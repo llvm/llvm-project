@@ -26,8 +26,6 @@
 ; RUN:    -shared %t.o %t2.o -o %t3
 ; RUN: llvm-bcanalyzer -dump %t.o.thinlto.bc | FileCheck %s --check-prefix=BACKEND1
 ; RUN: llvm-bcanalyzer -dump %t2.o.thinlto.bc | FileCheck %s --check-prefix=BACKEND2
-; RUN: llvm-dis %t.o.thinlto.bc -o - | FileCheck %s --check-prefix=DIS1
-; RUN: llvm-dis %t2.o.thinlto.bc -o - | FileCheck %s --check-prefix=DIS2
 ; RUN: not test -e %t3
 
 ; Ensure gold generates an index as well as a binary with save-temps in ThinLTO mode.
@@ -97,7 +95,6 @@
 ; BACKEND1-NEXT: </MODULE_STRTAB_BLOCK
 ; BACKEND1-NEXT: <GLOBALVAL_SUMMARY_BLOCK
 ; BACKEND1-NEXT: <VERSION
-; BACKEND1-NEXT: <FLAGS
 ; BACKEND1-NEXT: <VALUE_GUID op0={{1|2}} op1={{-3706093650706652785|-5300342847281564238}}
 ; BACKEND1-NEXT: <VALUE_GUID op0={{1|2}} op1={{-3706093650706652785|-5300342847281564238}}
 ; BACKEND1-NEXT: <COMBINED
@@ -111,18 +108,9 @@
 ; BACKEND2-NEXT: </MODULE_STRTAB_BLOCK
 ; BACKEND2-NEXT: <GLOBALVAL_SUMMARY_BLOCK
 ; BACKEND2-NEXT: <VERSION
-; BACKEND2-NEXT: <FLAGS
 ; BACKEND2-NEXT: <VALUE_GUID op0=1 op1=-5300342847281564238
 ; BACKEND2-NEXT: <COMBINED
 ; BACKEND2-NEXT: </GLOBALVAL_SUMMARY_BLOCK
-
-; DIS1: ^0 = module: (path: "{{.*}}thinlto.ll.tmp.o", hash: (0, 0, 0, 0, 0))
-; DIS1: ^1 = module: (path: "{{.*}}thinlto.ll.tmp2.o", hash: (0, 0, 0, 0, 0))
-; DIS1: ^2 = gv: (guid: 13146401226427987378, summaries: (function: (module: ^1, flags: (linkage: external, notEligibleToImport: 0, live: 1, dsoLocal: 0), insts: 1)))
-; DIS1: ^3 = gv: (guid: 14740650423002898831, summaries: (function: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 1, dsoLocal: 0), insts: 2, calls: ((callee: ^2)))))
-
-; DIS2: ^0 = module: (path: "{{.*}}thinlto.ll.tmp2.o", hash: (0, 0, 0, 0, 0))
-; DIS2: ^1 = gv: (guid: 13146401226427987378, summaries: (function: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 1, dsoLocal: 0), insts: 1)))
 
 ; COMBINED: <MODULE_STRTAB_BLOCK
 ; COMBINED-NEXT: <ENTRY {{.*}} record string = '{{.*}}/test/tools/gold/X86/Output/thinlto.ll.tmp{{.*}}.o'
@@ -130,7 +118,6 @@
 ; COMBINED-NEXT: </MODULE_STRTAB_BLOCK
 ; COMBINED-NEXT: <GLOBALVAL_SUMMARY_BLOCK
 ; COMBINED-NEXT: <VERSION
-; COMBINED-NEXT: <FLAGS
 ; COMBINED-NEXT: <VALUE_GUID op0={{1|2}} op1={{-3706093650706652785|-5300342847281564238}}
 ; COMBINED-NEXT: <VALUE_GUID op0={{1|2}} op1={{-3706093650706652785|-5300342847281564238}}
 ; COMBINED-NEXT: <COMBINED

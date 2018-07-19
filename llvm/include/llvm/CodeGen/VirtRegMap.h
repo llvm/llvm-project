@@ -90,24 +90,24 @@ class TargetInstrInfo;
 
     void grow();
 
-    /// returns true if the specified virtual register is
+    /// @brief returns true if the specified virtual register is
     /// mapped to a physical register
     bool hasPhys(unsigned virtReg) const {
       return getPhys(virtReg) != NO_PHYS_REG;
     }
 
-    /// returns the physical register mapped to the specified
+    /// @brief returns the physical register mapped to the specified
     /// virtual register
     unsigned getPhys(unsigned virtReg) const {
       assert(TargetRegisterInfo::isVirtualRegister(virtReg));
       return Virt2PhysMap[virtReg];
     }
 
-    /// creates a mapping for the specified virtual register to
+    /// @brief creates a mapping for the specified virtual register to
     /// the specified physical register
     void assignVirt2Phys(unsigned virtReg, MCPhysReg physReg);
 
-    /// clears the specified virtual register's, physical
+    /// @brief clears the specified virtual register's, physical
     /// register mapping
     void clearVirt(unsigned virtReg) {
       assert(TargetRegisterInfo::isVirtualRegister(virtReg));
@@ -116,26 +116,26 @@ class TargetInstrInfo;
       Virt2PhysMap[virtReg] = NO_PHYS_REG;
     }
 
-    /// clears all virtual to physical register mappings
+    /// @brief clears all virtual to physical register mappings
     void clearAllVirt() {
       Virt2PhysMap.clear();
       grow();
     }
 
-    /// returns true if VirtReg is assigned to its preferred physreg.
+    /// @brief returns true if VirtReg is assigned to its preferred physreg.
     bool hasPreferredPhys(unsigned VirtReg);
 
-    /// returns true if VirtReg has a known preferred register.
+    /// @brief returns true if VirtReg has a known preferred register.
     /// This returns false if VirtReg has a preference that is a virtual
     /// register that hasn't been assigned yet.
     bool hasKnownPreference(unsigned VirtReg);
 
-    /// records virtReg is a split live interval from SReg.
+    /// @brief records virtReg is a split live interval from SReg.
     void setIsSplitFromReg(unsigned virtReg, unsigned SReg) {
       Virt2SplitMap[virtReg] = SReg;
     }
 
-    /// returns the live interval virtReg is split from.
+    /// @brief returns the live interval virtReg is split from.
     unsigned getPreSplitReg(unsigned virtReg) const {
       return Virt2SplitMap[virtReg];
     }
@@ -149,7 +149,7 @@ class TargetInstrInfo;
       return Orig ? Orig : VirtReg;
     }
 
-    /// returns true if the specified virtual register is not
+    /// @brief returns true if the specified virtual register is not
     /// mapped to a stack slot or rematerialized.
     bool isAssignedReg(unsigned virtReg) const {
       if (getStackSlot(virtReg) == NO_STACK_SLOT)
@@ -159,20 +159,20 @@ class TargetInstrInfo;
       return (Virt2SplitMap[virtReg] && Virt2PhysMap[virtReg] != NO_PHYS_REG);
     }
 
-    /// returns the stack slot mapped to the specified virtual
+    /// @brief returns the stack slot mapped to the specified virtual
     /// register
     int getStackSlot(unsigned virtReg) const {
       assert(TargetRegisterInfo::isVirtualRegister(virtReg));
       return Virt2StackSlotMap[virtReg];
     }
 
-    /// create a mapping for the specifed virtual register to
+    /// @brief create a mapping for the specifed virtual register to
     /// the next available stack slot
     int assignVirt2StackSlot(unsigned virtReg);
 
-    /// create a mapping for the specified virtual register to
+    /// @brief create a mapping for the specified virtual register to
     /// the specified stack slot
-    void assignVirt2StackSlot(unsigned virtReg, int SS);
+    void assignVirt2StackSlot(unsigned virtReg, int frameIndex);
 
     void print(raw_ostream &OS, const Module* M = nullptr) const override;
     void dump() const;

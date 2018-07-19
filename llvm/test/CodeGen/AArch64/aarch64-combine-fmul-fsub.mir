@@ -1,7 +1,7 @@
-# RUN: llc -run-pass=machine-combiner -o - -mtriple=aarch64-unknown-linux -mcpu=cortex-a57 -enable-unsafe-fp-math -machine-combiner-verify-pattern-order=true %s | FileCheck --check-prefixes=UNPROFITABLE,ALL %s
-# RUN: llc -run-pass=machine-combiner -o - -mtriple=aarch64-unknown-linux -mcpu=falkor -enable-unsafe-fp-math %s -machine-combiner-verify-pattern-order=true | FileCheck --check-prefixes=PROFITABLE,ALL %s
-# RUN: llc -run-pass=machine-combiner -o - -mtriple=aarch64-unknown-linux -mcpu=exynos-m1 -enable-unsafe-fp-math -machine-combiner-verify-pattern-order=true %s | FileCheck --check-prefixes=PROFITABLE,ALL %s
-# RUN: llc -run-pass=machine-combiner -o - -mtriple=aarch64-unknown-linux -mcpu=thunderx2t99 -enable-unsafe-fp-math -machine-combiner-verify-pattern-order=true %s | FileCheck --check-prefixes=PROFITABLE,ALL %s
+# RUN: llc -run-pass=machine-combiner -o - -mtriple=aarch64-unknown-linux -mcpu=cortex-a57 -enable-unsafe-fp-math %s | FileCheck --check-prefixes=UNPROFITABLE,ALL %s
+# RUN: llc -run-pass=machine-combiner -o - -mtriple=aarch64-unknown-linux -mcpu=falkor -enable-unsafe-fp-math %s | FileCheck --check-prefixes=PROFITABLE,ALL %s
+# RUN: llc -run-pass=machine-combiner -o - -mtriple=aarch64-unknown-linux -mcpu=exynosm1 -enable-unsafe-fp-math %s | FileCheck --check-prefixes=PROFITABLE,ALL %s
+# RUN: llc -run-pass=machine-combiner -o - -mtriple=aarch64-unknown-linux -mcpu=thunderx2t99 -enable-unsafe-fp-math %s | FileCheck --check-prefixes=PROFITABLE,ALL %s
 #
 name:            f1_2s
 registers:
@@ -12,13 +12,13 @@ registers:
   - { id: 4, class: fpr64 }
 body:             |
   bb.0.entry:
-    %2:fpr64 = COPY $d2
-    %1:fpr64 = COPY $d1
-    %0:fpr64 = COPY $d0
+    %2:fpr64 = COPY %d2
+    %1:fpr64 = COPY %d1
+    %0:fpr64 = COPY %d0
     %3:fpr64 = FMULv2f32 %0, %1
     %4:fpr64 = FSUBv2f32 killed %3, %2
-    $d0 = COPY %4
-    RET_ReallyLR implicit $d0
+    %d0 = COPY %4
+    RET_ReallyLR implicit %d0
 
 ...
 # UNPROFITABLE-LABEL: name: f1_2s
@@ -26,8 +26,8 @@ body:             |
 # UNPROFITABLE-NEXT: FSUBv2f32 killed %3, %2
 #
 # PROFITABLE-LABEL: name: f1_2s
-# PROFITABLE: [[R1:%[0-9]+]]:fpr64 = FNEGv2f32 %2
-# PROFITABLE-NEXT: FMLAv2f32 killed [[R1]], %0, %1
+# PROFITABLE: %5:fpr64 = FNEGv2f32 %2
+# PROFITABLE-NEXT: FMLAv2f32 killed %5, %0, %1
 ---
 name:            f1_4s
 registers:
@@ -38,13 +38,13 @@ registers:
   - { id: 4, class: fpr128 }
 body:             |
   bb.0.entry:
-    %2:fpr128 = COPY $q2
-    %1:fpr128 = COPY $q1
-    %0:fpr128 = COPY $q0
+    %2:fpr128 = COPY %q2
+    %1:fpr128 = COPY %q1
+    %0:fpr128 = COPY %q0
     %3:fpr128 = FMULv4f32 %0, %1
     %4:fpr128 = FSUBv4f32 killed %3, %2
-    $q0 = COPY %4
-    RET_ReallyLR implicit $q0
+    %q0 = COPY %4
+    RET_ReallyLR implicit %q0
 
 ...
 # UNPROFITABLE-LABEL: name: f1_4s
@@ -52,8 +52,8 @@ body:             |
 # UNPROFITABLE-NEXT: FSUBv4f32 killed %3, %2
 #
 # PROFITABLE-LABEL: name: f1_4s
-# PROFITABLE: [[R1:%[0-9]+]]:fpr128 = FNEGv4f32 %2
-# PROFITABLE-NEXT: FMLAv4f32 killed [[R1]], %0, %1
+# PROFITABLE: %5:fpr128 = FNEGv4f32 %2
+# PROFITABLE-NEXT: FMLAv4f32 killed %5, %0, %1
 ---
 name:            f1_2d
 registers:
@@ -64,13 +64,13 @@ registers:
   - { id: 4, class: fpr128 }
 body:             |
   bb.0.entry:
-    %2:fpr128 = COPY $q2
-    %1:fpr128 = COPY $q1
-    %0:fpr128 = COPY $q0
+    %2:fpr128 = COPY %q2
+    %1:fpr128 = COPY %q1
+    %0:fpr128 = COPY %q0
     %3:fpr128 = FMULv2f64 %0, %1
     %4:fpr128 = FSUBv2f64 killed %3, %2
-    $q0 = COPY %4
-    RET_ReallyLR implicit $q0
+    %q0 = COPY %4
+    RET_ReallyLR implicit %q0
 
 ...
 # UNPROFITABLE-LABEL: name: f1_2d
@@ -78,8 +78,8 @@ body:             |
 # UNPROFITABLE-NEXT: FSUBv2f64 killed %3, %2
 #
 # PROFITABLE-LABEL: name: f1_2d
-# PROFITABLE: [[R1:%[0-9]+]]:fpr128 = FNEGv2f64 %2
-# PROFITABLE-NEXT: FMLAv2f64 killed [[R1]], %0, %1
+# PROFITABLE: %5:fpr128 = FNEGv2f64 %2
+# PROFITABLE-NEXT: FMLAv2f64 killed %5, %0, %1
 ---
 name:            f1_both_fmul_2s
 registers:
@@ -92,15 +92,15 @@ registers:
   - { id: 6, class: fpr64 }
 body:             |
   bb.0.entry:
-    %3:fpr64 = COPY $q3
-    %2:fpr64 = COPY $q2
-    %1:fpr64 = COPY $q1
-    %0:fpr64 = COPY $q0
+    %3:fpr64 = COPY %q3
+    %2:fpr64 = COPY %q2
+    %1:fpr64 = COPY %q1
+    %0:fpr64 = COPY %q0
     %4:fpr64 = FMULv2f32 %0, %1
     %5:fpr64 = FMULv2f32 %2, %3
     %6:fpr64 = FSUBv2f32 killed %4, %5
-    $q0 = COPY %6
-    RET_ReallyLR implicit $q0
+    %q0 = COPY %6
+    RET_ReallyLR implicit %q0
 
 ...
 # ALL-LABEL: name: f1_both_fmul_2s
@@ -118,15 +118,15 @@ registers:
   - { id: 6, class: fpr128 }
 body:             |
   bb.0.entry:
-    %3:fpr128 = COPY $q3
-    %2:fpr128 = COPY $q2
-    %1:fpr128 = COPY $q1
-    %0:fpr128 = COPY $q0
+    %3:fpr128 = COPY %q3
+    %2:fpr128 = COPY %q2
+    %1:fpr128 = COPY %q1
+    %0:fpr128 = COPY %q0
     %4:fpr128 = FMULv4f32 %0, %1
     %5:fpr128 = FMULv4f32 %2, %3
     %6:fpr128 = FSUBv4f32 killed %4, %5
-    $q0 = COPY %6
-    RET_ReallyLR implicit $q0
+    %q0 = COPY %6
+    RET_ReallyLR implicit %q0
 
 ...
 # ALL-LABEL: name: f1_both_fmul_4s
@@ -144,15 +144,15 @@ registers:
   - { id: 6, class: fpr128 }
 body:             |
   bb.0.entry:
-    %3:fpr128 = COPY $q3
-    %2:fpr128 = COPY $q2
-    %1:fpr128 = COPY $q1
-    %0:fpr128 = COPY $q0
+    %3:fpr128 = COPY %q3
+    %2:fpr128 = COPY %q2
+    %1:fpr128 = COPY %q1
+    %0:fpr128 = COPY %q0
     %4:fpr128 = FMULv2f64 %0, %1
     %5:fpr128 = FMULv2f64 %2, %3
     %6:fpr128 = FSUBv2f64 killed %4, %5
-    $q0 = COPY %6
-    RET_ReallyLR implicit $q0
+    %q0 = COPY %6
+    RET_ReallyLR implicit %q0
 
 ...
 # ALL-LABEL: name: f1_both_fmul_2d

@@ -34,12 +34,6 @@ TEST(SymbolStringPool, UniquingAndComparisons) {
   (void)(P1 < P3);
 }
 
-TEST(SymbolStringPool, Dereference) {
-  SymbolStringPool SP;
-  auto Foo = SP.intern("foo");
-  EXPECT_EQ(*Foo, "foo") << "Equality on dereferenced string failed";
-}
-
 TEST(SymbolStringPool, ClearDeadEntries) {
   SymbolStringPool SP;
   {

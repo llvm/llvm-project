@@ -19,7 +19,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/DivergenceAnalysis.h"
 #include "llvm/Analysis/Loads.h"
-#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Attributes.h"
@@ -49,21 +48,15 @@ using namespace llvm;
 
 namespace {
 
-static cl::opt<bool> WidenLoads(
-  "amdgpu-codegenprepare-widen-constant-loads",
-  cl::desc("Widen sub-dword constant address space loads in AMDGPUCodeGenPrepare"),
-  cl::ReallyHidden,
-  cl::init(true));
-
 class AMDGPUCodeGenPrepare : public FunctionPass,
                              public InstVisitor<AMDGPUCodeGenPrepare, bool> {
-  const GCNSubtarget *ST = nullptr;
+  const SISubtarget *ST = nullptr;
   DivergenceAnalysis *DA = nullptr;
   Module *Mod = nullptr;
   bool HasUnsafeFPMath = false;
   AMDGPUAS AMDGPUASI;
 
-  /// Copies exact/nsw/nuw flags (if any) from binary operation \p I to
+  /// \brief Copies exact/nsw/nuw flags (if any) from binary operation \p I to
   /// binary operation \p V.
   ///
   /// \returns Binary operation \p V.
@@ -87,7 +80,7 @@ class AMDGPUCodeGenPrepare : public FunctionPass,
   /// false otherwise.
   bool needsPromotionToI32(const Type *T) const;
 
-  /// Promotes uniform binary operation \p I to equivalent 32 bit binary
+  /// \brief Promotes uniform binary operation \p I to equivalent 32 bit binary
   /// operation.
   ///
   /// \details \p I's base element bit width must be greater than 1 and less
@@ -100,7 +93,7 @@ class AMDGPUCodeGenPrepare : public FunctionPass,
   /// false otherwise.
   bool promoteUniformOpToI32(BinaryOperator &I) const;
 
-  /// Promotes uniform 'icmp' operation \p I to 32 bit 'icmp' operation.
+  /// \brief Promotes uniform 'icmp' operation \p I to 32 bit 'icmp' operation.
   ///
   /// \details \p I's base element bit width must be greater than 1 and less
   /// than or equal 16. Promotion is done by sign or zero extending operands to
@@ -109,7 +102,7 @@ class AMDGPUCodeGenPrepare : public FunctionPass,
   /// \returns True.
   bool promoteUniformOpToI32(ICmpInst &I) const;
 
-  /// Promotes uniform 'select' operation \p I to 32 bit 'select'
+  /// \brief Promotes uniform 'select' operation \p I to 32 bit 'select'
   /// operation.
   ///
   /// \details \p I's base element bit width must be greater than 1 and less
@@ -120,7 +113,7 @@ class AMDGPUCodeGenPrepare : public FunctionPass,
   /// \returns True.
   bool promoteUniformOpToI32(SelectInst &I) const;
 
-  /// Promotes uniform 'bitreverse' intrinsic \p I to 32 bit 'bitreverse'
+  /// \brief Promotes uniform 'bitreverse' intrinsic \p I to 32 bit 'bitreverse'
   /// intrinsic.
   ///
   /// \details \p I's base element bit width must be greater than 1 and less
@@ -132,16 +125,7 @@ class AMDGPUCodeGenPrepare : public FunctionPass,
   ///
   /// \returns True.
   bool promoteUniformBitreverseToI32(IntrinsicInst &I) const;
-
-  /// Expands 24 bit div or rem.
-  Value* expandDivRem24(IRBuilder<> &Builder, Value *Num, Value *Den,
-                        bool IsDiv, bool IsSigned) const;
-
-  /// Expands 32 bit div or rem.
-  Value* expandDivRem32(IRBuilder<> &Builder, Instruction::BinaryOps Opc,
-                        Value *Num, Value *Den) const;
-
-  /// Widen a scalar load.
+  /// \brief Widen a scalar load.
   ///
   /// \details \p Widen scalar load for uniform, small type loads from constant
   //  memory / to a full 32-bits and then truncate the input to allow a scalar
@@ -266,9 +250,7 @@ bool AMDGPUCodeGenPrepare::promoteUniformOpToI32(BinaryOperator &I) const {
          "I does not need promotion to i32");
 
   if (I.getOpcode() == Instruction::SDiv ||
-      I.getOpcode() == Instruction::UDiv ||
-      I.getOpcode() == Instruction::SRem ||
-      I.getOpcode() == Instruction::URem)
+      I.getOpcode() == Instruction::UDiv)
     return false;
 
   IRBuilder<> Builder(&I);
@@ -390,18 +372,13 @@ bool AMDGPUCodeGenPrepare::promoteUniformBitreverseToI32(
   return true;
 }
 
-static bool shouldKeepFDivF32(Value *Num, bool UnsafeDiv, bool HasDenormals) {
+static bool shouldKeepFDivF32(Value *Num, bool UnsafeDiv) {
   const ConstantFP *CNum = dyn_cast<ConstantFP>(Num);
   if (!CNum)
-    return HasDenormals;
-
-  if (UnsafeDiv)
-    return true;
-
-  bool IsOne = CNum->isExactlyValue(+1.0) || CNum->isExactlyValue(-1.0);
+    return false;
 
   // Reciprocal f32 is handled separately without denormals.
-  return HasDenormals ^ IsOne;
+  return UnsafeDiv || CNum->isExactlyValue(+1.0);
 }
 
 // Insert an intrinsic for fast fdiv for safe math situations where we can
@@ -427,7 +404,7 @@ bool AMDGPUCodeGenPrepare::visitFDiv(BinaryOperator &FDiv) {
                                       FMF.allowReciprocal();
 
   // With UnsafeDiv node will be optimized to just rcp and mul.
-  if (UnsafeDiv)
+  if (ST->hasFP32Denormals() || UnsafeDiv)
     return false;
 
   IRBuilder<> Builder(FDiv.getParent(), std::next(FDiv.getIterator()), FPMath);
@@ -441,7 +418,6 @@ bool AMDGPUCodeGenPrepare::visitFDiv(BinaryOperator &FDiv) {
 
   Value *NewFDiv = nullptr;
 
-  bool HasDenormals = ST->hasFP32Denormals();
   if (VectorType *VT = dyn_cast<VectorType>(Ty)) {
     NewFDiv = UndefValue::get(VT);
 
@@ -452,7 +428,7 @@ bool AMDGPUCodeGenPrepare::visitFDiv(BinaryOperator &FDiv) {
       Value *DenEltI = Builder.CreateExtractElement(Den, I);
       Value *NewElt;
 
-      if (shouldKeepFDivF32(NumEltI, UnsafeDiv, HasDenormals)) {
+      if (shouldKeepFDivF32(NumEltI, UnsafeDiv)) {
         NewElt = Builder.CreateFDiv(NumEltI, DenEltI);
       } else {
         NewElt = Builder.CreateCall(Decl, { NumEltI, DenEltI });
@@ -461,7 +437,7 @@ bool AMDGPUCodeGenPrepare::visitFDiv(BinaryOperator &FDiv) {
       NewFDiv = Builder.CreateInsertElement(NewFDiv, NewElt, I);
     }
   } else {
-    if (!shouldKeepFDivF32(Num, UnsafeDiv, HasDenormals))
+    if (!shouldKeepFDivF32(Num, UnsafeDiv))
       NewFDiv = Builder.CreateCall(Decl, { Num, Den });
   }
 
@@ -471,7 +447,7 @@ bool AMDGPUCodeGenPrepare::visitFDiv(BinaryOperator &FDiv) {
     FDiv.eraseFromParent();
   }
 
-  return !!NewFDiv;
+  return true;
 }
 
 static bool hasUnsafeFPMath(const Function &F) {
@@ -479,322 +455,18 @@ static bool hasUnsafeFPMath(const Function &F) {
   return Attr.getValueAsString() == "true";
 }
 
-static std::pair<Value*, Value*> getMul64(IRBuilder<> &Builder,
-                                          Value *LHS, Value *RHS) {
-  Type *I32Ty = Builder.getInt32Ty();
-  Type *I64Ty = Builder.getInt64Ty();
-
-  Value *LHS_EXT64 = Builder.CreateZExt(LHS, I64Ty);
-  Value *RHS_EXT64 = Builder.CreateZExt(RHS, I64Ty);
-  Value *MUL64 = Builder.CreateMul(LHS_EXT64, RHS_EXT64);
-  Value *Lo = Builder.CreateTrunc(MUL64, I32Ty);
-  Value *Hi = Builder.CreateLShr(MUL64, Builder.getInt64(32));
-  Hi = Builder.CreateTrunc(Hi, I32Ty);
-  return std::make_pair(Lo, Hi);
-}
-
-static Value* getMulHu(IRBuilder<> &Builder, Value *LHS, Value *RHS) {
-  return getMul64(Builder, LHS, RHS).second;
-}
-
-// The fractional part of a float is enough to accurately represent up to
-// a 24-bit signed integer.
-Value* AMDGPUCodeGenPrepare::expandDivRem24(IRBuilder<> &Builder,
-                                            Value *Num, Value *Den,
-                                            bool IsDiv, bool IsSigned) const {
-  assert(Num->getType()->isIntegerTy(32));
-
-  const DataLayout &DL = Mod->getDataLayout();
-  unsigned LHSSignBits = ComputeNumSignBits(Num, DL);
-  if (LHSSignBits < 9)
-    return nullptr;
-
-  unsigned RHSSignBits = ComputeNumSignBits(Den, DL);
-  if (RHSSignBits < 9)
-    return nullptr;
-
-
-  unsigned SignBits = std::min(LHSSignBits, RHSSignBits);
-  unsigned DivBits = 32 - SignBits;
-  if (IsSigned)
-    ++DivBits;
-
-  Type *Ty = Num->getType();
-  Type *I32Ty = Builder.getInt32Ty();
-  Type *F32Ty = Builder.getFloatTy();
-  ConstantInt *One = Builder.getInt32(1);
-  Value *JQ = One;
-
-  if (IsSigned) {
-    // char|short jq = ia ^ ib;
-    JQ = Builder.CreateXor(Num, Den);
-
-    // jq = jq >> (bitsize - 2)
-    JQ = Builder.CreateAShr(JQ, Builder.getInt32(30));
-
-    // jq = jq | 0x1
-    JQ = Builder.CreateOr(JQ, One);
-  }
-
-  // int ia = (int)LHS;
-  Value *IA = Num;
-
-  // int ib, (int)RHS;
-  Value *IB = Den;
-
-  // float fa = (float)ia;
-  Value *FA = IsSigned ? Builder.CreateSIToFP(IA, F32Ty)
-                       : Builder.CreateUIToFP(IA, F32Ty);
-
-  // float fb = (float)ib;
-  Value *FB = IsSigned ? Builder.CreateSIToFP(IB,F32Ty)
-                       : Builder.CreateUIToFP(IB,F32Ty);
-
-  Value *RCP = Builder.CreateFDiv(ConstantFP::get(F32Ty, 1.0), FB);
-  Value *FQM = Builder.CreateFMul(FA, RCP);
-
-  // fq = trunc(fqm);
-  CallInst* FQ = Builder.CreateIntrinsic(Intrinsic::trunc, { FQM });
-  FQ->copyFastMathFlags(Builder.getFastMathFlags());
-
-  // float fqneg = -fq;
-  Value *FQNeg = Builder.CreateFNeg(FQ);
-
-  // float fr = mad(fqneg, fb, fa);
-  Value *FR = Builder.CreateIntrinsic(Intrinsic::amdgcn_fmad_ftz,
-                                      { FQNeg, FB, FA }, FQ);
-
-  // int iq = (int)fq;
-  Value *IQ = IsSigned ? Builder.CreateFPToSI(FQ, I32Ty)
-                       : Builder.CreateFPToUI(FQ, I32Ty);
-
-  // fr = fabs(fr);
-  FR = Builder.CreateIntrinsic(Intrinsic::fabs, { FR }, FQ);
-
-  // fb = fabs(fb);
-  FB = Builder.CreateIntrinsic(Intrinsic::fabs, { FB }, FQ);
-
-  // int cv = fr >= fb;
-  Value *CV = Builder.CreateFCmpOGE(FR, FB);
-
-  // jq = (cv ? jq : 0);
-  JQ = Builder.CreateSelect(CV, JQ, Builder.getInt32(0));
-
-  // dst = iq + jq;
-  Value *Div = Builder.CreateAdd(IQ, JQ);
-
-  Value *Res = Div;
-  if (!IsDiv) {
-    // Rem needs compensation, it's easier to recompute it
-    Value *Rem = Builder.CreateMul(Div, Den);
-    Res = Builder.CreateSub(Num, Rem);
-  }
-
-  // Truncate to number of bits this divide really is.
-  if (IsSigned) {
-    Res = Builder.CreateTrunc(Res, Builder.getIntNTy(DivBits));
-    Res = Builder.CreateSExt(Res, Ty);
-  } else {
-    ConstantInt *TruncMask = Builder.getInt32((UINT64_C(1) << DivBits) - 1);
-    Res = Builder.CreateAnd(Res, TruncMask);
-  }
-
-  return Res;
-}
-
-Value* AMDGPUCodeGenPrepare::expandDivRem32(IRBuilder<> &Builder,
-                                            Instruction::BinaryOps Opc,
-                                            Value *Num, Value *Den) const {
-  assert(Opc == Instruction::URem || Opc == Instruction::UDiv ||
-         Opc == Instruction::SRem || Opc == Instruction::SDiv);
-
-  FastMathFlags FMF;
-  FMF.setFast();
-  Builder.setFastMathFlags(FMF);
-
-  if (isa<Constant>(Den))
-    return nullptr; // Keep it for optimization
-
-  bool IsDiv = Opc == Instruction::UDiv || Opc == Instruction::SDiv;
-  bool IsSigned = Opc == Instruction::SRem || Opc == Instruction::SDiv;
-
-  Type *Ty = Num->getType();
-  Type *I32Ty = Builder.getInt32Ty();
-  Type *F32Ty = Builder.getFloatTy();
-
-  if (Ty->getScalarSizeInBits() < 32) {
-    if (IsSigned) {
-      Num = Builder.CreateSExt(Num, I32Ty);
-      Den = Builder.CreateSExt(Den, I32Ty);
-    } else {
-      Num = Builder.CreateZExt(Num, I32Ty);
-      Den = Builder.CreateZExt(Den, I32Ty);
-    }
-  }
-
-  if (Value *Res = expandDivRem24(Builder, Num, Den, IsDiv, IsSigned)) {
-    Res = Builder.CreateTrunc(Res, Ty);
-    return Res;
-  }
-
-  ConstantInt *Zero = Builder.getInt32(0);
-  ConstantInt *One = Builder.getInt32(1);
-  ConstantInt *MinusOne = Builder.getInt32(~0);
-
-  Value *Sign = nullptr;
-  if (IsSigned) {
-    ConstantInt *K31 = Builder.getInt32(31);
-    Value *LHSign = Builder.CreateAShr(Num, K31);
-    Value *RHSign = Builder.CreateAShr(Den, K31);
-    // Remainder sign is the same as LHS
-    Sign = IsDiv ? Builder.CreateXor(LHSign, RHSign) : LHSign;
-
-    Num = Builder.CreateAdd(Num, LHSign);
-    Den = Builder.CreateAdd(Den, RHSign);
-
-    Num = Builder.CreateXor(Num, LHSign);
-    Den = Builder.CreateXor(Den, RHSign);
-  }
-
-  // RCP =  URECIP(Den) = 2^32 / Den + e
-  // e is rounding error.
-  Value *DEN_F32 = Builder.CreateUIToFP(Den, F32Ty);
-  Value *RCP_F32 = Builder.CreateFDiv(ConstantFP::get(F32Ty, 1.0), DEN_F32);
-  Constant *UINT_MAX_PLUS_1 = ConstantFP::get(F32Ty, BitsToFloat(0x4f800000));
-  Value *RCP_SCALE = Builder.CreateFMul(RCP_F32, UINT_MAX_PLUS_1);
-  Value *RCP = Builder.CreateFPToUI(RCP_SCALE, I32Ty);
-
-  // RCP_LO, RCP_HI = mul(RCP, Den) */
-  Value *RCP_LO, *RCP_HI;
-  std::tie(RCP_LO, RCP_HI) = getMul64(Builder, RCP, Den);
-
-  // NEG_RCP_LO = -RCP_LO
-  Value *NEG_RCP_LO = Builder.CreateNeg(RCP_LO);
-
-  // ABS_RCP_LO = (RCP_HI == 0 ? NEG_RCP_LO : RCP_LO)
-  Value *RCP_HI_0_CC = Builder.CreateICmpEQ(RCP_HI, Zero);
-  Value *ABS_RCP_LO = Builder.CreateSelect(RCP_HI_0_CC, NEG_RCP_LO, RCP_LO);
-
-  // Calculate the rounding error from the URECIP instruction
-  // E = mulhu(ABS_RCP_LO, RCP)
-  Value *E = getMulHu(Builder, ABS_RCP_LO, RCP);
-
-  // RCP_A_E = RCP + E
-  Value *RCP_A_E = Builder.CreateAdd(RCP, E);
-
-  // RCP_S_E = RCP - E
-  Value *RCP_S_E = Builder.CreateSub(RCP, E);
-
-  // Tmp0 = (RCP_HI == 0 ? RCP_A_E : RCP_SUB_E)
-  Value *Tmp0 = Builder.CreateSelect(RCP_HI_0_CC, RCP_A_E, RCP_S_E);
-
-  // Quotient = mulhu(Tmp0, Num)
-  Value *Quotient = getMulHu(Builder, Tmp0, Num);
-
-  // Num_S_Remainder = Quotient * Den
-  Value *Num_S_Remainder = Builder.CreateMul(Quotient, Den);
-
-  // Remainder = Num - Num_S_Remainder
-  Value *Remainder = Builder.CreateSub(Num, Num_S_Remainder);
-
-  // Remainder_GE_Den = (Remainder >= Den ? -1 : 0)
-  Value *Rem_GE_Den_CC = Builder.CreateICmpUGE(Remainder, Den);
-  Value *Remainder_GE_Den = Builder.CreateSelect(Rem_GE_Den_CC, MinusOne, Zero);
-
-  // Remainder_GE_Zero = (Num >= Num_S_Remainder ? -1 : 0)
-  Value *Num_GE_Num_S_Rem_CC = Builder.CreateICmpUGE(Num, Num_S_Remainder);
-  Value *Remainder_GE_Zero = Builder.CreateSelect(Num_GE_Num_S_Rem_CC,
-                                                  MinusOne, Zero);
-
-  // Tmp1 = Remainder_GE_Den & Remainder_GE_Zero
-  Value *Tmp1 = Builder.CreateAnd(Remainder_GE_Den, Remainder_GE_Zero);
-  Value *Tmp1_0_CC = Builder.CreateICmpEQ(Tmp1, Zero);
-
-  Value *Res;
-  if (IsDiv) {
-    // Quotient_A_One = Quotient + 1
-    Value *Quotient_A_One = Builder.CreateAdd(Quotient, One);
-
-    // Quotient_S_One = Quotient - 1
-    Value *Quotient_S_One = Builder.CreateSub(Quotient, One);
-
-    // Div = (Tmp1 == 0 ? Quotient : Quotient_A_One)
-    Value *Div = Builder.CreateSelect(Tmp1_0_CC, Quotient, Quotient_A_One);
-
-    // Div = (Remainder_GE_Zero == 0 ? Quotient_S_One : Div)
-    Res = Builder.CreateSelect(Num_GE_Num_S_Rem_CC, Div, Quotient_S_One);
-  } else {
-    // Remainder_S_Den = Remainder - Den
-    Value *Remainder_S_Den = Builder.CreateSub(Remainder, Den);
-
-    // Remainder_A_Den = Remainder + Den
-    Value *Remainder_A_Den = Builder.CreateAdd(Remainder, Den);
-
-    // Rem = (Tmp1 == 0 ? Remainder : Remainder_S_Den)
-    Value *Rem = Builder.CreateSelect(Tmp1_0_CC, Remainder, Remainder_S_Den);
-
-    // Rem = (Remainder_GE_Zero == 0 ? Remainder_A_Den : Rem)
-    Res = Builder.CreateSelect(Num_GE_Num_S_Rem_CC, Rem, Remainder_A_Den);
-  }
-
-  if (IsSigned) {
-    Res = Builder.CreateXor(Res, Sign);
-    Res = Builder.CreateSub(Res, Sign);
-  }
-
-  Res = Builder.CreateTrunc(Res, Ty);
-
-  return Res;
-}
-
 bool AMDGPUCodeGenPrepare::visitBinaryOperator(BinaryOperator &I) {
-  if (ST->has16BitInsts() && needsPromotionToI32(I.getType()) &&
-      DA->isUniform(&I) && promoteUniformOpToI32(I))
-    return true;
-
   bool Changed = false;
-  Instruction::BinaryOps Opc = I.getOpcode();
-  Type *Ty = I.getType();
-  Value *NewDiv = nullptr;
-  if ((Opc == Instruction::URem || Opc == Instruction::UDiv ||
-       Opc == Instruction::SRem || Opc == Instruction::SDiv) &&
-      Ty->getScalarSizeInBits() <= 32) {
-    Value *Num = I.getOperand(0);
-    Value *Den = I.getOperand(1);
-    IRBuilder<> Builder(&I);
-    Builder.SetCurrentDebugLocation(I.getDebugLoc());
 
-    if (VectorType *VT = dyn_cast<VectorType>(Ty)) {
-      NewDiv = UndefValue::get(VT);
-
-      for (unsigned I = 0, E = VT->getNumElements(); I != E; ++I) {
-        Value *NumEltI = Builder.CreateExtractElement(Num, I);
-        Value *DenEltI = Builder.CreateExtractElement(Den, I);
-        Value *NewElt = expandDivRem32(Builder, Opc, NumEltI, DenEltI);
-        if (!NewElt)
-          NewElt = Builder.CreateBinOp(Opc, NumEltI, DenEltI);
-        NewDiv = Builder.CreateInsertElement(NewDiv, NewElt, I);
-      }
-    } else {
-      NewDiv = expandDivRem32(Builder, Opc, Num, Den);
-    }
-
-    if (NewDiv) {
-      I.replaceAllUsesWith(NewDiv);
-      I.eraseFromParent();
-      Changed = true;
-    }
-  }
+  if (ST->has16BitInsts() && needsPromotionToI32(I.getType()) &&
+      DA->isUniform(&I))
+    Changed |= promoteUniformOpToI32(I);
 
   return Changed;
 }
 
-bool AMDGPUCodeGenPrepare::visitLoadInst(LoadInst &I) {
-  if (!WidenLoads)
-    return false;
-
-  if ((I.getPointerAddressSpace() == AMDGPUASI.CONSTANT_ADDRESS ||
-       I.getPointerAddressSpace() == AMDGPUASI.CONSTANT_ADDRESS_32BIT) &&
+bool AMDGPUCodeGenPrepare::visitLoadInst(LoadInst  &I) {
+  if (I.getPointerAddressSpace() == AMDGPUASI.CONSTANT_ADDRESS &&
       canWidenScalarExtLoad(I)) {
     IRBuilder<> Builder(&I);
     Builder.SetCurrentDebugLocation(I.getDebugLoc());
@@ -802,28 +474,7 @@ bool AMDGPUCodeGenPrepare::visitLoadInst(LoadInst &I) {
     Type *I32Ty = Builder.getInt32Ty();
     Type *PT = PointerType::get(I32Ty, I.getPointerAddressSpace());
     Value *BitCast= Builder.CreateBitCast(I.getPointerOperand(), PT);
-    LoadInst *WidenLoad = Builder.CreateLoad(BitCast);
-    WidenLoad->copyMetadata(I);
-
-    // If we have range metadata, we need to convert the type, and not make
-    // assumptions about the high bits.
-    if (auto *Range = WidenLoad->getMetadata(LLVMContext::MD_range)) {
-      ConstantInt *Lower =
-        mdconst::extract<ConstantInt>(Range->getOperand(0));
-
-      if (Lower->getValue().isNullValue()) {
-        WidenLoad->setMetadata(LLVMContext::MD_range, nullptr);
-      } else {
-        Metadata *LowAndHigh[] = {
-          ConstantAsMetadata::get(ConstantInt::get(I32Ty, Lower->getValue().zext(32))),
-          // Don't make assumptions about the high bits.
-          ConstantAsMetadata::get(ConstantInt::get(I32Ty, 0))
-        };
-
-        WidenLoad->setMetadata(LLVMContext::MD_range,
-                               MDNode::get(Mod->getContext(), LowAndHigh));
-      }
-    }
+    Value *WidenLoad = Builder.CreateLoad(BitCast);
 
     int TySize = Mod->getDataLayout().getTypeSizeInBits(I.getType());
     Type *IntNTy = Builder.getIntNTy(TySize);
@@ -889,11 +540,10 @@ bool AMDGPUCodeGenPrepare::runOnFunction(Function &F) {
   if (!TPC)
     return false;
 
-  const AMDGPUTargetMachine &TM = TPC->getTM<AMDGPUTargetMachine>();
-  ST = &TM.getSubtarget<GCNSubtarget>(F);
+  const TargetMachine &TM = TPC->getTM<TargetMachine>();
+  ST = &TM.getSubtarget<SISubtarget>(F);
   DA = &getAnalysis<DivergenceAnalysis>();
   HasUnsafeFPMath = hasUnsafeFPMath(F);
-  AMDGPUASI = TM.getAMDGPUAS();
 
   bool MadeChange = false;
 

@@ -94,8 +94,8 @@ registers:
   - { id: 4, class: gprc, preferred-register: '' }
   - { id: 5, class: g8rc, preferred-register: '' }
 liveins:         
-  - { reg: '$x3', virtual-reg: '%0' }
-  - { reg: '$x4', virtual-reg: '%1' }
+  - { reg: '%x3', virtual-reg: '%0' }
+  - { reg: '%x4', virtual-reg: '%1' }
 frameInfo:       
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -118,18 +118,18 @@ stack:
 constants:       
 body:             |
   bb.0.entry:
-    liveins: $x0, $x4
+    liveins: %x0, %x4
   
-    %1:g8rc = COPY $x4
-    %0:g8rc = COPY $x0
+    %1:g8rc = COPY %x4
+    %0:g8rc = COPY %x0
     %2:gprc = LI 44
     %3:gprc = COPY %1.sub_32
-    %4:gprc = ADD4 killed $r0, killed %2
+    %4:gprc = ADD4 killed %r0, killed %2
     ; CHECK: li 3, 44
     ; CHECK: add 3, 0, 3
     %5:g8rc = EXTSW_32_64 killed %4
-    $x3 = COPY %5
-    BLR8 implicit $lr8, implicit $rm, implicit $x3
+    %x3 = COPY %5
+    BLR8 implicit %lr8, implicit %rm, implicit %x3
 
 ...
 ---
@@ -148,8 +148,8 @@ registers:
   - { id: 4, class: gprc, preferred-register: '' }
   - { id: 5, class: g8rc, preferred-register: '' }
 liveins:         
-  - { reg: '$x3', virtual-reg: '%0' }
-  - { reg: '$x4', virtual-reg: '%1' }
+  - { reg: '%x3', virtual-reg: '%0' }
+  - { reg: '%x4', virtual-reg: '%1' }
 frameInfo:       
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -172,18 +172,18 @@ stack:
 constants:       
 body:             |
   bb.0.entry:
-    liveins: $x0, $x4
+    liveins: %x0, %x4
   
-    %1:g8rc = COPY $x4
-    %0:g8rc = COPY $x0
+    %1:g8rc = COPY %x4
+    %0:g8rc = COPY %x0
     %2:gprc = COPY %0.sub_32
     %3:gprc = LI 44
-    %4:gprc = ADD4 killed %3, killed $r0
+    %4:gprc = ADD4 killed %3, killed %r0
     ; CHECK: li 3, 44
     ; CHECK: add 3, 3, 0
     %5:g8rc = EXTSW_32_64 killed %4
-    $x3 = COPY %5
-    BLR8 implicit $lr8, implicit $rm, implicit $x3
+    %x3 = COPY %5
+    BLR8 implicit %lr8, implicit %rm, implicit %x3
 
 ...
 ---
@@ -202,8 +202,8 @@ registers:
   - { id: 4, class: gprc, preferred-register: '' }
   - { id: 5, class: g8rc, preferred-register: '' }
 liveins:         
-  - { reg: '$x3', virtual-reg: '%0' }
-  - { reg: '$x4', virtual-reg: '%1' }
+  - { reg: '%x3', virtual-reg: '%0' }
+  - { reg: '%x4', virtual-reg: '%1' }
 frameInfo:       
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -226,17 +226,17 @@ stack:
 constants:       
 body:             |
   bb.0.entry:
-    liveins: $x3, $x4
+    liveins: %x3, %x4
   
-    %1:g8rc = COPY $x4
-    %0:g8rc = COPY $x3
+    %1:g8rc = COPY %x4
+    %0:g8rc = COPY %x3
     %2:gprc = COPY %0.sub_32
-    $r0 = LI 44
-    %4:gprc = ADD4 killed $r0, killed %2
+    %r0 = LI 44
+    %4:gprc = ADD4 killed %r0, killed %2
     ; CHECK: addi 3, 3, 44
     %5:g8rc = EXTSW_32_64 killed %4
-    $x3 = COPY %5
-    BLR8 implicit $lr8, implicit $rm, implicit $x3
+    %x3 = COPY %5
+    BLR8 implicit %lr8, implicit %rm, implicit %x3
 
 ...
 ---
@@ -255,8 +255,8 @@ registers:
   - { id: 4, class: gprc, preferred-register: '' }
   - { id: 5, class: g8rc, preferred-register: '' }
 liveins:         
-  - { reg: '$x3', virtual-reg: '%0' }
-  - { reg: '$x4', virtual-reg: '%1' }
+  - { reg: '%x3', virtual-reg: '%0' }
+  - { reg: '%x4', virtual-reg: '%1' }
 frameInfo:       
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -279,17 +279,17 @@ stack:
 constants:       
 body:             |
   bb.0.entry:
-    liveins: $x3, $x4
+    liveins: %x3, %x4
   
-    %1:g8rc = COPY $x4
-    %0:g8rc = COPY $x3
+    %1:g8rc = COPY %x4
+    %0:g8rc = COPY %x3
     %2:gprc = COPY %0.sub_32
-    $r0 = LI 44
-    %4:gprc = ADD4 killed %2, killed $r0
+    %r0 = LI 44
+    %4:gprc = ADD4 killed %2, killed %r0
     ; CHECK: addi 3, 3, 44
     %5:g8rc = EXTSW_32_64 killed %4
-    $x3 = COPY %5
-    BLR8 implicit $lr8, implicit $rm, implicit $x3
+    %x3 = COPY %5
+    BLR8 implicit %lr8, implicit %rm, implicit %x3
 
 ...
 ---
@@ -305,8 +305,8 @@ registers:
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: g8rc, preferred-register: '' }
 liveins:         
-  - { reg: '$x0', virtual-reg: '%0' }
-  - { reg: '$x4', virtual-reg: '%1' }
+  - { reg: '%x0', virtual-reg: '%0' }
+  - { reg: '%x4', virtual-reg: '%1' }
 frameInfo:       
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -329,15 +329,15 @@ stack:
 constants:       
 body:             |
   bb.0.entry:
-    liveins: $x0, $x4
+    liveins: %x0, %x4
   
-    %1:g8rc = COPY $x4
+    %1:g8rc = COPY %x4
     %0:g8rc_and_g8rc_nox0 = LI8 44
-    %2:g8rc = LDX %0, $x0 :: (load 8 from %ir.1, !tbaa !3)
+    %2:g8rc = LDX %0, %x0 :: (load 8 from %ir.1, !tbaa !3)
     ; CHECK: li 3, 44
     ; CHECK: ldx 3, 3, 0
-    $x3 = COPY %2
-    BLR8 implicit $lr8, implicit $rm, implicit $x3
+    %x3 = COPY %2
+    BLR8 implicit %lr8, implicit %rm, implicit %x3
 
 ...
 ---
@@ -353,8 +353,8 @@ registers:
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: g8rc, preferred-register: '' }
 liveins:         
-  - { reg: '$x3', virtual-reg: '%0' }
-  - { reg: '$x4', virtual-reg: '%1' }
+  - { reg: '%x3', virtual-reg: '%0' }
+  - { reg: '%x4', virtual-reg: '%1' }
 frameInfo:       
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -377,14 +377,14 @@ stack:
 constants:       
 body:             |
   bb.0.entry:
-    liveins: $x3, $x4
+    liveins: %x3, %x4
   
     %1:g8rc = LI8 44
     %0:g8rc_and_g8rc_nox0 = LI8 44
-    %2:g8rc = LDX $zero8, %1 :: (load 8 from %ir.1, !tbaa !3)
+    %2:g8rc = LDX %zero8, %1 :: (load 8 from %ir.1, !tbaa !3)
     ; CHECK: ld 3, 44(0)
-    $x3 = COPY %2
-    BLR8 implicit $lr8, implicit $rm, implicit $x3
+    %x3 = COPY %2
+    BLR8 implicit %lr8, implicit %rm, implicit %x3
 
 ...
 ---
@@ -400,8 +400,8 @@ registers:
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: g8rc, preferred-register: '' }
 liveins:         
-  - { reg: '$x3', virtual-reg: '%0' }
-  - { reg: '$x4', virtual-reg: '%1' }
+  - { reg: '%x3', virtual-reg: '%0' }
+  - { reg: '%x4', virtual-reg: '%1' }
 frameInfo:       
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -424,13 +424,13 @@ stack:
 constants:       
 body:             |
   bb.0.entry:
-    liveins: $x3, $x4
+    liveins: %x3, %x4
   
-    $x0 = LI8 44
-    %0:g8rc_and_g8rc_nox0 = COPY $x3
-    %2:g8rc = LDX %0, $x0 :: (load 8 from %ir.1, !tbaa !3)
+    %x0 = LI8 44
+    %0:g8rc_and_g8rc_nox0 = COPY %x3
+    %2:g8rc = LDX %0, %x0 :: (load 8 from %ir.1, !tbaa !3)
     ; CHECK: ld 3, 44(3)
-    $x3 = COPY %2
-    BLR8 implicit $lr8, implicit $rm, implicit $x3
+    %x3 = COPY %2
+    BLR8 implicit %lr8, implicit %rm, implicit %x3
 
 ...

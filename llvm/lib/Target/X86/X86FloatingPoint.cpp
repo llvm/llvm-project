@@ -39,7 +39,6 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
-#include "llvm/Config/llvm-config.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -435,7 +434,7 @@ bool FPS::processBasicBlock(MachineFunction &MF, MachineBasicBlock &BB) {
       PrevMI = &*std::prev(I);
 
     ++NumFP;  // Keep track of # of pseudo instrs
-    LLVM_DEBUG(dbgs() << "\nFPInst:\t" << MI);
+    DEBUG(dbgs() << "\nFPInst:\t" << MI);
 
     // Get dead variables list now because the MI pointer may be deleted as part
     // of processing!
@@ -465,13 +464,13 @@ bool FPS::processBasicBlock(MachineFunction &MF, MachineBasicBlock &BB) {
       // is in the clobber list and marked dead might not be live on the stack.
       static_assert(X86::FP7 - X86::FP0 == 7, "sequential FP regnumbers");
       if (Reg >= X86::FP0 && Reg <= X86::FP6 && isLive(Reg-X86::FP0)) {
-        LLVM_DEBUG(dbgs() << "Register FP#" << Reg - X86::FP0 << " is dead!\n");
+        DEBUG(dbgs() << "Register FP#" << Reg-X86::FP0 << " is dead!\n");
         freeStackSlotAfter(I, Reg-X86::FP0);
       }
     }
 
     // Print out all of the instructions expanded to if -debug
-    LLVM_DEBUG({
+    DEBUG({
       MachineBasicBlock::iterator PrevI = PrevMI;
       if (I == PrevI) {
         dbgs() << "Just deleted pseudo instruction\n";
@@ -500,15 +499,15 @@ bool FPS::processBasicBlock(MachineFunction &MF, MachineBasicBlock &BB) {
 /// setupBlockStack - Use the live bundles to set up our model of the stack
 /// to match predecessors' live out stack.
 void FPS::setupBlockStack() {
-  LLVM_DEBUG(dbgs() << "\nSetting up live-ins for " << printMBBReference(*MBB)
-                    << " derived from " << MBB->getName() << ".\n");
+  DEBUG(dbgs() << "\nSetting up live-ins for " << printMBBReference(*MBB)
+               << " derived from " << MBB->getName() << ".\n");
   StackTop = 0;
   // Get the live-in bundle for MBB.
   const LiveBundle &Bundle =
     LiveBundles[Bundles->getBundle(MBB->getNumber(), false)];
 
   if (!Bundle.Mask) {
-    LLVM_DEBUG(dbgs() << "Block has no FP live-ins.\n");
+    DEBUG(dbgs() << "Block has no FP live-ins.\n");
     return;
   }
 
@@ -517,8 +516,8 @@ void FPS::setupBlockStack() {
 
   // Push the fixed live-in registers.
   for (unsigned i = Bundle.FixCount; i > 0; --i) {
-    LLVM_DEBUG(dbgs() << "Live-in st(" << (i - 1) << "): %fp"
-                      << unsigned(Bundle.FixStack[i - 1]) << '\n');
+    DEBUG(dbgs() << "Live-in st(" << (i-1) << "): %fp"
+                 << unsigned(Bundle.FixStack[i-1]) << '\n');
     pushReg(Bundle.FixStack[i-1]);
   }
 
@@ -527,7 +526,7 @@ void FPS::setupBlockStack() {
   // to be revived at the end of a short block. It might save a few instrs.
   unsigned Mask = calcLiveInMask(MBB, /*RemoveFPs=*/true);
   adjustLiveRegs(Mask, MBB->begin());
-  LLVM_DEBUG(MBB->dump());
+  DEBUG(MBB->dump());
 }
 
 /// finishBlockStack - Revive live-outs that are implicitly defined out of
@@ -539,8 +538,8 @@ void FPS::finishBlockStack() {
   if (MBB->succ_empty())
     return;
 
-  LLVM_DEBUG(dbgs() << "Setting up live-outs for " << printMBBReference(*MBB)
-                    << " derived from " << MBB->getName() << ".\n");
+  DEBUG(dbgs() << "Setting up live-outs for " << printMBBReference(*MBB)
+               << " derived from " << MBB->getName() << ".\n");
 
   // Get MBB's live-out bundle.
   unsigned BundleIdx = Bundles->getBundle(MBB->getNumber(), true);
@@ -552,18 +551,18 @@ void FPS::finishBlockStack() {
   adjustLiveRegs(Bundle.Mask, Term);
 
   if (!Bundle.Mask) {
-    LLVM_DEBUG(dbgs() << "No live-outs.\n");
+    DEBUG(dbgs() << "No live-outs.\n");
     return;
   }
 
   // Has the stack order been fixed yet?
-  LLVM_DEBUG(dbgs() << "LB#" << BundleIdx << ": ");
+  DEBUG(dbgs() << "LB#" << BundleIdx << ": ");
   if (Bundle.isFixed()) {
-    LLVM_DEBUG(dbgs() << "Shuffling stack to match.\n");
+    DEBUG(dbgs() << "Shuffling stack to match.\n");
     shuffleStackTop(Bundle.FixStack, Bundle.FixCount, Term);
   } else {
     // Not fixed yet, we get to choose.
-    LLVM_DEBUG(dbgs() << "Fixing stack order now.\n");
+    DEBUG(dbgs() << "Fixing stack order now.\n");
     Bundle.FixCount = StackTop;
     for (unsigned i = 0; i < StackTop; ++i)
       Bundle.FixStack[i] = getStackEntry(i);
@@ -600,14 +599,13 @@ static int Lookup(ArrayRef<TableEntry> Table, unsigned Opcode) {
 #ifdef NDEBUG
 #define ASSERT_SORTED(TABLE)
 #else
-#define ASSERT_SORTED(TABLE)                                                   \
-  {                                                                            \
-    static std::atomic<bool> TABLE##Checked(false);                            \
-    if (!TABLE##Checked.load(std::memory_order_relaxed)) {                     \
-      assert(std::is_sorted(std::begin(TABLE), std::end(TABLE)) &&             \
-             "All lookup tables must be sorted for efficient access!");        \
-      TABLE##Checked.store(true, std::memory_order_relaxed);                   \
-    }                                                                          \
+#define ASSERT_SORTED(TABLE)                                              \
+  { static bool TABLE##Checked = false;                                   \
+    if (!TABLE##Checked) {                                                \
+       assert(std::is_sorted(std::begin(TABLE), std::end(TABLE)) &&       \
+              "All lookup tables must be sorted for efficient access!");  \
+       TABLE##Checked = true;                                             \
+    }                                                                     \
   }
 #endif
 
@@ -895,8 +893,7 @@ void FPS::adjustLiveRegs(unsigned Mask, MachineBasicBlock::iterator I) {
   while (Kills && Defs) {
     unsigned KReg = countTrailingZeros(Kills);
     unsigned DReg = countTrailingZeros(Defs);
-    LLVM_DEBUG(dbgs() << "Renaming %fp" << KReg << " as imp %fp" << DReg
-                      << "\n");
+    DEBUG(dbgs() << "Renaming %fp" << KReg << " as imp %fp" << DReg << "\n");
     std::swap(Stack[getSlot(KReg)], Stack[getSlot(DReg)]);
     std::swap(RegMap[KReg], RegMap[DReg]);
     Kills &= ~(1 << KReg);
@@ -910,7 +907,7 @@ void FPS::adjustLiveRegs(unsigned Mask, MachineBasicBlock::iterator I) {
       unsigned KReg = getStackEntry(0);
       if (!(Kills & (1 << KReg)))
         break;
-      LLVM_DEBUG(dbgs() << "Popping %fp" << KReg << "\n");
+      DEBUG(dbgs() << "Popping %fp" << KReg << "\n");
       popStackAfter(I2);
       Kills &= ~(1 << KReg);
     }
@@ -919,7 +916,7 @@ void FPS::adjustLiveRegs(unsigned Mask, MachineBasicBlock::iterator I) {
   // Manually kill the rest.
   while (Kills) {
     unsigned KReg = countTrailingZeros(Kills);
-    LLVM_DEBUG(dbgs() << "Killing %fp" << KReg << "\n");
+    DEBUG(dbgs() << "Killing %fp" << KReg << "\n");
     freeStackSlotBefore(I, KReg);
     Kills &= ~(1 << KReg);
   }
@@ -927,14 +924,14 @@ void FPS::adjustLiveRegs(unsigned Mask, MachineBasicBlock::iterator I) {
   // Load zeros for all the imp-defs.
   while(Defs) {
     unsigned DReg = countTrailingZeros(Defs);
-    LLVM_DEBUG(dbgs() << "Defining %fp" << DReg << " as 0\n");
+    DEBUG(dbgs() << "Defining %fp" << DReg << " as 0\n");
     BuildMI(*MBB, I, DebugLoc(), TII->get(X86::LD_F0));
     pushReg(DReg);
     Defs &= ~(1 << DReg);
   }
 
   // Now we should have the correct registers live.
-  LLVM_DEBUG(dumpStack());
+  DEBUG(dumpStack());
   assert(StackTop == countPopulation(Mask) && "Live count mismatch");
 }
 
@@ -957,7 +954,7 @@ void FPS::shuffleStackTop(const unsigned char *FixStack,
     if (FixCount > 0)
       moveToTop(OldReg, I);
   }
-  LLVM_DEBUG(dumpStack());
+  DEBUG(dumpStack());
 }
 
 
@@ -1469,7 +1466,7 @@ void FPS::handleSpecialFP(MachineBasicBlock::iterator &Inst) {
   case TargetOpcode::IMPLICIT_DEF: {
     // All FP registers must be explicitly defined, so load a 0 instead.
     unsigned Reg = MI.getOperand(0).getReg() - X86::FP0;
-    LLVM_DEBUG(dbgs() << "Emitting LD_F0 for implicit FP" << Reg << '\n');
+    DEBUG(dbgs() << "Emitting LD_F0 for implicit FP" << Reg << '\n');
     BuildMI(*MBB, Inst, MI.getDebugLoc(), TII->get(X86::LD_F0));
     pushReg(Reg);
     break;
@@ -1574,9 +1571,8 @@ void FPS::handleSpecialFP(MachineBasicBlock::iterator &Inst) {
       MI.emitError("implicitly popped regs must be last on the x87 stack");
     unsigned NumSTPopped = countTrailingOnes(STPopped);
 
-    LLVM_DEBUG(dbgs() << "Asm uses " << NumSTUses << " fixed regs, pops "
-                      << NumSTPopped << ", and defines " << NumSTDefs
-                      << " regs.\n");
+    DEBUG(dbgs() << "Asm uses " << NumSTUses << " fixed regs, pops "
+                 << NumSTPopped << ", and defines " << NumSTDefs << " regs.\n");
 
 #ifndef NDEBUG
     // If any input operand uses constraint "f", all output register
@@ -1614,10 +1610,7 @@ void FPS::handleSpecialFP(MachineBasicBlock::iterator &Inst) {
       STUsesArray[I] = I;
 
     shuffleStackTop(STUsesArray, NumSTUses, Inst);
-    LLVM_DEBUG({
-      dbgs() << "Before asm: ";
-      dumpStack();
-    });
+    DEBUG({dbgs() << "Before asm: "; dumpStack();});
 
     // With the stack layout fixed, rewrite the FP registers.
     for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
@@ -1665,7 +1658,7 @@ void FPS::handleSpecialFP(MachineBasicBlock::iterator &Inst) {
   // We want to leave I pointing to the previous instruction, but what if we
   // just erased the first instruction?
   if (Inst == MBB->begin()) {
-    LLVM_DEBUG(dbgs() << "Inserting dummy KILL\n");
+    DEBUG(dbgs() << "Inserting dummy KILL\n");
     Inst = BuildMI(*MBB, Inst, DebugLoc(), TII->get(TargetOpcode::KILL));
   } else
     --Inst;
@@ -1680,7 +1673,7 @@ void FPS::setKillFlags(MachineBasicBlock &MBB) const {
 
   for (MachineBasicBlock::reverse_iterator I = MBB.rbegin(), E = MBB.rend();
        I != E; ++I) {
-    if (I->isDebugInstr())
+    if (I->isDebugValue())
       continue;
 
     std::bitset<8> Defs;

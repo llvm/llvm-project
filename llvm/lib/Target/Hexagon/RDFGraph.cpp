@@ -893,7 +893,7 @@ void DataFlowGraph::build(unsigned Options) {
     NodeAddr<BlockNode*> BA = newBlock(Func, &B);
     BlockNodes.insert(std::make_pair(&B, BA));
     for (MachineInstr &I : B) {
-      if (I.isDebugInstr())
+      if (I.isDebugValue())
         continue;
       buildStmt(BA, I);
     }
@@ -1471,7 +1471,7 @@ void DataFlowGraph::buildPhis(BlockRefsMap &PhiM, RegisterSet &AllRefs,
   // and add a def for each S in the closure.
 
   // Sort the refs so that the phis will be created in a deterministic order.
-  llvm::sort(MaxRefs.begin(), MaxRefs.end());
+  std::sort(MaxRefs.begin(), MaxRefs.end());
   // Remove duplicates.
   auto NewEnd = std::unique(MaxRefs.begin(), MaxRefs.end());
   MaxRefs.erase(NewEnd, MaxRefs.end());

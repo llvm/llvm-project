@@ -95,8 +95,6 @@ class LLVM_LIBRARY_VISIBILITY X86AsmPrinter : public AsmPrinter {
   void LowerPATCHABLE_RET(const MachineInstr &MI, X86MCInstLower &MCIL);
   void LowerPATCHABLE_TAIL_CALL(const MachineInstr &MI, X86MCInstLower &MCIL);
   void LowerPATCHABLE_EVENT_CALL(const MachineInstr &MI, X86MCInstLower &MCIL);
-  void LowerPATCHABLE_TYPED_EVENT_CALL(const MachineInstr &MI,
-                                       X86MCInstLower &MCIL);
 
   void LowerFENTRY_CALL(const MachineInstr &MI, X86MCInstLower &MCIL);
 
@@ -130,7 +128,7 @@ public:
                              unsigned AsmVariant, const char *ExtraCode,
                              raw_ostream &OS) override;
 
-  /// Return the symbol for the specified constant pool entry.
+  /// \brief Return the symbol for the specified constant pool entry.
   MCSymbol *GetCPISymbol(unsigned CPID) const override;
 
   bool doInitialization(Module &M) override {

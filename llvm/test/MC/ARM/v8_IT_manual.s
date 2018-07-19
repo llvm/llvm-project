@@ -695,6 +695,9 @@ it ge
 strexge r0, r0, [pc]
 @ CHECK: [[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
+strdge r0, r0, [r0], #-0
+@ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
+it ge
 strdge r0, r0, [r1], #-0
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
@@ -738,6 +741,9 @@ strdge r0, r0, [lr], #-0
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
 strdge r0, r0, [pc], #-0
+@ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
+it ge
+strdge r0, r0, [r0], #0
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
 strdge r0, r0, [r1], #0
@@ -833,6 +839,9 @@ it ge
 strdge r0, r0, [pc, #-0]
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
+strdge r0, r0, [r0, #-0]!
+@ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
+it ge
 strdge r0, r0, [r1, #-0]!
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
@@ -878,6 +887,9 @@ it ge
 strdge r0, r0, [pc, #-0]!
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
+strdge r0, r0, [r0]
+@ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
+it ge
 strdge r0, r0, [r1]
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
@@ -921,6 +933,9 @@ strdge r0, r0, [lr]
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
 strdge r0, r0, [pc]
+@ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
+it ge
+strdge r0, r0, [r0, #0]!
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
 strdge r0, r0, [r1, #0]!

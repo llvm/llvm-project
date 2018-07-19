@@ -91,9 +91,9 @@ guidance below to help you know what to expect.
 
 Each toolchain provides a good reference for what it accepts:
 
-* Clang: https://clang.llvm.org/cxx_status.html
-* GCC: https://gcc.gnu.org/projects/cxx-status.html#cxx11
-* MSVC: https://msdn.microsoft.com/en-us/library/hh567368.aspx
+* Clang: http://clang.llvm.org/cxx_status.html
+* GCC: http://gcc.gnu.org/projects/cxx0x.html
+* MSVC: http://msdn.microsoft.com/en-us/library/hh567368.aspx
 
 In most cases, the MSVC list will be the dominating factor. Here is a summary
 of the features that are expected to work. Features not on this list are
@@ -184,7 +184,7 @@ you hit a type trait which doesn't work we can then add support to LLVM's
 traits header to emulate it.
 
 .. _the libstdc++ manual:
-  https://gcc.gnu.org/onlinedocs/gcc-4.8.0/libstdc++/manual/manual/status.html#status.iso.2011
+  http://gcc.gnu.org/onlinedocs/gcc-4.8.0/libstdc++/manual/manual/status.html#status.iso.2011
 
 Other Languages
 ---------------
@@ -591,7 +591,7 @@ understood for formatting nested function calls. Examples:
 This formatting scheme also makes it particularly easy to get predictable,
 consistent, and automatic formatting with tools like `Clang Format`_.
 
-.. _Clang Format: https://clang.llvm.org/docs/ClangFormat.html
+.. _Clang Format: http://clang.llvm.org/docs/ClangFormat.html
 
 Language and Compiler Issues
 ----------------------------
@@ -667,14 +667,14 @@ Do not use Static Constructors
 Static constructors and destructors (e.g. global variables whose types have a
 constructor or destructor) should not be added to the code base, and should be
 removed wherever possible.  Besides `well known problems
-<https://yosefk.com/c++fqa/ctors.html#fqa-10.12>`_ where the order of
+<http://yosefk.com/c++fqa/ctors.html#fqa-10.12>`_ where the order of
 initialization is undefined between globals in different source files, the
 entire concept of static constructors is at odds with the common use case of
 LLVM as a library linked into a larger application.
   
 Consider the use of LLVM as a JIT linked into another application (perhaps for
-`OpenGL, custom languages <https://llvm.org/Users.html>`_, `shaders in movies
-<https://llvm.org/devmtg/2010-11/Gritz-OpenShadingLang.pdf>`_, etc). Due to the
+`OpenGL, custom languages <http://llvm.org/Users.html>`_, `shaders in movies
+<http://llvm.org/devmtg/2010-11/Gritz-OpenShadingLang.pdf>`_, etc). Due to the
 design of static constructors, they must be executed at startup time of the
 entire application, regardless of whether or how LLVM is used in that larger
 application.  There are two problems with this:
@@ -692,7 +692,7 @@ target or other library into an application, but static constructors violate
 this goal.
   
 That said, LLVM unfortunately does contain static constructors.  It would be a
-`great project <https://llvm.org/PR11944>`_ for someone to purge all static
+`great project <http://llvm.org/PR11944>`_ for someone to purge all static
 constructors from LLVM, and then enable the ``-Wglobal-constructors`` warning
 flag (when building with Clang) to ensure we do not regress in the future.
 
@@ -826,71 +826,33 @@ As a rule of thumb, in case an ordered result is expected, remember to
 sort an unordered container before iteration. Or use ordered containers
 like vector/MapVector/SetVector if you want to iterate pointer keys.
 
-Beware of non-deterministic sorting order of equal elements
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-std::sort uses a non-stable sorting algorithm in which the order of equal
-elements is not guaranteed to be preserved. Thus using std::sort for a
-container having equal elements may result in non-determinstic behavior.
-To uncover such instances of non-determinism, LLVM has introduced a new
-llvm::sort wrapper function. For an EXPENSIVE_CHECKS build this will randomly
-shuffle the container before sorting. As a rule of thumb, always make sure to
-use llvm::sort instead of std::sort.
-
 Style Issues
 ============
 
 The High-Level Issues
 ---------------------
 
-Self-contained Headers
-^^^^^^^^^^^^^^^^^^^^^^
+A Public Header File **is** a Module
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Header files should be self-contained (compile on their own) and end in .h.
-Non-header files that are meant for inclusion should end in .inc and be used
-sparingly.
+C++ doesn't do too well in the modularity department.  There is no real
+encapsulation or data hiding (unless you use expensive protocol classes), but it
+is what we have to work with.  When you write a public header file (in the LLVM
+source tree, they live in the top level "``include``" directory), you are
+defining a module of functionality.
 
-All header files should be self-contained. Users and refactoring tools should
-not have to adhere to special conditions to include the header. Specifically, a
-header should have header guards and include all other headers it needs.
+Ideally, modules should be completely independent of each other, and their
+header files should only ``#include`` the absolute minimum number of headers
+possible. A module is not just a class, a function, or a namespace: it's a
+collection of these that defines an interface.  This interface may be several
+functions, classes, or data structures, but the important issue is how they work
+together.
 
-There are rare cases where a file designed to be included is not
-self-contained. These are typically intended to be included at unusual
-locations, such as the middle of another file. They might not use header
-guards, and might not include their prerequisites. Name such files with the
-.inc extension. Use sparingly, and prefer self-contained headers when possible.
-
-In general, a header should be implemented by one or more ``.cpp`` files.  Each
+In general, a module should be implemented by one or more ``.cpp`` files.  Each
 of these ``.cpp`` files should include the header that defines their interface
-first.  This ensures that all of the dependences of the header have been
-properly added to the header itself, and are not implicit.  System headers
-should be included after user headers for a translation unit.
-
-Library Layering
-^^^^^^^^^^^^^^^^
-
-A directory of header files (for example ``include/llvm/Foo``) defines a
-library (``Foo``). Dependencies between libraries are defined by the
-``LLVMBuild.txt`` file in their implementation (``lib/Foo``). One library (both
-its headers and implementation) should only use things from the libraries
-listed in its dependencies.
-
-Some of this constraint can be enforced by classic Unix linkers (Mac & Windows
-linkers, as well as lld, do not enforce this constraint). A Unix linker
-searches left to right through the libraries specified on its command line and
-never revisits a library. In this way, no circular dependencies between
-libraries can exist.
-
-This doesn't fully enforce all inter-library dependencies, and importantly
-doesn't enforce header file circular dependencies created by inline functions.
-A good way to answer the "is this layered correctly" would be to consider
-whether a Unix linker would succeed at linking the program if all inline
-functions were defined out-of-line. (& for all valid orderings of dependencies
-- since linking resolution is linear, it's possible that some implicit
-dependencies can sneak through: A depends on B and C, so valid orderings are
-"C B A" or "B C A", in both cases the explicit dependencies come before their
-use. But in the first case, B could still link successfully if it implicitly
-depended on C, or the opposite in the second case)
+first.  This ensures that all of the dependences of the module header have been
+properly added to the module header itself, and are not implicit.  System
+headers should be included after user headers for a translation unit.
 
 .. _minimal list of #includes:
 
@@ -1697,12 +1659,12 @@ A lot of these comments and recommendations have been culled from other sources.
 Two particularly important books for our work are:
 
 #. `Effective C++
-   <https://www.amazon.com/Effective-Specific-Addison-Wesley-Professional-Computing/dp/0321334876>`_
+   <http://www.amazon.com/Effective-Specific-Addison-Wesley-Professional-Computing/dp/0321334876>`_
    by Scott Meyers.  Also interesting and useful are "More Effective C++" and
    "Effective STL" by the same author.
 
 #. `Large-Scale C++ Software Design
-   <https://www.amazon.com/Large-Scale-Software-Design-John-Lakos/dp/0201633620>`_
+   <http://www.amazon.com/Large-Scale-Software-Design-John-Lakos/dp/0201633620/ref=sr_1_1>`_
    by John Lakos
 
 If you get some free time, and you haven't read them: do so, you might learn

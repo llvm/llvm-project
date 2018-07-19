@@ -65,17 +65,17 @@ public:
   /// floating points.
   BlockFrequency getBlockFreq(const BasicBlock *BB) const;
 
-  /// Returns the estimated profile count of \p BB.
+  /// \brief Returns the estimated profile count of \p BB.
   /// This computes the relative block frequency of \p BB and multiplies it by
   /// the enclosing function's count (if available) and returns the value.
   Optional<uint64_t> getBlockProfileCount(const BasicBlock *BB) const;
 
-  /// Returns the estimated profile count of \p Freq.
+  /// \brief Returns the estimated profile count of \p Freq.
   /// This uses the frequency \p Freq and multiplies it by
   /// the enclosing function's count (if available) and returns the value.
   Optional<uint64_t> getProfileCountFromFreq(uint64_t Freq) const;
 
-  /// Returns true if \p BB is an irreducible loop header
+  /// \brief Returns true if \p BB is an irreducible loop header
   /// block. Otherwise false.
   bool isIrrLoopHeader(const BasicBlock *BB);
 
@@ -105,7 +105,7 @@ public:
   void print(raw_ostream &OS) const;
 };
 
-/// Analysis pass which computes \c BlockFrequencyInfo.
+/// \brief Analysis pass which computes \c BlockFrequencyInfo.
 class BlockFrequencyAnalysis
     : public AnalysisInfoMixin<BlockFrequencyAnalysis> {
   friend AnalysisInfoMixin<BlockFrequencyAnalysis>;
@@ -113,14 +113,14 @@ class BlockFrequencyAnalysis
   static AnalysisKey Key;
 
 public:
-  /// Provide the result type for this analysis pass.
+  /// \brief Provide the result type for this analysis pass.
   using Result = BlockFrequencyInfo;
 
-  /// Run the analysis pass over a function and produce BFI.
+  /// \brief Run the analysis pass over a function and produce BFI.
   Result run(Function &F, FunctionAnalysisManager &AM);
 };
 
-/// Printer pass for the \c BlockFrequencyInfo results.
+/// \brief Printer pass for the \c BlockFrequencyInfo results.
 class BlockFrequencyPrinterPass
     : public PassInfoMixin<BlockFrequencyPrinterPass> {
   raw_ostream &OS;
@@ -131,7 +131,7 @@ public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-/// Legacy analysis pass which computes \c BlockFrequencyInfo.
+/// \brief Legacy analysis pass which computes \c BlockFrequencyInfo.
 class BlockFrequencyInfoWrapperPass : public FunctionPass {
   BlockFrequencyInfo BFI;
 

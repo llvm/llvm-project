@@ -71,7 +71,7 @@ public:
 
   StringRef getPassName() const override { return "AArch64 Assembly Printer"; }
 
-  /// Wrapper for MCInstLowering.lowerOperand() for the
+  /// \brief Wrapper for MCInstLowering.lowerOperand() for the
   /// tblgen'erated pseudo lowering.
   bool lowerOperand(const MachineOperand &MO, MCOperand &MCOp) const {
     return MCInstLowering.lowerOperand(MO, MCOp);
@@ -88,7 +88,7 @@ public:
 
   void EmitSled(const MachineInstr &MI, SledKind Kind);
 
-  /// tblgen'erated driver function for lowering simple MI->MC
+  /// \brief tblgen'erated driver function for lowering simple MI->MC
   /// pseudo instructions.
   bool emitPseudoExpansionLowering(MCStreamer &OutStreamer,
                                    const MachineInstr *MI);
@@ -131,7 +131,7 @@ private:
 
   AArch64FunctionInfo *AArch64FI = nullptr;
 
-  /// Emit the LOHs contained in AArch64FI.
+  /// \brief Emit the LOHs contained in AArch64FI.
   void EmitLOHs();
 
   /// Emit instruction to set float register to zero.
@@ -210,6 +210,29 @@ void AArch64AsmPrinter::EmitEndOfAsmFile(Module &M) {
     OutStreamer->EmitAssemblerFlag(MCAF_SubsectionsViaSymbols);
     SM.serializeToStackMapSection();
   }
+
+  if (TT.isOSBinFormatCOFF()) {
+    const auto &TLOF =
+        static_cast<const TargetLoweringObjectFileCOFF &>(getObjFileLowering());
+
+    std::string Flags;
+    raw_string_ostream OS(Flags);
+
+    for (const auto &Function : M)
+      TLOF.emitLinkerFlagsForGlobal(OS, &Function);
+    for (const auto &Global : M.globals())
+      TLOF.emitLinkerFlagsForGlobal(OS, &Global);
+    for (const auto &Alias : M.aliases())
+      TLOF.emitLinkerFlagsForGlobal(OS, &Alias);
+
+    OS.flush();
+
+    // Output collected flags
+    if (!Flags.empty()) {
+      OutStreamer->SwitchSection(TLOF.getDrectveSection());
+      OutStreamer->EmitBytes(Flags);
+    }
+  }
 }
 
 void AArch64AsmPrinter::EmitLOHs() {
@@ -274,11 +297,6 @@ void AArch64AsmPrinter::printOperand(const MachineInstr *MI, unsigned OpNum,
 
     Sym->print(O, MAI);
     printOffset(MO.getOffset(), O);
-    break;
-  }
-  case MachineOperand::MO_BlockAddress: {
-    MCSymbol *Sym = GetBlockAddressSymbol(MO.getBlockAddress());
-    Sym->print(O, MAI);
     break;
   }
   }

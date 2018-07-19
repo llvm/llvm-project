@@ -276,9 +276,8 @@ AliasResult CFLSteensAAResult::query(const MemoryLocation &LocA,
   if (!MaybeFnA && !MaybeFnB) {
     // The only times this is known to happen are when globals + InlineAsm are
     // involved
-    LLVM_DEBUG(
-        dbgs()
-        << "CFLSteensAA: could not extract parent function information.\n");
+    DEBUG(dbgs()
+          << "CFLSteensAA: could not extract parent function information.\n");
     return MayAlias;
   }
 

@@ -261,19 +261,3 @@ entry:
   call void @use_vec(<4 x i64 addrspace(1) *> %vec2)
   ret void
 }
-
-declare <4 x i64 addrspace(1)*> @def_vec() "gc-leaf-function"
-
-define void @test12(<4 x i64 addrspace(1)*> %vec1) gc "statepoint-example" {
-; CHECK-LABEL: @test12(
-; CHECK: @llvm.experimental.gc.statepoint.p0f_isVoidf{{.*}}<4 x i64 addrspace(1)*> %vec)
-; CHECK-NEXT: %vec.relocated = call coldcc <4 x i8 addrspace(1)*> @llvm.experimental.gc.relocate.v4p1i8(
-; CHECK-NEXT: %vec.relocated.casted = bitcast <4 x i8 addrspace(1)*> %vec.relocated to <4 x i64 addrspace(1)*>
-; CHECK-NEXT: call void @use_vec(<4 x i64 addrspace(1)*> %vec.relocated.casted)
-; CHECK-NEXT: ret void
-entry:
-  %vec = call <4 x i64 addrspace(1)*> @def_vec()
-  call void @do_safepoint() [ "deopt"() ]
-  call void @use_vec(<4 x i64 addrspace(1)*> %vec)
-  ret void
-}

@@ -61,7 +61,7 @@ enum AlignTypeEnum {
 // sunk down to an FTTI element that is queried rather than a global
 // preference.
 
-/// Layout alignment element.
+/// \brief Layout alignment element.
 ///
 /// Stores the alignment data associated with a given alignment type (integer,
 /// vector, float) and type bit width.
@@ -69,7 +69,7 @@ enum AlignTypeEnum {
 /// \note The unusual order of elements in the structure attempts to reduce
 /// padding and make the structure slightly more cache friendly.
 struct LayoutAlignElem {
-  /// Alignment type from \c AlignTypeEnum
+  /// \brief Alignment type from \c AlignTypeEnum
   unsigned AlignType : 8;
   unsigned TypeBitWidth : 24;
   unsigned ABIAlign : 16;
@@ -81,7 +81,7 @@ struct LayoutAlignElem {
   bool operator==(const LayoutAlignElem &rhs) const;
 };
 
-/// Layout pointer alignment element.
+/// \brief Layout pointer alignment element.
 ///
 /// Stores the alignment data associated with a given pointer and address space.
 ///
@@ -92,17 +92,15 @@ struct PointerAlignElem {
   unsigned PrefAlign;
   uint32_t TypeByteWidth;
   uint32_t AddressSpace;
-  uint32_t IndexWidth;
 
   /// Initializer
   static PointerAlignElem get(uint32_t AddressSpace, unsigned ABIAlign,
-                              unsigned PrefAlign, uint32_t TypeByteWidth,
-                              uint32_t IndexWidth);
+                              unsigned PrefAlign, uint32_t TypeByteWidth);
 
   bool operator==(const PointerAlignElem &rhs) const;
 };
 
-/// A parsed version of the target data layout string in and methods for
+/// \brief A parsed version of the target data layout string in and methods for
 /// querying it.
 ///
 /// The target data layout string is specified *by the target* - a frontend
@@ -115,7 +113,6 @@ private:
 
   unsigned AllocaAddrSpace;
   unsigned StackNaturalAlign;
-  unsigned ProgramAddrSpace;
 
   enum ManglingModeT {
     MM_None,
@@ -129,7 +126,7 @@ private:
 
   SmallVector<unsigned char, 8> LegalIntWidths;
 
-  /// Primitive type alignment data. This is sorted by type and bit
+  /// \brief Primitive type alignment data. This is sorted by type and bit
   /// width during construction.
   using AlignmentsTy = SmallVector<LayoutAlignElem, 16>;
   AlignmentsTy Alignments;
@@ -143,7 +140,7 @@ private:
   AlignmentsTy::iterator
   findAlignmentLowerBound(AlignTypeEnum AlignType, uint32_t BitWidth);
 
-  /// The string representation used to create this DataLayout
+  /// \brief The string representation used to create this DataLayout
   std::string StringRepresentation;
 
   using PointersTy = SmallVector<PointerAlignElem, 8>;
@@ -168,8 +165,7 @@ private:
   unsigned getAlignmentInfo(AlignTypeEnum align_type, uint32_t bit_width,
                             bool ABIAlign, Type *Ty) const;
   void setPointerAlignment(uint32_t AddrSpace, unsigned ABIAlign,
-                           unsigned PrefAlign, uint32_t TypeByteWidth,
-                           uint32_t IndexWidth);
+                           unsigned PrefAlign, uint32_t TypeByteWidth);
 
   /// Internal helper method that returns requested alignment for type.
   unsigned getAlignment(Type *Ty, bool abi_or_pref) const;
@@ -200,7 +196,6 @@ public:
     BigEndian = DL.isBigEndian();
     AllocaAddrSpace = DL.AllocaAddrSpace;
     StackNaturalAlign = DL.StackNaturalAlign;
-    ProgramAddrSpace = DL.ProgramAddrSpace;
     ManglingMode = DL.ManglingMode;
     LegalIntWidths = DL.LegalIntWidths;
     Alignments = DL.Alignments;
@@ -221,7 +216,7 @@ public:
   bool isLittleEndian() const { return !BigEndian; }
   bool isBigEndian() const { return BigEndian; }
 
-  /// Returns the string representation of the DataLayout.
+  /// \brief Returns the string representation of the DataLayout.
   ///
   /// This representation is in the same format accepted by the string
   /// constructor above. This should not be used to compare two DataLayout as
@@ -230,10 +225,10 @@ public:
     return StringRepresentation;
   }
 
-  /// Test if the DataLayout was constructed from an empty string.
+  /// \brief Test if the DataLayout was constructed from an empty string.
   bool isDefault() const { return StringRepresentation.empty(); }
 
-  /// Returns true if the specified type is known to be a native integer
+  /// \brief Returns true if the specified type is known to be a native integer
   /// type supported by the CPU.
   ///
   /// For example, i64 is not native on most 32-bit CPUs and i37 is not native
@@ -257,16 +252,8 @@ public:
   unsigned getStackAlignment() const { return StackNaturalAlign; }
   unsigned getAllocaAddrSpace() const { return AllocaAddrSpace; }
 
-  unsigned getProgramAddressSpace() const { return ProgramAddrSpace; }
-
   bool hasMicrosoftFastStdCallMangling() const {
     return ManglingMode == MM_WinCOFFX86;
-  }
-
-  /// Returns true if symbols with leading question marks should not receive IR
-  /// mangling. True for Windows mangling modes.
-  bool doNotMangleLeadingQuestionMark() const {
-    return ManglingMode == MM_WinCOFF || ManglingMode == MM_WinCOFFX86;
   }
 
   bool hasLinkerPrivateGlobalPrefix() const { return ManglingMode == MM_MachO; }
@@ -309,7 +296,7 @@ public:
 
   static const char *getManglingComponent(const Triple &T);
 
-  /// Returns true if the specified type fits in a native integer type
+  /// \brief Returns true if the specified type fits in a native integer type
   /// supported by the CPU.
   ///
   /// For example, if the CPU only supports i32 as a native integer type, then
@@ -333,9 +320,6 @@ public:
   /// FIXME: The defaults need to be removed once all of
   /// the backends/clients are updated.
   unsigned getPointerSize(unsigned AS = 0) const;
-
-  // Index size used for address calculation.
-  unsigned getIndexSize(unsigned AS) const;
 
   /// Return the address spaces containing non-integral pointers.  Pointers in
   /// this address space don't have a well-defined bitwise representation.
@@ -361,21 +345,12 @@ public:
     return getPointerSize(AS) * 8;
   }
 
-  /// Size in bits of index used for address calculation in getelementptr.
-  unsigned getIndexSizeInBits(unsigned AS) const {
-    return getIndexSize(AS) * 8;
-  }
-
   /// Layout pointer size, in bits, based on the type.  If this function is
   /// called with a pointer type, then the type size of the pointer is returned.
   /// If this function is called with a vector of pointers, then the type size
   /// of the pointer is returned.  This should only be called with a pointer or
   /// vector of pointers.
   unsigned getPointerTypeSizeInBits(Type *) const;
-
-  /// Layout size of the index used in GEP calculation.
-  /// The function should be called with pointer or vector of pointers type.
-  unsigned getIndexTypeSizeInBits(Type *Ty) const;
 
   unsigned getPointerTypeSize(Type *Ty) const {
     return getPointerTypeSizeInBits(Ty) / 8;
@@ -398,13 +373,13 @@ public:
   /// [*] The alloc size depends on the alignment, and thus on the target.
   ///     These values are for x86-32 linux.
 
-  /// Returns the number of bits necessary to hold the specified type.
+  /// \brief Returns the number of bits necessary to hold the specified type.
   ///
   /// For example, returns 36 for i36 and 80 for x86_fp80. The type passed must
   /// have a size (Type::isSized() must return true).
   uint64_t getTypeSizeInBits(Type *Ty) const;
 
-  /// Returns the maximum number of bytes that may be overwritten by
+  /// \brief Returns the maximum number of bytes that may be overwritten by
   /// storing the specified type.
   ///
   /// For example, returns 5 for i36 and 10 for x86_fp80.
@@ -412,7 +387,7 @@ public:
     return (getTypeSizeInBits(Ty) + 7) / 8;
   }
 
-  /// Returns the maximum number of bits that may be overwritten by
+  /// \brief Returns the maximum number of bits that may be overwritten by
   /// storing the specified type; always a multiple of 8.
   ///
   /// For example, returns 40 for i36 and 80 for x86_fp80.
@@ -420,7 +395,7 @@ public:
     return 8 * getTypeStoreSize(Ty);
   }
 
-  /// Returns the offset in bytes between successive objects of the
+  /// \brief Returns the offset in bytes between successive objects of the
   /// specified type, including alignment padding.
   ///
   /// This is the amount that alloca reserves for this type. For example,
@@ -430,7 +405,7 @@ public:
     return alignTo(getTypeStoreSize(Ty), getABITypeAlignment(Ty));
   }
 
-  /// Returns the offset in bits between successive objects of the
+  /// \brief Returns the offset in bits between successive objects of the
   /// specified type, including alignment padding; always a multiple of 8.
   ///
   /// This is the amount that alloca reserves for this type. For example,
@@ -439,69 +414,64 @@ public:
     return 8 * getTypeAllocSize(Ty);
   }
 
-  /// Returns the minimum ABI-required alignment for the specified type.
+  /// \brief Returns the minimum ABI-required alignment for the specified type.
   unsigned getABITypeAlignment(Type *Ty) const;
 
-  /// Returns the minimum ABI-required alignment for an integer type of
+  /// \brief Returns the minimum ABI-required alignment for an integer type of
   /// the specified bitwidth.
   unsigned getABIIntegerTypeAlignment(unsigned BitWidth) const;
 
-  /// Returns the preferred stack/global alignment for the specified
+  /// \brief Returns the preferred stack/global alignment for the specified
   /// type.
   ///
   /// This is always at least as good as the ABI alignment.
   unsigned getPrefTypeAlignment(Type *Ty) const;
 
-  /// Returns the preferred alignment for the specified type, returned as
+  /// \brief Returns the preferred alignment for the specified type, returned as
   /// log2 of the value (a shift amount).
   unsigned getPreferredTypeAlignmentShift(Type *Ty) const;
 
-  /// Returns an integer type with size at least as big as that of a
+  /// \brief Returns an integer type with size at least as big as that of a
   /// pointer in the given address space.
   IntegerType *getIntPtrType(LLVMContext &C, unsigned AddressSpace = 0) const;
 
-  /// Returns an integer (vector of integer) type with size at least as
+  /// \brief Returns an integer (vector of integer) type with size at least as
   /// big as that of a pointer of the given pointer (vector of pointer) type.
   Type *getIntPtrType(Type *) const;
 
-  /// Returns the smallest integer type with size at least as big as
+  /// \brief Returns the smallest integer type with size at least as big as
   /// Width bits.
   Type *getSmallestLegalIntType(LLVMContext &C, unsigned Width = 0) const;
 
-  /// Returns the largest legal integer type, or null if none are set.
+  /// \brief Returns the largest legal integer type, or null if none are set.
   Type *getLargestLegalIntType(LLVMContext &C) const {
     unsigned LargestSize = getLargestLegalIntTypeSizeInBits();
     return (LargestSize == 0) ? nullptr : Type::getIntNTy(C, LargestSize);
   }
 
-  /// Returns the size of largest legal integer type size, or 0 if none
+  /// \brief Returns the size of largest legal integer type size, or 0 if none
   /// are set.
   unsigned getLargestLegalIntTypeSizeInBits() const;
 
-  /// Returns the type of a GEP index.
-  /// If it was not specified explicitly, it will be the integer type of the
-  /// pointer width - IntPtrType.
-  Type *getIndexType(Type *PtrTy) const;
-
-  /// Returns the offset from the beginning of the type for the specified
+  /// \brief Returns the offset from the beginning of the type for the specified
   /// indices.
   ///
   /// Note that this takes the element type, not the pointer type.
   /// This is used to implement getelementptr.
   int64_t getIndexedOffsetInType(Type *ElemTy, ArrayRef<Value *> Indices) const;
 
-  /// Returns a StructLayout object, indicating the alignment of the
+  /// \brief Returns a StructLayout object, indicating the alignment of the
   /// struct, its size, and the offsets of its fields.
   ///
   /// Note that this information is lazily cached.
   const StructLayout *getStructLayout(StructType *Ty) const;
 
-  /// Returns the preferred alignment of the specified global.
+  /// \brief Returns the preferred alignment of the specified global.
   ///
   /// This includes an explicitly requested alignment (if the global has one).
   unsigned getPreferredAlignment(const GlobalVariable *GV) const;
 
-  /// Returns the preferred alignment of the specified global, returned
+  /// \brief Returns the preferred alignment of the specified global, returned
   /// in log form.
   ///
   /// This includes an explicitly requested alignment (if the global has one).
@@ -536,7 +506,7 @@ public:
   /// NB: Padding in nested element is not taken into account.
   bool hasPadding() const { return IsPadded; }
 
-  /// Given a valid byte offset into the structure, returns the structure
+  /// \brief Given a valid byte offset into the structure, returns the structure
   /// index that contains it.
   unsigned getElementContainingOffset(uint64_t Offset) const;
 

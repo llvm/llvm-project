@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains the declaration of the ARCInstPrinter class,
+/// \brief This file contains the declaration of the ARCInstPrinter class,
 /// which is used to print ARC MCInst to a .s file.
 ///
 //===----------------------------------------------------------------------===//

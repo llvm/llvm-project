@@ -103,9 +103,6 @@ static int modRMRequired(OpcodeType type,
   case XOPA_MAP:
     decision = &XOPA_MAP_SYM;
     break;
-  case THREEDNOW_MAP:
-    decision = &THREEDNOW_MAP_SYM;
-    break;
   }
 
   return decision->opcodeDecisions[insnContext].modRMDecisions[opcode].
@@ -149,9 +146,6 @@ static InstrUID decode(OpcodeType type,
     break;
   case XOPA_MAP:
     dec = &XOPA_MAP_SYM.opcodeDecisions[insnContext].modRMDecisions[opcode];
-    break;
-  case THREEDNOW_MAP:
-    dec = &THREEDNOW_MAP_SYM.opcodeDecisions[insnContext].modRMDecisions[opcode];
     break;
   }
 
@@ -298,9 +292,6 @@ static bool isREX(struct InternalInstruction *insn, uint8_t prefix) {
 static void setPrefixPresent(struct InternalInstruction *insn, uint8_t prefix) {
   uint8_t nextByte;
   switch (prefix) {
-  case 0xf0:
-    insn->hasLockPrefix = true;
-    break;
   case 0xf2:
   case 0xf3:
     if (lookAtByte(insn, &nextByte))
@@ -632,8 +623,6 @@ static int readPrefixes(struct InternalInstruction* insn) {
   return 0;
 }
 
-static int readModRM(struct InternalInstruction* insn);
-
 /*
  * readOpcode - Reads the opcode (excepting the ModR/M byte in the case of
  *   extended or escape opcodes).
@@ -726,17 +715,6 @@ static int readOpcode(struct InternalInstruction* insn) {
         return -1;
 
       insn->opcodeType = THREEBYTE_3A;
-    } else if (current == 0x0f) {
-      dbgprintf(insn, "Found a 3dnow escape prefix (0x%hhx)", current);
-
-      // Consume operands before the opcode to comply with the 3DNow encoding
-      if (readModRM(insn))
-        return -1;
-
-      if (consumeByte(insn, &current))
-        return -1;
-
-      insn->opcodeType = THREEDNOW_MAP;
     } else {
       dbgprintf(insn, "Didn't find a three-byte escape prefix");
 
@@ -756,6 +734,8 @@ static int readOpcode(struct InternalInstruction* insn) {
 
   return 0;
 }
+
+static int readModRM(struct InternalInstruction* insn);
 
 /*
  * getIDWithAttrMask - Determines the ID of an instruction, consuming
@@ -967,7 +947,6 @@ static int getID(struct InternalInstruction* insn, const void *miiArg) {
       attrMask |= ATTR_ADSIZE;
       break;
     }
-
   }
 
   if (insn->rexPrefix & 0x08) {
@@ -1060,15 +1039,13 @@ static int getID(struct InternalInstruction* insn, const void *miiArg) {
   }
 
   /*
-   * Absolute moves, umonitor, and movdir64b need special handling.
+   * Absolute moves need special handling.
    * -For 16-bit mode because the meaning of the AdSize and OpSize prefixes are
    *  inverted w.r.t.
    * -For 32-bit mode we need to ensure the ADSIZE prefix is observed in
    *  any position.
    */
-  if ((insn->opcodeType == ONEBYTE && ((insn->opcode & 0xFC) == 0xA0)) ||
-      (insn->opcodeType == TWOBYTE && (insn->opcode == 0xAE)) ||
-      (insn->opcodeType == THREEBYTE_38 && insn->opcode == 0xF8)) {
+  if (insn->opcodeType == ONEBYTE && ((insn->opcode & 0xFC) == 0xA0)) {
     /* Make sure we observed the prefixes in any position. */
     if (insn->hasAdSize)
       attrMask |= ATTR_ADSIZE;
@@ -1076,13 +1053,8 @@ static int getID(struct InternalInstruction* insn, const void *miiArg) {
       attrMask |= ATTR_OPSIZE;
 
     /* In 16-bit, invert the attributes. */
-    if (insn->mode == MODE_16BIT) {
-      attrMask ^= ATTR_ADSIZE;
-
-      /* The OpSize attribute is only valid with the absolute moves. */
-      if (insn->opcodeType == ONEBYTE && ((insn->opcode & 0xFC) == 0xA0))
-        attrMask ^= ATTR_OPSIZE;
-    }
+    if (insn->mode == MODE_16BIT)
+      attrMask ^= ATTR_ADSIZE | ATTR_OPSIZE;
 
     if (getIDWithAttrMask(&instructionID, insn, attrMask))
       return -1;
@@ -1307,7 +1279,7 @@ static int readDisplacement(struct InternalInstruction* insn) {
  * @return      - 0 if the information was successfully read; nonzero otherwise.
  */
 static int readModRM(struct InternalInstruction* insn) {
-  uint8_t mod, rm, reg, evexrm;
+  uint8_t mod, rm, reg;
 
   dbgprintf(insn, "readModRM()");
 
@@ -1344,18 +1316,16 @@ static int readModRM(struct InternalInstruction* insn) {
 
   reg |= rFromREX(insn->rexPrefix) << 3;
   rm  |= bFromREX(insn->rexPrefix) << 3;
-
-  evexrm = 0;
-  if (insn->vectorExtensionType == TYPE_EVEX && insn->mode == MODE_64BIT) {
+  if (insn->vectorExtensionType == TYPE_EVEX) {
     reg |= r2FromEVEX2of4(insn->vectorExtensionPrefix[1]) << 4;
-    evexrm = xFromEVEX2of4(insn->vectorExtensionPrefix[1]) << 4;
+    rm  |=  xFromEVEX2of4(insn->vectorExtensionPrefix[1]) << 4;
   }
 
   insn->reg = (Reg)(insn->regBase + reg);
 
   switch (insn->addressSize) {
-  case 2: {
-    EABase eaBaseBase = EA_BASE_BX_SI;
+  case 2:
+    insn->eaBaseBase = EA_BASE_BX_SI;
 
     switch (mod) {
     case 0x0:
@@ -1365,19 +1335,19 @@ static int readModRM(struct InternalInstruction* insn) {
         if (readDisplacement(insn))
           return -1;
       } else {
-        insn->eaBase = (EABase)(eaBaseBase + rm);
+        insn->eaBase = (EABase)(insn->eaBaseBase + rm);
         insn->eaDisplacement = EA_DISP_NONE;
       }
       break;
     case 0x1:
-      insn->eaBase = (EABase)(eaBaseBase + rm);
+      insn->eaBase = (EABase)(insn->eaBaseBase + rm);
       insn->eaDisplacement = EA_DISP_8;
       insn->displacementSize = 1;
       if (readDisplacement(insn))
         return -1;
       break;
     case 0x2:
-      insn->eaBase = (EABase)(eaBaseBase + rm);
+      insn->eaBase = (EABase)(insn->eaBaseBase + rm);
       insn->eaDisplacement = EA_DISP_16;
       if (readDisplacement(insn))
         return -1;
@@ -1389,10 +1359,9 @@ static int readModRM(struct InternalInstruction* insn) {
       break;
     }
     break;
-  }
   case 4:
-  case 8: {
-    EABase eaBaseBase = (insn->addressSize == 4 ? EA_BASE_EAX : EA_BASE_RAX);
+  case 8:
+    insn->eaBaseBase = (insn->addressSize == 4 ? EA_BASE_EAX : EA_BASE_RAX);
 
     switch (mod) {
     case 0x0:
@@ -1414,7 +1383,7 @@ static int readModRM(struct InternalInstruction* insn) {
           return -1;
         break;
       default:
-        insn->eaBase = (EABase)(eaBaseBase + rm);
+        insn->eaBase = (EABase)(insn->eaBaseBase + rm);
         break;
       }
       break;
@@ -1430,7 +1399,7 @@ static int readModRM(struct InternalInstruction* insn) {
           return -1;
         break;
       default:
-        insn->eaBase = (EABase)(eaBaseBase + rm);
+        insn->eaBase = (EABase)(insn->eaBaseBase + rm);
         if (readDisplacement(insn))
           return -1;
         break;
@@ -1438,17 +1407,16 @@ static int readModRM(struct InternalInstruction* insn) {
       break;
     case 0x3:
       insn->eaDisplacement = EA_DISP_NONE;
-      insn->eaBase = (EABase)(insn->eaRegBase + rm + evexrm);
+      insn->eaBase = (EABase)(insn->eaRegBase + rm);
       break;
     }
     break;
-  }
   } /* switch (insn->addressSize) */
 
   return 0;
 }
 
-#define GENERIC_FIXUP_FUNC(name, base, prefix, mask)      \
+#define GENERIC_FIXUP_FUNC(name, base, prefix)            \
   static uint16_t name(struct InternalInstruction *insn,  \
                        OperandType type,                  \
                        uint8_t index,                     \
@@ -1462,9 +1430,6 @@ static int readModRM(struct InternalInstruction* insn) {
     case TYPE_Rv:                                         \
       return base + index;                                \
     case TYPE_R8:                                         \
-      index &= mask;                                      \
-      if (index > 0xf)                                    \
-        *valid = 0;                                       \
       if (insn->rexPrefix &&                              \
          index >= 4 && index <= 7) {                      \
         return prefix##_SPL + (index - 4);                \
@@ -1472,19 +1437,10 @@ static int readModRM(struct InternalInstruction* insn) {
         return prefix##_AL + index;                       \
       }                                                   \
     case TYPE_R16:                                        \
-      index &= mask;                                      \
-      if (index > 0xf)                                    \
-        *valid = 0;                                       \
       return prefix##_AX + index;                         \
     case TYPE_R32:                                        \
-      index &= mask;                                      \
-      if (index > 0xf)                                    \
-        *valid = 0;                                       \
       return prefix##_EAX + index;                        \
     case TYPE_R64:                                        \
-      index &= mask;                                      \
-      if (index > 0xf)                                    \
-        *valid = 0;                                       \
       return prefix##_RAX + index;                        \
     case TYPE_ZMM:                                        \
       return prefix##_ZMM0 + index;                       \
@@ -1493,7 +1449,6 @@ static int readModRM(struct InternalInstruction* insn) {
     case TYPE_XMM:                                        \
       return prefix##_XMM0 + index;                       \
     case TYPE_VK:                                         \
-      index &= 0xf;                                       \
       if (index > 7)                                      \
         *valid = 0;                                       \
       return prefix##_K0 + index;                         \
@@ -1533,8 +1488,8 @@ static int readModRM(struct InternalInstruction* insn) {
  *                field is valid for the register class; 0 if not.
  * @return      - The proper value.
  */
-GENERIC_FIXUP_FUNC(fixupRegValue, insn->regBase,    MODRM_REG, 0x1f)
-GENERIC_FIXUP_FUNC(fixupRMValue,  insn->eaRegBase,  EA_REG,    0xf)
+GENERIC_FIXUP_FUNC(fixupRegValue, insn->regBase,    MODRM_REG)
+GENERIC_FIXUP_FUNC(fixupRMValue,  insn->eaRegBase,  EA_REG)
 
 /*
  * fixupReg - Consults an operand specifier to determine which of the
@@ -1715,7 +1670,7 @@ static int readVVVV(struct InternalInstruction* insn) {
     return -1;
 
   if (insn->mode != MODE_64BIT)
-    vvvv &= 0xf; // Can only clear bit 4. Bit 3 must be cleared later.
+    vvvv &= 0x7;
 
   insn->vvvv = static_cast<Reg>(vvvv);
   return 0;
@@ -1776,10 +1731,10 @@ static int readOperands(struct InternalInstruction* insn) {
 
       // If sibIndex was set to SIB_INDEX_NONE, index offset is 4.
       if (insn->sibIndex == SIB_INDEX_NONE)
-        insn->sibIndex = (SIBIndex)(insn->sibIndexBase + 4);
+        insn->sibIndex = (SIBIndex)4;
 
       // If EVEX.v2 is set this is one of the 16-31 registers.
-      if (insn->vectorExtensionType == TYPE_EVEX && insn->mode == MODE_64BIT &&
+      if (insn->vectorExtensionType == TYPE_EVEX &&
           v2FromEVEX4of4(insn->vectorExtensionPrefix[3]))
         insn->sibIndex = (SIBIndex)(insn->sibIndex + 16);
 
@@ -1880,8 +1835,6 @@ static int readOperands(struct InternalInstruction* insn) {
       needVVVV = 0; /* Mark that we have found a VVVV operand. */
       if (!hasVVVV)
         return -1;
-      if (insn->mode != MODE_64BIT)
-        insn->vvvv = static_cast<Reg>(insn->vvvv & 0x7);
       if (fixupReg(insn, &Op))
         return -1;
       break;

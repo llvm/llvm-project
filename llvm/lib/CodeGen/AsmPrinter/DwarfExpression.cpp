@@ -123,10 +123,7 @@ bool DwarfExpression::addMachineReg(const TargetRegisterInfo &TRI,
   const TargetRegisterClass *RC = TRI.getMinimalPhysRegClass(MachineReg);
   unsigned RegSize = TRI.getRegSizeInBits(*RC);
   // Keep track of the bits in the register we already emitted, so we
-  // can avoid emitting redundant aliasing subregs. Because this is
-  // just doing a greedy scan of all subregisters, it is possible that
-  // this doesn't find a combination of subregisters that fully cover
-  // the register (even though one may exist).
+  // can avoid emitting redundant aliasing subregs.
   SmallBitVector Coverage(RegSize, false);
   for (MCSubRegIterator SR(MachineReg, &TRI); SR.isValid(); ++SR) {
     unsigned Idx = TRI.getSubRegIndex(MachineReg, *SR);
@@ -146,7 +143,7 @@ bool DwarfExpression::addMachineReg(const TargetRegisterInfo &TRI,
     if (CurSubReg.test(Coverage)) {
       // Emit a piece for any gap in the coverage.
       if (Offset > CurPos)
-        DwarfRegs.push_back({-1, Offset - CurPos, "no DWARF register encoding"});
+        DwarfRegs.push_back({-1, Offset - CurPos, nullptr});
       DwarfRegs.push_back(
           {Reg, std::min<unsigned>(Size, MaxSize - Offset), "sub-register"});
       if (Offset >= MaxSize)
@@ -157,13 +154,8 @@ bool DwarfExpression::addMachineReg(const TargetRegisterInfo &TRI,
       CurPos = Offset + Size;
     }
   }
-  // Failed to find any DWARF encoding.
-  if (CurPos == 0)
-    return false;
-  // Found a partial or complete DWARF encoding.
-  if (CurPos < RegSize)
-    DwarfRegs.push_back({-1, RegSize - CurPos, "no DWARF register encoding"});
-  return true;
+
+  return CurPos;
 }
 
 void DwarfExpression::addStackValue() {
@@ -357,14 +349,11 @@ void DwarfExpression::addExpression(DIExpressionCursor &&ExprCursor,
     case dwarf::DW_OP_shl:
     case dwarf::DW_OP_shr:
     case dwarf::DW_OP_shra:
-    case dwarf::DW_OP_lit0:
-    case dwarf::DW_OP_not:
-    case dwarf::DW_OP_dup:
       emitOp(Op->getOp());
       break;
     case dwarf::DW_OP_deref:
       assert(LocationKind != Register);
-      if (LocationKind != Memory && ::isMemoryLocation(ExprCursor))
+      if (LocationKind != Memory && isMemoryLocation(ExprCursor))
         // Turning this into a memory location description makes the deref
         // implicit.
         LocationKind = Memory;

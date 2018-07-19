@@ -13,11 +13,11 @@
 
 declare void @readnone() readnone
 ; CHECK: Function Attrs: readnone
-; CHECK-NEXT: declare void @readnone()
+; CHECK: declare void @readnone()
 
 declare void @unknown()
 ; CHECK-NOT: Function Attrs
-; CHECK-LABEL: declare void @unknown(){{ *$}}
+; CHECK: declare void @unknown()
 
 ; The @test1 function checks that when we refine an indirect call to a direct
 ; call we revisit the SCC passes to reflect the more precise information. This
@@ -26,7 +26,7 @@ declare void @unknown()
 define void @test1() {
 ; BEFORE-NOT: Function Attrs
 ; AFTER: Function Attrs: readnone
-; CHECK-LABEL: define void @test1()
+; CHECK: define void @test1()
 entry:
   %fptr = alloca void ()*
   store void ()* @readnone, void ()** %fptr
@@ -49,7 +49,7 @@ entry:
 
 declare void @readnone_with_arg(void ()**) readnone
 ; CHECK: Function Attrs: readnone
-; CHECK-LABEL: declare void @readnone_with_arg(void ()**)
+; CHECK: declare void @readnone_with_arg(void ()**)
 
 define void @test2_a(void ()** %ignore) {
 ; BEFORE-NOT: Function Attrs
@@ -76,7 +76,7 @@ define void @test2_b() {
 ; BEFORE-NOT: Function Attrs
 ; AFTER1: Function Attrs: readonly
 ; AFTER2: Function Attrs: readnone
-; CHECK-LABEL: define void @test2_b()
+; CHECK: define void @test2_b()
 entry:
   %f2ptr = alloca void ()*
   store void ()* @readnone, void ()** %f2ptr
@@ -96,20 +96,17 @@ entry:
 }
 
 declare i8* @memcpy(i8*, i8*, i64)
-; CHECK-LABEL: declare i8* @memcpy(
+; CHECK: declare i8* @memcpy(
 
 ; The @test3 function checks that when we refine an indirect call to an
 ; intrinsic we still revisit the SCC pass. This also covers cases where the
 ; value handle itself doesn't persist due to the nature of how instcombine
 ; creates the memcpy intrinsic call, and we rely on the count of indirect calls
 ; decreasing and the count of direct calls increasing.
-; Adding 'noinline' attribute to force attributes for improved matching.
-define void @test3(i8* %src, i8* %dest, i64 %size) noinline {
-; CHECK: Function Attrs
-; CHECK-NOT: read
-; CHECK-SAME: noinline
-; BEFORE-LABEL: define void @test3(i8* %src, i8* %dest, i64 %size)
-; AFTER-LABEL: define void @test3(i8* nocapture readonly %src, i8* nocapture %dest, i64 %size)
+define void @test3(i8* %src, i8* %dest, i64 %size) {
+; CHECK-NOT: Function Attrs
+; BEFORE: define void @test3(i8* %src, i8* %dest, i64 %size)
+; AFTER: define void @test3(i8* nocapture readonly %src, i8* nocapture %dest, i64 %size)
   %fptr = alloca i8* (i8*, i8*, i64)*
   store i8* (i8*, i8*, i64)* @memcpy, i8* (i8*, i8*, i64)** %fptr
   %f = load i8* (i8*, i8*, i64)*, i8* (i8*, i8*, i64)** %fptr
@@ -121,7 +118,7 @@ define void @test3(i8* %src, i8* %dest, i64 %size) noinline {
 ; A boring function that just keeps our declarations around.
 define void @keep(i8** %sink) {
 ; CHECK-NOT: Function Attrs
-; CHECK-LABEL: define void @keep(
+; CHECK: define void @keep(
 entry:
   store volatile i8* bitcast (void ()* @readnone to i8*), i8** %sink
   store volatile i8* bitcast (void ()* @unknown to i8*), i8** %sink

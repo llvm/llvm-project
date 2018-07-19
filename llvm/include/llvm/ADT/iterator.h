@@ -19,7 +19,7 @@
 
 namespace llvm {
 
-/// CRTP base class which implements the entire standard iterator facade
+/// \brief CRTP base class which implements the entire standard iterator facade
 /// in terms of a minimal subset of the interface.
 ///
 /// Use this when it is reasonable to implement most of the iterator
@@ -183,7 +183,7 @@ public:
   }
 };
 
-/// CRTP base class for adapting an iterator to a different type.
+/// \brief CRTP base class for adapting an iterator to a different type.
 ///
 /// This class can be used through CRTP to adapt one iterator into another.
 /// Typically this is done through providing in the derived class a custom \c
@@ -274,7 +274,7 @@ public:
   ReferenceT operator*() const { return *I; }
 };
 
-/// An iterator type that allows iterating over the pointees via some
+/// \brief An iterator type that allows iterating over the pointees via some
 /// other iterator.
 ///
 /// The typical usage of this is to expose a type that iterates over Ts, but
@@ -288,7 +288,7 @@ template <typename WrappedIteratorT,
               decltype(**std::declval<WrappedIteratorT>())>::type>
 struct pointee_iterator
     : iterator_adaptor_base<
-          pointee_iterator<WrappedIteratorT, T>, WrappedIteratorT,
+          pointee_iterator<WrappedIteratorT>, WrappedIteratorT,
           typename std::iterator_traits<WrappedIteratorT>::iterator_category,
           T> {
   pointee_iterator() = default;
@@ -311,7 +311,7 @@ make_pointee_range(RangeT &&Range) {
 template <typename WrappedIteratorT,
           typename T = decltype(&*std::declval<WrappedIteratorT>())>
 class pointer_iterator
-    : public iterator_adaptor_base<pointer_iterator<WrappedIteratorT, T>,
+    : public iterator_adaptor_base<pointer_iterator<WrappedIteratorT>,
                                    WrappedIteratorT, T> {
   mutable T Ptr;
 

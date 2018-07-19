@@ -24,7 +24,7 @@ class LoopDataPrefetchPass : public PassInfoMixin<LoopDataPrefetchPass> {
 public:
   LoopDataPrefetchPass() = default;
 
-  /// Run the pass over the function.
+  /// \brief Run the pass over the function.
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 

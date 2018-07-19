@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file implements a CFG stacking pass.
+/// \brief This file implements a CFG stacking pass.
 ///
 /// This pass inserts BLOCK and LOOP markers to mark the start of scopes, since
 /// scope boundaries serve as the labels for WebAssembly's control transfers.
@@ -57,10 +57,6 @@ public:
 } // end anonymous namespace
 
 char WebAssemblyCFGStackify::ID = 0;
-INITIALIZE_PASS(WebAssemblyCFGStackify, DEBUG_TYPE,
-                "Insert BLOCK and LOOP markers for WebAssembly scopes",
-                false, false)
-
 FunctionPass *llvm::createWebAssemblyCFGStackify() {
   return new WebAssemblyCFGStackify();
 }
@@ -127,8 +123,7 @@ static void PlaceBlockMarker(
   // Decide where in Header to put the BLOCK.
   MachineBasicBlock::iterator InsertPos;
   MachineLoop *HeaderLoop = MLI.getLoopFor(Header);
-  if (HeaderLoop &&
-      MBB.getNumber() > WebAssembly::getBottom(HeaderLoop)->getNumber()) {
+  if (HeaderLoop && MBB.getNumber() > LoopBottom(HeaderLoop)->getNumber()) {
     // Header is the header of a loop that does not lexically contain MBB, so
     // the BLOCK needs to be above the LOOP, after any END constructs.
     InsertPos = Header->begin();
@@ -148,10 +143,9 @@ static void PlaceBlockMarker(
   }
 
   // Add the BLOCK.
-  MachineInstr *Begin =
-      BuildMI(*Header, InsertPos, Header->findDebugLoc(InsertPos),
-              TII.get(WebAssembly::BLOCK))
-          .addImm(int64_t(WebAssembly::ExprType::Void));
+  MachineInstr *Begin = BuildMI(*Header, InsertPos, DebugLoc(),
+                                TII.get(WebAssembly::BLOCK))
+      .addImm(int64_t(WebAssembly::ExprType::Void));
 
   // Mark the end of the block.
   InsertPos = MBB.begin();
@@ -159,7 +153,7 @@ static void PlaceBlockMarker(
          InsertPos->getOpcode() == WebAssembly::END_LOOP &&
          LoopTops[&*InsertPos]->getParent()->getNumber() >= Header->getNumber())
     ++InsertPos;
-  MachineInstr *End = BuildMI(MBB, InsertPos, MBB.findPrevDebugLoc(InsertPos),
+  MachineInstr *End = BuildMI(MBB, InsertPos, DebugLoc(),
                               TII.get(WebAssembly::END_BLOCK));
   BlockTops[End] = Begin;
 
@@ -182,7 +176,7 @@ static void PlaceLoopMarker(
 
   // The operand of a LOOP is the first block after the loop. If the loop is the
   // bottom of the function, insert a dummy block at the end.
-  MachineBasicBlock *Bottom = WebAssembly::getBottom(Loop);
+  MachineBasicBlock *Bottom = LoopBottom(Loop);
   auto Iter = std::next(MachineFunction::iterator(Bottom));
   if (Iter == MF.end()) {
     MachineBasicBlock *Label = MF.CreateMachineBasicBlock();
@@ -199,14 +193,12 @@ static void PlaceLoopMarker(
   while (InsertPos != MBB.end() &&
          InsertPos->getOpcode() == WebAssembly::END_LOOP)
     ++InsertPos;
-  MachineInstr *Begin = BuildMI(MBB, InsertPos, MBB.findDebugLoc(InsertPos),
+  MachineInstr *Begin = BuildMI(MBB, InsertPos, DebugLoc(),
                                 TII.get(WebAssembly::LOOP))
-                            .addImm(int64_t(WebAssembly::ExprType::Void));
+      .addImm(int64_t(WebAssembly::ExprType::Void));
 
-  // Mark the end of the loop (using arbitrary debug location that branched
-  // to the loop end as its location).
-  DebugLoc EndDL = (*AfterLoop->pred_rbegin())->findBranchDebugLoc();
-  MachineInstr *End = BuildMI(*AfterLoop, AfterLoop->begin(), EndDL,
+  // Mark the end of the loop.
+  MachineInstr *End = BuildMI(*AfterLoop, AfterLoop->begin(), DebugLoc(),
                               TII.get(WebAssembly::END_LOOP));
   LoopTops[End] = Begin;
 
@@ -257,13 +249,12 @@ static void FixEndsAtEndOfFunction(
   case MVT::v8i16: retType = WebAssembly::ExprType::I16x8; break;
   case MVT::v4i32: retType = WebAssembly::ExprType::I32x4; break;
   case MVT::v4f32: retType = WebAssembly::ExprType::F32x4; break;
-  case MVT::ExceptRef: retType = WebAssembly::ExprType::ExceptRef; break;
   default: llvm_unreachable("unexpected return type");
   }
 
   for (MachineBasicBlock &MBB : reverse(MF)) {
     for (MachineInstr &MI : reverse(MBB)) {
-      if (MI.isPosition() || MI.isDebugInstr())
+      if (MI.isPosition() || MI.isDebugValue())
         continue;
       if (MI.getOpcode() == WebAssembly::END_BLOCK) {
         BlockTops[&MI]->getOperand(0).setImm(int32_t(retType));
@@ -284,8 +275,7 @@ static void FixEndsAtEndOfFunction(
 static void AppendEndToFunction(
     MachineFunction &MF,
     const WebAssemblyInstrInfo &TII) {
-  BuildMI(MF.back(), MF.back().end(),
-          MF.back().findPrevDebugLoc(MF.back().end()),
+  BuildMI(MF.back(), MF.back().end(), DebugLoc(),
           TII.get(WebAssembly::END_FUNCTION));
 }
 
@@ -358,13 +348,15 @@ static void PlaceMarkers(MachineFunction &MF, const MachineLoopInfo &MLI,
   FixEndsAtEndOfFunction(MF, MFI, BlockTops, LoopTops);
 
   // Add an end instruction at the end of the function body.
-  AppendEndToFunction(MF, TII);
+  if (!MF.getSubtarget<WebAssemblySubtarget>()
+        .getTargetTriple().isOSBinFormatELF())
+    AppendEndToFunction(MF, TII);
 }
 
 bool WebAssemblyCFGStackify::runOnMachineFunction(MachineFunction &MF) {
-  LLVM_DEBUG(dbgs() << "********** CFG Stackifying **********\n"
-                       "********** Function: "
-                    << MF.getName() << '\n');
+  DEBUG(dbgs() << "********** CFG Stackifying **********\n"
+                  "********** Function: "
+               << MF.getName() << '\n');
 
   const auto &MLI = getAnalysis<MachineLoopInfo>();
   auto &MDT = getAnalysis<MachineDominatorTree>();

@@ -8,41 +8,41 @@
 ;}
 ;
 ; CHECK:        DW_TAG_array_type
-; CHECK-NEXT:     DW_AT_type	(0x000000f8 "int")
+; CHECK-NEXT:     DW_AT_type	(cu + 0x00f8 "int")
+; CHECK-NOT: TAG      
+; CHECK:          DW_TAG_subrange_type
+; CHECK-NEXT:       DW_AT_type	(cu + {{.*}}"sizetype")
+; CHECK-NEXT:       DW_AT_count	(cu + {{.*}})
 ; CHECK-NOT: TAG
 ; CHECK:          DW_TAG_subrange_type
-; CHECK-NEXT:       DW_AT_type	(0x{{.*}}"__ARRAY_SIZE_TYPE__")
-; CHECK-NEXT:       DW_AT_count	(0x{{.*}})
+; CHECK-NEXT:       DW_AT_type	(cu + {{.*}} "sizetype")
+; CHECK-NEXT:       DW_AT_count	(cu + {{.*}})
 ; CHECK-NOT: TAG
 ; CHECK:          DW_TAG_subrange_type
-; CHECK-NEXT:       DW_AT_type	(0x{{.*}} "__ARRAY_SIZE_TYPE__")
-; CHECK-NEXT:       DW_AT_count	(0x{{.*}})
+; CHECK-NEXT:       DW_AT_type	(cu + {{.*}} "sizetype")
+; CHECK-NEXT:       DW_AT_count	(cu + {{.*}})
 ; CHECK-NOT: TAG
 ; CHECK:          DW_TAG_subrange_type
-; CHECK-NEXT:       DW_AT_type	(0x{{.*}} "__ARRAY_SIZE_TYPE__")
-; CHECK-NEXT:       DW_AT_count	(0x{{.*}})
-; CHECK-NOT: TAG
-; CHECK:          DW_TAG_subrange_type
-; CHECK-NEXT:       DW_AT_type	(0x{{.*}} "__ARRAY_SIZE_TYPE__")
-; CHECK-NEXT:       DW_AT_count	(0x{{.*}})
+; CHECK-NEXT:       DW_AT_type	(cu + {{.*}} "sizetype")
+; CHECK-NEXT:       DW_AT_count	(cu + {{.*}})
 ; CHECK:        DW_TAG_array_type
-; CHECK-NEXT:     DW_AT_type	(0x000000f8 "int")
+; CHECK-NEXT:     DW_AT_type	(cu + 0x00f8 "int")
+; CHECK-NOT: TAG      
+; CHECK:          DW_TAG_subrange_type
+; CHECK-NEXT:       DW_AT_type	(cu + {{.*}}"sizetype")
+; CHECK-NEXT:       DW_AT_count	(cu + {{.*}})
 ; CHECK-NOT: TAG
 ; CHECK:          DW_TAG_subrange_type
-; CHECK-NEXT:       DW_AT_type	(0x{{.*}}"__ARRAY_SIZE_TYPE__")
-; CHECK-NEXT:       DW_AT_count	(0x{{.*}})
+; CHECK-NEXT:       DW_AT_type	(cu + {{.*}} "sizetype")
+; CHECK-NEXT:       DW_AT_count	(cu + {{.*}})
 ; CHECK-NOT: TAG
 ; CHECK:          DW_TAG_subrange_type
-; CHECK-NEXT:       DW_AT_type	(0x{{.*}} "__ARRAY_SIZE_TYPE__")
-; CHECK-NEXT:       DW_AT_count	(0x{{.*}})
+; CHECK-NEXT:       DW_AT_type	(cu + {{.*}} "sizetype")
+; CHECK-NEXT:       DW_AT_count	(cu + {{.*}})
 ; CHECK-NOT: TAG
 ; CHECK:          DW_TAG_subrange_type
-; CHECK-NEXT:       DW_AT_type	(0x{{.*}} "__ARRAY_SIZE_TYPE__")
-; CHECK-NEXT:       DW_AT_count	(0x{{.*}})
-; CHECK-NOT: TAG
-; CHECK:          DW_TAG_subrange_type
-; CHECK-NEXT:       DW_AT_type	(0x{{.*}} "__ARRAY_SIZE_TYPE__")
-; CHECK-NEXT:       DW_AT_count	(0x{{.*}})
+; CHECK-NEXT:       DW_AT_type	(cu + {{.*}} "sizetype")
+; CHECK-NEXT:       DW_AT_count	(cu + {{.*}})
 
 
 source_filename = "/tmp/test.c"
@@ -101,7 +101,7 @@ attributes #1 = { minsize nounwind optsize }
 !5 = !{i32 1, !"wchar_size", i32 4}
 !6 = !{i32 7, !"PIC Level", i32 2}
 !7 = !{!"clang version 7.0.0 (trunk 324259) (llvm/trunk 324261)"}
-!8 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 1, type: !9, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !12)
+!8 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 1, type: !9, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !12)
 !9 = !DISubroutineType(types: !10)
 !10 = !{null, !11, !11, !11, !11}
 !11 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)

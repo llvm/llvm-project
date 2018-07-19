@@ -1,4 +1,4 @@
-# RUN: llc -O0 -mtriple arm-- -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -O0 -mtriple arm-- -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s
 --- |
   define void @test_mla() #0 { ret void }
   define void @test_mla_commutative() #0 { ret void }
@@ -30,23 +30,9 @@
 
   define void @test_movti16_0xffff() #2 { ret void }
 
-  define void @test_vnmuls() #3 { ret void }
-  define void @test_vnmuls_reassociate() #3 { ret void }
-  define void @test_vnmuld() #3 { ret void }
-
-  define void @test_vfnmas() #4 { ret void }
-  define void @test_vfnmad() #4 { ret void }
-
-  define void @test_vfmss() #4 { ret void }
-  define void @test_vfmsd() #4 { ret void }
-
-  define void @test_vfnmss() #4 { ret void }
-
   attributes #0 = { "target-features"="+v6" }
   attributes #1 = { "target-features"="-v6" }
   attributes #2 = { "target-features"="+v6t2" }
-  attributes #3 = { "target-features"="+vfp2" }
-  attributes #4 = { "target-features"="+vfp4" }
 ...
 ---
 name:            test_mla
@@ -63,24 +49,24 @@ registers:
   - { id: 4, class: gprb }
 body:             |
   bb.0:
-    liveins: $r0, $r1, $r2
+    liveins: %r0, %r1, %r2
 
-    %0(s32) = COPY $r0
-    %1(s32) = COPY $r1
-    %2(s32) = COPY $r2
-    ; CHECK: [[VREGX:%[0-9]+]]:gprnopc = COPY $r0
-    ; CHECK: [[VREGY:%[0-9]+]]:gprnopc = COPY $r1
-    ; CHECK: [[VREGZ:%[0-9]+]]:gprnopc = COPY $r2
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
+    %2(s32) = COPY %r2
+    ; CHECK: [[VREGX:%[0-9]+]]:gprnopc = COPY %r0
+    ; CHECK: [[VREGY:%[0-9]+]]:gprnopc = COPY %r1
+    ; CHECK: [[VREGZ:%[0-9]+]]:gprnopc = COPY %r2
 
     %3(s32) = G_MUL %0, %1
     %4(s32) = G_ADD %3, %2
-    ; CHECK: [[VREGR:%[0-9]+]]:gprnopc = MLA [[VREGX]], [[VREGY]], [[VREGZ]], 14, $noreg, $noreg
+    ; CHECK: [[VREGR:%[0-9]+]]:gprnopc = MLA [[VREGX]], [[VREGY]], [[VREGZ]], 14, %noreg, %noreg
 
-    $r0 = COPY %4(s32)
-    ; CHECK: $r0 = COPY [[VREGR]]
+    %r0 = COPY %4(s32)
+    ; CHECK: %r0 = COPY [[VREGR]]
 
-    BX_RET 14, $noreg, implicit $r0
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    BX_RET 14, %noreg, implicit %r0
+    ; CHECK: BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_mla_commutative
@@ -97,24 +83,24 @@ registers:
   - { id: 4, class: gprb }
 body:             |
   bb.0:
-    liveins: $r0, $r1, $r2
+    liveins: %r0, %r1, %r2
 
-    %0(s32) = COPY $r0
-    %1(s32) = COPY $r1
-    %2(s32) = COPY $r2
-    ; CHECK: [[VREGX:%[0-9]+]]:gprnopc = COPY $r0
-    ; CHECK: [[VREGY:%[0-9]+]]:gprnopc = COPY $r1
-    ; CHECK: [[VREGZ:%[0-9]+]]:gprnopc = COPY $r2
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
+    %2(s32) = COPY %r2
+    ; CHECK: [[VREGX:%[0-9]+]]:gprnopc = COPY %r0
+    ; CHECK: [[VREGY:%[0-9]+]]:gprnopc = COPY %r1
+    ; CHECK: [[VREGZ:%[0-9]+]]:gprnopc = COPY %r2
 
     %3(s32) = G_MUL %0, %1
     %4(s32) = G_ADD %2, %3
-    ; CHECK: [[VREGR:%[0-9]+]]:gprnopc = MLA [[VREGX]], [[VREGY]], [[VREGZ]], 14, $noreg, $noreg
+    ; CHECK: [[VREGR:%[0-9]+]]:gprnopc = MLA [[VREGX]], [[VREGY]], [[VREGZ]], 14, %noreg, %noreg
 
-    $r0 = COPY %4(s32)
-    ; CHECK: $r0 = COPY [[VREGR]]
+    %r0 = COPY %4(s32)
+    ; CHECK: %r0 = COPY [[VREGR]]
 
-    BX_RET 14, $noreg, implicit $r0
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    BX_RET 14, %noreg, implicit %r0
+    ; CHECK: BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_mla_v5
@@ -131,24 +117,24 @@ registers:
   - { id: 4, class: gprb }
 body:             |
   bb.0:
-    liveins: $r0, $r1, $r2
+    liveins: %r0, %r1, %r2
 
-    %0(s32) = COPY $r0
-    %1(s32) = COPY $r1
-    %2(s32) = COPY $r2
-    ; CHECK: [[VREGX:%[0-9]+]]:gprnopc = COPY $r0
-    ; CHECK: [[VREGY:%[0-9]+]]:gprnopc = COPY $r1
-    ; CHECK: [[VREGZ:%[0-9]+]]:gprnopc = COPY $r2
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
+    %2(s32) = COPY %r2
+    ; CHECK: [[VREGX:%[0-9]+]]:gprnopc = COPY %r0
+    ; CHECK: [[VREGY:%[0-9]+]]:gprnopc = COPY %r1
+    ; CHECK: [[VREGZ:%[0-9]+]]:gprnopc = COPY %r2
 
     %3(s32) = G_MUL %0, %1
     %4(s32) = G_ADD %3, %2
-    ; CHECK: [[VREGR:%[0-9]+]]:gprnopc = MLAv5 [[VREGX]], [[VREGY]], [[VREGZ]], 14, $noreg, $noreg
+    ; CHECK: [[VREGR:%[0-9]+]]:gprnopc = MLAv5 [[VREGX]], [[VREGY]], [[VREGZ]], 14, %noreg, %noreg
 
-    $r0 = COPY %4(s32)
-    ; CHECK: $r0 = COPY [[VREGR]]
+    %r0 = COPY %4(s32)
+    ; CHECK: %r0 = COPY [[VREGR]]
 
-    BX_RET 14, $noreg, implicit $r0
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    BX_RET 14, %noreg, implicit %r0
+    ; CHECK: BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_mls
@@ -165,24 +151,24 @@ registers:
   - { id: 4, class: gprb }
 body:             |
   bb.0:
-    liveins: $r0, $r1, $r2
+    liveins: %r0, %r1, %r2
 
-    %0(s32) = COPY $r0
-    %1(s32) = COPY $r1
-    %2(s32) = COPY $r2
-    ; CHECK: [[VREGX:%[0-9]+]]:gpr = COPY $r0
-    ; CHECK: [[VREGY:%[0-9]+]]:gpr = COPY $r1
-    ; CHECK: [[VREGZ:%[0-9]+]]:gpr = COPY $r2
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
+    %2(s32) = COPY %r2
+    ; CHECK: [[VREGX:%[0-9]+]]:gpr = COPY %r0
+    ; CHECK: [[VREGY:%[0-9]+]]:gpr = COPY %r1
+    ; CHECK: [[VREGZ:%[0-9]+]]:gpr = COPY %r2
 
     %3(s32) = G_MUL %0, %1
     %4(s32) = G_SUB %2, %3
-    ; CHECK: [[VREGR:%[0-9]+]]:gpr = MLS [[VREGX]], [[VREGY]], [[VREGZ]], 14, $noreg
+    ; CHECK: [[VREGR:%[0-9]+]]:gpr = MLS [[VREGX]], [[VREGY]], [[VREGZ]], 14, %noreg
 
-    $r0 = COPY %4(s32)
-    ; CHECK: $r0 = COPY [[VREGR]]
+    %r0 = COPY %4(s32)
+    ; CHECK: %r0 = COPY [[VREGR]]
 
-    BX_RET 14, $noreg, implicit $r0
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    BX_RET 14, %noreg, implicit %r0
+    ; CHECK: BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_no_mls
@@ -199,25 +185,25 @@ registers:
   - { id: 4, class: gprb }
 body:             |
   bb.0:
-    liveins: $r0, $r1, $r2
+    liveins: %r0, %r1, %r2
 
-    %0(s32) = COPY $r0
-    %1(s32) = COPY $r1
-    %2(s32) = COPY $r2
-    ; CHECK: [[VREGX:%[0-9]+]]:gprnopc = COPY $r0
-    ; CHECK: [[VREGY:%[0-9]+]]:gprnopc = COPY $r1
-    ; CHECK: [[VREGZ:%[0-9]+]]:gpr = COPY $r2
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
+    %2(s32) = COPY %r2
+    ; CHECK: [[VREGX:%[0-9]+]]:gprnopc = COPY %r0
+    ; CHECK: [[VREGY:%[0-9]+]]:gprnopc = COPY %r1
+    ; CHECK: [[VREGZ:%[0-9]+]]:gpr = COPY %r2
 
     %3(s32) = G_MUL %0, %1
     %4(s32) = G_SUB %2, %3
-    ; CHECK: [[VREGM:%[0-9]+]]:gprnopc = MULv5 [[VREGX]], [[VREGY]], 14, $noreg, $noreg
-    ; CHECK: [[VREGR:%[0-9]+]]:gpr = SUBrr [[VREGZ]], [[VREGM]], 14, $noreg, $noreg
+    ; CHECK: [[VREGM:%[0-9]+]]:gprnopc = MULv5 [[VREGX]], [[VREGY]], 14, %noreg, %noreg
+    ; CHECK: [[VREGR:%[0-9]+]]:gpr = SUBrr [[VREGZ]], [[VREGM]], 14, %noreg, %noreg
 
-    $r0 = COPY %4(s32)
-    ; CHECK: $r0 = COPY [[VREGR]]
+    %r0 = COPY %4(s32)
+    ; CHECK: %r0 = COPY [[VREGR]]
 
-    BX_RET 14, $noreg, implicit $r0
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    BX_RET 14, %noreg, implicit %r0
+    ; CHECK: BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_shifts_to_revsh
@@ -239,10 +225,10 @@ registers:
   - { id: 9, class: gprb }
 body:             |
   bb.0:
-    liveins: $r0
+    liveins: %r0
 
-    %0(s32) = COPY $r0
-    ; CHECK: [[VREGX:%[0-9]+]]:gpr = COPY $r0
+    %0(s32) = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]]:gpr = COPY %r0
 
     %1(s32) = G_CONSTANT i32 24
     %2(s32) = G_SHL %0(s32), %1(s32)
@@ -259,11 +245,11 @@ body:             |
     %9(s32) = G_OR %4(s32), %8(s32)
     ; CHECK: [[VREGR:%[0-9]+]]:gpr = REVSH [[VREGX]]
 
-    $r0 = COPY %9(s32)
-    ; CHECK: $r0 = COPY [[VREGR]]
+    %r0 = COPY %9(s32)
+    ; CHECK: %r0 = COPY [[VREGR]]
 
-    BX_RET 14, $noreg, implicit $r0
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    BX_RET 14, %noreg, implicit %r0
+    ; CHECK: BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_shifts_to_revsh_commutative
@@ -285,10 +271,10 @@ registers:
   - { id: 9, class: gprb }
 body:             |
   bb.0:
-    liveins: $r0
+    liveins: %r0
 
-    %0(s32) = COPY $r0
-    ; CHECK: [[VREGX:%[0-9]+]]:gpr = COPY $r0
+    %0(s32) = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]]:gpr = COPY %r0
 
     %1(s32) = G_CONSTANT i32 24
     %2(s32) = G_SHL %0(s32), %1(s32)
@@ -305,11 +291,11 @@ body:             |
     %9(s32) = G_OR %8(s32), %4(s32)
     ; CHECK: [[VREGR:%[0-9]+]]:gpr = REVSH [[VREGX]]
 
-    $r0 = COPY %9(s32)
-    ; CHECK: $r0 = COPY [[VREGR]]
+    %r0 = COPY %9(s32)
+    ; CHECK: %r0 = COPY [[VREGR]]
 
-    BX_RET 14, $noreg, implicit $r0
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    BX_RET 14, %noreg, implicit %r0
+    ; CHECK: BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_shifts_no_revsh_features
@@ -331,9 +317,9 @@ registers:
   - { id: 9, class: gprb }
 body:             |
   bb.0:
-    liveins: $r0
+    liveins: %r0
 
-    %0(s32) = COPY $r0
+    %0(s32) = COPY %r0
 
     %1(s32) = G_CONSTANT i32 24
     %2(s32) = G_SHL %0(s32), %1(s32)
@@ -351,9 +337,9 @@ body:             |
     ; We don't really care how this is folded as long as it's not into a REVSH.
     ; CHECK-NOT: REVSH
 
-    $r0 = COPY %9(s32)
+    %r0 = COPY %9(s32)
 
-    BX_RET 14, $noreg, implicit $r0
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_shifts_no_revsh_constants
@@ -375,9 +361,9 @@ registers:
   - { id: 9, class: gprb }
 body:             |
   bb.0:
-    liveins: $r0
+    liveins: %r0
 
-    %0(s32) = COPY $r0
+    %0(s32) = COPY %r0
 
     %1(s32) = G_CONSTANT i32 16 ; REVSH needs 24 here
     %2(s32) = G_SHL %0(s32), %1(s32)
@@ -395,9 +381,9 @@ body:             |
     ; We don't really care how this is folded as long as it's not into a REVSH.
     ; CHECK-NOT: REVSH
 
-    $r0 = COPY %9(s32)
+    %r0 = COPY %9(s32)
 
-    BX_RET 14, $noreg, implicit $r0
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_bicrr
@@ -414,23 +400,23 @@ registers:
   - { id: 4, class: gprb }
 body:             |
   bb.0:
-    liveins: $r0, $r1
+    liveins: %r0, %r1
 
-    %0(s32) = COPY $r0
-    %1(s32) = COPY $r1
-    ; CHECK: [[VREGX:%[0-9]+]]:gpr = COPY $r0
-    ; CHECK: [[VREGY:%[0-9]+]]:gpr = COPY $r1
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
+    ; CHECK: [[VREGX:%[0-9]+]]:gpr = COPY %r0
+    ; CHECK: [[VREGY:%[0-9]+]]:gpr = COPY %r1
 
     %2(s32) = G_CONSTANT i32 -1
     %3(s32) = G_XOR %1, %2
     %4(s32) = G_AND %0, %3
-    ; CHECK: [[VREGR:%[0-9]+]]:gpr = BICrr [[VREGX]], [[VREGY]], 14, $noreg, $noreg
+    ; CHECK: [[VREGR:%[0-9]+]]:gpr = BICrr [[VREGX]], [[VREGY]], 14, %noreg, %noreg
 
-    $r0 = COPY %4(s32)
-    ; CHECK: $r0 = COPY [[VREGR]]
+    %r0 = COPY %4(s32)
+    ; CHECK: %r0 = COPY [[VREGR]]
 
-    BX_RET 14, $noreg, implicit $r0
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    BX_RET 14, %noreg, implicit %r0
+    ; CHECK: BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_bicrr_commutative
@@ -447,23 +433,23 @@ registers:
   - { id: 4, class: gprb }
 body:             |
   bb.0:
-    liveins: $r0, $r1
+    liveins: %r0, %r1
 
-    %0(s32) = COPY $r0
-    %1(s32) = COPY $r1
-    ; CHECK: [[VREGX:%[0-9]+]]:gpr = COPY $r0
-    ; CHECK: [[VREGY:%[0-9]+]]:gpr = COPY $r1
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
+    ; CHECK: [[VREGX:%[0-9]+]]:gpr = COPY %r0
+    ; CHECK: [[VREGY:%[0-9]+]]:gpr = COPY %r1
 
     %2(s32) = G_CONSTANT i32 -1
     %3(s32) = G_XOR %1, %2
     %4(s32) = G_AND %3, %0
-    ; CHECK: [[VREGR:%[0-9]+]]:gpr = BICrr [[VREGX]], [[VREGY]], 14, $noreg, $noreg
+    ; CHECK: [[VREGR:%[0-9]+]]:gpr = BICrr [[VREGX]], [[VREGY]], 14, %noreg, %noreg
 
-    $r0 = COPY %4(s32)
-    ; CHECK: $r0 = COPY [[VREGR]]
+    %r0 = COPY %4(s32)
+    ; CHECK: %r0 = COPY [[VREGR]]
 
-    BX_RET 14, $noreg, implicit $r0
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    BX_RET 14, %noreg, implicit %r0
+    ; CHECK: BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_bicri
@@ -480,10 +466,10 @@ registers:
   - { id: 4, class: gprb }
 body:             |
   bb.0:
-    liveins: $r0
+    liveins: %r0
 
-    %0(s32) = COPY $r0
-    ; CHECK: [[VREGX:%[0-9]+]]:gpr = COPY $r0
+    %0(s32) = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]]:gpr = COPY %r0
 
     ; This test and the following ones are a bit contrived, since they use a
     ; G_XOR that can be constant-folded. They exist mostly to validate the
@@ -495,13 +481,13 @@ body:             |
     %2(s32) = G_CONSTANT i32 -1
     %3(s32) = G_XOR %1, %2
     %4(s32) = G_AND %0, %3
-    ; CHECK: [[VREGR:%[0-9]+]]:gpr = BICri [[VREGX]], 192, 14, $noreg, $noreg
+    ; CHECK: [[VREGR:%[0-9]+]]:gpr = BICri [[VREGX]], 192, 14, %noreg, %noreg
 
-    $r0 = COPY %4(s32)
-    ; CHECK: $r0 = COPY [[VREGR]]
+    %r0 = COPY %4(s32)
+    ; CHECK: %r0 = COPY [[VREGR]]
 
-    BX_RET 14, $noreg, implicit $r0
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    BX_RET 14, %noreg, implicit %r0
+    ; CHECK: BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_bicri_commutative_xor
@@ -518,23 +504,23 @@ registers:
   - { id: 4, class: gprb }
 body:             |
   bb.0:
-    liveins: $r0
+    liveins: %r0
 
-    %0(s32) = COPY $r0
-    ; CHECK: [[VREGX:%[0-9]+]]:gpr = COPY $r0
+    %0(s32) = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]]:gpr = COPY %r0
 
     %1(s32) = G_CONSTANT i32 192
 
     %2(s32) = G_CONSTANT i32 -1
     %3(s32) = G_XOR %2, %1
     %4(s32) = G_AND %0, %3
-    ; CHECK: [[VREGR:%[0-9]+]]:gpr = BICri [[VREGX]], 192, 14, $noreg, $noreg
+    ; CHECK: [[VREGR:%[0-9]+]]:gpr = BICri [[VREGX]], 192, 14, %noreg, %noreg
 
-    $r0 = COPY %4(s32)
-    ; CHECK: $r0 = COPY [[VREGR]]
+    %r0 = COPY %4(s32)
+    ; CHECK: %r0 = COPY [[VREGR]]
 
-    BX_RET 14, $noreg, implicit $r0
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    BX_RET 14, %noreg, implicit %r0
+    ; CHECK: BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_bicri_commutative_and
@@ -551,23 +537,23 @@ registers:
   - { id: 4, class: gprb }
 body:             |
   bb.0:
-    liveins: $r0
+    liveins: %r0
 
-    %0(s32) = COPY $r0
-    ; CHECK: [[VREGX:%[0-9]+]]:gpr = COPY $r0
+    %0(s32) = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]]:gpr = COPY %r0
 
     %1(s32) = G_CONSTANT i32 192
 
     %2(s32) = G_CONSTANT i32 -1
     %3(s32) = G_XOR %1, %2
     %4(s32) = G_AND %3, %0
-    ; CHECK: [[VREGR:%[0-9]+]]:gpr = BICri [[VREGX]], 192, 14, $noreg, $noreg
+    ; CHECK: [[VREGR:%[0-9]+]]:gpr = BICri [[VREGX]], 192, 14, %noreg, %noreg
 
-    $r0 = COPY %4(s32)
-    ; CHECK: $r0 = COPY [[VREGR]]
+    %r0 = COPY %4(s32)
+    ; CHECK: %r0 = COPY [[VREGR]]
 
-    BX_RET 14, $noreg, implicit $r0
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    BX_RET 14, %noreg, implicit %r0
+    ; CHECK: BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_bicri_commutative_both
@@ -584,23 +570,23 @@ registers:
   - { id: 4, class: gprb }
 body:             |
   bb.0:
-    liveins: $r0
+    liveins: %r0
 
-    %0(s32) = COPY $r0
-    ; CHECK: [[VREGX:%[0-9]+]]:gpr = COPY $r0
+    %0(s32) = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]]:gpr = COPY %r0
 
     %1(s32) = G_CONSTANT i32 192
 
     %2(s32) = G_CONSTANT i32 -1
     %3(s32) = G_XOR %2, %1
     %4(s32) = G_AND %3, %0
-    ; CHECK: [[VREGR:%[0-9]+]]:gpr = BICri [[VREGX]], 192, 14, $noreg, $noreg
+    ; CHECK: [[VREGR:%[0-9]+]]:gpr = BICri [[VREGX]], 192, 14, %noreg, %noreg
 
-    $r0 = COPY %4(s32)
-    ; CHECK: $r0 = COPY [[VREGR]]
+    %r0 = COPY %4(s32)
+    ; CHECK: %r0 = COPY [[VREGR]]
 
-    BX_RET 14, $noreg, implicit $r0
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    BX_RET 14, %noreg, implicit %r0
+    ; CHECK: BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_pkhbt
@@ -621,12 +607,12 @@ registers:
   - { id: 8, class: gprb }
 body:             |
   bb.0:
-    liveins: $r0, $r1
+    liveins: %r0, %r1
 
-    %0(s32) = COPY $r0
-    %1(s32) = COPY $r1
-    ; CHECK-DAG: [[VREGX:%[0-9]+]]:gprnopc = COPY $r0
-    ; CHECK-DAG: [[VREGY:%[0-9]+]]:gprnopc = COPY $r1
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
+    ; CHECK-DAG: [[VREGX:%[0-9]+]]:gprnopc = COPY %r0
+    ; CHECK-DAG: [[VREGY:%[0-9]+]]:gprnopc = COPY %r1
 
     %2(s32) = G_CONSTANT i32 65535 ; 0xFFFF
     %3(s32) = G_AND %0, %2
@@ -637,13 +623,13 @@ body:             |
     %7(s32) = G_AND %5, %6
 
     %8(s32) = G_OR %3, %7
-    ; CHECK: [[VREGR:%[0-9]+]]:gprnopc = PKHBT [[VREGX]], [[VREGY]], 7, 14, $noreg
+    ; CHECK: [[VREGR:%[0-9]+]]:gprnopc = PKHBT [[VREGX]], [[VREGY]], 7, 14, %noreg
 
-    $r0 = COPY %8(s32)
-    ; CHECK: $r0 = COPY [[VREGR]]
+    %r0 = COPY %8(s32)
+    ; CHECK: %r0 = COPY [[VREGR]]
 
-    BX_RET 14, $noreg, implicit $r0
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    BX_RET 14, %noreg, implicit %r0
+    ; CHECK: BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_pkhbt_commutative
@@ -664,12 +650,12 @@ registers:
   - { id: 8, class: gprb }
 body:             |
   bb.0:
-    liveins: $r0, $r1
+    liveins: %r0, %r1
 
-    %0(s32) = COPY $r0
-    %1(s32) = COPY $r1
-    ; CHECK-DAG: [[VREGX:%[0-9]+]]:gprnopc = COPY $r0
-    ; CHECK-DAG: [[VREGY:%[0-9]+]]:gprnopc = COPY $r1
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
+    ; CHECK-DAG: [[VREGX:%[0-9]+]]:gprnopc = COPY %r0
+    ; CHECK-DAG: [[VREGY:%[0-9]+]]:gprnopc = COPY %r1
 
     %2(s32) = G_CONSTANT i32 65535 ; 0xFFFF
     %3(s32) = G_AND %0, %2
@@ -680,13 +666,13 @@ body:             |
     %7(s32) = G_AND %5, %6
 
     %8(s32) = G_OR %7, %3
-    ; CHECK: [[VREGR:%[0-9]+]]:gprnopc = PKHBT [[VREGX]], [[VREGY]], 7, 14, $noreg
+    ; CHECK: [[VREGR:%[0-9]+]]:gprnopc = PKHBT [[VREGX]], [[VREGY]], 7, 14, %noreg
 
-    $r0 = COPY %8(s32)
-    ; CHECK: $r0 = COPY [[VREGR]]
+    %r0 = COPY %8(s32)
+    ; CHECK: %r0 = COPY [[VREGR]]
 
-    BX_RET 14, $noreg, implicit $r0
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    BX_RET 14, %noreg, implicit %r0
+    ; CHECK: BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_pkhbt_imm16_31
@@ -705,12 +691,12 @@ registers:
   - { id: 6, class: gprb }
 body:             |
   bb.0:
-    liveins: $r0, $r1
+    liveins: %r0, %r1
 
-    %0(s32) = COPY $r0
-    %1(s32) = COPY $r1
-    ; CHECK-DAG: [[VREGX:%[0-9]+]]:gprnopc = COPY $r0
-    ; CHECK-DAG: [[VREGY:%[0-9]+]]:gprnopc = COPY $r1
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
+    ; CHECK-DAG: [[VREGX:%[0-9]+]]:gprnopc = COPY %r0
+    ; CHECK-DAG: [[VREGY:%[0-9]+]]:gprnopc = COPY %r1
 
     %2(s32) = G_CONSTANT i32 65535 ; 0xFFFF
     %3(s32) = G_AND %0, %2
@@ -719,13 +705,13 @@ body:             |
     %5(s32) = G_SHL %1, %4
 
     %6(s32) = G_OR %3, %5
-    ; CHECK: [[VREGR:%[0-9]+]]:gprnopc = PKHBT [[VREGX]], [[VREGY]], 17, 14, $noreg
+    ; CHECK: [[VREGR:%[0-9]+]]:gprnopc = PKHBT [[VREGX]], [[VREGY]], 17, 14, %noreg
 
-    $r0 = COPY %6(s32)
-    ; CHECK: $r0 = COPY [[VREGR]]
+    %r0 = COPY %6(s32)
+    ; CHECK: %r0 = COPY [[VREGR]]
 
-    BX_RET 14, $noreg, implicit $r0
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    BX_RET 14, %noreg, implicit %r0
+    ; CHECK: BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_pkhbt_unshifted
@@ -744,12 +730,12 @@ registers:
   - { id: 6, class: gprb }
 body:             |
   bb.0:
-    liveins: $r0, $r1
+    liveins: %r0, %r1
 
-    %0(s32) = COPY $r0
-    %1(s32) = COPY $r1
-    ; CHECK-DAG: [[VREGX:%[0-9]+]]:gprnopc = COPY $r0
-    ; CHECK-DAG: [[VREGY:%[0-9]+]]:gprnopc = COPY $r1
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
+    ; CHECK-DAG: [[VREGX:%[0-9]+]]:gprnopc = COPY %r0
+    ; CHECK-DAG: [[VREGY:%[0-9]+]]:gprnopc = COPY %r1
 
     %2(s32) = G_CONSTANT i32 65535 ; 0xFFFF
     %3(s32) = G_AND %0, %2
@@ -758,13 +744,13 @@ body:             |
     %5(s32) = G_AND %1, %4
 
     %6(s32) = G_OR %3, %5
-    ; CHECK: [[VREGR:%[0-9]+]]:gprnopc = PKHBT [[VREGX]], [[VREGY]], 0, 14, $noreg
+    ; CHECK: [[VREGR:%[0-9]+]]:gprnopc = PKHBT [[VREGX]], [[VREGY]], 0, 14, %noreg
 
-    $r0 = COPY %6(s32)
-    ; CHECK: $r0 = COPY [[VREGR]]
+    %r0 = COPY %6(s32)
+    ; CHECK: %r0 = COPY [[VREGR]]
 
-    BX_RET 14, $noreg, implicit $r0
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    BX_RET 14, %noreg, implicit %r0
+    ; CHECK: BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_pkhtb_imm16
@@ -783,12 +769,12 @@ registers:
   - { id: 6, class: gprb }
 body:             |
   bb.0:
-    liveins: $r0, $r1
+    liveins: %r0, %r1
 
-    %0(s32) = COPY $r0
-    %1(s32) = COPY $r1
-    ; CHECK-DAG: [[VREGX:%[0-9]+]]:gprnopc = COPY $r0
-    ; CHECK-DAG: [[VREGY:%[0-9]+]]:gprnopc = COPY $r1
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
+    ; CHECK-DAG: [[VREGX:%[0-9]+]]:gprnopc = COPY %r0
+    ; CHECK-DAG: [[VREGY:%[0-9]+]]:gprnopc = COPY %r1
 
     %2(s32) = G_CONSTANT i32 4294901760 ; 0xFFFF0000
     %3(s32) = G_AND %0, %2
@@ -797,13 +783,13 @@ body:             |
     %5(s32) = G_LSHR %1, %4
 
     %6(s32) = G_OR %3, %5
-    ; CHECK: [[VREGR:%[0-9]+]]:gprnopc = PKHTB [[VREGX]], [[VREGY]], 16, 14, $noreg
+    ; CHECK: [[VREGR:%[0-9]+]]:gprnopc = PKHTB [[VREGX]], [[VREGY]], 16, 14, %noreg
 
-    $r0 = COPY %6(s32)
-    ; CHECK: $r0 = COPY [[VREGR]]
+    %r0 = COPY %6(s32)
+    ; CHECK: %r0 = COPY [[VREGR]]
 
-    BX_RET 14, $noreg, implicit $r0
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    BX_RET 14, %noreg, implicit %r0
+    ; CHECK: BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_pkhtb_imm1_15
@@ -824,12 +810,12 @@ registers:
   - { id: 8, class: gprb }
 body:             |
   bb.0:
-    liveins: $r0, $r1
+    liveins: %r0, %r1
 
-    %0(s32) = COPY $r0
-    %1(s32) = COPY $r1
-    ; CHECK-DAG: [[VREGX:%[0-9]+]]:gprnopc = COPY $r0
-    ; CHECK-DAG: [[VREGY:%[0-9]+]]:gprnopc = COPY $r1
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
+    ; CHECK-DAG: [[VREGX:%[0-9]+]]:gprnopc = COPY %r0
+    ; CHECK-DAG: [[VREGY:%[0-9]+]]:gprnopc = COPY %r1
 
     %2(s32) = G_CONSTANT i32 4294901760 ; 0xFFFF0000
     %3(s32) = G_AND %0, %2
@@ -840,13 +826,13 @@ body:             |
     %7(s32) = G_AND %5, %6
 
     %8(s32) = G_OR %3, %7
-    ; CHECK: [[VREGR:%[0-9]+]]:gprnopc = PKHTB [[VREGX]], [[VREGY]], 7, 14, $noreg
+    ; CHECK: [[VREGR:%[0-9]+]]:gprnopc = PKHTB [[VREGX]], [[VREGY]], 7, 14, %noreg
 
-    $r0 = COPY %8(s32)
-    ; CHECK: $r0 = COPY [[VREGR]]
+    %r0 = COPY %8(s32)
+    ; CHECK: %r0 = COPY [[VREGR]]
 
-    BX_RET 14, $noreg, implicit $r0
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    BX_RET 14, %noreg, implicit %r0
+    ; CHECK: BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_movti16_0xffff
@@ -861,284 +847,19 @@ registers:
   - { id: 2, class: gprb }
 body:             |
   bb.0:
-    liveins: $r0
+    liveins: %r0
 
-    %0(s32) = COPY $r0
-    ; CHECK: [[VREGX:%[0-9]+]]:gpr = COPY $r0
+    %0(s32) = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]]:gpr = COPY %r0
 
     %1(s32) = G_CONSTANT i32 4294901760 ; 0xFFFF0000
 
     %2(s32) = G_OR %0, %1
-    ; CHECK: [[VREGR:%[0-9]+]]:gprnopc = MOVTi16 [[VREGX]], 65535, 14, $noreg
+    ; CHECK: [[VREGR:%[0-9]+]]:gprnopc = MOVTi16 [[VREGX]], 65535, 14, %noreg
 
-    $r0 = COPY %2(s32)
-    ; CHECK: $r0 = COPY [[VREGR]]
+    %r0 = COPY %2(s32)
+    ; CHECK: %r0 = COPY [[VREGR]]
 
-    BX_RET 14, $noreg, implicit $r0
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
-...
----
-name:            test_vnmuls
-# CHECK-LABEL: name: test_vnmuls
-legalized:       true
-regBankSelected: true
-selected:        false
-# CHECK: selected: true
-registers:
-  - { id: 0, class: fprb }
-  - { id: 1, class: fprb }
-  - { id: 2, class: fprb }
-  - { id: 3, class: fprb }
-body:             |
-  bb.0:
-    liveins: $s0, $s1
-
-    %0(s32) = COPY $s0
-    %1(s32) = COPY $s1
-    ; CHECK-DAG: [[VREGX:%[0-9]+]]:spr = COPY $s0
-    ; CHECK-DAG: [[VREGY:%[0-9]+]]:spr = COPY $s1
-
-    %2(s32) = G_FMUL %0, %1
-    %3(s32) = G_FNEG %2
-    ; CHECK: [[VREGR:%[0-9]+]]:spr = VNMULS [[VREGX]], [[VREGY]], 14, $noreg
-
-    $s0 = COPY %3(s32)
-    ; CHECK: $s0 = COPY [[VREGR]]
-
-    BX_RET 14, $noreg, implicit $s0
-    ; CHECK: BX_RET 14, $noreg, implicit $s0
-...
----
-name:            test_vnmuls_reassociate
-# CHECK-LABEL: name: test_vnmuls_reassociate
-legalized:       true
-regBankSelected: true
-selected:        false
-# CHECK: selected: true
-registers:
-  - { id: 0, class: fprb }
-  - { id: 1, class: fprb }
-  - { id: 2, class: fprb }
-  - { id: 3, class: fprb }
-body:             |
-  bb.0:
-    liveins: $s0, $s1
-
-    %0(s32) = COPY $s0
-    %1(s32) = COPY $s1
-    ; CHECK-DAG: [[VREGX:%[0-9]+]]:spr = COPY $s0
-    ; CHECK-DAG: [[VREGY:%[0-9]+]]:spr = COPY $s1
-
-    %2(s32) = G_FNEG %0
-    %3(s32) = G_FMUL %1, %2
-    ; CHECK: [[VREGR:%[0-9]+]]:spr = VNMULS [[VREGX]], [[VREGY]], 14, $noreg
-
-    $s0 = COPY %3(s32)
-    ; CHECK: $s0 = COPY [[VREGR]]
-
-    BX_RET 14, $noreg, implicit $s0
-    ; CHECK: BX_RET 14, $noreg, implicit $s0
-...
----
-name:            test_vnmuld
-# CHECK-LABEL: name: test_vnmuld
-legalized:       true
-regBankSelected: true
-selected:        false
-# CHECK: selected: true
-registers:
-  - { id: 0, class: fprb }
-  - { id: 1, class: fprb }
-  - { id: 2, class: fprb }
-  - { id: 3, class: fprb }
-body:             |
-  bb.0:
-    liveins: $d0, $d1
-
-    %0(s64) = COPY $d0
-    %1(s64) = COPY $d1
-    ; CHECK-DAG: [[VREGX:%[0-9]+]]:dpr = COPY $d0
-    ; CHECK-DAG: [[VREGY:%[0-9]+]]:dpr = COPY $d1
-
-    %2(s64) = G_FMUL %0, %1
-    %3(s64) = G_FNEG %2
-    ; CHECK: [[VREGR:%[0-9]+]]:dpr = VNMULD [[VREGX]], [[VREGY]], 14, $noreg
-
-    $d0 = COPY %3(s64)
-    ; CHECK: $d0 = COPY [[VREGR]]
-
-    BX_RET 14, $noreg, implicit $d0
-    ; CHECK: BX_RET 14, $noreg, implicit $d0
-...
----
-name:            test_vfnmas
-# CHECK-LABEL: name: test_vfnmas
-legalized:       true
-regBankSelected: true
-selected:        false
-# CHECK: selected: true
-registers:
-  - { id: 0, class: fprb }
-  - { id: 1, class: fprb }
-  - { id: 2, class: fprb }
-  - { id: 3, class: fprb }
-  - { id: 4, class: fprb }
-body:             |
-  bb.0:
-    liveins: $s0, $s1, $s2
-
-    %0(s32) = COPY $s0
-    %1(s32) = COPY $s1
-    %2(s32) = COPY $s2
-    ; CHECK-DAG: [[VREGX:%[0-9]+]]:spr = COPY $s0
-    ; CHECK-DAG: [[VREGY:%[0-9]+]]:spr = COPY $s1
-    ; CHECK-DAG: [[VREGZ:%[0-9]+]]:spr = COPY $s2
-
-    %3(s32) = G_FMA %0, %1, %2
-    %4(s32) = G_FNEG %3
-    ; CHECK: [[VREGR:%[0-9]+]]:spr = VFNMAS [[VREGZ]], [[VREGX]], [[VREGY]], 14, $noreg
-
-    $s0 = COPY %4(s32)
-    ; CHECK: $s0 = COPY [[VREGR]]
-
-    BX_RET 14, $noreg, implicit $s0
-    ; CHECK: BX_RET 14, $noreg, implicit $s0
-...
----
-name:            test_vfnmad
-# CHECK-LABEL: name: test_vfnmad
-legalized:       true
-regBankSelected: true
-selected:        false
-# CHECK: selected: true
-registers:
-  - { id: 0, class: fprb }
-  - { id: 1, class: fprb }
-  - { id: 2, class: fprb }
-  - { id: 3, class: fprb }
-  - { id: 4, class: fprb }
-  - { id: 5, class: fprb }
-body:             |
-  bb.0:
-    liveins: $d0, $d1, $d2
-
-    %0(s64) = COPY $d0
-    %1(s64) = COPY $d1
-    %2(s64) = COPY $d2
-    ; CHECK-DAG: [[VREGX:%[0-9]+]]:dpr = COPY $d0
-    ; CHECK-DAG: [[VREGY:%[0-9]+]]:dpr = COPY $d1
-    ; CHECK-DAG: [[VREGZ:%[0-9]+]]:dpr = COPY $d2
-
-    %3(s64) = G_FNEG %0
-    %4(s64) = G_FNEG %2
-    %5(s64) = G_FMA %3, %1, %4
-    ; CHECK: [[VREGR:%[0-9]+]]:dpr = VFNMAD [[VREGZ]], [[VREGX]], [[VREGY]], 14, $noreg
-
-    $d0 = COPY %5(s64)
-    ; CHECK: $d0 = COPY [[VREGR]]
-
-    BX_RET 14, $noreg, implicit $d0
-    ; CHECK: BX_RET 14, $noreg, implicit $d0
-...
----
-name:            test_vfmss
-# CHECK-LABEL: name: test_vfmss
-legalized:       true
-regBankSelected: true
-selected:        false
-# CHECK: selected: true
-registers:
-  - { id: 0, class: fprb }
-  - { id: 1, class: fprb }
-  - { id: 2, class: fprb }
-  - { id: 3, class: fprb }
-  - { id: 4, class: fprb }
-body:             |
-  bb.0:
-    liveins: $s0, $s1, $s2
-
-    %0(s32) = COPY $s0
-    %1(s32) = COPY $s1
-    %2(s32) = COPY $s2
-    ; CHECK-DAG: [[VREGX:%[0-9]+]]:spr = COPY $s0
-    ; CHECK-DAG: [[VREGY:%[0-9]+]]:spr = COPY $s1
-    ; CHECK-DAG: [[VREGZ:%[0-9]+]]:spr = COPY $s2
-
-    %3(s32) = G_FNEG %0
-    %4(s32) = G_FMA %3, %1, %2
-    ; CHECK: [[VREGR:%[0-9]+]]:spr = VFMSS [[VREGZ]], [[VREGX]], [[VREGY]], 14, $noreg
-
-    $s0 = COPY %4(s32)
-    ; CHECK: $s0 = COPY [[VREGR]]
-
-    BX_RET 14, $noreg, implicit $s0
-    ; CHECK: BX_RET 14, $noreg, implicit $s0
-...
----
-name:            test_vfmsd
-# CHECK-LABEL: name: test_vfmsd
-legalized:       true
-regBankSelected: true
-selected:        false
-# CHECK: selected: true
-registers:
-  - { id: 0, class: fprb }
-  - { id: 1, class: fprb }
-  - { id: 2, class: fprb }
-  - { id: 3, class: fprb }
-  - { id: 4, class: fprb }
-body:             |
-  bb.0:
-    liveins: $d0, $d1, $d2
-
-    %0(s64) = COPY $d0
-    %1(s64) = COPY $d1
-    %2(s64) = COPY $d2
-    ; CHECK-DAG: [[VREGX:%[0-9]+]]:dpr = COPY $d0
-    ; CHECK-DAG: [[VREGY:%[0-9]+]]:dpr = COPY $d1
-    ; CHECK-DAG: [[VREGZ:%[0-9]+]]:dpr = COPY $d2
-
-    %3(s64) = G_FNEG %1
-    %4(s64) = G_FMA %0, %3, %2
-    ; CHECK: [[VREGR:%[0-9]+]]:dpr = VFMSD [[VREGZ]], [[VREGX]], [[VREGY]], 14, $noreg
-
-    $d0 = COPY %4(s64)
-    ; CHECK: $d0 = COPY [[VREGR]]
-
-    BX_RET 14, $noreg, implicit $d0
-    ; CHECK: BX_RET 14, $noreg, implicit $d0
-...
----
-name:            test_vfnmss
-# CHECK-LABEL: name: test_vfnmss
-legalized:       true
-regBankSelected: true
-selected:        false
-# CHECK: selected: true
-registers:
-  - { id: 0, class: fprb }
-  - { id: 1, class: fprb }
-  - { id: 2, class: fprb }
-  - { id: 3, class: fprb }
-  - { id: 4, class: fprb }
-body:             |
-  bb.0:
-    liveins: $s0, $s1, $s2
-
-    %0(s32) = COPY $s0
-    %1(s32) = COPY $s1
-    %2(s32) = COPY $s2
-    ; CHECK-DAG: [[VREGX:%[0-9]+]]:spr = COPY $s0
-    ; CHECK-DAG: [[VREGY:%[0-9]+]]:spr = COPY $s1
-    ; CHECK-DAG: [[VREGZ:%[0-9]+]]:spr = COPY $s2
-
-    %3(s32) = G_FNEG %2
-    %4(s32) = G_FMA %0, %1, %3
-    ; CHECK: [[VREGR:%[0-9]+]]:spr = VFNMSS [[VREGZ]], [[VREGX]], [[VREGY]], 14, $noreg
-
-    $s0 = COPY %4(s32)
-    ; CHECK: $s0 = COPY [[VREGR]]
-
-    BX_RET 14, $noreg, implicit $s0
-    ; CHECK: BX_RET 14, $noreg, implicit $s0
+    BX_RET 14, %noreg, implicit %r0
+    ; CHECK: BX_RET 14, %noreg, implicit %r0
 ...

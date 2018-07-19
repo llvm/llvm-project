@@ -1,6 +1,4 @@
 ; RUN: opt -S -functionattrs -enable-nonnull-arg-prop %s | FileCheck %s
-; RUN: opt -S -passes=function-attrs -enable-nonnull-arg-prop %s | FileCheck %s
-
 declare nonnull i8* @ret_nonnull()
 
 ; Return a pointer trivially nonnull (call return attribute)
@@ -224,17 +222,8 @@ define i32* @gep1(i32* %p) {
   ret i32* %q
 }
 
-define i32* @gep1_no_null_opt(i32* %p) #0 {
-; Should't be able to derive nonnull based on gep.
-; CHECK: define i32* @gep1_no_null_opt(
-  %q = getelementptr inbounds i32, i32* %p, i32 1
-  ret i32* %q
-}
-
 ; CHECK: define i32 addrspace(3)* @gep2(
 define i32 addrspace(3)* @gep2(i32 addrspace(3)* %p) {
   %q = getelementptr inbounds i32, i32 addrspace(3)* %p, i32 1
   ret i32 addrspace(3)* %q
 }
-
-attributes #0 = { "null-pointer-is-valid"="true" }

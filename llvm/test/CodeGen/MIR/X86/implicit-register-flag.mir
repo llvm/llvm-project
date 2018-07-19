@@ -32,19 +32,19 @@ name:            foo
 body: |
   bb.0.entry:
     successors: %bb.1, %bb.2
-    ; CHECK:      CMP32ri8 $edi, 10, implicit-def $eflags
-    ; CHECK-NEXT: JG_1 %bb.2, implicit $eflags
-    CMP32ri8 $edi, 10, implicit-def $eflags
-    JG_1 %bb.2, implicit $eflags
+    ; CHECK:      CMP32ri8 %edi, 10, implicit-def %eflags
+    ; CHECK-NEXT: JG_1 %bb.2, implicit %eflags
+    CMP32ri8 %edi, 10, implicit-def %eflags
+    JG_1 %bb.2, implicit %eflags
 
   bb.1.less:
-    ; CHECK: $eax = MOV32r0 implicit-def $eflags
-    $eax = MOV32r0 implicit-def $eflags
-    RETQ $eax
+    ; CHECK: %eax = MOV32r0 implicit-def %eflags
+    %eax = MOV32r0 implicit-def %eflags
+    RETQ %eax
 
   bb.2.exit:
-    $eax = COPY $edi
-    RETQ $eax
+    %eax = COPY %edi
+    RETQ %eax
 ...
 ---
 name:            implicit_subregister1
@@ -53,16 +53,16 @@ body: |
   ; Verify that the implicit register verifier won't report an error on implicit
   ; subregisters.
   ; CHECK-LABEL: name: implicit_subregister1
-  ; CHECK: dead $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags, implicit-def $al
-    dead $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags, implicit-def $al
-    RETQ killed $al
+  ; CHECK: dead %eax = XOR32rr undef %eax, undef %eax, implicit-def dead %eflags, implicit-def %al
+    dead %eax = XOR32rr undef %eax, undef %eax, implicit-def dead %eflags, implicit-def %al
+    RETQ killed %al
 ...
 ---
 name:            implicit_subregister2
 body: |
   bb.0.entry:
   ; CHECK-LABEL: name: implicit_subregister2
-  ; CHECK: dead $r15 = XOR64rr undef $r15, undef $r15, implicit-def dead $eflags, implicit-def $r15w
-    dead $r15 = XOR64rr undef $r15, undef $r15, implicit-def dead $eflags, implicit-def $r15w
-    RETQ killed $r15w
+  ; CHECK: dead %r15 = XOR64rr undef %r15, undef %r15, implicit-def dead %eflags, implicit-def %r15w
+    dead %r15 = XOR64rr undef %r15, undef %r15, implicit-def dead %eflags, implicit-def %r15w
+    RETQ killed %r15w
 ...

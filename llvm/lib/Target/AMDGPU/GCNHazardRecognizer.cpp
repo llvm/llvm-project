@@ -16,7 +16,6 @@
 #include "SIDefines.h"
 #include "SIInstrInfo.h"
 #include "SIRegisterInfo.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -40,7 +39,7 @@ using namespace llvm;
 GCNHazardRecognizer::GCNHazardRecognizer(const MachineFunction &MF) :
   CurrCycleInstr(nullptr),
   MF(MF),
-  ST(MF.getSubtarget<GCNSubtarget>()),
+  ST(MF.getSubtarget<SISubtarget>()),
   TII(*ST.getInstrInfo()),
   TRI(TII.getRegisterInfo()),
   ClauseUses(TRI.getNumRegUnits()),
@@ -356,13 +355,13 @@ int GCNHazardRecognizer::checkSoftClauseHazards(MachineInstr *MEM) {
 }
 
 int GCNHazardRecognizer::checkSMRDHazards(MachineInstr *SMRD) {
-  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
   int WaitStatesNeeded = 0;
 
   WaitStatesNeeded = checkSoftClauseHazards(SMRD);
 
   // This SMRD hazard only affects SI.
-  if (ST.getGeneration() != AMDGPUSubtarget::SOUTHERN_ISLANDS)
+  if (ST.getGeneration() != SISubtarget::SOUTHERN_ISLANDS)
     return WaitStatesNeeded;
 
   // A read of an SGPR by SMRD instruction requires 4 wait states when the
@@ -399,7 +398,7 @@ int GCNHazardRecognizer::checkSMRDHazards(MachineInstr *SMRD) {
 }
 
 int GCNHazardRecognizer::checkVMEMHazards(MachineInstr* VMEM) {
-  if (ST.getGeneration() < AMDGPUSubtarget::VOLCANIC_ISLANDS)
+  if (ST.getGeneration() < SISubtarget::VOLCANIC_ISLANDS)
     return 0;
 
   int WaitStatesNeeded = checkSoftClauseHazards(VMEM);
@@ -635,7 +634,7 @@ int GCNHazardRecognizer::checkRFEHazards(MachineInstr *RFE) {
 }
 
 int GCNHazardRecognizer::checkAnyInstHazards(MachineInstr *MI) {
-  if (MI->isDebugInstr())
+  if (MI->isDebugValue())
     return 0;
 
   const SIRegisterInfo *TRI = ST.getRegisterInfo();

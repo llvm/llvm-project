@@ -58,7 +58,7 @@
 
 namespace llvm {
 
-/// An opaque object representing a hash code.
+/// \brief An opaque object representing a hash code.
 ///
 /// This object represents the result of hashing some entity. It is intended to
 /// be used to implement hashtables or other hashing-based data structures.
@@ -74,14 +74,14 @@ class hash_code {
   size_t value;
 
 public:
-  /// Default construct a hash_code.
+  /// \brief Default construct a hash_code.
   /// Note that this leaves the value uninitialized.
   hash_code() = default;
 
-  /// Form a hash code directly from a numerical value.
+  /// \brief Form a hash code directly from a numerical value.
   hash_code(size_t value) : value(value) {}
 
-  /// Convert the hash code to its numerical value for use.
+  /// \brief Convert the hash code to its numerical value for use.
   /*explicit*/ operator size_t() const { return value; }
 
   friend bool operator==(const hash_code &lhs, const hash_code &rhs) {
@@ -91,11 +91,11 @@ public:
     return lhs.value != rhs.value;
   }
 
-  /// Allow a hash_code to be directly run through hash_value.
+  /// \brief Allow a hash_code to be directly run through hash_value.
   friend size_t hash_value(const hash_code &code) { return code.value; }
 };
 
-/// Compute a hash_code for any integer value.
+/// \brief Compute a hash_code for any integer value.
 ///
 /// Note that this function is intended to compute the same hash_code for
 /// a particular value without regard to the pre-promotion type. This is in
@@ -106,24 +106,21 @@ template <typename T>
 typename std::enable_if<is_integral_or_enum<T>::value, hash_code>::type
 hash_value(T value);
 
-/// Compute a hash_code for a pointer's address.
+/// \brief Compute a hash_code for a pointer's address.
 ///
 /// N.B.: This hashes the *address*. Not the value and not the type.
 template <typename T> hash_code hash_value(const T *ptr);
 
-/// Compute a hash_code for a pair of objects.
+/// \brief Compute a hash_code for a pair of objects.
 template <typename T, typename U>
 hash_code hash_value(const std::pair<T, U> &arg);
 
-/// Compute a hash_code for a standard string.
+/// \brief Compute a hash_code for a standard string.
 template <typename T>
 hash_code hash_value(const std::basic_string<T> &arg);
 
-/// \brief Compute a hash_code for a tuple.
-template <typename ...Ts>
-hash_code hash_value(const std::tuple<Ts...> &arg);
 
-/// Override the execution seed with a fixed value.
+/// \brief Override the execution seed with a fixed value.
 ///
 /// This hashing library uses a per-execution seed designed to change on each
 /// run with high probability in order to ensure that the hash codes are not
@@ -168,7 +165,7 @@ static const uint64_t k1 = 0xb492b66fbe98f273ULL;
 static const uint64_t k2 = 0x9ae16a3b2f90404fULL;
 static const uint64_t k3 = 0xc949d7c7509e6557ULL;
 
-/// Bitwise right rotate.
+/// \brief Bitwise right rotate.
 /// Normally this will compile to a single instruction, especially if the
 /// shift is a manifest constant.
 inline uint64_t rotate(uint64_t val, size_t shift) {
@@ -258,13 +255,13 @@ inline uint64_t hash_short(const char *s, size_t length, uint64_t seed) {
   return k2 ^ seed;
 }
 
-/// The intermediate state used during hashing.
+/// \brief The intermediate state used during hashing.
 /// Currently, the algorithm for computing hash codes is based on CityHash and
 /// keeps 56 bytes of arbitrary state.
 struct hash_state {
   uint64_t h0, h1, h2, h3, h4, h5, h6;
 
-  /// Create a new hash_state structure and initialize it based on the
+  /// \brief Create a new hash_state structure and initialize it based on the
   /// seed and the first 64-byte chunk.
   /// This effectively performs the initial mix.
   static hash_state create(const char *s, uint64_t seed) {
@@ -276,7 +273,7 @@ struct hash_state {
     return state;
   }
 
-  /// Mix 32-bytes from the input sequence into the 16-bytes of 'a'
+  /// \brief Mix 32-bytes from the input sequence into the 16-bytes of 'a'
   /// and 'b', including whatever is already in 'a' and 'b'.
   static void mix_32_bytes(const char *s, uint64_t &a, uint64_t &b) {
     a += fetch64(s);
@@ -288,7 +285,7 @@ struct hash_state {
     a += c;
   }
 
-  /// Mix in a 64-byte buffer of data.
+  /// \brief Mix in a 64-byte buffer of data.
   /// We mix all 64 bytes even when the chunk length is smaller, but we
   /// record the actual length.
   void mix(const char *s) {
@@ -306,7 +303,7 @@ struct hash_state {
     std::swap(h2, h0);
   }
 
-  /// Compute the final 64-bit hash code value based on the current
+  /// \brief Compute the final 64-bit hash code value based on the current
   /// state and the length of bytes hashed.
   uint64_t finalize(size_t length) {
     return hash_16_bytes(hash_16_bytes(h3, h5) + shift_mix(h1) * k1 + h2,
@@ -315,7 +312,7 @@ struct hash_state {
 };
 
 
-/// A global, fixed seed-override variable.
+/// \brief A global, fixed seed-override variable.
 ///
 /// This variable can be set using the \see llvm::set_fixed_execution_seed
 /// function. See that function for details. Do not, under any circumstances,
@@ -336,7 +333,7 @@ inline size_t get_execution_seed() {
 }
 
 
-/// Trait to indicate whether a type's bits can be hashed directly.
+/// \brief Trait to indicate whether a type's bits can be hashed directly.
 ///
 /// A type trait which is true if we want to combine values for hashing by
 /// reading the underlying data. It is false if values of this type must
@@ -363,14 +360,14 @@ template <typename T, typename U> struct is_hashable_data<std::pair<T, U> >
                                   (sizeof(T) + sizeof(U)) ==
                                    sizeof(std::pair<T, U>))> {};
 
-/// Helper to get the hashable data representation for a type.
+/// \brief Helper to get the hashable data representation for a type.
 /// This variant is enabled when the type itself can be used.
 template <typename T>
 typename std::enable_if<is_hashable_data<T>::value, T>::type
 get_hashable_data(const T &value) {
   return value;
 }
-/// Helper to get the hashable data representation for a type.
+/// \brief Helper to get the hashable data representation for a type.
 /// This variant is enabled when we must first call hash_value and use the
 /// result as our data.
 template <typename T>
@@ -380,7 +377,7 @@ get_hashable_data(const T &value) {
   return hash_value(value);
 }
 
-/// Helper to store data from a value into a buffer and advance the
+/// \brief Helper to store data from a value into a buffer and advance the
 /// pointer into that buffer.
 ///
 /// This routine first checks whether there is enough space in the provided
@@ -399,7 +396,7 @@ bool store_and_advance(char *&buffer_ptr, char *buffer_end, const T& value,
   return true;
 }
 
-/// Implement the combining of integral values into a hash_code.
+/// \brief Implement the combining of integral values into a hash_code.
 ///
 /// This overload is selected when the value type of the iterator is
 /// integral. Rather than computing a hash_code for each object and then
@@ -439,7 +436,7 @@ hash_code hash_combine_range_impl(InputIteratorT first, InputIteratorT last) {
   return state.finalize(length);
 }
 
-/// Implement the combining of integral values into a hash_code.
+/// \brief Implement the combining of integral values into a hash_code.
 ///
 /// This overload is selected when the value type of the iterator is integral
 /// and when the input iterator is actually a pointer. Rather than computing
@@ -474,7 +471,7 @@ hash_combine_range_impl(ValueT *first, ValueT *last) {
 } // namespace hashing
 
 
-/// Compute a hash_code for a sequence of values.
+/// \brief Compute a hash_code for a sequence of values.
 ///
 /// This hashes a sequence of values. It produces the same hash_code as
 /// 'hash_combine(a, b, c, ...)', but can run over arbitrary sized sequences
@@ -490,7 +487,7 @@ hash_code hash_combine_range(InputIteratorT first, InputIteratorT last) {
 namespace hashing {
 namespace detail {
 
-/// Helper class to manage the recursive combining of hash_combine
+/// \brief Helper class to manage the recursive combining of hash_combine
 /// arguments.
 ///
 /// This class exists to manage the state and various calls involved in the
@@ -503,14 +500,14 @@ struct hash_combine_recursive_helper {
   const size_t seed;
 
 public:
-  /// Construct a recursive hash combining helper.
+  /// \brief Construct a recursive hash combining helper.
   ///
   /// This sets up the state for a recursive hash combine, including getting
   /// the seed and buffer setup.
   hash_combine_recursive_helper()
     : seed(get_execution_seed()) {}
 
-  /// Combine one chunk of data into the current in-flight hash.
+  /// \brief Combine one chunk of data into the current in-flight hash.
   ///
   /// This merges one chunk of data into the hash. First it tries to buffer
   /// the data. If the buffer is full, it hashes the buffer into its
@@ -551,7 +548,7 @@ public:
     return buffer_ptr;
   }
 
-  /// Recursive, variadic combining method.
+  /// \brief Recursive, variadic combining method.
   ///
   /// This function recurses through each argument, combining that argument
   /// into a single hash.
@@ -564,7 +561,7 @@ public:
     return combine(length, buffer_ptr, buffer_end, args...);
   }
 
-  /// Base case for recursive, variadic combining.
+  /// \brief Base case for recursive, variadic combining.
   ///
   /// The base case when combining arguments recursively is reached when all
   /// arguments have been handled. It flushes the remaining buffer and
@@ -592,7 +589,7 @@ public:
 } // namespace detail
 } // namespace hashing
 
-/// Combine values into a single hash_code.
+/// \brief Combine values into a single hash_code.
 ///
 /// This routine accepts a varying number of arguments of any type. It will
 /// attempt to combine them into a single hash_code. For user-defined types it
@@ -614,7 +611,7 @@ template <typename ...Ts> hash_code hash_combine(const Ts &...args) {
 namespace hashing {
 namespace detail {
 
-/// Helper to hash the value of a single integer.
+/// \brief Helper to hash the value of a single integer.
 ///
 /// Overloads for smaller integer types are not provided to ensure consistent
 /// behavior in the presence of integral promotions. Essentially,

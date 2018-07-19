@@ -13,13 +13,8 @@ elseif( CMAKE_HOST_UNIX )
   if( HAVE_LIBDL )
     set(system_libs ${system_libs} ${CMAKE_DL_LIBS})
   endif()
-  if( HAVE_BACKTRACE AND NOT "${Backtrace_LIBRARIES}" STREQUAL "" )
-    # On BSDs, CMake returns a fully qualified path to the backtrace library.
-    # We need to remove the path and the 'lib' prefix, to make it look like a
-    # regular short library name, suitable for appending to a -l link flag.
-    get_filename_component(Backtrace_LIBFILE ${Backtrace_LIBRARIES} NAME_WE)
-    STRING(REGEX REPLACE "^lib" "" Backtrace_LIBFILE ${Backtrace_LIBFILE})
-    set(system_libs ${system_libs} ${Backtrace_LIBFILE})
+  if( HAVE_BACKTRACE )
+    set(system_libs ${system_libs} ${Backtrace_LIBRARIES})
   endif()
   if(LLVM_ENABLE_TERMINFO)
     if(HAVE_TERMINFO)
@@ -32,9 +27,6 @@ elseif( CMAKE_HOST_UNIX )
   set(system_libs ${system_libs} ${LLVM_PTHREAD_LIB})
   if( UNIX AND NOT (BEOS OR HAIKU) )
     set(system_libs ${system_libs} m)
-  endif()
-  if( FUCHSIA )
-    set(system_libs ${system_libs} zircon)
   endif()
 endif( MSVC OR MINGW )
 
@@ -79,11 +71,9 @@ add_llvm_library(LLVMSupport
   GlobPattern.cpp
   GraphWriter.cpp
   Hashing.cpp
-  InitLLVM.cpp
   IntEqClasses.cpp
   IntervalMap.cpp
   JamCRC.cpp
-  JSON.cpp
   KnownBits.cpp
   LEB128.cpp
   LineIterator.cpp
@@ -125,8 +115,6 @@ add_llvm_library(LLVMSupport
   Twine.cpp
   Unicode.cpp
   UnicodeCaseFold.cpp
-  VersionTuple.cpp
-  WithColor.cpp
   YAMLParser.cpp
   YAMLTraits.cpp
   raw_os_ostream.cpp

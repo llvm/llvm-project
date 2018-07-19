@@ -17,7 +17,6 @@
 #include "AMDGPU.h"
 #include "AMDGPUSubtarget.h"
 #include "R600InstrInfo.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/CodeGen/DFAPacketizer.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -84,39 +83,39 @@ private:
       LastDstChan = BISlot;
       if (TII->isPredicated(*BI))
         continue;
-      int OperandIdx = TII->getOperandIdx(BI->getOpcode(), R600::OpName::write);
+      int OperandIdx = TII->getOperandIdx(BI->getOpcode(), AMDGPU::OpName::write);
       if (OperandIdx > -1 && BI->getOperand(OperandIdx).getImm() == 0)
         continue;
-      int DstIdx = TII->getOperandIdx(BI->getOpcode(), R600::OpName::dst);
+      int DstIdx = TII->getOperandIdx(BI->getOpcode(), AMDGPU::OpName::dst);
       if (DstIdx == -1) {
         continue;
       }
       unsigned Dst = BI->getOperand(DstIdx).getReg();
       if (isTrans || TII->isTransOnly(*BI)) {
-        Result[Dst] = R600::PS;
+        Result[Dst] = AMDGPU::PS;
         continue;
       }
-      if (BI->getOpcode() == R600::DOT4_r600 ||
-          BI->getOpcode() == R600::DOT4_eg) {
-        Result[Dst] = R600::PV_X;
+      if (BI->getOpcode() == AMDGPU::DOT4_r600 ||
+          BI->getOpcode() == AMDGPU::DOT4_eg) {
+        Result[Dst] = AMDGPU::PV_X;
         continue;
       }
-      if (Dst == R600::OQAP) {
+      if (Dst == AMDGPU::OQAP) {
         continue;
       }
       unsigned PVReg = 0;
       switch (TRI.getHWRegChan(Dst)) {
       case 0:
-        PVReg = R600::PV_X;
+        PVReg = AMDGPU::PV_X;
         break;
       case 1:
-        PVReg = R600::PV_Y;
+        PVReg = AMDGPU::PV_Y;
         break;
       case 2:
-        PVReg = R600::PV_Z;
+        PVReg = AMDGPU::PV_Z;
         break;
       case 3:
-        PVReg = R600::PV_W;
+        PVReg = AMDGPU::PV_W;
         break;
       default:
         llvm_unreachable("Invalid Chan");
@@ -129,9 +128,9 @@ private:
   void substitutePV(MachineInstr &MI, const DenseMap<unsigned, unsigned> &PVs)
       const {
     unsigned Ops[] = {
-      R600::OpName::src0,
-      R600::OpName::src1,
-      R600::OpName::src2
+      AMDGPU::OpName::src0,
+      AMDGPU::OpName::src1,
+      AMDGPU::OpName::src2
     };
     for (unsigned i = 0; i < 3; i++) {
       int OperandIdx = TII->getOperandIdx(MI.getOpcode(), Ops[i]);
@@ -171,7 +170,7 @@ public:
       return true;
     if (!TII->isALUInstr(MI.getOpcode()))
       return true;
-    if (MI.getOpcode() == R600::GROUP_BARRIER)
+    if (MI.getOpcode() == AMDGPU::GROUP_BARRIER)
       return true;
     // XXX: This can be removed once the packetizer properly handles all the
     // LDS instruction group restrictions.
@@ -185,8 +184,8 @@ public:
     if (getSlot(*MII) == getSlot(*MIJ))
       ConsideredInstUsesAlreadyWrittenVectorElement = true;
     // Does MII and MIJ share the same pred_sel ?
-    int OpI = TII->getOperandIdx(MII->getOpcode(), R600::OpName::pred_sel),
-        OpJ = TII->getOperandIdx(MIJ->getOpcode(), R600::OpName::pred_sel);
+    int OpI = TII->getOperandIdx(MII->getOpcode(), AMDGPU::OpName::pred_sel),
+        OpJ = TII->getOperandIdx(MIJ->getOpcode(), AMDGPU::OpName::pred_sel);
     unsigned PredI = (OpI > -1)?MII->getOperand(OpI).getReg():0,
         PredJ = (OpJ > -1)?MIJ->getOperand(OpJ).getReg():0;
     if (PredI != PredJ)
@@ -220,7 +219,7 @@ public:
   }
 
   void setIsLastBit(MachineInstr *MI, unsigned Bit) const {
-    unsigned LastOp = TII->getOperandIdx(MI->getOpcode(), R600::OpName::last);
+    unsigned LastOp = TII->getOperandIdx(MI->getOpcode(), AMDGPU::OpName::last);
     MI->getOperand(LastOp).setImm(Bit);
   }
 
@@ -237,7 +236,7 @@ public:
         if (ConsideredInstUsesAlreadyWrittenVectorElement &&
             !TII->isVectorOnly(MI) && VLIW5) {
           isTransSlot = true;
-          LLVM_DEBUG({
+          DEBUG({
             dbgs() << "Considering as Trans Inst :";
             MI.dump();
           });
@@ -250,7 +249,7 @@ public:
     // Are the Constants limitations met ?
     CurrentPacketMIs.push_back(&MI);
     if (!TII->fitsConstReadLimitations(CurrentPacketMIs)) {
-      LLVM_DEBUG({
+      DEBUG({
         dbgs() << "Couldn't pack :\n";
         MI.dump();
         dbgs() << "with the following packets :\n";
@@ -267,7 +266,7 @@ public:
     // Is there a BankSwizzle set that meet Read Port limitations ?
     if (!TII->fitsReadPortLimitations(CurrentPacketMIs,
             PV, BS, isTransSlot)) {
-      LLVM_DEBUG({
+      DEBUG({
         dbgs() << "Couldn't pack :\n";
         MI.dump();
         dbgs() << "with the following packets :\n";
@@ -301,11 +300,11 @@ public:
       for (unsigned i = 0, e = CurrentPacketMIs.size(); i < e; i++) {
         MachineInstr *MI = CurrentPacketMIs[i];
         unsigned Op = TII->getOperandIdx(MI->getOpcode(),
-            R600::OpName::bank_swizzle);
+            AMDGPU::OpName::bank_swizzle);
         MI->getOperand(Op).setImm(BS[i]);
       }
       unsigned Op =
-          TII->getOperandIdx(MI.getOpcode(), R600::OpName::bank_swizzle);
+          TII->getOperandIdx(MI.getOpcode(), AMDGPU::OpName::bank_swizzle);
       MI.getOperand(Op).setImm(BS.back());
       if (!CurrentPacketMIs.empty())
         setIsLastBit(CurrentPacketMIs.back(), 0);
@@ -334,7 +333,6 @@ bool R600Packetizer::runOnMachineFunction(MachineFunction &Fn) {
 
   // DFA state table should not be empty.
   assert(Packetizer.getResourceTracker() && "Empty DFA table!");
-  assert(Packetizer.getResourceTracker()->getInstrItins());
 
   if (Packetizer.getResourceTracker()->getInstrItins()->isEmpty())
     return false;
@@ -354,8 +352,8 @@ bool R600Packetizer::runOnMachineFunction(MachineFunction &Fn) {
     MachineBasicBlock::iterator End = MBB->end();
     MachineBasicBlock::iterator MI = MBB->begin();
     while (MI != End) {
-      if (MI->isKill() || MI->getOpcode() == R600::IMPLICIT_DEF ||
-          (MI->getOpcode() == R600::CF_ALU && !MI->getOperand(8).getImm())) {
+      if (MI->isKill() || MI->getOpcode() == AMDGPU::IMPLICIT_DEF ||
+          (MI->getOpcode() == AMDGPU::CF_ALU && !MI->getOperand(8).getImm())) {
         MachineBasicBlock::iterator DeleteMI = MI;
         ++MI;
         MBB->erase(DeleteMI);

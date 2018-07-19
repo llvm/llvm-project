@@ -1,14 +1,12 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -enable-var-scope -check-prefixes=GCN,CIVI %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -enable-var-scope -check-prefixes=GCN,GFX9 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CIVI %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
 
 ; GCN-LABEL: {{^}}use_dispatch_ptr:
-; GCN: v_mov_b32_e32 v[[LO:[0-9]+]], s6
-; GCN: v_mov_b32_e32 v[[HI:[0-9]+]], s7
-; GCN: {{flat|global}}_load_dword v{{[0-9]+}}, v{{\[}}[[LO]]:[[HI]]{{\]}}
+; GCN: s_load_dword s{{[0-9]+}}, s[6:7], 0x0
 define void @use_dispatch_ptr() #1 {
-  %dispatch_ptr = call noalias i8 addrspace(4)* @llvm.amdgcn.dispatch.ptr() #0
-  %header_ptr = bitcast i8 addrspace(4)* %dispatch_ptr to i32 addrspace(4)*
-  %value = load volatile i32, i32 addrspace(4)* %header_ptr
+  %dispatch_ptr = call noalias i8 addrspace(2)* @llvm.amdgcn.dispatch.ptr() #0
+  %header_ptr = bitcast i8 addrspace(2)* %dispatch_ptr to i32 addrspace(2)*
+  %value = load volatile i32, i32 addrspace(2)* %header_ptr
   ret void
 }
 
@@ -21,13 +19,11 @@ define amdgpu_kernel void @kern_indirect_use_dispatch_ptr(i32) #1 {
 }
 
 ; GCN-LABEL: {{^}}use_queue_ptr:
-; GCN: v_mov_b32_e32 v[[LO:[0-9]+]], s6
-; GCN: v_mov_b32_e32 v[[HI:[0-9]+]], s7
-; GCN: {{flat|global}}_load_dword v{{[0-9]+}}, v{{\[}}[[LO]]:[[HI]]{{\]}}
+; GCN: s_load_dword s{{[0-9]+}}, s[6:7], 0x0
 define void @use_queue_ptr() #1 {
-  %queue_ptr = call noalias i8 addrspace(4)* @llvm.amdgcn.queue.ptr() #0
-  %header_ptr = bitcast i8 addrspace(4)* %queue_ptr to i32 addrspace(4)*
-  %value = load volatile i32, i32 addrspace(4)* %header_ptr
+  %queue_ptr = call noalias i8 addrspace(2)* @llvm.amdgcn.queue.ptr() #0
+  %header_ptr = bitcast i8 addrspace(2)* %queue_ptr to i32 addrspace(2)*
+  %value = load volatile i32, i32 addrspace(2)* %header_ptr
   ret void
 }
 
@@ -41,15 +37,14 @@ define amdgpu_kernel void @kern_indirect_use_queue_ptr(i32) #1 {
 }
 
 ; GCN-LABEL: {{^}}use_queue_ptr_addrspacecast:
-; CIVI: flat_load_dword v[[HI:[0-9]+]], v[0:1]
+; CIVI: s_load_dword [[APERTURE_LOAD:s[0-9]+]], s[6:7], 0x10
 ; GFX9: s_getreg_b32 [[APERTURE_LOAD:s[0-9]+]]
-; CIVI: v_mov_b32_e32 v[[LO:[0-9]+]], 16
-; GFX9: v_mov_b32_e32 v[[HI:[0-9]+]], [[APERTURE_LOAD]]
-; GFX9: {{flat|global}}_store_dword v{{\[[0-9]+}}:[[HI]]{{\]}}
-; CIVI: {{flat|global}}_store_dword v{{\[}}[[LO]]:[[HI]]{{\]}}
+
+; GCN: v_mov_b32_e32 v[[HI:[0-9]+]], [[APERTURE_LOAD]]
+; GCN: {{flat|global}}_store_dword v{{\[[0-9]+}}:[[HI]]{{\]}}
 define void @use_queue_ptr_addrspacecast() #1 {
-  %asc = addrspacecast i32 addrspace(3)* inttoptr (i32 16 to i32 addrspace(3)*) to i32*
-  store volatile i32 0, i32* %asc
+  %asc = addrspacecast i32 addrspace(3)* inttoptr (i32 16 to i32 addrspace(3)*) to i32 addrspace(4)*
+  store volatile i32 0, i32 addrspace(4)* %asc
   ret void
 }
 
@@ -65,13 +60,11 @@ define amdgpu_kernel void @kern_indirect_use_queue_ptr_addrspacecast(i32) #1 {
 }
 
 ; GCN-LABEL: {{^}}use_kernarg_segment_ptr:
-; GCN: v_mov_b32_e32 v[[LO:[0-9]+]], s6
-; GCN: v_mov_b32_e32 v[[HI:[0-9]+]], s7
-; GCN: {{flat|global}}_load_dword v{{[0-9]+}}, v{{\[}}[[LO]]:[[HI]]{{\]}}
+; GCN: s_load_dword s{{[0-9]+}}, s[6:7], 0x0
 define void @use_kernarg_segment_ptr() #1 {
-  %kernarg_segment_ptr = call noalias i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr() #0
-  %header_ptr = bitcast i8 addrspace(4)* %kernarg_segment_ptr to i32 addrspace(4)*
-  %value = load volatile i32, i32 addrspace(4)* %header_ptr
+  %kernarg_segment_ptr = call noalias i8 addrspace(2)* @llvm.amdgcn.kernarg.segment.ptr() #0
+  %header_ptr = bitcast i8 addrspace(2)* %kernarg_segment_ptr to i32 addrspace(2)*
+  %value = load volatile i32, i32 addrspace(2)* %header_ptr
   ret void
 }
 
@@ -120,8 +113,8 @@ define void @use_workgroup_id_x() #1 {
 ; GCN: ; use s6
 ; GCN: s_setpc_b64
 define void @use_stack_workgroup_id_x() #1 {
-  %alloca = alloca i32, addrspace(5)
-  store volatile i32 0, i32 addrspace(5)* %alloca
+  %alloca = alloca i32
+  store volatile i32 0, i32* %alloca
   %val = call i32 @llvm.amdgcn.workgroup.id.x()
   call void asm sideeffect "; use $0", "s"(i32 %val)
   ret void
@@ -215,8 +208,8 @@ define amdgpu_kernel void @kern_indirect_use_workgroup_id_x() #1 {
 ; GCN: enable_sgpr_workgroup_id_z = 0
 
 ; GCN: s_mov_b32 s33, s8
-; GCN-DAG: s_mov_b32 s4, s33
-; GCN-DAG: s_mov_b32 s6, s7
+; GCN: s_mov_b32 s4, s33
+; GCN: s_mov_b32 s6, s7
 ; GCN: s_mov_b32 s32, s33
 ; GCN: s_swappc_b64
 define amdgpu_kernel void @kern_indirect_use_workgroup_id_y() #1 {
@@ -230,8 +223,8 @@ define amdgpu_kernel void @kern_indirect_use_workgroup_id_y() #1 {
 ; GCN: enable_sgpr_workgroup_id_z = 1
 
 ; GCN: s_mov_b32 s33, s8
-; GCN-DAG: s_mov_b32 s4, s33
-; GCN-DAG: s_mov_b32 s6, s7
+; GCN: s_mov_b32 s4, s33
+; GCN: s_mov_b32 s6, s7
 ; GCN: s_swappc_b64
 define amdgpu_kernel void @kern_indirect_use_workgroup_id_z() #1 {
   call void @use_workgroup_id_z()
@@ -403,7 +396,7 @@ define amdgpu_kernel void @kern_indirect_other_arg_use_workgroup_id_x() #1 {
 
 ; GCN-DAG: s_mov_b32 s33, s8
 ; GCN-DAG: v_mov_b32_e32 v0, 0x22b
-; GCN-DAG: s_mov_b32 s4, s33
+; GCN: s_mov_b32 s4, s33
 ; GCN-DAG: s_mov_b32 s6, s7
 ; GCN-DAG: s_mov_b32 s32, s33
 ; GCN: s_swappc_b64
@@ -419,7 +412,7 @@ define amdgpu_kernel void @kern_indirect_other_arg_use_workgroup_id_y() #1 {
 
 ; GCN: s_mov_b32 s33, s8
 ; GCN-DAG: v_mov_b32_e32 v0, 0x22b
-; GCN-DAG: s_mov_b32 s4, s33
+; GCN: s_mov_b32 s4, s33
 ; GCN-DAG: s_mov_b32 s6, s7
 
 ; GCN: s_mov_b32 s32, s33
@@ -431,34 +424,28 @@ define amdgpu_kernel void @kern_indirect_other_arg_use_workgroup_id_z() #1 {
 
 ; GCN-LABEL: {{^}}use_every_sgpr_input:
 ; GCN: buffer_store_dword v{{[0-9]+}}, off, s[0:3], s5 offset:4
-; GCN: v_mov_b32_e32 v[[LO:[0-9]+]], s6
-; GCN: v_mov_b32_e32 v[[HI:[0-9]+]], s7
-; GCN: {{flat|global}}_load_dword v{{[0-9]+}}, v{{\[}}[[LO]]:[[HI]]{{\]}}
-; GCN: v_mov_b32_e32 v[[LO:[0-9]+]], s8
-; GCN: v_mov_b32_e32 v[[HI:[0-9]+]], s9
-; GCN: {{flat|global}}_load_dword v{{[0-9]+}}, v{{\[}}[[LO]]:[[HI]]{{\]}}
-; GCN: v_mov_b32_e32 v[[LO:[0-9]+]], s10
-; GCN: v_mov_b32_e32 v[[HI:[0-9]+]], s11
-; GCN: {{flat|global}}_load_dword v{{[0-9]+}}, v{{\[}}[[LO]]:[[HI]]{{\]}}
+; GCN: s_load_dword s{{[0-9]+}}, s[6:7], 0x0
+; GCN: s_load_dword s{{[0-9]+}}, s[8:9], 0x0
+; GCN: s_load_dword s{{[0-9]+}}, s[10:11], 0x0
 ; GCN: ; use s[12:13]
 ; GCN: ; use s14
 ; GCN: ; use s15
 ; GCN: ; use s16
 define void @use_every_sgpr_input() #1 {
-  %alloca = alloca i32, align 4, addrspace(5)
-  store volatile i32 0, i32 addrspace(5)* %alloca
+  %alloca = alloca i32, align 4
+  store volatile i32 0, i32* %alloca
 
-  %dispatch_ptr = call noalias i8 addrspace(4)* @llvm.amdgcn.dispatch.ptr() #0
-  %dispatch_ptr.bc = bitcast i8 addrspace(4)* %dispatch_ptr to i32 addrspace(4)*
-  %val0 = load volatile i32, i32 addrspace(4)* %dispatch_ptr.bc
+  %dispatch_ptr = call noalias i8 addrspace(2)* @llvm.amdgcn.dispatch.ptr() #0
+  %dispatch_ptr.bc = bitcast i8 addrspace(2)* %dispatch_ptr to i32 addrspace(2)*
+  %val0 = load volatile i32, i32 addrspace(2)* %dispatch_ptr.bc
 
-  %queue_ptr = call noalias i8 addrspace(4)* @llvm.amdgcn.queue.ptr() #0
-  %queue_ptr.bc = bitcast i8 addrspace(4)* %queue_ptr to i32 addrspace(4)*
-  %val1 = load volatile i32, i32 addrspace(4)* %queue_ptr.bc
+  %queue_ptr = call noalias i8 addrspace(2)* @llvm.amdgcn.queue.ptr() #0
+  %queue_ptr.bc = bitcast i8 addrspace(2)* %queue_ptr to i32 addrspace(2)*
+  %val1 = load volatile i32, i32 addrspace(2)* %queue_ptr.bc
 
-  %kernarg_segment_ptr = call noalias i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr() #0
-  %kernarg_segment_ptr.bc = bitcast i8 addrspace(4)* %kernarg_segment_ptr to i32 addrspace(4)*
-  %val2 = load volatile i32, i32 addrspace(4)* %kernarg_segment_ptr.bc
+  %kernarg_segment_ptr = call noalias i8 addrspace(2)* @llvm.amdgcn.kernarg.segment.ptr() #0
+  %kernarg_segment_ptr.bc = bitcast i8 addrspace(2)* %kernarg_segment_ptr to i32 addrspace(2)*
+  %val2 = load volatile i32, i32 addrspace(2)* %kernarg_segment_ptr.bc
 
   %val3 = call i64 @llvm.amdgcn.dispatch.id()
   call void asm sideeffect "; use $0", "s"(i64 %val3)
@@ -525,20 +512,20 @@ define void @func_indirect_use_every_sgpr_input() #1 {
 ; GCN-DAG: s_mov_b32 s8, s16
 ; GCN: s_swappc_b64
 define void @func_use_every_sgpr_input_call_use_workgroup_id_xyz() #1 {
-  %alloca = alloca i32, align 4, addrspace(5)
-  store volatile i32 0, i32 addrspace(5)* %alloca
+  %alloca = alloca i32, align 4
+  store volatile i32 0, i32* %alloca
 
-  %dispatch_ptr = call noalias i8 addrspace(4)* @llvm.amdgcn.dispatch.ptr() #0
-  %dispatch_ptr.bc = bitcast i8 addrspace(4)* %dispatch_ptr to i32 addrspace(4)*
-  %val0 = load volatile i32, i32 addrspace(4)* %dispatch_ptr.bc
+  %dispatch_ptr = call noalias i8 addrspace(2)* @llvm.amdgcn.dispatch.ptr() #0
+  %dispatch_ptr.bc = bitcast i8 addrspace(2)* %dispatch_ptr to i32 addrspace(2)*
+  %val0 = load volatile i32, i32 addrspace(2)* %dispatch_ptr.bc
 
-  %queue_ptr = call noalias i8 addrspace(4)* @llvm.amdgcn.queue.ptr() #0
-  %queue_ptr.bc = bitcast i8 addrspace(4)* %queue_ptr to i32 addrspace(4)*
-  %val1 = load volatile i32, i32 addrspace(4)* %queue_ptr.bc
+  %queue_ptr = call noalias i8 addrspace(2)* @llvm.amdgcn.queue.ptr() #0
+  %queue_ptr.bc = bitcast i8 addrspace(2)* %queue_ptr to i32 addrspace(2)*
+  %val1 = load volatile i32, i32 addrspace(2)* %queue_ptr.bc
 
-  %kernarg_segment_ptr = call noalias i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr() #0
-  %kernarg_segment_ptr.bc = bitcast i8 addrspace(4)* %kernarg_segment_ptr to i32 addrspace(4)*
-  %val2 = load volatile i32, i32 addrspace(4)* %kernarg_segment_ptr.bc
+  %kernarg_segment_ptr = call noalias i8 addrspace(2)* @llvm.amdgcn.kernarg.segment.ptr() #0
+  %kernarg_segment_ptr.bc = bitcast i8 addrspace(2)* %kernarg_segment_ptr to i32 addrspace(2)*
+  %val2 = load volatile i32, i32 addrspace(2)* %kernarg_segment_ptr.bc
 
   %val3 = call i64 @llvm.amdgcn.dispatch.id()
   call void asm sideeffect "; use $0", "s"(i64 %val3)
@@ -558,56 +545,45 @@ define void @func_use_every_sgpr_input_call_use_workgroup_id_xyz() #1 {
 
 ; GCN-LABEL: {{^}}func_use_every_sgpr_input_call_use_workgroup_id_xyz_spill:
 ; GCN: s_mov_b32 s5, s32
-; GCN: s_add_u32 s32, s32, 0x400
+; GCN: s_add_u32 s32, s32, 0x300
 
-; GCN-DAG: s_mov_b32 [[SAVE_X:s[0-57-9][0-9]*]], s14
-; GCN-DAG: s_mov_b32 [[SAVE_Y:s[0-68-9][0-9]*]], s15
-; GCN-DAG: s_mov_b32 [[SAVE_Z:s[0-79][0-9]*]], s16
+; GCN-DAG: s_mov_b32 [[SAVE_X:s[0-9]+]], s14
+; GCN-DAG: s_mov_b32 [[SAVE_Y:s[0-9]+]], s15
+; GCN-DAG: s_mov_b32 [[SAVE_Z:s[0-9]+]], s16
 ; GCN-DAG: s_mov_b64 {{s\[[0-9]+:[0-9]+\]}}, s[6:7]
 ; GCN-DAG: s_mov_b64 {{s\[[0-9]+:[0-9]+\]}}, s[8:9]
 ; GCN-DAG: s_mov_b64 {{s\[[0-9]+:[0-9]+\]}}, s[10:11]
 
-; GCN-DAG: s_mov_b32 s6, s14
-; GCN-DAG: s_mov_b32 s7, s15
-; GCN-DAG: s_mov_b32 s8, s16
-
-; GCN-DAG: s_mov_b64 s{{\[}}[[LO_X:[0-9]+]]{{\:}}[[HI_X:[0-9]+]]{{\]}}, s[6:7]
-; GCN-DAG: s_mov_b64 s{{\[}}[[LO_Y:[0-9]+]]{{\:}}[[HI_Y:[0-9]+]]{{\]}}, s[8:9]
-; GCN-DAG: s_mov_b64 s{{\[}}[[LO_Z:[0-9]+]]{{\:}}[[HI_Z:[0-9]+]]{{\]}}, s[10:11]
-
+; GCN-DAG: s_mov_b32 s6, [[SAVE_X]]
+; GCN-DAG: s_mov_b32 s7, [[SAVE_Y]]
+; GCN-DAG: s_mov_b32 s8, [[SAVE_Z]]
 ; GCN: s_swappc_b64
 
 ; GCN: buffer_store_dword v{{[0-9]+}}, off, s[0:3], s5 offset:4
-; GCN: v_mov_b32_e32 v[[LO:[0-9]+]], s[[LO_X]]
-; GCN: v_mov_b32_e32 v[[HI:[0-9]+]], s[[HI_X]]
-; GCN: {{flat|global}}_load_dword v{{[0-9]+}}, v{{\[}}[[LO]]:[[HI]]{{\]}}
-; GCN: v_mov_b32_e32 v[[LO:[0-9]+]], s[[LO_Y]]
-; GCN: v_mov_b32_e32 v[[HI:[0-9]+]], s[[HI_Y]]
-; GCN: {{flat|global}}_load_dword v{{[0-9]+}}, v{{\[}}[[LO]]:[[HI]]{{\]}}
-; GCN: v_mov_b32_e32 v[[LO:[0-9]+]], s[[LO_Z]]
-; GCN: v_mov_b32_e32 v[[HI:[0-9]+]], s[[HI_Z]]
-; GCN: {{flat|global}}_load_dword v{{[0-9]+}}, v{{\[}}[[LO]]:[[HI]]{{\]}}
+; GCN: s_load_dword s{{[0-9]+}},
+; GCN: s_load_dword s{{[0-9]+}},
+; GCN: s_load_dword s{{[0-9]+}},
 ; GCN: ; use
 ; GCN: ; use [[SAVE_X]]
 ; GCN: ; use [[SAVE_Y]]
 ; GCN: ; use [[SAVE_Z]]
 define void @func_use_every_sgpr_input_call_use_workgroup_id_xyz_spill() #1 {
-  %alloca = alloca i32, align 4, addrspace(5)
+  %alloca = alloca i32, align 4
   call void @use_workgroup_id_xyz()
 
-  store volatile i32 0, i32 addrspace(5)* %alloca
+  store volatile i32 0, i32* %alloca
 
-  %dispatch_ptr = call noalias i8 addrspace(4)* @llvm.amdgcn.dispatch.ptr() #0
-  %dispatch_ptr.bc = bitcast i8 addrspace(4)* %dispatch_ptr to i32 addrspace(4)*
-  %val0 = load volatile i32, i32 addrspace(4)* %dispatch_ptr.bc
+  %dispatch_ptr = call noalias i8 addrspace(2)* @llvm.amdgcn.dispatch.ptr() #0
+  %dispatch_ptr.bc = bitcast i8 addrspace(2)* %dispatch_ptr to i32 addrspace(2)*
+  %val0 = load volatile i32, i32 addrspace(2)* %dispatch_ptr.bc
 
-  %queue_ptr = call noalias i8 addrspace(4)* @llvm.amdgcn.queue.ptr() #0
-  %queue_ptr.bc = bitcast i8 addrspace(4)* %queue_ptr to i32 addrspace(4)*
-  %val1 = load volatile i32, i32 addrspace(4)* %queue_ptr.bc
+  %queue_ptr = call noalias i8 addrspace(2)* @llvm.amdgcn.queue.ptr() #0
+  %queue_ptr.bc = bitcast i8 addrspace(2)* %queue_ptr to i32 addrspace(2)*
+  %val1 = load volatile i32, i32 addrspace(2)* %queue_ptr.bc
 
-  %kernarg_segment_ptr = call noalias i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr() #0
-  %kernarg_segment_ptr.bc = bitcast i8 addrspace(4)* %kernarg_segment_ptr to i32 addrspace(4)*
-  %val2 = load volatile i32, i32 addrspace(4)* %kernarg_segment_ptr.bc
+  %kernarg_segment_ptr = call noalias i8 addrspace(2)* @llvm.amdgcn.kernarg.segment.ptr() #0
+  %kernarg_segment_ptr.bc = bitcast i8 addrspace(2)* %kernarg_segment_ptr to i32 addrspace(2)*
+  %val2 = load volatile i32, i32 addrspace(2)* %kernarg_segment_ptr.bc
 
   %val3 = call i64 @llvm.amdgcn.dispatch.id()
   call void asm sideeffect "; use $0", "s"(i64 %val3)
@@ -627,10 +603,10 @@ define void @func_use_every_sgpr_input_call_use_workgroup_id_xyz_spill() #1 {
 declare i32 @llvm.amdgcn.workgroup.id.x() #0
 declare i32 @llvm.amdgcn.workgroup.id.y() #0
 declare i32 @llvm.amdgcn.workgroup.id.z() #0
-declare noalias i8 addrspace(4)* @llvm.amdgcn.queue.ptr() #0
-declare noalias i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr() #0
+declare noalias i8 addrspace(2)* @llvm.amdgcn.queue.ptr() #0
+declare noalias i8 addrspace(2)* @llvm.amdgcn.kernarg.segment.ptr() #0
 declare i64 @llvm.amdgcn.dispatch.id() #0
-declare noalias i8 addrspace(4)* @llvm.amdgcn.dispatch.ptr() #0
+declare noalias i8 addrspace(2)* @llvm.amdgcn.dispatch.ptr() #0
 
 attributes #0 = { nounwind readnone speculatable }
 attributes #1 = { nounwind noinline }

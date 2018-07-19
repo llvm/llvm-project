@@ -21,7 +21,7 @@
 namespace llvm {
 
 struct CallSiteSplittingPass : PassInfoMixin<CallSiteSplittingPass> {
-  /// Run the pass over the function.
+  /// \brief Run the pass over the function.
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 } // end namespace llvm

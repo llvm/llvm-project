@@ -17,13 +17,8 @@ cmake_policy(SET CMP0056 NEW)
 
 cmake_policy(SET CMP0057 NEW)
 
-if(POLICY CMP0068)
-  cmake_policy(SET CMP0068 NEW)
-  set(CMAKE_BUILD_WITH_INSTALL_NAME_DIR ON)
-endif()
-
 if(NOT DEFINED LLVM_VERSION_MAJOR)
-  set(LLVM_VERSION_MAJOR 7)
+  set(LLVM_VERSION_MAJOR 6)
 endif()
 if(NOT DEFINED LLVM_VERSION_MINOR)
   set(LLVM_VERSION_MINOR 0)
@@ -32,7 +27,7 @@ if(NOT DEFINED LLVM_VERSION_PATCH)
   set(LLVM_VERSION_PATCH 0)
 endif()
 if(NOT DEFINED LLVM_VERSION_SUFFIX)
-  set(LLVM_VERSION_SUFFIX svn)
+  set(LLVM_VERSION_SUFFIX "")
 endif()
 
 if (NOT PACKAGE_VERSION)
@@ -92,7 +87,7 @@ if(CMAKE_HOST_APPLE AND APPLE)
 
     foreach(lang ${languages})
       set(CMAKE_${lang}_CREATE_STATIC_LIBRARY
-        "\"${CMAKE_LIBTOOL}\" -static ${LIBTOOL_NO_WARNING_FLAG} -o <TARGET> \
+        "${CMAKE_LIBTOOL} -static ${LIBTOOL_NO_WARNING_FLAG} -o <TARGET> \
         <LINK_FLAGS> <OBJECTS> ")
     endforeach()
   endif()
@@ -142,14 +137,11 @@ set(LLVM_CCACHE_BUILD OFF CACHE BOOL "Set to ON for a ccache enabled build")
 if(LLVM_CCACHE_BUILD)
   find_program(CCACHE_PROGRAM ccache)
   if(CCACHE_PROGRAM)
-      set(LLVM_CCACHE_MAXSIZE "" CACHE STRING "Size of ccache")
+      set(LLVM_CCACHE_SIZE "" CACHE STRING "Size of ccache")
       set(LLVM_CCACHE_DIR "" CACHE STRING "Directory to keep ccached data")
-      set(LLVM_CCACHE_PARAMS "CCACHE_CPP2=yes CCACHE_HASHDIR=yes"
-          CACHE STRING "Parameters to pass through to ccache")
-
-      set(CCACHE_PROGRAM "${LLVM_CCACHE_PARAMS} ${CCACHE_PROGRAM}")
-      if (LLVM_CCACHE_MAXSIZE)
-        set(CCACHE_PROGRAM "CCACHE_MAXSIZE=${LLVM_CCACHE_MAXSIZE} ${CCACHE_PROGRAM}")
+      set(CCACHE_PROGRAM "CCACHE_CPP2=yes CCACHE_HASHDIR=yes ${CCACHE_PROGRAM}")
+      if (LLVM_CCACHE_SIZE)
+        set(CCACHE_PROGRAM "CCACHE_SIZE=${LLVM_CCACHE_SIZE} ${CCACHE_PROGRAM}")
       endif()
       if (LLVM_CCACHE_DIR)
         set(CCACHE_PROGRAM "CCACHE_DIR=${LLVM_CCACHE_DIR} ${CCACHE_PROGRAM}")
@@ -210,7 +202,7 @@ option(LLVM_APPEND_VC_REV
 
 set(PACKAGE_NAME LLVM)
 set(PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
-set(PACKAGE_BUGREPORT "https://bugs.llvm.org/")
+set(PACKAGE_BUGREPORT "http://llvm.org/bugs/")
 
 set(BUG_REPORT_URL "${PACKAGE_BUGREPORT}" CACHE STRING
   "Default URL where bug reports are to be submitted.")
@@ -284,9 +276,9 @@ set(LLVM_LIBDIR_SUFFIX "" CACHE STRING "Define suffix of library directory name 
 set(LLVM_TOOLS_INSTALL_DIR "bin" CACHE STRING "Path for binary subdirectory (defaults to 'bin')")
 mark_as_advanced(LLVM_TOOLS_INSTALL_DIR)
 
-set(LLVM_UTILS_INSTALL_DIR "${LLVM_TOOLS_INSTALL_DIR}" CACHE STRING
+set(LLVM_UTILS_INSTALL_DIR "bin" CACHE STRING
     "Path to install LLVM utilities (enabled by LLVM_INSTALL_UTILS=ON) (defaults to LLVM_TOOLS_INSTALL_DIR)")
-mark_as_advanced(LLVM_UTILS_INSTALL_DIR)
+mark_as_advanced(LLVM_TOOLS_INSTALL_DIR)
 
 # They are used as destination of target generators.
 set(LLVM_RUNTIME_OUTPUT_INTDIR ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin)
@@ -363,8 +355,6 @@ set(LLVM_ENABLE_LIBXML2 "ON" CACHE STRING "Use libxml2 if available. Can be ON, 
 
 option(LLVM_ENABLE_LIBEDIT "Use libedit if available." ON)
 
-option(LLVM_ENABLE_LIBPFM "Use libpfm for performance counters if available." ON)
-
 option(LLVM_ENABLE_THREADS "Use threads if available." ON)
 
 option(LLVM_ENABLE_ZLIB "Use zlib for compression/decompression if available." ON)
@@ -429,9 +419,6 @@ option(LLVM_USE_OPROFILE
 option(LLVM_EXTERNALIZE_DEBUGINFO
   "Generate dSYM files and strip executables and libraries (Darwin Only)" OFF)
 
-option(LLVM_CODESIGNING_IDENTITY
-  "Sign executables and dylibs with the given identity (Darwin Only)" OFF)
-
 # If enabled, verify we are on a platform that supports oprofile.
 if( LLVM_USE_OPROFILE )
   if( NOT CMAKE_SYSTEM_NAME MATCHES "Linux" )
@@ -441,7 +428,6 @@ endif( LLVM_USE_OPROFILE )
 
 set(LLVM_USE_SANITIZER "" CACHE STRING
   "Define the sanitizer used to build binaries and tests.")
-option(LLVM_OPTIMIZE_SANITIZED_BUILDS "Pass -O1 on debug sanitizer builds" ON)
 set(LLVM_LIB_FUZZING_ENGINE "" CACHE PATH
   "Path to fuzzing library for linking with fuzz targets")
 
@@ -523,7 +509,6 @@ option (LLVM_INCLUDE_DOCS "Generate build targets for llvm documentation." ON)
 option (LLVM_ENABLE_DOXYGEN "Use doxygen to generate llvm API documentation." OFF)
 option (LLVM_ENABLE_SPHINX "Use Sphinx to generate llvm documentation." OFF)
 option (LLVM_ENABLE_OCAMLDOC "Build OCaml bindings documentation." ON)
-option (LLVM_ENABLE_BINDINGS "Build bindings." ON)
 
 set(LLVM_INSTALL_DOXYGEN_HTML_DIR "share/doc/llvm/doxygen-html"
     CACHE STRING "Doxygen-generated HTML documentation install directory")
@@ -586,9 +571,6 @@ endif()
 # Override the default target with an environment variable named by LLVM_TARGET_TRIPLE_ENV.
 set(LLVM_TARGET_TRIPLE_ENV CACHE STRING "The name of environment variable to override default target. Disabled by blank.")
 mark_as_advanced(LLVM_TARGET_TRIPLE_ENV)
-
-set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR OFF CACHE BOOL
-  "Enable per-target runtimes directory")
 
 # All options referred to from HandleLLVMOptions have to be specified
 # BEFORE this include, otherwise options will not be correctly set on
@@ -751,6 +733,9 @@ configure_file(
 configure_file(
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Config/abi-breaking.h.cmake
   ${LLVM_INCLUDE_DIR}/llvm/Config/abi-breaking.h)
+configure_file(
+  ${LLVM_MAIN_INCLUDE_DIR}/llvm/Support/DataTypes.h.cmake
+  ${LLVM_INCLUDE_DIR}/llvm/Support/DataTypes.h)
 
 # Add target for generating source rpm package.
 set(LLVM_SRPM_USER_BINARY_SPECFILE ${CMAKE_CURRENT_SOURCE_DIR}/llvm.spec.in
@@ -844,7 +829,7 @@ endif()
 include(AddLLVM)
 include(TableGen)
 
-if( MINGW AND NOT "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" )
+if( MINGW )
   # People report that -O3 is unreliable on MinGW. The traditional
   # build also uses -O2 for that reason:
   llvm_replace_compiler_option(CMAKE_CXX_FLAGS_RELEASE "-O3" "-O2")
@@ -970,7 +955,7 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     PATTERN ".svn" EXCLUDE
     )
 
-  install(DIRECTORY ${LLVM_INCLUDE_DIR}/llvm ${LLVM_INCLUDE_DIR}/llvm-c
+  install(DIRECTORY ${LLVM_INCLUDE_DIR}/llvm
     DESTINATION include
     COMPONENT llvm-headers
     FILES_MATCHING
@@ -991,7 +976,6 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
 
   if (NOT CMAKE_CONFIGURATION_TYPES)
     add_llvm_install_targets(install-llvm-headers
-                             DEPENDS llvm-headers
                              COMPONENT llvm-headers)
   endif()
 endif()
@@ -1006,7 +990,7 @@ if(LLVM_DISTRIBUTION_COMPONENTS)
   add_custom_target(distribution)
   add_custom_target(install-distribution)
   add_custom_target(install-distribution-stripped)
-  foreach(target ${LLVM_DISTRIBUTION_COMPONENTS} ${LLVM_RUNTIME_DISTRIBUTION_COMPONENTS})
+  foreach(target ${LLVM_DISTRIBUTION_COMPONENTS})
     if(TARGET ${target})
       add_dependencies(distribution ${target})
     else()
@@ -1033,3 +1017,4 @@ endif()
 if (MSVC AND CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows")
   include(InstallRequiredSystemLibraries)
 endif()
+

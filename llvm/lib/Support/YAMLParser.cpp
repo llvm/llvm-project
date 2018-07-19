@@ -26,7 +26,6 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/Unicode.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -168,7 +167,7 @@ using TokenQueueT = BumpPtrList<Token>;
 
 namespace {
 
-/// This struct is used to track simple keys.
+/// @brief This struct is used to track simple keys.
 ///
 /// Simple keys are handled by creating an entry in SimpleKeys for each Token
 /// which could legally be the start of a simple key. When peekNext is called,
@@ -191,7 +190,7 @@ struct SimpleKey {
 
 } // end anonymous namespace
 
-/// The Unicode scalar value of a UTF-8 minimal well-formed code unit
+/// @brief The Unicode scalar value of a UTF-8 minimal well-formed code unit
 ///        subsequence and the subsequence's length in code units (uint8_t).
 ///        A length of 0 represents an error.
 using UTF8Decoded = std::pair<uint32_t, unsigned>;
@@ -249,7 +248,7 @@ static UTF8Decoded decodeUTF8(StringRef Range) {
 namespace llvm {
 namespace yaml {
 
-/// Scans YAML tokens from a MemoryBuffer.
+/// @brief Scans YAML tokens from a MemoryBuffer.
 class Scanner {
 public:
   Scanner(StringRef Input, SourceMgr &SM, bool ShowColors = true,
@@ -257,10 +256,10 @@ public:
   Scanner(MemoryBufferRef Buffer, SourceMgr &SM_, bool ShowColors = true,
           std::error_code *EC = nullptr);
 
-  /// Parse the next token and return it without popping it.
+  /// @brief Parse the next token and return it without popping it.
   Token &peekNext();
 
-  /// Parse the next token and pop it from the queue.
+  /// @brief Parse the next token and pop it from the queue.
   Token getNext();
 
   void printError(SMLoc Loc, SourceMgr::DiagKind Kind, const Twine &Message,
@@ -287,7 +286,7 @@ public:
     setError(Message, Current);
   }
 
-  /// Returns true if an error occurred while parsing.
+  /// @brief Returns true if an error occurred while parsing.
   bool failed() {
     return Failed;
   }
@@ -299,7 +298,7 @@ private:
     return StringRef(Current, End - Current);
   }
 
-  /// Decode a UTF-8 minimal well-formed code unit subsequence starting
+  /// @brief Decode a UTF-8 minimal well-formed code unit subsequence starting
   ///        at \a Position.
   ///
   /// If the UTF-8 code units starting at Position do not form a well-formed
@@ -329,7 +328,7 @@ private:
   // l-
   //   A production matching complete line(s).
 
-  /// Skip a single nb-char[27] starting at Position.
+  /// @brief Skip a single nb-char[27] starting at Position.
   ///
   /// A nb-char is 0x9 | [0x20-0x7E] | 0x85 | [0xA0-0xD7FF] | [0xE000-0xFEFE]
   ///                  | [0xFF00-0xFFFD] | [0x10000-0x10FFFF]
@@ -338,7 +337,7 @@ private:
   ///          nb-char.
   StringRef::iterator skip_nb_char(StringRef::iterator Position);
 
-  /// Skip a single b-break[28] starting at Position.
+  /// @brief Skip a single b-break[28] starting at Position.
   ///
   /// A b-break is 0xD 0xA | 0xD | 0xA
   ///
@@ -354,7 +353,7 @@ private:
   ///          s-space.
   StringRef::iterator skip_s_space(StringRef::iterator Position);
 
-  /// Skip a single s-white[33] starting at Position.
+  /// @brief Skip a single s-white[33] starting at Position.
   ///
   /// A s-white is 0x20 | 0x9
   ///
@@ -362,7 +361,7 @@ private:
   ///          s-white.
   StringRef::iterator skip_s_white(StringRef::iterator Position);
 
-  /// Skip a single ns-char[34] starting at Position.
+  /// @brief Skip a single ns-char[34] starting at Position.
   ///
   /// A ns-char is nb-char - s-white
   ///
@@ -372,7 +371,7 @@ private:
 
   using SkipWhileFunc = StringRef::iterator (Scanner::*)(StringRef::iterator);
 
-  /// Skip minimal well-formed code unit subsequences until Func
+  /// @brief Skip minimal well-formed code unit subsequences until Func
   ///        returns its input.
   ///
   /// @returns The code unit after the last minimal well-formed code unit
@@ -384,20 +383,20 @@ private:
   /// input.
   void advanceWhile(SkipWhileFunc Func);
 
-  /// Scan ns-uri-char[39]s starting at Cur.
+  /// @brief Scan ns-uri-char[39]s starting at Cur.
   ///
   /// This updates Cur and Column while scanning.
   void scan_ns_uri_char();
 
-  /// Consume a minimal well-formed code unit subsequence starting at
+  /// @brief Consume a minimal well-formed code unit subsequence starting at
   ///        \a Cur. Return false if it is not the same Unicode scalar value as
   ///        \a Expected. This updates \a Column.
   bool consume(uint32_t Expected);
 
-  /// Skip \a Distance UTF-8 code units. Updates \a Cur and \a Column.
+  /// @brief Skip \a Distance UTF-8 code units. Updates \a Cur and \a Column.
   void skip(uint32_t Distance);
 
-  /// Return true if the minimal well-formed code unit subsequence at
+  /// @brief Return true if the minimal well-formed code unit subsequence at
   ///        Pos is whitespace or a new line
   bool isBlankOrBreak(StringRef::iterator Position);
 
@@ -406,77 +405,77 @@ private:
   /// Return false if the code unit at the current position isn't a line break.
   bool consumeLineBreakIfPresent();
 
-  /// If IsSimpleKeyAllowed, create and push_back a new SimpleKey.
+  /// @brief If IsSimpleKeyAllowed, create and push_back a new SimpleKey.
   void saveSimpleKeyCandidate( TokenQueueT::iterator Tok
                              , unsigned AtColumn
                              , bool IsRequired);
 
-  /// Remove simple keys that can no longer be valid simple keys.
+  /// @brief Remove simple keys that can no longer be valid simple keys.
   ///
   /// Invalid simple keys are not on the current line or are further than 1024
   /// columns back.
   void removeStaleSimpleKeyCandidates();
 
-  /// Remove all simple keys on FlowLevel \a Level.
+  /// @brief Remove all simple keys on FlowLevel \a Level.
   void removeSimpleKeyCandidatesOnFlowLevel(unsigned Level);
 
-  /// Unroll indentation in \a Indents back to \a Col. Creates BlockEnd
+  /// @brief Unroll indentation in \a Indents back to \a Col. Creates BlockEnd
   ///        tokens if needed.
   bool unrollIndent(int ToColumn);
 
-  /// Increase indent to \a Col. Creates \a Kind token at \a InsertPoint
+  /// @brief Increase indent to \a Col. Creates \a Kind token at \a InsertPoint
   ///        if needed.
   bool rollIndent( int ToColumn
                  , Token::TokenKind Kind
                  , TokenQueueT::iterator InsertPoint);
 
-  /// Skip a single-line comment when the comment starts at the current
+  /// @brief Skip a single-line comment when the comment starts at the current
   /// position of the scanner.
   void skipComment();
 
-  /// Skip whitespace and comments until the start of the next token.
+  /// @brief Skip whitespace and comments until the start of the next token.
   void scanToNextToken();
 
-  /// Must be the first token generated.
+  /// @brief Must be the first token generated.
   bool scanStreamStart();
 
-  /// Generate tokens needed to close out the stream.
+  /// @brief Generate tokens needed to close out the stream.
   bool scanStreamEnd();
 
-  /// Scan a %BLAH directive.
+  /// @brief Scan a %BLAH directive.
   bool scanDirective();
 
-  /// Scan a ... or ---.
+  /// @brief Scan a ... or ---.
   bool scanDocumentIndicator(bool IsStart);
 
-  /// Scan a [ or { and generate the proper flow collection start token.
+  /// @brief Scan a [ or { and generate the proper flow collection start token.
   bool scanFlowCollectionStart(bool IsSequence);
 
-  /// Scan a ] or } and generate the proper flow collection end token.
+  /// @brief Scan a ] or } and generate the proper flow collection end token.
   bool scanFlowCollectionEnd(bool IsSequence);
 
-  /// Scan the , that separates entries in a flow collection.
+  /// @brief Scan the , that separates entries in a flow collection.
   bool scanFlowEntry();
 
-  /// Scan the - that starts block sequence entries.
+  /// @brief Scan the - that starts block sequence entries.
   bool scanBlockEntry();
 
-  /// Scan an explicit ? indicating a key.
+  /// @brief Scan an explicit ? indicating a key.
   bool scanKey();
 
-  /// Scan an explicit : indicating a value.
+  /// @brief Scan an explicit : indicating a value.
   bool scanValue();
 
-  /// Scan a quoted scalar.
+  /// @brief Scan a quoted scalar.
   bool scanFlowScalar(bool IsDoubleQuoted);
 
-  /// Scan an unquoted scalar.
+  /// @brief Scan an unquoted scalar.
   bool scanPlainScalar();
 
-  /// Scan an Alias or Anchor starting with * or &.
+  /// @brief Scan an Alias or Anchor starting with * or &.
   bool scanAliasOrAnchor(bool IsAlias);
 
-  /// Scan a block scalar starting with | or >.
+  /// @brief Scan a block scalar starting with | or >.
   bool scanBlockScalar(bool IsLiteral);
 
   /// Scan a chomping indicator in a block scalar header.
@@ -503,57 +502,57 @@ private:
   bool scanBlockScalarIndent(unsigned BlockIndent, unsigned BlockExitIndent,
                              bool &IsDone);
 
-  /// Scan a tag of the form !stuff.
+  /// @brief Scan a tag of the form !stuff.
   bool scanTag();
 
-  /// Dispatch to the next scanning function based on \a *Cur.
+  /// @brief Dispatch to the next scanning function based on \a *Cur.
   bool fetchMoreTokens();
 
-  /// The SourceMgr used for diagnostics and buffer management.
+  /// @brief The SourceMgr used for diagnostics and buffer management.
   SourceMgr &SM;
 
-  /// The original input.
+  /// @brief The original input.
   MemoryBufferRef InputBuffer;
 
-  /// The current position of the scanner.
+  /// @brief The current position of the scanner.
   StringRef::iterator Current;
 
-  /// The end of the input (one past the last character).
+  /// @brief The end of the input (one past the last character).
   StringRef::iterator End;
 
-  /// Current YAML indentation level in spaces.
+  /// @brief Current YAML indentation level in spaces.
   int Indent;
 
-  /// Current column number in Unicode code points.
+  /// @brief Current column number in Unicode code points.
   unsigned Column;
 
-  /// Current line number.
+  /// @brief Current line number.
   unsigned Line;
 
-  /// How deep we are in flow style containers. 0 Means at block level.
+  /// @brief How deep we are in flow style containers. 0 Means at block level.
   unsigned FlowLevel;
 
-  /// Are we at the start of the stream?
+  /// @brief Are we at the start of the stream?
   bool IsStartOfStream;
 
-  /// Can the next token be the start of a simple key?
+  /// @brief Can the next token be the start of a simple key?
   bool IsSimpleKeyAllowed;
 
-  /// True if an error has occurred.
+  /// @brief True if an error has occurred.
   bool Failed;
 
-  /// Should colors be used when printing out the diagnostic messages?
+  /// @brief Should colors be used when printing out the diagnostic messages?
   bool ShowColors;
 
-  /// Queue of tokens. This is required to queue up tokens while looking
+  /// @brief Queue of tokens. This is required to queue up tokens while looking
   ///        for the end of a simple key. And for cases where a single character
   ///        can produce multiple tokens (e.g. BlockEnd).
   TokenQueueT TokenQueue;
 
-  /// Indentation levels.
+  /// @brief Indentation levels.
   SmallVector<int, 4> Indents;
 
-  /// Potential simple keys.
+  /// @brief Potential simple keys.
   SmallVector<SimpleKey, 4> SimpleKeys;
 
   std::error_code *EC;
@@ -688,7 +687,7 @@ bool yaml::scanTokens(StringRef Input) {
   return true;
 }
 
-std::string yaml::escape(StringRef Input, bool EscapePrintable) {
+std::string yaml::escape(StringRef Input) {
   std::string EscapedInput;
   for (StringRef::iterator i = Input.begin(), e = Input.end(); i != e; ++i) {
     if (*i == '\\')
@@ -735,9 +734,6 @@ std::string yaml::escape(StringRef Input, bool EscapePrintable) {
         EscapedInput += "\\L";
       else if (UnicodeScalarValue.first == 0x2029)
         EscapedInput += "\\P";
-      else if (!EscapePrintable &&
-               sys::unicode::isPrintable(UnicodeScalarValue.first))
-        EscapedInput += StringRef(i, UnicodeScalarValue.second);
       else {
         std::string HexStr = utohexstr(UnicodeScalarValue.first);
         if (HexStr.size() <= 2)

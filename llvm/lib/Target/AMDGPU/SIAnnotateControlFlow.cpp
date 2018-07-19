@@ -18,7 +18,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/DivergenceAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constant.h"
@@ -38,6 +37,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include <cassert>
 #include <utility>
 
@@ -133,7 +133,7 @@ INITIALIZE_PASS_END(SIAnnotateControlFlow, DEBUG_TYPE,
 
 char SIAnnotateControlFlow::ID = 0;
 
-/// Initialize all the types and constants used in the pass
+/// \brief Initialize all the types and constants used in the pass
 bool SIAnnotateControlFlow::doInitialization(Module &M) {
   LLVMContext &Context = M.getContext();
 
@@ -157,29 +157,29 @@ bool SIAnnotateControlFlow::doInitialization(Module &M) {
   return false;
 }
 
-/// Is the branch condition uniform or did the StructurizeCFG pass
+/// \brief Is the branch condition uniform or did the StructurizeCFG pass
 /// consider it as such?
 bool SIAnnotateControlFlow::isUniform(BranchInst *T) {
   return DA->isUniform(T->getCondition()) ||
          T->getMetadata("structurizecfg.uniform") != nullptr;
 }
 
-/// Is BB the last block saved on the stack ?
+/// \brief Is BB the last block saved on the stack ?
 bool SIAnnotateControlFlow::isTopOfStack(BasicBlock *BB) {
   return !Stack.empty() && Stack.back().first == BB;
 }
 
-/// Pop the last saved value from the control flow stack
+/// \brief Pop the last saved value from the control flow stack
 Value *SIAnnotateControlFlow::popSaved() {
   return Stack.pop_back_val().second;
 }
 
-/// Push a BB and saved value to the control flow stack
+/// \brief Push a BB and saved value to the control flow stack
 void SIAnnotateControlFlow::push(BasicBlock *BB, Value *Saved) {
   Stack.push_back(std::make_pair(BB, Saved));
 }
 
-/// Can the condition represented by this PHI node treated like
+/// \brief Can the condition represented by this PHI node treated like
 /// an "Else" block?
 bool SIAnnotateControlFlow::isElse(PHINode *Phi) {
   BasicBlock *IDom = DT->getNode(Phi->getParent())->getIDom()->getBlock();
@@ -198,14 +198,14 @@ bool SIAnnotateControlFlow::isElse(PHINode *Phi) {
   return true;
 }
 
-// Erase "Phi" if it is not used any more
+// \brief Erase "Phi" if it is not used any more
 void SIAnnotateControlFlow::eraseIfUnused(PHINode *Phi) {
   if (RecursivelyDeleteDeadPHINode(Phi)) {
-    LLVM_DEBUG(dbgs() << "Erased unused condition phi\n");
+    DEBUG(dbgs() << "Erased unused condition phi\n");
   }
 }
 
-/// Open a new "If" block
+/// \brief Open a new "If" block
 void SIAnnotateControlFlow::openIf(BranchInst *Term) {
   if (isUniform(Term))
     return;
@@ -215,7 +215,7 @@ void SIAnnotateControlFlow::openIf(BranchInst *Term) {
   push(Term->getSuccessor(1), ExtractValueInst::Create(Ret, 1, "", Term));
 }
 
-/// Close the last "If" block and open a new "Else" block
+/// \brief Close the last "If" block and open a new "Else" block
 void SIAnnotateControlFlow::insertElse(BranchInst *Term) {
   if (isUniform(Term)) {
     return;
@@ -225,7 +225,7 @@ void SIAnnotateControlFlow::insertElse(BranchInst *Term) {
   push(Term->getSuccessor(1), ExtractValueInst::Create(Ret, 1, "", Term));
 }
 
-/// Recursively handle the condition leading to a loop
+/// \brief Recursively handle the condition leading to a loop
 Value *SIAnnotateControlFlow::handleLoopCondition(
     Value *Cond, PHINode *Broken, llvm::Loop *L, BranchInst *Term,
     SmallVectorImpl<WeakTrackingVH> &LoopPhiConditions) {
@@ -322,7 +322,7 @@ Value *SIAnnotateControlFlow::handleLoopCondition(
   llvm_unreachable("Unhandled loop condition!");
 }
 
-/// Handle a back edge (loop)
+/// \brief Handle a back edge (loop)
 void SIAnnotateControlFlow::handleLoop(BranchInst *Term) {
   if (isUniform(Term))
     return;
@@ -353,7 +353,7 @@ void SIAnnotateControlFlow::handleLoop(BranchInst *Term) {
   push(Term->getSuccessor(0), Arg);
 }
 
-/// Close the last opened control flow
+/// \brief Close the last opened control flow
 void SIAnnotateControlFlow::closeControlFlow(BasicBlock *BB) {
   llvm::Loop *L = LI->getLoopFor(BB);
 
@@ -381,7 +381,7 @@ void SIAnnotateControlFlow::closeControlFlow(BasicBlock *BB) {
     CallInst::Create(EndCf, Exec, "", FirstInsertionPt);
 }
 
-/// Annotate the control flow with intrinsics so the backend can
+/// \brief Annotate the control flow with intrinsics so the backend can
 /// recognize if/then/else and loops.
 bool SIAnnotateControlFlow::runOnFunction(Function &F) {
   DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
@@ -422,15 +422,11 @@ bool SIAnnotateControlFlow::runOnFunction(Function &F) {
     openIf(Term);
   }
 
-  if (!Stack.empty()) {
-    // CFG was probably not structured.
-    report_fatal_error("failed to annotate CFG");
-  }
-
+  assert(Stack.empty());
   return true;
 }
 
-/// Create the annotation pass
+/// \brief Create the annotation pass
 FunctionPass *llvm::createSIAnnotateControlFlowPass() {
   return new SIAnnotateControlFlow();
 }

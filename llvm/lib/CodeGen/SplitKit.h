@@ -421,7 +421,7 @@ private:
 
   SlotIndex buildSingleSubRegCopy(unsigned FromReg, unsigned ToReg,
       MachineBasicBlock &MB, MachineBasicBlock::iterator InsertBefore,
-      unsigned SubIdx, LiveInterval &DestLI, bool Late, SlotIndex Def);
+      unsigned SubIdx, LiveInterval &DestLI, bool Late, SlotIndex PrevCopy);
 
 public:
   /// Create a new SplitEditor for editing the LiveInterval analyzed by SA.

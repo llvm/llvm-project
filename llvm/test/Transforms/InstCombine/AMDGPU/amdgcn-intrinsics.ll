@@ -895,8 +895,8 @@ define i32 @ubfe_offset_33(i32 %src, i32 %width) {
 
 ; CHECK-LABEL: @ubfe_offset_0(
 ; CHECK-NEXT: %1 = sub i32 32, %width
-; CHECK-NEXT: %2 = lshr i32 -1, %1
-; CHECK-NEXT: %bfe = and i32 %2, %src
+; CHECK-NEXT: %2 = shl i32 %src, %1
+; CHECK-NEXT: %bfe = lshr i32 %2, %1
 ; CHECK-NEXT: ret i32 %bfe
 define i32 @ubfe_offset_0(i32 %src, i32 %width) {
   %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 %src, i32 0, i32 %width)
@@ -905,8 +905,8 @@ define i32 @ubfe_offset_0(i32 %src, i32 %width) {
 
 ; CHECK-LABEL: @ubfe_offset_32(
 ; CHECK-NEXT: %1 = sub i32 32, %width
-; CHECK-NEXT: %2 = lshr i32 -1, %1
-; CHECK-NEXT: %bfe = and i32 %2, %src
+; CHECK-NEXT: %2 = shl i32 %src, %1
+; CHECK-NEXT: %bfe = lshr i32 %2, %1
 ; CHECK-NEXT: ret i32 %bfe
 define i32 @ubfe_offset_32(i32 %src, i32 %width) {
   %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 %src, i32 32, i32 %width)
@@ -915,8 +915,8 @@ define i32 @ubfe_offset_32(i32 %src, i32 %width) {
 
 ; CHECK-LABEL: @ubfe_offset_31(
 ; CHECK-NEXT: %1 = sub i32 32, %width
-; CHECK-NEXT: %2 = lshr i32 -1, %1
-; CHECK-NEXT: %bfe = and i32 %2, %src
+; CHECK-NEXT: %2 = shl i32 %src, %1
+; CHECK-NEXT: %bfe = lshr i32 %2, %1
 ; CHECK-NEXT: ret i32 %bfe
 define i32 @ubfe_offset_31(i32 %src, i32 %width) {
   %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 %src, i32 32, i32 %width)
@@ -1002,8 +1002,8 @@ define i64 @ubfe_offset_33_width_4_i64(i64 %src) {
 ; CHECK-LABEL: @ubfe_offset_0_i64(
 ; CHECK-NEXT: %1 = sub i32 64, %width
 ; CHECK-NEXT: %2 = zext i32 %1 to i64
-; CHECK-NEXT: %3 = lshr i64 -1, %2
-; CHECK-NEXT: %bfe = and i64 %3, %src
+; CHECK-NEXT: %3 = shl i64 %src, %2
+; CHECK-NEXT: %bfe = lshr i64 %3, %2
 ; CHECK-NEXT: ret i64 %bfe
 define i64 @ubfe_offset_0_i64(i64 %src, i32 %width) {
   %bfe = call i64 @llvm.amdgcn.ubfe.i64(i64 %src, i32 0, i32 %width)
@@ -1229,7 +1229,7 @@ define float @fmed3_x_undef_y_f32(float %x, float %y) {
 }
 
 ; CHECK-LABEL: @fmed3_x_y_undef_f32(
-; CHECK: call float @llvm.maxnum.f32(float %x, float %y)
+; CHECK: call float @llvm.minnum.f32(float %x, float %y)
 define float @fmed3_x_y_undef_f32(float %x, float %y) {
   %med3 = call float @llvm.amdgcn.fmed3.f32(float %x, float %y, float undef)
   ret float %med3
@@ -1250,7 +1250,7 @@ define float @fmed3_x_qnan0_y_f32(float %x, float %y) {
 }
 
 ; CHECK-LABEL: @fmed3_x_y_qnan0_f32(
-; CHECK: call float @llvm.maxnum.f32(float %x, float %y)
+; CHECK: call float @llvm.minnum.f32(float %x, float %y)
 define float @fmed3_x_y_qnan0_f32(float %x, float %y) {
   %med3 = call float @llvm.amdgcn.fmed3.f32(float %x, float %y, float 0x7FF8000000000000)
   ret float %med3
@@ -1265,7 +1265,7 @@ define float @fmed3_qnan1_x_y_f32(float %x, float %y) {
 
 ; This can return any of the qnans.
 ; CHECK-LABEL: @fmed3_qnan0_qnan1_qnan2_f32(
-; CHECK: ret float 0x7FF8030000000000
+; CHECK: ret float 0x7FF8002000000000
 define float @fmed3_qnan0_qnan1_qnan2_f32(float %x, float %y) {
   %med3 = call float @llvm.amdgcn.fmed3.f32(float 0x7FF8000100000000, float 0x7FF8002000000000, float 0x7FF8030000000000)
   ret float %med3
@@ -1332,48 +1332,6 @@ define float @fmed3_qnan0_x_qnan1_f32(float %x) {
 define float @fmed3_qnan0_qnan1_x_f32(float %x) {
   %med3 = call float @llvm.amdgcn.fmed3.f32(float 0x7FF8001000000000, float 0x7FF8002000000000, float %x)
   ret float %med3
-}
-
-; CHECK-LABEL: @fmed3_nan_0_1_f32(
-; CHECK: ret float 0.0
-define float @fmed3_nan_0_1_f32() {
-  %med3 = call float @llvm.amdgcn.fmed3.f32(float 0x7FF8001000000000, float 0.0, float 1.0)
-  ret float %med3
-}
-
-; CHECK-LABEL: @fmed3_0_nan_1_f32(
-; CHECK: ret float 0.0
-define float @fmed3_0_nan_1_f32() {
-  %med = call float @llvm.amdgcn.fmed3.f32(float 0.0, float 0x7FF8001000000000, float 1.0)
-  ret float %med
-}
-
-; CHECK-LABEL: @fmed3_0_1_nan_f32(
-; CHECK: ret float 1.0
-define float @fmed3_0_1_nan_f32() {
-  %med = call float @llvm.amdgcn.fmed3.f32(float 0.0, float 1.0, float 0x7FF8001000000000)
-  ret float %med
-}
-
-; CHECK-LABEL: @fmed3_undef_0_1_f32(
-; CHECK: ret float 0.0
-define float @fmed3_undef_0_1_f32() {
-  %med3 = call float @llvm.amdgcn.fmed3.f32(float undef, float 0.0, float 1.0)
-  ret float %med3
-}
-
-; CHECK-LABEL: @fmed3_0_undef_1_f32(
-; CHECK: ret float 0.0
-define float @fmed3_0_undef_1_f32() {
-  %med = call float @llvm.amdgcn.fmed3.f32(float 0.0, float undef, float 1.0)
-  ret float %med
-}
-
-; CHECK-LABEL: @fmed3_0_1_undef_f32(
-; CHECK: ret float 1.0
-define float @fmed3_0_1_undef_f32() {
-  %med = call float @llvm.amdgcn.fmed3.f32(float 0.0, float 1.0, float undef)
-  ret float %med
 }
 
 ; --------------------------------------------------------------------
@@ -1734,34 +1692,5 @@ define void @kill_true() {
   ret void
 }
 
-; --------------------------------------------------------------------
-; llvm.amdgcn.update.dpp.i32
-; --------------------------------------------------------------------
-
-declare i32 @llvm.amdgcn.update.dpp.i32(i32, i32, i32, i32, i32, i1)
-
-; CHECK-LABEL: {{^}}define amdgpu_kernel void @update_dpp_no_combine(
-; CHECK: @llvm.amdgcn.update.dpp.i32(i32 %in1, i32 %in2, i32 1, i32 1, i32 1, i1 false)
-define amdgpu_kernel void @update_dpp_no_combine(i32 addrspace(1)* %out, i32 %in1, i32 %in2) {
-  %tmp0 = call i32 @llvm.amdgcn.update.dpp.i32(i32 %in1, i32 %in2, i32 1, i32 1, i32 1, i1 0)
-  store i32 %tmp0, i32 addrspace(1)* %out
-  ret void
-}
-
-; CHECK-LABEL: {{^}}define amdgpu_kernel void @update_dpp_drop_old(
-; CHECK: @llvm.amdgcn.update.dpp.i32(i32 undef, i32 %in2, i32 3, i32 15, i32 15, i1 true)
-define amdgpu_kernel void @update_dpp_drop_old(i32 addrspace(1)* %out, i32 %in1, i32 %in2) {
-  %tmp0 = call i32 @llvm.amdgcn.update.dpp.i32(i32 %in1, i32 %in2, i32 3, i32 15, i32 15, i1 1)
-  store i32 %tmp0, i32 addrspace(1)* %out
-  ret void
-}
-
-; CHECK-LABEL: {{^}}define amdgpu_kernel void @update_dpp_undef_old(
-; CHECK: @llvm.amdgcn.update.dpp.i32(i32 undef, i32 %in1, i32 4, i32 15, i32 15, i1 true)
-define amdgpu_kernel void @update_dpp_undef_old(i32 addrspace(1)* %out, i32 %in1) {
-  %tmp0 = call i32 @llvm.amdgcn.update.dpp.i32(i32 undef, i32 %in1, i32 4, i32 15, i32 15, i1 1)
-  store i32 %tmp0, i32 addrspace(1)* %out
-  ret void
-}
 
 ; CHECK: attributes #5 = { convergent }

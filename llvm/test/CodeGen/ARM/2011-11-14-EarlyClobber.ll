@@ -9,7 +9,7 @@ target triple = "thumbv7-apple-ios"
 ;
 ; The early-clobber instruction is an str:
 ;
-;   early-clobber %12 = t2STR_PRE %6, %12, 32, 14, %noreg
+;   early-clobber %12 = t2STR_PRE %6, %12, 32, pred:14, pred:%noreg
 ;
 ; This tests that shrinkToUses handles the EC redef correctly.
 

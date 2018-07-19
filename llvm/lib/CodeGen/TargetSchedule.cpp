@@ -61,10 +61,12 @@ static unsigned lcm(unsigned A, unsigned B) {
   return LCM;
 }
 
-void TargetSchedModel::init(const TargetSubtargetInfo *TSInfo) {
-  STI = TSInfo;
-  SchedModel = TSInfo->getSchedModel();
-  TII = TSInfo->getInstrInfo();
+void TargetSchedModel::init(const MCSchedModel &sm,
+                            const TargetSubtargetInfo *sti,
+                            const TargetInstrInfo *tii) {
+  SchedModel = sm;
+  STI = sti;
+  TII = tii;
   STI->initInstrItins(InstrItins);
 
   unsigned NumRes = SchedModel.getNumProcResourceKinds();
@@ -255,19 +257,31 @@ unsigned TargetSchedModel::computeOperandLatency(
 
 unsigned
 TargetSchedModel::computeInstrLatency(const MCSchedClassDesc &SCDesc) const {
-  return capLatency(MCSchedModel::computeInstrLatency(*STI, SCDesc));
+  unsigned Latency = 0;
+  for (unsigned DefIdx = 0, DefEnd = SCDesc.NumWriteLatencyEntries;
+       DefIdx != DefEnd; ++DefIdx) {
+    // Lookup the definition's write latency in SubtargetInfo.
+    const MCWriteLatencyEntry *WLEntry =
+      STI->getWriteLatencyEntry(&SCDesc, DefIdx);
+    Latency = std::max(Latency, capLatency(WLEntry->Cycles));
+  }
+  return Latency;
 }
 
 unsigned TargetSchedModel::computeInstrLatency(unsigned Opcode) const {
   assert(hasInstrSchedModel() && "Only call this function with a SchedModel");
-  unsigned SCIdx = TII->get(Opcode).getSchedClass();
-  return capLatency(SchedModel.computeInstrLatency(*STI, SCIdx));
-}
 
-unsigned TargetSchedModel::computeInstrLatency(const MCInst &Inst) const {
-  if (hasInstrSchedModel())
-    return capLatency(SchedModel.computeInstrLatency(*STI, *TII, Inst));
-  return computeInstrLatency(Inst.getOpcode());
+  unsigned SCIdx = TII->get(Opcode).getSchedClass();
+  const MCSchedClassDesc *SCDesc = SchedModel.getSchedClassDesc(SCIdx);
+
+  if (SCDesc->isValid() && !SCDesc->isVariant())
+    return computeInstrLatency(*SCDesc);
+
+  if (SCDesc->isValid()) {
+    assert (!SCDesc->isVariant() && "No MI sched latency: SCDesc->isVariant()");
+    return computeInstrLatency(*SCDesc);
+  }
+  return 0;
 }
 
 unsigned
@@ -322,39 +336,71 @@ computeOutputLatency(const MachineInstr *DefMI, unsigned DefOperIdx,
   return 0;
 }
 
-double
-TargetSchedModel::computeReciprocalThroughput(const MachineInstr *MI) const {
-  if (hasInstrItineraries()) {
-    unsigned SchedClass = MI->getDesc().getSchedClass();
-    return MCSchedModel::getReciprocalThroughput(SchedClass,
-                                                 *getInstrItineraries());
+static Optional<double>
+getRThroughputFromItineraries(unsigned schedClass,
+                              const InstrItineraryData *IID){
+  Optional<double> Throughput;
+
+  for (const InstrStage *IS = IID->beginStage(schedClass),
+                        *E = IID->endStage(schedClass);
+       IS != E; ++IS) {
+    if (IS->getCycles()) {
+      double Temp = countPopulation(IS->getUnits()) * 1.0 / IS->getCycles();
+      Throughput = Throughput.hasValue()
+                        ? std::min(Throughput.getValue(), Temp)
+                        : Temp;
+    }
   }
-
-  if (hasInstrSchedModel())
-    return MCSchedModel::getReciprocalThroughput(*STI, *resolveSchedClass(MI));
-
-  return 0.0;
+  if (Throughput.hasValue())
+    // We need reciprocal throughput that's why we return such value.
+    return 1 / Throughput.getValue();
+  return Throughput;
 }
 
-double
-TargetSchedModel::computeReciprocalThroughput(unsigned Opcode) const {
+static Optional<double>
+getRThroughputFromInstrSchedModel(const MCSchedClassDesc *SCDesc,
+                                  const TargetSubtargetInfo *STI,
+                                  const MCSchedModel &SchedModel) {
+  Optional<double> Throughput;
+
+  for (const MCWriteProcResEntry *WPR = STI->getWriteProcResBegin(SCDesc),
+                                 *WEnd = STI->getWriteProcResEnd(SCDesc);
+       WPR != WEnd; ++WPR) {
+    if (WPR->Cycles) {
+      unsigned NumUnits =
+          SchedModel.getProcResource(WPR->ProcResourceIdx)->NumUnits;
+      double Temp = NumUnits * 1.0 / WPR->Cycles;
+      Throughput = Throughput.hasValue()
+                       ? std::min(Throughput.getValue(), Temp)
+                       : Temp;
+    }
+  }
+  if (Throughput.hasValue())
+    // We need reciprocal throughput that's why we return such value.
+    return 1 / Throughput.getValue();
+  return Throughput;
+}
+
+Optional<double>
+TargetSchedModel::computeInstrRThroughput(const MachineInstr *MI) const {
+  if (hasInstrItineraries())
+    return getRThroughputFromItineraries(MI->getDesc().getSchedClass(),
+                                         getInstrItineraries());
+  if (hasInstrSchedModel())
+    return getRThroughputFromInstrSchedModel(resolveSchedClass(MI), STI,
+                                             SchedModel);
+  return Optional<double>();
+}
+
+Optional<double>
+TargetSchedModel::computeInstrRThroughput(unsigned Opcode) const {
   unsigned SchedClass = TII->get(Opcode).getSchedClass();
   if (hasInstrItineraries())
-    return MCSchedModel::getReciprocalThroughput(SchedClass,
-                                                 *getInstrItineraries());
+    return getRThroughputFromItineraries(SchedClass, getInstrItineraries());
   if (hasInstrSchedModel()) {
-    const MCSchedClassDesc &SCDesc = *SchedModel.getSchedClassDesc(SchedClass);
-    if (SCDesc.isValid() && !SCDesc.isVariant())
-      return MCSchedModel::getReciprocalThroughput(*STI, SCDesc);
+    const MCSchedClassDesc *SCDesc = SchedModel.getSchedClassDesc(SchedClass);
+    if (SCDesc->isValid() && !SCDesc->isVariant())
+      return getRThroughputFromInstrSchedModel(SCDesc, STI, SchedModel);
   }
-
-  return 0.0;
+  return Optional<double>();
 }
-
-double
-TargetSchedModel::computeReciprocalThroughput(const MCInst &MI) const {
-  if (hasInstrSchedModel())
-    return SchedModel.getReciprocalThroughput(*STI, *TII, MI);
-  return computeReciprocalThroughput(MI.getOpcode());
-}
-

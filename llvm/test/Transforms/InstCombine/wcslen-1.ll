@@ -166,18 +166,6 @@ define i64 @test_no_simplify2(i32 %x) {
   ret i64 %hello_l
 }
 
-define i64 @test_no_simplify2_no_null_opt(i32 %x) #0 {
-; CHECK-LABEL: @test_no_simplify2_no_null_opt(
-; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[X:%.*]] to i64
-; CHECK-NEXT:    [[HELLO_P:%.*]] = getelementptr inbounds [7 x i32], [7 x i32]* @null_hello, i64 0, i64 [[TMP1]]
-; CHECK-NEXT:    [[HELLO_L:%.*]] = call i64 @wcslen(i32* [[HELLO_P]])
-; CHECK-NEXT:    ret i64 [[HELLO_L]]
-;
-  %hello_p = getelementptr inbounds [7 x i32], [7 x i32]* @null_hello, i32 0, i32 %x
-  %hello_l = call i64 @wcslen(i32* %hello_p)
-  ret i64 %hello_l
-}
-
 ; wcslen(@null_hello_mid + (x & 15)) should not be simplified to a sub instruction.
 
 define i64 @test_no_simplify3(i32 %x) {
@@ -186,20 +174,6 @@ define i64 @test_no_simplify3(i32 %x) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[AND]] to i64
 ; CHECK-NEXT:    [[HELLO_P:%.*]] = getelementptr inbounds [13 x i32], [13 x i32]* @null_hello_mid, i64 0, i64 [[TMP1]]
 ; CHECK-NEXT:    [[HELLO_L:%.*]] = call i64 @wcslen(i32* nonnull [[HELLO_P]])
-; CHECK-NEXT:    ret i64 [[HELLO_L]]
-;
-  %and = and i32 %x, 15
-  %hello_p = getelementptr inbounds [13 x i32], [13 x i32]* @null_hello_mid, i32 0, i32 %and
-  %hello_l = call i64 @wcslen(i32* %hello_p)
-  ret i64 %hello_l
-}
-
-define i64 @test_no_simplify3_no_null_opt(i32 %x) #0 {
-; CHECK-LABEL: @test_no_simplify3_no_null_opt(
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 15
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[AND]] to i64
-; CHECK-NEXT:    [[HELLO_P:%.*]] = getelementptr inbounds [13 x i32], [13 x i32]* @null_hello_mid, i64 0, i64 [[TMP1]]
-; CHECK-NEXT:    [[HELLO_L:%.*]] = call i64 @wcslen(i32* [[HELLO_P]])
 ; CHECK-NEXT:    ret i64 [[HELLO_L]]
 ;
   %and = and i32 %x, 15
@@ -218,5 +192,3 @@ define i64 @test_no_simplify4() {
   %l = call i64 @wcslen(i32* bitcast ([1 x i16]* @str16 to i32*))
   ret i64 %l
 }
-
-attributes #0 = { "null-pointer-is-valid"="true" }

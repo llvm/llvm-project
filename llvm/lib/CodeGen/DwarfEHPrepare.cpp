@@ -18,7 +18,6 @@
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/CodeGen/RuntimeLibcalls.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -34,6 +33,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include <cstddef>
 
 using namespace llvm;
@@ -195,9 +195,9 @@ bool DwarfEHPrepare::InsertUnwindResumeCalls(Function &Fn) {
   if (Resumes.empty())
     return false;
 
-  // Check the personality, don't do anything if it's scope-based.
+  // Check the personality, don't do anything if it's funclet-based.
   EHPersonality Pers = classifyEHPersonality(Fn.getPersonalityFn());
-  if (isScopedEHPersonality(Pers))
+  if (isFuncletEHPersonality(Pers))
     return false;
 
   LLVMContext &Ctx = Fn.getContext();

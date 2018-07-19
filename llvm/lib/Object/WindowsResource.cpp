@@ -334,7 +334,7 @@ private:
   void writeDirectoryTree();
   void writeDirectoryStringTable();
   void writeFirstSectionRelocations();
-  std::unique_ptr<WritableMemoryBuffer> OutputBuffer;
+  std::unique_ptr<MemoryBuffer> OutputBuffer;
   char *BufferStart;
   uint64_t CurrentOffset = 0;
   COFF::MachineTypes MachineType;
@@ -360,7 +360,7 @@ WindowsResourceCOFFWriter::WindowsResourceCOFFWriter(
       Data(Parser.getData()), StringTable(Parser.getStringTable()) {
   performFileLayout();
 
-  OutputBuffer = WritableMemoryBuffer::getNewMemBuffer(FileSize);
+  OutputBuffer = MemoryBuffer::getNewMemBuffer(FileSize);
 }
 
 void WindowsResourceCOFFWriter::performFileLayout() {
@@ -425,7 +425,7 @@ static std::time_t getTime() {
 }
 
 std::unique_ptr<MemoryBuffer> WindowsResourceCOFFWriter::write() {
-  BufferStart = OutputBuffer->getBufferStart();
+  BufferStart = const_cast<char *>(OutputBuffer->getBufferStart());
 
   writeCOFFHeader();
   writeFirstSectionHeader();

@@ -1,4 +1,0 @@
-# RUN: llvm-mc --disassemble %s -triple=i686-apple-darwin9 2>&1 | grep "invalid instruction encoding"
-
-# Make sure the VEX.vvvv being all 1s check doesn't ignore bit 3 in 32-bit mode.
-0xc4 0xe1 0xb9 0x7e 0xc0

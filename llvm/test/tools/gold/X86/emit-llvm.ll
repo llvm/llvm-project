@@ -48,14 +48,14 @@ target triple = "x86_64-unknown-linux-gnu"
 
 @g8 = external global i32
 
-; CHECK-DAG: define internal void @f1()
+; CHECK-DAG: define internal dso_local void @f1()
 ; OPT2-NOT: @f1
 define hidden void @f1() {
   ret void
 }
 
-; CHECK-DAG: define hidden void @f2()
-; OPT-DAG: define hidden void @f2()
+; CHECK-DAG: define dso_local hidden void @f2()
+; OPT-DAG: define dso_local hidden void @f2()
 define hidden void @f2() {
   ret void
 }

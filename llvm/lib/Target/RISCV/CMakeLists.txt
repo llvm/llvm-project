@@ -1,15 +1,14 @@
 set(LLVM_TARGET_DEFINITIONS RISCV.td)
 
-tablegen(LLVM RISCVGenAsmMatcher.inc -gen-asm-matcher)
-tablegen(LLVM RISCVGenAsmWriter.inc -gen-asm-writer)
-tablegen(LLVM RISCVGenCompressInstEmitter.inc -gen-compress-inst-emitter)
-tablegen(LLVM RISCVGenDAGISel.inc -gen-dag-isel)
-tablegen(LLVM RISCVGenDisassemblerTables.inc -gen-disassembler)
+tablegen(LLVM RISCVGenRegisterInfo.inc -gen-register-info)
 tablegen(LLVM RISCVGenInstrInfo.inc -gen-instr-info)
 tablegen(LLVM RISCVGenMCCodeEmitter.inc -gen-emitter)
 tablegen(LLVM RISCVGenMCPseudoLowering.inc -gen-pseudo-lowering)
-tablegen(LLVM RISCVGenRegisterInfo.inc -gen-register-info)
+tablegen(LLVM RISCVGenAsmMatcher.inc -gen-asm-matcher)
+tablegen(LLVM RISCVGenAsmWriter.inc -gen-asm-writer)
+tablegen(LLVM RISCVGenDAGISel.inc -gen-dag-isel)
 tablegen(LLVM RISCVGenSubtargetInfo.inc -gen-subtarget)
+tablegen(LLVM RISCVGenDisassemblerTables.inc -gen-disassembler)
 
 add_public_tablegen_target(RISCVCommonTableGen)
 
@@ -20,11 +19,9 @@ add_llvm_target(RISCVCodeGen
   RISCVISelDAGToDAG.cpp
   RISCVISelLowering.cpp
   RISCVMCInstLower.cpp
-  RISCVMergeBaseOffset.cpp
   RISCVRegisterInfo.cpp
   RISCVSubtarget.cpp
   RISCVTargetMachine.cpp
-  RISCVTargetObjectFile.cpp
   )
 
 add_subdirectory(AsmParser)

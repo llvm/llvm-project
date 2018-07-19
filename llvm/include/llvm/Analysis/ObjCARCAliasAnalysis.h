@@ -29,7 +29,7 @@
 namespace llvm {
 namespace objcarc {
 
-/// This is a simple alias analysis implementation that uses knowledge
+/// \brief This is a simple alias analysis implementation that uses knowledge
 /// of ARC constructs to answer queries.
 ///
 /// TODO: This class could be generalized to know about other ObjC-specific

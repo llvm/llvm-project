@@ -38,10 +38,10 @@ define void @test_igess_store(i16 signext %a, i16 signext %b) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r5, r2, .LC0@toc@ha
 ; CHECK-NEXT:    sub r3, r3, r4
-; CHECK-NEXT:    ld r4, .LC0@toc@l(r5)
+; CHECK-NEXT:    ld r12, .LC0@toc@l(r5)
 ; CHECK-NEXT:    rldicl r3, r3, 1, 63
 ; CHECK-NEXT:    xori r3, r3, 1
-; CHECK-NEXT:    sth r3, 0(r4)
+; CHECK-NEXT:    sth r3, 0(r12)
 ; CHECK-NEXT:    blr
 entry:
   %cmp = icmp sge i16 %a, %b
@@ -55,10 +55,10 @@ define void @test_igess_sext_store(i16 signext %a, i16 signext %b) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r5, r2, .LC0@toc@ha
 ; CHECK-NEXT:    sub r3, r3, r4
-; CHECK-NEXT:    ld r4, .LC0@toc@l(r5)
+; CHECK-NEXT:    ld r12, .LC0@toc@l(r5)
 ; CHECK-NEXT:    rldicl r3, r3, 1, 63
 ; CHECK-NEXT:    addi r3, r3, -1
-; CHECK-NEXT:    sth r3, 0(r4)
+; CHECK-NEXT:    sth r3, 0(r12)
 ; CHECK-NEXT:    blr
 entry:
   %cmp = icmp sge i16 %a, %b

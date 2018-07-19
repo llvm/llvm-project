@@ -38,7 +38,7 @@ define <4 x float> @test_negative_zero_1(<4 x float> %A) {
 ; SSE2-LABEL: test_negative_zero_1:
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    movaps %xmm0, %xmm1
-; SSE2-NEXT:    movhlps {{.*#+}} xmm1 = xmm0[1],xmm1[1]
+; SSE2-NEXT:    movhlps {{.*#+}} xmm1 = xmm1[1,1]
 ; SSE2-NEXT:    xorps %xmm2, %xmm2
 ; SSE2-NEXT:    movss {{.*#+}} xmm2 = xmm1[0],xmm2[1,2,3]
 ; SSE2-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
@@ -72,7 +72,7 @@ define <2 x double> @test_negative_zero_2(<2 x double> %A) {
 ;
 ; SSE41-LABEL: test_negative_zero_2:
 ; SSE41:       # %bb.0: # %entry
-; SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0,1],mem[2,3]
+; SSE41-NEXT:    blendpd {{.*#+}} xmm0 = xmm0[0],mem[1]
 ; SSE41-NEXT:    retq
 entry:
   %0 = extractelement <2 x double> %A, i32 0
@@ -107,10 +107,10 @@ define <4 x float> @test_buildvector_v4f32_load(float* %p0, float* %p1, float* %
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE2-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; SSE2-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; SSE2-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; SSE2-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
 ; SSE2-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; SSE2-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
+; SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE2-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
 ; SSE2-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; SSE2-NEXT:    retq
 ;
@@ -135,9 +135,9 @@ define <4 x float> @test_buildvector_v4f32_load(float* %p0, float* %p1, float* %
 define <4 x float> @test_buildvector_v4f32_partial_load(float %f0, float %f1, float %f2, float* %p3) {
 ; SSE2-LABEL: test_buildvector_v4f32_partial_load:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movss {{.*#+}} xmm3 = mem[0],zero,zero,zero
 ; SSE2-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; SSE2-NEXT:    unpcklps {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
+; SSE2-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; SSE2-NEXT:    unpcklps {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
 ; SSE2-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm2[0]
 ; SSE2-NEXT:    retq
 ;
@@ -555,19 +555,4 @@ define <16 x i8> @test_buildvector_v16i8_register_zero_2(i8 %a2, i8 %a3, i8 %a6,
   %ins14 = insertelement <16 x i8> %ins13, i8     0, i32 14
   %ins15 = insertelement <16 x i8> %ins14, i8  %a15, i32 15
   ret <16 x i8> %ins15
-}
-
-; OSS-Fuzz #5688
-; https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=5688
-define <4 x i32> @ossfuzz5688(i32 %a0) {
-; CHECK-LABEL: ossfuzz5688:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    retq
-  %1 = insertelement <4 x i32> zeroinitializer, i32 -2147483648, i32 %a0
-  %2 = extractelement <4 x i32> %1, i32 %a0
-  %3 = extractelement <4 x i32> <i32 30, i32 53, i32 42, i32 12>, i32 %2
-  %4 = extractelement <4 x i32> zeroinitializer, i32 %2
-  %5 = insertelement <4 x i32> undef, i32 %3, i32 undef
-  store i32 %4, i32* undef
-  ret <4 x i32> %5
 }

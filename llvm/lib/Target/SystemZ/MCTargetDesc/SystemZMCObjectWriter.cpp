@@ -161,7 +161,8 @@ unsigned SystemZObjectWriter::getRelocType(MCContext &Ctx,
   }
 }
 
-std::unique_ptr<MCObjectTargetWriter>
-llvm::createSystemZObjectWriter(uint8_t OSABI) {
-  return llvm::make_unique<SystemZObjectWriter>(OSABI);
+std::unique_ptr<MCObjectWriter>
+llvm::createSystemZObjectWriter(raw_pwrite_stream &OS, uint8_t OSABI) {
+  return createELFObjectWriter(llvm::make_unique<SystemZObjectWriter>(OSABI),
+                               OS, /*IsLittleEndian=*/false);
 }

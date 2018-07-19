@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-pc-linux -x86-cmov-converter=true -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap %s
+; RUN: llc -mtriple=x86_64-pc-linux -x86-cmov-converter=true -verify-machineinstrs < %s | FileCheck %s
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; This test checks that x86-cmov-converter optimization transform CMOV
@@ -234,7 +234,7 @@ for.body:                                         ; preds = %for.body.preheader,
 }
 
 ; CHECK-LABEL: BinarySearch
-; CHECK: set
+; CHECK: cmov
 
 define i32 @BinarySearch(i32 %Mask, %struct.Node* nocapture readonly %Curr, %struct.Node* nocapture readonly %Next) #0 {
 entry:

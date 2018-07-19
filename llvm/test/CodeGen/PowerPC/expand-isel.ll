@@ -79,13 +79,13 @@ entry:
 ; CHECK: cmpwi r7, 0
 ; CHECK-NEXT: bc 12, gt, [[TRUE:.LBB[0-9]+]]
 ; CHECK: ori r3, r4, 0
-; CHECK-NEXT: ori r4, r6, 0
+; CHECK-NEXT: ori r12, r6, 0
 ; CHECK-NEXT: b [[SUCCESSOR:.LBB[0-9]+]]
 ; CHECK-NEXT:  [[TRUE]]
 ; CHECK-NEXT: addi r3, r7, 0
-; CHECK-NEXT: addi r4, r5, 0
+; CHECK-NEXT: addi r12, r5, 0
 ; CHECK-NEXT: [[SUCCESSOR]]
-; CHECK-NEXT: add r3, r3, r4
+; CHECK-NEXT: add r3, r3, r12
 ; CHECK-NEXT: extsw r3, r3
 ; CHECK-NEXT: blr
 }
@@ -104,12 +104,12 @@ entry:
 ; CHECK: cmpwi cr0, r7, 0
 ; CHECK-NEXT: bc 12, gt, [[TRUE:.LBB[0-9]+]]
 ; CHECK: ori r3, r4, 0
-; CHECK-NEXT: ori r4, r6, 0
+; CHECK-NEXT: ori r12, r6, 0
 ; CHECK-NEXT: b [[SUCCESSOR:.LBB[0-9]+]]
 ; CHECK-NEXT: [[TRUE]]
-; CHECK-NEXT: addi r4, r5, 0
+; CHECK-NEXT: addi r12, r5, 0
 ; CHECK-NEXT:  [[SUCCESSOR]]
-; CHECK-NEXT: add r3, r3, r4
+; CHECK-NEXT: add r3, r3, r12
 ; CHECK-NEXT: extsw r3, r3
 ; CHECK-NEXT: blr
 }

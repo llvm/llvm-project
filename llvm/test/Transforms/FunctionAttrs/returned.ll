@@ -1,5 +1,4 @@
 ; RUN: opt < %s -functionattrs -S | FileCheck %s
-; RUN: opt < %s -passes=function-attrs -S | FileCheck %s
 
 ; CHECK: define i32 @test1(i32 %p, i32 %q)
 define i32 @test1(i32 %p, i32 %q) {

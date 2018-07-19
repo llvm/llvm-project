@@ -16,7 +16,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/MC/MCInstrDesc.h"
-#include "llvm/Support/AMDHSAKernelDescriptor.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cstdint>
@@ -29,31 +28,24 @@ class Argument;
 class FeatureBitset;
 class Function;
 class GlobalValue;
+class MachineMemOperand;
 class MCContext;
 class MCRegisterClass;
 class MCRegisterInfo;
 class MCSection;
 class MCSubtargetInfo;
-class MachineMemOperand;
 class Triple;
 
 namespace AMDGPU {
-
-#define GET_MIMGBaseOpcode_DECL
-#define GET_MIMGDim_DECL
-#define GET_MIMGEncoding_DECL
-#include "AMDGPUGenSearchableTables.inc"
-
 namespace IsaInfo {
 
 enum {
   // The closed Vulkan driver sets 96, which limits the wave count to 8 but
   // doesn't spill SGPRs as much as when 80 is set.
-  FIXED_NUM_SGPRS_FOR_INIT_BUG = 96,
-  TRAP_NUM_SGPRS = 16
+  FIXED_NUM_SGPRS_FOR_INIT_BUG = 96
 };
 
-/// Instruction set architecture version.
+/// \brief Instruction set architecture version.
 struct IsaVersion {
   unsigned Major;
   unsigned Minor;
@@ -63,12 +55,12 @@ struct IsaVersion {
 /// \returns Isa version for given subtarget \p Features.
 IsaVersion getIsaVersion(const FeatureBitset &Features);
 
-/// Streams isa version string for given subtarget \p STI into \p Stream.
+/// \brief Streams isa version string for given subtarget \p STI into \p Stream.
 void streamIsaVersion(const MCSubtargetInfo *STI, raw_ostream &Stream);
 
-/// \returns True if given subtarget \p STI supports code object version 3,
+/// \returns True if given subtarget \p Features support code object version 3,
 /// false otherwise.
-bool hasCodeObjectV3(const MCSubtargetInfo *STI);
+bool hasCodeObjectV3(const FeatureBitset &Features);
 
 /// \returns Wavefront size for given subtarget \p Features.
 unsigned getWavefrontSize(const FeatureBitset &Features);
@@ -100,7 +92,7 @@ unsigned getMinWavesPerEU(const FeatureBitset &Features);
 
 /// \returns Maximum number of waves per execution unit for given subtarget \p
 /// Features without any kind of limitation.
-unsigned getMaxWavesPerEU();
+unsigned getMaxWavesPerEU(const FeatureBitset &Features);
 
 /// \returns Maximum number of waves per execution unit for given subtarget \p
 /// Features and limited by given \p FlatWorkGroupSize.
@@ -139,22 +131,6 @@ unsigned getMinNumSGPRs(const FeatureBitset &Features, unsigned WavesPerEU);
 unsigned getMaxNumSGPRs(const FeatureBitset &Features, unsigned WavesPerEU,
                         bool Addressable);
 
-/// \returns Number of extra SGPRs implicitly required by given subtarget \p
-/// Features when the given special registers are used.
-unsigned getNumExtraSGPRs(const FeatureBitset &Features, bool VCCUsed,
-                          bool FlatScrUsed, bool XNACKUsed);
-
-/// \returns Number of extra SGPRs implicitly required by given subtarget \p
-/// Features when the given special registers are used. XNACK is inferred from
-/// \p Features.
-unsigned getNumExtraSGPRs(const FeatureBitset &Features, bool VCCUsed,
-                          bool FlatScrUsed);
-
-/// \returns Number of SGPR blocks needed for given subtarget \p Features when
-/// \p NumSGPRs are used. \p NumSGPRs should already include any special
-/// register counts.
-unsigned getNumSGPRBlocks(const FeatureBitset &Features, unsigned NumSGPRs);
-
 /// \returns VGPR allocation granularity for given subtarget \p Features.
 unsigned getVGPRAllocGranule(const FeatureBitset &Features);
 
@@ -175,56 +151,19 @@ unsigned getMinNumVGPRs(const FeatureBitset &Features, unsigned WavesPerEU);
 /// execution unit requirement for given subtarget \p Features.
 unsigned getMaxNumVGPRs(const FeatureBitset &Features, unsigned WavesPerEU);
 
-/// \returns Number of VGPR blocks needed for given subtarget \p Features when
-/// \p NumVGPRs are used.
-unsigned getNumVGPRBlocks(const FeatureBitset &Features, unsigned NumSGPRs);
-
 } // end namespace IsaInfo
 
 LLVM_READONLY
 int16_t getNamedOperandIdx(uint16_t Opcode, uint16_t NamedIdx);
 
-struct MIMGBaseOpcodeInfo {
-  MIMGBaseOpcode BaseOpcode;
-  bool Store;
-  bool Atomic;
-  bool AtomicX2;
-  bool Sampler;
-
-  uint8_t NumExtraArgs;
-  bool Gradients;
-  bool Coordinates;
-  bool LodOrClampOrMip;
-  bool HasD16;
-};
-
 LLVM_READONLY
-const MIMGBaseOpcodeInfo *getMIMGBaseOpcodeInfo(unsigned BaseOpcode);
-
-struct MIMGDimInfo {
-  MIMGDim Dim;
-  uint8_t NumCoords;
-  uint8_t NumGradients;
-  bool DA;
-};
-
-LLVM_READONLY
-const MIMGDimInfo *getMIMGDimInfo(unsigned Dim);
-
-LLVM_READONLY
-int getMIMGOpcode(unsigned BaseOpcode, unsigned MIMGEncoding,
-                  unsigned VDataDwords, unsigned VAddrDwords);
-
-LLVM_READONLY
-int getMaskedMIMGOp(unsigned Opc, unsigned NewChannels);
-
+int getMaskedMIMGOp(const MCInstrInfo &MII,
+                    unsigned Opc, unsigned NewChannels);
 LLVM_READONLY
 int getMCOpcode(uint16_t Opcode, unsigned Gen);
 
 void initDefaultAMDKernelCodeT(amd_kernel_code_t &Header,
                                const FeatureBitset &Features);
-
-amdhsa::kernel_descriptor_t getDefaultAmdhsaKernelDescriptor();
 
 bool isGroupSegment(const GlobalValue *GV);
 bool isGlobalSegment(const GlobalValue *GV);
@@ -277,7 +216,7 @@ unsigned decodeExpcnt(const IsaInfo::IsaVersion &Version, unsigned Waitcnt);
 /// \returns Decoded Lgkmcnt from given \p Waitcnt for given isa \p Version.
 unsigned decodeLgkmcnt(const IsaInfo::IsaVersion &Version, unsigned Waitcnt);
 
-/// Decodes Vmcnt, Expcnt and Lgkmcnt from given \p Waitcnt for given isa
+/// \brief Decodes Vmcnt, Expcnt and Lgkmcnt from given \p Waitcnt for given isa
 /// \p Version, and writes decoded values into \p Vmcnt, \p Expcnt and
 /// \p Lgkmcnt respectively.
 ///
@@ -301,7 +240,7 @@ unsigned encodeExpcnt(const IsaInfo::IsaVersion &Version, unsigned Waitcnt,
 unsigned encodeLgkmcnt(const IsaInfo::IsaVersion &Version, unsigned Waitcnt,
                        unsigned Lgkmcnt);
 
-/// Encodes \p Vmcnt, \p Expcnt and \p Lgkmcnt into Waitcnt for given isa
+/// \brief Encodes \p Vmcnt, \p Expcnt and \p Lgkmcnt into Waitcnt for given isa
 /// \p Version.
 ///
 /// \details \p Vmcnt, \p Expcnt and \p Lgkmcnt are encoded as follows:
@@ -339,45 +278,41 @@ inline bool isKernel(CallingConv::ID CC) {
   }
 }
 
-bool hasXNACK(const MCSubtargetInfo &STI);
-bool hasMIMG_R128(const MCSubtargetInfo &STI);
-bool hasPackedD16(const MCSubtargetInfo &STI);
-
 bool isSI(const MCSubtargetInfo &STI);
 bool isCI(const MCSubtargetInfo &STI);
 bool isVI(const MCSubtargetInfo &STI);
 bool isGFX9(const MCSubtargetInfo &STI);
 
-/// Is Reg - scalar register
+/// \brief Is Reg - scalar register
 bool isSGPR(unsigned Reg, const MCRegisterInfo* TRI);
 
-/// Is there any intersection between registers
+/// \brief Is there any intersection between registers
 bool isRegIntersect(unsigned Reg0, unsigned Reg1, const MCRegisterInfo* TRI);
 
 /// If \p Reg is a pseudo reg, return the correct hardware register given
 /// \p STI otherwise return \p Reg.
 unsigned getMCReg(unsigned Reg, const MCSubtargetInfo &STI);
 
-/// Convert hardware register \p Reg to a pseudo register
+/// \brief Convert hardware register \p Reg to a pseudo register
 LLVM_READNONE
 unsigned mc2PseudoReg(unsigned Reg);
 
-/// Can this operand also contain immediate values?
+/// \brief Can this operand also contain immediate values?
 bool isSISrcOperand(const MCInstrDesc &Desc, unsigned OpNo);
 
-/// Is this floating-point operand?
+/// \brief Is this floating-point operand?
 bool isSISrcFPOperand(const MCInstrDesc &Desc, unsigned OpNo);
 
-/// Does this opearnd support only inlinable literals?
+/// \brief Does this opearnd support only inlinable literals?
 bool isSISrcInlinableOperand(const MCInstrDesc &Desc, unsigned OpNo);
 
-/// Get the size in bits of a register from the register class \p RC.
+/// \brief Get the size in bits of a register from the register class \p RC.
 unsigned getRegBitWidth(unsigned RCID);
 
-/// Get the size in bits of a register from the register class \p RC.
+/// \brief Get the size in bits of a register from the register class \p RC.
 unsigned getRegBitWidth(const MCRegisterClass &RC);
 
-/// Get size of register operand
+/// \brief Get size of register operand
 unsigned getRegOperandSize(const MCRegisterInfo *MRI, const MCInstrDesc &Desc,
                            unsigned OpNo);
 
@@ -414,7 +349,7 @@ inline unsigned getOperandSize(const MCInstrDesc &Desc, unsigned OpNo) {
   return getOperandSize(Desc.OpInfo[OpNo]);
 }
 
-/// Is this literal inlinable
+/// \brief Is this literal inlinable
 LLVM_READNONE
 bool isInlinableLiteral64(int64_t Literal, bool HasInv2Pi);
 
@@ -437,9 +372,6 @@ int64_t getSMRDEncodedOffset(const MCSubtargetInfo &ST, int64_t ByteOffset);
 /// offset field.  \p ByteOffset should be the offset in bytes and
 /// not the encoded offset.
 bool isLegalSMRDImmOffset(const MCSubtargetInfo &ST, int64_t ByteOffset);
-
-/// \returns true if the intrinsic is divergent
-bool isIntrinsicSourceOfDivergence(unsigned IntrID);
 
 } // end namespace AMDGPU
 } // end namespace llvm

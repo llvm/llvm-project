@@ -95,8 +95,7 @@ static inline bool isDebugSSection(object::SectionRef Section,
 
 static bool isDebugTSection(SectionRef Section, CVTypeArray &Types) {
   BinaryStreamReader Reader;
-  if (!isCodeViewDebugSubsection(Section, ".debug$T", Reader) &&
-      !isCodeViewDebugSubsection(Section, ".debug$P", Reader))
+  if (!isCodeViewDebugSubsection(Section, ".debug$T", Reader))
     return false;
   cantFail(Reader.readArray(Types, Reader.bytesRemaining()));
   return true;
@@ -243,7 +242,7 @@ void SymbolGroup::formatFromChecksumsOffset(LinePrinter &Printer,
   }
 }
 
-Expected<InputFile> InputFile::open(StringRef Path, bool AllowUnknownFile) {
+Expected<InputFile> InputFile::open(StringRef Path) {
   InputFile IF;
   if (!llvm::sys::fs::exists(Path))
     return make_error<StringError>(formatv("File {0} not found", Path),
@@ -264,7 +263,7 @@ Expected<InputFile> InputFile::open(StringRef Path, bool AllowUnknownFile) {
     return std::move(IF);
   }
 
-  if (Magic == file_magic::pdb) {
+  if (Magic == file_magic::unknown) {
     std::unique_ptr<IPDBSession> Session;
     if (auto Err = loadDataForPDB(PDB_ReaderType::Native, Path, Session))
       return std::move(Err);
@@ -275,19 +274,9 @@ Expected<InputFile> InputFile::open(StringRef Path, bool AllowUnknownFile) {
     return std::move(IF);
   }
 
-  if (!AllowUnknownFile)
-    return make_error<StringError>(
-        formatv("File {0} is not a supported file type", Path),
-        inconvertibleErrorCode());
-
-  auto Result = MemoryBuffer::getFile(Path, -1LL, false);
-  if (!Result)
-    return make_error<StringError>(
-        formatv("File {0} could not be opened", Path), Result.getError());
-
-  IF.UnknownFile = std::move(*Result);
-  IF.PdbOrObj = IF.UnknownFile.get();
-  return std::move(IF);
+  return make_error<StringError>(
+      formatv("File {0} is not a supported file type", Path),
+      inconvertibleErrorCode());
 }
 
 PDBFile &InputFile::pdb() {
@@ -308,25 +297,6 @@ object::COFFObjectFile &InputFile::obj() {
 const object::COFFObjectFile &InputFile::obj() const {
   assert(isObj());
   return *PdbOrObj.get<object::COFFObjectFile *>();
-}
-
-MemoryBuffer &InputFile::unknown() {
-  assert(isUnknown());
-  return *PdbOrObj.get<MemoryBuffer *>();
-}
-
-const MemoryBuffer &InputFile::unknown() const {
-  assert(isUnknown());
-  return *PdbOrObj.get<MemoryBuffer *>();
-}
-
-StringRef InputFile::getFilePath() const {
-  if (isPdb())
-    return pdb().getFilePath();
-  if (isObj())
-    return obj().getFileName();
-  assert(isUnknown());
-  return unknown().getBufferIdentifier();
 }
 
 bool InputFile::hasTypes() const {
@@ -352,8 +322,6 @@ bool InputFile::isPdb() const { return PdbOrObj.is<PDBFile *>(); }
 bool InputFile::isObj() const {
   return PdbOrObj.is<object::COFFObjectFile *>();
 }
-
-bool InputFile::isUnknown() const { return PdbOrObj.is<MemoryBuffer *>(); }
 
 codeview::LazyRandomTypeCollection &
 InputFile::getOrCreateTypeCollection(TypeCollectionKind Kind) {

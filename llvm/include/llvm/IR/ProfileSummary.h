@@ -51,7 +51,7 @@ private:
   SummaryEntryVector DetailedSummary;
   uint64_t TotalCount, MaxCount, MaxInternalCount, MaxFunctionCount;
   uint32_t NumCounts, NumFunctions;
-  /// Return detailed summary as metadata.
+  /// \brief Return detailed summary as metadata.
   Metadata *getDetailedSummaryMD(LLVMContext &Context);
 
 public:
@@ -67,9 +67,9 @@ public:
         NumCounts(NumCounts), NumFunctions(NumFunctions) {}
 
   Kind getKind() const { return PSK; }
-  /// Return summary information as metadata.
+  /// \brief Return summary information as metadata.
   Metadata *getMD(LLVMContext &Context);
-  /// Construct profile summary from metdata.
+  /// \brief Construct profile summary from metdata.
   static ProfileSummary *getFromMD(Metadata *MD);
   SummaryEntryVector &getDetailedSummary() { return DetailedSummary; }
   uint32_t getNumFunctions() { return NumFunctions; }

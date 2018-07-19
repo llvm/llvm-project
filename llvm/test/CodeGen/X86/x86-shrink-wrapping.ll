@@ -1,5 +1,4 @@
-; RUN: llc %s -o - -enable-shrink-wrap=true -pass-remarks-output=%t | FileCheck %s --check-prefix=CHECK --check-prefix=ENABLE
-; RUN: cat %t | FileCheck %s --check-prefix=REMARKS
+; RUN: llc %s -o - -enable-shrink-wrap=true | FileCheck %s --check-prefix=CHECK --check-prefix=ENABLE
 ; RUN: llc %s -o - -enable-shrink-wrap=false | FileCheck %s --check-prefix=CHECK --check-prefix=DISABLE
 ;
 ; Note: Lots of tests use inline asm instead of regular calls.
@@ -18,7 +17,7 @@ target triple = "x86_64-apple-macosx"
 ; Compare the arguments and jump to exit.
 ; No prologue needed.
 ; ENABLE: movl %edi, [[ARG0CPY:%e[a-z]+]]
-; ENABLE-NEXT: cmpl %esi, %edi
+; ENABLE-NEXT: cmpl %esi, [[ARG0CPY]]
 ; ENABLE-NEXT: jge [[EXIT_LABEL:LBB[0-9_]+]]
 ;
 ; Prologue code.
@@ -28,7 +27,7 @@ target triple = "x86_64-apple-macosx"
 ; Compare the arguments and jump to exit.
 ; After the prologue is set.
 ; DISABLE: movl %edi, [[ARG0CPY:%e[a-z]+]]
-; DISABLE-NEXT: cmpl %esi, %edi
+; DISABLE-NEXT: cmpl %esi, [[ARG0CPY]]
 ; DISABLE-NEXT: jge [[EXIT_LABEL:LBB[0-9_]+]]
 ;
 ; Store %a in the alloca.
@@ -315,7 +314,7 @@ if.end:                                           ; preds = %if.else, %for.end
 ; ENABLE: addl %esi, %esi
 ; ENABLE-NEXT: movl %esi, %eax
 ; ENABLE-NEXT: retq
-define i32 @loopInfoRestoreOutsideLoop(i32 %cond, i32 %N) nounwind {
+define i32 @loopInfoRestoreOutsideLoop(i32 %cond, i32 %N) #0 {
 entry:
   %tobool = icmp eq i32 %cond, 0
   br i1 %tobool, label %if.else, label %if.then
@@ -809,9 +808,10 @@ end:
 ; DISABLE-NEXT: subq $16, %rsp
 ;
 ; Load the value of b.
+; CHECK: movb _b(%rip), [[BOOL:%cl]]
 ; Create the zero value for the select assignment.
-; CHECK: xorl [[CMOVE_VAL:%eax]], [[CMOVE_VAL]]
-; CHECK-NEXT: cmpb $0, _b(%rip)
+; CHECK-NEXT: xorl [[CMOVE_VAL:%eax]], [[CMOVE_VAL]]
+; CHECK-NEXT: testb [[BOOL]], [[BOOL]]
 ; CHECK-NEXT: jne [[STOREC_LABEL:LBB[0-9_]+]]
 ;
 ; CHECK: movb $48, [[CMOVE_VAL:%al]]
@@ -941,13 +941,6 @@ attributes #3 = { nounwind }
 ; CHECK: popq
 ; CHECK-NEXT: popq
 ; CHECK-NEXT: retq
-; Make sure we emit missed optimization remarks for this.
-; REMARKS: Pass:            shrink-wrap
-; REMARKS-NEXT: Name:            UnsupportedIrreducibleCFG
-; REMARKS-NEXT: Function:        irreducibleCFG
-; REMARKS-NEXT: Args:
-; REMARKS-NEXT:   - String:          Irreducible CFGs are not supported yet
-
 define i32 @irreducibleCFG() #4 {
 entry:
   %i0 = load i32, i32* @irreducibleCFGa, align 4

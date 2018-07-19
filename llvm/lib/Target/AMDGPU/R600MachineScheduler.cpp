@@ -8,14 +8,13 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// R600 Machine Scheduler interface
+/// \brief R600 Machine Scheduler interface
 //
 //===----------------------------------------------------------------------===//
 
 #include "R600MachineScheduler.h"
 #include "AMDGPUSubtarget.h"
 #include "R600InstrInfo.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/Pass.h"
@@ -79,7 +78,7 @@ SUnit* R600SchedStrategy::pickNode(bool &IsTopNode) {
       AllowSwitchFromAlu = true;
     } else {
       unsigned NeededWF = 62.5f / ALUFetchRationEstimate;
-      LLVM_DEBUG(dbgs() << NeededWF << " approx. Wavefronts Required\n");
+      DEBUG( dbgs() << NeededWF << " approx. Wavefronts Required\n" );
       // We assume the local GPR requirements to be "dominated" by the requirement
       // of the TEX clause (which consumes 128 bits regs) ; ALU inst before and
       // after TEX are indeed likely to consume or generate values from/for the
@@ -125,24 +124,26 @@ SUnit* R600SchedStrategy::pickNode(bool &IsTopNode) {
       NextInstKind = IDOther;
   }
 
-  LLVM_DEBUG(if (SU) {
-    dbgs() << " ** Pick node **\n";
-    SU->dump(DAG);
-  } else {
-    dbgs() << "NO NODE \n";
-    for (unsigned i = 0; i < DAG->SUnits.size(); i++) {
-      const SUnit &S = DAG->SUnits[i];
-      if (!S.isScheduled)
-        S.dump(DAG);
-    }
-  });
+  DEBUG(
+      if (SU) {
+        dbgs() << " ** Pick node **\n";
+        SU->dump(DAG);
+      } else {
+        dbgs() << "NO NODE \n";
+        for (unsigned i = 0; i < DAG->SUnits.size(); i++) {
+          const SUnit &S = DAG->SUnits[i];
+          if (!S.isScheduled)
+            S.dump(DAG);
+        }
+      }
+  );
 
   return SU;
 }
 
 void R600SchedStrategy::schedNode(SUnit *SU, bool IsTopNode) {
   if (NextInstKind != CurInstKind) {
-    LLVM_DEBUG(dbgs() << "Instruction Type Switch\n");
+    DEBUG(dbgs() << "Instruction Type Switch\n");
     if (NextInstKind != IDAlu)
       OccupedSlotsMask |= 31;
     CurEmitted = 0;
@@ -162,7 +163,7 @@ void R600SchedStrategy::schedNode(SUnit *SU, bool IsTopNode) {
       for (MachineInstr::mop_iterator It = SU->getInstr()->operands_begin(),
           E = SU->getInstr()->operands_end(); It != E; ++It) {
         MachineOperand &MO = *It;
-        if (MO.isReg() && MO.getReg() == R600::ALU_LITERAL_X)
+        if (MO.isReg() && MO.getReg() == AMDGPU::ALU_LITERAL_X)
           ++CurEmitted;
       }
     }
@@ -171,7 +172,8 @@ void R600SchedStrategy::schedNode(SUnit *SU, bool IsTopNode) {
     ++CurEmitted;
   }
 
-  LLVM_DEBUG(dbgs() << CurEmitted << " Instructions Emitted in this clause\n");
+
+  DEBUG(dbgs() << CurEmitted << " Instructions Emitted in this clause\n");
 
   if (CurInstKind != IDFetch) {
     MoveUnits(Pending[IDFetch], Available[IDFetch]);
@@ -181,18 +183,18 @@ void R600SchedStrategy::schedNode(SUnit *SU, bool IsTopNode) {
 
 static bool
 isPhysicalRegCopy(MachineInstr *MI) {
-  if (MI->getOpcode() != R600::COPY)
+  if (MI->getOpcode() != AMDGPU::COPY)
     return false;
 
   return !TargetRegisterInfo::isVirtualRegister(MI->getOperand(1).getReg());
 }
 
 void R600SchedStrategy::releaseTopNode(SUnit *SU) {
-  LLVM_DEBUG(dbgs() << "Top Releasing "; SU->dump(DAG););
+  DEBUG(dbgs() << "Top Releasing ";SU->dump(DAG););
 }
 
 void R600SchedStrategy::releaseBottomNode(SUnit *SU) {
-  LLVM_DEBUG(dbgs() << "Bottom Releasing "; SU->dump(DAG););
+  DEBUG(dbgs() << "Bottom Releasing ";SU->dump(DAG););
   if (isPhysicalRegCopy(SU->getInstr())) {
     PhysicalRegCopy.push_back(SU);
     return;
@@ -224,14 +226,14 @@ R600SchedStrategy::AluKind R600SchedStrategy::getAluKind(SUnit *SU) const {
     return AluTrans;
 
   switch (MI->getOpcode()) {
-  case R600::PRED_X:
+  case AMDGPU::PRED_X:
     return AluPredX;
-  case R600::INTERP_PAIR_XY:
-  case R600::INTERP_PAIR_ZW:
-  case R600::INTERP_VEC_LOAD:
-  case R600::DOT_4:
+  case AMDGPU::INTERP_PAIR_XY:
+  case AMDGPU::INTERP_PAIR_ZW:
+  case AMDGPU::INTERP_VEC_LOAD:
+  case AMDGPU::DOT_4:
     return AluT_XYZW;
-  case R600::COPY:
+  case AMDGPU::COPY:
     if (MI->getOperand(1).isUndef()) {
       // MI will become a KILL, don't considers it in scheduling
       return AluDiscarded;
@@ -246,7 +248,7 @@ R600SchedStrategy::AluKind R600SchedStrategy::getAluKind(SUnit *SU) const {
   if(TII->isVector(*MI) ||
      TII->isCubeOp(MI->getOpcode()) ||
      TII->isReductionOp(MI->getOpcode()) ||
-     MI->getOpcode() == R600::GROUP_BARRIER) {
+     MI->getOpcode() == AMDGPU::GROUP_BARRIER) {
     return AluT_XYZW;
   }
 
@@ -257,13 +259,13 @@ R600SchedStrategy::AluKind R600SchedStrategy::getAluKind(SUnit *SU) const {
   // Is the result already assigned to a channel ?
   unsigned DestSubReg = MI->getOperand(0).getSubReg();
   switch (DestSubReg) {
-  case R600::sub0:
+  case AMDGPU::sub0:
     return AluT_X;
-  case R600::sub1:
+  case AMDGPU::sub1:
     return AluT_Y;
-  case R600::sub2:
+  case AMDGPU::sub2:
     return AluT_Z;
-  case R600::sub3:
+  case AMDGPU::sub3:
     return AluT_W;
   default:
     break;
@@ -271,16 +273,16 @@ R600SchedStrategy::AluKind R600SchedStrategy::getAluKind(SUnit *SU) const {
 
   // Is the result already member of a X/Y/Z/W class ?
   unsigned DestReg = MI->getOperand(0).getReg();
-  if (regBelongsToClass(DestReg, &R600::R600_TReg32_XRegClass) ||
-      regBelongsToClass(DestReg, &R600::R600_AddrRegClass))
+  if (regBelongsToClass(DestReg, &AMDGPU::R600_TReg32_XRegClass) ||
+      regBelongsToClass(DestReg, &AMDGPU::R600_AddrRegClass))
     return AluT_X;
-  if (regBelongsToClass(DestReg, &R600::R600_TReg32_YRegClass))
+  if (regBelongsToClass(DestReg, &AMDGPU::R600_TReg32_YRegClass))
     return AluT_Y;
-  if (regBelongsToClass(DestReg, &R600::R600_TReg32_ZRegClass))
+  if (regBelongsToClass(DestReg, &AMDGPU::R600_TReg32_ZRegClass))
     return AluT_Z;
-  if (regBelongsToClass(DestReg, &R600::R600_TReg32_WRegClass))
+  if (regBelongsToClass(DestReg, &AMDGPU::R600_TReg32_WRegClass))
     return AluT_W;
-  if (regBelongsToClass(DestReg, &R600::R600_Reg128RegClass))
+  if (regBelongsToClass(DestReg, &AMDGPU::R600_Reg128RegClass))
     return AluT_XYZW;
 
   // LDS src registers cannot be used in the Trans slot.
@@ -301,13 +303,13 @@ int R600SchedStrategy::getInstKind(SUnit* SU) {
   }
 
   switch (Opcode) {
-  case R600::PRED_X:
-  case R600::COPY:
-  case R600::CONST_COPY:
-  case R600::INTERP_PAIR_XY:
-  case R600::INTERP_PAIR_ZW:
-  case R600::INTERP_VEC_LOAD:
-  case R600::DOT_4:
+  case AMDGPU::PRED_X:
+  case AMDGPU::COPY:
+  case AMDGPU::CONST_COPY:
+  case AMDGPU::INTERP_PAIR_XY:
+  case AMDGPU::INTERP_PAIR_ZW:
+  case AMDGPU::INTERP_VEC_LOAD:
+  case AMDGPU::DOT_4:
     return IDAlu;
   default:
     return IDOther;
@@ -343,17 +345,17 @@ void R600SchedStrategy::LoadAlu() {
 }
 
 void R600SchedStrategy::PrepareNextSlot() {
-  LLVM_DEBUG(dbgs() << "New Slot\n");
+  DEBUG(dbgs() << "New Slot\n");
   assert (OccupedSlotsMask && "Slot wasn't filled");
   OccupedSlotsMask = 0;
-//  if (HwGen == AMDGPUSubtarget::NORTHERN_ISLANDS)
+//  if (HwGen == R600Subtarget::NORTHERN_ISLANDS)
 //    OccupedSlotsMask |= 16;
   InstructionsGroupCandidate.clear();
   LoadAlu();
 }
 
 void R600SchedStrategy::AssignSlot(MachineInstr* MI, unsigned Slot) {
-  int DstIndex = TII->getOperandIdx(MI->getOpcode(), R600::OpName::dst);
+  int DstIndex = TII->getOperandIdx(MI->getOpcode(), AMDGPU::OpName::dst);
   if (DstIndex == -1) {
     return;
   }
@@ -370,16 +372,16 @@ void R600SchedStrategy::AssignSlot(MachineInstr* MI, unsigned Slot) {
   // Constrains the regclass of DestReg to assign it to Slot
   switch (Slot) {
   case 0:
-    MRI->constrainRegClass(DestReg, &R600::R600_TReg32_XRegClass);
+    MRI->constrainRegClass(DestReg, &AMDGPU::R600_TReg32_XRegClass);
     break;
   case 1:
-    MRI->constrainRegClass(DestReg, &R600::R600_TReg32_YRegClass);
+    MRI->constrainRegClass(DestReg, &AMDGPU::R600_TReg32_YRegClass);
     break;
   case 2:
-    MRI->constrainRegClass(DestReg, &R600::R600_TReg32_ZRegClass);
+    MRI->constrainRegClass(DestReg, &AMDGPU::R600_TReg32_ZRegClass);
     break;
   case 3:
-    MRI->constrainRegClass(DestReg, &R600::R600_TReg32_WRegClass);
+    MRI->constrainRegClass(DestReg, &AMDGPU::R600_TReg32_WRegClass);
     break;
   }
 }
@@ -459,7 +461,7 @@ SUnit* R600SchedStrategy::pickOther(int QID) {
   }
   if (!AQ.empty()) {
     SU = AQ.back();
-    AQ.pop_back();
+    AQ.resize(AQ.size() - 1);
   }
   return SU;
 }

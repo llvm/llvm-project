@@ -44,7 +44,7 @@ class MachineOperand;
 class MachineRegisterInfo;
 class raw_ostream;
 
-/// A set of physical registers with utility functions to track liveness
+/// \brief A set of physical registers with utility functions to track liveness
 /// when walking backward/forward through a basic block.
 class LivePhysRegs {
   const TargetRegisterInfo *TRI = nullptr;
@@ -84,7 +84,7 @@ public:
       LiveRegs.insert(*SubRegs);
   }
 
-  /// Removes a physical register, all its sub-registers, and all its
+  /// \brief Removes a physical register, all its sub-registers, and all its
   /// super-registers from the set.
   void removeReg(unsigned Reg) {
     assert(TRI && "LivePhysRegs is not initialized.");
@@ -98,7 +98,7 @@ public:
         SmallVectorImpl<std::pair<unsigned, const MachineOperand*>> *Clobbers =
         nullptr);
 
-  /// Returns true if register \p Reg is contained in the set. This also
+  /// \brief Returns true if register \p Reg is contained in the set. This also
   /// works if only the super register of \p Reg has been defined, because
   /// addReg() always adds all sub-registers to the set as well.
   /// Note: Returns false if just some sub registers are live, use available()
@@ -155,7 +155,7 @@ public:
   void dump() const;
 
 private:
-  /// Adds live-in registers from basic block \p MBB, taking associated
+  /// \brief Adds live-in registers from basic block \p MBB, taking associated
   /// lane masks into consideration.
   void addBlockLiveIns(const MachineBasicBlock &MBB);
 
@@ -169,7 +169,7 @@ inline raw_ostream &operator<<(raw_ostream &OS, const LivePhysRegs& LR) {
   return OS;
 }
 
-/// Computes registers live-in to \p MBB assuming all of its successors
+/// \brief Computes registers live-in to \p MBB assuming all of its successors
 /// live-in lists are up-to-date. Puts the result into the given LivePhysReg
 /// instance \p LiveRegs.
 void computeLiveIns(LivePhysRegs &LiveRegs, const MachineBasicBlock &MBB);
@@ -184,13 +184,6 @@ void addLiveIns(MachineBasicBlock &MBB, const LivePhysRegs &LiveRegs);
 /// Convenience function combining computeLiveIns() and addLiveIns().
 void computeAndAddLiveIns(LivePhysRegs &LiveRegs,
                           MachineBasicBlock &MBB);
-
-/// Convenience function for recomputing live-in's for \p MBB.
-static inline void recomputeLiveIns(MachineBasicBlock &MBB) {
-  LivePhysRegs LPR;
-  MBB.clearLiveIns();
-  computeAndAddLiveIns(LPR, MBB);
-}
 
 } // end namespace llvm
 

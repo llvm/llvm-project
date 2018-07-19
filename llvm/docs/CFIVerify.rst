@@ -25,8 +25,8 @@ This tool will be present as a part of the LLVM toolchain, and will reside in
 the "/llvm/tools/llvm-cfi-verify" directory, relative to the LLVM trunk. It will
 be tested in two methods:
 
-- Unit tests to validate code sections, present in
-  "/llvm/unittests/tools/llvm-cfi-verify".
+- Unit tests to validate code sections, present in "/llvm/unittests/llvm-cfi-
+  verify".
 - Integration tests, present in "/llvm/tools/clang/test/LLVMCFIVerify". These
   integration tests are part of clang as part of a continuous integration
   framework, ensuring updates to the compiler that reduce CFI coverage on
@@ -86,8 +86,6 @@ Only machine code sections that are marked as executable will be subject to this
 analysis. Non-executable sections do not require analysis as any execution
 present in these sections has already violated the control flow integrity.
 
-Suitable extensions may be made at a later date to include analysis for indirect
+Suitable extensions may be made at a later date to include anaylsis for indirect
 control flow operations across DSO boundaries. Currently, these CFI features are
 only experimental with an unstable ABI, making them unsuitable for analysis.
-
-The tool currently only supports the x86, x86_64, and AArch64 architectures.

@@ -11,7 +11,6 @@
 #include "Mips.h"
 #include "MipsTargetMachine.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
-#include "llvm/CodeGen/StackProtector.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -33,7 +32,6 @@ namespace {
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.addRequired<TargetPassConfig>();
-      AU.addPreserved<StackProtector>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
 
@@ -44,7 +42,7 @@ namespace {
 }
 
 bool MipsModuleDAGToDAGISel::runOnMachineFunction(MachineFunction &MF) {
-  LLVM_DEBUG(errs() << "In MipsModuleDAGToDAGISel::runMachineFunction\n");
+  DEBUG(errs() << "In MipsModuleDAGToDAGISel::runMachineFunction\n");
   auto &TPC = getAnalysis<TargetPassConfig>();
   auto &TM = TPC.getTM<MipsTargetMachine>();
   TM.resetSubtarget(&MF);

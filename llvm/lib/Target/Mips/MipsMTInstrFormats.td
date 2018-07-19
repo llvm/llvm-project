@@ -15,7 +15,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-class MipsMTInst : MipsInst<(outs), (ins), "", [], NoItinerary, FrmOther> {
+class MipsMTInst : MipsInst<(outs), (ins), "", [], NoItinerary, FrmOther>,
+                   PredicateControl {
   let DecoderNamespace = "Mips";
   let EncodingPredicates = [HasStdEnc];
 }

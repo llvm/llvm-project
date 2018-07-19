@@ -17,36 +17,20 @@ define float @frem_constant_fold() {
   ret float %f
 }
 
-define double @fmul_fdiv_common_operand(double %x, double %y) {
-; CHECK-LABEL: @fmul_fdiv_common_operand(
-; CHECK-NEXT:    ret double %x
+define double @fdiv_of_undef(double %X) {
+; CHECK-LABEL: @fdiv_of_undef(
+; CHECK-NEXT:    ret double undef
 ;
-  %m = fmul double %x, %y
-  %d = fdiv reassoc nnan double %m, %y
-  ret double %d
+; undef / X -> undef
+  %r = fdiv double undef, %X
+  ret double %r
 }
 
-; Negative test - the fdiv must be reassociative and not allow NaNs.
-
-define double @fmul_fdiv_common_operand_too_strict(double %x, double %y) {
-; CHECK-LABEL: @fmul_fdiv_common_operand_too_strict(
-; CHECK-NEXT:    [[M:%.*]] = fmul fast double %x, %y
-; CHECK-NEXT:    [[D:%.*]] = fdiv reassoc double [[M]], %y
-; CHECK-NEXT:    ret double [[D]]
+define double @fdiv_by_undef(double %X) {
+; CHECK-LABEL: @fdiv_by_undef(
+; CHECK-NEXT:    ret double undef
 ;
-  %m = fmul fast double %x, %y
-  %d = fdiv reassoc double %m, %y
-  ret double %d
+; X / undef -> undef
+  %r = fdiv double %X, undef
+  ret double %r
 }
-
-; Commute the fmul operands. Use a vector type to verify that works too.
-
-define <2 x float> @fmul_fdiv_common_operand_commute_vec(<2 x float> %x, <2 x float> %y) {
-; CHECK-LABEL: @fmul_fdiv_common_operand_commute_vec(
-; CHECK-NEXT:    ret <2 x float> %x
-;
-  %m = fmul <2 x float> %y, %x
-  %d = fdiv fast <2 x float> %m, %y
-  ret <2 x float> %d
-}
-

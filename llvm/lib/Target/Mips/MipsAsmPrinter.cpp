@@ -160,8 +160,6 @@ void MipsAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     PrintDebugValueComment(MI, OS);
     return;
   }
-  if (MI->isDebugLabel())
-    return;
 
   // If we just ended a constant pool, mark it as such.
   if (InConstantPool && Opc != Mips::CONSTPOOL_ENTRY) {
@@ -501,13 +499,6 @@ bool MipsAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
         return true;
       O << MO.getImm() - 1;
       return false;
-    case 'y': // exact log2
-      if ((MO.getType()) != MachineOperand::MO_Immediate)
-        return true;
-      if (!isPowerOf2_64(MO.getImm()))
-        return true;
-      O << Log2_64(MO.getImm());
-      return false;
     case 'z':
       // $0 if zero, regular printing otherwise
       if (MO.getType() == MachineOperand::MO_Immediate && MO.getImm() == 0) {
@@ -585,27 +576,17 @@ bool MipsAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
   assert(OffsetMO.isImm() && "Unexpected offset for inline asm memory operand.");
   int Offset = OffsetMO.getImm();
 
-  // Currently we are expecting either no ExtraCode or 'D','M','L'.
+  // Currently we are expecting either no ExtraCode or 'D'
   if (ExtraCode) {
-    switch (ExtraCode[0]) {
-    case 'D':
+    if (ExtraCode[0] == 'D')
       Offset += 4;
-      break;
-    case 'M':
-      if (Subtarget->isLittle())
-        Offset += 4;
-      break;
-    case 'L':
-      if (!Subtarget->isLittle())
-        Offset += 4;
-      break;
-    default:
+    else
       return true; // Unknown modifier.
-    }
+    // FIXME: M = high order bits
+    // FIXME: L = low order bits
   }
 
-  O << Offset << "($" << MipsInstPrinter::getRegisterName(BaseMO.getReg())
-    << ")";
+  O << Offset << "($" << MipsInstPrinter::getRegisterName(BaseMO.getReg()) << ")";
 
   return false;
 }

@@ -90,24 +90,6 @@ void BasicBlock::setParent(Function *parent) {
   InstList.setSymTabObject(&Parent, parent);
 }
 
-iterator_range<filter_iterator<BasicBlock::const_iterator,
-                               std::function<bool(const Instruction &)>>>
-BasicBlock::instructionsWithoutDebug() const {
-  std::function<bool(const Instruction &)> Fn = [](const Instruction &I) {
-    return !isa<DbgInfoIntrinsic>(I);
-  };
-  return make_filter_range(*this, Fn);
-}
-
-iterator_range<filter_iterator<BasicBlock::iterator,
-                               std::function<bool(Instruction &)>>>
-BasicBlock::instructionsWithoutDebug() {
-  std::function<bool(Instruction &)> Fn = [](Instruction &I) {
-    return !isa<DbgInfoIntrinsic>(I);
-  };
-  return make_filter_range(*this, Fn);
-}
-
 void BasicBlock::removeFromParent() {
   getParent()->getBasicBlockList().remove(getIterator());
 }
@@ -478,10 +460,4 @@ Optional<uint64_t> BasicBlock::getIrrLoopHeaderWeight() const {
     }
   }
   return Optional<uint64_t>();
-}
-
-BasicBlock::iterator llvm::skipDebugIntrinsics(BasicBlock::iterator It) {
-  while (isa<DbgInfoIntrinsic>(It))
-    ++It;
-  return It;
 }

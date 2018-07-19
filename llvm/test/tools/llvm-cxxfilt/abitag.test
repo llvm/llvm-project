@@ -1,6 +1,0 @@
-RUN: llvm-cxxfilt _Z14returns_stringB5cxx11v _Z6globalB5cxx11 _Z6globalB12a_longer_tag | FileCheck %s
-
-CHECK: returns_string[abi:cxx11]()
-CHECK-NEXT: global[abi:cxx11]
-CHECK-NEXT: global[abi:a_longer_tag]
-

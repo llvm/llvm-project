@@ -20,7 +20,7 @@
 
 namespace llvm {
 
-/// Default traits class for extracting a graph from an analysis pass.
+/// \brief Default traits class for extracting a graph from an analysis pass.
 ///
 /// This assumes that 'GraphT' is 'AnalysisT *' and so just passes it through.
 template <typename AnalysisT, typename GraphT = AnalysisT *>
@@ -36,7 +36,7 @@ public:
   DOTGraphTraitsViewer(StringRef GraphName, char &ID)
       : FunctionPass(ID), Name(GraphName) {}
 
-  /// Return true if this function should be processed.
+  /// @brief Return true if this function should be processed.
   ///
   /// An implementation of this class my override this function to indicate that
   /// only certain functions should be viewed.
@@ -78,7 +78,7 @@ public:
   DOTGraphTraitsPrinter(StringRef GraphName, char &ID)
       : FunctionPass(ID), Name(GraphName) {}
 
-  /// Return true if this function should be processed.
+  /// @brief Return true if this function should be processed.
   ///
   /// An implementation of this class my override this function to indicate that
   /// only certain functions should be printed.

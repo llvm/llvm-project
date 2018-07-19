@@ -34,7 +34,7 @@ public:
 
   Linker(Module &M);
 
-  /// Link \p Src into the composite.
+  /// \brief Link \p Src into the composite.
   ///
   /// Passing OverrideSymbols as true will have symbols from Src
   /// shadow those in the Dest.

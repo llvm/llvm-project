@@ -268,11 +268,11 @@ StackMaps::parseRegisterLiveOutMask(const uint32_t *Mask) const {
   // in the list. Merge entries that refer to the same dwarf register and use
   // the maximum size that needs to be spilled.
 
-  llvm::sort(LiveOuts.begin(), LiveOuts.end(),
-             [](const LiveOutReg &LHS, const LiveOutReg &RHS) {
-               // Only sort by the dwarf register number.
-               return LHS.DwarfRegNum < RHS.DwarfRegNum;
-             });
+  std::sort(LiveOuts.begin(), LiveOuts.end(),
+            [](const LiveOutReg &LHS, const LiveOutReg &RHS) {
+              // Only sort by the dwarf register number.
+              return LHS.DwarfRegNum < RHS.DwarfRegNum;
+            });
 
   for (auto I = LiveOuts.begin(), E = LiveOuts.end(); I != E; ++I) {
     for (auto II = std::next(I); II != E; ++II) {
@@ -420,13 +420,13 @@ void StackMaps::emitStackmapHeader(MCStreamer &OS) {
   OS.EmitIntValue(0, 2);               // Reserved.
 
   // Num functions.
-  LLVM_DEBUG(dbgs() << WSMP << "#functions = " << FnInfos.size() << '\n');
+  DEBUG(dbgs() << WSMP << "#functions = " << FnInfos.size() << '\n');
   OS.EmitIntValue(FnInfos.size(), 4);
   // Num constants.
-  LLVM_DEBUG(dbgs() << WSMP << "#constants = " << ConstPool.size() << '\n');
+  DEBUG(dbgs() << WSMP << "#constants = " << ConstPool.size() << '\n');
   OS.EmitIntValue(ConstPool.size(), 4);
   // Num callsites.
-  LLVM_DEBUG(dbgs() << WSMP << "#callsites = " << CSInfos.size() << '\n');
+  DEBUG(dbgs() << WSMP << "#callsites = " << CSInfos.size() << '\n');
   OS.EmitIntValue(CSInfos.size(), 4);
 }
 
@@ -439,11 +439,11 @@ void StackMaps::emitStackmapHeader(MCStreamer &OS) {
 /// }
 void StackMaps::emitFunctionFrameRecords(MCStreamer &OS) {
   // Function Frame records.
-  LLVM_DEBUG(dbgs() << WSMP << "functions:\n");
+  DEBUG(dbgs() << WSMP << "functions:\n");
   for (auto const &FR : FnInfos) {
-    LLVM_DEBUG(dbgs() << WSMP << "function addr: " << FR.first
-                      << " frame size: " << FR.second.StackSize
-                      << " callsite count: " << FR.second.RecordCount << '\n');
+    DEBUG(dbgs() << WSMP << "function addr: " << FR.first
+                 << " frame size: " << FR.second.StackSize
+                 << " callsite count: " << FR.second.RecordCount << '\n');
     OS.EmitSymbolValue(FR.first, 8);
     OS.EmitIntValue(FR.second.StackSize, 8);
     OS.EmitIntValue(FR.second.RecordCount, 8);
@@ -455,9 +455,9 @@ void StackMaps::emitFunctionFrameRecords(MCStreamer &OS) {
 /// int64  : Constants[NumConstants]
 void StackMaps::emitConstantPoolEntries(MCStreamer &OS) {
   // Constant pool entries.
-  LLVM_DEBUG(dbgs() << WSMP << "constants:\n");
+  DEBUG(dbgs() << WSMP << "constants:\n");
   for (const auto &ConstEntry : ConstPool) {
-    LLVM_DEBUG(dbgs() << WSMP << ConstEntry.second << '\n');
+    DEBUG(dbgs() << WSMP << ConstEntry.second << '\n');
     OS.EmitIntValue(ConstEntry.second, 8);
   }
 }
@@ -492,7 +492,7 @@ void StackMaps::emitConstantPoolEntries(MCStreamer &OS) {
 ///   0x4, Constant, Offset              (small constant)
 ///   0x5, ConstIndex, Constants[Offset] (large constant)
 void StackMaps::emitCallsiteEntries(MCStreamer &OS) {
-  LLVM_DEBUG(print(dbgs()));
+  DEBUG(print(dbgs()));
   // Callsite entries.
   for (const auto &CSI : CSInfos) {
     const LocationVec &CSLocs = CSI.Locations;
@@ -569,7 +569,7 @@ void StackMaps::serializeToStackMapSection() {
   OS.EmitLabel(OutContext.getOrCreateSymbol(Twine("__LLVM_StackMaps")));
 
   // Serialize data.
-  LLVM_DEBUG(dbgs() << "********** Stack Map Output **********\n");
+  DEBUG(dbgs() << "********** Stack Map Output **********\n");
   emitStackmapHeader(OS);
   emitFunctionFrameRecords(OS);
   emitConstantPoolEntries(OS);

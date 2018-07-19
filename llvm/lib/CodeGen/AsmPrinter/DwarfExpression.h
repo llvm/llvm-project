@@ -211,9 +211,6 @@ public:
   /// Emit an unsigned constant.
   void addUnsignedConstant(const APInt &Value);
 
-  bool isMemoryLocation() const { return LocationKind == Memory; }
-  bool isUnknownLocation() const { return LocationKind == Unknown; }
-
   /// Lock this down to become a memory location description.
   void setMemoryLocationKind() {
     assert(LocationKind == Unknown);

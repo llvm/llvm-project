@@ -16,6 +16,8 @@
 namespace llvm {
 
 class Nios2TargetObjectFile : public TargetLoweringObjectFileELF {
+  const Nios2TargetMachine *TM;
+
 public:
   Nios2TargetObjectFile() : TargetLoweringObjectFileELF() {}
 

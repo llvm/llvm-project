@@ -26,7 +26,6 @@
 namespace llvm {
 
 class Module;
-class ModuleSummaryIndex;
 class raw_ostream;
 
 namespace lowertypetests {
@@ -198,11 +197,6 @@ struct ByteArrayBuilder {
 
 class LowerTypeTestsPass : public PassInfoMixin<LowerTypeTestsPass> {
 public:
-  ModuleSummaryIndex *ExportSummary;
-  const ModuleSummaryIndex *ImportSummary;
-  LowerTypeTestsPass(ModuleSummaryIndex *ExportSummary,
-                     const ModuleSummaryIndex *ImportSummary)
-      : ExportSummary(ExportSummary), ImportSummary(ImportSummary) {}
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 

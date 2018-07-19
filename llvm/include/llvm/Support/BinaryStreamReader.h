@@ -24,7 +24,7 @@
 
 namespace llvm {
 
-/// Provides read only access to a subclass of `BinaryStream`.  Provides
+/// \brief Provides read only access to a subclass of `BinaryStream`.  Provides
 /// bounds checking and helpers for writing certain common data types such as
 /// null-terminated strings, integers in various flavors of endianness, etc.
 /// Can be subclassed to provide reading of custom datatypes, although no

@@ -13,14 +13,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "dsymutil.h"
-#include "BinaryHolder.h"
 #include "CFBundle.h"
 #include "DebugMap.h"
-#include "LinkUtils.h"
 #include "MachOUtils.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/DebugInfo/DIContext.h"
@@ -30,12 +27,12 @@
 #include "llvm/Object/MachO.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/PrettyStackTrace.h"
+#include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ThreadPool.h"
-#include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/thread.h"
 #include <algorithm>
@@ -65,11 +62,6 @@ static opt<std::string> OsoPrependPath(
     "oso-prepend-path",
     desc("Specify a directory to prepend to the paths of object files."),
     value_desc("path"), cat(DsymCategory));
-
-static opt<bool> Assembly(
-    "S",
-    desc("Output textual assembly instead of a binary dSYM companion file."),
-    init(false), cat(DsymCategory), cl::Hidden);
 
 static opt<bool> DumpStab(
     "symtab",
@@ -150,15 +142,6 @@ static opt<bool> InputIsYAMLDebugMap(
 static opt<bool> Verify("verify", desc("Verify the linked DWARF debug info."),
                         cat(DsymCategory));
 
-static opt<std::string>
-    Toolchain("toolchain", desc("Embed toolchain information in dSYM bundle."),
-              cat(DsymCategory));
-
-static opt<bool>
-    PaperTrailWarnings("papertrail",
-                       desc("Embed warnings in the linked DWARF debug info."),
-                       cat(DsymCategory));
-
 static bool createPlistFile(llvm::StringRef Bin, llvm::StringRef BundleRoot) {
   if (NoOutput)
     return true;
@@ -169,8 +152,8 @@ static bool createPlistFile(llvm::StringRef Bin, llvm::StringRef BundleRoot) {
   std::error_code EC;
   llvm::raw_fd_ostream PL(InfoPlist, EC, llvm::sys::fs::F_Text);
   if (EC) {
-    WithColor::error() << "cannot create plist file " << InfoPlist << ": "
-                       << EC.message() << '\n';
+    llvm::errs() << "error: cannot create plist file " << InfoPlist << ": "
+                 << EC.message() << '\n';
     return false;
   }
 
@@ -201,26 +184,13 @@ static bool createPlistFile(llvm::StringRef Bin, llvm::StringRef BundleRoot) {
      << "\t\t<key>CFBundleSignature</key>\n"
      << "\t\t<string>\?\?\?\?</string>\n";
 
-  if (!BI.OmitShortVersion()) {
-    PL << "\t\t<key>CFBundleShortVersionString</key>\n";
-    PL << "\t\t<string>";
-    printHTMLEscaped(BI.ShortVersionStr, PL);
-    PL << "</string>\n";
-  }
+  if (!BI.OmitShortVersion())
+    PL << "\t\t<key>CFBundleShortVersionString</key>\n"
+       << "\t\t<string>" << BI.ShortVersionStr << "</string>\n";
 
-  PL << "\t\t<key>CFBundleVersion</key>\n";
-  PL << "\t\t<string>";
-  printHTMLEscaped(BI.VersionStr, PL);
-  PL << "</string>\n";
-
-  if (!Toolchain.empty()) {
-    PL << "\t\t<key>Toolchain</key>\n";
-    PL << "\t\t<string>";
-    printHTMLEscaped(Toolchain, PL);
-    PL << "</string>\n";
-  }
-
-  PL << "\t</dict>\n"
+  PL << "\t\t<key>CFBundleVersion</key>\n"
+     << "\t\t<string>" << BI.VersionStr << "</string>\n"
+     << "\t</dict>\n"
      << "</plist>\n";
 
   PL.close();
@@ -235,8 +205,8 @@ static bool createBundleDir(llvm::StringRef BundleBase) {
   llvm::sys::path::append(Bundle, "Contents", "Resources", "DWARF");
   if (std::error_code EC = create_directories(Bundle.str(), true,
                                               llvm::sys::fs::perms::all_all)) {
-    WithColor::error() << "cannot create directory " << Bundle << ": "
-                       << EC.message() << "\n";
+    llvm::errs() << "error: cannot create directory " << Bundle << ": "
+                 << EC.message() << "\n";
     return false;
   }
   return true;
@@ -244,8 +214,8 @@ static bool createBundleDir(llvm::StringRef BundleBase) {
 
 static bool verify(llvm::StringRef OutputFile, llvm::StringRef Arch) {
   if (OutputFile == "-") {
-    WithColor::warning() << "verification skipped for " << Arch
-                         << "because writing to stdout.\n";
+    llvm::errs() << "warning: verification skipped for " << Arch
+                 << "because writing to stdout.\n";
     return true;
   }
 
@@ -263,7 +233,7 @@ static bool verify(llvm::StringRef OutputFile, llvm::StringRef Arch) {
     DIDumpOptions DumpOpts;
     bool success = DICtx->verify(os, DumpOpts.noImplicitRecursion());
     if (!success)
-      WithColor::error() << "verification failed for " << Arch << '\n';
+      errs() << "error: verification failed for " << Arch << '\n';
     return success;
   }
 
@@ -327,9 +297,6 @@ static Expected<LinkOptions> getOptions() {
   Options.NoTimestamp = NoTimestamp;
   Options.PrependPath = OsoPrependPath;
 
-  if (Assembly)
-    Options.FileType = OutputFileType::Assembly;
-
   if (Options.Update && std::find(InputFiles.begin(), InputFiles.end(), "-") !=
                             InputFiles.end()) {
     // FIXME: We cannot use stdin for an update because stdin will be
@@ -338,14 +305,9 @@ static Expected<LinkOptions> getOptions() {
     // used a unique BinaryHolder object that could cache multiple
     // binaries this restriction would go away.
     return make_error<StringError>(
-        "standard input cannot be used as input for a dSYM update.",
+        "error: standard input cannot be used as input for a dSYM update.",
         inconvertibleErrorCode());
   }
-
-  if (NumThreads == 0)
-    Options.Threads = llvm::thread::hardware_concurrency();
-  if (DumpDebugMap || Verbose)
-    Options.Threads = 1;
 
   return Options;
 }
@@ -406,13 +368,14 @@ struct TempFileVector {
 } // namespace
 
 int main(int argc, char **argv) {
-  InitLLVM X(argc, argv);
-
+  llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
+  llvm::PrettyStackTraceProgram StackPrinter(argc, argv);
+  llvm::llvm_shutdown_obj Shutdown;
   void *P = (void *)(intptr_t)getOutputFileName;
   std::string SDKPath = llvm::sys::fs::getMainExecutable(argv[0], P);
   SDKPath = llvm::sys::path::parent_path(SDKPath);
 
-  HideUnrelatedOptions({&DsymCategory, &ColorCategory});
+  HideUnrelatedOptions(DsymCategory);
   llvm::cl::ParseCommandLineOptions(
       argc, argv,
       "manipulate archived DWARF debug symbol files.\n\n"
@@ -432,7 +395,7 @@ int main(int argc, char **argv) {
 
   auto OptionsOrErr = getOptions();
   if (!OptionsOrErr) {
-    WithColor::error() << toString(OptionsOrErr.takeError());
+    errs() << "error: " << toString(OptionsOrErr.takeError());
     return 1;
   }
 
@@ -443,31 +406,24 @@ int main(int argc, char **argv) {
 
   auto InputsOrErr = getInputs(OptionsOrErr->Update);
   if (!InputsOrErr) {
-    WithColor::error() << toString(InputsOrErr.takeError()) << '\n';
+    errs() << "error: " << toString(InputsOrErr.takeError()) << '\n';
     return 1;
   }
 
   if (!FlatOut && OutputFileOpt == "-") {
-    WithColor::error() << "cannot emit to standard output without --flat\n";
+    llvm::errs() << "error: cannot emit to standard output without --flat\n";
     return 1;
   }
 
   if (InputsOrErr->size() > 1 && FlatOut && !OutputFileOpt.empty()) {
-    WithColor::error() << "cannot use -o with multiple inputs in flat mode\n";
+    llvm::errs() << "error: cannot use -o with multiple inputs in flat mode\n";
     return 1;
   }
-
-  if (getenv("RC_DEBUG_OPTIONS"))
-    PaperTrailWarnings = true;
-
-  if (PaperTrailWarnings && InputIsYAMLDebugMap)
-    WithColor::warning()
-        << "Paper trail warnings are not supported for YAML input";
 
   for (const auto &Arch : ArchFlags)
     if (Arch != "*" && Arch != "all" &&
         !llvm::object::MachOObjectFile::isValidArch(Arch)) {
-      WithColor::error() << "unsupported cpu architecture: '" << Arch << "'\n";
+      llvm::errs() << "error: Unsupported cpu architecture: '" << Arch << "'\n";
       return 1;
     }
 
@@ -479,13 +435,12 @@ int main(int argc, char **argv) {
       continue;
     }
 
-    auto DebugMapPtrsOrErr =
-        parseDebugMap(InputFile, ArchFlags, OsoPrependPath, PaperTrailWarnings,
-                      Verbose, InputIsYAMLDebugMap);
+    auto DebugMapPtrsOrErr = parseDebugMap(InputFile, ArchFlags, OsoPrependPath,
+                                           Verbose, InputIsYAMLDebugMap);
 
     if (auto EC = DebugMapPtrsOrErr.getError()) {
-      WithColor::error() << "cannot parse the debug map for '" << InputFile
-                         << "': " << EC.message() << '\n';
+      llvm::errs() << "error: cannot parse the debug map for \"" << InputFile
+                   << "\": " << EC.message() << '\n';
       return 1;
     }
 
@@ -499,15 +454,16 @@ int main(int argc, char **argv) {
 
     // Ensure that the debug map is not empty (anymore).
     if (DebugMapPtrsOrErr->empty()) {
-      WithColor::error() << "no architecture to link\n";
+      llvm::errs() << "error: no architecture to link\n";
       return 1;
     }
 
-    // Shared a single binary holder for all the link steps.
-    BinaryHolder BinHolder;
+    if (NumThreads == 0)
+      NumThreads = llvm::thread::hardware_concurrency();
+    if (DumpDebugMap || Verbose)
+      NumThreads = 1;
+    NumThreads = std::min<unsigned>(NumThreads, DebugMapPtrsOrErr->size());
 
-    NumThreads =
-        std::min<unsigned>(OptionsOrErr->Threads, DebugMapPtrsOrErr->size());
     llvm::ThreadPool Threads(NumThreads);
 
     // If there is more than one link to execute, we need to generate
@@ -527,9 +483,9 @@ int main(int argc, char **argv) {
         continue;
 
       if (Map->begin() == Map->end())
-        WithColor::warning()
-            << "no debug symbols in executable (-arch "
-            << MachOUtils::getArchName(Map->getTriple().getArchName()) << ")\n";
+        llvm::errs() << "warning: no debug symbols in executable (-arch "
+                     << MachOUtils::getArchName(Map->getTriple().getArchName())
+                     << ")\n";
 
       // Using a std::shared_ptr rather than std::unique_ptr because move-only
       // types don't work with std::bind in the ThreadPool implementation.
@@ -558,7 +514,7 @@ int main(int argc, char **argv) {
 
       auto LinkLambda = [&,
                          OutputFile](std::shared_ptr<raw_fd_ostream> Stream) {
-        AllOK.fetch_and(linkDwarf(*Stream, BinHolder, *Map, *OptionsOrErr));
+        AllOK.fetch_and(linkDwarf(*Stream, *Map, *OptionsOrErr));
         Stream->flush();
         if (Verify && !NoOutput)
           AllOK.fetch_and(verify(OutputFile, Map->getTriple().getArchName()));

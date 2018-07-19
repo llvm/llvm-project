@@ -35,7 +35,7 @@ void CoverageFilenamesSectionWriter::write(raw_ostream &OS) {
 
 namespace {
 
-/// Gather only the expressions that are used by the mapping
+/// \brief Gather only the expressions that are used by the mapping
 /// regions in this function.
 class CounterExpressionsMinimizer {
   ArrayRef<CounterExpression> Expressions;
@@ -74,7 +74,7 @@ public:
 
   ArrayRef<CounterExpression> getExpressions() const { return UsedExpressions; }
 
-  /// Adjust the given counter to correctly transition from the old
+  /// \brief Adjust the given counter to correctly transition from the old
   /// expression ids to the new expression ids.
   Counter adjust(Counter C) const {
     if (C.isExpression())
@@ -85,7 +85,7 @@ public:
 
 } // end anonymous namespace
 
-/// Encode the counter.
+/// \brief Encode the counter.
 ///
 /// The encoding uses the following format:
 /// Low 2 bits - Tag:

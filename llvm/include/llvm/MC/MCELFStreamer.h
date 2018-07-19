@@ -24,8 +24,7 @@ class MCInst;
 class MCELFStreamer : public MCObjectStreamer {
 public:
   MCELFStreamer(MCContext &Context, std::unique_ptr<MCAsmBackend> TAB,
-                std::unique_ptr<MCObjectWriter> OW,
-                std::unique_ptr<MCCodeEmitter> Emitter);
+                raw_pwrite_stream &OS, std::unique_ptr<MCCodeEmitter> Emitter);
 
   ~MCELFStreamer() override = default;
 
@@ -52,15 +51,12 @@ public:
                         unsigned ByteAlignment) override;
 
   void emitELFSize(MCSymbol *Symbol, const MCExpr *Value) override;
-  void emitELFSymverDirective(StringRef AliasName,
-                              const MCSymbol *Aliasee) override;
 
   void EmitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                              unsigned ByteAlignment) override;
 
   void EmitZerofill(MCSection *Section, MCSymbol *Symbol = nullptr,
-                    uint64_t Size = 0, unsigned ByteAlignment = 0,
-                    SMLoc L = SMLoc()) override;
+                    uint64_t Size = 0, unsigned ByteAlignment = 0) override;
   void EmitTBSSSymbol(MCSection *Section, MCSymbol *Symbol, uint64_t Size,
                       unsigned ByteAlignment = 0) override;
   void EmitValueImpl(const MCExpr *Value, unsigned Size,
@@ -69,9 +65,6 @@ public:
   void EmitIdent(StringRef IdentString) override;
 
   void EmitValueToAlignment(unsigned, int64_t, unsigned, unsigned) override;
-
-  void emitCGProfileEntry(const MCSymbolRefExpr *From,
-                          const MCSymbolRefExpr *To, uint64_t Count) override;
 
   void FinishImpl() override;
 
@@ -85,10 +78,8 @@ private:
   void EmitInstToData(const MCInst &Inst, const MCSubtargetInfo &) override;
 
   void fixSymbolsInTLSFixups(const MCExpr *expr);
-  void finalizeCGProfileEntry(const MCSymbolRefExpr *&S);
-  void finalizeCGProfile();
 
-  /// Merge the content of the fragment \p EF into the fragment \p DF.
+  /// \brief Merge the content of the fragment \p EF into the fragment \p DF.
   void mergeFragment(MCDataFragment *, MCDataFragment *);
 
   bool SeenIdent = false;
@@ -100,7 +91,7 @@ private:
 
 MCELFStreamer *createARMELFStreamer(MCContext &Context,
                                     std::unique_ptr<MCAsmBackend> TAB,
-                                    std::unique_ptr<MCObjectWriter> OW,
+                                    raw_pwrite_stream &OS,
                                     std::unique_ptr<MCCodeEmitter> Emitter,
                                     bool RelaxAll, bool IsThumb);
 

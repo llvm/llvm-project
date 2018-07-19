@@ -289,8 +289,8 @@ Expected<DbiStream &> PDBFile::getPDBDbiStream() {
     auto DbiS = safelyCreateIndexedStream(ContainerLayout, *Buffer, StreamDBI);
     if (!DbiS)
       return DbiS.takeError();
-    auto TempDbi = llvm::make_unique<DbiStream>(std::move(*DbiS));
-    if (auto EC = TempDbi->reload(this))
+    auto TempDbi = llvm::make_unique<DbiStream>(*this, std::move(*DbiS));
+    if (auto EC = TempDbi->reload())
       return std::move(EC);
     Dbi = std::move(TempDbi);
   }
@@ -370,10 +370,7 @@ Expected<PDBStringTable &> PDBFile::getStringTable() {
     if (!IS)
       return IS.takeError();
 
-    Expected<uint32_t> ExpectedNSI = IS->getNamedStreamIndex("/names");
-    if (!ExpectedNSI)
-      return ExpectedNSI.takeError();
-    uint32_t NameStreamIndex = *ExpectedNSI;
+    uint32_t NameStreamIndex = IS->getNamedStreamIndex("/names");
 
     auto NS =
         safelyCreateIndexedStream(ContainerLayout, *Buffer, NameStreamIndex);
@@ -448,13 +445,7 @@ bool PDBFile::hasPDBStringTable() {
   auto IS = getPDBInfoStream();
   if (!IS)
     return false;
-  Expected<uint32_t> ExpectedNSI = IS->getNamedStreamIndex("/names");
-  if (!ExpectedNSI) {
-    consumeError(ExpectedNSI.takeError());
-    return false;
-  }
-  assert(*ExpectedNSI < getNumStreams());
-  return true;
+  return IS->getNamedStreamIndex("/names") < getNumStreams();
 }
 
 /// Wrapper around MappedBlockStream::createIndexedStream() that checks if a

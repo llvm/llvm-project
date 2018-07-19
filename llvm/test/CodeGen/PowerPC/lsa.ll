@@ -23,8 +23,8 @@ entry:
 
 ; CHECK: @foo
 ; CHECK-NOT: lwzx
-; CHECK: lwz {{[0-9]+}}, 0([[REG:[0-9]+]])
-; CHECK: lwz {{[0-9]+}}, 4([[REG]])
+; CHECK: lwz {{[0-9]+}}, 4([[REG:[0-9]+]])
+; CHECK: lwz {{[0-9]+}}, 0([[REG]])
 ; CHECK: blr
 
   %add = add nsw i32 %4, %3

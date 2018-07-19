@@ -36,7 +36,6 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
@@ -69,6 +68,32 @@ INITIALIZE_PASS_END(StackProtector, DEBUG_TYPE,
                     "Insert stack protectors", false, true)
 
 FunctionPass *llvm::createStackProtectorPass() { return new StackProtector(); }
+
+StackProtector::SSPLayoutKind
+StackProtector::getSSPLayout(const AllocaInst *AI) const {
+  return AI ? Layout.lookup(AI) : SSPLK_None;
+}
+
+void StackProtector::adjustForColoring(const AllocaInst *From,
+                                       const AllocaInst *To) {
+  // When coloring replaces one alloca with another, transfer the SSPLayoutKind
+  // tag from the remapped to the target alloca. The remapped alloca should
+  // have a size smaller than or equal to the replacement alloca.
+  SSPLayoutMap::iterator I = Layout.find(From);
+  if (I != Layout.end()) {
+    SSPLayoutKind Kind = I->second;
+    Layout.erase(I);
+
+    // Transfer the tag, but make sure that SSPLK_AddrOf does not overwrite
+    // SSPLK_SmallArray or SSPLK_LargeArray, and make sure that
+    // SSPLK_SmallArray does not overwrite SSPLK_LargeArray.
+    I = Layout.find(To);
+    if (I == Layout.end())
+      Layout.insert(std::make_pair(To, Kind));
+    else if (I->second != SSPLK_LargeArray && Kind != SSPLK_AddrOf)
+      I->second = Kind;
+  }
+}
 
 void StackProtector::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<TargetPassConfig>();
@@ -157,14 +182,6 @@ bool StackProtector::ContainsProtectableArray(Type *Ty, bool &IsLarge,
   return NeedsProtector;
 }
 
-static bool isLifetimeInst(const Instruction *I) {
-  if (const auto Intrinsic = dyn_cast<IntrinsicInst>(I)) {
-    const auto Id = Intrinsic->getIntrinsicID();
-    return Id == Intrinsic::lifetime_start || Id == Intrinsic::lifetime_end;
-  }
-  return false;
-}
-
 bool StackProtector::HasAddressTaken(const Instruction *AI) {
   for (const User *U : AI->users()) {
     if (const StoreInst *SI = dyn_cast<StoreInst>(U)) {
@@ -173,10 +190,8 @@ bool StackProtector::HasAddressTaken(const Instruction *AI) {
     } else if (const PtrToIntInst *SI = dyn_cast<PtrToIntInst>(U)) {
       if (AI == SI->getOperand(0))
         return true;
-    } else if (const CallInst *CI = dyn_cast<CallInst>(U)) {
-      // Ignore intrinsics that are not calls. TODO: Use isLoweredToCall().
-      if (!isa<DbgInfoIntrinsic>(CI) && !isLifetimeInst(CI))
-        return true;
+    } else if (isa<CallInst>(U)) {
+      return true;
     } else if (isa<InvokeInst>(U)) {
       return true;
     } else if (const SelectInst *SI = dyn_cast<SelectInst>(U)) {
@@ -199,7 +214,7 @@ bool StackProtector::HasAddressTaken(const Instruction *AI) {
   return false;
 }
 
-/// Check whether or not this function needs a stack protector based
+/// \brief Check whether or not this function needs a stack protector based
 /// upon the stack protector level.
 ///
 /// We use two heuristics: a standard (ssp) and strong (sspstrong).
@@ -263,21 +278,18 @@ bool StackProtector::RequiresStackProtector() {
             if (CI->getLimitedValue(SSPBufferSize) >= SSPBufferSize) {
               // A call to alloca with size >= SSPBufferSize requires
               // stack protectors.
-              Layout.insert(std::make_pair(AI,
-                                           MachineFrameInfo::SSPLK_LargeArray));
+              Layout.insert(std::make_pair(AI, SSPLK_LargeArray));
               ORE.emit(RemarkBuilder);
               NeedsProtector = true;
             } else if (Strong) {
               // Require protectors for all alloca calls in strong mode.
-              Layout.insert(std::make_pair(AI,
-                                           MachineFrameInfo::SSPLK_SmallArray));
+              Layout.insert(std::make_pair(AI, SSPLK_SmallArray));
               ORE.emit(RemarkBuilder);
               NeedsProtector = true;
             }
           } else {
             // A call to alloca with a variable size requires protectors.
-            Layout.insert(std::make_pair(AI,
-                                         MachineFrameInfo::SSPLK_LargeArray));
+            Layout.insert(std::make_pair(AI, SSPLK_LargeArray));
             ORE.emit(RemarkBuilder);
             NeedsProtector = true;
           }
@@ -286,9 +298,8 @@ bool StackProtector::RequiresStackProtector() {
 
         bool IsLarge = false;
         if (ContainsProtectableArray(AI->getAllocatedType(), IsLarge, Strong)) {
-          Layout.insert(std::make_pair(AI, IsLarge
-                                       ? MachineFrameInfo::SSPLK_LargeArray
-                                       : MachineFrameInfo::SSPLK_SmallArray));
+          Layout.insert(std::make_pair(AI, IsLarge ? SSPLK_LargeArray
+                                                   : SSPLK_SmallArray));
           ORE.emit([&]() {
             return OptimizationRemark(DEBUG_TYPE, "StackProtectorBuffer", &I)
                    << "Stack protection applied to function "
@@ -302,7 +313,7 @@ bool StackProtector::RequiresStackProtector() {
 
         if (Strong && HasAddressTaken(AI)) {
           ++NumAddrTaken;
-          Layout.insert(std::make_pair(AI, MachineFrameInfo::SSPLK_AddrOf));
+          Layout.insert(std::make_pair(AI, SSPLK_AddrOf));
           ORE.emit([&]() {
             return OptimizationRemark(DEBUG_TYPE, "StackProtectorAddressTaken",
                                       &I)
@@ -511,24 +522,4 @@ BasicBlock *StackProtector::CreateFailBB() {
 
 bool StackProtector::shouldEmitSDCheck(const BasicBlock &BB) const {
   return HasPrologue && !HasIRCheck && dyn_cast<ReturnInst>(BB.getTerminator());
-}
-
-void StackProtector::copyToMachineFrameInfo(MachineFrameInfo &MFI) const {
-  if (Layout.empty())
-    return;
-
-  for (int I = 0, E = MFI.getObjectIndexEnd(); I != E; ++I) {
-    if (MFI.isDeadObjectIndex(I))
-      continue;
-
-    const AllocaInst *AI = MFI.getObjectAllocation(I);
-    if (!AI)
-      continue;
-
-    SSPLayoutMap::const_iterator LI = Layout.find(AI);
-    if (LI == Layout.end())
-      continue;
-
-    MFI.setObjectSSPLayout(I, LI->second);
-  }
 }

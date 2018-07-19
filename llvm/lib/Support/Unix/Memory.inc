@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "Unix.h"
-#include "llvm/Config/config.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Process.h"
@@ -25,10 +24,6 @@
 #include <mach/mach.h>
 #endif
 
-#ifdef __Fuchsia__
-#include <zircon/syscalls.h>
-#endif
-
 #if defined(__mips__)
 #  if defined(__OpenBSD__)
 #    include <mips64/sysarch.h>
@@ -37,7 +32,7 @@
 #  endif
 #endif
 
-#if defined(__APPLE__)
+#ifdef __APPLE__
 extern "C" void sys_icache_invalidate(const void *Addr, size_t len);
 #else
 extern "C" void __clear_cache(void *, void*);
@@ -209,11 +204,6 @@ void Memory::InvalidateInstructionCache(const void *Addr,
        defined(__arm64__))
   sys_icache_invalidate(const_cast<void *>(Addr), Len);
 #  endif
-
-#elif defined(__Fuchsia__)
-
-  zx_status_t Status = zx_cache_flush(Addr, Len, ZX_CACHE_FLUSH_INSN);
-  assert(Status == ZX_OK && "cannot invalidate instruction cache");
 
 #else
 

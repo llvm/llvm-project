@@ -13,8 +13,6 @@
 // better decisions.
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_ANALYSIS_DIVERGENCE_ANALYSIS_H
-#define LLVM_ANALYSIS_DIVERGENCE_ANALYSIS_H
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/IR/Function.h"
@@ -37,25 +35,14 @@ public:
   // Print all divergent branches in the function.
   void print(raw_ostream &OS, const Module *) const override;
 
-  // Returns true if V is divergent at its definition.
-  //
-  // Even if this function returns false, V may still be divergent when used
-  // in a different basic block.
+  // Returns true if V is divergent.
   bool isDivergent(const Value *V) const { return DivergentValues.count(V); }
 
   // Returns true if V is uniform/non-divergent.
-  //
-  // Even if this function returns true, V may still be divergent when used
-  // in a different basic block.
   bool isUniform(const Value *V) const { return !isDivergent(V); }
-
-  // Keep the analysis results uptodate by removing an erased value.
-  void removeValue(const Value *V) { DivergentValues.erase(V); }
 
 private:
   // Stores all divergent values.
   DenseSet<const Value *> DivergentValues;
 };
 } // End llvm namespace
-
-#endif //LLVM_ANALYSIS_DIVERGENCE_ANALYSIS_H

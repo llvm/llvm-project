@@ -18,11 +18,11 @@ EOF
    clang -c -g odr_violation.c -o 2.o
 */
 
-// RUN: dsymutil -f -oso-prepend-path=%p/../Inputs/modules \
+// RUN: llvm-dsymutil -f -oso-prepend-path=%p/../Inputs/modules \
 // RUN:   -y %p/dummy-debug-map.map -o - \
 // RUN:     | llvm-dwarfdump -v --debug-info - | FileCheck %s
 
-// RUN: dsymutil -f -oso-prepend-path=%p/../Inputs/modules -y \
+// RUN: llvm-dsymutil -f -oso-prepend-path=%p/../Inputs/modules -y \
 // RUN:   %p/dummy-debug-map.map -o %t 2>&1 | FileCheck --check-prefix=WARN %s
 
 // WARN-NOT: warning: hash mismatch

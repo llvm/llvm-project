@@ -187,9 +187,9 @@ endif:
 
 ; GCN: [[ENDIF]]:
 ; GCN: buffer_store_dword
-define amdgpu_kernel void @test_vccnz_sgpr_ifcvt_triangle(i32 addrspace(1)* %out, i32 addrspace(4)* %in, float %cnd) #0 {
+define amdgpu_kernel void @test_vccnz_sgpr_ifcvt_triangle(i32 addrspace(1)* %out, i32 addrspace(2)* %in, float %cnd) #0 {
 entry:
-  %v = load i32, i32 addrspace(4)* %in
+  %v = load i32, i32 addrspace(2)* %in
   %cc = fcmp oeq float %cnd, 1.000000e+00
   br i1 %cc, label %if, label %endif
 
@@ -206,9 +206,9 @@ endif:
 
 ; GCN-LABEL: {{^}}test_vccnz_ifcvt_triangle_constant_load:
 ; GCN: v_cndmask_b32
-define amdgpu_kernel void @test_vccnz_ifcvt_triangle_constant_load(float addrspace(1)* %out, float addrspace(4)* %in) #0 {
+define amdgpu_kernel void @test_vccnz_ifcvt_triangle_constant_load(float addrspace(1)* %out, float addrspace(2)* %in) #0 {
 entry:
-  %v = load float, float addrspace(4)* %in
+  %v = load float, float addrspace(2)* %in
   %cc = fcmp oeq float %v, 1.000000e+00
   br i1 %cc, label %if, label %endif
 
@@ -248,9 +248,9 @@ endif:
 ; GCN: s_add_i32 [[ADD:s[0-9]+]], [[VAL]], [[VAL]]
 ; GCN: s_cmp_lg_u32 s{{[0-9]+}}, 1
 ; GCN-NEXT: s_cselect_b32 [[SELECT:s[0-9]+]], [[ADD]], [[VAL]]
-define amdgpu_kernel void @test_scc1_sgpr_ifcvt_triangle(i32 addrspace(4)* %in, i32 %cond) #0 {
+define amdgpu_kernel void @test_scc1_sgpr_ifcvt_triangle(i32 addrspace(2)* %in, i32 %cond) #0 {
 entry:
-  %v = load i32, i32 addrspace(4)* %in
+  %v = load i32, i32 addrspace(2)* %in
   %cc = icmp eq i32 %cond, 1
   br i1 %cc, label %if, label %endif
 
@@ -295,9 +295,9 @@ endif:
 ; GCN: s_addc_u32
 ; GCN: s_cmp_lg_u32 s{{[0-9]+}}, 1
 ; GCN-NEXT: s_cselect_b64 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @test_scc1_sgpr_ifcvt_triangle64(i64 addrspace(4)* %in, i32 %cond) #0 {
+define amdgpu_kernel void @test_scc1_sgpr_ifcvt_triangle64(i64 addrspace(2)* %in, i32 %cond) #0 {
 entry:
-  %v = load i64, i64 addrspace(4)* %in
+  %v = load i64, i64 addrspace(2)* %in
   %cc = icmp eq i32 %cond, 1
   br i1 %cc, label %if, label %endif
 
@@ -320,9 +320,9 @@ endif:
 ; GCN: s_cmp_lg_u32 s{{[0-9]+}}, 1
 ; GCN-NEXT: s_cselect_b64 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}
 ; GCN-NEXT: s_cselect_b64 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @test_scc1_sgpr_ifcvt_triangle96(<3 x i32> addrspace(4)* %in, i32 %cond) #0 {
+define amdgpu_kernel void @test_scc1_sgpr_ifcvt_triangle96(<3 x i32> addrspace(2)* %in, i32 %cond) #0 {
 entry:
-  %v = load <3 x i32>, <3 x i32> addrspace(4)* %in
+  %v = load <3 x i32>, <3 x i32> addrspace(2)* %in
   %cc = icmp eq i32 %cond, 1
   br i1 %cc, label %if, label %endif
 
@@ -345,9 +345,9 @@ endif:
 ; GCN: s_cmp_lg_u32 s{{[0-9]+}}, 1
 ; GCN-NEXT: s_cselect_b64 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}
 ; GCN-NEXT: s_cselect_b64 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @test_scc1_sgpr_ifcvt_triangle128(<4 x i32> addrspace(4)* %in, i32 %cond) #0 {
+define amdgpu_kernel void @test_scc1_sgpr_ifcvt_triangle128(<4 x i32> addrspace(2)* %in, i32 %cond) #0 {
 entry:
-  %v = load <4 x i32>, <4 x i32> addrspace(4)* %in
+  %v = load <4 x i32>, <4 x i32> addrspace(2)* %in
   %cc = icmp eq i32 %cond, 1
   br i1 %cc, label %if, label %endif
 

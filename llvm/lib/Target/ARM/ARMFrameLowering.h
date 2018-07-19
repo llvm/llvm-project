@@ -44,8 +44,6 @@ public:
 
   bool noFramePointerElim(const MachineFunction &MF) const override;
 
-  bool enableCalleeSaveSkip(const MachineFunction &MF) const override;
-
   bool hasFP(const MachineFunction &MF) const override;
   bool hasReservedCallFrame(const MachineFunction &MF) const override;
   bool canSimplifyCallFramePseudos(const MachineFunction &MF) const override;

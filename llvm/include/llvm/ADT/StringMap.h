@@ -37,12 +37,12 @@ template<typename ValueTy> class StringMapKeyIterator;
 
 /// StringMapEntryBase - Shared base class of StringMapEntry instances.
 class StringMapEntryBase {
-  size_t StrLen;
+  unsigned StrLen;
 
 public:
-  explicit StringMapEntryBase(size_t Len) : StrLen(Len) {}
+  explicit StringMapEntryBase(unsigned Len) : StrLen(Len) {}
 
-  size_t getKeyLength() const { return StrLen; }
+  unsigned getKeyLength() const { return StrLen; }
 };
 
 /// StringMapImpl - This is the base class of StringMap that is shared among
@@ -127,10 +127,10 @@ class StringMapEntry : public StringMapEntryBase {
 public:
   ValueTy second;
 
-  explicit StringMapEntry(size_t strLen)
+  explicit StringMapEntry(unsigned strLen)
     : StringMapEntryBase(strLen), second() {}
   template <typename... InitTy>
-  StringMapEntry(size_t strLen, InitTy &&... InitVals)
+  StringMapEntry(unsigned strLen, InitTy &&... InitVals)
       : StringMapEntryBase(strLen), second(std::forward<InitTy>(InitVals)...) {}
   StringMapEntry(StringMapEntry &E) = delete;
 
@@ -155,16 +155,19 @@ public:
   template <typename AllocatorTy, typename... InitTy>
   static StringMapEntry *Create(StringRef Key, AllocatorTy &Allocator,
                                 InitTy &&... InitVals) {
-    size_t KeyLength = Key.size();
+    unsigned KeyLength = Key.size();
 
     // Allocate a new item with space for the string at the end and a null
     // terminator.
-    size_t AllocSize = sizeof(StringMapEntry) + KeyLength + 1;
-    size_t Alignment = alignof(StringMapEntry);
+    unsigned AllocSize = static_cast<unsigned>(sizeof(StringMapEntry))+
+      KeyLength+1;
+    unsigned Alignment = alignof(StringMapEntry);
 
     StringMapEntry *NewItem =
       static_cast<StringMapEntry*>(Allocator.Allocate(AllocSize,Alignment));
-    assert(NewItem && "Unhandled out-of-memory");
+
+    if (NewItem == nullptr)
+      report_bad_alloc_error("Allocation of StringMap entry failed.");
 
     // Construct the value.
     new (NewItem) StringMapEntry(KeyLength, std::forward<InitTy>(InitVals)...);
@@ -200,7 +203,8 @@ public:
   template<typename AllocatorTy>
   void Destroy(AllocatorTy &Allocator) {
     // Free memory referenced by the item.
-    size_t AllocSize = sizeof(StringMapEntry) + getKeyLength() + 1;
+    unsigned AllocSize =
+        static_cast<unsigned>(sizeof(StringMapEntry)) + getKeyLength() + 1;
     this->~StringMapEntry();
     Allocator.Deallocate(static_cast<void *>(this), AllocSize);
   }

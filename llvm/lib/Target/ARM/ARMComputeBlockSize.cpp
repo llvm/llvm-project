@@ -35,7 +35,6 @@ mayOptimizeThumb2Instruction(const MachineInstr *MI) {
     case ARM::tBcc:
     // optimizeThumb2JumpTables.
     case ARM::t2BR_JT:
-    case ARM::tBR_JTr:
       return true;
   }
   return false;

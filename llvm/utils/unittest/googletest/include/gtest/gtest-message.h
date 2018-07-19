@@ -49,7 +49,36 @@
 #include <limits>
 
 #include "gtest/internal/gtest-port.h"
-#include "gtest/internal/custom/raw-ostream.h"
+
+#if !GTEST_NO_LLVM_RAW_OSTREAM
+#include "llvm/Support/raw_os_ostream.h"
+
+// LLVM INTERNAL CHANGE: To allow operator<< to work with both
+// std::ostreams and LLVM's raw_ostreams, we define a special
+// std::ostream with an implicit conversion to raw_ostream& and stream
+// to that.  This causes the compiler to prefer std::ostream overloads
+// but still find raw_ostream& overloads.
+namespace llvm {
+class convertible_fwd_ostream : public std::ostream {
+  raw_os_ostream ros_;
+
+public:
+  convertible_fwd_ostream(std::ostream& os)
+    : std::ostream(os.rdbuf()), ros_(*this) {}
+  operator raw_ostream&() { return ros_; }
+};
+}
+template <typename T>
+inline void GTestStreamToHelper(std::ostream& os, const T& val) {
+  llvm::convertible_fwd_ostream cos(os);
+  cos << val;
+}
+#else
+template <typename T>
+inline void GTestStreamToHelper(std::ostream& os, const T& val) {
+  os << val;
+}
+#endif
 
 // Ensures that there is at least one operator<< in the global namespace.
 // See Message& operator<<(...) below for why.
@@ -128,8 +157,12 @@ class GTEST_API_ Message {
     // from the global namespace.  With this using declaration,
     // overloads of << defined in the global namespace and those
     // visible via Koenig lookup are both exposed in this function.
+#if GTEST_NO_LLVM_RAW_OSTREAM
     using ::operator <<;
-    *ss_ << llvm_gtest::printable(val);
+    *ss_ << val;
+#else
+    ::GTestStreamToHelper(*ss_, val);
+#endif
     return *this;
   }
 
@@ -151,7 +184,11 @@ class GTEST_API_ Message {
     if (pointer == NULL) {
       *ss_ << "(null)";
     } else {
-      *ss_ << llvm_gtest::printable(pointer);
+#if GTEST_NO_LLVM_RAW_OSTREAM
+      *ss_ << pointer;
+#else
+      ::GTestStreamToHelper(*ss_, pointer);
+#endif
     }
     return *this;
   }

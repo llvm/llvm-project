@@ -61,6 +61,7 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -98,7 +99,6 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MachineValueType.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
@@ -113,11 +113,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "isel"
 
-// FIXME: Remove this after the feature has proven reliable.
-static cl::opt<bool> SinkLocalValues("fast-isel-sink-local-values",
-                                     cl::init(true), cl::Hidden,
-                                     cl::desc("Sink local values in FastISel"));
-
 STATISTIC(NumFastIselSuccessIndependent, "Number of insts selected by "
                                          "target-independent selector");
 STATISTIC(NumFastIselSuccessTarget, "Number of insts selected by "
@@ -125,10 +120,9 @@ STATISTIC(NumFastIselSuccessTarget, "Number of insts selected by "
 STATISTIC(NumFastIselDead, "Number of dead insts removed on failure");
 
 /// Set the current block to which generated machine instructions will be
-/// appended.
+/// appended, and clear the local CSE map.
 void FastISel::startNewBlock() {
-  assert(LocalValueMap.empty() &&
-         "local values should be cleared after finishing a BB");
+  LocalValueMap.clear();
 
   // Instructions are appended to FuncInfo.MBB. If the basic block already
   // contains labels or copies, use the last instruction as the last local
@@ -138,9 +132,6 @@ void FastISel::startNewBlock() {
     EmitStartPt = &FuncInfo.MBB->back();
   LastLocalValue = EmitStartPt;
 }
-
-/// Flush the local CSE map and sink anything we can.
-void FastISel::finishBasicBlock() { flushLocalValueMap(); }
 
 bool FastISel::lowerArguments() {
   if (!FuncInfo.CanLowerReturn)
@@ -162,168 +153,11 @@ bool FastISel::lowerArguments() {
   return true;
 }
 
-/// Return the defined register if this instruction defines exactly one
-/// virtual register and uses no other virtual registers. Otherwise return 0.
-static unsigned findSinkableLocalRegDef(MachineInstr &MI) {
-  unsigned RegDef = 0;
-  for (const MachineOperand &MO : MI.operands()) {
-    if (!MO.isReg())
-      continue;
-    if (MO.isDef()) {
-      if (RegDef)
-        return 0;
-      RegDef = MO.getReg();
-    } else if (TargetRegisterInfo::isVirtualRegister(MO.getReg())) {
-      // This is another use of a vreg. Don't try to sink it.
-      return 0;
-    }
-  }
-  return RegDef;
-}
-
 void FastISel::flushLocalValueMap() {
-  // Try to sink local values down to their first use so that we can give them a
-  // better debug location. This has the side effect of shrinking local value
-  // live ranges, which helps out fast regalloc.
-  if (SinkLocalValues && LastLocalValue != EmitStartPt) {
-    // Sink local value materialization instructions between EmitStartPt and
-    // LastLocalValue. Visit them bottom-up, starting from LastLocalValue, to
-    // avoid inserting into the range that we're iterating over.
-    MachineBasicBlock::reverse_iterator RE =
-        EmitStartPt ? MachineBasicBlock::reverse_iterator(EmitStartPt)
-                    : FuncInfo.MBB->rend();
-    MachineBasicBlock::reverse_iterator RI(LastLocalValue);
-
-    InstOrderMap OrderMap;
-    for (; RI != RE;) {
-      MachineInstr &LocalMI = *RI;
-      ++RI;
-      bool Store = true;
-      if (!LocalMI.isSafeToMove(nullptr, Store))
-        continue;
-      unsigned DefReg = findSinkableLocalRegDef(LocalMI);
-      if (DefReg == 0)
-        continue;
-
-      sinkLocalValueMaterialization(LocalMI, DefReg, OrderMap);
-    }
-  }
-
   LocalValueMap.clear();
   LastLocalValue = EmitStartPt;
   recomputeInsertPt();
   SavedInsertPt = FuncInfo.InsertPt;
-  LastFlushPoint = FuncInfo.InsertPt;
-}
-
-static bool isRegUsedByPhiNodes(unsigned DefReg,
-                                FunctionLoweringInfo &FuncInfo) {
-  for (auto &P : FuncInfo.PHINodesToUpdate)
-    if (P.second == DefReg)
-      return true;
-  return false;
-}
-
-/// Build a map of instruction orders. Return the first terminator and its
-/// order. Consider EH_LABEL instructions to be terminators as well, since local
-/// values for phis after invokes must be materialized before the call.
-void FastISel::InstOrderMap::initialize(
-    MachineBasicBlock *MBB, MachineBasicBlock::iterator LastFlushPoint) {
-  unsigned Order = 0;
-  for (MachineInstr &I : *MBB) {
-    if (!FirstTerminator &&
-        (I.isTerminator() || (I.isEHLabel() && &I != &MBB->front()))) {
-      FirstTerminator = &I;
-      FirstTerminatorOrder = Order;
-    }
-    Orders[&I] = Order++;
-
-    // We don't need to order instructions past the last flush point.
-    if (I.getIterator() == LastFlushPoint)
-      break;
-  }
-}
-
-void FastISel::sinkLocalValueMaterialization(MachineInstr &LocalMI,
-                                             unsigned DefReg,
-                                             InstOrderMap &OrderMap) {
-  // If this register is used by a register fixup, MRI will not contain all
-  // the uses until after register fixups, so don't attempt to sink or DCE
-  // this instruction. Register fixups typically come from no-op cast
-  // instructions, which replace the cast instruction vreg with the local
-  // value vreg.
-  if (FuncInfo.RegsWithFixups.count(DefReg))
-    return;
-
-  // We can DCE this instruction if there are no uses and it wasn't a
-  // materialized for a successor PHI node.
-  bool UsedByPHI = isRegUsedByPhiNodes(DefReg, FuncInfo);
-  if (!UsedByPHI && MRI.use_nodbg_empty(DefReg)) {
-    if (EmitStartPt == &LocalMI)
-      EmitStartPt = EmitStartPt->getPrevNode();
-    LLVM_DEBUG(dbgs() << "removing dead local value materialization "
-                      << LocalMI);
-    OrderMap.Orders.erase(&LocalMI);
-    LocalMI.eraseFromParent();
-    return;
-  }
-
-  // Number the instructions if we haven't yet so we can efficiently find the
-  // earliest use.
-  if (OrderMap.Orders.empty())
-    OrderMap.initialize(FuncInfo.MBB, LastFlushPoint);
-
-  // Find the first user in the BB.
-  MachineInstr *FirstUser = nullptr;
-  unsigned FirstOrder = std::numeric_limits<unsigned>::max();
-  for (MachineInstr &UseInst : MRI.use_nodbg_instructions(DefReg)) {
-    auto I = OrderMap.Orders.find(&UseInst);
-    assert(I != OrderMap.Orders.end() &&
-           "local value used by instruction outside local region");
-    unsigned UseOrder = I->second;
-    if (UseOrder < FirstOrder) {
-      FirstOrder = UseOrder;
-      FirstUser = &UseInst;
-    }
-  }
-
-  // The insertion point will be the first terminator or the first user,
-  // whichever came first. If there was no terminator, this must be a
-  // fallthrough block and the insertion point is the end of the block.
-  MachineBasicBlock::instr_iterator SinkPos;
-  if (UsedByPHI && OrderMap.FirstTerminatorOrder < FirstOrder) {
-    FirstOrder = OrderMap.FirstTerminatorOrder;
-    SinkPos = OrderMap.FirstTerminator->getIterator();
-  } else if (FirstUser) {
-    SinkPos = FirstUser->getIterator();
-  } else {
-    assert(UsedByPHI && "must be users if not used by a phi");
-    SinkPos = FuncInfo.MBB->instr_end();
-  }
-
-  // Collect all DBG_VALUEs before the new insertion position so that we can
-  // sink them.
-  SmallVector<MachineInstr *, 1> DbgValues;
-  for (MachineInstr &DbgVal : MRI.use_instructions(DefReg)) {
-    if (!DbgVal.isDebugValue())
-      continue;
-    unsigned UseOrder = OrderMap.Orders[&DbgVal];
-    if (UseOrder < FirstOrder)
-      DbgValues.push_back(&DbgVal);
-  }
-
-  // Sink LocalMI before SinkPos and assign it the same DebugLoc.
-  LLVM_DEBUG(dbgs() << "sinking local value to first use " << LocalMI);
-  FuncInfo.MBB->remove(&LocalMI);
-  FuncInfo.MBB->insert(SinkPos, &LocalMI);
-  if (SinkPos != FuncInfo.MBB->end())
-    LocalMI.setDebugLoc(SinkPos->getDebugLoc());
-
-  // Sink any debug values that we've collected.
-  for (MachineInstr *DI : DbgValues) {
-    FuncInfo.MBB->remove(DI);
-    FuncInfo.MBB->insert(SinkPos, DI);
-  }
 }
 
 bool FastISel::hasTrivialKill(const Value *V) {
@@ -494,10 +328,8 @@ void FastISel::updateValueMap(const Value *I, unsigned Reg, unsigned NumRegs) {
     AssignedReg = Reg;
   else if (Reg != AssignedReg) {
     // Arrange for uses of AssignedReg to be replaced by uses of Reg.
-    for (unsigned i = 0; i < NumRegs; i++) {
+    for (unsigned i = 0; i < NumRegs; i++)
       FuncInfo.RegFixups[AssignedReg + i] = Reg + i;
-      FuncInfo.RegsWithFixups.insert(Reg + i);
-    }
 
     AssignedReg = Reg;
   }
@@ -849,7 +681,7 @@ bool FastISel::selectStackmap(const CallInst *I) {
   return true;
 }
 
-/// Lower an argument list according to the target calling convention.
+/// \brief Lower an argument list according to the target calling convention.
 ///
 /// This is a helper for lowering intrinsics that follow a target calling
 /// convention or require stack pointer adjustment. Only a subset of the
@@ -870,7 +702,7 @@ bool FastISel::lowerCallOperands(const CallInst *CI, unsigned ArgIdx,
     ArgListEntry Entry;
     Entry.Val = V;
     Entry.Ty = V->getType();
-    Entry.setAttributes(&CS, ArgI);
+    Entry.setAttributes(&CS, ArgIdx);
     Args.push_back(Entry);
   }
 
@@ -1042,31 +874,10 @@ bool FastISel::selectXRayCustomEvent(const CallInst *I) {
               TII.get(TargetOpcode::PATCHABLE_EVENT_CALL));
   for (auto &MO : Ops)
     MIB.add(MO);
-
   // Insert the Patchable Event Call instruction, that gets lowered properly.
   return true;
 }
 
-bool FastISel::selectXRayTypedEvent(const CallInst *I) {
-  const auto &Triple = TM.getTargetTriple();
-  if (Triple.getArch() != Triple::x86_64 || !Triple.isOSLinux())
-    return true; // don't do anything to this instruction.
-  SmallVector<MachineOperand, 8> Ops;
-  Ops.push_back(MachineOperand::CreateReg(getRegForValue(I->getArgOperand(0)),
-                                          /*IsDef=*/false));
-  Ops.push_back(MachineOperand::CreateReg(getRegForValue(I->getArgOperand(1)),
-                                          /*IsDef=*/false));
-  Ops.push_back(MachineOperand::CreateReg(getRegForValue(I->getArgOperand(2)),
-                                          /*IsDef=*/false));
-  MachineInstrBuilder MIB =
-      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
-              TII.get(TargetOpcode::PATCHABLE_TYPED_EVENT_CALL));
-  for (auto &MO : Ops)
-    MIB.add(MO);
-
-  // Insert the Patchable Typed Event Call instruction, that gets lowered properly.
-  return true;
-}
 
 /// Returns an AttributeList representing the attributes applied to the return
 /// value of the given call.
@@ -1330,13 +1141,13 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
     const DbgDeclareInst *DI = cast<DbgDeclareInst>(II);
     assert(DI->getVariable() && "Missing variable");
     if (!FuncInfo.MF->getMMI().hasDebugInfo()) {
-      LLVM_DEBUG(dbgs() << "Dropping debug info for " << *DI << "\n");
+      DEBUG(dbgs() << "Dropping debug info for " << *DI << "\n");
       return true;
     }
 
     const Value *Address = DI->getAddress();
     if (!Address || isa<UndefValue>(Address)) {
-      LLVM_DEBUG(dbgs() << "Dropping debug info for " << *DI << "\n");
+      DEBUG(dbgs() << "Dropping debug info for " << *DI << "\n");
       return true;
     }
 
@@ -1371,15 +1182,24 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
     if (Op) {
       assert(DI->getVariable()->isValidLocationForIntrinsic(DbgLoc) &&
              "Expected inlined-at fields to agree");
-      // A dbg.declare describes the address of a source variable, so lower it
-      // into an indirect DBG_VALUE.
-      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
-              TII.get(TargetOpcode::DBG_VALUE), /*IsIndirect*/ true,
-              *Op, DI->getVariable(), DI->getExpression());
+      if (Op->isReg()) {
+        Op->setIsDebug(true);
+        // A dbg.declare describes the address of a source variable, so lower it
+        // into an indirect DBG_VALUE.
+        BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
+                TII.get(TargetOpcode::DBG_VALUE), /*IsIndirect*/ true,
+                Op->getReg(), DI->getVariable(), DI->getExpression());
+      } else
+        BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
+                TII.get(TargetOpcode::DBG_VALUE))
+            .add(*Op)
+            .addImm(0)
+            .addMetadata(DI->getVariable())
+            .addMetadata(DI->getExpression());
     } else {
       // We can't yet handle anything else here because it would require
       // generating code, thus altering codegen because of debug info.
-      LLVM_DEBUG(dbgs() << "Dropping debug info for " << *DI << "\n");
+      DEBUG(dbgs() << "Dropping debug info for " << *DI << "\n");
     }
     return true;
   }
@@ -1422,7 +1242,7 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
     } else {
       // We can't yet handle anything else here because it would require
       // generating code, thus altering codegen because of debug info.
-      LLVM_DEBUG(dbgs() << "Dropping debug info for " << *DI << "\n");
+      DEBUG(dbgs() << "Dropping debug info for " << *DI << "\n");
     }
     return true;
   }
@@ -1436,8 +1256,7 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
     updateValueMap(II, ResultReg);
     return true;
   }
-  case Intrinsic::launder_invariant_group:
-  case Intrinsic::strip_invariant_group:
+  case Intrinsic::invariant_group_barrier:
   case Intrinsic::expect: {
     unsigned ResultReg = getRegForValue(II->getArgOperand(0));
     if (!ResultReg)
@@ -1453,8 +1272,6 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
 
   case Intrinsic::xray_customevent:
     return selectXRayCustomEvent(II);
-  case Intrinsic::xray_typedevent:
-    return selectXRayTypedEvent(II);
   }
 
   return fastLowerIntrinsicCall(II);

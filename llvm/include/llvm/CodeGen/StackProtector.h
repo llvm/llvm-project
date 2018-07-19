@@ -19,7 +19,6 @@
 
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Triple.h"
-#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/ValueMap.h"
 #include "llvm/Pass.h"
@@ -36,11 +35,24 @@ class TargetMachine;
 class Type;
 
 class StackProtector : public FunctionPass {
-private:
-  /// A mapping of AllocaInsts to their required SSP layout.
-  using SSPLayoutMap = DenseMap<const AllocaInst *,
-                                MachineFrameInfo::SSPLayoutKind>;
+public:
+  /// SSPLayoutKind.  Stack Smashing Protection (SSP) rules require that
+  /// vulnerable stack allocations are located close the stack protector.
+  enum SSPLayoutKind {
+    SSPLK_None,       ///< Did not trigger a stack protector.  No effect on data
+                      ///< layout.
+    SSPLK_LargeArray, ///< Array or nested array >= SSP-buffer-size.  Closest
+                      ///< to the stack protector.
+    SSPLK_SmallArray, ///< Array or nested array < SSP-buffer-size. 2nd closest
+                      ///< to the stack protector.
+    SSPLK_AddrOf      ///< The address of this allocation is exposed and
+                      ///< triggered protection.  3rd closest to the protector.
+  };
 
+  /// A mapping of AllocaInsts to their required SSP layout.
+  using SSPLayoutMap = ValueMap<const AllocaInst *, SSPLayoutKind>;
+
+private:
   const TargetMachine *TM = nullptr;
 
   /// TLI - Keep a pointer of a TargetLowering to consult for determining
@@ -58,7 +70,7 @@ private:
   /// AllocaInst triggers a stack protector.
   SSPLayoutMap Layout;
 
-  /// The minimum size of buffers that will receive stack smashing
+  /// \brief The minimum size of buffers that will receive stack smashing
   /// protection when -fstack-protection is used.
   unsigned SSPBufferSize = 0;
 
@@ -95,7 +107,7 @@ private:
   bool ContainsProtectableArray(Type *Ty, bool &IsLarge, bool Strong = false,
                                 bool InStruct = false) const;
 
-  /// Check whether a stack allocation has its address taken.
+  /// \brief Check whether a stack allocation has its address taken.
   bool HasAddressTaken(const Instruction *AI);
 
   /// RequiresStackProtector - Check whether or not this function needs a
@@ -111,12 +123,14 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
+  SSPLayoutKind getSSPLayout(const AllocaInst *AI) const;
+
   // Return true if StackProtector is supposed to be handled by SelectionDAG.
   bool shouldEmitSDCheck(const BasicBlock &BB) const;
 
-  bool runOnFunction(Function &Fn) override;
+  void adjustForColoring(const AllocaInst *From, const AllocaInst *To);
 
-  void copyToMachineFrameInfo(MachineFrameInfo &MFI) const;
+  bool runOnFunction(Function &Fn) override;
 };
 
 } // end namespace llvm

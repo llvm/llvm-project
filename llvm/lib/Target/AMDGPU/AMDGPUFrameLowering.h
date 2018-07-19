@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// Interface to describe a layout of a stack frame on an AMDGPU target.
+/// \brief Interface to describe a layout of a stack frame on an AMDGPU target.
 //
 //===----------------------------------------------------------------------===//
 
@@ -19,7 +19,7 @@
 
 namespace llvm {
 
-/// Information about the stack frame layout on the AMDGPU targets.
+/// \brief Information about the stack frame layout on the AMDGPU targets.
 ///
 /// It holds the direction of the stack growth, the known stack alignment on
 /// entry to each function, and the offset to the locals area.

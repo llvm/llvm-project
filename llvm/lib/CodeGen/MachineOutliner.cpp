@@ -25,8 +25,9 @@
 ///
 /// Targets must implement
 ///   * getOutliningCandidateInfo
-///   * buildOutlinedFrame
+///   * insertOutlinerEpilogue
 ///   * insertOutlinedCall
+///   * insertOutlinerPrologue
 ///   * isFunctionSafeToOutlineFrom
 ///
 /// in order to make use of the MachineOutliner.
@@ -55,22 +56,18 @@
 /// https://www.cs.helsinki.fi/u/ukkonen/SuffixT1withFigs.pdf
 ///
 //===----------------------------------------------------------------------===//
-#include "llvm/CodeGen/MachineOutliner.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
-#include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/Mangler.h"
 #include "llvm/Support/Allocator.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <functional>
@@ -83,23 +80,121 @@
 
 using namespace llvm;
 using namespace ore;
-using namespace outliner;
 
 STATISTIC(NumOutlined, "Number of candidates outlined");
 STATISTIC(FunctionsCreated, "Number of functions created");
 
-// Set to true if the user wants the outliner to run on linkonceodr linkage
-// functions. This is false by default because the linker can dedupe linkonceodr
-// functions. Since the outliner is confined to a single module (modulo LTO),
-// this is off by default. It should, however, be the default behaviour in
-// LTO.
-static cl::opt<bool> EnableLinkOnceODROutlining(
-    "enable-linkonceodr-outlining",
-    cl::Hidden,
-    cl::desc("Enable the machine outliner on linkonceodr functions"),
-    cl::init(false));
-
 namespace {
+
+/// \brief An individual sequence of instructions to be replaced with a call to
+/// an outlined function.
+struct Candidate {
+private:
+  /// The start index of this \p Candidate in the instruction list.
+  unsigned StartIdx;
+
+  /// The number of instructions in this \p Candidate.
+  unsigned Len;
+
+public:
+  /// Set to false if the candidate overlapped with another candidate.
+  bool InCandidateList = true;
+
+  /// \brief The index of this \p Candidate's \p OutlinedFunction in the list of
+  /// \p OutlinedFunctions.
+  unsigned FunctionIdx;
+
+  /// Contains all target-specific information for this \p Candidate.
+  TargetInstrInfo::MachineOutlinerInfo MInfo;
+
+  /// Return the number of instructions in this Candidate.
+  unsigned getLength() const { return Len; }
+
+  /// Return the start index of this candidate.
+  unsigned getStartIdx() const { return StartIdx; }
+
+  // Return the end index of this candidate.
+  unsigned getEndIdx() const { return StartIdx + Len - 1; }
+
+  /// \brief The number of instructions that would be saved by outlining every
+  /// candidate of this type.
+  ///
+  /// This is a fixed value which is not updated during the candidate pruning
+  /// process. It is only used for deciding which candidate to keep if two
+  /// candidates overlap. The true benefit is stored in the OutlinedFunction
+  /// for some given candidate.
+  unsigned Benefit = 0;
+
+  Candidate(unsigned StartIdx, unsigned Len, unsigned FunctionIdx)
+      : StartIdx(StartIdx), Len(Len), FunctionIdx(FunctionIdx) {}
+
+  Candidate() {}
+
+  /// \brief Used to ensure that \p Candidates are outlined in an order that
+  /// preserves the start and end indices of other \p Candidates.
+  bool operator<(const Candidate &RHS) const {
+    return getStartIdx() > RHS.getStartIdx();
+  }
+};
+
+/// \brief The information necessary to create an outlined function for some
+/// class of candidate.
+struct OutlinedFunction {
+
+private:
+  /// The number of candidates for this \p OutlinedFunction.
+  unsigned OccurrenceCount = 0;
+
+public:
+  std::vector<std::shared_ptr<Candidate>> Candidates;
+
+  /// The actual outlined function created.
+  /// This is initialized after we go through and create the actual function.
+  MachineFunction *MF = nullptr;
+
+  /// A number assigned to this function which appears at the end of its name.
+  unsigned Name;
+
+  /// \brief The sequence of integers corresponding to the instructions in this
+  /// function.
+  std::vector<unsigned> Sequence;
+
+  /// Contains all target-specific information for this \p OutlinedFunction.
+  TargetInstrInfo::MachineOutlinerInfo MInfo;
+
+  /// Return the number of candidates for this \p OutlinedFunction.
+  unsigned getOccurrenceCount() { return OccurrenceCount; }
+
+  /// Decrement the occurrence count of this OutlinedFunction and return the
+  /// new count.
+  unsigned decrement() {
+    assert(OccurrenceCount > 0 && "Can't decrement an empty function!");
+    OccurrenceCount--;
+    return getOccurrenceCount();
+  }
+
+  /// \brief Return the number of instructions it would take to outline this
+  /// function.
+  unsigned getOutliningCost() {
+    return (OccurrenceCount * MInfo.CallOverhead) + Sequence.size() +
+           MInfo.FrameOverhead;
+  }
+
+  /// \brief Return the number of instructions that would be saved by outlining
+  /// this function.
+  unsigned getBenefit() {
+    unsigned NotOutlinedCost = OccurrenceCount * Sequence.size();
+    unsigned OutlinedCost = getOutliningCost();
+    return (NotOutlinedCost < OutlinedCost) ? 0
+                                            : NotOutlinedCost - OutlinedCost;
+  }
+
+  OutlinedFunction(unsigned Name, unsigned OccurrenceCount,
+                   const std::vector<unsigned> &Sequence,
+                   TargetInstrInfo::MachineOutlinerInfo &MInfo)
+      : OccurrenceCount(OccurrenceCount), Name(Name), Sequence(Sequence),
+        MInfo(MInfo) {}
+};
 
 /// Represents an undefined index in the suffix tree.
 const unsigned EmptyIdx = -1;
@@ -147,7 +242,7 @@ struct SuffixTreeNode {
   /// For all other nodes, this is ignored.
   unsigned SuffixIdx = EmptyIdx;
 
-  /// For internal nodes, a pointer to the internal node representing
+  /// \brief For internal nodes, a pointer to the internal node representing
   /// the same sequence with the first character chopped off.
   ///
   /// This acts as a shortcut in Ukkonen's algorithm. One of the things that
@@ -261,7 +356,7 @@ private:
   /// The end index of each leaf in the tree.
   unsigned LeafEndIdx = -1;
 
-  /// Helper struct which keeps track of the next insertion point in
+  /// \brief Helper struct which keeps track of the next insertion point in
   /// Ukkonen's algorithm.
   struct ActiveState {
     /// The next node to insert at.
@@ -274,7 +369,7 @@ private:
     unsigned Len = 0;
   };
 
-  /// The point the next insertion will take place at in the
+  /// \brief The point the next insertion will take place at in the
   /// construction algorithm.
   ActiveState Active;
 
@@ -321,7 +416,7 @@ private:
     return N;
   }
 
-  /// Set the suffix indices of the leaves to the start indices of their
+  /// \brief Set the suffix indices of the leaves to the start indices of their
   /// respective suffixes. Also stores each leaf in \p LeafVector at its
   /// respective suffix index.
   ///
@@ -359,7 +454,7 @@ private:
     }
   }
 
-  /// Construct the suffix tree for the prefix of the input ending at
+  /// \brief Construct the suffix tree for the prefix of the input ending at
   /// \p EndIdx.
   ///
   /// Used to construct the full suffix tree iteratively. At the end of each
@@ -520,16 +615,16 @@ public:
   }
 };
 
-/// Maps \p MachineInstrs to unsigned integers and stores the mappings.
+/// \brief Maps \p MachineInstrs to unsigned integers and stores the mappings.
 struct InstructionMapper {
 
-  /// The next available integer to assign to a \p MachineInstr that
+  /// \brief The next available integer to assign to a \p MachineInstr that
   /// cannot be outlined.
   ///
   /// Set to -3 for compatability with \p DenseMapInfo<unsigned>.
   unsigned IllegalInstrNumber = -3;
 
-  /// The next available integer to assign to a \p MachineInstr that can
+  /// \brief The next available integer to assign to a \p MachineInstr that can
   /// be outlined.
   unsigned LegalInstrNumber = 0;
 
@@ -544,11 +639,11 @@ struct InstructionMapper {
   /// The vector of unsigned integers that the module is mapped to.
   std::vector<unsigned> UnsignedVec;
 
-  /// Stores the location of the instruction associated with the integer
+  /// \brief Stores the location of the instruction associated with the integer
   /// at index i in \p UnsignedVec for each index i.
   std::vector<MachineBasicBlock::iterator> InstrList;
 
-  /// Maps \p *It to a legal integer.
+  /// \brief Maps \p *It to a legal integer.
   ///
   /// Updates \p InstrList, \p UnsignedVec, \p InstructionIntegerMap,
   /// \p IntegerInstructionMap, and \p LegalInstrNumber.
@@ -611,7 +706,7 @@ struct InstructionMapper {
     return MINumber;
   }
 
-  /// Transforms a \p MachineBasicBlock into a \p vector of \p unsigneds
+  /// \brief Transforms a \p MachineBasicBlock into a \p vector of \p unsigneds
   /// and appends it to \p UnsignedVec and \p InstrList.
   ///
   /// Two instructions are assigned the same integer if they are identical.
@@ -625,29 +720,20 @@ struct InstructionMapper {
   void convertToUnsignedVec(MachineBasicBlock &MBB,
                             const TargetRegisterInfo &TRI,
                             const TargetInstrInfo &TII) {
-    unsigned Flags = TII.getMachineOutlinerMBBFlags(MBB);
-
     for (MachineBasicBlock::iterator It = MBB.begin(), Et = MBB.end(); It != Et;
          It++) {
 
       // Keep track of where this instruction is in the module.
-      switch (TII.getOutliningType(It, Flags)) {
-      case InstrType::Illegal:
+      switch (TII.getOutliningType(*It)) {
+      case TargetInstrInfo::MachineOutlinerInstrType::Illegal:
         mapToIllegalUnsigned(It);
         break;
 
-      case InstrType::Legal:
+      case TargetInstrInfo::MachineOutlinerInstrType::Legal:
         mapToLegalUnsigned(It);
         break;
 
-      case InstrType::LegalTerminator:
-        mapToLegalUnsigned(It);
-        InstrList.push_back(It);
-        UnsignedVec.push_back(IllegalInstrNumber);
-        IllegalInstrNumber--;
-        break;
-
-      case InstrType::Invisible:
+      case TargetInstrInfo::MachineOutlinerInstrType::Invisible:
         break;
       }
     }
@@ -671,7 +757,7 @@ struct InstructionMapper {
   }
 };
 
-/// An interprocedural pass which finds repeated sequences of
+/// \brief An interprocedural pass which finds repeated sequences of
 /// instructions and replaces them with calls to functions.
 ///
 /// Each instruction is mapped to an unsigned integer and placed in a string.
@@ -684,18 +770,9 @@ struct MachineOutliner : public ModulePass {
 
   static char ID;
 
-  /// Set to true if the outliner should consider functions with
+  /// \brief Set to true if the outliner should consider functions with
   /// linkonceodr linkage.
   bool OutlineFromLinkOnceODRs = false;
-
-  /// Set to true if the outliner should run on all functions in the module
-  /// considered safe for outlining.
-  /// Set to true by default for compatibility with llc's -run-pass option.
-  /// Set when the pass is constructed in TargetPassConfig.
-  bool RunOnAllFunctions = true;
-
-  // Collection of IR functions created by the outliner.
-  std::vector<Function *> CreatedIRFunctions;
 
   StringRef getPassName() const override { return "Machine Outliner"; }
 
@@ -706,7 +783,8 @@ struct MachineOutliner : public ModulePass {
     ModulePass::getAnalysisUsage(AU);
   }
 
-  MachineOutliner() : ModulePass(ID) {
+  MachineOutliner(bool OutlineFromLinkOnceODRs = false)
+      : ModulePass(ID), OutlineFromLinkOnceODRs(OutlineFromLinkOnceODRs) {
     initializeMachineOutlinerPass(*PassRegistry::getPassRegistry());
   }
 
@@ -734,7 +812,7 @@ struct MachineOutliner : public ModulePass {
                  std::vector<std::shared_ptr<Candidate>> &CandidateList,
                  std::vector<OutlinedFunction> &FunctionList);
 
-  /// Replace the sequences of instructions represented by the
+  /// \brief Replace the sequences of instructions represented by the
   /// \p Candidates in \p CandidateList with calls to \p MachineFunctions
   /// described in \p FunctionList.
   ///
@@ -774,7 +852,7 @@ struct MachineOutliner : public ModulePass {
   /// Removes \p C from the candidate list, and updates its \p OutlinedFunction.
   void prune(Candidate &C, std::vector<OutlinedFunction> &FunctionList);
 
-  /// Remove any overlapping candidates that weren't handled by the
+  /// \brief Remove any overlapping candidates that weren't handled by the
   /// suffix tree's pruning method.
   ///
   /// Pruning from the suffix tree doesn't necessarily remove all overlaps.
@@ -795,16 +873,6 @@ struct MachineOutliner : public ModulePass {
   /// Construct a suffix tree on the instructions in \p M and outline repeated
   /// strings from that tree.
   bool runOnModule(Module &M) override;
-
-  /// Return a DISubprogram for OF if one exists, and null otherwise. Helper
-  /// function for remark emission.
-  DISubprogram *getSubprogramOrNull(const OutlinedFunction &OF) {
-    DISubprogram *SP;
-    for (const std::shared_ptr<Candidate> &C : OF.Candidates)
-      if (C && C->getMF() && (SP = C->getMF()->getFunction().getSubprogram()))
-        return SP;
-    return nullptr;
-  }
 };
 
 } // Anonymous namespace.
@@ -812,10 +880,8 @@ struct MachineOutliner : public ModulePass {
 char MachineOutliner::ID = 0;
 
 namespace llvm {
-ModulePass *createMachineOutlinerPass(bool RunOnAllFunctions) {
-  MachineOutliner *OL = new MachineOutliner();
-  OL->RunOnAllFunctions = RunOnAllFunctions;
-  return OL;
+ModulePass *createMachineOutlinerPass(bool OutlineFromLinkOnceODRs) {
+  return new MachineOutliner(OutlineFromLinkOnceODRs);
 }
 
 } // namespace llvm
@@ -857,6 +923,14 @@ unsigned MachineOutliner::findCandidates(
     // this vector.
     std::vector<Candidate> CandidatesForRepeatedSeq;
 
+    // Describes the start and end point of each candidate. This allows the
+    // target to infer some information about each occurrence of each repeated
+    // sequence.
+    // FIXME: CandidatesForRepeatedSeq and this should be combined.
+    std::vector<
+        std::pair<MachineBasicBlock::iterator, MachineBasicBlock::iterator>>
+        RepeatedSequenceLocs;
+
     // Figure out the call overhead for each instance of the sequence.
     for (auto &ChildPair : Parent.Children) {
       SuffixTreeNode *M = ChildPair.second;
@@ -892,18 +966,17 @@ unsigned MachineOutliner::findCandidates(
                         CandidatesForRepeatedSeq.end(),
                         [&StartIdx, &EndIdx](const Candidate &C) {
                           return (EndIdx < C.getStartIdx() ||
-                                  StartIdx > C.getEndIdx());
+                                  StartIdx > C.getEndIdx()); 
                         })) {
           // It doesn't overlap with anything, so we can outline it.
           // Each sequence is over [StartIt, EndIt].
-          // Save the candidate and its location.
-
           MachineBasicBlock::iterator StartIt = Mapper.InstrList[StartIdx];
           MachineBasicBlock::iterator EndIt = Mapper.InstrList[EndIdx];
 
-          CandidatesForRepeatedSeq.emplace_back(StartIdx, StringLen, StartIt,
-                                                EndIt, StartIt->getParent(),
+          // Save the candidate and its location.
+          CandidatesForRepeatedSeq.emplace_back(StartIdx, StringLen,
                                                 FunctionList.size());
+          RepeatedSequenceLocs.emplace_back(std::make_pair(StartIt, EndIt));
         }
       }
     }
@@ -911,13 +984,13 @@ unsigned MachineOutliner::findCandidates(
     // We've found something we might want to outline.
     // Create an OutlinedFunction to store it and check if it'd be beneficial
     // to outline.
-    TargetCostInfo TCI =
-        TII.getOutliningCandidateInfo(CandidatesForRepeatedSeq);
+    TargetInstrInfo::MachineOutlinerInfo MInfo =
+        TII.getOutlininingCandidateInfo(RepeatedSequenceLocs);
     std::vector<unsigned> Seq;
     for (unsigned i = Leaf->SuffixIdx; i < Leaf->SuffixIdx + StringLen; i++)
       Seq.push_back(ST.Str[i]);
     OutlinedFunction OF(FunctionList.size(), CandidatesForRepeatedSeq.size(),
-                        Seq, TCI);
+                        Seq, MInfo);
     unsigned Benefit = OF.getBenefit();
 
     // Is it better to outline this candidate than not?
@@ -925,24 +998,27 @@ unsigned MachineOutliner::findCandidates(
       // Outlining this candidate would take more instructions than not
       // outlining.
       // Emit a remark explaining why we didn't outline this candidate.
-      Candidate &C = CandidatesForRepeatedSeq.front();
-      MachineOptimizationRemarkEmitter MORE(*(C.getMF()), nullptr);
+      std::pair<MachineBasicBlock::iterator, MachineBasicBlock::iterator> C =
+          RepeatedSequenceLocs[0];
+      MachineOptimizationRemarkEmitter MORE(
+          *(C.first->getParent()->getParent()), nullptr);
       MORE.emit([&]() {
         MachineOptimizationRemarkMissed R(DEBUG_TYPE, "NotOutliningCheaper",
-                                          C.front()->getDebugLoc(), C.getMBB());
+                                          C.first->getDebugLoc(),
+                                          C.first->getParent());
         R << "Did not outline " << NV("Length", StringLen) << " instructions"
-          << " from " << NV("NumOccurrences", CandidatesForRepeatedSeq.size())
+          << " from " << NV("NumOccurrences", RepeatedSequenceLocs.size())
           << " locations."
-          << " Bytes from outlining all occurrences ("
+          << " Instructions from outlining all occurrences ("
           << NV("OutliningCost", OF.getOutliningCost()) << ")"
-          << " >= Unoutlined instruction bytes ("
-          << NV("NotOutliningCost", OF.getNotOutlinedCost()) << ")"
+          << " >= Unoutlined instruction count ("
+          << NV("NotOutliningCost", StringLen * OF.getOccurrenceCount()) << ")"
           << " (Also found at: ";
 
         // Tell the user the other places the candidate was found.
-        for (unsigned i = 1, e = CandidatesForRepeatedSeq.size(); i < e; i++) {
+        for (unsigned i = 1, e = RepeatedSequenceLocs.size(); i < e; i++) {
           R << NV((Twine("OtherStartLoc") + Twine(i)).str(),
-                  CandidatesForRepeatedSeq[i].front()->getDebugLoc());
+                  RepeatedSequenceLocs[i].first->getDebugLoc());
           if (i != e - 1)
             R << ", ";
         }
@@ -963,7 +1039,7 @@ unsigned MachineOutliner::findCandidates(
     std::vector<std::shared_ptr<Candidate>> CandidatesForFn;
     for (Candidate &C : CandidatesForRepeatedSeq) {
       C.Benefit = Benefit;
-      C.TCI = TCI;
+      C.MInfo = MInfo;
       std::shared_ptr<Candidate> Cptr = std::make_shared<Candidate>(C);
       CandidateList.push_back(Cptr);
       CandidatesForFn.push_back(Cptr);
@@ -991,11 +1067,11 @@ void MachineOutliner::prune(Candidate &C,
   // Remove C from the CandidateList.
   C.InCandidateList = false;
 
-  LLVM_DEBUG(dbgs() << "- Removed a Candidate \n";
-             dbgs() << "--- Num fns left for candidate: "
-                    << F.getOccurrenceCount() << "\n";
-             dbgs() << "--- Candidate's functions's benefit: " << F.getBenefit()
-                    << "\n";);
+  DEBUG(dbgs() << "- Removed a Candidate \n";
+        dbgs() << "--- Num fns left for candidate: " << F.getOccurrenceCount()
+               << "\n";
+        dbgs() << "--- Candidate's functions's benefit: " << F.getBenefit()
+               << "\n";);
 }
 
 void MachineOutliner::pruneOverlaps(
@@ -1043,7 +1119,7 @@ void MachineOutliner::pruneOverlaps(
     if (C1.getStartIdx() > MaxCandidateLen)
       FarthestPossibleIdx = C1.getStartIdx() - MaxCandidateLen;
 
-    // Compare against the candidates in the list that start at most
+    // Compare against the candidates in the list that start at at most
     // FarthestPossibleIdx indices away from C1. There are at most
     // MaxCandidateLen of these.
     for (auto Sit = It + 1; Sit != Et; Sit++) {
@@ -1129,19 +1205,8 @@ MachineOutliner::createOutlinedFunction(Module &M, const OutlinedFunction &OF,
 
   // NOTE: If this is linkonceodr, then we can take advantage of linker deduping
   // which gives us better results when we outline from linkonceodr functions.
-  F->setLinkage(GlobalValue::InternalLinkage);
+  F->setLinkage(GlobalValue::PrivateLinkage);
   F->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
-
-  // FIXME: Set nounwind, so we don't generate eh_frame? Haven't verified it's
-  // necessary.
-
-  // Set optsize/minsize, so we don't insert padding between outlined
-  // functions.
-  F->addFnAttr(Attribute::OptimizeForSize);
-  F->addFnAttr(Attribute::MinSize);
-
-  // Save F so that we can add debug info later if we need to.
-  CreatedIRFunctions.push_back(F);
 
   BasicBlock *EntryBB = BasicBlock::Create(C, "entry", F);
   IRBuilder<> Builder(EntryBB);
@@ -1156,6 +1221,8 @@ MachineOutliner::createOutlinedFunction(Module &M, const OutlinedFunction &OF,
   // Insert the new function into the module.
   MF.insert(MF.begin(), &MBB);
 
+  TII.insertOutlinerPrologue(MBB, MF, OF.MInfo);
+
   // Copy over the instructions for the function using the integer mappings in
   // its sequence.
   for (unsigned Str : OF.Sequence) {
@@ -1164,53 +1231,13 @@ MachineOutliner::createOutlinedFunction(Module &M, const OutlinedFunction &OF,
     NewMI->dropMemRefs();
 
     // Don't keep debug information for outlined instructions.
+    // FIXME: This means outlined functions are currently undebuggable.
     NewMI->setDebugLoc(DebugLoc());
     MBB.insert(MBB.end(), NewMI);
   }
 
-  TII.buildOutlinedFrame(MBB, MF, OF.TCI);
+  TII.insertOutlinerEpilogue(MBB, MF, OF.MInfo);
 
-  // If there's a DISubprogram associated with this outlined function, then
-  // emit debug info for the outlined function.
-  if (DISubprogram *SP = getSubprogramOrNull(OF)) {
-    // We have a DISubprogram. Get its DICompileUnit.
-    DICompileUnit *CU = SP->getUnit();
-    DIBuilder DB(M, true, CU);
-    DIFile *Unit = SP->getFile();
-    Mangler Mg;
-
-    // Walk over each IR function we created in the outliner and create
-    // DISubprograms for each function.
-    for (Function *F : CreatedIRFunctions) {
-      // Get the mangled name of the function for the linkage name.
-      std::string Dummy;
-      llvm::raw_string_ostream MangledNameStream(Dummy);
-      Mg.getNameWithPrefix(MangledNameStream, F, false);
-
-      DISubprogram *SP = DB.createFunction(
-          Unit /* Context */, F->getName(), StringRef(MangledNameStream.str()),
-          Unit /* File */,
-          0 /* Line 0 is reserved for compiler-generated code. */,
-          DB.createSubroutineType(
-              DB.getOrCreateTypeArray(None)), /* void type */
-          false, true, 0, /* Line 0 is reserved for compiler-generated code. */
-          DINode::DIFlags::FlagArtificial /* Compiler-generated code. */,
-          true /* Outlined code is optimized code by definition. */);
-
-      // Don't add any new variables to the subprogram.
-      DB.finalizeSubprogram(SP);
-
-      // Attach subprogram to the function.
-      F->setSubprogram(SP);
-    }
-
-    // We're done with the DIBuilder.
-    DB.finalize();
-  }
-
-  // Outlined functions shouldn't preserve liveness.
-  MF.getProperties().reset(MachineFunctionProperties::Property::TracksLiveness);
-  MF.getRegInfo().freezeReservedRegs(MF);
   return &MF;
 }
 
@@ -1233,6 +1260,19 @@ bool MachineOutliner::outline(
     if (OF.getBenefit() < 1)
       continue;
 
+    // If not, then outline it.
+    assert(C.getStartIdx() < Mapper.InstrList.size() &&
+           "Candidate out of bounds!");
+    MachineBasicBlock *MBB = (*Mapper.InstrList[C.getStartIdx()]).getParent();
+    MachineBasicBlock::iterator StartIt = Mapper.InstrList[C.getStartIdx()];
+    unsigned EndIdx = C.getEndIdx();
+
+    assert(EndIdx < Mapper.InstrList.size() && "Candidate out of bounds!");
+    MachineBasicBlock::iterator EndIt = Mapper.InstrList[EndIdx];
+    assert(EndIt != MBB->end() && "EndIt out of bounds!");
+
+    EndIt++; // Erase needs one past the end index.
+
     // Does this candidate have a function yet?
     if (!OF.MF) {
       OF.MF = createOutlinedFunction(M, OF, Mapper);
@@ -1244,7 +1284,7 @@ bool MachineOutliner::outline(
       MachineOptimizationRemark R(DEBUG_TYPE, "OutlinedFunction",
                                   MBB->findDebugLoc(MBB->begin()), MBB);
       R << "Saved " << NV("OutliningBenefit", OF.getBenefit())
-        << " bytes by "
+        << " instructions by "
         << "outlining " << NV("Length", OF.Sequence.size()) << " instructions "
         << "from " << NV("NumOccurrences", OF.getOccurrenceCount())
         << " locations. "
@@ -1259,7 +1299,7 @@ bool MachineOutliner::outline(
 
         R << NV(
             (Twine("StartLoc") + Twine(i)).str(),
-            OF.Candidates[i]->front()->getDebugLoc());
+            Mapper.InstrList[OF.Candidates[i]->getStartIdx()]->getDebugLoc());
         if (i != e - 1)
           R << ", ";
       }
@@ -1271,65 +1311,28 @@ bool MachineOutliner::outline(
     }
 
     MachineFunction *MF = OF.MF;
-    MachineBasicBlock &MBB = *C.getMBB();
-    MachineBasicBlock::iterator StartIt = C.front();
-    MachineBasicBlock::iterator EndIt = C.back();
-    assert(StartIt != C.getMBB()->end() && "StartIt out of bounds!");
-    assert(EndIt != C.getMBB()->end() && "EndIt out of bounds!");
-
     const TargetSubtargetInfo &STI = MF->getSubtarget();
     const TargetInstrInfo &TII = *STI.getInstrInfo();
 
     // Insert a call to the new function and erase the old sequence.
-    auto CallInst = TII.insertOutlinedCall(M, MBB, StartIt, *OF.MF, C.TCI);
+    TII.insertOutlinedCall(M, *MBB, StartIt, *MF, C.MInfo);
+    StartIt = Mapper.InstrList[C.getStartIdx()];
+    MBB->erase(StartIt, EndIt);
 
-    // If the caller tracks liveness, then we need to make sure that anything
-    // we outline doesn't break liveness assumptions.
-    // The outlined functions themselves currently don't track liveness, but
-    // we should make sure that the ranges we yank things out of aren't
-    // wrong.
-    if (MBB.getParent()->getProperties().hasProperty(
-            MachineFunctionProperties::Property::TracksLiveness)) {
-      // Helper lambda for adding implicit def operands to the call instruction.
-      auto CopyDefs = [&CallInst](MachineInstr &MI) {
-        for (MachineOperand &MOP : MI.operands()) {
-          // Skip over anything that isn't a register.
-          if (!MOP.isReg())
-            continue;
-
-          // If it's a def, add it to the call instruction.
-          if (MOP.isDef())
-            CallInst->addOperand(
-                MachineOperand::CreateReg(MOP.getReg(), true, /* isDef = true */
-                                          true /* isImp = true */));
-        }
-      };
-
-      // Copy over the defs in the outlined range.
-      // First inst in outlined range <-- Anything that's defined in this
-      // ...                           .. range has to be added as an implicit
-      // Last inst in outlined range  <-- def to the call instruction.
-      std::for_each(CallInst, std::next(EndIt), CopyDefs);
-    }
-
-    // Erase from the point after where the call was inserted up to, and
-    // including, the final instruction in the sequence.
-    // Erase needs one past the end, so we need std::next there too.
-    MBB.erase(std::next(StartIt), std::next(EndIt));
     OutlinedSomething = true;
 
     // Statistics.
     NumOutlined++;
   }
 
-  LLVM_DEBUG(dbgs() << "OutlinedSomething = " << OutlinedSomething << "\n";);
+  DEBUG(dbgs() << "OutlinedSomething = " << OutlinedSomething << "\n";);
 
   return OutlinedSomething;
 }
 
 bool MachineOutliner::runOnModule(Module &M) {
-  // Check if there's anything in the module. If it's empty, then there's
-  // nothing to outline.
+
+  // Is there anything in the module at all?
   if (M.empty())
     return false;
 
@@ -1339,67 +1342,25 @@ bool MachineOutliner::runOnModule(Module &M) {
   const TargetRegisterInfo *TRI = STI.getRegisterInfo();
   const TargetInstrInfo *TII = STI.getInstrInfo();
 
-  // If the user passed -enable-machine-outliner=always or
-  // -enable-machine-outliner, the pass will run on all functions in the module.
-  // Otherwise, if the target supports default outlining, it will run on all
-  // functions deemed by the target to be worth outlining from by default. Tell
-  // the user how the outliner is running.
-  LLVM_DEBUG(
-    dbgs() << "Machine Outliner: Running on ";
-    if (RunOnAllFunctions)
-      dbgs() << "all functions";
-    else
-      dbgs() << "target-default functions";
-    dbgs() << "\n"
-  );
-
-  // If the user specifies that they want to outline from linkonceodrs, set
-  // it here.
-  OutlineFromLinkOnceODRs = EnableLinkOnceODROutlining;
-
   InstructionMapper Mapper;
 
-  // Build instruction mappings for each function in the module. Start by
-  // iterating over each Function in M.
+  // Build instruction mappings for each function in the module.
   for (Function &F : M) {
+    MachineFunction &MF = MMI.getOrCreateMachineFunction(F);
 
-    // If there's nothing in F, then there's no reason to try and outline from
-    // it.
-    if (F.empty())
+    // Is the function empty? Safe to outline from?
+    if (F.empty() ||
+        !TII->isFunctionSafeToOutlineFrom(MF, OutlineFromLinkOnceODRs))
       continue;
 
-    // There's something in F. Check if it has a MachineFunction associated with
-    // it.
-    MachineFunction *MF = MMI.getMachineFunction(F);
+    // If it is, look at each MachineBasicBlock in the function.
+    for (MachineBasicBlock &MBB : MF) {
 
-    // If it doesn't, then there's nothing to outline from. Move to the next
-    // Function.
-    if (!MF)
-      continue;
-
-    if (!RunOnAllFunctions && !TII->shouldOutlineFromFunctionByDefault(*MF))
-      continue;
-
-    // We have a MachineFunction. Ask the target if it's suitable for outlining.
-    // If it isn't, then move on to the next Function in the module.
-    if (!TII->isFunctionSafeToOutlineFrom(*MF, OutlineFromLinkOnceODRs))
-      continue;
-
-    // We have a function suitable for outlining. Iterate over every
-    // MachineBasicBlock in MF and try to map its instructions to a list of
-    // unsigned integers.
-    for (MachineBasicBlock &MBB : *MF) {
-      // If there isn't anything in MBB, then there's no point in outlining from
-      // it.
+      // Is there anything in MBB?
       if (MBB.empty())
         continue;
 
-      // Check if MBB could be the target of an indirect branch. If it is, then
-      // we don't want to outline from it.
-      if (MBB.hasAddressTaken())
-        continue;
-
-      // MBB is suitable for outlining. Map it to a list of unsigneds.
+      // If yes, map it.
       Mapper.convertToUnsignedVec(MBB, *TRI, *TII);
     }
   }
@@ -1417,7 +1378,5 @@ bool MachineOutliner::runOnModule(Module &M) {
   pruneOverlaps(CandidateList, FunctionList, Mapper, MaxCandidateLen, *TII);
 
   // Outline each of the candidates and return true if something was outlined.
-  bool OutlinedSomething = outline(M, CandidateList, FunctionList, Mapper);
-
-  return OutlinedSomething;
+  return outline(M, CandidateList, FunctionList, Mapper);
 }

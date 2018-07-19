@@ -12,7 +12,7 @@ define i32 @bpf_prog1(%struct.bpf_context* nocapture %ctx) #0 section "events/ne
   %devname = alloca [3 x i8], align 1
   %fmt = alloca [15 x i8], align 1
   %1 = getelementptr inbounds [3 x i8], [3 x i8]* %devname, i64 0, i64 0
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %1, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @bpf_prog1.devname, i64 0, i64 0), i64 3, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %1, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @bpf_prog1.devname, i64 0, i64 0), i64 3, i32 1, i1 false)
   %2 = getelementptr inbounds %struct.bpf_context, %struct.bpf_context* %ctx, i64 0, i32 0
   %3 = load i64, i64* %2, align 8
   %4 = inttoptr i64 %3 to %struct.sk_buff*
@@ -25,7 +25,7 @@ define i32 @bpf_prog1(%struct.bpf_context* nocapture %ctx) #0 section "events/ne
 
 ; <label>:10                                      ; preds = %0
   %11 = getelementptr inbounds [15 x i8], [15 x i8]* %fmt, i64 0, i64 0
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %11, i8* getelementptr inbounds ([15 x i8], [15 x i8]* @bpf_prog1.fmt, i64 0, i64 0), i64 15, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %11, i8* getelementptr inbounds ([15 x i8], [15 x i8]* @bpf_prog1.fmt, i64 0, i64 0), i64 15, i32 1, i1 false)
   %12 = call i32 (i8*, i32, ...) inttoptr (i64 11 to i32 (i8*, i32, ...)*)(i8* %11, i32 15, %struct.sk_buff* %4, i8* %7) #1
 ; CHECK-LABEL: bpf_prog1:
 ; CHECK: call 4
@@ -43,4 +43,4 @@ define i32 @bpf_prog1(%struct.bpf_context* nocapture %ctx) #0 section "events/ne
 }
 
 ; Function Attrs: nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) #1
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i32, i1) #1

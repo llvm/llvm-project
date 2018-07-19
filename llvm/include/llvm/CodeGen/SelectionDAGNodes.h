@@ -31,18 +31,17 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Metadata.h"
-#include "llvm/IR/Operator.h"
 #include "llvm/Support/AlignOf.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MachineValueType.h"
 #include <algorithm>
 #include <cassert>
 #include <climits>
@@ -190,10 +189,8 @@ public:
   inline bool isUndef() const;
   inline unsigned getMachineOpcode() const;
   inline const DebugLoc &getDebugLoc() const;
-  inline void dump() const;
-  inline void dump(const SelectionDAG *G) const;
-  inline void dumpr() const;
-  inline void dumpr(const SelectionDAG *G) const;
+  inline void dump(const SelectionDAG *G = nullptr) const;
+  inline void dumpr(const SelectionDAG *G = nullptr) const;
 
   /// Return true if this operand (which must be a chain) reaches the
   /// specified operand without crossing any side-effecting instructions.
@@ -360,34 +357,21 @@ private:
   bool NoUnsignedWrap : 1;
   bool NoSignedWrap : 1;
   bool Exact : 1;
+  bool UnsafeAlgebra : 1;
   bool NoNaNs : 1;
   bool NoInfs : 1;
   bool NoSignedZeros : 1;
   bool AllowReciprocal : 1;
   bool VectorReduction : 1;
   bool AllowContract : 1;
-  bool ApproximateFuncs : 1;
-  bool AllowReassociation : 1;
 
 public:
   /// Default constructor turns off all optimization flags.
   SDNodeFlags()
       : AnyDefined(false), NoUnsignedWrap(false), NoSignedWrap(false),
-        Exact(false), NoNaNs(false), NoInfs(false),
+        Exact(false), UnsafeAlgebra(false), NoNaNs(false), NoInfs(false),
         NoSignedZeros(false), AllowReciprocal(false), VectorReduction(false),
-        AllowContract(false), ApproximateFuncs(false),
-        AllowReassociation(false) {}
-
-  /// Propagate the fast-math-flags from an IR FPMathOperator.
-  void copyFMF(const FPMathOperator &FPMO) {
-    setNoNaNs(FPMO.hasNoNaNs());
-    setNoInfs(FPMO.hasNoInfs());
-    setNoSignedZeros(FPMO.hasNoSignedZeros());
-    setAllowReciprocal(FPMO.hasAllowReciprocal());
-    setAllowContract(FPMO.hasAllowContract());
-    setApproximateFuncs(FPMO.hasApproxFunc());
-    setAllowReassociation(FPMO.hasAllowReassoc());
-  }
+        AllowContract(false) {}
 
   /// Sets the state of the flags to the defined state.
   void setDefined() { AnyDefined = true; }
@@ -406,6 +390,10 @@ public:
   void setExact(bool b) {
     setDefined();
     Exact = b;
+  }
+  void setUnsafeAlgebra(bool b) {
+    setDefined();
+    UnsafeAlgebra = b;
   }
   void setNoNaNs(bool b) {
     setDefined();
@@ -431,32 +419,18 @@ public:
     setDefined();
     AllowContract = b;
   }
-  void setApproximateFuncs(bool b) {
-    setDefined();
-    ApproximateFuncs = b;
-  }
-  void setAllowReassociation(bool b) {
-    setDefined();
-    AllowReassociation = b;
-  }
 
   // These are accessors for each flag.
   bool hasNoUnsignedWrap() const { return NoUnsignedWrap; }
   bool hasNoSignedWrap() const { return NoSignedWrap; }
   bool hasExact() const { return Exact; }
+  bool hasUnsafeAlgebra() const { return UnsafeAlgebra; }
   bool hasNoNaNs() const { return NoNaNs; }
   bool hasNoInfs() const { return NoInfs; }
   bool hasNoSignedZeros() const { return NoSignedZeros; }
   bool hasAllowReciprocal() const { return AllowReciprocal; }
   bool hasVectorReduction() const { return VectorReduction; }
   bool hasAllowContract() const { return AllowContract; }
-  bool hasApproximateFuncs() const { return ApproximateFuncs; }
-  bool hasAllowReassociation() const { return AllowReassociation; }
-
-  bool isFast() const {
-    return NoSignedZeros && AllowReciprocal && NoNaNs && NoInfs &&
-           AllowContract && ApproximateFuncs && AllowReassociation;
-  }
 
   /// Clear any flags in this flag set that aren't also set in Flags.
   /// If the given Flags are undefined then don't do anything.
@@ -466,14 +440,13 @@ public:
     NoUnsignedWrap &= Flags.NoUnsignedWrap;
     NoSignedWrap &= Flags.NoSignedWrap;
     Exact &= Flags.Exact;
+    UnsafeAlgebra &= Flags.UnsafeAlgebra;
     NoNaNs &= Flags.NoNaNs;
     NoInfs &= Flags.NoInfs;
     NoSignedZeros &= Flags.NoSignedZeros;
     AllowReciprocal &= Flags.AllowReciprocal;
     VectorReduction &= Flags.VectorReduction;
     AllowContract &= Flags.AllowContract;
-    ApproximateFuncs &= Flags.ApproximateFuncs;
-    AllowReassociation &= Flags.AllowReassociation;
   }
 };
 
@@ -493,13 +466,11 @@ protected:
     friend class SDNode;
     friend class MemIntrinsicSDNode;
     friend class MemSDNode;
-    friend class SelectionDAG;
 
     uint16_t HasDebugValue : 1;
     uint16_t IsMemIntrinsic : 1;
-    uint16_t IsDivergent : 1;
   };
-  enum { NumSDNodeBits = 3 };
+  enum { NumSDNodeBits = 2 };
 
   class ConstantSDNodeBitfields {
     friend class ConstantSDNode;
@@ -569,7 +540,7 @@ protected:
   static_assert(sizeof(ConstantSDNodeBitfields) <= 2, "field too wide");
   static_assert(sizeof(MemSDNodeBitfields) <= 2, "field too wide");
   static_assert(sizeof(LSBaseSDNodeBitfields) <= 2, "field too wide");
-  static_assert(sizeof(LoadSDNodeBitfields) <= 2, "field too wide");
+  static_assert(sizeof(LoadSDNodeBitfields) <= 4, "field too wide");
   static_assert(sizeof(StoreSDNodeBitfields) <= 2, "field too wide");
 
 private:
@@ -690,8 +661,6 @@ public:
 
   bool getHasDebugValue() const { return SDNodeBits.HasDebugValue; }
   void setHasDebugValue(bool b) { SDNodeBits.HasDebugValue = b; }
-
-  bool isDivergent() const { return SDNodeBits.IsDivergent; }
 
   /// Return true if there are no uses of this node.
   bool use_empty() const { return UseList == nullptr; }
@@ -827,44 +796,16 @@ public:
   /// searches to be performed in parallel, caching of results across
   /// queries and incremental addition to Worklist. Stops early if N is
   /// found but will resume. Remember to clear Visited and Worklists
-  /// if DAG changes. MaxSteps gives a maximum number of nodes to visit before
-  /// giving up. The TopologicalPrune flag signals that positive NodeIds are
-  /// topologically ordered (Operands have strictly smaller node id) and search
-  /// can be pruned leveraging this.
+  /// if DAG changes.
   static bool hasPredecessorHelper(const SDNode *N,
                                    SmallPtrSetImpl<const SDNode *> &Visited,
                                    SmallVectorImpl<const SDNode *> &Worklist,
-                                   unsigned int MaxSteps = 0,
-                                   bool TopologicalPrune = false) {
-    SmallVector<const SDNode *, 8> DeferredNodes;
+                                   unsigned int MaxSteps = 0) {
     if (Visited.count(N))
       return true;
-
-    // Node Id's are assigned in three places: As a topological
-    // ordering (> 0), during legalization (results in values set to
-    // 0), new nodes (set to -1). If N has a topolgical id then we
-    // know that all nodes with ids smaller than it cannot be
-    // successors and we need not check them. Filter out all node
-    // that can't be matches. We add them to the worklist before exit
-    // in case of multiple calls. Note that during selection the topological id
-    // may be violated if a node's predecessor is selected before it. We mark
-    // this at selection negating the id of unselected successors and
-    // restricting topological pruning to positive ids.
-
-    int NId = N->getNodeId();
-    // If we Invalidated the Id, reconstruct original NId.
-    if (NId < -1)
-      NId = -(NId + 1);
-
-    bool Found = false;
     while (!Worklist.empty()) {
       const SDNode *M = Worklist.pop_back_val();
-      int MId = M->getNodeId();
-      if (TopologicalPrune && M->getOpcode() != ISD::TokenFactor && (NId > 0) &&
-          (MId > 0) && (MId < NId)) {
-        DeferredNodes.push_back(M);
-        continue;
-      }
+      bool Found = false;
       for (const SDValue &OpV : M->op_values()) {
         SDNode *Op = OpV.getNode();
         if (Visited.insert(Op).second)
@@ -873,16 +814,11 @@ public:
           Found = true;
       }
       if (Found)
-        break;
+        return true;
       if (MaxSteps != 0 && Visited.size() >= MaxSteps)
-        break;
+        return false;
     }
-    // Push deferred nodes back on worklist.
-    Worklist.append(DeferredNodes.begin(), DeferredNodes.end());
-    // If we bailed early, conservatively return found.
-    if (MaxSteps != 0 && Visited.size() >= MaxSteps)
-      return true;
-    return Found;
+    return false;
   }
 
   /// Return true if all the users of N are contained in Nodes.
@@ -948,7 +884,6 @@ public:
 
   const SDNodeFlags getFlags() const { return Flags; }
   void setFlags(SDNodeFlags NewFlags) { Flags = NewFlags; }
-  bool isFast() { return Flags.isFast(); }
 
   /// Clear any flags in this node that aren't also set in Flags.
   /// If Flags is not in a defined state then this has no effect.
@@ -1154,16 +1089,8 @@ inline const DebugLoc &SDValue::getDebugLoc() const {
   return Node->getDebugLoc();
 }
 
-inline void SDValue::dump() const {
-  return Node->dump();
-}
-
 inline void SDValue::dump(const SelectionDAG *G) const {
   return Node->dump(G);
-}
-
-inline void SDValue::dumpr() const {
-  return Node->dumpr();
 }
 
 inline void SDValue::dumpr(const SelectionDAG *G) const {
@@ -1246,7 +1173,7 @@ protected:
 
 public:
   MemSDNode(unsigned Opc, unsigned Order, const DebugLoc &dl, SDVTList VTs,
-            EVT memvt, MachineMemOperand *MMO);
+            EVT MemoryVT, MachineMemOperand *MMO);
 
   bool readMem() const { return MMO->isLoad(); }
   bool writeMem() const { return MMO->isStore(); }
@@ -1263,8 +1190,7 @@ public:
   /// encoding of the volatile flag, as well as bits used by subclasses. This
   /// function should only be used to compute a FoldingSetNodeID value.
   /// The HasDebugValue bit is masked out because CSE map needs to match
-  /// nodes with debug info with nodes without debug info. Same is about
-  /// isDivergent bit.
+  /// nodes with debug info with nodes without debug info.
   unsigned getRawSubclassData() const {
     uint16_t Data;
     union {
@@ -1273,7 +1199,6 @@ public:
     };
     memcpy(&RawSDNodeBits, &this->RawSDNodeBits, sizeof(this->RawSDNodeBits));
     SDNodeBits.HasDebugValue = 0;
-    SDNodeBits.IsDivergent = false;
     memcpy(&Data, &RawSDNodeBits, sizeof(RawSDNodeBits));
     return Data;
   }
@@ -1342,7 +1267,6 @@ public:
            N->getOpcode() == ISD::ATOMIC_LOAD_ADD     ||
            N->getOpcode() == ISD::ATOMIC_LOAD_SUB     ||
            N->getOpcode() == ISD::ATOMIC_LOAD_AND     ||
-           N->getOpcode() == ISD::ATOMIC_LOAD_CLR     ||
            N->getOpcode() == ISD::ATOMIC_LOAD_OR      ||
            N->getOpcode() == ISD::ATOMIC_LOAD_XOR     ||
            N->getOpcode() == ISD::ATOMIC_LOAD_NAND    ||
@@ -1394,7 +1318,6 @@ public:
            N->getOpcode() == ISD::ATOMIC_LOAD_ADD     ||
            N->getOpcode() == ISD::ATOMIC_LOAD_SUB     ||
            N->getOpcode() == ISD::ATOMIC_LOAD_AND     ||
-           N->getOpcode() == ISD::ATOMIC_LOAD_CLR     ||
            N->getOpcode() == ISD::ATOMIC_LOAD_OR      ||
            N->getOpcode() == ISD::ATOMIC_LOAD_XOR     ||
            N->getOpcode() == ISD::ATOMIC_LOAD_NAND    ||
@@ -1498,8 +1421,9 @@ class ConstantSDNode : public SDNode {
 
   const ConstantInt *Value;
 
-  ConstantSDNode(bool isTarget, bool isOpaque, const ConstantInt *val, EVT VT)
-      : SDNode(isTarget ? ISD::TargetConstant : ISD::Constant, 0, DebugLoc(),
+  ConstantSDNode(bool isTarget, bool isOpaque, const ConstantInt *val,
+                 const DebugLoc &DL, EVT VT)
+      : SDNode(isTarget ? ISD::TargetConstant : ISD::Constant, 0, DL,
                getSDVTList(VT)),
         Value(val) {
     ConstantSDNodeBits.IsOpaque = isOpaque;
@@ -1535,9 +1459,10 @@ class ConstantFPSDNode : public SDNode {
 
   const ConstantFP *Value;
 
-  ConstantFPSDNode(bool isTarget, const ConstantFP *val, EVT VT)
-      : SDNode(isTarget ? ISD::TargetConstantFP : ISD::ConstantFP, 0,
-               DebugLoc(), getSDVTList(VT)),
+  ConstantFPSDNode(bool isTarget, const ConstantFP *val, const DebugLoc &DL,
+                   EVT VT)
+      : SDNode(isTarget ? ISD::TargetConstantFP : ISD::ConstantFP, 0, DL,
+               getSDVTList(VT)),
         Value(val) {}
 
 public:
@@ -1594,10 +1519,10 @@ bool isOneConstant(SDValue V);
 bool isBitwiseNot(SDValue V);
 
 /// Returns the SDNode if it is a constant splat BuildVector or constant int.
-ConstantSDNode *isConstOrConstSplat(SDValue N);
+ConstantSDNode *isConstOrConstSplat(SDValue V);
 
 /// Returns the SDNode if it is a constant splat BuildVector or constant float.
-ConstantFPSDNode *isConstOrConstSplatFP(SDValue N);
+ConstantFPSDNode *isConstOrConstSplatFP(SDValue V);
 
 class GlobalAddressSDNode : public SDNode {
   friend class SelectionDAG;
@@ -1608,7 +1533,7 @@ class GlobalAddressSDNode : public SDNode {
 
   GlobalAddressSDNode(unsigned Opc, unsigned Order, const DebugLoc &DL,
                       const GlobalValue *GA, EVT VT, int64_t o,
-                      unsigned char TF);
+                      unsigned char TargetFlags);
 
 public:
   const GlobalValue *getGlobal() const { return TheGlobal; }
@@ -1789,13 +1714,13 @@ public:
                        unsigned MinSplatBits = 0,
                        bool isBigEndian = false) const;
 
-  /// Returns the splatted value or a null value if this is not a splat.
+  /// \brief Returns the splatted value or a null value if this is not a splat.
   ///
   /// If passed a non-null UndefElements bitvector, it will resize it to match
   /// the vector width and set the bits where elements are undef.
   SDValue getSplatValue(BitVector *UndefElements = nullptr) const;
 
-  /// Returns the splatted constant or null if this is not a constant
+  /// \brief Returns the splatted constant or null if this is not a constant
   /// splat.
   ///
   /// If passed a non-null UndefElements bitvector, it will resize it to match
@@ -1803,7 +1728,7 @@ public:
   ConstantSDNode *
   getConstantSplatNode(BitVector *UndefElements = nullptr) const;
 
-  /// Returns the splatted constant FP or null if this is not a constant
+  /// \brief Returns the splatted constant FP or null if this is not a constant
   /// FP splat.
   ///
   /// If passed a non-null UndefElements bitvector, it will resize it to match
@@ -1811,7 +1736,7 @@ public:
   ConstantFPSDNode *
   getConstantFPSplatNode(BitVector *UndefElements = nullptr) const;
 
-  /// If this is a constant FP splat and the splatted constant FP is an
+  /// \brief If this is a constant FP splat and the splatted constant FP is an
   /// exact power or 2, return the log base 2 integer value.  Otherwise,
   /// return -1.
   ///
@@ -2195,14 +2120,13 @@ public:
       : MemSDNode(NodeTy, Order, dl, VTs, MemVT, MMO) {}
 
   // In the both nodes address is Op1, mask is Op2:
-  // MaskedGatherSDNode  (Chain, passthru, mask, base, index, scale)
-  // MaskedScatterSDNode (Chain, value, mask, base, index, scale)
+  // MaskedGatherSDNode  (Chain, src0, mask, base, index), src0 is a passthru value
+  // MaskedScatterSDNode (Chain, value, mask, base, index)
   // Mask is a vector of i1 elements
   const SDValue &getBasePtr() const { return getOperand(3); }
   const SDValue &getIndex()   const { return getOperand(4); }
   const SDValue &getMask()    const { return getOperand(2); }
   const SDValue &getValue()   const { return getOperand(1); }
-  const SDValue &getScale()   const { return getOperand(5); }
 
   static bool classof(const SDNode *N) {
     return N->getOpcode() == ISD::MGATHER ||
@@ -2404,17 +2328,6 @@ namespace ISD {
     return isa<StoreSDNode>(N) &&
       cast<StoreSDNode>(N)->getAddressingMode() == ISD::UNINDEXED;
   }
-
-  /// Attempt to match a unary predicate against a scalar/splat constant or
-  /// every element of a constant BUILD_VECTOR.
-  bool matchUnaryPredicate(SDValue Op,
-                           std::function<bool(ConstantSDNode *)> Match);
-
-  /// Attempt to match a binary predicate against a pair of scalar/splat
-  /// constants or every element of a pair of constant BUILD_VECTORs.
-  bool matchBinaryPredicate(
-      SDValue LHS, SDValue RHS,
-      std::function<bool(ConstantSDNode *, ConstantSDNode *)> Match);
 
 } // end namespace ISD
 

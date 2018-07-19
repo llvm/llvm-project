@@ -20,7 +20,6 @@ add_llvm_unittest(AnalysisTests
   MemoryBuiltinsTest.cpp
   MemorySSA.cpp
   OrderedBasicBlockTest.cpp
-  PhiValuesTest.cpp
   ProfileSummaryInfoTest.cpp
   ScalarEvolutionTest.cpp
   SparsePropagation.cpp

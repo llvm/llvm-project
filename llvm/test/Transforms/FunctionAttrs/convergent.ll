@@ -1,8 +1,4 @@
-; FIXME: convert CHECK-INDIRECT into CHECK (and remove -check-prefixes) as soon
-; FIXME: as new-pass-manager's handling of indirect_non_convergent_call is fixed
-;
-; RUN: opt -functionattrs -S < %s | FileCheck %s --check-prefixes=CHECK,CHECK-INDIRECT
-; RUN: opt -passes=function-attrs -S < %s | FileCheck %s
+; RUN: opt -functionattrs -S < %s | FileCheck %s
 
 ; CHECK: Function Attrs
 ; CHECK-NOT: convergent
@@ -54,8 +50,8 @@ define i32 @indirect_convergent_call(i32 ()* %f) convergent {
 ; "Function Attrs" comment in the output.
 ;
 ; CHECK: Function Attrs
-; CHECK-INDIRECT-NOT: convergent
-; CHECK-INDIRECT-NEXT: define i32 @indirect_non_convergent_call(
+; CHECK-NOT: convergent
+; CHECK-NEXT: define i32 @indirect_non_convergent_call(
 define i32 @indirect_non_convergent_call(i32 ()* %f) convergent norecurse {
    %a = call i32 %f()
    ret i32 %a

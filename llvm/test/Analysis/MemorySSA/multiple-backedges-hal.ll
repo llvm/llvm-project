@@ -42,22 +42,22 @@ Entry:
   br label %OuterLoop
 
 OuterLoop:
-; CHECK: 5 = MemoryPhi({Entry,1},{InnerLoop.Tail,3})
+; CHECK: 4 = MemoryPhi({Entry,1},{InnerLoop.Tail,3})
 ; CHECK-NEXT: %Val.Outer =
   %Val.Outer = call i8 @getValue()
-; CHECK: 2 = MemoryDef(5)
+; CHECK: 2 = MemoryDef(4)
 ; CHECK-NEXT: store i8 %Val.Outer
   store i8 %Val.Outer, i8* %Arg
   call void @doThingWithoutReading()
   br label %InnerLoop
 
 InnerLoop:
-; CHECK: 4 = MemoryPhi({OuterLoop,2},{InnerLoop,3})
-; CHECK-NEXT: ; MemoryUse(4)
+; CHECK: 5 = MemoryPhi({OuterLoop,2},{InnerLoop,3})
+; CHECK-NEXT: ; MemoryUse(5)
 ; CHECK-NEXT: %StartingAccess = load
   %StartingAccess = load i8, i8* %Arg, align 4
   %Val.Inner = call i8 @getValue()
-; CHECK: 3 = MemoryDef(4)
+; CHECK: 3 = MemoryDef(5)
 ; CHECK-NEXT: store i8 %Val.Inner
   store i8 %Val.Inner, i8* %Arg
   call void @doThingWithoutReading()

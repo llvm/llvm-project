@@ -144,7 +144,7 @@ public:
     return 0;
   }
 
-  /// True if the subtarget should run MachineScheduler after aggressive
+  /// \brief True if the subtarget should run MachineScheduler after aggressive
   /// coalescing.
   ///
   /// This currently replaces the SelectionDAG scheduler with the "source" order
@@ -152,14 +152,14 @@ public:
   /// TargetLowering preference). It does not yet disable the postRA scheduler.
   virtual bool enableMachineScheduler() const;
 
-  /// Support printing of [latency:throughput] comment in output .S file.
+  /// \brief Support printing of [latency:throughput] comment in output .S file.
   virtual bool supportPrintSchedInfo() const { return false; }
 
-  /// True if the machine scheduler should disable the TLI preference
+  /// \brief True if the machine scheduler should disable the TLI preference
   /// for preRA scheduling with the source level scheduler.
   virtual bool enableMachineSchedDefaultSched() const { return true; }
 
-  /// True if the subtarget should enable joining global copies.
+  /// \brief True if the subtarget should enable joining global copies.
   ///
   /// By default this is enabled if the machine scheduler is enabled, but
   /// can be overridden.
@@ -171,13 +171,13 @@ public:
   /// which is the preferred way to influence this.
   virtual bool enablePostRAScheduler() const;
 
-  /// True if the subtarget should run the atomic expansion pass.
+  /// \brief True if the subtarget should run the atomic expansion pass.
   virtual bool enableAtomicExpand() const;
 
   /// True if the subtarget should run the indirectbr expansion pass.
   virtual bool enableIndirectBrExpand() const;
 
-  /// Override generic scheduling policy within a region.
+  /// \brief Override generic scheduling policy within a region.
   ///
   /// This is a convenient way for targets that don't provide any custom
   /// scheduling heuristics (no custom MachineSchedStrategy) to make
@@ -185,7 +185,7 @@ public:
   virtual void overrideSchedPolicy(MachineSchedPolicy &Policy,
                                    unsigned NumRegionInstrs) const {}
 
-  // Perform target specific adjustments to the latency of a schedule
+  // \brief Perform target specific adjustments to the latency of a schedule
   // dependency.
   virtual void adjustSchedDependency(SUnit *def, SUnit *use, SDep &dep) const {}
 
@@ -200,13 +200,13 @@ public:
     return CriticalPathRCs.clear();
   }
 
-  // Provide an ordered list of schedule DAG mutations for the post-RA
+  // \brief Provide an ordered list of schedule DAG mutations for the post-RA
   // scheduler.
   virtual void getPostRAMutations(
       std::vector<std::unique_ptr<ScheduleDAGMutation>> &Mutations) const {
   }
 
-  // Provide an ordered list of schedule DAG mutations for the machine
+  // \brief Provide an ordered list of schedule DAG mutations for the machine
   // pipeliner.
   virtual void getSMSMutations(
       std::vector<std::unique_ptr<ScheduleDAGMutation>> &Mutations) const {
@@ -218,25 +218,25 @@ public:
     return CodeGenOpt::Default;
   }
 
-  /// True if the subtarget should run the local reassignment
+  /// \brief True if the subtarget should run the local reassignment
   /// heuristic of the register allocator.
   /// This heuristic may be compile time intensive, \p OptLevel provides
   /// a finer grain to tune the register allocator.
   virtual bool enableRALocalReassignment(CodeGenOpt::Level OptLevel) const;
 
-  /// True if the subtarget should consider the cost of local intervals
+  /// \brief True if the subtarget should consider the cost of local intervals
   /// created by a split candidate when choosing the best split candidate. This
   /// heuristic may be compile time intensive.
   virtual bool enableAdvancedRASplitCost() const;
 
-  /// Enable use of alias analysis during code generation (during MI
+  /// \brief Enable use of alias analysis during code generation (during MI
   /// scheduling, DAGCombine, etc.).
   virtual bool useAA() const;
 
-  /// Enable the use of the early if conversion pass.
+  /// \brief Enable the use of the early if conversion pass.
   virtual bool enableEarlyIfConversion() const { return false; }
 
-  /// Return PBQPConstraint(s) for the target.
+  /// \brief Return PBQPConstraint(s) for the target.
   ///
   /// Override to provide custom PBQP constraints.
   virtual std::unique_ptr<PBQPRAConstraint> getCustomPBQPConstraints() const {
@@ -249,11 +249,8 @@ public:
   virtual bool enableSubRegLiveness() const { return false; }
 
   /// Returns string representation of scheduler comment
-  std::string getSchedInfoStr(const MachineInstr &MI) const;
+  std::string getSchedInfoStr(const MachineInstr &MI) const override;
   std::string getSchedInfoStr(MCInst const &MCI) const override;
-
-  /// This is called after a .mir file was loaded.
-  virtual void mirFileLoaded(MachineFunction &MF) const;
 };
 
 } // end namespace llvm

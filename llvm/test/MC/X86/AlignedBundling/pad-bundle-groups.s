@@ -38,10 +38,9 @@ foo:
   callq   bar
   callq   bar
   .bundle_unlock
-# And here we'll need a 10-byte NOP + 1-byte NOP
+# And here we'll need a 11-byte NOP
 # CHECK:        30: callq
 # CHECK:        35: nop
-# CHECK:        3f: nop
 # CHECK-NEXT:   40: callq
 # CHECK-NEXT:   45: callq
 

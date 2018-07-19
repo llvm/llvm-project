@@ -290,7 +290,7 @@ define <32 x i16> @constant_shift_v32i16(<32 x i16> %a) nounwind {
 ; AVX512DQ-LABEL: constant_shift_v32i16:
 ; AVX512DQ:       # %bb.0:
 ; AVX512DQ-NEXT:    vpmovsxwd %ymm0, %zmm0
-; AVX512DQ-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
+; AVX512DQ-NEXT:    vmovdqa32 {{.*#+}} zmm2 = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
 ; AVX512DQ-NEXT:    vpsravd %zmm2, %zmm0, %zmm0
 ; AVX512DQ-NEXT:    vpmovdw %zmm0, %ymm0
 ; AVX512DQ-NEXT:    vpmovsxwd %ymm1, %zmm1
@@ -463,7 +463,8 @@ define <64 x i8> @ashr_const7_v64i8(<64 x i8> %a) {
 ;
 ; AVX512BW-LABEL: ashr_const7_v64i8:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vpmovb2m %zmm0, %k0
+; AVX512BW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512BW-NEXT:    vpcmpgtb %zmm0, %zmm1, %k0
 ; AVX512BW-NEXT:    vpmovm2b %k0, %zmm0
 ; AVX512BW-NEXT:    retq
   %res = ashr <64 x i8> %a, <i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7>

@@ -21,8 +21,8 @@
 ; these debug locations are propaged correctly to lowered instructions.
 ;
 ; CHECK: [[DLOC:![0-9]+]] = !DILocation(line: 6
-; CHECK-DAG: [[VREG1:%[^ ]+]]:gr64 = COPY $rsi
-; CHECK-DAG: [[VREG2:%[^ ]+]]:gr64 = COPY $rdi
+; CHECK-DAG: [[VREG1:%[^ ]+]]:gr64 = COPY %rsi
+; CHECK-DAG: [[VREG2:%[^ ]+]]:gr64 = COPY %rdi
 ; CHECK: SUB64rr [[VREG2]], [[VREG1]]
 ; CHECK-NEXT: JNE_1 {{.*}}, debug-location [[DLOC]]{{$}}
 ; CHECK: [[VREG3:%[^ ]+]]:gr64 = PHI [[VREG2]]

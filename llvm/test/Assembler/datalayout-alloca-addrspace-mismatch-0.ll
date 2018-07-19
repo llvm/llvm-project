@@ -2,9 +2,7 @@
 
 target datalayout = "A1"
 
-; CHECK: Allocation instruction pointer not in the stack address space!
-; CHECK-NEXT:  %alloca_scalar_no_align = alloca i32, addrspace(2)
-
+; CHECK: :7:41: error: address space must match datalayout
 define void @use_alloca() {
   %alloca_scalar_no_align = alloca i32, addrspace(2)
   ret void

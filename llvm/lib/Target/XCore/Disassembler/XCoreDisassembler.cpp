@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file is part of the XCore Disassembler.
+/// \brief This file is part of the XCore Disassembler.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -29,7 +29,7 @@ typedef MCDisassembler::DecodeStatus DecodeStatus;
 
 namespace {
 
-/// A disassembler class for XCore.
+/// \brief A disassembler class for XCore.
 class XCoreDisassembler : public MCDisassembler {
 public:
   XCoreDisassembler(const MCSubtargetInfo &STI, MCContext &Ctx) :

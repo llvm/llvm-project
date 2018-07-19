@@ -26,18 +26,15 @@ class raw_ostream;
 
 /// PostDominatorTree Class - Concrete subclass of DominatorTree that is used to
 /// compute the post-dominator tree.
-class PostDominatorTree : public PostDomTreeBase<BasicBlock> {
-public:
+struct PostDominatorTree : public PostDomTreeBase<BasicBlock> {
   using Base = PostDomTreeBase<BasicBlock>;
 
-  PostDominatorTree() = default;
-  explicit PostDominatorTree(Function &F) { recalculate(F); }
   /// Handle invalidation explicitly.
   bool invalidate(Function &F, const PreservedAnalyses &PA,
                   FunctionAnalysisManager::Invalidator &);
 };
 
-/// Analysis pass which computes a \c PostDominatorTree.
+/// \brief Analysis pass which computes a \c PostDominatorTree.
 class PostDominatorTreeAnalysis
     : public AnalysisInfoMixin<PostDominatorTreeAnalysis> {
   friend AnalysisInfoMixin<PostDominatorTreeAnalysis>;
@@ -45,15 +42,15 @@ class PostDominatorTreeAnalysis
   static AnalysisKey Key;
 
 public:
-  /// Provide the result type for this analysis pass.
+  /// \brief Provide the result type for this analysis pass.
   using Result = PostDominatorTree;
 
-  /// Run the analysis pass over a function and produce a post dominator
+  /// \brief Run the analysis pass over a function and produce a post dominator
   ///        tree.
   PostDominatorTree run(Function &F, FunctionAnalysisManager &);
 };
 
-/// Printer pass for the \c PostDominatorTree.
+/// \brief Printer pass for the \c PostDominatorTree.
 class PostDominatorTreePrinterPass
     : public PassInfoMixin<PostDominatorTreePrinterPass> {
   raw_ostream &OS;
@@ -77,8 +74,6 @@ struct PostDominatorTreeWrapperPass : public FunctionPass {
   const PostDominatorTree &getPostDomTree() const { return DT; }
 
   bool runOnFunction(Function &F) override;
-
-  void verifyAnalysis() const override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();

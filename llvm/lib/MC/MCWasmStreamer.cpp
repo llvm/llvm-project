@@ -45,8 +45,7 @@ void MCWasmStreamer::mergeFragment(MCDataFragment *DF, MCDataFragment *EF) {
                                  DF->getContents().size());
     DF->getFixups().push_back(EF->getFixups()[i]);
   }
-  if (DF->getSubtargetInfo() == nullptr && EF->getSubtargetInfo())
-    DF->setHasInstructions(*EF->getSubtargetInfo());
+  DF->setHasInstructions(true);
   DF->getContents().append(EF->getContents().begin(), EF->getContents().end());
 }
 
@@ -67,7 +66,6 @@ void MCWasmStreamer::ChangeSection(MCSection *Section,
     Asm.registerSymbol(*Grp);
 
   this->MCObjectStreamer::ChangeSection(Section, Subsection);
-  Asm.registerSymbol(*Section->getBeginSymbol());
 }
 
 void MCWasmStreamer::EmitWeakReference(MCSymbol *Alias,
@@ -83,9 +81,9 @@ bool MCWasmStreamer::EmitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
 
   auto *Symbol = cast<MCSymbolWasm>(S);
 
-  // Adding a symbol attribute always introduces the symbol; note that an
-  // important side effect of calling registerSymbol here is to register the
-  // symbol with the assembler.
+  // Adding a symbol attribute always introduces the symbol, note that an
+  // important side effect of calling registerSymbol here is to register
+  // the symbol with the assembler.
   getAssembler().registerSymbol(*Symbol);
 
   switch (Attribute) {
@@ -115,11 +113,11 @@ bool MCWasmStreamer::EmitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
     break;
 
   case MCSA_ELF_TypeFunction:
-    Symbol->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
+    Symbol->setIsFunction(true);
     break;
 
   case MCSA_ELF_TypeObject:
-    Symbol->setType(wasm::WASM_SYMBOL_TYPE_DATA);
+    Symbol->setIsFunction(false);
     break;
 
   default:
@@ -158,8 +156,17 @@ void MCWasmStreamer::EmitValueToAlignment(unsigned ByteAlignment, int64_t Value,
 }
 
 void MCWasmStreamer::EmitIdent(StringRef IdentString) {
-  // TODO(sbc): Add the ident section once we support mergable strings
-  // sections in the object format
+  MCSection *Comment = getAssembler().getContext().getWasmSection(
+      ".comment", SectionKind::getMetadata());
+  PushSection();
+  SwitchSection(Comment);
+  if (!SeenIdent) {
+    EmitIntValue(0, 1);
+    SeenIdent = true;
+  }
+  EmitBytes(IdentString);
+  EmitIntValue(0, 1);
+  PopSection();
 }
 
 void MCWasmStreamer::EmitInstToFragment(const MCInst &Inst,
@@ -184,7 +191,7 @@ void MCWasmStreamer::EmitInstToData(const MCInst &Inst,
     Fixups[i].setOffset(Fixups[i].getOffset() + DF->getContents().size());
     DF->getFixups().push_back(Fixups[i]);
   }
-  DF->setHasInstructions(STI);
+  DF->setHasInstructions(true);
   DF->getContents().append(Code.begin(), Code.end());
 }
 
@@ -196,11 +203,11 @@ void MCWasmStreamer::FinishImpl() {
 
 MCStreamer *llvm::createWasmStreamer(MCContext &Context,
                                      std::unique_ptr<MCAsmBackend> &&MAB,
-                                     std::unique_ptr<MCObjectWriter> &&OW,
+                                     raw_pwrite_stream &OS,
                                      std::unique_ptr<MCCodeEmitter> &&CE,
                                      bool RelaxAll) {
   MCWasmStreamer *S =
-      new MCWasmStreamer(Context, std::move(MAB), std::move(OW), std::move(CE));
+      new MCWasmStreamer(Context, std::move(MAB), OS, std::move(CE));
   if (RelaxAll)
     S->getAssembler().setRelaxAll(true);
   return S;
@@ -215,8 +222,7 @@ void MCWasmStreamer::EmitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) {
 }
 
 void MCWasmStreamer::EmitZerofill(MCSection *Section, MCSymbol *Symbol,
-                                  uint64_t Size, unsigned ByteAlignment,
-                                  SMLoc Loc) {
+                                  uint64_t Size, unsigned ByteAlignment) {
   llvm_unreachable("Wasm doesn't support this directive");
 }
 

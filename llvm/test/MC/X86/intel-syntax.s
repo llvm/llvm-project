@@ -62,7 +62,7 @@ main:
   lcall [rax]
 // CHECK: ljmpl *(%rax)
   jmp FWORD ptr [rax]
-// CHECK: ljmpq *(%rax)
+// CHECK: ljmpl *(%rax)
   ljmp [rax]
 
 // CHECK:	movl	$257, -4(%rsp)
@@ -551,9 +551,13 @@ test [ECX], AL
 
 // CHECK: fnstsw %ax
 // CHECK: fnstsw %ax
+// CHECK: fnstsw %ax
+// CHECK: fnstsw %ax
 // CHECK: fnstsw (%eax)
 fnstsw
 fnstsw AX
+fnstsw EAX
+fnstsw AL
 fnstsw WORD PTR [EAX]
 
 // CHECK: faddp %st(1)
@@ -664,8 +668,8 @@ fdivr ST(1)
 
 // CHECK: fxsave64 (%rax)
 // CHECK: fxrstor64 (%rax)
-fxsave64 [rax]
-fxrstor64 [rax]
+fxsave64 opaque ptr [rax]
+fxrstor64 opaque ptr [rax]
 
 .bss
 .globl _g0
@@ -871,34 +875,3 @@ punpcklwd mm0, dword ptr [rsp]
 // CHECK:   punpckldq
 punpckldq mm0, dword ptr [rsp]
 
-// CHECK: lslq (%eax), %rbx
-lsl rbx, word ptr [eax]
-
-// CHECK: lsll (%eax), %ebx
-lsl ebx, word ptr [eax]
-
-// CHECK: lslw (%eax), %bx
-lsl bx, word ptr [eax]
-
-// CHECK: sysexitl
-sysexit
-// CHECK: sysexitq
-sysexitq
-// CHECK: sysretl
-sysret
-// CHECK: sysretq
-sysretq
-
-// CHECK: leaq (%rsp,%rax), %rax
-lea rax, [rax+rsp]
-// CHECK: leaq (%rsp,%rax), %rax
-lea rax, [rsp+rax]
-// CHECK: leal (%esp,%eax), %eax
-lea eax, [eax+esp]
-// CHECK: leal (%esp,%eax), %eax
-lea eax, [esp+eax]
-
-// CHECK: vpgatherdq      %ymm2, (%rdi,%xmm1), %ymm0
-vpgatherdq ymm0, [rdi+xmm1], ymm2
-// CHECK: vpgatherdq      %ymm2, (%rdi,%xmm1), %ymm0
-vpgatherdq ymm0, [xmm1+rdi], ymm2

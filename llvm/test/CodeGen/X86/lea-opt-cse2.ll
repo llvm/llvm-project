@@ -46,9 +46,7 @@ define void @foo(%struct.SA* nocapture %ctx, i32 %n) local_unnamed_addr #0 {
 ; X86-NEXT:    leal 1(%esi,%edx), %ecx
 ; X86-NEXT:    movl %ecx, 16(%eax)
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    popl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
  entry:
    br label %loop

@@ -36,36 +36,32 @@ def ExtensionHVXV62: SubtargetFeature<"hvxv62", "HexagonHVXVersion",
 def ExtensionHVXV65: SubtargetFeature<"hvxv65", "HexagonHVXVersion",
       "Hexagon::ArchEnum::V65", "Hexagon HVX instructions",
       [ExtensionHVX,ExtensionHVXV60, ExtensionHVXV62]>;
+def ExtensionHVX64B
+    : SubtargetFeature<"hvx-length64b", "UseHVX64BOps", "true",
+                       "Hexagon HVX 64B instructions", [ExtensionHVX]>;
+def ExtensionHVX128B
+    : SubtargetFeature<"hvx-length128b", "UseHVX128BOps", "true",
+                       "Hexagon HVX 128B instructions", [ExtensionHVX]>;
 
-def ExtensionHVX64B: SubtargetFeature<"hvx-length64b", "UseHVX64BOps",
-      "true", "Hexagon HVX 64B instructions", [ExtensionHVX]>;
-def ExtensionHVX128B: SubtargetFeature<"hvx-length128b", "UseHVX128BOps",
-      "true", "Hexagon HVX 128B instructions", [ExtensionHVX]>;
+// This is an alias to ExtensionHVX128B to accept the hvx-double as
+// an acceptable subtarget feature.
+def ExtensionHVXDbl
+    : SubtargetFeature<"hvx-double", "UseHVX128BOps", "true",
+                       "Hexagon HVX 128B instructions", [ExtensionHVX128B]>;
 
-def FeaturePackets: SubtargetFeature<"packets", "UsePackets", "true",
-      "Support for instruction packets">;
 def FeatureLongCalls: SubtargetFeature<"long-calls", "UseLongCalls", "true",
       "Use constant-extended calls">;
 def FeatureMemNoShuf: SubtargetFeature<"mem_noshuf", "HasMemNoShuf", "false",
       "Supports mem_noshuf feature">;
-def FeatureMemops: SubtargetFeature<"memops", "UseMemops", "true",
-      "Use memop instructions">;
-def FeatureNVJ: SubtargetFeature<"nvj", "UseNewValueJumps", "true",
-      "Support for new-value jumps", [FeaturePackets]>;
-def FeatureNVS: SubtargetFeature<"nvs", "UseNewValueStores", "true",
-      "Support for new-value stores", [FeaturePackets]>;
-def FeatureSmallData: SubtargetFeature<"small-data", "UseSmallData", "true",
-      "Allow GP-relative addressing of global variables">;
-def FeatureDuplex: SubtargetFeature<"duplex", "EnableDuplex", "true",
+def FeatureDuplex : SubtargetFeature<"duplex", "EnableDuplex", "true",
       "Enable generation of duplex instruction">;
-def FeatureReservedR19: SubtargetFeature<"reserved-r19", "ReservedR19",
-      "true", "Reserve register R19">;
 
 //===----------------------------------------------------------------------===//
 // Hexagon Instruction Predicate Definitions.
 //===----------------------------------------------------------------------===//
 
-def UseMEMOPS          : Predicate<"HST->useMemops()">;
+def UseMEMOP           : Predicate<"HST->useMemOps()">;
+def IEEERndNearV5T     : Predicate<"HST->modeIEEERndNear()">;
 def UseHVX64B          : Predicate<"HST->useHVX64BOps()">,
                          AssemblerPredicate<"ExtensionHVX64B">;
 def UseHVX128B         : Predicate<"HST->useHVX128BOps()">,
@@ -79,8 +75,10 @@ def UseHVXV62          : Predicate<"HST->useHVXOps()">,
 def UseHVXV65          : Predicate<"HST->useHVXOps()">,
                          AssemblerPredicate<"ExtensionHVXV65">;
 
-def Hvx64:  HwMode<"+hvx-length64b">;
-def Hvx128: HwMode<"+hvx-length128b">;
+def Hvx64     : HwMode<"+hvx-length64b">;
+def Hvx64old  : HwMode<"-hvx-double">;
+def Hvx128    : HwMode<"+hvx-length128b">;
+def Hvx128old : HwMode<"+hvx-double">;
 
 //===----------------------------------------------------------------------===//
 // Classes used for relation maps.
@@ -302,10 +300,8 @@ include "HexagonDepITypes.td"
 include "HexagonInstrFormats.td"
 include "HexagonDepInstrFormats.td"
 include "HexagonDepInstrInfo.td"
-include "HexagonCallingConv.td"
 include "HexagonPseudo.td"
 include "HexagonPatterns.td"
-include "HexagonPatternsHVX.td"
 include "HexagonPatternsV65.td"
 include "HexagonDepMappings.td"
 include "HexagonIntrinsics.td"
@@ -322,34 +318,19 @@ class Proc<string Name, SchedMachineModel Model,
            list<SubtargetFeature> Features>
  : ProcessorModel<Name, Model, Features>;
 
-def : Proc<"generic", HexagonModelV60,
-           [ArchV4, ArchV5, ArchV55, ArchV60,
-            FeatureDuplex, FeatureMemops, FeatureNVJ, FeatureNVS,
-            FeaturePackets, FeatureSmallData]>;
 def : Proc<"hexagonv4",  HexagonModelV4,
-           [ArchV4,
-            FeatureDuplex, FeatureMemops, FeatureNVJ, FeatureNVS,
-            FeaturePackets, FeatureSmallData]>;
+           [ArchV4, FeatureDuplex]>;
 def : Proc<"hexagonv5",  HexagonModelV4,
-           [ArchV4, ArchV5,
-            FeatureDuplex, FeatureMemops, FeatureNVJ, FeatureNVS,
-            FeaturePackets, FeatureSmallData]>;
+           [ArchV4, ArchV5, FeatureDuplex]>;
 def : Proc<"hexagonv55", HexagonModelV55,
-           [ArchV4, ArchV5, ArchV55,
-            FeatureDuplex, FeatureMemops, FeatureNVJ, FeatureNVS,
-            FeaturePackets, FeatureSmallData]>;
+           [ArchV4, ArchV5, ArchV55, FeatureDuplex]>;
 def : Proc<"hexagonv60", HexagonModelV60,
-           [ArchV4, ArchV5, ArchV55, ArchV60,
-            FeatureDuplex, FeatureMemops, FeatureNVJ, FeatureNVS,
-            FeaturePackets, FeatureSmallData]>;
+           [ArchV4, ArchV5, ArchV55, ArchV60, FeatureDuplex]>;
 def : Proc<"hexagonv62", HexagonModelV62,
-           [ArchV4, ArchV5, ArchV55, ArchV60, ArchV62,
-            FeatureDuplex, FeatureMemops, FeatureNVJ, FeatureNVS,
-            FeaturePackets, FeatureSmallData]>;
+           [ArchV4, ArchV5, ArchV55, ArchV60, ArchV62, FeatureDuplex]>;
 def : Proc<"hexagonv65", HexagonModelV65,
            [ArchV4, ArchV5, ArchV55, ArchV60, ArchV62, ArchV65,
-            FeatureDuplex, FeatureMemNoShuf, FeatureMemops, FeatureNVJ,
-            FeatureNVS, FeaturePackets, FeatureSmallData]>;
+            FeatureMemNoShuf, FeatureDuplex]>;
 
 //===----------------------------------------------------------------------===//
 // Declare the target which we are implementing
@@ -376,5 +357,4 @@ def Hexagon : Target {
   let AssemblyParsers = [HexagonAsmParser];
   let AssemblyParserVariants = [HexagonAsmParserVariant];
   let AssemblyWriters = [HexagonAsmWriter];
-  let AllowRegisterRenaming = 1;
 }

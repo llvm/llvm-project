@@ -72,6 +72,5 @@ define i32 @f5(i32 %a) nounwind {
 	ret i32 %2
 }
 ; CHECK-LABEL: f5:
-; CHECK-NEXT: not r0, r0
-; CHECK-NEXT: mkmsk r1, 5
-; CHECK-NEXT: shr r0, r0, r1
+; CHECK-NEXT: ashr r0, r0, 32
+; CHECK-NEXT: eq r0, r0, 0

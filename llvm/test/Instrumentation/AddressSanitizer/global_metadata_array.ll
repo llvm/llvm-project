@@ -18,9 +18,9 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; CHECK: @.str = internal unnamed_addr constant { [14 x i8], [50 x i8] } { [14 x i8] c"Hello, world!\00", [50 x i8] zeroinitializer }{{.*}}, align 32
 
 ; Check emitted location descriptions:
-; CHECK: [[VARNAME:@___asan_gen_.[0-9]+]] = private unnamed_addr constant [7 x i8] c"global\00", align 1
-; CHECK: [[FILENAME:@___asan_gen_.[0-9]+]] = private unnamed_addr constant [22 x i8] c"/tmp/asan-globals.cpp\00", align 1
-; CHECK: [[LOCDESCR:@___asan_gen_.[0-9]+]] = private unnamed_addr constant { [22 x i8]*, i32, i32 } { [22 x i8]* [[FILENAME]], i32 5, i32 5 }
+; CHECK: [[VARNAME:@__asan_gen_.[0-9]+]] = private unnamed_addr constant [7 x i8] c"global\00", align 1
+; CHECK: [[FILENAME:@__asan_gen_.[0-9]+]] = private unnamed_addr constant [22 x i8] c"/tmp/asan-globals.cpp\00", align 1
+; CHECK: [[LOCDESCR:@__asan_gen_.[0-9]+]] = private unnamed_addr constant { [22 x i8]*, i32, i32 } { [22 x i8]* [[FILENAME]], i32 5, i32 5 }
 
 ; Check that location descriptors and global names were passed into __asan_register_globals:
 ; CHECK: i64 ptrtoint ([7 x i8]* [[VARNAME]] to i64)

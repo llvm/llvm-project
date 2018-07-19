@@ -98,8 +98,8 @@ namespace {
         CreateCmpXchgInstFun CreateCmpXchg);
 
     bool expandAtomicCmpXchg(AtomicCmpXchgInst *CI);
-    bool isIdempotentRMW(AtomicRMWInst *RMWI);
-    bool simplifyIdempotentRMW(AtomicRMWInst *RMWI);
+    bool isIdempotentRMW(AtomicRMWInst *AI);
+    bool simplifyIdempotentRMW(AtomicRMWInst *AI);
 
     bool expandAtomicOpToLibcall(Instruction *I, unsigned Size, unsigned Align,
                                  Value *PointerOperand, Value *ValueOperand,
@@ -379,8 +379,8 @@ LoadInst *AtomicExpand::convertAtomicLoadToIntegerType(LoadInst *LI) {
   NewLI->setAlignment(LI->getAlignment());
   NewLI->setVolatile(LI->isVolatile());
   NewLI->setAtomic(LI->getOrdering(), LI->getSyncScopeID());
-  LLVM_DEBUG(dbgs() << "Replaced " << *LI << " with " << *NewLI << "\n");
-
+  DEBUG(dbgs() << "Replaced " << *LI << " with " << *NewLI << "\n");
+  
   Value *NewVal = Builder.CreateBitCast(NewLI, LI->getType());
   LI->replaceAllUsesWith(NewVal);
   LI->eraseFromParent();
@@ -462,7 +462,7 @@ StoreInst *AtomicExpand::convertAtomicStoreToIntegerType(StoreInst *SI) {
   NewSI->setAlignment(SI->getAlignment());
   NewSI->setVolatile(SI->isVolatile());
   NewSI->setAtomic(SI->getOrdering(), SI->getSyncScopeID());
-  LLVM_DEBUG(dbgs() << "Replaced " << *SI << " with " << *NewSI << "\n");
+  DEBUG(dbgs() << "Replaced " << *SI << " with " << *NewSI << "\n");
   SI->eraseFromParent();
   return NewSI;
 }
@@ -943,7 +943,7 @@ AtomicCmpXchgInst *AtomicExpand::convertCmpXchgToIntegerType(AtomicCmpXchgInst *
                                             CI->getSyncScopeID());
   NewCI->setVolatile(CI->isVolatile());
   NewCI->setWeak(CI->isWeak());
-  LLVM_DEBUG(dbgs() << "Replaced " << *CI << " with " << *NewCI << "\n");
+  DEBUG(dbgs() << "Replaced " << *CI << " with " << *NewCI << "\n");
 
   Value *OldVal = Builder.CreateExtractValue(NewCI, 0);
   Value *Succ = Builder.CreateExtractValue(NewCI, 1);

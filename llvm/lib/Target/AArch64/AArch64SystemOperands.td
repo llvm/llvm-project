@@ -143,23 +143,6 @@ class ISB<string name, bits<4> encoding> : SearchableTable{
 def : ISB<"sy", 0xf>;
 
 //===----------------------------------------------------------------------===//
-// TSB (Trace synchronization barrier) instruction options.
-//===----------------------------------------------------------------------===//
-
-class TSB<string name, bits<4> encoding> : SearchableTable{
-  let SearchableFields = ["Name", "Encoding"];
-  let EnumValueField = "Encoding";
-
-  string Name = name;
-  bits<4> Encoding;
-  let Encoding = encoding;
-
-  code Requires = [{ {AArch64::HasV8_4aOps} }];
-}
-
-def : TSB<"csync", 0>;
-
-//===----------------------------------------------------------------------===//
 // PRFM (prefetch) instruction options.
 //===----------------------------------------------------------------------===//
 
@@ -192,87 +175,6 @@ def : PRFM<"pstl3keep", 0x14>;
 def : PRFM<"pstl3strm", 0x15>;
 
 //===----------------------------------------------------------------------===//
-// SVE Prefetch instruction options.
-//===----------------------------------------------------------------------===//
-
-class SVEPRFM<string name, bits<4> encoding> : SearchableTable {
-  let SearchableFields = ["Name", "Encoding"];
-  let EnumValueField = "Encoding";
-
-  string Name = name;
-  bits<4> Encoding;
-  let Encoding = encoding;
-  code Requires = [{ {} }];
-}
-
-let Requires = [{ {AArch64::FeatureSVE} }] in {
-def : SVEPRFM<"pldl1keep", 0x00>;
-def : SVEPRFM<"pldl1strm", 0x01>;
-def : SVEPRFM<"pldl2keep", 0x02>;
-def : SVEPRFM<"pldl2strm", 0x03>;
-def : SVEPRFM<"pldl3keep", 0x04>;
-def : SVEPRFM<"pldl3strm", 0x05>;
-def : SVEPRFM<"pstl1keep", 0x08>;
-def : SVEPRFM<"pstl1strm", 0x09>;
-def : SVEPRFM<"pstl2keep", 0x0a>;
-def : SVEPRFM<"pstl2strm", 0x0b>;
-def : SVEPRFM<"pstl3keep", 0x0c>;
-def : SVEPRFM<"pstl3strm", 0x0d>;
-}
-
-//===----------------------------------------------------------------------===//
-// SVE Predicate patterns
-//===----------------------------------------------------------------------===//
-
-class SVEPREDPAT<string name, bits<5> encoding> : SearchableTable {
-  let SearchableFields = ["Name", "Encoding"];
-  let EnumValueField = "Encoding";
-
-  string Name = name;
-  bits<5> Encoding;
-  let Encoding = encoding;
-}
-
-def : SVEPREDPAT<"pow2",  0x00>;
-def : SVEPREDPAT<"vl1",   0x01>;
-def : SVEPREDPAT<"vl2",   0x02>;
-def : SVEPREDPAT<"vl3",   0x03>;
-def : SVEPREDPAT<"vl4",   0x04>;
-def : SVEPREDPAT<"vl5",   0x05>;
-def : SVEPREDPAT<"vl6",   0x06>;
-def : SVEPREDPAT<"vl7",   0x07>;
-def : SVEPREDPAT<"vl8",   0x08>;
-def : SVEPREDPAT<"vl16",  0x09>;
-def : SVEPREDPAT<"vl32",  0x0a>;
-def : SVEPREDPAT<"vl64",  0x0b>;
-def : SVEPREDPAT<"vl128", 0x0c>;
-def : SVEPREDPAT<"vl256", 0x0d>;
-def : SVEPREDPAT<"mul4",  0x1d>;
-def : SVEPREDPAT<"mul3",  0x1e>;
-def : SVEPREDPAT<"all",   0x1f>;
-
-//===----------------------------------------------------------------------===//
-// Exact FP Immediates.
-//
-// These definitions are used to create a lookup table with FP Immediates that
-// is used for a few instructions that only accept a limited set of exact FP
-// immediates values.
-//===----------------------------------------------------------------------===//
-class ExactFPImm<string name, string repr, bits<4> enum > : SearchableTable {
-  let SearchableFields = ["Enum", "Repr"];
-  let EnumValueField = "Enum";
-
-  string Name = name;
-  bits<4> Enum = enum;
-  string Repr = repr;
-}
-
-def : ExactFPImm<"zero", "0.0", 0x0>;
-def : ExactFPImm<"half", "0.5", 0x1>;
-def : ExactFPImm<"one",  "1.0", 0x2>;
-def : ExactFPImm<"two",  "2.0", 0x3>;
-
-//===----------------------------------------------------------------------===//
 // PState instruction options.
 //===----------------------------------------------------------------------===//
 
@@ -295,9 +197,7 @@ def : PState<"PAN",     0b00100>;
 // v8.2a "User Access Override" extension-specific PStates
 let Requires = [{ {AArch64::HasV8_2aOps} }] in
 def : PState<"UAO",     0b00011>;
-// v8.4a timining insensitivity of data processing instructions
-let Requires = [{ {AArch64::HasV8_4aOps} }] in
-def : PState<"DIT",     0b11010>;
+
 
 //===----------------------------------------------------------------------===//
 // PSB instruction options.
@@ -330,7 +230,6 @@ class TLBI<string name, bits<3> op1, bits<4> crn, bits<4> crm,
   let Encoding{6-3} = crm;
   let Encoding{2-0} = op2;
   bit NeedsReg = needsreg;
-  code Requires = [{ {} }];
 }
 
 def : TLBI<"IPAS2E1IS",    0b100, 0b1000, 0b0000, 0b001>;
@@ -366,59 +265,6 @@ def : TLBI<"VALE3",        0b110, 0b1000, 0b0111, 0b101>;
 def : TLBI<"VMALLS12E1",   0b100, 0b1000, 0b0111, 0b110, 0>;
 def : TLBI<"VAALE1",       0b000, 0b1000, 0b0111, 0b111>;
 
-// Armv8.4-A Outer Sharable TLB Maintenance instructions:
-let Requires = [{ {AArch64::HasV8_4aOps} }] in {
-//                         op1    CRn     CRm     op2
-def : TLBI<"VMALLE1OS",    0b000, 0b1000, 0b0001, 0b000, 0>;
-def : TLBI<"VAE1OS",       0b000, 0b1000, 0b0001, 0b001>;
-def : TLBI<"ASIDE1OS",     0b000, 0b1000, 0b0001, 0b010>;
-def : TLBI<"VAAE1OS",      0b000, 0b1000, 0b0001, 0b011>;
-def : TLBI<"VALE1OS",      0b000, 0b1000, 0b0001, 0b101>;
-def : TLBI<"VAALE1OS",     0b000, 0b1000, 0b0001, 0b111>;
-def : TLBI<"IPAS2E1OS",    0b100, 0b1000, 0b0100, 0b000>;
-def : TLBI<"IPAS2LE1OS",   0b100, 0b1000, 0b0100, 0b100>;
-def : TLBI<"VAE2OS",       0b100, 0b1000, 0b0001, 0b001>;
-def : TLBI<"VALE2OS",      0b100, 0b1000, 0b0001, 0b101>;
-def : TLBI<"VMALLS12E1OS", 0b100, 0b1000, 0b0001, 0b110, 0>;
-def : TLBI<"VAE3OS",       0b110, 0b1000, 0b0001, 0b001>;
-def : TLBI<"VALE3OS",      0b110, 0b1000, 0b0001, 0b101>;
-def : TLBI<"ALLE2OS",      0b100, 0b1000, 0b0001, 0b000, 0>;
-def : TLBI<"ALLE1OS",      0b100, 0b1000, 0b0001, 0b100, 0>;
-def : TLBI<"ALLE3OS",      0b110, 0b1000, 0b0001, 0b000, 0>;
-
-// Armv8.4-A TLB Range Maintenance instructions:
-//                         op1    CRn     CRm     op2
-def : TLBI<"RVAE1",        0b000, 0b1000, 0b0110, 0b001>;
-def : TLBI<"RVAAE1",       0b000, 0b1000, 0b0110, 0b011>;
-def : TLBI<"RVALE1",       0b000, 0b1000, 0b0110, 0b101>;
-def : TLBI<"RVAALE1",      0b000, 0b1000, 0b0110, 0b111>;
-def : TLBI<"RVAE1IS",      0b000, 0b1000, 0b0010, 0b001>;
-def : TLBI<"RVAAE1IS",     0b000, 0b1000, 0b0010, 0b011>;
-def : TLBI<"RVALE1IS",     0b000, 0b1000, 0b0010, 0b101>;
-def : TLBI<"RVAALE1IS",    0b000, 0b1000, 0b0010, 0b111>;
-def : TLBI<"RVAE1OS",      0b000, 0b1000, 0b0101, 0b001>;
-def : TLBI<"RVAAE1OS",     0b000, 0b1000, 0b0101, 0b011>;
-def : TLBI<"RVALE1OS",     0b000, 0b1000, 0b0101, 0b101>;
-def : TLBI<"RVAALE1OS",    0b000, 0b1000, 0b0101, 0b111>;
-def : TLBI<"RIPAS2E1IS",   0b100, 0b1000, 0b0000, 0b010>;
-def : TLBI<"RIPAS2LE1IS",  0b100, 0b1000, 0b0000, 0b110>;
-def : TLBI<"RIPAS2E1",     0b100, 0b1000, 0b0100, 0b010>;
-def : TLBI<"RIPAS2LE1",    0b100, 0b1000, 0b0100, 0b110>;
-def : TLBI<"RIPAS2E1OS",   0b100, 0b1000, 0b0100, 0b011>;
-def : TLBI<"RIPAS2LE1OS",  0b100, 0b1000, 0b0100, 0b111>;
-def : TLBI<"RVAE2",        0b100, 0b1000, 0b0110, 0b001>;
-def : TLBI<"RVALE2",       0b100, 0b1000, 0b0110, 0b101>;
-def : TLBI<"RVAE2IS",      0b100, 0b1000, 0b0010, 0b001>;
-def : TLBI<"RVALE2IS",     0b100, 0b1000, 0b0010, 0b101>;
-def : TLBI<"RVAE2OS",      0b100, 0b1000, 0b0101, 0b001>;
-def : TLBI<"RVALE2OS",     0b100, 0b1000, 0b0101, 0b101>;
-def : TLBI<"RVAE3",        0b110, 0b1000, 0b0110, 0b001>;
-def : TLBI<"RVALE3",       0b110, 0b1000, 0b0110, 0b101>;
-def : TLBI<"RVAE3IS",      0b110, 0b1000, 0b0010, 0b001>;
-def : TLBI<"RVALE3IS",     0b110, 0b1000, 0b0010, 0b101>;
-def : TLBI<"RVAE3OS",      0b110, 0b1000, 0b0101, 0b001>;
-def : TLBI<"RVALE3OS",     0b110, 0b1000, 0b0101, 0b101>;
-}
 
 //===----------------------------------------------------------------------===//
 // MRS/MSR (system register read/write) instruction options.
@@ -574,7 +420,7 @@ def : ROSysReg<"ICC_HPPIR0_EL1",     0b11, 0b000, 0b1100, 0b1000, 0b010>;
 def : ROSysReg<"ICC_RPR_EL1",        0b11, 0b000, 0b1100, 0b1011, 0b011>;
 def : ROSysReg<"ICH_VTR_EL2",        0b11, 0b100, 0b1100, 0b1011, 0b001>;
 def : ROSysReg<"ICH_EISR_EL2",       0b11, 0b100, 0b1100, 0b1011, 0b011>;
-def : ROSysReg<"ICH_ELRSR_EL2",      0b11, 0b100, 0b1100, 0b1011, 0b101>;
+def : ROSysReg<"ICH_ELSR_EL2",       0b11, 0b100, 0b1100, 0b1011, 0b101>;
 
 // v8.1a "Limited Ordering Regions" extension-specific system register
 //                         Op0    Op1     CRn     CRm    Op2
@@ -1190,126 +1036,6 @@ def : RWSysReg<"APDBKeyHi_EL1", 0b11, 0b000, 0b0010, 0b0010, 0b011>;
 def : RWSysReg<"APGAKeyLo_EL1", 0b11, 0b000, 0b0010, 0b0011, 0b000>;
 def : RWSysReg<"APGAKeyHi_EL1", 0b11, 0b000, 0b0010, 0b0011, 0b001>;
 }
-
-let Requires = [{ {AArch64::HasV8_4aOps} }] in {
-
-// v8.4a "Virtualization secure second stage translation" registers
-//                           Op0   Op1    CRn     CRm     Op2
-def : RWSysReg<"VSTCR_EL2" , 0b11, 0b100, 0b0010, 0b0110, 0b010>;
-def : RWSysReg<"VSTTBR_EL2", 0b11, 0b100, 0b0010, 0b0110, 0b000>;
-
-// v8.4a "Virtualization timer" registers
-//                                Op0   Op1    CRn     CRm     Op2
-def : RWSysReg<"CNTHVS_TVAL_EL2", 0b11, 0b100, 0b1110, 0b0100, 0b000>;
-def : RWSysReg<"CNTHVS_CVAL_EL2", 0b11, 0b100, 0b1110, 0b0100, 0b010>;
-def : RWSysReg<"CNTHVS_CTL_EL2",  0b11, 0b100, 0b1110, 0b0100, 0b001>;
-def : RWSysReg<"CNTHPS_TVAL_EL2", 0b11, 0b100, 0b1110, 0b0101, 0b000>;
-def : RWSysReg<"CNTHPS_CVAL_EL2", 0b11, 0b100, 0b1110, 0b0101, 0b010>;
-def : RWSysReg<"CNTHPS_CTL_EL2",  0b11, 0b100, 0b1110, 0b0101, 0b001>;
-
-// v8.4a "Virtualization debug state" registers
-//                           Op0   Op1    CRn     CRm     Op2
-def : RWSysReg<"SDER32_EL2", 0b11, 0b100, 0b0001, 0b0011, 0b001>;
-
-// v8.4a RAS registers
-//                              Op0   Op1    CRn     CRm    Op2
-def : RWSysReg<"ERXPFGCTL_EL1", 0b11, 0b000, 0b0101, 0b0100, 0b101>;
-def : RWSysReg<"ERXPFGCDN_EL1", 0b11, 0b000, 0b0101, 0b0100, 0b110>;
-def : RWSysReg<"ERXTS_EL1",     0b11, 0b000, 0b0101, 0b0101, 0b111>;
-def : RWSysReg<"ERXMISC2_EL1",  0b11, 0b000, 0b0101, 0b0101, 0b010>;
-def : RWSysReg<"ERXMISC3_EL1",  0b11, 0b000, 0b0101, 0b0101, 0b011>;
-def : ROSysReg<"ERXPFGF_EL1",   0b11, 0b000, 0b0101, 0b0100, 0b100>;
-
-// v8.4a MPAM registers
-//                             Op0   Op1    CRn     CRm     Op2
-def : RWSysReg<"MPAM0_EL1",    0b11, 0b000, 0b1010, 0b0101, 0b001>;
-def : RWSysReg<"MPAM1_EL1",    0b11, 0b000, 0b1010, 0b0101, 0b000>;
-def : RWSysReg<"MPAM2_EL2",    0b11, 0b100, 0b1010, 0b0101, 0b000>;
-def : RWSysReg<"MPAM3_EL3",    0b11, 0b110, 0b1010, 0b0101, 0b000>;
-def : RWSysReg<"MPAM1_EL12",   0b11, 0b101, 0b1010, 0b0101, 0b000>;
-def : RWSysReg<"MPAMHCR_EL2",  0b11, 0b100, 0b1010, 0b0100, 0b000>;
-def : RWSysReg<"MPAMVPMV_EL2", 0b11, 0b100, 0b1010, 0b0100, 0b001>;
-def : RWSysReg<"MPAMVPM0_EL2", 0b11, 0b100, 0b1010, 0b0110, 0b000>;
-def : RWSysReg<"MPAMVPM1_EL2", 0b11, 0b100, 0b1010, 0b0110, 0b001>;
-def : RWSysReg<"MPAMVPM2_EL2", 0b11, 0b100, 0b1010, 0b0110, 0b010>;
-def : RWSysReg<"MPAMVPM3_EL2", 0b11, 0b100, 0b1010, 0b0110, 0b011>;
-def : RWSysReg<"MPAMVPM4_EL2", 0b11, 0b100, 0b1010, 0b0110, 0b100>;
-def : RWSysReg<"MPAMVPM5_EL2", 0b11, 0b100, 0b1010, 0b0110, 0b101>;
-def : RWSysReg<"MPAMVPM6_EL2", 0b11, 0b100, 0b1010, 0b0110, 0b110>;
-def : RWSysReg<"MPAMVPM7_EL2", 0b11, 0b100, 0b1010, 0b0110, 0b111>;
-def : ROSysReg<"MPAMIDR_EL1",  0b11, 0b000, 0b1010, 0b0100, 0b100>;
-
-// v8.4a Activitiy monitor registers
-//                                 Op0   Op1    CRn     CRm     Op2
-def : RWSysReg<"AMCR_EL0",         0b11, 0b011, 0b1101, 0b0010, 0b000>;
-def : ROSysReg<"AMCFGR_EL0",       0b11, 0b011, 0b1101, 0b0010, 0b001>;
-def : ROSysReg<"AMCGCR_EL0",       0b11, 0b011, 0b1101, 0b0010, 0b010>;
-def : RWSysReg<"AMUSERENR_EL0",    0b11, 0b011, 0b1101, 0b0010, 0b011>;
-def : RWSysReg<"AMCNTENCLR0_EL0",  0b11, 0b011, 0b1101, 0b0010, 0b100>;
-def : RWSysReg<"AMCNTENSET0_EL0",  0b11, 0b011, 0b1101, 0b0010, 0b101>;
-def : RWSysReg<"AMEVCNTR00_EL0",   0b11, 0b011, 0b1101, 0b0100, 0b000>;
-def : RWSysReg<"AMEVCNTR01_EL0",   0b11, 0b011, 0b1101, 0b0100, 0b001>;
-def : RWSysReg<"AMEVCNTR02_EL0",   0b11, 0b011, 0b1101, 0b0100, 0b010>;
-def : RWSysReg<"AMEVCNTR03_EL0",   0b11, 0b011, 0b1101, 0b0100, 0b011>;
-def : ROSysReg<"AMEVTYPER00_EL0",  0b11, 0b011, 0b1101, 0b0110, 0b000>;
-def : ROSysReg<"AMEVTYPER01_EL0",  0b11, 0b011, 0b1101, 0b0110, 0b001>;
-def : ROSysReg<"AMEVTYPER02_EL0",  0b11, 0b011, 0b1101, 0b0110, 0b010>;
-def : ROSysReg<"AMEVTYPER03_EL0",  0b11, 0b011, 0b1101, 0b0110, 0b011>;
-def : RWSysReg<"AMCNTENCLR1_EL0",  0b11, 0b011, 0b1101, 0b0011, 0b000>;
-def : RWSysReg<"AMCNTENSET1_EL0",  0b11, 0b011, 0b1101, 0b0011, 0b001>;
-def : RWSysReg<"AMEVCNTR10_EL0",   0b11, 0b011, 0b1101, 0b1100, 0b000>;
-def : RWSysReg<"AMEVCNTR11_EL0",   0b11, 0b011, 0b1101, 0b1100, 0b001>;
-def : RWSysReg<"AMEVCNTR12_EL0",   0b11, 0b011, 0b1101, 0b1100, 0b010>;
-def : RWSysReg<"AMEVCNTR13_EL0",   0b11, 0b011, 0b1101, 0b1100, 0b011>;
-def : RWSysReg<"AMEVCNTR14_EL0",   0b11, 0b011, 0b1101, 0b1100, 0b100>;
-def : RWSysReg<"AMEVCNTR15_EL0",   0b11, 0b011, 0b1101, 0b1100, 0b101>;
-def : RWSysReg<"AMEVCNTR16_EL0",   0b11, 0b011, 0b1101, 0b1100, 0b110>;
-def : RWSysReg<"AMEVCNTR17_EL0",   0b11, 0b011, 0b1101, 0b1100, 0b111>;
-def : RWSysReg<"AMEVCNTR18_EL0",   0b11, 0b011, 0b1101, 0b1101, 0b000>;
-def : RWSysReg<"AMEVCNTR19_EL0",   0b11, 0b011, 0b1101, 0b1101, 0b001>;
-def : RWSysReg<"AMEVCNTR110_EL0",  0b11, 0b011, 0b1101, 0b1101, 0b010>;
-def : RWSysReg<"AMEVCNTR111_EL0",  0b11, 0b011, 0b1101, 0b1101, 0b011>;
-def : RWSysReg<"AMEVCNTR112_EL0",  0b11, 0b011, 0b1101, 0b1101, 0b100>;
-def : RWSysReg<"AMEVCNTR113_EL0",  0b11, 0b011, 0b1101, 0b1101, 0b101>;
-def : RWSysReg<"AMEVCNTR114_EL0",  0b11, 0b011, 0b1101, 0b1101, 0b110>;
-def : RWSysReg<"AMEVCNTR115_EL0",  0b11, 0b011, 0b1101, 0b1101, 0b111>;
-def : RWSysReg<"AMEVTYPER10_EL0",  0b11, 0b011, 0b1101, 0b1110, 0b000>;
-def : RWSysReg<"AMEVTYPER11_EL0",  0b11, 0b011, 0b1101, 0b1110, 0b001>;
-def : RWSysReg<"AMEVTYPER12_EL0",  0b11, 0b011, 0b1101, 0b1110, 0b010>;
-def : RWSysReg<"AMEVTYPER13_EL0",  0b11, 0b011, 0b1101, 0b1110, 0b011>;
-def : RWSysReg<"AMEVTYPER14_EL0",  0b11, 0b011, 0b1101, 0b1110, 0b100>;
-def : RWSysReg<"AMEVTYPER15_EL0",  0b11, 0b011, 0b1101, 0b1110, 0b101>;
-def : RWSysReg<"AMEVTYPER16_EL0",  0b11, 0b011, 0b1101, 0b1110, 0b110>;
-def : RWSysReg<"AMEVTYPER17_EL0",  0b11, 0b011, 0b1101, 0b1110, 0b111>;
-def : RWSysReg<"AMEVTYPER18_EL0",  0b11, 0b011, 0b1101, 0b1111, 0b000>;
-def : RWSysReg<"AMEVTYPER19_EL0",  0b11, 0b011, 0b1101, 0b1111, 0b001>;
-def : RWSysReg<"AMEVTYPER110_EL0", 0b11, 0b011, 0b1101, 0b1111, 0b010>;
-def : RWSysReg<"AMEVTYPER111_EL0", 0b11, 0b011, 0b1101, 0b1111, 0b011>;
-def : RWSysReg<"AMEVTYPER112_EL0", 0b11, 0b011, 0b1101, 0b1111, 0b100>;
-def : RWSysReg<"AMEVTYPER113_EL0", 0b11, 0b011, 0b1101, 0b1111, 0b101>;
-def : RWSysReg<"AMEVTYPER114_EL0", 0b11, 0b011, 0b1101, 0b1111, 0b110>;
-def : RWSysReg<"AMEVTYPER115_EL0", 0b11, 0b011, 0b1101, 0b1111, 0b111>;
-
-// v8.4a Trace Extension registers
-//
-// Please note that the 8.4 spec also defines these registers:
-// TRCIDR1, ID_DFR0_EL1, ID_AA64DFR0_EL1, MDSCR_EL1, MDCR_EL2, and MDCR_EL3,
-// but they are already defined above.
-//
-//                                 Op0   Op1    CRn     CRm     Op2
-def : RWSysReg<"TRFCR_EL1",        0b11, 0b000, 0b0001, 0b0010, 0b001>;
-def : RWSysReg<"TRFCR_EL2",        0b11, 0b100, 0b0001, 0b0010, 0b001>;
-def : RWSysReg<"TRFCR_EL12",       0b11, 0b101, 0b0001, 0b0010, 0b001>;
-
-// v8.4a Timining insensitivity of data processing instructions
-//                                 Op0   Op1    CRn     CRm     Op2
-def : RWSysReg<"DIT",              0b11, 0b011, 0b0100, 0b0010, 0b101>;
-
-// v8.4a Enhanced Support for Nested Virtualization
-//                                 Op0   Op1    CRn     CRm     Op2
-def : RWSysReg<"VNCR_EL2",         0b11, 0b100, 0b0010, 0b0010, 0b000>;
-
-} // HasV8_4aOps
 
 // Cyclone specific system registers
 //                                 Op0    Op1     CRn     CRm    Op2

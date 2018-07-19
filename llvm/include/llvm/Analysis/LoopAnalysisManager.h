@@ -69,7 +69,7 @@ extern cl::opt<bool> EnableMSSALoopDependency;
 extern template class AllAnalysesOn<Loop>;
 
 extern template class AnalysisManager<Loop, LoopStandardAnalysisResults &>;
-/// The loop analysis manager.
+/// \brief The loop analysis manager.
 ///
 /// See the documentation for the AnalysisManager template for detail
 /// documentation. This typedef serves as a convenient way to refer to this

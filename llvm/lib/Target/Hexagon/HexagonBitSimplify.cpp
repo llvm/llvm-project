@@ -184,7 +184,9 @@ namespace {
   public:
     static char ID;
 
-    HexagonBitSimplify() : MachineFunctionPass(ID) {}
+    HexagonBitSimplify() : MachineFunctionPass(ID) {
+      initializeHexagonBitSimplifyPass(*PassRegistry::getPassRegistry());
+    }
 
     StringRef getPassName() const override {
       return "Hexagon bit simplification";
@@ -255,10 +257,10 @@ namespace {
 
 char HexagonBitSimplify::ID = 0;
 
-INITIALIZE_PASS_BEGIN(HexagonBitSimplify, "hexagon-bit-simplify",
+INITIALIZE_PASS_BEGIN(HexagonBitSimplify, "hexbit",
       "Hexagon bit simplification", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
-INITIALIZE_PASS_END(HexagonBitSimplify, "hexagon-bit-simplify",
+INITIALIZE_PASS_END(HexagonBitSimplify, "hexbit",
       "Hexagon bit simplification", false, false)
 
 bool HexagonBitSimplify::visitBlock(MachineBasicBlock &B, Transformation &T,
@@ -620,7 +622,7 @@ bool HexagonBitSimplify::getUsedBitsInStore(unsigned Opc, BitVector &Bits,
 // operand may be a subregister of a larger register, while Bits would
 // correspond to the larger register in its entirety. Because of that,
 // the parameter Begin can be used to indicate which bit of Bits should be
-// considered the LSB of the operand.
+// considered the LSB of of the operand.
 bool HexagonBitSimplify::getUsedBits(unsigned Opc, unsigned OpN,
       BitVector &Bits, uint16_t Begin, const HexagonInstrInfo &HII) {
   using namespace Hexagon;
@@ -2450,7 +2452,7 @@ bool BitSimplification::simplifyExtractLow(MachineInstr *MI,
   if (Len == RW)
     return false;
 
-  LLVM_DEBUG({
+  DEBUG({
     dbgs() << __func__ << " on reg: " << printReg(RD.Reg, &HRI, RD.Sub)
            << ", MI: " << *MI;
     dbgs() << "Cell: " << RC << '\n';
@@ -2644,7 +2646,7 @@ bool HexagonBitSimplify::runOnMachineFunction(MachineFunction &MF) {
 
   const HexagonEvaluator HE(HRI, MRI, HII, MF);
   BitTracker BT(HE, MF);
-  LLVM_DEBUG(BT.trace(true));
+  DEBUG(BT.trace(true));
   BT.run();
 
   MachineBasicBlock &Entry = MF.front();
@@ -2975,8 +2977,7 @@ void HexagonLoopRescheduling::moveGroup(InstrGroup &G, MachineBasicBlock &LB,
 }
 
 bool HexagonLoopRescheduling::processLoop(LoopCand &C) {
-  LLVM_DEBUG(dbgs() << "Processing loop in " << printMBBReference(*C.LB)
-                    << "\n");
+  DEBUG(dbgs() << "Processing loop in " << printMBBReference(*C.LB) << "\n");
   std::vector<PhiInfo> Phis;
   for (auto &I : *C.LB) {
     if (!I.isPHI())
@@ -3000,7 +3001,7 @@ bool HexagonLoopRescheduling::processLoop(LoopCand &C) {
     Phis.push_back(PhiInfo(I, *C.LB));
   }
 
-  LLVM_DEBUG({
+  DEBUG({
     dbgs() << "Phis: {";
     for (auto &I : Phis) {
       dbgs() << ' ' << printReg(I.DefR, HRI) << "=phi("
@@ -3121,7 +3122,7 @@ bool HexagonLoopRescheduling::processLoop(LoopCand &C) {
     Groups.push_back(G);
   }
 
-  LLVM_DEBUG({
+  DEBUG({
     for (unsigned i = 0, n = Groups.size(); i < n; ++i) {
       InstrGroup &G = Groups[i];
       dbgs() << "Group[" << i << "] inp: "
@@ -3189,7 +3190,7 @@ bool HexagonLoopRescheduling::runOnMachineFunction(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
   const HexagonEvaluator HE(*HRI, *MRI, *HII, MF);
   BitTracker BT(HE, MF);
-  LLVM_DEBUG(BT.trace(true));
+  DEBUG(BT.trace(true));
   BT.run();
   BTP = &BT;
 

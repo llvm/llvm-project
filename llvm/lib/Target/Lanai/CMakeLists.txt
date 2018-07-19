@@ -9,7 +9,6 @@ tablegen(LLVM LanaiGenInstrInfo.inc -gen-instr-info)
 tablegen(LLVM LanaiGenMCCodeEmitter.inc -gen-emitter)
 tablegen(LLVM LanaiGenRegisterInfo.inc -gen-register-info)
 tablegen(LLVM LanaiGenSubtargetInfo.inc -gen-subtarget)
-
 add_public_tablegen_target(LanaiCommonTableGen)
 
 add_llvm_target(LanaiCodeGen
@@ -30,7 +29,7 @@ add_llvm_target(LanaiCodeGen
 )
 
 add_subdirectory(AsmParser)
-add_subdirectory(Disassembler)
-add_subdirectory(InstPrinter)
-add_subdirectory(MCTargetDesc)
 add_subdirectory(TargetInfo)
+add_subdirectory(MCTargetDesc)
+add_subdirectory(InstPrinter)
+add_subdirectory(Disassembler)

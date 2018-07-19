@@ -226,7 +226,7 @@ define i64 @test_lea_add_offset(i64, i64) {
 ;
 ; BTVER2-LABEL: test_lea_add_offset:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    leaq 16(%rdi,%rsi), %rax # sched: [2:1.00]
+; BTVER2-NEXT:    leaq 16(%rdi,%rsi), %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_lea_add_offset:
@@ -292,7 +292,7 @@ define i64 @test_lea_add_offset_big(i64, i64) {
 ;
 ; BTVER2-LABEL: test_lea_add_offset_big:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    leaq -4096(%rdi,%rsi), %rax # sched: [2:1.00]
+; BTVER2-NEXT:    leaq -4096(%rdi,%rsi), %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_lea_add_offset_big:
@@ -348,7 +348,7 @@ define i64 @test_lea_mul(i64) {
 ;
 ; BTVER2-LABEL: test_lea_mul:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    leaq (%rdi,%rdi,2), %rax # sched: [2:1.00]
+; BTVER2-NEXT:    leaq (%rdi,%rdi,2), %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_lea_mul:
@@ -408,7 +408,7 @@ define i64 @test_lea_mul_offset(i64) {
 ;
 ; BTVER2-LABEL: test_lea_mul_offset:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    leaq -32(%rdi,%rdi,2), %rax # sched: [2:1.00]
+; BTVER2-NEXT:    leaq -32(%rdi,%rdi,2), %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_lea_mul_offset:
@@ -474,7 +474,7 @@ define i64 @test_lea_mul_offset_big(i64) {
 ;
 ; BTVER2-LABEL: test_lea_mul_offset_big:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    leaq 10000(%rdi,%rdi,8), %rax # sched: [2:1.00]
+; BTVER2-NEXT:    leaq 10000(%rdi,%rdi,8), %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_lea_mul_offset_big:
@@ -530,7 +530,7 @@ define i64 @test_lea_add_scale(i64, i64) {
 ;
 ; BTVER2-LABEL: test_lea_add_scale:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    leaq (%rdi,%rsi,2), %rax # sched: [2:1.00]
+; BTVER2-NEXT:    leaq (%rdi,%rsi,2), %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_lea_add_scale:
@@ -591,7 +591,7 @@ define i64 @test_lea_add_scale_offset(i64, i64) {
 ;
 ; BTVER2-LABEL: test_lea_add_scale_offset:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    leaq 96(%rdi,%rsi,4), %rax # sched: [2:1.00]
+; BTVER2-NEXT:    leaq 96(%rdi,%rsi,4), %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_lea_add_scale_offset:
@@ -658,7 +658,7 @@ define i64 @test_lea_add_scale_offset_big(i64, i64) {
 ;
 ; BTVER2-LABEL: test_lea_add_scale_offset_big:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    leaq -1200(%rdi,%rsi,8), %rax # sched: [2:1.00]
+; BTVER2-NEXT:    leaq -1200(%rdi,%rsi,8), %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_lea_add_scale_offset_big:

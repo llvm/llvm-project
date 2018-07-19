@@ -87,8 +87,6 @@ def IIC_SprMTSRIN    : InstrItinClass;
 def IIC_SprRFI       : InstrItinClass;
 def IIC_SprSC        : InstrItinClass;
 def IIC_FPGeneral    : InstrItinClass;
-def IIC_FPDGeneral   : InstrItinClass;
-def IIC_FPSGeneral   : InstrItinClass;
 def IIC_FPAddSub     : InstrItinClass;
 def IIC_FPCompare    : InstrItinClass;
 def IIC_FPDivD       : InstrItinClass;
@@ -135,6 +133,5 @@ include "PPCScheduleP7.td"
 include "PPCScheduleP8.td"
 include "PPCScheduleP9.td"
 include "PPCScheduleA2.td"
-include "PPCScheduleE500.td"
 include "PPCScheduleE500mc.td"
 include "PPCScheduleE5500.td"

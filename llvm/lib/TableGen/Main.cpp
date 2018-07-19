@@ -52,7 +52,7 @@ static int reportError(const char *ProgName, Twine Msg) {
   return 1;
 }
 
-/// Create a dependency file for `-d` option.
+/// \brief Create a dependency file for `-d` option.
 ///
 /// This functionality is really only for the benefit of the build system.
 /// It is similar to GCC's `-M*` family of options.

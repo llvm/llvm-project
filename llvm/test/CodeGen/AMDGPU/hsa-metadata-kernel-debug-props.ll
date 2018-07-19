@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa-amdgiz -mcpu=gfx700 -filetype=obj -o - < %s | llvm-readobj -elf-output-style=GNU -notes | FileCheck --check-prefix=CHECK --check-prefix=GFX700 --check-prefix=NOTES %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa-amdgiz -mcpu=gfx802 -filetype=obj -o - < %s | llvm-readobj -elf-output-style=GNU -notes | FileCheck --check-prefix=CHECK --check-prefix=GFX802 --check-prefix=NOTES %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa-amdgiz -mcpu=gfx800 -filetype=obj -o - < %s | llvm-readobj -elf-output-style=GNU -notes | FileCheck --check-prefix=CHECK --check-prefix=GFX800 --check-prefix=NOTES %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa-amdgiz -mcpu=gfx900 -filetype=obj -o - < %s | llvm-readobj -elf-output-style=GNU -notes | FileCheck --check-prefix=CHECK --check-prefix=GFX900 --check-prefix=NOTES %s
 target datalayout = "A5"
 
@@ -13,6 +13,10 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 ; CHECK:      SymbolName: 'test@kd'
 ; CHECK:      DebugProps:
 ; CHECK:        DebuggerABIVersion:                [ 1, 0 ]
+; CHECK:        ReservedNumVGPRs:                  4
+; GFX700:       ReservedFirstVGPR:                 8
+; GFX800:       ReservedFirstVGPR:                 8
+; GFX900:       ReservedFirstVGPR:                 10
 ; CHECK:        PrivateSegmentBufferSGPR:          0
 ; CHECK:        WavefrontPrivateSegmentOffsetSGPR: 11
 define amdgpu_kernel void @test(i32 addrspace(1)* %A) #0 !dbg !7 !kernel_arg_addr_space !12 !kernel_arg_access_qual !13 !kernel_arg_type !14 !kernel_arg_base_type !14 !kernel_arg_type_qual !15 {
@@ -46,7 +50,7 @@ attributes #0 = { noinline nounwind "correctly-rounded-divide-sqrt-fp-math"="fal
 !4 = !{i32 2, !"Dwarf Version", i32 2}
 !5 = !{i32 2, !"Debug Info Version", i32 3}
 !6 = !{!"clang version 5.0.0"}
-!7 = distinct !DISubprogram(name: "test", scope: !1, file: !1, line: 1, type: !8, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
+!7 = distinct !DISubprogram(name: "test", scope: !1, file: !1, line: 1, type: !8, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
 !8 = !DISubroutineType(types: !9)
 !9 = !{null, !10}
 !10 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !11, size: 64)

@@ -56,7 +56,7 @@ public:
   }
   ~AAEvaluator();
 
-  /// Run the pass over the function.
+  /// \brief Run the pass over the function.
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
 private:

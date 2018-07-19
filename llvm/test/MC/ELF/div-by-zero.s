@@ -4,6 +4,3 @@
 
 // CHECK: expected relocatable expression
 .int 1/0
-
-// CHECK: expected relocatable expression
-.int 2%0

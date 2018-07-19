@@ -20,5 +20,5 @@ bb2:
   ret void
 
 ; CHECK: [[END:.Lfunc_end.*]]:
-; CHECK: .uleb128	[[END]]-
+; CHECK: .long	[[END]]-
 }

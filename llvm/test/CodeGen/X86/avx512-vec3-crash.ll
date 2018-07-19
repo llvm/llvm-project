@@ -9,19 +9,20 @@ define <3 x i8 > @foo(<3 x i8>%x, <3 x i8>%a, <3 x i8>%b) {
 ; CHECK-NEXT:    vpinsrd $1, %esi, %xmm0, %xmm0
 ; CHECK-NEXT:    vpinsrd $2, %edx, %xmm0, %xmm0
 ; CHECK-NEXT:    vpslld $24, %xmm0, %xmm0
+; CHECK-NEXT:    vpsrad $24, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovd %ecx, %xmm1
 ; CHECK-NEXT:    vpinsrd $1, %r8d, %xmm1, %xmm1
-; CHECK-NEXT:    vpsrad $24, %xmm0, %xmm0
 ; CHECK-NEXT:    vpinsrd $2, %r9d, %xmm1, %xmm1
 ; CHECK-NEXT:    vpslld $24, %xmm1, %xmm1
 ; CHECK-NEXT:    vpsrad $24, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; CHECK-NEXT:    vpcmpgtd %xmm0, %xmm1, %k0
+; CHECK-NEXT:    vpmovm2d %k0, %xmm0
 ; CHECK-NEXT:    vpextrb $0, %xmm0, %eax
 ; CHECK-NEXT:    vpextrb $4, %xmm0, %edx
 ; CHECK-NEXT:    vpextrb $8, %xmm0, %ecx
-; CHECK-NEXT:    # kill: def $al killed $al killed $eax
-; CHECK-NEXT:    # kill: def $dl killed $dl killed $edx
-; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
+; CHECK-NEXT:    # kill: def %al killed %al killed %eax
+; CHECK-NEXT:    # kill: def %dl killed %dl killed %edx
+; CHECK-NEXT:    # kill: def %cl killed %cl killed %ecx
 ; CHECK-NEXT:    retq
   %cmp.i = icmp slt <3 x i8> %x, %a
   %res = sext <3 x i1> %cmp.i to <3 x i8>

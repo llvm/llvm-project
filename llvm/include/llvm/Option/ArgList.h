@@ -85,6 +85,9 @@ public:
     SkipToNextArg();
   }
 
+  // FIXME: This conversion function makes no sense.
+  operator const Arg*() { return *Current; }
+
   reference operator*() const { return *Current; }
   pointer operator->() const { return Current; }
 
@@ -353,7 +356,7 @@ public:
     return MakeArgStringRef(Str.toStringRef(Buf));
   }
 
-  /// Create an arg string for (\p LHS + \p RHS), reusing the
+  /// \brief Create an arg string for (\p LHS + \p RHS), reusing the
   /// string at \p Index if possible.
   const char *GetOrMakeJoinedArgString(unsigned Index, StringRef LHS,
                                         StringRef RHS) const;
@@ -387,8 +390,6 @@ private:
   void releaseMemory();
 
 public:
-  InputArgList() : NumInputArgStrings(0) {}
-
   InputArgList(const char* const *ArgBegin, const char* const *ArgEnd);
 
   InputArgList(InputArgList &&RHS)

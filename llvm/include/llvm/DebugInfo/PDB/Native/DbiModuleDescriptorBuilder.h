@@ -49,7 +49,6 @@ public:
 
   void setPdbFilePathNI(uint32_t NI);
   void setObjFileName(StringRef Name);
-  void setFirstSectionContrib(const SectionContrib &SC);
   void addSymbol(codeview::CVSymbol Symbol);
 
   void

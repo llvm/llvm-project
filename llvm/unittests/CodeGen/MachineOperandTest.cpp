@@ -80,7 +80,7 @@ TEST(MachineOperandTest, PrintSubReg) {
   std::string str;
   raw_string_ostream OS(str);
   MO.print(OS, /*TRI=*/nullptr, /*IntrinsicInfo=*/nullptr);
-  ASSERT_TRUE(OS.str() == "$physreg1.subreg5");
+  ASSERT_TRUE(OS.str() == "%physreg1.subreg5");
 }
 
 TEST(MachineOperandTest, PrintCImm) {
@@ -118,7 +118,8 @@ TEST(MachineOperandTest, PrintSubRegIndex) {
   // TRI and IntrinsicInfo we can print the operand as a subreg index.
   std::string str;
   raw_string_ostream OS(str);
-  MachineOperand::printSubRegIdx(OS, MO.getImm(), nullptr);
+  ModuleSlotTracker DummyMST(nullptr);
+  MachineOperand::printSubregIdx(OS, MO.getImm(), nullptr);
   ASSERT_TRUE(OS.str() == "%subreg.3");
 }
 
@@ -214,7 +215,7 @@ TEST(MachineOperandTest, PrintExternalSymbol) {
   {
     raw_string_ostream OS(str);
     MO.print(OS, /*TRI=*/nullptr, /*IntrinsicInfo=*/nullptr);
-    ASSERT_TRUE(OS.str() == "&foo");
+    ASSERT_TRUE(OS.str() == "$foo");
   }
 
   str.clear();
@@ -224,7 +225,7 @@ TEST(MachineOperandTest, PrintExternalSymbol) {
   {
     raw_string_ostream OS(str);
     MO.print(OS, /*TRI=*/nullptr, /*IntrinsicInfo=*/nullptr);
-    ASSERT_TRUE(OS.str() == "&foo + 12");
+    ASSERT_TRUE(OS.str() == "$foo + 12");
   }
 
   str.clear();
@@ -234,7 +235,7 @@ TEST(MachineOperandTest, PrintExternalSymbol) {
   {
     raw_string_ostream OS(str);
     MO.print(OS, /*TRI=*/nullptr, /*IntrinsicInfo=*/nullptr);
-    ASSERT_TRUE(OS.str() == "&foo - 12");
+    ASSERT_TRUE(OS.str() == "$foo - 12");
   }
 }
 
@@ -295,7 +296,7 @@ TEST(MachineOperandTest, PrintMetadata) {
   LLVMContext Ctx;
   Module M("MachineOperandMDNodeTest", Ctx);
   NamedMDNode *MD = M.getOrInsertNamedMetadata("namedmd");
-  ModuleSlotTracker MST(&M);
+  ModuleSlotTracker DummyMST(&M);
   Metadata *MDS = MDString::get(Ctx, "foo");
   MDNode *Node = MDNode::get(Ctx, MDS);
   MD->addOperand(Node);
@@ -311,8 +312,7 @@ TEST(MachineOperandTest, PrintMetadata) {
   std::string str;
   // Print a MachineOperand containing a metadata node.
   raw_string_ostream OS(str);
-  MO.print(OS, MST, LLT{}, /*PrintDef=*/false, /*IsStandalone=*/false,
-           /*ShouldPrintRegisterTies=*/false, 0, /*TRI=*/nullptr,
+  MO.print(OS, DummyMST, LLT{}, false, false, 0, /*TRI=*/nullptr,
            /*IntrinsicInfo=*/nullptr);
   ASSERT_TRUE(OS.str() == "!0");
 }

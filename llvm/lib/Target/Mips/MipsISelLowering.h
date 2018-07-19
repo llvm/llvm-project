@@ -19,9 +19,9 @@
 #include "MCTargetDesc/MipsBaseInfo.h"
 #include "MCTargetDesc/MipsMCTargetDesc.h"
 #include "Mips.h"
-#include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -29,7 +29,6 @@
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Type.h"
-#include "llvm/Support/MachineValueType.h"
 #include "llvm/Target/TargetMachine.h"
 #include <algorithm>
 #include <cassert>
@@ -89,9 +88,6 @@ class TargetRegisterClass;
 
       // Thread Pointer
       ThreadPointer,
-
-      // Vector Floating Point Multiply and Subtract
-      FMS,
 
       // Floating Point Branch Conditional
       FPBrcond,
@@ -221,6 +217,12 @@ class TargetRegisterClass;
       VCLT_S,
       VCLT_U,
 
+      // Element-wise vector max/min.
+      VSMAX,
+      VSMIN,
+      VUMAX,
+      VUMIN,
+
       // Vector Shuffle with mask as an operand
       VSHF,  // Generic shuffle
       SHF,   // 4-element set shuffle.
@@ -279,6 +281,10 @@ class TargetRegisterClass;
 
     bool isCheapToSpeculateCttz() const override;
     bool isCheapToSpeculateCtlz() const override;
+
+    /// Return the register type for a given MVT, ensuring vectors are treated
+    /// as a series of gpr sized integers.
+    MVT getRegisterTypeForCallingConv(MVT VT) const override;
 
     /// Return the register type for a given MVT, ensuring vectors are treated
     /// as a series of gpr sized integers.
@@ -364,10 +370,6 @@ class TargetRegisterClass;
     bool isJumpTableRelative() const override {
       return getTargetMachine().isPositionIndependent();
     }
-
-   CCAssignFn *CCAssignFnForCall() const;
-
-   CCAssignFn *CCAssignFnForReturn() const;
 
   protected:
     SDValue getGlobalReg(SelectionDAG &DAG, EVT Ty) const;
@@ -679,13 +681,17 @@ class TargetRegisterClass;
                                                 unsigned Size, unsigned DstReg,
                                                 unsigned SrcRec) const;
 
-    MachineBasicBlock *emitAtomicBinary(MachineInstr &MI,
-                                        MachineBasicBlock *BB) const;
+    MachineBasicBlock *emitAtomicBinary(MachineInstr &MI, MachineBasicBlock *BB,
+                                        unsigned Size, unsigned BinOpcode,
+                                        bool Nand = false) const;
     MachineBasicBlock *emitAtomicBinaryPartword(MachineInstr &MI,
                                                 MachineBasicBlock *BB,
-                                                unsigned Size) const;
+                                                unsigned Size,
+                                                unsigned BinOpcode,
+                                                bool Nand = false) const;
     MachineBasicBlock *emitAtomicCmpSwap(MachineInstr &MI,
-                                         MachineBasicBlock *BB) const;
+                                         MachineBasicBlock *BB,
+                                         unsigned Size) const;
     MachineBasicBlock *emitAtomicCmpSwapPartword(MachineInstr &MI,
                                                  MachineBasicBlock *BB,
                                                  unsigned Size) const;

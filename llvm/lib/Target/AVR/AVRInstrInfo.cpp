@@ -273,7 +273,7 @@ bool AVRInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
 
   while (I != MBB.begin()) {
     --I;
-    if (I->isDebugInstr()) {
+    if (I->isDebugValue()) {
       continue;
     }
 
@@ -444,7 +444,7 @@ unsigned AVRInstrInfo::removeBranch(MachineBasicBlock &MBB,
 
   while (I != MBB.begin()) {
     --I;
-    if (I->isDebugInstr()) {
+    if (I->isDebugValue()) {
       continue;
     }
     //:TODO: add here the missing jmp instructions once they are implemented

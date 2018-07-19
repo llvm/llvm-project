@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Fix bitcasted functions.
+/// \brief Fix bitcasted functions.
 ///
 /// WebAssembly requires caller and callee signatures to match, however in LLVM,
 /// some amount of slop is vaguely permitted. Detect mismatch by looking for
@@ -61,9 +61,6 @@ public:
 } // End anonymous namespace
 
 char FixFunctionBitcasts::ID = 0;
-INITIALIZE_PASS(FixFunctionBitcasts, DEBUG_TYPE,
-                "Fix mismatching bitcasts for WebAssembly", false, false)
-
 ModulePass *llvm::createWebAssemblyFixFunctionBitcasts() {
   return new FixFunctionBitcasts();
 }

@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 // \file
-// An automatic updater for MemorySSA that handles arbitrary insertion,
+// \brief An automatic updater for MemorySSA that handles arbitrary insertion,
 // deletion, and moves.  It performs phi insertion where necessary, and
 // automatically updates the MemorySSA IR to be correct.
 // While updating loads or removing instructions is often easy enough to not
@@ -33,7 +33,6 @@
 #define LLVM_ANALYSIS_MEMORYSSAUPDATER_H
 
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/IR/BasicBlock.h"
@@ -44,7 +43,6 @@
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
-#include "llvm/IR/ValueHandle.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -60,13 +58,8 @@ class raw_ostream;
 class MemorySSAUpdater {
 private:
   MemorySSA *MSSA;
-
-  /// We use WeakVH rather than a costly deletion to deal with dangling pointers.
-  /// MemoryPhis are created eagerly and sometimes get zapped shortly afterwards.
-  SmallVector<WeakVH, 16> InsertedPHIs;
-
+  SmallVector<MemoryPhi *, 8> InsertedPHIs;
   SmallPtrSet<BasicBlock *, 8> VisitedBlocks;
-  SmallSet<AssertingVH<MemoryPhi>, 8> NonOptPhis;
 
 public:
   MemorySSAUpdater(MemorySSA *MSSA) : MSSA(MSSA) {}
@@ -93,37 +86,6 @@ public:
   void moveAfter(MemoryUseOrDef *What, MemoryUseOrDef *Where);
   void moveToPlace(MemoryUseOrDef *What, BasicBlock *BB,
                    MemorySSA::InsertionPlace Where);
-  /// `From` block was spliced into `From` and `To`.
-  /// Move all accesses from `From` to `To` starting at instruction `Start`.
-  /// `To` is newly created BB, so empty of MemorySSA::MemoryAccesses.
-  /// Edges are already updated, so successors of `To` with MPhi nodes need to
-  /// update incoming block.
-  /// |------|        |------|
-  /// | From |        | From |
-  /// |      |        |------|
-  /// |      |           ||
-  /// |      |   =>      \/
-  /// |      |        |------|  <- Start
-  /// |      |        |  To  |
-  /// |------|        |------|
-  void moveAllAfterSpliceBlocks(BasicBlock *From, BasicBlock *To,
-                                Instruction *Start);
-  /// `From` block was merged into `To`. All instructions were moved and
-  /// `From` is an empty block with successor edges; `From` is about to be
-  /// deleted. Move all accesses from `From` to `To` starting at instruction
-  /// `Start`. `To` may have multiple successors, `From` has a single
-  /// predecessor. `From` may have successors with MPhi nodes, replace their
-  /// incoming block with `To`.
-  /// |------|        |------|
-  /// |  To  |        |  To  |
-  /// |------|        |      |
-  ///    ||      =>   |      |
-  ///    \/           |      |
-  /// |------|        |      |  <- Start
-  /// | From |        |      |
-  /// |------|        |------|
-  void moveAllAfterMergeBlocks(BasicBlock *From, BasicBlock *To,
-                               Instruction *Start);
 
   // The below are utility functions. Other than creation of accesses to pass
   // to insertDef, and removeAccess to remove accesses, you should generally
@@ -131,7 +93,7 @@ public:
   // the edge cases right, and the above calls already operate in near-optimal
   // time bounds.
 
-  /// Create a MemoryAccess in MemorySSA at a specified point in a block,
+  /// \brief Create a MemoryAccess in MemorySSA at a specified point in a block,
   /// with a specified clobbering definition.
   ///
   /// Returns the new MemoryAccess.
@@ -148,7 +110,7 @@ public:
                                        const BasicBlock *BB,
                                        MemorySSA::InsertionPlace Point);
 
-  /// Create a MemoryAccess in MemorySSA before or after an existing
+  /// \brief Create a MemoryAccess in MemorySSA before or after an existing
   /// MemoryAccess.
   ///
   /// Returns the new MemoryAccess.
@@ -165,7 +127,7 @@ public:
                                           MemoryAccess *Definition,
                                           MemoryAccess *InsertPt);
 
-  /// Remove a MemoryAccess from MemorySSA, including updating all
+  /// \brief Remove a MemoryAccess from MemorySSA, including updating all
   /// definitions and uses.
   /// This should be called when a memory instruction that has a MemoryAccess
   /// associated with it is erased from the program.  For example, if a store or
@@ -173,45 +135,18 @@ public:
   /// on the MemoryAccess for that store/load.
   void removeMemoryAccess(MemoryAccess *);
 
-  /// Remove MemoryAccess for a given instruction, if a MemoryAccess exists.
-  /// This should be called when an instruction (load/store) is deleted from
-  /// the program.
-  void removeMemoryAccess(const Instruction *I) {
-    if (MemoryAccess *MA = MSSA->getMemoryAccess(I))
-      removeMemoryAccess(MA);
-  }
-
-  /// Remove all MemoryAcceses in a set of BasicBlocks about to be deleted.
-  /// Assumption we make here: all uses of deleted defs and phi must either
-  /// occur in blocks about to be deleted (thus will be deleted as well), or
-  /// they occur in phis that will simply lose an incoming value.
-  /// Deleted blocks still have successor info, but their predecessor edges and
-  /// Phi nodes may already be updated. Instructions in DeadBlocks should be
-  /// deleted after this call.
-  void removeBlocks(const SmallPtrSetImpl<BasicBlock *> &DeadBlocks);
-
-  /// Get handle on MemorySSA.
-  MemorySSA* getMemorySSA() const { return MSSA; }
-
 private:
   // Move What before Where in the MemorySSA IR.
   template <class WhereType>
   void moveTo(MemoryUseOrDef *What, BasicBlock *BB, WhereType Where);
-  // Move all memory accesses from `From` to `To` starting at `Start`.
-  // Restrictions apply, see public wrappers of this method.
-  void moveAllAccesses(BasicBlock *From, BasicBlock *To, Instruction *Start);
   MemoryAccess *getPreviousDef(MemoryAccess *);
   MemoryAccess *getPreviousDefInBlock(MemoryAccess *);
-  MemoryAccess *
-  getPreviousDefFromEnd(BasicBlock *,
-                        DenseMap<BasicBlock *, TrackingVH<MemoryAccess>> &);
-  MemoryAccess *
-  getPreviousDefRecursive(BasicBlock *,
-                          DenseMap<BasicBlock *, TrackingVH<MemoryAccess>> &);
+  MemoryAccess *getPreviousDefFromEnd(BasicBlock *);
+  MemoryAccess *getPreviousDefRecursive(BasicBlock *);
   MemoryAccess *recursePhi(MemoryAccess *Phi);
   template <class RangeType>
   MemoryAccess *tryRemoveTrivialPhi(MemoryPhi *Phi, RangeType &Operands);
-  void fixupDefs(const SmallVectorImpl<WeakVH> &);
+  void fixupDefs(const SmallVectorImpl<MemoryAccess *> &);
 };
 } // end namespace llvm
 

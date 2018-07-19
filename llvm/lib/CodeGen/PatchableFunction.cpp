@@ -49,7 +49,6 @@ static bool doesNotGeneratecode(const MachineInstr &MI) {
   case TargetOpcode::EH_LABEL:
   case TargetOpcode::GC_LABEL:
   case TargetOpcode::DBG_VALUE:
-  case TargetOpcode::DBG_LABEL:
     return true;
   }
 }

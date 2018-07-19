@@ -1,5 +1,7 @@
-; RUN: opt < %s -analyze -basicaa -da | FileCheck %s -check-prefix=DELIN
+; RUN: opt < %s -analyze -basicaa -da -da-delinearize=false | FileCheck %s
+; RUN: opt < %s -analyze -basicaa -da -da-delinearize | FileCheck %s -check-prefix=DELIN
 
+; ModuleID = 'GCD.bc'
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.6.0"
 
@@ -13,7 +15,15 @@ define void @gcd0(i32* %A, i32* %B) nounwind uwtable ssp {
 entry:
   br label %for.cond1.preheader
 
-; DELIN-LABEL: gcd0
+; CHECK: 'Dependence Analysis' for function 'gcd0'
+; CHECK: da analyze - output [* *]!
+; CHECK: da analyze - flow [=> *|<]!
+; CHECK: da analyze - confused!
+; CHECK: da analyze - input [* *]!
+; CHECK: da analyze - confused!
+; CHECK: da analyze - none!
+
+; DELIN: 'Dependence Analysis' for function 'gcd0'
 ; DELIN: da analyze - output [* *]!
 ; DELIN: da analyze - flow [=> *|<]!
 ; DELIN: da analyze - confused!
@@ -66,7 +76,15 @@ define void @gcd1(i32* %A, i32* %B) nounwind uwtable ssp {
 entry:
   br label %for.cond1.preheader
 
-; DELIN-LABEL: gcd1
+; CHECK: 'Dependence Analysis' for function 'gcd1'
+; CHECK: da analyze - output [* *]!
+; CHECK: da analyze - none!
+; CHECK: da analyze - confused!
+; CHECK: da analyze - input [* *]!
+; CHECK: da analyze - confused!
+; CHECK: da analyze - none!
+
+; DELIN: 'Dependence Analysis' for function 'gcd1'
 ; DELIN: da analyze - output [* *]!
 ; DELIN: da analyze - none!
 ; DELIN: da analyze - confused!
@@ -120,7 +138,15 @@ define void @gcd2(i32* %A, i32* %B) nounwind uwtable ssp {
 entry:
   br label %for.cond1.preheader
 
-; DELIN-LABEL: gcd2
+; CHECK: 'Dependence Analysis' for function 'gcd2'
+; CHECK: da analyze - output [* *]!
+; CHECK: da analyze - none!
+; CHECK: da analyze - confused!
+; CHECK: da analyze - input [* *]!
+; CHECK: da analyze - confused!
+; CHECK: da analyze - none!
+
+; DELIN: 'Dependence Analysis' for function 'gcd2'
 ; DELIN: da analyze - output [* *]!
 ; DELIN: da analyze - none!
 ; DELIN: da analyze - confused!
@@ -174,7 +200,15 @@ define void @gcd3(i32* %A, i32* %B) nounwind uwtable ssp {
 entry:
   br label %for.cond1.preheader
 
-; DELIN-LABEL: gcd3
+; CHECK: 'Dependence Analysis' for function 'gcd3'
+; CHECK: da analyze - output [* *]!
+; CHECK: da analyze - flow [<> *]!
+; CHECK: da analyze - confused!
+; CHECK: da analyze - input [* *]!
+; CHECK: da analyze - confused!
+; CHECK: da analyze - none!
+
+; DELIN: 'Dependence Analysis' for function 'gcd3'
 ; DELIN: da analyze - output [* *]!
 ; DELIN: da analyze - flow [<> *]!
 ; DELIN: da analyze - confused!
@@ -226,11 +260,19 @@ define void @gcd4(i32* %A, i32* %B, i64 %M, i64 %N) nounwind uwtable ssp {
 entry:
   br label %for.cond1.preheader
 
-; DELIN-LABEL: gcd4
-; DELIN: da analyze - output [* *]!
+; CHECK: 'Dependence Analysis' for function 'gcd4'
+; CHECK: da analyze - output [* *]!
+; CHECK: da analyze - none!
+; CHECK: da analyze - confused!
+; CHECK: da analyze - input [* *]!
+; CHECK: da analyze - confused!
+; CHECK: da analyze - none!
+
+; DELIN: 'Dependence Analysis' for function 'gcd4'
+; DELIN: da analyze - none!
 ; DELIN: da analyze - none!
 ; DELIN: da analyze - confused!
-; DELIN: da analyze - input [* *]!
+; DELIN: da analyze - none!
 ; DELIN: da analyze - confused!
 ; DELIN: da analyze - none!
 
@@ -288,11 +330,19 @@ define void @gcd5(i32* %A, i32* %B, i64 %M, i64 %N) nounwind uwtable ssp {
 entry:
   br label %for.cond1.preheader
 
-; DELIN-LABEL: gcd5
-; DELIN: da analyze - output [* *]!
-; DELIN: da analyze - flow [<> *]!
+; CHECK: 'Dependence Analysis' for function 'gcd5'
+; CHECK: da analyze - output [* *]!
+; CHECK: da analyze - flow [<> *]!
+; CHECK: da analyze - confused!
+; CHECK: da analyze - input [* *]!
+; CHECK: da analyze - confused!
+; CHECK: da analyze - none!
+
+; DELIN: 'Dependence Analysis' for function 'gcd5'
+; DELIN: da analyze - none!
+; DELIN: da analyze - flow [> *]!
 ; DELIN: da analyze - confused!
-; DELIN: da analyze - input [* *]!
+; DELIN: da analyze - none!
 ; DELIN: da analyze - confused!
 ; DELIN: da analyze - none!
 
@@ -351,11 +401,19 @@ entry:
   %cmp4 = icmp sgt i64 %n, 0
   br i1 %cmp4, label %for.cond1.preheader.preheader, label %for.end12
 
-; DELIN-LABEL: gcd6
-; DELIN: da analyze - output [* *]!
+; CHECK: 'Dependence Analysis' for function 'gcd6'
+; CHECK: da analyze - output [* *]!
+; CHECK: da analyze - none!
+; CHECK: da analyze - confused!
+; CHECK: da analyze - input [* *]!
+; CHECK: da analyze - confused!
+; CHECK: da analyze - output [* *]!
+
+; DELIN: 'Dependence Analysis' for function 'gcd6'
+; DELIN: da analyze - none!
 ; DELIN: da analyze - none!
 ; DELIN: da analyze - confused!
-; DELIN: da analyze - input [* *]!
+; DELIN: da analyze - none!
 ; DELIN: da analyze - confused!
 ; DELIN: da analyze - output [* *]!
 
@@ -423,7 +481,15 @@ entry:
   %cmp4 = icmp sgt i32 %n, 0
   br i1 %cmp4, label %for.cond1.preheader.preheader, label %for.end15
 
-; DELIN-LABEL: gcd7
+; CHECK: 'Dependence Analysis' for function 'gcd7'
+; CHECK: da analyze - output [* *]!
+; CHECK: da analyze - flow [* *|<]!
+; CHECK: da analyze - confused!
+; CHECK: da analyze - input [* *]!
+; CHECK: da analyze - confused!
+; CHECK: da analyze - output [* *]!
+
+; DELIN: 'Dependence Analysis' for function 'gcd7'
 ; DELIN: da analyze - output [* *]!
 ; DELIN: da analyze - flow [* *|<]!
 ; DELIN: da analyze - confused!
@@ -507,9 +573,17 @@ entry:
   %cmp4 = icmp sgt i32 %n, 0
   br i1 %cmp4, label %for.cond1.preheader.preheader, label %for.end15
 
-; DELIN-LABEL: gcd8
+; CHECK: 'Dependence Analysis' for function 'gcd8'
+; CHECK: da analyze - output [* *]!
+; CHECK: da analyze - none!
+; CHECK: da analyze - confused!
+; CHECK: da analyze - input [* *]!
+; CHECK: da analyze - confused!
+; CHECK: da analyze - output [* *]!
+
+; DELIN: 'Dependence Analysis' for function 'gcd8'
 ; DELIN: da analyze - output [* *]!
-; DELIN: da analyze - flow [* *|<]!
+; DELIN: da analyze - none!
 ; DELIN: da analyze - confused!
 ; DELIN: da analyze - input [* *]!
 ; DELIN: da analyze - confused!
@@ -586,7 +660,15 @@ entry:
   %cmp4 = icmp eq i32 %n, 0
   br i1 %cmp4, label %for.end15, label %for.cond1.preheader.preheader
 
-; DELIN-LABEL: gcd9
+; CHECK: 'Dependence Analysis' for function 'gcd9'
+; CHECK: da analyze - output [* *]!
+; CHECK: da analyze - flow [* *|<]!
+; CHECK: da analyze - confused!
+; CHECK: da analyze - input [* *]!
+; CHECK: da analyze - confused!
+; CHECK: da analyze - output [* *]!
+
+; DELIN: 'Dependence Analysis' for function 'gcd9'
 ; DELIN: da analyze - output [* *]!
 ; DELIN: da analyze - flow [* *|<]!
 ; DELIN: da analyze - confused!

@@ -20,7 +20,7 @@ namespace llvm {
 
 class Twine;
 
-/// Generic interface for extending the MCAsmParser,
+/// \brief Generic interface for extending the MCAsmParser,
 /// which is implemented by target and object file assembly parser
 /// implementations.
 class MCAsmParserExtension {
@@ -45,7 +45,7 @@ public:
   MCAsmParserExtension &operator=(const MCAsmParserExtension &) = delete;
   virtual ~MCAsmParserExtension();
 
-  /// Initialize the extension for parsing using the given \p Parser.
+  /// \brief Initialize the extension for parsing using the given \p Parser.
   /// The extension should use the AsmParser interfaces to register its
   /// parsing routines.
   virtual void Initialize(MCAsmParser &Parser);

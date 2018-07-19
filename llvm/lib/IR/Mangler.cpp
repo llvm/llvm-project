@@ -44,9 +44,6 @@ static void getNameWithPrefixImpl(raw_ostream &OS, const Twine &GVName,
     return;
   }
 
-  if (DL.doNotMangleLeadingQuestionMark() && Name[0] == '?')
-    Prefix = '\0';
-
   if (PrefixTy == Private)
     OS << DL.getPrivateGlobalPrefix();
   else if (PrefixTy == LinkerPrivate)
@@ -138,13 +135,8 @@ void Mangler::getNameWithPrefix(raw_ostream &OS, const GlobalValue *GV,
   // Mangle functions with Microsoft calling conventions specially.  Only do
   // this mangling for x86_64 vectorcall and 32-bit x86.
   const Function *MSFunc = dyn_cast<Function>(GV);
-
-  // Don't add byte count suffixes when '\01' or '?' are in the first
-  // character.
-  if (Name.startswith("\01") ||
-      (DL.doNotMangleLeadingQuestionMark() && Name.startswith("?")))
-    MSFunc = nullptr;
-
+  if (Name.startswith("\01"))
+    MSFunc = nullptr; // Don't mangle when \01 is present.
   CallingConv::ID CC =
       MSFunc ? MSFunc->getCallingConv() : (unsigned)CallingConv::C;
   if (!DL.hasMicrosoftFastStdCallMangling() &&
@@ -212,13 +204,3 @@ void llvm::emitLinkerFlagsForGlobalCOFF(raw_ostream &OS, const GlobalValue *GV,
       OS << ",data";
   }
 }
-
-void llvm::emitLinkerFlagsForUsedCOFF(raw_ostream &OS, const GlobalValue *GV,
-                                      const Triple &T, Mangler &M) {
-  if (!T.isKnownWindowsMSVCEnvironment())
-    return;
-
-  OS << " /INCLUDE:";
-  M.getNameWithPrefix(OS, GV, false);
-}
-

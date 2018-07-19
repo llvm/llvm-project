@@ -76,12 +76,12 @@
 //------------------------------------------------------------------------------
 
 // Out of range immediates: more than 12 bits
-        add w4, w5, #-4097
+        add w4, w5, #-4096
         add w5, w6, #0x1000
         add w4, w5, #-4096, lsl #12
         add w5, w6, #0x1000, lsl #12
 // CHECK-ERROR: error: expected compatible register, symbol or integer in range [0, 4095]
-// CHECK-ERROR-NEXT:         add w4, w5, #-4097
+// CHECK-ERROR-NEXT:         add w4, w5, #-4096
 // CHECK-ERROR-NEXT:                     ^
 // CHECK-ERROR-AARCH64-NEXT: error: expected compatible register, symbol or integer in range [0, 4095]
 // CHECK-ERROR-AARCH64-NEXT:         add w5, w6, #0x1000
@@ -1851,16 +1851,12 @@
 
         ldr sp, some_label
         ldrsw w3, somewhere
-        ldr v0, some_label
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:         ldr sp, some_label
 // CHECK-ERROR-NEXT:             ^
 // CHECK-ERROR-NEXT: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:         ldrsw w3, somewhere
 // CHECK-ERROR-NEXT:               ^
-// CHECK-ERROR-NEXT: error: invalid operand for instruction
-// CHECK-ERROR-NEXT:         ldr v0, some_label
-// CHECK-ERROR-NEXT:             ^
 
         ldrsw x2, #1048576
         ldr q0, #-1048580
@@ -1917,14 +1913,6 @@
 //------------------------------------------------------------------------------
 // Load/store (unscaled immediate)
 //------------------------------------------------------------------------------
-        ldur v0, [x0, #0]
-        stur v0, [x0, #0]
-// CHECK-ERROR-NEXT: error: invalid operand for instruction
-// CHECK-ERROR-NEXT:         ldur v0, [x0, #0]
-// CHECK-ERROR-NEXT:              ^
-// CHECK-ERROR-NEXT: error: invalid operand for instruction
-// CHECK-ERROR-NEXT:         stur v0, [x0, #0]
-// CHECK-ERROR-NEXT:              ^
 
         ldurb w2, [sp, #256]
         sturh w17, [x1, #256]
@@ -1972,15 +1960,6 @@
 //------------------------------------------------------------------------------
 // Load-store register (immediate post-indexed)
 //------------------------------------------------------------------------------
-        ldr v0, [x0], #0
-        str v0, [x0], #0
-// CHECK-ERROR: error: invalid operand for instruction
-// CHECK-ERROR-NEXT:         ldr v0, [x0], #0
-// CHECK-ERROR-NEXT:             ^
-// CHECK-ERROR: error: invalid operand for instruction
-// CHECK-ERROR-NEXT:         str v0, [x0], #0
-// CHECK-ERROR-NEXT:             ^
-
         ldr x3, [x4, #25], #0
         ldr x4, [x9, #0], #4
 // CHECK-ERROR-AARCH64: error: invalid operand for instruction
@@ -2168,14 +2147,6 @@
 //------------------------------------------------------------------------------
 // Load-store register (immediate pre-indexed)
 //------------------------------------------------------------------------------
-        ldr v0, [x0, #0]!
-        str v0, [x0, #0]!
-// CHECK-ERROR: error: invalid operand for instruction
-// CHECK-ERROR-NEXT:         ldr v0, [x0, #0]!
-// CHECK-ERROR-NEXT:             ^
-// CHECK-ERROR: error: invalid operand for instruction
-// CHECK-ERROR-NEXT:         str v0, [x0, #0]!
-// CHECK-ERROR-NEXT:             ^
 
         ldr x3, [x4]!
 // CHECK-ERROR: error:
@@ -2386,14 +2357,6 @@
 //------------------------------------------------------------------------------
 // Load/store (unsigned immediate)
 //------------------------------------------------------------------------------
-        ldr v0, [x0, #0]
-        str v0, [x0, #0]
-// CHECK-ERROR: error: invalid operand for instruction
-// CHECK-ERROR-NEXT:         ldr v0, [x0, #0]
-// CHECK-ERROR-NEXT:             ^
-// CHECK-ERROR: error: invalid operand for instruction
-// CHECK-ERROR-NEXT:         str v0, [x0, #0]
-// CHECK-ERROR-NEXT:             ^
 
 //// Out of range immediates
         ldr q0, [x11, #65536]
@@ -2476,37 +2439,13 @@
 // CHECK-ERROR-NEXT:        prfm pldl1strm, [w3, #8]
 // CHECK-ERROR-NEXT:                         ^
 // CHECK-ERROR-AARCH64-NEXT: error: operand specifier not recognised
-// CHECK-ERROR-ARM64-NEXT: error: prefetch hint expected
+// CHECK-ERROR-ARM64-NEXT: error: pre-fetch hint expected
 // CHECK-ERROR-NEXT:        prfm wibble, [sp]
 // CHECK-ERROR-NEXT:             ^
 
 //------------------------------------------------------------------------------
 // Load/store register (register offset)
 //------------------------------------------------------------------------------
-        ldr v0, [x0, xzr]
-        ldr v0, [x0, x1, lsl #0]
-        ldr v0, [x0, x1, lsl #0]
-        str v0, [x0, xzr]
-        str v0, [x0, x1, lsl #0]
-        str v0, [x0, x1, lsl #0]
-// CHECK-ERROR-NEXT: error: invalid operand for instruction
-// CHECK-ERROR-NEXT:         ldr v0, [x0, xzr]
-// CHECK-ERROR-NEXT:             ^
-// CHECK-ERROR-NEXT: error: invalid operand for instruction
-// CHECK-ERROR-NEXT:         ldr v0, [x0, x1, lsl #0]
-// CHECK-ERROR-NEXT:             ^
-// CHECK-ERROR-NEXT: error: invalid operand for instruction
-// CHECK-ERROR-NEXT:         ldr v0, [x0, x1, lsl #0]
-// CHECK-ERROR-NEXT:             ^
-// CHECK-ERROR-NEXT: error: invalid operand for instruction
-// CHECK-ERROR-NEXT:         str v0, [x0, xzr]
-// CHECK-ERROR-NEXT:             ^
-// CHECK-ERROR-NEXT: error: invalid operand for instruction
-// CHECK-ERROR-NEXT:         str v0, [x0, x1, lsl #0]
-// CHECK-ERROR-NEXT:             ^
-// CHECK-ERROR-NEXT: error: invalid operand for instruction
-// CHECK-ERROR-NEXT:         str v0, [x0, x1, lsl #0]
-// CHECK-ERROR-NEXT:             ^
 
         ldr w3, [xzr, x3]
         ldr w4, [x0, x4, lsl]
@@ -2595,15 +2534,6 @@
 //------------------------------------------------------------------------------
 // Load/store register pair (offset)
 //------------------------------------------------------------------------------
-        ldp v0, v1, [x0, #0]
-        stp v0, v1, [x0, #0]
-// CHECK-ERROR-NEXT: error: invalid operand for instruction
-// CHECK-ERROR-NEXT:         ldp v0, v1, [x0, #0]
-// CHECK-ERROR-NEXT:             ^
-// CHECK-ERROR-NEXT: error: invalid operand for instruction
-// CHECK-ERROR-NEXT:         stp v0, v1, [x0, #0]
-// CHECK-ERROR-NEXT:             ^
-
         ldp w3, w2, [x4, #1]
         stp w1, w2, [x3, #253]
         stp w9, w10, [x5, #256]
@@ -2706,14 +2636,6 @@
 //------------------------------------------------------------------------------
 // Load/store register pair (post-indexed)
 //------------------------------------------------------------------------------
-        ldp v0, v1, [x0], #0
-        stp v0, v1, [x0], #0
-// CHECK-ERROR-NEXT: error: invalid operand for instruction
-// CHECK-ERROR-NEXT:         ldp v0, v1, [x0], #0
-// CHECK-ERROR-NEXT:             ^
-// CHECK-ERROR-NEXT: error: invalid operand for instruction
-// CHECK-ERROR-NEXT:         stp v0, v1, [x0], #0
-// CHECK-ERROR-NEXT:             ^
 
         ldp w3, w2, [x4], #1
         stp w1, w2, [x3], #253
@@ -2817,14 +2739,6 @@
 //------------------------------------------------------------------------------
 // Load/store register pair (pre-indexed)
 //------------------------------------------------------------------------------
-        ldp v0, v1, [x0, #0]!
-        stp v0, v1, [x0, #0]!
-// CHECK-ERROR-NEXT: error: invalid operand for instruction
-// CHECK-ERROR-NEXT:         ldp v0, v1, [x0, #0]!
-// CHECK-ERROR-NEXT:             ^
-// CHECK-ERROR-NEXT: error: invalid operand for instruction
-// CHECK-ERROR-NEXT:         stp v0, v1, [x0, #0]!
-// CHECK-ERROR-NEXT:             ^
 
         ldp w3, w2, [x4, #1]!
         stp w1, w2, [x3, #253]!
@@ -2928,15 +2842,6 @@
 //------------------------------------------------------------------------------
 // Load/store register pair (offset)
 //------------------------------------------------------------------------------
-        ldnp v0, v1, [x0, #0]
-        stnp v0, v1, [x0, #0]
-// CHECK-ERROR-NEXT: error: invalid operand for instruction
-// CHECK-ERROR-NEXT:         ldnp v0, v1, [x0, #0]
-// CHECK-ERROR-NEXT:              ^
-// CHECK-ERROR-NEXT: error: invalid operand for instruction
-// CHECK-ERROR-NEXT:         stnp v0, v1, [x0, #0]
-// CHECK-ERROR-NEXT:              ^
-
         ldnp w3, w2, [x4, #1]
         stnp w1, w2, [x3, #253]
         stnp w9, w10, [x5, #256]

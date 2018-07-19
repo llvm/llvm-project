@@ -8,14 +8,13 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// Add implicit use of exec to vector register copies.
+/// \brief Add implicit use of exec to vector register copies.
 ///
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
 #include "AMDGPUSubtarget.h"
 #include "SIInstrInfo.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 
 using namespace llvm;
@@ -47,7 +46,7 @@ char SIFixVGPRCopies::ID = 0;
 char &llvm::SIFixVGPRCopiesID = SIFixVGPRCopies::ID;
 
 bool SIFixVGPRCopies::runOnMachineFunction(MachineFunction &MF) {
-  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
   const SIInstrInfo *TII = ST.getInstrInfo();
   bool Changed = false;
@@ -59,7 +58,7 @@ bool SIFixVGPRCopies::runOnMachineFunction(MachineFunction &MF) {
         if (TII->isVGPRCopy(MI) && !MI.readsRegister(AMDGPU::EXEC, TRI)) {
           MI.addOperand(MF,
                         MachineOperand::CreateReg(AMDGPU::EXEC, false, true));
-          LLVM_DEBUG(dbgs() << "Add exec use to " << MI);
+          DEBUG(dbgs() << "Add exec use to " << MI);
           Changed = true;
         }
         break;

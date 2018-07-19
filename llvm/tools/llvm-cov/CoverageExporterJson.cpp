@@ -44,10 +44,10 @@
 #include "CoverageExporterJson.h"
 #include "CoverageReport.h"
 
-/// The semantic version combined as a string.
+/// \brief The semantic version combined as a string.
 #define LLVM_COVERAGE_EXPORT_JSON_STR "2.0.0"
 
-/// Unique type identifier for JSON coverage export.
+/// \brief Unique type identifier for JSON coverage export.
 #define LLVM_COVERAGE_EXPORT_JSON_TYPE_STR "llvm.coverage.json.export"
 
 using namespace llvm;
@@ -117,13 +117,10 @@ void CoverageExporterJson::emitArrayEnd() {
   OS << "]";
 }
 
-void CoverageExporterJson::renderRoot(
-    const CoverageFilters &IgnoreFilenameFilters) {
+void CoverageExporterJson::renderRoot() {
   std::vector<std::string> SourceFiles;
-  for (StringRef SF : Coverage.getUniqueSourceFiles()) {
-    if (!IgnoreFilenameFilters.matchesFilename(SF))
-      SourceFiles.emplace_back(SF);
-  }
+  for (StringRef SF : Coverage.getUniqueSourceFiles())
+    SourceFiles.emplace_back(SF);
   renderRoot(SourceFiles);
 }
 
@@ -221,11 +218,11 @@ void CoverageExporterJson::renderFiles(
 
 void CoverageExporterJson::renderFile(const std::string &Filename,
                                       const FileCoverageSummary &FileReport) {
-  // Start File.
+   // Start File.
   emitDictStart();
 
   emitDictElement("filename", Filename);
-
+  
   if (!Options.ExportSummaryOnly) {
     // Calculate and render detailed coverage information for given file.
     auto FileCoverage = Coverage.getCoverageForFile(Filename);

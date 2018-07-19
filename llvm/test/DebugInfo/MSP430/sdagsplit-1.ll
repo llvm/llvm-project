@@ -13,10 +13,10 @@
 ;      return 0;
 ;    }
 ;
-; CHECK-DAG: DBG_VALUE debug-use $r{{[0-9]+}}, debug-use $noreg, !{{[0-9]+}}, !DIExpression(DW_OP_LLVM_fragment, 32, 16), debug-location !{{[0-9]+}}
-; CHECK-DAG: DBG_VALUE debug-use $r{{[0-9]+}}, debug-use $noreg, !{{[0-9]+}}, !DIExpression(DW_OP_LLVM_fragment, 48, 16), debug-location !{{[0-9]+}}
-; CHECK-DAG: DBG_VALUE debug-use $r{{[0-9]+}}, debug-use $noreg, !{{[0-9]+}}, !DIExpression(DW_OP_LLVM_fragment, 0, 16), debug-location !{{[0-9]+}}
-; CHECK-DAG: DBG_VALUE debug-use $r{{[0-9]+}}, debug-use $noreg, !{{[0-9]+}}, !DIExpression(DW_OP_LLVM_fragment, 16, 16), debug-location !{{[0-9]+}}
+; CHECK-DAG: DBG_VALUE debug-use %r{{[0-9]+}}, debug-use %noreg, !{{[0-9]+}}, !DIExpression(DW_OP_LLVM_fragment, 32, 16), debug-location !{{[0-9]+}}
+; CHECK-DAG: DBG_VALUE debug-use %r{{[0-9]+}}, debug-use %noreg, !{{[0-9]+}}, !DIExpression(DW_OP_LLVM_fragment, 48, 16), debug-location !{{[0-9]+}}
+; CHECK-DAG: DBG_VALUE debug-use %r{{[0-9]+}}, debug-use %noreg, !{{[0-9]+}}, !DIExpression(DW_OP_LLVM_fragment, 0, 16), debug-location !{{[0-9]+}}
+; CHECK-DAG: DBG_VALUE debug-use %r{{[0-9]+}}, debug-use %noreg, !{{[0-9]+}}, !DIExpression(DW_OP_LLVM_fragment, 16, 16), debug-location !{{[0-9]+}}
 
 ; ModuleID = 'sdagsplit-1.c'
 target datalayout = "e-m:e-p:16:16-i32:16-i64:16-f32:16-f64:16-a:8-n8:16-S16"
@@ -51,7 +51,7 @@ attributes #1 = { nounwind readnone speculatable }
 !4 = !{i32 2, !"Debug Info Version", i32 3}
 !5 = !{i32 1, !"wchar_size", i32 2}
 !6 = !{!"clang version 6.0.0 "}
-!7 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 2, type: !8, isLocal: false, isDefinition: true, scopeLine: 3, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !11)
+!7 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 2, type: !8, isLocal: false, isDefinition: true, scopeLine: 3, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !11)
 !8 = !DISubroutineType(types: !9)
 !9 = !{!10, !10, !10}
 !10 = !DIBasicType(name: "long long int", size: 64, encoding: DW_ATE_signed)

@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// Interface definition for SIRegisterInfo
+/// \brief Interface definition for SIRegisterInfo
 //
 //===----------------------------------------------------------------------===//
 
@@ -16,14 +16,15 @@
 #define LLVM_LIB_TARGET_AMDGPU_SIREGISTERINFO_H
 
 #include "AMDGPURegisterInfo.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIDefines.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 
 namespace llvm {
 
-class GCNSubtarget;
 class LiveIntervals;
 class MachineRegisterInfo;
+class SISubtarget;
 class SIMachineFunctionInfo;
 
 class SIRegisterInfo final : public AMDGPURegisterInfo {
@@ -35,10 +36,11 @@ private:
   bool SpillSGPRToVGPR;
   bool SpillSGPRToSMEM;
 
+  void reserveRegisterTuples(BitVector &, unsigned Reg) const;
   void classifyPressureSet(unsigned PSetID, unsigned Reg,
                            BitVector &PressureSets) const;
 public:
-  SIRegisterInfo(const GCNSubtarget &ST);
+  SIRegisterInfo(const SISubtarget &ST);
 
   bool spillSGPRToVGPR() const {
     return SpillSGPRToVGPR;
@@ -124,7 +126,7 @@ public:
     return getEncodingValue(Reg) & 0xff;
   }
 
-  /// Return the 'base' register class for this register.
+  /// \brief Return the 'base' register class for this register.
   /// e.g. SGPR0 => SReg_32, VGPR => VGPR_32 SGPR0_SGPR1 -> SReg_32, etc.
   const TargetRegisterClass *getPhysRegClass(unsigned Reg) const;
 
@@ -222,11 +224,10 @@ public:
 
   const int *getRegUnitPressureSets(unsigned RegUnit) const override;
 
-  unsigned getReturnAddressReg(const MachineFunction &MF) const;
-
-  const TargetRegisterClass *
-  getConstrainedRegClassForOperand(const MachineOperand &MO,
-                                 const MachineRegisterInfo &MRI) const override;
+  unsigned getReturnAddressReg(const MachineFunction &MF) const {
+    // Not a callee saved register.
+    return AMDGPU::SGPR30_SGPR31;
+  }
 
 private:
   void buildSpillLoadStore(MachineBasicBlock::iterator MI,

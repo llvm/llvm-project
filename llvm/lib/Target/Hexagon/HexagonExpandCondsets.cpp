@@ -316,10 +316,8 @@ void HexagonExpandCondsets::updateKillFlags(unsigned Reg) {
   auto KillAt = [this,Reg] (SlotIndex K, LaneBitmask LM) -> void {
     // Set the <kill> flag on a use of Reg whose lane mask is contained in LM.
     MachineInstr *MI = LIS->getInstructionFromIndex(K);
-    for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
-      MachineOperand &Op = MI->getOperand(i);
-      if (!Op.isReg() || !Op.isUse() || Op.getReg() != Reg ||
-          MI->isRegTiedToDefOperand(i))
+    for (auto &Op : MI->operands()) {
+      if (!Op.isReg() || !Op.isUse() || Op.getReg() != Reg)
         continue;
       LaneBitmask SLM = getLaneMask(Reg, Op.getSubReg());
       if ((SLM & LM) == SLM) {
@@ -499,18 +497,14 @@ void HexagonExpandCondsets::updateDeadsInRange(unsigned Reg, LaneBitmask LM,
       if (!Op.isReg() || !DefRegs.count(Op))
         continue;
       if (Op.isDef()) {
-        // Tied defs will always have corresponding uses, so no extra
-        // implicit uses are needed.
-        if (!Op.isTied())
-          ImpUses.insert({Op, i});
+        ImpUses.insert({Op, i});
       } else {
         // This function can be called for the same register with different
         // lane masks. If the def in this instruction was for the whole
         // register, we can get here more than once. Avoid adding multiple
         // implicit uses (or adding an implicit use when an explicit one is
         // present).
-        if (Op.isTied())
-          ImpUses.erase(Op);
+        ImpUses.erase(Op);
       }
     }
     if (ImpUses.empty())
@@ -551,14 +545,7 @@ void HexagonExpandCondsets::removeInstr(MachineInstr &MI) {
 void HexagonExpandCondsets::updateLiveness(std::set<unsigned> &RegSet,
       bool Recalc, bool UpdateKills, bool UpdateDeads) {
   UpdateKills |= UpdateDeads;
-  for (unsigned R : RegSet) {
-    if (!TargetRegisterInfo::isVirtualRegister(R)) {
-      assert(TargetRegisterInfo::isPhysicalRegister(R));
-      // There shouldn't be any physical registers as operands, except
-      // possibly reserved registers.
-      assert(MRI->isReserved(R));
-      continue;
-    }
+  for (auto R : RegSet) {
     if (Recalc)
       recalculateLiveInterval(R);
     if (UpdateKills)
@@ -654,7 +641,7 @@ MachineInstr *HexagonExpandCondsets::genCondTfrFor(MachineOperand &SrcOp,
               .add(SrcOp);
   }
 
-  LLVM_DEBUG(dbgs() << "created an initial copy: " << *MIB);
+  DEBUG(dbgs() << "created an initial copy: " << *MIB);
   return &*MIB;
 }
 
@@ -667,8 +654,8 @@ bool HexagonExpandCondsets::split(MachineInstr &MI,
       return false;
     TfrCounter++;
   }
-  LLVM_DEBUG(dbgs() << "\nsplitting " << printMBBReference(*MI.getParent())
-                    << ": " << MI);
+  DEBUG(dbgs() << "\nsplitting " << printMBBReference(*MI.getParent()) << ": "
+               << MI);
   MachineOperand &MD = MI.getOperand(0);  // Definition
   MachineOperand &MP = MI.getOperand(1);  // Predicate register
   assert(MD.isDef());
@@ -945,8 +932,8 @@ bool HexagonExpandCondsets::predicate(MachineInstr &TfrI, bool Cond,
   unsigned Opc = TfrI.getOpcode();
   (void)Opc;
   assert(Opc == Hexagon::A2_tfrt || Opc == Hexagon::A2_tfrf);
-  LLVM_DEBUG(dbgs() << "\nattempt to predicate if-" << (Cond ? "true" : "false")
-                    << ": " << TfrI);
+  DEBUG(dbgs() << "\nattempt to predicate if-" << (Cond ? "true" : "false")
+               << ": " << TfrI);
 
   MachineOperand &MD = TfrI.getOperand(0);
   MachineOperand &MP = TfrI.getOperand(1);
@@ -967,7 +954,7 @@ bool HexagonExpandCondsets::predicate(MachineInstr &TfrI, bool Cond,
   if (!DefI || !isPredicable(DefI))
     return false;
 
-  LLVM_DEBUG(dbgs() << "Source def: " << *DefI);
+  DEBUG(dbgs() << "Source def: " << *DefI);
 
   // Collect the information about registers defined and used between the
   // DefI and the TfrI.
@@ -1052,8 +1039,8 @@ bool HexagonExpandCondsets::predicate(MachineInstr &TfrI, bool Cond,
     if (!canMoveMemTo(*DefI, TfrI, true))
       CanDown = false;
 
-  LLVM_DEBUG(dbgs() << "Can move up: " << (CanUp ? "yes" : "no")
-                    << ", can move down: " << (CanDown ? "yes\n" : "no\n"));
+  DEBUG(dbgs() << "Can move up: " << (CanUp ? "yes" : "no")
+               << ", can move down: " << (CanDown ? "yes\n" : "no\n"));
   MachineBasicBlock::iterator PastDefIt = std::next(DefIt);
   if (CanUp)
     predicateAt(MD, *DefI, PastDefIt, MP, Cond, UpdRegs);
@@ -1148,10 +1135,10 @@ bool HexagonExpandCondsets::coalesceRegisters(RegisterRef R1, RegisterRef R2) {
     return false;
   bool Overlap = L1.overlaps(L2);
 
-  LLVM_DEBUG(dbgs() << "compatible registers: ("
-                    << (Overlap ? "overlap" : "disjoint") << ")\n  "
-                    << printReg(R1.Reg, TRI, R1.Sub) << "  " << L1 << "\n  "
-                    << printReg(R2.Reg, TRI, R2.Sub) << "  " << L2 << "\n");
+  DEBUG(dbgs() << "compatible registers: ("
+               << (Overlap ? "overlap" : "disjoint") << ")\n  "
+               << printReg(R1.Reg, TRI, R1.Sub) << "  " << L1 << "\n  "
+               << printReg(R2.Reg, TRI, R2.Sub) << "  " << L2 << "\n");
   if (R1.Sub || R2.Sub)
     return false;
   if (Overlap)
@@ -1184,7 +1171,7 @@ bool HexagonExpandCondsets::coalesceRegisters(RegisterRef R1, RegisterRef R2) {
   LIS->removeInterval(R2.Reg);
 
   updateKillFlags(R1.Reg);
-  LLVM_DEBUG(dbgs() << "coalesced: " << L1 << "\n");
+  DEBUG(dbgs() << "coalesced: " << L1 << "\n");
   L1.verify();
 
   return true;
@@ -1265,8 +1252,8 @@ bool HexagonExpandCondsets::runOnMachineFunction(MachineFunction &MF) {
   LIS = &getAnalysis<LiveIntervals>();
   MRI = &MF.getRegInfo();
 
-  LLVM_DEBUG(LIS->print(dbgs() << "Before expand-condsets\n",
-                        MF.getFunction().getParent()));
+  DEBUG(LIS->print(dbgs() << "Before expand-condsets\n",
+                   MF.getFunction().getParent()));
 
   bool Changed = false;
   std::set<unsigned> CoalUpd, PredUpd;
@@ -1293,8 +1280,8 @@ bool HexagonExpandCondsets::runOnMachineFunction(MachineFunction &MF) {
         if (!CoalUpd.count(Op.getReg()))
           KillUpd.insert(Op.getReg());
   updateLiveness(KillUpd, false, true, false);
-  LLVM_DEBUG(
-      LIS->print(dbgs() << "After coalescing\n", MF.getFunction().getParent()));
+  DEBUG(LIS->print(dbgs() << "After coalescing\n",
+                   MF.getFunction().getParent()));
 
   // First, simply split all muxes into a pair of conditional transfers
   // and update the live intervals to reflect the new arrangement. The
@@ -1310,8 +1297,8 @@ bool HexagonExpandCondsets::runOnMachineFunction(MachineFunction &MF) {
   // predication, and after splitting they are difficult to recalculate
   // (because of predicated defs), so make sure they are left untouched.
   // Predication does not use live intervals.
-  LLVM_DEBUG(
-      LIS->print(dbgs() << "After splitting\n", MF.getFunction().getParent()));
+  DEBUG(LIS->print(dbgs() << "After splitting\n",
+                   MF.getFunction().getParent()));
 
   // Traverse all blocks and collapse predicable instructions feeding
   // conditional transfers into predicated instructions.
@@ -1319,13 +1306,13 @@ bool HexagonExpandCondsets::runOnMachineFunction(MachineFunction &MF) {
   // cases that were not created in the previous step.
   for (auto &B : MF)
     Changed |= predicateInBlock(B, PredUpd);
-  LLVM_DEBUG(LIS->print(dbgs() << "After predicating\n",
-                        MF.getFunction().getParent()));
+  DEBUG(LIS->print(dbgs() << "After predicating\n",
+                   MF.getFunction().getParent()));
 
   PredUpd.insert(CoalUpd.begin(), CoalUpd.end());
   updateLiveness(PredUpd, true, true, true);
 
-  LLVM_DEBUG({
+  DEBUG({
     if (Changed)
       LIS->print(dbgs() << "After expand-condsets\n",
                  MF.getFunction().getParent());
@@ -1337,6 +1324,7 @@ bool HexagonExpandCondsets::runOnMachineFunction(MachineFunction &MF) {
 //===----------------------------------------------------------------------===//
 //                         Public Constructor Functions
 //===----------------------------------------------------------------------===//
+
 FunctionPass *llvm::createHexagonExpandCondsets() {
   return new HexagonExpandCondsets();
 }

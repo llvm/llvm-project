@@ -42,12 +42,12 @@ define amdgpu_kernel void @v_cnd_nan(float addrspace(1)* %out, i32 %c, float %f)
 ; (select (cmp (sgprX, constant)), constant, sgprZ)
 
 ; GCN-LABEL: {{^}}fcmp_sgprX_k0_select_k1_sgprZ_f32:
-; GCN: s_load_dwordx2
-; GCN: s_load_dwordx2 s{{\[}}[[X:[0-9]+]]:[[Z:[0-9]+]]{{\]}}
-; GCN-DAG: v_cmp_nlg_f32_e64 vcc, s[[X]], 0
-; GCN-DAG: v_mov_b32_e32 [[VZ:v[0-9]+]], s[[Z]]
+; GCN: s_load_dword [[X:s[0-9]+]]
+; GCN: s_load_dword [[Z:s[0-9]+]]
+; GCN-DAG: v_cmp_nlg_f32_e64 vcc, [[X]], 0
+; GCN-DAG: v_mov_b32_e32 [[VZ:v[0-9]+]], [[Z]]
 ; GCN: v_cndmask_b32_e32 v{{[0-9]+}}, 1.0, [[VZ]], vcc
-define amdgpu_kernel void @fcmp_sgprX_k0_select_k1_sgprZ_f32(float addrspace(1)* %out, [8 x i32], float %x, float %z) #0 {
+define amdgpu_kernel void @fcmp_sgprX_k0_select_k1_sgprZ_f32(float addrspace(1)* %out, float %x, float %z) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %tid.ext = sext i32 %tid to i64
   %out.gep = getelementptr inbounds float, float addrspace(1)* %out, i64 %tid.ext
@@ -73,11 +73,12 @@ define amdgpu_kernel void @fcmp_sgprX_k0_select_k1_sgprX_f32(float addrspace(1)*
 }
 
 ; GCN-LABEL: {{^}}fcmp_sgprX_k0_select_k0_sgprZ_f32:
-; GCN-DAG: s_load_dwordx2 s{{\[}}[[X:[0-9]+]]:[[Z:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, {{0x13|0x4c}}
-; GCN-DAG: v_cmp_nlg_f32_e64 vcc, s[[X]], 0
-; GCN-DAG: v_mov_b32_e32 [[VZ:v[0-9]+]], s[[Z]]
+; GCN-DAG: s_load_dword [[X:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, {{0xb|0x2c}}
+; GCN-DAG: s_load_dword [[Z:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, {{0xc|0x30}}
+; GCN-DAG: v_cmp_nlg_f32_e64 vcc, [[X]], 0
+; GCN-DAG: v_mov_b32_e32 [[VZ:v[0-9]+]], [[Z]]
 ; GCN: v_cndmask_b32_e32 v{{[0-9]+}}, 0, [[VZ]], vcc
-define amdgpu_kernel void @fcmp_sgprX_k0_select_k0_sgprZ_f32(float addrspace(1)* %out, [8 x i32], float %x, float %z) #0 {
+define amdgpu_kernel void @fcmp_sgprX_k0_select_k0_sgprZ_f32(float addrspace(1)* %out, float %x, float %z) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %tid.ext = sext i32 %tid to i64
   %out.gep = getelementptr inbounds float, float addrspace(1)* %out, i64 %tid.ext
@@ -314,10 +315,10 @@ define amdgpu_kernel void @icmp_vgprX_k0_select_k1_vgprZ_i1(i1 addrspace(1)* %ou
 
 ; Different types compared vs. selected
 ; GCN-LABEL: {{^}}fcmp_vgprX_k0_selectf64_k1_vgprZ_f32:
-; GCN-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 0x3ff00000
-; GCN-DAG: {{buffer|flat}}_load_dword [[X:v[0-9]+]]
-; GCN-DAG: {{buffer|flat}}_load_dwordx2
+; GCN: {{buffer|flat}}_load_dword [[X:v[0-9]+]]
+; GCN: {{buffer|flat}}_load_dwordx2
 
+; GCN: v_mov_b32_e32 [[K:v[0-9]+]], 0x3ff00000
 ; GCN: v_cmp_le_f32_e32 vcc, 0, [[X]]
 ; GCN-DAG: v_cndmask_b32_e32 v{{[0-9]+}}, [[K]], v{{[0-9]+}}, vcc
 ; GCN-DAG: v_cndmask_b32_e32 v{{[0-9]+}}, 0, v{{[0-9]+}}, vcc

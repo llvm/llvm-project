@@ -75,10 +75,10 @@ registers:
 # CHECK-NEXT: G_FADD %0, %2
 body:             |
   bb.0 (%ir-block.0):
-    liveins: $s0, $w0
+    liveins: %s0, %w0
 
-    %0(s32) = COPY $s0
-    %6(s32) = COPY $w0
+    %0(s32) = COPY %s0
+    %6(s32) = COPY %w0
     %1(s1) = G_TRUNC %6
     %4(s32) = G_FCONSTANT float 1.000000e+00
     %5(s32) = G_FCONSTANT float 2.000000e+00
@@ -93,7 +93,7 @@ body:             |
   bb.3.end:
     %2(s32) = PHI %4(s32), %bb.1, %5(s32), %bb.2
     %3(s32) = G_FADD %0, %2
-    $s0 = COPY %3(s32)
-    RET_ReallyLR implicit $s0
+    %s0 = COPY %3(s32)
+    RET_ReallyLR implicit %s0
 
 ...

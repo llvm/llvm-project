@@ -1,4 +1,4 @@
-# RUN: llc -run-pass si-insert-waitcnts -march=amdgcn -mcpu=tahiti -o - %s | FileCheck %s
+# RUN: llc -run-pass si-insert-waits -march=amdgcn -mcpu=tahiti -o - %s | FileCheck %s
 --- |
 
   define amdgpu_kernel void @vccz_corrupt_workaround(float %cond, i32 addrspace(1)* %out) #0 {
@@ -46,10 +46,9 @@
 ...
 ---
 # CHECK-LABEL: name: vccz_corrupt_workaround
-# CHECK: $vcc = V_CMP_EQ_F32
-# CHECK-NEXT: S_WAITCNT 0
-# CHECK-NEXT: $vcc = S_MOV_B64 $vcc
-# CHECK-NEXT: S_CBRANCH_VCCZ %bb.2, implicit killed $vcc
+# CHECK: %vcc = V_CMP_EQ_F32
+# CHECK-NEXT: %vcc = S_MOV_B64 %vcc
+# CHECK-NEXT: S_CBRANCH_VCCZ %bb.2, implicit killed %vcc
 
 name:            vccz_corrupt_workaround
 alignment:       0
@@ -59,7 +58,7 @@ regBankSelected: false
 selected:        false
 tracksRegLiveness: true
 liveins:
-  - { reg: '$sgpr0_sgpr1' }
+  - { reg: '%sgpr0_sgpr1' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -76,42 +75,43 @@ frameInfo:
   hasMustTailInVarArgFunc: false
 body:             |
   bb.0.entry:
-    liveins: $sgpr0_sgpr1, $vcc
+    liveins: %sgpr0_sgpr1
 
-    $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 11, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
-    $sgpr7 = S_MOV_B32 61440
-    $sgpr6 = S_MOV_B32 -1
-    $vcc = V_CMP_EQ_F32_e64 0, 0, 0, undef $sgpr2, 0, implicit $exec
-    S_CBRANCH_VCCZ %bb.1, implicit killed $vcc
+    %sgpr2 = S_LOAD_DWORD_IMM %sgpr0_sgpr1, 9, 0 :: (non-temporal dereferenceable invariant load 4 from `float addrspace(2)* undef`)
+    %sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed %sgpr0_sgpr1, 11, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
+    %sgpr7 = S_MOV_B32 61440
+    %sgpr6 = S_MOV_B32 -1
+    %vcc = V_CMP_EQ_F32_e64 0, 0, 0, %sgpr2, 0, implicit %exec
+    S_CBRANCH_VCCZ %bb.1, implicit killed %vcc
 
   bb.2.if:
-    liveins: $sgpr6, $sgpr7, $sgpr0_sgpr1_sgpr2_sgpr3:0x00000003
+    liveins: %sgpr6, %sgpr7, %sgpr0_sgpr1_sgpr2_sgpr3:0x00000003
 
-    $vgpr0 = V_MOV_B32_e32 9, implicit $exec
-    BUFFER_STORE_DWORD_OFFSET killed $vgpr0, killed $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`)
-    $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+    %vgpr0 = V_MOV_B32_e32 9, implicit %exec
+    BUFFER_STORE_DWORD_OFFSET killed %vgpr0, killed %sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, implicit %exec :: (volatile store 4 into `i32 addrspace(1)* undef`)
+    %vgpr0 = V_MOV_B32_e32 0, implicit %exec
     S_BRANCH %bb.3
 
   bb.1.else:
-    liveins: $sgpr6, $sgpr7, $sgpr0_sgpr1_sgpr2_sgpr3:0x00000003
+    liveins: %sgpr6, %sgpr7, %sgpr0_sgpr1_sgpr2_sgpr3:0x00000003
 
-    $vgpr0 = V_MOV_B32_e32 100, implicit $exec
-    BUFFER_STORE_DWORD_OFFSET killed $vgpr0, killed $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`)
-    $vgpr0 = V_MOV_B32_e32 1, implicit $exec
+    %vgpr0 = V_MOV_B32_e32 100, implicit %exec
+    BUFFER_STORE_DWORD_OFFSET killed %vgpr0, killed %sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, implicit %exec :: (volatile store 4 into `i32 addrspace(1)* undef`)
+    %vgpr0 = V_MOV_B32_e32 1, implicit %exec
 
   bb.3.done:
-    liveins: $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3:0x00000003
+    liveins: %vgpr0, %sgpr0_sgpr1_sgpr2_sgpr3:0x00000003
 
-    $sgpr3 = S_MOV_B32 61440
-    $sgpr2 = S_MOV_B32 -1
-    BUFFER_STORE_DWORD_OFFSET killed $vgpr0, killed $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec :: (store 4 into %ir.out)
+    %sgpr3 = S_MOV_B32 61440
+    %sgpr2 = S_MOV_B32 -1
+    BUFFER_STORE_DWORD_OFFSET killed %vgpr0, killed %sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit %exec :: (store 4 into %ir.out)
     S_ENDPGM
 
 ...
 ---
 # CHECK-LABEL: name: vccz_corrupt_undef_vcc
-# CHECK: S_WAITCNT 3855
-# CHECK-NEXT: $vgpr0 = V_MOV_B32_e32
+# CHECK: S_WAITCNT
+# CHECK-NEXT: S_CBRANCH_VCCZ %bb.2, implicit undef %vcc
 
 name:            vccz_corrupt_undef_vcc
 alignment:       0
@@ -121,7 +121,7 @@ regBankSelected: false
 selected:        false
 tracksRegLiveness: true
 liveins:
-  - { reg: '$sgpr0_sgpr1' }
+  - { reg: '%sgpr0_sgpr1' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -138,34 +138,34 @@ frameInfo:
   hasMustTailInVarArgFunc: false
 body:             |
   bb.0.entry:
-    liveins: $sgpr0_sgpr1
+    liveins: %sgpr0_sgpr1
 
-    $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 11, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
-    $sgpr7 = S_MOV_B32 61440
-    $sgpr6 = S_MOV_B32 -1
-    S_CBRANCH_VCCZ %bb.1, implicit undef $vcc
+    %sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed %sgpr0_sgpr1, 11, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
+    %sgpr7 = S_MOV_B32 61440
+    %sgpr6 = S_MOV_B32 -1
+    S_CBRANCH_VCCZ %bb.1, implicit undef %vcc
 
   bb.2.if:
-    liveins: $sgpr6, $sgpr7, $sgpr0_sgpr1_sgpr2_sgpr3:0x00000003
+    liveins: %sgpr6, %sgpr7, %sgpr0_sgpr1_sgpr2_sgpr3:0x00000003
 
-    $vgpr0 = V_MOV_B32_e32 9, implicit $exec
-    BUFFER_STORE_DWORD_OFFSET killed $vgpr0, killed $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`)
-    $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+    %vgpr0 = V_MOV_B32_e32 9, implicit %exec
+    BUFFER_STORE_DWORD_OFFSET killed %vgpr0, killed %sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, implicit %exec :: (volatile store 4 into `i32 addrspace(1)* undef`)
+    %vgpr0 = V_MOV_B32_e32 0, implicit %exec
     S_BRANCH %bb.3
 
   bb.1.else:
-    liveins: $sgpr6, $sgpr7, $sgpr0_sgpr1_sgpr2_sgpr3:0x00000003
+    liveins: %sgpr6, %sgpr7, %sgpr0_sgpr1_sgpr2_sgpr3:0x00000003
 
-    $vgpr0 = V_MOV_B32_e32 100, implicit $exec
-    BUFFER_STORE_DWORD_OFFSET killed $vgpr0, killed $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`)
-    $vgpr0 = V_MOV_B32_e32 1, implicit $exec
+    %vgpr0 = V_MOV_B32_e32 100, implicit %exec
+    BUFFER_STORE_DWORD_OFFSET killed %vgpr0, killed %sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, implicit %exec :: (volatile store 4 into `i32 addrspace(1)* undef`)
+    %vgpr0 = V_MOV_B32_e32 1, implicit %exec
 
   bb.3.done:
-    liveins: $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3:0x00000003
+    liveins: %vgpr0, %sgpr0_sgpr1_sgpr2_sgpr3:0x00000003
 
-    $sgpr3 = S_MOV_B32 61440
-    $sgpr2 = S_MOV_B32 -1
-    BUFFER_STORE_DWORD_OFFSET killed $vgpr0, killed $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec :: (store 4 into %ir.out)
+    %sgpr3 = S_MOV_B32 61440
+    %sgpr2 = S_MOV_B32 -1
+    BUFFER_STORE_DWORD_OFFSET killed %vgpr0, killed %sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit %exec :: (store 4 into %ir.out)
     S_ENDPGM
 
 ...

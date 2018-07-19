@@ -5,8 +5,7 @@ FileHeader:
 Sections:
   - Type:            TYPE
     Signatures:
-      - Index:           0
-        ReturnType:      I32
+      - ReturnType:      I32
         ParamTypes:
           - I32
   - Type:            IMPORT

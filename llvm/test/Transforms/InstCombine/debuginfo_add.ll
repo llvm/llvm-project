@@ -28,20 +28,14 @@ entry:
   tail call void @llvm.dbg.value(metadata i64 %0, metadata !25, metadata !DIExpression()), !dbg !30
   %offset.08 = add i64 %0, -4096
   tail call void @llvm.dbg.value(metadata i64 %offset.08, metadata !26, metadata !DIExpression()), !dbg !31
+  ; CHECK: call void @llvm.dbg.value(metadata i64 %0, metadata !26, metadata !DIExpression(DW_OP_constu, 4096, DW_OP_minus, DW_OP_stack_value)), !dbg !30
   tail call void @llvm.dbg.value(metadata i32 undef, metadata !23, metadata !DIExpression()), !dbg !32
   br i1 undef, label %for.end, label %for.body.lr.ph, !dbg !32
 
 for.body.lr.ph:                                   ; preds = %entry
-  ; The 'load' and the 'add' are sunken to this basic block. So let's verify that the related dbg.values are sunken as well.
-  ; The add is later eliminated, so we verify that the dbg.value is salvaged by using DW_OP_minus.
-  ; CHECK-LABEL: for.body.lr.ph:
-  ; CHECK-NEXT: %0 = load
-  ; CHECK-NEXT: call void @llvm.dbg.value(metadata i64 %0, metadata !25, metadata !DIExpression()), !dbg !
-  ; CHECK-NEXT: call void @llvm.dbg.value(metadata i64 %0, metadata !26, metadata !DIExpression(DW_OP_constu, 4096, DW_OP_minus, DW_OP_stack_value)), !dbg !
   br label %for.body, !dbg !32
 
 for.body:                                         ; preds = %for.body.lr.ph, %for.body
-  ; CHECK-LABEL: for.body:
   %offset.010 = phi i64 [ %offset.08, %for.body.lr.ph ], [ %offset.0, %for.body ]
   %head_size.09 = phi i32 [ undef, %for.body.lr.ph ], [ %sub2, %for.body ]
   tail call void @llvm.dbg.value(metadata i32 %head_size.09, metadata !23, metadata !DIExpression()), !dbg !31
@@ -49,7 +43,7 @@ for.body:                                         ; preds = %for.body.lr.ph, %fo
   %sub2 = add i32 %head_size.09, -4096, !dbg !37
   %offset.0 = add i64 %offset.010, -4096
   tail call void @llvm.dbg.value(metadata i64 %offset.0, metadata !26, metadata !DIExpression()), !dbg !30
-  ; CHECK: call void @llvm.dbg.value(metadata i64 %offset.010, metadata !26, metadata !DIExpression(DW_OP_constu, 4096, DW_OP_minus, DW_OP_stack_value)), !dbg !
+  ; CHECK: call void @llvm.dbg.value(metadata i64 %offset.010, metadata !26, metadata !DIExpression(DW_OP_constu, 4096, DW_OP_minus, DW_OP_stack_value)), !dbg !29
   tail call void @llvm.dbg.value(metadata i32 %sub2, metadata !23, metadata !DIExpression()), !dbg !31
   %tobool = icmp eq i32 %sub2, 0, !dbg !32
   br i1 %tobool, label %for.end, label %for.body, !dbg !32, !llvm.loop !38
@@ -82,7 +76,7 @@ attributes #3 = { nobuiltin }
 !8 = !{i32 1, !"min_enum_size", i32 4}
 !9 = !{i32 7, !"PIC Level", i32 2}
 !10 = !{!"clang version 6.0.0 (trunk 317434) (llvm/trunk 317437)"}
-!11 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 6, type: !12, isLocal: false, isDefinition: true, scopeLine: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !20)
+!11 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 6, type: !12, isLocal: false, isDefinition: true, scopeLine: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !20)
 !12 = !DISubroutineType(types: !13)
 !13 = !{null, !14, !19}
 !14 = !DIDerivedType(tag: DW_TAG_typedef, name: "v_t", file: !1, line: 1, baseType: !15)

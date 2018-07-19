@@ -84,7 +84,7 @@ define amdgpu_kernel void @sdiv_v4i32_4(<4 x i32> addrspace(1)* %out, <4 x i32> 
 }
 
 ; FUNC-LABEL: {{^}}v_sdiv_i8:
-; SI: v_rcp_iflag_f32
+; SI: v_rcp_f32
 ; SI: v_bfe_i32 [[BFE:v[0-9]+]], v{{[0-9]+}}, 0, 8
 ; SI: buffer_store_dword [[BFE]]
 define amdgpu_kernel void @v_sdiv_i8(i32 addrspace(1)* %out, i8 addrspace(1)* %in) {
@@ -98,7 +98,7 @@ define amdgpu_kernel void @v_sdiv_i8(i32 addrspace(1)* %out, i8 addrspace(1)* %i
 }
 
 ; FUNC-LABEL: {{^}}v_sdiv_i23:
-; SI: v_rcp_iflag_f32
+; SI: v_rcp_f32
 ; SI: v_bfe_i32 [[BFE:v[0-9]+]], v{{[0-9]+}}, 0, 23
 ; SI: buffer_store_dword [[BFE]]
 define amdgpu_kernel void @v_sdiv_i23(i32 addrspace(1)* %out, i23 addrspace(1)* %in) {
@@ -112,7 +112,7 @@ define amdgpu_kernel void @v_sdiv_i23(i32 addrspace(1)* %out, i23 addrspace(1)* 
 }
 
 ; FUNC-LABEL: {{^}}v_sdiv_i24:
-; SI: v_rcp_iflag_f32
+; SI: v_rcp_f32
 ; SI: v_bfe_i32 [[BFE:v[0-9]+]], v{{[0-9]+}}, 0, 24
 ; SI: buffer_store_dword [[BFE]]
 define amdgpu_kernel void @v_sdiv_i24(i32 addrspace(1)* %out, i24 addrspace(1)* %in) {

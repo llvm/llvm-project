@@ -97,7 +97,9 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
       Resume,
       Destroy,
       Promise,
-      Index
+      Index,
+      /// The index of the first spill field.
+      FirstSpill
     };
   };
 
@@ -191,6 +193,17 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
     case coro::ABI::RetconOnce:
       return RetconLowering.ResumePrototype->getCallingConv();
     }
+  }
+
+  unsigned getFirstSpillFieldIndex() const {
+    switch (ABI) {
+    case coro::ABI::Switch:
+      return SwitchFieldIndex::FirstSpill;
+
+    case coro::ABI::Retcon:
+    case coro::ABI::RetconOnce:
+      return 0;
+    }    
   }
 
   AllocaInst *getPromiseAlloca() const {

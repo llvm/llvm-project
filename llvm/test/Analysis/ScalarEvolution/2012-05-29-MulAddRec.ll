@@ -8,8 +8,6 @@
 ;
 ; PR12929: cast<Ty>() argument of incompatible type
 
-declare void @use(i8 %x)
-
 ; CHECK: @func
 ; CHECK: for.cond:
 ; CHECK: %inc1 = phi i8 [ 0, %entry ], [ %0, %for.body ]
@@ -35,7 +33,6 @@ for.cond:                                         ; preds = %for.cond.loopexit, 
   %indvars.iv = phi i8 [ %indvars.iv.next, %for.cond.loopexit ], [ 10, %entry ]
   %mul3 = phi i8 [ undef, %entry ], [ %mul.lcssa, %for.cond.loopexit ]
   %inc1 = phi i8 [ 0, %entry ], [ %0, %for.cond.loopexit ]
-  call void @use(i8 %inc1)
   br label %for.body
 
 for.body:                                         ; preds = %for.body, %for.cond
@@ -43,7 +40,6 @@ for.body:                                         ; preds = %for.body, %for.cond
   %mul45 = phi i8 [ %mul3, %for.cond ], [ %mul, %for.body ]
   %inc = add i8 %inc26, 1
   %mul = mul i8 %inc26, %mul45
-  call void @use(i8 %inc)
   %exitcond = icmp ne i8 %inc, %indvars.iv
   br i1 %exitcond, label %for.body, label %for.cond.loopexit
 }

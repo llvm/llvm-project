@@ -19,8 +19,10 @@
 ; CHECK: store i32 2, i32* %[[INC2]], align 4
 ; CHECK: %[[CMP3:.*]] = icmp eq i32 %k, 3
 ; CHECK: br i1 %[[CMP3]], label %for.end, label %[[LOOP_PH:.*]]
-; CHECK: for.end:
-; CHECK: ret void
+; CHECK: [[LOOP_PH]]:
+; CHECK: br label %[[LOOP:.*]]
+; CHECK: [[LOOP]]:
+; CHECK: %[[IV:.*]] = phi i32 [ 3, %[[LOOP_PH]] ], [ {{.*}}, %[[LOOP]] ]
 
 define void @basic(i32* %p, i32 %k) #0 {
 entry:
@@ -66,8 +68,11 @@ for.end:                                          ; preds = %for.cond.for.end_cr
 ; CHECK: store i32 2, i32* %[[INC2]], align 4
 ; CHECK: %[[CMP3:.*]] = icmp eq i32 %k, 3
 ; CHECK: br i1 %[[CMP3]], label %for.end, label %[[LOOP_PH:.*]]
-; CHECK: for.end:
-; CHECK: %ret = phi i32 [ 0, %entry ], [ 1, %[[NEXT0]] ], [ 2, %[[NEXT1]] ], [ 3, %[[NEXT2]] ], [ %inc, %for.body ]
+; CHECK: [[LOOP_PH]]:
+; CHECK: br label %[[LOOP:.*]]
+; CHECK: [[LOOP]]:
+; CHECK: %[[IV:.*]] = phi i32 [ 3, %[[LOOP_PH]] ], [ %[[IV:.*]], %[[LOOP]] ]
+; CHECK: %ret = phi i32 [ 0, %entry ], [ 1, %[[NEXT0]] ], [ 2, %[[NEXT1]] ], [ 3, %[[NEXT2]] ], [ %[[IV]], %[[LOOP]] ]
 ; CHECK: ret i32 %ret
 define i32 @output(i32* %p, i32 %k) #0 {
 entry:

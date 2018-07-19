@@ -45,7 +45,7 @@ private:
 
 // Create our command line option.
 static DebugCounterList DebugCounterOption(
-    "debug-counter", cl::Hidden,
+    "debug-counter",
     cl::desc("Comma separated list of debug counter skip and count"),
     cl::CommaSeparated, cl::ZeroOrMore, cl::location(DebugCounter::instance()));
 

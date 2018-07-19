@@ -125,7 +125,7 @@ bool DeadMachineInstructionElim::runOnMachineFunction(MachineFunction &MF) {
 
       // If the instruction is dead, delete it!
       if (isDead(MI)) {
-        LLVM_DEBUG(dbgs() << "DeadMachineInstructionElim: DELETING: " << *MI);
+        DEBUG(dbgs() << "DeadMachineInstructionElim: DELETING: " << *MI);
         // It is possible that some DBG_VALUE instructions refer to this
         // instruction.  They get marked as undef and will be deleted
         // in the live debug variable analysis.

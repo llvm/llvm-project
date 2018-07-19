@@ -31,6 +31,7 @@ define float @pr26070() {
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; CHECK-NEXT:    orps {{.*}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %c = call float @copysignf(float 1.0, float undef) readnone
   ret float %c

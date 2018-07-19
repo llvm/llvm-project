@@ -17,14 +17,12 @@
 #include "llvm/Option/Option.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileOutputBuffer.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
-#include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/WindowsManifest/WindowsManifestMerger.h"
 
@@ -63,10 +61,12 @@ class CvtResOptTable : public opt::OptTable {
 public:
   CvtResOptTable() : OptTable(InfoTable, true) {}
 };
+
+static ExitOnError ExitOnErr;
 } // namespace
 
 LLVM_ATTRIBUTE_NORETURN void reportError(Twine Msg) {
-  WithColor::error(errs(), "llvm-mt") << Msg << '\n';
+  errs() << "llvm-mt error: " << Msg << "\n";
   exit(1);
 }
 
@@ -86,26 +86,25 @@ void error(Error EC) {
     });
 }
 
-int main(int Argc, const char **Argv) {
-  InitLLVM X(Argc, Argv);
+int main(int argc, const char **argv) {
+  sys::PrintStackTraceOnErrorSignal(argv[0]);
+  PrettyStackTraceProgram X(argc, argv);
+
+  ExitOnErr.setBanner("llvm-mt: ");
+
+  SmallVector<const char *, 256> argv_buf;
+  SpecificBumpPtrAllocator<char> ArgAllocator;
+  ExitOnErr(errorCodeToError(sys::Process::GetArgumentVector(
+      argv_buf, makeArrayRef(argv, argc), ArgAllocator)));
+  llvm_shutdown_obj Y; // Call llvm_shutdown() on exit.
 
   CvtResOptTable T;
   unsigned MAI, MAC;
-  ArrayRef<const char *> ArgsArr = makeArrayRef(Argv + 1, Argc - 1);
+  ArrayRef<const char *> ArgsArr = makeArrayRef(argv + 1, argc);
   opt::InputArgList InputArgs = T.ParseArgs(ArgsArr, MAI, MAC);
 
-  for (auto *Arg : InputArgs.filtered(OPT_INPUT)) {
-    auto ArgString = Arg->getAsString(InputArgs);
-    std::string Diag;
-    raw_string_ostream OS(Diag);
-    OS << "invalid option '" << ArgString << "'";
-
-    std::string Nearest;
-    if (T.findNearest(ArgString, Nearest) < 2)
-      OS << ", did you mean '" << Nearest << "'?";
-
-    reportError(OS.str());
-  }
+  for (auto *Arg : InputArgs.filtered(OPT_INPUT))
+    reportError(Twine("invalid option ") + Arg->getSpelling());
 
   for (auto &Arg : InputArgs) {
     if (Arg->getOption().matches(OPT_unsupported)) {

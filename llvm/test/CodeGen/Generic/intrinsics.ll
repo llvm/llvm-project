@@ -39,20 +39,12 @@ define double @test_cos(float %F) {
         ret double %I
 }
 
-declare i8* @llvm.launder.invariant.group(i8*)
+declare i8* @llvm.invariant.group.barrier(i8*)
 
-define i8* @launder(i8* %p) {
-        %q = call i8* @llvm.launder.invariant.group(i8* %p)
+define i8* @barrier(i8* %p) {
+        %q = call i8* @llvm.invariant.group.barrier(i8* %p)
         ret i8* %q
 }
-
-declare i8* @llvm.strip.invariant.group(i8*)
-
-define i8* @strip(i8* %p) {
-        %q = call i8* @llvm.strip.invariant.group(i8* %p)
-        ret i8* %q
-}
-
 
 ; sideeffect
 

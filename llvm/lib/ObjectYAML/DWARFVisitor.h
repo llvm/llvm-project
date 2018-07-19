@@ -26,7 +26,7 @@ struct Entry;
 struct FormValue;
 struct AttributeAbbrev;
 
-/// A class to visits DWARFYAML Compile Units and DIEs in preorder.
+/// \brief A class to visits DWARFYAML Compile Units and DIEs in preorder.
 ///
 /// Extensions of this class can either maintain const or non-const references
 /// to the DWARFYAML::Data object.

@@ -239,8 +239,7 @@ define amdgpu_kernel void @v_cttz_i32_sel_ne_bitwidth(i32 addrspace(1)* noalias 
 
 ; FUNC-LABEL: {{^}}v_cttz_i8_sel_eq_neg1:
 ; SI: {{buffer|flat}}_load_ubyte
-; SI-NOSDWA: v_ffbl_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}
-; SI-SDWA: v_ffbl_b32_sdwa
+; SI: v_ffbl_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}
 ; EG: MEM_RAT MSKOR
 ; EG: FFBL_INT
  define amdgpu_kernel void @v_cttz_i8_sel_eq_neg1(i8 addrspace(1)* noalias %out, i8 addrspace(1)* nocapture readonly %arrayidx) nounwind {

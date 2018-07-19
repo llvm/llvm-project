@@ -125,6 +125,13 @@ StringRef llvm::object::getELFRelocationTypeName(uint32_t Machine,
       break;
     }
     break;
+  case ELF::EM_WEBASSEMBLY:
+    switch (Type) {
+#include "llvm/BinaryFormat/ELFRelocs/WebAssembly.def"
+    default:
+      break;
+    }
+    break;
   case ELF::EM_AMDGPU:
     switch (Type) {
 #include "llvm/BinaryFormat/ELFRelocs/AMDGPU.def"
@@ -146,50 +153,6 @@ StringRef llvm::object::getELFRelocationTypeName(uint32_t Machine,
 }
 
 #undef ELF_RELOC
-
-uint32_t llvm::object::getELFRelrRelocationType(uint32_t Machine) {
-  switch (Machine) {
-  case ELF::EM_X86_64:
-    return ELF::R_X86_64_RELATIVE;
-  case ELF::EM_386:
-  case ELF::EM_IAMCU:
-    return ELF::R_386_RELATIVE;
-  case ELF::EM_MIPS:
-    break;
-  case ELF::EM_AARCH64:
-    return ELF::R_AARCH64_RELATIVE;
-  case ELF::EM_ARM:
-    return ELF::R_ARM_RELATIVE;
-  case ELF::EM_ARC_COMPACT:
-  case ELF::EM_ARC_COMPACT2:
-    return ELF::R_ARC_RELATIVE;
-  case ELF::EM_AVR:
-    break;
-  case ELF::EM_HEXAGON:
-    return ELF::R_HEX_RELATIVE;
-  case ELF::EM_LANAI:
-    break;
-  case ELF::EM_PPC:
-    break;
-  case ELF::EM_PPC64:
-    return ELF::R_PPC64_RELATIVE;
-  case ELF::EM_RISCV:
-    return ELF::R_RISCV_RELATIVE;
-  case ELF::EM_S390:
-    return ELF::R_390_RELATIVE;
-  case ELF::EM_SPARC:
-  case ELF::EM_SPARC32PLUS:
-  case ELF::EM_SPARCV9:
-    return ELF::R_SPARC_RELATIVE;
-  case ELF::EM_AMDGPU:
-    break;
-  case ELF::EM_BPF:
-    break;
-  default:
-    break;
-  }
-  return 0;
-}
 
 StringRef llvm::object::getELFSectionTypeName(uint32_t Machine, unsigned Type) {
   switch (Machine) {
@@ -239,14 +202,9 @@ StringRef llvm::object::getELFSectionTypeName(uint32_t Machine, unsigned Type) {
     STRINGIFY_ENUM_CASE(ELF, SHT_PREINIT_ARRAY);
     STRINGIFY_ENUM_CASE(ELF, SHT_GROUP);
     STRINGIFY_ENUM_CASE(ELF, SHT_SYMTAB_SHNDX);
-    STRINGIFY_ENUM_CASE(ELF, SHT_RELR);
     STRINGIFY_ENUM_CASE(ELF, SHT_ANDROID_REL);
     STRINGIFY_ENUM_CASE(ELF, SHT_ANDROID_RELA);
-    STRINGIFY_ENUM_CASE(ELF, SHT_ANDROID_RELR);
     STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_ODRTAB);
-    STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_LINKER_OPTIONS);
-    STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_CALL_GRAPH_PROFILE);
-    STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_ADDRSIG);
     STRINGIFY_ENUM_CASE(ELF, SHT_GNU_ATTRIBUTES);
     STRINGIFY_ENUM_CASE(ELF, SHT_GNU_HASH);
     STRINGIFY_ENUM_CASE(ELF, SHT_GNU_verdef);
@@ -255,85 +213,6 @@ StringRef llvm::object::getELFSectionTypeName(uint32_t Machine, unsigned Type) {
   default:
     return "Unknown";
   }
-}
-
-template <class ELFT>
-Expected<std::vector<typename ELFT::Rela>>
-ELFFile<ELFT>::decode_relrs(Elf_Relr_Range relrs) const {
-  // This function decodes the contents of an SHT_RELR packed relocation
-  // section.
-  //
-  // Proposal for adding SHT_RELR sections to generic-abi is here:
-  //   https://groups.google.com/forum/#!topic/generic-abi/bX460iggiKg
-  //
-  // The encoded sequence of Elf64_Relr entries in a SHT_RELR section looks
-  // like [ AAAAAAAA BBBBBBB1 BBBBBBB1 ... AAAAAAAA BBBBBB1 ... ]
-  //
-  // i.e. start with an address, followed by any number of bitmaps. The address
-  // entry encodes 1 relocation. The subsequent bitmap entries encode up to 63
-  // relocations each, at subsequent offsets following the last address entry.
-  //
-  // The bitmap entries must have 1 in the least significant bit. The assumption
-  // here is that an address cannot have 1 in lsb. Odd addresses are not
-  // supported.
-  //
-  // Excluding the least significant bit in the bitmap, each non-zero bit in
-  // the bitmap represents a relocation to be applied to a corresponding machine
-  // word that follows the base address word. The second least significant bit
-  // represents the machine word immediately following the initial address, and
-  // each bit that follows represents the next word, in linear order. As such,
-  // a single bitmap can encode up to 31 relocations in a 32-bit object, and
-  // 63 relocations in a 64-bit object.
-  //
-  // This encoding has a couple of interesting properties:
-  // 1. Looking at any entry, it is clear whether it's an address or a bitmap:
-  //    even means address, odd means bitmap.
-  // 2. Just a simple list of addresses is a valid encoding.
-
-  Elf_Rela Rela;
-  Rela.r_info = 0;
-  Rela.r_addend = 0;
-  Rela.setType(getRelrRelocationType(), false);
-  std::vector<Elf_Rela> Relocs;
-
-  // Word type: uint32_t for Elf32, and uint64_t for Elf64.
-  typedef typename ELFT::uint Word;
-
-  // Word size in number of bytes.
-  const size_t WordSize = sizeof(Word);
-
-  // Number of bits used for the relocation offsets bitmap.
-  // These many relative relocations can be encoded in a single entry.
-  const size_t NBits = 8*WordSize - 1;
-
-  Word Base = 0;
-  for (const Elf_Relr &R : relrs) {
-    Word Entry = R;
-    if ((Entry&1) == 0) {
-      // Even entry: encodes the offset for next relocation.
-      Rela.r_offset = Entry;
-      Relocs.push_back(Rela);
-      // Set base offset for subsequent bitmap entries.
-      Base = Entry + WordSize;
-      continue;
-    }
-
-    // Odd entry: encodes bitmap for relocations starting at base.
-    Word Offset = Base;
-    while (Entry != 0) {
-      Entry >>= 1;
-      if ((Entry&1) != 0) {
-        Rela.r_offset = Offset;
-        Relocs.push_back(Rela);
-      }
-      Offset += WordSize;
-    }
-
-    // Advance base offset by NBits words.
-    Base += NBits * WordSize;
-  }
-
-  return Relocs;
 }
 
 template <class ELFT>

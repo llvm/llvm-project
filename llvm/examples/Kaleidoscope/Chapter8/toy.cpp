@@ -1173,7 +1173,7 @@ static void MainLoop() {
 // "Library" functions that can be "extern'd" from user code.
 //===----------------------------------------------------------------------===//
 
-#ifdef _WIN32
+#ifdef LLVM_ON_WIN32
 #define DLLEXPORT __declspec(dllexport)
 #else
 #define DLLEXPORT
@@ -1255,7 +1255,7 @@ int main() {
   legacy::PassManager pass;
   auto FileType = TargetMachine::CGFT_ObjectFile;
 
-  if (TheTargetMachine->addPassesToEmitFile(pass, dest, nullptr, FileType)) {
+  if (TheTargetMachine->addPassesToEmitFile(pass, dest, FileType)) {
     errs() << "TheTargetMachine can't emit a file of this type";
     return 1;
   }

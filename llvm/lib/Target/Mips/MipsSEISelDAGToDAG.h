@@ -93,37 +93,37 @@ private:
   bool selectIntAddrSImm10Lsl3(SDValue Addr, SDValue &Base,
                                SDValue &Offset) const override;
 
-  /// Select constant vector splats.
+  /// \brief Select constant vector splats.
   bool selectVSplat(SDNode *N, APInt &Imm,
                     unsigned MinSizeInBits) const override;
-  /// Select constant vector splats whose value fits in a given integer.
+  /// \brief Select constant vector splats whose value fits in a given integer.
   bool selectVSplatCommon(SDValue N, SDValue &Imm, bool Signed,
                                   unsigned ImmBitSize) const;
-  /// Select constant vector splats whose value fits in a uimm1.
+  /// \brief Select constant vector splats whose value fits in a uimm1.
   bool selectVSplatUimm1(SDValue N, SDValue &Imm) const override;
-  /// Select constant vector splats whose value fits in a uimm2.
+  /// \brief Select constant vector splats whose value fits in a uimm2.
   bool selectVSplatUimm2(SDValue N, SDValue &Imm) const override;
-  /// Select constant vector splats whose value fits in a uimm3.
+  /// \brief Select constant vector splats whose value fits in a uimm3.
   bool selectVSplatUimm3(SDValue N, SDValue &Imm) const override;
-  /// Select constant vector splats whose value fits in a uimm4.
+  /// \brief Select constant vector splats whose value fits in a uimm4.
   bool selectVSplatUimm4(SDValue N, SDValue &Imm) const override;
-  /// Select constant vector splats whose value fits in a uimm5.
+  /// \brief Select constant vector splats whose value fits in a uimm5.
   bool selectVSplatUimm5(SDValue N, SDValue &Imm) const override;
-  /// Select constant vector splats whose value fits in a uimm6.
+  /// \brief Select constant vector splats whose value fits in a uimm6.
   bool selectVSplatUimm6(SDValue N, SDValue &Imm) const override;
-  /// Select constant vector splats whose value fits in a uimm8.
+  /// \brief Select constant vector splats whose value fits in a uimm8.
   bool selectVSplatUimm8(SDValue N, SDValue &Imm) const override;
-  /// Select constant vector splats whose value fits in a simm5.
+  /// \brief Select constant vector splats whose value fits in a simm5.
   bool selectVSplatSimm5(SDValue N, SDValue &Imm) const override;
-  /// Select constant vector splats whose value is a power of 2.
+  /// \brief Select constant vector splats whose value is a power of 2.
   bool selectVSplatUimmPow2(SDValue N, SDValue &Imm) const override;
-  /// Select constant vector splats whose value is the inverse of a
+  /// \brief Select constant vector splats whose value is the inverse of a
   /// power of 2.
   bool selectVSplatUimmInvPow2(SDValue N, SDValue &Imm) const override;
-  /// Select constant vector splats whose value is a run of set bits
+  /// \brief Select constant vector splats whose value is a run of set bits
   /// ending at the most significant bit
   bool selectVSplatMaskL(SDValue N, SDValue &Imm) const override;
-  /// Select constant vector splats whose value is a run of set bits
+  /// \brief Select constant vector splats whose value is a run of set bits
   /// starting at bit zero.
   bool selectVSplatMaskR(SDValue N, SDValue &Imm) const override;
 

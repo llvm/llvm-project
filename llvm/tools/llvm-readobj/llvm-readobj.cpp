@@ -34,10 +34,11 @@
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetRegistry.h"
 
 using namespace llvm;
@@ -146,18 +147,6 @@ namespace opts {
   cl::alias ProgramHeadersShort("l", cl::desc("Alias for --program-headers"),
                                 cl::aliasopt(ProgramHeaders));
 
-  // -string-dump
-  cl::list<std::string> StringDump("string-dump", cl::desc("<number|name>"),
-                                   cl::ZeroOrMore);
-  cl::alias StringDumpShort("p", cl::desc("Alias for --string-dump"),
-                            cl::aliasopt(StringDump));
-
-  // -hex-dump
-  cl::list<std::string> HexDump("hex-dump", cl::desc("<number|name>"),
-                                cl::ZeroOrMore);
-  cl::alias HexDumpShort("x", cl::desc("Alias for --hex-dump"),
-                         cl::aliasopt(HexDump));
-
   // -hash-table
   cl::opt<bool> HashTable("hash-table",
     cl::desc("Display ELF hash table"));
@@ -169,10 +158,6 @@ namespace opts {
   // -expand-relocs
   cl::opt<bool> ExpandRelocs("expand-relocs",
     cl::desc("Expand each shown relocation to multiple lines"));
-
-  // -raw-relr
-  cl::opt<bool> RawRelr("raw-relr",
-    cl::desc("Do not decode relocations in SHT_RELR section, display raw contents"));
 
   // -codeview
   cl::opt<bool> CodeView("codeview",
@@ -243,11 +228,6 @@ namespace opts {
   COFFLoadConfig("coff-load-config",
                  cl::desc("Display the PE/COFF load config"));
 
-  // -elf-linker-options
-  cl::opt<bool>
-  ELFLinkerOptions("elf-linker-options",
-                   cl::desc("Display the ELF .linker-options section"));
-
   // -macho-data-in-code
   cl::opt<bool>
   MachODataInCode("macho-data-in-code",
@@ -299,11 +279,6 @@ namespace opts {
       cl::desc("Display bucket list histogram for hash sections"));
   cl::alias HashHistogramShort("I", cl::desc("Alias for -elf-hash-histogram"),
                                cl::aliasopt(HashHistogram));
-
-  cl::opt<bool> CGProfile("elf-cg-profile", cl::desc("Display callgraph profile section"));
-
-  cl::opt<bool> Addrsig("elf-addrsig",
-                        cl::desc("Display address-significance table"));
 
   cl::opt<OutputStyleTy>
       Output("elf-output-style", cl::desc("Specify ELF dump style"),
@@ -380,7 +355,7 @@ struct ReadObjTypeTableBuilder {
 }
 static ReadObjTypeTableBuilder CVTypes;
 
-/// Creates an format-specific object file dumper.
+/// @brief Creates an format-specific object file dumper.
 static std::error_code createDumper(const ObjectFile *Obj,
                                     ScopedPrinter &Writer,
                                     std::unique_ptr<ObjDumper> &Result) {
@@ -399,20 +374,20 @@ static std::error_code createDumper(const ObjectFile *Obj,
   return readobj_error::unsupported_obj_file_format;
 }
 
-/// Dumps the specified object file.
-static void dumpObject(const ObjectFile *Obj, ScopedPrinter &Writer) {
+/// @brief Dumps the specified object file.
+static void dumpObject(const ObjectFile *Obj) {
+  ScopedPrinter Writer(outs());
   std::unique_ptr<ObjDumper> Dumper;
   if (std::error_code EC = createDumper(Obj, Writer, Dumper))
     reportError(Obj->getFileName(), EC);
 
   if (opts::Output == opts::LLVM) {
-    Writer.startLine() << "\n";
-    Writer.printString("File", Obj->getFileName());
-    Writer.printString("Format", Obj->getFileFormatName());
-    Writer.printString("Arch", Triple::getArchTypeName(
-                                   (llvm::Triple::ArchType)Obj->getArch()));
-    Writer.printString("AddressSize",
-                       formatv("{0}bit", 8 * Obj->getBytesInAddress()));
+    outs() << '\n';
+    outs() << "File: " << Obj->getFileName() << "\n";
+    outs() << "Format: " << Obj->getFileFormatName() << "\n";
+    outs() << "Arch: " << Triple::getArchTypeName(
+                              (llvm::Triple::ArchType)Obj->getArch()) << "\n";
+    outs() << "AddressSize: " << (8 * Obj->getBytesInAddress()) << "bit\n";
     Dumper->printLoadName();
   }
 
@@ -436,14 +411,6 @@ static void dumpObject(const ObjectFile *Obj, ScopedPrinter &Writer) {
     Dumper->printNeededLibraries();
   if (opts::ProgramHeaders)
     Dumper->printProgramHeaders();
-  if (!opts::StringDump.empty())
-    llvm::for_each(opts::StringDump, [&Dumper, Obj](StringRef SectionName) {
-      Dumper->printSectionAsString(Obj, SectionName);
-    });
-  if (!opts::HexDump.empty())
-    llvm::for_each(opts::HexDump, [&Dumper](StringRef SectionName) {
-      Dumper->printSectionAsHex(SectionName);
-    });
   if (opts::HashTable)
     Dumper->printHashTable();
   if (opts::GnuHashTable)
@@ -451,8 +418,6 @@ static void dumpObject(const ObjectFile *Obj, ScopedPrinter &Writer) {
   if (opts::VersionInfo)
     Dumper->printVersionInfo();
   if (Obj->isELF()) {
-    if (opts::ELFLinkerOptions)
-      Dumper->printELFLinkerOptions();
     if (Obj->getArch() == llvm::Triple::arm)
       if (opts::ARMAttributes)
         Dumper->printAttributes();
@@ -470,10 +435,6 @@ static void dumpObject(const ObjectFile *Obj, ScopedPrinter &Writer) {
       Dumper->printGroupSections();
     if (opts::HashHistogram)
       Dumper->printHashHistogram();
-    if (opts::CGProfile)
-      Dumper->printCGProfile();
-    if (opts::Addrsig)
-      Dumper->printAddrsig();
     if (opts::Notes)
       Dumper->printNotes();
   }
@@ -515,8 +476,8 @@ static void dumpObject(const ObjectFile *Obj, ScopedPrinter &Writer) {
     Dumper->printStackMap();
 }
 
-/// Dumps each object file in \a Arc;
-static void dumpArchive(const Archive *Arc, ScopedPrinter &Writer) {
+/// @brief Dumps each object file in \a Arc;
+static void dumpArchive(const Archive *Arc) {
   Error Err = Error::success();
   for (auto &Child : Arc->children(Err)) {
     Expected<std::unique_ptr<Binary>> ChildOrErr = Child.getAsBinary();
@@ -527,9 +488,9 @@ static void dumpArchive(const Archive *Arc, ScopedPrinter &Writer) {
       continue;
     }
     if (ObjectFile *Obj = dyn_cast<ObjectFile>(&*ChildOrErr.get()))
-      dumpObject(Obj, Writer);
+      dumpObject(Obj);
     else if (COFFImportFile *Imp = dyn_cast<COFFImportFile>(&*ChildOrErr.get()))
-      dumpCOFFImportFile(Imp, Writer);
+      dumpCOFFImportFile(Imp);
     else
       reportError(Arc->getFileName(), readobj_error::unrecognized_file_format);
   }
@@ -537,22 +498,21 @@ static void dumpArchive(const Archive *Arc, ScopedPrinter &Writer) {
     reportError(Arc->getFileName(), std::move(Err));
 }
 
-/// Dumps each object file in \a MachO Universal Binary;
-static void dumpMachOUniversalBinary(const MachOUniversalBinary *UBinary,
-                                     ScopedPrinter &Writer) {
+/// @brief Dumps each object file in \a MachO Universal Binary;
+static void dumpMachOUniversalBinary(const MachOUniversalBinary *UBinary) {
   for (const MachOUniversalBinary::ObjectForArch &Obj : UBinary->objects()) {
     Expected<std::unique_ptr<MachOObjectFile>> ObjOrErr = Obj.getAsObjectFile();
     if (ObjOrErr)
-      dumpObject(&*ObjOrErr.get(), Writer);
+      dumpObject(&*ObjOrErr.get());
     else if (auto E = isNotObjectErrorInvalidFileType(ObjOrErr.takeError())) {
       reportError(UBinary->getFileName(), ObjOrErr.takeError());
     }
     else if (Expected<std::unique_ptr<Archive>> AOrErr = Obj.getAsArchive())
-      dumpArchive(&*AOrErr.get(), Writer);
+      dumpArchive(&*AOrErr.get());
   }
 }
 
-/// Dumps \a WinRes, Windows Resource (.res) file;
+/// @brief Dumps \a WinRes, Windows Resource (.res) file;
 static void dumpWindowsResourceFile(WindowsResource *WinRes) {
   ScopedPrinter Printer{outs()};
   WindowsRes::Dumper Dumper(WinRes, Printer);
@@ -561,9 +521,8 @@ static void dumpWindowsResourceFile(WindowsResource *WinRes) {
 }
 
 
-/// Opens \a File and dumps it.
+/// @brief Opens \a File and dumps it.
 static void dumpInput(StringRef File) {
-  ScopedPrinter Writer(outs());
 
   // Attempt to open the binary.
   Expected<OwningBinary<Binary>> BinaryOrErr = createBinary(File);
@@ -572,14 +531,14 @@ static void dumpInput(StringRef File) {
   Binary &Binary = *BinaryOrErr.get().getBinary();
 
   if (Archive *Arc = dyn_cast<Archive>(&Binary))
-    dumpArchive(Arc, Writer);
+    dumpArchive(Arc);
   else if (MachOUniversalBinary *UBinary =
                dyn_cast<MachOUniversalBinary>(&Binary))
-    dumpMachOUniversalBinary(UBinary, Writer);
+    dumpMachOUniversalBinary(UBinary);
   else if (ObjectFile *Obj = dyn_cast<ObjectFile>(&Binary))
-    dumpObject(Obj, Writer);
+    dumpObject(Obj);
   else if (COFFImportFile *Import = dyn_cast<COFFImportFile>(&Binary))
-    dumpCOFFImportFile(Import, Writer);
+    dumpCOFFImportFile(Import);
   else if (WindowsResource *WinRes = dyn_cast<WindowsResource>(&Binary))
     dumpWindowsResourceFile(WinRes);
   else
@@ -587,14 +546,17 @@ static void dumpInput(StringRef File) {
 }
 
 int main(int argc, const char *argv[]) {
-  InitLLVM X(argc, argv);
+  StringRef ToolName = argv[0];
+  sys::PrintStackTraceOnErrorSignal(ToolName);
+  PrettyStackTraceProgram X(argc, argv);
+  llvm_shutdown_obj Y;
 
   // Register the target printer for --version.
   cl::AddExtraVersionPrinter(TargetRegistry::printRegisteredTargetsForVersion);
 
   opts::WideOutput.setHiddenFlag(cl::Hidden);
 
-  if (sys::path::stem(argv[0]).find("readelf") != StringRef::npos)
+  if (sys::path::stem(ToolName).find("readelf") != StringRef::npos)
     opts::Output = opts::GNU;
 
   cl::ParseCommandLineOptions(argc, argv, "LLVM Object Reader\n");

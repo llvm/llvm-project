@@ -26,11 +26,10 @@ class AMDGPUCallLowering: public CallLowering {
   AMDGPUAS AMDGPUASI;
 
   unsigned lowerParameterPtr(MachineIRBuilder &MIRBuilder, Type *ParamTy,
-                             uint64_t Offset) const;
+                             unsigned Offset) const;
 
   void lowerParameter(MachineIRBuilder &MIRBuilder, Type *ParamTy,
-                      uint64_t Offset, unsigned Align,
-                      unsigned DstReg) const;
+                      unsigned Offset, unsigned DstReg) const;
 
  public:
   AMDGPUCallLowering(const AMDGPUTargetLowering &TLI);

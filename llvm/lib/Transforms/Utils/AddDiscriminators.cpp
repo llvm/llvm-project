@@ -69,7 +69,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Utils.h"
+#include "llvm/Transforms/Scalar.h"
 #include <utility>
 
 using namespace llvm;
@@ -114,7 +114,7 @@ static bool shouldHaveDiscriminator(const Instruction *I) {
   return !isa<IntrinsicInst>(I) || isa<MemIntrinsic>(I);
 }
 
-/// Assign DWARF discriminators.
+/// \brief Assign DWARF discriminators.
 ///
 /// To assign discriminators, we examine the boundaries of every
 /// basic block and its successors. Suppose there is a basic block B1
@@ -210,9 +210,9 @@ static bool addDiscriminators(Function &F) {
       // it in 1 byte ULEB128 representation.
       unsigned Discriminator = R.second ? ++LDM[L] : LDM[L];
       I.setDebugLoc(DIL->setBaseDiscriminator(Discriminator));
-      LLVM_DEBUG(dbgs() << DIL->getFilename() << ":" << DIL->getLine() << ":"
-                        << DIL->getColumn() << ":" << Discriminator << " " << I
-                        << "\n");
+      DEBUG(dbgs() << DIL->getFilename() << ":" << DIL->getLine() << ":"
+                   << DIL->getColumn() << ":" << Discriminator << " " << I
+                   << "\n");
       Changed = true;
     }
   }

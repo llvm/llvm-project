@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple x86_64-unknown-unknown --show-encoding < %s | FileCheck %s
+// RUN: llvm-mc -triple x86_64-unknown-unknown -mcpu=knl -mattr=+avx512vbmi2 --show-encoding < %s | FileCheck %s
 
 // CHECK: vpexpandb %zmm3, %zmm1
 // CHECK: encoding: [0x62,0xf2,0x7d,0x48,0x62,0xcb]

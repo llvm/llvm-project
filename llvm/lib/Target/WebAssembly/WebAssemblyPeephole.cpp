@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Late peephole optimizations for WebAssembly.
+/// \brief Late peephole optimizations for WebAssembly.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -50,9 +50,6 @@ public:
 } // end anonymous namespace
 
 char WebAssemblyPeephole::ID = 0;
-INITIALIZE_PASS(WebAssemblyPeephole, DEBUG_TYPE,
-                "WebAssembly peephole optimizations", false, false)
-
 FunctionPass *llvm::createWebAssemblyPeephole() {
   return new WebAssemblyPeephole();
 }
@@ -83,13 +80,18 @@ static bool MaybeRewriteToFallthrough(MachineInstr &MI, MachineBasicBlock &MBB,
     return false;
   if (&MBB != &MF.back())
     return false;
-
-  MachineBasicBlock::iterator End = MBB.end();
-  --End;
-  assert(End->getOpcode() == WebAssembly::END_FUNCTION);
-  --End;
-  if (&MI != &*End)
-    return false;
+  if (MF.getSubtarget<WebAssemblySubtarget>()
+        .getTargetTriple().isOSBinFormatELF()) {
+    if (&MI != &MBB.back())
+      return false;
+  } else {
+    MachineBasicBlock::iterator End = MBB.end();
+    --End;
+    assert(End->getOpcode() == WebAssembly::END_FUNCTION);
+    --End;
+    if (&MI != &*End)
+      return false;
+  }
 
   if (FallthroughOpc != WebAssembly::FALLTHROUGH_RETURN_VOID) {
     // If the operand isn't stackified, insert a COPY to read the operand and
@@ -111,7 +113,7 @@ static bool MaybeRewriteToFallthrough(MachineInstr &MI, MachineBasicBlock &MBB,
 }
 
 bool WebAssemblyPeephole::runOnMachineFunction(MachineFunction &MF) {
-  LLVM_DEBUG({
+  DEBUG({
     dbgs() << "********** Peephole **********\n"
            << "********** Function: " << MF.getName() << '\n';
   });

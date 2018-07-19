@@ -50,22 +50,11 @@ public:
     return v->isIR();
   }
 
-  using module_iterator =
-      pointee_iterator<std::vector<std::unique_ptr<Module>>::const_iterator,
-                       const Module>;
-
-  module_iterator module_begin() const { return module_iterator(Mods.begin()); }
-  module_iterator module_end() const { return module_iterator(Mods.end()); }
-
-  iterator_range<module_iterator> modules() const {
-    return make_range(module_begin(), module_end());
-  }
-
-  /// Finds and returns bitcode embedded in the given object file, or an
+  /// \brief Finds and returns bitcode embedded in the given object file, or an
   /// error code if not found.
   static Expected<MemoryBufferRef> findBitcodeInObject(const ObjectFile &Obj);
 
-  /// Finds and returns bitcode in the given memory buffer (which may
+  /// \brief Finds and returns bitcode in the given memory buffer (which may
   /// be either a bitcode file or a native object file with embedded bitcode),
   /// or an error code if not found.
   static Expected<MemoryBufferRef>

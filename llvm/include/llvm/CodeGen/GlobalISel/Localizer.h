@@ -70,8 +70,6 @@ public:
         .set(MachineFunctionProperties::Property::RegBankSelected);
   }
 
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
-
   bool runOnMachineFunction(MachineFunction &MF) override;
 };
 

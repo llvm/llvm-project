@@ -379,12 +379,11 @@ define amdgpu_kernel void @test_fold_canonicalize_minnum_value_f32(float addrspa
   ret void
 }
 
-; FIXME: Should there be more checks here? minnum with NaN operand is simplified away.
-
 ; GCN-LABEL: test_fold_canonicalize_sNaN_value_f32:
-; VI:   v_add_u32_e32 v{{[0-9]+}}
-; GFX9:	v_add_co_u32_e32 v{{[0-9]+}}
-; GCN:  {{flat|global}}_store_dword v[{{[0-9:]+}}]
+; GCN:  v_min_f32_e32 [[V0:v[0-9]+]], 0x7f800001, v{{[0-9]+}}
+; GCN-FLUSH:  v_mul_f32_e32 [[RESULT:v[0-9]+]], 1.0, [[V0]]
+; GCN-DENORM: v_max_f32_e32 [[RESULT:v[0-9]+]], [[V0]], [[V0]]
+; GCN:  {{flat|global}}_store_dword v[{{[0-9:]+}}], [[RESULT]]
 define amdgpu_kernel void @test_fold_canonicalize_sNaN_value_f32(float addrspace(1)* %arg) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds float, float addrspace(1)* %arg, i32 %id

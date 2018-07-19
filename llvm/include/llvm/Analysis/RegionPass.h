@@ -28,7 +28,7 @@ class RGPassManager;
 class Function;
 
 //===----------------------------------------------------------------------===//
-/// A pass that runs on each Region in a function.
+/// @brief A pass that runs on each Region in a function.
 ///
 /// RegionPass is managed by RGPassManager.
 class RegionPass : public Pass {
@@ -39,7 +39,7 @@ public:
   /// @name To be implemented by every RegionPass
   ///
   //@{
-  /// Run the pass on a specific Region
+  /// @brief Run the pass on a specific Region
   ///
   /// Accessing regions not contained in the current region is not allowed.
   ///
@@ -49,7 +49,7 @@ public:
   /// @return True if the pass modifies this Region.
   virtual bool runOnRegion(Region *R, RGPassManager &RGM) = 0;
 
-  /// Get a pass to print the LLVM IR in the region.
+  /// @brief Get a pass to print the LLVM IR in the region.
   ///
   /// @param O      The output stream to print the Region.
   /// @param Banner The banner to separate different printed passes.
@@ -85,7 +85,7 @@ protected:
   bool skipRegion(Region &R) const;
 };
 
-/// The pass manager to schedule RegionPasses.
+/// @brief The pass manager to schedule RegionPasses.
 class RGPassManager : public FunctionPass, public PMDataManager {
   std::deque<Region*> RQ;
   bool skipThisRegion;
@@ -97,7 +97,7 @@ public:
   static char ID;
   explicit RGPassManager();
 
-  /// Execute all of the passes scheduled for execution.
+  /// @brief Execute all of the passes scheduled for execution.
   ///
   /// @return True if any of the passes modifies the function.
   bool runOnFunction(Function &F) override;
@@ -111,10 +111,10 @@ public:
   PMDataManager *getAsPMDataManager() override { return this; }
   Pass *getAsPass() override { return this; }
 
-  /// Print passes managed by this manager.
+  /// @brief Print passes managed by this manager.
   void dumpPassStructure(unsigned Offset) override;
 
-  /// Get passes contained by this manager.
+  /// @brief Get passes contained by this manager.
   Pass *getContainedPass(unsigned N) {
     assert(N < PassVector.size() && "Pass number out of range!");
     Pass *FP = static_cast<Pass *>(PassVector[N]);

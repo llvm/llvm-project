@@ -28,14 +28,14 @@ class LoopAccessInfo;
 class LoopInfo;
 class ScalarEvolution;
 
-/// This class emits a version of the loop where run-time checks ensure
+/// \brief This class emits a version of the loop where run-time checks ensure
 /// that may-alias pointers can't overlap.
 ///
 /// It currently only supports single-exit loops and assumes that the loop
 /// already has a preheader.
 class LoopVersioning {
 public:
-  /// Expects LoopAccessInfo, Loop, LoopInfo, DominatorTree as input.
+  /// \brief Expects LoopAccessInfo, Loop, LoopInfo, DominatorTree as input.
   /// It uses runtime check provided by the user. If \p UseLAIChecks is true,
   /// we will retain the default checks made by LAI. Otherwise, construct an
   /// object having no checks and we expect the user to add them.
@@ -43,7 +43,7 @@ public:
                  DominatorTree *DT, ScalarEvolution *SE,
                  bool UseLAIChecks = true);
 
-  /// Performs the CFG manipulation part of versioning the loop including
+  /// \brief Performs the CFG manipulation part of versioning the loop including
   /// the DominatorTree and LoopInfo updates.
   ///
   /// The loop that was used to construct the class will be the "versioned" loop
@@ -58,38 +58,38 @@ public:
   ///        transform L
   void versionLoop() { versionLoop(findDefsUsedOutsideOfLoop(VersionedLoop)); }
 
-  /// Same but if the client has already precomputed the set of values
+  /// \brief Same but if the client has already precomputed the set of values
   /// used outside the loop, this API will allows passing that.
   void versionLoop(const SmallVectorImpl<Instruction *> &DefsUsedOutside);
 
-  /// Returns the versioned loop.  Control flows here if pointers in the
+  /// \brief Returns the versioned loop.  Control flows here if pointers in the
   /// loop don't alias (i.e. all memchecks passed).  (This loop is actually the
   /// same as the original loop that we got constructed with.)
   Loop *getVersionedLoop() { return VersionedLoop; }
 
-  /// Returns the fall-back loop.  Control flows here if pointers in the
+  /// \brief Returns the fall-back loop.  Control flows here if pointers in the
   /// loop may alias (i.e. one of the memchecks failed).
   Loop *getNonVersionedLoop() { return NonVersionedLoop; }
 
-  /// Sets the runtime alias checks for versioning the loop.
+  /// \brief Sets the runtime alias checks for versioning the loop.
   void setAliasChecks(
       SmallVector<RuntimePointerChecking::PointerCheck, 4> Checks);
 
-  /// Sets the runtime SCEV checks for versioning the loop.
+  /// \brief Sets the runtime SCEV checks for versioning the loop.
   void setSCEVChecks(SCEVUnionPredicate Check);
 
-  /// Annotate memory instructions in the versioned loop with no-alias
+  /// \brief Annotate memory instructions in the versioned loop with no-alias
   /// metadata based on the memchecks issued.
   ///
   /// This is just wrapper that calls prepareNoAliasMetadata and
   /// annotateInstWithNoAlias on the instructions of the versioned loop.
   void annotateLoopWithNoAlias();
 
-  /// Set up the aliasing scopes based on the memchecks.  This needs to
+  /// \brief Set up the aliasing scopes based on the memchecks.  This needs to
   /// be called before the first call to annotateInstWithNoAlias.
   void prepareNoAliasMetadata();
 
-  /// Add the noalias annotations to \p VersionedInst.
+  /// \brief Add the noalias annotations to \p VersionedInst.
   ///
   /// \p OrigInst is the instruction corresponding to \p VersionedInst in the
   /// original loop.  Initialize the aliasing scopes with
@@ -98,50 +98,50 @@ public:
                                const Instruction *OrigInst);
 
 private:
-  /// Adds the necessary PHI nodes for the versioned loops based on the
+  /// \brief Adds the necessary PHI nodes for the versioned loops based on the
   /// loop-defined values used outside of the loop.
   ///
   /// This needs to be called after versionLoop if there are defs in the loop
   /// that are used outside the loop.
   void addPHINodes(const SmallVectorImpl<Instruction *> &DefsUsedOutside);
 
-  /// Add the noalias annotations to \p I.  Initialize the aliasing
+  /// \brief Add the noalias annotations to \p I.  Initialize the aliasing
   /// scopes with prepareNoAliasMetadata once before this can be called.
   void annotateInstWithNoAlias(Instruction *I) {
     annotateInstWithNoAlias(I, I);
   }
 
-  /// The original loop.  This becomes the "versioned" one.  I.e.,
+  /// \brief The original loop.  This becomes the "versioned" one.  I.e.,
   /// control flows here if pointers in the loop don't alias.
   Loop *VersionedLoop;
-  /// The fall-back loop.  I.e. control flows here if pointers in the
+  /// \brief The fall-back loop.  I.e. control flows here if pointers in the
   /// loop may alias (memchecks failed).
   Loop *NonVersionedLoop;
 
-  /// This maps the instructions from VersionedLoop to their counterpart
+  /// \brief This maps the instructions from VersionedLoop to their counterpart
   /// in NonVersionedLoop.
   ValueToValueMapTy VMap;
 
-  /// The set of alias checks that we are versioning for.
+  /// \brief The set of alias checks that we are versioning for.
   SmallVector<RuntimePointerChecking::PointerCheck, 4> AliasChecks;
 
-  /// The set of SCEV checks that we are versioning for.
+  /// \brief The set of SCEV checks that we are versioning for.
   SCEVUnionPredicate Preds;
 
-  /// Maps a pointer to the pointer checking group that the pointer
+  /// \brief Maps a pointer to the pointer checking group that the pointer
   /// belongs to.
   DenseMap<const Value *, const RuntimePointerChecking::CheckingPtrGroup *>
       PtrToGroup;
 
-  /// The alias scope corresponding to a pointer checking group.
+  /// \brief The alias scope corresponding to a pointer checking group.
   DenseMap<const RuntimePointerChecking::CheckingPtrGroup *, MDNode *>
       GroupToScope;
 
-  /// The list of alias scopes that a pointer checking group can't alias.
+  /// \brief The list of alias scopes that a pointer checking group can't alias.
   DenseMap<const RuntimePointerChecking::CheckingPtrGroup *, MDNode *>
       GroupToNonAliasingScopeList;
 
-  /// Analyses used.
+  /// \brief Analyses used.
   const LoopAccessInfo &LAI;
   LoopInfo *LI;
   DominatorTree *DT;

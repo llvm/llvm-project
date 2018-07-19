@@ -16,17 +16,20 @@ entry:
 
 ; CHECK-ARM-LABEL: test_cmpxchg_res_i8
 ; CHECK-ARM: bl __sync_val_compare_and_swap_1
-; CHECK-ARM: sub r0, r0, {{r[0-9]+}}
-; CHECK-ARM: rsbs [[REG:r[0-9]+]], r0, #0
-; CHECK-ARM: adc r0, r0, [[REG]]
+; CHECK-ARM: mov [[REG:r[0-9]+]], #0
+; CHECK-ARM: cmp r0, {{r[0-9]+}}
+; CHECK-ARM: moveq [[REG]], #1
+; CHECK-ARM: mov r0, [[REG]]
 
 ; CHECK-THUMB-LABEL: test_cmpxchg_res_i8
 ; CHECK-THUMB: bl __sync_val_compare_and_swap_1
 ; CHECK-THUMB-NOT: mov [[R1:r[0-7]]], r0
-; CHECK-THUMB: subs [[R1:r[0-7]]], r0, {{r[0-9]+}}
-; CHECK-THUMB: movs r0, #0
-; CHECK-THUMB: subs r0, r0, [[R1]]
-; CHECK-THUMB: adcs r0, [[R1]]
+; CHECK-THUMB: movs [[R1:r[0-7]]], r0
+; CHECK-THUMB: movs r0, #1
+; CHECK-THUMB: movs [[R2:r[0-9]+]], #0
+; CHECK-THUMB: cmp [[R1]], {{r[0-9]+}}
+; CHECK-THUMB: beq
+; CHECK-THUMB: movs r0, [[R2]]
 
 ; CHECK-ARMV6-LABEL: test_cmpxchg_res_i8:
 ; CHECK-ARMV6-NEXT:  .fnstart
@@ -45,11 +48,15 @@ entry:
 ; CHECK-THUMBV6-LABEL: test_cmpxchg_res_i8:
 ; CHECK-THUMBV6:       mov [[EXPECTED:r[0-9]+]], r1
 ; CHECK-THUMBV6-NEXT:  bl __sync_val_compare_and_swap_1
-; CHECK-THUMBV6-NEXT:  uxtb r1, r4
-; CHECK-THUMBV6-NEXT:  subs [[R1:r[0-7]]], r0, {{r[0-9]+}}
-; CHECK-THUMBV6-NEXT:  movs r0, #0
-; CHECK-THUMBV6-NEXT:  subs r0, r0, [[R1]]
-; CHECK-THUMBV6-NEXT:  adcs r0, [[R1]]
+; CHECK-THUMBV6-NEXT:  mov [[RES:r[0-9]+]], r0
+; CHECK-THUMBV6-NEXT:  uxtb [[EXPECTED_ZEXT:r[0-9]+]], [[EXPECTED]]
+; CHECK-THUMBV6-NEXT:  movs r0, #1
+; CHECK-THUMBV6-NEXT:  movs [[ZERO:r[0-9]+]], #0
+; CHECK-THUMBV6-NEXT:  cmp [[RES]], [[EXPECTED_ZEXT]]
+; CHECK-THUMBV6-NEXT:  beq [[END:.LBB[0-9_]+]]
+; CHECK-THUMBV6-NEXT:  mov r0, [[ZERO]]
+; CHECK-THUMBV6-NEXT: [[END]]:
+; CHECK-THUMBV6-NEXT:  pop {{.*}}pc}
 
 ; CHECK-ARMV7-LABEL: test_cmpxchg_res_i8:
 ; CHECK-ARMV7-NEXT: .fnstart

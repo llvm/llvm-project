@@ -1,6 +1,6 @@
 ; Test the backchain attribute.
 ;
-; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck -allow-deprecated-dag-overlap %s
+; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s
 
 declare i8 *@llvm.stacksave()
 declare void @llvm.stackrestore(i8 *)

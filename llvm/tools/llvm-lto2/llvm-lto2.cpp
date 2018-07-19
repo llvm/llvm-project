@@ -17,7 +17,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Bitcode/BitcodeReader.h"
-#include "llvm/CodeGen/CommandFlags.inc"
+#include "llvm/CodeGen/CommandFlags.def"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/LTO/Caching.h"
 #include "llvm/LTO/LTO.h"
@@ -113,9 +113,6 @@ static cl::opt<bool>
     DebugPassManager("debug-pass-manager", cl::init(false), cl::Hidden,
                      cl::desc("Print pass management debugging information"));
 
-static cl::opt<std::string>
-    StatsFile("stats-file", cl::desc("Filename to write statistics to"));
-
 static void check(Error E, std::string Msg) {
   if (!E)
     return;
@@ -192,8 +189,7 @@ static int run(int argc, char **argv) {
     DiagnosticPrinterRawOStream DP(errs());
     DI.print(DP);
     errs() << '\n';
-    if (DI.getSeverity() == DS_Error)
-      exit(1);
+    exit(1);
   };
 
   Conf.CPU = MCPU;
@@ -244,15 +240,10 @@ static int run(int argc, char **argv) {
 
   Conf.OverrideTriple = OverrideTriple;
   Conf.DefaultTriple = DefaultTriple;
-  Conf.StatsFile = StatsFile;
 
   ThinBackend Backend;
   if (ThinLTODistributedIndexes)
-    Backend = createWriteIndexesThinBackend(/* OldPrefix */ "",
-                                            /* NewPrefix */ "",
-                                            /* ShouldEmitImportsFiles */ true,
-                                            /* LinkedObjectsFile */ nullptr,
-                                            /* OnWrite */ {});
+    Backend = createWriteIndexesThinBackend("", "", true, "");
   else
     Backend = createInProcessThinBackend(Threads);
   LTO Lto(std::move(Conf), std::move(Backend));
@@ -305,7 +296,8 @@ static int run(int argc, char **argv) {
     return llvm::make_unique<lto::NativeObjectStream>(std::move(S));
   };
 
-  auto AddBuffer = [&](size_t Task, std::unique_ptr<MemoryBuffer> MB) {
+  auto AddBuffer = [&](size_t Task, std::unique_ptr<MemoryBuffer> MB,
+                       StringRef Path) {
     *AddStream(Task)->OS << MB->getBuffer();
   };
 

@@ -4,31 +4,31 @@
 
 # CHECK-LABEL: name: test0a
 # TODO: Enhance combiner to handle this case. This expands into:
-#   sub     $r7, $r6, $r3
-#   sub.f   $r7, $r6, $r0
-#   sel.eq $r18, $r3, $rv
+#   sub     %r7, %r6, %r3
+#   sub.f   %r7, %r6, %r0
+#   sel.eq %r18, %r3, %rv
 # This is different from the pattern currently matched. If the lowered form had
-# been sub.f $r3, 0, $r0 then it would have matched.
+# been sub.f %r3, 0, %r0 then it would have matched.
 
 # CHECK-LABEL: name: test1a
-# CHECK: [[IN1:%.*]]:gpr = COPY $r7
-# CHECK: [[IN2:%.*]]:gpr = COPY $r6
-# CHECK: SUB_F_R [[IN1]], [[IN2]], 0, implicit-def $sr
+# CHECK: [[IN1:%.*]]:gpr = COPY %r7
+# CHECK: [[IN2:%.*]]:gpr = COPY %r6
+# CHECK: SUB_F_R [[IN1]], [[IN2]], 0, implicit-def %sr
 
 # CHECK-LABEL: name: test1b
-# CHECK: [[IN1:%.*]]:gpr = COPY $r7
-# CHECK: [[IN2:%.*]]:gpr = COPY $r6
-# CHECK: SUB_F_R [[IN1]], [[IN2]], 0, implicit-def $sr
+# CHECK: [[IN1:%.*]]:gpr = COPY %r7
+# CHECK: [[IN2:%.*]]:gpr = COPY %r6
+# CHECK: SUB_F_R [[IN1]], [[IN2]], 0, implicit-def %sr
 
 # CHECK-LABEL: name: test2a
-# CHECK: [[IN1:%.*]]:gpr = COPY $r7
-# CHECK: [[IN2:%.*]]:gpr = COPY $r6
-# CHECK: SUB_F_R [[IN1]], [[IN2]], 0, implicit-def $sr
+# CHECK: [[IN1:%.*]]:gpr = COPY %r7
+# CHECK: [[IN2:%.*]]:gpr = COPY %r6
+# CHECK: SUB_F_R [[IN1]], [[IN2]], 0, implicit-def %sr
 
 # CHECK-LABEL: name: test2b
-# CHECK: [[IN1:%.*]]:gpr = COPY $r7
-# CHECK: [[IN2:%.*]]:gpr = COPY $r6
-# CHECK: SUB_F_R [[IN1]], [[IN2]], 0, implicit-def $sr
+# CHECK: [[IN1:%.*]]:gpr = COPY %r7
+# CHECK: [[IN2:%.*]]:gpr = COPY %r6
+# CHECK: SUB_F_R [[IN1]], [[IN2]], 0, implicit-def %sr
 
 # CHECK-LABEL: name: test3
 # CHECK: AND_F_R
@@ -184,9 +184,9 @@ registers:
   - { id: 4, class: gpr }
   - { id: 5, class: gpr }
 liveins:
-  - { reg: '$r6', virtual-reg: '%0' }
-  - { reg: '$r7', virtual-reg: '%1' }
-  - { reg: '$r18', virtual-reg: '%2' }
+  - { reg: '%r6', virtual-reg: '%0' }
+  - { reg: '%r7', virtual-reg: '%1' }
+  - { reg: '%r18', virtual-reg: '%2' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -203,16 +203,16 @@ frameInfo:
   hasMustTailInVarArgFunc: false
 body:             |
   bb.0.entry:
-    liveins: $r6, $r7, $r18
+    liveins: %r6, %r7, %r18
 
-    %2 = COPY $r18
-    %1 = COPY $r7
-    %0 = COPY $r6
+    %2 = COPY %r18
+    %1 = COPY %r7
+    %0 = COPY %r6
     %4 = SUB_R %1, %0, 0
-    SFSUB_F_RI_LO %4, 0, implicit-def $sr
-    %5 = SELECT %2, %4, 7, implicit $sr
-    $rv = COPY %5
-    RET implicit $rca, implicit $rv
+    SFSUB_F_RI_LO %4, 0, implicit-def %sr
+    %5 = SELECT %2, %4, 7, implicit %sr
+    %rv = COPY %5
+    RET implicit %rca, implicit %rv
 
 ...
 ---
@@ -227,9 +227,9 @@ registers:
   - { id: 3, class: gpr }
   - { id: 4, class: gpr }
 liveins:
-  - { reg: '$r6', virtual-reg: '%0' }
-  - { reg: '$r7', virtual-reg: '%1' }
-  - { reg: '$r18', virtual-reg: '%2' }
+  - { reg: '%r6', virtual-reg: '%0' }
+  - { reg: '%r7', virtual-reg: '%1' }
+  - { reg: '%r18', virtual-reg: '%2' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -246,15 +246,15 @@ frameInfo:
   hasMustTailInVarArgFunc: false
 body:             |
   bb.0.entry:
-    liveins: $r6, $r7, $r18
+    liveins: %r6, %r7, %r18
 
-    %2 = COPY $r18
-    %1 = COPY $r7
-    %0 = COPY $r6
-    SFSUB_F_RR %1, %0, implicit-def $sr
-    %4 = SELECT %2, %1, 7, implicit $sr
-    $rv = COPY %4
-    RET implicit $rca, implicit $rv
+    %2 = COPY %r18
+    %1 = COPY %r7
+    %0 = COPY %r6
+    SFSUB_F_RR %1, %0, implicit-def %sr
+    %4 = SELECT %2, %1, 7, implicit %sr
+    %rv = COPY %4
+    RET implicit %rca, implicit %rv
 
 ...
 ---
@@ -270,10 +270,10 @@ registers:
   - { id: 4, class: gpr }
   - { id: 5, class: gpr }
 liveins:
-  - { reg: '$r6', virtual-reg: '%0' }
-  - { reg: '$r7', virtual-reg: '%1' }
-  - { reg: '$r18', virtual-reg: '%2' }
-  - { reg: '$r19', virtual-reg: '%3' }
+  - { reg: '%r6', virtual-reg: '%0' }
+  - { reg: '%r7', virtual-reg: '%1' }
+  - { reg: '%r18', virtual-reg: '%2' }
+  - { reg: '%r19', virtual-reg: '%3' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -290,17 +290,17 @@ frameInfo:
   hasMustTailInVarArgFunc: false
 body:             |
   bb.0.entry:
-    liveins: $r6, $r7, $r18, $r19
+    liveins: %r6, %r7, %r18, %r19
 
-    %3 = COPY $r19
-    %2 = COPY $r18
-    %1 = COPY $r7
-    %0 = COPY $r6
+    %3 = COPY %r19
+    %2 = COPY %r18
+    %1 = COPY %r7
+    %0 = COPY %r6
     %4 = SUB_R %1, %0, 0
-    SFSUB_F_RI_LO killed %4, 0, implicit-def $sr
-    %5 = SELECT %2, %3, 11, implicit $sr
-    $rv = COPY %5
-    RET implicit $rca, implicit $rv
+    SFSUB_F_RI_LO killed %4, 0, implicit-def %sr
+    %5 = SELECT %2, %3, 11, implicit %sr
+    %rv = COPY %5
+    RET implicit %rca, implicit %rv
 
 ...
 ---
@@ -316,10 +316,10 @@ registers:
   - { id: 4, class: gpr }
   - { id: 5, class: gpr }
 liveins:
-  - { reg: '$r6', virtual-reg: '%0' }
-  - { reg: '$r7', virtual-reg: '%1' }
-  - { reg: '$r18', virtual-reg: '%2' }
-  - { reg: '$r19', virtual-reg: '%3' }
+  - { reg: '%r6', virtual-reg: '%0' }
+  - { reg: '%r7', virtual-reg: '%1' }
+  - { reg: '%r18', virtual-reg: '%2' }
+  - { reg: '%r19', virtual-reg: '%3' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -336,17 +336,17 @@ frameInfo:
   hasMustTailInVarArgFunc: false
 body:             |
   bb.0.entry:
-    liveins: $r6, $r7, $r18, $r19
+    liveins: %r6, %r7, %r18, %r19
 
-    %3 = COPY $r19
-    %2 = COPY $r18
-    %1 = COPY $r7
-    %0 = COPY $r6
+    %3 = COPY %r19
+    %2 = COPY %r18
+    %1 = COPY %r7
+    %0 = COPY %r6
     %4 = SUB_R %1, %0, 0
-    SFSUB_F_RI_LO killed %4, 0, implicit-def $sr
-    %5 = SELECT %2, %3, 11, implicit $sr
-    $rv = COPY %5
-    RET implicit $rca, implicit $rv
+    SFSUB_F_RI_LO killed %4, 0, implicit-def %sr
+    %5 = SELECT %2, %3, 11, implicit %sr
+    %rv = COPY %5
+    RET implicit %rca, implicit %rv
 
 ...
 ---
@@ -362,10 +362,10 @@ registers:
   - { id: 4, class: gpr }
   - { id: 5, class: gpr }
 liveins:
-  - { reg: '$r6', virtual-reg: '%0' }
-  - { reg: '$r7', virtual-reg: '%1' }
-  - { reg: '$r18', virtual-reg: '%2' }
-  - { reg: '$r19', virtual-reg: '%3' }
+  - { reg: '%r6', virtual-reg: '%0' }
+  - { reg: '%r7', virtual-reg: '%1' }
+  - { reg: '%r18', virtual-reg: '%2' }
+  - { reg: '%r19', virtual-reg: '%3' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -382,17 +382,17 @@ frameInfo:
   hasMustTailInVarArgFunc: false
 body:             |
   bb.0.entry:
-    liveins: $r6, $r7, $r18, $r19
+    liveins: %r6, %r7, %r18, %r19
 
-    %3 = COPY $r19
-    %2 = COPY $r18
-    %1 = COPY $r7
-    %0 = COPY $r6
+    %3 = COPY %r19
+    %2 = COPY %r18
+    %1 = COPY %r7
+    %0 = COPY %r6
     %4 = SUB_R %1, %0, 0
-    SFSUB_F_RI_LO killed %4, 0, implicit-def $sr
-    %5 = SELECT %2, %3, 10, implicit $sr
-    $rv = COPY %5
-    RET implicit $rca, implicit $rv
+    SFSUB_F_RI_LO killed %4, 0, implicit-def %sr
+    %5 = SELECT %2, %3, 10, implicit %sr
+    %rv = COPY %5
+    RET implicit %rca, implicit %rv
 
 ...
 ---
@@ -408,10 +408,10 @@ registers:
   - { id: 4, class: gpr }
   - { id: 5, class: gpr }
 liveins:
-  - { reg: '$r6', virtual-reg: '%0' }
-  - { reg: '$r7', virtual-reg: '%1' }
-  - { reg: '$r18', virtual-reg: '%2' }
-  - { reg: '$r19', virtual-reg: '%3' }
+  - { reg: '%r6', virtual-reg: '%0' }
+  - { reg: '%r7', virtual-reg: '%1' }
+  - { reg: '%r18', virtual-reg: '%2' }
+  - { reg: '%r19', virtual-reg: '%3' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -428,17 +428,17 @@ frameInfo:
   hasMustTailInVarArgFunc: false
 body:             |
   bb.0.entry:
-    liveins: $r6, $r7, $r18, $r19
+    liveins: %r6, %r7, %r18, %r19
 
-    %3 = COPY $r19
-    %2 = COPY $r18
-    %1 = COPY $r7
-    %0 = COPY $r6
+    %3 = COPY %r19
+    %2 = COPY %r18
+    %1 = COPY %r7
+    %0 = COPY %r6
     %4 = SUB_R %1, %0, 0
-    SFSUB_F_RI_LO killed %4, 0, implicit-def $sr
-    %5 = SELECT %2, %3, 10, implicit $sr
-    $rv = COPY %5
-    RET implicit $rca, implicit $rv
+    SFSUB_F_RI_LO killed %4, 0, implicit-def %sr
+    %5 = SELECT %2, %3, 10, implicit %sr
+    %rv = COPY %5
+    RET implicit %rca, implicit %rv
 
 ...
 ---
@@ -454,10 +454,10 @@ registers:
   - { id: 4, class: gpr }
   - { id: 5, class: gpr }
 liveins:
-  - { reg: '$r6', virtual-reg: '%0' }
-  - { reg: '$r7', virtual-reg: '%1' }
-  - { reg: '$r18', virtual-reg: '%2' }
-  - { reg: '$r19', virtual-reg: '%3' }
+  - { reg: '%r6', virtual-reg: '%0' }
+  - { reg: '%r7', virtual-reg: '%1' }
+  - { reg: '%r18', virtual-reg: '%2' }
+  - { reg: '%r19', virtual-reg: '%3' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -474,17 +474,17 @@ frameInfo:
   hasMustTailInVarArgFunc: false
 body:             |
   bb.0.entry:
-    liveins: $r6, $r7, $r18, $r19
+    liveins: %r6, %r7, %r18, %r19
 
-    %3 = COPY $r19
-    %2 = COPY $r18
-    %1 = COPY $r7
-    %0 = COPY $r6
+    %3 = COPY %r19
+    %2 = COPY %r18
+    %1 = COPY %r7
+    %0 = COPY %r6
     %4 = SUB_R %1, %0, 0
-    SFSUB_F_RI_LO killed %4, 1, implicit-def $sr
-    %5 = SELECT %2, %3, 13, implicit $sr
-    $rv = COPY %5
-    RET implicit $rca, implicit $rv
+    SFSUB_F_RI_LO killed %4, 1, implicit-def %sr
+    %5 = SELECT %2, %3, 13, implicit %sr
+    %rv = COPY %5
+    RET implicit %rca, implicit %rv
 
 ...
 ---
@@ -517,10 +517,10 @@ registers:
   - { id: 21, class: gpr }
   - { id: 22, class: gpr }
 liveins:
-  - { reg: '$r6', virtual-reg: '%1' }
-  - { reg: '$r7', virtual-reg: '%2' }
-  - { reg: '$r18', virtual-reg: '%3' }
-  - { reg: '$r19', virtual-reg: '%4' }
+  - { reg: '%r6', virtual-reg: '%1' }
+  - { reg: '%r7', virtual-reg: '%2' }
+  - { reg: '%r18', virtual-reg: '%3' }
+  - { reg: '%r19', virtual-reg: '%4' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -538,63 +538,63 @@ frameInfo:
 body:             |
   bb.0.entry:
     successors: %bb.4.return, %bb.1.if.end
-    liveins: $r6, $r7, $r18, $r19
+    liveins: %r6, %r7, %r18, %r19
 
-    %4 = COPY $r19
-    %3 = COPY $r18
-    %2 = COPY $r7
-    %1 = COPY $r6
-    SFSUB_F_RI_LO %1, 0, implicit-def $sr
-    %5 = SCC 6, implicit $sr
-    SFSUB_F_RR %1, %2, implicit-def $sr
-    %6 = SCC 4, implicit $sr
+    %4 = COPY %r19
+    %3 = COPY %r18
+    %2 = COPY %r7
+    %1 = COPY %r6
+    SFSUB_F_RI_LO %1, 0, implicit-def %sr
+    %5 = SCC 6, implicit %sr
+    SFSUB_F_RR %1, %2, implicit-def %sr
+    %6 = SCC 4, implicit %sr
     %7 = AND_R killed %5, killed %6, 0
     %8 = SLI 1
     %9 = AND_R killed %7, %8, 0
-    SFSUB_F_RI_LO killed %9, 0, implicit-def $sr
-    BRCC %bb.4.return, 6, implicit $sr
+    SFSUB_F_RI_LO killed %9, 0, implicit-def %sr
+    BRCC %bb.4.return, 6, implicit %sr
     BT %bb.1.if.end
 
   bb.1.if.end:
     successors: %bb.4.return, %bb.2.if.end6
 
-    SFSUB_F_RI_LO %2, 0, implicit-def $sr
-    %10 = SCC 6, implicit $sr
-    SFSUB_F_RR %2, %3, implicit-def $sr
-    %11 = SCC 4, implicit $sr
+    SFSUB_F_RI_LO %2, 0, implicit-def %sr
+    %10 = SCC 6, implicit %sr
+    SFSUB_F_RR %2, %3, implicit-def %sr
+    %11 = SCC 4, implicit %sr
     %12 = AND_R killed %10, killed %11, 0
     %14 = AND_R killed %12, %8, 0
-    SFSUB_F_RI_LO killed %14, 0, implicit-def $sr
-    BRCC %bb.4.return, 6, implicit $sr
+    SFSUB_F_RI_LO killed %14, 0, implicit-def %sr
+    BRCC %bb.4.return, 6, implicit %sr
     BT %bb.2.if.end6
 
   bb.2.if.end6:
     successors: %bb.4.return, %bb.3.if.end11
 
-    SFSUB_F_RI_LO %3, 0, implicit-def $sr
-    %15 = SCC 6, implicit $sr
-    SFSUB_F_RR %3, %4, implicit-def $sr
-    %16 = SCC 4, implicit $sr
+    SFSUB_F_RI_LO %3, 0, implicit-def %sr
+    %15 = SCC 6, implicit %sr
+    SFSUB_F_RR %3, %4, implicit-def %sr
+    %16 = SCC 4, implicit %sr
     %17 = AND_R killed %15, killed %16, 0
     %18 = SLI 1
     %19 = AND_R killed %17, killed %18, 0
-    SFSUB_F_RI_LO killed %19, 0, implicit-def $sr
-    BRCC %bb.4.return, 6, implicit $sr
+    SFSUB_F_RI_LO killed %19, 0, implicit-def %sr
+    BRCC %bb.4.return, 6, implicit %sr
     BT %bb.3.if.end11
 
   bb.3.if.end11:
     %20 = SLI 21
-    SFSUB_F_RR %4, %1, implicit-def $sr
-    %21 = SELECT %2, %20, 4, implicit $sr
-    SFSUB_F_RI_LO %4, 0, implicit-def $sr
-    %22 = SELECT killed %21, %20, 6, implicit $sr
-    $rv = COPY %22
-    RET implicit $rca, implicit $rv
+    SFSUB_F_RR %4, %1, implicit-def %sr
+    %21 = SELECT %2, %20, 4, implicit %sr
+    SFSUB_F_RI_LO %4, 0, implicit-def %sr
+    %22 = SELECT killed %21, %20, 6, implicit %sr
+    %rv = COPY %22
+    RET implicit %rca, implicit %rv
 
   bb.4.return:
     %0 = PHI %3, %bb.0.entry, %4, %bb.1.if.end, %1, %bb.2.if.end6
-    $rv = COPY %0
-    RET implicit $rca, implicit $rv
+    %rv = COPY %0
+    RET implicit %rca, implicit %rv
 
 ...
 ---
@@ -637,16 +637,16 @@ body:             |
     %5 = OR_I_LO killed %4, target-flags(lanai-lo) @b
     %6 = LDW_RI killed %5, 0, 0 :: (load 4 from @b, !tbaa !0)
     %0 = SUB_R killed %6, killed %3, 0
-    SFSUB_F_RI_LO %0, 0, implicit-def $sr
-    BRCC %bb.3.if.end, 10, implicit $sr
+    SFSUB_F_RI_LO %0, 0, implicit-def %sr
+    BRCC %bb.3.if.end, 10, implicit %sr
     BT %bb.1.if.then
 
   bb.1.if.then:
     successors: %bb.2.while.body
 
-    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
-    CALL @g, csr, implicit-def dead $rca, implicit $sp, implicit-def $sp, implicit-def $rv
-    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead %sp, implicit %sp
+    CALL @g, csr, implicit-def dead %rca, implicit %sp, implicit-def %sp, implicit-def %rv
+    ADJCALLSTACKUP 0, 0, implicit-def dead %sp, implicit %sp
 
   bb.2.while.body:
     successors: %bb.2.while.body
@@ -655,17 +655,17 @@ body:             |
 
   bb.3.if.end:
     successors: %bb.4.if.then4, %bb.6.if.end7
-    liveins: $sr
+    liveins: %sr
 
-    BRCC %bb.6.if.end7, 14, implicit $sr
+    BRCC %bb.6.if.end7, 14, implicit %sr
     BT %bb.4.if.then4
 
   bb.4.if.then4:
     successors: %bb.5.while.body6
 
-    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
-    CALL @g, csr, implicit-def dead $rca, implicit $sp, implicit-def $sp, implicit-def $rv
-    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead %sp, implicit %sp
+    CALL @g, csr, implicit-def dead %rca, implicit %sp, implicit-def %sp, implicit-def %rv
+    ADJCALLSTACKUP 0, 0, implicit-def dead %sp, implicit %sp
 
   bb.5.while.body6:
     successors: %bb.5.while.body6
@@ -673,6 +673,6 @@ body:             |
     BT %bb.5.while.body6
 
   bb.6.if.end7:
-    RET implicit $rca
+    RET implicit %rca
 
 ...

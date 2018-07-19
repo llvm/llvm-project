@@ -1,28 +1,23 @@
 # RUN: llvm-mc %s -triple=riscv32 -riscv-no-aliases \
-# RUN:     | FileCheck -check-prefixes=CHECK-EXPAND,CHECK-INST %s
+# RUN:     | FileCheck -check-prefix=CHECK-INST %s
 # RUN: llvm-mc %s -triple=riscv32 \
-# RUN:     | FileCheck -check-prefixes=CHECK-EXPAND,CHECK-ALIAS %s
+# RUN:     | FileCheck -check-prefix=CHECK-ALIAS %s
 # RUN: llvm-mc %s -triple=riscv64 -riscv-no-aliases\
-# RUN:     | FileCheck -check-prefixes=CHECK-EXPAND,CHECK-INST %s
+# RUN:     | FileCheck -check-prefix=CHECK-INST %s
 # RUN: llvm-mc %s -triple=riscv64 \
-# RUN:     | FileCheck -check-prefixes=CHECK-EXPAND,CHECK-ALIAS %s
+# RUN:     | FileCheck -check-prefix=CHECK-ALIAS %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 < %s \
 # RUN:     | llvm-objdump -d -riscv-no-aliases - \
-# RUN:     | FileCheck -check-prefixes=CHECK-EXPAND,CHECK-INST %s
+# RUN:     | FileCheck -check-prefix=CHECK-INST %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 < %s \
 # RUN:     | llvm-objdump -d - \
-# RUN:     | FileCheck -check-prefixes=CHECK-EXPAND,CHECK-ALIAS %s
+# RUN:     | FileCheck -check-prefix=CHECK-ALIAS %s
 # RUN: llvm-mc -filetype=obj -triple riscv64 < %s \
 # RUN:     | llvm-objdump -d -riscv-no-aliases - \
-# RUN:     | FileCheck -check-prefixes=CHECK-EXPAND,CHECK-INST %s
+# RUN:     | FileCheck -check-prefix=CHECK-INST %s
 # RUN: llvm-mc -filetype=obj -triple riscv64 < %s \
 # RUN:     | llvm-objdump -d - \
-# RUN:     | FileCheck -check-prefixes=CHECK-EXPAND,CHECK-ALIAS %s
-
-# The following check prefixes are used in this test:
-# CHECK-INST.....Match the canonical instr (tests alias to instr. mapping)
-# CHECK-ALIAS....Match the alias (tests instr. to alias mapping)
-# CHECK-EXPAND...Match canonical instr. unconditionally (tests alias expansion)
+# RUN:     | FileCheck -check-prefix=CHECK-ALIAS %s
 
 # TODO la
 # TODO lb lh lw
@@ -31,7 +26,7 @@
 # CHECK-INST: addi zero, zero, 0
 # CHECK-ALIAS: nop
 nop
-
+# TODO li
 # CHECK-INST: addi t6, zero, 0
 # CHECK-ALIAS: mv t6, zero
 mv x31, zero
@@ -53,13 +48,6 @@ sltz x31, x1
 # CHECK-INST: slt t6, zero, ra
 # CHECK-ALIAS: sgtz t6, ra
 sgtz x31, x1
-
-# CHECK-INST: slt ra, gp, sp
-# CHECK-ALIAS: slt ra, gp, sp
-sgt x1, x2, x3
-# CHECK-INST: sltu tp, t1, t0
-# CHECK-ALIAS: sltu tp, t1, t0
-sgtu x4, x5, x6
 
 # CHECK-INST: beq a0, zero, 512
 # CHECK-ALIAS: beqz a0, 512

@@ -8,7 +8,7 @@
 //==-----------------------------------------------------------------------===//
 //
 /// \file
-/// AMDGPU Implementation of the IntrinsicInfo class.
+/// \brief AMDGPU Implementation of the IntrinsicInfo class.
 //
 //===-----------------------------------------------------------------------===//
 
@@ -25,13 +25,13 @@ AMDGPUIntrinsicInfo::AMDGPUIntrinsicInfo()
 
 static const char *const IntrinsicNameTable[] = {
 #define GET_INTRINSIC_NAME_TABLE
-#include "AMDGPUGenIntrinsicImpl.inc"
+#include "AMDGPUGenIntrinsics.inc"
 #undef GET_INTRINSIC_NAME_TABLE
 };
 
 namespace {
 #define GET_INTRINSIC_ATTRIBUTES
-#include "AMDGPUGenIntrinsicImpl.inc"
+#include "AMDGPUGenIntrinsics.inc"
 #undef GET_INTRINSIC_ATTRIBUTES
 }
 
@@ -80,7 +80,7 @@ unsigned AMDGPUIntrinsicInfo::lookupName(const char *NameData,
 bool AMDGPUIntrinsicInfo::isOverloaded(unsigned id) const {
 // Overload Table
 #define GET_INTRINSIC_OVERLOAD_TABLE
-#include "AMDGPUGenIntrinsicImpl.inc"
+#include "AMDGPUGenIntrinsics.inc"
 #undef GET_INTRINSIC_OVERLOAD_TABLE
 }
 

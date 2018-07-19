@@ -275,20 +275,18 @@ eliminateFrameIndex(MachineBasicBlock::iterator II, int SPAdj,
   MachineInstr &MI = *II;
   MachineFunction &MF = *MI.getParent()->getParent();
 
-  LLVM_DEBUG(errs() << "\nFunction : " << MF.getName() << "\n";
-             errs() << "<--------->\n"
-                    << MI);
+  DEBUG(errs() << "\nFunction : " << MF.getName() << "\n";
+        errs() << "<--------->\n" << MI);
 
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
   uint64_t stackSize = MF.getFrameInfo().getStackSize();
   int64_t spOffset = MF.getFrameInfo().getObjectOffset(FrameIndex);
 
-  LLVM_DEBUG(errs() << "FrameIndex : " << FrameIndex << "\n"
-                    << "spOffset   : " << spOffset << "\n"
-                    << "stackSize  : " << stackSize << "\n"
-                    << "alignment  : "
-                    << MF.getFrameInfo().getObjectAlignment(FrameIndex)
-                    << "\n");
+  DEBUG(errs() << "FrameIndex : " << FrameIndex << "\n"
+               << "spOffset   : " << spOffset << "\n"
+               << "stackSize  : " << stackSize << "\n"
+               << "alignment  : "
+               << MF.getFrameInfo().getObjectAlignment(FrameIndex) << "\n");
 
   eliminateFI(MI, FIOperandNum, FrameIndex, stackSize, spOffset);
 }

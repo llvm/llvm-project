@@ -156,7 +156,7 @@ protected:
 
     // Build the various AA results and register them.
     AC.reset(new AssumptionCache(F));
-    BAR.reset(new BasicAAResult(M.getDataLayout(), F, TLI, *AC));
+    BAR.reset(new BasicAAResult(M.getDataLayout(), TLI, *AC));
     AAR->addAAResult(*BAR);
 
     return *AAR;

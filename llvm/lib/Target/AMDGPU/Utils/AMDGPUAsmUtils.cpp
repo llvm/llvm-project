@@ -61,15 +61,7 @@ const char* const IdSymbolic[] = {
   "HW_REG_HW_ID",
   "HW_REG_GPR_ALLOC",
   "HW_REG_LDS_ALLOC",
-  "HW_REG_IB_STS",
-  nullptr,
-  nullptr,
-  nullptr,
-  nullptr,
-  nullptr,
-  nullptr,
-  nullptr,
-  "HW_REG_SH_MEM_BASES"
+  "HW_REG_IB_STS"
 };
 
 } // namespace Hwreg

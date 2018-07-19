@@ -14,7 +14,9 @@ define float @bitcast_fabs(float %x) {
 ; CHECK-LABEL: bitcast_fabs:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    stfs f1, -8(r1)
-; CHECK:         lwz r2, -8(r1)
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    lwz r2, -8(r1)
 ; CHECK-NEXT:    clrlwi r2, r2, 1
 ; CHECK-NEXT:    stw r2, -4(r1)
 ; CHECK-NEXT:    lfs f1, -4(r1)

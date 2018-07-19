@@ -12,18 +12,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CodeGenSchedule.h"
 #include "CodeGenInstruction.h"
+#include "CodeGenSchedule.h"
 #include "CodeGenTarget.h"
-#include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/Regex.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/Regex.h"
 #include "llvm/TableGen/Error.h"
 #include <algorithm>
 #include <iterator>
@@ -51,113 +50,38 @@ struct InstrsOp : public SetTheory::Operator {
 };
 
 // (instregex "OpcPat",...) Find all instructions matching an opcode pattern.
+//
+// TODO: Since this is a prefix match, perform a binary search over the
+// instruction names using lower_bound. Note that the predefined instrs must be
+// scanned linearly first. However, this is only safe if the regex pattern has
+// no top-level bars. The DAG already has a list of patterns, so there's no
+// reason to use top-level bars, but we need a way to verify they don't exist
+// before implementing the optimization.
 struct InstRegexOp : public SetTheory::Operator {
   const CodeGenTarget &Target;
   InstRegexOp(const CodeGenTarget &t): Target(t) {}
 
-  /// Remove any text inside of parentheses from S.
-  static std::string removeParens(llvm::StringRef S) {
-    std::string Result;
-    unsigned Paren = 0;
-    // NB: We don't care about escaped parens here.
-    for (char C : S) {
-      switch (C) {
-      case '(':
-        ++Paren;
-        break;
-      case ')':
-        --Paren;
-        break;
-      default:
-        if (Paren == 0)
-          Result += C;
-      }
-    }
-    return Result;
-  }
-
   void apply(SetTheory &ST, DagInit *Expr, SetTheory::RecSet &Elts,
              ArrayRef<SMLoc> Loc) override {
-    ArrayRef<const CodeGenInstruction *> Instructions =
-        Target.getInstructionsByEnumValue();
-
-    unsigned NumGeneric = Target.getNumFixedInstructions();
-    unsigned NumPseudos = Target.getNumPseudoInstructions();
-    auto Generics = Instructions.slice(0, NumGeneric);
-    auto Pseudos = Instructions.slice(NumGeneric, NumPseudos);
-    auto NonPseudos = Instructions.slice(NumGeneric + NumPseudos);
-
+    SmallVector<Regex, 4> RegexList;
     for (Init *Arg : make_range(Expr->arg_begin(), Expr->arg_end())) {
       StringInit *SI = dyn_cast<StringInit>(Arg);
       if (!SI)
-        PrintFatalError(Loc, "instregex requires pattern string: " +
-                                 Expr->getAsString());
-      StringRef Original = SI->getValue();
-
-      // Extract a prefix that we can binary search on.
-      static const char RegexMetachars[] = "()^$|*+?.[]\\{}";
-      auto FirstMeta = Original.find_first_of(RegexMetachars);
-
-      // Look for top-level | or ?. We cannot optimize them to binary search.
-      if (removeParens(Original).find_first_of("|?") != std::string::npos)
-        FirstMeta = 0;
-
-      Optional<Regex> Regexpr = None;
-      StringRef Prefix = Original.substr(0, FirstMeta);
-      StringRef PatStr = Original.substr(FirstMeta);
-      if (!PatStr.empty()) {
-        // For the rest use a python-style prefix match.
-        std::string pat = PatStr;
-        if (pat[0] != '^') {
-          pat.insert(0, "^(");
-          pat.insert(pat.end(), ')');
-        }
-        Regexpr = Regex(pat);
+        PrintFatalError(Loc, "instregex requires pattern string: "
+          + Expr->getAsString());
+      std::string pat = SI->getValue();
+      // Implement a python-style prefix match.
+      if (pat[0] != '^') {
+        pat.insert(0, "^(");
+        pat.insert(pat.end(), ')');
       }
-
-      int NumMatches = 0;
-
-      // The generic opcodes are unsorted, handle them manually.
-      for (auto *Inst : Generics) {
-        StringRef InstName = Inst->TheDef->getName();
-        if (InstName.startswith(Prefix) &&
-            (!Regexpr || Regexpr->match(InstName.substr(Prefix.size())))) {
+      RegexList.push_back(Regex(pat));
+    }
+    for (const CodeGenInstruction *Inst : Target.getInstructionsByEnumValue()) {
+      for (auto &R : RegexList) {
+        if (R.match(Inst->TheDef->getName()))
           Elts.insert(Inst->TheDef);
-          NumMatches++;
-        }
       }
-
-      // Target instructions are split into two ranges: pseudo instructions
-      // first, than non-pseudos. Each range is in lexicographical order
-      // sorted by name. Find the sub-ranges that start with our prefix.
-      struct Comp {
-        bool operator()(const CodeGenInstruction *LHS, StringRef RHS) {
-          return LHS->TheDef->getName() < RHS;
-        }
-        bool operator()(StringRef LHS, const CodeGenInstruction *RHS) {
-          return LHS < RHS->TheDef->getName() &&
-                 !RHS->TheDef->getName().startswith(LHS);
-        }
-      };
-      auto Range1 =
-          std::equal_range(Pseudos.begin(), Pseudos.end(), Prefix, Comp());
-      auto Range2 = std::equal_range(NonPseudos.begin(), NonPseudos.end(),
-                                     Prefix, Comp());
-
-      // For these ranges we know that instruction names start with the prefix.
-      // Check if there's a regex that needs to be checked.
-      const auto HandleNonGeneric = [&](const CodeGenInstruction *Inst) {
-        StringRef InstName = Inst->TheDef->getName();
-        if (!Regexpr || Regexpr->match(InstName.substr(Prefix.size()))) {
-          Elts.insert(Inst->TheDef);
-          NumMatches++;
-        }
-      };
-      std::for_each(Range1.first, Range1.second, HandleNonGeneric);
-      std::for_each(Range2.first, Range2.second, HandleNonGeneric);
-
-      if (0 == NumMatches)
-        PrintFatalError(Loc, "instregex has no matches: " + Original);
     }
   }
 };
@@ -215,41 +139,8 @@ CodeGenSchedModels::CodeGenSchedModels(RecordKeeper &RK,
 
   // Populate each CodeGenProcModel's WriteResDefs, ReadAdvanceDefs, and
   // ProcResourceDefs.
-  LLVM_DEBUG(
-      dbgs() << "\n+++ RESOURCE DEFINITIONS (collectProcResources) +++\n");
+  DEBUG(dbgs() << "\n+++ RESOURCE DEFINITIONS (collectProcResources) +++\n");
   collectProcResources();
-
-  // Collect optional processor description.
-  collectOptionalProcessorInfo();
-
-  checkCompleteness();
-}
-
-void CodeGenSchedModels::collectRetireControlUnits() {
-  RecVec Units = Records.getAllDerivedDefinitions("RetireControlUnit");
-
-  for (Record *RCU : Units) {
-    CodeGenProcModel &PM = getProcModel(RCU->getValueAsDef("SchedModel"));
-    if (PM.RetireControlUnit) {
-      PrintError(RCU->getLoc(),
-                 "Expected a single RetireControlUnit definition");
-      PrintNote(PM.RetireControlUnit->getLoc(),
-                "Previous definition of RetireControlUnit was here");
-    }
-    PM.RetireControlUnit = RCU;
-  }
-}
-
-/// Collect optional processor information.
-void CodeGenSchedModels::collectOptionalProcessorInfo() {
-  // Find register file definitions for each processor.
-  collectRegisterFiles();
-
-  // Collect processor RetireControlUnit descriptors if available.
-  collectRetireControlUnits();
-
-  // Find pfm counter definitions for each processor.
-  collectPfmCounters();
 
   checkCompleteness();
 }
@@ -257,7 +148,7 @@ void CodeGenSchedModels::collectOptionalProcessorInfo() {
 /// Gather all processor models.
 void CodeGenSchedModels::collectProcModels() {
   RecVec ProcRecords = Records.getAllDerivedDefinitions("Processor");
-  llvm::sort(ProcRecords.begin(), ProcRecords.end(), LessRecordFieldName());
+  std::sort(ProcRecords.begin(), ProcRecords.end(), LessRecordFieldName());
 
   // Reserve space because we can. Reallocation would be ok.
   ProcModels.reserve(ProcRecords.size()+1);
@@ -269,7 +160,7 @@ void CodeGenSchedModels::collectProcModels() {
   ProcModelMap[NoModelDef] = 0;
 
   // For each processor, find a unique machine model.
-  LLVM_DEBUG(dbgs() << "+++ PROCESSOR MODELs (addProcModel) +++\n");
+  DEBUG(dbgs() << "+++ PROCESSOR MODELs (addProcModel) +++\n");
   for (Record *ProcRecord : ProcRecords)
     addProcModel(ProcRecord);
 }
@@ -293,7 +184,7 @@ void CodeGenSchedModels::addProcModel(Record *ProcDef) {
     ProcModels.emplace_back(ProcModels.size(), Name,
                             ProcDef->getValueAsDef("SchedModel"), ModelKey);
   }
-  LLVM_DEBUG(ProcModels.back().dump());
+  DEBUG(ProcModels.back().dump());
 }
 
 // Recursively find all reachable SchedReadWrite records.
@@ -376,7 +267,7 @@ void CodeGenSchedModels::collectSchedRW() {
   // Find all ReadWrites referenced by SchedAlias. AliasDefs needs to be sorted
   // for the loop below that initializes Alias vectors.
   RecVec AliasDefs = Records.getAllDerivedDefinitions("SchedAlias");
-  llvm::sort(AliasDefs.begin(), AliasDefs.end(), LessRecord());
+  std::sort(AliasDefs.begin(), AliasDefs.end(), LessRecord());
   for (Record *ADef : AliasDefs) {
     Record *MatchDef = ADef->getValueAsDef("MatchRW");
     Record *AliasDef = ADef->getValueAsDef("AliasRW");
@@ -394,12 +285,12 @@ void CodeGenSchedModels::collectSchedRW() {
   }
   // Sort and add the SchedReadWrites directly referenced by instructions or
   // itinerary resources. Index reads and writes in separate domains.
-  llvm::sort(SWDefs.begin(), SWDefs.end(), LessRecord());
+  std::sort(SWDefs.begin(), SWDefs.end(), LessRecord());
   for (Record *SWDef : SWDefs) {
     assert(!getSchedRWIdx(SWDef, /*IsRead=*/false) && "duplicate SchedWrite");
     SchedWrites.emplace_back(SchedWrites.size(), SWDef);
   }
-  llvm::sort(SRDefs.begin(), SRDefs.end(), LessRecord());
+  std::sort(SRDefs.begin(), SRDefs.end(), LessRecord());
   for (Record *SRDef : SRDefs) {
     assert(!getSchedRWIdx(SRDef, /*IsRead-*/true) && "duplicate SchedWrite");
     SchedReads.emplace_back(SchedReads.size(), SRDef);
@@ -421,26 +312,26 @@ void CodeGenSchedModels::collectSchedRW() {
       PrintFatalError(ADef->getLoc(), "Cannot Alias an Alias");
     RW.Aliases.push_back(ADef);
   }
-  LLVM_DEBUG(
-      dbgs() << "\n+++ SCHED READS and WRITES (collectSchedRW) +++\n";
-      for (unsigned WIdx = 0, WEnd = SchedWrites.size(); WIdx != WEnd; ++WIdx) {
-        dbgs() << WIdx << ": ";
-        SchedWrites[WIdx].dump();
-        dbgs() << '\n';
-      } for (unsigned RIdx = 0, REnd = SchedReads.size(); RIdx != REnd;
-             ++RIdx) {
-        dbgs() << RIdx << ": ";
-        SchedReads[RIdx].dump();
-        dbgs() << '\n';
-      } RecVec RWDefs = Records.getAllDerivedDefinitions("SchedReadWrite");
-      for (Record *RWDef
-           : RWDefs) {
-        if (!getSchedRWIdx(RWDef, RWDef->isSubClassOf("SchedRead"))) {
-          StringRef Name = RWDef->getName();
-          if (Name != "NoWrite" && Name != "ReadDefault")
-            dbgs() << "Unused SchedReadWrite " << Name << '\n';
-        }
-      });
+  DEBUG(
+    dbgs() << "\n+++ SCHED READS and WRITES (collectSchedRW) +++\n";
+    for (unsigned WIdx = 0, WEnd = SchedWrites.size(); WIdx != WEnd; ++WIdx) {
+      dbgs() << WIdx << ": ";
+      SchedWrites[WIdx].dump();
+      dbgs() << '\n';
+    }
+    for (unsigned RIdx = 0, REnd = SchedReads.size(); RIdx != REnd; ++RIdx) {
+      dbgs() << RIdx << ": ";
+      SchedReads[RIdx].dump();
+      dbgs() << '\n';
+    }
+    RecVec RWDefs = Records.getAllDerivedDefinitions("SchedReadWrite");
+    for (Record *RWDef : RWDefs) {
+      if (!getSchedRWIdx(RWDef, RWDef->isSubClassOf("SchedRead"))) {
+        const std::string &Name = RWDef->getName();
+        if (Name != "NoWrite" && Name != "ReadDefault")
+          dbgs() << "Unused SchedReadWrite " << RWDef->getName() << '\n';
+      }
+    });
 }
 
 /// Compute a SchedWrite name from a sequence of writes.
@@ -455,12 +346,16 @@ std::string CodeGenSchedModels::genRWName(ArrayRef<unsigned> Seq, bool IsRead) {
   return Name;
 }
 
-unsigned CodeGenSchedModels::getSchedRWIdx(const Record *Def,
-                                           bool IsRead) const {
+unsigned CodeGenSchedModels::getSchedRWIdx(Record *Def, bool IsRead,
+                                           unsigned After) const {
   const std::vector<CodeGenSchedRW> &RWVec = IsRead ? SchedReads : SchedWrites;
-  const auto I = find_if(
-      RWVec, [Def](const CodeGenSchedRW &RW) { return RW.TheDef == Def; });
-  return I == RWVec.end() ? 0 : std::distance(RWVec.begin(), I);
+  assert(After < RWVec.size() && "start position out of bounds");
+  for (std::vector<CodeGenSchedRW>::const_iterator I = RWVec.begin() + After,
+         E = RWVec.end(); I != E; ++I) {
+    if (I->TheDef == Def)
+      return I - RWVec.begin();
+  }
+  return 0;
 }
 
 bool CodeGenSchedModels::hasReadOfWrite(Record *WriteDef) const {
@@ -477,8 +372,10 @@ bool CodeGenSchedModels::hasReadOfWrite(Record *WriteDef) const {
   return false;
 }
 
-static void splitSchedReadWrites(const RecVec &RWDefs,
-                                 RecVec &WriteDefs, RecVec &ReadDefs) {
+namespace llvm {
+
+void splitSchedReadWrites(const RecVec &RWDefs,
+                          RecVec &WriteDefs, RecVec &ReadDefs) {
   for (Record *RWDef : RWDefs) {
     if (RWDef->isSubClassOf("SchedWrite"))
       WriteDefs.push_back(RWDef);
@@ -489,14 +386,16 @@ static void splitSchedReadWrites(const RecVec &RWDefs,
   }
 }
 
+} // end namespace llvm
+
 // Split the SchedReadWrites defs and call findRWs for each list.
 void CodeGenSchedModels::findRWs(const RecVec &RWDefs,
                                  IdxVec &Writes, IdxVec &Reads) const {
-  RecVec WriteDefs;
-  RecVec ReadDefs;
-  splitSchedReadWrites(RWDefs, WriteDefs, ReadDefs);
-  findRWs(WriteDefs, Writes, false);
-  findRWs(ReadDefs, Reads, true);
+    RecVec WriteDefs;
+    RecVec ReadDefs;
+    splitSchedReadWrites(RWDefs, WriteDefs, ReadDefs);
+    findRWs(WriteDefs, Writes, false);
+    findRWs(ReadDefs, Reads, true);
 }
 
 // Call getSchedRWIdx for all elements in a sequence of SchedRW defs.
@@ -533,10 +432,11 @@ void CodeGenSchedModels::expandRWSeqForProc(
 
   const CodeGenSchedRW &SchedWrite = getSchedRW(RWIdx, IsRead);
   Record *AliasDef = nullptr;
-  for (const Record *Rec : SchedWrite.Aliases) {
-    const CodeGenSchedRW &AliasRW = getSchedRW(Rec->getValueAsDef("AliasRW"));
-    if (Rec->getValueInit("SchedModel")->isComplete()) {
-      Record *ModelDef = Rec->getValueAsDef("SchedModel");
+  for (RecIter AI = SchedWrite.Aliases.begin(), AE = SchedWrite.Aliases.end();
+       AI != AE; ++AI) {
+    const CodeGenSchedRW &AliasRW = getSchedRW((*AI)->getValueAsDef("AliasRW"));
+    if ((*AI)->getValueInit("SchedModel")->isComplete()) {
+      Record *ModelDef = (*AI)->getValueAsDef("SchedModel");
       if (&getProcModel(ModelDef) != &ProcModel)
         continue;
     }
@@ -557,9 +457,9 @@ void CodeGenSchedModels::expandRWSeqForProc(
   }
   int Repeat =
     SchedWrite.TheDef ? SchedWrite.TheDef->getValueAsInt("Repeat") : 1;
-  for (int I = 0, E = Repeat; I < E; ++I) {
-    for (unsigned Idx : SchedWrite.Sequence) {
-      expandRWSeqForProc(Idx, RWSeq, IsRead, ProcModel);
+  for (int i = 0; i < Repeat; ++i) {
+    for (unsigned I : SchedWrite.Sequence) {
+      expandRWSeqForProc(I, RWSeq, IsRead, ProcModel);
     }
   }
 }
@@ -569,11 +469,13 @@ unsigned CodeGenSchedModels::findRWForSequence(ArrayRef<unsigned> Seq,
                                                bool IsRead) {
   std::vector<CodeGenSchedRW> &RWVec = IsRead ? SchedReads : SchedWrites;
 
-  auto I = find_if(RWVec, [Seq](CodeGenSchedRW &RW) {
-    return makeArrayRef(RW.Sequence) == Seq;
-  });
+  for (std::vector<CodeGenSchedRW>::iterator I = RWVec.begin(), E = RWVec.end();
+       I != E; ++I) {
+    if (makeArrayRef(I->Sequence) == Seq)
+      return I - RWVec.begin();
+  }
   // Index zero reserved for invalid RW.
-  return I == RWVec.end() ? 0 : std::distance(RWVec.begin(), I);
+  return 0;
 }
 
 /// Add this ReadWrite if it doesn't already exist.
@@ -587,10 +489,12 @@ unsigned CodeGenSchedModels::findOrInsertRW(ArrayRef<unsigned> Seq,
   if (Idx)
     return Idx;
 
-  std::vector<CodeGenSchedRW> &RWVec = IsRead ? SchedReads : SchedWrites;
-  unsigned RWIdx = RWVec.size();
+  unsigned RWIdx = IsRead ? SchedReads.size() : SchedWrites.size();
   CodeGenSchedRW SchedRW(RWIdx, IsRead, Seq, genRWName(Seq, IsRead));
-  RWVec.push_back(SchedRW);
+  if (IsRead)
+    SchedReads.push_back(SchedRW);
+  else
+    SchedWrites.push_back(SchedRW);
   return RWIdx;
 }
 
@@ -600,9 +504,10 @@ unsigned CodeGenSchedModels::findOrInsertRW(ArrayRef<unsigned> Seq,
 void CodeGenSchedModels::collectSchedClasses() {
 
   // NoItinerary is always the first class at Idx=0
-  assert(SchedClasses.empty() && "Expected empty sched class");
-  SchedClasses.emplace_back(0, "NoInstrModel",
-                            Records.getDef("NoItinerary"));
+  SchedClasses.resize(1);
+  SchedClasses.back().Index = 0;
+  SchedClasses.back().Name = "NoInstrModel";
+  SchedClasses.back().ItinClassDef = Records.getDef("NoItinerary");
   SchedClasses.back().ProcIndices.push_back(0);
 
   // Create a SchedClass for each unique combination of itinerary class and
@@ -614,34 +519,32 @@ void CodeGenSchedModels::collectSchedClasses() {
       findRWs(Inst->TheDef->getValueAsListOfDefs("SchedRW"), Writes, Reads);
 
     // ProcIdx == 0 indicates the class applies to all processors.
-    unsigned SCIdx = addSchedClass(ItinDef, Writes, Reads, /*ProcIndices*/{0});
+    IdxVec ProcIndices(1, 0);
+
+    unsigned SCIdx = addSchedClass(ItinDef, Writes, Reads, ProcIndices);
     InstrClassMap[Inst->TheDef] = SCIdx;
   }
   // Create classes for InstRW defs.
   RecVec InstRWDefs = Records.getAllDerivedDefinitions("InstRW");
-  llvm::sort(InstRWDefs.begin(), InstRWDefs.end(), LessRecord());
-  LLVM_DEBUG(dbgs() << "\n+++ SCHED CLASSES (createInstRWClass) +++\n");
+  std::sort(InstRWDefs.begin(), InstRWDefs.end(), LessRecord());
+  DEBUG(dbgs() << "\n+++ SCHED CLASSES (createInstRWClass) +++\n");
   for (Record *RWDef : InstRWDefs)
     createInstRWClass(RWDef);
 
   NumInstrSchedClasses = SchedClasses.size();
 
   bool EnableDump = false;
-  LLVM_DEBUG(EnableDump = true);
+  DEBUG(EnableDump = true);
   if (!EnableDump)
     return;
 
-  LLVM_DEBUG(
-      dbgs()
-      << "\n+++ ITINERARIES and/or MACHINE MODELS (collectSchedClasses) +++\n");
+  dbgs() << "\n+++ ITINERARIES and/or MACHINE MODELS (collectSchedClasses) +++\n";
   for (const CodeGenInstruction *Inst : Target.getInstructionsByEnumValue()) {
     StringRef InstName = Inst->TheDef->getName();
-    unsigned SCIdx = getSchedClassIdx(*Inst);
+    unsigned SCIdx = InstrClassMap.lookup(Inst->TheDef);
     if (!SCIdx) {
-      LLVM_DEBUG({
-        if (!Inst->hasNoSchedulingInfo)
-          dbgs() << "No machine model for " << Inst->TheDef->getName() << '\n';
-      });
+      if (!Inst->hasNoSchedulingInfo)
+        dbgs() << "No machine model for " << Inst->TheDef->getName() << '\n';
       continue;
     }
     CodeGenSchedClass &SC = getSchedClass(SCIdx);
@@ -657,51 +560,58 @@ void CodeGenSchedModels::collectSchedClasses() {
     }
     if (!SC.Writes.empty()) {
       ProcIndices.push_back(0);
-      LLVM_DEBUG({
-        dbgs() << "SchedRW machine model for " << InstName;
-        for (IdxIter WI = SC.Writes.begin(), WE = SC.Writes.end(); WI != WE;
-             ++WI)
-          dbgs() << " " << SchedWrites[*WI].Name;
-        for (IdxIter RI = SC.Reads.begin(), RE = SC.Reads.end(); RI != RE; ++RI)
-          dbgs() << " " << SchedReads[*RI].Name;
-        dbgs() << '\n';
-      });
+      dbgs() << "SchedRW machine model for " << InstName;
+      for (IdxIter WI = SC.Writes.begin(), WE = SC.Writes.end(); WI != WE; ++WI)
+        dbgs() << " " << SchedWrites[*WI].Name;
+      for (IdxIter RI = SC.Reads.begin(), RE = SC.Reads.end(); RI != RE; ++RI)
+        dbgs() << " " << SchedReads[*RI].Name;
+      dbgs() << '\n';
     }
     const RecVec &RWDefs = SchedClasses[SCIdx].InstRWs;
     for (Record *RWDef : RWDefs) {
       const CodeGenProcModel &ProcModel =
-          getProcModel(RWDef->getValueAsDef("SchedModel"));
+        getProcModel(RWDef->getValueAsDef("SchedModel"));
       ProcIndices.push_back(ProcModel.Index);
-      LLVM_DEBUG(dbgs() << "InstRW on " << ProcModel.ModelName << " for "
-                        << InstName);
+      dbgs() << "InstRW on " << ProcModel.ModelName << " for " << InstName;
       IdxVec Writes;
       IdxVec Reads;
       findRWs(RWDef->getValueAsListOfDefs("OperandReadWrites"),
               Writes, Reads);
-      LLVM_DEBUG({
-        for (unsigned WIdx : Writes)
-          dbgs() << " " << SchedWrites[WIdx].Name;
-        for (unsigned RIdx : Reads)
-          dbgs() << " " << SchedReads[RIdx].Name;
-        dbgs() << '\n';
-      });
+      for (unsigned WIdx : Writes)
+        dbgs() << " " << SchedWrites[WIdx].Name;
+      for (unsigned RIdx : Reads)
+        dbgs() << " " << SchedReads[RIdx].Name;
+      dbgs() << '\n';
     }
     // If ProcIndices contains zero, the class applies to all processors.
-    LLVM_DEBUG({
-      if (!std::count(ProcIndices.begin(), ProcIndices.end(), 0)) {
-        for (const CodeGenProcModel &PM : ProcModels) {
-          if (!std::count(ProcIndices.begin(), ProcIndices.end(), PM.Index))
-            dbgs() << "No machine model for " << Inst->TheDef->getName()
-                   << " on processor " << PM.ModelName << '\n';
-        }
+    if (!std::count(ProcIndices.begin(), ProcIndices.end(), 0)) {
+      for (const CodeGenProcModel &PM : ProcModels) {
+        if (!std::count(ProcIndices.begin(), ProcIndices.end(), PM.Index))
+          dbgs() << "No machine model for " << Inst->TheDef->getName()
+                 << " on processor " << PM.ModelName << '\n';
       }
-    });
+    }
   }
 }
 
+/// Find an SchedClass that has been inferred from a per-operand list of
+/// SchedWrites and SchedReads.
+unsigned CodeGenSchedModels::findSchedClassIdx(Record *ItinClassDef,
+                                               ArrayRef<unsigned> Writes,
+                                               ArrayRef<unsigned> Reads) const {
+  for (SchedClassIter I = schedClassBegin(), E = schedClassEnd(); I != E; ++I) {
+    if (I->ItinClassDef == ItinClassDef && makeArrayRef(I->Writes) == Writes &&
+        makeArrayRef(I->Reads) == Reads) {
+      return I - schedClassBegin();
+    }
+  }
+  return 0;
+}
+
 // Get the SchedClass index for an instruction.
-unsigned
-CodeGenSchedModels::getSchedClassIdx(const CodeGenInstruction &Inst) const {
+unsigned CodeGenSchedModels::getSchedClassIdx(
+  const CodeGenInstruction &Inst) const {
+
   return InstrClassMap.lookup(Inst.TheDef);
 }
 
@@ -745,27 +655,22 @@ unsigned CodeGenSchedModels::addSchedClass(Record *ItinClassDef,
                                            ArrayRef<unsigned> ProcIndices) {
   assert(!ProcIndices.empty() && "expect at least one ProcIdx");
 
-  auto IsKeyEqual = [=](const CodeGenSchedClass &SC) {
-                     return SC.isKeyEqual(ItinClassDef, OperWrites, OperReads);
-                   };
-
-  auto I = find_if(make_range(schedClassBegin(), schedClassEnd()), IsKeyEqual);
-  unsigned Idx = I == schedClassEnd() ? 0 : std::distance(schedClassBegin(), I);
+  unsigned Idx = findSchedClassIdx(ItinClassDef, OperWrites, OperReads);
   if (Idx || SchedClasses[0].isKeyEqual(ItinClassDef, OperWrites, OperReads)) {
     IdxVec PI;
     std::set_union(SchedClasses[Idx].ProcIndices.begin(),
                    SchedClasses[Idx].ProcIndices.end(),
                    ProcIndices.begin(), ProcIndices.end(),
                    std::back_inserter(PI));
-    SchedClasses[Idx].ProcIndices = std::move(PI);
+    SchedClasses[Idx].ProcIndices.swap(PI);
     return Idx;
   }
   Idx = SchedClasses.size();
-  SchedClasses.emplace_back(Idx,
-                            createSchedClassName(ItinClassDef, OperWrites,
-                                                 OperReads),
-                            ItinClassDef);
+  SchedClasses.resize(Idx+1);
   CodeGenSchedClass &SC = SchedClasses.back();
+  SC.Index = Idx;
+  SC.Name = createSchedClassName(ItinClassDef, OperWrites, OperReads);
+  SC.ItinClassDef = ItinClassDef;
   SC.Writes = OperWrites;
   SC.Reads = OperReads;
   SC.ProcIndices = ProcIndices;
@@ -780,104 +685,106 @@ void CodeGenSchedModels::createInstRWClass(Record *InstRWDef) {
   // intersects with an existing class via a previous InstRWDef. Instrs that do
   // not intersect with an existing class refer back to their former class as
   // determined from ItinDef or SchedRW.
-  SmallMapVector<unsigned, SmallVector<Record *, 8>, 4> ClassInstrs;
+  SmallVector<std::pair<unsigned, SmallVector<Record *, 8>>, 4> ClassInstrs;
   // Sort Instrs into sets.
   const RecVec *InstDefs = Sets.expand(InstRWDef);
   if (InstDefs->empty())
     PrintFatalError(InstRWDef->getLoc(), "No matching instruction opcodes");
 
-  for (Record *InstDef : *InstDefs) {
+  for (Record *InstDef : make_range(InstDefs->begin(), InstDefs->end())) {
     InstClassMapTy::const_iterator Pos = InstrClassMap.find(InstDef);
     if (Pos == InstrClassMap.end())
       PrintFatalError(InstDef->getLoc(), "No sched class for instruction.");
     unsigned SCIdx = Pos->second;
-    ClassInstrs[SCIdx].push_back(InstDef);
+    unsigned CIdx = 0, CEnd = ClassInstrs.size();
+    for (; CIdx != CEnd; ++CIdx) {
+      if (ClassInstrs[CIdx].first == SCIdx)
+        break;
+    }
+    if (CIdx == CEnd) {
+      ClassInstrs.resize(CEnd + 1);
+      ClassInstrs[CIdx].first = SCIdx;
+    }
+    ClassInstrs[CIdx].second.push_back(InstDef);
   }
   // For each set of Instrs, create a new class if necessary, and map or remap
   // the Instrs to it.
-  for (auto &Entry : ClassInstrs) {
-    unsigned OldSCIdx = Entry.first;
-    ArrayRef<Record*> InstDefs = Entry.second;
+  unsigned CIdx = 0, CEnd = ClassInstrs.size();
+  for (; CIdx != CEnd; ++CIdx) {
+    unsigned OldSCIdx = ClassInstrs[CIdx].first;
+    ArrayRef<Record*> InstDefs = ClassInstrs[CIdx].second;
     // If the all instrs in the current class are accounted for, then leave
     // them mapped to their old class.
     if (OldSCIdx) {
       const RecVec &RWDefs = SchedClasses[OldSCIdx].InstRWs;
       if (!RWDefs.empty()) {
         const RecVec *OrigInstDefs = Sets.expand(RWDefs[0]);
-        unsigned OrigNumInstrs =
-          count_if(*OrigInstDefs, [&](Record *OIDef) {
-                     return InstrClassMap[OIDef] == OldSCIdx;
-                   });
+        unsigned OrigNumInstrs = 0;
+        for (Record *OIDef : make_range(OrigInstDefs->begin(), OrigInstDefs->end())) {
+          if (InstrClassMap[OIDef] == OldSCIdx)
+            ++OrigNumInstrs;
+        }
         if (OrigNumInstrs == InstDefs.size()) {
           assert(SchedClasses[OldSCIdx].ProcIndices[0] == 0 &&
                  "expected a generic SchedClass");
-          Record *RWModelDef = InstRWDef->getValueAsDef("SchedModel");
-          // Make sure we didn't already have a InstRW containing this
-          // instruction on this model.
-          for (Record *RWD : RWDefs) {
-            if (RWD->getValueAsDef("SchedModel") == RWModelDef &&
-                RWModelDef->getValueAsBit("FullInstRWOverlapCheck")) {
-              for (Record *Inst : InstDefs) {
-                PrintFatalError(InstRWDef->getLoc(), "Overlapping InstRW def " +
-                            Inst->getName() + " also matches " +
-                            RWD->getValue("Instrs")->getValue()->getAsString());
-              }
-            }
-          }
-          LLVM_DEBUG(dbgs() << "InstRW: Reuse SC " << OldSCIdx << ":"
-                            << SchedClasses[OldSCIdx].Name << " on "
-                            << RWModelDef->getName() << "\n");
+          DEBUG(dbgs() << "InstRW: Reuse SC " << OldSCIdx << ":"
+                << SchedClasses[OldSCIdx].Name << " on "
+                << InstRWDef->getValueAsDef("SchedModel")->getName() << "\n");
           SchedClasses[OldSCIdx].InstRWs.push_back(InstRWDef);
           continue;
         }
       }
     }
     unsigned SCIdx = SchedClasses.size();
-    SchedClasses.emplace_back(SCIdx, createSchedClassName(InstDefs), nullptr);
+    SchedClasses.resize(SCIdx+1);
     CodeGenSchedClass &SC = SchedClasses.back();
-    LLVM_DEBUG(dbgs() << "InstRW: New SC " << SCIdx << ":" << SC.Name << " on "
-                      << InstRWDef->getValueAsDef("SchedModel")->getName()
-                      << "\n");
+    SC.Index = SCIdx;
+    SC.Name = createSchedClassName(InstDefs);
+    DEBUG(dbgs() << "InstRW: New SC " << SCIdx << ":" << SC.Name << " on "
+          << InstRWDef->getValueAsDef("SchedModel")->getName() << "\n");
 
     // Preserve ItinDef and Writes/Reads for processors without an InstRW entry.
     SC.ItinClassDef = SchedClasses[OldSCIdx].ItinClassDef;
     SC.Writes = SchedClasses[OldSCIdx].Writes;
     SC.Reads = SchedClasses[OldSCIdx].Reads;
     SC.ProcIndices.push_back(0);
-    // If we had an old class, copy it's InstRWs to this new class.
-    if (OldSCIdx) {
-      Record *RWModelDef = InstRWDef->getValueAsDef("SchedModel");
-      for (Record *OldRWDef : SchedClasses[OldSCIdx].InstRWs) {
-        if (OldRWDef->getValueAsDef("SchedModel") == RWModelDef) {
-          for (Record *InstDef : InstDefs) {
-            PrintFatalError(OldRWDef->getLoc(), "Overlapping InstRW def " +
-                       InstDef->getName() + " also matches " +
-                       OldRWDef->getValue("Instrs")->getValue()->getAsString());
-          }
-        }
-        assert(OldRWDef != InstRWDef &&
-               "SchedClass has duplicate InstRW def");
-        SC.InstRWs.push_back(OldRWDef);
-      }
-    }
     // Map each Instr to this new class.
-    for (Record *InstDef : InstDefs)
-      InstrClassMap[InstDef] = SCIdx;
+    // Note that InstDefs may be a smaller list than InstRWDef's "Instrs".
+    Record *RWModelDef = InstRWDef->getValueAsDef("SchedModel");
+    SmallSet<unsigned, 4> RemappedClassIDs;
+    for (ArrayRef<Record*>::const_iterator
+           II = InstDefs.begin(), IE = InstDefs.end(); II != IE; ++II) {
+      unsigned OldSCIdx = InstrClassMap[*II];
+      if (OldSCIdx && RemappedClassIDs.insert(OldSCIdx).second) {
+        for (RecIter RI = SchedClasses[OldSCIdx].InstRWs.begin(),
+               RE = SchedClasses[OldSCIdx].InstRWs.end(); RI != RE; ++RI) {
+          if ((*RI)->getValueAsDef("SchedModel") == RWModelDef) {
+            PrintFatalError(InstRWDef->getLoc(), "Overlapping InstRW def " +
+                          (*II)->getName() + " also matches " +
+                          (*RI)->getValue("Instrs")->getValue()->getAsString());
+          }
+          assert(*RI != InstRWDef && "SchedClass has duplicate InstRW def");
+          SC.InstRWs.push_back(*RI);
+        }
+      }
+      InstrClassMap[*II] = SCIdx;
+    }
     SC.InstRWs.push_back(InstRWDef);
   }
 }
 
 // True if collectProcItins found anything.
 bool CodeGenSchedModels::hasItineraries() const {
-  for (const CodeGenProcModel &PM : make_range(procModelBegin(),procModelEnd()))
+  for (const CodeGenProcModel &PM : make_range(procModelBegin(),procModelEnd())) {
     if (PM.hasItineraries())
       return true;
+  }
   return false;
 }
 
 // Gather the processor itineraries.
 void CodeGenSchedModels::collectProcItins() {
-  LLVM_DEBUG(dbgs() << "\n+++ PROBLEM ITINERARIES (collectProcItins) +++\n");
+  DEBUG(dbgs() << "\n+++ PROBLEM ITINERARIES (collectProcItins) +++\n");
   for (CodeGenProcModel &ProcModel : ProcModels) {
     if (!ProcModel.hasItineraries())
       continue;
@@ -891,39 +798,37 @@ void CodeGenSchedModels::collectProcItins() {
     // Insert each itinerary data record in the correct position within
     // the processor model's ItinDefList.
     for (Record *ItinData : ItinRecords) {
-      const Record *ItinDef = ItinData->getValueAsDef("TheClass");
+      Record *ItinDef = ItinData->getValueAsDef("TheClass");
       bool FoundClass = false;
-
-      for (const CodeGenSchedClass &SC :
-           make_range(schedClassBegin(), schedClassEnd())) {
+      for (SchedClassIter SCI = schedClassBegin(), SCE = schedClassEnd();
+           SCI != SCE; ++SCI) {
         // Multiple SchedClasses may share an itinerary. Update all of them.
-        if (SC.ItinClassDef == ItinDef) {
-          ProcModel.ItinDefList[SC.Index] = ItinData;
+        if (SCI->ItinClassDef == ItinDef) {
+          ProcModel.ItinDefList[SCI->Index] = ItinData;
           FoundClass = true;
         }
       }
       if (!FoundClass) {
-        LLVM_DEBUG(dbgs() << ProcModel.ItinsDef->getName()
-                          << " missing class for itinerary "
-                          << ItinDef->getName() << '\n');
+        DEBUG(dbgs() << ProcModel.ItinsDef->getName()
+              << " missing class for itinerary " << ItinDef->getName() << '\n');
       }
     }
     // Check for missing itinerary entries.
     assert(!ProcModel.ItinDefList[0] && "NoItinerary class can't have rec");
-    LLVM_DEBUG(
-        for (unsigned i = 1, N = ProcModel.ItinDefList.size(); i < N; ++i) {
-          if (!ProcModel.ItinDefList[i])
-            dbgs() << ProcModel.ItinsDef->getName()
-                   << " missing itinerary for class " << SchedClasses[i].Name
-                   << '\n';
-        });
+    DEBUG(
+      for (unsigned i = 1, N = ProcModel.ItinDefList.size(); i < N; ++i) {
+        if (!ProcModel.ItinDefList[i])
+          dbgs() << ProcModel.ItinsDef->getName()
+                 << " missing itinerary for class "
+                 << SchedClasses[i].Name << '\n';
+      });
   }
 }
 
 // Gather the read/write types for each itinerary class.
 void CodeGenSchedModels::collectProcItinRW() {
   RecVec ItinRWDefs = Records.getAllDerivedDefinitions("ItinRW");
-  llvm::sort(ItinRWDefs.begin(), ItinRWDefs.end(), LessRecord());
+  std::sort(ItinRWDefs.begin(), ItinRWDefs.end(), LessRecord());
   for (Record *RWDef  : ItinRWDefs) {
     if (!RWDef->getValueInit("SchedModel")->isComplete())
       PrintFatalError(RWDef->getLoc(), "SchedModel is undefined");
@@ -949,9 +854,8 @@ void CodeGenSchedModels::collectProcUnsupportedFeatures() {
 /// Infer new classes from existing classes. In the process, this may create new
 /// SchedWrites from sequences of existing SchedWrites.
 void CodeGenSchedModels::inferSchedClasses() {
-  LLVM_DEBUG(
-      dbgs() << "\n+++ INFERRING SCHED CLASSES (inferSchedClasses) +++\n");
-  LLVM_DEBUG(dbgs() << NumInstrSchedClasses << " instr sched classes.\n");
+  DEBUG(dbgs() << "\n+++ INFERRING SCHED CLASSES (inferSchedClasses) +++\n");
+  DEBUG(dbgs() << NumInstrSchedClasses << " instr sched classes.\n");
 
   // Visit all existing classes and newly created classes.
   for (unsigned Idx = 0; Idx != SchedClasses.size(); ++Idx) {
@@ -977,18 +881,20 @@ void CodeGenSchedModels::inferFromItinClass(Record *ItinClassDef,
     const CodeGenProcModel &PM = ProcModels[PIdx];
     // For all ItinRW entries.
     bool HasMatch = false;
-    for (const Record *Rec : PM.ItinRWDefs) {
-      RecVec Matched = Rec->getValueAsListOfDefs("MatchedItinClasses");
+    for (RecIter II = PM.ItinRWDefs.begin(), IE = PM.ItinRWDefs.end();
+         II != IE; ++II) {
+      RecVec Matched = (*II)->getValueAsListOfDefs("MatchedItinClasses");
       if (!std::count(Matched.begin(), Matched.end(), ItinClassDef))
         continue;
       if (HasMatch)
-        PrintFatalError(Rec->getLoc(), "Duplicate itinerary class "
+        PrintFatalError((*II)->getLoc(), "Duplicate itinerary class "
                       + ItinClassDef->getName()
                       + " in ItinResources for " + PM.ModelName);
       HasMatch = true;
       IdxVec Writes, Reads;
-      findRWs(Rec->getValueAsListOfDefs("OperandReadWrites"), Writes, Reads);
-      inferFromRW(Writes, Reads, FromClassIdx, PIdx);
+      findRWs((*II)->getValueAsListOfDefs("OperandReadWrites"), Writes, Reads);
+      IdxVec ProcIndices(1, PIdx);
+      inferFromRW(Writes, Reads, FromClassIdx, ProcIndices);
     }
   }
 }
@@ -1011,7 +917,8 @@ void CodeGenSchedModels::inferFromInstRWs(unsigned SCIdx) {
     IdxVec Writes, Reads;
     findRWs(Rec->getValueAsListOfDefs("OperandReadWrites"), Writes, Reads);
     unsigned PIdx = getProcModel(Rec->getValueAsDef("SchedModel")).Index;
-    inferFromRW(Writes, Reads, SCIdx, PIdx); // May mutate SchedClasses.
+    IdxVec ProcIndices(1, PIdx);
+    inferFromRW(Writes, Reads, SCIdx, ProcIndices); // May mutate SchedClasses.
   }
 }
 
@@ -1094,10 +1001,10 @@ bool PredTransitions::mutuallyExclusive(Record *PredDef,
     const CodeGenSchedRW &SchedRW = SchedModels.getSchedRW(PC.RWIdx, PC.IsRead);
     assert(SchedRW.HasVariants && "PredCheck must refer to a SchedVariant");
     RecVec Variants = SchedRW.TheDef->getValueAsListOfDefs("Variants");
-    if (any_of(Variants, [PredDef](const Record *R) {
-          return R->getValueAsDef("Predicate") == PredDef;
-        }))
-      return true;
+    for (RecIter VI = Variants.begin(), VE = Variants.end(); VI != VE; ++VI) {
+      if ((*VI)->getValueAsDef("Predicate") == PredDef)
+        return true;
+    }
   }
   return false;
 }
@@ -1115,10 +1022,12 @@ static bool hasAliasedVariants(const CodeGenSchedRW &RW,
     if (AliasRW.IsSequence) {
       IdxVec ExpandedRWs;
       SchedModels.expandRWSequence(AliasRW.Index, ExpandedRWs, AliasRW.IsRead);
-      for (unsigned SI : ExpandedRWs) {
-        if (hasAliasedVariants(SchedModels.getSchedRW(SI, AliasRW.IsRead),
-                               SchedModels))
+      for (IdxIter SI = ExpandedRWs.begin(), SE = ExpandedRWs.end();
+           SI != SE; ++SI) {
+        if (hasAliasedVariants(SchedModels.getSchedRW(*SI, AliasRW.IsRead),
+                               SchedModels)) {
           return true;
+        }
       }
     }
   }
@@ -1127,16 +1036,27 @@ static bool hasAliasedVariants(const CodeGenSchedRW &RW,
 
 static bool hasVariant(ArrayRef<PredTransition> Transitions,
                        CodeGenSchedModels &SchedModels) {
-  for (const PredTransition &PTI : Transitions) {
-    for (const SmallVectorImpl<unsigned> &WSI : PTI.WriteSequences)
-      for (unsigned WI : WSI)
-        if (hasAliasedVariants(SchedModels.getSchedWrite(WI), SchedModels))
+  for (ArrayRef<PredTransition>::iterator
+         PTI = Transitions.begin(), PTE = Transitions.end();
+       PTI != PTE; ++PTI) {
+    for (SmallVectorImpl<SmallVector<unsigned,4>>::const_iterator
+           WSI = PTI->WriteSequences.begin(), WSE = PTI->WriteSequences.end();
+         WSI != WSE; ++WSI) {
+      for (SmallVectorImpl<unsigned>::const_iterator
+             WI = WSI->begin(), WE = WSI->end(); WI != WE; ++WI) {
+        if (hasAliasedVariants(SchedModels.getSchedWrite(*WI), SchedModels))
           return true;
-
-    for (const SmallVectorImpl<unsigned> &RSI : PTI.ReadSequences)
-      for (unsigned RI : RSI)
-        if (hasAliasedVariants(SchedModels.getSchedRead(RI), SchedModels))
+      }
+    }
+    for (SmallVectorImpl<SmallVector<unsigned,4>>::const_iterator
+           RSI = PTI->ReadSequences.begin(), RSE = PTI->ReadSequences.end();
+         RSI != RSE; ++RSI) {
+      for (SmallVectorImpl<unsigned>::const_iterator
+             RI = RSI->begin(), RE = RSI->end(); RI != RE; ++RI) {
+        if (hasAliasedVariants(SchedModels.getSchedRead(*RI), SchedModels))
           return true;
+      }
+    }
   }
   return false;
 }
@@ -1160,7 +1080,7 @@ void PredTransitions::getIntersectingVariants(
     // Push each variant. Assign TransVecIdx later.
     const RecVec VarDefs = SchedRW.TheDef->getValueAsListOfDefs("Variants");
     for (Record *VarDef : VarDefs)
-      Variants.emplace_back(VarDef, SchedRW.Index, VarProcIdx, 0);
+      Variants.push_back(TransVariant(VarDef, SchedRW.Index, VarProcIdx, 0));
     if (VarProcIdx == 0)
       GenericRW = true;
   }
@@ -1180,10 +1100,12 @@ void PredTransitions::getIntersectingVariants(
     if (AliasRW.HasVariants) {
       const RecVec VarDefs = AliasRW.TheDef->getValueAsListOfDefs("Variants");
       for (Record *VD : VarDefs)
-        Variants.emplace_back(VD, AliasRW.Index, AliasProcIdx, 0);
+        Variants.push_back(TransVariant(VD, AliasRW.Index, AliasProcIdx, 0));
     }
-    if (AliasRW.IsSequence)
-      Variants.emplace_back(AliasRW.TheDef, SchedRW.Index, AliasProcIdx, 0);
+    if (AliasRW.IsSequence) {
+      Variants.push_back(
+        TransVariant(AliasRW.TheDef, SchedRW.Index, AliasProcIdx, 0));
+    }
     if (AliasProcIdx == 0)
       GenericRW = true;
   }
@@ -1242,7 +1164,7 @@ pushVariant(const TransVariant &VInfo, bool IsRead) {
   IdxVec SelectedRWs;
   if (VInfo.VarOrSeqDef->isSubClassOf("SchedVar")) {
     Record *PredDef = VInfo.VarOrSeqDef->getValueAsDef("Predicate");
-    Trans.PredTerm.emplace_back(IsRead, VInfo.RWIdx,PredDef);
+    Trans.PredTerm.push_back(PredCheck(IsRead, VInfo.RWIdx,PredDef));
     RecVec SelectedDefs = VInfo.VarOrSeqDef->getValueAsListOfDefs("Selected");
     SchedModels.findRWs(SelectedDefs, SelectedRWs, IsRead);
   }
@@ -1259,8 +1181,11 @@ pushVariant(const TransVariant &VInfo, bool IsRead) {
   if (SchedRW.IsVariadic) {
     unsigned OperIdx = RWSequences.size()-1;
     // Make N-1 copies of this transition's last sequence.
-    RWSequences.insert(RWSequences.end(), SelectedRWs.size() - 1,
-                       RWSequences[OperIdx]);
+    for (unsigned i = 1, e = SelectedRWs.size(); i != e; ++i) {
+      // Create a temporary copy the vector could reallocate.
+      RWSequences.reserve(RWSequences.size() + 1);
+      RWSequences.push_back(RWSequences[OperIdx]);
+    }
     // Push each of the N elements of the SelectedRWs onto a copy of the last
     // sequence (split the current operand into N operands).
     // Note that write sequences should be expanded within this loop--the entire
@@ -1342,7 +1267,7 @@ void PredTransitions::substituteVariants(const PredTransition &Trans) {
   // Build up a set of partial results starting at the back of
   // PredTransitions. Remember the first new transition.
   unsigned StartIdx = TransVec.size();
-  TransVec.emplace_back();
+  TransVec.resize(TransVec.size() + 1);
   TransVec.back().PredTerm = Trans.PredTerm;
   TransVec.back().ProcIndices = Trans.ProcIndices;
 
@@ -1353,7 +1278,7 @@ void PredTransitions::substituteVariants(const PredTransition &Trans) {
     // Push a new (empty) write sequence onto all partial Transitions.
     for (std::vector<PredTransition>::iterator I =
            TransVec.begin() + StartIdx, E = TransVec.end(); I != E; ++I) {
-      I->WriteSequences.emplace_back();
+      I->WriteSequences.resize(I->WriteSequences.size() + 1);
     }
     substituteVariantOperand(*WSI, /*IsRead=*/false, StartIdx);
   }
@@ -1364,7 +1289,7 @@ void PredTransitions::substituteVariants(const PredTransition &Trans) {
     // Push a new (empty) read sequence onto all partial Transitions.
     for (std::vector<PredTransition>::iterator I =
            TransVec.begin() + StartIdx, E = TransVec.end(); I != E; ++I) {
-      I->ReadSequences.emplace_back();
+      I->ReadSequences.resize(I->ReadSequences.size() + 1);
     }
     substituteVariantOperand(*RSI, /*IsRead=*/true, StartIdx);
   }
@@ -1379,30 +1304,37 @@ static void inferFromTransitions(ArrayRef<PredTransition> LastTransitions,
   for (ArrayRef<PredTransition>::iterator
          I = LastTransitions.begin(), E = LastTransitions.end(); I != E; ++I) {
     IdxVec OperWritesVariant;
-    transform(I->WriteSequences, std::back_inserter(OperWritesVariant),
-              [&SchedModels](ArrayRef<unsigned> WS) {
-                return SchedModels.findOrInsertRW(WS, /*IsRead=*/false);
-              });
+    for (SmallVectorImpl<SmallVector<unsigned,4>>::const_iterator
+           WSI = I->WriteSequences.begin(), WSE = I->WriteSequences.end();
+         WSI != WSE; ++WSI) {
+      // Create a new write representing the expanded sequence.
+      OperWritesVariant.push_back(
+        SchedModels.findOrInsertRW(*WSI, /*IsRead=*/false));
+    }
     IdxVec OperReadsVariant;
-    transform(I->ReadSequences, std::back_inserter(OperReadsVariant),
-              [&SchedModels](ArrayRef<unsigned> RS) {
-                return SchedModels.findOrInsertRW(RS, /*IsRead=*/true);
-              });
+    for (SmallVectorImpl<SmallVector<unsigned,4>>::const_iterator
+           RSI = I->ReadSequences.begin(), RSE = I->ReadSequences.end();
+         RSI != RSE; ++RSI) {
+      // Create a new read representing the expanded sequence.
+      OperReadsVariant.push_back(
+        SchedModels.findOrInsertRW(*RSI, /*IsRead=*/true));
+    }
+    IdxVec ProcIndices(I->ProcIndices.begin(), I->ProcIndices.end());
     CodeGenSchedTransition SCTrans;
     SCTrans.ToClassIdx =
       SchedModels.addSchedClass(/*ItinClassDef=*/nullptr, OperWritesVariant,
-                                OperReadsVariant, I->ProcIndices);
-    SCTrans.ProcIndices.assign(I->ProcIndices.begin(), I->ProcIndices.end());
+                                OperReadsVariant, ProcIndices);
+    SCTrans.ProcIndices = ProcIndices;
     // The final PredTerm is unique set of predicates guarding the transition.
     RecVec Preds;
-    transform(I->PredTerm, std::back_inserter(Preds),
-              [](const PredCheck &P) {
-                return P.Predicate;
-              });
-    Preds.erase(std::unique(Preds.begin(), Preds.end()), Preds.end());
-    SCTrans.PredTerm = std::move(Preds);
-    SchedModels.getSchedClass(FromClassIdx)
-        .Transitions.push_back(std::move(SCTrans));
+    for (SmallVectorImpl<PredCheck>::const_iterator
+           PI = I->PredTerm.begin(), PE = I->PredTerm.end(); PI != PE; ++PI) {
+      Preds.push_back(PI->Predicate);
+    }
+    RecIter PredsEnd = std::unique(Preds.begin(), Preds.end());
+    Preds.resize(PredsEnd - Preds.begin());
+    SCTrans.PredTerm = Preds;
+    SchedModels.getSchedClass(FromClassIdx).Transitions.push_back(SCTrans);
   }
 }
 
@@ -1413,42 +1345,48 @@ void CodeGenSchedModels::inferFromRW(ArrayRef<unsigned> OperWrites,
                                      ArrayRef<unsigned> OperReads,
                                      unsigned FromClassIdx,
                                      ArrayRef<unsigned> ProcIndices) {
-  LLVM_DEBUG(dbgs() << "INFER RW proc("; dumpIdxVec(ProcIndices);
-             dbgs() << ") ");
+  DEBUG(dbgs() << "INFER RW proc("; dumpIdxVec(ProcIndices); dbgs() << ") ");
 
   // Create a seed transition with an empty PredTerm and the expanded sequences
   // of SchedWrites for the current SchedClass.
   std::vector<PredTransition> LastTransitions;
-  LastTransitions.emplace_back();
+  LastTransitions.resize(1);
   LastTransitions.back().ProcIndices.append(ProcIndices.begin(),
                                             ProcIndices.end());
 
   for (unsigned WriteIdx : OperWrites) {
     IdxVec WriteSeq;
     expandRWSequence(WriteIdx, WriteSeq, /*IsRead=*/false);
-    LastTransitions[0].WriteSequences.emplace_back();
-    SmallVectorImpl<unsigned> &Seq = LastTransitions[0].WriteSequences.back();
-    Seq.append(WriteSeq.begin(), WriteSeq.end());
-    LLVM_DEBUG(dbgs() << "("; dumpIdxVec(Seq); dbgs() << ") ");
+    unsigned Idx = LastTransitions[0].WriteSequences.size();
+    LastTransitions[0].WriteSequences.resize(Idx + 1);
+    SmallVectorImpl<unsigned> &Seq = LastTransitions[0].WriteSequences[Idx];
+    for (IdxIter WI = WriteSeq.begin(), WE = WriteSeq.end(); WI != WE; ++WI)
+      Seq.push_back(*WI);
+    DEBUG(dbgs() << "("; dumpIdxVec(Seq); dbgs() << ") ");
   }
-  LLVM_DEBUG(dbgs() << " Reads: ");
+  DEBUG(dbgs() << " Reads: ");
   for (unsigned ReadIdx : OperReads) {
     IdxVec ReadSeq;
     expandRWSequence(ReadIdx, ReadSeq, /*IsRead=*/true);
-    LastTransitions[0].ReadSequences.emplace_back();
-    SmallVectorImpl<unsigned> &Seq = LastTransitions[0].ReadSequences.back();
-    Seq.append(ReadSeq.begin(), ReadSeq.end());
-    LLVM_DEBUG(dbgs() << "("; dumpIdxVec(Seq); dbgs() << ") ");
+    unsigned Idx = LastTransitions[0].ReadSequences.size();
+    LastTransitions[0].ReadSequences.resize(Idx + 1);
+    SmallVectorImpl<unsigned> &Seq = LastTransitions[0].ReadSequences[Idx];
+    for (IdxIter RI = ReadSeq.begin(), RE = ReadSeq.end(); RI != RE; ++RI)
+      Seq.push_back(*RI);
+    DEBUG(dbgs() << "("; dumpIdxVec(Seq); dbgs() << ") ");
   }
-  LLVM_DEBUG(dbgs() << '\n');
+  DEBUG(dbgs() << '\n');
 
   // Collect all PredTransitions for individual operands.
   // Iterate until no variant writes remain.
   while (hasVariant(LastTransitions, *this)) {
     PredTransitions Transitions(*this);
-    for (const PredTransition &Trans : LastTransitions)
-      Transitions.substituteVariants(Trans);
-    LLVM_DEBUG(Transitions.dump());
+    for (std::vector<PredTransition>::const_iterator
+           I = LastTransitions.begin(), E = LastTransitions.end();
+         I != E; ++I) {
+      Transitions.substituteVariants(*I);
+    }
+    DEBUG(Transitions.dump());
     LastTransitions.swap(Transitions.TransVec);
   }
   // If the first transition has no variants, nothing to do.
@@ -1509,47 +1447,6 @@ void CodeGenSchedModels::verifyProcResourceGroups(CodeGenProcModel &PM) {
   }
 }
 
-// Collect all the RegisterFile definitions available in this target.
-void CodeGenSchedModels::collectRegisterFiles() {
-  RecVec RegisterFileDefs = Records.getAllDerivedDefinitions("RegisterFile");
-
-  // RegisterFiles is the vector of CodeGenRegisterFile.
-  for (Record *RF : RegisterFileDefs) {
-    // For each register file definition, construct a CodeGenRegisterFile object
-    // and add it to the appropriate scheduling model.
-    CodeGenProcModel &PM = getProcModel(RF->getValueAsDef("SchedModel"));
-    PM.RegisterFiles.emplace_back(CodeGenRegisterFile(RF->getName(),RF));
-    CodeGenRegisterFile &CGRF = PM.RegisterFiles.back();
-
-    // Now set the number of physical registers as well as the cost of registers
-    // in each register class.
-    CGRF.NumPhysRegs = RF->getValueAsInt("NumPhysRegs");
-    RecVec RegisterClasses = RF->getValueAsListOfDefs("RegClasses");
-    std::vector<int64_t> RegisterCosts = RF->getValueAsListOfInts("RegCosts");
-    for (unsigned I = 0, E = RegisterClasses.size(); I < E; ++I) {
-      int Cost = RegisterCosts.size() > I ? RegisterCosts[I] : 1;
-      CGRF.Costs.emplace_back(RegisterClasses[I], Cost);
-    }
-  }
-}
-
-// Collect all the RegisterFile definitions available in this target.
-void CodeGenSchedModels::collectPfmCounters() {
-  for (Record *Def : Records.getAllDerivedDefinitions("PfmIssueCounter")) {
-    CodeGenProcModel &PM = getProcModel(Def->getValueAsDef("SchedModel"));
-    PM.PfmIssueCounterDefs.emplace_back(Def);
-  }
-  for (Record *Def : Records.getAllDerivedDefinitions("PfmCycleCounter")) {
-    CodeGenProcModel &PM = getProcModel(Def->getValueAsDef("SchedModel"));
-    if (PM.PfmCycleCounterDef) {
-      PrintFatalError(Def->getLoc(),
-                      "multiple cycle counters for " +
-                          Def->getValueAsDef("SchedModel")->getName());
-    }
-    PM.PfmCycleCounterDef = Def;
-  }
-}
-
 // Collect and sort WriteRes, ReadAdvance, and ProcResources.
 void CodeGenSchedModels::collectProcResources() {
   ProcResourceDefs = Records.getAllDerivedDefinitions("ProcResourceUnits");
@@ -1558,24 +1455,26 @@ void CodeGenSchedModels::collectProcResources() {
   // Add any subtarget-specific SchedReadWrites that are directly associated
   // with processor resources. Refer to the parent SchedClass's ProcIndices to
   // determine which processors they apply to.
-  for (const CodeGenSchedClass &SC :
-       make_range(schedClassBegin(), schedClassEnd())) {
-    if (SC.ItinClassDef) {
-      collectItinProcResources(SC.ItinClassDef);
-      continue;
+  for (SchedClassIter SCI = schedClassBegin(), SCE = schedClassEnd();
+       SCI != SCE; ++SCI) {
+    if (SCI->ItinClassDef)
+      collectItinProcResources(SCI->ItinClassDef);
+    else {
+      // This class may have a default ReadWrite list which can be overriden by
+      // InstRW definitions.
+      if (!SCI->InstRWs.empty()) {
+        for (RecIter RWI = SCI->InstRWs.begin(), RWE = SCI->InstRWs.end();
+             RWI != RWE; ++RWI) {
+          Record *RWModelDef = (*RWI)->getValueAsDef("SchedModel");
+          IdxVec ProcIndices(1, getProcModel(RWModelDef).Index);
+          IdxVec Writes, Reads;
+          findRWs((*RWI)->getValueAsListOfDefs("OperandReadWrites"),
+                  Writes, Reads);
+          collectRWResources(Writes, Reads, ProcIndices);
+        }
+      }
+      collectRWResources(SCI->Writes, SCI->Reads, SCI->ProcIndices);
     }
-
-    // This class may have a default ReadWrite list which can be overriden by
-    // InstRW definitions.
-    for (Record *RW : SC.InstRWs) {
-      Record *RWModelDef = RW->getValueAsDef("SchedModel");
-      unsigned PIdx = getProcModel(RWModelDef).Index;
-      IdxVec Writes, Reads;
-      findRWs(RW->getValueAsListOfDefs("OperandReadWrites"), Writes, Reads);
-      collectRWResources(Writes, Reads, PIdx);
-    }
-
-    collectRWResources(SC.Writes, SC.Reads, SC.ProcIndices);
   }
   // Add resources separately defined by each subtarget.
   RecVec WRDefs = Records.getAllDerivedDefinitions("WriteRes");
@@ -1610,45 +1509,38 @@ void CodeGenSchedModels::collectProcResources() {
     if (!is_contained(PM.ProcResourceDefs, PRG))
       PM.ProcResourceDefs.push_back(PRG);
   }
-  // Add ProcResourceUnits unconditionally.
-  for (Record *PRU : Records.getAllDerivedDefinitions("ProcResourceUnits")) {
-    if (!PRU->getValueInit("SchedModel")->isComplete())
-      continue;
-    CodeGenProcModel &PM = getProcModel(PRU->getValueAsDef("SchedModel"));
-    if (!is_contained(PM.ProcResourceDefs, PRU))
-      PM.ProcResourceDefs.push_back(PRU);
-  }
   // Finalize each ProcModel by sorting the record arrays.
   for (CodeGenProcModel &PM : ProcModels) {
-    llvm::sort(PM.WriteResDefs.begin(), PM.WriteResDefs.end(),
-               LessRecord());
-    llvm::sort(PM.ReadAdvanceDefs.begin(), PM.ReadAdvanceDefs.end(),
-               LessRecord());
-    llvm::sort(PM.ProcResourceDefs.begin(), PM.ProcResourceDefs.end(),
-               LessRecord());
-    LLVM_DEBUG(
-        PM.dump();
-        dbgs() << "WriteResDefs: "; for (RecIter RI = PM.WriteResDefs.begin(),
-                                         RE = PM.WriteResDefs.end();
-                                         RI != RE; ++RI) {
-          if ((*RI)->isSubClassOf("WriteRes"))
-            dbgs() << (*RI)->getValueAsDef("WriteType")->getName() << " ";
-          else
-            dbgs() << (*RI)->getName() << " ";
-        } dbgs() << "\nReadAdvanceDefs: ";
-        for (RecIter RI = PM.ReadAdvanceDefs.begin(),
-             RE = PM.ReadAdvanceDefs.end();
-             RI != RE; ++RI) {
-          if ((*RI)->isSubClassOf("ReadAdvance"))
-            dbgs() << (*RI)->getValueAsDef("ReadType")->getName() << " ";
-          else
-            dbgs() << (*RI)->getName() << " ";
-        } dbgs()
-        << "\nProcResourceDefs: ";
-        for (RecIter RI = PM.ProcResourceDefs.begin(),
-             RE = PM.ProcResourceDefs.end();
-             RI != RE; ++RI) { dbgs() << (*RI)->getName() << " "; } dbgs()
-        << '\n');
+    std::sort(PM.WriteResDefs.begin(), PM.WriteResDefs.end(),
+              LessRecord());
+    std::sort(PM.ReadAdvanceDefs.begin(), PM.ReadAdvanceDefs.end(),
+              LessRecord());
+    std::sort(PM.ProcResourceDefs.begin(), PM.ProcResourceDefs.end(),
+              LessRecord());
+    DEBUG(
+      PM.dump();
+      dbgs() << "WriteResDefs: ";
+      for (RecIter RI = PM.WriteResDefs.begin(),
+             RE = PM.WriteResDefs.end(); RI != RE; ++RI) {
+        if ((*RI)->isSubClassOf("WriteRes"))
+          dbgs() << (*RI)->getValueAsDef("WriteType")->getName() << " ";
+        else
+          dbgs() << (*RI)->getName() << " ";
+      }
+      dbgs() << "\nReadAdvanceDefs: ";
+      for (RecIter RI = PM.ReadAdvanceDefs.begin(),
+             RE = PM.ReadAdvanceDefs.end(); RI != RE; ++RI) {
+        if ((*RI)->isSubClassOf("ReadAdvance"))
+          dbgs() << (*RI)->getValueAsDef("ReadType")->getName() << " ";
+        else
+          dbgs() << (*RI)->getName() << " ";
+      }
+      dbgs() << "\nProcResourceDefs: ";
+      for (RecIter RI = PM.ProcResourceDefs.begin(),
+             RE = PM.ProcResourceDefs.end(); RI != RE; ++RI) {
+        dbgs() << (*RI)->getName() << " ";
+      }
+      dbgs() << '\n');
     verifyProcResourceGroups(PM);
   }
 
@@ -1660,7 +1552,6 @@ void CodeGenSchedModels::checkCompleteness() {
   bool Complete = true;
   bool HadCompleteModel = false;
   for (const CodeGenProcModel &ProcModel : procModels()) {
-    const bool HasItineraries = ProcModel.hasItineraries();
     if (!ProcModel.ModelDef->getValueAsBit("CompleteModel"))
       continue;
     for (const CodeGenInstruction *Inst : Target.getInstructionsByEnumValue()) {
@@ -1681,7 +1572,7 @@ void CodeGenSchedModels::checkCompleteness() {
       const CodeGenSchedClass &SC = getSchedClass(SCIdx);
       if (!SC.Writes.empty())
         continue;
-      if (HasItineraries && SC.ItinClassDef != nullptr &&
+      if (SC.ItinClassDef != nullptr &&
           SC.ItinClassDef->getName() != "NoItinerary")
         continue;
 
@@ -1728,7 +1619,8 @@ void CodeGenSchedModels::collectItinProcResources(Record *ItinClassDef) {
       HasMatch = true;
       IdxVec Writes, Reads;
       findRWs((*II)->getValueAsListOfDefs("OperandReadWrites"), Writes, Reads);
-      collectRWResources(Writes, Reads, PIdx);
+      IdxVec ProcIndices(1, PIdx);
+      collectRWResources(Writes, Reads, ProcIndices);
     }
   }
 }

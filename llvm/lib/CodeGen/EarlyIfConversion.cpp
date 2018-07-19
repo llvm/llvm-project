@@ -185,7 +185,7 @@ bool SSAIfConv::canSpeculateInstrs(MachineBasicBlock *MBB) {
   // Reject any live-in physregs. It's probably CPSR/EFLAGS, and very hard to
   // get right.
   if (!MBB->livein_empty()) {
-    LLVM_DEBUG(dbgs() << printMBBReference(*MBB) << " has live-ins.\n");
+    DEBUG(dbgs() << printMBBReference(*MBB) << " has live-ins.\n");
     return false;
   }
 
@@ -195,18 +195,18 @@ bool SSAIfConv::canSpeculateInstrs(MachineBasicBlock *MBB) {
   // terminators never have side effects or define any used register values.
   for (MachineBasicBlock::iterator I = MBB->begin(),
        E = MBB->getFirstTerminator(); I != E; ++I) {
-    if (I->isDebugInstr())
+    if (I->isDebugValue())
       continue;
 
     if (++InstrCount > BlockInstrLimit && !Stress) {
-      LLVM_DEBUG(dbgs() << printMBBReference(*MBB) << " has more than "
-                        << BlockInstrLimit << " instructions.\n");
+      DEBUG(dbgs() << printMBBReference(*MBB) << " has more than "
+                   << BlockInstrLimit << " instructions.\n");
       return false;
     }
 
     // There shouldn't normally be any phis in a single-predecessor block.
     if (I->isPHI()) {
-      LLVM_DEBUG(dbgs() << "Can't hoist: " << *I);
+      DEBUG(dbgs() << "Can't hoist: " << *I);
       return false;
     }
 
@@ -214,21 +214,21 @@ bool SSAIfConv::canSpeculateInstrs(MachineBasicBlock *MBB) {
     // speculate GOT or constant pool loads that are guaranteed not to trap,
     // but we don't support that for now.
     if (I->mayLoad()) {
-      LLVM_DEBUG(dbgs() << "Won't speculate load: " << *I);
+      DEBUG(dbgs() << "Won't speculate load: " << *I);
       return false;
     }
 
     // We never speculate stores, so an AA pointer isn't necessary.
     bool DontMoveAcrossStore = true;
     if (!I->isSafeToMove(nullptr, DontMoveAcrossStore)) {
-      LLVM_DEBUG(dbgs() << "Can't speculate: " << *I);
+      DEBUG(dbgs() << "Can't speculate: " << *I);
       return false;
     }
 
     // Check for any dependencies on Head instructions.
     for (const MachineOperand &MO : I->operands()) {
       if (MO.isRegMask()) {
-        LLVM_DEBUG(dbgs() << "Won't speculate regmask: " << *I);
+        DEBUG(dbgs() << "Won't speculate regmask: " << *I);
         return false;
       }
       if (!MO.isReg())
@@ -246,10 +246,9 @@ bool SSAIfConv::canSpeculateInstrs(MachineBasicBlock *MBB) {
       if (!DefMI || DefMI->getParent() != Head)
         continue;
       if (InsertAfter.insert(DefMI).second)
-        LLVM_DEBUG(dbgs() << printMBBReference(*MBB) << " depends on "
-                          << *DefMI);
+        DEBUG(dbgs() << printMBBReference(*MBB) << " depends on " << *DefMI);
       if (DefMI->isTerminator()) {
-        LLVM_DEBUG(dbgs() << "Can't insert instructions below terminator.\n");
+        DEBUG(dbgs() << "Can't insert instructions below terminator.\n");
         return false;
       }
     }
@@ -280,7 +279,7 @@ bool SSAIfConv::findInsertionPoint() {
     --I;
     // Some of the conditional code depends in I.
     if (InsertAfter.count(&*I)) {
-      LLVM_DEBUG(dbgs() << "Can't insert code after " << *I);
+      DEBUG(dbgs() << "Can't insert code after " << *I);
       return false;
     }
 
@@ -314,7 +313,7 @@ bool SSAIfConv::findInsertionPoint() {
     // Some of the clobbered registers are live before I, not a valid insertion
     // point.
     if (!LiveRegUnits.empty()) {
-      LLVM_DEBUG({
+      DEBUG({
         dbgs() << "Would clobber";
         for (SparseSet<unsigned>::const_iterator
              i = LiveRegUnits.begin(), e = LiveRegUnits.end(); i != e; ++i)
@@ -326,10 +325,10 @@ bool SSAIfConv::findInsertionPoint() {
 
     // This is a valid insertion point.
     InsertionPoint = I;
-    LLVM_DEBUG(dbgs() << "Can insert before " << *I);
+    DEBUG(dbgs() << "Can insert before " << *I);
     return true;
   }
-  LLVM_DEBUG(dbgs() << "No legal insertion point found.\n");
+  DEBUG(dbgs() << "No legal insertion point found.\n");
   return false;
 }
 
@@ -362,39 +361,39 @@ bool SSAIfConv::canConvertIf(MachineBasicBlock *MBB) {
     if (Succ1->pred_size() != 1 || Succ1->succ_size() != 1 ||
         Succ1->succ_begin()[0] != Tail)
       return false;
-    LLVM_DEBUG(dbgs() << "\nDiamond: " << printMBBReference(*Head) << " -> "
-                      << printMBBReference(*Succ0) << "/"
-                      << printMBBReference(*Succ1) << " -> "
-                      << printMBBReference(*Tail) << '\n');
+    DEBUG(dbgs() << "\nDiamond: " << printMBBReference(*Head) << " -> "
+                 << printMBBReference(*Succ0) << "/"
+                 << printMBBReference(*Succ1) << " -> "
+                 << printMBBReference(*Tail) << '\n');
 
     // Live-in physregs are tricky to get right when speculating code.
     if (!Tail->livein_empty()) {
-      LLVM_DEBUG(dbgs() << "Tail has live-ins.\n");
+      DEBUG(dbgs() << "Tail has live-ins.\n");
       return false;
     }
   } else {
-    LLVM_DEBUG(dbgs() << "\nTriangle: " << printMBBReference(*Head) << " -> "
-                      << printMBBReference(*Succ0) << " -> "
-                      << printMBBReference(*Tail) << '\n');
+    DEBUG(dbgs() << "\nTriangle: " << printMBBReference(*Head) << " -> "
+                 << printMBBReference(*Succ0) << " -> "
+                 << printMBBReference(*Tail) << '\n');
   }
 
   // This is a triangle or a diamond.
   // If Tail doesn't have any phis, there must be side effects.
   if (Tail->empty() || !Tail->front().isPHI()) {
-    LLVM_DEBUG(dbgs() << "No phis in tail.\n");
+    DEBUG(dbgs() << "No phis in tail.\n");
     return false;
   }
 
   // The branch we're looking to eliminate must be analyzable.
   Cond.clear();
   if (TII->analyzeBranch(*Head, TBB, FBB, Cond)) {
-    LLVM_DEBUG(dbgs() << "Branch not analyzable.\n");
+    DEBUG(dbgs() << "Branch not analyzable.\n");
     return false;
   }
 
   // This is weird, probably some sort of degenerate CFG.
   if (!TBB) {
-    LLVM_DEBUG(dbgs() << "AnalyzeBranch didn't find conditional branch.\n");
+    DEBUG(dbgs() << "AnalyzeBranch didn't find conditional branch.\n");
     return false;
   }
 
@@ -423,7 +422,7 @@ bool SSAIfConv::canConvertIf(MachineBasicBlock *MBB) {
     // Get target information.
     if (!TII->canInsertSelect(*Head, Cond, PI.TReg, PI.FReg,
                               PI.CondCycles, PI.TCycles, PI.FCycles)) {
-      LLVM_DEBUG(dbgs() << "Can't convert: " << *PI.PHI);
+      DEBUG(dbgs() << "Can't convert: " << *PI.PHI);
       return false;
     }
   }
@@ -460,10 +459,10 @@ void SSAIfConv::replacePHIInstrs() {
   // Convert all PHIs to select instructions inserted before FirstTerm.
   for (unsigned i = 0, e = PHIs.size(); i != e; ++i) {
     PHIInfo &PI = PHIs[i];
-    LLVM_DEBUG(dbgs() << "If-converting " << *PI.PHI);
+    DEBUG(dbgs() << "If-converting " << *PI.PHI);
     unsigned DstReg = PI.PHI->getOperand(0).getReg();
     TII->insertSelect(*Head, FirstTerm, HeadDL, DstReg, Cond, PI.TReg, PI.FReg);
-    LLVM_DEBUG(dbgs() << "          --> " << *std::prev(FirstTerm));
+    DEBUG(dbgs() << "          --> " << *std::prev(FirstTerm));
     PI.PHI->eraseFromParent();
     PI.PHI = nullptr;
   }
@@ -482,7 +481,7 @@ void SSAIfConv::rewritePHIOperands() {
     PHIInfo &PI = PHIs[i];
     unsigned DstReg = 0;
 
-    LLVM_DEBUG(dbgs() << "If-converting " << *PI.PHI);
+    DEBUG(dbgs() << "If-converting " << *PI.PHI);
     if (PI.TReg == PI.FReg) {
       // We do not need the select instruction if both incoming values are
       // equal.
@@ -492,7 +491,7 @@ void SSAIfConv::rewritePHIOperands() {
       DstReg = MRI->createVirtualRegister(MRI->getRegClass(PHIDst));
       TII->insertSelect(*Head, FirstTerm, HeadDL,
                          DstReg, Cond, PI.TReg, PI.FReg);
-      LLVM_DEBUG(dbgs() << "          --> " << *std::prev(FirstTerm));
+      DEBUG(dbgs() << "          --> " << *std::prev(FirstTerm));
     }
 
     // Rewrite PHI operands TPred -> (DstReg, Head), remove FPred.
@@ -506,7 +505,7 @@ void SSAIfConv::rewritePHIOperands() {
         PI.PHI->RemoveOperand(i-2);
       }
     }
-    LLVM_DEBUG(dbgs() << "          --> " << *PI.PHI);
+    DEBUG(dbgs() << "          --> " << *PI.PHI);
   }
 }
 
@@ -564,8 +563,8 @@ void SSAIfConv::convertIf(SmallVectorImpl<MachineBasicBlock*> &RemovedBlocks) {
   assert(Head->succ_empty() && "Additional head successors?");
   if (!ExtraPreds && Head->isLayoutSuccessor(Tail)) {
     // Splice Tail onto the end of Head.
-    LLVM_DEBUG(dbgs() << "Joining tail " << printMBBReference(*Tail)
-                      << " into head " << printMBBReference(*Head) << '\n');
+    DEBUG(dbgs() << "Joining tail " << printMBBReference(*Tail) << " into head "
+                 << printMBBReference(*Head) << '\n');
     Head->splice(Head->end(), Tail,
                      Tail->begin(), Tail->end());
     Head->transferSuccessorsAndUpdatePHIs(Tail);
@@ -573,12 +572,12 @@ void SSAIfConv::convertIf(SmallVectorImpl<MachineBasicBlock*> &RemovedBlocks) {
     Tail->eraseFromParent();
   } else {
     // We need a branch to Tail, let code placement work it out later.
-    LLVM_DEBUG(dbgs() << "Converting to unconditional branch.\n");
+    DEBUG(dbgs() << "Converting to unconditional branch.\n");
     SmallVector<MachineOperand, 0> EmptyCond;
     TII->insertBranch(*Head, Tail, nullptr, EmptyCond, HeadDL);
     Head->addSuccessor(Tail);
   }
-  LLVM_DEBUG(dbgs() << *Head);
+  DEBUG(dbgs() << *Head);
 }
 
 
@@ -693,7 +692,7 @@ bool EarlyIfConverter::shouldConvertIf() {
 
   MachineTraceMetrics::Trace TBBTrace = MinInstr->getTrace(IfConv.getTPred());
   MachineTraceMetrics::Trace FBBTrace = MinInstr->getTrace(IfConv.getFPred());
-  LLVM_DEBUG(dbgs() << "TBB: " << TBBTrace << "FBB: " << FBBTrace);
+  DEBUG(dbgs() << "TBB: " << TBBTrace << "FBB: " << FBBTrace);
   unsigned MinCrit = std::min(TBBTrace.getCriticalPath(),
                               FBBTrace.getCriticalPath());
 
@@ -707,10 +706,10 @@ bool EarlyIfConverter::shouldConvertIf() {
   if (IfConv.TBB != IfConv.Tail)
     ExtraBlocks.push_back(IfConv.TBB);
   unsigned ResLength = FBBTrace.getResourceLength(ExtraBlocks);
-  LLVM_DEBUG(dbgs() << "Resource length " << ResLength
-                    << ", minimal critical path " << MinCrit << '\n');
+  DEBUG(dbgs() << "Resource length " << ResLength
+               << ", minimal critical path " << MinCrit << '\n');
   if (ResLength > MinCrit + CritLimit) {
-    LLVM_DEBUG(dbgs() << "Not enough available ILP.\n");
+    DEBUG(dbgs() << "Not enough available ILP.\n");
     return false;
   }
 
@@ -720,7 +719,7 @@ bool EarlyIfConverter::shouldConvertIf() {
   MachineTraceMetrics::Trace HeadTrace = MinInstr->getTrace(IfConv.Head);
   unsigned BranchDepth =
       HeadTrace.getInstrCycles(*IfConv.Head->getFirstTerminator()).Depth;
-  LLVM_DEBUG(dbgs() << "Branch depth: " << BranchDepth << '\n');
+  DEBUG(dbgs() << "Branch depth: " << BranchDepth << '\n');
 
   // Look at all the tail phis, and compute the critical path extension caused
   // by inserting select instructions.
@@ -729,15 +728,15 @@ bool EarlyIfConverter::shouldConvertIf() {
     SSAIfConv::PHIInfo &PI = IfConv.PHIs[i];
     unsigned Slack = TailTrace.getInstrSlack(*PI.PHI);
     unsigned MaxDepth = Slack + TailTrace.getInstrCycles(*PI.PHI).Depth;
-    LLVM_DEBUG(dbgs() << "Slack " << Slack << ":\t" << *PI.PHI);
+    DEBUG(dbgs() << "Slack " << Slack << ":\t" << *PI.PHI);
 
     // The condition is pulled into the critical path.
     unsigned CondDepth = adjCycles(BranchDepth, PI.CondCycles);
     if (CondDepth > MaxDepth) {
       unsigned Extra = CondDepth - MaxDepth;
-      LLVM_DEBUG(dbgs() << "Condition adds " << Extra << " cycles.\n");
+      DEBUG(dbgs() << "Condition adds " << Extra << " cycles.\n");
       if (Extra > CritLimit) {
-        LLVM_DEBUG(dbgs() << "Exceeds limit of " << CritLimit << '\n');
+        DEBUG(dbgs() << "Exceeds limit of " << CritLimit << '\n');
         return false;
       }
     }
@@ -746,9 +745,9 @@ bool EarlyIfConverter::shouldConvertIf() {
     unsigned TDepth = adjCycles(TBBTrace.getPHIDepth(*PI.PHI), PI.TCycles);
     if (TDepth > MaxDepth) {
       unsigned Extra = TDepth - MaxDepth;
-      LLVM_DEBUG(dbgs() << "TBB data adds " << Extra << " cycles.\n");
+      DEBUG(dbgs() << "TBB data adds " << Extra << " cycles.\n");
       if (Extra > CritLimit) {
-        LLVM_DEBUG(dbgs() << "Exceeds limit of " << CritLimit << '\n');
+        DEBUG(dbgs() << "Exceeds limit of " << CritLimit << '\n');
         return false;
       }
     }
@@ -757,9 +756,9 @@ bool EarlyIfConverter::shouldConvertIf() {
     unsigned FDepth = adjCycles(FBBTrace.getPHIDepth(*PI.PHI), PI.FCycles);
     if (FDepth > MaxDepth) {
       unsigned Extra = FDepth - MaxDepth;
-      LLVM_DEBUG(dbgs() << "FBB data adds " << Extra << " cycles.\n");
+      DEBUG(dbgs() << "FBB data adds " << Extra << " cycles.\n");
       if (Extra > CritLimit) {
-        LLVM_DEBUG(dbgs() << "Exceeds limit of " << CritLimit << '\n');
+        DEBUG(dbgs() << "Exceeds limit of " << CritLimit << '\n');
         return false;
       }
     }
@@ -784,8 +783,8 @@ bool EarlyIfConverter::tryConvertIf(MachineBasicBlock *MBB) {
 }
 
 bool EarlyIfConverter::runOnMachineFunction(MachineFunction &MF) {
-  LLVM_DEBUG(dbgs() << "********** EARLY IF-CONVERSION **********\n"
-                    << "********** Function: " << MF.getName() << '\n');
+  DEBUG(dbgs() << "********** EARLY IF-CONVERSION **********\n"
+               << "********** Function: " << MF.getName() << '\n');
   if (skipFunction(MF.getFunction()))
     return false;
 

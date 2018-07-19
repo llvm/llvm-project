@@ -65,7 +65,7 @@ protected:
   void reassignSectionAddress(unsigned SectionID, uint64_t Addr);
 
 public:
-  /// Information about the loaded object.
+  /// \brief Information about the loaded object.
   class LoadedObjectInfo : public llvm::LoadedObjectInfo {
     friend class RuntimeDyldImpl;
 
@@ -88,7 +88,7 @@ public:
     ObjSectionToIDMap ObjSecToIDMap;
   };
 
-  /// Memory Management.
+  /// \brief Memory Management.
   class MemoryManager {
     friend class RuntimeDyld;
 
@@ -170,7 +170,7 @@ public:
     bool FinalizationLocked = false;
   };
 
-  /// Construct a RuntimeDyld instance.
+  /// \brief Construct a RuntimeDyld instance.
   RuntimeDyld(MemoryManager &MemMgr, JITSymbolResolver &Resolver);
   RuntimeDyld(const RuntimeDyld &) = delete;
   RuntimeDyld &operator=(const RuntimeDyld &) = delete;
@@ -188,13 +188,6 @@ public:
   /// Get the target address and flags for the named symbol.
   /// This address is the one used for relocation.
   JITEvaluatedSymbol getSymbol(StringRef Name) const;
-
-  /// Returns a copy of the symbol table. This can be used by on-finalized
-  /// callbacks to extract the symbol table before throwing away the
-  /// RuntimeDyld instance. Because the map keys (StringRefs) are backed by
-  /// strings inside the RuntimeDyld instance, the map should be processed
-  /// before the RuntimeDyld instance is discarded.
-  std::map<StringRef, JITEvaluatedSymbol> getSymbolTable() const;
 
   /// Resolve the relocations for all symbols we currently know about.
   void resolveRelocations();

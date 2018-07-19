@@ -48,7 +48,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
+#include "llvm/Transforms/PGOInstrumentation.h"
 #include "CFGMST.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -119,7 +119,6 @@
 #include <vector>
 
 using namespace llvm;
-using ProfileCount = Function::ProfileCount;
 
 #define DEBUG_TYPE "pgo-instrumentation"
 
@@ -224,8 +223,8 @@ static cl::opt<bool>
     EmitBranchProbability("pgo-emit-branch-prob", cl::init(false), cl::Hidden,
                           cl::desc("When this option is on, the annotated "
                                    "branch probability will be emitted as "
-                                   "optimization remarks: -{Rpass|"
-                                   "pass-remarks}=pgo-instrumentation"));
+                                   " optimization remarks: -Rpass-analysis="
+                                   "pgo-instr-use"));
 
 // Command line option to turn on CFG dot dump after profile annotation.
 // Defined in Analysis/BlockFrequencyInfo.cpp:  -pgo-view-counts
@@ -449,7 +448,7 @@ ModulePass *llvm::createPGOInstrumentationUseLegacyPass(StringRef Filename) {
 
 namespace {
 
-/// An MST based instrumentation for PGO
+/// \brief An MST based instrumentation for PGO
 ///
 /// Implements a Minimum Spanning Tree (MST) based instrumentation for PGO
 /// in the function level.
@@ -546,7 +545,7 @@ public:
     computeCFGHash();
     if (!ComdatMembers.empty())
       renameComdatFunction();
-    LLVM_DEBUG(dumpInfo("after CFGMST"));
+    DEBUG(dumpInfo("after CFGMST"));
 
     NumOfPGOBB += MST.BBInfos.size();
     for (auto &E : MST.AllEdges) {
@@ -596,12 +595,12 @@ void FuncPGOInstrumentation<Edge, BBInfo>::computeCFGHash() {
   FunctionHash = (uint64_t)SIVisitor.getNumOfSelectInsts() << 56 |
                  (uint64_t)ValueSites[IPVK_IndirectCallTarget].size() << 48 |
                  (uint64_t)MST.AllEdges.size() << 32 | JC.getCRC();
-  LLVM_DEBUG(dbgs() << "Function Hash Computation for " << F.getName() << ":\n"
-                    << " CRC = " << JC.getCRC()
-                    << ", Selects = " << SIVisitor.getNumOfSelectInsts()
-                    << ", Edges = " << MST.AllEdges.size() << ", ICSites = "
-                    << ValueSites[IPVK_IndirectCallTarget].size()
-                    << ", Hash = " << FunctionHash << "\n";);
+  DEBUG(dbgs() << "Function Hash Computation for " << F.getName() << ":\n"
+               << " CRC = " << JC.getCRC()
+               << ", Selects = " << SIVisitor.getNumOfSelectInsts()
+               << ", Edges = " << MST.AllEdges.size()
+               << ", ICSites = " << ValueSites[IPVK_IndirectCallTarget].size()
+               << ", Hash = " << FunctionHash << "\n";);
 }
 
 // Check if we can safely rename this Comdat function.
@@ -702,8 +701,8 @@ BasicBlock *FuncPGOInstrumentation<Edge, BBInfo>::getInstrBB(Edge *E) {
   // For a critical edge, we have to split. Instrument the newly
   // created BB.
   NumOfPGOSplit++;
-  LLVM_DEBUG(dbgs() << "Split critical edge: " << getBBInfo(SrcBB).Index
-                    << " --> " << getBBInfo(DestBB).Index << "\n");
+  DEBUG(dbgs() << "Split critical edge: " << getBBInfo(SrcBB).Index << " --> "
+               << getBBInfo(DestBB).Index << "\n");
   unsigned SuccNum = GetSuccessorNumber(SrcBB, DestBB);
   BasicBlock *InstrBB = SplitCriticalEdge(TI, SuccNum);
   assert(InstrBB && "Critical edge is not split");
@@ -753,8 +752,8 @@ static void instrumentOneFunc(
   for (auto &I : FuncInfo.ValueSites[IPVK_IndirectCallTarget]) {
     CallSite CS(I);
     Value *Callee = CS.getCalledValue();
-    LLVM_DEBUG(dbgs() << "Instrument one indirect call: CallSite Index = "
-                      << NumIndirectCallSites << "\n");
+    DEBUG(dbgs() << "Instrument one indirect call: CallSite Index = "
+                 << NumIndirectCallSites << "\n");
     IRBuilder<> Builder(I);
     assert(Builder.GetInsertPoint() != I->getParent()->end() &&
            "Cannot get the Instrumentation point");
@@ -862,7 +861,7 @@ public:
   // Set the branch weights based on the count values.
   void setBranchWeights();
 
-  // Annotate the value profile call sites for all value kind.
+  // Annotate the value profile call sites all all value kind.
   void annotateValueSites();
 
   // Annotate the value profile call sites for one value kind.
@@ -1042,14 +1041,14 @@ bool PGOUseFunc::readCounters(IndexedInstrProfReader *PGOReader) {
   std::vector<uint64_t> &CountFromProfile = ProfileRecord.Counts;
 
   NumOfPGOFunc++;
-  LLVM_DEBUG(dbgs() << CountFromProfile.size() << " counts\n");
+  DEBUG(dbgs() << CountFromProfile.size() << " counts\n");
   uint64_t ValueSum = 0;
   for (unsigned I = 0, S = CountFromProfile.size(); I < S; I++) {
-    LLVM_DEBUG(dbgs() << "  " << I << ": " << CountFromProfile[I] << "\n");
+    DEBUG(dbgs() << "  " << I << ": " << CountFromProfile[I] << "\n");
     ValueSum += CountFromProfile[I];
   }
 
-  LLVM_DEBUG(dbgs() << "SUM =  " << ValueSum << "\n");
+  DEBUG(dbgs() << "SUM =  " << ValueSum << "\n");
 
   getBBInfo(nullptr).UnknownCountOutEdge = 2;
   getBBInfo(nullptr).UnknownCountInEdge = 2;
@@ -1129,7 +1128,7 @@ void PGOUseFunc::populateCounters() {
     }
   }
 
-  LLVM_DEBUG(dbgs() << "Populate counts in " << NumPasses << " passes.\n");
+  DEBUG(dbgs() << "Populate counts in " << NumPasses << " passes.\n");
 #ifndef NDEBUG
   // Assert every BB has a valid counter.
   for (auto &BB : F) {
@@ -1140,7 +1139,7 @@ void PGOUseFunc::populateCounters() {
   }
 #endif
   uint64_t FuncEntryCount = getBBInfo(&*F.begin()).CountValue;
-  F.setEntryCount(ProfileCount(FuncEntryCount, Function::PCT_Real));
+  F.setEntryCount(FuncEntryCount);
   uint64_t FuncMaxCount = FuncEntryCount;
   for (auto &BB : F) {
     auto BI = findBBInfo(&BB);
@@ -1154,13 +1153,13 @@ void PGOUseFunc::populateCounters() {
   FuncInfo.SIVisitor.annotateSelects(F, this, &CountPosition);
   assert(CountPosition == ProfileCountSize);
 
-  LLVM_DEBUG(FuncInfo.dumpInfo("after reading profile."));
+  DEBUG(FuncInfo.dumpInfo("after reading profile."));
 }
 
 // Assign the scaled count values to the BB with multiple out edges.
 void PGOUseFunc::setBranchWeights() {
   // Generate MD_prof metadata for every branch instruction.
-  LLVM_DEBUG(dbgs() << "\nSetting branch weights.\n");
+  DEBUG(dbgs() << "\nSetting branch weights.\n");
   for (auto &BB : F) {
     TerminatorInst *TI = BB.getTerminator();
     if (TI->getNumSuccessors() < 2)
@@ -1201,7 +1200,7 @@ static bool isIndirectBrTarget(BasicBlock *BB) {
 }
 
 void PGOUseFunc::annotateIrrLoopHeaderWeights() {
-  LLVM_DEBUG(dbgs() << "\nAnnotating irreducible loop header weights.\n");
+  DEBUG(dbgs() << "\nAnnotating irreducible loop header weights.\n");
   // Find irr loop headers
   for (auto &BB : F) {
     // As a heuristic also annotate indrectbr targets as they have a high chance
@@ -1334,9 +1333,9 @@ void PGOUseFunc::annotateValueSites(uint32_t Kind) {
   }
 
   for (auto &I : ValueSites) {
-    LLVM_DEBUG(dbgs() << "Read one value site profile (kind = " << Kind
-                      << "): Index = " << ValueSiteIndex << " out of "
-                      << NumValueSites << "\n");
+    DEBUG(dbgs() << "Read one value site profile (kind = " << Kind
+                 << "): Index = " << ValueSiteIndex << " out of "
+                 << NumValueSites << "\n");
     annotateValueSite(*M, *I, ProfileRecord,
                       static_cast<InstrProfValueKind>(Kind), ValueSiteIndex,
                       Kind == IPVK_MemOPSize ? MaxNumMemOPAnnotations
@@ -1432,7 +1431,7 @@ static bool annotateAllFunctions(
     Module &M, StringRef ProfileFileName,
     function_ref<BranchProbabilityInfo *(Function &)> LookupBPI,
     function_ref<BlockFrequencyInfo *(Function &)> LookupBFI) {
-  LLVM_DEBUG(dbgs() << "Read in profile counters: ");
+  DEBUG(dbgs() << "Read in profile counters: ");
   auto &Ctx = M.getContext();
   // Read the counter array from file.
   auto ReaderOrErr = IndexedInstrProfReader::create(ProfileFileName);
@@ -1518,13 +1517,12 @@ static bool annotateAllFunctions(
   // inconsistent MST between prof-gen and prof-use.
   for (auto &F : HotFunctions) {
     F->addFnAttr(Attribute::InlineHint);
-    LLVM_DEBUG(dbgs() << "Set inline attribute to function: " << F->getName()
-                      << "\n");
+    DEBUG(dbgs() << "Set inline attribute to function: " << F->getName()
+                 << "\n");
   }
   for (auto &F : ColdFunctions) {
     F->addFnAttr(Attribute::Cold);
-    LLVM_DEBUG(dbgs() << "Set cold attribute to function: " << F->getName()
-                      << "\n");
+    DEBUG(dbgs() << "Set cold attribute to function: " << F->getName() << "\n");
   }
   return true;
 }
@@ -1587,25 +1585,22 @@ void llvm::setProfMetadata(Module *M, Instruction *TI,
   for (const auto &ECI : EdgeCounts)
     Weights.push_back(scaleBranchCount(ECI, Scale));
 
-  LLVM_DEBUG(dbgs() << "Weight is: "; for (const auto &W
-                                           : Weights) {
-    dbgs() << W << " ";
-  } dbgs() << "\n";);
+  DEBUG(dbgs() << "Weight is: ";
+        for (const auto &W : Weights) { dbgs() << W << " "; }
+        dbgs() << "\n";);
   TI->setMetadata(LLVMContext::MD_prof, MDB.createBranchWeights(Weights));
   if (EmitBranchProbability) {
     std::string BrCondStr = getBranchCondString(TI);
     if (BrCondStr.empty())
       return;
 
-    uint64_t WSum =
-        std::accumulate(Weights.begin(), Weights.end(), (uint64_t)0,
-                        [](uint64_t w1, uint64_t w2) { return w1 + w2; });
+    unsigned WSum =
+        std::accumulate(Weights.begin(), Weights.end(), 0,
+                        [](unsigned w1, unsigned w2) { return w1 + w2; });
     uint64_t TotalCount =
-        std::accumulate(EdgeCounts.begin(), EdgeCounts.end(), (uint64_t)0,
+        std::accumulate(EdgeCounts.begin(), EdgeCounts.end(), 0,
                         [](uint64_t c1, uint64_t c2) { return c1 + c2; });
-    Scale = calculateCountScale(WSum);
-    BranchProbability BP(scaleBranchCount(Weights[0], Scale),
-                         scaleBranchCount(WSum, Scale));
+    BranchProbability BP(Weights[0], WSum);
     std::string BranchProbStr;
     raw_string_ostream OS(BranchProbStr);
     OS << BP;

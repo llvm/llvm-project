@@ -13,20 +13,18 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "OrcLazyJIT.h"
 #include "RemoteJITUtils.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Bitcode/BitcodeReader.h"
-#include "llvm/CodeGen/CommandFlags.inc"
+#include "llvm/CodeGen/CommandFlags.def"
 #include "llvm/CodeGen/LinkAllCodegenComponents.h"
-#include "llvm/Config/llvm-config.h"
 #include "llvm/ExecutionEngine/GenericValue.h"
 #include "llvm/ExecutionEngine/Interpreter.h"
 #include "llvm/ExecutionEngine/JITEventListener.h"
 #include "llvm/ExecutionEngine/MCJIT.h"
 #include "llvm/ExecutionEngine/ObjectCache.h"
-#include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
-#include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/ExecutionEngine/Orc/OrcRemoteTargetClient.h"
 #include "llvm/ExecutionEngine/OrcMCJITReplacement.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
@@ -35,7 +33,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/TypeBuilder.h"
-#include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ObjectFile.h"
@@ -43,18 +40,18 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Memory.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PluginLoader.h"
+#include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
+#include "llvm/Support/Signals.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
-#include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Instrumentation.h"
 #include <cerrno>
@@ -179,28 +176,6 @@ namespace {
     cl::desc("Generate software floating point library calls"),
     cl::init(false));
 
-  enum class DumpKind {
-    NoDump,
-    DumpFuncsToStdOut,
-    DumpModsToStdOut,
-    DumpModsToDisk
-  };
-
-  cl::opt<DumpKind> OrcDumpKind(
-      "orc-lazy-debug", cl::desc("Debug dumping for the orc-lazy JIT."),
-      cl::init(DumpKind::NoDump),
-      cl::values(clEnumValN(DumpKind::NoDump, "no-dump",
-                            "Don't dump anything."),
-                 clEnumValN(DumpKind::DumpFuncsToStdOut, "funcs-to-stdout",
-                            "Dump function names to stdout."),
-                 clEnumValN(DumpKind::DumpModsToStdOut, "mods-to-stdout",
-                            "Dump modules to stdout."),
-                 clEnumValN(DumpKind::DumpModsToDisk, "mods-to-disk",
-                            "Dump modules to the current "
-                            "working directory. (WARNING: "
-                            "will overwrite existing files).")),
-      cl::Hidden);
-
   ExitOnError ExitOnErr;
 }
 
@@ -320,7 +295,7 @@ static void addCygMingExtraModule(ExecutionEngine &EE, LLVMContext &Context,
 CodeGenOpt::Level getOptLevel() {
   switch (OptLevel) {
   default:
-    WithColor::error(errs(), "lli") << "invalid optimization level.\n";
+    errs() << "lli: Invalid optimization level.\n";
     exit(1);
   case '0': return CodeGenOpt::None;
   case '1': return CodeGenOpt::Less;
@@ -337,14 +312,14 @@ static void reportError(SMDiagnostic Err, const char *ProgName) {
   exit(1);
 }
 
-int runOrcLazyJIT(LLVMContext &Ctx, std::vector<std::unique_ptr<Module>> Ms,
-                  const std::vector<std::string> &Args);
-
 //===----------------------------------------------------------------------===//
 // main Driver function
 //
 int main(int argc, char **argv, char * const *envp) {
-  InitLLVM X(argc, argv);
+  sys::PrintStackTraceOnErrorSignal(argv[0]);
+  PrettyStackTraceProgram X(argc, argv);
+
+  atexit(llvm_shutdown); // Call llvm_shutdown() on exit.
 
   if (argc > 1)
     ExitOnErr.setBanner(std::string(argv[0]) + ": ");
@@ -383,7 +358,7 @@ int main(int argc, char **argv, char * const *envp) {
     Args.push_back(InputFile);
     for (auto &Arg : InputArgv)
       Args.push_back(Arg);
-    return runOrcLazyJIT(Context, std::move(Ms), Args);
+    return runOrcLazyJIT(std::move(Ms), Args);
   }
 
   if (EnableCacheManager) {
@@ -403,8 +378,8 @@ int main(int argc, char **argv, char * const *envp) {
   std::string ErrorMsg;
   EngineBuilder builder(std::move(Owner));
   builder.setMArch(MArch);
-  builder.setMCPU(getCPUStr());
-  builder.setMAttrs(getFeatureList());
+  builder.setMCPU(MCPU);
+  builder.setMAttrs(MAttrs);
   if (RelocModel.getNumOccurrences())
     builder.setRelocationModel(RelocModel);
   if (CMModel.getNumOccurrences())
@@ -432,8 +407,8 @@ int main(int argc, char **argv, char * const *envp) {
     builder.setMCJITMemoryManager(
       std::unique_ptr<RTDyldMemoryManager>(RTDyldMM));
   } else if (RemoteMCJIT) {
-    WithColor::error(errs(), argv[0])
-        << "remote process execution does not work with the interpreter.\n";
+    errs() << "error: Remote process execution does not work with the "
+              "interpreter.\n";
     exit(1);
   }
 
@@ -448,10 +423,9 @@ int main(int argc, char **argv, char * const *envp) {
   std::unique_ptr<ExecutionEngine> EE(builder.create());
   if (!EE) {
     if (!ErrorMsg.empty())
-      WithColor::error(errs(), argv[0])
-          << "error creating EE: " << ErrorMsg << "\n";
+      errs() << argv[0] << ": error creating EE: " << ErrorMsg << "\n";
     else
-      WithColor::error(errs(), argv[0]) << "unknown error creating EE!\n";
+      errs() << argv[0] << ": unknown error creating EE!\n";
     exit(1);
   }
 
@@ -524,8 +498,7 @@ int main(int argc, char **argv, char * const *envp) {
                 JITEventListener::createIntelJITEventListener());
 
   if (!NoLazyCompilation && RemoteMCJIT) {
-    WithColor::warning(errs(), argv[0])
-        << "remote mcjit does not support lazy compilation\n";
+    errs() << "warning: remote mcjit does not support lazy compilation\n";
     NoLazyCompilation = true;
   }
   EE->DisableLazyCompilation(NoLazyCompilation);
@@ -551,8 +524,7 @@ int main(int argc, char **argv, char * const *envp) {
   //
   Function *EntryFn = Mod->getFunction(EntryFunc);
   if (!EntryFn) {
-    WithColor::error(errs(), argv[0])
-        << '\'' << EntryFunc << "\' function not found in module.\n";
+    errs() << '\'' << EntryFunc << "\' function not found in module.\n";
     return -1;
   }
 
@@ -565,19 +537,16 @@ int main(int argc, char **argv, char * const *envp) {
   // remote JIT on Unix platforms.
   if (RemoteMCJIT) {
 #ifndef LLVM_ON_UNIX
-    WithColor::warning(errs(), argv[0])
-        << "host does not support external remote targets.\n";
-    WithColor::note() << "defaulting to local execution\n";
+    errs() << "Warning: host does not support external remote targets.\n"
+           << "  Defaulting to local execution\n";
     return -1;
 #else
     if (ChildExecPath.empty()) {
-      WithColor::error(errs(), argv[0])
-          << "-remote-mcjit requires -mcjit-remote-process.\n";
+      errs() << "-remote-mcjit requires -mcjit-remote-process.\n";
       exit(1);
     } else if (!sys::fs::can_execute(ChildExecPath)) {
-      WithColor::error(errs(), argv[0])
-          << "unable to find usable child executable: '" << ChildExecPath
-          << "'\n";
+      errs() << "Unable to find usable child executable: '" << ChildExecPath
+             << "'\n";
       return -1;
     }
 #endif
@@ -617,11 +586,10 @@ int main(int argc, char **argv, char * const *envp) {
       ResultGV.IntVal = APInt(32, Result);
       Args.push_back(ResultGV);
       EE->runFunction(ExitF, Args);
-      WithColor::error(errs(), argv[0]) << "exit(" << Result << ") returned!\n";
+      errs() << "ERROR: exit(" << Result << ") returned!\n";
       abort();
     } else {
-      WithColor::error(errs(), argv[0])
-          << "exit defined with wrong prototype!\n";
+      errs() << "ERROR: exit defined with wrong prototype!\n";
       abort();
     }
   } else {
@@ -634,15 +602,13 @@ int main(int argc, char **argv, char * const *envp) {
     // Lanch the remote process and get a channel to it.
     std::unique_ptr<FDRawChannel> C = launchRemote();
     if (!C) {
-      WithColor::error(errs(), argv[0]) << "failed to launch remote JIT.\n";
+      errs() << "Failed to launch remote JIT.\n";
       exit(1);
     }
 
     // Create a remote target client running over the channel.
-    llvm::orc::ExecutionSession ES;
-    ES.setErrorReporter([&](Error Err) { ExitOnErr(std::move(Err)); });
     typedef orc::remote::OrcRemoteTargetClient MyRemote;
-    auto R = ExitOnErr(MyRemote::Create(*C, ES));
+    auto R = ExitOnErr(MyRemote::Create(*C, ExitOnErr));
 
     // Create a remote memory manager.
     auto RemoteMM = ExitOnErr(R->createRemoteMemoryManager());
@@ -666,8 +632,8 @@ int main(int argc, char **argv, char * const *envp) {
     // FIXME: argv and envp handling.
     JITTargetAddress Entry = EE->getFunctionAddress(EntryFn->getName().str());
     EE->finalizeObject();
-    LLVM_DEBUG(dbgs() << "Executing '" << EntryFn->getName() << "' at 0x"
-                      << format("%llx", Entry) << "\n");
+    DEBUG(dbgs() << "Executing '" << EntryFn->getName() << "' at 0x"
+                 << format("%llx", Entry) << "\n");
     Result = ExitOnErr(R->callIntVoid(Entry));
 
     // Like static constructors, the remote target MCJIT support doesn't handle
@@ -681,130 +647,6 @@ int main(int argc, char **argv, char * const *envp) {
     // Signal the remote target that we're done JITing.
     ExitOnErr(R->terminateSession());
   }
-
-  return Result;
-}
-
-static orc::IRTransformLayer2::TransformFunction createDebugDumper() {
-  switch (OrcDumpKind) {
-  case DumpKind::NoDump:
-    return [](std::unique_ptr<Module> M) { return M; };
-
-  case DumpKind::DumpFuncsToStdOut:
-    return [](std::unique_ptr<Module> M) {
-      printf("[ ");
-
-      for (const auto &F : *M) {
-        if (F.isDeclaration())
-          continue;
-
-        if (F.hasName()) {
-          std::string Name(F.getName());
-          printf("%s ", Name.c_str());
-        } else
-          printf("<anon> ");
-      }
-
-      printf("]\n");
-      return M;
-    };
-
-  case DumpKind::DumpModsToStdOut:
-    return [](std::unique_ptr<Module> M) {
-      outs() << "----- Module Start -----\n"
-             << *M << "----- Module End -----\n";
-
-      return M;
-    };
-
-  case DumpKind::DumpModsToDisk:
-    return [](std::unique_ptr<Module> M) {
-      std::error_code EC;
-      raw_fd_ostream Out(M->getModuleIdentifier() + ".ll", EC, sys::fs::F_Text);
-      if (EC) {
-        errs() << "Couldn't open " << M->getModuleIdentifier()
-               << " for dumping.\nError:" << EC.message() << "\n";
-        exit(1);
-      }
-      Out << *M;
-      return M;
-    };
-  }
-  llvm_unreachable("Unknown DumpKind");
-}
-
-int runOrcLazyJIT(LLVMContext &Ctx, std::vector<std::unique_ptr<Module>> Ms,
-                  const std::vector<std::string> &Args) {
-  // Bail out early if no modules loaded.
-  if (Ms.empty())
-    return 0;
-
-  // Add lli's symbols into the JIT's search space.
-  std::string ErrMsg;
-  sys::DynamicLibrary LibLLI =
-      sys::DynamicLibrary::getPermanentLibrary(nullptr, &ErrMsg);
-  if (!LibLLI.isValid()) {
-    errs() << "Error loading lli symbols: " << ErrMsg << ".\n";
-    return 1;
-  }
-
-  const auto &TT = Ms.front()->getTargetTriple();
-  orc::JITTargetMachineBuilder TMD =
-      TT.empty() ? ExitOnErr(orc::JITTargetMachineBuilder::detectHost())
-                 : orc::JITTargetMachineBuilder(Triple(TT));
-
-  TMD.setArch(MArch)
-      .setCPU(getCPUStr())
-      .addFeatures(getFeatureList())
-      .setRelocationModel(RelocModel.getNumOccurrences()
-                              ? Optional<Reloc::Model>(RelocModel)
-                              : None)
-      .setCodeModel(CMModel.getNumOccurrences()
-                        ? Optional<CodeModel::Model>(CMModel)
-                        : None);
-  auto TM = ExitOnErr(TMD.createTargetMachine());
-  auto DL = TM->createDataLayout();
-  auto ES = llvm::make_unique<orc::ExecutionSession>();
-  auto J =
-      ExitOnErr(orc::LLLazyJIT::Create(std::move(ES), std::move(TM), DL, Ctx));
-
-  auto Dump = createDebugDumper();
-
-  J->setLazyCompileTransform(
-    [&](std::unique_ptr<Module> M) {
-      if (verifyModule(*M, &dbgs())) {
-        dbgs() << "Bad module: " << *M << "\n";
-        exit(1);
-      }
-      return Dump(std::move(M));
-    });
-  J->getMainVSO().setFallbackDefinitionGenerator(
-      orc::DynamicLibraryFallbackGenerator(
-          std::move(LibLLI), DL, [](orc::SymbolStringPtr) { return true; }));
-
-  orc::MangleAndInterner Mangle(J->getExecutionSession(), DL);
-  orc::LocalCXXRuntimeOverrides2 CXXRuntimeOverrides;
-  ExitOnErr(CXXRuntimeOverrides.enable(J->getMainVSO(), Mangle));
-
-  for (auto &M : Ms) {
-    orc::makeAllSymbolsExternallyAccessible(*M);
-    ExitOnErr(J->addLazyIRModule(std::move(M)));
-  }
-
-  ExitOnErr(J->runConstructors());
-
-  auto MainSym = ExitOnErr(J->lookup("main"));
-  typedef int (*MainFnPtr)(int, const char *[]);
-  std::vector<const char *> ArgV;
-  for (auto &Arg : Args)
-    ArgV.push_back(Arg.c_str());
-  auto Main =
-      reinterpret_cast<MainFnPtr>(static_cast<uintptr_t>(MainSym.getAddress()));
-  auto Result = Main(ArgV.size(), (const char **)ArgV.data());
-
-  ExitOnErr(J->runDestructors());
-
-  CXXRuntimeOverrides.runDestructors();
 
   return Result;
 }

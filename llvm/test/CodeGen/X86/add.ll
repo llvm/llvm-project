@@ -176,14 +176,14 @@ define i64 @test6(i64 %A, i32 %B) nounwind {
 ;
 ; X64-LINUX-LABEL: test6:
 ; X64-LINUX:       # %bb.0: # %entry
-; X64-LINUX-NEXT:    # kill: def $esi killed $esi def $rsi
+; X64-LINUX-NEXT:    # kill: def %esi killed %esi def %rsi
 ; X64-LINUX-NEXT:    shlq $32, %rsi
 ; X64-LINUX-NEXT:    leaq (%rsi,%rdi), %rax
 ; X64-LINUX-NEXT:    retq
 ;
 ; X64-WIN32-LABEL: test6:
 ; X64-WIN32:       # %bb.0: # %entry
-; X64-WIN32-NEXT:    # kill: def $edx killed $edx def $rdx
+; X64-WIN32-NEXT:    # kill: def %edx killed %edx def %rdx
 ; X64-WIN32-NEXT:    shlq $32, %rdx
 ; X64-WIN32-NEXT:    leaq (%rdx,%rcx), %rax
 ; X64-WIN32-NEXT:    retq
@@ -380,61 +380,5 @@ entry:
   %aa = load i64, i64* %a
   %b = add i64 %aa, 128
   store i64 %b, i64* %a
-  ret void
-}
-
-define i32 @inc_not(i32 %a) {
-; X32-LABEL: inc_not:
-; X32:       # %bb.0:
-; X32-NEXT:    xorl %eax, %eax
-; X32-NEXT:    subl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    retl
-;
-; X64-LINUX-LABEL: inc_not:
-; X64-LINUX:       # %bb.0:
-; X64-LINUX-NEXT:    negl %edi
-; X64-LINUX-NEXT:    movl %edi, %eax
-; X64-LINUX-NEXT:    retq
-;
-; X64-WIN32-LABEL: inc_not:
-; X64-WIN32:       # %bb.0:
-; X64-WIN32-NEXT:    negl %ecx
-; X64-WIN32-NEXT:    movl %ecx, %eax
-; X64-WIN32-NEXT:    retq
-  %nota = xor i32 %a, -1
-  %r = add i32 %nota, 1
-  ret i32 %r
-}
-
-define void @uaddo1_not(i32 %a, i32* %p0, i1* %p1) {
-; X32-LABEL: uaddo1_not:
-; X32:       # %bb.0:
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    xorl %edx, %edx
-; X32-NEXT:    subl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    movl %edx, (%ecx)
-; X32-NEXT:    setae (%eax)
-; X32-NEXT:    retl
-;
-; X64-LINUX-LABEL: uaddo1_not:
-; X64-LINUX:       # %bb.0:
-; X64-LINUX-NEXT:    negl %edi
-; X64-LINUX-NEXT:    movl %edi, (%rsi)
-; X64-LINUX-NEXT:    setae (%rdx)
-; X64-LINUX-NEXT:    retq
-;
-; X64-WIN32-LABEL: uaddo1_not:
-; X64-WIN32:       # %bb.0:
-; X64-WIN32-NEXT:    negl %ecx
-; X64-WIN32-NEXT:    movl %ecx, (%rdx)
-; X64-WIN32-NEXT:    setae (%r8)
-; X64-WIN32-NEXT:    retq
-  %nota = xor i32 %a, -1
-  %uaddo = call {i32, i1} @llvm.uadd.with.overflow.i32(i32 %nota, i32 1)
-  %r0 = extractvalue {i32, i1} %uaddo, 0
-  %r1 = extractvalue {i32, i1} %uaddo, 1
-  store i32 %r0, i32* %p0
-  store i1 %r1, i1* %p1
   ret void
 }

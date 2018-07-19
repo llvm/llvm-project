@@ -9,14 +9,14 @@
 ;
 ; This issue manifests in a CFG that looks something like this:
 ;
-; %bb.2.finish:
-;     successors: %bb.5(?%) %bb.6(?%)
+; %bb.2: derived from LLVM BB %finish
 ;     Predecessors according to CFG: %bb.0 %bb.1
 ;         %0 = PHI %3, <%bb.0>, %5, <%bb.1>
 ;         %7 = LDIRdK 2
 ;         %8 = LDIRdK 1
 ;         CPRdRr %2, %0, implicit-def %SREG
 ;         BREQk <%bb.6>, implicit %SREG
+;     Successors according to CFG: %bb.5(?%) %bb.6(?%)
 ;
 ; The code assumes it the fallthrough block after this is %bb.5, but
 ; it's actually %bb.3! To be proper, there should be an unconditional
@@ -49,10 +49,10 @@ dead:
 ; basic block containing `select` needs to contain explicit jumps to
 ; both successors.
 
-; CHECK: bb.2.finish:
-; CHECK: successors:
+; CHECK: %bb.2: derived from LLVM BB %finish
 ; CHECK: BREQk [[BRANCHED:%bb.[0-9]+]]
 ; CHECK: RJMPk [[DIRECT:%bb.[0-9]+]]
+; CHECK: Successors according to CFG
 ; CHECK-SAME-DAG: {{.*}}[[BRANCHED]]
 ; CHECK-SAME-DAG: {{.*}}[[DIRECT]]
-; CHECK: bb.3.dead:
+; CHECK: %bb.3: derived from LLVM BB

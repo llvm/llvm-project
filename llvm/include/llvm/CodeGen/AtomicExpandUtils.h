@@ -26,7 +26,7 @@ using CreateCmpXchgInstFun =
     function_ref<void(IRBuilder<> &, Value *, Value *, Value *, AtomicOrdering,
                       Value *&, Value *&)>;
 
-/// Expand an atomic RMW instruction into a loop utilizing
+/// \brief Expand an atomic RMW instruction into a loop utilizing
 /// cmpxchg. You'll want to make sure your target machine likes cmpxchg
 /// instructions in the first place and that there isn't another, better,
 /// transformation available (for example AArch32/AArch64 have linked loads).
@@ -58,7 +58,7 @@ using CreateCmpXchgInstFun =
 ///     [...]
 ///
 /// Returns true if the containing function was modified.
-bool expandAtomicRMWToCmpXchg(AtomicRMWInst *AI, CreateCmpXchgInstFun CreateCmpXchg);
+bool expandAtomicRMWToCmpXchg(AtomicRMWInst *AI, CreateCmpXchgInstFun Factory);
 
 } // end namespace llvm
 

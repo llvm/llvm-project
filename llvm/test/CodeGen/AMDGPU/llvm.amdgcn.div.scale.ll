@@ -230,13 +230,13 @@ define amdgpu_kernel void @test_div_scale_f64_scalar_den_2(double addrspace(1)* 
 }
 
 ; SI-LABEL: {{^}}test_div_scale_f32_all_scalar_1:
-; SI-DAG: s_load_dword [[A:s[0-9]+]], {{s\[[0-9]+:[0-9]+\]}}, 0x13
-; SI-DAG: s_load_dword [[B:s[0-9]+]], {{s\[[0-9]+:[0-9]+\]}}, 0x1c
+; SI-DAG: s_load_dword [[A:s[0-9]+]], {{s\[[0-9]+:[0-9]+\]}}, 0xb
+; SI-DAG: s_load_dword [[B:s[0-9]+]], {{s\[[0-9]+:[0-9]+\]}}, 0xc
 ; SI: v_mov_b32_e32 [[VA:v[0-9]+]], [[A]]
 ; SI: v_div_scale_f32 [[RESULT0:v[0-9]+]], [[RESULT1:s\[[0-9]+:[0-9]+\]]], [[B]], [[B]], [[VA]]
 ; SI: buffer_store_dword [[RESULT0]]
 ; SI: s_endpgm
-define amdgpu_kernel void @test_div_scale_f32_all_scalar_1(float addrspace(1)* %out, [8 x i32], float %a, [8 x i32], float %b) nounwind {
+define amdgpu_kernel void @test_div_scale_f32_all_scalar_1(float addrspace(1)* %out, float %a, float %b) nounwind {
   %result = call { float, i1 } @llvm.amdgcn.div.scale.f32(float %a, float %b, i1 false) nounwind readnone
   %result0 = extractvalue { float, i1 } %result, 0
   store float %result0, float addrspace(1)* %out, align 4
@@ -244,13 +244,13 @@ define amdgpu_kernel void @test_div_scale_f32_all_scalar_1(float addrspace(1)* %
 }
 
 ; SI-LABEL: {{^}}test_div_scale_f32_all_scalar_2:
-; SI-DAG: s_load_dword [[A:s[0-9]+]], {{s\[[0-9]+:[0-9]+\]}}, 0x13
-; SI-DAG: s_load_dword [[B:s[0-9]+]], {{s\[[0-9]+:[0-9]+\]}}, 0x1c
+; SI-DAG: s_load_dword [[A:s[0-9]+]], {{s\[[0-9]+:[0-9]+\]}}, 0xb
+; SI-DAG: s_load_dword [[B:s[0-9]+]], {{s\[[0-9]+:[0-9]+\]}}, 0xc
 ; SI: v_mov_b32_e32 [[VB:v[0-9]+]], [[B]]
 ; SI: v_div_scale_f32 [[RESULT0:v[0-9]+]], [[RESULT1:s\[[0-9]+:[0-9]+\]]], [[A]], [[VB]], [[A]]
 ; SI: buffer_store_dword [[RESULT0]]
 ; SI: s_endpgm
-define amdgpu_kernel void @test_div_scale_f32_all_scalar_2(float addrspace(1)* %out, [8 x i32], float %a, [8 x i32], float %b) nounwind {
+define amdgpu_kernel void @test_div_scale_f32_all_scalar_2(float addrspace(1)* %out, float %a, float %b) nounwind {
   %result = call { float, i1 } @llvm.amdgcn.div.scale.f32(float %a, float %b, i1 true) nounwind readnone
   %result0 = extractvalue { float, i1 } %result, 0
   store float %result0, float addrspace(1)* %out, align 4
@@ -258,14 +258,14 @@ define amdgpu_kernel void @test_div_scale_f32_all_scalar_2(float addrspace(1)* %
 }
 
 ; SI-LABEL: {{^}}test_div_scale_f64_all_scalar_1:
-; SI-DAG: s_load_dwordx2 s{{\[}}[[A_LO:[0-9]+]]:[[A_HI:[0-9]+]]{{\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0x13
-; SI-DAG: s_load_dwordx2 [[B:s\[[0-9]+:[0-9]+\]]], {{s\[[0-9]+:[0-9]+\]}}, 0x1d
+; SI-DAG: s_load_dwordx2 s{{\[}}[[A_LO:[0-9]+]]:[[A_HI:[0-9]+]]{{\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0xb
+; SI-DAG: s_load_dwordx2 [[B:s\[[0-9]+:[0-9]+\]]], {{s\[[0-9]+:[0-9]+\]}}, 0xd
 ; SI-DAG: v_mov_b32_e32 v[[VA_LO:[0-9]+]], s[[A_LO]]
 ; SI-DAG: v_mov_b32_e32 v[[VA_HI:[0-9]+]], s[[A_HI]]
 ; SI: v_div_scale_f64 [[RESULT0:v\[[0-9]+:[0-9]+\]]], [[RESULT1:s\[[0-9]+:[0-9]+\]]], [[B]], [[B]], v{{\[}}[[VA_LO]]:[[VA_HI]]{{\]}}
 ; SI: buffer_store_dwordx2 [[RESULT0]]
 ; SI: s_endpgm
-define amdgpu_kernel void @test_div_scale_f64_all_scalar_1(double addrspace(1)* %out, [8 x i32], double %a, [8 x i32], double %b) nounwind {
+define amdgpu_kernel void @test_div_scale_f64_all_scalar_1(double addrspace(1)* %out, double %a, double %b) nounwind {
   %result = call { double, i1 } @llvm.amdgcn.div.scale.f64(double %a, double %b, i1 false) nounwind readnone
   %result0 = extractvalue { double, i1 } %result, 0
   store double %result0, double addrspace(1)* %out, align 8
@@ -273,14 +273,14 @@ define amdgpu_kernel void @test_div_scale_f64_all_scalar_1(double addrspace(1)* 
 }
 
 ; SI-LABEL: {{^}}test_div_scale_f64_all_scalar_2:
-; SI-DAG: s_load_dwordx2 [[A:s\[[0-9]+:[0-9]+\]]], {{s\[[0-9]+:[0-9]+\]}}, 0x13
-; SI-DAG: s_load_dwordx2 s{{\[}}[[B_LO:[0-9]+]]:[[B_HI:[0-9]+]]{{\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0x1d
+; SI-DAG: s_load_dwordx2 [[A:s\[[0-9]+:[0-9]+\]]], {{s\[[0-9]+:[0-9]+\]}}, 0xb
+; SI-DAG: s_load_dwordx2 s{{\[}}[[B_LO:[0-9]+]]:[[B_HI:[0-9]+]]{{\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0xd
 ; SI-DAG: v_mov_b32_e32 v[[VB_LO:[0-9]+]], s[[B_LO]]
 ; SI-DAG: v_mov_b32_e32 v[[VB_HI:[0-9]+]], s[[B_HI]]
 ; SI: v_div_scale_f64 [[RESULT0:v\[[0-9]+:[0-9]+\]]], [[RESULT1:s\[[0-9]+:[0-9]+\]]], [[A]], v{{\[}}[[VB_LO]]:[[VB_HI]]{{\]}}, [[A]]
 ; SI: buffer_store_dwordx2 [[RESULT0]]
 ; SI: s_endpgm
-define amdgpu_kernel void @test_div_scale_f64_all_scalar_2(double addrspace(1)* %out, [8 x i32], double %a, [8 x i32], double %b) nounwind {
+define amdgpu_kernel void @test_div_scale_f64_all_scalar_2(double addrspace(1)* %out, double %a, double %b) nounwind {
   %result = call { double, i1 } @llvm.amdgcn.div.scale.f64(double %a, double %b, i1 true) nounwind readnone
   %result0 = extractvalue { double, i1 } %result, 0
   store double %result0, double addrspace(1)* %out, align 8

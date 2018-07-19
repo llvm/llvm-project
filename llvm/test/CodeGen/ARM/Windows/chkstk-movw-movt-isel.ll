@@ -18,7 +18,7 @@ entry:
 }
 
 ; CHECK-LABEL: isel
-; CHECK: push {r4, r5, r6, lr}
+; CHECK: push {r4, r5}
 ; CHECK: movw r12, #0
 ; CHECK: movt r12, #0
 ; CHECK: movw r4, #{{\d*}}

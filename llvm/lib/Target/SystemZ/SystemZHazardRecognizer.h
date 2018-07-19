@@ -75,11 +75,9 @@ class SystemZHazardRecognizer : public ScheduleHazardRecognizer {
 
   /// Two decoder groups per cycle are formed (for z13), meaning 2x3
   /// instructions. This function returns a number between 0 and 5,
-  /// representing the current decoder slot of the current cycle.  If an SU
-  /// is passed which will begin a new decoder group, the returned value is
-  /// the cycle index of the next group.
-  unsigned getCurrCycleIdx(SUnit *SU = nullptr) const;
-
+  /// representing the current decoder slot of the current cycle.
+  unsigned getCurrCycleIdx();
+  
   /// LastFPdOpCycleIdx stores the numbeer returned by getCurrCycleIdx()
   /// when a stalling operation is scheduled (which uses the FPd resource).
   unsigned LastFPdOpCycleIdx;
@@ -90,14 +88,14 @@ class SystemZHazardRecognizer : public ScheduleHazardRecognizer {
   unsigned getCurrGroupSize() {return CurrGroupSize;};
 
   /// Start next decoder group.
-  void nextGroup();
+  void nextGroup(bool DbgOutput = true);
 
   /// Clear all counters for processor resources.
   void clearProcResCounters();
 
   /// With the goal of alternating processor sides for stalling (FPd)
   /// ops, return true if it seems good to schedule an FPd op next.
-  bool isFPdOpPreferred_distance(SUnit *SU) const;
+  bool isFPdOpPreferred_distance(const SUnit *SU);
 
   /// Last emitted instruction or nullptr.
   MachineInstr *LastEmittedMI;
@@ -147,7 +145,6 @@ public:
   void dumpSU(SUnit *SU, raw_ostream &OS) const;
   void dumpCurrGroup(std::string Msg = "") const;
   void dumpProcResourceCounters() const;
-  void dumpState() const;
 #endif
 
   MachineBasicBlock::iterator getLastEmittedMI() { return LastEmittedMI; }

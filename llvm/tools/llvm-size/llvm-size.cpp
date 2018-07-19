@@ -23,8 +23,10 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/PrettyStackTrace.h"
+#include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <string>
@@ -68,7 +70,7 @@ cl::opt<bool>
 static cl::list<std::string>
 ArchFlags("arch", cl::desc("architecture(s) from a Mach-O file to dump"),
           cl::ZeroOrMore);
-static bool ArchAll = false;
+bool ArchAll = false;
 
 enum RadixTy { octal = 8, decimal = 10, hexadecimal = 16 };
 static cl::opt<unsigned int>
@@ -93,7 +95,7 @@ static cl::alias TotalSizesShort("t", cl::desc("Short for --totals"),
 static cl::list<std::string>
 InputFilenames(cl::Positional, cl::desc("<input files>"), cl::ZeroOrMore);
 
-static bool HadError = false;
+bool HadError = false;
 
 static std::string ToolName;
 
@@ -852,7 +854,11 @@ static void printBerkelyTotals() {
 }
 
 int main(int argc, char **argv) {
-  InitLLVM X(argc, argv);
+  // Print a stack trace if we signal out.
+  sys::PrintStackTraceOnErrorSignal(argv[0]);
+  PrettyStackTraceProgram X(argc, argv);
+
+  llvm_shutdown_obj Y; // Call llvm_shutdown() on exit.
   cl::ParseCommandLineOptions(argc, argv, "llvm object size dumper\n");
 
   ToolName = argv[0];

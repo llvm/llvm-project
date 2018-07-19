@@ -44,7 +44,7 @@ define void @test(i256* %a, i256* %b, i256* %out) #0 {
 ; X32-NEXT:    movl %edi, %eax
 ; X32-NEXT:    mull %ecx
 ; X32-NEXT:    movl %ecx, %edi
-; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl %edi, {{[0-9]+}}(%esp) # 4-byte Spill
 ; X32-NEXT:    movl %edx, %ecx
 ; X32-NEXT:    addl %ebx, %eax
 ; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
@@ -62,9 +62,9 @@ define void @test(i256* %a, i256* %b, i256* %out) #0 {
 ; X32-NEXT:    movl %ecx, %eax
 ; X32-NEXT:    mull %edx
 ; X32-NEXT:    movl %edx, %ebp
-; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl %ebp, {{[0-9]+}}(%esp) # 4-byte Spill
 ; X32-NEXT:    movl %eax, %esi
-; X32-NEXT:    movl %eax, (%esp) # 4-byte Spill
+; X32-NEXT:    movl %esi, (%esp) # 4-byte Spill
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
 ; X32-NEXT:    xorl %edx, %edx
 ; X32-NEXT:    mull %edx
@@ -127,7 +127,7 @@ define void @test(i256* %a, i256* %b, i256* %out) #0 {
 ; X32-NEXT:    adcl $0, {{[0-9]+}}(%esp) # 4-byte Folded Spill
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    movl 8(%eax), %ebx
+; X32-NEXT:    movl 8(%ecx), %ebx
 ; X32-NEXT:    movl %esi, %eax
 ; X32-NEXT:    movl %esi, %edi
 ; X32-NEXT:    mull %ebx
@@ -156,7 +156,7 @@ define void @test(i256* %a, i256* %b, i256* %out) #0 {
 ; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # 1-byte Folded Reload
 ; X32-NEXT:    adcl %eax, %esi
 ; X32-NEXT:    movl %ebx, %edi
-; X32-NEXT:    movl %ebx, %eax
+; X32-NEXT:    movl %edi, %eax
 ; X32-NEXT:    xorl %ecx, %ecx
 ; X32-NEXT:    mull %ecx
 ; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp) # 4-byte Spill
@@ -349,15 +349,10 @@ define void @test(i256* %a, i256* %b, i256* %out) #0 {
 ; X32-NEXT:    movl %eax, 24(%ecx)
 ; X32-NEXT:    movl %edx, 28(%ecx)
 ; X32-NEXT:    addl $88, %esp
-; X32-NEXT:    .cfi_def_cfa_offset 20
 ; X32-NEXT:    popl %esi
-; X32-NEXT:    .cfi_def_cfa_offset 16
 ; X32-NEXT:    popl %edi
-; X32-NEXT:    .cfi_def_cfa_offset 12
 ; X32-NEXT:    popl %ebx
-; X32-NEXT:    .cfi_def_cfa_offset 8
 ; X32-NEXT:    popl %ebp
-; X32-NEXT:    .cfi_def_cfa_offset 4
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test:
@@ -426,11 +421,8 @@ define void @test(i256* %a, i256* %b, i256* %out) #0 {
 ; X64-NEXT:    movq %rax, 16(%r9)
 ; X64-NEXT:    movq %rdx, 24(%r9)
 ; X64-NEXT:    popq %rbx
-; X64-NEXT:    .cfi_def_cfa_offset 24
 ; X64-NEXT:    popq %r14
-; X64-NEXT:    .cfi_def_cfa_offset 16
 ; X64-NEXT:    popq %r15
-; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq
 entry:
   %av = load i256, i256* %a

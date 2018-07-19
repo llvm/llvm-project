@@ -32,37 +32,18 @@ public:
   unsigned getStubAlignment() override { return 8; }
 
   /// Extract the addend encoded in the instruction / memory location.
-  Expected<int64_t> decodeAddend(const RelocationEntry &RE) const {
+  int64_t decodeAddend(const RelocationEntry &RE) const {
     const SectionEntry &Section = Sections[RE.SectionID];
     uint8_t *LocalAddress = Section.getAddressWithOffset(RE.Offset);
     unsigned NumBytes = 1 << RE.Size;
     int64_t Addend = 0;
     // Verify that the relocation has the correct size and alignment.
     switch (RE.RelType) {
-    default: {
-      std::string ErrMsg;
-      {
-        raw_string_ostream ErrStream(ErrMsg);
-        ErrStream << "Unsupported relocation type: "
-                  << getRelocName(RE.RelType);
-      }
-      return make_error<StringError>(std::move(ErrMsg),
-                                     inconvertibleErrorCode());
-    }
-    case MachO::ARM64_RELOC_POINTER_TO_GOT:
-    case MachO::ARM64_RELOC_UNSIGNED: {
-      if (NumBytes != 4 && NumBytes != 8) {
-        std::string ErrMsg;
-        {
-          raw_string_ostream ErrStream(ErrMsg);
-          ErrStream << "Invalid relocation size for relocation "
-                    << getRelocName(RE.RelType);
-        }
-        return make_error<StringError>(std::move(ErrMsg),
-                                       inconvertibleErrorCode());
-      }
+    default:
+      llvm_unreachable("Unsupported relocation type!");
+    case MachO::ARM64_RELOC_UNSIGNED:
+      assert((NumBytes == 4 || NumBytes == 8) && "Invalid relocation size.");
       break;
-    }
     case MachO::ARM64_RELOC_BRANCH26:
     case MachO::ARM64_RELOC_PAGE21:
     case MachO::ARM64_RELOC_PAGEOFF12:
@@ -77,7 +58,6 @@ public:
     switch (RE.RelType) {
     default:
       llvm_unreachable("Unsupported relocation type!");
-    case MachO::ARM64_RELOC_POINTER_TO_GOT:
     case MachO::ARM64_RELOC_UNSIGNED:
       // This could be an unaligned memory location.
       if (NumBytes == 4)
@@ -159,7 +139,6 @@ public:
     switch (RelType) {
     default:
       llvm_unreachable("Unsupported relocation type!");
-    case MachO::ARM64_RELOC_POINTER_TO_GOT:
     case MachO::ARM64_RELOC_UNSIGNED:
       assert((NumBytes == 4 || NumBytes == 8) && "Invalid relocation size.");
       break;
@@ -177,7 +156,6 @@ public:
     switch (RelType) {
     default:
       llvm_unreachable("Unsupported relocation type!");
-    case MachO::ARM64_RELOC_POINTER_TO_GOT:
     case MachO::ARM64_RELOC_UNSIGNED:
       // This could be an unaligned memory location.
       if (NumBytes == 4)
@@ -304,20 +282,7 @@ public:
       return processSubtractRelocation(SectionID, RelI, Obj, ObjSectionToID);
 
     RelocationEntry RE(getRelocationEntry(SectionID, Obj, RelI));
-
-    if (RE.RelType == MachO::ARM64_RELOC_POINTER_TO_GOT) {
-      bool Valid =
-          (RE.Size == 2 && RE.IsPCRel) || (RE.Size == 3 && !RE.IsPCRel);
-      if (!Valid)
-        return make_error<StringError>("ARM64_RELOC_POINTER_TO_GOT supports "
-                                       "32-bit pc-rel or 64-bit absolute only",
-                                       inconvertibleErrorCode());
-    }
-
-    if (auto Addend = decodeAddend(RE))
-      RE.Addend = *Addend;
-    else
-      return Addend.takeError();
+    RE.Addend = decodeAddend(RE);
 
     assert((ExplicitAddend == 0 || RE.Addend == 0) && "Relocation has "\
       "ARM64_RELOC_ADDEND and embedded addend in the instruction.");
@@ -331,17 +296,13 @@ public:
       return ValueOrErr.takeError();
 
     bool IsExtern = Obj.getPlainRelocationExternal(RelInfo);
-    if (RE.RelType == MachO::ARM64_RELOC_POINTER_TO_GOT) {
-      // We'll take care of the offset in processGOTRelocation.
-      Value.Offset = 0;
-    } else if (!IsExtern && RE.IsPCRel)
+    if (!IsExtern && RE.IsPCRel)
       makeValueAddendPCRel(Value, RelI, 1 << RE.Size);
 
     RE.Addend = Value.Offset;
 
     if (RE.RelType == MachO::ARM64_RELOC_GOT_LOAD_PAGE21 ||
-        RE.RelType == MachO::ARM64_RELOC_GOT_LOAD_PAGEOFF12 ||
-        RE.RelType == MachO::ARM64_RELOC_POINTER_TO_GOT)
+        RE.RelType == MachO::ARM64_RELOC_GOT_LOAD_PAGEOFF12)
       processGOTRelocation(RE, Value, Stubs);
     else {
       if (Value.SymbolName)
@@ -354,7 +315,7 @@ public:
   }
 
   void resolveRelocation(const RelocationEntry &RE, uint64_t Value) override {
-    LLVM_DEBUG(dumpRelocationToResolve(RE, Value));
+    DEBUG(dumpRelocationToResolve(RE, Value));
 
     const SectionEntry &Section = Sections[RE.SectionID];
     uint8_t *LocalAddress = Section.getAddressWithOffset(RE.Offset);
@@ -374,19 +335,6 @@ public:
       encodeAddend(LocalAddress, 1 << RE.Size, RelType, Value + RE.Addend);
       break;
     }
-
-    case MachO::ARM64_RELOC_POINTER_TO_GOT: {
-      assert(((RE.Size == 2 && RE.IsPCRel) || (RE.Size == 3 && !RE.IsPCRel)) &&
-             "ARM64_RELOC_POINTER_TO_GOT only supports 32-bit pc-rel or 64-bit "
-             "absolute");
-      // Addend is the GOT entry address and RE.Offset the target of the
-      // relocation.
-      uint64_t Result =
-          RE.IsPCRel ? (RE.Addend - RE.Offset) : (Value + RE.Addend);
-      encodeAddend(LocalAddress, 1 << RE.Size, RelType, Result);
-      break;
-    }
-
     case MachO::ARM64_RELOC_BRANCH26: {
       assert(RE.IsPCRel && "not PCRel and ARM64_RELOC_BRANCH26 not supported");
       // Check if branch is in range.
@@ -424,7 +372,7 @@ public:
       writeBytesUnaligned(Value, LocalAddress, 1 << RE.Size);
       break;
     }
-
+    case MachO::ARM64_RELOC_POINTER_TO_GOT:
     case MachO::ARM64_RELOC_TLVP_LOAD_PAGE21:
     case MachO::ARM64_RELOC_TLVP_LOAD_PAGEOFF12:
       llvm_unreachable("Relocation type not yet implemented!");
@@ -442,9 +390,7 @@ public:
 private:
   void processGOTRelocation(const RelocationEntry &RE,
                             RelocationValueRef &Value, StubMap &Stubs) {
-    assert((RE.RelType == MachO::ARM64_RELOC_POINTER_TO_GOT &&
-            (RE.Size == 2 || RE.Size == 3)) ||
-           RE.Size == 2);
+    assert(RE.Size == 2);
     SectionEntry &Section = Sections[RE.SectionID];
     StubMap::const_iterator i = Stubs.find(Value);
     int64_t Offset;
@@ -515,23 +461,6 @@ private:
     addRelocationForSection(R, SectionAID);
 
     return ++RelI;
-  }
-
-  static const char *getRelocName(uint32_t RelocType) {
-    switch (RelocType) {
-      case MachO::ARM64_RELOC_UNSIGNED: return "ARM64_RELOC_UNSIGNED";
-      case MachO::ARM64_RELOC_SUBTRACTOR: return "ARM64_RELOC_SUBTRACTOR";
-      case MachO::ARM64_RELOC_BRANCH26: return "ARM64_RELOC_BRANCH26";
-      case MachO::ARM64_RELOC_PAGE21: return "ARM64_RELOC_PAGE21";
-      case MachO::ARM64_RELOC_PAGEOFF12: return "ARM64_RELOC_PAGEOFF12";
-      case MachO::ARM64_RELOC_GOT_LOAD_PAGE21: return "ARM64_RELOC_GOT_LOAD_PAGE21";
-      case MachO::ARM64_RELOC_GOT_LOAD_PAGEOFF12: return "ARM64_RELOC_GOT_LOAD_PAGEOFF12";
-      case MachO::ARM64_RELOC_POINTER_TO_GOT: return "ARM64_RELOC_POINTER_TO_GOT";
-      case MachO::ARM64_RELOC_TLVP_LOAD_PAGE21: return "ARM64_RELOC_TLVP_LOAD_PAGE21";
-      case MachO::ARM64_RELOC_TLVP_LOAD_PAGEOFF12: return "ARM64_RELOC_TLVP_LOAD_PAGEOFF12";
-      case MachO::ARM64_RELOC_ADDEND: return "ARM64_RELOC_ADDEND";
-    }
-    return "Unrecognized arm64 addend";
   }
 
 };

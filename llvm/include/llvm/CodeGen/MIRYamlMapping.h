@@ -258,11 +258,11 @@ template <> struct MappingTraits<MachineStackObject> {
     YamlIO.mapOptional("callee-saved-restored", Object.CalleeSavedRestored,
                        true);
     YamlIO.mapOptional("local-offset", Object.LocalOffset, Optional<int64_t>());
-    YamlIO.mapOptional("debug-info-variable", Object.DebugVar,
+    YamlIO.mapOptional("di-variable", Object.DebugVar,
                        StringValue()); // Don't print it out when it's empty.
-    YamlIO.mapOptional("debug-info-expression", Object.DebugExpr,
+    YamlIO.mapOptional("di-expression", Object.DebugExpr,
                        StringValue()); // Don't print it out when it's empty.
-    YamlIO.mapOptional("debug-info-location", Object.DebugLoc,
+    YamlIO.mapOptional("di-location", Object.DebugLoc,
                        StringValue()); // Don't print it out when it's empty.
   }
 
@@ -283,9 +283,6 @@ struct FixedMachineStackObject {
   bool IsAliased = false;
   StringValue CalleeSavedRegister;
   bool CalleeSavedRestored = true;
-  StringValue DebugVar;
-  StringValue DebugExpr;
-  StringValue DebugLoc;
 
   bool operator==(const FixedMachineStackObject &Other) const {
     return ID == Other.ID && Type == Other.Type && Offset == Other.Offset &&
@@ -293,9 +290,7 @@ struct FixedMachineStackObject {
            StackID == Other.StackID &&
            IsImmutable == Other.IsImmutable && IsAliased == Other.IsAliased &&
            CalleeSavedRegister == Other.CalleeSavedRegister &&
-           CalleeSavedRestored == Other.CalleeSavedRestored &&
-           DebugVar == Other.DebugVar && DebugExpr == Other.DebugExpr
-           && DebugLoc == Other.DebugLoc;
+           CalleeSavedRestored == Other.CalleeSavedRestored;
   }
 };
 
@@ -326,12 +321,6 @@ template <> struct MappingTraits<FixedMachineStackObject> {
                        StringValue()); // Don't print it out when it's empty.
     YamlIO.mapOptional("callee-saved-restored", Object.CalleeSavedRestored,
                      true);
-    YamlIO.mapOptional("debug-info-variable", Object.DebugVar,
-                       StringValue()); // Don't print it out when it's empty.
-    YamlIO.mapOptional("debug-info-expression", Object.DebugExpr,
-                       StringValue()); // Don't print it out when it's empty.
-    YamlIO.mapOptional("debug-info-location", Object.DebugLoc,
-                       StringValue()); // Don't print it out when it's empty.
   }
 
   static const bool flow = true;
@@ -428,7 +417,6 @@ struct MachineFrameInfo {
   bool HasOpaqueSPAdjustment = false;
   bool HasVAStart = false;
   bool HasMustTailInVarArgFunc = false;
-  unsigned LocalFrameSize = 0;
   StringValue SavePoint;
   StringValue RestorePoint;
 
@@ -446,7 +434,6 @@ struct MachineFrameInfo {
            HasOpaqueSPAdjustment == Other.HasOpaqueSPAdjustment &&
            HasVAStart == Other.HasVAStart &&
            HasMustTailInVarArgFunc == Other.HasMustTailInVarArgFunc &&
-           LocalFrameSize == Other.LocalFrameSize &&
            SavePoint == Other.SavePoint && RestorePoint == Other.RestorePoint;
   }
 };
@@ -470,7 +457,6 @@ template <> struct MappingTraits<MachineFrameInfo> {
     YamlIO.mapOptional("hasVAStart", MFI.HasVAStart, false);
     YamlIO.mapOptional("hasMustTailInVarArgFunc", MFI.HasMustTailInVarArgFunc,
                        false);
-    YamlIO.mapOptional("localFrameSize", MFI.LocalFrameSize, (unsigned)0);
     YamlIO.mapOptional("savePoint", MFI.SavePoint,
                        StringValue()); // Don't print it out when it's empty.
     YamlIO.mapOptional("restorePoint", MFI.RestorePoint,
@@ -486,7 +472,6 @@ struct MachineFunction {
   bool Legalized = false;
   bool RegBankSelected = false;
   bool Selected = false;
-  bool FailedISel = false;
   // Register information
   bool TracksRegLiveness = false;
   std::vector<VirtualRegisterDefinition> VirtualRegisters;
@@ -510,7 +495,6 @@ template <> struct MappingTraits<MachineFunction> {
     YamlIO.mapOptional("legalized", MF.Legalized, false);
     YamlIO.mapOptional("regBankSelected", MF.RegBankSelected, false);
     YamlIO.mapOptional("selected", MF.Selected, false);
-    YamlIO.mapOptional("failedISel", MF.FailedISel, false);
     YamlIO.mapOptional("tracksRegLiveness", MF.TracksRegLiveness, false);
     YamlIO.mapOptional("registers", MF.VirtualRegisters,
                        std::vector<VirtualRegisterDefinition>());

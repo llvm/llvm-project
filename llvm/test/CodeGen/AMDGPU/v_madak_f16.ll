@@ -35,9 +35,9 @@ define amdgpu_kernel void @madak_f16_use_2(
     half addrspace(1)* %b,
     half addrspace(1)* %c) {
 entry:
-  %a.val = load volatile half, half addrspace(1)* %a
-  %b.val = load volatile half, half addrspace(1)* %b
-  %c.val = load volatile half, half addrspace(1)* %c
+  %a.val = load half, half addrspace(1)* %a
+  %b.val = load half, half addrspace(1)* %b
+  %c.val = load half, half addrspace(1)* %c
 
   %t0.val = fmul half %a.val, %b.val
   %t1.val = fmul half %a.val, %c.val

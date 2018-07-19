@@ -1,5 +1,4 @@
 ; RUN: opt -functionattrs -S < %s | FileCheck %s
-; RUN: opt -passes=function-attrs -S < %s | FileCheck %s
 
 ; This checks for an iterator wraparound bug in FunctionAttrs.  The previous
 ; "incorrect" behavior was inferring readonly for the %x argument in @caller.

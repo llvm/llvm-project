@@ -10,7 +10,6 @@
 #include "AMDGPU.h"
 #include "AMDGPUSubtarget.h"
 #include "SIInstrInfo.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -77,7 +76,7 @@ static unsigned isCopyToExec(const MachineInstr &MI) {
   case AMDGPU::COPY:
   case AMDGPU::S_MOV_B64: {
     const MachineOperand &Dst = MI.getOperand(0);
-    if (Dst.isReg() && Dst.getReg() == AMDGPU::EXEC && MI.getOperand(1).isReg())
+    if (Dst.isReg() && Dst.getReg() == AMDGPU::EXEC)
       return MI.getOperand(1).getReg();
     break;
   }
@@ -209,7 +208,7 @@ bool SIOptimizeExecMasking::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
 
-  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
   const SIInstrInfo *TII = ST.getInstrInfo();
 
@@ -244,11 +243,11 @@ bool SIOptimizeExecMasking::runOnMachineFunction(MachineFunction &MF) {
       // Fold exec = COPY (S_AND_B64 reg, exec) -> exec = S_AND_B64 reg, exec
       if (CopyToExecInst->getOperand(1).isKill() &&
           isLogicalOpOnExec(*PrepareExecInst) == CopyToExec) {
-        LLVM_DEBUG(dbgs() << "Fold exec copy: " << *PrepareExecInst);
+        DEBUG(dbgs() << "Fold exec copy: " << *PrepareExecInst);
 
         PrepareExecInst->getOperand(0).setReg(AMDGPU::EXEC);
 
-        LLVM_DEBUG(dbgs() << "into: " << *PrepareExecInst << '\n');
+        DEBUG(dbgs() << "into: " << *PrepareExecInst << '\n');
 
         CopyToExecInst->eraseFromParent();
       }
@@ -258,7 +257,7 @@ bool SIOptimizeExecMasking::runOnMachineFunction(MachineFunction &MF) {
 
     if (isLiveOut(MBB, CopyToExec)) {
       // The copied register is live out and has a second use in another block.
-      LLVM_DEBUG(dbgs() << "Exec copy source register is live out\n");
+      DEBUG(dbgs() << "Exec copy source register is live out\n");
       continue;
     }
 
@@ -270,7 +269,7 @@ bool SIOptimizeExecMasking::runOnMachineFunction(MachineFunction &MF) {
            = std::next(CopyFromExecInst->getIterator()), JE = I->getIterator();
          J != JE; ++J) {
       if (SaveExecInst && J->readsRegister(AMDGPU::EXEC, TRI)) {
-        LLVM_DEBUG(dbgs() << "exec read prevents saveexec: " << *J << '\n');
+        DEBUG(dbgs() << "exec read prevents saveexec: " << *J << '\n');
         // Make sure this is inserted after any VALU ops that may have been
         // scheduled in between.
         SaveExecInst = nullptr;
@@ -281,8 +280,8 @@ bool SIOptimizeExecMasking::runOnMachineFunction(MachineFunction &MF) {
 
       if (J->modifiesRegister(CopyToExec, TRI)) {
         if (SaveExecInst) {
-          LLVM_DEBUG(dbgs() << "Multiple instructions modify "
-                            << printReg(CopyToExec, TRI) << '\n');
+          DEBUG(dbgs() << "Multiple instructions modify "
+                << printReg(CopyToExec, TRI) << '\n');
           SaveExecInst = nullptr;
           break;
         }
@@ -293,11 +292,10 @@ bool SIOptimizeExecMasking::runOnMachineFunction(MachineFunction &MF) {
 
         if (ReadsCopyFromExec) {
           SaveExecInst = &*J;
-          LLVM_DEBUG(dbgs() << "Found save exec op: " << *SaveExecInst << '\n');
+          DEBUG(dbgs() << "Found save exec op: " << *SaveExecInst << '\n');
           continue;
         } else {
-          LLVM_DEBUG(dbgs()
-                     << "Instruction does not read exec copy: " << *J << '\n');
+          DEBUG(dbgs() << "Instruction does not read exec copy: " << *J << '\n');
           break;
         }
       } else if (ReadsCopyFromExec && !SaveExecInst) {
@@ -309,8 +307,8 @@ bool SIOptimizeExecMasking::runOnMachineFunction(MachineFunction &MF) {
         // spill %sgpr0_sgpr1
         // %sgpr2_sgpr3 = S_AND_B64 %sgpr0_sgpr1
         //
-        LLVM_DEBUG(dbgs() << "Found second use of save inst candidate: " << *J
-                          << '\n');
+        DEBUG(dbgs() << "Found second use of save inst candidate: "
+              << *J << '\n');
         break;
       }
 
@@ -323,7 +321,7 @@ bool SIOptimizeExecMasking::runOnMachineFunction(MachineFunction &MF) {
     if (!SaveExecInst)
       continue;
 
-    LLVM_DEBUG(dbgs() << "Insert save exec op: " << *SaveExecInst << '\n');
+    DEBUG(dbgs() << "Insert save exec op: " << *SaveExecInst << '\n');
 
     MachineOperand &Src0 = SaveExecInst->getOperand(1);
     MachineOperand &Src1 = SaveExecInst->getOperand(2);

@@ -10,7 +10,6 @@
 #include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/Config/llvm-config.h"
 #include "llvm/MC/MCParser/MCAsmLexer.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
@@ -86,6 +85,7 @@ bool MCAsmParser::TokError(const Twine &Msg, SMRange Range) {
 }
 
 bool MCAsmParser::Error(SMLoc L, const Twine &Msg, SMRange Range) {
+  HadError = true;
 
   MCPendingError PErr;
   PErr.Loc = L;

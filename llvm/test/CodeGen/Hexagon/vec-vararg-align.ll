@@ -1,7 +1,7 @@
 ; RUN: llc -march=hexagon < %s | FileCheck %s
 ;
 ; Check that the stack is aligned according to the outgoing function arguments.
-; CHECK: r29 = and(r29,#-64)
+; CHECK: r29 = and(r29,#-128)
 
 target triple = "hexagon-unknown--elf"
 

@@ -1,5 +1,5 @@
-; RUN: llc -fast-isel-sink-local-values -verify-machineinstrs -disable-fp-elim -enable-shrink-wrap=false < %s -mtriple=aarch64-apple-ios -disable-post-ra | FileCheck -allow-deprecated-dag-overlap --check-prefix=CHECK-APPLE %s
-; RUN: llc -fast-isel-sink-local-values -verify-machineinstrs -disable-fp-elim -O0 -fast-isel < %s -mtriple=aarch64-apple-ios -disable-post-ra | FileCheck -allow-deprecated-dag-overlap --check-prefix=CHECK-O0 %s
+; RUN: llc -verify-machineinstrs -disable-fp-elim -enable-shrink-wrap=false < %s -mtriple=aarch64-apple-ios -disable-post-ra | FileCheck --check-prefix=CHECK-APPLE %s
+; RUN: llc -verify-machineinstrs -disable-fp-elim -O0 -fast-isel < %s -mtriple=aarch64-apple-ios -disable-post-ra | FileCheck --check-prefix=CHECK-O0 %s
 
 declare i8* @malloc(i64)
 declare void @free(i8*)
@@ -40,11 +40,11 @@ define float @caller(i8* %error_ref) {
 ; CHECK-APPLE: mov [[ID:x[0-9]+]], x0
 ; CHECK-APPLE: mov x21, xzr
 ; CHECK-APPLE: bl {{.*}}foo
-; CHECK-APPLE: mov x0, x21
 ; CHECK-APPLE: cbnz x21
 ; Access part of the error object and save it to error_ref
-; CHECK-APPLE: ldrb [[CODE:w[0-9]+]], [x0, #8]
+; CHECK-APPLE: ldrb [[CODE:w[0-9]+]], [x21, #8]
 ; CHECK-APPLE: strb [[CODE]], [{{.*}}[[ID]]]
+; CHECK-APPLE: mov x0, x21
 ; CHECK-APPLE: bl {{.*}}free
 
 ; CHECK-O0-LABEL: caller:
@@ -189,10 +189,10 @@ define float @foo_loop(%swift_error** swifterror %error_ptr_ref, i32 %cc, float 
 ; CHECK-O0:[[BB2]]:
 ; CHECK-O0: ldr     x0, [sp, [[SLOT2]]]
 ; CHECK-O0: fcmp
-; CHECK-O0: str     x0, [sp, [[SLOT3:#[0-9]+]]
+; CHECK-O0: str     x0, [sp]
 ; CHECK-O0: b.le [[BB1]]
 ; reload from stack
-; CHECK-O0: ldr [[ID3:x[0-9]+]], [sp, [[SLOT3]]]
+; CHECK-O0: ldr [[ID3:x[0-9]+]], [sp]
 ; CHECK-O0: mov x21, [[ID3]]
 ; CHECK-O0: ret
 entry:
@@ -263,11 +263,11 @@ define float @caller3(i8* %error_ref) {
 ; CHECK-APPLE: mov [[ID:x[0-9]+]], x0
 ; CHECK-APPLE: mov x21, xzr
 ; CHECK-APPLE: bl {{.*}}foo_sret
-; CHECK-APPLE: mov x0, x21
 ; CHECK-APPLE: cbnz x21
 ; Access part of the error object and save it to error_ref
-; CHECK-APPLE: ldrb [[CODE:w[0-9]+]], [x0, #8]
+; CHECK-APPLE: ldrb [[CODE:w[0-9]+]], [x21, #8]
 ; CHECK-APPLE: strb [[CODE]], [{{.*}}[[ID]]]
+; CHECK-APPLE: mov x0, x21
 ; CHECK-APPLE: bl {{.*}}free
 
 ; CHECK-O0-LABEL: caller3:
@@ -316,11 +316,12 @@ define float @foo_vararg(%swift_error** swifterror %error_ptr_ref, ...) {
 ; First vararg
 ; CHECK-APPLE-DAG: orr {{x[0-9]+}}, [[ARGS]], #0x8
 ; CHECK-APPLE-DAG: ldr {{w[0-9]+}}, [{{.*}}[[TMP]], #16]
+; CHECK-APPLE-DAG: add {{x[0-9]+}}, {{x[0-9]+}}, #8
 ; Second vararg
 ; CHECK-APPLE-DAG: ldr {{w[0-9]+}}, [{{x[0-9]+}}], #8
 ; CHECK-APPLE-DAG: add {{x[0-9]+}}, {{x[0-9]+}}, #16
 ; Third vararg
-; CHECK-APPLE: ldr {{w[0-9]+}}, [{{x[0-9]+}}], #8
+; CHECK-APPLE: ldr {{w[0-9]+}}, [{{x[0-9]+}}]
 
 ; CHECK-APPLE: mov x21, x0
 ; CHECK-APPLE-NOT: x21
@@ -357,11 +358,11 @@ define float @caller4(i8* %error_ref) {
 
 ; CHECK-APPLE: mov x21, xzr
 ; CHECK-APPLE: bl {{.*}}foo_vararg
-; CHECK-APPLE: mov x0, x21
 ; CHECK-APPLE: cbnz x21
 ; Access part of the error object and save it to error_ref
-; CHECK-APPLE: ldrb [[CODE:w[0-9]+]], [x0, #8]
+; CHECK-APPLE: ldrb [[CODE:w[0-9]+]], [x21, #8]
 ; CHECK-APPLE: strb [[CODE]], [{{.*}}[[ID]]]
+; CHECK-APPLE: mov x0, x21
 ; CHECK-APPLE: bl {{.*}}free
 entry:
   %error_ptr_ref = alloca swifterror %swift_error*

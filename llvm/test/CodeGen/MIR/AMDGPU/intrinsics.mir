@@ -16,6 +16,6 @@ registers:
 body: |
   bb.0:
     ; CHECK-LABEL: name: use_intrin
-    ; CHECK: %0:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.sbfe)
-    %0(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.sbfe.i32)
+    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY intrinsic(@llvm.amdgcn.sbfe)
+    %0(s64) = COPY intrinsic(@llvm.amdgcn.sbfe.i32)
 ...

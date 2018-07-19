@@ -69,7 +69,7 @@ class GVN : public PassInfoMixin<GVN> {
 public:
   struct Expression;
 
-  /// Run the pass over the function.
+  /// \brief Run the pass over the function.
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
   /// This removes the specified instruction from
@@ -291,17 +291,17 @@ private:
 /// loads are eliminated by the pass.
 FunctionPass *createGVNPass(bool NoLoads = false);
 
-/// A simple and fast domtree-based GVN pass to hoist common expressions
+/// \brief A simple and fast domtree-based GVN pass to hoist common expressions
 /// from sibling branches.
 struct GVNHoistPass : PassInfoMixin<GVNHoistPass> {
-  /// Run the pass over the function.
+  /// \brief Run the pass over the function.
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-/// Uses an "inverted" value numbering to decide the similarity of
+/// \brief Uses an "inverted" value numbering to decide the similarity of
 /// expressions and sinks similar expressions into successors.
 struct GVNSinkPass : PassInfoMixin<GVNSinkPass> {
-  /// Run the pass over the function.
+  /// \brief Run the pass over the function.
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 

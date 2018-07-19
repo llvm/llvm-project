@@ -3,18 +3,18 @@
 ; CHECK-LABEL: fred
 ; CHECK: stwux 1, 1, 0
 ; Save R31..R29 via R0:
-; CHECK: addic 0, 0, -12
+; CHECK: addic 0, 0, -4
 ; CHECK: stwx 31, 0, 0
 ; CHECK: addic 0, 0, -4
 ; CHECK: stwx 30, 0, 0
 ; CHECK: addic 0, 0, -4
 ; CHECK: stwx 29, 0, 0
 ; Set R29 back to the value of R0 from before the updates:
-; CHECK: addic 29, 0, 20
+; CHECK: addic 29, 0, 12
 ; Save CR through R12 using R29 as the stack pointer (aligned base pointer).
 ; CHECK: mfcr 12
-; CHECK: stw 28, -24(29)
-; CHECK: stw 12, -28(29)
+; CHECK: stw 28, -16(29)
+; CHECK: stw 12, -20(29)
 
 target datalayout = "E-m:e-p:32:32-i64:64-n32"
 target triple = "powerpc-unknown-freebsd"
@@ -24,8 +24,7 @@ define i64 @fred(double %a0) local_unnamed_addr #0 {
 b1:
   %v2 = alloca i64, align 128
   store i64 0, i64* %v2
-  %a1 = tail call double asm "fadd $0, $1, $2", "=f,f,f,~{cr2}"(double %a0, double %a0)
-  %v3 = fcmp olt double %a1, 0x43E0000000000000
+  %v3 = fcmp olt double %a0, 0x43E0000000000000
   br i1 %v3, label %b4, label %b8
 
 b4:                                               ; preds = %b1

@@ -13,8 +13,15 @@
 
 #include "NVPTXMCAsmInfo.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
+
+// -debug-compile - Command line option to inform opt and llc passes to
+// compile for debugging
+static cl::opt<bool> CompileForDebugging("debug-compile",
+                                         cl::desc("Compile for debugging"),
+                                         cl::Hidden, cl::init(false));
 
 void NVPTXMCAsmInfo::anchor() {}
 
@@ -30,7 +37,7 @@ NVPTXMCAsmInfo::NVPTXMCAsmInfo(const Triple &TheTriple) {
   InlineAsmStart = " begin inline asm";
   InlineAsmEnd = " end inline asm";
 
-  SupportsDebugInformation = true;
+  SupportsDebugInformation = CompileForDebugging;
   // PTX does not allow .align on functions.
   HasFunctionAlignment = false;
   HasDotTypeDotSizeDirective = false;
@@ -38,16 +45,13 @@ NVPTXMCAsmInfo::NVPTXMCAsmInfo(const Triple &TheTriple) {
   HiddenDeclarationVisibilityAttr = HiddenVisibilityAttr = MCSA_Invalid;
   ProtectedVisibilityAttr = MCSA_Invalid;
 
-  // FIXME: remove comment once debug info is properly supported.
-  Data8bitsDirective = "// .b8 ";
-  Data16bitsDirective = nullptr; // not supported
-  Data32bitsDirective = "// .b32 ";
-  Data64bitsDirective = "// .b64 ";
-  ZeroDirective = "// .b8";
-  AsciiDirective = nullptr; // not supported
-  AscizDirective = nullptr; // not supported
-  SupportsQuotedNames = false;
-  SupportsExtendedDwarfLocDirective = false;
+  Data8bitsDirective = " .b8 ";
+  Data16bitsDirective = " .b16 ";
+  Data32bitsDirective = " .b32 ";
+  Data64bitsDirective = " .b64 ";
+  ZeroDirective = " .b8";
+  AsciiDirective = " .b8";
+  AscizDirective = " .b8";
 
   // @TODO: Can we just disable this?
   WeakDirective = "\t// .weak\t";

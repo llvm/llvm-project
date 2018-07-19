@@ -15,8 +15,8 @@ define i32 @test(i32 %i) {
 ; CHECK-NEXT:    lbzx 3, 4, 3
 ; CHECK-NEXT:    ld 4, .LC1@toc@l(5)
 ; CHECK-NEXT:    subfic 3, 3, 1
-; CHECK-NEXT:    ld 4, 0(4)
 ; CHECK-NEXT:    extsw 3, 3
+; CHECK-NEXT:    ld 4, 0(4)
 ; CHECK-NEXT:    sldi 3, 3, 2
 ; CHECK-NEXT:    lwzx 3, 4, 3
 ; CHECK-NEXT:    blr

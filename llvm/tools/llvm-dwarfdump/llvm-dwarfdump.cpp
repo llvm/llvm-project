@@ -22,13 +22,14 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Regex.h"
+#include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ToolOutputFile.h"
-#include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -309,62 +310,6 @@ static void filterByName(const StringSet<> &Names,
 
 }
 
-static void getDies(DWARFContext &DICtx, const AppleAcceleratorTable &Accel,
-                    StringRef Name, SmallVectorImpl<DWARFDie> &Dies) {
-  for (const auto &Entry : Accel.equal_range(Name)) {
-    if (llvm::Optional<uint64_t> Off = Entry.getDIESectionOffset()) {
-      if (DWARFDie Die = DICtx.getDIEForOffset(*Off))
-        Dies.push_back(Die);
-    }
-  }
-}
-
-static DWARFDie toDie(const DWARFDebugNames::Entry &Entry,
-                      DWARFContext &DICtx) {
-  llvm::Optional<uint64_t> CUOff = Entry.getCUOffset();
-  llvm::Optional<uint64_t> Off = Entry.getDIEUnitOffset();
-  if (!CUOff || !Off)
-    return DWARFDie();
-
-  DWARFCompileUnit *CU = DICtx.getCompileUnitForOffset(*CUOff);
-  if (!CU)
-    return DWARFDie();
-
-  if (llvm::Optional<uint64_t> DWOId = CU->getDWOId()) {
-    // This is a skeleton unit. Look up the DIE in the DWO unit.
-    CU = DICtx.getDWOCompileUnitForHash(*DWOId);
-    if (!CU)
-      return DWARFDie();
-  }
-
-  return CU->getDIEForOffset(CU->getOffset() + *Off);
-}
-
-static void getDies(DWARFContext &DICtx, const DWARFDebugNames &Accel,
-                    StringRef Name, SmallVectorImpl<DWARFDie> &Dies) {
-  for (const auto &Entry : Accel.equal_range(Name)) {
-    if (DWARFDie Die = toDie(Entry, DICtx))
-      Dies.push_back(Die);
-  }
-}
-
-/// Print only DIEs that have a certain name.
-static void filterByAccelName(ArrayRef<std::string> Names, DWARFContext &DICtx,
-                              raw_ostream &OS) {
-  SmallVector<DWARFDie, 4> Dies;
-  for (const auto &Name : Names) {
-    getDies(DICtx, DICtx.getAppleNames(), Name, Dies);
-    getDies(DICtx, DICtx.getAppleTypes(), Name, Dies);
-    getDies(DICtx, DICtx.getAppleNamespaces(), Name, Dies);
-    getDies(DICtx, DICtx.getDebugNames(), Name, Dies);
-  }
-  llvm::sort(Dies.begin(), Dies.end());
-  Dies.erase(std::unique(Dies.begin(), Dies.end()), Dies.end());
-
-  for (DWARFDie Die : Dies)
-    Die.dump(OS, 0, getDumpOpts());
-}
-
 /// Handle the --lookup option and dump the DIEs and line info for the given
 /// address.
 static bool lookup(DWARFContext &DICtx, uint64_t Address, raw_ostream &OS) {
@@ -416,8 +361,29 @@ static bool dumpObjectFile(ObjectFile &Obj, DWARFContext &DICtx, Twine Filename,
 
   // Handle the --find option and lower it to --debug-info=<offset>.
   if (!Find.empty()) {
-    filterByAccelName(Find, DICtx, OS);
-    return true;
+    DumpOffsets[DIDT_ID_DebugInfo] = [&]() -> llvm::Optional<uint64_t> {
+      for (auto Name : Find) {
+        auto find = [&](const AppleAcceleratorTable &Accel)
+            -> llvm::Optional<uint64_t> {
+          for (auto Entry : Accel.equal_range(Name))
+            for (auto Atom : Entry)
+              if (auto Offset = Atom.getAsSectionOffset())
+                return Offset;
+          return None;
+        };
+        if (auto Offset = find(DICtx.getAppleNames()))
+          return DumpOffsets[DIDT_ID_DebugInfo] = *Offset;
+        if (auto Offset = find(DICtx.getAppleTypes()))
+          return DumpOffsets[DIDT_ID_DebugInfo] = *Offset;
+        if (auto Offset = find(DICtx.getAppleNamespaces()))
+          return DumpOffsets[DIDT_ID_DebugInfo] = *Offset;
+        // TODO: Add .debug_names support
+      }
+      return None;
+    }();
+    // Early exit if --find was specified but the current file doesn't have it.
+    if (!DumpOffsets[DIDT_ID_DebugInfo])
+      return true;
   }
 
   // Dump the complete DWARF structure.
@@ -542,12 +508,15 @@ static std::vector<std::string> expandBundle(const std::string &InputPath) {
 }
 
 int main(int argc, char **argv) {
-  InitLLVM X(argc, argv);
+  // Print a stack trace if we signal out.
+  sys::PrintStackTraceOnErrorSignal(argv[0]);
+  PrettyStackTraceProgram X(argc, argv);
+  llvm_shutdown_obj Y;  // Call llvm_shutdown() on exit.
 
   llvm::InitializeAllTargetInfos();
   llvm::InitializeAllTargetMCs();
 
-  HideUnrelatedOptions({&DwarfDumpCategory, &SectionCategory, &ColorCategory});
+  HideUnrelatedOptions({&DwarfDumpCategory, &SectionCategory});
   cl::ParseCommandLineOptions(
       argc, argv,
       "pretty-print DWARF debug information in object files"
@@ -599,7 +568,7 @@ int main(int argc, char **argv) {
     ShowChildren = true;
 
   // Defaults to a.out if no filenames specified.
-  if (InputFilenames.empty())
+  if (InputFilenames.size() == 0)
     InputFilenames.push_back("a.out");
 
   // Expand any .dSYM bundles to the individual object files contained therein.

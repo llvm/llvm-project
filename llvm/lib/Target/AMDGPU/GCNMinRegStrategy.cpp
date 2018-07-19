@@ -142,38 +142,35 @@ GCNMinRegScheduler::Candidate* GCNMinRegScheduler::pickCandidate() {
     unsigned Num = RQ.size();
     if (Num == 1) break;
 
-    LLVM_DEBUG(dbgs() << "\nSelecting max priority candidates among " << Num
-                      << '\n');
+    DEBUG(dbgs() << "\nSelecting max priority candidates among " << Num << '\n');
     Num = findMax(Num, [=](const Candidate &C) { return C.Priority; });
     if (Num == 1) break;
 
-    LLVM_DEBUG(dbgs() << "\nSelecting min non-ready producing candidate among "
-                      << Num << '\n');
+    DEBUG(dbgs() << "\nSelecting min non-ready producing candidate among "
+                 << Num << '\n');
     Num = findMax(Num, [=](const Candidate &C) {
       auto SU = C.SU;
       int Res = getNotReadySuccessors(SU);
-      LLVM_DEBUG(dbgs() << "SU(" << SU->NodeNum << ") would left non-ready "
-                        << Res << " successors, metric = " << -Res << '\n');
+      DEBUG(dbgs() << "SU(" << SU->NodeNum << ") would left non-ready "
+                   << Res << " successors, metric = " << -Res << '\n');
       return -Res;
     });
     if (Num == 1) break;
 
-    LLVM_DEBUG(dbgs() << "\nSelecting most producing candidate among " << Num
-                      << '\n');
+    DEBUG(dbgs() << "\nSelecting most producing candidate among "
+                 << Num << '\n');
     Num = findMax(Num, [=](const Candidate &C) {
       auto SU = C.SU;
       auto Res = getReadySuccessors(SU);
-      LLVM_DEBUG(dbgs() << "SU(" << SU->NodeNum << ") would make ready " << Res
-                        << " successors, metric = " << Res << '\n');
+      DEBUG(dbgs() << "SU(" << SU->NodeNum << ") would make ready "
+                   << Res << " successors, metric = " << Res << '\n');
       return Res;
     });
     if (Num == 1) break;
 
     Num = Num ? Num : RQ.size();
-    LLVM_DEBUG(
-        dbgs()
-        << "\nCan't find best candidate, selecting in program order among "
-        << Num << '\n');
+    DEBUG(dbgs() << "\nCan't find best candidate, selecting in program order among "
+                 << Num << '\n');
     Num = findMax(Num, [=](const Candidate &C) { return -(int64_t)C.SU->NodeNum; });
     assert(Num == 1);
   } while (false);
@@ -205,17 +202,17 @@ void GCNMinRegScheduler::bumpPredsPriority(const SUnit *SchedSU, int Priority) {
         Worklist.push_back(P.getSUnit());
     }
   }
-  LLVM_DEBUG(dbgs() << "Make the predecessors of SU(" << SchedSU->NodeNum
-                    << ")'s non-ready successors of " << Priority
-                    << " priority in ready queue: ");
+  DEBUG(dbgs() << "Make the predecessors of SU(" << SchedSU->NodeNum
+               << ")'s non-ready successors of " << Priority
+               << " priority in ready queue: ");
   const auto SetEnd = Set.end();
   for (auto &C : RQ) {
     if (Set.find(C.SU) != SetEnd) {
       C.Priority = Priority;
-      LLVM_DEBUG(dbgs() << " SU(" << C.SU->NodeNum << ')');
+      DEBUG(dbgs() << " SU(" << C.SU->NodeNum << ')');
     }
   }
-  LLVM_DEBUG(dbgs() << '\n');
+  DEBUG(dbgs() << '\n');
 }
 
 void GCNMinRegScheduler::releaseSuccessors(const SUnit* SU, int Priority) {
@@ -246,19 +243,19 @@ GCNMinRegScheduler::schedule(ArrayRef<const SUnit*> TopRoots,
   releaseSuccessors(&DAG.EntrySU, StepNo);
 
   while (!RQ.empty()) {
-    LLVM_DEBUG(dbgs() << "\n=== Picking candidate, Step = " << StepNo
-                      << "\n"
-                         "Ready queue:";
-               for (auto &C
-                    : RQ) dbgs()
-               << ' ' << C.SU->NodeNum << "(P" << C.Priority << ')';
-               dbgs() << '\n';);
+    DEBUG(
+      dbgs() << "\n=== Picking candidate, Step = " << StepNo << "\n"
+                "Ready queue:";
+      for (auto &C : RQ)
+        dbgs() << ' ' << C.SU->NodeNum << "(P" << C.Priority << ')';
+      dbgs() << '\n';
+    );
 
     auto C = pickCandidate();
     assert(C);
     RQ.remove(*C);
     auto SU = C->SU;
-    LLVM_DEBUG(dbgs() << "Selected "; SU->dump(&DAG));
+    DEBUG(dbgs() << "Selected "; SU->dump(&DAG));
 
     releaseSuccessors(SU, StepNo);
     Schedule.push_back(SU);

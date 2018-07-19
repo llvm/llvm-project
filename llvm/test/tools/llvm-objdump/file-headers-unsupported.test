@@ -1,3 +1,0 @@
-# RUN: not llvm-objdump -file-headers %p/Inputs/trivial.obj.wasm 2>&1 | FileCheck %s
-
-# CHECK: Invalid/Unsupported object file format

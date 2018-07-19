@@ -62,12 +62,10 @@ understanding the encoding.
 Magic Numbers
 -------------
 
-The first four bytes of a bitstream are used as an application-specific magic
-number.  Generic bitcode tools may look at the first four bytes to determine
-whether the stream is a known stream type.  However, these tools should *not*
-determine whether a bitstream is valid based on its magic number alone.  New
-application-specific bitstream formats are being developed all the time; tools
-should not reject them just because they have a hitherto unseen magic number.
+The first two bytes of a bitcode file are 'BC' (``0x42``, ``0x43``).  The second
+two bytes are an application-specific magic number.  Generic bitcode tools can
+look at only the first two bytes to verify the file is bitcode, while
+application-specific programs will want to look at all four.
 
 .. _primitives:
 
@@ -498,8 +496,11 @@ LLVM IR Magic Number
 The magic number for LLVM IR files is:
 
 :raw-html:`<tt><blockquote>`
-['B'\ :sub:`8`, 'C'\ :sub:`8`, 0x0\ :sub:`4`, 0xC\ :sub:`4`, 0xE\ :sub:`4`, 0xD\ :sub:`4`]
+[0x0\ :sub:`4`, 0xC\ :sub:`4`, 0xE\ :sub:`4`, 0xD\ :sub:`4`]
 :raw-html:`</blockquote></tt>`
+
+When combined with the bitcode magic number and viewed as bytes, this is
+``"BC 0xC0DE"``.
 
 .. _Signed VBRs:
 
@@ -903,7 +904,7 @@ PARAMATTR_CODE_ENTRY Record
 
 The ``ENTRY`` record (code 2) contains a variable number of values describing a
 unique set of function parameter attributes. Each *attrgrp* value is used as a
-key with which to look up an entry in the attribute group table described
+key with which to look up an entry in the the attribute group table described
 in the ``PARAMATTR_GROUP_BLOCK`` block.
 
 .. _PARAMATTR_CODE_ENTRY_OLD:
@@ -1054,9 +1055,6 @@ The integer codes are mapped to well-known attributes as follows.
 * code 53: ``speculatable``
 * code 54: ``strictfp``
 * code 55: ``sanitize_hwaddress``
-* code 56: ``nocf_check``
-* code 57: ``optforfuzzing``
-* code 58: ``shadowcallstack``
 
 .. note::
   The ``allocsize`` attribute has a special encoding for its arguments. Its two

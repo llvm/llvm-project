@@ -36,7 +36,7 @@ class SDValue;
 class SelectionDAG;
 struct EVT;
 
-/// Compute the linearized index of a member in a nested
+/// \brief Compute the linearized index of a member in a nested
 /// aggregate/struct/array.
 ///
 /// Given an LLVM IR aggregate type and a sequence of insertvalue or
@@ -124,7 +124,7 @@ bool returnTypeIsEligibleForTailCall(const Function *F, const Instruction *I,
                                      const TargetLoweringBase &TLI);
 
 DenseMap<const MachineBasicBlock *, int>
-getEHScopeMembership(const MachineFunction &MF);
+getFuncletMembership(const MachineFunction &MF);
 
 } // End llvm namespace
 

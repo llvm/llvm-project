@@ -22,7 +22,7 @@ using namespace coverage;
 
 struct FileCoverageSummary;
 
-/// A coverage printer for html output.
+/// \brief A coverage printer for html output.
 class CoveragePrinterHTML : public CoveragePrinter {
 public:
   Expected<OwnedStream> createViewFile(StringRef Path,
@@ -45,7 +45,7 @@ private:
                               const FileCoverageSummary &FCS) const;
 };
 
-/// A code coverage view which supports html-based rendering.
+/// \brief A code coverage view which supports html-based rendering.
 class SourceCoverageViewHTML : public SourceCoverageView {
   void renderViewHeader(raw_ostream &OS) override;
 

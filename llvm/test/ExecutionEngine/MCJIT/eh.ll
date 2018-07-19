@@ -1,4 +1,3 @@
-; REQUIRES: cxx-shared-library
 ; RUN: %lli %s
 ; XFAIL: arm, cygwin, win32, mingw
 declare i8* @__cxa_allocate_exception(i64)

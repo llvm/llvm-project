@@ -11,14 +11,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Coroutines.h"
 #include "CoroInstr.h"
 #include "CoroInternal.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/CallGraphSCCPass.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constants.h"
@@ -33,8 +31,10 @@
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Transforms/Coroutines.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include <cassert>
 #include <cstddef>
 #include <utility>
@@ -123,15 +123,25 @@ Value *coro::LowererBase::makeSubFnCall(Value *Arg, int Index,
 static bool isCoroutineIntrinsicName(StringRef Name) {
   // NOTE: Must be sorted!
   static const char *const CoroIntrinsics[] = {
-      "llvm.coro.alloc",   "llvm.coro.begin",   "llvm.coro.destroy",
-      "llvm.coro.done",    "llvm.coro.end",     "llvm.coro.frame",
-      "llvm.coro.free",    "llvm.coro.id",
-      "llvm.coro.id.retcon", "llvm.coro.id.retcon.once",
-      "llvm.coro.noop",
-      "llvm.coro.param",   "llvm.coro.prepare.retcon",
-      "llvm.coro.promise", "llvm.coro.resume",
-      "llvm.coro.save",    "llvm.coro.size",    "llvm.coro.subfn.addr",
-      "llvm.coro.suspend", "llvm.coro.suspend.retcon",
+      "llvm.coro.alloc",
+      "llvm.coro.begin",
+      "llvm.coro.destroy",
+      "llvm.coro.done",
+      "llvm.coro.end",
+      "llvm.coro.frame",
+      "llvm.coro.free",
+      "llvm.coro.id",
+      "llvm.coro.id.retcon",
+      "llvm.coro.id.retcon.once",
+      "llvm.coro.param",
+      "llvm.coro.prepare.retcon",
+      "llvm.coro.promise",
+      "llvm.coro.resume",
+      "llvm.coro.save",
+      "llvm.coro.size",
+      "llvm.coro.subfn.addr",
+      "llvm.coro.suspend",
+      "llvm.coro.suspend.retcon",
   };
   return Intrinsic::lookupLLVMIntrinsicByName(CoroIntrinsics, Name) != -1;
 }

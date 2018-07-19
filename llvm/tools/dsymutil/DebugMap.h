@@ -1,6 +1,6 @@
 //=- tools/dsymutil/DebugMap.h - Generic debug map representation -*- C++ -*-=//
 //
-//                     The LLVM Compiler Infrastructure
+//                             The LLVM Linker
 //
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
@@ -48,9 +48,10 @@ namespace dsymutil {
 
 class DebugMapObject;
 
-/// The DebugMap object stores the list of object files to query for debug
-/// information along with the mapping between the symbols' addresses in the
-/// object file to their linked address in the linked binary.
+/// \brief The DebugMap object stores the list of object files to
+/// query for debug information along with the mapping between the
+/// symbols' addresses in the object file to their linked address in
+/// the linked binary.
 ///
 /// A DebugMap producer could look like this:
 /// DebugMap *DM = new DebugMap();
@@ -102,8 +103,6 @@ public:
 
   const_iterator end() const { return Objects.end(); }
 
-  unsigned getNumberOfObjects() const { return Objects.size(); }
-
   /// This function adds an DebugMapObject to the list owned by this
   /// debug map.
   DebugMapObject &
@@ -126,9 +125,10 @@ public:
   parseYAMLDebugMap(StringRef InputFile, StringRef PrependPath, bool Verbose);
 };
 
-/// The DebugMapObject represents one object file described by the DebugMap. It
-/// contains a list of mappings between addresses in the object file and in the
-/// linked binary for all the linked atoms in this object file.
+/// \brief The DebugMapObject represents one object file described by
+/// the DebugMap. It contains a list of mappings between addresses in
+/// the object file and in the linked binary for all the linked atoms
+/// in this object file.
 class DebugMapObject {
 public:
   struct SymbolMapping {
@@ -150,17 +150,17 @@ public:
   using YAMLSymbolMapping = std::pair<std::string, SymbolMapping>;
   using DebugMapEntry = StringMapEntry<SymbolMapping>;
 
-  /// Adds a symbol mapping to this DebugMapObject.
+  /// \brief Adds a symbol mapping to this DebugMapObject.
   /// \returns false if the symbol was already registered. The request
   /// is discarded in this case.
   bool addSymbol(StringRef SymName, Optional<uint64_t> ObjectAddress,
                  uint64_t LinkedAddress, uint32_t Size);
 
-  /// Lookup a symbol mapping.
+  /// \brief Lookup a symbol mapping.
   /// \returns null if the symbol isn't found.
   const DebugMapEntry *lookupSymbol(StringRef SymbolName) const;
 
-  /// Lookup an object file address.
+  /// \brief Lookup an objectfile address.
   /// \returns null if the address isn't found.
   const DebugMapEntry *lookupObjectAddress(uint64_t Address) const;
 
@@ -175,11 +175,6 @@ public:
   iterator_range<StringMap<SymbolMapping>::const_iterator> symbols() const {
     return make_range(Symbols.begin(), Symbols.end());
   }
-
-  bool empty() const { return Symbols.empty(); }
-
-  void addWarning(StringRef Warning) { Warnings.push_back(Warning); }
-  const std::vector<std::string> &getWarnings() const { return Warnings; }
 
   void print(raw_ostream &OS) const;
 #ifndef NDEBUG
@@ -199,8 +194,6 @@ private:
   DenseMap<uint64_t, DebugMapEntry *> AddressToMapping;
   uint8_t Type;
 
-  std::vector<std::string> Warnings;
-
   /// For YAMLIO support.
   ///@{
   friend yaml::MappingTraits<dsymutil::DebugMapObject>;
@@ -215,6 +208,7 @@ public:
 };
 
 } // end namespace dsymutil
+
 } // end namespace llvm
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::dsymutil::DebugMapObject::YAMLSymbolMapping)

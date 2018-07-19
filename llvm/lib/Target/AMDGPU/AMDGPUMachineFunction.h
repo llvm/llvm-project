@@ -15,52 +15,55 @@
 
 namespace llvm {
 
-class GCNSubtarget;
-
 class AMDGPUMachineFunction : public MachineFunctionInfo {
   /// A map to keep track of local memory objects and their offsets within the
   /// local memory space.
   SmallDenseMap<const GlobalValue *, unsigned, 4> LocalMemoryObjects;
 
-protected:
-  uint64_t ExplicitKernArgSize;
+  uint64_t KernArgSize;
   unsigned MaxKernArgAlign;
 
   /// Number of bytes in the LDS that are being used.
   unsigned LDSSize;
 
-  // Kernels + shaders. i.e. functions called by the driver and not called
+  // FIXME: This should probably be removed.
+  /// Start of implicit kernel args
+  unsigned ABIArgOffset;
+
+  // Kernels + shaders. i.e. functions called by the driver and not not called
   // by other functions.
   bool IsEntryFunction;
 
   bool NoSignedZerosFPMath;
-
-  // Function may be memory bound.
-  bool MemoryBound;
-
-  // Kernel may need limited waves per EU for better performance.
-  bool WaveLimiter;
 
 public:
   AMDGPUMachineFunction(const MachineFunction &MF);
 
   uint64_t allocateKernArg(uint64_t Size, unsigned Align) {
     assert(isPowerOf2_32(Align));
-    ExplicitKernArgSize = alignTo(ExplicitKernArgSize, Align);
+    KernArgSize = alignTo(KernArgSize, Align);
 
-    uint64_t Result = ExplicitKernArgSize;
-    ExplicitKernArgSize += Size;
+    uint64_t Result = KernArgSize;
+    KernArgSize += Size;
 
     MaxKernArgAlign = std::max(Align, MaxKernArgAlign);
     return Result;
   }
 
-  uint64_t getExplicitKernArgSize() const {
-    return ExplicitKernArgSize;
+  uint64_t getKernArgSize() const {
+    return KernArgSize;
   }
 
   unsigned getMaxKernArgAlign() const {
     return MaxKernArgAlign;
+  }
+
+  void setABIArgOffset(unsigned NewOffset) {
+    ABIArgOffset = NewOffset;
+  }
+
+  unsigned getABIArgOffset() const {
+    return ABIArgOffset;
   }
 
   unsigned getLDSSize() const {
@@ -73,14 +76,6 @@ public:
 
   bool hasNoSignedZerosFPMath() const {
     return NoSignedZerosFPMath;
-  }
-
-  bool isMemoryBound() const {
-    return MemoryBound;
-  }
-
-  bool needsWaveLimiter() const {
-    return WaveLimiter;
   }
 
   unsigned allocateLDSGlobal(const DataLayout &DL, const GlobalValue &GV);

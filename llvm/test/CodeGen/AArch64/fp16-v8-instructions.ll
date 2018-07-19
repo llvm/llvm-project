@@ -1,5 +1,5 @@
-; RUN: llc < %s -asm-verbose=false -mtriple=aarch64-none-eabi -mattr=-fullfp16 | FileCheck -allow-deprecated-dag-overlap %s --check-prefix=CHECK-CVT   --check-prefix=CHECK
-; RUN: llc < %s -asm-verbose=false -mtriple=aarch64-none-eabi -mattr=+fullfp16 | FileCheck -allow-deprecated-dag-overlap %s --check-prefix=CHECK-FP16  --check-prefix=CHECK
+; RUN: llc < %s -asm-verbose=false -mtriple=aarch64-none-eabi -mattr=-fullfp16 | FileCheck %s --check-prefix=CHECK-CVT   --check-prefix=CHECK
+; RUN: llc < %s -asm-verbose=false -mtriple=aarch64-none-eabi -mattr=+fullfp16 | FileCheck %s --check-prefix=CHECK-FP16  --check-prefix=CHECK
 
 define <8 x half> @add_h(<8 x half> %a, <8 x half> %b) {
 entry:

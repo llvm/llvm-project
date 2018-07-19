@@ -127,13 +127,13 @@ public:
 
 char PrintModulePassWrapper::ID = 0;
 INITIALIZE_PASS(PrintModulePassWrapper, "print-module",
-                "Print module to stderr", false, true)
+                "Print module to stderr", false, false)
 char PrintFunctionPassWrapper::ID = 0;
 INITIALIZE_PASS(PrintFunctionPassWrapper, "print-function",
-                "Print function to stderr", false, true)
+                "Print function to stderr", false, false)
 char PrintBasicBlockPass::ID = 0;
 INITIALIZE_PASS(PrintBasicBlockPass, "print-bb", "Print BB to stderr", false,
-                true)
+                false)
 
 ModulePass *llvm::createPrintModulePass(llvm::raw_ostream &OS,
                                         const std::string &Banner,
@@ -149,12 +149,4 @@ FunctionPass *llvm::createPrintFunctionPass(llvm::raw_ostream &OS,
 BasicBlockPass *llvm::createPrintBasicBlockPass(llvm::raw_ostream &OS,
                                                 const std::string &Banner) {
   return new PrintBasicBlockPass(OS, Banner);
-}
-
-bool llvm::isIRPrintingPass(Pass *P) {
-  const char *PID = (const char*)P->getPassID();
-
-  return (PID == &PrintModulePassWrapper::ID)
-      || (PID == &PrintFunctionPassWrapper::ID)
-      || (PID == &PrintBasicBlockPass::ID);
 }

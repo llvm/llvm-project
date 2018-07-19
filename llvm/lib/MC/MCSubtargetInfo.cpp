@@ -51,6 +51,8 @@ MCSubtargetInfo::MCSubtargetInfo(
   InitMCProcessorInfo(CPU, FS);
 }
 
+/// ToggleFeature - Toggle a feature and returns the re-computed feature
+/// bits. This version does not change the implied bits.
 FeatureBitset MCSubtargetInfo::ToggleFeature(uint64_t FB) {
   FeatureBits.flip(FB);
   return FeatureBits;
@@ -61,6 +63,8 @@ FeatureBitset MCSubtargetInfo::ToggleFeature(const FeatureBitset &FB) {
   return FeatureBits;
 }
 
+/// ToggleFeature - Toggle a feature and returns the re-computed feature
+/// bits. This version will also change all implied bits.
 FeatureBitset MCSubtargetInfo::ToggleFeature(StringRef FS) {
   SubtargetFeatures::ToggleFeature(FeatureBits, FS, ProcFeatures);
   return FeatureBits;
@@ -114,6 +118,7 @@ MCSubtargetInfo::getInstrItineraryForCPU(StringRef CPU) const {
   return InstrItineraryData(SchedModel, Stages, OperandCycles, ForwardingPaths);
 }
 
+/// Initialize an InstrItineraryData instance.
 void MCSubtargetInfo::initInstrItins(InstrItineraryData &InstrItins) const {
   InstrItins = InstrItineraryData(getSchedModel(), Stages, OperandCycles,
                                   ForwardingPaths);

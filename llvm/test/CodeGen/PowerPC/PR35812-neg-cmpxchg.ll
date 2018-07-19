@@ -11,10 +11,10 @@
 define signext i32 @main() {
 ; CHECK-LABEL: main:
 ; CHECK:    li 3, -32477
+; CHECK:    lis 12, 0
 ; CHECK:    li 6, 234
 ; CHECK:    sth 3, 46(1)
-; CHECK:    lis 3, 0
-; CHECK:    ori 4, 3, 33059
+; CHECK:    ori 4, 12, 33059
 ; CHECK:    sync
 ; CHECK:  .LBB0_1: # %L.entry
 ; CHECK:    lharx 3, 0, 5
@@ -32,20 +32,20 @@ define signext i32 @main() {
 ; CHECK:    cmplwi 3, 234
 ;
 ; CHECK-P7-LABEL: main:
-; CHECK-P7:    li 3, -32477
 ; CHECK-P7:    lis 4, 0
 ; CHECK-P7:    li 7, 0
-; CHECK-P7:    li 5, 234
+; CHECK-P7:    li 3, -32477
 ; CHECK-P7:    sth 3, 46(1)
+; CHECK-P7:    li 5, 234
 ; CHECK-P7:    ori 4, 4, 33059
 ; CHECK-P7:    rlwinm 3, 6, 3, 27, 27
 ; CHECK-P7:    ori 7, 7, 65535
 ; CHECK-P7:    sync
 ; CHECK-P7:    slw 8, 5, 3
-; CHECK-P7:    slw 9, 4, 3
-; CHECK-P7:    rldicr 4, 6, 0, 61
 ; CHECK-P7:    slw 5, 7, 3
+; CHECK-P7:    slw 9, 4, 3
 ; CHECK-P7:    and 7, 8, 5
+; CHECK-P7:    rldicr 4, 6, 0, 61
 ; CHECK-P7:    and 8, 9, 5
 ; CHECK-P7:  .LBB0_1: # %L.entry
 ; CHECK-P7:    lwarx 9, 0, 4

@@ -472,19 +472,6 @@ void CodeViewContext::encodeInlineLineTable(MCAsmLayout &Layout,
   if (Locs.empty())
     return;
 
-  // Check that the locations are all in the same section.
-#ifndef NDEBUG
-  const MCSection *FirstSec = &Locs.front().getLabel()->getSection();
-  for (const MCCVLineEntry &Loc : Locs) {
-    if (&Loc.getLabel()->getSection() != FirstSec) {
-      errs() << ".cv_loc " << Loc.getFunctionId() << ' ' << Loc.getFileNum()
-             << ' ' << Loc.getLine() << ' ' << Loc.getColumn()
-             << " is in the wrong section\n";
-      llvm_unreachable(".cv_loc crosses sections");
-    }
-  }
-#endif
-
   // Make an artificial start location using the function start and the inlinee
   // lines start location information. All deltas start relative to this
   // location.
@@ -589,7 +576,7 @@ void CodeViewContext::encodeInlineLineTable(MCAsmLayout &Layout,
   if (!LocAfter.empty()) {
     // Only try to compute this difference if we're in the same section.
     const MCCVLineEntry &Loc = LocAfter[0];
-    if (&Loc.getLabel()->getSection() == &LastLabel->getSection())
+    if (&Loc.getLabel()->getSection(false) == &LastLabel->getSection(false))
       LocAfterLength = computeLabelDiff(Layout, LastLabel, Loc.getLabel());
   }
 
@@ -632,7 +619,7 @@ void CodeViewContext::encodeDefRange(MCAsmLayout &Layout,
     }
     unsigned NumGaps = J - I - 1;
 
-    support::endian::Writer LEWriter(OS, support::little);
+    support::endian::Writer<support::little> LEWriter(OS);
 
     unsigned Bias = 0;
     // We must split the range into chunks of MaxDefRange, this is a fundamental

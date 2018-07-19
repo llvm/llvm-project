@@ -91,7 +91,7 @@ void RegAllocBase::allocatePhysRegs() {
 
     // Unused registers can appear when the spiller coalesces snippets.
     if (MRI->reg_nodbg_empty(VirtReg->reg)) {
-      LLVM_DEBUG(dbgs() << "Dropping unused " << *VirtReg << '\n');
+      DEBUG(dbgs() << "Dropping unused " << *VirtReg << '\n');
       aboutToRemoveInterval(*VirtReg);
       LIS->removeInterval(VirtReg->reg);
       continue;
@@ -103,9 +103,9 @@ void RegAllocBase::allocatePhysRegs() {
     // selectOrSplit requests the allocator to return an available physical
     // register if possible and populate a list of new live intervals that
     // result from splitting.
-    LLVM_DEBUG(dbgs() << "\nselectOrSplit "
-                      << TRI->getRegClassName(MRI->getRegClass(VirtReg->reg))
-                      << ':' << *VirtReg << " w=" << VirtReg->weight << '\n');
+    DEBUG(dbgs() << "\nselectOrSplit "
+          << TRI->getRegClassName(MRI->getRegClass(VirtReg->reg))
+          << ':' << *VirtReg << " w=" << VirtReg->weight << '\n');
 
     using VirtRegVec = SmallVector<unsigned, 4>;
 
@@ -145,12 +145,12 @@ void RegAllocBase::allocatePhysRegs() {
       assert(!VRM->hasPhys(SplitVirtReg->reg) && "Register already assigned");
       if (MRI->reg_nodbg_empty(SplitVirtReg->reg)) {
         assert(SplitVirtReg->empty() && "Non-empty but used interval");
-        LLVM_DEBUG(dbgs() << "not queueing unused  " << *SplitVirtReg << '\n');
+        DEBUG(dbgs() << "not queueing unused  " << *SplitVirtReg << '\n');
         aboutToRemoveInterval(*SplitVirtReg);
         LIS->removeInterval(SplitVirtReg->reg);
         continue;
       }
-      LLVM_DEBUG(dbgs() << "queuing new interval: " << *SplitVirtReg << "\n");
+      DEBUG(dbgs() << "queuing new interval: " << *SplitVirtReg << "\n");
       assert(TargetRegisterInfo::isVirtualRegister(SplitVirtReg->reg) &&
              "expect split value in virtual register");
       enqueue(SplitVirtReg);

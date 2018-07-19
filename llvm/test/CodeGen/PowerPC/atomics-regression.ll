@@ -35,6 +35,7 @@ define i8 @test3(i8* %ptr) {
 ; PPC64LE-LABEL: test3:
 ; PPC64LE:       # %bb.0:
 ; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:    ori 2, 2, 0
 ; PPC64LE-NEXT:    lbz 3, 0(3)
 ; PPC64LE-NEXT:    cmpd 7, 3, 3
 ; PPC64LE-NEXT:    bne- 7, .+4
@@ -78,6 +79,7 @@ define i16 @test7(i16* %ptr) {
 ; PPC64LE-LABEL: test7:
 ; PPC64LE:       # %bb.0:
 ; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:    ori 2, 2, 0
 ; PPC64LE-NEXT:    lhz 3, 0(3)
 ; PPC64LE-NEXT:    cmpd 7, 3, 3
 ; PPC64LE-NEXT:    bne- 7, .+4
@@ -121,6 +123,7 @@ define i32 @test11(i32* %ptr) {
 ; PPC64LE-LABEL: test11:
 ; PPC64LE:       # %bb.0:
 ; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:    ori 2, 2, 0
 ; PPC64LE-NEXT:    lwz 3, 0(3)
 ; PPC64LE-NEXT:    cmpd 7, 3, 3
 ; PPC64LE-NEXT:    bne- 7, .+4
@@ -164,6 +167,7 @@ define i64 @test15(i64* %ptr) {
 ; PPC64LE-LABEL: test15:
 ; PPC64LE:       # %bb.0:
 ; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:    ori 2, 2, 0
 ; PPC64LE-NEXT:    ld 3, 0(3)
 ; PPC64LE-NEXT:    cmpd 7, 3, 3
 ; PPC64LE-NEXT:    bne- 7, .+4

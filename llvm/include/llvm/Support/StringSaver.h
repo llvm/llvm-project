@@ -16,7 +16,7 @@
 
 namespace llvm {
 
-/// Saves strings in the inheritor's stable storage and returns a
+/// \brief Saves strings in the inheritor's stable storage and returns a
 /// StringRef with a stable character pointer.
 class StringSaver final {
   BumpPtrAllocator &Alloc;

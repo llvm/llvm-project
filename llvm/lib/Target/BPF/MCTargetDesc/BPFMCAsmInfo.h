@@ -44,10 +44,6 @@ public:
     // line numbers, etc.
     CodePointerSize = 8;
   }
-
-  void setDwarfUsesRelocationsAcrossSections(bool enable) {
-    DwarfUsesRelocationsAcrossSections = enable;
-  }
 };
 }
 

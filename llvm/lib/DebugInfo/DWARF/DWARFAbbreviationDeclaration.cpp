@@ -16,7 +16,6 @@
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstddef>
 #include <cstdint>
@@ -97,7 +96,8 @@ DWARFAbbreviationDeclaration::extract(DataExtractor Data,
       default:
         // The form has a byte size that doesn't depend on Params.
         // If it's a fixed size, keep track of it.
-        if ((ByteSize = dwarf::getFixedFormByteSize(F, dwarf::FormParams()))) {
+        if ((ByteSize =
+                 DWARFFormValue::getFixedByteSize(F, DWARFFormParams()))) {
           if (FixedAttributeSize)
             FixedAttributeSize->NumBytes += *ByteSize;
           break;
@@ -127,11 +127,26 @@ DWARFAbbreviationDeclaration::extract(DataExtractor Data,
 }
 
 void DWARFAbbreviationDeclaration::dump(raw_ostream &OS) const {
+  auto tagString = TagString(getTag());
   OS << '[' << getCode() << "] ";
-  OS << formatv("{0}", getTag());
+  if (!tagString.empty())
+    OS << tagString;
+  else
+    OS << format("DW_TAG_Unknown_%x", getTag());
   OS << "\tDW_CHILDREN_" << (hasChildren() ? "yes" : "no") << '\n';
   for (const AttributeSpec &Spec : AttributeSpecs) {
-    OS << formatv("\t{0}\t{1}", Spec.Attr, Spec.Form);
+    OS << '\t';
+    auto attrString = AttributeString(Spec.Attr);
+    if (!attrString.empty())
+      OS << attrString;
+    else
+      OS << format("DW_AT_Unknown_%x", Spec.Attr);
+    OS << '\t';
+    auto formString = FormEncodingString(Spec.Form);
+    if (!formString.empty())
+      OS << formString;
+    else
+      OS << format("DW_FORM_Unknown_%x", Spec.Form);
     if (Spec.isImplicitConst())
       OS << '\t' << Spec.getImplicitConstValue();
     OS << '\n';
@@ -202,7 +217,8 @@ Optional<int64_t> DWARFAbbreviationDeclaration::AttributeSpec::getByteSize(
   if (ByteSize.HasByteSize)
     return ByteSize.ByteSize;
   Optional<int64_t> S;
-  auto FixedByteSize = dwarf::getFixedFormByteSize(Form, U.getFormParams());
+  auto FixedByteSize =
+      DWARFFormValue::getFixedByteSize(Form, U.getFormParams());
   if (FixedByteSize)
     S = *FixedByteSize;
   return S;

@@ -37,7 +37,7 @@ DWARFDebugPubTable::DWARFDebugPubTable(StringRef Data, bool LittleEndian,
       if (DieRef == 0)
         break;
       uint8_t IndexEntryValue = GnuStyle ? PubNames.getU8(&Offset) : 0;
-      StringRef Name = PubNames.getCStrRef(&Offset);
+      const char *Name = PubNames.getCStr(&Offset);
       SetData.Entries.push_back(
           {DieRef, PubIndexEntryDescriptor(IndexEntryValue), Name});
     }

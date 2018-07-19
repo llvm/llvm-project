@@ -75,9 +75,6 @@ struct XRayRecord {
   /// The thread ID for the currently running thread.
   uint32_t TId;
 
-  /// The process ID for the currently running process.
-  uint32_t PId;
-
   /// The function call arguments.
   std::vector<uint64_t> CallArgs;
 };

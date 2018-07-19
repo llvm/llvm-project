@@ -32,7 +32,7 @@ namespace llvm {
     ResourcePriorityQueue *PQ;
     explicit resource_sort(ResourcePriorityQueue *pq) : PQ(pq) {}
 
-    bool operator()(const SUnit* LHS, const SUnit* RHS) const;
+    bool operator()(const SUnit* left, const SUnit* right) const;
   };
 
   class ResourcePriorityQueue : public SchedulingPriorityQueue {
@@ -121,7 +121,7 @@ namespace llvm {
     void remove(SUnit *SU) override;
 
     /// scheduledNode - Main resource tracking point.
-    void scheduledNode(SUnit *SU) override;
+    void scheduledNode(SUnit *Node) override;
     bool isResourceAvailable(SUnit *SU);
     void reserveResources(SUnit *SU);
 

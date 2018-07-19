@@ -24,8 +24,6 @@
 #include "llvm/DebugInfo/PDB/Native/TpiStreamBuilder.h"
 #include "llvm/Support/BinaryStream.h"
 #include "llvm/Support/BinaryStreamWriter.h"
-#include "llvm/Support/JamCRC.h"
-#include "llvm/Support/Path.h"
 
 using namespace llvm;
 using namespace llvm::codeview;
@@ -34,8 +32,7 @@ using namespace llvm::pdb;
 using namespace llvm::support;
 
 PDBFileBuilder::PDBFileBuilder(BumpPtrAllocator &Allocator)
-    : Allocator(Allocator), InjectedSourceHashTraits(Strings),
-      InjectedSourceTable(2, InjectedSourceHashTraits) {}
+    : Allocator(Allocator) {}
 
 PDBFileBuilder::~PDBFileBuilder() {}
 
@@ -83,46 +80,15 @@ GSIStreamBuilder &PDBFileBuilder::getGsiBuilder() {
   return *Gsi;
 }
 
-Expected<uint32_t> PDBFileBuilder::allocateNamedStream(StringRef Name,
-                                                       uint32_t Size) {
+Error PDBFileBuilder::addNamedStream(StringRef Name, uint32_t Size) {
   auto ExpectedStream = Msf->addStream(Size);
-  if (ExpectedStream)
-    NamedStreams.set(Name, *ExpectedStream);
-  return ExpectedStream;
-}
-
-Error PDBFileBuilder::addNamedStream(StringRef Name, StringRef Data) {
-  Expected<uint32_t> ExpectedIndex = allocateNamedStream(Name, Data.size());
-  if (!ExpectedIndex)
-    return ExpectedIndex.takeError();
-  assert(NamedStreamData.count(*ExpectedIndex) == 0);
-  NamedStreamData[*ExpectedIndex] = Data;
+  if (!ExpectedStream)
+    return ExpectedStream.takeError();
+  NamedStreams.set(Name, *ExpectedStream);
   return Error::success();
 }
 
-void PDBFileBuilder::addInjectedSource(StringRef Name,
-                                       std::unique_ptr<MemoryBuffer> Buffer) {
-  // Stream names must be exact matches, since they get looked up in a hash
-  // table and the hash value is dependent on the exact contents of the string.
-  // link.exe lowercases a path and converts / to \, so we must do the same.
-  SmallString<64> VName;
-  sys::path::native(Name.lower(), VName);
-
-  uint32_t NI = getStringTableBuilder().insert(Name);
-  uint32_t VNI = getStringTableBuilder().insert(VName);
-
-  InjectedSourceDescriptor Desc;
-  Desc.Content = std::move(Buffer);
-  Desc.NameIndex = NI;
-  Desc.VNameIndex = VNI;
-  Desc.StreamName = "/src/files/";
-
-  Desc.StreamName += VName;
-
-  InjectedSources.push_back(std::move(Desc));
-}
-
-Error PDBFileBuilder::finalizeMsfLayout() {
+Expected<msf::MSFLayout> PDBFileBuilder::finalizeMsfLayout() {
 
   if (Ipi && Ipi->getRecordCount() > 0) {
     // In theory newer PDBs always have an ID stream, but by saying that we're
@@ -135,85 +101,38 @@ Error PDBFileBuilder::finalizeMsfLayout() {
 
   uint32_t StringsLen = Strings.calculateSerializedSize();
 
-  Expected<uint32_t> SN = allocateNamedStream("/LinkInfo", 0);
-  if (!SN)
-    return SN.takeError();
+  if (auto EC = addNamedStream("/names", StringsLen))
+    return std::move(EC);
+  if (auto EC = addNamedStream("/LinkInfo", 0))
+    return std::move(EC);
 
+  if (Info) {
+    if (auto EC = Info->finalizeMsfLayout())
+      return std::move(EC);
+  }
+  if (Dbi) {
+    if (auto EC = Dbi->finalizeMsfLayout())
+      return std::move(EC);
+  }
+  if (Tpi) {
+    if (auto EC = Tpi->finalizeMsfLayout())
+      return std::move(EC);
+  }
+  if (Ipi) {
+    if (auto EC = Ipi->finalizeMsfLayout())
+      return std::move(EC);
+  }
   if (Gsi) {
     if (auto EC = Gsi->finalizeMsfLayout())
-      return EC;
+      return std::move(EC);
     if (Dbi) {
       Dbi->setPublicsStreamIndex(Gsi->getPublicsStreamIndex());
       Dbi->setGlobalsStreamIndex(Gsi->getGlobalsStreamIndex());
       Dbi->setSymbolRecordStreamIndex(Gsi->getRecordStreamIdx());
     }
   }
-  if (Tpi) {
-    if (auto EC = Tpi->finalizeMsfLayout())
-      return EC;
-  }
-  if (Dbi) {
-    if (auto EC = Dbi->finalizeMsfLayout())
-      return EC;
-  }
-  SN = allocateNamedStream("/names", StringsLen);
-  if (!SN)
-    return SN.takeError();
 
-  if (Ipi) {
-    if (auto EC = Ipi->finalizeMsfLayout())
-      return EC;
-  }
-
-  // Do this last, since it relies on the named stream map being complete, and
-  // that can be updated by previous steps in the finalization.
-  if (Info) {
-    if (auto EC = Info->finalizeMsfLayout())
-      return EC;
-  }
-
-  if (!InjectedSources.empty()) {
-    for (const auto &IS : InjectedSources) {
-      JamCRC CRC(0);
-      CRC.update(makeArrayRef(IS.Content->getBufferStart(),
-                              IS.Content->getBufferSize()));
-
-      SrcHeaderBlockEntry Entry;
-      ::memset(&Entry, 0, sizeof(SrcHeaderBlockEntry));
-      Entry.Size = sizeof(SrcHeaderBlockEntry);
-      Entry.FileSize = IS.Content->getBufferSize();
-      Entry.FileNI = IS.NameIndex;
-      Entry.VFileNI = IS.VNameIndex;
-      Entry.ObjNI = 1;
-      Entry.IsVirtual = 0;
-      Entry.Version =
-          static_cast<uint32_t>(PdbRaw_SrcHeaderBlockVer::SrcVerOne);
-      Entry.CRC = CRC.getCRC();
-      StringRef VName = getStringTableBuilder().getStringForId(IS.VNameIndex);
-      InjectedSourceTable.set_as(VName, std::move(Entry));
-    }
-
-    uint32_t SrcHeaderBlockSize =
-        sizeof(SrcHeaderBlockHeader) +
-        InjectedSourceTable.calculateSerializedLength();
-    SN = allocateNamedStream("/src/headerblock", SrcHeaderBlockSize);
-    if (!SN)
-      return SN.takeError();
-    for (const auto &IS : InjectedSources) {
-      SN = allocateNamedStream(IS.StreamName, IS.Content->getBufferSize());
-      if (!SN)
-        return SN.takeError();
-    }
-  }
-
-  // Do this last, since it relies on the named stream map being complete, and
-  // that can be updated by previous steps in the finalization.
-  if (Info) {
-    if (auto EC = Info->finalizeMsfLayout())
-      return EC;
-  }
-
-  return Error::success();
+  return Msf->build();
 }
 
 Expected<uint32_t> PDBFileBuilder::getNamedStreamIndex(StringRef Name) const {
@@ -223,55 +142,70 @@ Expected<uint32_t> PDBFileBuilder::getNamedStreamIndex(StringRef Name) const {
   return SN;
 }
 
-void PDBFileBuilder::commitSrcHeaderBlock(WritableBinaryStream &MsfBuffer,
-                                          const msf::MSFLayout &Layout) {
-  assert(!InjectedSourceTable.empty());
+void PDBFileBuilder::commitFpm(WritableBinaryStream &MsfBuffer,
+                               const MSFLayout &Layout) {
+  auto FpmStream =
+      WritableMappedBlockStream::createFpmStream(Layout, MsfBuffer, Allocator);
 
-  uint32_t SN = cantFail(getNamedStreamIndex("/src/headerblock"));
-  auto Stream = WritableMappedBlockStream::createIndexedStream(
-      Layout, MsfBuffer, SN, Allocator);
-  BinaryStreamWriter Writer(*Stream);
+  // We only need to create the alt fpm stream so that it gets initialized.
+  WritableMappedBlockStream::createFpmStream(Layout, MsfBuffer, Allocator,
+                                             true);
 
-  SrcHeaderBlockHeader Header;
-  ::memset(&Header, 0, sizeof(Header));
-  Header.Version = static_cast<uint32_t>(PdbRaw_SrcHeaderBlockVer::SrcVerOne);
-  Header.Size = Writer.bytesRemaining();
-
-  cantFail(Writer.writeObject(Header));
-  cantFail(InjectedSourceTable.commit(Writer));
-
-  assert(Writer.bytesRemaining() == 0);
-}
-
-void PDBFileBuilder::commitInjectedSources(WritableBinaryStream &MsfBuffer,
-                                           const msf::MSFLayout &Layout) {
-  if (InjectedSourceTable.empty())
-    return;
-
-  commitSrcHeaderBlock(MsfBuffer, Layout);
-
-  for (const auto &IS : InjectedSources) {
-    uint32_t SN = cantFail(getNamedStreamIndex(IS.StreamName));
-
-    auto SourceStream = WritableMappedBlockStream::createIndexedStream(
-        Layout, MsfBuffer, SN, Allocator);
-    BinaryStreamWriter SourceWriter(*SourceStream);
-    assert(SourceWriter.bytesRemaining() == IS.Content->getBufferSize());
-    cantFail(SourceWriter.writeBytes(
-        arrayRefFromStringRef(IS.Content->getBuffer())));
+  uint32_t BI = 0;
+  BinaryStreamWriter FpmWriter(*FpmStream);
+  while (BI < Layout.SB->NumBlocks) {
+    uint8_t ThisByte = 0;
+    for (uint32_t I = 0; I < 8; ++I) {
+      bool IsFree =
+          (BI < Layout.SB->NumBlocks) ? Layout.FreePageMap.test(BI) : true;
+      uint8_t Mask = uint8_t(IsFree) << I;
+      ThisByte |= Mask;
+      ++BI;
+    }
+    cantFail(FpmWriter.writeObject(ThisByte));
   }
+  assert(FpmWriter.bytesRemaining() == 0);
 }
 
 Error PDBFileBuilder::commit(StringRef Filename) {
   assert(!Filename.empty());
-  if (auto EC = finalizeMsfLayout())
+  auto ExpectedLayout = finalizeMsfLayout();
+  if (!ExpectedLayout)
+    return ExpectedLayout.takeError();
+  auto &Layout = *ExpectedLayout;
+
+  uint64_t Filesize = Layout.SB->BlockSize * Layout.SB->NumBlocks;
+  auto OutFileOrError = FileOutputBuffer::create(Filename, Filesize);
+  if (auto E = OutFileOrError.takeError())
+    return E;
+  FileBufferByteStream Buffer(std::move(*OutFileOrError),
+                              llvm::support::little);
+  BinaryStreamWriter Writer(Buffer);
+
+  if (auto EC = Writer.writeObject(*Layout.SB))
     return EC;
 
-  MSFLayout Layout;
-  auto ExpectedMsfBuffer = Msf->commit(Filename, Layout);
-  if (!ExpectedMsfBuffer)
-    return ExpectedMsfBuffer.takeError();
-  FileBufferByteStream Buffer = std::move(*ExpectedMsfBuffer);
+  commitFpm(Buffer, Layout);
+
+  uint32_t BlockMapOffset =
+      msf::blockToOffset(Layout.SB->BlockMapAddr, Layout.SB->BlockSize);
+  Writer.setOffset(BlockMapOffset);
+  if (auto EC = Writer.writeArray(Layout.DirectoryBlocks))
+    return EC;
+
+  auto DirStream = WritableMappedBlockStream::createDirectoryStream(
+      Layout, Buffer, Allocator);
+  BinaryStreamWriter DW(*DirStream);
+  if (auto EC = DW.writeInteger<uint32_t>(Layout.StreamSizes.size()))
+    return EC;
+
+  if (auto EC = DW.writeArray(Layout.StreamSizes))
+    return EC;
+
+  for (const auto &Blocks : Layout.StreamMap) {
+    if (auto EC = DW.writeArray(Blocks))
+      return EC;
+  }
 
   auto ExpectedSN = getNamedStreamIndex("/names");
   if (!ExpectedSN)
@@ -282,17 +216,6 @@ Error PDBFileBuilder::commit(StringRef Filename) {
   BinaryStreamWriter NSWriter(*NS);
   if (auto EC = Strings.commit(NSWriter))
     return EC;
-
-  for (const auto &NSE : NamedStreamData) {
-    if (NSE.second.empty())
-      continue;
-
-    auto NS = WritableMappedBlockStream::createIndexedStream(
-        Layout, Buffer, NSE.first, Allocator);
-    BinaryStreamWriter NSW(*NS);
-    if (auto EC = NSW.writeBytes(arrayRefFromStringRef(NSE.second)))
-      return EC;
-  }
 
   if (Info) {
     if (auto EC = Info->commit(Layout, Buffer))
@@ -318,23 +241,6 @@ Error PDBFileBuilder::commit(StringRef Filename) {
     if (auto EC = Gsi->commit(Layout, Buffer))
       return EC;
   }
-
-  auto InfoStreamBlocks = Layout.StreamMap[StreamPDB];
-  assert(!InfoStreamBlocks.empty());
-  uint64_t InfoStreamFileOffset =
-      blockToOffset(InfoStreamBlocks.front(), Layout.SB->BlockSize);
-  InfoStreamHeader *H = reinterpret_cast<InfoStreamHeader *>(
-      Buffer.getBufferStart() + InfoStreamFileOffset);
-
-  commitInjectedSources(Buffer, Layout);
-
-  // Set the build id at the very end, after every other byte of the PDB
-  // has been written.
-  // FIXME: Use a hash of the PDB rather than time(nullptr) for the signature.
-  H->Age = Info->getAge();
-  H->Guid = Info->getGuid();
-  Optional<uint32_t> Sig = Info->getSignature();
-  H->Signature = Sig.hasValue() ? *Sig : time(nullptr);
 
   return Buffer.commit();
 }

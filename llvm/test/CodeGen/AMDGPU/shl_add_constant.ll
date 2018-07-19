@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=SI %s
+; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() #1
 
@@ -54,13 +54,14 @@ define amdgpu_kernel void @shl_2_add_999_i32(i32 addrspace(1)* %out, i32 addrspa
 }
 
 ; FUNC-LABEL: {{^}}test_add_shl_add_constant:
-; SI-DAG: s_load_dwordx2 s{{\[}}[[X:[0-9]+]]:[[Y:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x13
-; SI-DAG: s_lshl_b32 [[SHL3:s[0-9]+]], s[[X]], 3
-; SI: s_add_i32 [[RESULT:s[0-9]+]], [[SHL3]], s[[Y]]
+; SI-DAG: s_load_dword [[X:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0xb
+; SI-DAG: s_load_dword [[Y:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0xc
+; SI-DAG: s_lshl_b32 [[SHL3:s[0-9]+]], [[X]], 3
+; SI: s_add_i32 [[RESULT:s[0-9]+]], [[SHL3]], [[Y]]
 ; SI: s_addk_i32 [[RESULT]], 0x3d8
 ; SI: v_mov_b32_e32 [[VRESULT:v[0-9]+]], [[RESULT]]
 ; SI: buffer_store_dword [[VRESULT]]
-define amdgpu_kernel void @test_add_shl_add_constant(i32 addrspace(1)* %out, [8 x i32], i32 %x, i32 %y) #0 {
+define amdgpu_kernel void @test_add_shl_add_constant(i32 addrspace(1)* %out, i32 %x, i32 %y) #0 {
   %add.0 = add i32 %x, 123
   %shl = shl i32 %add.0, 3
   %add.1 = add i32 %shl, %y
@@ -69,14 +70,15 @@ define amdgpu_kernel void @test_add_shl_add_constant(i32 addrspace(1)* %out, [8 
 }
 
 ; FUNC-LABEL: {{^}}test_add_shl_add_constant_inv:
-; SI-DAG: s_load_dwordx2 s{{\[}}[[X:[0-9]+]]:[[Y:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x13
-; SI: s_lshl_b32 [[SHL3:s[0-9]+]], s[[X]], 3
-; SI: s_add_i32 [[TMP:s[0-9]+]], s[[Y]], [[SHL3]]
+; SI-DAG: s_load_dword [[X:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0xb
+; SI-DAG: s_load_dword [[Y:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0xc
+; SI: s_lshl_b32 [[SHL3:s[0-9]+]], [[X]], 3
+; SI: s_add_i32 [[TMP:s[0-9]+]], [[Y]], [[SHL3]]
 ; SI: s_addk_i32 [[TMP]], 0x3d8
 ; SI: v_mov_b32_e32 [[VRESULT:v[0-9]+]], [[TMP]]
 ; SI: buffer_store_dword [[VRESULT]]
 
-define amdgpu_kernel void @test_add_shl_add_constant_inv(i32 addrspace(1)* %out, [8 x i32], i32 %x, i32 %y) #0 {
+define amdgpu_kernel void @test_add_shl_add_constant_inv(i32 addrspace(1)* %out, i32 %x, i32 %y) #0 {
   %add.0 = add i32 %x, 123
   %shl = shl i32 %add.0, 3
   %add.1 = add i32 %y, %shl

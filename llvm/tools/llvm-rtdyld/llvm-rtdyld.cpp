@@ -27,9 +27,11 @@
 #include "llvm/Object/SymbolSize.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/DynamicLibrary.h"
-#include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Memory.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/PrettyStackTrace.h"
+#include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
@@ -40,7 +42,7 @@ using namespace llvm::object;
 
 static cl::list<std::string>
 InputFileList(cl::Positional, cl::ZeroOrMore,
-              cl::desc("<input files>"));
+              cl::desc("<input file>"));
 
 enum ActionType {
   AC_Execute,
@@ -734,8 +736,11 @@ static int linkAndVerify() {
 }
 
 int main(int argc, char **argv) {
-  InitLLVM X(argc, argv);
+  sys::PrintStackTraceOnErrorSignal(argv[0]);
+  PrettyStackTraceProgram X(argc, argv);
+
   ProgramName = argv[0];
+  llvm_shutdown_obj Y;  // Call llvm_shutdown() on exit.
 
   llvm::InitializeAllTargetInfos();
   llvm::InitializeAllTargetMCs();

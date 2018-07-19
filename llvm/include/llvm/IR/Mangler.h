@@ -50,9 +50,6 @@ public:
 void emitLinkerFlagsForGlobalCOFF(raw_ostream &OS, const GlobalValue *GV,
                                   const Triple &TT, Mangler &Mangler);
 
-void emitLinkerFlagsForUsedCOFF(raw_ostream &OS, const GlobalValue *GV,
-                                const Triple &T, Mangler &M);
-
 } // End llvm namespace
 
 #endif

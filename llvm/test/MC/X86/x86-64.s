@@ -288,6 +288,9 @@ inl	(%dx), %eax
 
 //PR15455
 
+// permitted invalid memory forms	
+outs	(%rsi), (%dx) 
+// CHECK: outsw	(%rsi), %dx
 outsb	(%rsi), (%dx)
 // CHECK: outsb	(%rsi), %dx
 outsw	(%rsi), (%dx)
@@ -295,6 +298,8 @@ outsw	(%rsi), (%dx)
 outsl	(%rsi), (%dx)
 // CHECK: outsl	(%rsi), %dx
 
+ins	(%dx), %es:(%rdi)
+// CHECK: insw	%dx, %es:(%rdi)
 insb	(%dx), %es:(%rdi)
 // CHECK: insb	%dx, %es:(%rdi)
 insw	(%dx), %es:(%rdi)
@@ -340,9 +345,13 @@ fucomi	%st(2), %st
 
 // CHECK: fnstsw %ax
 // CHECK: fnstsw %ax
+// CHECK: fnstsw %ax
+// CHECK: fnstsw %ax
 
 fnstsw
 fnstsw %ax
+fnstsw %eax
+fnstsw %al
 
 // rdar://8431880
 // CHECK: rclb	%bl
@@ -1128,10 +1137,10 @@ mov %gs, (%rsi)  // CHECK: movw	%gs, (%rsi) # encoding: [0x8c,0x2e]
 	idiv	0x12345678,%eax
 
 // PR8524
-movd	%rax, %mm5 // CHECK: movq %rax, %mm5 # encoding: [0x48,0x0f,0x6e,0xe8]
-movd	%mm5, %rbx // CHECK: movq %mm5, %rbx # encoding: [0x48,0x0f,0x7e,0xeb]
-movq	%rax, %mm5 // CHECK: movq %rax, %mm5 # encoding: [0x48,0x0f,0x6e,0xe8]
-movq	%mm5, %rbx // CHECK: movq %mm5, %rbx # encoding: [0x48,0x0f,0x7e,0xeb]
+movd	%rax, %mm5 // CHECK: movd %rax, %mm5 # encoding: [0x48,0x0f,0x6e,0xe8]
+movd	%mm5, %rbx // CHECK: movd %mm5, %rbx # encoding: [0x48,0x0f,0x7e,0xeb]
+movq	%rax, %mm5 // CHECK: movd %rax, %mm5 # encoding: [0x48,0x0f,0x6e,0xe8]
+movq	%mm5, %rbx // CHECK: movd %mm5, %rbx # encoding: [0x48,0x0f,0x7e,0xeb]
 
 rex64 // CHECK: rex64 # encoding: [0x48]
 data16 // CHECK: data16 # encoding: [0x66]
@@ -1351,8 +1360,8 @@ pclmullqhqdq (%rdi), %xmm1
 pclmulqdq $0, (%rdi), %xmm1
 
 // PR10345
-// CHECK: nop
-// CHECK: encoding: [0x90]
+// CHECK: xchgq %rax, %rax
+// CHECK: encoding: [0x48,0x90]
 xchgq %rax, %rax
 
 // CHECK: xchgl %eax, %eax
@@ -1554,206 +1563,6 @@ ptwriteq 0xdeadbeef(%rbx,%rcx,8)
 // CHECK: ptwriteq %rax
 // CHECK:  encoding: [0xf3,0x48,0x0f,0xae,0xe0]
 ptwriteq %rax
-
-// CHECK: wbnoinvd
-// CHECK:  encoding: [0xf3,0x0f,0x09]
-wbnoinvd
-
-// CHECK: cldemote 4(%rax)
-// CHECK:  encoding: [0x0f,0x1c,0x40,0x04]
-cldemote 4(%rax)
-
-// CHECK: cldemote 3735928559(%rbx,%rcx,8)
-// CHECK:  encoding: [0x0f,0x1c,0x84,0xcb,0xef,0xbe,0xad,0xde]
-cldemote 0xdeadbeef(%rbx,%rcx,8)
-
-// CHECK: umonitor %r13
-// CHECK:  encoding: [0xf3,0x41,0x0f,0xae,0xf5]
-umonitor %r13
-
-// CHECK: umonitor %rax
-// CHECK:  encoding: [0xf3,0x0f,0xae,0xf0]
-umonitor %rax
-
-// CHECK: umonitor %eax
-// CHECK:  encoding: [0x67,0xf3,0x0f,0xae,0xf0]
-umonitor %eax
-
-// CHECK: umwait %r15
-// CHECK:  encoding: [0xf2,0x41,0x0f,0xae,0xf7]
-umwait %r15
-
-// CHECK: umwait %ebx
-// CHECK:  encoding: [0xf2,0x0f,0xae,0xf3]
-umwait %ebx
-
-// CHECK: tpause %r15
-// CHECK:  encoding: [0x66,0x41,0x0f,0xae,0xf7]
-tpause %r15
-
-// CHECK: tpause %ebx
-// CHECK:  encoding: [0x66,0x0f,0xae,0xf3]
-tpause %ebx
-
-// CHECK: movdiri %r15, 485498096
-// CHECK: # encoding: [0x4c,0x0f,0x38,0xf9,0x3c,0x25,0xf0,0x1c,0xf0,0x1c]
-movdiri %r15, 485498096
-
-// CHECK: movdiri %r15, (%rdx)
-// CHECK: # encoding: [0x4c,0x0f,0x38,0xf9,0x3a]
-movdiri %r15, (%rdx)
-
-// CHECK: movdiri %r15, 64(%rdx)
-// CHECK: # encoding: [0x4c,0x0f,0x38,0xf9,0x7a,0x40]
-movdiri %r15, 64(%rdx)
-
-// CHECK: movdir64b 485498096, %rax
-// CHECK: # encoding: [0x66,0x0f,0x38,0xf8,0x04,0x25,0xf0,0x1c,0xf0,0x1c]
-movdir64b 485498096, %rax
-
-// CHECK: movdir64b 485498096, %eax
-// CHECK: # encoding: [0x67,0x66,0x0f,0x38,0xf8,0x04,0x25,0xf0,0x1c,0xf0,0x1c]
-movdir64b 485498096, %eax
-
-// CHECK: movdir64b (%rdx), %r15
-// CHECK: # encoding: [0x66,0x44,0x0f,0x38,0xf8,0x3a]
-movdir64b (%rdx), %r15
-
-// CHECK: pconfig
-// CHECK: # encoding: [0x0f,0x01,0xc5]
-pconfig
-
-// CHECK: encls
-// CHECK: encoding: [0x0f,0x01,0xcf]
-encls
-
-// CHECK: enclu
-// CHECK: encoding: [0x0f,0x01,0xd7]
-enclu
-
-// CHECK: enclv
-// CHECK: encoding: [0x0f,0x01,0xc0]
-enclv
-
-// CHECK: movq %rax, %rbx
-// CHECK: encoding: [0x48,0x8b,0xd8]
-movq.s %rax, %rbx
-
-// CHECK: movq %rax, %rbx
-// CHECK: encoding: [0x48,0x8b,0xd8]
-mov.s %rax, %rbx
-
-// CHECK: movl %eax, %ebx
-// CHECK: encoding: [0x8b,0xd8]
-movl.s %eax, %ebx
-
-// CHECK: movl %eax, %ebx
-// CHECK: encoding: [0x8b,0xd8]
-mov.s %eax, %ebx
-
-// CHECK: movw %ax, %bx
-// CHECK: encoding: [0x66,0x8b,0xd8]
-movw.s %ax, %bx
-
-// CHECK: movw %ax, %bx
-// CHECK: encoding: [0x66,0x8b,0xd8]
-mov.s %ax, %bx
-
-// CHECK: movb %al, %bl
-// CHECK: encoding: [0x8a,0xd8]
-movb.s %al, %bl
-
-// CHECK: movb %al, %bl
-// CHECK: encoding: [0x8a,0xd8]
-mov.s %al, %bl
-
-// CHECK: movq %mm0, %mm1
-// CHECK: encoding: [0x0f,0x7f,0xc1]
-movq.s %mm0, %mm1
-
-// CHECK: movq %xmm0, %xmm1
-// CHECK: encoding: [0x66,0x0f,0xd6,0xc1]
-movq.s %xmm0, %xmm1
-
-// CHECK: movdqa %xmm0, %xmm1
-// CHECK: encoding: [0x66,0x0f,0x7f,0xc1]
-movdqa.s %xmm0, %xmm1
-
-// CHECK: movdqu %xmm0, %xmm1
-// CHECK: encoding: [0xf3,0x0f,0x7f,0xc1]
-movdqu.s %xmm0, %xmm1
-
-// CHECK: movaps %xmm0, %xmm1
-// CHECK: encoding: [0x0f,0x29,0xc1]
-movaps.s %xmm0, %xmm1
-
-// CHECK: movups %xmm0, %xmm1
-// CHECK: encoding: [0x0f,0x11,0xc1]
-movups.s %xmm0, %xmm1
-
-// CHECK: movapd %xmm0, %xmm1
-// CHECK: encoding: [0x66,0x0f,0x29,0xc1]
-movapd.s %xmm0, %xmm1
-
-// CHECK: movupd %xmm0, %xmm1
-// CHECK: encoding: [0x66,0x0f,0x11,0xc1]
-movupd.s %xmm0, %xmm1
-
-// CHECK: vmovq %xmm0, %xmm8
-// CHECK: encoding: [0xc4,0xc1,0x79,0xd6,0xc0]
-vmovq.s %xmm0, %xmm8
-
-// CHECK: vmovq %xmm8, %xmm0
-// CHECK: encoding: [0xc5,0x79,0xd6,0xc0]
-vmovq.s %xmm8, %xmm0
-
-// CHECK: vmovdqa %xmm0, %xmm8
-// CHECK: encoding: [0xc4,0xc1,0x79,0x7f,0xc0]
-vmovdqa.s %xmm0, %xmm8
-
-// CHECK: vmovdqa %xmm8, %xmm0
-// CHECK: encoding: [0xc5,0x79,0x7f,0xc0]
-vmovdqa.s %xmm8, %xmm0
-
-// CHECK: vmovdqu %xmm0, %xmm8
-// CHECK: encoding: [0xc4,0xc1,0x7a,0x7f,0xc0]
-vmovdqu.s %xmm0, %xmm8
-
-// CHECK: vmovdqu %xmm8, %xmm0
-// CHECK: encoding: [0xc5,0x7a,0x7f,0xc0]
-vmovdqu.s %xmm8, %xmm0
-
-// CHECK: vmovaps %xmm0, %xmm8
-// CHECK: encoding: [0xc4,0xc1,0x78,0x29,0xc0]
-vmovaps.s %xmm0, %xmm8
-
-// CHECK: vmovaps %xmm8, %xmm0
-// CHECK: encoding: [0xc5,0x78,0x29,0xc0]
-vmovaps.s %xmm8, %xmm0
-
-// CHECK: vmovups %xmm0, %xmm8
-// CHECK: encoding: [0xc4,0xc1,0x78,0x11,0xc0]
-vmovups.s %xmm0, %xmm8
-
-// CHECK: vmovups %xmm8, %xmm0
-// CHECK: encoding: [0xc5,0x78,0x11,0xc0]
-vmovups.s %xmm8, %xmm0
-
-// CHECK: vmovapd %xmm0, %xmm8
-// CHECK: encoding: [0xc4,0xc1,0x79,0x29,0xc0]
-vmovapd.s %xmm0, %xmm8
-
-// CHECK: vmovapd %xmm8, %xmm0
-// CHECK: encoding: [0xc5,0x79,0x29,0xc0]
-vmovapd.s %xmm8, %xmm0
-
-// CHECK: vmovupd %xmm0, %xmm8
-// CHECK: encoding: [0xc4,0xc1,0x79,0x11,0xc0]
-vmovupd.s %xmm0, %xmm8
-
-// CHECK: vmovupd %xmm8, %xmm0
-// CHECK: encoding: [0xc5,0x79,0x11,0xc0]
-vmovupd.s %xmm8, %xmm0
 
 //  __asm __volatile(
 //    "pushf        \n\t"

@@ -72,7 +72,7 @@ void llvm_execute_on_thread(void (*UserFn)(void *), void *UserData,
 
   enum InitStatus { Uninitialized = 0, Wait = 1, Done = 2 };
 
-  /// The llvm::once_flag structure
+  /// \brief The llvm::once_flag structure
   ///
   /// This type is modeled after std::once_flag to use with llvm::call_once.
   /// This structure must be used as an opaque object. It is a struct to force
@@ -83,7 +83,7 @@ void llvm_execute_on_thread(void (*UserFn)(void *), void *UserData,
 
 #endif
 
-  /// Execute the function specified as a parameter once.
+  /// \brief Execute the function specified as a parameter once.
   ///
   /// Typical usage:
   /// \code
@@ -139,17 +139,17 @@ void llvm_execute_on_thread(void (*UserFn)(void *), void *UserData,
   /// not available.
   unsigned hardware_concurrency();
 
-  /// Return the current thread id, as used in various OS system calls.
+  /// \brief Return the current thread id, as used in various OS system calls.
   /// Note that not all platforms guarantee that the value returned will be
   /// unique across the entire system, so portable code should not assume
   /// this.
   uint64_t get_threadid();
 
-  /// Get the maximum length of a thread name on this platform.
+  /// \brief Get the maximum length of a thread name on this platform.
   /// A value of 0 means there is no limit.
   uint32_t get_max_thread_name_length();
 
-  /// Set the name of the current thread.  Setting a thread's name can
+  /// \brief Set the name of the current thread.  Setting a thread's name can
   /// be helpful for enabling useful diagnostics under a debugger or when
   /// logging.  The level of support for setting a thread's name varies
   /// wildly across operating systems, and we only make a best effort to
@@ -157,7 +157,7 @@ void llvm_execute_on_thread(void (*UserFn)(void *), void *UserData,
   /// or failure is returned.
   void set_thread_name(const Twine &Name);
 
-  /// Get the name of the current thread.  The level of support for
+  /// \brief Get the name of the current thread.  The level of support for
   /// getting a thread's name varies wildly across operating systems, and it
   /// is not even guaranteed that if you can successfully set a thread's name
   /// that you can later get it back.  This function is intended for diagnostic

@@ -99,11 +99,11 @@ public:
 private:
   MCContext &Context;
 
-  std::unique_ptr<MCAsmBackend> Backend;
+  MCAsmBackend &Backend;
 
-  std::unique_ptr<MCCodeEmitter> Emitter;
+  MCCodeEmitter &Emitter;
 
-  std::unique_ptr<MCObjectWriter> Writer;
+  MCObjectWriter &Writer;
 
   SectionListType Sections;
 
@@ -130,7 +130,7 @@ private:
   // refactoring too.
   mutable SmallPtrSet<const MCSymbol *, 32> ThumbFuncs;
 
-  /// The bundle alignment size currently set in the assembler.
+  /// \brief The bundle alignment size currently set in the assembler.
   ///
   /// By default it's 0, which means bundling is disabled.
   unsigned BundleAlignSize;
@@ -162,14 +162,12 @@ private:
   /// evaluates to.
   /// \param Value [out] On return, the value of the fixup as currently laid
   /// out.
-  /// \param WasForced [out] On return, the value in the fixup is set to the
-  /// correct value if WasForced is true, even if evaluateFixup returns false.
   /// \return Whether the fixup value was fully resolved. This is true if the
   /// \p Value result is fixed, otherwise the value may change due to
   /// relocation.
   bool evaluateFixup(const MCAsmLayout &Layout, const MCFixup &Fixup,
                      const MCFragment *DF, MCValue &Target,
-                     uint64_t &Value, bool &WasForced) const;
+                     uint64_t &Value) const;
 
   /// Check whether a fixup can be satisfied, or whether it needs to be relaxed
   /// (increased in size, in order to hold its value correctly).
@@ -180,11 +178,11 @@ private:
   bool fragmentNeedsRelaxation(const MCRelaxableFragment *IF,
                                const MCAsmLayout &Layout) const;
 
-  /// Perform one layout iteration and return true if any offsets
+  /// \brief Perform one layout iteration and return true if any offsets
   /// were adjusted.
   bool layoutOnce(MCAsmLayout &Layout);
 
-  /// Perform one layout iteration of the given section and return true
+  /// \brief Perform one layout iteration of the given section and return true
   /// if any offsets were adjusted.
   bool layoutSectionOnce(MCAsmLayout &Layout, MCSection &Sec);
 
@@ -208,17 +206,14 @@ private:
   handleFixup(const MCAsmLayout &Layout, MCFragment &F, const MCFixup &Fixup);
 
 public:
-  std::vector<std::pair<StringRef, const MCSymbol *>> Symvers;
-
   /// Construct a new assembler instance.
   //
   // FIXME: How are we going to parameterize this? Two obvious options are stay
   // concrete and require clients to pass in a target like object. The other
   // option is to make this abstract, and have targets provide concrete
   // implementations as we do with AsmParser.
-  MCAssembler(MCContext &Context, std::unique_ptr<MCAsmBackend> Backend,
-              std::unique_ptr<MCCodeEmitter> Emitter,
-              std::unique_ptr<MCObjectWriter> Writer);
+  MCAssembler(MCContext &Context, MCAsmBackend &Backend,
+              MCCodeEmitter &Emitter, MCObjectWriter &Writer);
   MCAssembler(const MCAssembler &) = delete;
   MCAssembler &operator=(const MCAssembler &) = delete;
   ~MCAssembler();
@@ -238,8 +233,8 @@ public:
   /// defining a separate atom.
   bool isSymbolLinkerVisible(const MCSymbol &SD) const;
 
-  /// Emit the section contents to \p OS.
-  void writeSectionData(raw_ostream &OS, const MCSection *Section,
+  /// Emit the section contents using the given object writer.
+  void writeSectionData(const MCSection *Section,
                         const MCAsmLayout &Layout) const;
 
   /// Check whether a given symbol has been flagged with .thumb_func.
@@ -277,17 +272,11 @@ public:
 
   MCContext &getContext() const { return Context; }
 
-  MCAsmBackend *getBackendPtr() const { return Backend.get(); }
+  MCAsmBackend &getBackend() const { return Backend; }
 
-  MCCodeEmitter *getEmitterPtr() const { return Emitter.get(); }
+  MCCodeEmitter &getEmitter() const { return Emitter; }
 
-  MCObjectWriter *getWriterPtr() const { return Writer.get(); }
-
-  MCAsmBackend &getBackend() const { return *Backend; }
-
-  MCCodeEmitter &getEmitter() const { return *Emitter; }
-
-  MCObjectWriter &getWriter() const { return *Writer; }
+  MCObjectWriter &getWriter() const { return Writer; }
 
   MCDwarfLineTableParams getDWARFLinetableParams() const { return LTParams; }
   void setDWARFLinetableParams(MCDwarfLineTableParams P) { LTParams = P; }
@@ -418,13 +407,6 @@ public:
   const MCLOHContainer &getLOHContainer() const {
     return const_cast<MCAssembler *>(this)->getLOHContainer();
   }
-
-  struct CGProfileEntry {
-    const MCSymbolRefExpr *From;
-    const MCSymbolRefExpr *To;
-    uint64_t Count;
-  };
-  std::vector<CGProfileEntry> CGProfile;
   /// @}
   /// \name Backend Data Access
   /// @{
@@ -440,22 +422,21 @@ public:
       FileNames.push_back(FileName);
   }
 
-  /// Write the necessary bundle padding to \p OS.
+  /// \brief Write the necessary bundle padding to the given object writer.
   /// Expects a fragment \p F containing instructions and its size \p FSize.
-  void writeFragmentPadding(raw_ostream &OS, const MCEncodedFragment &F,
-                            uint64_t FSize) const;
+  void writeFragmentPadding(const MCFragment &F, uint64_t FSize,
+                            MCObjectWriter *OW) const;
 
   /// @}
 
   void dump() const;
 };
 
-/// Compute the amount of padding required before the fragment \p F to
+/// \brief Compute the amount of padding required before the fragment \p F to
 /// obey bundling restrictions, where \p FOffset is the fragment's offset in
 /// its section and \p FSize is the fragment's size.
-uint64_t computeBundlePadding(const MCAssembler &Assembler,
-                              const MCEncodedFragment *F, uint64_t FOffset,
-                              uint64_t FSize);
+uint64_t computeBundlePadding(const MCAssembler &Assembler, const MCFragment *F,
+                              uint64_t FOffset, uint64_t FSize);
 
 } // end namespace llvm
 

@@ -50,18 +50,6 @@
 
 .thumb
 
-	ADD r0, r1, #0xFFFFFF00
-# CHECK: subw r0, r1, #256
-# CHECK-DISABLED: note: instruction requires: NegativeImmediates
-# CHECK-DISABLED: ADD
-	ADDS r0, r1, #0xFFFFFF00
-# CHECK: subs.w r0, r1, #256
-# CHECK-DISABLED: note: instruction requires: NegativeImmediates
-# CHECK-DISABLED: ADDS
-	ADDS.W r0, r1, #0xFFFFFF00
-# CHECK: subs.w r0, r1, #256
-# CHECK-DISABLED: note: instruction requires: NegativeImmediates
-# CHECK-DISABLED: ADDS.W
 	ADC r0, r1, #0xFFFFFF00
 # CHECK: sbc r0, r1, #255
 # CHECK-DISABLED: note: instruction requires: NegativeImmediates
@@ -102,30 +90,10 @@
 # CHECK: bic r0, r1, #16777472 @ encoding: [0x21,0xf0,0x01,0x20]
 # CHECK-DISABLED: note: instruction requires: NegativeImmediates
 # CHECK-DISABLED: AND
-	AND.W r0, r1, #0xFFFFFF00
-# CHECK: bic r0, r1, #255
-# CHECK-DISABLED: note: instruction requires: NegativeImmediates
-# CHECK-DISABLED: AND.W
-	ANDS r0, r1, #0xFFFFFF00
-# CHECK: bics r0, r1, #255
-# CHECK-DISABLED: note: instruction requires: NegativeImmediates
-# CHECK-DISABLED: ANDS
 	BIC r0, r1, #0xFFFFFF00
 # CHECK: and r0, r1, #255
 # CHECK-DISABLED: note: instruction requires: NegativeImmediates
 # CHECK-DISABLED: BIC
-	BIC.W r0, r1, #0xFFFFFF00
-# CHECK: and r0, r1, #255
-# CHECK-DISABLED: note: instruction requires: NegativeImmediates
-# CHECK-DISABLED: BIC.W
-	BICS r0, r1, #0xFFFFFF00
-# CHECK: ands r0, r1, #255
-# CHECK-DISABLED: note: instruction requires: NegativeImmediates
-# CHECK-DISABLED: BICS
-	BICS.W r0, r1, #0xFFFFFF00
-# CHECK: ands r0, r1, #255
-# CHECK-DISABLED: note: instruction requires: NegativeImmediates
-# CHECK-DISABLED: BICS.W
 	BIC r0, r1, #0xFEFFFEFF
 # CHECK: and r0, r1, #16777472 @ encoding: [0x01,0xf0,0x01,0x20]
 # CHECK-DISABLED: note: instruction requires: NegativeImmediates
@@ -174,20 +142,3 @@
 # CHECK: add.w r0, r1, #255
 # CHECK-DISABLED: note: instruction requires: NegativeImmediates
 # CHECK-DISABLED: SUB.W
-	SUB r0, r1, #0xFFFFFF00
-# CHECK: addw r0, r1, #256
-# CHECK-DISABLED: note: instruction requires: NegativeImmediates
-# CHECK-DISABLED: SUB
-	SUBS r0, r1, #0xFFFFFF00
-# CHECK: adds.w r0, r1, #256
-# CHECK-DISABLED: note: instruction requires: NegativeImmediates
-# CHECK-DISABLED: SUBS
-	SUBS.W r0, r1, #0xFFFFFF00
-# CHECK: adds.w r0, r1, #256
-# CHECK-DISABLED: note: instruction requires: NegativeImmediates
-# CHECK-DISABLED: SUBS.W
-
-	ADD r0, r1, #-13
-# CHECK: subw r0, r1, #13
-# CHECK-DISABLED: note: instruction requires: NegativeImmediates
-# CHECK-DISABLED: ADD

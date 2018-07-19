@@ -126,11 +126,6 @@ def G_BSWAP : GenericInstruction {
   let hasSideEffects = 0;
 }
 
-def G_ADDRSPACE_CAST : GenericInstruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type1:$src);
-  let hasSideEffects = 0;
-}
 //------------------------------------------------------------------------------
 // Binary ops.
 //------------------------------------------------------------------------------
@@ -383,12 +378,6 @@ def G_UITOFP : GenericInstruction {
   let hasSideEffects = 0;
 }
 
-def G_FABS : GenericInstruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src);
-  let hasSideEffects = 0;
-}
-
 //------------------------------------------------------------------------------
 // Floating Point Binary ops.
 //------------------------------------------------------------------------------
@@ -481,22 +470,6 @@ def G_FLOG2 : GenericInstruction {
 
 // Generic load. Expects a MachineMemOperand in addition to explicit operands.
 def G_LOAD : GenericInstruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins ptype1:$addr);
-  let hasSideEffects = 0;
-  let mayLoad = 1;
-}
-
-// Generic sign-extended load. Expects a MachineMemOperand in addition to explicit operands.
-def G_SEXTLOAD : GenericInstruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins ptype1:$addr);
-  let hasSideEffects = 0;
-  let mayLoad = 1;
-}
-
-// Generic zero-extended load. Expects a MachineMemOperand in addition to explicit operands.
-def G_ZEXTLOAD : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins ptype1:$addr);
   let hasSideEffects = 0;

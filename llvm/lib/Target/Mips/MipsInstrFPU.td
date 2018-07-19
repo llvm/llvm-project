@@ -149,16 +149,12 @@ multiclass ROUND_M<string opstr, InstrItinClass Itin> {
 class MFC1_FT<string opstr, RegisterOperand DstRC, RegisterOperand SrcRC,
               InstrItinClass Itin, SDPatternOperator OpNode= null_frag> :
   InstSE<(outs DstRC:$rt), (ins SrcRC:$fs), !strconcat(opstr, "\t$rt, $fs"),
-         [(set DstRC:$rt, (OpNode SrcRC:$fs))], Itin, FrmFR, opstr>, HARDFLOAT {
-  let isMoveReg = 1;
-}
+         [(set DstRC:$rt, (OpNode SrcRC:$fs))], Itin, FrmFR, opstr>, HARDFLOAT;
 
 class MTC1_FT<string opstr, RegisterOperand DstRC, RegisterOperand SrcRC,
               InstrItinClass Itin, SDPatternOperator OpNode= null_frag> :
   InstSE<(outs DstRC:$fs), (ins SrcRC:$rt), !strconcat(opstr, "\t$rt, $fs"),
-         [(set DstRC:$fs, (OpNode SrcRC:$rt))], Itin, FrmFR, opstr>, HARDFLOAT {
-  let isMoveReg = 1;
-}
+         [(set DstRC:$fs, (OpNode SrcRC:$rt))], Itin, FrmFR, opstr>, HARDFLOAT;
 
 class MTC1_64_FT<string opstr, RegisterOperand DstRC, RegisterOperand SrcRC,
                  InstrItinClass Itin> :
@@ -353,24 +349,22 @@ defm D64 : C_COND_M<"d", FGR64Opnd, 17, II_C_CC_D>, ISA_MIPS1_NOT_32R6_64R6,
 //===----------------------------------------------------------------------===//
 // Floating Point Instructions
 //===----------------------------------------------------------------------===//
-let AdditionalPredicates = [NotInMicroMips] in {
-  def ROUND_W_S  : MMRel, StdMMR6Rel, ABSS_FT<"round.w.s", FGR32Opnd, FGR32Opnd, II_ROUND>,
-                   ABSS_FM<0xc, 16>, ISA_MIPS2;
-  defm ROUND_W : ROUND_M<"round.w.d", II_ROUND>, ABSS_FM<0xc, 17>, ISA_MIPS2;
-  def TRUNC_W_S  : MMRel, StdMMR6Rel, ABSS_FT<"trunc.w.s", FGR32Opnd, FGR32Opnd, II_TRUNC>,
-                   ABSS_FM<0xd, 16>, ISA_MIPS2;
-  def CEIL_W_S   : MMRel, StdMMR6Rel, ABSS_FT<"ceil.w.s", FGR32Opnd, FGR32Opnd, II_CEIL>,
-                   ABSS_FM<0xe, 16>, ISA_MIPS2;
-  def FLOOR_W_S  : MMRel, StdMMR6Rel, ABSS_FT<"floor.w.s", FGR32Opnd, FGR32Opnd, II_FLOOR>,
-                   ABSS_FM<0xf, 16>, ISA_MIPS2;
-  def CVT_W_S    : MMRel, ABSS_FT<"cvt.w.s", FGR32Opnd, FGR32Opnd, II_CVT>,
-                   ABSS_FM<0x24, 16>, ISA_MIPS1;
+def ROUND_W_S  : MMRel, StdMMR6Rel, ABSS_FT<"round.w.s", FGR32Opnd, FGR32Opnd, II_ROUND>,
+                 ABSS_FM<0xc, 16>, ISA_MIPS2;
+defm ROUND_W : ROUND_M<"round.w.d", II_ROUND>, ABSS_FM<0xc, 17>, ISA_MIPS2;
+def TRUNC_W_S  : MMRel, StdMMR6Rel, ABSS_FT<"trunc.w.s", FGR32Opnd, FGR32Opnd, II_TRUNC>,
+                 ABSS_FM<0xd, 16>, ISA_MIPS2;
+def CEIL_W_S   : MMRel, StdMMR6Rel, ABSS_FT<"ceil.w.s", FGR32Opnd, FGR32Opnd, II_CEIL>,
+                 ABSS_FM<0xe, 16>, ISA_MIPS2;
+def FLOOR_W_S  : MMRel, StdMMR6Rel, ABSS_FT<"floor.w.s", FGR32Opnd, FGR32Opnd, II_FLOOR>,
+                 ABSS_FM<0xf, 16>, ISA_MIPS2;
+def CVT_W_S    : MMRel, ABSS_FT<"cvt.w.s", FGR32Opnd, FGR32Opnd, II_CVT>,
+                 ABSS_FM<0x24, 16>;
 
-  defm TRUNC_W : ROUND_M<"trunc.w.d", II_TRUNC>, ABSS_FM<0xd, 17>, ISA_MIPS2;
-  defm CEIL_W  : ROUND_M<"ceil.w.d", II_CEIL>, ABSS_FM<0xe, 17>, ISA_MIPS2;
-  defm FLOOR_W : ROUND_M<"floor.w.d", II_FLOOR>, ABSS_FM<0xf, 17>, ISA_MIPS2;
-  defm CVT_W   : ROUND_M<"cvt.w.d", II_CVT>, ABSS_FM<0x24, 17>, ISA_MIPS1;
-}
+defm TRUNC_W : ROUND_M<"trunc.w.d", II_TRUNC>, ABSS_FM<0xd, 17>, ISA_MIPS2;
+defm CEIL_W  : ROUND_M<"ceil.w.d", II_CEIL>, ABSS_FM<0xe, 17>, ISA_MIPS2;
+defm FLOOR_W : ROUND_M<"floor.w.d", II_FLOOR>, ABSS_FM<0xf, 17>, ISA_MIPS2;
+defm CVT_W   : ROUND_M<"cvt.w.d", II_CVT>, ABSS_FM<0x24, 17>;
 
 let AdditionalPredicates = [NotInMicroMips] in {
   def RECIP_S : MMRel, ABSS_FT<"recip.s", FGR32Opnd, FGR32Opnd, II_RECIP_S>,
@@ -397,54 +391,53 @@ let AdditionalPredicates = [NotInMicroMips] in {
 let DecoderNamespace = "MipsFP64" in {
   let AdditionalPredicates = [NotInMicroMips] in {
   def ROUND_L_S : ABSS_FT<"round.l.s", FGR64Opnd, FGR32Opnd, II_ROUND>,
-                  ABSS_FM<0x8, 16>, ISA_MIPS2, FGR_64;
+                  ABSS_FM<0x8, 16>, FGR_64;
   def ROUND_L_D64 : ABSS_FT<"round.l.d", FGR64Opnd, FGR64Opnd, II_ROUND>,
-                    ABSS_FM<0x8, 17>, INSN_MIPS3_32, FGR_64;
+                    ABSS_FM<0x8, 17>, FGR_64;
   def TRUNC_L_S : ABSS_FT<"trunc.l.s", FGR64Opnd, FGR32Opnd, II_TRUNC>,
-                  ABSS_FM<0x9, 16>, ISA_MIPS2, FGR_64;
+                  ABSS_FM<0x9, 16>, FGR_64;
   def TRUNC_L_D64 : ABSS_FT<"trunc.l.d", FGR64Opnd, FGR64Opnd, II_TRUNC>,
-                    ABSS_FM<0x9, 17>, INSN_MIPS3_32, FGR_64;
+                    ABSS_FM<0x9, 17>, FGR_64;
   def CEIL_L_S  : ABSS_FT<"ceil.l.s", FGR64Opnd, FGR32Opnd, II_CEIL>,
-                  ABSS_FM<0xa, 16>, ISA_MIPS2, FGR_64;
+                  ABSS_FM<0xa, 16>, FGR_64;
   def CEIL_L_D64 : ABSS_FT<"ceil.l.d", FGR64Opnd, FGR64Opnd, II_CEIL>,
-                   ABSS_FM<0xa, 17>, INSN_MIPS3_32, FGR_64;
+                   ABSS_FM<0xa, 17>, FGR_64;
   def FLOOR_L_S : ABSS_FT<"floor.l.s", FGR64Opnd, FGR32Opnd, II_FLOOR>,
-                  ABSS_FM<0xb, 16>, ISA_MIPS2, FGR_64;
+                  ABSS_FM<0xb, 16>, FGR_64;
   def FLOOR_L_D64 : ABSS_FT<"floor.l.d", FGR64Opnd, FGR64Opnd, II_FLOOR>,
-                    ABSS_FM<0xb, 17>, INSN_MIPS3_32, FGR_64;
+                    ABSS_FM<0xb, 17>, FGR_64;
   }
 }
 
+def CVT_S_W : MMRel, ABSS_FT<"cvt.s.w", FGR32Opnd, FGR32Opnd, II_CVT>,
+              ABSS_FM<0x20, 20>;
 let AdditionalPredicates = [NotInMicroMips] in{
-  def CVT_S_W : MMRel, ABSS_FT<"cvt.s.w", FGR32Opnd, FGR32Opnd, II_CVT>,
-                ABSS_FM<0x20, 20>, ISA_MIPS1;
   def CVT_L_S : MMRel, ABSS_FT<"cvt.l.s", FGR64Opnd, FGR32Opnd, II_CVT>,
                 ABSS_FM<0x25, 16>, INSN_MIPS3_32R2;
   def CVT_L_D64: MMRel, ABSS_FT<"cvt.l.d", FGR64Opnd, FGR64Opnd, II_CVT>,
                  ABSS_FM<0x25, 17>, INSN_MIPS3_32R2;
 }
 
-let AdditionalPredicates = [NotInMicroMips] in {
-  def CVT_S_D32 : MMRel, ABSS_FT<"cvt.s.d", FGR32Opnd, AFGR64Opnd, II_CVT>,
-                  ABSS_FM<0x20, 17>, ISA_MIPS1, FGR_32;
-  def CVT_D32_S : MMRel, ABSS_FT<"cvt.d.s", AFGR64Opnd, FGR32Opnd, II_CVT>,
-                  ABSS_FM<0x21, 16>, ISA_MIPS1, FGR_32;
-  def CVT_D32_W : MMRel, ABSS_FT<"cvt.d.w", AFGR64Opnd, FGR32Opnd, II_CVT>,
-                  ABSS_FM<0x21, 20>, ISA_MIPS1, FGR_32;
-}
+def CVT_S_D32 : MMRel, ABSS_FT<"cvt.s.d", FGR32Opnd, AFGR64Opnd, II_CVT>,
+                ABSS_FM<0x20, 17>, FGR_32;
+def CVT_D32_W : MMRel, ABSS_FT<"cvt.d.w", AFGR64Opnd, FGR32Opnd, II_CVT>,
+                ABSS_FM<0x21, 20>, FGR_32;
+def CVT_D32_S : MMRel, ABSS_FT<"cvt.d.s", AFGR64Opnd, FGR32Opnd, II_CVT>,
+                ABSS_FM<0x21, 16>, FGR_32;
+
 let DecoderNamespace = "MipsFP64" in {
-  let AdditionalPredicates = [NotInMicroMips] in {
+  def CVT_S_D64 : ABSS_FT<"cvt.s.d", FGR32Opnd, FGR64Opnd, II_CVT>,
+                  ABSS_FM<0x20, 17>, FGR_64;
+  let AdditionalPredicates = [NotInMicroMips] in{
     def CVT_S_L   : ABSS_FT<"cvt.s.l", FGR32Opnd, FGR64Opnd, II_CVT>,
-                    ABSS_FM<0x20, 21>, INSN_MIPS3_32R2, FGR_64;
-    def CVT_S_D64 : ABSS_FT<"cvt.s.d", FGR32Opnd, FGR64Opnd, II_CVT>,
-                    ABSS_FM<0x20, 17>, ISA_MIPS1, FGR_64;
-    def CVT_D64_W : ABSS_FT<"cvt.d.w", FGR64Opnd, FGR32Opnd, II_CVT>,
-                    ABSS_FM<0x21, 20>, ISA_MIPS1, FGR_64;
-    def CVT_D64_S : ABSS_FT<"cvt.d.s", FGR64Opnd, FGR32Opnd, II_CVT>,
-                    ABSS_FM<0x21, 16>, ISA_MIPS1, FGR_64;
-    def CVT_D64_L : ABSS_FT<"cvt.d.l", FGR64Opnd, FGR64Opnd, II_CVT>,
-                    ABSS_FM<0x21, 21>, INSN_MIPS3_32R2, FGR_64;
+                    ABSS_FM<0x20, 21>, FGR_64;
   }
+  def CVT_D64_W : ABSS_FT<"cvt.d.w", FGR64Opnd, FGR32Opnd, II_CVT>,
+                  ABSS_FM<0x21, 20>, FGR_64;
+  def CVT_D64_S : ABSS_FT<"cvt.d.s", FGR64Opnd, FGR32Opnd, II_CVT>,
+                  ABSS_FM<0x21, 16>, FGR_64;
+  def CVT_D64_L : ABSS_FT<"cvt.d.l", FGR64Opnd, FGR64Opnd, II_CVT>,
+                  ABSS_FM<0x21, 21>, FGR_64;
 }
 
 let isPseudo = 1, isCodeGenOnly = 1 in {
@@ -457,21 +450,17 @@ let isPseudo = 1, isCodeGenOnly = 1 in {
 
 let AdditionalPredicates = [NotInMicroMips] in {
   def FABS_S : MMRel, ABSS_FT<"abs.s", FGR32Opnd, FGR32Opnd, II_ABS, fabs>,
-               ABSS_FM<0x5, 16>, ISA_MIPS1;
-  defm FABS : ABSS_M<"abs.d", II_ABS, fabs>, ABSS_FM<0x5, 17>, ISA_MIPS1;
+               ABSS_FM<0x5, 16>;
+  defm FABS : ABSS_M<"abs.d", II_ABS, fabs>, ABSS_FM<0x5, 17>;
 }
 
 def FNEG_S : MMRel, ABSS_FT<"neg.s", FGR32Opnd, FGR32Opnd, II_NEG, fneg>,
-             ABSS_FM<0x7, 16>, ISA_MIPS1;
-let AdditionalPredicates = [NotInMicroMips] in {
-  defm FNEG : ABSS_M<"neg.d", II_NEG, fneg>, ABSS_FM<0x7, 17>, ISA_MIPS1;
-}
+             ABSS_FM<0x7, 16>;
+defm FNEG : ABSS_M<"neg.d", II_NEG, fneg>, ABSS_FM<0x7, 17>;
 
-let AdditionalPredicates = [NotInMicroMips] in {
-  def FSQRT_S : MMRel, StdMMR6Rel, ABSS_FT<"sqrt.s", FGR32Opnd, FGR32Opnd,
-                II_SQRT_S, fsqrt>, ABSS_FM<0x4, 16>, ISA_MIPS2;
-  defm FSQRT : ABSS_M<"sqrt.d", II_SQRT_D, fsqrt>, ABSS_FM<0x4, 17>, ISA_MIPS2;
-}
+def FSQRT_S : MMRel, StdMMR6Rel, ABSS_FT<"sqrt.s", FGR32Opnd, FGR32Opnd,
+              II_SQRT_S, fsqrt>, ABSS_FM<0x4, 16>, ISA_MIPS2;
+defm FSQRT : ABSS_M<"sqrt.d", II_SQRT_D, fsqrt>, ABSS_FM<0x4, 17>, ISA_MIPS2;
 
 // The odd-numbered registers are only referenced when doing loads,
 // stores, and moves between floating-point and integer registers.
@@ -480,60 +469,60 @@ let AdditionalPredicates = [NotInMicroMips] in {
 
 /// Move Control Registers From/To CPU Registers
 let AdditionalPredicates = [NotInMicroMips] in {
-  def CFC1 : MMRel, MFC1_FT<"cfc1", GPR32Opnd, CCROpnd, II_CFC1>, MFC1_FM<2>,
-             ISA_MIPS1;
-  def CTC1 : MMRel, MTC1_FT<"ctc1", CCROpnd, GPR32Opnd, II_CTC1>, MFC1_FM<6>,
-             ISA_MIPS1;
+  def CFC1 : MMRel, MFC1_FT<"cfc1", GPR32Opnd, CCROpnd, II_CFC1>, MFC1_FM<2>;
+  def CTC1 : MMRel, MTC1_FT<"ctc1", CCROpnd, GPR32Opnd, II_CTC1>, MFC1_FM<6>;
+}
+def MFC1 : MMRel, MFC1_FT<"mfc1", GPR32Opnd, FGR32Opnd, II_MFC1,
+                          bitconvert>, MFC1_FM<0>;
+def MFC1_D64 : MFC1_FT<"mfc1", GPR32Opnd, FGR64Opnd, II_MFC1>, MFC1_FM<0>,
+               FGR_64 {
+  let DecoderNamespace = "MipsFP64";
+}
+def MTC1 : MMRel, MTC1_FT<"mtc1", FGR32Opnd, GPR32Opnd, II_MTC1,
+                          bitconvert>, MFC1_FM<4>;
+def MTC1_D64 : MTC1_FT<"mtc1", FGR64Opnd, GPR32Opnd, II_MTC1>, MFC1_FM<4>,
+               FGR_64 {
+  let DecoderNamespace = "MipsFP64";
+}
 
-  def MFC1 : MMRel, MFC1_FT<"mfc1", GPR32Opnd, FGR32Opnd, II_MFC1,
-                            bitconvert>, MFC1_FM<0>, ISA_MIPS1;
-  def MFC1_D64 : MFC1_FT<"mfc1", GPR32Opnd, FGR64Opnd, II_MFC1>, MFC1_FM<0>,
-                 ISA_MIPS1, FGR_64 {
-    let DecoderNamespace = "MipsFP64";
-  }
-  def MTC1 : MMRel, MTC1_FT<"mtc1", FGR32Opnd, GPR32Opnd, II_MTC1,
-                            bitconvert>, MFC1_FM<4>, ISA_MIPS1;
-  def MTC1_D64 : MTC1_FT<"mtc1", FGR64Opnd, GPR32Opnd, II_MTC1>, MFC1_FM<4>,
-                 ISA_MIPS1, FGR_64 {
-    let DecoderNamespace = "MipsFP64";
-  }
-
+let AdditionalPredicates = [NotInMicroMips] in {
   def MFHC1_D32 : MMRel, MFC1_FT<"mfhc1", GPR32Opnd, AFGR64Opnd, II_MFHC1>,
                   MFC1_FM<3>, ISA_MIPS32R2, FGR_32;
   def MFHC1_D64 : MFC1_FT<"mfhc1", GPR32Opnd, FGR64Opnd, II_MFHC1>,
                   MFC1_FM<3>, ISA_MIPS32R2, FGR_64 {
     let DecoderNamespace = "MipsFP64";
   }
-
+}
+let AdditionalPredicates = [NotInMicroMips] in {
   def MTHC1_D32 : MMRel, StdMMR6Rel, MTC1_64_FT<"mthc1", AFGR64Opnd, GPR32Opnd, II_MTHC1>,
                   MFC1_FM<7>, ISA_MIPS32R2, FGR_32;
   def MTHC1_D64 : MTC1_64_FT<"mthc1", FGR64Opnd, GPR32Opnd, II_MTHC1>,
                   MFC1_FM<7>, ISA_MIPS32R2, FGR_64 {
     let DecoderNamespace = "MipsFP64";
   }
-
+}
+let AdditionalPredicates = [NotInMicroMips] in {
   def DMTC1 : MTC1_FT<"dmtc1", FGR64Opnd, GPR64Opnd, II_DMTC1,
               bitconvert>, MFC1_FM<5>, ISA_MIPS3;
   def DMFC1 : MFC1_FT<"dmfc1", GPR64Opnd, FGR64Opnd, II_DMFC1,
                       bitconvert>, MFC1_FM<1>, ISA_MIPS3;
-  let isMoveReg = 1 in {
-    def FMOV_S   : MMRel, ABSS_FT<"mov.s", FGR32Opnd, FGR32Opnd, II_MOV_S>,
-                   ABSS_FM<0x6, 16>, ISA_MIPS1;
-    def FMOV_D32 : MMRel, ABSS_FT<"mov.d", AFGR64Opnd, AFGR64Opnd, II_MOV_D>,
-                   ABSS_FM<0x6, 17>, ISA_MIPS1, FGR_32;
-    def FMOV_D64 : ABSS_FT<"mov.d", FGR64Opnd, FGR64Opnd, II_MOV_D>,
-                   ABSS_FM<0x6, 17>, ISA_MIPS1, FGR_64 {
-                     let DecoderNamespace = "MipsFP64";
-    }
-  } // isMoveReg
+}
+
+def FMOV_S   : MMRel, ABSS_FT<"mov.s", FGR32Opnd, FGR32Opnd, II_MOV_S>,
+               ABSS_FM<0x6, 16>;
+def FMOV_D32 : MMRel, ABSS_FT<"mov.d", AFGR64Opnd, AFGR64Opnd, II_MOV_D>,
+               ABSS_FM<0x6, 17>, FGR_32;
+def FMOV_D64 : ABSS_FT<"mov.d", FGR64Opnd, FGR64Opnd, II_MOV_D>,
+               ABSS_FM<0x6, 17>, FGR_64 {
+                 let DecoderNamespace = "MipsFP64";
 }
 
 /// Floating Point Memory Instructions
 let AdditionalPredicates = [NotInMicroMips] in {
   def LWC1 : MMRel, LW_FT<"lwc1", FGR32Opnd, mem_simm16, II_LWC1, load>,
-             LW_FM<0x31>, ISA_MIPS1;
+             LW_FM<0x31>;
   def SWC1 : MMRel, SW_FT<"swc1", FGR32Opnd, mem_simm16, II_SWC1, store>,
-             LW_FM<0x39>, ISA_MIPS1;
+             LW_FM<0x39>;
 }
 
 let DecoderNamespace = "MipsFP64", AdditionalPredicates = [NotInMicroMips] in {
@@ -580,15 +569,14 @@ let DecoderNamespace="MipsFP64" in {
 
 // Load/store doubleword indexed unaligned.
 // FIXME: This instruction should not be defined for FGR_32.
-let AdditionalPredicates = [IsNotNaCl, NotInMicroMips] in {
+let AdditionalPredicates = [IsNotNaCl] in {
   def LUXC1 : MMRel, LWXC1_FT<"luxc1", AFGR64Opnd, II_LUXC1>, LWXC1_FM<0x5>,
               INSN_MIPS5_32R2_NOT_32R6_64R6, FGR_32;
   def SUXC1 : MMRel, SWXC1_FT<"suxc1", AFGR64Opnd, II_SUXC1>, SWXC1_FM<0xd>,
               INSN_MIPS5_32R2_NOT_32R6_64R6, FGR_32;
 }
 
-let AdditionalPredicates = [IsNotNaCl, NotInMicroMips],
-    DecoderNamespace="MipsFP64" in {
+let DecoderNamespace="MipsFP64" in {
   def LUXC164 : LWXC1_FT<"luxc1", FGR64Opnd, II_LUXC1>, LWXC1_FM<0x5>,
                 INSN_MIPS5_32R2_NOT_32R6_64R6, FGR_64;
   def SUXC164 : SWXC1_FT<"suxc1", FGR64Opnd, II_SUXC1>, SWXC1_FM<0xd>,
@@ -596,62 +584,58 @@ let AdditionalPredicates = [IsNotNaCl, NotInMicroMips],
 }
 
 /// Floating-point Aritmetic
-let AdditionalPredicates = [NotInMicroMips] in {
-  def FADD_S : MMRel, ADDS_FT<"add.s", FGR32Opnd, II_ADD_S, 1, fadd>,
-               ADDS_FM<0x00, 16>, ISA_MIPS1;
-  defm FADD :  ADDS_M<"add.d", II_ADD_D, 1, fadd>, ADDS_FM<0x00, 17>,
-               ISA_MIPS1;
-  def FDIV_S : MMRel, ADDS_FT<"div.s", FGR32Opnd, II_DIV_S, 0, fdiv>,
-               ADDS_FM<0x03, 16>, ISA_MIPS1;
-  defm FDIV :  ADDS_M<"div.d", II_DIV_D, 0, fdiv>, ADDS_FM<0x03, 17>,
-               ISA_MIPS1;
-  def FMUL_S : MMRel, ADDS_FT<"mul.s", FGR32Opnd, II_MUL_S, 1, fmul>,
-               ADDS_FM<0x02, 16>, ISA_MIPS1;
-  defm FMUL :  ADDS_M<"mul.d", II_MUL_D, 1, fmul>, ADDS_FM<0x02, 17>,
-               ISA_MIPS1;
-  def FSUB_S : MMRel, ADDS_FT<"sub.s", FGR32Opnd, II_SUB_S, 0, fsub>,
-               ADDS_FM<0x01, 16>, ISA_MIPS1;
-  defm FSUB :  ADDS_M<"sub.d", II_SUB_D, 0, fsub>, ADDS_FM<0x01, 17>,
-               ISA_MIPS1;
-}
+def FADD_S : MMRel, ADDS_FT<"add.s", FGR32Opnd, II_ADD_S, 1, fadd>,
+             ADDS_FM<0x00, 16>;
+defm FADD :  ADDS_M<"add.d", II_ADD_D, 1, fadd>, ADDS_FM<0x00, 17>;
+def FDIV_S : MMRel, ADDS_FT<"div.s", FGR32Opnd, II_DIV_S, 0, fdiv>,
+             ADDS_FM<0x03, 16>;
+defm FDIV :  ADDS_M<"div.d", II_DIV_D, 0, fdiv>, ADDS_FM<0x03, 17>;
+def FMUL_S : MMRel, ADDS_FT<"mul.s", FGR32Opnd, II_MUL_S, 1, fmul>,
+             ADDS_FM<0x02, 16>;
+defm FMUL :  ADDS_M<"mul.d", II_MUL_D, 1, fmul>, ADDS_FM<0x02, 17>;
+def FSUB_S : MMRel, ADDS_FT<"sub.s", FGR32Opnd, II_SUB_S, 0, fsub>,
+             ADDS_FM<0x01, 16>;
+defm FSUB :  ADDS_M<"sub.d", II_SUB_D, 0, fsub>, ADDS_FM<0x01, 17>;
 
-let AdditionalPredicates = [NotInMicroMips, HasMadd4] in {
-  def MADD_S : MMRel, MADDS_FT<"madd.s", FGR32Opnd, II_MADD_S, fadd>,
-               MADDS_FM<4, 0>, INSN_MIPS4_32R2_NOT_32R6_64R6;
-  def MSUB_S : MMRel, MADDS_FT<"msub.s", FGR32Opnd, II_MSUB_S, fsub>,
-               MADDS_FM<5, 0>, INSN_MIPS4_32R2_NOT_32R6_64R6;
+def MADD_S : MMRel, MADDS_FT<"madd.s", FGR32Opnd, II_MADD_S, fadd>,
+             MADDS_FM<4, 0>, INSN_MIPS4_32R2_NOT_32R6_64R6, MADD4;
+def MSUB_S : MMRel, MADDS_FT<"msub.s", FGR32Opnd, II_MSUB_S, fsub>,
+             MADDS_FM<5, 0>, INSN_MIPS4_32R2_NOT_32R6_64R6, MADD4;
 
-  def MADD_D32 : MMRel, MADDS_FT<"madd.d", AFGR64Opnd, II_MADD_D, fadd>,
-                 MADDS_FM<4, 1>, INSN_MIPS4_32R2_NOT_32R6_64R6, FGR_32;
-  def MSUB_D32 : MMRel, MADDS_FT<"msub.d", AFGR64Opnd, II_MSUB_D, fsub>,
-                 MADDS_FM<5, 1>, INSN_MIPS4_32R2_NOT_32R6_64R6, FGR_32;
-
-  let DecoderNamespace = "MipsFP64" in {
-    def MADD_D64 : MADDS_FT<"madd.d", FGR64Opnd, II_MADD_D, fadd>,
-                   MADDS_FM<4, 1>, INSN_MIPS4_32R2_NOT_32R6_64R6, FGR_64;
-    def MSUB_D64 : MADDS_FT<"msub.d", FGR64Opnd, II_MSUB_D, fsub>,
-                   MADDS_FM<5, 1>, INSN_MIPS4_32R2_NOT_32R6_64R6, FGR_64;
-  }
-}
-
-let AdditionalPredicates = [NoNaNsFPMath, HasMadd4, NotInMicroMips] in {
+let AdditionalPredicates = [NoNaNsFPMath, HasMadd4] in {
   def NMADD_S : MMRel, NMADDS_FT<"nmadd.s", FGR32Opnd, II_NMADD_S, fadd>,
                 MADDS_FM<6, 0>, INSN_MIPS4_32R2_NOT_32R6_64R6;
   def NMSUB_S : MMRel, NMADDS_FT<"nmsub.s", FGR32Opnd, II_NMSUB_S, fsub>,
                 MADDS_FM<7, 0>, INSN_MIPS4_32R2_NOT_32R6_64R6;
+}
 
+def MADD_D32 : MMRel, MADDS_FT<"madd.d", AFGR64Opnd, II_MADD_D, fadd>,
+               MADDS_FM<4, 1>, INSN_MIPS4_32R2_NOT_32R6_64R6, FGR_32, MADD4;
+def MSUB_D32 : MMRel, MADDS_FT<"msub.d", AFGR64Opnd, II_MSUB_D, fsub>,
+               MADDS_FM<5, 1>, INSN_MIPS4_32R2_NOT_32R6_64R6, FGR_32, MADD4;
+
+let AdditionalPredicates = [NoNaNsFPMath, HasMadd4] in {
   def NMADD_D32 : MMRel, NMADDS_FT<"nmadd.d", AFGR64Opnd, II_NMADD_D, fadd>,
                   MADDS_FM<6, 1>, INSN_MIPS4_32R2_NOT_32R6_64R6, FGR_32;
   def NMSUB_D32 : MMRel, NMADDS_FT<"nmsub.d", AFGR64Opnd, II_NMSUB_D, fsub>,
                   MADDS_FM<7, 1>, INSN_MIPS4_32R2_NOT_32R6_64R6, FGR_32;
-
-  let DecoderNamespace = "MipsFP64" in {
-    def NMADD_D64 : NMADDS_FT<"nmadd.d", FGR64Opnd, II_NMADD_D, fadd>,
-                    MADDS_FM<6, 1>, INSN_MIPS4_32R2_NOT_32R6_64R6, FGR_64;
-    def NMSUB_D64 : NMADDS_FT<"nmsub.d", FGR64Opnd, II_NMSUB_D, fsub>,
-                    MADDS_FM<7, 1>, INSN_MIPS4_32R2_NOT_32R6_64R6, FGR_64;
-  }
 }
+
+let DecoderNamespace = "MipsFP64" in {
+  def MADD_D64 : MADDS_FT<"madd.d", FGR64Opnd, II_MADD_D, fadd>,
+                 MADDS_FM<4, 1>, INSN_MIPS4_32R2_NOT_32R6_64R6, FGR_64, MADD4;
+  def MSUB_D64 : MADDS_FT<"msub.d", FGR64Opnd, II_MSUB_D, fsub>,
+                 MADDS_FM<5, 1>, INSN_MIPS4_32R2_NOT_32R6_64R6, FGR_64, MADD4;
+}
+
+let AdditionalPredicates = [NoNaNsFPMath, HasMadd4],
+    DecoderNamespace = "MipsFP64" in {
+  def NMADD_D64 : NMADDS_FT<"nmadd.d", FGR64Opnd, II_NMADD_D, fadd>,
+                  MADDS_FM<6, 1>, INSN_MIPS4_32R2_NOT_32R6_64R6, FGR_64;
+  def NMSUB_D64 : NMADDS_FT<"nmsub.d", FGR64Opnd, II_NMSUB_D, fsub>,
+                  MADDS_FM<7, 1>, INSN_MIPS4_32R2_NOT_32R6_64R6, FGR_64;
+}
+
 //===----------------------------------------------------------------------===//
 // Floating Point Branch Codes
 //===----------------------------------------------------------------------===//
@@ -860,31 +844,28 @@ let AdditionalPredicates = [NotInMicroMips] in {
 //===----------------------------------------------------------------------===//
 // Floating Point Patterns
 //===----------------------------------------------------------------------===//
-def : MipsPat<(f32 fpimm0), (MTC1 ZERO)>, ISA_MIPS1;
-def : MipsPat<(f32 fpimm0neg), (FNEG_S (MTC1 ZERO))>, ISA_MIPS1;
+def : MipsPat<(f32 fpimm0), (MTC1 ZERO)>;
+def : MipsPat<(f32 fpimm0neg), (FNEG_S (MTC1 ZERO))>;
 
 def : MipsPat<(f32 (sint_to_fp GPR32Opnd:$src)),
               (PseudoCVT_S_W GPR32Opnd:$src)>;
 def : MipsPat<(MipsTruncIntFP FGR32Opnd:$src),
-              (TRUNC_W_S FGR32Opnd:$src)>, ISA_MIPS1;
+              (TRUNC_W_S FGR32Opnd:$src)>;
 
 def : MipsPat<(MipsMTC1_D64 GPR32Opnd:$src),
-              (MTC1_D64 GPR32Opnd:$src)>, ISA_MIPS1, FGR_64;
+              (MTC1_D64 GPR32Opnd:$src)>, FGR_64;
 
 def : MipsPat<(f64 (sint_to_fp GPR32Opnd:$src)),
               (PseudoCVT_D32_W GPR32Opnd:$src)>, FGR_32;
-let AdditionalPredicates = [NotInMicroMips] in {
-  def : MipsPat<(MipsTruncIntFP AFGR64Opnd:$src),
-                (TRUNC_W_D32 AFGR64Opnd:$src)>, ISA_MIPS2, FGR_32;
-  def : MipsPat<(f32 (fpround AFGR64Opnd:$src)),
-                (CVT_S_D32 AFGR64Opnd:$src)>, ISA_MIPS1, FGR_32;
-  def : MipsPat<(f64 (fpextend FGR32Opnd:$src)),
-                (CVT_D32_S FGR32Opnd:$src)>, ISA_MIPS1, FGR_32;
-}
+def : MipsPat<(MipsTruncIntFP AFGR64Opnd:$src),
+              (TRUNC_W_D32 AFGR64Opnd:$src)>, FGR_32;
+def : MipsPat<(f32 (fpround AFGR64Opnd:$src)),
+              (CVT_S_D32 AFGR64Opnd:$src)>, FGR_32;
+def : MipsPat<(f64 (fpextend FGR32Opnd:$src)),
+              (CVT_D32_S FGR32Opnd:$src)>, FGR_32;
 
-def : MipsPat<(f64 fpimm0), (DMTC1 ZERO_64)>, ISA_MIPS3, GPR_64, FGR_64;
-def : MipsPat<(f64 fpimm0neg), (FNEG_D64 (DMTC1 ZERO_64))>, ISA_MIPS3, GPR_64,
-      FGR_64;
+def : MipsPat<(f64 fpimm0), (DMTC1 ZERO_64)>, FGR_64;
+def : MipsPat<(f64 fpimm0neg), (FNEG_D64 (DMTC1 ZERO_64))>, FGR_64;
 
 def : MipsPat<(f64 (sint_to_fp GPR32Opnd:$src)),
               (PseudoCVT_D64_W GPR32Opnd:$src)>, FGR_64;
@@ -894,18 +875,16 @@ def : MipsPat<(f64 (sint_to_fp GPR64Opnd:$src)),
               (PseudoCVT_D64_L GPR64Opnd:$src)>, FGR_64;
 
 def : MipsPat<(MipsTruncIntFP FGR64Opnd:$src),
-              (TRUNC_W_D64 FGR64Opnd:$src)>, ISA_MIPS2, FGR_64;
+              (TRUNC_W_D64 FGR64Opnd:$src)>, FGR_64;
 def : MipsPat<(MipsTruncIntFP FGR32Opnd:$src),
-              (TRUNC_L_S FGR32Opnd:$src)>, ISA_MIPS2, FGR_64;
+              (TRUNC_L_S FGR32Opnd:$src)>, FGR_64;
 def : MipsPat<(MipsTruncIntFP FGR64Opnd:$src),
-              (TRUNC_L_D64 FGR64Opnd:$src)>, ISA_MIPS2, FGR_64;
+              (TRUNC_L_D64 FGR64Opnd:$src)>, FGR_64;
 
-let AdditionalPredicates = [NotInMicroMips] in {
-  def : MipsPat<(f32 (fpround FGR64Opnd:$src)),
-                (CVT_S_D64 FGR64Opnd:$src)>, ISA_MIPS1, FGR_64;
-  def : MipsPat<(f64 (fpextend FGR32Opnd:$src)),
-                (CVT_D64_S FGR32Opnd:$src)>, ISA_MIPS1, FGR_64;
-}
+def : MipsPat<(f32 (fpround FGR64Opnd:$src)),
+              (CVT_S_D64 FGR64Opnd:$src)>, FGR_64;
+def : MipsPat<(f64 (fpextend FGR32Opnd:$src)),
+              (CVT_D64_S FGR32Opnd:$src)>, FGR_64;
 
 // To generate NMADD and NMSUB instructions when fneg node is present
 multiclass NMADD_NMSUB<Instruction Nmadd, Instruction Nmsub, RegisterOperand RC> {
@@ -924,13 +903,13 @@ let AdditionalPredicates = [NoNaNsFPMath, HasMadd4, NotInMicroMips] in {
 // Patterns for loads/stores with a reg+imm operand.
 let AdditionalPredicates = [NotInMicroMips] in {
   let AddedComplexity = 40 in {
-    def : LoadRegImmPat<LWC1, f32, load>, ISA_MIPS1;
-    def : StoreRegImmPat<SWC1, f32>, ISA_MIPS1;
+    def : LoadRegImmPat<LWC1, f32, load>;
+    def : StoreRegImmPat<SWC1, f32>;
 
-    def : LoadRegImmPat<LDC164, f64, load>, ISA_MIPS1, FGR_64;
-    def : StoreRegImmPat<SDC164, f64>, ISA_MIPS1, FGR_64;
+    def : LoadRegImmPat<LDC164, f64, load>, FGR_64;
+    def : StoreRegImmPat<SDC164, f64>, FGR_64;
 
-    def : LoadRegImmPat<LDC1, f64, load>, ISA_MIPS1, FGR_32;
-    def : StoreRegImmPat<SDC1, f64>, ISA_MIPS1, FGR_32;
+    def : LoadRegImmPat<LDC1, f64, load>, FGR_32;
+    def : StoreRegImmPat<SDC1, f64>, FGR_32;
   }
 }

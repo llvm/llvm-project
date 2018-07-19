@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// R600 implementation of the TargetRegisterInfo class.
+/// \brief R600 implementation of the TargetRegisterInfo class.
 //
 //===----------------------------------------------------------------------===//
 
@@ -17,17 +17,13 @@
 #include "R600Defines.h"
 #include "R600InstrInfo.h"
 #include "R600MachineFunctionInfo.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 
 using namespace llvm;
 
-R600RegisterInfo::R600RegisterInfo() : R600GenRegisterInfo(0) {
+R600RegisterInfo::R600RegisterInfo() : AMDGPURegisterInfo() {
   RCW.RegWeight = 0;
   RCW.WeightLimit = 0;
 }
-
-#define GET_REGINFO_TARGET_DESC
-#include "R600GenRegisterInfo.inc"
 
 BitVector R600RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   BitVector Reserved(getNumRegs());
@@ -35,33 +31,33 @@ BitVector R600RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   const R600Subtarget &ST = MF.getSubtarget<R600Subtarget>();
   const R600InstrInfo *TII = ST.getInstrInfo();
 
-  reserveRegisterTuples(Reserved, R600::ZERO);
-  reserveRegisterTuples(Reserved, R600::HALF);
-  reserveRegisterTuples(Reserved, R600::ONE);
-  reserveRegisterTuples(Reserved, R600::ONE_INT);
-  reserveRegisterTuples(Reserved, R600::NEG_HALF);
-  reserveRegisterTuples(Reserved, R600::NEG_ONE);
-  reserveRegisterTuples(Reserved, R600::PV_X);
-  reserveRegisterTuples(Reserved, R600::ALU_LITERAL_X);
-  reserveRegisterTuples(Reserved, R600::ALU_CONST);
-  reserveRegisterTuples(Reserved, R600::PREDICATE_BIT);
-  reserveRegisterTuples(Reserved, R600::PRED_SEL_OFF);
-  reserveRegisterTuples(Reserved, R600::PRED_SEL_ZERO);
-  reserveRegisterTuples(Reserved, R600::PRED_SEL_ONE);
-  reserveRegisterTuples(Reserved, R600::INDIRECT_BASE_ADDR);
+  Reserved.set(AMDGPU::ZERO);
+  Reserved.set(AMDGPU::HALF);
+  Reserved.set(AMDGPU::ONE);
+  Reserved.set(AMDGPU::ONE_INT);
+  Reserved.set(AMDGPU::NEG_HALF);
+  Reserved.set(AMDGPU::NEG_ONE);
+  Reserved.set(AMDGPU::PV_X);
+  Reserved.set(AMDGPU::ALU_LITERAL_X);
+  Reserved.set(AMDGPU::ALU_CONST);
+  Reserved.set(AMDGPU::PREDICATE_BIT);
+  Reserved.set(AMDGPU::PRED_SEL_OFF);
+  Reserved.set(AMDGPU::PRED_SEL_ZERO);
+  Reserved.set(AMDGPU::PRED_SEL_ONE);
+  Reserved.set(AMDGPU::INDIRECT_BASE_ADDR);
 
-  for (TargetRegisterClass::iterator I = R600::R600_AddrRegClass.begin(),
-                        E = R600::R600_AddrRegClass.end(); I != E; ++I) {
-    reserveRegisterTuples(Reserved, *I);
+  for (TargetRegisterClass::iterator I = AMDGPU::R600_AddrRegClass.begin(),
+                        E = AMDGPU::R600_AddrRegClass.end(); I != E; ++I) {
+    Reserved.set(*I);
   }
 
-  TII->reserveIndirectRegisters(Reserved, MF, *this);
+  TII->reserveIndirectRegisters(Reserved, MF);
 
   return Reserved;
 }
 
 // Dummy to not crash RegisterClassInfo.
-static const MCPhysReg CalleeSavedReg = R600::NoRegister;
+static const MCPhysReg CalleeSavedReg = AMDGPU::NoRegister;
 
 const MCPhysReg *R600RegisterInfo::getCalleeSavedRegs(
   const MachineFunction *) const {
@@ -69,7 +65,7 @@ const MCPhysReg *R600RegisterInfo::getCalleeSavedRegs(
 }
 
 unsigned R600RegisterInfo::getFrameRegister(const MachineFunction &MF) const {
-  return R600::NoRegister;
+  return AMDGPU::NoRegister;
 }
 
 unsigned R600RegisterInfo::getHWRegChan(unsigned reg) const {
@@ -84,7 +80,7 @@ const TargetRegisterClass * R600RegisterInfo::getCFGStructurizerRegClass(
                                                                    MVT VT) const {
   switch(VT.SimpleTy) {
   default:
-  case MVT::i32: return &R600::R600_TReg32RegClass;
+  case MVT::i32: return &AMDGPU::R600_TReg32RegClass;
   }
 }
 
@@ -97,9 +93,9 @@ bool R600RegisterInfo::isPhysRegLiveAcrossClauses(unsigned Reg) const {
   assert(!TargetRegisterInfo::isVirtualRegister(Reg));
 
   switch (Reg) {
-  case R600::OQAP:
-  case R600::OQBP:
-  case R600::AR_X:
+  case AMDGPU::OQAP:
+  case AMDGPU::OQBP:
+  case AMDGPU::AR_X:
     return false;
   default:
     return true;
@@ -111,11 +107,4 @@ void R600RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                                            unsigned FIOperandNum,
                                            RegScavenger *RS) const {
   llvm_unreachable("Subroutines not supported yet");
-}
-
-void R600RegisterInfo::reserveRegisterTuples(BitVector &Reserved, unsigned Reg) const {
-  MCRegAliasIterator R(Reg, this, true);
-
-  for (; R.isValid(); ++R)
-    Reserved.set(*R);
 }

@@ -17,7 +17,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/ErrorOr.h"
 #include <system_error>
 
@@ -28,32 +27,35 @@ namespace sys {
   // a colon on Unix or a semicolon on Windows.
 #if defined(LLVM_ON_UNIX)
   const char EnvPathSeparator = ':';
-#elif defined (_WIN32)
+#elif defined (LLVM_ON_WIN32)
   const char EnvPathSeparator = ';';
 #endif
 
-#if defined(_WIN32)
-  typedef unsigned long procid_t; // Must match the type of DWORD on Windows.
-  typedef void *process_t;        // Must match the type of HANDLE on Windows.
+/// @brief This struct encapsulates information about a process.
+struct ProcessInfo {
+#if defined(LLVM_ON_UNIX)
+  typedef pid_t ProcessId;
+#elif defined(LLVM_ON_WIN32)
+  typedef unsigned long ProcessId; // Must match the type of DWORD on Windows.
+  typedef void * HANDLE; // Must match the type of HANDLE on Windows.
+  /// The handle to the process (available on Windows only).
+  HANDLE ProcessHandle;
 #else
-  typedef pid_t procid_t;
-  typedef procid_t process_t;
+#error "ProcessInfo is not defined for this platform!"
 #endif
 
-  /// This struct encapsulates information about a process.
-  struct ProcessInfo {
-    enum : procid_t { InvalidPid = 0 };
+  enum : ProcessId { InvalidPid = 0 };
 
-    procid_t Pid;      /// The process identifier.
-    process_t Process; /// Platform-dependent process object.
+  /// The process identifier.
+  ProcessId Pid;
 
-    /// The return code, set after execution.
-    int ReturnCode;
+  /// The return code, set after execution.
+  int ReturnCode;
 
-    ProcessInfo();
-  };
+  ProcessInfo();
+};
 
-  /// Find the first executable file \p Name in \p Paths.
+  /// \brief Find the first executable file \p Name in \p Paths.
   ///
   /// This does not perform hashing as a shell would but instead stats each PATH
   /// entry individually so should generally be avoided. Core LLVM library
@@ -89,13 +91,12 @@ namespace sys {
   int ExecuteAndWait(
       StringRef Program, ///< Path of the program to be executed. It is
       ///< presumed this is the result of the findProgramByName method.
-      ArrayRef<StringRef> Args, ///< An array of strings that are passed to the
+      const char **Args, ///< A vector of strings that are passed to the
       ///< program.  The first element should be the name of the program.
-      ///< The array should **not** be terminated by an empty StringRef.
-      Optional<ArrayRef<StringRef>> Env = None, ///< An optional vector of
-      ///< strings to use for the program's environment. If not provided, the
-      ///< current program's environment will be used.  If specified, the
-      ///< vector should **not** be terminated by an empty StringRef.
+      ///< The list *must* be terminated by a null char* entry.
+      const char **Env = nullptr, ///< An optional vector of strings to use for
+      ///< the program's environment. If not provided, the current program's
+      ///< environment will be used.
       ArrayRef<Optional<StringRef>> Redirects = {}, ///<
       ///< An array of optional paths. Should have a size of zero or three.
       ///< If the array is empty, no redirections are performed.
@@ -124,17 +125,12 @@ namespace sys {
   /// \note On Microsoft Windows systems, users will need to either call
   /// \see Wait until the process finished execution or win32 CloseHandle() API
   /// on ProcessInfo.ProcessHandle to avoid memory leaks.
-  ProcessInfo ExecuteNoWait(StringRef Program, ArrayRef<StringRef> Args,
-                            Optional<ArrayRef<StringRef>> Env,
+  ProcessInfo ExecuteNoWait(StringRef Program, const char **Args,
+                            const char **Env = nullptr,
                             ArrayRef<Optional<StringRef>> Redirects = {},
                             unsigned MemoryLimit = 0,
                             std::string *ErrMsg = nullptr,
                             bool *ExecutionFailed = nullptr);
-
-  /// Return true if the given arguments fit within system-specific
-  /// argument length limits.
-  bool commandLineFitsWithinSystemLimits(StringRef Program,
-                                         ArrayRef<StringRef> Args);
 
   /// Return true if the given arguments fit within system-specific
   /// argument length limits.
@@ -195,14 +191,6 @@ namespace sys {
       ///< string is non-empty upon return an error occurred while invoking the
       ///< program.
       );
-
-#if defined(_WIN32)
-  /// Given a list of command line arguments, quote and escape them as necessary
-  /// to build a single flat command line appropriate for calling CreateProcess
-  /// on
-  /// Windows.
-  std::string flattenWindowsCommandLine(ArrayRef<StringRef> Args);
-#endif
   }
 }
 

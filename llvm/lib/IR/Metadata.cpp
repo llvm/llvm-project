@@ -237,7 +237,7 @@ void ReplaceableMetadataImpl::replaceAllUsesWith(Metadata *MD) {
   // Copy out uses since UseMap will get touched below.
   using UseTy = std::pair<void *, std::pair<OwnerTy, uint64_t>>;
   SmallVector<UseTy, 8> Uses(UseMap.begin(), UseMap.end());
-  llvm::sort(Uses.begin(), Uses.end(), [](const UseTy &L, const UseTy &R) {
+  std::sort(Uses.begin(), Uses.end(), [](const UseTy &L, const UseTy &R) {
     return L.second.second < R.second.second;
   });
   for (const auto &Pair : Uses) {
@@ -290,7 +290,7 @@ void ReplaceableMetadataImpl::resolveAllUses(bool ResolveUsers) {
   // Copy out uses since UseMap could get touched below.
   using UseTy = std::pair<void *, std::pair<OwnerTy, uint64_t>>;
   SmallVector<UseTy, 8> Uses(UseMap.begin(), UseMap.end());
-  llvm::sort(Uses.begin(), Uses.end(), [](const UseTy &L, const UseTy &R) {
+  std::sort(Uses.begin(), Uses.end(), [](const UseTy &L, const UseTy &R) {
     return L.second.second < R.second.second;
   });
   UseMap.clear();
@@ -1110,14 +1110,14 @@ void MDAttachmentMap::set(unsigned ID, MDNode &MD) {
                            std::make_tuple(&MD));
 }
 
-bool MDAttachmentMap::erase(unsigned ID) {
+void MDAttachmentMap::erase(unsigned ID) {
   if (empty())
-    return false;
+    return;
 
   // Common case is one/last value.
   if (Attachments.back().first == ID) {
     Attachments.pop_back();
-    return true;
+    return;
   }
 
   for (auto I = Attachments.begin(), E = std::prev(Attachments.end()); I != E;
@@ -1125,10 +1125,8 @@ bool MDAttachmentMap::erase(unsigned ID) {
     if (I->first == ID) {
       *I = std::move(Attachments.back());
       Attachments.pop_back();
-      return true;
+      return;
     }
-
-  return false;
 }
 
 MDNode *MDAttachmentMap::lookup(unsigned ID) const {
@@ -1151,31 +1149,29 @@ void MDGlobalAttachmentMap::insert(unsigned ID, MDNode &MD) {
   Attachments.push_back({ID, TrackingMDNodeRef(&MD)});
 }
 
-MDNode *MDGlobalAttachmentMap::lookup(unsigned ID) const {
-  for (const auto &A : Attachments)
-    if (A.MDKind == ID)
-      return A.Node;
-  return nullptr;
-}
-
 void MDGlobalAttachmentMap::get(unsigned ID,
-                                SmallVectorImpl<MDNode *> &Result) const {
-  for (const auto &A : Attachments)
+                                SmallVectorImpl<MDNode *> &Result) {
+  for (auto A : Attachments)
     if (A.MDKind == ID)
       Result.push_back(A.Node);
 }
 
-bool MDGlobalAttachmentMap::erase(unsigned ID) {
-  auto I = std::remove_if(Attachments.begin(), Attachments.end(),
-                          [ID](const Attachment &A) { return A.MDKind == ID; });
-  bool Changed = I != Attachments.end();
-  Attachments.erase(I, Attachments.end());
-  return Changed;
+void MDGlobalAttachmentMap::erase(unsigned ID) {
+  auto Follower = Attachments.begin();
+  for (auto Leader = Attachments.begin(), E = Attachments.end(); Leader != E;
+       ++Leader) {
+    if (Leader->MDKind != ID) {
+      if (Follower != Leader)
+        *Follower = std::move(*Leader);
+      ++Follower;
+    }
+  }
+  Attachments.resize(Follower - Attachments.begin());
 }
 
 void MDGlobalAttachmentMap::getAll(
     SmallVectorImpl<std::pair<unsigned, MDNode *>> &Result) const {
-  for (const auto &A : Attachments)
+  for (auto &A : Attachments)
     Result.emplace_back(A.MDKind, A.Node);
 
   // Sort the resulting array so it is stable with respect to metadata IDs. We
@@ -1402,16 +1398,15 @@ void GlobalObject::addMetadata(StringRef Kind, MDNode &MD) {
   addMetadata(getContext().getMDKindID(Kind), MD);
 }
 
-bool GlobalObject::eraseMetadata(unsigned KindID) {
+void GlobalObject::eraseMetadata(unsigned KindID) {
   // Nothing to unset.
   if (!hasMetadata())
-    return false;
+    return;
 
   auto &Store = getContext().pImpl->GlobalObjectMetadata[this];
-  bool Changed = Store.erase(KindID);
+  Store.erase(KindID);
   if (Store.empty())
     clearMetadata();
-  return Changed;
 }
 
 void GlobalObject::getAllMetadata(
@@ -1442,9 +1437,11 @@ void GlobalObject::setMetadata(StringRef Kind, MDNode *N) {
 }
 
 MDNode *GlobalObject::getMetadata(unsigned KindID) const {
-  if (hasMetadata())
-    return getContext().pImpl->GlobalObjectMetadata[this].lookup(KindID);
-  return nullptr;
+  SmallVector<MDNode *, 1> MDs;
+  getMetadata(KindID, MDs);
+  if (MDs.empty())
+    return nullptr;
+  return MDs[0];
 }
 
 MDNode *GlobalObject::getMetadata(StringRef Kind) const {

@@ -1,5 +1,4 @@
 ; RUN: opt < %s -basicaa -licm -S | FileCheck %s
-; RUN: opt < %s -debugify -basicaa -licm -S | FileCheck %s -check-prefix=DEBUGIFY
 
 declare i32 @strlen(i8*) readonly nounwind
 
@@ -243,23 +242,13 @@ Out:		; preds = %Loop
 define void @test11() {
 	br label %Loop
 Loop:
-	%dead1 = getelementptr %Ty, %Ty* @X2, i64 0, i32 0
-	%dead2 = getelementptr %Ty, %Ty* @X2, i64 0, i32 1
+	%dead = getelementptr %Ty, %Ty* @X2, i64 0, i32 0
 	br i1 false, label %Loop, label %Out
 Out:
 	ret void
 ; CHECK-LABEL: @test11(
 ; CHECK:     Out:
 ; CHECK-NEXT:  ret void
-
-; The GEP in dead1 is adding a zero offset, so the DIExpression can be kept as
-; a "register location".
-; The GEP in dead2 is adding a 4 bytes to the pointer, so the DIExpression is
-; turned into an "implicit location" using DW_OP_stack_value.
-;
-; DEBUGIFY-LABEL: @test11(
-; DEBUGIFY: call void @llvm.dbg.value(metadata %Ty* @X2, metadata {{.*}}, metadata !DIExpression())
-; DEBUGIFY: call void @llvm.dbg.value(metadata %Ty* @X2, metadata {{.*}}, metadata !DIExpression(DW_OP_plus_uconst, 4, DW_OP_stack_value))
 }
 
 @c = common global [1 x i32] zeroinitializer, align 4

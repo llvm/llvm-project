@@ -15,6 +15,8 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/ToolDrivers/llvm-dlltool/DlltoolDriver.h"
+#include "llvm/ToolDrivers/llvm-lib/LibDriver.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ArchiveWriter.h"
 #include "llvm/Object/MachO.h"
@@ -24,17 +26,15 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/LineIterator.h"
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/Process.h"
-#include "llvm/Support/StringSaver.h"
+#include "llvm/Support/PrettyStackTrace.h"
+#include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/ToolDrivers/llvm-dlltool/DlltoolDriver.h"
-#include "llvm/ToolDrivers/llvm-lib/LibDriver.h"
 
 #if !defined(_MSC_VER) && !defined(__MINGW32__)
 #include <unistd.h>
@@ -47,76 +47,10 @@ using namespace llvm;
 // The name this program was invoked as.
 static StringRef ToolName;
 
-// The basename of this program.
-static StringRef Stem;
-
-const char RanlibHelp[] = R"(
-OVERVIEW: LLVM Ranlib (llvm-ranlib)
-
-  This program generates an index to speed access to archives
-
-USAGE: llvm-ranlib <archive-file>
-
-OPTIONS:
-  -help                             - Display available options
-  -version                          - Display the version of this program
-)";
-
-const char ArHelp[] = R"(
-OVERVIEW: LLVM Archiver (llvm-ar)
-
-  This program archives bitcode files into single libraries
-
-USAGE: llvm-ar [options] [relpos] [count] <archive-file> [members]...
-
-OPTIONS:
-  -M                                -
-  -format                           - Archive format to create
-    =default                        -   default
-    =gnu                            -   gnu
-    =darwin                         -   darwin
-    =bsd                            -   bsd
-  -plugin=<string>                  - plugin (ignored for compatibility
-  -help                             - Display available options
-  -version                          - Display the version of this program
-
-OPERATIONS:
-  d[NsS]       - delete file(s) from the archive
-  m[abiSs]     - move file(s) in the archive
-  p[kN]        - print file(s) found in the archive
-  q[ufsS]      - quick append file(s) to the archive
-  r[abfiuRsS]  - replace or insert file(s) into the archive
-  t            - display contents of archive
-  x[No]        - extract file(s) from the archive
-
-MODIFIERS (operation specific):
-  [a] - put file(s) after [relpos]
-  [b] - put file(s) before [relpos] (same as [i])
-  [D] - use zero for timestamps and uids/gids (default)
-  [i] - put file(s) before [relpos] (same as [b])
-  [o] - preserve original dates
-  [s] - create an archive index (cf. ranlib)
-  [S] - do not build a symbol table
-  [T] - create a thin archive
-  [u] - update only files newer than archive contents
-  [U] - use actual timestamps and uids/gids
-
-MODIFIERS (generic):
-  [c] - do not warn if the library had to be created
-  [v] - be verbose about actions taken
-)";
-
-void printHelpMessage() {
-  if (Stem.contains_lower("ranlib"))
-    outs() << RanlibHelp;
-  else if (Stem.contains_lower("ar"))
-    outs() << ArHelp;
-}
-
 // Show the error message and exit.
 LLVM_ATTRIBUTE_NORETURN static void fail(Twine Error) {
   errs() << ToolName << ": " << Error << ".\n";
-  printHelpMessage();
+  cl::PrintHelpMessage();
   exit(1);
 }
 
@@ -142,17 +76,54 @@ static void failIfError(Error E, Twine Context = "") {
   });
 }
 
-static SmallVector<const char *, 256> PositionalArgs;
+// llvm-ar/llvm-ranlib remaining positional arguments.
+static cl::list<std::string>
+    RestOfArgs(cl::Positional, cl::ZeroOrMore,
+               cl::desc("[relpos] [count] <archive-file> [members]..."));
 
-static bool MRI;
+static cl::opt<bool> MRI("M", cl::desc(""));
+static cl::opt<std::string> Plugin("plugin", cl::desc("plugin (ignored for compatibility"));
 
 namespace {
-enum Format { Default, GNU, BSD, DARWIN, Unknown };
+enum Format { Default, GNU, BSD, DARWIN };
 }
 
-static Format FormatType = Default;
+static cl::opt<Format>
+    FormatOpt("format", cl::desc("Archive format to create"),
+              cl::values(clEnumValN(Default, "default", "default"),
+                         clEnumValN(GNU, "gnu", "gnu"),
+                         clEnumValN(DARWIN, "darwin", "darwin"),
+                         clEnumValN(BSD, "bsd", "bsd")));
 
 static std::string Options;
+
+// Provide additional help output explaining the operations and modifiers of
+// llvm-ar. This object instructs the CommandLine library to print the text of
+// the constructor when the --help option is given.
+static cl::extrahelp MoreHelp(
+  "\nOPERATIONS:\n"
+  "  d[NsS]       - delete file(s) from the archive\n"
+  "  m[abiSs]     - move file(s) in the archive\n"
+  "  p[kN]        - print file(s) found in the archive\n"
+  "  q[ufsS]      - quick append file(s) to the archive\n"
+  "  r[abfiuRsS]  - replace or insert file(s) into the archive\n"
+  "  t            - display contents of archive\n"
+  "  x[No]        - extract file(s) from the archive\n"
+  "\nMODIFIERS (operation specific):\n"
+  "  [a] - put file(s) after [relpos]\n"
+  "  [b] - put file(s) before [relpos] (same as [i])\n"
+  "  [i] - put file(s) before [relpos] (same as [b])\n"
+  "  [o] - preserve original dates\n"
+  "  [s] - create an archive index (cf. ranlib)\n"
+  "  [S] - do not build a symbol table\n"
+  "  [T] - create a thin archive\n"
+  "  [u] - update only files newer than archive contents\n"
+  "\nMODIFIERS (generic):\n"
+  "  [c] - do not warn if the library had to be created\n"
+  "  [v] - be verbose about actions taken\n"
+);
+
+static const char OptionChars[] = "dmpqrtxabiosSTucv";
 
 // This enumeration delineates the kinds of operations on an archive
 // that are permitted.
@@ -195,23 +166,30 @@ static std::vector<StringRef> Members;
 // Extract the member filename from the command line for the [relpos] argument
 // associated with a, b, and i modifiers
 static void getRelPos() {
-  if (PositionalArgs.size() == 0)
+  if(RestOfArgs.size() == 0)
     fail("Expected [relpos] for a, b, or i modifier");
-  RelPos = PositionalArgs[0];
-  PositionalArgs.erase(PositionalArgs.begin());
+  RelPos = RestOfArgs[0];
+  RestOfArgs.erase(RestOfArgs.begin());
+}
+
+static void getOptions() {
+  if(RestOfArgs.size() == 0)
+    fail("Expected options");
+  Options = RestOfArgs[0];
+  RestOfArgs.erase(RestOfArgs.begin());
 }
 
 // Get the archive file name from the command line
 static void getArchive() {
-  if (PositionalArgs.size() == 0)
+  if(RestOfArgs.size() == 0)
     fail("An archive name must be specified");
-  ArchiveName = PositionalArgs[0];
-  PositionalArgs.erase(PositionalArgs.begin());
+  ArchiveName = RestOfArgs[0];
+  RestOfArgs.erase(RestOfArgs.begin());
 }
 
-// Copy over remaining items in PositionalArgs to our Members vector
+// Copy over remaining items in RestOfArgs to our Members vector
 static void getMembers() {
-  for (auto &Arg : PositionalArgs)
+  for (auto &Arg : RestOfArgs)
     Members.push_back(Arg);
 }
 
@@ -222,10 +200,12 @@ static void runMRIScript();
 // modifier/operation pairs have not been violated.
 static ArchiveOperation parseCommandLine() {
   if (MRI) {
-    if (!PositionalArgs.empty() || !Options.empty())
+    if (!RestOfArgs.empty())
       fail("Cannot mix -M and other options");
     runMRIScript();
   }
+
+  getOptions();
 
   // Keep track of number of operations. We can only specify one
   // per execution.
@@ -390,7 +370,6 @@ static void doExtract(StringRef Name, const object::Archive::Child &C) {
 
   int FD;
   failIfError(sys::fs::openFileForWrite(sys::path::filename(Name), FD,
-                                        sys::fs::CD_CreateAlways,
                                         sys::fs::F_None, Mode),
               Name);
 
@@ -672,7 +651,7 @@ performWriteOperation(ArchiveOperation Operation,
     NewMembers = computeNewArchiveMembers(Operation, OldArchive);
 
   object::Archive::Kind Kind;
-  switch (FormatType) {
+  switch (FormatOpt) {
   case Default:
     if (Thin)
       Kind = object::Archive::K_GNU;
@@ -698,8 +677,6 @@ performWriteOperation(ArchiveOperation Operation,
       fail("Only the gnu format has a thin mode");
     Kind = object::Archive::K_DARWIN;
     break;
-  case Unknown:
-    llvm_unreachable("");
   }
 
   Error E =
@@ -781,7 +758,7 @@ static int performOperation(ArchiveOperation Operation,
 }
 
 static void runMRIScript() {
-  enum class MRICommand { AddLib, AddMod, Create, Delete, Save, End, Invalid };
+  enum class MRICommand { AddLib, AddMod, Create, Save, End, Invalid };
 
   ErrorOr<std::unique_ptr<MemoryBuffer>> Buf = MemoryBuffer::getSTDIN();
   failIfError(Buf.getError());
@@ -802,7 +779,6 @@ static void runMRIScript() {
                        .Case("addlib", MRICommand::AddLib)
                        .Case("addmod", MRICommand::AddMod)
                        .Case("create", MRICommand::Create)
-                       .Case("delete", MRICommand::Delete)
                        .Case("save", MRICommand::Save)
                        .Case("end", MRICommand::End)
                        .Default(MRICommand::Invalid);
@@ -837,12 +813,6 @@ static void runMRIScript() {
         fail("File already saved");
       ArchiveName = Rest;
       break;
-    case MRICommand::Delete: {
-      StringRef Name = sys::path::filename(Rest);
-      llvm::erase_if(NewMembers,
-                     [=](NewArchiveMember &M) { return M.MemberName == Name; });
-      break;
-    }
     case MRICommand::Save:
       Saved = true;
       break;
@@ -859,113 +829,67 @@ static void runMRIScript() {
   exit(0);
 }
 
-static bool handleGenericOption(StringRef arg) {
-  if (arg == "-help" || arg == "--help") {
-    printHelpMessage();
-    return true;
-  }
-  if (arg == "-version" || arg == "--version") {
-    cl::PrintVersionMessage();
-    return true;
-  }
-  return false;
-}
-
-static int ar_main(int argc, char **argv) {
-  SmallVector<const char *, 0> Argv(argv, argv + argc);
-  BumpPtrAllocator Alloc;
-  StringSaver Saver(Alloc);
-  cl::ExpandResponseFiles(Saver, cl::TokenizeGNUCommandLine, Argv);
-  for(size_t i = 1; i < Argv.size(); ++i) {
-    StringRef Arg = Argv[i];
-    const char *match;
-    auto MatchFlagWithArg = [&](const char *expected) {
-      size_t len = strlen(expected);
-      if (Arg == expected) {
-        if (++i >= Argv.size())
-          fail(std::string(expected) + " requires an argument");
-        match = Argv[i];
-        return true;
-      }
-      if (Arg.startswith(expected) && Arg.size() > len &&
-                 Arg[len] == '=') {
-        match = Arg.data() + len + 1;
-        return true;
-      }
-      return false;
-    };
-    if (handleGenericOption(Argv[i]))
-      return 0;
-    if (Arg == "--") {
-      for(; i < Argv.size(); ++i)
-        PositionalArgs.push_back(Argv[i]);
-      break;
-    }
-    if (Arg[0] == '-') {
-      if (Arg.startswith("--"))
-        Arg = Argv[i] + 2;
-      else
-        Arg = Argv[i] + 1;
-      if (Arg == "M") {
-        MRI = true;
-      } else if (MatchFlagWithArg("format")) {
-        FormatType = StringSwitch<Format>(match)
-            .Case("default", Default)
-            .Case("gnu", GNU)
-            .Case("darwin", DARWIN)
-            .Case("bsd", BSD)
-            .Default(Unknown);
-        if (FormatType == Unknown)
-          fail(std::string("Invalid format ") + match);
-      } else if (MatchFlagWithArg("plugin")) {
-        // Ignored.
-      } else {
-        Options += Argv[i] + 1;
-      }
-    } else if (Options.empty()) {
-      Options += Argv[i];
-    } else {
-      PositionalArgs.push_back(Argv[i]);
-    }
-  }
+static int ar_main() {
+  // Do our own parsing of the command line because the CommandLine utility
+  // can't handle the grouped positional parameters without a dash.
   ArchiveOperation Operation = parseCommandLine();
   return performOperation(Operation, nullptr);
 }
 
-static int ranlib_main(int argc, char **argv) {
-  bool ArchiveSpecified = false;
-  for(int i = 1; i < argc; ++i) {
-    if (handleGenericOption(argv[i])) {
-      return 0;
-    } else {
-      if (ArchiveSpecified)
-        fail("Exactly one archive should be specified");
-      ArchiveSpecified = true;
-      ArchiveName = argv[i];
-    }
-  }
+static int ranlib_main() {
+  if (RestOfArgs.size() != 1)
+    fail(ToolName + " takes just one archive as an argument");
+  ArchiveName = RestOfArgs[0];
   return performOperation(CreateSymTab, nullptr);
 }
 
 int main(int argc, char **argv) {
-  InitLLVM X(argc, argv);
   ToolName = argv[0];
+  // Print a stack trace if we signal out.
+  sys::PrintStackTraceOnErrorSignal(argv[0]);
+  PrettyStackTraceProgram X(argc, argv);
+  llvm_shutdown_obj Y;  // Call llvm_shutdown() on exit.
 
   llvm::InitializeAllTargetInfos();
   llvm::InitializeAllTargetMCs();
   llvm::InitializeAllAsmParsers();
 
-  Stem = sys::path::stem(ToolName);
-  if (Stem.contains_lower("dlltool"))
+  StringRef Stem = sys::path::stem(ToolName);
+  if (Stem.find("dlltool") != StringRef::npos)
     return dlltoolDriverMain(makeArrayRef(argv, argc));
 
-  if (Stem.contains_lower("ranlib"))
-    return ranlib_main(argc, argv);
-
-  if (Stem.contains_lower("lib"))
+  if (Stem.find("ranlib") == StringRef::npos &&
+      Stem.find("lib") != StringRef::npos)
     return libDriverMain(makeArrayRef(argv, argc));
 
-  if (Stem.contains_lower("ar"))
-    return ar_main(argc, argv);
+  for (int i = 1; i < argc; i++) {
+    // If an argument starts with a dash and only contains chars
+    // that belong to the options chars set, remove the dash.
+    // We can't handle it after the command line options parsing
+    // is done, since it will error out on an unrecognized string
+    // starting with a dash.
+    // Make sure this doesn't match the actual llvm-ar specific options
+    // that start with a dash.
+    StringRef S = argv[i];
+    if (S.startswith("-") &&
+        S.find_first_not_of(OptionChars, 1) == StringRef::npos) {
+      argv[i]++;
+      break;
+    }
+    if (S == "--")
+      break;
+  }
+
+  // Have the command line options parsed and handle things
+  // like --help and --version.
+  cl::ParseCommandLineOptions(argc, argv,
+    "LLVM Archiver (llvm-ar)\n\n"
+    "  This program archives bitcode files into single libraries\n"
+  );
+
+  if (Stem.find("ranlib") != StringRef::npos)
+    return ranlib_main();
+  if (Stem.find("ar") != StringRef::npos)
+    return ar_main();
   fail("Not ranlib, ar, lib or dlltool!");
 }

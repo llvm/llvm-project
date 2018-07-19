@@ -28,7 +28,7 @@ class MachineRegisterInfo;
 class ScheduleDAG;
 class SIInstrInfo;
 class SIRegisterInfo;
-class GCNSubtarget;
+class SISubtarget;
 
 class GCNHazardRecognizer final : public ScheduleHazardRecognizer {
   // This variable stores the instruction that has been emitted this cycle. It
@@ -37,7 +37,7 @@ class GCNHazardRecognizer final : public ScheduleHazardRecognizer {
   MachineInstr *CurrCycleInstr;
   std::list<MachineInstr*> EmittedInstrs;
   const MachineFunction &MF;
-  const GCNSubtarget &ST;
+  const SISubtarget &ST;
   const SIInstrInfo &TII;
   const SIRegisterInfo &TRI;
 

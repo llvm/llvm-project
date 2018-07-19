@@ -1,4 +1,4 @@
-; RUN: llc -fast-isel-sink-local-values -O0 -fast-isel -fast-isel-abort=1 -verify-machineinstrs -mtriple=arm64-apple-darwin < %s | FileCheck %s
+; RUN: llc -O0 -fast-isel -fast-isel-abort=1 -verify-machineinstrs -mtriple=arm64-apple-darwin < %s | FileCheck %s
 
 define void @t0(i32 %a) nounwind {
 entry:
@@ -95,8 +95,6 @@ declare void @llvm.trap() nounwind
 define void @ands(i32* %addr) {
 ; CHECK-LABEL: ands:
 ; CHECK: tst [[COND:w[0-9]+]], #0x1
-; CHECK-NEXT: orr w{{[0-9]+}}, wzr, #0x2
-; CHECK-NEXT: orr w{{[0-9]+}}, wzr, #0x1
 ; CHECK-NEXT: csel [[COND]],
 entry:
   %cond91 = select i1 undef, i32 1, i32 2

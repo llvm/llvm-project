@@ -26,7 +26,7 @@ namespace llvm {
   FunctionPass *createRegionOnlyPrinterPass();
 
 #ifndef NDEBUG
-  /// Open a viewer to display the GraphViz vizualization of the analysis
+  /// @brief Open a viewer to display the GraphViz vizualization of the analysis
   /// result.
   ///
   /// Practical to call in the debugger.
@@ -35,7 +35,7 @@ namespace llvm {
   /// @param RI The analysis to display.
   void viewRegion(llvm::RegionInfo *RI);
 
-  /// Analyze the regions of a function and open its GraphViz
+  /// @brief Analyze the regions of a function and open its GraphViz
   /// visualization in a viewer.
   ///
   /// Useful to call in the debugger.
@@ -46,7 +46,7 @@ namespace llvm {
   /// @param F Function to analyze.
   void viewRegion(const llvm::Function *F);
 
-  /// Open a viewer to display the GraphViz vizualization of the analysis
+  /// @brief Open a viewer to display the GraphViz vizualization of the analysis
   /// result.
   ///
   /// Useful to call in the debugger.
@@ -55,7 +55,7 @@ namespace llvm {
   /// @param RI The analysis to display.
   void viewRegionOnly(llvm::RegionInfo *RI);
 
-  /// Analyze the regions of a function and open its GraphViz
+  /// @brief Analyze the regions of a function and open its GraphViz
   /// visualization in a viewer.
   ///
   /// Useful to call in the debugger.

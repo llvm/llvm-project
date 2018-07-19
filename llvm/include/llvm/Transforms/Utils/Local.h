@@ -16,12 +16,10 @@
 #define LLVM_TRANSFORMS_UTILS_LOCAL_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/Analysis/Utils/Local.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
@@ -119,8 +117,7 @@ struct SimplifyCFGOptions {
 /// conditions and indirectbr addresses this might make dead if
 /// DeleteDeadConditions is true.
 bool ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions = false,
-                            const TargetLibraryInfo *TLI = nullptr,
-                            DeferredDominance *DDT = nullptr);
+                            const TargetLibraryInfo *TLI = nullptr);
 
 //===----------------------------------------------------------------------===//
 //  Local dead code elimination.
@@ -142,18 +139,6 @@ bool wouldInstructionBeTriviallyDead(Instruction *I,
 /// recursively. Return true if any instructions were deleted.
 bool RecursivelyDeleteTriviallyDeadInstructions(Value *V,
                                         const TargetLibraryInfo *TLI = nullptr);
-
-/// Delete all of the instructions in `DeadInsts`, and all other instructions
-/// that deleting these in turn causes to be trivially dead.
-///
-/// The initial instructions in the provided vector must all have empty use
-/// lists and satisfy `isInstructionTriviallyDead`.
-///
-/// `DeadInsts` will be used as scratch storage for this routine and will be
-/// empty afterward.
-void RecursivelyDeleteTriviallyDeadInstructions(
-    SmallVectorImpl<Instruction *> &DeadInsts,
-    const TargetLibraryInfo *TLI = nullptr);
 
 /// If the specified value is an effectively dead PHI node, due to being a
 /// def-use chain of single-use nodes that either forms a cycle or is terminated
@@ -186,21 +171,18 @@ bool SimplifyInstructionsInBlock(BasicBlock *BB,
 ///
 /// .. and delete the predecessor corresponding to the '1', this will attempt to
 /// recursively fold the 'and' to 0.
-void RemovePredecessorAndSimplify(BasicBlock *BB, BasicBlock *Pred,
-                                  DeferredDominance *DDT = nullptr);
+void RemovePredecessorAndSimplify(BasicBlock *BB, BasicBlock *Pred);
 
 /// BB is a block with one predecessor and its predecessor is known to have one
 /// successor (BB!). Eliminate the edge between them, moving the instructions in
 /// the predecessor into BB. This deletes the predecessor block.
-void MergeBasicBlockIntoOnlyPred(BasicBlock *BB, DominatorTree *DT = nullptr,
-                                 DeferredDominance *DDT = nullptr);
+void MergeBasicBlockIntoOnlyPred(BasicBlock *BB, DominatorTree *DT = nullptr);
 
 /// BB is known to contain an unconditional branch, and contains no instructions
 /// other than PHI nodes, potential debug intrinsics and the branch. If
 /// possible, eliminate BB by rewriting all the predecessors to branch to the
 /// successor block and return true. If we can't transform, return false.
-bool TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
-                                             DeferredDominance *DDT = nullptr);
+bool TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB);
 
 /// Check for and eliminate duplicate PHI nodes in this block. This doesn't try
 /// to be clever about PHI nodes which differ only in the order of the incoming
@@ -264,6 +246,72 @@ inline unsigned getKnownAlignment(Value *V, const DataLayout &DL,
   return getOrEnforceKnownAlignment(V, 0, DL, CxtI, AC, DT);
 }
 
+/// Given a getelementptr instruction/constantexpr, emit the code necessary to
+/// compute the offset from the base pointer (without adding in the base
+/// pointer). Return the result as a signed integer of intptr size.
+/// When NoAssumptions is true, no assumptions about index computation not
+/// overflowing is made.
+template <typename IRBuilderTy>
+Value *EmitGEPOffset(IRBuilderTy *Builder, const DataLayout &DL, User *GEP,
+                     bool NoAssumptions = false) {
+  GEPOperator *GEPOp = cast<GEPOperator>(GEP);
+  Type *IntPtrTy = DL.getIntPtrType(GEP->getType());
+  Value *Result = Constant::getNullValue(IntPtrTy);
+
+  // If the GEP is inbounds, we know that none of the addressing operations will
+  // overflow in an unsigned sense.
+  bool isInBounds = GEPOp->isInBounds() && !NoAssumptions;
+
+  // Build a mask for high order bits.
+  unsigned IntPtrWidth = IntPtrTy->getScalarType()->getIntegerBitWidth();
+  uint64_t PtrSizeMask =
+      std::numeric_limits<uint64_t>::max() >> (64 - IntPtrWidth);
+
+  gep_type_iterator GTI = gep_type_begin(GEP);
+  for (User::op_iterator i = GEP->op_begin() + 1, e = GEP->op_end(); i != e;
+       ++i, ++GTI) {
+    Value *Op = *i;
+    uint64_t Size = DL.getTypeAllocSize(GTI.getIndexedType()) & PtrSizeMask;
+    if (Constant *OpC = dyn_cast<Constant>(Op)) {
+      if (OpC->isZeroValue())
+        continue;
+
+      // Handle a struct index, which adds its field offset to the pointer.
+      if (StructType *STy = GTI.getStructTypeOrNull()) {
+        if (OpC->getType()->isVectorTy())
+          OpC = OpC->getSplatValue();
+
+        uint64_t OpValue = cast<ConstantInt>(OpC)->getZExtValue();
+        Size = DL.getStructLayout(STy)->getElementOffset(OpValue);
+
+        if (Size)
+          Result = Builder->CreateAdd(Result, ConstantInt::get(IntPtrTy, Size),
+                                      GEP->getName()+".offs");
+        continue;
+      }
+
+      Constant *Scale = ConstantInt::get(IntPtrTy, Size);
+      Constant *OC = ConstantExpr::getIntegerCast(OpC, IntPtrTy, true /*SExt*/);
+      Scale = ConstantExpr::getMul(OC, Scale, isInBounds/*NUW*/);
+      // Emit an add instruction.
+      Result = Builder->CreateAdd(Result, Scale, GEP->getName()+".offs");
+      continue;
+    }
+    // Convert to correct type.
+    if (Op->getType() != IntPtrTy)
+      Op = Builder->CreateIntCast(Op, IntPtrTy, true, Op->getName()+".c");
+    if (Size != 1) {
+      // We'll let instcombine(mul) convert this to a shl if possible.
+      Op = Builder->CreateMul(Op, ConstantInt::get(IntPtrTy, Size),
+                              GEP->getName()+".idx", isInBounds /*NUW*/);
+    }
+
+    // Emit an add instruction.
+    Result = Builder->CreateAdd(Op, Result, GEP->getName()+".offs");
+  }
+  return Result;
+}
+
 ///===---------------------------------------------------------------------===//
 ///  Dbg Intrinsic utilities
 ///
@@ -316,7 +364,7 @@ bool replaceDbgDeclare(Value *Address, Value *NewAddress,
 /// DW_OP_deref is prepended to the expression. If Offset is non-zero,
 /// a constant displacement is added to the expression (between the
 /// optional Deref operations). Offset can be negative. The new
-/// llvm.dbg.declare is inserted immediately after AI.
+/// llvm.dbg.declare is inserted immediately before AI.
 bool replaceDbgDeclareForAlloca(AllocaInst *AI, Value *NewAllocaAddress,
                                 DIBuilder &Builder, bool DerefBefore,
                                 int Offset, bool DerefAfter);
@@ -329,27 +377,10 @@ bool replaceDbgDeclareForAlloca(AllocaInst *AI, Value *NewAllocaAddress,
 void replaceDbgValueForAlloca(AllocaInst *AI, Value *NewAllocaAddress,
                               DIBuilder &Builder, int Offset = 0);
 
-/// Assuming the instruction \p I is going to be deleted, attempt to salvage
-/// debug users of \p I by writing the effect of \p I in a DIExpression.
-/// Returns true if any debug users were updated.
-bool salvageDebugInfo(Instruction &I);
-
-/// Point debug users of \p From to \p To or salvage them. Use this function
-/// only when replacing all uses of \p From with \p To, with a guarantee that
-/// \p From is going to be deleted.
-///
-/// Follow these rules to prevent use-before-def of \p To:
-///   . If \p To is a linked Instruction, set \p DomPoint to \p To.
-///   . If \p To is an unlinked Instruction, set \p DomPoint to the Instruction
-///     \p To will be inserted after.
-///   . If \p To is not an Instruction (e.g a Constant), the choice of
-///     \p DomPoint is arbitrary. Pick \p From for simplicity.
-///
-/// If a debug user cannot be preserved without reordering variable updates or
-/// introducing a use-before-def, it is either salvaged (\ref salvageDebugInfo)
-/// or deleted. Returns true if any debug users were updated.
-bool replaceAllDbgUsesWith(Instruction &From, Value &To, Instruction &DomPoint,
-                           DominatorTree &DT);
+/// Assuming the instruction \p I is going to be deleted, attempt to salvage any
+/// dbg.value intrinsics referring to \p I by rewriting its effect into a
+/// DIExpression.
+void salvageDebugInfo(Instruction &I);
 
 /// Remove all instructions from a basic block other than it's terminator
 /// and any present EH pad instructions.
@@ -358,8 +389,7 @@ unsigned removeAllNonTerminatorAndEHPadInstructions(BasicBlock *BB);
 /// Insert an unreachable instruction before the specified
 /// instruction, making it and the rest of the code in the block dead.
 unsigned changeToUnreachable(Instruction *I, bool UseLLVMTrap,
-                             bool PreserveLCSSA = false,
-                             DeferredDominance *DDT = nullptr);
+                             bool PreserveLCSSA = false);
 
 /// Convert the CallInst to InvokeInst with the specified unwind edge basic
 /// block.  This also splits the basic block where CI is located, because
@@ -374,13 +404,12 @@ BasicBlock *changeToInvokeAndSplitBasicBlock(CallInst *CI,
 ///
 /// \param BB  Block whose terminator will be replaced.  Its terminator must
 ///            have an unwind successor.
-void removeUnwindEdge(BasicBlock *BB, DeferredDominance *DDT = nullptr);
+void removeUnwindEdge(BasicBlock *BB);
 
 /// Remove all blocks that can not be reached from the function's entry.
 ///
 /// Returns true if any basic block was removed.
-bool removeUnreachableBlocks(Function &F, LazyValueInfo *LVI = nullptr,
-                             DeferredDominance *DDT = nullptr);
+bool removeUnreachableBlocks(Function &F, LazyValueInfo *LVI = nullptr);
 
 /// Combine the metadata of two instructions so that K can replace J
 ///

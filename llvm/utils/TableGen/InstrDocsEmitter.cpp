@@ -109,7 +109,6 @@ void EmitInstrDocs(RecordKeeper &RK, raw_ostream &OS) {
     FLAG(isBarrier)
     FLAG(isCall)
     FLAG(isAdd)
-    FLAG(isTrap)
     FLAG(canFoldAsLoad)
     FLAG(mayLoad)
     //FLAG(mayLoad_Unset) // Deliberately omitted.

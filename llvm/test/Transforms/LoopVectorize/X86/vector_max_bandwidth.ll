@@ -16,7 +16,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; widest type in the loop for maximum bandwidth when
 ; -vectorizer-maximize-bandwidth is indicated.
 ;
-; CHECK-LABEL: foo
+; CHECK-label: foo
 ; CHECK-AVX1: LV: Selecting VF: 16.
 ; CHECK-AVX2: LV: Selecting VF: 32.
 define void @foo() {

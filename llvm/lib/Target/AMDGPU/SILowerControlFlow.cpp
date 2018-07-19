@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// This pass lowers the pseudo control flow instructions to real
+/// \brief This pass lowers the pseudo control flow instructions to real
 /// machine instructions.
 ///
 /// All control flow is handled using predicated instructions and
@@ -51,7 +51,6 @@
 #include "AMDGPU.h"
 #include "AMDGPUSubtarget.h"
 #include "SIInstrInfo.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/LiveIntervals.h"
@@ -344,49 +343,11 @@ void SILowerControlFlow::emitBreak(MachineInstr &MI) {
 }
 
 void SILowerControlFlow::emitIfBreak(MachineInstr &MI) {
-  MachineBasicBlock &MBB = *MI.getParent();
-  const DebugLoc &DL = MI.getDebugLoc();
-  auto Dst = MI.getOperand(0).getReg();
-
-  // Skip ANDing with exec if the break condition is already masked by exec
-  // because it is a V_CMP in the same basic block. (We know the break
-  // condition operand was an i1 in IR, so if it is a VALU instruction it must
-  // be one with a carry-out.)
-  bool SkipAnding = false;
-  if (MI.getOperand(1).isReg()) {
-    if (MachineInstr *Def = MRI->getUniqueVRegDef(MI.getOperand(1).getReg())) {
-      SkipAnding = Def->getParent() == MI.getParent()
-          && SIInstrInfo::isVALU(*Def);
-    }
-  }
-
-  // AND the break condition operand with exec, then OR that into the "loop
-  // exit" mask.
-  MachineInstr *And = nullptr, *Or = nullptr;
-  if (!SkipAnding) {
-    And = BuildMI(MBB, &MI, DL, TII->get(AMDGPU::S_AND_B64), Dst)
-             .addReg(AMDGPU::EXEC)
-             .add(MI.getOperand(1));
-    Or = BuildMI(MBB, &MI, DL, TII->get(AMDGPU::S_OR_B64), Dst)
-             .addReg(Dst)
-             .add(MI.getOperand(2));
-  } else
-    Or = BuildMI(MBB, &MI, DL, TII->get(AMDGPU::S_OR_B64), Dst)
-             .add(MI.getOperand(1))
-             .add(MI.getOperand(2));
-
-  if (LIS) {
-    if (And)
-      LIS->InsertMachineInstrInMaps(*And);
-    LIS->ReplaceMachineInstrInMaps(MI, *Or);
-  }
-
-  MI.eraseFromParent();
+  MI.setDesc(TII->get(AMDGPU::S_OR_B64));
 }
 
 void SILowerControlFlow::emitElseBreak(MachineInstr &MI) {
-  // Lowered in the same way as emitIfBreak above.
-  emitIfBreak(MI);
+  MI.setDesc(TII->get(AMDGPU::S_OR_B64));
 }
 
 void SILowerControlFlow::emitLoop(MachineInstr &MI) {
@@ -453,8 +414,8 @@ void SILowerControlFlow::findMaskOperands(MachineInstr &MI, unsigned OpNo,
       return;
 
   for (const auto &SrcOp : Def->explicit_operands())
-    if (SrcOp.isReg() && SrcOp.isUse() &&
-        (TargetRegisterInfo::isVirtualRegister(SrcOp.getReg()) ||
+    if (SrcOp.isUse() && (!SrcOp.isReg() ||
+        TargetRegisterInfo::isVirtualRegister(SrcOp.getReg()) ||
         SrcOp.getReg() == AMDGPU::EXEC))
       Src.push_back(SrcOp);
 }
@@ -486,7 +447,7 @@ void SILowerControlFlow::combineMasks(MachineInstr &MI) {
 }
 
 bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
-  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
   TII = ST.getInstrInfo();
   TRI = &TII->getRegisterInfo();
 

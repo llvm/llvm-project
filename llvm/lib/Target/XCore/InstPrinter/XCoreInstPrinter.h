@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains the declaration of the XCoreInstPrinter class,
+/// \brief This file contains the declaration of the XCoreInstPrinter class,
 /// which is used to print XCore MCInst to a .s file.
 ///
 //===----------------------------------------------------------------------===//

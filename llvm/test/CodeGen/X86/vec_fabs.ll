@@ -10,15 +10,35 @@
 ; 2013.
 
 define <2 x double> @fabs_v2f64(<2 x double> %p) {
-; X32-LABEL: fabs_v2f64:
-; X32:       # %bb.0:
-; X32-NEXT:    vandps {{\.LCPI.*}}, %xmm0, %xmm0
-; X32-NEXT:    retl
+; X32_AVX-LABEL: fabs_v2f64:
+; X32_AVX:       # %bb.0:
+; X32_AVX-NEXT:    vandps {{\.LCPI.*}}, %xmm0, %xmm0
+; X32_AVX-NEXT:    retl
 ;
-; X64-LABEL: fabs_v2f64:
-; X64:       # %bb.0:
-; X64-NEXT:    vandps {{.*}}(%rip), %xmm0, %xmm0
-; X64-NEXT:    retq
+; X32_AVX512VL-LABEL: fabs_v2f64:
+; X32_AVX512VL:       # %bb.0:
+; X32_AVX512VL-NEXT:    vpand {{\.LCPI.*}}, %xmm0, %xmm0
+; X32_AVX512VL-NEXT:    retl
+;
+; X32_AVX512VLDQ-LABEL: fabs_v2f64:
+; X32_AVX512VLDQ:       # %bb.0:
+; X32_AVX512VLDQ-NEXT:    vandps {{\.LCPI.*}}, %xmm0, %xmm0
+; X32_AVX512VLDQ-NEXT:    retl
+;
+; X64_AVX-LABEL: fabs_v2f64:
+; X64_AVX:       # %bb.0:
+; X64_AVX-NEXT:    vandps {{.*}}(%rip), %xmm0, %xmm0
+; X64_AVX-NEXT:    retq
+;
+; X64_AVX512VL-LABEL: fabs_v2f64:
+; X64_AVX512VL:       # %bb.0:
+; X64_AVX512VL-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64_AVX512VL-NEXT:    retq
+;
+; X64_AVX512VLDQ-LABEL: fabs_v2f64:
+; X64_AVX512VLDQ:       # %bb.0:
+; X64_AVX512VLDQ-NEXT:    vandps {{.*}}(%rip), %xmm0, %xmm0
+; X64_AVX512VLDQ-NEXT:    retq
   %t = call <2 x double> @llvm.fabs.v2f64(<2 x double> %p)
   ret <2 x double> %t
 }

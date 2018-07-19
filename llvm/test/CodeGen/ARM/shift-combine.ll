@@ -9,7 +9,7 @@
 
 define i32 @test_lshr_and1(i32 %x) {
 entry:
-;CHECK-LABEL: test_lshr_and1:
+;CHECK-LABLE: test_lshr_and1:
 ;CHECK-COMMON:      movw r1, :lower16:array
 ;CHECK-COMMON-NEXT: and  r0, r0, #12
 ;CHECK-COMMON-NEXT: movt r1, :upper16:array
@@ -130,7 +130,7 @@ entry:
 ; CHECK-V6M:        ldrh [[LOW:r[0-9]+]], [r0, #2]
 ; CHECK-V6M:        ldr [[HIGH:r[0-9]+]], [r0, #4]
 ; CHECK-V6M-NEXT:   lsls [[HIGH]], [[HIGH]], #16
-; CHECK-V6M-NEXT:   adds r0, r1, r0
+; CHECK-V6M-NEXT:   orrs r0, r1
 ; CHECK-ALIGN:      ldr [[HIGH:r[0-9]+]], [r0, #4]
 ; CHECK-ALIGN-NEXT: ldrh [[LOW:r[0-9]+]], [r0, #2]
 ; CHECK-ALIGN-NEXT: orr.w r0, [[LOW]], [[HIGH]], lsl #16
@@ -217,23 +217,10 @@ entry:
   ret i32 %conv
 }
 
-; CHECK-LABEL: test_shift7_mask8
+; CHECK-LABEL: test_shift8_mask8
 ; CHECK-BE:         ldr r1, [r0]
 ; CHECK-COMMON:     ldr r1, [r0]
-; CHECK-COMMON:     ubfx r1, r1, #7, #8
-; CHECK-COMMON:     str r1, [r0]
-define arm_aapcscc void @test_shift7_mask8(i32* nocapture %p) {
-entry:
-  %0 = load i32, i32* %p, align 4
-  %shl = lshr i32 %0, 7
-  %and = and i32 %shl, 255
-  store i32 %and, i32* %p, align 4
-  ret void
-}
-
-; CHECK-LABEL: test_shift8_mask8
-; CHECK-BE:         ldrb r1, [r0, #2]
-; CHECK-COMMON:     ldrb r1, [r0, #1]
+; CHECK-COMMON:     ubfx r1, r1, #8, #8
 ; CHECK-COMMON:     str r1, [r0]
 define arm_aapcscc void @test_shift8_mask8(i32* nocapture %p) {
 entry:
@@ -244,100 +231,15 @@ entry:
   ret void
 }
 
-; CHECK-LABEL: test_shift8_mask7
-; CHECK-BE:         ldr r1, [r0]
-; CHECK-COMMON:     ldr r1, [r0]
-; CHECK-COMMON:     ubfx r1, r1, #8, #7
-; CHECK-COMMON:     str r1, [r0]
-define arm_aapcscc void @test_shift8_mask7(i32* nocapture %p) {
-entry:
-  %0 = load i32, i32* %p, align 4
-  %shl = lshr i32 %0, 8
-  %and = and i32 %shl, 127
-  store i32 %and, i32* %p, align 4
-  ret void
-}
-
-; CHECK-LABEL: test_shift9_mask8
-; CHECK-BE:         ldr r1, [r0]
-; CHECK-COMMON:     ldr r1, [r0]
-; CHECK-COMMON:     ubfx r1, r1, #9, #8
-; CHECK-COMMON:     str r1, [r0]
-define arm_aapcscc void @test_shift9_mask8(i32* nocapture %p) {
-entry:
-  %0 = load i32, i32* %p, align 4
-  %shl = lshr i32 %0, 9
-  %and = and i32 %shl, 255
-  store i32 %and, i32* %p, align 4
-  ret void
-}
-
 ; CHECK-LABEL: test_shift8_mask16
-; CHECK-ALIGN:      ldr r1, [r0]
-; CHECK-ALIGN:      ubfx r1, r1, #8, #16
-; CHECK-BE:         ldrh r1, [r0, #1]
-; CHECK-ARM:        ldrh r1, [r0, #1]
-; CHECK-THUMB:      ldrh.w r1, [r0, #1]
+; CHECK-BE:         ldr r1, [r0]
+; CHECK-COMMON:     ldr r1, [r0]
+; CHECK-COMMON:     ubfx r1, r1, #8, #16
 ; CHECK-COMMON:     str r1, [r0]
 define arm_aapcscc void @test_shift8_mask16(i32* nocapture %p) {
 entry:
   %0 = load i32, i32* %p, align 4
   %shl = lshr i32 %0, 8
-  %and = and i32 %shl, 65535
-  store i32 %and, i32* %p, align 4
-  ret void
-}
-
-; CHECK-LABEL: test_shift15_mask16
-; CHECK-COMMON:     ldr r1, [r0]
-; CHECK-COMMON:     ubfx r1, r1, #15, #16
-; CHECK-COMMON:     str r1, [r0]
-define arm_aapcscc void @test_shift15_mask16(i32* nocapture %p) {
-entry:
-  %0 = load i32, i32* %p, align 4
-  %shl = lshr i32 %0, 15
-  %and = and i32 %shl, 65535
-  store i32 %and, i32* %p, align 4
-  ret void
-}
-
-; CHECK-LABEL: test_shift16_mask15
-; CHECK-BE:         ldrh r1, [r0]
-; CHECK-COMMON:     ldrh r1, [r0, #2]
-; CHECK-COMMON:     bfc r1, #15, #17
-; CHECK-COMMON:     str r1, [r0]
-define arm_aapcscc void @test_shift16_mask15(i32* nocapture %p) {
-entry:
-  %0 = load i32, i32* %p, align 4
-  %shl = lshr i32 %0, 16
-  %and = and i32 %shl, 32767
-  store i32 %and, i32* %p, align 4
-  ret void
-}
-
-; CHECK-LABEL: test_shift8_mask24
-; CHECK-BE:         ldr r1, [r0]
-; CHECK-COMMON:     ldr r1, [r0]
-; CHECK-ARM:        lsr r1, r1, #8
-; CHECK-THUMB:      lsrs r1, r1, #8
-; CHECK-COMMON:     str r1, [r0]
-define arm_aapcscc void @test_shift8_mask24(i32* nocapture %p) {
-entry:
-  %0 = load i32, i32* %p, align 4
-  %shl = lshr i32 %0, 8
-  %and = and i32 %shl, 16777215
-  store i32 %and, i32* %p, align 4
-  ret void
-}
-
-; CHECK-LABEL: test_shift24_mask16
-; CHECK-BE:         ldrb r1, [r0]
-; CHECK-COMMON:     ldrb r1, [r0, #3]
-; CHECK-COMMON:     str r1, [r0]
-define arm_aapcscc void @test_shift24_mask16(i32* nocapture %p) {
-entry:
-  %0 = load i32, i32* %p, align 4
-  %shl = lshr i32 %0, 24
   %and = and i32 %shl, 65535
   store i32 %and, i32* %p, align 4
   ret void
@@ -371,17 +273,4 @@ entry:
   %and = and i32 %shl, 65535
   store i32 %and, i32* %q, align 4
   ret void
-}
-
-; CHECK-LABEL: trunc_i64_mask_srl
-; CHECK-ARM: ldrh r2, [r1, #4]
-; CHECK-BE: ldrh r2, [r1, #2]
-define i1 @trunc_i64_mask_srl(i32 zeroext %AttrArgNo, i64* %ptr) {
-entry:
-  %bf.load.i = load i64, i64* %ptr, align 8
-  %bf.lshr.i = lshr i64 %bf.load.i, 32
-  %0 = trunc i64 %bf.lshr.i to i32
-  %bf.cast.i = and i32 %0, 65535
-  %cmp.i = icmp ugt i32 %bf.cast.i, %AttrArgNo
-  ret i1 %cmp.i
 }

@@ -29,7 +29,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/TypeFinder.h"
 #include "llvm/Pass.h"
-#include "llvm/Transforms/Utils.h"
+#include "llvm/Transforms/IPO.h"
 
 using namespace llvm;
 

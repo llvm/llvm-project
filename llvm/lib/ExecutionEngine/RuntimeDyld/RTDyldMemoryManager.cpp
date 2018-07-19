@@ -298,6 +298,4 @@ void *RTDyldMemoryManager::getPointerToNamedFunction(const std::string &Name,
   return (void*)Addr;
 }
 
-void RTDyldMemoryManager::anchor() {}
-void MCJITMemoryManager::anchor() {}
 } // namespace llvm

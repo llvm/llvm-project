@@ -117,7 +117,6 @@ def IntrHasSideEffects : IntrinsicProperty;
 
 class LLVMType<ValueType vt> {
   ValueType VT = vt;
-  int isAny = 0;
 }
 
 class LLVMQualPointerType<LLVMType elty, int addrspace>
@@ -132,8 +131,6 @@ class LLVMPointerType<LLVMType elty>
 class LLVMAnyPointerType<LLVMType elty>
   : LLVMType<iPTRAny>{
   LLVMType ElTy = elty;
-
-  let isAny = 1;
 }
 
 // Match the type of another intrinsic parameter.  Number is an index into the
@@ -166,12 +163,10 @@ class LLVMVectorOfAnyPointersToElt<int num> : LLVMMatchType<num>;
 class LLVMHalfElementsVectorType<int num> : LLVMMatchType<num>;
 
 def llvm_void_ty       : LLVMType<isVoid>;
-let isAny = 1 in {
-  def llvm_any_ty        : LLVMType<Any>;
-  def llvm_anyint_ty     : LLVMType<iAny>;
-  def llvm_anyfloat_ty   : LLVMType<fAny>;
-  def llvm_anyvector_ty  : LLVMType<vAny>;
-}
+def llvm_any_ty        : LLVMType<Any>;
+def llvm_anyint_ty     : LLVMType<iAny>;
+def llvm_anyfloat_ty   : LLVMType<fAny>;
+def llvm_anyvector_ty  : LLVMType<vAny>;
 def llvm_i1_ty         : LLVMType<i1>;
 def llvm_i8_ty         : LLVMType<i8>;
 def llvm_i16_ty        : LLVMType<i16>;
@@ -253,6 +248,7 @@ def llvm_v4f64_ty      : LLVMType<v4f64>;    //  4 x double
 def llvm_v8f64_ty      : LLVMType<v8f64>;    //  8 x double
 
 def llvm_vararg_ty     : LLVMType<isVoid>;   // this means vararg here
+
 
 //===----------------------------------------------------------------------===//
 // Intrinsic Definitions.
@@ -394,17 +390,17 @@ def int_instrprof_value_profile : Intrinsic<[],
 
 def int_memcpy  : Intrinsic<[],
                              [llvm_anyptr_ty, llvm_anyptr_ty, llvm_anyint_ty,
-                              llvm_i1_ty],
+                              llvm_i32_ty, llvm_i1_ty],
                             [IntrArgMemOnly, NoCapture<0>, NoCapture<1>,
                              WriteOnly<0>, ReadOnly<1>]>;
 def int_memmove : Intrinsic<[],
                             [llvm_anyptr_ty, llvm_anyptr_ty, llvm_anyint_ty,
-                             llvm_i1_ty],
+                             llvm_i32_ty, llvm_i1_ty],
                             [IntrArgMemOnly, NoCapture<0>, NoCapture<1>,
                              ReadOnly<1>]>;
 def int_memset  : Intrinsic<[],
                             [llvm_anyptr_ty, llvm_i8_ty, llvm_anyint_ty,
-                             llvm_i1_ty],
+                             llvm_i32_ty, llvm_i1_ty],
                             [IntrArgMemOnly, NoCapture<0>, WriteOnly<0>]>;
 
 // FIXME: Add version of these floating point intrinsics which allow non-default
@@ -577,10 +573,6 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable] in {
   def int_ctlz : Intrinsic<[llvm_anyint_ty], [LLVMMatchType<0>, llvm_i1_ty]>;
   def int_cttz : Intrinsic<[llvm_anyint_ty], [LLVMMatchType<0>, llvm_i1_ty]>;
   def int_bitreverse : Intrinsic<[llvm_anyint_ty], [LLVMMatchType<0>]>;
-  def int_fshl : Intrinsic<[llvm_anyint_ty],
-      [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>]>;
-  def int_fshr : Intrinsic<[llvm_anyint_ty],
-      [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>]>;
 }
 
 //===------------------------ Debugger Intrinsics -------------------------===//
@@ -603,8 +595,6 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable] in {
                                        [llvm_metadata_ty,
                                         llvm_metadata_ty,
                                         llvm_metadata_ty]>;
-  def int_dbg_label        : Intrinsic<[],
-                                       [llvm_metadata_ty]>;
 }
 
 //===------------------ Exception Handling Intrinsics----------------------===//
@@ -716,26 +706,16 @@ def int_invariant_end   : Intrinsic<[],
                                      llvm_anyptr_ty],
                                     [IntrArgMemOnly, NoCapture<2>]>;
 
-// launder.invariant.group can't be marked with 'readnone' (IntrNoMem),
+// invariant.group.barrier can't be marked with 'readnone' (IntrNoMem),
 // because it would cause CSE of two barriers with the same argument.
-// Inaccessiblememonly says that the barrier doesn't read the argument,
-// but it changes state not accessible to this module. This way
-// we can DSE through the barrier because it doesn't read the value
-// after store. Although the barrier doesn't modify any memory it
-// can't be marked as readonly, because it would be possible to
-// CSE 2 barriers with store in between.
+// Readonly and argmemonly says that barrier only reads its argument and
+// it can be CSE only if memory didn't change between 2 barriers call,
+// which is valid.
 // The argument also can't be marked with 'returned' attribute, because
 // it would remove barrier.
-// Note that it is still experimental, which means that its semantics
-// might change in the future.
-def int_launder_invariant_group : Intrinsic<[llvm_anyptr_ty],
+def int_invariant_group_barrier : Intrinsic<[llvm_anyptr_ty],
                                             [LLVMMatchType<0>],
-                                            [IntrInaccessibleMemOnly, IntrSpeculatable]>;
-
-
-def int_strip_invariant_group : Intrinsic<[llvm_anyptr_ty],
-                                          [LLVMMatchType<0>],
-                                          [IntrSpeculatable, IntrNoMem]>;
+                                            [IntrReadMem, IntrArgMemOnly]>;
 
 //===------------------------ Stackmap Intrinsics -------------------------===//
 //
@@ -796,7 +776,6 @@ def int_coro_free : Intrinsic<[llvm_ptr_ty], [llvm_token_ty, llvm_ptr_ty],
 def int_coro_end : Intrinsic<[llvm_i1_ty], [llvm_ptr_ty, llvm_i1_ty], []>;
 
 def int_coro_frame : Intrinsic<[llvm_ptr_ty], [], [IntrNoMem]>;
-def int_coro_noop : Intrinsic<[llvm_ptr_ty], [], [IntrNoMem]>;
 def int_coro_size : Intrinsic<[llvm_anyint_ty], [], [IntrNoMem]>;
 
 def int_coro_save : Intrinsic<[llvm_token_ty], [llvm_ptr_ty], []>;
@@ -910,10 +889,6 @@ def int_type_checked_load : Intrinsic<[llvm_ptr_ty, llvm_i1_ty],
                                       [llvm_ptr_ty, llvm_i32_ty, llvm_metadata_ty],
                                       [IntrNoMem]>;
 
-// Create a branch funnel that implements an indirect call to a limited set of
-// callees. This needs to be a musttail call.
-def int_icall_branch_funnel : Intrinsic<[], [llvm_vararg_ty], []>;
-
 def int_load_relative: Intrinsic<[llvm_ptr_ty], [llvm_ptr_ty, llvm_anyint_ty],
                                  [IntrReadMem, IntrArgMemOnly]>;
 
@@ -923,10 +898,6 @@ def int_load_relative: Intrinsic<[llvm_ptr_ty], [llvm_ptr_ty, llvm_anyint_ty],
 // Takes a pointer to a string and the length of the string.
 def int_xray_customevent : Intrinsic<[], [llvm_ptr_ty, llvm_i32_ty],
                                      [NoCapture<0>, ReadOnly<0>, IntrWriteMem]>;
-// Typed event logging for x-ray.
-// Takes a numeric type tag, a pointer to a string and the length of the string.
-def int_xray_typedevent : Intrinsic<[], [llvm_i16_ty, llvm_ptr_ty, llvm_i32_ty],
-                                        [NoCapture<1>, ReadOnly<1>, IntrWriteMem]>;
 //===----------------------------------------------------------------------===//
 
 //===------ Memory intrinsics with element-wise atomicity guarantees ------===//

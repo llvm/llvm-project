@@ -50,9 +50,6 @@ namespace PPC {
     PRED_UN_PLUS  = (3 << 5) | 15,
     PRED_NU_PLUS  = (3 << 5) |  7,
 
-    // SPE scalar compare instructions always set the GT bit.
-    PRED_SPE      = PRED_GT,
-
     // When dealing with individual condition-register bits, we have simple set
     // and unset predicates.
     PRED_BIT_SET =   1024,

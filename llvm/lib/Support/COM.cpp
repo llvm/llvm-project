@@ -13,11 +13,11 @@
 
 #include "llvm/Support/COM.h"
 
-#include "llvm/Config/llvm-config.h"
+#include "llvm/Config/config.h"
 
 // Include the platform-specific parts of this class.
 #ifdef LLVM_ON_UNIX
 #include "Unix/COM.inc"
-#elif _WIN32
+#elif LLVM_ON_WIN32
 #include "Windows/COM.inc"
 #endif

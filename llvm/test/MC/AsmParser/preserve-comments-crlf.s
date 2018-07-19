@@ -1,4 +1,3 @@
-	#REQUIRES: shell
 	#RUN: llvm-mc -preserve-comments -n -triple i386-linux-gnu < %s > %t
 	#RUN: diff --strip-trailing-cr %s %t
 	.text

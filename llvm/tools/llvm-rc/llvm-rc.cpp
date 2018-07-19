@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "ResourceFileWriter.h"
-#include "ResourceScriptCppFilter.h"
 #include "ResourceScriptParser.h"
 #include "ResourceScriptStmt.h"
 #include "ResourceScriptToken.h"
@@ -22,10 +21,8 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
@@ -79,13 +76,22 @@ LLVM_ATTRIBUTE_NORETURN static void fatalError(const Twine &Message) {
 
 } // anonymous namespace
 
-int main(int Argc, const char **Argv) {
-  InitLLVM X(Argc, Argv);
+int main(int argc_, const char *argv_[]) {
+  sys::PrintStackTraceOnErrorSignal(argv_[0]);
+  PrettyStackTraceProgram X(argc_, argv_);
+
   ExitOnErr.setBanner("llvm-rc: ");
+
+  SmallVector<const char *, 256> argv;
+  SpecificBumpPtrAllocator<char> ArgAllocator;
+  ExitOnErr(errorCodeToError(sys::Process::GetArgumentVector(
+      argv, makeArrayRef(argv_, argc_), ArgAllocator)));
+
+  llvm_shutdown_obj Y;
 
   RcOptTable T;
   unsigned MAI, MAC;
-  ArrayRef<const char *> ArgsArr = makeArrayRef(Argv + 1, Argc - 1);
+  ArrayRef<const char *> ArgsArr = makeArrayRef(argv_ + 1, argc_);
   opt::InputArgList InputArgs = T.ParseArgs(ArgsArr, MAI, MAC);
 
   // The tool prints nothing when invoked with no command-line arguments.
@@ -112,8 +118,7 @@ int main(int Argc, const char **Argv) {
   std::unique_ptr<MemoryBuffer> FileContents = std::move(*File);
   StringRef Contents = FileContents->getBuffer();
 
-  std::string FilteredContents = filterCppOutput(Contents);
-  std::vector<RCToken> Tokens = ExitOnErr(tokenizeRC(FilteredContents));
+  std::vector<RCToken> Tokens = ExitOnErr(tokenizeRC(Contents));
 
   if (BeVerbose) {
     const Twine TokenNames[] = {
@@ -132,47 +137,25 @@ int main(int Argc, const char **Argv) {
     }
   }
 
-  WriterParams Params;
+  SearchParams Params;
   SmallString<128> InputFile(InArgsInfo[0]);
   llvm::sys::fs::make_absolute(InputFile);
   Params.InputFilePath = InputFile;
   Params.Include = InputArgs.getAllArgValues(OPT_INCLUDE);
   Params.NoInclude = InputArgs.getAllArgValues(OPT_NOINCLUDE);
 
-  if (InputArgs.hasArg(OPT_CODEPAGE)) {
-    if (InputArgs.getLastArgValue(OPT_CODEPAGE)
-            .getAsInteger(10, Params.CodePage))
-      fatalError("Invalid code page: " +
-                 InputArgs.getLastArgValue(OPT_CODEPAGE));
-    switch (Params.CodePage) {
-    case CpAcp:
-    case CpWin1252:
-    case CpUtf8:
-      break;
-    default:
-      fatalError(
-          "Unsupported code page, only 0, 1252 and 65001 are supported!");
-    }
-  }
-
   std::unique_ptr<ResourceFileWriter> Visitor;
   bool IsDryRun = InputArgs.hasArg(OPT_DRY_RUN);
 
   if (!IsDryRun) {
     auto OutArgsInfo = InputArgs.getAllArgValues(OPT_FILEOUT);
-    if (OutArgsInfo.empty()) {
-      SmallString<128> OutputFile = InputFile;
-      llvm::sys::path::replace_extension(OutputFile, "res");
-      OutArgsInfo.push_back(OutputFile.str());
-    }
-
     if (OutArgsInfo.size() != 1)
       fatalError(
-          "No more than one output file should be provided (using /FO flag).");
+          "Exactly one output file should be provided (using /FO flag).");
 
     std::error_code EC;
-    auto FOut = llvm::make_unique<raw_fd_ostream>(
-        OutArgsInfo[0], EC, sys::fs::FA_Read | sys::fs::FA_Write);
+    auto FOut =
+        llvm::make_unique<raw_fd_ostream>(OutArgsInfo[0], EC, sys::fs::F_RW);
     if (EC)
       fatalError("Error opening output file '" + OutArgsInfo[0] +
                  "': " + EC.message());

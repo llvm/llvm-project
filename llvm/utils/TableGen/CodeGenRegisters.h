@@ -19,16 +19,16 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SparseBitVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MachineValueType.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/SetTheory.h"
 #include <cassert>
@@ -80,10 +80,6 @@ namespace llvm {
     // Are all super-registers containing this SubRegIndex covered by their
     // sub-registers?
     bool AllSuperRegsCovered;
-    // A subregister index is "artificial" if every subregister obtained
-    // from applying this index is artificial. Artificial subregister
-    // indexes are not used to create new register classes.
-    bool Artificial;
 
     CodeGenSubRegIndex(Record *R, unsigned Enum);
     CodeGenSubRegIndex(StringRef N, StringRef Nspace, unsigned Enum);
@@ -154,7 +150,6 @@ namespace llvm {
     unsigned CostPerUse;
     bool CoveredBySubRegs;
     bool HasDisjunctSubRegs;
-    bool Artificial;
 
     // Map SubRegIndex -> Register.
     typedef std::map<CodeGenSubRegIndex *, CodeGenRegister *, deref<llvm::less>>
@@ -336,8 +331,6 @@ namespace llvm {
     /// True if there are at least 2 subregisters which do not interfere.
     bool HasDisjunctSubRegs;
     bool CoveredBySubRegs;
-    /// A register class is artificial if all its members are artificial.
-    bool Artificial;
 
     // Return the Record that defined this class, or NULL if the class was
     // created by TableGen.
@@ -434,8 +427,7 @@ namespace llvm {
     const BitVector &getTopoSigs() const { return TopoSigs; }
 
     // Populate a unique sorted list of units from a register set.
-    void buildRegUnitSet(const CodeGenRegBank &RegBank,
-                         std::vector<unsigned> &RegUnits) const;
+    void buildRegUnitSet(std::vector<unsigned> &RegUnits) const;
 
     CodeGenRegisterClass(CodeGenRegBank&, Record *R);
 
@@ -483,11 +475,8 @@ namespace llvm {
     // Index into RegClassUnitSets where we can find the list of UnitSets that
     // contain this unit.
     unsigned RegClassUnitSetsIdx;
-    // A register unit is artificial if at least one of its roots is
-    // artificial.
-    bool Artificial;
 
-    RegUnit() : Weight(0), RegClassUnitSetsIdx(0), Artificial(false) {
+    RegUnit() : Weight(0), RegClassUnitSetsIdx(0) {
       Roots[0] = Roots[1] = nullptr;
     }
 
@@ -561,9 +550,6 @@ namespace llvm {
 
     // Give each register unit set an order based on sorting criteria.
     std::vector<unsigned> RegUnitSetOrder;
-
-    // Keep track of synthesized definitions generated in TupleExpander.
-    std::vector<std::unique_ptr<Record>> SynthDefs;
 
     // Add RC to *2RC maps.
     void addToMaps(CodeGenRegisterClass*);
@@ -662,12 +648,8 @@ namespace llvm {
     // registers.
     unsigned newRegUnit(CodeGenRegister *R0, CodeGenRegister *R1 = nullptr) {
       RegUnits.resize(RegUnits.size() + 1);
-      RegUnit &RU = RegUnits.back();
-      RU.Roots[0] = R0;
-      RU.Roots[1] = R1;
-      RU.Artificial = R0->Artificial;
-      if (R1)
-        RU.Artificial |= R1->Artificial;
+      RegUnits.back().Roots[0] = R0;
+      RegUnits.back().Roots[1] = R1;
       return RegUnits.size() - 1;
     }
 

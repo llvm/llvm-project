@@ -41,7 +41,7 @@ static cl::opt<bool> PrintMustModRef("print-mustmodref", cl::ReallyHidden);
 
 static cl::opt<bool> EvalAAMD("evaluate-aa-metadata", cl::ReallyHidden);
 
-static void PrintResults(AliasResult AR, bool P, const Value *V1,
+static void PrintResults(const char *Msg, bool P, const Value *V1,
                          const Value *V2, const Module *M) {
   if (PrintAll || P) {
     std::string o1, o2;
@@ -50,15 +50,18 @@ static void PrintResults(AliasResult AR, bool P, const Value *V1,
       V1->printAsOperand(os1, true, M);
       V2->printAsOperand(os2, true, M);
     }
-
+    
     if (o2 < o1)
       std::swap(o1, o2);
-    errs() << "  " << AR << ":\t" << o1 << ", " << o2 << "\n";
+    errs() << "  " << Msg << ":\t"
+           << o1 << ", "
+           << o2 << "\n";
   }
 }
 
-static inline void PrintModRefResults(const char *Msg, bool P, Instruction *I,
-                                      Value *Ptr, Module *M) {
+static inline void
+PrintModRefResults(const char *Msg, bool P, Instruction *I, Value *Ptr,
+                   Module *M) {
   if (PrintAll || P) {
     errs() << "  " << Msg << ":  Ptr: ";
     Ptr->printAsOperand(errs(), true, M);
@@ -66,19 +69,21 @@ static inline void PrintModRefResults(const char *Msg, bool P, Instruction *I,
   }
 }
 
-static inline void PrintModRefResults(const char *Msg, bool P, CallSite CSA,
-                                      CallSite CSB, Module *M) {
+static inline void
+PrintModRefResults(const char *Msg, bool P, CallSite CSA, CallSite CSB,
+                   Module *M) {
   if (PrintAll || P) {
-    errs() << "  " << Msg << ": " << *CSA.getInstruction() << " <-> "
-           << *CSB.getInstruction() << '\n';
+    errs() << "  " << Msg << ": " << *CSA.getInstruction()
+           << " <-> " << *CSB.getInstruction() << '\n';
   }
 }
 
-static inline void PrintLoadStoreResults(AliasResult AR, bool P,
-                                         const Value *V1, const Value *V2,
-                                         const Module *M) {
+static inline void
+PrintLoadStoreResults(const char *Msg, bool P, const Value *V1,
+                      const Value *V2, const Module *M) {
   if (PrintAll || P) {
-    errs() << "  " << AR << ": " << *V1 << " <-> " << *V2 << '\n';
+    errs() << "  " << Msg << ": " << *V1
+           << " <-> " << *V2 << '\n';
   }
 }
 
@@ -150,22 +155,22 @@ void AAEvaluator::runInternal(Function &F, AAResults &AA) {
       Type *I2ElTy =cast<PointerType>((*I2)->getType())->getElementType();
       if (I2ElTy->isSized()) I2Size = DL.getTypeStoreSize(I2ElTy);
 
-      AliasResult AR = AA.alias(*I1, I1Size, *I2, I2Size);
-      switch (AR) {
+      switch (AA.alias(*I1, I1Size, *I2, I2Size)) {
       case NoAlias:
-        PrintResults(AR, PrintNoAlias, *I1, *I2, F.getParent());
+        PrintResults("NoAlias", PrintNoAlias, *I1, *I2, F.getParent());
         ++NoAliasCount;
         break;
       case MayAlias:
-        PrintResults(AR, PrintMayAlias, *I1, *I2, F.getParent());
+        PrintResults("MayAlias", PrintMayAlias, *I1, *I2, F.getParent());
         ++MayAliasCount;
         break;
       case PartialAlias:
-        PrintResults(AR, PrintPartialAlias, *I1, *I2, F.getParent());
+        PrintResults("PartialAlias", PrintPartialAlias, *I1, *I2,
+                     F.getParent());
         ++PartialAliasCount;
         break;
       case MustAlias:
-        PrintResults(AR, PrintMustAlias, *I1, *I2, F.getParent());
+        PrintResults("MustAlias", PrintMustAlias, *I1, *I2, F.getParent());
         ++MustAliasCount;
         break;
       }
@@ -176,23 +181,26 @@ void AAEvaluator::runInternal(Function &F, AAResults &AA) {
     // iterate over all pairs of load, store
     for (Value *Load : Loads) {
       for (Value *Store : Stores) {
-        AliasResult AR = AA.alias(MemoryLocation::get(cast<LoadInst>(Load)),
-                                  MemoryLocation::get(cast<StoreInst>(Store)));
-        switch (AR) {
+        switch (AA.alias(MemoryLocation::get(cast<LoadInst>(Load)),
+                         MemoryLocation::get(cast<StoreInst>(Store)))) {
         case NoAlias:
-          PrintLoadStoreResults(AR, PrintNoAlias, Load, Store, F.getParent());
+          PrintLoadStoreResults("NoAlias", PrintNoAlias, Load, Store,
+                                F.getParent());
           ++NoAliasCount;
           break;
         case MayAlias:
-          PrintLoadStoreResults(AR, PrintMayAlias, Load, Store, F.getParent());
+          PrintLoadStoreResults("MayAlias", PrintMayAlias, Load, Store,
+                                F.getParent());
           ++MayAliasCount;
           break;
         case PartialAlias:
-          PrintLoadStoreResults(AR, PrintPartialAlias, Load, Store, F.getParent());
+          PrintLoadStoreResults("PartialAlias", PrintPartialAlias, Load, Store,
+                                F.getParent());
           ++PartialAliasCount;
           break;
         case MustAlias:
-          PrintLoadStoreResults(AR, PrintMustAlias, Load, Store, F.getParent());
+          PrintLoadStoreResults("MustAlias", PrintMustAlias, Load, Store,
+                                F.getParent());
           ++MustAliasCount;
           break;
         }
@@ -203,23 +211,26 @@ void AAEvaluator::runInternal(Function &F, AAResults &AA) {
     for (SetVector<Value *>::iterator I1 = Stores.begin(), E = Stores.end();
          I1 != E; ++I1) {
       for (SetVector<Value *>::iterator I2 = Stores.begin(); I2 != I1; ++I2) {
-        AliasResult AR = AA.alias(MemoryLocation::get(cast<StoreInst>(*I1)),
-                                  MemoryLocation::get(cast<StoreInst>(*I2)));
-        switch (AR) {
+        switch (AA.alias(MemoryLocation::get(cast<StoreInst>(*I1)),
+                         MemoryLocation::get(cast<StoreInst>(*I2)))) {
         case NoAlias:
-          PrintLoadStoreResults(AR, PrintNoAlias, *I1, *I2, F.getParent());
+          PrintLoadStoreResults("NoAlias", PrintNoAlias, *I1, *I2,
+                                F.getParent());
           ++NoAliasCount;
           break;
         case MayAlias:
-          PrintLoadStoreResults(AR, PrintMayAlias, *I1, *I2, F.getParent());
+          PrintLoadStoreResults("MayAlias", PrintMayAlias, *I1, *I2,
+                                F.getParent());
           ++MayAliasCount;
           break;
         case PartialAlias:
-          PrintLoadStoreResults(AR, PrintPartialAlias, *I1, *I2, F.getParent());
+          PrintLoadStoreResults("PartialAlias", PrintPartialAlias, *I1, *I2,
+                                F.getParent());
           ++PartialAliasCount;
           break;
         case MustAlias:
-          PrintLoadStoreResults(AR, PrintMustAlias, *I1, *I2, F.getParent());
+          PrintLoadStoreResults("MustAlias", PrintMustAlias, *I1, *I2,
+                                F.getParent());
           ++MustAliasCount;
           break;
         }

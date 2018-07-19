@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}v_sad_u32_pat1:
 ; GCN: v_sad_u32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
@@ -59,7 +59,7 @@ define amdgpu_kernel void @v_sad_u32_multi_use_sub_pat1(i32 addrspace(1)* %out, 
   %t1 = select i1 %icmp1, i32 %a, i32 %b
 
   %ret0 = sub i32 %t0, %t1
-  store volatile i32 %ret0, i32  addrspace(5)*undef
+  store volatile i32 %ret0, i32 *undef
   %ret = add i32 %ret0, %c
 
   store i32 %ret, i32 addrspace(1)* %out
@@ -77,7 +77,7 @@ define amdgpu_kernel void @v_sad_u32_multi_use_add_pat1(i32 addrspace(1)* %out, 
 
   %ret0 = sub i32 %t0, %t1
   %ret = add i32 %ret0, %c
-  store volatile i32 %ret, i32  addrspace(5)*undef
+  store volatile i32 %ret, i32 *undef
   store i32 %ret, i32 addrspace(1)* %out
   ret void
 }
@@ -87,7 +87,7 @@ define amdgpu_kernel void @v_sad_u32_multi_use_add_pat1(i32 addrspace(1)* %out, 
 define amdgpu_kernel void @v_sad_u32_multi_use_max_pat1(i32 addrspace(1)* %out, i32 %a, i32 %b, i32 %c) {
   %icmp0 = icmp ugt i32 %a, %b
   %t0 = select i1 %icmp0, i32 %a, i32 %b
-  store volatile i32 %t0, i32  addrspace(5)*undef
+  store volatile i32 %t0, i32 *undef
 
   %icmp1 = icmp ule i32 %a, %b
   %t1 = select i1 %icmp1, i32 %a, i32 %b
@@ -108,7 +108,7 @@ define amdgpu_kernel void @v_sad_u32_multi_use_min_pat1(i32 addrspace(1)* %out, 
   %icmp1 = icmp ule i32 %a, %b
   %t1 = select i1 %icmp1, i32 %a, i32 %b
 
-  store volatile i32 %t1, i32  addrspace(5)*undef
+  store volatile i32 %t1, i32 *undef
 
   %ret0 = sub i32 %t0, %t1
   %ret = add i32 %ret0, %c
@@ -122,7 +122,7 @@ define amdgpu_kernel void @v_sad_u32_multi_use_min_pat1(i32 addrspace(1)* %out, 
 define amdgpu_kernel void @v_sad_u32_multi_use_sub_pat2(i32 addrspace(1)* %out, i32 %a, i32 %b, i32 %c) {
   %icmp0 = icmp ugt i32 %a, %b
   %sub0 = sub i32 %a, %b
-  store volatile i32 %sub0, i32  addrspace(5)*undef
+  store volatile i32 %sub0, i32 *undef
   %sub1 = sub i32 %b, %a
   %ret0 = select i1 %icmp0, i32 %sub0, i32 %sub1
 
@@ -141,7 +141,7 @@ define amdgpu_kernel void @v_sad_u32_multi_use_select_pat2(i32 addrspace(1)* %ou
   %sub0 = sub i32 %a, %b
   %sub1 = sub i32 %b, %a
   %ret0 = select i1 %icmp0, i32 %sub0, i32 %sub1
-  store volatile i32 %ret0, i32  addrspace(5)*undef
+  store volatile i32 %ret0, i32 *undef
 
   %ret = add i32 %ret0, %c
 
@@ -203,11 +203,8 @@ define amdgpu_kernel void @v_sad_u32_i16_pat1(i16 addrspace(1)* %out, i16 %a, i1
 }
 
 ; GCN-LABEL: {{^}}v_sad_u32_i16_pat2:
-; GCN: v_sad_u32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-define amdgpu_kernel void @v_sad_u32_i16_pat2(i16 addrspace(1)* %out) {
-  %a = load volatile i16, i16 addrspace(1)* undef
-  %b = load volatile i16, i16 addrspace(1)* undef
-  %c = load volatile i16, i16 addrspace(1)* undef
+; GCN: v_sad_u32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+define amdgpu_kernel void @v_sad_u32_i16_pat2(i16 addrspace(1)* %out, i16 zeroext %a, i16 zeroext %b, i16 zeroext %c) {
   %icmp0 = icmp ugt i16 %a, %b
   %sub0 = sub i16 %a, %b
   %sub1 = sub i16 %b, %a
@@ -236,31 +233,8 @@ define amdgpu_kernel void @v_sad_u32_i8_pat1(i8 addrspace(1)* %out, i8 %a, i8 %b
 }
 
 ; GCN-LABEL: {{^}}v_sad_u32_i8_pat2:
-; GCN: v_sad_u32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-define amdgpu_kernel void @v_sad_u32_i8_pat2(i8 addrspace(1)* %out) {
-  %a = load volatile i8, i8 addrspace(1)* undef
-  %b = load volatile i8, i8 addrspace(1)* undef
-  %c = load volatile i8, i8 addrspace(1)* undef
-  %icmp0 = icmp ugt i8 %a, %b
-  %sub0 = sub i8 %a, %b
-  %sub1 = sub i8 %b, %a
-  %ret0 = select i1 %icmp0, i8 %sub0, i8 %sub1
-
-  %ret = add i8 %ret0, %c
-
-  store i8 %ret, i8 addrspace(1)* %out
-  ret void
-}
-
-; GCN-LABEL: {{^}}s_sad_u32_i8_pat2:
-; GCN: s_load_dword
-; GCN: s_bfe_u32
-; GCN: s_sub_i32
-; GCN: s_and_b32
-; GCN: s_sub_i32
-; GCN: s_lshr_b32
-; GCN: v_add_i32_e32
-define amdgpu_kernel void @s_sad_u32_i8_pat2(i8 addrspace(1)* %out, i8 zeroext %a, i8 zeroext %b, i8 zeroext %c) {
+; GCN: v_sad_u32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+define amdgpu_kernel void @v_sad_u32_i8_pat2(i8 addrspace(1)* %out, i8 zeroext %a, i8 zeroext %b, i8 zeroext %c) {
   %icmp0 = icmp ugt i8 %a, %b
   %sub0 = sub i8 %a, %b
   %sub1 = sub i8 %b, %a

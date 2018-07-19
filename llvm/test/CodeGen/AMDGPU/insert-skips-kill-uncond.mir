@@ -10,11 +10,11 @@
 # CHECK-LABEL: name: kill_uncond_branch
 
 # CHECK: bb.0:
-# CHECK: S_CBRANCH_VCCNZ %bb.1, implicit $vcc
+# CHECK: S_CBRANCH_VCCNZ %bb.1, implicit %vcc
 
 # CHECK: bb.1:
 # CHECK: V_CMPX_LE_F32_e32
-# CHECK-NEXT: S_CBRANCH_EXECNZ %bb.2, implicit $exec
+# CHECK-NEXT: S_CBRANCH_EXECNZ %bb.2, implicit %exec
 
 # CHECK: bb.3:
 # CHECK-NEXT: EXP_DONE
@@ -28,12 +28,12 @@ name: kill_uncond_branch
 body: |
   bb.0:
     successors: %bb.1
-    S_CBRANCH_VCCNZ %bb.1, implicit $vcc
+    S_CBRANCH_VCCNZ %bb.1, implicit %vcc
 
   bb.1:
     successors: %bb.2
-    $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-    SI_KILL_F32_COND_IMM_TERMINATOR $vgpr0, 0, 3, implicit-def $exec, implicit-def $vcc, implicit-def $scc, implicit $exec
+    %vgpr0 = V_MOV_B32_e32 0, implicit %exec
+    SI_KILL_F32_COND_IMM_TERMINATOR %vgpr0, 0, 3, implicit-def %exec, implicit-def %vcc, implicit %exec
     S_BRANCH %bb.2
 
   bb.2:

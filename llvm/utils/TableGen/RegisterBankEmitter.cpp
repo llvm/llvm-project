@@ -291,11 +291,9 @@ void RegisterBankEmitter::run(raw_ostream &OS) {
       visitRegisterBankClasses(
           RegisterClassHierarchy, RC, "explicit",
           [&Bank](const CodeGenRegisterClass *RC, StringRef Kind) {
-            LLVM_DEBUG(dbgs()
-                       << "Added " << RC->getName() << "(" << Kind << ")\n");
+            DEBUG(dbgs() << "Added " << RC->getName() << "(" << Kind << ")\n");
             Bank.addRegisterClass(RC);
-          },
-          VisitedRCs);
+          }, VisitedRCs);
     }
 
     Banks.push_back(Bank);

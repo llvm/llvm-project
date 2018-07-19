@@ -10,8 +10,6 @@
 // CHECK-NEXT:   Group {
 // CHECK-NEXT:     Name: .group
 // CHECK-NEXT:     Index:
-// CHECK-NEXT:     Link:
-// CHECK-NEXT:     Info:
 // CHECK-NEXT:     Type: COMDAT
 // CHECK-NEXT:     Signature: 123
 // CHECK-NEXT:     Section(s) in group [
@@ -21,8 +19,6 @@
 // CHECK-NEXT:   Group {
 // CHECK-NEXT:     Name: .group
 // CHECK-NEXT:     Index:
-// CHECK-NEXT:     Link:
-// CHECK-NEXT:     Info:
 // CHECK-NEXT:     Type: COMDAT
 // CHECK-NEXT:     Signature: abc
 // CHECK-NEXT:     Section(s) in group [

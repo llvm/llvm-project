@@ -15,9 +15,9 @@ target triple = "i686-pc-win32"
 
 @c = global { i8, [63 x i8] } { i8 42, [63 x i8] zeroinitializer }, align 32
 @llvm.global_ctors = appending global [1 x { i32, void ()* }] [{ i32, void ()* } { i32 1, void ()* @asan.module_ctor }]
-@___asan_gen_ = private constant [7 x i8] c"asan.c\00", align 1
-@___asan_gen_1 = private unnamed_addr constant [2 x i8] c"c\00", align 1
-@0 = internal global [1 x { i32, i32, i32, i32, i32, i32 }] [{ i32, i32, i32, i32, i32, i32 } { i32 ptrtoint ({ i8, [63 x i8] }* @c to i32), i32 1, i32 64, i32 ptrtoint ([2 x i8]* @___asan_gen_1 to i32), i32 ptrtoint ([7 x i8]* @___asan_gen_ to i32), i32 0 }]
+@__asan_gen_ = private constant [7 x i8] c"asan.c\00", align 1
+@__asan_gen_1 = private unnamed_addr constant [2 x i8] c"c\00", align 1
+@0 = internal global [1 x { i32, i32, i32, i32, i32, i32 }] [{ i32, i32, i32, i32, i32, i32 } { i32 ptrtoint ({ i8, [63 x i8] }* @c to i32), i32 1, i32 64, i32 ptrtoint ([2 x i8]* @__asan_gen_1 to i32), i32 ptrtoint ([7 x i8]* @__asan_gen_ to i32), i32 0 }]
 @llvm.global_dtors = appending global [1 x { i32, void ()* }] [{ i32, void ()* } { i32 1, void ()* @asan.module_dtor }]
 
 define internal void @asan.module_ctor() {

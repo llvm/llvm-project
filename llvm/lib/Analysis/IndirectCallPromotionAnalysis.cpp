@@ -71,19 +71,19 @@ uint32_t ICallPromotionAnalysis::getProfitablePromotionCandidates(
     const Instruction *Inst, uint32_t NumVals, uint64_t TotalCount) {
   ArrayRef<InstrProfValueData> ValueDataRef(ValueDataArray.get(), NumVals);
 
-  LLVM_DEBUG(dbgs() << " \nWork on callsite " << *Inst
-                    << " Num_targets: " << NumVals << "\n");
+  DEBUG(dbgs() << " \nWork on callsite " << *Inst << " Num_targets: " << NumVals
+               << "\n");
 
   uint32_t I = 0;
   uint64_t RemainingCount = TotalCount;
   for (; I < MaxNumPromotions && I < NumVals; I++) {
     uint64_t Count = ValueDataRef[I].Count;
     assert(Count <= RemainingCount);
-    LLVM_DEBUG(dbgs() << " Candidate " << I << " Count=" << Count
-                      << "  Target_func: " << ValueDataRef[I].Value << "\n");
+    DEBUG(dbgs() << " Candidate " << I << " Count=" << Count
+                 << "  Target_func: " << ValueDataRef[I].Value << "\n");
 
     if (!isPromotionProfitable(Count, TotalCount, RemainingCount)) {
-      LLVM_DEBUG(dbgs() << " Not promote: Cold target.\n");
+      DEBUG(dbgs() << " Not promote: Cold target.\n");
       return I;
     }
     RemainingCount -= Count;

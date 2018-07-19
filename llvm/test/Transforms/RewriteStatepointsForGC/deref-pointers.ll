@@ -62,19 +62,9 @@ entry:
 
 define i8 @test_md(i8 addrspace(1)* %ptr) gc "statepoint-example" {
 ; CHECK-LABEL: @test_md(
-; CHECK: %tmp = load i8, i8 addrspace(1)* %ptr, !tbaa [[TAG_old:!.*]]
+; CHECK: %tmp = load i8, i8 addrspace(1)* %ptr, !tbaa !0
 entry:
   %tmp = load i8, i8 addrspace(1)* %ptr, !tbaa !0
-  call void @foo() [ "deopt"(i32 0, i32 -1, i32 0, i32 0, i32 0) ]
-  ret i8 %tmp
-}
-
-; Same as test_md() above, but with new-format TBAA metadata.
-define i8 @test_md_new(i8 addrspace(1)* %ptr) gc "statepoint-example" {
-; CHECK-LABEL: @test_md_new(
-; CHECK: %tmp = load i8, i8 addrspace(1)* %ptr, !tbaa [[TAG_new:!.*]]
-entry:
-  %tmp = load i8, i8 addrspace(1)* %ptr, !tbaa !4
   call void @foo() [ "deopt"(i32 0, i32 -1, i32 0, i32 0, i32 0) ]
   ret i8 %tmp
 }
@@ -102,25 +92,14 @@ entry:
 define i8 addrspace(1)* @test_callsite_arg_attribute(i8 addrspace(1)* %ptr) gc "statepoint-example" {
 ; CHECK-LABEL: @test_callsite_arg_attribute(
 ; CHECK: call void @some_function_consumer(i8 addrspace(1)* %ptr)
+; CHECK: !0 = !{!1, !1, i64 0}
+; CHECK: !1 = !{!"red", !2}
+; CHECK: !2 = !{!"blue"}
 entry:
   call void @some_function_consumer(i8 addrspace(1)* dereferenceable(4) noalias %ptr)
   call void @foo() [ "deopt"(i32 0, i32 -1, i32 0, i32 0, i32 0) ]
   ret i8 addrspace(1)* %ptr
 }
-
-!0 = !{!1, !2, i64 0, i64 1}  ; TAG_old
-!1 = !{!"type_base_old", !2, i64 0}
-!2 = !{!"type_access_old", !3}
-!3 = !{!"root"}
-
-!4 = !{!5, !6, i64 0, i64 1, i64 1}  ; TAG_new
-!5 = !{!3, i64 1, !"type_base_new", !6, i64 0, i64 1}
-!6 = !{!3, i64 1, !"type_access_new"}
-
-; CHECK-DAG: [[ROOT:!.*]] = !{!"root"}
-; CHECK-DAG: [[TYPE_access_old:!.*]] = !{!"type_access_old", [[ROOT]]}
-; CHECK-DAG: [[TYPE_base_old:!.*]] = !{!"type_base_old", [[TYPE_access_old]], i64 0}
-; CHECK-DAG: [[TAG_old]] = !{[[TYPE_base_old]], [[TYPE_access_old]], i64 0}
-; CHECK-DAG: [[TYPE_access_new:!.*]] = !{[[ROOT]], i64 1, !"type_access_new"}
-; CHECK-DAG: [[TYPE_base_new:!.*]] = !{[[ROOT]], i64 1, !"type_base_new", [[TYPE_access_new]], i64 0, i64 1}
-; CHECK-DAG: [[TAG_new]] = !{[[TYPE_base_new]], [[TYPE_access_new]], i64 0, i64 1}
+!0 = !{!1, !1, i64 0, i64 1}
+!1 = !{!"red", !2}
+!2 = !{!"blue"}

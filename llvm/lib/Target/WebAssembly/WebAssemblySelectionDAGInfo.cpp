@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file implements the WebAssemblySelectionDAGInfo class.
+/// \brief This file implements the WebAssemblySelectionDAGInfo class.
 ///
 //===----------------------------------------------------------------------===//
 

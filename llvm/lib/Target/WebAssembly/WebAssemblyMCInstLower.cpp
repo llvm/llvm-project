@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains code to lower WebAssembly MachineInstrs to their
+/// \brief This file contains code to lower WebAssembly MachineInstrs to their
 /// corresponding MCInst records.
 ///
 //===----------------------------------------------------------------------===//
@@ -25,6 +25,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCSymbolELF.h"
 #include "llvm/MC/MCSymbolWasm.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -33,7 +34,11 @@ using namespace llvm;
 MCSymbol *
 WebAssemblyMCInstLower::GetGlobalAddressSymbol(const MachineOperand &MO) const {
   const GlobalValue *Global = MO.getGlobal();
-  MCSymbolWasm *WasmSym = cast<MCSymbolWasm>(Printer.getSymbol(Global));
+  MCSymbol *Sym = Printer.getSymbol(Global);
+  if (isa<MCSymbolELF>(Sym))
+    return Sym;
+
+  MCSymbolWasm *WasmSym = cast<MCSymbolWasm>(Sym);
 
   if (const auto *FuncTy = dyn_cast<FunctionType>(Global->getValueType())) {
     const MachineFunction &MF = *MO.getParent()->getParent()->getParent();
@@ -69,7 +74,7 @@ WebAssemblyMCInstLower::GetGlobalAddressSymbol(const MachineOperand &MO) const {
 
     WasmSym->setReturns(std::move(Returns));
     WasmSym->setParams(std::move(Params));
-    WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
+    WasmSym->setIsFunction(true);
   }
 
   return WasmSym;
@@ -78,22 +83,17 @@ WebAssemblyMCInstLower::GetGlobalAddressSymbol(const MachineOperand &MO) const {
 MCSymbol *WebAssemblyMCInstLower::GetExternalSymbolSymbol(
     const MachineOperand &MO) const {
   const char *Name = MO.getSymbolName();
-  MCSymbolWasm *WasmSym =
-      cast<MCSymbolWasm>(Printer.GetExternalSymbolSymbol(Name));
+  MCSymbol *Sym = Printer.GetExternalSymbolSymbol(Name);
+  if (isa<MCSymbolELF>(Sym))
+    return Sym;
+
+  MCSymbolWasm *WasmSym = cast<MCSymbolWasm>(Sym);
   const WebAssemblySubtarget &Subtarget = Printer.getSubtarget();
 
   // __stack_pointer is a global variable; all other external symbols used by
-  // CodeGen are functions.  It's OK to hardcode knowledge of specific symbols
-  // here; this method is precisely there for fetching the signatures of known
-  // Clang-provided symbols.
-  if (strcmp(Name, "__stack_pointer") == 0) {
-    WasmSym->setType(wasm::WASM_SYMBOL_TYPE_GLOBAL);
-    WasmSym->setGlobalType(wasm::WasmGlobalType{
-        uint8_t(Subtarget.hasAddr64() ? wasm::WASM_TYPE_I64
-                                      : wasm::WASM_TYPE_I32),
-        true});
+  // CodeGen are functions.
+  if (strcmp(Name, "__stack_pointer") == 0)
     return WasmSym;
-  }
 
   SmallVector<wasm::ValType, 4> Returns;
   SmallVector<wasm::ValType, 4> Params;
@@ -101,7 +101,7 @@ MCSymbol *WebAssemblyMCInstLower::GetExternalSymbolSymbol(
 
   WasmSym->setReturns(std::move(Returns));
   WasmSym->setParams(std::move(Params));
-  WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
+  WasmSym->setIsFunction(true);
 
   return WasmSym;
 }
@@ -169,32 +169,35 @@ void WebAssemblyMCInstLower::Lower(const MachineInstr *MI,
         const MCOperandInfo &Info = Desc.OpInfo[i];
         if (Info.OperandType == WebAssembly::OPERAND_TYPEINDEX) {
           MCSymbol *Sym = Printer.createTempSymbol("typeindex");
+          if (!isa<MCSymbolELF>(Sym)) {
+            SmallVector<wasm::ValType, 4> Returns;
+            SmallVector<wasm::ValType, 4> Params;
 
-          SmallVector<wasm::ValType, 4> Returns;
-          SmallVector<wasm::ValType, 4> Params;
+            const MachineRegisterInfo &MRI =
+                MI->getParent()->getParent()->getRegInfo();
+            for (const MachineOperand &MO : MI->defs())
+              Returns.push_back(getType(MRI.getRegClass(MO.getReg())));
+            for (const MachineOperand &MO : MI->explicit_uses())
+              if (MO.isReg())
+                Params.push_back(getType(MRI.getRegClass(MO.getReg())));
 
-          const MachineRegisterInfo &MRI =
-              MI->getParent()->getParent()->getRegInfo();
-          for (const MachineOperand &MO : MI->defs())
-            Returns.push_back(getType(MRI.getRegClass(MO.getReg())));
-          for (const MachineOperand &MO : MI->explicit_uses())
-            if (MO.isReg())
-              Params.push_back(getType(MRI.getRegClass(MO.getReg())));
+            // call_indirect instructions have a callee operand at the end which
+            // doesn't count as a param.
+            if (WebAssembly::isCallIndirect(*MI))
+              Params.pop_back();
 
-          // call_indirect instructions have a callee operand at the end which
-          // doesn't count as a param.
-          if (WebAssembly::isCallIndirect(*MI))
-            Params.pop_back();
+            MCSymbolWasm *WasmSym = cast<MCSymbolWasm>(Sym);
+            WasmSym->setReturns(std::move(Returns));
+            WasmSym->setParams(std::move(Params));
+            WasmSym->setIsFunction(true);
 
-          MCSymbolWasm *WasmSym = cast<MCSymbolWasm>(Sym);
-          WasmSym->setReturns(std::move(Returns));
-          WasmSym->setParams(std::move(Params));
-          WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
-
-          const MCExpr *Expr = MCSymbolRefExpr::create(
-              WasmSym, MCSymbolRefExpr::VK_WebAssembly_TYPEINDEX, Ctx);
-          MCOp = MCOperand::createExpr(Expr);
-          break;
+            const MCExpr *Expr =
+                MCSymbolRefExpr::create(WasmSym,
+                                        MCSymbolRefExpr::VK_WebAssembly_TYPEINDEX,
+                                        Ctx);
+            MCOp = MCOperand::createExpr(Expr);
+            break;
+          }
         }
       }
       MCOp = MCOperand::createImm(MO.getImm());

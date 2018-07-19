@@ -37,9 +37,9 @@ public:
 
  MachineDominanceFrontier();
 
- ForwardDominanceFrontierBase<MachineBasicBlock> &getBase() { return Base; }
+ DominanceFrontierBase<MachineBasicBlock, false> &getBase() { return Base; }
 
- const SmallVectorImpl<MachineBasicBlock *> &getRoots() const {
+  const SmallVectorImpl<MachineBasicBlock *> &getRoots() const {
    return Base.getRoots();
   }
 

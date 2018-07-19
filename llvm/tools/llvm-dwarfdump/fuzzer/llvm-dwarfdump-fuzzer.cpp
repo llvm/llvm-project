@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file implements a function that runs llvm-dwarfdump
+/// \brief This file implements a function that runs llvm-dwarfdump
 ///  on a single input. This function is then linked into the Fuzzer library.
 ///
 //===----------------------------------------------------------------------===//

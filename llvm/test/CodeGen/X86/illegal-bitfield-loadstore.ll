@@ -81,7 +81,6 @@ define void @i24_insert_bit(i24* %a, i1 zeroext %bit) {
 ; X86-NEXT:    orl %edx, %eax
 ; X86-NEXT:    movw %ax, (%ecx)
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: i24_insert_bit:
@@ -117,7 +116,7 @@ define void @i56_or(i56* %a) {
 ; X64-NEXT:    movzwl 4(%rdi), %eax
 ; X64-NEXT:    movzbl 6(%rdi), %ecx
 ; X64-NEXT:    movb %cl, 6(%rdi)
-; X64-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
+; X64-NEXT:    # kill: def %ecx killed %ecx killed %rcx def %rcx
 ; X64-NEXT:    shll $16, %ecx
 ; X64-NEXT:    orl %eax, %ecx
 ; X64-NEXT:    shlq $32, %rcx
@@ -149,7 +148,7 @@ define void @i56_and_or(i56* %a) {
 ; X64-NEXT:    movzwl 4(%rdi), %eax
 ; X64-NEXT:    movzbl 6(%rdi), %ecx
 ; X64-NEXT:    movb %cl, 6(%rdi)
-; X64-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
+; X64-NEXT:    # kill: def %ecx killed %ecx killed %rcx def %rcx
 ; X64-NEXT:    shll $16, %ecx
 ; X64-NEXT:    orl %eax, %ecx
 ; X64-NEXT:    shlq $32, %rcx
@@ -187,7 +186,7 @@ define void @i56_insert_bit(i56* %a, i1 zeroext %bit) {
 ; X64-NEXT:    movzwl 4(%rdi), %ecx
 ; X64-NEXT:    movzbl 6(%rdi), %edx
 ; X64-NEXT:    movb %dl, 6(%rdi)
-; X64-NEXT:    # kill: def $edx killed $edx killed $rdx def $rdx
+; X64-NEXT:    # kill: def %edx killed %edx killed %rdx def %rdx
 ; X64-NEXT:    shll $16, %edx
 ; X64-NEXT:    orl %ecx, %edx
 ; X64-NEXT:    shlq $32, %rdx

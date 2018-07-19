@@ -32,7 +32,9 @@ void SmallPtrSetImplBase::shrink_and_clear() {
   NumNonEmpty = NumTombstones = 0;
 
   // Install the new array.  Clear all the buckets to empty.
-  CurArray = (const void**)safe_malloc(sizeof(void*) * CurArraySize);
+  CurArray = (const void**)malloc(sizeof(void*) * CurArraySize);
+  if (CurArray == nullptr)
+    report_bad_alloc_error("Allocation of SmallPtrSet bucket array failed.");
 
   memset(CurArray, -1, CurArraySize*sizeof(void*));
 }
@@ -98,7 +100,9 @@ void SmallPtrSetImplBase::Grow(unsigned NewSize) {
   bool WasSmall = isSmall();
 
   // Install the new array.  Clear all the buckets to empty.
-  const void **NewBuckets = (const void**) safe_malloc(sizeof(void*) * NewSize);
+  const void **NewBuckets = (const void**) malloc(sizeof(void*) * NewSize);
+  if (NewBuckets == nullptr)
+    report_bad_alloc_error("Allocation of SmallPtrSet bucket array failed.");
 
   // Reset member only if memory was allocated successfully
   CurArray = NewBuckets;
@@ -128,7 +132,9 @@ SmallPtrSetImplBase::SmallPtrSetImplBase(const void **SmallStorage,
     CurArray = SmallArray;
   // Otherwise, allocate new heap space (unless we were the same size)
   } else {
-    CurArray = (const void**)safe_malloc(sizeof(void*) * that.CurArraySize);
+    CurArray = (const void**)malloc(sizeof(void*) * that.CurArraySize);
+    if (CurArray == nullptr)
+      report_bad_alloc_error("Allocation of SmallPtrSet bucket array failed.");
   }
 
   // Copy over the that array.
@@ -157,12 +163,16 @@ void SmallPtrSetImplBase::CopyFrom(const SmallPtrSetImplBase &RHS) {
   // Otherwise, allocate new heap space (unless we were the same size)
   } else if (CurArraySize != RHS.CurArraySize) {
     if (isSmall())
-      CurArray = (const void**)safe_malloc(sizeof(void*) * RHS.CurArraySize);
+      CurArray = (const void**)malloc(sizeof(void*) * RHS.CurArraySize);
     else {
-      const void **T = (const void**)safe_realloc(CurArray,
+      const void **T = (const void**)realloc(CurArray,
                                              sizeof(void*) * RHS.CurArraySize);
+      if (!T)
+        free(CurArray);
       CurArray = T;
     }
+    if (CurArray == nullptr)
+      report_bad_alloc_error("Allocation of SmallPtrSet bucket array failed.");
   }
 
   CopyHelper(RHS);

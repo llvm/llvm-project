@@ -28,6 +28,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -39,7 +40,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MachineValueType.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -104,11 +104,6 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
     setTargetDAGCombine(ISD::SRL);
     setTargetDAGCombine(ISD::SETCC);
     setTargetDAGCombine(ISD::VSELECT);
-
-    if (Subtarget.hasMips32r2()) {
-      setOperationAction(ISD::ADDC, MVT::i32, Legal);
-      setOperationAction(ISD::ADDE, MVT::i32, Legal);
-    }
   }
 
   if (Subtarget.hasDSPR2())
@@ -336,12 +331,8 @@ addMSAIntType(MVT::SimpleValueType Ty, const TargetRegisterClass *RC) {
   setOperationAction(ISD::SRA, Ty, Legal);
   setOperationAction(ISD::SRL, Ty, Legal);
   setOperationAction(ISD::SUB, Ty, Legal);
-  setOperationAction(ISD::SMAX, Ty, Legal);
-  setOperationAction(ISD::SMIN, Ty, Legal);
   setOperationAction(ISD::UDIV, Ty, Legal);
   setOperationAction(ISD::UREM, Ty, Legal);
-  setOperationAction(ISD::UMAX, Ty, Legal);
-  setOperationAction(ISD::UMIN, Ty, Legal);
   setOperationAction(ISD::VECTOR_SHUFFLE, Ty, Custom);
   setOperationAction(ISD::VSELECT, Ty, Legal);
   setOperationAction(ISD::XOR, Ty, Legal);
@@ -710,77 +701,6 @@ static SDValue performORCombine(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-static bool shouldTransformMulToShiftsAddsSubs(APInt C, EVT VT,
-                                               SelectionDAG &DAG,
-                                               const MipsSubtarget &Subtarget) {
-  // Estimate the number of operations the below transform will turn a
-  // constant multiply into. The number is approximately how many powers
-  // of two summed together that the constant can be broken down into.
-
-  SmallVector<APInt, 16> WorkStack(1, C);
-  unsigned Steps = 0;
-  unsigned BitWidth = C.getBitWidth();
-
-  while (!WorkStack.empty()) {
-    APInt Val = WorkStack.pop_back_val();
-
-    if (Val == 0 || Val == 1)
-      continue;
-
-    if (Val.isPowerOf2()) {
-      ++Steps;
-      continue;
-    }
-
-    APInt Floor = APInt(BitWidth, 1) << Val.logBase2();
-    APInt Ceil = Val.isNegative() ? APInt(BitWidth, 0)
-                                  : APInt(BitWidth, 1) << C.ceilLogBase2();
-
-    if ((Val - Floor).ule(Ceil - Val)) {
-      WorkStack.push_back(Floor);
-      WorkStack.push_back(Val - Floor);
-      ++Steps;
-      continue;
-    }
-
-    WorkStack.push_back(Ceil);
-    WorkStack.push_back(Ceil - Val);
-    ++Steps;
-
-    // If we have taken more than 12[1] / 8[2] steps to attempt the
-    // optimization for a native sized value, it is more than likely that this
-    // optimization will make things worse.
-    //
-    // [1] MIPS64 requires 6 instructions at most to materialize any constant,
-    //     multiplication requires at least 4 cycles, but another cycle (or two)
-    //     to retrieve the result from the HI/LO registers.
-    //
-    // [2] For MIPS32, more than 8 steps is expensive as the constant could be
-    //     materialized in 2 instructions, multiplication requires at least 4
-    //     cycles, but another cycle (or two) to retrieve the result from the
-    //     HI/LO registers.
-
-    if (Steps > 12 && (Subtarget.isABI_N32() || Subtarget.isABI_N64()))
-      return false;
-
-    if (Steps > 8 && Subtarget.isABI_O32())
-      return false;
-  }
-
-  // If the value being multiplied is not supported natively, we have to pay
-  // an additional legalization cost, conservatively assume an increase in the
-  // cost of 3 instructions per step. This values for this heuristic were
-  // determined experimentally.
-  unsigned RegisterSize = DAG.getTargetLoweringInfo()
-                              .getRegisterType(*DAG.getContext(), VT)
-                              .getSizeInBits();
-  Steps *= (VT.getSizeInBits() != RegisterSize) * 3;
-  if (Steps > 27)
-    return false;
-
-  return true;
-}
-
 static SDValue genConstMult(SDValue X, APInt C, const SDLoc &DL, EVT VT,
                             EVT ShiftTy, SelectionDAG &DAG) {
   // Return 0.
@@ -819,13 +739,11 @@ static SDValue genConstMult(SDValue X, APInt C, const SDLoc &DL, EVT VT,
 
 static SDValue performMULCombine(SDNode *N, SelectionDAG &DAG,
                                  const TargetLowering::DAGCombinerInfo &DCI,
-                                 const MipsSETargetLowering *TL,
-                                 const MipsSubtarget &Subtarget) {
+                                 const MipsSETargetLowering *TL) {
   EVT VT = N->getValueType(0);
 
   if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(N->getOperand(1)))
-    if (!VT.isVector() && shouldTransformMulToShiftsAddsSubs(
-                              C->getAPIntValue(), VT, DAG, Subtarget))
+    if (!VT.isVector())
       return genConstMult(N->getOperand(0), C->getAPIntValue(), SDLoc(N), VT,
                           TL->getScalarShiftAmountTy(DAG.getDataLayout(), VT),
                           DAG);
@@ -972,7 +890,46 @@ static SDValue performSETCCCombine(SDNode *N, SelectionDAG &DAG) {
 static SDValue performVSELECTCombine(SDNode *N, SelectionDAG &DAG) {
   EVT Ty = N->getValueType(0);
 
-  if (Ty == MVT::v2i16 || Ty == MVT::v4i8) {
+  if (Ty.is128BitVector() && Ty.isInteger()) {
+    // Try the following combines:
+    //   (vselect (setcc $a, $b, SETLT), $b, $a)) -> (vsmax $a, $b)
+    //   (vselect (setcc $a, $b, SETLE), $b, $a)) -> (vsmax $a, $b)
+    //   (vselect (setcc $a, $b, SETLT), $a, $b)) -> (vsmin $a, $b)
+    //   (vselect (setcc $a, $b, SETLE), $a, $b)) -> (vsmin $a, $b)
+    //   (vselect (setcc $a, $b, SETULT), $b, $a)) -> (vumax $a, $b)
+    //   (vselect (setcc $a, $b, SETULE), $b, $a)) -> (vumax $a, $b)
+    //   (vselect (setcc $a, $b, SETULT), $a, $b)) -> (vumin $a, $b)
+    //   (vselect (setcc $a, $b, SETULE), $a, $b)) -> (vumin $a, $b)
+    // SETGT/SETGE/SETUGT/SETUGE variants of these will show up initially but
+    // will be expanded to equivalent SETLT/SETLE/SETULT/SETULE versions by the
+    // legalizer.
+    SDValue Op0 = N->getOperand(0);
+
+    if (Op0->getOpcode() != ISD::SETCC)
+      return SDValue();
+
+    ISD::CondCode CondCode = cast<CondCodeSDNode>(Op0->getOperand(2))->get();
+    bool Signed;
+
+    if (CondCode == ISD::SETLT  || CondCode == ISD::SETLE)
+      Signed = true;
+    else if (CondCode == ISD::SETULT || CondCode == ISD::SETULE)
+      Signed = false;
+    else
+      return SDValue();
+
+    SDValue Op1 = N->getOperand(1);
+    SDValue Op2 = N->getOperand(2);
+    SDValue Op0Op0 = Op0->getOperand(0);
+    SDValue Op0Op1 = Op0->getOperand(1);
+
+    if (Op1 == Op0Op0 && Op2 == Op0Op1)
+      return DAG.getNode(Signed ? MipsISD::VSMIN : MipsISD::VUMIN, SDLoc(N),
+                         Ty, Op1, Op2);
+    else if (Op1 == Op0Op1 && Op2 == Op0Op0)
+      return DAG.getNode(Signed ? MipsISD::VSMAX : MipsISD::VUMAX, SDLoc(N),
+                         Ty, Op1, Op2);
+  } else if ((Ty == MVT::v2i16) || (Ty == MVT::v4i8)) {
     SDValue SetCC = N->getOperand(0);
 
     if (SetCC.getOpcode() != MipsISD::SETCC_DSP)
@@ -1026,7 +983,7 @@ MipsSETargetLowering::PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const {
     Val = performORCombine(N, DAG, DCI, Subtarget);
     break;
   case ISD::MUL:
-    return performMULCombine(N, DAG, DCI, this, Subtarget);
+    return performMULCombine(N, DAG, DCI, this);
   case ISD::SHL:
     Val = performSHLCombine(N, DAG, DCI, Subtarget);
     break;
@@ -1045,9 +1002,11 @@ MipsSETargetLowering::PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const {
   }
 
   if (Val.getNode()) {
-    LLVM_DEBUG(dbgs() << "\nMipsSE DAG Combine:\n";
-               N->printrWithDepth(dbgs(), &DAG); dbgs() << "\n=> \n";
-               Val.getNode()->printrWithDepth(dbgs(), &DAG); dbgs() << "\n");
+    DEBUG(dbgs() << "\nMipsSE DAG Combine:\n";
+          N->printrWithDepth(dbgs(), &DAG);
+          dbgs() << "\n=> \n";
+          Val.getNode()->printrWithDepth(dbgs(), &DAG);
+          dbgs() << "\n");
     return Val;
   }
 
@@ -1346,16 +1305,7 @@ static SDValue lowerMSASplatZExt(SDValue Op, unsigned OpNr, SelectionDAG &DAG) {
   SDValue LaneB;
 
   if (ResVecTy == MVT::v2i64) {
-    // In case of the index being passed as an immediate value, set the upper
-    // lane to 0 so that the splati.d instruction can be matched.
-    if (isa<ConstantSDNode>(LaneA))
-      LaneB = DAG.getConstant(0, DL, MVT::i32);
-    // Having the index passed in a register, set the upper lane to the same
-    // value as the lower - this results in the BUILD_VECTOR node not being
-    // expanded through stack. This way we are able to pattern match the set of
-    // nodes created here to splat.d.
-    else
-      LaneB = LaneA;
+    LaneB = DAG.getConstant(0, DL, MVT::i32);
     ViaVecTy = MVT::v4i32;
     if(BigEndian)
       std::swap(LaneA, LaneB);
@@ -1870,8 +1820,10 @@ SDValue MipsSETargetLowering::lowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::mips_fmsub_w:
   case Intrinsic::mips_fmsub_d: {
     // TODO: If intrinsics have fast-math-flags, propagate them.
-    return DAG.getNode(MipsISD::FMS, SDLoc(Op), Op->getValueType(0),
-                       Op->getOperand(1), Op->getOperand(2), Op->getOperand(3));
+    EVT ResTy = Op->getValueType(0);
+    return DAG.getNode(ISD::FSUB, SDLoc(Op), ResTy, Op->getOperand(1),
+                       DAG.getNode(ISD::FMUL, SDLoc(Op), ResTy,
+                                   Op->getOperand(2), Op->getOperand(3)));
   }
   case Intrinsic::mips_frint_w:
   case Intrinsic::mips_frint_d:
@@ -1967,49 +1919,49 @@ SDValue MipsSETargetLowering::lowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::mips_max_s_h:
   case Intrinsic::mips_max_s_w:
   case Intrinsic::mips_max_s_d:
-    return DAG.getNode(ISD::SMAX, DL, Op->getValueType(0),
+    return DAG.getNode(MipsISD::VSMAX, DL, Op->getValueType(0),
                        Op->getOperand(1), Op->getOperand(2));
   case Intrinsic::mips_max_u_b:
   case Intrinsic::mips_max_u_h:
   case Intrinsic::mips_max_u_w:
   case Intrinsic::mips_max_u_d:
-    return DAG.getNode(ISD::UMAX, DL, Op->getValueType(0),
+    return DAG.getNode(MipsISD::VUMAX, DL, Op->getValueType(0),
                        Op->getOperand(1), Op->getOperand(2));
   case Intrinsic::mips_maxi_s_b:
   case Intrinsic::mips_maxi_s_h:
   case Intrinsic::mips_maxi_s_w:
   case Intrinsic::mips_maxi_s_d:
-    return DAG.getNode(ISD::SMAX, DL, Op->getValueType(0),
+    return DAG.getNode(MipsISD::VSMAX, DL, Op->getValueType(0),
                        Op->getOperand(1), lowerMSASplatImm(Op, 2, DAG, true));
   case Intrinsic::mips_maxi_u_b:
   case Intrinsic::mips_maxi_u_h:
   case Intrinsic::mips_maxi_u_w:
   case Intrinsic::mips_maxi_u_d:
-    return DAG.getNode(ISD::UMAX, DL, Op->getValueType(0),
+    return DAG.getNode(MipsISD::VUMAX, DL, Op->getValueType(0),
                        Op->getOperand(1), lowerMSASplatImm(Op, 2, DAG));
   case Intrinsic::mips_min_s_b:
   case Intrinsic::mips_min_s_h:
   case Intrinsic::mips_min_s_w:
   case Intrinsic::mips_min_s_d:
-    return DAG.getNode(ISD::SMIN, DL, Op->getValueType(0),
+    return DAG.getNode(MipsISD::VSMIN, DL, Op->getValueType(0),
                        Op->getOperand(1), Op->getOperand(2));
   case Intrinsic::mips_min_u_b:
   case Intrinsic::mips_min_u_h:
   case Intrinsic::mips_min_u_w:
   case Intrinsic::mips_min_u_d:
-    return DAG.getNode(ISD::UMIN, DL, Op->getValueType(0),
+    return DAG.getNode(MipsISD::VUMIN, DL, Op->getValueType(0),
                        Op->getOperand(1), Op->getOperand(2));
   case Intrinsic::mips_mini_s_b:
   case Intrinsic::mips_mini_s_h:
   case Intrinsic::mips_mini_s_w:
   case Intrinsic::mips_mini_s_d:
-    return DAG.getNode(ISD::SMIN, DL, Op->getValueType(0),
+    return DAG.getNode(MipsISD::VSMIN, DL, Op->getValueType(0),
                        Op->getOperand(1), lowerMSASplatImm(Op, 2, DAG, true));
   case Intrinsic::mips_mini_u_b:
   case Intrinsic::mips_mini_u_h:
   case Intrinsic::mips_mini_u_w:
   case Intrinsic::mips_mini_u_d:
-    return DAG.getNode(ISD::UMIN, DL, Op->getValueType(0),
+    return DAG.getNode(MipsISD::VUMIN, DL, Op->getValueType(0),
                        Op->getOperand(1), lowerMSASplatImm(Op, 2, DAG));
   case Intrinsic::mips_mod_s_b:
   case Intrinsic::mips_mod_s_h:
@@ -2360,7 +2312,7 @@ SDValue MipsSETargetLowering::lowerINTRINSIC_VOID(SDValue Op,
   }
 }
 
-/// Check if the given BuildVectorSDNode is a splat.
+/// \brief Check if the given BuildVectorSDNode is a splat.
 /// This method currently relies on DAG nodes being reused when equivalent,
 /// so it's possible for this to return false even when isConstantSplat returns
 /// true.

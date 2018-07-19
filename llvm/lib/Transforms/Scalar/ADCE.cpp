@@ -174,8 +174,8 @@ class AggressiveDeadCodeElimination {
   /// marked live.
   void markLiveBranchesFromControlDependences();
 
-  /// Remove instructions not marked live, return if any instruction was
-  /// removed.
+  /// Remove instructions not marked live, return if any any instruction
+  /// was removed.
   bool removeDeadInstructions();
 
   /// Identify connected sections of the control flow graph which have
@@ -298,8 +298,8 @@ void AggressiveDeadCodeElimination::initialize() {
     auto &Info = BlockInfo[BB];
     // Real function return
     if (isa<ReturnInst>(Info.Terminator)) {
-      LLVM_DEBUG(dbgs() << "post-dom root child is a return: " << BB->getName()
-                        << '\n';);
+      DEBUG(dbgs() << "post-dom root child is a return: " << BB->getName()
+                   << '\n';);
       continue;
     }
 
@@ -356,7 +356,7 @@ void AggressiveDeadCodeElimination::markLiveInstructions() {
     // where we need to mark the inputs as live.
     while (!Worklist.empty()) {
       Instruction *LiveInst = Worklist.pop_back_val();
-      LLVM_DEBUG(dbgs() << "work live: "; LiveInst->dump(););
+      DEBUG(dbgs() << "work live: "; LiveInst->dump(););
 
       for (Use &OI : LiveInst->operands())
         if (Instruction *Inst = dyn_cast<Instruction>(OI))
@@ -378,7 +378,7 @@ void AggressiveDeadCodeElimination::markLive(Instruction *I) {
   if (Info.Live)
     return;
 
-  LLVM_DEBUG(dbgs() << "mark live: "; I->dump());
+  DEBUG(dbgs() << "mark live: "; I->dump());
   Info.Live = true;
   Worklist.push_back(I);
 
@@ -402,7 +402,7 @@ void AggressiveDeadCodeElimination::markLive(Instruction *I) {
 void AggressiveDeadCodeElimination::markLive(BlockInfoType &BBInfo) {
   if (BBInfo.Live)
     return;
-  LLVM_DEBUG(dbgs() << "mark block live: " << BBInfo.BB->getName() << '\n');
+  DEBUG(dbgs() << "mark block live: " << BBInfo.BB->getName() << '\n');
   BBInfo.Live = true;
   if (!BBInfo.CFLive) {
     BBInfo.CFLive = true;
@@ -463,7 +463,7 @@ void AggressiveDeadCodeElimination::markLiveBranchesFromControlDependences() {
   if (BlocksWithDeadTerminators.empty())
     return;
 
-  LLVM_DEBUG({
+  DEBUG({
     dbgs() << "new live blocks:\n";
     for (auto *BB : NewLiveBlocks)
       dbgs() << "\t" << BB->getName() << '\n';
@@ -487,7 +487,7 @@ void AggressiveDeadCodeElimination::markLiveBranchesFromControlDependences() {
 
   // Dead terminators which control live blocks are now marked live.
   for (auto *BB : IDFBlocks) {
-    LLVM_DEBUG(dbgs() << "live control in: " << BB->getName() << '\n');
+    DEBUG(dbgs() << "live control in: " << BB->getName() << '\n');
     markLive(BB->getTerminator());
   }
 }
@@ -501,7 +501,7 @@ bool AggressiveDeadCodeElimination::removeDeadInstructions() {
   // Updates control and dataflow around dead blocks
   updateDeadRegions();
 
-  LLVM_DEBUG({
+  DEBUG({
     for (Instruction &I : instructions(F)) {
       // Check if the instruction is alive.
       if (isLive(&I))
@@ -555,7 +555,7 @@ bool AggressiveDeadCodeElimination::removeDeadInstructions() {
 
 // A dead region is the set of dead blocks with a common live post-dominator.
 void AggressiveDeadCodeElimination::updateDeadRegions() {
-  LLVM_DEBUG({
+  DEBUG({
     dbgs() << "final dead terminator blocks: " << '\n';
     for (auto *BB : BlocksWithDeadTerminators)
       dbgs() << '\t' << BB->getName()
@@ -607,9 +607,8 @@ void AggressiveDeadCodeElimination::updateDeadRegions() {
       // It might have happened that the same successor appeared multiple times
       // and the CFG edge wasn't really removed.
       if (Succ != PreferredSucc->BB) {
-        LLVM_DEBUG(dbgs() << "ADCE: (Post)DomTree edge enqueued for deletion"
-                          << BB->getName() << " -> " << Succ->getName()
-                          << "\n");
+        DEBUG(dbgs() << "ADCE: (Post)DomTree edge enqueued for deletion"
+                     << BB->getName() << " -> " << Succ->getName() << "\n");
         DeletedEdges.push_back({DominatorTree::Delete, BB, Succ});
       }
     }
@@ -653,7 +652,7 @@ void AggressiveDeadCodeElimination::makeUnconditional(BasicBlock *BB,
     InstInfo[PredTerm].Live = true;
     return;
   }
-  LLVM_DEBUG(dbgs() << "making unconditional " << BB->getName() << '\n');
+  DEBUG(dbgs() << "making unconditional " << BB->getName() << '\n');
   NumBranchesRemoved += 1;
   IRBuilder<> Builder(PredTerm);
   auto *NewTerm = Builder.CreateBr(Target);

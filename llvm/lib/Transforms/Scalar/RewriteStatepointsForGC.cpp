@@ -28,7 +28,6 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
@@ -65,6 +64,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
 #include <algorithm>
 #include <cassert>
@@ -476,12 +476,6 @@ findBaseDefiningValueOfVector(Value *I) {
   if (auto *BC = dyn_cast<BitCastInst>(I))
     return findBaseDefiningValue(BC->getOperand(0));
 
-  // We assume that functions in the source language only return base
-  // pointers.  This should probably be generalized via attributes to support
-  // both source language and internal functions.
-  if (isa<CallInst>(I) || isa<InvokeInst>(I))
-    return BaseDefiningValueResult(I, true);
-
   // A PHI or Select is a base defining value.  The outer findBasePointer
   // algorithm is responsible for constructing a base value for this BDV.
   assert((isa<SelectInst>(I) || isa<PHINode>(I)) &&
@@ -616,8 +610,8 @@ static Value *findBaseDefiningValueCached(Value *I, DefiningValueMapTy &Cache) {
   Value *&Cached = Cache[I];
   if (!Cached) {
     Cached = findBaseDefiningValue(I).BDV;
-    LLVM_DEBUG(dbgs() << "fBDV-cached: " << I->getName() << " -> "
-                      << Cached->getName() << "\n");
+    DEBUG(dbgs() << "fBDV-cached: " << I->getName() << " -> "
+                 << Cached->getName() << "\n");
   }
   assert(Cache[I] != nullptr);
   return Cached;
@@ -848,9 +842,9 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache) {
   }
 
 #ifndef NDEBUG
-  LLVM_DEBUG(dbgs() << "States after initialization:\n");
+  DEBUG(dbgs() << "States after initialization:\n");
   for (auto Pair : States) {
-    LLVM_DEBUG(dbgs() << " " << Pair.second << " for " << *Pair.first << "\n");
+    DEBUG(dbgs() << " " << Pair.second << " for " << *Pair.first << "\n");
   }
 #endif
 
@@ -923,9 +917,9 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache) {
   }
 
 #ifndef NDEBUG
-  LLVM_DEBUG(dbgs() << "States after meet iteration:\n");
+  DEBUG(dbgs() << "States after meet iteration:\n");
   for (auto Pair : States) {
-    LLVM_DEBUG(dbgs() << " " << Pair.second << " for " << *Pair.first << "\n");
+    DEBUG(dbgs() << " " << Pair.second << " for " << *Pair.first << "\n");
   }
 #endif
 
@@ -966,7 +960,7 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache) {
     auto MakeBaseInstPlaceholder = [](Instruction *I) -> Instruction* {
       if (isa<PHINode>(I)) {
         BasicBlock *BB = I->getParent();
-        int NumPreds = pred_size(BB);
+        int NumPreds = std::distance(pred_begin(BB), pred_end(BB));
         assert(NumPreds > 0 && "how did we reach here");
         std::string Name = suffixed_name_or(I, ".base", "base_phi");
         return PHINode::Create(I->getType(), NumPreds, Name, I);
@@ -1124,11 +1118,10 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache) {
     assert(BDV && Base);
     assert(!isKnownBaseResult(BDV) && "why did it get added?");
 
-    LLVM_DEBUG(
-        dbgs() << "Updating base value cache"
-               << " for: " << BDV->getName() << " from: "
-               << (Cache.count(BDV) ? Cache[BDV]->getName().str() : "none")
-               << " to: " << Base->getName() << "\n");
+    DEBUG(dbgs() << "Updating base value cache"
+                 << " for: " << BDV->getName() << " from: "
+                 << (Cache.count(BDV) ? Cache[BDV]->getName().str() : "none")
+                 << " to: " << Base->getName() << "\n");
 
     if (Cache.count(BDV)) {
       assert(isKnownBaseResult(Base) &&
@@ -1376,7 +1369,7 @@ public:
 
     assert(OldI != NewI && "Disallowed at construction?!");
     assert((!IsDeoptimize || !New) &&
-           "Deoptimize intrinsics are not replaced!");
+           "Deoptimize instrinsics are not replaced!");
 
     Old = nullptr;
     New = nullptr;
@@ -1386,7 +1379,7 @@ public:
 
     if (IsDeoptimize) {
       // Note: we've inserted instructions, so the call to llvm.deoptimize may
-      // not necessarily be followed by the matching return.
+      // not necessarilly be followed by the matching return.
       auto *RI = cast<ReturnInst>(OldI->getParent()->getTerminator());
       new UnreachableInst(RI->getContext(), RI);
       RI->eraseFromParent();
@@ -1812,7 +1805,7 @@ static void relocationViaAlloca(
 
     SmallVector<Instruction *, 20> Uses;
     // PERF: trade a linear scan for repeated reallocation
-    Uses.reserve(Def->getNumUses());
+    Uses.reserve(std::distance(Def->user_begin(), Def->user_end()));
     for (User *U : Def->users()) {
       if (!isa<ConstantExpr>(U)) {
         // If the def has a ConstantExpr use, then the def is either a
@@ -1824,7 +1817,7 @@ static void relocationViaAlloca(
       }
     }
 
-    llvm::sort(Uses.begin(), Uses.end());
+    std::sort(Uses.begin(), Uses.end());
     auto Last = std::unique(Uses.begin(), Uses.end());
     Uses.erase(Last, Uses.end());
 
@@ -1984,7 +1977,7 @@ chainToBasePointerCost(SmallVectorImpl<Instruction*> &Chain,
         Cost += 2;
 
     } else {
-      llvm_unreachable("unsupported instruction type during rematerialization");
+      llvm_unreachable("unsupported instruciton type during rematerialization");
     }
   }
 
@@ -2031,7 +2024,7 @@ static void rematerializeLiveValues(CallSite CS,
   SmallVector<Value *, 32> LiveValuesToBeDeleted;
 
   for (Value *LiveValue: Info.LiveSet) {
-    // For each live pointer find its defining chain
+    // For each live pointer find it's defining chain
     SmallVector<Instruction *, 3> ChainToBase;
     assert(Info.PointerToBase.count(LiveValue));
     Value *RootOfChain =
@@ -2468,8 +2461,22 @@ static void stripNonValidDataFromBody(Function &F) {
         continue;
       }
 
-    if (MDNode *Tag = I.getMetadata(LLVMContext::MD_tbaa)) {
-      MDNode *MutableTBAA = Builder.createMutableTBAAAccessTag(Tag);
+    if (const MDNode *MD = I.getMetadata(LLVMContext::MD_tbaa)) {
+      assert(MD->getNumOperands() < 5 && "unrecognized metadata shape!");
+      bool IsImmutableTBAA =
+          MD->getNumOperands() == 4 &&
+          mdconst::extract<ConstantInt>(MD->getOperand(3))->getValue() == 1;
+
+      if (!IsImmutableTBAA)
+        continue; // no work to do, MD_tbaa is already marked mutable
+
+      MDNode *Base = cast<MDNode>(MD->getOperand(0));
+      MDNode *Access = cast<MDNode>(MD->getOperand(1));
+      uint64_t Offset =
+          mdconst::extract<ConstantInt>(MD->getOperand(2))->getZExtValue();
+
+      MDNode *MutableTBAA =
+          Builder.createTBAAStructTagNode(Base, Access, Offset);
       I.setMetadata(LLVMContext::MD_tbaa, MutableTBAA);
     }
 
@@ -2530,30 +2537,29 @@ bool RewriteStatepointsForGC::runOnFunction(Function &F, DominatorTree &DT,
     return false;
   };
 
-
-  // Delete any unreachable statepoints so that we don't have unrewritten
-  // statepoints surviving this pass.  This makes testing easier and the
-  // resulting IR less confusing to human readers.
-  DeferredDominance DD(DT);
-  bool MadeChange = removeUnreachableBlocks(F, nullptr, &DD);
-  DD.flush();
-
   // Gather all the statepoints which need rewritten.  Be careful to only
   // consider those in reachable code since we need to ask dominance queries
   // when rewriting.  We'll delete the unreachable ones in a moment.
   SmallVector<CallSite, 64> ParsePointNeeded;
+  bool HasUnreachableStatepoint = false;
   for (Instruction &I : instructions(F)) {
     // TODO: only the ones with the flag set!
     if (NeedsRewrite(I)) {
-      // NOTE removeUnreachableBlocks() is stronger than
-      // DominatorTree::isReachableFromEntry(). In other words
-      // removeUnreachableBlocks can remove some blocks for which
-      // isReachableFromEntry() returns true.
-      assert(DT.isReachableFromEntry(I.getParent()) &&
-            "no unreachable blocks expected");
-      ParsePointNeeded.push_back(CallSite(&I));
+      if (DT.isReachableFromEntry(I.getParent()))
+        ParsePointNeeded.push_back(CallSite(&I));
+      else
+        HasUnreachableStatepoint = true;
     }
   }
+
+  bool MadeChange = false;
+
+  // Delete any unreachable statepoints so that we don't have unrewritten
+  // statepoints surviving this pass.  This makes testing easier and the
+  // resulting IR less confusing to human readers.  Rather than be fancy, we
+  // just reuse a utility function which removes the unreachable blocks.
+  if (HasUnreachableStatepoint)
+    MadeChange |= removeUnreachableBlocks(F);
 
   // Return early if no work to do.
   if (ParsePointNeeded.empty())

@@ -34,10 +34,9 @@ template <typename FailT, typename Fun, typename... Args>
 inline auto RetryAfterSignal(const FailT &Fail, const Fun &F,
                              const Args &... As) -> decltype(F(As...)) {
   decltype(F(As...)) Res;
-  do {
-    errno = 0;
+  do
     Res = F(As...);
-  } while (Res == Fail && errno == EINTR);
+  while (Res == Fail && errno == EINTR);
   return Res;
 }
 

@@ -22,7 +22,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/CodeGen/ExecutionDomainFix.h"
+#include "llvm/CodeGen/ExecutionDepsFix.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
@@ -34,6 +34,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/TargetLoweringObjectFile.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/DataLayout.h"
@@ -44,7 +45,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TargetParser.h"
 #include "llvm/Support/TargetRegistry.h"
-#include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/Scalar.h"
 #include <cassert>
@@ -75,7 +75,7 @@ EnableGlobalMerge("arm-global-merge", cl::Hidden,
                   cl::desc("Enable the global merge pass"));
 
 namespace llvm {
-  void initializeARMExecutionDomainFixPass(PassRegistry&);
+  void initializeARMExecutionDepsFixPass(PassRegistry&);
 }
 
 extern "C" void LLVMInitializeARMTarget() {
@@ -89,9 +89,8 @@ extern "C" void LLVMInitializeARMTarget() {
   initializeGlobalISel(Registry);
   initializeARMLoadStoreOptPass(Registry);
   initializeARMPreAllocLoadStoreOptPass(Registry);
-  initializeARMParallelDSPPass(Registry);
   initializeARMConstantIslandsPass(Registry);
-  initializeARMExecutionDomainFixPass(Registry);
+  initializeARMExecutionDepsFixPass(Registry);
   initializeARMExpandPseudoPass(Registry);
   initializeThumb2SizeReducePass(Registry);
 }
@@ -215,7 +214,11 @@ ARMBaseTargetMachine::ARMBaseTargetMachine(const Target &T, const Triple &TT,
 
   // Default to triple-appropriate float ABI
   if (Options.FloatABIType == FloatABI::Default) {
-    if (isTargetHardFloat())
+    if (TargetTriple.getEnvironment() == Triple::GNUEABIHF ||
+        TargetTriple.getEnvironment() == Triple::MuslEABIHF ||
+        TargetTriple.getEnvironment() == Triple::EABIHF ||
+        TargetTriple.isOSWindows() ||
+        TargetABI == ARMBaseTargetMachine::ARM_ABI_AAPCS16)
       this->Options.FloatABIType = FloatABI::Hard;
     else
       this->Options.FloatABIType = FloatABI::Soft;
@@ -233,11 +236,6 @@ ARMBaseTargetMachine::ARMBaseTargetMachine(const Target &T, const Triple &TT,
       this->Options.EABIVersion = EABI::GNU;
     else
       this->Options.EABIVersion = EABI::EABI5;
-  }
-
-  if (TT.isOSBinFormatMachO()) {
-    this->Options.TrapUnreachable = true;
-    this->Options.NoTrapAfterNoreturn = true;
   }
 
   initAsmInfo();
@@ -357,23 +355,20 @@ public:
   void addPreEmitPass() override;
 };
 
-class ARMExecutionDomainFix : public ExecutionDomainFix {
+class ARMExecutionDepsFix : public ExecutionDepsFix {
 public:
   static char ID;
-  ARMExecutionDomainFix() : ExecutionDomainFix(ID, ARM::DPRRegClass) {}
+  ARMExecutionDepsFix() : ExecutionDepsFix(ID, ARM::DPRRegClass) {}
   StringRef getPassName() const override {
-    return "ARM Execution Domain Fix";
+    return "ARM Execution Dependency Fix";
   }
 };
-char ARMExecutionDomainFix::ID;
+char ARMExecutionDepsFix::ID;
 
 } // end anonymous namespace
 
-INITIALIZE_PASS_BEGIN(ARMExecutionDomainFix, "arm-execution-domain-fix",
-  "ARM Execution Domain Fix", false, false)
-INITIALIZE_PASS_DEPENDENCY(ReachingDefAnalysis)
-INITIALIZE_PASS_END(ARMExecutionDomainFix, "arm-execution-domain-fix",
-  "ARM Execution Domain Fix", false, false)
+INITIALIZE_PASS(ARMExecutionDepsFix, "arm-execution-deps-fix",
+                "ARM Execution Dependency Fix", false, false)
 
 TargetPassConfig *ARMBaseTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new ARMPassConfig(*this, PM);
@@ -403,9 +398,6 @@ void ARMPassConfig::addIRPasses() {
 }
 
 bool ARMPassConfig::addPreISel() {
-  if (getOptLevel() != CodeGenOpt::None)
-    addPass(createARMParallelDSPPass());
-
   if ((TM->getOptLevel() != CodeGenOpt::None &&
        EnableGlobalMerge == cl::BOU_UNSET) ||
       EnableGlobalMerge == cl::BOU_TRUE) {
@@ -470,8 +462,7 @@ void ARMPassConfig::addPreSched2() {
     if (EnableARMLoadStoreOpt)
       addPass(createARMLoadStoreOptimizationPass());
 
-    addPass(new ARMExecutionDomainFix());
-    addPass(createBreakFalseDeps());
+    addPass(new ARMExecutionDepsFix());
   }
 
   // Expand some pseudo instructions into multiple instructions to allow

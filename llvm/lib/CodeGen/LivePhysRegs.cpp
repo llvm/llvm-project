@@ -18,13 +18,12 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBundle.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
 
-/// Remove all registers from the set that get clobbered by the register
+/// \brief Remove all registers from the set that get clobbered by the register
 /// mask.
 /// The clobbers set will be the list of live registers clobbered
 /// by the regmask.
@@ -45,7 +44,7 @@ void LivePhysRegs::removeRegsInMask(const MachineOperand &MO,
 void LivePhysRegs::removeDefs(const MachineInstr &MI) {
   for (ConstMIBundleOperands O(MI); O.isValid(); ++O) {
     if (O->isReg()) {
-      if (!O->isDef() || O->isDebug())
+      if (!O->isDef())
         continue;
       unsigned Reg = O->getReg();
       if (!TargetRegisterInfo::isPhysicalRegister(Reg))
@@ -59,7 +58,7 @@ void LivePhysRegs::removeDefs(const MachineInstr &MI) {
 /// Add uses to the set.
 void LivePhysRegs::addUses(const MachineInstr &MI) {
   for (ConstMIBundleOperands O(MI); O.isValid(); ++O) {
-    if (!O->isReg() || !O->readsReg() || O->isDebug())
+    if (!O->isReg() || !O->readsReg())
       continue;
     unsigned Reg = O->getReg();
     if (!TargetRegisterInfo::isPhysicalRegister(Reg))
@@ -86,7 +85,7 @@ void LivePhysRegs::stepForward(const MachineInstr &MI,
         SmallVectorImpl<std::pair<unsigned, const MachineOperand*>> &Clobbers) {
   // Remove killed registers from the set.
   for (ConstMIBundleOperands O(MI); O.isValid(); ++O) {
-    if (O->isReg() && !O->isDebug()) {
+    if (O->isReg()) {
       unsigned Reg = O->getReg();
       if (!TargetRegisterInfo::isPhysicalRegister(Reg))
         continue;
@@ -106,12 +105,8 @@ void LivePhysRegs::stepForward(const MachineInstr &MI,
 
   // Add defs to the set.
   for (auto Reg : Clobbers) {
-    // Skip dead defs and registers clobbered by regmasks. They shouldn't
-    // be added to the set.
+    // Skip dead defs.  They shouldn't be added to the set.
     if (Reg.second->isReg() && Reg.second->isDead())
-      continue;
-    if (Reg.second->isRegMask() &&
-        MachineOperand::clobbersPhysReg(Reg.second->getRegMask(), Reg.first))
       continue;
     addReg(Reg.first);
   }

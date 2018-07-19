@@ -6,7 +6,6 @@
 set(LLVM_LINK_COMPONENTS
   DebugInfoDWARF
   DebugInfoPDB
-  Demangle
   Object
   Support
   Symbolize

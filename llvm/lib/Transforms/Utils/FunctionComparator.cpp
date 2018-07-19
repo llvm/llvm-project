@@ -18,6 +18,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
@@ -376,7 +377,7 @@ int FunctionComparator::cmpConstants(const Constant *L,
     }
   }
   default: // Unknown constant, abort.
-    LLVM_DEBUG(dbgs() << "Looking at valueID " << L->getValueID() << "\n");
+    DEBUG(dbgs() << "Looking at valueID " << L->getValueID() << "\n");
     llvm_unreachable("Constant ValueID not recognized.");
     return -1;
   }
@@ -709,7 +710,7 @@ int FunctionComparator::cmpInlineAsm(const InlineAsm *L,
     return Res;
   if (int Res = cmpNumbers(L->getDialect(), R->getDialect()))
     return Res;
-  assert(L->getFunctionType() != R->getFunctionType());
+  llvm_unreachable("InlineAsm blocks were not uniqued.");
   return 0;
 }
 
@@ -924,7 +925,7 @@ FunctionComparator::FunctionHash FunctionComparator::functionHash(Function &F) {
   H.add(F.arg_size());
 
   SmallVector<const BasicBlock *, 8> BBs;
-  SmallPtrSet<const BasicBlock *, 16> VisitedBBs;
+  SmallSet<const BasicBlock *, 16> VisitedBBs;
 
   // Walk the blocks in the same order as FunctionComparator::cmpBasicBlocks(),
   // accumulating the hash of the function "structure." (BB and opcode sequence)

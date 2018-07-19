@@ -13,7 +13,6 @@ add_llvm_unittest(SupportTests
   CachePruningTest.cpp
   CrashRecoveryTest.cpp
   Casting.cpp
-  CheckedArithmeticTest.cpp
   Chrono.cpp
   CommandLineTest.cpp
   CompressionTest.cpp
@@ -30,7 +29,6 @@ add_llvm_unittest(SupportTests
   FormatVariadicTest.cpp
   GlobPatternTest.cpp
   Host.cpp
-  JSONTest.cpp
   LEB128Test.cpp
   LineIteratorTest.cpp
   LockFileManagerTest.cpp
@@ -54,17 +52,14 @@ add_llvm_unittest(SupportTests
   SwapByteOrderTest.cpp
   TarWriterTest.cpp
   TargetParserTest.cpp
-  TaskQueueTest.cpp
   ThreadLocalTest.cpp
   ThreadPool.cpp
   Threading.cpp
   TimerTest.cpp
   TypeNameTest.cpp
-  TypeTraitsTest.cpp
   TrailingObjectsTest.cpp
   TrigramIndexTest.cpp
   UnicodeTest.cpp
-  VersionTupleTest.cpp
   YAMLIOTest.cpp
   YAMLParserTest.cpp
   formatted_raw_ostream_test.cpp

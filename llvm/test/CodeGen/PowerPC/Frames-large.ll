@@ -20,8 +20,8 @@ define i32* @f1() nounwind {
 
 ; PPC32-FP: _f1:
 ; PPC32-FP:	lis r0, -1
-; PPC32-FP:	ori r0, r0, 32736
 ; PPC32-FP:	stw r31, -4(r1)
+; PPC32-FP:	ori r0, r0, 32736
 ; PPC32-FP:	stwux r1, r1, r0
 ; PPC32-FP:	mr r31, r1
 ; PPC32-FP:	addi r3, r31, 32
@@ -41,8 +41,8 @@ define i32* @f1() nounwind {
 
 ; PPC64-FP: _f1:
 ; PPC64-FP:	lis r0, -1
-; PPC64-FP:	ori r0, r0, 32704
 ; PPC64-FP:	std r31, -8(r1)
+; PPC64-FP:	ori r0, r0, 32704
 ; PPC64-FP:	stdux r1, r1, r0
 ; PPC64-FP:	mr r31, r1
 ; PPC64-FP:	addi r3, r31, 60

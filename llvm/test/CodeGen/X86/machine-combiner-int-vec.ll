@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=x86_64-unknown-unknown -mcpu=x86-64 -mattr=sse2 -machine-combiner-verify-pattern-order=true < %s | FileCheck %s --check-prefix=SSE
-; RUN: llc -mtriple=x86_64-unknown-unknown -mcpu=x86-64 -mattr=avx2 -machine-combiner-verify-pattern-order=true < %s | FileCheck %s --check-prefix=AVX
+; RUN: llc -mtriple=x86_64-unknown-unknown -mcpu=x86-64 -mattr=sse2 < %s | FileCheck %s --check-prefix=SSE
+; RUN: llc -mtriple=x86_64-unknown-unknown -mcpu=x86-64 -mattr=avx2 < %s | FileCheck %s --check-prefix=AVX
 
 ; Verify that 128-bit vector logical ops are reassociated.
 

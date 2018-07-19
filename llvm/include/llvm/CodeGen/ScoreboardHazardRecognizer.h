@@ -106,7 +106,7 @@ class ScoreboardHazardRecognizer : public ScheduleHazardRecognizer {
   Scoreboard RequiredScoreboard;
 
 public:
-  ScoreboardHazardRecognizer(const InstrItineraryData *II,
+  ScoreboardHazardRecognizer(const InstrItineraryData *ItinData,
                              const ScheduleDAG *DAG,
                              const char *ParentDebugType = "");
 

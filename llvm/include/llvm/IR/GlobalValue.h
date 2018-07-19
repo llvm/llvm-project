@@ -44,7 +44,7 @@ namespace Intrinsic {
 
 class GlobalValue : public Constant {
 public:
-  /// An enumeration for the kinds of linkage for global values.
+  /// @brief An enumeration for the kinds of linkage for global values.
   enum LinkageTypes {
     ExternalLinkage = 0,///< Externally visible function
     AvailableExternallyLinkage, ///< Available for inspection, not emission.
@@ -59,14 +59,14 @@ public:
     CommonLinkage       ///< Tentative definitions.
   };
 
-  /// An enumeration for the kinds of visibility of global values.
+  /// @brief An enumeration for the kinds of visibility of global values.
   enum VisibilityTypes {
     DefaultVisibility = 0,  ///< The GV is visible
     HiddenVisibility,       ///< The GV is hidden
     ProtectedVisibility     ///< The GV is protected
   };
 
-  /// Storage classes of global values for PE targets.
+  /// @brief Storage classes of global values for PE targets.
   enum DLLStorageClassTypes {
     DefaultStorageClass   = 0,
     DLLImportStorageClass = 1, ///< Function to be imported from DLL
@@ -77,12 +77,11 @@ protected:
   GlobalValue(Type *Ty, ValueTy VTy, Use *Ops, unsigned NumOps,
               LinkageTypes Linkage, const Twine &Name, unsigned AddressSpace)
       : Constant(PointerType::get(Ty, AddressSpace), VTy, Ops, NumOps),
-        ValueType(Ty), Visibility(DefaultVisibility),
+        ValueType(Ty), Linkage(Linkage), Visibility(DefaultVisibility),
         UnnamedAddrVal(unsigned(UnnamedAddr::None)),
         DllStorageClass(DefaultStorageClass), ThreadLocal(NotThreadLocal),
-        HasLLVMReservedName(false), IsDSOLocal(false), IntID((Intrinsic::ID)0U),
-        Parent(nullptr) {
-    setLinkage(Linkage);
+        HasLLVMReservedName(false), IsDSOLocal(false),
+        IntID((Intrinsic::ID)0U), Parent(nullptr) {
     setName(Name);
   }
 
@@ -110,11 +109,11 @@ protected:
   unsigned IsDSOLocal : 1;
 
 private:
+  friend class Constant;
+
   // Give subclasses access to what otherwise would be wasted padding.
   // (17 + 4 + 2 + 2 + 2 + 3 + 1 + 1) == 32.
   unsigned SubClassData : GlobalValueSubClassDataBits;
-
-  friend class Constant;
 
   void destroyConstantImpl();
   Value *handleOperandChangeImpl(Value *From, Value *To);
@@ -143,14 +142,8 @@ private:
     llvm_unreachable("Fully covered switch above!");
   }
 
-  void maybeSetDsoLocal() {
-    if (hasLocalLinkage() ||
-        (!hasDefaultVisibility() && !hasExternalWeakLinkage()))
-      setDSOLocal(true);
-  }
-
 protected:
-  /// The intrinsic ID for this subclass (which must be a Function).
+  /// \brief The intrinsic ID for this subclass (which must be a Function).
   ///
   /// This member is defined by this class, but not used for anything.
   /// Subclasses can use it to store their intrinsic ID, if they have one.
@@ -239,7 +232,6 @@ public:
     assert((!hasLocalLinkage() || V == DefaultVisibility) &&
            "local linkage requires default visibility");
     Visibility = V;
-    maybeSetDsoLocal();
   }
 
   /// If the value is "Thread Local", its value isn't shared by the threads.
@@ -445,7 +437,6 @@ public:
     if (isLocalLinkage(LT))
       Visibility = DefaultVisibility;
     Linkage = LT;
-    maybeSetDsoLocal();
   }
   LinkageTypes getLinkage() const { return LinkageTypes(Linkage); }
 
@@ -572,13 +563,6 @@ public:
            V->getValueID() == Value::GlobalAliasVal ||
            V->getValueID() == Value::GlobalIFuncVal;
   }
-
-  /// True if GV can be left out of the object symbol table. This is the case
-  /// for linkonce_odr values whose address is not significant. While legal, it
-  /// is not normally profitable to omit them from the .o symbol table. Using
-  /// this analysis makes sense when the information can be passed down to the
-  /// linker or we are in LTO.
-  bool canBeOmittedFromSymbolTable() const;
 };
 
 } // end namespace llvm

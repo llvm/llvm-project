@@ -28,6 +28,9 @@ define <4 x float>@test_var_maskz(<4 x float> %v0, <4 x float> %v1, <4 x float> 
 define <4 x float>@test_const0_mask(<4 x float> %v0, <4 x float> %v1, <4 x float> %v2) {
 ; CHECK-LABEL: test_const0_mask:
 ; CHECK:       ## %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    kmovw %eax, %k1
+; CHECK-NEXT:    vfmadd213ss %xmm2, %xmm1, %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %res = call <4 x float> @llvm.x86.avx512.mask.vfmadd.ss(<4 x float> %v0,<4 x float> %v1, <4 x float> %v2,  i8 0, i32 4)
   ret < 4 x float> %res
@@ -37,8 +40,9 @@ define <4 x float>@test_const0_mask(<4 x float> %v0, <4 x float> %v1, <4 x float
 define <4 x float>@test_const0_maskz(<4 x float> %v0, <4 x float> %v1, <4 x float> %v2) {
 ; CHECK-LABEL: test_const0_maskz:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    kmovw %eax, %k1
+; CHECK-NEXT:    vfmadd213ss %xmm2, %xmm1, %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %res = call <4 x float> @llvm.x86.avx512.maskz.vfmadd.ss(<4 x float> %v0,<4 x float> %v1, <4 x float> %v2,  i8 0, i32 4)
   ret < 4 x float> %res
@@ -48,6 +52,9 @@ define <4 x float>@test_const0_maskz(<4 x float> %v0, <4 x float> %v1, <4 x floa
 define <4 x float>@test_const2_mask(<4 x float> %v0, <4 x float> %v1, <4 x float> %v2) {
 ; CHECK-LABEL: test_const2_mask:
 ; CHECK:       ## %bb.0:
+; CHECK-NEXT:    movb $2, %al
+; CHECK-NEXT:    kmovw %eax, %k1
+; CHECK-NEXT:    vfmadd213ss %xmm2, %xmm1, %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %res = call <4 x float> @llvm.x86.avx512.mask.vfmadd.ss(<4 x float> %v0,<4 x float> %v1, <4 x float> %v2,  i8 2, i32 4)
   ret < 4 x float> %res
@@ -57,8 +64,9 @@ define <4 x float>@test_const2_mask(<4 x float> %v0, <4 x float> %v1, <4 x float
 define <4 x float>@test_const2_maskz(<4 x float> %v0, <4 x float> %v1, <4 x float> %v2) {
 ; CHECK-LABEL: test_const2_maskz:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; CHECK-NEXT:    movb $2, %al
+; CHECK-NEXT:    kmovw %eax, %k1
+; CHECK-NEXT:    vfmadd213ss %xmm2, %xmm1, %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %res = call <4 x float> @llvm.x86.avx512.maskz.vfmadd.ss(<4 x float> %v0,<4 x float> %v1, <4 x float> %v2,  i8 2, i32 4)
   ret < 4 x float> %res

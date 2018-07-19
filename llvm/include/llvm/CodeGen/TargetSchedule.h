@@ -19,7 +19,6 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
-#include "llvm/Config/llvm-config.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/MC/MCSchedule.h"
 
@@ -46,23 +45,24 @@ class TargetSchedModel {
 public:
   TargetSchedModel() : SchedModel(MCSchedModel::GetDefaultSchedModel()) {}
 
-  /// Initialize the machine model for instruction scheduling.
+  /// \brief Initialize the machine model for instruction scheduling.
   ///
   /// The machine model API keeps a copy of the top-level MCSchedModel table
   /// indices and may query TargetSubtargetInfo and TargetInstrInfo to resolve
   /// dynamic properties.
-  void init(const TargetSubtargetInfo *TSInfo);
+  void init(const MCSchedModel &sm, const TargetSubtargetInfo *sti,
+            const TargetInstrInfo *tii);
 
   /// Return the MCSchedClassDesc for this instruction.
   const MCSchedClassDesc *resolveSchedClass(const MachineInstr *MI) const;
 
-  /// TargetSubtargetInfo getter.
+  /// \brief TargetSubtargetInfo getter.
   const TargetSubtargetInfo *getSubtargetInfo() const { return STI; }
 
-  /// TargetInstrInfo getter.
+  /// \brief TargetInstrInfo getter.
   const TargetInstrInfo *getInstrInfo() const { return TII; }
 
-  /// Return true if this machine model includes an instruction-level
+  /// \brief Return true if this machine model includes an instruction-level
   /// scheduling model.
   ///
   /// This is more detailed than the course grain IssueWidth and default
@@ -71,7 +71,7 @@ public:
 
   const MCSchedModel *getMCSchedModel() const { return &SchedModel; }
 
-  /// Return true if this machine model includes cycle-to-cycle itinerary
+  /// \brief Return true if this machine model includes cycle-to-cycle itinerary
   /// data.
   ///
   /// This models scheduling at each stage in the processor pipeline.
@@ -83,35 +83,35 @@ public:
     return nullptr;
   }
 
-  /// Return true if this machine model includes an instruction-level
+  /// \brief Return true if this machine model includes an instruction-level
   /// scheduling model or cycle-to-cycle itinerary data.
   bool hasInstrSchedModelOrItineraries() const {
     return hasInstrSchedModel() || hasInstrItineraries();
   }
 
-  /// Identify the processor corresponding to the current subtarget.
+  /// \brief Identify the processor corresponding to the current subtarget.
   unsigned getProcessorID() const { return SchedModel.getProcessorID(); }
 
-  /// Maximum number of micro-ops that may be scheduled per cycle.
+  /// \brief Maximum number of micro-ops that may be scheduled per cycle.
   unsigned getIssueWidth() const { return SchedModel.IssueWidth; }
 
-  /// Return true if new group must begin.
+  /// \brief Return true if new group must begin.
   bool mustBeginGroup(const MachineInstr *MI,
                           const MCSchedClassDesc *SC = nullptr) const;
-  /// Return true if current group must end.
+  /// \brief Return true if current group must end.
   bool mustEndGroup(const MachineInstr *MI,
                           const MCSchedClassDesc *SC = nullptr) const;
 
-  /// Return the number of issue slots required for this MI.
+  /// \brief Return the number of issue slots required for this MI.
   unsigned getNumMicroOps(const MachineInstr *MI,
                           const MCSchedClassDesc *SC = nullptr) const;
 
-  /// Get the number of kinds of resources for this target.
+  /// \brief Get the number of kinds of resources for this target.
   unsigned getNumProcResourceKinds() const {
     return SchedModel.getNumProcResourceKinds();
   }
 
-  /// Get a processor resource by ID for convenience.
+  /// \brief Get a processor resource by ID for convenience.
   const MCProcResourceDesc *getProcResource(unsigned PIdx) const {
     return SchedModel.getProcResource(PIdx);
   }
@@ -126,7 +126,7 @@ public:
 
   using ProcResIter = const MCWriteProcResEntry *;
 
-  // Get an iterator into the processor resources consumed by this
+  // \brief Get an iterator into the processor resources consumed by this
   // scheduling class.
   ProcResIter getWriteProcResBegin(const MCSchedClassDesc *SC) const {
     // The subtarget holds a single resource table for all processors.
@@ -136,34 +136,34 @@ public:
     return STI->getWriteProcResEnd(SC);
   }
 
-  /// Multiply the number of units consumed for a resource by this factor
+  /// \brief Multiply the number of units consumed for a resource by this factor
   /// to normalize it relative to other resources.
   unsigned getResourceFactor(unsigned ResIdx) const {
     return ResourceFactors[ResIdx];
   }
 
-  /// Multiply number of micro-ops by this factor to normalize it
+  /// \brief Multiply number of micro-ops by this factor to normalize it
   /// relative to other resources.
   unsigned getMicroOpFactor() const {
     return MicroOpFactor;
   }
 
-  /// Multiply cycle count by this factor to normalize it relative to
+  /// \brief Multiply cycle count by this factor to normalize it relative to
   /// other resources. This is the number of resource units per cycle.
   unsigned getLatencyFactor() const {
     return ResourceLCM;
   }
 
-  /// Number of micro-ops that may be buffered for OOO execution.
+  /// \brief Number of micro-ops that may be buffered for OOO execution.
   unsigned getMicroOpBufferSize() const { return SchedModel.MicroOpBufferSize; }
 
-  /// Number of resource units that may be buffered for OOO execution.
+  /// \brief Number of resource units that may be buffered for OOO execution.
   /// \return The buffer size in resource units or -1 for unlimited.
   int getResourceBufferSize(unsigned PIdx) const {
     return SchedModel.getProcResource(PIdx)->BufferSize;
   }
 
-  /// Compute operand latency based on the available machine model.
+  /// \brief Compute operand latency based on the available machine model.
   ///
   /// Compute and return the latency of the given data dependent def and use
   /// when the operand indices are already known. UseMI may be NULL for an
@@ -172,7 +172,7 @@ public:
                                  const MachineInstr *UseMI, unsigned UseOperIdx)
     const;
 
-  /// Compute the instruction latency based on the available machine
+  /// \brief Compute the instruction latency based on the available machine
   /// model.
   ///
   /// Compute and return the expected latency of this instruction independent of
@@ -185,20 +185,18 @@ public:
   /// if converter after moving it to TargetSchedModel).
   unsigned computeInstrLatency(const MachineInstr *MI,
                                bool UseDefaultDefLatency = true) const;
-  unsigned computeInstrLatency(const MCInst &Inst) const;
   unsigned computeInstrLatency(unsigned Opcode) const;
 
 
-  /// Output dependency latency of a pair of defs of the same register.
+  /// \brief Output dependency latency of a pair of defs of the same register.
   ///
   /// This is typically one cycle.
-  unsigned computeOutputLatency(const MachineInstr *DefMI, unsigned DefOperIdx,
+  unsigned computeOutputLatency(const MachineInstr *DefMI, unsigned DefIdx,
                                 const MachineInstr *DepMI) const;
 
-  /// Compute the reciprocal throughput of the given instruction.
-  double computeReciprocalThroughput(const MachineInstr *MI) const;
-  double computeReciprocalThroughput(const MCInst &MI) const;
-  double computeReciprocalThroughput(unsigned Opcode) const;
+  /// \brief Compute the reciprocal throughput of the given instruction.
+  Optional<double> computeInstrRThroughput(const MachineInstr *MI) const;
+  Optional<double> computeInstrRThroughput(unsigned Opcode) const;
 };
 
 } // end namespace llvm

@@ -17,6 +17,7 @@
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/DIE.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/TargetLoweringObjectFile.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -25,7 +26,6 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MachineLocation.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
 using namespace llvm;
 
@@ -43,17 +43,20 @@ void AsmPrinter::EmitSLEB128(int64_t Value, const char *Desc) const {
   OutStreamer->EmitSLEB128IntValue(Value);
 }
 
+/// EmitULEB128 - emit the specified unsigned leb128 value.
+void AsmPrinter::EmitPaddedULEB128(uint64_t Value, unsigned PadTo,
+                                   const char *Desc) const {
+  if (isVerbose() && Desc)
+    OutStreamer->AddComment(Desc);
+
+  OutStreamer->EmitPaddedULEB128IntValue(Value, PadTo);
+}
+
 void AsmPrinter::EmitULEB128(uint64_t Value, const char *Desc) const {
   if (isVerbose() && Desc)
     OutStreamer->AddComment(Desc);
 
   OutStreamer->EmitULEB128IntValue(Value);
-}
-
-/// Emit something like ".uleb128 Hi-Lo".
-void AsmPrinter::EmitLabelDifferenceAsULEB128(const MCSymbol *Hi,
-                                              const MCSymbol *Lo) const {
-  OutStreamer->emitAbsoluteSymbolDiffAsULEB128(Hi, Lo);
 }
 
 static const char *DecodeDWARFEncoding(unsigned Encoding) {
@@ -64,10 +67,6 @@ static const char *DecodeDWARFEncoding(unsigned Encoding) {
     return "omit";
   case dwarf::DW_EH_PE_pcrel:
     return "pcrel";
-  case dwarf::DW_EH_PE_uleb128:
-    return "uleb128";
-  case dwarf::DW_EH_PE_sleb128:
-    return "sleb128";
   case dwarf::DW_EH_PE_udata4:
     return "udata4";
   case dwarf::DW_EH_PE_udata8:
@@ -176,11 +175,7 @@ void AsmPrinter::emitDwarfStringOffset(DwarfStringPoolEntry S) const {
   }
 
   // Just emit the offset directly; no need for symbol math.
-  emitInt32(S.Offset);
-}
-
-void AsmPrinter::EmitDwarfOffset(const MCSymbol *Label, uint64_t Offset) const {
-  EmitLabelPlusOffset(Label, Offset, MAI->getCodePointerSize());
+  EmitInt32(S.Offset);
 }
 
 //===----------------------------------------------------------------------===//
@@ -258,7 +253,7 @@ void AsmPrinter::emitDwarfDIE(const DIE &Die) const {
       emitDwarfDIE(Child);
 
     OutStreamer->AddComment("End Of Children Mark");
-    emitInt8(0);
+    EmitInt8(0);
   }
 }
 

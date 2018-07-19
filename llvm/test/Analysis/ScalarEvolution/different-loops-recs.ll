@@ -277,10 +277,9 @@ define void @test_04() {
 ; CHECK:       %tmp11 = add i64 %tmp10, undef
 ; CHECK-NEXT:  -->  ((sext i8 %tmp8 to i64) + {(-2 + undef),+,-1}<nw><%loop2>)
 ; CHECK:       %tmp13 = trunc i64 %tmp11 to i32
-; CHECK-NEXT:  -->  ((sext i8 %tmp8 to i32) + {(-2 + (trunc i64 undef to i32)),+,-1}<%loop2>)
+; CHECK-NEXT:  -->  ((sext i8 %tmp8 to i32) + {(trunc i64 (-2 + undef) to i32),+,-1}<%loop2>)
 ; CHECK:       %tmp14 = sub i32 %tmp13, %tmp2
-; `{{[{][{]}}` is the ugliness needed to match `{{`
-; CHECK-NEXT:  -->  ((sext i8 %tmp8 to i32) + {{[{][{]}}(-4 + (trunc i64 undef to i32)),+,-1}<%loop1>,+,-1}<%loop2>)
+; CHECK-NEXT:  -->  ((sext i8 %tmp8 to i32) + {{{{}}(-2 + (trunc i64 (-2 + undef) to i32)),+,-1}<%loop1>,+,-1}<%loop2>)
 ; CHECK:       %tmp15 = add nuw nsw i64 %tmp7, 1
 ; CHECK-NEXT:  -->  {3,+,1}<nuw><nsw><%loop2>
 
@@ -322,7 +321,7 @@ define void @test_05(i32 %N) {
 ; CHECK:       %SQ = mul i32 %i.0, %i.0
 ; CHECK-NEXT:  -->  {4,+,5,+,2}<%bb3>
 ; CHECK:       %tmp4 = mul i32 %i.0, 2
-; CHECK-NEXT:  -->  {4,+,2}<nuw><nsw><%bb3>
+; CHECK-NEXT:  -->  {4,+,2}<%bb3>
 ; CHECK:       %tmp5 = sub i32 %SQ, %tmp4
 ; CHECK-NEXT:  -->  {0,+,3,+,2}<%bb3>
 
@@ -463,9 +462,9 @@ define void @test_08() {
 ; CHECK:       %tmp11 = add i64 %iv.2.2, %iv.2.1
 ; CHECK-NEXT:  -->  ({0,+,-1}<nsw><%loop_2> + %iv.2.1)
 ; CHECK:       %tmp12 = trunc i64 %tmp11 to i32
-; CHECK-NEXT:  -->  ((trunc i64 %iv.2.1 to i32) + {0,+,-1}<%loop_2>)
+; CHECK-NEXT:  -->  (trunc i64 ({0,+,-1}<nsw><%loop_2> + %iv.2.1) to i32)
 ; CHECK:       %tmp14 = mul i32 %tmp12, %tmp7
-; CHECK-NEXT:  -->  (((trunc i64 %iv.2.1 to i32) + {0,+,-1}<%loop_2>) * {-1,+,-1}<%loop_1>)
+; CHECK-NEXT:  -->  ((trunc i64 ({0,+,-1}<nsw><%loop_2> + %iv.2.1) to i32) * {-1,+,-1}<%loop_1>)
 ; CHECK:       %tmp16 = mul i64 %iv.2.1, %iv.1.1
 ; CHECK-NEXT:  -->  ({2,+,1}<nuw><nsw><%loop_1> * %iv.2.1)
 

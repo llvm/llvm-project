@@ -2,7 +2,7 @@ set(LLVM_LINK_COMPONENTS
   Support
   )
 
-add_llvm_unittest(ADTTests
+set(ADTSources
   APFloatTest.cpp
   APIntTest.cpp
   APSIntTest.cpp
@@ -18,7 +18,6 @@ add_llvm_unittest(ADTTests
   DepthFirstIteratorTest.cpp
   EquivalenceClassesTest.cpp
   FoldingSet.cpp
-  FunctionExtrasTest.cpp
   FunctionRefTest.cpp
   HashingTest.cpp
   IListBaseTest.cpp
@@ -52,13 +51,11 @@ add_llvm_unittest(ADTTests
   SetVectorTest.cpp
   SimpleIListTest.cpp
   SmallPtrSetTest.cpp
-  SmallSetTest.cpp
   SmallStringTest.cpp
   SmallVectorTest.cpp
   SparseBitVectorTest.cpp
   SparseMultiSetTest.cpp
   SparseSetTest.cpp
-  StatisticTest.cpp
   StringExtrasTest.cpp
   StringMapTest.cpp
   StringRefTest.cpp
@@ -67,6 +64,10 @@ add_llvm_unittest(ADTTests
   TripleTest.cpp
   TwineTest.cpp
   VariadicFunctionTest.cpp
+ )
+
+add_llvm_unittest(ADTTests
+  ${ADTSources}
   )
 
 add_dependencies(ADTTests intrinsics_gen)

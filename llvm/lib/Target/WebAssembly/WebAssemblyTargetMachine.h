@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file declares the WebAssembly-specific subclass of
+/// \brief This file declares the WebAssembly-specific subclass of
 /// TargetMachine.
 ///
 //===----------------------------------------------------------------------===//

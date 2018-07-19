@@ -24,7 +24,7 @@ class MCAsmBackend;
 class MCCodeEmitter;
 class MCContext;
 class MCInstrInfo;
-class MCObjectTargetWriter;
+class MCObjectWriter;
 class MCRegisterInfo;
 class MCSubtargetInfo;
 class MCTargetOptions;
@@ -52,7 +52,9 @@ MCAsmBackend *createBPFbeAsmBackend(const Target &T, const MCSubtargetInfo &STI,
                                     const MCRegisterInfo &MRI,
                                     const MCTargetOptions &Options);
 
-std::unique_ptr<MCObjectTargetWriter> createBPFELFObjectWriter(uint8_t OSABI);
+std::unique_ptr<MCObjectWriter> createBPFELFObjectWriter(raw_pwrite_stream &OS,
+                                                         uint8_t OSABI,
+                                                         bool IsLittleEndian);
 }
 
 // Defines symbolic names for BPF registers.  This defines a mapping from

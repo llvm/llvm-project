@@ -37,7 +37,6 @@ struct YAMLXRayRecord {
   std::string Function;
   uint64_t TSC;
   uint32_t TId;
-  uint32_t PId;
   std::vector<uint64_t> CallArgs;
 };
 
@@ -80,7 +79,6 @@ template <> struct MappingTraits<xray::YAMLXRayRecord> {
     IO.mapOptional("args", Record.CallArgs);
     IO.mapRequired("cpu", Record.CPU);
     IO.mapRequired("thread", Record.TId);
-    IO.mapOptional("process", Record.PId, 0U);
     IO.mapRequired("kind", Record.Type);
     IO.mapRequired("tsc", Record.TSC);
   }

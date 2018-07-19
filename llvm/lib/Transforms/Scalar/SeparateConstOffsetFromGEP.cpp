@@ -165,8 +165,8 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
@@ -190,6 +190,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include <cassert>
 #include <cstdint>
 #include <string>
@@ -212,7 +213,7 @@ static cl::opt<bool>
 
 namespace {
 
-/// A helper class for separating a constant offset from a GEP index.
+/// \brief A helper class for separating a constant offset from a GEP index.
 ///
 /// In real programs, a GEP index may be more complicated than a simple addition
 /// of something and a constant integer which can be trivially splitted. For
@@ -339,15 +340,16 @@ private:
   const DominatorTree *DT;
 };
 
-/// A pass that tries to split every GEP in the function into a variadic
+/// \brief A pass that tries to split every GEP in the function into a variadic
 /// base and a constant offset. It is a FunctionPass because searching for the
 /// constant offset may inspect other basic blocks.
 class SeparateConstOffsetFromGEP : public FunctionPass {
 public:
   static char ID;
 
-  SeparateConstOffsetFromGEP(bool LowerGEP = false)
-      : FunctionPass(ID), LowerGEP(LowerGEP) {
+  SeparateConstOffsetFromGEP(const TargetMachine *TM = nullptr,
+                             bool LowerGEP = false)
+      : FunctionPass(ID), TM(TM), LowerGEP(LowerGEP) {
     initializeSeparateConstOffsetFromGEPPass(*PassRegistry::getPassRegistry());
   }
 
@@ -448,6 +450,7 @@ private:
   const DataLayout *DL = nullptr;
   DominatorTree *DT = nullptr;
   ScalarEvolution *SE;
+  const TargetMachine *TM;
 
   LoopInfo *LI;
   TargetLibraryInfo *TLI;
@@ -477,8 +480,10 @@ INITIALIZE_PASS_END(
     "Split GEPs to a variadic base and a constant offset for better CSE", false,
     false)
 
-FunctionPass *llvm::createSeparateConstOffsetFromGEPPass(bool LowerGEP) {
-  return new SeparateConstOffsetFromGEP(LowerGEP);
+FunctionPass *
+llvm::createSeparateConstOffsetFromGEPPass(const TargetMachine *TM,
+                                           bool LowerGEP) {
+  return new SeparateConstOffsetFromGEP(TM, LowerGEP);
 }
 
 bool ConstantOffsetExtractor::CanTraceInto(bool SignExtended,
@@ -497,8 +502,6 @@ bool ConstantOffsetExtractor::CanTraceInto(bool SignExtended,
   Value *LHS = BO->getOperand(0), *RHS = BO->getOperand(1);
   // Do not trace into "or" unless it is equivalent to "add". If LHS and RHS
   // don't have common bits, (LHS | RHS) is equivalent to (LHS + RHS).
-  // FIXME: this does not appear to be covered by any tests
-  //        (with x86/aarch64 backends at least)
   if (BO->getOpcode() == Instruction::Or &&
       !haveNoCommonBitsSet(LHS, RHS, DL, nullptr, BO, DT))
     return false;
@@ -587,10 +590,6 @@ APInt ConstantOffsetExtractor::find(Value *V, bool SignExtended,
     // Trace into subexpressions for more hoisting opportunities.
     if (CanTraceInto(SignExtended, ZeroExtended, BO, NonNegative))
       ConstantOffset = findInEitherOperand(BO, SignExtended, ZeroExtended);
-  } else if (isa<TruncInst>(V)) {
-    ConstantOffset =
-        find(U->getOperand(0), SignExtended, ZeroExtended, NonNegative)
-            .trunc(BitWidth);
   } else if (isa<SExtInst>(V)) {
     ConstantOffset = find(U->getOperand(0), /* SignExtended */ true,
                           ZeroExtended, NonNegative).sext(BitWidth);
@@ -655,9 +654,8 @@ ConstantOffsetExtractor::distributeExtsAndCloneChain(unsigned ChainIndex) {
   }
 
   if (CastInst *Cast = dyn_cast<CastInst>(U)) {
-    assert(
-        (isa<SExtInst>(Cast) || isa<ZExtInst>(Cast) || isa<TruncInst>(Cast)) &&
-        "Only following instructions can be traced: sext, zext & trunc");
+    assert((isa<SExtInst>(Cast) || isa<ZExtInst>(Cast)) &&
+           "We only traced into two types of CastInst: sext and zext");
     ExtInsts.push_back(Cast);
     UserChain[ChainIndex] = nullptr;
     return distributeExtsAndCloneChain(ChainIndex - 1);
@@ -708,7 +706,7 @@ Value *ConstantOffsetExtractor::removeConstOffset(unsigned ChainIndex) {
   BinaryOperator::BinaryOps NewOp = BO->getOpcode();
   if (BO->getOpcode() == Instruction::Or) {
     // Rebuild "or" as "add", because "or" may be invalid for the new
-    // expression.
+    // epxression.
     //
     // For instance, given
     //   a | (b + 5) where a and b + 5 have no common bits,
@@ -945,10 +943,6 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
 
   if (!NeedsExtraction)
     return Changed;
-
-  TargetTransformInfo &TTI =
-      getAnalysis<TargetTransformInfoWrapperPass>().getTTI(*GEP->getFunction());
-
   // If LowerGEP is disabled, before really splitting the GEP, check whether the
   // backend supports the addressing mode we are about to produce. If no, this
   // splitting probably won't be beneficial.
@@ -957,6 +951,9 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
   // of variable indices. Therefore, we don't check for addressing modes in that
   // case.
   if (!LowerGEP) {
+    TargetTransformInfo &TTI =
+        getAnalysis<TargetTransformInfoWrapperPass>().getTTI(
+            *GEP->getParent()->getParent());
     unsigned AddrSpace = GEP->getPointerAddressSpace();
     if (!TTI.isLegalAddressingMode(GEP->getResultElementType(),
                                    /*BaseGV=*/nullptr, AccumulativeByteOffset,
@@ -1019,7 +1016,7 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
   if (LowerGEP) {
     // As currently BasicAA does not analyze ptrtoint/inttoptr, do not lower to
     // arithmetic operations if the target uses alias analysis in codegen.
-    if (TTI.useAA())
+    if (TM && TM->getSubtargetImpl(*GEP->getParent()->getParent())->useAA())
       lowerToSingleIndexGEPs(GEP, AccumulativeByteOffset);
     else
       lowerToArithmetics(GEP, AccumulativeByteOffset);
@@ -1068,7 +1065,7 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
       DL->getTypeAllocSize(GEP->getResultElementType()));
   Type *IntPtrTy = DL->getIntPtrType(GEP->getType());
   if (AccumulativeByteOffset % ElementTypeSizeOfGEP == 0) {
-    // Very likely. As long as %gep is naturally aligned, the byte offset we
+    // Very likely. As long as %gep is natually aligned, the byte offset we
     // extracted should be a multiple of sizeof(*%gep).
     int64_t Index = AccumulativeByteOffset / ElementTypeSizeOfGEP;
     NewGEP = GetElementPtrInst::Create(GEP->getResultElementType(), NewGEP,
@@ -1298,7 +1295,7 @@ void SeparateConstOffsetFromGEP::swapGEPOperand(GetElementPtrInst *First,
 
   // We changed p+o+c to p+c+o, p+c may not be inbound anymore.
   const DataLayout &DAL = First->getModule()->getDataLayout();
-  APInt Offset(DAL.getIndexSizeInBits(
+  APInt Offset(DAL.getPointerSizeInBits(
                    cast<PointerType>(First->getType())->getAddressSpace()),
                0);
   Value *NewBase =

@@ -5,13 +5,11 @@ FileHeader:
 Sections:
   - Type:            TYPE
     Signatures:
-      - Index:           0
-        ReturnType:      I32
+      - ReturnType:      I32
         ParamTypes:
           - F32
           - F32
-      - Index:           1
-        ReturnType:      I64
+      - ReturnType:      I64
         ParamTypes:
           - F64
           - F64

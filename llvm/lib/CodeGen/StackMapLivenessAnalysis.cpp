@@ -39,7 +39,7 @@ STATISTIC(NumBBsHaveNoStackmap,   "Number of basic blocks with no stackmap");
 STATISTIC(NumStackMaps,           "Number of StackMaps visited");
 
 namespace {
-/// This pass calculates the liveness information for each basic block in
+/// \brief This pass calculates the liveness information for each basic block in
 /// a function and attaches the register live-out information to a patchpoint
 /// intrinsic if present.
 ///
@@ -54,10 +54,10 @@ class StackMapLiveness : public MachineFunctionPass {
 public:
   static char ID;
 
-  /// Default construct and initialize the pass.
+  /// \brief Default construct and initialize the pass.
   StackMapLiveness();
 
-  /// Tell the pass manager which passes we depend on and what
+  /// \brief Tell the pass manager which passes we depend on and what
   /// information we preserve.
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
@@ -66,17 +66,17 @@ public:
         MachineFunctionProperties::Property::NoVRegs);
   }
 
-  /// Calculate the liveness information for the given machine function.
+  /// \brief Calculate the liveness information for the given machine function.
   bool runOnMachineFunction(MachineFunction &MF) override;
 
 private:
-  /// Performs the actual liveness calculation for the function.
+  /// \brief Performs the actual liveness calculation for the function.
   bool calculateLiveness(MachineFunction &MF);
 
-  /// Add the current register live set to the instruction.
+  /// \brief Add the current register live set to the instruction.
   void addLiveOutSetToMI(MachineFunction &MF, MachineInstr &MI);
 
-  /// Create a register mask and initialize it with the registers from
+  /// \brief Create a register mask and initialize it with the registers from
   /// the register live set.
   uint32_t *createRegisterMask(MachineFunction &MF) const;
 };
@@ -106,8 +106,8 @@ bool StackMapLiveness::runOnMachineFunction(MachineFunction &MF) {
   if (!EnablePatchPointLiveness)
     return false;
 
-  LLVM_DEBUG(dbgs() << "********** COMPUTING STACKMAP LIVENESS: "
-                    << MF.getName() << " **********\n");
+  DEBUG(dbgs() << "********** COMPUTING STACKMAP LIVENESS: " << MF.getName()
+               << " **********\n");
   TRI = MF.getSubtarget().getRegisterInfo();
   ++NumStackMapFuncVisited;
 
@@ -124,7 +124,7 @@ bool StackMapLiveness::calculateLiveness(MachineFunction &MF) {
   bool HasChanged = false;
   // For all basic blocks in the function.
   for (auto &MBB : MF) {
-    LLVM_DEBUG(dbgs() << "****** BB " << MBB.getName() << " ******\n");
+    DEBUG(dbgs() << "****** BB " << MBB.getName() << " ******\n");
     LiveRegs.init(*TRI);
     // FIXME: This should probably be addLiveOuts().
     LiveRegs.addLiveOutsNoPristines(MBB);
@@ -138,7 +138,7 @@ bool StackMapLiveness::calculateLiveness(MachineFunction &MF) {
         HasStackMap = true;
         ++NumStackMaps;
       }
-      LLVM_DEBUG(dbgs() << "   " << LiveRegs << "   " << *I);
+      DEBUG(dbgs() << "   " << LiveRegs << "   " << *I);
       LiveRegs.stepBackward(*I);
     }
     ++NumBBsVisited;

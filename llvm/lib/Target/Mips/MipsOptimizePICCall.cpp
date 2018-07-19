@@ -27,6 +27,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -34,7 +35,6 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MachineValueType.h"
 #include "llvm/Support/RecyclingAllocator.h"
 #include <cassert>
 #include <utility>
@@ -90,10 +90,10 @@ public:
   }
 
 private:
-  /// Visit MBB.
+  /// \brief Visit MBB.
   bool visitNode(MBBInfo &MBBI);
 
-  /// Test if MI jumps to a function via a register.
+  /// \brief Test if MI jumps to a function via a register.
   ///
   /// Also, return the virtual register containing the target function's address
   /// and the underlying object in Reg and Val respectively, if the function's
@@ -101,15 +101,15 @@ private:
   bool isCallViaRegister(MachineInstr &MI, unsigned &Reg,
                          ValueType &Val) const;
 
-  /// Return the number of instructions that dominate the current
+  /// \brief Return the number of instructions that dominate the current
   /// instruction and load the function address from object Entry.
   unsigned getCount(ValueType Entry);
 
-  /// Return the destination virtual register of the last instruction
+  /// \brief Return the destination virtual register of the last instruction
   /// that loads from object Entry.
   unsigned getReg(ValueType Entry);
 
-  /// Update ScopedHT.
+  /// \brief Update ScopedHT.
   void incCntAndSetReg(ValueType Entry, unsigned Reg);
 
   ScopedHTType ScopedHT;

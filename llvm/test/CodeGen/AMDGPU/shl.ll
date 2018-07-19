@@ -1,6 +1,6 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=verde -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=GCN -check-prefix=SI -check-prefix=FUNC %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=verde -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI -check-prefix=FUNC %s
 ; XUN: llc -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI -check-prefix=FUNC %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=r600 -mtriple=r600---amdgiz -mcpu=redwood -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=EG -check-prefix=FUNC %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=r600 -mtriple=r600---amdgiz -mcpu=redwood -verify-machineinstrs < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
 
 declare i32 @llvm.r600.read.tidig.x() #0
 
@@ -275,11 +275,11 @@ define amdgpu_kernel void @shl_v4i64(<4 x i64> addrspace(1)* %out, <4 x i64> add
 
 ; Make sure load width gets reduced to i32 load.
 ; GCN-LABEL: {{^}}s_shl_32_i64:
-; GCN-DAG: s_load_dword [[LO_A:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x13{{$}}
+; GCN-DAG: s_load_dword [[LO_A:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0xb{{$}}
 ; GCN-DAG: v_mov_b32_e32 v[[VLO:[0-9]+]], 0{{$}}
 ; GCN-DAG: v_mov_b32_e32 v[[VHI:[0-9]+]], [[LO_A]]
 ; GCN: buffer_store_dwordx2 v{{\[}}[[VLO]]:[[VHI]]{{\]}}
-define amdgpu_kernel void @s_shl_32_i64(i64 addrspace(1)* %out, [8 x i32], i64 %a) {
+define amdgpu_kernel void @s_shl_32_i64(i64 addrspace(1)* %out, i64 %a) {
   %result = shl i64 %a, 32
   store i64 %result, i64 addrspace(1)* %out
   ret void

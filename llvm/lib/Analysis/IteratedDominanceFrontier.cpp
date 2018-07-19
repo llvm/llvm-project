@@ -21,20 +21,15 @@ template <class NodeTy, bool IsPostDom>
 void IDFCalculator<NodeTy, IsPostDom>::calculate(
     SmallVectorImpl<BasicBlock *> &PHIBlocks) {
   // Use a priority queue keyed on dominator tree level so that inserted nodes
-  // are handled from the bottom of the dominator tree upwards. We also augment
-  // the level with a DFS number to ensure that the blocks are ordered in a
-  // deterministic way.
-  typedef std::pair<DomTreeNode *, std::pair<unsigned, unsigned>>
-      DomTreeNodePair;
+  // are handled from the bottom of the dominator tree upwards.
+  typedef std::pair<DomTreeNode *, unsigned> DomTreeNodePair;
   typedef std::priority_queue<DomTreeNodePair, SmallVector<DomTreeNodePair, 32>,
                               less_second> IDFPriorityQueue;
   IDFPriorityQueue PQ;
 
-  DT.updateDFSNumbers();
-
   for (BasicBlock *BB : *DefBlocks) {
     if (DomTreeNode *Node = DT.getNode(BB))
-      PQ.push({Node, std::make_pair(Node->getLevel(), Node->getDFSNumIn())});
+      PQ.push({Node, Node->getLevel()});
   }
 
   SmallVector<DomTreeNode *, 32> Worklist;
@@ -45,7 +40,7 @@ void IDFCalculator<NodeTy, IsPostDom>::calculate(
     DomTreeNodePair RootPair = PQ.top();
     PQ.pop();
     DomTreeNode *Root = RootPair.first;
-    unsigned RootLevel = RootPair.second.first;
+    unsigned RootLevel = RootPair.second;
 
     // Walk all dominator tree children of Root, inspecting their CFG edges with
     // targets elsewhere on the dominator tree. Only targets whose level is at
@@ -82,8 +77,7 @@ void IDFCalculator<NodeTy, IsPostDom>::calculate(
 
         PHIBlocks.emplace_back(SuccBB);
         if (!DefBlocks->count(SuccBB))
-          PQ.push(std::make_pair(
-              SuccNode, std::make_pair(SuccLevel, SuccNode->getDFSNumIn())));
+          PQ.push(std::make_pair(SuccNode, SuccLevel));
       }
 
       for (auto DomChild : *Node) {

@@ -26,12 +26,12 @@ class FunctionPass;
 class Module;
 class Function;
 
-/// Create a lint pass.
+/// @brief Create a lint pass.
 ///
 /// Check a module or function.
 FunctionPass *createLintPass();
 
-/// Check a module.
+/// @brief Check a module.
 ///
 /// This should only be used for debugging, because it plays games with
 /// PassManagers and stuff.

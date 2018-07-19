@@ -280,7 +280,7 @@ unsigned SparcInstrInfo::removeBranch(MachineBasicBlock &MBB,
   while (I != MBB.begin()) {
     --I;
 
-    if (I->isDebugInstr())
+    if (I->isDebugValue())
       continue;
 
     if (I->getOpcode() != SP::BA

@@ -6,7 +6,7 @@ set(LLVM_LINK_COMPONENTS
   Passes
   )
 
-add_llvm_unittest(IRTests
+set(IRSources
   AsmWriterTest.cpp
   AttributesTest.cpp
   BasicBlockTest.cpp
@@ -15,10 +15,8 @@ add_llvm_unittest(IRTests
   ConstantsTest.cpp
   DebugInfoTest.cpp
   DebugTypeODRUniquingTest.cpp
-  DeferredDominanceTest.cpp
   DominatorTreeTest.cpp
   DominatorTreeBatchUpdatesTest.cpp
-  DomTreeUpdaterTest.cpp
   FunctionTest.cpp
   PassBuilderCallbacksTest.cpp
   IRBuilderTest.cpp
@@ -26,7 +24,6 @@ add_llvm_unittest(IRTests
   IntrinsicsTest.cpp
   LegacyPassManagerTest.cpp
   MDBuilderTest.cpp
-  ManglerTest.cpp
   MetadataTest.cpp
   ModuleTest.cpp
   PassManagerTest.cpp
@@ -40,4 +37,14 @@ add_llvm_unittest(IRTests
   ValueTest.cpp
   VerifierTest.cpp
   WaymarkTest.cpp
+  )
+
+# HACK: Declare a couple of source files as optionally compiled to satisfy the
+# missing-file-checker in LLVM's weird CMake build.
+set(LLVM_OPTIONAL_SOURCES
+  ValueMapTest.cpp
+  )
+
+add_llvm_unittest(IRTests
+  ${IRSources}
   )

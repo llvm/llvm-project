@@ -87,7 +87,7 @@ STATISTIC(NumEliminated, "Number of tail calls removed");
 STATISTIC(NumRetDuped,   "Number of return duplicated");
 STATISTIC(NumAccumAdded, "Number of accumulators introduced");
 
-/// Scan the specified function for alloca instructions.
+/// \brief Scan the specified function for alloca instructions.
 /// If it contains any dynamic allocas, returns false.
 static bool canTRE(Function &F) {
   // Because of PR962, we don't TRE dynamic allocas.
@@ -302,7 +302,7 @@ static bool markTails(Function &F, bool &AllCallsAreTailCalls,
     if (Visited[CI->getParent()] != ESCAPED) {
       // If the escape point was part way through the block, calls after the
       // escape point wouldn't have been put into DeferredTails.
-      LLVM_DEBUG(dbgs() << "Marked as tail call candidate: " << *CI << "\n");
+      DEBUG(dbgs() << "Marked as tail call candidate: " << *CI << "\n");
       CI->setTailCall();
       Modified = true;
     } else {
@@ -699,8 +699,8 @@ static bool foldReturnAndProcessPred(
     BranchInst *BI = UncondBranchPreds.pop_back_val();
     BasicBlock *Pred = BI->getParent();
     if (CallInst *CI = findTRECandidate(BI, CannotTailCallElimCallsMarkedTail, TTI)){
-      LLVM_DEBUG(dbgs() << "FOLDING: " << *BB
-                        << "INTO UNCOND BRANCH PRED: " << *Pred);
+      DEBUG(dbgs() << "FOLDING: " << *BB
+            << "INTO UNCOND BRANCH PRED: " << *Pred);
       ReturnInst *RI = FoldReturnIntoUncondBranch(Ret, BB, Pred);
 
       // Cleanup: if all predecessors of BB have been eliminated by

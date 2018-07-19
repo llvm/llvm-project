@@ -14,7 +14,5 @@ set(LLVM_LINK_COMPONENTS
     Support
     Target
 )
-add_llvm_fuzzer(llvm-isel-fuzzer
-  llvm-isel-fuzzer.cpp
-  DUMMY_MAIN DummyISelFuzzer.cpp
-  )
+add_llvm_fuzzer(llvm-isel-fuzzer llvm-isel-fuzzer.cpp
+  DUMMY_MAIN DummyISelFuzzer.cpp)

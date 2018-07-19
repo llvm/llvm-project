@@ -16,7 +16,7 @@ entry:
 ;OPT0:          stw [[REG2]], 0([[REG1]])
 ;OPT1:          addis [[REG1:[0-9]+]], 13, a@tprel@ha
 ;OPT1-NEXT:     li [[REG2:[0-9]+]], 42
-;OPT1:     stw [[REG2]], a@tprel@l([[REG1]])
+;OPT1-NEXT:     stw [[REG2]], a@tprel@l([[REG1]])
   store i32 42, i32* @a, align 4
   ret i32 0
 }

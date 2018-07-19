@@ -103,7 +103,7 @@ public:
     One.setSignBit();
   }
 
-  /// Make this value non-negative.
+  /// Make this value negative.
   void makeNonNegative() {
     Zero.setSignBit();
   }

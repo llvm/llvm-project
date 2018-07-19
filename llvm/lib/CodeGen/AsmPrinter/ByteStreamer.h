@@ -43,7 +43,7 @@ public:
   APByteStreamer(AsmPrinter &Asm) : AP(Asm) {}
   void EmitInt8(uint8_t Byte, const Twine &Comment) override {
     AP.OutStreamer->AddComment(Comment);
-    AP.emitInt8(Byte);
+    AP.EmitInt8(Byte);
   }
   void EmitSLEB128(uint64_t DWord, const Twine &Comment) override {
     AP.OutStreamer->AddComment(Comment);
@@ -76,7 +76,7 @@ private:
   SmallVectorImpl<char> &Buffer;
   SmallVectorImpl<std::string> &Comments;
 
-  /// Only verbose textual output needs comments.  This will be set to
+  /// \brief Only verbose textual output needs comments.  This will be set to
   /// true for that case, and false otherwise.  If false, comments passed in to
   /// the emit methods will be ignored.
   bool GenerateComments;

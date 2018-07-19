@@ -173,27 +173,7 @@ const PPCFrameLowering::SpillSlot *PPCFrameLowering::getCalleeSavedSpillSlots(
       {PPC::V23, -144},
       {PPC::V22, -160},
       {PPC::V21, -176},
-      {PPC::V20, -192},
-  
-      // SPE register save area (overlaps Vector save area).
-      {PPC::S31, -8},
-      {PPC::S30, -16},
-      {PPC::S29, -24},
-      {PPC::S28, -32},
-      {PPC::S27, -40},
-      {PPC::S26, -48},
-      {PPC::S25, -56},
-      {PPC::S24, -64},
-      {PPC::S23, -72},
-      {PPC::S22, -80},
-      {PPC::S21, -88},
-      {PPC::S20, -96},
-      {PPC::S19, -104},
-      {PPC::S18, -112},
-      {PPC::S17, -120},
-      {PPC::S16, -128},
-      {PPC::S15, -136},
-      {PPC::S14, -144}};
+      {PPC::V20, -192}};
 
   static const SpillSlot Offsets64[] = {
       // Floating-point register save area offsets.
@@ -1635,7 +1615,7 @@ void PPCFrameLowering::determineCalleeSaves(MachineFunction &MF,
   }
 
   // Make sure we don't explicitly spill r31, because, for example, we have
-  // some inline asm which explicitly clobbers it, when we otherwise have a
+  // some inline asm which explicity clobbers it, when we otherwise have a
   // frame pointer and are using r31's spill slot for the prologue/epilogue
   // code. Same goes for the base pointer and the PIC base register.
   if (needsFP(MF))
@@ -1696,7 +1676,7 @@ void PPCFrameLowering::processFunctionBeforeFrameFinalized(MachineFunction &MF,
   unsigned MinGPR = PPC::R31;
   unsigned MinG8R = PPC::X31;
   unsigned MinFPR = PPC::F31;
-  unsigned MinVR = Subtarget.hasSPE() ? PPC::S31 : PPC::V31;
+  unsigned MinVR = PPC::V31;
 
   bool HasGPSaveArea = false;
   bool HasG8SaveArea = false;
@@ -1711,8 +1691,7 @@ void PPCFrameLowering::processFunctionBeforeFrameFinalized(MachineFunction &MF,
 
   for (unsigned i = 0, e = CSI.size(); i != e; ++i) {
     unsigned Reg = CSI[i].getReg();
-    if (PPC::GPRCRegClass.contains(Reg) ||
-        PPC::SPE4RCRegClass.contains(Reg)) {
+    if (PPC::GPRCRegClass.contains(Reg)) {
       HasGPSaveArea = true;
 
       GPRegs.push_back(CSI[i]);
@@ -1741,10 +1720,7 @@ void PPCFrameLowering::processFunctionBeforeFrameFinalized(MachineFunction &MF,
       ; // do nothing, as we already know whether CRs are spilled
     } else if (PPC::VRSAVERCRegClass.contains(Reg)) {
       HasVRSAVESaveArea = true;
-    } else if (PPC::VRRCRegClass.contains(Reg) ||
-               PPC::SPERCRegClass.contains(Reg)) {
-      // Altivec and SPE are mutually exclusive, but have the same stack
-      // alignment requirements, so overload the save area for both cases.
+    } else if (PPC::VRRCRegClass.contains(Reg)) {
       HasVRSaveArea = true;
 
       VRegs.push_back(CSI[i]);
@@ -1887,10 +1863,8 @@ void PPCFrameLowering::processFunctionBeforeFrameFinalized(MachineFunction &MF,
     LowerBound -= 4; // The VRSAVE save area is always 4 bytes long.
   }
 
-  // Both Altivec and SPE have the same alignment and padding requirements
-  // within the stack frame.
   if (HasVRSaveArea) {
-    // Insert alignment padding, we need 16-byte alignment. Note: for positive
+    // Insert alignment padding, we need 16-byte alignment. Note: for postive
     // number the alignment formula is : y = (x + (n-1)) & (~(n-1)). But since
     // we are using negative number here (the stack grows downward). We should
     // use formula : y = x & (~(n-1)). Where x is the size before aligning, n
@@ -1976,14 +1950,7 @@ PPCFrameLowering::spillCalleeSavedRegisters(MachineBasicBlock &MBB,
     bool IsCRField = PPC::CR2 <= Reg && Reg <= PPC::CR4;
 
     // Add the callee-saved register as live-in; it's killed at the spill.
-    // Do not do this for callee-saved registers that are live-in to the
-    // function because they will already be marked live-in and this will be
-    // adding it for a second time. It is an error to add the same register
-    // to the set more than once.
-    const MachineRegisterInfo &MRI = MF->getRegInfo();
-    bool IsLiveIn = MRI.isLiveIn(Reg);
-    if (!IsLiveIn)
-       MBB.addLiveIn(Reg);
+    MBB.addLiveIn(Reg);
 
     if (CRSpilled && IsCRField) {
       CRMIB.addReg(Reg, RegState::ImplicitKill);
@@ -2013,10 +1980,7 @@ PPCFrameLowering::spillCalleeSavedRegisters(MachineBasicBlock &MBB,
       }
     } else {
       const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
-      // Use !IsLiveIn for the kill flag.
-      // We do not want to kill registers that are live in this function
-      // before their use because they will become undefined registers.
-      TII.storeRegToStackSlot(MBB, MI, Reg, !IsLiveIn,
+      TII.storeRegToStackSlot(MBB, MI, Reg, true,
                               CSI[i].getFrameIdx(), RC, TRI);
     }
   }
@@ -2185,8 +2149,6 @@ PPCFrameLowering::restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
 }
 
 bool PPCFrameLowering::enableShrinkWrapping(const MachineFunction &MF) const {
-  if (MF.getInfo<PPCFunctionInfo>()->shrinkWrapDisabled())
-    return false;
   return (MF.getSubtarget<PPCSubtarget>().isSVR4ABI() &&
           MF.getSubtarget<PPCSubtarget>().isPPC64());
 }

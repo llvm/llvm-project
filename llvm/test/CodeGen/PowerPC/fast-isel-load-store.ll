@@ -3,7 +3,6 @@
 ; When fastisel better supports VSX fix up this test case.
 ;
 ; RUN: llc -relocation-model=static < %s -O0 -verify-machineinstrs -fast-isel -fast-isel-abort=1 -mattr=-vsx -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 | FileCheck %s --check-prefix=ELF64
-; RUN: llc -relocation-model=static < %s -O0 -verify-machineinstrs -fast-isel -fast-isel-abort=1 -mattr=spe  -mtriple=powerpc-unknown-linux-gnu -mcpu=e500 | FileCheck %s --check-prefix=SPE
 
 ; This test verifies that load/store instructions are properly generated,
 ; and that they pass MI verification.
@@ -63,25 +62,19 @@ define i64 @t4() nounwind {
 
 define float @t5() nounwind {
 ; ELF64: t5
-; SPE: t5
   %1 = load float, float* @e, align 4
 ; ELF64: lfs
-; SPE: lwz
   %2 = fadd float %1, 1.0
 ; ELF64: fadds
-; SPE: efsadd
   ret float %2
 }
 
 define double @t6() nounwind {
 ; ELF64: t6
-; SPE: t6
   %1 = load double, double* @f, align 8
 ; ELF64: lfd
-; SPE: evldd
   %2 = fadd double %1, 1.0
 ; ELF64: fadd
-; SPE: efdadd
   ret double %2
 }
 
@@ -133,25 +126,19 @@ define void @t10(i64 %v) nounwind {
 
 define void @t11(float %v) nounwind {
 ; ELF64: t11
-; SPE: t11
   %1 = fadd float %v, 1.0
   store float %1, float* @e, align 4
 ; ELF64: fadds
 ; ELF64: stfs
-; SPE: efsadd
-; SPE: stw
   ret void
 }
 
 define void @t12(double %v) nounwind {
 ; ELF64: t12
-; SPE: t12
   %1 = fadd double %v, 1.0
   store double %1, double* @f, align 8
 ; ELF64: fadd
 ; ELF64: stfd
-; SPE: efdadd
-; SPE: evstdd
   ret void
 }
 

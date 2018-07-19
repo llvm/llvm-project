@@ -100,7 +100,7 @@ public:
   /// Gather and emit post-function exception information.
   void endFunction(const MachineFunction *) override;
 
-  /// Emit target-specific EH funclet machinery.
+  /// \brief Emit target-specific EH funclet machinery.
   void beginFunclet(const MachineBasicBlock &MBB, MCSymbol *Sym) override;
   void endFunclet() override;
 };

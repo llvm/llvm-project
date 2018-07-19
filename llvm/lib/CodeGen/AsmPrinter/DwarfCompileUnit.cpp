@@ -28,6 +28,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
+#include "llvm/CodeGen/TargetLoweringObjectFile.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
@@ -39,7 +40,6 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MachineLocation.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include <algorithm>
@@ -94,18 +94,16 @@ void DwarfCompileUnit::addLocalLabelAddress(DIE &Die,
                  DIEInteger(0));
 }
 
-unsigned DwarfCompileUnit::getOrCreateSourceID(const DIFile *File) {
+unsigned DwarfCompileUnit::getOrCreateSourceID(StringRef FileName,
+                                               StringRef DirName) {
   // If we print assembly, we can't separate .file entries according to
   // compile units. Thus all files will belong to the default compile unit.
 
   // FIXME: add a better feature test than hasRawTextSupport. Even better,
   // extend .file to support this.
-  unsigned CUID = Asm->OutStreamer->hasRawTextSupport() ? 0 : getUniqueID();
-  if (!File)
-    return Asm->OutStreamer->EmitDwarfFileDirective(0, "", "", nullptr, None, CUID);
   return Asm->OutStreamer->EmitDwarfFileDirective(
-      0, File->getDirectory(), File->getFilename(), getMD5AsBytes(File),
-      File->getSource(), CUID);
+      0, DirName, FileName,
+      Asm->OutStreamer->hasRawTextSupport() ? 0 : getUniqueID());
 }
 
 DIE *DwarfCompileUnit::getOrCreateGlobalVariableDIE(
@@ -198,7 +196,7 @@ DIE *DwarfCompileUnit::getOrCreateGlobalVariableDIE(
     if (Global) {
       const MCSymbol *Sym = Asm->getSymbol(Global);
       if (Global->isThreadLocal()) {
-        if (Asm->TM.useEmulatedTLS()) {
+        if (Asm->TM.Options.EmulatedTLS) {
           // TODO: add debug info for emulated thread local mode.
         } else {
           // FIXME: Make this work with -gsplit-dwarf.
@@ -230,13 +228,8 @@ DIE *DwarfCompileUnit::getOrCreateGlobalVariableDIE(
         addOpAddress(*Loc, Sym);
       }
     }
-    // Global variables attached to symbols are memory locations.
-    // It would be better if this were unconditional, but malformed input that
-    // mixes non-fragments and fragments for the same variable is too expensive
-    // to detect in the verifier.
-    if (DwarfExpr->isUnknownLocation())
-      DwarfExpr->setMemoryLocationKind();
-    DwarfExpr->addExpression(Expr);
+    if (Expr)
+      DwarfExpr->addExpression(Expr);
   }
   if (Loc)
     addBlock(*VariableDIE, dwarf::DW_AT_location, DwarfExpr->finalize());
@@ -249,8 +242,7 @@ DIE *DwarfCompileUnit::getOrCreateGlobalVariableDIE(
 
     // If the linkage name is different than the name, go ahead and output
     // that as well into the name table.
-    if (GV->getLinkageName() != "" && GV->getName() != GV->getLinkageName() &&
-        DD->useAllLinkageNames())
+    if (GV->getLinkageName() != "" && GV->getName() != GV->getLinkageName())
       DD->addAccelName(GV->getLinkageName(), *VariableDIE);
   }
 
@@ -276,20 +268,15 @@ void DwarfCompileUnit::addRange(RangeSpan Range) {
 
 void DwarfCompileUnit::initStmtList() {
   // Define start line table label for each Compile Unit.
-  MCSymbol *LineTableStartSym;
-  const TargetLoweringObjectFile &TLOF = Asm->getObjFileLowering();
-  if (DD->useSectionsAsReferences()) {
-    LineTableStartSym = TLOF.getDwarfLineSection()->getBeginSymbol();
-  } else {
-    LineTableStartSym =
-        Asm->OutStreamer->getDwarfLineTableSymbol(getUniqueID());
-  }
+  MCSymbol *LineTableStartSym =
+      Asm->OutStreamer->getDwarfLineTableSymbol(getUniqueID());
 
   // DW_AT_stmt_list is a offset of line number information for this
   // compile unit in debug_line section. For split dwarf this is
   // left in the skeleton CU and so not included.
   // The line table entries are not always emitted in assembly, so it
   // is not okay to use line_table_start here.
+  const TargetLoweringObjectFile &TLOF = Asm->getObjFileLowering();
   StmtListValue =
       addSectionLabel(getUnitDie(), dwarf::DW_AT_stmt_list, LineTableStartSym,
                       TLOF.getDwarfLineSection()->getBeginSymbol());
@@ -399,30 +386,21 @@ void DwarfCompileUnit::addScopeRangeList(DIE &ScopeDIE,
                                          SmallVector<RangeSpan, 2> Range) {
   const TargetLoweringObjectFile &TLOF = Asm->getObjFileLowering();
 
-  // Emit the offset into .debug_ranges or .debug_rnglists as a relocatable
-  // label. emitDIE() will handle emitting it appropriately.
+  // Emit offset in .debug_range as a relocatable label. emitDIE will handle
+  // emitting it appropriately.
   const MCSymbol *RangeSectionSym =
-      DD->getDwarfVersion() >= 5
-          ? TLOF.getDwarfRnglistsSection()->getBeginSymbol()
-          : TLOF.getDwarfRangesSection()->getBeginSymbol();
+      TLOF.getDwarfRangesSection()->getBeginSymbol();
 
   RangeSpanList List(Asm->createTempSymbol("debug_ranges"), std::move(Range));
 
   // Under fission, ranges are specified by constant offsets relative to the
   // CU's DW_AT_GNU_ranges_base.
-  // FIXME: For DWARF v5, do not generate the DW_AT_ranges attribute under
-  // fission until we support the forms using the .debug_addr section
-  // (DW_RLE_startx_endx etc.).
-  if (isDwoUnit()) {
-    if (DD->getDwarfVersion() < 5)
-      addSectionDelta(ScopeDIE, dwarf::DW_AT_ranges, List.getSym(),
-                      RangeSectionSym);
-  } else {
+  if (isDwoUnit())
+    addSectionDelta(ScopeDIE, dwarf::DW_AT_ranges, List.getSym(),
+                    RangeSectionSym);
+  else
     addSectionLabel(ScopeDIE, dwarf::DW_AT_ranges, List.getSym(),
                     RangeSectionSym);
-    if (DD->getDwarfVersion() >= 5)
-      addRnglistsBase();
-  }
 
   // Add the range list to the set of ranges to be emitted.
   (Skeleton ? Skeleton : this)->CURangeLists.push_back(std::move(List));
@@ -430,10 +408,9 @@ void DwarfCompileUnit::addScopeRangeList(DIE &ScopeDIE,
 
 void DwarfCompileUnit::attachRangesOrLowHighPC(
     DIE &Die, SmallVector<RangeSpan, 2> Ranges) {
-  if (Ranges.size() == 1 || !DD->useRangesSection()) {
-    const RangeSpan &Front = Ranges.front();
-    const RangeSpan &Back = Ranges.back();
-    attachLowHighPC(Die, Front.getStart(), Back.getEnd());
+  if (Ranges.size() == 1) {
+    const auto &single = Ranges.front();
+    attachLowHighPC(Die, single.getStart(), single.getEnd());
   } else
     addScopeRangeList(Die, std::move(Ranges));
 }
@@ -467,7 +444,7 @@ DIE *DwarfCompileUnit::constructInlinedScopeDIE(LexicalScope *Scope) {
   // Add the call site information to the DIE.
   const DILocation *IA = Scope->getInlinedAt();
   addUInt(*ScopeDIE, dwarf::DW_AT_call_file, None,
-          getOrCreateSourceID(IA->getFile()));
+          getOrCreateSourceID(IA->getFilename(), IA->getDirectory()));
   addUInt(*ScopeDIE, dwarf::DW_AT_call_line, None, IA->getLine());
   if (IA->getDiscriminator() && DD->getDwarfVersion() >= 4)
     addUInt(*ScopeDIE, dwarf::DW_AT_GNU_discriminator, None,
@@ -794,7 +771,9 @@ DIE *DwarfCompileUnit::constructImportedEntityDIE(
   else
     EntityDie = getDIE(Entity);
   assert(EntityDie);
-  addSourceLine(*IMDie, Module->getLine(), Module->getFile());
+  auto *File = Module->getFile();
+  addSourceLine(*IMDie, Module->getLine(), File ? File->getFilename() : "",
+                File ? File->getDirectory() : "");
   addDIEEntry(*IMDie, dwarf::DW_AT_import, *EntityDie);
   StringRef Name = Module->getName();
   if (!Name.empty())
@@ -855,7 +834,7 @@ void DwarfCompileUnit::createAbstractVariable(const DILocalVariable *Var,
 
 void DwarfCompileUnit::emitHeader(bool UseOffsets) {
   // Don't bother labeling the .dwo unit, as its offset isn't used.
-  if (!Skeleton && !DD->useSectionsAsReferences()) {
+  if (!Skeleton) {
     LabelBegin = Asm->createTempSymbol("cu_begin");
     Asm->OutStreamer->EmitLabel(LabelBegin);
   }
@@ -864,8 +843,6 @@ void DwarfCompileUnit::emitHeader(bool UseOffsets) {
                                 : DD->useSplitDwarf() ? dwarf::DW_UT_skeleton
                                                       : dwarf::DW_UT_compile;
   DwarfUnit::emitCommonHeader(UseOffsets, UT);
-  if (DD->getDwarfVersion() >= 5 && UT != dwarf::DW_UT_compile)
-    Asm->emitInt64(getDWOId());
 }
 
 bool DwarfCompileUnit::hasDwarfPubSections() const {
@@ -874,8 +851,7 @@ bool DwarfCompileUnit::hasDwarfPubSections() const {
   if (CUNode->getGnuPubnames())
     return true;
 
-  return DD->tuneForGDB() && DD->usePubSections() &&
-         !includeMinimalInlineScopes();
+  return DD->tuneForGDB() && !includeMinimalInlineScopes();
 }
 
 /// addGlobalName - Add a new global name to the compile unit.

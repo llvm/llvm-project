@@ -13,16 +13,19 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cinttypes>
 #include <cstdint>
+#include <utility>
 
 using namespace llvm;
 
-// FIXME: There are several versions of this. Consolidate them.
-template <typename... Ts>
-static Error createError(char const *Fmt, const Ts &... Vals) {
-  std::string Buffer;
-  raw_string_ostream Stream(Buffer);
-  Stream << format(Fmt, Vals...);
-  return make_error<StringError>(Stream.str(), inconvertibleErrorCode());
+void DWARFAddressRange::dump(raw_ostream &OS, uint32_t AddressSize) const {
+
+  OS << format("[0x%*.*" PRIx64 ", ", AddressSize * 2, AddressSize * 2, LowPC)
+     << format(" 0x%*.*" PRIx64 ")", AddressSize * 2, AddressSize * 2, HighPC);
+}
+
+raw_ostream &llvm::operator<<(raw_ostream &OS, const DWARFAddressRange &R) {
+  R.dump(OS, /* AddressSize */ 8);
+  return OS;
 }
 
 void DWARFDebugRangeList::clear() {
@@ -31,15 +34,14 @@ void DWARFDebugRangeList::clear() {
   Entries.clear();
 }
 
-Error DWARFDebugRangeList::extract(const DWARFDataExtractor &data,
-                                   uint32_t *offset_ptr) {
+bool DWARFDebugRangeList::extract(const DWARFDataExtractor &data,
+                                  uint32_t *offset_ptr) {
   clear();
   if (!data.isValidOffset(*offset_ptr))
-    return createError("invalid range list offset 0x%" PRIx32, *offset_ptr);
-
+    return false;
   AddressSize = data.getAddressSize();
   if (AddressSize != 4 && AddressSize != 8)
-    return createError("invalid address size: %d", AddressSize);
+    return false;
   Offset = *offset_ptr;
   while (true) {
     RangeListEntry Entry;
@@ -53,14 +55,13 @@ Error DWARFDebugRangeList::extract(const DWARFDataExtractor &data,
     // Check that both values were extracted correctly.
     if (*offset_ptr != prev_offset + 2 * AddressSize) {
       clear();
-      return createError("invalid range list entry at offset 0x%" PRIx32,
-                         prev_offset);
+      return false;
     }
     if (Entry.isEndOfListEntry())
       break;
     Entries.push_back(Entry);
   }
-  return Error::success();
+  return true;
 }
 
 void DWARFDebugRangeList::dump(raw_ostream &OS) const {

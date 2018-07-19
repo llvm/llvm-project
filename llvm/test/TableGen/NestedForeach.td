@@ -17,10 +17,6 @@ foreach S = ["R", "C"] in {
   }
 }
 
-foreach i = [0, 1] in
-  foreach j = !foreach(x, [0, 2], !add(i, x)) in
-    def Z#i#_#j;
-
 // CHECK: def C2D0
 // CHECK: def C2D2
 // CHECK: def C2D4
@@ -75,8 +71,3 @@ foreach i = [0, 1] in
 // CHECK: def R4Q0
 // CHECK: def R4Q2
 // CHECK: def R4Q4
-
-// CHECK: def Z0_0
-// CHECK: def Z0_2
-// CHECK: def Z1_1
-// CHECK: def Z1_3

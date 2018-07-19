@@ -25,7 +25,6 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LEB128.h"
-#include "llvm/Support/MD5.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cstdint>
@@ -64,7 +63,7 @@ SampleProfileWriter::write(const StringMap<FunctionSamples> &ProfileMap) {
   return sampleprof_error::success;
 }
 
-/// Write samples to a text file.
+/// \brief Write samples to a text file.
 ///
 /// Note: it may be tempting to implement this in terms of
 /// FunctionSamples::print().  Please don't.  The dump functionality is intended
@@ -145,61 +144,13 @@ void SampleProfileWriterBinary::addNames(const FunctionSamples &S) {
     }
 }
 
-void SampleProfileWriterBinary::stablizeNameTable(std::set<StringRef> &V) {
-  // Sort the names to make NameTable deterministic.
-  for (const auto &I : NameTable)
-    V.insert(I.first);
-  int i = 0;
-  for (const StringRef &N : V)
-    NameTable[N] = i++;
-}
-
-std::error_code SampleProfileWriterRawBinary::writeNameTable() {
+std::error_code SampleProfileWriterBinary::writeHeader(
+    const StringMap<FunctionSamples> &ProfileMap) {
   auto &OS = *OutputStream;
-  std::set<StringRef> V;
-  stablizeNameTable(V);
 
-  // Write out the name table.
-  encodeULEB128(NameTable.size(), OS);
-  for (auto N : V) {
-    OS << N;
-    encodeULEB128(0, OS);
-  }
-  return sampleprof_error::success;
-}
-
-std::error_code SampleProfileWriterCompactBinary::writeNameTable() {
-  auto &OS = *OutputStream;
-  std::set<StringRef> V;
-  stablizeNameTable(V);
-
-  // Write out the name table.
-  encodeULEB128(NameTable.size(), OS);
-  for (auto N : V) {
-    encodeULEB128(MD5Hash(N), OS);
-  }
-  return sampleprof_error::success;
-}
-
-std::error_code SampleProfileWriterRawBinary::writeMagicIdent() {
-  auto &OS = *OutputStream;
   // Write file magic identifier.
   encodeULEB128(SPMagic(), OS);
   encodeULEB128(SPVersion(), OS);
-  return sampleprof_error::success;
-}
-
-std::error_code SampleProfileWriterCompactBinary::writeMagicIdent() {
-  auto &OS = *OutputStream;
-  // Write file magic identifier.
-  encodeULEB128(SPMagic(SPF_Compact_Binary), OS);
-  encodeULEB128(SPVersion(), OS);
-  return sampleprof_error::success;
-}
-
-std::error_code SampleProfileWriterBinary::writeHeader(
-    const StringMap<FunctionSamples> &ProfileMap) {
-  writeMagicIdent();
 
   computeSummary(ProfileMap);
   if (auto EC = writeSummary())
@@ -211,7 +162,20 @@ std::error_code SampleProfileWriterBinary::writeHeader(
     addNames(I.second);
   }
 
-  writeNameTable();
+  // Sort the names to make NameTable is deterministic.
+  std::set<StringRef> V;
+  for (const auto &I : NameTable)
+    V.insert(I.first);
+  int i = 0;
+  for (const StringRef &N : V)
+    NameTable[N] = i++;
+
+  // Write out the name table.
+  encodeULEB128(NameTable.size(), OS);
+  for (auto N : V) {
+    OS << N;
+    encodeULEB128(0, OS);
+  }
   return sampleprof_error::success;
 }
 
@@ -275,7 +239,7 @@ std::error_code SampleProfileWriterBinary::writeBody(const FunctionSamples &S) {
   return sampleprof_error::success;
 }
 
-/// Write samples of a top-level function to a binary file.
+/// \brief Write samples of a top-level function to a binary file.
 ///
 /// \returns true if the samples were written successfully, false otherwise.
 std::error_code SampleProfileWriterBinary::write(const FunctionSamples &S) {
@@ -283,7 +247,7 @@ std::error_code SampleProfileWriterBinary::write(const FunctionSamples &S) {
   return writeBody(S);
 }
 
-/// Create a sample profile file writer based on the specified format.
+/// \brief Create a sample profile file writer based on the specified format.
 ///
 /// \param Filename The file to create.
 ///
@@ -294,7 +258,7 @@ ErrorOr<std::unique_ptr<SampleProfileWriter>>
 SampleProfileWriter::create(StringRef Filename, SampleProfileFormat Format) {
   std::error_code EC;
   std::unique_ptr<raw_ostream> OS;
-  if (Format == SPF_Binary || Format == SPF_Compact_Binary)
+  if (Format == SPF_Binary)
     OS.reset(new raw_fd_ostream(Filename, EC, sys::fs::F_None));
   else
     OS.reset(new raw_fd_ostream(Filename, EC, sys::fs::F_Text));
@@ -304,7 +268,7 @@ SampleProfileWriter::create(StringRef Filename, SampleProfileFormat Format) {
   return create(OS, Format);
 }
 
-/// Create a sample profile stream writer based on the specified format.
+/// \brief Create a sample profile stream writer based on the specified format.
 ///
 /// \param OS The output stream to store the profile data to.
 ///
@@ -318,9 +282,7 @@ SampleProfileWriter::create(std::unique_ptr<raw_ostream> &OS,
   std::unique_ptr<SampleProfileWriter> Writer;
 
   if (Format == SPF_Binary)
-    Writer.reset(new SampleProfileWriterRawBinary(OS));
-  else if (Format == SPF_Compact_Binary)
-    Writer.reset(new SampleProfileWriterCompactBinary(OS));
+    Writer.reset(new SampleProfileWriterBinary(OS));
   else if (Format == SPF_Text)
     Writer.reset(new SampleProfileWriterText(OS));
   else if (Format == SPF_GCC)

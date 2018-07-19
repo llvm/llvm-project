@@ -12,7 +12,7 @@ foo:
         .align  16
 # CHECK:            1:  nopw %cs:(%eax,%eax)
 # CHECK-RELAX:      10: nopw %cs:(%eax,%eax)
-# CHECK-RELAX:      1a: nop
+# CHECK-RELAX:      1f: nop
 # CHECK-OPT:        10: movl $1, (%esp)
 # CHECK-RELAX:      20: movl $1, (%esp)
         movl $0x1, (%esp)     # 7 bytes

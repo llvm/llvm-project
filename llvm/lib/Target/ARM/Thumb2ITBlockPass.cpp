@@ -183,7 +183,7 @@ Thumb2ITBlockPass::MoveCopyOutOfITBlock(MachineInstr *MI,
   // If not, then there is nothing to be gained by moving the copy.
   MachineBasicBlock::iterator I = MI; ++I;
   MachineBasicBlock::iterator E = MI->getParent()->end();
-  while (I != E && I->isDebugInstr())
+  while (I != E && I->isDebugValue())
     ++I;
   if (I != E) {
     unsigned NPredReg = 0;
@@ -237,7 +237,7 @@ bool Thumb2ITBlockPass::InsertITInstructions(MachineBasicBlock &MBB) {
       // block so check the instruction we just put in the block.
       for (; MBBI != E && Pos &&
              (!MI->isBranch() && !MI->isReturn()) ; ++MBBI) {
-        if (MBBI->isDebugInstr())
+        if (MBBI->isDebugValue())
           continue;
 
         MachineInstr *NMI = &*MBBI;

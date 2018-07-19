@@ -37,7 +37,6 @@ enum Kind {
   Identifier,
   Comma,
   Equal,
-  EqualEqual,
   KwBase,
   KwConstant,
   KwData,
@@ -105,10 +104,9 @@ public:
     }
     case '=':
       Buf = Buf.drop_front();
-      if (Buf.startswith("=")) {
+      // GNU dlltool accepts both = and ==.
+      if (Buf.startswith("="))
         Buf = Buf.drop_front();
-        return Token(EqualEqual, "==");
-      }
       return Token(Equal, "=");
     case ',':
       Buf = Buf.drop_front();
@@ -282,13 +280,6 @@ private:
       }
       if (Tok.K == KwPrivate) {
         E.Private = true;
-        continue;
-      }
-      if (Tok.K == EqualEqual) {
-        read();
-        E.AliasTarget = Tok.Value;
-        if (Machine == IMAGE_FILE_MACHINE_I386 && !isDecorated(E.AliasTarget, MingwDef))
-          E.AliasTarget = std::string("_").append(E.AliasTarget);
         continue;
       }
       unget();

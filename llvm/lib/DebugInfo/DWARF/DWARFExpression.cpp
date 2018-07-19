@@ -258,10 +258,9 @@ bool DWARFExpression::Operation::print(raw_ostream &OS,
   return true;
 }
 
-void DWARFExpression::print(raw_ostream &OS, const MCRegisterInfo *RegInfo,
-                            bool IsEH) const {
+void DWARFExpression::print(raw_ostream &OS, const MCRegisterInfo *RegInfo) {
   for (auto &Op : *this) {
-    if (!Op.print(OS, this, RegInfo, IsEH)) {
+    if (!Op.print(OS, this, RegInfo, /* isEH */ false)) {
       uint32_t FailOffset = Op.getEndOffset();
       while (FailOffset < Data.getData().size())
         OS << format(" %02x", Data.getU8(&FailOffset));

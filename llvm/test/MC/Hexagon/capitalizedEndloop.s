@@ -11,10 +11,6 @@
 	{ R0 = mpyi(R0,R0) } : ENDLOOP1
 	{ R0 = mpyi(R0,R0) }:endloop1
 
-	{ R0 = mpyi(R0,R0) } : endloop01
-	{ R0 = mpyi(R0,R0) } : ENDLOOP01
-	{ R0 = mpyi(R0,R0) }:endloop01
-
 	{ R0 = mpyi(R0,R0) } : endloop0 : endloop1
 	{ R0 = mpyi(R0,R0) } : ENDLOOP0 : ENDLOOP1
 	{ R0 = mpyi(R0,R0) }:endloop0:endloop1
@@ -26,11 +22,8 @@
 # CHECK: :endloop1
 # CHECK: :endloop1
 # CHECK: :endloop1
-# CHECK: :endloop01
-# CHECK: :endloop01
-# CHECK: :endloop01
-# CHECK: :endloop01
-# CHECK: :endloop01
-# CHECK: :endloop01
+# CHECK: :endloop0 :endloop1
+# CHECK: :endloop0 :endloop1
+# CHECK: :endloop0 :endloop1
 
 

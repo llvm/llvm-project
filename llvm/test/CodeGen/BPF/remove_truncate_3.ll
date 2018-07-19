@@ -91,13 +91,13 @@ define i32 @xdp_dummy(%struct.xdp_md* nocapture readonly) local_unnamed_addr #0 
 ; Function Attrs: norecurse nounwind readnone
 define i32 @rol32(i32, i32) local_unnamed_addr #1 {
   %3 = shl i32 %0, %1
-; CHECK: r1 <<= 32
-; CHECK: r1 >>= 32
+; CHECK: r3 <<= 32
+; CHECK: r3 >>= 32
   %4 = sub i32 0, %1
   %5 = and i32 %4, 31
   %6 = lshr i32 %0, %5
-; CHECK: r0 <<= 32
-; CHECK: r0 >>= 32
+; CHECK: r1 <<= 32
+; CHECK: r1 >>= 32
   %7 = or i32 %6, %3
   ret i32 %7
 }

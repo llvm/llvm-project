@@ -42,8 +42,6 @@
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/PtrUseVisitor.h"
-#include "llvm/Transforms/Utils/Local.h"
-#include "llvm/Config/llvm-config.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/ConstantFolder.h"
@@ -81,6 +79,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
 #include <algorithm>
 #include <cassert>
@@ -125,9 +124,14 @@ static cl::opt<bool> SROARandomShuffleSlices("sroa-random-shuffle-slices",
 static cl::opt<bool> SROAStrictInbounds("sroa-strict-inbounds", cl::init(false),
                                         cl::Hidden);
 
+/// Hidden option to allow more aggressive splitting.
+static cl::opt<bool>
+SROASplitNonWholeAllocaSlices("sroa-split-nonwhole-alloca-slices",
+                              cl::init(false), cl::Hidden);
+
 namespace {
 
-/// A custom IRBuilder inserter which prefixes all names, but only in
+/// \brief A custom IRBuilder inserter which prefixes all names, but only in
 /// Assert builds.
 class IRBuilderPrefixedInserter : public IRBuilderDefaultInserter {
   std::string Prefix;
@@ -147,23 +151,23 @@ protected:
   }
 };
 
-/// Provide a type for IRBuilder that drops names in release builds.
+/// \brief Provide a type for IRBuilder that drops names in release builds.
 using IRBuilderTy = IRBuilder<ConstantFolder, IRBuilderPrefixedInserter>;
 
-/// A used slice of an alloca.
+/// \brief A used slice of an alloca.
 ///
 /// This structure represents a slice of an alloca used by some instruction. It
 /// stores both the begin and end offsets of this use, a pointer to the use
 /// itself, and a flag indicating whether we can classify the use as splittable
 /// or not when forming partitions of the alloca.
 class Slice {
-  /// The beginning offset of the range.
+  /// \brief The beginning offset of the range.
   uint64_t BeginOffset = 0;
 
-  /// The ending offset, not included in the range.
+  /// \brief The ending offset, not included in the range.
   uint64_t EndOffset = 0;
 
-  /// Storage for both the use of this slice and whether it can be
+  /// \brief Storage for both the use of this slice and whether it can be
   /// split.
   PointerIntPair<Use *, 1, bool> UseAndIsSplittable;
 
@@ -185,7 +189,7 @@ public:
   bool isDead() const { return getUse() == nullptr; }
   void kill() { UseAndIsSplittable.setPointer(nullptr); }
 
-  /// Support for ordering ranges.
+  /// \brief Support for ordering ranges.
   ///
   /// This provides an ordering over ranges such that start offsets are
   /// always increasing, and within equal start offsets, the end offsets are
@@ -203,7 +207,7 @@ public:
     return false;
   }
 
-  /// Support comparison with a single offset to allow binary searches.
+  /// \brief Support comparison with a single offset to allow binary searches.
   friend LLVM_ATTRIBUTE_UNUSED bool operator<(const Slice &LHS,
                                               uint64_t RHSOffset) {
     return LHS.beginOffset() < RHSOffset;
@@ -229,7 +233,7 @@ template <> struct isPodLike<Slice> { static const bool value = true; };
 
 } // end namespace llvm
 
-/// Representation of the alloca slices.
+/// \brief Representation of the alloca slices.
 ///
 /// This class represents the slices of an alloca which are formed by its
 /// various uses. If a pointer escapes, we can't fully build a representation
@@ -238,16 +242,16 @@ template <> struct isPodLike<Slice> { static const bool value = true; };
 /// starting at a particular offset before splittable slices.
 class llvm::sroa::AllocaSlices {
 public:
-  /// Construct the slices of a particular alloca.
+  /// \brief Construct the slices of a particular alloca.
   AllocaSlices(const DataLayout &DL, AllocaInst &AI);
 
-  /// Test whether a pointer to the allocation escapes our analysis.
+  /// \brief Test whether a pointer to the allocation escapes our analysis.
   ///
   /// If this is true, the slices are never fully built and should be
   /// ignored.
   bool isEscaped() const { return PointerEscapingInstr; }
 
-  /// Support for iterating over the slices.
+  /// \brief Support for iterating over the slices.
   /// @{
   using iterator = SmallVectorImpl<Slice>::iterator;
   using range = iterator_range<iterator>;
@@ -262,10 +266,10 @@ public:
   const_iterator end() const { return Slices.end(); }
   /// @}
 
-  /// Erase a range of slices.
+  /// \brief Erase a range of slices.
   void erase(iterator Start, iterator Stop) { Slices.erase(Start, Stop); }
 
-  /// Insert new slices for this alloca.
+  /// \brief Insert new slices for this alloca.
   ///
   /// This moves the slices into the alloca's slices collection, and re-sorts
   /// everything so that the usual ordering properties of the alloca's slices
@@ -274,7 +278,7 @@ public:
     int OldSize = Slices.size();
     Slices.append(NewSlices.begin(), NewSlices.end());
     auto SliceI = Slices.begin() + OldSize;
-    llvm::sort(SliceI, Slices.end());
+    std::sort(SliceI, Slices.end());
     std::inplace_merge(Slices.begin(), SliceI, Slices.end());
   }
 
@@ -283,10 +287,10 @@ public:
   class partition_iterator;
   iterator_range<partition_iterator> partitions();
 
-  /// Access the dead users for this alloca.
+  /// \brief Access the dead users for this alloca.
   ArrayRef<Instruction *> getDeadUsers() const { return DeadUsers; }
 
-  /// Access the dead operands referring to this alloca.
+  /// \brief Access the dead operands referring to this alloca.
   ///
   /// These are operands which have cannot actually be used to refer to the
   /// alloca as they are outside its range and the user doesn't correct for
@@ -312,11 +316,11 @@ private:
   friend class AllocaSlices::SliceBuilder;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  /// Handle to alloca instruction to simplify method interfaces.
+  /// \brief Handle to alloca instruction to simplify method interfaces.
   AllocaInst &AI;
 #endif
 
-  /// The instruction responsible for this alloca not having a known set
+  /// \brief The instruction responsible for this alloca not having a known set
   /// of slices.
   ///
   /// When an instruction (potentially) escapes the pointer to the alloca, we
@@ -324,7 +328,7 @@ private:
   /// alloca. This will be null if the alloca slices are analyzed successfully.
   Instruction *PointerEscapingInstr;
 
-  /// The slices of the alloca.
+  /// \brief The slices of the alloca.
   ///
   /// We store a vector of the slices formed by uses of the alloca here. This
   /// vector is sorted by increasing begin offset, and then the unsplittable
@@ -332,7 +336,7 @@ private:
   /// details.
   SmallVector<Slice, 8> Slices;
 
-  /// Instructions which will become dead if we rewrite the alloca.
+  /// \brief Instructions which will become dead if we rewrite the alloca.
   ///
   /// Note that these are not separated by slice. This is because we expect an
   /// alloca to be completely rewritten or not rewritten at all. If rewritten,
@@ -340,7 +344,7 @@ private:
   /// they come from outside of the allocated space.
   SmallVector<Instruction *, 8> DeadUsers;
 
-  /// Operands which will become dead if we rewrite the alloca.
+  /// \brief Operands which will become dead if we rewrite the alloca.
   ///
   /// These are operands that in their particular use can be replaced with
   /// undef when we rewrite the alloca. These show up in out-of-bounds inputs
@@ -351,7 +355,7 @@ private:
   SmallVector<Use *, 8> DeadOperands;
 };
 
-/// A partition of the slices.
+/// \brief A partition of the slices.
 ///
 /// An ephemeral representation for a range of slices which can be viewed as
 /// a partition of the alloca. This range represents a span of the alloca's
@@ -367,32 +371,32 @@ private:
 
   using iterator = AllocaSlices::iterator;
 
-  /// The beginning and ending offsets of the alloca for this
+  /// \brief The beginning and ending offsets of the alloca for this
   /// partition.
   uint64_t BeginOffset, EndOffset;
 
-  /// The start and end iterators of this partition.
+  /// \brief The start and end iterators of this partition.
   iterator SI, SJ;
 
-  /// A collection of split slice tails overlapping the partition.
+  /// \brief A collection of split slice tails overlapping the partition.
   SmallVector<Slice *, 4> SplitTails;
 
-  /// Raw constructor builds an empty partition starting and ending at
+  /// \brief Raw constructor builds an empty partition starting and ending at
   /// the given iterator.
   Partition(iterator SI) : SI(SI), SJ(SI) {}
 
 public:
-  /// The start offset of this partition.
+  /// \brief The start offset of this partition.
   ///
   /// All of the contained slices start at or after this offset.
   uint64_t beginOffset() const { return BeginOffset; }
 
-  /// The end offset of this partition.
+  /// \brief The end offset of this partition.
   ///
   /// All of the contained slices end at or before this offset.
   uint64_t endOffset() const { return EndOffset; }
 
-  /// The size of the partition.
+  /// \brief The size of the partition.
   ///
   /// Note that this can never be zero.
   uint64_t size() const {
@@ -400,7 +404,7 @@ public:
     return EndOffset - BeginOffset;
   }
 
-  /// Test whether this partition contains no slices, and merely spans
+  /// \brief Test whether this partition contains no slices, and merely spans
   /// a region occupied by split slices.
   bool empty() const { return SI == SJ; }
 
@@ -417,7 +421,7 @@ public:
   iterator end() const { return SJ; }
   /// @}
 
-  /// Get the sequence of split slice tails.
+  /// \brief Get the sequence of split slice tails.
   ///
   /// These tails are of slices which start before this partition but are
   /// split and overlap into the partition. We accumulate these while forming
@@ -425,7 +429,7 @@ public:
   ArrayRef<Slice *> splitSliceTails() const { return SplitTails; }
 };
 
-/// An iterator over partitions of the alloca's slices.
+/// \brief An iterator over partitions of the alloca's slices.
 ///
 /// This iterator implements the core algorithm for partitioning the alloca's
 /// slices. It is a forward iterator as we don't support backtracking for
@@ -439,18 +443,18 @@ class AllocaSlices::partition_iterator
                                   Partition> {
   friend class AllocaSlices;
 
-  /// Most of the state for walking the partitions is held in a class
+  /// \brief Most of the state for walking the partitions is held in a class
   /// with a nice interface for examining them.
   Partition P;
 
-  /// We need to keep the end of the slices to know when to stop.
+  /// \brief We need to keep the end of the slices to know when to stop.
   AllocaSlices::iterator SE;
 
-  /// We also need to keep track of the maximum split end offset seen.
+  /// \brief We also need to keep track of the maximum split end offset seen.
   /// FIXME: Do we really?
   uint64_t MaxSplitSliceEndOffset = 0;
 
-  /// Sets the partition to be empty at given iterator, and sets the
+  /// \brief Sets the partition to be empty at given iterator, and sets the
   /// end iterator.
   partition_iterator(AllocaSlices::iterator SI, AllocaSlices::iterator SE)
       : P(SI), SE(SE) {
@@ -460,7 +464,7 @@ class AllocaSlices::partition_iterator
       advance();
   }
 
-  /// Advance the iterator to the next partition.
+  /// \brief Advance the iterator to the next partition.
   ///
   /// Requires that the iterator not be at the end of the slices.
   void advance() {
@@ -615,7 +619,7 @@ public:
   Partition &operator*() { return P; }
 };
 
-/// A forward range over the partitions of the alloca's slices.
+/// \brief A forward range over the partitions of the alloca's slices.
 ///
 /// This accesses an iterator range over the partitions of the alloca's
 /// slices. It computes these partitions on the fly based on the overlapping
@@ -639,7 +643,7 @@ static Value *foldSelectInst(SelectInst &SI) {
   return nullptr;
 }
 
-/// A helper that folds a PHI node or a select.
+/// \brief A helper that folds a PHI node or a select.
 static Value *foldPHINodeOrSelectInst(Instruction &I) {
   if (PHINode *PN = dyn_cast<PHINode>(&I)) {
     // If PN merges together the same value, return that value.
@@ -648,7 +652,7 @@ static Value *foldPHINodeOrSelectInst(Instruction &I) {
   return foldSelectInst(cast<SelectInst>(I));
 }
 
-/// Builder for the alloca slices.
+/// \brief Builder for the alloca slices.
 ///
 /// This class builds a set of alloca slices by recursively visiting the uses
 /// of an alloca and making a slice for each load and store at each offset.
@@ -664,7 +668,7 @@ class AllocaSlices::SliceBuilder : public PtrUseVisitor<SliceBuilder> {
   SmallDenseMap<Instruction *, unsigned> MemTransferSliceMap;
   SmallDenseMap<Instruction *, uint64_t> PHIOrSelectSizes;
 
-  /// Set to de-duplicate dead instructions found in the use walk.
+  /// \brief Set to de-duplicate dead instructions found in the use walk.
   SmallPtrSet<Instruction *, 4> VisitedDeadInsts;
 
 public:
@@ -683,12 +687,11 @@ private:
     // Completely skip uses which have a zero size or start either before or
     // past the end of the allocation.
     if (Size == 0 || Offset.uge(AllocSize)) {
-      LLVM_DEBUG(dbgs() << "WARNING: Ignoring " << Size << " byte use @"
-                        << Offset
-                        << " which has zero size or starts outside of the "
-                        << AllocSize << " byte alloca:\n"
-                        << "    alloca: " << AS.AI << "\n"
-                        << "       use: " << I << "\n");
+      DEBUG(dbgs() << "WARNING: Ignoring " << Size << " byte use @" << Offset
+                   << " which has zero size or starts outside of the "
+                   << AllocSize << " byte alloca:\n"
+                   << "    alloca: " << AS.AI << "\n"
+                   << "       use: " << I << "\n");
       return markAsDead(I);
     }
 
@@ -703,11 +706,10 @@ private:
     // them, and so have to record at least the information here.
     assert(AllocSize >= BeginOffset); // Established above.
     if (Size > AllocSize - BeginOffset) {
-      LLVM_DEBUG(dbgs() << "WARNING: Clamping a " << Size << " byte use @"
-                        << Offset << " to remain within the " << AllocSize
-                        << " byte alloca:\n"
-                        << "    alloca: " << AS.AI << "\n"
-                        << "       use: " << I << "\n");
+      DEBUG(dbgs() << "WARNING: Clamping a " << Size << " byte use @" << Offset
+                   << " to remain within the " << AllocSize << " byte alloca:\n"
+                   << "    alloca: " << AS.AI << "\n"
+                   << "       use: " << I << "\n");
       EndOffset = AllocSize;
     }
 
@@ -800,18 +802,18 @@ private:
     uint64_t Size = DL.getTypeStoreSize(ValOp->getType());
 
     // If this memory access can be shown to *statically* extend outside the
-    // bounds of the allocation, it's behavior is undefined, so simply
+    // bounds of of the allocation, it's behavior is undefined, so simply
     // ignore it. Note that this is more strict than the generic clamping
     // behavior of insertUse. We also try to handle cases which might run the
     // risk of overflow.
     // FIXME: We should instead consider the pointer to have escaped if this
     // function is being instrumented for addressing bugs or race conditions.
     if (Size > AllocSize || Offset.ugt(AllocSize - Size)) {
-      LLVM_DEBUG(dbgs() << "WARNING: Ignoring " << Size << " byte store @"
-                        << Offset << " which extends past the end of the "
-                        << AllocSize << " byte alloca:\n"
-                        << "    alloca: " << AS.AI << "\n"
-                        << "       use: " << SI << "\n");
+      DEBUG(dbgs() << "WARNING: Ignoring " << Size << " byte store @" << Offset
+                   << " which extends past the end of the " << AllocSize
+                   << " byte alloca:\n"
+                   << "    alloca: " << AS.AI << "\n"
+                   << "       use: " << SI << "\n");
       return markAsDead(SI);
     }
 
@@ -1025,7 +1027,7 @@ private:
 
   void visitSelectInst(SelectInst &SI) { visitPHINodeOrSelectInst(SI); }
 
-  /// Disable SROA entirely if there are unhandled users of the alloca.
+  /// \brief Disable SROA entirely if there are unhandled users of the alloca.
   void visitInstruction(Instruction &I) { PI.setAborted(&I); }
 };
 
@@ -1060,7 +1062,7 @@ AllocaSlices::AllocaSlices(const DataLayout &DL, AllocaInst &AI)
 
   // Sort the uses. This arranges for the offsets to be in ascending order,
   // and the sizes to be in descending order.
-  llvm::sort(Slices.begin(), Slices.end());
+  std::sort(Slices.begin(), Slices.end());
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -1238,7 +1240,7 @@ static bool isSafePHIToSpeculate(PHINode &PN) {
 }
 
 static void speculatePHINodeLoads(PHINode &PN) {
-  LLVM_DEBUG(dbgs() << "    original: " << PN << "\n");
+  DEBUG(dbgs() << "    original: " << PN << "\n");
 
   Type *LoadTy = cast<PointerType>(PN.getType())->getElementType();
   IRBuilderTy PHIBuilder(&PN);
@@ -1261,21 +1263,10 @@ static void speculatePHINodeLoads(PHINode &PN) {
   }
 
   // Inject loads into all of the pred blocks.
-  DenseMap<BasicBlock*, Value*> InjectedLoads;
   for (unsigned Idx = 0, Num = PN.getNumIncomingValues(); Idx != Num; ++Idx) {
     BasicBlock *Pred = PN.getIncomingBlock(Idx);
-    Value *InVal = PN.getIncomingValue(Idx);
-
-    // A PHI node is allowed to have multiple (duplicated) entries for the same
-    // basic block, as long as the value is the same. So if we already injected
-    // a load in the predecessor, then we should reuse the same load for all
-    // duplicated entries.
-    if (Value* V = InjectedLoads.lookup(Pred)) {
-      NewPN->addIncoming(V, Pred);
-      continue;
-    }
-
     TerminatorInst *TI = Pred->getTerminator();
+    Value *InVal = PN.getIncomingValue(Idx);
     IRBuilderTy PredBuilder(TI);
 
     LoadInst *Load = PredBuilder.CreateLoad(
@@ -1285,10 +1276,9 @@ static void speculatePHINodeLoads(PHINode &PN) {
     if (AATags)
       Load->setAAMetadata(AATags);
     NewPN->addIncoming(Load, Pred);
-    InjectedLoads[Pred] = Load;
   }
 
-  LLVM_DEBUG(dbgs() << "          speculated to: " << *NewPN << "\n");
+  DEBUG(dbgs() << "          speculated to: " << *NewPN << "\n");
   PN.eraseFromParent();
 }
 
@@ -1328,7 +1318,7 @@ static bool isSafeSelectToSpeculate(SelectInst &SI) {
 }
 
 static void speculateSelectInstLoads(SelectInst &SI) {
-  LLVM_DEBUG(dbgs() << "    original: " << SI << "\n");
+  DEBUG(dbgs() << "    original: " << SI << "\n");
 
   IRBuilderTy IRB(&SI);
   Value *TV = SI.getTrueValue();
@@ -1359,14 +1349,14 @@ static void speculateSelectInstLoads(SelectInst &SI) {
     Value *V = IRB.CreateSelect(SI.getCondition(), TL, FL,
                                 LI->getName() + ".sroa.speculated");
 
-    LLVM_DEBUG(dbgs() << "          speculated to: " << *V << "\n");
+    DEBUG(dbgs() << "          speculated to: " << *V << "\n");
     LI->replaceAllUsesWith(V);
     LI->eraseFromParent();
   }
   SI.eraseFromParent();
 }
 
-/// Build a GEP out of a base pointer and indices.
+/// \brief Build a GEP out of a base pointer and indices.
 ///
 /// This will return the BasePtr if that is valid, or build a new GEP
 /// instruction using the IRBuilder if GEP-ing is needed.
@@ -1384,7 +1374,7 @@ static Value *buildGEP(IRBuilderTy &IRB, Value *BasePtr,
                                NamePrefix + "sroa_idx");
 }
 
-/// Get a natural GEP off of the BasePtr walking through Ty toward
+/// \brief Get a natural GEP off of the BasePtr walking through Ty toward
 /// TargetTy without changing the offset of the pointer.
 ///
 /// This routine assumes we've already established a properly offset GEP with
@@ -1433,7 +1423,7 @@ static Value *getNaturalGEPWithType(IRBuilderTy &IRB, const DataLayout &DL,
   return buildGEP(IRB, BasePtr, Indices, NamePrefix);
 }
 
-/// Recursively compute indices for a natural GEP.
+/// \brief Recursively compute indices for a natural GEP.
 ///
 /// This is the recursive step for getNaturalGEPWithOffset that walks down the
 /// element types adding appropriate indices for the GEP.
@@ -1501,7 +1491,7 @@ static Value *getNaturalGEPRecursively(IRBuilderTy &IRB, const DataLayout &DL,
                                   Indices, NamePrefix);
 }
 
-/// Get a natural GEP from a base pointer to a particular offset and
+/// \brief Get a natural GEP from a base pointer to a particular offset and
 /// resulting in a particular type.
 ///
 /// The goal is to produce a "natural" looking GEP that works with the existing
@@ -1536,7 +1526,7 @@ static Value *getNaturalGEPWithOffset(IRBuilderTy &IRB, const DataLayout &DL,
                                   Indices, NamePrefix);
 }
 
-/// Compute an adjusted pointer from Ptr by Offset bytes where the
+/// \brief Compute an adjusted pointer from Ptr by Offset bytes where the
 /// resulting pointer has PointerTy.
 ///
 /// This tries very hard to compute a "natural" GEP which arrives at the offset
@@ -1645,7 +1635,7 @@ static Value *getAdjustedPtr(IRBuilderTy &IRB, const DataLayout &DL, Value *Ptr,
   return Ptr;
 }
 
-/// Compute the adjusted alignment for a load or store from an offset.
+/// \brief Compute the adjusted alignment for a load or store from an offset.
 static unsigned getAdjustedAlignment(Instruction *I, uint64_t Offset,
                                      const DataLayout &DL) {
   unsigned Alignment;
@@ -1666,7 +1656,7 @@ static unsigned getAdjustedAlignment(Instruction *I, uint64_t Offset,
   return MinAlign(Alignment, Offset);
 }
 
-/// Test whether we can convert a value from the old to the new type.
+/// \brief Test whether we can convert a value from the old to the new type.
 ///
 /// This predicate should be used to guard calls to convertValue in order to
 /// ensure that we only try to convert viable values. The strategy is that we
@@ -1717,7 +1707,7 @@ static bool canConvertValue(const DataLayout &DL, Type *OldTy, Type *NewTy) {
   return true;
 }
 
-/// Generic routine to convert an SSA value to a value of a different
+/// \brief Generic routine to convert an SSA value to a value of a different
 /// type.
 ///
 /// This will try various different casting techniques, such as bitcasts,
@@ -1769,7 +1759,7 @@ static Value *convertValue(const DataLayout &DL, IRBuilderTy &IRB, Value *V,
   return IRB.CreateBitCast(V, NewTy);
 }
 
-/// Test whether the given slice use can be promoted to a vector.
+/// \brief Test whether the given slice use can be promoted to a vector.
 ///
 /// This function is called to test each entry in a partition which is slated
 /// for a single slice.
@@ -1840,7 +1830,7 @@ static bool isVectorPromotionViableForSlice(Partition &P, const Slice &S,
   return true;
 }
 
-/// Test whether the given alloca partitioning and range of slices can be
+/// \brief Test whether the given alloca partitioning and range of slices can be
 /// promoted to a vector.
 ///
 /// This is a quick test to check whether we can rewrite a particular alloca
@@ -1906,7 +1896,7 @@ static VectorType *isVectorPromotionViable(Partition &P, const DataLayout &DL) {
              "All non-integer types eliminated!");
       return RHSTy->getNumElements() < LHSTy->getNumElements();
     };
-    llvm::sort(CandidateTys.begin(), CandidateTys.end(), RankVectorTypes);
+    std::sort(CandidateTys.begin(), CandidateTys.end(), RankVectorTypes);
     CandidateTys.erase(
         std::unique(CandidateTys.begin(), CandidateTys.end(), RankVectorTypes),
         CandidateTys.end());
@@ -1953,7 +1943,7 @@ static VectorType *isVectorPromotionViable(Partition &P, const DataLayout &DL) {
   return nullptr;
 }
 
-/// Test whether a slice of an alloca is valid for integer widening.
+/// \brief Test whether a slice of an alloca is valid for integer widening.
 ///
 /// This implements the necessary checking for the \c isIntegerWideningViable
 /// test below on a single slice of the alloca.
@@ -1980,10 +1970,6 @@ static bool isIntegerWideningViableForSlice(const Slice &S,
     // We can't handle loads that extend past the allocated memory.
     if (DL.getTypeStoreSize(LI->getType()) > Size)
       return false;
-    // So far, AllocaSliceRewriter does not support widening split slice tails
-    // in rewriteIntegerLoad.
-    if (S.beginOffset() < AllocBeginOffset)
-      return false;
     // Note that we don't count vector loads or stores as whole-alloca
     // operations which enable integer widening because we would prefer to use
     // vector widening instead.
@@ -2004,10 +1990,6 @@ static bool isIntegerWideningViableForSlice(const Slice &S,
       return false;
     // We can't handle stores that extend past the allocated memory.
     if (DL.getTypeStoreSize(ValueTy) > Size)
-      return false;
-    // So far, AllocaSliceRewriter does not support widening split slice tails
-    // in rewriteIntegerStore.
-    if (S.beginOffset() < AllocBeginOffset)
       return false;
     // Note that we don't count vector loads or stores as whole-alloca
     // operations which enable integer widening because we would prefer to use
@@ -2039,7 +2021,7 @@ static bool isIntegerWideningViableForSlice(const Slice &S,
   return true;
 }
 
-/// Test whether the given alloca partition's integer operations can be
+/// \brief Test whether the given alloca partition's integer operations can be
 /// widened to promotable ones.
 ///
 /// This is a quick test to check whether we can rewrite the integer loads and
@@ -2090,7 +2072,7 @@ static bool isIntegerWideningViable(Partition &P, Type *AllocaTy,
 static Value *extractInteger(const DataLayout &DL, IRBuilderTy &IRB, Value *V,
                              IntegerType *Ty, uint64_t Offset,
                              const Twine &Name) {
-  LLVM_DEBUG(dbgs() << "       start: " << *V << "\n");
+  DEBUG(dbgs() << "       start: " << *V << "\n");
   IntegerType *IntTy = cast<IntegerType>(V->getType());
   assert(DL.getTypeStoreSize(Ty) + Offset <= DL.getTypeStoreSize(IntTy) &&
          "Element extends past full value");
@@ -2099,13 +2081,13 @@ static Value *extractInteger(const DataLayout &DL, IRBuilderTy &IRB, Value *V,
     ShAmt = 8 * (DL.getTypeStoreSize(IntTy) - DL.getTypeStoreSize(Ty) - Offset);
   if (ShAmt) {
     V = IRB.CreateLShr(V, ShAmt, Name + ".shift");
-    LLVM_DEBUG(dbgs() << "     shifted: " << *V << "\n");
+    DEBUG(dbgs() << "     shifted: " << *V << "\n");
   }
   assert(Ty->getBitWidth() <= IntTy->getBitWidth() &&
          "Cannot extract to a larger integer!");
   if (Ty != IntTy) {
     V = IRB.CreateTrunc(V, Ty, Name + ".trunc");
-    LLVM_DEBUG(dbgs() << "     trunced: " << *V << "\n");
+    DEBUG(dbgs() << "     trunced: " << *V << "\n");
   }
   return V;
 }
@@ -2116,10 +2098,10 @@ static Value *insertInteger(const DataLayout &DL, IRBuilderTy &IRB, Value *Old,
   IntegerType *Ty = cast<IntegerType>(V->getType());
   assert(Ty->getBitWidth() <= IntTy->getBitWidth() &&
          "Cannot insert a larger integer!");
-  LLVM_DEBUG(dbgs() << "       start: " << *V << "\n");
+  DEBUG(dbgs() << "       start: " << *V << "\n");
   if (Ty != IntTy) {
     V = IRB.CreateZExt(V, IntTy, Name + ".ext");
-    LLVM_DEBUG(dbgs() << "    extended: " << *V << "\n");
+    DEBUG(dbgs() << "    extended: " << *V << "\n");
   }
   assert(DL.getTypeStoreSize(Ty) + Offset <= DL.getTypeStoreSize(IntTy) &&
          "Element store outside of alloca store");
@@ -2128,15 +2110,15 @@ static Value *insertInteger(const DataLayout &DL, IRBuilderTy &IRB, Value *Old,
     ShAmt = 8 * (DL.getTypeStoreSize(IntTy) - DL.getTypeStoreSize(Ty) - Offset);
   if (ShAmt) {
     V = IRB.CreateShl(V, ShAmt, Name + ".shift");
-    LLVM_DEBUG(dbgs() << "     shifted: " << *V << "\n");
+    DEBUG(dbgs() << "     shifted: " << *V << "\n");
   }
 
   if (ShAmt || Ty->getBitWidth() < IntTy->getBitWidth()) {
     APInt Mask = ~Ty->getMask().zext(IntTy->getBitWidth()).shl(ShAmt);
     Old = IRB.CreateAnd(Old, Mask, Name + ".mask");
-    LLVM_DEBUG(dbgs() << "      masked: " << *Old << "\n");
+    DEBUG(dbgs() << "      masked: " << *Old << "\n");
     V = IRB.CreateOr(Old, V, Name + ".insert");
-    LLVM_DEBUG(dbgs() << "    inserted: " << *V << "\n");
+    DEBUG(dbgs() << "    inserted: " << *V << "\n");
   }
   return V;
 }
@@ -2153,7 +2135,7 @@ static Value *extractVector(IRBuilderTy &IRB, Value *V, unsigned BeginIndex,
   if (NumElements == 1) {
     V = IRB.CreateExtractElement(V, IRB.getInt32(BeginIndex),
                                  Name + ".extract");
-    LLVM_DEBUG(dbgs() << "     extract: " << *V << "\n");
+    DEBUG(dbgs() << "     extract: " << *V << "\n");
     return V;
   }
 
@@ -2163,7 +2145,7 @@ static Value *extractVector(IRBuilderTy &IRB, Value *V, unsigned BeginIndex,
     Mask.push_back(IRB.getInt32(i));
   V = IRB.CreateShuffleVector(V, UndefValue::get(V->getType()),
                               ConstantVector::get(Mask), Name + ".extract");
-  LLVM_DEBUG(dbgs() << "     shuffle: " << *V << "\n");
+  DEBUG(dbgs() << "     shuffle: " << *V << "\n");
   return V;
 }
 
@@ -2177,7 +2159,7 @@ static Value *insertVector(IRBuilderTy &IRB, Value *Old, Value *V,
     // Single element to insert.
     V = IRB.CreateInsertElement(Old, V, IRB.getInt32(BeginIndex),
                                 Name + ".insert");
-    LLVM_DEBUG(dbgs() << "     insert: " << *V << "\n");
+    DEBUG(dbgs() << "     insert: " << *V << "\n");
     return V;
   }
 
@@ -2202,7 +2184,7 @@ static Value *insertVector(IRBuilderTy &IRB, Value *Old, Value *V,
       Mask.push_back(UndefValue::get(IRB.getInt32Ty()));
   V = IRB.CreateShuffleVector(V, UndefValue::get(V->getType()),
                               ConstantVector::get(Mask), Name + ".expand");
-  LLVM_DEBUG(dbgs() << "    shuffle: " << *V << "\n");
+  DEBUG(dbgs() << "    shuffle: " << *V << "\n");
 
   Mask.clear();
   for (unsigned i = 0; i != VecTy->getNumElements(); ++i)
@@ -2210,11 +2192,11 @@ static Value *insertVector(IRBuilderTy &IRB, Value *Old, Value *V,
 
   V = IRB.CreateSelect(ConstantVector::get(Mask), V, Old, Name + "blend");
 
-  LLVM_DEBUG(dbgs() << "    blend: " << *V << "\n");
+  DEBUG(dbgs() << "    blend: " << *V << "\n");
   return V;
 }
 
-/// Visitor to rewrite instructions using p particular slice of an alloca
+/// \brief Visitor to rewrite instructions using p particular slice of an alloca
 /// to use a new alloca.
 ///
 /// Also implements the rewriting to vector-based accesses when the partition
@@ -2313,9 +2295,9 @@ public:
     IsSplittable = I->isSplittable();
     IsSplit =
         BeginOffset < NewAllocaBeginOffset || EndOffset > NewAllocaEndOffset;
-    LLVM_DEBUG(dbgs() << "  rewriting " << (IsSplit ? "split " : ""));
-    LLVM_DEBUG(AS.printSlice(dbgs(), I, ""));
-    LLVM_DEBUG(dbgs() << "\n");
+    DEBUG(dbgs() << "  rewriting " << (IsSplit ? "split " : ""));
+    DEBUG(AS.printSlice(dbgs(), I, ""));
+    DEBUG(dbgs() << "\n");
 
     // Compute the intersecting offset range.
     assert(BeginOffset < NewAllocaEndOffset);
@@ -2345,7 +2327,7 @@ private:
 
   // Every instruction which can end up as a user must have a rewrite rule.
   bool visitInstruction(Instruction &I) {
-    LLVM_DEBUG(dbgs() << "    !!!! Cannot rewrite: " << I << "\n");
+    DEBUG(dbgs() << "    !!!! Cannot rewrite: " << I << "\n");
     llvm_unreachable("No rewrite rule for this instruction!");
   }
 
@@ -2387,7 +2369,7 @@ private:
                           );
   }
 
-  /// Compute suitable alignment to access this slice of the *new*
+  /// \brief Compute suitable alignment to access this slice of the *new*
   /// alloca.
   ///
   /// You can optionally pass a type to this routine and if that type's ABI
@@ -2449,12 +2431,9 @@ private:
   }
 
   bool visitLoadInst(LoadInst &LI) {
-    LLVM_DEBUG(dbgs() << "    original: " << LI << "\n");
+    DEBUG(dbgs() << "    original: " << LI << "\n");
     Value *OldOp = LI.getOperand(0);
     assert(OldOp == OldPtr);
-
-    AAMDNodes AATags;
-    LI.getAAMetadata(AATags);
 
     unsigned AS = LI.getPointerAddressSpace();
 
@@ -2474,8 +2453,6 @@ private:
                  TargetTy->isIntegerTy()))) {
       LoadInst *NewLI = IRB.CreateAlignedLoad(&NewAI, NewAI.getAlignment(),
                                               LI.isVolatile(), LI.getName());
-      if (AATags)
-        NewLI->setAAMetadata(AATags);
       if (LI.isVolatile())
         NewLI->setAtomic(LI.getOrdering(), LI.getSyncScopeID());
 
@@ -2511,8 +2488,6 @@ private:
       LoadInst *NewLI = IRB.CreateAlignedLoad(getNewAllocaSlicePtr(IRB, LTy),
                                               getSliceAlign(TargetTy),
                                               LI.isVolatile(), LI.getName());
-      if (AATags)
-        NewLI->setAAMetadata(AATags);
       if (LI.isVolatile())
         NewLI->setAtomic(LI.getOrdering(), LI.getSyncScopeID());
 
@@ -2549,12 +2524,11 @@ private:
 
     Pass.DeadInsts.insert(&LI);
     deleteIfTriviallyDead(OldOp);
-    LLVM_DEBUG(dbgs() << "          to: " << *V << "\n");
+    DEBUG(dbgs() << "          to: " << *V << "\n");
     return !LI.isVolatile() && !IsPtrAdjusted;
   }
 
-  bool rewriteVectorizedStoreInst(Value *V, StoreInst &SI, Value *OldOp,
-                                  AAMDNodes AATags) {
+  bool rewriteVectorizedStoreInst(Value *V, StoreInst &SI, Value *OldOp) {
     if (V->getType() != VecTy) {
       unsigned BeginIndex = getIndex(NewBeginOffset);
       unsigned EndIndex = getIndex(NewEndOffset);
@@ -2572,15 +2546,14 @@ private:
       V = insertVector(IRB, Old, V, BeginIndex, "vec");
     }
     StoreInst *Store = IRB.CreateAlignedStore(V, &NewAI, NewAI.getAlignment());
-    if (AATags)
-      Store->setAAMetadata(AATags);
     Pass.DeadInsts.insert(&SI);
 
-    LLVM_DEBUG(dbgs() << "          to: " << *Store << "\n");
+    (void)Store;
+    DEBUG(dbgs() << "          to: " << *Store << "\n");
     return true;
   }
 
-  bool rewriteIntegerStore(Value *V, StoreInst &SI, AAMDNodes AATags) {
+  bool rewriteIntegerStore(Value *V, StoreInst &SI) {
     assert(IntTy && "We cannot extract an integer from the alloca");
     assert(!SI.isVolatile());
     if (DL.getTypeSizeInBits(V->getType()) != IntTy->getBitWidth()) {
@@ -2594,20 +2567,15 @@ private:
     V = convertValue(DL, IRB, V, NewAllocaTy);
     StoreInst *Store = IRB.CreateAlignedStore(V, &NewAI, NewAI.getAlignment());
     Store->copyMetadata(SI, LLVMContext::MD_mem_parallel_loop_access);
-    if (AATags)
-      Store->setAAMetadata(AATags);
     Pass.DeadInsts.insert(&SI);
-    LLVM_DEBUG(dbgs() << "          to: " << *Store << "\n");
+    DEBUG(dbgs() << "          to: " << *Store << "\n");
     return true;
   }
 
   bool visitStoreInst(StoreInst &SI) {
-    LLVM_DEBUG(dbgs() << "    original: " << SI << "\n");
+    DEBUG(dbgs() << "    original: " << SI << "\n");
     Value *OldOp = SI.getOperand(1);
     assert(OldOp == OldPtr);
-
-    AAMDNodes AATags;
-    SI.getAAMetadata(AATags);
 
     Value *V = SI.getValueOperand();
 
@@ -2630,9 +2598,9 @@ private:
     }
 
     if (VecTy)
-      return rewriteVectorizedStoreInst(V, SI, OldOp, AATags);
+      return rewriteVectorizedStoreInst(V, SI, OldOp);
     if (IntTy && V->getType()->isIntegerTy())
-      return rewriteIntegerStore(V, SI, AATags);
+      return rewriteIntegerStore(V, SI);
 
     const bool IsStorePastEnd = DL.getTypeStoreSize(V->getType()) > SliceSize;
     StoreInst *NewSI;
@@ -2663,18 +2631,16 @@ private:
                                      SI.isVolatile());
     }
     NewSI->copyMetadata(SI, LLVMContext::MD_mem_parallel_loop_access);
-    if (AATags)
-      NewSI->setAAMetadata(AATags);
     if (SI.isVolatile())
       NewSI->setAtomic(SI.getOrdering(), SI.getSyncScopeID());
     Pass.DeadInsts.insert(&SI);
     deleteIfTriviallyDead(OldOp);
 
-    LLVM_DEBUG(dbgs() << "          to: " << *NewSI << "\n");
+    DEBUG(dbgs() << "          to: " << *NewSI << "\n");
     return NewSI->getPointerOperand() == &NewAI && !SI.isVolatile();
   }
 
-  /// Compute an integer value from splatting an i8 across the given
+  /// \brief Compute an integer value from splatting an i8 across the given
   /// number of bytes.
   ///
   /// Note that this routine assumes an i8 is a byte. If that isn't true, don't
@@ -2701,19 +2667,16 @@ private:
     return V;
   }
 
-  /// Compute a vector splat for a given element value.
+  /// \brief Compute a vector splat for a given element value.
   Value *getVectorSplat(Value *V, unsigned NumElements) {
     V = IRB.CreateVectorSplat(NumElements, V, "vsplat");
-    LLVM_DEBUG(dbgs() << "       splat: " << *V << "\n");
+    DEBUG(dbgs() << "       splat: " << *V << "\n");
     return V;
   }
 
   bool visitMemSetInst(MemSetInst &II) {
-    LLVM_DEBUG(dbgs() << "    original: " << II << "\n");
+    DEBUG(dbgs() << "    original: " << II << "\n");
     assert(II.getRawDest() == OldPtr);
-
-    AAMDNodes AATags;
-    II.getAAMetadata(AATags);
 
     // If the memset has a variable size, it cannot be split, just adjust the
     // pointer to the new alloca.
@@ -2721,7 +2684,8 @@ private:
       assert(!IsSplit);
       assert(NewBeginOffset == BeginOffset);
       II.setDest(getNewAllocaSlicePtr(IRB, OldPtr->getType()));
-      II.setDestAlignment(getSliceAlign());
+      Type *CstTy = II.getAlignmentCst()->getType();
+      II.setAlignment(ConstantInt::get(CstTy, getSliceAlign()));
 
       deleteIfTriviallyDead(OldPtr);
       return false;
@@ -2746,9 +2710,8 @@ private:
       CallInst *New = IRB.CreateMemSet(
           getNewAllocaSlicePtr(IRB, OldPtr->getType()), II.getValue(), Size,
           getSliceAlign(), II.isVolatile());
-      if (AATags)
-        New->setAAMetadata(AATags);
-      LLVM_DEBUG(dbgs() << "          to: " << *New << "\n");
+      (void)New;
+      DEBUG(dbgs() << "          to: " << *New << "\n");
       return false;
     }
 
@@ -2810,11 +2773,10 @@ private:
       V = convertValue(DL, IRB, V, AllocaTy);
     }
 
-    StoreInst *New = IRB.CreateAlignedStore(V, &NewAI, NewAI.getAlignment(),
-                                            II.isVolatile());
-    if (AATags)
-      New->setAAMetadata(AATags);
-    LLVM_DEBUG(dbgs() << "          to: " << *New << "\n");
+    Value *New = IRB.CreateAlignedStore(V, &NewAI, NewAI.getAlignment(),
+                                        II.isVolatile());
+    (void)New;
+    DEBUG(dbgs() << "          to: " << *New << "\n");
     return !II.isVolatile();
   }
 
@@ -2822,10 +2784,7 @@ private:
     // Rewriting of memory transfer instructions can be a bit tricky. We break
     // them into two categories: split intrinsics and unsplit intrinsics.
 
-    LLVM_DEBUG(dbgs() << "    original: " << II << "\n");
-
-    AAMDNodes AATags;
-    II.getAAMetadata(AATags);
+    DEBUG(dbgs() << "    original: " << II << "\n");
 
     bool IsDest = &II.getRawDestUse() == OldUse;
     assert((IsDest && II.getRawDest() == OldPtr) ||
@@ -2842,16 +2801,18 @@ private:
     // update both source and dest of a single call.
     if (!IsSplittable) {
       Value *AdjustedPtr = getNewAllocaSlicePtr(IRB, OldPtr->getType());
-      if (IsDest) {
+      if (IsDest)
         II.setDest(AdjustedPtr);
-        II.setDestAlignment(SliceAlign);
-      }
-      else {
+      else
         II.setSource(AdjustedPtr);
-        II.setSourceAlignment(SliceAlign);
+
+      if (II.getAlignment() > SliceAlign) {
+        Type *CstTy = II.getAlignmentCst()->getType();
+        II.setAlignment(
+            ConstantInt::get(CstTy, MinAlign(II.getAlignment(), SliceAlign)));
       }
 
-      LLVM_DEBUG(dbgs() << "          to: " << II << "\n");
+      DEBUG(dbgs() << "          to: " << II << "\n");
       deleteIfTriviallyDead(OldPtr);
       return false;
     }
@@ -2901,10 +2862,8 @@ private:
     // Compute the relative offset for the other pointer within the transfer.
     unsigned IntPtrWidth = DL.getPointerSizeInBits(OtherAS);
     APInt OtherOffset(IntPtrWidth, NewBeginOffset - BeginOffset);
-    unsigned OtherAlign =
-      IsDest ? II.getSourceAlignment() : II.getDestAlignment();
-    OtherAlign =  MinAlign(OtherAlign ? OtherAlign : 1,
-                           OtherOffset.zextOrTrunc(64).getZExtValue());
+    unsigned OtherAlign = MinAlign(II.getAlignment() ? II.getAlignment() : 1,
+                                   OtherOffset.zextOrTrunc(64).getZExtValue());
 
     if (EmitMemCpy) {
       // Compute the other pointer, folding as much as possible to produce
@@ -2916,25 +2875,11 @@ private:
       Type *SizeTy = II.getLength()->getType();
       Constant *Size = ConstantInt::get(SizeTy, NewEndOffset - NewBeginOffset);
 
-      Value *DestPtr, *SrcPtr;
-      unsigned DestAlign, SrcAlign;
-      // Note: IsDest is true iff we're copying into the new alloca slice
-      if (IsDest) {
-        DestPtr = OurPtr;
-        DestAlign = SliceAlign;
-        SrcPtr = OtherPtr;
-        SrcAlign = OtherAlign;
-      } else {
-        DestPtr = OtherPtr;
-        DestAlign = OtherAlign;
-        SrcPtr = OurPtr;
-        SrcAlign = SliceAlign;
-      }
-      CallInst *New = IRB.CreateMemCpy(DestPtr, DestAlign, SrcPtr, SrcAlign,
-                                       Size, II.isVolatile());
-      if (AATags)
-        New->setAAMetadata(AATags);
-      LLVM_DEBUG(dbgs() << "          to: " << *New << "\n");
+      CallInst *New = IRB.CreateMemCpy(
+          IsDest ? OurPtr : OtherPtr, IsDest ? OtherPtr : OurPtr, Size,
+          MinAlign(SliceAlign, OtherAlign), II.isVolatile());
+      (void)New;
+      DEBUG(dbgs() << "          to: " << *New << "\n");
       return false;
     }
 
@@ -2982,11 +2927,8 @@ private:
       uint64_t Offset = NewBeginOffset - NewAllocaBeginOffset;
       Src = extractInteger(DL, IRB, Src, SubIntTy, Offset, "extract");
     } else {
-      LoadInst *Load = IRB.CreateAlignedLoad(SrcPtr, SrcAlign, II.isVolatile(),
-                                             "copyload");
-      if (AATags)
-        Load->setAAMetadata(AATags);
-      Src = Load;
+      Src =
+          IRB.CreateAlignedLoad(SrcPtr, SrcAlign, II.isVolatile(), "copyload");
     }
 
     if (VecTy && !IsWholeAlloca && IsDest) {
@@ -3004,16 +2946,15 @@ private:
 
     StoreInst *Store = cast<StoreInst>(
         IRB.CreateAlignedStore(Src, DstPtr, DstAlign, II.isVolatile()));
-    if (AATags)
-      Store->setAAMetadata(AATags);
-    LLVM_DEBUG(dbgs() << "          to: " << *Store << "\n");
+    (void)Store;
+    DEBUG(dbgs() << "          to: " << *Store << "\n");
     return !II.isVolatile();
   }
 
   bool visitIntrinsicInst(IntrinsicInst &II) {
     assert(II.getIntrinsicID() == Intrinsic::lifetime_start ||
            II.getIntrinsicID() == Intrinsic::lifetime_end);
-    LLVM_DEBUG(dbgs() << "    original: " << II << "\n");
+    DEBUG(dbgs() << "    original: " << II << "\n");
     assert(II.getArgOperand(1) == OldPtr);
 
     // Record this instruction for deletion.
@@ -3041,13 +2982,13 @@ private:
       New = IRB.CreateLifetimeEnd(Ptr, Size);
 
     (void)New;
-    LLVM_DEBUG(dbgs() << "          to: " << *New << "\n");
+    DEBUG(dbgs() << "          to: " << *New << "\n");
 
     return true;
   }
 
   bool visitPHINode(PHINode &PN) {
-    LLVM_DEBUG(dbgs() << "    original: " << PN << "\n");
+    DEBUG(dbgs() << "    original: " << PN << "\n");
     assert(BeginOffset >= NewAllocaBeginOffset && "PHIs are unsplittable");
     assert(EndOffset <= NewAllocaEndOffset && "PHIs are unsplittable");
 
@@ -3066,7 +3007,7 @@ private:
     // Replace the operands which were using the old pointer.
     std::replace(PN.op_begin(), PN.op_end(), cast<Value>(OldPtr), NewPtr);
 
-    LLVM_DEBUG(dbgs() << "          to: " << PN << "\n");
+    DEBUG(dbgs() << "          to: " << PN << "\n");
     deleteIfTriviallyDead(OldPtr);
 
     // PHIs can't be promoted on their own, but often can be speculated. We
@@ -3077,7 +3018,7 @@ private:
   }
 
   bool visitSelectInst(SelectInst &SI) {
-    LLVM_DEBUG(dbgs() << "    original: " << SI << "\n");
+    DEBUG(dbgs() << "    original: " << SI << "\n");
     assert((SI.getTrueValue() == OldPtr || SI.getFalseValue() == OldPtr) &&
            "Pointer isn't an operand!");
     assert(BeginOffset >= NewAllocaBeginOffset && "Selects are unsplittable");
@@ -3090,7 +3031,7 @@ private:
     if (SI.getOperand(2) == OldPtr)
       SI.setOperand(2, NewPtr);
 
-    LLVM_DEBUG(dbgs() << "          to: " << SI << "\n");
+    DEBUG(dbgs() << "          to: " << SI << "\n");
     deleteIfTriviallyDead(OldPtr);
 
     // Selects can't be promoted on their own, but often can be speculated. We
@@ -3103,7 +3044,7 @@ private:
 
 namespace {
 
-/// Visitor to rewrite aggregate loads and stores as scalar.
+/// \brief Visitor to rewrite aggregate loads and stores as scalar.
 ///
 /// This pass aggressively rewrites all aggregate loads and stores on
 /// a particular pointer (or any pointer derived from it which we can identify)
@@ -3126,7 +3067,7 @@ public:
   /// Rewrite loads and stores through a pointer and all pointers derived from
   /// it.
   bool rewrite(Instruction &I) {
-    LLVM_DEBUG(dbgs() << "  Rewriting FCA loads and stores...\n");
+    DEBUG(dbgs() << "  Rewriting FCA loads and stores...\n");
     enqueueUsers(I);
     bool Changed = false;
     while (!Queue.empty()) {
@@ -3148,7 +3089,7 @@ private:
   // Conservative default is to not rewrite anything.
   bool visitInstruction(Instruction &I) { return false; }
 
-  /// Generic recursive split emission class.
+  /// \brief Generic recursive split emission class.
   template <typename Derived> class OpSplitter {
   protected:
     /// The builder used to form new instructions.
@@ -3172,7 +3113,7 @@ private:
         : IRB(InsertionPoint), GEPIndices(1, IRB.getInt32(0)), Ptr(Ptr) {}
 
   public:
-    /// Generic recursive split emission routine.
+    /// \brief Generic recursive split emission routine.
     ///
     /// This method recursively splits an aggregate op (load or store) into
     /// scalar or vector ops. It splits recursively until it hits a single value
@@ -3224,10 +3165,8 @@ private:
   };
 
   struct LoadOpSplitter : public OpSplitter<LoadOpSplitter> {
-    AAMDNodes AATags;
-
-    LoadOpSplitter(Instruction *InsertionPoint, Value *Ptr, AAMDNodes AATags)
-        : OpSplitter<LoadOpSplitter>(InsertionPoint, Ptr), AATags(AATags) {}
+    LoadOpSplitter(Instruction *InsertionPoint, Value *Ptr)
+        : OpSplitter<LoadOpSplitter>(InsertionPoint, Ptr) {}
 
     /// Emit a leaf load of a single value. This is called at the leaves of the
     /// recursive emission to actually load values.
@@ -3236,11 +3175,9 @@ private:
       // Load the single value and insert it using the indices.
       Value *GEP =
           IRB.CreateInBoundsGEP(nullptr, Ptr, GEPIndices, Name + ".gep");
-      LoadInst *Load = IRB.CreateLoad(GEP, Name + ".load");
-      if (AATags)
-        Load->setAAMetadata(AATags);
+      Value *Load = IRB.CreateLoad(GEP, Name + ".load");
       Agg = IRB.CreateInsertValue(Agg, Load, Indices, Name + ".insert");
-      LLVM_DEBUG(dbgs() << "          to: " << *Load << "\n");
+      DEBUG(dbgs() << "          to: " << *Load << "\n");
     }
   };
 
@@ -3250,10 +3187,8 @@ private:
       return false;
 
     // We have an aggregate being loaded, split it apart.
-    LLVM_DEBUG(dbgs() << "    original: " << LI << "\n");
-    AAMDNodes AATags;
-    LI.getAAMetadata(AATags);
-    LoadOpSplitter Splitter(&LI, *U, AATags);
+    DEBUG(dbgs() << "    original: " << LI << "\n");
+    LoadOpSplitter Splitter(&LI, *U);
     Value *V = UndefValue::get(LI.getType());
     Splitter.emitSplitOps(LI.getType(), V, LI.getName() + ".fca");
     LI.replaceAllUsesWith(V);
@@ -3262,9 +3197,8 @@ private:
   }
 
   struct StoreOpSplitter : public OpSplitter<StoreOpSplitter> {
-    StoreOpSplitter(Instruction *InsertionPoint, Value *Ptr, AAMDNodes AATags)
-        : OpSplitter<StoreOpSplitter>(InsertionPoint, Ptr), AATags(AATags) {}
-    AAMDNodes AATags;
+    StoreOpSplitter(Instruction *InsertionPoint, Value *Ptr)
+        : OpSplitter<StoreOpSplitter>(InsertionPoint, Ptr) {}
 
     /// Emit a leaf store of a single value. This is called at the leaves of the
     /// recursive emission to actually produce stores.
@@ -3278,10 +3212,9 @@ private:
           IRB.CreateExtractValue(Agg, Indices, Name + ".extract");
       Value *InBoundsGEP =
           IRB.CreateInBoundsGEP(nullptr, Ptr, GEPIndices, Name + ".gep");
-      StoreInst *Store = IRB.CreateStore(ExtractValue, InBoundsGEP);
-      if (AATags)
-        Store->setAAMetadata(AATags);
-      LLVM_DEBUG(dbgs() << "          to: " << *Store << "\n");
+      Value *Store = IRB.CreateStore(ExtractValue, InBoundsGEP);
+      (void)Store;
+      DEBUG(dbgs() << "          to: " << *Store << "\n");
     }
   };
 
@@ -3293,10 +3226,8 @@ private:
       return false;
 
     // We have an aggregate being stored, split it apart.
-    LLVM_DEBUG(dbgs() << "    original: " << SI << "\n");
-    AAMDNodes AATags;
-    SI.getAAMetadata(AATags);
-    StoreOpSplitter Splitter(&SI, *U, AATags);
+    DEBUG(dbgs() << "    original: " << SI << "\n");
+    StoreOpSplitter Splitter(&SI, *U);
     Splitter.emitSplitOps(V->getType(), V, V->getName() + ".fca");
     SI.eraseFromParent();
     return true;
@@ -3325,7 +3256,7 @@ private:
 
 } // end anonymous namespace
 
-/// Strip aggregate type wrapping.
+/// \brief Strip aggregate type wrapping.
 ///
 /// This removes no-op aggregate types wrapping an underlying type. It will
 /// strip as many layers of types as it can without changing either the type
@@ -3355,7 +3286,7 @@ static Type *stripAggregateTypeWrapping(const DataLayout &DL, Type *Ty) {
   return stripAggregateTypeWrapping(DL, InnerTy);
 }
 
-/// Try to find a partition of the aggregate type passed in for a given
+/// \brief Try to find a partition of the aggregate type passed in for a given
 /// offset and size.
 ///
 /// This recurses through the aggregate type and tries to compute a subtype
@@ -3461,7 +3392,7 @@ static Type *getTypePartition(const DataLayout &DL, Type *Ty, uint64_t Offset,
   return SubTy;
 }
 
-/// Pre-split loads and stores to simplify rewriting.
+/// \brief Pre-split loads and stores to simplify rewriting.
 ///
 /// We want to break up the splittable load+store pairs as much as
 /// possible. This is important to do as a preprocessing step, as once we
@@ -3492,7 +3423,7 @@ static Type *getTypePartition(const DataLayout &DL, Type *Ty, uint64_t Offset,
 ///
 /// \returns true if any changes are made.
 bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
-  LLVM_DEBUG(dbgs() << "Pre-splitting loads and stores\n");
+  DEBUG(dbgs() << "Pre-splitting loads and stores\n");
 
   // Track the loads and stores which are candidates for pre-splitting here, in
   // the order they first appear during the partition scan. These give stable
@@ -3524,7 +3455,7 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
   // maybe it would make it more principled?
   SmallPtrSet<LoadInst *, 8> UnsplittableLoads;
 
-  LLVM_DEBUG(dbgs() << "  Searching for candidate loads and stores\n");
+  DEBUG(dbgs() << "  Searching for candidate loads and stores\n");
   for (auto &P : AS.partitions()) {
     for (Slice &S : P) {
       Instruction *I = cast<Instruction>(S.getUse()->getUser());
@@ -3579,7 +3510,7 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
       }
 
       // Record the initial split.
-      LLVM_DEBUG(dbgs() << "    Candidate: " << *I << "\n");
+      DEBUG(dbgs() << "    Candidate: " << *I << "\n");
       auto &Offsets = SplitOffsetsMap[I];
       assert(Offsets.Splits.empty() &&
              "Should not have splits the first time we see an instruction!");
@@ -3639,11 +3570,10 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
                         if (LoadOffsets.Splits == StoreOffsets.Splits)
                           return false;
 
-                        LLVM_DEBUG(
-                            dbgs()
-                            << "    Mismatched splits for load and store:\n"
-                            << "      " << *LI << "\n"
-                            << "      " << *SI << "\n");
+                        DEBUG(dbgs()
+                              << "    Mismatched splits for load and store:\n"
+                              << "      " << *LI << "\n"
+                              << "      " << *SI << "\n");
 
                         // We've found a store and load that we need to split
                         // with mismatched relative splits. Just give up on them
@@ -3716,7 +3646,7 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
     Instruction *BasePtr = cast<Instruction>(LI->getPointerOperand());
     IRB.SetInsertPoint(LI);
 
-    LLVM_DEBUG(dbgs() << "  Splitting load: " << *LI << "\n");
+    DEBUG(dbgs() << "  Splitting load: " << *LI << "\n");
 
     uint64_t PartOffset = 0, PartSize = Offsets.Splits.front();
     int Idx = 0, Size = Offsets.Splits.size();
@@ -3726,7 +3656,7 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
       auto *PartPtrTy = PartTy->getPointerTo(AS);
       LoadInst *PLoad = IRB.CreateAlignedLoad(
           getAdjustedPtr(IRB, DL, BasePtr,
-                         APInt(DL.getIndexSizeInBits(AS), PartOffset),
+                         APInt(DL.getPointerSizeInBits(AS), PartOffset),
                          PartPtrTy, BasePtr->getName() + "."),
           getAdjustedAlignment(LI, PartOffset, DL), /*IsVolatile*/ false,
           LI->getName());
@@ -3741,9 +3671,9 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
           Slice(BaseOffset + PartOffset, BaseOffset + PartOffset + PartSize,
                 &PLoad->getOperandUse(PLoad->getPointerOperandIndex()),
                 /*IsSplittable*/ false));
-      LLVM_DEBUG(dbgs() << "    new slice [" << NewSlices.back().beginOffset()
-                        << ", " << NewSlices.back().endOffset()
-                        << "): " << *PLoad << "\n");
+      DEBUG(dbgs() << "    new slice [" << NewSlices.back().beginOffset()
+                   << ", " << NewSlices.back().endOffset() << "): " << *PLoad
+                   << "\n");
 
       // See if we've handled all the splits.
       if (Idx >= Size)
@@ -3763,15 +3693,14 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
       StoreInst *SI = cast<StoreInst>(LU);
       if (!Stores.empty() && SplitOffsetsMap.count(SI)) {
         DeferredStores = true;
-        LLVM_DEBUG(dbgs() << "    Deferred splitting of store: " << *SI
-                          << "\n");
+        DEBUG(dbgs() << "    Deferred splitting of store: " << *SI << "\n");
         continue;
       }
 
       Value *StoreBasePtr = SI->getPointerOperand();
       IRB.SetInsertPoint(SI);
 
-      LLVM_DEBUG(dbgs() << "    Splitting store of load: " << *SI << "\n");
+      DEBUG(dbgs() << "    Splitting store of load: " << *SI << "\n");
 
       for (int Idx = 0, Size = SplitLoads.size(); Idx < Size; ++Idx) {
         LoadInst *PLoad = SplitLoads[Idx];
@@ -3783,11 +3712,11 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
         StoreInst *PStore = IRB.CreateAlignedStore(
             PLoad,
             getAdjustedPtr(IRB, DL, StoreBasePtr,
-                           APInt(DL.getIndexSizeInBits(AS), PartOffset),
+                           APInt(DL.getPointerSizeInBits(AS), PartOffset),
                            PartPtrTy, StoreBasePtr->getName() + "."),
             getAdjustedAlignment(SI, PartOffset, DL), /*IsVolatile*/ false);
         PStore->copyMetadata(*LI, LLVMContext::MD_mem_parallel_loop_access);
-        LLVM_DEBUG(dbgs() << "      +" << PartOffset << ":" << *PStore << "\n");
+        DEBUG(dbgs() << "      +" << PartOffset << ":" << *PStore << "\n");
       }
 
       // We want to immediately iterate on any allocas impacted by splitting
@@ -3836,7 +3765,7 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
     Value *LoadBasePtr = LI->getPointerOperand();
     Instruction *StoreBasePtr = cast<Instruction>(SI->getPointerOperand());
 
-    LLVM_DEBUG(dbgs() << "  Splitting store: " << *SI << "\n");
+    DEBUG(dbgs() << "  Splitting store: " << *SI << "\n");
 
     // Check whether we have an already split load.
     auto SplitLoadsMapI = SplitLoadsMap.find(LI);
@@ -3846,7 +3775,7 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
       assert(SplitLoads->size() == Offsets.Splits.size() + 1 &&
              "Too few split loads for the number of splits in the store!");
     } else {
-      LLVM_DEBUG(dbgs() << "          of load: " << *LI << "\n");
+      DEBUG(dbgs() << "          of load: " << *LI << "\n");
     }
 
     uint64_t PartOffset = 0, PartSize = Offsets.Splits.front();
@@ -3865,7 +3794,7 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
         auto AS = LI->getPointerAddressSpace();
         PLoad = IRB.CreateAlignedLoad(
             getAdjustedPtr(IRB, DL, LoadBasePtr,
-                           APInt(DL.getIndexSizeInBits(AS), PartOffset),
+                           APInt(DL.getPointerSizeInBits(AS), PartOffset),
                            LoadPartPtrTy, LoadBasePtr->getName() + "."),
             getAdjustedAlignment(LI, PartOffset, DL), /*IsVolatile*/ false,
             LI->getName());
@@ -3877,7 +3806,7 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
       StoreInst *PStore = IRB.CreateAlignedStore(
           PLoad,
           getAdjustedPtr(IRB, DL, StoreBasePtr,
-                         APInt(DL.getIndexSizeInBits(AS), PartOffset),
+                         APInt(DL.getPointerSizeInBits(AS), PartOffset),
                          StorePartPtrTy, StoreBasePtr->getName() + "."),
           getAdjustedAlignment(SI, PartOffset, DL), /*IsVolatile*/ false);
 
@@ -3886,11 +3815,11 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
           Slice(BaseOffset + PartOffset, BaseOffset + PartOffset + PartSize,
                 &PStore->getOperandUse(PStore->getPointerOperandIndex()),
                 /*IsSplittable*/ false));
-      LLVM_DEBUG(dbgs() << "    new slice [" << NewSlices.back().beginOffset()
-                        << ", " << NewSlices.back().endOffset()
-                        << "): " << *PStore << "\n");
+      DEBUG(dbgs() << "    new slice [" << NewSlices.back().beginOffset()
+                   << ", " << NewSlices.back().endOffset() << "): " << *PStore
+                   << "\n");
       if (!SplitLoads) {
-        LLVM_DEBUG(dbgs() << "      of split load: " << *PLoad << "\n");
+        DEBUG(dbgs() << "      of split load: " << *PLoad << "\n");
       }
 
       // See if we've finished all the splits.
@@ -3945,10 +3874,10 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
   // sequence.
   AS.insert(NewSlices);
 
-  LLVM_DEBUG(dbgs() << "  Pre-split slices:\n");
+  DEBUG(dbgs() << "  Pre-split slices:\n");
 #ifndef NDEBUG
   for (auto I = AS.begin(), E = AS.end(); I != E; ++I)
-    LLVM_DEBUG(AS.print(dbgs(), I, "    "));
+    DEBUG(AS.print(dbgs(), I, "    "));
 #endif
 
   // Finally, don't try to promote any allocas that new require re-splitting.
@@ -3962,7 +3891,7 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
   return true;
 }
 
-/// Rewrite an alloca partition's users.
+/// \brief Rewrite an alloca partition's users.
 ///
 /// This routine drives both of the rewriting goals of the SROA pass. It tries
 /// to rewrite uses of an alloca partition to be conducive for SSA value
@@ -4005,10 +3934,10 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
   // exact same type as the original, and with the same access offsets. In that
   // case, re-use the existing alloca, but still run through the rewriter to
   // perform phi and select speculation.
-  // P.beginOffset() can be non-zero even with the same type in a case with
-  // out-of-bounds access (e.g. @PR35657 function in SROA/basictest.ll).
   AllocaInst *NewAI;
-  if (SliceTy == AI.getAllocatedType() && P.beginOffset() == 0) {
+  if (SliceTy == AI.getAllocatedType()) {
+    assert(P.beginOffset() == 0 &&
+           "Non-zero begin offset but same alloca type");
     NewAI = &AI;
     // FIXME: We should be able to bail at this point with "nothing changed".
     // FIXME: We might want to defer PHI speculation until after here.
@@ -4029,14 +3958,12 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
     NewAI = new AllocaInst(
       SliceTy, AI.getType()->getAddressSpace(), nullptr, Alignment,
         AI.getName() + ".sroa." + Twine(P.begin() - AS.begin()), &AI);
-    // Copy the old AI debug location over to the new one.
-    NewAI->setDebugLoc(AI.getDebugLoc());
     ++NumNewAllocas;
   }
 
-  LLVM_DEBUG(dbgs() << "Rewriting alloca partition "
-                    << "[" << P.beginOffset() << "," << P.endOffset()
-                    << ") to: " << *NewAI << "\n");
+  DEBUG(dbgs() << "Rewriting alloca partition "
+               << "[" << P.beginOffset() << "," << P.endOffset()
+               << ") to: " << *NewAI << "\n");
 
   // Track the high watermark on the worklist as it is only relevant for
   // promoted allocas. We will reset it to this point if the alloca is not in
@@ -4113,7 +4040,7 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
   return NewAI;
 }
 
-/// Walks the slices of an alloca and form partitions based on them,
+/// \brief Walks the slices of an alloca and form partitions based on them,
 /// rewriting each of their uses.
 bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
   if (AS.begin() == AS.end())
@@ -4136,7 +4063,7 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
 
   uint64_t AllocaSize = DL.getTypeAllocSize(AI.getAllocatedType());
   const uint64_t MaxBitVectorSize = 1024;
-  if (AllocaSize <= MaxBitVectorSize) {
+  if (SROASplitNonWholeAllocaSlices && AllocaSize <= MaxBitVectorSize) {
     // If a byte boundary is included in any load or store, a slice starting or
     // ending at the boundary is not splittable.
     SmallBitVector SplittableOffset(AllocaSize + 1, true);
@@ -4179,7 +4106,7 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
   }
 
   if (!IsSorted)
-    llvm::sort(AS.begin(), AS.end());
+    std::sort(AS.begin(), AS.end());
 
   /// Describes the allocas introduced by rewritePartition in order to migrate
   /// the debug info.
@@ -4274,7 +4201,7 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
   return Changed;
 }
 
-/// Clobber a use with undef, deleting the used value if it becomes dead.
+/// \brief Clobber a use with undef, deleting the used value if it becomes dead.
 void SROA::clobberUse(Use &U) {
   Value *OldV = U;
   // Replace the use with an undef value.
@@ -4289,13 +4216,13 @@ void SROA::clobberUse(Use &U) {
     }
 }
 
-/// Analyze an alloca for SROA.
+/// \brief Analyze an alloca for SROA.
 ///
 /// This analyzes the alloca to ensure we can reason about it, builds
 /// the slices of the alloca, and then hands it off to be split and
 /// rewritten as needed.
 bool SROA::runOnAlloca(AllocaInst &AI) {
-  LLVM_DEBUG(dbgs() << "SROA alloca: " << AI << "\n");
+  DEBUG(dbgs() << "SROA alloca: " << AI << "\n");
   ++NumAllocasAnalyzed;
 
   // Special case dead allocas, as they're trivial.
@@ -4319,7 +4246,7 @@ bool SROA::runOnAlloca(AllocaInst &AI) {
 
   // Build the slices using a recursive instruction-visiting builder.
   AllocaSlices AS(DL, AI);
-  LLVM_DEBUG(AS.print(dbgs()));
+  DEBUG(AS.print(dbgs()));
   if (AS.isEscaped())
     return Changed;
 
@@ -4347,18 +4274,18 @@ bool SROA::runOnAlloca(AllocaInst &AI) {
 
   Changed |= splitAlloca(AI, AS);
 
-  LLVM_DEBUG(dbgs() << "  Speculating PHIs\n");
+  DEBUG(dbgs() << "  Speculating PHIs\n");
   while (!SpeculatablePHIs.empty())
     speculatePHINodeLoads(*SpeculatablePHIs.pop_back_val());
 
-  LLVM_DEBUG(dbgs() << "  Speculating Selects\n");
+  DEBUG(dbgs() << "  Speculating Selects\n");
   while (!SpeculatableSelects.empty())
     speculateSelectInstLoads(*SpeculatableSelects.pop_back_val());
 
   return Changed;
 }
 
-/// Delete the dead instructions accumulated in this run.
+/// \brief Delete the dead instructions accumulated in this run.
 ///
 /// Recursively deletes the dead instructions we've accumulated. This is done
 /// at the very end to maximize locality of the recursive delete and to
@@ -4372,7 +4299,7 @@ bool SROA::deleteDeadInstructions(
   bool Changed = false;
   while (!DeadInsts.empty()) {
     Instruction *I = DeadInsts.pop_back_val();
-    LLVM_DEBUG(dbgs() << "Deleting dead instruction: " << *I << "\n");
+    DEBUG(dbgs() << "Deleting dead instruction: " << *I << "\n");
 
     // If the instruction is an alloca, find the possible dbg.declare connected
     // to it, and remove it too. We must do this before calling RAUW or we will
@@ -4400,7 +4327,7 @@ bool SROA::deleteDeadInstructions(
   return Changed;
 }
 
-/// Promote the allocas, using the best available technique.
+/// \brief Promote the allocas, using the best available technique.
 ///
 /// This attempts to promote whatever allocas have been identified as viable in
 /// the PromotableAllocas list. If that list is empty, there is nothing to do.
@@ -4411,7 +4338,7 @@ bool SROA::promoteAllocas(Function &F) {
 
   NumPromoted += PromotableAllocas.size();
 
-  LLVM_DEBUG(dbgs() << "Promoting allocas with mem2reg...\n");
+  DEBUG(dbgs() << "Promoting allocas with mem2reg...\n");
   PromoteMemToReg(PromotableAllocas, *DT, AC);
   PromotableAllocas.clear();
   return true;
@@ -4419,7 +4346,7 @@ bool SROA::promoteAllocas(Function &F) {
 
 PreservedAnalyses SROA::runImpl(Function &F, DominatorTree &RunDT,
                                 AssumptionCache &RunAC) {
-  LLVM_DEBUG(dbgs() << "SROA function: " << F.getName() << "\n");
+  DEBUG(dbgs() << "SROA function: " << F.getName() << "\n");
   C = &F.getContext();
   DT = &RunDT;
   AC = &RunAC;

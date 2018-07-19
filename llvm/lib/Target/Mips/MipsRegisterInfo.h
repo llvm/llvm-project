@@ -57,8 +57,6 @@ public:
 
   BitVector getReservedRegs(const MachineFunction &MF) const override;
 
-  bool enableMultipleCopyHints() const override { return true; }
-
   bool requiresRegisterScavenging(const MachineFunction &MF) const override;
 
   bool trackLivenessAfterRegAlloc(const MachineFunction &MF) const override;
@@ -74,7 +72,7 @@ public:
   /// Debug information queries.
   unsigned getFrameRegister(const MachineFunction &MF) const override;
 
-  /// Return GPR register class.
+  /// \brief Return GPR register class.
   virtual const TargetRegisterClass *intRegClass(unsigned Size) const = 0;
 
 private:

@@ -28,9 +28,9 @@ registers:
 
 body: |
   bb.0:
-    liveins: $r0, $r1
-      %0 = COPY $r1
-      %1 = COPY $r0
+    liveins: %r0, %r1
+      %0 = COPY %r1
+      %1 = COPY %r0
       %2 = A2_tfrsi @array
       %3 = IMPLICIT_DEF
       %4 = A2_tfrsi @array+424
@@ -41,5 +41,5 @@ body: |
       %8 = A2_tfrsi @array+144
       %9 = C2_mux %3, %4, %8
       S4_storeiri_io %9, 0, 0
-      PS_jmpret $r31, implicit-def $pc
+      PS_jmpret %r31, implicit-def %pc
 ...

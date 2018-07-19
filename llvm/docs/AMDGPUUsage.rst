@@ -64,7 +64,13 @@ specify the target triple:
      ============ ==============================================================
      Environment  Description
      ============ ==============================================================
-     *<empty>*    Default.
+     *<empty>*    Defaults to ``opencl``.
+     ``opencl``   OpenCL compute kernel (see :ref:`amdgpu-opencl`).
+     ``amdgizcl`` Same as ``opencl`` except a different address space mapping is
+                  used (see :ref:`amdgpu-address-spaces`).
+     ``amdgiz``   Same as ``opencl`` except a different address space mapping is
+                  used (see :ref:`amdgpu-address-spaces`).
+     ``hcc``      AMD HC language compute kernel (see :ref:`amdgpu-hcc`).
      ============ ==============================================================
 
 .. _amdgpu-processors:
@@ -98,23 +104,23 @@ names from both the *Processor* and *Alternative Processor* can be used.
      **Radeon HD 5000 Series (Evergreen)** [AMD-RADEON-HD-5000]_
      -----------------------------------------------------------------------------------
      ``cedar``                   ``r600``     dGPU
-     ``cypress``                 ``r600``     dGPU
-     ``juniper``                 ``r600``     dGPU
      ``redwood``                 ``r600``     dGPU
      ``sumo``                    ``r600``     dGPU
+     ``juniper``                 ``r600``     dGPU
+     ``cypress``                 ``r600``     dGPU
      **Radeon HD 6000 Series (Northern Islands)** [AMD-RADEON-HD-6000]_
      -----------------------------------------------------------------------------------
      ``barts``                   ``r600``     dGPU
+     ``turks``                   ``r600``     dGPU
      ``caicos``                  ``r600``     dGPU
      ``cayman``                  ``r600``     dGPU
-     ``turks``                   ``r600``     dGPU
      **GCN GFX6 (Southern Islands (SI))** [AMD-GCN-GFX6]_
      -----------------------------------------------------------------------------------
      ``gfx600``  - ``tahiti``    ``amdgcn``   dGPU
-     ``gfx601``  - ``hainan``    ``amdgcn``   dGPU
-                 - ``oland``
-                 - ``pitcairn``
+     ``gfx601``  - ``pitcairn``  ``amdgcn``   dGPU
                  - ``verde``
+                 - ``oland``
+                 - ``hainan``
      **GCN GFX7 (Sea Islands (CI))** [AMD-GCN-GFX7]_
      -----------------------------------------------------------------------------------
      ``gfx700``  - ``kaveri``    ``amdgcn``   APU                     - A6-7000
@@ -168,8 +174,8 @@ names from both the *Processor* and *Alternative Processor* can be used.
      \                           ``amdgcn``   APU   - xnack           - E2-9010
                                                       [on]            - A6-9210
                                                                       - A9-9410
-     ``gfx802``  - ``iceland``   ``amdgcn``   dGPU  - xnack   ROCm    - FirePro S7150
-                 - ``tonga``                          [off]           - FirePro S7100
+     ``gfx802``  - ``tonga``     ``amdgcn``   dGPU  - xnack   ROCm    - FirePro S7150
+                 - ``iceland``                        [off]           - FirePro S7100
                                                                       - FirePro W7100
                                                                       - Radeon R285
                                                                       - Radeon R9 380
@@ -198,15 +204,8 @@ names from both the *Processor* and *Alternative Processor* can be used.
                                                                       - Radeon RX Vega 64
                                                                         Liquid
                                                                       - Radeon Instinct MI25
-     ``gfx902``                  ``amdgcn``   APU   - xnack           - Ryzen 3 2200G
-                                                      [on]            - Ryzen 5 2400G
-     ``gfx904``                  ``amdgcn``   dGPU  - xnack           *TBA*
-                                                      [off]
-                                                                      .. TODO
-                                                                         Add product
-                                                                         names.
-     ``gfx906``                  ``amdgcn``   dGPU  - xnack           *TBA*
-                                                      [off]
+     ``gfx902``                  ``amdgcn``   APU   - xnack           *TBA*
+                                                      [on]
                                                                       .. TODO
                                                                          Add product
                                                                          names.
@@ -275,17 +274,34 @@ LLVM Address Space number is used throughout LLVM (for example, in LLVM IR).
   .. table:: Address Space Mapping
      :name: amdgpu-address-space-mapping-table
 
-     ================== =================
+     ================== ================= ================= ================= =================
      LLVM Address Space Memory Space
-     ================== =================
-     0                  Generic (Flat)
-     1                  Global
-     2                  Region (GDS)
-     3                  Local (group/LDS)
-     4                  Constant
-     5                  Private (Scratch)
-     6                  Constant 32-bit
-     ================== =================
+     ------------------ -----------------------------------------------------------------------
+     \                  Current Default   amdgiz/amdgizcl   hcc               Future Default
+     ================== ================= ================= ================= =================
+     0                  Private (Scratch) Generic (Flat)    Generic (Flat)    Generic (Flat)
+     1                  Global            Global            Global            Global
+     2                  Constant          Constant          Constant          Region (GDS)
+     3                  Local (group/LDS) Local (group/LDS) Local (group/LDS) Local (group/LDS)
+     4                  Generic (Flat)    Region (GDS)      Region (GDS)      Constant
+     5                  Region (GDS)      Private (Scratch) Private (Scratch) Private (Scratch)
+     ================== ================= ================= ================= =================
+
+Current Default
+  This is the current default address space mapping used for all languages
+  except hcc. This will shortly be deprecated.
+
+amdgiz/amdgizcl
+  This is the current address space mapping used when ``amdgiz`` or ``amdgizcl``
+  is specified as the target triple environment value.
+
+hcc
+  This is the current address space mapping used when ``hcc`` is specified as
+  the target triple environment value.This will shortly be deprecated.
+
+Future Default
+  This will shortly be the only address space mapping for all languages using
+  AMDGPU backend.
 
 .. _amdgpu-memory-scopes:
 
@@ -369,41 +385,12 @@ is conservatively correct for OpenCL.
 AMDGPU Intrinsics
 -----------------
 
-The AMDGPU backend implements the following LLVM IR intrinsics.
+The AMDGPU backend implements the following intrinsics.
 
 *This section is WIP.*
 
 .. TODO
    List AMDGPU intrinsics
-
-AMDGPU Attributes
------------------
-
-The AMDGPU backend supports the following LLVM IR attributes.
-
-  .. table:: AMDGPU LLVM IR Attributes
-     :name: amdgpu-llvm-ir-attributes-table
-
-     ======================================= ==========================================================
-     LLVM Attribute                          Description
-     ======================================= ==========================================================
-     "amdgpu-flat-work-group-size"="min,max" Specify the minimum and maximum flat work group sizes that
-                                             will be specified when the kernel is dispatched. Generated
-                                             by the ``amdgpu_flat_work_group_size`` CLANG attribute [CLANG-ATTR]_.
-     "amdgpu-implicitarg-num-bytes"="n"      Number of kernel argument bytes to add to the kernel
-                                             argument block size for the implicit arguments. This
-                                             varies by OS and language (for OpenCL see
-                                             :ref:`opencl-kernel-implicit-arguments-appended-for-amdhsa-os-table`).
-     "amdgpu-max-work-group-size"="n"        Specify the maximum work-group size that will be specifed
-                                             when the kernel is dispatched.
-     "amdgpu-num-sgpr"="n"                   Specifies the number of SGPRs to use. Generated by
-                                             the ``amdgpu_num_sgpr`` CLANG attribute [CLANG-ATTR]_.
-     "amdgpu-num-vgpr"="n"                   Specifies the number of VGPRs to use. Generated by the
-                                             ``amdgpu_num_vgpr`` CLANG attribute [CLANG-ATTR]_.
-     "amdgpu-waves-per-eu"="m,n"             Specify the minimum and maximum number of waves per
-                                             execution unit. Generated by the ``amdgpu_waves_per_eu``
-                                             CLANG attribute [CLANG-ATTR]_.
-     ======================================= ==========================================================
 
 Code Object
 ===========
@@ -537,11 +524,6 @@ The AMDGPU backend uses the following ELF header:
                                                   target feature is
                                                   enabled for all code
                                                   contained in the code object.
-                                                  If the processor
-                                                  does not support the
-                                                  ``xnack`` target
-                                                  feature then must
-                                                  be 0.
                                                   See
                                                   :ref:`amdgpu-target-features`.
      ================================= ========== =============================
@@ -553,42 +535,38 @@ The AMDGPU backend uses the following ELF header:
      Name                              Value      Description (see
                                                   :ref:`amdgpu-processor-table`)
      ================================= ========== =============================
-     ``EF_AMDGPU_MACH_NONE``           0x000      *not specified*
-     ``EF_AMDGPU_MACH_R600_R600``      0x001      ``r600``
-     ``EF_AMDGPU_MACH_R600_R630``      0x002      ``r630``
-     ``EF_AMDGPU_MACH_R600_RS880``     0x003      ``rs880``
-     ``EF_AMDGPU_MACH_R600_RV670``     0x004      ``rv670``
-     ``EF_AMDGPU_MACH_R600_RV710``     0x005      ``rv710``
-     ``EF_AMDGPU_MACH_R600_RV730``     0x006      ``rv730``
-     ``EF_AMDGPU_MACH_R600_RV770``     0x007      ``rv770``
-     ``EF_AMDGPU_MACH_R600_CEDAR``     0x008      ``cedar``
-     ``EF_AMDGPU_MACH_R600_CYPRESS``   0x009      ``cypress``
-     ``EF_AMDGPU_MACH_R600_JUNIPER``   0x00a      ``juniper``
-     ``EF_AMDGPU_MACH_R600_REDWOOD``   0x00b      ``redwood``
-     ``EF_AMDGPU_MACH_R600_SUMO``      0x00c      ``sumo``
-     ``EF_AMDGPU_MACH_R600_BARTS``     0x00d      ``barts``
-     ``EF_AMDGPU_MACH_R600_CAICOS``    0x00e      ``caicos``
-     ``EF_AMDGPU_MACH_R600_CAYMAN``    0x00f      ``cayman``
-     ``EF_AMDGPU_MACH_R600_TURKS``     0x010      ``turks``
-     *reserved*                        0x011 -    Reserved for ``r600``
-                                       0x01f      architecture processors.
-     ``EF_AMDGPU_MACH_AMDGCN_GFX600``  0x020      ``gfx600``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX601``  0x021      ``gfx601``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX700``  0x022      ``gfx700``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX701``  0x023      ``gfx701``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX702``  0x024      ``gfx702``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX703``  0x025      ``gfx703``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX704``  0x026      ``gfx704``
-     *reserved*                        0x027      Reserved.
-     ``EF_AMDGPU_MACH_AMDGCN_GFX801``  0x028      ``gfx801``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX802``  0x029      ``gfx802``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX803``  0x02a      ``gfx803``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX810``  0x02b      ``gfx810``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX900``  0x02c      ``gfx900``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX902``  0x02d      ``gfx902``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX904``  0x02e      ``gfx904``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX906``  0x02f      ``gfx906``
-     *reserved*                        0x030      Reserved.
+     ``EF_AMDGPU_MACH_NONE``           0          *not specified*
+     ``EF_AMDGPU_MACH_R600_R600``      1          ``r600``
+     ``EF_AMDGPU_MACH_R600_R630``      2          ``r630``
+     ``EF_AMDGPU_MACH_R600_RS880``     3          ``rs880``
+     ``EF_AMDGPU_MACH_R600_RV670``     4          ``rv670``
+     ``EF_AMDGPU_MACH_R600_RV710``     5          ``rv710``
+     ``EF_AMDGPU_MACH_R600_RV730``     6          ``rv730``
+     ``EF_AMDGPU_MACH_R600_RV770``     7          ``rv770``
+     ``EF_AMDGPU_MACH_R600_CEDAR``     8          ``cedar``
+     ``EF_AMDGPU_MACH_R600_REDWOOD``   9          ``redwood``
+     ``EF_AMDGPU_MACH_R600_SUMO``      10         ``sumo``
+     ``EF_AMDGPU_MACH_R600_JUNIPER``   11         ``juniper``
+     ``EF_AMDGPU_MACH_R600_CYPRESS``   12         ``cypress``
+     ``EF_AMDGPU_MACH_R600_BARTS``     13         ``barts``
+     ``EF_AMDGPU_MACH_R600_TURKS``     14         ``turks``
+     ``EF_AMDGPU_MACH_R600_CAICOS``    15         ``caicos``
+     ``EF_AMDGPU_MACH_R600_CAYMAN``    16         ``cayman``
+     *reserved*                        17-31      Reserved for ``r600``
+                                                  architecture processors.
+     ``EF_AMDGPU_MACH_AMDGCN_GFX600``  32         ``gfx600``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX601``  33         ``gfx601``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX700``  34         ``gfx700``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX701``  35         ``gfx701``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX702``  36         ``gfx702``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX703``  37         ``gfx703``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX704``  38         ``gfx704``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX801``  39         ``gfx801``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX802``  40         ``gfx802``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX803``  41         ``gfx803``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX810``  42         ``gfx810``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX900``  43         ``gfx900``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX902``  44         ``gfx902``
      ================================= ========== =============================
 
 Sections
@@ -696,7 +674,7 @@ Additional note records can be present.
   Specifies extensible metadata associated with the code objects executed on HSA
   [HSA]_ compatible runtimes such as AMD's ROCm [AMD-ROCm]_. It is required when
   the target triple OS is ``amdhsa`` (see :ref:`amdgpu-target-triples`). See
-  :ref:`amdgpu-amdhsa-code-object-metadata` for the syntax of the code
+  :ref:`amdgpu-amdhsa-hsa-code-object-metadata` for the syntax of the code
   object metadata string.
 
 .. _amdgpu-symbols:
@@ -715,7 +693,7 @@ Symbols include the following:
      *link-name*           ``STT_OBJECT`` - ``.data``   Global variable
                                           - ``.rodata``
                                           - ``.bss``
-     *link-name*\ ``.kd``  ``STT_OBJECT`` - ``.rodata`` Kernel descriptor
+     *link-name*\ ``@kd``  ``STT_OBJECT`` - ``.rodata`` Kernel descriptor
      *link-name*           ``STT_FUNC``   - ``.text``   Kernel entry point
      ===================== ============== ============= ==================
 
@@ -795,41 +773,31 @@ The following relocation types are supported:
   .. table:: AMDGPU ELF Relocation Records
      :name: amdgpu-elf-relocation-records-table
 
-     ========================== ======= =====  ==========  ==============================
-     Relocation Type            Kind    Value  Field       Calculation
-     ========================== ======= =====  ==========  ==============================
-     ``R_AMDGPU_NONE``                  0      *none*      *none*
-     ``R_AMDGPU_ABS32_LO``      Static, 1      ``word32``  (S + A) & 0xFFFFFFFF
-                                Dynamic
-     ``R_AMDGPU_ABS32_HI``      Static, 2      ``word32``  (S + A) >> 32
-                                Dynamic
-     ``R_AMDGPU_ABS64``         Static, 3      ``word64``  S + A
-                                Dynamic
-     ``R_AMDGPU_REL32``         Static  4      ``word32``  S + A - P
-     ``R_AMDGPU_REL64``         Static  5      ``word64``  S + A - P
-     ``R_AMDGPU_ABS32``         Static, 6      ``word32``  S + A
-                                Dynamic
-     ``R_AMDGPU_GOTPCREL``      Static  7      ``word32``  G + GOT + A - P
-     ``R_AMDGPU_GOTPCREL32_LO`` Static  8      ``word32``  (G + GOT + A - P) & 0xFFFFFFFF
-     ``R_AMDGPU_GOTPCREL32_HI`` Static  9      ``word32``  (G + GOT + A - P) >> 32
-     ``R_AMDGPU_REL32_LO``      Static  10     ``word32``  (S + A - P) & 0xFFFFFFFF
-     ``R_AMDGPU_REL32_HI``      Static  11     ``word32``  (S + A - P) >> 32
-     *reserved*                         12
-     ``R_AMDGPU_RELATIVE64``    Dynamic 13     ``word64``  B + A
-     ========================== ======= =====  ==========  ==============================
-
-``R_AMDGPU_ABS32_LO`` and ``R_AMDGPU_ABS32_HI`` are only supported by
-the ``mesa3d`` OS, which does not support ``R_AMDGPU_ABS64``.
-
-There is no current OS loader support for 32 bit programs and so
-``R_AMDGPU_ABS32`` is not used.
+     ==========================  =====  ==========  ==============================
+     Relocation Type             Value  Field       Calculation
+     ==========================  =====  ==========  ==============================
+     ``R_AMDGPU_NONE``           0      *none*      *none*
+     ``R_AMDGPU_ABS32_LO``       1      ``word32``  (S + A) & 0xFFFFFFFF
+     ``R_AMDGPU_ABS32_HI``       2      ``word32``  (S + A) >> 32
+     ``R_AMDGPU_ABS64``          3      ``word64``  S + A
+     ``R_AMDGPU_REL32``          4      ``word32``  S + A - P
+     ``R_AMDGPU_REL64``          5      ``word64``  S + A - P
+     ``R_AMDGPU_ABS32``          6      ``word32``  S + A
+     ``R_AMDGPU_GOTPCREL``       7      ``word32``  G + GOT + A - P
+     ``R_AMDGPU_GOTPCREL32_LO``  8      ``word32``  (G + GOT + A - P) & 0xFFFFFFFF
+     ``R_AMDGPU_GOTPCREL32_HI``  9      ``word32``  (G + GOT + A - P) >> 32
+     ``R_AMDGPU_REL32_LO``       10     ``word32``  (S + A - P) & 0xFFFFFFFF
+     ``R_AMDGPU_REL32_HI``       11     ``word32``  (S + A - P) >> 32
+     *reserved*                  12
+     ``R_AMDGPU_RELATIVE64``     13     ``word64``  B + A
+     ==========================  =====  ==========  ==============================
 
 .. _amdgpu-dwarf:
 
 DWARF
 -----
 
-Standard DWARF [DWARF]_ Version 5 sections can be generated. These contain
+Standard DWARF [DWARF]_ Version 2 sections can be generated. These contain
 information that maps the code object executable code and data to the source
 language constructs. It can be used by tools such as debuggers and profilers.
 
@@ -885,60 +853,10 @@ Register Mapping
 Source Text
 ~~~~~~~~~~~
 
-Source text for online-compiled programs (e.g. those compiled by the OpenCL
-runtime) may be embedded into the DWARF v5 line table using the ``clang
--gembed-source`` option, described in table :ref:`amdgpu-debug-options`.
+*This section is WIP.*
 
-For example:
-
-``-gembed-source``
-  Enable the embedded source DWARF v5 extension.
-``-gno-embed-source``
-  Disable the embedded source DWARF v5 extension.
-
-  .. table:: AMDGPU Debug Options
-     :name: amdgpu-debug-options
-
-     ==================== ==================================================
-     Debug Flag           Description
-     ==================== ==================================================
-     -g[no-]embed-source  Enable/disable embedding source text in DWARF
-                          debug sections. Useful for environments where
-                          source cannot be written to disk, such as
-                          when performing online compilation.
-     ==================== ==================================================
-
-This option enables one extended content types in the DWARF v5 Line Number
-Program Header, which is used to encode embedded source.
-
-  .. table:: AMDGPU DWARF Line Number Program Header Extended Content Types
-     :name: amdgpu-dwarf-extended-content-types
-
-     ============================  ======================
-     Content Type                  Form
-     ============================  ======================
-     ``DW_LNCT_LLVM_source``       ``DW_FORM_line_strp``
-     ============================  ======================
-
-The source field will contain the UTF-8 encoded, null-terminated source text
-with ``'\n'`` line endings. When the source field is present, consumers can use
-the embedded source instead of attempting to discover the source on disk. When
-the source field is absent, consumers can access the file to get the source
-text.
-
-The above content type appears in the ``file_name_entry_format`` field of the
-line table prologue, and its corresponding value appear in the ``file_names``
-field. The current encoding of the content type is documented in table
-:ref:`amdgpu-dwarf-extended-content-types-encoding`
-
-  .. table:: AMDGPU DWARF Line Number Program Header Extended Content Types Encoding
-     :name: amdgpu-dwarf-extended-content-types-encoding
-
-     ============================  ====================
-     Content Type                  Value
-     ============================  ====================
-     ``DW_LNCT_LLVM_source``       0x2001
-     ============================  ====================
+.. TODO
+   DWARF extension to include runtime generated source text.
 
 .. _amdgpu-code-conventions:
 
@@ -954,37 +872,7 @@ AMDHSA
 This section provides code conventions used when the target triple OS is
 ``amdhsa`` (see :ref:`amdgpu-target-triples`).
 
-.. _amdgpu-amdhsa-code-object-target-identification:
-
-Code Object Target Identification
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The AMDHSA OS uses the following syntax to specify the code object
-target as a single string:
-
-  ``<Architecture>-<Vendor>-<OS>-<Environment>-<Processor><Target Features>``
-
-Where:
-
-  - ``<Architecture>``, ``<Vendor>``, ``<OS>`` and ``<Environment>``
-    are the same as the *Target Triple* (see
-    :ref:`amdgpu-target-triples`).
-
-  - ``<Processor>`` is the same as the *Processor* (see
-    :ref:`amdgpu-processors`).
-
-  - ``<Target Features>`` is a list of the enabled *Target Features*
-    (see :ref:`amdgpu-target-features`), each prefixed by a plus, that
-    apply to *Processor*. The list must be in the same order as listed
-    in the table :ref:`amdgpu-target-feature-table`. Note that *Target
-    Features* must be included in the list if they are enabled even if
-    that is the default for *Processor*.
-
-For example:
-
-  ``"amdgcn-amd-amdhsa--gfx902+xnack"``
-
-.. _amdgpu-amdhsa-code-object-metadata:
+.. _amdgpu-amdhsa-hsa-code-object-metadata:
 
 Code Object Metadata
 ~~~~~~~~~~~~~~~~~~~~
@@ -1103,11 +991,9 @@ non-AMD key names should be prefixed by "*vendor-name*.".
      =================== ============== ========= ==============================
      String Key          Value Type     Required? Description
      =================== ============== ========= ==============================
-     "ReqdWorkGroupSize" sequence of              If not 0, 0, 0 then all values
-                         3 integers               must be >=1 and the dispatch
-                                                  work-group size X, Y, Z must
-                                                  correspond to the specified
-                                                  values. Defaults to 0, 0, 0.
+     "ReqdWorkGroupSize" sequence of              The dispatch work-group size
+                         3 integers               X, Y, Z must correspond to the
+                                                  specified values.
 
                                                   Corresponds to the OpenCL
                                                   ``reqd_work_group_size``
@@ -1400,9 +1286,19 @@ non-AMD key names should be prefixed by "*vendor-name*.".
                                                            supported by the
                                                            kernel in work-items.
                                                            Must be >=1 and
-                                                           consistent with
-                                                           ReqdWorkGroupSize if
-                                                           not 0, 0, 0.
+                                                           consistent with any
+                                                           non-0 values in
+                                                           FixedWorkGroupSize.
+     "FixedWorkGroupSize"         sequence of              Corresponds to the
+                                  3 integers               dispatch work-group
+                                                           size X, Y, Z. If
+                                                           omitted, defaults to
+                                                           0, 0, 0. If an
+                                                           element is non-0 then
+                                                           the kernel must only
+                                                           be launched with a
+                                                           matching corresponding
+                                                           work-group size.
      "NumSpilledSGPRs"            integer                  Number of stores from
                                                            a scalar register to
                                                            a register allocator
@@ -1467,7 +1363,7 @@ CPU host program, or from an HSA kernel executing on a GPU.
    such as grid and work-group size, together with information from the code
    object about the kernel, such as segment sizes. The ROCm runtime queries on
    the kernel symbol can be used to obtain the code object values which are
-   recorded in the :ref:`amdgpu-amdhsa-code-object-metadata`.
+   recorded in the :ref:`amdgpu-amdhsa-hsa-code-object-metadata`.
 7. CP executes micro-code and is responsible for detecting and setting up the
    GPU to execute the wavefronts of a kernel dispatch.
 8. CP ensures that when the a wavefront starts executing the kernel machine
@@ -1534,7 +1430,7 @@ address to physical address is:
 There are different ways that the wavefront scratch base address is determined
 by a wavefront (see :ref:`amdgpu-amdhsa-initial-kernel-execution-state`). This
 memory can be accessed in an interleaved manner using buffer instruction with
-the scratch buffer descriptor and per wavefront scratch offset, by the scratch
+the scratch buffer descriptor and per wave scratch offset, by the scratch
 instructions, or by flat instructions. If each lane of a wavefront accesses the
 same private address, the interleaving results in adjacent dwords being accessed
 and hence requires fewer cache lines to be fetched. Multi-dword access is not
@@ -1601,8 +1497,7 @@ that implements the kernel.
 Kernel Descriptor for GFX6-GFX9
 +++++++++++++++++++++++++++++++
 
-CP microcode requires the Kernel descriptor to be allocated on 64 byte
-alignment.
+CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
 
   .. table:: Kernel Descriptor for GFX6-GFX9
      :name: amdgpu-amdhsa-kernel-descriptor-gfx6-gfx9-table
@@ -1610,7 +1505,7 @@ alignment.
      ======= ======= =============================== ============================
      Bits    Size    Field Name                      Description
      ======= ======= =============================== ============================
-     31:0    4 bytes GROUP_SEGMENT_FIXED_SIZE        The amount of fixed local
+     31:0    4 bytes GroupSegmentFixedSize           The amount of fixed local
                                                      address space memory
                                                      required for a work-group
                                                      in bytes. This does not
@@ -1619,7 +1514,7 @@ alignment.
                                                      space memory that may be
                                                      added when the kernel is
                                                      dispatched.
-     63:32   4 bytes PRIVATE_SEGMENT_FIXED_SIZE      The amount of fixed
+     63:32   4 bytes PrivateSegmentFixedSize         The amount of fixed
                                                      private address space
                                                      memory required for a
                                                      work-item in bytes. If
@@ -1628,31 +1523,54 @@ alignment.
                                                      be added to this value for
                                                      the call stack.
      127:64  8 bytes                                 Reserved, must be 0.
-     191:128 8 bytes KERNEL_CODE_ENTRY_BYTE_OFFSET   Byte offset (possibly
+     191:128 8 bytes KernelCodeEntryByteOffset       Byte offset (possibly
                                                      negative) from base
                                                      address of kernel
                                                      descriptor to kernel's
                                                      entry point instruction
                                                      which must be 256 byte
                                                      aligned.
-     383:192 24                                      Reserved, must be 0.
+     223:192 4 bytes MaxFlatWorkGroupSize            Maximum flat work-group
+                                                     size supported by the
+                                                     kernel in work-items. If
+                                                     an exact work-group size
+                                                     is required then must be
+                                                     omitted or 0 and
+                                                     ReqdWorkGroupSize* must
+                                                     be set to non-0.
+     239:224 2 bytes ReqdWorkGroupSizeX              If present and non-0 then
+                                                     the kernel
+                                                     must be executed with the
+                                                     specified work-group size
+                                                     for X.
+     255:240 2 bytes ReqdWorkGroupSizeY              If present and non-0 then
+                                                     the kernel
+                                                     must be executed with the
+                                                     specified work-group size
+                                                     for Y.
+     271:256 2 bytes ReqdWorkGroupSizeZ              If present and non-0 then
+                                                     the kernel
+                                                     must be executed with the
+                                                     specified work-group size
+                                                     for Z.
+     383:272 14                                      Reserved, must be 0.
              bytes
-     415:384 4 bytes COMPUTE_PGM_RSRC1               Compute Shader (CS)
+     415:384 4 bytes ComputePgmRsrc1                 Compute Shader (CS)
                                                      program settings used by
                                                      CP to set up
                                                      ``COMPUTE_PGM_RSRC1``
                                                      configuration
                                                      register. See
                                                      :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx9-table`.
-     447:416 4 bytes COMPUTE_PGM_RSRC2               Compute Shader (CS)
+     447:416 4 bytes ComputePgmRsrc2                 Compute Shader (CS)
                                                      program settings used by
                                                      CP to set up
                                                      ``COMPUTE_PGM_RSRC2``
                                                      configuration
                                                      register. See
                                                      :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx9-table`.
-     448     1 bit   ENABLE_SGPR_PRIVATE_SEGMENT     Enable the setup of the
-                     _BUFFER                         SGPR user data registers
+     448     1 bit   EnableSGPRPrivateSegmentBuffer  Enable the setup of the
+                                                     SGPR user data registers
                                                      (see
                                                      :ref:`amdgpu-amdhsa-initial-kernel-execution-state`).
 
@@ -1663,15 +1581,21 @@ alignment.
                                                      ``compute_pgm_rsrc2.user_sgpr.user_sgpr_count``.
                                                      Any requests beyond 16
                                                      will be ignored.
-     449     1 bit   ENABLE_SGPR_DISPATCH_PTR        *see above*
-     450     1 bit   ENABLE_SGPR_QUEUE_PTR           *see above*
-     451     1 bit   ENABLE_SGPR_KERNARG_SEGMENT_PTR *see above*
-     452     1 bit   ENABLE_SGPR_DISPATCH_ID         *see above*
-     453     1 bit   ENABLE_SGPR_FLAT_SCRATCH_INIT   *see above*
-     454     1 bit   ENABLE_SGPR_PRIVATE_SEGMENT     *see above*
-                     _SIZE
-     455     1 bit                                   Reserved, must be 0.
-     511:456 8 bytes                                 Reserved, must be 0.
+     449     1 bit   EnableSGPRDispatchPtr           *see above*
+     450     1 bit   EnableSGPRQueuePtr              *see above*
+     451     1 bit   EnableSGPRKernargSegmentPtr     *see above*
+     452     1 bit   EnableSGPRDispatchID            *see above*
+     453     1 bit   EnableSGPRFlatScratchInit       *see above*
+     454     1 bit   EnableSGPRPrivateSegmentSize    *see above*
+     455     1 bit   EnableSGPRGridWorkgroupCountX   Not implemented in CP and
+                                                     should always be 0.
+     456     1 bit   EnableSGPRGridWorkgroupCountY   Not implemented in CP and
+                                                     should always be 0.
+     457     1 bit   EnableSGPRGridWorkgroupCountZ   Not implemented in CP and
+                                                     should always be 0.
+     463:458 6 bits                                  Reserved, must be 0.
+     511:464 6                                       Reserved, must be 0.
+             bytes
      512     **Total size 64 bytes.**
      ======= ====================================================================
 
@@ -1683,86 +1607,42 @@ alignment.
      ======= ======= =============================== ===========================================================================
      Bits    Size    Field Name                      Description
      ======= ======= =============================== ===========================================================================
-     5:0     6 bits  GRANULATED_WORKITEM_VGPR_COUNT  Number of vector register
-                                                     blocks used by each work-item;
+     5:0     6 bits  GRANULATED_WORKITEM_VGPR_COUNT  Number of vector registers
+                                                     used by each work-item,
                                                      granularity is device
                                                      specific:
 
                                                      GFX6-GFX9
-                                                       - vgprs_used 0..256
-                                                       - max(0, ceil(vgprs_used / 4) - 1)
-
-                                                     Where vgprs_used is defined
-                                                     as the highest VGPR number
-                                                     explicitly referenced plus
-                                                     one.
+                                                       - max_vgpr 1..256
+                                                       - roundup((max_vgpg + 1)
+                                                         / 4) - 1
 
                                                      Used by CP to set up
                                                      ``COMPUTE_PGM_RSRC1.VGPRS``.
-
-                                                     The
-                                                     :ref:`amdgpu-assembler`
-                                                     calculates this
-                                                     automatically for the
-                                                     selected processor from
-                                                     values provided to the
-                                                     `.amdhsa_kernel` directive
-                                                     by the
-                                                     `.amdhsa_next_free_vgpr`
-                                                     nested directive (see
-                                                     :ref:`amdhsa-kernel-directives-table`).
-     9:6     4 bits  GRANULATED_WAVEFRONT_SGPR_COUNT Number of scalar register
-                                                     blocks used by a wavefront;
+     9:6     4 bits  GRANULATED_WAVEFRONT_SGPR_COUNT Number of scalar registers
+                                                     used by a wavefront,
                                                      granularity is device
                                                      specific:
 
                                                      GFX6-GFX8
-                                                       - sgprs_used 0..112
-                                                       - max(0, ceil(sgprs_used / 8) - 1)
+                                                       - max_sgpr 1..112
+                                                       - roundup((max_sgpg + 1)
+                                                         / 8) - 1
                                                      GFX9
-                                                       - sgprs_used 0..112
-                                                       - 2 * max(0, ceil(sgprs_used / 16) - 1)
+                                                       - max_sgpr 1..112
+                                                       - roundup((max_sgpg + 1)
+                                                         / 16) - 1
 
-                                                     Where sgprs_used is
-                                                     defined as the highest
-                                                     SGPR number explicitly
-                                                     referenced plus one, plus
-                                                     a target-specific number
-                                                     of additional special
-                                                     SGPRs for VCC,
-                                                     FLAT_SCRATCH (GFX7+) and
-                                                     XNACK_MASK (GFX8+), and
-                                                     any additional
-                                                     target-specific
-                                                     limitations. It does not
-                                                     include the 16 SGPRs added
-                                                     if a trap handler is
+                                                     Includes the special SGPRs
+                                                     for VCC, Flat Scratch (for
+                                                     GFX7 onwards) and XNACK
+                                                     (for GFX8 onwards). It does
+                                                     not include the 16 SGPR
+                                                     added if a trap handler is
                                                      enabled.
-
-                                                     The target-specific
-                                                     limitations and special
-                                                     SGPR layout are defined in
-                                                     the hardware
-                                                     documentation, which can
-                                                     be found in the
-                                                     :ref:`amdgpu-processors`
-                                                     table.
 
                                                      Used by CP to set up
                                                      ``COMPUTE_PGM_RSRC1.SGPRS``.
-
-                                                     The
-                                                     :ref:`amdgpu-assembler`
-                                                     calculates this
-                                                     automatically for the
-                                                     selected processor from
-                                                     values provided to the
-                                                     `.amdhsa_kernel` directive
-                                                     by the
-                                                     `.amdhsa_next_free_sgpr`
-                                                     and `.amdhsa_reserve_*`
-                                                     nested directives (see
-                                                     :ref:`amdhsa-kernel-directives-table`).
      11:10   2 bits  PRIORITY                        Must be 0.
 
                                                      Start executing wavefront
@@ -1914,7 +1794,7 @@ alignment.
      Bits    Size    Field Name                      Description
      ======= ======= =============================== ===========================================================================
      0       1 bit   ENABLE_SGPR_PRIVATE_SEGMENT     Enable the setup of the
-                     _WAVEFRONT_OFFSET               SGPR wavefront scratch offset
+                     _WAVE_OFFSET                    SGPR wave scratch offset
                                                      system register (see
                                                      :ref:`amdgpu-amdhsa-initial-kernel-execution-state`).
 
@@ -1928,13 +1808,17 @@ alignment.
 
                                                      Used by CP to set up
                                                      ``COMPUTE_PGM_RSRC2.USER_SGPR``.
-     6       1 bit   ENABLE_TRAP_HANDLER             Must be 0.
+     6       1 bit   ENABLE_TRAP_HANDLER             Set to 1 if code contains a
+                                                     TRAP instruction which
+                                                     requires a trap handler to
+                                                     be enabled.
 
-                                                     This bit represents
-                                                     ``COMPUTE_PGM_RSRC2.TRAP_PRESENT``,
-                                                     which is set by the CP if
-                                                     the runtime has installed a
-                                                     trap handler.
+                                                     CP sets
+                                                     ``COMPUTE_PGM_RSRC2.TRAP_PRESENT``
+                                                     if the runtime has
+                                                     installed a trap handler
+                                                     regardless of the setting
+                                                     of this field.
      7       1 bit   ENABLE_SGPR_WORKGROUP_ID_X      Enable the setup of the
                                                      system SGPR register for
                                                      the work-group id in the X
@@ -1997,7 +1881,7 @@ alignment.
                                                      exceptions exceptions
                                                      enabled which are generated
                                                      when a memory violation has
-                                                     occurred for this wavefront from
+                                                     occurred for this wave from
                                                      L1 or LDS
                                                      (write-to-read-only-memory,
                                                      mis-aligned atomic, LDS
@@ -2066,10 +1950,10 @@ alignment.
      ====================================== ===== ==============================
      Enumeration Name                       Value Description
      ====================================== ===== ==============================
-     FLOAT_ROUND_MODE_NEAR_EVEN             0     Round Ties To Even
-     FLOAT_ROUND_MODE_PLUS_INFINITY         1     Round Toward +infinity
-     FLOAT_ROUND_MODE_MINUS_INFINITY        2     Round Toward -infinity
-     FLOAT_ROUND_MODE_ZERO                  3     Round Toward 0
+     AMDGPU_FLOAT_ROUND_MODE_NEAR_EVEN      0     Round Ties To Even
+     AMDGPU_FLOAT_ROUND_MODE_PLUS_INFINITY  1     Round Toward +infinity
+     AMDGPU_FLOAT_ROUND_MODE_MINUS_INFINITY 2     Round Toward -infinity
+     AMDGPU_FLOAT_ROUND_MODE_ZERO           3     Round Toward 0
      ====================================== ===== ==============================
 
 ..
@@ -2080,11 +1964,11 @@ alignment.
      ====================================== ===== ==============================
      Enumeration Name                       Value Description
      ====================================== ===== ==============================
-     FLOAT_DENORM_MODE_FLUSH_SRC_DST        0     Flush Source and Destination
+     AMDGPU_FLOAT_DENORM_MODE_FLUSH_SRC_DST 0     Flush Source and Destination
                                                   Denorms
-     FLOAT_DENORM_MODE_FLUSH_DST            1     Flush Output Denorms
-     FLOAT_DENORM_MODE_FLUSH_SRC            2     Flush Source Denorms
-     FLOAT_DENORM_MODE_FLUSH_NONE           3     No Flush
+     AMDGPU_FLOAT_DENORM_MODE_FLUSH_DST     1     Flush Output Denorms
+     AMDGPU_FLOAT_DENORM_MODE_FLUSH_SRC     2     Flush Source Denorms
+     AMDGPU_FLOAT_DENORM_MODE_FLUSH_NONE    3     No Flush
      ====================================== ===== ==============================
 
 ..
@@ -2095,13 +1979,13 @@ alignment.
      ======================================== ===== ============================
      Enumeration Name                         Value Description
      ======================================== ===== ============================
-     SYSTEM_VGPR_WORKITEM_ID_X                0     Set work-item X dimension
+     AMDGPU_SYSTEM_VGPR_WORKITEM_ID_X         0     Set work-item X dimension
                                                     ID.
-     SYSTEM_VGPR_WORKITEM_ID_X_Y              1     Set work-item X and Y
+     AMDGPU_SYSTEM_VGPR_WORKITEM_ID_X_Y       1     Set work-item X and Y
                                                     dimensions ID.
-     SYSTEM_VGPR_WORKITEM_ID_X_Y_Z            2     Set work-item X, Y and Z
+     AMDGPU_SYSTEM_VGPR_WORKITEM_ID_X_Y_Z     2     Set work-item X, Y and Z
                                                     dimensions ID.
-     SYSTEM_VGPR_WORKITEM_ID_UNDEFINED        3     Undefined.
+     AMDGPU_SYSTEM_VGPR_WORKITEM_ID_UNDEFINED 3     Undefined.
      ======================================== ===== ============================
 
 .. _amdgpu-amdhsa-initial-kernel-execution-state:
@@ -2121,10 +2005,10 @@ SGPR0, the next enabled register is SGPR1 etc.; disabled registers do not have
 an SGPR number.
 
 The initial SGPRs comprise up to 16 User SRGPs that are set by CP and apply to
-all wavefronts of the grid. It is possible to specify more than 16 User SGPRs using
+all waves of the grid. It is possible to specify more than 16 User SGPRs using
 the ``enable_sgpr_*`` bit fields, in which case only the first 16 are actually
 initialized. These are then immediately followed by the System SGPRs that are
-set up by ADC/SPI and can have different values for each wavefront of the grid
+set up by ADC/SPI and can have different values for each wave of the grid
 dispatch.
 
 SGPR register initial state is defined in
@@ -2139,10 +2023,10 @@ SGPR register initial state is defined in
                 field)                     SGPRs
      ========== ========================== ====== ==============================
      First      Private Segment Buffer     4      V# that can be used, together
-                (enable_sgpr_private              with Scratch Wavefront Offset
-                _segment_buffer)                  as an offset, to access the
-                                                  private memory space using a
-                                                  segment address.
+                (enable_sgpr_private              with Scratch Wave Offset as an
+                _segment_buffer)                  offset, to access the private
+                                                  memory space using a segment
+                                                  address.
 
                                                   CP uses the value provided by
                                                   the runtime.
@@ -2182,7 +2066,7 @@ SGPR register initial state is defined in
                                                     address is
                                                     ``SH_HIDDEN_PRIVATE_BASE_VIMID``
                                                     plus this offset.) The value
-                                                    of Scratch Wavefront Offset must
+                                                    of Scratch Wave Offset must
                                                     be added to this offset by
                                                     the kernel machine code,
                                                     right shifted by 8, and
@@ -2192,13 +2076,13 @@ SGPR register initial state is defined in
                                                     to SGPRn-4 on GFX7, and
                                                     SGPRn-6 on GFX8 (where SGPRn
                                                     is the highest numbered SGPR
-                                                    allocated to the wavefront).
+                                                    allocated to the wave).
                                                     FLAT_SCRATCH_HI is
                                                     multiplied by 256 (as it is
                                                     in units of 256 bytes) and
                                                     added to
                                                     ``SH_HIDDEN_PRIVATE_BASE_VIMID``
-                                                    to calculate the per wavefront
+                                                    to calculate the per wave
                                                     FLAT SCRATCH BASE in flat
                                                     memory instructions that
                                                     access the scratch
@@ -2238,7 +2122,7 @@ SGPR register initial state is defined in
                                                     divides it if there are
                                                     multiple Shader Arrays each
                                                     with its own SPI). The value
-                                                    of Scratch Wavefront Offset must
+                                                    of Scratch Wave Offset must
                                                     be added by the kernel
                                                     machine code and the result
                                                     moved to the FLAT_SCRATCH
@@ -2307,12 +2191,12 @@ SGPR register initial state is defined in
      then       Work-Group Id Z            1      32 bit work-group id in Z
                 (enable_sgpr_workgroup_id         dimension of grid for
                 _Z)                               wavefront.
-     then       Work-Group Info            1      {first_wavefront, 14'b0000,
+     then       Work-Group Info            1      {first_wave, 14'b0000,
                 (enable_sgpr_workgroup            ordered_append_term[10:0],
-                _info)                            threadgroup_size_in_wavefronts[5:0]}
-     then       Scratch Wavefront Offset   1      32 bit byte offset from base
+                _info)                            threadgroup_size_in_waves[5:0]}
+     then       Scratch Wave Offset        1      32 bit byte offset from base
                 (enable_sgpr_private              of scratch base of queue
-                _segment_wavefront_offset)        executing the kernel
+                _segment_wave_offset)             executing the kernel
                                                   dispatch. Must be used as an
                                                   offset with Private
                                                   segment address when using
@@ -2352,14 +2236,14 @@ VGPR register initial state is defined in
                 > 1)                              wavefront lane.
      ========== ========================== ====== ==============================
 
-The setting of registers is done by GPU CP/ADC/SPI hardware as follows:
+The setting of registers is is done by GPU CP/ADC/SPI hardware as follows:
 
 1. SGPRs before the Work-Group Ids are set by CP using the 16 User Data
    registers.
 2. Work-group Id registers X, Y, Z are set by ADC which supports any
    combination including none.
-3. Scratch Wavefront Offset is set by SPI in a per wavefront basis which is why
-   its value cannot included with the flat scratch init value which is per queue.
+3. Scratch Wave Offset is set by SPI in a per wave basis which is why its value
+   cannot included with the flat scratch init value which is per queue.
 4. The VGPRs are set by SPI which only supports specifying either (X), (X, Y)
    or (X, Y, Z).
 
@@ -2407,7 +2291,7 @@ Flat Scratch
 
 If the kernel may use flat operations to access scratch memory, the prolog code
 must set up FLAT_SCRATCH register pair (FLAT_SCRATCH_LO/FLAT_SCRATCH_HI which
-are in SGPRn-4/SGPRn-3). Initialization uses Flat Scratch Init and Scratch Wavefront
+are in SGPRn-4/SGPRn-3). Initialization uses Flat Scratch Init and Scratch Wave
 Offset SGPR registers (see :ref:`amdgpu-amdhsa-initial-kernel-execution-state`):
 
 GFX6
@@ -2418,7 +2302,7 @@ GFX7-GFX8
      ``SH_HIDDEN_PRIVATE_BASE_VIMID`` to the base of scratch backing memory
      being managed by SPI for the queue executing the kernel dispatch. This is
      the same value used in the Scratch Segment Buffer V# base address. The
-     prolog must add the value of Scratch Wavefront Offset to get the wavefront's byte
+     prolog must add the value of Scratch Wave Offset to get the wave's byte
      scratch backing memory offset from ``SH_HIDDEN_PRIVATE_BASE_VIMID``. Since
      FLAT_SCRATCH_LO is in units of 256 bytes, the offset must be right shifted
      by 8 before moving into FLAT_SCRATCH_LO.
@@ -2432,7 +2316,7 @@ GFX7-GFX8
 GFX9
   The Flat Scratch Init is the 64 bit address of the base of scratch backing
   memory being managed by SPI for the queue executing the kernel dispatch. The
-  prolog must add the value of Scratch Wavefront Offset and moved to the FLAT_SCRATCH
+  prolog must add the value of Scratch Wave Offset and moved to the FLAT_SCRATCH
   pair for use as the flat scratch base in flat memory instructions.
 
 .. _amdgpu-amdhsa-memory-model:
@@ -2498,12 +2382,12 @@ For GFX6-GFX9:
   global order and involve no caching. Completion is reported to a wavefront in
   execution order.
 * The LDS memory has multiple request queues shared by the SIMDs of a
-  CU. Therefore, the LDS operations performed by different wavefronts of a work-group
+  CU. Therefore, the LDS operations performed by different waves of a work-group
   can be reordered relative to each other, which can result in reordering the
   visibility of vector memory operations with respect to LDS operations of other
   wavefronts in the same work-group. A ``s_waitcnt lgkmcnt(0)`` is required to
   ensure synchronization between LDS operations and vector memory operations
-  between wavefronts of a work-group, but not between operations performed by the
+  between waves of a work-group, but not between operations performed by the
   same wavefront.
 * The vector memory operations are performed as wavefront wide operations and
   completion is reported to a wavefront in execution order. The exception is
@@ -2513,7 +2397,7 @@ For GFX6-GFX9:
 * The vector memory operations access a single vector L1 cache shared by all
   SIMDs a CU. Therefore, no special action is required for coherence between the
   lanes of a single wavefront, or for coherence between wavefronts in the same
-  work-group. A ``buffer_wbinvl1_vol`` is required for coherence between wavefronts
+  work-group. A ``buffer_wbinvl1_vol`` is required for coherence between waves
   executing in different work-groups as they may be executing on different CUs.
 * The scalar memory operations access a scalar L1 cache shared by all wavefronts
   on a group of CUs. The scalar and vector L1 caches are not coherent. However,
@@ -2524,7 +2408,7 @@ For GFX6-GFX9:
 * The L2 cache has independent channels to service disjoint ranges of virtual
   addresses.
 * Each CU has a separate request queue per channel. Therefore, the vector and
-  scalar memory operations performed by wavefronts executing in different work-groups
+  scalar memory operations performed by waves executing in different work-groups
   (which may be executing on different CUs) of an agent can be reordered
   relative to each other. A ``s_waitcnt vmcnt(0)`` is required to ensure
   synchronization between vector memory operations of different CUs. It ensures a
@@ -2574,7 +2458,7 @@ case the AMDGPU backend ensures the memory location used to spill is never
 accessed by vector memory operations at the same time. If scalar writes are used
 then a ``s_dcache_wb`` is inserted before the ``s_endpgm`` and before a function
 return since the locations may be used for vector memory instructions by a
-future wavefront that uses the same scratch area, or a function call that creates a
+future wave that uses the same scratch area, or a function call that creates a
 frame at the same address, respectively. There is no need for a ``s_dcache_inv``
 as all scalar writes are write-before-read in the same thread.
 
@@ -3854,153 +3738,15 @@ the ``s_trap`` instruction with the following usage:
                                            ``queue_ptr`` terminated and its
                                                          associated queue put
                                                          into the error state.
-     ``llvm.debugtrap``  ``s_trap 0x03``                 - If debugger not
-                                                           installed then
-                                                           behaves as a
-                                                           no-operation. The
-                                                           trap handler is
-                                                           entered and
-                                                           immediately returns
-                                                           to continue
-                                                           execution of the
-                                                           wavefront.
-                                                         - If the debugger is
-                                                           installed, causes
-                                                           the debug trap to be
-                                                           reported by the
-                                                           debugger and the
-                                                           wavefront is put in
-                                                           the halt state until
-                                                           resumed by the
-                                                           debugger.
-     reserved            ``s_trap 0x04``                 Reserved.
-     reserved            ``s_trap 0x05``                 Reserved.
-     reserved            ``s_trap 0x06``                 Reserved.
-     debugger breakpoint ``s_trap 0x07``                 Reserved for debugger
+     ``llvm.debugtrap``  ``s_trap 0x03`` ``SGPR0-1``:    If debugger not
+                                           ``queue_ptr`` installed handled
+                                                         same as ``llvm.trap``.
+     debugger breakpoint ``s_trap 0x07``                 Reserved for  debugger
                                                          breakpoints.
-     reserved            ``s_trap 0x08``                 Reserved.
-     reserved            ``s_trap 0xfe``                 Reserved.
-     reserved            ``s_trap 0xff``                 Reserved.
+     debugger            ``s_trap 0x08``                 Reserved for debugger.
+     debugger            ``s_trap 0xfe``                 Reserved for debugger.
+     debugger            ``s_trap 0xff``                 Reserved for debugger.
      =================== =============== =============== =======================
-
-AMDPAL
-------
-
-This section provides code conventions used when the target triple OS is
-``amdpal`` (see :ref:`amdgpu-target-triples`) for passing runtime parameters
-from the application/runtime to each invocation of a hardware shader. These
-parameters include both generic, application-controlled parameters called
-*user data* as well as system-generated parameters that are a product of the
-draw or dispatch execution.
-
-User Data
-~~~~~~~~~
-
-Each hardware stage has a set of 32-bit *user data registers* which can be
-written from a command buffer and then loaded into SGPRs when waves are launched
-via a subsequent dispatch or draw operation. This is the way most arguments are
-passed from the application/runtime to a hardware shader.
-
-Compute User Data
-~~~~~~~~~~~~~~~~~
-
-Compute shader user data mappings are simpler than graphics shaders, and have a
-fixed mapping.
-
-Note that there are always 10 available *user data entries* in registers -
-entries beyond that limit must be fetched from memory (via the spill table
-pointer) by the shader.
-
-  .. table:: PAL Compute Shader User Data Registers
-     :name: pal-compute-user-data-registers
-
-     ============= ================================
-     User Register Description
-     ============= ================================
-     0             Global Internal Table (32-bit pointer)
-     1             Per-Shader Internal Table (32-bit pointer)
-     2 - 11        Application-Controlled User Data (10 32-bit values)
-     12            Spill Table (32-bit pointer)
-     13 - 14       Thread Group Count (64-bit pointer)
-     15            GDS Range
-     ============= ================================
-
-Graphics User Data
-~~~~~~~~~~~~~~~~~~
-
-Graphics pipelines support a much more flexible user data mapping:
-
-  .. table:: PAL Graphics Shader User Data Registers
-     :name: pal-graphics-user-data-registers
-
-     ============= ================================
-     User Register Description
-     ============= ================================
-     0             Global Internal Table (32-bit pointer)
-     +             Per-Shader Internal Table (32-bit pointer)
-     + 1-15        Application Controlled User Data
-                   (1-15 Contiguous 32-bit Values in Registers)
-     +             Spill Table (32-bit pointer)
-     +             Draw Index (First Stage Only)
-     +             Vertex Offset (First Stage Only)
-     +             Instance Offset (First Stage Only)
-     ============= ================================
-
-  The placement of the global internal table remains fixed in the first *user
-  data SGPR register*. Otherwise all parameters are optional, and can be mapped
-  to any desired *user data SGPR register*, with the following regstrictions:
-
-  * Draw Index, Vertex Offset, and Instance Offset can only be used by the first
-    activehardware stage in a graphics pipeline (i.e. where the API vertex
-    shader runs).
-
-  * Application-controlled user data must be mapped into a contiguous range of
-    user data registers.
-
-  * The application-controlled user data range supports compaction remapping, so
-    only *entries* that are actually consumed by the shader must be assigned to
-    corresponding *registers*. Note that in order to support an efficient runtime
-    implementation, the remapping must pack *registers* in the same order as
-    *entries*, with unused *entries* removed.
-
-.. _pal_global_internal_table:
-
-Global Internal Table
-~~~~~~~~~~~~~~~~~~~~~
-
-The global internal table is a table of *shader resource descriptors* (SRDs) that
-define how certain engine-wide, runtime-managed resources should be accessed
-from a shader. The majority of these resources have HW-defined formats, and it
-is up to the compiler to write/read data as required by the target hardware.
-
-The following table illustrates the required format:
-
-  .. table:: PAL Global Internal Table
-     :name: pal-git-table
-
-     ============= ================================
-     Offset        Description
-     ============= ================================
-     0-3           Graphics Scratch SRD
-     4-7           Compute Scratch SRD
-     8-11          ES/GS Ring Output SRD
-     12-15         ES/GS Ring Input SRD
-     16-19         GS/VS Ring Output #0
-     20-23         GS/VS Ring Output #1
-     24-27         GS/VS Ring Output #2
-     28-31         GS/VS Ring Output #3
-     32-35         GS/VS Ring Input SRD
-     36-39         Tessellation Factor Buffer SRD
-     40-43         Off-Chip LDS Buffer SRD
-     44-47         Off-Chip Param Cache Buffer SRD
-     48-51         Sample Position Buffer SRD
-     52            vaRange::ShadowDescriptorTable High Bits
-     ============= ================================
-
-  The pointer to the global internal table passed to the shader as user data
-  is a 32-bit pointer. The top 32 bits should be assumed to be the same as
-  the top 32 bits of the pipeline, so the shader may use the program
-  counter's top 32 bits.
 
 Unspecified OS
 --------------
@@ -4034,42 +3780,34 @@ Source Languages
 OpenCL
 ------
 
+When generating code for the OpenCL language the target triple environment
+should be ``opencl`` or ``amdgizcl`` (see :ref:`amdgpu-target-triples`).
+
 When the language is OpenCL the following differences occur:
 
 1. The OpenCL memory model is used (see :ref:`amdgpu-amdhsa-memory-model`).
-2. The AMDGPU backend appends additional arguments to the kernel's explicit
-   arguments for the AMDHSA OS (see
-   :ref:`opencl-kernel-implicit-arguments-appended-for-amdhsa-os-table`).
+2. The AMDGPU backend adds additional arguments to the kernel.
 3. Additional metadata is generated
-   (see :ref:`amdgpu-amdhsa-code-object-metadata`).
+   (:ref:`amdgpu-amdhsa-hsa-code-object-metadata`).
 
-  .. table:: OpenCL kernel implicit arguments appended for AMDHSA OS
-     :name: opencl-kernel-implicit-arguments-appended-for-amdhsa-os-table
-
-     ======== ==== ========= ===========================================
-     Position Byte Byte      Description
-              Size Alignment
-     ======== ==== ========= ===========================================
-     1        8    8         OpenCL Global Offset X
-     2        8    8         OpenCL Global Offset Y
-     3        8    8         OpenCL Global Offset Z
-     4        8    8         OpenCL address of printf buffer
-     5        8    8         OpenCL address of virtual queue used by
-                             enqueue_kernel.
-     6        8    8         OpenCL address of AqlWrap struct used by
-                             enqueue_kernel.
-     ======== ==== ========= ===========================================
+.. TODO
+   Specify what affect this has. Hidden arguments added. Additional metadata
+   generated.
 
 .. _amdgpu-hcc:
 
 HCC
 ---
 
-When the language is HCC the following differences occur:
+When generating code for the OpenCL language the target triple environment
+should be ``hcc`` (see :ref:`amdgpu-target-triples`).
+
+When the language is OpenCL the following differences occur:
 
 1. The HSA memory model is used (see :ref:`amdgpu-amdhsa-memory-model`).
 
-.. _amdgpu-assembler:
+.. TODO
+   Specify what affect this has.
 
 Assembler
 ---------
@@ -4077,35 +3815,15 @@ Assembler
 AMDGPU backend has LLVM-MC based assembler which is currently in development.
 It supports AMDGCN GFX6-GFX9.
 
-This section describes general syntax for instructions and operands.
-
-Instructions
-~~~~~~~~~~~~
-
-.. toctree::
-   :hidden:
-
-   AMDGPUAsmGFX7
-   AMDGPUAsmGFX8
-   AMDGPUAsmGFX9
-   AMDGPUOperandSyntax
-
-An instruction has the following syntax:
-
-    *<opcode> <operand0>, <operand1>,... <modifier0> <modifier1>...*
-
-Note that operands are normally comma-separated while modifiers are space-separated.
-
-The order of operands and modifiers is fixed. Most modifiers are optional and may be omitted.
-
-See detailed instruction syntax description for :doc:`GFX7<AMDGPUAsmGFX7>`,
-:doc:`GFX8<AMDGPUAsmGFX8>` and :doc:`GFX9<AMDGPUAsmGFX9>`.
-
-Note that features under development are not included in this description.
-
-For more information about instructions, their semantics and supported combinations of
+This section describes general syntax for instructions and operands. For more
+information about instructions, their semantics and supported combinations of
 operands, refer to one of instruction set architecture manuals
 [AMD-GCN-GFX6]_, [AMD-GCN-GFX7]_, [AMD-GCN-GFX8]_ and [AMD-GCN-GFX9]_.
+
+An instruction has the following syntax (register operands are normally
+comma-separated while extra operands are space-separated):
+
+*<opcode> <register_operand0>, ... <extra_operand0> ...*
 
 Operands
 ~~~~~~~~
@@ -4122,16 +3840,34 @@ The following syntax for register operands is supported:
 * Register index expressions: v[2*2], s[1-1:2-1]
 * 'off' indicates that an operand is not enabled
 
-Modifiers
-~~~~~~~~~
+The following extra operands are supported:
 
-Detailed description of modifiers may be found :doc:`here<AMDGPUOperandSyntax>`.
+* offset, offset0, offset1
+* idxen, offen bits
+* glc, slc, tfe bits
+* waitcnt: integer or combination of counter values
+* VOP3 modifiers:
+
+  - abs (\| \|), neg (\-)
+
+* DPP modifiers:
+
+  - row_shl, row_shr, row_ror, row_rol
+  - row_mirror, row_half_mirror, row_bcast
+  - wave_shl, wave_shr, wave_ror, wave_rol, quad_perm
+  - row_mask, bank_mask, bound_ctrl
+
+* SDWA modifiers:
+
+  - dst_sel, src0_sel, src1_sel (BYTE_N, WORD_M, DWORD)
+  - dst_unused (UNUSED_PAD, UNUSED_SEXT, UNUSED_PRESERVE)
+  - abs, neg, sext
 
 Instruction Examples
 ~~~~~~~~~~~~~~~~~~~~
 
 DS
-++
+~~
 
 .. code-block:: nasm
 
@@ -4303,9 +4039,6 @@ VOP_SDWA examples:
 
 For full list of supported instructions, refer to "Vector ALU instructions".
 
-.. TODO
-   Remove once we switch to code object v3 by default.
-
 HSA Code Object Directives
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -4398,209 +4131,6 @@ Here is an example of a minimal amd_kernel_code_t specification:
    .Lfunc_end0:
         .size   hello_world, .Lfunc_end0-hello_world
 
-Predefined Symbols (-mattr=+code-object-v3)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The AMDGPU assembler defines and updates some symbols automatically. These
-symbols do not affect code generation.
-
-.amdgcn.gfx_generation_number
-+++++++++++++++++++++++++++++
-
-Set to the GFX generation number of the target being assembled for. For
-example, when assembling for a "GFX9" target this will be set to the integer
-value "9". The possible GFX generation numbers are presented in
-:ref:`amdgpu-processors`.
-
-.amdgcn.next_free_vgpr
-++++++++++++++++++++++
-
-Set to zero before assembly begins. At each instruction, if the current value
-of this symbol is less than or equal to the maximum VGPR number explicitly
-referenced within that instruction then the symbol value is updated to equal
-that VGPR number plus one.
-
-May be used to set the `.amdhsa_next_free_vpgr` directive in
-:ref:`amdhsa-kernel-directives-table`.
-
-May be set at any time, e.g. manually set to zero at the start of each kernel.
-
-.amdgcn.next_free_sgpr
-++++++++++++++++++++++
-
-Set to zero before assembly begins. At each instruction, if the current value
-of this symbol is less than or equal the maximum SGPR number explicitly
-referenced within that instruction then the symbol value is updated to equal
-that SGPR number plus one.
-
-May be used to set the `.amdhsa_next_free_spgr` directive in
-:ref:`amdhsa-kernel-directives-table`.
-
-May be set at any time, e.g. manually set to zero at the start of each kernel.
-
-Code Object Directives (-mattr=+code-object-v3)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Directives which begin with ``.amdgcn`` are valid for all ``amdgcn``
-architecture processors, and are not OS-specific. Directives which begin with
-``.amdhsa`` are specific to ``amdgcn`` architecture processors when the
-``amdhsa`` OS is specified. See :ref:`amdgpu-target-triples` and
-:ref:`amdgpu-processors`.
-
-.amdgcn_target <target>
-+++++++++++++++++++++++
-
-Optional directive which declares the target supported by the containing
-assembler source file. Valid values are described in
-:ref:`amdgpu-amdhsa-code-object-target-identification`. Used by the assembler
-to validate command-line options such as ``-triple``, ``-mcpu``, and those
-which specify target features.
-
-.amdhsa_kernel <name>
-+++++++++++++++++++++
-
-Creates a correctly aligned AMDHSA kernel descriptor and a symbol,
-``<name>.kd``, in the current location of the current section. Only valid when
-the OS is ``amdhsa``. ``<name>`` must be a symbol that labels the first
-instruction to execute, and does not need to be previously defined.
-
-Marks the beginning of a list of directives used to generate the bytes of a
-kernel descriptor, as described in :ref:`amdgpu-amdhsa-kernel-descriptor`.
-Directives which may appear in this list are described in
-:ref:`amdhsa-kernel-directives-table`. Directives may appear in any order, must
-be valid for the target being assembled for, and cannot be repeated. Directives
-support the range of values specified by the field they reference in
-:ref:`amdgpu-amdhsa-kernel-descriptor`. If a directive is not specified, it is
-assumed to have its default value, unless it is marked as "Required", in which
-case it is an error to omit the directive. This list of directives is
-terminated by an ``.end_amdhsa_kernel`` directive.
-
-  .. table:: AMDHSA Kernel Assembler Directives
-     :name: amdhsa-kernel-directives-table
-
-     ======================================================== ================ ============ ===================
-     Directive                                                Default          Supported On Description
-     ======================================================== ================ ============ ===================
-     ``.amdhsa_group_segment_fixed_size``                     0                GFX6-GFX9    Controls GROUP_SEGMENT_FIXED_SIZE in
-                                                                                            :ref:`amdgpu-amdhsa-kernel-descriptor-gfx6-gfx9-table`.
-     ``.amdhsa_private_segment_fixed_size``                   0                GFX6-GFX9    Controls PRIVATE_SEGMENT_FIXED_SIZE in
-                                                                                            :ref:`amdgpu-amdhsa-kernel-descriptor-gfx6-gfx9-table`.
-     ``.amdhsa_user_sgpr_private_segment_buffer``             0                GFX6-GFX9    Controls ENABLE_SGPR_PRIVATE_SEGMENT_BUFFER in
-                                                                                            :ref:`amdgpu-amdhsa-kernel-descriptor-gfx6-gfx9-table`.
-     ``.amdhsa_user_sgpr_dispatch_ptr``                       0                GFX6-GFX9    Controls ENABLE_SGPR_DISPATCH_PTR in
-                                                                                            :ref:`amdgpu-amdhsa-kernel-descriptor-gfx6-gfx9-table`.
-     ``.amdhsa_user_sgpr_queue_ptr``                          0                GFX6-GFX9    Controls ENABLE_SGPR_QUEUE_PTR in
-                                                                                            :ref:`amdgpu-amdhsa-kernel-descriptor-gfx6-gfx9-table`.
-     ``.amdhsa_user_sgpr_kernarg_segment_ptr``                0                GFX6-GFX9    Controls ENABLE_SGPR_KERNARG_SEGMENT_PTR in
-                                                                                            :ref:`amdgpu-amdhsa-kernel-descriptor-gfx6-gfx9-table`.
-     ``.amdhsa_user_sgpr_dispatch_id``                        0                GFX6-GFX9    Controls ENABLE_SGPR_DISPATCH_ID in
-                                                                                            :ref:`amdgpu-amdhsa-kernel-descriptor-gfx6-gfx9-table`.
-     ``.amdhsa_user_sgpr_flat_scratch_init``                  0                GFX6-GFX9    Controls ENABLE_SGPR_FLAT_SCRATCH_INIT in
-                                                                                            :ref:`amdgpu-amdhsa-kernel-descriptor-gfx6-gfx9-table`.
-     ``.amdhsa_user_sgpr_private_segment_size``               0                GFX6-GFX9    Controls ENABLE_SGPR_PRIVATE_SEGMENT_SIZE in
-                                                                                            :ref:`amdgpu-amdhsa-kernel-descriptor-gfx6-gfx9-table`.
-     ``.amdhsa_system_sgpr_private_segment_wavefront_offset`` 0                GFX6-GFX9    Controls ENABLE_SGPR_PRIVATE_SEGMENT_WAVEFRONT_OFFSET in
-                                                                                            :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx9-table`.
-     ``.amdhsa_system_sgpr_workgroup_id_x``                   1                GFX6-GFX9    Controls ENABLE_SGPR_WORKGROUP_ID_X in
-                                                                                            :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx9-table`.
-     ``.amdhsa_system_sgpr_workgroup_id_y``                   0                GFX6-GFX9    Controls ENABLE_SGPR_WORKGROUP_ID_Y in
-                                                                                            :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx9-table`.
-     ``.amdhsa_system_sgpr_workgroup_id_z``                   0                GFX6-GFX9    Controls ENABLE_SGPR_WORKGROUP_ID_Z in
-                                                                                            :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx9-table`.
-     ``.amdhsa_system_sgpr_workgroup_info``                   0                GFX6-GFX9    Controls ENABLE_SGPR_WORKGROUP_INFO in
-                                                                                            :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx9-table`.
-     ``.amdhsa_system_vgpr_workitem_id``                      0                GFX6-GFX9    Controls ENABLE_VGPR_WORKITEM_ID in
-                                                                                            :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx9-table`.
-                                                                                            Possible values are defined in
-                                                                                            :ref:`amdgpu-amdhsa-system-vgpr-work-item-id-enumeration-values-table`.
-     ``.amdhsa_next_free_vgpr``                               Required         GFX6-GFX9    Maximum VGPR number explicitly referenced, plus one.
-                                                                                            Used to calculate GRANULATED_WORKITEM_VGPR_COUNT in
-                                                                                            :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx9-table`.
-     ``.amdhsa_next_free_sgpr``                               Required         GFX6-GFX9    Maximum SGPR number explicitly referenced, plus one.
-                                                                                            Used to calculate GRANULATED_WAVEFRONT_SGPR_COUNT in
-                                                                                            :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx9-table`.
-     ``.amdhsa_reserve_vcc``                                  1                GFX6-GFX9    Whether the kernel may use the special VCC SGPR.
-                                                                                            Used to calculate GRANULATED_WAVEFRONT_SGPR_COUNT in
-                                                                                            :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx9-table`.
-     ``.amdhsa_reserve_flat_scratch``                         1                GFX7-GFX9    Whether the kernel may use flat instructions to access
-                                                                                            scratch memory. Used to calculate
-                                                                                            GRANULATED_WAVEFRONT_SGPR_COUNT in
-                                                                                            :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx9-table`.
-     ``.amdhsa_reserve_xnack_mask``                           Target           GFX8-GFX9    Whether the kernel may trigger XNACK replay.
-                                                              Feature                       Used to calculate GRANULATED_WAVEFRONT_SGPR_COUNT in
-                                                              Specific                      :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx9-table`.
-                                                              (+xnack)
-     ``.amdhsa_float_round_mode_32``                          0                GFX6-GFX9    Controls FLOAT_ROUND_MODE_32 in
-                                                                                            :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx9-table`.
-                                                                                            Possible values are defined in
-                                                                                            :ref:`amdgpu-amdhsa-floating-point-rounding-mode-enumeration-values-table`.
-     ``.amdhsa_float_round_mode_16_64``                       0                GFX6-GFX9    Controls FLOAT_ROUND_MODE_16_64 in
-                                                                                            :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx9-table`.
-                                                                                            Possible values are defined in
-                                                                                            :ref:`amdgpu-amdhsa-floating-point-rounding-mode-enumeration-values-table`.
-     ``.amdhsa_float_denorm_mode_32``                         0                GFX6-GFX9    Controls FLOAT_DENORM_MODE_32 in
-                                                                                            :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx9-table`.
-                                                                                            Possible values are defined in
-                                                                                            :ref:`amdgpu-amdhsa-floating-point-denorm-mode-enumeration-values-table`.
-     ``.amdhsa_float_denorm_mode_16_64``                      3                GFX6-GFX9    Controls FLOAT_DENORM_MODE_16_64 in
-                                                                                            :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx9-table`.
-                                                                                            Possible values are defined in
-                                                                                            :ref:`amdgpu-amdhsa-floating-point-denorm-mode-enumeration-values-table`.
-     ``.amdhsa_dx10_clamp``                                   1                GFX6-GFX9    Controls ENABLE_DX10_CLAMP in
-                                                                                            :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx9-table`.
-     ``.amdhsa_ieee_mode``                                    1                GFX6-GFX9    Controls ENABLE_IEEE_MODE in
-                                                                                            :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx9-table`.
-     ``.amdhsa_fp16_overflow``                                0                GFX9         Controls FP16_OVFL in
-                                                                                            :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx9-table`.
-     ``.amdhsa_exception_fp_ieee_invalid_op``                 0                GFX6-GFX9    Controls ENABLE_EXCEPTION_IEEE_754_FP_INVALID_OPERATION in
-                                                                                            :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx9-table`.
-     ``.amdhsa_exception_fp_denorm_src``                      0                GFX6-GFX9    Controls ENABLE_EXCEPTION_FP_DENORMAL_SOURCE in
-                                                                                            :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx9-table`.
-     ``.amdhsa_exception_fp_ieee_div_zero``                   0                GFX6-GFX9    Controls ENABLE_EXCEPTION_IEEE_754_FP_DIVISION_BY_ZERO in
-                                                                                            :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx9-table`.
-     ``.amdhsa_exception_fp_ieee_overflow``                   0                GFX6-GFX9    Controls ENABLE_EXCEPTION_IEEE_754_FP_OVERFLOW in
-                                                                                            :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx9-table`.
-     ``.amdhsa_exception_fp_ieee_underflow``                  0                GFX6-GFX9    Controls ENABLE_EXCEPTION_IEEE_754_FP_UNDERFLOW in
-                                                                                            :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx9-table`.
-     ``.amdhsa_exception_fp_ieee_inexact``                    0                GFX6-GFX9    Controls ENABLE_EXCEPTION_IEEE_754_FP_INEXACT in
-                                                                                            :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx9-table`.
-     ``.amdhsa_exception_int_div_zero``                       0                GFX6-GFX9    Controls ENABLE_EXCEPTION_INT_DIVIDE_BY_ZERO in
-                                                                                            :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx9-table`.
-     ======================================================== ================ ============ ===================
-
-Example HSA Source Code (-mattr=+code-object-v3)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Here is an example of a minimal assembly source file, defining one HSA kernel:
-
-.. code-block:: nasm
-
-  .amdgcn_target "amdgcn-amd-amdhsa--gfx900+xnack" // optional
-
-  .text
-  .globl hello_world
-  .p2align 8
-  .type hello_world,@function
-  hello_world:
-    s_load_dwordx2 s[0:1], s[0:1] 0x0
-    v_mov_b32 v0, 3.14159
-    s_waitcnt lgkmcnt(0)
-    v_mov_b32 v1, s0
-    v_mov_b32 v2, s1
-    flat_store_dword v[1:2], v0
-    s_endpgm
-  .Lfunc_end0:
-    .size   hello_world, .Lfunc_end0-hello_world
-
-  .rodata
-  .p2align 6
-  .amdhsa_kernel hello_world
-    .amdhsa_user_sgpr_kernarg_segment_ptr 1
-    .amdhsa_next_free_vgpr .amdgcn.next_free_vgpr
-    .amdhsa_next_free_sgpr .amdgcn.next_free_sgpr
-  .end_amdhsa_kernel
-
-
 Additional Documentation
 ========================
 
@@ -4612,6 +4142,8 @@ Additional Documentation
 .. [AMD-GCN-GFX7] `AMD Sea Islands Series ISA <http://developer.amd.com/wordpress/media/2013/07/AMD_Sea_Islands_Instruction_Set_Architecture.pdf>`_
 .. [AMD-GCN-GFX8] `AMD GCN3 Instruction Set Architecture <http://amd-dev.wpengine.netdna-cdn.com/wordpress/media/2013/12/AMD_GCN3_Instruction_Set_Architecture_rev1.1.pdf>`__
 .. [AMD-GCN-GFX9] `AMD "Vega" Instruction Set Architecture <http://developer.amd.com/wordpress/media/2013/12/Vega_Shader_ISA_28July2017.pdf>`__
+.. [AMD-OpenCL_Programming-Guide]  `AMD Accelerated Parallel Processing OpenCL Programming Guide <http://developer.amd.com/download/AMD_Accelerated_Parallel_Processing_OpenCL_Programming_Guide.pdf>`_
+.. [AMD-APP-SDK] `AMD Accelerated Parallel Processing APP SDK Documentation <http://developer.amd.com/tools/heterogeneous-computing/amd-accelerated-parallel-processing-app-sdk/documentation/>`__
 .. [AMD-ROCm] `ROCm: Open Platform for Development, Discovery and Education Around GPU Computing <http://gpuopen.com/compute-product/rocm/>`__
 .. [AMD-ROCm-github] `ROCm github <http://github.com/RadeonOpenCompute>`__
 .. [HSA] `Heterogeneous System Architecture (HSA) Foundation <http://www.hsafoundation.com/>`__
@@ -4620,4 +4152,4 @@ Additional Documentation
 .. [YAML] `YAML Ain't Markup Language (YAML™) Version 1.2 <http://www.yaml.org/spec/1.2/spec.html>`__
 .. [OpenCL] `The OpenCL Specification Version 2.0 <http://www.khronos.org/registry/cl/specs/opencl-2.0.pdf>`__
 .. [HRF] `Heterogeneous-race-free Memory Models <http://benedictgaster.org/wp-content/uploads/2014/01/asplos269-FINAL.pdf>`__
-.. [CLANG-ATTR] `Attributes in Clang <http://clang.llvm.org/docs/AttributeReference.html>`__
+.. [AMD-AMDGPU-Compute-Application-Binary-Interface] `AMDGPU Compute Application Binary Interface <https://github.com/RadeonOpenCompute/ROCm-ComputeABI-Doc/blob/master/AMDGPU-ABI.md>`__

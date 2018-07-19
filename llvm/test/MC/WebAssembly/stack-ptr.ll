@@ -1,6 +1,4 @@
-; RUN: llc -filetype=obj %s -o - | obj2yaml | FileCheck %s
-
-target triple = "wasm32-unknown-unknown"
+; RUN: llc -mtriple wasm32-unknown-unknown-wasm -filetype=obj %s -o - | obj2yaml | FileCheck %s
 
 ; Function that uses explict stack, and should generate a reference to
 ; __stack_pointer, along with the corresponding reloction entry.

@@ -35,7 +35,6 @@
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CallSite.h"
@@ -60,6 +59,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/ImportedFunctionsInliningStatistics.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <algorithm>
 #include <cassert>
@@ -208,8 +208,8 @@ static void mergeInlinedArrayAllocas(
 
       // Otherwise, we *can* reuse it, RAUW AI into AvailableAlloca and declare
       // success!
-      LLVM_DEBUG(dbgs() << "    ***MERGED ALLOCA: " << *AI
-                        << "\n\t\tINTO: " << *AvailableAlloca << '\n');
+      DEBUG(dbgs() << "    ***MERGED ALLOCA: " << *AI
+                   << "\n\t\tINTO: " << *AvailableAlloca << '\n');
 
       // Move affected dbg.declare calls immediately after the new alloca to
       // avoid the situation when a dbg.declare precedes its alloca.
@@ -379,14 +379,14 @@ shouldInline(CallSite CS, function_ref<InlineCost(CallSite CS)> GetInlineCost,
   Function *Caller = CS.getCaller();
 
   if (IC.isAlways()) {
-    LLVM_DEBUG(dbgs() << "    Inlining: cost=always"
-                      << ", Call: " << *CS.getInstruction() << "\n");
+    DEBUG(dbgs() << "    Inlining: cost=always"
+                 << ", Call: " << *CS.getInstruction() << "\n");
     return IC;
   }
 
   if (IC.isNever()) {
-    LLVM_DEBUG(dbgs() << "    NOT Inlining: cost=never"
-                      << ", Call: " << *CS.getInstruction() << "\n");
+    DEBUG(dbgs() << "    NOT Inlining: cost=never"
+                 << ", Call: " << *CS.getInstruction() << "\n");
     ORE.emit([&]() {
       return OptimizationRemarkMissed(DEBUG_TYPE, "NeverInline", Call)
              << NV("Callee", Callee) << " not inlined into "
@@ -397,9 +397,9 @@ shouldInline(CallSite CS, function_ref<InlineCost(CallSite CS)> GetInlineCost,
   }
 
   if (!IC) {
-    LLVM_DEBUG(dbgs() << "    NOT Inlining: cost=" << IC.getCost()
-                      << ", thres=" << IC.getThreshold()
-                      << ", Call: " << *CS.getInstruction() << "\n");
+    DEBUG(dbgs() << "    NOT Inlining: cost=" << IC.getCost()
+                 << ", thres=" << IC.getThreshold()
+                 << ", Call: " << *CS.getInstruction() << "\n");
     ORE.emit([&]() {
       return OptimizationRemarkMissed(DEBUG_TYPE, "TooCostly", Call)
              << NV("Callee", Callee) << " not inlined into "
@@ -412,9 +412,9 @@ shouldInline(CallSite CS, function_ref<InlineCost(CallSite CS)> GetInlineCost,
 
   int TotalSecondaryCost = 0;
   if (shouldBeDeferred(Caller, CS, IC, TotalSecondaryCost, GetInlineCost)) {
-    LLVM_DEBUG(dbgs() << "    NOT Inlining: " << *CS.getInstruction()
-                      << " Cost = " << IC.getCost()
-                      << ", outer Cost = " << TotalSecondaryCost << '\n');
+    DEBUG(dbgs() << "    NOT Inlining: " << *CS.getInstruction()
+                 << " Cost = " << IC.getCost()
+                 << ", outer Cost = " << TotalSecondaryCost << '\n');
     ORE.emit([&]() {
       return OptimizationRemarkMissed(DEBUG_TYPE, "IncreaseCostInOtherContexts",
                                       Call)
@@ -428,9 +428,9 @@ shouldInline(CallSite CS, function_ref<InlineCost(CallSite CS)> GetInlineCost,
     return None;
   }
 
-  LLVM_DEBUG(dbgs() << "    Inlining: cost=" << IC.getCost()
-                    << ", thres=" << IC.getThreshold()
-                    << ", Call: " << *CS.getInstruction() << '\n');
+  DEBUG(dbgs() << "    Inlining: cost=" << IC.getCost()
+               << ", thres=" << IC.getThreshold()
+               << ", Call: " << *CS.getInstruction() << '\n');
   return IC;
 }
 
@@ -470,12 +470,12 @@ inlineCallsImpl(CallGraphSCC &SCC, CallGraph &CG,
                 function_ref<AAResults &(Function &)> AARGetter,
                 ImportedFunctionsInliningStatistics &ImportedFunctionsStats) {
   SmallPtrSet<Function *, 8> SCCFunctions;
-  LLVM_DEBUG(dbgs() << "Inliner visiting SCC:");
+  DEBUG(dbgs() << "Inliner visiting SCC:");
   for (CallGraphNode *Node : SCC) {
     Function *F = Node->getFunction();
     if (F)
       SCCFunctions.insert(F);
-    LLVM_DEBUG(dbgs() << " " << (F ? F->getName() : "INDIRECTNODE"));
+    DEBUG(dbgs() << " " << (F ? F->getName() : "INDIRECTNODE"));
   }
 
   // Scan through and identify all call sites ahead of time so that we only
@@ -524,7 +524,7 @@ inlineCallsImpl(CallGraphSCC &SCC, CallGraph &CG,
       }
   }
 
-  LLVM_DEBUG(dbgs() << ": " << CallSites.size() << " call sites.\n");
+  DEBUG(dbgs() << ": " << CallSites.size() << " call sites.\n");
 
   // If there are no calls in this function, exit early.
   if (CallSites.empty())
@@ -593,7 +593,7 @@ inlineCallsImpl(CallGraphSCC &SCC, CallGraph &CG,
       // size.  This happens because IPSCCP propagates the result out of the
       // call and then we're left with the dead call.
       if (IsTriviallyDead) {
-        LLVM_DEBUG(dbgs() << "    -> Deleting dead call: " << *Instr << "\n");
+        DEBUG(dbgs() << "    -> Deleting dead call: " << *Instr << "\n");
         // Update the call graph by deleting the edge from Callee to Caller.
         CG[Caller]->removeCallEdgeFor(CS);
         Instr->eraseFromParent();
@@ -657,8 +657,8 @@ inlineCallsImpl(CallGraphSCC &SCC, CallGraph &CG,
           // callgraph references to the node, we cannot delete it yet, this
           // could invalidate the CGSCC iterator.
           CG[Callee]->getNumReferences() == 0) {
-        LLVM_DEBUG(dbgs() << "    -> Deleting dead function: "
-                          << Callee->getName() << "\n");
+        DEBUG(dbgs() << "    -> Deleting dead function: " << Callee->getName()
+                     << "\n");
         CallGraphNode *CalleeNode = CG[Callee];
 
         // Remove any call graph edges from the callee to its callees.
@@ -793,14 +793,6 @@ bool LegacyInlinerBase::removeDeadFunctions(CallGraph &CG,
   return true;
 }
 
-InlinerPass::~InlinerPass() {
-  if (ImportedFunctionsStats) {
-    assert(InlinerFunctionImportStats != InlinerFunctionImportStatsOpts::No);
-    ImportedFunctionsStats->dump(InlinerFunctionImportStats ==
-                                 InlinerFunctionImportStatsOpts::Verbose);
-  }
-}
-
 PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
                                    CGSCCAnalysisManager &AM, LazyCallGraph &CG,
                                    CGSCCUpdateResult &UR) {
@@ -811,13 +803,6 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
   assert(InitialC.size() > 0 && "Cannot handle an empty SCC!");
   Module &M = *InitialC.begin()->getFunction().getParent();
   ProfileSummaryInfo *PSI = MAM.getCachedResult<ProfileSummaryAnalysis>(M);
-
-  if (!ImportedFunctionsStats &&
-      InlinerFunctionImportStats != InlinerFunctionImportStatsOpts::No) {
-    ImportedFunctionsStats =
-        llvm::make_unique<ImportedFunctionsInliningStatistics>();
-    ImportedFunctionsStats->setModuleInfo(M);
-  }
 
   // We use a single common worklist for calls across the entire SCC. We
   // process these in-order and append new calls introduced during inlining to
@@ -845,14 +830,8 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
   // incrementally maknig a single function grow in a super linear fashion.
   SmallVector<std::pair<CallSite, int>, 16> Calls;
 
-  FunctionAnalysisManager &FAM =
-      AM.getResult<FunctionAnalysisManagerCGSCCProxy>(InitialC, CG)
-          .getManager();
-
   // Populate the initial list of calls in this SCC.
   for (auto &N : InitialC) {
-    auto &ORE =
-        FAM.getResult<OptimizationRemarkEmitterAnalysis>(N.getFunction());
     // We want to generally process call sites top-down in order for
     // simplifications stemming from replacing the call with the returned value
     // after inlining to be visible to subsequent inlining decisions.
@@ -860,20 +839,9 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
     // Instead we should do an actual RPO walk of the function body.
     for (Instruction &I : instructions(N.getFunction()))
       if (auto CS = CallSite(&I))
-        if (Function *Callee = CS.getCalledFunction()) {
+        if (Function *Callee = CS.getCalledFunction())
           if (!Callee->isDeclaration())
             Calls.push_back({CS, -1});
-          else if (!isa<IntrinsicInst>(I)) {
-            using namespace ore;
-            ORE.emit([&]() {
-              return OptimizationRemarkMissed(DEBUG_TYPE, "NoDefinition", &I)
-                     << NV("Callee", Callee) << " will not be inlined into "
-                     << NV("Caller", CS.getCaller())
-                     << " because its definition is unavailable"
-                     << setIsVerbose();
-            });
-          }
-        }
   }
   if (Calls.empty())
     return PreservedAnalyses::all();
@@ -911,7 +879,7 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
     if (F.hasFnAttribute(Attribute::OptimizeNone))
       continue;
 
-    LLVM_DEBUG(dbgs() << "Inlining calls in: " << F.getName() << "\n");
+    DEBUG(dbgs() << "Inlining calls in: " << F.getName() << "\n");
 
     // Get a FunctionAnalysisManager via a proxy for this particular node. We
     // do this each time we visit a node as the SCC may have changed and as
@@ -963,9 +931,9 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
       // and thus hidden from the full inline history.
       if (CG.lookupSCC(*CG.lookup(Callee)) == C &&
           UR.InlinedInternalEdges.count({&N, C})) {
-        LLVM_DEBUG(dbgs() << "Skipping inlining internal SCC edge from a node "
-                             "previously split out of this SCC by inlining: "
-                          << F.getName() << " -> " << Callee.getName() << "\n");
+        DEBUG(dbgs() << "Skipping inlining internal SCC edge from a node "
+                        "previously split out of this SCC by inlining: "
+                     << F.getName() << " -> " << Callee.getName() << "\n");
         continue;
       }
 
@@ -1023,9 +991,6 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
             if (!NewCallee->isDeclaration())
               Calls.push_back({CS, NewHistoryID});
       }
-
-      if (InlinerFunctionImportStats != InlinerFunctionImportStatsOpts::No)
-        ImportedFunctionsStats->recordInline(F, Callee);
 
       // Merge the attributes based on the inlining.
       AttributeFuncs::mergeAttributesForInlining(F, Callee);
@@ -1087,7 +1052,7 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
     // change.
     LazyCallGraph::SCC *OldC = C;
     C = &updateCGAndAnalysisManagerForFunctionPass(CG, *C, N, AM, UR);
-    LLVM_DEBUG(dbgs() << "Updated inlining SCC: " << *C << "\n");
+    DEBUG(dbgs() << "Updated inlining SCC: " << *C << "\n");
     RC = &C->getOuterRefSCC();
 
     // If this causes an SCC to split apart into multiple smaller SCCs, there
@@ -1105,8 +1070,8 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
     if (C != OldC && llvm::any_of(InlinedCallees, [&](Function *Callee) {
           return CG.lookupSCC(*CG.lookup(*Callee)) == OldC;
         })) {
-      LLVM_DEBUG(dbgs() << "Inlined an internal call edge and split an SCC, "
-                           "retaining this to avoid infinite inlining.\n");
+      DEBUG(dbgs() << "Inlined an internal call edge and split an SCC, "
+                      "retaining this to avoid infinite inlining.\n");
       UR.InlinedInternalEdges.insert({&N, OldC});
     }
     InlinedCallees.clear();

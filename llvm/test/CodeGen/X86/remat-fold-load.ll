@@ -16,7 +16,7 @@ target triple = "i386-unknown-linux-gnu"
 %type_d = type { i64 }
 %type_e = type { %type_c, i64 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i32, i1) nounwind
 
 define linkonce_odr void @test() nounwind {
 entry:
@@ -41,7 +41,7 @@ if.then.i.i.i.i71:                                ; preds = %while.body12
   %tmp1 = getelementptr inbounds %type_a, %type_a* %tmp, i32 0, i32 1, i32 0, i32 1
   %buf_6.i.i.i.i70 = bitcast %type_d* %tmp1 to i8**
   %tmp2 = load i8*, i8** %buf_6.i.i.i.i70, align 4
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* undef, i8* %tmp2, i32 undef, i1 false) nounwind
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* undef, i8* %tmp2, i32 undef, i32 1, i1 false) nounwind
   unreachable
 
 if.else.i.i.i.i74:                                ; preds = %while.body12
@@ -69,7 +69,7 @@ if.then.i.i.i.i92:                                ; preds = %if.else.i.i.i.i74
   %tmp12 = getelementptr inbounds %type_e, %type_e* %tmp9, i32 0, i32 0, i32 1
   %buf_6.i.i.i.i91 = bitcast %type_d* %tmp12 to i8**
   %tmp13 = load i8*, i8** %buf_6.i.i.i.i91, align 4
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %call4.i.i.i.i89, i8* %tmp13, i32 %tmp10, i1 false) nounwind
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %call4.i.i.i.i89, i8* %tmp13, i32 %tmp10, i32 1, i1 false) nounwind
   br label %A
 
 if.else.i.i.i.i95:                                ; preds = %if.else.i.i.i.i74

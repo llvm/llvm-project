@@ -31,7 +31,7 @@
 
 namespace llvm {
 
-/// An union-find based Minimum Spanning Tree for CFG
+/// \brief An union-find based Minimum Spanning Tree for CFG
 ///
 /// Implements a Union-find algorithm to compute Minimum Spanning Tree
 /// for a given CFG.
@@ -97,7 +97,7 @@ public:
   // Edges with large weight will be put into MST first so they are less likely
   // to be instrumented.
   void buildEdges() {
-    LLVM_DEBUG(dbgs() << "Build Edge on " << F.getName() << "\n");
+    DEBUG(dbgs() << "Build Edge on " << F.getName() << "\n");
 
     const BasicBlock *Entry = &(F.getEntryBlock());
     uint64_t EntryWeight = (BFI != nullptr ? BFI->getEntryFreq() : 2);
@@ -107,8 +107,8 @@ public:
 
     // Add a fake edge to the entry.
     EntryIncoming = &addEdge(nullptr, Entry, EntryWeight);
-    LLVM_DEBUG(dbgs() << "  Edge: from fake node to " << Entry->getName()
-                      << " w = " << EntryWeight << "\n");
+    DEBUG(dbgs() << "  Edge: from fake node to " << Entry->getName()
+                     << " w = " << EntryWeight << "\n");
 
     // Special handling for single BB functions.
     if (succ_empty(Entry)) {
@@ -138,8 +138,8 @@ public:
             Weight = BPI->getEdgeProbability(&*BB, TargetBB).scale(scaleFactor);
           auto *E = &addEdge(&*BB, TargetBB, Weight);
           E->IsCritical = Critical;
-          LLVM_DEBUG(dbgs() << "  Edge: from " << BB->getName() << " to "
-                            << TargetBB->getName() << "  w=" << Weight << "\n");
+          DEBUG(dbgs() << "  Edge: from " << BB->getName() << " to "
+                       << TargetBB->getName() << "  w=" << Weight << "\n");
 
           // Keep track of entry/exit edges:
           if (&*BB == Entry) {
@@ -164,8 +164,8 @@ public:
           MaxExitOutWeight = BBWeight;
           ExitOutgoing = ExitO;
         }
-        LLVM_DEBUG(dbgs() << "  Edge: from " << BB->getName() << " to fake exit"
-                          << " w = " << BBWeight << "\n");
+        DEBUG(dbgs() << "  Edge: from " << BB->getName() << " to fake exit"
+                     << " w = " << BBWeight << "\n");
       }
     }
 

@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file implements a class to represent arbitrary precision
+/// \brief This file implements a class to represent arbitrary precision
 /// integral constant values and operations on them.
 ///
 //===----------------------------------------------------------------------===//
@@ -40,7 +40,7 @@ inline APInt operator-(APInt);
 //                              APInt Class
 //===----------------------------------------------------------------------===//
 
-/// Class for arbitrary precision integers.
+/// \brief Class for arbitrary precision integers.
 ///
 /// APInt is a functional replacement for common case unsigned integer type like
 /// "unsigned", "unsigned long" or "uint64_t", but also allows non-byte-width
@@ -78,12 +78,6 @@ public:
     APINT_BITS_PER_WORD = APINT_WORD_SIZE * CHAR_BIT
   };
 
-  enum class Rounding {
-    DOWN,
-    TOWARD_ZERO,
-    UP,
-  };
-
   static const WordType WORD_MAX = ~WordType(0);
 
 private:
@@ -100,7 +94,7 @@ private:
 
   friend class APSInt;
 
-  /// Fast internal constructor
+  /// \brief Fast internal constructor
   ///
   /// This constructor is used only internally for speed of construction of
   /// temporaries. It is unsafe for general use so it is not public.
@@ -108,19 +102,19 @@ private:
     U.pVal = val;
   }
 
-  /// Determine if this APInt just has one word to store value.
+  /// \brief Determine if this APInt just has one word to store value.
   ///
   /// \returns true if the number of bits <= 64, false otherwise.
   bool isSingleWord() const { return BitWidth <= APINT_BITS_PER_WORD; }
 
-  /// Determine which word a bit is in.
+  /// \brief Determine which word a bit is in.
   ///
   /// \returns the word position for the specified bit position.
   static unsigned whichWord(unsigned bitPosition) {
     return bitPosition / APINT_BITS_PER_WORD;
   }
 
-  /// Determine which bit in a word a bit is in.
+  /// \brief Determine which bit in a word a bit is in.
   ///
   /// \returns the bit position in a word for the specified bit position
   /// in the APInt.
@@ -128,7 +122,7 @@ private:
     return bitPosition % APINT_BITS_PER_WORD;
   }
 
-  /// Get a single bit mask.
+  /// \brief Get a single bit mask.
   ///
   /// \returns a uint64_t with only bit at "whichBit(bitPosition)" set
   /// This method generates and returns a uint64_t (word) mask for a single
@@ -138,7 +132,7 @@ private:
     return 1ULL << whichBit(bitPosition);
   }
 
-  /// Clear unused high order bits
+  /// \brief Clear unused high order bits
   ///
   /// This method is used internally to clear the top "N" bits in the high order
   /// word that are not used by the APInt. This is needed after the most
@@ -157,7 +151,7 @@ private:
     return *this;
   }
 
-  /// Get the word corresponding to a bit position
+  /// \brief Get the word corresponding to a bit position
   /// \returns the corresponding word for the specified bit position.
   uint64_t getWord(unsigned bitPosition) const {
     return isSingleWord() ? U.VAL : U.pVal[whichWord(bitPosition)];
@@ -168,7 +162,7 @@ private:
   /// value of any bits upon return. Caller should populate the bits after.
   void reallocate(unsigned NewBitWidth);
 
-  /// Convert a char array into an APInt
+  /// \brief Convert a char array into an APInt
   ///
   /// \param radix 2, 8, 10, 16, or 36
   /// Converts a string into a number.  The string must be non-empty
@@ -182,7 +176,7 @@ private:
   /// result to hold the input.
   void fromString(unsigned numBits, StringRef str, uint8_t radix);
 
-  /// An internal division function for dividing APInts.
+  /// \brief An internal division function for dividing APInts.
   ///
   /// This is used by the toString method to divide by the radix. It simply
   /// provides a more convenient form of divide for internal use since KnuthDiv
@@ -264,7 +258,7 @@ public:
   /// \name Constructors
   /// @{
 
-  /// Create a new APInt of numBits width, initialized as val.
+  /// \brief Create a new APInt of numBits width, initialized as val.
   ///
   /// If isSigned is true then val is treated as if it were a signed value
   /// (i.e. as an int64_t) and the appropriate sign extension to the bit width
@@ -285,7 +279,7 @@ public:
     }
   }
 
-  /// Construct an APInt of numBits width, initialized as bigVal[].
+  /// \brief Construct an APInt of numBits width, initialized as bigVal[].
   ///
   /// Note that bigVal.size() can be smaller or larger than the corresponding
   /// bit width but any extraneous bits will be dropped.
@@ -303,7 +297,7 @@ public:
   /// constructor.
   APInt(unsigned numBits, unsigned numWords, const uint64_t bigVal[]);
 
-  /// Construct an APInt from a string representation.
+  /// \brief Construct an APInt from a string representation.
   ///
   /// This constructor interprets the string \p str in the given radix. The
   /// interpretation stops when the first character that is not suitable for the
@@ -317,7 +311,7 @@ public:
   APInt(unsigned numBits, StringRef str, uint8_t radix);
 
   /// Simply makes *this a copy of that.
-  /// Copy Constructor.
+  /// @brief Copy Constructor.
   APInt(const APInt &that) : BitWidth(that.BitWidth) {
     if (isSingleWord())
       U.VAL = that.U.VAL;
@@ -325,26 +319,26 @@ public:
       initSlowCase(that);
   }
 
-  /// Move Constructor.
+  /// \brief Move Constructor.
   APInt(APInt &&that) : BitWidth(that.BitWidth) {
     memcpy(&U, &that.U, sizeof(U));
     that.BitWidth = 0;
   }
 
-  /// Destructor.
+  /// \brief Destructor.
   ~APInt() {
     if (needsCleanup())
       delete[] U.pVal;
   }
 
-  /// Default constructor that creates an uninteresting APInt
+  /// \brief Default constructor that creates an uninteresting APInt
   /// representing a 1-bit zero value.
   ///
   /// This is useful for object deserialization (pair this with the static
   ///  method Read).
   explicit APInt() : BitWidth(1) { U.VAL = 0; }
 
-  /// Returns whether this instance allocated memory.
+  /// \brief Returns whether this instance allocated memory.
   bool needsCleanup() const { return !isSingleWord(); }
 
   /// Used to insert APInt objects, or objects that contain APInt objects, into
@@ -355,33 +349,33 @@ public:
   /// \name Value Tests
   /// @{
 
-  /// Determine sign of this APInt.
+  /// \brief Determine sign of this APInt.
   ///
   /// This tests the high bit of this APInt to determine if it is set.
   ///
   /// \returns true if this APInt is negative, false otherwise
   bool isNegative() const { return (*this)[BitWidth - 1]; }
 
-  /// Determine if this APInt Value is non-negative (>= 0)
+  /// \brief Determine if this APInt Value is non-negative (>= 0)
   ///
   /// This tests the high bit of the APInt to determine if it is unset.
   bool isNonNegative() const { return !isNegative(); }
 
-  /// Determine if sign bit of this APInt is set.
+  /// \brief Determine if sign bit of this APInt is set.
   ///
   /// This tests the high bit of this APInt to determine if it is set.
   ///
   /// \returns true if this APInt has its sign bit set, false otherwise.
   bool isSignBitSet() const { return (*this)[BitWidth-1]; }
 
-  /// Determine if sign bit of this APInt is clear.
+  /// \brief Determine if sign bit of this APInt is clear.
   ///
   /// This tests the high bit of this APInt to determine if it is clear.
   ///
   /// \returns true if this APInt has its sign bit clear, false otherwise.
   bool isSignBitClear() const { return !isSignBitSet(); }
 
-  /// Determine if this APInt Value is positive.
+  /// \brief Determine if this APInt Value is positive.
   ///
   /// This tests if the value of this APInt is positive (> 0). Note
   /// that 0 is not a positive value.
@@ -389,7 +383,7 @@ public:
   /// \returns true if this APInt is positive.
   bool isStrictlyPositive() const { return isNonNegative() && !isNullValue(); }
 
-  /// Determine if all bits are set
+  /// \brief Determine if all bits are set
   ///
   /// This checks to see if the value has all bits of the APInt are set or not.
   bool isAllOnesValue() const {
@@ -398,13 +392,13 @@ public:
     return countTrailingOnesSlowCase() == BitWidth;
   }
 
-  /// Determine if all bits are clear
+  /// \brief Determine if all bits are clear
   ///
   /// This checks to see if the value has all bits of the APInt are clear or
   /// not.
   bool isNullValue() const { return !*this; }
 
-  /// Determine if this is a value of 1.
+  /// \brief Determine if this is a value of 1.
   ///
   /// This checks to see if the value of this APInt is one.
   bool isOneValue() const {
@@ -413,13 +407,13 @@ public:
     return countLeadingZerosSlowCase() == BitWidth - 1;
   }
 
-  /// Determine if this is the largest unsigned value.
+  /// \brief Determine if this is the largest unsigned value.
   ///
   /// This checks to see if the value of this APInt is the maximum unsigned
   /// value for the APInt's bit width.
   bool isMaxValue() const { return isAllOnesValue(); }
 
-  /// Determine if this is the largest signed value.
+  /// \brief Determine if this is the largest signed value.
   ///
   /// This checks to see if the value of this APInt is the maximum signed
   /// value for the APInt's bit width.
@@ -429,13 +423,13 @@ public:
     return !isNegative() && countTrailingOnesSlowCase() == BitWidth - 1;
   }
 
-  /// Determine if this is the smallest unsigned value.
+  /// \brief Determine if this is the smallest unsigned value.
   ///
   /// This checks to see if the value of this APInt is the minimum unsigned
   /// value for the APInt's bit width.
   bool isMinValue() const { return isNullValue(); }
 
-  /// Determine if this is the smallest signed value.
+  /// \brief Determine if this is the smallest signed value.
   ///
   /// This checks to see if the value of this APInt is the minimum signed
   /// value for the APInt's bit width.
@@ -445,19 +439,19 @@ public:
     return isNegative() && countTrailingZerosSlowCase() == BitWidth - 1;
   }
 
-  /// Check if this APInt has an N-bits unsigned integer value.
+  /// \brief Check if this APInt has an N-bits unsigned integer value.
   bool isIntN(unsigned N) const {
     assert(N && "N == 0 ???");
     return getActiveBits() <= N;
   }
 
-  /// Check if this APInt has an N-bits signed integer value.
+  /// \brief Check if this APInt has an N-bits signed integer value.
   bool isSignedIntN(unsigned N) const {
     assert(N && "N == 0 ???");
     return getMinSignedBits() <= N;
   }
 
-  /// Check if this APInt's value is a power of two greater than zero.
+  /// \brief Check if this APInt's value is a power of two greater than zero.
   ///
   /// \returns true if the argument APInt value is a power of two > 0.
   bool isPowerOf2() const {
@@ -466,12 +460,12 @@ public:
     return countPopulationSlowCase() == 1;
   }
 
-  /// Check if the APInt's value is returned by getSignMask.
+  /// \brief Check if the APInt's value is returned by getSignMask.
   ///
   /// \returns true if this is the value returned by getSignMask.
   bool isSignMask() const { return isMinSignedValue(); }
 
-  /// Convert APInt to a boolean value.
+  /// \brief Convert APInt to a boolean value.
   ///
   /// This converts the APInt to a boolean value as a test against zero.
   bool getBoolValue() const { return !!*this; }
@@ -482,7 +476,7 @@ public:
     return ugt(Limit) ? Limit : getZExtValue();
   }
 
-  /// Check if the APInt consists of a repeated bit pattern.
+  /// \brief Check if the APInt consists of a repeated bit pattern.
   ///
   /// e.g. 0x01010101 satisfies isSplat(8).
   /// \param SplatSizeInBits The size of the pattern in bits. Must divide bit
@@ -511,7 +505,7 @@ public:
     return (Ones > 0) && ((Ones + countLeadingZerosSlowCase()) == BitWidth);
   }
 
-  /// Return true if this APInt value contains a sequence of ones with
+  /// \brief Return true if this APInt value contains a sequence of ones with
   /// the remainder zero.
   bool isShiftedMask() const {
     if (isSingleWord())
@@ -525,29 +519,29 @@ public:
   /// \name Value Generators
   /// @{
 
-  /// Gets maximum unsigned value of APInt for specific bit width.
+  /// \brief Gets maximum unsigned value of APInt for specific bit width.
   static APInt getMaxValue(unsigned numBits) {
     return getAllOnesValue(numBits);
   }
 
-  /// Gets maximum signed value of APInt for a specific bit width.
+  /// \brief Gets maximum signed value of APInt for a specific bit width.
   static APInt getSignedMaxValue(unsigned numBits) {
     APInt API = getAllOnesValue(numBits);
     API.clearBit(numBits - 1);
     return API;
   }
 
-  /// Gets minimum unsigned value of APInt for a specific bit width.
+  /// \brief Gets minimum unsigned value of APInt for a specific bit width.
   static APInt getMinValue(unsigned numBits) { return APInt(numBits, 0); }
 
-  /// Gets minimum signed value of APInt for a specific bit width.
+  /// \brief Gets minimum signed value of APInt for a specific bit width.
   static APInt getSignedMinValue(unsigned numBits) {
     APInt API(numBits, 0);
     API.setBit(numBits - 1);
     return API;
   }
 
-  /// Get the SignMask for a specific bit width.
+  /// \brief Get the SignMask for a specific bit width.
   ///
   /// This is just a wrapper function of getSignedMinValue(), and it helps code
   /// readability when we want to get a SignMask.
@@ -555,19 +549,19 @@ public:
     return getSignedMinValue(BitWidth);
   }
 
-  /// Get the all-ones value.
+  /// \brief Get the all-ones value.
   ///
   /// \returns the all-ones value for an APInt of the specified bit-width.
   static APInt getAllOnesValue(unsigned numBits) {
     return APInt(numBits, WORD_MAX, true);
   }
 
-  /// Get the '0' value.
+  /// \brief Get the '0' value.
   ///
   /// \returns the '0' value for an APInt of the specified bit-width.
   static APInt getNullValue(unsigned numBits) { return APInt(numBits, 0); }
 
-  /// Compute an APInt containing numBits highbits from this APInt.
+  /// \brief Compute an APInt containing numBits highbits from this APInt.
   ///
   /// Get an APInt with the same BitWidth as this APInt, just zero mask
   /// the low bits and right shift to the least significant bit.
@@ -575,7 +569,7 @@ public:
   /// \returns the high "numBits" bits of this APInt.
   APInt getHiBits(unsigned numBits) const;
 
-  /// Compute an APInt containing numBits lowbits from this APInt.
+  /// \brief Compute an APInt containing numBits lowbits from this APInt.
   ///
   /// Get an APInt with the same BitWidth as this APInt, just zero mask
   /// the high bits.
@@ -583,14 +577,14 @@ public:
   /// \returns the low "numBits" bits of this APInt.
   APInt getLoBits(unsigned numBits) const;
 
-  /// Return an APInt with exactly one bit set in the result.
+  /// \brief Return an APInt with exactly one bit set in the result.
   static APInt getOneBitSet(unsigned numBits, unsigned BitNo) {
     APInt Res(numBits, 0);
     Res.setBit(BitNo);
     return Res;
   }
 
-  /// Get a value with a block of bits set.
+  /// \brief Get a value with a block of bits set.
   ///
   /// Constructs an APInt value that has a contiguous range of bits set. The
   /// bits from loBit (inclusive) to hiBit (exclusive) will be set. All other
@@ -609,7 +603,7 @@ public:
     return Res;
   }
 
-  /// Get a value with upper bits starting at loBit set.
+  /// \brief Get a value with upper bits starting at loBit set.
   ///
   /// Constructs an APInt value that has a contiguous range of bits set. The
   /// bits from loBit (inclusive) to numBits (exclusive) will be set. All other
@@ -626,7 +620,7 @@ public:
     return Res;
   }
 
-  /// Get a value with high bits set
+  /// \brief Get a value with high bits set
   ///
   /// Constructs an APInt value that has the top hiBitsSet bits set.
   ///
@@ -638,7 +632,7 @@ public:
     return Res;
   }
 
-  /// Get a value with low bits set
+  /// \brief Get a value with low bits set
   ///
   /// Constructs an APInt value that has the bottom loBitsSet bits set.
   ///
@@ -650,10 +644,10 @@ public:
     return Res;
   }
 
-  /// Return a value containing V broadcasted over NewLen bits.
+  /// \brief Return a value containing V broadcasted over NewLen bits.
   static APInt getSplat(unsigned NewLen, const APInt &V);
 
-  /// Determine if two APInts have the same value, after zero-extending
+  /// \brief Determine if two APInts have the same value, after zero-extending
   /// one of them (if needed!) to ensure that the bit-widths match.
   static bool isSameValue(const APInt &I1, const APInt &I2) {
     if (I1.getBitWidth() == I2.getBitWidth())
@@ -665,7 +659,7 @@ public:
     return I1.zext(I2.getBitWidth()) == I2;
   }
 
-  /// Overload to compute a hash_code for an APInt value.
+  /// \brief Overload to compute a hash_code for an APInt value.
   friend hash_code hash_value(const APInt &Arg);
 
   /// This function returns a pointer to the internal storage of the APInt.
@@ -681,7 +675,7 @@ public:
   /// \name Unary Operators
   /// @{
 
-  /// Postfix increment operator.
+  /// \brief Postfix increment operator.
   ///
   /// Increments *this by 1.
   ///
@@ -692,12 +686,12 @@ public:
     return API;
   }
 
-  /// Prefix increment operator.
+  /// \brief Prefix increment operator.
   ///
   /// \returns *this incremented by one
   APInt &operator++();
 
-  /// Postfix decrement operator.
+  /// \brief Postfix decrement operator.
   ///
   /// Decrements *this by 1.
   ///
@@ -708,12 +702,12 @@ public:
     return API;
   }
 
-  /// Prefix decrement operator.
+  /// \brief Prefix decrement operator.
   ///
   /// \returns *this decremented by one.
   APInt &operator--();
 
-  /// Logical negation operator.
+  /// \brief Logical negation operator.
   ///
   /// Performs logical negation operation on this APInt.
   ///
@@ -728,7 +722,7 @@ public:
   /// \name Assignment Operators
   /// @{
 
-  /// Copy assignment operator.
+  /// \brief Copy assignment operator.
   ///
   /// \returns *this after assignment of RHS.
   APInt &operator=(const APInt &RHS) {
@@ -743,13 +737,8 @@ public:
     return *this;
   }
 
-  /// Move assignment operator.
+  /// @brief Move assignment operator.
   APInt &operator=(APInt &&that) {
-#ifdef _MSC_VER
-    // The MSVC std::shuffle implementation still does self-assignment.
-    if (this == &that)
-      return *this;
-#endif
     assert(this != &that && "Self-move not supported");
     if (!isSingleWord())
       delete[] U.pVal;
@@ -764,7 +753,7 @@ public:
     return *this;
   }
 
-  /// Assignment operator.
+  /// \brief Assignment operator.
   ///
   /// The RHS value is assigned to *this. If the significant bits in RHS exceed
   /// the bit width, the excess bits are truncated. If the bit width is larger
@@ -782,7 +771,7 @@ public:
     return *this;
   }
 
-  /// Bitwise AND assignment operator.
+  /// \brief Bitwise AND assignment operator.
   ///
   /// Performs a bitwise AND operation on this APInt and RHS. The result is
   /// assigned to *this.
@@ -797,7 +786,7 @@ public:
     return *this;
   }
 
-  /// Bitwise AND assignment operator.
+  /// \brief Bitwise AND assignment operator.
   ///
   /// Performs a bitwise AND operation on this APInt and RHS. RHS is
   /// logically zero-extended or truncated to match the bit-width of
@@ -812,7 +801,7 @@ public:
     return *this;
   }
 
-  /// Bitwise OR assignment operator.
+  /// \brief Bitwise OR assignment operator.
   ///
   /// Performs a bitwise OR operation on this APInt and RHS. The result is
   /// assigned *this;
@@ -827,7 +816,7 @@ public:
     return *this;
   }
 
-  /// Bitwise OR assignment operator.
+  /// \brief Bitwise OR assignment operator.
   ///
   /// Performs a bitwise OR operation on this APInt and RHS. RHS is
   /// logically zero-extended or truncated to match the bit-width of
@@ -842,7 +831,7 @@ public:
     return *this;
   }
 
-  /// Bitwise XOR assignment operator.
+  /// \brief Bitwise XOR assignment operator.
   ///
   /// Performs a bitwise XOR operation on this APInt and RHS. The result is
   /// assigned to *this.
@@ -857,7 +846,7 @@ public:
     return *this;
   }
 
-  /// Bitwise XOR assignment operator.
+  /// \brief Bitwise XOR assignment operator.
   ///
   /// Performs a bitwise XOR operation on this APInt and RHS. RHS is
   /// logically zero-extended or truncated to match the bit-width of
@@ -872,7 +861,7 @@ public:
     return *this;
   }
 
-  /// Multiplication assignment operator.
+  /// \brief Multiplication assignment operator.
   ///
   /// Multiplies this APInt by RHS and assigns the result to *this.
   ///
@@ -880,7 +869,7 @@ public:
   APInt &operator*=(const APInt &RHS);
   APInt &operator*=(uint64_t RHS);
 
-  /// Addition assignment operator.
+  /// \brief Addition assignment operator.
   ///
   /// Adds RHS to *this and assigns the result to *this.
   ///
@@ -888,7 +877,7 @@ public:
   APInt &operator+=(const APInt &RHS);
   APInt &operator+=(uint64_t RHS);
 
-  /// Subtraction assignment operator.
+  /// \brief Subtraction assignment operator.
   ///
   /// Subtracts RHS from *this and assigns the result to *this.
   ///
@@ -896,7 +885,7 @@ public:
   APInt &operator-=(const APInt &RHS);
   APInt &operator-=(uint64_t RHS);
 
-  /// Left-shift assignment function.
+  /// \brief Left-shift assignment function.
   ///
   /// Shifts *this left by shiftAmt and assigns the result to *this.
   ///
@@ -914,7 +903,7 @@ public:
     return *this;
   }
 
-  /// Left-shift assignment function.
+  /// \brief Left-shift assignment function.
   ///
   /// Shifts *this left by shiftAmt and assigns the result to *this.
   ///
@@ -925,22 +914,22 @@ public:
   /// \name Binary Operators
   /// @{
 
-  /// Multiplication operator.
+  /// \brief Multiplication operator.
   ///
   /// Multiplies this APInt by RHS and returns the result.
   APInt operator*(const APInt &RHS) const;
 
-  /// Left logical shift operator.
+  /// \brief Left logical shift operator.
   ///
   /// Shifts this APInt left by \p Bits and returns the result.
   APInt operator<<(unsigned Bits) const { return shl(Bits); }
 
-  /// Left logical shift operator.
+  /// \brief Left logical shift operator.
   ///
   /// Shifts this APInt left by \p Bits and returns the result.
   APInt operator<<(const APInt &Bits) const { return shl(Bits); }
 
-  /// Arithmetic right-shift function.
+  /// \brief Arithmetic right-shift function.
   ///
   /// Arithmetic right-shift this APInt by shiftAmt.
   APInt ashr(unsigned ShiftAmt) const {
@@ -964,7 +953,7 @@ public:
     ashrSlowCase(ShiftAmt);
   }
 
-  /// Logical right-shift function.
+  /// \brief Logical right-shift function.
   ///
   /// Logical right-shift this APInt by shiftAmt.
   APInt lshr(unsigned shiftAmt) const {
@@ -986,7 +975,7 @@ public:
     lshrSlowCase(ShiftAmt);
   }
 
-  /// Left-shift function.
+  /// \brief Left-shift function.
   ///
   /// Left-shift this APInt by shiftAmt.
   APInt shl(unsigned shiftAmt) const {
@@ -995,13 +984,13 @@ public:
     return R;
   }
 
-  /// Rotate left by rotateAmt.
+  /// \brief Rotate left by rotateAmt.
   APInt rotl(unsigned rotateAmt) const;
 
-  /// Rotate right by rotateAmt.
+  /// \brief Rotate right by rotateAmt.
   APInt rotr(unsigned rotateAmt) const;
 
-  /// Arithmetic right-shift function.
+  /// \brief Arithmetic right-shift function.
   ///
   /// Arithmetic right-shift this APInt by shiftAmt.
   APInt ashr(const APInt &ShiftAmt) const {
@@ -1013,7 +1002,7 @@ public:
   /// Arithmetic right-shift this APInt by shiftAmt in place.
   void ashrInPlace(const APInt &shiftAmt);
 
-  /// Logical right-shift function.
+  /// \brief Logical right-shift function.
   ///
   /// Logical right-shift this APInt by shiftAmt.
   APInt lshr(const APInt &ShiftAmt) const {
@@ -1025,7 +1014,7 @@ public:
   /// Logical right-shift this APInt by ShiftAmt in place.
   void lshrInPlace(const APInt &ShiftAmt);
 
-  /// Left-shift function.
+  /// \brief Left-shift function.
   ///
   /// Left-shift this APInt by shiftAmt.
   APInt shl(const APInt &ShiftAmt) const {
@@ -1034,31 +1023,28 @@ public:
     return R;
   }
 
-  /// Rotate left by rotateAmt.
+  /// \brief Rotate left by rotateAmt.
   APInt rotl(const APInt &rotateAmt) const;
 
-  /// Rotate right by rotateAmt.
+  /// \brief Rotate right by rotateAmt.
   APInt rotr(const APInt &rotateAmt) const;
 
-  /// Unsigned division operation.
+  /// \brief Unsigned division operation.
   ///
   /// Perform an unsigned divide operation on this APInt by RHS. Both this and
   /// RHS are treated as unsigned quantities for purposes of this division.
   ///
-  /// \returns a new APInt value containing the division result, rounded towards
-  /// zero.
+  /// \returns a new APInt value containing the division result
   APInt udiv(const APInt &RHS) const;
   APInt udiv(uint64_t RHS) const;
 
-  /// Signed division function for APInt.
+  /// \brief Signed division function for APInt.
   ///
   /// Signed divide this APInt by APInt RHS.
-  ///
-  /// The result is rounded towards zero.
   APInt sdiv(const APInt &RHS) const;
   APInt sdiv(int64_t RHS) const;
 
-  /// Unsigned remainder operation.
+  /// \brief Unsigned remainder operation.
   ///
   /// Perform an unsigned remainder operation on this APInt with RHS being the
   /// divisor. Both this and RHS are treated as unsigned quantities for purposes
@@ -1070,13 +1056,13 @@ public:
   APInt urem(const APInt &RHS) const;
   uint64_t urem(uint64_t RHS) const;
 
-  /// Function for signed remainder operation.
+  /// \brief Function for signed remainder operation.
   ///
   /// Signed remainder operation on APInt.
   APInt srem(const APInt &RHS) const;
   int64_t srem(int64_t RHS) const;
 
-  /// Dual division/remainder interface.
+  /// \brief Dual division/remainder interface.
   ///
   /// Sometimes it is convenient to divide two APInt values and obtain both the
   /// quotient and remainder. This function does both operations in the same
@@ -1104,7 +1090,7 @@ public:
   APInt sshl_ov(const APInt &Amt, bool &Overflow) const;
   APInt ushl_ov(const APInt &Amt, bool &Overflow) const;
 
-  /// Array-indexing support.
+  /// \brief Array-indexing support.
   ///
   /// \returns the bit value at bitPosition
   bool operator[](unsigned bitPosition) const {
@@ -1116,7 +1102,7 @@ public:
   /// \name Comparison Operators
   /// @{
 
-  /// Equality operator.
+  /// \brief Equality operator.
   ///
   /// Compares this APInt with RHS for the validity of the equality
   /// relationship.
@@ -1127,7 +1113,7 @@ public:
     return EqualSlowCase(RHS);
   }
 
-  /// Equality operator.
+  /// \brief Equality operator.
   ///
   /// Compares this APInt with a uint64_t for the validity of the equality
   /// relationship.
@@ -1137,7 +1123,7 @@ public:
     return (isSingleWord() || getActiveBits() <= 64) && getZExtValue() == Val;
   }
 
-  /// Equality comparison.
+  /// \brief Equality comparison.
   ///
   /// Compares this APInt with RHS for the validity of the equality
   /// relationship.
@@ -1145,7 +1131,7 @@ public:
   /// \returns true if *this == Val
   bool eq(const APInt &RHS) const { return (*this) == RHS; }
 
-  /// Inequality operator.
+  /// \brief Inequality operator.
   ///
   /// Compares this APInt with RHS for the validity of the inequality
   /// relationship.
@@ -1153,7 +1139,7 @@ public:
   /// \returns true if *this != Val
   bool operator!=(const APInt &RHS) const { return !((*this) == RHS); }
 
-  /// Inequality operator.
+  /// \brief Inequality operator.
   ///
   /// Compares this APInt with a uint64_t for the validity of the inequality
   /// relationship.
@@ -1161,7 +1147,7 @@ public:
   /// \returns true if *this != Val
   bool operator!=(uint64_t Val) const { return !((*this) == Val); }
 
-  /// Inequality comparison
+  /// \brief Inequality comparison
   ///
   /// Compares this APInt with RHS for the validity of the inequality
   /// relationship.
@@ -1169,7 +1155,7 @@ public:
   /// \returns true if *this != Val
   bool ne(const APInt &RHS) const { return !((*this) == RHS); }
 
-  /// Unsigned less than comparison
+  /// \brief Unsigned less than comparison
   ///
   /// Regards both *this and RHS as unsigned quantities and compares them for
   /// the validity of the less-than relationship.
@@ -1177,7 +1163,7 @@ public:
   /// \returns true if *this < RHS when both are considered unsigned.
   bool ult(const APInt &RHS) const { return compare(RHS) < 0; }
 
-  /// Unsigned less than comparison
+  /// \brief Unsigned less than comparison
   ///
   /// Regards both *this as an unsigned quantity and compares it with RHS for
   /// the validity of the less-than relationship.
@@ -1188,7 +1174,7 @@ public:
     return (isSingleWord() || getActiveBits() <= 64) && getZExtValue() < RHS;
   }
 
-  /// Signed less than comparison
+  /// \brief Signed less than comparison
   ///
   /// Regards both *this and RHS as signed quantities and compares them for
   /// validity of the less-than relationship.
@@ -1196,7 +1182,7 @@ public:
   /// \returns true if *this < RHS when both are considered signed.
   bool slt(const APInt &RHS) const { return compareSigned(RHS) < 0; }
 
-  /// Signed less than comparison
+  /// \brief Signed less than comparison
   ///
   /// Regards both *this as a signed quantity and compares it with RHS for
   /// the validity of the less-than relationship.
@@ -1207,7 +1193,7 @@ public:
                                                         : getSExtValue() < RHS;
   }
 
-  /// Unsigned less or equal comparison
+  /// \brief Unsigned less or equal comparison
   ///
   /// Regards both *this and RHS as unsigned quantities and compares them for
   /// validity of the less-or-equal relationship.
@@ -1215,7 +1201,7 @@ public:
   /// \returns true if *this <= RHS when both are considered unsigned.
   bool ule(const APInt &RHS) const { return compare(RHS) <= 0; }
 
-  /// Unsigned less or equal comparison
+  /// \brief Unsigned less or equal comparison
   ///
   /// Regards both *this as an unsigned quantity and compares it with RHS for
   /// the validity of the less-or-equal relationship.
@@ -1223,7 +1209,7 @@ public:
   /// \returns true if *this <= RHS when considered unsigned.
   bool ule(uint64_t RHS) const { return !ugt(RHS); }
 
-  /// Signed less or equal comparison
+  /// \brief Signed less or equal comparison
   ///
   /// Regards both *this and RHS as signed quantities and compares them for
   /// validity of the less-or-equal relationship.
@@ -1231,7 +1217,7 @@ public:
   /// \returns true if *this <= RHS when both are considered signed.
   bool sle(const APInt &RHS) const { return compareSigned(RHS) <= 0; }
 
-  /// Signed less or equal comparison
+  /// \brief Signed less or equal comparison
   ///
   /// Regards both *this as a signed quantity and compares it with RHS for the
   /// validity of the less-or-equal relationship.
@@ -1239,7 +1225,7 @@ public:
   /// \returns true if *this <= RHS when considered signed.
   bool sle(uint64_t RHS) const { return !sgt(RHS); }
 
-  /// Unsigned greather than comparison
+  /// \brief Unsigned greather than comparison
   ///
   /// Regards both *this and RHS as unsigned quantities and compares them for
   /// the validity of the greater-than relationship.
@@ -1247,7 +1233,7 @@ public:
   /// \returns true if *this > RHS when both are considered unsigned.
   bool ugt(const APInt &RHS) const { return !ule(RHS); }
 
-  /// Unsigned greater than comparison
+  /// \brief Unsigned greater than comparison
   ///
   /// Regards both *this as an unsigned quantity and compares it with RHS for
   /// the validity of the greater-than relationship.
@@ -1258,7 +1244,7 @@ public:
     return (!isSingleWord() && getActiveBits() > 64) || getZExtValue() > RHS;
   }
 
-  /// Signed greather than comparison
+  /// \brief Signed greather than comparison
   ///
   /// Regards both *this and RHS as signed quantities and compares them for the
   /// validity of the greater-than relationship.
@@ -1266,7 +1252,7 @@ public:
   /// \returns true if *this > RHS when both are considered signed.
   bool sgt(const APInt &RHS) const { return !sle(RHS); }
 
-  /// Signed greater than comparison
+  /// \brief Signed greater than comparison
   ///
   /// Regards both *this as a signed quantity and compares it with RHS for
   /// the validity of the greater-than relationship.
@@ -1277,7 +1263,7 @@ public:
                                                         : getSExtValue() > RHS;
   }
 
-  /// Unsigned greater or equal comparison
+  /// \brief Unsigned greater or equal comparison
   ///
   /// Regards both *this and RHS as unsigned quantities and compares them for
   /// validity of the greater-or-equal relationship.
@@ -1285,7 +1271,7 @@ public:
   /// \returns true if *this >= RHS when both are considered unsigned.
   bool uge(const APInt &RHS) const { return !ult(RHS); }
 
-  /// Unsigned greater or equal comparison
+  /// \brief Unsigned greater or equal comparison
   ///
   /// Regards both *this as an unsigned quantity and compares it with RHS for
   /// the validity of the greater-or-equal relationship.
@@ -1293,7 +1279,7 @@ public:
   /// \returns true if *this >= RHS when considered unsigned.
   bool uge(uint64_t RHS) const { return !ult(RHS); }
 
-  /// Signed greater or equal comparison
+  /// \brief Signed greather or equal comparison
   ///
   /// Regards both *this and RHS as signed quantities and compares them for
   /// validity of the greater-or-equal relationship.
@@ -1301,7 +1287,7 @@ public:
   /// \returns true if *this >= RHS when both are considered signed.
   bool sge(const APInt &RHS) const { return !slt(RHS); }
 
-  /// Signed greater or equal comparison
+  /// \brief Signed greater or equal comparison
   ///
   /// Regards both *this as a signed quantity and compares it with RHS for
   /// the validity of the greater-or-equal relationship.
@@ -1330,13 +1316,13 @@ public:
   /// \name Resizing Operators
   /// @{
 
-  /// Truncate to new width.
+  /// \brief Truncate to new width.
   ///
   /// Truncate the APInt to a specified width. It is an error to specify a width
   /// that is greater than or equal to the current width.
   APInt trunc(unsigned width) const;
 
-  /// Sign extend to a new width.
+  /// \brief Sign extend to a new width.
   ///
   /// This operation sign extends the APInt to a new width. If the high order
   /// bit is set, the fill on the left will be done with 1 bits, otherwise zero.
@@ -1344,32 +1330,32 @@ public:
   /// current width.
   APInt sext(unsigned width) const;
 
-  /// Zero extend to a new width.
+  /// \brief Zero extend to a new width.
   ///
   /// This operation zero extends the APInt to a new width. The high order bits
   /// are filled with 0 bits.  It is an error to specify a width that is less
   /// than or equal to the current width.
   APInt zext(unsigned width) const;
 
-  /// Sign extend or truncate to width
+  /// \brief Sign extend or truncate to width
   ///
   /// Make this APInt have the bit width given by \p width. The value is sign
   /// extended, truncated, or left alone to make it that width.
   APInt sextOrTrunc(unsigned width) const;
 
-  /// Zero extend or truncate to width
+  /// \brief Zero extend or truncate to width
   ///
   /// Make this APInt have the bit width given by \p width. The value is zero
   /// extended, truncated, or left alone to make it that width.
   APInt zextOrTrunc(unsigned width) const;
 
-  /// Sign extend or truncate to width
+  /// \brief Sign extend or truncate to width
   ///
   /// Make this APInt have the bit width given by \p width. The value is sign
   /// extended, or left alone to make it that width.
   APInt sextOrSelf(unsigned width) const;
 
-  /// Zero extend or truncate to width
+  /// \brief Zero extend or truncate to width
   ///
   /// Make this APInt have the bit width given by \p width. The value is zero
   /// extended, or left alone to make it that width.
@@ -1379,7 +1365,7 @@ public:
   /// \name Bit Manipulation Operators
   /// @{
 
-  /// Set every bit to 1.
+  /// \brief Set every bit to 1.
   void setAllBits() {
     if (isSingleWord())
       U.VAL = WORD_MAX;
@@ -1390,7 +1376,7 @@ public:
     clearUnusedBits();
   }
 
-  /// Set a given bit to 1.
+  /// \brief Set a given bit to 1.
   ///
   /// Set the given bit to 1 whose position is given as "bitPosition".
   void setBit(unsigned BitPosition) {
@@ -1441,7 +1427,7 @@ public:
     return setBits(BitWidth - hiBits, BitWidth);
   }
 
-  /// Set every bit to 0.
+  /// \brief Set every bit to 0.
   void clearAllBits() {
     if (isSingleWord())
       U.VAL = 0;
@@ -1449,7 +1435,7 @@ public:
       memset(U.pVal, 0, getNumWords() * APINT_WORD_SIZE);
   }
 
-  /// Set a given bit to 0.
+  /// \brief Set a given bit to 0.
   ///
   /// Set the given bit to 0 whose position is given as "bitPosition".
   void clearBit(unsigned BitPosition) {
@@ -1466,7 +1452,7 @@ public:
     clearBit(BitWidth - 1);
   }
 
-  /// Toggle every bit to its opposite value.
+  /// \brief Toggle every bit to its opposite value.
   void flipAllBits() {
     if (isSingleWord()) {
       U.VAL ^= WORD_MAX;
@@ -1476,7 +1462,7 @@ public:
     }
   }
 
-  /// Toggles a given bit to its opposite value.
+  /// \brief Toggles a given bit to its opposite value.
   ///
   /// Toggle a given bit to its opposite value whose position is given
   /// as "bitPosition".
@@ -1498,17 +1484,17 @@ public:
   /// \name Value Characterization Functions
   /// @{
 
-  /// Return the number of bits in the APInt.
+  /// \brief Return the number of bits in the APInt.
   unsigned getBitWidth() const { return BitWidth; }
 
-  /// Get the number of words.
+  /// \brief Get the number of words.
   ///
   /// Here one word's bitwidth equals to that of uint64_t.
   ///
   /// \returns the number of words to hold the integer value of this APInt.
   unsigned getNumWords() const { return getNumWords(BitWidth); }
 
-  /// Get the number of words.
+  /// \brief Get the number of words.
   ///
   /// *NOTE* Here one word's bitwidth equals to that of uint64_t.
   ///
@@ -1518,14 +1504,14 @@ public:
     return ((uint64_t)BitWidth + APINT_BITS_PER_WORD - 1) / APINT_BITS_PER_WORD;
   }
 
-  /// Compute the number of active bits in the value
+  /// \brief Compute the number of active bits in the value
   ///
   /// This function returns the number of active bits which is defined as the
   /// bit width minus the number of leading zeros. This is used in several
   /// computations to see how "wide" the value is.
   unsigned getActiveBits() const { return BitWidth - countLeadingZeros(); }
 
-  /// Compute the number of active words in the value of this APInt.
+  /// \brief Compute the number of active words in the value of this APInt.
   ///
   /// This is used in conjunction with getActiveData to extract the raw value of
   /// the APInt.
@@ -1534,7 +1520,7 @@ public:
     return numActiveBits ? whichWord(numActiveBits - 1) + 1 : 1;
   }
 
-  /// Get the minimum bit size for this signed APInt
+  /// \brief Get the minimum bit size for this signed APInt
   ///
   /// Computes the minimum bit width for this APInt while considering it to be a
   /// signed (and probably negative) value. If the value is not negative, this
@@ -1548,7 +1534,7 @@ public:
     return getActiveBits() + 1;
   }
 
-  /// Get zero extended value
+  /// \brief Get zero extended value
   ///
   /// This method attempts to return the value of this APInt as a zero extended
   /// uint64_t. The bitwidth must be <= 64 or the value must fit within a
@@ -1560,7 +1546,7 @@ public:
     return U.pVal[0];
   }
 
-  /// Get sign extended value
+  /// \brief Get sign extended value
   ///
   /// This method attempts to return the value of this APInt as a sign extended
   /// int64_t. The bit width must be <= 64 or the value must fit within an
@@ -1572,13 +1558,13 @@ public:
     return int64_t(U.pVal[0]);
   }
 
-  /// Get bits required for string value.
+  /// \brief Get bits required for string value.
   ///
   /// This method determines how many bits are required to hold the APInt
   /// equivalent of the string given by \p str.
   static unsigned getBitsNeeded(StringRef str, uint8_t radix);
 
-  /// The APInt version of the countLeadingZeros functions in
+  /// \brief The APInt version of the countLeadingZeros functions in
   ///   MathExtras.h.
   ///
   /// It counts the number of zeros from the most significant bit to the first
@@ -1594,7 +1580,7 @@ public:
     return countLeadingZerosSlowCase();
   }
 
-  /// Count the number of leading one bits.
+  /// \brief Count the number of leading one bits.
   ///
   /// This function is an APInt version of the countLeadingOnes
   /// functions in MathExtras.h. It counts the number of ones from the most
@@ -1614,7 +1600,7 @@ public:
     return isNegative() ? countLeadingOnes() : countLeadingZeros();
   }
 
-  /// Count the number of trailing zero bits.
+  /// \brief Count the number of trailing zero bits.
   ///
   /// This function is an APInt version of the countTrailingZeros
   /// functions in MathExtras.h. It counts the number of zeros from the least
@@ -1628,7 +1614,7 @@ public:
     return countTrailingZerosSlowCase();
   }
 
-  /// Count the number of trailing one bits.
+  /// \brief Count the number of trailing one bits.
   ///
   /// This function is an APInt version of the countTrailingOnes
   /// functions in MathExtras.h. It counts the number of ones from the least
@@ -1642,7 +1628,7 @@ public:
     return countTrailingOnesSlowCase();
   }
 
-  /// Count the number of bits set.
+  /// \brief Count the number of bits set.
   ///
   /// This function is an APInt version of the countPopulation functions
   /// in MathExtras.h. It counts the number of 1 bits in the APInt value.
@@ -1676,7 +1662,7 @@ public:
     toString(Str, Radix, true, false);
   }
 
-  /// Return the APInt as a std::string.
+  /// \brief Return the APInt as a std::string.
   ///
   /// Note that this is an inefficient method.  It is better to pass in a
   /// SmallVector/SmallString to the methods above to avoid thrashing the heap
@@ -1690,16 +1676,16 @@ public:
   /// Value.
   APInt reverseBits() const;
 
-  /// Converts this APInt to a double value.
+  /// \brief Converts this APInt to a double value.
   double roundToDouble(bool isSigned) const;
 
-  /// Converts this unsigned APInt to a double value.
+  /// \brief Converts this unsigned APInt to a double value.
   double roundToDouble() const { return roundToDouble(false); }
 
-  /// Converts this signed APInt to a double value.
+  /// \brief Converts this signed APInt to a double value.
   double signedRoundToDouble() const { return roundToDouble(true); }
 
-  /// Converts APInt bits to a double
+  /// \brief Converts APInt bits to a double
   ///
   /// The conversion does not do a translation from integer to double, it just
   /// re-interprets the bits as a double. Note that it is valid to do this on
@@ -1708,7 +1694,7 @@ public:
     return BitsToDouble(getWord(0));
   }
 
-  /// Converts APInt bits to a double
+  /// \brief Converts APInt bits to a double
   ///
   /// The conversion does not do a translation from integer to float, it just
   /// re-interprets the bits as a float. Note that it is valid to do this on
@@ -1717,7 +1703,7 @@ public:
     return BitsToFloat(getWord(0));
   }
 
-  /// Converts a double to APInt bits.
+  /// \brief Converts a double to APInt bits.
   ///
   /// The conversion does not do a translation from double to integer, it just
   /// re-interprets the bits of the double.
@@ -1725,7 +1711,7 @@ public:
     return APInt(sizeof(double) * CHAR_BIT, DoubleToBits(V));
   }
 
-  /// Converts a float to APInt bits.
+  /// \brief Converts a float to APInt bits.
   ///
   /// The conversion does not do a translation from float to integer, it just
   /// re-interprets the bits of the float.
@@ -1784,10 +1770,10 @@ public:
     return logBase2();
   }
 
-  /// Compute the square root
+  /// \brief Compute the square root
   APInt sqrt() const;
 
-  /// Get the absolute value;
+  /// \brief Get the absolute value;
   ///
   /// If *this is < 0 then return -(*this), otherwise *this;
   APInt abs() const {
@@ -1938,7 +1924,7 @@ public:
   /// Set the least significant BITS and clear the rest.
   static void tcSetLeastSignificantBits(WordType *, unsigned, unsigned bits);
 
-  /// debug method
+  /// \brief debug method
   void dump() const;
 
   /// @}
@@ -1961,7 +1947,7 @@ inline bool operator==(uint64_t V1, const APInt &V2) { return V2 == V1; }
 
 inline bool operator!=(uint64_t V1, const APInt &V2) { return V2 != V1; }
 
-/// Unary bitwise complement operator.
+/// \brief Unary bitwise complement operator.
 ///
 /// \returns an APInt that is the bitwise complement of \p v.
 inline APInt operator~(APInt v) {
@@ -2094,27 +2080,27 @@ inline APInt operator*(uint64_t LHS, APInt b) {
 
 namespace APIntOps {
 
-/// Determine the smaller of two APInts considered to be signed.
+/// \brief Determine the smaller of two APInts considered to be signed.
 inline const APInt &smin(const APInt &A, const APInt &B) {
   return A.slt(B) ? A : B;
 }
 
-/// Determine the larger of two APInts considered to be signed.
+/// \brief Determine the larger of two APInts considered to be signed.
 inline const APInt &smax(const APInt &A, const APInt &B) {
   return A.sgt(B) ? A : B;
 }
 
-/// Determine the smaller of two APInts considered to be signed.
+/// \brief Determine the smaller of two APInts considered to be signed.
 inline const APInt &umin(const APInt &A, const APInt &B) {
   return A.ult(B) ? A : B;
 }
 
-/// Determine the larger of two APInts considered to be unsigned.
+/// \brief Determine the larger of two APInts considered to be unsigned.
 inline const APInt &umax(const APInt &A, const APInt &B) {
   return A.ugt(B) ? A : B;
 }
 
-/// Compute GCD of two unsigned APInt values.
+/// \brief Compute GCD of two unsigned APInt values.
 ///
 /// This function returns the greatest common divisor of the two APInt values
 /// using Stein's algorithm.
@@ -2122,49 +2108,43 @@ inline const APInt &umax(const APInt &A, const APInt &B) {
 /// \returns the greatest common divisor of A and B.
 APInt GreatestCommonDivisor(APInt A, APInt B);
 
-/// Converts the given APInt to a double value.
+/// \brief Converts the given APInt to a double value.
 ///
 /// Treats the APInt as an unsigned value for conversion purposes.
 inline double RoundAPIntToDouble(const APInt &APIVal) {
   return APIVal.roundToDouble();
 }
 
-/// Converts the given APInt to a double value.
+/// \brief Converts the given APInt to a double value.
 ///
 /// Treats the APInt as a signed value for conversion purposes.
 inline double RoundSignedAPIntToDouble(const APInt &APIVal) {
   return APIVal.signedRoundToDouble();
 }
 
-/// Converts the given APInt to a float vlalue.
+/// \brief Converts the given APInt to a float vlalue.
 inline float RoundAPIntToFloat(const APInt &APIVal) {
   return float(RoundAPIntToDouble(APIVal));
 }
 
-/// Converts the given APInt to a float value.
+/// \brief Converts the given APInt to a float value.
 ///
 /// Treast the APInt as a signed value for conversion purposes.
 inline float RoundSignedAPIntToFloat(const APInt &APIVal) {
   return float(APIVal.signedRoundToDouble());
 }
 
-/// Converts the given double value into a APInt.
+/// \brief Converts the given double value into a APInt.
 ///
 /// This function convert a double value to an APInt value.
 APInt RoundDoubleToAPInt(double Double, unsigned width);
 
-/// Converts a float value into a APInt.
+/// \brief Converts a float value into a APInt.
 ///
 /// Converts a float value into an APInt value.
 inline APInt RoundFloatToAPInt(float Float, unsigned width) {
   return RoundDoubleToAPInt(double(Float), width);
 }
-
-/// Return A unsign-divided by B, rounded by the given rounding mode.
-APInt RoundingUDiv(const APInt &A, const APInt &B, APInt::Rounding RM);
-
-/// Return A sign-divided by B, rounded by the given rounding mode.
-APInt RoundingSDiv(const APInt &A, const APInt &B, APInt::Rounding RM);
 
 } // End of APIntOps namespace
 

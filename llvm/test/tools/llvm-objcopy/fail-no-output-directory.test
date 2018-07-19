@@ -1,6 +1,6 @@
 # RUN: yaml2obj %s > %t
 # RUN: not llvm-objcopy %t no/such/dir 2>&1 | FileCheck %s
-# CHECK: failed to open no/such/dir:
+# CHECK: failed to open no/such/dir
 
 !ELF
 FileHeader:

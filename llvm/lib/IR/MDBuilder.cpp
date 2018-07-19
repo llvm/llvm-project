@@ -58,14 +58,10 @@ MDNode *MDBuilder::createUnpredictable() {
 }
 
 MDNode *MDBuilder::createFunctionEntryCount(
-    uint64_t Count, bool Synthetic,
-    const DenseSet<GlobalValue::GUID> *Imports) {
+    uint64_t Count, const DenseSet<GlobalValue::GUID> *Imports) {
   Type *Int64Ty = Type::getInt64Ty(Context);
   SmallVector<Metadata *, 8> Ops;
-  if (Synthetic)
-    Ops.push_back(createString("synthetic_function_entry_count"));
-  else
-    Ops.push_back(createString("function_entry_count"));
+  Ops.push_back(createString("function_entry_count"));
   Ops.push_back(createConstant(ConstantInt::get(Int64Ty, Count)));
   if (Imports) {
     SmallVector<GlobalValue::GUID, 2> OrderID(Imports->begin(), Imports->end());
@@ -133,7 +129,7 @@ MDNode *MDBuilder::createTBAARoot(StringRef Name) {
   return MDNode::get(Context, createString(Name));
 }
 
-/// Return metadata for a non-root TBAA node with the given name,
+/// \brief Return metadata for a non-root TBAA node with the given name,
 /// parent in the TBAA tree, and value for 'pointsToConstantMemory'.
 MDNode *MDBuilder::createTBAANode(StringRef Name, MDNode *Parent,
                                   bool isConstant) {
@@ -153,7 +149,7 @@ MDNode *MDBuilder::createAliasScope(StringRef Name, MDNode *Domain) {
   return MDNode::get(Context, {createString(Name), Domain});
 }
 
-/// Return metadata for a tbaa.struct node with the given
+/// \brief Return metadata for a tbaa.struct node with the given
 /// struct field descriptions.
 MDNode *MDBuilder::createTBAAStructNode(ArrayRef<TBAAStructField> Fields) {
   SmallVector<Metadata *, 4> Vals(Fields.size() * 3);
@@ -166,7 +162,7 @@ MDNode *MDBuilder::createTBAAStructNode(ArrayRef<TBAAStructField> Fields) {
   return MDNode::get(Context, Vals);
 }
 
-/// Return metadata for a TBAA struct node in the type DAG
+/// \brief Return metadata for a TBAA struct node in the type DAG
 /// with the given name, a list of pairs (offset, field type in the type DAG).
 MDNode *MDBuilder::createTBAAStructTypeNode(
     StringRef Name, ArrayRef<std::pair<MDNode *, uint64_t>> Fields) {
@@ -180,7 +176,7 @@ MDNode *MDBuilder::createTBAAStructTypeNode(
   return MDNode::get(Context, Ops);
 }
 
-/// Return metadata for a TBAA scalar type node with the
+/// \brief Return metadata for a TBAA scalar type node with the
 /// given name, an offset and a parent in the TBAA type DAG.
 MDNode *MDBuilder::createTBAAScalarTypeNode(StringRef Name, MDNode *Parent,
                                             uint64_t Offset) {
@@ -189,7 +185,7 @@ MDNode *MDBuilder::createTBAAScalarTypeNode(StringRef Name, MDNode *Parent,
                      {createString(Name), Parent, createConstant(Off)});
 }
 
-/// Return metadata for a TBAA tag node with the given
+/// \brief Return metadata for a TBAA tag node with the given
 /// base type, access type and offset relative to the base type.
 MDNode *MDBuilder::createTBAAStructTagNode(MDNode *BaseType, MDNode *AccessType,
                                            uint64_t Offset, bool IsConstant) {
@@ -230,33 +226,6 @@ MDNode *MDBuilder::createTBAAAccessTag(MDNode *BaseType, MDNode *AccessType,
                                  ImmutabilityFlagNode});
   }
   return MDNode::get(Context, {BaseType, AccessType, OffsetNode, SizeNode});
-}
-
-MDNode *MDBuilder::createMutableTBAAAccessTag(MDNode *Tag) {
-  MDNode *BaseType = cast<MDNode>(Tag->getOperand(0));
-  MDNode *AccessType = cast<MDNode>(Tag->getOperand(1));
-  Metadata *OffsetNode = Tag->getOperand(2);
-  uint64_t Offset = mdconst::extract<ConstantInt>(OffsetNode)->getZExtValue();
-
-  bool NewFormat = isa<MDNode>(AccessType->getOperand(0));
-
-  // See if the tag is already mutable.
-  unsigned ImmutabilityFlagOp = NewFormat ? 4 : 3;
-  if (Tag->getNumOperands() <= ImmutabilityFlagOp)
-    return Tag;
-
-  // If Tag is already mutable then return it.
-  Metadata *ImmutabilityFlagNode = Tag->getOperand(ImmutabilityFlagOp);
-  if (!mdconst::extract<ConstantInt>(ImmutabilityFlagNode)->getValue())
-    return Tag;
-
-  // Otherwise, create another node.
-  if (!NewFormat)
-    return createTBAAStructTagNode(BaseType, AccessType, Offset);
-
-  Metadata *SizeNode = Tag->getOperand(3);
-  uint64_t Size = mdconst::extract<ConstantInt>(SizeNode)->getZExtValue();
-  return createTBAAAccessTag(BaseType, AccessType, Offset, Size);
 }
 
 MDNode *MDBuilder::createIrrLoopHeaderWeight(uint64_t Weight) {

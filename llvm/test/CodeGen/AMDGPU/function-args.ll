@@ -297,8 +297,8 @@ define void @void_func_v2i16(<2 x i16> %arg0) #0 {
 }
 
 ; GCN-LABEL: {{^}}void_func_v3i16:
-; GCN-DAG: buffer_store_dword v{{[0-9]+}}, off
-; GCN-DAG: buffer_store_short v{{[0-9]+}}, off
+; GCN-DAG: buffer_store_dword v0, off
+; GCN-DAG: buffer_store_short v2, off
 define void @void_func_v3i16(<3 x i16> %arg0) #0 {
   store <3 x i16> %arg0, <3 x i16> addrspace(1)* undef
   ret void
@@ -434,17 +434,10 @@ define void @void_func_v2f16(<2 x half> %arg0) #0 {
   ret void
 }
 
-; FIXME: Different abi if f16 legal
 ; GCN-LABEL: {{^}}void_func_v3f16:
-; CI-DAG: v_cvt_f16_f32_e32 v{{[0-9]+}}, v0
-; CI-DAG: v_cvt_f16_f32_e32 v{{[0-9]+}}, v1
-; CI-DAG: v_cvt_f16_f32_e32 v{{[0-9]+}}, v2
-
-; GFX89-DAG: v0
-; GFX89-DAG: v1
-
-; GCN-DAG: buffer_store_short
-; GCN-DAG: buffer_store_dword
+; GFX9-NOT: v0
+; GCN-DAG: buffer_store_dword v0, off
+; GCN-DAG: buffer_store_short v2, off
 define void @void_func_v3f16(<3 x half> %arg0) #0 {
   store <3 x half> %arg0, <3 x half> addrspace(1)* undef
   ret void
@@ -513,8 +506,8 @@ define void @void_func_struct_i8_i32({ i8, i32 } %arg0) #0 {
 ; GCN-DAG: buffer_load_dword v[[ELT1:[0-9]+]], off, s[0:3], s5 offset:8{{$}}
 ; GCN-DAG: buffer_store_dword v[[ELT1]]
 ; GCN-DAG: buffer_store_byte v[[ELT0]]
-define void @void_func_byval_struct_i8_i32({ i8, i32 } addrspace(5)* byval %arg0) #0 {
-  %arg0.load = load { i8, i32 }, { i8, i32 } addrspace(5)* %arg0
+define void @void_func_byval_struct_i8_i32({ i8, i32 }* byval %arg0) #0 {
+  %arg0.load = load { i8, i32 }, { i8, i32 }* %arg0
   store { i8, i32 } %arg0.load, { i8, i32 } addrspace(1)* undef
   ret void
 }
@@ -527,9 +520,9 @@ define void @void_func_byval_struct_i8_i32({ i8, i32 } addrspace(5)* byval %arg0
 
 ; GCN: ds_write_b32 v0, v0
 ; GCN: s_setpc_b64
-define void @void_func_byval_struct_i8_i32_x2({ i8, i32 } addrspace(5)* byval %arg0, { i8, i32 } addrspace(5)* byval %arg1, i32 %arg2) #0 {
-  %arg0.load = load volatile { i8, i32 }, { i8, i32 } addrspace(5)* %arg0
-  %arg1.load = load volatile { i8, i32 }, { i8, i32 } addrspace(5)* %arg1
+define void @void_func_byval_struct_i8_i32_x2({ i8, i32 }* byval %arg0, { i8, i32 }* byval %arg1, i32 %arg2) #0 {
+  %arg0.load = load volatile { i8, i32 }, { i8, i32 }* %arg0
+  %arg1.load = load volatile { i8, i32 }, { i8, i32 }* %arg1
   store volatile { i8, i32 } %arg0.load, { i8, i32 } addrspace(1)* undef
   store volatile { i8, i32 } %arg1.load, { i8, i32 } addrspace(1)* undef
   store volatile i32 %arg2, i32 addrspace(3)* undef
@@ -542,9 +535,9 @@ define void @void_func_byval_struct_i8_i32_x2({ i8, i32 } addrspace(5)* byval %a
 ; GCN-DAG: buffer_load_dword v[[ARG1_LOAD1:[0-9]+]], off, s[0:3], s5 offset:12{{$}}
 ; GCN-DAG: buffer_store_dword v[[ARG0_LOAD]], off
 ; GCN-DAG: buffer_store_dwordx2 v{{\[}}[[ARG1_LOAD0]]:[[ARG1_LOAD1]]{{\]}}, off
-define void @void_func_byval_i32_byval_i64(i32 addrspace(5)* byval %arg0, i64 addrspace(5)* byval %arg1) #0 {
-  %arg0.load = load i32, i32 addrspace(5)* %arg0
-  %arg1.load = load i64, i64 addrspace(5)* %arg1
+define void @void_func_byval_i32_byval_i64(i32* byval %arg0, i64* byval %arg1) #0 {
+  %arg0.load = load i32, i32* %arg0
+  %arg1.load = load i64, i64* %arg1
   store i32 %arg0.load, i32 addrspace(1)* undef
   store i64 %arg1.load, i64 addrspace(1)* undef
   ret void

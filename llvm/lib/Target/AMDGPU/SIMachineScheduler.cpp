@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// SI Machine Scheduler interface
+/// \brief SI Machine Scheduler interface
 //
 //===----------------------------------------------------------------------===//
 
@@ -16,7 +16,6 @@
 #include "AMDGPU.h"
 #include "SIInstrInfo.h"
 #include "SIRegisterInfo.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/LiveInterval.h"
@@ -155,8 +154,6 @@ static const char *getReasonStr(SIScheduleCandReason Reason) {
 
 #endif
 
-namespace llvm {
-namespace SISched {
 static bool tryLess(int TryVal, int CandVal,
                     SISchedulerCandidate &TryCand,
                     SISchedulerCandidate &Cand,
@@ -190,8 +187,6 @@ static bool tryGreater(int TryVal, int CandVal,
   Cand.setRepeat(Reason);
   return false;
 }
-} // end namespace SISched
-} // end namespace llvm
 
 // SIScheduleBlock //
 
@@ -217,8 +212,7 @@ void SIScheduleBlock::tryCandidateTopDown(SISchedCandidate &Cand,
   }
 
   if (Cand.SGPRUsage > 60 &&
-      SISched::tryLess(TryCand.SGPRUsage, Cand.SGPRUsage,
-                       TryCand, Cand, RegUsage))
+      tryLess(TryCand.SGPRUsage, Cand.SGPRUsage, TryCand, Cand, RegUsage))
     return;
 
   // Schedule low latency instructions as top as possible.
@@ -236,22 +230,21 @@ void SIScheduleBlock::tryCandidateTopDown(SISchedCandidate &Cand,
   // could go quite high, thus above the arbitrary limit of 60 will encourage
   // use the already loaded constants (in order to release some SGPRs) before
   // loading more.
-  if (SISched::tryLess(TryCand.HasLowLatencyNonWaitedParent,
-                       Cand.HasLowLatencyNonWaitedParent,
-                       TryCand, Cand, SIScheduleCandReason::Depth))
+  if (tryLess(TryCand.HasLowLatencyNonWaitedParent,
+              Cand.HasLowLatencyNonWaitedParent,
+              TryCand, Cand, SIScheduleCandReason::Depth))
     return;
 
-  if (SISched::tryGreater(TryCand.IsLowLatency, Cand.IsLowLatency,
-                          TryCand, Cand, SIScheduleCandReason::Depth))
+  if (tryGreater(TryCand.IsLowLatency, Cand.IsLowLatency,
+                 TryCand, Cand, SIScheduleCandReason::Depth))
     return;
 
   if (TryCand.IsLowLatency &&
-      SISched::tryLess(TryCand.LowLatencyOffset, Cand.LowLatencyOffset,
-                       TryCand, Cand, SIScheduleCandReason::Depth))
+      tryLess(TryCand.LowLatencyOffset, Cand.LowLatencyOffset,
+              TryCand, Cand, SIScheduleCandReason::Depth))
     return;
 
-  if (SISched::tryLess(TryCand.VGPRUsage, Cand.VGPRUsage,
-                       TryCand, Cand, RegUsage))
+  if (tryLess(TryCand.VGPRUsage, Cand.VGPRUsage, TryCand, Cand, RegUsage))
     return;
 
   // Fall through to original instruction order.
@@ -1208,7 +1201,7 @@ void SIScheduleBlockCreator::createBlocksForVariant(SISchedulerBlockCreatorVaria
   NextReservedID = 1;
   NextNonReservedID = DAGSize + 1;
 
-  LLVM_DEBUG(dbgs() << "Coloring the graph\n");
+  DEBUG(dbgs() << "Coloring the graph\n");
 
   if (BlockVariant == SISchedulerBlockCreatorVariant::LatenciesGrouped)
     colorHighLatenciesGroups();
@@ -1265,11 +1258,13 @@ void SIScheduleBlockCreator::createBlocksForVariant(SISchedulerBlockCreatorVaria
     SIScheduleBlock *Block = CurrentBlocks[i];
     Block->finalizeUnits();
   }
-  LLVM_DEBUG(dbgs() << "Blocks created:\n\n";
-             for (unsigned i = 0, e = CurrentBlocks.size(); i != e; ++i) {
-               SIScheduleBlock *Block = CurrentBlocks[i];
-               Block->printDebug(true);
-             });
+  DEBUG(
+    dbgs() << "Blocks created:\n\n";
+    for (unsigned i = 0, e = CurrentBlocks.size(); i != e; ++i) {
+      SIScheduleBlock *Block = CurrentBlocks[i];
+      Block->printDebug(true);
+    }
+  );
 }
 
 // Two functions taken from Codegen/MachineScheduler.cpp
@@ -1279,7 +1274,7 @@ static MachineBasicBlock::iterator
 nextIfDebug(MachineBasicBlock::iterator I,
             MachineBasicBlock::const_iterator End) {
   for (; I != End; ++I) {
-    if (!I->isDebugInstr())
+    if (!I->isDebugValue())
       break;
   }
   return I;
@@ -1289,7 +1284,7 @@ void SIScheduleBlockCreator::topologicalSort() {
   unsigned DAGSize = CurrentBlocks.size();
   std::vector<int> WorkList;
 
-  LLVM_DEBUG(dbgs() << "Topological Sort\n");
+  DEBUG(dbgs() << "Topological Sort\n");
 
   WorkList.reserve(DAGSize);
   TopDownIndex2Block.resize(DAGSize);
@@ -1336,11 +1331,11 @@ void SIScheduleBlockCreator::topologicalSort() {
 void SIScheduleBlockCreator::scheduleInsideBlocks() {
   unsigned DAGSize = CurrentBlocks.size();
 
-  LLVM_DEBUG(dbgs() << "\nScheduling Blocks\n\n");
+  DEBUG(dbgs() << "\nScheduling Blocks\n\n");
 
   // We do schedule a valid scheduling such that a Block corresponds
   // to a range of instructions.
-  LLVM_DEBUG(dbgs() << "First phase: Fast scheduling for Reg Liveness\n");
+  DEBUG(dbgs() << "First phase: Fast scheduling for Reg Liveness\n");
   for (unsigned i = 0, e = DAGSize; i != e; ++i) {
     SIScheduleBlock *Block = CurrentBlocks[i];
     Block->fastSchedule();
@@ -1394,7 +1389,7 @@ void SIScheduleBlockCreator::scheduleInsideBlocks() {
     Block->schedule((*SUs.begin())->getInstr(), (*SUs.rbegin())->getInstr());
   }
 
-  LLVM_DEBUG(dbgs() << "Restoring MI Pos\n");
+  DEBUG(dbgs() << "Restoring MI Pos\n");
   // Restore old ordering (which prevents a LIS->handleMove bug).
   for (unsigned i = PosOld.size(), e = 0; i != e; --i) {
     MachineBasicBlock::iterator POld = PosOld[i-1];
@@ -1408,10 +1403,12 @@ void SIScheduleBlockCreator::scheduleInsideBlocks() {
     }
   }
 
-  LLVM_DEBUG(for (unsigned i = 0, e = CurrentBlocks.size(); i != e; ++i) {
-    SIScheduleBlock *Block = CurrentBlocks[i];
-    Block->printDebug(true);
-  });
+  DEBUG(
+    for (unsigned i = 0, e = CurrentBlocks.size(); i != e; ++i) {
+      SIScheduleBlock *Block = CurrentBlocks[i];
+      Block->printDebug(true);
+    }
+  );
 }
 
 void SIScheduleBlockCreator::fillStats() {
@@ -1562,10 +1559,13 @@ SIScheduleBlockScheduler::SIScheduleBlockScheduler(SIScheduleDAGMI *DAG,
     blockScheduled(Block);
   }
 
-  LLVM_DEBUG(dbgs() << "Block Order:"; for (SIScheduleBlock *Block
-                                            : BlocksScheduled) {
-    dbgs() << ' ' << Block->getID();
-  } dbgs() << '\n';);
+  DEBUG(
+    dbgs() << "Block Order:";
+    for (SIScheduleBlock* Block : BlocksScheduled) {
+      dbgs() << ' ' << Block->getID();
+    }
+    dbgs() << '\n';
+  );
 }
 
 bool SIScheduleBlockScheduler::tryCandidateLatency(SIBlockSchedCandidate &Cand,
@@ -1576,19 +1576,19 @@ bool SIScheduleBlockScheduler::tryCandidateLatency(SIBlockSchedCandidate &Cand,
   }
 
   // Try to hide high latencies.
-  if (SISched::tryLess(TryCand.LastPosHighLatParentScheduled,
-                 Cand.LastPosHighLatParentScheduled, TryCand, Cand, Latency))
+  if (tryLess(TryCand.LastPosHighLatParentScheduled,
+              Cand.LastPosHighLatParentScheduled, TryCand, Cand, Latency))
     return true;
   // Schedule high latencies early so you can hide them better.
-  if (SISched::tryGreater(TryCand.IsHighLatency, Cand.IsHighLatency,
-                          TryCand, Cand, Latency))
+  if (tryGreater(TryCand.IsHighLatency, Cand.IsHighLatency,
+                 TryCand, Cand, Latency))
     return true;
-  if (TryCand.IsHighLatency && SISched::tryGreater(TryCand.Height, Cand.Height,
-                                                   TryCand, Cand, Depth))
+  if (TryCand.IsHighLatency && tryGreater(TryCand.Height, Cand.Height,
+                                          TryCand, Cand, Depth))
     return true;
-  if (SISched::tryGreater(TryCand.NumHighLatencySuccessors,
-                          Cand.NumHighLatencySuccessors,
-                          TryCand, Cand, Successor))
+  if (tryGreater(TryCand.NumHighLatencySuccessors,
+                 Cand.NumHighLatencySuccessors,
+                 TryCand, Cand, Successor))
     return true;
   return false;
 }
@@ -1600,17 +1600,17 @@ bool SIScheduleBlockScheduler::tryCandidateRegUsage(SIBlockSchedCandidate &Cand,
     return true;
   }
 
-  if (SISched::tryLess(TryCand.VGPRUsageDiff > 0, Cand.VGPRUsageDiff > 0,
-                       TryCand, Cand, RegUsage))
+  if (tryLess(TryCand.VGPRUsageDiff > 0, Cand.VGPRUsageDiff > 0,
+              TryCand, Cand, RegUsage))
     return true;
-  if (SISched::tryGreater(TryCand.NumSuccessors > 0,
-                          Cand.NumSuccessors > 0,
-                          TryCand, Cand, Successor))
+  if (tryGreater(TryCand.NumSuccessors > 0,
+                 Cand.NumSuccessors > 0,
+                 TryCand, Cand, Successor))
     return true;
-  if (SISched::tryGreater(TryCand.Height, Cand.Height, TryCand, Cand, Depth))
+  if (tryGreater(TryCand.Height, Cand.Height, TryCand, Cand, Depth))
     return true;
-  if (SISched::tryLess(TryCand.VGPRUsageDiff, Cand.VGPRUsageDiff,
-                       TryCand, Cand, RegUsage))
+  if (tryLess(TryCand.VGPRUsageDiff, Cand.VGPRUsageDiff,
+              TryCand, Cand, RegUsage))
     return true;
   return false;
 }
@@ -1628,17 +1628,18 @@ SIScheduleBlock *SIScheduleBlockScheduler::pickBlock() {
     maxVregUsage = VregCurrentUsage;
   if (SregCurrentUsage > maxSregUsage)
     maxSregUsage = SregCurrentUsage;
-  LLVM_DEBUG(dbgs() << "Picking New Blocks\n"; dbgs() << "Available: ";
-             for (SIScheduleBlock *Block
-                  : ReadyBlocks) dbgs()
-             << Block->getID() << ' ';
-             dbgs() << "\nCurrent Live:\n";
-             for (unsigned Reg
-                  : LiveRegs) dbgs()
-             << printVRegOrUnit(Reg, DAG->getTRI()) << ' ';
-             dbgs() << '\n';
-             dbgs() << "Current VGPRs: " << VregCurrentUsage << '\n';
-             dbgs() << "Current SGPRs: " << SregCurrentUsage << '\n';);
+  DEBUG(
+    dbgs() << "Picking New Blocks\n";
+    dbgs() << "Available: ";
+    for (SIScheduleBlock* Block : ReadyBlocks)
+      dbgs() << Block->getID() << ' ';
+    dbgs() << "\nCurrent Live:\n";
+    for (unsigned Reg : LiveRegs)
+      dbgs() << printVRegOrUnit(Reg, DAG->getTRI()) << ' ';
+    dbgs() << '\n';
+    dbgs() << "Current VGPRs: " << VregCurrentUsage << '\n';
+    dbgs() << "Current SGPRs: " << SregCurrentUsage << '\n';
+  );
 
   Cand.Block = nullptr;
   for (std::vector<SIScheduleBlock*>::iterator I = ReadyBlocks.begin(),
@@ -1670,18 +1671,20 @@ SIScheduleBlock *SIScheduleBlockScheduler::pickBlock() {
     if (TryCand.Reason != NoCand) {
       Cand.setBest(TryCand);
       Best = I;
-      LLVM_DEBUG(dbgs() << "Best Current Choice: " << Cand.Block->getID() << ' '
-                        << getReasonStr(Cand.Reason) << '\n');
+      DEBUG(dbgs() << "Best Current Choice: " << Cand.Block->getID() << ' '
+                   << getReasonStr(Cand.Reason) << '\n');
     }
   }
 
-  LLVM_DEBUG(dbgs() << "Picking: " << Cand.Block->getID() << '\n';
-             dbgs() << "Is a block with high latency instruction: "
-                    << (Cand.IsHighLatency ? "yes\n" : "no\n");
-             dbgs() << "Position of last high latency dependency: "
-                    << Cand.LastPosHighLatParentScheduled << '\n';
-             dbgs() << "VGPRUsageDiff: " << Cand.VGPRUsageDiff << '\n';
-             dbgs() << '\n';);
+  DEBUG(
+    dbgs() << "Picking: " << Cand.Block->getID() << '\n';
+    dbgs() << "Is a block with high latency instruction: "
+      << (Cand.IsHighLatency ? "yes\n" : "no\n");
+    dbgs() << "Position of last high latency dependency: "
+           << Cand.LastPosHighLatParentScheduled << '\n';
+    dbgs() << "VGPRUsageDiff: " << Cand.VGPRUsageDiff << '\n';
+    dbgs() << '\n';
+  );
 
   Block = Cand.Block;
   ReadyBlocks.erase(Best);
@@ -1930,10 +1933,13 @@ void SIScheduleDAGMI::schedule()
 {
   SmallVector<SUnit*, 8> TopRoots, BotRoots;
   SIScheduleBlockResult Best, Temp;
-  LLVM_DEBUG(dbgs() << "Preparing Scheduling\n");
+  DEBUG(dbgs() << "Preparing Scheduling\n");
 
   buildDAGWithRegPressure();
-  LLVM_DEBUG(for (SUnit &SU : SUnits) SU.dumpAll(this));
+  DEBUG(
+    for(SUnit& SU : SUnits)
+       SU.dumpAll(this)
+  );
 
   topologicalSort();
   findRootsAndBiasEdges(TopRoots, BotRoots);
@@ -2035,15 +2041,15 @@ void SIScheduleDAGMI::schedule()
 
     scheduleMI(SU, true);
 
-    LLVM_DEBUG(dbgs() << "Scheduling SU(" << SU->NodeNum << ") "
-                      << *SU->getInstr());
+    DEBUG(dbgs() << "Scheduling SU(" << SU->NodeNum << ") "
+                 << *SU->getInstr());
   }
 
   assert(CurrentTop == CurrentBottom && "Nonempty unscheduled zone.");
 
   placeDebugValues();
 
-  LLVM_DEBUG({
+  DEBUG({
     dbgs() << "*** Final schedule for "
            << printMBBReference(*begin()->getParent()) << " ***\n";
     dumpSchedule();

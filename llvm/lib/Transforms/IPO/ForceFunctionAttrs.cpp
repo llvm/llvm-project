@@ -42,10 +42,8 @@ static Attribute::AttrKind parseAttrKind(StringRef Kind) {
       .Case("nonlazybind", Attribute::NonLazyBind)
       .Case("noredzone", Attribute::NoRedZone)
       .Case("noreturn", Attribute::NoReturn)
-      .Case("nocf_check", Attribute::NoCfCheck)
       .Case("norecurse", Attribute::NoRecurse)
       .Case("nounwind", Attribute::NoUnwind)
-      .Case("optforfuzzing", Attribute::OptForFuzzing)
       .Case("optnone", Attribute::OptimizeNone)
       .Case("optsize", Attribute::OptimizeForSize)
       .Case("readnone", Attribute::ReadNone)
@@ -53,7 +51,6 @@ static Attribute::AttrKind parseAttrKind(StringRef Kind) {
       .Case("argmemonly", Attribute::ArgMemOnly)
       .Case("returns_twice", Attribute::ReturnsTwice)
       .Case("safestack", Attribute::SafeStack)
-      .Case("shadowcallstack", Attribute::ShadowCallStack)
       .Case("sanitize_address", Attribute::SanitizeAddress)
       .Case("sanitize_hwaddress", Attribute::SanitizeHWAddress)
       .Case("sanitize_memory", Attribute::SanitizeMemory)
@@ -75,8 +72,8 @@ static void addForcedAttributes(Function &F) {
 
     auto Kind = parseAttrKind(KV.second);
     if (Kind == Attribute::None) {
-      LLVM_DEBUG(dbgs() << "ForcedAttribute: " << KV.second
-                        << " unknown or not handled!\n");
+      DEBUG(dbgs() << "ForcedAttribute: " << KV.second
+                   << " unknown or not handled!\n");
       continue;
     }
     if (F.hasFnAttribute(Kind))

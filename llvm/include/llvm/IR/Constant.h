@@ -38,7 +38,7 @@ class APInt;
 /// structurally equivalent constants will always have the same address.
 /// Constants are created on demand as needed and never deleted: thus clients
 /// don't have to worry about the lifetime of the objects.
-/// LLVM Constant Representation
+/// @brief LLVM Constant Representation
 class Constant : public User {
 protected:
   Constant(Type *ty, ValueTy vty, Use *Ops, unsigned NumOps)
@@ -70,26 +70,6 @@ public:
 
   /// Return true if the value is the smallest signed value.
   bool isMinSignedValue() const;
-
-  /// Return true if this is a finite and non-zero floating-point scalar
-  /// constant or a vector constant with all finite and non-zero elements.
-  bool isFiniteNonZeroFP() const;
-
-  /// Return true if this is a normal (as opposed to denormal) floating-point
-  /// scalar constant or a vector constant with all normal elements.
-  bool isNormalFP() const;
-
-  /// Return true if this scalar has an exact multiplicative inverse or this
-  /// vector has an exact multiplicative inverse for each element in the vector.
-  bool hasExactInverseFP() const;
-
-  /// Return true if this is a floating-point NaN constant or a vector
-  /// floating-point constant with all NaN elements.
-  bool isNaN() const;
-
-  /// Return true if this is a vector constant that includes any undefined
-  /// elements.
-  bool containsUndefElement() const;
 
   /// Return true if evaluation of this constant could trap. This is true for
   /// things like constant expressions that could divide by zero.
@@ -157,7 +137,7 @@ public:
 
   /// @returns the value for an integer or vector of integer constant of the
   /// given type that has all its bits set to true.
-  /// Get the all ones value
+  /// @brief Get the all ones value
   static Constant *getAllOnesValue(Type* Ty);
 
   /// Return the value for an integer or pointer constant, or a vector thereof,

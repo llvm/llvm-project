@@ -22,7 +22,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/APInt.h"
-#include "llvm/Config/llvm-config.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/InstrTypes.h"
@@ -191,7 +190,8 @@ ConstantRange::makeGuaranteedNoWrapRegion(Instruction::BinaryOps BinOp,
     return CR0.inverse().unionWith(CR1.inverse()).inverse();
   };
 
-  assert(Instruction::isBinaryOp(BinOp) && "Binary operators only!");
+  assert(BinOp >= Instruction::BinaryOpsBegin &&
+         BinOp < Instruction::BinaryOpsEnd && "Binary operators only!");
 
   assert((NoWrapKind == OBO::NoSignedWrap ||
           NoWrapKind == OBO::NoUnsignedWrap ||
@@ -255,64 +255,6 @@ ConstantRange::makeGuaranteedNoWrapRegion(Instruction::BinaryOps BinOp,
                           APInt::getSignedMinValue(BitWidth) + SignedMin));
     }
     return Result;
-  case Instruction::Mul: {
-    if (NoWrapKind == (OBO::NoSignedWrap | OBO::NoUnsignedWrap)) {
-      return SubsetIntersect(
-          makeGuaranteedNoWrapRegion(BinOp, Other, OBO::NoSignedWrap),
-          makeGuaranteedNoWrapRegion(BinOp, Other, OBO::NoUnsignedWrap));
-    }
-
-    // Equivalent to calling makeGuaranteedNoWrapRegion() on [V, V+1).
-    const bool Unsigned = NoWrapKind == OBO::NoUnsignedWrap;
-    const auto makeSingleValueRegion = [Unsigned,
-                                        BitWidth](APInt V) -> ConstantRange {
-      // Handle special case for 0, -1 and 1. See the last for reason why we
-      // specialize -1 and 1.
-      if (V == 0 || V.isOneValue())
-        return ConstantRange(BitWidth, true);
-
-      APInt MinValue, MaxValue;
-      if (Unsigned) {
-        MinValue = APInt::getMinValue(BitWidth);
-        MaxValue = APInt::getMaxValue(BitWidth);
-      } else {
-        MinValue = APInt::getSignedMinValue(BitWidth);
-        MaxValue = APInt::getSignedMaxValue(BitWidth);
-      }
-      // e.g. Returning [-127, 127], represented as [-127, -128).
-      if (!Unsigned && V.isAllOnesValue())
-        return ConstantRange(-MaxValue, MinValue);
-
-      APInt Lower, Upper;
-      if (!Unsigned && V.isNegative()) {
-        Lower = APIntOps::RoundingSDiv(MaxValue, V, APInt::Rounding::UP);
-        Upper = APIntOps::RoundingSDiv(MinValue, V, APInt::Rounding::DOWN);
-      } else if (Unsigned) {
-        Lower = APIntOps::RoundingUDiv(MinValue, V, APInt::Rounding::UP);
-        Upper = APIntOps::RoundingUDiv(MaxValue, V, APInt::Rounding::DOWN);
-      } else {
-        Lower = APIntOps::RoundingSDiv(MinValue, V, APInt::Rounding::UP);
-        Upper = APIntOps::RoundingSDiv(MaxValue, V, APInt::Rounding::DOWN);
-      }
-      if (Unsigned) {
-        Lower = Lower.zextOrSelf(BitWidth);
-        Upper = Upper.zextOrSelf(BitWidth);
-      } else {
-        Lower = Lower.sextOrSelf(BitWidth);
-        Upper = Upper.sextOrSelf(BitWidth);
-      }
-      // ConstantRange ctor take a half inclusive interval [Lower, Upper + 1).
-      // Upper + 1 is guanranteed not to overflow, because |divisor| > 1. 0, -1,
-      // and 1 are already handled as special cases.
-      return ConstantRange(Lower, Upper + 1);
-    };
-
-    if (Unsigned)
-      return makeSingleValueRegion(Other.getUnsignedMax());
-
-    return SubsetIntersect(makeSingleValueRegion(Other.getSignedMin()),
-                           makeSingleValueRegion(Other.getSignedMax()));
-  }
   }
 }
 
@@ -416,7 +358,7 @@ bool ConstantRange::contains(const ConstantRange &Other) const {
 ConstantRange ConstantRange::subtract(const APInt &Val) const {
   assert(Val.getBitWidth() == getBitWidth() && "Wrong bit width");
   // If the set is empty or full, don't modify the endpoints.
-  if (Lower == Upper)
+  if (Lower == Upper) 
     return *this;
   return ConstantRange(Lower - Val, Upper - Val);
 }
@@ -426,7 +368,7 @@ ConstantRange ConstantRange::difference(const ConstantRange &CR) const {
 }
 
 ConstantRange ConstantRange::intersectWith(const ConstantRange &CR) const {
-  assert(getBitWidth() == CR.getBitWidth() &&
+  assert(getBitWidth() == CR.getBitWidth() && 
          "ConstantRange types don't agree!");
 
   // Handle common cases.
@@ -500,7 +442,7 @@ ConstantRange ConstantRange::intersectWith(const ConstantRange &CR) const {
 }
 
 ConstantRange ConstantRange::unionWith(const ConstantRange &CR) const {
-  assert(getBitWidth() == CR.getBitWidth() &&
+  assert(getBitWidth() == CR.getBitWidth() && 
          "ConstantRange types don't agree!");
 
   if (   isFullSet() || CR.isEmptySet()) return *this;
@@ -722,7 +664,8 @@ ConstantRange ConstantRange::sextOrTrunc(uint32_t DstTySize) const {
 
 ConstantRange ConstantRange::binaryOp(Instruction::BinaryOps BinOp,
                                       const ConstantRange &Other) const {
-  assert(Instruction::isBinaryOp(BinOp) && "Binary operators only!");
+  assert(BinOp >= Instruction::BinaryOpsBegin &&
+         BinOp < Instruction::BinaryOpsEnd && "Binary operators only!");
 
   switch (BinOp) {
   case Instruction::Add:
@@ -854,7 +797,7 @@ ConstantRange::multiply(const ConstantRange &Other) const {
   this_max = getSignedMax().sext(getBitWidth() * 2);
   Other_min = Other.getSignedMin().sext(getBitWidth() * 2);
   Other_max = Other.getSignedMax().sext(getBitWidth() * 2);
-
+  
   auto L = {this_min * Other_min, this_min * Other_max,
             this_max * Other_min, this_max * Other_max};
   auto Compare = [](const APInt &A, const APInt &B) { return A.slt(B); };

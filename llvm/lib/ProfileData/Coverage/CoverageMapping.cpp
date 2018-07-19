@@ -83,7 +83,7 @@ Counter CounterExpressionBuilder::simplify(Counter ExpressionTree) {
     return Counter::getZero();
 
   // Group the terms by counter ID.
-  llvm::sort(Terms.begin(), Terms.end(), [](const Term &LHS, const Term &RHS) {
+  std::sort(Terms.begin(), Terms.end(), [](const Term &LHS, const Term &RHS) {
     return LHS.CounterID < RHS.CounterID;
   });
 
@@ -207,10 +207,8 @@ Error CoverageMapping::loadFunctionRecord(
   else
     OrigFuncName = getFuncNameWithoutPrefix(OrigFuncName, Record.Filenames[0]);
 
-  // Don't load records for (filenames, function) pairs we've already seen.
-  auto FilenamesHash = hash_combine_range(Record.Filenames.begin(),
-                                          Record.Filenames.end());
-  if (!RecordProvenance[FilenamesHash].insert(hash_value(OrigFuncName)).second)
+  // Don't load records for functions we've already seen.
+  if (!FunctionNames.insert(OrigFuncName).second)
     return Error::success();
 
   CounterMappingContext Ctx(Record.Expressions);
@@ -294,7 +292,7 @@ CoverageMapping::load(ArrayRef<StringRef> ObjectFilenames,
 
 namespace {
 
-/// Distributes functions into instantiation sets.
+/// \brief Distributes functions into instantiation sets.
 ///
 /// An instantiation set is a collection of functions that have the same source
 /// code, ie, template functions specializations.
@@ -346,7 +344,7 @@ class SegmentBuilder {
     else
       Segments.emplace_back(StartLoc.first, StartLoc.second, IsRegionEntry);
 
-    LLVM_DEBUG({
+    DEBUG({
       const auto &Last = Segments.back();
       dbgs() << "Segment at " << Last.Line << ":" << Last.Col
              << " (count = " << Last.Count << ")"
@@ -459,8 +457,8 @@ class SegmentBuilder {
 
   /// Sort a nested sequence of regions from a single file.
   static void sortNestedRegions(MutableArrayRef<CountedRegion> Regions) {
-    llvm::sort(Regions.begin(), Regions.end(), [](const CountedRegion &LHS,
-                                                  const CountedRegion &RHS) {
+    std::sort(Regions.begin(), Regions.end(), [](const CountedRegion &LHS,
+                                                 const CountedRegion &RHS) {
       if (LHS.startLoc() != RHS.startLoc())
         return LHS.startLoc() < RHS.startLoc();
       if (LHS.endLoc() != RHS.endLoc())
@@ -524,7 +522,7 @@ public:
     sortNestedRegions(Regions);
     ArrayRef<CountedRegion> CombinedRegions = combineRegions(Regions);
 
-    LLVM_DEBUG({
+    DEBUG({
       dbgs() << "Combined regions:\n";
       for (const auto &CR : CombinedRegions)
         dbgs() << "  " << CR.LineStart << ":" << CR.ColumnStart << " -> "
@@ -539,8 +537,8 @@ public:
       const auto &L = Segments[I - 1];
       const auto &R = Segments[I];
       if (!(L.Line < R.Line) && !(L.Line == R.Line && L.Col < R.Col)) {
-        LLVM_DEBUG(dbgs() << " ! Segment " << L.Line << ":" << L.Col
-                          << " followed by " << R.Line << ":" << R.Col << "\n");
+        DEBUG(dbgs() << " ! Segment " << L.Line << ":" << L.Col
+                     << " followed by " << R.Line << ":" << R.Col << "\n");
         assert(false && "Coverage segments not unique or sorted");
       }
     }
@@ -557,7 +555,7 @@ std::vector<StringRef> CoverageMapping::getUniqueSourceFiles() const {
   for (const auto &Function : getCoveredFunctions())
     Filenames.insert(Filenames.end(), Function.Filenames.begin(),
                      Function.Filenames.end());
-  llvm::sort(Filenames.begin(), Filenames.end());
+  std::sort(Filenames.begin(), Filenames.end());
   auto Last = std::unique(Filenames.begin(), Filenames.end());
   Filenames.erase(Last, Filenames.end());
   return Filenames;
@@ -613,7 +611,7 @@ CoverageData CoverageMapping::getCoverageForFile(StringRef Filename) const {
       }
   }
 
-  LLVM_DEBUG(dbgs() << "Emitting segments for file: " << Filename << "\n");
+  DEBUG(dbgs() << "Emitting segments for file: " << Filename << "\n");
   FileCoverage.Segments = SegmentBuilder::buildSegments(Regions);
 
   return FileCoverage;
@@ -654,8 +652,7 @@ CoverageMapping::getCoverageForFunction(const FunctionRecord &Function) const {
         FunctionCoverage.Expansions.emplace_back(CR, Function);
     }
 
-  LLVM_DEBUG(dbgs() << "Emitting segments for function: " << Function.Name
-                    << "\n");
+  DEBUG(dbgs() << "Emitting segments for function: " << Function.Name << "\n");
   FunctionCoverage.Segments = SegmentBuilder::buildSegments(Regions);
 
   return FunctionCoverage;
@@ -673,8 +670,8 @@ CoverageData CoverageMapping::getCoverageForExpansion(
         ExpansionCoverage.Expansions.emplace_back(CR, Expansion.Function);
     }
 
-  LLVM_DEBUG(dbgs() << "Emitting segments for expansion of file "
-                    << Expansion.FileID << "\n");
+  DEBUG(dbgs() << "Emitting segments for expansion of file " << Expansion.FileID
+               << "\n");
   ExpansionCoverage.Segments = SegmentBuilder::buildSegments(Regions);
 
   return ExpansionCoverage;

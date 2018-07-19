@@ -15,9 +15,9 @@ define amdgpu_kernel void @div_fixup_f16(
     half addrspace(1)* %b,
     half addrspace(1)* %c) {
 entry:
-  %a.val = load volatile half, half addrspace(1)* %a
-  %b.val = load volatile half, half addrspace(1)* %b
-  %c.val = load volatile half, half addrspace(1)* %c
+  %a.val = load half, half addrspace(1)* %a
+  %b.val = load half, half addrspace(1)* %b
+  %c.val = load half, half addrspace(1)* %c
   %r.val = call half @llvm.amdgcn.div.fixup.f16(half %a.val, half %b.val, half %c.val)
   store half %r.val, half addrspace(1)* %r
   ret void
@@ -35,8 +35,8 @@ define amdgpu_kernel void @div_fixup_f16_imm_a(
     half addrspace(1)* %b,
     half addrspace(1)* %c) {
 entry:
-  %b.val = load volatile half, half addrspace(1)* %b
-  %c.val = load volatile half, half addrspace(1)* %c
+  %b.val = load half, half addrspace(1)* %b
+  %c.val = load half, half addrspace(1)* %c
   %r.val = call half @llvm.amdgcn.div.fixup.f16(half 3.0, half %b.val, half %c.val)
   store half %r.val, half addrspace(1)* %r
   ret void
@@ -54,8 +54,8 @@ define amdgpu_kernel void @div_fixup_f16_imm_b(
     half addrspace(1)* %a,
     half addrspace(1)* %c) {
 entry:
-  %a.val = load volatile half, half addrspace(1)* %a
-  %c.val = load volatile half, half addrspace(1)* %c
+  %a.val = load half, half addrspace(1)* %a
+  %c.val = load half, half addrspace(1)* %c
   %r.val = call half @llvm.amdgcn.div.fixup.f16(half %a.val, half 3.0, half %c.val)
   store half %r.val, half addrspace(1)* %r
   ret void
@@ -73,8 +73,8 @@ define amdgpu_kernel void @div_fixup_f16_imm_c(
     half addrspace(1)* %a,
     half addrspace(1)* %b) {
 entry:
-  %a.val = load volatile half, half addrspace(1)* %a
-  %b.val = load volatile half, half addrspace(1)* %b
+  %a.val = load half, half addrspace(1)* %a
+  %b.val = load half, half addrspace(1)* %b
   %r.val = call half @llvm.amdgcn.div.fixup.f16(half %a.val, half %b.val, half 3.0)
   store half %r.val, half addrspace(1)* %r
   ret void
@@ -90,7 +90,7 @@ define amdgpu_kernel void @div_fixup_f16_imm_a_imm_b(
     half addrspace(1)* %r,
     half addrspace(1)* %c) {
 entry:
-  %c.val = load volatile half, half addrspace(1)* %c
+  %c.val = load half, half addrspace(1)* %c
   %r.val = call half @llvm.amdgcn.div.fixup.f16(half 3.0, half 3.0, half %c.val)
   store half %r.val, half addrspace(1)* %r
   ret void

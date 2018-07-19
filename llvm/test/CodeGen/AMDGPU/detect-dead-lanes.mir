@@ -42,9 +42,9 @@ body: |
 # Check defined lanes transfer; Includes checking for some special cases like
 # undef operands or IMPLICIT_DEF definitions.
 # CHECK-LABEL: name: test1
-# CHECK: %0:sreg_128 = REG_SEQUENCE $sgpr0, %subreg.sub0, $sgpr0, %subreg.sub2
-# CHECK: %1:sreg_128 = INSERT_SUBREG %0, $sgpr1,  %subreg.sub3
-# CHECK: %2:sreg_64 = INSERT_SUBREG %0.sub2_sub3, $sgpr42,  %subreg.sub0
+# CHECK: %0:sreg_128 = REG_SEQUENCE %sgpr0, %subreg.sub0, %sgpr0, %subreg.sub2
+# CHECK: %1:sreg_128 = INSERT_SUBREG %0, %sgpr1,  %subreg.sub3
+# CHECK: %2:sreg_64 = INSERT_SUBREG %0.sub2_sub3, %sgpr42,  %subreg.sub0
 # CHECK: S_NOP 0, implicit %1.sub0
 # CHECK: S_NOP 0, implicit undef %1.sub1
 # CHECK: S_NOP 0, implicit %1.sub2
@@ -87,9 +87,9 @@ registers:
   - { id: 10, class: sreg_128 }
 body: |
   bb.0:
-    %0 = REG_SEQUENCE $sgpr0, %subreg.sub0, $sgpr0, %subreg.sub2
-    %1 = INSERT_SUBREG %0, $sgpr1, %subreg.sub3
-    %2 = INSERT_SUBREG %0.sub2_sub3, $sgpr42, %subreg.sub0
+    %0 = REG_SEQUENCE %sgpr0, %subreg.sub0, %sgpr0, %subreg.sub2
+    %1 = INSERT_SUBREG %0, %sgpr1, %subreg.sub3
+    %2 = INSERT_SUBREG %0.sub2_sub3, %sgpr42, %subreg.sub0
     S_NOP 0, implicit %1.sub0
     S_NOP 0, implicit %1.sub1
     S_NOP 0, implicit %1.sub2
@@ -204,8 +204,8 @@ body: |
 # lanes. So we should not get a dead/undef flag here.
 # CHECK-LABEL: name: test3
 # CHECK: S_NOP 0, implicit-def %0
-# CHECK: $vcc = COPY %0
-# CHECK: %1:sreg_64 = COPY $vcc
+# CHECK: %vcc = COPY %0
+# CHECK: %1:sreg_64 = COPY %vcc
 # CHECK: S_NOP 0, implicit %1
 name: test3
 tracksRegLiveness: true
@@ -215,9 +215,9 @@ registers:
 body: |
   bb.0:
     S_NOP 0, implicit-def %0
-    $vcc = COPY %0
+    %vcc = COPY %0
 
-    %1 = COPY $vcc
+    %1 = COPY %vcc
     S_NOP 0, implicit %1
 ...
 ---
@@ -296,7 +296,7 @@ body: |
     ; let's swiffle some lanes around for fun...
     %5 = REG_SEQUENCE %4.sub0, %subreg.sub0, %4.sub2, %subreg.sub1, %4.sub1, %subreg.sub2, %4.sub3, %subreg.sub3
 
-    S_CBRANCH_VCCNZ %bb.1, implicit undef $vcc
+    S_CBRANCH_VCCNZ %bb.1, implicit undef %vcc
     S_BRANCH %bb.2
 
   bb.2:
@@ -349,7 +349,7 @@ body: |
     ; rotate lanes, but skip sub2 lane...
     %6 = REG_SEQUENCE %5.sub1, %subreg.sub0, %5.sub3, %subreg.sub1, %5.sub2, %subreg.sub2, %5.sub0, %subreg.sub3
 
-    S_CBRANCH_VCCNZ %bb.1, implicit undef $vcc
+    S_CBRANCH_VCCNZ %bb.1, implicit undef %vcc
     S_BRANCH %bb.2
 
   bb.2:
@@ -392,7 +392,7 @@ body: |
     ; rotate subreg lanes, skipping sub1
     %3 = REG_SEQUENCE %2.sub3, %subreg.sub0, %2.sub1, %subreg.sub1, %2.sub0, %subreg.sub2, %2.sub2, %subreg.sub3
 
-    S_CBRANCH_VCCNZ %bb.1, implicit undef $vcc
+    S_CBRANCH_VCCNZ %bb.1, implicit undef %vcc
     S_BRANCH %bb.2
 
   bb.2:

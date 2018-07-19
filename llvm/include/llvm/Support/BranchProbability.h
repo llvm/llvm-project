@@ -73,7 +73,7 @@ public:
 
   void dump() const;
 
-  /// Scale a large integer.
+  /// \brief Scale a large integer.
   ///
   /// Scales \c Num.  Guarantees full precision.  Returns the floor of the
   /// result.
@@ -81,7 +81,7 @@ public:
   /// \return \c Num times \c this.
   uint64_t scale(uint64_t Num) const;
 
-  /// Scale a large integer by the inverse.
+  /// \brief Scale a large integer by the inverse.
   ///
   /// Scales \c Num by the inverse of \c this.  Guarantees full precision.
   /// Returns the floor of the result.

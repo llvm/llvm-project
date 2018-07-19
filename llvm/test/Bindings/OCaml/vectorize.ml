@@ -42,6 +42,7 @@ let test_transforms () =
   ignore (build_ret_void (builder_at_end context (entry_block fn)));
 
   ignore (PassManager.create ()
+           ++ add_bb_vectorize
            ++ add_loop_vectorize
            ++ add_slp_vectorize
            ++ PassManager.run_module m

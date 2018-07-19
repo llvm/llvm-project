@@ -35,8 +35,6 @@ struct SparcRegisterInfo : public SparcGenRegisterInfo {
   const TargetRegisterClass *getPointerRegClass(const MachineFunction &MF,
                                                 unsigned Kind) const override;
 
-  bool enableMultipleCopyHints() const override { return true; }
-
   void eliminateFrameIndex(MachineBasicBlock::iterator II,
                            int SPAdj, unsigned FIOperandNum,
                            RegScavenger *RS = nullptr) const override;

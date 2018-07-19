@@ -232,8 +232,6 @@ SectionMemoryManager::~SectionMemoryManager() {
 
 SectionMemoryManager::MemoryMapper::~MemoryMapper() {}
 
-void SectionMemoryManager::anchor() {}
-
 namespace {
 // Trivial implementation of SectionMemoryManager::MemoryMapper that just calls
 // into sys::Memory.

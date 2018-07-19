@@ -100,8 +100,7 @@ bb3:
 ; GCN-LABEL: {{^}}uniform_conditional_min_long_forward_vcnd_branch:
 ; GCN: s_load_dword [[CND:s[0-9]+]]
 ; GCN-DAG: v_mov_b32_e32 [[V_CND:v[0-9]+]], [[CND]]
-; GCN-DAG: v_cmp_eq_f32_e64 [[UNMASKED:s\[[0-9]+:[0-9]+\]]], [[CND]], 0
-; GCN-DAG: s_and_b64 vcc, exec, [[UNMASKED]]
+; GCN-DAG: v_cmp_eq_f32_e64 vcc, [[CND]], 0
 ; GCN: s_cbranch_vccz [[LONGBB:BB[0-9]+_[0-9]+]]
 
 ; GCN-NEXT: [[LONG_JUMP:BB[0-9]+_[0-9]+]]: ; %bb0
@@ -358,7 +357,7 @@ bb0:
   br i1 %cmp0, label %bb2, label %bb1
 
 bb1:
-  %val = load volatile i32, i32 addrspace(4)* undef
+  %val = load volatile i32, i32 addrspace(2)* undef
   %cmp1 = icmp eq i32 %val, 3
   br i1 %cmp1, label %bb3, label %bb2
 
@@ -431,17 +430,11 @@ endif:
 ; si_mask_branch
 
 ; GCN-LABEL: {{^}}analyze_mask_branch:
-; GCN: v_cmp_nlt_f32_e32 vcc
-; GCN-NEXT: s_and_saveexec_b64 [[TEMP_MASK:s\[[0-9]+:[0-9]+\]]], vcc
-; GCN-NEXT: s_xor_b64  [[MASK:s\[[0-9]+:[0-9]+\]]], exec, [[TEMP_MASK]]
-; GCN-NEXT: ; mask branch [[FLOW:BB[0-9]+_[0-9]+]]
-
-; GCN: [[FLOW]]: ; %Flow
-; GCN-NEXT: s_or_saveexec_b64 [[TEMP_MASK1:s\[[0-9]+:[0-9]+\]]], [[MASK]]
-; GCN-NEXT: s_xor_b64 exec, exec, [[TEMP_MASK1]]
+; GCN: v_cmp_lt_f32_e32 vcc
+; GCN-NEXT: s_and_saveexec_b64 [[MASK:s\[[0-9]+:[0-9]+\]]], vcc
 ; GCN-NEXT: ; mask branch [[RET:BB[0-9]+_[0-9]+]]
 
-; GCN: [[LOOP_BODY:BB[0-9]+_[0-9]+]]: ; %loop
+; GCN-NEXT: [[LOOP_BODY:BB[0-9]+_[0-9]+]]: ; %loop_body
 ; GCN: ;;#ASMSTART
 ; GCN: v_nop_e64
 ; GCN: v_nop_e64
@@ -450,16 +443,17 @@ endif:
 ; GCN: v_nop_e64
 ; GCN: v_nop_e64
 ; GCN: ;;#ASMEND
-; GCN: s_cbranch_vccz [[RET]]
 
-; GCN-NEXT: [[LONGBB:BB[0-9]+_[0-9]+]]: ; %loop
+; GCN-NEXT: [[LONGBB:BB[0-9]+_[0-9]+]]: ; %loop_body
 ; GCN-NEXT: ; in Loop: Header=[[LOOP_BODY]] Depth=1
 ; GCN-NEXT: s_getpc_b64 vcc
 ; GCN-NEXT: s_sub_u32 vcc_lo, vcc_lo, ([[LONGBB]]+4)-[[LOOP_BODY]]
 ; GCN-NEXT: s_subb_u32 vcc_hi, vcc_hi, 0
 ; GCN-NEXT: s_setpc_b64 vcc
 
-; GCN-NEXT: [[RET]]: ; %UnifiedReturnBlock
+; GCN-NEXT: [[RET]]: ; %ret
+; GCN-NEXT: s_or_b64 exec, exec, [[MASK]]
+; GCN: buffer_store_dword
 ; GCN-NEXT: s_endpgm
 define amdgpu_kernel void @analyze_mask_branch() #0 {
 entry:
@@ -490,7 +484,7 @@ ret:
 
 ; GCN-LABEL: {{^}}long_branch_hang:
 ; GCN: s_cmp_lt_i32 s{{[0-9]+}}, 6
-; GCN: s_cbranch_scc1 {{BB[0-9]+_[0-9]+}}
+; GCN-NEXT: s_cbranch_scc1 {{BB[0-9]+_[0-9]+}}
 ; GCN-NEXT: s_branch [[LONG_BR_0:BB[0-9]+_[0-9]+]]
 ; GCN-NEXT: BB{{[0-9]+_[0-9]+}}:
 
@@ -506,7 +500,8 @@ ret:
 ; GCN: s_setpc_b64
 
 ; GCN: [[LONG_BR_DEST0]]
-; GCN: s_cbranch_vccz
+; GCN: v_cmp_ne_u32_e32
+; GCN-NEXT: s_cbranch_vccz
 ; GCN: s_setpc_b64
 
 ; GCN: s_endpgm
@@ -525,11 +520,6 @@ bb9:                                              ; preds = %bb
   br i1 %tmp12, label %bb19, label %bb14
 
 bb13:                                             ; preds = %bb
-  call void asm sideeffect
-  "v_nop_e64
-   v_nop_e64
-   v_nop_e64
-   v_nop_e64", ""() #0
   br i1 %tmp6, label %bb19, label %bb14
 
 bb14:                                             ; preds = %bb13, %bb9

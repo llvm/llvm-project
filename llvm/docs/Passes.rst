@@ -83,8 +83,6 @@ Yet to be written.
 A pass which can be used to count how many alias queries are being made and how
 the alias analysis implementation being used responds.
 
-.. _passes-da:
-
 ``-da``: Dependence Analysis
 ----------------------------
 
@@ -643,21 +641,6 @@ not library calls are simplified is controlled by the
 :ref:`-functionattrs <passes-functionattrs>` pass and LLVM's knowledge of
 library calls on different targets.
 
-.. _passes-aggressive-instcombine:
-
-``-aggressive-instcombine``: Combine expression patterns
---------------------------------------------------------
-
-Combine expression patterns to form expressions with fewer, simple instructions.
-This pass does not modify the CFG.
-
-For example, this pass reduce width of expressions post-dominated by TruncInst
-into smaller width when applicable.
-
-It differs from instcombine pass in that it contains pattern optimization that
-requires higher complexity than the O(1), thus, it should run fewer times than
-instcombine pass.
-
 ``-internalize``: Internalize Global Symbols
 --------------------------------------------
 
@@ -826,27 +809,6 @@ dominator information.
 This pass implements a simple loop unroller.  It works best when loops have
 been canonicalized by the :ref:`indvars <passes-indvars>` pass, allowing it to
 determine the trip counts of loops easily.
-
-``-loop-unroll-and-jam``: Unroll and Jam loops
-----------------------------------------------
-
-This pass implements a simple unroll and jam classical loop optimisation pass.
-It transforms loop from:
-
-.. code-block:: c++
-
-  for i.. i+= 1              for i.. i+= 4
-    for j..                    for j..
-      code(i, j)                 code(i, j)
-                                 code(i+1, j)
-                                 code(i+2, j)
-                                 code(i+3, j)
-                             remainder loop
-
-Which can be seen as unrolling the outer loop and "jamming" (fusing) the inner
-loops into one. When variables or loads can be shared in the new inner loop, this
-can lead to significant performance improvements. It uses
-:ref:`Dependence Analysis <passes-da>` for proving the transformations are safe.
 
 ``-loop-unswitch``: Unswitch loops
 ----------------------------------

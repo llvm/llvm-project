@@ -1631,7 +1631,7 @@ RPCAsyncDispatch<RPCEndpointT, Func> rpcAsyncDispatch(RPCEndpointT &Endpoint) {
   return RPCAsyncDispatch<RPCEndpointT, Func>(Endpoint);
 }
 
-/// Allows a set of asynchrounous calls to be dispatched, and then
+/// \brief Allows a set of asynchrounous calls to be dispatched, and then
 ///        waited on as a group.
 class ParallelCallGroup {
 public:
@@ -1640,7 +1640,7 @@ public:
   ParallelCallGroup(const ParallelCallGroup &) = delete;
   ParallelCallGroup &operator=(const ParallelCallGroup &) = delete;
 
-  /// Make as asynchronous call.
+  /// \brief Make as asynchronous call.
   template <typename AsyncDispatcher, typename HandlerT, typename... ArgTs>
   Error call(const AsyncDispatcher &AsyncDispatch, HandlerT Handler,
              const ArgTs &... Args) {
@@ -1669,7 +1669,7 @@ public:
     return AsyncDispatch(std::move(WrappedHandler), Args...);
   }
 
-  /// Blocks until all calls have been completed and their return value
+  /// \brief Blocks until all calls have been completed and their return value
   ///        handlers run.
   void wait() {
     std::unique_lock<std::mutex> Lock(M);
@@ -1683,21 +1683,21 @@ private:
   uint32_t NumOutstandingCalls = 0;
 };
 
-/// Convenience class for grouping RPC Functions into APIs that can be
+/// @brief Convenience class for grouping RPC Functions into APIs that can be
 ///        negotiated as a block.
 ///
 template <typename... Funcs>
 class APICalls {
 public:
 
-  /// Test whether this API contains Function F.
+  /// @brief Test whether this API contains Function F.
   template <typename F>
   class Contains {
   public:
     static const bool value = false;
   };
 
-  /// Negotiate all functions in this API.
+  /// @brief Negotiate all functions in this API.
   template <typename RPCEndpoint>
   static Error negotiate(RPCEndpoint &R) {
     return Error::success();

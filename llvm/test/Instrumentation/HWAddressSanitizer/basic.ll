@@ -1,9 +1,7 @@
 ; Test basic address sanitizer instrumentation.
 ;
-; RUN: opt < %s -hwasan -hwasan-recover=0 -S | FileCheck %s --check-prefixes=CHECK,ABORT,DYNAMIC-SHADOW
-; RUN: opt < %s -hwasan -hwasan-recover=1 -S | FileCheck %s --check-prefixes=CHECK,RECOVER,DYNAMIC-SHADOW
-; RUN: opt < %s -hwasan -hwasan-recover=0 -hwasan-mapping-offset=0 -S | FileCheck %s --check-prefixes=CHECK,ABORT,ZERO-BASED-SHADOW
-; RUN: opt < %s -hwasan -hwasan-recover=1 -hwasan-mapping-offset=0 -S | FileCheck %s --check-prefixes=CHECK,RECOVER,ZERO-BASED-SHADOW
+; RUN: opt < %s -hwasan -hwasan-recover=0 -S | FileCheck %s  --check-prefixes=CHECK,ABORT
+; RUN: opt < %s -hwasan -hwasan-recover=1 -S | FileCheck %s  --check-prefixes=CHECK,RECOVER
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-android"
@@ -15,16 +13,14 @@ define i8 @test_load8(i8* %a) sanitize_hwaddress {
 ; CHECK: %[[PTRTAG:[^ ]*]] = trunc i64 %[[B]] to i8
 ; CHECK: %[[C:[^ ]*]] = and i64 %[[A]], 72057594037927935
 ; CHECK: %[[D:[^ ]*]] = lshr i64 %[[C]], 4
-; DYNAMIC-SHADOW: %[[D_DYN:[^ ]*]] = add i64 %[[D]], %.hwasan.shadow
-; DYNAMIC-SHADOW: %[[E:[^ ]*]] = inttoptr i64 %[[D_DYN]] to i8*
-; ZERO-BASED-SHADOW: %[[E:[^ ]*]] = inttoptr i64 %[[D]] to i8*
+; CHECK: %[[E:[^ ]*]] = inttoptr i64 %[[D]] to i8*
 ; CHECK: %[[MEMTAG:[^ ]*]] = load i8, i8* %[[E]]
 ; CHECK: %[[F:[^ ]*]] = icmp ne i8 %[[PTRTAG]], %[[MEMTAG]]
 ; CHECK: br i1 %[[F]], label {{.*}}, label {{.*}}, !prof {{.*}}
 
-; ABORT: call void asm sideeffect "brk #2304", "{x0}"(i64 %[[A]])
+; ABORT: call void asm sideeffect "hlt #256", "{x0}"(i64 %[[A]])
 ; ABORT: unreachable
-; RECOVER: call void asm sideeffect "brk #2336", "{x0}"(i64 %[[A]])
+; RECOVER: call void asm sideeffect "hlt #288", "{x0}"(i64 %[[A]])
 ; RECOVER: br label
 
 ; CHECK: %[[G:[^ ]*]] = load i8, i8* %a, align 4
@@ -42,16 +38,14 @@ define i16 @test_load16(i16* %a) sanitize_hwaddress {
 ; CHECK: %[[PTRTAG:[^ ]*]] = trunc i64 %[[B]] to i8
 ; CHECK: %[[C:[^ ]*]] = and i64 %[[A]], 72057594037927935
 ; CHECK: %[[D:[^ ]*]] = lshr i64 %[[C]], 4
-; DYNAMIC-SHADOW: %[[D_DYN:[^ ]*]] = add i64 %[[D]], %.hwasan.shadow
-; DYNAMIC-SHADOW: %[[E:[^ ]*]] = inttoptr i64 %[[D_DYN]] to i8*
-; ZERO-BASED-SHADOW: %[[E:[^ ]*]] = inttoptr i64 %[[D]] to i8*
+; CHECK: %[[E:[^ ]*]] = inttoptr i64 %[[D]] to i8*
 ; CHECK: %[[MEMTAG:[^ ]*]] = load i8, i8* %[[E]]
 ; CHECK: %[[F:[^ ]*]] = icmp ne i8 %[[PTRTAG]], %[[MEMTAG]]
 ; CHECK: br i1 %[[F]], label {{.*}}, label {{.*}}, !prof {{.*}}
 
-; ABORT: call void asm sideeffect "brk #2305", "{x0}"(i64 %[[A]])
+; ABORT: call void asm sideeffect "hlt #257", "{x0}"(i64 %[[A]])
 ; ABORT: unreachable
-; RECOVER: call void asm sideeffect "brk #2337", "{x0}"(i64 %[[A]])
+; RECOVER: call void asm sideeffect "hlt #289", "{x0}"(i64 %[[A]])
 ; RECOVER: br label
 
 ; CHECK: %[[G:[^ ]*]] = load i16, i16* %a, align 4
@@ -69,16 +63,14 @@ define i32 @test_load32(i32* %a) sanitize_hwaddress {
 ; CHECK: %[[PTRTAG:[^ ]*]] = trunc i64 %[[B]] to i8
 ; CHECK: %[[C:[^ ]*]] = and i64 %[[A]], 72057594037927935
 ; CHECK: %[[D:[^ ]*]] = lshr i64 %[[C]], 4
-; DYNAMIC-SHADOW: %[[D_DYN:[^ ]*]] = add i64 %[[D]], %.hwasan.shadow
-; DYNAMIC-SHADOW: %[[E:[^ ]*]] = inttoptr i64 %[[D_DYN]] to i8*
-; ZERO-BASED-SHADOW: %[[E:[^ ]*]] = inttoptr i64 %[[D]] to i8*
+; CHECK: %[[E:[^ ]*]] = inttoptr i64 %[[D]] to i8*
 ; CHECK: %[[MEMTAG:[^ ]*]] = load i8, i8* %[[E]]
 ; CHECK: %[[F:[^ ]*]] = icmp ne i8 %[[PTRTAG]], %[[MEMTAG]]
 ; CHECK: br i1 %[[F]], label {{.*}}, label {{.*}}, !prof {{.*}}
 
-; ABORT: call void asm sideeffect "brk #2306", "{x0}"(i64 %[[A]])
+; ABORT: call void asm sideeffect "hlt #258", "{x0}"(i64 %[[A]])
 ; ABORT: unreachable
-; RECOVER: call void asm sideeffect "brk #2338", "{x0}"(i64 %[[A]])
+; RECOVER: call void asm sideeffect "hlt #290", "{x0}"(i64 %[[A]])
 ; RECOVER: br label
 
 ; CHECK: %[[G:[^ ]*]] = load i32, i32* %a, align 4
@@ -96,16 +88,14 @@ define i64 @test_load64(i64* %a) sanitize_hwaddress {
 ; CHECK: %[[PTRTAG:[^ ]*]] = trunc i64 %[[B]] to i8
 ; CHECK: %[[C:[^ ]*]] = and i64 %[[A]], 72057594037927935
 ; CHECK: %[[D:[^ ]*]] = lshr i64 %[[C]], 4
-; DYNAMIC-SHADOW: %[[D_DYN:[^ ]*]] = add i64 %[[D]], %.hwasan.shadow
-; DYNAMIC-SHADOW: %[[E:[^ ]*]] = inttoptr i64 %[[D_DYN]] to i8*
-; ZERO-BASED-SHADOW: %[[E:[^ ]*]] = inttoptr i64 %[[D]] to i8*
+; CHECK: %[[E:[^ ]*]] = inttoptr i64 %[[D]] to i8*
 ; CHECK: %[[MEMTAG:[^ ]*]] = load i8, i8* %[[E]]
 ; CHECK: %[[F:[^ ]*]] = icmp ne i8 %[[PTRTAG]], %[[MEMTAG]]
 ; CHECK: br i1 %[[F]], label {{.*}}, label {{.*}}, !prof {{.*}}
 
-; ABORT: call void asm sideeffect "brk #2307", "{x0}"(i64 %[[A]])
+; ABORT: call void asm sideeffect "hlt #259", "{x0}"(i64 %[[A]])
 ; ABORT: unreachable
-; RECOVER: call void asm sideeffect "brk #2339", "{x0}"(i64 %[[A]])
+; RECOVER: call void asm sideeffect "hlt #291", "{x0}"(i64 %[[A]])
 ; RECOVER: br label
 
 ; CHECK: %[[G:[^ ]*]] = load i64, i64* %a, align 8
@@ -123,16 +113,14 @@ define i128 @test_load128(i128* %a) sanitize_hwaddress {
 ; CHECK: %[[PTRTAG:[^ ]*]] = trunc i64 %[[B]] to i8
 ; CHECK: %[[C:[^ ]*]] = and i64 %[[A]], 72057594037927935
 ; CHECK: %[[D:[^ ]*]] = lshr i64 %[[C]], 4
-; DYNAMIC-SHADOW: %[[D_DYN:[^ ]*]] = add i64 %[[D]], %.hwasan.shadow
-; DYNAMIC-SHADOW: %[[E:[^ ]*]] = inttoptr i64 %[[D_DYN]] to i8*
-; ZERO-BASED-SHADOW: %[[E:[^ ]*]] = inttoptr i64 %[[D]] to i8*
+; CHECK: %[[E:[^ ]*]] = inttoptr i64 %[[D]] to i8*
 ; CHECK: %[[MEMTAG:[^ ]*]] = load i8, i8* %[[E]]
 ; CHECK: %[[F:[^ ]*]] = icmp ne i8 %[[PTRTAG]], %[[MEMTAG]]
 ; CHECK: br i1 %[[F]], label {{.*}}, label {{.*}}, !prof {{.*}}
 
-; ABORT: call void asm sideeffect "brk #2308", "{x0}"(i64 %[[A]])
+; ABORT: call void asm sideeffect "hlt #260", "{x0}"(i64 %[[A]])
 ; ABORT: unreachable
-; RECOVER: call void asm sideeffect "brk #2340", "{x0}"(i64 %[[A]])
+; RECOVER: call void asm sideeffect "hlt #292", "{x0}"(i64 %[[A]])
 ; RECOVER: br label
 
 ; CHECK: %[[G:[^ ]*]] = load i128, i128* %a, align 16
@@ -146,8 +134,8 @@ entry:
 define i40 @test_load40(i40* %a) sanitize_hwaddress {
 ; CHECK-LABEL: @test_load40(
 ; CHECK: %[[A:[^ ]*]] = ptrtoint i40* %a to i64
-; ABORT: call void @__hwasan_loadN(i64 %[[A]], i64 5)
-; RECOVER: call void @__hwasan_loadN_noabort(i64 %[[A]], i64 5)
+; ABORT: call void @__hwasan_load(i64 %[[A]], i64 5)
+; RECOVER: call void @__hwasan_load_noabort(i64 %[[A]], i64 5)
 ; CHECK: %[[B:[^ ]*]] = load i40, i40* %a
 ; CHECK: ret i40 %[[B]]
 
@@ -163,16 +151,14 @@ define void @test_store8(i8* %a, i8 %b) sanitize_hwaddress {
 ; CHECK: %[[PTRTAG:[^ ]*]] = trunc i64 %[[B]] to i8
 ; CHECK: %[[C:[^ ]*]] = and i64 %[[A]], 72057594037927935
 ; CHECK: %[[D:[^ ]*]] = lshr i64 %[[C]], 4
-; DYNAMIC-SHADOW: %[[D_DYN:[^ ]*]] = add i64 %[[D]], %.hwasan.shadow
-; DYNAMIC-SHADOW: %[[E:[^ ]*]] = inttoptr i64 %[[D_DYN]] to i8*
-; ZERO-BASED-SHADOW: %[[E:[^ ]*]] = inttoptr i64 %[[D]] to i8*
+; CHECK: %[[E:[^ ]*]] = inttoptr i64 %[[D]] to i8*
 ; CHECK: %[[MEMTAG:[^ ]*]] = load i8, i8* %[[E]]
 ; CHECK: %[[F:[^ ]*]] = icmp ne i8 %[[PTRTAG]], %[[MEMTAG]]
 ; CHECK: br i1 %[[F]], label {{.*}}, label {{.*}}, !prof {{.*}}
 
-; ABORT: call void asm sideeffect "brk #2320", "{x0}"(i64 %[[A]])
+; ABORT: call void asm sideeffect "hlt #272", "{x0}"(i64 %[[A]])
 ; ABORT: unreachable
-; RECOVER: call void asm sideeffect "brk #2352", "{x0}"(i64 %[[A]])
+; RECOVER: call void asm sideeffect "hlt #304", "{x0}"(i64 %[[A]])
 ; RECOVER: br label
 
 ; CHECK: store i8 %b, i8* %a, align 4
@@ -190,16 +176,14 @@ define void @test_store16(i16* %a, i16 %b) sanitize_hwaddress {
 ; CHECK: %[[PTRTAG:[^ ]*]] = trunc i64 %[[B]] to i8
 ; CHECK: %[[C:[^ ]*]] = and i64 %[[A]], 72057594037927935
 ; CHECK: %[[D:[^ ]*]] = lshr i64 %[[C]], 4
-; DYNAMIC-SHADOW: %[[D_DYN:[^ ]*]] = add i64 %[[D]], %.hwasan.shadow
-; DYNAMIC-SHADOW: %[[E:[^ ]*]] = inttoptr i64 %[[D_DYN]] to i8*
-; ZERO-BASED-SHADOW: %[[E:[^ ]*]] = inttoptr i64 %[[D]] to i8*
+; CHECK: %[[E:[^ ]*]] = inttoptr i64 %[[D]] to i8*
 ; CHECK: %[[MEMTAG:[^ ]*]] = load i8, i8* %[[E]]
 ; CHECK: %[[F:[^ ]*]] = icmp ne i8 %[[PTRTAG]], %[[MEMTAG]]
 ; CHECK: br i1 %[[F]], label {{.*}}, label {{.*}}, !prof {{.*}}
 
-; ABORT: call void asm sideeffect "brk #2321", "{x0}"(i64 %[[A]])
+; ABORT: call void asm sideeffect "hlt #273", "{x0}"(i64 %[[A]])
 ; ABORT: unreachable
-; RECOVER: call void asm sideeffect "brk #2353", "{x0}"(i64 %[[A]])
+; RECOVER: call void asm sideeffect "hlt #305", "{x0}"(i64 %[[A]])
 ; RECOVER: br label
 
 ; CHECK: store i16 %b, i16* %a, align 4
@@ -217,16 +201,14 @@ define void @test_store32(i32* %a, i32 %b) sanitize_hwaddress {
 ; CHECK: %[[PTRTAG:[^ ]*]] = trunc i64 %[[B]] to i8
 ; CHECK: %[[C:[^ ]*]] = and i64 %[[A]], 72057594037927935
 ; CHECK: %[[D:[^ ]*]] = lshr i64 %[[C]], 4
-; DYNAMIC-SHADOW: %[[D_DYN:[^ ]*]] = add i64 %[[D]], %.hwasan.shadow
-; DYNAMIC-SHADOW: %[[E:[^ ]*]] = inttoptr i64 %[[D_DYN]] to i8*
-; ZERO-BASED-SHADOW: %[[E:[^ ]*]] = inttoptr i64 %[[D]] to i8*
+; CHECK: %[[E:[^ ]*]] = inttoptr i64 %[[D]] to i8*
 ; CHECK: %[[MEMTAG:[^ ]*]] = load i8, i8* %[[E]]
 ; CHECK: %[[F:[^ ]*]] = icmp ne i8 %[[PTRTAG]], %[[MEMTAG]]
 ; CHECK: br i1 %[[F]], label {{.*}}, label {{.*}}, !prof {{.*}}
 
-; ABORT: call void asm sideeffect "brk #2322", "{x0}"(i64 %[[A]])
+; ABORT: call void asm sideeffect "hlt #274", "{x0}"(i64 %[[A]])
 ; ABORT: unreachable
-; RECOVER: call void asm sideeffect "brk #2354", "{x0}"(i64 %[[A]])
+; RECOVER: call void asm sideeffect "hlt #306", "{x0}"(i64 %[[A]])
 ; RECOVER: br label
 
 ; CHECK: store i32 %b, i32* %a, align 4
@@ -244,16 +226,14 @@ define void @test_store64(i64* %a, i64 %b) sanitize_hwaddress {
 ; CHECK: %[[PTRTAG:[^ ]*]] = trunc i64 %[[B]] to i8
 ; CHECK: %[[C:[^ ]*]] = and i64 %[[A]], 72057594037927935
 ; CHECK: %[[D:[^ ]*]] = lshr i64 %[[C]], 4
-; DYNAMIC-SHADOW: %[[D_DYN:[^ ]*]] = add i64 %[[D]], %.hwasan.shadow
-; DYNAMIC-SHADOW: %[[E:[^ ]*]] = inttoptr i64 %[[D_DYN]] to i8*
-; ZERO-BASED-SHADOW: %[[E:[^ ]*]] = inttoptr i64 %[[D]] to i8*
+; CHECK: %[[E:[^ ]*]] = inttoptr i64 %[[D]] to i8*
 ; CHECK: %[[MEMTAG:[^ ]*]] = load i8, i8* %[[E]]
 ; CHECK: %[[F:[^ ]*]] = icmp ne i8 %[[PTRTAG]], %[[MEMTAG]]
 ; CHECK: br i1 %[[F]], label {{.*}}, label {{.*}}, !prof {{.*}}
 
-; ABORT: call void asm sideeffect "brk #2323", "{x0}"(i64 %[[A]])
+; ABORT: call void asm sideeffect "hlt #275", "{x0}"(i64 %[[A]])
 ; ABORT: unreachable
-; RECOVER: call void asm sideeffect "brk #2355", "{x0}"(i64 %[[A]])
+; RECOVER: call void asm sideeffect "hlt #307", "{x0}"(i64 %[[A]])
 ; RECOVER: br label
 
 ; CHECK: store i64 %b, i64* %a, align 8
@@ -271,16 +251,14 @@ define void @test_store128(i128* %a, i128 %b) sanitize_hwaddress {
 ; CHECK: %[[PTRTAG:[^ ]*]] = trunc i64 %[[B]] to i8
 ; CHECK: %[[C:[^ ]*]] = and i64 %[[A]], 72057594037927935
 ; CHECK: %[[D:[^ ]*]] = lshr i64 %[[C]], 4
-; DYNAMIC-SHADOW: %[[D_DYN:[^ ]*]] = add i64 %[[D]], %.hwasan.shadow
-; DYNAMIC-SHADOW: %[[E:[^ ]*]] = inttoptr i64 %[[D_DYN]] to i8*
-; ZERO-BASED-SHADOW: %[[E:[^ ]*]] = inttoptr i64 %[[D]] to i8*
+; CHECK: %[[E:[^ ]*]] = inttoptr i64 %[[D]] to i8*
 ; CHECK: %[[MEMTAG:[^ ]*]] = load i8, i8* %[[E]]
 ; CHECK: %[[F:[^ ]*]] = icmp ne i8 %[[PTRTAG]], %[[MEMTAG]]
 ; CHECK: br i1 %[[F]], label {{.*}}, label {{.*}}, !prof {{.*}}
 
-; ABORT: call void asm sideeffect "brk #2324", "{x0}"(i64 %[[A]])
+; ABORT: call void asm sideeffect "hlt #276", "{x0}"(i64 %[[A]])
 ; ABORT: unreachable
-; RECOVER: call void asm sideeffect "brk #2356", "{x0}"(i64 %[[A]])
+; RECOVER: call void asm sideeffect "hlt #308", "{x0}"(i64 %[[A]])
 ; RECOVER: br label
 
 ; CHECK: store i128 %b, i128* %a, align 16
@@ -294,8 +272,8 @@ entry:
 define void @test_store40(i40* %a, i40 %b) sanitize_hwaddress {
 ; CHECK-LABEL: @test_store40(
 ; CHECK: %[[A:[^ ]*]] = ptrtoint i40* %a to i64
-; ABORT: call void @__hwasan_storeN(i64 %[[A]], i64 5)
-; RECOVER: call void @__hwasan_storeN_noabort(i64 %[[A]], i64 5)
+; ABORT: call void @__hwasan_store(i64 %[[A]], i64 5)
+; RECOVER: call void @__hwasan_store_noabort(i64 %[[A]], i64 5)
 ; CHECK: store i40 %b, i40* %a
 ; CHECK: ret void
 
@@ -307,8 +285,8 @@ entry:
 define void @test_store_unaligned(i64* %a, i64 %b) sanitize_hwaddress {
 ; CHECK-LABEL: @test_store_unaligned(
 ; CHECK: %[[A:[^ ]*]] = ptrtoint i64* %a to i64
-; ABORT: call void @__hwasan_storeN(i64 %[[A]], i64 8)
-; RECOVER: call void @__hwasan_storeN_noabort(i64 %[[A]], i64 8)
+; ABORT: call void @__hwasan_store(i64 %[[A]], i64 8)
+; RECOVER: call void @__hwasan_store_noabort(i64 %[[A]], i64 8)
 ; CHECK: store i64 %b, i64* %a, align 4
 ; CHECK: ret void
 
@@ -342,7 +320,6 @@ entry:
 define i8 @test_load_addrspace(i8 addrspace(256)* %a) sanitize_hwaddress {
 ; CHECK-LABEL: @test_load_addrspace(
 ; CHECK-NEXT: entry:
-; DYNAMIC-SHADOW: %.hwasan.shadow = call i64 asm "", "=r,0"([0 x i8]* @__hwasan_shadow)
 ; CHECK-NEXT: %[[B:[^ ]*]] = load i8, i8 addrspace(256)* %a
 ; CHECK-NEXT: ret i8 %[[B]]
 

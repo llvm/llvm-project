@@ -333,50 +333,6 @@ define i32 @test_no-use-jump-tables3(i32 %i) "no-jump-tables"="true" {
 ; CHECK-NEXT: ret i32
 }
 
-; Calle with "null-pointer-is-valid"="true" attribute should not be inlined
-; into a caller without this attribute. Exception: alwaysinline callee
-; can still be inlined.
-
-define i32 @null-pointer-is-valid_callee0(i32 %i) "null-pointer-is-valid"="true" {
-  ret i32 %i
-; CHECK: @null-pointer-is-valid_callee0(i32 %i)
-; CHECK-NEXT: ret i32
-}
-
-define i32 @null-pointer-is-valid_callee1(i32 %i) alwaysinline "null-pointer-is-valid"="true" {
-  ret i32 %i
-; CHECK: @null-pointer-is-valid_callee1(i32 %i)
-; CHECK-NEXT: ret i32
-}
-
-define i32 @null-pointer-is-valid_callee2(i32 %i)  {
-  ret i32 %i
-; CHECK: @null-pointer-is-valid_callee2(i32 %i)
-; CHECK-NEXT: ret i32
-}
-
-define i32 @test_null-pointer-is-valid0(i32 %i) {
-  %1 = call i32 @null-pointer-is-valid_callee0(i32 %i)
-  ret i32 %1
-; CHECK: @test_null-pointer-is-valid0(
-; CHECK: call i32 @null-pointer-is-valid_callee0
-; CHECK-NEXT: ret i32
-}
-
-define i32 @test_null-pointer-is-valid1(i32 %i) {
-  %1 = call i32 @null-pointer-is-valid_callee1(i32 %i)
-  ret i32 %1
-; CHECK: @test_null-pointer-is-valid1(
-; CHECK-NEXT: ret i32
-}
-
-define i32 @test_null-pointer-is-valid2(i32 %i) "null-pointer-is-valid"="true" {
-  %1 = call i32 @null-pointer-is-valid_callee2(i32 %i)
-  ret i32 %1
-; CHECK: @test_null-pointer-is-valid2(
-; CHECK-NEXT: ret i32
-}
-
 ; CHECK: attributes [[FPMAD_FALSE]] = { "less-precise-fpmad"="false" }
 ; CHECK: attributes [[FPMAD_TRUE]] = { "less-precise-fpmad"="true" }
 ; CHECK: attributes [[NOIMPLICITFLOAT]] = { noimplicitfloat }

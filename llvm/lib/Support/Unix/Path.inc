@@ -31,8 +31,23 @@
 #ifdef HAVE_SYS_MMAN_H
 #include <sys/mman.h>
 #endif
+#if HAVE_DIRENT_H
+# include <dirent.h>
+# define NAMLEN(dirent) strlen((dirent)->d_name)
+#else
+# define dirent direct
+# define NAMLEN(dirent) (dirent)->d_namlen
+# if HAVE_SYS_NDIR_H
+#  include <sys/ndir.h>
+# endif
+# if HAVE_SYS_DIR_H
+#  include <sys/dir.h>
+# endif
+# if HAVE_NDIR_H
+#  include <ndir.h>
+# endif
+#endif
 
-#include <dirent.h>
 #include <pwd.h>
 
 #ifdef __APPLE__
@@ -93,9 +108,6 @@ using namespace llvm;
 namespace llvm {
 namespace sys  {
 namespace fs {
-
-const file_t kInvalidFile = -1;
-
 #if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) ||     \
     defined(__minix) || defined(__FreeBSD_kernel__) || defined(__linux__) ||   \
     defined(__CYGWIN__) || defined(__DragonFly__) || defined(_AIX)
@@ -368,12 +380,6 @@ static bool is_local_impl(struct STATVFS &Vfs) {
 #elif defined(__CYGWIN__)
   // Cygwin doesn't expose this information; would need to use Win32 API.
   return false;
-#elif defined(__Fuchsia__)
-  // Fuchsia doesn't yet support remote filesystem mounts.
-  return true;
-#elif defined(__HAIKU__)
-  // Haiku doesn't expose this information.
-  return false;
 #elif defined(__sun)
   // statvfs::f_basetype contains a null-terminated FSType name of the mounted target
   StringRef fstype(Vfs.f_basetype);
@@ -524,7 +530,7 @@ static void expandTildeExpr(SmallVectorImpl<char> &Path) {
 }
 
 static std::error_code fillStatus(int StatRet, const struct stat &Status,
-                                  file_status &Result) {
+                             file_status &Result) {
   if (StatRet != 0) {
     std::error_code ec(errno, std::generic_category());
     if (ec == errc::no_such_file_or_directory)
@@ -637,8 +643,7 @@ std::error_code mapped_file_region::init(int FD, uint64_t Offset,
 
 mapped_file_region::mapped_file_region(int fd, mapmode mode, size_t length,
                                        uint64_t offset, std::error_code &ec)
-    : Size(length), Mapping(), Mode(mode) {
-  (void)Mode;
+    : Size(length), Mapping() {
   ec = init(fd, offset, mode);
   if (ec)
     Mapping = nullptr;
@@ -697,7 +702,7 @@ std::error_code detail::directory_iterator_increment(detail::DirIterState &it) {
   if (cur_dir == nullptr && errno != 0) {
     return std::error_code(errno, std::generic_category());
   } else if (cur_dir != nullptr) {
-    StringRef name(cur_dir->d_name);
+    StringRef name(cur_dir->d_name, NAMLEN(cur_dir));
     if ((name.size() == 1 && name[0] == '.') ||
         (name.size() == 2 && name[0] == '.' && name[1] == '.'))
       return directory_iterator_increment(it);
@@ -724,83 +729,21 @@ static bool hasProcSelfFD() {
 }
 #endif
 
-static int nativeOpenFlags(CreationDisposition Disp, OpenFlags Flags,
-                           FileAccess Access) {
-  int Result = 0;
-  if (Access == FA_Read)
-    Result |= O_RDONLY;
-  else if (Access == FA_Write)
-    Result |= O_WRONLY;
-  else if (Access == (FA_Read | FA_Write))
-    Result |= O_RDWR;
-
-  // This is for compatibility with old code that assumed F_Append implied
-  // would open an existing file.  See Windows/Path.inc for a longer comment.
-  if (Flags & F_Append)
-    Disp = CD_OpenAlways;
-
-  if (Disp == CD_CreateNew) {
-    Result |= O_CREAT; // Create if it doesn't exist.
-    Result |= O_EXCL;  // Fail if it does.
-  } else if (Disp == CD_CreateAlways) {
-    Result |= O_CREAT; // Create if it doesn't exist.
-    Result |= O_TRUNC; // Truncate if it does.
-  } else if (Disp == CD_OpenAlways) {
-    Result |= O_CREAT; // Create if it doesn't exist.
-  } else if (Disp == CD_OpenExisting) {
-    // Nothing special, just don't add O_CREAT and we get these semantics.
-  }
-
-  if (Flags & F_Append)
-    Result |= O_APPEND;
-
-#ifdef O_CLOEXEC
-  if (!(Flags & OF_ChildInherit))
-    Result |= O_CLOEXEC;
-#endif
-
-  return Result;
-}
-
-std::error_code openFile(const Twine &Name, int &ResultFD,
-                         CreationDisposition Disp, FileAccess Access,
-                         OpenFlags Flags, unsigned Mode) {
-  int OpenFlags = nativeOpenFlags(Disp, Flags, Access);
-
+std::error_code openFileForRead(const Twine &Name, int &ResultFD,
+                                SmallVectorImpl<char> *RealPath) {
   SmallString<128> Storage;
   StringRef P = Name.toNullTerminatedStringRef(Storage);
-  if ((ResultFD = sys::RetryAfterSignal(-1, ::open, P.begin(), OpenFlags, Mode)) <
-      0)
+  int OpenFlags = O_RDONLY;
+#ifdef O_CLOEXEC
+  OpenFlags |= O_CLOEXEC;
+#endif
+  if ((ResultFD = sys::RetryAfterSignal(-1, open, P.begin(), OpenFlags)) < 0)
     return std::error_code(errno, std::generic_category());
 #ifndef O_CLOEXEC
-  if (!(Flags & OF_ChildInherit)) {
-    int r = fcntl(ResultFD, F_SETFD, FD_CLOEXEC);
-    (void)r;
-    assert(r == 0 && "fcntl(F_SETFD, FD_CLOEXEC) failed");
-  }
+  int r = fcntl(ResultFD, F_SETFD, FD_CLOEXEC);
+  (void)r;
+  assert(r == 0 && "fcntl(F_SETFD, FD_CLOEXEC) failed");
 #endif
-  return std::error_code();
-}
-
-Expected<int> openNativeFile(const Twine &Name, CreationDisposition Disp,
-                             FileAccess Access, OpenFlags Flags,
-                             unsigned Mode) {
-
-  int FD;
-  std::error_code EC = openFile(Name, FD, Disp, Access, Flags, Mode);
-  if (EC)
-    return errorCodeToError(EC);
-  return FD;
-}
-
-std::error_code openFileForRead(const Twine &Name, int &ResultFD,
-                                OpenFlags Flags,
-                                SmallVectorImpl<char> *RealPath) {
-  std::error_code EC =
-      openFile(Name, ResultFD, CD_OpenExisting, FA_Read, Flags, 0666);
-  if (EC)
-    return EC;
-
   // Attempt to get the real name of the file, if the user asked
   if(!RealPath)
     return std::error_code();
@@ -820,9 +763,6 @@ std::error_code openFileForRead(const Twine &Name, int &ResultFD,
     if (CharCount > 0)
       RealPath->append(Buffer, Buffer + CharCount);
   } else {
-    SmallString<128> Storage;
-    StringRef P = Name.toNullTerminatedStringRef(Storage);
-
     // Use ::realpath to get the real path name
     if (::realpath(P.begin(), Buffer) != nullptr)
       RealPath->append(Buffer, Buffer + strlen(Buffer));
@@ -831,18 +771,41 @@ std::error_code openFileForRead(const Twine &Name, int &ResultFD,
   return std::error_code();
 }
 
-Expected<file_t> openNativeFileForRead(const Twine &Name, OpenFlags Flags,
-                                       SmallVectorImpl<char> *RealPath) {
-  file_t ResultFD;
-  std::error_code EC = openFileForRead(Name, ResultFD, Flags, RealPath);
-  if (EC)
-    return errorCodeToError(EC);
-  return ResultFD;
-}
+std::error_code openFileForWrite(const Twine &Name, int &ResultFD,
+                            sys::fs::OpenFlags Flags, unsigned Mode) {
+  // Verify that we don't have both "append" and "excl".
+  assert((!(Flags & sys::fs::F_Excl) || !(Flags & sys::fs::F_Append)) &&
+         "Cannot specify both 'excl' and 'append' file creation flags!");
 
-void closeFile(file_t &F) {
-  ::close(F);
-  F = kInvalidFile;
+  int OpenFlags = O_CREAT;
+
+#ifdef O_CLOEXEC
+  OpenFlags |= O_CLOEXEC;
+#endif
+
+  if (Flags & F_RW)
+    OpenFlags |= O_RDWR;
+  else
+    OpenFlags |= O_WRONLY;
+
+  if (Flags & F_Append)
+    OpenFlags |= O_APPEND;
+  else
+    OpenFlags |= O_TRUNC;
+
+  if (Flags & F_Excl)
+    OpenFlags |= O_EXCL;
+
+  SmallString<128> Storage;
+  StringRef P = Name.toNullTerminatedStringRef(Storage);
+  if ((ResultFD = sys::RetryAfterSignal(-1, open, P.begin(), OpenFlags, Mode)) < 0)
+    return std::error_code(errno, std::generic_category());
+#ifndef O_CLOEXEC
+  int r = fcntl(ResultFD, F_SETFD, FD_CLOEXEC);
+  (void)r;
+  assert(r == 0 && "fcntl(F_SETFD, FD_CLOEXEC) failed");
+#endif
+  return std::error_code();
 }
 
 template <typename T>

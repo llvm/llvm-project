@@ -17,16 +17,13 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
-#include "llvm/ExecutionEngine/Orc/Core.h"
-#include "llvm/ExecutionEngine/Orc/OrcError.h"
 #include "llvm/ExecutionEngine/RuntimeDyld.h"
-#include "llvm/Support/DynamicLibrary.h"
-#include "llvm/Target/TargetOptions.h"
+#include "llvm/ExecutionEngine/Orc/OrcError.h"
 #include <algorithm>
 #include <cstdint>
 #include <string>
-#include <utility>
 #include <vector>
+#include <utility>
 
 namespace llvm {
 
@@ -34,58 +31,18 @@ class ConstantArray;
 class GlobalVariable;
 class Function;
 class Module;
-class TargetMachine;
 class Value;
 
 namespace orc {
 
-/// A utility class for building TargetMachines for JITs.
-class JITTargetMachineBuilder {
-public:
-  JITTargetMachineBuilder(Triple TT);
-  static Expected<JITTargetMachineBuilder> detectHost();
-  Expected<std::unique_ptr<TargetMachine>> createTargetMachine();
-
-  JITTargetMachineBuilder &setArch(std::string Arch) {
-    this->Arch = std::move(Arch);
-    return *this;
-  }
-  JITTargetMachineBuilder &setCPU(std::string CPU) {
-    this->CPU = std::move(CPU);
-    return *this;
-  }
-  JITTargetMachineBuilder &setRelocationModel(Optional<Reloc::Model> RM) {
-    this->RM = std::move(RM);
-    return *this;
-  }
-  JITTargetMachineBuilder &setCodeModel(Optional<CodeModel::Model> CM) {
-    this->CM = std::move(CM);
-    return *this;
-  }
-  JITTargetMachineBuilder &
-  addFeatures(const std::vector<std::string> &FeatureVec);
-  SubtargetFeatures &getFeatures() { return Features; }
-  TargetOptions &getOptions() { return Options; }
-
-private:
-  Triple TT;
-  std::string Arch;
-  std::string CPU;
-  SubtargetFeatures Features;
-  TargetOptions Options;
-  Optional<Reloc::Model> RM;
-  Optional<CodeModel::Model> CM;
-  CodeGenOpt::Level OptLevel = CodeGenOpt::Default;
-};
-
-/// This iterator provides a convenient way to iterate over the elements
+/// @brief This iterator provides a convenient way to iterate over the elements
 ///        of an llvm.global_ctors/llvm.global_dtors instance.
 ///
 ///   The easiest way to get hold of instances of this class is to use the
 /// getConstructors/getDestructors functions.
 class CtorDtorIterator {
 public:
-  /// Accessor for an element of the global_ctors/global_dtors array.
+  /// @brief Accessor for an element of the global_ctors/global_dtors array.
   ///
   ///   This class provides a read-only view of the element with any casts on
   /// the function stripped away.
@@ -98,23 +55,23 @@ public:
     Value *Data;
   };
 
-  /// Construct an iterator instance. If End is true then this iterator
+  /// @brief Construct an iterator instance. If End is true then this iterator
   ///        acts as the end of the range, otherwise it is the beginning.
   CtorDtorIterator(const GlobalVariable *GV, bool End);
 
-  /// Test iterators for equality.
+  /// @brief Test iterators for equality.
   bool operator==(const CtorDtorIterator &Other) const;
 
-  /// Test iterators for inequality.
+  /// @brief Test iterators for inequality.
   bool operator!=(const CtorDtorIterator &Other) const;
 
-  /// Pre-increment iterator.
+  /// @brief Pre-increment iterator.
   CtorDtorIterator& operator++();
 
-  /// Post-increment iterator.
+  /// @brief Post-increment iterator.
   CtorDtorIterator operator++(int);
 
-  /// Dereference iterator. The resulting value provides a read-only view
+  /// @brief Dereference iterator. The resulting value provides a read-only view
   ///        of this element of the global_ctors/global_dtors list.
   Element operator*() const;
 
@@ -123,31 +80,32 @@ private:
   unsigned I;
 };
 
-/// Create an iterator range over the entries of the llvm.global_ctors
+/// @brief Create an iterator range over the entries of the llvm.global_ctors
 ///        array.
 iterator_range<CtorDtorIterator> getConstructors(const Module &M);
 
-/// Create an iterator range over the entries of the llvm.global_ctors
+/// @brief Create an iterator range over the entries of the llvm.global_ctors
 ///        array.
 iterator_range<CtorDtorIterator> getDestructors(const Module &M);
 
-/// Convenience class for recording constructor/destructor names for
+/// @brief Convenience class for recording constructor/destructor names for
 ///        later execution.
 template <typename JITLayerT>
 class CtorDtorRunner {
 public:
-  /// Construct a CtorDtorRunner for the given range using the given
+  /// @brief Construct a CtorDtorRunner for the given range using the given
   ///        name mangling function.
-  CtorDtorRunner(std::vector<std::string> CtorDtorNames, VModuleKey K)
-      : CtorDtorNames(std::move(CtorDtorNames)), K(K) {}
+  CtorDtorRunner(std::vector<std::string> CtorDtorNames,
+                 typename JITLayerT::ModuleHandleT H)
+      : CtorDtorNames(std::move(CtorDtorNames)), H(H) {}
 
-  /// Run the recorded constructors/destructors through the given JIT
+  /// @brief Run the recorded constructors/destructors through the given JIT
   ///        layer.
   Error runViaLayer(JITLayerT &JITLayer) const {
     using CtorDtorTy = void (*)();
 
-    for (const auto &CtorDtorName : CtorDtorNames) {
-      if (auto CtorDtorSym = JITLayer.findSymbolIn(K, CtorDtorName, false)) {
+    for (const auto &CtorDtorName : CtorDtorNames)
+      if (auto CtorDtorSym = JITLayer.findSymbolIn(H, CtorDtorName, false)) {
         if (auto AddrOrErr = CtorDtorSym.getAddress()) {
           CtorDtorTy CtorDtor =
             reinterpret_cast<CtorDtorTy>(static_cast<uintptr_t>(*AddrOrErr));
@@ -160,30 +118,15 @@ public:
         else
           return make_error<JITSymbolNotFound>(CtorDtorName);
       }
-    }
     return Error::success();
   }
 
 private:
   std::vector<std::string> CtorDtorNames;
-  orc::VModuleKey K;
+  typename JITLayerT::ModuleHandleT H;
 };
 
-class CtorDtorRunner2 {
-public:
-  CtorDtorRunner2(VSO &V) : V(V) {}
-  void add(iterator_range<CtorDtorIterator> CtorDtors);
-  Error run();
-
-private:
-  using CtorDtorList = std::vector<SymbolStringPtr>;
-  using CtorDtorPriorityMap = std::map<unsigned, CtorDtorList>;
-
-  VSO &V;
-  CtorDtorPriorityMap CtorDtorsByPriority;
-};
-
-/// Support class for static dtor execution. For hosted (in-process) JITs
+/// @brief Support class for static dtor execution. For hosted (in-process) JITs
 ///        only!
 ///
 ///   If a __cxa_atexit function isn't found C++ programs that use static
@@ -198,26 +141,7 @@ private:
 /// the client determines that destructors should be run (generally at JIT
 /// teardown or after a return from main), the runDestructors method should be
 /// called.
-class LocalCXXRuntimeOverridesBase {
-public:
-  /// Run any destructors recorded by the overriden __cxa_atexit function
-  /// (CXAAtExitOverride).
-  void runDestructors();
-
-protected:
-  template <typename PtrTy> JITTargetAddress toTargetAddress(PtrTy *P) {
-    return static_cast<JITTargetAddress>(reinterpret_cast<uintptr_t>(P));
-  }
-
-  using DestructorPtr = void (*)(void *);
-  using CXXDestructorDataPair = std::pair<DestructorPtr, void *>;
-  using CXXDestructorDataPairList = std::vector<CXXDestructorDataPair>;
-  CXXDestructorDataPairList DSOHandleOverride;
-  static int CXAAtExitOverride(DestructorPtr Destructor, void *Arg,
-                               void *DSOHandle);
-};
-
-class LocalCXXRuntimeOverrides : public LocalCXXRuntimeOverridesBase {
+class LocalCXXRuntimeOverrides {
 public:
   /// Create a runtime-overrides class.
   template <typename MangleFtorT>
@@ -234,38 +158,32 @@ public:
     return nullptr;
   }
 
+  /// Run any destructors recorded by the overriden __cxa_atexit function
+  /// (CXAAtExitOverride).
+  void runDestructors();
+
 private:
+  template <typename PtrTy>
+  JITTargetAddress toTargetAddress(PtrTy* P) {
+    return static_cast<JITTargetAddress>(reinterpret_cast<uintptr_t>(P));
+  }
+
   void addOverride(const std::string &Name, JITTargetAddress Addr) {
     CXXRuntimeOverrides.insert(std::make_pair(Name, Addr));
   }
 
   StringMap<JITTargetAddress> CXXRuntimeOverrides;
-};
 
-class LocalCXXRuntimeOverrides2 : public LocalCXXRuntimeOverridesBase {
-public:
-  Error enable(VSO &V, MangleAndInterner &Mangler);
-};
-
-/// A utility class to expose symbols found via dlsym to the JIT.
-///
-/// If an instance of this class is attached to a VSO as a fallback definition
-/// generator, then any symbol found in the given DynamicLibrary that passes
-/// the 'Allow' predicate will be added to the VSO.
-class DynamicLibraryFallbackGenerator {
-public:
-  using SymbolPredicate = std::function<bool(SymbolStringPtr)>;
-  DynamicLibraryFallbackGenerator(sys::DynamicLibrary Dylib,
-                                  const DataLayout &DL, SymbolPredicate Allow);
-  SymbolNameSet operator()(VSO &V, const SymbolNameSet &Names);
-
-private:
-  sys::DynamicLibrary Dylib;
-  SymbolPredicate Allow;
-  char GlobalPrefix;
+  using DestructorPtr = void (*)(void *);
+  using CXXDestructorDataPair = std::pair<DestructorPtr, void *>;
+  using CXXDestructorDataPairList = std::vector<CXXDestructorDataPair>;
+  CXXDestructorDataPairList DSOHandleOverride;
+  static int CXAAtExitOverride(DestructorPtr Destructor, void *Arg,
+                               void *DSOHandle);
 };
 
 } // end namespace orc
+
 } // end namespace llvm
 
 #endif // LLVM_EXECUTIONENGINE_ORC_EXECUTIONUTILS_H

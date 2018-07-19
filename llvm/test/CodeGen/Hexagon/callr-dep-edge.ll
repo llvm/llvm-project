@@ -5,9 +5,9 @@ target triple = "hexagon"
 
 @fp = common global i32 (...)* null, align 4
 
-; CHECK: [[REG:r[0-9]+]] = memw
+; CHECK: r0 = memw
 ; CHECK: {
-; CHECK: callr [[REG]]
+; CHECK: callr r0
 
 ; Function Attrs: nounwind
 define i32 @foo() #0 {

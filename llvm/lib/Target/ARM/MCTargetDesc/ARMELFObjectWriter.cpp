@@ -236,7 +236,9 @@ unsigned ARMELFObjectWriter::GetRelocTypeInner(const MCValue &Target,
   }
 }
 
-std::unique_ptr<MCObjectTargetWriter>
-llvm::createARMELFObjectWriter(uint8_t OSABI) {
-  return llvm::make_unique<ARMELFObjectWriter>(OSABI);
+std::unique_ptr<MCObjectWriter>
+llvm::createARMELFObjectWriter(raw_pwrite_stream &OS, uint8_t OSABI,
+                               bool IsLittleEndian) {
+  return createELFObjectWriter(llvm::make_unique<ARMELFObjectWriter>(OSABI), OS,
+                               IsLittleEndian);
 }

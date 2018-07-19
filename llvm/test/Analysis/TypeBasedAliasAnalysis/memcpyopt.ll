@@ -6,17 +6,17 @@ target datalayout = "e-p:64:64:64"
 ; it has a TBAA tag which declares that it is unrelated.
 
 ; CHECK: @foo
-; CHECK-NEXT: tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %p, i8* align 1 %q, i64 16, i1 false), !tbaa !0
+; CHECK-NEXT: tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %p, i8* %q, i64 16, i32 1, i1 false), !tbaa !0
 ; CHECK-NEXT: store i8 2, i8* %s, align 1, !tbaa [[TAGA:!.*]]
 ; CHECK-NEXT: ret void
 define void @foo(i8* nocapture %p, i8* nocapture %q, i8* nocapture %s) nounwind {
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %p, i8* %q, i64 16, i1 false), !tbaa !2
+  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %p, i8* %q, i64 16, i32 1, i1 false), !tbaa !2
   store i8 2, i8* %s, align 1, !tbaa !1
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %q, i8* %p, i64 16, i1 false), !tbaa !2
+  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %q, i8* %p, i64 16, i32 1, i1 false), !tbaa !2
   ret void
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i32, i1) nounwind
 
 ; CHECK: [[TAGA]] = !{[[TYPEA:!.*]], [[TYPEA]], i64 0}
 ; CHECK: [[TYPEA]] = !{!"A", !{{.*}}}

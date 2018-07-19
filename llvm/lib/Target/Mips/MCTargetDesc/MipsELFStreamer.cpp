@@ -16,7 +16,6 @@
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInst.h"
-#include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSymbolELF.h"
 #include "llvm/Support/Casting.h"
 
@@ -24,10 +23,9 @@ using namespace llvm;
 
 MipsELFStreamer::MipsELFStreamer(MCContext &Context,
                                  std::unique_ptr<MCAsmBackend> MAB,
-                                 std::unique_ptr<MCObjectWriter> OW,
+                                 raw_pwrite_stream &OS,
                                  std::unique_ptr<MCCodeEmitter> Emitter)
-    : MCELFStreamer(Context, std::move(MAB), std::move(OW),
-                    std::move(Emitter)) {
+    : MCELFStreamer(Context, std::move(MAB), OS, std::move(Emitter)) {
   RegInfoRecord = new MipsRegInfoRecord(this, Context);
   MipsOptionRecords.push_back(
       std::unique_ptr<MipsRegInfoRecord>(RegInfoRecord));
@@ -93,8 +91,7 @@ void MipsELFStreamer::EmitMipsOptionRecords() {
 
 MCELFStreamer *llvm::createMipsELFStreamer(
     MCContext &Context, std::unique_ptr<MCAsmBackend> MAB,
-    std::unique_ptr<MCObjectWriter> OW, std::unique_ptr<MCCodeEmitter> Emitter,
+    raw_pwrite_stream &OS, std::unique_ptr<MCCodeEmitter> Emitter,
     bool RelaxAll) {
-  return new MipsELFStreamer(Context, std::move(MAB), std::move(OW),
-                             std::move(Emitter));
+  return new MipsELFStreamer(Context, std::move(MAB), OS, std::move(Emitter));
 }

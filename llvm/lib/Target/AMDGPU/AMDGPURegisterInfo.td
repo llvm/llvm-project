@@ -19,4 +19,5 @@ foreach Index = 0-15 in {
 
 }
 
+include "R600RegisterInfo.td"
 include "SIRegisterInfo.td"

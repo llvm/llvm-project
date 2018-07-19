@@ -70,7 +70,7 @@ int main(int argc, char **argv) {
   }
 
   std::unique_ptr<Module> M = ExitOnErr(Ms[ModuleIndex].parseModule(Context));
-  WriteBitcodeToFile(*M, Out->os());
+  WriteBitcodeToFile(M.get(), Out->os());
 
   Out->keep();
   return 0;

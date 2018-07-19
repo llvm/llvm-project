@@ -11,7 +11,6 @@
 #define LLVM_LIB_CODEGEN_ASMPRINTER_DEBUGLOCENTRY_H
 
 #include "DebugLocStream.h"
-#include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/MC/MCSymbol.h"
@@ -21,7 +20,7 @@
 namespace llvm {
 class AsmPrinter;
 
-/// This struct describes location entries emitted in the .debug_loc
+/// \brief This struct describes location entries emitted in the .debug_loc
 /// section.
 class DebugLocEntry {
   /// Begin and end symbols for the address range that this location is valid.
@@ -29,7 +28,7 @@ class DebugLocEntry {
   const MCSymbol *End;
 
 public:
-  /// A single location or constant.
+  /// \brief A single location or constant.
   struct Value {
     Value(const DIExpression *Expr, int64_t i)
         : Expression(Expr), EntryKind(E_Integer) {
@@ -106,13 +105,13 @@ public:
     Values.push_back(std::move(Val));
   }
 
-  /// If this and Next are describing different pieces of the same
+  /// \brief If this and Next are describing different pieces of the same
   /// variable, merge them by appending Next's values to the current
   /// list of values.
   /// Return true if the merge was successful.
   bool MergeValues(const DebugLocEntry &Next);
 
-  /// Attempt to merge this DebugLocEntry with Next and return
+  /// \brief Attempt to merge this DebugLocEntry with Next and return
   /// true if the merge was successful. Entries can be merged if they
   /// share the same Loc/Constant and if Next immediately follows this
   /// Entry.
@@ -136,10 +135,10 @@ public:
         }) && "value must be a piece");
   }
 
-  // Sort the pieces by offset.
+  // \brief Sort the pieces by offset.
   // Remove any duplicate entries by dropping all but the first.
   void sortUniqueValues() {
-    llvm::sort(Values.begin(), Values.end());
+    std::sort(Values.begin(), Values.end());
     Values.erase(
         std::unique(
             Values.begin(), Values.end(), [](const Value &A, const Value &B) {
@@ -148,12 +147,12 @@ public:
         Values.end());
   }
 
-  /// Lower this entry into a DWARF expression.
+  /// \brief Lower this entry into a DWARF expression.
   void finalize(const AsmPrinter &AP, DebugLocStream::ListBuilder &List,
                 const DIBasicType *BT);
 };
 
-/// Compare two Values for equality.
+/// \brief Compare two Values for equality.
 inline bool operator==(const DebugLocEntry::Value &A,
                        const DebugLocEntry::Value &B) {
   if (A.EntryKind != B.EntryKind)

@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Defines facilities for reading and writing on-disk hash tables.
+/// \brief Defines facilities for reading and writing on-disk hash tables.
 ///
 //===----------------------------------------------------------------------===//
 #ifndef LLVM_SUPPORT_ONDISKHASHTABLE_H
@@ -25,7 +25,7 @@
 
 namespace llvm {
 
-/// Generates an on disk hash table.
+/// \brief Generates an on disk hash table.
 ///
 /// This needs an \c Info that handles storing values into the hash table's
 /// payload and computes the hash for a given key. This should provide the
@@ -57,7 +57,7 @@ namespace llvm {
 /// };
 /// \endcode
 template <typename Info> class OnDiskChainedHashTableGenerator {
-  /// A single item in the hash table.
+  /// \brief A single item in the hash table.
   class Item {
   public:
     typename Info::key_type Key;
@@ -75,7 +75,7 @@ template <typename Info> class OnDiskChainedHashTableGenerator {
   offset_type NumEntries;
   llvm::SpecificBumpPtrAllocator<Item> BA;
 
-  /// A linked list of values in a particular hash bucket.
+  /// \brief A linked list of values in a particular hash bucket.
   struct Bucket {
     offset_type Off;
     unsigned Length;
@@ -85,7 +85,7 @@ template <typename Info> class OnDiskChainedHashTableGenerator {
   Bucket *Buckets;
 
 private:
-  /// Insert an item into the appropriate hash bucket.
+  /// \brief Insert an item into the appropriate hash bucket.
   void insert(Bucket *Buckets, size_t Size, Item *E) {
     Bucket &B = Buckets[E->Hash & (Size - 1)];
     E->Next = B.Head;
@@ -93,10 +93,9 @@ private:
     B.Head = E;
   }
 
-  /// Resize the hash table, moving the old entries into the new buckets.
+  /// \brief Resize the hash table, moving the old entries into the new buckets.
   void resize(size_t NewSize) {
-    Bucket *NewBuckets = static_cast<Bucket *>(
-        safe_calloc(NewSize, sizeof(Bucket)));
+    Bucket *NewBuckets = (Bucket *)std::calloc(NewSize, sizeof(Bucket));
     // Populate NewBuckets with the old entries.
     for (size_t I = 0; I < NumBuckets; ++I)
       for (Item *E = Buckets[I].Head; E;) {
@@ -112,14 +111,14 @@ private:
   }
 
 public:
-  /// Insert an entry into the table.
+  /// \brief Insert an entry into the table.
   void insert(typename Info::key_type_ref Key,
               typename Info::data_type_ref Data) {
     Info InfoObj;
     insert(Key, Data, InfoObj);
   }
 
-  /// Insert an entry into the table.
+  /// \brief Insert an entry into the table.
   ///
   /// Uses the provided Info instead of a stack allocated one.
   void insert(typename Info::key_type_ref Key,
@@ -130,7 +129,7 @@ public:
     insert(Buckets, NumBuckets, new (BA.Allocate()) Item(Key, Data, InfoObj));
   }
 
-  /// Determine whether an entry has been inserted.
+  /// \brief Determine whether an entry has been inserted.
   bool contains(typename Info::key_type_ref Key, Info &InfoObj) {
     unsigned Hash = InfoObj.ComputeHash(Key);
     for (Item *I = Buckets[Hash & (NumBuckets - 1)].Head; I; I = I->Next)
@@ -139,18 +138,18 @@ public:
     return false;
   }
 
-  /// Emit the table to Out, which must not be at offset 0.
+  /// \brief Emit the table to Out, which must not be at offset 0.
   offset_type Emit(raw_ostream &Out) {
     Info InfoObj;
     return Emit(Out, InfoObj);
   }
 
-  /// Emit the table to Out, which must not be at offset 0.
+  /// \brief Emit the table to Out, which must not be at offset 0.
   ///
   /// Uses the provided Info instead of a stack allocated one.
   offset_type Emit(raw_ostream &Out, Info &InfoObj) {
     using namespace llvm::support;
-    endian::Writer LE(Out, little);
+    endian::Writer<little> LE(Out);
 
     // Now we're done adding entries, resize the bucket list if it's
     // significantly too large. (This only happens if the number of
@@ -227,13 +226,13 @@ public:
     NumBuckets = 64;
     // Note that we do not need to run the constructors of the individual
     // Bucket objects since 'calloc' returns bytes that are all 0.
-    Buckets = static_cast<Bucket *>(safe_calloc(NumBuckets, sizeof(Bucket)));
+    Buckets = (Bucket *)std::calloc(NumBuckets, sizeof(Bucket));
   }
 
   ~OnDiskChainedHashTableGenerator() { std::free(Buckets); }
 };
 
-/// Provides lookup on an on disk hash table.
+/// \brief Provides lookup on an on disk hash table.
 ///
 /// This needs an \c Info that handles reading values from the hash table's
 /// payload and computes the hash for a given key. This should provide the
@@ -339,14 +338,14 @@ public:
     bool operator!=(const iterator &X) const { return X.Data != Data; }
   };
 
-  /// Look up the stored data for a particular key.
+  /// \brief Look up the stored data for a particular key.
   iterator find(const external_key_type &EKey, Info *InfoPtr = nullptr) {
     const internal_key_type &IKey = InfoObj.GetInternalKey(EKey);
     hash_value_type KeyHash = InfoObj.ComputeHash(IKey);
     return find_hashed(IKey, KeyHash, InfoPtr);
   }
 
-  /// Look up the stored data for a particular key with a known hash.
+  /// \brief Look up the stored data for a particular key with a known hash.
   iterator find_hashed(const internal_key_type &IKey, hash_value_type KeyHash,
                        Info *InfoPtr = nullptr) {
     using namespace llvm::support;
@@ -404,7 +403,7 @@ public:
 
   Info &getInfoObj() { return InfoObj; }
 
-  /// Create the hash table.
+  /// \brief Create the hash table.
   ///
   /// \param Buckets is the beginning of the hash table itself, which follows
   /// the payload of entire structure. This is the value returned by
@@ -424,7 +423,7 @@ public:
   }
 };
 
-/// Provides lookup and iteration over an on disk hash table.
+/// \brief Provides lookup and iteration over an on disk hash table.
 ///
 /// \copydetails llvm::OnDiskChainedHashTable
 template <typename Info>
@@ -440,7 +439,7 @@ public:
   typedef typename base_type::offset_type       offset_type;
 
 private:
-  /// Iterates over all of the keys in the table.
+  /// \brief Iterates over all of the keys in the table.
   class iterator_base {
     const unsigned char *Ptr;
     offset_type NumItemsInBucketLeft;
@@ -497,7 +496,7 @@ public:
       : base_type(NumBuckets, NumEntries, Buckets, Base, InfoObj),
         Payload(Payload) {}
 
-  /// Iterates over all of the keys in the table.
+  /// \brief Iterates over all of the keys in the table.
   class key_iterator : public iterator_base {
     Info *InfoObj;
 
@@ -543,7 +542,7 @@ public:
     return make_range(key_begin(), key_end());
   }
 
-  /// Iterates over all the entries in the table, returning the data.
+  /// \brief Iterates over all the entries in the table, returning the data.
   class data_iterator : public iterator_base {
     Info *InfoObj;
 
@@ -586,7 +585,7 @@ public:
     return make_range(data_begin(), data_end());
   }
 
-  /// Create the hash table.
+  /// \brief Create the hash table.
   ///
   /// \param Buckets is the beginning of the hash table itself, which follows
   /// the payload of entire structure. This is the value returned by

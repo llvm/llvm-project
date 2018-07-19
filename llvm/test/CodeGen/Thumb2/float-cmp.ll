@@ -69,8 +69,7 @@ define i1 @cmp_f_ord(float %a, float %b) {
 ; HARD: movvc r0, #1
   %1 = fcmp ord float %a, %b
   ret i1 %1
-}
-define i1 @cmp_f_ueq(float %a, float %b) {
+}define i1 @cmp_f_ueq(float %a, float %b) {
 ; CHECK-LABEL: cmp_f_ueq:
 ; NONE: bl __aeabi_fcmpeq
 ; NONE: bl __aeabi_fcmpun
@@ -83,8 +82,8 @@ define i1 @cmp_f_ueq(float %a, float %b) {
 define i1 @cmp_f_ugt(float %a, float %b) {
 ; CHECK-LABEL: cmp_f_ugt:
 ; NONE: bl __aeabi_fcmple
-; NONE-NEXT: clz r0, r0
-; NONE-NEXT: lsrs r0, r0, #5
+; NONE: cmp r0, #0
+; NONE-NEXT: it eq
 ; HARD: vcmpe.f32
 ; HARD: movhi r0, #1
   %1 = fcmp ugt float %a, %b
@@ -93,8 +92,8 @@ define i1 @cmp_f_ugt(float %a, float %b) {
 define i1 @cmp_f_uge(float %a, float %b) {
 ; CHECK-LABEL: cmp_f_uge:
 ; NONE: bl __aeabi_fcmplt
-; NONE-NEXT: clz r0, r0
-; NONE-NEXT: lsrs r0, r0, #5
+; NONE: cmp r0, #0
+; NONE-NEXT: it eq
 ; HARD: vcmpe.f32
 ; HARD: movpl r0, #1
   %1 = fcmp uge float %a, %b
@@ -103,8 +102,8 @@ define i1 @cmp_f_uge(float %a, float %b) {
 define i1 @cmp_f_ult(float %a, float %b) {
 ; CHECK-LABEL: cmp_f_ult:
 ; NONE: bl __aeabi_fcmpge
-; NONE-NEXT: clz r0, r0
-; NONE-NEXT: lsrs r0, r0, #5
+; NONE: cmp r0, #0
+; NONE-NEXT: it eq
 ; HARD: vcmpe.f32
 ; HARD: movlt r0, #1
   %1 = fcmp ult float %a, %b
@@ -113,8 +112,8 @@ define i1 @cmp_f_ult(float %a, float %b) {
 define i1 @cmp_f_ule(float %a, float %b) {
 ; CHECK-LABEL: cmp_f_ule:
 ; NONE: bl __aeabi_fcmpgt
-; NONE-NEXT: clz r0, r0
-; NONE-NEXT: lsrs r0, r0, #5
+; NONE: cmp r0, #0
+; NONE-NEXT: it eq
 ; HARD: vcmpe.f32
 ; HARD: movle r0, #1
   %1 = fcmp ule float %a, %b

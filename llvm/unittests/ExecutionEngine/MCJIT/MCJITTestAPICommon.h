@@ -46,10 +46,10 @@ protected:
     // fail to initialize the AssumptionCacheTracker.
     initializeAssumptionCacheTrackerPass(*PassRegistry::getPassRegistry());
 
-#ifdef _WIN32
+#ifdef LLVM_ON_WIN32
     // On Windows, generate ELF objects by specifying "-elf" in triple
     HostTriple += "-elf";
-#endif // _WIN32
+#endif // LLVM_ON_WIN32
     HostTriple = Triple::normalize(HostTriple);
   }
 

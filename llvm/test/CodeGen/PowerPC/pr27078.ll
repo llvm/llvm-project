@@ -10,8 +10,8 @@ define <4 x float> @bar(float* %p, float* %q) {
   ret <4 x float>  %6
 
 ; CHECK: xxsldwi
-; CHECK-DAG: vmrghw
-; CHECK-DAG: vmrglw
+; CHECK-NEXT: vmrghw
+; CHECK-NEXT: vmrglw
 ; CHECK-NEXT: xxsldwi
 ; CHECK-NEXT: xxsldwi
 ; CHECK-NEXT: xxsldwi

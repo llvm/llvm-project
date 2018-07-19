@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This class implements WebAssembly-specific bits of
+/// \brief This class implements WebAssembly-specific bits of
 /// TargetFrameLowering class.
 ///
 //===----------------------------------------------------------------------===//

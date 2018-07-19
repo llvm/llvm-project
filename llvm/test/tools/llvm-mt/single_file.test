@@ -1,5 +1,5 @@
 REQUIRES: libxml2
-UNSUPPORTED: system-windows
+UNSUPPORTED: windows
 
 RUN: llvm-mt /manifest %p/Inputs/test_manifest.manifest /out:%t
 RUN: FileCheck %s --input-file=%t

@@ -36,7 +36,7 @@ class ProvenanceAnalysis;
 
 /// \enum Sequence
 ///
-/// A sequence of states that a pointer may go through in which an
+/// \brief A sequence of states that a pointer may go through in which an
 /// objc_retain and objc_release are actually needed.
 enum Sequence {
   S_None,
@@ -51,7 +51,7 @@ enum Sequence {
 raw_ostream &operator<<(raw_ostream &OS,
                         const Sequence S) LLVM_ATTRIBUTE_UNUSED;
 
-/// Unidirectional information about either a
+/// \brief Unidirectional information about either a
 /// retain-decrement-use-release sequence or release-use-decrement-retain
 /// reverse sequence.
 struct RRInfo {
@@ -97,7 +97,7 @@ struct RRInfo {
   bool Merge(const RRInfo &Other);
 };
 
-/// This class summarizes several per-pointer runtime properties which
+/// \brief This class summarizes several per-pointer runtime properties which
 /// are propagated through the flow graph.
 class PtrState {
 protected:

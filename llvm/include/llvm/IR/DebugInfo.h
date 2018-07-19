@@ -28,10 +28,10 @@ class DbgDeclareInst;
 class DbgValueInst;
 class Module;
 
-/// Find subprogram that is enclosing this scope.
+/// \brief Find subprogram that is enclosing this scope.
 DISubprogram *getDISubprogram(const MDNode *Scope);
 
-/// Strip debug info in the module if it exists.
+/// \brief Strip debug info in the module if it exists.
 ///
 /// To do this, we remove all calls to the debugger intrinsics and any named
 /// metadata for debugging. We also remove debug locations for instructions.
@@ -51,10 +51,10 @@ bool stripDebugInfo(Function &F);
 ///   All debug type metadata nodes are unreachable and garbage collected.
 bool stripNonLineTableDebugInfo(Module &M);
 
-/// Return Debug Info Metadata Version by checking module flags.
+/// \brief Return Debug Info Metadata Version by checking module flags.
 unsigned getDebugMetadataVersionFromModule(const Module &M);
 
-/// Utility to find all debug info in a module.
+/// \brief Utility to find all debug info in a module.
 ///
 /// DebugInfoFinder tries to list all debug info MDNodes used in a module. To
 /// list debug info MDNodes used by an instruction, DebugInfoFinder uses
@@ -64,33 +64,30 @@ unsigned getDebugMetadataVersionFromModule(const Module &M);
 /// used by the CUs.
 class DebugInfoFinder {
 public:
-  /// Process entire module and collect debug info anchors.
+  /// \brief Process entire module and collect debug info anchors.
   void processModule(const Module &M);
-  /// Process a single instruction and collect debug info anchors.
-  void processInstruction(const Module &M, const Instruction &I);
 
-  /// Process DbgDeclareInst.
+  /// \brief Process DbgDeclareInst.
   void processDeclare(const Module &M, const DbgDeclareInst *DDI);
-  /// Process DbgValueInst.
+  /// \brief Process DbgValueInst.
   void processValue(const Module &M, const DbgValueInst *DVI);
-  /// Process debug info location.
+  /// \brief Process debug info location.
   void processLocation(const Module &M, const DILocation *Loc);
 
-  /// Clear all lists.
+  /// \brief Clear all lists.
   void reset();
 
 private:
   void InitializeTypeMap(const Module &M);
 
-  void processCompileUnit(DICompileUnit *CU);
-  void processScope(DIScope *Scope);
-  void processSubprogram(DISubprogram *SP);
   void processType(DIType *DT);
+  void processSubprogram(DISubprogram *SP);
+  void processScope(DIScope *Scope);
   bool addCompileUnit(DICompileUnit *CU);
   bool addGlobalVariable(DIGlobalVariableExpression *DIG);
-  bool addScope(DIScope *Scope);
   bool addSubprogram(DISubprogram *SP);
   bool addType(DIType *DT);
+  bool addScope(DIScope *Scope);
 
 public:
   using compile_unit_iterator =

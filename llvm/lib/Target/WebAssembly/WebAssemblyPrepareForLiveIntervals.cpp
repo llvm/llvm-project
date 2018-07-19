@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Fix up code to meet LiveInterval's requirements.
+/// \brief Fix up code to meet LiveInterval's requirements.
 ///
 /// Some CodeGen passes don't preserve LiveInterval's requirements, because
 /// they run after register allocation and it isn't important. However,
@@ -55,9 +55,6 @@ private:
 } // end anonymous namespace
 
 char WebAssemblyPrepareForLiveIntervals::ID = 0;
-INITIALIZE_PASS(WebAssemblyPrepareForLiveIntervals, DEBUG_TYPE,
-                "Fix up code for LiveIntervals", false, false)
-
 FunctionPass *llvm::createWebAssemblyPrepareForLiveIntervals() {
   return new WebAssemblyPrepareForLiveIntervals();
 }
@@ -71,7 +68,7 @@ static bool HasArgumentDef(unsigned Reg, const MachineRegisterInfo &MRI) {
 }
 
 bool WebAssemblyPrepareForLiveIntervals::runOnMachineFunction(MachineFunction &MF) {
-  LLVM_DEBUG({
+  DEBUG({
     dbgs() << "********** Prepare For LiveIntervals **********\n"
            << "********** Function: " << MF.getName() << '\n';
   });

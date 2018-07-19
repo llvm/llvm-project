@@ -80,21 +80,7 @@ public:
     FrameDestroy = 1 << 1,              // Instruction is used as a part of
                                         // function frame destruction code.
     BundledPred  = 1 << 2,              // Instruction has bundled predecessors.
-    BundledSucc  = 1 << 3,              // Instruction has bundled successors.
-    FmNoNans     = 1 << 4,              // Instruction does not support Fast
-                                        // math nan values.
-    FmNoInfs     = 1 << 5,              // Instruction does not support Fast
-                                        // math infinity values.
-    FmNsz        = 1 << 6,              // Instruction is not required to retain
-                                        // signed zero values.
-    FmArcp       = 1 << 7,              // Instruction supports Fast math
-                                        // reciprocal approximations.
-    FmContract   = 1 << 8,              // Instruction supports Fast math
-                                        // contraction operations like fma.
-    FmAfn        = 1 << 9,              // Instruction may map to Fast math
-                                        // instrinsic approximation.
-    FmReassoc    = 1 << 10              // Instruction supports Fast math
-                                        // reassociation of operand order.
+    BundledSucc  = 1 << 3               // Instruction has bundled successors.
   };
 
 private:
@@ -107,7 +93,7 @@ private:
   using OperandCapacity = ArrayRecycler<MachineOperand>::Capacity;
   OperandCapacity CapOperands;          // Capacity of the Operands array.
 
-  uint16_t Flags = 0;                   // Various bits of additional
+  uint8_t Flags = 0;                    // Various bits of additional
                                         // information about machine
                                         // instruction.
 
@@ -141,7 +127,7 @@ private:
   /// This constructor create a MachineInstr and add the implicit operands.
   /// It reserves space for number of operands specified by
   /// MCInstrDesc.  An explicit DebugLoc is supplied.
-  MachineInstr(MachineFunction &, const MCInstrDesc &tid, DebugLoc dl,
+  MachineInstr(MachineFunction &, const MCInstrDesc &MCID, DebugLoc dl,
                bool NoImp = false);
 
   // MachineInstrs are pool-allocated and owned by MachineFunction.
@@ -189,7 +175,7 @@ public:
   }
 
   /// Return the MI flags bitvector.
-  uint16_t getFlags() const {
+  uint8_t getFlags() const {
     return Flags;
   }
 
@@ -200,7 +186,7 @@ public:
 
   /// Set a MI flag.
   void setFlag(MIFlag Flag) {
-    Flags |= (uint16_t)Flag;
+    Flags |= (uint8_t)Flag;
   }
 
   void setFlags(unsigned flags) {
@@ -211,7 +197,7 @@ public:
 
   /// clearFlag - Clear a MI flag.
   void clearFlag(MIFlag Flag) {
-    Flags &= ~((uint16_t)Flag);
+    Flags &= ~((uint8_t)Flag);
   }
 
   /// Return true if MI is in a bundle (but not the first MI in a bundle).
@@ -292,10 +278,6 @@ public:
   /// this DBG_VALUE instruction.
   const DIExpression *getDebugExpression() const;
 
-  /// Return the debug label referenced by
-  /// this DBG_LABEL instruction.
-  const DILabel *getDebugLabel() const;
-
   /// Emit an error referring to the source location of this instruction.
   /// This should only be used for inline assembly that is somehow
   /// impossible to compile. Other errors should have been handled much
@@ -322,11 +304,6 @@ public:
     return Operands[i];
   }
 
-  /// Returns the total number of definitions.
-  unsigned getNumDefs() const {
-    return getNumExplicitDefs() + MCID->getNumImplicitDefs();
-  }
-
   /// Return true if operand \p OpIdx is a subregister index.
   bool isOperandSubregIdx(unsigned OpIdx) const {
     assert(getOperand(OpIdx).getType() == MachineOperand::MO_Immediate &&
@@ -344,9 +321,6 @@ public:
 
   /// Returns the number of non-implicit operands.
   unsigned getNumExplicitOperands() const;
-
-  /// Returns the number of non-implicit definitions.
-  unsigned getNumExplicitDefs() const;
 
   /// iterator/begin/end - Iterate over all operands of a machine instruction.
   using mop_iterator = MachineOperand *;
@@ -382,29 +356,31 @@ public:
   /// Implicit definition are not included!
   iterator_range<mop_iterator> defs() {
     return make_range(operands_begin(),
-                      operands_begin() + getNumExplicitDefs());
+                      operands_begin() + getDesc().getNumDefs());
   }
   /// \copydoc defs()
   iterator_range<const_mop_iterator> defs() const {
     return make_range(operands_begin(),
-                      operands_begin() + getNumExplicitDefs());
+                      operands_begin() + getDesc().getNumDefs());
   }
   /// Returns a range that includes all operands that are register uses.
   /// This may include unrelated operands which are not register uses.
   iterator_range<mop_iterator> uses() {
-    return make_range(operands_begin() + getNumExplicitDefs(), operands_end());
+    return make_range(operands_begin() + getDesc().getNumDefs(),
+                      operands_end());
   }
   /// \copydoc uses()
   iterator_range<const_mop_iterator> uses() const {
-    return make_range(operands_begin() + getNumExplicitDefs(), operands_end());
+    return make_range(operands_begin() + getDesc().getNumDefs(),
+                      operands_end());
   }
   iterator_range<mop_iterator> explicit_uses() {
-    return make_range(operands_begin() + getNumExplicitDefs(),
-                      operands_begin() + getNumExplicitOperands());
+    return make_range(operands_begin() + getDesc().getNumDefs(),
+                      operands_begin() + getNumExplicitOperands() );
   }
   iterator_range<const_mop_iterator> explicit_uses() const {
-    return make_range(operands_begin() + getNumExplicitDefs(),
-                      operands_begin() + getNumExplicitOperands());
+    return make_range(operands_begin() + getDesc().getNumDefs(),
+                      operands_begin() + getNumExplicitOperands() );
   }
 
   /// Returns the number of the operand iterator \p I points to.
@@ -415,7 +391,7 @@ public:
   /// Access to memory operands of the instruction
   mmo_iterator memoperands_begin() const { return MemRefs; }
   mmo_iterator memoperands_end() const { return MemRefs + NumMemRefs; }
-  /// Return true if we don't have any memory operands which described the
+  /// Return true if we don't have any memory operands which described the the
   /// memory access done by this instruction.  If this is true, calling code
   /// must be conservative.
   bool memoperands_empty() const { return NumMemRefs == 0; }
@@ -553,12 +529,6 @@ public:
     return hasProperty(MCID::MoveImm, Type);
   }
 
-  /// Return true if this instruction is a register move.
-  /// (including moving values from subreg to reg)
-  bool isMoveReg(QueryType Type = IgnoreBundle) const {
-    return hasProperty(MCID::MoveReg, Type);
-  }
-
   /// Return true if this instruction is a bitcast instruction.
   bool isBitcast(QueryType Type = IgnoreBundle) const {
     return hasProperty(MCID::Bitcast, Type);
@@ -606,7 +576,7 @@ public:
     return hasProperty(MCID::FoldableAsLoad, Type);
   }
 
-  /// Return true if this instruction behaves
+  /// \brief Return true if this instruction behaves
   /// the same way as the generic REG_SEQUENCE instructions.
   /// E.g., on ARM,
   /// dX VMOVDRR rY, rZ
@@ -620,7 +590,7 @@ public:
     return hasProperty(MCID::RegSequence, Type);
   }
 
-  /// Return true if this instruction behaves
+  /// \brief Return true if this instruction behaves
   /// the same way as the generic EXTRACT_SUBREG instructions.
   /// E.g., on ARM,
   /// rX, rY VMOVRRD dZ
@@ -635,7 +605,7 @@ public:
     return hasProperty(MCID::ExtractSubreg, Type);
   }
 
-  /// Return true if this instruction behaves
+  /// \brief Return true if this instruction behaves
   /// the same way as the generic INSERT_SUBREG instructions.
   /// E.g., on ARM,
   /// dX = VSETLNi32 dY, rZ, Imm
@@ -847,8 +817,6 @@ public:
   bool isPosition() const { return isLabel() || isCFIInstruction(); }
 
   bool isDebugValue() const { return getOpcode() == TargetOpcode::DBG_VALUE; }
-  bool isDebugLabel() const { return getOpcode() == TargetOpcode::DBG_LABEL; }
-  bool isDebugInstr() const { return isDebugValue() || isDebugLabel(); }
 
   /// A DBG_VALUE is indirect iff the first operand is a register and
   /// the second operand is an immediate.
@@ -925,9 +893,6 @@ public:
     case TargetOpcode::EH_LABEL:
     case TargetOpcode::GC_LABEL:
     case TargetOpcode::DBG_VALUE:
-    case TargetOpcode::DBG_LABEL:
-    case TargetOpcode::LIFETIME_START:
-    case TargetOpcode::LIFETIME_END:
       return true;
     }
   }
@@ -1082,7 +1047,7 @@ public:
                         const TargetInstrInfo *TII,
                         const TargetRegisterInfo *TRI) const;
 
-  /// Applies the constraints (def/use) implied by this MI on \p Reg to
+  /// \brief Applies the constraints (def/use) implied by this MI on \p Reg to
   /// the given \p CurRC.
   /// If \p ExploreBundle is set and MI is part of a bundle, all the
   /// instructions inside the bundle will be taken into account. In other words,
@@ -1099,7 +1064,7 @@ public:
       const TargetInstrInfo *TII, const TargetRegisterInfo *TRI,
       bool ExploreBundle = false) const;
 
-  /// Applies the constraints (def/use) implied by the \p OpIdx operand
+  /// \brief Applies the constraints (def/use) implied by the \p OpIdx operand
   /// to the given \p CurRC.
   ///
   /// Returns the register class that satisfies both \p CurRC and the
@@ -1268,20 +1233,15 @@ public:
   bool hasComplexRegisterTies() const;
 
   /// Print this MI to \p OS.
-  /// Don't print information that can be inferred from other instructions if
-  /// \p IsStandalone is false. It is usually true when only a fragment of the
-  /// function is printed.
   /// Only print the defs and the opcode if \p SkipOpers is true.
   /// Otherwise, also print operands if \p SkipDebugLoc is true.
   /// Otherwise, also print the debug loc, with a terminating newline.
   /// \p TII is used to print the opcode name.  If it's not present, but the
   /// MI is in a function, the opcode will be printed using the function's TII.
-  void print(raw_ostream &OS, bool IsStandalone = true, bool SkipOpers = false,
-             bool SkipDebugLoc = false, bool AddNewLine = true,
+  void print(raw_ostream &OS, bool SkipOpers = false, bool SkipDebugLoc = false,
              const TargetInstrInfo *TII = nullptr) const;
-  void print(raw_ostream &OS, ModuleSlotTracker &MST, bool IsStandalone = true,
-             bool SkipOpers = false, bool SkipDebugLoc = false,
-             bool AddNewLine = true,
+  void print(raw_ostream &OS, ModuleSlotTracker &MST, bool SkipOpers = false,
+             bool SkipDebugLoc = false,
              const TargetInstrInfo *TII = nullptr) const;
   void dump() const;
   /// @}
@@ -1321,7 +1281,7 @@ public:
 
   /// Erase an operand from an instruction, leaving it with one
   /// fewer operand than it started with.
-  void RemoveOperand(unsigned OpNo);
+  void RemoveOperand(unsigned i);
 
   /// Add a MachineMemOperand to the machine instruction.
   /// This function should be used only occasionally. The setMemRefs function
@@ -1350,11 +1310,6 @@ public:
   /// for use when merging two MachineInstrs into one. This routine does not
   /// modify the memrefs of the this MachineInstr.
   std::pair<mmo_iterator, unsigned> mergeMemRefsWith(const MachineInstr& Other);
-
-  /// Return the MIFlags which represent both MachineInstrs. This
-  /// should be used when merging two MachineInstrs into one. This routine does
-  /// not modify the MIFlags of this MachineInstr.
-  uint16_t mergeFlagsWith(const MachineInstr& Other) const;
 
   /// Clear this MachineInstr's memory reference descriptor list.  This resets
   /// the memrefs to their most conservative state.  This should be used only
@@ -1396,7 +1351,7 @@ private:
   /// Slow path for hasProperty when we're dealing with a bundle.
   bool hasPropertyInBundle(unsigned Mask, QueryType Type) const;
 
-  /// Implements the logic of getRegClassConstraintEffectForVReg for the
+  /// \brief Implements the logic of getRegClassConstraintEffectForVReg for the
   /// this MI and the given operand index \p OpIdx.
   /// If the related operand does not constrained Reg, this returns CurRC.
   const TargetRegisterClass *getRegClassConstraintEffectForVRegImpl(

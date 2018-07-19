@@ -60,7 +60,7 @@ class TargetTransformInfo;
 /// clients.
 namespace consthoist {
 
-/// Keeps track of the user of a constant and the operand index where the
+/// \brief Keeps track of the user of a constant and the operand index where the
 /// constant is used.
 struct ConstantUser {
   Instruction *Inst;
@@ -71,7 +71,7 @@ struct ConstantUser {
 
 using ConstantUseListType = SmallVector<ConstantUser, 8>;
 
-/// Keeps track of a constant candidate and its uses.
+/// \brief Keeps track of a constant candidate and its uses.
 struct ConstantCandidate {
   ConstantUseListType Uses;
   ConstantInt *ConstInt;
@@ -79,14 +79,14 @@ struct ConstantCandidate {
 
   ConstantCandidate(ConstantInt *ConstInt) : ConstInt(ConstInt) {}
 
-  /// Add the user to the use list and update the cost.
+  /// \brief Add the user to the use list and update the cost.
   void addUser(Instruction *Inst, unsigned Idx, unsigned Cost) {
     CumulativeCost += Cost;
     Uses.push_back(ConstantUser(Inst, Idx));
   }
 };
 
-/// This represents a constant that has been rebased with respect to a
+/// \brief This represents a constant that has been rebased with respect to a
 /// base constant. The difference to the base constant is recorded in Offset.
 struct RebasedConstantInfo {
   ConstantUseListType Uses;
@@ -98,7 +98,7 @@ struct RebasedConstantInfo {
 
 using RebasedConstantListType = SmallVector<RebasedConstantInfo, 4>;
 
-/// A base constant and all its rebased constants.
+/// \brief A base constant and all its rebased constants.
 struct ConstantInfo {
   ConstantInt *BaseConstant;
   RebasedConstantListType RebasedConstants;

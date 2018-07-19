@@ -26,13 +26,15 @@ namespace llvm {
 class CodeGenTarget;
 class CodeGenSchedModels;
 class CodeGenInstruction;
-class CodeGenRegisterClass;
 
 using RecVec = std::vector<Record*>;
 using RecIter = std::vector<Record*>::const_iterator;
 
 using IdxVec = std::vector<unsigned>;
 using IdxIter = std::vector<unsigned>::const_iterator;
+
+void splitSchedReadWrites(const RecVec &RWDefs,
+                          RecVec &WriteDefs, RecVec &ReadDefs);
 
 /// We have two kinds of SchedReadWrites. Explicitly defined and inferred
 /// sequences.  TheDef is nonnull for explicit SchedWrites, but Sequence may or
@@ -140,11 +142,9 @@ struct CodeGenSchedClass {
   // off to join another inferred class.
   RecVec InstRWs;
 
-  CodeGenSchedClass(unsigned Index, std::string Name, Record *ItinClassDef)
-    : Index(Index), Name(std::move(Name)), ItinClassDef(ItinClassDef) {}
+  CodeGenSchedClass(): Index(0), ItinClassDef(nullptr) {}
 
-  bool isKeyEqual(Record *IC, ArrayRef<unsigned> W,
-                  ArrayRef<unsigned> R) const {
+  bool isKeyEqual(Record *IC, ArrayRef<unsigned> W, ArrayRef<unsigned> R) {
     return ItinClassDef == IC && makeArrayRef(Writes) == W &&
            makeArrayRef(Reads) == R;
   }
@@ -156,38 +156,6 @@ struct CodeGenSchedClass {
 #ifndef NDEBUG
   void dump(const CodeGenSchedModels *SchedModels) const;
 #endif
-};
-
-/// Represent the cost of allocating a register of register class RCDef.
-///
-/// The cost of allocating a register is equivalent to the number of physical
-/// registers used by the register renamer. Register costs are defined at
-/// register class granularity.
-struct CodeGenRegisterCost {
-  Record *RCDef;
-  unsigned Cost;
-  CodeGenRegisterCost(Record *RC, unsigned RegisterCost)
-      : RCDef(RC), Cost(RegisterCost) {}
-  CodeGenRegisterCost(const CodeGenRegisterCost &) = default;
-  CodeGenRegisterCost &operator=(const CodeGenRegisterCost &) = delete;
-};
-
-/// A processor register file.
-///
-/// This class describes a processor register file. Register file information is
-/// currently consumed by external tools like llvm-mca to predict dispatch
-/// stalls due to register pressure.
-struct CodeGenRegisterFile {
-  std::string Name;
-  Record *RegisterFileDef;
-
-  unsigned NumPhysRegs;
-  std::vector<CodeGenRegisterCost> Costs;
-
-  CodeGenRegisterFile(StringRef name, Record *def)
-      : Name(name), RegisterFileDef(def), NumPhysRegs(0) {}
-
-  bool hasDefaultCosts() const { return Costs.empty(); }
 };
 
 // Processor model.
@@ -231,21 +199,11 @@ struct CodeGenProcModel {
 
   // Per-operand machine model resources associated with this processor.
   RecVec ProcResourceDefs;
+  RecVec ProcResGroupDefs;
 
-  // List of Register Files.
-  std::vector<CodeGenRegisterFile> RegisterFiles;
-
-  // Optional Retire Control Unit definition.
-  Record *RetireControlUnit;
-
-  // List of PfmCounters.
-  RecVec PfmIssueCounterDefs;
-  Record *PfmCycleCounterDef = nullptr;
-
-  CodeGenProcModel(unsigned Idx, std::string Name, Record *MDef,
+  CodeGenProcModel(unsigned Idx, const std::string &Name, Record *MDef,
                    Record *IDef) :
-    Index(Idx), ModelName(std::move(Name)), ModelDef(MDef), ItinsDef(IDef),
-    RetireControlUnit(nullptr) {}
+    Index(Idx), ModelName(Name), ModelDef(MDef), ItinsDef(IDef) {}
 
   bool hasItineraries() const {
     return !ItinsDef->getValueAsListOfDefs("IID").empty();
@@ -253,12 +211,6 @@ struct CodeGenProcModel {
 
   bool hasInstrSchedModel() const {
     return !WriteResDefs.empty() || !ItinRWDefs.empty();
-  }
-
-  bool hasExtraProcessorInfo() const {
-    return RetireControlUnit || !RegisterFiles.empty() ||
-        !PfmIssueCounterDefs.empty() ||
-        PfmCycleCounterDef != nullptr;
   }
 
   unsigned getProcResourceIdx(Record *PRDef) const;
@@ -384,11 +336,11 @@ public:
     return const_cast<CodeGenSchedRW&>(
       IsRead ? getSchedRead(Idx) : getSchedWrite(Idx));
   }
-  const CodeGenSchedRW &getSchedRW(Record *Def) const {
+  const CodeGenSchedRW &getSchedRW(Record*Def) const {
     return const_cast<CodeGenSchedModels&>(*this).getSchedRW(Def);
   }
 
-  unsigned getSchedRWIdx(const Record *Def, bool IsRead) const;
+  unsigned getSchedRWIdx(Record *Def, bool IsRead, unsigned After = 0) const;
 
   // Return true if the given write record is referenced by a ReadAdvance.
   bool hasReadOfWrite(Record *WriteDef) const;
@@ -427,6 +379,9 @@ public:
 
   unsigned findOrInsertRW(ArrayRef<unsigned> Seq, bool IsRead);
 
+  unsigned findSchedClassIdx(Record *ItinClassDef, ArrayRef<unsigned> Writes,
+                             ArrayRef<unsigned> Reads) const;
+
   Record *findProcResUnits(Record *ProcResKind, const CodeGenProcModel &PM,
                            ArrayRef<SMLoc> Loc) const;
 
@@ -442,14 +397,6 @@ private:
   unsigned findRWForSequence(ArrayRef<unsigned> Seq, bool IsRead);
 
   void collectSchedClasses();
-
-  void collectRetireControlUnits();
-
-  void collectRegisterFiles();
-
-  void collectPfmCounters();
-
-  void collectOptionalProcessorInfo();
 
   std::string createSchedClassName(Record *ItinClassDef,
                                    ArrayRef<unsigned> OperWrites,

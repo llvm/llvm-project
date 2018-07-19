@@ -18,7 +18,7 @@ define void @test_select(fp128* %p, fp128* %q, i1 zeroext %c) {
 ; MMX-NEXT:    movaps %xmm0, (%rsi)
 ; MMX-NEXT:    retq
 ; MMX-NEXT:  .LBB0_1:
-; MMX-NEXT:    movups (%rdi), %xmm0
+; MMX-NEXT:    movaps (%rdi), %xmm0
 ; MMX-NEXT:    movaps %xmm0, (%rsi)
 ; MMX-NEXT:    retq
 ;

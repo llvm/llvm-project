@@ -142,17 +142,8 @@ void LPPassManager::getAnalysisUsage(AnalysisUsage &Info) const {
 void LPPassManager::markLoopAsDeleted(Loop &L) {
   assert((&L == CurrentLoop || CurrentLoop->contains(&L)) &&
          "Must not delete loop outside the current loop tree!");
-  // If this loop appears elsewhere within the queue, we also need to remove it
-  // there. However, we have to be careful to not remove the back of the queue
-  // as that is assumed to match the current loop.
-  assert(LQ.back() == CurrentLoop && "Loop queue back isn't the current loop!");
-  LQ.erase(std::remove(LQ.begin(), LQ.end(), &L), LQ.end());
-
-  if (&L == CurrentLoop) {
+  if (&L == CurrentLoop)
     CurrentLoopDeleted = true;
-    // Add this loop back onto the back of the queue to preserve our invariants.
-    LQ.push_back(&L);
-  }
 }
 
 /// run - Execute all of the passes scheduled for execution.  Keep track of
@@ -160,7 +151,6 @@ void LPPassManager::markLoopAsDeleted(Loop &L) {
 bool LPPassManager::runOnFunction(Function &F) {
   auto &LIWP = getAnalysis<LoopInfoWrapperPass>();
   LI = &LIWP.getLoopInfo();
-  Module &M = *F.getParent();
 #if 0
   DominatorTree *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
 #endif
@@ -210,9 +200,8 @@ bool LPPassManager::runOnFunction(Function &F) {
       {
         PassManagerPrettyStackEntry X(P, *CurrentLoop->getHeader());
         TimeRegion PassTimer(getPassTimer(P));
-        unsigned InstrCount = initSizeRemarkInfo(M);
+
         Changed |= P->runOnLoop(CurrentLoop, *this);
-        emitInstrCountChangedRemark(P, M, InstrCount);
       }
 
       if (Changed)
@@ -368,13 +357,13 @@ bool LoopPass::skipLoop(const Loop *L) const {
     return false;
   // Check the opt bisect limit.
   LLVMContext &Context = F->getContext();
-  if (!Context.getOptPassGate().shouldRunPass(this, *L))
+  if (!Context.getOptBisect().shouldRunPass(this, *L))
     return true;
   // Check for the OptimizeNone attribute.
   if (F->hasFnAttribute(Attribute::OptimizeNone)) {
     // FIXME: Report this to dbgs() only once per function.
-    LLVM_DEBUG(dbgs() << "Skipping pass '" << getPassName() << "' in function "
-                      << F->getName() << "\n");
+    DEBUG(dbgs() << "Skipping pass '" << getPassName()
+          << "' in function " << F->getName() << "\n");
     // FIXME: Delete loop from pass manager's queue?
     return true;
   }

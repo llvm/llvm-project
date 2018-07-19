@@ -57,11 +57,6 @@ OPTIONS
 
  Print all records to standard output (default).
 
-.. option:: -dump-json
-
- Print a JSON representation of all records, suitable for further
- automated processing.
-
 .. option:: -print-enums
 
  Print enumeration values for a class.
@@ -114,13 +109,9 @@ OPTIONS
 
  Generate subtarget enumerations.
 
-.. option:: -gen-intrinsic-enums
+.. option:: -gen-intrinsic
 
- Generate intrinsic enums.
-
-.. option:: -gen-intrinsic-impl
-
- Generate intrinsic implementation.
+ Generate intrinsic information.
 
 .. option:: -gen-tgt-intrinsic
 

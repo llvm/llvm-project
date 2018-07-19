@@ -19,10 +19,10 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/None.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/TargetLoweringObjectFile.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Constants.h"
@@ -30,14 +30,12 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/MC/MCAsmInfo.h"
-#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MachineLocation.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Target/TargetLoweringObjectFile.h"
 #include <cassert>
 #include <cstdint>
 #include <string>
@@ -85,6 +83,8 @@ DwarfTypeUnit::DwarfTypeUnit(DwarfCompileUnit &CU, AsmPrinter *A,
                              MCDwarfDwoLineTable *SplitLineTable)
     : DwarfUnit(dwarf::DW_TAG_type_unit, CU.getCUNode(), A, DW, DWU), CU(CU),
       SplitLineTable(SplitLineTable) {
+  if (SplitLineTable)
+    addSectionOffset(getUnitDie(), dwarf::DW_AT_stmt_list, 0);
 }
 
 DwarfUnit::~DwarfUnit() {
@@ -239,12 +239,6 @@ void DwarfUnit::addSInt(DIELoc &Die, Optional<dwarf::Form> Form,
 
 void DwarfUnit::addString(DIE &Die, dwarf::Attribute Attribute,
                           StringRef String) {
-  if (DD->useInlineStrings()) {
-    Die.addValue(DIEValueAllocator, Attribute, dwarf::DW_FORM_string,
-                 new (DIEValueAllocator)
-                     DIEInlineString(String, DIEValueAllocator));
-    return;
-  }
   auto StringPoolEntry = DU->getStringPool().getEntry(*Asm, String);
   dwarf::Form IxForm =
       isDwoUnit() ? dwarf::DW_FORM_GNU_str_index : dwarf::DW_FORM_strp;
@@ -282,33 +276,9 @@ void DwarfUnit::addSectionOffset(DIE &Die, dwarf::Attribute Attribute,
     addUInt(Die, Attribute, dwarf::DW_FORM_data4, Integer);
 }
 
-MD5::MD5Result *DwarfUnit::getMD5AsBytes(const DIFile *File) const {
-  assert(File);
-  if (DD->getDwarfVersion() < 5)
-    return nullptr;
-  Optional<DIFile::ChecksumInfo<StringRef>> Checksum = File->getChecksum();
-  if (!Checksum || Checksum->Kind != DIFile::CSK_MD5)
-    return nullptr;
-
-  // Convert the string checksum to an MD5Result for the streamer.
-  // The verifier validates the checksum so we assume it's okay.
-  // An MD5 checksum is 16 bytes.
-  std::string ChecksumString = fromHex(Checksum->Value);
-  void *CKMem = Asm->OutStreamer->getContext().allocate(16, 1);
-  memcpy(CKMem, ChecksumString.data(), 16);
-  return reinterpret_cast<MD5::MD5Result *>(CKMem);
-}
-
-unsigned DwarfTypeUnit::getOrCreateSourceID(const DIFile *File) {
-  if (!SplitLineTable)
-    return getCU().getOrCreateSourceID(File);
-  if (!UsedLineTable) {
-    UsedLineTable = true;
-    // This is a split type unit that needs a line table.
-    addSectionOffset(getUnitDie(), dwarf::DW_AT_stmt_list, 0);
-  }
-  return SplitLineTable->getFile(File->getDirectory(), File->getFilename(),
-                                 getMD5AsBytes(File), File->getSource());
+unsigned DwarfTypeUnit::getOrCreateSourceID(StringRef FileName, StringRef DirName) {
+  return SplitLineTable ? SplitLineTable->getFile(DirName, FileName)
+                        : getCU().getOrCreateSourceID(FileName, DirName);
 }
 
 void DwarfUnit::addOpAddress(DIELoc &Die, const MCSymbol *Sym) {
@@ -378,11 +348,12 @@ void DwarfUnit::addBlock(DIE &Die, dwarf::Attribute Attribute,
   Die.addValue(DIEValueAllocator, Attribute, Block->BestForm(), Block);
 }
 
-void DwarfUnit::addSourceLine(DIE &Die, unsigned Line, const DIFile *File) {
+void DwarfUnit::addSourceLine(DIE &Die, unsigned Line, StringRef File,
+                              StringRef Directory) {
   if (Line == 0)
     return;
 
-  unsigned FileID = getOrCreateSourceID(File);
+  unsigned FileID = getOrCreateSourceID(File, Directory);
   assert(FileID && "Invalid file id");
   addUInt(Die, dwarf::DW_AT_decl_file, None, FileID);
   addUInt(Die, dwarf::DW_AT_decl_line, None, Line);
@@ -391,31 +362,32 @@ void DwarfUnit::addSourceLine(DIE &Die, unsigned Line, const DIFile *File) {
 void DwarfUnit::addSourceLine(DIE &Die, const DILocalVariable *V) {
   assert(V);
 
-  addSourceLine(Die, V->getLine(), V->getFile());
+  addSourceLine(Die, V->getLine(), V->getScope()->getFilename(),
+                V->getScope()->getDirectory());
 }
 
 void DwarfUnit::addSourceLine(DIE &Die, const DIGlobalVariable *G) {
   assert(G);
 
-  addSourceLine(Die, G->getLine(), G->getFile());
+  addSourceLine(Die, G->getLine(), G->getFilename(), G->getDirectory());
 }
 
 void DwarfUnit::addSourceLine(DIE &Die, const DISubprogram *SP) {
   assert(SP);
 
-  addSourceLine(Die, SP->getLine(), SP->getFile());
+  addSourceLine(Die, SP->getLine(), SP->getFilename(), SP->getDirectory());
 }
 
 void DwarfUnit::addSourceLine(DIE &Die, const DIType *Ty) {
   assert(Ty);
 
-  addSourceLine(Die, Ty->getLine(), Ty->getFile());
+  addSourceLine(Die, Ty->getLine(), Ty->getFilename(), Ty->getDirectory());
 }
 
 void DwarfUnit::addSourceLine(DIE &Die, const DIObjCProperty *Ty) {
   assert(Ty);
 
-  addSourceLine(Die, Ty->getLine(), Ty->getFile());
+  addSourceLine(Die, Ty->getLine(), Ty->getFilename(), Ty->getDirectory());
 }
 
 /* Byref variables, in Blocks, are declared by the programmer as "SomeType
@@ -1242,8 +1214,9 @@ bool DwarfUnit::applySubprogramDefinitionAttributes(const DISubprogram *SP,
     // Look at the Decl's linkage name only if we emitted it.
     if (DD->useAllLinkageNames())
       DeclLinkageName = SPDecl->getLinkageName();
-    unsigned DeclID = getOrCreateSourceID(SPDecl->getFile());
-    unsigned DefID = getOrCreateSourceID(SP->getFile());
+    unsigned DeclID =
+        getOrCreateSourceID(SPDecl->getFilename(), SPDecl->getDirectory());
+    unsigned DefID = getOrCreateSourceID(SP->getFilename(), SP->getDirectory());
     if (DeclID != DefID)
       addUInt(SPDie, dwarf::DW_AT_decl_file, None, DefID);
 
@@ -1401,9 +1374,14 @@ void DwarfUnit::constructSubrangeDIE(DIE &Buffer, const DISubrange *SR,
     addUInt(DW_Subrange, dwarf::DW_AT_lower_bound, None, LowerBound);
 
   if (auto *CV = SR->getCount().dyn_cast<DIVariable*>()) {
-    if (auto *CountVarDIE = getDIE(CV))
-      addDIEEntry(DW_Subrange, dwarf::DW_AT_count, *CountVarDIE);
+    // 'finishVariableDefinition' that creates the types for a variable is
+    // always called _after_ the DIEs for variables are created.
+    auto *CountVarDIE = getDIE(CV);
+    assert(CountVarDIE && "DIE for count is not yet instantiated");
+    addDIEEntry(DW_Subrange, dwarf::DW_AT_count, *CountVarDIE);
   } else if (Count != -1)
+    // FIXME: An unbounded array should reference the expression that defines
+    // the array.
     addUInt(DW_Subrange, dwarf::DW_AT_count, None, Count);
 }
 
@@ -1412,49 +1390,16 @@ DIE *DwarfUnit::getIndexTyDie() {
     return IndexTyDie;
   // Construct an integer type to use for indexes.
   IndexTyDie = &createAndAddDIE(dwarf::DW_TAG_base_type, getUnitDie());
-  StringRef Name = "__ARRAY_SIZE_TYPE__";
-  addString(*IndexTyDie, dwarf::DW_AT_name, Name);
+  addString(*IndexTyDie, dwarf::DW_AT_name, "sizetype");
   addUInt(*IndexTyDie, dwarf::DW_AT_byte_size, None, sizeof(int64_t));
   addUInt(*IndexTyDie, dwarf::DW_AT_encoding, dwarf::DW_FORM_data1,
           dwarf::DW_ATE_unsigned);
-  DD->addAccelType(Name, *IndexTyDie, /*Flags*/ 0);
   return IndexTyDie;
 }
 
-/// Returns true if the vector's size differs from the sum of sizes of elements
-/// the user specified.  This can occur if the vector has been rounded up to
-/// fit memory alignment constraints.
-static bool hasVectorBeenPadded(const DICompositeType *CTy) {
-  assert(CTy && CTy->isVector() && "Composite type is not a vector");
-  const uint64_t ActualSize = CTy->getSizeInBits();
-
-  // Obtain the size of each element in the vector.
-  DIType *BaseTy = CTy->getBaseType().resolve();
-  assert(BaseTy && "Unknown vector element type.");
-  const uint64_t ElementSize = BaseTy->getSizeInBits();
-
-  // Locate the number of elements in the vector.
-  const DINodeArray Elements = CTy->getElements();
-  assert(Elements.size() == 1 &&
-         Elements[0]->getTag() == dwarf::DW_TAG_subrange_type &&
-         "Invalid vector element array, expected one element of type subrange");
-  const auto Subrange = cast<DISubrange>(Elements[0]);
-  const auto CI = Subrange->getCount().get<ConstantInt *>();
-  const int32_t NumVecElements = CI->getSExtValue();
-
-  // Ensure we found the element count and that the actual size is wide
-  // enough to contain the requested size.
-  assert(ActualSize >= (NumVecElements * ElementSize) && "Invalid vector size");
-  return ActualSize != (NumVecElements * ElementSize);
-}
-
 void DwarfUnit::constructArrayTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
-  if (CTy->isVector()) {
+  if (CTy->isVector())
     addFlag(Buffer, dwarf::DW_AT_GNU_vector);
-    if (hasVectorBeenPadded(CTy))
-      addUInt(Buffer, dwarf::DW_AT_byte_size, None,
-              CTy->getSizeInBits() / CHAR_BIT);
-  }
 
   // Emit the element type.
   addType(Buffer, resolve(CTy->getBaseType()));
@@ -1475,15 +1420,6 @@ void DwarfUnit::constructArrayTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
 }
 
 void DwarfUnit::constructEnumTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
-  const DIType *DTy = resolve(CTy->getBaseType());
-  bool IsUnsigned = DTy && isUnsignedDIType(DD, DTy);
-  if (DTy) {
-    if (DD->getDwarfVersion() >= 3)
-      addType(Buffer, DTy);
-    if (DD->getDwarfVersion() >= 4 && (CTy->getFlags() & DINode::FlagFixedEnum))
-      addFlag(Buffer, dwarf::DW_AT_enum_class);
-  }
-
   DINodeArray Elements = CTy->getElements();
 
   // Add enumerators to enumeration type.
@@ -1493,9 +1429,15 @@ void DwarfUnit::constructEnumTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
       DIE &Enumerator = createAndAddDIE(dwarf::DW_TAG_enumerator, Buffer);
       StringRef Name = Enum->getName();
       addString(Enumerator, dwarf::DW_AT_name, Name);
-      auto Value = static_cast<uint64_t>(Enum->getValue());
-      addConstantValue(Enumerator, IsUnsigned, Value);
+      int64_t Value = Enum->getValue();
+      addSInt(Enumerator, dwarf::DW_AT_const_value, dwarf::DW_FORM_sdata,
+              Value);
     }
+  }
+  const DIType *DTy = resolve(CTy->getBaseType());
+  if (DTy) {
+    addType(Buffer, DTy);
+    addFlag(Buffer, dwarf::DW_AT_enum_class);
   }
 }
 
@@ -1672,18 +1614,18 @@ DIE *DwarfUnit::getOrCreateStaticMemberDIE(const DIDerivedType *DT) {
 void DwarfUnit::emitCommonHeader(bool UseOffsets, dwarf::UnitType UT) {
   // Emit size of content not including length itself
   Asm->OutStreamer->AddComment("Length of Unit");
-  Asm->emitInt32(getHeaderSize() + getUnitDie().getSize());
+  Asm->EmitInt32(getHeaderSize() + getUnitDie().getSize());
 
   Asm->OutStreamer->AddComment("DWARF version number");
   unsigned Version = DD->getDwarfVersion();
-  Asm->emitInt16(Version);
+  Asm->EmitInt16(Version);
 
   // DWARF v5 reorders the address size and adds a unit type.
   if (Version >= 5) {
     Asm->OutStreamer->AddComment("DWARF Unit Type");
-    Asm->emitInt8(UT);
+    Asm->EmitInt8(UT);
     Asm->OutStreamer->AddComment("Address Size (in bytes)");
-    Asm->emitInt8(Asm->MAI->getCodePointerSize());
+    Asm->EmitInt8(Asm->MAI->getCodePointerSize());
   }
 
   // We share one abbreviations table across all units so it's always at the
@@ -1692,14 +1634,14 @@ void DwarfUnit::emitCommonHeader(bool UseOffsets, dwarf::UnitType UT) {
   Asm->OutStreamer->AddComment("Offset Into Abbrev. Section");
   const TargetLoweringObjectFile &TLOF = Asm->getObjFileLowering();
   if (UseOffsets)
-    Asm->emitInt32(0);
+    Asm->EmitInt32(0);
   else
     Asm->emitDwarfSymbolReference(
         TLOF.getDwarfAbbrevSection()->getBeginSymbol(), false);
 
   if (Version <= 4) {
     Asm->OutStreamer->AddComment("Address Size (in bytes)");
-    Asm->emitInt8(Asm->MAI->getCodePointerSize());
+    Asm->EmitInt8(Asm->MAI->getCodePointerSize());
   }
 }
 
@@ -1764,13 +1706,4 @@ void DwarfUnit::addStringOffsetsStart() {
   addSectionLabel(getUnitDie(), dwarf::DW_AT_str_offsets_base,
                   DU->getStringOffsetsStartSym(),
                   TLOF.getDwarfStrOffSection()->getBeginSymbol());
-}
-
-void DwarfUnit::addRnglistsBase() {
-  assert(DD->getDwarfVersion() >= 5 &&
-         "DW_AT_rnglists_base requires DWARF version 5 or later");
-  const TargetLoweringObjectFile &TLOF = Asm->getObjFileLowering();
-  addSectionLabel(getUnitDie(), dwarf::DW_AT_rnglists_base,
-                  DU->getRnglistsTableBaseSym(),
-                  TLOF.getDwarfRnglistsSection()->getBeginSymbol());
 }

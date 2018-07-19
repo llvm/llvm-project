@@ -19,7 +19,6 @@
 #include "R600InstrInfo.h"
 #include "R600MachineFunctionInfo.h"
 #include "R600RegisterInfo.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -34,8 +33,8 @@ namespace {
 
 static bool isCFAlu(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
-  case R600::CF_ALU:
-  case R600::CF_ALU_PUSH_BEFORE:
+  case AMDGPU::CF_ALU:
+  case AMDGPU::CF_ALU_PUSH_BEFORE:
     return true;
   default:
     return false;
@@ -85,20 +84,20 @@ char &llvm::R600ClauseMergePassID = R600ClauseMergePass::ID;
 unsigned R600ClauseMergePass::getCFAluSize(const MachineInstr &MI) const {
   assert(isCFAlu(MI));
   return MI
-      .getOperand(TII->getOperandIdx(MI.getOpcode(), R600::OpName::COUNT))
+      .getOperand(TII->getOperandIdx(MI.getOpcode(), AMDGPU::OpName::COUNT))
       .getImm();
 }
 
 bool R600ClauseMergePass::isCFAluEnabled(const MachineInstr &MI) const {
   assert(isCFAlu(MI));
   return MI
-      .getOperand(TII->getOperandIdx(MI.getOpcode(), R600::OpName::Enabled))
+      .getOperand(TII->getOperandIdx(MI.getOpcode(), AMDGPU::OpName::Enabled))
       .getImm();
 }
 
 void R600ClauseMergePass::cleanPotentialDisabledCFAlu(
     MachineInstr &CFAlu) const {
-  int CntIdx = TII->getOperandIdx(R600::CF_ALU, R600::OpName::COUNT);
+  int CntIdx = TII->getOperandIdx(AMDGPU::CF_ALU, AMDGPU::OpName::COUNT);
   MachineBasicBlock::iterator I = CFAlu, E = CFAlu.getParent()->end();
   I++;
   do {
@@ -117,46 +116,46 @@ void R600ClauseMergePass::cleanPotentialDisabledCFAlu(
 bool R600ClauseMergePass::mergeIfPossible(MachineInstr &RootCFAlu,
                                           const MachineInstr &LatrCFAlu) const {
   assert(isCFAlu(RootCFAlu) && isCFAlu(LatrCFAlu));
-  int CntIdx = TII->getOperandIdx(R600::CF_ALU, R600::OpName::COUNT);
+  int CntIdx = TII->getOperandIdx(AMDGPU::CF_ALU, AMDGPU::OpName::COUNT);
   unsigned RootInstCount = getCFAluSize(RootCFAlu),
       LaterInstCount = getCFAluSize(LatrCFAlu);
   unsigned CumuledInsts = RootInstCount + LaterInstCount;
   if (CumuledInsts >= TII->getMaxAlusPerClause()) {
-    LLVM_DEBUG(dbgs() << "Excess inst counts\n");
+    DEBUG(dbgs() << "Excess inst counts\n");
     return false;
   }
-  if (RootCFAlu.getOpcode() == R600::CF_ALU_PUSH_BEFORE)
+  if (RootCFAlu.getOpcode() == AMDGPU::CF_ALU_PUSH_BEFORE)
     return false;
   // Is KCache Bank 0 compatible ?
   int Mode0Idx =
-      TII->getOperandIdx(R600::CF_ALU, R600::OpName::KCACHE_MODE0);
+      TII->getOperandIdx(AMDGPU::CF_ALU, AMDGPU::OpName::KCACHE_MODE0);
   int KBank0Idx =
-      TII->getOperandIdx(R600::CF_ALU, R600::OpName::KCACHE_BANK0);
+      TII->getOperandIdx(AMDGPU::CF_ALU, AMDGPU::OpName::KCACHE_BANK0);
   int KBank0LineIdx =
-      TII->getOperandIdx(R600::CF_ALU, R600::OpName::KCACHE_ADDR0);
+      TII->getOperandIdx(AMDGPU::CF_ALU, AMDGPU::OpName::KCACHE_ADDR0);
   if (LatrCFAlu.getOperand(Mode0Idx).getImm() &&
       RootCFAlu.getOperand(Mode0Idx).getImm() &&
       (LatrCFAlu.getOperand(KBank0Idx).getImm() !=
            RootCFAlu.getOperand(KBank0Idx).getImm() ||
        LatrCFAlu.getOperand(KBank0LineIdx).getImm() !=
            RootCFAlu.getOperand(KBank0LineIdx).getImm())) {
-    LLVM_DEBUG(dbgs() << "Wrong KC0\n");
+    DEBUG(dbgs() << "Wrong KC0\n");
     return false;
   }
   // Is KCache Bank 1 compatible ?
   int Mode1Idx =
-      TII->getOperandIdx(R600::CF_ALU, R600::OpName::KCACHE_MODE1);
+      TII->getOperandIdx(AMDGPU::CF_ALU, AMDGPU::OpName::KCACHE_MODE1);
   int KBank1Idx =
-      TII->getOperandIdx(R600::CF_ALU, R600::OpName::KCACHE_BANK1);
+      TII->getOperandIdx(AMDGPU::CF_ALU, AMDGPU::OpName::KCACHE_BANK1);
   int KBank1LineIdx =
-      TII->getOperandIdx(R600::CF_ALU, R600::OpName::KCACHE_ADDR1);
+      TII->getOperandIdx(AMDGPU::CF_ALU, AMDGPU::OpName::KCACHE_ADDR1);
   if (LatrCFAlu.getOperand(Mode1Idx).getImm() &&
       RootCFAlu.getOperand(Mode1Idx).getImm() &&
       (LatrCFAlu.getOperand(KBank1Idx).getImm() !=
            RootCFAlu.getOperand(KBank1Idx).getImm() ||
        LatrCFAlu.getOperand(KBank1LineIdx).getImm() !=
            RootCFAlu.getOperand(KBank1LineIdx).getImm())) {
-    LLVM_DEBUG(dbgs() << "Wrong KC0\n");
+    DEBUG(dbgs() << "Wrong KC0\n");
     return false;
   }
   if (LatrCFAlu.getOperand(Mode0Idx).getImm()) {

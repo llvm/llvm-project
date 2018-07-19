@@ -55,11 +55,12 @@ cl::opt<std::string> OutputFile("output",
                                          "(for miscompilation detection)"));
 }
 
-/// If we reduce or update the program somehow, call this method to update
-/// bugdriver with it.  This deletes the old module and sets the specified one
-/// as the current program.
-void BugDriver::setNewProgram(std::unique_ptr<Module> M) {
-  Program = std::move(M);
+/// setNewProgram - If we reduce or update the program somehow, call this method
+/// to update bugdriver with it.  This deletes the old module and sets the
+/// specified one as the current program.
+void BugDriver::setNewProgram(Module *M) {
+  delete Program;
+  Program = M;
 }
 
 /// getPassesString - Turn a list of passes into a string which indicates the
@@ -84,6 +85,7 @@ BugDriver::BugDriver(const char *toolname, bool find_bugs, unsigned timeout,
       MemoryLimit(memlimit), UseValgrind(use_valgrind) {}
 
 BugDriver::~BugDriver() {
+  delete Program;
   if (Interpreter != SafeInterpreter)
     delete Interpreter;
   delete SafeInterpreter;
@@ -119,12 +121,6 @@ std::unique_ptr<Module> llvm::parseInputFile(StringRef Filename,
   return Result;
 }
 
-std::unique_ptr<Module> BugDriver::swapProgramIn(std::unique_ptr<Module> M) {
-  std::unique_ptr<Module> OldProgram = std::move(Program);
-  Program = std::move(M);
-  return OldProgram;
-}
-
 // This method takes the specified list of LLVM input files, attempts to load
 // them, either as assembly or bitcode, then link them together. It returns
 // true on failure (if, for example, an input bitcode file could not be
@@ -135,7 +131,7 @@ bool BugDriver::addSources(const std::vector<std::string> &Filenames) {
   assert(!Filenames.empty() && "Must specify at least on input filename!");
 
   // Load the first input file.
-  Program = parseInputFile(Filenames[0], Context);
+  Program = parseInputFile(Filenames[0], Context).release();
   if (!Program)
     return true;
 
@@ -176,7 +172,7 @@ Error BugDriver::run() {
   // miscompilation.
   if (!PassesToRun.empty()) {
     outs() << "Running selected passes on program to test for crash: ";
-    if (runPasses(*Program, PassesToRun))
+    if (runPasses(Program, PassesToRun))
       return debugOptimizerCrash();
   }
 
@@ -186,7 +182,7 @@ Error BugDriver::run() {
 
   // Test to see if we have a code generator crash.
   outs() << "Running the code generator to test for a crash: ";
-  if (Error E = compileProgram(*Program)) {
+  if (Error E = compileProgram(Program)) {
     outs() << toString(std::move(E));
     return debugCodeGeneratorCrash();
   }
@@ -199,7 +195,7 @@ Error BugDriver::run() {
   bool CreatedOutput = false;
   if (ReferenceOutputFile.empty()) {
     outs() << "Generating reference output from raw program: ";
-    if (Error E = createReferenceFile(*Program)) {
+    if (Error E = createReferenceFile(Program)) {
       errs() << toString(std::move(E));
       return debugCodeGeneratorCrash();
     }
@@ -215,7 +211,7 @@ Error BugDriver::run() {
   // matches, then we assume there is a miscompilation bug and try to
   // diagnose it.
   outs() << "*** Checking the code generator...\n";
-  Expected<bool> Diff = diffProgram(*Program, "", "", false);
+  Expected<bool> Diff = diffProgram(Program, "", "", false);
   if (Error E = Diff.takeError()) {
     errs() << toString(std::move(E));
     return debugCodeGeneratorCrash();

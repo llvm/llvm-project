@@ -63,9 +63,6 @@ void TypedefDumper::dump(const PDBSymbolTypePointer &Symbol) {
     PointeeType->dump(*this);
     Printer << ((Symbol.isReference()) ? "&" : "*");
   }
-
-  if (Symbol.getRawSymbol().isRestrictedType())
-    WithColor(Printer, PDB_ColorItem::Keyword).get() << " __restrict";
 }
 
 void TypedefDumper::dump(const PDBSymbolTypeFunctionSig &Symbol) {

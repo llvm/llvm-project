@@ -444,17 +444,6 @@ unsigned llvm::dwarf::getMacinfo(StringRef MacinfoString) {
       .Default(DW_MACINFO_invalid);
 }
 
-StringRef llvm::dwarf::RangeListEncodingString(unsigned Encoding) {
-  switch (Encoding) {
-  default:
-    return StringRef();
-#define HANDLE_DW_RLE(ID, NAME)                                                \
-  case DW_RLE_##NAME:                                                          \
-    return "DW_RLE_" #NAME;
-#include "llvm/BinaryFormat/Dwarf.def"
-  }
-}
-
 StringRef llvm::dwarf::CallFrameString(unsigned Encoding) {
   switch (Encoding) {
   default:
@@ -564,19 +553,6 @@ StringRef llvm::dwarf::AttributeValueString(uint16_t Attr, unsigned Val) {
     return InlineCodeString(Val);
   case DW_AT_ordering:
     return ArrayOrderString(Val);
-  case DW_AT_APPLE_runtime_class:
-    return LanguageString(Val);
-  }
-
-  return StringRef();
-}
-
-StringRef llvm::dwarf::AtomValueString(uint16_t Atom, unsigned Val) {
-  switch (Atom) {
-  case DW_ATOM_null:
-    return "NULL";
-  case DW_ATOM_die_tag:
-    return TagString(Val);
   }
 
   return StringRef();
@@ -593,93 +569,6 @@ StringRef llvm::dwarf::IndexString(unsigned Idx) {
   }
 }
 
-Optional<uint8_t> llvm::dwarf::getFixedFormByteSize(dwarf::Form Form,
-                                                    FormParams Params) {
-  switch (Form) {
-  case DW_FORM_addr:
-    if (Params)
-      return Params.AddrSize;
-    return None;
-
-  case DW_FORM_block:          // ULEB128 length L followed by L bytes.
-  case DW_FORM_block1:         // 1 byte length L followed by L bytes.
-  case DW_FORM_block2:         // 2 byte length L followed by L bytes.
-  case DW_FORM_block4:         // 4 byte length L followed by L bytes.
-  case DW_FORM_string:         // C-string with null terminator.
-  case DW_FORM_sdata:          // SLEB128.
-  case DW_FORM_udata:          // ULEB128.
-  case DW_FORM_ref_udata:      // ULEB128.
-  case DW_FORM_indirect:       // ULEB128.
-  case DW_FORM_exprloc:        // ULEB128 length L followed by L bytes.
-  case DW_FORM_strx:           // ULEB128.
-  case DW_FORM_addrx:          // ULEB128.
-  case DW_FORM_loclistx:       // ULEB128.
-  case DW_FORM_rnglistx:       // ULEB128.
-  case DW_FORM_GNU_addr_index: // ULEB128.
-  case DW_FORM_GNU_str_index:  // ULEB128.
-    return None;
-
-  case DW_FORM_ref_addr:
-    if (Params)
-      return Params.getRefAddrByteSize();
-    return None;
-
-  case DW_FORM_flag:
-  case DW_FORM_data1:
-  case DW_FORM_ref1:
-  case DW_FORM_strx1:
-  case DW_FORM_addrx1:
-    return 1;
-
-  case DW_FORM_data2:
-  case DW_FORM_ref2:
-  case DW_FORM_strx2:
-  case DW_FORM_addrx2:
-    return 2;
-
-  case DW_FORM_strx3:
-    return 3;
-
-  case DW_FORM_data4:
-  case DW_FORM_ref4:
-  case DW_FORM_ref_sup4:
-  case DW_FORM_strx4:
-  case DW_FORM_addrx4:
-    return 4;
-
-  case DW_FORM_strp:
-  case DW_FORM_GNU_ref_alt:
-  case DW_FORM_GNU_strp_alt:
-  case DW_FORM_line_strp:
-  case DW_FORM_sec_offset:
-  case DW_FORM_strp_sup:
-    if (Params)
-      return Params.getDwarfOffsetByteSize();
-    return None;
-
-  case DW_FORM_data8:
-  case DW_FORM_ref8:
-  case DW_FORM_ref_sig8:
-  case DW_FORM_ref_sup8:
-    return 8;
-
-  case DW_FORM_flag_present:
-    return 0;
-
-  case DW_FORM_data16:
-    return 16;
-
-  case DW_FORM_implicit_const:
-    // The implicit value is stored in the abbreviation as a SLEB128, and
-    // there no data in debug info.
-    return 0;
-
-  default:
-    break;
-  }
-  return None;
-}
-
 bool llvm::dwarf::isValidFormForVersion(Form F, unsigned Version,
                                         bool ExtensionsOk) {
   if (FormVendor(F) == DWARF_VENDOR_DWARF) {
@@ -688,8 +577,3 @@ bool llvm::dwarf::isValidFormForVersion(Form F, unsigned Version,
   }
   return ExtensionsOk;
 }
-
-constexpr char llvm::dwarf::EnumTraits<Attribute>::Type[];
-constexpr char llvm::dwarf::EnumTraits<Form>::Type[];
-constexpr char llvm::dwarf::EnumTraits<Index>::Type[];
-constexpr char llvm::dwarf::EnumTraits<Tag>::Type[];

@@ -57,12 +57,19 @@ define <16 x float> @v16f32(<16 x float> %a, <16 x float> %b) nounwind {
 }
 
 define <2 x double> @v2f64(<2 x double> %a, <2 x double> %b) nounwind {
-; CHECK-LABEL: v2f64:
-; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vandps {{.*}}(%rip), %xmm1, %xmm1
-; CHECK-NEXT:    vandps {{.*}}(%rip), %xmm0, %xmm0
-; CHECK-NEXT:    vorps %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    retq
+; AVX512VL-LABEL: v2f64:
+; AVX512VL:       ## %bb.0:
+; AVX512VL-NEXT:    vpand {{.*}}(%rip), %xmm1, %xmm1
+; AVX512VL-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; AVX512VL-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX512VL-NEXT:    retq
+;
+; AVX512VLDQ-LABEL: v2f64:
+; AVX512VLDQ:       ## %bb.0:
+; AVX512VLDQ-NEXT:    vandps {{.*}}(%rip), %xmm1, %xmm1
+; AVX512VLDQ-NEXT:    vandps {{.*}}(%rip), %xmm0, %xmm0
+; AVX512VLDQ-NEXT:    vorps %xmm1, %xmm0, %xmm0
+; AVX512VLDQ-NEXT:    retq
   %tmp = tail call <2 x double> @llvm.copysign.v2f64( <2 x double> %a, <2 x double> %b )
   ret <2 x double> %tmp
 }

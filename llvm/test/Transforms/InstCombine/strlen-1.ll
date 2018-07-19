@@ -162,17 +162,6 @@ define i32 @test_no_simplify2(i32 %x) {
   ret i32 %hello_l
 }
 
-define i32 @test_no_simplify2_no_null_opt(i32 %x) #0 {
-; CHECK-LABEL: @test_no_simplify2_no_null_opt(
-; CHECK-NEXT:    [[HELLO_P:%.*]] = getelementptr inbounds [7 x i8], [7 x i8]* @null_hello, i32 0, i32 %x
-; CHECK-NEXT:    [[HELLO_L:%.*]] = call i32 @strlen(i8* [[HELLO_P]])
-; CHECK-NEXT:    ret i32 [[HELLO_L]]
-;
-  %hello_p = getelementptr inbounds [7 x i8], [7 x i8]* @null_hello, i32 0, i32 %x
-  %hello_l = call i32 @strlen(i8* %hello_p)
-  ret i32 %hello_l
-}
-
 ; strlen(@null_hello_mid + (x & 15)) should not be simplified to a sub instruction.
 
 define i32 @test_no_simplify3(i32 %x) {
@@ -188,17 +177,3 @@ define i32 @test_no_simplify3(i32 %x) {
   ret i32 %hello_l
 }
 
-define i32 @test_no_simplify3_on_null_opt(i32 %x) #0 {
-; CHECK-LABEL: @test_no_simplify3_on_null_opt(
-; CHECK-NEXT:    [[AND:%.*]] = and i32 %x, 15
-; CHECK-NEXT:    [[HELLO_P:%.*]] = getelementptr inbounds [13 x i8], [13 x i8]* @null_hello_mid, i32 0, i32 [[AND]]
-; CHECK-NEXT:    [[HELLO_L:%.*]] = call i32 @strlen(i8* [[HELLO_P]])
-; CHECK-NEXT:    ret i32 [[HELLO_L]]
-;
-  %and = and i32 %x, 15
-  %hello_p = getelementptr inbounds [13 x i8], [13 x i8]* @null_hello_mid, i32 0, i32 %and
-  %hello_l = call i32 @strlen(i8* %hello_p)
-  ret i32 %hello_l
-}
-
-attributes #0 = { "null-pointer-is-valid"="true" }

@@ -1,7 +1,0 @@
-RUN: dsymutil --update -f %p/../Inputs/empty-CU.o -o - | llvm-dwarfdump -v - -debug-info | FileCheck %s
-
-CHECK: .debug_info contents:
-CHECK: 0x00000000: Compile Unit: length = 0x00000008 version = 0x0003 abbr_offset = 0x0000 addr_size = 0x04 (next unit at 0x0000000c)
-
-CHECK: 0x0000000b: DW_TAG_compile_unit [1]
-CHECK: 0x0000000c: Compile Unit: length = 0x00000007 version = 0x0003 abbr_offset = 0x0000 addr_size = 0x04 (next unit at 0x00000017)

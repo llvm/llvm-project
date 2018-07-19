@@ -66,8 +66,6 @@ unsigned AMDGPUELFObjectWriter::getRelocType(MCContext &Ctx,
     return ELF::R_AMDGPU_REL32_LO;
   case MCSymbolRefExpr::VK_AMDGPU_REL32_HI:
     return ELF::R_AMDGPU_REL32_HI;
-  case MCSymbolRefExpr::VK_AMDGPU_REL64:
-    return ELF::R_AMDGPU_REL64;
   }
 
   switch (Fixup.getKind()) {
@@ -84,9 +82,11 @@ unsigned AMDGPUELFObjectWriter::getRelocType(MCContext &Ctx,
   llvm_unreachable("unhandled relocation type");
 }
 
-std::unique_ptr<MCObjectTargetWriter>
+std::unique_ptr<MCObjectWriter>
 llvm::createAMDGPUELFObjectWriter(bool Is64Bit, uint8_t OSABI,
-                                  bool HasRelocationAddend) {
-  return llvm::make_unique<AMDGPUELFObjectWriter>(Is64Bit, OSABI,
-                                                  HasRelocationAddend);
+                                  bool HasRelocationAddend,
+                                  raw_pwrite_stream &OS) {
+  auto MOTW = llvm::make_unique<AMDGPUELFObjectWriter>(Is64Bit, OSABI,
+                                                       HasRelocationAddend);
+  return createELFObjectWriter(std::move(MOTW), OS, true);
 }

@@ -33,12 +33,12 @@ entry:
 ; COMMON:  subsd
 define double @f2(double %a) {
 entry:
-  %sub = call double @llvm.experimental.constrained.fsub.f64(
+  %div = call double @llvm.experimental.constrained.fsub.f64(
                                                double %a,
                                                double 0.000000e+00,
                                                metadata !"round.dynamic",
                                                metadata !"fpexcept.strict")
-  ret double %sub
+  ret double %div
 }
 
 ; Verify that '-((-a)*b)' isn't simplified to 'a*b' when the rounding mode is

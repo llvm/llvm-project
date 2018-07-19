@@ -89,7 +89,6 @@ func TestAttributes(t *testing.T) {
 		"uwtable",
 		"zeroext",
 		"cold",
-		"nocf_check",
 	}
 
 	for _, name := range attrTests {
@@ -112,11 +111,7 @@ func TestDebugLoc(t *testing.T) {
 	}()
 	file := d.CreateFile("dummy_file", "dummy_dir")
 	voidInfo := d.CreateBasicType(DIBasicType{Name: "void"})
-	typeInfo := d.CreateSubroutineType(DISubroutineType{
-		File:       file,
-		Parameters: []Metadata{voidInfo},
-		Flags:      0,
-	})
+	typeInfo := d.CreateSubroutineType(DISubroutineType{file, []Metadata{voidInfo}})
 	scope := d.CreateFunction(file, DIFunction{
 		Name:         "foo",
 		LinkageName:  "foo",

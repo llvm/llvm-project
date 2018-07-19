@@ -85,16 +85,6 @@ Expected<FileAnalysis> FileAnalysis::Create(StringRef Filename) {
   if (!Analysis.Object)
     return make_error<UnsupportedDisassembly>("Failed to cast object");
 
-  switch (Analysis.Object->getArch()) {
-    case Triple::x86:
-    case Triple::x86_64:
-    case Triple::aarch64:
-    case Triple::aarch64_be:
-      break;
-    default:
-      return make_error<UnsupportedDisassembly>("Unsupported architecture.");
-  }
-
   Analysis.ObjectTriple = Analysis.Object->makeTriple();
   Analysis.Features = Analysis.Object->getFeatures();
 
@@ -164,8 +154,7 @@ const Instr &FileAnalysis::getInstructionOrDie(uint64_t Address) const {
 }
 
 bool FileAnalysis::isCFITrap(const Instr &InstrMeta) const {
-  const auto &InstrDesc = MII->get(InstrMeta.Instruction.getOpcode());
-  return InstrDesc.isTrap();
+  return MII->getName(InstrMeta.Instruction.getOpcode()) == "TRAP";
 }
 
 bool FileAnalysis::canFallThrough(const Instr &InstrMeta) const {
@@ -307,38 +296,20 @@ uint64_t FileAnalysis::indirectCFOperandClobber(const GraphResult &Graph) const 
     else
       Node = Branch.Fallthrough;
 
-    // Some architectures (e.g., AArch64) cannot load in an indirect branch, so
-    // we allow them one load.
-    bool canLoad = !MII->get(IndirectCF.Instruction.getOpcode()).mayLoad();
-
-    // We walk backwards from the indirect CF.  It is the last node returned by
-    // Graph.flattenAddress, so we skip it since we already handled it.
-    DenseSet<unsigned> CurRegisterNumbers = RegisterNumbers;
-    std::vector<uint64_t> Nodes = Graph.flattenAddress(Node);
-    for (auto I = Nodes.rbegin() + 1, E = Nodes.rend(); I != E; ++I) {
-      Node = *I;
+    while (Node != Graph.BaseAddress) {
       const Instr &NodeInstr = getInstructionOrDie(Node);
       const auto &InstrDesc = MII->get(NodeInstr.Instruction.getOpcode());
 
-      for (auto RI = CurRegisterNumbers.begin(), RE = CurRegisterNumbers.end();
-           RI != RE; ++RI) {
-        unsigned RegNum = *RI;
+      for (unsigned RegNum : RegisterNumbers) {
         if (InstrDesc.hasDefOfPhysReg(NodeInstr.Instruction, RegNum,
-                                      *RegisterInfo)) {
-          if (!canLoad || !InstrDesc.mayLoad())
-            return Node;
-          canLoad = false;
-          CurRegisterNumbers.erase(RI);
-          // Add the registers this load reads to those we check for clobbers.
-          for (unsigned i = InstrDesc.getNumDefs(),
-                        e = InstrDesc.getNumOperands(); i != e; i++) {
-            const auto Operand = NodeInstr.Instruction.getOperand(i);
-            if (Operand.isReg())
-              CurRegisterNumbers.insert(Operand.getReg());
-          }
-          break;
-        }
+                                      *RegisterInfo))
+          return Node;
       }
+
+      const auto &KV = Graph.IntermediateNodes.find(Node);
+      assert((KV != Graph.IntermediateNodes.end()) &&
+             "Could not get next node.");
+      Node = KV->second;
     }
   }
 
@@ -483,9 +454,6 @@ void FileAnalysis::parseSectionContents(ArrayRef<uint8_t> SectionBytes,
     }
 
     if (!usesRegisterOperand(InstrMeta))
-      continue;
-
-    if (InstrDesc.isReturn())
       continue;
 
     // Check if this instruction exists in the range of the DWARF metadata.

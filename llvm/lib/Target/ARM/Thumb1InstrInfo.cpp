@@ -109,11 +109,11 @@ loadRegFromStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
                      unsigned DestReg, int FI,
                      const TargetRegisterClass *RC,
                      const TargetRegisterInfo *TRI) const {
-  assert((RC->hasSuperClassEq(&ARM::tGPRRegClass) ||
+  assert((RC == &ARM::tGPRRegClass ||
           (TargetRegisterInfo::isPhysicalRegister(DestReg) &&
            isARMLowRegister(DestReg))) && "Unknown regclass!");
 
-  if (RC->hasSuperClassEq(&ARM::tGPRRegClass) ||
+  if (RC == &ARM::tGPRRegClass ||
       (TargetRegisterInfo::isPhysicalRegister(DestReg) &&
        isARMLowRegister(DestReg))) {
     DebugLoc DL;

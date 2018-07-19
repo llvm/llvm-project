@@ -54,7 +54,7 @@ public:
 
   const MipsSubtarget *getSubtargetImpl(const Function &F) const override;
 
-  /// Reset the subtarget for the Mips target.
+  /// \brief Reset the subtarget for the Mips target.
   void resetSubtarget(MachineFunction *MF);
 
   // Pass Pipeline Configuration

@@ -246,10 +246,6 @@ OPTIONS
 
  Show code coverage only for functions that match the given regular expression.
 
-.. option:: -ignore-filename-regex=<PATTERN>
-
- Skip source code files with file paths that match the given regular expression.
-
 .. option:: -format=<FORMAT>
 
  Use the specified output format. The supported formats are: "text", "html".
@@ -327,8 +323,8 @@ the binaries *BIN*,... using the profile data *PROFILE*. It can optionally be
 filtered to only show the coverage for the files listed in *SOURCES*.
 
 If no source files are provided, a summary line is printed for each file in the
-coverage data. If any files are provided, summaries can be shown for each
-function in the listed files if the ``-show-functions`` option is enabled.
+coverage data. If any files are provided, summaries are shown for each function
+in the listed files instead.
 
 For information on compiling programs for coverage and generating profile data,
 see :ref:`llvm-cov-show`.
@@ -354,10 +350,6 @@ OPTIONS
 .. option:: -show-instantiation-summary
 
  Show statistics for all function instantiations. Defaults to false.
-
-.. option:: -ignore-filename-regex=<PATTERN>
-
- Skip source code files with file paths that match the given regular expression.
 
 .. program:: llvm-cov export
 
@@ -398,7 +390,3 @@ OPTIONS
  will not export coverage information for smaller units such as individual
  functions or regions. The result will be the same as produced by :program:
  `llvm-cov report` command, but presented in JSON format rather than text.
-
-.. option:: -ignore-filename-regex=<PATTERN>
-
- Skip source code files with file paths that match the given regular expression.

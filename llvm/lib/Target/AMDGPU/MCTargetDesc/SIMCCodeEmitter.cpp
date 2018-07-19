@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// The SI code emitter produces machine code that can be executed
+/// \brief The SI code emitter produces machine code that can be executed
 /// directly on the GPU device.
 //
 //===----------------------------------------------------------------------===//
@@ -43,7 +43,7 @@ namespace {
 class SIMCCodeEmitter : public  AMDGPUMCCodeEmitter {
   const MCRegisterInfo &MRI;
 
-  /// Encode an fp or int literal
+  /// \brief Encode an fp or int literal
   uint32_t getLitEncoding(const MCOperand &MO, const MCOperandInfo &OpInfo,
                           const MCSubtargetInfo &STI) const;
 
@@ -54,7 +54,7 @@ public:
   SIMCCodeEmitter(const SIMCCodeEmitter &) = delete;
   SIMCCodeEmitter &operator=(const SIMCCodeEmitter &) = delete;
 
-  /// Encode the instruction and write it to the OS.
+  /// \brief Encode the instruction and write it to the OS.
   void encodeInstruction(const MCInst &MI, raw_ostream &OS,
                          SmallVectorImpl<MCFixup> &Fixups,
                          const MCSubtargetInfo &STI) const override;
@@ -64,7 +64,7 @@ public:
                              SmallVectorImpl<MCFixup> &Fixups,
                              const MCSubtargetInfo &STI) const override;
 
-  /// Use a fixup to encode the simm16 field for SOPP branch
+  /// \brief Use a fixup to encode the simm16 field for SOPP branch
   ///        instructions.
   unsigned getSOPPBrEncoding(const MCInst &MI, unsigned OpNo,
                              SmallVectorImpl<MCFixup> &Fixups,
@@ -335,24 +335,13 @@ SIMCCodeEmitter::getSDWASrcEncoding(const MCInst &MI, unsigned OpNo,
 
   const MCOperand &MO = MI.getOperand(OpNo);
 
-  if (MO.isReg()) {
-    unsigned Reg = MO.getReg();
-    RegEnc |= MRI.getEncodingValue(Reg);
-    RegEnc &= SDWA9EncValues::SRC_VGPR_MASK;
-    if (AMDGPU::isSGPR(AMDGPU::mc2PseudoReg(Reg), &MRI)) {
-      RegEnc |= SDWA9EncValues::SRC_SGPR_MASK;
-    }
-    return RegEnc;
-  } else {
-    const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
-    uint32_t Enc = getLitEncoding(MO, Desc.OpInfo[OpNo], STI);
-    if (Enc != ~0U && Enc != 255) {
-      return Enc | SDWA9EncValues::SRC_SGPR_MASK;
-    }
+  unsigned Reg = MO.getReg();
+  RegEnc |= MRI.getEncodingValue(Reg);
+  RegEnc &= SDWA9EncValues::SRC_VGPR_MASK;
+  if (AMDGPU::isSGPR(AMDGPU::mc2PseudoReg(Reg), &MRI)) {
+    RegEnc |= SDWA9EncValues::SRC_SGPR_MASK;
   }
-
-  llvm_unreachable("Unsupported operand kind");
-  return 0;
+  return RegEnc;
 }
 
 unsigned
@@ -438,6 +427,3 @@ uint64_t SIMCCodeEmitter::getMachineOpValue(const MCInst &MI,
   llvm_unreachable("Encoding of this operand type is not supported yet.");
   return 0;
 }
-
-#define ENABLE_INSTR_PREDICATE_VERIFIER
-#include "AMDGPUGenMCCodeEmitter.inc"

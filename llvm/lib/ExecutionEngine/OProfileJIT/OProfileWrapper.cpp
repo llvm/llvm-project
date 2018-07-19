@@ -64,16 +64,15 @@ bool OProfileWrapper::initialize() {
 
   // If the oprofile daemon is not running, don't load the opagent library
   if (!isOProfileRunning()) {
-    LLVM_DEBUG(dbgs() << "OProfile daemon is not detected.\n");
+    DEBUG(dbgs() << "OProfile daemon is not detected.\n");
     return false;
   }
 
   std::string error;
   if(!DynamicLibrary::LoadLibraryPermanently("libopagent.so", &error)) {
-    LLVM_DEBUG(
-        dbgs()
-        << "OProfile connector library libopagent.so could not be loaded: "
-        << error << "\n");
+    DEBUG(dbgs()
+            << "OProfile connector library libopagent.so could not be loaded: "
+            << error << "\n");
   }
 
   // Get the addresses of the opagent functions

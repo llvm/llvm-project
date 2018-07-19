@@ -28,32 +28,32 @@ class BlockFrequency {
 public:
   BlockFrequency(uint64_t Freq = 0) : Frequency(Freq) { }
 
-  /// Returns the maximum possible frequency, the saturation value.
+  /// \brief Returns the maximum possible frequency, the saturation value.
   static uint64_t getMaxFrequency() { return -1ULL; }
 
-  /// Returns the frequency as a fixpoint number scaled by the entry
+  /// \brief Returns the frequency as a fixpoint number scaled by the entry
   /// frequency.
   uint64_t getFrequency() const { return Frequency; }
 
-  /// Multiplies with a branch probability. The computation will never
+  /// \brief Multiplies with a branch probability. The computation will never
   /// overflow.
   BlockFrequency &operator*=(BranchProbability Prob);
   BlockFrequency operator*(BranchProbability Prob) const;
 
-  /// Divide by a non-zero branch probability using saturating
+  /// \brief Divide by a non-zero branch probability using saturating
   /// arithmetic.
   BlockFrequency &operator/=(BranchProbability Prob);
   BlockFrequency operator/(BranchProbability Prob) const;
 
-  /// Adds another block frequency using saturating arithmetic.
+  /// \brief Adds another block frequency using saturating arithmetic.
   BlockFrequency &operator+=(BlockFrequency Freq);
   BlockFrequency operator+(BlockFrequency Freq) const;
 
-  /// Subtracts another block frequency using saturating arithmetic.
+  /// \brief Subtracts another block frequency using saturating arithmetic.
   BlockFrequency &operator-=(BlockFrequency Freq);
   BlockFrequency operator-(BlockFrequency Freq) const;
 
-  /// Shift block frequency to the right by count digits saturating to 1.
+  /// \brief Shift block frequency to the right by count digits saturating to 1.
   BlockFrequency &operator>>=(const unsigned count);
 
   bool operator<(BlockFrequency RHS) const {

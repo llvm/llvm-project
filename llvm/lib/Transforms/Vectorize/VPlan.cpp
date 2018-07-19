@@ -116,7 +116,7 @@ VPBasicBlock::createEmptyBasicBlock(VPTransformState::CFGState &CFG) {
   BasicBlock *PrevBB = CFG.PrevBB;
   BasicBlock *NewBB = BasicBlock::Create(PrevBB->getContext(), getName(),
                                          PrevBB->getParent(), CFG.LastBB);
-  LLVM_DEBUG(dbgs() << "LV: created " << NewBB->getName() << '\n');
+  DEBUG(dbgs() << "LV: created " << NewBB->getName() << '\n');
 
   // Hook up the new basic block to its predecessors.
   for (VPBlockBase *PredVPBlock : getHierarchicalPredecessors()) {
@@ -125,7 +125,7 @@ VPBasicBlock::createEmptyBasicBlock(VPTransformState::CFGState &CFG) {
     BasicBlock *PredBB = CFG.VPBB2IRBB[PredVPBB];
     assert(PredBB && "Predecessor basic-block not found building successor.");
     auto *PredBBTerminator = PredBB->getTerminator();
-    LLVM_DEBUG(dbgs() << "LV: draw edge from" << PredBB->getName() << '\n');
+    DEBUG(dbgs() << "LV: draw edge from" << PredBB->getName() << '\n');
     if (isa<UnreachableInst>(PredBBTerminator)) {
       assert(PredVPSuccessors.size() == 1 &&
              "Predecessor ending w/o branch must have single successor.");
@@ -175,8 +175,8 @@ void VPBasicBlock::execute(VPTransformState *State) {
   }
 
   // 2. Fill the IR basic block with IR instructions.
-  LLVM_DEBUG(dbgs() << "LV: vectorizing VPBB:" << getName()
-                    << " in BB:" << NewBB->getName() << '\n');
+  DEBUG(dbgs() << "LV: vectorizing VPBB:" << getName()
+               << " in BB:" << NewBB->getName() << '\n');
 
   State->CFG.VPBB2IRBB[this] = NewBB;
   State->CFG.PrevVPBB = this;
@@ -184,7 +184,7 @@ void VPBasicBlock::execute(VPTransformState *State) {
   for (VPRecipeBase &Recipe : Recipes)
     Recipe.execute(*State);
 
-  LLVM_DEBUG(dbgs() << "LV: filled BB:" << *NewBB);
+  DEBUG(dbgs() << "LV: filled BB:" << *NewBB);
 }
 
 void VPRegionBlock::execute(VPTransformState *State) {
@@ -193,7 +193,7 @@ void VPRegionBlock::execute(VPTransformState *State) {
   if (!isReplicator()) {
     // Visit the VPBlocks connected to "this", starting from it.
     for (VPBlockBase *Block : RPOT) {
-      LLVM_DEBUG(dbgs() << "LV: VPBlock in RPO " << Block->getName() << '\n');
+      DEBUG(dbgs() << "LV: VPBlock in RPO " << Block->getName() << '\n');
       Block->execute(State);
     }
     return;
@@ -210,7 +210,7 @@ void VPRegionBlock::execute(VPTransformState *State) {
       State->Instance->Lane = Lane;
       // Visit the VPBlocks connected to \p this, starting from it.
       for (VPBlockBase *Block : RPOT) {
-        LLVM_DEBUG(dbgs() << "LV: VPBlock in RPO " << Block->getName() << '\n');
+        DEBUG(dbgs() << "LV: VPBlock in RPO " << Block->getName() << '\n');
         Block->execute(State);
       }
     }
@@ -218,15 +218,6 @@ void VPRegionBlock::execute(VPTransformState *State) {
 
   // Exit replicating mode.
   State->Instance.reset();
-}
-
-void VPRecipeBase::insertBefore(VPRecipeBase *InsertPos) {
-  Parent = InsertPos->getParent();
-  Parent->getRecipeList().insert(InsertPos->getIterator(), this);
-}
-
-iplist<VPRecipeBase>::iterator VPRecipeBase::eraseFromParent() {
-  return getParent()->getRecipeList().erase(getIterator());
 }
 
 void VPInstruction::generateInstruction(VPTransformState &State,
@@ -365,7 +356,7 @@ void VPlan::updateDominatorTree(DominatorTree *DT, BasicBlock *LoopPreHeaderBB,
            "One successor of a basic block does not lead to the other.");
     assert(InterimSucc->getSinglePredecessor() &&
            "Interim successor has more than one predecessor.");
-    assert(pred_size(PostDomSucc) == 2 &&
+    assert(std::distance(pred_begin(PostDomSucc), pred_end(PostDomSucc)) == 2 &&
            "PostDom successor has more than two predecessors.");
     DT->addNewBlock(InterimSucc, BB);
     DT->addNewBlock(PostDomSucc, BB);
@@ -457,18 +448,6 @@ void VPlanPrinter::dumpBasicBlock(const VPBasicBlock *BasicBlock) {
   bumpIndent(1);
   for (const VPRecipeBase &Recipe : *BasicBlock)
     Recipe.print(OS, Indent);
-
-  // Dump the condition bit.
-  const VPValue *CBV = BasicBlock->getCondBit();
-  if (CBV) {
-    OS << " +\n" << Indent << " \"CondBit: ";
-    if (const VPInstruction *CBI = dyn_cast<VPInstruction>(CBV)) {
-      CBI->printAsOperand(OS);
-      OS << " (" << DOT::EscapeString(CBI->getParent()->getName()) << ")\\l\"";
-    } else
-      CBV->printAsOperand(OS);
-  }
-
   bumpIndent(-2);
   OS << "\n" << Indent << "]\n";
   dumpEdges(BasicBlock);

@@ -70,14 +70,14 @@
 ; GCN: v_cmp_ne_u32_e32 vcc, 1, [[REG]]
 ; GCN: v_cndmask_b32_e64 v{{[0-9]+}}, 0, -1, vcc
 
-; GCN: ; %Flow4
+; GCN: ; %Flow1
 ; GCN-NEXT: s_or_b64 exec, exec
 ; GCN: v_cmp_ne_u32_e32 vcc, 0
 
 ; GCN: ; %exit1
 ; GCN: ds_write_b32
 
-; GCN: %Flow5
+; GCN: %Flow2
 ; GCN-NEXT: s_or_b64 exec, exec
 ; GCN: v_cmp_ne_u32_e32 vcc, 0
 ; GCN-NEXT: s_and_saveexec_b64
@@ -355,7 +355,7 @@ exit1:                                     ; preds = %LeafBlock, %LeafBlock1
 
 ; GCN: v_mov_b32_e32 v0, 2.0
 ; GCN: s_or_b64 exec, exec
-; GCN-NOT: s_and_b64 exec, exec
+; GCN: s_and_b64 exec, exec
 ; GCN: v_mov_b32_e32 v0, 1.0
 
 ; GCN: {{^BB[0-9]+_[0-9]+}}: ; %UnifiedReturnBlock
@@ -642,12 +642,12 @@ uniform.multi.exit.region:
   br i1 %uniform.cond0, label %uniform.if, label %uniform.ret1
 
 uniform.if:
-  %sgpr0 = load volatile i32, i32 addrspace(4)* undef
+  %sgpr0 = load volatile i32, i32 addrspace(2)* undef
   %uniform.cond1 = icmp slt i32 %sgpr0, 1
   br i1 %uniform.cond1, label %uniform.then, label %uniform.endif
 
 uniform.then:
-  %sgpr1 = load volatile i32, i32 addrspace(4)* undef
+  %sgpr1 = load volatile i32, i32 addrspace(2)* undef
   %uniform.cond2 = icmp sge i32 %sgpr1, 4
   store volatile i32 33, i32 addrspace(1)* undef
   br i1 %uniform.cond2, label %uniform.ret0, label %uniform.endif

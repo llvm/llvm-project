@@ -10,7 +10,5 @@
 define <4 x i32> @test(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK: pblendw $63, %xmm1, %xmm0
   %shuffle = shufflevector <4 x i32> %a, <4 x i32> %b, <4 x i32> <i32 4, i32 5, i32 6, i32 3>
-  ; add forces execution domain
-  %sum = add <4 x i32> %shuffle, %shuffle
-  ret <4 x i32> %sum
+  ret <4 x i32> %shuffle
 }

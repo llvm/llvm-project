@@ -232,17 +232,6 @@ static DecodeStatus decodeSImmOperandAndLsl1(MCInst &Inst, uint64_t Imm,
   return MCDisassembler::Success;
 }
 
-static DecodeStatus decodeCLUIImmOperand(MCInst &Inst, uint64_t Imm,
-                                         int64_t Address,
-                                         const void *Decoder) {
-  assert(isUInt<6>(Imm) && "Invalid immediate");
-  if (Imm > 31) {
-    Imm = (SignExtend64<6>(Imm) & 0xfffff);
-  }
-  Inst.addOperand(MCOperand::createImm(Imm));
-  return MCDisassembler::Success;
-}
-
 #include "RISCVGenDisassemblerTables.inc"
 
 DecodeStatus RISCVDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
@@ -258,15 +247,14 @@ DecodeStatus RISCVDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
   // It's a 32 bit instruction if bit 0 and 1 are 1.
   if ((Bytes[0] & 0x3) == 0x3) {
     Insn = support::endian::read32le(Bytes.data());
-    LLVM_DEBUG(dbgs() << "Trying RISCV32 table :\n");
+    DEBUG(dbgs() << "Trying RISCV32 table :\n");
     Result = decodeInstruction(DecoderTable32, MI, Insn, Address, this, STI);
     Size = 4;
   } else {
     Insn = support::endian::read16le(Bytes.data());
 
     if (!STI.getFeatureBits()[RISCV::Feature64Bit]) {
-      LLVM_DEBUG(
-          dbgs() << "Trying RISCV32Only_16 table (16-bit Instruction):\n");
+      DEBUG(dbgs() << "Trying RISCV32Only_16 table (16-bit Instruction):\n");
       // Calling the auto-generated decoder function.
       Result = decodeInstruction(DecoderTableRISCV32Only_16, MI, Insn, Address,
                                  this, STI);
@@ -276,7 +264,7 @@ DecodeStatus RISCVDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
       }
     }
 
-    LLVM_DEBUG(dbgs() << "Trying RISCV_C table (16-bit Instruction):\n");
+    DEBUG(dbgs() << "Trying RISCV_C table (16-bit Instruction):\n");
     // Calling the auto-generated decoder function.
     Result = decodeInstruction(DecoderTable16, MI, Insn, Address, this, STI);
     Size = 2;

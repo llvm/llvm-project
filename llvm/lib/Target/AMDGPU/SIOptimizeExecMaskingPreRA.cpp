@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// This pass removes redundant S_OR_B64 instructions enabling lanes in
+/// \brief This pass removes redundant S_OR_B64 instructions enabling lanes in
 /// the exec. If two SI_END_CF (lowered as S_OR_B64) come together without any
 /// vector instructions between them we can only keep outer SI_END_CF, given
 /// that CFG is structured and exec bits of the outer end statement are always
@@ -23,7 +23,6 @@
 #include "AMDGPU.h"
 #include "AMDGPUSubtarget.h"
 #include "SIInstrInfo.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 
@@ -107,7 +106,7 @@ bool SIOptimizeExecMaskingPreRA::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
 
-  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
   const SIInstrInfo *TII = ST.getInstrInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
@@ -135,7 +134,7 @@ bool SIOptimizeExecMaskingPreRA::runOnMachineFunction(MachineFunction &MF) {
         }
 
         while (I != E) {
-          if (I->isDebugInstr()) {
+          if (I->isDebugValue()) {
             I = std::next(I);
             continue;
           }
@@ -144,8 +143,7 @@ bool SIOptimizeExecMaskingPreRA::runOnMachineFunction(MachineFunction &MF) {
               I->hasUnmodeledSideEffects() || I->hasOrderedMemoryRef())
             break;
 
-          LLVM_DEBUG(dbgs()
-                     << "Removing no effect instruction: " << *I << '\n');
+          DEBUG(dbgs() << "Removing no effect instruction: " << *I << '\n');
 
           for (auto &Op : I->operands()) {
             if (Op.isReg())
@@ -195,7 +193,7 @@ bool SIOptimizeExecMaskingPreRA::runOnMachineFunction(MachineFunction &MF) {
         !getOrExecSource(*NextLead, *TII, MRI))
       continue;
 
-    LLVM_DEBUG(dbgs() << "Redundant EXEC = S_OR_B64 found: " << *Lead << '\n');
+    DEBUG(dbgs() << "Redundant EXEC = S_OR_B64 found: " << *Lead << '\n');
 
     auto SaveExec = getOrExecSource(*Lead, *TII, MRI);
     unsigned SaveExecReg = getOrNonExecReg(*Lead, *TII);
@@ -226,7 +224,7 @@ bool SIOptimizeExecMaskingPreRA::runOnMachineFunction(MachineFunction &MF) {
         break;
       }
 
-      LLVM_DEBUG(dbgs() << "Redundant EXEC COPY: " << *SaveExec << '\n');
+      DEBUG(dbgs() << "Redundant EXEC COPY: " << *SaveExec << '\n');
     }
 
     if (SafeToReplace) {

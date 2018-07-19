@@ -237,6 +237,8 @@ define <4 x float> @insert_mem_lo_v4f32(<2 x float>* %ptr, <4 x float> %b) {
 ; SSE1-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; SSE1-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
 ; SSE1-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
+; SSE1-NEXT:    xorps %xmm2, %xmm2
+; SSE1-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm2[0]
 ; SSE1-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm0[2,3]
 ; SSE1-NEXT:    movaps %xmm1, %xmm0
 ; SSE1-NEXT:    retq
@@ -256,6 +258,8 @@ define <4 x float> @insert_mem_hi_v4f32(<2 x float>* %ptr, <4 x float> %b) {
 ; SSE1-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; SSE1-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
 ; SSE1-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
+; SSE1-NEXT:    xorps %xmm2, %xmm2
+; SSE1-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm2[0]
 ; SSE1-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; SSE1-NEXT:    retq
   %a = load <2 x float>, <2 x float>* %ptr
@@ -280,7 +284,7 @@ define <4 x float> @shuffle_mem_v4f32_0145(<4 x float> %a, <4 x float>* %pb) {
 ; SSE1:       # %bb.0:
 ; SSE1-NEXT:    movhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
 ; SSE1-NEXT:    retq
-  %b = load <4 x float>, <4 x float>* %pb, align 1
+  %b = load <4 x float>, <4 x float>* %pb, align 16
   %shuffle = shufflevector <4 x float> %a, <4 x float> %b, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
   ret <4 x float> %shuffle
 }
@@ -292,15 +296,5 @@ define <4 x float> @shuffle_mem_v4f32_6723(<4 x float> %a, <4 x float>* %pb) {
 ; SSE1-NEXT:    retq
   %b = load <4 x float>, <4 x float>* %pb, align 16
   %shuffle = shufflevector <4 x float> %a, <4 x float> %b, <4 x i32> <i32 6, i32 7, i32 2, i32 3>
-  ret <4 x float> %shuffle
-}
-
-define <4 x float> @shuffle_mem_v4f32_4523(<4 x float> %a, <4 x float>* %pb) {
-; SSE1-LABEL: shuffle_mem_v4f32_4523:
-; SSE1:       # %bb.0:
-; SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
-; SSE1-NEXT:    retq
-  %b = load <4 x float>, <4 x float>* %pb, align 1
-  %shuffle = shufflevector <4 x float> %a, <4 x float> %b, <4 x i32> <i32 4, i32 5, i32 2, i32 3>
   ret <4 x float> %shuffle
 }

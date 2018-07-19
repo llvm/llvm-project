@@ -90,11 +90,11 @@ private:
                                     const ObjectFile *Obj,
                                     const std::string &ArchName);
 
-  /// Returns pair of pointers to object and debug object.
+  /// \brief Returns pair of pointers to object and debug object.
   Expected<ObjectPair> getOrCreateObjectPair(const std::string &Path,
                                             const std::string &ArchName);
 
-  /// Return a pointer to object file at specified path, for a specified
+  /// \brief Return a pointer to object file at specified path, for a specified
   /// architecture (e.g. if path refers to a Mach-O universal binary, only one
   /// object file from it will be returned).
   Expected<ObjectFile *> getOrCreateObject(const std::string &Path,
@@ -102,14 +102,14 @@ private:
 
   std::map<std::string, std::unique_ptr<SymbolizableModule>> Modules;
 
-  /// Contains cached results of getOrCreateObjectPair().
+  /// \brief Contains cached results of getOrCreateObjectPair().
   std::map<std::pair<std::string, std::string>, ObjectPair>
       ObjectPairForPathArch;
 
-  /// Contains parsed binary for each path, or parsing error.
+  /// \brief Contains parsed binary for each path, or parsing error.
   std::map<std::string, OwningBinary<Binary>> BinaryForPath;
 
-  /// Parsed object file for path/architecture pair, where "path" refers
+  /// \brief Parsed object file for path/architecture pair, where "path" refers
   /// to Mach-O universal binary.
   std::map<std::pair<std::string, std::string>, std::unique_ptr<ObjectFile>>
       ObjectForUBPathAndArch;

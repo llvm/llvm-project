@@ -11,8 +11,7 @@
 #define LLVM_DEBUGINFO_DWARF_DWARFVERIFIER_H
 
 #include "llvm/DebugInfo/DIContext.h"
-#include "llvm/DebugInfo/DWARF/DWARFAcceleratorTable.h"
-#include "llvm/DebugInfo/DWARF/DWARFAddressRange.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
 
 #include <cstdint>
@@ -25,7 +24,6 @@ struct DWARFAttribute;
 class DWARFContext;
 class DWARFDie;
 class DWARFUnit;
-class DWARFCompileUnit;
 class DWARFDataExtractor;
 class DWARFDebugAbbrev;
 class DataExtractor;
@@ -110,7 +108,7 @@ private:
   /// \param Abbrev Pointer to the abbreviations section we are verifying
   /// Abbrev can be a pointer to either .debug_abbrev or debug_abbrev.dwo.
   ///
-  /// \returns The number of errors that occurred during verification.
+  /// \returns The number of errors that occured during verification.
   unsigned verifyAbbrevSection(const DWARFDebugAbbrev *Abbrev);
 
   /// Verifies the header of a unit in the .debug_info section.
@@ -152,14 +150,14 @@ private:
   ///                  type of the unit DIE.
   ///
   /// \returns true if the content is verified successfully, false otherwise.
-  bool verifyUnitContents(DWARFUnit &Unit, uint8_t UnitType = 0);
+  bool verifyUnitContents(DWARFUnit Unit, uint8_t UnitType = 0);
 
   /// Verify that all Die ranges are valid.
   ///
   /// This function currently checks for:
   /// - cases in which lowPC >= highPC
   ///
-  /// \returns Number of errors that occurred during verification.
+  /// \returns Number of errors that occured during verification.
   unsigned verifyDieRanges(const DWARFDie &Die, DieRangeInfo &ParentRI);
 
   /// Verifies the attribute's DWARF attribute and its value.
@@ -171,7 +169,7 @@ private:
   /// \param Die          The DWARF DIE that owns the attribute value
   /// \param AttrValue    The DWARF attribute value to check
   ///
-  /// \returns NumErrors The number of errors occurred during verification of
+  /// \returns NumErrors The number of errors occured during verification of
   /// attributes' values in a .debug_info section unit
   unsigned verifyDebugInfoAttribute(const DWARFDie &Die,
                                     DWARFAttribute &AttrValue);
@@ -186,7 +184,7 @@ private:
   /// \param Die          The DWARF DIE that owns the attribute value
   /// \param AttrValue    The DWARF attribute value to check
   ///
-  /// \returns NumErrors The number of errors occurred during verification of
+  /// \returns NumErrors The number of errors occured during verification of
   /// attributes' forms in a .debug_info section unit
   unsigned verifyDebugInfoForm(const DWARFDie &Die, DWARFAttribute &AttrValue);
 
@@ -198,11 +196,11 @@ private:
   /// around, that it doesn't create invalid references by failing to relocate
   /// CU relative and absolute references.
   ///
-  /// \returns NumErrors The number of errors occurred during verification of
+  /// \returns NumErrors The number of errors occured during verification of
   /// references for the .debug_info section
   unsigned verifyDebugInfoReferences();
 
-  /// Verify the DW_AT_stmt_list encoding and value and ensure that no
+  /// Verify the the DW_AT_stmt_list encoding and value and ensure that no
   /// compile units that have the same DW_AT_stmt_list value.
   void verifyDebugLineStmtOffsets();
 
@@ -229,42 +227,10 @@ private:
   /// \param StrData pointer to the string section
   /// \param SectionName the name of the table we're verifying
   ///
-  /// \returns The number of errors occurred during verification
+  /// \returns The number of errors occured during verification
   unsigned verifyAppleAccelTable(const DWARFSection *AccelSection,
                                  DataExtractor *StrData,
                                  const char *SectionName);
-
-  unsigned verifyDebugNamesCULists(const DWARFDebugNames &AccelTable);
-  unsigned verifyNameIndexBuckets(const DWARFDebugNames::NameIndex &NI,
-                                  const DataExtractor &StrData);
-  unsigned verifyNameIndexAbbrevs(const DWARFDebugNames::NameIndex &NI);
-  unsigned verifyNameIndexAttribute(const DWARFDebugNames::NameIndex &NI,
-                                    const DWARFDebugNames::Abbrev &Abbr,
-                                    DWARFDebugNames::AttributeEncoding AttrEnc);
-  unsigned verifyNameIndexEntries(const DWARFDebugNames::NameIndex &NI,
-                                  const DWARFDebugNames::NameTableEntry &NTE);
-  unsigned verifyNameIndexCompleteness(const DWARFDie &Die,
-                                       const DWARFDebugNames::NameIndex &NI);
-
-  /// Verify that the DWARF v5 accelerator table is valid.
-  ///
-  /// This function currently checks that:
-  /// - Headers individual Name Indices fit into the section and can be parsed.
-  /// - Abbreviation tables can be parsed and contain valid index attributes
-  ///   with correct form encodings.
-  /// - The CU lists reference existing compile units.
-  /// - The buckets have a valid index, or they are empty.
-  /// - All names are reachable via the hash table (they have the correct hash,
-  ///   and the hash is in the correct bucket).
-  /// - Information in the index entries is complete (all required entries are
-  ///   present) and consistent with the debug_info section DIEs.
-  ///
-  /// \param AccelSection section containing the acceleration table
-  /// \param StrData string section
-  ///
-  /// \returns The number of errors occurred during verification
-  unsigned verifyDebugNames(const DWARFSection &AccelSection,
-                            const DataExtractor &StrData);
 
 public:
   DWARFVerifier(raw_ostream &S, DWARFContext &D,

@@ -55,12 +55,6 @@ static cl::opt<unsigned> VRegDistCutoff("insert-dist-cutoff", cl::init(30U),
   cl::Hidden, cl::ZeroOrMore, cl::desc("Vreg distance cutoff for insert "
   "generation."));
 
-// Limit the container sizes for extreme cases where we run out of memory.
-static cl::opt<unsigned> MaxORLSize("insert-max-orl", cl::init(4096),
-  cl::Hidden, cl::ZeroOrMore, cl::desc("Maximum size of OrderedRegisterList"));
-static cl::opt<unsigned> MaxIFMSize("insert-max-ifmap", cl::init(1024),
-  cl::Hidden, cl::ZeroOrMore, cl::desc("Maximum size of IFMap"));
-
 static cl::opt<bool> OptTiming("insert-timing", cl::init(false), cl::Hidden,
   cl::ZeroOrMore, cl::desc("Enable timing of insert generation"));
 static cl::opt<bool> OptTimingDetail("insert-timing-detail", cl::init(false),
@@ -92,7 +86,6 @@ namespace {
   struct RegisterSet : private BitVector {
     RegisterSet() = default;
     explicit RegisterSet(unsigned s, bool t = false) : BitVector(s, t) {}
-    RegisterSet(const RegisterSet &RS) : BitVector(RS) {}
 
     using BitVector::clear;
 
@@ -377,11 +370,9 @@ namespace {
 
   class OrderedRegisterList {
     using ListType = std::vector<unsigned>;
-    const unsigned MaxSize;
 
   public:
-    OrderedRegisterList(const RegisterOrdering &RO)
-      : MaxSize(MaxORLSize), Ord(RO) {}
+    OrderedRegisterList(const RegisterOrdering &RO) : Ord(RO) {}
 
     void insert(unsigned VR);
     void remove(unsigned VR);
@@ -442,17 +433,12 @@ void OrderedRegisterList::insert(unsigned VR) {
     Seq.push_back(VR);
   else
     Seq.insert(L, VR);
-
-  unsigned S = Seq.size();
-  if (S > MaxSize)
-    Seq.resize(MaxSize);
-  assert(Seq.size() <= MaxSize);
 }
 
 void OrderedRegisterList::remove(unsigned VR) {
   iterator L = std::lower_bound(Seq.begin(), Seq.end(), VR, Ord);
-  if (L != Seq.end())
-    Seq.erase(L);
+  assert(L != Seq.end());
+  Seq.erase(L);
 }
 
 namespace {
@@ -632,7 +618,7 @@ void HexagonGenInsert::buildOrderingBT(RegisterOrdering &RB,
   SortableVectorType VRs;
   for (RegisterOrdering::iterator I = RB.begin(), E = RB.end(); I != E; ++I)
     VRs.push_back(I->first);
-  llvm::sort(VRs.begin(), VRs.end(), LexCmp);
+  std::sort(VRs.begin(), VRs.end(), LexCmp);
   // Transfer the results to the outgoing register ordering.
   for (unsigned i = 0, n = VRs.size(); i < n; ++i)
     RO.insert(std::make_pair(VRs[i], i));
@@ -964,9 +950,6 @@ void HexagonGenInsert::collectInBlock(MachineBasicBlock *B,
           continue;
 
         findRecordInsertForms(VR, AVs);
-        // Stop if the map size is too large.
-        if (IFMap.size() > MaxIFMSize)
-          return;
       }
     }
 

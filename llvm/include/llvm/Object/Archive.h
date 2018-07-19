@@ -91,9 +91,9 @@ public:
 
     const Archive *Parent;
     ArchiveMemberHeader Header;
-    /// Includes header but not padding byte.
+    /// \brief Includes header but not padding byte.
     StringRef Data;
-    /// Offset from Data to the start of the file.
+    /// \brief Offset from Data to the start of the file.
     uint16_t StartOfFile;
 
     Expected<bool> isThinMember() const;

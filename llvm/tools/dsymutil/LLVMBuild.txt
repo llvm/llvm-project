@@ -17,6 +17,6 @@
 
 [component_0]
 type = Tool
-name = dsymutil
+name = llvm-dsymutil
 parent = Tools
 required_libraries = AsmPrinter DebugInfoDWARF MC Object Support all-targets

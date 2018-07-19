@@ -193,7 +193,7 @@ define amdgpu_kernel void @v_abs_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> a
 
 ; GCN-DAG: s_min_i32 s{{[0-9]+}}, [[VAL0]], [[VAL1]]
 ; GCN-DAG: s_max_i32 s{{[0-9]+}}, [[VAL0]], [[VAL1]]
-define amdgpu_kernel void @s_min_max_i32(i32 addrspace(1)* %out0, i32 addrspace(1)* %out1, [8 x i32], i32 %val0, [8 x i32], i32 %val1) nounwind {
+define amdgpu_kernel void @s_min_max_i32(i32 addrspace(1)* %out0, i32 addrspace(1)* %out1, i32 %val0, i32 %val1) nounwind {
   %cond0 = icmp sgt i32 %val0, %val1
   %sel0 = select i1 %cond0, i32 %val0, i32 %val1
   %sel1 = select i1 %cond0, i32 %val1, i32 %val0

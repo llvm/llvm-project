@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file implements WebAssembly-specific per-machine-function
+/// \brief This file implements WebAssembly-specific per-machine-function
 /// information.
 ///
 //===----------------------------------------------------------------------===//

@@ -165,13 +165,13 @@ namespace {
       }
     }
 
-    /// A check failed, so printout out the condition and the message.
+    /// \brief A check failed, so printout out the condition and the message.
     ///
     /// This provides a nice place to put a breakpoint if you want to see why
     /// something is not correct.
     void CheckFailed(const Twine &Message) { MessagesStr << Message << '\n'; }
 
-    /// A check failed (with values to print).
+    /// \brief A check failed (with values to print).
     ///
     /// This calls the Message-only version so that the above is easier to set
     /// a breakpoint on.
@@ -323,9 +323,9 @@ void Lint::visitCallSite(CallSite CS) {
       MemCpyInst *MCI = cast<MemCpyInst>(&I);
       // TODO: If the size is known, use it.
       visitMemoryReference(I, MCI->getDest(), MemoryLocation::UnknownSize,
-                           MCI->getDestAlignment(), nullptr, MemRef::Write);
+                           MCI->getAlignment(), nullptr, MemRef::Write);
       visitMemoryReference(I, MCI->getSource(), MemoryLocation::UnknownSize,
-                           MCI->getSourceAlignment(), nullptr, MemRef::Read);
+                           MCI->getAlignment(), nullptr, MemRef::Read);
 
       // Check that the memcpy arguments don't overlap. The AliasAnalysis API
       // isn't expressive enough for what we really want to do. Known partial
@@ -345,16 +345,16 @@ void Lint::visitCallSite(CallSite CS) {
       MemMoveInst *MMI = cast<MemMoveInst>(&I);
       // TODO: If the size is known, use it.
       visitMemoryReference(I, MMI->getDest(), MemoryLocation::UnknownSize,
-                           MMI->getDestAlignment(), nullptr, MemRef::Write);
+                           MMI->getAlignment(), nullptr, MemRef::Write);
       visitMemoryReference(I, MMI->getSource(), MemoryLocation::UnknownSize,
-                           MMI->getSourceAlignment(), nullptr, MemRef::Read);
+                           MMI->getAlignment(), nullptr, MemRef::Read);
       break;
     }
     case Intrinsic::memset: {
       MemSetInst *MSI = cast<MemSetInst>(&I);
       // TODO: If the size is known, use it.
       visitMemoryReference(I, MSI->getDest(), MemoryLocation::UnknownSize,
-                           MSI->getDestAlignment(), nullptr, MemRef::Write);
+                           MSI->getAlignment(), nullptr, MemRef::Write);
       break;
     }
 

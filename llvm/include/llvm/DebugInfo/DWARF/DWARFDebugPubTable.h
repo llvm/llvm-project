@@ -32,7 +32,7 @@ public:
 
     /// The name of the object as given by the DW_AT_name attribute of the
     /// referenced DIE.
-    StringRef Name;
+    const char *Name;
   };
 
   /// Each table consists of sets of variable length entries. Each set describes

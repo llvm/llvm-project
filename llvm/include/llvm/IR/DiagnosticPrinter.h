@@ -28,7 +28,7 @@ class StringRef;
 class Twine;
 class Value;
 
-/// Interface for custom diagnostic printing.
+/// \brief Interface for custom diagnostic printing.
 class DiagnosticPrinter {
 public:
   virtual ~DiagnosticPrinter() = default;
@@ -58,7 +58,7 @@ public:
   virtual DiagnosticPrinter &operator<<(const SMDiagnostic &Diag) = 0;
 };
 
-/// Basic diagnostic printer that uses an underlying raw_ostream.
+/// \brief Basic diagnostic printer that uses an underlying raw_ostream.
 class DiagnosticPrinterRawOStream : public DiagnosticPrinter {
 protected:
   raw_ostream &Stream;

@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Defines the llvm::Arg class for parsed arguments.
+/// \brief Defines the llvm::Arg class for parsed arguments.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -28,35 +28,35 @@ namespace opt {
 
 class ArgList;
 
-/// A concrete instance of a particular driver option.
+/// \brief A concrete instance of a particular driver option.
 ///
 /// The Arg class encodes just enough information to be able to
 /// derive the argument values efficiently.
 class Arg {
 private:
-  /// The option this argument is an instance of.
+  /// \brief The option this argument is an instance of.
   const Option Opt;
 
-  /// The argument this argument was derived from (during tool chain
+  /// \brief The argument this argument was derived from (during tool chain
   /// argument translation), if any.
   const Arg *BaseArg;
 
-  /// How this instance of the option was spelled.
+  /// \brief How this instance of the option was spelled.
   StringRef Spelling;
 
-  /// The index at which this argument appears in the containing
+  /// \brief The index at which this argument appears in the containing
   /// ArgList.
   unsigned Index;
 
-  /// Was this argument used to effect compilation?
+  /// \brief Was this argument used to effect compilation?
   ///
   /// This is used for generating "argument unused" diagnostics.
   mutable unsigned Claimed : 1;
 
-  /// Does this argument own its values?
+  /// \brief Does this argument own its values?
   mutable unsigned OwnsValues : 1;
 
-  /// The argument values, as C strings.
+  /// \brief The argument values, as C strings.
   SmallVector<const char *, 2> Values;
 
 public:
@@ -74,7 +74,7 @@ public:
   StringRef getSpelling() const { return Spelling; }
   unsigned getIndex() const { return Index; }
 
-  /// Return the base argument which generated this arg.
+  /// \brief Return the base argument which generated this arg.
   ///
   /// This is either the argument itself or the argument it was
   /// derived from during tool chain specific argument translation.
@@ -88,7 +88,7 @@ public:
 
   bool isClaimed() const { return getBaseArg().Claimed; }
 
-  /// Set the Arg claimed bit.
+  /// \brief Set the Arg claimed bit.
   void claim() const { getBaseArg().Claimed = true; }
 
   unsigned getNumValues() const { return Values.size(); }
@@ -107,10 +107,10 @@ public:
     return false;
   }
 
-  /// Append the argument onto the given array as strings.
+  /// \brief Append the argument onto the given array as strings.
   void render(const ArgList &Args, ArgStringList &Output) const;
 
-  /// Append the argument, render as an input, onto the given
+  /// \brief Append the argument, render as an input, onto the given
   /// array as strings.
   ///
   /// The distinction is that some options only render their values
@@ -120,7 +120,7 @@ public:
   void print(raw_ostream &O) const;
   void dump() const;
 
-  /// Return a formatted version of the argument and
+  /// \brief Return a formatted version of the argument and
   /// its values, for debugging and diagnostics.
   std::string getAsString(const ArgList &Args) const;
 };

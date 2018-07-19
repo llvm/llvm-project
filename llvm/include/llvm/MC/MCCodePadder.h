@@ -28,6 +28,7 @@ typedef SmallVector<const MCPaddingFragment *, 8> MCPFRange;
 
 struct MCCodePaddingContext {
   bool IsPaddingActive;
+  bool IsBasicBlockInsideInnermostLoop;
   bool IsBasicBlockReachableViaFallthrough;
   bool IsBasicBlockReachableViaBranch;
 };
@@ -118,7 +119,7 @@ public:
   /// \param Fragment The fragment to relax.
   /// \param Layout Code layout information.
   ///
-  /// \returns true iff any relaxation occurred.
+  /// \returns true iff any relaxation occured.
   bool relaxFragment(MCPaddingFragment *Fragment, MCAsmLayout &Layout);
 };
 
