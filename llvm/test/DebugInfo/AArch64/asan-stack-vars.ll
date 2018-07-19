@@ -73,7 +73,7 @@ target triple = "arm64-apple-ios"
 @llvm.compiler.used = appending global [12 x i8*] [i8* bitcast (%struct._class_t** @"OBJC_CLASSLIST_REFERENCES_$_" to i8*), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @OBJC_METH_VAR_NAME_, i32 0, i32 0), i8* bitcast (i8** @OBJC_SELECTOR_REFERENCES_ to i8*), i8* getelementptr inbounds ([14 x i8], [14 x i8]* @OBJC_METH_VAR_NAME_.1, i32 0, i32 0), i8* bitcast (i8** @OBJC_SELECTOR_REFERENCES_.2 to i8*), i8* getelementptr inbounds ([9 x i8], [9 x i8]* @OBJC_METH_VAR_NAME_.3, i32 0, i32 0), i8* bitcast (i8** @OBJC_SELECTOR_REFERENCES_.4 to i8*), i8* getelementptr inbounds ([9 x i8], [9 x i8]* @OBJC_CLASS_NAME_, i32 0, i32 0), i8* getelementptr inbounds ([12 x i8], [12 x i8]* @OBJC_METH_VAR_NAME_.5, i32 0, i32 0), i8* getelementptr inbounds ([21 x i8], [21 x i8]* @OBJC_METH_VAR_TYPE_, i32 0, i32 0), i8* bitcast ({ i32, i32, [1 x %struct._objc_method] }* @"\01l_OBJC_$_CLASS_METHODS_MyObject" to i8*), i8* bitcast ([1 x i8*]* @"OBJC_LABEL_CLASS_$" to i8*)], section "llvm.metadata"
 @llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 1, void ()* @asan.module_ctor, i8* null }]
 @__asan_shadow_memory_dynamic_address = external global i64
-@__asan_gen_ = private unnamed_addr constant [34 x i8] c"2 32 16 9 imageSize 64 8 6 object\00", align 1
+@___asan_gen_ = private unnamed_addr constant [34 x i8] c"2 32 16 9 imageSize 64 8 6 object\00", align 1
 
 ; Function Attrs: noinline sanitize_address ssp uwtable
 define internal i8* @"\01+[MyObject doWithSize:]"(i8* %self, i8* %_cmd, [2 x double] %imageSize.coerce) #0 !dbg !14 {
@@ -91,7 +91,7 @@ entry:
   store i64 1102416563, i64* %6, !dbg !35
   %7 = add i64 %1, 8, !dbg !35
   %8 = inttoptr i64 %7 to i64*, !dbg !35
-  store i64 ptrtoint ([34 x i8]* @__asan_gen_ to i64), i64* %8, !dbg !35
+  store i64 ptrtoint ([34 x i8]* @___asan_gen_ to i64), i64* %8, !dbg !35
   %9 = add i64 %1, 16, !dbg !35
   %10 = inttoptr i64 %9 to i64*, !dbg !35
   store i64 ptrtoint (i8* (i8*, i8*, [2 x double])* @"\01+[MyObject doWithSize:]" to i64), i64* %10, !dbg !35

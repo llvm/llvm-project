@@ -48,7 +48,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 @llvm.global_ctors = appending global [1 x { i32, void ()* }] [{ i32, void ()* } { i32 1, void ()* @asan.module_ctor }]
 @__asan_option_detect_stack_use_after_return = external global i32
-@__asan_gen_ = private unnamed_addr constant [16 x i8] c"1 32 4 6 y.addr\00", align 1
+@___asan_gen_ = private unnamed_addr constant [16 x i8] c"1 32 4 6 y.addr\00", align 1
 
 ; Function Attrs: nounwind sanitize_address uwtable
 define i32 @_Z3bari(i32 %y) #0 !dbg !4 {
@@ -71,7 +71,7 @@ entry:
   store i64 1102416563, i64* %9
   %10 = add i64 %6, 8
   %11 = inttoptr i64 %10 to i64*
-  store i64 ptrtoint ([16 x i8]* @__asan_gen_ to i64), i64* %11
+  store i64 ptrtoint ([16 x i8]* @___asan_gen_ to i64), i64* %11
   %12 = add i64 %6, 16
   %13 = inttoptr i64 %12 to i64*
   store i64 ptrtoint (i32 (i32)* @_Z3bari to i64), i64* %13

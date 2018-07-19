@@ -459,39 +459,25 @@ enum CastAwayConstnessKind {
 /// Like Sema::UnwrapSimilarTypes, this removes one level of indirection from
 /// both types, provided that they're both pointer-like or array-like. Unlike
 /// the Sema function, doesn't care if the unwrapped pieces are related.
+///
+/// This function may remove additional levels as necessary for correctness:
+/// the resulting T1 is unwrapped sufficiently that it is never an array type,
+/// so that its qualifiers can be directly compared to those of T2 (which will
+/// have the combined set of qualifiers from all indermediate levels of T2),
+/// as (effectively) required by [expr.const.cast]p7 replacing T1's qualifiers
+/// with those from T2.
 static CastAwayConstnessKind
 unwrapCastAwayConstnessLevel(ASTContext &Context, QualType &T1, QualType &T2) {
-  // Note, even if this returns false, it may have unwrapped some number of
-  // matching "array of" pieces. That's OK, we don't need to check their
-  // cv-qualifiers (that check is covered by checking the qualifiers on the
-  // array types themselves).
-  if (Context.UnwrapSimilarTypes(T1, T2))
-    return CastAwayConstnessKind::CACK_Similar;
-
-  // Special case: if the destination type is a reference type, unwrap it as
-  // the first level.
-  if (T2->isReferenceType()) {
-    T2 = T2->getPointeeType();
-    return CastAwayConstnessKind::CACK_Similar;
-  }
-
+  enum { None, Ptr, MemPtr, BlockPtr, Array };
   auto Classify = [](QualType T) {
-    if (T->isAnyPointerType()) return 1;
-    if (T->isMemberPointerType()) return 2;
-    if (T->isBlockPointerType()) return 3;
+    if (T->isAnyPointerType()) return Ptr;
+    if (T->isMemberPointerType()) return MemPtr;
+    if (T->isBlockPointerType()) return BlockPtr;
     // We somewhat-arbitrarily don't look through VLA types here. This is at
     // least consistent with the behavior of UnwrapSimilarTypes.
-    if (T->isConstantArrayType() || T->isIncompleteArrayType()) return 4;
-    return 0;
+    if (T->isConstantArrayType() || T->isIncompleteArrayType()) return Array;
+    return None;
   };
-
-  int T1Class = Classify(T1);
-  if (!T1Class)
-    return CastAwayConstnessKind::CACK_None;
-
-  int T2Class = Classify(T2);
-  if (!T2Class)
-    return CastAwayConstnessKind::CACK_None;
 
   auto Unwrap = [&](QualType T) {
     if (auto *AT = Context.getAsArrayType(T))
@@ -499,10 +485,57 @@ unwrapCastAwayConstnessLevel(ASTContext &Context, QualType &T1, QualType &T2) {
     return T->getPointeeType();
   };
 
-  T1 = Unwrap(T1);
-  T2 = Unwrap(T2);
-  return T1Class == T2Class ? CastAwayConstnessKind::CACK_SimilarKind
-                            : CastAwayConstnessKind::CACK_Incoherent;
+  CastAwayConstnessKind Kind;
+
+  if (T2->isReferenceType()) {
+    // Special case: if the destination type is a reference type, unwrap it as
+    // the first level. (The source will have been an lvalue expression in this
+    // case, so there is no corresponding "reference to" in T1 to remove.) This
+    // simulates removing a "pointer to" from both sides.
+    T2 = T2->getPointeeType();
+    Kind = CastAwayConstnessKind::CACK_Similar;
+  } else if (Context.UnwrapSimilarTypes(T1, T2)) {
+    Kind = CastAwayConstnessKind::CACK_Similar;
+  } else {
+    // Try unwrapping mismatching levels.
+    int T1Class = Classify(T1);
+    if (T1Class == None)
+      return CastAwayConstnessKind::CACK_None;
+
+    int T2Class = Classify(T2);
+    if (T2Class == None)
+      return CastAwayConstnessKind::CACK_None;
+
+    T1 = Unwrap(T1);
+    T2 = Unwrap(T2);
+    Kind = T1Class == T2Class ? CastAwayConstnessKind::CACK_SimilarKind
+                              : CastAwayConstnessKind::CACK_Incoherent;
+  }
+
+  // We've unwrapped at least one level. If the resulting T1 is a (possibly
+  // multidimensional) array type, any qualifier on any matching layer of
+  // T2 is considered to correspond to T1. Decompose down to the element
+  // type of T1 so that we can compare properly.
+  while (true) {
+    Context.UnwrapSimilarArrayTypes(T1, T2);
+
+    if (Classify(T1) != Array)
+      break;
+
+    auto T2Class = Classify(T2);
+    if (T2Class == None)
+      break;
+
+    if (T2Class != Array)
+      Kind = CastAwayConstnessKind::CACK_Incoherent;
+    else if (Kind != CastAwayConstnessKind::CACK_Incoherent)
+      Kind = CastAwayConstnessKind::CACK_SimilarKind;
+
+    T1 = Unwrap(T1);
+    T2 = Unwrap(T2).withCVRQualifiers(T2.getCVRQualifiers());
+  }
+
+  return Kind;
 }
 
 /// Check if the pointer conversion from SrcType to DestType casts away

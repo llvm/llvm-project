@@ -1653,8 +1653,10 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
     // Retrieve the cached top-level module.
     Module = Known->second;    
   } else if (ModuleName == getLangOpts().CurrentModule) {
-    // This is the module we're building. 
-    Module = PP->getHeaderSearchInfo().lookupModule(ModuleName);
+    // This is the module we're building.
+    Module = PP->getHeaderSearchInfo().lookupModule(
+        ModuleName, /*AllowSearch*/ true,
+        /*AllowExtraModuleMapSearch*/ !IsInclusionDirective);
     /// FIXME: perhaps we should (a) look for a module using the module name
     //  to file map (PrebuiltModuleFiles) and (b) diagnose if still not found?
     //if (Module == nullptr) {
@@ -1666,7 +1668,8 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
     Known = KnownModules.insert(std::make_pair(Path[0].first, Module)).first;
   } else {
     // Search for a module with the given name.
-    Module = PP->getHeaderSearchInfo().lookupModule(ModuleName);
+    Module = PP->getHeaderSearchInfo().lookupModule(ModuleName, true,
+                                                    !IsInclusionDirective);
     HeaderSearchOptions &HSOpts =
         PP->getHeaderSearchInfo().getHeaderSearchOpts();
 
@@ -1743,7 +1746,8 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
                                    ImportLoc, ARRFlags)) {
     case ASTReader::Success: {
       if (Source != ModuleCache && !Module) {
-        Module = PP->getHeaderSearchInfo().lookupModule(ModuleName);
+        Module = PP->getHeaderSearchInfo().lookupModule(ModuleName, true,
+                                                        !IsInclusionDirective);
         if (!Module || !Module->getASTFile() ||
             FileMgr->getFile(ModuleFileName) != Module->getASTFile()) {
           // Error out if Module does not refer to the file in the prebuilt
@@ -1874,7 +1878,8 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
             PrivateModule, PP->getIdentifierInfo(Module->Name)->getTokenID());
         PrivPath.push_back(std::make_pair(&II, Path[0].second));
 
-        if (PP->getHeaderSearchInfo().lookupModule(PrivateModule))
+        if (PP->getHeaderSearchInfo().lookupModule(PrivateModule, true,
+                                                   !IsInclusionDirective))
           Sub =
               loadModule(ImportLoc, PrivPath, Visibility, IsInclusionDirective);
         if (Sub) {

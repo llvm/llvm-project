@@ -2016,43 +2016,43 @@ static bool markAliveBlocks(Function &F,
     // instructions into LLVM unreachable insts.  The instruction combining pass
     // canonicalizes unreachable insts into stores to null or undef.
     for (Instruction &I : *BB) {
-      // Assumptions that are known to be false are equivalent to unreachable.
-      // Also, if the condition is undefined, then we make the choice most
-      // beneficial to the optimizer, and choose that to also be unreachable.
-      if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
-        if (II->getIntrinsicID() == Intrinsic::assume) {
-          if (match(II->getArgOperand(0), m_CombineOr(m_Zero(), m_Undef()))) {
-            // Don't insert a call to llvm.trap right before the unreachable.
-            changeToUnreachable(II, false, false, DDT);
-            Changed = true;
-            break;
-          }
-        }
-
-        if (II->getIntrinsicID() == Intrinsic::experimental_guard) {
-          // A call to the guard intrinsic bails out of the current compilation
-          // unit if the predicate passed to it is false.  If the predicate is a
-          // constant false, then we know the guard will bail out of the current
-          // compile unconditionally, so all code following it is dead.
-          //
-          // Note: unlike in llvm.assume, it is not "obviously profitable" for
-          // guards to treat `undef` as `false` since a guard on `undef` can
-          // still be useful for widening.
-          if (match(II->getArgOperand(0), m_Zero()))
-            if (!isa<UnreachableInst>(II->getNextNode())) {
-              changeToUnreachable(II->getNextNode(), /*UseLLVMTrap=*/false,
-                                  false, DDT);
+      if (auto *CI = dyn_cast<CallInst>(&I)) {
+        Value *Callee = CI->getCalledValue();
+        // Handle intrinsic calls.
+        if (Function *F = dyn_cast<Function>(Callee)) {
+          auto IntrinsicID = F->getIntrinsicID();
+          // Assumptions that are known to be false are equivalent to
+          // unreachable. Also, if the condition is undefined, then we make the
+          // choice most beneficial to the optimizer, and choose that to also be
+          // unreachable.
+          if (IntrinsicID == Intrinsic::assume) {
+            if (match(CI->getArgOperand(0), m_CombineOr(m_Zero(), m_Undef()))) {
+              // Don't insert a call to llvm.trap right before the unreachable.
+              changeToUnreachable(CI, false, false, DDT);
               Changed = true;
               break;
             }
-        }
-      }
-
-      if (auto *CI = dyn_cast<CallInst>(&I)) {
-        Value *Callee = CI->getCalledValue();
-        if ((isa<ConstantPointerNull>(Callee) &&
-             !NullPointerIsDefined(CI->getFunction())) ||
-            isa<UndefValue>(Callee)) {
+          } else if (IntrinsicID == Intrinsic::experimental_guard) {
+            // A call to the guard intrinsic bails out of the current
+            // compilation unit if the predicate passed to it is false. If the
+            // predicate is a constant false, then we know the guard will bail
+            // out of the current compile unconditionally, so all code following
+            // it is dead.
+            //
+            // Note: unlike in llvm.assume, it is not "obviously profitable" for
+            // guards to treat `undef` as `false` since a guard on `undef` can
+            // still be useful for widening.
+            if (match(CI->getArgOperand(0), m_Zero()))
+              if (!isa<UnreachableInst>(CI->getNextNode())) {
+                changeToUnreachable(CI->getNextNode(), /*UseLLVMTrap=*/false,
+                                    false, DDT);
+                Changed = true;
+                break;
+              }
+          }
+        } else if ((isa<ConstantPointerNull>(Callee) &&
+                    !NullPointerIsDefined(CI->getFunction())) ||
+                   isa<UndefValue>(Callee)) {
           changeToUnreachable(CI, /*UseLLVMTrap=*/false, false, DDT);
           Changed = true;
           break;
@@ -2068,12 +2068,11 @@ static bool markAliveBlocks(Function &F,
           }
           break;
         }
-      }
+      } else if (auto *SI = dyn_cast<StoreInst>(&I)) {
+        // Store to undef and store to null are undefined and used to signal
+        // that they should be changed to unreachable by passes that can't
+        // modify the CFG.
 
-      // Store to undef and store to null are undefined and used to signal that
-      // they should be changed to unreachable by passes that can't modify the
-      // CFG.
-      if (auto *SI = dyn_cast<StoreInst>(&I)) {
         // Don't touch volatile stores.
         if (SI->isVolatile()) continue;
 

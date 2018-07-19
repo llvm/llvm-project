@@ -3015,7 +3015,7 @@ AST_MATCHER_P_OVERLOAD(QualType, pointsTo, internal::Matcher<Decl>,
 ///   class A {};
 ///   using B = A;
 /// \endcode
-/// The matcher type(hasUnqualifeidDesugaredType(recordType())) matches
+/// The matcher type(hasUnqualifiedDesugaredType(recordType())) matches
 /// both B and A.
 AST_MATCHER_P(Type, hasUnqualifiedDesugaredType, internal::Matcher<Type>,
               InnerMatcher) {

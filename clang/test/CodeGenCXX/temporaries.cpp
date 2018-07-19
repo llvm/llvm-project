@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -emit-llvm %s -o - -triple=x86_64-apple-darwin9 -std=c++11 | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm %s -o - -triple=x86_64-apple-darwin9 -std=c++11 | FileCheck %s -check-prefixes=CHECK,NULL-INVALID
+// RUN: %clang_cc1 -emit-llvm %s -o - -triple=x86_64-apple-darwin9 -std=c++11 -fno-delete-null-pointer-checks | FileCheck %s -check-prefixes=CHECK,NULL-VALID
 
 namespace PR16263 {
   const unsigned int n = 1234;
@@ -333,7 +334,8 @@ namespace PR6648 {
   struct D;
   D& zed(B);
   void foobar() {
-    // CHECK: call nonnull %"struct.PR6648::D"* @_ZN6PR66483zedENS_1BE
+    // NULL-INVALID: call nonnull %"struct.PR6648::D"* @_ZN6PR66483zedENS_1BE
+    // NULL-VALID: call %"struct.PR6648::D"* @_ZN6PR66483zedENS_1BE
     zed(foo);
   }
 }

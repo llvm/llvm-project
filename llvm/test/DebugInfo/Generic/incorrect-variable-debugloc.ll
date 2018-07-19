@@ -54,8 +54,8 @@
 
 @llvm.global_ctors = appending global [1 x { i32, void ()* }] [{ i32, void ()* } { i32 1, void ()* @asan.module_ctor }]
 @__asan_option_detect_stack_use_after_return = external global i32
-@__asan_gen_ = private unnamed_addr constant [11 x i8] c"1 32 8 1 A\00", align 1
-@__asan_gen_1 = private unnamed_addr constant [13 x i8] c"1 32 1 3 tmp\00", align 1
+@___asan_gen_ = private unnamed_addr constant [11 x i8] c"1 32 8 1 A\00", align 1
+@___asan_gen_1 = private unnamed_addr constant [13 x i8] c"1 32 1 3 tmp\00", align 1
 
 ; Function Attrs: noreturn sanitize_address
 define i32 @_Z3fn1v() #0 !dbg !22 {
@@ -78,7 +78,7 @@ entry:
   store i64 1102416563, i64* %9, !dbg !39
   %10 = add i64 %6, 8, !dbg !39
   %11 = inttoptr i64 %10 to i64*, !dbg !39
-  store i64 ptrtoint ([11 x i8]* @__asan_gen_ to i64), i64* %11, !dbg !39
+  store i64 ptrtoint ([11 x i8]* @___asan_gen_ to i64), i64* %11, !dbg !39
   %12 = add i64 %6, 16, !dbg !39
   %13 = inttoptr i64 %12 to i64*, !dbg !39
   store i64 ptrtoint (i32 ()* @_Z3fn1v to i64), i64* %13, !dbg !39
@@ -136,7 +136,7 @@ entry:
   store i64 1102416563, i64* %9, !dbg !48
   %10 = add i64 %6, 8, !dbg !48
   %11 = inttoptr i64 %10 to i64*, !dbg !48
-  store i64 ptrtoint ([13 x i8]* @__asan_gen_1 to i64), i64* %11, !dbg !48
+  store i64 ptrtoint ([13 x i8]* @___asan_gen_1 to i64), i64* %11, !dbg !48
   %12 = add i64 %6, 16, !dbg !48
   %13 = inttoptr i64 %12 to i64*, !dbg !48
   store i64 ptrtoint (void (%struct.C*)* @_ZN1C5m_fn3Ev to i64), i64* %13, !dbg !48

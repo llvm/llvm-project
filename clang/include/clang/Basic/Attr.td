@@ -1770,6 +1770,13 @@ def Section : InheritableAttr {
   let Documentation = [SectionDocs];
 }
 
+def CodeSeg : InheritableAttr {
+  let Spellings = [Declspec<"code_seg">];
+  let Args = [StringArgument<"Name">];
+  let Subjects = SubjectList<[Function, CXXRecord], ErrorDiag>;
+  let Documentation = [CodeSegDocs];
+}
+
 def PragmaClangBSSSection : InheritableAttr {
   // This attribute has no spellings as it is only ever created implicitly.
   let Spellings = [];

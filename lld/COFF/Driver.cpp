@@ -984,6 +984,9 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
       Config->PDBAltPath = Arg->getValue();
     if (Args.hasArg(OPT_natvis))
       Config->NatvisFiles = Args.getAllArgValues(OPT_natvis);
+
+    if (auto *Arg = Args.getLastArg(OPT_pdb_source_path))
+      Config->PDBSourcePath = Arg->getValue();
   }
 
   // Handle /noentry

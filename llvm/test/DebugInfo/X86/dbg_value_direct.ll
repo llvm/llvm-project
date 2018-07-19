@@ -20,7 +20,7 @@ target triple = "x86_64-unknown-linux-gnu"
 @__asan_mapping_offset = linkonce_odr constant i64 2147450880
 @__asan_mapping_scale = linkonce_odr constant i64 3
 @llvm.global_ctors = appending global [1 x { i32, void ()* }] [{ i32, void ()* } { i32 1, void ()* @asan.module_ctor }]
-@__asan_gen_ = private unnamed_addr constant [16 x i8] c"1 32 4 5 .addr \00", align 1
+@___asan_gen_ = private unnamed_addr constant [16 x i8] c"1 32 4 5 .addr \00", align 1
 
 ; Function Attrs: sanitize_address uwtable
 define void @_Z4funci(%struct.A* noalias sret %agg.result, i32) #0 "stack-protector-buffer-size"="1" !dbg !4 {
@@ -33,7 +33,7 @@ entry:
   store i64 1102416563, i64* %4
   %5 = add i64 %1, 8
   %6 = inttoptr i64 %5 to i64*
-  store i64 ptrtoint ([16 x i8]* @__asan_gen_ to i64), i64* %6
+  store i64 ptrtoint ([16 x i8]* @___asan_gen_ to i64), i64* %6
   %7 = add i64 %1, 16
   %8 = inttoptr i64 %7 to i64*
   store i64 ptrtoint (void (%struct.A*, i32)* @_Z4funci to i64), i64* %8
