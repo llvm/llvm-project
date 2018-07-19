@@ -579,6 +579,11 @@ if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
   append_if(USE_NO_UNINITIALIZED "-Wno-uninitialized" CMAKE_CXX_FLAGS)
   append_if(USE_NO_MAYBE_UNINITIALIZED "-Wno-maybe-uninitialized" CMAKE_CXX_FLAGS)
 
+  # Disable -Wclass-memaccess, a C++-only warning from GCC 8 that fires on
+  # LLVM's ADT classes.
+  check_cxx_compiler_flag("-Wclass-memaccess" CXX_SUPPORTS_CLASS_MEMACCESS_FLAG)
+  append_if(CXX_SUPPORTS_CLASS_MEMACCESS_FLAG "-Wno-class-memaccess" CMAKE_CXX_FLAGS)
+
   # Check if -Wnon-virtual-dtor warns even though the class is marked final.
   # If it does, don't add it. So it won't be added on clang 3.4 and older.
   # This also catches cases when -Wnon-virtual-dtor isn't supported by

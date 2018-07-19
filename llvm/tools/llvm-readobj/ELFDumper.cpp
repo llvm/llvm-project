@@ -2904,7 +2904,9 @@ template <class ELFT> void GNUStyle<ELFT>::printSections(const ELFO *Obj) {
     Bias = 8;
     Width = 8;
   }
-  OS << "There are " << to_string(Obj->getHeader()->e_shnum)
+
+  ArrayRef<Elf_Shdr> Sections = unwrapOrError(Obj->sections());
+  OS << "There are " << to_string(Sections.size())
      << " section headers, starting at offset "
      << "0x" << to_hexString(Obj->getHeader()->e_shoff, false) << ":\n\n";
   OS << "Section Headers:\n";
@@ -2923,7 +2925,7 @@ template <class ELFT> void GNUStyle<ELFT>::printSections(const ELFO *Obj) {
     printField(f);
   OS << "\n";
 
-  for (const Elf_Shdr &Sec : unwrapOrError(Obj->sections())) {
+  for (const Elf_Shdr &Sec : Sections) {
     Number = to_string(SectionIndex);
     Fields[0].Str = Number;
     Fields[1].Str = unwrapOrError(Obj->getSectionName(&Sec));

@@ -103,7 +103,7 @@ define i64 @rshift10(i64 %a, i64 %b) nounwind readnone {
 ; BTVER2-LABEL: rshift10:
 ; BTVER2:       # %bb.0: # %entry
 ; BTVER2-NEXT:    shrq $62, %rdi # sched: [1:0.50]
-; BTVER2-NEXT:    leaq (%rdi,%rsi,4), %rax # sched: [1:0.50]
+; BTVER2-NEXT:    leaq (%rdi,%rsi,4), %rax # sched: [2:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; BDVER1-LABEL: rshift10:

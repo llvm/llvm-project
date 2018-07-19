@@ -278,7 +278,7 @@ define i32 @test_lea_add_offset(i32, i32) {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    # kill: def $esi killed $esi def $rsi
 ; BTVER2-NEXT:    # kill: def $edi killed $edi def $rdi
-; BTVER2-NEXT:    leal 16(%rdi,%rsi), %eax # sched: [1:0.50]
+; BTVER2-NEXT:    leal 16(%rdi,%rsi), %eax # sched: [2:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_lea_add_offset:
@@ -362,7 +362,7 @@ define i32 @test_lea_add_offset_big(i32, i32) {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    # kill: def $esi killed $esi def $rsi
 ; BTVER2-NEXT:    # kill: def $edi killed $edi def $rdi
-; BTVER2-NEXT:    leal -4096(%rdi,%rsi), %eax # sched: [1:0.50]
+; BTVER2-NEXT:    leal -4096(%rdi,%rsi), %eax # sched: [2:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_lea_add_offset_big:
@@ -428,7 +428,7 @@ define i32 @test_lea_mul(i32) {
 ; BTVER2-LABEL: test_lea_mul:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    # kill: def $edi killed $edi def $rdi
-; BTVER2-NEXT:    leal (%rdi,%rdi,2), %eax # sched: [1:0.50]
+; BTVER2-NEXT:    leal (%rdi,%rdi,2), %eax # sched: [2:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_lea_mul:
@@ -497,7 +497,7 @@ define i32 @test_lea_mul_offset(i32) {
 ; BTVER2-LABEL: test_lea_mul_offset:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    # kill: def $edi killed $edi def $rdi
-; BTVER2-NEXT:    leal -32(%rdi,%rdi,2), %eax # sched: [1:0.50]
+; BTVER2-NEXT:    leal -32(%rdi,%rdi,2), %eax # sched: [2:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_lea_mul_offset:
@@ -572,7 +572,7 @@ define i32 @test_lea_mul_offset_big(i32) {
 ; BTVER2-LABEL: test_lea_mul_offset_big:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    # kill: def $edi killed $edi def $rdi
-; BTVER2-NEXT:    leal 10000(%rdi,%rdi,8), %eax # sched: [1:0.50]
+; BTVER2-NEXT:    leal 10000(%rdi,%rdi,8), %eax # sched: [2:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_lea_mul_offset_big:
@@ -645,7 +645,7 @@ define i32 @test_lea_add_scale(i32, i32) {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    # kill: def $esi killed $esi def $rsi
 ; BTVER2-NEXT:    # kill: def $edi killed $edi def $rdi
-; BTVER2-NEXT:    leal (%rdi,%rsi,2), %eax # sched: [1:0.50]
+; BTVER2-NEXT:    leal (%rdi,%rsi,2), %eax # sched: [2:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_lea_add_scale:
@@ -724,7 +724,7 @@ define i32 @test_lea_add_scale_offset(i32, i32) {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    # kill: def $esi killed $esi def $rsi
 ; BTVER2-NEXT:    # kill: def $edi killed $edi def $rdi
-; BTVER2-NEXT:    leal 96(%rdi,%rsi,4), %eax # sched: [1:0.50]
+; BTVER2-NEXT:    leal 96(%rdi,%rsi,4), %eax # sched: [2:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_lea_add_scale_offset:
@@ -809,7 +809,7 @@ define i32 @test_lea_add_scale_offset_big(i32, i32) {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    # kill: def $esi killed $esi def $rsi
 ; BTVER2-NEXT:    # kill: def $edi killed $edi def $rdi
-; BTVER2-NEXT:    leal -1200(%rdi,%rsi,8), %eax # sched: [1:0.50]
+; BTVER2-NEXT:    leal -1200(%rdi,%rsi,8), %eax # sched: [2:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_lea_add_scale_offset_big:

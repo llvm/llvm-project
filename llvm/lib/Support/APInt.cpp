@@ -1735,25 +1735,25 @@ void APInt::udivrem(const APInt &LHS, const APInt &RHS,
 
   // Check the degenerate cases
   if (lhsWords == 0) {
-    Quotient = 0;                // 0 / Y ===> 0
-    Remainder = 0;               // 0 % Y ===> 0
+    Quotient = APInt(BitWidth, 0);    // 0 / Y ===> 0
+    Remainder = APInt(BitWidth, 0);   // 0 % Y ===> 0
     return;
   }
 
   if (rhsBits == 1) {
-    Quotient = LHS;             // X / 1 ===> X
-    Remainder = 0;              // X % 1 ===> 0
+    Quotient = LHS;                   // X / 1 ===> X
+    Remainder = APInt(BitWidth, 0);   // X % 1 ===> 0
   }
 
   if (lhsWords < rhsWords || LHS.ult(RHS)) {
-    Remainder = LHS;            // X % Y ===> X, iff X < Y
-    Quotient = 0;               // X / Y ===> 0, iff X < Y
+    Remainder = LHS;                  // X % Y ===> X, iff X < Y
+    Quotient = APInt(BitWidth, 0);    // X / Y ===> 0, iff X < Y
     return;
   }
 
   if (LHS == RHS) {
-    Quotient  = 1;              // X / X ===> 1
-    Remainder = 0;              // X % X ===> 0;
+    Quotient  = APInt(BitWidth, 1);   // X / X ===> 1
+    Remainder = APInt(BitWidth, 0);   // X % X ===> 0;
     return;
   }
 
@@ -1801,25 +1801,26 @@ void APInt::udivrem(const APInt &LHS, uint64_t RHS, APInt &Quotient,
 
   // Check the degenerate cases
   if (lhsWords == 0) {
-    Quotient = 0;                // 0 / Y ===> 0
-    Remainder = 0;               // 0 % Y ===> 0
+    Quotient = APInt(BitWidth, 0);    // 0 / Y ===> 0
+    Remainder = 0;                    // 0 % Y ===> 0
     return;
   }
 
   if (RHS == 1) {
-    Quotient = LHS;             // X / 1 ===> X
-    Remainder = 0;              // X % 1 ===> 0
+    Quotient = LHS;                   // X / 1 ===> X
+    Remainder = 0;                    // X % 1 ===> 0
+    return;
   }
 
   if (LHS.ult(RHS)) {
-    Remainder = LHS.getZExtValue(); // X % Y ===> X, iff X < Y
-    Quotient = 0;                   // X / Y ===> 0, iff X < Y
+    Remainder = LHS.getZExtValue();   // X % Y ===> X, iff X < Y
+    Quotient = APInt(BitWidth, 0);    // X / Y ===> 0, iff X < Y
     return;
   }
 
   if (LHS == RHS) {
-    Quotient  = 1;              // X / X ===> 1
-    Remainder = 0;              // X % X ===> 0;
+    Quotient  = APInt(BitWidth, 1);   // X / X ===> 1
+    Remainder = 0;                    // X % X ===> 0;
     return;
   }
 

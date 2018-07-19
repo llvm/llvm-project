@@ -66,6 +66,8 @@ public:
     return TargetTriple.getEnvironment() == Triple::GNUEABIHF ||
            TargetTriple.getEnvironment() == Triple::MuslEABIHF ||
            TargetTriple.getEnvironment() == Triple::EABIHF ||
+           (TargetTriple.isOSBinFormatMachO() &&
+            TargetTriple.getSubArch() == Triple::ARMSubArch_v7em) ||
            TargetTriple.isOSWindows() ||
            TargetABI == ARMBaseTargetMachine::ARM_ABI_AAPCS16;
   }

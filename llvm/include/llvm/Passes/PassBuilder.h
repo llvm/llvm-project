@@ -27,6 +27,7 @@ namespace llvm {
 class StringRef;
 class AAManager;
 class TargetMachine;
+class ModuleSummaryIndex;
 
 /// A struct capturing PGO tunables.
 struct PGOOptions {
@@ -310,8 +311,9 @@ public:
   /// only intended for use when attempting to optimize code. If frontends
   /// require some transformations for semantic reasons, they should explicitly
   /// build them.
-  ModulePassManager buildThinLTODefaultPipeline(OptimizationLevel Level,
-                                                bool DebugLogging = false);
+  ModulePassManager
+  buildThinLTODefaultPipeline(OptimizationLevel Level, bool DebugLogging,
+                              const ModuleSummaryIndex *ImportSummary);
 
   /// Build a pre-link, LTO-targeting default optimization pipeline to a pass
   /// manager.
@@ -340,7 +342,8 @@ public:
   /// require some transformations for semantic reasons, they should explicitly
   /// build them.
   ModulePassManager buildLTODefaultPipeline(OptimizationLevel Level,
-                                            bool DebugLogging = false);
+                                            bool DebugLogging,
+                                            ModuleSummaryIndex *ExportSummary);
 
   /// Build the default `AAManager` with the default alias analysis pipeline
   /// registered.
