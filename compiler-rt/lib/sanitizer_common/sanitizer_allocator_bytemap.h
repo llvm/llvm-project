@@ -18,7 +18,7 @@
 template<u64 kSize>
 class FlatByteMap {
  public:
-  void TestOnlyInit() {
+  void Init() {
     internal_memset(map_, 0, sizeof(map_));
   }
 
@@ -44,7 +44,7 @@ class FlatByteMap {
 template <u64 kSize1, u64 kSize2, class MapUnmapCallback = NoOpMapUnmapCallback>
 class TwoLevelByteMap {
  public:
-  void TestOnlyInit() {
+  void Init() {
     internal_memset(map1_, 0, sizeof(map1_));
     mu_.Init();
   }

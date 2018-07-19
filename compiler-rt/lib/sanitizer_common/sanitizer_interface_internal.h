@@ -52,6 +52,12 @@ extern "C" {
   SANITIZER_INTERFACE_ATTRIBUTE void __sanitizer_dump_trace_pc_guard_coverage();
 
   SANITIZER_INTERFACE_ATTRIBUTE void __sanitizer_cov(__sanitizer::u32 *guard);
+
+  // Returns 1 on the first call, then returns 0 thereafter.  Called by the tool
+  // to ensure only one report is printed when multiple errors occur
+  // simultaneously.
+  SANITIZER_INTERFACE_ATTRIBUTE int __sanitizer_acquire_crash_state();
+
   SANITIZER_INTERFACE_ATTRIBUTE
   void __sanitizer_annotate_contiguous_container(const void *beg,
                                                  const void *end,

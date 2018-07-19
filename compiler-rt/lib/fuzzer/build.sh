@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 LIBFUZZER_SRC_DIR=$(dirname $0)
 CXX="${CXX:-clang}"
 for f in $LIBFUZZER_SRC_DIR/*.cpp; do

@@ -22,12 +22,14 @@
 #define COMPILER_RT_ALLOCA _alloca
 /* Need to include <stdio.h> and <io.h> */
 #define COMPILER_RT_FTRUNCATE(f,l) _chsize(_fileno(f),l)
+#define COMPILER_RT_ALWAYS_INLINE __forceinline
 #elif __GNUC__
 #define COMPILER_RT_ALIGNAS(x) __attribute__((aligned(x)))
 #define COMPILER_RT_VISIBILITY __attribute__((visibility("hidden")))
 #define COMPILER_RT_WEAK __attribute__((weak))
 #define COMPILER_RT_ALLOCA __builtin_alloca
 #define COMPILER_RT_FTRUNCATE(f,l) ftruncate(fileno(f),l)
+#define COMPILER_RT_ALWAYS_INLINE inline __attribute((always_inline))
 #endif
 
 #if defined(__APPLE__)

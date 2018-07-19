@@ -15,6 +15,10 @@
 # define alloca _alloca
 #endif
 
+#if defined(__sun__) && defined(__svr4__)
+#include <alloca.h>
+#endif
+
 #define RZ 32
 
 __attribute__((noinline)) void foo(int len) {

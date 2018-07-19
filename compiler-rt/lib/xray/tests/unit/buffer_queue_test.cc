@@ -32,9 +32,9 @@ TEST(BufferQueueTest, GetAndRelease) {
   ASSERT_TRUE(Success);
   BufferQueue::Buffer Buf;
   ASSERT_EQ(Buffers.getBuffer(Buf), BufferQueue::ErrorCode::Ok);
-  ASSERT_NE(nullptr, Buf.Buffer);
+  ASSERT_NE(nullptr, Buf.Data);
   ASSERT_EQ(Buffers.releaseBuffer(Buf), BufferQueue::ErrorCode::Ok);
-  ASSERT_EQ(nullptr, Buf.Buffer);
+  ASSERT_EQ(nullptr, Buf.Data);
 }
 
 TEST(BufferQueueTest, GetUntilFailed) {
@@ -53,7 +53,7 @@ TEST(BufferQueueTest, ReleaseUnknown) {
   BufferQueue Buffers(kSize, 1, Success);
   ASSERT_TRUE(Success);
   BufferQueue::Buffer Buf;
-  Buf.Buffer = reinterpret_cast<void *>(0xdeadbeef);
+  Buf.Data = reinterpret_cast<void *>(0xdeadbeef);
   Buf.Size = kSize;
   EXPECT_EQ(BufferQueue::ErrorCode::UnrecognizedBuffer,
             Buffers.releaseBuffer(Buf));
@@ -65,7 +65,7 @@ TEST(BufferQueueTest, ErrorsWhenFinalising) {
   ASSERT_TRUE(Success);
   BufferQueue::Buffer Buf;
   ASSERT_EQ(Buffers.getBuffer(Buf), BufferQueue::ErrorCode::Ok);
-  ASSERT_NE(nullptr, Buf.Buffer);
+  ASSERT_NE(nullptr, Buf.Data);
   ASSERT_EQ(Buffers.finalize(), BufferQueue::ErrorCode::Ok);
   BufferQueue::Buffer OtherBuf;
   ASSERT_EQ(BufferQueue::ErrorCode::QueueFinalizing,

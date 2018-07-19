@@ -29,7 +29,9 @@
 // Similar code is used in Google Perftools,
 // https://github.com/gperftools/gperftools.
 
-static malloc_zone_t sanitizer_zone;
+namespace __sanitizer {
+extern malloc_zone_t sanitizer_zone;
+}
 
 INTERCEPTOR(malloc_zone_t *, malloc_create_zone,
                              vm_size_t start_size, unsigned zone_flags) {
@@ -63,29 +65,6 @@ INTERCEPTOR(void, malloc_destroy_zone, malloc_zone_t *zone) {
     COMMON_MALLOC_FREE((void *)zone->zone_name);
   }
   COMMON_MALLOC_FREE(zone);
-}
-
-extern unsigned malloc_num_zones;
-extern malloc_zone_t **malloc_zones;
-
-// We need to make sure that sanitizer_zone is registered as malloc_zones[0]. If
-// libmalloc tries to set up a different zone as malloc_zones[0], it will call
-// mprotect(malloc_zones, ..., PROT_READ).  This interceptor will catch that and
-// make sure we are still the first (default) zone.
-INTERCEPTOR(int, mprotect, void *addr, size_t len, int prot) {
-  if (addr == malloc_zones && prot == PROT_READ) {
-    if (malloc_num_zones > 1 && malloc_zones[0] != &sanitizer_zone) {
-      for (unsigned i = 1; i < malloc_num_zones; i++) {
-        if (malloc_zones[i] == &sanitizer_zone) {
-          // Swap malloc_zones[0] and malloc_zones[i].
-          malloc_zones[i] = malloc_zones[0];
-          malloc_zones[0] = &sanitizer_zone;
-          break;
-        }
-      }
-    }
-  }
-  return REAL(mprotect)(addr, len, prot);
 }
 
 INTERCEPTOR(malloc_zone_t *, malloc_default_zone, void) {
@@ -170,12 +149,8 @@ INTERCEPTOR(size_t, malloc_good_size, size_t size) {
 INTERCEPTOR(int, posix_memalign, void **memptr, size_t alignment, size_t size) {
   COMMON_MALLOC_ENTER();
   CHECK(memptr);
-  COMMON_MALLOC_MEMALIGN(alignment, size);
-  if (p) {
-    *memptr = p;
-    return 0;
-  }
-  return -1;
+  COMMON_MALLOC_POSIX_MEMALIGN(memptr, alignment, size);
+  return res;
 }
 
 namespace {

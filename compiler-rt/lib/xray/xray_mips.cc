@@ -158,6 +158,12 @@ bool patchCustomEvent(const bool Enable, const uint32_t FuncId,
   return false;
 }
 
+bool patchTypedEvent(const bool Enable, const uint32_t FuncId,
+                     const XRaySledEntry &Sled) XRAY_NEVER_INSTRUMENT {
+  // FIXME: Implement in mips?
+  return false;
+}
+
 } // namespace __xray
 
 extern "C" void __xray_ArgLoggerEntry() XRAY_NEVER_INSTRUMENT {

@@ -28,6 +28,14 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   abort();
 }
 
+TEST(Fuzzer, Basename) {
+  EXPECT_EQ(Basename("foo/bar"), "bar");
+  EXPECT_EQ(Basename("bar"), "bar");
+  EXPECT_EQ(Basename("/bar"), "bar");
+  EXPECT_EQ(Basename("foo/x"), "x");
+  EXPECT_EQ(Basename("foo/"), "");
+}
+
 TEST(Fuzzer, CrossOver) {
   std::unique_ptr<ExternalFunctions> t(new ExternalFunctions());
   fuzzer::EF = t.get();
@@ -328,7 +336,7 @@ void TestShuffleBytes(Mutator M, int NumIter) {
 }
 
 TEST(FuzzerMutate, ShuffleBytes1) {
-  TestShuffleBytes(&MutationDispatcher::Mutate_ShuffleBytes, 1 << 16);
+  TestShuffleBytes(&MutationDispatcher::Mutate_ShuffleBytes, 1 << 17);
 }
 TEST(FuzzerMutate, ShuffleBytes2) {
   TestShuffleBytes(&MutationDispatcher::Mutate, 1 << 20);
@@ -380,6 +388,21 @@ TEST(FuzzerMutate, CopyPart1) {
 }
 TEST(FuzzerMutate, CopyPart2) {
   TestCopyPart(&MutationDispatcher::Mutate, 1 << 13);
+}
+TEST(FuzzerMutate, CopyPartNoInsertAtMaxSize) {
+  // This (non exhaustively) tests if `Mutate_CopyPart` tries to perform an
+  // insert on an input of size `MaxSize`.  Performing an insert in this case
+  // will lead to the mutation failing.
+  std::unique_ptr<ExternalFunctions> t(new ExternalFunctions());
+  fuzzer::EF = t.get();
+  Random Rand(0);
+  std::unique_ptr<MutationDispatcher> MD(new MutationDispatcher(Rand, {}));
+  uint8_t Data[8] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x00, 0x11, 0x22};
+  size_t MaxSize = sizeof(Data);
+  for (int count = 0; count < (1 << 18); ++count) {
+    size_t NewSize = MD->Mutate_CopyPart(Data, MaxSize, MaxSize);
+    ASSERT_EQ(NewSize, MaxSize);
+  }
 }
 
 void TestAddWordFromDictionary(Mutator M, int NumIter) {
@@ -559,12 +582,14 @@ TEST(FuzzerUtil, Base64) {
 }
 
 TEST(Corpus, Distribution) {
+  DataFlowTrace DFT;
   Random Rand(0);
   std::unique_ptr<InputCorpus> C(new InputCorpus(""));
   size_t N = 10;
   size_t TriesPerUnit = 1<<16;
   for (size_t i = 0; i < N; i++)
-    C->AddToCorpus(Unit{ static_cast<uint8_t>(i) }, 1, false, {});
+    C->AddToCorpus(Unit{static_cast<uint8_t>(i)}, 1, false, false, {}, DFT,
+                   nullptr);
 
   Vector<size_t> Hist(N);
   for (size_t i = 0; i < N * TriesPerUnit; i++) {

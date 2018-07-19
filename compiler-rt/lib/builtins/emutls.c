@@ -14,7 +14,22 @@
 #include "int_lib.h"
 #include "int_util.h"
 
+#ifdef __BIONIC__
+/* There are 4 pthread key cleanup rounds on Bionic. Delay emutls deallocation
+   to round 2. We need to delay deallocation because:
+    - Android versions older than M lack __cxa_thread_atexit_impl, so apps
+      use a pthread key destructor to call C++ destructors.
+    - Apps might use __thread/thread_local variables in pthread destructors.
+   We can't wait until the final two rounds, because jemalloc needs two rounds
+   after the final malloc/free call to free its thread-specific data (see
+   https://reviews.llvm.org/D46978#1107507). */
+#define EMUTLS_SKIP_DESTRUCTOR_ROUNDS 1
+#else
+#define EMUTLS_SKIP_DESTRUCTOR_ROUNDS 0
+#endif
+
 typedef struct emutls_address_array {
+    uintptr_t skip_destructor_rounds;
     uintptr_t size;  /* number of elements in the 'data' array */
     void* data[];
 } emutls_address_array;
@@ -65,9 +80,30 @@ static __inline void emutls_memalign_free(void *base) {
 #endif
 }
 
+static __inline void emutls_setspecific(emutls_address_array *value) {
+    pthread_setspecific(emutls_pthread_key, (void*) value);
+}
+
+static __inline emutls_address_array* emutls_getspecific() {
+    return (emutls_address_array*) pthread_getspecific(emutls_pthread_key);
+}
+
 static void emutls_key_destructor(void* ptr) {
-    emutls_shutdown((emutls_address_array*)ptr);
-    free(ptr);
+    emutls_address_array *array = (emutls_address_array*)ptr;
+    if (array->skip_destructor_rounds > 0) {
+        /* emutls is deallocated using a pthread key destructor. These
+         * destructors are called in several rounds to accommodate destructor
+         * functions that (re)initialize key values with pthread_setspecific.
+         * Delay the emutls deallocation to accommodate other end-of-thread
+         * cleanup tasks like calling thread_local destructors (e.g. the
+         * __cxa_thread_atexit fallback in libc++abi).
+         */
+        array->skip_destructor_rounds--;
+        emutls_setspecific(array);
+    } else {
+        emutls_shutdown(array);
+        free(ptr);
+    }
 }
 
 static __inline void emutls_init(void) {
@@ -88,15 +124,7 @@ static __inline void emutls_unlock() {
     pthread_mutex_unlock(&emutls_mutex);
 }
 
-static __inline void emutls_setspecific(emutls_address_array *value) {
-    pthread_setspecific(emutls_pthread_key, (void*) value);
-}
-
-static __inline emutls_address_array* emutls_getspecific() {
-    return (emutls_address_array*) pthread_getspecific(emutls_pthread_key);
-}
-
-#else
+#else /* _WIN32 */
 
 #include <windows.h>
 #include <malloc.h>
@@ -222,11 +250,11 @@ static __inline void __atomic_store_n(void *ptr, uintptr_t val, unsigned type) {
     InterlockedExchangePointer((void *volatile *)ptr, (void *)val);
 }
 
-#endif
+#endif /* __ATOMIC_RELEASE */
 
 #pragma warning (pop)
 
-#endif
+#endif /* _WIN32 */
 
 static size_t emutls_num_object = 0;  /* number of allocated TLS objects */
 
@@ -314,11 +342,12 @@ static __inline void emutls_check_array_set_size(emutls_address_array *array,
  * which must be no smaller than the given index.
  */
 static __inline uintptr_t emutls_new_data_array_size(uintptr_t index) {
-   /* Need to allocate emutls_address_array with one extra slot
-    * to store the data array size.
+   /* Need to allocate emutls_address_array with extra slots
+    * to store the header.
     * Round up the emutls_address_array size to multiple of 16.
     */
-    return ((index + 1 + 15) & ~((uintptr_t)15)) - 1;
+    uintptr_t header_words = sizeof(emutls_address_array) / sizeof(void *);
+    return ((index + header_words + 15) & ~((uintptr_t)15)) - header_words;
 }
 
 /* Returns the size in bytes required for an emutls_address_array with
@@ -337,8 +366,10 @@ emutls_get_address_array(uintptr_t index) {
     if (array == NULL) {
         uintptr_t new_size = emutls_new_data_array_size(index);
         array = (emutls_address_array*) malloc(emutls_asize(new_size));
-        if (array)
+        if (array) {
             memset(array->data, 0, new_size * sizeof(void*));
+            array->skip_destructor_rounds = EMUTLS_SKIP_DESTRUCTOR_ROUNDS;
+        }
         emutls_check_array_set_size(array, new_size);
     } else if (index > array->size) {
         uintptr_t orig_size = array->size;

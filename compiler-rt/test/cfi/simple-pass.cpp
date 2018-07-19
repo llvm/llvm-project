@@ -1,5 +1,10 @@
+// -mretpoline does not work yet on Darwin.
+// XFAIL: darwin
+
 // RUN: %clangxx_cfi -o %t %s
 // RUN: %run %t
+// RUN: %clangxx_cfi -mretpoline -o %t2 %s
+// RUN: %run %t2
 
 // Tests that the CFI mechanism does not crash the program when making various
 // kinds of valid calls involving classes with various different linkages and

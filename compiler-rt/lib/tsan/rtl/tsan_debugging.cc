@@ -83,6 +83,13 @@ int __tsan_get_report_data(void *report, const char **description, int *count,
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
+int __tsan_get_report_tag(void *report, uptr *tag) {
+  const ReportDesc *rep = (ReportDesc *)report;
+  *tag = rep->tag;
+  return 1;
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
 int __tsan_get_report_stack(void *report, uptr idx, void **trace,
                             uptr trace_size) {
   const ReportDesc *rep = (ReportDesc *)report;

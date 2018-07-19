@@ -11,6 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <sys/mman.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -44,7 +46,13 @@ void symbolize_cb(long cmd, void *ctx) {
   }
 }
 
-char buf0[100<<10];
+/*
+ * See lib/tsan/rtl/tsan_platform.h for details of what the memory layout
+ * of Go programs looks like.  To prevent running over existing mappings,
+ * we pick an address slightly inside the Go heap region.
+ */
+void *go_heap = (void *)0xC011110000;
+char *buf0;
 
 void foobar() {}
 void barfoo() {}
@@ -54,6 +62,15 @@ int main(void) {
   void *proc0 = 0;
   __tsan_init(&thr0, &proc0, symbolize_cb);
   current_proc = proc0;
+
+  // Allocate something resembling a heap in Go.
+  buf0 = mmap(go_heap, 16384, PROT_READ | PROT_WRITE,
+              MAP_PRIVATE | MAP_FIXED | MAP_ANON, -1, 0);
+  if (buf0 == MAP_FAILED) {
+    fprintf(stderr, "failed to allocate Go-like heap at %p; errno %d\n",
+            go_heap, errno);
+    return 1;
+  }
   char *buf = (char*)((unsigned long)buf0 + (64<<10) - 1 & ~((64<<10) - 1));
   __tsan_map_shadow(buf, 4096);
   __tsan_malloc(thr0, (char*)&barfoo + 1, buf, 10);

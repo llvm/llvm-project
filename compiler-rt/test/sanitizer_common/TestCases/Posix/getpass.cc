@@ -5,13 +5,19 @@
 
 #include <assert.h>
 #include <stdio.h>
-#include <unistd.h>
 #include <string.h>
 #if __linux__
 #include <pty.h>
+#elif defined(__FreeBSD__)
+#include <libutil.h>
+#include <pwd.h>
+#include <sys/ioctl.h>
+#include <sys/termios.h>
+#include <sys/types.h>
 #else
 #include <util.h>
 #endif
+#include <unistd.h>
 
 int
 main (int argc, char** argv)

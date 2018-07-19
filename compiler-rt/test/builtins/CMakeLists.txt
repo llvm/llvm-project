@@ -26,6 +26,11 @@ foreach(arch ${BUILTIN_SUPPORTED_ARCH})
     string(REPLACE ";" " " BUILTINS_TEST_TARGET_CFLAGS "${BUILTINS_TEST_TARGET_CFLAGS}")
   endif()
 
+  if (${arch} STREQUAL "riscv32")
+    list(APPEND BUILTINS_TEST_TARGET_CFLAGS -fforce-enable-int128)
+    string(REPLACE ";" " " BUILTINS_TEST_TARGET_CFLAGS "${BUILTINS_TEST_TARGET_CFLAGS}")
+  endif()
+
   string(TOUPPER ${arch} ARCH_UPPER_CASE)
   set(CONFIG_NAME ${ARCH_UPPER_CASE}${OS_NAME}Config)
   configure_lit_site_cfg(

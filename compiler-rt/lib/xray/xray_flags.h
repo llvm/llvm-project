@@ -29,6 +29,8 @@ struct Flags {
 };
 
 extern Flags xray_flags_dont_use_directly;
+extern void registerXRayFlags(FlagParser *P, Flags *F);
+const char *useCompilerDefinedFlags();
 inline Flags *flags() { return &xray_flags_dont_use_directly; }
 
 void initializeFlags();

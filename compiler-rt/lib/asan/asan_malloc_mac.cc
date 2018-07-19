@@ -38,6 +38,9 @@ using namespace __asan;
 #define COMMON_MALLOC_CALLOC(count, size) \
   GET_STACK_TRACE_MALLOC; \
   void *p = asan_calloc(count, size, &stack);
+#define COMMON_MALLOC_POSIX_MEMALIGN(memptr, alignment, size) \
+  GET_STACK_TRACE_MALLOC; \
+  int res = asan_posix_memalign(memptr, alignment, size, &stack);
 #define COMMON_MALLOC_VALLOC(size) \
   GET_STACK_TRACE_MALLOC; \
   void *p = asan_memalign(GetPageSizeCached(), size, &stack, FROM_MALLOC);

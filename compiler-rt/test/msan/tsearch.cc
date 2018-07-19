@@ -1,7 +1,7 @@
 // RUN: %clangxx_msan -O0 -g %s -o %t && %run %t
 
 // tdestroy is a GNU extension
-// UNSUPPORTED: netbsd
+// UNSUPPORTED: netbsd, freebsd
 
 #include <assert.h>
 #include <search.h>

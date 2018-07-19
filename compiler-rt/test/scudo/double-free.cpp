@@ -2,7 +2,6 @@
 // RUN: not %run %t malloc   2>&1 | FileCheck %s
 // RUN: not %run %t new      2>&1 | FileCheck %s
 // RUN: not %run %t newarray 2>&1 | FileCheck %s
-// RUN: not %run %t memalign 2>&1 | FileCheck %s
 
 // Tests double-free error on pointers allocated with different allocation
 // functions.
@@ -31,13 +30,6 @@ int main(int argc, char **argv)
     assert(p);
     delete[] p;
     delete[] p;
-  }
-  if (!strcmp(argv[1], "memalign")) {
-    void *p = nullptr;
-    posix_memalign(&p, 0x100, sizeof(int));
-    assert(p);
-    free(p);
-    free(p);
   }
   return 0;
 }

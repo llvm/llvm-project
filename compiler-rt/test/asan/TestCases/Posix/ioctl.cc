@@ -10,6 +10,10 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#if defined(__sun__) && defined(__svr4__)
+#include <sys/filio.h>
+#endif
+
 int main(int argc, char **argv) {
   int fd = socket(AF_INET, SOCK_DGRAM, 0);
 

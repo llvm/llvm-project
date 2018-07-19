@@ -16,6 +16,6 @@ extern "C" {
 int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size);
 }  // extern "C"
 
-int main(int argc, char **argv) {
+__attribute__((visibility("default"))) int main(int argc, char **argv) {
   return fuzzer::FuzzerDriver(&argc, &argv, LLVMFuzzerTestOneInput);
 }

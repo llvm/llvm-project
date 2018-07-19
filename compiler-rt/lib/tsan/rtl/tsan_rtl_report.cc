@@ -649,8 +649,8 @@ void ReportRace(ThreadState *thr) {
     // callback. Most likely, TraceTopPC will now return a EventTypeFuncExit
     // event. Later we subtract -1 from it (in GetPreviousInstructionPc)
     // and the resulting PC has kExternalPCBit set, so we pass it to
-    // __tsan_symbolize_external. __tsan_symbolize_external is within its rights
-    // to crash since the PC is completely bogus.
+    // __tsan_symbolize_external_ex. __tsan_symbolize_external_ex is within its
+    // rights to crash since the PC is completely bogus.
     // test/tsan/double_race.cc contains a test case for this.
     toppc = 0;
   }

@@ -294,6 +294,19 @@ TSAN_INTERCEPTOR(void, xpc_connection_cancel, xpc_connection_t connection) {
 
 #endif  // #if defined(__has_include) && __has_include(<xpc/xpc.h>)
 
+TSAN_INTERCEPTOR(int, objc_sync_enter, void *obj) {
+  SCOPED_TSAN_INTERCEPTOR(objc_sync_enter, obj);
+  int result = REAL(objc_sync_enter)(obj);
+  if (obj) Acquire(thr, pc, (uptr)obj);
+  return result;
+}
+
+TSAN_INTERCEPTOR(int, objc_sync_exit, void *obj) {
+  SCOPED_TSAN_INTERCEPTOR(objc_sync_enter, obj);
+  if (obj) Release(thr, pc, (uptr)obj);
+  return REAL(objc_sync_exit)(obj);
+}
+
 // On macOS, libc++ is always linked dynamically, so intercepting works the
 // usual way.
 #define STDCXX_INTERCEPTOR TSAN_INTERCEPTOR

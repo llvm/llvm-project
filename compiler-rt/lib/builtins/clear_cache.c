@@ -101,6 +101,8 @@ void __clear_cache(void *start, void *end) {
  * Intel processors have a unified instruction and data cache
  * so there is nothing to do
  */
+#elif defined(_WIN32) && (defined(__arm__) || defined(__aarch64__))
+    FlushInstructionCache(GetCurrentProcess(), start, end - start);
 #elif defined(__arm__) && !defined(__APPLE__)
     #if defined(__FreeBSD__) || defined(__NetBSD__)
         struct arm_sync_icache_args arg;
@@ -128,8 +130,6 @@ void __clear_cache(void *start, void *end) {
                           : "r"(syscall_nr), "r"(start_reg), "r"(end_reg),
                             "r"(flags));
          assert(start_reg == 0 && "Cache flush syscall failed.");
-    #elif defined(_WIN32)
-        FlushInstructionCache(GetCurrentProcess(), start, end - start);
     #else
         compilerrt_abort();
     #endif

@@ -29,6 +29,16 @@
 # ifndef LITTLE_ENDIAN
 #  define LITTLE_ENDIAN _LITTLE_ENDIAN
 # endif
+#elif defined(__sun__) && defined(__svr4__)
+// Solaris provides _BIG_ENDIAN/_LITTLE_ENDIAN selector in sys/types.h.
+# include <sys/types.h>
+# define BIG_ENDIAN 4321
+# define LITTLE_ENDIAN 1234
+# if defined(_BIG_ENDIAN)
+#  define BYTE_ORDER BIG_ENDIAN
+# else
+#  define BYTE_ORDER LITTLE_ENDIAN
+# endif
 #elif defined(_WIN32)
 # define BYTE_ORDER 0
 # define BIG_ENDIAN 1

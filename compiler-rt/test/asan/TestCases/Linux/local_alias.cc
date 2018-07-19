@@ -7,10 +7,6 @@
 // FIXME: https://github.com/google/sanitizers/issues/316
 // XFAIL: android
 //
-// This test requires the integrated assembler to be the default.
-// XFAIL: target-is-mips64
-// XFAIL: target-is-mips64el
-//
 // RUN: %clangxx_asan -DBUILD_INSTRUMENTED_DSO=1 -fPIC -shared -mllvm -asan-use-private-alias %s -o %t-INSTRUMENTED-SO.so
 // RUN: %clangxx -DBUILD_UNINSTRUMENTED_DSO=1 -fPIC -shared %s -o %t-UNINSTRUMENTED-SO.so
 // RUN: %clangxx %s -c -mllvm -asan-use-private-alias -o %t.o

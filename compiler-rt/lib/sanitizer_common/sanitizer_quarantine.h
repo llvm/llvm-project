@@ -90,6 +90,9 @@ class Quarantine {
     atomic_store_relaxed(&max_size_, size);
     atomic_store_relaxed(&min_size_, size / 10 * 9);  // 90% of max size.
     atomic_store_relaxed(&max_cache_size_, cache_size);
+
+    cache_mutex_.Init();
+    recycle_mutex_.Init();
   }
 
   uptr GetSize() const { return atomic_load_relaxed(&max_size_); }
@@ -142,8 +145,8 @@ class Quarantine {
   atomic_uintptr_t min_size_;
   atomic_uintptr_t max_cache_size_;
   char pad1_[kCacheLineSize];
-  SpinMutex cache_mutex_;
-  SpinMutex recycle_mutex_;
+  StaticSpinMutex cache_mutex_;
+  StaticSpinMutex recycle_mutex_;
   Cache cache_;
   char pad2_[kCacheLineSize];
 

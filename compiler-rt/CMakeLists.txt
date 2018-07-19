@@ -9,6 +9,7 @@ cmake_minimum_required(VERSION 3.4.3)
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR OR COMPILER_RT_STANDALONE_BUILD)
   project(CompilerRT C CXX ASM)
   set(COMPILER_RT_STANDALONE_BUILD TRUE)
+  set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 endif()
 
 # Add path for custom compiler-rt modules.
@@ -63,6 +64,11 @@ set(COMPILER_RT_BAREMETAL_BUILD OFF CACHE BOOLEAN
 
 if (COMPILER_RT_STANDALONE_BUILD)
   load_llvm_config()
+  if (TARGET intrinsics_gen)
+    # Loading the llvm config causes this target to be imported so place it
+    # under the appropriate folder in an IDE.
+    set_target_properties(intrinsics_gen PROPERTIES FOLDER "Compiler-RT Misc")
+  endif()
 
   # Find Python interpreter.
   set(Python_ADDITIONAL_VERSIONS 2.7 2.6 2.5)
@@ -96,6 +102,8 @@ pythonize_bool(ANDROID)
 set(COMPILER_RT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(COMPILER_RT_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
+pythonize_bool(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
+
 # We support running instrumented tests when we're not cross compiling
 # and target a UNIX-like system or Windows.
 # We can run tests on Android even when we are cross-compiling.
@@ -111,9 +119,6 @@ option(COMPILER_RT_EXTERNALIZE_DEBUGINFO
   "Generate dSYM files and strip executables and libraries (Darwin Only)" OFF)
 # COMPILER_RT_DEBUG_PYBOOL is used by lit.common.configured.in.
 pythonize_bool(COMPILER_RT_DEBUG)
-
-include(HandleCompilerRT)
-include(config-ix)
 
 if(APPLE AND SANITIZER_MIN_OSX_VERSION AND SANITIZER_MIN_OSX_VERSION VERSION_LESS "10.9")
   # Mac OS X prior to 10.9 had problems with exporting symbols from
@@ -133,41 +138,34 @@ pythonize_bool(SANITIZER_CAN_USE_CXXABI)
 
 set(SANITIZER_CXX_ABI "default" CACHE STRING
     "Specify C++ ABI library to use.")
-set(CXXABIS none default libcxxabi libstdc++ libc++)
+set(CXXABIS none default libstdc++ libc++)
 set_property(CACHE SANITIZER_CXX_ABI PROPERTY STRINGS ;${CXXABIS})
 
 if (SANITIZER_CXX_ABI STREQUAL "default")
-  if (HAVE_LIBCXXABI AND COMPILER_RT_DEFAULT_TARGET_ONLY)
-    set(SANITIZER_CXX_ABI_LIBNAME "libcxxabi")
-    set(SANITIZER_CXX_ABI_INTREE 1)
-  elseif (APPLE)
-    set(SANITIZER_CXX_ABI_LIBNAME "libcxxabi")
+  if (APPLE)
+    set(SANITIZER_CXX_ABI_LIBNAME "libc++")
     set(SANITIZER_CXX_ABI_SYSTEM 1)
+  elseif (FUCHSIA)
+    set(SANITIZER_CXX_ABI_LIBNAME "libc++")
+    set(SANITIZER_CXX_ABI_INTREE 1)
   else()
     set(SANITIZER_CXX_ABI_LIBNAME "libstdc++")
+    set(SANITIZER_CXX_ABI_SYSTEM 1)
   endif()
 else()
   set(SANITIZER_CXX_ABI_LIBNAME "${SANITIZER_CXX_ABI}")
+  set(SANITIZER_CXX_ABI_SYSTEM 1)
 endif()
 
-if (SANITIZER_CXX_ABI_LIBNAME STREQUAL "libcxxabi")
-  if (SANITIZER_CXX_ABI_INTREE)
-    if (TARGET unwind_shared OR HAVE_LIBUNWIND)
-      list(APPEND SANITIZER_CXX_ABI_LIBRARY unwind_shared)
-    endif()
-    if (TARGET cxxabi_shared OR HAVE_LIBCXXABI)
-      list(APPEND SANITIZER_CXX_ABI_LIBRARY cxxabi_shared)
-    endif()
-  else()
-    list(APPEND SANITIZER_CXX_ABI_LIBRARY "c++abi")
-  endif()
-elseif (SANITIZER_CXX_ABI_LIBNAME STREQUAL "libc++")
-  list(APPEND SANITIZER_CXX_ABI_LIBRARY "c++")
-elseif (SANITIZER_CXX_ABI_LIBNAME STREQUAL "libstdc++")
-  append_list_if(COMPILER_RT_HAS_LIBSTDCXX stdc++ SANITIZER_CXX_ABI_LIBRARY)
+set(DEFAULT_COMPILER_RT_USE_BUILTINS_LIBRARY OFF)
+if (FUCHSIA)
+  set(DEFAULT_COMPILER_RT_USE_BUILTINS_LIBRARY ON)
 endif()
 
-option(SANITIZER_USE_COMPILER_RT "Use compiler-rt builtins instead of libgcc" OFF)
+option(COMPILER_RT_USE_BUILTINS_LIBRARY
+  "Use compiler-rt builtins instead of libgcc" ${DEFAULT_COMPILER_RT_USE_BUILTINS_LIBRARY})
+
+include(config-ix)
 
 #================================
 # Setup Compiler Flags
@@ -274,12 +272,14 @@ else()
   set(SANITIZER_LIMIT_FRAME_SIZE FALSE)
 endif()
 
+if(FUCHSIA OR UNIX)
+  set(SANITIZER_USE_SYMBOLS TRUE)
+else()
+  set(SANITIZER_USE_SYMBOLS FALSE)
+endif()
+
 # Build sanitizer runtimes with debug info.
-if(COMPILER_RT_HAS_GLINE_TABLES_ONLY_FLAG AND NOT COMPILER_RT_DEBUG)
-  list(APPEND SANITIZER_COMMON_CFLAGS -gline-tables-only)
-elseif(COMPILER_RT_HAS_G_FLAG)
-  list(APPEND SANITIZER_COMMON_CFLAGS -g)
-elseif(MSVC)
+if(MSVC)
   # Use /Z7 instead of /Zi for the asan runtime. This avoids the LNK4099
   # warning from the MS linker complaining that it can't find the 'vc140.pdb'
   # file used by our object library compilations.
@@ -287,6 +287,10 @@ elseif(MSVC)
   llvm_replace_compiler_option(CMAKE_CXX_FLAGS "/Z[i7I]" "/Z7")
   llvm_replace_compiler_option(CMAKE_CXX_FLAGS_DEBUG "/Z[i7I]" "/Z7")
   llvm_replace_compiler_option(CMAKE_CXX_FLAGS_RELWITHDEBINFO "/Z[i7I]" "/Z7")
+elseif(COMPILER_RT_HAS_GLINE_TABLES_ONLY_FLAG AND NOT COMPILER_RT_DEBUG)
+  list(APPEND SANITIZER_COMMON_CFLAGS -gline-tables-only)
+elseif(COMPILER_RT_HAS_G_FLAG)
+  list(APPEND SANITIZER_COMMON_CFLAGS -g)
 endif()
 
 if(LLVM_ENABLE_MODULES)
@@ -309,9 +313,7 @@ append_list_if(COMPILER_RT_HAS_WD4800_FLAG /wd4800 SANITIZER_COMMON_CFLAGS)
 # Set common link flags.
 append_list_if(COMPILER_RT_HAS_NODEFAULTLIBS_FLAG -nodefaultlibs SANITIZER_COMMON_LINK_FLAGS)
 
-if (SANITIZER_USE_COMPILER_RT)
-  list(APPEND SANITIZER_COMMON_LINK_FLAGS -rtlib=compiler-rt)
-  find_compiler_rt_library(builtins COMPILER_RT_BUILTINS_LIBRARY)
+if (COMPILER_RT_USE_BUILTINS_LIBRARY)
   list(APPEND SANITIZER_COMMON_LINK_LIBS ${COMPILER_RT_BUILTINS_LIBRARY})
 else()
   if (ANDROID)
@@ -323,9 +325,38 @@ endif()
 
 append_list_if(COMPILER_RT_HAS_LIBC c SANITIZER_COMMON_LINK_LIBS)
 
+if(ANDROID)
+# Put the Sanitizer shared libraries in the global group. For more details, see
+# android-changes-for-ndk-developers.md#changes-to-library-search-order
+  if (COMPILER_RT_HAS_Z_GLOBAL)
+    list(APPEND SANITIZER_COMMON_LINK_FLAGS -Wl,-z,global)
+  endif()
+endif()
+
 if("${CMAKE_SYSTEM_NAME}" STREQUAL "Fuchsia")
   list(APPEND SANITIZER_COMMON_LINK_FLAGS -Wl,-z,defs,-z,now,-z,relro)
   list(APPEND SANITIZER_COMMON_LINK_LIBS zircon)
+endif()
+
+if (SANITIZER_CXX_ABI_LIBNAME STREQUAL "libc++")
+  if (SANITIZER_CXX_ABI_INTREE)
+    if (NOT LIBCXXABI_ENABLE_STATIC_UNWINDER AND (TARGET unwind_shared OR HAVE_LIBUNWIND))
+      list(APPEND SANITIZER_CXX_ABI_LIBRARY unwind_shared)
+    elseif (LIBCXXABI_ENABLE_STATIC_UNWINDER AND (TARGET unwind_static OR HAVE_LIBUNWIND))
+      list(APPEND SANITIZER_CXX_ABI_LIBRARY unwind_static)
+    endif()
+    if (NOT LIBCXX_ENABLE_STATIC_ABI_LIBRARY AND (TARGET cxxabi_shared OR HAVE_LIBCXXABI))
+      list(APPEND SANITIZER_CXX_ABI_LIBRARY cxxabi_shared)
+    elseif (LIBCXX_ENABLE_STATIC_ABI_LIBRARY AND (TARGET cxxabi_static OR HAVE_LIBCXXABI))
+      list(APPEND SANITIZER_CXX_ABI_LIBRARY cxxabi_static)
+    endif()
+  else()
+    append_list_if(COMPILER_RT_HAS_LIBCXX c++ SANITIZER_CXX_ABI_LIBRARY)
+  endif()
+elseif (SANITIZER_CXX_ABI_LIBNAME STREQUAL "libcxxabi")
+  list(APPEND SANITIZER_CXX_ABI_LIBRARY "c++abi")
+elseif (SANITIZER_CXX_ABI_LIBNAME STREQUAL "libstdc++")
+  append_list_if(COMPILER_RT_HAS_LIBSTDCXX stdc++ SANITIZER_CXX_ABI_LIBRARY)
 endif()
 
 # Warnings to turn off for all libraries, not just sanitizers.
@@ -339,7 +370,7 @@ if (CMAKE_LINKER MATCHES "link.exe$")
   # it, but CMake doesn't seem to have a way to set linker flags for
   # individual static libraries, so we enable the suppression flag for
   # the whole compiler-rt project.
-  append("/IGNORE:4221" CMAKE_STATIC_LINKER_FLAGS)
+  set(CMAKE_STATIC_LINKER_FLAGS "${CMAKE_STATIC_LINKER_FLAGS} /IGNORE:4221")
 endif()
 
 add_subdirectory(include)

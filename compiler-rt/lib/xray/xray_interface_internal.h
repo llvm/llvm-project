@@ -43,8 +43,8 @@ struct XRaySledEntry {
 };
 
 struct XRayFunctionSledIndex {
-  const XRaySledEntry* Begin;
-  const XRaySledEntry* End;
+  const XRaySledEntry *Begin;
+  const XRaySledEntry *End;
 };
 }
 
@@ -57,12 +57,13 @@ struct XRaySledMap {
   size_t Functions;
 };
 
-bool patchFunctionEntry(bool Enable, uint32_t FuncId,
-                        const XRaySledEntry &Sled, void (*Trampoline)());
+bool patchFunctionEntry(bool Enable, uint32_t FuncId, const XRaySledEntry &Sled,
+                        void (*Trampoline)());
 bool patchFunctionExit(bool Enable, uint32_t FuncId, const XRaySledEntry &Sled);
 bool patchFunctionTailExit(bool Enable, uint32_t FuncId,
                            const XRaySledEntry &Sled);
 bool patchCustomEvent(bool Enable, uint32_t FuncId, const XRaySledEntry &Sled);
+bool patchTypedEvent(bool Enable, uint32_t FuncId, const XRaySledEntry &Sled);
 
 } // namespace __xray
 
@@ -74,6 +75,7 @@ extern void __xray_FunctionExit();
 extern void __xray_FunctionTailExit();
 extern void __xray_ArgLoggerEntry();
 extern void __xray_CustomEvent();
+extern void __xray_TypedEvent();
 }
 
 #endif

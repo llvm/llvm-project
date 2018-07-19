@@ -1,12 +1,12 @@
 // RUN: %clangxx_asan -O0 %s -o %t && %env_asan_opts=detect_stack_use_after_return=1 not %run %t 2>&1 | FileCheck %s
 // RUN: %clangxx_asan -O2 %s -o %t && %env_asan_opts=detect_stack_use_after_return=1 not %run %t 2>&1 | FileCheck %s
-// XFAIL: arm-linux-gnueabi,win32
+// XFAIL: win32
 
 // FIXME: Fix this test under GCC.
 // REQUIRES: Clang
 
-// FIXME: Fix this test for dynamic runtime on armhf-linux.
-// UNSUPPORTED: armhf-linux && asan-dynamic-runtime
+// FIXME: Fix this test for dynamic runtime on arm linux.
+// UNSUPPORTED: (arm-linux || armhf-linux) && asan-dynamic-runtime
 
 // UNSUPPORTED: ios
 

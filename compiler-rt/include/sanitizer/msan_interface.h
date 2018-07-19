@@ -104,6 +104,14 @@ extern "C" {
      copy. Source and destination regions can overlap. */
   void __msan_copy_shadow(const volatile void *dst, const volatile void *src,
                           size_t size);
+
+  /* Disables uninitialized memory checks in interceptors. */
+  void __msan_scoped_disable_interceptor_checks(void);
+
+  /* Re-enables uninitialized memory checks in interceptors after a previous
+     call to __msan_scoped_disable_interceptor_checks. */
+  void __msan_scoped_enable_interceptor_checks(void);
+
 #ifdef __cplusplus
 }  // extern "C"
 #endif

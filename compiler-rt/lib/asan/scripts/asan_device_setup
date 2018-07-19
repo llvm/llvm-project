@@ -309,7 +309,7 @@ if [[ -n "$ASAN_RT64" ]]; then
   cp "$ASAN_RT_PATH/$ASAN_RT64" "$TMPDIR/"
 fi
 
-ASAN_OPTIONS=start_deactivated=1,malloc_context_size=0
+ASAN_OPTIONS=start_deactivated=1
 
 # The name of a symlink to libclang_rt.asan-$ARCH-android.so used in LD_PRELOAD.
 # The idea is to have the same name in lib and lib64 to keep it from falling

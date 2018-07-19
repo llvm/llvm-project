@@ -1,6 +1,6 @@
 // RUN: %clangxx_scudo %s -lstdc++ -o %t
-// RUN: %run %t pointers 2>&1
-// RUN: %run %t contents 2>&1
+// RUN: %run %t pointers   2>&1
+// RUN: %run %t contents   2>&1
 // RUN: %run %t usablesize 2>&1
 
 // Tests that our reallocation function returns the same pointer when the
@@ -14,6 +14,8 @@
 #include <string.h>
 
 #include <vector>
+
+#include <sanitizer/allocator_interface.h>
 
 int main(int argc, char **argv)
 {
@@ -35,7 +37,7 @@ int main(int argc, char **argv)
       if (p) free(p);
       size += 16;
       p = malloc(size);
-      usable_size = malloc_usable_size(p);
+      usable_size = __sanitizer_get_allocated_size(p);
       assert(usable_size >= size);
     } while (usable_size == size);
     for (int i = 0; i < usable_size; i++)
@@ -56,7 +58,7 @@ int main(int argc, char **argv)
       if (!strcmp(argv[1], "pointers")) {
         old_p = p = realloc(nullptr, size);
         assert(p);
-        size = malloc_usable_size(p);
+        size = __sanitizer_get_allocated_size(p);
         // Our realloc implementation will return the same pointer if the size
         // requested is lower than or equal to the usable size of the associated
         // chunk.

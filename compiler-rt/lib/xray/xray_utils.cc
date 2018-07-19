@@ -15,11 +15,11 @@
 #include "sanitizer_common/sanitizer_common.h"
 #include "xray_defs.h"
 #include "xray_flags.h"
-#include <stdlib.h>
 #include <cstdio>
 #include <errno.h>
 #include <fcntl.h>
 #include <iterator>
+#include <stdlib.h>
 #include <sys/types.h>
 #include <tuple>
 #include <unistd.h>
@@ -31,7 +31,7 @@ void printToStdErr(const char *Buffer) XRAY_NEVER_INSTRUMENT {
   fprintf(stderr, "%s", Buffer);
 }
 
-void retryingWriteAll(int Fd, char *Begin, char *End) XRAY_NEVER_INSTRUMENT {
+void retryingWriteAll(int Fd, const char *Begin, const char *End) XRAY_NEVER_INSTRUMENT {
   if (Begin == End)
     return;
   auto TotalBytes = std::distance(Begin, End);
@@ -82,7 +82,7 @@ bool readValueFromFile(const char *Filename,
   if (!Success)
     return false;
   close(Fd);
-  char *End = nullptr;
+  const char *End = nullptr;
   long long Tmp = internal_simple_strtoll(Line, &End, 10);
   bool Result = false;
   if (Line[0] != '\0' && (*End == '\n' || *End == '\0')) {
@@ -94,10 +94,10 @@ bool readValueFromFile(const char *Filename,
 
 int getLogFD() XRAY_NEVER_INSTRUMENT {
   // Open a temporary file once for the log.
-  static char TmpFilename[256] = {};
-  static char TmpWildcardPattern[] = "XXXXXX";
-  auto Argv = GetArgv();
-  const char *Progname = Argv[0] == nullptr ? "(unknown)" : Argv[0];
+  char TmpFilename[256] = {};
+  char TmpWildcardPattern[] = "XXXXXX";
+  auto **Argv = GetArgv();
+  const char *Progname = !Argv ? "(unknown)" : Argv[0];
   const char *LastSlash = internal_strrchr(Progname, '/');
 
   if (LastSlash != nullptr)
@@ -117,7 +117,7 @@ int getLogFD() XRAY_NEVER_INSTRUMENT {
            TmpFilename);
     return -1;
   }
-  if (__sanitizer::Verbosity())
+  if (Verbosity())
     Report("XRay: Log file in '%s'\n", TmpFilename);
 
   return Fd;

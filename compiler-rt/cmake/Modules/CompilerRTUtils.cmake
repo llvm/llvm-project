@@ -168,6 +168,7 @@ macro(detect_target_arch)
   check_symbol_exists(__mips64__ "" __MIPS64)
   check_symbol_exists(__powerpc64__ "" __PPC64)
   check_symbol_exists(__powerpc64le__ "" __PPC64LE)
+  check_symbol_exists(__riscv "" __RISCV)
   check_symbol_exists(__s390x__ "" __S390X)
   check_symbol_exists(__wasm32__ "" __WEBASSEMBLY32)
   check_symbol_exists(__wasm64__ "" __WEBASSEMBLY64)
@@ -187,6 +188,14 @@ macro(detect_target_arch)
     add_default_target_arch(powerpc64)
   elseif(__PPC64LE)
     add_default_target_arch(powerpc64le)
+  elseif(__RISCV)
+    if(CMAKE_SIZEOF_VOID_P EQUAL "4")
+      add_default_target_arch(riscv32)
+    elseif(CMAKE_SIZEOF_VOID_P EQUAL "8")
+      add_default_target_arch(riscv64)
+    else()
+      message(FATAL_ERROR "Unsupport XLEN for RISC-V")
+    endif()
   elseif(__S390X)
     add_default_target_arch(s390x)
   elseif(__WEBASSEMBLY32)
@@ -304,4 +313,70 @@ function(filter_builtin_sources output_var exclude_or_include excluded_list)
     endif ()
   endforeach ()
   set(${output_var} ${intermediate} PARENT_SCOPE)
+endfunction()
+
+function(get_compiler_rt_target arch variable)
+  if(ANDROID AND ${arch} STREQUAL "i386")
+    set(target "i686${COMPILER_RT_OS_SUFFIX}-${COMPILER_RT_DEFAULT_TARGET_OS}")
+  else()
+    set(target "${arch}-${COMPILER_RT_DEFAULT_TARGET_OS}")
+  endif()
+  if(COMPILER_RT_DEFAULT_TARGET_ABI)
+    set(target "${target}-${COMPILER_RT_DEFAULT_TARGET_ABI}")
+  endif()
+  set(${variable} ${target} PARENT_SCOPE)
+endfunction()
+
+function(get_compiler_rt_install_dir arch install_dir)
+  if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
+    get_compiler_rt_target(${arch} target)
+    set(${install_dir} ${COMPILER_RT_INSTALL_PATH}/${target}/lib PARENT_SCOPE)
+  else()
+    set(${install_dir} ${COMPILER_RT_LIBRARY_INSTALL_DIR} PARENT_SCOPE)
+  endif()
+endfunction()
+
+function(get_compiler_rt_output_dir arch output_dir)
+  if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
+    get_compiler_rt_target(${arch} target)
+    set(${output_dir} ${COMPILER_RT_OUTPUT_DIR}/${target}/lib PARENT_SCOPE)
+  else()
+    set(${output_dir} ${COMPILER_RT_LIBRARY_OUTPUT_DIR} PARENT_SCOPE)
+  endif()
+endfunction()
+
+# compiler_rt_process_sources(
+#   <OUTPUT_VAR>
+#   <SOURCE_FILE> ...
+#  [ADDITIONAL_HEADERS <header> ...]
+# )
+#
+# Process the provided sources and write the list of new sources
+# into `<OUTPUT_VAR>`.
+#
+# ADDITIONAL_HEADERS     - Adds the supplied header to list of sources for IDEs.
+#
+# This function is very similar to `llvm_process_sources()` but exists here
+# because we need to support standalone builds of compiler-rt.
+function(compiler_rt_process_sources OUTPUT_VAR)
+  cmake_parse_arguments(
+    ARG
+    ""
+    ""
+    "ADDITIONAL_HEADERS"
+    ${ARGN}
+  )
+  set(sources ${ARG_UNPARSED_ARGUMENTS})
+  set(headers "")
+  if (XCODE OR MSVC_IDE OR CMAKE_EXTRA_GENERATOR)
+    # For IDEs we need to tell CMake about header files.
+    # Otherwise they won't show up in UI.
+    set(headers ${ARG_ADDITIONAL_HEADERS})
+    list(LENGTH headers headers_length)
+    if (${headers_length} GREATER 0)
+      set_source_files_properties(${headers}
+        PROPERTIES HEADER_FILE_ONLY ON)
+    endif()
+  endif()
+  set("${OUTPUT_VAR}" ${sources} ${headers} PARENT_SCOPE)
 endfunction()

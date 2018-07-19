@@ -13,8 +13,10 @@
 //===----------------------------------------------------------------------===//
 #include "interception/interception.h"
 #include "sanitizer_common/sanitizer_allocator.h"
+#include "sanitizer_common/sanitizer_allocator_report.h"
 #include "sanitizer_common/sanitizer_internal_defs.h"
 #include "tsan_interceptors.h"
+#include "tsan_rtl.h"
 
 using namespace __tsan;  // NOLINT
 
@@ -34,7 +36,10 @@ DECLARE_REAL(void, free, void *ptr)
   {  \
     SCOPED_INTERCEPTOR_RAW(mangled_name, size); \
     p = user_alloc(thr, pc, size); \
-    if (!nothrow && UNLIKELY(!p)) DieOnFailure::OnOOM(); \
+    if (!nothrow && UNLIKELY(!p)) { \
+      GET_STACK_TRACE_FATAL(thr, pc); \
+      ReportOutOfMemory(size, &stack); \
+    } \
   }  \
   invoke_malloc_hook(p, size);  \
   return p;
@@ -46,7 +51,10 @@ DECLARE_REAL(void, free, void *ptr)
   {  \
     SCOPED_INTERCEPTOR_RAW(mangled_name, size); \
     p = user_memalign(thr, pc, (uptr)align, size); \
-    if (!nothrow && UNLIKELY(!p)) DieOnFailure::OnOOM(); \
+    if (!nothrow && UNLIKELY(!p)) { \
+      GET_STACK_TRACE_FATAL(thr, pc); \
+      ReportOutOfMemory(size, &stack); \
+    } \
   }  \
   invoke_malloc_hook(p, size);  \
   return p;

@@ -14,11 +14,10 @@
 #include "sanitizer_common.h"
 #include "sanitizer_allocator_interface.h"
 #include "sanitizer_allocator_internal.h"
+#include "sanitizer_atomic.h"
 #include "sanitizer_flags.h"
 #include "sanitizer_libc.h"
 #include "sanitizer_placement_new.h"
-#include "sanitizer_stacktrace_printer.h"
-#include "sanitizer_symbolizer.h"
 
 namespace __sanitizer {
 
@@ -39,9 +38,10 @@ void NORETURN ReportMmapFailureAndDie(uptr size, const char *mem_type,
                                       const char *mmap_type, error_t err,
                                       bool raw_report) {
   static int recursion_count;
-  if (raw_report || recursion_count) {
-    // If raw report is requested or we went into recursion, just die.
-    // The Report() and CHECK calls below may call mmap recursively and fail.
+  if (SANITIZER_RTEMS || raw_report || recursion_count) {
+    // If we are on RTEMS or raw report is requested or we went into recursion,
+    // just die.  The Report() and CHECK calls below may call mmap recursively
+    // and fail.
     RawWrite("ERROR: Failed to mmap\n");
     Die();
   }
@@ -57,19 +57,6 @@ void NORETURN ReportMmapFailureAndDie(uptr size, const char *mem_type,
 
 typedef bool UptrComparisonFunction(const uptr &a, const uptr &b);
 typedef bool U32ComparisonFunction(const u32 &a, const u32 &b);
-
-template<class T>
-static inline bool CompareLess(const T &a, const T &b) {
-  return a < b;
-}
-
-void SortArray(uptr *array, uptr size) {
-  InternalSort<uptr*, UptrComparisonFunction>(&array, size, CompareLess);
-}
-
-void SortArray(u32 *array, uptr size) {
-  InternalSort<u32*, U32ComparisonFunction>(&array, size, CompareLess);
-}
 
 const char *StripPathPrefix(const char *filepath,
                             const char *strip_path_prefix) {
@@ -106,18 +93,6 @@ void ReportErrorSummary(const char *error_message, const char *alt_tool_name) {
               alt_tool_name ? alt_tool_name : SanitizerToolName, error_message);
   __sanitizer_report_error_summary(buff.data());
 }
-
-#if !SANITIZER_GO
-void ReportErrorSummary(const char *error_type, const AddressInfo &info,
-                        const char *alt_tool_name) {
-  if (!common_flags()->print_summary) return;
-  InternalScopedString buff(kMaxSummaryLength);
-  buff.append("%s ", error_type);
-  RenderFrame(&buff, "%L %F", 0, info, common_flags()->symbolize_vs_style,
-              common_flags()->strip_path_prefix);
-  ReportErrorSummary(buff.data(), alt_tool_name);
-}
-#endif
 
 // Removes the ANSI escape sequences from the input string (in-place).
 void RemoveANSIEscapeSequencesFromString(char *str) {
@@ -355,6 +330,12 @@ extern "C" {
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_report_error_summary,
                              const char *error_summary) {
   Printf("%s\n", error_summary);
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+int __sanitizer_acquire_crash_state() {
+  static atomic_uint8_t in_crash_state = {};
+  return !atomic_exchange(&in_crash_state, 1, memory_order_relaxed);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE

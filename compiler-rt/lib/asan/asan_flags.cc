@@ -33,10 +33,7 @@ static const char *MaybeCallAsanDefaultOptions() {
 
 static const char *MaybeUseAsanDefaultOptionsCompileDefinition() {
 #ifdef ASAN_DEFAULT_OPTIONS
-// Stringize the macro value.
-# define ASAN_STRINGIZE(x) #x
-# define ASAN_STRINGIZE_OPTIONS(options) ASAN_STRINGIZE(options)
-  return ASAN_STRINGIZE_OPTIONS(ASAN_DEFAULT_OPTIONS);
+  return SANITIZER_STRINGIFY(ASAN_DEFAULT_OPTIONS);
 #else
   return "";
 #endif
@@ -163,6 +160,10 @@ void InitializeFlags() {
   CHECK_LE(f->max_redzone, 2048);
   CHECK(IsPowerOfTwo(f->redzone));
   CHECK(IsPowerOfTwo(f->max_redzone));
+  if (SANITIZER_RTEMS) {
+    CHECK(!f->unmap_shadow_on_exit);
+    CHECK(!f->protect_shadow_gap);
+  }
 
   // quarantine_size is deprecated but we still honor it.
   // quarantine_size can not be used together with quarantine_size_mb.

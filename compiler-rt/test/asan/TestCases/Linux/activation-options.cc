@@ -28,7 +28,6 @@
 // RUN:   ASAN_ACTIVATION_OPTIONS=include=%t.asan.options.%b %run %t --fix-name 2>&1 | \
 // RUN:   FileCheck %s --check-prefix=CHECK-HELP --check-prefix=CHECK-FOUND
 
-// XFAIL: arm-linux-gnueabi
 // XFAIL: android
 
 #if !defined(SHARED_LIB)

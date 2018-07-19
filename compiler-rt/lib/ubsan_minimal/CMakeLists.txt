@@ -44,7 +44,7 @@ if(COMPILER_RT_HAS_UBSAN_MINIMAL)
     LINK_LIBS ${UBSAN_DYNAMIC_LIBS}
     PARENT_TARGET ubsan-minimal)
 
-  if (UNIX AND NOT APPLE)
+  if (SANITIZER_USE_SYMBOLS AND NOT APPLE)
     set(ARCHS_FOR_SYMBOLS ${UBSAN_SUPPORTED_ARCH})
     list(REMOVE_ITEM ARCHS_FOR_SYMBOLS i386 i686)
     add_sanitizer_rt_symbols(clang_rt.ubsan_minimal

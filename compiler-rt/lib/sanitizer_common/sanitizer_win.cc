@@ -23,13 +23,10 @@
 #include <stdlib.h>
 
 #include "sanitizer_common.h"
-#include "sanitizer_dbghelp.h"
 #include "sanitizer_file.h"
 #include "sanitizer_libc.h"
 #include "sanitizer_mutex.h"
 #include "sanitizer_placement_new.h"
-#include "sanitizer_stacktrace.h"
-#include "sanitizer_symbolizer.h"
 #include "sanitizer_win_defs.h"
 
 // A macro to tell the compiler that this part of the code cannot be reached,
@@ -250,15 +247,12 @@ uptr ReservedAddressRange::MapOrDie(uptr fixed_addr, uptr size) {
 }
 
 void ReservedAddressRange::Unmap(uptr addr, uptr size) {
-  void* addr_as_void = reinterpret_cast<void*>(addr);
-  uptr base_as_uptr = reinterpret_cast<uptr>(base_);
   // Only unmap if it covers the entire range.
-  CHECK((addr == base_as_uptr) && (size == size_));
-  UnmapOrDie(addr_as_void, size);
-  if (addr_as_void == base_) {
-    base_ = reinterpret_cast<void*>(addr + size);
-  }
-  size_ = size_ - size;
+  CHECK((addr == reinterpret_cast<uptr>(base_)) && (size == size_));
+  // We unmap the whole range, just null out the base.
+  base_ = nullptr;
+  size_ = 0;
+  UnmapOrDie(reinterpret_cast<void*>(addr), size);
 }
 
 void *MmapFixedOrDieOnFatalError(uptr fixed_addr, uptr size) {
@@ -279,11 +273,7 @@ void *MmapNoReserveOrDie(uptr size, const char *mem_type) {
 }
 
 uptr ReservedAddressRange::Init(uptr size, const char *name, uptr fixed_addr) {
-  if (fixed_addr) {
-    base_ = MmapFixedNoAccess(fixed_addr, size, name);
-  } else {
-    base_ = MmapNoAccess(size);
-  }
+  base_ = fixed_addr ? MmapFixedNoAccess(fixed_addr, size) : MmapNoAccess(size);
   size_ = size;
   name_ = name;
   (void)os_handle_;  // unsupported
@@ -321,17 +311,20 @@ void ReleaseMemoryPagesToOS(uptr beg, uptr end) {
   // FIXME: add madvise-analog when we move to 64-bits.
 }
 
-void NoHugePagesInRegion(uptr addr, uptr size) {
+bool NoHugePagesInRegion(uptr addr, uptr size) {
   // FIXME: probably similar to ReleaseMemoryToOS.
+  return true;
 }
 
-void DontDumpShadowMemory(uptr addr, uptr length) {
+bool DontDumpShadowMemory(uptr addr, uptr length) {
   // This is almost useless on 32-bits.
   // FIXME: add madvise-analog when we move to 64-bits.
+  return true;
 }
 
 uptr FindAvailableMemoryRange(uptr size, uptr alignment, uptr left_padding,
-                              uptr *largest_gap_found) {
+                              uptr *largest_gap_found,
+                              uptr *max_occupied_addr) {
   uptr address = 0;
   while (true) {
     MEMORY_BASIC_INFORMATION info;
@@ -433,7 +426,7 @@ void DumpProcessMap() {
   modules.init();
   uptr num_modules = modules.size();
 
-  InternalScopedBuffer<ModuleInfo> module_infos(num_modules);
+  InternalMmapVector<ModuleInfo> module_infos(num_modules);
   for (size_t i = 0; i < num_modules; ++i) {
     module_infos[i].filepath = modules[i].full_name();
     module_infos[i].base_address = modules[i].ranges().front()->beg;
@@ -466,8 +459,7 @@ void ReExec() {
   UNIMPLEMENTED();
 }
 
-void PrepareForSandboxing(__sanitizer_sandbox_arguments *args) {
-}
+void PlatformPrepareForSandboxing(__sanitizer_sandbox_arguments *args) {}
 
 bool StackSizeIsUnlimited() {
   UNIMPLEMENTED();
@@ -502,12 +494,19 @@ void SleepForMillis(int millis) {
 }
 
 u64 NanoTime() {
-  return 0;
+  static LARGE_INTEGER frequency = {};
+  LARGE_INTEGER counter;
+  if (UNLIKELY(frequency.QuadPart == 0)) {
+    QueryPerformanceFrequency(&frequency);
+    CHECK_NE(frequency.QuadPart, 0);
+  }
+  QueryPerformanceCounter(&counter);
+  counter.QuadPart *= 1000ULL * 1000000ULL;
+  counter.QuadPart /= frequency.QuadPart;
+  return counter.QuadPart;
 }
 
-u64 MonotonicNanoTime() {
-  return 0;
-}
+u64 MonotonicNanoTime() { return NanoTime(); }
 
 void Abort() {
   internal__exit(3);
@@ -756,7 +755,10 @@ uptr internal_ftruncate(fd_t fd, uptr size) {
 }
 
 uptr GetRSS() {
-  return 0;
+  PROCESS_MEMORY_COUNTERS counters;
+  if (!GetProcessMemoryInfo(GetCurrentProcess(), &counters, sizeof(counters)))
+    return 0;
+  return counters.WorkingSetSize;
 }
 
 void *internal_start_thread(void (*func)(void *arg), void *arg) { return 0; }
@@ -829,54 +831,6 @@ void GetThreadStackAndTls(bool main, uptr *stk_addr, uptr *stk_size,
   *tls_size = 0;
 #endif
 }
-
-#if !SANITIZER_GO
-void BufferedStackTrace::SlowUnwindStack(uptr pc, u32 max_depth) {
-  CHECK_GE(max_depth, 2);
-  // FIXME: CaptureStackBackTrace might be too slow for us.
-  // FIXME: Compare with StackWalk64.
-  // FIXME: Look at LLVMUnhandledExceptionFilter in Signals.inc
-  size = CaptureStackBackTrace(1, Min(max_depth, kStackTraceMax),
-                               (void **)&trace_buffer[0], 0);
-  if (size == 0)
-    return;
-
-  // Skip the RTL frames by searching for the PC in the stacktrace.
-  uptr pc_location = LocatePcInTrace(pc);
-  PopStackFrames(pc_location);
-}
-
-void BufferedStackTrace::SlowUnwindStackWithContext(uptr pc, void *context,
-                                                    u32 max_depth) {
-  CONTEXT ctx = *(CONTEXT *)context;
-  STACKFRAME64 stack_frame;
-  memset(&stack_frame, 0, sizeof(stack_frame));
-
-  InitializeDbgHelpIfNeeded();
-
-  size = 0;
-#if defined(_WIN64)
-  int machine_type = IMAGE_FILE_MACHINE_AMD64;
-  stack_frame.AddrPC.Offset = ctx.Rip;
-  stack_frame.AddrFrame.Offset = ctx.Rbp;
-  stack_frame.AddrStack.Offset = ctx.Rsp;
-#else
-  int machine_type = IMAGE_FILE_MACHINE_I386;
-  stack_frame.AddrPC.Offset = ctx.Eip;
-  stack_frame.AddrFrame.Offset = ctx.Ebp;
-  stack_frame.AddrStack.Offset = ctx.Esp;
-#endif
-  stack_frame.AddrPC.Mode = AddrModeFlat;
-  stack_frame.AddrFrame.Mode = AddrModeFlat;
-  stack_frame.AddrStack.Mode = AddrModeFlat;
-  while (StackWalk64(machine_type, GetCurrentProcess(), GetCurrentThread(),
-                     &stack_frame, &ctx, NULL, SymFunctionTableAccess64,
-                     SymGetModuleBase64, NULL) &&
-         size < Min(max_depth, kStackTraceMax)) {
-    trace_buffer[size++] = (uptr)stack_frame.AddrPC.Offset;
-  }
-}
-#endif  // #if !SANITIZER_GO
 
 void ReportFile::Write(const char *buffer, uptr length) {
   SpinMutexLock l(mu);
@@ -1073,6 +1027,10 @@ void MaybeReexec() {
   // No need to re-exec on Windows.
 }
 
+void CheckASLR() {
+  // Do nothing
+}
+
 char **GetArgv() {
   // FIXME: Actually implement this function.
   return 0;
@@ -1106,9 +1064,10 @@ bool GetRandom(void *buffer, uptr length, bool blocking) {
   UNIMPLEMENTED();
 }
 
-// FIXME: implement on this platform.
 u32 GetNumberOfCPUs() {
-  UNIMPLEMENTED();
+  SYSTEM_INFO sysinfo = {};
+  GetNativeSystemInfo(&sysinfo);
+  return sysinfo.dwNumberOfProcessors;
 }
 
 }  // namespace __sanitizer

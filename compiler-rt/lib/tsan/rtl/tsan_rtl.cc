@@ -105,8 +105,8 @@ Context::Context()
   , racy_stacks()
   , racy_addresses()
   , fired_suppressions_mtx(MutexTypeFired, StatMtxFired)
-  , fired_suppressions(8)
   , clock_alloc("clock allocator") {
+  fired_suppressions.reserve(8);
 }
 
 // The objects are allocated in TLS, so one may rely on zero-initialization.
@@ -140,7 +140,7 @@ static void MemoryProfiler(Context *ctx, fd_t fd, int i) {
   uptr n_threads;
   uptr n_running_threads;
   ctx->thread_registry->GetNumberOfThreads(&n_threads, &n_running_threads);
-  InternalScopedBuffer<char> buf(4096);
+  InternalMmapVector<char> buf(4096);
   WriteMemoryProfile(buf.data(), buf.size(), n_threads, n_running_threads);
   WriteToFile(fd, buf.data(), internal_strlen(buf.data()));
 }
@@ -354,6 +354,7 @@ void Initialize(ThreadState *thr) {
   ctx = new(ctx_placeholder) Context;
   const char *options = GetEnv(SANITIZER_GO ? "GORACE" : "TSAN_OPTIONS");
   CacheBinaryName();
+  CheckASLR();
   InitializeFlags(&ctx->flags, options);
   AvoidCVE_2016_2143();
   InitializePlatformEarly();
@@ -547,6 +548,10 @@ u32 CurrentStackId(ThreadState *thr, uptr pc) {
 }
 
 void TraceSwitch(ThreadState *thr) {
+#if !SANITIZER_GO
+  if (ctx->after_multithreaded_fork)
+    return;
+#endif
   thr->nomalloc++;
   Trace *thr_trace = ThreadTrace(thr->tid);
   Lock l(&thr_trace->mtx);

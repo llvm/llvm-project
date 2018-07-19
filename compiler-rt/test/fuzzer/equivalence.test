@@ -1,9 +1,11 @@
+REQUIRES: this-test-is-deprecated
+UNSUPPORTED: freebsd
 RUN: %cpp_compiler %S/EquivalenceATest.cpp -o %t-EquivalenceATest
 RUN: %cpp_compiler %S/EquivalenceBTest.cpp -o %t-EquivalenceBTest
 
-RUN: %t-EquivalenceATest -run_equivalence_server=EQUIV_TEST & export APID=$!
+RUN: %run %t-EquivalenceATest -run_equivalence_server=EQUIV_TEST & export APID=$!
 RUN: sleep 3
-RUN: not %t-EquivalenceBTest -use_equivalence_server=EQUIV_TEST -max_len=4096 2>&1 | FileCheck %s
+RUN: not %run %t-EquivalenceBTest -use_equivalence_server=EQUIV_TEST -max_len=4096 2>&1 | FileCheck %s
 CHECK: ERROR: libFuzzer: equivalence-mismatch. Sizes: {{.*}}; offset 2
 CHECK: SUMMARY: libFuzzer: equivalence-mismatch
 RUN: kill -9 $APID

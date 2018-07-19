@@ -15,6 +15,7 @@
 #include "msan.h"
 #include "msan_chained_origin_depot.h"
 #include "msan_origin.h"
+#include "msan_report.h"
 #include "sanitizer_common/sanitizer_allocator_internal.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_flags.h"
@@ -30,8 +31,8 @@ namespace __msan {
 class Decorator: public __sanitizer::SanitizerCommonDecorator {
  public:
   Decorator() : SanitizerCommonDecorator() { }
-  const char *Origin()     { return Magenta(); }
-  const char *Name()   { return Green(); }
+  const char *Origin() const { return Magenta(); }
+  const char *Name() const { return Green(); }
 };
 
 static void DescribeStackOrigin(const char *so, uptr pc) {

@@ -1,7 +1,7 @@
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
 
-// Test the the fuzzer is able to 'cleanse' the reproducer
+// Test the fuzzer is able to 'cleanse' the reproducer
 // by replacing all irrelevant bytes with garbage.
 #include <cstddef>
 #include <cstdint>

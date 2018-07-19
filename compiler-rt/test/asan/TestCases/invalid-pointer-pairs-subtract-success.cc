@@ -1,12 +1,12 @@
 // RUN: %clangxx_asan -O0 %s -o %t -mllvm -asan-detect-invalid-pointer-pair
 
-// RUN: %env_asan_opts=detect_invalid_pointer_pairs=1 %run %t
+// RUN: %env_asan_opts=detect_invalid_pointer_pairs=2 %run %t
 
 #include <assert.h>
 #include <stdlib.h>
 
 int bar(char *p, char *q) {
-  return p <= q;
+  return p - q;
 }
 
 char global[10000] = {};

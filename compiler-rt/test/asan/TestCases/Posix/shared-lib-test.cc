@@ -6,7 +6,6 @@
 // RUN: %clangxx_asan -O2 %s %libdl -o %t && not %run %t 2>&1 | FileCheck %s
 // RUN: %clangxx_asan -O3 -DSHARED_LIB %s -fPIC -shared -o %t-so.so
 // RUN: %clangxx_asan -O3 %s %libdl -o %t && not %run %t 2>&1 | FileCheck %s
-// XFAIL: arm-linux-gnueabi
 
 #if !defined(SHARED_LIB)
 #include <dlfcn.h>

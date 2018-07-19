@@ -21,7 +21,6 @@
 #include "sanitizer_libc.h"
 #include "sanitizer_posix.h"
 #include "sanitizer_procmaps.h"
-#include "sanitizer_stacktrace.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -153,11 +152,15 @@ bool MprotectReadOnly(uptr addr, uptr size) {
   return 0 == internal_mprotect((void *)addr, size, PROT_READ);
 }
 
+#if !SANITIZER_MAC
+void MprotectMallocZones(void *addr, int prot) {}
+#endif
+
 fd_t OpenFile(const char *filename, FileAccessMode mode, error_t *errno_p) {
   int flags;
   switch (mode) {
     case RdOnly: flags = O_RDONLY; break;
-    case WrOnly: flags = O_WRONLY | O_CREAT; break;
+    case WrOnly: flags = O_WRONLY | O_CREAT | O_TRUNC; break;
     case RdWr: flags = O_RDWR | O_CREAT; break;
   }
   fd_t res = internal_open(filename, flags, 0660);

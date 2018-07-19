@@ -7,7 +7,7 @@
 #elif defined(__FreeBSD__)
 #include <pthread_np.h>
 #define USE_PTHREAD_SETNAME_NP 1
-#define tasn_pthread_setname_np pthread_set_name_np
+#define tsan_pthread_setname_np pthread_set_name_np
 #elif defined(__NetBSD__)
 #define USE_PTHREAD_SETNAME_NP 1
 #define tsan_pthread_setname_np(a, b) pthread_setname_np((a), "%s", (void *)(b))

@@ -2,6 +2,8 @@
 
 // Check that strlen() and similar intercepted functions can be called on shadow
 // memory.
+// The mem_to_shadow's part might need rework
+// XFAIL: freebsd
 
 #include <assert.h>
 #include <stdint.h>

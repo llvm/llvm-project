@@ -9,6 +9,7 @@
 // Tests for sanitizer_libc.h.
 //===----------------------------------------------------------------------===//
 #include <algorithm>
+#include <fstream>
 
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_file.h"
@@ -82,8 +83,18 @@ static void temp_file_name(char *buf, size_t bufsize, const char *prefix) {
   // on Android already.
   tmpdir = GetEnv("EXTERNAL_STORAGE");
 #endif
-  u32 uid = GetUid();
-  internal_snprintf(buf, bufsize, "%s/%s%d", tmpdir, prefix, uid);
+  internal_snprintf(buf, bufsize, "%s/%sXXXXXX", tmpdir, prefix);
+  ASSERT_TRUE(mkstemp(buf));
+#endif
+}
+
+static void Unlink(const char *path) {
+#if SANITIZER_WINDOWS
+  // No sanitizer needs to delete a file on Windows yet. If we ever do, we can
+  // add a portable wrapper and test it from here.
+  ::DeleteFileA(&path[0]);
+#else
+  internal_unlink(path);
 #endif
 }
 
@@ -97,6 +108,14 @@ TEST(SanitizerCommon, FileOps) {
   temp_file_name(tmpfile, sizeof(tmpfile), "sanitizer_common.fileops.tmp.");
   fd_t fd = OpenFile(tmpfile, WrOnly);
   ASSERT_NE(fd, kInvalidFd);
+  ASSERT_TRUE(WriteToFile(fd, "A", 1));
+  CloseFile(fd);
+
+  fd = OpenFile(tmpfile, WrOnly);
+  ASSERT_NE(fd, kInvalidFd);
+#if SANITIZER_POSIX && !SANITIZER_MAC
+  EXPECT_EQ(internal_lseek(fd, 0, SEEK_END), 0u);
+#endif
   uptr bytes_written = 0;
   EXPECT_TRUE(WriteToFile(fd, str1, len1, &bytes_written));
   EXPECT_EQ(len1, bytes_written);
@@ -142,14 +161,66 @@ TEST(SanitizerCommon, FileOps) {
   EXPECT_EQ(0, internal_memcmp(buf, str2, len2));
   CloseFile(fd);
 
-#if SANITIZER_WINDOWS
-  // No sanitizer needs to delete a file on Windows yet. If we ever do, we can
-  // add a portable wrapper and test it from here.
-  ::DeleteFileA(&tmpfile[0]);
-#else
-  internal_unlink(tmpfile);
-#endif
+  Unlink(tmpfile);
 }
+
+class SanitizerCommonFileTest : public ::testing::TestWithParam<uptr> {
+  void SetUp() override {
+    data_.resize(GetParam());
+    std::generate(data_.begin(), data_.end(), [] {
+      return rand() % 256;  // NOLINT
+    });
+
+    temp_file_name(file_name_, sizeof(file_name_),
+                   "sanitizer_common.ReadFile.tmp.");
+
+    std::ofstream f(file_name_, std::ios::out | std::ios::binary);
+    if (!data_.empty())
+      f.write(data_.data(), data_.size());
+  }
+
+  void TearDown() override { Unlink(file_name_); }
+
+ protected:
+  char file_name_[256];
+  std::vector<char> data_;
+};
+
+TEST_P(SanitizerCommonFileTest, ReadFileToBuffer) {
+  char *buff;
+  uptr size;
+  uptr len;
+  EXPECT_TRUE(ReadFileToBuffer(file_name_, &buff, &len, &size));
+  EXPECT_EQ(data_, std::vector<char>(buff, buff + size));
+  UnmapOrDie(buff, len);
+}
+
+TEST_P(SanitizerCommonFileTest, ReadFileToBufferHalf) {
+  char *buff;
+  uptr size;
+  uptr len;
+  data_.resize(data_.size() / 2);
+  EXPECT_TRUE(ReadFileToBuffer(file_name_, &buff, &len, &size, data_.size()));
+  EXPECT_EQ(data_, std::vector<char>(buff, buff + size));
+  UnmapOrDie(buff, len);
+}
+
+TEST_P(SanitizerCommonFileTest, ReadFileToVector) {
+  InternalMmapVector<char> buff;
+  EXPECT_TRUE(ReadFileToVector(file_name_, &buff));
+  EXPECT_EQ(data_, std::vector<char>(buff.begin(), buff.end()));
+}
+
+TEST_P(SanitizerCommonFileTest, ReadFileToVectorHalf) {
+  InternalMmapVector<char> buff;
+  data_.resize(data_.size() / 2);
+  EXPECT_TRUE(ReadFileToVector(file_name_, &buff, data_.size()));
+  EXPECT_EQ(data_, std::vector<char>(buff.begin(), buff.end()));
+}
+
+INSTANTIATE_TEST_CASE_P(FileSizes, SanitizerCommonFileTest,
+                        ::testing::Values(0, 1, 7, 13, 32, 4096, 4097, 1048575,
+                                          1048576, 1048577));
 
 static const size_t kStrlcpyBufSize = 8;
 void test_internal_strlcpy(char *dbuf, const char *sbuf) {

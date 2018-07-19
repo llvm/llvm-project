@@ -1,7 +1,9 @@
 [cfi-unrelated-cast]
-# std::get_temporary_buffer, likewise (libstdc++, libc++).
+# The specification of std::get_temporary_buffer mandates a cast to
+# uninitialized T* (libstdc++, libc++, MSVC stdlib).
 fun:_ZSt20get_temporary_buffer*
 fun:_ZNSt3__120get_temporary_buffer*
+fun:*get_temporary_buffer@.*@std@@*
 
 # STL address-of magic (libstdc++, libc++).
 fun:*__addressof*

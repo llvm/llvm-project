@@ -21,9 +21,10 @@ namespace __xray {
 
 ALWAYS_INLINE uint64_t readTSC(uint8_t &CPU) XRAY_NEVER_INSTRUMENT {
   unsigned LongCPU;
-  uint64_t TSC = __rdtscp(&LongCPU);
+  unsigned long Rax, Rdx;
+  __asm__ __volatile__("rdtscp\n" : "=a"(Rax), "=d"(Rdx), "=c"(LongCPU) ::);
   CPU = LongCPU;
-  return TSC;
+  return (Rdx << 32) + Rax;
 }
 
 uint64_t getTSCFrequency();

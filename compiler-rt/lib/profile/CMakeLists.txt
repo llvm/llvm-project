@@ -64,11 +64,19 @@ set(PROFILE_SOURCES
   InstrProfilingRuntime.cc
   InstrProfilingUtil.c)
 
+set(PROFILE_HEADERS
+  InstrProfData.inc
+  InstrProfiling.h
+  InstrProfilingInternal.h
+  InstrProfilingPort.h
+  InstrProfilingUtil.h
+  WindowsMMap.h)
+
 if(WIN32)
     list(APPEND PROFILE_SOURCES WindowsMMap.c)
 endif()
 
-if(UNIX)
+if(FUCHSIA OR UNIX)
  set(EXTRA_FLAGS
      -fPIC
      -Wno-pedantic)
@@ -104,6 +112,7 @@ if(APPLE)
     ARCHS ${PROFILE_SUPPORTED_ARCH}
     CFLAGS ${EXTRA_FLAGS}
     SOURCES ${PROFILE_SOURCES}
+    ADDITIONAL_HEADERS ${PROFILE_HEADERS}
     PARENT_TARGET profile)
 else()
   add_compiler_rt_runtime(clang_rt.profile
@@ -111,5 +120,6 @@ else()
     ARCHS ${PROFILE_SUPPORTED_ARCH}
     CFLAGS ${EXTRA_FLAGS}
     SOURCES ${PROFILE_SOURCES}
+    ADDITIONAL_HEADERS ${PROFILE_HEADERS}
     PARENT_TARGET profile)
 endif()

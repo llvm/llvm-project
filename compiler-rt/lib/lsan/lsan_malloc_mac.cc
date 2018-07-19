@@ -37,6 +37,9 @@ using namespace __lsan;
 #define COMMON_MALLOC_CALLOC(count, size) \
   GET_STACK_TRACE_MALLOC; \
   void *p = lsan_calloc(count, size, stack)
+#define COMMON_MALLOC_POSIX_MEMALIGN(memptr, alignment, size) \
+  GET_STACK_TRACE_MALLOC; \
+  int res = lsan_posix_memalign(memptr, alignment, size, stack)
 #define COMMON_MALLOC_VALLOC(size) \
   GET_STACK_TRACE_MALLOC; \
   void *p = lsan_valloc(size, stack)

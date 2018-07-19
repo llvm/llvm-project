@@ -27,7 +27,8 @@ using namespace __asan;
 static void FindInfoForStackVar(uptr addr, const char *frame_descr, uptr offset,
                                 char *name, uptr name_size,
                                 uptr &region_address, uptr &region_size) {
-  InternalMmapVector<StackVarDescr> vars(16);
+  InternalMmapVector<StackVarDescr> vars;
+  vars.reserve(16);
   if (!ParseFrameDescription(frame_descr, &vars)) {
     return;
   }

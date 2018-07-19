@@ -3,15 +3,10 @@
 
 // REQUIRES: lto
 
-// RUN: %clangxx_asan -DPART=0 -c %s -o %t-1.o -flto
-// RUN: %clangxx_asan -DPART=1 -c %s -o %t-2.o -flto
-// RUN: %clangxx_asan %t-1.o %t-2.o -o %t -flto
-// RUN: not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-ODR
-
 // RUN: %clangxx_asan -DPART=0 -c %s -o %t-1.o -flto -mllvm -asan-use-private-alias
 // RUN: %clangxx_asan -DPART=1 -c %s -o %t-2.o -flto -mllvm -asan-use-private-alias
 // RUN: %clangxx_asan %t-1.o %t-2.o -o %t -flto
-// RUN: %env_asan_opts=use_odr_indicator=1 %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-NO-ODR
+// RUN: %env_asan_opts=use_odr_indicator=1 %run %t 2>&1 | FileCheck %s
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -40,6 +35,5 @@ void putstest()
 
 #endif // PART == 1
 
-// CHECK-ODR: ERROR: AddressSanitizer: odr-violation
-// CHECK-NO-ODR-NOT: ERROR: AddressSanitizer: odr-violation
-// CHECK-NO-ODR: Done.
+// CHECK-NOT: ERROR: AddressSanitizer: odr-violation
+// CHECK: Done.

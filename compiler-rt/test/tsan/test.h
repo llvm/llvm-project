@@ -56,7 +56,7 @@ unsigned long long monotonic_clock_ns() {
 #endif
 
 //The const kPCInc must be in sync with StackTrace::GetPreviousInstructionPc
-#if defined(__powerpc64__)
+#if defined(__powerpc64__) || defined(__arm__) || defined(__aarch64__)
 // PCs are always 4 byte aligned.
 const int kPCInc = 4;
 #elif defined(__sparc__) || defined(__mips__)

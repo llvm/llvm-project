@@ -1,4 +1,5 @@
-// RUN: %clangxx_tsan -stdlib=libstdc++ -static-libstdc++ -O1 %s -o %t && %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_tsan %linux_static_libstdcplusplus -O1 %s -o %t && %run %t 2>&1 \
+// RUN: | FileCheck %s
 #include <pthread.h>
 #include <stdlib.h>
 #include <stdio.h>
