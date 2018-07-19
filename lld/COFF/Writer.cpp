@@ -1260,7 +1260,7 @@ void Writer::addBaserels() {
     return;
   std::vector<Baserel> V;
   for (OutputSection *Sec : OutputSections) {
-    if (Sec == RelocSec)
+    if (Sec->Header.Characteristics & IMAGE_SCN_MEM_DISCARDABLE)
       continue;
     // Collect all locations for base relocations.
     for (Chunk *C : Sec->getChunks())
