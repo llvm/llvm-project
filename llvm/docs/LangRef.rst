@@ -5180,6 +5180,59 @@ For example:
 
    !0 = !{!"llvm.loop.unroll.full"}
 
+'``llvm.loop.unroll_and_jam``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This metadata is treated very similarly to the ``llvm.loop.unroll`` metadata
+above, but affect the unroll and jam pass. In addition any loop with
+``llvm.loop.unroll`` metadata but no ``llvm.loop.unroll_and_jam`` metadata will
+disable unroll and jam (so ``llvm.loop.unroll`` metadata will be left to the
+unroller, plus ``llvm.loop.unroll.disable`` metadata will disable unroll and jam
+too.)
+
+The metadata for unroll and jam otherwise is the same as for ``unroll``.
+``llvm.loop.unroll_and_jam.enable``, ``llvm.loop.unroll_and_jam.disable`` and
+``llvm.loop.unroll_and_jam.count`` do the same as for unroll.
+``llvm.loop.unroll_and_jam.full`` is not supported. Again these are only hints
+and the normal safety checks will still be performed.
+
+'``llvm.loop.unroll_and_jam.count``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This metadata suggests an unroll and jam factor to use, similarly to
+``llvm.loop.unroll.count``. The first operand is the string
+``llvm.loop.unroll_and_jam.count`` and the second operand is a positive integer
+specifying the unroll factor. For example:
+
+.. code-block:: llvm
+
+   !0 = !{!"llvm.loop.unroll_and_jam.count", i32 4}
+
+If the trip count of the loop is less than the unroll count the loop
+will be partially unroll and jammed.
+
+'``llvm.loop.unroll_and_jam.disable``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This metadata disables loop unroll and jamming. The metadata has a single
+operand which is the string ``llvm.loop.unroll_and_jam.disable``. For example:
+
+.. code-block:: llvm
+
+   !0 = !{!"llvm.loop.unroll_and_jam.disable"}
+
+'``llvm.loop.unroll_and_jam.enable``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This metadata suggests that the loop should be fully unroll and jammed if the
+trip count is known at compile time and partially unrolled if the trip count is
+not known at compile time. The metadata has a single operand which is the
+string ``llvm.loop.unroll_and_jam.enable``.  For example:
+
+.. code-block:: llvm
+
+   !0 = !{!"llvm.loop.unroll_and_jam.enable"}
+
 '``llvm.loop.licm_versioning.disable``' Metadata
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
