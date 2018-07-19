@@ -24,6 +24,7 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
+#include "llvm/Analysis/TapirTaskInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -565,10 +566,11 @@ char ASanGlobalsMetadataWrapperPass::ID = 0;
 
 /// AddressSanitizer: instrument the code in module to find memory bugs.
 struct AddressSanitizer {
-  AddressSanitizer(Module &M, GlobalsMetadata &GlobalsMD,
+  AddressSanitizer(Module &M, GlobalsMetadata &GlobalsMD, TaskInfo &TI,
                    bool CompileKernel = false, bool Recover = false,
                    bool UseAfterScope = false)
-      : UseAfterScope(UseAfterScope || ClUseAfterScope), GlobalsMD(GlobalsMD) {
+      : UseAfterScope(UseAfterScope || ClUseAfterScope), GlobalsMD(GlobalsMD),
+        TI(TI) {
     this->Recover = ClRecover.getNumOccurrences() > 0 ? ClRecover : Recover;
     this->CompileKernel =
         ClEnableKasan.getNumOccurrences() > 0 ? ClEnableKasan : CompileKernel;
@@ -666,6 +668,9 @@ private:
   FunctionCallee AsanPtrCmpFunction, AsanPtrSubFunction;
   Constant *AsanShadowGlobal;
 
+  // Analyses
+  TaskInfo &TI;
+
   // These arrays is indexed by AccessIsWrite, Experiment and log2(AccessSize).
   FunctionCallee AsanErrorCallback[2][2][kNumberOfAccessSizes];
   FunctionCallee AsanMemoryAccessCallback[2][2][kNumberOfAccessSizes];
@@ -700,14 +705,16 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<ASanGlobalsMetadataWrapperPass>();
     AU.addRequired<TargetLibraryInfoWrapperPass>();
+    AU.addRequired<TaskInfoWrapperPass>();
   }
 
   bool runOnFunction(Function &F) override {
     GlobalsMetadata &GlobalsMD =
         getAnalysis<ASanGlobalsMetadataWrapperPass>().getGlobalsMD();
+    TaskInfo &TI = getAnalysis<TaskInfoWrapperPass>().getTaskInfo();
     const TargetLibraryInfo *TLI =
         &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
-    AddressSanitizer ASan(*F.getParent(), GlobalsMD, CompileKernel, Recover,
+    AddressSanitizer ASan(*F.getParent(), GlobalsMD, TI, CompileKernel, Recover,
                           UseAfterScope);
     return ASan.instrumentFunction(F, TLI);
   }
@@ -1155,8 +1162,10 @@ PreservedAnalyses AddressSanitizerPass::run(Function &F,
   auto &MAM = MAMProxy.getManager();
   Module &M = *F.getParent();
   if (auto *R = MAM.getCachedResult<ASanGlobalsMetadataAnalysis>(M)) {
+    TaskInfo &TI = AM.getResult<TaskAnalysis>(F);
     const TargetLibraryInfo *TLI = &AM.getResult<TargetLibraryAnalysis>(F);
-    AddressSanitizer Sanitizer(M, *R, CompileKernel, Recover, UseAfterScope);
+    AddressSanitizer Sanitizer(M, *R, TI, CompileKernel, Recover,
+                               UseAfterScope);
     if (Sanitizer.instrumentFunction(F, TLI))
       return PreservedAnalyses::none();
     return PreservedAnalyses::all();
@@ -1198,6 +1207,7 @@ INITIALIZE_PASS_BEGIN(
     false)
 INITIALIZE_PASS_DEPENDENCY(ASanGlobalsMetadataWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(TaskInfoWrapperPass)
 INITIALIZE_PASS_END(
     AddressSanitizerLegacyPass, "asan",
     "AddressSanitizer: detects use-after-free and out-of-bounds bugs.", false,
@@ -1308,11 +1318,6 @@ bool AddressSanitizer::isInterestingAlloca(const AllocaInst &AI) {
   if (PreviouslySeenAllocaInfo != ProcessedAllocas.end())
     return PreviouslySeenAllocaInfo->getSecond();
 
-  bool FunctionContainsDetach = false;
-  {
-    for (const BasicBlock &BB : *(AI.getParent()->getParent()))
-      FunctionContainsDetach |= isa<DetachInst>(BB.getTerminator());
-  }
   bool IsInteresting =
       (AI.getAllocatedType()->isSized() &&
        // alloca() may be called with 0 size, ignore it.
@@ -1321,7 +1326,7 @@ bool AddressSanitizer::isInterestingAlloca(const AllocaInst &AI) {
        // Promotable allocas are common under -O0.
        (!ClSkipPromotableAllocas || !isAllocaPromotable(&AI)) &&
        (!ClSkipPromotableAllocas ||
-        (!FunctionContainsDetach || !isAllocaParallelPromotable(&AI, *DT))) &&
+        (TI.isSerial() || !TI.isAllocaParallelPromotable(&AI))) &&
        // inalloca allocas are not treated as static, and we don't want
        // dynamic alloca instrumentation for them as well.
        !AI.isUsedWithInAlloca() &&

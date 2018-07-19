@@ -14,6 +14,7 @@
 #include "llvm/Transforms/Utils/Mem2Reg.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/TapirTaskInfo.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
@@ -32,7 +33,7 @@ using namespace llvm;
 STATISTIC(NumPromoted, "Number of alloca's promoted");
 
 static bool promoteMemoryToRegister(Function &F, DominatorTree &DT,
-                                    AssumptionCache &AC) {
+                                    AssumptionCache &AC, TaskInfo &TI) {
   std::vector<AllocaInst *> Allocas;
   bool Changed = false;
 
@@ -40,15 +41,9 @@ static bool promoteMemoryToRegister(Function &F, DominatorTree &DT,
   // CFG's.  We can perform this scan for entry blocks once for the function,
   // because this pass preserves the CFG.
   SmallVector<BasicBlock *, 4> EntryBlocks;
-  bool FunctionContainsDetach = false;
-  EntryBlocks.push_back(&F.getEntryBlock());
-  for (BasicBlock &BB : F)
-    if (BasicBlock *Pred = BB.getUniquePredecessor())
-      if (DetachInst *DI = dyn_cast<DetachInst>(Pred->getTerminator())) {
-        FunctionContainsDetach = true;
-        if (DI->getDetached() == &BB)
-          EntryBlocks.push_back(&BB);
-      }
+  for (Task *T : depth_first(TI.getRootTask())) {
+    EntryBlocks.push_back(T->getEntry());
+  }
 
   while (true) {
     Allocas.clear();
@@ -58,14 +53,13 @@ static bool promoteMemoryToRegister(Function &F, DominatorTree &DT,
     for (BasicBlock *BB : EntryBlocks)
       for (BasicBlock::iterator I = BB->begin(), E = --BB->end(); I != E; ++I)
         if (AllocaInst *AI = dyn_cast<AllocaInst>(I))       // Is it an alloca?
-          if (isAllocaPromotable(AI) &&
-              (!FunctionContainsDetach || isAllocaParallelPromotable(AI, DT)))
+          if (isAllocaPromotable(AI) && TI.isAllocaParallelPromotable(AI))
             Allocas.push_back(AI);
 
     if (Allocas.empty())
       break;
 
-    PromoteMemToReg(Allocas, DT, &AC);
+    PromoteMemToReg(Allocas, DT, &AC, &TI);
     NumPromoted += Allocas.size();
     Changed = true;
   }
@@ -75,7 +69,8 @@ static bool promoteMemoryToRegister(Function &F, DominatorTree &DT,
 PreservedAnalyses PromotePass::run(Function &F, FunctionAnalysisManager &AM) {
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &AC = AM.getResult<AssumptionAnalysis>(F);
-  if (!promoteMemoryToRegister(F, DT, AC))
+  auto &TI = AM.getResult<TaskAnalysis>(F);
+  if (!promoteMemoryToRegister(F, DT, AC, TI))
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;
@@ -102,12 +97,14 @@ struct PromoteLegacyPass : public FunctionPass {
     DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
     AssumptionCache &AC =
         getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-    return promoteMemoryToRegister(F, DT, AC);
+    TaskInfo &TI = getAnalysis<TaskInfoWrapperPass>().getTaskInfo();
+    return promoteMemoryToRegister(F, DT, AC, TI);
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<DominatorTreeWrapperPass>();
+    AU.addRequired<TaskInfoWrapperPass>();
     AU.setPreservesCFG();
   }
 };
@@ -121,6 +118,7 @@ INITIALIZE_PASS_BEGIN(PromoteLegacyPass, "mem2reg", "Promote Memory to "
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(TaskInfoWrapperPass)
 INITIALIZE_PASS_END(PromoteLegacyPass, "mem2reg", "Promote Memory to Register",
                     false, false)
 

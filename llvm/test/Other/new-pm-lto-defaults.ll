@@ -63,6 +63,9 @@
 ; CHECK-O1-NEXT: Running pass: LowerTypeTestsPass
 ; CHECK-O2-NEXT: Running pass: GlobalOptPass
 ; CHECK-O2-NEXT: Running pass: ModuleToFunctionPassAdaptor<{{.*}}PromotePass>
+; CHECK-O2-NEXT: Running analysis: DominatorTreeAnalysis
+; CHECK-O2-NEXT: Running analysis: AssumptionAnalysis
+; CHECK-O2-NEXT: Running analysis: TaskAnalysis
 ; CHECK-O2-NEXT: Running pass: ConstantMergePass
 ; CHECK-O2-NEXT: Running pass: DeadArgumentEliminationPass
 ; CHECK-O2-NEXT: Running pass: ModuleToFunctionPassAdaptor<{{.*}}PassManager{{.*}}>
