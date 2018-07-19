@@ -117,6 +117,9 @@ raw_ostream &dbgs();
 //
 #define DEBUG(X) DEBUG_WITH_TYPE(DEBUG_TYPE, X)
 
+// Transitory measure to get people onto LLVM_DEBUG for new code.
+#define LLVM_DEBUG(X) DEBUG_WITH_TYPE(DEBUG_TYPE, X)
+
 } // end namespace llvm
 
 #endif // LLVM_SUPPORT_DEBUG_H
