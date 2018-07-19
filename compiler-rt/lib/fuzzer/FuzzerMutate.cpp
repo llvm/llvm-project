@@ -549,6 +549,7 @@ size_t MutationDispatcher::MutateWithMask(uint8_t *Data, size_t Size,
   assert(!T.empty());
   size_t NewSize = Mutate(T.data(), OneBits, OneBits);
   assert(NewSize <= OneBits);
+  (void)NewSize;
   // Even if NewSize < OneBits we still use all OneBits bytes.
   for (size_t I = 0, J = 0; I < Size; I++)
     if (Mask[I])

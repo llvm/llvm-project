@@ -10831,19 +10831,11 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     Ops[0] = Builder.CreateBitCast(Ops[0], llvm::VectorType::get(Int64Ty, 2));
     Ops[1] = Builder.CreateBitCast(Ops[1], llvm::VectorType::get(Int64Ty, 2));
 
-    // Element zero comes from the first input vector and element one comes from
-    // the second. The element indices within each vector are numbered in big
-    // endian order so the shuffle mask must be adjusted for this on little
-    // endian platforms (i.e. index is complemented and source vector reversed).
-    unsigned ElemIdx0;
-    unsigned ElemIdx1;
-    if (getTarget().isLittleEndian()) {
-      ElemIdx0 = (~Index & 1) + 2;
-      ElemIdx1 = (~Index & 2) >> 1;
-    } else { // BigEndian
-      ElemIdx0 = (Index & 2) >> 1;
-      ElemIdx1 = 2 + (Index & 1);
-    }
+    // Account for endianness by treating this as just a shuffle. So we use the
+    // same indices for both LE and BE in order to produce expected results in
+    // both cases.
+    unsigned ElemIdx0 = (Index & 2) >> 1;;
+    unsigned ElemIdx1 = 2 + (Index & 1);;
 
     Constant *ShuffleElts[2] = {ConstantInt::get(Int32Ty, ElemIdx0),
                                 ConstantInt::get(Int32Ty, ElemIdx1)};
