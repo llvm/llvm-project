@@ -751,7 +751,8 @@ void NumericLiteralParser::ParseDecimalOrOctalCommon(SourceLocation TokLoc){
 
   // If we have a hex digit other than 'e' (which denotes a FP exponent) then
   // the code is using an incorrect base.
-  if (isHexDigit(*s) && *s != 'e' && *s != 'E') {
+  if (isHexDigit(*s) && *s != 'e' && *s != 'E' &&
+      !isValidUDSuffix(PP.getLangOpts(), StringRef(s, ThisTokEnd - s))) {
     PP.Diag(PP.AdvanceToTokenCharacter(TokLoc, s-ThisTokBegin),
             diag::err_invalid_digit) << StringRef(s, 1) << (radix == 8 ? 1 : 0);
     hadError = true;
@@ -804,12 +805,14 @@ bool NumericLiteralParser::isValidUDSuffix(const LangOptions &LangOpts,
   if (!LangOpts.CPlusPlus14)
     return false;
 
-  // In C++1y, "s", "h", "min", "ms", "us", and "ns" are used in the library.
+  // In C++14, "s", "h", "min", "ms", "us", and "ns" are used in the library.
   // Per tweaked N3660, "il", "i", and "if" are also used in the library.
+  // In C++2a "d" and "y" are used in the library.
   return llvm::StringSwitch<bool>(Suffix)
       .Cases("h", "min", "s", true)
       .Cases("ms", "us", "ns", true)
       .Cases("il", "i", "if", true)
+      .Cases("d", "y", LangOpts.CPlusPlus2a)
       .Default(false);
 }
 
@@ -922,7 +925,9 @@ void NumericLiteralParser::ParseNumberStartingWithZero(SourceLocation TokLoc) {
     s = SkipBinaryDigits(s);
     if (s == ThisTokEnd) {
       // Done.
-    } else if (isHexDigit(*s)) {
+    } else if (isHexDigit(*s) &&
+               !isValidUDSuffix(PP.getLangOpts(),
+                                StringRef(s, ThisTokEnd - s))) {
       PP.Diag(PP.AdvanceToTokenCharacter(TokLoc, s-ThisTokBegin),
               diag::err_invalid_digit) << StringRef(s, 1) << 2;
       hadError = true;

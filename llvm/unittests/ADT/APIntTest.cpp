@@ -1060,6 +1060,38 @@ TEST(APIntTest, divremuint) {
           APInt{1024, 1});
 }
 
+TEST(APIntTest, divrem_simple) {
+  // Test simple cases.
+  APInt A(65, 2), B(65, 2);
+  APInt Q, R;
+
+  // X / X
+  APInt::sdivrem(A, B, Q, R);
+  EXPECT_EQ(Q, APInt(65, 1));
+  EXPECT_EQ(R, APInt(65, 0));
+  APInt::udivrem(A, B, Q, R);
+  EXPECT_EQ(Q, APInt(65, 1));
+  EXPECT_EQ(R, APInt(65, 0));
+
+  // 0 / X
+  APInt O(65, 0);
+  APInt::sdivrem(O, B, Q, R);
+  EXPECT_EQ(Q, APInt(65, 0));
+  EXPECT_EQ(R, APInt(65, 0));
+  APInt::udivrem(O, B, Q, R);
+  EXPECT_EQ(Q, APInt(65, 0));
+  EXPECT_EQ(R, APInt(65, 0));
+
+  // X / 1
+  APInt I(65, 1);
+  APInt::sdivrem(A, I, Q, R);
+  EXPECT_EQ(Q, A);
+  EXPECT_EQ(R, APInt(65, 0));
+  APInt::udivrem(A, I, Q, R);
+  EXPECT_EQ(Q, A);
+  EXPECT_EQ(R, APInt(65, 0));
+}
+
 TEST(APIntTest, fromString) {
   EXPECT_EQ(APInt(32, 0), APInt(32,   "0", 2));
   EXPECT_EQ(APInt(32, 1), APInt(32,   "1", 2));

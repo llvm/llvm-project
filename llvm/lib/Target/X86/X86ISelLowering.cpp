@@ -31291,8 +31291,7 @@ static SDValue combineShuffle(SDNode *N, SelectionDAG &DAG,
     if (SDValue Res = combineX86ShufflesRecursively(
             {Op}, 0, Op, {0}, {}, /*Depth*/ 1,
             /*HasVarMask*/ false, DAG, Subtarget)) {
-      DCI.CombineTo(N, Res);
-      return SDValue();
+      return DCI.CombineTo(N, Res);
     }
   }
 
@@ -33969,7 +33968,7 @@ static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
 
   if (NewMul)
     // Do not add new nodes to DAG combiner worklist.
-    DCI.CombineTo(N, NewMul, false);
+    return DCI.CombineTo(N, NewMul, false);
 
   return SDValue();
 }
@@ -34230,8 +34229,7 @@ static SDValue combineVectorPack(SDNode *N, SelectionDAG &DAG,
   if (SDValue Res =
           combineX86ShufflesRecursively({Op}, 0, Op, {0}, {}, /*Depth*/ 1,
                                         /*HasVarMask*/ false, DAG, Subtarget)) {
-    DCI.CombineTo(N, Res);
-    return SDValue();
+    return DCI.CombineTo(N, Res);
   }
 
   return SDValue();
@@ -34292,8 +34290,7 @@ static SDValue combineVectorShiftImm(SDNode *N, SelectionDAG &DAG,
     if (SDValue Res = combineX86ShufflesRecursively(
             {Op}, 0, Op, {0}, {}, /*Depth*/ 1,
             /*HasVarMask*/ false, DAG, Subtarget)) {
-      DCI.CombineTo(N, Res);
-      return SDValue();
+      return DCI.CombineTo(N, Res);
     }
   }
 
@@ -34333,8 +34330,7 @@ static SDValue combineVectorInsert(SDNode *N, SelectionDAG &DAG,
   if (SDValue Res =
           combineX86ShufflesRecursively({Op}, 0, Op, {0}, {}, /*Depth*/ 1,
                                         /*HasVarMask*/ false, DAG, Subtarget)) {
-    DCI.CombineTo(N, Res);
-    return SDValue();
+    return DCI.CombineTo(N, Res);
   }
 
   return SDValue();
@@ -34790,8 +34786,7 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
     if (SDValue Res = combineX86ShufflesRecursively(
             {Op}, 0, Op, {0}, {}, /*Depth*/ 1,
             /*HasVarMask*/ false, DAG, Subtarget)) {
-      DCI.CombineTo(N, Res);
-      return SDValue();
+      return DCI.CombineTo(N, Res);
     }
   }
 
@@ -37201,8 +37196,7 @@ static SDValue combineAndnp(SDNode *N, SelectionDAG &DAG,
     if (SDValue Res = combineX86ShufflesRecursively(
             {Op}, 0, Op, {0}, {}, /*Depth*/ 1,
             /*HasVarMask*/ false, DAG, Subtarget)) {
-      DCI.CombineTo(N, Res);
-      return SDValue();
+      return DCI.CombineTo(N, Res);
     }
   }
 

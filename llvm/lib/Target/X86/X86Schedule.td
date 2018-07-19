@@ -618,11 +618,6 @@ def SchedWriteFShuffleSizes
  : X86SchedWriteSizes<SchedWriteFShuffle, SchedWriteFShuffle>;
 
 //===----------------------------------------------------------------------===//
-//  Common MCInstPredicate definitions used by variant scheduling classes.
-
-def ZeroIdiomPredicate : CheckSameRegOperand<1, 2>;
-
-//===----------------------------------------------------------------------===//
 // Generic Processor Scheduler Models.
 
 // IssueWidth is analogous to the number of decode units. Core and its

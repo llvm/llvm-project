@@ -118,8 +118,6 @@ public:
   bool run();
 
 private:
-  GetElementPtrInst *getSourceGEP(Value *Src) const;
-
   unsigned getPointerAddressSpace(Value *I);
 
   unsigned getAlignment(LoadInst *LI) const {
@@ -139,6 +137,8 @@ private:
   }
 
   bool isConsecutiveAccess(Value *A, Value *B);
+  bool areConsecutivePointers(Value *PtrA, Value *PtrB, APInt Size);
+  bool lookThroughComplexAddresses(Value *PtrA, Value *PtrB, APInt PtrDelta);
 
   /// After vectorization, reorder the instructions that I depends on
   /// (the instructions defining its operands), to ensure they dominate I.
@@ -277,21 +277,6 @@ unsigned Vectorizer::getPointerAddressSpace(Value *I) {
   return -1;
 }
 
-GetElementPtrInst *Vectorizer::getSourceGEP(Value *Src) const {
-  // First strip pointer bitcasts. Make sure pointee size is the same with
-  // and without casts.
-  // TODO: a stride set by the add instruction below can match the difference
-  // in pointee type size here. Currently it will not be vectorized.
-  Value *SrcPtr = getLoadStorePointerOperand(Src);
-  Value *SrcBase = SrcPtr->stripPointerCasts();
-  Type *SrcPtrType = SrcPtr->getType()->getPointerElementType();
-  Type *SrcBaseType = SrcBase->getType()->getPointerElementType();
-  if (SrcPtrType->isSized() && SrcBaseType->isSized() &&
-      DL.getTypeStoreSize(SrcPtrType) == DL.getTypeStoreSize(SrcBaseType))
-    SrcPtr = SrcBase;
-  return dyn_cast<GetElementPtrInst>(SrcPtr);
-}
-
 // FIXME: Merge with llvm::isConsecutiveAccess
 bool Vectorizer::isConsecutiveAccess(Value *A, Value *B) {
   Value *PtrA = getLoadStorePointerOperand(A);
@@ -304,7 +289,6 @@ bool Vectorizer::isConsecutiveAccess(Value *A, Value *B) {
     return false;
 
   // Make sure that A and B are different pointers of the same size type.
-  unsigned PtrBitWidth = DL.getPointerSizeInBits(ASA);
   Type *PtrATy = PtrA->getType()->getPointerElementType();
   Type *PtrBTy = PtrB->getType()->getPointerElementType();
   if (PtrA == PtrB ||
@@ -314,10 +298,16 @@ bool Vectorizer::isConsecutiveAccess(Value *A, Value *B) {
           DL.getTypeStoreSize(PtrBTy->getScalarType()))
     return false;
 
+  unsigned PtrBitWidth = DL.getPointerSizeInBits(ASA);
   APInt Size(PtrBitWidth, DL.getTypeStoreSize(PtrATy));
 
-  unsigned IdxWidth = DL.getIndexSizeInBits(ASA);
-  APInt OffsetA(IdxWidth, 0), OffsetB(IdxWidth, 0);
+  return areConsecutivePointers(PtrA, PtrB, Size);
+}
+
+bool Vectorizer::areConsecutivePointers(Value *PtrA, Value *PtrB, APInt Size) {
+  unsigned PtrBitWidth = DL.getPointerTypeSizeInBits(PtrA->getType());
+  APInt OffsetA(PtrBitWidth, 0);
+  APInt OffsetB(PtrBitWidth, 0);
   PtrA = PtrA->stripAndAccumulateInBoundsConstantOffsets(DL, OffsetA);
   PtrB = PtrB->stripAndAccumulateInBoundsConstantOffsets(DL, OffsetB);
 
@@ -340,26 +330,58 @@ bool Vectorizer::isConsecutiveAccess(Value *A, Value *B) {
   if (X == PtrSCEVB)
     return true;
 
+  // The above check will not catch the cases where one of the pointers is
+  // factorized but the other one is not, such as (C + (S * (A + B))) vs
+  // (AS + BS). Get the minus scev. That will allow re-combining the expresions
+  // and getting the simplified difference.
+  const SCEV *Dist = SE.getMinusSCEV(PtrSCEVB, PtrSCEVA);
+  if (C == Dist)
+    return true;
+
   // Sometimes even this doesn't work, because SCEV can't always see through
   // patterns that look like (gep (ext (add (shl X, C1), C2))). Try checking
   // things the hard way.
+  return lookThroughComplexAddresses(PtrA, PtrB, BaseDelta);
+}
+
+bool Vectorizer::lookThroughComplexAddresses(Value *PtrA, Value *PtrB,
+                                             APInt PtrDelta) {
+  auto *GEPA = dyn_cast<GetElementPtrInst>(PtrA);
+  auto *GEPB = dyn_cast<GetElementPtrInst>(PtrB);
+  if (!GEPA || !GEPB)
+    return false;
 
   // Look through GEPs after checking they're the same except for the last
   // index.
-  GetElementPtrInst *GEPA = getSourceGEP(A);
-  GetElementPtrInst *GEPB = getSourceGEP(B);
-  if (!GEPA || !GEPB || GEPA->getNumOperands() != GEPB->getNumOperands())
+  if (GEPA->getNumOperands() != GEPB->getNumOperands() ||
+      GEPA->getPointerOperand() != GEPB->getPointerOperand())
     return false;
-  unsigned FinalIndex = GEPA->getNumOperands() - 1;
-  for (unsigned i = 0; i < FinalIndex; i++)
-    if (GEPA->getOperand(i) != GEPB->getOperand(i))
+  gep_type_iterator GTIA = gep_type_begin(GEPA);
+  gep_type_iterator GTIB = gep_type_begin(GEPB);
+  for (unsigned I = 0, E = GEPA->getNumIndices() - 1; I < E; ++I) {
+    if (GTIA.getOperand() != GTIB.getOperand())
       return false;
+    ++GTIA;
+    ++GTIB;
+  }
 
-  Instruction *OpA = dyn_cast<Instruction>(GEPA->getOperand(FinalIndex));
-  Instruction *OpB = dyn_cast<Instruction>(GEPB->getOperand(FinalIndex));
+  Instruction *OpA = dyn_cast<Instruction>(GTIA.getOperand());
+  Instruction *OpB = dyn_cast<Instruction>(GTIB.getOperand());
   if (!OpA || !OpB || OpA->getOpcode() != OpB->getOpcode() ||
       OpA->getType() != OpB->getType())
     return false;
+
+  if (PtrDelta.isNegative()) {
+    if (PtrDelta.isMinSignedValue())
+      return false;
+    PtrDelta.negate();
+    std::swap(OpA, OpB);
+  }
+  uint64_t Stride = DL.getTypeAllocSize(GTIA.getIndexedType());
+  if (PtrDelta.urem(Stride) != 0)
+    return false;
+  unsigned IdxBitWidth = OpA->getType()->getScalarSizeInBits();
+  APInt IdxDiff = PtrDelta.udiv(Stride).zextOrSelf(IdxBitWidth);
 
   // Only look through a ZExt/SExt.
   if (!isa<SExtInst>(OpA) && !isa<ZExtInst>(OpA))
@@ -367,44 +389,46 @@ bool Vectorizer::isConsecutiveAccess(Value *A, Value *B) {
 
   bool Signed = isa<SExtInst>(OpA);
 
-  OpA = dyn_cast<Instruction>(OpA->getOperand(0));
+  // At this point A could be a function parameter, i.e. not an instruction
+  Value *ValA = OpA->getOperand(0);
   OpB = dyn_cast<Instruction>(OpB->getOperand(0));
-  if (!OpA || !OpB || OpA->getType() != OpB->getType())
+  if (!OpB || ValA->getType() != OpB->getType())
     return false;
 
-  // Now we need to prove that adding 1 to OpA won't overflow.
+  // Now we need to prove that adding IdxDiff to ValA won't overflow.
   bool Safe = false;
-  // First attempt: if OpB is an add with NSW/NUW, and OpB is 1 added to OpA,
-  // we're okay.
+  // First attempt: if OpB is an add with NSW/NUW, and OpB is IdxDiff added to
+  // ValA, we're okay.
   if (OpB->getOpcode() == Instruction::Add &&
       isa<ConstantInt>(OpB->getOperand(1)) &&
-      cast<ConstantInt>(OpB->getOperand(1))->getSExtValue() > 0) {
+      IdxDiff.sle(cast<ConstantInt>(OpB->getOperand(1))->getSExtValue())) {
     if (Signed)
       Safe = cast<BinaryOperator>(OpB)->hasNoSignedWrap();
     else
       Safe = cast<BinaryOperator>(OpB)->hasNoUnsignedWrap();
   }
 
-  unsigned BitWidth = OpA->getType()->getScalarSizeInBits();
+  unsigned BitWidth = ValA->getType()->getScalarSizeInBits();
 
   // Second attempt:
-  // If any bits are known to be zero other than the sign bit in OpA, we can
-  // add 1 to it while guaranteeing no overflow of any sort.
+  // If all set bits of IdxDiff or any higher order bit other than the sign bit
+  // are known to be zero in ValA, we can add Diff to it while guaranteeing no
+  // overflow of any sort.
   if (!Safe) {
+    OpA = dyn_cast<Instruction>(ValA);
+    if (!OpA)
+      return false;
     KnownBits Known(BitWidth);
     computeKnownBits(OpA, Known, DL, 0, nullptr, OpA, &DT);
-    if (Known.countMaxTrailingOnes() < (BitWidth - 1))
-      Safe = true;
+    if (Known.Zero.trunc(BitWidth - 1).zext(IdxBitWidth).ult(IdxDiff))
+      return false;
   }
 
-  if (!Safe)
-    return false;
-
-  const SCEV *OffsetSCEVA = SE.getSCEV(OpA);
+  const SCEV *OffsetSCEVA = SE.getSCEV(ValA);
   const SCEV *OffsetSCEVB = SE.getSCEV(OpB);
-  const SCEV *One = SE.getConstant(APInt(BitWidth, 1));
-  const SCEV *X2 = SE.getAddExpr(OffsetSCEVA, One);
-  return X2 == OffsetSCEVB;
+  const SCEV *C = SE.getConstant(IdxDiff.trunc(BitWidth));
+  const SCEV *X = SE.getAddExpr(OffsetSCEVA, C);
+  return X == OffsetSCEVB;
 }
 
 void Vectorizer::reorder(Instruction *I) {

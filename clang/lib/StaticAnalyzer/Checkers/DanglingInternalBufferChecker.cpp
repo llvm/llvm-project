@@ -32,8 +32,8 @@ REGISTER_MAP_WITH_PROGRAMSTATE(RawPtrMap, const MemRegion *, PtrSet)
 // This is a trick to gain access to PtrSet's Factory.
 namespace clang {
 namespace ento {
-template<> struct ProgramStateTrait<PtrSet>
-  : public ProgramStatePartialTrait<PtrSet> {
+template <>
+struct ProgramStateTrait<PtrSet> : public ProgramStatePartialTrait<PtrSet> {
   static void *GDMIndex() {
     static int Index = 0;
     return &Index;
@@ -46,7 +46,10 @@ namespace {
 
 class DanglingInternalBufferChecker
     : public Checker<check::DeadSymbols, check::PostCall> {
-  CallDescription CStrFn, DataFn;
+
+  CallDescription AppendFn, AssignFn, ClearFn, CStrFn, DataFn, EraseFn,
+      InsertFn, PopBackFn, PushBackFn, ReplaceFn, ReserveFn, ResizeFn,
+      ShrinkToFitFn, SwapFn;
 
 public:
   class DanglingBufferBRVisitor : public BugReporterVisitor {
@@ -81,7 +84,17 @@ public:
     }
   };
 
-  DanglingInternalBufferChecker() : CStrFn("c_str"), DataFn("data") {}
+  DanglingInternalBufferChecker()
+      : AppendFn("append"), AssignFn("assign"), ClearFn("clear"),
+        CStrFn("c_str"), DataFn("data"), EraseFn("erase"), InsertFn("insert"),
+        PopBackFn("pop_back"), PushBackFn("push_back"), ReplaceFn("replace"),
+        ReserveFn("reserve"), ResizeFn("resize"),
+        ShrinkToFitFn("shrink_to_fit"), SwapFn("swap") {}
+
+  /// Check whether the function called on the container object is a
+  /// member function that potentially invalidates pointers referring
+  /// to the objects's internal buffer.
+  bool mayInvalidateBuffer(const CallEvent &Call) const;
 
   /// Record the connection between the symbol returned by c_str() and the
   /// corresponding string object region in the ProgramState. Mark the symbol
@@ -93,6 +106,37 @@ public:
 };
 
 } // end anonymous namespace
+
+// [string.require]
+//
+// "References, pointers, and iterators referring to the elements of a
+// basic_string sequence may be invalidated by the following uses of that
+// basic_string object:
+//
+// -- TODO: As an argument to any standard library function taking a reference
+// to non-const basic_string as an argument. For example, as an argument to
+// non-member functions swap(), operator>>(), and getline(), or as an argument
+// to basic_string::swap().
+//
+// -- Calling non-const member functions, except operator[], at, front, back,
+// begin, rbegin, end, and rend."
+//
+bool DanglingInternalBufferChecker::mayInvalidateBuffer(
+    const CallEvent &Call) const {
+  if (const auto *MemOpCall = dyn_cast<CXXMemberOperatorCall>(&Call)) {
+    OverloadedOperatorKind Opc = MemOpCall->getOriginExpr()->getOperator();
+    if (Opc == OO_Equal || Opc == OO_PlusEqual)
+      return true;
+    return false;
+  }
+  return (isa<CXXDestructorCall>(Call) || Call.isCalled(AppendFn) ||
+          Call.isCalled(AssignFn) || Call.isCalled(ClearFn) ||
+          Call.isCalled(EraseFn) || Call.isCalled(InsertFn) ||
+          Call.isCalled(PopBackFn) || Call.isCalled(PushBackFn) ||
+          Call.isCalled(ReplaceFn) || Call.isCalled(ReserveFn) ||
+          Call.isCalled(ResizeFn) || Call.isCalled(ShrinkToFitFn) ||
+          Call.isCalled(SwapFn));
+}
 
 void DanglingInternalBufferChecker::checkPostCall(const CallEvent &Call,
                                                   CheckerContext &C) const {
@@ -127,7 +171,7 @@ void DanglingInternalBufferChecker::checkPostCall(const CallEvent &Call,
     return;
   }
 
-  if (isa<CXXDestructorCall>(ICall)) {
+  if (mayInvalidateBuffer(Call)) {
     if (const PtrSet *PS = State->get<RawPtrMap>(ObjRegion)) {
       // Mark all pointer symbols associated with the deleted object released.
       const Expr *Origin = Call.getOriginExpr();
@@ -161,8 +205,8 @@ void DanglingInternalBufferChecker::checkDeadSymbols(SymbolReaper &SymReaper,
           CleanedUpSet = F.remove(CleanedUpSet, Symbol);
       }
       State = CleanedUpSet.isEmpty()
-              ? State->remove<RawPtrMap>(Entry.first)
-              : State->set<RawPtrMap>(Entry.first, CleanedUpSet);
+                  ? State->remove<RawPtrMap>(Entry.first)
+                  : State->set<RawPtrMap>(Entry.first, CleanedUpSet);
     }
   }
   C.addTransition(State);
@@ -183,7 +227,7 @@ DanglingInternalBufferChecker::DanglingBufferBRVisitor::VisitNode(
 
   SmallString<256> Buf;
   llvm::raw_svector_ostream OS(Buf);
-  OS << "Pointer to dangling buffer was obtained here";
+  OS << "Dangling inner pointer obtained here";
   PathDiagnosticLocation Pos(S, BRC.getSourceManager(),
                              N->getLocationContext());
   return std::make_shared<PathDiagnosticEventPiece>(Pos, OS.str(), true,

@@ -34,6 +34,7 @@ set_default("can_symbolize", @CAN_SYMBOLIZE@)
 set_default("use_lld", False)
 set_default("use_thinlto", False)
 set_default("use_lto", config.use_thinlto)
+set_default("use_newpm", False)
 set_default("android", @ANDROID_PYBOOL@)
 config.available_features.add('target-is-%s' % config.target_arch)
 
