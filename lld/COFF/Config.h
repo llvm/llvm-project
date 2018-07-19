@@ -104,6 +104,7 @@ struct Configuration {
   std::vector<std::string> NatvisFiles;
   llvm::SmallString<128> PDBAltPath;
   llvm::SmallString<128> PDBPath;
+  llvm::SmallString<128> PDBSourcePath;
   std::vector<llvm::StringRef> Argv;
 
   // Symbols in this set are considered as live by the garbage collector.

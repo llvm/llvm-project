@@ -724,7 +724,7 @@ let Predicates = [UseSSE1] in {
             (MOVLPSmr addr:$src1, VR128:$src2)>;
 
   // This pattern helps select MOVLPS on SSE1 only targets. With SSE2 we'll
-  // end up with a movsd or bleand instead of shufp.
+  // end up with a movsd or blend instead of shufp.
   // No need for aligned load, we're only loading 64-bits.
   def : Pat<(X86Shufp (loadv4f32 addr:$src2), VR128:$src1, (i8 -28)),
             (MOVLPSrm VR128:$src1, addr:$src2)>;
@@ -780,7 +780,7 @@ let Predicates = [UseAVX] in {
 
 let Predicates = [UseSSE1] in {
   // This pattern helps select MOVHPS on SSE1 only targets. With SSE2 we'll
-  // end up with a movsd or bleand instead of shufp.
+  // end up with a movsd or blend instead of shufp.
   // No need for aligned load, we're only loading 64-bits.
   def : Pat<(X86Movlhps VR128:$src1, (loadv4f32 addr:$src2)),
             (MOVHPSrm VR128:$src1, addr:$src2)>;

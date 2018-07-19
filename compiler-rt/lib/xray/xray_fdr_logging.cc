@@ -741,6 +741,7 @@ XRayBuffer fdrIterator(const XRayBuffer B) {
 
   static BufferQueue::const_iterator It{};
   static BufferQueue::const_iterator End{};
+  static void *CurrentBuffer{nullptr};
   if (B.Data == static_cast<void *>(&Header) && B.Size == sizeof(Header)) {
     // From this point on, we provide raw access to the raw buffer we're getting
     // from the BufferQueue. We're relying on the iterators from the current
@@ -749,12 +750,39 @@ XRayBuffer fdrIterator(const XRayBuffer B) {
     End = BQ->cend();
   }
 
+  if (CurrentBuffer != nullptr) {
+    InternalFree(CurrentBuffer);
+    CurrentBuffer = nullptr;
+  }
+
   if (It == End)
     return {nullptr, 0};
 
+  // Set up the current buffer to contain the extents like we would when writing
+  // out to disk. The difference here would be that we still write "empty"
+  // buffers, or at least go through the iterators faithfully to let the
+  // handlers see the empty buffers in the queue.
+  auto BufferSize = atomic_load(&It->Extents->Size, memory_order_acquire);
+  auto SerializedBufferSize = BufferSize + sizeof(MetadataRecord);
+  CurrentBuffer = InternalAlloc(SerializedBufferSize);
+  if (CurrentBuffer == nullptr)
+    return {nullptr, 0};
+
+  // Write out the extents as a Metadata Record into the CurrentBuffer.
+  MetadataRecord ExtentsRecord;
+  ExtentsRecord.Type = uint8_t(RecordType::Metadata);
+  ExtentsRecord.RecordKind =
+      uint8_t(MetadataRecord::RecordKinds::BufferExtents);
+  internal_memcpy(ExtentsRecord.Data, &BufferSize, sizeof(BufferSize));
+  auto AfterExtents =
+      static_cast<char *>(internal_memcpy(CurrentBuffer, &ExtentsRecord,
+                                          sizeof(MetadataRecord))) +
+      sizeof(MetadataRecord);
+  internal_memcpy(AfterExtents, It->Data, BufferSize);
+
   XRayBuffer Result;
-  Result.Data = It->Data;
-  Result.Size = atomic_load(&It->Extents->Size, memory_order_acquire);
+  Result.Data = CurrentBuffer;
+  Result.Size = SerializedBufferSize;
   ++It;
   return Result;
 }

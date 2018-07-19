@@ -67,7 +67,7 @@ void DataFlowTrace::Init(const std::string &DirPath,
         const char *End = L.c_str() + L.size();
         assert(Beg < End);
         size_t Len = End - Beg;
-        Vector<bool> V(Len);
+        Vector<uint8_t> V(Len);
         for (size_t I = 0; I < Len; I++) {
           if (Beg[I] != '0' && Beg[I] != '1')
             ParseError("the trace should contain only 0 or 1");
