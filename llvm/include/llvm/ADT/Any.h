@@ -25,7 +25,7 @@
 namespace llvm {
 
 class Any {
-  template <typename T> struct TypeId { static const char Id = 0; };
+  template <typename T> struct TypeId { static const char Id; };
 
   struct StorageBase {
     virtual ~StorageBase() = default;
@@ -98,6 +98,9 @@ private:
 
   std::unique_ptr<StorageBase> Storage;
 };
+
+template <typename T> const char Any::TypeId<T>::Id = 0;
+
 
 template <typename T> bool any_isa(const Any &Value) {
   if (!Value.Storage)
