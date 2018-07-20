@@ -1694,7 +1694,7 @@ def fverbose_asm : Flag<["-"], "fverbose-asm">, Group<f_Group>;
 def fvisibility_EQ : Joined<["-"], "fvisibility=">, Group<f_Group>,
   HelpText<"Set the default symbol visibility for all global declarations">, Values<"hidden,default">;
 def fvisibility_inlines_hidden : Flag<["-"], "fvisibility-inlines-hidden">, Group<f_Group>,
-  HelpText<"Give inline C++ member functions default visibility by default">,
+  HelpText<"Give inline C++ member functions hidden visibility by default">,
   Flags<[CC1Option]>;
 def fvisibility_ms_compat : Flag<["-"], "fvisibility-ms-compat">, Group<f_Group>,
   HelpText<"Give global types 'default' visibility and global functions and "

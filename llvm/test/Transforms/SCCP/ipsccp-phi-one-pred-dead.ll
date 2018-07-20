@@ -7,11 +7,13 @@ define void @test() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label %Flow5.pre
 ; CHECK:       Flow6:
-; CHECK-NEXT:    br label %end2
+; CHECK-NEXT:    br i1 undef, label %end1, label %end2
 ; CHECK:       Flow5.pre:
 ; CHECK-NEXT:    br label %Flow5
 ; CHECK:       Flow5:
 ; CHECK-NEXT:    br label %Flow6
+; CHECK:       end1:
+; CHECK-NEXT:    unreachable
 ; CHECK:       end2:
 ; CHECK-NEXT:    unreachable
 ;

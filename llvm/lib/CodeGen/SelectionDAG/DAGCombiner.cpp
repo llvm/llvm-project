@@ -2582,6 +2582,11 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
   if (isAllOnesConstantOrAllOnesSplatConstant(N0))
     return DAG.getNode(ISD::XOR, DL, VT, N1, N0);
 
+  // fold (A - (0-B)) -> A+B
+  if (N1.getOpcode() == ISD::SUB &&
+      isNullConstantOrNullSplatConstant(N1.getOperand(0)))
+    return DAG.getNode(ISD::ADD, DL, VT, N0, N1.getOperand(1));
+
   // fold A-(A-B) -> B
   if (N1.getOpcode() == ISD::SUB && N0 == N1.getOperand(0))
     return N1.getOperand(1);

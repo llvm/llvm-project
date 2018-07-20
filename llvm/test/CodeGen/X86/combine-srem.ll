@@ -248,11 +248,9 @@ define <4 x i32> @combine_vec_srem_by_pow2a_neg(<4 x i32> %x) {
 ; SSE-NEXT:    paddd %xmm0, %xmm1
 ; SSE-NEXT:    psrad $2, %xmm1
 ; SSE-NEXT:    pxor %xmm2, %xmm2
-; SSE-NEXT:    pxor %xmm3, %xmm3
-; SSE-NEXT:    psubd %xmm1, %xmm3
-; SSE-NEXT:    pslld $2, %xmm3
-; SSE-NEXT:    psubd %xmm3, %xmm2
-; SSE-NEXT:    psubd %xmm2, %xmm0
+; SSE-NEXT:    psubd %xmm1, %xmm2
+; SSE-NEXT:    pslld $2, %xmm2
+; SSE-NEXT:    paddd %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_srem_by_pow2a_neg:
@@ -264,8 +262,7 @@ define <4 x i32> @combine_vec_srem_by_pow2a_neg(<4 x i32> %x) {
 ; AVX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX-NEXT:    vpsubd %xmm1, %xmm2, %xmm1
 ; AVX-NEXT:    vpslld $2, %xmm1, %xmm1
-; AVX-NEXT:    vpsubd %xmm1, %xmm2, %xmm1
-; AVX-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = srem <4 x i32> %x, <i32 -4, i32 -4, i32 -4, i32 -4>
   ret <4 x i32> %1

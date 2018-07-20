@@ -17,6 +17,7 @@
 #include "FuzzerValueBitMap.h"
 
 #include <set>
+#include <unordered_map>
 
 namespace fuzzer {
 
@@ -176,7 +177,7 @@ private:
   uintptr_t *PCs() const;
 
   Set<uintptr_t> ObservedPCs;
-  Set<uintptr_t> ObservedFuncs;
+  std::unordered_map<uintptr_t, uintptr_t> ObservedFuncs;  // PC => Counter.
 
   template <class Callback>
   void IterateInline8bitCounters(Callback CB) const;
