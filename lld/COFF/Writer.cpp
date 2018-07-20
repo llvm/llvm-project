@@ -470,12 +470,9 @@ void Writer::createSections() {
 
   // Finally, move some output sections to the end.
   auto SectionOrder = [&](OutputSection *S) {
-    // .reloc should come last of all since it refers to RVAs of data in the
-    // previous sections.
-    if (S == RelocSec)
-      return 3;
     // Move DISCARDABLE (or non-memory-mapped) sections to the end of file because
-    // the loader cannot handle holes.
+    // the loader cannot handle holes. Stripping can remove other discardable ones
+    // than .reloc, which is first of them (created early).
     if (S->Header.Characteristics & IMAGE_SCN_MEM_DISCARDABLE)
       return 2;
     // .rsrc should come at the end of the non-discardable sections because its
