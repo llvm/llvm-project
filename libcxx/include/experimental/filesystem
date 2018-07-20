@@ -232,6 +232,7 @@
 
 #include <experimental/__config>
 #include <cstddef>
+#include <cstdlib>
 #include <chrono>
 #include <iterator>
 #include <iosfwd>
@@ -2250,6 +2251,7 @@ private:
           __ec->clear();
         return __data_.__type_;
       }
+      _LIBCPP_UNREACHABLE();
     }
 
     _LIBCPP_INLINE_VISIBILITY
@@ -2270,6 +2272,7 @@ private:
         return __data_.__type_;
       }
       }
+      _LIBCPP_UNREACHABLE();
     }
 
     _LIBCPP_INLINE_VISIBILITY
@@ -2284,6 +2287,7 @@ private:
       case _RefreshSymlink:
         return file_status(__get_ft(__ec), __data_.__non_sym_perms_);
       }
+      _LIBCPP_UNREACHABLE();
     }
 
     _LIBCPP_INLINE_VISIBILITY
@@ -2299,6 +2303,7 @@ private:
       case _RefreshSymlinkUnresolved:
         return file_status(__get_sym_ft(__ec), __data_.__sym_perms_);
       }
+      _LIBCPP_UNREACHABLE();
     }
 
 
@@ -2324,6 +2329,7 @@ private:
         return __data_.__size_;
       }
       }
+      _LIBCPP_UNREACHABLE();
     }
 
     _LIBCPP_INLINE_VISIBILITY
@@ -2342,6 +2348,7 @@ private:
         return __data_.__nlink_;
       }
       }
+      _LIBCPP_UNREACHABLE();
     }
 
     _LIBCPP_INLINE_VISIBILITY
@@ -2364,6 +2371,7 @@ private:
         return __data_.__write_time_;
       }
       }
+      _LIBCPP_UNREACHABLE();
     }
 private:
     _Path __p_;
