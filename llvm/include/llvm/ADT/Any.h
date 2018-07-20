@@ -110,7 +110,7 @@ template <typename T> bool any_isa(const Any &Value) {
 template <class T> T any_cast(const Any &Value) {
   using U =
       typename std::remove_cv<typename std::remove_reference<T>::type>::type;
-  return static_cast<T>(*any_cast<U>(&operand));
+  return static_cast<T>(*any_cast<U>(&Value));
 }
 
 template <class T> T any_cast(Any &Value) {
