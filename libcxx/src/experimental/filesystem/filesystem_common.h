@@ -228,8 +228,8 @@ public:
 } // namespace time_util
 
 
-using TimeSpec = struct timespec;
-using StatT = struct stat;
+using TimeSpec = struct ::timespec;
+using StatT = struct ::stat;
 
 using FSTime = time_util::fs_time_util<file_time_type, time_t, struct timespec>;
 
