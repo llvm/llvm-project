@@ -201,6 +201,7 @@ private:
 
   OutputSection *TextSec;
   OutputSection *RdataSec;
+  OutputSection *BuildidSec;
   OutputSection *DataSec;
   OutputSection *PdataSec;
   OutputSection *IdataSec;
@@ -420,6 +421,7 @@ void Writer::createSections() {
   TextSec = CreateSection(".text", CODE | R | X);
   CreateSection(".bss", BSS | R | W);
   RdataSec = CreateSection(".rdata", DATA | R);
+  BuildidSec = CreateSection(".buildid", DATA | R);
   DataSec = CreateSection(".data", DATA | R | W);
   PdataSec = CreateSection(".pdata", DATA | R);
   IdataSec = CreateSection(".idata", DATA | R);
@@ -503,6 +505,8 @@ void Writer::createMiscChunks() {
   if (Config->Debug) {
     DebugDirectory = make<DebugDirectoryChunk>(DebugRecords);
 
+    OutputSection *DebugInfoSec = Config->MinGW ? BuildidSec : RdataSec;
+
     // Make a CVDebugRecordChunk even when /DEBUG:CV is not specified.  We
     // output a PDB no matter what, and this chunk provides the only means of
     // allowing a debugger to match a PDB and an executable.  So we need it even
@@ -511,9 +515,9 @@ void Writer::createMiscChunks() {
     BuildId = CVChunk;
     DebugRecords.push_back(CVChunk);
 
-    RdataSec->addChunk(DebugDirectory);
+    DebugInfoSec->addChunk(DebugDirectory);
     for (Chunk *C : DebugRecords)
-      RdataSec->addChunk(C);
+      DebugInfoSec->addChunk(C);
   }
 
   // Create SEH table. x86-only.
