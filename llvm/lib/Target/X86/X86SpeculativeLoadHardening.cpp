@@ -192,8 +192,7 @@ private:
                            SmallPtrSetImpl<MachineInstr *> &HardenedInstrs);
   bool canHardenRegister(unsigned Reg);
   void hardenPostLoad(MachineInstr &MI);
-  void checkReturnInstr(MachineInstr &MI);
-  void checkCallInstr(MachineInstr &MI);
+  void hardenReturnInstr(MachineInstr &MI);
 };
 
 } // end anonymous namespace
@@ -529,7 +528,7 @@ bool X86SpeculativeLoadHardeningPass::runOnMachineFunction(
       if (!MI.isReturn())
         continue;
 
-      checkReturnInstr(MI);
+      hardenReturnInstr(MI);
     }
 
   LLVM_DEBUG(dbgs() << "Final speculative load hardened function:\n"; MF.dump();
@@ -1969,7 +1968,30 @@ void X86SpeculativeLoadHardeningPass::hardenPostLoad(MachineInstr &MI) {
   ++NumPostLoadRegsHardened;
 }
 
-void X86SpeculativeLoadHardeningPass::checkReturnInstr(MachineInstr &MI) {
+/// Harden a return instruction.
+///
+/// Returns implicitly perform a load which we need to harden. Without hardening
+/// this load, an attacker my speculatively write over the return address to
+/// steer speculation of the return to an attacker controlled address. This is
+/// called Spectre v1.1 or Bounds Check Bypass Store (BCBS) and is described in
+/// this paper:
+/// https://people.csail.mit.edu/vlk/spectre11.pdf
+///
+/// We can harden this by introducing an LFENCE that will delay any load of the
+/// return address until prior instructions have retired (and thus are not being
+/// speculated), or we can harden the address used by the implicit load: the
+/// stack pointer.
+///
+/// If we are not using an LFENCE, hardening the stack pointer has an additional
+/// benefit: it allows us to pass the predicate state accumulated in this
+/// function back to the caller. In the absence of a BCBS attack on the return,
+/// the caller will typically be resumed and speculatively executed due to the
+/// Return Stack Buffer (RSB) prediction which is very accurate and has a high
+/// priority. It is possible that some code from the caller will be executed
+/// speculatively even during a BCBS-attacked return until the steering takes
+/// effect. Whenever this happens, the caller can recover the (poisoned)
+/// predicate state from the stack pointer and continue to harden loads.
+void X86SpeculativeLoadHardeningPass::hardenReturnInstr(MachineInstr &MI) {
   MachineBasicBlock &MBB = *MI.getParent();
   DebugLoc Loc = MI.getDebugLoc();
   auto InsertPt = MI.getIterator();

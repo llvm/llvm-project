@@ -221,6 +221,24 @@ namespace Name                                                      \
     } while (false)
 #
 
+#define TEST_CHECK_THROW_RESULT(Except, Checker, ...)                          \
+  do {                                                                         \
+    TEST_SET_CHECKPOINT();                                                     \
+    ::rapid_cxx_test::test_outcome m_f(::rapid_cxx_test::failure_type::none,   \
+                                       __FILE__, TEST_FUNC_NAME(), __LINE__,   \
+                                       "TEST_CHECK_THROW_RESULT(" #Except      \
+                                       "," #Checker "," #__VA_ARGS__ ")",      \
+                                       "");                                    \
+    try {                                                                      \
+      (static_cast<void>(__VA_ARGS__));                                        \
+      m_f.type = ::rapid_cxx_test::failure_type::check;                        \
+    } catch (Except const& Caught) {                                           \
+      Checker(Caught);                                                         \
+    }                                                                          \
+    ::rapid_cxx_test::get_reporter().report(m_f);                              \
+  } while (false)
+#
+
 #else // TEST_HAS_NO_EXCEPTIONS
 
 # define TEST_CHECK_NO_THROW(...)                                                      \
@@ -236,6 +254,7 @@ namespace Name                                                      \
 #
 
 #define TEST_CHECK_THROW(Except, ...) ((void)0)
+#define TEST_CHECK_THROW_RESULT(Except, Checker, ...) ((void)0)
 
 #endif // TEST_HAS_NO_EXCEPTIONS
 

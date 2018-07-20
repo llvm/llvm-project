@@ -2582,6 +2582,11 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
   if (isAllOnesConstantOrAllOnesSplatConstant(N0))
     return DAG.getNode(ISD::XOR, DL, VT, N1, N0);
 
+  // fold (A - (0-B)) -> A+B
+  if (N1.getOpcode() == ISD::SUB &&
+      isNullConstantOrNullSplatConstant(N1.getOperand(0)))
+    return DAG.getNode(ISD::ADD, DL, VT, N0, N1.getOperand(1));
+
   // fold A-(A-B) -> B
   if (N1.getOpcode() == ISD::SUB && N0 == N1.getOperand(0))
     return N1.getOperand(1);
@@ -2623,6 +2628,24 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
       N0.getOperand(1).getOperand(1) == N1)
     return DAG.getNode(ISD::SUB, DL, VT, N0.getOperand(0),
                        N0.getOperand(1).getOperand(0));
+
+  // fold (X - (-Y * Z)) -> (X + (Y * Z))
+  if (N1.getOpcode() == ISD::MUL && N1.hasOneUse()) {
+    if (N1.getOperand(0).getOpcode() == ISD::SUB &&
+        isNullConstantOrNullSplatConstant(N1.getOperand(0).getOperand(0))) {
+      SDValue Mul = DAG.getNode(ISD::MUL, DL, VT,
+                                N1.getOperand(0).getOperand(1),
+                                N1.getOperand(1));
+      return DAG.getNode(ISD::ADD, DL, VT, N0, Mul);
+    }
+    if (N1.getOperand(1).getOpcode() == ISD::SUB &&
+        isNullConstantOrNullSplatConstant(N1.getOperand(1).getOperand(0))) {
+      SDValue Mul = DAG.getNode(ISD::MUL, DL, VT,
+                                N1.getOperand(0),
+                                N1.getOperand(1).getOperand(1));
+      return DAG.getNode(ISD::ADD, DL, VT, N0, Mul);
+    }
+  }
 
   // If either operand of a sub is undef, the result is undef
   if (N0.isUndef())

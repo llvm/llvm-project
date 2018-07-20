@@ -39275,6 +39275,31 @@ static SDValue combineExtractSubvector(SDNode *N, SelectionDAG &DAG,
         OpVT, SDLoc(N),
         InVec.getNode()->ops().slice(IdxVal, OpVT.getVectorNumElements()));
 
+  // If we're extracting the lowest subvector and we're the only user,
+  // we may be able to perform this with a smaller vector width.
+  if (IdxVal == 0 && InVec.hasOneUse()) {
+    unsigned InOpcode = InVec.getOpcode();
+    if (OpVT == MVT::v2f64 && InVec.getValueType() == MVT::v4f64) {
+      // v2f64 CVTDQ2PD(v4i32).
+      if (InOpcode == ISD::SINT_TO_FP &&
+          InVec.getOperand(0).getValueType() == MVT::v4i32) {
+        return DAG.getNode(X86ISD::CVTSI2P, SDLoc(N), OpVT, InVec.getOperand(0));
+      }
+      // v2f64 CVTPS2PD(v4f32).
+      if (InOpcode == ISD::FP_EXTEND &&
+          InVec.getOperand(0).getValueType() == MVT::v4f32) {
+        return DAG.getNode(X86ISD::VFPEXT, SDLoc(N), OpVT, InVec.getOperand(0));
+      }
+    }
+    if ((InOpcode == X86ISD::VZEXT || InOpcode == X86ISD::VSEXT) &&
+        OpVT.is128BitVector() &&
+        InVec.getOperand(0).getSimpleValueType().is128BitVector()) {
+      unsigned ExtOp = InOpcode == X86ISD::VZEXT ? ISD::ZERO_EXTEND_VECTOR_INREG
+                                                 : ISD::SIGN_EXTEND_VECTOR_INREG;
+      return DAG.getNode(ExtOp, SDLoc(N), OpVT, InVec.getOperand(0));
+    }
+  }
+
   return SDValue();
 }
 
