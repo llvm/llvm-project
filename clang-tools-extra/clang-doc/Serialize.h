@@ -29,15 +29,15 @@ namespace doc {
 namespace serialize {
 
 std::string emitInfo(const NamespaceDecl *D, const FullComment *FC,
-                     int LineNumber, StringRef File);
+                     int LineNumber, StringRef File, bool PublicOnly);
 std::string emitInfo(const RecordDecl *D, const FullComment *FC, int LineNumber,
-                     StringRef File);
+                     StringRef File, bool PublicOnly);
 std::string emitInfo(const EnumDecl *D, const FullComment *FC, int LineNumber,
-                     StringRef File);
+                     StringRef File, bool PublicOnly);
 std::string emitInfo(const FunctionDecl *D, const FullComment *FC,
-                     int LineNumber, StringRef File);
+                     int LineNumber, StringRef File, bool PublicOnly);
 std::string emitInfo(const CXXMethodDecl *D, const FullComment *FC,
-                     int LineNumber, StringRef File);
+                     int LineNumber, StringRef File, bool PublicOnly);
 
 // Function to hash a given USR value for storage.
 // As USRs (Unified Symbol Resolution) could be large, especially for functions

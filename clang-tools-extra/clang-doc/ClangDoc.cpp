@@ -15,6 +15,7 @@
 
 #include "ClangDoc.h"
 #include "Mapper.h"
+#include "Representation.h"
 #include "clang/AST/AST.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
@@ -28,33 +29,33 @@ namespace doc {
 
 class MapperActionFactory : public tooling::FrontendActionFactory {
 public:
-  MapperActionFactory(tooling::ExecutionContext *ECtx) : ECtx(ECtx) {}
+  MapperActionFactory(ClangDocContext CDCtx) : CDCtx(CDCtx) {}
   clang::FrontendAction *create() override;
 
 private:
-  tooling::ExecutionContext *ECtx;
+  ClangDocContext CDCtx;
 };
 
 clang::FrontendAction *MapperActionFactory::create() {
   class ClangDocAction : public clang::ASTFrontendAction {
   public:
-    ClangDocAction(ExecutionContext *ECtx) : ECtx(ECtx) {}
+    ClangDocAction(ClangDocContext CDCtx) : CDCtx(CDCtx) {}
 
     std::unique_ptr<clang::ASTConsumer>
     CreateASTConsumer(clang::CompilerInstance &Compiler,
                       llvm::StringRef InFile) override {
-      return llvm::make_unique<MapASTVisitor>(&Compiler.getASTContext(), ECtx);
+      return llvm::make_unique<MapASTVisitor>(&Compiler.getASTContext(), CDCtx);
     }
 
   private:
-    ExecutionContext *ECtx;
+    ClangDocContext CDCtx;
   };
-  return new ClangDocAction(ECtx);
+  return new ClangDocAction(CDCtx);
 }
 
 std::unique_ptr<tooling::FrontendActionFactory>
-newMapperActionFactory(tooling::ExecutionContext *ECtx) {
-  return llvm::make_unique<MapperActionFactory>(ECtx);
+newMapperActionFactory(ClangDocContext CDCtx) {
+  return llvm::make_unique<MapperActionFactory>(CDCtx);
 }
 
 } // namespace doc
