@@ -16,12 +16,12 @@ extern "C" void test() {
   foo();
 }
 
-// X64: define void @test()
+// X64: define dso_local void @test()
 // X64-SAME: personality i8* bitcast (i32 (...)* @__gxx_personality_seh0 to i8*)
 // X64: invoke void @foo()
 // X64: landingpad { i8*, i32 }
 
-// X86: define void @test()
+// X86: define dso_local void @test()
 // X86-SAME: personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*)
 // X86: invoke void @foo()
 // X86: landingpad { i8*, i32 }

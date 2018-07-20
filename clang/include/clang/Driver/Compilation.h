@@ -1,4 +1,4 @@
-//===--- Compilation.h - Compilation Task Data Structure --------*- C++ -*-===//
+//===- Compilation.h - Compilation Task Data Structure ----------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -10,24 +10,36 @@
 #ifndef LLVM_CLANG_DRIVER_COMPILATION_H
 #define LLVM_CLANG_DRIVER_COMPILATION_H
 
+#include "clang/Basic/LLVM.h"
 #include "clang/Driver/Action.h"
 #include "clang/Driver/Job.h"
 #include "clang/Driver/Util.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Option/Option.h"
+#include <cassert>
+#include <iterator>
 #include <map>
+#include <memory>
+#include <utility>
+#include <vector>
 
 namespace llvm {
 namespace opt {
-  class DerivedArgList;
-  class InputArgList;
-}
-}
+
+class DerivedArgList;
+class InputArgList;
+
+} // namespace opt
+} // namespace llvm
 
 namespace clang {
 namespace driver {
-  class Driver;
-  class JobList;
-  class ToolChain;
+
+class Driver;
+class ToolChain;
 
 /// Compilation - A set of tasks to perform for a single driver
 /// invocation.
@@ -40,7 +52,7 @@ class Compilation {
 
   /// A mask of all the programming models the host has to support in the
   /// current compilation.
-  unsigned ActiveOffloadMask;
+  unsigned ActiveOffloadMask = 0;
 
   /// Array with the toolchains of offloading host and devices in the order they
   /// were requested by the user. We are preserving that order in case the code
@@ -73,6 +85,11 @@ class Compilation {
     const ToolChain *TC = nullptr;
     StringRef BoundArch;
     Action::OffloadKind DeviceOffloadKind = Action::OFK_None;
+
+    TCArgsKey(const ToolChain *TC, StringRef BoundArch,
+              Action::OffloadKind DeviceOffloadKind)
+        : TC(TC), BoundArch(BoundArch), DeviceOffloadKind(DeviceOffloadKind) {}
+
     bool operator<(const TCArgsKey &K) const {
       if (TC < K.TC)
         return true;
@@ -83,9 +100,6 @@ class Compilation {
         return true;
       return false;
     }
-    TCArgsKey(const ToolChain *TC, StringRef BoundArch,
-              Action::OffloadKind DeviceOffloadKind)
-        : TC(TC), BoundArch(BoundArch), DeviceOffloadKind(DeviceOffloadKind) {}
   };
   std::map<TCArgsKey, llvm::opt::DerivedArgList *> TCArgs;
 
@@ -103,10 +117,13 @@ class Compilation {
   std::vector<Optional<StringRef>> Redirects;
 
   /// Whether we're compiling for diagnostic purposes.
-  bool ForDiagnostics;
+  bool ForDiagnostics = false;
 
   /// Whether an error during the parsing of the input args.
   bool ContainsError;
+
+  /// Whether to keep temporary files regardless of -save-temps.
+  bool ForceKeepTempFiles = false;
 
 public:
   Compilation(const Driver &D, const ToolChain &DefaultToolChain,
@@ -123,12 +140,12 @@ public:
   }
 
   /// Iterator that visits device toolchains of a given kind.
-  typedef const std::multimap<Action::OffloadKind,
-                              const ToolChain *>::const_iterator
-      const_offload_toolchains_iterator;
-  typedef std::pair<const_offload_toolchains_iterator,
-                    const_offload_toolchains_iterator>
-      const_offload_toolchains_range;
+  using const_offload_toolchains_iterator =
+      const std::multimap<Action::OffloadKind,
+                          const ToolChain *>::const_iterator;
+  using const_offload_toolchains_range =
+      std::pair<const_offload_toolchains_iterator,
+                const_offload_toolchains_iterator>;
 
   template <Action::OffloadKind Kind>
   const_offload_toolchains_range getOffloadToolChains() const {
@@ -289,7 +306,7 @@ public:
   void Redirect(ArrayRef<Optional<StringRef>> Redirects);
 };
 
-} // end namespace driver
-} // end namespace clang
+} // namespace driver
+} // namespace clang
 
-#endif
+#endif // LLVM_CLANG_DRIVER_COMPILATION_H

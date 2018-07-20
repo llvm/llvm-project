@@ -53,7 +53,7 @@ int main () {
 @implementation OtherClass
 - (ClassA<ProtocolY> *)aMethod {
     // This does not work, even though ClassB subclasses from A and conforms to Y
-    // because the property type explicity adds ProtocolX conformance
+    // because the property type explicitly adds ProtocolX conformance
     // even though ClassB already conforms to ProtocolX
     return self.aProperty;
 }

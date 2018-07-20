@@ -23,7 +23,8 @@ llvm_canonicalize_cmake_booleans(
   CLANG_ENABLE_ARCMT
   CLANG_ENABLE_STATIC_ANALYZER
   ENABLE_BACKTRACES
-  HAVE_LIBZ)
+  HAVE_LIBZ
+  LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
 
 configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
@@ -55,6 +56,7 @@ list(APPEND CLANG_TEST_DEPS
   clang-rename
   clang-refactor
   clang-diff
+  hmaptool
   )
 
 if(CLANG_ENABLE_STATIC_ANALYZER)
@@ -94,9 +96,11 @@ if( NOT CLANG_BUILT_STANDALONE )
     llvm-config
     FileCheck count not
     llc
+    llvm-as
     llvm-bcanalyzer
     llvm-cat
     llvm-dis
+    llvm-lto2
     llvm-modextract
     llvm-nm
     llvm-objdump

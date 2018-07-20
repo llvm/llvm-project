@@ -43,7 +43,7 @@ double *g;
 // CK1: [[SIZES06:@.+]] = {{.+}}constant [2 x i[[sz]]] [i[[sz]] {{8|4}}, i[[sz]] {{8|4}}]
 // CK1: [[TYPES06:@.+]] = {{.+}}constant [2 x i64] [i64 288, i64 288]
 
-// CK1-LABEL: @_Z3foo
+// CK1-LABEL: @_Z3foo{{.*}}(
 template<typename T>
 void foo(float *&lr, T *&tr) {
   float *l;
@@ -206,14 +206,20 @@ void bar(float *&a, int *&b) {
 
 // CK2: [[ST:%.+]] = type { double*, double** }
 
+// CK2-LABEL: @.__omp_offloading_{{.*}}foo{{.*}}_l244.region_id = weak constant i8 0
+
 // CK2: [[SIZE00:@.+]] = {{.+}}constant [1 x i[[sz:64|32]]] [i{{64|32}} {{8|4}}]
-// CK2: [[MTYPE00:@.+]] = {{.+}}constant [1 x i64] [i64 33]
+// CK2: [[MTYPE00:@.+]] = {{.+}}constant [1 x i64] [i64 288]
 
-// CK2: [[SIZE01:@.+]] = {{.+}}constant [2 x i[[sz]]] [i[[sz]] {{8|4}}, i[[sz]] {{8|4}}]
-// CK2: [[MTYPE01:@.+]] = {{.+}}constant [2 x i64] [i64 32, i64 17]
+// CK2-LABEL: @.__omp_offloading_{{.*}}foo{{.*}}_l259.region_id = weak constant i8 0
 
-// CK2: [[SIZE02:@.+]] = {{.+}}constant [3 x i[[sz]]] [i[[sz]] {{8|4}}, i[[sz]] {{8|4}}, i[[sz]] {{8|4}}]
-// CK2: [[MTYPE02:@.+]] = {{.+}}constant [3 x i64] [i64 33, i64 0, i64 17]
+// CK2: [[SIZE01:@.+]] = {{.+}}constant [1 x i[[sz]]] [i[[sz]] {{8|4}}]
+// CK2: [[MTYPE01:@.+]] = {{.+}}constant [1 x i64] [i64 288]
+
+// CK2-LABEL: @.__omp_offloading_{{.*}}foo{{.*}}_l274.region_id = weak constant i8 0
+
+// CK2: [[SIZE02:@.+]] = {{.+}}constant [1 x i[[sz]]] [i[[sz]] {{8|4}}]
+// CK2: [[MTYPE02:@.+]] = {{.+}}constant [1 x i64] [i64 288]
 
 template <typename T>
 struct ST {
@@ -232,66 +238,39 @@ struct ST {
     // CK2-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
     // CK2-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
     // CK2-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to [[ST]]**
-    // CK2-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to double***
+    // CK2-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to [[ST]]**
     // CK2-DAG: store [[ST]]* [[VAR0:%.+]], [[ST]]** [[CBP0]]
-    // CK2-DAG: store double** [[SEC0:%.+]], double*** [[CP0]]
-    // CK2-DAG: [[SEC0]] = getelementptr {{.*}}[[ST]]* [[VAR0]], i{{.+}} 0, i{{.+}} 0
+    // CK2-DAG: store [[ST]]* [[VAR0]], [[ST]]** [[CP0]]
     #pragma omp target is_device_ptr(a)
     {
       a++;
     }
 
-    // CK2-DAG: call i32 @__tgt_target(i64 {{[^,]+}}, i8* {{[^,]+}}, i32 2, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[2 x i{{.+}}]* [[SIZE01]], {{.+}}getelementptr {{.+}}[2 x i{{.+}}]* [[MTYPE01]]{{.+}})
+    // CK2-DAG: call i32 @__tgt_target(i64 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE01]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE01]]{{.+}})
     // CK2-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
     // CK2-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
 
     // CK2-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
     // CK2-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
     // CK2-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to [[ST]]**
-    // CK2-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to double****
+    // CK2-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to [[ST]]**
     // CK2-DAG: store [[ST]]* [[VAR0:%.+]], [[ST]]** [[CBP0]]
-    // CK2-DAG: store double*** [[SEC0:%.+]], double**** [[CP0]]
-    // CK2-DAG: [[SEC0]] = getelementptr {{.*}}[[ST]]* [[VAR0]], i{{.+}} 0, i{{.+}} 1
-
-    // CK2-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
-    // CK2-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
-    // CK2-DAG: [[CBP1:%.+]] = bitcast i8** [[BP1]] to double****
-    // CK2-DAG: [[CP1:%.+]] = bitcast i8** [[P1]] to double***
-    // CK2-DAG: store double*** [[SEC0]], double**** [[CBP1]]
-    // CK2-DAG: store double** [[SEC1:%.+]], double*** [[CP1]]
-    // CK2-DAG: [[SEC1]] = load double**, double*** [[SEC0]]
+    // CK2-DAG: store [[ST]]* [[VAR0]], [[ST]]** [[CP0]]
     #pragma omp target is_device_ptr(b)
     {
       b++;
     }
 
-    // CK2-DAG: call i32 @__tgt_target(i64 {{[^,]+}}, i8* {{[^,]+}}, i32 3, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[3 x i{{.+}}]* [[SIZE02]], {{.+}}getelementptr {{.+}}[3 x i{{.+}}]* [[MTYPE02]]{{.+}})
+    // CK2-DAG: call i32 @__tgt_target(i64 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE02]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE02]]{{.+}})
     // CK2-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
     // CK2-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
 
-    // CK2-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
-    // CK2-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
+    // CK2-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
+    // CK2-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
     // CK2-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to [[ST]]**
-    // CK2-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to double****
+    // CK2-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to [[ST]]**
     // CK2-DAG: store [[ST]]* [[VAR0:%.+]], [[ST]]** [[CBP0]]
-    // CK2-DAG: store double*** [[SEC0:%.+]], double**** [[CP0]]
-    // CK2-DAG: [[SEC0]] = getelementptr {{.*}}[[ST]]* [[VAR0]], i{{.+}} 0, i{{.+}} 1
-
-    // CK2-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 2
-    // CK2-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 2
-    // CK2-DAG: [[CBP1:%.+]] = bitcast i8** [[BP1]] to double****
-    // CK2-DAG: [[CP1:%.+]] = bitcast i8** [[P1]] to double***
-    // CK2-DAG: store double*** [[SEC0]], double**** [[CBP1]]
-    // CK2-DAG: store double** [[SEC1:%.+]], double*** [[CP1]]
-    // CK2-DAG: [[SEC1]] = load double**, double*** [[SEC0]]
-
-    // CK2-DAG: [[BP2:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
-    // CK2-DAG: [[P2:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
-    // CK2-DAG: [[CBP2:%.+]] = bitcast i8** [[BP2]] to [[ST]]**
-    // CK2-DAG: [[CP2:%.+]] = bitcast i8** [[P2]] to double***
-    // CK2-DAG: store [[ST]]* [[VAR2:%.+]], [[ST]]** [[CBP2]]
-    // CK2-DAG: store double** [[SEC2:%.+]], double*** [[CP2]]
-    // CK2-DAG: [[SEC2]] = getelementptr {{.*}}[[ST]]* [[VAR2]], i{{.+}} 0, i{{.+}} 0
+    // CK2-DAG: store [[ST]]* [[VAR0]], [[ST]]** [[CP0]]
     #pragma omp target is_device_ptr(a, b)
     {
       a++;

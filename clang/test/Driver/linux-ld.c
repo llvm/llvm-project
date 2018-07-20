@@ -156,7 +156,7 @@
 // RUN:   | FileCheck --check-prefix=CHECK-LD-64-STATIC %s
 // CHECK-LD-64-STATIC-NOT: warning:
 // CHECK-LD-64-STATIC: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
-// CHECK-LD-64-STATIC-NOT: "--eh-frame-hdr"
+// CHECK-LD-64-STATIC: "--eh-frame-hdr"
 // CHECK-LD-64-STATIC: "-m" "elf_x86_64"
 // CHECK-LD-64-STATIC-NOT: "-dynamic-linker"
 // CHECK-LD-64-STATIC: "-static"
@@ -426,6 +426,7 @@
 // RUN:     -stdlib=libc++ \
 // RUN:     -ccc-install-dir %S/Inputs/basic_linux_tree/usr/bin \
 // RUN:     --gcc-toolchain="" \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_libcxx_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BASIC-LIBCXX-SYSROOT %s
 // CHECK-BASIC-LIBCXX-SYSROOT: "{{[^"]*}}clang{{[^"]*}}" "-cc1"
@@ -438,6 +439,7 @@
 // RUN:     -stdlib=libc++ \
 // RUN:     -ccc-install-dir %S/Inputs/basic_linux_libcxx_tree/usr/bin \
 // RUN:     --gcc-toolchain="" \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_libcxx_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BASIC-LIBCXX-INSTALL %s
 // CHECK-BASIC-LIBCXX-INSTALL: "{{[^"]*}}clang{{[^"]*}}" "-cc1"
@@ -1780,3 +1782,13 @@
 // CHECK-LD-GENTOO-X32: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
 // CHECK-LD-GENTOO-X32: "-lc"
 // CHECK-LD-GENTOO-X32: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
+
+// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN:     --target=x86_64-unknown-linux-gnu \
+// RUN:     --gcc-toolchain="%S/Inputs/rhel_7_tree/opt/rh/devtoolset-7/root/usr" \
+// RUN:     --sysroot=%S/Inputs/rhel_7_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-LD-RHEL7-DTS %s
+// CHECK-LD-RHEL7-DTS: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
+// CHECK-LD-RHLE7-DTS: Selected GCC installation: [[GCC_INSTALL:[[SYSROOT]]/lib/gcc/x86_64-redhat-linux/7]]
+// CHECK-LD-RHEL7-DTS-NOT: /usr/bin/ld
+// CHECK-LD-RHLE7-DTS: [[GCC_INSTALL]/../../../bin/ld

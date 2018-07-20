@@ -1,9 +1,9 @@
 // Test target codegen - host bc file has to be created first.
-// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm-bc %s -o %t-ppc-host.bc
-// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple nvptx64-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-64
-// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple i386-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda -emit-llvm-bc %s -o %t-x86-host.bc
-// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple nvptx-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-32
-// RUN: %clang_cc1 -verify -fopenmp -fexceptions -fcxx-exceptions -x c++ -triple nvptx-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-32
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-cuda-mode -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm-bc %s -o %t-ppc-host.bc
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-cuda-mode -x c++ -triple nvptx64-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-64
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-cuda-mode -x c++ -triple i386-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda -emit-llvm-bc %s -o %t-x86-host.bc
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-cuda-mode -x c++ -triple nvptx-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-32
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-cuda-mode -fexceptions -fcxx-exceptions -x c++ -triple nvptx-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-32
 // expected-no-diagnostics
 #ifndef HEADER
 #define HEADER
@@ -24,18 +24,18 @@ tx ftemplate(int n) {
   float d;
   double e;
 
-  #pragma omp target parallel reduction(+: e) map(tofrom: e)
+  #pragma omp target parallel reduction(+: e)
   {
     e += 5;
   }
 
-  #pragma omp target parallel reduction(^: c) reduction(*: d) map(tofrom: c,d)
+  #pragma omp target parallel reduction(^: c) reduction(*: d)
   {
     c ^= 2;
     d *= 33;
   }
 
-  #pragma omp target parallel reduction(|: a) reduction(max: b) map(tofrom: a,b)
+  #pragma omp target parallel reduction(|: a) reduction(max: b)
   {
     a |= 1;
     b = 99 > b ? 99 : b;
@@ -55,6 +55,7 @@ int bar(int n){
   // CHECK: define {{.*}}void {{@__omp_offloading_.+template.+l27}}(
   //
   // CHECK: call void @__kmpc_spmd_kernel_init(
+  // CHECK: call void @__kmpc_data_sharing_init_stack_spmd
   // CHECK: br label {{%?}}[[EXECUTE:.+]]
   //
   // CHECK: [[EXECUTE]]
@@ -117,15 +118,15 @@ int bar(int n){
   // CHECK: [[ELT_VOID:%.+]] = load i8*, i8** [[ELT_REF]],
   // CHECK: [[REMOTE_ELT_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[REMOTE_RED_LIST:%.+]], i{{32|64}} 0, i{{32|64}} 0
   // CHECK: [[ELT:%.+]] = bitcast i8* [[ELT_VOID]] to double*
-  // CHECK: [[ELT_VAL:%.+]] = load double, double* [[ELT]], align
   //
-  // CHECK: [[ELT_CAST:%.+]] = bitcast double [[ELT_VAL]] to i64
+  // CHECK: [[ELT_CAST:%.+]] = bitcast double* [[ELT]] to i64*
+  // CHECK: [[REMOTE_ELT_CAST:%.+]] = bitcast double* [[REMOTE_ELT]] to i64*
+  // CHECK: [[ELT_VAL:%.+]] = load i64, i64* [[ELT_CAST]], align
   // CHECK: [[WS32:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.warpsize()
   // CHECK: [[WS:%.+]] = trunc i32 [[WS32]] to i16
-  // CHECK: [[REMOTE_ELT_VAL64:%.+]] = call i64 @__kmpc_shuffle_int64(i64 [[ELT_CAST]], i16 [[LANEOFFSET]], i16 [[WS]])
-  // CHECK: [[REMOTE_ELT_VAL:%.+]] = bitcast i64 [[REMOTE_ELT_VAL64]] to double
+  // CHECK: [[REMOTE_ELT_VAL64:%.+]] = call i64 @__kmpc_shuffle_int64(i64 [[ELT_VAL]], i16 [[LANEOFFSET]], i16 [[WS]])
   //
-  // CHECK: store double [[REMOTE_ELT_VAL]], double* [[REMOTE_ELT]], align
+  // CHECK: store i64 [[REMOTE_ELT_VAL64]], i64* [[REMOTE_ELT_CAST]], align
   // CHECK: [[REMOTE_ELT_VOID:%.+]] = bitcast double* [[REMOTE_ELT]] to i8*
   // CHECK: store i8* [[REMOTE_ELT_VOID]], i8** [[REMOTE_ELT_REF]], align
   //
@@ -168,8 +169,8 @@ int bar(int n){
   // CHECK: [[REMOTE_ELT_VOID:%.+]] = load i8*, i8** [[REMOTE_ELT_REF]],
   // CHECK: [[ELT_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[RED_LIST]], i{{32|64}} 0, i{{32|64}} 0
   // CHECK: [[ELT_VOID:%.+]] = load i8*, i8** [[ELT_REF]],
-  // CHECK: [[ELT:%.+]] = bitcast i8* [[ELT_VOID]] to double*
   // CHECK: [[REMOTE_ELT:%.+]] = bitcast i8* [[REMOTE_ELT_VOID]] to double*
+  // CHECK: [[ELT:%.+]] = bitcast i8* [[ELT_VOID]] to double*
   // CHECK: [[REMOTE_ELT_VAL:%.+]] = load double, double* [[REMOTE_ELT]], align
   // CHECK: store double [[REMOTE_ELT_VAL]], double* [[ELT]], align
   // CHECK: br label {{%?}}[[COPY_CONT:.+]]
@@ -193,10 +194,10 @@ int bar(int n){
   // CHECK: [[ELT_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[RED_LIST]], i{{32|64}} 0, i{{32|64}} 0
   // CHECK: [[ELT_VOID:%.+]] = load i8*, i8** [[ELT_REF]],
   // CHECK: [[ELT:%.+]] = bitcast i8* [[ELT_VOID]] to double*
-  // CHECK: [[ELT_VAL:%.+]] = load double, double* [[ELT]], align
   //
   // CHECK: [[MEDIUM_ELT64:%.+]] = getelementptr inbounds [32 x i64], [32 x i64] addrspace([[SHARED_ADDRSPACE]])* [[TRANSFER_STORAGE]], i64 0, i32 [[WARPID]]
   // CHECK: [[MEDIUM_ELT:%.+]] = bitcast i64 addrspace([[SHARED_ADDRSPACE]])* [[MEDIUM_ELT64]] to double addrspace([[SHARED_ADDRSPACE]])*
+  // CHECK: [[ELT_VAL:%.+]] = load double, double* [[ELT]], align
   // CHECK: store double [[ELT_VAL]], double addrspace([[SHARED_ADDRSPACE]])* [[MEDIUM_ELT]], align
   // CHECK: br label {{%?}}[[COPY_CONT:.+]]
   //
@@ -216,10 +217,10 @@ int bar(int n){
   // CHECK: [[DO_READ]]
   // CHECK: [[MEDIUM_ELT64:%.+]] = getelementptr inbounds [32 x i64], [32 x i64] addrspace([[SHARED_ADDRSPACE]])* [[TRANSFER_STORAGE]], i64 0, i32 [[TID]]
   // CHECK: [[MEDIUM_ELT:%.+]] = bitcast i64 addrspace([[SHARED_ADDRSPACE]])* [[MEDIUM_ELT64]] to double addrspace([[SHARED_ADDRSPACE]])*
-  // CHECK: [[MEDIUM_ELT_VAL:%.+]] = load double, double addrspace([[SHARED_ADDRSPACE]])* [[MEDIUM_ELT]], align
   // CHECK: [[ELT_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[RED_LIST:%.+]], i{{32|64}} 0, i{{32|64}} 0
   // CHECK: [[ELT_VOID:%.+]] = load i8*, i8** [[ELT_REF]],
   // CHECK: [[ELT:%.+]] = bitcast i8* [[ELT_VOID]] to double*
+  // CHECK: [[MEDIUM_ELT_VAL:%.+]] = load double, double addrspace([[SHARED_ADDRSPACE]])* [[MEDIUM_ELT]], align
   // CHECK: store double [[MEDIUM_ELT_VAL]], double* [[ELT]], align
   // CHECK: br label {{%?}}[[READ_CONT:.+]]
   //
@@ -242,6 +243,7 @@ int bar(int n){
   // CHECK: define {{.*}}void {{@__omp_offloading_.+template.+l32}}(
   //
   // CHECK: call void @__kmpc_spmd_kernel_init(
+  // CHECK: call void @__kmpc_data_sharing_init_stack_spmd
   // CHECK: br label {{%?}}[[EXECUTE:.+]]
   //
   // CHECK: [[EXECUTE]]
@@ -347,15 +349,15 @@ int bar(int n){
   // CHECK: [[ELT_VOID:%.+]] = load i8*, i8** [[ELT_REF]],
   // CHECK: [[REMOTE_ELT_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[REMOTE_RED_LIST]], i{{32|64}} 0, i{{32|64}} 1
   // CHECK: [[ELT:%.+]] = bitcast i8* [[ELT_VOID]] to float*
-  // CHECK: [[ELT_VAL:%.+]] = load float, float* [[ELT]], align
   //
-  // CHECK: [[ELT_CAST:%.+]] = bitcast float [[ELT_VAL]] to i32
+  // CHECK: [[ELT_CAST:%.+]] = bitcast float* [[ELT]] to i32*
+  // CHECK: [[REMOTE_ELT2_CAST:%.+]] = bitcast float* [[REMOTE_ELT2]] to i32*
+  // CHECK: [[ELT_VAL:%.+]] = load i32, i32* [[ELT_CAST]], align
   // CHECK: [[WS32:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.warpsize()
   // CHECK: [[WS:%.+]] = trunc i32 [[WS32]] to i16
-  // CHECK: [[REMOTE_ELT2_VAL32:%.+]] = call i32 @__kmpc_shuffle_int32(i32 [[ELT_CAST]], i16 [[LANEOFFSET]], i16 [[WS]])
-  // CHECK: [[REMOTE_ELT2_VAL:%.+]] = bitcast i32 [[REMOTE_ELT2_VAL32]] to float
+  // CHECK: [[REMOTE_ELT2_VAL32:%.+]] = call i32 @__kmpc_shuffle_int32(i32 [[ELT_VAL]], i16 [[LANEOFFSET]], i16 [[WS]])
   //
-  // CHECK: store float [[REMOTE_ELT2_VAL]], float* [[REMOTE_ELT2]], align
+  // CHECK: store i32 [[REMOTE_ELT2_VAL32]], i32* [[REMOTE_ELT2_CAST]], align
   // CHECK: [[REMOTE_ELT2C:%.+]] = bitcast float* [[REMOTE_ELT2]] to i8*
   // CHECK: store i8* [[REMOTE_ELT2C]], i8** [[REMOTE_ELT_REF]], align
   //
@@ -405,8 +407,8 @@ int bar(int n){
   // CHECK: [[REMOTE_ELT_VOID:%.+]] = load i8*, i8** [[REMOTE_ELT_REF]],
   // CHECK: [[ELT_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[RED_LIST]], i{{32|64}} 0, i{{32|64}} 1
   // CHECK: [[ELT_VOID:%.+]] = load i8*, i8** [[ELT_REF]],
-  // CHECK: [[ELT:%.+]] = bitcast i8* [[ELT_VOID]] to float*
   // CHECK: [[REMOTE_ELT:%.+]] = bitcast i8* [[REMOTE_ELT_VOID]] to float*
+  // CHECK: [[ELT:%.+]] = bitcast i8* [[ELT_VOID]] to float*
   // CHECK: [[REMOTE_ELT_VAL:%.+]] = load float, float* [[REMOTE_ELT]], align
   // CHECK: store float [[REMOTE_ELT_VAL]], float* [[ELT]], align
   // CHECK: br label {{%?}}[[COPY_CONT:.+]]
@@ -429,10 +431,10 @@ int bar(int n){
   // [[DO_COPY]]
   // CHECK: [[ELT_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[RED_LIST]], i{{32|64}} 0, i{{32|64}} 0
   // CHECK: [[ELT_VOID:%.+]] = load i8*, i8** [[ELT_REF]],
-  // CHECK: [[ELT_VAL:%.+]] = load i8, i8* [[ELT_VOID]], align
   //
   // CHECK: [[MEDIUM_ELT64:%.+]] = getelementptr inbounds [32 x i64], [32 x i64] addrspace([[SHARED_ADDRSPACE]])* [[TRANSFER_STORAGE]], i64 0, i32 [[WARPID]]
   // CHECK: [[MEDIUM_ELT:%.+]] = bitcast i64 addrspace([[SHARED_ADDRSPACE]])* [[MEDIUM_ELT64]] to i8 addrspace([[SHARED_ADDRSPACE]])*
+  // CHECK: [[ELT_VAL:%.+]] = load i8, i8* [[ELT_VOID]], align
   // CHECK: store i8 [[ELT_VAL]], i8 addrspace([[SHARED_ADDRSPACE]])* [[MEDIUM_ELT]], align
   // CHECK: br label {{%?}}[[COPY_CONT:.+]]
   //
@@ -452,9 +454,9 @@ int bar(int n){
   // CHECK: [[DO_READ]]
   // CHECK: [[MEDIUM_ELT64:%.+]] = getelementptr inbounds [32 x i64], [32 x i64] addrspace([[SHARED_ADDRSPACE]])* [[TRANSFER_STORAGE]], i64 0, i32 [[TID]]
   // CHECK: [[MEDIUM_ELT:%.+]] = bitcast i64 addrspace([[SHARED_ADDRSPACE]])* [[MEDIUM_ELT64]] to i8 addrspace([[SHARED_ADDRSPACE]])*
-  // CHECK: [[MEDIUM_ELT_VAL:%.+]] = load i8, i8 addrspace([[SHARED_ADDRSPACE]])* [[MEDIUM_ELT]], align
   // CHECK: [[ELT_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[RED_LIST:%.+]], i{{32|64}} 0, i{{32|64}} 0
   // CHECK: [[ELT_VOID:%.+]] = load i8*, i8** [[ELT_REF]],
+  // CHECK: [[MEDIUM_ELT_VAL:%.+]] = load i8, i8 addrspace([[SHARED_ADDRSPACE]])* [[MEDIUM_ELT]], align
   // CHECK: store i8 [[MEDIUM_ELT_VAL]], i8* [[ELT_VOID]], align
   // CHECK: br label {{%?}}[[READ_CONT:.+]]
   //
@@ -470,10 +472,10 @@ int bar(int n){
   // CHECK: [[ELT_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[RED_LIST]], i{{32|64}} 0, i{{32|64}} 1
   // CHECK: [[ELT_VOID:%.+]] = load i8*, i8** [[ELT_REF]],
   // CHECK: [[ELT:%.+]] = bitcast i8* [[ELT_VOID]] to float*
-  // CHECK: [[ELT_VAL:%.+]] = load float, float* [[ELT]], align
   //
   // CHECK: [[MEDIUM_ELT64:%.+]] = getelementptr inbounds [32 x i64], [32 x i64] addrspace([[SHARED_ADDRSPACE]])* [[TRANSFER_STORAGE]], i64 0, i32 [[WARPID]]
   // CHECK: [[MEDIUM_ELT:%.+]] = bitcast i64 addrspace([[SHARED_ADDRSPACE]])* [[MEDIUM_ELT64]] to float addrspace([[SHARED_ADDRSPACE]])*
+  // CHECK: [[ELT_VAL:%.+]] = load float, float* [[ELT]], align
   // CHECK: store float [[ELT_VAL]], float addrspace([[SHARED_ADDRSPACE]])* [[MEDIUM_ELT]], align
   // CHECK: br label {{%?}}[[COPY_CONT:.+]]
   //
@@ -493,10 +495,10 @@ int bar(int n){
   // CHECK: [[DO_READ]]
   // CHECK: [[MEDIUM_ELT64:%.+]] = getelementptr inbounds [32 x i64], [32 x i64] addrspace([[SHARED_ADDRSPACE]])* [[TRANSFER_STORAGE]], i64 0, i32 [[TID]]
   // CHECK: [[MEDIUM_ELT:%.+]] = bitcast i64 addrspace([[SHARED_ADDRSPACE]])* [[MEDIUM_ELT64]] to float addrspace([[SHARED_ADDRSPACE]])*
-  // CHECK: [[MEDIUM_ELT_VAL:%.+]] = load float, float addrspace([[SHARED_ADDRSPACE]])* [[MEDIUM_ELT]], align
   // CHECK: [[ELT_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[RED_LIST:%.+]], i{{32|64}} 0, i{{32|64}} 1
   // CHECK: [[ELT_VOID:%.+]] = load i8*, i8** [[ELT_REF]],
   // CHECK: [[ELT:%.+]] = bitcast i8* [[ELT_VOID]] to float*
+  // CHECK: [[MEDIUM_ELT_VAL:%.+]] = load float, float addrspace([[SHARED_ADDRSPACE]])* [[MEDIUM_ELT]], align
   // CHECK: store float [[MEDIUM_ELT_VAL]], float* [[ELT]], align
   // CHECK: br label {{%?}}[[READ_CONT:.+]]
   //
@@ -519,6 +521,7 @@ int bar(int n){
   // CHECK: define {{.*}}void {{@__omp_offloading_.+template.+l38}}(
   //
   // CHECK: call void @__kmpc_spmd_kernel_init(
+  // CHECK: call void @__kmpc_data_sharing_init_stack_spmd
   // CHECK: br label {{%?}}[[EXECUTE:.+]]
   //
   // CHECK: [[EXECUTE]]
@@ -714,8 +717,8 @@ int bar(int n){
   // CHECK: [[REMOTE_ELT_VOID:%.+]] = load i8*, i8** [[REMOTE_ELT_REF]],
   // CHECK: [[ELT_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[RED_LIST]], i{{32|64}} 0, i{{32|64}} 0
   // CHECK: [[ELT_VOID:%.+]] = load i8*, i8** [[ELT_REF]],
-  // CHECK: [[ELT:%.+]] = bitcast i8* [[ELT_VOID]] to i32*
   // CHECK: [[REMOTE_ELT:%.+]] = bitcast i8* [[REMOTE_ELT_VOID]] to i32*
+  // CHECK: [[ELT:%.+]] = bitcast i8* [[ELT_VOID]] to i32*
   // CHECK: [[REMOTE_ELT_VAL:%.+]] = load i32, i32* [[REMOTE_ELT]], align
   // CHECK: store i32 [[REMOTE_ELT_VAL]], i32* [[ELT]], align
   //
@@ -723,8 +726,8 @@ int bar(int n){
   // CHECK: [[REMOTE_ELT_VOID:%.+]] = load i8*, i8** [[REMOTE_ELT_REF]],
   // CHECK: [[ELT_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[RED_LIST]], i{{32|64}} 0, i{{32|64}} 1
   // CHECK: [[ELT_VOID:%.+]] = load i8*, i8** [[ELT_REF]],
-  // CHECK: [[ELT:%.+]] = bitcast i8* [[ELT_VOID]] to i16*
   // CHECK: [[REMOTE_ELT:%.+]] = bitcast i8* [[REMOTE_ELT_VOID]] to i16*
+  // CHECK: [[ELT:%.+]] = bitcast i8* [[ELT_VOID]] to i16*
   // CHECK: [[REMOTE_ELT_VAL:%.+]] = load i16, i16* [[REMOTE_ELT]], align
   // CHECK: store i16 [[REMOTE_ELT_VAL]], i16* [[ELT]], align
   // CHECK: br label {{%?}}[[COPY_CONT:.+]]
@@ -748,10 +751,10 @@ int bar(int n){
   // CHECK: [[ELT_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[RED_LIST]], i{{32|64}} 0, i{{32|64}} 0
   // CHECK: [[ELT_VOID:%.+]] = load i8*, i8** [[ELT_REF]],
   // CHECK: [[ELT:%.+]] = bitcast i8* [[ELT_VOID]] to i32*
-  // CHECK: [[ELT_VAL:%.+]] = load i32, i32* [[ELT]], align
   //
   // CHECK: [[MEDIUM_ELT64:%.+]] = getelementptr inbounds [32 x i64], [32 x i64] addrspace([[SHARED_ADDRSPACE]])* [[TRANSFER_STORAGE]], i64 0, i32 [[WARPID]]
   // CHECK: [[MEDIUM_ELT:%.+]] = bitcast i64 addrspace([[SHARED_ADDRSPACE]])* [[MEDIUM_ELT64]] to i32 addrspace([[SHARED_ADDRSPACE]])*
+  // CHECK: [[ELT_VAL:%.+]] = load i32, i32* [[ELT]], align
   // CHECK: store i32 [[ELT_VAL]], i32 addrspace([[SHARED_ADDRSPACE]])* [[MEDIUM_ELT]], align
   // CHECK: br label {{%?}}[[COPY_CONT:.+]]
   //
@@ -771,10 +774,10 @@ int bar(int n){
   // CHECK: [[DO_READ]]
   // CHECK: [[MEDIUM_ELT64:%.+]] = getelementptr inbounds [32 x i64], [32 x i64] addrspace([[SHARED_ADDRSPACE]])* [[TRANSFER_STORAGE]], i64 0, i32 [[TID]]
   // CHECK: [[MEDIUM_ELT:%.+]] = bitcast i64 addrspace([[SHARED_ADDRSPACE]])* [[MEDIUM_ELT64]] to i32 addrspace([[SHARED_ADDRSPACE]])*
-  // CHECK: [[MEDIUM_ELT_VAL:%.+]] = load i32, i32 addrspace([[SHARED_ADDRSPACE]])* [[MEDIUM_ELT]], align
   // CHECK: [[ELT_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[RED_LIST:%.+]], i{{32|64}} 0, i{{32|64}} 0
   // CHECK: [[ELT_VOID:%.+]] = load i8*, i8** [[ELT_REF]],
   // CHECK: [[ELT:%.+]] = bitcast i8* [[ELT_VOID]] to i32*
+  // CHECK: [[MEDIUM_ELT_VAL:%.+]] = load i32, i32 addrspace([[SHARED_ADDRSPACE]])* [[MEDIUM_ELT]], align
   // CHECK: store i32 [[MEDIUM_ELT_VAL]], i32* [[ELT]], align
   // CHECK: br label {{%?}}[[READ_CONT:.+]]
   //
@@ -790,10 +793,10 @@ int bar(int n){
   // CHECK: [[ELT_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[RED_LIST]], i{{32|64}} 0, i{{32|64}} 1
   // CHECK: [[ELT_VOID:%.+]] = load i8*, i8** [[ELT_REF]],
   // CHECK: [[ELT:%.+]] = bitcast i8* [[ELT_VOID]] to i16*
-  // CHECK: [[ELT_VAL:%.+]] = load i16, i16* [[ELT]], align
   //
   // CHECK: [[MEDIUM_ELT64:%.+]] = getelementptr inbounds [32 x i64], [32 x i64] addrspace([[SHARED_ADDRSPACE]])* [[TRANSFER_STORAGE]], i64 0, i32 [[WARPID]]
   // CHECK: [[MEDIUM_ELT:%.+]] = bitcast i64 addrspace([[SHARED_ADDRSPACE]])* [[MEDIUM_ELT64]] to i16 addrspace([[SHARED_ADDRSPACE]])*
+  // CHECK: [[ELT_VAL:%.+]] = load i16, i16* [[ELT]], align
   // CHECK: store i16 [[ELT_VAL]], i16 addrspace([[SHARED_ADDRSPACE]])* [[MEDIUM_ELT]], align
   // CHECK: br label {{%?}}[[COPY_CONT:.+]]
   //
@@ -813,10 +816,10 @@ int bar(int n){
   // CHECK: [[DO_READ]]
   // CHECK: [[MEDIUM_ELT64:%.+]] = getelementptr inbounds [32 x i64], [32 x i64] addrspace([[SHARED_ADDRSPACE]])* [[TRANSFER_STORAGE]], i64 0, i32 [[TID]]
   // CHECK: [[MEDIUM_ELT:%.+]] = bitcast i64 addrspace([[SHARED_ADDRSPACE]])* [[MEDIUM_ELT64]] to i16 addrspace([[SHARED_ADDRSPACE]])*
-  // CHECK: [[MEDIUM_ELT_VAL:%.+]] = load i16, i16 addrspace([[SHARED_ADDRSPACE]])* [[MEDIUM_ELT]], align
   // CHECK: [[ELT_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[RED_LIST:%.+]], i{{32|64}} 0, i{{32|64}} 1
   // CHECK: [[ELT_VOID:%.+]] = load i8*, i8** [[ELT_REF]],
   // CHECK: [[ELT:%.+]] = bitcast i8* [[ELT_VOID]] to i16*
+  // CHECK: [[MEDIUM_ELT_VAL:%.+]] = load i16, i16 addrspace([[SHARED_ADDRSPACE]])* [[MEDIUM_ELT]], align
   // CHECK: store i16 [[MEDIUM_ELT_VAL]], i16* [[ELT]], align
   // CHECK: br label {{%?}}[[READ_CONT:.+]]
   //

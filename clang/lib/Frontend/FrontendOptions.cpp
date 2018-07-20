@@ -1,4 +1,4 @@
-//===--- FrontendOptions.cpp ----------------------------------------------===//
+//===- FrontendOptions.cpp ------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -9,6 +9,7 @@
 
 #include "clang/Frontend/FrontendOptions.h"
 #include "llvm/ADT/StringSwitch.h"
+
 using namespace clang;
 
 InputKind FrontendOptions::getInputKindForExtension(StringRef Extension) {

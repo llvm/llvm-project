@@ -1,16 +1,16 @@
 // Test target codegen - host bc file has to be created first.
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm-bc %s -o %t-ppc-host.bc
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple nvptx64-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-64
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple i386-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda -emit-llvm-bc %s -o %t-x86-host.bc
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple nvptx-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-32
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -fexceptions -fcxx-exceptions -x c++ -triple nvptx-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-32
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -fopenmp-cuda-mode -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm-bc %s -o %t-ppc-host.bc
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -fopenmp-cuda-mode -x c++ -triple nvptx64-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-64
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -fopenmp-cuda-mode -x c++ -triple i386-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda -emit-llvm-bc %s -o %t-x86-host.bc
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -fopenmp-cuda-mode -x c++ -triple nvptx-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-32
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -fopenmp-cuda-mode -fexceptions -fcxx-exceptions -x c++ -triple nvptx-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-32
 // expected-no-diagnostics
 #ifndef HEADER
 #define HEADER
 
-// Check that the execution mode of all 2 target regions on the gpu is set to SPMD Mode.
-// CHECK-DAG: {{@__omp_offloading_.+l21}}_exec_mode = weak constant i8 0
-// CHECK-DAG: {{@__omp_offloading_.+l26}}_exec_mode = weak constant i8 0
+// Check that the execution mode of all 2 target regions on the gpu is set to non-SPMD Mode.
+// CHECK-DAG: {{@__omp_offloading_.+l21}}_exec_mode = weak constant i8 1
+// CHECK-DAG: {{@__omp_offloading_.+l26}}_exec_mode = weak constant i8 1
 
 template<typename tx>
 tx ftemplate(int n) {
@@ -46,23 +46,13 @@ int bar(int n){
   // CHECK: store i16* {{%.+}}, i16** [[AA_ADDR]], align
   // CHECK: [[AA:%.+]] = load i16*, i16** [[AA_ADDR]], align
   // CHECK: [[THREAD_LIMIT:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
-  // CHECK: call void @__kmpc_spmd_kernel_init(i32 [[THREAD_LIMIT]],
-  // CHECK: br label {{%?}}[[EXEC:.+]]
-  //
-  // CHECK: [[EXEC]]
-  // CHECK-NOT: call void @__kmpc_push_num_threads
-  // CHECK: {{call|invoke}} void [[OP1:@.+]](i32* null, i32* null, i16* [[AA]])
-  // CHECK: br label {{%?}}[[DONE:.+]]
-  //
-  // CHECK: [[DONE]]
-  // CHECK: call void @__kmpc_spmd_kernel_deinit()
-  // CHECK: br label {{%?}}[[EXIT:.+]]
-  //
-  // CHECK: [[EXIT]]
+  // CHECK: call void @__kmpc_kernel_init(i32
+  // CHECK: call void @__kmpc_push_num_threads
+  // CHECK: call void @__kmpc_kernel_deinit(i16 1)
   // CHECK: ret void
   // CHECK: }
 
-  // CHECK: define internal void [[OP1]](i32* noalias %.global_tid., i32* noalias %.bound_tid., i16* {{[^%]*}}[[ARG:%.+]])
+  // CHECK: define internal void @{{.+}}(i32* noalias %{{.+}}, i32* noalias %{{.+}}, i16* {{[^%]*}}[[ARG:%.+]])
   // CHECK: = alloca i32*, align
   // CHECK: = alloca i32*, align
   // CHECK: [[AA_ADDR:%.+]] = alloca i16*, align
@@ -89,23 +79,13 @@ int bar(int n){
   // CHECK: [[AA:%.+]] = load i16*, i16** [[AA_ADDR]], align
   // CHECK: [[B:%.+]] = load [10 x i32]*, [10 x i32]** [[B_ADDR]], align
   // CHECK: [[THREAD_LIMIT:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
-  // CHECK: call void @__kmpc_spmd_kernel_init(i32 [[THREAD_LIMIT]],
-  // CHECK: br label {{%?}}[[EXEC:.+]]
-  //
-  // CHECK: [[EXEC]]
-  // CHECK-NOT: call void @__kmpc_push_num_threads
-  // CHECK: {{call|invoke}} void [[OP2:@.+]](i32* null, i32* null, i32* [[A]], i16* [[AA]], [10 x i32]* [[B]])
-  // CHECK: br label {{%?}}[[DONE:.+]]
-  //
-  // CHECK: [[DONE]]
-  // CHECK: call void @__kmpc_spmd_kernel_deinit()
-  // CHECK: br label {{%?}}[[EXIT:.+]]
-  //
-  // CHECK: [[EXIT]]
+  // CHECK: call void @__kmpc_kernel_init(i32
+  // CHECK: call void @__kmpc_push_num_threads
+  // CHECK: call void @__kmpc_kernel_deinit(i16 1)
   // CHECK: ret void
   // CHECK: }
 
-  // CHECK: define internal void [[OP2]](i32* noalias %.global_tid., i32* noalias %.bound_tid., i32* {{[^%]*}}[[ARG1:%.+]], i16* {{[^%]*}}[[ARG2:%.+]], [10 x i32]* {{[^%]*}}[[ARG3:%.+]])
+  // CHECK: define internal void @{{.+}}(i32* noalias %{{.+}}, i32* noalias %{{.+}}, i32* {{[^%]*}}[[ARG1:%.+]], i16* {{[^%]*}}[[ARG2:%.+]], [10 x i32]* {{[^%]*}}[[ARG3:%.+]])
   // CHECK: = alloca i32*, align
   // CHECK: = alloca i32*, align
   // CHECK: [[A_ADDR:%.+]] = alloca i32*, align

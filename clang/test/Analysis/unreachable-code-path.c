@@ -63,6 +63,7 @@ void test6(const char *c) {
   if (c) return;
   if (!c) return;
   __builtin_unreachable(); // no-warning
+  __builtin_assume(0); // no-warning
 }
 
 // Compile-time constant false positives

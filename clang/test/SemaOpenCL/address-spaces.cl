@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only
 // RUN: %clang_cc1 %s -cl-std=CL2.0 -verify -pedantic -fsyntax-only
+// RUN: %clang_cc1 %s -cl-std=c++ -verify -pedantic -fsyntax-only
 
 __constant int ci = 1;
 
@@ -8,6 +9,8 @@ __kernel void foo(__global int *gip) {
   __local int lj = 2; // expected-error {{'__local' variable cannot have an initializer}}
 
   int *ip;
+// FIXME: Temporarily disable part of the test that doesn't work for C++ yet.
+#if !__OPENCL_CPP_VERSION__
 #if __OPENCL_C_VERSION__ < 200
   ip = gip; // expected-error {{assigning '__global int *' to 'int *' changes address space of pointer}}
   ip = &li; // expected-error {{assigning '__local int *' to 'int *' changes address space of pointer}}
@@ -62,4 +65,7 @@ void func_multiple_addr(void) {
   __local __private int *var2;  // expected-error {{multiple address spaces specified for type}}
   __local private_int_t var3;   // expected-error {{multiple address spaces specified for type}}
   __local private_int_t *var4;  // expected-error {{multiple address spaces specified for type}}
+  __private private_int_t var5; // expected-warning {{multiple identical address spaces specified for type}}
+  __private private_int_t *var6;// expected-warning {{multiple identical address spaces specified for type}}
+#endif // !__OPENCL_CXX_VERSION__
 }

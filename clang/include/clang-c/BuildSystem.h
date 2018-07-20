@@ -28,19 +28,19 @@ extern "C" {
  */
 
 /**
- * \brief Return the timestamp for use with Clang's
+ * Return the timestamp for use with Clang's
  * \c -fbuild-session-timestamp= option.
  */
 CINDEX_LINKAGE unsigned long long clang_getBuildSessionTimestamp(void);
 
 /**
- * \brief Object encapsulating information about overlaying virtual
+ * Object encapsulating information about overlaying virtual
  * file/directories over the real file system.
  */
 typedef struct CXVirtualFileOverlayImpl *CXVirtualFileOverlay;
 
 /**
- * \brief Create a \c CXVirtualFileOverlay object.
+ * Create a \c CXVirtualFileOverlay object.
  * Must be disposed with \c clang_VirtualFileOverlay_dispose().
  *
  * \param options is reserved, always pass 0.
@@ -49,7 +49,7 @@ CINDEX_LINKAGE CXVirtualFileOverlay
 clang_VirtualFileOverlay_create(unsigned options);
 
 /**
- * \brief Map an absolute virtual file path to an absolute real one.
+ * Map an absolute virtual file path to an absolute real one.
  * The virtual path must be canonicalized (not contain "."/"..").
  * \returns 0 for success, non-zero to indicate an error.
  */
@@ -59,7 +59,7 @@ clang_VirtualFileOverlay_addFileMapping(CXVirtualFileOverlay,
                                         const char *realPath);
 
 /**
- * \brief Set the case sensitivity for the \c CXVirtualFileOverlay object.
+ * Set the case sensitivity for the \c CXVirtualFileOverlay object.
  * The \c CXVirtualFileOverlay object is case-sensitive by default, this
  * option can be used to override the default.
  * \returns 0 for success, non-zero to indicate an error.
@@ -69,7 +69,7 @@ clang_VirtualFileOverlay_setCaseSensitivity(CXVirtualFileOverlay,
 											int caseSensitive);
 
 /**
- * \brief Write out the \c CXVirtualFileOverlay object to a char buffer.
+ * Write out the \c CXVirtualFileOverlay object to a char buffer.
  *
  * \param options is reserved, always pass 0.
  * \param out_buffer_ptr pointer to receive the buffer pointer, which should be
@@ -83,7 +83,7 @@ clang_VirtualFileOverlay_writeToBuffer(CXVirtualFileOverlay, unsigned options,
                                        unsigned *out_buffer_size);
 
 /**
- * \brief free memory allocated by libclang, such as the buffer returned by
+ * free memory allocated by libclang, such as the buffer returned by
  * \c CXVirtualFileOverlay() or \c clang_ModuleMapDescriptor_writeToBuffer().
  *
  * \param buffer memory pointer to free.
@@ -91,17 +91,17 @@ clang_VirtualFileOverlay_writeToBuffer(CXVirtualFileOverlay, unsigned options,
 CINDEX_LINKAGE void clang_free(void *buffer);
 
 /**
- * \brief Dispose a \c CXVirtualFileOverlay object.
+ * Dispose a \c CXVirtualFileOverlay object.
  */
 CINDEX_LINKAGE void clang_VirtualFileOverlay_dispose(CXVirtualFileOverlay);
 
 /**
- * \brief Object encapsulating information about a module.map file.
+ * Object encapsulating information about a module.map file.
  */
 typedef struct CXModuleMapDescriptorImpl *CXModuleMapDescriptor;
 
 /**
- * \brief Create a \c CXModuleMapDescriptor object.
+ * Create a \c CXModuleMapDescriptor object.
  * Must be disposed with \c clang_ModuleMapDescriptor_dispose().
  *
  * \param options is reserved, always pass 0.
@@ -110,7 +110,7 @@ CINDEX_LINKAGE CXModuleMapDescriptor
 clang_ModuleMapDescriptor_create(unsigned options);
 
 /**
- * \brief Sets the framework module name that the module.map describes.
+ * Sets the framework module name that the module.map describes.
  * \returns 0 for success, non-zero to indicate an error.
  */
 CINDEX_LINKAGE enum CXErrorCode
@@ -118,7 +118,7 @@ clang_ModuleMapDescriptor_setFrameworkModuleName(CXModuleMapDescriptor,
                                                  const char *name);
 
 /**
- * \brief Sets the umbrealla header name that the module.map describes.
+ * Sets the umbrealla header name that the module.map describes.
  * \returns 0 for success, non-zero to indicate an error.
  */
 CINDEX_LINKAGE enum CXErrorCode
@@ -126,7 +126,7 @@ clang_ModuleMapDescriptor_setUmbrellaHeader(CXModuleMapDescriptor,
                                             const char *name);
 
 /**
- * \brief Write out the \c CXModuleMapDescriptor object to a char buffer.
+ * Write out the \c CXModuleMapDescriptor object to a char buffer.
  *
  * \param options is reserved, always pass 0.
  * \param out_buffer_ptr pointer to receive the buffer pointer, which should be
@@ -140,7 +140,7 @@ clang_ModuleMapDescriptor_writeToBuffer(CXModuleMapDescriptor, unsigned options,
                                        unsigned *out_buffer_size);
 
 /**
- * \brief Dispose a \c CXModuleMapDescriptor object.
+ * Dispose a \c CXModuleMapDescriptor object.
  */
 CINDEX_LINKAGE void clang_ModuleMapDescriptor_dispose(CXModuleMapDescriptor);
 

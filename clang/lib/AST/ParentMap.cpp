@@ -15,6 +15,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/StmtObjC.h"
 #include "llvm/ADT/DenseMap.h"
 
 using namespace clang;
@@ -193,6 +194,8 @@ bool ParentMap::isConsumedExpr(Expr* E) const {
       return DirectChild == cast<IndirectGotoStmt>(P)->getTarget();
     case Stmt::SwitchStmtClass:
       return DirectChild == cast<SwitchStmt>(P)->getCond();
+    case Stmt::ObjCForCollectionStmtClass:
+      return DirectChild == cast<ObjCForCollectionStmt>(P)->getCollection();
     case Stmt::ReturnStmtClass:
       return true;
   }

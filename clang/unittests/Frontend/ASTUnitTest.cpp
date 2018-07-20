@@ -23,7 +23,41 @@ using namespace clang;
 
 namespace {
 
-TEST(ASTUnit, SaveLoadPreservesLangOptionsInPrintingPolicy) {
+class ASTUnitTest : public ::testing::Test {
+protected:
+  int FD;
+  llvm::SmallString<256> InputFileName;
+  std::unique_ptr<ToolOutputFile> input_file;
+  IntrusiveRefCntPtr<DiagnosticsEngine> Diags;
+  std::shared_ptr<CompilerInvocation> CInvok;
+  std::shared_ptr<PCHContainerOperations> PCHContainerOps;
+
+  std::unique_ptr<ASTUnit> createASTUnit(bool isVolatile) {
+    EXPECT_FALSE(llvm::sys::fs::createTemporaryFile("ast-unit", "cpp", FD,
+                                                    InputFileName));
+    input_file = llvm::make_unique<ToolOutputFile>(InputFileName, FD);
+    input_file->os() << "";
+
+    const char *Args[] = {"clang", "-xc++", InputFileName.c_str()};
+
+    Diags = CompilerInstance::createDiagnostics(new DiagnosticOptions());
+
+    CInvok = createInvocationFromCommandLine(Args, Diags);
+
+    if (!CInvok)
+      return nullptr;
+
+    FileManager *FileMgr =
+        new FileManager(FileSystemOptions(), vfs::getRealFileSystem());
+    PCHContainerOps = std::make_shared<PCHContainerOperations>();
+
+    return ASTUnit::LoadFromCompilerInvocation(
+        CInvok, PCHContainerOps, Diags, FileMgr, false, false, 0, TU_Complete,
+        false, false, isVolatile);
+  }
+};
+
+TEST_F(ASTUnitTest, SaveLoadPreservesLangOptionsInPrintingPolicy) {
   // Check that the printing policy is restored with the correct language
   // options when loading an ASTUnit from a file.  To this end, an ASTUnit
   // for a C++ translation unit is set up and written to a temporary file.
@@ -38,29 +72,7 @@ TEST(ASTUnit, SaveLoadPreservesLangOptionsInPrintingPolicy) {
     EXPECT_TRUE(PolicyWithDefaultLangOpt.UseVoidForZeroParams);
   }
 
-  int FD;
-  llvm::SmallString<256> InputFileName;
-  ASSERT_FALSE(llvm::sys::fs::createTemporaryFile("ast-unit", "cpp", FD, InputFileName));
-  ToolOutputFile input_file(InputFileName, FD);
-  input_file.os() << "";
-
-  const char* Args[] = {"clang", "-xc++", InputFileName.c_str()};
-
-  IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-      CompilerInstance::createDiagnostics(new DiagnosticOptions());
-
-  std::shared_ptr<CompilerInvocation> CInvok =
-      createInvocationFromCommandLine(Args, Diags);
-
-  if (!CInvok)
-    FAIL() << "could not create compiler invocation";
-
-  FileManager *FileMgr =
-      new FileManager(FileSystemOptions(), vfs::getRealFileSystem());
-  auto PCHContainerOps = std::make_shared<PCHContainerOperations>();
-
-  std::unique_ptr<ASTUnit> AST = ASTUnit::LoadFromCompilerInvocation(
-      CInvok, PCHContainerOps, Diags, FileMgr);
+  std::unique_ptr<ASTUnit> AST = createASTUnit(false);
 
   if (!AST)
     FAIL() << "failed to create ASTUnit";
@@ -68,20 +80,35 @@ TEST(ASTUnit, SaveLoadPreservesLangOptionsInPrintingPolicy) {
   EXPECT_FALSE(AST->getASTContext().getPrintingPolicy().UseVoidForZeroParams);
 
   llvm::SmallString<256> ASTFileName;
-  ASSERT_FALSE(llvm::sys::fs::createTemporaryFile("ast-unit", "ast", FD, ASTFileName));
+  ASSERT_FALSE(
+      llvm::sys::fs::createTemporaryFile("ast-unit", "ast", FD, ASTFileName));
   ToolOutputFile ast_file(ASTFileName, FD);
   AST->Save(ASTFileName.str());
 
   EXPECT_TRUE(llvm::sys::fs::exists(ASTFileName));
 
   std::unique_ptr<ASTUnit> AU = ASTUnit::LoadFromASTFile(
-      ASTFileName.str(), PCHContainerOps->getRawReader(), ASTUnit::LoadEverything, Diags,
-      FileSystemOptions(), /*UseDebugInfo=*/false);
+      ASTFileName.str(), PCHContainerOps->getRawReader(),
+      ASTUnit::LoadEverything, Diags, FileSystemOptions(),
+      /*UseDebugInfo=*/false);
 
   if (!AU)
     FAIL() << "failed to load ASTUnit";
 
   EXPECT_FALSE(AU->getASTContext().getPrintingPolicy().UseVoidForZeroParams);
+}
+
+TEST_F(ASTUnitTest, GetBufferForFileMemoryMapping) {
+  std::unique_ptr<ASTUnit> AST = createASTUnit(true);
+
+  if (!AST)
+    FAIL() << "failed to create ASTUnit";
+
+  std::unique_ptr<llvm::MemoryBuffer> memoryBuffer =
+      AST->getBufferForFile(InputFileName);
+
+  EXPECT_NE(memoryBuffer->getBufferKind(),
+            llvm::MemoryBuffer::MemoryBuffer_MMap);
 }
 
 } // anonymous namespace

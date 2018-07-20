@@ -26,7 +26,7 @@ int c = (c + c); // expected-warning 2 {{variable 'c' is uninitialized when used
 int e = static_cast<long>(e) + 1; // expected-warning {{variable 'e' is uninitialized when used within its own initialization}}
 int f = foo(f); // expected-warning {{variable 'f' is uninitialized when used within its own initialization}}
 
-// Thes don't warn as they don't require the value.
+// These don't warn as they don't require the value.
 int g = sizeof(g);
 void* ptr = &ptr;
 int h = bar(&h);
@@ -60,7 +60,7 @@ void test_stuff () {
   int e = static_cast<long>(e) + 1; // expected-warning {{variable 'e' is uninitialized when used within its own initialization}}
   int f = foo(f); // expected-warning {{variable 'f' is uninitialized when used within its own initialization}}
 
-  // Thes don't warn as they don't require the value.
+  // These don't warn as they don't require the value.
   int g = sizeof(g);
   void* ptr = &ptr;
   int h = bar(&h);
@@ -94,7 +94,7 @@ void test_stuff () {
     int e = static_cast<long>(e) + 1; // expected-warning {{variable 'e' is uninitialized when used within its own initialization}}
     int f = foo(f); // expected-warning {{variable 'f' is uninitialized when used within its own initialization}}
 
-    // Thes don't warn as they don't require the value.
+    // These don't warn as they don't require the value.
     int g = sizeof(g);
     void* ptr = &ptr;
     int h = bar(&h);
@@ -704,7 +704,7 @@ namespace statics {
   static int e = static_cast<long>(e) + 1; // expected-warning {{variable 'e' is uninitialized when used within its own initialization}}
   static int f = foo(f); // expected-warning {{variable 'f' is uninitialized when used within its own initialization}}
 
-  // Thes don't warn as they don't require the value.
+  // These don't warn as they don't require the value.
   static int g = sizeof(g);
   int gg = g;  // Silence unneeded warning
   static void* ptr = &ptr;
@@ -740,7 +740,7 @@ namespace statics {
     static int e = static_cast<long>(e) + 1; // expected-warning {{static variable 'e' is suspiciously used within its own initialization}}
     static int f = foo(f); // expected-warning {{static variable 'f' is suspiciously used within its own initialization}}
 
-    // Thes don't warn as they don't require the value.
+    // These don't warn as they don't require the value.
     static int g = sizeof(g);
     static void* ptr = &ptr;
     static int h = bar(&h);
@@ -774,7 +774,7 @@ namespace statics {
       static int e = static_cast<long>(e) + 1; // expected-warning {{static variable 'e' is suspiciously used within its own initialization}}
       static int f = foo(f); // expected-warning {{static variable 'f' is suspiciously used within its own initialization}}
 
-      // Thes don't warn as they don't require the value.
+      // These don't warn as they don't require the value.
       static int g = sizeof(g);
       static void* ptr = &ptr;
       static int h = bar(&h);

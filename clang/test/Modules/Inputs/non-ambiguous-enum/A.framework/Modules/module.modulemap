@@ -1,0 +1,5 @@
+
+framework module A {
+  header "a.h"
+  export *
+}

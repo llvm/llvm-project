@@ -182,7 +182,7 @@ void test_capture_lambda() {
 }
 
 inline int test_captured_linkage() {
-  // CHECK-7: @_ZZ21test_captured_linkagevE1i = linkonce_odr global i32 0
+  // CHECK-7: @_ZZ21test_captured_linkagevE1i = linkonce_odr {{(dso_local )?}}global i32 0
   int j;
   #pragma clang __debug captured
   {

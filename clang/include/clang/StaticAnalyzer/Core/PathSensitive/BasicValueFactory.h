@@ -1,4 +1,4 @@
-//=== BasicValueFactory.h - Basic values for Path Sens analysis --*- C++ -*---//
+//==- BasicValueFactory.h - Basic values for Path Sens analysis --*- C++ -*-==//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -17,12 +17,26 @@
 #define LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_BASICVALUEFACTORY_H
 
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Expr.h"
+#include "clang/AST/Type.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/APSIntType.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/StoreRef.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
+#include "llvm/ADT/APSInt.h"
+#include "llvm/ADT/FoldingSet.h"
+#include "llvm/ADT/ImmutableList.h"
+#include "llvm/ADT/iterator_range.h"
+#include "llvm/Support/Allocator.h"
+#include <cassert>
+#include <cstdint>
+#include <utility>
 
 namespace clang {
+
+class CXXBaseSpecifier;
+class DeclaratorDecl;
+
 namespace ento {
 
 class CompoundValData : public llvm::FoldingSetNode {
@@ -34,7 +48,8 @@ public:
     assert(NonLoc::isCompoundType(t));
   }
 
-  typedef llvm::ImmutableList<SVal>::iterator iterator;
+  using iterator = llvm::ImmutableList<SVal>::iterator;
+
   iterator begin() const { return L.begin(); }
   iterator end() const { return L.end(); }
 
@@ -47,6 +62,7 @@ public:
 class LazyCompoundValData : public llvm::FoldingSetNode {
   StoreRef store;
   const TypedValueRegion *region;
+
 public:
   LazyCompoundValData(const StoreRef &st, const TypedValueRegion *r)
       : store(st), region(r) {
@@ -63,16 +79,17 @@ public:
   void Profile(llvm::FoldingSetNodeID& ID) { Profile(ID, store, region); }
 };
 
-class PointerToMemberData: public llvm::FoldingSetNode {
+class PointerToMemberData : public llvm::FoldingSetNode {
   const DeclaratorDecl *D;
   llvm::ImmutableList<const CXXBaseSpecifier *> L;
 
 public:
   PointerToMemberData(const DeclaratorDecl *D,
                       llvm::ImmutableList<const CXXBaseSpecifier *> L)
-    : D(D), L(L) {}
+      : D(D), L(L) {}
 
-  typedef llvm::ImmutableList<const CXXBaseSpecifier *>::iterator iterator;
+  using iterator = llvm::ImmutableList<const CXXBaseSpecifier *>::iterator;
+
   iterator begin() const { return L.begin(); }
   iterator end() const { return L.end(); }
 
@@ -81,24 +98,25 @@ public:
 
   void Profile(llvm::FoldingSetNodeID& ID) { Profile(ID, D, L); }
   const DeclaratorDecl *getDeclaratorDecl() const {return D;}
+
   llvm::ImmutableList<const CXXBaseSpecifier *> getCXXBaseList() const {
     return L;
   }
 };
 
 class BasicValueFactory {
-  typedef llvm::FoldingSet<llvm::FoldingSetNodeWrapper<llvm::APSInt> >
-          APSIntSetTy;
+  using APSIntSetTy =
+      llvm::FoldingSet<llvm::FoldingSetNodeWrapper<llvm::APSInt>>;
 
   ASTContext &Ctx;
   llvm::BumpPtrAllocator& BPAlloc;
 
-  APSIntSetTy   APSIntSet;
-  void *        PersistentSVals;
-  void *        PersistentSValPairs;
+  APSIntSetTy APSIntSet;
+  void *PersistentSVals = nullptr;
+  void *PersistentSValPairs = nullptr;
 
   llvm::ImmutableList<SVal>::Factory SValListFactory;
-  llvm::ImmutableList<const CXXBaseSpecifier*>::Factory CXXBaseListFactory;
+  llvm::ImmutableList<const CXXBaseSpecifier *>::Factory CXXBaseListFactory;
   llvm::FoldingSet<CompoundValData>  CompoundValDataSet;
   llvm::FoldingSet<LazyCompoundValData> LazyCompoundValDataSet;
   llvm::FoldingSet<PointerToMemberData> PointerToMemberDataSet;
@@ -109,9 +127,8 @@ class BasicValueFactory {
 
 public:
   BasicValueFactory(ASTContext &ctx, llvm::BumpPtrAllocator &Alloc)
-    : Ctx(ctx), BPAlloc(Alloc), PersistentSVals(nullptr),
-      PersistentSValPairs(nullptr), SValListFactory(Alloc),
-      CXXBaseListFactory(Alloc) {}
+      : Ctx(ctx), BPAlloc(Alloc), SValListFactory(Alloc),
+        CXXBaseListFactory(Alloc) {}
 
   ~BasicValueFactory();
 
@@ -147,57 +164,57 @@ public:
     return getValue(TargetType.convert(From));
   }
 
-  const llvm::APSInt& getIntValue(uint64_t X, bool isUnsigned) {
+  const llvm::APSInt &getIntValue(uint64_t X, bool isUnsigned) {
     QualType T = isUnsigned ? Ctx.UnsignedIntTy : Ctx.IntTy;
     return getValue(X, T);
   }
 
-  inline const llvm::APSInt& getMaxValue(const llvm::APSInt &v) {
+  const llvm::APSInt &getMaxValue(const llvm::APSInt &v) {
     return getValue(APSIntType(v).getMaxValue());
   }
 
-  inline const llvm::APSInt& getMinValue(const llvm::APSInt &v) {
+  const llvm::APSInt &getMinValue(const llvm::APSInt &v) {
     return getValue(APSIntType(v).getMinValue());
   }
 
-  inline const llvm::APSInt& getMaxValue(QualType T) {
+  const llvm::APSInt &getMaxValue(QualType T) {
     return getValue(getAPSIntType(T).getMaxValue());
   }
 
-  inline const llvm::APSInt& getMinValue(QualType T) {
+  const llvm::APSInt &getMinValue(QualType T) {
     return getValue(getAPSIntType(T).getMinValue());
   }
 
-  inline const llvm::APSInt& Add1(const llvm::APSInt& V) {
+  const llvm::APSInt &Add1(const llvm::APSInt &V) {
     llvm::APSInt X = V;
     ++X;
     return getValue(X);
   }
 
-  inline const llvm::APSInt& Sub1(const llvm::APSInt& V) {
+  const llvm::APSInt &Sub1(const llvm::APSInt &V) {
     llvm::APSInt X = V;
     --X;
     return getValue(X);
   }
 
-  inline const llvm::APSInt& getZeroWithTypeSize(QualType T) {
+  const llvm::APSInt &getZeroWithTypeSize(QualType T) {
     assert(T->isScalarType());
     return getValue(0, Ctx.getTypeSize(T), true);
   }
 
-  inline const llvm::APSInt& getZeroWithPtrWidth(bool isUnsigned = true) {
+  const llvm::APSInt &getZeroWithPtrWidth(bool isUnsigned = true) {
     return getValue(0, Ctx.getTypeSize(Ctx.VoidPtrTy), isUnsigned);
   }
 
-  inline const llvm::APSInt &getIntWithPtrWidth(uint64_t X, bool isUnsigned) {
+  const llvm::APSInt &getIntWithPtrWidth(uint64_t X, bool isUnsigned) {
     return getValue(X, Ctx.getTypeSize(Ctx.VoidPtrTy), isUnsigned);
   }
 
-  inline const llvm::APSInt& getTruthValue(bool b, QualType T) {
-    return getValue(b ? 1 : 0, Ctx.getTypeSize(T), false);
+  const llvm::APSInt &getTruthValue(bool b, QualType T) {
+    return getValue(b ? 1 : 0, Ctx.getIntWidth(T), true);
   }
 
-  inline const llvm::APSInt& getTruthValue(bool b) {
+  const llvm::APSInt &getTruthValue(bool b) {
     return getTruthValue(b, Ctx.getLogicalOperationType());
   }
 
@@ -229,7 +246,7 @@ public:
     return CXXBaseListFactory.add(CBS, L);
   }
 
-  const clang::ento::PointerToMemberData *accumCXXBase(
+  const PointerToMemberData *accumCXXBase(
       llvm::iterator_range<CastExpr::path_const_iterator> PathRange,
       const nonloc::PointerToMember &PTM);
 
@@ -246,8 +263,8 @@ public:
   const SVal* getPersistentSVal(SVal X);
 };
 
-} // end GR namespace
+} // namespace ento
 
-} // end clang namespace
+} // namespace clang
 
-#endif
+#endif // LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_BASICVALUEFACTORY_H

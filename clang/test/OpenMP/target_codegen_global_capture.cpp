@@ -150,7 +150,7 @@ int foo(short a, short b, short c, short d){
 
     // CHECK: define internal void [[OFFLOADF]]({{.+}} {{.*}}%{{.+}}, {{.+}} {{.*}}%{{.+}}, {{.+}} {{.*}}%{{.+}}, {{.+}} {{.*}}%{{.+}}, {{.+}} {{.*}}%{{.+}}, {{.+}} {{.*}}%{{.+}}, {{.+}} {{.*}}%{{.+}}, {{.+}} {{.*}}%{{.+}}, {{.+}} {{.*}}%{{.+}})
     // The parallel region only uses 3 captures.
-    // CHECK:     call {{.*}}@__kmpc_fork_call(%ident_t* {{.+}}, i32 {{.+}}, void (i32*, i32*, ...)* bitcast ({{.*}}[[PARF:@.+]] to {{.*}}), {{.+}}* %{{.+}}, {{.+}}* %{{.+}}, {{.+}}* %{{.+}})
+    // CHECK:     call {{.*}}@__kmpc_fork_call(%struct.ident_t* {{.+}}, i32 {{.+}}, void (i32*, i32*, ...)* bitcast ({{.*}}[[PARF:@.+]] to {{.*}}), {{.+}}* %{{.+}}, {{.+}}* %{{.+}}, {{.+}}* %{{.+}})
     // CHECK:     call void @.omp_outlined.(i32* %{{.+}}, i32* %{{.+}}, {{.+}}* %{{.+}}, {{.+}}* %{{.+}}, {{.+}}* %{{.+}})
     // Capture d, Gd, Sd,
 
@@ -180,7 +180,7 @@ int bar(short a, short b, short c, short d){
   static float Sc = 11.0;
   static float Sd = 12.0;
 
-  // CHECK: call void {{.*}}@__kmpc_fork_call(%ident_t* {{.+}}, i32 {{.+}}, void (i32*, i32*, ...)* bitcast ({{.*}}[[PARF:@.+]] to {{.*}}), i16* %{{.+}}, i16* %{{.+}}, i16* %{{.+}}, i16* %{{.+}})
+  // CHECK: call void {{.*}}@__kmpc_fork_call(%struct.ident_t* {{.+}}, i32 {{.+}}, void (i32*, i32*, ...)* bitcast ({{.*}}[[PARF:@.+]] to {{.*}}), i16* %{{.+}}, i16* %{{.+}}, i16* %{{.+}}, i16* %{{.+}})
   // CHECK: define internal void [[PARF]](i32* noalias %{{.*}}, i32* noalias %{{.*}}, i16* dereferenceable(2) [[A:%.+]], i16* dereferenceable(2) [[B:%.+]], i16* dereferenceable(2) [[C:%.+]], i16* dereferenceable(2) [[D:%.+]])
   // Capture a, b, c, d
   // CHECK: [[ALLOCLA:%.+]] = alloca i16
@@ -288,7 +288,7 @@ int bar(short a, short b, short c, short d){
       Sb += 1.0;
 
       // CHECK: define internal void [[OFFLOADF]]({{.+}} {{.*}}%{{.+}}, {{.+}} {{.*}}%{{.+}}, {{.+}} {{.*}}%{{.+}}, {{.+}} {{.*}}%{{.+}}, {{.+}} {{.*}}%{{.+}}, {{.+}} {{.*}}%{{.+}}, {{.+}} {{.*}}%{{.+}}, {{.+}} {{.*}}%{{.+}}, {{.+}} {{.*}}%{{.+}})
-      // CHECK: call void {{.*}}@__kmpc_fork_call(%ident_t* {{.+}}, i32 {{.+}}, void (i32*, i32*, ...)* bitcast ({{.*}}[[PARF:@.+]] to {{.*}})
+      // CHECK: call void {{.*}}@__kmpc_fork_call(%struct.ident_t* {{.+}}, i32 {{.+}}, void (i32*, i32*, ...)* bitcast ({{.*}}[[PARF:@.+]] to {{.*}})
 
       // CHECK: define internal void [[PARF]](i32* noalias %{{.*}}, i32* noalias %{{.*}}, {{.+}}* dereferenceable({{.+}}) %{{.+}}, {{.+}}* dereferenceable({{.+}}) %{{.+}}, {{.+}}* dereferenceable({{.+}}) %{{.+}})
       // Capture d, Gd, Sd
@@ -325,7 +325,7 @@ int tbar(T a, T b, T c, T d){
   static float Sc = 19.0;
   static float Sd = 20.0;
 
-  // CHECK: call void {{.*}}@__kmpc_fork_call(%ident_t* {{.+}}, i32 {{.+}}, void (i32*, i32*, ...)* bitcast ({{.*}}[[PARF:@.+]] to {{.*}}), i16* %{{.+}}, i16* %{{.+}}, i16* %{{.+}}, i16* %{{.+}})
+  // CHECK: call void {{.*}}@__kmpc_fork_call(%struct.ident_t* {{.+}}, i32 {{.+}}, void (i32*, i32*, ...)* bitcast ({{.*}}[[PARF:@.+]] to {{.*}}), i16* %{{.+}}, i16* %{{.+}}, i16* %{{.+}}, i16* %{{.+}})
   // CHECK: define internal void [[PARF]](i32* noalias %{{.*}}, i32* noalias %{{.*}}, i16* dereferenceable(2) [[A:%.+]], i16* dereferenceable(2) [[B:%.+]], i16* dereferenceable(2) [[C:%.+]], i16* dereferenceable(2) [[D:%.+]])
   // Capture a, b, c, d
   // CHECK: [[ALLOCLA:%.+]] = alloca i16
@@ -433,7 +433,7 @@ int tbar(T a, T b, T c, T d){
       Sb += 1.0;
 
       // CHECK: define internal void [[OFFLOADF]]({{.+}} {{.*}}%{{.+}}, {{.+}} {{.*}}%{{.+}}, {{.+}} {{.*}}%{{.+}}, {{.+}} {{.*}}%{{.+}}, {{.+}} {{.*}}%{{.+}}, {{.+}} {{.*}}%{{.+}}, {{.+}} {{.*}}%{{.+}}, {{.+}} {{.*}}%{{.+}}, {{.+}} {{.*}}%{{.+}})
-      // CHECK: call void {{.*}}@__kmpc_fork_call(%ident_t* {{.+}}, i32 {{.+}}, void (i32*, i32*, ...)* bitcast ({{.*}}[[PARF:@.+]] to {{.*}})
+      // CHECK: call void {{.*}}@__kmpc_fork_call(%struct.ident_t* {{.+}}, i32 {{.+}}, void (i32*, i32*, ...)* bitcast ({{.*}}[[PARF:@.+]] to {{.*}})
 
       // CHECK: define internal void [[PARF]](i32* noalias %{{.*}}, i32* noalias %{{.*}}, {{.+}}* dereferenceable({{.+}}) %{{.+}}, {{.+}}* dereferenceable({{.+}}) %{{.+}}, {{.+}}* dereferenceable({{.+}}) %{{.+}})
       // Capture d, Gd, Sd

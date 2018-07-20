@@ -23,7 +23,7 @@ namespace clang {
   class CodeCompleteConsumer;
   class Sema;
 
-  /// \brief Parse the entire file specified, notifying the ASTConsumer as
+  /// Parse the entire file specified, notifying the ASTConsumer as
   /// the file is parsed.
   ///
   /// This operation inserts the parsed decls into the translation
@@ -42,7 +42,7 @@ namespace clang {
                 CodeCompleteConsumer *CompletionConsumer = nullptr,
                 bool SkipFunctionBodies = false);
 
-  /// \brief Parse the main file known to the preprocessor, producing an 
+  /// Parse the main file known to the preprocessor, producing an 
   /// abstract syntax tree.
   void ParseAST(Sema &S, bool PrintStats = false,
                 bool SkipFunctionBodies = false);

@@ -38,3 +38,13 @@ struct Complex {
   Complex(Complex &Copy) : i(Copy.i) {};
   int i;
 } complex;
+
+// This type is manually marked as trivial_abi.
+// CHECK-DAG: !DICompositeType({{.*}}, name: "Marked",{{.*}}flags: DIFlagTypePassByValue
+struct __attribute__((trivial_abi)) Marked {
+  int *p;
+  Marked();
+  ~Marked();
+  Marked(const Marked &) noexcept;
+  Marked &operator=(const Marked &);
+} marked;

@@ -21,7 +21,7 @@ void t2() {
 }
 
 void ignore_fe_size() {
-  // CHECK-LABEL: define void @ignore_fe_size()
+  // CHECK-LABEL: define dso_local void @ignore_fe_size()
   char c;
   // CHECK: vaddps xmm1, xmm2, $1{1to4}
   __asm vaddps xmm1, xmm2, [c]{1to4}

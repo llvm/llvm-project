@@ -354,9 +354,9 @@ int foo() {return 0;};
 
 // TERM_DEBUG-LABEL: parallel_for
 // CLEANUP: parallel_for
-void parallel_for(float *a, int n) {
+void parallel_for(float *a, const int n) {
   float arr[n];
-#pragma omp parallel for schedule(static, 5) private(arr)
+#pragma omp parallel for schedule(static, 5) private(arr) default(none) firstprivate(n) shared(a)
   // TERM_DEBUG-NOT: __kmpc_global_thread_num
   // TERM_DEBUG:     call void @__kmpc_for_static_init_4u({{.+}}), !dbg [[DBG_LOC_START:![0-9]+]]
   // TERM_DEBUG:     invoke i32 {{.*}}foo{{.*}}()
@@ -370,7 +370,7 @@ void parallel_for(float *a, int n) {
   // CLEANUP:     call void @__kmpc_for_static_init_4u({{.+}})
   // CLEANUP:     call void @__kmpc_for_static_fini({{.+}})
   for (unsigned i = 131071; i <= 2147483647; i += 127)
-    a[i] += foo() + arr[i];
+    a[i] += foo() + arr[i] + n;
 }
 // Check source line corresponds to "#pragma omp parallel for schedule(static, 5)" above:
 // TERM_DEBUG-DAG: [[DBG_LOC_START]] = !DILocation(line: [[@LINE-4]],

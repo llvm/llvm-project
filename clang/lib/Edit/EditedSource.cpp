@@ -1,4 +1,4 @@
-//===----- EditedSource.cpp - Collection of source edits ------------------===//
+//===- EditedSource.cpp - Collection of source edits ----------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -9,12 +9,21 @@
 
 #include "clang/Edit/EditedSource.h"
 #include "clang/Basic/CharInfo.h"
+#include "clang/Basic/LLVM.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Edit/Commit.h"
 #include "clang/Edit/EditsReceiver.h"
+#include "clang/Edit/FileOffset.h"
 #include "clang/Lex/Lexer.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include <algorithm>
+#include <cassert>
+#include <tuple>
+#include <utility>
 
 using namespace clang;
 using namespace edit;
@@ -27,12 +36,14 @@ void EditedSource::deconstructMacroArgLoc(SourceLocation Loc,
                                           SourceLocation &ExpansionLoc,
                                           MacroArgUse &ArgUse) {
   assert(SourceMgr.isMacroArgExpansion(Loc));
-  SourceLocation DefArgLoc = SourceMgr.getImmediateExpansionRange(Loc).first;
+  SourceLocation DefArgLoc =
+      SourceMgr.getImmediateExpansionRange(Loc).getBegin();
   SourceLocation ImmediateExpansionLoc =
-      SourceMgr.getImmediateExpansionRange(DefArgLoc).first;
+      SourceMgr.getImmediateExpansionRange(DefArgLoc).getBegin();
   ExpansionLoc = ImmediateExpansionLoc;
   while (SourceMgr.isMacroBodyExpansion(ExpansionLoc))
-    ExpansionLoc = SourceMgr.getImmediateExpansionRange(ExpansionLoc).first;
+    ExpansionLoc =
+        SourceMgr.getImmediateExpansionRange(ExpansionLoc).getBegin();
   SmallString<20> Buf;
   StringRef ArgName = Lexer::getSpelling(SourceMgr.getSpellingLoc(DefArgLoc),
                                          Buf, SourceMgr, LangOpts);
@@ -269,9 +280,11 @@ bool EditedSource::commit(const Commit &commit) {
 
   struct CommitRAII {
     EditedSource &Editor;
+
     CommitRAII(EditedSource &Editor) : Editor(Editor) {
       Editor.startingCommit();
     }
+
     ~CommitRAII() {
       Editor.finishedCommit();
     }
@@ -298,7 +311,7 @@ bool EditedSource::commit(const Commit &commit) {
   return true;
 }
 
-// \brief Returns true if it is ok to make the two given characters adjacent.
+// Returns true if it is ok to make the two given characters adjacent.
 static bool canBeJoined(char left, char right, const LangOptions &LangOpts) {
   // FIXME: Should use TokenConcatenation to make sure we don't allow stuff like
   // making two '<' adjacent.
@@ -306,7 +319,7 @@ static bool canBeJoined(char left, char right, const LangOptions &LangOpts) {
            Lexer::isIdentifierBodyChar(right, LangOpts));
 }
 
-/// \brief Returns true if it is ok to eliminate the trailing whitespace between
+/// Returns true if it is ok to eliminate the trailing whitespace between
 /// the given characters.
 static bool canRemoveWhitespace(char left, char beforeWSpace, char right,
                                 const LangOptions &LangOpts) {
@@ -319,7 +332,7 @@ static bool canRemoveWhitespace(char left, char beforeWSpace, char right,
   return true;
 }
 
-/// \brief Check the range that we are going to remove and:
+/// Check the range that we are going to remove and:
 /// -Remove any trailing whitespace if possible.
 /// -Insert a space if removing the range is going to mess up the source tokens.
 static void adjustRemoval(const SourceManager &SM, const LangOptions &LangOpts,

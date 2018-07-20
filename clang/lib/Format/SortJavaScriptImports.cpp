@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file implements a sort operation for JavaScript ES6 imports.
+/// This file implements a sort operation for JavaScript ES6 imports.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -128,8 +128,7 @@ public:
           SmallVectorImpl<AnnotatedLine *> &AnnotatedLines,
           FormatTokenLexer &Tokens) override {
     tooling::Replacements Result;
-    AffectedRangeMgr.computeAffectedLines(AnnotatedLines.begin(),
-                                          AnnotatedLines.end());
+    AffectedRangeMgr.computeAffectedLines(AnnotatedLines);
 
     const AdditionalKeywords &Keywords = Tokens.getKeywords();
     SmallVector<JsModuleReference, 16> References;
@@ -189,9 +188,9 @@ public:
     if (FirstNonImportLine && FirstNonImportLine->First->NewlinesBefore < 2)
       ReferencesText += "\n";
 
-    DEBUG(llvm::dbgs() << "Replacing imports:\n"
-                       << getSourceText(InsertionPoint) << "\nwith:\n"
-                       << ReferencesText << "\n");
+    LLVM_DEBUG(llvm::dbgs() << "Replacing imports:\n"
+                            << getSourceText(InsertionPoint) << "\nwith:\n"
+                            << ReferencesText << "\n");
     auto Err = Result.add(tooling::Replacement(
         Env.getSourceManager(), CharSourceRange::getCharRange(InsertionPoint),
         ReferencesText));
@@ -308,7 +307,7 @@ private:
       FirstNonImportLine = nullptr;
       AnyImportAffected = AnyImportAffected || Line->Affected;
       Reference.Range.setEnd(LineEnd->Tok.getEndLoc());
-      DEBUG({
+      LLVM_DEBUG({
         llvm::dbgs() << "JsModuleReference: {"
                      << "is_export: " << Reference.IsExport
                      << ", cat: " << Reference.Category
@@ -446,10 +445,9 @@ tooling::Replacements sortJavaScriptImports(const FormatStyle &Style,
                                             ArrayRef<tooling::Range> Ranges,
                                             StringRef FileName) {
   // FIXME: Cursor support.
-  std::unique_ptr<Environment> Env =
-      Environment::CreateVirtualEnvironment(Code, FileName, Ranges);
-  JavaScriptImportSorter Sorter(*Env, Style);
-  return Sorter.process().first;
+  return JavaScriptImportSorter(Environment(Code, FileName, Ranges), Style)
+      .process()
+      .first;
 }
 
 } // end namespace format

@@ -8,7 +8,7 @@ struct foo {
 template <typename T>
 struct bar : virtual public foo {
   void f() {
-    // CHECK: define{{.*}}@"\01?f@?$bar@Ubaz@@@@UEAAXXZ"
+    // CHECK: define{{.*}}@"?f@?$bar@Ubaz@@@@UEAAXXZ"
     // Load "this", vbtable, vbase offset and vtable.
     // CHECK: load
     // CHECK: load

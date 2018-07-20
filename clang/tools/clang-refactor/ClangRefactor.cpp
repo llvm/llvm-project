@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file implements a clang-refactor tool that performs various
+/// This file implements a clang-refactor tool that performs various
 /// source transformations.
 ///
 //===----------------------------------------------------------------------===//

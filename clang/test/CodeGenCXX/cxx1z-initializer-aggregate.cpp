@@ -112,3 +112,21 @@ namespace Dynamic {
   //   A_CLEANUP:
   // CHECK: call void @_ZN7Dynamic1AD1Ev({{.*}} @_ZN7Dynamic2d3E
 }
+
+namespace Instantiated1 {
+  struct A { A(); };
+  struct B : A { using A::A; };
+  template<int> B v({});
+  template B v<0>;
+  // CHECK-LABEL: define {{.*}}global_var_init{{.*}} comdat($_ZN13Instantiated11vILi0EEE) {
+  // CHECK: call void @_ZN13Instantiated11BC1Ev(%{{.*}}* @_ZN13Instantiated11vILi0EEE)
+}
+
+namespace Instantiated2 {
+  struct A { A(); };
+  struct B : A {};
+  template<int> B v({});
+  template B v<0>;
+  // CHECK-LABEL: define {{.*}}global_var_init{{.*}} comdat($_ZN13Instantiated21vILi0EEE) {
+  // CHECK: call void @_ZN13Instantiated21AC2Ev(
+}

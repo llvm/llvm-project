@@ -27,33 +27,33 @@ namespace cxstring {
 
 struct CXStringBuf;
 
-/// \brief Create a CXString object for an empty "" string.
+/// Create a CXString object for an empty "" string.
 CXString createEmpty();
 
-/// \brief Create a CXString object for an NULL string.
+/// Create a CXString object for an NULL string.
 ///
 /// A NULL string should be used as an "invalid" value in case of errors.
 CXString createNull();
 
-/// \brief Create a CXString object from a nul-terminated C string.  New
+/// Create a CXString object from a nul-terminated C string.  New
 /// CXString may contain a pointer to \p String.
 ///
 /// \p String should not be changed by the caller afterwards.
 CXString createRef(const char *String);
 
-/// \brief Create a CXString object from a nul-terminated C string.  New
+/// Create a CXString object from a nul-terminated C string.  New
 /// CXString will contain a copy of \p String.
 ///
 /// \p String can be changed or freed by the caller.
 CXString createDup(const char *String);
 
-/// \brief Create a CXString object from a StringRef.  New CXString may
+/// Create a CXString object from a StringRef.  New CXString may
 /// contain a pointer to the undrelying data of \p String.
 ///
 /// \p String should not be changed by the caller afterwards.
 CXString createRef(StringRef String);
 
-/// \brief Create a CXString object from a StringRef.  New CXString will
+/// Create a CXString object from a StringRef.  New CXString will
 /// contain a copy of \p String.
 ///
 /// \p String can be changed or freed by the caller.
@@ -65,12 +65,12 @@ CXString createDup(StringRef String);
 // If you need to make a copy, call \c createDup(StringRef(String)).
 CXString createRef(std::string String) = delete;
 
-/// \brief Create a CXString object that is backed by a string buffer.
+/// Create a CXString object that is backed by a string buffer.
 CXString createCXString(CXStringBuf *buf);
 
 CXStringSet *createSet(const std::vector<std::string> &Strings);
 
-/// \brief A string pool used for fast allocation/deallocation of strings.
+/// A string pool used for fast allocation/deallocation of strings.
 class CXStringPool {
 public:
   ~CXStringPool();
@@ -89,13 +89,13 @@ struct CXStringBuf {
 
   CXStringBuf(CXTranslationUnit TU) : TU(TU) {}
 
-  /// \brief Return this buffer to the pool.
+  /// Return this buffer to the pool.
   void dispose();
 };
 
 CXStringBuf *getCXStringBuf(CXTranslationUnit TU);
 
-/// \brief Returns true if the CXString data is managed by a pool.
+/// Returns true if the CXString data is managed by a pool.
 bool isManagedByPool(CXString str);
 
 }

@@ -109,17 +109,8 @@ bool CodeGenModule::TryEmitBaseDestructorAsAlias(const CXXDestructorDecl *D) {
       D->getType()->getAs<FunctionType>()->getCallConv())
     return true;
 
-  return TryEmitDefinitionAsAlias(GlobalDecl(D, Dtor_Base),
-                                  GlobalDecl(BaseD, Dtor_Base));
-}
-
-/// Try to emit a definition as a global alias for another definition.
-/// If \p InEveryTU is true, we know that an equivalent alias can be produced
-/// in every translation unit.
-bool CodeGenModule::TryEmitDefinitionAsAlias(GlobalDecl AliasDecl,
-                                             GlobalDecl TargetDecl) {
-  if (!getCodeGenOpts().CXXCtorDtorAliases)
-    return true;
+  GlobalDecl AliasDecl(D, Dtor_Base);
+  GlobalDecl TargetDecl(BaseD, Dtor_Base);
 
   // The alias will use the linkage of the referent.  If we can't
   // support aliases with that linkage, fail.
@@ -193,6 +184,9 @@ bool CodeGenModule::TryEmitDefinitionAsAlias(GlobalDecl AliasDecl,
   auto *Alias = llvm::GlobalAlias::create(AliasValueType, 0, Linkage, "",
                                           Aliasee, &getModule());
 
+  // Destructors are always unnamed_addr.
+  Alias->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+
   // Switch any previous uses to the alias.
   if (Entry) {
     assert(Entry->getType() == AliasType &&
@@ -205,7 +199,7 @@ bool CodeGenModule::TryEmitDefinitionAsAlias(GlobalDecl AliasDecl,
   }
 
   // Finally, set up the alias with its proper name and attributes.
-  setAliasAttributes(cast<NamedDecl>(AliasDecl.getDecl()), Alias);
+  SetCommonAttributes(AliasDecl, Alias);
 
   return false;
 }
@@ -227,10 +221,9 @@ llvm::Function *CodeGenModule::codegenCXXStructor(const CXXMethodDecl *MD,
   }
 
   setFunctionLinkage(GD, Fn);
-  setFunctionDLLStorageClass(GD, Fn);
 
   CodeGenFunction(*this).GenerateCode(GD, Fn, FnInfo);
-  setFunctionDefinitionAttributes(MD, Fn);
+  setNonAliasAttributes(GD, Fn);
   SetLLVMFunctionAttributesForDefinition(MD, Fn);
   return Fn;
 }
@@ -243,6 +236,11 @@ llvm::Constant *CodeGenModule::getAddrOfCXXStructor(
   if (auto *CD = dyn_cast<CXXConstructorDecl>(MD)) {
     GD = GlobalDecl(CD, toCXXCtorType(Type));
   } else {
+    // Always alias equivalent complete destructors to base destructors in the
+    // MS ABI.
+    if (getTarget().getCXXABI().isMicrosoft() &&
+        Type == StructorType::Complete && MD->getParent()->getNumVBases() == 0)
+      Type = StructorType::Base;
     GD = GlobalDecl(cast<CXXDestructorDecl>(MD), toCXXDtorType(Type));
   }
 
@@ -263,7 +261,6 @@ static CGCallee BuildAppleKextVirtualCall(CodeGenFunction &CGF,
                                           const CXXRecordDecl *RD) {
   assert(!CGF.CGM.getTarget().getCXXABI().isMicrosoft() &&
          "No kext in Microsoft ABI");
-  GD = GD.getCanonicalDecl();
   CodeGenModule &CGM = CGF.CGM;
   llvm::Value *VTable = CGM.getCXXABI().getAddrOfVTable(RD, CharUnits());
   Ty = Ty->getPointerTo()->getPointerTo();
@@ -279,7 +276,7 @@ static CGCallee BuildAppleKextVirtualCall(CodeGenFunction &CGF,
     CGF.Builder.CreateConstInBoundsGEP1_64(VTable, VTableIndex, "vfnkxt");
   llvm::Value *VFunc =
     CGF.Builder.CreateAlignedLoad(VFuncPtr, CGF.PointerAlignInBytes);
-  CGCallee Callee(GD.getDecl(), VFunc);
+  CGCallee Callee(GD.getDecl()->getCanonicalDecl(), VFunc);
   return Callee;
 }
 

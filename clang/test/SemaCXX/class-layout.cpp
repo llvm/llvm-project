@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown %s -fsyntax-only -verify -std=c++98 -Wno-inaccessible-base
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown %s -fsyntax-only -verify -std=c++11 -Wno-inaccessible-base
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown %s -fsyntax-only -verify -std=c++11 -Wno-inaccessible-base -fclang-abi-compat=6 -DCLANG_ABI_COMPAT=6
 // expected-no-diagnostics
 
 #define SA(n, p) int a##n[(p) ? 1 : -1]
@@ -570,3 +571,36 @@ namespace test18 {
   SA(0, sizeof(might_use_tail_padding) == 80);
 }
 } // namespace PR16537
+
+namespace PR37275 {
+  struct X { char c; };
+
+  struct A { int n; };
+  _Static_assert(_Alignof(A) == _Alignof(int), "");
+
+  // __attribute__((packed)) does not apply to base classes.
+  struct __attribute__((packed)) B : X, A {};
+#if defined(CLANG_ABI_COMPAT) && CLANG_ABI_COMPAT <= 6
+  _Static_assert(_Alignof(B) == 1, "");
+  _Static_assert(__builtin_offsetof(B, n) == 1, "");
+#else
+  _Static_assert(_Alignof(B) == _Alignof(int), "");
+  _Static_assert(__builtin_offsetof(B, n) == 4, "");
+#endif
+
+  // #pragma pack does, though.
+#pragma pack(push, 2)
+  struct C : X, A {};
+  _Static_assert(_Alignof(C) == 2, "");
+  _Static_assert(__builtin_offsetof(C, n) == 2, "");
+
+  struct __attribute__((packed)) D : X, A {};
+#if defined(CLANG_ABI_COMPAT) && CLANG_ABI_COMPAT <= 6
+  _Static_assert(_Alignof(D) == 1, "");
+  _Static_assert(__builtin_offsetof(D, n) == 1, "");
+#else
+  _Static_assert(_Alignof(D) == 2, "");
+  _Static_assert(__builtin_offsetof(D, n) == 2, "");
+#endif
+#pragma pack(pop)
+}

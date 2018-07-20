@@ -46,7 +46,7 @@ class MisusedMovedObjectChecker
     : public Checker<check::PreCall, check::PostCall, check::EndFunction,
                      check::DeadSymbols, check::RegionChanges> {
 public:
-  void checkEndFunction(CheckerContext &C) const;
+  void checkEndFunction(const ReturnStmt *RS, CheckerContext &C) const;
   void checkPreCall(const CallEvent &MC, CheckerContext &C) const;
   void checkPostCall(const CallEvent &MC, CheckerContext &C) const;
   void checkDeadSymbols(SymbolReaper &SR, CheckerContext &C) const;
@@ -61,7 +61,7 @@ public:
 
 private:
   enum MisuseKind {MK_FunCall, MK_Copy, MK_Move};
-  class MovedBugVisitor : public BugReporterVisitorImpl<MovedBugVisitor> {
+  class MovedBugVisitor : public BugReporterVisitor {
   public:
     MovedBugVisitor(const MemRegion *R) : Region(R), Found(false) {}
 
@@ -222,7 +222,8 @@ ExplodedNode *MisusedMovedObjectChecker::reportBug(const MemRegion *Region,
 
 // Removing the function parameters' MemRegion from the state. This is needed
 // for PODs where the trivial destructor does not even created nor executed.
-void MisusedMovedObjectChecker::checkEndFunction(CheckerContext &C) const {
+void MisusedMovedObjectChecker::checkEndFunction(const ReturnStmt *RS,
+                                                 CheckerContext &C) const {
   auto State = C.getState();
   TrackedRegionMapTy Objects = State->get<TrackedRegionMap>();
   if (Objects.isEmpty())

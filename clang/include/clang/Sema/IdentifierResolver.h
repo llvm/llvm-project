@@ -15,16 +15,20 @@
 #ifndef LLVM_CLANG_SEMA_IDENTIFIERRESOLVER_H
 #define LLVM_CLANG_SEMA_IDENTIFIERRESOLVER_H
 
-#include "clang/Basic/IdentifierTable.h"
+#include "clang/Basic/LLVM.h"
 #include "llvm/ADT/SmallVector.h"
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <iterator>
 
 namespace clang {
 
-class ASTContext;
 class Decl;
-class DeclContext;
 class DeclarationName;
-class ExternalPreprocessorSource;
+class DeclContext;
+class IdentifierInfo;
+class LangOptions;
 class NamedDecl;
 class Preprocessor;
 class Scope;
@@ -33,17 +37,16 @@ class Scope;
 /// scopes.  It manages the shadowing chains of declaration names and
 /// implements efficient decl lookup based on a declaration name.
 class IdentifierResolver {
-
   /// IdDeclInfo - Keeps track of information about decls associated
   /// to a particular declaration name. IdDeclInfos are lazily
   /// constructed and assigned to a declaration name the first time a
   /// decl with that declaration name is shadowed in some scope.
   class IdDeclInfo {
   public:
-    typedef SmallVector<NamedDecl*, 2> DeclsTy;
+    using DeclsTy = SmallVector<NamedDecl *, 2>;
 
-    inline DeclsTy::iterator decls_begin() { return Decls.begin(); }
-    inline DeclsTy::iterator decls_end() { return Decls.end(); }
+    DeclsTy::iterator decls_begin() { return Decls.begin(); }
+    DeclsTy::iterator decls_end() { return Decls.end(); }
 
     void AddDecl(NamedDecl *D) { Decls.push_back(D); }
 
@@ -51,7 +54,7 @@ class IdentifierResolver {
     /// The decl must already be part of the decl chain.
     void RemoveDecl(NamedDecl *D);
 
-    /// \brief Insert the given declaration at the given position in the list.
+    /// Insert the given declaration at the given position in the list.
     void InsertDecl(DeclsTy::iterator Pos, NamedDecl *D) {
       Decls.insert(Pos, D);
     }
@@ -61,30 +64,32 @@ class IdentifierResolver {
   };
 
 public:
-
   /// iterator - Iterate over the decls of a specified declaration name.
   /// It will walk or not the parent declaration contexts depending on how
   /// it was instantiated.
   class iterator {
   public:
-    typedef NamedDecl *             value_type;
-    typedef NamedDecl *             reference;
-    typedef NamedDecl *             pointer;
-    typedef std::input_iterator_tag iterator_category;
-    typedef std::ptrdiff_t          difference_type;
+    friend class IdentifierResolver;
+
+    using value_type = NamedDecl *;
+    using reference = NamedDecl *;
+    using pointer = NamedDecl *;
+    using iterator_category = std::input_iterator_tag;
+    using difference_type = std::ptrdiff_t;
 
     /// Ptr - There are 2 forms that 'Ptr' represents:
     /// 1) A single NamedDecl. (Ptr & 0x1 == 0)
     /// 2) A IdDeclInfo::DeclsTy::iterator that traverses only the decls of the
     ///    same declaration context. (Ptr & 0x1 == 0x1)
-    uintptr_t Ptr;
-    typedef IdDeclInfo::DeclsTy::iterator BaseIter;
+    uintptr_t Ptr = 0;
+    using BaseIter = IdDeclInfo::DeclsTy::iterator;
 
     /// A single NamedDecl. (Ptr & 0x1 == 0)
     iterator(NamedDecl *D) {
       Ptr = reinterpret_cast<uintptr_t>(D);
       assert((Ptr & 0x1) == 0 && "Invalid Ptr!");
     }
+
     /// A IdDeclInfo::DeclsTy::iterator that walks or not the parent declaration
     /// contexts depending on 'LookInParentCtx'.
     iterator(BaseIter I) {
@@ -98,11 +103,10 @@ public:
       return reinterpret_cast<BaseIter>(Ptr & ~0x1);
     }
 
-    friend class IdentifierResolver;
-
     void incrementSlowCase();
+
   public:
-    iterator() : Ptr(0) {}
+    iterator() = default;
 
     NamedDecl *operator*() const {
       if (isIterator())
@@ -127,6 +131,9 @@ public:
       return *this;
     }
   };
+
+  explicit IdentifierResolver(Preprocessor &PP);
+  ~IdentifierResolver();
 
   /// begin - Returns an iterator for decls with the name 'Name'.
   iterator begin(DeclarationName Name);
@@ -156,11 +163,11 @@ public:
   /// The decl must already be part of the decl chain.
   void RemoveDecl(NamedDecl *D);
 
-  /// \brief Insert the given declaration after the given iterator
+  /// Insert the given declaration after the given iterator
   /// position.
   void InsertDeclAfter(iterator Pos, NamedDecl *D);
 
-  /// \brief Try to add the given declaration to the top level scope, if it
+  /// Try to add the given declaration to the top level scope, if it
   /// (or a redeclaration of it) hasn't already been added.
   ///
   /// \param D The externally-produced declaration to add.
@@ -170,9 +177,6 @@ public:
   /// \returns true if the declaration was added, false otherwise.
   bool tryAddTopLevelDecl(NamedDecl *D, DeclarationName Name);
   
-  explicit IdentifierResolver(Preprocessor &PP);
-  ~IdentifierResolver();
-
 private:
   const LangOptions &LangOpt;
   Preprocessor &PP;
@@ -193,11 +197,10 @@ private:
     assert((reinterpret_cast<uintptr_t>(Ptr) & 0x1) == 1
           && "Ptr not a IdDeclInfo* !");
     return reinterpret_cast<IdDeclInfo*>(
-                    reinterpret_cast<uintptr_t>(Ptr) & ~0x1
-                                                            );
+                    reinterpret_cast<uintptr_t>(Ptr) & ~0x1);
   }
 };
 
-} // end namespace clang
+} // namespace clang
 
-#endif
+#endif // LLVM_CLANG_SEMA_IDENTIFIERRESOLVER_H

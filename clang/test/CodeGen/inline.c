@@ -61,13 +61,13 @@
 // RUN: %clang_cc1 %s -triple i386-pc-win32 -O1 -disable-llvm-passes -emit-llvm -o - -std=c99 | FileCheck %s --check-prefix=CHECK4
 // RUN: %clang_cc1 %s -triple i386-pc-win32 -fexperimental-new-pass-manager -O1 -disable-llvm-passes -emit-llvm -o - -std=c99 | FileCheck %s --check-prefix=CHECK4
 // CHECK4-NOT: define weak_odr void @_Exit(
-// CHECK4-LABEL: define weak_odr i32 @ei()
-// CHECK4-LABEL: define i32 @bar()
+// CHECK4-LABEL: define weak_odr dso_local i32 @ei()
+// CHECK4-LABEL: define dso_local i32 @bar()
 // CHECK4-NOT: unreferenced1
-// CHECK4-LABEL: define weak_odr void @unreferenced2()
-// CHECK4-LABEL: define void @gnu_inline()
-// CHECK4-LABEL: define linkonce_odr i32 @foo()
-// CHECK4-LABEL: define available_externally void @gnu_ei_inline()
+// CHECK4-LABEL: define weak_odr dso_local void @unreferenced2()
+// CHECK4-LABEL: define dso_local void @gnu_inline()
+// CHECK4-LABEL: define linkonce_odr dso_local i32 @foo()
+// CHECK4-LABEL: define available_externally dso_local void @gnu_ei_inline()
 
 __attribute__((noreturn)) void __cdecl _exit(int _Code);
 __inline void __cdecl _Exit(int status) { _exit(status); }

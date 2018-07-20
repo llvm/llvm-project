@@ -1,4 +1,4 @@
-//===---- VerifyDiagnosticConsumer.cpp - Verifying Diagnostic Client ------===//
+//===- VerifyDiagnosticConsumer.cpp - Verifying Diagnostic Client ---------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -13,27 +13,48 @@
 
 #include "clang/Frontend/VerifyDiagnosticConsumer.h"
 #include "clang/Basic/CharInfo.h"
+#include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileManager.h"
+#include "clang/Basic/LLVM.h"
+#include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/SourceManager.h"
+#include "clang/Basic/TokenKinds.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/TextDiagnosticBuffer.h"
 #include "clang/Lex/HeaderSearch.h"
+#include "clang/Lex/Lexer.h"
+#include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Lex/Token.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <cstring>
+#include <iterator>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
 using namespace clang;
-typedef VerifyDiagnosticConsumer::Directive Directive;
-typedef VerifyDiagnosticConsumer::DirectiveList DirectiveList;
-typedef VerifyDiagnosticConsumer::ExpectedData ExpectedData;
+
+using Directive = VerifyDiagnosticConsumer::Directive;
+using DirectiveList = VerifyDiagnosticConsumer::DirectiveList;
+using ExpectedData = VerifyDiagnosticConsumer::ExpectedData;
 
 VerifyDiagnosticConsumer::VerifyDiagnosticConsumer(DiagnosticsEngine &Diags_)
-  : Diags(Diags_),
-    PrimaryClient(Diags.getClient()), PrimaryClientOwner(Diags.takeClient()),
-    Buffer(new TextDiagnosticBuffer()), CurrentPreprocessor(nullptr),
-    LangOpts(nullptr), SrcManager(nullptr), ActiveSourceFiles(0),
-    Status(HasNoDirectives)
-{
+    : Diags(Diags_), PrimaryClient(Diags.getClient()),
+      PrimaryClientOwner(Diags.takeClient()),
+      Buffer(new TextDiagnosticBuffer()), Status(HasNoDirectives) {
   if (Diags.hasSourceManager())
     setSourceManager(Diags.getSourceManager());
 }
@@ -48,16 +69,18 @@ VerifyDiagnosticConsumer::~VerifyDiagnosticConsumer() {
 }
 
 #ifndef NDEBUG
+
 namespace {
+
 class VerifyFileTracker : public PPCallbacks {
   VerifyDiagnosticConsumer &Verify;
   SourceManager &SM;
 
 public:
   VerifyFileTracker(VerifyDiagnosticConsumer &Verify, SourceManager &SM)
-    : Verify(Verify), SM(SM) { }
+      : Verify(Verify), SM(SM) {}
 
-  /// \brief Hook into the preprocessor and update the list of parsed
+  /// Hook into the preprocessor and update the list of parsed
   /// files when the preprocessor indicates a new file is entered.
   void FileChanged(SourceLocation Loc, FileChangeReason Reason,
                    SrcMgr::CharacteristicKind FileType,
@@ -66,7 +89,9 @@ public:
                                   VerifyDiagnosticConsumer::IsParsed);
   }
 };
-} // End anonymous namespace.
+
+} // namespace
+
 #endif
 
 // DiagnosticConsumer interface.
@@ -79,10 +104,10 @@ void VerifyDiagnosticConsumer::BeginSourceFile(const LangOptions &LangOpts,
       CurrentPreprocessor = PP;
       this->LangOpts = &LangOpts;
       setSourceManager(PP->getSourceManager());
-      const_cast<Preprocessor*>(PP)->addCommentHandler(this);
+      const_cast<Preprocessor *>(PP)->addCommentHandler(this);
 #ifndef NDEBUG
       // Debug build tracks parsed files.
-      const_cast<Preprocessor*>(PP)->addPPCallbacks(
+      const_cast<Preprocessor *>(PP)->addPPCallbacks(
                       llvm::make_unique<VerifyFileTracker>(*this, *SrcManager));
 #endif
     }
@@ -99,7 +124,8 @@ void VerifyDiagnosticConsumer::EndSourceFile() {
   // Detach comment handler once last active source file completed.
   if (--ActiveSourceFiles == 0) {
     if (CurrentPreprocessor)
-      const_cast<Preprocessor*>(CurrentPreprocessor)->removeCommentHandler(this);
+      const_cast<Preprocessor *>(CurrentPreprocessor)->
+          removeCommentHandler(this);
 
     // Check diagnostics once last file completed.
     CheckDiagnostics();
@@ -152,19 +178,18 @@ void VerifyDiagnosticConsumer::HandleDiagnostic(
 // Checking diagnostics implementation.
 //===----------------------------------------------------------------------===//
 
-typedef TextDiagnosticBuffer::DiagList DiagList;
-typedef TextDiagnosticBuffer::const_iterator const_diag_iterator;
+using DiagList = TextDiagnosticBuffer::DiagList;
+using const_diag_iterator = TextDiagnosticBuffer::const_iterator;
 
 namespace {
 
 /// StandardDirective - Directive with string matching.
-///
 class StandardDirective : public Directive {
 public:
   StandardDirective(SourceLocation DirectiveLoc, SourceLocation DiagnosticLoc,
                     bool MatchAnyLine, StringRef Text, unsigned Min,
                     unsigned Max)
-    : Directive(DirectiveLoc, DiagnosticLoc, MatchAnyLine, Text, Min, Max) { }
+      : Directive(DirectiveLoc, DiagnosticLoc, MatchAnyLine, Text, Min, Max) {}
 
   bool isValid(std::string &Error) override {
     // all strings are considered valid; even empty ones
@@ -177,14 +202,13 @@ public:
 };
 
 /// RegexDirective - Directive with regular-expression matching.
-///
 class RegexDirective : public Directive {
 public:
   RegexDirective(SourceLocation DirectiveLoc, SourceLocation DiagnosticLoc,
                  bool MatchAnyLine, StringRef Text, unsigned Min, unsigned Max,
                  StringRef RegexStr)
-    : Directive(DirectiveLoc, DiagnosticLoc, MatchAnyLine, Text, Min, Max),
-      Regex(RegexStr) { }
+      : Directive(DirectiveLoc, DiagnosticLoc, MatchAnyLine, Text, Min, Max),
+        Regex(RegexStr) {}
 
   bool isValid(std::string &Error) override {
     return Regex.isValid(Error);
@@ -202,7 +226,7 @@ class ParseHelper
 {
 public:
   ParseHelper(StringRef S)
-    : Begin(S.begin()), End(S.end()), C(Begin), P(Begin), PEnd(nullptr) {}
+      : Begin(S.begin()), End(S.end()), C(Begin), P(Begin) {}
 
   // Return true if string literal is next.
   bool Next(StringRef S) {
@@ -210,7 +234,7 @@ public:
     PEnd = C + S.size();
     if (PEnd > End)
       return false;
-    return !memcmp(P, S.data(), S.size());
+    return memcmp(P, S.data(), S.size()) == 0;
   }
 
   // Return true if number is next.
@@ -321,16 +345,23 @@ public:
     return !(C < End);
   }
 
-  const char * const Begin; // beginning of expected content
-  const char * const End;   // end of expected content (1-past)
-  const char *C;            // position of next char in content
+  // Beginning of expected content.
+  const char * const Begin;
+
+  // End of expected content (1-past).
+  const char * const End;
+
+  // Position of next char in content.
+  const char *C;
+
   const char *P;
 
 private:
-  const char *PEnd; // previous next/search subject end (1-past)
+  // Previous next/search subject end (1-past).
+  const char *PEnd = nullptr;
 };
 
-} // namespace anonymous
+} // anonymous
 
 /// ParseDirective - Go through the comment and see if it indicates expected
 /// diagnostics. If so, then put them in the appropriate directive list.
@@ -625,7 +656,7 @@ bool VerifyDiagnosticConsumer::HandleComment(Preprocessor &PP,
 }
 
 #ifndef NDEBUG
-/// \brief Lex the specified source file to determine whether it contains
+/// Lex the specified source file to determine whether it contains
 /// any expected-* directives.  As a Lexer is used rather than a full-blown
 /// Preprocessor, directives inside skipped #if blocks will still be found.
 ///
@@ -663,7 +694,7 @@ static bool findDirectives(SourceManager &SM, FileID FID,
 }
 #endif // !NDEBUG
 
-/// \brief Takes a list of diagnostics that have been generated but not matched
+/// Takes a list of diagnostics that have been generated but not matched
 /// by an expected-* directive and produces a diagnostic to the user from this.
 static unsigned PrintUnexpected(DiagnosticsEngine &Diags, SourceManager *SourceMgr,
                                 const_diag_iterator diag_begin,
@@ -691,7 +722,7 @@ static unsigned PrintUnexpected(DiagnosticsEngine &Diags, SourceManager *SourceM
   return std::distance(diag_begin, diag_end);
 }
 
-/// \brief Takes a list of diagnostics that were expected to have been generated
+/// Takes a list of diagnostics that were expected to have been generated
 /// but were not and produces a diagnostic to the user from this.
 static unsigned PrintExpected(DiagnosticsEngine &Diags,
                               SourceManager &SourceMgr,
@@ -701,21 +732,20 @@ static unsigned PrintExpected(DiagnosticsEngine &Diags,
 
   SmallString<256> Fmt;
   llvm::raw_svector_ostream OS(Fmt);
-  for (auto *DirPtr : DL) {
-    Directive &D = *DirPtr;
-    if (D.DiagnosticLoc.isInvalid())
+  for (const auto *D : DL) {
+    if (D->DiagnosticLoc.isInvalid())
       OS << "\n  File *";
     else
-      OS << "\n  File " << SourceMgr.getFilename(D.DiagnosticLoc);
-    if (D.MatchAnyLine)
+      OS << "\n  File " << SourceMgr.getFilename(D->DiagnosticLoc);
+    if (D->MatchAnyLine)
       OS << " Line *";
     else
-      OS << " Line " << SourceMgr.getPresumedLineNumber(D.DiagnosticLoc);
-    if (D.DirectiveLoc != D.DiagnosticLoc)
+      OS << " Line " << SourceMgr.getPresumedLineNumber(D->DiagnosticLoc);
+    if (D->DirectiveLoc != D->DiagnosticLoc)
       OS << " (directive at "
-         << SourceMgr.getFilename(D.DirectiveLoc) << ':'
-         << SourceMgr.getPresumedLineNumber(D.DirectiveLoc) << ')';
-    OS << ": " << D.Text;
+         << SourceMgr.getFilename(D->DirectiveLoc) << ':'
+         << SourceMgr.getPresumedLineNumber(D->DirectiveLoc) << ')';
+    OS << ": " << D->Text;
   }
 
   Diags.Report(diag::err_verify_inconsistent_diags).setForceEmit()
@@ -723,7 +753,7 @@ static unsigned PrintExpected(DiagnosticsEngine &Diags,
   return DL.size();
 }
 
-/// \brief Determine whether two source locations come from the same file.
+/// Determine whether two source locations come from the same file.
 static bool IsFromSameFile(SourceManager &SM, SourceLocation DirectiveLoc,
                            SourceLocation DiagnosticLoc) {
   while (DiagnosticLoc.isMacroID())
@@ -741,7 +771,6 @@ static bool IsFromSameFile(SourceManager &SM, SourceLocation DirectiveLoc,
 
 /// CheckLists - Compare expected to seen diagnostic lists and return the
 /// the difference between them.
-///
 static unsigned CheckLists(DiagnosticsEngine &Diags, SourceManager &SourceMgr,
                            const char *Label,
                            DirectiveList &Left,
@@ -792,7 +821,6 @@ static unsigned CheckLists(DiagnosticsEngine &Diags, SourceManager &SourceMgr,
 /// CheckResults - This compares the expected results to those that
 /// were actually reported. It emits any discrepencies. Return "true" if there
 /// were problems. Return "false" otherwise.
-///
 static unsigned CheckResults(DiagnosticsEngine &Diags, SourceManager &SourceMgr,
                              const TextDiagnosticBuffer &Buffer,
                              ExpectedData &ED) {
@@ -875,19 +903,16 @@ void VerifyDiagnosticConsumer::CheckDiagnostics() {
   // this file is being parsed separately from the main file, in which
   // case consider moving the directives to the correct place, if this
   // is applicable.
-  if (UnparsedFiles.size() > 0) {
+  if (!UnparsedFiles.empty()) {
     // Generate a cache of parsed FileEntry pointers for alias lookups.
     llvm::SmallPtrSet<const FileEntry *, 8> ParsedFileCache;
-    for (ParsedFilesMap::iterator I = ParsedFiles.begin(),
-                                End = ParsedFiles.end(); I != End; ++I) {
-      if (const FileEntry *FE = I->second)
+    for (const auto &I : ParsedFiles)
+      if (const FileEntry *FE = I.second)
         ParsedFileCache.insert(FE);
-    }
 
     // Iterate through list of unparsed files.
-    for (UnparsedFilesMap::iterator I = UnparsedFiles.begin(),
-                                  End = UnparsedFiles.end(); I != End; ++I) {
-      const UnparsedFileStatus &Status = I->second;
+    for (const auto &I : UnparsedFiles) {
+      const UnparsedFileStatus &Status = I.second;
       const FileEntry *FE = Status.getFile();
 
       // Skip files that have been parsed via an alias.

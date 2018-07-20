@@ -21,13 +21,13 @@ class FormatTestJava : public ::testing::Test {
 protected:
   static std::string format(llvm::StringRef Code, unsigned Offset,
                             unsigned Length, const FormatStyle &Style) {
-    DEBUG(llvm::errs() << "---\n");
-    DEBUG(llvm::errs() << Code << "\n\n");
+    LLVM_DEBUG(llvm::errs() << "---\n");
+    LLVM_DEBUG(llvm::errs() << Code << "\n\n");
     std::vector<tooling::Range> Ranges(1, tooling::Range(Offset, Length));
     tooling::Replacements Replaces = reformat(Style, Code, Ranges);
     auto Result = applyAllReplacements(Code, Replaces);
     EXPECT_TRUE(static_cast<bool>(Result));
-    DEBUG(llvm::errs() << "\n" << *Result << "\n\n");
+    LLVM_DEBUG(llvm::errs() << "\n" << *Result << "\n\n");
     return *Result;
   }
 
@@ -46,6 +46,7 @@ protected:
   static void verifyFormat(
       llvm::StringRef Code,
       const FormatStyle &Style = getGoogleStyle(FormatStyle::LK_Java)) {
+    EXPECT_EQ(Code.str(), format(Code, Style)) << "Expected code is not stable";
     EXPECT_EQ(Code.str(), format(test::messUp(Code), Style));
   }
 };
@@ -144,6 +145,7 @@ TEST_F(FormatTestJava, ClassDeclarations) {
   verifyFormat("public interface SomeInterface {\n"
                "  void doStuff(int theStuff);\n"
                "  void doMoreStuff(int moreStuff);\n"
+               "  default void doStuffWithDefault() {}\n"
                "}");
   verifyFormat("@interface SomeInterface {\n"
                "  void doStuff(int theStuff);\n"

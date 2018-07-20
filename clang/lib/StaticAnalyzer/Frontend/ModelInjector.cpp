@@ -10,6 +10,7 @@
 #include "ModelInjector.h"
 #include "clang/AST/Decl.h"
 #include "clang/Basic/IdentifierTable.h"
+#include "clang/Basic/Stack.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendAction.h"
@@ -95,11 +96,10 @@ void ModelInjector::onBodySynthesis(const NamedDecl *D) {
 
   ParseModelFileAction parseModelFile(Bodies);
 
-  const unsigned ThreadStackSize = 8 << 20;
   llvm::CrashRecoveryContext CRC;
 
   CRC.RunSafelyOnThread([&]() { Instance.ExecuteAction(parseModelFile); },
-                        ThreadStackSize);
+                        DesiredStackSize);
 
   Instance.getPreprocessor().FinalizeForModelFile();
 
@@ -109,7 +109,7 @@ void ModelInjector::onBodySynthesis(const NamedDecl *D) {
 
   // The preprocessor enters to the main file id when parsing is started, so
   // the main file id is changed to the model file during parsing and it needs
-  // to be reseted to the former main file id after parsing of the model file
+  // to be reset to the former main file id after parsing of the model file
   // is done.
   SM.setMainFileID(mainFileID);
 }

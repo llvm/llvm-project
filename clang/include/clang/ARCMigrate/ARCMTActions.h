@@ -55,7 +55,7 @@ public:
                 bool emitPremigrationARCErrors);
 };
 
-/// \brief Migrates to modern ObjC syntax.
+/// Migrates to modern ObjC syntax.
 class ObjCMigrateAction : public WrapperFrontendAction {
   std::string MigrateDir;
   unsigned    ObjCMigAction;

@@ -25,7 +25,7 @@ using namespace clang;
 
 namespace {
 
-/// \brief Numbers things which need to correspond across multiple TUs.
+/// Numbers things which need to correspond across multiple TUs.
 /// Typically these are things like static locals, lambdas, or blocks.
 class MicrosoftNumberingContext : public MangleNumberingContext {
   llvm::DenseMap<const Type *, unsigned> ManglingNumbers;
@@ -106,7 +106,7 @@ public:
   void addTypedefNameForUnnamedTagDecl(TagDecl *TD,
                                        TypedefNameDecl *DD) override {
     TD = TD->getCanonicalDecl();
-    DD = cast<TypedefNameDecl>(DD->getCanonicalDecl());
+    DD = DD->getCanonicalDecl();
     TypedefNameDecl *&I = UnnamedTagDeclToTypedefNameDecl[TD];
     if (!I)
       I = DD;

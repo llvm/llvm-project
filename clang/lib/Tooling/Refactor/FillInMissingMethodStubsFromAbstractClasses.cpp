@@ -163,7 +163,7 @@ static SourceLocation findInsertionLocationForMethodsFromAbstractClass(
       if (OM->getLexicalDeclContext() == AbstractClass) {
         SourceLocation EndLoc = M->getLocEnd();
         if (EndLoc.isMacroID())
-          EndLoc = SM.getExpansionRange(EndLoc).second;
+          EndLoc = SM.getExpansionRange(EndLoc).getEnd();
         if (Loc.isInvalid())
           Loc = EndLoc;
         else if (SM.isBeforeInTranslationUnit(Loc, EndLoc))

@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 %s -emit-llvm -o - | FileCheck %s
 // PR 3518
-// Some of the objects were coming out as unintialized (external) before 3518
+// Some of the objects were coming out as uninitialized (external) before 3518
 // was fixed.  Internal names are different between llvm-gcc and clang so they
 // are not tested.
 

@@ -36,9 +36,17 @@ Treat source input files as Objective-C inputs
 
 Treat source input files as Objective-C++ inputs
 
+.. option:: -Qn
+
+Do not emit metadata containing compiler name and version
+
 .. option:: -Qunused-arguments
 
 Don't emit warning for unused driver arguments
+
+.. option:: -Qy
+
+Emit metadata containing compiler name and version
 
 .. option:: -Wa,<arg>,<arg2>...
 
@@ -61,10 +69,10 @@ Pass <arg> to the ptxas assembler
 Pass <arg> to the target offloading toolchain.
 
 .. program:: clang1
-.. option:: -Xopenmp-target=<arg> <arg2>
+.. option:: -Xopenmp-target=<triple> <arg>
 .. program:: clang
 
-Pass <arg> to the specified target offloading toolchain. The triple that identifies the toolchain must be provided after the equals sign.
+Pass <arg> to the target offloading toolchain identified by <triple>.
 
 .. option:: -Z<arg>
 
@@ -116,6 +124,10 @@ Output path for the plist report
 .. option:: -bundle\_loader <arg>
 .. program:: clang
 
+.. option:: -cfguard
+
+Emit tables required for Windows Control Flow Guard.
+
 .. option:: -client\_name<arg>
 
 .. option:: -compatibility\_version<arg>
@@ -143,6 +155,10 @@ CUDA GPU architecture (e.g. sm\_35).  May be specified more than once.
 .. option:: --cuda-host-only
 
 Compile CUDA code for host only.  Has no effect on non-CUDA compilations.
+
+.. option:: --cuda-include-ptx=<arg>, --no-cuda-include-ptx=<arg>
+
+Include PTX for the follwing GPU architecture (e.g. sm\_35) or 'all'. May be specified more than once.
 
 .. option:: --cuda-noopt-device-debug, --no-cuda-noopt-device-debug
 
@@ -194,6 +210,14 @@ Use approximate transcendental functions
 
 Flush denormal floating point values to zero in CUDA device mode.
 
+.. option:: -fcuda-rdc, -fno-cuda-rdc
+
+Generate relocatable device code, also known as separate compilation mode.
+
+.. option:: -ffixed-r19
+
+Reserve the r19 register (Hexagon only)
+
 .. option:: -fheinous-gnu-extensions
 
 .. option:: -flat\_namespace
@@ -233,6 +257,8 @@ Generate CodeView debug information
 Display available options
 
 .. option:: --help-hidden
+
+Display help for hidden options
 
 .. option:: -image\_base <arg>
 
@@ -706,6 +732,10 @@ Print source range spans in numeric form
 
 .. option:: -fdiagnostics-show-category=<arg>
 
+.. option:: -fdiscard-value-names, -fno-discard-value-names
+
+Discard value names in LLVM IR
+
 .. option:: -fexperimental-isel, -fno-experimental-isel
 
 Enables the experimental global instruction selector
@@ -743,6 +773,10 @@ Level of field padding for AddressSanitizer
 .. option:: -fsanitize-address-globals-dead-stripping
 
 Enable linker dead stripping of globals in AddressSanitizer
+
+.. option:: -fsanitize-address-poison-class-member-array-new-cookie, -fno-sanitize-address-poison-class-member-array-new-cookie
+
+Enable poisoning array cookies when using class member operator new\[\] in AddressSanitizer
 
 .. option:: -fsanitize-address-use-after-scope, -fno-sanitize-address-use-after-scope
 
@@ -876,6 +910,10 @@ Add directory to include search path
 
 Restrict all prior -I flags to double-quoted inclusion and remove current directory from include path
 
+.. option:: --cuda-path-ignore-env
+
+Ignore environment variables to detect CUDA installation
+
 .. option:: --cuda-path=<arg>
 
 CUDA installation path
@@ -920,15 +958,13 @@ Specify the module user build path
 
 Don't verify input files for the modules if the module has been successfully validated or loaded during this build session
 
-.. option:: -fmodules-validate-system-headers
+.. option:: -fmodules-validate-system-headers, -fno-modules-validate-system-headers
 
 Validate the system headers that a module depends on when loading the module
 
 .. option:: -fprebuilt-module-path=<directory>
 
 Specify the prebuilt module path
-
-.. option:: -i<arg>
 
 .. option:: -idirafter<arg>, --include-directory-after <arg>, --include-directory-after=<arg>
 
@@ -1115,6 +1151,12 @@ Target-independent compilation options
 
 .. option:: -faccess-control, -fno-access-control
 
+.. option:: -falign-functions, -fno-align-functions
+
+.. program:: clang1
+.. option:: -falign-functions=<arg>
+.. program:: clang
+
 .. program:: clang1
 .. option:: -faligned-allocation, -faligned-new, -fno-aligned-allocation
 .. program:: clang
@@ -1182,6 +1224,10 @@ Accept non-standard constructs supported by the Borland compiler
 Load the clang builtins module map file.
 
 .. option:: -fcaret-diagnostics, -fno-caret-diagnostics
+
+.. option:: -fcf-protection=<arg>, -fcf-protection (equivalent to -fcf-protection=full)
+
+Instrument control-flow architecture protection. Options: return, branch, full, none.
 
 .. option:: -fclasspath=<arg>, --CLASSPATH <arg>, --CLASSPATH=<arg>, --classpath <arg>, --classpath=<arg>
 
@@ -1313,6 +1359,8 @@ Use emutls functions to access thread\_local variables
 
 .. option:: -ferror-limit=<arg>
 
+.. option:: -fescaping-block-tail-calls, -fno-escaping-block-tail-calls
+
 .. option:: -fexceptions, -fno-exceptions
 
 Enable support for exception handling
@@ -1328,6 +1376,10 @@ Allow aggressive, lossy floating-point optimizations
 .. option:: -ffinite-math-only, -fno-finite-math-only
 
 .. option:: -ffor-scope, -fno-for-scope
+
+.. option:: -fforce-enable-int128, -fno-force-enable-int128
+
+Enable support for int128\_t type
 
 .. option:: -ffp-contract=<arg>
 
@@ -1417,6 +1469,8 @@ Specify the maximum alignment to enforce on pointers lacking an explicit alignme
 
 .. option:: -fmerge-all-constants, -fno-merge-all-constants
 
+Allow merging of constants
+
 .. option:: -fmessage-length=<arg>
 
 .. option:: -fmodule-file-deps, -fno-module-file-deps
@@ -1489,6 +1543,14 @@ Specifies the largest alignment guaranteed by '::operator new(size\_t)'
 
 Disable implicit builtin knowledge of a specific function
 
+.. option:: -fdelete-null-pointer-checks, -fno-delete-null-pointer-checks
+
+When enabled, treat null pointer dereference, creation of a reference to null,
+or passing a null pointer to a function parameter annotated with the "nonnull"
+attribute as undefined behavior. (And, thus the optimizer may assume that any
+pointer used in such a way must not have been null and optimize away the
+branches accordingly.) On by default.
+
 .. option:: -fno-elide-type
 
 Do not elide types when printing diagnostics
@@ -1499,15 +1561,15 @@ Do not elide types when printing diagnostics
 
 Do not treat C++ operator name keywords as synonyms for operators
 
+.. option:: -fno-rtti-data
+
+Control emission of RTTI data
+
 .. option:: -fno-strict-modules-decluse
 
 .. option:: -fno-working-directory
 
-.. option:: -fnoopenmp-relocatable-target
-
-Do not compile OpenMP target code as relocatable.
-
-.. option:: -fnoopenmp-use-tls
+.. option:: -fnoxray-link-deps
 
 .. option:: -fobjc-abi-version=<arg>
 
@@ -1547,17 +1609,11 @@ Enable ARC-style weak references in Objective-C
 
 .. option:: -fopenmp, -fno-openmp
 
-.. option:: -fopenmp-dump-offload-linker-script
-
-.. option:: -fopenmp-relocatable-target
-
-OpenMP target code is compiled as relocatable using the -c flag. For OpenMP targets the code is relocatable by default.
+Parse OpenMP pragmas and generate parallel code.
 
 .. option:: -fopenmp-simd, -fno-openmp-simd
 
 Emit OpenMP code only for SIMD-based constructs.
-
-.. option:: -fopenmp-use-tls
 
 .. option:: -fopenmp-version=<arg>
 
@@ -1668,6 +1724,10 @@ Allow division operations to be reassociated
 
 Override the default ABI to return small structs in registers
 
+.. option:: -fregister-global-dtors-with-atexit, -fno-register-global-dtors-with-atexit
+
+Use atexit or \_\_cxa\_atexit to register global destructors
+
 .. option:: -frelaxed-template-template-args, -fno-relaxed-template-template-args
 
 Enable C++17 relaxed template template argument matching
@@ -1744,7 +1804,7 @@ Enable the superword-level parallelism vectorization passes
 
 .. option:: -fsplit-dwarf-inlining, -fno-split-dwarf-inlining
 
-Place debug types in their own section (ELF Only)
+Provide minimal debug info in the object/executable to facilitate online symbolication/stack traces in the absence of .dwo/.dwp files when using Split DWARF
 
 .. option:: -fsplit-stack
 
@@ -1759,6 +1819,10 @@ Force the usage of stack protectors for all functions
 .. option:: -fstack-protector-strong
 
 Use a strong heuristic to apply stack protectors to functions
+
+.. option:: -fstack-size-section, -fno-stack-size-section
+
+Emit section containing metadata on function stack sizes
 
 .. option:: -fstandalone-debug, -fno-limit-debug-info, -fno-standalone-debug
 
@@ -1878,6 +1942,12 @@ Set the default symbol visibility for all global declarations
 
 Enables whole-program vtable optimization. Requires -flto
 
+.. option:: -fforce-emit-vtables, -fno-force-emit-vtables
+
+In order to improve devirtualization, forces emitting of vtables even in
+modules where it isn't necessary. It causes more inline virtual functions
+to be emitted.
+
 .. option:: -fwrapv, -fno-wrapv
 
 Treat signed integer overflow as two's complement
@@ -1890,9 +1960,17 @@ Store string literals as writable data
 
 Determine whether to always emit \_\_xray\_customevent(...) calls even if the function it appears in is not always instrumented.
 
+.. option:: -fxray-always-emit-typedevents, -fno-xray-always-emit-typedevents
+
+Determine whether to always emit \_\_xray\_typedevent(...) calls even if the function it appears in is not always instrumented.
+
 .. option:: -fxray-always-instrument=<arg>
 
-Filename defining the whitelist for imbuing the 'always instrument' XRay attribute.
+DEPRECATED: Filename defining the whitelist for imbuing the 'always instrument' XRay attribute.
+
+.. option:: -fxray-attr-list=<arg>
+
+Filename defining the list of functions/types for imbuing XRay attributes.
 
 .. option:: -fxray-instruction-threshold<arg>
 
@@ -1906,9 +1984,21 @@ Sets the minimum function size to instrument with XRay
 
 Generate XRay instrumentation sleds on function entry and exit
 
+.. option:: -fxray-instrumentation-bundle=<arg>
+
+Select which XRay instrumentation points to emit. Options: all, none, function, custom. Default is 'all'.
+
+.. option:: -fxray-link-deps
+
+Tells clang to add the link dependencies for XRay.
+
+.. option:: -fxray-modes=<arg>
+
+List of modes to link in by default into XRay instrumented binaries.
+
 .. option:: -fxray-never-instrument=<arg>
 
-Filename defining the whitelist for imbuing the 'never instrument' XRay attribute.
+DEPRECATED: Filename defining the whitelist for imbuing the 'never instrument' XRay attribute.
 
 .. option:: -fzero-initialized-in-bss, -fno-zero-initialized-in-bss
 
@@ -1965,6 +2055,10 @@ OpenCL language standard to compile for.
 .. option:: -cl-strict-aliasing
 
 OpenCL only. This option is added for compatibility with OpenCL 1.0.
+
+.. option:: -cl-uniform-work-group-size
+
+OpenCL only. Defines that the global work-size be a multiple of the work-group size specified to clEnqueueNDRangeKernel
 
 .. option:: -cl-unsafe-math-optimizations
 
@@ -2078,6 +2172,10 @@ Use Intel MCU ABI
 
 (integrated-as) Emit an object file which can be used with an incremental linker
 
+.. option:: -mindirect-jump=<arg>
+
+Change indirect jump instructions to inhibit speculation
+
 .. option:: -miphoneos-version-min=<arg>, -mios-version-min=<arg>
 
 .. option:: -mips16
@@ -2168,6 +2266,10 @@ Use software floating point
 
 Set the stack alignment
 
+.. option:: -mstack-arg-probe, -mno-stack-arg-probe
+
+Enable stack probes
+
 .. option:: -mstack-probe-size=<arg>
 
 Set the stack probe size
@@ -2207,6 +2309,10 @@ AARCH64
 .. option:: -ffixed-x18
 
 Reserve the x18 register (AArch64 only)
+
+.. option:: -ffixed-x20
+
+Reserve the x20 register (AArch64 only)
 
 .. option:: -mfix-cortex-a53-835769, -mno-fix-cortex-a53-835769
 
@@ -2264,15 +2370,15 @@ Hexagon
 -------
 .. option:: -mieee-rnd-near
 
+.. option:: -mpackets, -mno-packets
+
+Enable generation of instruction packets
+
 Hexagon
 -------
 .. option:: -mhvx, -mno-hvx
 
 Enable Hexagon Vector eXtensions
-
-.. option:: -mhvx-double, -mno-hvx-double
-
-Enable Hexagon Double Vector eXtensions
 
 .. option:: -mhvx-length=<arg>
 
@@ -2318,11 +2424,17 @@ PowerPC
 
 .. option:: -mqpx, -mno-qpx
 
+.. option:: -msecure-plt
+
 .. option:: -mvsx, -mno-vsx
 
 WebAssembly
 -----------
+.. option:: -mexception-handling, -mno-exception-handling
+
 .. option:: -mnontrapping-fptoint, -mno-nontrapping-fptoint
+
+.. option:: -msign-ext, -mno-sign-ext
 
 .. option:: -msimd128, -mno-simd128
 
@@ -2370,6 +2482,8 @@ X86
 
 .. option:: -mbmi2, -mno-bmi2
 
+.. option:: -mcldemote, -mno-cldemote
+
 .. option:: -mclflushopt, -mno-clflushopt
 
 .. option:: -mclwb, -mno-clwb
@@ -2390,8 +2504,6 @@ X86
 
 .. option:: -mgfni, -mno-gfni
 
-.. option:: -mibt, -mno-ibt
-
 .. option:: -mlwp, -mno-lwp
 
 .. option:: -mlzcnt, -mno-lzcnt
@@ -2399,6 +2511,10 @@ X86
 .. option:: -mmmx, -mno-mmx
 
 .. option:: -mmovbe, -mno-movbe
+
+.. option:: -mmovdiri, -mno-movdiri
+
+.. option:: -mmovdir64b, -mno-movdir64b
 
 .. option:: -mmpx, -mno-mpx
 
@@ -2414,6 +2530,8 @@ X86
 
 .. option:: -mprfchw, -mno-prfchw
 
+.. option:: -mrdpid, -mno-rdpid
+
 .. option:: -mrdrnd, -mno-rdrnd
 
 .. option:: -mrdseed, -mno-rdseed
@@ -2423,6 +2541,8 @@ X86
 .. option:: -mretpoline-external-thunk, -mno-retpoline-external-thunk
 
 .. option:: -mrtm, -mno-rtm
+
+.. option:: -msahf, -mno-sahf
 
 .. option:: -msgx, -mno-sgx
 
@@ -2451,6 +2571,10 @@ X86
 .. option:: -mvaes, -mno-vaes
 
 .. option:: -mvpclmulqdq, -mno-vpclmulqdq
+
+.. option:: -mwaitpkg, -mno-waitpkg
+
+.. option:: -mwbnoinvd, -mno-wbnoinvd
 
 .. option:: -mx87, -m80387, -mno-x87
 
@@ -2542,6 +2666,10 @@ Debug information flags
 .. option:: -gcolumn-info, -gno-column-info
 
 .. option:: -gdwarf-aranges
+
+.. option:: -gembed-source, -gno-embed-source
+
+Embed source text in DWARF debug sections
 
 .. option:: -ggnu-pubnames
 
@@ -2708,6 +2836,8 @@ a Fortran input.
 
 .. option:: -fwhole-file, -fno-whole-file
 
+.. option:: -imultilib <arg>
+
 .. option:: -nocpp
 
 .. option:: -static-libgfortran
@@ -2732,11 +2862,11 @@ Set starting address of BSS to <addr>
 
 .. option:: -Tdata<addr>
 
-Set starting address of BSS to <addr>
+Set starting address of DATA to <addr>
 
 .. option:: -Ttext<addr>
 
-Set starting address of BSS to <addr>
+Set starting address of TEXT to <addr>
 
 .. option:: -Wl,<arg>,<arg2>...
 

@@ -7,17 +7,11 @@ template<typename T> struct vector;
 namespace N {
   namespace M {
     template<typename T> struct A;
-#if __cplusplus <= 199711L // C++03 or earlier modes
-    // expected-note@-2{{explicitly specialized declaration is here}}
-#endif
   }
 }
 
 template<typename T>
 struct N::M::A<T*> { };
-#if __cplusplus <= 199711L
-// expected-warning@-2{{first declaration of class template partial specialization of 'A' outside namespace 'M' is a C++11 extension}}
-#endif
 
 // C++ [temp.class.spec]p9
 //   bullet 1, as amended by DR1315

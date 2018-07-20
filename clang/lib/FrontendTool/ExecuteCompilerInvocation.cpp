@@ -33,6 +33,8 @@
 using namespace clang;
 using namespace llvm::opt;
 
+namespace clang {
+
 static std::unique_ptr<FrontendAction>
 CreateFrontendBaseAction(CompilerInstance &CI) {
   using namespace clang::frontend;
@@ -44,6 +46,8 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
   case ASTDump:                return llvm::make_unique<ASTDumpAction>();
   case ASTPrint:               return llvm::make_unique<ASTPrintAction>();
   case ASTView:                return llvm::make_unique<ASTViewAction>();
+  case DumpCompilerOptions:
+    return llvm::make_unique<DumpCompilerOptionsAction>();
   case DumpRawTokens:          return llvm::make_unique<DumpRawTokensAction>();
   case DumpTokens:             return llvm::make_unique<DumpTokensAction>();
   case EmitAssembly:           return llvm::make_unique<EmitAssemblyAction>();
@@ -64,6 +68,7 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
   case ParseSyntaxOnly:        return llvm::make_unique<SyntaxOnlyAction>();
   case ModuleFileInfo:         return llvm::make_unique<DumpModuleInfoAction>();
   case VerifyPCH:              return llvm::make_unique<VerifyPCHAction>();
+  case TemplightDump:          return llvm::make_unique<TemplightDumpAction>();
 
   case PluginAction: {
     for (FrontendPluginRegistry::iterator it =
@@ -123,7 +128,7 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
 #endif
 }
 
-static std::unique_ptr<FrontendAction>
+std::unique_ptr<FrontendAction>
 CreateFrontendAction(CompilerInstance &CI) {
   // Create the underlying action.
   std::unique_ptr<FrontendAction> Act = CreateFrontendBaseAction(CI);
@@ -179,7 +184,7 @@ CreateFrontendAction(CompilerInstance &CI) {
   return Act;
 }
 
-bool clang::ExecuteCompilerInvocation(CompilerInstance *Clang) {
+bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
   // Honor -help.
   if (Clang->getFrontendOpts().ShowHelp) {
     std::unique_ptr<OptTable> Opts = driver::createDriverOptTable();
@@ -260,3 +265,5 @@ bool clang::ExecuteCompilerInvocation(CompilerInstance *Clang) {
     BuryPointer(std::move(Act));
   return Success;
 }
+
+} // namespace clang 

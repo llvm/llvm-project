@@ -9,6 +9,7 @@
 
 #include "clang/Basic/VirtualFileSystem.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -64,6 +65,21 @@ public:
     return std::string();
   }
   std::error_code setCurrentWorkingDirectory(const Twine &Path) override {
+    return std::error_code();
+  }
+  // Map any symlink to "/symlink".
+  std::error_code getRealPath(const Twine &Path,
+                              SmallVectorImpl<char> &Output) const override {
+    auto I = FilesAndDirs.find(Path.str());
+    if (I == FilesAndDirs.end())
+      return make_error_code(llvm::errc::no_such_file_or_directory);
+    if (I->second.isSymlink()) {
+      Output.clear();
+      Twine("/symlink").toVector(Output);
+      return std::error_code();
+    }
+    Output.clear();
+    Path.toVector(Output);
     return std::error_code();
   }
 
@@ -193,6 +209,35 @@ TEST(VirtualFileSystemTest, BaseOnlyOverlay) {
   Status2 = O->status("/foo");
   EXPECT_FALSE(Status2.getError());
   EXPECT_TRUE(Status->equivalent(*Status2));
+}
+
+TEST(VirtualFileSystemTest, GetRealPathInOverlay) {
+  IntrusiveRefCntPtr<DummyFileSystem> Lower(new DummyFileSystem());
+  Lower->addRegularFile("/foo");
+  Lower->addSymlink("/lower_link");
+  IntrusiveRefCntPtr<DummyFileSystem> Upper(new DummyFileSystem());
+
+  IntrusiveRefCntPtr<vfs::OverlayFileSystem> O(
+      new vfs::OverlayFileSystem(Lower));
+  O->pushOverlay(Upper);
+
+  // Regular file.
+  SmallString<16> RealPath;
+  EXPECT_FALSE(O->getRealPath("/foo", RealPath));
+  EXPECT_EQ(RealPath.str(), "/foo");
+
+  // Expect no error getting real path for symlink in lower overlay.
+  EXPECT_FALSE(O->getRealPath("/lower_link", RealPath));
+  EXPECT_EQ(RealPath.str(), "/symlink");
+
+  // Try a non-existing link.
+  EXPECT_EQ(O->getRealPath("/upper_link", RealPath),
+            errc::no_such_file_or_directory);
+
+  // Add a new symlink in upper.
+  Upper->addSymlink("/upper_link");
+  EXPECT_FALSE(O->getRealPath("/upper_link", RealPath));
+  EXPECT_EQ(RealPath.str(), "/symlink");
 }
 
 TEST(VirtualFileSystemTest, OverlayFiles) {
@@ -442,16 +487,17 @@ TEST(VirtualFileSystemTest, BrokenSymlinkRealFSRecursiveIteration) {
   ScopedDir _dd(TestDirectory + "/d/d");
   ScopedDir _ddd(TestDirectory + "/d/d/d");
   ScopedLink _e("no_such_file", TestDirectory + "/e");
-  std::vector<StringRef> Expected = {_b, _bb, _d, _dd, _ddd};
 
-  std::vector<std::string> Contents;
+  std::vector<StringRef> ExpectedBrokenSymlinks = {_a, _ba, _bc, _c, _e};
+  std::vector<StringRef> ExpectedNonBrokenSymlinks = {_b, _bb, _d, _dd, _ddd};
+  std::vector<std::string> VisitedBrokenSymlinks;
+  std::vector<std::string> VisitedNonBrokenSymlinks;
   std::error_code EC;
   for (vfs::recursive_directory_iterator I(*FS, Twine(TestDirectory), EC), E;
        I != E; I.increment(EC)) {
-    // Skip broken symlinks.
     auto EC2 = std::make_error_code(std::errc::no_such_file_or_directory);
     if (EC == EC2) {
-      EC.clear();
+      VisitedBrokenSymlinks.push_back(I->getName());
       continue;
     }
     // For bot debugging.
@@ -467,13 +513,20 @@ TEST(VirtualFileSystemTest, BrokenSymlinkRealFSRecursiveIteration) {
              << "EC message: " << EC2.message() << "\n";
     }
     ASSERT_FALSE(EC);
-    Contents.push_back(I->getName());
+    VisitedNonBrokenSymlinks.push_back(I->getName());
   }
 
-  // Check sorted contents.
-  std::sort(Contents.begin(), Contents.end());
-  EXPECT_EQ(Expected.size(), Contents.size());
-  EXPECT_TRUE(std::equal(Contents.begin(), Contents.end(), Expected.begin()));
+  // Check visited file names.
+  std::sort(VisitedBrokenSymlinks.begin(), VisitedBrokenSymlinks.end());
+  std::sort(VisitedNonBrokenSymlinks.begin(), VisitedNonBrokenSymlinks.end());
+  EXPECT_EQ(ExpectedBrokenSymlinks.size(), VisitedBrokenSymlinks.size());
+  EXPECT_TRUE(std::equal(VisitedBrokenSymlinks.begin(),
+                         VisitedBrokenSymlinks.end(),
+                         ExpectedBrokenSymlinks.begin()));
+  EXPECT_EQ(ExpectedNonBrokenSymlinks.size(), VisitedNonBrokenSymlinks.size());
+  EXPECT_TRUE(std::equal(VisitedNonBrokenSymlinks.begin(),
+                         VisitedNonBrokenSymlinks.end(),
+                         ExpectedNonBrokenSymlinks.begin()));
 }
 #endif
 
@@ -488,8 +541,8 @@ static void checkContents(DirIter I, ArrayRef<StringRef> ExpectedOut) {
   for (DirIter E; !EC && I != E; I.increment(EC))
     InputToCheck.push_back(I->getName());
 
-  std::sort(InputToCheck.begin(), InputToCheck.end());
-  std::sort(Expected.begin(), Expected.end());
+  llvm::sort(InputToCheck.begin(), InputToCheck.end());
+  llvm::sort(Expected.begin(), Expected.end());
   EXPECT_EQ(InputToCheck.size(), Expected.size());
 
   unsigned LastElt = std::min(InputToCheck.size(), Expected.size());
@@ -759,6 +812,30 @@ TEST_F(InMemoryFileSystemTest, WorkingDirectory) {
   ASSERT_EQ("/b", ReplaceBackslashes(
                       NormalizedFS.getCurrentWorkingDirectory().get()));
 }
+
+#if !defined(_WIN32)
+TEST_F(InMemoryFileSystemTest, GetRealPath) {
+  SmallString<16> Path;
+  EXPECT_EQ(FS.getRealPath("b", Path), errc::operation_not_permitted);
+
+  auto GetRealPath = [this](StringRef P) {
+    SmallString<16> Output;
+    auto EC = FS.getRealPath(P, Output);
+    EXPECT_FALSE(EC);
+    return Output.str().str();
+  };
+
+  FS.setCurrentWorkingDirectory("a");
+  EXPECT_EQ(GetRealPath("b"), "a/b");
+  EXPECT_EQ(GetRealPath("../b"), "b");
+  EXPECT_EQ(GetRealPath("b/./c"), "a/b/c");
+
+  FS.setCurrentWorkingDirectory("/a");
+  EXPECT_EQ(GetRealPath("b"), "/a/b");
+  EXPECT_EQ(GetRealPath("../b"), "/b");
+  EXPECT_EQ(GetRealPath("b/./c"), "/a/b/c");
+}
+#endif // _WIN32
 
 TEST_F(InMemoryFileSystemTest, AddFileWithUser) {
   FS.addFile("/a/b/c", 0, MemoryBuffer::getMemBuffer("abc"), 0xFEEDFACE);

@@ -5,33 +5,33 @@
 #include <immintrin.h>
 
 void foo64(__m64) {}
-// CHECK: define void @"\01?foo64@@YAXT__m64@@@Z"
+// CHECK: define dso_local void @"?foo64@@YAXT__m64@@@Z"
 
 void foo128(__m128) {}
-// CHECK: define void @"\01?foo128@@YAXT__m128@@@Z"
+// CHECK: define dso_local void @"?foo128@@YAXT__m128@@@Z"
 
 void foo128d(__m128d) {}
-// CHECK: define void @"\01?foo128d@@YAXU__m128d@@@Z"
+// CHECK: define dso_local void @"?foo128d@@YAXU__m128d@@@Z"
 
 void foo128i(__m128i) {}
-// CHECK: define void @"\01?foo128i@@YAXT__m128i@@@Z"
+// CHECK: define dso_local void @"?foo128i@@YAXT__m128i@@@Z"
 
 void foo256(__m256) {}
-// CHECK: define void @"\01?foo256@@YAXT__m256@@@Z"
+// CHECK: define dso_local void @"?foo256@@YAXT__m256@@@Z"
 
 void foo256d(__m256d) {}
-// CHECK: define void @"\01?foo256d@@YAXU__m256d@@@Z"
+// CHECK: define dso_local void @"?foo256d@@YAXU__m256d@@@Z"
 
 void foo256i(__m256i) {}
-// CHECK: define void @"\01?foo256i@@YAXT__m256i@@@Z"
+// CHECK: define dso_local void @"?foo256i@@YAXT__m256i@@@Z"
 
 // We have a custom mangling for vector types not standardized by Intel.
 void foov8hi(__v8hi) {}
-// CHECK: define void @"\01?foov8hi@@YAXT?$__vector@F$07@__clang@@@Z"
+// CHECK: define dso_local void @"?foov8hi@@YAXT?$__vector@F$07@__clang@@@Z"
 
 typedef __attribute__((ext_vector_type(4))) int vi4b;
 void foovi4b(vi4b) {}
-// CHECK: define void @"\01?foovi4b@@YAXT?$__vector@H$03@__clang@@@Z"
+// CHECK: define dso_local void @"?foovi4b@@YAXT?$__vector@H$03@__clang@@@Z"
 
 // Clang does not support vectors of complex types, so we can't test the
 // mangling of them.

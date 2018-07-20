@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 %s -ffreestanding -triple=x86_64-apple-darwin -target-feature +clflushopt  -emit-llvm -o - -Wall -Werror | FileCheck %s
 
-#include <x86intrin.h>
+#include <immintrin.h>
 
 void test_mm_clflushopt(char * __m) {
   //CHECK-LABEL: @test_mm_clflushopt

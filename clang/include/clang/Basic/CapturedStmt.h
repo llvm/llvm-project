@@ -13,9 +13,10 @@
 
 namespace clang {
 
-/// \brief The different kinds of captured statement.
+/// The different kinds of captured statement.
 enum CapturedRegionKind {
   CR_Default,
+  CR_ObjCAtFinally,
   CR_OpenMP
 };
 

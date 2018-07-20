@@ -1,4 +1,4 @@
-//==- CFGReachabilityAnalysis.cpp - Basic reachability analysis --*- C++ -*-==//
+//===- CFGReachabilityAnalysis.cpp - Basic reachability analysis ----------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -13,18 +13,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/SmallVector.h"
 #include "clang/Analysis/Analyses/CFGReachabilityAnalysis.h"
 #include "clang/Analysis/CFG.h"
+#include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/SmallVector.h"
 
 using namespace clang;
 
-CFGReverseBlockReachabilityAnalysis::CFGReverseBlockReachabilityAnalysis(const CFG &cfg)
-  : analyzed(cfg.getNumBlockIDs(), false) {}
+CFGReverseBlockReachabilityAnalysis::CFGReverseBlockReachabilityAnalysis(
+    const CFG &cfg)
+    : analyzed(cfg.getNumBlockIDs(), false) {}
 
 bool CFGReverseBlockReachabilityAnalysis::isReachable(const CFGBlock *Src,
                                           const CFGBlock *Dst) {
-
   const unsigned DstBlockID = Dst->getBlockID();
   
   // If we haven't analyzed the destination node, run the analysis now

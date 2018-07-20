@@ -4,6 +4,7 @@ set( LLVM_LINK_COMPONENTS
   CodeGen
   Core
   IPO
+  AggressiveInstCombine
   InstCombine
   Instrumentation
   MC
@@ -33,6 +34,7 @@ add_clang_tool(clang
   cc1_main.cpp
   cc1as_main.cpp
   apinotes_main.cpp
+  cc1gen_reproducer_main.cpp
 
   DEPENDS
   ${tablegen_deps}
@@ -98,20 +100,16 @@ if (APPLE)
   set(TOOL_INFO_BUILD_VERSION)
 endif()
 
-if(CLANG_ORDER_FILE AND (LD64_EXECUTABLE OR GOLD_EXECUTABLE))
-  include(CMakePushCheckState)
+if(CLANG_ORDER_FILE AND
+    (LLVM_LINKER_IS_LD64 OR LLVM_LINKER_IS_GOLD OR LLVM_LINKER_IS_LLD))
+  include(CheckLinkerFlag)
 
-  function(check_linker_flag flag out_var)
-    cmake_push_check_state()
-    set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} ${flag}")
-    check_cxx_compiler_flag("" ${out_var})
-    cmake_pop_check_state()
-  endfunction()
-
-  if (LD64_EXECUTABLE)
+  if (LLVM_LINKER_IS_LD64)
     set(LINKER_ORDER_FILE_OPTION "-Wl,-order_file,${CLANG_ORDER_FILE}")
-  elseif (GOLD_EXECUTABLE)
+  elseif (LLVM_LINKER_IS_GOLD)
     set(LINKER_ORDER_FILE_OPTION "-Wl,--section-ordering-file,${CLANG_ORDER_FILE}")
+  elseif (LLVM_LINKER_IS_LLD)
+    set(LINKER_ORDER_FILE_OPTION "-Wl,--symbol-ordering-file,${CLANG_ORDER_FILE}")
   endif()
 
   # This is a test to ensure the actual order file works with the linker.

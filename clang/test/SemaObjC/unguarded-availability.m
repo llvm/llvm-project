@@ -7,7 +7,7 @@
 
 typedef int AVAILABLE_10_12 new_int; // expected-note + {{marked partial here}}
 
-int func_10_11() AVAILABLE_10_11; // expected-note 4 {{'func_10_11' has been explicitly marked partial here}}
+int func_10_11() AVAILABLE_10_11; // expected-note 8 {{'func_10_11' has been explicitly marked partial here}}
 
 #ifdef OBJCPP
 // expected-note@+2 6 {{marked partial here}}
@@ -310,4 +310,46 @@ void switchAnimals(Animals a) {
   (void)AK_Dodo; // expected-warning{{'AK_Dodo' is deprecated}}
   (void)AK_Cat; // no warning
   (void)AK_CyborgCat; // expected-warning{{'AK_CyborgCat' is only available on macOS 10.12 or newer}} expected-note {{@available}}
+}
+
+
+// test static initializers has the same availability as the deployment target and it cannot be overwritten.
+@interface HasStaticInitializer : BaseClass
++ (void)load AVAILABLE_10_11; // expected-warning{{ignoring availability attribute on '+load' method}}
+@end
+
+@implementation HasStaticInitializer
++ (void)load {
+  func_10_11(); // expected-warning{{'func_10_11' is only available on macOS 10.11 or newer}} expected-note{{enclose 'func_10_11' in an @available check to silence this warning}}
+}
+@end
+
+// test availability from interface is ignored when checking the unguarded availability in +load method.
+AVAILABLE_10_11
+@interface HasStaticInitializer1 : BaseClass
++ (void)load;
++ (void)load: (int)x; // no warning.
+@end
+
+@implementation HasStaticInitializer1
++ (void)load {
+  func_10_11(); // expected-warning{{'func_10_11' is only available on macOS 10.11 or newer}} expected-note{{enclose 'func_10_11' in an @available check to silence this warning}}
+}
++ (void)load: (int)x {
+  func_10_11(); // no warning.
+}
+@end
+
+__attribute__((constructor))
+void is_constructor();
+
+AVAILABLE_10_11 // expected-warning{{ignoring availability attribute with constructor attribute}}
+void is_constructor() {
+  func_10_11(); // expected-warning{{'func_10_11' is only available on macOS 10.11 or newer}} expected-note{{enclose 'func_10_11' in an @available check to silence this warning}}
+}
+
+AVAILABLE_10_11 // expected-warning{{ignoring availability attribute with destructor attribute}}
+__attribute__((destructor))
+void is_destructor() {
+  func_10_11(); // expected-warning{{'func_10_11' is only available on macOS 10.11 or newer}} expected-note{{enclose 'func_10_11' in an @available check to silence this warning}}
 }

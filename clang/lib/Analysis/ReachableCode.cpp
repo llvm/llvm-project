@@ -66,6 +66,21 @@ static bool isBuiltinUnreachable(const Stmt *S) {
   return false;
 }
 
+static bool isBuiltinAssumeFalse(const CFGBlock *B, const Stmt *S,
+                                 ASTContext &C) {
+  if (B->empty())  {
+    // Happens if S is B's terminator and B contains nothing else
+    // (e.g. a CFGBlock containing only a goto).
+    return false;
+  }
+  if (Optional<CFGStmt> CS = B->back().getAs<CFGStmt>()) {
+    if (const auto *CE = dyn_cast<CallExpr>(CS->getStmt())) {
+      return CE->getCallee()->IgnoreCasts() == S && CE->isBuiltinAssumeFalse(C);
+    }
+  }
+  return false;
+}
+
 static bool isDeadReturn(const CFGBlock *B, const Stmt *S) {
   // Look to see if the current control flow ends with a 'return', and see if
   // 'S' is a substatement. The 'return' may not be the last element in the
@@ -372,6 +387,7 @@ namespace {
     llvm::BitVector &Reachable;
     SmallVector<const CFGBlock *, 10> WorkList;
     Preprocessor &PP;
+    ASTContext &C;
 
     typedef SmallVector<std::pair<const CFGBlock *, const Stmt *>, 12>
     DeferredLocsTy;
@@ -379,10 +395,10 @@ namespace {
     DeferredLocsTy DeferredLocs;
 
   public:
-    DeadCodeScan(llvm::BitVector &reachable, Preprocessor &PP)
+    DeadCodeScan(llvm::BitVector &reachable, Preprocessor &PP, ASTContext &C)
     : Visited(reachable.size()),
       Reachable(reachable),
-      PP(PP) {}
+      PP(PP), C(C) {}
 
     void enqueue(const CFGBlock *block);
     unsigned scanBackwards(const CFGBlock *Start,
@@ -600,7 +616,8 @@ void DeadCodeScan::reportDeadCode(const CFGBlock *B,
 
   if (isa<BreakStmt>(S)) {
     UK = reachable_code::UK_Break;
-  } else if (isTrivialDoWhile(B, S) || isBuiltinUnreachable(S)) {
+  } else if (isTrivialDoWhile(B, S) || isBuiltinUnreachable(S) ||
+             isBuiltinAssumeFalse(B, S, C)) {
     return;
   }
   else if (isDeadReturn(B, S)) {
@@ -693,7 +710,7 @@ void FindUnreachableCode(AnalysisDeclContext &AC, Preprocessor &PP,
     if (reachable[block->getBlockID()])
       continue;
     
-    DeadCodeScan DS(reachable, PP);
+    DeadCodeScan DS(reachable, PP, AC.getASTContext());
     numReachable += DS.scanBackwards(block, CB);
     
     if (numReachable == cfg->getNumBlockIDs())

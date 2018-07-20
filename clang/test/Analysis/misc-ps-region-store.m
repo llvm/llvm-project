@@ -1109,7 +1109,7 @@ void pr8015_C() {
 }
 
 // Tests that we correctly handle that 'number' is perfectly constrained
-// after 'if (nunber == 0)', allowing us to resolve that
+// after 'if (number == 0)', allowing us to resolve that
 // numbers[number] == numbers[0].
 void pr8015_D_FIXME() {
   int number = pr8015_A();

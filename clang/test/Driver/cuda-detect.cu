@@ -4,9 +4,14 @@
 //
 // Check that we properly detect CUDA installation.
 // RUN: %clang -v --target=i386-unknown-linux \
-// RUN:   --sysroot=%S/no-cuda-there 2>&1 | FileCheck %s -check-prefix NOCUDA
+// RUN:   --sysroot=%S/no-cuda-there --cuda-path-ignore-env 2>&1 | FileCheck %s -check-prefix NOCUDA
 // RUN: %clang -v --target=i386-apple-macosx \
-// RUN:   --sysroot=%S/no-cuda-there 2>&1 | FileCheck %s -check-prefix NOCUDA
+// RUN:   --sysroot=%S/no-cuda-there --cuda-path-ignore-env 2>&1 | FileCheck %s -check-prefix NOCUDA
+// RUN: %clang -v --target=x86_64-unknown-linux \
+// RUN:   --sysroot=%S/no-cuda-there --cuda-path-ignore-env 2>&1 | FileCheck %s -check-prefix NOCUDA
+// RUN: %clang -v --target=x86_64-apple-macosx \
+// RUN:   --sysroot=%S/no-cuda-there --cuda-path-ignore-env 2>&1 | FileCheck %s -check-prefix NOCUDA
+
 
 // RUN: %clang -v --target=i386-unknown-linux \
 // RUN:   --sysroot=%S/Inputs/CUDA 2>&1 | FileCheck %s
@@ -20,15 +25,23 @@
 
 // Check that we don't find a CUDA installation without libdevice ...
 // RUN: %clang -v --target=i386-unknown-linux \
-// RUN:   --sysroot=%S/Inputs/CUDA-nolibdevice 2>&1 | FileCheck %s -check-prefix NOCUDA
+// RUN:   --sysroot=%S/Inputs/CUDA-nolibdevice --cuda-path-ignore-env 2>&1 | FileCheck %s -check-prefix NOCUDA
 // RUN: %clang -v --target=i386-apple-macosx \
-// RUN:   --sysroot=%S/Inputs/CUDA-nolibdevice 2>&1 | FileCheck %s -check-prefix NOCUDA
+// RUN:   --sysroot=%S/Inputs/CUDA-nolibdevice --cuda-path-ignore-env 2>&1 | FileCheck %s -check-prefix NOCUDA
+// RUN: %clang -v --target=x86_64-unknown-linux \
+// RUN:   --sysroot=%S/Inputs/CUDA-nolibdevice --cuda-path-ignore-env 2>&1 | FileCheck %s -check-prefix NOCUDA
+// RUN: %clang -v --target=x84_64-apple-macosx \
+// RUN:   --sysroot=%S/Inputs/CUDA-nolibdevice --cuda-path-ignore-env 2>&1 | FileCheck %s -check-prefix NOCUDA
 
 // ... unless the user doesn't need libdevice
 // RUN: %clang -v --target=i386-unknown-linux -nocudalib \
-// RUN:   --sysroot=%S/Inputs/CUDA-nolibdevice 2>&1 | FileCheck %s -check-prefix NO-LIBDEVICE
+// RUN:   --sysroot=%S/Inputs/CUDA-nolibdevice --cuda-path-ignore-env 2>&1 | FileCheck %s -check-prefix NO-LIBDEVICE
 // RUN: %clang -v --target=i386-apple-macosx -nocudalib \
-// RUN:   --sysroot=%S/Inputs/CUDA-nolibdevice 2>&1 | FileCheck %s -check-prefix NO-LIBDEVICE
+// RUN:   --sysroot=%S/Inputs/CUDA-nolibdevice --cuda-path-ignore-env 2>&1 | FileCheck %s -check-prefix NO-LIBDEVICE
+// RUN: %clang -v --target=x86_64-unknown-linux -nocudalib \
+// RUN:   --sysroot=%S/Inputs/CUDA-nolibdevice --cuda-path-ignore-env 2>&1 | FileCheck %s -check-prefix NO-LIBDEVICE
+// RUN: %clang -v --target=x86_64-apple-macosx -nocudalib \
+// RUN:   --sysroot=%S/Inputs/CUDA-nolibdevice --cuda-path-ignore-env 2>&1 | FileCheck %s -check-prefix NO-LIBDEVICE
 
 
 // Make sure we map libdevice bitcode files to proper GPUs. These

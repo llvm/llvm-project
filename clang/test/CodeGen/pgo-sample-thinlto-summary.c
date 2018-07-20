@@ -13,8 +13,8 @@ void foo(int n) {
     g += baz(i);
 }
 
-// SAMPLEPGO-LABEL: define void @bar
-// THINLTO-LABEL: define void @bar
+// SAMPLEPGO-LABEL: define {{(dso_local )?}}void @bar
+// THINLTO-LABEL: define {{(dso_local )?}}void @bar
 // SAMPLEPGO-NOT: call{{.*}}foo
 // THINLTO: call{{.*}}foo
 void bar(int n) {
@@ -23,8 +23,8 @@ void bar(int n) {
 }
 
 // Checks if loop unroll is invoked by normal compile, but not thinlto compile.
-// SAMPLEPGO-LABEL: define void @unroll
-// THINLTO-LABEL: define void @unroll
+// SAMPLEPGO-LABEL: define {{(dso_local )?}}void @unroll
+// THINLTO-LABEL: define {{(dso_local )?}}void @unroll
 // SAMPLEPGO: call{{.*}}baz
 // SAMPLEPGO: call{{.*}}baz
 // THINLTO: call{{.*}}baz
@@ -35,8 +35,8 @@ void unroll() {
 }
 
 // Checks that icp is not invoked for ThinLTO, but invoked for normal samplepgo.
-// SAMPLEPGO-LABEL: define void @icp
-// THINLTO-LABEL: define void @icp
+// SAMPLEPGO-LABEL: define {{(dso_local )?}}void @icp
+// THINLTO-LABEL: define {{(dso_local )?}}void @icp
 // SAMPLEPGO: if.true.direct_targ
 // FIXME: the following condition needs to be reversed once
 //        LTOPreLinkDefaultPipeline is customized.

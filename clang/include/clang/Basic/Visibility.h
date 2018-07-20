@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief Defines the clang::Visibility enumeration and various utility
+/// Defines the clang::Visibility enumeration and various utility
 /// functions.
 ///
 //===----------------------------------------------------------------------===//
@@ -16,10 +16,12 @@
 #define LLVM_CLANG_BASIC_VISIBILITY_H
 
 #include "clang/Basic/Linkage.h"
+#include <cassert>
+#include <cstdint>
 
 namespace clang {
 
-/// \brief Describes the different kinds of visibility that a declaration
+/// Describes the different kinds of visibility that a declaration
 /// may have.
 ///
 /// Visibility determines how a declaration interacts with the dynamic

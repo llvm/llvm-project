@@ -30,10 +30,10 @@ namespace diagtool {
     }
   };
 
-  /// \brief Get every diagnostic in the system, sorted by name.
+  /// Get every diagnostic in the system, sorted by name.
   llvm::ArrayRef<DiagnosticRecord> getBuiltinDiagnosticsByName();
 
-  /// \brief Get a diagnostic by its ID.
+  /// Get a diagnostic by its ID.
   const DiagnosticRecord &getDiagnosticForID(short DiagID);
 
 
@@ -101,7 +101,7 @@ namespace diagtool {
     }
   };
 
-  /// \brief Get every diagnostic group in the system, sorted by name.
+  /// Get every diagnostic group in the system, sorted by name.
   llvm::ArrayRef<GroupRecord> getDiagnosticGroups();
 
   template<>

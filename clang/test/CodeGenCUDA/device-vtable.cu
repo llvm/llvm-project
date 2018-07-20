@@ -19,7 +19,9 @@ struct H  {
 //CHECK-HOST: @_ZTV1H =
 //CHECK-HOST-SAME: @_ZN1H6methodEv
 //CHECK-DEVICE-NOT: @_ZTV1H =
-
+//CHECK-DEVICE-NOT: @_ZTVN10__cxxabiv117__class_type_infoE
+//CHECK-DEVICE-NOT: @_ZTS1H
+//CHECK-DEVICE-NOT: @_ZTI1H
 struct D  {
    __device__ virtual void method();
 };
@@ -27,7 +29,9 @@ struct D  {
 //CHECK-DEVICE: @_ZTV1D
 //CHECK-DEVICE-SAME: @_ZN1D6methodEv
 //CHECK-HOST-NOT: @_ZTV1D
-
+//CHECK-DEVICE-NOT: @_ZTVN10__cxxabiv117__class_type_infoE
+//CHECK-DEVICE-NOT: @_ZTS1D
+//CHECK-DEVICE-NOT: @_ZTI1D
 // This is the case with mixed host and device virtual methods.  It's
 // impossible to emit a valid vtable in that case because only host or
 // only device methods would be available during host or device
@@ -45,6 +49,9 @@ struct HD  {
 // CHECK-HOST-NOT: @_ZN2HD8d_methodEv
 // CHECK-HOST-SAME: null
 // CHECK-BOTH-SAME: ]
+// CHECK-DEVICE-NOT: @_ZTVN10__cxxabiv117__class_type_infoE
+// CHECK-DEVICE-NOT: @_ZTS2HD
+// CHECK-DEVICE-NOT: @_ZTI2HD
 
 void H::method() {}
 //CHECK-HOST: define void @_ZN1H6methodEv

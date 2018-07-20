@@ -122,7 +122,7 @@ static void CheckUnreachable(Sema &S, AnalysisDeclContext &AC) {
 }
 
 namespace {
-/// \brief Warn on logical operator errors in CFGBuilder
+/// Warn on logical operator errors in CFGBuilder
 class LogicalErrorHandler : public CFGCallback {
   Sema &S;
 
@@ -200,60 +200,41 @@ static bool hasRecursiveCallInPath(const FunctionDecl *FD, CFGBlock &Block) {
   return false;
 }
 
-// All blocks are in one of three states.  States are ordered so that blocks
-// can only move to higher states.
-enum RecursiveState {
-  FoundNoPath,
-  FoundPath,
-  FoundPathWithNoRecursiveCall
-};
-
-// Returns true if there exists a path to the exit block and every path
-// to the exit block passes through a call to FD.
+// Returns true if every path from the entry block passes through a call to FD.
 static bool checkForRecursiveFunctionCall(const FunctionDecl *FD, CFG *cfg) {
+  llvm::SmallPtrSet<CFGBlock *, 16> Visited;
+  llvm::SmallVector<CFGBlock *, 16> WorkList;
+  // Keep track of whether we found at least one recursive path.
+  bool foundRecursion = false;
 
   const unsigned ExitID = cfg->getExit().getBlockID();
 
-  // Mark all nodes as FoundNoPath, then set the status of the entry block.
-  SmallVector<RecursiveState, 16> States(cfg->getNumBlockIDs(), FoundNoPath);
-  States[cfg->getEntry().getBlockID()] = FoundPathWithNoRecursiveCall;
+  // Seed the work list with the entry block.
+  WorkList.push_back(&cfg->getEntry());
 
-  // Make the processing stack and seed it with the entry block.
-  SmallVector<CFGBlock *, 16> Stack;
-  Stack.push_back(&cfg->getEntry());
+  while (!WorkList.empty()) {
+    CFGBlock *Block = WorkList.pop_back_val();
 
-  while (!Stack.empty()) {
-    CFGBlock *CurBlock = Stack.back();
-    Stack.pop_back();
+    for (auto I = Block->succ_begin(), E = Block->succ_end(); I != E; ++I) {
+      if (CFGBlock *SuccBlock = *I) {
+        if (!Visited.insert(SuccBlock).second)
+          continue;
 
-    unsigned ID = CurBlock->getBlockID();
-    RecursiveState CurState = States[ID];
+        // Found a path to the exit node without a recursive call.
+        if (ExitID == SuccBlock->getBlockID())
+          return false;
 
-    if (CurState == FoundPathWithNoRecursiveCall) {
-      // Found a path to the exit node without a recursive call.
-      if (ExitID == ID)
-        return false;
-
-      // Only change state if the block has a recursive call.
-      if (hasRecursiveCallInPath(FD, *CurBlock))
-        CurState = FoundPath;
-    }
-
-    // Loop over successor blocks and add them to the Stack if their state
-    // changes.
-    for (auto I = CurBlock->succ_begin(), E = CurBlock->succ_end(); I != E; ++I)
-      if (*I) {
-        unsigned next_ID = (*I)->getBlockID();
-        if (States[next_ID] < CurState) {
-          States[next_ID] = CurState;
-          Stack.push_back(*I);
+        // If the successor block contains a recursive call, end analysis there.
+        if (hasRecursiveCallInPath(FD, *SuccBlock)) {
+          foundRecursion = true;
+          continue;
         }
-      }
-  }
 
-  // Return true if the exit node is reachable, and only reachable through
-  // a recursive call.
-  return States[ExitID] == FoundPath;
+        WorkList.push_back(SuccBlock);
+      }
+    }
+  }
+  return foundRecursion;
 }
 
 static void checkRecursiveFunction(Sema &S, const FunctionDecl *FD,
@@ -269,10 +250,6 @@ static void checkRecursiveFunction(Sema &S, const FunctionDecl *FD,
   CFG *cfg = AC.getCFG();
   if (!cfg) return;
 
-  // If the exit block is unreachable, skip processing the function.
-  if (cfg->getExit().pred_empty())
-    return;
-
   // Emit diagnostic if a recursive function call is detected for all paths.
   if (checkForRecursiveFunctionCall(FD, cfg))
     S.Diag(Body->getLocStart(), diag::warn_infinite_recursive_function);
@@ -281,114 +258,62 @@ static void checkRecursiveFunction(Sema &S, const FunctionDecl *FD,
 //===----------------------------------------------------------------------===//
 // Check for throw in a non-throwing function.
 //===----------------------------------------------------------------------===//
-enum ThrowState {
-  FoundNoPathForThrow,
-  FoundPathForThrow,
-  FoundPathWithNoThrowOutFunction,
-};
 
-static bool isThrowCaught(const CXXThrowExpr *Throw,
-                          const CXXCatchStmt *Catch) {
-  const Type *CaughtType = Catch->getCaughtType().getTypePtrOrNull();
-  if (!CaughtType)
-    return true;
-  const Type *ThrowType = nullptr;
-  if (Throw->getSubExpr())
-    ThrowType = Throw->getSubExpr()->getType().getTypePtrOrNull();
-  if (!ThrowType)
-    return false;
-  if (ThrowType->isReferenceType())
-    ThrowType = ThrowType->castAs<ReferenceType>()
-                    ->getPointeeType()
-                    ->getUnqualifiedDesugaredType();
-  if (CaughtType->isReferenceType())
-    CaughtType = CaughtType->castAs<ReferenceType>()
-                     ->getPointeeType()
-                     ->getUnqualifiedDesugaredType();
-  if (ThrowType->isPointerType() && CaughtType->isPointerType()) {
-    ThrowType = ThrowType->getPointeeType()->getUnqualifiedDesugaredType();
-    CaughtType = CaughtType->getPointeeType()->getUnqualifiedDesugaredType();
-  }
-  if (CaughtType == ThrowType)
-    return true;
-  const CXXRecordDecl *CaughtAsRecordType =
-      CaughtType->getAsCXXRecordDecl();
-  const CXXRecordDecl *ThrowTypeAsRecordType = ThrowType->getAsCXXRecordDecl();
-  if (CaughtAsRecordType && ThrowTypeAsRecordType)
-    return ThrowTypeAsRecordType->isDerivedFrom(CaughtAsRecordType);
-  return false;
-}
-
-static bool isThrowCaughtByHandlers(const CXXThrowExpr *CE,
-                                    const CXXTryStmt *TryStmt) {
-  for (unsigned H = 0, E = TryStmt->getNumHandlers(); H < E; ++H) {
-    if (isThrowCaught(CE, TryStmt->getHandler(H)))
-      return true;
-  }
-  return false;
-}
-
-static bool doesThrowEscapePath(CFGBlock Block, SourceLocation &OpLoc) {
-  for (const auto &B : Block) {
-    if (B.getKind() != CFGElement::Statement)
-      continue;
-    const auto *CE = dyn_cast<CXXThrowExpr>(B.getAs<CFGStmt>()->getStmt());
-    if (!CE)
-      continue;
-
-    OpLoc = CE->getThrowLoc();
-    for (const auto &I : Block.succs()) {
-      if (!I.isReachable())
-        continue;
-      if (const auto *Terminator =
-              dyn_cast_or_null<CXXTryStmt>(I->getTerminator()))
-        if (isThrowCaughtByHandlers(CE, Terminator))
-          return false;
-    }
-    return true;
-  }
-  return false;
-}
-
-static bool hasThrowOutNonThrowingFunc(SourceLocation &OpLoc, CFG *BodyCFG) {
-
-  unsigned ExitID = BodyCFG->getExit().getBlockID();
-
-  SmallVector<ThrowState, 16> States(BodyCFG->getNumBlockIDs(),
-                                     FoundNoPathForThrow);
-  States[BodyCFG->getEntry().getBlockID()] = FoundPathWithNoThrowOutFunction;
-
+/// Determine whether an exception thrown by E, unwinding from ThrowBlock,
+/// can reach ExitBlock.
+static bool throwEscapes(Sema &S, const CXXThrowExpr *E, CFGBlock &ThrowBlock,
+                         CFG *Body) {
   SmallVector<CFGBlock *, 16> Stack;
-  Stack.push_back(&BodyCFG->getEntry());
-  while (!Stack.empty()) {
-    CFGBlock *CurBlock = Stack.pop_back_val();
+  llvm::BitVector Queued(Body->getNumBlockIDs());
 
-    unsigned ID = CurBlock->getBlockID();
-    ThrowState CurState = States[ID];
-    if (CurState == FoundPathWithNoThrowOutFunction) {
-      if (ExitID == ID)
+  Stack.push_back(&ThrowBlock);
+  Queued[ThrowBlock.getBlockID()] = true;
+
+  while (!Stack.empty()) {
+    CFGBlock &UnwindBlock = *Stack.back();
+    Stack.pop_back();
+
+    for (auto &Succ : UnwindBlock.succs()) {
+      if (!Succ.isReachable() || Queued[Succ->getBlockID()])
         continue;
 
-      if (doesThrowEscapePath(*CurBlock, OpLoc))
-        CurState = FoundPathForThrow;
-    }
+      if (Succ->getBlockID() == Body->getExit().getBlockID())
+        return true;
 
-    // Loop over successor blocks and add them to the Stack if their state
-    // changes.
-    for (const auto &I : CurBlock->succs())
-      if (I.isReachable()) {
-        unsigned NextID = I->getBlockID();
-        if (NextID == ExitID && CurState == FoundPathForThrow) {
-          States[NextID] = CurState;
-        } else if (States[NextID] < CurState) {
-          States[NextID] = CurState;
-          Stack.push_back(I);
-        }
+      if (auto *Catch =
+              dyn_cast_or_null<CXXCatchStmt>(Succ->getLabel())) {
+        QualType Caught = Catch->getCaughtType();
+        if (Caught.isNull() || // catch (...) catches everything
+            !E->getSubExpr() || // throw; is considered cuaght by any handler
+            S.handlerCanCatch(Caught, E->getSubExpr()->getType()))
+          // Exception doesn't escape via this path.
+          break;
+      } else {
+        Stack.push_back(Succ);
+        Queued[Succ->getBlockID()] = true;
       }
+    }
   }
-  // Return true if the exit node is reachable, and only reachable through
-  // a throw expression.
-  return States[ExitID] == FoundPathForThrow;
+
+  return false;
+}
+
+static void visitReachableThrows(
+    CFG *BodyCFG,
+    llvm::function_ref<void(const CXXThrowExpr *, CFGBlock &)> Visit) {
+  llvm::BitVector Reachable(BodyCFG->getNumBlockIDs());
+  clang::reachable_code::ScanReachableFromBlock(&BodyCFG->getEntry(), Reachable);
+  for (CFGBlock *B : *BodyCFG) {
+    if (!Reachable[B->getBlockID()])
+      continue;
+    for (CFGElement &E : *B) {
+      Optional<CFGStmt> S = E.getAs<CFGStmt>();
+      if (!S)
+        continue;
+      if (auto *Throw = dyn_cast<CXXThrowExpr>(S->getStmt()))
+        Visit(Throw, *B);
+    }
+  }
 }
 
 static void EmitDiagForCXXThrowInNonThrowingFunc(Sema &S, SourceLocation OpLoc,
@@ -418,14 +343,15 @@ static void checkThrowInNonThrowingFunc(Sema &S, const FunctionDecl *FD,
     return;
   if (BodyCFG->getExit().pred_empty())
     return;
-  SourceLocation OpLoc;
-  if (hasThrowOutNonThrowingFunc(OpLoc, BodyCFG))
-    EmitDiagForCXXThrowInNonThrowingFunc(S, OpLoc, FD);
+  visitReachableThrows(BodyCFG, [&](const CXXThrowExpr *Throw, CFGBlock &Block) {
+    if (throwEscapes(S, Throw, Block, BodyCFG))
+      EmitDiagForCXXThrowInNonThrowingFunc(S, Throw->getThrowLoc(), FD);
+  });
 }
 
 static bool isNoexcept(const FunctionDecl *FD) {
   const auto *FPT = FD->getType()->castAs<FunctionProtoType>();
-  if (FPT->isNothrow(FD->getASTContext()) || FD->hasAttr<NoThrowAttr>())
+  if (FPT->isNothrow() || FD->hasAttr<NoThrowAttr>())
     return true;
   return false;
 }
@@ -683,18 +609,19 @@ struct CheckFallThroughDiagnostics {
 
 } // anonymous namespace
 
-/// CheckFallThroughForFunctionDef - Check that we don't fall off the end of a
+/// CheckFallThroughForBody - Check that we don't fall off the end of a
 /// function that should return a value.  Check that we don't fall off the end
 /// of a noreturn function.  We assume that functions and blocks not marked
 /// noreturn will return.
 static void CheckFallThroughForBody(Sema &S, const Decl *D, const Stmt *Body,
                                     const BlockExpr *blkExpr,
-                                    const CheckFallThroughDiagnostics& CD,
-                                    AnalysisDeclContext &AC) {
+                                    const CheckFallThroughDiagnostics &CD,
+                                    AnalysisDeclContext &AC,
+                                    sema::FunctionScopeInfo *FSI) {
 
   bool ReturnsVoid = false;
   bool HasNoReturn = false;
-  bool IsCoroutine = S.getCurFunction() && S.getCurFunction()->isCoroutine();
+  bool IsCoroutine = FSI->isCoroutine();
 
   if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
     if (const auto *CBody = dyn_cast<CoroutineBodyStmt>(Body))
@@ -726,7 +653,7 @@ static void CheckFallThroughForBody(Sema &S, const Decl *D, const Stmt *Body,
   SourceLocation LBrace = Body->getLocStart(), RBrace = Body->getLocEnd();
   auto EmitDiag = [&](SourceLocation Loc, unsigned DiagID) {
     if (IsCoroutine)
-      S.Diag(Loc, DiagID) << S.getCurFunction()->CoroutinePromise->getType();
+      S.Diag(Loc, DiagID) << FSI->CoroutinePromise->getType();
     else
       S.Diag(Loc, DiagID);
   };
@@ -1461,8 +1388,8 @@ static void diagnoseRepeatedUseOfWeak(Sema &S,
 
   // Sort by first use so that we emit the warnings in a deterministic order.
   SourceManager &SM = S.getSourceManager();
-  std::sort(UsesByStmt.begin(), UsesByStmt.end(),
-            [&SM](const StmtUsesPair &LHS, const StmtUsesPair &RHS) {
+  llvm::sort(UsesByStmt.begin(), UsesByStmt.end(),
+             [&SM](const StmtUsesPair &LHS, const StmtUsesPair &RHS) {
     return SM.isBeforeInTranslationUnit(LHS.first->getLocStart(),
                                         RHS.first->getLocStart());
   });
@@ -1600,8 +1527,8 @@ public:
         // Sort the uses by their SourceLocations.  While not strictly
         // guaranteed to produce them in line/column order, this will provide
         // a stable ordering.
-        std::sort(vec->begin(), vec->end(),
-                  [](const UninitUse &a, const UninitUse &b) {
+        llvm::sort(vec->begin(), vec->end(),
+                   [](const UninitUse &a, const UninitUse &b) {
           // Prefer a more confident report over a less confident one.
           if (a.getKind() != b.getKind())
             return a.getKind() > b.getKind();
@@ -1674,7 +1601,7 @@ class ThreadSafetyReporter : public clang::threadSafety::ThreadSafetyHandler {
     if (Verbose && CurrentFunction) {
       PartialDiagnosticAt FNote(CurrentFunction->getBody()->getLocStart(),
                                 S.PDiag(diag::note_thread_warning_in_fun)
-                                    << CurrentFunction->getNameAsString());
+                                    << CurrentFunction);
       return OptionalNotes(1, FNote);
     }
     return OptionalNotes();
@@ -1685,7 +1612,7 @@ class ThreadSafetyReporter : public clang::threadSafety::ThreadSafetyHandler {
     if (Verbose && CurrentFunction) {
       PartialDiagnosticAt FNote(CurrentFunction->getBody()->getLocStart(),
                                 S.PDiag(diag::note_thread_warning_in_fun)
-                                    << CurrentFunction->getNameAsString());
+                                    << CurrentFunction);
       ONS.push_back(std::move(FNote));
     }
     return ONS;
@@ -1699,7 +1626,7 @@ class ThreadSafetyReporter : public clang::threadSafety::ThreadSafetyHandler {
     if (Verbose && CurrentFunction) {
       PartialDiagnosticAt FNote(CurrentFunction->getBody()->getLocStart(),
                                 S.PDiag(diag::note_thread_warning_in_fun)
-                                    << CurrentFunction->getNameAsString());
+                                    << CurrentFunction);
       ONS.push_back(std::move(FNote));
     }
     return ONS;
@@ -1723,7 +1650,7 @@ class ThreadSafetyReporter : public clang::threadSafety::ThreadSafetyHandler {
 
   void setVerbose(bool b) { Verbose = b; }
 
-  /// \brief Emit all buffered diagnostics in order of sourcelocation.
+  /// Emit all buffered diagnostics in order of sourcelocation.
   /// We need to output diagnostics produced while iterating through
   /// the lockset in deterministic order, so this function orders diagnostics
   /// and outputs them.
@@ -1815,7 +1742,7 @@ class ThreadSafetyReporter : public clang::threadSafety::ThreadSafetyHandler {
                         diag::warn_variable_requires_any_lock:
                         diag::warn_var_deref_requires_any_lock;
     PartialDiagnosticAt Warning(Loc, S.PDiag(DiagID)
-      << D->getNameAsString() << getLockKindFromAccessKind(AK));
+      << D << getLockKindFromAccessKind(AK));
     Warnings.emplace_back(std::move(Warning), getNotes());
   }
 
@@ -1843,7 +1770,7 @@ class ThreadSafetyReporter : public clang::threadSafety::ThreadSafetyHandler {
           break;
       }
       PartialDiagnosticAt Warning(Loc, S.PDiag(DiagID) << Kind
-                                                       << D->getNameAsString()
+                                                       << D
                                                        << LockName << LK);
       PartialDiagnosticAt Note(Loc, S.PDiag(diag::note_found_mutex_near_match)
                                         << *PossibleMatch);
@@ -1873,12 +1800,11 @@ class ThreadSafetyReporter : public clang::threadSafety::ThreadSafetyHandler {
           break;
       }
       PartialDiagnosticAt Warning(Loc, S.PDiag(DiagID) << Kind
-                                                       << D->getNameAsString()
+                                                       << D
                                                        << LockName << LK);
       if (Verbose && POK == POK_VarAccess) {
         PartialDiagnosticAt Note(D->getLocation(),
-                                 S.PDiag(diag::note_guarded_by_declared_here)
-                                     << D->getNameAsString());
+                                 S.PDiag(diag::note_guarded_by_declared_here));
         Warnings.emplace_back(std::move(Warning), getNotes(Note));
       } else
         Warnings.emplace_back(std::move(Warning), getNotes());
@@ -2194,7 +2120,7 @@ AnalysisBasedWarnings::IssueWarnings(sema::AnalysisBasedWarnings::Policy P,
                    : (fscope->isCoroutine()
                           ? CheckFallThroughDiagnostics::MakeForCoroutine(D)
                           : CheckFallThroughDiagnostics::MakeForFunction(D)));
-    CheckFallThroughForBody(S, D, Body, blkExpr, CD, AC);
+    CheckFallThroughForBody(S, D, Body, blkExpr, CD, AC, fscope);
   }
 
   // Warning: check for unreachable code

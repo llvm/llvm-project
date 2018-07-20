@@ -23,8 +23,8 @@ struct C : A, B {
   // CHECK-NEXT:   via vfptr at offset 4
   // CHECK-NEXT:   0 | void C::g()
 
-  // MANGLING-DAG: @"\01??_7C@@6BA@@@"
-  // MANGLING-DAG: @"\01??_7C@@6BB@@@"
+  // MANGLING-DAG: @"??_7C@@6BA@@@"
+  // MANGLING-DAG: @"??_7C@@6BB@@@"
 
   // Overrides only the right child's method (B::g),
   // needs this adjustment but not thunks.

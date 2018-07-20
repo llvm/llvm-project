@@ -38,7 +38,7 @@ int main() {
 // CHECK: [[SHAREDS_REF_PTR:%.+]] = getelementptr inbounds [[KMP_TASK_T]], [[KMP_TASK_T]]* [[TASK_PTR:%.+]], i32 0, i32 0
 // CHECK: [[SHAREDS_REF:%.+]] = load i8*, i8** [[SHAREDS_REF_PTR]]
 // CHECK: [[BITCAST:%.+]] = bitcast [[STRUCT_SHAREDS]]* [[CAPTURES]] to i8*
-// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[SHAREDS_REF]], i8* [[BITCAST]], i64 16, i32 8, i1 false)
+// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[SHAREDS_REF]], i8* align 8 [[BITCAST]], i64 16, i1 false)
 // CHECK: [[PRIORITY_REF_PTR:%.+]] = getelementptr inbounds [[KMP_TASK_T]], [[KMP_TASK_T]]* [[TASK_PTR]], i32 0, i32 4
 // CHECK: [[PRIORITY:%.+]] = bitcast %union{{.+}}* [[PRIORITY_REF_PTR]] to i32*
 // CHECK: store i32 {{.+}}, i32* [[PRIORITY]]
@@ -55,7 +55,7 @@ int main() {
 // CHECK: [[SHAREDS_REF_PTR:%.+]] = getelementptr inbounds [[KMP_TASK_T]], [[KMP_TASK_T]]* [[TASK_PTR:%.+]], i32 0, i32 0
 // CHECK: [[SHAREDS_REF:%.+]] = load i8*, i8** [[SHAREDS_REF_PTR]]
 // CHECK: [[BITCAST:%.+]] = bitcast [[STRUCT_SHAREDS1]]* [[CAPTURES]] to i8*
-// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[SHAREDS_REF]], i8* [[BITCAST]], i64 8, i32 8, i1 false)
+// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[SHAREDS_REF]], i8* align 8 [[BITCAST]], i64 8, i1 false)
 // CHECK: [[DEP:%.*]] = getelementptr inbounds [4 x [[KMP_DEPEND_INFO]]], [4 x [[KMP_DEPEND_INFO]]]* [[DEPENDENCIES:%.*]], i64 0, i64 0
 // CHECK: [[T0:%.*]] = getelementptr inbounds [[KMP_DEPEND_INFO]], [[KMP_DEPEND_INFO]]* [[DEP]], i32 0, i32 0
 // CHECK: store i64 ptrtoint (i32* @{{.+}} to i64), i64* [[T0]]

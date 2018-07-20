@@ -170,7 +170,7 @@ namespace {
 
 } // namespace
 
-/// \brief Run checkers for visiting Stmts.
+/// Run checkers for visiting Stmts.
 void CheckerManager::runCheckersForStmt(bool isPreVisit,
                                         ExplodedNodeSet &Dst,
                                         const ExplodedNodeSet &Src,
@@ -226,7 +226,7 @@ namespace {
 
 } // namespace
 
-/// \brief Run checkers for visiting obj-c messages.
+/// Run checkers for visiting obj-c messages.
 void CheckerManager::runCheckersForObjCMessage(ObjCMessageVisitKind visitKind,
                                                ExplodedNodeSet &Dst,
                                                const ExplodedNodeSet &Src,
@@ -284,7 +284,7 @@ namespace {
 
 } // namespace
 
-/// \brief Run checkers for visiting an abstract call event.
+/// Run checkers for visiting an abstract call event.
 void CheckerManager::runCheckersForCallEvent(bool isPreVisit,
                                              ExplodedNodeSet &Dst,
                                              const ExplodedNodeSet &Src,
@@ -335,7 +335,7 @@ namespace {
 
 } // namespace
 
-/// \brief Run checkers for load/store of a location.
+/// Run checkers for load/store of a location.
 
 void CheckerManager::runCheckersForLocation(ExplodedNodeSet &Dst,
                                             const ExplodedNodeSet &Src,
@@ -379,7 +379,7 @@ namespace {
 
 } // namespace
 
-/// \brief Run checkers for binding of a value to a location.
+/// Run checkers for binding of a value to a location.
 void CheckerManager::runCheckersForBind(ExplodedNodeSet &Dst,
                                         const ExplodedNodeSet &Src,
                                         SVal location, SVal val,
@@ -433,13 +433,14 @@ void CheckerManager::runCheckersForBeginFunction(ExplodedNodeSet &Dst,
   expandGraphWithCheckers(C, Dst, Src);
 }
 
-/// \brief Run checkers for end of path.
+/// Run checkers for end of path.
 // Note, We do not chain the checker output (like in expandGraphWithCheckers)
 // for this callback since end of path nodes are expected to be final.
 void CheckerManager::runCheckersForEndFunction(NodeBuilderContext &BC,
                                                ExplodedNodeSet &Dst,
                                                ExplodedNode *Pred,
-                                               ExprEngine &Eng) {
+                                               ExprEngine &Eng,
+                                               const ReturnStmt *RS) {
   // We define the builder outside of the loop bacause if at least one checkers
   // creates a sucsessor for Pred, we do not need to generate an
   // autotransition for it.
@@ -449,7 +450,7 @@ void CheckerManager::runCheckersForEndFunction(NodeBuilderContext &BC,
                                           Pred->getLocationContext(),
                                           checkFn.Checker);
     CheckerContext C(Bldr, Eng, Pred, L);
-    checkFn(C);
+    checkFn(RS, C);
   }
 }
 
@@ -480,7 +481,7 @@ namespace {
 
 } // namespace
 
-/// \brief Run checkers for branch condition.
+/// Run checkers for branch condition.
 void CheckerManager::runCheckersForBranchCondition(const Stmt *Condition,
                                                    ExplodedNodeSet &Dst,
                                                    ExplodedNode *Pred,
@@ -529,7 +530,7 @@ void CheckerManager::runCheckersForNewAllocator(
   expandGraphWithCheckers(C, Dst, Src);
 }
 
-/// \brief Run checkers for live symbols.
+/// Run checkers for live symbols.
 void CheckerManager::runCheckersForLiveSymbols(ProgramStateRef state,
                                                SymbolReaper &SymReaper) {
   for (const auto LiveSymbolsChecker : LiveSymbolsCheckers)
@@ -570,7 +571,7 @@ namespace {
 
 } // namespace
 
-/// \brief Run checkers for dead symbols.
+/// Run checkers for dead symbols.
 void CheckerManager::runCheckersForDeadSymbols(ExplodedNodeSet &Dst,
                                                const ExplodedNodeSet &Src,
                                                SymbolReaper &SymReaper,
@@ -581,7 +582,7 @@ void CheckerManager::runCheckersForDeadSymbols(ExplodedNodeSet &Dst,
   expandGraphWithCheckers(C, Dst, Src);
 }
 
-/// \brief Run checkers for region changes.
+/// Run checkers for region changes.
 ProgramStateRef
 CheckerManager::runCheckersForRegionChanges(ProgramStateRef state,
                                             const InvalidatedSymbols *invalidated,
@@ -600,7 +601,7 @@ CheckerManager::runCheckersForRegionChanges(ProgramStateRef state,
   return state;
 }
 
-/// \brief Run checkers to process symbol escape event.
+/// Run checkers to process symbol escape event.
 ProgramStateRef
 CheckerManager::runCheckersForPointerEscape(ProgramStateRef State,
                                    const InvalidatedSymbols &Escaped,
@@ -621,7 +622,7 @@ CheckerManager::runCheckersForPointerEscape(ProgramStateRef State,
   return State;
 }
 
-/// \brief Run checkers for handling assumptions on symbolic values.
+/// Run checkers for handling assumptions on symbolic values.
 ProgramStateRef
 CheckerManager::runCheckersForEvalAssume(ProgramStateRef state,
                                          SVal Cond, bool Assumption) {
@@ -635,7 +636,7 @@ CheckerManager::runCheckersForEvalAssume(ProgramStateRef state,
   return state;
 }
 
-/// \brief Run checkers for evaluating a call.
+/// Run checkers for evaluating a call.
 /// Only one checker will evaluate the call.
 void CheckerManager::runCheckersForEvalCall(ExplodedNodeSet &Dst,
                                             const ExplodedNodeSet &Src,
@@ -680,7 +681,7 @@ void CheckerManager::runCheckersForEvalCall(ExplodedNodeSet &Dst,
   }
 }
 
-/// \brief Run checkers for the entire Translation Unit.
+/// Run checkers for the entire Translation Unit.
 void CheckerManager::runCheckersOnEndOfTranslationUnit(
                                                   const TranslationUnitDecl *TU,
                                                   AnalysisManager &mgr,

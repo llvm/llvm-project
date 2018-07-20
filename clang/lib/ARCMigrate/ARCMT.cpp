@@ -503,7 +503,7 @@ public:
 
 } // end anonymous namespace.
 
-/// \brief Anchor for VTable.
+/// Anchor for VTable.
 MigrationProcess::RewriteListener::~RewriteListener() { }
 
 MigrationProcess::MigrationProcess(

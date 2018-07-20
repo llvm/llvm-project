@@ -335,7 +335,7 @@ class TestCursor(unittest.TestCase):
 
         self.assertEqual(enum.kind, CursorKind.ENUM_DECL)
         enum_type = enum.enum_type
-        self.assertEqual(enum_type.kind, TypeKind.UINT)
+        self.assertIn(enum_type.kind, (TypeKind.UINT, TypeKind.INT))
 
     def test_enum_type_cpp(self):
         tu = get_tu('enum TEST : long long { FOO=1, BAR=2 };', lang="cpp")
@@ -428,6 +428,18 @@ class TestCursor(unittest.TestCase):
         self.assertIsNotNone(foo)
         t = foo.result_type
         self.assertEqual(t.kind, TypeKind.INT)
+
+    def test_result_type_objc_method_decl(self):
+        code = """\
+        @interface Interface : NSObject
+        -(void)voidMethod;
+        @end
+        """
+        tu = get_tu(code, lang='objc')
+        cursor = get_cursor(tu, 'voidMethod')
+        result_type = cursor.result_type
+        self.assertEqual(cursor.kind, CursorKind.OBJC_INSTANCE_METHOD_DECL)
+        self.assertEqual(result_type.kind, TypeKind.VOID)
 
     def test_availability(self):
         tu = get_tu('class A { A(A const&) = delete; };', lang='cpp')
@@ -549,4 +561,4 @@ class TestCursor(unittest.TestCase):
         # all valid manglings.
         # [c-index-test handles this by running the source through clang, emitting
         #  an AST file and running libclang on that AST file]
-        self.assertIn(foo.mangled_name, ('_Z3fooii', '__Z3fooii', '?foo@@YAHHH'))
+        self.assertIn(foo.mangled_name, ('_Z3fooii', '__Z3fooii', '?foo@@YAHHH', '?foo@@YAHHH@Z'))

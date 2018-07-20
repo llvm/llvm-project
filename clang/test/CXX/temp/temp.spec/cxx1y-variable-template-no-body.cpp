@@ -28,10 +28,8 @@ T pi1 = T(3.1415926535897932385); // expected-note 0-2 {{here}}
 
 // Should recover as if specialization
 template float pi1<float> = 1.0;  // expected-error {{explicit template instantiation cannot have a definition; if this definition is meant to be an explicit specialization, add '<>' after the 'template' keyword}}
-#ifndef FIXING
 namespace expected_global {
-  template<> double pi1<double> = 1.5;  // expected-error {{variable template specialization of 'pi1' must originally be declared in the global scope}}
-  template int pi1<int> = 10;  // expected-error {{explicit template instantiation cannot have a definition; if this definition is meant to be an explicit specialization, add '<>' after the 'template' keyword}} \
-                                  expected-error {{variable template specialization of 'pi1' must originally be declared in the global scope}}
-}
+#ifndef FIXING
+  template int pi1<int> = 10;  // expected-error {{explicit template instantiation cannot have a definition; if this definition is meant to be an explicit specialization, add '<>' after the 'template' keyword}} expected-error {{must occur at global scope}}
 #endif
+}

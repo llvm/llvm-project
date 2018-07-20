@@ -41,7 +41,7 @@ public:
   RawComment() : Kind(RCK_Invalid), IsAlmostTrailingComment(false) { }
 
   RawComment(const SourceManager &SourceMgr, SourceRange SR,
-             bool Merged, bool ParseAllComments);
+             const CommentOptions &CommentOpts, bool Merged);
 
   CommentKind getKind() const LLVM_READONLY {
     return (CommentKind) Kind;
@@ -70,7 +70,6 @@ public:
   /// \code /**< stuff */ \endcode
   /// \code /*!< stuff */ \endcode
   bool isTrailingComment() const LLVM_READONLY {
-    assert(isDocumentation());
     return IsTrailingComment;
   }
 
@@ -83,18 +82,12 @@ public:
 
   /// Returns true if this comment is not a documentation comment.
   bool isOrdinary() const LLVM_READONLY {
-    return ((Kind == RCK_OrdinaryBCPL) || (Kind == RCK_OrdinaryC)) &&
-        !ParseAllComments;
+    return ((Kind == RCK_OrdinaryBCPL) || (Kind == RCK_OrdinaryC));
   }
 
   /// Returns true if this comment any kind of a documentation comment.
   bool isDocumentation() const LLVM_READONLY {
     return !isInvalid() && !isOrdinary();
-  }
-
-  /// Returns whether we are parsing all comments.
-  bool isParseAllComments() const LLVM_READONLY {
-    return ParseAllComments;
   }
 
   /// Returns raw comment text with comment markers.
@@ -118,6 +111,30 @@ public:
     return extractBriefText(Context);
   }
 
+  /// Returns sanitized comment text, suitable for presentation in editor UIs.
+  /// E.g. will transform:
+  ///     // This is a long multiline comment.
+  ///     //   Parts of it  might be indented.
+  ///     /* The comments styles might be mixed. */
+  ///  into
+  ///     "This is a long multiline comment.\n"
+  ///     "  Parts of it  might be indented.\n"
+  ///     "The comments styles might be mixed."
+  /// Also removes leading indentation and sanitizes some common cases:
+  ///     /* This is a first line.
+  ///      *   This is a second line. It is indented.
+  ///      * This is a third line. */
+  /// and
+  ///     /* This is a first line.
+  ///          This is a second line. It is indented.
+  ///     This is a third line. */
+  /// will both turn into:
+  ///     "This is a first line.\n"
+  ///     "  This is a second line. It is indented.\n"
+  ///     "This is a third line."
+  std::string getFormattedText(const SourceManager &SourceMgr,
+                               DiagnosticsEngine &Diags) const;
+
   /// Parse the comment, assuming it is attached to decl \c D.
   comments::FullComment *parse(const ASTContext &Context,
                                const Preprocessor *PP, const Decl *D) const;
@@ -139,18 +156,12 @@ private:
   bool IsTrailingComment : 1;
   bool IsAlmostTrailingComment : 1;
 
-  /// When true, ordinary comments starting with "//" and "/*" will be
-  /// considered as documentation comments.
-  bool ParseAllComments : 1;
-
-  /// \brief Constructor for AST deserialization.
+  /// Constructor for AST deserialization.
   RawComment(SourceRange SR, CommentKind K, bool IsTrailingComment,
-             bool IsAlmostTrailingComment,
-             bool ParseAllComments) :
+             bool IsAlmostTrailingComment) :
     Range(SR), RawTextValid(false), BriefTextValid(false), Kind(K),
     IsAttached(false), IsTrailingComment(IsTrailingComment),
-    IsAlmostTrailingComment(IsAlmostTrailingComment),
-    ParseAllComments(ParseAllComments)
+    IsAlmostTrailingComment(IsAlmostTrailingComment)
   { }
 
   StringRef getRawTextSlow(const SourceManager &SourceMgr) const;
@@ -160,7 +171,7 @@ private:
   friend class ASTReader;
 };
 
-/// \brief Compare comments' source locations.
+/// Compare comments' source locations.
 template<>
 class BeforeThanCompare<RawComment> {
   const SourceManager &SM;
@@ -177,13 +188,14 @@ public:
   }
 };
 
-/// \brief This class represents all comments included in the translation unit,
+/// This class represents all comments included in the translation unit,
 /// sorted in order of appearance in the translation unit.
 class RawCommentList {
 public:
   RawCommentList(SourceManager &SourceMgr) : SourceMgr(SourceMgr) {}
 
-  void addComment(const RawComment &RC, llvm::BumpPtrAllocator &Allocator);
+  void addComment(const RawComment &RC, const CommentOptions &CommentOpts,
+                  llvm::BumpPtrAllocator &Allocator);
 
   ArrayRef<RawComment *> getComments() const {
     return Comments;

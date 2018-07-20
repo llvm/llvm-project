@@ -7,21 +7,17 @@ def NamedGroup : DiagGroup<"name">;
 
 
 def InNamedGroup : Warning<"">, InGroup<DiagGroup<"name">>;
-//      CHECK: anonymous-groups.td:[[@LINE-1]]:41: error: group 'name' is referred to anonymously
+//      CHECK: anonymous-groups.td:[[@LINE-1]]:1: error: group 'name' is referred to anonymously
 // CHECK-NEXT: {{^def InNamedGroup : Warning<"">, InGroup<DiagGroup<"name">>;}}
-// CHECK-NEXT: {{^                                ~~~~~~~~\^~~~~~~~~~~~~~~~~~}}
-// CHECK-NEXT: {{^                                InGroup<NamedGroup>}}
-// CHECK-NEXT: anonymous-groups.td:6:1: note: group defined here
+//      CHECK: anonymous-groups.td:6:1: note: group defined here
 // CHECK-NEXT: def NamedGroup : DiagGroup<"name">;
 // CHECK-NEXT: ^
 
 
 def AlsoInNamedGroup : Warning<"">, InGroup  < DiagGroup<"name"> >;
-//      CHECK: anonymous-groups.td:[[@LINE-1]]:48: error: group 'name' is referred to anonymously
+//      CHECK: anonymous-groups.td:[[@LINE-1]]:1: error: group 'name' is referred to anonymously
 // CHECK-NEXT: {{^def AlsoInNamedGroup : Warning<"">, InGroup  < DiagGroup<"name"> >;}}
-// CHECK-NEXT: {{^                                    ~~~~~~~~~~~\^~~~~~~~~~~~~~~~~~~}}
-// CHECK-NEXT: {{^                                    InGroup<NamedGroup>}}
-// CHECK-NEXT: anonymous-groups.td:6:1: note: group defined here
+//      CHECK: anonymous-groups.td:6:1: note: group defined here
 // CHECK-NEXT: def NamedGroup : DiagGroup<"name">;
 // CHECK-NEXT: ^
 
@@ -31,12 +27,8 @@ def AlsoAnonymousGroup : Warning<"">, InGroup<DiagGroup<"anonymous">>;
 def AnonymousGroupAgain : Warning<"">,
   InGroup<DiagGroup<"anonymous">>;
 
-//      CHECK: anonymous-groups.td:[[@LINE-5]]:43: error: group 'anonymous' is referred to anonymously
+//      CHECK: anonymous-groups.td:[[@LINE-5]]:1: error: group 'anonymous' is referred to anonymously
 // CHECK-NEXT: {{^def AnonymousGroup : Warning<"">, InGroup<DiagGroup<"anonymous">>;}}
-// CHECK-NEXT: {{^                                  ~~~~~~~~\^~~~~~~~~~~~~~~~~~~~~~~}}
-// CHECK-NEXT: anonymous-groups.td:[[@LINE-7]]:47: note: also referenced here
+//      CHECK: anonymous-groups.td:[[@LINE-6]]:1: note: also referenced here
 // CHECK-NEXT: {{^def AlsoAnonymousGroup : Warning<"">, InGroup<DiagGroup<"anonymous">>;}}
-// CHECK-NEXT: {{^                                      ~~~~~~~~\^~~~~~~~~~~~~~~~~~~~~~~}}
-// CHECK-NEXT: anonymous-groups.td:[[@LINE-8]]:11: note: also referenced here
-// CHECK-NEXT: {{^  InGroup<DiagGroup<"anonymous">>;}}
-// CHECK-NEXT: {{^  ~~~~~~~~\^~~~~~~~~~~~~~~~~~~~~~~}}
+//      CHECK: anonymous-groups.td:[[@LINE-7]]:1: note: also referenced here

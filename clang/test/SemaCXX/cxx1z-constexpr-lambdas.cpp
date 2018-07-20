@@ -6,7 +6,7 @@
 namespace test_lambda_is_literal {
 #ifdef CPP14_AND_EARLIER
 //expected-error@+4{{not a literal type}}
-//expected-note@+2{{not an aggregate and has no constexpr constructors}}
+//expected-note@+2{{lambda closure types are non-literal types before C++17}}
 #endif
 auto L = [] { };
 constexpr int foo(decltype(L) l) { return 0; }
@@ -269,5 +269,38 @@ namespace ns1_test_lvalue_type {
 } // end ns1_unimplemented 
 
 } // end ns test_lambda_is_cce
+
+namespace PR36054 {
+constexpr int fn() {
+  int Capture = 42;
+  return [=]() constexpr { return Capture; }();
+}
+
+static_assert(fn() == 42, "");
+
+template <class T>
+constexpr int tfn() {
+  int Capture = 42;
+  return [=]() constexpr { return Capture; }();
+}
+
+static_assert(tfn<int>() == 42, "");
+
+constexpr int gfn() {
+  int Capture = 42;
+  return [=](auto P) constexpr { return Capture + P; }(58);
+}
+
+static_assert(gfn() == 100, "");
+
+constexpr bool OtherCaptures() {
+  int Capture = 42;
+  constexpr auto Outer = [](auto P) constexpr { return 42 + P; };
+  auto Inner = [&](auto O) constexpr { return O(58) + Capture; };
+  return Inner(Outer) == 142;
+}
+
+static_assert(OtherCaptures(), "");
+} // namespace PR36054
 
 #endif // ndef CPP14_AND_EARLIER

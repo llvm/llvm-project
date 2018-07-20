@@ -525,6 +525,7 @@ namespace  {
     void VisitPredefinedExpr(const PredefinedExpr *Node);
     void VisitCharacterLiteral(const CharacterLiteral *Node);
     void VisitIntegerLiteral(const IntegerLiteral *Node);
+    void VisitFixedPointLiteral(const FixedPointLiteral *Node);
     void VisitFloatingLiteral(const FloatingLiteral *Node);
     void VisitStringLiteral(const StringLiteral *Str);
     void VisitInitListExpr(const InitListExpr *ILE);
@@ -539,6 +540,7 @@ namespace  {
     void VisitAddrLabelExpr(const AddrLabelExpr *Node);
     void VisitBlockExpr(const BlockExpr *Node);
     void VisitOpaqueValueExpr(const OpaqueValueExpr *Node);
+    void VisitGenericSelectionExpr(const GenericSelectionExpr *E);
 
     // C++
     void VisitCXXNamedCastExpr(const CXXNamedCastExpr *Node);
@@ -808,11 +810,10 @@ void ASTDumper::dumpLookups(const DeclContext *DC, bool DumpDecls) {
 
     bool HasUndeserializedLookups = Primary->hasExternalVisibleStorage();
 
-    for (auto I = Deserialize ? Primary->lookups_begin()
-                              : Primary->noload_lookups_begin(),
-              E = Deserialize ? Primary->lookups_end()
-                              : Primary->noload_lookups_end();
-         I != E; ++I) {
+    auto Range = Deserialize
+                     ? Primary->lookups()
+                     : Primary->noload_lookups(/*PreserveInternalState=*/true);
+    for (auto I = Range.begin(), E = Range.end(); I != E; ++I) {
       DeclarationName Name = I.getLookupName();
       DeclContextLookupResult R = *I;
 
@@ -1602,7 +1603,7 @@ void ASTDumper::VisitClassTemplatePartialSpecializationDecl(
 
 void ASTDumper::VisitClassScopeFunctionSpecializationDecl(
     const ClassScopeFunctionSpecializationDecl *D) {
-  dumpDeclRef(D->getSpecialization());
+  dumpDecl(D->getSpecialization());
   if (D->hasExplicitTemplateArgs())
     dumpTemplateArgumentListInfo(D->templateArgs());
 }
@@ -1948,8 +1949,13 @@ void ASTDumper::dumpStmt(const Stmt *S) {
       return;
     }
 
+    // Some statements have custom mechanisms for dumping their children.
     if (const DeclStmt *DS = dyn_cast<DeclStmt>(S)) {
       VisitDeclStmt(DS);
+      return;
+    }
+    if (const GenericSelectionExpr *GSE = dyn_cast<GenericSelectionExpr>(S)) {
+      VisitGenericSelectionExpr(GSE);
       return;
     }
 
@@ -2174,6 +2180,13 @@ void ASTDumper::VisitIntegerLiteral(const IntegerLiteral *Node) {
   OS << " " << Node->getValue().toString(10, isSigned);
 }
 
+void ASTDumper::VisitFixedPointLiteral(const FixedPointLiteral *Node) {
+  VisitExpr(Node);
+
+  ColorScope Color(*this, ValueColor);
+  OS << " " << Node->getValueAsString(/*Radix=*/10);
+}
+
 void ASTDumper::VisitFloatingLiteral(const FloatingLiteral *Node) {
   VisitExpr(Node);
   ColorScope Color(*this, ValueColor);
@@ -2213,6 +2226,8 @@ void ASTDumper::VisitUnaryOperator(const UnaryOperator *Node) {
   VisitExpr(Node);
   OS << " " << (Node->isPostfix() ? "postfix" : "prefix")
      << " '" << UnaryOperator::getOpcodeStr(Node->getOpcode()) << "'";
+  if (!Node->canOverflow())
+    OS << " cannot overflow";
 }
 
 void ASTDumper::VisitUnaryExprOrTypeTraitExpr(
@@ -2272,6 +2287,32 @@ void ASTDumper::VisitOpaqueValueExpr(const OpaqueValueExpr *Node) {
 
   if (Expr *Source = Node->getSourceExpr())
     dumpStmt(Source);
+}
+
+void ASTDumper::VisitGenericSelectionExpr(const GenericSelectionExpr *E) {
+  VisitExpr(E);
+  if (E->isResultDependent())
+    OS << " result_dependent";
+  dumpStmt(E->getControllingExpr());
+  dumpTypeAsChild(E->getControllingExpr()->getType()); // FIXME: remove
+
+  for (unsigned I = 0, N = E->getNumAssocs(); I != N; ++I) {
+    dumpChild([=] {
+      if (const TypeSourceInfo *TSI = E->getAssocTypeSourceInfo(I)) {
+        OS << "case ";
+        dumpType(TSI->getType());
+      } else {
+        OS << "default";
+      }
+
+      if (!E->isResultDependent() && E->getResultIndex() == I)
+        OS << " selected";
+
+      if (const TypeSourceInfo *TSI = E->getAssocTypeSourceInfo(I))
+        dumpTypeAsChild(TSI->getType());
+      dumpStmt(E->getAssocExpr(I));
+    });
+  }
 }
 
 // GNU extensions.

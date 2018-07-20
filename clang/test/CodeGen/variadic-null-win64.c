@@ -15,7 +15,7 @@ void f(const char *f) {
   v(f, 1, 2, 3, NULL);
   kr(f, 1, 2, 3, 0);
 }
-// WINDOWS: define void @f(i8* %f)
+// WINDOWS: define dso_local void @f(i8* %f)
 // WINDOWS: call void (i8*, ...) @v(i8* {{.*}}, i32 1, i32 2, i32 3, i64 0)
 // WINDOWS: call void bitcast (void (...)* @kr to void (i8*, i32, i32, i32, i32)*)(i8* {{.*}}, i32 1, i32 2, i32 3, i32 0)
 // LINUX: define void @f(i8* %f)

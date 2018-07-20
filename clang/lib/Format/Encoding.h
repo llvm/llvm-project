@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief Contains functions for text encoding manipulation. Supports UTF-8,
+/// Contains functions for text encoding manipulation. Supports UTF-8,
 /// 8-bit encodings and escape sequences in C++ string literals.
 ///
 //===----------------------------------------------------------------------===//
@@ -30,7 +30,7 @@ enum Encoding {
   Encoding_Unknown // We treat all other encodings as 8-bit encodings.
 };
 
-/// \brief Detects encoding of the Text. If the Text can be decoded using UTF-8,
+/// Detects encoding of the Text. If the Text can be decoded using UTF-8,
 /// it is considered UTF8, otherwise we treat it as some 8-bit encoding.
 inline Encoding detectEncoding(StringRef Text) {
   const llvm::UTF8 *Ptr = reinterpret_cast<const llvm::UTF8 *>(Text.begin());
@@ -40,7 +40,7 @@ inline Encoding detectEncoding(StringRef Text) {
   return Encoding_Unknown;
 }
 
-/// \brief Returns the number of columns required to display the \p Text on a
+/// Returns the number of columns required to display the \p Text on a
 /// generic Unicode-capable terminal. Text is assumed to use the specified
 /// \p Encoding.
 inline unsigned columnWidth(StringRef Text, Encoding Encoding) {
@@ -56,7 +56,7 @@ inline unsigned columnWidth(StringRef Text, Encoding Encoding) {
   return Text.size();
 }
 
-/// \brief Returns the number of columns required to display the \p Text,
+/// Returns the number of columns required to display the \p Text,
 /// starting from the \p StartColumn on a terminal with the \p TabWidth. The
 /// text is assumed to use the specified \p Encoding.
 inline unsigned columnWidthWithTabs(StringRef Text, unsigned StartColumn,
@@ -73,7 +73,7 @@ inline unsigned columnWidthWithTabs(StringRef Text, unsigned StartColumn,
   }
 }
 
-/// \brief Gets the number of bytes in a sequence representing a single
+/// Gets the number of bytes in a sequence representing a single
 /// codepoint and starting with FirstChar in the specified Encoding.
 inline unsigned getCodePointNumBytes(char FirstChar, Encoding Encoding) {
   switch (Encoding) {
@@ -91,7 +91,7 @@ inline bool isHexDigit(char c) {
          ('A' <= c && c <= 'F');
 }
 
-/// \brief Gets the length of an escape sequence inside a C++ string literal.
+/// Gets the length of an escape sequence inside a C++ string literal.
 /// Text should span from the beginning of the escape sequence (starting with a
 /// backslash) to the end of the string literal.
 inline unsigned getEscapeSequenceLength(StringRef Text) {

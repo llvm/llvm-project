@@ -17,9 +17,9 @@ no_suspend operator co_await(B const&) { return {}; }
 extern "C" void f() {
   A a;
   B b;
-  // CHECK: call void @"\01??__LA@@QEAA?AUno_suspend@@XZ"(
+  // CHECK: call void @"??__LA@@QEAA?AUno_suspend@@XZ"(
   a.operator co_await();
-  // CHECK-NEXT: call i8 @"\01??__L@YA?AUno_suspend@@AEBUB@@@Z"(
+  // CHECK-NEXT: call i8 @"??__L@YA?AUno_suspend@@AEBUB@@@Z"(
   operator co_await(b);
 }
 

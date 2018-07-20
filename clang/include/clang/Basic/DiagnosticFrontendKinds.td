@@ -118,6 +118,8 @@ def err_fe_invalid_alignment : Error<
     "invalid value '%1' in '%0'; alignment must be a power of 2">;
 def err_fe_invalid_wchar_type
     : Error<"invalid wchar_t type '%0'; must be one of 'char', 'short', 'int'">;
+def err_fe_invalid_exception_model
+   : Error<"invalid exception model '%0' for target '%1'">;
 
 def warn_fe_serialized_diag_merge_failure : Warning<
     "unable to merge a subprocess's serialized diagnostics">,
@@ -238,4 +240,9 @@ def err_invalid_vfs_overlay : Error<
 
 def warn_option_invalid_ocl_version : Warning<
   "OpenCL version %0 does not support the option '%1'">, InGroup<Deprecated>;
+
+def warn_stdlibcxx_not_found : Warning<
+  "include path for stdlibc++ headers not found; pass '-std=libc++' on the "
+  "command line to use the libc++ standard library instead">,
+  InGroup<DiagGroup<"stdlibcxx-not-found">>;
 }

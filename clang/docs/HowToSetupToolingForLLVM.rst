@@ -133,7 +133,8 @@ Examples:
       if (this->ASTList.operator _Bool())
           return clang::CreateASTDeclNodeLister();
       if (this->ASTDump.operator _Bool())
-          return clang::CreateASTDumper(this->ASTDumpFilter);
+          return clang::CreateASTDumper(nullptr /*Dump to stdout.*/,
+                                        this->ASTDumpFilter);
       if (this->ASTPrint.operator _Bool())
           return clang::CreateASTPrinter(&llvm::outs(), this->ASTDumpFilter);
       return new clang::ASTConsumer();

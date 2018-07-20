@@ -10,6 +10,8 @@
 #ifndef HEADER
 #define HEADER
 
+void add_1(float *d);
+
 #pragma omp declare simd linear(d : 8)
 #pragma omp declare simd inbranch simdlen(32)
 #pragma omp declare simd notinbranch
@@ -19,6 +21,8 @@ void add_1(float *d);
 #pragma omp declare simd inbranch simdlen(32)
 #pragma omp declare simd notinbranch
 void add_1(float *d) {}
+
+void add_1(float *d);
 
 #pragma omp declare simd linear(d : 8)
 #pragma omp declare simd inbranch simdlen(32)

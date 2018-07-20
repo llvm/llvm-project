@@ -30,7 +30,7 @@ float16x8_t test_vdupq_n_f16(float16_t *a1) {
   // CHECK-LABEL: test_vdupq_n_f16
   return vdupq_n_f16(*a1);
   // match that an element is inserted into parts 0-7.  The backend better
-  // turn that into a single dup intruction
+  // turn that into a single dup instruction
   // CHECK: insertelement {{.*, i32 0 *$}}
   // CHECK: insertelement {{.*, i32 1 *$}}
   // CHECK: insertelement {{.*, i32 2 *$}}

@@ -5,7 +5,7 @@ template <typename T> class A {
   ~A() {}
 };
 template class A<char>;
-// CHECK-DAG: define weak_odr x86_thiscallcc void @"\01??1?$A@D@test1@@AAE@XZ"
+// CHECK-DAG: define weak_odr dso_local x86_thiscallcc void @"??1?$A@D@test1@@AAE@XZ"
 }
 
 namespace test2 {
@@ -22,14 +22,14 @@ B::~B() {}
 void foo() {
   B b;
 }
-// CHECK-DAG: @"\01??1B@test2@@UAE@XZ" = alias void (%"struct.test2::B"*), bitcast (void (%"struct.test2::A"*)* @"\01??1A@test2@@UAE@XZ" to void (%"struct.test2::B"*)*)
+// CHECK-DAG: @"??1B@test2@@UAE@XZ" = dso_local unnamed_addr alias void (%"struct.test2::B"*), bitcast (void (%"struct.test2::A"*)* @"??1A@test2@@UAE@XZ" to void (%"struct.test2::B"*)*)
 }
 
 namespace test3 {
 struct A { virtual ~A(); };
 A::~A() {}
 }
-// CHECK-DAG: define x86_thiscallcc void @"\01??1A@test3@@UAE@XZ"(
+// CHECK-DAG: define dso_local x86_thiscallcc void @"??1A@test3@@UAE@XZ"(
 namespace test3 {
 template <typename T>
 struct B : A {
@@ -39,4 +39,4 @@ template struct B<int>;
 }
 // This has to be weak, and emitting weak aliases is fragile, so we don't do the
 // aliasing.
-// CHECK-DAG: define weak_odr x86_thiscallcc void @"\01??1?$B@H@test3@@UAE@XZ"(
+// CHECK-DAG: define weak_odr dso_local x86_thiscallcc void @"??1?$B@H@test3@@UAE@XZ"(

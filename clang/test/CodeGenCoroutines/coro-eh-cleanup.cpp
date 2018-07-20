@@ -45,18 +45,18 @@ coro_t f() {
   co_return;
 }
 
-// CHECK: @"\01?f@@YA?AUcoro_t@@XZ"(
-// CHECK:   invoke void @"\01?may_throw@@YAXXZ"()
+// CHECK: @"?f@@YA?AUcoro_t@@XZ"(
+// CHECK:   invoke void @"?may_throw@@YAXXZ"()
 // CHECK:       to label %[[CONT:.+]] unwind label %[[EHCLEANUP:.+]]
 // CHECK: [[EHCLEANUP]]:
 // CHECK:   %[[INNERPAD:.+]] = cleanuppad within none []
-// CHECK:   call void @"\01??_DCleanup@@QEAAXXZ"(
+// CHECK:   call void @"??1Cleanup@@QEAA@XZ"(
 // CHECK:   cleanupret from %{{.+}} unwind label %[[CATCHDISPATCH:.+]]
 
 // CHECK: [[CATCHDISPATCH]]:
 // CHECK:   catchswitch within none [label %[[CATCHPAD:.+]]] unwind label %[[COROENDBB:.+]]
 // CHECK: [[CATCHPAD]]:
-// CHECK:   call void @"\01?unhandled_exception@promise_type@coro_t@@QEAAXXZ"
+// CHECK:   call void @"?unhandled_exception@promise_type@coro_t@@QEAAXXZ"
 
 // CHECK: [[COROENDBB]]:
 // CHECK-NEXT: %[[CLPAD:.+]] = cleanuppad within none

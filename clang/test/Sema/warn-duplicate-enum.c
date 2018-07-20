@@ -1,29 +1,29 @@
 // RUN: %clang_cc1 %s -fsyntax-only -verify -Wduplicate-enum
 // RUN: %clang_cc1 %s -x c++ -fsyntax-only -verify -Wduplicate-enum
 enum A {
-  A1 = 0,  // expected-note {{element A1 also has value 0}}
+  A1 = 0,  // expected-note {{element 'A1' also has value 0}}
   A2 = -1,
-  A3,  // expected-warning {{element A3 has been implicitly assigned 0 which another element has been assigned}}
+  A3,  // expected-warning {{element 'A3' has been implicitly assigned 0 which another element has been assigned}}
   A4};
 
 enum B {
-  B1 = -1,  // expected-note {{element B1 also has value -1}}
-  B2,       // expected-warning {{element B2 has been implicitly assigned 0 which another element has been assigned}}
+  B1 = -1,  // expected-note {{element 'B1' also has value -1}}
+  B2,       // expected-warning {{element 'B2' has been implicitly assigned 0 which another element has been assigned}}
   B3,
   B4 = -2,
-  B5,  // expected-warning {{element B5 has been implicitly assigned -1 which another element has been assigned}}
-  B6   // expected-note {{element B6 also has value 0}}
+  B5,  // expected-warning {{element 'B5' has been implicitly assigned -1 which another element has been assigned}}
+  B6   // expected-note {{element 'B6' also has value 0}}
 };
 
-enum C { C1, C2 = -1, C3 }; // expected-warning{{element C1 has been implicitly assigned 0 which another element has been assigned}} \
-  // expected-note {{element C3 also has value 0}}
+enum C { C1, C2 = -1, C3 }; // expected-warning{{element 'C1' has been implicitly assigned 0 which another element has been assigned}} \
+  // expected-note {{element 'C3' also has value 0}}
 
 enum D {
   D1,
   D2,
-  D3,  // expected-warning{{element D3 has been implicitly assigned 2 which another element has been assigned}}
+  D3,  // expected-warning{{element 'D3' has been implicitly assigned 2 which another element has been assigned}}
   D4 = D2,  // no warning
-  D5 = 2  // expected-note {{element D5 also has value 2}}
+  D5 = 2  // expected-note {{element 'D5' also has value 2}}
 };
 
 enum E {

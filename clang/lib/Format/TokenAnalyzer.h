@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file declares an abstract TokenAnalyzer, and associated helper
+/// This file declares an abstract TokenAnalyzer, and associated helper
 /// classes. TokenAnalyzer can be extended to generate replacements based on
 /// an annotated and pre-processed token stream.
 ///
@@ -37,43 +37,23 @@ namespace format {
 class Environment {
 public:
   Environment(SourceManager &SM, FileID ID, ArrayRef<CharSourceRange> Ranges)
-      : ID(ID), CharRanges(Ranges.begin(), Ranges.end()), SM(SM),
-      FirstStartColumn(0),
-      NextStartColumn(0),
-      LastStartColumn(0) {}
-
-  Environment(FileID ID, std::unique_ptr<FileManager> FileMgr,
-              std::unique_ptr<SourceManager> VirtualSM,
-              std::unique_ptr<DiagnosticsEngine> Diagnostics,
-              const std::vector<CharSourceRange> &CharRanges,
-              unsigned FirstStartColumn,
-              unsigned NextStartColumn,
-              unsigned LastStartColumn)
-      : ID(ID), CharRanges(CharRanges.begin(), CharRanges.end()),
-        SM(*VirtualSM), 
-        FirstStartColumn(FirstStartColumn),
-        NextStartColumn(NextStartColumn),
-        LastStartColumn(LastStartColumn),
-        FileMgr(std::move(FileMgr)),
-        VirtualSM(std::move(VirtualSM)), Diagnostics(std::move(Diagnostics)) {}
+      : SM(SM), ID(ID), CharRanges(Ranges.begin(), Ranges.end()),
+        FirstStartColumn(0), NextStartColumn(0), LastStartColumn(0) {}
 
   // This sets up an virtual file system with file \p FileName containing the
   // fragment \p Code. Assumes that \p Code starts at \p FirstStartColumn,
   // that the next lines of \p Code should start at \p NextStartColumn, and
   // that \p Code should end at \p LastStartColumn if it ends in newline.
   // See also the documentation of clang::format::internal::reformat.
-  static std::unique_ptr<Environment>
-  CreateVirtualEnvironment(StringRef Code, StringRef FileName,
-                           ArrayRef<tooling::Range> Ranges,
-                           unsigned FirstStartColumn = 0,
-                           unsigned NextStartColumn = 0,
-                           unsigned LastStartColumn = 0);
+  Environment(StringRef Code, StringRef FileName,
+              ArrayRef<tooling::Range> Ranges, unsigned FirstStartColumn = 0,
+              unsigned NextStartColumn = 0, unsigned LastStartColumn = 0);
 
   FileID getFileID() const { return ID; }
 
-  ArrayRef<CharSourceRange> getCharRanges() const { return CharRanges; }
-
   const SourceManager &getSourceManager() const { return SM; }
+
+  ArrayRef<CharSourceRange> getCharRanges() const { return CharRanges; }
 
   // Returns the column at which the fragment of code managed by this
   // environment starts.
@@ -88,19 +68,18 @@ public:
   unsigned getLastStartColumn() const { return LastStartColumn; }
 
 private:
-  FileID ID;
-  SmallVector<CharSourceRange, 8> CharRanges;
+  // This is only set if constructed from string.
+  std::unique_ptr<SourceManagerForFile> VirtualSM;
+
+  // This refers to either a SourceManager provided by users or VirtualSM
+  // created for a single file.
   SourceManager &SM;
+  FileID ID;
+
+  SmallVector<CharSourceRange, 8> CharRanges;
   unsigned FirstStartColumn;
   unsigned NextStartColumn;
   unsigned LastStartColumn;
-
-  // The order of these fields are important - they should be in the same order
-  // as they are created in `CreateVirtualEnvironment` so that they can be
-  // deleted in the reverse order as they are created.
-  std::unique_ptr<FileManager> FileMgr;
-  std::unique_ptr<SourceManager> VirtualSM;
-  std::unique_ptr<DiagnosticsEngine> Diagnostics;
 };
 
 class TokenAnalyzer : public UnwrappedLineConsumer {

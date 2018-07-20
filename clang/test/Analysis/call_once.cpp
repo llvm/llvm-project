@@ -403,3 +403,12 @@ void callback_with_implicit_cast() {
   std::once_flag flag;
   call_once(flag, callback_taking_func, callback_with_implicit_cast);
 }
+
+std::once_flag another_once_flag;
+typedef void (*my_callback_t)(int *);
+my_callback_t callback;
+int global_int;
+
+void rdar40270582() {
+  call_once(another_once_flag, callback, &global_int);
+}

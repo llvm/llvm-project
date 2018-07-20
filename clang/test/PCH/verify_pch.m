@@ -2,7 +2,7 @@
 // RUN: rm -rf %t
 // RUN: mkdir -p %t/usr/include
 // RUN: echo '// empty' > %t/usr/include/sys_header.h
-// RUN: cp %s %t.h
+// RUN: cat %s > %t.h
 //
 // Precompile
 // RUN: %clang_cc1 -isystem %t/usr/include -x objective-c-header -emit-pch -o %t.pch %t.h

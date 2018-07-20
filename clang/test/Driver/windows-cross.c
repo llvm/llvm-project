@@ -3,6 +3,11 @@
 
 // CHECK-BASIC-LIBCXX: armv7-windows-itanium-ld" "--sysroot={{.*}}/Inputs/Windows/ARM/8.1" "-m" "thumb2pe" "-Bdynamic" "--entry" "mainCRTStartup" "--allow-multiple-definition" "-o" "{{[^"]*}}" "{{[^"]*}}.o" "-lmsvcrt"
 
+// RUN: %clang -### -target armv7-windows-itanium --sysroot %S/Inputs/Windows/ARM/8.1 -B %S/Inputs/Windows/ARM/8.1/usr/bin -fuse-ld=ld -stdlib=libstdc++ -rtlib=compiler-rt -static -o /dev/null %s 2>&1 \
+// RUN:   | FileCheck %s --check-prefix CHECK-STATIC
+
+// CHECK-STATIC: armv7-windows-itanium-ld" "--sysroot={{.*}}/Inputs/Windows/ARM/8.1" "-m" "thumb2pe" "-Bstatic" "--entry" "mainCRTStartup" "--allow-multiple-definition" "-o" "{{[^"]*}}" "{{[^"]*}}.o" "-lmsvcrt"
+
 // RUN: %clang -### -target armv7-windows-itanium --sysroot %s/Inputs/Windows/ARM/8.1 -B %S/Inputs/Windows/ARM/8.1/usr/bin -fuse-ld=ld -rtlib=compiler-rt -stdlib=libstdc++ -o /dev/null %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix CHECK-RTLIB
 
@@ -22,6 +27,11 @@
 // RUN:   | FileCheck %s --check-prefix CHECK-SHARED
 
 // CHECK-SHARED: armv7-windows-itanium-ld" "--sysroot={{.*}}/Inputs/Windows/ARM/8.1" "-m" "thumb2pe" "-shared" "-Bdynamic" "--enable-auto-image-base" "--entry" "_DllMainCRTStartup" "--allow-multiple-definition" "-o" "shared.dll" "--out-implib" "shared.lib" "{{.*}}.o" "-lmsvcrt" "{{.*[\\/]}}clang_rt.builtins-arm.lib"
+
+// RUN: %clang -### -target armv7-windows-itanium --sysroot %S/Inputs/Windows/ARM/8.1 -B %S/Inputs/Windows/ARM/8.1/usr/bin -fuse-ld=ld -shared -rtlib=compiler-rt -stdlib=libc++ -static -o shared.dll %s 2>&1 \
+// RUN:   | FileCheck %s --check-prefix CHECK-SHARED-STATIC
+
+// CHECK-SHARED-STATIC: armv7-windows-itanium-ld" "--sysroot={{.*}}/Inputs/Windows/ARM/8.1" "-m" "thumb2pe" "-shared" "-Bstatic" "--enable-auto-image-base" "--entry" "_DllMainCRTStartup" "--allow-multiple-definition" "-o" "shared.dll" "--out-implib" "shared.lib" "{{.*}}.o" "-lmsvcrt" "{{.*[\\/]}}clang_rt.builtins-arm.lib"
 
 // RUN: %clang -### -target armv7-windows-itanium --sysroot %s/Inputs/Windows/ARM/8.1 -B %S/Inputs/Windows/ARM/8.1/usr/bin -fuse-ld=ld -shared -rtlib=compiler-rt -stdlib=libc++ -nostartfiles -o shared.dll %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix CHECK-NOSTARTFILES

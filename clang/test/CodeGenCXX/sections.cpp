@@ -76,26 +76,26 @@ __declspec(allocate("long_section")) long long_var = 42;
 __declspec(allocate("short_section")) short short_var = 42;
 }
 
-//CHECK: @D = global i32 1
-//CHECK: @a = global i32 1, section ".data"
-//CHECK: @b = constant i32 1, section ".my_const"
+//CHECK: @D = dso_local global i32 1
+//CHECK: @a = dso_local global i32 1, section ".data"
+//CHECK: @b = dso_local constant i32 1, section ".my_const"
 //CHECK: @[[MYSTR:.*]] = {{.*}} unnamed_addr constant [11 x i8] c"my string!\00"
-//CHECK: @s = global i8* getelementptr inbounds ([11 x i8], [11 x i8]* @[[MYSTR]], i32 0, i32 0), section ".data2"
-//CHECK: @c = global i32 1, section ".my_seg"
-//CHECK: @d = global i32 1, section ".data"
-//CHECK: @e = global i32 0, section ".my_bss"
-//CHECK: @f = global i32 0, section ".c"
-//CHECK: @i = global i32 0
-//CHECK: @TEST1 = global i32 0
-//CHECK: @TEST2 = global i32 0, section ".bss1"
-//CHECK: @TEST3 = global i32 0, section ".bss1"
-//CHECK: @d2 = global i32 1, section ".data"
-//CHECK: @b2 = constant i32 1, section ".my_const"
-//CHECK: @unreferenced = constant i32 0, section "read_flag_section"
-//CHECK: @referenced = constant i32 42, section "read_flag_section"
-//CHECK: @implicitly_read_write = global i32 42, section "no_section_attributes"
-//CHECK: @long_var = global i32 42, section "long_section"
-//CHECK: @short_var = global i16 42, section "short_section"
-//CHECK: define void @g()
-//CHECK: define void @h() {{.*}} section ".my_code"
-//CHECK: define void @h2() {{.*}} section ".my_code"
+//CHECK: @s = dso_local global i8* getelementptr inbounds ([11 x i8], [11 x i8]* @[[MYSTR]], i32 0, i32 0), section ".data2"
+//CHECK: @c = dso_local global i32 1, section ".my_seg"
+//CHECK: @d = dso_local global i32 1, section ".data"
+//CHECK: @e = dso_local global i32 0, section ".my_bss"
+//CHECK: @f = dso_local global i32 0, section ".c"
+//CHECK: @i = dso_local global i32 0
+//CHECK: @TEST1 = dso_local global i32 0
+//CHECK: @TEST2 = dso_local global i32 0, section ".bss1"
+//CHECK: @TEST3 = dso_local global i32 0, section ".bss1"
+//CHECK: @d2 = dso_local global i32 1, section ".data"
+//CHECK: @b2 = dso_local constant i32 1, section ".my_const"
+//CHECK: @unreferenced = dso_local constant i32 0, section "read_flag_section"
+//CHECK: @referenced = dso_local constant i32 42, section "read_flag_section"
+//CHECK: @implicitly_read_write = dso_local global i32 42, section "no_section_attributes"
+//CHECK: @long_var = dso_local global i32 42, section "long_section"
+//CHECK: @short_var = dso_local global i16 42, section "short_section"
+//CHECK: define dso_local void @g()
+//CHECK: define dso_local void @h() {{.*}} section ".my_code"
+//CHECK: define dso_local void @h2() {{.*}} section ".my_code"

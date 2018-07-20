@@ -6,6 +6,14 @@ struct A {
   int x;
   void foo() const;
   void bar();
+
+  void testImplicitThisSyntax() {
+    x = 3;
+    foo();
+    clang_analyzer_eval(x == 3); // expected-warning{{TRUE}}
+    bar();
+    clang_analyzer_eval(x == 3); // expected-warning{{UNKNOWN}}
+  }
 };
 
 struct B {
@@ -106,6 +114,22 @@ void checkThatContainedConstMethodDoesNotInvalidateObjects() {
   t.in.bar();
   clang_analyzer_eval(t.x == 1); // expected-warning{{TRUE}}
   clang_analyzer_eval(t.in.x == 2); // expected-warning{{TRUE}}
+}
+
+void checkPointerTypedThisExpression(A *a) {
+  a->x = 3;
+  a->foo();
+  clang_analyzer_eval(a->x == 3); // expected-warning{{TRUE}}
+  a->bar();
+  clang_analyzer_eval(a->x == 3); // expected-warning{{UNKNOWN}}
+}
+
+void checkReferenceTypedThisExpression(A &a) {
+  a.x = 3;
+  a.foo();
+  clang_analyzer_eval(a.x == 3); // expected-warning{{TRUE}}
+  a.bar();
+  clang_analyzer_eval(a.x == 3); // expected-warning{{UNKNOWN}}
 }
 
 // --- Versions of the above tests where the const method is inherited --- //

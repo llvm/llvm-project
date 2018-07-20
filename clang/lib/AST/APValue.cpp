@@ -23,12 +23,55 @@ using namespace clang;
 
 namespace {
   struct LVBase {
-    llvm::PointerIntPair<APValue::LValueBase, 1, bool> BaseAndIsOnePastTheEnd;
+    APValue::LValueBase Base;
     CharUnits Offset;
     unsigned PathLength;
-    unsigned CallIndex;
-    bool IsNullPtr;
+    bool IsNullPtr : 1;
+    bool IsOnePastTheEnd : 1;
   };
+}
+
+void *APValue::LValueBase::getOpaqueValue() const {
+  return Ptr.getOpaqueValue();
+}
+
+bool APValue::LValueBase::isNull() const {
+  return Ptr.isNull();
+}
+
+APValue::LValueBase::operator bool () const {
+  return static_cast<bool>(Ptr);
+}
+
+clang::APValue::LValueBase
+llvm::DenseMapInfo<clang::APValue::LValueBase>::getEmptyKey() {
+  return clang::APValue::LValueBase(
+      DenseMapInfo<clang::APValue::LValueBase::PtrTy>::getEmptyKey(),
+      DenseMapInfo<unsigned>::getEmptyKey(),
+      DenseMapInfo<unsigned>::getEmptyKey());
+}
+
+clang::APValue::LValueBase
+llvm::DenseMapInfo<clang::APValue::LValueBase>::getTombstoneKey() {
+  return clang::APValue::LValueBase(
+      DenseMapInfo<clang::APValue::LValueBase::PtrTy>::getTombstoneKey(),
+      DenseMapInfo<unsigned>::getTombstoneKey(),
+      DenseMapInfo<unsigned>::getTombstoneKey());
+}
+
+unsigned llvm::DenseMapInfo<clang::APValue::LValueBase>::getHashValue(
+    const clang::APValue::LValueBase &Base) {
+  llvm::FoldingSetNodeID ID;
+  ID.AddPointer(Base.getOpaqueValue());
+  ID.AddInteger(Base.getCallIndex());
+  ID.AddInteger(Base.getVersion());
+  return ID.ComputeHash();
+}
+
+bool llvm::DenseMapInfo<clang::APValue::LValueBase>::isEqual(
+    const clang::APValue::LValueBase &LHS,
+    const clang::APValue::LValueBase &RHS) {
+  return LHS == RHS;
 }
 
 struct APValue::LV : LVBase {
@@ -150,11 +193,10 @@ APValue::APValue(const APValue &RHS) : Kind(Uninitialized) {
     MakeLValue();
     if (RHS.hasLValuePath())
       setLValue(RHS.getLValueBase(), RHS.getLValueOffset(), RHS.getLValuePath(),
-                RHS.isLValueOnePastTheEnd(), RHS.getLValueCallIndex(),
-                RHS.isNullPointer());
+                RHS.isLValueOnePastTheEnd(), RHS.isNullPointer());
     else
       setLValue(RHS.getLValueBase(), RHS.getLValueOffset(), NoLValuePath(),
-                RHS.getLValueCallIndex(), RHS.isNullPointer());
+                RHS.isNullPointer());
     break;
   case Array:
     MakeArray(RHS.getArrayInitializedElts(), RHS.getArraySize());
@@ -552,12 +594,12 @@ std::string APValue::getAsString(ASTContext &Ctx, QualType Ty) const {
 
 const APValue::LValueBase APValue::getLValueBase() const {
   assert(isLValue() && "Invalid accessor");
-  return ((const LV*)(const void*)Data.buffer)->BaseAndIsOnePastTheEnd.getPointer();
+  return ((const LV*)(const void*)Data.buffer)->Base;
 }
 
 bool APValue::isLValueOnePastTheEnd() const {
   assert(isLValue() && "Invalid accessor");
-  return ((const LV*)(const void*)Data.buffer)->BaseAndIsOnePastTheEnd.getInt();
+  return ((const LV*)(const void*)Data.buffer)->IsOnePastTheEnd;
 }
 
 CharUnits &APValue::getLValueOffset() {
@@ -578,7 +620,12 @@ ArrayRef<APValue::LValuePathEntry> APValue::getLValuePath() const {
 
 unsigned APValue::getLValueCallIndex() const {
   assert(isLValue() && "Invalid accessor");
-  return ((const LV*)(const char*)Data.buffer)->CallIndex;
+  return ((const LV*)(const char*)Data.buffer)->Base.getCallIndex();
+}
+
+unsigned APValue::getLValueVersion() const {
+  assert(isLValue() && "Invalid accessor");
+  return ((const LV*)(const char*)Data.buffer)->Base.getVersion();
 }
 
 bool APValue::isNullPointer() const {
@@ -587,26 +634,24 @@ bool APValue::isNullPointer() const {
 }
 
 void APValue::setLValue(LValueBase B, const CharUnits &O, NoLValuePath,
-                        unsigned CallIndex, bool IsNullPtr) {
+                        bool IsNullPtr) {
   assert(isLValue() && "Invalid accessor");
   LV &LVal = *((LV*)(char*)Data.buffer);
-  LVal.BaseAndIsOnePastTheEnd.setPointer(B);
-  LVal.BaseAndIsOnePastTheEnd.setInt(false);
+  LVal.Base = B;
+  LVal.IsOnePastTheEnd = false;
   LVal.Offset = O;
-  LVal.CallIndex = CallIndex;
   LVal.resizePath((unsigned)-1);
   LVal.IsNullPtr = IsNullPtr;
 }
 
 void APValue::setLValue(LValueBase B, const CharUnits &O,
                         ArrayRef<LValuePathEntry> Path, bool IsOnePastTheEnd,
-                        unsigned CallIndex, bool IsNullPtr) {
+                        bool IsNullPtr) {
   assert(isLValue() && "Invalid accessor");
   LV &LVal = *((LV*)(char*)Data.buffer);
-  LVal.BaseAndIsOnePastTheEnd.setPointer(B);
-  LVal.BaseAndIsOnePastTheEnd.setInt(IsOnePastTheEnd);
+  LVal.Base = B;
+  LVal.IsOnePastTheEnd = IsOnePastTheEnd;
   LVal.Offset = O;
-  LVal.CallIndex = CallIndex;
   LVal.resizePath(Path.size());
   memcpy(LVal.getPath(), Path.data(), Path.size() * sizeof(LValuePathEntry));
   LVal.IsNullPtr = IsNullPtr;

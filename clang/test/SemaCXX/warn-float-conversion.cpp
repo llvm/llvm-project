@@ -63,6 +63,9 @@ void TestConstantFloat() {
 
   int b3 = five / 1.0;  //expected-warning{{conversion}}
   int b4 = five / 2.0;  //expected-warning{{conversion}}
+
+  int f = 2147483646.5 + 1; // expected-warning{{implicit conversion from 'double' to 'int' changes value from 2147483647.5 to 2147483647}}
+  unsigned g = -.5 + .01; // expected-warning{{implicit conversion from 'double' to 'unsigned int' changes non-zero value from -0.49 to 0}}
 }
 #endif  // FLOAT_CONVERSION
 
@@ -81,9 +84,43 @@ void TestOverflow() {
   char b = -500.0;  // caught by -Wliteral-conversion
 
   const float LargeNumber = 1024;
-  char c = LargeNumber;  // expected-warning{{implicit conversion of out of range value from 'const float' to 'char' changes value from 1024 to 127}}
-  char d = 400.0 + 400.0;  // expected-warning{{implicit conversion of out of range value from 'double' to 'char' changes value from 800 to 127}}
+  char c = LargeNumber;  // expected-warning{{implicit conversion of out of range value from 'const float' to 'char' is undefined}}
+  char d = 400.0 + 400.0;  // expected-warning{{implicit conversion of out of range value from 'double' to 'char' is undefined}}
 
-  char e = 1.0 / 0.0;  // expected-warning{{implicit conversion of out of range value from 'double' to 'char' changes value from +Inf to 127}}
+  char e = 1.0 / 0.0;  // expected-warning{{implicit conversion of out of range value from 'double' to 'char' is undefined}}
 }
+
+
+template <typename T>
+class Check {
+ public:
+  static constexpr bool Safe();
+};
+
+template<>
+constexpr bool Check<char>::Safe() { return false; }
+
+template<>
+constexpr bool Check<float>::Safe() { return true; }
+
+template <typename T>
+T run1(T t) {
+  const float ret = 800;
+  return ret;  // expected-warning {{implicit conversion of out of range value from 'const float' to 'char' is undefined}}
+}
+
+template <typename T>
+T run2(T t) {
+  const float ret = 800;
+  if (Check<T>::Safe())
+    return ret;
+  else
+    return t;
+}
+
+void test() {
+  float a = run1(a) + run2(a);
+  char b = run1(b) + run2(b);  // expected-note {{in instantiation of function template specialization 'run1<char>' requested here}}
+}
+
 #endif  // OVERFLOW

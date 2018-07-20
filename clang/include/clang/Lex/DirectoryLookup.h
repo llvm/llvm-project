@@ -55,10 +55,10 @@ private:
   /// normal directory, a framework, or a headermap.
   unsigned LookupType : 2;
   
-  /// \brief Whether this is a header map used when building a framework.
+  /// Whether this is a header map used when building a framework.
   unsigned IsIndexHeaderMap : 1;
 
-  /// \brief Whether we've performed an exhaustive search for module maps
+  /// Whether we've performed an exhaustive search for module maps
   /// within the subdirectories of this directory.
   unsigned SearchedAllModuleMaps : 1;
   
@@ -118,11 +118,11 @@ public:
   /// isHeaderMap - Return true if this is a header map, not a normal directory.
   bool isHeaderMap() const { return getLookupType() == LT_HeaderMap; }
 
-  /// \brief Determine whether we have already searched this entire
+  /// Determine whether we have already searched this entire
   /// directory for module maps.
   bool haveSearchedAllModuleMaps() const { return SearchedAllModuleMaps; }
 
-  /// \brief Specify whether we have already searched all of the subdirectories
+  /// Specify whether we have already searched all of the subdirectories
   /// for module maps.
   void setSearchedAllModuleMaps(bool SAMM) {
     SearchedAllModuleMaps = SAMM;
@@ -134,12 +134,12 @@ public:
     return (SrcMgr::CharacteristicKind)DirCharacteristic;
   }
 
-  /// \brief Whether this describes a system header directory.
+  /// Whether this describes a system header directory.
   bool isSystemHeaderDirectory() const {
     return getDirCharacteristic() != SrcMgr::C_User;
   }
 
-  /// \brief Whether this header map is building a framework or not.
+  /// Whether this header map is building a framework or not.
   bool isIndexHeaderMap() const { 
     return isHeaderMap() && IsIndexHeaderMap; 
   }

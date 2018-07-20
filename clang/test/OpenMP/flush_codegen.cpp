@@ -35,4 +35,6 @@ int main() {
 // CHECK: call {{.*}}void @__kmpc_flush(%{{.+}}* {{(@|%).+}})
 // CHECK: ret
 
+// CHECK-NOT: line: 0,
+
 #endif

@@ -18,6 +18,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Compiler.h"
 
 namespace clang {
@@ -25,39 +26,8 @@ namespace targets {
 
 // PPC abstract base class
 class LLVM_LIBRARY_VISIBILITY PPCTargetInfo : public TargetInfo {
-  static const Builtin::Info BuiltinInfo[];
-  static const char *const GCCRegNames[];
-  static const TargetInfo::GCCRegAlias GCCRegAliases[];
-  std::string CPU;
 
-  // Target cpu features.
-  bool HasAltivec;
-  bool HasVSX;
-  bool HasP8Vector;
-  bool HasP8Crypto;
-  bool HasDirectMove;
-  bool HasQPX;
-  bool HasHTM;
-  bool HasBPERMD;
-  bool HasExtDiv;
-  bool HasP9Vector;
-
-protected:
-  std::string ABI;
-
-public:
-  PPCTargetInfo(const llvm::Triple &Triple, const TargetOptions &)
-      : TargetInfo(Triple), HasAltivec(false), HasVSX(false),
-        HasP8Vector(false), HasP8Crypto(false), HasDirectMove(false),
-        HasQPX(false), HasHTM(false), HasBPERMD(false), HasExtDiv(false),
-        HasP9Vector(false) {
-    SuitableAlign = 128;
-    SimdDefaultAlign = 128;
-    LongDoubleWidth = LongDoubleAlign = 128;
-    LongDoubleFormat = &llvm::APFloat::PPCDoubleDouble();
-  }
-
-  /// \brief Flags for architecture specific defines.
+  /// Flags for architecture specific defines.
   typedef enum {
     ArchDefineNone = 0,
     ArchDefineName = 1 << 0, // <name> is substituted for arch name.
@@ -78,6 +48,37 @@ public:
     ArchDefineA2q = 1 << 15
   } ArchDefineTypes;
 
+
+  ArchDefineTypes ArchDefs = ArchDefineNone;
+  static const Builtin::Info BuiltinInfo[];
+  static const char *const GCCRegNames[];
+  static const TargetInfo::GCCRegAlias GCCRegAliases[];
+  std::string CPU;
+
+  // Target cpu features.
+  bool HasAltivec = false;
+  bool HasVSX = false;
+  bool HasP8Vector = false;
+  bool HasP8Crypto = false;
+  bool HasDirectMove = false;
+  bool HasQPX = false;
+  bool HasHTM = false;
+  bool HasBPERMD = false;
+  bool HasExtDiv = false;
+  bool HasP9Vector = false;
+
+protected:
+  std::string ABI;
+
+public:
+  PPCTargetInfo(const llvm::Triple &Triple, const TargetOptions &)
+      : TargetInfo(Triple) {
+    SuitableAlign = 128;
+    SimdDefaultAlign = 128;
+    LongDoubleWidth = LongDoubleAlign = 128;
+    LongDoubleFormat = &llvm::APFloat::PPCDoubleDouble();
+  }
+
   // Set the language option for altivec based on our value.
   void adjust(LangOptions &Opts) override;
 
@@ -86,11 +87,66 @@ public:
   //  821, 823, 8540, 8548, e300c2, e300c3, e500mc64, e6500, 860, cell,
   //  titan, rs64.
   bool isValidCPUName(StringRef Name) const override;
+  void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
 
   bool setCPU(const std::string &Name) override {
     bool CPUKnown = isValidCPUName(Name);
-    if (CPUKnown)
+    if (CPUKnown) {
       CPU = Name;
+
+      // CPU identification.
+      ArchDefs =
+          (ArchDefineTypes)llvm::StringSwitch<int>(CPU)
+              .Case("440", ArchDefineName)
+              .Case("450", ArchDefineName | ArchDefine440)
+              .Case("601", ArchDefineName)
+              .Case("602", ArchDefineName | ArchDefinePpcgr)
+              .Case("603", ArchDefineName | ArchDefinePpcgr)
+              .Case("603e", ArchDefineName | ArchDefine603 | ArchDefinePpcgr)
+              .Case("603ev", ArchDefineName | ArchDefine603 | ArchDefinePpcgr)
+              .Case("604", ArchDefineName | ArchDefinePpcgr)
+              .Case("604e", ArchDefineName | ArchDefine604 | ArchDefinePpcgr)
+              .Case("620", ArchDefineName | ArchDefinePpcgr)
+              .Case("630", ArchDefineName | ArchDefinePpcgr)
+              .Case("7400", ArchDefineName | ArchDefinePpcgr)
+              .Case("7450", ArchDefineName | ArchDefinePpcgr)
+              .Case("750", ArchDefineName | ArchDefinePpcgr)
+              .Case("970", ArchDefineName | ArchDefinePwr4 | ArchDefinePpcgr |
+                               ArchDefinePpcsq)
+              .Case("a2", ArchDefineA2)
+              .Case("a2q", ArchDefineName | ArchDefineA2 | ArchDefineA2q)
+              .Cases("power3", "pwr3", ArchDefinePpcgr)
+              .Cases("power4", "pwr4",
+                    ArchDefinePwr4 | ArchDefinePpcgr | ArchDefinePpcsq)
+              .Cases("power5", "pwr5",
+                    ArchDefinePwr5 | ArchDefinePwr4 | ArchDefinePpcgr |
+                        ArchDefinePpcsq)
+              .Cases("power5x", "pwr5x",
+                    ArchDefinePwr5x | ArchDefinePwr5 | ArchDefinePwr4 |
+                        ArchDefinePpcgr | ArchDefinePpcsq)
+              .Cases("power6", "pwr6",
+                    ArchDefinePwr6 | ArchDefinePwr5x | ArchDefinePwr5 |
+                        ArchDefinePwr4 | ArchDefinePpcgr | ArchDefinePpcsq)
+              .Cases("power6x", "pwr6x",
+                    ArchDefinePwr6x | ArchDefinePwr6 | ArchDefinePwr5x |
+                        ArchDefinePwr5 | ArchDefinePwr4 | ArchDefinePpcgr |
+                        ArchDefinePpcsq)
+              .Cases("power7", "pwr7",
+                    ArchDefinePwr7 | ArchDefinePwr6x | ArchDefinePwr6 |
+                        ArchDefinePwr5x | ArchDefinePwr5 | ArchDefinePwr4 |
+                        ArchDefinePpcgr | ArchDefinePpcsq)
+              // powerpc64le automatically defaults to at least power8.
+              .Cases("power8", "pwr8", "ppc64le",
+                    ArchDefinePwr8 | ArchDefinePwr7 | ArchDefinePwr6x |
+                        ArchDefinePwr6 | ArchDefinePwr5x | ArchDefinePwr5 |
+                        ArchDefinePwr4 | ArchDefinePpcgr | ArchDefinePpcsq)
+              .Cases("power9", "pwr9",
+                    ArchDefinePwr9 | ArchDefinePwr8 | ArchDefinePwr7 |
+                        ArchDefinePwr6x | ArchDefinePwr6 | ArchDefinePwr5x |
+                        ArchDefinePwr5 | ArchDefinePwr4 | ArchDefinePpcgr |
+                        ArchDefinePpcsq)
+              .Default(ArchDefineNone);
+    }
     return CPUKnown;
   }
 
@@ -310,10 +366,6 @@ public:
       LongDoubleWidth = LongDoubleAlign = 64;
       LongDoubleFormat = &llvm::APFloat::IEEEdouble();
       break;
-    case llvm::Triple::NetBSD:
-      IntMaxType = SignedLongLong;
-      Int64Type = SignedLongLong;
-      break;
     default:
       break;
     }
@@ -333,6 +385,15 @@ public:
       return true;
     }
     return false;
+  }
+
+  CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
+    switch (CC) {
+    case CC_Swift:
+      return CCCR_OK;
+    default:
+      return CCCR_Warning;
+    }
   }
 };
 

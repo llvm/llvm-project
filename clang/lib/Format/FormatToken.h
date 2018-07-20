@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file contains the declaration of the FormatToken, a wrapper
+/// This file contains the declaration of the FormatToken, a wrapper
 /// around Token with additional information related to formatting.
 ///
 //===----------------------------------------------------------------------===//
@@ -29,7 +29,9 @@ namespace format {
 #define LIST_TOKEN_TYPES                                                       \
   TYPE(ArrayInitializerLSquare)                                                \
   TYPE(ArraySubscriptLSquare)                                                  \
+  TYPE(AttributeColon)                                                         \
   TYPE(AttributeParen)                                                         \
+  TYPE(AttributeSquare)                                                        \
   TYPE(BinaryOperator)                                                         \
   TYPE(BitFieldColon)                                                          \
   TYPE(BlockComment)                                                           \
@@ -88,6 +90,7 @@ namespace format {
   TYPE(TemplateCloser)                                                         \
   TYPE(TemplateOpener)                                                         \
   TYPE(TemplateString)                                                         \
+  TYPE(ProtoExtensionLSquare)                                                  \
   TYPE(TrailingAnnotation)                                                     \
   TYPE(TrailingReturnArrow)                                                    \
   TYPE(TrailingUnaryOperator)                                                  \
@@ -101,7 +104,7 @@ enum TokenType {
       NUM_TOKEN_TYPES
 };
 
-/// \brief Determines the name of a token type.
+/// Determines the name of a token type.
 const char *getTokenTypeName(TokenType Type);
 
 // Represents what type of block a set of braces open.
@@ -115,181 +118,191 @@ enum FormatDecision { FD_Unformatted, FD_Continue, FD_Break };
 class TokenRole;
 class AnnotatedLine;
 
-/// \brief A wrapper around a \c Token storing information about the
+/// A wrapper around a \c Token storing information about the
 /// whitespace characters preceding it.
 struct FormatToken {
   FormatToken() {}
 
-  /// \brief The \c Token.
+  /// The \c Token.
   Token Tok;
 
-  /// \brief The number of newlines immediately before the \c Token.
+  /// The number of newlines immediately before the \c Token.
   ///
   /// This can be used to determine what the user wrote in the original code
   /// and thereby e.g. leave an empty line between two function definitions.
   unsigned NewlinesBefore = 0;
 
-  /// \brief Whether there is at least one unescaped newline before the \c
+  /// Whether there is at least one unescaped newline before the \c
   /// Token.
   bool HasUnescapedNewline = false;
 
-  /// \brief The range of the whitespace immediately preceding the \c Token.
+  /// The range of the whitespace immediately preceding the \c Token.
   SourceRange WhitespaceRange;
 
-  /// \brief The offset just past the last '\n' in this token's leading
+  /// The offset just past the last '\n' in this token's leading
   /// whitespace (relative to \c WhiteSpaceStart). 0 if there is no '\n'.
   unsigned LastNewlineOffset = 0;
 
-  /// \brief The width of the non-whitespace parts of the token (or its first
+  /// The width of the non-whitespace parts of the token (or its first
   /// line for multi-line tokens) in columns.
   /// We need this to correctly measure number of columns a token spans.
   unsigned ColumnWidth = 0;
 
-  /// \brief Contains the width in columns of the last line of a multi-line
+  /// Contains the width in columns of the last line of a multi-line
   /// token.
   unsigned LastLineColumnWidth = 0;
 
-  /// \brief Whether the token text contains newlines (escaped or not).
+  /// Whether the token text contains newlines (escaped or not).
   bool IsMultiline = false;
 
-  /// \brief Indicates that this is the first token of the file.
+  /// Indicates that this is the first token of the file.
   bool IsFirst = false;
 
-  /// \brief Whether there must be a line break before this token.
+  /// Whether there must be a line break before this token.
   ///
   /// This happens for example when a preprocessor directive ended directly
   /// before the token.
   bool MustBreakBefore = false;
 
-  /// \brief The raw text of the token.
+  /// The raw text of the token.
   ///
   /// Contains the raw token text without leading whitespace and without leading
   /// escaped newlines.
   StringRef TokenText;
 
-  /// \brief Set to \c true if this token is an unterminated literal.
+  /// Set to \c true if this token is an unterminated literal.
   bool IsUnterminatedLiteral = 0;
 
-  /// \brief Contains the kind of block if this token is a brace.
+  /// Contains the kind of block if this token is a brace.
   BraceBlockKind BlockKind = BK_Unknown;
 
   TokenType Type = TT_Unknown;
 
-  /// \brief The number of spaces that should be inserted before this token.
+  /// The number of spaces that should be inserted before this token.
   unsigned SpacesRequiredBefore = 0;
 
-  /// \brief \c true if it is allowed to break before this token.
+  /// \c true if it is allowed to break before this token.
   bool CanBreakBefore = false;
 
-  /// \brief \c true if this is the ">" of "template<..>".
+  /// \c true if this is the ">" of "template<..>".
   bool ClosesTemplateDeclaration = false;
 
-  /// \brief Number of parameters, if this is "(", "[" or "<".
+  /// Number of parameters, if this is "(", "[" or "<".
   ///
   /// This is initialized to 1 as we don't need to distinguish functions with
   /// 0 parameters from functions with 1 parameter. Thus, we can simply count
   /// the number of commas.
   unsigned ParameterCount = 0;
 
-  /// \brief Number of parameters that are nested blocks,
+  /// Number of parameters that are nested blocks,
   /// if this is "(", "[" or "<".
   unsigned BlockParameterCount = 0;
 
-  /// \brief If this is a bracket ("<", "(", "[" or "{"), contains the kind of
+  /// If this is a bracket ("<", "(", "[" or "{"), contains the kind of
   /// the surrounding bracket.
   tok::TokenKind ParentBracket = tok::unknown;
 
-  /// \brief A token can have a special role that can carry extra information
+  /// A token can have a special role that can carry extra information
   /// about the token's formatting.
   std::unique_ptr<TokenRole> Role;
 
-  /// \brief If this is an opening parenthesis, how are the parameters packed?
+  /// If this is an opening parenthesis, how are the parameters packed?
   ParameterPackingKind PackingKind = PPK_Inconclusive;
 
-  /// \brief The total length of the unwrapped line up to and including this
+  /// The total length of the unwrapped line up to and including this
   /// token.
   unsigned TotalLength = 0;
 
-  /// \brief The original 0-based column of this token, including expanded tabs.
+  /// The original 0-based column of this token, including expanded tabs.
   /// The configured TabWidth is used as tab width.
   unsigned OriginalColumn = 0;
 
-  /// \brief The length of following tokens until the next natural split point,
+  /// The length of following tokens until the next natural split point,
   /// or the next token that can be broken.
   unsigned UnbreakableTailLength = 0;
 
   // FIXME: Come up with a 'cleaner' concept.
-  /// \brief The binding strength of a token. This is a combined value of
+  /// The binding strength of a token. This is a combined value of
   /// operator precedence, parenthesis nesting, etc.
   unsigned BindingStrength = 0;
 
-  /// \brief The nesting level of this token, i.e. the number of surrounding (),
+  /// The nesting level of this token, i.e. the number of surrounding (),
   /// [], {} or <>.
   unsigned NestingLevel = 0;
 
-  /// \brief The indent level of this token. Copied from the surrounding line.
+  /// The indent level of this token. Copied from the surrounding line.
   unsigned IndentLevel = 0;
 
-  /// \brief Penalty for inserting a line break before this token.
+  /// Penalty for inserting a line break before this token.
   unsigned SplitPenalty = 0;
 
-  /// \brief If this is the first ObjC selector name in an ObjC method
+  /// If this is the first ObjC selector name in an ObjC method
   /// definition or call, this contains the length of the longest name.
   ///
   /// This being set to 0 means that the selectors should not be colon-aligned,
   /// e.g. because several of them are block-type.
   unsigned LongestObjCSelectorName = 0;
 
-  /// \brief Stores the number of required fake parentheses and the
+  /// If this is the first ObjC selector name in an ObjC method
+  /// definition or call, this contains the number of parts that the whole
+  /// selector consist of.
+  unsigned ObjCSelectorNameParts = 0;
+
+  /// The 0-based index of the parameter/argument. For ObjC it is set
+  /// for the selector name token.
+  /// For now calculated only for ObjC.
+  unsigned ParameterIndex = 0;
+
+  /// Stores the number of required fake parentheses and the
   /// corresponding operator precedence.
   ///
   /// If multiple fake parentheses start at a token, this vector stores them in
   /// reverse order, i.e. inner fake parenthesis first.
   SmallVector<prec::Level, 4> FakeLParens;
-  /// \brief Insert this many fake ) after this token for correct indentation.
+  /// Insert this many fake ) after this token for correct indentation.
   unsigned FakeRParens = 0;
 
-  /// \brief \c true if this token starts a binary expression, i.e. has at least
+  /// \c true if this token starts a binary expression, i.e. has at least
   /// one fake l_paren with a precedence greater than prec::Unknown.
   bool StartsBinaryExpression = false;
-  /// \brief \c true if this token ends a binary expression.
+  /// \c true if this token ends a binary expression.
   bool EndsBinaryExpression = false;
 
-  /// \brief Is this is an operator (or "."/"->") in a sequence of operators
+  /// Is this is an operator (or "."/"->") in a sequence of operators
   /// with the same precedence, contains the 0-based operator index.
   unsigned OperatorIndex = 0;
 
-  /// \brief If this is an operator (or "."/"->") in a sequence of operators
+  /// If this is an operator (or "."/"->") in a sequence of operators
   /// with the same precedence, points to the next operator.
   FormatToken *NextOperator = nullptr;
 
-  /// \brief Is this token part of a \c DeclStmt defining multiple variables?
+  /// Is this token part of a \c DeclStmt defining multiple variables?
   ///
   /// Only set if \c Type == \c TT_StartOfName.
   bool PartOfMultiVariableDeclStmt = false;
 
-  /// \brief Does this line comment continue a line comment section?
+  /// Does this line comment continue a line comment section?
   ///
   /// Only set to true if \c Type == \c TT_LineComment.
   bool ContinuesLineCommentSection = false;
 
-  /// \brief If this is a bracket, this points to the matching one.
+  /// If this is a bracket, this points to the matching one.
   FormatToken *MatchingParen = nullptr;
 
-  /// \brief The previous token in the unwrapped line.
+  /// The previous token in the unwrapped line.
   FormatToken *Previous = nullptr;
 
-  /// \brief The next token in the unwrapped line.
+  /// The next token in the unwrapped line.
   FormatToken *Next = nullptr;
 
-  /// \brief If this token starts a block, this contains all the unwrapped lines
+  /// If this token starts a block, this contains all the unwrapped lines
   /// in it.
   SmallVector<AnnotatedLine *, 1> Children;
 
-  /// \brief Stores the formatting decision for the token once it was made.
+  /// Stores the formatting decision for the token once it was made.
   FormatDecision Decision = FD_Unformatted;
 
-  /// \brief If \c true, this token has been fully formatted (indented and
+  /// If \c true, this token has been fully formatted (indented and
   /// potentially re-formatted inside), and we do not allow further formatting
   /// changes.
   bool Finalized = false;
@@ -337,7 +350,7 @@ struct FormatToken {
            (!ColonRequired || (Next && Next->is(tok::colon)));
   }
 
-  /// \brief Determine whether the token is a simple-type-specifier.
+  /// Determine whether the token is a simple-type-specifier.
   bool isSimpleTypeSpecifier() const;
 
   bool isObjCAccessSpecifier() const {
@@ -348,22 +361,28 @@ struct FormatToken {
             Next->isObjCAtKeyword(tok::objc_private));
   }
 
-  /// \brief Returns whether \p Tok is ([{ or a template opening <.
+  /// Returns whether \p Tok is ([{ or an opening < of a template or in
+  /// protos.
   bool opensScope() const {
     if (is(TT_TemplateString) && TokenText.endswith("${"))
+      return true;
+    if (is(TT_DictLiteral) && is(tok::less))
       return true;
     return isOneOf(tok::l_paren, tok::l_brace, tok::l_square,
                    TT_TemplateOpener);
   }
-  /// \brief Returns whether \p Tok is )]} or a template closing >.
+  /// Returns whether \p Tok is )]} or a closing > of a template or in
+  /// protos.
   bool closesScope() const {
     if (is(TT_TemplateString) && TokenText.startswith("}"))
+      return true;
+    if (is(TT_DictLiteral) && is(tok::greater))
       return true;
     return isOneOf(tok::r_paren, tok::r_brace, tok::r_square,
                    TT_TemplateCloser);
   }
 
-  /// \brief Returns \c true if this is a "." or "->" accessing a member.
+  /// Returns \c true if this is a "." or "->" accessing a member.
   bool isMemberAccess() const {
     return isOneOf(tok::arrow, tok::period, tok::arrowstar) &&
            !isOneOf(TT_DesignatedInitializerPeriod, TT_TrailingReturnArrow,
@@ -396,7 +415,7 @@ struct FormatToken {
            (is(TT_LineComment) || !Next || Next->NewlinesBefore > 0);
   }
 
-  /// \brief Returns \c true if this is a keyword that can be used
+  /// Returns \c true if this is a keyword that can be used
   /// like a function call (e.g. sizeof, typeid, ...).
   bool isFunctionLikeKeyword() const {
     switch (Tok.getKind()) {
@@ -416,7 +435,7 @@ struct FormatToken {
     }
   }
 
-  /// \brief Returns \c true if this is a string literal that's like a label,
+  /// Returns \c true if this is a string literal that's like a label,
   /// e.g. ends with "=" or ":".
   bool isLabelString() const {
     if (!is(tok::string_literal))
@@ -431,7 +450,7 @@ struct FormatToken {
            (Content.back() == ':' || Content.back() == '=');
   }
 
-  /// \brief Returns actual token start location without leading escaped
+  /// Returns actual token start location without leading escaped
   /// newlines and whitespace.
   ///
   /// This can be different to Tok.getLocation(), which includes leading escaped
@@ -441,10 +460,11 @@ struct FormatToken {
   }
 
   prec::Level getPrecedence() const {
-    return getBinOpPrecedence(Tok.getKind(), true, true);
+    return getBinOpPrecedence(Tok.getKind(), /*GreaterThanIsOperator=*/true,
+                              /*CPlusPlus11=*/true);
   }
 
-  /// \brief Returns the previous token ignoring comments.
+  /// Returns the previous token ignoring comments.
   FormatToken *getPreviousNonComment() const {
     FormatToken *Tok = Previous;
     while (Tok && Tok->is(tok::comment))
@@ -452,7 +472,7 @@ struct FormatToken {
     return Tok;
   }
 
-  /// \brief Returns the next token ignoring comments.
+  /// Returns the next token ignoring comments.
   const FormatToken *getNextNonComment() const {
     const FormatToken *Tok = Next;
     while (Tok && Tok->is(tok::comment))
@@ -460,12 +480,13 @@ struct FormatToken {
     return Tok;
   }
 
-  /// \brief Returns \c true if this tokens starts a block-type list, i.e. a
+  /// Returns \c true if this tokens starts a block-type list, i.e. a
   /// list that should be indented with a block indent.
   bool opensBlockOrBlockTypeList(const FormatStyle &Style) const {
     if (is(TT_TemplateString) && opensScope())
       return true;
     return is(TT_ArrayInitializerLSquare) ||
+           is(TT_ProtoExtensionLSquare) ||
            (is(tok::l_brace) &&
             (BlockKind == BK_Block || is(TT_DictLiteral) ||
              (!Style.Cpp11BracedListStyle && NestingLevel == 0))) ||
@@ -473,7 +494,7 @@ struct FormatToken {
                               Style.Language == FormatStyle::LK_TextProto));
   }
 
-  /// \brief Returns whether the token is the left square bracket of a C++
+  /// Returns whether the token is the left square bracket of a C++
   /// structured binding declaration.
   bool isCppStructuredBinding(const FormatStyle &Style) const {
     if (!Style.isCpp() || isNot(tok::l_square))
@@ -486,14 +507,14 @@ struct FormatToken {
     return T && T->is(tok::kw_auto);
   }
 
-  /// \brief Same as opensBlockOrBlockTypeList, but for the closing token.
+  /// Same as opensBlockOrBlockTypeList, but for the closing token.
   bool closesBlockOrBlockTypeList(const FormatStyle &Style) const {
     if (is(TT_TemplateString) && closesScope())
       return true;
     return MatchingParen && MatchingParen->opensBlockOrBlockTypeList(Style);
   }
 
-  /// \brief Return the actual namespace token, if this token starts a namespace
+  /// Return the actual namespace token, if this token starts a namespace
   /// block.
   const FormatToken *getNamespaceToken() const {
     const FormatToken *NamespaceTok = this;
@@ -546,11 +567,11 @@ public:
   TokenRole(const FormatStyle &Style) : Style(Style) {}
   virtual ~TokenRole();
 
-  /// \brief After the \c TokenAnnotator has finished annotating all the tokens,
+  /// After the \c TokenAnnotator has finished annotating all the tokens,
   /// this function precomputes required information for formatting.
   virtual void precomputeFormattingInfos(const FormatToken *Token);
 
-  /// \brief Apply the special formatting that the given role demands.
+  /// Apply the special formatting that the given role demands.
   ///
   /// Assumes that the token having this role is already formatted.
   ///
@@ -562,7 +583,7 @@ public:
     return 0;
   }
 
-  /// \brief Same as \c formatFromToken, but assumes that the first token has
+  /// Same as \c formatFromToken, but assumes that the first token has
   /// already been set thereby deciding on the first line break.
   virtual unsigned formatAfterToken(LineState &State,
                                     ContinuationIndenter *Indenter,
@@ -570,7 +591,7 @@ public:
     return 0;
   }
 
-  /// \brief Notifies the \c Role that a comma was found.
+  /// Notifies the \c Role that a comma was found.
   virtual void CommaFound(const FormatToken *Token) {}
 
 protected:
@@ -590,46 +611,46 @@ public:
   unsigned formatFromToken(LineState &State, ContinuationIndenter *Indenter,
                            bool DryRun) override;
 
-  /// \brief Adds \p Token as the next comma to the \c CommaSeparated list.
+  /// Adds \p Token as the next comma to the \c CommaSeparated list.
   void CommaFound(const FormatToken *Token) override {
     Commas.push_back(Token);
   }
 
 private:
-  /// \brief A struct that holds information on how to format a given list with
+  /// A struct that holds information on how to format a given list with
   /// a specific number of columns.
   struct ColumnFormat {
-    /// \brief The number of columns to use.
+    /// The number of columns to use.
     unsigned Columns;
 
-    /// \brief The total width in characters.
+    /// The total width in characters.
     unsigned TotalWidth;
 
-    /// \brief The number of lines required for this format.
+    /// The number of lines required for this format.
     unsigned LineCount;
 
-    /// \brief The size of each column in characters.
+    /// The size of each column in characters.
     SmallVector<unsigned, 8> ColumnSizes;
   };
 
-  /// \brief Calculate which \c ColumnFormat fits best into
+  /// Calculate which \c ColumnFormat fits best into
   /// \p RemainingCharacters.
   const ColumnFormat *getColumnFormat(unsigned RemainingCharacters) const;
 
-  /// \brief The ordered \c FormatTokens making up the commas of this list.
+  /// The ordered \c FormatTokens making up the commas of this list.
   SmallVector<const FormatToken *, 8> Commas;
 
-  /// \brief The length of each of the list's items in characters including the
+  /// The length of each of the list's items in characters including the
   /// trailing comma.
   SmallVector<unsigned, 8> ItemLengths;
 
-  /// \brief Precomputed formats that can be used for this list.
+  /// Precomputed formats that can be used for this list.
   SmallVector<ColumnFormat, 4> Formats;
 
   bool HasNestedBracedList;
 };
 
-/// \brief Encapsulates keywords that are context sensitive or for languages not
+/// Encapsulates keywords that are context sensitive or for languages not
 /// properly supported by Clang's lexer.
 struct AdditionalKeywords {
   AdditionalKeywords(IdentifierTable &IdentTable) {
@@ -761,7 +782,7 @@ struct AdditionalKeywords {
   IdentifierInfo *kw_slots;
   IdentifierInfo *kw_qslots;
 
-  /// \brief Returns \c true if \p Tok is a true JavaScript identifier, returns
+  /// Returns \c true if \p Tok is a true JavaScript identifier, returns
   /// \c false if it is a keyword or a pseudo keyword.
   bool IsJavaScriptIdentifier(const FormatToken &Tok) const {
     return Tok.is(tok::identifier) &&
@@ -770,7 +791,7 @@ struct AdditionalKeywords {
   }
 
 private:
-  /// \brief The JavaScript keywords beyond the C++ keyword set.
+  /// The JavaScript keywords beyond the C++ keyword set.
   std::unordered_set<IdentifierInfo *> JsExtraKeywords;
 };
 

@@ -54,5 +54,5 @@ class Foo {
 
   // Don't crash here.
   template<>
-  static void Bar(const long& input) {}  // expected-error{{explicit specialization of 'Bar' in class scope}}
+  static void Bar(const long& input) {}  // expected-warning{{explicit specialization cannot have a storage class}}
 };

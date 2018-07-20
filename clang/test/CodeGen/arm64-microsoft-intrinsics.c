@@ -24,3 +24,38 @@ void check__isb(void) {
 
 // CHECK-MSVC: @llvm.aarch64.isb(i32 0)
 // CHECK-LINUX: error: implicit declaration of function '__isb'
+
+void check__yield(void) {
+  __yield();
+}
+
+// CHECK-MSVC: @llvm.aarch64.hint(i32 1)
+// CHECK-LINUX: error: implicit declaration of function '__yield'
+
+void check__wfe(void) {
+  __wfe();
+}
+
+// CHECK-MSVC: @llvm.aarch64.hint(i32 2)
+// CHECK-LINUX: error: implicit declaration of function '__wfe'
+
+void check__wfi(void) {
+  __wfi();
+}
+
+// CHECK-MSVC: @llvm.aarch64.hint(i32 3)
+// CHECK-LINUX: error: implicit declaration of function '__wfi'
+
+void check__sev(void) {
+  __sev();
+}
+
+// CHECK-MSVC: @llvm.aarch64.hint(i32 4)
+// CHECK-LINUX: error: implicit declaration of function '__sev'
+
+void check__sevl(void) {
+  __sevl();
+}
+
+// CHECK-MSVC: @llvm.aarch64.hint(i32 5)
+// CHECK-LINUX: error: implicit declaration of function '__sevl'

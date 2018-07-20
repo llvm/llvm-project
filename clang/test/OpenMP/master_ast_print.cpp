@@ -25,7 +25,7 @@ int main (int argc, char **argv) {
 }
 // CHECK-NEXT: #pragma omp parallel
 // CHECK-NEXT: {
-// CHECK-NEXT: #pragma omp master
+// CHECK-NEXT: #pragma omp master{{$}}
 // CHECK-NEXT: {
 // CHECK-NEXT: a = 2;
 // CHECK-NEXT: }

@@ -1164,7 +1164,7 @@ void ObjCLoopChecker::checkDeadSymbols(SymbolReaper &SymReaper,
 
 namespace {
 /// \class ObjCNonNilReturnValueChecker
-/// \brief The checker restricts the return values of APIs known to
+/// The checker restricts the return values of APIs known to
 /// never (or almost never) return 'nil'.
 class ObjCNonNilReturnValueChecker
   : public Checker<check::PostObjCMessage,

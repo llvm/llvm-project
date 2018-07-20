@@ -45,7 +45,7 @@ int foo(int n) {
   {
   }
 
-  // TCHECK: define void @__omp_offloading_{{.+}}(i32*{{.+}} %{{.+}})
+  // TCHECK: define weak void @__omp_offloading_{{.+}}(i32*{{.+}} %{{.+}})
   // TCHECK: [[A:%.+]] = alloca i{{[0-9]+}}*,
   // TCHECK: store {{.+}}, {{.+}} [[A]],
   // TCHECK: load i32*, i32** [[A]],
@@ -56,7 +56,7 @@ int foo(int n) {
     a = 1;
   }
 
-  // TCHECK:  define void @__omp_offloading_{{.+}}(i32*{{.+}} %{{.+}})
+  // TCHECK:  define weak void @__omp_offloading_{{.+}}(i32*{{.+}} %{{.+}})
   // TCHECK: [[A:%.+]] = alloca i{{[0-9]+}}*,
   // TCHECK: store {{.+}}, {{.+}} [[A]],
   // TCHECK: [[REF:%.+]] = load i32*, i32** [[A]],
@@ -69,7 +69,7 @@ int foo(int n) {
     aa = 1;
   }
 
-  // TCHECK:  define void @__omp_offloading_{{.+}}(i32*{{.+}} [[A:%.+]], i16*{{.+}} [[AA:%.+]])
+  // TCHECK:  define weak void @__omp_offloading_{{.+}}(i32*{{.+}} [[A:%.+]], i16*{{.+}} [[AA:%.+]])
   // TCHECK:  [[A:%.+]] = alloca i{{[0-9]+}}*,
   // TCHECK:  [[AA:%.+]] = alloca i{{[0-9]+}}*,
   // TCHECK: store {{.+}}, {{.+}} [[A]],
@@ -118,7 +118,7 @@ int fstatic(int n) {
   return a;
 }
 
-// TCHECK: define void @__omp_offloading_{{.+}}(i32*{{.+}}, i16*{{.+}}, i8*{{.+}}, [10 x i32]*{{.+}})
+// TCHECK: define weak void @__omp_offloading_{{.+}}(i32*{{.+}}, i16*{{.+}}, i8*{{.+}}, [10 x i32]*{{.+}})
 // TCHECK:  [[A:%.+]] = alloca i{{[0-9]+}}*,
 // TCHECK:  [[A2:%.+]] = alloca i{{[0-9]+}}*,
 // TCHECK:  [[A3:%.+]] = alloca i{{[0-9]+}}*,
@@ -154,7 +154,7 @@ struct S1 {
     return c[1][1] + (int)b;
   }
 
-  // TCHECK: define void @__omp_offloading_{{.+}}([[S1]]* [[TH:%.+]], i32*{{.+}}, i{{[0-9]+}} [[VLA:%.+]], i{{[0-9]+}} [[VLA1:%.+]], i16*{{.+}})
+  // TCHECK: define weak void @__omp_offloading_{{.+}}([[S1]]* [[TH:%.+]], i32*{{.+}}, i{{[0-9]+}} [[VLA:%.+]], i{{[0-9]+}} [[VLA1:%.+]], i16*{{.+}})
   // TCHECK: [[TH_ADDR:%.+]] = alloca [[S1]]*,
   // TCHECK: [[B_ADDR:%.+]] = alloca i{{[0-9]+}}*,
   // TCHECK: [[VLA_ADDR:%.+]] = alloca i{{[0-9]+}},
@@ -206,7 +206,7 @@ int bar(int n){
 }
 
 // template
-// TCHECK: define void @__omp_offloading_{{.+}}(i{{[0-9]+}}*{{.+}}, i{{[0-9]+}}*{{.+}}, [10 x i32]*{{.+}})
+// TCHECK: define weak void @__omp_offloading_{{.+}}(i{{[0-9]+}}*{{.+}}, i{{[0-9]+}}*{{.+}}, [10 x i32]*{{.+}})
 // TCHECK: [[A:%.+]] = alloca i{{[0-9]+}}*,
 // TCHECK: [[A2:%.+]] = alloca i{{[0-9]+}}*,
 // TCHECK: [[B:%.+]] = alloca [10 x i{{[0-9]+}}]*,

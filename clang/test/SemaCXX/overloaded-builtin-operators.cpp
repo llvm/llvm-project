@@ -62,6 +62,10 @@ void f(Short s, Long l, Enum1 e1, Enum2 e2, Xpmf pmf) {
   // FIXME: should pass (void)static_cast<no&>(islong(e1 % e2));
 }
 
+struct BoolRef {
+  operator bool&();
+};
+
 struct ShortRef { // expected-note{{candidate function (the implicit copy assignment operator) not viable}}
 #if __cplusplus >= 201103L // C++11 or later
 // expected-note@-2 {{candidate function (the implicit move assignment operator) not viable}}
@@ -71,6 +75,10 @@ struct ShortRef { // expected-note{{candidate function (the implicit copy assign
 
 struct LongRef {
   operator volatile long&();
+};
+
+struct FloatRef {
+  operator float&();
 };
 
 struct XpmfRef { // expected-note{{candidate function (the implicit copy assignment operator) not viable}}
@@ -84,12 +92,18 @@ struct E2Ref {
   operator E2&();
 };
 
-void g(ShortRef sr, LongRef lr, E2Ref e2_ref, XpmfRef pmf_ref) {
+void g(BoolRef br, ShortRef sr, LongRef lr, FloatRef fr, E2Ref e2_ref, XpmfRef pmf_ref) {
   // C++ [over.built]p3
   short s1 = sr++;
 
-  // C++ [over.built]p3
+  // C++ [over.built]p4
   long l1 = lr--;
+
+  // C++ [over.built]p4
+  float f1 = fr--;
+
+  // C++ [over.built]p4
+  bool b2 = br--; // expected-error{{cannot decrement value of type 'BoolRef'}}
 
   // C++ [over.built]p18
   short& sr1 = (sr *= lr);

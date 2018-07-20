@@ -9,7 +9,7 @@ A a = { };
 A a2 = { 1 }; // expected-error{{excess elements in struct initializer}}
 
 struct B {
-  const int : 0;
+  const int : 0; // expected-error{{anonymous bit-field cannot have qualifiers}}
 };
 
 B b;

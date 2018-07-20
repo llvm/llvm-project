@@ -77,10 +77,10 @@ unsigned testMixedStruct() {
   // CHECK: %[[l:.*]] = alloca %[[ListInt:[^ ]*]], align 8
   // CHECK: %[[r:.*]] = alloca %[[ListInt]], align 8
 
-  // CHECK: call {{.*}}memcpy{{.*}}(i8* %{{.*}}, i8* bitcast ({{.*}}* @_ZZ15testMixedStructvE1l to i8*), i64 16,
+  // CHECK: call {{.*}}memcpy{{.*}}(i8* align {{[0-9]+}} %{{.*}}, i8* align {{[0-9]+}} bitcast ({{.*}}* @_ZZ15testMixedStructvE1l to i8*), i64 16,
   ListInt_left l{0, 1};
 
-  // CHECK: call {{.*}}memcpy{{.*}}(i8* %{{.*}}, i8* bitcast ({{.*}}* @_ZZ15testMixedStructvE1r to i8*), i64 16,
+  // CHECK: call {{.*}}memcpy{{.*}}(i8* align {{[0-9]+}} %{{.*}}, i8* align {{[0-9]+}} bitcast ({{.*}}* @_ZZ15testMixedStructvE1r to i8*), i64 16,
   ListInt_right r{0, 2};
 
   // CHECK: call void @_Z10useListIntR4ListIiE(%[[ListInt]]* dereferenceable({{[0-9]+}}) %[[l]])
@@ -121,4 +121,14 @@ void testWithAttributes() {
   auto b = make_with_attributes_right();
   static_assert(alignof(decltype(a)) == 2, "");
   static_assert(alignof(decltype(b)) == 2, "");
+}
+
+// Check that returnNonTrivial doesn't return Class0<S0> directly in registers.
+
+// CHECK: declare void @_Z16returnNonTrivialv(%struct.Class0* sret)
+
+@import template_nontrivial0;
+@import template_nontrivial1;
+
+S1::S1() : a(returnNonTrivial()) {
 }

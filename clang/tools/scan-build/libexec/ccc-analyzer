@@ -419,7 +419,7 @@ my %LangMap = (
   'cc'  => 'c++',
   'C'   => 'c++',
   'ii'  => 'c++-cpp-output',
-  'i'   => $IsCXX ? 'c++-cpp-output' : 'c-cpp-output',
+  'i'   => $IsCXX ? 'c++-cpp-output' : 'cpp-output',
   'm'   => 'objective-c',
   'mi'  => 'objective-c-cpp-output',
   'mm'  => 'objective-c++',
@@ -439,7 +439,7 @@ my %LangsAccepted = (
   "c" => 1,
   "c++" => 1,
   "objective-c++" => 1,
-  "c-cpp-output" => 1,
+  "cpp-output" => 1,
   "objective-c-cpp-output" => 1,
   "c++-cpp-output" => 1
 );

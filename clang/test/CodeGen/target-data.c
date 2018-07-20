@@ -124,20 +124,20 @@
 
 // RUN: %clang_cc1 -triple r600-unknown -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=R600
-// R600: target datalayout = "e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64"
+// R600: target datalayout = "e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5"
 
 // RUN: %clang_cc1 -triple r600-unknown -target-cpu cayman -o - -emit-llvm %s \
 // RUN: | FileCheck %s -check-prefix=R600D
-// R600D: target datalayout = "e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64"
+// R600D: target datalayout = "e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5"
 
 // RUN: %clang_cc1 -triple amdgcn-unknown -target-cpu hawaii -o - -emit-llvm %s \
 // RUN: | FileCheck %s -check-prefix=R600SI
-// R600SI: target datalayout = "e-p:32:32-p1:64:64-p2:64:64-p3:32:32-p4:64:64-p5:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64"
+// R600SI: target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5"
 
 // Test default -target-cpu
 // RUN: %clang_cc1 -triple amdgcn-unknown -o - -emit-llvm %s \
 // RUN: | FileCheck %s -check-prefix=R600SIDefault
-// R600SIDefault: target datalayout = "e-p:32:32-p1:64:64-p2:64:64-p3:32:32-p4:64:64-p5:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64"
+// R600SIDefault: target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5"
 
 // RUN: %clang_cc1 -triple arm64-unknown -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=AARCH64

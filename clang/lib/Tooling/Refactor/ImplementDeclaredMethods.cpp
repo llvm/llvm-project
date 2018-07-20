@@ -254,7 +254,7 @@ ImplementDeclaredCXXMethodsOperation::runInImplementationAST(
   NestedNameSpecifier *NamePrefix = nullptr;
   if (DefinedOutOfLineMethods.empty()) {
     const RecordDecl *OutermostRecord = findOutermostRecord(Class);
-    InsertionLoc = SM.getExpansionRange(OutermostRecord->getLocEnd()).second;
+    InsertionLoc = SM.getExpansionRange(OutermostRecord->getLocEnd()).getEnd();
     if (SM.getFileID(InsertionLoc) == File) {
       // We can insert right after the class. Compute the appropriate
       // qualification.
@@ -297,7 +297,7 @@ ImplementDeclaredCXXMethodsOperation::runInImplementationAST(
   } else {
     // Insert at the end of the defined methods.
     for (const CXXMethodDecl *M : DefinedOutOfLineMethods) {
-      SourceLocation EndLoc = SM.getExpansionRange(M->getLocEnd()).second;
+      SourceLocation EndLoc = SM.getExpansionRange(M->getLocEnd()).getEnd();
       if (InsertionLoc.isInvalid() ||
           SM.isBeforeInTranslationUnit(InsertionLoc, EndLoc)) {
         InsertionLoc = EndLoc;

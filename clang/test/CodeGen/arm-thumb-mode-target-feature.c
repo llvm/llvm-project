@@ -17,8 +17,8 @@ void t3() {}
 // THUMB: void @t1() [[ThumbAttr:#[0-7]]]
 // THUMB: void @t2() [[NoThumbAttr:#[0-7]]]
 // THUMB: void @t3() [[ThumbAttr:#[0-7]]]
-// THUMB: attributes [[ThumbAttr]] = { {{.*}} "target-features"="+thumb-mode"
-// THUMB: attributes [[NoThumbAttr]] = { {{.*}} "target-features"="-thumb-mode"
+// THUMB: attributes [[ThumbAttr]] = { {{.*}} "target-features"="+armv7-a,+thumb-mode"
+// THUMB: attributes [[NoThumbAttr]] = { {{.*}} "target-features"="+armv7-a,-thumb-mode"
 //
 // THUMB-CLANG: void @t1() [[ThumbAttr:#[0-7]]]
 // THUMB-CLANG: void @t2() [[NoThumbAttr:#[0-7]]]
@@ -29,5 +29,5 @@ void t3() {}
 // ARM: void @t1() [[NoThumbAtr:#[0-7]]]
 // ARM: void @t2() [[NoThumbAttr:#[0-7]]]
 // ARM: void @t3() [[ThumbAttr:#[0-7]]]
-// ARM: attributes [[NoThumbAttr]] = { {{.*}} "target-features"="-thumb-mode"
-// ARM: attributes [[ThumbAttr]] = { {{.*}} "target-features"="+thumb-mode"
+// ARM: attributes [[NoThumbAttr]] = { {{.*}} "target-features"="+armv7-a,-thumb-mode"
+// ARM: attributes [[ThumbAttr]] = { {{.*}} "target-features"="+armv7-a,+thumb-mode"

@@ -41,7 +41,7 @@ void addrof_single(int *a) __attribute__((overloadable, enable_if(0, "")));
 void addrof_single(char *a) __attribute__((overloadable, enable_if(0, "")));
 void addrof_single(char *a) __attribute__((overloadable));
 
-// CHECK-LABEL: define void @foo
+// CHECK-LABEL: define {{(dso_local )?}}void @foo
 void foo() {
   // CHECK: store void (i8*)* @_Z11addrof_manyPc
   void (*p1)(char *) = &addrof_many;
@@ -64,7 +64,7 @@ void foo() {
 void ovl_bar(char *) __attribute__((overloadable));
 void ovl_bar(int) __attribute__((overloadable));
 
-// CHECK-LABEL: define void @bar
+// CHECK-LABEL: define {{(dso_local )?}}void @bar
 void bar() {
   char charbuf[1];
   unsigned char ucharbuf[1];
@@ -79,7 +79,7 @@ void ovl_baz(int *, int) __attribute__((overloadable));
 void ovl_baz(unsigned int *, unsigned int) __attribute__((overloadable));
 void ovl_baz2(int, int *) __attribute__((overloadable));
 void ovl_baz2(unsigned int, unsigned int *) __attribute__((overloadable));
-// CHECK-LABEL: define void @baz
+// CHECK-LABEL: define {{(dso_local )?}}void @baz
 void baz() {
   unsigned int j;
   // Initial rules for incompatible pointer conversions made this overload

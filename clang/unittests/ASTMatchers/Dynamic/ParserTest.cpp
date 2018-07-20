@@ -186,8 +186,8 @@ using ast_matchers::internal::Matcher;
 Parser::NamedValueMap getTestNamedValues() {
   Parser::NamedValueMap Values;
   Values["nameX"] = llvm::StringRef("x");
-  Values["hasParamA"] =
-      VariantMatcher::SingleMatcher(hasParameter(0, hasName("a")));
+  Values["hasParamA"] = VariantMatcher::SingleMatcher(
+      functionDecl(hasParameter(0, hasName("a"))));
   return Values;
 }
 
@@ -234,6 +234,17 @@ TEST(ParserTest, FullParserTest) {
             "2:27: Incorrect type for arg 1. "
             "(Expected = Matcher<Expr>) != (Actual = String)",
             Error.toStringFull());
+}
+
+TEST(ParserTest, VariadicMatchTest) {
+  Diagnostics Error;
+  llvm::Optional<DynTypedMatcher> OM(Parser::parseMatcherExpression(
+      "stmt(objcMessageExpr(hasAnySelector(\"methodA\", \"methodB:\")))",
+      &Error));
+  EXPECT_EQ("", Error.toStringFull());
+  auto M = OM->unconditionalConvertTo<Stmt>();
+  EXPECT_TRUE(matchesObjC("@interface I @end "
+                          "void foo(I* i) { [i methodA]; }", M));
 }
 
 std::string ParseWithError(StringRef Code) {
@@ -329,16 +340,17 @@ TEST(ParserTest, CompletionNamedValues) {
   EXPECT_LT(0u, Comps.size());
 
   // Can complete names and registry together.
-  Code = "cxxMethodDecl(hasP";
+  Code = "functionDecl(hasP";
   Comps = Parser::completeExpression(Code, Code.size(), nullptr, &NamedValues);
   ASSERT_EQ(3u, Comps.size());
-  EXPECT_EQ("aramA", Comps[0].TypedText);
-  EXPECT_EQ("Matcher<FunctionDecl> hasParamA", Comps[0].MatcherDecl);
 
-  EXPECT_EQ("arameter(", Comps[1].TypedText);
+  EXPECT_EQ("arameter(", Comps[0].TypedText);
   EXPECT_EQ(
       "Matcher<FunctionDecl> hasParameter(unsigned, Matcher<ParmVarDecl>)",
-      Comps[1].MatcherDecl);
+      Comps[0].MatcherDecl);
+
+  EXPECT_EQ("aramA", Comps[1].TypedText);
+  EXPECT_EQ("Matcher<Decl> hasParamA", Comps[1].MatcherDecl);
 
   EXPECT_EQ("arent(", Comps[2].TypedText);
   EXPECT_EQ(

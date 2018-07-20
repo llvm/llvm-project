@@ -23,7 +23,7 @@ using namespace llvm;
 // Static Analyzer Checkers Tables generation
 //===----------------------------------------------------------------------===//
 
-/// \brief True if it is specified hidden or a parent package is specified
+/// True if it is specified hidden or a parent package is specified
 /// as hidden, otherwise false.
 static bool isHidden(const Record &R) {
   if (R.getValueAsBit("Hidden"))

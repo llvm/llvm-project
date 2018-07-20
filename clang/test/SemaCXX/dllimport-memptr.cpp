@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-windows-msvc -fms-extensions -verify -std=c++11 %s
+// RUN: %clang_cc1 -triple x86_64-windows-msvc -fms-extensions -verify -std=c++17 %s
 
 // expected-no-diagnostics
 

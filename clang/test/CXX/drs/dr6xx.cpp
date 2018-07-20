@@ -1,9 +1,13 @@
-// RUN: %clang_cc1 -std=c++98 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++11 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++14 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++1z %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++98 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
+// RUN: %clang_cc1 -std=c++11 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
+// RUN: %clang_cc1 -std=c++14 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
+// RUN: %clang_cc1 -std=c++17 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
+// RUN: %clang_cc1 -std=c++2a %s -verify -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
 
-namespace std { struct type_info {}; }
+namespace std {
+  struct type_info {};
+  __extension__ typedef __SIZE_TYPE__ size_t;
+} // namespace std
 
 namespace dr601 { // dr601: yes
 #if __cplusplus >= 201103L
@@ -351,6 +355,672 @@ namespace dr638 { // dr638: no
 namespace dr639 { // dr639: yes
   void f(int i) {
     void((i = 0) + (i = 0)); // expected-warning {{unsequenced}}
+  }
+}
+
+namespace dr641 { // dr641: yes
+  namespace std_example {
+    struct abc;
+
+    struct xyz {
+      xyz(); // expected-note 0-1{{candidate}}
+      xyz(xyz &); // expected-note 0-1{{candidate}}
+
+      operator xyz &() = delete; // expected-error 0-1{{extension}} expected-warning {{will never be used}}
+      operator abc &() = delete; // expected-error 0-1{{extension}}
+    };
+
+    struct abc : xyz {};
+
+    template<typename T>
+    void use(T &); // expected-note {{expects an l-value}}
+    void test() {
+      use<xyz>(xyz()); // expected-error {{no match}}
+      use<const xyz>(xyz());
+#if __cplusplus < 201103L
+      // expected-error-re@-2 {{no viable constructor copying parameter of type '{{.*}}xyz'}}
+#endif
+    }
+  }
+
+  template<typename T> struct error { typedef typename T::error type; };
+
+  struct A {
+    template<typename T, typename error<T>::type = 0> operator T() const; // expected-error 0-1{{extension}}
+  };
+  A a;
+  void f(A&); // expected-note 2{{candidate}}
+  void g(const A ca) {
+    f(A()); // expected-error {{no match}}
+    f(ca); // expected-error {{no match}}
+    (void)A();
+    (void)ca;
+  }
+}
+
+namespace dr642 { // dr642: yes
+  void f() {
+    const int i = 2;
+    {
+      char i[i];
+      _Static_assert(sizeof(i) == 2, ""); // expected-error {{C11}}
+    }
+  }
+
+  struct s { int a; };
+  void g(int s) {
+    struct s *p = new struct s;
+    p->a = s;
+  }
+}
+
+#if __cplusplus >= 201103L
+namespace dr643 { // dr643: yes
+  struct A {
+    int x;
+    auto f() -> decltype(this->x);
+    auto f(A &a) -> decltype(a.x);
+    auto g() -> decltype(x);
+    auto h() -> decltype(this->y); // expected-error {{no member named 'y'}}
+    auto h(A &a) -> decltype(a.y); // expected-error {{no member named 'y'}}
+    auto i() -> decltype(y); // expected-error {{undeclared identifier 'y'}}
+    int y;
+  };
+}
+#endif
+
+#if __cplusplus >= 201103L
+namespace dr644 { // dr644: partial
+  struct A {
+    A() = default;
+    int x, y;
+  };
+  static_assert(__is_literal_type(A), "");
+
+  struct B : A {};
+  static_assert(__is_literal_type(B), "");
+
+  struct C : virtual A {};
+  static_assert(!__is_literal_type(C), "");
+
+  struct D { C c; };
+  static_assert(!__is_literal_type(D), "");
+
+  // FIXME: According to DR644, E<C> is a literal type despite having virtual
+  // base classes. This appears to be a wording defect.
+  template<typename T>
+  struct E : T {
+    constexpr E() = default;
+  };
+  static_assert(!__is_literal_type(E<C>), "");
+}
+#endif
+
+// dr645 increases permission to optimize; it's not clear that it's possible to
+// test for this.
+// dr645: na
+
+#if __cplusplus >= 201103L
+namespace dr646 { // dr646: sup 981
+  struct A {
+    constexpr A(const A&) = default; // ok
+  };
+
+  struct B {
+    constexpr B() {}
+    B(B&);
+  };
+  constexpr B b = {}; // ok
+}
+#endif
+
+#if __cplusplus >= 201103L
+namespace dr647 { // dr647: yes
+  // This is partially superseded by dr1358.
+  struct A {
+    constexpr virtual void f() const;
+    constexpr virtual void g() const {} // expected-error {{virtual function cannot be constexpr}}
+  };
+
+  struct X { virtual void f() const; }; // expected-note {{overridden}}
+  struct B : X {
+    constexpr void f() const {} // expected-error {{virtual function cannot be constexpr}}
+  };
+
+  struct NonLiteral { NonLiteral() {} }; // expected-note {{not an aggregate and has no constexpr constructors}}
+
+  struct C {
+    constexpr C(NonLiteral);
+    constexpr C(NonLiteral, int) {} // expected-error {{not a literal type}}
+    constexpr C() try {} catch (...) {} // expected-error {{function try block}}
+  };
+
+  struct D {
+    operator int() const;
+    constexpr D(int) {}
+    D(float); // expected-note 2{{declared here}}
+  };
+  constexpr int get();
+  struct E {
+    int n;
+    D d;
+
+    // FIXME: We should diagnose this, as the conversion function is not
+    // constexpr. However, that part of this issue is supreseded by dr1364 and
+    // others; no diagnostic is required for this any more.
+    constexpr E()
+        : n(D(0)),
+          d(0) {}
+
+    constexpr E(int) // expected-error {{never produces a constant expression}}
+        : n(0),
+          d(0.0f) {} // expected-note {{non-constexpr constructor}}
+    constexpr E(float f) // expected-error {{never produces a constant expression}}
+        : n(get()),
+          d(D(0) + f) {} // expected-note {{non-constexpr constructor}}
+  };
+}
+#endif
+
+#if __cplusplus >= 201103L
+namespace dr648 { // dr648: yes
+  int f();
+  constexpr int a = (true ? 1 : f());
+  constexpr int b = false && f();
+  constexpr int c = true || f();
+}
+#endif
+
+#if __cplusplus >= 201103L
+namespace dr649 { // dr649: yes
+  alignas(0x20000000) int n; // expected-error {{requested alignment}}
+  struct alignas(0x20000000) X {}; // expected-error {{requested alignment}}
+  struct Y { int n alignas(0x20000000); }; // expected-error {{requested alignment}}
+  struct alignas(256) Z {};
+  // This part is superseded by dr2130 and eventually by aligned allocation support.
+  auto *p = new Z;
+}
+#endif
+
+// dr650 FIXME: add codegen test
+
+#if __cplusplus >= 201103L
+namespace dr651 { // dr651: yes
+  struct X {
+    virtual X &f();
+  };
+  struct Y : X {
+    Y &f();
+  };
+  using T = decltype(((X&&)Y()).f());
+  using T = X &;
+}
+#endif
+
+#if __cplusplus >= 201103L
+namespace dr652 { // dr652: yes
+  constexpr int n = 1.2 * 3.4;
+  static_assert(n == 4, "");
+}
+#endif
+
+// dr653 FIXME: add codegen test
+
+#if __cplusplus >= 201103L
+namespace dr654 { // dr654: yes
+  void f() {
+    if (nullptr) {} // expected-warning {{implicit conversion of nullptr constant to 'bool'}}
+    bool b = nullptr; // expected-warning {{implicit conversion of nullptr constant to 'bool'}}
+    if (nullptr == 0) {}
+    if (nullptr != 0) {}
+    if (nullptr <= 0) {} // expected-error {{invalid operands}}
+    if (nullptr == 1) {} // expected-error {{invalid operands}}
+    if (!nullptr) {} // expected-warning {{implicit conversion of nullptr constant to 'bool'}}
+    decltype(nullptr) n = 0;
+    static_cast<int>(nullptr); // expected-error {{not allowed}}
+    (void)static_cast<decltype(nullptr)>(0);
+    static_cast<decltype(nullptr)>(1); // expected-error {{not allowed}}
+    void(true ? nullptr : 0);
+    void(true ? 0 : nullptr);
+  }
+}
+#endif
+
+namespace dr655 { // dr655: yes
+  struct A { A(int); }; // expected-note 2-3{{not viable}}
+  struct B : A {
+    A a;
+    B();
+    B(int) : B() {} // expected-error 0-1 {{C++11}}
+    B(int*) : A() {} // expected-error {{no matching constructor}}
+  };
+}
+
+namespace dr656 { // dr656: yes
+  struct A { A(const A&) = delete; }; // expected-error 0-1 {{C++11}}
+  struct B : A {};
+  struct X { operator B(); } x;
+  const A &r = x;
+  struct Y : private A { // expected-note 2{{here}} expected-note 2{{candidate}}
+    operator B() volatile;
+  };
+  extern Y y;
+  extern volatile Y vy;
+  // Conversion not considered due to reference-related types.
+  const A &s = y; // expected-error {{private base class}}
+  const A &t = vy; // expected-error {{drops 'volatile'}}
+
+  struct C { operator struct D(); } c;
+  struct D : C {};
+  const D &d = c; // ok, D not reference-related to C
+
+  template<typename T> void accept(T); // expected-note {{candidate}}
+  template<typename T> void accept(...) = delete; // expected-error 0-1 {{C++11}} expected-note {{candidate}}
+  void f() {
+    accept<const A&>(x);
+    accept<const A&>(y); // expected-error {{private base class}}
+    accept<const A&>(vy); // expected-error {{call to deleted}} expected-error {{no matching constructor}}
+    accept<const D&>(c);
+  }
+}
+
+namespace dr657 { // dr657: partial
+  struct Abs { virtual void x() = 0; };
+  struct Der : public Abs { virtual void x(); };
+
+  struct Cnvt { template<typename F> Cnvt(F); };
+
+  void foo(Cnvt a);
+  void foo(Abs &a);
+  void f(Abs *a) { foo(*a); }
+
+  void bar(Abs &a);
+  template<typename T> void bar(T);
+  void g(Abs *a) { bar(*a); }
+
+  // FIXME: The following examples demonstrate that we might be accepting the
+  // above cases for the wrong reason.
+
+  // FIXME: We should reject this.
+  struct C { C(Abs) {} };
+  // FIXME: We should reject this.
+  struct Q { operator Abs() { __builtin_unreachable(); } } q;
+#if __cplusplus >= 201703L
+  // FIXME: We should *definitely* reject this.
+  C c = Q().operator Abs();
+#endif
+
+  template<typename F> struct Cnvt2 { Cnvt2(F); typedef int type; };
+
+  // FIXME: We should reject this.
+  void baz(Abs &a);
+  template<typename T> typename Cnvt2<T>::type baz(T);
+  void h(Abs *a) { baz(*a); }
+
+  // FIXME: We should reject this too.
+  Cnvt2<Abs>::type err;
+}
+
+// dr658 FIXME: add codegen test
+
+#if __cplusplus >= 201103L
+namespace dr659 { // dr659: yes
+  static_assert(alignof(char) == alignof(char&), "");
+  static_assert(alignof(int) == alignof(int&), "");
+  int n = alignof(int(&)()); // expected-error {{application of 'alignof' to a function type}}
+  struct A; // expected-note {{forward}}
+  int m = alignof(A&); // expected-error {{application of 'alignof' to an incomplete type}}
+}
+#endif
+
+#if __cplusplus >= 201103L
+namespace dr660 { // dr660: yes
+  enum : int { a };
+  enum class { b }; // expected-error {{requires a name}}
+  auto x = a;
+
+  struct X {
+    enum : int { a };
+    enum class { b }; // expected-error {{requires a name}}
+  };
+  auto y = X::a;
+}
+#endif
+
+// dr661 FIXME: add codegen test
+
+namespace dr662 { // dr662: yes
+  template <typename T> void f(T t) {
+    T &tr = t;
+    T *tp = &t; // expected-error {{pointer to a reference}}
+#if __cplusplus >= 201103L
+    auto *ap = &t;
+#endif
+  }
+  void g(int n) { f<int&>(n); } // expected-note {{instantiation of}}
+}
+
+namespace dr663 { // dr663: yes c++11
+  int ЍЎ = 123;
+#if __cplusplus < 201103L
+  // expected-error@-2 {{non-ASCII}}
+#endif
+}
+
+#if __cplusplus >= 201103L
+namespace dr664 { // dr664: yes
+  struct A { A(const A&) = delete; };
+  A &&f(A &&a, int n) {
+    if (n)
+      return f(static_cast<A&&>(a), n - 1);
+    return static_cast<A&&>(a);
+  }
+}
+#endif
+
+namespace dr665 { // dr665: yes
+  struct A { virtual ~A(); };
+  struct B : A {} *b;
+  struct C : private A {} *c; // expected-note {{here}}
+  struct D : B, C {} *d;
+
+  struct VB : virtual A {} *vb;
+  struct VC : private virtual A {} *vc; // expected-note {{here}}
+  struct VD : VB, VC {} *vd;
+
+  void f() {
+    (void)dynamic_cast<A*>(b);
+    (void)dynamic_cast<A*>(c); // expected-error {{private}}
+    (void)dynamic_cast<A*>(d); // expected-error {{ambiguous}}
+    (void)dynamic_cast<A*>(vb);
+    (void)dynamic_cast<A*>(vc); // expected-error {{private}}, even though it could be valid at runtime
+    (void)dynamic_cast<A*>(vd);
+  }
+}
+
+namespace dr666 { // dr666: yes
+  struct P { friend P operator*(P, P); P(int); } p(0);
+
+  template<int> int f();
+  template<typename T> int f() {
+    T::type *p = 0; // expected-error {{missing 'typename'}}
+    int a(T::type); // expected-error {{missing 'typename'}}
+    return f<T::type>(); // expected-error {{missing 'typename'}}
+  }
+  struct X { static const int type = 0; };
+  struct Y { typedef int type; };
+  int a = f<X>();
+  int b = f<Y>(); // expected-note {{instantiation of}}
+}
+
+// Triviality is entirely different in C++98.
+#if __cplusplus >= 201103L
+namespace dr667 { // dr667: yes
+  struct A {
+    A() = default;
+    int &r;
+  };
+  static_assert(!__is_trivially_constructible(A), "");
+
+  struct B { ~B() = delete; };
+  union C { B b; };
+  static_assert(!__is_trivially_destructible(C), "");
+
+  struct D { D(const D&) = delete; };
+  struct E : D {};
+  static_assert(!__is_trivially_constructible(E, const E&), "");
+
+  struct F { F &operator=(F&&) = delete; };
+  struct G : F {};
+  static_assert(!__is_trivially_assignable(G, G&&), "");
+}
+#endif
+
+// dr668 FIXME: add codegen test
+
+#if __cplusplus >= 201103L
+namespace dr669 { // dr669: yes
+  void f() {
+    int n;
+    using T = decltype(n);
+    using T = int;
+    using U = decltype((n));
+    using U = int &;
+
+    [=] {
+      using V = decltype(n);
+      using V = int;
+      using W = decltype((n));
+      using W = const int&;
+    } ();
+
+    struct X {
+      int n;
+      void f() const {
+        using X = decltype(n);
+        using X = int;
+        using Y = decltype((n));
+        using Y = const int&;
+      }
+    };
+  }
+}
+#endif
+
+namespace dr671 { // dr671: yes
+  enum class E { e }; // expected-error 0-1 {{C++11}}
+  E e = static_cast<E>(0);
+  int n = static_cast<int>(E::e); // expected-error 0-1 {{C++11}}
+  int m = static_cast<int>(e); // expected-error 0-1 {{C++11}}
+}
+
+// dr672 FIXME: add codegen test
+
+namespace dr673 { // dr673: yes
+  template<typename> struct X { static const int n = 0; };
+
+  class A {
+    friend class B *f();
+    class C *f();
+    void f(class D *);
+    enum { e = X<struct E>::n };
+    void g() { extern struct F *p; }
+  };
+  B *b;
+  C *c;
+  D *d;
+  E *e;
+  F *f; // expected-error {{unknown type name}}
+}
+
+namespace dr674 { // dr674: no
+  template<typename T> int f(T);
+
+  int g(int);
+  template<typename T> int g(T);
+
+  int h(int);
+  template<typename T> int h(T);
+
+  class X {
+    // FIXME: This should deduce dr674::f<int>.
+    friend int dr674::f(int); // expected-error {{does not match any}}
+    friend int dr674::g(int);
+    friend int dr674::h<>(int);
+    int n;
+  };
+
+  template<typename T> int f(T) { return X().n; }
+  int g(int) { return X().n; }
+  template<typename T> int g(T) { return X().n; }
+  int h(int) { return X().n; }
+  template<typename T> int h(T) { return X().n; }
+
+  template int f(int);
+  template int g(int);
+  template int h(int);
+}
+
+namespace dr675 { // dr675: dup 739
+  template<typename T> struct A { T n : 1; };
+#if __cplusplus >= 201103L
+  static_assert(A<char>{1}.n < 0, "");
+  static_assert(A<int>{1}.n < 0, "");
+  static_assert(A<long long>{1}.n < 0, "");
+#endif
+}
+
+// dr676: na
+
+namespace dr677 { // dr677: no
+  struct A {
+    void *operator new(std::size_t);
+    void operator delete(void*) = delete; // expected-error 0-1{{C++11}} expected-note {{deleted}}
+  };
+  struct B {
+    void *operator new(std::size_t);
+    void operator delete(void*) = delete; // expected-error 0-1{{C++11}} expected-note 2{{deleted}}
+    virtual ~B();
+  };
+  void f(A *p) { delete p; } // expected-error {{deleted}}
+  // FIXME: This appears to be valid; we shouldn't even be looking up the 'operator delete' here.
+  void f(B *p) { delete p; } // expected-error {{deleted}}
+  B::~B() {} // expected-error {{deleted}}
+}
+
+// dr678 FIXME: check that the modules ODR check catches this
+
+namespace dr679 { // dr679: yes
+  struct X {};
+  template<int> void operator+(X, X);
+  template<> void operator+<0>(X, X) {} // expected-note {{previous}}
+  template<> void operator+<0>(X, X) {} // expected-error {{redefinition}}
+}
+
+// dr680: na
+
+#if __cplusplus >= 201103L
+namespace dr681 { // dr681: partial
+  auto *a() -> int; // expected-error {{must specify return type 'auto', not 'auto *'}}
+  auto (*b)() -> int;
+  // FIXME: The errors here aren't great.
+  auto (*c()) -> int; // expected-error {{expected function body}}
+  auto ((*d)()) -> int; // expected-error {{expected ';'}} expected-error {{requires an initializer}}
+
+  // FIXME: This is definitely wrong. This should be
+  //   "function of () returning pointer to function of () returning int"
+  // not a function with a deduced return type.
+  auto (*e())() -> int; // expected-error 0-1{{C++14}}
+
+  auto f() -> int (*)();
+  auto g() -> auto (*)() -> int;
+}
+#endif
+
+#if __cplusplus >= 201103L
+namespace dr683 { // dr683: yes
+  struct A {
+    A() = default;
+    A(const A&) = default;
+    A(A&);
+  };
+  static_assert(__is_trivially_constructible(A, const A&), "");
+  static_assert(!__is_trivially_constructible(A, A&), "");
+  static_assert(!__is_trivial(A), "");
+
+  struct B : A {};
+  static_assert(__is_trivially_constructible(B, const B&), "");
+  static_assert(__is_trivially_constructible(B, B&), "");
+  static_assert(__is_trivial(B), "");
+}
+#endif
+
+#if __cplusplus >= 201103L
+namespace dr684 { // dr684: sup 1454
+  void f() {
+    int a; // expected-note {{here}}
+    constexpr int *p = &a; // expected-error {{constant expression}} expected-note {{pointer to 'a'}}
+  }
+}
+#endif
+
+#if __cplusplus >= 201103L
+namespace dr685 { // dr685: yes
+  enum E : long { e };
+  void f(int);
+  int f(long);
+  int a = f(e);
+
+  enum G : short { g };
+  int h(short);
+  void h(long);
+  int b = h(g);
+
+  int i(int);
+  void i(long);
+  int c = i(g);
+
+  int j(unsigned int); // expected-note {{candidate}}
+  void j(long); // expected-note {{candidate}}
+  int d = j(g); // expected-error {{ambiguous}}
+
+  int k(short); // expected-note {{candidate}}
+  void k(int); // expected-note {{candidate}}
+  int x = k(g); // expected-error {{ambiguous}}
+}
+#endif
+
+namespace dr686 { // dr686: yes
+  void f() {
+    (void)dynamic_cast<struct A*>(0); // expected-error {{incomplete}} expected-note {{forward}}
+    (void)dynamic_cast<struct A{}*>(0); // expected-error {{cannot be defined in a type specifier}}
+    (void)typeid(struct B*);
+    (void)typeid(struct B{}*); // expected-error {{cannot be defined in a type specifier}}
+    (void)static_cast<struct C*>(0);
+    (void)static_cast<struct C{}*>(0); // expected-error {{cannot be defined in a type specifier}}
+    (void)reinterpret_cast<struct D*>(0);
+    (void)reinterpret_cast<struct D{}*>(0); // expected-error {{cannot be defined in a type specifier}}
+    (void)const_cast<struct E*>(0); // expected-error {{not allowed}}
+    (void)const_cast<struct E{}*>(0); // expected-error {{cannot be defined in a type specifier}}
+    (void)sizeof(struct F*);
+    (void)sizeof(struct F{}*); // expected-error {{cannot be defined in a type specifier}}
+    (void)new struct G*;
+    (void)new struct G{}*; // expected-error {{cannot be defined in a type specifier}}
+#if __cplusplus >= 201103L
+    (void)alignof(struct H*);
+    (void)alignof(struct H{}*); // expected-error {{cannot be defined in a type specifier}}
+#endif
+    (void)(struct I*)0;
+    (void)(struct I{}*)0; // expected-error {{cannot be defined in a type specifier}}
+    if (struct J *p = 0) {}
+    if (struct J {} *p = 0) {} // expected-error {{cannot be defined in a condition}}
+    for (struct K *p = 0; struct L *q = 0; ) {}
+    for (struct K {} *p = 0; struct L {} *q = 0; ) {} // expected-error {{'L' cannot be defined in a condition}}
+#if __cplusplus >= 201103L
+    using M = struct {};
+#endif
+    struct N {
+      operator struct O{}(){}; // expected-error {{cannot be defined in a type specifier}}
+    };
+    try {}
+    catch (struct P *) {} // expected-error {{incomplete}} expected-note {{forward}}
+    catch (struct P {} *) {} // expected-error {{cannot be defined in a type specifier}}
+#if __cplusplus < 201703L
+    void g() throw(struct Q); // expected-error {{incomplete}} expected-note {{forward}}
+    void h() throw(struct Q {}); // expected-error {{cannot be defined in a type specifier}}
+#endif
+  }
+  template<struct R *> struct X;
+  template<struct R {} *> struct Y; // expected-error {{cannot be defined in a type specifier}}
+}
+
+namespace dr687 { // dr687 still open
+  template<typename T> void f(T a) {
+    // FIXME: This is valid in C++20.
+    g<int>(a); // expected-error {{undeclared}} expected-error {{'('}}
+
+    // This is not.
+    template g<int>(a); // expected-error {{expected expression}}
   }
 }
 

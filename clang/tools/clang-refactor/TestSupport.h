@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief Declares datatypes and routines that are used by test-specific code
+/// Declares datatypes and routines that are used by test-specific code
 /// in clang-refactor.
 ///
 //===----------------------------------------------------------------------===//

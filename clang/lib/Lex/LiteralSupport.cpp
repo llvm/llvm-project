@@ -70,7 +70,7 @@ static CharSourceRange MakeCharSourceRange(const LangOptions &Features,
   return CharSourceRange::getCharRange(Begin, End);
 }
 
-/// \brief Produce a diagnostic highlighting some portion of a literal.
+/// Produce a diagnostic highlighting some portion of a literal.
 ///
 /// Emits the diagnostic \p DiagID, highlighting the range of characters from
 /// \p TokRangeBegin (inclusive) to \p TokRangeEnd (exclusive), which must be
@@ -538,6 +538,7 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
   saw_exponent = false;
   saw_period = false;
   saw_ud_suffix = false;
+  saw_fixed_point_suffix = false;
   isLong = false;
   isUnsigned = false;
   isLongLong = false;
@@ -547,6 +548,8 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
   isFloat16 = false;
   isFloat128 = false;
   MicrosoftInteger = 0;
+  isFract = false;
+  isAccum = false;
   hadError = false;
 
   if (*s == '0') { // parse radix
@@ -568,6 +571,16 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
   SuffixBegin = s;
   checkSeparator(TokLoc, s, CSK_AfterDigits);
 
+  // Initial scan to lookahead for fixed point suffix.
+  if (PP.getLangOpts().FixedPoint) {
+    for (const char *c = s; c != ThisTokEnd; ++c) {
+      if (*c == 'r' || *c == 'k' || *c == 'R' || *c == 'K') {
+        saw_fixed_point_suffix = true;
+        break;
+      }
+    }
+  }
+
   // Parse the suffix.  At this point we can classify whether we have an FP or
   // integer constant.
   bool isFPConstant = isFloatingLiteral();
@@ -576,11 +589,25 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
   // we break out of the loop.
   for (; s != ThisTokEnd; ++s) {
     switch (*s) {
+    case 'R':
+    case 'r':
+      if (!PP.getLangOpts().FixedPoint) break;
+      if (isFract || isAccum) break;
+      if (!(saw_period || saw_exponent)) break;
+      isFract = true;
+      continue;
+    case 'K':
+    case 'k':
+      if (!PP.getLangOpts().FixedPoint) break;
+      if (isFract || isAccum) break;
+      if (!(saw_period || saw_exponent)) break;
+      isAccum = true;
+      continue;
     case 'h':      // FP Suffix for "half".
     case 'H':
       // OpenCL Extension v1.2 s9.5 - h or H suffix for half type.
-      if (!PP.getLangOpts().Half) break;
-      if (!isFPConstant) break;  // Error for integer constant.
+      if (!(PP.getLangOpts().Half || PP.getLangOpts().FixedPoint)) break;
+      if (isIntegerLiteral()) break;  // Error for integer constant.
       if (isHalf || isFloat || isLong) break; // HH, FH, LH invalid.
       isHalf = true;
       continue;  // Success.
@@ -693,6 +720,9 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
         isHalf = false;
         isImaginary = false;
         MicrosoftInteger = 0;
+        saw_fixed_point_suffix = false;
+        isFract = false;
+        isAccum = false;
       }
 
       saw_ud_suffix = true;
@@ -707,6 +737,10 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
       hadError = true;
     }
   }
+
+  if (!hadError && saw_fixed_point_suffix) {
+    assert(isFract || isAccum);
+  }
 }
 
 /// ParseDecimalOrOctalCommon - This method is called for decimal or octal
@@ -717,7 +751,8 @@ void NumericLiteralParser::ParseDecimalOrOctalCommon(SourceLocation TokLoc){
 
   // If we have a hex digit other than 'e' (which denotes a FP exponent) then
   // the code is using an incorrect base.
-  if (isHexDigit(*s) && *s != 'e' && *s != 'E') {
+  if (isHexDigit(*s) && *s != 'e' && *s != 'E' &&
+      !isValidUDSuffix(PP.getLangOpts(), StringRef(s, ThisTokEnd - s))) {
     PP.Diag(PP.AdvanceToTokenCharacter(TokLoc, s-ThisTokBegin),
             diag::err_invalid_digit) << StringRef(s, 1) << (radix == 8 ? 1 : 0);
     hadError = true;
@@ -770,12 +805,14 @@ bool NumericLiteralParser::isValidUDSuffix(const LangOptions &LangOpts,
   if (!LangOpts.CPlusPlus14)
     return false;
 
-  // In C++1y, "s", "h", "min", "ms", "us", and "ns" are used in the library.
+  // In C++14, "s", "h", "min", "ms", "us", and "ns" are used in the library.
   // Per tweaked N3660, "il", "i", and "if" are also used in the library.
+  // In C++2a "d" and "y" are used in the library.
   return llvm::StringSwitch<bool>(Suffix)
       .Cases("h", "min", "s", true)
       .Cases("ms", "us", "ns", true)
       .Cases("il", "i", "if", true)
+      .Cases("d", "y", LangOpts.CPlusPlus2a)
       .Default(false);
 }
 
@@ -888,7 +925,9 @@ void NumericLiteralParser::ParseNumberStartingWithZero(SourceLocation TokLoc) {
     s = SkipBinaryDigits(s);
     if (s == ThisTokEnd) {
       // Done.
-    } else if (isHexDigit(*s)) {
+    } else if (isHexDigit(*s) &&
+               !isValidUDSuffix(PP.getLangOpts(),
+                                StringRef(s, ThisTokEnd - s))) {
       PP.Diag(PP.AdvanceToTokenCharacter(TokLoc, s-ThisTokBegin),
               diag::err_invalid_digit) << StringRef(s, 1) << 2;
       hadError = true;
@@ -1010,6 +1049,126 @@ NumericLiteralParser::GetFloatValue(llvm::APFloat &Result) {
   }
 
   return Result.convertFromString(Str, APFloat::rmNearestTiesToEven);
+}
+
+static inline bool IsExponentPart(char c) {
+  return c == 'p' || c == 'P' || c == 'e' || c == 'E';
+}
+
+bool NumericLiteralParser::GetFixedPointValue(llvm::APInt &StoreVal, unsigned Scale) {
+  assert(radix == 16 || radix == 10);
+
+  // Find how many digits are needed to store the whole literal.
+  unsigned NumDigits = SuffixBegin - DigitsBegin;
+  if (saw_period) --NumDigits;
+
+  // Initial scan of the exponent if it exists
+  bool ExpOverflowOccurred = false;
+  bool NegativeExponent = false;
+  const char *ExponentBegin;
+  uint64_t Exponent = 0;
+  int64_t BaseShift = 0;
+  if (saw_exponent) {
+    const char *Ptr = DigitsBegin;
+
+    while (!IsExponentPart(*Ptr)) ++Ptr;
+    ExponentBegin = Ptr;
+    ++Ptr;
+    NegativeExponent = *Ptr == '-';
+    if (NegativeExponent) ++Ptr;
+
+    unsigned NumExpDigits = SuffixBegin - Ptr;
+    if (alwaysFitsInto64Bits(radix, NumExpDigits)) {
+      llvm::StringRef ExpStr(Ptr, NumExpDigits);
+      llvm::APInt ExpInt(/*numBits=*/64, ExpStr, /*radix=*/10);
+      Exponent = ExpInt.getZExtValue();
+    } else {
+      ExpOverflowOccurred = true;
+    }
+
+    if (NegativeExponent) BaseShift -= Exponent;
+    else BaseShift += Exponent;
+  }
+
+  // Number of bits needed for decimal literal is
+  //   ceil(NumDigits * log2(10))       Integral part
+  // + Scale                            Fractional part
+  // + ceil(Exponent * log2(10))        Exponent
+  // --------------------------------------------------
+  //   ceil((NumDigits + Exponent) * log2(10)) + Scale
+  //
+  // But for simplicity in handling integers, we can round up log2(10) to 4,
+  // making:
+  // 4 * (NumDigits + Exponent) + Scale
+  //
+  // Number of digits needed for hexadecimal literal is
+  //   4 * NumDigits                    Integral part
+  // + Scale                            Fractional part
+  // + Exponent                         Exponent
+  // --------------------------------------------------
+  //   (4 * NumDigits) + Scale + Exponent
+  uint64_t NumBitsNeeded;
+  if (radix == 10)
+    NumBitsNeeded = 4 * (NumDigits + Exponent) + Scale;
+  else
+    NumBitsNeeded = 4 * NumDigits + Exponent + Scale;
+
+  if (NumBitsNeeded > std::numeric_limits<unsigned>::max())
+    ExpOverflowOccurred = true;
+  llvm::APInt Val(static_cast<unsigned>(NumBitsNeeded), 0, /*isSigned=*/false);
+
+  bool FoundDecimal = false;
+
+  int64_t FractBaseShift = 0;
+  const char *End = saw_exponent ? ExponentBegin : SuffixBegin;
+  for (const char *Ptr = DigitsBegin; Ptr < End; ++Ptr) {
+    if (*Ptr == '.') {
+      FoundDecimal = true;
+      continue;
+    }
+
+    // Normal reading of an integer
+    unsigned C = llvm::hexDigitValue(*Ptr);
+    assert(C < radix && "NumericLiteralParser ctor should have rejected this");
+
+    Val *= radix;
+    Val += C;
+
+    if (FoundDecimal)
+      // Keep track of how much we will need to adjust this value by from the
+      // number of digits past the radix point.
+      --FractBaseShift;
+  }
+
+  // For a radix of 16, we will be multiplying by 2 instead of 16.
+  if (radix == 16) FractBaseShift *= 4;
+  BaseShift += FractBaseShift;
+
+  Val <<= Scale;
+
+  uint64_t Base = (radix == 16) ? 2 : 10;
+  if (BaseShift > 0) {
+    for (int64_t i = 0; i < BaseShift; ++i) {
+      Val *= Base;
+    }
+  } else if (BaseShift < 0) {
+    for (int64_t i = BaseShift; i < 0 && !Val.isNullValue(); ++i)
+      Val = Val.udiv(Base);
+  }
+
+  bool IntOverflowOccurred = false;
+  auto MaxVal = llvm::APInt::getMaxValue(StoreVal.getBitWidth());
+  if (Val.getBitWidth() > StoreVal.getBitWidth()) {
+    IntOverflowOccurred |= Val.ugt(MaxVal.zext(Val.getBitWidth()));
+    StoreVal = Val.trunc(StoreVal.getBitWidth());
+  } else if (Val.getBitWidth() < StoreVal.getBitWidth()) {
+    IntOverflowOccurred |= Val.zext(MaxVal.getBitWidth()).ugt(MaxVal);
+    StoreVal = Val.zext(StoreVal.getBitWidth());
+  } else {
+    StoreVal = Val;
+  }
+
+  return IntOverflowOccurred || ExpOverflowOccurred;
 }
 
 /// \verbatim
@@ -1591,7 +1750,7 @@ static const char *resyncUTF8(const char *Err, const char *End) {
   return Err;
 }
 
-/// \brief This function copies from Fragment, which is a sequence of bytes
+/// This function copies from Fragment, which is a sequence of bytes
 /// within Tok's contents (which begin at TokBegin) into ResultPtr.
 /// Performs widening for multi-byte characters.
 bool StringLiteralParser::CopyStringFragment(const Token &Tok,

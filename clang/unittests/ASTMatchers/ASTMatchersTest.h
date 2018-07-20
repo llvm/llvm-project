@@ -132,7 +132,7 @@ testing::AssertionResult matchesObjC(const std::string &Code, const T &AMatcher,
                                      bool ExpectMatch = true) {
   return matchesConditionally(Code, AMatcher, ExpectMatch,
                               {"-fobjc-nonfragile-abi", "-Wno-objc-root-class",
-                               "-Wno-incomplete-implementation"},
+                               "-fblocks", "-Wno-incomplete-implementation"},
                               FileContentMappings(), "input.m");
 }
 

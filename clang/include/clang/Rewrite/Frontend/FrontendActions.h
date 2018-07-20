@@ -46,7 +46,7 @@ public:
   ~FixItAction() override;
 };
 
-/// \brief Emits changes to temporary files and uses them for the original
+/// Emits changes to temporary files and uses them for the original
 /// frontend action.
 class FixItRecompile : public WrapperFrontendAction {
 public:

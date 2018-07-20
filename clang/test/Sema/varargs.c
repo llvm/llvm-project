@@ -112,3 +112,12 @@ void f13(enum E1 e, ...) {
 #endif
   __builtin_va_end(va);
 }
+
+void f14(int e, ...) {
+  // expected-warning@+3 {{implicitly declaring library function 'va_start'}}
+  // expected-note@+2 {{include the header <stdarg.h>}}
+  // expected-error@+1 {{too few arguments to function call}}
+  va_start();
+  __builtin_va_list va;
+  va_start(va, e);
+}

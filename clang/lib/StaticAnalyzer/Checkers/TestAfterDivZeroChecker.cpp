@@ -55,7 +55,7 @@ public:
   }
 };
 
-class DivisionBRVisitor : public BugReporterVisitorImpl<DivisionBRVisitor> {
+class DivisionBRVisitor : public BugReporterVisitor {
 private:
   SymbolRef ZeroSymbol;
   const StackFrameContext *SFC;
@@ -85,7 +85,7 @@ class TestAfterDivZeroChecker
 public:
   void checkPreStmt(const BinaryOperator *B, CheckerContext &C) const;
   void checkBranchCondition(const Stmt *Condition, CheckerContext &C) const;
-  void checkEndFunction(CheckerContext &C) const;
+  void checkEndFunction(const ReturnStmt *RS, CheckerContext &C) const;
   void setDivZeroMap(SVal Var, CheckerContext &C) const;
   bool hasDivZeroMap(SVal Var, const CheckerContext &C) const;
   bool isZero(SVal S, CheckerContext &C) const;
@@ -180,7 +180,8 @@ void TestAfterDivZeroChecker::reportBug(SVal Val, CheckerContext &C) const {
   }
 }
 
-void TestAfterDivZeroChecker::checkEndFunction(CheckerContext &C) const {
+void TestAfterDivZeroChecker::checkEndFunction(const ReturnStmt *RS,
+                                               CheckerContext &C) const {
   ProgramStateRef State = C.getState();
 
   DivZeroMapTy DivZeroes = State->get<DivZeroMap>();

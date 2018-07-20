@@ -94,6 +94,7 @@ public:
   void getHexagonLibraryPaths(const llvm::opt::ArgList &Args,
       ToolChain::path_list &LibPaths) const;
 
+  static bool isAutoHVXEnabled(const llvm::opt::ArgList &Args);
   static const StringRef GetDefaultCPU();
   static const StringRef GetTargetCPUVersion(const llvm::opt::ArgList &Args);
 

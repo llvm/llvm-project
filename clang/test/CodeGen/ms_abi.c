@@ -13,7 +13,7 @@ void __attribute__((ms_abi)) f1(void);
 void __attribute__((sysv_abi)) f2(void);
 void f3(void) {
   // FREEBSD-LABEL: define void @f3()
-  // WIN64-LABEL: define void @f3()
+  // WIN64-LABEL: define dso_local void @f3()
   f1();
   // FREEBSD: call win64cc void @f1()
   // WIN64: call void @f1()
@@ -23,13 +23,13 @@ void f3(void) {
 }
 // FREEBSD: declare win64cc void @f1()
 // FREEBSD: declare void @f2()
-// WIN64: declare void @f1()
-// WIN64: declare x86_64_sysvcc void @f2()
+// WIN64: declare dso_local void @f1()
+// WIN64: declare dso_local x86_64_sysvcc void @f2()
 
 // Win64 ABI varargs
 void __attribute__((ms_abi)) f4(int a, ...) {
   // FREEBSD-LABEL: define win64cc void @f4
-  // WIN64-LABEL: define void @f4
+  // WIN64-LABEL: define dso_local void @f4
   __builtin_ms_va_list ap;
   __builtin_ms_va_start(ap, a);
   // FREEBSD: %[[AP:.*]] = alloca i8*
@@ -79,7 +79,7 @@ void __attribute__((ms_abi)) f4(int a, ...) {
 
 // Let's verify that normal va_lists work right on Win64, too.
 void f5(int a, ...) {
-  // WIN64-LABEL: define void @f5
+  // WIN64-LABEL: define dso_local void @f5
   __builtin_va_list ap;
   __builtin_va_start(ap, a);
   // WIN64: %[[AP:.*]] = alloca i8*
@@ -110,7 +110,7 @@ void f5(int a, ...) {
 void __attribute__((sysv_abi)) f6(__builtin_ms_va_list ap) {
   // FREEBSD-LABEL: define void @f6
   // FREEBSD: store i8* %ap, i8** %[[AP:.*]]
-  // WIN64-LABEL: define x86_64_sysvcc void @f6
+  // WIN64-LABEL: define dso_local x86_64_sysvcc void @f6
   // WIN64: store i8* %ap, i8** %[[AP:.*]]
   int b = __builtin_va_arg(ap, int);
   // FREEBSD: %[[AP_CUR:.*]] = load i8*, i8** %[[AP]]
@@ -155,7 +155,7 @@ struct i128 {
 };
 
 __attribute__((ms_abi)) struct i128 f7(struct i128 a) {
-  // WIN64: define void @f7(%struct.i128* noalias sret %agg.result, %struct.i128* %a)
+  // WIN64: define dso_local void @f7(%struct.i128* noalias sret %agg.result, %struct.i128* %a)
   // FREEBSD: define win64cc void @f7(%struct.i128* noalias sret %agg.result, %struct.i128* %a)
   return a;
 }

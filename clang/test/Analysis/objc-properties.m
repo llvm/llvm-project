@@ -17,7 +17,7 @@ typedef signed char BOOL;
   id _nonSynth;
 }
 
-  @property (assign, nonatomic) MyClass* A; // explicitely synthesized, not implemented, non-default ivar name
+  @property (assign, nonatomic) MyClass* A; // explicitly synthesized, not implemented, non-default ivar name
 
   @property (assign) MyClass* X;  // automatically synthesized, not implemented
 

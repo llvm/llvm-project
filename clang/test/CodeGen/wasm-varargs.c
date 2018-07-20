@@ -80,10 +80,9 @@ struct S test_struct(char *fmt, ...) {
   return v;
 }
 
-// CHECK: define void @test_struct([[STRUCT_S:%[^,=]+]]*{{.*}} noalias sret %agg.result, i8*{{.*}} %fmt, ...) {{.*}} {
+// CHECK: define void @test_struct([[STRUCT_S:%[^,=]+]]*{{.*}} noalias sret [[AGG_RESULT:%.*]], i8*{{.*}} %fmt, ...) {{.*}} {
 // CHECK:   [[FMT_ADDR:%[^,=]+]] = alloca i8*, align 4
 // CHECK:   [[VA:%[^,=]+]] = alloca i8*, align 4
-// CHECK:   [[V:%[^,=]+]] = alloca [[STRUCT_S]], align 4
 // CHECK:   store i8* %fmt, i8** [[FMT_ADDR]], align 4
 // CHECK:   [[VA1:%[^,=]+]] = bitcast i8** [[VA]] to i8*
 // CHECK:   call void @llvm.va_start(i8* [[VA1]])
@@ -91,13 +90,10 @@ struct S test_struct(char *fmt, ...) {
 // CHECK:   [[ARGP_NEXT:%[^,=]+]] = getelementptr inbounds i8, i8* [[ARGP_CUR]], i32 12
 // CHECK:   store i8* [[ARGP_NEXT]], i8** [[VA]], align 4
 // CHECK:   [[R3:%[^,=]+]] = bitcast i8* [[ARGP_CUR]] to [[STRUCT_S]]*
-// CHECK:   [[R4:%[^,=]+]] = bitcast [[STRUCT_S]]* [[V]] to i8*
+// CHECK:   [[R4:%[^,=]+]] = bitcast [[STRUCT_S]]* [[AGG_RESULT]] to i8*
 // CHECK:   [[R5:%[^,=]+]] = bitcast [[STRUCT_S]]* [[R3]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i32(i8* [[R4]], i8* [[R5]], i32 12, i32 4, i1 false)
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 [[R4]], i8* align 4 [[R5]], i32 12, i1 false)
 // CHECK:   [[VA2:%[^,=]+]] = bitcast i8** [[VA]] to i8*
 // CHECK:   call void @llvm.va_end(i8* [[VA2]])
-// CHECK:   [[R6:%[^,=]+]] = bitcast [[STRUCT_S]]* %agg.result to i8*
-// CHECK:   [[R7:%[^,=]+]] = bitcast [[STRUCT_S]]* [[V]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i32(i8* [[R6]], i8* [[R7]], i32 12, i32 4, i1 false)
 // CHECK:   ret void
 // CHECK: }

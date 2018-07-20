@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief A wrapper class around \c RecursiveASTVisitor that visits each
+/// A wrapper class around \c RecursiveASTVisitor that visits each
 /// occurrences of a named symbol.
 ///
 //===----------------------------------------------------------------------===//

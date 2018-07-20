@@ -44,7 +44,7 @@ void TextDiagnosticPrinter::EndSourceFile() {
   TextDiag.reset();
 }
 
-/// \brief Print any diagnostic option information to a raw_ostream.
+/// Print any diagnostic option information to a raw_ostream.
 ///
 /// This implements all of the logic for adding diagnostic options to a message
 /// (via OS). Each relevant option is comma separated and all are enclosed in

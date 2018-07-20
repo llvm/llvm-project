@@ -46,7 +46,14 @@ public:
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
-  bool hasFeature(StringRef Feature) const override { return Feature == "bpf"; }
+  bool hasFeature(StringRef Feature) const override {
+    return Feature == "bpf" || Feature == "alu32" || Feature == "dwarfris";
+  }
+
+  void setFeatureEnabled(llvm::StringMap<bool> &Features, StringRef Name,
+                         bool Enabled) const override {
+    Features[Name] = Enabled;
+  }
 
   ArrayRef<Builtin::Info> getTargetBuiltins() const override { return None; }
 
@@ -56,6 +63,7 @@ public:
     return TargetInfo::VoidPtrBuiltinVaList;
   }
 
+  bool isValidGCCRegisterName(StringRef Name) const override { return true; }
   ArrayRef<const char *> getGCCRegNames() const override { return None; }
 
   bool validateAsmConstraint(const char *&Name,
@@ -77,12 +85,9 @@ public:
     }
   }
 
-  bool isValidCPUName(StringRef Name) const override {
-    if (Name == "generic" || Name == "v1" ||
-        Name == "v2" || Name == "probe")
-      return true;
-    return false;
-  }
+  bool isValidCPUName(StringRef Name) const override;
+
+  void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
 
   bool setCPU(const std::string &Name) override {
     StringRef CPUName(Name);

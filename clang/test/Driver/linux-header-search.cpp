@@ -7,6 +7,7 @@
 // RUN:     -target x86_64-unknown-linux-gnu \
 // RUN:     -stdlib=libc++ \
 // RUN:     -ccc-install-dir %S/Inputs/basic_linux_tree/usr/bin \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_libcxx_tree \
 // RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=CHECK-BASIC-LIBCXX-SYSROOT %s
@@ -18,6 +19,7 @@
 // RUN:     -target x86_64-unknown-linux-gnu \
 // RUN:     -stdlib=libc++ \
 // RUN:     -ccc-install-dir %S/Inputs/basic_linux_libcxx_tree/usr/bin \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_libcxx_tree \
 // RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=CHECK-BASIC-LIBCXX-INSTALL %s
@@ -30,6 +32,7 @@
 // RUN:     -target x86_64-unknown-linux-gnu \
 // RUN:     -stdlib=libc++ \
 // RUN:     -ccc-install-dir %S/Inputs/basic_linux_tree/usr/bin \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_libcxxv2_tree \
 // RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=CHECK-BASIC-LIBCXXV2-SYSROOT %s
@@ -41,6 +44,7 @@
 // RUN:     -target x86_64-unknown-linux-gnu \
 // RUN:     -stdlib=libc++ \
 // RUN:     -ccc-install-dir %S/Inputs/basic_linux_libcxxv2_tree/usr/bin \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_libcxxv2_tree \
 // RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=CHECK-BASIC-LIBCXXV2-INSTALL %s
@@ -54,6 +58,7 @@
 // RUN:     -target x86_64-unknown-linux-gnu \
 // RUN:     -stdlib=libc++ \
 // RUN:     -ccc-install-dir %S/Inputs/basic_linux_tree/usr/bin \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_libstdcxx_libcxxv2_tree \
 // RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=CHECK-BASIC-LIBSTDCXX-LIBCXXV2-SYSROOT %s
@@ -342,6 +347,59 @@
 // CHECK-GENTOO-4-9-3-32: "-internal-isystem" "[[RESOURCE_DIR]]{{/|\\\\}}include"
 // CHECK-GENTOO-4-9-3-32: "-internal-externc-isystem" "[[SYSROOT]]/include"
 // CHECK-GENTOO-4-9-3-32: "-internal-externc-isystem" "[[SYSROOT]]/usr/include"
+//
+// Test support for parsing Gentoo's gcc-config -- clang should parse the
+// /etc/env.d/gcc/config-x86_64-pc-linux-gnu file to find CURRENT gcc used.
+// Then should pick the multilibs from version 4.9.x specified in
+// /etc/env.d/gcc/x86_64-pc-linux-gnu-4.9.3.
+// RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1 \
+// RUN:     -target x86_64-unknown-linux-gnu -stdlib=libstdc++ \
+// RUN:     --sysroot=%S/Inputs/gentoo_linux_gcc_4.9.x_tree \
+// RUN:     --gcc-toolchain="" \
+// RUN:   | FileCheck --check-prefix=CHECK-GENTOO-4-9-X %s
+//
+// CHECK-GENTOO-4-9-X: "{{.*}}clang{{.*}}" "-cc1"
+// CHECK-GENTOO-4-9-X: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
+// CHECK-GENTOO-4-9-X: "-isysroot" "[[SYSROOT:[^"]+]]"
+// CHECK-GENTOO-4-9-X: "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/x86_64-pc-linux-gnu/4.9.x/include/g++-v4.9.3"
+// CHECK-GENTOO-4-9-X: "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/x86_64-pc-linux-gnu/4.9.x/include/g++-v4.9.3/x86_64-pc-linux-gnu"
+// CHECK-GENTOO-4-9-X: "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/x86_64-pc-linux-gnu/4.9.x/include/g++-v4.9.3/backward"
+// CHECK-GENTOO-4-9-X: "-internal-isystem" "[[SYSROOT]]/usr/local/include"
+// CHECK-GENTOO-4-9-X: "-internal-isystem" "[[RESOURCE_DIR]]{{/|\\\\}}include"
+// CHECK-GENTOO-4-9-X: "-internal-externc-isystem" "[[SYSROOT]]/include"
+// CHECK-GENTOO-4-9-X: "-internal-externc-isystem" "[[SYSROOT]]/usr/include"
+//
+// RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1 \
+// RUN:     -target x86_64-unknown-linux-gnux32 -stdlib=libstdc++ \
+// RUN:     --sysroot=%S/Inputs/gentoo_linux_gcc_4.9.x_tree \
+// RUN:     --gcc-toolchain="" \
+// RUN:   | FileCheck --check-prefix=CHECK-GENTOO-4-9-X-X32 %s
+// CHECK-GENTOO-4-9-X-X32: "{{.*}}clang{{.*}}" "-cc1"
+// CHECK-GENTOO-4-9-X-X32: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
+// CHECK-GENTOO-4-9-X-X32: "-isysroot" "[[SYSROOT:[^"]+]]"
+// CHECK-GENTOO-4-9-X-X32: "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/x86_64-pc-linux-gnu/4.9.x/include/g++-v4.9.3"
+// CHECK-GENTOO-4-9-X-X32: "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/x86_64-pc-linux-gnu/4.9.x/include/g++-v4.9.3/x86_64-pc-linux-gnu/x32"
+// CHECK-GENTOO-4-9-X-X32: "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/x86_64-pc-linux-gnu/4.9.x/include/g++-v4.9.3/backward"
+// CHECK-GENTOO-4-9-X-X32: "-internal-isystem" "[[SYSROOT]]/usr/local/include"
+// CHECK-GENTOO-4-9-X-X32: "-internal-isystem" "[[RESOURCE_DIR]]{{/|\\\\}}include"
+// CHECK-GENTOO-4-9-X-X32: "-internal-externc-isystem" "[[SYSROOT]]/include"
+// CHECK-GENTOO-4-9-X-X32: "-internal-externc-isystem" "[[SYSROOT]]/usr/include"
+//
+// RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1 \
+// RUN:     -target i386-unknown-linux-gnu -stdlib=libstdc++ \
+// RUN:     --sysroot=%S/Inputs/gentoo_linux_gcc_4.9.x_tree \
+// RUN:     --gcc-toolchain="" \
+// RUN:   | FileCheck --check-prefix=CHECK-GENTOO-4-9-X-32 %s
+// CHECK-GENTOO-4-9-X-32: "{{.*}}clang{{.*}}" "-cc1"
+// CHECK-GENTOO-4-9-X-32: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
+// CHECK-GENTOO-4-9-X-32: "-isysroot" "[[SYSROOT:[^"]+]]"
+// CHECK-GENTOO-4-9-X-32: "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/x86_64-pc-linux-gnu/4.9.x/include/g++-v4.9.3"
+// CHECK-GENTOO-4-9-X-32: "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/x86_64-pc-linux-gnu/4.9.x/include/g++-v4.9.3/x86_64-pc-linux-gnu/32"
+// CHECK-GENTOO-4-9-X-32: "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/x86_64-pc-linux-gnu/4.9.x/include/g++-v4.9.3/backward"
+// CHECK-GENTOO-4-9-X-32: "-internal-isystem" "[[SYSROOT]]/usr/local/include"
+// CHECK-GENTOO-4-9-X-32: "-internal-isystem" "[[RESOURCE_DIR]]{{/|\\\\}}include"
+// CHECK-GENTOO-4-9-X-32: "-internal-externc-isystem" "[[SYSROOT]]/include"
+// CHECK-GENTOO-4-9-X-32: "-internal-externc-isystem" "[[SYSROOT]]/usr/include"
 //
 // Check header search on Debian 6 / MIPS64
 // RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1 \

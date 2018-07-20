@@ -11,7 +11,6 @@
 #include "clang/AST/ASTConsumer.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Tooling/Tooling.h"
-#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ToolOutputFile.h"

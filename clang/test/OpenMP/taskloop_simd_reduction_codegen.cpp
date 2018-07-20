@@ -52,7 +52,7 @@ sum = 0.0;
 // CHECK:    [[C:%.*]] = alloca [100 x %struct.S],
 // CHECK:    [[D:%.*]] = alloca float*,
 // CHECK:    [[AGG_CAPTURED:%.*]] = alloca [[STRUCT_ANON:%.*]],
-// CHECK:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(%ident_t*
+// CHECK:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t*
 // CHECK:    [[DOTRD_INPUT_:%.*]] = alloca [4 x %struct.kmp_task_red_input_t],
 // CHECK:    alloca i32,
 // CHECK:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32,
@@ -65,21 +65,21 @@ sum = 0.0;
 // CHECK:    [[TMP2:%.*]] = zext i32 [[ADD]] to i64
 // CHECK:    [[VLA:%.+]] = alloca float, i64 %
 
-// CHECK:    call void @__kmpc_taskgroup(%ident_t*
+// CHECK:    call void @__kmpc_taskgroup(%struct.ident_t*
 // CHECK-DAG:    [[TMP21:%.*]] = bitcast float* [[SUM]] to i8*
 // CHECK-DAG:    store i8* [[TMP21]], i8** [[TMP20:%[^,]+]],
 // CHECK-DAG:    [[TMP20]] = getelementptr inbounds [[STRUCT_KMP_TASK_RED_INPUT_T:%.+]], %struct.kmp_task_red_input_t* [[DOTRD_INPUT_GEP_:%.+]], i32 0, i32 0
 // CHECK-DAG:    [[TMP22:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_RED_INPUT_T]], %struct.kmp_task_red_input_t* [[DOTRD_INPUT_GEP_]], i32 0, i32 1
 // CHECK-DAG:    store i64 4, i64* [[TMP22]],
 // CHECK-DAG:    [[TMP23:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_RED_INPUT_T]], %struct.kmp_task_red_input_t* [[DOTRD_INPUT_GEP_]], i32 0, i32 2
-// CHECK-DAG:    store i8* bitcast (void (i8*)* [[RED_INIT1:@.+]] to i8*), i8** [[TMP23]],
+// CHECK-DAG:    store i8* bitcast (void (i8*)* @[[RED_INIT1:.+]] to i8*), i8** [[TMP23]],
 // CHECK-DAG:    [[TMP24:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_RED_INPUT_T]], %struct.kmp_task_red_input_t* [[DOTRD_INPUT_GEP_]], i32 0, i32 3
 // CHECK-DAG:    store i8* null, i8** [[TMP24]],
 // CHECK-DAG:    [[TMP25:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_RED_INPUT_T]], %struct.kmp_task_red_input_t* [[DOTRD_INPUT_GEP_]], i32 0, i32 4
-// CHECK-DAG:    store i8* bitcast (void (i8*, i8*)* [[RED_COMB1:@.+]] to i8*), i8** [[TMP25]],
+// CHECK-DAG:    store i8* bitcast (void (i8*, i8*)* @[[RED_COMB1:.+]] to i8*), i8** [[TMP25]],
 // CHECK-DAG:    [[TMP26:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_RED_INPUT_T]], %struct.kmp_task_red_input_t* [[DOTRD_INPUT_GEP_]], i32 0, i32 5
 // CHECK-DAG:    [[TMP27:%.*]] = bitcast i32* [[TMP26]] to i8*
-// CHECK-DAG:    call void @llvm.memset.p0i8.i64(i8* [[TMP27]], i8 0, i64 4, i32 8, i1 false)
+// CHECK-DAG:    call void @llvm.memset.p0i8.i64(i8* align 8 [[TMP27]], i8 0, i64 4, i1 false)
 // CHECK-DAG:    [[ARRAYIDX5:%.*]] = getelementptr inbounds [100 x %struct.S], [100 x %struct.S]* [[C]], i64 0, i64 0
 // CHECK-DAG:    [[LB_ADD_LEN:%.*]] = add nsw i64 -1, %
 // CHECK-DAG:    [[ARRAYIDX6:%.*]] = getelementptr inbounds [100 x %struct.S], [100 x %struct.S]* [[C]], i64 0, i64 [[LB_ADD_LEN]]
@@ -95,11 +95,11 @@ sum = 0.0;
 // CHECK-DAG:    store i64 [[TMP37]], i64* [[TMP38:%[^,]+]],
 // CHECK-DAG:    [[TMP38]] = getelementptr inbounds [[STRUCT_KMP_TASK_RED_INPUT_T]], %struct.kmp_task_red_input_t* [[DOTRD_INPUT_GEP_4]], i32 0, i32 1
 // CHECK-DAG:    [[TMP39:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_RED_INPUT_T]], %struct.kmp_task_red_input_t* [[DOTRD_INPUT_GEP_4]], i32 0, i32 2
-// CHECK-DAG:    store i8* bitcast (void (i8*)* [[RED_INIT2:@.+]] to i8*), i8** [[TMP39]],
+// CHECK-DAG:    store i8* bitcast (void (i8*)* @[[RED_INIT2:.+]] to i8*), i8** [[TMP39]],
 // CHECK-DAG:    [[TMP40:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_RED_INPUT_T]], %struct.kmp_task_red_input_t* [[DOTRD_INPUT_GEP_4]], i32 0, i32 3
-// CHECK-DAG:    store i8* bitcast (void (i8*)* [[RED_FINI2:@.+]] to i8*), i8** [[TMP40]],
+// CHECK-DAG:    store i8* bitcast (void (i8*)* @[[RED_FINI2:.+]] to i8*), i8** [[TMP40]],
 // CHECK-DAG:    [[TMP41:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_RED_INPUT_T]], %struct.kmp_task_red_input_t* [[DOTRD_INPUT_GEP_4]], i32 0, i32 4
-// CHECK-DAG:    store i8* bitcast (void (i8*, i8*)* [[RED_COMB2:@.+]] to i8*), i8** [[TMP41]],
+// CHECK-DAG:    store i8* bitcast (void (i8*, i8*)* @[[RED_COMB2:.+]] to i8*), i8** [[TMP41]],
 // CHECK-DAG:    [[TMP42:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_RED_INPUT_T]], %struct.kmp_task_red_input_t* [[DOTRD_INPUT_GEP_4]], i32 0, i32 5
 // CHECK-DAG:    store i32 1, i32* [[TMP42]],
 // CHECK-DAG:    [[TMP44:%.*]] = load float*, float** [[D]],
@@ -109,14 +109,14 @@ sum = 0.0;
 // CHECK-DAG:    [[TMP46:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_RED_INPUT_T]], %struct.kmp_task_red_input_t* [[DOTRD_INPUT_GEP_7]], i32 0, i32 1
 // CHECK-DAG:    store i64 4, i64* [[TMP46]],
 // CHECK-DAG:    [[TMP47:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_RED_INPUT_T]], %struct.kmp_task_red_input_t* [[DOTRD_INPUT_GEP_7]], i32 0, i32 2
-// CHECK-DAG:    store i8* bitcast (void (i8*)* [[RED_INIT3:@.+]] to i8*), i8** [[TMP47]],
+// CHECK-DAG:    store i8* bitcast (void (i8*)* @[[RED_INIT3:.+]] to i8*), i8** [[TMP47]],
 // CHECK-DAG:    [[TMP48:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_RED_INPUT_T]], %struct.kmp_task_red_input_t* [[DOTRD_INPUT_GEP_7]], i32 0, i32 3
 // CHECK-DAG:    store i8* null, i8** [[TMP48]],
 // CHECK-DAG:    [[TMP49:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_RED_INPUT_T]], %struct.kmp_task_red_input_t* [[DOTRD_INPUT_GEP_7]], i32 0, i32 4
-// CHECK-DAG:    store i8* bitcast (void (i8*, i8*)* [[RED_COMB3:@.+]] to i8*), i8** [[TMP49]],
+// CHECK-DAG:    store i8* bitcast (void (i8*, i8*)* @[[RED_COMB3:.+]] to i8*), i8** [[TMP49]],
 // CHECK-DAG:    [[TMP50:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_RED_INPUT_T]], %struct.kmp_task_red_input_t* [[DOTRD_INPUT_GEP_7]], i32 0, i32 5
 // CHECK-DAG:    [[TMP51:%.*]] = bitcast i32* [[TMP50]] to i8*
-// CHECK-DAG:    call void @llvm.memset.p0i8.i64(i8* [[TMP51]], i8 0, i64 4, i32 8, i1 false)
+// CHECK-DAG:    call void @llvm.memset.p0i8.i64(i8* align 8 [[TMP51]], i8 0, i64 4, i1 false)
 // CHECK-DAG:    [[TMP53:%.*]] = bitcast float* [[VLA]] to i8*
 // CHECK-DAG:    store i8* [[TMP53]], i8** [[TMP52:%[^,]+]],
 // CHECK-DAG:    [[TMP52]] = getelementptr inbounds [[STRUCT_KMP_TASK_RED_INPUT_T]], %struct.kmp_task_red_input_t* [[DOTRD_INPUT_GEP_8:%.+]], i32 0, i32 0
@@ -125,11 +125,11 @@ sum = 0.0;
 // CHECK-DAG:    store i64 [[TMP54]], i64* [[TMP56:%[^,]+]],
 // CHECK-DAG:    [[TMP56]] = getelementptr inbounds [[STRUCT_KMP_TASK_RED_INPUT_T]], %struct.kmp_task_red_input_t* [[DOTRD_INPUT_GEP_8]], i32 0, i32 1
 // CHECK-DAG:    [[TMP57:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_RED_INPUT_T]], %struct.kmp_task_red_input_t* [[DOTRD_INPUT_GEP_8]], i32 0, i32 2
-// CHECK-DAG:    store i8* bitcast (void (i8*)* [[RED_INIT4:@.+]] to i8*), i8** [[TMP57]],
+// CHECK-DAG:    store i8* bitcast (void (i8*)* @[[RED_INIT4:.+]] to i8*), i8** [[TMP57]],
 // CHECK-DAG:    [[TMP58:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_RED_INPUT_T]], %struct.kmp_task_red_input_t* [[DOTRD_INPUT_GEP_8]], i32 0, i32 3
 // CHECK-DAG:    store i8* null, i8** [[TMP58]],
 // CHECK-DAG:    [[TMP59:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_RED_INPUT_T]], %struct.kmp_task_red_input_t* [[DOTRD_INPUT_GEP_8]], i32 0, i32 4
-// CHECK-DAG:    store i8* bitcast (void (i8*, i8*)* [[RED_COMB4:@.+]] to i8*), i8** [[TMP59]],
+// CHECK-DAG:    store i8* bitcast (void (i8*, i8*)* @[[RED_COMB4:.+]] to i8*), i8** [[TMP59]],
 // CHECK-DAG:    [[TMP60:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_RED_INPUT_T]], %struct.kmp_task_red_input_t* [[DOTRD_INPUT_GEP_8]], i32 0, i32 5
 // CHECK-DAG:    store i32 1, i32* [[TMP60]],
 // CHECK-DAG:    [[DOTRD_INPUT_GEP_]] = getelementptr inbounds [4 x %struct.kmp_task_red_input_t], [4 x %struct.kmp_task_red_input_t]* [[DOTRD_INPUT_]], i64 0, i64
@@ -147,55 +147,64 @@ sum = 0.0;
 // CHECK:    [[DIV:%.*]] = sdiv i32 [[ADD11]], 1
 // CHECK:    [[SUB12:%.*]] = sub nsw i32 [[DIV]], 1
 // CHECK:    store i32 [[SUB12]], i32* [[DOTCAPTURE_EXPR_9]],
-// CHECK:    [[TMP65:%.*]] = call i8* @__kmpc_omp_task_alloc(%ident_t* %{{.+}}, i32 [[TMP0]], i32 1, i64 888, i64 72, i32 (i32, i8*)* bitcast (i32 (i32, %struct.kmp_task_t_with_privates*)* @{{.+}} to i32 (i32, i8*)*))
-// CHECK:    call void @__kmpc_taskloop(%ident_t* %{{.+}}, i32 [[TMP0]], i8* [[TMP65]], i32 1, i64* %{{.+}}, i64* %{{.+}}, i64 %{{.+}}, i32 0, i32 0, i64 0, i8* null)
-// CHECK:    call void @__kmpc_end_taskgroup(%ident_t*
+// CHECK:    [[TMP65:%.*]] = call i8* @__kmpc_omp_task_alloc(%struct.ident_t* %{{.+}}, i32 [[TMP0]], i32 1, i64 888, i64 72, i32 (i32, i8*)* bitcast (i32 (i32, %struct.kmp_task_t_with_privates*)* @{{.+}} to i32 (i32, i8*)*))
+// CHECK:    call void @__kmpc_taskloop(%struct.ident_t* %{{.+}}, i32 [[TMP0]], i8* [[TMP65]], i32 1, i64* %{{.+}}, i64* %{{.+}}, i64 %{{.+}}, i32 0, i32 0, i64 0, i8* null)
+// CHECK:    call void @__kmpc_end_taskgroup(%struct.ident_t*
 
 // CHECK:    ret i32
 
-// CHECK: define internal void [[RED_INIT1]](i8*)
+// CHECK: define internal void @[[RED_INIT1]](i8*)
 // CHECK: store float 0.000000e+00, float* %
 // CHECK: ret void
 
-// CHECK: define internal void [[RED_COMB1]](i8*, i8*)
+// CHECK: define internal void @[[RED_COMB1]](i8*, i8*)
 // CHECK: fadd float %
 // CHECK: store float %{{.+}}, float* %
 // CHECK: ret void
 
-// CHECK: define internal void [[RED_INIT2]](i8*)
+// CHECK: define internal void @[[RED_INIT2]](i8*)
 // CHECK: call i8* @__kmpc_threadprivate_cached(
 // CHECK: call i8* @__kmpc_threadprivate_cached(
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(
 // CHECK: ret void
 
-// CHECK: define internal void [[RED_FINI2]](i8*)
+// CHECK: define internal void @[[RED_FINI2]](i8*)
 // CHECK: call i8* @__kmpc_threadprivate_cached(
 // CHECK: call void @
 // CHECK: ret void
 
-// CHECK: define internal void [[RED_COMB2]](i8*, i8*)
+// CHECK: define internal void @[[RED_COMB2]](i8*, i8*)
 // CHECK: call i8* @__kmpc_threadprivate_cached(
 // CHECK: fadd float %
 // CHECK: store float %{{.+}}, float* %
 // CHECK: ret void
 
-// CHECK: define internal void [[RED_INIT3]](i8*)
+// CHECK: define internal void @[[RED_INIT3]](i8*)
 // CHECK: store float 0.000000e+00, float* %
 // CHECK: ret void
 
-// CHECK: define internal void [[RED_COMB3]](i8*, i8*)
+// CHECK: define internal void @[[RED_COMB3]](i8*, i8*)
 // CHECK: fadd float %
 // CHECK: store float %{{.+}}, float* %
 // CHECK: ret void
 
-// CHECK: define internal void [[RED_INIT4]](i8*)
+// CHECK: define internal void @[[RED_INIT4]](i8*)
 // CHECK: call i8* @__kmpc_threadprivate_cached(
 // CHECK: store float 0.000000e+00, float* %
 // CHECK: ret void
 
-// CHECK: define internal void [[RED_COMB4]](i8*, i8*)
+// CHECK: define internal void @[[RED_COMB4]](i8*, i8*)
 // CHECK: call i8* @__kmpc_threadprivate_cached(
 // CHECK: fadd float %
 // CHECK: store float %{{.+}}, float* %
 // CHECK: ret void
 
+// CHECK-DAG: !DISubprogram(linkageName: "[[RED_INIT1]]"
+// CHECK-DAG: !DISubprogram(linkageName: "[[RED_COMB1]]"
+// CHECK-DAG: !DISubprogram(linkageName: "[[RED_INIT2]]"
+// CHECK-DAG: !DISubprogram(linkageName: "[[RED_FINI2]]"
+// CHECK-DAG: !DISubprogram(linkageName: "[[RED_COMB2]]"
+// CHECK-DAG: !DISubprogram(linkageName: "[[RED_INIT3]]"
+// CHECK-DAG: !DISubprogram(linkageName: "[[RED_COMB3]]"
+// CHECK-DAG: !DISubprogram(linkageName: "[[RED_INIT4]]"
+// CHECK-DAG: !DISubprogram(linkageName: "[[RED_COMB4]]"

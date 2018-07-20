@@ -30,7 +30,7 @@
 // CHECK: @end
 
 // CHECK: @interface I(CAT)
-// CHECK: - (void)MethCAT __attribute__((availability(macos, introduced=10_1_0, deprecated=10_2)));
+// CHECK: - (void)MethCAT __attribute__((availability(macos, introduced=10.1.0, deprecated=10.2)));
 // CHECK: @end
 
 // CHECK: @implementation I
@@ -50,3 +50,13 @@ struct __attribute__((objc_bridge_related(C1,,))) S1;
 
 // CHECK: @class C1;
 // CHECK: struct __attribute__((objc_bridge_related(C1, , ))) S1;
+
+@interface ImplicitPropertyWithSetterOnly
+
+- (void)setX:(int)x;
+
+@end
+
+void printImplicitPropertyWithSetterOnly(ImplicitPropertyWithSetterOnly *x) {
+  x.x = 313; // CHECK: x.x = 313;
+}

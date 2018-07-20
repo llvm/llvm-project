@@ -55,7 +55,7 @@ namespace PR6031 {
   struct NoDepBase {
     int foo() {
       class NoDepBase::Nested nested; // expected-error{{no class named 'Nested' in 'NoDepBase<T>'}}
-      typedef typename NoDepBase::template MemberTemplate<T>::type type; // expected-error{{'MemberTemplate' following the 'template' keyword does not refer to a template}} \
+      typedef typename NoDepBase::template MemberTemplate<T>::type type; // expected-error{{no member named 'MemberTemplate' in 'NoDepBase<T>'}} \
       // FIXME: expected-error{{unqualified-id}}
       return NoDepBase::a; // expected-error{{no member named 'a' in 'NoDepBase<T>'}}
     }
@@ -103,7 +103,7 @@ namespace PR6081 {
     template< class X >
     void f0(const X & k)
     {
-      this->template f1<int>()(k); // expected-error{{'f1' following the 'template' keyword does not refer to a template}} \
+      this->template f1<int>()(k); // expected-error{{no member named 'f1' in 'C<T>'}} \
       // FIXME: expected-error{{unqualified-id}} \
       // expected-error{{function-style cast or type construction}} \
       // expected-error{{expected expression}}

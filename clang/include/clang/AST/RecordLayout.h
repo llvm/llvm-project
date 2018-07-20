@@ -111,7 +111,7 @@ private:
     /// Only used for MS-ABI.
     bool EndsWithZeroSizedObject : 1;
 
-    /// \brief True if this class is zero sized or first base is zero sized or
+    /// True if this class is zero sized or first base is zero sized or
     /// has this property.  Only used for MS-ABI.
     bool LeadsWithZeroSizedBase : 1;
 

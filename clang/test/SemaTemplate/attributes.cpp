@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=gnu++11 -fsyntax-only -verify %s
+// RUN: not %clang_cc1 -std=gnu++11 -ast-dump %s | FileCheck %s
 
 namespace attribute_aligned {
   template<int N>
@@ -52,3 +53,13 @@ namespace PR9049 {
   template<typename T>
   inline void WBCFRelease(__attribute__((cf_consumed)) T aValue) { if(aValue) CFRelease(aValue); }
 }
+
+// CHECK: FunctionTemplateDecl {{.*}} HasAnnotations
+// CHECK:   AnnotateAttr {{.*}} "ANNOTATE_BAR"
+// CHECK:   AnnotateAttr {{.*}} "ANNOTATE_FOO"
+// CHECK: FunctionDecl {{.*}} HasAnnotations
+// CHECK:   TemplateArgument type 'int'
+// CHECK:   AnnotateAttr {{.*}} "ANNOTATE_BAR"
+// CHECK:   AnnotateAttr {{.*}} "ANNOTATE_FOO"
+template<typename T> [[clang::annotate("ANNOTATE_FOO"), clang::annotate("ANNOTATE_BAR")]] void HasAnnotations();
+void UseAnnotations() { HasAnnotations<int>(); }

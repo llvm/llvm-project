@@ -1132,6 +1132,7 @@ typedef struct {
  * \brief Return the set of symbol occurrences that are associated with the
  * given \p Replacement.
  */
+CINDEX_LINKAGE
 CXRefactoringReplacementAssociatedSymbolOccurrences
 clang_RefactoringReplacement_getAssociatedSymbolOccurrences(
     CXRefactoringReplacement Replacement);

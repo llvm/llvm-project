@@ -173,3 +173,10 @@ TEST(NamedDeclPrinter, TestClassWithScopedNamedEnum) {
     "A",
     "X::Y::A"));
 }
+
+TEST(NamedDeclPrinter, TestLinkageInNamespace) {
+  ASSERT_TRUE(PrintedWrittenNamedDeclCXX11Matches(
+    "namespace X { extern \"C\" { int A; } }",
+    "A",
+    "X::A"));
+}

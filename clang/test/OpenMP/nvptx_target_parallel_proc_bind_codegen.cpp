@@ -1,9 +1,9 @@
 // Test target codegen - host bc file has to be created first.
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm-bc %s -o %t-ppc-host.bc
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple nvptx64-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-64
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple i386-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda -emit-llvm-bc %s -o %t-x86-host.bc
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple nvptx-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-32
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -fexceptions -fcxx-exceptions -x c++ -triple nvptx-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-32
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -fopenmp-cuda-mode -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm-bc %s -o %t-ppc-host.bc
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -fopenmp-cuda-mode -x c++ -triple nvptx64-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-64
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -fopenmp-cuda-mode -x c++ -triple i386-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda -emit-llvm-bc %s -o %t-x86-host.bc
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -fopenmp-cuda-mode -x c++ -triple nvptx-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-32
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -fopenmp-cuda-mode -fexceptions -fcxx-exceptions -x c++ -triple nvptx-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-32
 // expected-no-diagnostics
 #ifndef HEADER
 #define HEADER
@@ -48,11 +48,12 @@ int bar(int n){
 
   // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+template.+l22}}(
   // CHECK: call void @__kmpc_spmd_kernel_init(
+  // CHECK: call void @__kmpc_data_sharing_init_stack_spmd
   // CHECK: br label {{%?}}[[EXEC:.+]]
   //
   // CHECK: [[EXEC]]
   // CHECK-NOT: call void @__kmpc_push_proc_bind
-  // CHECK: {{call|invoke}} void [[OP1:@.+]](i32* null, i32* null
+  // CHECK: {{call|invoke}} void [[OP1:@.+]](
   // CHECK: br label {{%?}}[[DONE:.+]]
   //
   // CHECK: [[DONE]]
@@ -69,11 +70,12 @@ int bar(int n){
 
   // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+template.+l26}}(
   // CHECK: call void @__kmpc_spmd_kernel_init(
+  // CHECK: call void @__kmpc_data_sharing_init_stack_spmd
   // CHECK: br label {{%?}}[[EXEC:.+]]
   //
   // CHECK: [[EXEC]]
   // CHECK-NOT: call void @__kmpc_push_proc_bind
-  // CHECK: {{call|invoke}} void [[OP1:@.+]](i32* null, i32* null
+  // CHECK: {{call|invoke}} void [[OP1:@.+]](
   // CHECK: br label {{%?}}[[DONE:.+]]
   //
   // CHECK: [[DONE]]
@@ -89,11 +91,12 @@ int bar(int n){
 
   // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+template.+l31}}(
   // CHECK: call void @__kmpc_spmd_kernel_init(
+  // CHECK: call void @__kmpc_data_sharing_init_stack_spmd
   // CHECK: br label {{%?}}[[EXEC:.+]]
   //
   // CHECK: [[EXEC]]
   // CHECK-NOT: call void @__kmpc_push_proc_bind
-  // CHECK: {{call|invoke}} void [[OP1:@.+]](i32* null, i32* null
+  // CHECK: {{call|invoke}} void [[OP1:@.+]](
   // CHECK: br label {{%?}}[[DONE:.+]]
   //
   // CHECK: [[DONE]]

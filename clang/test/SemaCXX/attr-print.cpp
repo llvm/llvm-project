@@ -34,3 +34,12 @@ class __attribute__((consumable(unknown))) AttrTester1 {
   // CHECK: void callableWhen() __attribute__((callable_when("unconsumed", "consumed")));
   void callableWhen()  __attribute__((callable_when("unconsumed", "consumed")));
 };
+
+// CHECK: class __single_inheritance SingleInheritance;
+class __single_inheritance SingleInheritance;
+
+// CHECK: class __multiple_inheritance MultipleInheritance;
+class __multiple_inheritance MultipleInheritance;
+
+// CHECK: class __virtual_inheritance VirtualInheritance;
+class __virtual_inheritance VirtualInheritance;

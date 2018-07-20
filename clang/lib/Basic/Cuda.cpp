@@ -18,12 +18,18 @@ const char *CudaVersionToString(CudaVersion V) {
     return "8.0";
   case CudaVersion::CUDA_90:
     return "9.0";
+  case CudaVersion::CUDA_91:
+    return "9.1";
+  case CudaVersion::CUDA_92:
+    return "9.2";
   }
   llvm_unreachable("invalid enum");
 }
 
 const char *CudaArchToString(CudaArch A) {
   switch (A) {
+  case CudaArch::LAST:
+    break;
   case CudaArch::UNKNOWN:
     return "unknown";
   case CudaArch::SM_20:
@@ -52,6 +58,34 @@ const char *CudaArchToString(CudaArch A) {
     return "sm_62";
   case CudaArch::SM_70:
     return "sm_70";
+  case CudaArch::SM_72:
+    return "sm_72";
+  case CudaArch::GFX600: // tahiti
+    return "gfx600";
+  case CudaArch::GFX601: // pitcairn, verde, oland,hainan
+    return "gfx601";
+  case CudaArch::GFX700: // kaveri
+    return "gfx700";
+  case CudaArch::GFX701: // hawaii
+    return "gfx701";
+  case CudaArch::GFX702: // 290,290x,R390,R390x
+    return "gfx702";
+  case CudaArch::GFX703: // kabini mullins
+    return "gfx703";
+  case CudaArch::GFX704: // bonaire
+    return "gfx704";
+  case CudaArch::GFX801: // carrizo
+    return "gfx801";
+  case CudaArch::GFX802: // tonga,iceland
+    return "gfx802";
+  case CudaArch::GFX803: // fiji,polaris10
+    return "gfx803";
+  case CudaArch::GFX810: // stoney
+    return "gfx810";
+  case CudaArch::GFX900: // vega, instinct
+    return "gfx900";
+  case CudaArch::GFX902: // TBA
+    return "gfx902";
   }
   llvm_unreachable("invalid enum");
 }
@@ -71,6 +105,20 @@ CudaArch StringToCudaArch(llvm::StringRef S) {
       .Case("sm_61", CudaArch::SM_61)
       .Case("sm_62", CudaArch::SM_62)
       .Case("sm_70", CudaArch::SM_70)
+      .Case("sm_72", CudaArch::SM_72)
+      .Case("gfx600", CudaArch::GFX600)
+      .Case("gfx601", CudaArch::GFX601)
+      .Case("gfx700", CudaArch::GFX700)
+      .Case("gfx701", CudaArch::GFX701)
+      .Case("gfx702", CudaArch::GFX702)
+      .Case("gfx703", CudaArch::GFX703)
+      .Case("gfx704", CudaArch::GFX704)
+      .Case("gfx801", CudaArch::GFX801)
+      .Case("gfx802", CudaArch::GFX802)
+      .Case("gfx803", CudaArch::GFX803)
+      .Case("gfx810", CudaArch::GFX810)
+      .Case("gfx900", CudaArch::GFX900)
+      .Case("gfx902", CudaArch::GFX902)
       .Default(CudaArch::UNKNOWN);
 }
 
@@ -102,6 +150,10 @@ const char *CudaVirtualArchToString(CudaVirtualArch A) {
     return "compute_62";
   case CudaVirtualArch::COMPUTE_70:
     return "compute_70";
+  case CudaVirtualArch::COMPUTE_72:
+    return "compute_72";
+  case CudaVirtualArch::COMPUTE_AMDGCN:
+    return "compute_amdgcn";
   }
   llvm_unreachable("invalid enum");
 }
@@ -120,11 +172,15 @@ CudaVirtualArch StringToCudaVirtualArch(llvm::StringRef S) {
       .Case("compute_61", CudaVirtualArch::COMPUTE_61)
       .Case("compute_62", CudaVirtualArch::COMPUTE_62)
       .Case("compute_70", CudaVirtualArch::COMPUTE_70)
+      .Case("compute_72", CudaVirtualArch::COMPUTE_72)
+      .Case("compute_amdgcn", CudaVirtualArch::COMPUTE_AMDGCN)
       .Default(CudaVirtualArch::UNKNOWN);
 }
 
 CudaVirtualArch VirtualArchForCudaArch(CudaArch A) {
   switch (A) {
+  case CudaArch::LAST:
+    break;
   case CudaArch::UNKNOWN:
     return CudaVirtualArch::UNKNOWN;
   case CudaArch::SM_20:
@@ -152,12 +208,30 @@ CudaVirtualArch VirtualArchForCudaArch(CudaArch A) {
     return CudaVirtualArch::COMPUTE_62;
   case CudaArch::SM_70:
     return CudaVirtualArch::COMPUTE_70;
+  case CudaArch::SM_72:
+    return CudaVirtualArch::COMPUTE_72;
+  case CudaArch::GFX600:
+  case CudaArch::GFX601:
+  case CudaArch::GFX700:
+  case CudaArch::GFX701:
+  case CudaArch::GFX702:
+  case CudaArch::GFX703:
+  case CudaArch::GFX704:
+  case CudaArch::GFX801:
+  case CudaArch::GFX802:
+  case CudaArch::GFX803:
+  case CudaArch::GFX810:
+  case CudaArch::GFX900:
+  case CudaArch::GFX902:
+    return CudaVirtualArch::COMPUTE_AMDGCN;
   }
   llvm_unreachable("invalid enum");
 }
 
 CudaVersion MinVersionForCudaArch(CudaArch A) {
   switch (A) {
+  case CudaArch::LAST:
+    break;
   case CudaArch::UNKNOWN:
     return CudaVersion::UNKNOWN;
   case CudaArch::SM_20:
@@ -176,6 +250,22 @@ CudaVersion MinVersionForCudaArch(CudaArch A) {
     return CudaVersion::CUDA_80;
   case CudaArch::SM_70:
     return CudaVersion::CUDA_90;
+  case CudaArch::SM_72:
+    return CudaVersion::CUDA_91;
+  case CudaArch::GFX600:
+  case CudaArch::GFX601:
+  case CudaArch::GFX700:
+  case CudaArch::GFX701:
+  case CudaArch::GFX702:
+  case CudaArch::GFX703:
+  case CudaArch::GFX704:
+  case CudaArch::GFX801:
+  case CudaArch::GFX802:
+  case CudaArch::GFX803:
+  case CudaArch::GFX810:
+  case CudaArch::GFX900:
+  case CudaArch::GFX902:
+    return CudaVersion::CUDA_70;
   }
   llvm_unreachable("invalid enum");
 }
@@ -186,6 +276,19 @@ CudaVersion MaxVersionForCudaArch(CudaArch A) {
     return CudaVersion::UNKNOWN;
   case CudaArch::SM_20:
   case CudaArch::SM_21:
+  case CudaArch::GFX600:
+  case CudaArch::GFX601:
+  case CudaArch::GFX700:
+  case CudaArch::GFX701:
+  case CudaArch::GFX702:
+  case CudaArch::GFX703:
+  case CudaArch::GFX704:
+  case CudaArch::GFX801:
+  case CudaArch::GFX802:
+  case CudaArch::GFX803:
+  case CudaArch::GFX810:
+  case CudaArch::GFX900:
+  case CudaArch::GFX902:
     return CudaVersion::CUDA_80;
   default:
     return CudaVersion::LATEST;

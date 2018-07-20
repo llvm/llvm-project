@@ -252,3 +252,38 @@ __attribute__((objc_root_class))
 @synthesize prop = _prop;
 
 @end
+
+// rdar://39024725
+// Allow strong readwrite property and a readonly one.
+@protocol StrongCollision
+
+@property(strong) NSObject *p;
+@property(copy) NSObject *p2;
+
+// expected-error@+1 {{property with attribute 'retain (or strong)' was selected for synthesis}}
+@property(strong, readwrite) NSObject *collision;
+
+@end
+
+@protocol ReadonlyCollision
+
+@property(readonly) NSObject *p;
+@property(readonly) NSObject *p2;
+
+// expected-note@+1 {{it could also be property without attribute 'retain (or strong)' declared here}}
+@property(readonly, weak) NSObject *collision;
+
+@end
+
+@interface StrongReadonlyCollision : NSObject <StrongCollision, ReadonlyCollision>
+@end
+
+@implementation StrongReadonlyCollision
+
+// no error
+@synthesize p = _p;
+@synthesize p2 = _p2;
+
+@synthesize collision = _collision; // expected-note {{property synthesized here}}
+
+@end

@@ -48,7 +48,7 @@
 // CHECK: !DICompositeType(tag: DW_TAG_enumeration_type,
 // CHECK-NOT:              name:
 // CHECK-SAME:             )
-// CHECK: !DIEnumerator(name: "e5", value: 5)
+// CHECK: !DIEnumerator(name: "e5", value: 5, isUnsigned: true)
 
 // CHECK: !DIDerivedType(tag: DW_TAG_typedef, name: "B",
 // no mangled name here yet.

@@ -304,7 +304,7 @@ class Intrinsic {
   ListInit *Body;
   /// The architectural #ifdef guard.
   std::string Guard;
-  /// Set if the Unvailable bit is 1. This means we don't generate a body,
+  /// Set if the Unavailable bit is 1. This means we don't generate a body,
   /// just an "unavailable" attribute on a declaration.
   bool IsUnavailable;
   /// Is this intrinsic safe for big-endian? or does it need its arguments
@@ -552,7 +552,11 @@ public:
   // run - Emit arm_neon.h.inc
   void run(raw_ostream &o);
 
+  // runFP16 - Emit arm_fp16.h.inc
+  void runFP16(raw_ostream &o);
+
   // runHeader - Emit all the __builtin prototypes used in arm_neon.h
+	// and arm_fp16.h
   void runHeader(raw_ostream &o);
 
   // runTests - Emit tests for all the Neon intrinsics.
@@ -852,6 +856,35 @@ void Type::applyModifier(char Mod) {
     NumVectors = 0;
     Float = true;
     break;
+  case 'Y':
+    Bitwidth = ElementBitwidth = 16;
+    NumVectors = 0;
+    Float = true;
+    break;
+  case 'I':
+    Bitwidth = ElementBitwidth = 32;
+    NumVectors = 0;
+    Float = false;
+    Signed = true;
+    break;
+  case 'L':
+    Bitwidth = ElementBitwidth = 64;
+    NumVectors = 0;
+    Float = false;
+    Signed = true;
+    break;
+  case 'U':
+    Bitwidth = ElementBitwidth = 32;
+    NumVectors = 0;
+    Float = false;
+    Signed = false;
+    break;
+  case 'O':
+    Bitwidth = ElementBitwidth = 64;
+    NumVectors = 0;
+    Float = false;
+    Signed = false;
+    break;
   case 'f':
     Float = true;
     ElementBitwidth = 32;
@@ -915,7 +948,7 @@ void Type::applyModifier(char Mod) {
     break;
   case 'c':
     Constant = true;
-  // Fall through
+    LLVM_FALLTHROUGH;
   case 'p':
     Pointer = true;
     Bitwidth = ElementBitwidth;
@@ -961,6 +994,19 @@ void Type::applyModifier(char Mod) {
     NumVectors = 4;
     if (!AppliedQuad)
       Bitwidth *= 2;
+    break;
+  case '7':
+    if (AppliedQuad)
+      Bitwidth /= 2;
+    ElementBitwidth = 8;
+    break;
+  case '8':
+    ElementBitwidth = 8;
+    break;
+  case '9':
+    if (!AppliedQuad)
+      Bitwidth *= 2;
+    ElementBitwidth = 8;
     break;
   default:
     llvm_unreachable("Unhandled character!");
@@ -1010,7 +1056,7 @@ std::string Intrinsic::getInstTypeCode(Type T, ClassKind CK) const {
 }
 
 static bool isFloatingPointProtoModifier(char Mod) {
-  return Mod == 'F' || Mod == 'f' || Mod == 'H';
+  return Mod == 'F' || Mod == 'f' || Mod == 'H' || Mod == 'Y' || Mod == 'I';
 }
 
 std::string Intrinsic::getBuiltinTypeStr() {
@@ -1974,7 +2020,7 @@ void NeonEmitter::createIntrinsic(Record *R,
     }
   }
 
-  std::sort(NewTypeSpecs.begin(), NewTypeSpecs.end());
+  llvm::sort(NewTypeSpecs.begin(), NewTypeSpecs.end());
   NewTypeSpecs.erase(std::unique(NewTypeSpecs.begin(), NewTypeSpecs.end()),
 		     NewTypeSpecs.end());
   auto &Entry = IntrinsicMap[Name];
@@ -2116,8 +2162,7 @@ void NeonEmitter::genOverloadTypeCheckCode(raw_ostream &OS,
   OS << "#endif\n\n";
 }
 
-void
-NeonEmitter::genIntrinsicRangeCheckCode(raw_ostream &OS,
+void NeonEmitter::genIntrinsicRangeCheckCode(raw_ostream &OS,
                                         SmallVectorImpl<Intrinsic *> &Defs) {
   OS << "#ifdef GET_NEON_IMMEDIATE_CHECK\n";
 
@@ -2142,11 +2187,15 @@ NeonEmitter::genIntrinsicRangeCheckCode(raw_ostream &OS,
     Record *R = Def->getRecord();
     if (R->getValueAsBit("isVCVT_N")) {
       // VCVT between floating- and fixed-point values takes an immediate
-      // in the range [1, 32) for f32 or [1, 64) for f64.
+      // in the range [1, 32) for f32 or [1, 64) for f64 or [1, 16) for f16.
       LowerBound = "1";
-      if (Def->getBaseType().getElementSizeInBits() == 32)
+	  if (Def->getBaseType().getElementSizeInBits() == 16 ||
+		  Def->getName().find('h') != std::string::npos)
+		// VCVTh operating on FP16 intrinsics in range [1, 16)
+		UpperBound = "15";
+	  else if (Def->getBaseType().getElementSizeInBits() == 32)
         UpperBound = "31";
-      else
+	  else
         UpperBound = "63";
     } else if (R->getValueAsBit("isScalarShift")) {
       // Right shifts have an 'r' in the name, left shifts do not. Convert
@@ -2420,10 +2469,123 @@ void NeonEmitter::run(raw_ostream &OS) {
   OS << "#endif /* __ARM_NEON_H */\n";
 }
 
+/// run - Read the records in arm_fp16.td and output arm_fp16.h.  arm_fp16.h
+/// is comprised of type definitions and function declarations.
+void NeonEmitter::runFP16(raw_ostream &OS) {
+  OS << "/*===---- arm_fp16.h - ARM FP16 intrinsics "
+        "------------------------------"
+        "---===\n"
+        " *\n"
+        " * Permission is hereby granted, free of charge, to any person "
+        "obtaining a copy\n"
+        " * of this software and associated documentation files (the "
+				"\"Software\"), to deal\n"
+        " * in the Software without restriction, including without limitation "
+				"the rights\n"
+        " * to use, copy, modify, merge, publish, distribute, sublicense, "
+				"and/or sell\n"
+        " * copies of the Software, and to permit persons to whom the Software "
+				"is\n"
+        " * furnished to do so, subject to the following conditions:\n"
+        " *\n"
+        " * The above copyright notice and this permission notice shall be "
+        "included in\n"
+        " * all copies or substantial portions of the Software.\n"
+        " *\n"
+        " * THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, "
+        "EXPRESS OR\n"
+        " * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF "
+        "MERCHANTABILITY,\n"
+        " * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT "
+        "SHALL THE\n"
+        " * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR "
+        "OTHER\n"
+        " * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, "
+        "ARISING FROM,\n"
+        " * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER "
+        "DEALINGS IN\n"
+        " * THE SOFTWARE.\n"
+        " *\n"
+        " *===-----------------------------------------------------------------"
+        "---"
+        "---===\n"
+        " */\n\n";
+
+  OS << "#ifndef __ARM_FP16_H\n";
+  OS << "#define __ARM_FP16_H\n\n";
+
+  OS << "#include <stdint.h>\n\n";
+
+  OS << "typedef __fp16 float16_t;\n";
+
+  OS << "#define __ai static inline __attribute__((__always_inline__, "
+        "__nodebug__))\n\n";
+
+  SmallVector<Intrinsic *, 128> Defs;
+  std::vector<Record *> RV = Records.getAllDerivedDefinitions("Inst");
+  for (auto *R : RV)
+    createIntrinsic(R, Defs);
+
+  for (auto *I : Defs)
+    I->indexBody();
+
+  std::stable_sort(
+      Defs.begin(), Defs.end(),
+      [](const Intrinsic *A, const Intrinsic *B) { return *A < *B; });
+
+  // Only emit a def when its requirements have been met.
+  // FIXME: This loop could be made faster, but it's fast enough for now.
+  bool MadeProgress = true;
+  std::string InGuard;
+  while (!Defs.empty() && MadeProgress) {
+    MadeProgress = false;
+
+    for (SmallVector<Intrinsic *, 128>::iterator I = Defs.begin();
+         I != Defs.end(); /*No step*/) {
+      bool DependenciesSatisfied = true;
+      for (auto *II : (*I)->getDependencies()) {
+        if (std::find(Defs.begin(), Defs.end(), II) != Defs.end())
+          DependenciesSatisfied = false;
+      }
+      if (!DependenciesSatisfied) {
+        // Try the next one.
+        ++I;
+        continue;
+      }
+
+      // Emit #endif/#if pair if needed.
+      if ((*I)->getGuard() != InGuard) {
+        if (!InGuard.empty())
+          OS << "#endif\n";
+        InGuard = (*I)->getGuard();
+        if (!InGuard.empty())
+          OS << "#if " << InGuard << "\n";
+      }
+
+      // Actually generate the intrinsic code.
+      OS << (*I)->generate();
+
+      MadeProgress = true;
+      I = Defs.erase(I);
+    }
+  }
+  assert(Defs.empty() && "Some requirements were not satisfied!");
+  if (!InGuard.empty())
+    OS << "#endif\n";
+
+  OS << "\n";
+  OS << "#undef __ai\n\n";
+  OS << "#endif /* __ARM_FP16_H */\n";
+}
+
 namespace clang {
 
 void EmitNeon(RecordKeeper &Records, raw_ostream &OS) {
   NeonEmitter(Records).run(OS);
+}
+
+void EmitFP16(RecordKeeper &Records, raw_ostream &OS) {
+  NeonEmitter(Records).runFP16(OS);
 }
 
 void EmitNeonSema(RecordKeeper &Records, raw_ostream &OS) {

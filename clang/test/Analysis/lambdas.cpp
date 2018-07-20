@@ -348,6 +348,23 @@ void testCapturedConstExprFloat() {
   lambda();
 }
 
+
+static int b = 0;
+
+int f() {
+  b = 0;
+  auto &bm = b;
+  [&] {
+    bm++;
+    bm++;
+  }();
+  if (bm != 2) {
+    int *y = 0;
+    return *y; // no-warning
+  }
+  return 0;
+}
+
 // CHECK: [B2 (ENTRY)]
 // CHECK:   Succs (1): B1
 // CHECK: [B1]

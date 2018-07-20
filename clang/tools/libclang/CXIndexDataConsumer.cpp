@@ -148,15 +148,17 @@ public:
     return true;
   }
 };
+
+CXSymbolRole getSymbolRole(SymbolRoleSet Role) {
+  // CXSymbolRole mirrors low 9 bits of clang::index::SymbolRole.
+  return CXSymbolRole(static_cast<uint32_t>(Role) & ((1 << 9) - 1));
+}
 }
 
-bool CXIndexDataConsumer::handleDeclOccurence(const Decl *D,
-                                              SymbolRoleSet Roles,
-                                             ArrayRef<SymbolRelation> Relations,
-                                              FileID FID, unsigned Offset,
-                                              ASTNodeInfo ASTNode) {
-  SourceLocation Loc = getASTContext().getSourceManager()
-      .getLocForStartOfFile(FID).getLocWithOffset(Offset);
+bool CXIndexDataConsumer::handleDeclOccurence(
+    const Decl *D, SymbolRoleSet Roles, ArrayRef<SymbolRelation> Relations,
+    SourceLocation Loc, ASTNodeInfo ASTNode) {
+  Loc = getASTContext().getSourceManager().getFileLoc(Loc);
 
   if (Roles & (unsigned)SymbolRole::Reference) {
     const NamedDecl *ND = dyn_cast<NamedDecl>(D);
@@ -184,6 +186,7 @@ bool CXIndexDataConsumer::handleDeclOccurence(const Decl *D,
     if (Roles & (unsigned)SymbolRole::Implicit) {
       Kind = CXIdxEntityRef_Implicit;
     }
+    CXSymbolRole CXRole = getSymbolRole(Roles);
 
     CXCursor Cursor;
     if (ASTNode.OrigE) {
@@ -202,7 +205,7 @@ bool CXIndexDataConsumer::handleDeclOccurence(const Decl *D,
     }
     handleReference(ND, Loc, Cursor,
                     dyn_cast_or_null<NamedDecl>(ASTNode.Parent),
-                    ASTNode.ContainerDC, ASTNode.OrigE, Kind);
+                    ASTNode.ContainerDC, ASTNode.OrigE, Kind, CXRole);
 
   } else {
     const DeclContext *LexicalDC = ASTNode.ContainerDC;
@@ -220,8 +223,7 @@ bool CXIndexDataConsumer::handleDeclOccurence(const Decl *D,
 
 bool CXIndexDataConsumer::handleModuleOccurence(const ImportDecl *ImportD,
                                                 SymbolRoleSet Roles,
-                                                FileID FID,
-                                                unsigned Offset) {
+                                                SourceLocation Loc) {
   IndexingDeclVisitor(*this, SourceLocation(), nullptr).Visit(ImportD);
   return !shouldAbort();
 }
@@ -889,13 +891,14 @@ bool CXIndexDataConsumer::handleReference(const NamedDecl *D, SourceLocation Loc
                                       const NamedDecl *Parent,
                                       const DeclContext *DC,
                                       const Expr *E,
-                                      CXIdxEntityRefKind Kind) {
-  if (!D)
+                                      CXIdxEntityRefKind Kind,
+                                      CXSymbolRole Role) {
+  if (!D || !DC)
     return false;
 
   CXCursor Cursor = E ? MakeCXCursor(E, cast<Decl>(DC), CXTU)
                       : getRefCursor(D, Loc);
-  return handleReference(D, Loc, Cursor, Parent, DC, E, Kind);
+  return handleReference(D, Loc, Cursor, Parent, DC, E, Kind, Role);
 }
 
 bool CXIndexDataConsumer::handleReference(const NamedDecl *D, SourceLocation Loc,
@@ -903,11 +906,12 @@ bool CXIndexDataConsumer::handleReference(const NamedDecl *D, SourceLocation Loc
                                       const NamedDecl *Parent,
                                       const DeclContext *DC,
                                       const Expr *E,
-                                      CXIdxEntityRefKind Kind) {
+                                      CXIdxEntityRefKind Kind,
+                                      CXSymbolRole Role) {
   if (!CB.indexEntityReference)
     return false;
 
-  if (!D)
+  if (!D || !DC)
     return false;
   if (Loc.isInvalid())
     return false;
@@ -939,7 +943,8 @@ bool CXIndexDataConsumer::handleReference(const NamedDecl *D, SourceLocation Loc
                               getIndexLoc(Loc),
                               &RefEntity,
                               Parent ? &ParentEntity : nullptr,
-                              &Container };
+                              &Container,
+                              Role };
   CB.indexEntityReference(ClientData, &Info);
   return true;
 }

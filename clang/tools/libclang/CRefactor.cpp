@@ -26,6 +26,7 @@
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Index/USRGeneration.h"
+#include "clang/Tooling/CompilationDatabase.h"
 #include "clang/Tooling/Refactor/IndexerQuery.h"
 #include "clang/Tooling/Refactor/RefactoringActionFinder.h"
 #include "clang/Tooling/Refactor/RefactoringActions.h"
@@ -52,6 +53,7 @@ translateRefactoringActionType(CXRefactoringActionType Action) {
     return RefactoringActionType::Name;
 #include "clang/Tooling/Refactor/RefactoringActions.def"
   }
+  llvm_unreachable("unknown CXRefactoringActionType value");
 }
 
 static CXRefactoringActionType
@@ -62,6 +64,7 @@ translateRefactoringActionType(RefactoringActionType Action) {
     return CXRefactor_##Name;
 #include "clang/Tooling/Refactor/RefactoringActions.def"
   }
+  llvm_unreachable("unknown RefactoringActionType value");
 }
 
 static CXSymbolOccurrenceKind
@@ -82,6 +85,7 @@ translateOccurrenceKind(rename::OldSymbolOccurrence::OccurrenceKind Kind) {
   case rename::OldSymbolOccurrence::MatchingStringLiteral:
     return CXSymbolOccurrence_MatchingStringLiteral;
   }
+  llvm_unreachable("unknown OccurrenceKind value");
 }
 
 namespace {
@@ -511,6 +515,9 @@ translateIndexedOccurrenceKind(CXCursorKind Kind) {
   }
 }
 
+/// ClangTool::run is not thread-safe, so we have to guard it.
+static llvm::ManagedStatic<llvm::sys::Mutex> ClangToolConstructionMutex;
+
 // TODO: Remove
 CXErrorCode performIndexedFileRename(
     ArrayRef<CXRenamedIndexedSymbol> Symbols, StringRef Filename,
@@ -573,6 +580,7 @@ CXErrorCode performIndexedFileRename(
                            public rename::IndexedFileOccurrenceConsumer {
     ArrayRef<CXRenamedIndexedSymbol> Symbols;
     ArrayRef<rename::IndexedSymbol> IndexedSymbols;
+    rename::IndexedFileRenamerLock &Lock;
     const RefactoringOptionSet *Options;
 
   public:
@@ -581,13 +589,14 @@ CXErrorCode performIndexedFileRename(
 
     ToolRunner(ArrayRef<CXRenamedIndexedSymbol> Symbols,
                ArrayRef<rename::IndexedSymbol> IndexedSymbols,
+               rename::IndexedFileRenamerLock &Lock,
                const RefactoringOptionSet *Options)
-        : Symbols(Symbols), IndexedSymbols(IndexedSymbols), Options(Options),
-          Result(nullptr), Err(CXError_Success) {}
+        : Symbols(Symbols), IndexedSymbols(IndexedSymbols), Lock(Lock),
+          Options(Options), Result(nullptr), Err(CXError_Success) {}
 
     clang::FrontendAction *create() override {
       return new rename::IndexedFileOccurrenceProducer(IndexedSymbols, *this,
-                                                       Options);
+                                                       Lock, Options);
     }
 
     void handleOccurrence(const rename::OldSymbolOccurrence &Occurrence,
@@ -609,7 +618,9 @@ CXErrorCode performIndexedFileRename(
     }
   };
 
-  auto Runner = llvm::make_unique<ToolRunner>(Symbols, IndexedSymbols, Options);
+  rename::IndexedFileRenamerLock Lock(*ClangToolConstructionMutex);
+  auto Runner =
+      llvm::make_unique<ToolRunner>(Symbols, IndexedSymbols, Lock, Options);
 
   // Run a clang tool on the input file.
   std::string Name = Filename.str();
@@ -683,18 +694,21 @@ CXErrorCode performIndexedSymbolSearch(
   class ToolRunner final : public FrontendActionFactory,
                            public rename::IndexedFileOccurrenceConsumer {
     ArrayRef<rename::IndexedSymbol> IndexedSymbols;
+    rename::IndexedFileRenamerLock &Lock;
     const RefactoringOptionSet *Options;
 
   public:
     SymbolOccurrencesResult *Result;
 
     ToolRunner(ArrayRef<rename::IndexedSymbol> IndexedSymbols,
+               rename::IndexedFileRenamerLock &Lock,
                const RefactoringOptionSet *Options)
-        : IndexedSymbols(IndexedSymbols), Options(Options), Result(nullptr) {}
+        : IndexedSymbols(IndexedSymbols), Lock(Lock), Options(Options),
+          Result(nullptr) {}
 
     clang::FrontendAction *create() override {
       return new rename::IndexedFileOccurrenceProducer(IndexedSymbols, *this,
-                                                       Options);
+                                                       Lock, Options);
     }
 
     void handleOccurrence(const rename::OldSymbolOccurrence &Occurrence,
@@ -710,7 +724,8 @@ CXErrorCode performIndexedSymbolSearch(
     }
   };
 
-  auto Runner = llvm::make_unique<ToolRunner>(IndexedSymbols, Options);
+  rename::IndexedFileRenamerLock Lock(*ClangToolConstructionMutex);
+  auto Runner = llvm::make_unique<ToolRunner>(IndexedSymbols, Lock, Options);
 
   // Run a clang tool on the input file.
   std::string Name = Filename.str();

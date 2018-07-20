@@ -40,7 +40,7 @@ class ModuleFile;
 
 namespace reader {
 
-/// \brief Class that performs name lookup into a DeclContext stored
+/// Class that performs name lookup into a DeclContext stored
 /// in an AST file.
 class ASTDeclContextNameLookupTrait {
   ASTReader &Reader;
@@ -121,7 +121,7 @@ struct DeclContextLookupTable {
   MultiOnDiskHashTable<ASTDeclContextNameLookupTrait> Table;
 };
 
-/// \brief Base class for the trait describing the on-disk hash table for the
+/// Base class for the trait describing the on-disk hash table for the
 /// identifiers in an AST file.
 ///
 /// This class is not useful by itself; rather, it provides common
@@ -156,7 +156,7 @@ public:
   static internal_key_type ReadKey(const unsigned char* d, unsigned n); 
 };
 
-/// \brief Class that performs lookup for an identifier stored in an AST file.
+/// Class that performs lookup for an identifier stored in an AST file.
 class ASTIdentifierLookupTrait : public ASTIdentifierLookupTraitBase {
   ASTReader &Reader;
   ModuleFile &F;
@@ -182,12 +182,12 @@ public:
   ASTReader &getReader() const { return Reader; }
 };
   
-/// \brief The on-disk hash table used to contain information about
+/// The on-disk hash table used to contain information about
 /// all of the identifiers in the program.
 using ASTIdentifierLookupTable =
     llvm::OnDiskIterableChainedHashTable<ASTIdentifierLookupTrait>;
 
-/// \brief Class that performs lookup for a selector's entries in the global
+/// Class that performs lookup for a selector's entries in the global
 /// method pool stored in an AST file.
 class ASTSelectorLookupTrait {
   ASTReader &Reader;
@@ -229,11 +229,11 @@ public:
   data_type ReadData(Selector, const unsigned char* d, unsigned DataLen);
 };
   
-/// \brief The on-disk hash table used for the global method pool.
+/// The on-disk hash table used for the global method pool.
 using ASTSelectorLookupTable =
     llvm::OnDiskChainedHashTable<ASTSelectorLookupTrait>;
   
-/// \brief Trait class used to search the on-disk hash table containing all of
+/// Trait class used to search the on-disk hash table containing all of
 /// the header search information.
 ///
 /// The on-disk hash table contains a mapping from each header path to 
@@ -280,7 +280,7 @@ public:
   data_type ReadData(internal_key_ref,const unsigned char *d, unsigned DataLen);
 };
 
-/// \brief The on-disk hash table used for known header files.
+/// The on-disk hash table used for known header files.
 using HeaderFileInfoLookupTable =
     llvm::OnDiskChainedHashTable<HeaderFileInfoTrait>;
   

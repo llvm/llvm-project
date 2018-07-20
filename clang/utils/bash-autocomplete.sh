@@ -12,7 +12,7 @@ _clang()
 {
   local cur prev words cword arg flags w1 w2
   # If latest bash-completion is not supported just initialize COMPREPLY and
-  # initialize variables by setting manualy.
+  # initialize variables by setting manually.
   _init_completion -n 2> /dev/null
   if [[ "$?" != 0 ]]; then
     COMPREPLY=()
@@ -25,39 +25,21 @@ _clang()
     w2="${COMP_WORDS[$cword - 2]}"
   fi
 
-  # Clang want to know if -cc1 or -Xclang option is specified or not, because we don't want to show
-  # cc1 options otherwise.
-  if [[ "${COMP_WORDS[1]}" == "-cc1" || "$w1" == "-Xclang" ]]; then
-    arg="#"
-  fi
-
-  # bash always separates '=' as a token even if there's no space before/after '='.
-  # On the other hand, '=' is just a regular character for clang options that
-  # contain '='. For example, "-stdlib=" is defined as is, instead of "-stdlib" and "=".
-  # So, we need to partially undo bash tokenization here for integrity.
-  if [[ "$cur" == -* ]]; then
-    # -foo<tab>
-    arg="$arg$cur"
-  elif [[ "$w1" == -*  && "$cur" == '=' ]]; then
-    # -foo=<tab>
-    arg="$arg$w1=,"
-  elif [[ "$cur" == -*= ]]; then
-    # -foo=<tab>
-    arg="$arg$cur,"
-  elif [[ "$w1" == -* ]]; then
-    # -foo <tab> or -foo bar<tab>
-    arg="$arg$w1,$cur"
-  elif [[ "$w2" == -* && "$w1" == '=' ]]; then
-    # -foo=bar<tab>
-    arg="$arg$w2=,$cur"
-  elif [[ ${cur: -1} != '=' && ${cur/=} != $cur ]]; then
-    # -foo=bar<tab>
-    arg="$arg${cur%=*}=,${cur#*=}"
-  fi
+  # Pass all the current command-line flags to clang, so that clang can handle
+  # these internally.
+  # '=' is separated differently by bash, so we have to concat them without ','
+  for i in `seq 1 $cword`; do
+    if [[ $i == $cword || "${COMP_WORDS[$(($i+1))]}" == '=' ]]; then
+      arg="$arg${COMP_WORDS[$i]}"
+    else
+      arg="$arg${COMP_WORDS[$i]},"
+    fi
+  done
 
   # expand ~ to $HOME
   eval local path=${COMP_WORDS[0]}
-  flags=$( "$path" --autocomplete="$arg" 2>/dev/null | sed -e 's/\t.*//' )
+  # Use $'\t' so that bash expands the \t for older versions of sed.
+  flags=$( "$path" --autocomplete="$arg" 2>/dev/null | sed -e $'s/\t.*//' )
   # If clang is old that it does not support --autocomplete,
   # fall back to the filename completion.
   if [[ "$?" != 0 ]]; then
@@ -67,7 +49,7 @@ _clang()
 
   # When clang does not emit any possible autocompletion, or user pushed tab after " ",
   # just autocomplete files.
-  if [[ "$flags" == "$(echo -e '\n')" || "$arg" == "" ]]; then
+  if [[ "$flags" == "$(echo -e '\n')" ]]; then
     # If -foo=<tab> and there was no possible values, autocomplete files.
     [[ "$cur" == '=' || "$cur" == -*= ]] && cur=""
     _clang_filedir

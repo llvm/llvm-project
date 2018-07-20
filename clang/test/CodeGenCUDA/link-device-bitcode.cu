@@ -31,7 +31,7 @@
 // Make sure NVVMReflect pass is enabled in NVPTX back-end.
 // RUN: %clang_cc1 -triple nvptx-unknown-cuda -fcuda-is-device \
 // RUN:    -mlink-cuda-bitcode %t.bc -S -o /dev/null %s \
-// RUN:    -backend-option -debug-pass=Structure 2>&1 \
+// RUN:    -mllvm -debug-pass=Structure 2>&1 \
 // RUN:    | FileCheck %s -check-prefix CHECK-REFLECT
 
 #include "Inputs/cuda.h"

@@ -63,12 +63,12 @@ const GUID& zeroiid = __uuidof(0);
 // CHECK: @_GUID_87654321_4321_4321_4321_ba0987654321 = linkonce_odr constant { i32, i16, i16, [8 x i8] } { i32 -2023406815, i16 17185, i16 17185, [8 x i8] c"C!\BA\09\87eC!" }, comdat
 
 // The static initializer for thing.
-// CHECK-DEFINE-GUID: call void @llvm.memcpy.p0i8.p0i8.i32(i8* bitcast (%struct._GUID* @thing to i8*), i8* bitcast ({ i32, i16, i16, [8 x i8] }* @_GUID_12345678_1234_1234_1234_1234567890ac to i8*), i32 16, i32 4, i1 false)
-// CHECK-DEFINE-WRONG-GUID: call void @llvm.memcpy.p0i8.p0i8.i32(i8* bitcast (%struct._GUID* @thing to i8*), i8* bitcast ({ i32, i16, i16, [8 x i8] }* @_GUID_12345678_1234_1234_1234_1234567890ac to i8*), i32 4, i32 4, i1 false)
+// CHECK-DEFINE-GUID: call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 bitcast (%struct._GUID* @thing to i8*), i8* align 4 bitcast ({ i32, i16, i16, [8 x i8] }* @_GUID_12345678_1234_1234_1234_1234567890ac to i8*), i32 16, i1 false)
+// CHECK-DEFINE-WRONG-GUID: call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 bitcast (%struct._GUID* @thing to i8*), i8* align 4 bitcast ({ i32, i16, i16, [8 x i8] }* @_GUID_12345678_1234_1234_1234_1234567890ac to i8*), i32 4, i1 false)
 
 // The static initializer for g.
-// CHECK-DEFINE-GUID: call void @llvm.memcpy.p0i8.p0i8.i32(i8* bitcast (%struct._GUID* @g to i8*), i8* bitcast ({ i32, i16, i16, [8 x i8] }* @_GUID_12345678_1234_1234_1234_1234567890ab to i8*), i32 16, i32 4, i1 false)
-// CHECK-DEFINE-WRONG-GUID: call void @llvm.memcpy.p0i8.p0i8.i32(i8* bitcast (%struct._GUID* @g to i8*), i8* bitcast ({ i32, i16, i16, [8 x i8] }* @_GUID_12345678_1234_1234_1234_1234567890ab to i8*), i32 4, i32 4, i1 false)
+// CHECK-DEFINE-GUID: call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 bitcast (%struct._GUID* @g to i8*), i8* align 4 bitcast ({ i32, i16, i16, [8 x i8] }* @_GUID_12345678_1234_1234_1234_1234567890ab to i8*), i32 16, i1 false)
+// CHECK-DEFINE-WRONG-GUID: call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 bitcast (%struct._GUID* @g to i8*), i8* align 4 bitcast ({ i32, i16, i16, [8 x i8] }* @_GUID_12345678_1234_1234_1234_1234567890ab to i8*), i32 4, i1 false)
 
 #ifdef DEFINE_GUID
 void fun() {
@@ -81,20 +81,20 @@ void fun() {
 
   // CHECK-DEFINE-GUID: [[U1:%.+]] = bitcast %struct._GUID* %s1_1 to i8*
   // CHECK-DEFINE-WRONG-GUID: [[U1:%.+]] = bitcast %struct._GUID* %s1_1 to i8*
-  // CHECK-DEFINE-GUID: call void @llvm.memcpy.p0i8.p0i8.i32(i8* [[U1]], i8* bitcast ({ i32, i16, i16, [8 x i8] }* @_GUID_12345678_1234_1234_1234_1234567890ab to i8*), i32 16, i32 4, i1 false)
-  // CHECK-DEFINE-WRONG-GUID: call void @llvm.memcpy.p0i8.p0i8.i32(i8* [[U1]], i8* bitcast ({ i32, i16, i16, [8 x i8] }* @_GUID_12345678_1234_1234_1234_1234567890ab to i8*), i32 4, i32 4, i1 false)
+  // CHECK-DEFINE-GUID: call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 [[U1]], i8* align 4 bitcast ({ i32, i16, i16, [8 x i8] }* @_GUID_12345678_1234_1234_1234_1234567890ab to i8*), i32 16, i1 false)
+  // CHECK-DEFINE-WRONG-GUID: call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 [[U1]], i8* align 4 bitcast ({ i32, i16, i16, [8 x i8] }* @_GUID_12345678_1234_1234_1234_1234567890ab to i8*), i32 4, i1 false)
   GUID s1_1 = __uuidof(S1);
 
   // CHECK-DEFINE-GUID: [[U2:%.+]] = bitcast %struct._GUID* %s1_2 to i8*
   // CHECK-DEFINE-WRONG-GUID: [[U2:%.+]] = bitcast %struct._GUID* %s1_2 to i8*
-  // CHECK-DEFINE-GUID: call void @llvm.memcpy.p0i8.p0i8.i32(i8* [[U2]], i8* bitcast ({ i32, i16, i16, [8 x i8] }* @_GUID_12345678_1234_1234_1234_1234567890ab to i8*), i32 16, i32 4, i1 false)
-  // CHECK-DEFINE-WRONG-GUID: call void @llvm.memcpy.p0i8.p0i8.i32(i8* [[U2]], i8* bitcast ({ i32, i16, i16, [8 x i8] }* @_GUID_12345678_1234_1234_1234_1234567890ab to i8*), i32 4, i32 4, i1 false)
+  // CHECK-DEFINE-GUID: call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 [[U2]], i8* align 4 bitcast ({ i32, i16, i16, [8 x i8] }* @_GUID_12345678_1234_1234_1234_1234567890ab to i8*), i32 16, i1 false)
+  // CHECK-DEFINE-WRONG-GUID: call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 [[U2]], i8* align 4 bitcast ({ i32, i16, i16, [8 x i8] }* @_GUID_12345678_1234_1234_1234_1234567890ab to i8*), i32 4, i1 false)
   GUID s1_2 = __uuidof(S1);
 
   // CHECK-DEFINE-GUID: [[U3:%.+]] = bitcast %struct._GUID* %s1_3 to i8*
   // CHECK-DEFINE-WRONG-GUID: [[U3:%.+]] = bitcast %struct._GUID* %s1_3 to i8*
-  // CHECK-DEFINE-GUID: call void @llvm.memcpy.p0i8.p0i8.i32(i8* [[U3]], i8* bitcast ({ i32, i16, i16, [8 x i8] }* @_GUID_12345678_1234_1234_1234_1234567890ab to i8*), i32 16, i32 4, i1 false)
-  // CHECK-DEFINE-WRONG-GUID: call void @llvm.memcpy.p0i8.p0i8.i32(i8* [[U3]], i8* bitcast ({ i32, i16, i16, [8 x i8] }* @_GUID_12345678_1234_1234_1234_1234567890ab to i8*), i32 4, i32 4, i1 false)
+  // CHECK-DEFINE-GUID: call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 [[U3]], i8* align 4 bitcast ({ i32, i16, i16, [8 x i8] }* @_GUID_12345678_1234_1234_1234_1234567890ab to i8*), i32 16, i1 false)
+  // CHECK-DEFINE-WRONG-GUID: call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 [[U3]], i8* align 4 bitcast ({ i32, i16, i16, [8 x i8] }* @_GUID_12345678_1234_1234_1234_1234567890ab to i8*), i32 4, i1 false)
   GUID s1_3 = __uuidof(s1);
 }
 #endif

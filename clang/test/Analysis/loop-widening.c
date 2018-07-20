@@ -1,4 +1,5 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Malloc,debug.ExprInspection -analyzer-max-loop 4 -analyzer-config widen-loops=true -verify %s
+// RUN: %clang_analyze_cc1 -DTEST_NULL_TERM -analyzer-checker=core,unix.Malloc,debug.ExprInspection,alpha.cplusplus.IteratorRange -analyzer-max-loop 4 -analyzer-config widen-loops=true -verify %s
 
 void clang_analyzer_eval(int);
 void clang_analyzer_warnIfReached();
@@ -188,3 +189,16 @@ void nested_loop_inner_widen() {
   }
   clang_analyzer_eval(i >= 2); // expected-warning {{TRUE}}
 }
+
+#ifdef TEST_NULL_TERM
+void null_terminator_loop_widen(int *a) {
+  int c;
+  // Loop widening will call 'invalidateRegions()' and 'invalidateRegions()'
+  // will construct the SymbolConjured with null Stmt because of the null
+  // terminator statement. Accessing the null Stmt will cause a crash.
+  for (;;) {
+    c = *a; // no-crash
+    a++;
+  }
+}
+#endif

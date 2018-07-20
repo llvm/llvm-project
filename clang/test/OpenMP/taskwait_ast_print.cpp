@@ -19,7 +19,7 @@ T tmain(T argc) {
   return a + argc;
 }
 // CHECK:      static T a;
-// CHECK-NEXT: #pragma omp taskwait
+// CHECK-NEXT: #pragma omp taskwait{{$}}
 // CHECK:      static int a;
 // CHECK-NEXT: #pragma omp taskwait
 // CHECK:      static char a;

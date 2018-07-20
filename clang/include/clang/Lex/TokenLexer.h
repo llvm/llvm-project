@@ -62,18 +62,18 @@ class TokenLexer {
   /// expanded.
   SourceLocation ExpandLocStart, ExpandLocEnd;
 
-  /// \brief Source location pointing at the source location entry chunk that
+  /// Source location pointing at the source location entry chunk that
   /// was reserved for the current macro expansion.
   SourceLocation MacroExpansionStart;
   
-  /// \brief The offset of the macro expansion in the
+  /// The offset of the macro expansion in the
   /// "source location address space".
   unsigned MacroStartSLocOffset;
 
-  /// \brief Location of the macro definition.
+  /// Location of the macro definition.
   SourceLocation MacroDefStart;
 
-  /// \brief Length of the macro definition.
+  /// Length of the macro definition.
   unsigned MacroDefLength;
 
   /// Lexical information about the expansion point of the macro: the identifier
@@ -198,7 +198,7 @@ private:
   /// the tokens just expanded through __VA_OPT__ processing.  These (sub)
   /// sequence of tokens are folded into one stringified token.
   ///
-  /// \param[in] VCtx - contains relevent contextual information about the
+  /// \param[in] VCtx - contains relevant contextual information about the
   /// state of the tokens around and including the __VA_OPT__ token, necessary
   /// for stringification.
   void stringifyVAOPTContents(SmallVectorImpl<Token> &ReplacementToks,
@@ -216,12 +216,12 @@ private:
   /// first token on the next line.
   void HandleMicrosoftCommentPaste(Token &Tok, SourceLocation OpLoc);
 
-  /// \brief If \p loc is a FileID and points inside the current macro
+  /// If \p loc is a FileID and points inside the current macro
   /// definition, returns the appropriate source location pointing at the
   /// macro expansion source location entry.
   SourceLocation getExpansionLocForMacroDefLoc(SourceLocation loc) const;
 
-  /// \brief Creates SLocEntries and updates the locations of macro argument
+  /// Creates SLocEntries and updates the locations of macro argument
   /// tokens to their new expanded locations.
   ///
   /// \param ArgIdSpellLoc the location of the macro argument id inside the

@@ -1,4 +1,4 @@
-//===--- DiagnosticRenderer.h - Diagnostic Pretty-Printing ------*- C++ -*-===//
+//===- DiagnosticRenderer.h - Diagnostic Pretty-Printing --------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -17,20 +17,23 @@
 #define LLVM_CLANG_FRONTEND_DIAGNOSTICRENDERER_H
 
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/ADT/StringRef.h"
 
 namespace clang {
 
-class DiagnosticOptions;
 class LangOptions;
 class SourceManager;
 
-typedef llvm::PointerUnion<const Diagnostic *,
-                           const StoredDiagnostic *> DiagOrStoredDiag;
+using DiagOrStoredDiag =
+    llvm::PointerUnion<const Diagnostic *, const StoredDiagnostic *>;
   
-/// \brief Class to encapsulate the logic for formatting a diagnostic message.
+/// Class to encapsulate the logic for formatting a diagnostic message.
 ///
 /// Actual "printing" logic is implemented by subclasses.
 ///
@@ -47,24 +50,24 @@ protected:
   const LangOptions &LangOpts;
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts;
   
-  /// \brief The location of the previous diagnostic if known.
+  /// The location of the previous diagnostic if known.
   ///
   /// This will be invalid in cases where there is no (known) previous
   /// diagnostic location, or that location itself is invalid or comes from
   /// a different source manager than SM.
   SourceLocation LastLoc;
   
-  /// \brief The location of the last include whose stack was printed if known.
+  /// The location of the last include whose stack was printed if known.
   ///
   /// Same restriction as LastLoc essentially, but tracking include stack
   /// root locations rather than diagnostic locations.
   SourceLocation LastIncludeLoc;
   
-  /// \brief The level of the last diagnostic emitted.
+  /// The level of the last diagnostic emitted.
   ///
   /// The level of the last diagnostic emitted. Used to detect level changes
   /// which change the amount of information displayed.
-  DiagnosticsEngine::Level LastLevel;
+  DiagnosticsEngine::Level LastLevel = DiagnosticsEngine::Ignored;
 
   DiagnosticRenderer(const LangOptions &LangOpts,
                      DiagnosticOptions *DiagOpts);
@@ -97,7 +100,6 @@ protected:
   virtual void endDiagnostic(DiagOrStoredDiag D,
                              DiagnosticsEngine::Level Level) {}
 
-  
 private:
   void emitBasicNote(StringRef Message);
   void emitIncludeStack(FullSourceLoc Loc, PresumedLoc PLoc,
@@ -116,7 +118,7 @@ private:
                            ArrayRef<FixItHint> Hints);
 
 public:
-  /// \brief Emit a diagnostic.
+  /// Emit a diagnostic.
   ///
   /// This is the primary entry point for emitting diagnostic messages.
   /// It handles formatting and rendering the message as well as any ancillary
@@ -142,7 +144,7 @@ class DiagnosticNoteRenderer : public DiagnosticRenderer {
 public:
   DiagnosticNoteRenderer(const LangOptions &LangOpts,
                          DiagnosticOptions *DiagOpts)
-    : DiagnosticRenderer(LangOpts, DiagOpts) {}
+      : DiagnosticRenderer(LangOpts, DiagOpts) {}
 
   ~DiagnosticNoteRenderer() override;
 
@@ -156,5 +158,7 @@ public:
 
   virtual void emitNote(FullSourceLoc Loc, StringRef Message) = 0;
 };
-} // end clang namespace
-#endif
+
+} // namespace clang
+
+#endif // LLVM_CLANG_FRONTEND_DIAGNOSTICRENDERER_H

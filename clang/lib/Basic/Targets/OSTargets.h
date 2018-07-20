@@ -369,7 +369,7 @@ protected:
 public:
   NetBSDTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : OSTargetInfo<Target>(Triple, Opts) {
-    this->MCountName = "_mcount";
+    this->MCountName = "__mcount";
   }
 };
 
@@ -485,6 +485,7 @@ public:
     default:
     case llvm::Triple::x86_64:
       this->MCountName = ".mcount";
+      this->NewAlign = 256;
       break;
     }
   }
@@ -550,13 +551,24 @@ protected:
     Builder.defineMacro("_LARGEFILE_SOURCE");
     Builder.defineMacro("_LARGEFILE64_SOURCE");
     Builder.defineMacro("__EXTENSIONS__");
-    Builder.defineMacro("_REENTRANT");
+    if (Opts.POSIXThreads)
+      Builder.defineMacro("_REENTRANT");
+    if (this->HasFloat128)
+      Builder.defineMacro("__FLOAT128__");
   }
 
 public:
   SolarisTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : OSTargetInfo<Target>(Triple, Opts) {
     // FIXME: WIntType should be SignedLong
+    switch (Triple.getArch()) {
+    default:
+      break;
+    case llvm::Triple::x86:
+    case llvm::Triple::x86_64:
+      this->HasFloat128 = true;
+      break;
+    }
   }
 };
 

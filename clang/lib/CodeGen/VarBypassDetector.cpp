@@ -95,7 +95,7 @@ bool VarBypassDetector::BuildScopeInformation(const Stmt *S,
   case Stmt::CaseStmtClass:
   case Stmt::DefaultStmtClass:
   case Stmt::LabelStmtClass:
-    llvm_unreachable("the loop bellow handles labels and cases");
+    llvm_unreachable("the loop below handles labels and cases");
     break;
 
   default:

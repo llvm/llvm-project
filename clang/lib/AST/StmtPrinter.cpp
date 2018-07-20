@@ -1,4 +1,4 @@
-//===--- StmtPrinter.cpp - Printing implementation for Stmt ASTs ----------===//
+//===- StmtPrinter.cpp - Printing implementation for Stmt ASTs ------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,30 +14,60 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
+#include "clang/AST/Decl.h"
+#include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclOpenMP.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/ExprObjC.h"
 #include "clang/AST/ExprOpenMP.h"
+#include "clang/AST/NestedNameSpecifier.h"
+#include "clang/AST/OpenMPClause.h"
 #include "clang/AST/PrettyPrinter.h"
+#include "clang/AST/Stmt.h"
+#include "clang/AST/StmtCXX.h"
+#include "clang/AST/StmtObjC.h"
+#include "clang/AST/StmtOpenMP.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/AST/TemplateBase.h"
+#include "clang/AST/Type.h"
 #include "clang/Basic/CharInfo.h"
+#include "clang/Basic/ExpressionTraits.h"
+#include "clang/Basic/IdentifierTable.h"
+#include "clang/Basic/LLVM.h"
+#include "clang/Basic/Lambda.h"
+#include "clang/Basic/OpenMPKinds.h"
+#include "clang/Basic/OperatorKinds.h"
+#include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/TypeTraits.h"
 #include "clang/Lex/Lexer.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/raw_ostream.h"
+#include <cassert>
+#include <string>
+
 using namespace clang;
 
 //===----------------------------------------------------------------------===//
 // StmtPrinter Visitor
 //===----------------------------------------------------------------------===//
 
-namespace  {
+namespace {
+
   class StmtPrinter : public StmtVisitor<StmtPrinter> {
     raw_ostream &OS;
     unsigned IndentLevel;
-    clang::PrinterHelper* Helper;
+    PrinterHelper* Helper;
     PrintingPolicy Policy;
     const ASTContext *Context;
 
@@ -100,9 +130,11 @@ namespace  {
     void VisitStmt(Stmt *Node) LLVM_ATTRIBUTE_UNUSED {
       Indent() << "<<unknown stmt type>>\n";
     }
+
     void VisitExpr(Expr *Node) LLVM_ATTRIBUTE_UNUSED {
       OS << "<<unknown expr type>>";
     }
+
     void VisitCXXNamedCastExpr(CXXNamedCastExpr *Node);
 
 #define ABSTRACT_STMT(CLASS)
@@ -110,7 +142,8 @@ namespace  {
     void Visit##CLASS(CLASS *Node);
 #include "clang/AST/StmtNodes.inc"
   };
-}
+
+} // namespace
 
 //===----------------------------------------------------------------------===//
 //  Stmt printing methods.
@@ -131,7 +164,7 @@ void StmtPrinter::PrintRawDecl(Decl *D) {
 }
 
 void StmtPrinter::PrintRawDeclStmt(const DeclStmt *S) {
-  SmallVector<Decl*, 2> Decls(S->decls());
+  SmallVector<Decl *, 2> Decls(S->decls());
   Decl::printGroup(Decls.data(), Decls.size(), OS, Policy, IndentLevel);
 }
 
@@ -189,7 +222,7 @@ void StmtPrinter::PrintRawIfStmt(IfStmt *If) {
     PrintExpr(If->getCond());
   OS << ')';
 
-  if (CompoundStmt *CS = dyn_cast<CompoundStmt>(If->getThen())) {
+  if (auto *CS = dyn_cast<CompoundStmt>(If->getThen())) {
     OS << ' ';
     PrintRawCompoundStmt(CS);
     OS << (If->getElse() ? ' ' : '\n');
@@ -202,11 +235,11 @@ void StmtPrinter::PrintRawIfStmt(IfStmt *If) {
   if (Stmt *Else = If->getElse()) {
     OS << "else";
 
-    if (CompoundStmt *CS = dyn_cast<CompoundStmt>(Else)) {
+    if (auto *CS = dyn_cast<CompoundStmt>(Else)) {
       OS << ' ';
       PrintRawCompoundStmt(CS);
       OS << '\n';
-    } else if (IfStmt *ElseIf = dyn_cast<IfStmt>(Else)) {
+    } else if (auto *ElseIf = dyn_cast<IfStmt>(Else)) {
       OS << ' ';
       PrintRawIfStmt(ElseIf);
     } else {
@@ -230,7 +263,7 @@ void StmtPrinter::VisitSwitchStmt(SwitchStmt *Node) {
   OS << ")";
 
   // Pretty print compoundstmt bodies (very common).
-  if (CompoundStmt *CS = dyn_cast<CompoundStmt>(Node->getBody())) {
+  if (auto *CS = dyn_cast<CompoundStmt>(Node->getBody())) {
     OS << " ";
     PrintRawCompoundStmt(CS);
     OS << "\n";
@@ -252,7 +285,7 @@ void StmtPrinter::VisitWhileStmt(WhileStmt *Node) {
 
 void StmtPrinter::VisitDoStmt(DoStmt *Node) {
   Indent() << "do ";
-  if (CompoundStmt *CS = dyn_cast<CompoundStmt>(Node->getBody())) {
+  if (auto *CS = dyn_cast<CompoundStmt>(Node->getBody())) {
     PrintRawCompoundStmt(CS);
     OS << " ";
   } else {
@@ -269,7 +302,7 @@ void StmtPrinter::VisitDoStmt(DoStmt *Node) {
 void StmtPrinter::VisitForStmt(ForStmt *Node) {
   Indent() << "for (";
   if (Node->getInit()) {
-    if (DeclStmt *DS = dyn_cast<DeclStmt>(Node->getInit()))
+    if (auto *DS = dyn_cast<DeclStmt>(Node->getInit()))
       PrintRawDeclStmt(DS);
     else
       PrintExpr(cast<Expr>(Node->getInit()));
@@ -286,7 +319,7 @@ void StmtPrinter::VisitForStmt(ForStmt *Node) {
   }
   OS << ") ";
 
-  if (CompoundStmt *CS = dyn_cast<CompoundStmt>(Node->getBody())) {
+  if (auto *CS = dyn_cast<CompoundStmt>(Node->getBody())) {
     PrintRawCompoundStmt(CS);
     OS << "\n";
   } else {
@@ -297,7 +330,7 @@ void StmtPrinter::VisitForStmt(ForStmt *Node) {
 
 void StmtPrinter::VisitObjCForCollectionStmt(ObjCForCollectionStmt *Node) {
   Indent() << "for (";
-  if (DeclStmt *DS = dyn_cast<DeclStmt>(Node->getElement()))
+  if (auto *DS = dyn_cast<DeclStmt>(Node->getElement()))
     PrintRawDeclStmt(DS);
   else
     PrintExpr(cast<Expr>(Node->getElement()));
@@ -305,7 +338,7 @@ void StmtPrinter::VisitObjCForCollectionStmt(ObjCForCollectionStmt *Node) {
   PrintExpr(Node->getCollection());
   OS << ") ";
 
-  if (CompoundStmt *CS = dyn_cast<CompoundStmt>(Node->getBody())) {
+  if (auto *CS = dyn_cast<CompoundStmt>(Node->getBody())) {
     PrintRawCompoundStmt(CS);
     OS << "\n";
   } else {
@@ -365,7 +398,6 @@ void StmtPrinter::VisitBreakStmt(BreakStmt *Node) {
   if (Policy.IncludeNewlines) OS << "\n";
 }
 
-
 void StmtPrinter::VisitReturnStmt(ReturnStmt *Node) {
   Indent() << "return";
   if (Node->getRetValue()) {
@@ -375,7 +407,6 @@ void StmtPrinter::VisitReturnStmt(ReturnStmt *Node) {
   OS << ";";
   if (Policy.IncludeNewlines) OS << "\n";
 }
-
 
 void StmtPrinter::VisitGCCAsmStmt(GCCAsmStmt *Node) {
   Indent() << "asm ";
@@ -458,7 +489,7 @@ void StmtPrinter::VisitCapturedStmt(CapturedStmt *Node) {
 
 void StmtPrinter::VisitObjCAtTryStmt(ObjCAtTryStmt *Node) {
   Indent() << "@try";
-  if (CompoundStmt *TS = dyn_cast<CompoundStmt>(Node->getTryBody())) {
+  if (auto *TS = dyn_cast<CompoundStmt>(Node->getTryBody())) {
     PrintRawCompoundStmt(TS);
     OS << "\n";
   }
@@ -471,14 +502,13 @@ void StmtPrinter::VisitObjCAtTryStmt(ObjCAtTryStmt *Node) {
         PrintRawDecl(DS);
     }
     OS << ")";
-    if (CompoundStmt *CS = dyn_cast<CompoundStmt>(catchStmt->getCatchBody())) {
+    if (auto *CS = dyn_cast<CompoundStmt>(catchStmt->getCatchBody())) {
       PrintRawCompoundStmt(CS);
       OS << "\n";
     }
   }
 
-  if (ObjCAtFinallyStmt *FS = static_cast<ObjCAtFinallyStmt *>(
-        Node->getFinallyStmt())) {
+  if (auto *FS = static_cast<ObjCAtFinallyStmt *>(Node->getFinallyStmt())) {
     Indent() << "@finally";
     PrintRawCompoundStmt(dyn_cast<CompoundStmt>(FS->getFinallyBody()));
     OS << "\n";
@@ -596,19 +626,25 @@ void StmtPrinter::VisitSEHLeaveStmt(SEHLeaveStmt *Node) {
 //===----------------------------------------------------------------------===//
 
 namespace {
+
 class OMPClausePrinter : public OMPClauseVisitor<OMPClausePrinter> {
   raw_ostream &OS;
   const PrintingPolicy &Policy;
-  /// \brief Process clauses with list of variables.
+
+  /// Process clauses with list of variables.
   template <typename T>
   void VisitOMPClauseList(T *Node, char StartSym);
+
 public:
   OMPClausePrinter(raw_ostream &OS, const PrintingPolicy &Policy)
-    : OS(OS), Policy(Policy) { }
+      : OS(OS), Policy(Policy) {}
+
 #define OPENMP_CLAUSE(Name, Class)                              \
   void Visit##Class(Class *S);
 #include "clang/Basic/OpenMPKinds.def"
 };
+
+} // namespace
 
 void OMPClausePrinter::VisitOMPIfClause(OMPIfClause *Node) {
   OS << "if(";
@@ -776,7 +812,7 @@ void OMPClausePrinter::VisitOMPClauseList(T *Node, char StartSym) {
        I != E; ++I) {
     assert(*I && "Expected non-null Stmt");
     OS << (I == Node->varlist_begin() ? StartSym : ',');
-    if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(*I)) {
+    if (auto *DRE = dyn_cast<DeclRefExpr>(*I)) {
       if (isa<OMPCapturedExprDecl>(DRE->getDecl()))
         DRE->printPretty(OS, nullptr, Policy, 0);
       else
@@ -1017,7 +1053,6 @@ void OMPClausePrinter::VisitOMPIsDevicePtrClause(OMPIsDevicePtrClause *Node) {
     OS << ")";
   }
 }
-}
 
 //===----------------------------------------------------------------------===//
 //  OpenMP directives printing methods
@@ -1027,43 +1062,38 @@ void StmtPrinter::PrintOMPExecutableDirective(OMPExecutableDirective *S,
                                               bool ForceNoStmt) {
   OMPClausePrinter Printer(OS, Policy);
   ArrayRef<OMPClause *> Clauses = S->clauses();
-  for (ArrayRef<OMPClause *>::iterator I = Clauses.begin(), E = Clauses.end();
-       I != E; ++I)
-    if (*I && !(*I)->isImplicit()) {
-      Printer.Visit(*I);
+  for (auto *Clause : Clauses)
+    if (Clause && !Clause->isImplicit()) {
       OS << ' ';
+      Printer.Visit(Clause);
     }
   OS << "\n";
-  if (S->hasAssociatedStmt() && S->getAssociatedStmt() && !ForceNoStmt) {
-    assert(isa<CapturedStmt>(S->getAssociatedStmt()) &&
-           "Expected captured statement!");
-    Stmt *CS = cast<CapturedStmt>(S->getAssociatedStmt())->getCapturedStmt();
-    PrintStmt(CS);
-  }
+  if (!ForceNoStmt && S->hasAssociatedStmt())
+    PrintStmt(S->getInnermostCapturedStmt()->getCapturedStmt());
 }
 
 void StmtPrinter::VisitOMPParallelDirective(OMPParallelDirective *Node) {
-  Indent() << "#pragma omp parallel ";
+  Indent() << "#pragma omp parallel";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPSimdDirective(OMPSimdDirective *Node) {
-  Indent() << "#pragma omp simd ";
+  Indent() << "#pragma omp simd";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPForDirective(OMPForDirective *Node) {
-  Indent() << "#pragma omp for ";
+  Indent() << "#pragma omp for";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPForSimdDirective(OMPForSimdDirective *Node) {
-  Indent() << "#pragma omp for simd ";
+  Indent() << "#pragma omp for simd";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPSectionsDirective(OMPSectionsDirective *Node) {
-  Indent() << "#pragma omp sections ";
+  Indent() << "#pragma omp sections";
   PrintOMPExecutableDirective(Node);
 }
 
@@ -1073,7 +1103,7 @@ void StmtPrinter::VisitOMPSectionDirective(OMPSectionDirective *Node) {
 }
 
 void StmtPrinter::VisitOMPSingleDirective(OMPSingleDirective *Node) {
-  Indent() << "#pragma omp single ";
+  Indent() << "#pragma omp single";
   PrintOMPExecutableDirective(Node);
 }
 
@@ -1089,29 +1119,28 @@ void StmtPrinter::VisitOMPCriticalDirective(OMPCriticalDirective *Node) {
     Node->getDirectiveName().printName(OS);
     OS << ")";
   }
-  OS << " ";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPParallelForDirective(OMPParallelForDirective *Node) {
-  Indent() << "#pragma omp parallel for ";
+  Indent() << "#pragma omp parallel for";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPParallelForSimdDirective(
     OMPParallelForSimdDirective *Node) {
-  Indent() << "#pragma omp parallel for simd ";
+  Indent() << "#pragma omp parallel for simd";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPParallelSectionsDirective(
     OMPParallelSectionsDirective *Node) {
-  Indent() << "#pragma omp parallel sections ";
+  Indent() << "#pragma omp parallel sections";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPTaskDirective(OMPTaskDirective *Node) {
-  Indent() << "#pragma omp task ";
+  Indent() << "#pragma omp task";
   PrintOMPExecutableDirective(Node);
 }
 
@@ -1131,61 +1160,61 @@ void StmtPrinter::VisitOMPTaskwaitDirective(OMPTaskwaitDirective *Node) {
 }
 
 void StmtPrinter::VisitOMPTaskgroupDirective(OMPTaskgroupDirective *Node) {
-  Indent() << "#pragma omp taskgroup ";
+  Indent() << "#pragma omp taskgroup";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPFlushDirective(OMPFlushDirective *Node) {
-  Indent() << "#pragma omp flush ";
+  Indent() << "#pragma omp flush";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPOrderedDirective(OMPOrderedDirective *Node) {
-  Indent() << "#pragma omp ordered ";
-  PrintOMPExecutableDirective(Node);
+  Indent() << "#pragma omp ordered";
+  PrintOMPExecutableDirective(Node, Node->hasClausesOfKind<OMPDependClause>());
 }
 
 void StmtPrinter::VisitOMPAtomicDirective(OMPAtomicDirective *Node) {
-  Indent() << "#pragma omp atomic ";
+  Indent() << "#pragma omp atomic";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPTargetDirective(OMPTargetDirective *Node) {
-  Indent() << "#pragma omp target ";
+  Indent() << "#pragma omp target";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPTargetDataDirective(OMPTargetDataDirective *Node) {
-  Indent() << "#pragma omp target data ";
+  Indent() << "#pragma omp target data";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPTargetEnterDataDirective(
     OMPTargetEnterDataDirective *Node) {
-  Indent() << "#pragma omp target enter data ";
+  Indent() << "#pragma omp target enter data";
   PrintOMPExecutableDirective(Node, /*ForceNoStmt=*/true);
 }
 
 void StmtPrinter::VisitOMPTargetExitDataDirective(
     OMPTargetExitDataDirective *Node) {
-  Indent() << "#pragma omp target exit data ";
+  Indent() << "#pragma omp target exit data";
   PrintOMPExecutableDirective(Node, /*ForceNoStmt=*/true);
 }
 
 void StmtPrinter::VisitOMPTargetParallelDirective(
     OMPTargetParallelDirective *Node) {
-  Indent() << "#pragma omp target parallel ";
+  Indent() << "#pragma omp target parallel";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPTargetParallelForDirective(
     OMPTargetParallelForDirective *Node) {
-  Indent() << "#pragma omp target parallel for ";
+  Indent() << "#pragma omp target parallel for";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPTeamsDirective(OMPTeamsDirective *Node) {
-  Indent() << "#pragma omp teams ";
+  Indent() << "#pragma omp teams";
   PrintOMPExecutableDirective(Node);
 }
 
@@ -1198,111 +1227,111 @@ void StmtPrinter::VisitOMPCancellationPointDirective(
 
 void StmtPrinter::VisitOMPCancelDirective(OMPCancelDirective *Node) {
   Indent() << "#pragma omp cancel "
-           << getOpenMPDirectiveName(Node->getCancelRegion()) << " ";
+           << getOpenMPDirectiveName(Node->getCancelRegion());
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPTaskLoopDirective(OMPTaskLoopDirective *Node) {
-  Indent() << "#pragma omp taskloop ";
+  Indent() << "#pragma omp taskloop";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPTaskLoopSimdDirective(
     OMPTaskLoopSimdDirective *Node) {
-  Indent() << "#pragma omp taskloop simd ";
+  Indent() << "#pragma omp taskloop simd";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPDistributeDirective(OMPDistributeDirective *Node) {
-  Indent() << "#pragma omp distribute ";
+  Indent() << "#pragma omp distribute";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPTargetUpdateDirective(
     OMPTargetUpdateDirective *Node) {
-  Indent() << "#pragma omp target update ";
+  Indent() << "#pragma omp target update";
   PrintOMPExecutableDirective(Node, /*ForceNoStmt=*/true);
 }
 
 void StmtPrinter::VisitOMPDistributeParallelForDirective(
     OMPDistributeParallelForDirective *Node) {
-  Indent() << "#pragma omp distribute parallel for ";
+  Indent() << "#pragma omp distribute parallel for";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPDistributeParallelForSimdDirective(
     OMPDistributeParallelForSimdDirective *Node) {
-  Indent() << "#pragma omp distribute parallel for simd ";
+  Indent() << "#pragma omp distribute parallel for simd";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPDistributeSimdDirective(
     OMPDistributeSimdDirective *Node) {
-  Indent() << "#pragma omp distribute simd ";
+  Indent() << "#pragma omp distribute simd";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPTargetParallelForSimdDirective(
     OMPTargetParallelForSimdDirective *Node) {
-  Indent() << "#pragma omp target parallel for simd ";
+  Indent() << "#pragma omp target parallel for simd";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPTargetSimdDirective(OMPTargetSimdDirective *Node) {
-  Indent() << "#pragma omp target simd ";
+  Indent() << "#pragma omp target simd";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPTeamsDistributeDirective(
     OMPTeamsDistributeDirective *Node) {
-  Indent() << "#pragma omp teams distribute ";
+  Indent() << "#pragma omp teams distribute";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPTeamsDistributeSimdDirective(
     OMPTeamsDistributeSimdDirective *Node) {
-  Indent() << "#pragma omp teams distribute simd ";
+  Indent() << "#pragma omp teams distribute simd";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPTeamsDistributeParallelForSimdDirective(
     OMPTeamsDistributeParallelForSimdDirective *Node) {
-  Indent() << "#pragma omp teams distribute parallel for simd ";
+  Indent() << "#pragma omp teams distribute parallel for simd";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPTeamsDistributeParallelForDirective(
     OMPTeamsDistributeParallelForDirective *Node) {
-  Indent() << "#pragma omp teams distribute parallel for ";
+  Indent() << "#pragma omp teams distribute parallel for";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPTargetTeamsDirective(OMPTargetTeamsDirective *Node) {
-  Indent() << "#pragma omp target teams ";
+  Indent() << "#pragma omp target teams";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPTargetTeamsDistributeDirective(
     OMPTargetTeamsDistributeDirective *Node) {
-  Indent() << "#pragma omp target teams distribute ";
+  Indent() << "#pragma omp target teams distribute";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPTargetTeamsDistributeParallelForDirective(
     OMPTargetTeamsDistributeParallelForDirective *Node) {
-  Indent() << "#pragma omp target teams distribute parallel for ";
+  Indent() << "#pragma omp target teams distribute parallel for";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPTargetTeamsDistributeParallelForSimdDirective(
     OMPTargetTeamsDistributeParallelForSimdDirective *Node) {
-  Indent() << "#pragma omp target teams distribute parallel for simd ";
+  Indent() << "#pragma omp target teams distribute parallel for simd";
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPTargetTeamsDistributeSimdDirective(
     OMPTargetTeamsDistributeSimdDirective *Node) {
-  Indent() << "#pragma omp target teams distribute simd ";
+  Indent() << "#pragma omp target teams distribute simd";
   PrintOMPExecutableDirective(Node);
 }
 
@@ -1311,7 +1340,7 @@ void StmtPrinter::VisitOMPTargetTeamsDistributeSimdDirective(
 //===----------------------------------------------------------------------===//
 
 void StmtPrinter::VisitDeclRefExpr(DeclRefExpr *Node) {
-  if (auto *OCED = dyn_cast<OMPCapturedExprDecl>(Node->getDecl())) {
+  if (const auto *OCED = dyn_cast<OMPCapturedExprDecl>(Node->getDecl())) {
     OCED->getInit()->IgnoreImpCasts()->printPretty(OS, nullptr, Policy);
     return;
   }
@@ -1347,8 +1376,7 @@ void StmtPrinter::VisitUnresolvedLookupExpr(UnresolvedLookupExpr *Node) {
 
 static bool isImplicitSelf(const Expr *E) {
   if (const auto *DRE = dyn_cast<DeclRefExpr>(E)) {
-    if (const ImplicitParamDecl *PD =
-            dyn_cast<ImplicitParamDecl>(DRE->getDecl())) {
+    if (const auto *PD = dyn_cast<ImplicitParamDecl>(DRE->getDecl())) {
       if (PD->getParameterKind() == ImplicitParamDecl::ObjCSelf &&
           DRE->getLocStart().isInvalid())
         return true;
@@ -1378,14 +1406,17 @@ void StmtPrinter::VisitObjCPropertyRefExpr(ObjCPropertyRefExpr *Node) {
     OS << Node->getClassReceiver()->getName() << ".";
   }
 
-  if (Node->isImplicitProperty())
-    Node->getImplicitPropertyGetter()->getSelector().print(OS);
-  else
+  if (Node->isImplicitProperty()) {
+    if (const auto *Getter = Node->getImplicitPropertyGetter())
+      Getter->getSelector().print(OS);
+    else
+      OS << SelectorTable::getPropertyNameFromSetterSelector(
+          Node->getImplicitPropertySetter()->getSelector());
+  } else
     OS << Node->getExplicitProperty()->getName();
 }
 
 void StmtPrinter::VisitObjCSubscriptRefExpr(ObjCSubscriptRefExpr *Node) {
-  
   PrintExpr(Node->getBaseExpr());
   OS << "[";
   PrintExpr(Node->getKeyExpr());
@@ -1498,6 +1529,28 @@ void StmtPrinter::VisitIntegerLiteral(IntegerLiteral *Node) {
   }
 }
 
+void StmtPrinter::VisitFixedPointLiteral(FixedPointLiteral *Node) {
+  if (Policy.ConstantsAsWritten && printExprAsWritten(OS, Node, Context))
+    return;
+  OS << Node->getValueAsString(/*Radix=*/10);
+
+  switch (Node->getType()->getAs<BuiltinType>()->getKind()) {
+    default: llvm_unreachable("Unexpected type for fixed point literal!");
+    case BuiltinType::ShortFract:   OS << "hr"; break;
+    case BuiltinType::ShortAccum:   OS << "hk"; break;
+    case BuiltinType::UShortFract:  OS << "uhr"; break;
+    case BuiltinType::UShortAccum:  OS << "uhk"; break;
+    case BuiltinType::Fract:        OS << "r"; break;
+    case BuiltinType::Accum:        OS << "k"; break;
+    case BuiltinType::UFract:       OS << "ur"; break;
+    case BuiltinType::UAccum:       OS << "uk"; break;
+    case BuiltinType::LongFract:    OS << "lr"; break;
+    case BuiltinType::LongAccum:    OS << "lk"; break;
+    case BuiltinType::ULongFract:   OS << "ulr"; break;
+    case BuiltinType::ULongAccum:   OS << "ulk"; break;
+  }
+}
+
 static void PrintFloatingLiteral(raw_ostream &OS, FloatingLiteral *Node,
                                  bool PrintSuffix) {
   SmallString<16> Str;
@@ -1535,11 +1588,13 @@ void StmtPrinter::VisitImaginaryLiteral(ImaginaryLiteral *Node) {
 void StmtPrinter::VisitStringLiteral(StringLiteral *Str) {
   Str->outputString(OS);
 }
+
 void StmtPrinter::VisitParenExpr(ParenExpr *Node) {
   OS << "(";
   PrintExpr(Node->getSubExpr());
   OS << ")";
 }
+
 void StmtPrinter::VisitUnaryOperator(UnaryOperator *Node) {
   if (!Node->isPostfix()) {
     OS << UnaryOperator::getOpcodeStr(Node->getOpcode());
@@ -1695,7 +1750,7 @@ void StmtPrinter::VisitMemberExpr(MemberExpr *Node) {
   if (!Policy.SuppressImplicitBase || !isImplicitThis(Node->getBase())) {
     PrintExpr(Node->getBase());
 
-    MemberExpr *ParentMember = dyn_cast<MemberExpr>(Node->getBase());
+    auto *ParentMember = dyn_cast<MemberExpr>(Node->getBase());
     FieldDecl *ParentDecl =
         ParentMember ? dyn_cast<FieldDecl>(ParentMember->getMemberDecl())
                      : nullptr;
@@ -1704,7 +1759,7 @@ void StmtPrinter::VisitMemberExpr(MemberExpr *Node) {
       OS << (Node->isArrow() ? "->" : ".");
   }
 
-  if (FieldDecl *FD = dyn_cast<FieldDecl>(Node->getMemberDecl()))
+  if (auto *FD = dyn_cast<FieldDecl>(Node->getMemberDecl()))
     if (FD->isAnonymousStructOrUnion())
       return;
 
@@ -1716,6 +1771,7 @@ void StmtPrinter::VisitMemberExpr(MemberExpr *Node) {
   if (Node->hasExplicitTemplateArgs())
     printTemplateArgumentList(OS, Node->template_arguments(), Policy);
 }
+
 void StmtPrinter::VisitObjCIsaExpr(ObjCIsaExpr *Node) {
   PrintExpr(Node->getBase());
   OS << (Node->isArrow() ? "->isa" : ".isa");
@@ -1726,32 +1782,38 @@ void StmtPrinter::VisitExtVectorElementExpr(ExtVectorElementExpr *Node) {
   OS << ".";
   OS << Node->getAccessor().getName();
 }
+
 void StmtPrinter::VisitCStyleCastExpr(CStyleCastExpr *Node) {
   OS << '(';
   Node->getTypeAsWritten().print(OS, Policy);
   OS << ')';
   PrintExpr(Node->getSubExpr());
 }
+
 void StmtPrinter::VisitCompoundLiteralExpr(CompoundLiteralExpr *Node) {
   OS << '(';
   Node->getType().print(OS, Policy);
   OS << ')';
   PrintExpr(Node->getInitializer());
 }
+
 void StmtPrinter::VisitImplicitCastExpr(ImplicitCastExpr *Node) {
   // No need to print anything, simply forward to the subexpression.
   PrintExpr(Node->getSubExpr());
 }
+
 void StmtPrinter::VisitBinaryOperator(BinaryOperator *Node) {
   PrintExpr(Node->getLHS());
   OS << " " << BinaryOperator::getOpcodeStr(Node->getOpcode()) << " ";
   PrintExpr(Node->getRHS());
 }
+
 void StmtPrinter::VisitCompoundAssignOperator(CompoundAssignOperator *Node) {
   PrintExpr(Node->getLHS());
   OS << " " << BinaryOperator::getOpcodeStr(Node->getOpcode()) << " ";
   PrintExpr(Node->getRHS());
 }
+
 void StmtPrinter::VisitConditionalOperator(ConditionalOperator *Node) {
   PrintExpr(Node->getCond());
   OS << " ? ";
@@ -1768,6 +1830,7 @@ StmtPrinter::VisitBinaryConditionalOperator(BinaryConditionalOperator *Node) {
   OS << " ?: ";
   PrintExpr(Node->getFalseExpr());
 }
+
 void StmtPrinter::VisitAddrLabelExpr(AddrLabelExpr *Node) {
   OS << "&&" << Node->getLabel()->getName();
 }
@@ -2100,7 +2163,7 @@ void StmtPrinter::VisitUserDefinedLiteral(UserDefinedLiteral *Node) {
     OS << cast<StringLiteral>(Node->getArg(0)->IgnoreImpCasts())->getString();
     break;
   case UserDefinedLiteral::LOK_Template: {
-    DeclRefExpr *DRE = cast<DeclRefExpr>(Node->getCallee()->IgnoreImpCasts());
+    const auto *DRE = cast<DeclRefExpr>(Node->getCallee()->IgnoreImpCasts());
     const TemplateArgumentList *Args =
       cast<FunctionDecl>(DRE->getDecl())->getTemplateSpecializationArgs();
     assert(Args);
@@ -2121,13 +2184,13 @@ void StmtPrinter::VisitUserDefinedLiteral(UserDefinedLiteral *Node) {
   }
   case UserDefinedLiteral::LOK_Integer: {
     // Print integer literal without suffix.
-    IntegerLiteral *Int = cast<IntegerLiteral>(Node->getCookedLiteral());
+    const auto *Int = cast<IntegerLiteral>(Node->getCookedLiteral());
     OS << Int->getValue().toString(10, /*isSigned*/false);
     break;
   }
   case UserDefinedLiteral::LOK_Floating: {
     // Print floating literal without suffix.
-    FloatingLiteral *Float = cast<FloatingLiteral>(Node->getCookedLiteral());
+    auto *Float = cast<FloatingLiteral>(Node->getCookedLiteral());
     PrintFloatingLiteral(OS, Float, /*PrintSuffix=*/false);
     break;
   }
@@ -2240,9 +2303,11 @@ void StmtPrinter::VisitLambdaExpr(LambdaExpr *Node) {
     case LCK_This:
       OS << "this";
       break;
+
     case LCK_StarThis:
       OS << "*this";
       break;
+
     case LCK_ByRef:
       if (Node->getCaptureDefault() != LCD_ByRef || Node->isInitCapture(C))
         OS << '&';
@@ -2252,6 +2317,7 @@ void StmtPrinter::VisitLambdaExpr(LambdaExpr *Node) {
     case LCK_ByCopy:
       OS << C->getCapturedVar()->getName();
       break;
+
     case LCK_VLAType:
       llvm_unreachable("VLA type in explicit captures.");
     }
@@ -2265,7 +2331,7 @@ void StmtPrinter::VisitLambdaExpr(LambdaExpr *Node) {
     OS << " (";
     CXXMethodDecl *Method = Node->getCallOperator();
     NeedComma = false;
-    for (auto P : Method->parameters()) {
+    for (const auto *P : Method->parameters()) {
       if (NeedComma) {
         OS << ", ";
       } else {
@@ -2284,8 +2350,7 @@ void StmtPrinter::VisitLambdaExpr(LambdaExpr *Node) {
     if (Node->isMutable())
       OS << " mutable";
 
-    const FunctionProtoType *Proto
-      = Method->getType()->getAs<FunctionProtoType>();
+    auto *Proto = Method->getType()->getAs<FunctionProtoType>();
     Proto->printExceptionSpecification(OS, Policy);
 
     // FIXME: Attributes
@@ -2569,12 +2634,10 @@ void StmtPrinter::VisitCoawaitExpr(CoawaitExpr *S) {
   PrintExpr(S->getOperand());
 }
 
-
 void StmtPrinter::VisitDependentCoawaitExpr(DependentCoawaitExpr *S) {
   OS << "co_await ";
   PrintExpr(S->getOperand());
 }
-
 
 void StmtPrinter::VisitCoyieldExpr(CoyieldExpr *S) {
   OS << "co_yield ";
@@ -2708,7 +2771,7 @@ void StmtPrinter::VisitBlockExpr(BlockExpr *Node) {
       (*AI)->getType().print(OS, Policy, ParamStr);
     }
 
-    const FunctionProtoType *FT = cast<FunctionProtoType>(AFT);
+    const auto *FT = cast<FunctionProtoType>(AFT);
     if (FT->isVariadic()) {
       if (!BD->param_empty()) OS << ", ";
       OS << "...";
@@ -2755,4 +2818,4 @@ void Stmt::printPretty(raw_ostream &OS, PrinterHelper *Helper,
 //===----------------------------------------------------------------------===//
 
 // Implement virtual destructor.
-PrinterHelper::~PrinterHelper() {}
+PrinterHelper::~PrinterHelper() = default;

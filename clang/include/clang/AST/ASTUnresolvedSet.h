@@ -26,7 +26,7 @@ namespace clang {
 
 class NamedDecl;
 
-/// \brief An UnresolvedSet-like class which uses the ASTContext's allocator.
+/// An UnresolvedSet-like class which uses the ASTContext's allocator.
 class ASTUnresolvedSet {
   friend class LazyASTUnresolvedSet;
 
@@ -89,7 +89,7 @@ public:
   const DeclAccessPair &operator[](unsigned I) const { return Decls[I]; }
 };
 
-/// \brief An UnresolvedSet-like class that might not have been loaded from the
+/// An UnresolvedSet-like class that might not have been loaded from the
 /// external AST source yet.
 class LazyASTUnresolvedSet {
   mutable ASTUnresolvedSet Impl;

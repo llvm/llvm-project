@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +popcnt -emit-llvm -o - | FileCheck %s
 
 
-#include <x86intrin.h>
+#include <immintrin.h>
 
 unsigned int test_mm_popcnt_u32(unsigned int __X) {
   //CHECK: call i32 @llvm.ctpop.i32

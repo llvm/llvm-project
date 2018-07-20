@@ -308,6 +308,10 @@ void PointerArithChecker::checkPreStmt(const ArraySubscriptExpr *SubsExpr,
   // Indexing with 0 is OK.
   if (Idx.isZeroConstant())
     return;
+
+  // Indexing vector-type expressions is also OK.
+  if (SubsExpr->getBase()->getType()->isVectorType())
+    return;
   reportPointerArithMisuse(SubsExpr->getBase(), C);
 }
 

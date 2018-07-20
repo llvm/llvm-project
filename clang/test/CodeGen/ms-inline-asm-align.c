@@ -21,7 +21,7 @@ void align_test() {
 // DARWIN-SAME: .align 8
 // DARWIN-SAME: "~{dirflag},~{fpsr},~{flags}"()
 
-// WINDOWS-LABEL: define void @align_test()
+// WINDOWS-LABEL: define dso_local void @align_test()
 // WINDOWS: call void asm sideeffect inteldialect
 // WINDOWS-SAME: .align 8
 // WINDOWS-SAME: .align 16

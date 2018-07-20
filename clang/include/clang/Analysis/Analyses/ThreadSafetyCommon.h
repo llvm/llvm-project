@@ -1,4 +1,4 @@
-//===- ThreadSafetyCommon.h ------------------------------------*- C++ --*-===//
+//===- ThreadSafetyCommon.h -------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -22,20 +22,41 @@
 #ifndef LLVM_CLANG_ANALYSIS_ANALYSES_THREADSAFETYCOMMON_H
 #define LLVM_CLANG_ANALYSIS_ANALYSES_THREADSAFETYCOMMON_H
 
+#include "clang/AST/Decl.h"
 #include "clang/Analysis/Analyses/PostOrderCFGView.h"
 #include "clang/Analysis/Analyses/ThreadSafetyTIL.h"
 #include "clang/Analysis/Analyses/ThreadSafetyTraverse.h"
+#include "clang/Analysis/Analyses/ThreadSafetyUtil.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
-#include "clang/Basic/OperatorKinds.h"
-#include <memory>
-#include <ostream>
+#include "clang/Analysis/CFG.h"
+#include "clang/Basic/LLVM.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Casting.h"
 #include <sstream>
+#include <string>
+#include <utility>
 #include <vector>
 
-
 namespace clang {
-namespace threadSafety {
 
+class AbstractConditionalOperator;
+class ArraySubscriptExpr;
+class BinaryOperator;
+class CallExpr;
+class CastExpr;
+class CXXDestructorDecl;
+class CXXMemberCallExpr;
+class CXXOperatorCallExpr;
+class CXXThisExpr;
+class DeclRefExpr;
+class DeclStmt;
+class Expr;
+class MemberExpr;
+class Stmt;
+class UnaryOperator;
+
+namespace threadSafety {
 
 // Various helper functions on til::SExpr
 namespace sx {
@@ -72,9 +93,7 @@ inline std::string toString(const til::SExpr *E) {
   return ss.str();
 }
 
-}  // end namespace sx
-
-
+}  // namespace sx
 
 // This class defines the interface of a clang CFG Visitor.
 // CFGWalker will invoke the following methods.
@@ -123,11 +142,10 @@ class CFGVisitor {
   void exitCFG(const CFGBlock *Last) {}
 };
 
-
 // Walks the clang CFG, and invokes methods on a given CFGVisitor.
 class CFGWalker {
 public:
-  CFGWalker() : CFGraph(nullptr), ACtx(nullptr), SortedGraph(nullptr) {}
+  CFGWalker() = default;
 
   // Initialize the CFGWalker.  This setup only needs to be done once, even
   // if there are multiple passes over the CFG.
@@ -186,15 +204,15 @@ public:
       // Process statements
       for (const auto &BI : *CurrBlock) {
         switch (BI.getKind()) {
-        case CFGElement::Statement: {
+        case CFGElement::Statement:
           V.handleStatement(BI.castAs<CFGStmt>().getStmt());
           break;
-        }
+
         case CFGElement::AutomaticObjectDtor: {
           CFGAutomaticObjDtor AD = BI.castAs<CFGAutomaticObjDtor>();
-          CXXDestructorDecl *DD = const_cast<CXXDestructorDecl*>(
+          auto *DD = const_cast<CXXDestructorDecl *>(
               AD.getDestructorDecl(ACtx->getASTContext()));
-          VarDecl *VD = const_cast<VarDecl*>(AD.getVarDecl());
+          auto *VD = const_cast<VarDecl *>(AD.getVarDecl());
           V.handleDestructorCall(VD, DD);
           break;
         }
@@ -242,28 +260,27 @@ public:
   const PostOrderCFGView *getSortedGraph() const { return SortedGraph; }
 
 private:
-  CFG *CFGraph;
-  AnalysisDeclContext *ACtx;
-  PostOrderCFGView *SortedGraph;
+  CFG *CFGraph = nullptr;
+  AnalysisDeclContext *ACtx = nullptr;
+  PostOrderCFGView *SortedGraph = nullptr;
 };
 
-
-
-
+// TODO: move this back into ThreadSafety.cpp
+// This is specific to thread safety.  It is here because
+// translateAttrExpr needs it, but that should be moved too.
 class CapabilityExpr {
-  // TODO: move this back into ThreadSafety.cpp
-  // This is specific to thread safety.  It is here because
-  // translateAttrExpr needs it, but that should be moved too.
-
 private:
-  const til::SExpr* CapExpr;   ///< The capability expression.
-  bool Negated;                ///< True if this is a negative capability
+  /// The capability expression.
+  const til::SExpr* CapExpr;
+
+  /// True if this is a negative capability.
+  bool Negated;
 
 public:
   CapabilityExpr(const til::SExpr *E, bool Neg) : CapExpr(E), Negated(Neg) {}
 
-  const til::SExpr* sexpr()    const { return CapExpr; }
-  bool              negative() const { return Negated; }
+  const til::SExpr* sexpr() const { return CapExpr; }
+  bool negative() const { return Negated; }
 
   CapabilityExpr operator!() const {
     return CapabilityExpr(CapExpr, !Negated);
@@ -289,9 +306,9 @@ public:
   const ValueDecl* valueDecl() const {
     if (Negated || CapExpr == nullptr)
       return nullptr;
-    if (auto *P = dyn_cast<til::Project>(CapExpr))
+    if (const auto *P = dyn_cast<til::Project>(CapExpr))
       return P->clangDecl();
-    if (auto *P = dyn_cast<til::LiteralPtr>(CapExpr))
+    if (const auto *P = dyn_cast<til::LiteralPtr>(CapExpr))
       return P->clangDecl();
     return nullptr;
   }
@@ -309,12 +326,10 @@ public:
   bool isUniversal() const { return sexpr() && isa<til::Wildcard>(sexpr()); }
 };
 
-
-
 // Translate clang::Expr to til::SExpr.
 class SExprBuilder {
 public:
-  /// \brief Encapsulates the lexical context of a function call.  The lexical
+  /// Encapsulates the lexical context of a function call.  The lexical
   /// context includes the arguments to the call, including the implicit object
   /// argument.  When an attribute containing a mutex expression is attached to
   /// a method, the expression may refer to formal parameters of the method.
@@ -324,22 +339,29 @@ public:
   /// should be evaluated; multiple calling contexts can be chained together
   /// by the lock_returned attribute.
   struct CallingContext {
-    CallingContext  *Prev;      // The previous context; or 0 if none.
-    const NamedDecl *AttrDecl;  // The decl to which the attr is attached.
-    const Expr *SelfArg;        // Implicit object argument -- e.g. 'this'
-    unsigned NumArgs;           // Number of funArgs
-    const Expr *const *FunArgs; // Function arguments
-    bool SelfArrow;             // is Self referred to with -> or .?
+    // The previous context; or 0 if none.
+    CallingContext  *Prev;
+
+    // The decl to which the attr is attached.
+    const NamedDecl *AttrDecl;
+
+    // Implicit object argument -- e.g. 'this'
+    const Expr *SelfArg = nullptr;
+
+    // Number of funArgs
+    unsigned NumArgs = 0;
+
+    // Function arguments
+    const Expr *const *FunArgs = nullptr;
+
+    // is Self referred to with -> or .?
+    bool SelfArrow = false;
 
     CallingContext(CallingContext *P, const NamedDecl *D = nullptr)
-        : Prev(P), AttrDecl(D), SelfArg(nullptr),
-          NumArgs(0), FunArgs(nullptr), SelfArrow(false)
-    {}
+        : Prev(P), AttrDecl(D) {}
   };
 
-  SExprBuilder(til::MemRegionRef A)
-      : Arena(A), SelfVar(nullptr), Scfg(nullptr), CurrentBB(nullptr),
-        CurrentBlockInfo(nullptr) {
+  SExprBuilder(til::MemRegionRef A) : Arena(A) {
     // FIXME: we don't always have a self-variable.
     SelfVar = new (Arena) til::Variable(nullptr);
     SelfVar->setKind(til::Variable::VK_SFun);
@@ -368,6 +390,9 @@ public:
   til::SCFG *getCFG() { return Scfg; }
 
 private:
+  // We implement the CFGVisitor API
+  friend class CFGWalker;
+
   til::SExpr *translateDeclRefExpr(const DeclRefExpr *DRE,
                                    CallingContext *Ctx) ;
   til::SExpr *translateCXXThisExpr(const CXXThisExpr *TE, CallingContext *Ctx);
@@ -397,30 +422,29 @@ private:
   til::SExpr *translateDeclStmt(const DeclStmt *S, CallingContext *Ctx);
 
   // Map from statements in the clang CFG to SExprs in the til::SCFG.
-  typedef llvm::DenseMap<const Stmt*, til::SExpr*> StatementMap;
+  using StatementMap = llvm::DenseMap<const Stmt *, til::SExpr *>;
 
   // Map from clang local variables to indices in a LVarDefinitionMap.
-  typedef llvm::DenseMap<const ValueDecl *, unsigned> LVarIndexMap;
+  using LVarIndexMap = llvm::DenseMap<const ValueDecl *, unsigned>;
 
   // Map from local variable indices to SSA variables (or constants).
-  typedef std::pair<const ValueDecl *, til::SExpr *> NameVarPair;
-  typedef CopyOnWriteVector<NameVarPair> LVarDefinitionMap;
+  using NameVarPair = std::pair<const ValueDecl *, til::SExpr *>;
+  using LVarDefinitionMap = CopyOnWriteVector<NameVarPair>;
 
   struct BlockInfo {
     LVarDefinitionMap ExitMap;
-    bool HasBackEdges;
-    unsigned UnprocessedSuccessors;   // Successors yet to be processed
-    unsigned ProcessedPredecessors;   // Predecessors already processed
+    bool HasBackEdges = false;
 
-    BlockInfo()
-        : HasBackEdges(false), UnprocessedSuccessors(0),
-          ProcessedPredecessors(0) {}
+    // Successors yet to be processed
+    unsigned UnprocessedSuccessors = 0;
+
+    // Predecessors already processed
+    unsigned ProcessedPredecessors = 0;
+
+    BlockInfo() = default;
     BlockInfo(BlockInfo &&) = default;
     BlockInfo &operator=(BlockInfo &&) = default;
   };
-
-  // We implement the CFGVisitor API
-  friend class CFGWalker;
 
   void enterCFG(CFG *Cfg, const NamedDecl *D, const CFGBlock *First);
   void enterCFGBlock(const CFGBlock *B);
@@ -440,6 +464,7 @@ private:
   void insertStmt(const Stmt *S, til::SExpr *E) {
     SMap.insert(std::make_pair(S, E));
   }
+
   til::SExpr *getCurrentLVarDefinition(const ValueDecl *VD);
 
   til::SExpr *addStatement(til::SExpr *E, const Stmt *S,
@@ -459,30 +484,36 @@ private:
   static const bool CapabilityExprMode = true;
 
   til::MemRegionRef Arena;
-  til::Variable *SelfVar;       // Variable to use for 'this'.  May be null.
 
-  til::SCFG *Scfg;
-  StatementMap SMap;                       // Map from Stmt to TIL Variables
-  LVarIndexMap LVarIdxMap;                 // Indices of clang local vars.
-  std::vector<til::BasicBlock *> BlockMap; // Map from clang to til BBs.
-  std::vector<BlockInfo> BBInfo;           // Extra information per BB.
-                                           // Indexed by clang BlockID.
+  // Variable to use for 'this'.  May be null.
+  til::Variable *SelfVar = nullptr;
+
+  til::SCFG *Scfg = nullptr;
+
+  // Map from Stmt to TIL Variables
+  StatementMap SMap;
+
+  // Indices of clang local vars.
+  LVarIndexMap LVarIdxMap;
+
+  // Map from clang to til BBs.
+  std::vector<til::BasicBlock *> BlockMap;
+
+  // Extra information per BB. Indexed by clang BlockID.
+  std::vector<BlockInfo> BBInfo;           
 
   LVarDefinitionMap CurrentLVarMap;
-  std::vector<til::Phi*>   CurrentArguments;
-  std::vector<til::SExpr*> CurrentInstructions;
-  std::vector<til::Phi*>   IncompleteArgs;
-  til::BasicBlock *CurrentBB;
-  BlockInfo *CurrentBlockInfo;
+  std::vector<til::Phi *> CurrentArguments;
+  std::vector<til::SExpr *> CurrentInstructions;
+  std::vector<til::Phi *> IncompleteArgs;
+  til::BasicBlock *CurrentBB = nullptr;
+  BlockInfo *CurrentBlockInfo = nullptr;
 };
-
 
 // Dump an SCFG to llvm::errs().
 void printSCFG(CFGWalker &Walker);
 
+} // namespace threadSafety
+} // namespace clang
 
-} // end namespace threadSafety
-
-} // end namespace clang
-
-#endif  // LLVM_CLANG_THREAD_SAFETY_COMMON_H
+#endif // LLVM_CLANG_THREAD_SAFETY_COMMON_H

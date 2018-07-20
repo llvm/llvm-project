@@ -69,7 +69,7 @@ TEST(ToolChainTest, VFSGCCInstallation) {
     llvm::raw_string_ostream OS(S);
     C->getDefaultToolChain().printVerboseInfo(OS);
   }
-#if LLVM_ON_WIN32
+#if _WIN32
   std::replace(S.begin(), S.end(), '\\', '/');
 #endif
   EXPECT_EQ(
@@ -109,7 +109,7 @@ TEST(ToolChainTest, VFSGCCInstallationRelativeDir) {
     llvm::raw_string_ostream OS(S);
     C->getDefaultToolChain().printVerboseInfo(OS);
   }
-#if LLVM_ON_WIN32
+#if _WIN32
   std::replace(S.begin(), S.end(), '\\', '/');
 #endif
   EXPECT_EQ("Found candidate GCC installation: "

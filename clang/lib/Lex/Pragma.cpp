@@ -148,7 +148,7 @@ void Preprocessor::HandlePragmaDirective(SourceLocation IntroducerLoc,
 
 namespace {
 
-/// \brief Helper class for \see Preprocessor::Handle_Pragma.
+/// Helper class for \see Preprocessor::Handle_Pragma.
 class LexingFor_PragmaRAII {
   Preprocessor &PP;
   bool InMacroArgPreExpansion;
@@ -588,7 +588,7 @@ IdentifierInfo *Preprocessor::ParsePragmaPushOrPopMacro(Token &Tok) {
   return LookUpIdentifierInfo(MacroTok);
 }
 
-/// \brief Handle \#pragma push_macro.
+/// Handle \#pragma push_macro.
 ///
 /// The syntax is:
 /// \code
@@ -611,7 +611,7 @@ void Preprocessor::HandlePragmaPushMacro(Token &PushMacroTok) {
   PragmaPushMacroInfo[IdentInfo].push_back(MI);
 }
 
-/// \brief Handle \#pragma pop_macro.
+/// Handle \#pragma pop_macro.
 ///
 /// The syntax is:
 /// \code
@@ -1051,6 +1051,20 @@ struct PragmaDebugHandler : public PragmaHandler {
         PP.EnterToken(DumpAnnot);
       } else {
         PP.Diag(Identifier, diag::warn_pragma_debug_missing_argument)
+            << II->getName();
+      }
+    } else if (II->isStr("diag_mapping")) {
+      Token DiagName;
+      PP.LexUnexpandedToken(DiagName);
+      if (DiagName.is(tok::eod))
+        PP.getDiagnostics().dump();
+      else if (DiagName.is(tok::string_literal) && !DiagName.hasUDSuffix()) {
+        StringLiteralParser Literal(DiagName, PP);
+        if (Literal.hadError)
+          return;
+        PP.getDiagnostics().dump(Literal.GetString());
+      } else {
+        PP.Diag(DiagName, diag::warn_pragma_debug_missing_argument)
             << II->getName();
       }
     } else if (II->isStr("llvm_fatal_error")) {
@@ -1716,7 +1730,7 @@ struct PragmaAssumeNonNullHandler : public PragmaHandler {
   }
 };
 
-/// \brief Handle "\#pragma region [...]"
+/// Handle "\#pragma region [...]"
 ///
 /// The syntax is
 /// \code
@@ -1776,13 +1790,15 @@ void Preprocessor::RegisterBuiltinPragmas() {
   ModuleHandler->AddPragma(new PragmaModuleEndHandler());
   ModuleHandler->AddPragma(new PragmaModuleBuildHandler());
   ModuleHandler->AddPragma(new PragmaModuleLoadHandler());
+    
+  // Add region pragmas.
+  AddPragmaHandler(new PragmaRegionHandler("region"));
+  AddPragmaHandler(new PragmaRegionHandler("endregion"));
 
   // MS extensions.
   if (LangOpts.MicrosoftExt) {
     AddPragmaHandler(new PragmaWarningHandler());
     AddPragmaHandler(new PragmaIncludeAliasHandler());
-    AddPragmaHandler(new PragmaRegionHandler("region"));
-    AddPragmaHandler(new PragmaRegionHandler("endregion"));
   }
 
   // Pragmas added by plugins

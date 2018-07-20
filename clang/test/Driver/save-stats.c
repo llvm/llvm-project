@@ -18,3 +18,11 @@
 
 // RUN: %clang -target x86_64-apple-darwin -save-stats=bla -c %s -### 2>&1 | FileCheck %s -check-prefix=CHECK-INVALID
 // CHECK-INVALID: invalid value 'bla' in '-save-stats=bla'
+
+// RUN: %clang -target x86_64-linux-unknown -save-stats -flto -o obj/dir/save-stats.exe %s -### 2>&1 | FileCheck %s -check-prefix=CHECK-LTO
+// CHECK-LTO: "-stats-file=save-stats.stats"
+// CHECK-LTO: "-o" "obj/dir{{/|\\\\}}save-stats.exe"
+// CHECK-LTO: "-plugin-opt=stats-file=save-stats.stats"
+
+// RUN: %clang -target x86_64-linux-unknown -save-stats=obj -flto -o obj/dir/save-stats.exe %s -### 2>&1 | FileCheck %s -check-prefix=CHECK-LTO-OBJ
+// CHECK-LTO-OBJ: "-plugin-opt=stats-file=obj/dir{{/|\\\\}}save-stats.stats"

@@ -2,7 +2,7 @@
 
 struct [[maybe_unused]] S {
   int I [[maybe_unused]];
-  static int SI [[maybe_unused]]; // expected-warning {{'maybe_unused' attribute only applies to variables, functions, methods, types, enumerations, enumerators, labels, and non-static data members}}
+  static int SI [[maybe_unused]];
 };
 
 enum [[maybe_unused]] E1 {

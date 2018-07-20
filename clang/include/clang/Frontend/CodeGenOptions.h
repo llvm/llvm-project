@@ -16,6 +16,8 @@
 
 #include "clang/Basic/DebugInfoOptions.h"
 #include "clang/Basic/Sanitizers.h"
+#include "clang/Basic/XRayInstr.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Target/TargetOptions.h"
 #include <map>
@@ -25,7 +27,7 @@
 
 namespace clang {
 
-/// \brief Bitfields of CodeGenOptions, split out from CodeGenOptions to ensure
+/// Bitfields of CodeGenOptions, split out from CodeGenOptions to ensure
 /// that this large collection of bitfields is a trivial class type.
 class CodeGenOptionsBase {
 public:
@@ -167,7 +169,7 @@ public:
   std::string SplitDwarfFile;
 
   /// The name of the relocation model to use.
-  std::string RelocationModel;
+  llvm::Reloc::Model RelocationModel;
 
   /// The thread model to use
   std::string ThreadModel;
@@ -175,9 +177,6 @@ public:
   /// If not an empty string, trap intrinsics are lowered to calls to this
   /// function instead of to trap instructions.
   std::string TrapFuncName;
-
-  /// A list of command-line options to forward to the LLVM backend.
-  std::vector<std::string> BackendOptions;
 
   /// A list of dependent libraries.
   std::vector<std::string> DependentLibraries;
@@ -204,10 +203,12 @@ public:
   /// the summary and module symbol table (and not, e.g. any debug metadata).
   std::string ThinLinkBitcodeFile;
 
-  /// A list of file names passed with -fcuda-include-gpubinary options to
-  /// forward to CUDA runtime back-end for incorporating them into host-side
-  /// object file.
-  std::vector<std::string> CudaGpuBinaryFileNames;
+  /// Prefix to use for -save-temps output.
+  std::string SaveTempsFilePrefix;
+
+  /// Name of file passed with -fcuda-include-gpubinary option to forward to
+  /// CUDA runtime back-end for incorporating them into host-side object file.
+  std::string CudaGpuBinaryFileName;
 
   /// The name of the file to which the backend should save YAML optimization
   /// records.
@@ -248,7 +249,7 @@ public:
   /// List of backend command-line options for -fembed-bitcode.
   std::vector<uint8_t> CmdArgs;
 
-  /// \brief A list of all -fno-builtin-* function names (e.g., memset).
+  /// A list of all -fno-builtin-* function names (e.g., memset).
   std::vector<std::string> NoBuiltinFuncs;
 
   std::vector<std::string> Reciprocals;
@@ -257,6 +258,9 @@ public:
   /// override default transforms based on the width of the architected vector
   /// registers.
   std::string PreferVectorWidth;
+
+  /// Set of XRay instrumentation kinds to emit.
+  XRayInstrSet XRayInstrumentationBundle;
 
 public:
   // Define accessors/mutators for code generation options of enumeration type.
@@ -268,7 +272,7 @@ public:
 
   CodeGenOptions();
 
-  /// \brief Is this a libc/libm function that is no longer recognized as a
+  /// Is this a libc/libm function that is no longer recognized as a
   /// builtin because a -fno-builtin-* option has been specified?
   bool isNoBuiltinFunc(const char *Name) const;
 
@@ -276,22 +280,22 @@ public:
     return NoBuiltinFuncs;
   }
 
-  /// \brief Check if Clang profile instrumenation is on.
+  /// Check if Clang profile instrumenation is on.
   bool hasProfileClangInstr() const {
     return getProfileInstr() == ProfileClangInstr;
   }
 
-  /// \brief Check if IR level profile instrumentation is on.
+  /// Check if IR level profile instrumentation is on.
   bool hasProfileIRInstr() const {
     return getProfileInstr() == ProfileIRInstr;
   }
 
-  /// \brief Check if Clang profile use is on.
+  /// Check if Clang profile use is on.
   bool hasProfileClangUse() const {
     return getProfileUse() == ProfileClangInstr;
   }
 
-  /// \brief Check if IR level profile use is on.
+  /// Check if IR level profile use is on.
   bool hasProfileIRUse() const {
     return getProfileUse() == ProfileIRInstr;
   }

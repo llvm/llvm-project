@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief Defines the clang::TemplateNameKind enum.
+/// Defines the clang::TemplateNameKind enum.
 ///
 //===----------------------------------------------------------------------===//
 #ifndef LLVM_CLANG_BASIC_TEMPLATEKINDS_H
@@ -16,7 +16,7 @@
 
 namespace clang {
 
-/// \brief Specifies the kind of template name that an identifier refers to.
+/// Specifies the kind of template name that an identifier refers to.
 /// Be careful when changing this: this enumeration is used in diagnostics.
 enum TemplateNameKind {
   /// The name does not refer to a template.

@@ -27,6 +27,14 @@
 // FULL-NAME: -Wundefined-func-template
 // FULL-NAME-NOT: -Werror
 //
+//--- Invocation qqq-clang-g++ tries to find config file qqq-clang-g++.cfg even without -no-canonical-prefixes.
+// (As the clang executable and symlink are in different directories, this
+// requires specifying the path via --config-*-dir= though.)
+//
+// RUN: %T/testdmode/qqq-clang-g++ --config-system-dir= --config-user-dir=%T/testdmode -c %s -### 2>&1 | FileCheck %s -check-prefix SYMLINK
+//
+// SYMLINK: Configuration file: {{.*}}/testdmode/qqq-clang-g++.cfg
+//
 //--- File specified by --config overrides config inferred from clang executable.
 //
 // RUN: %T/testdmode/qqq-clang-g++ --config-system-dir=%S/Inputs/config --config-user-dir= --config i386-qqq -c -no-canonical-prefixes %s -### 2>&1 | FileCheck %s -check-prefix CHECK-EXPLICIT

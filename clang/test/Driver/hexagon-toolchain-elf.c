@@ -504,12 +504,22 @@
 // CHECK060-NEXT: hexagon-link
 
 // -----------------------------------------------------------------------------
+// ffixed-r19
+// -----------------------------------------------------------------------------
+// RUN: %clang -### -target hexagon-unknown-elf -ffixed-r19 %s 2>&1 \
+// RUN:        | FileCheck --check-prefix=CHECK070 %s
+// CHECK070: "-target-feature" "+reserved-r19"
+// RUN: %clang -### -target hexagon-unknown-elf %s 2>&1 \
+// RUN:        | FileCheck --check-prefix=CHECK071 %s
+// CHECK071-NOT: "+reserved-r19"
+
+// -----------------------------------------------------------------------------
 // Misc Defaults
 // -----------------------------------------------------------------------------
 // RUN: %clang -### -target hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv60 \
 // RUN:   %s 2>&1 \
-// RUN:   | FileCheck -check-prefix=CHECK070 %s
-// CHECK070:      "-cc1"
-// CHECK070:      "-Wreturn-type"
+// RUN:   | FileCheck -check-prefix=CHECK080 %s
+// CHECK080:      "-cc1"
+// CHECK080:      "-Wreturn-type"

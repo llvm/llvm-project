@@ -16,7 +16,7 @@
 
 using namespace clang;
 
-///\brief Constructs a new multiplexing external sema source and appends the
+///Constructs a new multiplexing external sema source and appends the
 /// given element to it.
 ///
 MultiplexExternalSemaSource::MultiplexExternalSemaSource(ExternalSemaSource &s1,
@@ -28,7 +28,7 @@ MultiplexExternalSemaSource::MultiplexExternalSemaSource(ExternalSemaSource &s1,
 // pin the vtable here.
 MultiplexExternalSemaSource::~MultiplexExternalSemaSource() {}
 
-///\brief Appends new source to the source list.
+///Appends new source to the source list.
 ///
 ///\param[in] source - An ExternalSemaSource.
 ///
@@ -162,6 +162,20 @@ void MultiplexExternalSemaSource::StartTranslationUnit(ASTConsumer *Consumer) {
 void MultiplexExternalSemaSource::PrintStats() {
   for(size_t i = 0; i < Sources.size(); ++i)
     Sources[i]->PrintStats();
+}
+
+Module *MultiplexExternalSemaSource::getModule(unsigned ID) {
+  for (size_t i = 0; i < Sources.size(); ++i)
+    if (auto M = Sources[i]->getModule(ID))
+      return M;
+  return nullptr;
+}
+
+bool MultiplexExternalSemaSource::DeclIsFromPCHWithObjectFile(const Decl *D) {
+  for (auto *S : Sources)
+    if (S->DeclIsFromPCHWithObjectFile(D))
+      return true;
+  return false;
 }
 
 bool MultiplexExternalSemaSource::layoutRecordType(const RecordDecl *Record,

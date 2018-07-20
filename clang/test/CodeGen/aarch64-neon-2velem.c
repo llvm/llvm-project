@@ -3083,6 +3083,17 @@ float32x2_t test_vfma_n_f32(float32x2_t a, float32x2_t b, float32_t n) {
   return vfma_n_f32(a, b, n);
 }
 
+// CHECK-LABEL: @test_vfma_n_f64(
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <1 x double> undef, double %n, i32 0
+// CHECK:   [[TMP0:%.*]] = bitcast <1 x double> %a to <8 x i8>
+// CHECK:   [[TMP1:%.*]] = bitcast <1 x double> %b to <8 x i8>
+// CHECK:   [[TMP2:%.*]] = bitcast <1 x double> [[VECINIT_I]] to <8 x i8>
+// CHECK:   [[TMP3:%.*]] = call <1 x double> @llvm.fma.v1f64(<1 x double> %b, <1 x double> [[VECINIT_I]], <1 x double> %a)
+// CHECK:   ret <1 x double> [[TMP3]]
+float64x1_t test_vfma_n_f64(float64x1_t a, float64x1_t b, float64_t n) {
+  return vfma_n_f64(a, b, n);
+}
+
 // CHECK-LABEL: @test_vfmaq_n_f32(
 // CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x float> undef, float %n, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <4 x float> [[VECINIT_I]], float %n, i32 1
@@ -3108,6 +3119,18 @@ float32x4_t test_vfmaq_n_f32(float32x4_t a, float32x4_t b, float32_t n) {
 // CHECK:   ret <2 x float> [[TMP3]]
 float32x2_t test_vfms_n_f32(float32x2_t a, float32x2_t b, float32_t n) {
   return vfms_n_f32(a, b, n);
+}
+
+// CHECK-LABEL: @test_vfms_n_f64(
+// CHECK:   [[SUB_I:%.*]] = fsub <1 x double> <double -0.000000e+00>, %b
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <1 x double> undef, double %n, i32 0
+// CHECK:   [[TMP0:%.*]] = bitcast <1 x double> %a to <8 x i8>
+// CHECK:   [[TMP1:%.*]] = bitcast <1 x double> [[SUB_I]] to <8 x i8>
+// CHECK:   [[TMP2:%.*]] = bitcast <1 x double> [[VECINIT_I]] to <8 x i8>
+// CHECK:   [[TMP3:%.*]] = call <1 x double> @llvm.fma.v1f64(<1 x double> [[SUB_I]], <1 x double> [[VECINIT_I]], <1 x double> %a)
+// CHECK:   ret <1 x double> [[TMP3]]
+float64x1_t test_vfms_n_f64(float64x1_t a, float64x1_t b, float64_t n) {
+  return vfms_n_f64(a, b, n);
 }
 
 // CHECK-LABEL: @test_vfmsq_n_f32(

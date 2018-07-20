@@ -320,3 +320,13 @@ void test12365078_check_positive() {
   NSString *string = [[NSString alloc] initWithCharactersNoCopy:characters length:12 freeWhenDone:1];
   if (string) free(characters); // expected-warning{{Attempt to free non-owned memory}}
 }
+
+void *test_reinterpret_cast_to_block() {
+  // Used to leak because the pointer was disappearing
+  // during the reinterpret_cast.
+  using BlockPtrTy = void (^)();
+  struct Block {};
+  Block* block = static_cast<Block*>(malloc(sizeof(Block)));
+  BlockPtrTy blockPtr = reinterpret_cast<BlockPtrTy>(block); // no-warning
+  return blockPtr;
+}

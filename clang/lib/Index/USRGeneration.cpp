@@ -103,7 +103,7 @@ public:
   void VisitUnresolvedUsingTypenameDecl(const UnresolvedUsingTypenameDecl *D);
 
   void VisitLinkageSpecDecl(const LinkageSpecDecl *D) {
-    IgnoreResults = true;
+    IgnoreResults = true; // No USRs for linkage specs themselves.
   }
 
   void VisitUsingDirectiveDecl(const UsingDirectiveDecl *D) {
@@ -192,6 +192,8 @@ bool USRGenerator::ShouldGenerateLocation(const NamedDecl *D) {
 void USRGenerator::VisitDeclContext(const DeclContext *DC) {
   if (const NamedDecl *D = dyn_cast<NamedDecl>(DC))
     Visit(D);
+  else if (isa<LinkageSpecDecl>(DC)) // Linkage specs are transparent in USRs.
+    VisitDeclContext(DC->getParent());
 }
 
 void USRGenerator::VisitFieldDecl(const FieldDecl *D) {
@@ -648,6 +650,8 @@ void USRGenerator::VisitType(QualType T) {
           c = 'b'; break;
         case BuiltinType::UChar:
           c = 'c'; break;
+        case BuiltinType::Char8:
+          c = 'u'; break; // FIXME: Check this doesn't collide
         case BuiltinType::Char16:
           c = 'q'; break;
         case BuiltinType::Char32:
@@ -705,6 +709,30 @@ void USRGenerator::VisitType(QualType T) {
         case BuiltinType::OCLQueue:
         case BuiltinType::OCLReserveID:
         case BuiltinType::OCLSampler:
+        case BuiltinType::ShortAccum:
+        case BuiltinType::Accum:
+        case BuiltinType::LongAccum:
+        case BuiltinType::UShortAccum:
+        case BuiltinType::UAccum:
+        case BuiltinType::ULongAccum:
+        case BuiltinType::ShortFract:
+        case BuiltinType::Fract:
+        case BuiltinType::LongFract:
+        case BuiltinType::UShortFract:
+        case BuiltinType::UFract:
+        case BuiltinType::ULongFract:
+        case BuiltinType::SatShortAccum:
+        case BuiltinType::SatAccum:
+        case BuiltinType::SatLongAccum:
+        case BuiltinType::SatUShortAccum:
+        case BuiltinType::SatUAccum:
+        case BuiltinType::SatULongAccum:
+        case BuiltinType::SatShortFract:
+        case BuiltinType::SatFract:
+        case BuiltinType::SatLongFract:
+        case BuiltinType::SatUShortFract:
+        case BuiltinType::SatUFract:
+        case BuiltinType::SatULongFract:
           IgnoreResults = true;
           return;
         case BuiltinType::ObjCId:

@@ -220,7 +220,7 @@ void test4(const A Ca) {
   // CHECK-NOT: note:
 }
 
-// Only display notes for relavent cases.
+// Only display notes for relevant cases.
 void test5(const A Ca) {
   Ca.Mb.c.d.Ce.num = 5;
   // CHECK-NOT: error:

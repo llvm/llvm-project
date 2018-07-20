@@ -3,14 +3,14 @@
 void *fail1(int a) __attribute__((alloc_size)); //expected-error{{'alloc_size' attribute takes at least 1 argument}}
 void *fail2(int a) __attribute__((alloc_size())); //expected-error{{'alloc_size' attribute takes at least 1 argument}}
 
-void *fail3(int a) __attribute__((alloc_size(0))); //expected-error{{'alloc_size' attribute parameter 0 is out of bounds}}
-void *fail4(int a) __attribute__((alloc_size(2))); //expected-error{{'alloc_size' attribute parameter 2 is out of bounds}}
+void *fail3(int a) __attribute__((alloc_size(0))); //expected-error{{'alloc_size' attribute parameter 1 is out of bounds}}
+void *fail4(int a) __attribute__((alloc_size(2))); //expected-error{{'alloc_size' attribute parameter 1 is out of bounds}}
 
-void *fail5(int a, int b) __attribute__((alloc_size(0, 1))); //expected-error{{'alloc_size' attribute parameter 0 is out of bounds}}
-void *fail6(int a, int b) __attribute__((alloc_size(3, 1))); //expected-error{{'alloc_size' attribute parameter 3 is out of bounds}}
+void *fail5(int a, int b) __attribute__((alloc_size(0, 1))); //expected-error{{'alloc_size' attribute parameter 1 is out of bounds}}
+void *fail6(int a, int b) __attribute__((alloc_size(3, 1))); //expected-error{{'alloc_size' attribute parameter 1 is out of bounds}}
 
-void *fail7(int a, int b) __attribute__((alloc_size(1, 0))); //expected-error{{'alloc_size' attribute parameter 0 is out of bounds}}
-void *fail8(int a, int b) __attribute__((alloc_size(1, 3))); //expected-error{{'alloc_size' attribute parameter 3 is out of bounds}}
+void *fail7(int a, int b) __attribute__((alloc_size(1, 0))); //expected-error{{'alloc_size' attribute parameter 2 is out of bounds}}
+void *fail8(int a, int b) __attribute__((alloc_size(1, 3))); //expected-error{{'alloc_size' attribute parameter 2 is out of bounds}}
 
 int fail9(int a) __attribute__((alloc_size(1))); //expected-warning{{'alloc_size' attribute only applies to return values that are pointers}}
 

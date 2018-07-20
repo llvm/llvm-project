@@ -7,7 +7,7 @@ extern "C" int a;
 // CHECK-NOT: @_ZN3foo1bE = global
 extern int b;
 
-// CHECK: @_ZN3foo1cE = global
+// CHECK: @_ZN3foo1cE = {{(dso_local )?}}global
 int c = 5;
 
 // CHECK-NOT: @_ZN3foo1dE
@@ -16,21 +16,21 @@ extern "C" struct d;
 // CHECK-NOT: should_not_appear
 extern "C++" int should_not_appear;
 
-// CHECK: @_ZN3foo10extern_cxxE = global
+// CHECK: @_ZN3foo10extern_cxxE = {{(dso_local )?}}global
 extern "C++" int extern_cxx = 0;
 
 }
 
-// CHECK-NOT: @global_a = global
+// CHECK-NOT: @global_a = {{(dso_local )?}}global
 extern "C" int global_a;
 
-// CHECK: @global_b = global
+// CHECK: @global_b = {{(dso_local )?}}global
 extern "C" int global_b = 0;
 
 // CHECK-NOT: should_not_appear
 extern "C++" int should_not_appear;
 
-// CHECK: @extern_cxx = global
+// CHECK: @extern_cxx = {{(dso_local )?}}global
 extern "C++" int extern_cxx = 0;
 
 namespace test1 {
@@ -38,11 +38,11 @@ namespace test1 {
     struct X {};
   }
   extern "C" {
-    // CHECK: @test1_b = global
+    // CHECK: @test1_b = {{(dso_local )?}}global
     X test1_b = X();
   }
   void *use = &test1_b;
-  // CHECK: @_ZN5test13useE = global
+  // CHECK: @_ZN5test13useE = {{(dso_local )?}}global
 }
 
 namespace test2 {
@@ -50,7 +50,7 @@ namespace test2 {
     struct X {};
   }
 
-  // CHECK: @test2_b = global
+  // CHECK: @test2_b = {{(dso_local )?}}global
   extern "C" X test2_b;
   X test2_b;
 }

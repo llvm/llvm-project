@@ -525,7 +525,7 @@ void rdar8405222() {
     rdar8405222_aux(i);
 }
 
-// Look through chains of assignements, e.g.: int x = y = 0, when employing
+// Look through chains of assignments, e.g.: int x = y = 0, when employing
 // silencing heuristics.
 int radar11185138_foo() {
   int x, y;

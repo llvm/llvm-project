@@ -165,11 +165,23 @@ never be stored on the heap, as it would leak the location of the SafeStack.
 This builtin function returns current unsafe stack pointer of the current
 thread.
 
+``__builtin___get_unsafe_stack_bottom()``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This builtin function returns a pointer to the bottom of the unsafe stack of the
+current thread.
+
+``__builtin___get_unsafe_stack_top()``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This builtin function returns a pointer to the top of the unsafe stack of the
+current thread.
+
 ``__builtin___get_unsafe_stack_start()``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-This builtin function returns a pointer to the start of the unsafe stack of the
-current thread.
+Deprecated: This builtin function is an alias for
+``__builtin___get_unsafe_stack_bottom()``.
 
 Design
 ======

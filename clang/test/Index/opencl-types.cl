@@ -16,11 +16,11 @@ void kernel testFloatTypes() {
   double4 vectorDouble;
 }
 
-// CHECK: VarDecl=scalarHalf:11:8 (Definition) [type=half] [typekind=Half] [isPOD=1]
+// CHECK: VarDecl=scalarHalf:11:8 (Definition){{( \(invalid\))?}} [type=half] [typekind=Half] [isPOD=1]
 // CHECK: VarDecl=vectorHalf:12:9 (Definition) [type=half4] [typekind=Typedef] [canonicaltype=half __attribute__((ext_vector_type(4)))] [canonicaltypekind=Unexposed] [isPOD=1]
 // CHECK: VarDecl=scalarFloat:13:9 (Definition) [type=float] [typekind=Float] [isPOD=1]
 // CHECK: VarDecl=vectorFloat:14:10 (Definition) [type=float4] [typekind=Typedef] [canonicaltype=float __attribute__((ext_vector_type(4)))] [canonicaltypekind=Unexposed] [isPOD=1]
-// CHECK: VarDecl=scalarDouble:15:10 (Definition) [type=double] [typekind=Double] [isPOD=1]
+// CHECK: VarDecl=scalarDouble:15:10 (Definition){{( \(invalid\))?}} [type=double] [typekind=Double] [isPOD=1]
 // CHECK: VarDecl=vectorDouble:16:11 (Definition) [type=double4] [typekind=Typedef] [canonicaltype=double __attribute__((ext_vector_type(4)))] [canonicaltypekind=Unexposed] [isPOD=1]
 
 #pragma OPENCL EXTENSION cl_khr_gl_msaa_sharing : enable
@@ -45,10 +45,10 @@ void kernel OCLImage3dROTest(read_only image3d_t scalarOCLImage3dRO);
 // CHECK: ParmDecl=scalarOCLImage2dArrayRO:32:61 (Definition) [type=__read_only image2d_array_t] [typekind=OCLImage2dArrayRO] [isPOD=1]
 // CHECK: ParmDecl=scalarOCLImage2dDepthRO:33:61 (Definition) [type=__read_only image2d_depth_t] [typekind=OCLImage2dDepthRO] [isPOD=1]
 // CHECK: ParmDecl=scalarOCLImage2dArrayDepthRO:34:72 (Definition) [type=__read_only image2d_array_depth_t] [typekind=OCLImage2dArrayDepthRO] [isPOD=1]
-// CHECK: ParmDecl=scalarOCLImage2dMSAARO:35:59 (Definition) [type=__read_only image2d_msaa_t] [typekind=OCLImage2dMSAARO] [isPOD=1]
-// CHECK: ParmDecl=scalarOCLImage2dArrayMSAARO:36:70 (Definition) [type=__read_only image2d_array_msaa_t] [typekind=OCLImage2dArrayMSAARO] [isPOD=1]
-// CHECK: ParmDecl=scalarOCLImage2dMSAADepthRO:37:70 (Definition) [type=__read_only image2d_msaa_depth_t] [typekind=OCLImage2dMSAADepthRO] [isPOD=1]
-// CHECK: ParmDecl=scalarOCLImage2dArrayMSAADepthRO:38:81 (Definition) [type=__read_only image2d_array_msaa_depth_t] [typekind=OCLImage2dArrayMSAADepthRO] [isPOD=1]
+// CHECK: ParmDecl=scalarOCLImage2dMSAARO:35:59 (Definition){{( \(invalid\))?}} [type=__read_only image2d_msaa_t] [typekind=OCLImage2dMSAARO] [isPOD=1]
+// CHECK: ParmDecl=scalarOCLImage2dArrayMSAARO:36:70 (Definition){{( \(invalid\))?}} [type=__read_only image2d_array_msaa_t] [typekind=OCLImage2dArrayMSAARO] [isPOD=1]
+// CHECK: ParmDecl=scalarOCLImage2dMSAADepthRO:37:70 (Definition){{( \(invalid\))?}} [type=__read_only image2d_msaa_depth_t] [typekind=OCLImage2dMSAADepthRO] [isPOD=1]
+// CHECK: ParmDecl=scalarOCLImage2dArrayMSAADepthRO:38:81 (Definition){{( \(invalid\))?}} [type=__read_only image2d_array_msaa_depth_t] [typekind=OCLImage2dArrayMSAADepthRO] [isPOD=1]
 // CHECK: ParmDecl=scalarOCLImage3dRO:39:50 (Definition) [type=__read_only image3d_t] [typekind=OCLImage3dRO] [isPOD=1]
 
 void kernel OCLImage1dWOTest(write_only image1d_t scalarOCLImage1dWO);
@@ -71,11 +71,11 @@ void kernel OCLImage3dWOTest(write_only image3d_t scalarOCLImage3dWO);
 // CHECK: ParmDecl=scalarOCLImage2dArrayWO:58:62 (Definition) [type=__write_only image2d_array_t] [typekind=OCLImage2dArrayWO] [isPOD=1]
 // CHECK: ParmDecl=scalarOCLImage2dDepthWO:59:62 (Definition) [type=__write_only image2d_depth_t] [typekind=OCLImage2dDepthWO] [isPOD=1]
 // CHECK: ParmDecl=scalarOCLImage2dArrayDepthWO:60:73 (Definition) [type=__write_only image2d_array_depth_t] [typekind=OCLImage2dArrayDepthWO] [isPOD=1]
-// CHECK: ParmDecl=scalarOCLImage2dMSAAWO:61:60 (Definition) [type=__write_only image2d_msaa_t] [typekind=OCLImage2dMSAAWO] [isPOD=1]
-// CHECK: ParmDecl=scalarOCLImage2dArrayMSAAWO:62:71 (Definition) [type=__write_only image2d_array_msaa_t] [typekind=OCLImage2dArrayMSAAWO] [isPOD=1]
-// CHECK: ParmDecl=scalarOCLImage2dMSAADepthWO:63:71 (Definition) [type=__write_only image2d_msaa_depth_t] [typekind=OCLImage2dMSAADepthWO] [isPOD=1]
-// CHECK: ParmDecl=scalarOCLImage2dArrayMSAADepthWO:64:82 (Definition) [type=__write_only image2d_array_msaa_depth_t] [typekind=OCLImage2dArrayMSAADepthWO] [isPOD=1]
-// CHECK: ParmDecl=scalarOCLImage3dWO:65:51 (Definition) [type=__write_only image3d_t] [typekind=OCLImage3dWO] [isPOD=1]
+// CHECK: ParmDecl=scalarOCLImage2dMSAAWO:61:60 (Definition){{( \(invalid\))?}} [type=__write_only image2d_msaa_t] [typekind=OCLImage2dMSAAWO] [isPOD=1]
+// CHECK: ParmDecl=scalarOCLImage2dArrayMSAAWO:62:71 (Definition){{( \(invalid\))?}} [type=__write_only image2d_array_msaa_t] [typekind=OCLImage2dArrayMSAAWO] [isPOD=1]
+// CHECK: ParmDecl=scalarOCLImage2dMSAADepthWO:63:71 (Definition){{( \(invalid\))?}} [type=__write_only image2d_msaa_depth_t] [typekind=OCLImage2dMSAADepthWO] [isPOD=1]
+// CHECK: ParmDecl=scalarOCLImage2dArrayMSAADepthWO:64:82 (Definition){{( \(invalid\))?}} [type=__write_only image2d_array_msaa_depth_t] [typekind=OCLImage2dArrayMSAADepthWO] [isPOD=1]
+// CHECK: ParmDecl=scalarOCLImage3dWO:65:51 (Definition){{( \(invalid\))?}} [type=__write_only image3d_t] [typekind=OCLImage3dWO] [isPOD=1]
 
 void kernel OCLImage1dRWTest(read_write image1d_t scalarOCLImage1dRW);
 void kernel OCLImage1dArrayRWTest(read_write image1d_array_t scalarOCLImage1dArrayRW);
@@ -97,10 +97,10 @@ void kernel OCLImage3dRWTest(read_write image3d_t scalarOCLImage3dRW);
 // CHECK: ParmDecl=scalarOCLImage2dArrayRW:84:62 (Definition) [type=__read_write image2d_array_t] [typekind=OCLImage2dArrayRW] [isPOD=1]
 // CHECK: ParmDecl=scalarOCLImage2dDepthRW:85:62 (Definition) [type=__read_write image2d_depth_t] [typekind=OCLImage2dDepthRW] [isPOD=1]
 // CHECK: ParmDecl=scalarOCLImage2dArrayDepthRW:86:73 (Definition) [type=__read_write image2d_array_depth_t] [typekind=OCLImage2dArrayDepthRW] [isPOD=1]
-// CHECK: ParmDecl=scalarOCLImage2dMSAARW:87:60 (Definition) [type=__read_write image2d_msaa_t] [typekind=OCLImage2dMSAARW] [isPOD=1]
-// CHECK: ParmDecl=scalarOCLImage2dArrayMSAARW:88:71 (Definition) [type=__read_write image2d_array_msaa_t] [typekind=OCLImage2dArrayMSAARW] [isPOD=1]
-// CHECK: ParmDecl=scalarOCLImage2dMSAADepthRW:89:71 (Definition) [type=__read_write image2d_msaa_depth_t] [typekind=OCLImage2dMSAADepthRW] [isPOD=1]
-// CHECK: ParmDecl=scalarOCLImage2dArrayMSAADepthRW:90:82 (Definition) [type=__read_write image2d_array_msaa_depth_t] [typekind=OCLImage2dArrayMSAADepthRW] [isPOD=1]
+// CHECK: ParmDecl=scalarOCLImage2dMSAARW:87:60 (Definition){{( \(invalid\))?}} [type=__read_write image2d_msaa_t] [typekind=OCLImage2dMSAARW] [isPOD=1]
+// CHECK: ParmDecl=scalarOCLImage2dArrayMSAARW:88:71 (Definition){{( \(invalid\))?}} [type=__read_write image2d_array_msaa_t] [typekind=OCLImage2dArrayMSAARW] [isPOD=1]
+// CHECK: ParmDecl=scalarOCLImage2dMSAADepthRW:89:71 (Definition){{( \(invalid\))?}} [type=__read_write image2d_msaa_depth_t] [typekind=OCLImage2dMSAADepthRW] [isPOD=1]
+// CHECK: ParmDecl=scalarOCLImage2dArrayMSAADepthRW:90:82 (Definition){{( \(invalid\))?}} [type=__read_write image2d_array_msaa_depth_t] [typekind=OCLImage2dArrayMSAADepthRW] [isPOD=1]
 // CHECK: ParmDecl=scalarOCLImage3dRW:91:51 (Definition) [type=__read_write image3d_t] [typekind=OCLImage3dRW] [isPOD=1]
 
 void kernel intPipeTestRO(read_only pipe int scalarPipe);

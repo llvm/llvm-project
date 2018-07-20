@@ -18,6 +18,10 @@ struct __attribute__((trivial_abi)) S3 { // expected-warning {{'trivial_abi' can
   virtual void m();
 };
 
+struct S3_2 {
+  virtual void m();
+} __attribute__((trivial_abi)); // expected-warning {{'trivial_abi' cannot be applied to 'S3_2'}}
+
 struct S4 {
   int a;
 };

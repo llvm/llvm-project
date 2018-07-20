@@ -185,7 +185,7 @@ namespace SameSignatureAfterInstantiation {
 
 namespace PR22040 {
   template <typename T> struct Foobar {
-    template <> void bazqux(typename T::type) {}  // expected-error {{cannot specialize a function 'bazqux' within class scope}} expected-error 2{{cannot be used prior to '::' because it has no members}}
+    template <> void bazqux(typename T::type) {}  // expected-error 2{{cannot be used prior to '::' because it has no members}}
   };
 
   void test() {

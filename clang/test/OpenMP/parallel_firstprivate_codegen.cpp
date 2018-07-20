@@ -366,7 +366,7 @@ int main() {
 // CHECK-64: [[SIVAR7_CONV:%.+]] = bitcast i64* [[SIVAR7_PRIV]] to i32*
 // CHECK: [[VEC_DEST:%.+]] = bitcast [2 x i{{[0-9]+}}]* [[VEC_PRIV]] to i8*
 // CHECK: [[VEC_SRC:%.+]] = bitcast [2 x i{{[0-9]+}}]* [[VEC_REF]] to i8*
-// CHECK: call void @llvm.memcpy.{{.+}}(i8* [[VEC_DEST]], i8* [[VEC_SRC]],
+// CHECK: call void @llvm.memcpy.{{.+}}(i8* align {{[0-9]+}} [[VEC_DEST]], i8* align {{[0-9]+}} [[VEC_SRC]],
 // CHECK: [[S_ARR_PRIV_BEGIN:%.+]] = getelementptr inbounds [2 x [[S_FLOAT_TY]]], [2 x [[S_FLOAT_TY]]]* [[S_ARR_PRIV]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
 // CHECK: [[S_ARR_BEGIN:%.+]] = bitcast [2 x [[S_FLOAT_TY]]]* [[S_ARR_REF]] to [[S_FLOAT_TY]]*
 // CHECK: [[S_ARR_PRIV_END:%.+]] = getelementptr [[S_FLOAT_TY]], [[S_FLOAT_TY]]* [[S_ARR_PRIV_BEGIN]], i{{[0-9]+}} 2
@@ -459,7 +459,7 @@ int main() {
 // CHECK: store i{{[0-9]+}} [[T_VAR_VAL]], i{{[0-9]+}}* [[T_VAR_PRIV]], align 128
 // CHECK: [[VEC_DEST:%.+]] = bitcast [2 x i{{[0-9]+}}]* [[VEC_PRIV]] to i8*
 // CHECK: [[VEC_SRC:%.+]] = bitcast [2 x i{{[0-9]+}}]* [[VEC_REF]] to i8*
-// CHECK: call void @llvm.memcpy.{{.+}}(i8* [[VEC_DEST]], i8* [[VEC_SRC]], i{{[0-9]+}} {{[0-9]+}}, i{{[0-9]+}} 128,
+// CHECK: call void @llvm.memcpy.{{.+}}(i8* align 128 [[VEC_DEST]], i8* align 128 [[VEC_SRC]], i{{[0-9]+}} {{[0-9]+}}, i1
 // CHECK: [[S_ARR_PRIV_BEGIN:%.+]] = getelementptr inbounds [2 x [[S_INT_TY]]], [2 x [[S_INT_TY]]]* [[S_ARR_PRIV]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
 // CHECK: [[S_ARR_BEGIN:%.+]] = bitcast [2 x [[S_INT_TY]]]* [[S_ARR_REF]] to [[S_INT_TY]]*
 // CHECK: [[S_ARR_PRIV_END:%.+]] = getelementptr [[S_INT_TY]], [[S_INT_TY]]* [[S_ARR_PRIV_BEGIN]], i{{[0-9]+}} 2
@@ -507,7 +507,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // ARRAY-DAG: store double* %{{.+}}, double** [[PRIV_VLA2]],
 // ARRAY: call i8* @llvm.stacksave()
 // ARRAY: [[SIZE:%.+]] = mul nuw i64 %{{.+}}, 8
-// ARRAY: call void @llvm.memcpy.p0i8.p0i8.i64(i8* %{{.+}}, i8* %{{.+}}, i64 [[SIZE]], i32 128, i1 false)
+// ARRAY: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 128 %{{.+}}, i8* align 128 %{{.+}}, i64 [[SIZE]], i1 false)
 #pragma omp parallel firstprivate(a, s, vla1, vla2)
   s[0].St_func(s, n, vla1);
   ;
@@ -523,7 +523,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // ARRAY-DAG: store double* %{{.+}}, double** [[PRIV_VLA2]],
 // ARRAY: call i8* @llvm.stacksave()
 // ARRAY: [[SIZE:%.+]] = mul nuw i64 %{{.+}}, 8
-// ARRAY: call void @llvm.memcpy.p0i8.p0i8.i64(i8* %{{.+}}, i8* %{{.+}}, i64 [[SIZE]], i32 128, i1 false)
+// ARRAY: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 128 %{{.+}}, i8* align 128 %{{.+}}, i64 [[SIZE]], i1 false)
 #endif
 
 

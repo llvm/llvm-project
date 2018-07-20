@@ -19,7 +19,7 @@ struct A {
   int ia;
 };
 A a;
-// EMITS-VFTABLE-DAG: @"\01??_7A@@6B@" = linkonce_odr unnamed_addr constant { [3 x i8*] }
+// EMITS-VFTABLE-DAG: @"??_7A@@6B@" = linkonce_odr unnamed_addr constant { [3 x i8*] }
 void use(A *obj) { obj->f(); }
 
 struct B : A {
@@ -39,7 +39,7 @@ struct B : A {
   virtual void j();
 };
 B b;
-// EMITS-VFTABLE-DAG: @"\01??_7B@@6B@" = linkonce_odr unnamed_addr constant { [5 x i8*] }
+// EMITS-VFTABLE-DAG: @"??_7B@@6B@" = linkonce_odr unnamed_addr constant { [5 x i8*] }
 void use(B *obj) { obj->f(); }
 
 struct C {
@@ -54,7 +54,7 @@ struct C {
   virtual void f();
 };
 void C::f() {}
-// NO-VFTABLE-NOT: @"\01??_7C@@6B@"
+// NO-VFTABLE-NOT: @"??_7C@@6B@"
 void use(C *obj) { obj->f(); }
 
 struct D {
@@ -69,7 +69,7 @@ struct D {
   virtual ~D();
 };
 D d;
-// EMITS-VFTABLE-DAG: @"\01??_7D@@6B@" = linkonce_odr unnamed_addr constant { [2 x i8*] }
+// EMITS-VFTABLE-DAG: @"??_7D@@6B@" = linkonce_odr unnamed_addr constant { [2 x i8*] }
 void use(D *obj) { obj->f(); }
 
 struct E : A {
@@ -89,7 +89,7 @@ struct E : A {
   virtual void i();
 };
 void E::i() {}
-// NO-VFTABLE-NOT: @"\01??_7E@@6B@"
+// NO-VFTABLE-NOT: @"??_7E@@6B@"
 void use(E *obj) { obj->i(); }
 
 struct F : A {
@@ -107,7 +107,7 @@ struct F : A {
   virtual ~F();
 };
 F f;
-// EMITS-VFTABLE-DAG: @"\01??_7F@@6B@" = linkonce_odr unnamed_addr constant { [5 x i8*] }
+// EMITS-VFTABLE-DAG: @"??_7F@@6B@" = linkonce_odr unnamed_addr constant { [5 x i8*] }
 void use(F *obj) { obj->i(); }
 
 struct G : E {
@@ -128,7 +128,7 @@ struct G : E {
   virtual void j();
 };
 void G::j() {}
-// NO-VFTABLE-NOT: @"\01??_7G@@6B@"
+// NO-VFTABLE-NOT: @"??_7G@@6B@"
 void use(G *obj) { obj->j(); }
 
 // Test that the usual Itanium-style key method does not emit a vtable.
@@ -136,7 +136,7 @@ struct H {
   virtual void f();
 };
 void H::f() {}
-// NO-VFTABLE-NOT: @"\01??_7H@@6B@"
+// NO-VFTABLE-NOT: @"??_7H@@6B@"
 
 struct Empty { };
 
@@ -295,7 +295,7 @@ struct S {
   // CHECK-NEXT:   0 | void S::f() [deleted]
   virtual void f() = delete;
   S();
-  // EMITS-VFTABLE-DAG: @"\01??_7S@@6B@" = linkonce_odr unnamed_addr constant { [1 x i8*] } { [1 x i8*] [i8* bitcast (void ()* @_purecall to i8*)] }
+  // EMITS-VFTABLE-DAG: @"??_7S@@6B@" = linkonce_odr unnamed_addr constant { [1 x i8*] } { [1 x i8*] [i8* bitcast (void ()* @_purecall to i8*)] }
 };
 
 S::S() {}

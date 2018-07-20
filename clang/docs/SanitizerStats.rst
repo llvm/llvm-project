@@ -56,7 +56,7 @@ Example:
         10   A a;
         11   g(&a);
         12 }
-    $ clang++ -fsanitize=cfi -flto -fuse-ld=gold vcall.cc -fsanitize-stats -g
+    $ clang++ -fsanitize=cfi -fvisibility=hidden -flto -fuse-ld=gold vcall.cc -fsanitize-stats -g
     $ SANITIZER_STATS_PATH=a.stats ./a.out
     $ sanstats a.stats
     vcall.cc:6 _Z1gP1A cfi-vcall 1

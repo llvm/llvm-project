@@ -1,5 +1,5 @@
 // RUN: %clang_analyze_cc1 -fblocks -analyzer-checker=core,nullability.NullPassedToNonnull,nullability.NullReturnedFromNonnull,nullability.NullablePassedToNonnull,nullability.NullableReturnedFromNonnull,nullability.NullableDereferenced -analyzer-output=text -verify %s
-// RUN: %clang_analyze_cc1 -fblocks -analyzer-checker=core,nullability.NullPassedToNonnull,nullability.NullReturnedFromNonnull,nullability.NullablePassedToNonnull,nullability.NullableReturnedFromNonnull,nullability.NullableDereferenced -analyzer-output=plist -analyzer-config path-diagnostics-alternate=true -o %t.plist %s
+// RUN: %clang_analyze_cc1 -fblocks -analyzer-checker=core,nullability.NullPassedToNonnull,nullability.NullReturnedFromNonnull,nullability.NullablePassedToNonnull,nullability.NullableReturnedFromNonnull,nullability.NullableDereferenced -analyzer-output=plist -o %t.plist %s
 // RUN: FileCheck --input-file=%t.plist %s
 
 #include "Inputs/system-header-simulator-for-nullability.h"

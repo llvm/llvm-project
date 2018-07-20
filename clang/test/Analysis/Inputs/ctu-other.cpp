@@ -1,3 +1,5 @@
+#include "../ctu-hdr.h"
+
 int callback_to_main(int x);
 int f(int x) {
   return x - 1;
@@ -64,4 +66,12 @@ int chf3(int x) {
 int chf1(int x) {
   return chf2(x);
 }
+}
+
+typedef struct { int n; } Anonymous;
+int fun_using_anon_struct(int n) { Anonymous anon; anon.n = n; return anon.n; }
+
+int other_macro_diag(int x) {
+  MACRODIAG();
+  return x;
 }

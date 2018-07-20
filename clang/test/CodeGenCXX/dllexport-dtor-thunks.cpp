@@ -5,6 +5,6 @@ struct __declspec(dllexport) B { virtual ~B(); };
 struct __declspec(dllexport) C : A, B { virtual ~C(); };
 C::~C() {}
 
+// CHECK: define dso_local dllexport void @"??1C@@UEAA@XZ"
 // This thunk should *not* be dllexport.
-// CHECK: define linkonce_odr i8* @"\01??_EC@@W7EAAPEAXI@Z"
-// CHECK: define dllexport void @"\01??1C@@UEAA@XZ"
+// CHECK: define linkonce_odr dso_local i8* @"??_EC@@W7EAAPEAXI@Z"

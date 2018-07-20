@@ -49,6 +49,7 @@ static Distro::DistroType DetectDistro(vfs::FileSystem &VFS) {
                       .Case("zesty", Distro::UbuntuZesty)
                       .Case("artful", Distro::UbuntuArtful)
                       .Case("bionic", Distro::UbuntuBionic)
+                      .Case("cosmic", Distro::UbuntuCosmic)
                       .Default(Distro::UnknownDistro);
     if (Version != Distro::UnknownDistro)
       return Version;

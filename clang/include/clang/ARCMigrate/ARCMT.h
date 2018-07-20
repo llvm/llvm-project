@@ -22,7 +22,7 @@ namespace clang {
 namespace arcmt {
   class MigrationPass;
 
-/// \brief Creates an AST with the provided CompilerInvocation but with these
+/// Creates an AST with the provided CompilerInvocation but with these
 /// changes:
 ///   -if a PCH/PTH is set, the original header is used instead
 ///   -Automatic Reference Counting mode is enabled
@@ -45,7 +45,7 @@ checkForManualIssues(CompilerInvocation &CI, const FrontendInputFile &Input,
                      bool emitPremigrationARCErrors = false,
                      StringRef plistOut = StringRef());
 
-/// \brief Works similar to checkForManualIssues but instead of checking, it
+/// Works similar to checkForManualIssues but instead of checking, it
 /// applies automatic modifications to source files to conform to ARC.
 ///
 /// \returns false if no error is produced, true otherwise.
@@ -55,7 +55,7 @@ applyTransformations(CompilerInvocation &origCI,
                      std::shared_ptr<PCHContainerOperations> PCHContainerOps,
                      DiagnosticConsumer *DiagClient);
 
-/// \brief Applies automatic modifications and produces temporary files
+/// Applies automatic modifications and produces temporary files
 /// and metadata into the \p outputDir path.
 ///
 /// \param emitPremigrationARCErrors if true all ARC errors will get emitted
@@ -72,7 +72,7 @@ bool migrateWithTemporaryFiles(
     DiagnosticConsumer *DiagClient, StringRef outputDir,
     bool emitPremigrationARCErrors, StringRef plistOut);
 
-/// \brief Get the set of file remappings from the \p outputDir path that
+/// Get the set of file remappings from the \p outputDir path that
 /// migrateWithTemporaryFiles produced.
 ///
 /// \returns false if no error is produced, true otherwise.
@@ -80,7 +80,7 @@ bool getFileRemappings(std::vector<std::pair<std::string,std::string> > &remap,
                        StringRef outputDir,
                        DiagnosticConsumer *DiagClient);
 
-/// \brief Get the set of file remappings from a list of files with remapping
+/// Get the set of file remappings from a list of files with remapping
 /// info.
 ///
 /// \returns false if no error is produced, true otherwise.

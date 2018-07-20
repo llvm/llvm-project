@@ -36,7 +36,7 @@ void f1a() __asm("f1");
 void f1a() {}
 //expected-note@-1 {{previous definition is here}}
 void f1() __attribute__((ifunc("f1_ifunc")));
-//expected-error@-1 {{definition with same mangled name as another definition}}
+//expected-error@-1 {{definition with same mangled name 'f1' as another definition}}
 void* f1_ifunc() { return 0; }
 
 void* f6_ifunc(int i);

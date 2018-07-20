@@ -14,7 +14,7 @@
 // CHECK: !DILocalVariable(name: ".block_descriptor", arg: 1,{{.*}}line: 2,
 // CHECK: !DILocalVariable(name: "param", arg: 2,{{.*}}line: 2,
 
-// Line directive so we don't have to worry about how many lines preceed the
+// Line directive so we don't have to worry about how many lines precede the
 // test code (as the line number is mangled in with the argument number as shown
 // above)
 #line 1

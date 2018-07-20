@@ -73,7 +73,7 @@ static bool isEmptyARCMTMacroStatement(NullStmt *S,
 
 namespace {
 
-/// \brief Returns true if the statement became empty due to previous
+/// Returns true if the statement became empty due to previous
 /// transformations.
 class EmptyChecker : public StmtVisitor<EmptyChecker, bool> {
   ASTContext &Ctx;

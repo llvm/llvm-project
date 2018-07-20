@@ -434,22 +434,22 @@ void test_read_exec_hi(global uint* out) {
 }
 
 // CHECK-LABEL: @test_dispatch_ptr
-// CHECK: call i8 addrspace(2)* @llvm.amdgcn.dispatch.ptr()
-void test_dispatch_ptr(__attribute__((address_space(2))) unsigned char ** out)
+// CHECK: call i8 addrspace(4)* @llvm.amdgcn.dispatch.ptr()
+void test_dispatch_ptr(__attribute__((address_space(4))) unsigned char ** out)
 {
   *out = __builtin_amdgcn_dispatch_ptr();
 }
 
 // CHECK-LABEL: @test_kernarg_segment_ptr
-// CHECK: call i8 addrspace(2)* @llvm.amdgcn.kernarg.segment.ptr()
-void test_kernarg_segment_ptr(__attribute__((address_space(2))) unsigned char ** out)
+// CHECK: call i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
+void test_kernarg_segment_ptr(__attribute__((address_space(4))) unsigned char ** out)
 {
   *out = __builtin_amdgcn_kernarg_segment_ptr();
 }
 
 // CHECK-LABEL: @test_implicitarg_ptr
-// CHECK: call i8 addrspace(2)* @llvm.amdgcn.implicitarg.ptr()
-void test_implicitarg_ptr(__attribute__((address_space(2))) unsigned char ** out)
+// CHECK: call i8 addrspace(4)* @llvm.amdgcn.implicitarg.ptr()
+void test_implicitarg_ptr(__attribute__((address_space(4))) unsigned char ** out)
 {
   *out = __builtin_amdgcn_implicitarg_ptr();
 }

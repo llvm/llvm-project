@@ -360,7 +360,9 @@ class TestClassScopeFunctionSpecialization {
   template<> void foo<int>(int a) { }
 };
 // CHECK:      ClassScopeFunctionSpecializationDecl
-// CHECK-NEXT:   CXXMethod{{.*}} 'foo' 'void (int)'
+// CHECK-NEXT:   CXXMethod{{.*}} foo 'void (int)'
+// CHECK-NEXT:     ParmVarDecl
+// CHECK-NEXT:     CompoundStmt
 // CHECK-NEXT:   TemplateArgument{{.*}} 'int'
 
 namespace TestTemplateTypeParmDecl {

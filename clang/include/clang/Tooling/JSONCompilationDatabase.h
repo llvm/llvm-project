@@ -1,4 +1,4 @@
-//===--- JSONCompilationDatabase.h - ----------------------------*- C++ -*-===//
+//===- JSONCompilationDatabase.h --------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -18,6 +18,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "clang/Tooling/FileMatchTrie.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -25,12 +26,14 @@
 #include "llvm/Support/YAMLParser.h"
 #include <memory>
 #include <string>
+#include <tuple>
+#include <utility>
 #include <vector>
 
 namespace clang {
 namespace tooling {
 
-/// \brief A JSON based compilation database.
+/// A JSON based compilation database.
 ///
 /// JSON compilation database files must contain a list of JSON objects which
 /// provide the command lines in the attributes 'directory', 'command',
@@ -58,7 +61,7 @@ namespace tooling {
 enum class JSONCommandLineSyntax { Windows, Gnu, AutoDetect };
 class JSONCompilationDatabase : public CompilationDatabase {
 public:
-  /// \brief Loads a JSON compilation database from the specified file.
+  /// Loads a JSON compilation database from the specified file.
   ///
   /// Returns NULL and sets ErrorMessage if the database could not be
   /// loaded from the given file.
@@ -66,14 +69,14 @@ public:
   loadFromFile(StringRef FilePath, std::string &ErrorMessage,
                JSONCommandLineSyntax Syntax);
 
-  /// \brief Loads a JSON compilation database from a data buffer.
+  /// Loads a JSON compilation database from a data buffer.
   ///
   /// Returns NULL and sets ErrorMessage if the database could not be loaded.
   static std::unique_ptr<JSONCompilationDatabase>
   loadFromBuffer(StringRef DatabaseString, std::string &ErrorMessage,
                  JSONCommandLineSyntax Syntax);
 
-  /// \brief Returns all compile commands in which the specified file was
+  /// Returns all compile commands in which the specified file was
   /// compiled.
   ///
   /// FIXME: Currently FilePath must be an absolute path inside the
@@ -81,23 +84,23 @@ public:
   std::vector<CompileCommand>
   getCompileCommands(StringRef FilePath) const override;
 
-  /// \brief Returns the list of all files available in the compilation database.
+  /// Returns the list of all files available in the compilation database.
   ///
   /// These are the 'file' entries of the JSON objects.
   std::vector<std::string> getAllFiles() const override;
 
-  /// \brief Returns all compile commands for all the files in the compilation
+  /// Returns all compile commands for all the files in the compilation
   /// database.
   std::vector<CompileCommand> getAllCompileCommands() const override;
 
 private:
-  /// \brief Constructs a JSON compilation database on a memory buffer.
+  /// Constructs a JSON compilation database on a memory buffer.
   JSONCompilationDatabase(std::unique_ptr<llvm::MemoryBuffer> Database,
                           JSONCommandLineSyntax Syntax)
       : Database(std::move(Database)), Syntax(Syntax),
         YAMLStream(this->Database->getBuffer(), SM) {}
 
-  /// \brief Parses the database file and creates the index.
+  /// Parses the database file and creates the index.
   ///
   /// Returns whether parsing succeeded. Sets ErrorMessage if parsing
   /// failed.
@@ -110,12 +113,12 @@ private:
   // Otherwise, each entry in the command line vector is a literal
   // argument to the compiler.
   // The output field may be a nullptr.
-  typedef std::tuple<llvm::yaml::ScalarNode *,
-                     llvm::yaml::ScalarNode *,
-                     std::vector<llvm::yaml::ScalarNode *>,
-                     llvm::yaml::ScalarNode *> CompileCommandRef;
+  using CompileCommandRef =
+      std::tuple<llvm::yaml::ScalarNode *, llvm::yaml::ScalarNode *,
+                 std::vector<llvm::yaml::ScalarNode *>,
+                 llvm::yaml::ScalarNode *>;
 
-  /// \brief Converts the given array of CompileCommandRefs to CompileCommands.
+  /// Converts the given array of CompileCommandRefs to CompileCommands.
   void getCommands(ArrayRef<CompileCommandRef> CommandsRef,
                    std::vector<CompileCommand> &Commands) const;
 
@@ -134,7 +137,7 @@ private:
   llvm::yaml::Stream YAMLStream;
 };
 
-} // end namespace tooling
-} // end namespace clang
+} // namespace tooling
+} // namespace clang
 
-#endif
+#endif // LLVM_CLANG_TOOLING_JSONCOMPILATIONDATABASE_H

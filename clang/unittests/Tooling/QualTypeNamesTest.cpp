@@ -26,9 +26,13 @@ struct TypeNameVisitor : TestVisitor<TypeNameVisitor> {
     std::string ExpectedName =
         ExpectedQualTypeNames.lookup(VD->getNameAsString());
     if (ExpectedName != "") {
-      std::string ActualName =
-          TypeName::getFullyQualifiedName(VD->getType(), *Context,
-                                          WithGlobalNsPrefix);
+      PrintingPolicy Policy(Context->getPrintingPolicy());
+      Policy.SuppressScope = false;
+      Policy.AnonymousTagLocations = true;
+      Policy.PolishForDeclaration = true;
+      Policy.SuppressUnwrittenScope = true;
+      std::string ActualName = TypeName::getFullyQualifiedName(
+          VD->getType(), *Context, Policy, WithGlobalNsPrefix);
       if (ExpectedName != ActualName) {
         // A custom message makes it much easier to see what declaration
         // failed compared to EXPECT_EQ.
@@ -217,6 +221,26 @@ TEST(QualTypeNameTest, getFullyQualifiedName) {
       "  }\n"
       "}\n"
   );
+
+  TypeNameVisitor AnonStrucs;
+  AnonStrucs.ExpectedQualTypeNames["a"] = "short";
+  AnonStrucs.ExpectedQualTypeNames["un_in_st_1"] =
+      "union (anonymous struct at input.cc:1:1)::(anonymous union at "
+      "input.cc:2:27)";
+  AnonStrucs.ExpectedQualTypeNames["b"] = "short";
+  AnonStrucs.ExpectedQualTypeNames["un_in_st_2"] =
+      "union (anonymous struct at input.cc:1:1)::(anonymous union at "
+      "input.cc:5:27)";
+  AnonStrucs.ExpectedQualTypeNames["anon_st"] =
+      "struct (anonymous struct at input.cc:1:1)";
+  AnonStrucs.runOver(R"(struct {
+                          union {
+                            short a;
+                          } un_in_st_1;
+                          union {
+                            short b;
+                          } un_in_st_2;
+                        } anon_st;)");
 }
 
 }  // end anonymous namespace

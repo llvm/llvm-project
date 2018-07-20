@@ -10,9 +10,6 @@ struct NonDefaultConstructible {
   NonDefaultConstructible(int);
 };
 
-// FIXME: The "must originally be declared in namespace" diagnostics throughout
-// this file are wrong.
-
 // C++ [temp.expl.spec]p1:
 //   An explicit specialization of any of the following:
 
@@ -43,7 +40,7 @@ template<> void N0::f0(double) { }
 struct X1 {
   template<typename T> void f(T);
   
-  template<> void f(int); // expected-error{{in class scope}}
+  template<> void f(int); // OK (DR727)
 };
 
 //     -- class template
@@ -94,7 +91,7 @@ template<> struct N0::X0<volatile void> {
 
 //     -- variable template [C++1y]
 namespace N0 {
-template<typename T> int v0; // expected-note +{{here}}
+template<typename T> int v0; // expected-note 4{{explicitly specialized declaration is here}}
 template<> extern int v0<char[1]>;
 template<> extern int v0<char[2]>;
 template<> extern int v0<char[5]>;
@@ -102,32 +99,32 @@ template<> extern int v0<char[6]>;
 }
 using N0::v0;
 
-template<typename T> int v1; // expected-note +{{here}}
+template<typename T> int v1; // expected-note 4{{explicitly specialized declaration is here}}
 template<> extern int v1<char[3]>;
 template<> extern int v1<char[4]>;
 template<> extern int v1<char[7]>;
 template<> extern int v1<char[8]>;
 
 template<> int N0::v0<int[1]>;
-template<> int v0<int[2]>; // FIXME: ill-formed
+template<> int v0<int[2]>;
 template<> int ::v1<int[3]>; // expected-warning {{extra qualification}}
 template<> int v1<int[4]>;
 
 template<> int N0::v0<char[1]>;
-template<> int v0<char[2]>; // FIXME: ill-formed
+template<> int v0<char[2]>;
 template<> int ::v1<char[3]>; // expected-warning {{extra qualification}}
 template<> int v1<char[4]>;
 
 namespace N1 {
-template<> int N0::v0<int[5]>; // expected-error {{must originally be declared in namespace 'N0'}} expected-error {{does not enclose namespace}}
-template<> int v0<int[6]>; // expected-error {{must originally be declared in namespace 'N0'}}
-template<> int ::v1<int[7]>; // expected-error {{must originally be declared in the global scope}} expected-error {{cannot name the global scope}}
-template<> int v1<int[8]>; // expected-error {{must originally be declared in the global scope}}
+template<> int N0::v0<int[5]>; // expected-error {{not in a namespace enclosing 'N0'}}
+template<> int v0<int[6]>; // expected-error {{not in a namespace enclosing 'N0'}}
+template<> int ::v1<int[7]>; // expected-error {{must occur at global scope}}
+template<> int v1<int[8]>; // expected-error {{must occur at global scope}}
 
-template<> int N0::v0<char[5]>; // expected-error {{does not enclose namespace 'N0'}}
-template<> int v0<char[6]>; // FIXME: ill-formed
-template<> int ::v1<char[7]>; // expected-error {{cannot name the global scope}}
-template<> int v1<char[8]>; // FIXME: ill-formed
+template<> int N0::v0<char[5]>; // expected-error {{not in a namespace enclosing 'N0'}}
+template<> int v0<char[6]>; // expected-error {{not in a namespace enclosing 'N0'}}
+template<> int ::v1<char[7]>; // expected-error {{must occur at global scope}}
+template<> int v1<char[8]>; // expected-error {{must occur at global scope}}
 }
 
 //     -- member function of a class template

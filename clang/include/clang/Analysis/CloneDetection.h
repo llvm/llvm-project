@@ -161,7 +161,7 @@ public:
 /// The result of findClones can be further constrained with the constrainClones
 /// method.
 ///
-/// This class only searches for clones in exectuable source code
+/// This class only searches for clones in executable source code
 /// (e.g. function bodies). Other clones (e.g. cloned comments or declarations)
 /// are not supported.
 class CloneDetector {

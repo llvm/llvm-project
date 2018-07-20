@@ -6,6 +6,7 @@ RUN: %clang_cc1 -triple=x86_64-linux-gnu -fmodules-codegen -fmodules-debuginfo -
 RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -debug-info-kind=limited -o - %t/foo.pcm | FileCheck --check-prefix=FOO --check-prefix=BOTH %s
 RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -debug-info-kind=limited -o - -fmodules -disable-llvm-passes -fmodule-file=%t/foo.pcm %S/Inputs/codegen/use.cpp | FileCheck --check-prefix=BOTH --check-prefix=USE %s
 
+
 For want of any better definition, inline asm goes "everywhere" the same as it
 if it were in a header (with the disadvantage that the inline asm will be
 included in the program if the module is used, even if the header containing

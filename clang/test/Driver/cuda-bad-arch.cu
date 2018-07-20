@@ -2,6 +2,7 @@
 // REQUIRES: clang-driver
 // REQUIRES: x86-registered-target
 // REQUIRES: nvptx-registered-target
+// REQUIRES: amdgpu-registered-target
 
 // RUN: %clang -### -target x86_64-linux-gnu --cuda-gpu-arch=compute_20 -c %s 2>&1 \
 // RUN: | FileCheck -check-prefix BAD %s
@@ -25,9 +26,12 @@
 // RUN: %clang -### -target x86_64-linux-gnu -c %s 2>&1 \
 // RUN: | FileCheck -check-prefix OK %s
 
-// We don't allow using NVPTX for host compilation.
+// We don't allow using NVPTX/AMDGCN for host compilation.
 // RUN: %clang -### --cuda-host-only -target nvptx-nvidia-cuda -c %s 2>&1 \
 // RUN: | FileCheck -check-prefix HOST_NVPTX %s
+// RUN: %clang -### --cuda-host-only -target amdgcn-amd-amdhsa -c %s 2>&1 \
+// RUN: | FileCheck -check-prefix HOST_AMDGCN %s
 
 // OK-NOT: error: Unsupported CUDA gpu architecture
-// HOST_NVPTX: error: unsupported use of NVPTX for host compilation.
+// HOST_NVPTX: error: unsupported architecture 'nvptx' for host compilation.
+// HOST_AMDGCN: error: unsupported architecture 'amdgcn' for host compilation.

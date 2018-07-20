@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 -fmodules-ts %S/module.cppm -triple %itanium_abi_triple -emit-module-interface -o %t
 // RUN: %clang_cc1 -fmodules-ts %s -triple %itanium_abi_triple -fmodule-file=%t -emit-llvm -o - | FileCheck %s --implicit-check-not=unused --implicit-check-not=global_module
 
-// CHECK-DAG: @extern_var_exported = external global
-// CHECK-DAG: @inline_var_exported = linkonce_odr global
-// CHECK-DAG: @_ZW6ModuleE19static_var_exported = available_externally global i32 0
-// CHECK-DAG: @const_var_exported = available_externally constant i32 3
+// CHECK-DAG: @extern_var_exported = external {{(dso_local )?}}global
+// CHECK-DAG: @inline_var_exported = linkonce_odr {{(dso_local )?}}global
+// CHECK-DAG: @_ZW6ModuleE19static_var_exported = available_externally {{(dso_local )?}}global i32 0
+// CHECK-DAG: @const_var_exported = available_externally {{(dso_local )?}}constant i32 3
 
 import Module;
 

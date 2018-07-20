@@ -1,24 +1,33 @@
-// RUN: %clang_cc1 %s -verify -fsyntax-only
-// RUN: %clang_cc1 %s -verify -fsyntax-only -cl-std=CL1.1
-// RUN: %clang_cc1 %s -verify -fsyntax-only -cl-std=CL1.2
-// RUN: %clang_cc1 %s -verify -fsyntax-only -cl-std=CL2.0
-// RUN: %clang_cc1 %s -verify -fsyntax-only -fblocks -DBLOCKS
-// RUN: %clang_cc1 %s -verify -fsyntax-only -cl-std=CL1.1 -fblocks -DBLOCKS
-// RUN: %clang_cc1 %s -verify -fsyntax-only -cl-std=CL1.2 -fblocks -DBLOCKS
-// RUN: %clang_cc1 %s -triple amdgcn--amdhsa -x c -std=c99 -verify -fsyntax-only
+// RUN: %clang_cc1 %s -verify -fsyntax-only -DSYNTAX
+// RUN: %clang_cc1 %s -verify -fsyntax-only -cl-std=CL1.1 -DSYNTAX
+// RUN: %clang_cc1 %s -verify -fsyntax-only -cl-std=CL1.2 -DSYNTAX
+// RUN: %clang_cc1 %s -verify -fsyntax-only -cl-std=CL2.0 -DSYNTAX
+// RUN: %clang_cc1 %s -verify -fsyntax-only -cl-std=c++ -DSYNTAX
+// RUN: %clang_cc1 %s -verify -fsyntax-only -fblocks -DBLOCKS -DSYNTAX
+// RUN: %clang_cc1 %s -verify -fsyntax-only -cl-std=CL1.1 -fblocks -DBLOCKS -DSYNTAX
+// RUN: %clang_cc1 %s -verify -fsyntax-only -cl-std=CL1.2 -fblocks -DBLOCKS -DSYNTAX
+// RUN: %clang_cc1 %s -triple amdgcn--amdhsa -x c -std=c99 -verify -fsyntax-only -DSYNTAX
 // RUN: %clang_cc1 -cl-std=CL1.1 -cl-strict-aliasing -fblocks %s 2>&1 | FileCheck --check-prefix=CHECK-INVALID-OPENCL-VERSION11 %s
 // RUN: %clang_cc1 -cl-std=CL1.2 -cl-strict-aliasing -fblocks %s 2>&1 | FileCheck --check-prefix=CHECK-INVALID-OPENCL-VERSION12 %s
 // RUN: %clang_cc1 -cl-std=CL2.0 -cl-strict-aliasing %s 2>&1 | FileCheck --check-prefix=CHECK-INVALID-OPENCL-VERSION20 %s
 
+#ifdef SYNTAX
+class test{
+int member;
+};
+#ifndef __OPENCL_CPP_VERSION__
+//expected-error@-4{{unknown type name 'class'}}
+//expected-error@-5{{expected ';' after top level declarator}}
+#endif
+#endif
+
 void f(void (^g)(void)) {
-#ifdef __OPENCL_C_VERSION__
-#if __OPENCL_C_VERSION__ < CL_VERSION_2_0 && !defined(BLOCKS)
-  // expected-error@-3{{blocks support disabled - compile with -fblocks or for OpenCL 2.0 or above}}
-#else
-  // expected-no-diagnostics
+#if defined(__OPENCL_C_VERSION__) || defined(__OPENCL_CPP_VERSION__)
+#if !defined(BLOCKS) && (defined(__OPENCL_CPP_VERSION__)  || __OPENCL_C_VERSION__ != CL_VERSION_2_0)
+  // expected-error@-3{{blocks support disabled - compile with -fblocks or for OpenCL 2.0}}
 #endif
 #else
-  // expected-error@-8{{blocks support disabled - compile with -fblocks or pick a deployment target that supports them}}
+  // expected-error@-6{{blocks support disabled - compile with -fblocks or pick a deployment target that supports them}}
 #endif
 }
 

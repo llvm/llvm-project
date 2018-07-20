@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -w -S -o - -emit-llvm              %s | FileCheck %s -check-prefix=NO__ERRNO
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -w -S -o - -emit-llvm -fmath-errno %s | FileCheck %s -check-prefix=HAS_ERRNO
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown-gnu -w -S -o - -emit-llvm -fmath-errno %s | FileCheck %s --check-prefix=HAS_ERRNO_GNU
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown-android -w -S -o - -emit-llvm -fmath-errno %s | FileCheck %s --check-prefix=HAS_ERRNO_ANDROID
 // RUN: %clang_cc1 -triple x86_64-unknown-windows-msvc -w -S -o - -emit-llvm -fmath-errno %s | FileCheck %s --check-prefix=HAS_ERRNO_WIN
 
 // Test attributes and codegen of math builtins.
@@ -24,23 +25,27 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // HAS_ERRNO: declare float @atan2f(float, float) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @atan2l(x86_fp80, x86_fp80) [[NOT_READNONE]]
 
-  __builtin_copysign(f,f); __builtin_copysignf(f,f);__builtin_copysignl(f,f);
+  __builtin_copysign(f,f); __builtin_copysignf(f,f); __builtin_copysignl(f,f); __builtin_copysignf128(f,f);
 
 // NO__ERRNO: declare double @llvm.copysign.f64(double, double) [[READNONE_INTRINSIC:#[0-9]+]]
 // NO__ERRNO: declare float @llvm.copysign.f32(float, float) [[READNONE_INTRINSIC]]
 // NO__ERRNO: declare x86_fp80 @llvm.copysign.f80(x86_fp80, x86_fp80) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare fp128 @llvm.copysign.f128(fp128, fp128) [[READNONE_INTRINSIC]]
 // HAS_ERRNO: declare double @llvm.copysign.f64(double, double) [[READNONE_INTRINSIC:#[0-9]+]]
 // HAS_ERRNO: declare float @llvm.copysign.f32(float, float) [[READNONE_INTRINSIC]]
 // HAS_ERRNO: declare x86_fp80 @llvm.copysign.f80(x86_fp80, x86_fp80) [[READNONE_INTRINSIC]]
+// HAS_ERRNO: declare fp128 @llvm.copysign.f128(fp128, fp128) [[READNONE_INTRINSIC]]
 
-  __builtin_fabs(f);       __builtin_fabsf(f);      __builtin_fabsl(f);
+  __builtin_fabs(f);       __builtin_fabsf(f);      __builtin_fabsl(f); __builtin_fabsf128(f);
 
 // NO__ERRNO: declare double @llvm.fabs.f64(double) [[READNONE_INTRINSIC]]
 // NO__ERRNO: declare float @llvm.fabs.f32(float) [[READNONE_INTRINSIC]]
 // NO__ERRNO: declare x86_fp80 @llvm.fabs.f80(x86_fp80) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare fp128 @llvm.fabs.f128(fp128) [[READNONE_INTRINSIC]]
 // HAS_ERRNO: declare double @llvm.fabs.f64(double) [[READNONE_INTRINSIC]]
 // HAS_ERRNO: declare float @llvm.fabs.f32(float) [[READNONE_INTRINSIC]]
 // HAS_ERRNO: declare x86_fp80 @llvm.fabs.f80(x86_fp80) [[READNONE_INTRINSIC]]
+// HAS_ERRNO: declare fp128 @llvm.fabs.f128(fp128) [[READNONE_INTRINSIC]]
 
   __builtin_frexp(f,i);    __builtin_frexpf(f,i);   __builtin_frexpl(f,i);
 
@@ -51,14 +56,14 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // HAS_ERRNO: declare float @frexpf(float, i32*) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @frexpl(x86_fp80, i32*) [[NOT_READNONE]]
 
-  __builtin_huge_val();    __builtin_huge_valf();   __builtin_huge_vall();
+  __builtin_huge_val();    __builtin_huge_valf();   __builtin_huge_vall(); __builtin_huge_valf128();
 
 // NO__ERRNO-NOT: .huge
 // NO__ERRNO-NOT: @huge
 // HAS_ERRNO-NOT: .huge
 // HAS_ERRNO-NOT: @huge
 
-  __builtin_inf();    __builtin_inff();   __builtin_infl();
+  __builtin_inf();    __builtin_inff();   __builtin_infl(); __builtin_inff128();
 
 // NO__ERRNO-NOT: .inf
 // NO__ERRNO-NOT: @inf
@@ -83,23 +88,27 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // HAS_ERRNO: declare float @modff(float, float*) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @modfl(x86_fp80, x86_fp80*) [[NOT_READNONE]]
 
-  __builtin_nan(c);        __builtin_nanf(c);       __builtin_nanl(c);  
+  __builtin_nan(c);        __builtin_nanf(c);       __builtin_nanl(c); __builtin_nanf128(c);
 
-// NO__ERRNO: declare double @nan(i8*) [[READNONE]]
-// NO__ERRNO: declare float @nanf(i8*) [[READNONE]]
-// NO__ERRNO: declare x86_fp80 @nanl(i8*) [[READNONE]]
-// HAS_ERRNO: declare double @nan(i8*) [[READNONE:#[0-9]+]]
-// HAS_ERRNO: declare float @nanf(i8*) [[READNONE]]
-// HAS_ERRNO: declare x86_fp80 @nanl(i8*) [[READNONE]]
+// NO__ERRNO: declare double @nan(i8*) [[PURE:#[0-9]+]]
+// NO__ERRNO: declare float @nanf(i8*) [[PURE]]
+// NO__ERRNO: declare x86_fp80 @nanl(i8*) [[PURE]]
+// NO__ERRNO: declare fp128 @nanf128(i8*) [[PURE]]
+// HAS_ERRNO: declare double @nan(i8*) [[PURE:#[0-9]+]]
+// HAS_ERRNO: declare float @nanf(i8*) [[PURE]]
+// HAS_ERRNO: declare x86_fp80 @nanl(i8*) [[PURE]]
+// HAS_ERRNO: declare fp128 @nanf128(i8*) [[PURE]]
 
-  __builtin_nans(c);        __builtin_nansf(c);       __builtin_nansl(c);  
+  __builtin_nans(c);        __builtin_nansf(c);       __builtin_nansl(c); __builtin_nansf128(c);
 
-// NO__ERRNO: declare double @nans(i8*) [[READNONE]]
-// NO__ERRNO: declare float @nansf(i8*) [[READNONE]]
-// NO__ERRNO: declare x86_fp80 @nansl(i8*) [[READNONE]]
-// HAS_ERRNO: declare double @nans(i8*) [[READNONE]]
-// HAS_ERRNO: declare float @nansf(i8*) [[READNONE]]
-// HAS_ERRNO: declare x86_fp80 @nansl(i8*) [[READNONE]]
+// NO__ERRNO: declare double @nans(i8*) [[PURE]]
+// NO__ERRNO: declare float @nansf(i8*) [[PURE]]
+// NO__ERRNO: declare x86_fp80 @nansl(i8*) [[PURE]]
+// NO__ERRNO: declare fp128 @nansf128(i8*) [[PURE]]
+// HAS_ERRNO: declare double @nans(i8*) [[PURE]]
+// HAS_ERRNO: declare float @nansf(i8*) [[PURE]]
+// HAS_ERRNO: declare x86_fp80 @nansl(i8*) [[PURE]]
+// HAS_ERRNO: declare fp128 @nansf128(i8*) [[PURE]]
 
   __builtin_pow(f,f);        __builtin_powf(f,f);       __builtin_powl(f,f);
 
@@ -179,7 +188,7 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // NO__ERRNO: declare double @cbrt(double) [[READNONE]]
 // NO__ERRNO: declare float @cbrtf(float) [[READNONE]]
 // NO__ERRNO: declare x86_fp80 @cbrtl(x86_fp80) [[READNONE]]
-// HAS_ERRNO: declare double @cbrt(double) [[READNONE]]
+// HAS_ERRNO: declare double @cbrt(double) [[READNONE:#[0-9]+]]
 // HAS_ERRNO: declare float @cbrtf(float) [[READNONE]]
 // HAS_ERRNO: declare x86_fp80 @cbrtl(x86_fp80) [[READNONE]]
 
@@ -287,6 +296,10 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // HAS_ERRNO_GNU: declare double @llvm.fma.f64(double, double, double) [[READNONE_INTRINSIC:#[0-9]+]]
 // HAS_ERRNO_GNU: declare float @llvm.fma.f32(float, float, float) [[READNONE_INTRINSIC]]
 // HAS_ERRNO_GNU: declare x86_fp80 @llvm.fma.f80(x86_fp80, x86_fp80, x86_fp80) [[READNONE_INTRINSIC]]
+
+// HAS_ERRNO_ANDROID: declare double @llvm.fma.f64(double, double, double) [[READNONE_INTRINSIC:#[0-9]+]]
+// HAS_ERRNO_ANDROID: declare float @llvm.fma.f32(float, float, float) [[READNONE_INTRINSIC]]
+// HAS_ERRNO_ANDROID: declare x86_fp80 @llvm.fma.f80(x86_fp80, x86_fp80, x86_fp80) [[READNONE_INTRINSIC]]
 
 // HAS_ERRNO_WIN: declare double @llvm.fma.f64(double, double, double) [[READNONE_INTRINSIC:#[0-9]+]]
 // HAS_ERRNO_WIN: declare float @llvm.fma.f32(float, float, float) [[READNONE_INTRINSIC]]
@@ -568,11 +581,14 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // NO__ERRNO: attributes [[READNONE]] = { {{.*}}readnone{{.*}} }
 // NO__ERRNO: attributes [[READNONE_INTRINSIC]] = { {{.*}}readnone{{.*}} }
 // NO__ERRNO: attributes [[NOT_READNONE]] = { nounwind "correctly{{.*}} }
+// NO__ERRNO: attributes [[PURE]] = { {{.*}}readonly{{.*}} }
 
 // HAS_ERRNO: attributes [[NOT_READNONE]] = { nounwind "correctly{{.*}} }
 // HAS_ERRNO: attributes [[READNONE_INTRINSIC]] = { {{.*}}readnone{{.*}} }
+// HAS_ERRNO: attributes [[PURE]] = { {{.*}}readonly{{.*}} }
 // HAS_ERRNO: attributes [[READNONE]] = { {{.*}}readnone{{.*}} }
 
 // HAS_ERRNO_GNU: attributes [[READNONE_INTRINSIC]] = { {{.*}}readnone{{.*}} }
+// HAS_ERRNO_ANDROID: attributes [[READNONE_INTRINSIC]] = { {{.*}}readnone{{.*}} }
 // HAS_ERRNO_WIN: attributes [[READNONE_INTRINSIC]] = { {{.*}}readnone{{.*}} }
 

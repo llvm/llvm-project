@@ -24,7 +24,7 @@ namespace comments {
 ///
 /// Due to a variety of comment styles, it considers the following as "a brief
 /// description", in order of priority:
-/// \li a \\brief or \\short command,
+/// \li a \or \\short command,
 /// \li the first paragraph,
 /// \li a \\result or \\return or \\returns paragraph.
 class BriefParser {

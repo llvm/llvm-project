@@ -108,7 +108,7 @@ def availability(issue):
   if status == 'unknown':
     avail = 'Unknown'
     avail_style = ' class="none"'
-  elif status == '6':
+  elif status == '7':
     avail = 'SVN'
     avail_style = ' class="svn"'
   elif re.match('^[0-9]+\.?[0-9]*', status):
@@ -128,6 +128,9 @@ def availability(issue):
     avail_style = ' class="na"'
   elif status == 'na lib':
     avail = 'N/A (Library DR)'
+    avail_style = ' class="na"'
+  elif status == 'na abi':
+    avail = 'N/A (ABI constraint)'
     avail_style = ' class="na"'
   elif status.startswith('sup '):
     dup = status.split(' ', 1)[1]

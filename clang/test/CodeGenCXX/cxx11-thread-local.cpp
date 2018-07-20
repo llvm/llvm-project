@@ -166,7 +166,8 @@ int f() {
 // DARWIN: call cxx_fast_tlscc void @_ZTHN1XIiE1mE()
 // CHECK: ret {{.*}}* @_ZN1XIiE1mE
 
-// CHECK: define internal {{.*}} @[[VF_M_INIT]]()
+// LINUX: define internal void @[[VF_M_INIT]]()
+// DARWIN: define internal cxx_fast_tlscc void @[[VF_M_INIT]]()
 // LINUX-SAME: comdat($_ZN1VIfE1mE)
 // DARWIN-NOT: comdat
 // CHECK: load i8, i8* bitcast (i64* @_ZGVN1VIfE1mE to i8*)
@@ -178,7 +179,8 @@ int f() {
 // CHECK: store i64 1, i64* @_ZGVN1VIfE1mE
 // CHECK: br label
 
-// CHECK: define internal {{.*}} @[[XF_M_INIT]]()
+// LINUX: define internal void @[[XF_M_INIT]]()
+// DARWIN: define internal cxx_fast_tlscc void @[[XF_M_INIT]]()
 // LINUX-SAME: comdat($_ZN1XIfE1mE)
 // DARWIN-NOT: comdat
 // CHECK: load i8, i8* bitcast (i64* @_ZGVN1XIfE1mE to i8*)
@@ -268,7 +270,8 @@ void set_anon_i() {
 // LINUX-LABEL: define internal i32* @_ZTWN12_GLOBAL__N_16anon_iE()
 // DARWIN-LABEL: define internal cxx_fast_tlscc i32* @_ZTWN12_GLOBAL__N_16anon_iE()
 
-// CHECK: define internal {{.*}} @[[V_M_INIT]]()
+// LINUX: define internal void @[[V_M_INIT]]()
+// DARWIN: define internal cxx_fast_tlscc void @[[V_M_INIT]]()
 // LINUX-SAME: comdat($_ZN1VIiE1mE)
 // DARWIN-NOT: comdat
 // CHECK: load i8, i8* bitcast (i64* @_ZGVN1VIiE1mE to i8*)
@@ -280,7 +283,8 @@ void set_anon_i() {
 // CHECK: store i64 1, i64* @_ZGVN1VIiE1mE
 // CHECK: br label
 
-// CHECK: define internal {{.*}} @[[X_M_INIT]]()
+// LINUX: define internal void @[[X_M_INIT]]()
+// DARWIN: define internal cxx_fast_tlscc void @[[X_M_INIT]]()
 // LINUX-SAME: comdat($_ZN1XIiE1mE)
 // DARWIN-NOT: comdat
 // CHECK: load i8, i8* bitcast (i64* @_ZGVN1XIiE1mE to i8*)

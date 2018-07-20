@@ -32,6 +32,7 @@ typedef unsigned long NSUInteger;
 
 @interface NSDictionary (SomeCategory)
 - (void)categoryMethodOnNSDictionary;
+- (id) allKeys;
 @end
 
 @interface NSMutableDictionary : NSDictionary
@@ -342,4 +343,11 @@ void boxedArrayEscape(NSMutableArray *array) {
   globalDictionary = @{ @"array" : array };
   for (id key in array)
     clang_analyzer_warnIfReached(); // expected-warning{{REACHABLE}}
+}
+
+int not_reachable_on_iteration_through_nil() {
+  NSDictionary* d = nil;
+  for (NSString* s in [d allKeys])
+    clang_analyzer_warnIfReached(); // no-warning
+  return 0;
 }

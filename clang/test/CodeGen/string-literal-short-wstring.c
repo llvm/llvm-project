@@ -12,12 +12,12 @@ int main() {
   char b[10] = "\u1120\u0220\U00102030";
 
   // ITANIUM: private unnamed_addr constant [3 x i16] [i16 65, i16 66, i16 0]
-  // MSABI: linkonce_odr unnamed_addr constant [3 x i16] [i16 65, i16 66, i16 0]
+  // MSABI: linkonce_odr dso_local unnamed_addr constant [3 x i16] [i16 65, i16 66, i16 0]
   const wchar_t *foo = L"AB";
 
   // This should convert to utf16.
   // ITANIUM: private unnamed_addr constant [5 x i16] [i16 4384, i16 544, i16 -9272, i16 -9168, i16 0]
-  // MSABI: linkonce_odr unnamed_addr constant [5 x i16] [i16 4384, i16 544, i16 -9272, i16 -9168, i16 0]
+  // MSABI: linkonce_odr dso_local unnamed_addr constant [5 x i16] [i16 4384, i16 544, i16 -9272, i16 -9168, i16 0]
   const wchar_t *bar = L"\u1120\u0220\U00102030";
 
 

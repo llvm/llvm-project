@@ -21,10 +21,19 @@ static llvm::cl::opt<std::string>
                  llvm::cl::init("standalone"));
 
 void InMemoryToolResults::addResult(StringRef Key, StringRef Value) {
-  KVResults.push_back({Key.str(), Value.str()});
+  auto Intern = [&](StringRef &V) {
+    auto R = Strings.insert(V);
+    if (R.second) { // A new entry, create a new string copy.
+      *R.first = StringsPool.save(V);
+    }
+    V = *R.first;
+  };
+  Intern(Key);
+  Intern(Value);
+  KVResults.push_back({Key, Value});
 }
 
-std::vector<std::pair<std::string, std::string>>
+std::vector<std::pair<llvm::StringRef, llvm::StringRef>>
 InMemoryToolResults::AllKVResults() {
   return KVResults;
 }
@@ -96,10 +105,13 @@ createExecutorFromCommandLineArgs(int &argc, const char **argv,
 }
 
 // This anchor is used to force the linker to link in the generated object file
-// and thus register the StandaloneToolExecutorPlugin.
+// and thus register the StandaloneToolExecutorPlugin etc.
 extern volatile int StandaloneToolExecutorAnchorSource;
+extern volatile int AllTUsToolExecutorAnchorSource;
 static int LLVM_ATTRIBUTE_UNUSED StandaloneToolExecutorAnchorDest =
     StandaloneToolExecutorAnchorSource;
+static int LLVM_ATTRIBUTE_UNUSED AllTUsToolExecutorAnchorDest =
+    AllTUsToolExecutorAnchorSource;
 
 } // end namespace tooling
 } // end namespace clang

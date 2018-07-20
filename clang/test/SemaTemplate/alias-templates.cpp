@@ -256,12 +256,14 @@ namespace PR31514 {
 }
 
 namespace an_alias_template_is_not_a_class_template {
-  template<typename T> using Foo = int; // expected-note 2{{here}}
+  template<typename T> using Foo = int; // expected-note 3{{here}}
   Foo x; // expected-error {{use of alias template 'Foo' requires template arguments}}
   Foo<> y; // expected-error {{too few template arguments for alias template 'Foo'}}
+  int z = Foo(); // expected-error {{use of alias template 'Foo' requires template arguments}}
 
-  template<template<typename> class Bar> void f() { // expected-note 2{{here}}
+  template<template<typename> class Bar> void f() { // expected-note 3{{here}}
     Bar x; // expected-error {{use of template template parameter 'Bar' requires template arguments}}
     Bar<> y; // expected-error {{too few template arguments for template template parameter 'Bar'}}
+    int z = Bar(); // expected-error {{use of template template parameter 'Bar' requires template arguments}}
   }
 }

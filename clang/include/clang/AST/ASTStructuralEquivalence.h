@@ -1,4 +1,4 @@
-//===--- ASTStructuralEquivalence.h - ---------------------------*- C++ -*-===//
+//===- ASTStructuralEquivalence.h -------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -19,6 +19,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Optional.h"
 #include <deque>
+#include <utility>
 
 namespace clang {
 
@@ -28,6 +29,14 @@ class DiagnosticBuilder;
 class QualType;
 class RecordDecl;
 class SourceLocation;
+
+/// \brief Whether to perform a normal or minimal equivalence check.
+/// In case of `Minimal`, we do not perform a recursive check of decls with
+/// external storage.
+enum class StructuralEquivalenceKind {
+  Default,
+  Minimal,
+};
 
 struct StructuralEquivalenceContext {
   /// AST contexts for which we are checking structural equivalence.
@@ -46,6 +55,8 @@ struct StructuralEquivalenceContext {
   /// (which we have already complained about).
   llvm::DenseSet<std::pair<Decl *, Decl *>> &NonEquivalentDecls;
 
+  StructuralEquivalenceKind EqKind;
+
   /// Whether we're being strict about the spelling of types when
   /// unifying two types.
   bool StrictTypeSpelling;
@@ -57,27 +68,35 @@ struct StructuralEquivalenceContext {
   bool Complain;
 
   /// \c true if the last diagnostic came from ToCtx.
-  bool LastDiagFromC2;
+  bool LastDiagFromC2 = false;
 
   StructuralEquivalenceContext(
       ASTContext &FromCtx, ASTContext &ToCtx,
       llvm::DenseSet<std::pair<Decl *, Decl *>> &NonEquivalentDecls,
+      StructuralEquivalenceKind EqKind,
       bool StrictTypeSpelling = false, bool Complain = true,
       bool ErrorOnTagTypeMismatch = false)
       : FromCtx(FromCtx), ToCtx(ToCtx), NonEquivalentDecls(NonEquivalentDecls),
-        StrictTypeSpelling(StrictTypeSpelling),
-        ErrorOnTagTypeMismatch(ErrorOnTagTypeMismatch), Complain(Complain),
-        LastDiagFromC2(false) {}
+        EqKind(EqKind), StrictTypeSpelling(StrictTypeSpelling),
+        ErrorOnTagTypeMismatch(ErrorOnTagTypeMismatch), Complain(Complain) {}
 
   DiagnosticBuilder Diag1(SourceLocation Loc, unsigned DiagID);
   DiagnosticBuilder Diag2(SourceLocation Loc, unsigned DiagID);
 
   /// Determine whether the two declarations are structurally
   /// equivalent.
-  bool IsStructurallyEquivalent(Decl *D1, Decl *D2);
+  /// Implementation functions (all static functions in
+  /// ASTStructuralEquivalence.cpp) must never call this function because that
+  /// will wreak havoc the internal state (\c DeclsToCheck and
+  /// \c TentativeEquivalences members) and can cause faulty equivalent results.
+  bool IsEquivalent(Decl *D1, Decl *D2);
 
   /// Determine whether the two types are structurally equivalent.
-  bool IsStructurallyEquivalent(QualType T1, QualType T2);
+  /// Implementation functions (all static functions in
+  /// ASTStructuralEquivalence.cpp) must never call this function because that
+  /// will wreak havoc the internal state (\c DeclsToCheck and
+  /// \c TentativeEquivalences members) and can cause faulty equivalent results.
+  bool IsEquivalent(QualType T1, QualType T2);
 
   /// Find the index of the given anonymous struct/union within its
   /// context.
@@ -98,6 +117,7 @@ private:
   /// \returns true if an error occurred, false otherwise.
   bool Finish();
 };
+
 } // namespace clang
 
 #endif // LLVM_CLANG_AST_ASTSTRUCTURALEQUIVALENCE_H

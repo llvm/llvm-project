@@ -474,3 +474,12 @@ char radar_11125445_memcopythenlogfirstbyte(const char *input, size_t length) {
   free(bytes);
   return x;
 }
+
+struct S {
+  char f;
+};
+
+void nocrash_on_locint_offset(void *addr, void* from, struct S s) {
+  int iAdd = (int) addr;
+  memcpy(((void *) &(s.f)), from, iAdd);
+}

@@ -270,8 +270,10 @@ void NumberObjectConversionChecker::checkASTCodeBody(const Decl *D,
                            hasRHS(SuspiciousNumberObjectExprM)));
 
   auto ConversionThroughBranchingM =
-      ifStmt(hasCondition(SuspiciousNumberObjectExprM))
-      .bind("pedantic");
+      ifStmt(allOf(
+          hasCondition(SuspiciousNumberObjectExprM),
+          unless(hasConditionVariableStatement(declStmt())
+      ))).bind("pedantic");
 
   auto ConversionThroughCallM =
       callExpr(hasAnyArgument(allOf(hasType(SuspiciousScalarTypeM),

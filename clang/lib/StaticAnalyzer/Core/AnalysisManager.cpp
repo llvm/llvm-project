@@ -26,10 +26,12 @@ AnalysisManager::AnalysisManager(
                 // Adding LoopExit elements to the CFG is a requirement for loop
                 // unrolling.
                 Options.includeLoopExitInCFG() || Options.shouldUnrollLoops(),
+                Options.includeScopesInCFG(),
                 Options.shouldSynthesizeBodies(),
                 Options.shouldConditionalizeStaticInitializers(),
                 /*addCXXNewAllocator=*/true,
                 Options.includeRichConstructorsInCFG(),
+                Options.shouldElideConstructors(),
                 injector),
       Ctx(ASTCtx), Diags(diags), LangOpts(lang), PathConsumers(PDC),
       CreateStoreMgr(storemgr), CreateConstraintMgr(constraintmgr),

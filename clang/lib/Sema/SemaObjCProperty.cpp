@@ -104,7 +104,7 @@ static void checkPropertyDeclWithOwnership(Sema &S,
     << propertyLifetime;
 }
 
-/// \brief Check this Objective-C property against a property declared in the
+/// Check this Objective-C property against a property declared in the
 /// given protocol.
 static void
 CheckPropertyAgainstProtocol(Sema &S, ObjCPropertyDecl *Prop,
@@ -618,7 +618,7 @@ ObjCPropertyDecl *Sema::CreatePropertyDecl(Scope *S,
     TInfo = Context.getTrivialTypeSourceInfo(T, TLoc);
   }
 
-  DeclContext *DC = cast<DeclContext>(CDecl);
+  DeclContext *DC = CDecl;
   ObjCPropertyDecl *PDecl = ObjCPropertyDecl::Create(Context, DC,
                                                      FD.D.getIdentifierLoc(),
                                                      PropertyId, AtLoc, 
@@ -897,14 +897,24 @@ SelectPropertyForSynthesisFromProtocols(Sema &S, SourceLocation AtLoc,
                                                  : HasUnexpectedAttribute;
         Mismatches.push_back({Prop, Kind, AttributeName});
       };
-      if (isIncompatiblePropertyAttribute(OriginalAttributes, Attr,
+      // The ownership might be incompatible unless the property has no explicit
+      // ownership.
+      bool HasOwnership = (Attr & (ObjCPropertyDecl::OBJC_PR_retain |
+                                   ObjCPropertyDecl::OBJC_PR_strong |
+                                   ObjCPropertyDecl::OBJC_PR_copy |
+                                   ObjCPropertyDecl::OBJC_PR_assign |
+                                   ObjCPropertyDecl::OBJC_PR_unsafe_unretained |
+                                   ObjCPropertyDecl::OBJC_PR_weak)) != 0;
+      if (HasOwnership &&
+          isIncompatiblePropertyAttribute(OriginalAttributes, Attr,
                                           ObjCPropertyDecl::OBJC_PR_copy)) {
         Diag(OriginalAttributes & ObjCPropertyDecl::OBJC_PR_copy, "copy");
         continue;
       }
-      if (areIncompatiblePropertyAttributes(
-              OriginalAttributes, Attr, ObjCPropertyDecl::OBJC_PR_retain |
-                                            ObjCPropertyDecl::OBJC_PR_strong)) {
+      if (HasOwnership && areIncompatiblePropertyAttributes(
+                              OriginalAttributes, Attr,
+                              ObjCPropertyDecl::OBJC_PR_retain |
+                                  ObjCPropertyDecl::OBJC_PR_strong)) {
         Diag(OriginalAttributes & (ObjCPropertyDecl::OBJC_PR_retain |
                                    ObjCPropertyDecl::OBJC_PR_strong),
              "retain (or strong)");
@@ -1819,7 +1829,7 @@ static bool SuperClassImplementsProperty(ObjCInterfaceDecl *IDecl,
   return false;
 }
 
-/// \brief Default synthesizes all properties which must be synthesized
+/// Default synthesizes all properties which must be synthesized
 /// in class's \@implementation.
 void Sema::DefaultSynthesizeProperties(Scope *S, ObjCImplDecl *IMPDecl,
                                        ObjCInterfaceDecl *IDecl,

@@ -39,6 +39,11 @@
 // MS-DIAG: call void @__cfi_slowpath_diag(i64 4195979634929632483, i8* %{{.*}}, {{.*}}@[[DATA]]{{.*}}) {{.*}}, !nosanitize
 // MS-TRAP: call void @__cfi_slowpath(i64 4195979634929632483, i8* %{{.*}}) {{.*}}, !nosanitize
 
+// ITANIUM-DIAG: declare void @__cfi_slowpath_diag(
+// ITANIUM-TRAP: declare void @__cfi_slowpath(
+// MS-DIAG: declare dso_local void @__cfi_slowpath_diag(
+// MS-TRAP: declare dso_local void @__cfi_slowpath(
+
 void caller(void (*f)()) {
   f();
 }
@@ -49,7 +54,7 @@ void caller(void (*f)()) {
 // CHECK: define internal void @g({{.*}} !type [[TVOID:![0-9]+]] !type [[TVOID_GENERALIZED:![0-9]+]] !type [[TVOID_ID:![0-9]+]]
 static void g(void) {}
 
-// CHECK: declare void @h({{[^!]*$}}
+// CHECK: declare {{(dso_local )?}}void @h({{[^!]*$}}
 void h(void);
 
 typedef void (*Fn)(void);
@@ -60,11 +65,14 @@ Fn h1() {
   return &h;
 }
 
-// CHECK: define void @bar({{.*}} !type [[TNOPROTO:![0-9]+]] !type [[TNOPROTO_GENERALIZED:![0-9]+]] !type [[TNOPROTO_ID:![0-9]+]]
+// CHECK: define {{(dso_local )?}}void @bar({{.*}} !type [[TNOPROTO:![0-9]+]] !type [[TNOPROTO_GENERALIZED:![0-9]+]] !type [[TNOPROTO_ID:![0-9]+]]
 // ITANIUM: define available_externally void @foo({{[^!]*$}}
-// MS: define linkonce_odr void @foo({{.*}} !type [[TNOPROTO]] !type [[TNOPROTO_GENERALIZED:![0-9]+]] !type [[TNOPROTO_ID]]
+// MS: define linkonce_odr dso_local void @foo({{.*}} !type [[TNOPROTO]] !type [[TNOPROTO_GENERALIZED:![0-9]+]] !type [[TNOPROTO_ID]]
 inline void foo() {}
 void bar() { foo(); }
+
+// ITANIUM: define weak void @__cfi_check
+// MS: define weak dso_local void @__cfi_check
 
 // CHECK: !{i32 4, !"Cross-DSO CFI", i32 1}
 

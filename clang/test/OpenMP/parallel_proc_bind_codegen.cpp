@@ -43,14 +43,14 @@ int main() {
 // CHECK-LABEL: @main
 // CHECK:       [[GTID:%.+]] = call {{.*}}i32 @__kmpc_global_thread_num([[IDENT_T_TY]]* [[DEF_LOC_2]])
 // CHECK:       call {{.*}}void @__kmpc_push_proc_bind([[IDENT_T_TY]]* [[DEF_LOC_2]], i32 [[GTID]], i32 4)
-// CHECK:       call {{.*}}void (%ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(
+// CHECK:       call {{.*}}void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(
 // CHECK:       call {{.*}}void @__kmpc_push_proc_bind([[IDENT_T_TY]]* [[DEF_LOC_2]], i32 [[GTID]], i32 3)
-// CHECK:       call {{.*}}void (%ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(
+// CHECK:       call {{.*}}void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(
 
 // CHECK-LABEL: @{{.+}}tmain
 // CHECK:       [[GTID:%.+]] = call {{.*}}i32 @__kmpc_global_thread_num([[IDENT_T_TY]]* [[DEF_LOC_2]])
 // CHECK:       call {{.*}}void @__kmpc_push_proc_bind([[IDENT_T_TY]]* [[DEF_LOC_2]], i32 [[GTID]], i32 2)
-// CHECK:       call {{.*}}void (%ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(
+// CHECK:       call {{.*}}void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(
 // CHECK:       ret i32 0
 // CHECK-NEXT:  }
 

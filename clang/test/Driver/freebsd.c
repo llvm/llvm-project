@@ -36,6 +36,33 @@
 // RUN:   | FileCheck --check-prefix=CHECK-LIB32PATHS %s
 // CHECK-LIB32PATHS: libraries: ={{.*:?}}/usr/lib32
 //
+// Check that O32 MIPS uses /usr/lib32 on a 64-bit tree.
+//
+// RUN: %clang -target mips-freebsd12 %s \
+// RUN:   --sysroot=%S/Inputs/multiarch_freebsd64_tree -print-search-dirs 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-LIB32PATHS %s
+//
+// Check that MIPS passes the correct linker emulation.
+//
+// RUN: %clang -target mips-freebsd %s -### %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-MIPS-LD %s
+// CHECK-MIPS-LD: ld{{.*}}" {{.*}} "-m" "elf32btsmip_fbsd"
+// RUN: %clang -target mipsel-freebsd %s -### %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-MIPSEL-LD %s
+// CHECK-MIPSEL-LD: ld{{.*}}" {{.*}} "-m" "elf32ltsmip_fbsd"
+// RUN: %clang -target mips64-freebsd %s -### %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-MIPS64-LD %s
+// CHECK-MIPS64-LD: ld{{.*}}" {{.*}} "-m" "elf64btsmip_fbsd"
+// RUN: %clang -target mips64el-freebsd %s -### %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-MIPS64EL-LD %s
+// CHECK-MIPS64EL-LD: ld{{.*}}" {{.*}} "-m" "elf64ltsmip_fbsd"
+// RUN: %clang -target mips64-freebsd -mabi=n32 %s -### %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-MIPSN32-LD %s
+// CHECK-MIPSN32-LD: ld{{.*}}" {{.*}} "-m" "elf32btsmipn32_fbsd"
+// RUN: %clang -target mips64el-freebsd -mabi=n32 %s -### %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-MIPSN32EL-LD %s
+// CHECK-MIPSN32EL-LD: ld{{.*}}" {{.*}} "-m" "elf32ltsmipn32_fbsd"
+//
 // Check that the new linker flags are passed to FreeBSD
 // RUN: %clang -no-canonical-prefixes -target x86_64-pc-freebsd8 -m32 %s \
 // RUN:   --sysroot=%S/Inputs/multiarch_freebsd64_tree -### 2>&1 \
@@ -142,3 +169,24 @@
 // RUN: %clang -target mips-unknown-freebsd %s -### -G0 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-MIPS-G %s
 // CHECK-MIPS-G: ld{{.*}}" "-G0"
+
+// Check CPU type for MIPS
+// RUN: %clang -target mips-unknown-freebsd -### -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-MIPS-CPU %s
+// RUN: %clang -target mipsel-unknown-freebsd -### -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-MIPS-CPU %s
+// CHECK-MIPS-CPU: "-target-cpu" "mips2"
+
+// Check CPU type for MIPS64
+// RUN: %clang -target mips64-unknown-freebsd -### -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-MIPS64-CPU %s
+// RUN: %clang -target mips64el-unknown-freebsd -### -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-MIPS64-CPU %s
+// CHECK-MIPS64-CPU: "-target-cpu" "mips3"
+
+// Check that the integrated assembler is enabled for MIPS64
+// RUN: %clang -target mips64-unknown-freebsd -### -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-MIPS64-AS %s
+// RUN: %clang -target mips64el-unknown-freebsd -### -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-MIPS64-AS %s
+// CHECK-MIPS64-AS-NOT: "-no-integrated-as"

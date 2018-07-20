@@ -107,7 +107,7 @@ def setDiagBreakpoint(frame, bp_loc, dict):
     target = frame.GetThread().GetProcess().GetTarget()
     diagtool = getDiagtool(target)
     name = subprocess.check_output([diagtool, "find-diagnostic-id", id]).rstrip();
-    # Make sure we only consider errors, warnings, and extentions.
+    # Make sure we only consider errors, warnings, and extensions.
     # FIXME: Make this configurable?
     prefixes = ['err_', 'warn_', 'exp_']
     if len([prefix for prefix in prefixes+[''] if name.startswith(prefix)][0]):
@@ -124,7 +124,7 @@ def enable(exe_ctx, args):
     numOfBreakpoints = target.GetNumBreakpoints()
 
     if args.id:
-        # Make sure we only consider errors, warnings, and extentions.
+        # Make sure we only consider errors, warnings, and extensions.
         # FIXME: Make this configurable?
         prefixes = ['err_', 'warn_', 'exp_']
         if len([prefix for prefix in prefixes+[''] if args.id.startswith(prefix)][0]):

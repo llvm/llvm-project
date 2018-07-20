@@ -4,6 +4,8 @@
 
 // REQUIRES: staticanalyzer
 
+// CHECK: <!-- FILENAME html-multifile-diagnostics.h -->
+
 // CHECK: <h3>Annotated Source Code</h3>
 
 // Make sure it's generated as multi-file HTML output

@@ -45,7 +45,7 @@ public:
   S5(int v) : a(v) {}
   S5 &operator=(S5 &s) {
 #pragma omp target parallel for simd private(a) private(this->a) private(s.a) // expected-error {{expected variable name or data member of current class}}
-    for (int k = 0; k < s.a; ++k)
+    for (int k = 0; k < s.a; ++k) // expected-warning {{Non-trivial type 'S5' is mapped, only trivial types are guaranteed to be mapped correctly}}
       ++s.a;
     return *this;
   }

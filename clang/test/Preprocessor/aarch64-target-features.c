@@ -38,6 +38,7 @@
 // CHECK-NOT: __ARM_SIZEOF_MINIMAL_ENUM 1
 // CHECK-NOT: __ARM_SIZEOF_WCHAR_T 2
 // CHECK-NOT: __ARM_FEATURE_SVE
+// CHECK-NOT: __ARM_FEATURE_DOTPROD
 
 // RUN: %clang -target aarch64_be-eabi -x c -E -dM %s -o - | FileCheck %s -check-prefix CHECK-BIGENDIAN
 // CHECK-BIGENDIAN: __ARM_BIG_ENDIAN 1
@@ -89,6 +90,21 @@
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+sve -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE %s
 // CHECK-SVE: __ARM_FEATURE_SVE 1
 
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv8.2a+dotprod -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-DOTPROD %s
+// CHECK-DOTPROD: __ARM_FEATURE_DOTPROD 1
+
+// RUN: %clang -target aarch64-none-linux-gnueabi -march=armv8.2a+fp16 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-FULLFP16-VECTOR-SCALAR %s
+// CHECK-FULLFP16-VECTOR-SCALAR: #define __ARM_FEATURE_FP16_SCALAR_ARITHMETIC 1
+// CHECK-FULLFP16-VECTOR-SCALAR: #define __ARM_FEATURE_FP16_VECTOR_ARITHMETIC 1
+// CHECK-FULLFP16-VECTOR-SCALAR: #define __ARM_FP 0xE
+// CHECK-FULLFP16-VECTOR-SCALAR: #define __ARM_FP16_FORMAT_IEEE 1
+
+// RUN: %clang -target aarch64-none-linux-gnueabi -march=armv8.2a+fp16+nosimd -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-FULLFP16-SCALAR %s
+// CHECK-FULLFP16-SCALAR:       #define __ARM_FEATURE_FP16_SCALAR_ARITHMETIC 1
+// CHECK-FULLFP16-SCALAR-NOT:   #define __ARM_FEATURE_FP16_VECTOR_ARITHMETIC 1
+// CHECK-FULLFP16-SCALAR:       #define __ARM_FP 0xE
+// CHECK-FULLFP16-SCALAR:       #define __ARM_FP16_FORMAT_IEEE 1
+
 // ================== Check whether -mtune accepts mixed-case features.
 // RUN: %clang -target aarch64 -mtune=CYCLONE -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-MTUNE-CYCLONE %s
 // CHECK-MTUNE-CYCLONE: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-feature" "+neon" "-target-feature" "+zcm" "-target-feature" "+zcz"
@@ -102,6 +118,7 @@
 // RUN: %clang -target aarch64 -mcpu=exynos-m1 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-MCPU-M1 %s
 // RUN: %clang -target aarch64 -mcpu=exynos-m2 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-MCPU-M1 %s
 // RUN: %clang -target aarch64 -mcpu=exynos-m3 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-MCPU-M1 %s
+// RUN: %clang -target aarch64 -mcpu=exynos-m4 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-MCPU-M1 %s
 // RUN: %clang -target aarch64 -mcpu=kryo -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-MCPU-KRYO %s
 // RUN: %clang -target aarch64 -mcpu=thunderx2t99 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-MCPU-THUNDERX2T99 %s
 // CHECK-MCPU-CYCLONE: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-feature" "+neon" "-target-feature" "+crypto" "-target-feature" "+zcm" "-target-feature" "+zcz"

@@ -1,14 +1,14 @@
 // RUN: %clang_cc1 -triple i386-pc-win32 %s -emit-llvm -fms-extensions -fms-compatibility -fno-rtti -o - | FileCheck %s
 
-// CHECK-NOT: @"\01??_7C@@6B@"
+// CHECK-NOT: @"??_7C@@6B@"
 
-// CHECK-DAG: @"\01??_7A2@@6B@"
+// CHECK-DAG: @"??_7A2@@6B@"
 
-// CHECK-DAG: @"\01??_7B2@@6B@"
+// CHECK-DAG: @"??_7B2@@6B@"
 
-// CHECK-NOT: @"\01??_7B1@@6B@"
+// CHECK-NOT: @"??_7B1@@6B@"
 
-// CHECK-NOT: @"\01??_7A1@@6B@"
+// CHECK-NOT: @"??_7A1@@6B@"
 
 struct __declspec(novtable) A1 {
   virtual void a();

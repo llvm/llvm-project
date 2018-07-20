@@ -42,7 +42,7 @@ public:
   }
 };
 
-// CHECK: #pragma omp distribute parallel for simd private(this->a) private(this->a) private(T::a)
+// CHECK: #pragma omp distribute parallel for simd private(this->a) private(this->a) private(T::a){{$}}
 // CHECK: #pragma omp distribute parallel for simd private(this->a) private(this->a) linear(k)
 // CHECK: #pragma omp distribute parallel for simd private(this->a) private(this->a) private(this->S::a)
 

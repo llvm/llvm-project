@@ -20,7 +20,7 @@
 namespace clang {
   class Sema;
 
-  /// \brief An abstract interface that should be implemented by
+  /// An abstract interface that should be implemented by
   /// clients that read ASTs and then require further semantic
   /// analysis of the entities in those ASTs.
   class SemaConsumer : public ASTConsumer {
@@ -30,12 +30,12 @@ namespace clang {
       ASTConsumer::SemaConsumer = true;
     }
 
-    /// \brief Initialize the semantic consumer with the Sema instance
+    /// Initialize the semantic consumer with the Sema instance
     /// being used to perform semantic analysis on the abstract syntax
     /// tree.
     virtual void InitializeSema(Sema &S) {}
 
-    /// \brief Inform the semantic consumer that Sema is no longer available.
+    /// Inform the semantic consumer that Sema is no longer available.
     virtual void ForgetSema() {}
 
     // isa/cast/dyn_cast support

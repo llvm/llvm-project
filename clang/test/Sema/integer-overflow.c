@@ -158,6 +158,21 @@ uint64_t check_integer_overflows(int i) {
   return ((4608 * 1024 * 1024) + ((uint64_t)(4608 * 1024 * 1024)));
 }
 
+void check_integer_overflows_in_function_calls() {
+// expected-warning@+1 {{overflow in expression; result is 536870912 with type 'int'}}
+  (void)f0(4608 * 1024 * 1024);
+
+// expected-warning@+1 {{overflow in expression; result is 536870912 with type 'int'}}
+  uint64_t x = f0(4608 * 1024 * 1024);
+
+// expected-warning@+2 {{overflow in expression; result is 536870912 with type 'int'}}
+  uint64_t (*f0_ptr)(uint64_t) = &f0;
+  (void)(*f0_ptr)(4608 * 1024 * 1024);
+
+// expected-warning@+1 {{overflow in expression; result is 536870912 with type 'int'}}
+  (void)f2(0, f0(4608 * 1024 * 1024));
+}
+
 struct s {
   unsigned x;
   unsigned y;

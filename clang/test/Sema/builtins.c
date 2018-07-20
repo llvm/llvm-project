@@ -248,3 +248,31 @@ char * Test20(char *p, const char *in, unsigned n)
 
     return buf;
 }
+
+void test21(const int *ptr) {
+  __sync_fetch_and_add(ptr, 1); // expected-error{{address argument to atomic builtin cannot be const-qualified ('const int *' invalid)}}
+  __atomic_fetch_add(ptr, 1, 0);  // expected-error {{address argument to atomic operation must be a pointer to non-const type ('const int *' invalid)}}
+}
+
+void test22(void) {
+  (void)__builtin_signbit(); // expected-error{{too few arguments to function call, expected 1, have 0}}
+  (void)__builtin_signbit(1.0, 2.0, 3.0); // expected-error{{too many arguments to function call, expected 1, have 3}}
+  (void)__builtin_signbit(1); // expected-error {{floating point classification requires argument of floating point type (passed in 'int')}}
+  (void)__builtin_signbit(1.0);
+  (void)__builtin_signbit(1.0f);
+  (void)__builtin_signbit(1.0L);
+
+  (void)__builtin_signbitf(); // expected-error{{too few arguments to function call, expected 1, have 0}}
+  (void)__builtin_signbitf(1.0, 2.0, 3.0); // expected-error{{too many arguments to function call, expected 1, have 3}}
+  (void)__builtin_signbitf(1);
+  (void)__builtin_signbitf(1.0);
+  (void)__builtin_signbitf(1.0f);
+  (void)__builtin_signbitf(1.0L);
+
+  (void)__builtin_signbitl(); // expected-error{{too few arguments to function call, expected 1, have 0}}
+  (void)__builtin_signbitl(1.0, 2.0, 3.0); // expected-error{{too many arguments to function call, expected 1, have 3}}
+  (void)__builtin_signbitl(1);
+  (void)__builtin_signbitl(1.0);
+  (void)__builtin_signbitl(1.0f);
+  (void)__builtin_signbitl(1.0L);
+}

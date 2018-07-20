@@ -281,7 +281,7 @@ def create_analyze_parser(from_build_command):
         '-maxloop',
         metavar='<loop count>',
         type=int,
-        help="""Specifiy the number of times a block can be visited before
+        help="""Specify the number of times a block can be visited before
         giving up. Increase for more comprehensive coverage at a cost of
         speed.""")
     advanced.add_argument(

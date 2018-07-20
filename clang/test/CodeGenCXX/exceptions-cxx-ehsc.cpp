@@ -11,9 +11,9 @@ void caller() {
   may_throw();
 }
 }
-// CHECK-LABEL: define void @"\01?caller@test1@@YAXXZ"(
+// CHECK-LABEL: define dso_local void @"?caller@test1@@YAXXZ"(
 // CHECK: call void @never_throws(
-// CHECK: invoke void @"\01?may_throw@test1@@YAXXZ"(
+// CHECK: invoke void @"?may_throw@test1@@YAXXZ"(
 
 namespace test2 {
 struct Cleanup { ~Cleanup(); };
@@ -26,6 +26,6 @@ void caller() {
   may_throw();
 }
 }
-// CHECK-LABEL: define void @"\01?caller@test2@@YAXXZ"(
+// CHECK-LABEL: define dso_local void @"?caller@test2@@YAXXZ"(
 // CHECK: invoke void @throws_int(
-// CHECK: invoke void @"\01?may_throw@test2@@YAXXZ"(
+// CHECK: invoke void @"?may_throw@test2@@YAXXZ"(

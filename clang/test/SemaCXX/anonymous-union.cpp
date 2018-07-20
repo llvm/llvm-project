@@ -80,6 +80,10 @@ union { // expected-error{{anonymous unions at namespace or global scope must be
   float float_val;
 };
 
+extern "C++" {
+union { }; // expected-error{{anonymous unions at namespace or global scope must be declared 'static'}}
+}
+
 static union {
   int int_val2; // expected-note{{previous definition is here}}
   float float_val2;

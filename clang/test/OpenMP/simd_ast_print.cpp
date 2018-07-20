@@ -38,7 +38,7 @@ public:
   }
 };
 
-// CHECK: #pragma omp simd aligned(this->a)
+// CHECK: #pragma omp simd aligned(this->a){{$}}
 // CHECK: #pragma omp simd aligned(this->b: 8)
 // CHECK: #pragma omp simd aligned(this->a)
 
@@ -153,7 +153,7 @@ int main (int argc, char **argv) {
   static int *a;
 // CHECK: static int *a;
 #pragma omp simd
-// CHECK-NEXT: #pragma omp simd
+// CHECK-NEXT: #pragma omp simd{{$}}
   for (int i=0; i < 2; ++i)*a=2;
 // CHECK-NEXT: for (int i = 0; i < 2; ++i)
 // CHECK-NEXT: *a = 2;

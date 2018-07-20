@@ -380,6 +380,11 @@ module TargetFeatures {
     module x86_32 { requires x86_32 }
     module x86_64 { requires x86_64 }
   }
+  module riscv {
+    requires riscv
+    module riscv32 { requires riscv32 }
+    module riscv64 { requires riscv64 }
+  }
 }
 
 module DebugSubmodules {
@@ -459,4 +464,14 @@ module innerstructredef {
   module two {
    header "innerstructredef.h"
   }
+}
+
+module template_nontrivial0 {
+  header "template-nontrivial0.h"
+  export *
+}
+
+module template_nontrivial1 {
+  header "template-nontrivial1.h"
+  export *
 }

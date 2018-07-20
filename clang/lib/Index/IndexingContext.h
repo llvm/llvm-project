@@ -10,10 +10,12 @@
 #ifndef LLVM_CLANG_LIB_INDEX_INDEXINGCONTEXT_H
 #define LLVM_CLANG_LIB_INDEX_INDEXINGCONTEXT_H
 
+#include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Index/IndexSymbol.h"
 #include "clang/Index/IndexingAction.h"
+#include "clang/Lex/MacroInfo.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 
@@ -71,9 +73,7 @@ public:
 
   bool shouldIndexFunctionLocalSymbols() const;
 
-  bool shouldIndexImplicitTemplateInsts() const {
-    return false;
-  }
+  bool shouldIndexImplicitInstantiation() const;
 
   static bool isTemplateImplicitInstantiation(const Decl *D);
 
@@ -92,6 +92,15 @@ public:
                        ArrayRef<SymbolRelation> Relations = None,
                        const Expr *RefE = nullptr,
                        const Decl *RefD = nullptr);
+
+  void handleMacroDefined(const IdentifierInfo &Name, SourceLocation Loc,
+                          const MacroInfo &MI);
+
+  void handleMacroUndefined(const IdentifierInfo &Name, SourceLocation Loc,
+                            const MacroInfo &MI);
+
+  void handleMacroReference(const IdentifierInfo &Name, SourceLocation Loc,
+                            const MacroInfo &MD);
 
   bool importedModule(const ImportDecl *ImportD);
 

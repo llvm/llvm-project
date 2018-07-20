@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 import gc
 import os
 import tempfile
@@ -19,15 +20,15 @@ from .util import get_tu
 kInputsDir = os.path.join(os.path.dirname(__file__), 'INPUTS')
 
 
+@contextmanager
 def save_tu(tu):
     """Convenience API to save a TranslationUnit to a file.
 
     Returns the filename it was saved to.
     """
-    _, path = tempfile.mkstemp()
-    tu.save(path)
-
-    return path
+    with tempfile.NamedTemporaryFile() as t:
+        tu.save(t.name)
+        yield t.name
 
 
 class TestTranslationUnit(unittest.TestCase):
@@ -108,15 +109,26 @@ int SOME_DEFINE;
         for i in zip(inc, tu.get_includes()):
             eq(i[0], i[1])
 
+    def test_inclusion_directive(self):
+        src = os.path.join(kInputsDir, 'include.cpp')
+        h1 = os.path.join(kInputsDir, "header1.h")
+        h2 = os.path.join(kInputsDir, "header2.h")
+        h3 = os.path.join(kInputsDir, "header3.h")
+        inc = [h1, h3, h2, h3, h1]
+
+        tu = TranslationUnit.from_source(src, options=TranslationUnit.PARSE_DETAILED_PROCESSING_RECORD)
+        inclusion_directive_files = [c.get_included_file().name for c in tu.cursor.get_children() if c.kind == CursorKind.INCLUSION_DIRECTIVE]
+        for i in zip(inc, inclusion_directive_files):
+            self.assert_normpaths_equal(i[0], i[1])
+
     def test_save(self):
         """Ensure TranslationUnit.save() works."""
 
         tu = get_tu('int foo();')
 
-        path = save_tu(tu)
-        self.assertTrue(os.path.exists(path))
-        self.assertGreater(os.path.getsize(path), 0)
-        os.unlink(path)
+        with save_tu(tu) as path:
+            self.assertTrue(os.path.exists(path))
+            self.assertGreater(os.path.getsize(path), 0)
 
     def test_save_translation_errors(self):
         """Ensure that saving to an invalid directory raises."""
@@ -137,21 +149,18 @@ int SOME_DEFINE;
 
         tu = get_tu('int foo();')
         self.assertEqual(len(tu.diagnostics), 0)
-        path = save_tu(tu)
+        with save_tu(tu) as path:
+            self.assertTrue(os.path.exists(path))
+            self.assertGreater(os.path.getsize(path), 0)
 
-        self.assertTrue(os.path.exists(path))
-        self.assertGreater(os.path.getsize(path), 0)
+            tu2 = TranslationUnit.from_ast_file(filename=path)
+            self.assertEqual(len(tu2.diagnostics), 0)
 
-        tu2 = TranslationUnit.from_ast_file(filename=path)
-        self.assertEqual(len(tu2.diagnostics), 0)
+            foo = get_cursor(tu2, 'foo')
+            self.assertIsNotNone(foo)
 
-        foo = get_cursor(tu2, 'foo')
-        self.assertIsNotNone(foo)
-
-        # Just in case there is an open file descriptor somewhere.
-        del tu2
-
-        os.unlink(path)
+            # Just in case there is an open file descriptor somewhere.
+            del tu2
 
     def test_index_parse(self):
         path = os.path.join(kInputsDir, 'hello.cpp')

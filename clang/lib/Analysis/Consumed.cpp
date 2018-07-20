@@ -1,4 +1,4 @@
-//===- Consumed.cpp --------------------------------------------*- C++ --*-===//
+//===- Consumed.cpp -------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -13,21 +13,29 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/Analyses/Consumed.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
-#include "clang/AST/RecursiveASTVisitor.h"
-#include "clang/AST/StmtCXX.h"
+#include "clang/AST/Stmt.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/Analysis/Analyses/PostOrderCFGView.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
+#include "clang/Basic/LLVM.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorHandling.h"
+#include <cassert>
 #include <memory>
+#include <utility>
 
 // TODO: Adjust states of args to constructors in the same way that arguments to
 //       function calls are handled.
@@ -49,7 +57,7 @@ using namespace clang;
 using namespace consumed;
 
 // Key method definition
-ConsumedWarningsHandlerBase::~ConsumedWarningsHandlerBase() {}
+ConsumedWarningsHandlerBase::~ConsumedWarningsHandlerBase() = default;
 
 static SourceLocation getFirstStmtLoc(const CFGBlock *Block) {
   // Find the source location of the first statement in the block, if the block
@@ -63,7 +71,7 @@ static SourceLocation getFirstStmtLoc(const CFGBlock *Block) {
   if (Block->succ_size() == 1 && *Block->succ_begin())
     return getFirstStmtLoc(*Block->succ_begin());
 
-  return SourceLocation();
+  return {};
 }
 
 static SourceLocation getLastStmtLoc(const CFGBlock *Block) {
@@ -109,7 +117,6 @@ static ConsumedState invertConsumedUnconsumed(ConsumedState State) {
 
 static bool isCallableInState(const CallableWhenAttr *CWAttr,
                               ConsumedState State) {
-  
   for (const auto &S : CWAttr->callableStates()) {
     ConsumedState MappedAttrState = CS_None;
 
@@ -133,7 +140,6 @@ static bool isCallableInState(const CallableWhenAttr *CWAttr,
   
   return false;
 }
-
 
 static bool isConsumableType(const QualType &QT) {
   if (QT->isPointerType() || QT->isReferenceType())
@@ -160,7 +166,6 @@ static bool isSetOnReadPtrType(const QualType &QT) {
     return RD->hasAttr<ConsumableSetOnReadAttr>();
   return false;
 }
-
 
 static bool isKnownState(ConsumedState State) {
   switch (State) {
@@ -270,11 +275,13 @@ static ConsumedState testsFor(const FunctionDecl *FunDecl) {
 }
 
 namespace {
+
 struct VarTestResult {
   const VarDecl *Var;
   ConsumedState TestsFor;
 };
-} // end anonymous::VarTestResult
+
+} // namespace
 
 namespace clang {
 namespace consumed {
@@ -292,7 +299,7 @@ class PropagationInfo {
     IT_BinTest,
     IT_Var,
     IT_Tmp
-  } InfoType;
+  } InfoType = IT_None;
 
   struct BinTestTy {
     const BinaryOperator *Source;
@@ -310,22 +317,19 @@ class PropagationInfo {
   };
   
 public:
-  PropagationInfo() : InfoType(IT_None) {}
-  
+  PropagationInfo() = default;
   PropagationInfo(const VarTestResult &VarTest)
-    : InfoType(IT_VarTest), VarTest(VarTest) {}
-  
+      : InfoType(IT_VarTest), VarTest(VarTest) {}
+
   PropagationInfo(const VarDecl *Var, ConsumedState TestsFor)
-    : InfoType(IT_VarTest) {
-    
+      : InfoType(IT_VarTest) {
     VarTest.Var      = Var;
     VarTest.TestsFor = TestsFor;
   }
   
   PropagationInfo(const BinaryOperator *Source, EffectiveOp EOp,
                   const VarTestResult &LTest, const VarTestResult &RTest)
-    : InfoType(IT_BinTest) {
-    
+      : InfoType(IT_BinTest) {
     BinTest.Source  = Source;
     BinTest.EOp     = EOp;
     BinTest.LTest   = LTest;
@@ -335,8 +339,7 @@ public:
   PropagationInfo(const BinaryOperator *Source, EffectiveOp EOp,
                   const VarDecl *LVar, ConsumedState LTestsFor,
                   const VarDecl *RVar, ConsumedState RTestsFor)
-    : InfoType(IT_BinTest) {
-    
+      : InfoType(IT_BinTest) {
     BinTest.Source         = Source;
     BinTest.EOp            = EOp;
     BinTest.LTest.Var      = LVar;
@@ -346,38 +349,37 @@ public:
   }
   
   PropagationInfo(ConsumedState State)
-    : InfoType(IT_State), State(State) {}
-  
+      : InfoType(IT_State), State(State) {}
   PropagationInfo(const VarDecl *Var) : InfoType(IT_Var), Var(Var) {}
   PropagationInfo(const CXXBindTemporaryExpr *Tmp)
-    : InfoType(IT_Tmp), Tmp(Tmp) {}
+      : InfoType(IT_Tmp), Tmp(Tmp) {}
   
-  const ConsumedState & getState() const {
+  const ConsumedState &getState() const {
     assert(InfoType == IT_State);
     return State;
   }
   
-  const VarTestResult & getVarTest() const {
+  const VarTestResult &getVarTest() const {
     assert(InfoType == IT_VarTest);
     return VarTest;
   }
   
-  const VarTestResult & getLTest() const {
+  const VarTestResult &getLTest() const {
     assert(InfoType == IT_BinTest);
     return BinTest.LTest;
   }
   
-  const VarTestResult & getRTest() const {
+  const VarTestResult &getRTest() const {
     assert(InfoType == IT_BinTest);
     return BinTest.RTest;
   }
   
-  const VarDecl * getVar() const {
+  const VarDecl *getVar() const {
     assert(InfoType == IT_Var);
     return Var;
   }
   
-  const CXXBindTemporaryExpr * getTmp() const {
+  const CXXBindTemporaryExpr *getTmp() const {
     assert(InfoType == IT_Tmp);
     return Tmp;
   }
@@ -405,12 +407,12 @@ public:
     return BinTest.Source;
   }
   
-  inline bool isValid()   const { return InfoType != IT_None;    }
-  inline bool isState()   const { return InfoType == IT_State;   }
-  inline bool isVarTest() const { return InfoType == IT_VarTest; }
-  inline bool isBinTest() const { return InfoType == IT_BinTest; }
-  inline bool isVar()     const { return InfoType == IT_Var;     }
-  inline bool isTmp()     const { return InfoType == IT_Tmp;     }
+  bool isValid() const { return InfoType != IT_None; }
+  bool isState() const { return InfoType == IT_State; }
+  bool isVarTest() const { return InfoType == IT_VarTest; }
+  bool isBinTest() const { return InfoType == IT_BinTest; }
+  bool isVar() const { return InfoType == IT_Var; }
+  bool isTmp() const { return InfoType == IT_Tmp; }
   
   bool isTest() const {
     return InfoType == IT_VarTest || InfoType == IT_BinTest;
@@ -433,15 +435,17 @@ public:
         BinTest.LTest.Var, invertConsumedUnconsumed(BinTest.LTest.TestsFor),
         BinTest.RTest.Var, invertConsumedUnconsumed(BinTest.RTest.TestsFor));
     } else {
-      return PropagationInfo();
+      return {};
     }
   }
 };
 
-static inline void
+} // namespace consumed
+} // namespace clang
+
+static void
 setStateForVarOrTmp(ConsumedStateMap *StateMap, const PropagationInfo &PInfo,
                     ConsumedState State) {
-
   assert(PInfo.isVar() || PInfo.isTmp());
   
   if (PInfo.isVar())
@@ -450,12 +454,14 @@ setStateForVarOrTmp(ConsumedStateMap *StateMap, const PropagationInfo &PInfo,
     StateMap->setState(PInfo.getTmp(), State);
 }
 
+namespace clang {
+namespace consumed {
+
 class ConsumedStmtVisitor : public ConstStmtVisitor<ConsumedStmtVisitor> {
-  
-  typedef llvm::DenseMap<const Stmt *, PropagationInfo> MapType;
-  typedef std::pair<const Stmt *, PropagationInfo> PairType;
-  typedef MapType::iterator InfoEntry;
-  typedef MapType::const_iterator ConstInfoEntry;
+  using MapType = llvm::DenseMap<const Stmt *, PropagationInfo>;
+  using PairType= std::pair<const Stmt *, PropagationInfo>;
+  using InfoEntry = MapType::iterator;
+  using ConstInfoEntry = MapType::const_iterator;
   
   AnalysisDeclContext &AC;
   ConsumedAnalyzer &Analyzer;
@@ -463,17 +469,19 @@ class ConsumedStmtVisitor : public ConstStmtVisitor<ConsumedStmtVisitor> {
   MapType PropagationMap;
 
   InfoEntry findInfo(const Expr *E) {
-    if (auto Cleanups = dyn_cast<ExprWithCleanups>(E))
+    if (const auto Cleanups = dyn_cast<ExprWithCleanups>(E))
       if (!Cleanups->cleanupsHaveSideEffects())
         E = Cleanups->getSubExpr();
     return PropagationMap.find(E->IgnoreParens());
   }
+
   ConstInfoEntry findInfo(const Expr *E) const {
-    if (auto Cleanups = dyn_cast<ExprWithCleanups>(E))
+    if (const auto Cleanups = dyn_cast<ExprWithCleanups>(E))
       if (!Cleanups->cleanupsHaveSideEffects())
         E = Cleanups->getSubExpr();
     return PropagationMap.find(E->IgnoreParens());
   }
+
   void insertInfo(const Expr *E, const PropagationInfo &PI) {
     PropagationMap.insert(PairType(E->IgnoreParens(), PI));
   }
@@ -517,7 +525,7 @@ public:
     if (Entry != PropagationMap.end())
       return Entry->second;
     else
-      return PropagationInfo();
+      return {};
   }
   
   void reset(ConsumedStateMap *NewStateMap) {
@@ -525,13 +533,14 @@ public:
   }
 };
 
+} // namespace consumed
+} // namespace clang
 
 void ConsumedStmtVisitor::forwardInfo(const Expr *From, const Expr *To) {
   InfoEntry Entry = findInfo(From);
   if (Entry != PropagationMap.end())
     insertInfo(To, Entry->second);
 }
-
 
 // Create a new state for To, which is initialized to the state of From.
 // If NS is not CS_None, sets the state of From to NS.
@@ -548,7 +557,6 @@ void ConsumedStmtVisitor::copyInfo(const Expr *From, const Expr *To,
   }
 }
 
-
 // Get the ConsumedState for From
 ConsumedState ConsumedStmtVisitor::getInfo(const Expr *From) {
   InfoEntry Entry = findInfo(From);
@@ -558,7 +566,6 @@ ConsumedState ConsumedStmtVisitor::getInfo(const Expr *From) {
   }
   return CS_None;
 }
-
 
 // If we already have info for To then update it, otherwise create a new entry.
 void ConsumedStmtVisitor::setInfo(const Expr *To, ConsumedState NS) {
@@ -571,8 +578,6 @@ void ConsumedStmtVisitor::setInfo(const Expr *To, ConsumedState NS) {
      insertInfo(To, PropagationInfo(NS));
   }
 }
-
-
 
 void ConsumedStmtVisitor::checkCallability(const PropagationInfo &PInfo,
                                            const FunctionDecl *FunDecl,
@@ -592,7 +597,6 @@ void ConsumedStmtVisitor::checkCallability(const PropagationInfo &PInfo,
     Analyzer.WarningsHandler.warnUseInInvalidState(
       FunDecl->getNameAsString(), PInfo.getVar()->getNameAsString(),
       stateToString(VarState), BlameLoc);
-
   } else {
     ConsumedState TmpState = PInfo.getAsState(StateMap);
 
@@ -603,7 +607,6 @@ void ConsumedStmtVisitor::checkCallability(const PropagationInfo &PInfo,
       FunDecl->getNameAsString(), stateToString(TmpState), BlameLoc);
   }
 }
-
 
 // Factors out common behavior for function, method, and operator calls.
 // Check parameters and set parameter state if necessary.
@@ -681,7 +684,6 @@ bool ConsumedStmtVisitor::handleCall(const CallExpr *Call, const Expr *ObjArg,
   return false;
 }
 
-
 void ConsumedStmtVisitor::propagateReturnType(const Expr *Call,
                                               const FunctionDecl *Fun) {
   QualType RetType = Fun->getCallResultType();
@@ -699,7 +701,6 @@ void ConsumedStmtVisitor::propagateReturnType(const Expr *Call,
   }
 }
 
-
 void ConsumedStmtVisitor::VisitBinaryOperator(const BinaryOperator *BinOp) {
   switch (BinOp->getOpcode()) {
   case BO_LAnd:
@@ -711,7 +712,6 @@ void ConsumedStmtVisitor::VisitBinaryOperator(const BinaryOperator *BinOp) {
     
     if (LEntry != PropagationMap.end() && LEntry->second.isVarTest()) {
       LTest = LEntry->second.getVarTest();
-      
     } else {
       LTest.Var      = nullptr;
       LTest.TestsFor = CS_None;
@@ -719,7 +719,6 @@ void ConsumedStmtVisitor::VisitBinaryOperator(const BinaryOperator *BinOp) {
     
     if (REntry != PropagationMap.end() && REntry->second.isVarTest()) {
       RTest = REntry->second.getVarTest();
-      
     } else {
       RTest.Var      = nullptr;
       RTest.TestsFor = CS_None;
@@ -728,7 +727,6 @@ void ConsumedStmtVisitor::VisitBinaryOperator(const BinaryOperator *BinOp) {
     if (!(LTest.Var == nullptr && RTest.Var == nullptr))
       PropagationMap.insert(PairType(BinOp, PropagationInfo(BinOp,
         static_cast<EffectiveOp>(BinOp->getOpcode() == BO_LOr), LTest, RTest)));
-    
     break;
   }
     
@@ -805,7 +803,6 @@ void ConsumedStmtVisitor::VisitCXXConstructExpr(const CXXConstructExpr *Call) {
   }
 }
 
-
 void ConsumedStmtVisitor::VisitCXXMemberCallExpr(
     const CXXMemberCallExpr *Call) {
   CXXMethodDecl* MD = Call->getMethodDecl();
@@ -816,12 +813,9 @@ void ConsumedStmtVisitor::VisitCXXMemberCallExpr(
   propagateReturnType(Call, MD);
 }
 
-
 void ConsumedStmtVisitor::VisitCXXOperatorCallExpr(
     const CXXOperatorCallExpr *Call) {
-
-  const FunctionDecl *FunDecl =
-    dyn_cast_or_null<FunctionDecl>(Call->getDirectCallee());
+  const auto *FunDecl = dyn_cast_or_null<FunctionDecl>(Call->getDirectCallee());
   if (!FunDecl) return;
 
   if (Call->getOperator() == OO_Equal) {
@@ -831,7 +825,7 @@ void ConsumedStmtVisitor::VisitCXXOperatorCallExpr(
     return;
   }
 
-  if (const CXXMemberCallExpr *MCall = dyn_cast<CXXMemberCallExpr>(Call))
+  if (const auto *MCall = dyn_cast<CXXMemberCallExpr>(Call))
     handleCall(MCall, MCall->getImplicitObjectArgument(), FunDecl);
   else
     handleCall(Call, Call->getArg(0), FunDecl);
@@ -840,7 +834,7 @@ void ConsumedStmtVisitor::VisitCXXOperatorCallExpr(
 }
 
 void ConsumedStmtVisitor::VisitDeclRefExpr(const DeclRefExpr *DeclRef) {
-  if (const VarDecl *Var = dyn_cast_or_null<VarDecl>(DeclRef->getDecl()))
+  if (const auto *Var = dyn_cast_or_null<VarDecl>(DeclRef->getDecl()))
     if (StateMap->getState(Var) != consumed::CS_None)
       PropagationMap.insert(PairType(DeclRef, PropagationInfo(Var)));
 }
@@ -851,20 +845,18 @@ void ConsumedStmtVisitor::VisitDeclStmt(const DeclStmt *DeclS) {
       VisitVarDecl(cast<VarDecl>(DI));
   
   if (DeclS->isSingleDecl())
-    if (const VarDecl *Var = dyn_cast_or_null<VarDecl>(DeclS->getSingleDecl()))
+    if (const auto *Var = dyn_cast_or_null<VarDecl>(DeclS->getSingleDecl()))
       PropagationMap.insert(PairType(DeclS, PropagationInfo(Var)));
 }
 
 void ConsumedStmtVisitor::VisitMaterializeTemporaryExpr(
   const MaterializeTemporaryExpr *Temp) {
-  
   forwardInfo(Temp->GetTemporaryExpr(), Temp);
 }
 
 void ConsumedStmtVisitor::VisitMemberExpr(const MemberExpr *MExpr) {
   forwardInfo(MExpr->getBase(), MExpr);
 }
-
 
 void ConsumedStmtVisitor::VisitParmVarDecl(const ParmVarDecl *Param) {
   QualType ParamType = Param->getType();
@@ -943,10 +935,6 @@ void ConsumedStmtVisitor::VisitVarDecl(const VarDecl *Var) {
     StateMap->setState(Var, consumed::CS_Unknown);
   }
 }
-}} // end clang::consumed::ConsumedStmtVisitor
-
-namespace clang {
-namespace consumed {
 
 static void splitVarStateForIf(const IfStmt *IfNode, const VarTestResult &Test,
                                ConsumedStateMap *ThenStates,
@@ -956,10 +944,8 @@ static void splitVarStateForIf(const IfStmt *IfNode, const VarTestResult &Test,
   if (VarState == CS_Unknown) {
     ThenStates->setState(Test.Var, Test.TestsFor);
     ElseStates->setState(Test.Var, invertConsumedUnconsumed(Test.TestsFor));
-  
   } else if (VarState == invertConsumedUnconsumed(Test.TestsFor)) {
     ThenStates->markUnreachable();
-    
   } else if (VarState == Test.TestsFor) {
     ElseStates->markUnreachable();
   }
@@ -978,28 +964,22 @@ static void splitVarStateForIfBinOp(const PropagationInfo &PInfo,
     if (PInfo.testEffectiveOp() == EO_And) {
       if (LState == CS_Unknown) {
         ThenStates->setState(LTest.Var, LTest.TestsFor);
-        
       } else if (LState == invertConsumedUnconsumed(LTest.TestsFor)) {
         ThenStates->markUnreachable();
-        
       } else if (LState == LTest.TestsFor && isKnownState(RState)) {
         if (RState == RTest.TestsFor)
           ElseStates->markUnreachable();
         else
           ThenStates->markUnreachable();
       }
-      
     } else {
       if (LState == CS_Unknown) {
         ElseStates->setState(LTest.Var,
                              invertConsumedUnconsumed(LTest.TestsFor));
-      
       } else if (LState == LTest.TestsFor) {
         ElseStates->markUnreachable();
-        
       } else if (LState == invertConsumedUnconsumed(LTest.TestsFor) &&
                  isKnownState(RState)) {
-        
         if (RState == RTest.TestsFor)
           ElseStates->markUnreachable();
         else
@@ -1014,7 +994,6 @@ static void splitVarStateForIfBinOp(const PropagationInfo &PInfo,
         ThenStates->setState(RTest.Var, RTest.TestsFor);
       else if (RState == invertConsumedUnconsumed(RTest.TestsFor))
         ThenStates->markUnreachable();
-      
     } else {
       if (RState == CS_Unknown)
         ElseStates->setState(RTest.Var,
@@ -1027,7 +1006,6 @@ static void splitVarStateForIfBinOp(const PropagationInfo &PInfo,
 
 bool ConsumedBlockInfo::allBackEdgesVisited(const CFGBlock *CurrBlock,
                                             const CFGBlock *TargetBlock) {
-  
   assert(CurrBlock && "Block pointer must not be NULL");
   assert(TargetBlock && "TargetBlock pointer must not be NULL");
   
@@ -1043,7 +1021,6 @@ bool ConsumedBlockInfo::allBackEdgesVisited(const CFGBlock *CurrBlock,
 void ConsumedBlockInfo::addInfo(
     const CFGBlock *Block, ConsumedStateMap *StateMap,
     std::unique_ptr<ConsumedStateMap> &OwnedStateMap) {
-
   assert(Block && "Block pointer must not be NULL");
 
   auto &Entry = StateMapsArray[Block->getBlockID()];
@@ -1058,7 +1035,6 @@ void ConsumedBlockInfo::addInfo(
 
 void ConsumedBlockInfo::addInfo(const CFGBlock *Block,
                                 std::unique_ptr<ConsumedStateMap> StateMap) {
-
   assert(Block && "Block pointer must not be NULL");
 
   auto &Entry = StateMapsArray[Block->getBlockID()];
@@ -1119,7 +1095,7 @@ void ConsumedStateMap::checkParamsForReturnTypestate(SourceLocation BlameLoc,
   
   for (const auto &DM : VarMap) {
     if (isa<ParmVarDecl>(DM.first)) {
-      const ParmVarDecl *Param = cast<ParmVarDecl>(DM.first);
+      const auto *Param = cast<ParmVarDecl>(DM.first);
       const ReturnTypestateAttr *RTA = Param->getAttr<ReturnTypestateAttr>();
       
       if (!RTA)
@@ -1226,7 +1202,7 @@ bool ConsumedStateMap::operator!=(const ConsumedStateMap *Other) const {
 void ConsumedAnalyzer::determineExpectedReturnState(AnalysisDeclContext &AC,
                                                     const FunctionDecl *D) {
   QualType ReturnType;
-  if (const CXXConstructorDecl *Constructor = dyn_cast<CXXConstructorDecl>(D)) {
+  if (const auto *Constructor = dyn_cast<CXXConstructorDecl>(D)) {
     ASTContext &CurrContext = AC.getASTContext();
     ReturnType = Constructor->getThisType(CurrContext)->getPointeeType();
   } else
@@ -1256,14 +1232,12 @@ void ConsumedAnalyzer::determineExpectedReturnState(AnalysisDeclContext &AC,
 
 bool ConsumedAnalyzer::splitState(const CFGBlock *CurrBlock,
                                   const ConsumedStmtVisitor &Visitor) {
-
   std::unique_ptr<ConsumedStateMap> FalseStates(
       new ConsumedStateMap(*CurrStates));
   PropagationInfo PInfo;
   
-  if (const IfStmt *IfNode =
-    dyn_cast_or_null<IfStmt>(CurrBlock->getTerminator().getStmt())) {
-    
+  if (const auto *IfNode =
+          dyn_cast_or_null<IfStmt>(CurrBlock->getTerminator().getStmt())) {
     const Expr *Cond = IfNode->getCond();
     
     PInfo = Visitor.getInfo(Cond);
@@ -1275,19 +1249,15 @@ bool ConsumedAnalyzer::splitState(const CFGBlock *CurrBlock,
       FalseStates->setSource(Cond);
       splitVarStateForIf(IfNode, PInfo.getVarTest(), CurrStates.get(),
                          FalseStates.get());
-
     } else if (PInfo.isBinTest()) {
       CurrStates->setSource(PInfo.testSourceNode());
       FalseStates->setSource(PInfo.testSourceNode());
       splitVarStateForIfBinOp(PInfo, CurrStates.get(), FalseStates.get());
-
     } else {
       return false;
     }
-    
-  } else if (const BinaryOperator *BinOp =
-    dyn_cast_or_null<BinaryOperator>(CurrBlock->getTerminator().getStmt())) {
-    
+  } else if (const auto *BinOp =
+       dyn_cast_or_null<BinaryOperator>(CurrBlock->getTerminator().getStmt())) {
     PInfo = Visitor.getInfo(BinOp->getLHS());
     if (!PInfo.isVarTest()) {
       if ((BinOp = dyn_cast_or_null<BinaryOperator>(BinOp->getLHS()))) {
@@ -1295,7 +1265,6 @@ bool ConsumedAnalyzer::splitState(const CFGBlock *CurrBlock,
         
         if (!PInfo.isVarTest())
           return false;
-        
       } else {
         return false;
       }
@@ -1320,7 +1289,6 @@ bool ConsumedAnalyzer::splitState(const CFGBlock *CurrBlock,
       else if (VarState == Test.TestsFor)
         FalseStates->markUnreachable();
     }
-    
   } else {
     return false;
   }
@@ -1339,7 +1307,7 @@ bool ConsumedAnalyzer::splitState(const CFGBlock *CurrBlock,
 }
 
 void ConsumedAnalyzer::run(AnalysisDeclContext &AC) {
-  const FunctionDecl *D = dyn_cast_or_null<FunctionDecl>(AC.getDecl());
+  const auto *D = dyn_cast_or_null<FunctionDecl>(AC.getDecl());
   if (!D)
     return;
   
@@ -1368,7 +1336,6 @@ void ConsumedAnalyzer::run(AnalysisDeclContext &AC) {
     
     if (!CurrStates) {
       continue;
-      
     } else if (!CurrStates->isReachable()) {
       CurrStates = nullptr;
       continue;
@@ -1423,7 +1390,6 @@ void ConsumedAnalyzer::run(AnalysisDeclContext &AC) {
 
         for (CFGBlock::const_succ_iterator SI = CurrBlock->succ_begin(),
              SE = CurrBlock->succ_end(); SI != SE; ++SI) {
-
           if (*SI == nullptr) continue;
 
           if (BlockInfo.isBackEdge(CurrBlock, *SI)) {
@@ -1452,4 +1418,3 @@ void ConsumedAnalyzer::run(AnalysisDeclContext &AC) {
 
   WarningsHandler.emitDiagnostics();
 }
-}} // end namespace clang::consumed

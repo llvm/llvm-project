@@ -40,7 +40,7 @@ class CodeGenFunction;
 class CodeGenModule;
 struct CatchTypeInfo;
 
-/// \brief Implements C++ ABI-specific code generation functions.
+/// Implements C++ ABI-specific code generation functions.
 class CGCXXABI {
 protected:
   CodeGenModule &CGM;
@@ -222,7 +222,7 @@ protected:
   /// is required.
   llvm::Constant *getMemberPointerAdjustment(const CastExpr *E);
 
-  /// \brief Computes the non-virtual adjustment needed for a member pointer
+  /// Computes the non-virtual adjustment needed for a member pointer
   /// conversion along an inheritance path stored in an APValue.  Unlike
   /// getMemberPointerAdjustment(), the adjustment can be negative if the path
   /// is from a derived type to a base type.
@@ -237,7 +237,7 @@ public:
   virtual void emitThrow(CodeGenFunction &CGF, const CXXThrowExpr *E) = 0;
   virtual llvm::GlobalVariable *getThrowInfo(QualType T) { return nullptr; }
 
-  /// \brief Determine whether it's possible to emit a vtable for \p RD, even
+  /// Determine whether it's possible to emit a vtable for \p RD, even
   /// though we do not know that the vtable has been marked as used by semantic
   /// analysis.
   virtual bool canSpeculativelyEmitVTable(const CXXRecordDecl *RD) const = 0;
@@ -318,6 +318,14 @@ public:
   /// not.
   virtual bool useThunkForDtorVariant(const CXXDestructorDecl *Dtor,
                                       CXXDtorType DT) const = 0;
+
+  virtual void setCXXDestructorDLLStorage(llvm::GlobalValue *GV,
+                                          const CXXDestructorDecl *Dtor,
+                                          CXXDtorType DT) const;
+
+  virtual llvm::GlobalValue::LinkageTypes
+  getCXXDestructorLinkage(GVALinkage Linkage, const CXXDestructorDecl *Dtor,
+                          CXXDtorType DT) const;
 
   /// Emit destructor variants required by this ABI.
   virtual void EmitCXXDestructors(const CXXDestructorDecl *D) = 0;
@@ -414,8 +422,7 @@ public:
 
   /// Build a virtual function pointer in the ABI-specific way.
   virtual CGCallee getVirtualFunctionPointer(CodeGenFunction &CGF,
-                                             GlobalDecl GD,
-                                             Address This,
+                                             GlobalDecl GD, Address This,
                                              llvm::Type *Ty,
                                              SourceLocation Loc) = 0;
 
@@ -434,6 +441,7 @@ public:
   /// base tables.
   virtual void emitVirtualInheritanceTables(const CXXRecordDecl *RD) = 0;
 
+  virtual bool exportThunk() = 0;
   virtual void setThunkLinkage(llvm::Function *Thunk, bool ForVTable,
                                GlobalDecl GD, bool ReturnAdjustment) = 0;
 
@@ -599,6 +607,17 @@ CGCXXABI *CreateItaniumCXXABI(CodeGenModule &CGM);
 /// Creates a Microsoft-family ABI.
 CGCXXABI *CreateMicrosoftCXXABI(CodeGenModule &CGM);
 
+struct CatchRetScope final : EHScopeStack::Cleanup {
+  llvm::CatchPadInst *CPI;
+
+  CatchRetScope(llvm::CatchPadInst *CPI) : CPI(CPI) {}
+
+  void Emit(CodeGenFunction &CGF, Flags flags) override {
+    llvm::BasicBlock *BB = CGF.createBasicBlock("catchret.dest");
+    CGF.Builder.CreateCatchRet(CPI, BB);
+    CGF.EmitBlock(BB);
+  }
+};
 }
 }
 

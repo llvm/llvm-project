@@ -38,37 +38,39 @@ namespace {
 
     void VisitStmt(const Stmt *S);
 
+    virtual void HandleStmtClass(Stmt::StmtClass SC) = 0;
+
 #define STMT(Node, Base) void Visit##Node(const Node *S);
 #include "clang/AST/StmtNodes.inc"
 
-    /// \brief Visit a declaration that is referenced within an expression
+    /// Visit a declaration that is referenced within an expression
     /// or statement.
     virtual void VisitDecl(const Decl *D) = 0;
 
-    /// \brief Visit a type that is referenced within an expression or
+    /// Visit a type that is referenced within an expression or
     /// statement.
     virtual void VisitType(QualType T) = 0;
 
-    /// \brief Visit a name that occurs within an expression or statement.
-    virtual void VisitName(DeclarationName Name) = 0;
+    /// Visit a name that occurs within an expression or statement.
+    virtual void VisitName(DeclarationName Name, bool TreatAsDecl = false) = 0;
 
-    /// \brief Visit identifiers that are not in Decl's or Type's.
+    /// Visit identifiers that are not in Decl's or Type's.
     virtual void VisitIdentifierInfo(IdentifierInfo *II) = 0;
 
-    /// \brief Visit a nested-name-specifier that occurs within an expression
+    /// Visit a nested-name-specifier that occurs within an expression
     /// or statement.
     virtual void VisitNestedNameSpecifier(NestedNameSpecifier *NNS) = 0;
 
-    /// \brief Visit a template name that occurs within an expression or
+    /// Visit a template name that occurs within an expression or
     /// statement.
     virtual void VisitTemplateName(TemplateName Name) = 0;
 
-    /// \brief Visit template arguments that occur within an expression or
+    /// Visit template arguments that occur within an expression or
     /// statement.
     void VisitTemplateArguments(const TemplateArgumentLoc *Args,
                                 unsigned NumArgs);
 
-    /// \brief Visit a single template argument.
+    /// Visit a single template argument.
     void VisitTemplateArgument(const TemplateArgument &Arg);
   };
 
@@ -80,6 +82,10 @@ namespace {
                              const ASTContext &Context, bool Canonical)
         : StmtProfiler(ID, Canonical), Context(Context) {}
   private:
+    void HandleStmtClass(Stmt::StmtClass SC) override {
+      ID.AddInteger(SC);
+    }
+
     void VisitDecl(const Decl *D) override {
       ID.AddInteger(D ? D->getKind() : 0);
 
@@ -134,7 +140,7 @@ namespace {
       ID.AddPointer(T.getAsOpaquePtr());
     }
 
-    void VisitName(DeclarationName Name) override {
+    void VisitName(DeclarationName Name, bool /*TreatAsDecl*/) override {
       ID.AddPointer(Name.getAsOpaquePtr());
     }
 
@@ -163,11 +169,26 @@ namespace {
         : StmtProfiler(ID, false), Hash(Hash) {}
 
   private:
+    void HandleStmtClass(Stmt::StmtClass SC) override {
+      if (SC == Stmt::UnresolvedLookupExprClass) {
+        // Pretend that the name looked up is a Decl due to how templates
+        // handle some Decl lookups.
+        ID.AddInteger(Stmt::DeclRefExprClass);
+      } else {
+        ID.AddInteger(SC);
+      }
+    }
+
     void VisitType(QualType T) override {
       Hash.AddQualType(T);
     }
 
-    void VisitName(DeclarationName Name) override {
+    void VisitName(DeclarationName Name, bool TreatAsDecl) override {
+      if (TreatAsDecl) {
+        // A Decl can be null, so each Decl is preceded by a boolean to
+        // store its nullness.  Add a boolean here to match.
+        ID.AddBoolean(true);
+      }
       Hash.AddDeclarationName(Name);
     }
     void VisitIdentifierInfo(IdentifierInfo *II) override {
@@ -196,7 +217,9 @@ namespace {
 
 void StmtProfiler::VisitStmt(const Stmt *S) {
   assert(S && "Requires non-null Stmt pointer");
-  ID.AddInteger(S->getStmtClass());
+
+  HandleStmtClass(S->getStmtClass());
+
   for (const Stmt *SubStmt : S->children()) {
     if (SubStmt)
       Visit(SubStmt);
@@ -382,7 +405,7 @@ StmtProfiler::VisitObjCAutoreleasePoolStmt(const ObjCAutoreleasePoolStmt *S) {
 namespace {
 class OMPClauseProfiler : public ConstOMPClauseVisitor<OMPClauseProfiler> {
   StmtProfiler *Profiler;
-  /// \brief Process clauses with list of variables.
+  /// Process clauses with list of variables.
   template <typename T>
   void VisitOMPClauseList(T *Node);
 
@@ -966,8 +989,11 @@ void StmtProfiler::VisitDeclRefExpr(const DeclRefExpr *S) {
   if (!Canonical)
     VisitNestedNameSpecifier(S->getQualifier());
   VisitDecl(S->getDecl());
-  if (!Canonical)
-    VisitTemplateArguments(S->getTemplateArgs(), S->getNumTemplateArgs());
+  if (!Canonical) {
+    ID.AddBoolean(S->hasExplicitTemplateArgs());
+    if (S->hasExplicitTemplateArgs())
+      VisitTemplateArguments(S->getTemplateArgs(), S->getNumTemplateArgs());
+  }
 }
 
 void StmtProfiler::VisitPredefinedExpr(const PredefinedExpr *S) {
@@ -976,6 +1002,12 @@ void StmtProfiler::VisitPredefinedExpr(const PredefinedExpr *S) {
 }
 
 void StmtProfiler::VisitIntegerLiteral(const IntegerLiteral *S) {
+  VisitExpr(S);
+  S->getValue().Profile(ID);
+  ID.AddInteger(S->getType()->castAs<BuiltinType>()->getKind());
+}
+
+void StmtProfiler::VisitFixedPointLiteral(const FixedPointLiteral *S) {
   VisitExpr(S);
   S->getValue().Profile(ID);
   ID.AddInteger(S->getType()->castAs<BuiltinType>()->getKind());
@@ -1659,7 +1691,7 @@ StmtProfiler::VisitCXXPseudoDestructorExpr(const CXXPseudoDestructorExpr *S) {
 void StmtProfiler::VisitOverloadExpr(const OverloadExpr *S) {
   VisitExpr(S);
   VisitNestedNameSpecifier(S->getQualifier());
-  VisitName(S->getName());
+  VisitName(S->getName(), /*TreatAsDecl*/ true);
   ID.AddBoolean(S->hasExplicitTemplateArgs());
   if (S->hasExplicitTemplateArgs())
     VisitTemplateArguments(S->getTemplateArgs(), S->getNumTemplateArgs());

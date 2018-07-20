@@ -14,10 +14,10 @@
 #include "clang/APINotes/APINotesReader.h"
 #include "clang/APINotes/Types.h"
 #include "clang/APINotes/APINotesWriter.h"
-#include "clang/Basic/VersionTuple.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/YAMLParser.h"
 #include "llvm/Support/YAMLTraits.h"
 #include <algorithm>
@@ -439,8 +439,6 @@ namespace llvm {
         if (value.tryParse(scalar))
           return "not a version number in the form XX.YY";
 
-        // Canonicalize on '.' as a separator.
-        value.UseDotAsSeparator();
         return StringRef();
       }
 

@@ -25,7 +25,7 @@ PCHContainerReader::~PCHContainerReader() {}
 
 namespace {
 
-/// \brief A PCHContainerGenerator that writes out the PCH to a flat file.
+/// A PCHContainerGenerator that writes out the PCH to a flat file.
 class RawPCHContainerGenerator : public ASTConsumer {
   std::shared_ptr<PCHBuffer> Buffer;
   std::unique_ptr<raw_pwrite_stream> OS;

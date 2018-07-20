@@ -58,7 +58,7 @@ void func() {
   }
 
   int x[] = {1, 2};
-  // CHECK: = !DILocalVariable(name: "__range"
+  // CHECK: = !DILocalVariable(name: "__range1"
   // CHECK-SAME:               scope: [[RANGE_FOR:![0-9]*]]
   // CHECK-NOT:                line:
   // CHECK-SAME:               ){{$}}

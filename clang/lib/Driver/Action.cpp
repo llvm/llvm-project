@@ -1,4 +1,4 @@
-//===--- Action.cpp - Abstract compilation steps --------------------------===//
+//===- Action.cpp - Abstract compilation steps ----------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,16 +8,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Driver/Action.h"
-#include "clang/Driver/ToolChain.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/Regex.h"
 #include <cassert>
-using namespace clang::driver;
+#include <string>
+
+using namespace clang;
+using namespace driver;
 using namespace llvm::opt;
 
-Action::~Action() {}
+Action::~Action() = default;
 
 const char *Action::getClassName(ActionClass AC) {
   switch (AC) {
@@ -97,16 +96,23 @@ std::string Action::getOffloadingKindPrefix() const {
     return "device-cuda";
   case OFK_OpenMP:
     return "device-openmp";
+  case OFK_HIP:
+    return "device-hip";
 
     // TODO: Add other programming models here.
   }
 
   if (!ActiveOffloadKindMask)
-    return "";
+    return {};
 
   std::string Res("host");
+  assert(!((ActiveOffloadKindMask & OFK_Cuda) &&
+           (ActiveOffloadKindMask & OFK_HIP)) &&
+         "Cannot offload CUDA and HIP at the same time");
   if (ActiveOffloadKindMask & OFK_Cuda)
     Res += "-cuda";
+  if (ActiveOffloadKindMask & OFK_HIP)
+    Res += "-hip";
   if (ActiveOffloadKindMask & OFK_OpenMP)
     Res += "-openmp";
 
@@ -119,11 +125,11 @@ std::string Action::getOffloadingKindPrefix() const {
 /// for each offloading kind.
 std::string
 Action::GetOffloadingFileNamePrefix(OffloadKind Kind,
-                                    llvm::StringRef NormalizedTriple,
+                                    StringRef NormalizedTriple,
                                     bool CreatePrefixForHost) {
   // Don't generate prefix for host actions unless required.
   if (!CreatePrefixForHost && (Kind == OFK_None || Kind == OFK_Host))
-    return "";
+    return {};
 
   std::string Res("-");
   Res += GetOffloadKindName(Kind);
@@ -134,7 +140,7 @@ Action::GetOffloadingFileNamePrefix(OffloadKind Kind,
 
 /// Return a string with the offload kind name. If that is not defined, we
 /// assume 'host'.
-llvm::StringRef Action::GetOffloadKindName(OffloadKind Kind) {
+StringRef Action::GetOffloadKindName(OffloadKind Kind) {
   switch (Kind) {
   case OFK_None:
   case OFK_Host:
@@ -143,6 +149,8 @@ llvm::StringRef Action::GetOffloadKindName(OffloadKind Kind) {
     return "cuda";
   case OFK_OpenMP:
     return "openmp";
+  case OFK_HIP:
+    return "hip";
 
     // TODO: Add other programming models here.
   }
@@ -153,12 +161,11 @@ llvm::StringRef Action::GetOffloadKindName(OffloadKind Kind) {
 void InputAction::anchor() {}
 
 InputAction::InputAction(const Arg &_Input, types::ID _Type)
-  : Action(InputClass, _Type), Input(_Input) {
-}
+    : Action(InputClass, _Type), Input(_Input) {}
 
 void BindArchAction::anchor() {}
 
-BindArchAction::BindArchAction(Action *Input, llvm::StringRef ArchName)
+BindArchAction::BindArchAction(Action *Input, StringRef ArchName)
     : Action(BindArchClass, Input), ArchName(ArchName) {}
 
 void OffloadAction::anchor() {}
@@ -300,8 +307,7 @@ JobAction::JobAction(ActionClass Kind, Action *Input, types::ID Type)
     : Action(Kind, Input, Type) {}
 
 JobAction::JobAction(ActionClass Kind, const ActionList &Inputs, types::ID Type)
-  : Action(Kind, Inputs, Type) {
-}
+    : Action(Kind, Inputs, Type) {}
 
 void PreprocessJobAction::anchor() {}
 
@@ -341,20 +347,17 @@ AssembleJobAction::AssembleJobAction(Action *Input, types::ID OutputType)
 void LinkJobAction::anchor() {}
 
 LinkJobAction::LinkJobAction(ActionList &Inputs, types::ID Type)
-  : JobAction(LinkJobClass, Inputs, Type) {
-}
+    : JobAction(LinkJobClass, Inputs, Type) {}
 
 void LipoJobAction::anchor() {}
 
 LipoJobAction::LipoJobAction(ActionList &Inputs, types::ID Type)
-  : JobAction(LipoJobClass, Inputs, Type) {
-}
+    : JobAction(LipoJobClass, Inputs, Type) {}
 
 void DsymutilJobAction::anchor() {}
 
 DsymutilJobAction::DsymutilJobAction(ActionList &Inputs, types::ID Type)
-  : JobAction(DsymutilJobClass, Inputs, Type) {
-}
+    : JobAction(DsymutilJobClass, Inputs, Type) {}
 
 void VerifyJobAction::anchor() {}
 

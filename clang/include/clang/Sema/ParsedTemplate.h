@@ -26,32 +26,32 @@
 #include <new>
 
 namespace clang {  
-  /// \brief Represents the parsed form of a C++ template argument.
+  /// Represents the parsed form of a C++ template argument.
   class ParsedTemplateArgument {
   public:
-    /// \brief Describes the kind of template argument that was parsed.
+    /// Describes the kind of template argument that was parsed.
     enum KindType {
-      /// \brief A template type parameter, stored as a type.
+      /// A template type parameter, stored as a type.
       Type,
-      /// \brief A non-type template parameter, stored as an expression.
+      /// A non-type template parameter, stored as an expression.
       NonType,
-      /// \brief A template template argument, stored as a template name.
+      /// A template template argument, stored as a template name.
       Template
     };
 
-    /// \brief Build an empty template argument. 
+    /// Build an empty template argument. 
     ///
     /// This template argument is invalid.
     ParsedTemplateArgument() : Kind(Type), Arg(nullptr) { }
     
-    /// \brief Create a template type argument or non-type template argument.
+    /// Create a template type argument or non-type template argument.
     ///
     /// \param Arg the template type argument or non-type template argument.
     /// \param Loc the location of the type.
     ParsedTemplateArgument(KindType Kind, void *Arg, SourceLocation Loc)
       : Kind(Kind), Arg(Arg), Loc(Loc) { }
     
-    /// \brief Create a template template argument.
+    /// Create a template template argument.
     ///
     /// \param SS the C++ scope specifier that precedes the template name, if
     /// any.
@@ -67,34 +67,34 @@ namespace clang {
         Arg(Template.getAsOpaquePtr()), 
         SS(SS), Loc(TemplateLoc), EllipsisLoc() { }
     
-    /// \brief Determine whether the given template argument is invalid.
+    /// Determine whether the given template argument is invalid.
     bool isInvalid() const { return Arg == nullptr; }
     
-    /// \brief Determine what kind of template argument we have.
+    /// Determine what kind of template argument we have.
     KindType getKind() const { return Kind; }
     
-    /// \brief Retrieve the template type argument's type.
+    /// Retrieve the template type argument's type.
     ParsedType getAsType() const {
       assert(Kind == Type && "Not a template type argument");
       return ParsedType::getFromOpaquePtr(Arg);
     }
     
-    /// \brief Retrieve the non-type template argument's expression.
+    /// Retrieve the non-type template argument's expression.
     Expr *getAsExpr() const {
       assert(Kind == NonType && "Not a non-type template argument");
       return static_cast<Expr*>(Arg);
     }
     
-    /// \brief Retrieve the template template argument's template name.
+    /// Retrieve the template template argument's template name.
     ParsedTemplateTy getAsTemplate() const {
       assert(Kind == Template && "Not a template template argument");
       return ParsedTemplateTy::getFromOpaquePtr(Arg);
     }
     
-    /// \brief Retrieve the location of the template argument.
+    /// Retrieve the location of the template argument.
     SourceLocation getLocation() const { return Loc; }
     
-    /// \brief Retrieve the nested-name-specifier that precedes the template
+    /// Retrieve the nested-name-specifier that precedes the template
     /// name in a template template argument.
     const CXXScopeSpec &getScopeSpec() const {
       assert(Kind == Template && 
@@ -102,7 +102,7 @@ namespace clang {
       return SS;
     }
     
-    /// \brief Retrieve the location of the ellipsis that makes a template
+    /// Retrieve the location of the ellipsis that makes a template
     /// template argument into a pack expansion.
     SourceLocation getEllipsisLoc() const {
       assert(Kind == Template && 
@@ -110,7 +110,7 @@ namespace clang {
       return EllipsisLoc;
     }
     
-    /// \brief Retrieve a pack expansion of the given template template
+    /// Retrieve a pack expansion of the given template template
     /// argument.
     ///
     /// \param EllipsisLoc The location of the ellipsis.
@@ -120,24 +120,24 @@ namespace clang {
   private:
     KindType Kind;
     
-    /// \brief The actual template argument representation, which may be
+    /// The actual template argument representation, which may be
     /// an \c Sema::TypeTy* (for a type), an Expr* (for an
     /// expression), or an Sema::TemplateTy (for a template).
     void *Arg;
 
-    /// \brief The nested-name-specifier that can accompany a template template
+    /// The nested-name-specifier that can accompany a template template
     /// argument.
     CXXScopeSpec SS;
 
-    /// \brief the location of the template argument.
+    /// the location of the template argument.
     SourceLocation Loc;
 
-    /// \brief The ellipsis location that can accompany a template template
+    /// The ellipsis location that can accompany a template template
     /// argument (turning it into a template template argument expansion).
     SourceLocation EllipsisLoc;
   };
   
-  /// \brief Information about a template-id annotation
+  /// Information about a template-id annotation
   /// token.
   ///
   /// A template-id annotation token contains the template declaration, 
@@ -149,7 +149,7 @@ namespace clang {
       : private llvm::TrailingObjects<TemplateIdAnnotation,
                                       ParsedTemplateArgument> {
     friend TrailingObjects;
-    /// \brief The nested-name-specifier that precedes the template name.
+    /// The nested-name-specifier that precedes the template name.
     CXXScopeSpec SS;
 
     /// TemplateKWLoc - The location of the template keyword.
@@ -184,12 +184,12 @@ namespace clang {
     /// NumArgs - The number of template arguments.
     unsigned NumArgs;
     
-    /// \brief Retrieves a pointer to the template arguments
+    /// Retrieves a pointer to the template arguments
     ParsedTemplateArgument *getTemplateArgs() { 
       return getTrailingObjects<ParsedTemplateArgument>(); 
     }
 
-    /// \brief Creates a new TemplateIdAnnotation with NumArgs arguments and
+    /// Creates a new TemplateIdAnnotation with NumArgs arguments and
     /// appends it to List.
     static TemplateIdAnnotation *
     Create(CXXScopeSpec SS, SourceLocation TemplateKWLoc,
@@ -199,8 +199,7 @@ namespace clang {
            SourceLocation LAngleLoc, SourceLocation RAngleLoc,
            ArrayRef<ParsedTemplateArgument> TemplateArgs,
            SmallVectorImpl<TemplateIdAnnotation *> &CleanupList) {
-
-      TemplateIdAnnotation *TemplateId = new (std::malloc(
+      TemplateIdAnnotation *TemplateId = new (llvm::safe_malloc(
           totalSizeToAlloc<ParsedTemplateArgument>(TemplateArgs.size())))
           TemplateIdAnnotation(SS, TemplateKWLoc, TemplateNameLoc, Name,
                                OperatorKind, OpaqueTemplateName, TemplateKind,

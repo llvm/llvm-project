@@ -26,10 +26,10 @@ static void foo9(int *a) __attribute__((interrupt)) {}
 // X86_LINUX: define x86_intrcc void @{{.*}}foo8{{.*}}(i32* %{{.+}})
 // X86_LINUX: define linkonce_odr x86_intrcc void @{{.*}}foo9{{.*}}(i32* %{{.+}})
 // X86_64_WIN: @llvm.used = appending global [3 x i8*] [i8* bitcast (void (i32*, i64)* @{{.*}}foo7{{.*}} to i8*), i8* bitcast (void (i32*)* @{{.*}}foo8{{.*}} to i8*), i8* bitcast (void (i32*)* @{{.*}}foo9{{.*}} to i8*)], section "llvm.metadata"
-// X86_64_WIN: define x86_intrcc void @{{.*}}foo7{{.*}}(i32* %{{.+}}, i64 %{{.+}})
-// X86_64_WIN: define x86_intrcc void @{{.*}}foo8{{.*}}(i32* %{{.+}})
-// X86_64_WIN: define linkonce_odr x86_intrcc void @{{.*}}foo9{{.*}}(i32* %{{.+}})
+// X86_64_WIN: define dso_local x86_intrcc void @{{.*}}foo7{{.*}}(i32* %{{.+}}, i64 %{{.+}})
+// X86_64_WIN: define dso_local x86_intrcc void @{{.*}}foo8{{.*}}(i32* %{{.+}})
+// X86_64_WIN: define linkonce_odr dso_local x86_intrcc void @{{.*}}foo9{{.*}}(i32* %{{.+}})
 // X86_WIN: @llvm.used = appending global [3 x i8*] [i8* bitcast (void (i32*, i32)* @{{.*}}foo7{{.*}} to i8*), i8* bitcast (void (i32*)* @{{.*}}foo8{{.*}} to i8*), i8* bitcast (void (i32*)* @{{.*}}foo9{{.*}} to i8*)], section "llvm.metadata"
-// X86_WIN: define x86_intrcc void @{{.*}}foo7{{.*}}(i32* %{{.+}}, i32 %{{.+}})
-// X86_WIN: define x86_intrcc void @{{.*}}foo8{{.*}}(i32* %{{.+}})
-// X86_WIN: define linkonce_odr x86_intrcc void @{{.*}}foo9{{.*}}(i32* %{{.+}})
+// X86_WIN: define dso_local x86_intrcc void @{{.*}}foo7{{.*}}(i32* %{{.+}}, i32 %{{.+}})
+// X86_WIN: define dso_local x86_intrcc void @{{.*}}foo8{{.*}}(i32* %{{.+}})
+// X86_WIN: define linkonce_odr dso_local x86_intrcc void @{{.*}}foo9{{.*}}(i32* %{{.+}})

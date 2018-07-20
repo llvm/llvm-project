@@ -7,6 +7,6 @@ signed callee_b0f(struct bt3 bp11) {
 // IR: callee_b0f(i64 [[ARG:%.*]])
 // IR: store i64 [[ARG]], i64* [[PTR:%.*]], align 8
 // IR: [[BITCAST:%.*]] = bitcast i64* [[PTR]] to i8*
-// IR: call void @llvm.memcpy.p0i8.p0i8.i64(i8* {{.*}}, i8* [[BITCAST]], i64 4
+// IR: call void @llvm.memcpy.p0i8.p0i8.i64(i8* {{.*}}, i8* align 8 [[BITCAST]], i64 4
   return bp11.b2;
 }

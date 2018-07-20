@@ -24,7 +24,7 @@ typedef struct {
 // Single-element structs should be returned as the one element.
 // WEBASSEMBLY32: define i32 @f2()
 // WEBASSEMBLY64: define i32 @f2()
-s2 f2() {
+s2 f2(void) {
   s2 foo;
   return foo;
 }
@@ -36,7 +36,7 @@ typedef struct {
 // Structs should be returned sret and not simplified by the frontend.
 // WEBASSEMBLY32: define void @f3(%struct.s3* noalias sret %agg.result)
 // WEBASSEMBLY64: define void @f3(%struct.s3* noalias sret %agg.result)
-s3 f3() {
+s3 f3(void) {
   s3 foo;
   return foo;
 }

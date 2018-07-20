@@ -287,3 +287,27 @@
 // RUN: %clang -### -ftrapping-math -fno-trapping-math -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-NO-TRAPPING-MATH %s
 // CHECK-NO-TRAPPING-MATH: "-fno-trapping-math"
+
+// This isn't fast-math, but the option is handled in the same place as other FP params.
+// Last option wins, and strict behavior is assumed by default. 
+
+// RUN: %clang -### -fno-strict-float-cast-overflow -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-FPOV-WORKAROUND %s
+// CHECK-FPOV-WORKAROUND: "-cc1"
+// CHECK-FPOV-WORKAROUND: "-fno-strict-float-cast-overflow"
+
+// RUN: %clang -### -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-FPOV-WORKAROUND-DEFAULT %s
+// CHECK-FPOV-WORKAROUND-DEFAULT: "-cc1"
+// CHECK-FPOV-WORKAROUND-DEFAULT-NOT: "strict-float-cast-overflow"
+
+// RUN: %clang -### -fstrict-float-cast-overflow -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-NO-FPOV-WORKAROUND %s
+// CHECK-NO-FPOV-WORKAROUND: "-cc1"
+// CHECK-NO-FPOV-WORKAROUND-NOT: "strict-float-cast-overflow"
+
+// RUN: %clang -### -fno-strict-float-cast-overflow -fstrict-float-cast-overflow -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-NO-FPOV-WORKAROUND-OVERRIDE %s
+// CHECK-NO-FPOV-WORKAROUND-OVERRIDE: "-cc1"
+// CHECK-NO-FPOV-WORKAROUND-OVERRIDE-NOT: "strict-float-cast-overflow"
+

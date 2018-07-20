@@ -31,6 +31,8 @@ int main(int argc, char **argv) {
   foo();
   L1:
     foo();
+  #pragma omp parallel ordered // expected-error {{unexpected OpenMP clause 'ordered' in directive '#pragma omp parallel'}}
+    ;
   #pragma omp parallel
   ;
   #pragma omp parallel

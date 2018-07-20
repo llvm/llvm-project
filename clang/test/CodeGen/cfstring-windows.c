@@ -31,8 +31,8 @@ __declspec(dllimport) long __CFConstantStringClassReference[];
 typedef struct __CFString *CFStringRef;
 const CFStringRef string = (CFStringRef)__builtin___CFStringMakeConstantString("string");
 
-// CHECK-CF-IN-CF-DECL: @__CFConstantStringClassReference = external dllexport global [0 x i32]
-// CHECK-CF-IN-CF-DEFN: @__CFConstantStringClassReference = common dllexport global [32 x i32]
+// CHECK-CF-IN-CF-DECL: @__CFConstantStringClassReference = external dso_local dllexport global [0 x i32]
+// CHECK-CF-IN-CF-DEFN: @__CFConstantStringClassReference = common dso_local dllexport global [32 x i32]
 // CHECK-CF: @__CFConstantStringClassReference = external dllimport global [0 x i32]
 // CHECK-CF-EXTERN: @__CFConstantStringClassReference = external dllimport global [0 x i32]
 // CHECK-CF-EXTERN-DLLIMPORT: @__CFConstantStringClassReference = external dllimport global [0 x i32]

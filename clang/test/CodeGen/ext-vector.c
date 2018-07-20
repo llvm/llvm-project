@@ -5,10 +5,10 @@ typedef __attribute__(( ext_vector_type(2) )) float float2;
 typedef __attribute__(( ext_vector_type(4) )) int int4;
 typedef __attribute__(( ext_vector_type(4) )) unsigned int uint4;
 
-// CHECK: @foo = global <4 x float> <float 1.000000e+00, float 2.000000e+00, float 3.000000e+00, float 4.000000e+00>
+// CHECK: @foo = {{(dso_local )?}}global <4 x float> <float 1.000000e+00, float 2.000000e+00, float 3.000000e+00, float 4.000000e+00>
 float4 foo = (float4){ 1.0, 2.0, 3.0, 4.0 };
 
-// CHECK: @bar = constant <4 x float> <float 1.000000e+00, float 2.000000e+00, float 3.000000e+00, float 0x7FF0000000000000>
+// CHECK: @bar = {{(dso_local )?}}constant <4 x float> <float 1.000000e+00, float 2.000000e+00, float 3.000000e+00, float 0x7FF0000000000000>
 const float4 bar = (float4){ 1.0, 2.0, 3.0, __builtin_inff() };
 
 // CHECK: @test1

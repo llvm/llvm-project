@@ -48,7 +48,7 @@ public:
   DefaultBool IsPureOnly;
 
   void checkBeginFunction(CheckerContext &C) const;
-  void checkEndFunction(CheckerContext &C) const;
+  void checkEndFunction(const ReturnStmt *RS, CheckerContext &C) const;
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
 
 private:
@@ -57,7 +57,7 @@ private:
   void reportBug(StringRef Msg, bool PureError, const MemRegion *Reg,
                  CheckerContext &C) const;
 
-  class VirtualBugVisitor : public BugReporterVisitorImpl<VirtualBugVisitor> {
+  class VirtualBugVisitor : public BugReporterVisitor {
   private:
     const MemRegion *ObjectRegion;
     bool Found;
@@ -108,7 +108,7 @@ VirtualCallChecker::VirtualBugVisitor::VisitNode(const ExplodedNode *N,
   if (!MD)
     return nullptr;
   auto ThiSVal =
-      State->getSVal(SVB.getCXXThis(MD, LCtx->getCurrentStackFrame()));
+      State->getSVal(SVB.getCXXThis(MD, LCtx->getStackFrame()));
   const MemRegion *Reg = ThiSVal.castAs<loc::MemRegionVal>().getRegion();
   if (!Reg)
     return nullptr;
@@ -167,7 +167,8 @@ void VirtualCallChecker::checkBeginFunction(CheckerContext &C) const {
 }
 
 // The EndFunction callback when leave a constructor or a destructor.
-void VirtualCallChecker::checkEndFunction(CheckerContext &C) const {
+void VirtualCallChecker::checkEndFunction(const ReturnStmt *RS,
+                                          CheckerContext &C) const {
   registerCtorDtorCallInState(false, C);
 }
 
@@ -230,7 +231,7 @@ void VirtualCallChecker::registerCtorDtorCallInState(bool IsBeginFunction,
   // Enter a constructor, set the corresponding memregion be true.
   if (isa<CXXConstructorDecl>(MD)) {
     auto ThiSVal =
-        State->getSVal(SVB.getCXXThis(MD, LCtx->getCurrentStackFrame()));
+        State->getSVal(SVB.getCXXThis(MD, LCtx->getStackFrame()));
     const MemRegion *Reg = ThiSVal.getAsRegion();
     if (IsBeginFunction)
       State = State->set<CtorDtorMap>(Reg, ObjectState::CtorCalled);
@@ -244,7 +245,7 @@ void VirtualCallChecker::registerCtorDtorCallInState(bool IsBeginFunction,
   // Enter a Destructor, set the corresponding memregion be true.
   if (isa<CXXDestructorDecl>(MD)) {
     auto ThiSVal =
-        State->getSVal(SVB.getCXXThis(MD, LCtx->getCurrentStackFrame()));
+        State->getSVal(SVB.getCXXThis(MD, LCtx->getStackFrame()));
     const MemRegion *Reg = ThiSVal.getAsRegion();
     if (IsBeginFunction)
       State = State->set<CtorDtorMap>(Reg, ObjectState::DtorCalled);

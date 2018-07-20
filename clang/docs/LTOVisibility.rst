@@ -11,9 +11,9 @@ linkage unit's LTO unit is empty. Each linkage unit has only a single LTO unit.
 
 The LTO visibility of a class is used by the compiler to determine which
 classes the whole-program devirtualization (``-fwhole-program-vtables``) and
-control flow integrity (``-fsanitize=cfi-vcall``) features apply to. These
-features use whole-program information, so they require the entire class
-hierarchy to be visible in order to work correctly.
+control flow integrity (``-fsanitize=cfi-vcall`` and ``-fsanitize=cfi-mfcall``)
+features apply to. These features use whole-program information, so they
+require the entire class hierarchy to be visible in order to work correctly.
 
 If any translation unit in the program uses either of the whole-program
 devirtualization or control flow integrity features, it is effectively an ODR

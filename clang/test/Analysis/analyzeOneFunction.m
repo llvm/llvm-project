@@ -38,7 +38,7 @@ typedef struct _NSZone NSZone;
 -(id)myMethod {
   Test1 *cell = [[[Test1 alloc] init] autorelease];
 
-  NSString *string1 = [[NSString alloc] initWithFormat:@"test %f", 0.0]; // No warning: this function is not analized.
+  NSString *string1 = [[NSString alloc] initWithFormat:@"test %f", 0.0]; // No warning: this function is not analyzed.
   cell.text = string1;
 
   return cell;

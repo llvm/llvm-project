@@ -15,6 +15,7 @@
 #include "clang/Tooling/Refactor/RenamedSymbol.h"
 #include "clang/Tooling/Refactor/SymbolName.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/Mutex.h"
 
 namespace clang {
 namespace tooling {
@@ -65,16 +66,37 @@ public:
                                 const LangOptions &LangOpts) = 0;
 };
 
+/// Guards against thread unsafe parts of ClangTool::run.
+class IndexedFileRenamerLock {
+  llvm::sys::Mutex &Lock;
+  bool IsUnlocked = false;
+
+public:
+  IndexedFileRenamerLock(llvm::sys::Mutex &Lock) : Lock(Lock) { Lock.lock(); }
+
+  void unlock() {
+    Lock.unlock();
+    IsUnlocked = true;
+  }
+
+  ~IndexedFileRenamerLock() {
+    if (!IsUnlocked)
+      Lock.unlock();
+  }
+};
+
 /// Finds the renamed \c SymbolOccurrences in an already indexed files.
 class IndexedFileOccurrenceProducer final : public PreprocessorFrontendAction {
   bool IsMultiPiece;
   ArrayRef<IndexedSymbol> Symbols;
   IndexedFileOccurrenceConsumer &Consumer;
+  IndexedFileRenamerLock &Lock;
   const RefactoringOptionSet *Options;
 
 public:
   IndexedFileOccurrenceProducer(ArrayRef<IndexedSymbol> Symbols,
                                 IndexedFileOccurrenceConsumer &Consumer,
+                                IndexedFileRenamerLock &Lock,
                                 const RefactoringOptionSet *Options = nullptr);
 
 private:

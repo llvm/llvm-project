@@ -1,9 +1,9 @@
 // Test target codegen - host bc file has to be created first.
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm-bc %s -o %t-ppc-host.bc
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple nvptx64-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-64
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple i386-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda -emit-llvm-bc %s -o %t-x86-host.bc
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple nvptx-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-32
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -fexceptions -fcxx-exceptions -x c++ -triple nvptx-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-32
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -fopenmp-cuda-mode -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm-bc %s -o %t-ppc-host.bc
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -fopenmp-cuda-mode -x c++ -triple nvptx64-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-64
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -fopenmp-cuda-mode -x c++ -triple i386-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda -emit-llvm-bc %s -o %t-x86-host.bc
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -fopenmp-cuda-mode -x c++ -triple nvptx-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-32
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -fopenmp-cuda-mode -fexceptions -fcxx-exceptions -x c++ -triple nvptx-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-32
 // expected-no-diagnostics
 #ifndef HEADER
 #define HEADER
@@ -55,14 +55,16 @@ int bar(int n){
 
   // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+template.+l26}}(
   // CHECK: [[AA_ADDR:%.+]] = alloca i16*, align
+  // CHECK-NOT: call i8* @__kmpc_data_sharing_push_stack
   // CHECK: store i16* {{%.+}}, i16** [[AA_ADDR]], align
   // CHECK: [[AA:%.+]] = load i16*, i16** [[AA_ADDR]], align
   // CHECK: [[THREAD_LIMIT:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
   // CHECK: call void @__kmpc_spmd_kernel_init(i32 [[THREAD_LIMIT]],
+  // CHECK: call void @__kmpc_data_sharing_init_stack_spmd
   // CHECK: br label {{%?}}[[EXEC:.+]]
   //
   // CHECK: [[EXEC]]
-  // CHECK: {{call|invoke}} void [[OP1:@.+]](i32* null, i32* null, i16* [[AA]])
+  // CHECK: {{call|invoke}} void [[OP1:@.+]]({{.+}}, {{.+}}, i16* [[AA]])
   // CHECK: br label {{%?}}[[DONE:.+]]
   //
   // CHECK: [[DONE]]
@@ -101,10 +103,11 @@ int bar(int n){
   // CHECK: [[B:%.+]] = load [10 x i32]*, [10 x i32]** [[B_ADDR]], align
   // CHECK: [[THREAD_LIMIT:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
   // CHECK: call void @__kmpc_spmd_kernel_init(i32 [[THREAD_LIMIT]],
+  // CHECK: call void @__kmpc_data_sharing_init_stack_spmd
   // CHECK: br label {{%?}}[[EXEC:.+]]
   //
   // CHECK: [[EXEC]]
-  // CHECK: {{call|invoke}} void [[OP2:@.+]](i32* null, i32* null, i32* [[A]], i16* [[AA]], [10 x i32]* [[B]])
+  // CHECK: {{call|invoke}} void [[OP2:@.+]]({{.+}}, {{.+}}, i32* [[A]], i16* [[AA]], [10 x i32]* [[B]])
   // CHECK: br label {{%?}}[[DONE:.+]]
   //
   // CHECK: [[DONE]]

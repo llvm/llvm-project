@@ -169,3 +169,50 @@ namespace ThisLambdaIsNotMyFriend {
   }
   void bar() { foo<void>(); }
 }
+
+namespace OverloadedMemberFunctionPointer {
+  template<class T, void(T::*pMethod)()>
+  void func0() {}
+
+  template<class T, void(T::*pMethod)(int)>
+  void func1() {}
+
+  template<class T>
+  void func2(void(*fn)()) {} // expected-note 2 {{candidate function template not viable: no overload of 'func}}
+
+  class C {
+  private:
+    friend void friendFunc();
+    void overloadedMethod();
+  protected:
+    void overloadedMethod(int);
+  public:
+    void overloadedMethod(int, int);
+    void method() {
+      func2<int>(&func0<C, &C::overloadedMethod>);
+      func2<int>(&func1<C, &C::overloadedMethod>);
+    }
+  };
+
+  void friendFunc() {
+    func2<int>(&func0<C, &C::overloadedMethod>);
+    func2<int>(&func1<C, &C::overloadedMethod>);
+  }
+
+  void nonFriendFunc() {
+    func2<int>(&func0<C, &C::overloadedMethod>); // expected-error {{no matching function for call to 'func2'}}
+    func2<int>(&func1<C, &C::overloadedMethod>); // expected-error {{no matching function for call to 'func2'}}
+  }
+
+  // r325321 caused an assertion failure when the following code was compiled.
+  class A {
+    template <typename Type> static bool foo1() { return true; }
+
+  public:
+    void init(bool c) {
+      if (c) {
+        auto f = foo1<int>;
+      }
+    }
+  };
+}

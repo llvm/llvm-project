@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file implements AffectRangeManager class.
+/// This file implements AffectRangeManager class.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -21,8 +21,9 @@ namespace clang {
 namespace format {
 
 bool AffectedRangeManager::computeAffectedLines(
-    SmallVectorImpl<AnnotatedLine *>::iterator I,
-    SmallVectorImpl<AnnotatedLine *>::iterator E) {
+    SmallVectorImpl<AnnotatedLine *> &Lines) {
+  SmallVectorImpl<AnnotatedLine *>::iterator I = Lines.begin();
+  SmallVectorImpl<AnnotatedLine *>::iterator E = Lines.end();
   bool SomeLineAffected = false;
   const AnnotatedLine *PreviousLine = nullptr;
   while (I != E) {
@@ -48,7 +49,7 @@ bool AffectedRangeManager::computeAffectedLines(
       continue;
     }
 
-    if (nonPPLineAffected(Line, PreviousLine))
+    if (nonPPLineAffected(Line, PreviousLine, Lines))
       SomeLineAffected = true;
 
     PreviousLine = Line;
@@ -99,10 +100,10 @@ void AffectedRangeManager::markAllAsAffected(
 }
 
 bool AffectedRangeManager::nonPPLineAffected(
-    AnnotatedLine *Line, const AnnotatedLine *PreviousLine) {
+    AnnotatedLine *Line, const AnnotatedLine *PreviousLine,
+    SmallVectorImpl<AnnotatedLine *> &Lines) {
   bool SomeLineAffected = false;
-  Line->ChildrenAffected =
-      computeAffectedLines(Line->Children.begin(), Line->Children.end());
+  Line->ChildrenAffected = computeAffectedLines(Line->Children);
   if (Line->ChildrenAffected)
     SomeLineAffected = true;
 
@@ -138,8 +139,13 @@ bool AffectedRangeManager::nonPPLineAffected(
       Line->First->NewlinesBefore < 2 && PreviousLine &&
       PreviousLine->Affected && PreviousLine->Last->is(tok::comment);
 
+  bool IsAffectedClosingBrace =
+      Line->First->is(tok::r_brace) &&
+      Line->MatchingOpeningBlockLineIndex != UnwrappedLine::kInvalidIndex &&
+      Lines[Line->MatchingOpeningBlockLineIndex]->Affected;
+
   if (SomeTokenAffected || SomeFirstChildAffected || LineMoved ||
-      IsContinuedComment) {
+      IsContinuedComment || IsAffectedClosingBrace) {
     Line->Affected = true;
     SomeLineAffected = true;
   }

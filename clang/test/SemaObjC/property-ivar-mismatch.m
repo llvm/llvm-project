@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -Wno-objc-root-class %s
-// Test that arithmatic types on property and its ivar have exact match.
+// Test that arithmetic types on property and its ivar have exact match.
 
 @interface Test4 
 {

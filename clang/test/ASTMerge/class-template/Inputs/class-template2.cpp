@@ -1,5 +1,7 @@
 template<class T>
-struct X0;
+struct X0 {
+  T getValue(T arg);
+};
 
 template<int I>
 struct X1;

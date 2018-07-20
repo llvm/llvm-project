@@ -1,4 +1,4 @@
-//===- ThreadSafetyTraverse.h ----------------------------------*- C++ --*-===//
+//===- ThreadSafetyTraverse.h -----------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -17,7 +17,13 @@
 #ifndef LLVM_CLANG_ANALYSIS_ANALYSES_THREADSAFETYTRAVERSE_H
 #define LLVM_CLANG_ANALYSIS_ANALYSES_THREADSAFETYTRAVERSE_H
 
-#include "ThreadSafetyTIL.h"
+#include "clang/AST/Decl.h"
+#include "clang/Analysis/Analyses/ThreadSafetyTIL.h"
+#include "clang/Analysis/Analyses/ThreadSafetyUtil.h"
+#include "clang/Basic/LLVM.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Casting.h"
+#include <cstdint>
 #include <ostream>
 
 namespace clang {
@@ -26,7 +32,7 @@ namespace til {
 
 // Defines an interface used to traverse SExprs.  Traversals have been made as
 // generic as possible, and are intended to handle any kind of pass over the
-// AST, e.g. visiters, copying, non-destructive rewriting, destructive
+// AST, e.g. visitors, copying, non-destructive rewriting, destructive
 // (in-place) rewriting, hashing, typing, etc.
 //
 // Traversals implement the functional notion of a "fold" operation on SExprs.
@@ -92,21 +98,27 @@ public:
 #undef TIL_OPCODE_DEF
 };
 
-
 // Base class for simple reducers that don't much care about the context.
 class SimpleReducerBase {
 public:
   enum TraversalKind {
-    TRV_Normal,   // ordinary subexpressions
-    TRV_Decl,     // declarations (e.g. function bodies)
-    TRV_Lazy,     // expressions that require lazy evaluation
-    TRV_Type      // type expressions
+    // Ordinary subexpressions.
+    TRV_Normal,
+
+    // Declarations (e.g. function bodies).
+    TRV_Decl,
+
+    // Expressions that require lazy evaluation.
+    TRV_Lazy,
+
+    // Type expressions.
+    TRV_Type
   };
 
   // R_Ctx defines a "context" for the traversal, which encodes information
   // about where a term appears.  This can be used to encoding the
   // "current continuation" for CPS transforms, or other information.
-  typedef TraversalKind R_Ctx;
+  using R_Ctx = TraversalKind;
 
   // Create context for an ordinary subexpression.
   R_Ctx subExprCtx(R_Ctx Ctx) { return TRV_Normal; }
@@ -123,14 +135,13 @@ public:
   R_Ctx typeCtx(R_Ctx Ctx) { return TRV_Type; }
 };
 
-
 // Base class for traversals that rewrite an SExpr to another SExpr.
 class CopyReducerBase : public SimpleReducerBase {
 public:
   // R_SExpr is the result type for a traversal.
   // A copy or non-destructive rewrite returns a newly allocated term.
-  typedef SExpr *R_SExpr;
-  typedef BasicBlock *R_BasicBlock;
+  using R_SExpr = SExpr *;
+  using R_BasicBlock = BasicBlock *;
 
   // Container is a minimal interface used to store results when traversing
   // SExprs of variable arity, such as Phi, Goto, and SCFG.
@@ -151,24 +162,23 @@ protected:
   MemRegionRef Arena;
 };
 
-
 // Base class for visit traversals.
 class VisitReducerBase : public SimpleReducerBase {
 public:
   // A visitor returns a bool, representing success or failure.
-  typedef bool R_SExpr;
-  typedef bool R_BasicBlock;
+  using R_SExpr = bool;
+  using R_BasicBlock = bool;
 
   // A visitor "container" is a single bool, which accumulates success.
   template <class T> class Container {
   public:
-    Container(VisitReducerBase &S, unsigned N) : Success(true) {}
-    void push_back(bool E) { Success = Success && E; }
+    bool Success = true;
 
-    bool Success;
+    Container(VisitReducerBase &S, unsigned N) {}
+
+    void push_back(bool E) { Success = Success && E; }
   };
 };
-
 
 // Implements a traversal that visits each subexpression, and returns either
 // true or false.
@@ -176,7 +186,7 @@ template <class Self>
 class VisitReducer : public Traversal<Self, VisitReducerBase>,
                      public VisitReducerBase {
 public:
-  VisitReducer() {}
+  VisitReducer() = default;
 
 public:
   R_SExpr reduceNull() { return true; }
@@ -191,54 +201,70 @@ public:
   R_SExpr reduceFunction(Function &Orig, Variable *Nvd, R_SExpr E0) {
     return Nvd && E0;
   }
+
   R_SExpr reduceSFunction(SFunction &Orig, Variable *Nvd, R_SExpr E0) {
     return Nvd && E0;
   }
+
   R_SExpr reduceCode(Code &Orig, R_SExpr E0, R_SExpr E1) {
     return E0 && E1;
   }
+
   R_SExpr reduceField(Field &Orig, R_SExpr E0, R_SExpr E1) {
     return E0 && E1;
   }
+
   R_SExpr reduceApply(Apply &Orig, R_SExpr E0, R_SExpr E1) {
     return E0 && E1;
   }
+
   R_SExpr reduceSApply(SApply &Orig, R_SExpr E0, R_SExpr E1) {
     return E0 && E1;
   }
+
   R_SExpr reduceProject(Project &Orig, R_SExpr E0) { return E0; }
   R_SExpr reduceCall(Call &Orig, R_SExpr E0) { return E0; }
   R_SExpr reduceAlloc(Alloc &Orig, R_SExpr E0) { return E0; }
   R_SExpr reduceLoad(Load &Orig, R_SExpr E0) { return E0; }
   R_SExpr reduceStore(Store &Orig, R_SExpr E0, R_SExpr E1) { return E0 && E1; }
+
   R_SExpr reduceArrayIndex(Store &Orig, R_SExpr E0, R_SExpr E1) {
     return E0 && E1;
   }
+
   R_SExpr reduceArrayAdd(Store &Orig, R_SExpr E0, R_SExpr E1) {
     return E0 && E1;
   }
+
   R_SExpr reduceUnaryOp(UnaryOp &Orig, R_SExpr E0) { return E0; }
+
   R_SExpr reduceBinaryOp(BinaryOp &Orig, R_SExpr E0, R_SExpr E1) {
     return E0 && E1;
   }
+
   R_SExpr reduceCast(Cast &Orig, R_SExpr E0) { return E0; }
 
   R_SExpr reduceSCFG(SCFG &Orig, Container<BasicBlock *> Bbs) {
     return Bbs.Success;
   }
+
   R_BasicBlock reduceBasicBlock(BasicBlock &Orig, Container<R_SExpr> &As,
                                 Container<R_SExpr> &Is, R_SExpr T) {
     return (As.Success && Is.Success && T);
   }
+
   R_SExpr reducePhi(Phi &Orig, Container<R_SExpr> &As) {
     return As.Success;
   }
+
   R_SExpr reduceGoto(Goto &Orig, BasicBlock *B) {
     return true;
   }
+
   R_SExpr reduceBranch(Branch &O, R_SExpr C, BasicBlock *B0, BasicBlock *B1) {
     return C;
   }
+
   R_SExpr reduceReturn(Return &O, R_SExpr E) {
     return E;
   }
@@ -246,9 +272,11 @@ public:
   R_SExpr reduceIdentifier(Identifier &Orig) {
     return true;
   }
+
   R_SExpr reduceIfThenElse(IfThenElse &Orig, R_SExpr C, R_SExpr T, R_SExpr E) {
     return C && T && E;
   }
+
   R_SExpr reduceLet(Let &Orig, Variable *Nvd, R_SExpr B) {
     return Nvd && B;
   }
@@ -260,7 +288,7 @@ public:
   void enterBasicBlock(BasicBlock &BB) {}
   void exitBasicBlock(BasicBlock &BB) {}
 
-  Variable   *reduceVariableRef  (Variable *Ovd)   { return Ovd; }
+  Variable *reduceVariableRef(Variable *Ovd) { return Ovd; }
   BasicBlock *reduceBasicBlockRef(BasicBlock *Obb) { return Obb; }
 
 public:
@@ -277,7 +305,6 @@ public:
 private:
   bool Success;
 };
-
 
 // Basic class for comparison operations over expressions.
 template <typename Self>
@@ -298,19 +325,18 @@ public:
   }
 };
 
-
 class EqualsComparator : public Comparator<EqualsComparator> {
 public:
   // Result type for the comparison, e.g. bool for simple equality,
   // or int for lexigraphic comparison (-1, 0, 1).  Must have one value which
   // denotes "true".
-  typedef bool CType;
+  using CType = bool;
 
   CType trueResult() { return true; }
   bool notTrue(CType ct) { return !ct; }
 
-  bool compareIntegers(unsigned i, unsigned j)       { return i == j; }
-  bool compareStrings (StringRef s, StringRef r)     { return s == r; }
+  bool compareIntegers(unsigned i, unsigned j) { return i == j; }
+  bool compareStrings (StringRef s, StringRef r) { return s == r; }
   bool comparePointers(const void* P, const void* Q) { return P == Q; }
 
   bool compare(const SExpr *E1, const SExpr* E2) {
@@ -320,10 +346,10 @@ public:
   }
 
   // TODO -- handle alpha-renaming of variables
-  void enterScope(const Variable* V1, const Variable* V2) { }
-  void leaveScope() { }
+  void enterScope(const Variable *V1, const Variable *V2) {}
+  void leaveScope() {}
 
-  bool compareVariableRefs(const Variable* V1, const Variable* V2) {
+  bool compareVariableRefs(const Variable *V1, const Variable *V2) {
     return V1 == V2;
   }
 
@@ -333,23 +359,21 @@ public:
   }
 };
 
-
-
 class MatchComparator : public Comparator<MatchComparator> {
 public:
   // Result type for the comparison, e.g. bool for simple equality,
   // or int for lexigraphic comparison (-1, 0, 1).  Must have one value which
   // denotes "true".
-  typedef bool CType;
+  using CType = bool;
 
   CType trueResult() { return true; }
   bool notTrue(CType ct) { return !ct; }
 
-  bool compareIntegers(unsigned i, unsigned j)       { return i == j; }
-  bool compareStrings (StringRef s, StringRef r)     { return s == r; }
-  bool comparePointers(const void* P, const void* Q) { return P == Q; }
+  bool compareIntegers(unsigned i, unsigned j) { return i == j; }
+  bool compareStrings (StringRef s, StringRef r) { return s == r; }
+  bool comparePointers(const void *P, const void *Q) { return P == Q; }
 
-  bool compare(const SExpr *E1, const SExpr* E2) {
+  bool compare(const SExpr *E1, const SExpr *E2) {
     // Wildcards match anything.
     if (E1->opcode() == COP_Wildcard || E2->opcode() == COP_Wildcard)
       return true;
@@ -360,8 +384,8 @@ public:
   }
 
   // TODO -- handle alpha-renaming of variables
-  void enterScope(const Variable* V1, const Variable* V2) { }
-  void leaveScope() { }
+  void enterScope(const Variable* V1, const Variable* V2) {}
+  void leaveScope() {}
 
   bool compareVariableRefs(const Variable* V1, const Variable* V2) {
     return V1 == V2;
@@ -373,8 +397,6 @@ public:
   }
 };
 
-
-
 // inline std::ostream& operator<<(std::ostream& SS, StringRef R) {
 //   return SS.write(R.data(), R.size());
 // }
@@ -383,14 +405,18 @@ public:
 template <typename Self, typename StreamType>
 class PrettyPrinter {
 private:
-  bool Verbose;  // Print out additional information
-  bool Cleanup;  // Omit redundant decls.
-  bool CStyle;   // Print exprs in C-like syntax.
+  // Print out additional information.
+  bool Verbose;
+
+  // Omit redundant decls.
+  bool Cleanup;
+
+  // Print exprs in C-like syntax.
+  bool CStyle;
 
 public:
   PrettyPrinter(bool V = false, bool C = true, bool CS = true)
-     : Verbose(V), Cleanup(C), CStyle(CS)
-  {}
+      : Verbose(V), Cleanup(C), CStyle(CS) {}
 
   static void print(const SExpr *E, StreamType &SS) {
     Self printer;
@@ -470,7 +496,6 @@ protected:
     }
   }
 
-
   void printSExpr(const SExpr *E, StreamType &SS, unsigned P, bool Sub=true) {
     if (!E) {
       self()->printNull(SS);
@@ -531,18 +556,16 @@ protected:
     else {
       ValueType VT = E->valueType();
       switch (VT.Base) {
-      case ValueType::BT_Void: {
+      case ValueType::BT_Void:
         SS << "void";
         return;
-      }
-      case ValueType::BT_Bool: {
+      case ValueType::BT_Bool:
         if (E->as<bool>().value())
           SS << "true";
         else
           SS << "false";
         return;
-      }
-      case ValueType::BT_Int: {
+      case ValueType::BT_Int:
         switch (VT.Size) {
         case ValueType::ST_8:
           if (VT.Signed)
@@ -572,8 +595,7 @@ protected:
           break;
         }
         break;
-      }
-      case ValueType::BT_Float: {
+      case ValueType::BT_Float:
         switch (VT.Size) {
         case ValueType::ST_32:
           printLiteralT(&E->as<float>(), SS);
@@ -585,21 +607,17 @@ protected:
           break;
         }
         break;
-      }
-      case ValueType::BT_String: {
+      case ValueType::BT_String:
         SS << "\"";
         printLiteralT(&E->as<StringRef>(), SS);
         SS << "\"";
         return;
-      }
-      case ValueType::BT_Pointer: {
+      case ValueType::BT_Pointer:
         SS << "#ptr";
         return;
-      }
-      case ValueType::BT_ValueRef: {
+      case ValueType::BT_ValueRef:
         SS << "#vref";
         return;
-      }
       }
     }
     SS << "#lit";
@@ -688,8 +706,8 @@ protected:
   void printProject(const Project *E, StreamType &SS) {
     if (CStyle) {
       // Omit the  this->
-      if (const SApply *SAP = dyn_cast<SApply>(E->record())) {
-        if (const Variable *V = dyn_cast<Variable>(SAP->sfun())) {
+      if (const auto *SAP = dyn_cast<SApply>(E->record())) {
+        if (const auto *V = dyn_cast<Variable>(SAP->sfun())) {
           if (!SAP->isDelegation() && V->kind() == Variable::VK_SFun) {
             SS << E->slotName();
             return;
@@ -704,12 +722,10 @@ protected:
       }
     }
     self()->printSExpr(E->record(), SS, Prec_Postfix);
-    if (CStyle && E->isArrow()) {
+    if (CStyle && E->isArrow())
       SS << "->";
-    }
-    else {
+    else
       SS << ".";
-    }
     SS << E->slotName();
   }
 
@@ -780,18 +796,16 @@ protected:
 
   void printSCFG(const SCFG *E, StreamType &SS) {
     SS << "CFG {\n";
-    for (auto BBI : *E) {
+    for (const auto *BBI : *E)
       printBasicBlock(BBI, SS);
-    }
     SS << "}";
     newline(SS);
   }
 
-
   void printBBInstr(const SExpr *E, StreamType &SS) {
     bool Sub = false;
     if (E->opcode() == COP_Variable) {
-      auto *V = cast<Variable>(E);
+      const auto *V = cast<Variable>(E);
       SS << "let " << V->name() << V->id() << " = ";
       E = V->definition();
       Sub = true;
@@ -810,10 +824,10 @@ protected:
       SS << " BB_" << E->parent()->blockID();
     newline(SS);
 
-    for (auto *A : E->arguments())
+    for (const auto *A : E->arguments())
       printBBInstr(A, SS);
 
-    for (auto *I : E->instructions())
+    for (const auto *I : E->instructions())
       printBBInstr(I, SS);
 
     const SExpr *T = E->terminator();
@@ -831,7 +845,7 @@ protected:
       self()->printSExpr(E->values()[0], SS, Prec_MAX);
     else {
       unsigned i = 0;
-      for (auto V : E->values()) {
+      for (const auto *V : E->values()) {
         if (i++ > 0)
           SS << ", ";
         self()->printSExpr(V, SS, Prec_MAX);
@@ -890,13 +904,10 @@ protected:
   }
 };
 
+class StdPrinter : public PrettyPrinter<StdPrinter, std::ostream> {};
 
-class StdPrinter : public PrettyPrinter<StdPrinter, std::ostream> { };
+} // namespace til
+} // namespace threadSafety
+} // namespace clang
 
-
-
-} // end namespace til
-} // end namespace threadSafety
-} // end namespace clang
-
-#endif  // LLVM_CLANG_THREAD_SAFETY_TRAVERSE_H
+#endif // LLVM_CLANG_ANALYSIS_ANALYSES_THREADSAFETYTRAVERSE_H

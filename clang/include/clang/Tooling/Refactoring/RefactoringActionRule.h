@@ -56,7 +56,7 @@ public:
 class RefactoringActionRule : public RefactoringActionRuleBase {
 public:
   /// Returns true when the rule has a source selection requirement that has
-  /// to be fullfilled before refactoring can be performed.
+  /// to be fulfilled before refactoring can be performed.
   virtual bool hasSelectionRequirement() = 0;
 
   /// Traverses each refactoring option used by the rule and invokes the

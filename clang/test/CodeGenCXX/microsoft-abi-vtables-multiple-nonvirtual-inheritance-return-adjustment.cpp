@@ -36,7 +36,7 @@ struct X : D {
   // CHECK-LABEL: VFTable indices for 'test1::X' (1 entry).
   // CHECK-NEXT:   2 | test1::C *test1::X::foo()
 
-  // MANGLING-DAG: @"\01??_7X@test1@@6B@"
+  // MANGLING-DAG: @"??_7X@test1@@6B@"
 
   virtual C* foo();
 } x;

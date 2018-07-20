@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief Defines and computes precedence levels for binary/ternary operators.
+/// Defines and computes precedence levels for binary/ternary operators.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -44,7 +44,7 @@ namespace prec {
   };
 }
 
-/// \brief Return the precedence of the specified binary operator token.
+/// Return the precedence of the specified binary operator token.
 prec::Level getBinOpPrecedence(tok::TokenKind Kind, bool GreaterThanIsOperator,
                                bool CPlusPlus11);
 

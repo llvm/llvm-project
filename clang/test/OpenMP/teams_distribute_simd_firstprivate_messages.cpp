@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -fopenmp %s
+// RUN: %clang_cc1 -verify -fopenmp %s -Wno-openmp-target
 
-// RUN: %clang_cc1 -verify -fopenmp-simd %s
+// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wno-openmp-target
 
 void foo() {
 }

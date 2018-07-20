@@ -9,9 +9,8 @@ struct X0 {
 };
 
 struct X1 {
-  int X1; // expected-note{{hidden by a non-type declaration of 'X1' here}}
-  X1(); // expected-error{{must use 'struct' tag to refer to type 'X1' in this scope}} \
-        // expected-error{{expected member name or ';' after declaration specifiers}}
+  int X1; // expected-error{{member 'X1' has the same name as its class}}
+  X1();
 };
 
 struct X2 {

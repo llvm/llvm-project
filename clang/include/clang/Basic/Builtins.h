@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief Defines enum values for all the target-independent builtin
+/// Defines enum values for all the target-independent builtin
 /// functions.
 ///
 //===----------------------------------------------------------------------===//
@@ -59,7 +59,7 @@ struct Info {
   const char *Features;
 };
 
-/// \brief Holds information about both target-independent and
+/// Holds information about both target-independent and
 /// target-specific builtins, allowing easy queries by clients.
 ///
 /// Builtins from an optional auxiliary target are stored in
@@ -72,122 +72,129 @@ class Context {
 public:
   Context() {}
 
-  /// \brief Perform target-specific initialization
+  /// Perform target-specific initialization
   /// \param AuxTarget Target info to incorporate builtins from. May be nullptr.
   void InitializeTarget(const TargetInfo &Target, const TargetInfo *AuxTarget);
 
-  /// \brief Mark the identifiers for all the builtins with their
+  /// Mark the identifiers for all the builtins with their
   /// appropriate builtin ID # and mark any non-portable builtin identifiers as
   /// such.
   void initializeBuiltins(IdentifierTable &Table, const LangOptions& LangOpts);
 
-  /// \brief Return the identifier name for the specified builtin,
+  /// Return the identifier name for the specified builtin,
   /// e.g. "__builtin_abs".
   const char *getName(unsigned ID) const {
     return getRecord(ID).Name;
   }
 
-  /// \brief Get the type descriptor string for the specified builtin.
+  /// Get the type descriptor string for the specified builtin.
   const char *getTypeString(unsigned ID) const {
     return getRecord(ID).Type;
   }
 
-  /// \brief Return true if this function is a target-specific builtin.
+  /// Return true if this function is a target-specific builtin.
   bool isTSBuiltin(unsigned ID) const {
     return ID >= Builtin::FirstTSBuiltin;
   }
 
-  /// \brief Return true if this function has no side effects.
+  /// Return true if this function has no side effects.
   bool isPure(unsigned ID) const {
     return strchr(getRecord(ID).Attributes, 'U') != nullptr;
   }
 
-  /// \brief Return true if this function has no side effects and doesn't
+  /// Return true if this function has no side effects and doesn't
   /// read memory.
   bool isConst(unsigned ID) const {
     return strchr(getRecord(ID).Attributes, 'c') != nullptr;
   }
 
-  /// \brief Return true if we know this builtin never throws an exception.
+  /// Return true if we know this builtin never throws an exception.
   bool isNoThrow(unsigned ID) const {
     return strchr(getRecord(ID).Attributes, 'n') != nullptr;
   }
 
-  /// \brief Return true if we know this builtin never returns.
+  /// Return true if we know this builtin never returns.
   bool isNoReturn(unsigned ID) const {
     return strchr(getRecord(ID).Attributes, 'r') != nullptr;
   }
 
-  /// \brief Return true if we know this builtin can return twice.
+  /// Return true if we know this builtin can return twice.
   bool isReturnsTwice(unsigned ID) const {
     return strchr(getRecord(ID).Attributes, 'j') != nullptr;
   }
 
-  /// \brief Returns true if this builtin does not perform the side-effects
+  /// Returns true if this builtin does not perform the side-effects
   /// of its arguments.
   bool isUnevaluated(unsigned ID) const {
     return strchr(getRecord(ID).Attributes, 'u') != nullptr;
   }
 
-  /// \brief Return true if this is a builtin for a libc/libm function,
+  /// Return true if this is a builtin for a libc/libm function,
   /// with a "__builtin_" prefix (e.g. __builtin_abs).
   bool isLibFunction(unsigned ID) const {
     return strchr(getRecord(ID).Attributes, 'F') != nullptr;
   }
 
-  /// \brief Determines whether this builtin is a predefined libc/libm
+  /// Determines whether this builtin is a predefined libc/libm
   /// function, such as "malloc", where we know the signature a
   /// priori.
   bool isPredefinedLibFunction(unsigned ID) const {
     return strchr(getRecord(ID).Attributes, 'f') != nullptr;
   }
 
-  /// \brief Returns true if this builtin requires appropriate header in other
+  /// Returns true if this builtin requires appropriate header in other
   /// compilers. In Clang it will work even without including it, but we can emit
   /// a warning about missing header.
   bool isHeaderDependentFunction(unsigned ID) const {
     return strchr(getRecord(ID).Attributes, 'h') != nullptr;
   }
 
-  /// \brief Determines whether this builtin is a predefined compiler-rt/libgcc
+  /// Determines whether this builtin is a predefined compiler-rt/libgcc
   /// function, such as "__clear_cache", where we know the signature a
   /// priori.
   bool isPredefinedRuntimeFunction(unsigned ID) const {
     return strchr(getRecord(ID).Attributes, 'i') != nullptr;
   }
 
-  /// \brief Determines whether this builtin has custom typechecking.
+  /// Determines whether this builtin has custom typechecking.
   bool hasCustomTypechecking(unsigned ID) const {
     return strchr(getRecord(ID).Attributes, 't') != nullptr;
   }
 
-  /// \brief Determines whether this builtin has a result or any arguments which
+  /// Determines whether this builtin has a result or any arguments which
   /// are pointer types.
   bool hasPtrArgsOrResult(unsigned ID) const {
     return strchr(getRecord(ID).Type, '*') != nullptr;
   }
 
-  /// \brief Completely forget that the given ID was ever considered a builtin,
+  /// Return true if this builtin has a result or any arguments which are
+  /// reference types.
+  bool hasReferenceArgsOrResult(unsigned ID) const {
+    return strchr(getRecord(ID).Type, '&') != nullptr ||
+           strchr(getRecord(ID).Type, 'A') != nullptr;
+  }
+
+  /// Completely forget that the given ID was ever considered a builtin,
   /// e.g., because the user provided a conflicting signature.
   void forgetBuiltin(unsigned ID, IdentifierTable &Table);
 
-  /// \brief If this is a library function that comes from a specific
+  /// If this is a library function that comes from a specific
   /// header, retrieve that header name.
   const char *getHeaderName(unsigned ID) const {
     return getRecord(ID).HeaderName;
   }
 
-  /// \brief Determine whether this builtin is like printf in its
+  /// Determine whether this builtin is like printf in its
   /// formatting rules and, if so, set the index to the format string
   /// argument and whether this function as a va_list argument.
   bool isPrintfLike(unsigned ID, unsigned &FormatIdx, bool &HasVAListArg);
 
-  /// \brief Determine whether this builtin is like scanf in its
+  /// Determine whether this builtin is like scanf in its
   /// formatting rules and, if so, set the index to the format string
   /// argument and whether this function as a va_list argument.
   bool isScanfLike(unsigned ID, unsigned &FormatIdx, bool &HasVAListArg);
 
-  /// \brief Return true if this function has no side effects and doesn't
+  /// Return true if this function has no side effects and doesn't
   /// read memory, except for possibly errno.
   ///
   /// Such functions can be const when the MathErrno lang option is disabled.
@@ -199,12 +206,14 @@ public:
     return getRecord(ID).Features;
   }
 
-  /// \brief Return true if builtin ID belongs to AuxTarget.
+  unsigned getRequiredVectorWidth(unsigned ID) const;
+
+  /// Return true if builtin ID belongs to AuxTarget.
   bool isAuxBuiltinID(unsigned ID) const {
     return ID >= (Builtin::FirstTSBuiltin + TSRecords.size());
   }
 
-  /// Return real buitin ID (i.e. ID it would have furing compilation
+  /// Return real builtin ID (i.e. ID it would have during compilation
   /// for AuxTarget).
   unsigned getAuxBuiltinID(unsigned ID) const { return ID - TSRecords.size(); }
 
@@ -212,26 +221,30 @@ public:
   /// prefix.
   static bool isBuiltinFunc(const char *Name);
 
+  /// Returns true if this is a builtin that can be redeclared.  Returns true
+  /// for non-builtins.
+  bool canBeRedeclared(unsigned ID) const;
+
 private:
   const Info &getRecord(unsigned ID) const;
 
-  /// \brief Is this builtin supported according to the given language options?
+  /// Is this builtin supported according to the given language options?
   bool builtinIsSupported(const Builtin::Info &BuiltinInfo,
                           const LangOptions &LangOpts);
 
-  /// \brief Helper function for isPrintfLike and isScanfLike.
+  /// Helper function for isPrintfLike and isScanfLike.
   bool isLike(unsigned ID, unsigned &FormatIdx, bool &HasVAListArg,
               const char *Fmt) const;
 };
 
 }
 
-/// \brief Kinds of BuiltinTemplateDecl.
+/// Kinds of BuiltinTemplateDecl.
 enum BuiltinTemplateKind : int {
-  /// \brief This names the __make_integer_seq BuiltinTemplateDecl.
+  /// This names the __make_integer_seq BuiltinTemplateDecl.
   BTK__make_integer_seq,
 
-  /// \brief This names the __type_pack_element BuiltinTemplateDecl.
+  /// This names the __type_pack_element BuiltinTemplateDecl.
   BTK__type_pack_element
 };
 

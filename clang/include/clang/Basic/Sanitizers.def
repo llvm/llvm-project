@@ -44,7 +44,11 @@ SANITIZER("address", Address)
 // Kernel AddressSanitizer (KASan)
 SANITIZER("kernel-address", KernelAddress)
 
+// Hardware-assisted AddressSanitizer
 SANITIZER("hwaddress", HWAddress)
+
+// Kernel Hardware-assisted AddressSanitizer (KHWASan)
+SANITIZER("kernel-hwaddress", KernelHWAddress)
 
 // MemorySanitizer
 SANITIZER("memory", Memory)
@@ -100,15 +104,19 @@ SANITIZER("dataflow", DataFlow)
 SANITIZER("cfi-cast-strict", CFICastStrict)
 SANITIZER("cfi-derived-cast", CFIDerivedCast)
 SANITIZER("cfi-icall", CFIICall)
+SANITIZER("cfi-mfcall", CFIMFCall)
 SANITIZER("cfi-unrelated-cast", CFIUnrelatedCast)
 SANITIZER("cfi-nvcall", CFINVCall)
 SANITIZER("cfi-vcall", CFIVCall)
 SANITIZER_GROUP("cfi", CFI,
-                CFIDerivedCast | CFIICall | CFIUnrelatedCast | CFINVCall |
-                CFIVCall)
+                CFIDerivedCast | CFIICall | CFIMFCall | CFIUnrelatedCast |
+                    CFINVCall | CFIVCall)
 
 // Safe Stack
 SANITIZER("safe-stack", SafeStack)
+
+// Shadow Call Stack
+SANITIZER("shadow-call-stack", ShadowCallStack)
 
 // -fsanitize=undefined includes all the sanitizers which have low overhead, no
 // ABI or address space layout implications, and only catch undefined behavior.

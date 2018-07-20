@@ -56,6 +56,10 @@ public:
     return Name == "nios2r1" || Name == "nios2r2";
   }
 
+  void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override {
+    Values.append({"nios2r1", "nios2r2"});
+  }
+
   bool setCPU(const std::string &Name) override {
     if (isValidCPUName(Name)) {
       CPU = Name;

@@ -237,10 +237,11 @@ namespace PR5066 {
 namespace PR17255 {
 void foo() {
   typename A::template B<>; // expected-error {{use of undeclared identifier 'A'}}
+  // expected-error@-1 {{'template' keyword not permitted here}}
 #if __cplusplus <= 199711L
-  // expected-error@-2 {{'template' keyword outside of a template}}
+  // expected-error@-3 {{'template' keyword outside of a template}}
 #endif
-  // expected-error@-4 {{expected a qualified name after 'typename'}}
+  // expected-error@-5 {{expected a qualified name after 'typename'}}
 }
 }
 
@@ -296,6 +297,11 @@ inline namespace ParensAroundFriend { // expected-error 0-1{{C++11}}
       friend A (::B::C());
     };
   }
+}
+
+namespace rdar37099386 {
+  class A typename A; // expected-error {{expected a qualified name after 'typename'}}
+  // expected-error@-1 {{cannot combine with previous 'class' declaration specifier}}
 }
 
 // PR8380

@@ -7,30 +7,30 @@
 // RUN: %clang_cc1 -fobjc-runtime=macosx-10.7.0 -triple x86_64-apple-darwin11 -Wno-objc-root-class -Wno-incompatible-pointer-types -Wno-arc-unsafe-retained-assign -emit-llvm -fblocks -fobjc-arc -fobjc-runtime-has-weak -o - %s | FileCheck -check-prefix=ARC-NATIVE %s
 
 // ARC-ALIEN: declare extern_weak void @objc_storeStrong(i8**, i8*)
-// ARC-ALIEN: declare extern_weak i8* @objc_retain(i8* returned)
-// ARC-ALIEN: declare extern_weak i8* @objc_autoreleaseReturnValue(i8* returned)
+// ARC-ALIEN: declare extern_weak i8* @objc_retain(i8*)
+// ARC-ALIEN: declare extern_weak i8* @objc_autoreleaseReturnValue(i8*)
 // ARC-ALIEN: declare i8* @objc_msgSend(i8*, i8*, ...) [[NLB:#[0-9]+]]
 // ARC-ALIEN: declare extern_weak void @objc_release(i8*)
-// ARC-ALIEN: declare extern_weak i8* @objc_retainAutoreleasedReturnValue(i8* returned)
+// ARC-ALIEN: declare extern_weak i8* @objc_retainAutoreleasedReturnValue(i8*)
 // ARC-ALIEN: declare extern_weak i8* @objc_initWeak(i8**, i8*)
 // ARC-ALIEN: declare extern_weak i8* @objc_storeWeak(i8**, i8*)
 // ARC-ALIEN: declare extern_weak i8* @objc_loadWeakRetained(i8**)
 // ARC-ALIEN: declare extern_weak void @objc_destroyWeak(i8**)
-// declare extern_weak i8* @objc_autorelease(i8*)
-// ARC-ALIEN: declare extern_weak i8* @objc_retainAutorelease(i8* returned)
+// ARC-ALIEN: declare extern_weak i8* @objc_autorelease(i8*)
+// ARC-ALIEN: declare extern_weak i8* @objc_retainAutorelease(i8*)
 
 // ARC-NATIVE: declare void @objc_storeStrong(i8**, i8*)
-// ARC-NATIVE: declare i8* @objc_retain(i8* returned) [[NLB:#[0-9]+]]
-// ARC-NATIVE: declare i8* @objc_autoreleaseReturnValue(i8* returned)
+// ARC-NATIVE: declare i8* @objc_retain(i8*) [[NLB:#[0-9]+]]
+// ARC-NATIVE: declare i8* @objc_autoreleaseReturnValue(i8*)
 // ARC-NATIVE: declare i8* @objc_msgSend(i8*, i8*, ...) [[NLB]]
 // ARC-NATIVE: declare void @objc_release(i8*) [[NLB]]
-// ARC-NATIVE: declare i8* @objc_retainAutoreleasedReturnValue(i8* returned)
+// ARC-NATIVE: declare i8* @objc_retainAutoreleasedReturnValue(i8*)
 // ARC-NATIVE: declare i8* @objc_initWeak(i8**, i8*)
 // ARC-NATIVE: declare i8* @objc_storeWeak(i8**, i8*)
 // ARC-NATIVE: declare i8* @objc_loadWeakRetained(i8**)
 // ARC-NATIVE: declare void @objc_destroyWeak(i8**)
-// declare i8* @objc_autorelease(i8*)
-// ARC-NATIVE: declare i8* @objc_retainAutorelease(i8* returned)
+// ARC-NATIVE: declare i8* @objc_autorelease(i8*)
+// ARC-NATIVE: declare i8* @objc_retainAutorelease(i8*)
 
 // CHECK-LABEL: define void @test0
 void test0(id x) {
@@ -507,7 +507,7 @@ void test19() {
   // CHECK:      [[X:%.*]] = alloca [5 x i8*], align 16
   // CHECK: call void @llvm.lifetime.start
   // CHECK-NEXT: [[T0:%.*]] = bitcast [5 x i8*]* [[X]] to i8*
-  // CHECK: call void @llvm.memset.p0i8.i64(i8* [[T0]], i8 0, i64 40, i32 16, i1 false)
+  // CHECK: call void @llvm.memset.p0i8.i64(i8* align 16 [[T0]], i8 0, i64 40, i1 false)
   id x[5];
 
   extern id test19_helper(void);
@@ -538,6 +538,7 @@ void test20(unsigned n) {
   // CHECK-LABEL: define void @test20
   // CHECK:      [[N:%.*]] = alloca i32, align 4
   // CHECK-NEXT: [[SAVED_STACK:%.*]] = alloca i8*
+  // CHECK-NEXT: [[VLA_EXPR:%.*]] = alloca i64, align 8
   // CHECK-NEXT: store i32 {{%.*}}, i32* [[N]], align 4
 
   id x[n];
@@ -553,10 +554,13 @@ void test20(unsigned n) {
   // Allocate the VLA.
   // CHECK-NEXT: [[VLA:%.*]] = alloca i8*, i64 [[DIM]], align 16
 
+  // Store the VLA #elements expression.
+  // CHECK-NEXT: store i64 [[DIM]], i64* [[VLA_EXPR]], align 8
+
   // Zero-initialize.
   // CHECK-NEXT: [[T0:%.*]] = bitcast i8** [[VLA]] to i8*
   // CHECK-NEXT: [[T1:%.*]] = mul nuw i64 [[DIM]], 8
-  // CHECK-NEXT: call void @llvm.memset.p0i8.i64(i8* [[T0]], i8 0, i64 [[T1]], i32 16, i1 false)
+  // CHECK-NEXT: call void @llvm.memset.p0i8.i64(i8* align 16 [[T0]], i8 0, i64 [[T1]], i1 false)
 
   // Destroy.
   // CHECK-NEXT: [[END:%.*]] = getelementptr inbounds i8*, i8** [[VLA]], i64 [[DIM]]
@@ -579,6 +583,7 @@ void test21(unsigned n) {
   // CHECK-LABEL: define void @test21
   // CHECK:      [[N:%.*]] = alloca i32, align 4
   // CHECK-NEXT: [[SAVED_STACK:%.*]] = alloca i8*
+  // CHECK-NEXT: [[VLA_EXPR:%.*]] = alloca i64, align 8
   // CHECK-NEXT: store i32 {{%.*}}, i32* [[N]], align 4
 
   id x[2][n][3];
@@ -595,11 +600,14 @@ void test21(unsigned n) {
   // CHECK-NEXT: [[T0:%.*]] = mul nuw i64 2, [[DIM]]
   // CHECK-NEXT: [[VLA:%.*]] = alloca [3 x i8*], i64 [[T0]], align 16
 
+  // Store the VLA #elements expression.
+  // CHECK-NEXT: store i64 [[DIM]], i64* [[VLA_EXPR]], align 8
+
   // Zero-initialize.
   // CHECK-NEXT: [[T0:%.*]] = bitcast [3 x i8*]* [[VLA]] to i8*
   // CHECK-NEXT: [[T1:%.*]] = mul nuw i64 2, [[DIM]]
   // CHECK-NEXT: [[T2:%.*]] = mul nuw i64 [[T1]], 24
-  // CHECK-NEXT: call void @llvm.memset.p0i8.i64(i8* [[T0]], i8 0, i64 [[T2]], i32 16, i1 false)
+  // CHECK-NEXT: call void @llvm.memset.p0i8.i64(i8* align 16 [[T0]], i8 0, i64 [[T2]], i1 false)
 
   // Destroy.
   // CHECK-NEXT: [[T0:%.*]] = mul nuw i64 2, [[DIM]]
@@ -1504,9 +1512,7 @@ void test68(void) {
 // CHECK:      [[SELF:%.*]] = alloca [[TEST69:%.*]]*, align 8
 // CHECK:      [[T0:%.*]] = load [[TEST69]]*, [[TEST69]]** [[SELF]], align 8
 // CHECK-NEXT: [[T1:%.*]] = bitcast [[TEST69]]* [[T0]] to i8*
-// CHECK-NEXT: [[RETAIN:%.*]] = call i8* @objc_retain(i8* [[T1]])
-// CHECK-NEXT: [[AUTORELEASE:%.*]] = tail call i8* @objc_autoreleaseReturnValue(i8* [[RETAIN]])
-// CHECK-NEXT: ret i8* [[AUTORELEASE]]
+// CHECK-NEXT: ret i8* [[T1]]
 
 // rdar://problem/10907547
 void test70(id i) {
@@ -1518,6 +1524,37 @@ void test70(id i) {
   id x[3] = {
     [2] = i
   };
+}
+
+// Be sure that we emit lifetime intrinsics only after dtors
+struct AggDtor {
+  char cs[40];
+  id x;
+};
+
+struct AggDtor getAggDtor(void);
+
+// CHECK-LABEL: define void @test71
+void test71(void) {
+  // FIXME: It would be nice if the __destructor_8_s40 for the first call (and
+  // the following lifetime.end) came before the second call.
+  //
+  // CHECK: %[[T:[^ ]+]] = bitcast %struct.AggDtor* %[[TMP1:[^ ]+]] to i8*
+  // CHECK: call void @llvm.lifetime.start.p0i8({{[^,]+}}, i8* %[[T]])
+  // CHECK: call void @getAggDtor(%struct.AggDtor* sret %[[TMP1]])
+  // CHECK: %[[T:[^ ]+]] = bitcast %struct.AggDtor* %[[TMP2:[^ ]+]] to i8*
+  // CHECK: call void @llvm.lifetime.start.p0i8({{[^,]+}}, i8* %[[T]])
+  // CHECK: call void @getAggDtor(%struct.AggDtor* sret %[[TMP2]])
+  // CHECK: %[[T:[^ ]+]] = bitcast %struct.AggDtor* %[[TMP2]] to i8**
+  // CHECK: call void @__destructor_8_s40(i8** %[[T]])
+  // CHECK: %[[T:[^ ]+]] = bitcast %struct.AggDtor* %[[TMP2:[^ ]+]] to i8*
+  // CHECK: call void @llvm.lifetime.end.p0i8({{[^,]+}}, i8* %[[T]])
+  // CHECK: %[[T:[^ ]+]] = bitcast %struct.AggDtor* %[[TMP1]] to i8**
+  // CHECK: call void @__destructor_8_s40(i8** %[[T]])
+  // CHECK: %[[T:[^ ]+]] = bitcast %struct.AggDtor* %[[TMP1:[^ ]+]] to i8*
+  // CHECK: call void @llvm.lifetime.end.p0i8({{[^,]+}}, i8* %[[T]])
+  getAggDtor();
+  getAggDtor();
 }
 
 // ARC-ALIEN: attributes [[NLB]] = { nonlazybind }

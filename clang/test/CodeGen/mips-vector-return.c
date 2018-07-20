@@ -8,13 +8,13 @@ typedef float  v4sf __attribute__ ((__vector_size__ (16)));
 typedef double v4df __attribute__ ((__vector_size__ (32)));
 typedef int v4i32 __attribute__ ((__vector_size__ (16)));
 
-// O32-LABEL: define void @test_v4sf(<4 x float>* noalias nocapture sret
+// O32-LABEL: define dso_local void @test_v4sf(<4 x float>* noalias nocapture sret
 // N64: define inreg { i64, i64 } @test_v4sf
 v4sf test_v4sf(float a) {
   return (v4sf){0.0f, a, 0.0f, 0.0f};
 }
 
-// O32-LABEL: define void @test_v4df(<4 x double>* noalias nocapture sret
+// O32-LABEL: define dso_local void @test_v4df(<4 x double>* noalias nocapture sret
 // N64-LABEL: define void @test_v4df(<4 x double>* noalias nocapture sret
 v4df test_v4df(double a) {
   return (v4df){0.0, a, 0.0, 0.0};
@@ -23,7 +23,7 @@ v4df test_v4df(double a) {
 // O32 returns integer vectors whose size is equal to or smaller than 16-bytes
 // in integer registers.
 //
-// O32: define inreg { i32, i32, i32, i32 } @test_v4i32
+// O32: define dso_local inreg { i32, i32, i32, i32 } @test_v4i32
 // N64: define inreg { i64, i64 } @test_v4i32
 v4i32 test_v4i32(int a) {
   return (v4i32){0, a, 0, 0};

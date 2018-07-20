@@ -25,3 +25,27 @@ __fp16 t2() { return g; }
 // HARD: ret float [[BITCAST]]
 // NATIVE: [[LOAD:%.*]] = load half, half* @g
 // NATIVE: ret half [[LOAD]]
+
+_Float16 h;
+
+void t3(_Float16 a) { h = a; }
+// SOFT: define void @t3(i32 [[PARAM:%.*]])
+// SOFT: [[TRUNC:%.*]] = trunc i32 [[PARAM]] to i16
+// HARD: define arm_aapcs_vfpcc void @t3(float [[PARAM:%.*]])
+// HARD: [[BITCAST:%.*]] = bitcast float [[PARAM]] to i32
+// HARD: [[TRUNC:%.*]] = trunc i32 [[BITCAST]] to i16
+// CHECK: store i16 [[TRUNC]], i16* bitcast (half* @h to i16*)
+// NATIVE: define void @t3(half [[PARAM:%.*]])
+// NATIVE: store half [[PARAM]], half* @h
+
+_Float16 t4() { return h; }
+// SOFT: define i32 @t4()
+// HARD: define arm_aapcs_vfpcc float @t4()
+// NATIVE: define half @t4()
+// CHECK: [[LOAD:%.*]] = load i16, i16* bitcast (half* @h to i16*)
+// CHECK: [[ZEXT:%.*]] = zext i16 [[LOAD]] to i32
+// SOFT: ret i32 [[ZEXT]]
+// HARD: [[BITCAST:%.*]] = bitcast i32 [[ZEXT]] to float
+// HARD: ret float [[BITCAST]]
+// NATIVE: [[LOAD:%.*]] = load half, half* @h
+// NATIVE: ret half [[LOAD]]

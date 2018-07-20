@@ -153,7 +153,7 @@ uses the function `buffer-file-name'."
                              nil nil clang-format-executable
                              nil `(,temp-buffer ,temp-file) nil
                              `("-output-replacements-xml"
-                               ;; Gaurd against a nil assume-file-name.
+                               ;; Guard against a nil assume-file-name.
                                ;; If the clang-format option -assume-filename
                                ;; is given a blank string it will crash as per
                                ;; the following bug report

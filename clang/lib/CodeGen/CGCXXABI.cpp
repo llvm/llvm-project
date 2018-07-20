@@ -287,6 +287,20 @@ CGCXXABI::EmitCtorCompleteObjectHandler(CodeGenFunction &CGF,
   return nullptr;
 }
 
+void CGCXXABI::setCXXDestructorDLLStorage(llvm::GlobalValue *GV,
+                                          const CXXDestructorDecl *Dtor,
+                                          CXXDtorType DT) const {
+  // Assume the base C++ ABI has no special rules for destructor variants.
+  CGM.setDLLImportDLLExport(GV, Dtor);
+}
+
+llvm::GlobalValue::LinkageTypes CGCXXABI::getCXXDestructorLinkage(
+    GVALinkage Linkage, const CXXDestructorDecl *Dtor, CXXDtorType DT) const {
+  // Delegate back to CGM by default.
+  return CGM.getLLVMLinkageForDeclarator(Dtor, Linkage,
+                                         /*isConstantVariable=*/false);
+}
+
 bool CGCXXABI::NeedsVTTParameter(GlobalDecl GD) {
   return false;
 }

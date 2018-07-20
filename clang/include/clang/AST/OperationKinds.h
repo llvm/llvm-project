@@ -33,15 +33,15 @@ enum UnaryOperatorKind {
 #include "clang/AST/OperationKinds.def"
 };
 
-/// \brief The kind of bridging performed by the Objective-C bridge cast.
+/// The kind of bridging performed by the Objective-C bridge cast.
 enum ObjCBridgeCastKind {
-  /// \brief Bridging via __bridge, which does nothing but reinterpret
+  /// Bridging via __bridge, which does nothing but reinterpret
   /// the bits.
   OBC_Bridge,
-  /// \brief Bridging via __bridge_transfer, which transfers ownership of an
+  /// Bridging via __bridge_transfer, which transfers ownership of an
   /// Objective-C pointer into ARC.
   OBC_BridgeTransfer,
-  /// \brief Bridging via __bridge_retain, which makes an ARC object available
+  /// Bridging via __bridge_retain, which makes an ARC object available
   /// as a +1 C pointer.
   OBC_BridgeRetained
 };

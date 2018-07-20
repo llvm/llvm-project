@@ -67,7 +67,7 @@ public:
     visitor.TraverseDecl(const_cast<TranslationUnitDecl *>(TUD));
   }
 
-  /// \brief Look for records of overly padded types. If padding *
+  /// Look for records of overly padded types. If padding *
   /// PadMultiplier exceeds AllowedPad, then generate a report.
   /// PadMultiplier is used to share code with the array padding
   /// checker.
@@ -97,7 +97,7 @@ public:
     reportRecord(RD, BaselinePad, OptimalPad, OptimalFieldsOrder);
   }
 
-  /// \brief Look for arrays of overly padded types. If the padding of the
+  /// Look for arrays of overly padded types. If the padding of the
   /// array type exceeds AllowedPad, then generate a report.
   void visitVariable(const VarDecl *VD) const {
     const ArrayType *ArrTy = VD->getType()->getAsArrayTypeUnsafe();
@@ -237,7 +237,7 @@ public:
     };
     std::transform(RD->field_begin(), RD->field_end(),
                    std::back_inserter(Fields), GatherSizesAndAlignments);
-    std::sort(Fields.begin(), Fields.end());
+    llvm::sort(Fields.begin(), Fields.end());
     // This lets us skip over vptrs and non-virtual bases,
     // so that we can just worry about the fields in our object.
     // Note that this does cause us to miss some cases where we

@@ -18,16 +18,16 @@ template <typename T> struct X {
 namespace B {
 
 template <>
-class A::ClassTemplate<int>; // expected-warning {{class template specialization of 'ClassTemplate' outside namespace enclosing 'A' is a Microsoft extension}}
+class A::ClassTemplate<int>; // expected-warning {{class template specialization of 'ClassTemplate' not in a namespace enclosing 'A' is a Microsoft extension}}
 
 template <class T1>
-class A::ClassTemplatePartial<T1, T1 *> {}; // expected-warning {{class template partial specialization of 'ClassTemplatePartial' outside namespace enclosing 'A' is a Microsoft extension}}
+class A::ClassTemplatePartial<T1, T1 *> {}; // expected-warning {{class template partial specialization of 'ClassTemplatePartial' not in a namespace enclosing 'A' is a Microsoft extension}}
 
 template <>
-struct A::X<int>::MemberClass; // expected-warning {{member class specialization of 'MemberClass' outside namespace enclosing 'A' is a Microsoft extension}}
+struct A::X<int>::MemberClass; // expected-warning {{member class specialization of 'MemberClass' not in class 'X' or an enclosing namespace is a Microsoft extension}}
 
 template <>
-enum A::X<int>::MemberEnumeration; // expected-warning {{member enumeration specialization of 'MemberEnumeration' outside namespace enclosing 'A' is a Microsoft extension}} // expected-error {{ISO C++ forbids forward references to 'enum' types}}
+enum A::X<int>::MemberEnumeration; // expected-warning {{member enumeration specialization of 'MemberEnumeration' not in class 'X' or an enclosing namespace is a Microsoft extension}} // expected-error {{ISO C++ forbids forward references to 'enum' types}}
 
 }
 

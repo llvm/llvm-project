@@ -28,8 +28,8 @@ namespace rename {
 
 IndexedFileOccurrenceProducer::IndexedFileOccurrenceProducer(
     ArrayRef<IndexedSymbol> Symbols, IndexedFileOccurrenceConsumer &Consumer,
-    const RefactoringOptionSet *Options)
-    : Symbols(Symbols), Consumer(Consumer), Options(Options) {
+    IndexedFileRenamerLock &Lock, const RefactoringOptionSet *Options)
+    : Symbols(Symbols), Consumer(Consumer), Lock(Lock), Options(Options) {
   IsMultiPiece = false;
   for (const auto &Symbol : Symbols) {
     if (Symbol.Name.size() > 1) {
@@ -298,7 +298,7 @@ static void findTextualMatchesInComment(
                            LangOpts)
           .str();
   OldSymbolOccurrence::OccurrenceKind Kind =
-      RawComment(SM, CommentRange, /*Merged=*/false, /*ParseAllComments=*/false)
+      RawComment(SM, CommentRange, LangOpts.CommentOpts, /*Merged=*/false)
               .isDocumentation()
           ? OldSymbolOccurrence::MatchingDocComment
           : OldSymbolOccurrence::MatchingComment;
@@ -435,6 +435,7 @@ static void findInclusionDirectiveOccurrence(
 }
 
 void IndexedFileOccurrenceProducer::ExecuteAction() {
+  Lock.unlock(); // The execution should now be thread-safe.
   Preprocessor &PP = getCompilerInstance().getPreprocessor();
   PP.EnterMainSourceFile();
 

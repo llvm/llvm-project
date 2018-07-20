@@ -340,7 +340,7 @@ bool DiagnosticIDs::isBuiltinWarningOrExtension(unsigned DiagID) {
          getBuiltinDiagClass(DiagID) != CLASS_ERROR;
 }
 
-/// \brief Determine whether the given built-in diagnostic ID is a
+/// Determine whether the given built-in diagnostic ID is a
 /// Note.
 bool DiagnosticIDs::isBuiltinNote(unsigned DiagID) {
   return DiagID < diag::DIAG_UPPER_LIMIT &&
@@ -412,7 +412,7 @@ DiagnosticIDs::getDiagnosticLevel(unsigned DiagID, SourceLocation Loc,
   return toLevel(getDiagnosticSeverity(DiagID, Loc, Diag));
 }
 
-/// \brief Based on the way the client configured the Diagnostic
+/// Based on the way the client configured the Diagnostic
 /// object, classify the specified diagnostic ID into a Level, consumable by
 /// the DiagnosticClient.
 ///
@@ -470,7 +470,7 @@ DiagnosticIDs::getDiagnosticSeverity(unsigned DiagID, SourceLocation Loc,
       Result = diag::Severity::Error;
   }
 
-  // If -Wfatal-errors is enabled, map errors to fatal unless explicity
+  // If -Wfatal-errors is enabled, map errors to fatal unless explicitly
   // disabled.
   if (Result == diag::Severity::Error) {
     if (State->ErrorsAsFatal && !Mapping.hasNoErrorAsFatal())

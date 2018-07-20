@@ -84,6 +84,41 @@ void ento::createPlistMultiFileDiagnosticConsumer(AnalyzerOptions &AnalyzerOpts,
                                    PP.getLangOpts(), true));
 }
 
+static void EmitRanges(raw_ostream &o,
+                       const ArrayRef<SourceRange> Ranges,
+                       const FIDMap& FM,
+                       const SourceManager &SM,
+                       const LangOptions &LangOpts,
+                       unsigned indent) {
+
+  if (Ranges.empty())
+    return;
+
+  Indent(o, indent) << "<key>ranges</key>\n";
+  Indent(o, indent) << "<array>\n";
+  ++indent;
+  for (auto &R : Ranges)
+    EmitRange(o, SM,
+              Lexer::getAsCharRange(SM.getExpansionRange(R), SM, LangOpts),
+              FM, indent + 1);
+  --indent;
+  Indent(o, indent) << "</array>\n";
+}
+
+static void EmitMessage(raw_ostream &o, StringRef Message, unsigned indent) {
+  // Output the text.
+  assert(!Message.empty());
+  Indent(o, indent) << "<key>extended_message</key>\n";
+  Indent(o, indent);
+  EmitString(o, Message) << '\n';
+
+  // Output the short text.
+  // FIXME: Really use a short string.
+  Indent(o, indent) << "<key>message</key>\n";
+  Indent(o, indent);
+  EmitString(o, Message) << '\n';
+}
+
 static void ReportControlFlow(raw_ostream &o,
                               const PathDiagnosticControlFlowPiece& P,
                               const FIDMap& FM,
@@ -138,7 +173,7 @@ static void ReportControlFlow(raw_ostream &o,
   Indent(o, indent) << "</dict>\n";
 }
 
-static void ReportEvent(raw_ostream &o, const PathDiagnosticPiece& P,
+static void ReportEvent(raw_ostream &o, const PathDiagnosticEventPiece& P,
                         const FIDMap& FM,
                         const SourceManager &SM,
                         const LangOptions &LangOpts,
@@ -163,34 +198,14 @@ static void ReportEvent(raw_ostream &o, const PathDiagnosticPiece& P,
 
   // Output the ranges (if any).
   ArrayRef<SourceRange> Ranges = P.getRanges();
-
-  if (!Ranges.empty()) {
-    Indent(o, indent) << "<key>ranges</key>\n";
-    Indent(o, indent) << "<array>\n";
-    ++indent;
-    for (auto &R : Ranges)
-      EmitRange(o, SM,
-                Lexer::getAsCharRange(SM.getExpansionRange(R), SM, LangOpts),
-                FM, indent + 1);
-    --indent;
-    Indent(o, indent) << "</array>\n";
-  }
+  EmitRanges(o, Ranges, FM, SM, LangOpts, indent);
 
   // Output the call depth.
   Indent(o, indent) << "<key>depth</key>";
   EmitInteger(o, depth) << '\n';
 
   // Output the text.
-  assert(!P.getString().empty());
-  Indent(o, indent) << "<key>extended_message</key>\n";
-  Indent(o, indent);
-  EmitString(o, P.getString()) << '\n';
-
-  // Output the short text.
-  // FIXME: Really use a short string.
-  Indent(o, indent) << "<key>message</key>\n";
-  Indent(o, indent);
-  EmitString(o, P.getString()) << '\n';
+  EmitMessage(o, P.getString(), indent);
 
   // Finish up.
   --indent;
@@ -246,6 +261,34 @@ static void ReportMacro(raw_ostream &o,
   }
 }
 
+static void ReportNote(raw_ostream &o, const PathDiagnosticNotePiece& P,
+                        const FIDMap& FM,
+                        const SourceManager &SM,
+                        const LangOptions &LangOpts,
+                        unsigned indent,
+                        unsigned depth) {
+
+  Indent(o, indent) << "<dict>\n";
+  ++indent;
+
+  // Output the location.
+  FullSourceLoc L = P.getLocation().asLocation();
+
+  Indent(o, indent) << "<key>location</key>\n";
+  EmitLocation(o, SM, L, FM, indent);
+
+  // Output the ranges (if any).
+  ArrayRef<SourceRange> Ranges = P.getRanges();
+  EmitRanges(o, Ranges, FM, SM, LangOpts, indent);
+
+  // Output the text.
+  EmitMessage(o, P.getString(), indent);
+
+  // Finish up.
+  --indent;
+  Indent(o, indent); o << "</dict>\n";
+}
+
 static void ReportDiag(raw_ostream &o, const PathDiagnosticPiece& P,
                        const FIDMap& FM, const SourceManager &SM,
                        const LangOptions &LangOpts) {
@@ -271,7 +314,7 @@ static void ReportPiece(raw_ostream &o,
                  indent, depth);
       break;
     case PathDiagnosticPiece::Event:
-      ReportEvent(o, cast<PathDiagnosticSpotPiece>(P), FM, SM, LangOpts,
+      ReportEvent(o, cast<PathDiagnosticEventPiece>(P), FM, SM, LangOpts,
                   indent, depth, isKeyEvent);
       break;
     case PathDiagnosticPiece::Macro:
@@ -279,7 +322,8 @@ static void ReportPiece(raw_ostream &o,
                   indent, depth);
       break;
     case PathDiagnosticPiece::Note:
-      // FIXME: Extend the plist format to support those.
+      ReportNote(o, cast<PathDiagnosticNotePiece>(P), FM, SM, LangOpts,
+                  indent, depth);
       break;
   }
 }
@@ -364,15 +408,39 @@ void PlistDiagnostics::FlushDiagnosticsImpl(
   for (std::vector<const PathDiagnostic*>::iterator DI=Diags.begin(),
        DE = Diags.end(); DI!=DE; ++DI) {
 
-    o << "  <dict>\n"
-         "   <key>path</key>\n";
+    o << "  <dict>\n";
 
     const PathDiagnostic *D = *DI;
+    const PathPieces &PP = D->path;
+
+    assert(std::is_partitioned(
+             PP.begin(), PP.end(),
+             [](const std::shared_ptr<PathDiagnosticPiece> &E)
+               { return E->getKind() == PathDiagnosticPiece::Note; }) &&
+           "PathDiagnostic is not partitioned so that notes precede the rest");
+
+    PathPieces::const_iterator FirstNonNote = std::partition_point(
+        PP.begin(), PP.end(),
+        [](const std::shared_ptr<PathDiagnosticPiece> &E)
+          { return E->getKind() == PathDiagnosticPiece::Note; });
+
+    PathPieces::const_iterator I = PP.begin();
+
+    if (FirstNonNote != PP.begin()) {
+      o << "   <key>notes</key>\n"
+           "   <array>\n";
+
+      for (; I != FirstNonNote; ++I)
+        ReportDiag(o, **I, FM, *SM, LangOpts);
+
+      o << "   </array>\n";
+    }
+
+    o << "   <key>path</key>\n";
 
     o << "   <array>\n";
 
-    for (PathPieces::const_iterator I = D->path.begin(), E = D->path.end();
-         I != E; ++I)
+    for (PathPieces::const_iterator E = PP.end(); I != E; ++I)
       ReportDiag(o, **I, FM, *SM, LangOpts);
 
     o << "   </array>\n";

@@ -10,8 +10,8 @@ class t : s<T_> {};
 extern template class t<char>;
 template class __declspec(dllexport) t<char>;
 
-// CHECK-MS: dllexport {{.*}} @"\01??4?$t@D@@QAEAAV0@ABV0@@Z"
-// CHECK-MS: dllexport {{.*}} @"\01??4?$s@D@@QAEAAU0@ABU0@@Z"
+// CHECK-MS: dllexport {{.*}} @"??4?$t@D@@QAEAAV0@ABV0@@Z"
+// CHECK-MS: dllexport {{.*}} @"??4?$s@D@@QAEAAU0@ABU0@@Z"
 
 // CHECK-IA: dllexport {{.*}} @_ZN1tIcEaSERKS0_
 // CHECK-IA: dllexport {{.*}} @_ZN1sIcEaSERKS0_

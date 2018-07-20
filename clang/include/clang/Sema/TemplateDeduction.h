@@ -1,80 +1,95 @@
-//===- TemplateDeduction.h - C++ template argument deduction ----*- C++ -*-===/
+//===- TemplateDeduction.h - C++ template argument deduction ----*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
-//===----------------------------------------------------------------------===/
 //
-//  This file provides types used with Sema's template argument deduction
+//===----------------------------------------------------------------------===//
+//
+// This file provides types used with Sema's template argument deduction
 // routines.
 //
-//===----------------------------------------------------------------------===/
+//===----------------------------------------------------------------------===//
+
 #ifndef LLVM_CLANG_SEMA_TEMPLATEDEDUCTION_H
 #define LLVM_CLANG_SEMA_TEMPLATEDEDUCTION_H
 
+#include "clang/AST/DeclAccessPair.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/TemplateBase.h"
 #include "clang/Basic/PartialDiagnostic.h"
+#include "clang/Basic/SourceLocation.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
+#include <cassert>
+#include <cstddef>
+#include <utility>
 
 namespace clang {
 
+class Decl;
 struct DeducedPack;
-class TemplateArgumentList;
 class Sema;
 
 namespace sema {
 
-/// \brief Provides information about an attempted template argument
+/// Provides information about an attempted template argument
 /// deduction, whose success or failure was described by a
 /// TemplateDeductionResult value.
 class TemplateDeductionInfo {
-  /// \brief The deduced template argument list.
-  ///
-  TemplateArgumentList *Deduced;
+  /// The deduced template argument list.
+  TemplateArgumentList *Deduced = nullptr;
 
-  /// \brief The source location at which template argument
+  /// The source location at which template argument
   /// deduction is occurring.
   SourceLocation Loc;
 
-  /// \brief Have we suppressed an error during deduction?
-  bool HasSFINAEDiagnostic;
+  /// Have we suppressed an error during deduction?
+  bool HasSFINAEDiagnostic = false;
 
-  /// \brief The template parameter depth for which we're performing deduction.
+  /// The template parameter depth for which we're performing deduction.
   unsigned DeducedDepth;
 
-  /// \brief Warnings (and follow-on notes) that were suppressed due to
+  /// The number of parameters with explicitly-specified template arguments,
+  /// up to and including the partially-specified pack (if any).
+  unsigned ExplicitArgs = 0;
+
+  /// Warnings (and follow-on notes) that were suppressed due to
   /// SFINAE while performing template argument deduction.
   SmallVector<PartialDiagnosticAt, 4> SuppressedDiagnostics;
 
-  TemplateDeductionInfo(const TemplateDeductionInfo &) = delete;
-  void operator=(const TemplateDeductionInfo &) = delete;
-
 public:
   TemplateDeductionInfo(SourceLocation Loc, unsigned DeducedDepth = 0)
-    : Deduced(nullptr), Loc(Loc), HasSFINAEDiagnostic(false),
-      DeducedDepth(DeducedDepth), CallArgIndex(0) {}
+      : Loc(Loc), DeducedDepth(DeducedDepth) {}
+  TemplateDeductionInfo(const TemplateDeductionInfo &) = delete;
+  TemplateDeductionInfo &operator=(const TemplateDeductionInfo &) = delete;
 
-  /// \brief Returns the location at which template argument is
+  /// Returns the location at which template argument is
   /// occurring.
   SourceLocation getLocation() const {
     return Loc;
   }
 
-  /// \brief The depth of template parameters for which deduction is being
+  /// The depth of template parameters for which deduction is being
   /// performed.
   unsigned getDeducedDepth() const {
     return DeducedDepth;
   }
 
-  /// \brief Take ownership of the deduced template argument list.
+  /// Get the number of explicitly-specified arguments.
+  unsigned getNumExplicitArgs() const {
+    return ExplicitArgs;
+  }
+
+  /// Take ownership of the deduced template argument list.
   TemplateArgumentList *take() {
     TemplateArgumentList *Result = Deduced;
     Deduced = nullptr;
     return Result;
   }
 
-  /// \brief Take ownership of the SFINAE diagnostic.
+  /// Take ownership of the SFINAE diagnostic.
   void takeSFINAEDiagnostic(PartialDiagnosticAt &PD) {
     assert(HasSFINAEDiagnostic);
     PD.first = SuppressedDiagnostics.front().first;
@@ -82,7 +97,7 @@ public:
     clearSFINAEDiagnostic();
   }
 
-  /// \brief Discard any SFINAE diagnostics.
+  /// Discard any SFINAE diagnostics.
   void clearSFINAEDiagnostic() {
     SuppressedDiagnostics.clear();
     HasSFINAEDiagnostic = false;
@@ -94,18 +109,25 @@ public:
     return SuppressedDiagnostics.front();
   }
 
-  /// \brief Provide a new template argument list that contains the
+  /// Provide an initial template argument list that contains the
+  /// explicitly-specified arguments.
+  void setExplicitArgs(TemplateArgumentList *NewDeduced) {
+    Deduced = NewDeduced;
+    ExplicitArgs = Deduced->size();
+  }
+
+  /// Provide a new template argument list that contains the
   /// results of template argument deduction.
   void reset(TemplateArgumentList *NewDeduced) {
     Deduced = NewDeduced;
   }
 
-  /// \brief Is a SFINAE diagnostic available?
+  /// Is a SFINAE diagnostic available?
   bool hasSFINAEDiagnostic() const {
     return HasSFINAEDiagnostic;
   }
 
-  /// \brief Set the diagnostic which caused the SFINAE failure.
+  /// Set the diagnostic which caused the SFINAE failure.
   void addSFINAEDiagnostic(SourceLocation Loc, PartialDiagnostic PD) {
     // Only collect the first diagnostic.
     if (HasSFINAEDiagnostic)
@@ -115,7 +137,7 @@ public:
     HasSFINAEDiagnostic = true;
   }
 
-  /// \brief Add a new diagnostic to the set of diagnostics
+  /// Add a new diagnostic to the set of diagnostics
   void addSuppressedDiagnostic(SourceLocation Loc,
                                PartialDiagnostic PD) {
     if (HasSFINAEDiagnostic)
@@ -123,19 +145,18 @@ public:
     SuppressedDiagnostics.emplace_back(Loc, std::move(PD));
   }
 
-  /// \brief Iterator over the set of suppressed diagnostics.
-  typedef SmallVectorImpl<PartialDiagnosticAt>::const_iterator
-    diag_iterator;
+  /// Iterator over the set of suppressed diagnostics.
+  using diag_iterator = SmallVectorImpl<PartialDiagnosticAt>::const_iterator;
 
-  /// \brief Returns an iterator at the beginning of the sequence of suppressed
+  /// Returns an iterator at the beginning of the sequence of suppressed
   /// diagnostics.
   diag_iterator diag_begin() const { return SuppressedDiagnostics.begin(); }
 
-  /// \brief Returns an iterator at the end of the sequence of suppressed
+  /// Returns an iterator at the end of the sequence of suppressed
   /// diagnostics.
   diag_iterator diag_end() const { return SuppressedDiagnostics.end(); }
 
-  /// \brief The template parameter to which a template argument
+  /// The template parameter to which a template argument
   /// deduction failure refers.
   ///
   /// Depending on the result of template argument deduction, this
@@ -144,15 +165,21 @@ public:
   ///   TDK_Incomplete: this is the first template parameter whose
   ///   corresponding template argument was not deduced.
   ///
+  ///   TDK_IncompletePack: this is the expanded parameter pack for
+  ///   which we deduced too few arguments.
+  ///
   ///   TDK_Inconsistent: this is the template parameter for which
   ///   two different template argument values were deduced.
   TemplateParameter Param;
 
-  /// \brief The first template argument to which the template
+  /// The first template argument to which the template
   /// argument deduction failure refers.
   ///
   /// Depending on the result of the template argument deduction,
   /// this template argument may have different meanings:
+  ///
+  ///   TDK_IncompletePack: this is the number of arguments we deduced
+  ///   for the pack.
   ///
   ///   TDK_Inconsistent: this argument is the first value deduced
   ///   for the corresponding template parameter.
@@ -167,7 +194,7 @@ public:
   ///   of the deduction, directly provided in the source code.
   TemplateArgument FirstArg;
 
-  /// \brief The second template argument to which the template
+  /// The second template argument to which the template
   /// argument deduction failure refers.
   ///
   ///   TDK_Inconsistent: this argument is the second value deduced
@@ -181,20 +208,20 @@ public:
   /// FIXME: Finish documenting this.
   TemplateArgument SecondArg;
 
-  /// \brief The index of the function argument that caused a deduction
+  /// The index of the function argument that caused a deduction
   /// failure.
   ///
   ///   TDK_DeducedMismatch: this is the index of the argument that had a
   ///   different argument type from its substituted parameter type.
-  unsigned CallArgIndex;
+  unsigned CallArgIndex = 0;
 
-  /// \brief Information on packs that we're currently expanding.
+  /// Information on packs that we're currently expanding.
   ///
   /// FIXME: This should be kept internal to SemaTemplateDeduction.
   SmallVector<DeducedPack *, 8> PendingDeducedPacks;
 };
 
-} // end namespace sema
+} // namespace sema
 
 /// A structure used to record information about a failed
 /// template argument deduction, for diagnosis.
@@ -202,41 +229,41 @@ struct DeductionFailureInfo {
   /// A Sema::TemplateDeductionResult.
   unsigned Result : 8;
 
-  /// \brief Indicates whether a diagnostic is stored in Diagnostic.
+  /// Indicates whether a diagnostic is stored in Diagnostic.
   unsigned HasDiagnostic : 1;
 
-  /// \brief Opaque pointer containing additional data about
+  /// Opaque pointer containing additional data about
   /// this deduction failure.
   void *Data;
 
-  /// \brief A diagnostic indicating why deduction failed.
+  /// A diagnostic indicating why deduction failed.
   alignas(PartialDiagnosticAt) char Diagnostic[sizeof(PartialDiagnosticAt)];
 
-  /// \brief Retrieve the diagnostic which caused this deduction failure,
+  /// Retrieve the diagnostic which caused this deduction failure,
   /// if any.
   PartialDiagnosticAt *getSFINAEDiagnostic();
 
-  /// \brief Retrieve the template parameter this deduction failure
+  /// Retrieve the template parameter this deduction failure
   /// refers to, if any.
   TemplateParameter getTemplateParameter();
 
-  /// \brief Retrieve the template argument list associated with this
+  /// Retrieve the template argument list associated with this
   /// deduction failure, if any.
   TemplateArgumentList *getTemplateArgumentList();
 
-  /// \brief Return the first template argument this deduction failure
+  /// Return the first template argument this deduction failure
   /// refers to, if any.
   const TemplateArgument *getFirstArg();
 
-  /// \brief Return the second template argument this deduction failure
+  /// Return the second template argument this deduction failure
   /// refers to, if any.
   const TemplateArgument *getSecondArg();
 
-  /// \brief Return the index of the call argument that this deduction
+  /// Return the index of the call argument that this deduction
   /// failure refers to, if any.
   llvm::Optional<unsigned> getCallArgIndex();
 
-  /// \brief Free any memory associated with this deduction failure.
+  /// Free any memory associated with this deduction failure.
   void Destroy();
 };
 
@@ -248,7 +275,7 @@ struct DeductionFailureInfo {
 /// TODO: In the future, we may need to unify/generalize this with
 /// OverloadCandidate.
 struct TemplateSpecCandidate {
-  /// \brief The declaration that was looked up, together with its access.
+  /// The declaration that was looked up, together with its access.
   /// Might be a UsingShadowDecl, but usually a FunctionTemplateDecl.
   DeclAccessPair FoundDecl;
 
@@ -276,36 +303,37 @@ struct TemplateSpecCandidate {
 class TemplateSpecCandidateSet {
   SmallVector<TemplateSpecCandidate, 16> Candidates;
   SourceLocation Loc;
+
   // Stores whether we're taking the address of these candidates. This helps us
   // produce better error messages when dealing with the pass_object_size
   // attribute on parameters.
   bool ForTakingAddress;
-
-  TemplateSpecCandidateSet(
-      const TemplateSpecCandidateSet &) = delete;
-  void operator=(const TemplateSpecCandidateSet &) = delete;
 
   void destroyCandidates();
 
 public:
   TemplateSpecCandidateSet(SourceLocation Loc, bool ForTakingAddress = false)
       : Loc(Loc), ForTakingAddress(ForTakingAddress) {}
+  TemplateSpecCandidateSet(const TemplateSpecCandidateSet &) = delete;
+  TemplateSpecCandidateSet &
+  operator=(const TemplateSpecCandidateSet &) = delete;
   ~TemplateSpecCandidateSet() { destroyCandidates(); }
 
   SourceLocation getLocation() const { return Loc; }
 
-  /// \brief Clear out all of the candidates.
+  /// Clear out all of the candidates.
   /// TODO: This may be unnecessary.
   void clear();
 
-  typedef SmallVector<TemplateSpecCandidate, 16>::iterator iterator;
+  using iterator = SmallVector<TemplateSpecCandidate, 16>::iterator;
+
   iterator begin() { return Candidates.begin(); }
   iterator end() { return Candidates.end(); }
 
   size_t size() const { return Candidates.size(); }
   bool empty() const { return Candidates.empty(); }
 
-  /// \brief Add a new candidate with NumConversions conversion sequence slots
+  /// Add a new candidate with NumConversions conversion sequence slots
   /// to the overload set.
   TemplateSpecCandidate &addCandidate() {
     Candidates.emplace_back();
@@ -319,6 +347,6 @@ public:
   }
 };
 
-} // end namespace clang
+} // namespace clang
 
-#endif
+#endif // LLVM_CLANG_SEMA_TEMPLATEDEDUCTION_H

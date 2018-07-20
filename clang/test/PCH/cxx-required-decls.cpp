@@ -7,4 +7,4 @@
 
 // CHECK: @_ZL5globS = internal global %struct.S zeroinitializer
 // CHECK: @_ZL3bar = internal global i32 0, align 4
-// CHECK: @glob_var = global i32 0
+// CHECK: @glob_var = {{(dso_local )?}}global i32 0

@@ -165,7 +165,7 @@ static bool CanElideOverflowCheck(const ASTContext &Ctx, const BinOpInfo &Op) {
 
   // If a unary op has a widened operand, the op cannot overflow.
   if (const auto *UO = dyn_cast<UnaryOperator>(Op.E))
-    return IsWidenedIntegerOp(Ctx, UO->getSubExpr());
+    return !UO->canOverflow();
 
   // We usually don't need overflow checks for binops with widened operands.
   // Multiplication with promoted unsigned operands is a special case.
@@ -387,6 +387,9 @@ public:
   Value *VisitIntegerLiteral(const IntegerLiteral *E) {
     return Builder.getInt(E->getValue());
   }
+  Value *VisitFixedPointLiteral(const FixedPointLiteral *E) {
+    return Builder.getInt(E->getValue());
+  }
   Value *VisitFloatingLiteral(const FloatingLiteral *E) {
     return llvm::ConstantFP::get(VMContext, E->getValue());
   }
@@ -422,10 +425,11 @@ public:
 
   Value *VisitOpaqueValueExpr(OpaqueValueExpr *E) {
     if (E->isGLValue())
-      return EmitLoadOfLValue(CGF.getOpaqueLValueMapping(E), E->getExprLoc());
+      return EmitLoadOfLValue(CGF.getOrCreateOpaqueLValueMapping(E),
+                              E->getExprLoc());
 
     // Otherwise, assume the mapping is the scalar directly.
-    return CGF.getOpaqueRValueMapping(E).getScalarVal();
+    return CGF.getOrCreateOpaqueRValueMapping(E).getScalarVal();
   }
 
   Value *emitConstant(const CodeGenFunction::ConstantEmission &Constant,
@@ -1144,7 +1148,7 @@ Value *ScalarExprEmitter::EmitNullValue(QualType Ty) {
   return CGF.EmitFromMemory(CGF.CGM.EmitNullConstant(Ty), Ty);
 }
 
-/// \brief Emit a sanitization check for the given "binary" operation (which
+/// Emit a sanitization check for the given "binary" operation (which
 /// might actually be a unary increment which has been lowered to a binary
 /// operation). The check passes if all values in \p Checks (which are \c i1),
 /// are \c true.
@@ -1617,6 +1621,24 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
                                       CE->getLocStart());
     }
 
+    if (CGF.CGM.getCodeGenOpts().StrictVTablePointers) {
+      const QualType SrcType = E->getType();
+
+      if (SrcType.mayBeNotDynamicClass() && DestTy.mayBeDynamicClass()) {
+        // Casting to pointer that could carry dynamic information (provided by
+        // invariant.group) requires launder.
+        Src = Builder.CreateLaunderInvariantGroup(Src);
+      } else if (SrcType.mayBeDynamicClass() && DestTy.mayBeNotDynamicClass()) {
+        // Casting to pointer that does not carry dynamic information (provided
+        // by invariant.group) requires stripping it.  Note that we don't do it
+        // if the source could not be dynamic type and destination could be
+        // dynamic because dynamic information is already laundered.  It is
+        // because launder(strip(src)) == launder(src), so there is no need to
+        // add extra strip before launder.
+        Src = Builder.CreateStripInvariantGroup(Src);
+      }
+    }
+
     return Builder.CreateBitCast(Src, DstTy);
   }
   case CK_AddressSpaceConversion: {
@@ -1753,12 +1775,31 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     llvm::Value* IntResult =
       Builder.CreateIntCast(Src, MiddleTy, InputSigned, "conv");
 
-    return Builder.CreateIntToPtr(IntResult, DestLLVMTy);
-  }
-  case CK_PointerToIntegral:
-    assert(!DestTy->isBooleanType() && "bool should use PointerToBool");
-    return Builder.CreatePtrToInt(Visit(E), ConvertType(DestTy));
+    auto *IntToPtr = Builder.CreateIntToPtr(IntResult, DestLLVMTy);
 
+    if (CGF.CGM.getCodeGenOpts().StrictVTablePointers) {
+      // Going from integer to pointer that could be dynamic requires reloading
+      // dynamic information from invariant.group.
+      if (DestTy.mayBeDynamicClass())
+        IntToPtr = Builder.CreateLaunderInvariantGroup(IntToPtr);
+    }
+    return IntToPtr;
+  }
+  case CK_PointerToIntegral: {
+    assert(!DestTy->isBooleanType() && "bool should use PointerToBool");
+    auto *PtrExpr = Visit(E);
+
+    if (CGF.CGM.getCodeGenOpts().StrictVTablePointers) {
+      const QualType SrcType = E->getType();
+
+      // Casting to integer requires stripping dynamic information as it does
+      // not carries it.
+      if (SrcType.mayBeDynamicClass())
+        PtrExpr = Builder.CreateStripInvariantGroup(PtrExpr);
+    }
+
+    return Builder.CreatePtrToInt(PtrExpr, ConvertType(DestTy));
+  }
   case CK_ToVoid: {
     CGF.EmitIgnoredExpr(E);
     return nullptr;
@@ -1873,7 +1914,7 @@ llvm::Value *ScalarExprEmitter::EmitIncDecConsiderOverflowBehavior(
       return Builder.CreateNSWAdd(InVal, Amount, Name);
     // Fall through.
   case LangOptions::SOB_Trapping:
-    if (IsWidenedIntegerOp(CGF.getContext(), E->getSubExpr()))
+    if (!E->canOverflow())
       return Builder.CreateNSWAdd(InVal, Amount, Name);
     return EmitOverflowCheckedBinOp(createBinOpInfoFromIncDec(E, InVal, IsInc));
   }
@@ -1955,11 +1996,9 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
   } else if (type->isIntegerType()) {
     // Note that signed integer inc/dec with width less than int can't
     // overflow because of promotion rules; we're just eliding a few steps here.
-    bool CanOverflow = value->getType()->getIntegerBitWidth() >=
-                       CGF.IntTy->getIntegerBitWidth();
-    if (CanOverflow && type->isSignedIntegerOrEnumerationType()) {
+    if (E->canOverflow() && type->isSignedIntegerOrEnumerationType()) {
       value = EmitIncDecConsiderOverflowBehavior(E, value, isInc);
-    } else if (CanOverflow && type->isUnsignedIntegerType() &&
+    } else if (E->canOverflow() && type->isUnsignedIntegerType() &&
                CGF.SanOpts.has(SanitizerKind::UnsignedIntegerOverflow)) {
       value =
           EmitOverflowCheckedBinOp(createBinOpInfoFromIncDec(E, value, isInc));
@@ -1975,7 +2014,7 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
     // VLA types don't have constant size.
     if (const VariableArrayType *vla
           = CGF.getContext().getAsVariableArrayType(type)) {
-      llvm::Value *numElts = CGF.getVLASize(vla).first;
+      llvm::Value *numElts = CGF.getVLASize(vla).NumElts;
       if (!isInc) numElts = Builder.CreateNSWNeg(numElts, "vla.negsize");
       if (CGF.getLangOpts().isSignedOverflowDefined())
         value = Builder.CreateGEP(value, numElts, "vla.inc");
@@ -2273,16 +2312,13 @@ ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
         CGF.EmitIgnoredExpr(E->getArgumentExpr());
       }
 
-      QualType eltType;
-      llvm::Value *numElts;
-      std::tie(numElts, eltType) = CGF.getVLASize(VAT);
-
-      llvm::Value *size = numElts;
+      auto VlaSize = CGF.getVLASize(VAT);
+      llvm::Value *size = VlaSize.NumElts;
 
       // Scale the number of non-VLA elements by the non-VLA element size.
-      CharUnits eltSize = CGF.getContext().getTypeSizeInChars(eltType);
+      CharUnits eltSize = CGF.getContext().getTypeSizeInChars(VlaSize.Type);
       if (!eltSize.isOne())
-        size = CGF.Builder.CreateNUWMul(CGF.CGM.getSize(eltSize), numElts);
+        size = CGF.Builder.CreateNUWMul(CGF.CGM.getSize(eltSize), size);
 
       return size;
     }
@@ -2769,7 +2805,7 @@ static Value *emitPointerArithmetic(CodeGenFunction &CGF,
   if (const VariableArrayType *vla
         = CGF.getContext().getAsVariableArrayType(elementType)) {
     // The element count here is the total number of non-VLA elements.
-    llvm::Value *numElements = CGF.getVLASize(vla).first;
+    llvm::Value *numElements = CGF.getVLASize(vla).NumElts;
 
     // Effectively, the multiply by the VLA size is part of the GEP.
     // GEP indexes are signed, and scaling an index isn't permitted to
@@ -2964,10 +3000,9 @@ Value *ScalarExprEmitter::EmitSub(const BinOpInfo &op) {
   // For a variable-length array, this is going to be non-constant.
   if (const VariableArrayType *vla
         = CGF.getContext().getAsVariableArrayType(elementType)) {
-    llvm::Value *numElements;
-    std::tie(numElements, elementType) = CGF.getVLASize(vla);
-
-    divisor = numElements;
+    auto VlaSize = CGF.getVLASize(vla);
+    elementType = VlaSize.Type;
+    divisor = VlaSize.NumElts;
 
     // Scale the number of non-VLA elements by the non-VLA element size.
     CharUnits eltSize = CGF.getContext().getTypeSizeInChars(elementType);
@@ -3243,6 +3278,23 @@ Value *ScalarExprEmitter::EmitCompare(const BinaryOperator *E,
       Result = Builder.CreateICmp(SICmpOpc, LHS, RHS, "cmp");
     } else {
       // Unsigned integers and pointers.
+
+      if (CGF.CGM.getCodeGenOpts().StrictVTablePointers &&
+          !isa<llvm::ConstantPointerNull>(LHS) &&
+          !isa<llvm::ConstantPointerNull>(RHS)) {
+
+        // Dynamic information is required to be stripped for comparisons,
+        // because it could leak the dynamic information.  Based on comparisons
+        // of pointers to dynamic objects, the optimizer can replace one pointer
+        // with another, which might be incorrect in presence of invariant
+        // groups. Comparison with null is safe because null does not carry any
+        // dynamic information.
+        if (LHSTy.mayBeDynamicClass())
+          LHS = Builder.CreateStripInvariantGroup(LHS);
+        if (RHSTy.mayBeDynamicClass())
+          RHS = Builder.CreateStripInvariantGroup(RHS);
+      }
+
       Result = Builder.CreateICmp(UICmpOpc, LHS, RHS, "cmp");
     }
 
@@ -3432,6 +3484,12 @@ Value *ScalarExprEmitter::VisitBinLAnd(const BinaryOperator *E) {
   }
   // Insert an entry into the phi node for the edge with the value of RHSCond.
   PN->addIncoming(RHSCond, RHSBlock);
+
+  // Artificial location to preserve the scope information
+  {
+    auto NL = ApplyDebugLocation::CreateArtificial(CGF);
+    PN->setDebugLoc(Builder.getCurrentDebugLocation());
+  }
 
   // ZExt result to int.
   return Builder.CreateZExtOrBitCast(PN, ResTy, "land.ext");

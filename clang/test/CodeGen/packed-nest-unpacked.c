@@ -9,26 +9,26 @@ struct X foo(void);
 // <rdar://problem/10463337>
 struct X test1() {
   // CHECK: @test1
-  // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* {{.*}}, i8* bitcast (%struct.X* getelementptr inbounds (%struct.Y, %struct.Y* @g, i32 0, i32 1) to i8*), i64 24, i32 1, i1 false)
+  // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* {{.*}}, i8* align 1 bitcast (%struct.X* getelementptr inbounds (%struct.Y, %struct.Y* @g, i32 0, i32 1) to i8*), i64 24, i1 false)
   return g.y;
 }
 struct X test2() {
   // CHECK: @test2
-  // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* {{.*}}, i8* bitcast (%struct.X* getelementptr inbounds (%struct.Y, %struct.Y* @g, i32 0, i32 1) to i8*), i64 24, i32 1, i1 false)
+  // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* {{.*}}, i8* align 1 bitcast (%struct.X* getelementptr inbounds (%struct.Y, %struct.Y* @g, i32 0, i32 1) to i8*), i64 24, i1 false)
   struct X a = g.y;
   return a;
 }
 
 void test3(struct X a) {
   // CHECK: @test3
-  // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* bitcast (%struct.X* getelementptr inbounds (%struct.Y, %struct.Y* @g, i32 0, i32 1) to i8*), i8* {{.*}}, i64 24, i32 1, i1 false)
+  // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 bitcast (%struct.X* getelementptr inbounds (%struct.Y, %struct.Y* @g, i32 0, i32 1) to i8*), i8* {{.*}}, i64 24, i1 false)
   g.y = a;
 }
 
 // <rdar://problem/10530444>
 void test4() {
   // CHECK: @test4
-  // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* {{.*}}, i8* bitcast (%struct.X* getelementptr inbounds (%struct.Y, %struct.Y* @g, i32 0, i32 1) to i8*), i64 24, i32 1, i1 false)
+  // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* {{.*}}, i8* align 1 bitcast (%struct.X* getelementptr inbounds (%struct.Y, %struct.Y* @g, i32 0, i32 1) to i8*), i64 24, i1 false)
   f(g.y);
 }
 
@@ -42,7 +42,7 @@ int test5() {
 // <rdar://problem/11220251>
 void test6() {
   // CHECK: @test6
-  // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* bitcast (%struct.X* getelementptr inbounds (%struct.Y, %struct.Y* @g, i32 0, i32 1) to i8*), i8* %{{.*}}, i64 24, i32 1, i1 false)
+  // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 bitcast (%struct.X* getelementptr inbounds (%struct.Y, %struct.Y* @g, i32 0, i32 1) to i8*), i8* align 4 %{{.*}}, i64 24, i1 false)
   g.y = foo();
 }
 

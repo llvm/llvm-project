@@ -11,7 +11,7 @@ void test1(void) {
   __annotation(L"unicode: \u0ca0_\u0ca0");
 }
 
-// CHECK-LABEL: define void @test1()
+// CHECK-LABEL: define dso_local void @test1()
 // CHECK: call void @llvm.codeview.annotation(metadata ![[A1:[0-9]+]])
 // CHECK: call void @llvm.codeview.annotation(metadata ![[A2:[0-9]+]])
 // CHECK: call void @llvm.codeview.annotation(metadata ![[A3:[0-9]+]])

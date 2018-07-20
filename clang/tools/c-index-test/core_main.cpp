@@ -10,6 +10,7 @@
 #include "JSONAggregation.h"
 #include "indexstore/IndexStoreCXX.h"
 #include "clang/DirectoryWatcher/DirectoryWatcher.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/CodeGen/ObjectFilePCHContainerOperations.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -22,6 +23,7 @@
 #include "clang/Index/IndexUnitReader.h"
 #include "clang/Index/USRGeneration.h"
 #include "clang/Index/CodegenNameGenerator.h"
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Serialization/ASTReader.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
@@ -123,6 +125,7 @@ namespace {
 class PrintIndexDataConsumer : public IndexDataConsumer {
   raw_ostream &OS;
   std::unique_ptr<CodegenNameGenerator> CGNameGen;
+  std::shared_ptr<Preprocessor> PP;
 
 public:
   PrintIndexDataConsumer(raw_ostream &OS) : OS(OS) {
@@ -132,15 +135,20 @@ public:
     CGNameGen.reset(new CodegenNameGenerator(Ctx));
   }
 
+  void setPreprocessor(std::shared_ptr<Preprocessor> PP) override {
+    this->PP = std::move(PP);
+  }
+
   bool handleDeclOccurence(const Decl *D, SymbolRoleSet Roles,
                            ArrayRef<SymbolRelation> Relations,
-                           FileID FID, unsigned Offset,
-                           ASTNodeInfo ASTNode) override {
+                           SourceLocation Loc, ASTNodeInfo ASTNode) override {
     ASTContext &Ctx = D->getASTContext();
     SourceManager &SM = Ctx.getSourceManager();
 
-    unsigned Line = SM.getLineNumber(FID, Offset);
-    unsigned Col = SM.getColumnNumber(FID, Offset);
+    Loc = SM.getFileLoc(Loc);
+    FileID FID = SM.getFileID(Loc);
+    unsigned Line = SM.getLineNumber(FID, SM.getFileOffset(Loc));
+    unsigned Col = SM.getColumnNumber(FID, SM.getFileOffset(Loc));
     OS << Line << ':' << Col << " | ";
 
     printSymbolInfo(getSymbolInfo(D), OS);
@@ -170,12 +178,14 @@ public:
   }
 
   bool handleModuleOccurence(const ImportDecl *ImportD, SymbolRoleSet Roles,
-                             FileID FID, unsigned Offset) override {
+                             SourceLocation Loc) override {
     ASTContext &Ctx = ImportD->getASTContext();
     SourceManager &SM = Ctx.getSourceManager();
 
-    unsigned Line = SM.getLineNumber(FID, Offset);
-    unsigned Col = SM.getColumnNumber(FID, Offset);
+    Loc = SM.getFileLoc(Loc);
+    FileID FID = SM.getFileID(Loc);
+    unsigned Line = SM.getLineNumber(FID, SM.getFileOffset(Loc));
+    unsigned Col = SM.getColumnNumber(FID, SM.getFileOffset(Loc));
     OS << Line << ':' << Col << " | ";
 
     printSymbolInfo(getSymbolInfo(ImportD), OS);
@@ -186,6 +196,37 @@ public:
     printSymbolRoles(Roles, OS);
     OS << " |\n";
 
+    return true;
+  }
+
+  bool handleMacroOccurence(const IdentifierInfo *Name, const MacroInfo *MI,
+                            SymbolRoleSet Roles, SourceLocation Loc) override {
+    assert(PP);
+    SourceManager &SM = PP->getSourceManager();
+
+    Loc = SM.getFileLoc(Loc);
+    FileID FID = SM.getFileID(Loc);
+    unsigned Line = SM.getLineNumber(FID, SM.getFileOffset(Loc));
+    unsigned Col = SM.getColumnNumber(FID, SM.getFileOffset(Loc));
+    OS << Line << ':' << Col << " | ";
+
+    printSymbolInfo(getSymbolInfoForMacro(*MI), OS);
+    OS << " | ";
+
+    OS << Name->getName();
+    OS << " | ";
+
+    SmallString<256> USRBuf;
+    if (generateUSRForMacro(Name->getName(), MI->getDefinitionLoc(), SM,
+                            USRBuf)) {
+      OS << "<no-usr>";
+    } else {
+      OS << USRBuf;
+    }
+    OS << " | ";
+
+    printSymbolRoles(Roles, OS);
+    OS << " |\n";
     return true;
   }
 };
@@ -238,7 +279,7 @@ static bool printSourceSymbols(ArrayRef<const char *> Args,
     if (auto Reader = Unit->getASTReader()) {
       Reader->getModuleManager().visit([&](serialization::ModuleFile &Mod) -> bool {
         OS << "==== Module " << Mod.ModuleName << " ====\n";
-        indexModuleFile(Mod, *Reader, DataConsumer, IndexOpts);
+        indexModuleFile(Mod, *Reader, *DataConsumer, IndexOpts);
         dumpModuleFileInputs(Mod, *Reader, OS);
         return true; // skip module dependencies.
       });
@@ -274,7 +315,7 @@ static bool printSourceSymbolsFromModule(StringRef modulePath,
     return true;
   }
 
-  auto DataConsumer = std::make_shared<PrintIndexDataConsumer>(outs());
+  PrintIndexDataConsumer DataConsumer(outs());
   IndexingOptions IndexOpts;
   indexASTUnit(*AU, DataConsumer, IndexOpts);
 

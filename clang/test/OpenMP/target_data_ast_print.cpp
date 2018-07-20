@@ -52,7 +52,7 @@ T tmain(T argc, T *argv) {
 
 // CHECK: template <typename T, int C> T tmain(T argc, T *argv) {
 // CHECK-NEXT: T i, j, b, c, d, e, x[20];
-// CHECK-NEXT: #pragma omp target data map(to: c)
+// CHECK-NEXT: #pragma omp target data map(to: c){{$}}
 // CHECK-NEXT: i = argc;
 // CHECK-NEXT: #pragma omp target data map(to: c) if(target data: j > 0)
 // CHECK-NEXT: foo();

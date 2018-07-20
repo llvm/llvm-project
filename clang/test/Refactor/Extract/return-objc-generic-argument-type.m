@@ -19,22 +19,22 @@ void foo(Array<NSObject *> *objects) {
 // prop-begin: +1:3
   objects.prop;
 // prop-end: -1:15
-// CHECK: "static NSObject * extracted(Array<NSObject *> *objects) {\nreturn objects.prop;\n}\n\n"
+// CHECK: "static NSObject *extracted(Array<NSObject *> *objects) {\nreturn objects.prop;\n}\n\n"
 // imp-prop-begin: +1:3
   objects.get;
 // imp-prop-end: -1:14
-// CHECK: "static NSObject * extracted(Array<NSObject *> *objects) {\nreturn objects.get;\n}\n\n"
+// CHECK: "static NSObject *extracted(Array<NSObject *> *objects) {\nreturn objects.get;\n}\n\n"
 // class-prop-begin: +1:3
   Array.classProp;
 // class-prop-end: -1:30
-// CHECK: "static Array * extracted() {\nreturn Array.classProp;\n}\n\n"
+// CHECK: "static Array *extracted() {\nreturn Array.classProp;\n}\n\n"
   typedef Array<NSObject *> ObjectArray;
 // class-prop2-begin: +1:3
   [ObjectArray classProp];
 // class-prop2-end: -1:26
-// CHECK: "static Array<NSObject *> * extracted() {\nreturn [ObjectArray classProp];\n}\n\n"
+// CHECK: "static Array<NSObject *> *extracted() {\nreturn [ObjectArray classProp];\n}\n\n"
 // class-method-begin: +1:3
   [ObjectArray classGet];
 // class-method-end: -1:25
-// CHECK: "static NSObject ** extracted() {\nreturn [ObjectArray classGet];\n}\n\n"
+// CHECK: "static NSObject **extracted() {\nreturn [ObjectArray classGet];\n}\n\n"
 }

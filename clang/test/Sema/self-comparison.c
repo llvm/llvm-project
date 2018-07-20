@@ -60,7 +60,7 @@ int array_comparisons() {
   return array1 >= array1; // expected-warning{{self-comparison always evaluates to true}}
 
   //
-  // compare differrent arrays
+  // compare different arrays
   //
   return array1 == array2; // expected-warning{{array comparison always evaluates to false}}
   return array1 != array2; // expected-warning{{array comparison always evaluates to true}}
@@ -86,3 +86,8 @@ int R8435950(int i) {
   return 1;
 }
 
+__attribute__((weak)) int weak_1[3];
+__attribute__((weak)) int weak_2[3];
+_Bool compare_weak() {
+  return weak_1 == weak_2;
+}

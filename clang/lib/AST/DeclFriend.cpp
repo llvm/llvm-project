@@ -39,7 +39,7 @@ FriendDecl *FriendDecl::Create(ASTContext &C, DeclContext *DC,
                           ArrayRef<TemplateParameterList *> FriendTypeTPLists) {
 #ifndef NDEBUG
   if (Friend.is<NamedDecl *>()) {
-    NamedDecl *D = Friend.get<NamedDecl*>();
+    const auto *D = Friend.get<NamedDecl*>();
     assert(isa<FunctionDecl>(D) ||
            isa<CXXRecordDecl>(D) ||
            isa<FunctionTemplateDecl>(D) ||
@@ -57,8 +57,8 @@ FriendDecl *FriendDecl::Create(ASTContext &C, DeclContext *DC,
   std::size_t Extra =
       FriendDecl::additionalSizeToAlloc<TemplateParameterList *>(
           FriendTypeTPLists.size());
-  FriendDecl *FD = new (C, DC, Extra) FriendDecl(DC, L, Friend, FriendL,
-                                                 FriendTypeTPLists);
+  auto *FD = new (C, DC, Extra) FriendDecl(DC, L, Friend, FriendL,
+                                           FriendTypeTPLists);
   cast<CXXRecordDecl>(DC)->pushFriendDecl(FD);
   return FD;
 }

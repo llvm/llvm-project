@@ -422,6 +422,28 @@ void test_builtin_os_log(void *buf, int i, const char *data) {
   // CHECK: %[[V6:.*]] = ptrtoint i8* %[[V5]] to i64
   // CHECK: call void @__os_log_helper_1_3_4_4_0_8_34_4_17_8_49(i8* %[[V1]], i32 %[[V2]], i64 %[[V4]], i32 16, i64 %[[V6]])
   __builtin_os_log_format(buf, "%d %{public}s %{private}.16P", i, data, data);
+
+  // privacy annotations aren't recognized when they are preceded or followed
+  // by non-whitespace characters.
+
+  // CHECK: call void @__os_log_helper_1_2_1_8_32(
+  __builtin_os_log_format(buf, "%{xyz public}s", data);
+
+  // CHECK: call void @__os_log_helper_1_2_1_8_32(
+  __builtin_os_log_format(buf, "%{ public xyz}s", data);
+
+  // CHECK: call void @__os_log_helper_1_2_1_8_32(
+  __builtin_os_log_format(buf, "%{ public1}s", data);
+
+  // Privacy annotations do not have to be in the first comma-delimited string.
+
+  // CHECK: call void @__os_log_helper_1_2_1_8_34(
+  __builtin_os_log_format(buf, "%{ xyz, public }s", "abc");
+
+  // The last privacy annotation in the string wins.
+
+  // CHECK: call void @__os_log_helper_1_3_1_8_33(
+  __builtin_os_log_format(buf, "%{ private, public, private, public}s", "abc");
 }
 
 // CHECK-LABEL: define linkonce_odr hidden void @__os_log_helper_1_3_4_4_0_8_34_4_17_8_49

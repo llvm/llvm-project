@@ -5,18 +5,18 @@ struct A {
   ~A();
 };
 
-// CHECK-DAG: $"\01??$a@X@@3UA@@A" = comdat any
-// CHECK-DAG: @"\01??$a@X@@3UA@@A" = linkonce_odr thread_local global %struct.A zeroinitializer, comdat, align 1
-// CHECK-DAG: @"\01??__E?$a@X@@YAXXZ$initializer$" = internal constant void ()* @"\01??__E?$a@X@@YAXXZ", section ".CRT$XDU", comdat($"\01??$a@X@@3UA@@A")
+// CHECK-DAG: $"??$a@X@@3UA@@A" = comdat any
+// CHECK-DAG: @"??$a@X@@3UA@@A" = linkonce_odr dso_local thread_local global %struct.A zeroinitializer, comdat, align 1
+// CHECK-DAG: @"??__E?$a@X@@YAXXZ$initializer$" = internal constant void ()* @"??__E?$a@X@@YAXXZ", section ".CRT$XDU", comdat($"??$a@X@@3UA@@A")
 template <typename T>
 thread_local A a = A();
 
-// CHECK-DAG: @"\01?b@@3UA@@A" = thread_local global %struct.A zeroinitializer, align 1
+// CHECK-DAG: @"?b@@3UA@@A" = dso_local thread_local global %struct.A zeroinitializer, align 1
 // CHECK-DAG: @"__tls_init$initializer$" = internal constant void ()* @__tls_init, section ".CRT$XDU"
 thread_local A b;
 
 // CHECK-LABEL: define internal void @__tls_init()
-// CHECK: call void @"\01??__Eb@@YAXXZ"
+// CHECK: call void @"??__Eb@@YAXXZ"
 
 thread_local A &c = b;
 thread_local A &d = c;

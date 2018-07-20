@@ -8,5 +8,5 @@ struct B : virtual A {
     virtual void f();
 };
 void (B::*MemPtr)(void) = &B::f;
-// CHECK-DAG: @"\01?MemPtr@PR23452@@3P8B@1@AEXXZQ21@" = global { i8*, i32, i32 } { i8* bitcast ({{.*}} @"\01??_9B@PR23452@@$BA@AE" to i8*), i32 0, i32 4 }
+// CHECK-DAG: @"?MemPtr@PR23452@@3P8B@1@AEXXZQ21@" = dso_local global { i8*, i32, i32 } { i8* bitcast ({{.*}} @"??_9B@PR23452@@$BA@AE" to i8*), i32 0, i32 4 }
 }

@@ -58,11 +58,11 @@
     \brief Test that headerfile can come after brief.
     \headerfile VTDevice.h <VTFoundation/VTDevice.h>
 
-    More property decription goes here.
+    More property description goes here.
 */
 @interface VTDevice : Device
 @end
-// CHECK: headerfile-comment-to-html.m:[[@LINE-2]]:12: ObjCInterfaceDecl=VTDevice:{{.*}} FullCommentAsXML=[<Other file="{{[^"]+}}headerfile-comment-to-html.m" line="[[@LINE-2]]" column="12"><Name>VTDevice</Name><USR>c:objc(cs)VTDevice</USR><Headerfile><Para> VTDevice.h &lt;VTFoundation/VTDevice.h&gt;</Para></Headerfile><Declaration>@interface VTDevice : Device\n@end</Declaration><Abstract><Para> Test that headerfile can come after brief.    </Para></Abstract><Discussion><Para>    More property decription goes here.</Para></Discussion></Other>]
+// CHECK: headerfile-comment-to-html.m:[[@LINE-2]]:12: ObjCInterfaceDecl=VTDevice:{{.*}} FullCommentAsXML=[<Other file="{{[^"]+}}headerfile-comment-to-html.m" line="[[@LINE-2]]" column="12"><Name>VTDevice</Name><USR>c:objc(cs)VTDevice</USR><Headerfile><Para> VTDevice.h &lt;VTFoundation/VTDevice.h&gt;</Para></Headerfile><Declaration>@interface VTDevice : Device\n@end</Declaration><Abstract><Para> Test that headerfile can come after brief.    </Para></Abstract><Discussion><Para>    More property description goes here.</Para></Discussion></Other>]
 // CHECK-NEXT:  CommentAST=[
 // CHECK-NEXT:    (CXComment_FullComment
 // CHECK-NEXT:       (CXComment_Paragraph IsWhitespace
@@ -77,7 +77,7 @@
 // CHECK-NEXT:           (CXComment_Text Text=[<VTFoundation])
 // CHECK-NEXT:           (CXComment_Text Text=[/VTDevice.h>])))
 // CHECK-NEXT:       (CXComment_Paragraph
-// CHECK-NEXT:         (CXComment_Text Text=[    More property decription goes here.])))]
+// CHECK-NEXT:         (CXComment_Text Text=[    More property description goes here.])))]
 
 /*!
   \headerfile  <stdio.h>

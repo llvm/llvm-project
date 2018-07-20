@@ -23,7 +23,7 @@ T tmain(T argc) {
     foo();
   }
   // CHECK-NEXT: #pragma omp parallel
-  // CHECK-NEXT: #pragma omp sections private(argc,b) firstprivate(c,d) lastprivate(d,f) reduction(-: g) nowait
+  // CHECK-NEXT: #pragma omp sections private(argc,b) firstprivate(c,d) lastprivate(d,f) reduction(-: g) nowait{{$}}
   // CHECK-NEXT: {
   // CHECK-NEXT: foo();
   // CHECK-NEXT: }
@@ -46,7 +46,7 @@ int main(int argc, char **argv) {
   // CHECK-NEXT: #pragma omp parallel
   // CHECK-NEXT: #pragma omp sections private(argc,b) firstprivate(argv,c) lastprivate(d,f) reduction(+: g) nowait
   // CHECK-NEXT: {
-  // CHECK-NEXT: #pragma omp section
+  // CHECK-NEXT: #pragma omp section{{$}}
   // CHECK-NEXT: foo();
   // CHECK-NEXT: #pragma omp section
   // CHECK-NEXT: foo();
