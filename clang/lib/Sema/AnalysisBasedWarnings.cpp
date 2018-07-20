@@ -658,6 +658,11 @@ static void CheckFallThroughForBody(Sema &S, const Decl *D, const Stmt *Body,
     else
       S.Diag(Loc, DiagID);
   };
+
+  // cpu_dispatch functions permit empty function bodies for ICC compatibility.
+  if (D->getAsFunction() && D->getAsFunction()->isCPUDispatchMultiVersion())
+    return;
+
   // Either in a function body compound statement, or a function-try-block.
   switch (CheckFallThrough(AC)) {
     case UnknownFallThrough:

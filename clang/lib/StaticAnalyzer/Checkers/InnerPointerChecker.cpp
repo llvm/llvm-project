@@ -1,4 +1,4 @@
-//=== DanglingInternalBufferChecker.cpp ---------------------------*- C++ -*--//
+//=== InnerPointerChecker.cpp -------------------------------------*- C++ -*--//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -44,7 +44,7 @@ struct ProgramStateTrait<PtrSet> : public ProgramStatePartialTrait<PtrSet> {
 
 namespace {
 
-class DanglingInternalBufferChecker
+class InnerPointerChecker
     : public Checker<check::DeadSymbols, check::PostCall> {
 
   CallDescription AppendFn, AssignFn, ClearFn, CStrFn, DataFn, EraseFn,
@@ -52,11 +52,11 @@ class DanglingInternalBufferChecker
       ShrinkToFitFn, SwapFn;
 
 public:
-  class DanglingBufferBRVisitor : public BugReporterVisitor {
+  class InnerPointerBRVisitor : public BugReporterVisitor {
     SymbolRef PtrToBuf;
 
   public:
-    DanglingBufferBRVisitor(SymbolRef Sym) : PtrToBuf(Sym) {}
+    InnerPointerBRVisitor(SymbolRef Sym) : PtrToBuf(Sym) {}
 
     static void *getTag() {
       static int Tag = 0;
@@ -84,7 +84,7 @@ public:
     }
   };
 
-  DanglingInternalBufferChecker()
+  InnerPointerChecker()
       : AppendFn("append"), AssignFn("assign"), ClearFn("clear"),
         CStrFn("c_str"), DataFn("data"), EraseFn("erase"), InsertFn("insert"),
         PopBackFn("pop_back"), PushBackFn("push_back"), ReplaceFn("replace"),
@@ -121,8 +121,7 @@ public:
 // -- Calling non-const member functions, except operator[], at, front, back,
 // begin, rbegin, end, and rend."
 //
-bool DanglingInternalBufferChecker::mayInvalidateBuffer(
-    const CallEvent &Call) const {
+bool InnerPointerChecker::mayInvalidateBuffer(const CallEvent &Call) const {
   if (const auto *MemOpCall = dyn_cast<CXXMemberOperatorCall>(&Call)) {
     OverloadedOperatorKind Opc = MemOpCall->getOriginExpr()->getOperator();
     if (Opc == OO_Equal || Opc == OO_PlusEqual)
@@ -138,8 +137,8 @@ bool DanglingInternalBufferChecker::mayInvalidateBuffer(
           Call.isCalled(SwapFn));
 }
 
-void DanglingInternalBufferChecker::checkPostCall(const CallEvent &Call,
-                                                  CheckerContext &C) const {
+void InnerPointerChecker::checkPostCall(const CallEvent &Call,
+                                        CheckerContext &C) const {
   const auto *ICall = dyn_cast<CXXInstanceCall>(&Call);
   if (!ICall)
     return;
@@ -187,8 +186,8 @@ void DanglingInternalBufferChecker::checkPostCall(const CallEvent &Call,
   }
 }
 
-void DanglingInternalBufferChecker::checkDeadSymbols(SymbolReaper &SymReaper,
-                                                     CheckerContext &C) const {
+void InnerPointerChecker::checkDeadSymbols(SymbolReaper &SymReaper,
+                                           CheckerContext &C) const {
   ProgramStateRef State = C.getState();
   PtrSet::Factory &F = State->getStateManager().get_context<PtrSet>();
   RawPtrMapTy RPM = State->get<RawPtrMap>();
@@ -213,9 +212,10 @@ void DanglingInternalBufferChecker::checkDeadSymbols(SymbolReaper &SymReaper,
 }
 
 std::shared_ptr<PathDiagnosticPiece>
-DanglingInternalBufferChecker::DanglingBufferBRVisitor::VisitNode(
-    const ExplodedNode *N, const ExplodedNode *PrevN, BugReporterContext &BRC,
-    BugReport &BR) {
+InnerPointerChecker::InnerPointerBRVisitor::VisitNode(const ExplodedNode *N,
+                                                      const ExplodedNode *PrevN,
+                                                      BugReporterContext &BRC,
+                                                      BugReport &BR) {
 
   if (!isSymbolTracked(N->getState(), PtrToBuf) ||
       isSymbolTracked(PrevN->getState(), PtrToBuf))
@@ -238,16 +238,15 @@ namespace clang {
 namespace ento {
 namespace allocation_state {
 
-std::unique_ptr<BugReporterVisitor> getDanglingBufferBRVisitor(SymbolRef Sym) {
-  return llvm::make_unique<
-      DanglingInternalBufferChecker::DanglingBufferBRVisitor>(Sym);
+std::unique_ptr<BugReporterVisitor> getInnerPointerBRVisitor(SymbolRef Sym) {
+  return llvm::make_unique<InnerPointerChecker::InnerPointerBRVisitor>(Sym);
 }
 
 } // end namespace allocation_state
 } // end namespace ento
 } // end namespace clang
 
-void ento::registerDanglingInternalBufferChecker(CheckerManager &Mgr) {
+void ento::registerInnerPointerChecker(CheckerManager &Mgr) {
   registerNewDeleteChecker(Mgr);
-  Mgr.registerChecker<DanglingInternalBufferChecker>();
+  Mgr.registerChecker<InnerPointerChecker>();
 }

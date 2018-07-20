@@ -191,6 +191,65 @@ in generation of more efficient code.
   }];
 }
 
+def CPUSpecificCPUDispatchDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``cpu_specific`` and ``cpu_dispatch`` attributes are used to define and
+resolve multiversioned functions. This form of multiversioning provides a
+mechanism for declaring versions across translation units and manually
+specifying the resolved function list. A specified CPU defines a set of minimum
+features that are required for the function to be called. The result of this is
+that future processors execute the most restrictive version of the function the
+new processor can execute.
+
+Function versions are defined with ``cpu_specific``, which takes one or more CPU
+names as a parameter. For example:
+
+.. code-block:: c
+
+  // Declares and defines the ivybridge version of single_cpu.
+  __attribute__((cpu_specific(ivybridge)))
+  void single_cpu(void){}
+
+  // Declares and defines the atom version of single_cpu.
+  __attribute__((cpu_specific(atom)))
+  void single_cpu(void){}
+
+  // Declares and defines both the ivybridge and atom version of multi_cpu.
+  __attribute__((cpu_specific(ivybridge, atom)))
+  void multi_cpu(void){}
+
+A dispatching (or resolving) function can be declared anywhere in a project's
+source code with ``cpu_dispatch``. This attribute takes one or more CPU names
+as a parameter (like ``cpu_specific``). Functions marked with ``cpu_dispatch``
+are not expected to be defined, only declared. If such a marked function has a
+definition, any side effects of the function are ignored; trivial function
+bodies are permissible for ICC compatibility.
+
+.. code-block:: c
+
+  // Creates a resolver for single_cpu above.
+  __attribute__((cpu_dispatch(ivybridge, atom)))
+  void single_cpu(void){}
+
+  // Creates a resolver for multi_cpu, but adds a 3rd version defined in another
+  // translation unit.
+  __attribute__((cpu_dispatch(ivybridge, atom, sandybridge)))
+  void multi_cpu(void){}
+
+Note that it is possible to have a resolving function that dispatches based on
+more or fewer options than are present in the program. Specifying fewer will
+result in the omitted options not being considered during resolution. Specifying
+a version for resolution that isn't defined in the program will result in a
+linking failure.
+
+It is also possible to specify a CPU name of ``generic`` which will be resolved
+if the executing processor doesn't satisfy the features required in the CPU
+name. The behavior of a program executing on a processor that doesn't satisfy
+any option of a multiversioned function is undefined.
+  }];
+}
+
 def C11NoReturnDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{

@@ -1591,6 +1591,7 @@ bool Sema::tryExprAsCall(Expr &E, QualType &ZeroArgCallReturnTy,
   }
 
   bool Ambiguous = false;
+  bool IsMV = false;
 
   if (Overloads) {
     for (OverloadExpr::decls_iterator it = Overloads->decls_begin(),
@@ -1604,11 +1605,16 @@ bool Sema::tryExprAsCall(Expr &E, QualType &ZeroArgCallReturnTy,
       if (const FunctionDecl *OverloadDecl
             = dyn_cast<FunctionDecl>((*it)->getUnderlyingDecl())) {
         if (OverloadDecl->getMinRequiredArguments() == 0) {
-          if (!ZeroArgCallReturnTy.isNull() && !Ambiguous) {
+          if (!ZeroArgCallReturnTy.isNull() && !Ambiguous &&
+              (!IsMV || !(OverloadDecl->isCPUDispatchMultiVersion() ||
+                          OverloadDecl->isCPUSpecificMultiVersion()))) {
             ZeroArgCallReturnTy = QualType();
             Ambiguous = true;
-          } else
+          } else {
             ZeroArgCallReturnTy = OverloadDecl->getReturnType();
+            IsMV = OverloadDecl->isCPUDispatchMultiVersion() ||
+                   OverloadDecl->isCPUSpecificMultiVersion();
+          }
         }
       }
     }
@@ -1689,7 +1695,7 @@ static void noteOverloads(Sema &S, const UnresolvedSetImpl &Overloads,
     NamedDecl *Fn = (*It)->getUnderlyingDecl();
     // Don't print overloads for non-default multiversioned functions.
     if (const auto *FD = Fn->getAsFunction()) {
-      if (FD->isMultiVersion() &&
+      if (FD->isMultiVersion() && FD->hasAttr<TargetAttr>() &&
           !FD->getAttr<TargetAttr>()->isDefaultVersion())
         continue;
     }
@@ -1731,6 +1737,21 @@ static bool IsCallableWithAppend(Expr *E) {
           !isa<CXXOperatorCallExpr>(E));
 }
 
+static bool IsCPUDispatchCPUSpecificMultiVersion(const Expr *E) {
+  if (const auto *UO = dyn_cast<UnaryOperator>(E))
+    E = UO->getSubExpr();
+
+  if (const auto *ULE = dyn_cast<UnresolvedLookupExpr>(E)) {
+    if (ULE->getNumDecls() == 0)
+      return false;
+
+    const NamedDecl *ND = *ULE->decls_begin();
+    if (const auto *FD = dyn_cast<FunctionDecl>(ND))
+      return FD->isCPUDispatchMultiVersion() || FD->isCPUSpecificMultiVersion();
+  }
+  return false;
+}
+
 bool Sema::tryToRecoverWithCall(ExprResult &E, const PartialDiagnostic &PD,
                                 bool ForceComplain,
                                 bool (*IsPlausibleResult)(QualType)) {
@@ -1747,12 +1768,13 @@ bool Sema::tryToRecoverWithCall(ExprResult &E, const PartialDiagnostic &PD,
     // so we can emit a fixit and carry on pretending that E was
     // actually a CallExpr.
     SourceLocation ParenInsertionLoc = getLocForEndOfToken(Range.getEnd());
-    Diag(Loc, PD)
-      << /*zero-arg*/ 1 << Range
-      << (IsCallableWithAppend(E.get())
-          ? FixItHint::CreateInsertion(ParenInsertionLoc, "()")
-          : FixItHint());
-    notePlausibleOverloads(*this, Loc, Overloads, IsPlausibleResult);
+    bool IsMV = IsCPUDispatchCPUSpecificMultiVersion(E.get());
+    Diag(Loc, PD) << /*zero-arg*/ 1 << IsMV << Range
+                  << (IsCallableWithAppend(E.get())
+                          ? FixItHint::CreateInsertion(ParenInsertionLoc, "()")
+                          : FixItHint());
+    if (!IsMV)
+      notePlausibleOverloads(*this, Loc, Overloads, IsPlausibleResult);
 
     // FIXME: Try this before emitting the fixit, and suppress diagnostics
     // while doing so.
@@ -1763,8 +1785,10 @@ bool Sema::tryToRecoverWithCall(ExprResult &E, const PartialDiagnostic &PD,
 
   if (!ForceComplain) return false;
 
-  Diag(Loc, PD) << /*not zero-arg*/ 0 << Range;
-  notePlausibleOverloads(*this, Loc, Overloads, IsPlausibleResult);
+  bool IsMV = IsCPUDispatchCPUSpecificMultiVersion(E.get());
+  Diag(Loc, PD) << /*not zero-arg*/ 0 << IsMV << Range;
+  if (!IsMV)
+    notePlausibleOverloads(*this, Loc, Overloads, IsPlausibleResult);
   E = ExprError();
   return true;
 }

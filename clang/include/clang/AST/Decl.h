@@ -2209,6 +2209,13 @@ public:
     getCanonicalDecl()->IsMultiVersion = V;
   }
 
+  /// True if this function is a multiversioned dispatch function as a part of
+  /// the cpu_specific/cpu_dispatch functionality.
+  bool isCPUDispatchMultiVersion() const;
+  /// True if this function is a multiversioned processor specific function as a
+  /// part of the cpu_specific/cpu_dispatch functionality.
+  bool isCPUSpecificMultiVersion() const;
+
   void setPreviousDeclaration(FunctionDecl * PrevDecl);
 
   FunctionDecl *getCanonicalDecl() override;

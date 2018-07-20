@@ -1092,6 +1092,27 @@ public:
   // argument.
   virtual bool validateCpuIs(StringRef Name) const { return false; }
 
+  // Validate a cpu_dispatch/cpu_specific CPU option, which is a different list
+  // from cpu_is, since it checks via features rather than CPUs directly.
+  virtual bool validateCPUSpecificCPUDispatch(StringRef Name) const {
+    return false;
+  }
+
+  // Get the character to be added for mangling purposes for cpu_specific.
+  virtual char CPUSpecificManglingCharacter(StringRef Name) const {
+    llvm_unreachable(
+        "cpu_specific Multiversioning not implemented on this target");
+  }
+
+  // Get a list of the features that make up the CPU option for
+  // cpu_specific/cpu_dispatch so that it can be passed to llvm as optimization
+  // options.
+  virtual void getCPUSpecificCPUDispatchFeatures(
+      StringRef Name, llvm::SmallVectorImpl<StringRef> &Features) const {
+    llvm_unreachable(
+        "cpu_specific Multiversioning not implemented on this target");
+  }
+
   // Returns maximal number of args passed in registers.
   unsigned getRegParmMax() const {
     assert(RegParmMax < 7 && "RegParmMax value is larger than AST can handle");
