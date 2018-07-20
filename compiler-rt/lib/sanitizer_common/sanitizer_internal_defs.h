@@ -122,6 +122,11 @@
 # define __has_feature(x) 0
 #endif
 
+// Older GCCs do not understand __has_attribute.
+#if !defined(__has_attribute)
+# define __has_attribute(x) 0
+#endif
+
 // For portability reasons we do not include stddef.h, stdint.h or any other
 // system header, but we do need some basic types that are not defined
 // in a portable way by the language itself.

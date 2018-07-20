@@ -24,7 +24,7 @@
 namespace __scudo {
 
 struct ALIGNED(SANITIZER_CACHE_LINE_SIZE) ScudoTSD {
-  AllocatorCache Cache;
+  AllocatorCacheT Cache;
   uptr QuarantineCachePlaceHolder[4];
 
   void init();
