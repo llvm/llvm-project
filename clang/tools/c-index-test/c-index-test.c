@@ -3656,6 +3656,8 @@ static unsigned getIndexOptions(void) {
     index_opts |= CXIndexOpt_IndexFunctionLocalSymbols;
   if (!getenv("CINDEXTEST_DISABLE_SKIPPARSEDBODIES"))
     index_opts |= CXIndexOpt_SkipParsedBodiesInSession;
+  if (getenv("CINDEXTEST_INDEXIMPLICITTEMPLATEINSTANTIATIONS"))
+    index_opts |= CXIndexOpt_IndexImplicitTemplateInstantiations;
 
   return index_opts;
 }

@@ -390,6 +390,9 @@ bool IndexingContext::handleDeclOccurrence(const Decl *D, SourceLocation Loc,
     }
   }
 
+  if (!OrigD)
+    OrigD = D;
+
   if (isTemplateImplicitInstantiation(D)) {
     if (!IsRef)
       return true;
@@ -398,9 +401,6 @@ bool IndexingContext::handleDeclOccurrence(const Decl *D, SourceLocation Loc,
       return true;
     assert(!isTemplateImplicitInstantiation(D));
   }
-
-  if (!OrigD)
-    OrigD = D;
 
   if (IsRef)
     Roles |= (unsigned)SymbolRole::Reference;

@@ -808,7 +808,7 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
       }
     }
   }
-	// Handle -fembed-bitcode option.
+  // Handle -fembed-bitcode option.
   if (Arg *A = Args.getLastArg(OPT_fembed_bitcode_EQ)) {
     StringRef Name = A->getValue();
     unsigned Model = llvm::StringSwitch<unsigned>(Name)
