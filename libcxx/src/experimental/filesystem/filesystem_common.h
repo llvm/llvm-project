@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===////
 
-#ifndef FILESYSTEM_TIME_HELPER_H
-#define FILESYSTEM_TIME_HELPER_H
+#ifndef FILESYSTEM_COMMON_H
+#define FILESYSTEM_COMMON_H
 
 #include "experimental/__config"
 #include "chrono"
@@ -17,13 +17,77 @@
 
 #include <unistd.h>
 #include <sys/stat.h>
+#include <sys/statvfs.h>
+#include <fcntl.h> /* values for fchmodat */
+
+#include <experimental/filesystem>
+
+#if (__APPLE__)
+#if defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__)
+#if __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ >= 101300
+#define _LIBCXX_USE_UTIMENSAT
+#endif
+#elif defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__)
+#if __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ >= 110000
+#define _LIBCXX_USE_UTIMENSAT
+#endif
+#elif defined(__ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__)
+#if __ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__ >= 110000
+#define _LIBCXX_USE_UTIMENSAT
+#endif
+#elif defined(__ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__)
+#if __ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__ >= 40000
+#define _LIBCXX_USE_UTIMENSAT
+#endif
+#endif // __ENVIRONMENT_.*_VERSION_MIN_REQUIRED__
+#else
+// We can use the presence of UTIME_OMIT to detect platforms that provide
+// utimensat.
+#if defined(UTIME_OMIT)
+#define _LIBCXX_USE_UTIMENSAT
+#endif
+#endif // __APPLE__
+
+#if !defined(_LIBCXX_USE_UTIMENSAT)
+#include <sys/time.h> // for ::utimes as used in __last_write_time
+#endif
+
 #if !defined(UTIME_OMIT)
 #include <sys/time.h> // for ::utimes as used in __last_write_time
 #endif
 
+#if defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
+#endif
+
 _LIBCPP_BEGIN_NAMESPACE_EXPERIMENTAL_FILESYSTEM
 
-namespace time_detail { namespace {
+namespace detail {
+namespace {
+
+std::error_code capture_errno() {
+  _LIBCPP_ASSERT(errno, "Expected errno to be non-zero");
+  return std::error_code(errno, std::generic_category());
+}
+
+void set_or_throw(std::error_code const& m_ec, std::error_code* ec,
+                  const char* msg, path const& p = {}, path const& p2 = {}) {
+  if (ec) {
+    *ec = m_ec;
+  } else {
+    string msg_s("std::experimental::filesystem::");
+    msg_s += msg;
+    __throw_filesystem_error(msg_s, p, p2, m_ec);
+  }
+}
+
+void set_or_throw(std::error_code* ec, const char* msg, path const& p = {},
+                  path const& p2 = {}) {
+  return set_or_throw(capture_errno(), ec, msg, p, p2);
+}
+
+namespace time_util {
 
 using namespace chrono;
 
@@ -78,9 +142,8 @@ const long long fs_time_util_base<FileTimeT, true>::min_seconds =
 
 template <class FileTimeT>
 const long long fs_time_util_base<FileTimeT, true>::min_nsec_timespec =
-    duration_cast<nanoseconds>((FileTimeT::duration::min() -
-                                seconds(min_seconds)) +
-                               seconds(1))
+    duration_cast<nanoseconds>(
+        (FileTimeT::duration::min() - seconds(min_seconds)) + seconds(1))
         .count();
 
 template <class FileTimeT, class TimeT, class TimeSpecT>
@@ -145,7 +208,6 @@ public:
   template <class SubSecDurT, class SubSecT>
   static bool set_times_checked(TimeT* sec_out, SubSecT* subsec_out,
                                 FileTimeT tp) {
-    using namespace chrono;
     auto dur = tp.time_since_epoch();
     auto sec_dur = duration_cast<seconds>(dur);
     auto subsec_dur = duration_cast<SubSecDurT>(dur - sec_dur);
@@ -163,11 +225,72 @@ public:
   }
 };
 
-} // end namespace
-} // end namespace time_detail
+} // namespace time_util
 
-using time_detail::fs_time_util;
+
+using TimeSpec = struct timespec;
+using StatT = struct stat;
+
+using FSTime = time_util::fs_time_util<file_time_type, time_t, struct timespec>;
+
+#if defined(__APPLE__)
+TimeSpec extract_mtime(StatT const& st) { return st.st_mtimespec; }
+TimeSpec extract_atime(StatT const& st) { return st.st_atimespec; }
+#else
+TimeSpec extract_mtime(StatT const& st) { return st.st_mtim; }
+TimeSpec extract_atime(StatT const& st) { return st.st_atim; }
+#endif
+
+#if !defined(_LIBCXX_USE_UTIMENSAT)
+using TimeStruct = struct ::timeval;
+using TimeStructArray = TimeStruct[2];
+#else
+using TimeStruct = struct ::timespec;
+using TimeStructArray = TimeStruct[2];
+#endif
+
+bool SetFileTimes(const path& p, TimeStructArray const& TS,
+                  std::error_code& ec) {
+#if !defined(_LIBCXX_USE_UTIMENSAT)
+  if (::utimes(p.c_str(), TS) == -1)
+#else
+  if (::utimensat(AT_FDCWD, p.c_str(), TS, 0) == -1)
+#endif
+  {
+    ec = capture_errno();
+    return true;
+  }
+  return false;
+}
+
+void SetTimeStructTo(TimeStruct& TS, TimeSpec ToTS) {
+  using namespace chrono;
+  TS.tv_sec = ToTS.tv_sec;
+#if !defined(_LIBCXX_USE_UTIMENSAT)
+  TS.tv_usec = duration_cast<microseconds>(nanoseconds(ToTS.tv_nsec)).count();
+#else
+  TS.tv_nsec = ToTS.tv_nsec;
+#endif
+}
+
+bool SetTimeStructTo(TimeStruct& TS, file_time_type NewTime) {
+  using namespace chrono;
+#if !defined(_LIBCXX_USE_UTIMENSAT)
+  return !FSTime::set_times_checked<microseconds>(&TS.tv_sec, &TS.tv_usec,
+                                                  NewTime);
+#else
+  return !FSTime::set_times_checked<nanoseconds>(&TS.tv_sec, &TS.tv_nsec,
+                                                 NewTime);
+#endif
+}
+
+} // namespace
+} // end namespace detail
 
 _LIBCPP_END_NAMESPACE_EXPERIMENTAL_FILESYSTEM
 
-#endif // FILESYSTEM_TIME_HELPER_H
+#if defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
+
+#endif // FILESYSTEM_COMMON_H
