@@ -40,7 +40,7 @@ template <class T> class Array {
   // We want each segment of the array to be cache-line aligned, and elements of
   // the array be offset from the beginning of the segment.
   struct Segment : SegmentBase {
-    char Data[];
+    char Data[1];
   };
 
 public:

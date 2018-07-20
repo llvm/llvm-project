@@ -5,12 +5,12 @@
 define void @pr32275(<4 x i8> %B15) {
 ; CHECK-LABEL: pr32275:
 ; CHECK:       # %bb.0: # %BB
-; CHECK-NEXT:    vrepif [[REG0:%v[0-9]]], 1
 ; CHECK:         vlgvb %r0, %v24, 3
 ; CHECK-NEXT:    vlgvb %r1, %v24, 1
 ; CHECK-NEXT:    vlvgp [[REG1:%v[0-9]]], %r1, %r0
 ; CHECK-NEXT:    vlgvb %r0, %v24, 0
 ; CHECK-NEXT:    vlgvb [[REG3:%r[0-9]]], %v24, 2
+; CHECK-NEXT:    vrepif [[REG0:%v[0-9]]], 1
 ; CHECK:       .LBB0_1:
 ; CHECK-DAG:     vlr [[REG2:%v[0-9]]], [[REG1]]
 ; CHECK-DAG:     vlvgf [[REG2]], %r0, 0

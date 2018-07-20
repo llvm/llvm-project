@@ -77,8 +77,9 @@ bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
   const unsigned KernArgBaseAlign = 16; // FIXME: Increase if necessary
   const uint64_t BaseOffset = ST.getExplicitKernelArgOffset(F);
 
+  unsigned MaxAlign;
   // FIXME: Alignment is broken broken with explicit arg offset.;
-  const uint64_t TotalKernArgSize = ST.getKernArgSegmentSize(F);
+  const uint64_t TotalKernArgSize = ST.getKernArgSegmentSize(F, MaxAlign);
   if (TotalKernArgSize == 0)
     return false;
 
@@ -91,13 +92,11 @@ bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
     Attribute::getWithDereferenceableBytes(Ctx, TotalKernArgSize));
 
   unsigned AS = KernArgSegment->getType()->getPointerAddressSpace();
-  unsigned MaxAlign = 1;
   uint64_t ExplicitArgOffset = 0;
 
   for (Argument &Arg : F.args()) {
     Type *ArgTy = Arg.getType();
     unsigned Align = DL.getABITypeAlignment(ArgTy);
-    MaxAlign = std::max(Align, MaxAlign);
     unsigned Size = DL.getTypeSizeInBits(ArgTy);
     unsigned AllocSize = DL.getTypeAllocSize(ArgTy);
 

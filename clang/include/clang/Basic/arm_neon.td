@@ -1438,12 +1438,12 @@ let ArchGuard = "defined(__ARM_FEATURE_FP16_VECTOR_ARITHMETIC)" in {
 
   // Comparison
   let InstName = "vacge" in {
-	  def VCAGEH     : SInst<"vcage", "udd", "hQh">;
-	  def VCALEH     : SInst<"vcale", "udd", "hQh">;
+    def VCAGEH     : SInst<"vcage", "udd", "hQh">;
+    def VCALEH     : SInst<"vcale", "udd", "hQh">;
   }
   let InstName = "vacgt" in {
     def VCAGTH     : SInst<"vcagt", "udd", "hQh">;
-	  def VCALTH     : SInst<"vcalt", "udd", "hQh">;
+    def VCALTH     : SInst<"vcalt", "udd", "hQh">;
   }
   def VCEQH        : SOpInst<"vceq", "udd", "hQh", OP_EQ>;
   def VCGEH        : SOpInst<"vcge", "udd", "hQh", OP_GE>;

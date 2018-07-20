@@ -10,7 +10,7 @@ define double @f1(double %a, double %b, i8 *%ptr) {
 ; CHECK: cli 0(%r2), 1
 ; CHECK-NEXT: bhr %r14
 ; CHECK: br %r14
-  %val = load i8 , i8 *%ptr
+  %val = load i8, i8 *%ptr
   %ext = zext i8 %val to i64
   %cond = icmp ugt i64 %ext, 1
   %res = select i1 %cond, double %a, double %b
@@ -24,7 +24,7 @@ define double @f2(double %a, double %b, i8 *%ptr) {
 ; CHECK: cli 0(%r2), 1
 ; CHECK-NEXT: bhr %r14
 ; CHECK: br %r14
-  %val = load i8 , i8 *%ptr
+  %val = load i8, i8 *%ptr
   %ext = sext i8 %val to i64
   %cond = icmp ugt i64 %ext, 1
   %res = select i1 %cond, double %a, double %b
@@ -38,7 +38,7 @@ define double @f3(double %a, double %b, i8 *%ptr) {
 ; CHECK: cli 0(%r2), 254
 ; CHECK-NEXT: blr %r14
 ; CHECK: br %r14
-  %val = load i8 , i8 *%ptr
+  %val = load i8, i8 *%ptr
   %ext = zext i8 %val to i64
   %cond = icmp ult i64 %ext, 254
   %res = select i1 %cond, double %a, double %b
@@ -52,7 +52,7 @@ define double @f4(double %a, double %b, i8 *%ptr) {
 ; CHECK: cli 0(%r2), 254
 ; CHECK-NEXT: blr %r14
 ; CHECK: br %r14
-  %val = load i8 , i8 *%ptr
+  %val = load i8, i8 *%ptr
   %ext = sext i8 %val to i64
   %cond = icmp ult i64 %ext, -2
   %res = select i1 %cond, double %a, double %b
@@ -65,7 +65,7 @@ define double @f5(double %a, double %b, i8 *%ptr) {
 ; CHECK-LABEL: f5:
 ; CHECK-NOT: cli
 ; CHECK: br %r14
-  %val = load i8 , i8 *%ptr
+  %val = load i8, i8 *%ptr
   %ext = zext i8 %val to i64
   %cond = icmp ult i64 %ext, 256
   %res = select i1 %cond, double %a, double %b
@@ -81,7 +81,7 @@ define double @f6(double %a, double %b, i8 *%ptr) {
 ; CHECK-LABEL: f6:
 ; CHECK-NOT: cli
 ; CHECK: br %r14
-  %val = load i8 , i8 *%ptr
+  %val = load i8, i8 *%ptr
   %ext = sext i8 %val to i64
   %cond = icmp ult i64 %ext, 128
   %res = select i1 %cond, double %a, double %b
@@ -93,7 +93,7 @@ define double @f7(double %a, double %b, i8 *%ptr) {
 ; CHECK-LABEL: f7:
 ; CHECK-NOT: cli
 ; CHECK: br %r14
-  %val = load i8 , i8 *%ptr
+  %val = load i8, i8 *%ptr
   %ext = sext i8 %val to i64
   %cond = icmp ult i64 %ext, -129
   %res = select i1 %cond, double %a, double %b
@@ -107,7 +107,7 @@ define double @f8(double %a, double %b, i8 *%ptr) {
 ; CHECK: cli 0(%r2), 1
 ; CHECK-NEXT: bhr %r14
 ; CHECK: br %r14
-  %val = load i8 , i8 *%ptr
+  %val = load i8, i8 *%ptr
   %ext = zext i8 %val to i64
   %cond = icmp sgt i64 %ext, 1
   %res = select i1 %cond, double %a, double %b
@@ -120,7 +120,7 @@ define double @f9(double %a, double %b, i8 *%ptr) {
 ; CHECK-LABEL: f9:
 ; CHECK-NOT: cli
 ; CHECK: br %r14
-  %val = load i8 , i8 *%ptr
+  %val = load i8, i8 *%ptr
   %ext = sext i8 %val to i64
   %cond = icmp sgt i64 %ext, 1
   %res = select i1 %cond, double %a, double %b
@@ -134,7 +134,7 @@ define double @f10(double %a, double %b, i8 *%ptr) {
 ; CHECK: cli 0(%r2), 254
 ; CHECK-NEXT: blr %r14
 ; CHECK: br %r14
-  %val = load i8 , i8 *%ptr
+  %val = load i8, i8 *%ptr
   %ext = zext i8 %val to i64
   %cond = icmp slt i64 %ext, 254
   %res = select i1 %cond, double %a, double %b
@@ -147,7 +147,7 @@ define double @f11(double %a, double %b, i8 *%ptr) {
 ; CHECK-LABEL: f11:
 ; CHECK-NOT: cli
 ; CHECK: br %r14
-  %val = load i8 , i8 *%ptr
+  %val = load i8, i8 *%ptr
   %ext = sext i8 %val to i64
   %cond = icmp slt i64 %ext, -2
   %res = select i1 %cond, double %a, double %b
@@ -160,7 +160,7 @@ define double @f12(double %a, double %b, i8 *%ptr) {
 ; CHECK-LABEL: f12:
 ; CHECK-NOT: cli
 ; CHECK: br %r14
-  %val = load i8 , i8 *%ptr
+  %val = load i8, i8 *%ptr
   %ext = zext i8 %val to i64
   %cond = icmp slt i64 %ext, 256
   %res = select i1 %cond, double %a, double %b
@@ -173,7 +173,7 @@ define double @f13(double %a, double %b, i8 *%ptr) {
 ; CHECK: cli 0(%r2), 128
 ; CHECK-NEXT: blr %r14
 ; CHECK: br %r14
-  %val = load i8 , i8 *%ptr
+  %val = load i8, i8 *%ptr
   %ext = sext i8 %val to i64
   %cond = icmp sge i64 %ext, 0
   %res = select i1 %cond, double %a, double %b
@@ -186,7 +186,7 @@ define double @f14(double %a, double %b, i8 *%ptr) {
 ; CHECK: cli 0(%r2), 128
 ; CHECK-NEXT: blr %r14
 ; CHECK: br %r14
-  %val = load i8 , i8 *%ptr
+  %val = load i8, i8 *%ptr
   %ext = sext i8 %val to i64
   %cond = icmp sgt i64 %ext, -1
   %res = select i1 %cond, double %a, double %b
@@ -199,7 +199,7 @@ define double @f15(double %a, double %b, i8 *%ptr) {
 ; CHECK: cli 0(%r2), 127
 ; CHECK-NEXT: bhr %r14
 ; CHECK: br %r14
-  %val = load i8 , i8 *%ptr
+  %val = load i8, i8 *%ptr
   %ext = sext i8 %val to i64
   %cond = icmp slt i64 %ext, 0
   %res = select i1 %cond, double %a, double %b
@@ -212,7 +212,7 @@ define double @f16(double %a, double %b, i8 *%ptr) {
 ; CHECK: cli 0(%r2), 127
 ; CHECK-NEXT: bhr %r14
 ; CHECK: br %r14
-  %val = load i8 , i8 *%ptr
+  %val = load i8, i8 *%ptr
   %ext = sext i8 %val to i64
   %cond = icmp sle i64 %ext, -1
   %res = select i1 %cond, double %a, double %b

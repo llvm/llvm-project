@@ -1109,6 +1109,10 @@ static Value *SimplifySRemInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
   if (match(Op1, m_SExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1))
     return ConstantInt::getNullValue(Op0->getType());
 
+  // If the two operands are negated, return 0.
+  if (isKnownNegation(Op0, Op1))
+   return ConstantInt::getNullValue(Op0->getType());
+
   return simplifyRem(Instruction::SRem, Op0, Op1, Q, MaxRecurse);
 }
 

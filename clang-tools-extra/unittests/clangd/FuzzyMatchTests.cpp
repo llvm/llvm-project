@@ -273,6 +273,29 @@ TEST(FuzzyMatch, Scoring) {
   EXPECT_THAT("Abs", matches("[abs]", 2.f));
 }
 
+// Returns pretty-printed segmentation of Text.
+// e.g. std::basic_string --> +--  +---- +-----
+std::string segment(StringRef Text) {
+  std::vector<CharRole> Roles(Text.size());
+  calculateRoles(Text, Roles);
+  std::string Printed;
+  for (unsigned I = 0; I < Text.size(); ++I)
+    Printed.push_back("?-+ "[static_cast<unsigned>(Roles[I])]);
+  return Printed;
+}
+
+// this is a no-op hack so clang-format will vertically align our testcases.
+StringRef returns(StringRef Text) { return Text; }
+
+TEST(FuzzyMatch, Segmentation) {
+  EXPECT_THAT(segment("std::basic_string"), //
+              returns("+--  +---- +-----"));
+  EXPECT_THAT(segment("XMLHttpRequest"), //
+              returns("+--+---+------"));
+  EXPECT_THAT(segment("t3h PeNgU1N oF d00m!!!!!!!!"), //
+              returns("+-- +-+-+-+ ++ +---        "));
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

@@ -1426,7 +1426,8 @@ error_code directory_entry::__do_refresh() noexcept {
       __data_.__cache_type_ = directory_entry::_RefreshSymlinkUnresolved;
       return error_code{};
     }
-    // Otherwise, we resolved the link as not existing. That's OK.
+    // Otherwise, we either resolved the link, potentially as not existing.
+    // That's OK.
     __data_.__cache_type_ = directory_entry::_RefreshSymlink;
   }
 

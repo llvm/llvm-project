@@ -2318,7 +2318,7 @@ bool Sema::LookupInSuper(LookupResult &R, CXXRecordDecl *Class) {
     CXXRecordDecl *RD = cast<CXXRecordDecl>(
         BaseSpec.getType()->castAs<RecordType>()->getDecl());
     LookupResult Result(*this, R.getLookupNameInfo(), R.getLookupKind());
-	Result.setBaseObjectType(Context.getRecordType(Class));
+    Result.setBaseObjectType(Context.getRecordType(Class));
     LookupQualifiedName(Result, RD);
 
     // Copy the lookup results into the target, merging the base's access into

@@ -417,9 +417,10 @@ static ControlFlowKind CheckFallThrough(AnalysisDeclContext &AC) {
   CFGBlock::FilterOptions FO;
   FO.IgnoreDefaultsWithCoveredEnums = 1;
 
-  for (CFGBlock::filtered_pred_iterator
-	 I = cfg->getExit().filtered_pred_start_end(FO); I.hasMore(); ++I) {
-    const CFGBlock& B = **I;
+  for (CFGBlock::filtered_pred_iterator I =
+           cfg->getExit().filtered_pred_start_end(FO);
+       I.hasMore(); ++I) {
+    const CFGBlock &B = **I;
     if (!live[B.getBlockID()])
       continue;
 

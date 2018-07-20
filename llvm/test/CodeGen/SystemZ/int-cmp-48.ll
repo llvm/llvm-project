@@ -11,7 +11,7 @@ define void @f1(i8 *%src) {
 ; CHECK: ber %r14
 ; CHECK: br %r14
 entry:
-  %byte = load i8 , i8 *%src
+  %byte = load i8, i8 *%src
   %and = and i8 %byte, 1
   %cmp = icmp eq i8 %and, 0
   br i1 %cmp, label %exit, label %store
@@ -33,7 +33,7 @@ define void @f2(i8 *%src) {
 ; CHECK: ber %r14
 ; CHECK: br %r14
 entry:
-  %byte = load i8 , i8 *%src
+  %byte = load i8, i8 *%src
   store i8 0, i8 *%src
   %and = and i8 %byte, 1
   %cmp = icmp eq i8 %and, 0
@@ -53,7 +53,7 @@ define double @f3(i8 *%src, double %a, double %b) {
 ; CHECK: tm 0(%r2), 1
 ; CHECK: je {{\.L.*}}
 ; CHECK: br %r14
-  %byte = load i8 , i8 *%src
+  %byte = load i8, i8 *%src
   %and = and i8 %byte, 1
   %cmp = icmp eq i8 %and, 0
   %res = select i1 %cmp, double %b, double %a
@@ -67,7 +67,7 @@ define double @f4(i8 *%src, double %a, double %b) {
 ; CHECK: je {{\.L.*}}
 ; CHECK: mvi 0(%r2), 0
 ; CHECK: br %r14
-  %byte = load i8 , i8 *%src
+  %byte = load i8, i8 *%src
   %and = and i8 %byte, 1
   %cmp = icmp eq i8 %and, 0
   %res = select i1 %cmp, double %b, double %a
@@ -81,7 +81,7 @@ define double @f5(i8 *%src, double %a, double %b) {
 ; CHECK: tm 0(%r2), 1
 ; CHECK: jne {{\.L.*}}
 ; CHECK: br %r14
-  %byte = load i8 , i8 *%src
+  %byte = load i8, i8 *%src
   %and = and i8 %byte, 1
   %cmp = icmp ne i8 %and, 0
   %res = select i1 %cmp, double %b, double %a
@@ -94,7 +94,7 @@ define double @f6(i8 *%src, double %a, double %b) {
 ; CHECK: tm 0(%r2), 254
 ; CHECK: jo {{\.L.*}}
 ; CHECK: br %r14
-  %byte = load i8 , i8 *%src
+  %byte = load i8, i8 *%src
   %and = and i8 %byte, 254
   %cmp = icmp eq i8 %and, 254
   %res = select i1 %cmp, double %b, double %a
@@ -107,7 +107,7 @@ define double @f7(i8 *%src, double %a, double %b) {
 ; CHECK: tm 0(%r2), 254
 ; CHECK: jno {{\.L.*}}
 ; CHECK: br %r14
-  %byte = load i8 , i8 *%src
+  %byte = load i8, i8 *%src
   %and = and i8 %byte, 254
   %cmp = icmp ne i8 %and, 254
   %res = select i1 %cmp, double %b, double %a
@@ -122,7 +122,7 @@ define double @f8(i8 *%src, double %a, double %b) {
 ; CHECK: tmll [[REG]], 3
 ; CHECK: jh {{\.L.*}}
 ; CHECK: br %r14
-  %byte = load i8 , i8 *%src
+  %byte = load i8, i8 *%src
   %and = and i8 %byte, 3
   %cmp = icmp eq i8 %and, 2
   %res = select i1 %cmp, double %b, double %a
@@ -136,7 +136,7 @@ define double @f9(i8 *%src, double %a, double %b) {
 ; CHECK: tmll [[REG]], 3
 ; CHECK: jl {{\.L.*}}
 ; CHECK: br %r14
-  %byte = load i8 , i8 *%src
+  %byte = load i8, i8 *%src
   %and = and i8 %byte, 3
   %cmp = icmp eq i8 %and, 1
   %res = select i1 %cmp, double %b, double %a
@@ -150,7 +150,7 @@ define double @f10(i8 *%src, double %a, double %b) {
 ; CHECK: je {{\.L.*}}
 ; CHECK: br %r14
   %ptr = getelementptr i8, i8 *%src, i64 4095
-  %byte = load i8 , i8 *%ptr
+  %byte = load i8, i8 *%ptr
   %and = and i8 %byte, 1
   %cmp = icmp eq i8 %and, 0
   %res = select i1 %cmp, double %b, double %a
@@ -164,7 +164,7 @@ define double @f11(i8 *%src, double %a, double %b) {
 ; CHECK: je {{\.L.*}}
 ; CHECK: br %r14
   %ptr = getelementptr i8, i8 *%src, i64 4096
-  %byte = load i8 , i8 *%ptr
+  %byte = load i8, i8 *%ptr
   %and = and i8 %byte, 1
   %cmp = icmp eq i8 %and, 0
   %res = select i1 %cmp, double %b, double %a
@@ -178,7 +178,7 @@ define double @f12(i8 *%src, double %a, double %b) {
 ; CHECK: je {{\.L.*}}
 ; CHECK: br %r14
   %ptr = getelementptr i8, i8 *%src, i64 524287
-  %byte = load i8 , i8 *%ptr
+  %byte = load i8, i8 *%ptr
   %and = and i8 %byte, 1
   %cmp = icmp eq i8 %and, 0
   %res = select i1 %cmp, double %b, double %a
@@ -193,7 +193,7 @@ define double @f13(i8 *%src, double %a, double %b) {
 ; CHECK: je {{\.L.*}}
 ; CHECK: br %r14
   %ptr = getelementptr i8, i8 *%src, i64 524288
-  %byte = load i8 , i8 *%ptr
+  %byte = load i8, i8 *%ptr
   %and = and i8 %byte, 1
   %cmp = icmp eq i8 %and, 0
   %res = select i1 %cmp, double %b, double %a
@@ -207,7 +207,7 @@ define double @f14(i8 *%src, double %a, double %b) {
 ; CHECK: je {{\.L.*}}
 ; CHECK: br %r14
   %ptr = getelementptr i8, i8 *%src, i64 -524288
-  %byte = load i8 , i8 *%ptr
+  %byte = load i8, i8 *%ptr
   %and = and i8 %byte, 1
   %cmp = icmp eq i8 %and, 0
   %res = select i1 %cmp, double %b, double %a
@@ -222,7 +222,7 @@ define double @f15(i8 *%src, double %a, double %b) {
 ; CHECK: je {{\.L.*}}
 ; CHECK: br %r14
   %ptr = getelementptr i8, i8 *%src, i64 -524289
-  %byte = load i8 , i8 *%ptr
+  %byte = load i8, i8 *%ptr
   %and = and i8 %byte, 1
   %cmp = icmp eq i8 %and, 0
   %res = select i1 %cmp, double %b, double %a
@@ -236,7 +236,7 @@ define double @f16(i8 *%src, i64 %index, double %a, double %b) {
 ; CHECK: je {{\.L.*}}
 ; CHECK: br %r14
   %ptr = getelementptr i8, i8 *%src, i64 %index
-  %byte = load i8 , i8 *%ptr
+  %byte = load i8, i8 *%ptr
   %and = and i8 %byte, 1
   %cmp = icmp eq i8 %and, 0
   %res = select i1 %cmp, double %b, double %a

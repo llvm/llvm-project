@@ -254,7 +254,7 @@ SourceLocation TypeLoc::getEndLoc() const {
     case RValueReference:
     case PackExpansion:
       if (!Last)
-	Last = Cur;
+        Last = Cur;
       break;
     case Qualified:
     case Elaborated:

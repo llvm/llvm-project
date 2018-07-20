@@ -79,7 +79,7 @@ define i32 @f7(i64 %src, i64 %index) {
   %add1 = add i64 %src, %index
   %add2 = add i64 %add1, 524287
   %ptr = inttoptr i64 %add2 to i32 *
-  %val = load i32 , i32 *%ptr
+  %val = load i32, i32 *%ptr
   %and = and i32 %val, 4294967040
   ret i32 %and
 }
@@ -161,7 +161,7 @@ define i64 @f14(i64 %src, i64 %index) {
   %add1 = add i64 %src, %index
   %add2 = add i64 %add1, 524287
   %ptr = inttoptr i64 %add2 to i64 *
-  %val = load i64 , i64 *%ptr
+  %val = load i64, i64 *%ptr
   %and = and i64 %val, 18446744073709551360
   ret i64 %and
 }
@@ -260,7 +260,7 @@ define i64 @f22(i64 %src, i64 %index) {
   %add1 = add i64 %src, %index
   %add2 = add i64 %add1, 524287
   %ptr = inttoptr i64 %add2 to i32 *
-  %val = load i32 , i32 *%ptr
+  %val = load i32, i32 *%ptr
   %and = and i32 %val, 4294967040
   %ext = zext i32 %and to i64
   ret i64 %ext

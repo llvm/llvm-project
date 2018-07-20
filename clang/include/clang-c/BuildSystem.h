@@ -66,7 +66,7 @@ clang_VirtualFileOverlay_addFileMapping(CXVirtualFileOverlay,
  */
 CINDEX_LINKAGE enum CXErrorCode
 clang_VirtualFileOverlay_setCaseSensitivity(CXVirtualFileOverlay,
-											int caseSensitive);
+                                            int caseSensitive);
 
 /**
  * Write out the \c CXVirtualFileOverlay object to a char buffer.

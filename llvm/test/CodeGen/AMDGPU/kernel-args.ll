@@ -589,6 +589,17 @@ entry:
 ;   ret void
 ; }
 
+; FUNC-LABEL: {{^}}i65_arg:
+; HSA-VI: kernarg_segment_byte_size = 24
+; HSA-VI: kernarg_segment_alignment = 4
+; HSA-VI: s_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}, s[4:5], 0x0
+; HSA-VI: s_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}, s[4:5], 0x8
+define amdgpu_kernel void @i65_arg(i65 addrspace(1)* nocapture %out, i65 %in) nounwind {
+entry:
+  store i65 %in, i65 addrspace(1)* %out, align 4
+  ret void
+}
+
 ; FUNC-LABEL: {{^}}i1_arg:
 ; HSA-VI: kernarg_segment_byte_size = 12
 ; HSA-VI: kernarg_segment_alignment = 4
@@ -651,7 +662,7 @@ define amdgpu_kernel void @i1_arg_sext_i64(i64 addrspace(1)* %out, i1 %x) nounwi
 }
 
 ; FUNC-LABEL: {{^}}empty_struct_arg:
-; HSA: kernarg_segment_byte_size = 0
+; HSA-VI: kernarg_segment_byte_size = 0
 define amdgpu_kernel void @empty_struct_arg({} %in) nounwind {
   ret void
 }
@@ -667,11 +678,11 @@ define amdgpu_kernel void @empty_struct_arg({} %in) nounwind {
 
 ; FIXME: Total argument size is computed wrong
 ; FUNC-LABEL: {{^}}struct_argument_alignment:
-; HSA: kernarg_segment_byte_size = 40
-; HSA: s_load_dword s{{[0-9]+}}, s[4:5], 0x0
-; HSA: s_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}, s[4:5], 0x8
-; HSA: s_load_dword s{{[0-9]+}}, s[4:5], 0x18
-; HSA: s_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}, s[4:5], 0x20
+; HSA-VI: kernarg_segment_byte_size = 40
+; HSA-VI: s_load_dword s{{[0-9]+}}, s[4:5], 0x0
+; HSA-VI: s_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}, s[4:5], 0x8
+; HSA-VI: s_load_dword s{{[0-9]+}}, s[4:5], 0x18
+; HSA-VI: s_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}, s[4:5], 0x20
 define amdgpu_kernel void @struct_argument_alignment({i32, i64} %arg0, i8, {i32, i64} %arg1) {
   %val0 = extractvalue {i32, i64} %arg0, 0
   %val1 = extractvalue {i32, i64} %arg0, 1
@@ -687,11 +698,11 @@ define amdgpu_kernel void @struct_argument_alignment({i32, i64} %arg0, i8, {i32,
 ; No padding between i8 and next struct, but round up at end to 4 byte
 ; multiple.
 ; FUNC-LABEL: {{^}}packed_struct_argument_alignment:
-; HSA: kernarg_segment_byte_size = 28
-; HSA: s_load_dword s{{[0-9]+}}, s[4:5], 0x0
-; HSA: s_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}, s[4:5], 0x4
-; HSA: s_load_dword s{{[0-9]+}}, s[4:5], 0xc
-; HSA: s_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}, s[4:5], 0x10
+; HSA-VI: kernarg_segment_byte_size = 28
+; HSA-VI: s_load_dword s{{[0-9]+}}, s[4:5], 0x0
+; HSA-VI: s_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}, s[4:5], 0x4
+; HSA-VI: s_load_dword s{{[0-9]+}}, s[4:5], 0xc
+; HSA-VI: s_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}, s[4:5], 0x10
 define amdgpu_kernel void @packed_struct_argument_alignment(<{i32, i64}> %arg0, i8, <{i32, i64}> %arg1) {
   %val0 = extractvalue <{i32, i64}> %arg0, 0
   %val1 = extractvalue <{i32, i64}> %arg0, 1
@@ -701,5 +712,49 @@ define amdgpu_kernel void @packed_struct_argument_alignment(<{i32, i64}> %arg0, 
   store volatile i64 %val1, i64 addrspace(1)* null
   store volatile i32 %val2, i32 addrspace(1)* null
   store volatile i64 %val3, i64 addrspace(1)* null
+  ret void
+}
+
+; GCN-LABEL: {{^}}struct_argument_alignment_after:
+; HSA-VI: kernarg_segment_byte_size = 64
+; HSA-VI: s_load_dword s{{[0-9]+}}, s[4:5], 0x0
+; HSA-VI: s_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}, s[4:5], 0x8
+; HSA-VI: s_load_dword s{{[0-9]+}}, s[4:5], 0x18
+; HSA-VI: s_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}, s[4:5], 0x20
+; HSA-VI: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s[4:5], 0x30
+define amdgpu_kernel void @struct_argument_alignment_after({i32, i64} %arg0, i8, {i32, i64} %arg2, i8, <4 x i32> %arg4) {
+  %val0 = extractvalue {i32, i64} %arg0, 0
+  %val1 = extractvalue {i32, i64} %arg0, 1
+  %val2 = extractvalue {i32, i64} %arg2, 0
+  %val3 = extractvalue {i32, i64} %arg2, 1
+  store volatile i32 %val0, i32 addrspace(1)* null
+  store volatile i64 %val1, i64 addrspace(1)* null
+  store volatile i32 %val2, i32 addrspace(1)* null
+  store volatile i64 %val3, i64 addrspace(1)* null
+  store volatile <4 x i32> %arg4, <4 x i32> addrspace(1)* null
+  ret void
+}
+
+; GCN-LABEL: {{^}}array_3xi32:
+; HSA-VI: s_load_dword s{{[0-9]+}}, s[4:5], 0x0
+; HSA-VI: s_load_dword s{{[0-9]+}}, s[4:5], 0x4
+; HSA-VI: s_load_dword s{{[0-9]+}}, s[4:5], 0x8
+; HSA-VI: s_load_dword s{{[0-9]+}}, s[4:5], 0xc
+define amdgpu_kernel void @array_3xi32(i16 %arg0, [3 x i32] %arg1) {
+  store volatile i16 %arg0, i16 addrspace(1)* undef
+  store volatile [3 x i32] %arg1, [3 x i32] addrspace(1)* undef
+  ret void
+}
+
+; FIXME: Why not all scalar loads?
+; GCN-LABEL: {{^}}array_3xi16:
+; HSA-VI: s_add_u32 s{{[0-9]+}}, s4, 2
+; HSA-VI: s_addc_u32 s{{[0-9]+}}, s5, 0
+; HSA-VI: flat_load_ushort
+; HSA-VI: s_load_dword s{{[0-9]+}}, s[4:5], 0x0
+; HSA-VI: s_load_dword s{{[0-9]+}}, s[4:5], 0x4
+define amdgpu_kernel void @array_3xi16(i8 %arg0, [3 x i16] %arg1) {
+  store volatile i8 %arg0, i8 addrspace(1)* undef
+  store volatile [3 x i16] %arg1, [3 x i16] addrspace(1)* undef
   ret void
 }

@@ -6,40 +6,40 @@
 ; to use LLC(H) if possible.
 define void @f1(i32 *%ptr) {
 ; CHECK-LABEL: f1:
-; CHECK: llc{{h?}} {{%r[0-9]+}}, 16{{[37]}}(%r15)
+; CHECK: llc{{h?}} {{%r[0-9]+}}, 1{{[67]}}{{[379]}}(%r15)
 ; CHECK: br %r14
-  %val0 = load volatile i32 , i32 *%ptr
-  %val1 = load volatile i32 , i32 *%ptr
-  %val2 = load volatile i32 , i32 *%ptr
-  %val3 = load volatile i32 , i32 *%ptr
-  %val4 = load volatile i32 , i32 *%ptr
-  %val5 = load volatile i32 , i32 *%ptr
-  %val6 = load volatile i32 , i32 *%ptr
-  %val7 = load volatile i32 , i32 *%ptr
-  %val8 = load volatile i32 , i32 *%ptr
-  %val9 = load volatile i32 , i32 *%ptr
-  %val10 = load volatile i32 , i32 *%ptr
-  %val11 = load volatile i32 , i32 *%ptr
-  %val12 = load volatile i32 , i32 *%ptr
-  %val13 = load volatile i32 , i32 *%ptr
-  %val14 = load volatile i32 , i32 *%ptr
-  %val15 = load volatile i32 , i32 *%ptr
-  %val16 = load volatile i32 , i32 *%ptr
-  %val17 = load volatile i32 , i32 *%ptr
-  %val18 = load volatile i32 , i32 *%ptr
-  %val19 = load volatile i32 , i32 *%ptr
-  %val20 = load volatile i32 , i32 *%ptr
-  %val21 = load volatile i32 , i32 *%ptr
-  %val22 = load volatile i32 , i32 *%ptr
-  %val23 = load volatile i32 , i32 *%ptr
-  %val24 = load volatile i32 , i32 *%ptr
-  %val25 = load volatile i32 , i32 *%ptr
-  %val26 = load volatile i32 , i32 *%ptr
-  %val27 = load volatile i32 , i32 *%ptr
-  %val28 = load volatile i32 , i32 *%ptr
-  %val29 = load volatile i32 , i32 *%ptr
-  %val30 = load volatile i32 , i32 *%ptr
-  %val31 = load volatile i32 , i32 *%ptr
+  %val0 = load volatile i32, i32 *%ptr
+  %val1 = load volatile i32, i32 *%ptr
+  %val2 = load volatile i32, i32 *%ptr
+  %val3 = load volatile i32, i32 *%ptr
+  %val4 = load volatile i32, i32 *%ptr
+  %val5 = load volatile i32, i32 *%ptr
+  %val6 = load volatile i32, i32 *%ptr
+  %val7 = load volatile i32, i32 *%ptr
+  %val8 = load volatile i32, i32 *%ptr
+  %val9 = load volatile i32, i32 *%ptr
+  %val10 = load volatile i32, i32 *%ptr
+  %val11 = load volatile i32, i32 *%ptr
+  %val12 = load volatile i32, i32 *%ptr
+  %val13 = load volatile i32, i32 *%ptr
+  %val14 = load volatile i32, i32 *%ptr
+  %val15 = load volatile i32, i32 *%ptr
+  %val16 = load volatile i32, i32 *%ptr
+  %val17 = load volatile i32, i32 *%ptr
+  %val18 = load volatile i32, i32 *%ptr
+  %val19 = load volatile i32, i32 *%ptr
+  %val20 = load volatile i32, i32 *%ptr
+  %val21 = load volatile i32, i32 *%ptr
+  %val22 = load volatile i32, i32 *%ptr
+  %val23 = load volatile i32, i32 *%ptr
+  %val24 = load volatile i32, i32 *%ptr
+  %val25 = load volatile i32, i32 *%ptr
+  %val26 = load volatile i32, i32 *%ptr
+  %val27 = load volatile i32, i32 *%ptr
+  %val28 = load volatile i32, i32 *%ptr
+  %val29 = load volatile i32, i32 *%ptr
+  %val30 = load volatile i32, i32 *%ptr
+  %val31 = load volatile i32, i32 *%ptr
 
   %trunc0 = trunc i32 %val0 to i8
   %trunc1 = trunc i32 %val1 to i8
@@ -179,40 +179,40 @@ define void @f1(i32 *%ptr) {
 ; Same again with i16, which should use LLH(H).
 define void @f2(i32 *%ptr) {
 ; CHECK-LABEL: f2:
-; CHECK: llh{{h?}} {{%r[0-9]+}}, 16{{[26]}}(%r15)
+; CHECK: llh{{h?}} {{%r[0-9]+}}, 1{{[67]}}{{[268]}}(%r15)
 ; CHECK: br %r14
-  %val0 = load volatile i32 , i32 *%ptr
-  %val1 = load volatile i32 , i32 *%ptr
-  %val2 = load volatile i32 , i32 *%ptr
-  %val3 = load volatile i32 , i32 *%ptr
-  %val4 = load volatile i32 , i32 *%ptr
-  %val5 = load volatile i32 , i32 *%ptr
-  %val6 = load volatile i32 , i32 *%ptr
-  %val7 = load volatile i32 , i32 *%ptr
-  %val8 = load volatile i32 , i32 *%ptr
-  %val9 = load volatile i32 , i32 *%ptr
-  %val10 = load volatile i32 , i32 *%ptr
-  %val11 = load volatile i32 , i32 *%ptr
-  %val12 = load volatile i32 , i32 *%ptr
-  %val13 = load volatile i32 , i32 *%ptr
-  %val14 = load volatile i32 , i32 *%ptr
-  %val15 = load volatile i32 , i32 *%ptr
-  %val16 = load volatile i32 , i32 *%ptr
-  %val17 = load volatile i32 , i32 *%ptr
-  %val18 = load volatile i32 , i32 *%ptr
-  %val19 = load volatile i32 , i32 *%ptr
-  %val20 = load volatile i32 , i32 *%ptr
-  %val21 = load volatile i32 , i32 *%ptr
-  %val22 = load volatile i32 , i32 *%ptr
-  %val23 = load volatile i32 , i32 *%ptr
-  %val24 = load volatile i32 , i32 *%ptr
-  %val25 = load volatile i32 , i32 *%ptr
-  %val26 = load volatile i32 , i32 *%ptr
-  %val27 = load volatile i32 , i32 *%ptr
-  %val28 = load volatile i32 , i32 *%ptr
-  %val29 = load volatile i32 , i32 *%ptr
-  %val30 = load volatile i32 , i32 *%ptr
-  %val31 = load volatile i32 , i32 *%ptr
+  %val0 = load volatile i32, i32 *%ptr
+  %val1 = load volatile i32, i32 *%ptr
+  %val2 = load volatile i32, i32 *%ptr
+  %val3 = load volatile i32, i32 *%ptr
+  %val4 = load volatile i32, i32 *%ptr
+  %val5 = load volatile i32, i32 *%ptr
+  %val6 = load volatile i32, i32 *%ptr
+  %val7 = load volatile i32, i32 *%ptr
+  %val8 = load volatile i32, i32 *%ptr
+  %val9 = load volatile i32, i32 *%ptr
+  %val10 = load volatile i32, i32 *%ptr
+  %val11 = load volatile i32, i32 *%ptr
+  %val12 = load volatile i32, i32 *%ptr
+  %val13 = load volatile i32, i32 *%ptr
+  %val14 = load volatile i32, i32 *%ptr
+  %val15 = load volatile i32, i32 *%ptr
+  %val16 = load volatile i32, i32 *%ptr
+  %val17 = load volatile i32, i32 *%ptr
+  %val18 = load volatile i32, i32 *%ptr
+  %val19 = load volatile i32, i32 *%ptr
+  %val20 = load volatile i32, i32 *%ptr
+  %val21 = load volatile i32, i32 *%ptr
+  %val22 = load volatile i32, i32 *%ptr
+  %val23 = load volatile i32, i32 *%ptr
+  %val24 = load volatile i32, i32 *%ptr
+  %val25 = load volatile i32, i32 *%ptr
+  %val26 = load volatile i32, i32 *%ptr
+  %val27 = load volatile i32, i32 *%ptr
+  %val28 = load volatile i32, i32 *%ptr
+  %val29 = load volatile i32, i32 *%ptr
+  %val30 = load volatile i32, i32 *%ptr
+  %val31 = load volatile i32, i32 *%ptr
 
   %trunc0 = trunc i32 %val0 to i16
   %trunc1 = trunc i32 %val1 to i16

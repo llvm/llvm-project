@@ -10,7 +10,7 @@ define void @f1(i32 *%src, i32 %target) {
 ; CHECK-NEXT: jle .L[[LABEL]]
   br label %loop
 loop:
-  %val = load volatile i32 , i32 *%src
+  %val = load volatile i32, i32 *%src
   %cond = icmp ule i32 %target, %val
   br i1 %cond, label %loop, label %exit
 exit:
@@ -25,7 +25,7 @@ define void @f2(i32 *%src, i32 %target) {
 ; CHECK-NEXT: jl .L[[LABEL]]
   br label %loop
 loop:
-  %val = load volatile i32 , i32 *%src
+  %val = load volatile i32, i32 *%src
   %cond = icmp ult i32 %target, %val
   br i1 %cond, label %loop, label %exit
 exit:
@@ -40,7 +40,7 @@ define void @f3(i32 *%src, i32 %target) {
 ; CHECK-NEXT: jh .L[[LABEL]]
   br label %loop
 loop:
-  %val = load volatile i32 , i32 *%src
+  %val = load volatile i32, i32 *%src
   %cond = icmp ugt i32 %target, %val
   br i1 %cond, label %loop, label %exit
 exit:
@@ -55,7 +55,7 @@ define void @f4(i32 *%src, i32 %target) {
 ; CHECK-NEXT: jhe .L[[LABEL]]
   br label %loop
 loop:
-  %val = load volatile i32 , i32 *%src
+  %val = load volatile i32, i32 *%src
   %cond = icmp uge i32 %target, %val
   br i1 %cond, label %loop, label %exit
 exit:

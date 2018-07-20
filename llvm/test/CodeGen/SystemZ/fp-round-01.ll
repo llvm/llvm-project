@@ -28,7 +28,7 @@ define void @f3(fp128 *%ptr) {
 ; CHECK-LABEL: f3:
 ; CHECK: fixbr %f0, 0, %f0
 ; CHECK: br %r14
-  %src = load fp128 , fp128 *%ptr
+  %src = load fp128, fp128 *%ptr
   %res = call fp128 @llvm.rint.f128(fp128 %src)
   store fp128 %res, fp128 *%ptr
   ret void
