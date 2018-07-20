@@ -64,7 +64,6 @@ bool link(ArrayRef<const char *> Args, bool CanExitEarly, raw_ostream &Diag) {
       " (use /errorlimit:0 to see all errors)";
   errorHandler().ExitEarly = CanExitEarly;
   Config = make<Configuration>();
-  Config->Argv = {Args.begin(), Args.end()};
 
   Symtab = make<SymbolTable>();
 
@@ -875,7 +874,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
 
   // Parse command line options.
   ArgParser Parser;
-  opt::InputArgList Args = Parser.parseLINK(ArgsArr.slice(1));
+  opt::InputArgList Args = Parser.parseLINK(ArgsArr);
 
   // Parse and evaluate -mllvm options.
   std::vector<const char *> V;
