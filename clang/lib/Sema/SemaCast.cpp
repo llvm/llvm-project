@@ -1955,6 +1955,12 @@ static bool fixOverloadedReinterpretCastExpr(Sema &Self, QualType DestType,
   return Result.isUsable();
 }
 
+static bool IsAddressSpaceConversion(QualType SrcType, QualType DestType) {
+  return SrcType->isPointerType() && DestType->isPointerType() &&
+         SrcType->getAs<PointerType>()->getPointeeType().getAddressSpace() !=
+             DestType->getAs<PointerType>()->getPointeeType().getAddressSpace();
+}
+
 static TryCastResult TryReinterpretCast(Sema &Self, ExprResult &SrcExpr,
                                         QualType DestType, bool CStyle,
                                         SourceRange OpRange,
@@ -2198,6 +2204,8 @@ static TryCastResult TryReinterpretCast(Sema &Self, ExprResult &SrcExpr,
     } else {
       Kind = CK_BitCast;
     }
+  } else if (IsAddressSpaceConversion(SrcType, DestType)) {
+    Kind = CK_AddressSpaceConversion;
   } else {
     Kind = CK_BitCast;
   }

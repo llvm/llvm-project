@@ -153,7 +153,7 @@ bool WalkAST::containsBadStrlcpyPattern(const CallExpr *CE) {
   if (LenArgDecl) {
     const auto *LenArgVal = dyn_cast<VarDecl>(LenArgDecl->getDecl());
     if (LenArgVal->getInit())
-	    LenArg = LenArgVal->getInit();
+      LenArg = LenArgVal->getInit();
   }
 
   // - integral value

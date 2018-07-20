@@ -46,9 +46,9 @@ define void @main() local_unnamed_addr #0 {
 ; CHECK-NEXT:    lrl %r13, g_832
 ; CHECK-NEXT:    strl %r0, g_69
 ; CHECK-NEXT:    lrl %r13, g_832
-; CHECK-NEXT:    lghi %r13, 24
-; CHECK-NEXT:    strl %r2, g_69
-; CHECK-NEXT:    ag %r13, 0(%r1)
+; CHECK-DAG:     lghi %r13, 24
+; CHECK-DAG:     strl %r2, g_69
+; CHECK-DAG:     ag %r13, 0(%r1)
 ; CHECK-NEXT:    lrl %r12, g_832
 ; CHECK-NEXT:    strl %r3, g_69
 ; CHECK-NEXT:    lrl %r12, g_832

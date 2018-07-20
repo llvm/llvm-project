@@ -1,4 +1,4 @@
-; RUN: llc < %s
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown
 ; PR38038
 
 define i8 @crash(half)  {

@@ -6654,7 +6654,7 @@ NamedDecl * Sema::DeclClonePragmaWeak(NamedDecl *ND, IdentifierInfo *II,
                            VD->getType(), VD->getTypeSourceInfo(),
                            VD->getStorageClass());
     if (VD->getQualifier())
-	  cast<VarDecl>(NewD)->setQualifierInfo(VD->getQualifierLoc());
+      cast<VarDecl>(NewD)->setQualifierInfo(VD->getQualifierLoc());
   }
   return NewD;
 }

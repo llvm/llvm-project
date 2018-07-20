@@ -1565,7 +1565,7 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
             IsGenericLambda && From.isNonODRUsed() && From.getInitExpr();
         if (!NonODRUsedInitCapture) {
           bool IsLast = (I + 1) == LSI->NumExplicitCaptures;
-					SourceRange FixItRange;
+          SourceRange FixItRange;
           if (CaptureRange.isValid()) {
             if (!CurHasPreviousCapture && !IsLast) {
               // If there are no captures preceding this capture, remove the

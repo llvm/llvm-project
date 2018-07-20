@@ -98,8 +98,8 @@ define void @f7(i64 %dummy, i64 %a, i64 *%res) {
 ; CHECK-LABEL: f7:
 ; CHECK: alghsik [[REG1:%r[0-5]]], %r3, 1
 ; CHECK-DAG: stg [[REG1]], 0(%r4)
-; CHECK: bler %r14
-; CHECK: jg foo@PLT
+; CHECK: jgnle foo@PLT
+; CHECK: br %r14
   %t = call {i64, i1} @llvm.uadd.with.overflow.i64(i64 %a, i64 1)
   %val = extractvalue {i64, i1} %t, 0
   %obit = extractvalue {i64, i1} %t, 1
@@ -119,8 +119,8 @@ define void @f8(i64 %dummy, i64 %a, i64 *%res) {
 ; CHECK-LABEL: f8:
 ; CHECK: alghsik [[REG1:%r[0-5]]], %r3, 1
 ; CHECK-DAG: stg [[REG1]], 0(%r4)
-; CHECK: bnler %r14
-; CHECK: jg foo@PLT
+; CHECK: jgle foo@PLT
+; CHECK: br %r14
   %t = call {i64, i1} @llvm.uadd.with.overflow.i64(i64 %a, i64 1)
   %val = extractvalue {i64, i1} %t, 0
   %obit = extractvalue {i64, i1} %t, 1

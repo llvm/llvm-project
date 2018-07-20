@@ -122,6 +122,10 @@ defm : HWWriteResPair<WriteALU,    [HWPort0156], 1>;
 defm : HWWriteResPair<WriteADC,    [HWPort06,HWPort0156], 2, [1,1], 2>;
 defm : HWWriteResPair<WriteIMul,   [HWPort1],   3>;
 defm : HWWriteResPair<WriteIMul64, [HWPort1],   3>;
+
+defm : HWWriteResPair<WriteBSWAP32,[HWPort15],   1>;
+defm : HWWriteResPair<WriteBSWAP64,[HWPort06, HWPort15], 2, [1,1], 2>;
+
 def  : WriteRes<WriteIMulH, []> { let Latency = 3; }
 defm : HWWriteResPair<WriteShift,  [HWPort06],  1>;
 defm : HWWriteResPair<WriteShiftDouble,  [HWPort06],  1>;
@@ -1148,20 +1152,6 @@ def HWWriteResGroup33 : SchedWriteRes<[HWPort01,HWPort015]> {
   let ResourceCycles = [1,1];
 }
 def: InstRW<[HWWriteResGroup33], (instregex "MMX_MOVDQ2Qrr")>;
-
-def HWWriteResGroup34 : SchedWriteRes<[HWPort06,HWPort15]> {
-  let Latency = 2;
-  let NumMicroOps = 2;
-  let ResourceCycles = [1,1];
-}
-def: InstRW<[HWWriteResGroup34], (instrs BSWAP64r)>;
-
-def HWWriteResGroup34_1 : SchedWriteRes<[HWPort15]> {
-  let Latency = 1;
-  let NumMicroOps = 1;
-  let ResourceCycles = [1];
-}
-def: InstRW<[HWWriteResGroup34_1], (instrs BSWAP32r)>;
 
 def HWWriteResGroup35 : SchedWriteRes<[HWPort06,HWPort0156]> {
   let Latency = 2;
