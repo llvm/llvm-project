@@ -39,7 +39,7 @@ class X {
   class Y {};
 };
 
-// RUN: clang-doc --dump-intermediate --doxygen -p %t %t/test.cpp -output=%t/docs
+// RUN: clang-doc --dump-mapper --doxygen -p %t %t/test.cpp -output=%t/docs
 
 
 // RUN: llvm-bcanalyzer --dump %t/docs/bc/289584A8E0FF4178A794622A547AA622503967A1.bc | FileCheck %s --check-prefix CHECK-0
@@ -77,7 +77,7 @@ class X {
 // CHECK-2-NEXT: <VersionBlock NumWords=1 BlockCodeSize=4>
 // CHECK-2-NEXT:   <Version abbrevid=4 op0=2/>
 // CHECK-2-NEXT: </VersionBlock>
-// CHECK-2-NEXT: <FunctionBlock NumWords=50 BlockCodeSize=4>
+// CHECK-2-NEXT: <FunctionBlock NumWords=47 BlockCodeSize=4>
 // CHECK-2-NEXT:   <USR abbrevid=4 op0=20 op1=80 op2=147 op3=212 op4=40 op5=205 op6=198 op7=32 op8=150 op9=166 op10=117 op11=71 op12=186 op13=82 op14=86 op15=110 op16=79 op17=185 op18=64 op19=78 op20=238/>
 // CHECK-2-NEXT:   <Name abbrevid=5 op0=15/> blob data = 'ProtectedMethod'
 // CHECK-2-NEXT:   <ReferenceBlock NumWords=10 BlockCodeSize=4>
@@ -88,7 +88,6 @@ class X {
 // CHECK-2-NEXT:   </ReferenceBlock>
 // CHECK-2-NEXT:   <IsMethod abbrevid=9 op0=1/>
 // CHECK-2-NEXT:   <DefLocation abbrevid=6 op0=34 op1=4/> blob data = '{{.*}}'
-// CHECK-2-NEXT:   <Location abbrevid=7 op0=31 op1=4/> blob data = '{{.*}}'
 // CHECK-2-NEXT:   <ReferenceBlock NumWords=10 BlockCodeSize=4>
 // CHECK-2-NEXT:     <USR abbrevid=4 op0=20 op1=40 op2=149 op3=132 op4=168 op5=224 op6=255 op7=65 op8=120 op9=167 op10=148 op11=98 op12=42 op13=84 op14=122 op15=166 op16=34 op17=80 op18=57 op19=103 op20=161/>
 // CHECK-2-NEXT:     <Name abbrevid=5 op0=1/> blob data = 'E'
@@ -147,7 +146,6 @@ class X {
 // CHECK-5-NEXT:       <Field abbrevid=7 op0=4/>
 // CHECK-5-NEXT:     </ReferenceBlock>
 // CHECK-5-NEXT:     <Name abbrevid=4 op0=1/> blob data = 'i'
-// CHECK-5-NEXT:     <Access abbrevid=5 op0=3/>
 // CHECK-5-NEXT:   </MemberTypeBlock>
 // CHECK-5-NEXT: </RecordBlock>
 
@@ -294,7 +292,6 @@ class X {
 // CHECK-12-NEXT:       <Field abbrevid=7 op0=4/>
 // CHECK-12-NEXT:     </ReferenceBlock>
 // CHECK-12-NEXT:     <Name abbrevid=4 op0=1/> blob data = 'X'
-// CHECK-12-NEXT:     <Access abbrevid=5 op0=3/>
 // CHECK-12-NEXT:   </MemberTypeBlock>
 // CHECK-12-NEXT:   <MemberTypeBlock NumWords=8 BlockCodeSize=4>
 // CHECK-12-NEXT:     <ReferenceBlock NumWords=3 BlockCodeSize=4>
@@ -302,7 +299,6 @@ class X {
 // CHECK-12-NEXT:       <Field abbrevid=7 op0=4/>
 // CHECK-12-NEXT:     </ReferenceBlock>
 // CHECK-12-NEXT:     <Name abbrevid=4 op0=1/> blob data = 'Y'
-// CHECK-12-NEXT:     <Access abbrevid=5 op0=3/>
 // CHECK-12-NEXT:   </MemberTypeBlock>
 // CHECK-12-NEXT: </RecordBlock>
 
