@@ -251,6 +251,9 @@
 #pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 #define __cpp_lib_experimental_filesystem 201406
 
 _LIBCPP_BEGIN_NAMESPACE_EXPERIMENTAL_FILESYSTEM
@@ -2646,5 +2649,7 @@ recursive_directory_iterator end(const recursive_directory_iterator&) _NOEXCEPT 
 }
 
 _LIBCPP_END_NAMESPACE_EXPERIMENTAL_FILESYSTEM
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP_EXPERIMENTAL_FILESYSTEM
