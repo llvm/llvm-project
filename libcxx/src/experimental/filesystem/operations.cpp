@@ -25,11 +25,6 @@
 #include <fcntl.h>  /* values for fchmodat */
 #include <experimental/filesystem>
 
-#ifdef NDEBUG
-#undef NDEBUG
-#endif
-#include <cassert>
-
 _LIBCPP_BEGIN_NAMESPACE_EXPERIMENTAL_FILESYSTEM
 
 filesystem_error::~filesystem_error() {}
@@ -298,7 +293,6 @@ file_status create_file_status(std::error_code& m_ec, path const& p,
                                struct ::stat& path_stat, std::error_code* ec) {
   if (ec)
     *ec = m_ec;
-  // assert(m_ec.value() != ENOTDIR);
   if (m_ec && (m_ec.value() == ENOENT || m_ec.value() == ENOTDIR)) {
     return file_status(file_type::not_found);
   } else if (m_ec) {
