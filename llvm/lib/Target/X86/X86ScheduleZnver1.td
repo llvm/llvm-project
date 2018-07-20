@@ -179,6 +179,10 @@ defm : ZnWriteResPair<WriteALU,   [ZnALU], 1>;
 defm : ZnWriteResPair<WriteADC,   [ZnALU], 1>;
 defm : ZnWriteResPair<WriteIMul,   [ZnALU1, ZnMultiplier], 4>;
 defm : ZnWriteResPair<WriteIMul64, [ZnALU1, ZnMultiplier], 4, [1,1], 2>;
+
+defm : ZnWriteResPair<WriteBSWAP32,[ZnALU], 1, [4]>;
+defm : ZnWriteResPair<WriteBSWAP64,[ZnALU], 1, [4]>;
+
 defm : ZnWriteResPair<WriteShift, [ZnALU], 1>;
 defm : ZnWriteResPair<WriteShiftDouble, [ZnALU], 1>;
 defm : ZnWriteResPair<WriteJump,  [ZnALU], 1>;
@@ -536,12 +540,6 @@ def : InstRW<[ZnWritePushA], (instregex "PUSHA(16|32)")>;
 
 //LAHF
 def : InstRW<[WriteMicrocoded], (instrs LAHF)>;
-
-// BSWAP.
-def ZnWriteBSwap : SchedWriteRes<[ZnALU]> {
-  let ResourceCycles = [4];
-}
-def : InstRW<[ZnWriteBSwap], (instregex "BSWAP")>;
 
 // MOVBE.
 // r,m.

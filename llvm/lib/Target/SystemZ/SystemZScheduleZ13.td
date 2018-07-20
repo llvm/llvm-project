@@ -18,7 +18,7 @@ def Z13Model : SchedMachineModel {
 
     let UnsupportedFeatures = Arch11UnsupportedFeatures.List;
 
-    let IssueWidth = 8;
+    let IssueWidth = 6;             // Number of instructions decoded per cycle.
     let MicroOpBufferSize = 60;     // Issue queues
     let LoadLatency = 1;            // Optimistic load latency.
 
@@ -29,37 +29,53 @@ def Z13Model : SchedMachineModel {
 }
 
 let SchedModel = Z13Model in  {
-
 // These definitions need the SchedModel value. They could be put in a
 // subtarget common include file, but it seems the include system in Tablegen
 // currently (2016) rejects multiple includes of same file.
+
+// Decoder grouping rules
+let NumMicroOps = 1 in {
+  def : WriteRes<NormalGr, []>;
+  def : WriteRes<BeginGroup, []> { let BeginGroup  = 1; }
+  def : WriteRes<EndGroup, []>   { let EndGroup    = 1; }
+}
+def : WriteRes<Cracked, []> {
+  let NumMicroOps = 2;
+  let BeginGroup  = 1;
+}
 def : WriteRes<GroupAlone, []> {
-  let NumMicroOps = 0;
+  let NumMicroOps = 3;
   let BeginGroup  = 1;
   let EndGroup    = 1;
 }
-def : WriteRes<BeginGroup, []> {
-  let NumMicroOps = 0;
-  let BeginGroup  = 1;
+
+// Incoming latency removed from the register operand which is used together
+// with a memory operand by the instruction.
+def : ReadAdvance<RegReadAdv, 4>;
+
+// LoadLatency (above) is not used for instructions in this file. This is
+// instead the role of LSULatency, which is the latency value added to the
+// result of loads and instructions with folded memory operands.
+def : WriteRes<LSULatency, []> { let Latency = 4; let NumMicroOps = 0; }
+
+let NumMicroOps = 0 in {
+  def : WriteRes<WLat1, []> { let Latency = 1; }
+  def : WriteRes<WLat2, []> { let Latency = 2; }
+  def : WriteRes<WLat3, []> { let Latency = 3; }
+  def : WriteRes<WLat4, []> { let Latency = 4; }
+  def : WriteRes<WLat5, []> { let Latency = 5; }
+  def : WriteRes<WLat6, []> { let Latency = 6; }
+  def : WriteRes<WLat7, []> { let Latency = 7; }
+  def : WriteRes<WLat8, []> { let Latency = 8; }
+  def : WriteRes<WLat9, []> { let Latency = 9; }
+  def : WriteRes<WLat10, []> { let Latency = 10; }
+  def : WriteRes<WLat11, []> { let Latency = 11; }
+  def : WriteRes<WLat12, []> { let Latency = 12; }
+  def : WriteRes<WLat15, []> { let Latency = 15; }
+  def : WriteRes<WLat16, []> { let Latency = 16; }
+  def : WriteRes<WLat20, []> { let Latency = 20; }
+  def : WriteRes<WLat30, []> { let Latency = 30; }
 }
-def : WriteRes<EndGroup, []> {
-  let NumMicroOps = 0;
-  let EndGroup    = 1;
-}
-def : WriteRes<Lat2, []> { let Latency = 2; let NumMicroOps = 0;}
-def : WriteRes<Lat3, []> { let Latency = 3; let NumMicroOps = 0;}
-def : WriteRes<Lat4, []> { let Latency = 4; let NumMicroOps = 0;}
-def : WriteRes<Lat5, []> { let Latency = 5; let NumMicroOps = 0;}
-def : WriteRes<Lat6, []> { let Latency = 6; let NumMicroOps = 0;}
-def : WriteRes<Lat7, []> { let Latency = 7; let NumMicroOps = 0;}
-def : WriteRes<Lat8, []> { let Latency = 8; let NumMicroOps = 0;}
-def : WriteRes<Lat9, []> { let Latency = 9; let NumMicroOps = 0;}
-def : WriteRes<Lat10, []> { let Latency = 10; let NumMicroOps = 0;}
-def : WriteRes<Lat11, []> { let Latency = 11; let NumMicroOps = 0;}
-def : WriteRes<Lat12, []> { let Latency = 12; let NumMicroOps = 0;}
-def : WriteRes<Lat15, []> { let Latency = 15; let NumMicroOps = 0;}
-def : WriteRes<Lat20, []> { let Latency = 20; let NumMicroOps = 0;}
-def : WriteRes<Lat30, []> { let Latency = 30; let NumMicroOps = 0;}
 
 // Execution units.
 def Z13_FXaUnit     : ProcResource<2>;
@@ -68,24 +84,45 @@ def Z13_LSUnit      : ProcResource<2>;
 def Z13_VecUnit     : ProcResource<2>;
 def Z13_VecFPdUnit  : ProcResource<2> { let BufferSize = 1; /* blocking */ }
 def Z13_VBUnit      : ProcResource<2>;
+def Z13_MCD         : ProcResource<1>;
 
 // Subtarget specific definitions of scheduling resources.
-def : WriteRes<FXa,     [Z13_FXaUnit]> { let Latency = 1; }
-def : WriteRes<FXa2,    [Z13_FXaUnit, Z13_FXaUnit]> { let Latency = 2; }
-def : WriteRes<FXb,     [Z13_FXbUnit]> { let Latency = 1; }
-def : WriteRes<LSU,     [Z13_LSUnit]>  { let Latency = 4; }
-def : WriteRes<VecBF,   [Z13_VecUnit]> { let Latency = 8; }
-def : WriteRes<VecBF2,  [Z13_VecUnit, Z13_VecUnit]> { let Latency = 9; }
-def : WriteRes<VecDF,   [Z13_VecUnit]> { let Latency = 8; }
-def : WriteRes<VecDF2,  [Z13_VecUnit, Z13_VecUnit]> { let Latency = 9; }
-def : WriteRes<VecDFX,  [Z13_VecUnit]> { let Latency = 1; }
-def : WriteRes<VecDFX2, [Z13_VecUnit, Z13_VecUnit]> { let Latency = 2; }
-def : WriteRes<VecFPd,  [Z13_VecFPdUnit]> { let Latency = 30;
-                                            let ResourceCycles = [30]; }
-def : WriteRes<VecMul,  [Z13_VecUnit]> { let Latency = 5; }
-def : WriteRes<VecStr,  [Z13_VecUnit]> { let Latency = 4; }
-def : WriteRes<VecXsPm, [Z13_VecUnit]> { let Latency = 3; }
-def : WriteRes<VBU,     [Z13_VBUnit]>; // Virtual Branching Unit
+let NumMicroOps = 0 in {
+  def : WriteRes<FXa,     [Z13_FXaUnit]>;
+  def : WriteRes<FXa2,    [Z13_FXaUnit]> { let ResourceCycles = [2]; }
+  def : WriteRes<FXa3,    [Z13_FXaUnit]> { let ResourceCycles = [3]; }
+  def : WriteRes<FXa4,    [Z13_FXaUnit]> { let ResourceCycles = [4]; }
+  def : WriteRes<FXb,     [Z13_FXbUnit]>;
+  def : WriteRes<FXb2,    [Z13_FXbUnit]> { let ResourceCycles = [2]; }
+  def : WriteRes<FXb3,    [Z13_FXbUnit]> { let ResourceCycles = [3]; }
+  def : WriteRes<FXb4,    [Z13_FXbUnit]> { let ResourceCycles = [4]; }
+  def : WriteRes<FXb5,    [Z13_FXbUnit]> { let ResourceCycles = [5]; }
+  def : WriteRes<LSU,     [Z13_LSUnit]>;
+  def : WriteRes<LSU2,    [Z13_LSUnit]> { let ResourceCycles = [2]; }
+  def : WriteRes<LSU3,    [Z13_LSUnit]> { let ResourceCycles = [3]; }
+  def : WriteRes<LSU4,    [Z13_LSUnit]> { let ResourceCycles = [4]; }
+  def : WriteRes<LSU5,    [Z13_LSUnit]> { let ResourceCycles = [5]; }
+  def : WriteRes<VecBF,   [Z13_VecUnit]>;
+  def : WriteRes<VecBF2,  [Z13_VecUnit]> { let ResourceCycles = [2]; }
+  def : WriteRes<VecBF4,  [Z13_VecUnit]> { let ResourceCycles = [4]; }
+  def : WriteRes<VecDF,   [Z13_VecUnit]>;
+  def : WriteRes<VecDF2,  [Z13_VecUnit]> { let ResourceCycles = [2]; }
+  def : WriteRes<VecDF4,  [Z13_VecUnit]> { let ResourceCycles = [4]; }
+  def : WriteRes<VecDFX,  [Z13_VecUnit]>;
+  def : WriteRes<VecDFX2, [Z13_VecUnit]> { let ResourceCycles = [2]; }
+  def : WriteRes<VecDFX4, [Z13_VecUnit]> { let ResourceCycles = [4]; }
+  def : WriteRes<VecFPd,  [Z13_VecFPdUnit]> { let ResourceCycles = [30]; }
+  def : WriteRes<VecMul,  [Z13_VecUnit]>;
+  def : WriteRes<VecStr,  [Z13_VecUnit]>;
+  def : WriteRes<VecXsPm, [Z13_VecUnit]>;
+  def : WriteRes<VecXsPm2,[Z13_VecUnit]> { let ResourceCycles = [2]; }
+  // Virtual Branching Unit
+  def : WriteRes<VBU,     [Z13_VBUnit]>;
+}
+
+def : WriteRes<MCD, [Z13_MCD]> { let NumMicroOps = 3;
+                                 let BeginGroup  = 1;
+                                 let EndGroup    = 1; }
 
 // -------------------------- INSTRUCTIONS ---------------------------------- //
 
@@ -99,26 +136,27 @@ def : WriteRes<VBU,     [Z13_VBUnit]>; // Virtual Branching Unit
 // Stack allocation
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[FXa], (instregex "ADJDYNALLOC$")>; // Pseudo -> LA / LAY
+// Pseudo -> LA / LAY
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "ADJDYNALLOC$")>;
 
 //===----------------------------------------------------------------------===//
 // Branch instructions
 //===----------------------------------------------------------------------===//
 
 // Branch
-def : InstRW<[VBU], (instregex "(Call)?BRC(L)?(Asm.*)?$")>;
-def : InstRW<[VBU], (instregex "(Call)?J(G)?(Asm.*)?$")>;
-def : InstRW<[FXb], (instregex "(Call)?BC(R)?(Asm.*)?$")>;
-def : InstRW<[FXb], (instregex "(Call)?B(R)?(Asm.*)?$")>;
-def : InstRW<[FXa, EndGroup], (instregex "BRCT(G)?$")>;
-def : InstRW<[FXb, FXa, Lat2, GroupAlone], (instregex "BRCTH$")>;
-def : InstRW<[FXb, FXa, Lat2, GroupAlone], (instregex "BCT(G)?(R)?$")>;
-def : InstRW<[FXa, FXa, FXb, FXb, Lat4, GroupAlone],
+def : InstRW<[WLat1, VBU, NormalGr], (instregex "(Call)?BRC(L)?(Asm.*)?$")>;
+def : InstRW<[WLat1, VBU, NormalGr], (instregex "(Call)?J(G)?(Asm.*)?$")>;
+def : InstRW<[WLat1, FXb, NormalGr], (instregex "(Call)?BC(R)?(Asm.*)?$")>;
+def : InstRW<[WLat1, FXb, NormalGr], (instregex "(Call)?B(R)?(Asm.*)?$")>;
+def : InstRW<[WLat1, FXa, EndGroup], (instregex "BRCT(G)?$")>;
+def : InstRW<[WLat1, FXa, FXb, GroupAlone], (instregex "BRCTH$")>;
+def : InstRW<[WLat1, FXa, FXb, GroupAlone], (instregex "BCT(G)?(R)?$")>;
+def : InstRW<[WLat1, FXa2, FXb2, GroupAlone],
              (instregex "B(R)?X(H|L).*$")>;
 
 // Compare and branch
-def : InstRW<[FXb], (instregex "C(L)?(G)?(I|R)J(Asm.*)?$")>;
-def : InstRW<[FXb, FXb, Lat2, GroupAlone],
+def : InstRW<[WLat1, FXb, NormalGr], (instregex "C(L)?(G)?(I|R)J(Asm.*)?$")>;
+def : InstRW<[WLat1, FXb2, GroupAlone],
              (instregex "C(L)?(G)?(I|R)B(Call|Return|Asm.*)?$")>;
 
 //===----------------------------------------------------------------------===//
@@ -126,574 +164,609 @@ def : InstRW<[FXb, FXb, Lat2, GroupAlone],
 //===----------------------------------------------------------------------===//
 
 // Trap
-def : InstRW<[VBU], (instregex "(Cond)?Trap$")>;
+def : InstRW<[WLat1, VBU, NormalGr], (instregex "(Cond)?Trap$")>;
 
 // Compare and trap
-def : InstRW<[FXb], (instregex "C(G)?(I|R)T(Asm.*)?$")>;
-def : InstRW<[FXb], (instregex "CL(G)?RT(Asm.*)?$")>;
-def : InstRW<[FXb], (instregex "CL(F|G)IT(Asm.*)?$")>;
-def : InstRW<[FXb, LSU, Lat5], (instregex "CL(G)?T(Asm.*)?$")>;
+def : InstRW<[WLat1, FXb, NormalGr], (instregex "C(G)?(I|R)T(Asm.*)?$")>;
+def : InstRW<[WLat1, FXb, NormalGr], (instregex "CL(G)?RT(Asm.*)?$")>;
+def : InstRW<[WLat1, FXb, NormalGr], (instregex "CL(F|G)IT(Asm.*)?$")>;
+def : InstRW<[WLat1, FXb, LSU, NormalGr], (instregex "CL(G)?T(Asm.*)?$")>;
 
 //===----------------------------------------------------------------------===//
 // Call and return instructions
 //===----------------------------------------------------------------------===//
 
 // Call
-def : InstRW<[VBU, FXa, FXa, Lat3, GroupAlone], (instregex "(Call)?BRAS$")>;
-def : InstRW<[FXa, FXa, FXb, Lat3, GroupAlone], (instregex "(Call)?BRASL$")>;
-def : InstRW<[FXa, FXa, FXb, Lat3, GroupAlone], (instregex "(Call)?BAS(R)?$")>;
-def : InstRW<[FXa, FXa, FXb, Lat3, GroupAlone], (instregex "TLS_(G|L)DCALL$")>;
+def : InstRW<[WLat1, VBU, FXa2, GroupAlone], (instregex "(Call)?BRAS$")>;
+def : InstRW<[WLat1, FXa2, FXb, GroupAlone], (instregex "(Call)?BRASL$")>;
+def : InstRW<[WLat1, FXa2, FXb, GroupAlone], (instregex "(Call)?BAS(R)?$")>;
+def : InstRW<[WLat1, FXa2, FXb, GroupAlone], (instregex "TLS_(G|L)DCALL$")>;
 
 // Return
-def : InstRW<[FXb, EndGroup], (instregex "Return$")>;
-def : InstRW<[FXb], (instregex "CondReturn$")>;
+def : InstRW<[WLat1, FXb, EndGroup], (instregex "Return$")>;
+def : InstRW<[WLat1, FXb, NormalGr], (instregex "CondReturn$")>;
 
 //===----------------------------------------------------------------------===//
 // Move instructions
 //===----------------------------------------------------------------------===//
 
 // Moves
-def : InstRW<[FXb, LSU, Lat5], (instregex "MV(G|H)?HI$")>;
-def : InstRW<[FXb, LSU, Lat5], (instregex "MVI(Y)?$")>;
+def : InstRW<[WLat1, FXb, LSU, NormalGr], (instregex "MV(G|H)?HI$")>;
+def : InstRW<[WLat1, FXb, LSU, NormalGr], (instregex "MVI(Y)?$")>;
 
 // Move character
-def : InstRW<[FXb, LSU, LSU, LSU, Lat8, GroupAlone], (instregex "MVC$")>;
-def : InstRW<[LSU, Lat30, GroupAlone], (instregex "MVCL(E|U)?$")>;
+def : InstRW<[WLat1, FXb, LSU3, GroupAlone], (instregex "MVC$")>;
+def : InstRW<[WLat30, WLat30, WLat30, MCD], (instregex "MVCL(E|U)?$")>;
 
 // Pseudo -> reg move
-def : InstRW<[FXa], (instregex "COPY(_TO_REGCLASS)?$")>;
-def : InstRW<[FXa], (instregex "EXTRACT_SUBREG$")>;
-def : InstRW<[FXa], (instregex "INSERT_SUBREG$")>;
-def : InstRW<[FXa], (instregex "REG_SEQUENCE$")>;
-def : InstRW<[FXa], (instregex "SUBREG_TO_REG$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "COPY(_TO_REGCLASS)?$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "EXTRACT_SUBREG$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "INSERT_SUBREG$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "REG_SEQUENCE$")>;
 
 // Loads
-def : InstRW<[LSU], (instregex "L(Y|FH|RL|Mux|CBB)?$")>;
-def : InstRW<[LSU], (instregex "LG(RL)?$")>;
-def : InstRW<[LSU], (instregex "L128$")>;
+def : InstRW<[LSULatency, LSU, NormalGr], (instregex "L(Y|FH|RL|Mux)?$")>;
+def : InstRW<[LSULatency, LSULatency, LSU, NormalGr], (instregex "LCBB$")>;
+def : InstRW<[LSULatency, LSU, NormalGr], (instregex "LG(RL)?$")>;
+def : InstRW<[LSULatency, LSU, NormalGr], (instregex "L128$")>;
 
-def : InstRW<[FXa], (instregex "LLIH(F|H|L)$")>;
-def : InstRW<[FXa], (instregex "LLIL(F|H|L)$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "LLIH(F|H|L)$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "LLIL(F|H|L)$")>;
 
-def : InstRW<[FXa], (instregex "LG(F|H)I$")>;
-def : InstRW<[FXa], (instregex "LHI(Mux)?$")>;
-def : InstRW<[FXa], (instregex "LR(Mux)?$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "LG(F|H)I$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "LHI(Mux)?$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "LR(Mux)?$")>;
 
 // Load and zero rightmost byte
-def : InstRW<[LSU], (instregex "LZR(F|G)$")>;
+def : InstRW<[LSULatency, LSU, NormalGr], (instregex "LZR(F|G)$")>;
 
 // Load and trap
-def : InstRW<[FXb, LSU, Lat5], (instregex "L(FH|G)?AT$")>;
+def : InstRW<[WLat1LSU, FXb, LSU, NormalGr], (instregex "L(FH|G)?AT$")>;
 
 // Load and test
-def : InstRW<[FXa, LSU, Lat5], (instregex "LT(G)?$")>;
-def : InstRW<[FXa], (instregex "LT(G)?R$")>;
+def : InstRW<[WLat1LSU, WLat1LSU, LSU, FXa, NormalGr], (instregex "LT(G)?$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "LT(G)?R$")>;
 
 // Stores
-def : InstRW<[FXb, LSU, Lat5], (instregex "STG(RL)?$")>;
-def : InstRW<[FXb, LSU, Lat5], (instregex "ST128$")>;
-def : InstRW<[FXb, LSU, Lat5], (instregex "ST(Y|FH|RL|Mux)?$")>;
+def : InstRW<[WLat1, FXb, LSU, NormalGr], (instregex "STG(RL)?$")>;
+def : InstRW<[WLat1, FXb, LSU, NormalGr], (instregex "ST128$")>;
+def : InstRW<[WLat1, FXb, LSU, NormalGr], (instregex "ST(Y|FH|RL|Mux)?$")>;
 
 // String moves.
-def : InstRW<[LSU, Lat30, GroupAlone], (instregex "MVST$")>;
+def : InstRW<[WLat30, WLat30, WLat30, MCD], (instregex "MVST$")>;
 
 //===----------------------------------------------------------------------===//
 // Conditional move instructions
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[FXa, Lat2], (instregex "LOCRMux$")>;
-def : InstRW<[FXa, Lat2], (instregex "LOC(G|FH)?R(Asm.*)?$")>;
-def : InstRW<[FXa, Lat2], (instregex "LOC(G|H)?HI(Mux|(Asm.*))?$")>;
-def : InstRW<[FXa, LSU, Lat6], (instregex "LOC(G|FH|Mux)?(Asm.*)?$")>;
-def : InstRW<[FXb, LSU, Lat5], (instregex "STOC(G|FH|Mux)?(Asm.*)?$")>;
+def : InstRW<[WLat2, FXa, NormalGr], (instregex "LOCRMux$")>;
+def : InstRW<[WLat2, FXa, NormalGr], (instregex "LOC(G|FH)?R(Asm.*)?$")>;
+def : InstRW<[WLat2, FXa, NormalGr], (instregex "LOC(G|H)?HI(Mux|(Asm.*))?$")>;
+def : InstRW<[WLat2LSU, RegReadAdv, FXa, LSU, NormalGr],
+             (instregex "LOC(G|FH|Mux)?(Asm.*)?$")>;
+def : InstRW<[WLat1, FXb, LSU, NormalGr],
+             (instregex "STOC(G|FH|Mux)?(Asm.*)?$")>;
 
 //===----------------------------------------------------------------------===//
 // Sign extensions
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[FXa], (instregex "L(B|H|G)R$")>;
-def : InstRW<[FXa], (instregex "LG(B|H|F)R$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "L(B|H|G)R$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "LG(B|H|F)R$")>;
 
-def : InstRW<[FXa, LSU, Lat5], (instregex "LTGF$")>;
-def : InstRW<[FXa], (instregex "LTGFR$")>;
+def : InstRW<[WLat1LSU, WLat1LSU, FXa, LSU, NormalGr], (instregex "LTGF$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "LTGFR$")>;
 
-def : InstRW<[FXa, LSU, Lat5], (instregex "LB(H|Mux)?$")>;
-def : InstRW<[FXa, LSU, Lat5], (instregex "LH(Y)?$")>;
-def : InstRW<[FXa, LSU, Lat5], (instregex "LH(H|Mux|RL)$")>;
-def : InstRW<[FXa, LSU, Lat5], (instregex "LG(B|H|F)$")>;
-def : InstRW<[FXa, LSU, Lat5], (instregex "LG(H|F)RL$")>;
+def : InstRW<[WLat1LSU, FXa, LSU, NormalGr], (instregex "LB(H|Mux)?$")>;
+def : InstRW<[WLat1LSU, FXa, LSU, NormalGr], (instregex "LH(Y)?$")>;
+def : InstRW<[WLat1LSU, FXa, LSU, NormalGr], (instregex "LH(H|Mux|RL)$")>;
+def : InstRW<[WLat1LSU, FXa, LSU, NormalGr], (instregex "LG(B|H|F)$")>;
+def : InstRW<[WLat1LSU, FXa, LSU, NormalGr], (instregex "LG(H|F)RL$")>;
 
 //===----------------------------------------------------------------------===//
 // Zero extensions
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[FXa], (instregex "LLCR(Mux)?$")>;
-def : InstRW<[FXa], (instregex "LLHR(Mux)?$")>;
-def : InstRW<[FXa], (instregex "LLG(C|H|F|T)R$")>;
-def : InstRW<[LSU], (instregex "LLC(Mux)?$")>;
-def : InstRW<[LSU], (instregex "LLH(Mux)?$")>;
-def : InstRW<[FXa, LSU, Lat5], (instregex "LL(C|H)H$")>;
-def : InstRW<[LSU], (instregex "LLHRL$")>;
-def : InstRW<[LSU], (instregex "LLG(C|H|F|T|HRL|FRL)$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "LLCR(Mux)?$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "LLHR(Mux)?$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "LLG(C|H|F|T)R$")>;
+def : InstRW<[LSULatency, LSU, NormalGr], (instregex "LLC(Mux)?$")>;
+def : InstRW<[LSULatency, LSU, NormalGr], (instregex "LLH(Mux)?$")>;
+def : InstRW<[WLat1LSU, FXa, LSU, NormalGr], (instregex "LL(C|H)H$")>;
+def : InstRW<[LSULatency, LSU, NormalGr], (instregex "LLHRL$")>;
+def : InstRW<[LSULatency, LSU, NormalGr], (instregex "LLG(C|H|F|T|HRL|FRL)$")>;
 
 // Load and zero rightmost byte
-def : InstRW<[LSU], (instregex "LLZRGF$")>;
+def : InstRW<[LSULatency, LSU, NormalGr], (instregex "LLZRGF$")>;
 
 // Load and trap
-def : InstRW<[FXb, LSU, Lat5], (instregex "LLG(F|T)?AT$")>;
+def : InstRW<[WLat1LSU, FXb, LSU, NormalGr], (instregex "LLG(F|T)?AT$")>;
 
 //===----------------------------------------------------------------------===//
 // Truncations
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[FXb, LSU, Lat5], (instregex "STC(H|Y|Mux)?$")>;
-def : InstRW<[FXb, LSU, Lat5], (instregex "STH(H|Y|RL|Mux)?$")>;
-def : InstRW<[FXb, LSU, Lat5], (instregex "STCM(H|Y)?$")>;
+def : InstRW<[WLat1, FXb, LSU, NormalGr], (instregex "STC(H|Y|Mux)?$")>;
+def : InstRW<[WLat1, FXb, LSU, NormalGr], (instregex "STH(H|Y|RL|Mux)?$")>;
+def : InstRW<[WLat1, FXb, LSU, NormalGr], (instregex "STCM(H|Y)?$")>;
 
 //===----------------------------------------------------------------------===//
 // Multi-register moves
 //===----------------------------------------------------------------------===//
 
 // Load multiple (estimated average of 5 ops)
-def : InstRW<[LSU, LSU, LSU, LSU, LSU, Lat10, GroupAlone],
-             (instregex "LM(H|Y|G)?$")>;
+def : InstRW<[WLat10, WLat10, LSU5, GroupAlone], (instregex "LM(H|Y|G)?$")>;
 
 // Load multiple disjoint
-def : InstRW<[LSU, Lat30, GroupAlone], (instregex "LMD$")>;
+def : InstRW<[WLat30, WLat30, MCD], (instregex "LMD$")>;
 
-// Store multiple (estimated average of ceil(5/2) FXb ops)
-def : InstRW<[LSU, LSU, FXb, FXb, FXb, Lat10,
-              GroupAlone], (instregex "STM(G|H|Y)?$")>;
+// Store multiple
+def : InstRW<[WLat1, LSU2, FXb3, GroupAlone], (instregex "STM(G|H|Y)?$")>;
 
 //===----------------------------------------------------------------------===//
 // Byte swaps
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[FXa], (instregex "LRV(G)?R$")>;
-def : InstRW<[FXa, LSU, Lat5], (instregex "LRV(G|H)?$")>;
-def : InstRW<[FXb, LSU, Lat5], (instregex "STRV(G|H)?$")>;
-def : InstRW<[LSU, Lat30, GroupAlone], (instregex "MVCIN$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "LRV(G)?R$")>;
+def : InstRW<[WLat1LSU, FXa, LSU, NormalGr], (instregex "LRV(G|H)?$")>;
+def : InstRW<[WLat1, FXb, LSU, NormalGr], (instregex "STRV(G|H)?$")>;
+def : InstRW<[WLat30, MCD], (instregex "MVCIN$")>;
 
 //===----------------------------------------------------------------------===//
 // Load address instructions
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[FXa], (instregex "LA(Y|RL)?$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "LA(Y|RL)?$")>;
 
 // Load the Global Offset Table address ( -> larl )
-def : InstRW<[FXa], (instregex "GOT$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "GOT$")>;
 
 //===----------------------------------------------------------------------===//
 // Absolute and Negation
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[FXa, Lat2], (instregex "LP(G)?R$")>;
-def : InstRW<[FXa, FXa, Lat3, BeginGroup], (instregex "L(N|P)GFR$")>;
-def : InstRW<[FXa, Lat2], (instregex "LN(R|GR)$")>;
-def : InstRW<[FXa], (instregex "LC(R|GR)$")>;
-def : InstRW<[FXa, FXa, Lat2, BeginGroup], (instregex "LCGFR$")>;
+def : InstRW<[WLat2, WLat2, FXa, NormalGr], (instregex "LP(G)?R$")>;
+def : InstRW<[WLat3, WLat3, FXa2, Cracked], (instregex "L(N|P)GFR$")>;
+def : InstRW<[WLat2, WLat2, FXa, NormalGr], (instregex "LN(R|GR)$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "LC(R|GR)$")>;
+def : InstRW<[WLat2, WLat2, FXa2, Cracked], (instregex "LCGFR$")>;
 
 //===----------------------------------------------------------------------===//
 // Insertion
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[FXa, LSU, Lat5], (instregex "IC(Y)?$")>;
-def : InstRW<[FXa, LSU, Lat5], (instregex "IC32(Y)?$")>;
-def : InstRW<[FXa, LSU, Lat5], (instregex "ICM(H|Y)?$")>;
-def : InstRW<[FXa], (instregex "II(F|H|L)Mux$")>;
-def : InstRW<[FXa], (instregex "IIHF(64)?$")>;
-def : InstRW<[FXa], (instregex "IIHH(64)?$")>;
-def : InstRW<[FXa], (instregex "IIHL(64)?$")>;
-def : InstRW<[FXa], (instregex "IILF(64)?$")>;
-def : InstRW<[FXa], (instregex "IILH(64)?$")>;
-def : InstRW<[FXa], (instregex "IILL(64)?$")>;
+def : InstRW<[WLat1LSU, RegReadAdv, FXa, LSU, NormalGr], (instregex "IC(Y)?$")>;
+def : InstRW<[WLat1LSU, RegReadAdv, FXa, LSU, NormalGr],
+             (instregex "IC32(Y)?$")>;
+def : InstRW<[WLat1LSU, RegReadAdv, WLat1LSU, FXa, LSU, NormalGr],
+             (instregex "ICM(H|Y)?$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "II(F|H|L)Mux$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "IIHF(64)?$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "IIHH(64)?$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "IIHL(64)?$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "IILF(64)?$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "IILH(64)?$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "IILL(64)?$")>;
 
 //===----------------------------------------------------------------------===//
 // Addition
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[FXa, LSU, Lat5], (instregex "A(Y)?$")>;
-def : InstRW<[FXa, LSU, Lat6], (instregex "AH(Y)?$")>;
-def : InstRW<[FXa], (instregex "AIH$")>;
-def : InstRW<[FXa], (instregex "AFI(Mux)?$")>;
-def : InstRW<[FXa, LSU, Lat5], (instregex "AG$")>;
-def : InstRW<[FXa], (instregex "AGFI$")>;
-def : InstRW<[FXa], (instregex "AGHI(K)?$")>;
-def : InstRW<[FXa], (instregex "AGR(K)?$")>;
-def : InstRW<[FXa], (instregex "AHI(K)?$")>;
-def : InstRW<[FXa], (instregex "AHIMux(K)?$")>;
-def : InstRW<[FXa, LSU, Lat5], (instregex "AL(Y)?$")>;
-def : InstRW<[FXa], (instregex "AL(FI|HSIK)$")>;
-def : InstRW<[FXa, LSU, Lat5], (instregex "ALG(F)?$")>;
-def : InstRW<[FXa], (instregex "ALGHSIK$")>;
-def : InstRW<[FXa], (instregex "ALGF(I|R)$")>;
-def : InstRW<[FXa], (instregex "ALGR(K)?$")>;
-def : InstRW<[FXa], (instregex "ALR(K)?$")>;
-def : InstRW<[FXa], (instregex "AR(K)?$")>;
-def : InstRW<[FXa], (instregex "A(L)?HHHR$")>;
-def : InstRW<[FXa, Lat2], (instregex "A(L)?HHLR$")>;
-def : InstRW<[FXa], (instregex "ALSIH(N)?$")>;
-def : InstRW<[FXb, LSU, Lat5], (instregex "A(L)?(G)?SI$")>;
+def : InstRW<[WLat1LSU, WLat1LSU, RegReadAdv, FXa, LSU, NormalGr],
+             (instregex "A(Y)?$")>;
+def : InstRW<[WLat2LSU, WLat2LSU, RegReadAdv, FXa, LSU, NormalGr],
+             (instregex "AH(Y)?$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "AIH$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "AFI(Mux)?$")>;
+def : InstRW<[WLat1LSU, WLat1LSU, RegReadAdv, FXa, LSU, NormalGr],
+             (instregex "AG$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "AGFI$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "AGHI(K)?$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "AGR(K)?$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "AHI(K)?$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "AHIMux(K)?$")>;
+def : InstRW<[WLat1LSU, WLat1LSU, RegReadAdv, FXa, LSU, NormalGr],
+             (instregex "AL(Y)?$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "AL(FI|HSIK)$")>;
+def : InstRW<[WLat1LSU, WLat1LSU, RegReadAdv, FXa, LSU, NormalGr],
+             (instregex "ALG(F)?$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "ALGHSIK$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "ALGF(I|R)$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "ALGR(K)?$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "ALR(K)?$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "AR(K)?$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "A(L)?HHHR$")>;
+def : InstRW<[WLat2, WLat2, FXa, NormalGr], (instregex "A(L)?HHLR$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "ALSIH(N)?$")>;
+def : InstRW<[WLat2LSU, FXb, LSU, NormalGr], (instregex "A(L)?(G)?SI$")>;
 
 // Logical addition with carry
-def : InstRW<[FXa, LSU, Lat6, GroupAlone], (instregex "ALC(G)?$")>;
-def : InstRW<[FXa, Lat2, GroupAlone], (instregex "ALC(G)?R$")>;
+def : InstRW<[WLat2LSU, WLat2LSU, RegReadAdv, FXa, LSU, GroupAlone],
+             (instregex "ALC(G)?$")>;
+def : InstRW<[WLat2, WLat2, FXa, GroupAlone], (instregex "ALC(G)?R$")>;
 
 // Add with sign extension (32 -> 64)
-def : InstRW<[FXa, LSU, Lat6], (instregex "AGF$")>;
-def : InstRW<[FXa, Lat2], (instregex "AGFR$")>;
+def : InstRW<[WLat2LSU, WLat2LSU, RegReadAdv, FXa, LSU, NormalGr],
+             (instregex "AGF$")>;
+def : InstRW<[WLat2, WLat2, FXa, NormalGr], (instregex "AGFR$")>;
 
 //===----------------------------------------------------------------------===//
 // Subtraction
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[FXa, LSU, Lat5], (instregex "S(G|Y)?$")>;
-def : InstRW<[FXa, LSU, Lat6], (instregex "SH(Y)?$")>;
-def : InstRW<[FXa], (instregex "SGR(K)?$")>;
-def : InstRW<[FXa], (instregex "SLFI$")>;
-def : InstRW<[FXa, LSU, Lat5], (instregex "SL(G|GF|Y)?$")>;
-def : InstRW<[FXa], (instregex "SLGF(I|R)$")>;
-def : InstRW<[FXa], (instregex "SLGR(K)?$")>;
-def : InstRW<[FXa], (instregex "SLR(K)?$")>;
-def : InstRW<[FXa], (instregex "SR(K)?$")>;
-def : InstRW<[FXa], (instregex "S(L)?HHHR$")>;
-def : InstRW<[FXa, Lat2], (instregex "S(L)?HHLR$")>;
+def : InstRW<[WLat1LSU, WLat1LSU, RegReadAdv, FXa, LSU, NormalGr],
+             (instregex "S(G|Y)?$")>;
+def : InstRW<[WLat2LSU, WLat2LSU, RegReadAdv, FXa, LSU, NormalGr],
+             (instregex "SH(Y)?$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "SGR(K)?$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "SLFI$")>;
+def : InstRW<[WLat1LSU, WLat1LSU, RegReadAdv, FXa, LSU, NormalGr],
+             (instregex "SL(G|GF|Y)?$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "SLGF(I|R)$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "SLGR(K)?$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "SLR(K)?$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "SR(K)?$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "S(L)?HHHR$")>;
+def : InstRW<[WLat2, WLat2, FXa, NormalGr], (instregex "S(L)?HHLR$")>;
 
 // Subtraction with borrow
-def : InstRW<[FXa, LSU, Lat6, GroupAlone], (instregex "SLB(G)?$")>;
-def : InstRW<[FXa, Lat2, GroupAlone], (instregex "SLB(G)?R$")>;
+def : InstRW<[WLat2LSU, WLat2LSU, RegReadAdv, FXa, LSU, GroupAlone],
+             (instregex "SLB(G)?$")>;
+def : InstRW<[WLat2, WLat2, FXa, GroupAlone], (instregex "SLB(G)?R$")>;
 
 // Subtraction with sign extension (32 -> 64)
-def : InstRW<[FXa, LSU, Lat6], (instregex "SGF$")>;
-def : InstRW<[FXa, Lat2], (instregex "SGFR$")>;
+def : InstRW<[WLat2LSU, WLat2LSU, RegReadAdv, FXa, LSU, NormalGr],
+             (instregex "SGF$")>;
+def : InstRW<[WLat2, WLat2, FXa, NormalGr], (instregex "SGFR$")>;
 
 //===----------------------------------------------------------------------===//
 // AND
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[FXa, LSU, Lat5], (instregex "N(G|Y)?$")>;
-def : InstRW<[FXa], (instregex "NGR(K)?$")>;
-def : InstRW<[FXa], (instregex "NI(FMux|HMux|LMux)$")>;
-def : InstRW<[FXb, LSU, Lat5], (instregex "NI(Y)?$")>;
-def : InstRW<[FXa], (instregex "NIHF(64)?$")>;
-def : InstRW<[FXa], (instregex "NIHH(64)?$")>;
-def : InstRW<[FXa], (instregex "NIHL(64)?$")>;
-def : InstRW<[FXa], (instregex "NILF(64)?$")>;
-def : InstRW<[FXa], (instregex "NILH(64)?$")>;
-def : InstRW<[FXa], (instregex "NILL(64)?$")>;
-def : InstRW<[FXa], (instregex "NR(K)?$")>;
-def : InstRW<[LSU, LSU, FXb, Lat9, BeginGroup], (instregex "NC$")>;
+def : InstRW<[WLat1LSU, WLat1LSU, RegReadAdv, FXa, LSU, NormalGr],
+             (instregex "N(G|Y)?$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "NGR(K)?$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "NI(FMux|HMux|LMux)$")>;
+def : InstRW<[WLat2LSU, FXb, LSU, NormalGr], (instregex "NI(Y)?$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "NIHF(64)?$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "NIHH(64)?$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "NIHL(64)?$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "NILF(64)?$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "NILH(64)?$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "NILL(64)?$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "NR(K)?$")>;
+def : InstRW<[WLat3LSU, LSU2, FXb, Cracked], (instregex "NC$")>;
 
 //===----------------------------------------------------------------------===//
 // OR
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[FXa, LSU, Lat5], (instregex "O(G|Y)?$")>;
-def : InstRW<[FXa], (instregex "OGR(K)?$")>;
-def : InstRW<[FXb, LSU, Lat5], (instregex "OI(Y)?$")>;
-def : InstRW<[FXa], (instregex "OI(FMux|HMux|LMux)$")>;
-def : InstRW<[FXa], (instregex "OIHF(64)?$")>;
-def : InstRW<[FXa], (instregex "OIHH(64)?$")>;
-def : InstRW<[FXa], (instregex "OIHL(64)?$")>;
-def : InstRW<[FXa], (instregex "OILF(64)?$")>;
-def : InstRW<[FXa], (instregex "OILH(64)?$")>;
-def : InstRW<[FXa], (instregex "OILL(64)?$")>;
-def : InstRW<[FXa], (instregex "OR(K)?$")>;
-def : InstRW<[LSU, LSU, FXb, Lat9, BeginGroup], (instregex "OC$")>;
+def : InstRW<[WLat1LSU, WLat1LSU, RegReadAdv, FXa, LSU, NormalGr],
+             (instregex "O(G|Y)?$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "OGR(K)?$")>;
+def : InstRW<[WLat2LSU, FXb, LSU, NormalGr], (instregex "OI(Y)?$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "OI(FMux|HMux|LMux)$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "OIHF(64)?$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "OIHH(64)?$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "OIHL(64)?$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "OILF(64)?$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "OILH(64)?$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "OILL(64)?$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "OR(K)?$")>;
+def : InstRW<[WLat3LSU, LSU2, FXb, Cracked], (instregex "OC$")>;
 
 //===----------------------------------------------------------------------===//
 // XOR
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[FXa, LSU, Lat5], (instregex "X(G|Y)?$")>;
-def : InstRW<[FXb, LSU, Lat5], (instregex "XI(Y)?$")>;
-def : InstRW<[FXa], (instregex "XIFMux$")>;
-def : InstRW<[FXa], (instregex "XGR(K)?$")>;
-def : InstRW<[FXa], (instregex "XIHF(64)?$")>;
-def : InstRW<[FXa], (instregex "XILF(64)?$")>;
-def : InstRW<[FXa], (instregex "XR(K)?$")>;
-def : InstRW<[LSU, LSU, FXb, Lat9, BeginGroup], (instregex "XC$")>;
+def : InstRW<[WLat1LSU, WLat1LSU, RegReadAdv, FXa, LSU, NormalGr],
+             (instregex "X(G|Y)?$")>;
+def : InstRW<[WLat2LSU, FXb, LSU, NormalGr], (instregex "XI(Y)?$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "XIFMux$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "XGR(K)?$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "XIHF(64)?$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "XILF(64)?$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "XR(K)?$")>;
+def : InstRW<[WLat3LSU, LSU2, FXb, Cracked], (instregex "XC$")>;
 
 //===----------------------------------------------------------------------===//
 // Multiplication
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[FXa, LSU, Lat10], (instregex "MS(GF|Y)?$")>;
-def : InstRW<[FXa, Lat6], (instregex "MS(R|FI)$")>;
-def : InstRW<[FXa, LSU, Lat12], (instregex "MSG$")>;
-def : InstRW<[FXa, Lat8], (instregex "MSGR$")>;
-def : InstRW<[FXa, Lat6], (instregex "MSGF(I|R)$")>;
-def : InstRW<[FXa2, LSU, Lat15, GroupAlone], (instregex "MLG$")>;
-def : InstRW<[FXa2, Lat9, GroupAlone], (instregex "MLGR$")>;
-def : InstRW<[FXa, Lat5], (instregex "MGHI$")>;
-def : InstRW<[FXa, Lat5], (instregex "MHI$")>;
-def : InstRW<[FXa, LSU, Lat9], (instregex "MH(Y)?$")>;
-def : InstRW<[FXa2, Lat7, GroupAlone], (instregex "M(L)?R$")>;
-def : InstRW<[FXa2, LSU, Lat7, GroupAlone], (instregex "M(FY|L)?$")>;
+def : InstRW<[WLat6LSU, RegReadAdv, FXa, LSU, NormalGr],
+             (instregex "MS(GF|Y)?$")>;
+def : InstRW<[WLat6, FXa, NormalGr], (instregex "MS(R|FI)$")>;
+def : InstRW<[WLat8LSU, RegReadAdv, FXa, LSU, NormalGr], (instregex "MSG$")>;
+def : InstRW<[WLat8, FXa, NormalGr], (instregex "MSGR$")>;
+def : InstRW<[WLat6, FXa, NormalGr], (instregex "MSGF(I|R)$")>;
+def : InstRW<[WLat11LSU, RegReadAdv, FXa2, LSU, GroupAlone],
+             (instregex "MLG$")>;
+def : InstRW<[WLat9, FXa2, GroupAlone], (instregex "MLGR$")>;
+def : InstRW<[WLat5, FXa, NormalGr], (instregex "MGHI$")>;
+def : InstRW<[WLat5, FXa, NormalGr], (instregex "MHI$")>;
+def : InstRW<[WLat5LSU, RegReadAdv, FXa, LSU, NormalGr], (instregex "MH(Y)?$")>;
+def : InstRW<[WLat7, FXa2, GroupAlone], (instregex "M(L)?R$")>;
+def : InstRW<[WLat7LSU, RegReadAdv, FXa2, LSU, GroupAlone],
+             (instregex "M(FY|L)?$")>;
 
 //===----------------------------------------------------------------------===//
 // Division and remainder
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[FXa2, FXa2, Lat20, GroupAlone], (instregex "DR$")>;
-def : InstRW<[FXa2, FXa2, LSU, Lat30, GroupAlone], (instregex "D$")>;
-def : InstRW<[FXa2, Lat30, GroupAlone], (instregex "DSG(F)?R$")>;
-def : InstRW<[LSU, FXa2, Lat30, GroupAlone], (instregex "DSG(F)?$")>;
-def : InstRW<[FXa2, FXa2, Lat20, GroupAlone], (instregex "DLR$")>;
-def : InstRW<[FXa2, FXa2, Lat30, GroupAlone], (instregex "DLGR$")>;
-def : InstRW<[FXa2, FXa2, LSU, Lat30, GroupAlone], (instregex "DL(G)?$")>;
+def : InstRW<[WLat20, FXa4, GroupAlone], (instregex "DR$")>;
+def : InstRW<[WLat30, RegReadAdv, FXa4, LSU, GroupAlone], (instregex "D$")>;
+def : InstRW<[WLat30, FXa2, GroupAlone], (instregex "DSG(F)?R$")>;
+def : InstRW<[WLat30, RegReadAdv, FXa2, LSU, GroupAlone],
+             (instregex "DSG(F)?$")>;
+def : InstRW<[WLat20, FXa4, GroupAlone], (instregex "DLR$")>;
+def : InstRW<[WLat30, FXa4, GroupAlone], (instregex "DLGR$")>;
+def : InstRW<[WLat30, RegReadAdv, FXa4, LSU, GroupAlone], (instregex "DL(G)?$")>;
 
 //===----------------------------------------------------------------------===//
 // Shifts
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[FXa], (instregex "SLL(G|K)?$")>;
-def : InstRW<[FXa], (instregex "SRL(G|K)?$")>;
-def : InstRW<[FXa], (instregex "SRA(G|K)?$")>;
-def : InstRW<[FXa], (instregex "SLA(G|K)?$")>;
-def : InstRW<[FXa, FXa, FXa, FXa, LSU, Lat8, GroupAlone],
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "SLL(G|K)?$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "SRL(G|K)?$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "SRA(G|K)?$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "SLA(G|K)?$")>;
+def : InstRW<[WLat5LSU, WLat5LSU, FXa4, LSU, GroupAlone],
              (instregex "S(L|R)D(A|L)$")>;
 
 // Rotate
-def : InstRW<[FXa, LSU, Lat6], (instregex "RLL(G)?$")>;
+def : InstRW<[WLat2LSU, FXa, LSU, NormalGr], (instregex "RLL(G)?$")>;
 
 // Rotate and insert
-def : InstRW<[FXa], (instregex "RISBG(N|32)?$")>;
-def : InstRW<[FXa], (instregex "RISBH(G|H|L)$")>;
-def : InstRW<[FXa], (instregex "RISBL(G|H|L)$")>;
-def : InstRW<[FXa], (instregex "RISBMux$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "RISBG(N|32)?$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "RISBH(G|H|L)$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "RISBL(G|H|L)$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "RISBMux$")>;
 
 // Rotate and Select
-def : InstRW<[FXa, FXa, Lat3, BeginGroup], (instregex "R(N|O|X)SBG$")>;
+def : InstRW<[WLat3, WLat3, FXa2, Cracked], (instregex "R(N|O|X)SBG$")>;
 
 //===----------------------------------------------------------------------===//
 // Comparison
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[FXb, LSU, Lat5], (instregex "C(G|Y|Mux|RL)?$")>;
-def : InstRW<[FXb], (instregex "C(F|H)I(Mux)?$")>;
-def : InstRW<[FXb], (instregex "CG(F|H)I$")>;
-def : InstRW<[FXb, LSU, Lat5], (instregex "CG(HSI|RL)$")>;
-def : InstRW<[FXb], (instregex "C(G)?R$")>;
-def : InstRW<[FXb], (instregex "CIH$")>;
-def : InstRW<[FXb, LSU, Lat5], (instregex "CH(F|SI)$")>;
-def : InstRW<[FXb, LSU, Lat5], (instregex "CL(Y|Mux|FHSI)?$")>;
-def : InstRW<[FXb], (instregex "CLFI(Mux)?$")>;
-def : InstRW<[FXb, LSU, Lat5], (instregex "CLG(HRL|HSI)?$")>;
-def : InstRW<[FXb, LSU, Lat5], (instregex "CLGF(RL)?$")>;
-def : InstRW<[FXb], (instregex "CLGF(I|R)$")>;
-def : InstRW<[FXb], (instregex "CLGR$")>;
-def : InstRW<[FXb, LSU, Lat5], (instregex "CLGRL$")>;
-def : InstRW<[FXb, LSU, Lat5], (instregex "CLH(F|RL|HSI)$")>;
-def : InstRW<[FXb], (instregex "CLIH$")>;
-def : InstRW<[FXb, LSU, Lat5], (instregex "CLI(Y)?$")>;
-def : InstRW<[FXb], (instregex "CLR$")>;
-def : InstRW<[FXb, LSU, Lat5], (instregex "CLRL$")>;
-def : InstRW<[FXb], (instregex "C(L)?HHR$")>;
-def : InstRW<[FXb, Lat2], (instregex "C(L)?HLR$")>;
+def : InstRW<[WLat1LSU, RegReadAdv, FXb, LSU, NormalGr],
+             (instregex "C(G|Y|Mux)?$")>;
+def : InstRW<[WLat1LSU, FXb, LSU, NormalGr], (instregex "CRL$")>;
+def : InstRW<[WLat1, FXb, NormalGr], (instregex "C(F|H)I(Mux)?$")>;
+def : InstRW<[WLat1, FXb, NormalGr], (instregex "CG(F|H)I$")>;
+def : InstRW<[WLat1LSU, FXb, LSU, NormalGr], (instregex "CG(HSI|RL)$")>;
+def : InstRW<[WLat1, FXb, NormalGr], (instregex "C(G)?R$")>;
+def : InstRW<[WLat1, FXb, NormalGr], (instregex "CIH$")>;
+def : InstRW<[WLat1LSU, RegReadAdv, FXb, LSU, NormalGr], (instregex "CHF$")>;
+def : InstRW<[WLat1LSU, FXb, LSU, NormalGr], (instregex "CHSI$")>;
+def : InstRW<[WLat1LSU, RegReadAdv, FXb, LSU, NormalGr],
+             (instregex "CL(Y|Mux)?$")>;
+def : InstRW<[WLat1LSU, FXb, LSU, NormalGr], (instregex "CLFHSI$")>;
+def : InstRW<[WLat1, FXb, NormalGr], (instregex "CLFI(Mux)?$")>;
+def : InstRW<[WLat1LSU, RegReadAdv, FXb, LSU, NormalGr], (instregex "CLG$")>;
+def : InstRW<[WLat1LSU, FXb, LSU, NormalGr], (instregex "CLG(HRL|HSI)$")>;
+def : InstRW<[WLat1LSU, RegReadAdv, FXb, LSU, NormalGr], (instregex "CLGF$")>;
+def : InstRW<[WLat1LSU, FXb, LSU, NormalGr], (instregex "CLGFRL$")>;
+def : InstRW<[WLat1, FXb, NormalGr], (instregex "CLGF(I|R)$")>;
+def : InstRW<[WLat1, FXb, NormalGr], (instregex "CLGR$")>;
+def : InstRW<[WLat1LSU, FXb, LSU, NormalGr], (instregex "CLGRL$")>;
+def : InstRW<[WLat1LSU, RegReadAdv, FXb, LSU, NormalGr], (instregex "CLHF$")>;
+def : InstRW<[WLat1LSU, FXb, LSU, NormalGr], (instregex "CLH(RL|HSI)$")>;
+def : InstRW<[WLat1, FXb, NormalGr], (instregex "CLIH$")>;
+def : InstRW<[WLat1LSU, FXb, LSU, NormalGr], (instregex "CLI(Y)?$")>;
+def : InstRW<[WLat1, FXb, NormalGr], (instregex "CLR$")>;
+def : InstRW<[WLat1LSU, FXb, LSU, NormalGr], (instregex "CLRL$")>;
+def : InstRW<[WLat1, FXb, NormalGr], (instregex "C(L)?HHR$")>;
+def : InstRW<[WLat2, FXb, NormalGr], (instregex "C(L)?HLR$")>;
 
 // Compare halfword
-def : InstRW<[FXb, LSU, Lat6], (instregex "CH(Y|RL)?$")>;
-def : InstRW<[FXb, LSU, Lat6], (instregex "CGH(RL)?$")>;
-def : InstRW<[FXa, FXb, LSU, Lat6, BeginGroup], (instregex "CHHSI$")>;
+def : InstRW<[WLat2LSU, RegReadAdv, FXb, LSU, NormalGr], (instregex "CH(Y)?$")>;
+def : InstRW<[WLat2LSU, FXb, LSU, NormalGr], (instregex "CHRL$")>;
+def : InstRW<[WLat2LSU, RegReadAdv, FXb, LSU, NormalGr], (instregex "CGH$")>;
+def : InstRW<[WLat2LSU, FXb, LSU, NormalGr], (instregex "CGHRL$")>;
+def : InstRW<[WLat2LSU, FXa, FXb, LSU, Cracked], (instregex "CHHSI$")>;
 
 // Compare with sign extension (32 -> 64)
-def : InstRW<[FXb, LSU, Lat6], (instregex "CGF(RL)?$")>;
-def : InstRW<[FXb, Lat2], (instregex "CGFR$")>;
+def : InstRW<[WLat2LSU, RegReadAdv, FXb, LSU, NormalGr], (instregex "CGF$")>;
+def : InstRW<[WLat2LSU, FXb, LSU, NormalGr], (instregex "CGFRL$")>;
+def : InstRW<[WLat2, FXb, NormalGr], (instregex "CGFR$")>;
 
 // Compare logical character
-def : InstRW<[FXb, LSU, LSU, Lat9, BeginGroup], (instregex "CLC$")>;
-def : InstRW<[LSU, Lat30, GroupAlone], (instregex "CLCL(E|U)?$")>;
-def : InstRW<[LSU, Lat30, GroupAlone], (instregex "CLST$")>;
+def : InstRW<[WLat6, FXb, LSU2, Cracked], (instregex "CLC$")>;
+def : InstRW<[WLat30, WLat30, WLat30, MCD], (instregex "CLCL(E|U)?$")>;
+def : InstRW<[WLat30, WLat30, WLat30, MCD], (instregex "CLST$")>;
 
 // Test under mask
-def : InstRW<[FXb, LSU, Lat5], (instregex "TM(Y)?$")>;
-def : InstRW<[FXb], (instregex "TM(H|L)Mux$")>;
-def : InstRW<[FXb], (instregex "TMHH(64)?$")>;
-def : InstRW<[FXb], (instregex "TMHL(64)?$")>;
-def : InstRW<[FXb], (instregex "TMLH(64)?$")>;
-def : InstRW<[FXb], (instregex "TMLL(64)?$")>;
+def : InstRW<[WLat1LSU, FXb, LSU, NormalGr], (instregex "TM(Y)?$")>;
+def : InstRW<[WLat1, FXb, NormalGr], (instregex "TM(H|L)Mux$")>;
+def : InstRW<[WLat1, FXb, NormalGr], (instregex "TMHH(64)?$")>;
+def : InstRW<[WLat1, FXb, NormalGr], (instregex "TMHL(64)?$")>;
+def : InstRW<[WLat1, FXb, NormalGr], (instregex "TMLH(64)?$")>;
+def : InstRW<[WLat1, FXb, NormalGr], (instregex "TMLL(64)?$")>;
 
 // Compare logical characters under mask
-def : InstRW<[FXb, LSU, Lat6], (instregex "CLM(H|Y)?$")>;
+def : InstRW<[WLat2LSU, RegReadAdv, FXb, LSU, NormalGr],
+             (instregex "CLM(H|Y)?$")>;
 
 //===----------------------------------------------------------------------===//
 // Prefetch and execution hint
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[LSU], (instregex "PFD(RL)?$")>;
-def : InstRW<[FXb, Lat2], (instregex "BPP$")>;
+def : InstRW<[WLat1, LSU, NormalGr], (instregex "PFD(RL)?$")>;
+def : InstRW<[WLat1, FXb, NormalGr], (instregex "BPP$")>;
 def : InstRW<[FXb, EndGroup], (instregex "BPRP$")>;
-def : InstRW<[FXb], (instregex "NIAI$")>;
+def : InstRW<[WLat1, FXb, NormalGr], (instregex "NIAI$")>;
 
 //===----------------------------------------------------------------------===//
 // Atomic operations
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[FXb, EndGroup], (instregex "Serialize$")>;
+def : InstRW<[WLat1, FXb, EndGroup], (instregex "Serialize$")>;
 
-def : InstRW<[FXb, LSU, Lat5], (instregex "LAA(G)?$")>;
-def : InstRW<[FXb, LSU, Lat5], (instregex "LAAL(G)?$")>;
-def : InstRW<[FXb, LSU, Lat5], (instregex "LAN(G)?$")>;
-def : InstRW<[FXb, LSU, Lat5], (instregex "LAO(G)?$")>;
-def : InstRW<[FXb, LSU, Lat5], (instregex "LAX(G)?$")>;
+def : InstRW<[WLat2LSU, WLat2LSU, FXb, LSU, NormalGr], (instregex "LAA(G)?$")>;
+def : InstRW<[WLat2LSU, WLat2LSU, FXb, LSU, NormalGr], (instregex "LAAL(G)?$")>;
+def : InstRW<[WLat2LSU, WLat2LSU, FXb, LSU, NormalGr], (instregex "LAN(G)?$")>;
+def : InstRW<[WLat2LSU, WLat2LSU, FXb, LSU, NormalGr], (instregex "LAO(G)?$")>;
+def : InstRW<[WLat2LSU, WLat2LSU, FXb, LSU, NormalGr], (instregex "LAX(G)?$")>;
 
 // Test and set
-def : InstRW<[FXb, LSU, Lat5, EndGroup], (instregex "TS$")>;
+def : InstRW<[WLat2LSU, FXb, LSU, EndGroup], (instregex "TS$")>;
 
 // Compare and swap
-def : InstRW<[FXa, FXb, LSU, Lat6, GroupAlone], (instregex "CS(G|Y)?$")>;
+def : InstRW<[WLat3LSU, WLat3LSU, FXa, FXb, LSU, GroupAlone],
+             (instregex "CS(G|Y)?$")>;
 
 // Compare double and swap
-def : InstRW<[FXa, FXa, FXb, FXb, FXa, LSU, Lat10, GroupAlone],
+def : InstRW<[WLat6LSU, WLat6LSU, FXa3, FXb2, LSU, GroupAlone],
              (instregex "CDS(Y)?$")>;
-def : InstRW<[FXa, FXa, FXb, FXb, LSU, FXb, FXb, LSU, LSU, Lat20, GroupAlone],
+def : InstRW<[WLat15, WLat15, FXa2, FXb4, LSU3, GroupAlone],
              (instregex "CDSG$")>;
 
 // Compare and swap and store
-def : InstRW<[FXa, LSU, Lat30], (instregex "CSST$")>;
+def : InstRW<[WLat30, MCD], (instregex "CSST$")>;
 
 // Perform locked operation
-def : InstRW<[LSU, Lat30, GroupAlone], (instregex "PLO$")>;
+def : InstRW<[WLat30, MCD], (instregex "PLO$")>;
 
 // Load/store pair from/to quadword
-def : InstRW<[LSU, LSU, Lat5, GroupAlone], (instregex "LPQ$")>;
-def : InstRW<[FXb, FXb, LSU, Lat6, GroupAlone], (instregex "STPQ$")>;
+def : InstRW<[WLat4LSU, LSU2, GroupAlone], (instregex "LPQ$")>;
+def : InstRW<[WLat1, FXb2, LSU, GroupAlone], (instregex "STPQ$")>;
 
 // Load pair disjoint
-def : InstRW<[LSU, LSU, Lat5, GroupAlone], (instregex "LPD(G)?$")>;
+def : InstRW<[WLat1LSU, WLat1LSU, LSU2, GroupAlone], (instregex "LPD(G)?$")>;
 
 //===----------------------------------------------------------------------===//
 // Translate and convert
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[LSU, Lat30, GroupAlone], (instregex "TR$")>;
-def : InstRW<[FXa, FXa, FXa, LSU, LSU, Lat30, GroupAlone], (instregex "TRT$")>;
-def : InstRW<[FXa, LSU, Lat30], (instregex "TRTR$")>;
-def : InstRW<[FXa, Lat30], (instregex "TRE$")>;
-def : InstRW<[FXa, Lat30], (instregex "TRT(R)?E(Opt)?$")>;
-def : InstRW<[LSU, Lat30], (instregex "TR(T|O)(T|O)(Opt)?$")>;
-def : InstRW<[FXa, Lat30], (instregex "CU(12|14|21|24|41|42)(Opt)?$")>;
-def : InstRW<[FXa, Lat30], (instregex "(CUUTF|CUTFU)(Opt)?$")>;
+def : InstRW<[WLat1, LSU5, GroupAlone], (instregex "TR$")>;
+def : InstRW<[WLat30, WLat30, WLat30, FXa3, LSU2, GroupAlone],
+             (instregex "TRT$")>;
+def : InstRW<[WLat30, WLat30, WLat30, MCD], (instregex "TRTR$")>;
+def : InstRW<[WLat30, WLat30, MCD], (instregex "TRE$")>;
+def : InstRW<[WLat30, WLat30, WLat30, MCD], (instregex "TRT(R)?E(Opt)?$")>;
+def : InstRW<[WLat30, WLat30, WLat30, MCD], (instregex "TR(T|O)(T|O)(Opt)?$")>;
+def : InstRW<[WLat30, WLat30, WLat30, MCD],
+             (instregex "CU(12|14|21|24|41|42)(Opt)?$")>;
+def : InstRW<[WLat30, WLat30, WLat30, MCD], (instregex "(CUUTF|CUTFU)(Opt)?$")>;
 
 //===----------------------------------------------------------------------===//
 // Message-security assist
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[FXa, Lat30], (instregex "KM(C|F|O|CTR)?$")>;
-def : InstRW<[FXa, Lat30], (instregex "(KIMD|KLMD|KMAC|PCC|PPNO)$")>;
+def : InstRW<[WLat30, WLat30, WLat30, WLat30, MCD],
+             (instregex "KM(C|F|O|CTR)?$")>;
+def : InstRW<[WLat30, WLat30, WLat30, MCD],
+             (instregex "(KIMD|KLMD|KMAC|PCC|PPNO)$")>;
 
 //===----------------------------------------------------------------------===//
 // Decimal arithmetic
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[FXb, VecDF, VecDF, LSU, LSU, Lat30, GroupAlone],
+def : InstRW<[WLat30, RegReadAdv, FXb, VecDF2, LSU2, GroupAlone],
              (instregex "CVBG$")>;
-def : InstRW<[FXb, VecDF, LSU, Lat30, GroupAlone], (instregex "CVB(Y)?$")>;
-def : InstRW<[FXb, FXb, FXb, VecDF2, VecDF2, LSU, Lat30, GroupAlone],
-             (instregex "CVDG$")>;
-def : InstRW<[FXb, VecDF, FXb, LSU, Lat30, GroupAlone], (instregex "CVD(Y)?$")>;
-def : InstRW<[LSU, Lat10, GroupAlone], (instregex "MVO$")>;
-def : InstRW<[LSU, Lat30, GroupAlone], (instregex "MV(N|Z)$")>;
-def : InstRW<[LSU, Lat30, GroupAlone], (instregex "(PACK|PKA|PKU)$")>;
-def : InstRW<[LSU, Lat12, GroupAlone], (instregex "UNPK(A|U)$")>;
-def : InstRW<[FXb, LSU, LSU, Lat9, BeginGroup], (instregex "UNPK$")>;
+def : InstRW<[WLat30, RegReadAdv, FXb, VecDF, LSU, GroupAlone],
+             (instregex "CVB(Y)?$")>;
+def : InstRW<[WLat1, FXb3, VecDF4, LSU, GroupAlone], (instregex "CVDG$")>;
+def : InstRW<[WLat1, FXb2, VecDF, LSU, GroupAlone], (instregex "CVD(Y)?$")>;
+def : InstRW<[WLat1, LSU5, GroupAlone], (instregex "MV(N|O|Z)$")>;
+def : InstRW<[WLat1, LSU5, GroupAlone], (instregex "(PACK|PKA|PKU)$")>;
+def : InstRW<[WLat12, LSU5, GroupAlone], (instregex "UNPK(A|U)$")>;
+def : InstRW<[WLat1, FXb, LSU2, Cracked], (instregex "UNPK$")>;
 
-def : InstRW<[FXb, VecDFX, LSU, LSU, LSU, Lat9, GroupAlone],
+def : InstRW<[WLat5LSU, FXb, VecDFX, LSU3, GroupAlone],
              (instregex "(A|S|ZA)P$")>;
-def : InstRW<[FXb, VecDFX2, VecDFX2, LSU, LSU, LSU, Lat30, GroupAlone],
-             (instregex "(M|D)P$")>;
-def : InstRW<[FXb, VecDFX, VecDFX, LSU, LSU, Lat15, GroupAlone],
-             (instregex "SRP$")>;
-def : InstRW<[VecDFX, LSU, LSU, Lat5, GroupAlone], (instregex "CP$")>;
-def : InstRW<[VecDFX, LSU, Lat4, BeginGroup], (instregex "TP$")>;
-def : InstRW<[LSU, Lat30, GroupAlone], (instregex "ED(MK)?$")>;
+def : InstRW<[WLat1, FXb, VecDFX4, LSU3, GroupAlone], (instregex "(M|D)P$")>;
+def : InstRW<[WLat15, FXb, VecDFX2, LSU2, GroupAlone], (instregex "SRP$")>;
+def : InstRW<[WLat8, VecDFX, LSU, LSU, GroupAlone], (instregex "CP$")>;
+def : InstRW<[WLat3LSU, VecDFX, LSU, Cracked], (instregex "TP$")>;
+def : InstRW<[WLat30, MCD], (instregex "ED(MK)?$")>;
 
 //===----------------------------------------------------------------------===//
 // Access registers
 //===----------------------------------------------------------------------===//
 
 // Extract/set/copy access register
-def : InstRW<[LSU], (instregex "(EAR|SAR|CPYA)$")>;
+def : InstRW<[WLat3, LSU, NormalGr], (instregex "(EAR|SAR|CPYA)$")>;
 
 // Load address extended
-def : InstRW<[LSU, FXa, Lat5, BeginGroup], (instregex "LAE(Y)?$")>;
+def : InstRW<[WLat5, LSU, FXa, Cracked], (instregex "LAE(Y)?$")>;
 
 // Load/store access multiple (not modeled precisely)
-def : InstRW<[LSU, Lat30, GroupAlone], (instregex "(L|ST)AM(Y)?$")>;
+def : InstRW<[WLat20, WLat20, LSU5, GroupAlone], (instregex "LAM(Y)?$")>;
+def : InstRW<[WLat1, LSU5, GroupAlone], (instregex "STAM(Y)?$")>;
 
 //===----------------------------------------------------------------------===//
 // Program mask and addressing mode
 //===----------------------------------------------------------------------===//
 
 // Insert Program Mask
-def : InstRW<[FXa, Lat3, EndGroup], (instregex "IPM$")>;
+def : InstRW<[WLat3, FXa, EndGroup], (instregex "IPM$")>;
 
 // Set Program Mask
-def : InstRW<[LSU, EndGroup], (instregex "SPM$")>;
+def : InstRW<[WLat3, LSU, EndGroup], (instregex "SPM$")>;
 
 // Branch and link
-def : InstRW<[FXa, FXa, FXb, Lat5, GroupAlone], (instregex "BAL(R)?$")>;
+def : InstRW<[WLat1, FXa2, FXb, GroupAlone], (instregex "BAL(R)?$")>;
 
 // Test addressing mode
-def : InstRW<[FXb], (instregex "TAM$")>;
+def : InstRW<[WLat1, FXb, NormalGr], (instregex "TAM$")>;
 
 // Set addressing mode
-def : InstRW<[FXb, Lat2, EndGroup], (instregex "SAM(24|31|64)$")>;
+def : InstRW<[WLat1, FXb, EndGroup], (instregex "SAM(24|31|64)$")>;
 
 // Branch (and save) and set mode.
-def : InstRW<[FXa, FXb, Lat2, GroupAlone], (instregex "BSM$")>;
-def : InstRW<[FXa, FXa, FXb, Lat3, GroupAlone], (instregex "BASSM$")>;
+def : InstRW<[WLat1, FXa, FXb, GroupAlone], (instregex "BSM$")>;
+def : InstRW<[WLat1, FXa2, FXb, GroupAlone], (instregex "BASSM$")>;
 
 //===----------------------------------------------------------------------===//
 // Transactional execution
 //===----------------------------------------------------------------------===//
 
 // Transaction begin
-def : InstRW<[LSU, LSU, FXb, FXb, FXb, FXb, FXb, Lat15, GroupAlone],
-              (instregex "TBEGIN(C)?$")>;
+def : InstRW<[WLat9, LSU2, FXb5, GroupAlone], (instregex "TBEGIN(C)?$")>;
 
 // Transaction end
-def : InstRW<[FXb, GroupAlone], (instregex "TEND$")>;
+def : InstRW<[WLat1, FXb, GroupAlone], (instregex "TEND$")>;
 
 // Transaction abort
-def : InstRW<[LSU, GroupAlone], (instregex "TABORT$")>;
+def : InstRW<[WLat30, MCD], (instregex "TABORT$")>;
 
 // Extract Transaction Nesting Depth
-def : InstRW<[FXa], (instregex "ETND$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "ETND$")>;
 
 // Nontransactional store
-def : InstRW<[FXb, LSU, Lat5], (instregex "NTSTG$")>;
+def : InstRW<[WLat1, FXb, LSU, NormalGr], (instregex "NTSTG$")>;
 
 //===----------------------------------------------------------------------===//
 // Processor assist
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[FXb], (instregex "PPA$")>;
+def : InstRW<[WLat30, MCD], (instregex "PPA$")>;
 
 //===----------------------------------------------------------------------===//
 // Miscellaneous Instructions.
 //===----------------------------------------------------------------------===//
 
 // Find leftmost one
-def : InstRW<[FXa, FXa, Lat6, GroupAlone], (instregex "FLOGR$")>;
+def : InstRW<[WLat7, WLat7, FXa2, GroupAlone], (instregex "FLOGR$")>;
 
 // Population count
-def : InstRW<[FXa, Lat3], (instregex "POPCNT$")>;
+def : InstRW<[WLat3, WLat3, FXa, NormalGr], (instregex "POPCNT$")>;
 
 // String instructions
-def : InstRW<[FXa, LSU, Lat30], (instregex "SRST$")>;
-def : InstRW<[FXa, Lat30], (instregex "SRSTU$")>;
-def : InstRW<[LSU, Lat30, GroupAlone], (instregex "CUSE$")>;
+def : InstRW<[WLat30, WLat30, WLat30, MCD], (instregex "SRST(U)?$")>;
+def : InstRW<[WLat30, WLat30, WLat30, MCD], (instregex "CUSE$")>;
 
 // Various complex instructions
-def : InstRW<[LSU, Lat30], (instregex "CFC$")>;
-def : InstRW<[FXb, LSU, Lat30], (instregex "UPT$")>;
-def : InstRW<[LSU, Lat30], (instregex "CKSM$")>;
-def : InstRW<[FXa, Lat30], (instregex "CMPSC$")>;
+def : InstRW<[WLat30, WLat30, WLat30, WLat30, MCD], (instregex "CFC$")>;
+def : InstRW<[WLat30, WLat30, WLat30, WLat30, WLat30, WLat30, MCD],
+             (instregex "UPT$")>;
+def : InstRW<[WLat30, WLat30, WLat30, MCD], (instregex "CKSM$")>;
+def : InstRW<[WLat30, WLat30, WLat30, WLat30, MCD], (instregex "CMPSC$")>;
 
 // Execute
-def : InstRW<[FXb, GroupAlone], (instregex "EX(RL)?$")>;
+def : InstRW<[WLat1, FXb, GroupAlone], (instregex "EX(RL)?$")>;
 
 //===----------------------------------------------------------------------===//
 // .insn directive instructions
@@ -711,155 +784,154 @@ def : InstRW<[], (instregex "Insn.*")>;
 //===----------------------------------------------------------------------===//
 
 // Load zero
-def : InstRW<[FXb], (instregex "LZ(DR|ER)$")>;
-def : InstRW<[FXb, FXb, Lat2, BeginGroup], (instregex "LZXR$")>;
+def : InstRW<[WLat1, FXb, NormalGr], (instregex "LZ(DR|ER)$")>;
+def : InstRW<[WLat2, FXb2, Cracked], (instregex "LZXR$")>;
 
 // Load
-def : InstRW<[VecXsPm], (instregex "LER$")>;
-def : InstRW<[FXb], (instregex "LD(R|R32|GR)$")>;
-def : InstRW<[FXb, Lat3], (instregex "LGDR$")>;
-def : InstRW<[FXb, FXb, Lat2, GroupAlone], (instregex "LXR$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "LER$")>;
+def : InstRW<[WLat1, FXb, NormalGr], (instregex "LD(R|R32|GR)$")>;
+def : InstRW<[WLat3, FXb, NormalGr], (instregex "LGDR$")>;
+def : InstRW<[WLat2, FXb2, GroupAlone], (instregex "LXR$")>;
 
 // Load and Test
-def : InstRW<[VecXsPm, Lat4], (instregex "LT(D|E)BR$")>;
-def : InstRW<[VecXsPm, Lat4], (instregex "LTEBRCompare$")>;
-def : InstRW<[VecXsPm, Lat4], (instregex "LTDBRCompare$")>;
-def : InstRW<[VecDF2, VecDF2, Lat11, GroupAlone], (instregex "LTXBR$")>;
-def : InstRW<[VecDF2, VecDF2, Lat11, GroupAlone], (instregex "LTXBRCompare$")>;
+def : InstRW<[WLat3, WLat3, VecXsPm, NormalGr], (instregex "LT(E|D)BR$")>;
+def : InstRW<[WLat3, VecXsPm, NormalGr], (instregex "LT(E|D)BRCompare$")>;
+def : InstRW<[WLat10, WLat10, VecDF4, GroupAlone],
+             (instregex "LTXBR(Compare)?$")>;
 
 // Copy sign
-def : InstRW<[VecXsPm], (instregex "CPSDRd(d|s)$")>;
-def : InstRW<[VecXsPm], (instregex "CPSDRs(d|s)$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "CPSDR(d|s)(d|s)$")>;
 
 //===----------------------------------------------------------------------===//
 // FP: Load instructions
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[VecXsPm, LSU, Lat7], (instregex "LE(Y)?$")>;
-def : InstRW<[LSU], (instregex "LD(Y|E32)?$")>;
-def : InstRW<[LSU], (instregex "LX$")>;
+def : InstRW<[WLat2LSU, VecXsPm, LSU, NormalGr], (instregex "LE(Y)?$")>;
+def : InstRW<[LSULatency, LSU, NormalGr], (instregex "LD(Y|E32)?$")>;
+def : InstRW<[LSULatency, LSU, NormalGr], (instregex "LX$")>;
 
 //===----------------------------------------------------------------------===//
 // FP: Store instructions
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[FXb, LSU, Lat7], (instregex "STD(Y)?$")>;
-def : InstRW<[FXb, LSU, Lat7], (instregex "STE(Y)?$")>;
-def : InstRW<[FXb, LSU, Lat5], (instregex "STX$")>;
+def : InstRW<[WLat1, FXb, LSU, NormalGr], (instregex "ST(E|D)(Y)?$")>;
+def : InstRW<[WLat1, FXb, LSU, NormalGr], (instregex "STX$")>;
 
 //===----------------------------------------------------------------------===//
 // FP: Conversion instructions
 //===----------------------------------------------------------------------===//
 
 // Load rounded
-def : InstRW<[VecBF], (instregex "LEDBR(A)?$")>;
-def : InstRW<[VecDF, VecDF, Lat20], (instregex "LEXBR(A)?$")>;
-def : InstRW<[VecDF, VecDF, Lat20], (instregex "LDXBR(A)?$")>;
+def : InstRW<[WLat7, VecBF, NormalGr], (instregex "LEDBR(A)?$")>;
+def : InstRW<[WLat9, VecDF2, NormalGr], (instregex "L(E|D)XBR(A)?$")>;
 
 // Load lengthened
-def : InstRW<[VecBF, LSU, Lat12], (instregex "LDEB$")>;
-def : InstRW<[VecBF], (instregex "LDEBR$")>;
-def : InstRW<[VecBF2, VecBF2, LSU, Lat12 , GroupAlone], (instregex "LX(D|E)B$")>;
-def : InstRW<[VecBF2, VecBF2, GroupAlone], (instregex "LX(D|E)BR$")>;
+def : InstRW<[WLat7LSU, VecBF, LSU, NormalGr], (instregex "LDEB$")>;
+def : InstRW<[WLat7, VecBF, NormalGr], (instregex "LDEBR$")>;
+def : InstRW<[WLat8LSU, VecBF4, LSU, GroupAlone], (instregex "LX(E|D)B$")>;
+def : InstRW<[WLat8, VecBF4, GroupAlone], (instregex "LX(E|D)BR$")>;
 
 // Convert from fixed / logical
-def : InstRW<[FXb, VecBF, Lat9, BeginGroup], (instregex "CE(F|G)BR(A)?$")>;
-def : InstRW<[FXb, VecBF, Lat9, BeginGroup], (instregex "CD(F|G)BR(A)?$")>;
-def : InstRW<[FXb, VecDF2, VecDF2, Lat12, GroupAlone], (instregex "CX(F|G)BR(A)?$")>;
-def : InstRW<[FXb, VecBF, Lat9, BeginGroup], (instregex "CEL(F|G)BR$")>;
-def : InstRW<[FXb, VecBF, Lat9, BeginGroup], (instregex "CDL(F|G)BR$")>;
-def : InstRW<[FXb, VecDF2, VecDF2, Lat12, GroupAlone], (instregex "CXL(F|G)BR$")>;
+def : InstRW<[WLat8, FXb, VecBF, Cracked], (instregex "C(E|D)(F|G)BR(A)?$")>;
+def : InstRW<[WLat11, FXb, VecDF4, GroupAlone], (instregex "CX(F|G)BR(A)?$")>;
+def : InstRW<[WLat8, FXb, VecBF, Cracked], (instregex "C(E|D)L(F|G)BR$")>;
+def : InstRW<[WLat11, FXb, VecDF4, GroupAlone], (instregex "CXL(F|G)BR$")>;
 
 // Convert to fixed / logical
-def : InstRW<[FXb, VecBF, Lat11, BeginGroup], (instregex "CF(E|D)BR(A)?$")>;
-def : InstRW<[FXb, VecBF, Lat11, BeginGroup], (instregex "CG(E|D)BR(A)?$")>;
-def : InstRW<[FXb, VecDF, VecDF, Lat20, BeginGroup], (instregex "C(F|G)XBR(A)?$")>;
-def : InstRW<[FXb, VecBF, Lat11, GroupAlone], (instregex "CLFEBR$")>;
-def : InstRW<[FXb, VecBF, Lat11, BeginGroup], (instregex "CLFDBR$")>;
-def : InstRW<[FXb, VecBF, Lat11, BeginGroup], (instregex "CLG(E|D)BR$")>;
-def : InstRW<[FXb, VecDF, VecDF, Lat20, BeginGroup], (instregex "CL(F|G)XBR$")>;
+def : InstRW<[WLat10, WLat10, FXb, VecBF, Cracked],
+             (instregex "C(F|G)(E|D)BR(A)?$")>;
+def : InstRW<[WLat12, WLat12, FXb, VecDF2, Cracked],
+             (instregex "C(F|G)XBR(A)?$")>;
+def : InstRW<[WLat10, WLat10, FXb, VecBF, GroupAlone], (instregex "CLFEBR$")>;
+def : InstRW<[WLat10, WLat10, FXb, VecBF, Cracked], (instregex "CLFDBR$")>;
+def : InstRW<[WLat10, WLat10, FXb, VecBF, Cracked], (instregex "CLG(E|D)BR$")>;
+def : InstRW<[WLat12, WLat12, FXb, VecDF2, Cracked], (instregex "CL(F|G)XBR$")>;
 
 //===----------------------------------------------------------------------===//
 // FP: Unary arithmetic
 //===----------------------------------------------------------------------===//
 
 // Load Complement / Negative / Positive
-def : InstRW<[VecXsPm, Lat4], (instregex "L(C|N|P)DBR$")>;
-def : InstRW<[VecXsPm, Lat4], (instregex "L(C|N|P)EBR$")>;
-def : InstRW<[FXb], (instregex "LCDFR(_32)?$")>;
-def : InstRW<[FXb], (instregex "LNDFR(_32)?$")>;
-def : InstRW<[FXb], (instregex "LPDFR(_32)?$")>;
-def : InstRW<[VecDF2, VecDF2, Lat11, GroupAlone], (instregex "L(C|N|P)XBR$")>;
+def : InstRW<[WLat3, WLat3, VecXsPm, NormalGr], (instregex "L(C|N|P)(E|D)BR$")>;
+def : InstRW<[WLat1, FXb, NormalGr], (instregex "L(C|N|P)DFR(_32)?$")>;
+def : InstRW<[WLat10, WLat10, VecDF4, GroupAlone], (instregex "L(C|N|P)XBR$")>;
 
 // Square root
-def : InstRW<[VecFPd, LSU], (instregex "SQ(E|D)B$")>;
-def : InstRW<[VecFPd], (instregex "SQ(E|D)BR$")>;
-def : InstRW<[VecFPd, VecFPd, GroupAlone], (instregex "SQXBR$")>;
+def : InstRW<[WLat30, VecFPd, LSU, NormalGr], (instregex "SQ(E|D)B$")>;
+def : InstRW<[WLat30, VecFPd, NormalGr], (instregex "SQ(E|D)BR$")>;
+def : InstRW<[WLat30, VecFPd, GroupAlone], (instregex "SQXBR$")>;
 
 // Load FP integer
-def : InstRW<[VecBF], (instregex "FIEBR(A)?$")>;
-def : InstRW<[VecBF], (instregex "FIDBR(A)?$")>;
-def : InstRW<[VecDF2, VecDF2, Lat11, GroupAlone], (instregex "FIXBR(A)?$")>;
+def : InstRW<[WLat7, VecBF, NormalGr], (instregex "FI(E|D)BR(A)?$")>;
+def : InstRW<[WLat10, VecDF4, GroupAlone], (instregex "FIXBR(A)?$")>;
 
 //===----------------------------------------------------------------------===//
 // FP: Binary arithmetic
 //===----------------------------------------------------------------------===//
 
 // Addition
-def : InstRW<[VecBF, LSU, Lat12], (instregex "A(E|D)B$")>;
-def : InstRW<[VecBF], (instregex "A(E|D)BR$")>;
-def : InstRW<[VecDF2, VecDF2, Lat10, GroupAlone], (instregex "AXBR$")>;
+def : InstRW<[WLat7LSU, WLat7LSU, RegReadAdv, VecBF, LSU, NormalGr],
+             (instregex "A(E|D)B$")>;
+def : InstRW<[WLat7, WLat7, VecBF, NormalGr], (instregex "A(E|D)BR$")>;
+def : InstRW<[WLat10, WLat10, VecDF4, GroupAlone], (instregex "AXBR$")>;
 
 // Subtraction
-def : InstRW<[VecBF, LSU, Lat12], (instregex "S(E|D)B$")>;
-def : InstRW<[VecBF], (instregex "S(E|D)BR$")>;
-def : InstRW<[VecDF2, VecDF2, Lat11, GroupAlone], (instregex "SXBR$")>;
+def : InstRW<[WLat7LSU, WLat7LSU, RegReadAdv, VecBF, LSU, NormalGr],
+             (instregex "S(E|D)B$")>;
+def : InstRW<[WLat7, WLat7, VecBF, NormalGr], (instregex "S(E|D)BR$")>;
+def : InstRW<[WLat10, WLat10, VecDF4, GroupAlone], (instregex "SXBR$")>;
 
 // Multiply
-def : InstRW<[VecBF, LSU, Lat12], (instregex "M(D|DE|EE)B$")>;
-def : InstRW<[VecBF], (instregex "M(D|DE|EE)BR$")>;
-def : InstRW<[VecBF2, VecBF2, LSU, Lat12, GroupAlone], (instregex "MXDB$")>;
-def : InstRW<[VecBF2, VecBF2, GroupAlone], (instregex "MXDBR$")>;
-def : InstRW<[VecDF2, VecDF2, Lat20, GroupAlone], (instregex "MXBR$")>;
+def : InstRW<[WLat7LSU, RegReadAdv, VecBF, LSU, NormalGr],
+             (instregex "M(D|DE|EE)B$")>;
+def : InstRW<[WLat7, VecBF, NormalGr], (instregex "M(D|DE|EE)BR$")>;
+def : InstRW<[WLat8LSU, RegReadAdv, VecBF4, LSU, GroupAlone],
+             (instregex "MXDB$")>;
+def : InstRW<[WLat8, VecBF4, GroupAlone], (instregex "MXDBR$")>;
+def : InstRW<[WLat20, VecDF4, GroupAlone], (instregex "MXBR$")>;
 
 // Multiply and add / subtract
-def : InstRW<[VecBF2, LSU, Lat12, GroupAlone], (instregex "M(A|S)EB$")>;
-def : InstRW<[VecBF, GroupAlone], (instregex "M(A|S)EBR$")>;
-def : InstRW<[VecBF2, LSU, Lat12, GroupAlone], (instregex "M(A|S)DB$")>;
-def : InstRW<[VecBF], (instregex "M(A|S)DBR$")>;
+def : InstRW<[WLat7LSU, RegReadAdv, RegReadAdv, VecBF2, LSU, GroupAlone],
+             (instregex "M(A|S)EB$")>;
+def : InstRW<[WLat7, VecBF, GroupAlone], (instregex "M(A|S)EBR$")>;
+def : InstRW<[WLat7LSU, RegReadAdv, RegReadAdv, VecBF2, LSU, GroupAlone],
+             (instregex "M(A|S)DB$")>;
+def : InstRW<[WLat7, VecBF, NormalGr], (instregex "M(A|S)DBR$")>;
 
 // Division
-def : InstRW<[VecFPd, LSU], (instregex "D(E|D)B$")>;
-def : InstRW<[VecFPd], (instregex "D(E|D)BR$")>;
-def : InstRW<[VecFPd, VecFPd, GroupAlone], (instregex "DXBR$")>;
+def : InstRW<[WLat30, RegReadAdv, VecFPd, LSU, NormalGr],
+             (instregex "D(E|D)B$")>;
+def : InstRW<[WLat30, VecFPd, NormalGr], (instregex "D(E|D)BR$")>;
+def : InstRW<[WLat30, VecFPd, GroupAlone], (instregex "DXBR$")>;
 
 // Divide to integer
-def : InstRW<[VecFPd, Lat30], (instregex "DI(E|D)BR$")>;
+def : InstRW<[WLat30, WLat30, WLat30, MCD], (instregex "DI(E|D)BR$")>;
 
 //===----------------------------------------------------------------------===//
 // FP: Comparisons
 //===----------------------------------------------------------------------===//
 
 // Compare
-def : InstRW<[VecXsPm, LSU, Lat8], (instregex "(K|C)(E|D)B$")>;
-def : InstRW<[VecXsPm, Lat4], (instregex "(K|C)(E|D)BR$")>;
-def : InstRW<[VecDF, VecDF, Lat20, GroupAlone], (instregex "(K|C)XBR$")>;
+def : InstRW<[WLat3LSU, RegReadAdv, VecXsPm, LSU, NormalGr],
+             (instregex "(K|C)(E|D)B$")>;
+def : InstRW<[WLat3, VecXsPm, NormalGr], (instregex "(K|C)(E|D)BR$")>;
+def : InstRW<[WLat9, VecDF2, GroupAlone], (instregex "(K|C)XBR$")>;
 
 // Test Data Class
-def : InstRW<[LSU, VecXsPm, Lat9], (instregex "TC(E|D)B$")>;
-def : InstRW<[LSU, VecDF2, VecDF2, Lat15, GroupAlone], (instregex "TCXB$")>;
+def : InstRW<[WLat5, LSU, VecXsPm, NormalGr], (instregex "TC(E|D)B$")>;
+def : InstRW<[WLat10, LSU2, VecDF4, GroupAlone], (instregex "TCXB$")>;
 
 //===----------------------------------------------------------------------===//
 // FP: Floating-point control register instructions
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[FXa, LSU, Lat4, GroupAlone], (instregex "EFPC$")>;
-def : InstRW<[FXb, LSU, Lat5, GroupAlone], (instregex "STFPC$")>;
-def : InstRW<[LSU, Lat3, GroupAlone], (instregex "SFPC$")>;
-def : InstRW<[LSU, LSU, Lat6, GroupAlone], (instregex "LFPC$")>;
-def : InstRW<[FXa, Lat30], (instregex "SFASR$")>;
-def : InstRW<[FXa, LSU, Lat30], (instregex "LFAS$")>;
-def : InstRW<[FXb, Lat3, GroupAlone], (instregex "SRNM(B|T)?$")>;
+def : InstRW<[WLat4, FXa, LSU, GroupAlone], (instregex "EFPC$")>;
+def : InstRW<[WLat1, FXb, LSU, GroupAlone], (instregex "STFPC$")>;
+def : InstRW<[WLat3, LSU, GroupAlone], (instregex "SFPC$")>;
+def : InstRW<[WLat3LSU, LSU2, GroupAlone], (instregex "LFPC$")>;
+def : InstRW<[WLat30, MCD], (instregex "SFASR$")>;
+def : InstRW<[WLat30, MCD], (instregex "LFAS$")>;
+def : InstRW<[WLat3, FXb, GroupAlone], (instregex "SRNM(B|T)?$")>;
 
 
 // --------------------- Hexadecimal floating point ------------------------- //
@@ -869,108 +941,113 @@ def : InstRW<[FXb, Lat3, GroupAlone], (instregex "SRNM(B|T)?$")>;
 //===----------------------------------------------------------------------===//
 
 // Load and Test
-def : InstRW<[VecXsPm, Lat4], (instregex "LT(D|E)R$")>;
-def : InstRW<[VecDF2, VecDF2, Lat11, GroupAlone], (instregex "LTXR$")>;
+def : InstRW<[WLat3, WLat3, VecXsPm, NormalGr], (instregex "LT(E|D)R$")>;
+def : InstRW<[WLat10, WLat10, VecDF4, GroupAlone], (instregex "LTXR$")>;
 
 //===----------------------------------------------------------------------===//
 // HFP: Conversion instructions
 //===----------------------------------------------------------------------===//
 
 // Load rounded
-def : InstRW<[VecBF], (instregex "(LEDR|LRER)$")>;
-def : InstRW<[VecBF], (instregex "LEXR$")>;
-def : InstRW<[VecDF2], (instregex "(LDXR|LRDR)$")>;
+def : InstRW<[WLat7, VecBF, NormalGr], (instregex "(LEDR|LRER)$")>;
+def : InstRW<[WLat7, VecBF, NormalGr], (instregex "LEXR$")>;
+def : InstRW<[WLat9, VecDF2, NormalGr], (instregex "(LDXR|LRDR)$")>;
 
 // Load lengthened
-def : InstRW<[LSU], (instregex "LDE$")>;
-def : InstRW<[FXb], (instregex "LDER$")>;
-def : InstRW<[VecBF2, VecBF2, LSU, Lat12, GroupAlone], (instregex "LX(D|E)$")>;
-def : InstRW<[VecBF2, VecBF2, GroupAlone], (instregex "LX(D|E)R$")>;
+def : InstRW<[LSULatency, LSU, NormalGr], (instregex "LDE$")>;
+def : InstRW<[WLat1, FXb, NormalGr], (instregex "LDER$")>;
+def : InstRW<[WLat8LSU, VecBF4, LSU, GroupAlone], (instregex "LX(E|D)$")>;
+def : InstRW<[WLat8, VecBF4, GroupAlone], (instregex "LX(E|D)R$")>;
 
 // Convert from fixed
-def : InstRW<[FXb, VecBF, Lat9, BeginGroup], (instregex "CE(F|G)R$")>;
-def : InstRW<[FXb, VecBF, Lat9, BeginGroup], (instregex "CD(F|G)R$")>;
-def : InstRW<[FXb, VecDF2, VecDF2, Lat12, GroupAlone], (instregex "CX(F|G)R$")>;
+def : InstRW<[WLat8, FXb, VecBF, Cracked], (instregex "C(E|D)(F|G)R$")>;
+def : InstRW<[WLat11, FXb, VecDF4, GroupAlone], (instregex "CX(F|G)R$")>;
 
 // Convert to fixed
-def : InstRW<[FXb, VecBF, Lat11, BeginGroup], (instregex "CF(E|D)R$")>;
-def : InstRW<[FXb, VecBF, Lat11, BeginGroup], (instregex "CG(E|D)R$")>;
-def : InstRW<[FXb, VecDF, VecDF, Lat20, BeginGroup], (instregex "C(F|G)XR$")>;
+def : InstRW<[WLat10, WLat10, FXb, VecBF, Cracked], (instregex "C(F|G)(E|D)R$")>;
+def : InstRW<[WLat12, WLat12, FXb, VecDF2, Cracked], (instregex "C(F|G)XR$")>;
 
 // Convert BFP to HFP / HFP to BFP.
-def : InstRW<[VecBF], (instregex "THD(E)?R$")>;
-def : InstRW<[VecBF], (instregex "TB(E)?DR$")>;
+def : InstRW<[WLat7, WLat7, VecBF, NormalGr], (instregex "THD(E)?R$")>;
+def : InstRW<[WLat7, WLat7, VecBF, NormalGr], (instregex "TB(E)?DR$")>;
 
 //===----------------------------------------------------------------------===//
 // HFP: Unary arithmetic
 //===----------------------------------------------------------------------===//
 
 // Load Complement / Negative / Positive
-def : InstRW<[VecXsPm, Lat4], (instregex "L(C|N|P)DR$")>;
-def : InstRW<[VecXsPm, Lat4], (instregex "L(C|N|P)ER$")>;
-def : InstRW<[VecDF2, VecDF2, Lat11, GroupAlone], (instregex "L(C|N|P)XR$")>;
+def : InstRW<[WLat3, WLat3, VecXsPm, NormalGr], (instregex "L(C|N|P)(E|D)R$")>;
+def : InstRW<[WLat10, WLat10, VecDF4, GroupAlone], (instregex "L(C|N|P)XR$")>;
 
 // Halve
-def : InstRW<[VecBF], (instregex "H(E|D)R$")>;
+def : InstRW<[WLat7, VecBF, NormalGr], (instregex "H(E|D)R$")>;
 
 // Square root
-def : InstRW<[VecFPd, LSU], (instregex "SQ(E|D)$")>;
-def : InstRW<[VecFPd], (instregex "SQ(E|D)R$")>;
-def : InstRW<[VecFPd, VecFPd, GroupAlone], (instregex "SQXR$")>;
+def : InstRW<[WLat30, VecFPd, LSU, NormalGr], (instregex "SQ(E|D)$")>;
+def : InstRW<[WLat30, VecFPd, NormalGr], (instregex "SQ(E|D)R$")>;
+def : InstRW<[WLat30, VecFPd, GroupAlone], (instregex "SQXR$")>;
 
 // Load FP integer
-def : InstRW<[VecBF], (instregex "FIER$")>;
-def : InstRW<[VecBF], (instregex "FIDR$")>;
-def : InstRW<[VecDF2, VecDF2, Lat11, GroupAlone], (instregex "FIXR$")>;
+def : InstRW<[WLat7, VecBF, NormalGr], (instregex "FI(E|D)R$")>;
+def : InstRW<[WLat10, VecDF4, GroupAlone], (instregex "FIXR$")>;
 
 //===----------------------------------------------------------------------===//
 // HFP: Binary arithmetic
 //===----------------------------------------------------------------------===//
 
 // Addition
-def : InstRW<[VecBF, LSU, Lat12], (instregex "A(E|D|U|W)$")>;
-def : InstRW<[VecBF], (instregex "A(E|D|U|W)R$")>;
-def : InstRW<[VecDF2, VecDF2, Lat10, GroupAlone], (instregex "AXR$")>;
+def : InstRW<[WLat7LSU, WLat7LSU, RegReadAdv, VecBF, LSU, NormalGr],
+             (instregex "A(E|D|U|W)$")>;
+def : InstRW<[WLat7, WLat7, VecBF, NormalGr], (instregex "A(E|D|U|W)R$")>;
+def : InstRW<[WLat10, WLat10, VecDF4, GroupAlone], (instregex "AXR$")>;
 
 // Subtraction
-def : InstRW<[VecBF, LSU, Lat12], (instregex "S(E|D|U|W)$")>;
-def : InstRW<[VecBF], (instregex "S(E|D|U|W)R$")>;
-def : InstRW<[VecDF2, VecDF2, Lat11, GroupAlone], (instregex "SXR$")>;
+def : InstRW<[WLat7LSU, WLat7LSU, RegReadAdv, VecBF, LSU, NormalGr],
+             (instregex "S(E|D|U|W)$")>;
+def : InstRW<[WLat7, WLat7, VecBF, NormalGr], (instregex "S(E|D|U|W)R$")>;
+def : InstRW<[WLat10, WLat10, VecDF4, GroupAlone], (instregex "SXR$")>;
 
 // Multiply
-def : InstRW<[VecBF, LSU, Lat12], (instregex "M(D|DE|E|EE)$")>;
-def : InstRW<[VecBF], (instregex "M(D|DE|E|EE)R$")>;
-def : InstRW<[VecBF2, VecBF2, LSU, Lat12, GroupAlone], (instregex "MXD$")>;
-def : InstRW<[VecBF2, VecBF2, GroupAlone], (instregex "MXDR$")>;
-def : InstRW<[VecDF2, VecDF2, Lat20, GroupAlone], (instregex "MXR$")>;
-def : InstRW<[VecBF2, VecBF2, LSU, Lat12, GroupAlone], (instregex "MY$")>;
-def : InstRW<[VecBF2, LSU, Lat12, GroupAlone], (instregex "MY(H|L)$")>;
-def : InstRW<[VecBF2, VecBF2, GroupAlone], (instregex "MYR$")>;
-def : InstRW<[VecBF, GroupAlone], (instregex "MY(H|L)R$")>;
+def : InstRW<[WLat7LSU, RegReadAdv, VecBF, LSU, NormalGr],
+             (instregex "M(D|DE|E|EE)$")>;
+def : InstRW<[WLat7, VecBF, NormalGr], (instregex "M(D|DE|E|EE)R$")>;
+def : InstRW<[WLat8LSU, RegReadAdv, VecBF4, LSU, GroupAlone],
+             (instregex "MXD$")>;
+def : InstRW<[WLat8, VecBF4, GroupAlone], (instregex "MXDR$")>;
+def : InstRW<[WLat30, VecDF4, GroupAlone], (instregex "MXR$")>;
+def : InstRW<[WLat8LSU, RegReadAdv, VecBF4, LSU, GroupAlone],
+             (instregex "MY$")>;
+def : InstRW<[WLat7LSU, RegReadAdv, VecBF2, LSU, GroupAlone],
+             (instregex "MY(H|L)$")>;
+def : InstRW<[WLat8, VecBF4, GroupAlone], (instregex "MYR$")>;
+def : InstRW<[WLat7, VecBF, GroupAlone], (instregex "MY(H|L)R$")>;
 
 // Multiply and add / subtract
-def : InstRW<[VecBF2, LSU, Lat12, GroupAlone], (instregex "M(A|S)E$")>;
-def : InstRW<[VecBF, GroupAlone], (instregex "M(A|S)ER$")>;
-def : InstRW<[VecBF2, LSU, Lat12, GroupAlone], (instregex "M(A|S)D$")>;
-def : InstRW<[VecBF, GroupAlone], (instregex "M(A|S)DR$")>;
-def : InstRW<[VecBF2, LSU, Lat12, GroupAlone], (instregex "MAY(H|L)$")>;
-def : InstRW<[VecBF2, VecBF2, LSU, Lat12, GroupAlone], (instregex "MAY$")>;
-def : InstRW<[VecBF, GroupAlone], (instregex "MAY(H|L)R$")>;
-def : InstRW<[VecBF2, VecBF2, GroupAlone], (instregex "MAYR$")>;
+def : InstRW<[WLat7LSU, RegReadAdv, RegReadAdv, VecBF2, LSU, GroupAlone],
+             (instregex "M(A|S)(E|D)$")>;
+def : InstRW<[WLat7, VecBF, GroupAlone], (instregex "M(A|S)(E|D)R$")>;
+def : InstRW<[WLat8LSU, RegReadAdv, RegReadAdv, VecBF4, LSU, GroupAlone],
+             (instregex "MAY$")>;
+def : InstRW<[WLat7LSU, RegReadAdv, RegReadAdv, VecBF2, LSU, GroupAlone],
+             (instregex "MAY(H|L)$")>;
+def : InstRW<[WLat8, VecBF4, GroupAlone], (instregex "MAYR$")>;
+def : InstRW<[WLat7, VecBF, GroupAlone], (instregex "MAY(H|L)R$")>;
 
 // Division
-def : InstRW<[VecFPd, LSU], (instregex "D(E|D)$")>;
-def : InstRW<[VecFPd], (instregex "D(E|D)R$")>;
-def : InstRW<[VecFPd, VecFPd, GroupAlone], (instregex "DXR$")>;
+def : InstRW<[WLat30, RegReadAdv, VecFPd, LSU, NormalGr],
+             (instregex "D(E|D)$")>;
+def : InstRW<[WLat30, VecFPd, NormalGr], (instregex "D(E|D)R$")>;
+def : InstRW<[WLat30, VecFPd, GroupAlone], (instregex "DXR$")>;
 
 //===----------------------------------------------------------------------===//
 // HFP: Comparisons
 //===----------------------------------------------------------------------===//
 
 // Compare
-def : InstRW<[VecBF, LSU, Lat12], (instregex "C(E|D)$")>;
-def : InstRW<[VecBF], (instregex "C(E|D)R$")>;
-def : InstRW<[VecDF, VecDF, Lat20, GroupAlone], (instregex "CXR$")>;
+def : InstRW<[WLat7LSU, RegReadAdv, VecBF, LSU, NormalGr],
+             (instregex "C(E|D)$")>;
+def : InstRW<[WLat7, VecBF, NormalGr], (instregex "C(E|D)R$")>;
+def : InstRW<[WLat10, VecDF2, GroupAlone], (instregex "CXR$")>;
 
 
 // ------------------------ Decimal floating point -------------------------- //
@@ -980,121 +1057,123 @@ def : InstRW<[VecDF, VecDF, Lat20, GroupAlone], (instregex "CXR$")>;
 //===----------------------------------------------------------------------===//
 
 // Load and Test
-def : InstRW<[VecDF], (instregex "LTDTR$")>;
-def : InstRW<[VecDF2, VecDF2, Lat11, GroupAlone], (instregex "LTXTR$")>;
+def : InstRW<[WLat8, WLat8, VecDF, NormalGr], (instregex "LTDTR$")>;
+def : InstRW<[WLat10, WLat10, VecDF4, GroupAlone], (instregex "LTXTR$")>;
 
 //===----------------------------------------------------------------------===//
 // DFP: Conversion instructions
 //===----------------------------------------------------------------------===//
 
 // Load rounded
-def : InstRW<[VecDF, Lat15], (instregex "LEDTR$")>;
-def : InstRW<[VecDF, VecDF, Lat20], (instregex "LDXTR$")>;
+def : InstRW<[WLat15, VecDF, NormalGr], (instregex "LEDTR$")>;
+def : InstRW<[WLat15, VecDF2, NormalGr], (instregex "LDXTR$")>;
 
 // Load lengthened
-def : InstRW<[VecDF], (instregex "LDETR$")>;
-def : InstRW<[VecDF2, VecDF2, Lat11, GroupAlone], (instregex "LXDTR$")>;
+def : InstRW<[WLat8, VecDF, NormalGr], (instregex "LDETR$")>;
+def : InstRW<[WLat10, VecDF4, GroupAlone], (instregex "LXDTR$")>;
 
 // Convert from fixed / logical
-def : InstRW<[FXb, VecDF, Lat30, BeginGroup], (instregex "CD(F|G)TR(A)?$")>;
-def : InstRW<[FXb, VecDF2, VecDF2, Lat30, GroupAlone], (instregex "CX(F|G)TR(A)?$")>;
-def : InstRW<[FXb, VecDF, Lat30, BeginGroup], (instregex "CDL(F|G)TR$")>;
-def : InstRW<[FXb, VecDF2, VecDF2, Lat30, GroupAlone], (instregex "CXL(F|G)TR$")>;
+def : InstRW<[WLat30, FXb, VecDF, Cracked], (instregex "CD(F|G)TR(A)?$")>;
+def : InstRW<[WLat30, FXb, VecDF4, GroupAlone], (instregex "CX(F|G)TR(A)?$")>;
+def : InstRW<[WLat30, FXb, VecDF, Cracked], (instregex "CDL(F|G)TR$")>;
+def : InstRW<[WLat30, FXb, VecDF4, GroupAlone], (instregex "CXL(F|G)TR$")>;
 
 // Convert to fixed / logical
-def : InstRW<[FXb, VecDF, Lat30, BeginGroup], (instregex "C(F|G)DTR(A)?$")>;
-def : InstRW<[FXb, VecDF, VecDF, Lat30, BeginGroup], (instregex "C(F|G)XTR(A)?$")>;
-def : InstRW<[FXb, VecDF, Lat30, BeginGroup], (instregex "CL(F|G)DTR$")>;
-def : InstRW<[FXb, VecDF, VecDF, Lat30, BeginGroup], (instregex "CL(F|G)XTR$")>;
+def : InstRW<[WLat30, WLat30, FXb, VecDF, Cracked],
+             (instregex "C(F|G)DTR(A)?$")>;
+def : InstRW<[WLat30, WLat30, FXb, VecDF2, Cracked],
+             (instregex "C(F|G)XTR(A)?$")>;
+def : InstRW<[WLat30, WLat30, FXb, VecDF, Cracked], (instregex "CL(F|G)DTR$")>;
+def : InstRW<[WLat30, WLat30, FXb, VecDF2, Cracked], (instregex "CL(F|G)XTR$")>;
 
 // Convert from / to signed / unsigned packed
-def : InstRW<[FXb, VecDF, Lat9, BeginGroup], (instregex "CD(S|U)TR$")>;
-def : InstRW<[FXb, FXb, VecDF2, VecDF2, Lat15, GroupAlone], (instregex "CX(S|U)TR$")>;
-def : InstRW<[FXb, VecDF, Lat12, BeginGroup], (instregex "C(S|U)DTR$")>;
-def : InstRW<[FXb, FXb, VecDF2, VecDF2, Lat15, GroupAlone], (instregex "C(S|U)XTR$")>;
+def : InstRW<[WLat9, FXb, VecDF, Cracked], (instregex "CD(S|U)TR$")>;
+def : InstRW<[WLat12, FXb2, VecDF4, GroupAlone], (instregex "CX(S|U)TR$")>;
+def : InstRW<[WLat11, FXb, VecDF, Cracked], (instregex "C(S|U)DTR$")>;
+def : InstRW<[WLat15, FXb2, VecDF4, GroupAlone], (instregex "C(S|U)XTR$")>;
 
 // Convert from / to zoned
-def : InstRW<[LSU, VecDF, Lat11, BeginGroup], (instregex "CDZT$")>;
-def : InstRW<[LSU, LSU, VecDF2, VecDF2, Lat15, GroupAlone], (instregex "CXZT$")>;
-def : InstRW<[FXb, LSU, VecDF, Lat11, BeginGroup], (instregex "CZDT$")>;
-def : InstRW<[FXb, LSU, VecDF, VecDF, Lat15, GroupAlone], (instregex "CZXT$")>;
+def : InstRW<[WLat8LSU, LSU, VecDF, Cracked], (instregex "CDZT$")>;
+def : InstRW<[WLat16LSU, LSU2, VecDF4, GroupAlone], (instregex "CXZT$")>;
+def : InstRW<[WLat1, FXb, LSU, VecDF, Cracked], (instregex "CZDT$")>;
+def : InstRW<[WLat1, FXb, LSU, VecDF2, GroupAlone], (instregex "CZXT$")>;
 
 // Convert from / to packed
-def : InstRW<[LSU, VecDF, Lat11, BeginGroup], (instregex "CDPT$")>;
-def : InstRW<[LSU, LSU, VecDF2, VecDF2, Lat15, GroupAlone], (instregex "CXPT$")>;
-def : InstRW<[FXb, LSU, VecDF, Lat11, BeginGroup], (instregex "CPDT$")>;
-def : InstRW<[FXb, LSU, VecDF, VecDF, Lat15, GroupAlone], (instregex "CPXT$")>;
+def : InstRW<[WLat8LSU, LSU, VecDF, Cracked], (instregex "CDPT$")>;
+def : InstRW<[WLat16LSU, LSU2, VecDF4, GroupAlone], (instregex "CXPT$")>;
+def : InstRW<[WLat1, FXb, LSU, VecDF, Cracked], (instregex "CPDT$")>;
+def : InstRW<[WLat1, FXb, LSU, VecDF2, GroupAlone], (instregex "CPXT$")>;
 
 // Perform floating-point operation
-def : InstRW<[FXb, Lat30], (instregex "PFPO$")>;
+def : InstRW<[WLat30, WLat30, WLat30, MCD], (instregex "PFPO$")>;
 
 //===----------------------------------------------------------------------===//
 // DFP: Unary arithmetic
 //===----------------------------------------------------------------------===//
 
 // Load FP integer
-def : InstRW<[VecDF], (instregex "FIDTR$")>;
-def : InstRW<[VecDF2, VecDF2, Lat11, GroupAlone], (instregex "FIXTR$")>;
+def : InstRW<[WLat8, VecDF, NormalGr], (instregex "FIDTR$")>;
+def : InstRW<[WLat10, VecDF4, GroupAlone], (instregex "FIXTR$")>;
 
 // Extract biased exponent
-def : InstRW<[FXb, VecDF, Lat12, BeginGroup], (instregex "EEDTR$")>;
-def : InstRW<[FXb, VecDF, Lat12, BeginGroup], (instregex "EEXTR$")>;
+def : InstRW<[WLat11, FXb, VecDF, Cracked], (instregex "EEDTR$")>;
+def : InstRW<[WLat11, FXb, VecDF, Cracked], (instregex "EEXTR$")>;
 
 // Extract significance
-def : InstRW<[FXb, VecDF, Lat12, BeginGroup], (instregex "ESDTR$")>;
-def : InstRW<[FXb, VecDF, VecDF, Lat15, BeginGroup], (instregex "ESXTR$")>;
+def : InstRW<[WLat11, FXb, VecDF, Cracked], (instregex "ESDTR$")>;
+def : InstRW<[WLat12, FXb, VecDF2, Cracked], (instregex "ESXTR$")>;
 
 //===----------------------------------------------------------------------===//
 // DFP: Binary arithmetic
 //===----------------------------------------------------------------------===//
 
 // Addition
-def : InstRW<[VecDF], (instregex "ADTR(A)?$")>;
-def : InstRW<[VecDF2, VecDF2, Lat10, GroupAlone], (instregex "AXTR(A)?$")>;
+def : InstRW<[WLat8, WLat8, VecDF, NormalGr], (instregex "ADTR(A)?$")>;
+def : InstRW<[WLat10, WLat10, VecDF4, GroupAlone], (instregex "AXTR(A)?$")>;
 
 // Subtraction
-def : InstRW<[VecDF], (instregex "SDTR(A)?$")>;
-def : InstRW<[VecDF2, VecDF2, Lat11, GroupAlone], (instregex "SXTR(A)?$")>;
+def : InstRW<[WLat8, WLat8, VecDF, NormalGr], (instregex "SDTR(A)?$")>;
+def : InstRW<[WLat10, WLat10, VecDF4, GroupAlone], (instregex "SXTR(A)?$")>;
 
 // Multiply
-def : InstRW<[VecDF, Lat30], (instregex "MDTR(A)?$")>;
-def : InstRW<[VecDF2, VecDF2, Lat30, GroupAlone], (instregex "MXTR(A)?$")>;
+def : InstRW<[WLat30, VecDF, NormalGr], (instregex "MDTR(A)?$")>;
+def : InstRW<[WLat30, VecDF4, GroupAlone], (instregex "MXTR(A)?$")>;
 
 // Division
-def : InstRW<[VecDF, Lat30], (instregex "DDTR(A)?$")>;
-def : InstRW<[VecDF2, VecDF2, Lat30, GroupAlone], (instregex "DXTR(A)?$")>;
+def : InstRW<[WLat30, VecDF, NormalGr], (instregex "DDTR(A)?$")>;
+def : InstRW<[WLat30, VecDF4, GroupAlone], (instregex "DXTR(A)?$")>;
 
 // Quantize
-def : InstRW<[VecDF], (instregex "QADTR$")>;
-def : InstRW<[VecDF2, VecDF2, Lat11, GroupAlone], (instregex "QAXTR$")>;
+def : InstRW<[WLat8, WLat8, VecDF, NormalGr], (instregex "QADTR$")>;
+def : InstRW<[WLat10, WLat10, VecDF4, GroupAlone], (instregex "QAXTR$")>;
 
 // Reround
-def : InstRW<[FXb, VecDF, Lat11, BeginGroup], (instregex "RRDTR$")>;
-def : InstRW<[FXb, VecDF2, VecDF2, Lat15, GroupAlone], (instregex "RRXTR$")>;
+def : InstRW<[WLat9, WLat9, FXb, VecDF, Cracked], (instregex "RRDTR$")>;
+def : InstRW<[WLat11, WLat11, FXb, VecDF4, GroupAlone], (instregex "RRXTR$")>;
 
 // Shift significand left/right
-def : InstRW<[LSU, VecDF, Lat11, GroupAlone], (instregex "S(L|R)DT$")>;
-def : InstRW<[LSU, VecDF2, VecDF2, Lat15, GroupAlone], (instregex "S(L|R)XT$")>;
+def : InstRW<[WLat11LSU, LSU, VecDF, GroupAlone], (instregex "S(L|R)DT$")>;
+def : InstRW<[WLat11LSU, LSU, VecDF4, GroupAlone], (instregex "S(L|R)XT$")>;
 
 // Insert biased exponent
-def : InstRW<[FXb, VecDF, Lat11, BeginGroup], (instregex "IEDTR$")>;
-def : InstRW<[FXb, VecDF2, VecDF2, Lat15, GroupAlone], (instregex "IEXTR$")>;
+def : InstRW<[WLat9, FXb, VecDF, Cracked], (instregex "IEDTR$")>;
+def : InstRW<[WLat11, FXb, VecDF4, GroupAlone], (instregex "IEXTR$")>;
 
 //===----------------------------------------------------------------------===//
 // DFP: Comparisons
 //===----------------------------------------------------------------------===//
 
 // Compare
-def : InstRW<[VecDF], (instregex "(K|C)DTR$")>;
-def : InstRW<[VecDF, VecDF, Lat11, GroupAlone], (instregex "(K|C)XTR$")>;
+def : InstRW<[WLat8, VecDF, NormalGr], (instregex "(K|C)DTR$")>;
+def : InstRW<[WLat9, VecDF2, GroupAlone], (instregex "(K|C)XTR$")>;
 
 // Compare biased exponent
-def : InstRW<[VecDF], (instregex "CEDTR$")>;
-def : InstRW<[VecDF], (instregex "CEXTR$")>;
+def : InstRW<[WLat8, VecDF, NormalGr], (instregex "CEDTR$")>;
+def : InstRW<[WLat8, VecDF, NormalGr], (instregex "CEXTR$")>;
 
 // Test Data Class/Group
-def : InstRW<[LSU, VecDF, Lat11], (instregex "TD(C|G)(E|D)T$")>;
-def : InstRW<[LSU, VecDF, VecDF, Lat15, GroupAlone], (instregex "TD(C|G)XT$")>;
+def : InstRW<[WLat15, LSU, VecDF, NormalGr], (instregex "TD(C|G)(E|D)T$")>;
+def : InstRW<[WLat15, LSU, VecDF2, GroupAlone], (instregex "TD(C|G)XT$")>;
 
 
 // --------------------------------- Vector --------------------------------- //
@@ -1103,234 +1182,236 @@ def : InstRW<[LSU, VecDF, VecDF, Lat15, GroupAlone], (instregex "TD(C|G)XT$")>;
 // Vector: Move instructions
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[FXb], (instregex "VLR(32|64)?$")>;
-def : InstRW<[FXb, Lat4], (instregex "VLGV(B|F|G|H)?$")>;
-def : InstRW<[FXb], (instregex "VLVG(B|F|G|H)?$")>;
-def : InstRW<[FXb, Lat2], (instregex "VLVGP(32)?$")>;
+def : InstRW<[WLat1, FXb, NormalGr], (instregex "VLR(32|64)?$")>;
+def : InstRW<[WLat4, FXb, NormalGr], (instregex "VLGV(B|F|G|H)?$")>;
+def : InstRW<[WLat1, FXb, NormalGr], (instregex "VLVG(B|F|G|H)?$")>;
+def : InstRW<[WLat3, FXb, NormalGr], (instregex "VLVGP(32)?$")>;
 
 //===----------------------------------------------------------------------===//
 // Vector: Immediate instructions
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[VecXsPm], (instregex "VZERO$")>;
-def : InstRW<[VecXsPm], (instregex "VONE$")>;
-def : InstRW<[VecXsPm], (instregex "VGBM$")>;
-def : InstRW<[VecXsPm], (instregex "VGM(B|F|G|H)?$")>;
-def : InstRW<[VecXsPm], (instregex "VREPI(B|F|G|H)?$")>;
-def : InstRW<[VecXsPm], (instregex "VLEI(B|F|G|H)$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VZERO$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VONE$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VGBM$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VGM(B|F|G|H)?$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VREPI(B|F|G|H)?$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VLEI(B|F|G|H)$")>;
 
 //===----------------------------------------------------------------------===//
 // Vector: Loads
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[LSU], (instregex "VL(L|BB)?$")>;
-def : InstRW<[LSU], (instregex "VL(32|64)$")>;
-def : InstRW<[LSU], (instregex "VLLEZ(B|F|G|H)?$")>;
-def : InstRW<[LSU], (instregex "VLREP(B|F|G|H)?$")>;
-def : InstRW<[VecXsPm, LSU, Lat7], (instregex "VLE(B|F|G|H)$")>;
-def : InstRW<[FXb, LSU, VecXsPm, Lat11, BeginGroup], (instregex "VGE(F|G)$")>;
-def : InstRW<[LSU, LSU, LSU, LSU, LSU, Lat10, GroupAlone],
-              (instregex "VLM$")>;
+def : InstRW<[LSULatency, LSU, NormalGr], (instregex "VL(BB)?$")>;
+def : InstRW<[LSULatency, LSU, NormalGr], (instregex "VLL$")>;
+def : InstRW<[LSULatency, LSU, NormalGr], (instregex "VL(32|64)$")>;
+def : InstRW<[LSULatency, LSU, NormalGr], (instregex "VLLEZ(B|F|G|H)?$")>;
+def : InstRW<[LSULatency, LSU, NormalGr], (instregex "VLREP(B|F|G|H)?$")>;
+def : InstRW<[WLat2LSU, RegReadAdv, VecXsPm, LSU, NormalGr],
+             (instregex "VLE(B|F|G|H)$")>;
+def : InstRW<[WLat6LSU, RegReadAdv, FXb, LSU, VecXsPm, Cracked],
+             (instregex "VGE(F|G)$")>;
+def : InstRW<[WLat4LSU, WLat4LSU, LSU5, GroupAlone], (instregex "VLM$")>;
 
 //===----------------------------------------------------------------------===//
 // Vector: Stores
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[FXb, LSU, Lat8], (instregex "VST(L|32|64)?$")>;
-def : InstRW<[FXb, LSU, Lat8], (instregex "VSTE(F|G)$")>;
-def : InstRW<[FXb, LSU, VecXsPm, Lat11, BeginGroup], (instregex "VSTE(B|H)$")>;
-def : InstRW<[LSU, LSU, FXb, FXb, FXb, FXb, FXb, Lat20, GroupAlone],
-              (instregex "VSTM$")>;
-def : InstRW<[FXb, FXb, LSU, Lat12, BeginGroup], (instregex "VSCE(F|G)$")>;
+def : InstRW<[WLat1, FXb, LSU, NormalGr], (instregex "VST(L|32|64)?$")>;
+def : InstRW<[WLat1, FXb, LSU, NormalGr], (instregex "VSTE(F|G)$")>;
+def : InstRW<[WLat1, FXb, LSU, VecXsPm, Cracked], (instregex "VSTE(B|H)$")>;
+def : InstRW<[WLat1, LSU2, FXb3, GroupAlone], (instregex "VSTM$")>;
+def : InstRW<[WLat1, FXb2, LSU, Cracked], (instregex "VSCE(F|G)$")>;
 
 //===----------------------------------------------------------------------===//
 // Vector: Selects and permutes
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[VecXsPm], (instregex "VMRH(B|F|G|H)?$")>;
-def : InstRW<[VecXsPm], (instregex "VMRL(B|F|G|H)?$")>;
-def : InstRW<[VecXsPm], (instregex "VPERM$")>;
-def : InstRW<[VecXsPm], (instregex "VPDI$")>;
-def : InstRW<[VecXsPm], (instregex "VREP(B|F|G|H)?$")>;
-def : InstRW<[VecXsPm], (instregex "VSEL$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VMRH(B|F|G|H)?$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VMRL(B|F|G|H)?$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VPERM$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VPDI$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VREP(B|F|G|H)?$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VSEL$")>;
 
 //===----------------------------------------------------------------------===//
 // Vector: Widening and narrowing
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[VecXsPm], (instregex "VPK(F|G|H)?$")>;
-def : InstRW<[VecXsPm], (instregex "VPKS(F|G|H)?$")>;
-def : InstRW<[VecXsPm, Lat4], (instregex "VPKS(F|G|H)S$")>;
-def : InstRW<[VecXsPm], (instregex "VPKLS(F|G|H)?$")>;
-def : InstRW<[VecXsPm, Lat4], (instregex "VPKLS(F|G|H)S$")>;
-def : InstRW<[VecXsPm], (instregex "VSEG(B|F|H)?$")>;
-def : InstRW<[VecXsPm], (instregex "VUPH(B|F|H)?$")>;
-def : InstRW<[VecXsPm], (instregex "VUPL(B|F)?$")>;
-def : InstRW<[VecXsPm], (instregex "VUPLH(B|F|H|W)?$")>;
-def : InstRW<[VecXsPm], (instregex "VUPLL(B|F|H)?$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VPK(F|G|H)?$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VPKS(F|G|H)?$")>;
+def : InstRW<[WLat3, WLat3, VecXsPm, NormalGr], (instregex "VPKS(F|G|H)S$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VPKLS(F|G|H)?$")>;
+def : InstRW<[WLat3, WLat3, VecXsPm, NormalGr], (instregex "VPKLS(F|G|H)S$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VSEG(B|F|H)?$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VUPH(B|F|H)?$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VUPL(B|F)?$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VUPLH(B|F|H|W)?$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VUPLL(B|F|H)?$")>;
 
 //===----------------------------------------------------------------------===//
 // Vector: Integer arithmetic
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[VecXsPm], (instregex "VA(B|F|G|H|Q|C|CQ)?$")>;
-def : InstRW<[VecXsPm], (instregex "VACC(B|F|G|H|Q|C|CQ)?$")>;
-def : InstRW<[VecXsPm], (instregex "VAVG(B|F|G|H)?$")>;
-def : InstRW<[VecXsPm], (instregex "VAVGL(B|F|G|H)?$")>;
-def : InstRW<[VecXsPm], (instregex "VN(C|O)?$")>;
-def : InstRW<[VecXsPm], (instregex "VO$")>;
-def : InstRW<[VecMul], (instregex "VCKSM$")>;
-def : InstRW<[VecXsPm], (instregex "VCLZ(B|F|G|H)?$")>;
-def : InstRW<[VecXsPm], (instregex "VCTZ(B|F|G|H)?$")>;
-def : InstRW<[VecXsPm], (instregex "VX$")>;
-def : InstRW<[VecMul], (instregex "VGFM?$")>;
-def : InstRW<[VecMul], (instregex "VGFMA(B|F|G|H)?$")>;
-def : InstRW<[VecMul], (instregex "VGFM(B|F|G|H)$")>;
-def : InstRW<[VecXsPm], (instregex "VLC(B|F|G|H)?$")>;
-def : InstRW<[VecXsPm], (instregex "VLP(B|F|G|H)?$")>;
-def : InstRW<[VecXsPm], (instregex "VMX(B|F|G|H)?$")>;
-def : InstRW<[VecXsPm], (instregex "VMXL(B|F|G|H)?$")>;
-def : InstRW<[VecXsPm], (instregex "VMN(B|F|G|H)?$")>;
-def : InstRW<[VecXsPm], (instregex "VMNL(B|F|G|H)?$")>;
-def : InstRW<[VecMul], (instregex "VMAL(B|F)?$")>;
-def : InstRW<[VecMul], (instregex "VMALE(B|F|H)?$")>;
-def : InstRW<[VecMul], (instregex "VMALH(B|F|H|W)?$")>;
-def : InstRW<[VecMul], (instregex "VMALO(B|F|H)?$")>;
-def : InstRW<[VecMul], (instregex "VMAO(B|F|H)?$")>;
-def : InstRW<[VecMul], (instregex "VMAE(B|F|H)?$")>;
-def : InstRW<[VecMul], (instregex "VMAH(B|F|H)?$")>;
-def : InstRW<[VecMul], (instregex "VME(B|F|H)?$")>;
-def : InstRW<[VecMul], (instregex "VMH(B|F|H)?$")>;
-def : InstRW<[VecMul], (instregex "VML(B|F)?$")>;
-def : InstRW<[VecMul], (instregex "VMLE(B|F|H)?$")>;
-def : InstRW<[VecMul], (instregex "VMLH(B|F|H|W)?$")>;
-def : InstRW<[VecMul], (instregex "VMLO(B|F|H)?$")>;
-def : InstRW<[VecMul], (instregex "VMO(B|F|H)?$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VA(B|F|G|H|Q|C|CQ)?$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VACC(B|F|G|H|Q|C|CQ)?$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VAVG(B|F|G|H)?$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VAVGL(B|F|G|H)?$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VN(C|O)?$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VO$")>;
+def : InstRW<[WLat4, VecMul, NormalGr], (instregex "VCKSM$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VCLZ(B|F|G|H)?$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VCTZ(B|F|G|H)?$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VX$")>;
+def : InstRW<[WLat4, VecMul, NormalGr], (instregex "VGFM?$")>;
+def : InstRW<[WLat4, VecMul, NormalGr], (instregex "VGFMA(B|F|G|H)?$")>;
+def : InstRW<[WLat4, VecMul, NormalGr], (instregex "VGFM(B|F|G|H)$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VLC(B|F|G|H)?$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VLP(B|F|G|H)?$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VMX(B|F|G|H)?$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VMXL(B|F|G|H)?$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VMN(B|F|G|H)?$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VMNL(B|F|G|H)?$")>;
+def : InstRW<[WLat4, VecMul, NormalGr], (instregex "VMAL(B|F)?$")>;
+def : InstRW<[WLat4, VecMul, NormalGr], (instregex "VMALE(B|F|H)?$")>;
+def : InstRW<[WLat4, VecMul, NormalGr], (instregex "VMALH(B|F|H|W)?$")>;
+def : InstRW<[WLat4, VecMul, NormalGr], (instregex "VMALO(B|F|H)?$")>;
+def : InstRW<[WLat4, VecMul, NormalGr], (instregex "VMAO(B|F|H)?$")>;
+def : InstRW<[WLat4, VecMul, NormalGr], (instregex "VMAE(B|F|H)?$")>;
+def : InstRW<[WLat4, VecMul, NormalGr], (instregex "VMAH(B|F|H)?$")>;
+def : InstRW<[WLat4, VecMul, NormalGr], (instregex "VME(B|F|H)?$")>;
+def : InstRW<[WLat4, VecMul, NormalGr], (instregex "VMH(B|F|H)?$")>;
+def : InstRW<[WLat4, VecMul, NormalGr], (instregex "VML(B|F)?$")>;
+def : InstRW<[WLat4, VecMul, NormalGr], (instregex "VMLE(B|F|H)?$")>;
+def : InstRW<[WLat4, VecMul, NormalGr], (instregex "VMLH(B|F|H|W)?$")>;
+def : InstRW<[WLat4, VecMul, NormalGr], (instregex "VMLO(B|F|H)?$")>;
+def : InstRW<[WLat4, VecMul, NormalGr], (instregex "VMO(B|F|H)?$")>;
 
-def : InstRW<[VecXsPm], (instregex "VPOPCT$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VPOPCT$")>;
 
-def : InstRW<[VecXsPm], (instregex "VERLL(B|F|G|H)?$")>;
-def : InstRW<[VecXsPm], (instregex "VERLLV(B|F|G|H)?$")>;
-def : InstRW<[VecXsPm], (instregex "VERIM(B|F|G|H)?$")>;
-def : InstRW<[VecXsPm], (instregex "VESL(B|F|G|H)?$")>;
-def : InstRW<[VecXsPm], (instregex "VESLV(B|F|G|H)?$")>;
-def : InstRW<[VecXsPm], (instregex "VESRA(B|F|G|H)?$")>;
-def : InstRW<[VecXsPm], (instregex "VESRAV(B|F|G|H)?$")>;
-def : InstRW<[VecXsPm], (instregex "VESRL(B|F|G|H)?$")>;
-def : InstRW<[VecXsPm], (instregex "VESRLV(B|F|G|H)?$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VERLL(B|F|G|H)?$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VERLLV(B|F|G|H)?$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VERIM(B|F|G|H)?$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VESL(B|F|G|H)?$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VESLV(B|F|G|H)?$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VESRA(B|F|G|H)?$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VESRAV(B|F|G|H)?$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VESRL(B|F|G|H)?$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VESRLV(B|F|G|H)?$")>;
 
-def : InstRW<[VecXsPm], (instregex "VSL(DB)?$")>;
-def : InstRW<[VecXsPm, VecXsPm, Lat8], (instregex "VSLB$")>;
-def : InstRW<[VecXsPm], (instregex "VSR(A|L)$")>;
-def : InstRW<[VecXsPm, VecXsPm, Lat8], (instregex "VSR(A|L)B$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VSL(DB)?$")>;
+def : InstRW<[WLat3, VecXsPm2, NormalGr], (instregex "VSLB$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VSR(A|L)$")>;
+def : InstRW<[WLat3, VecXsPm2, NormalGr], (instregex "VSR(A|L)B$")>;
 
-def : InstRW<[VecXsPm], (instregex "VSB(I|IQ|CBI|CBIQ)?$")>;
-def : InstRW<[VecXsPm], (instregex "VSCBI(B|F|G|H|Q)?$")>;
-def : InstRW<[VecXsPm], (instregex "VS(F|G|H|Q)?$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VSB(I|IQ|CBI|CBIQ)?$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VSCBI(B|F|G|H|Q)?$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VS(F|G|H|Q)?$")>;
 
-def : InstRW<[VecMul], (instregex "VSUM(B|H)?$")>;
-def : InstRW<[VecMul], (instregex "VSUMG(F|H)?$")>;
-def : InstRW<[VecMul], (instregex "VSUMQ(F|G)?$")>;
+def : InstRW<[WLat4, VecMul, NormalGr], (instregex "VSUM(B|H)?$")>;
+def : InstRW<[WLat4, VecMul, NormalGr], (instregex "VSUMG(F|H)?$")>;
+def : InstRW<[WLat4, VecMul, NormalGr], (instregex "VSUMQ(F|G)?$")>;
 
 //===----------------------------------------------------------------------===//
 // Vector: Integer comparison
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[VecXsPm, Lat4], (instregex "VEC(B|F|G|H)?$")>;
-def : InstRW<[VecXsPm, Lat4], (instregex "VECL(B|F|G|H)?$")>;
-def : InstRW<[VecXsPm], (instregex "VCEQ(B|F|G|H)?$")>;
-def : InstRW<[VecXsPm, Lat4], (instregex "VCEQ(B|F|G|H)S$")>;
-def : InstRW<[VecXsPm], (instregex "VCH(B|F|G|H)?$")>;
-def : InstRW<[VecXsPm, Lat4], (instregex "VCH(B|F|G|H)S$")>;
-def : InstRW<[VecXsPm], (instregex "VCHL(B|F|G|H)?$")>;
-def : InstRW<[VecXsPm, Lat4], (instregex "VCHL(B|F|G|H)S$")>;
-def : InstRW<[VecStr, Lat5], (instregex "VTM$")>;
+def : InstRW<[WLat3, VecXsPm, NormalGr], (instregex "VEC(B|F|G|H)?$")>;
+def : InstRW<[WLat3, VecXsPm, NormalGr], (instregex "VECL(B|F|G|H)?$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VCEQ(B|F|G|H)?$")>;
+def : InstRW<[WLat3, WLat3, VecXsPm, NormalGr], (instregex "VCEQ(B|F|G|H)S$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VCH(B|F|G|H)?$")>;
+def : InstRW<[WLat3, WLat3, VecXsPm, NormalGr], (instregex "VCH(B|F|G|H)S$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VCHL(B|F|G|H)?$")>;
+def : InstRW<[WLat3, WLat3, VecXsPm, NormalGr], (instregex "VCHL(B|F|G|H)S$")>;
+def : InstRW<[WLat4, VecStr, NormalGr], (instregex "VTM$")>;
 
 //===----------------------------------------------------------------------===//
 // Vector: Floating-point arithmetic
 //===----------------------------------------------------------------------===//
 
 // Conversion and rounding
-def : InstRW<[VecBF2], (instregex "VCD(L)?G$")>;
-def : InstRW<[VecBF2], (instregex "VCD(L)?GB$")>;
-def : InstRW<[VecBF], (instregex "WCD(L)?GB$")>;
-def : InstRW<[VecBF2], (instregex "VC(L)?GD$")>;
-def : InstRW<[VecBF2], (instregex "VC(L)?GDB$")>;
-def : InstRW<[VecBF], (instregex "WC(L)?GDB$")>;
-def : InstRW<[VecBF2], (instregex "VL(DE|ED)$")>;
-def : InstRW<[VecBF2], (instregex "VL(DE|ED)B$")>;
-def : InstRW<[VecBF], (instregex "WL(DE|ED)B$")>;
-def : InstRW<[VecBF2], (instregex "VFI$")>;
-def : InstRW<[VecBF2], (instregex "VFIDB$")>;
-def : InstRW<[VecBF], (instregex "WFIDB$")>;
+def : InstRW<[WLat8, VecBF2, NormalGr], (instregex "VCD(L)?G$")>;
+def : InstRW<[WLat8, VecBF2, NormalGr], (instregex "VCD(L)?GB$")>;
+def : InstRW<[WLat7, VecBF, NormalGr], (instregex "WCD(L)?GB$")>;
+def : InstRW<[WLat8, VecBF2, NormalGr], (instregex "VC(L)?GD$")>;
+def : InstRW<[WLat8, VecBF2, NormalGr], (instregex "VC(L)?GDB$")>;
+def : InstRW<[WLat7, VecBF, NormalGr], (instregex "WC(L)?GDB$")>;
+def : InstRW<[WLat8, VecBF2, NormalGr], (instregex "VL(DE|ED)$")>;
+def : InstRW<[WLat8, VecBF2, NormalGr], (instregex "VL(DE|ED)B$")>;
+def : InstRW<[WLat7, VecBF, NormalGr], (instregex "WL(DE|ED)B$")>;
+def : InstRW<[WLat8, VecBF2, NormalGr], (instregex "VFI$")>;
+def : InstRW<[WLat8, VecBF2, NormalGr], (instregex "VFIDB$")>;
+def : InstRW<[WLat7, VecBF, NormalGr], (instregex "WFIDB$")>;
 
 // Sign operations
-def : InstRW<[VecXsPm], (instregex "VFPSO$")>;
-def : InstRW<[VecXsPm], (instregex "(V|W)FPSODB$")>;
-def : InstRW<[VecXsPm], (instregex "(V|W)FL(C|N|P)DB$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VFPSO$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "(V|W)FPSODB$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "(V|W)FL(C|N|P)DB$")>;
 
 // Test data class
-def : InstRW<[VecXsPm, Lat4], (instregex "VFTCI$")>;
-def : InstRW<[VecXsPm, Lat4], (instregex "(V|W)FTCIDB$")>;
+def : InstRW<[WLat3, WLat3, VecXsPm, NormalGr], (instregex "VFTCI$")>;
+def : InstRW<[WLat3, WLat3, VecXsPm, NormalGr], (instregex "(V|W)FTCIDB$")>;
 
 // Add / subtract
-def : InstRW<[VecBF2], (instregex "VF(A|S)$")>;
-def : InstRW<[VecBF2], (instregex "VF(A|S)DB$")>;
-def : InstRW<[VecBF], (instregex "WF(A|S)DB$")>;
+def : InstRW<[WLat8, VecBF2, NormalGr], (instregex "VF(A|S)$")>;
+def : InstRW<[WLat8, VecBF2, NormalGr], (instregex "VF(A|S)DB$")>;
+def : InstRW<[WLat7, VecBF, NormalGr], (instregex "WF(A|S)DB$")>;
 
 // Multiply / multiply-and-add/subtract
-def : InstRW<[VecBF2], (instregex "VFM$")>;
-def : InstRW<[VecBF2], (instregex "VFMDB$")>;
-def : InstRW<[VecBF], (instregex "WFMDB$")>;
-def : InstRW<[VecBF2], (instregex "VFM(A|S)$")>;
-def : InstRW<[VecBF2], (instregex "VFM(A|S)DB$")>;
-def : InstRW<[VecBF], (instregex "WFM(A|S)DB$")>;
+def : InstRW<[WLat8, VecBF2, NormalGr], (instregex "VFM$")>;
+def : InstRW<[WLat8, VecBF2, NormalGr], (instregex "VFMDB$")>;
+def : InstRW<[WLat7, VecBF, NormalGr], (instregex "WFMDB$")>;
+def : InstRW<[WLat8, VecBF2, NormalGr], (instregex "VFM(A|S)$")>;
+def : InstRW<[WLat8, VecBF2, NormalGr], (instregex "VFM(A|S)DB$")>;
+def : InstRW<[WLat7, VecBF, NormalGr], (instregex "WFM(A|S)DB$")>;
 
 // Divide / square root
-def : InstRW<[VecFPd], (instregex "VFD$")>;
-def : InstRW<[VecFPd], (instregex "(V|W)FDDB$")>;
-def : InstRW<[VecFPd], (instregex "VFSQ$")>;
-def : InstRW<[VecFPd], (instregex "(V|W)FSQDB$")>;
+def : InstRW<[WLat30, VecFPd, NormalGr], (instregex "VFD$")>;
+def : InstRW<[WLat30, VecFPd, NormalGr], (instregex "(V|W)FDDB$")>;
+def : InstRW<[WLat30, VecFPd, NormalGr], (instregex "VFSQ$")>;
+def : InstRW<[WLat30, VecFPd, NormalGr], (instregex "(V|W)FSQDB$")>;
 
 //===----------------------------------------------------------------------===//
 // Vector: Floating-point comparison
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[VecXsPm], (instregex "VFC(E|H|HE)$")>;
-def : InstRW<[VecXsPm], (instregex "VFC(E|H|HE)DB$")>;
-def : InstRW<[VecXsPm], (instregex "WFC(E|H|HE)DB$")>;
-def : InstRW<[VecXsPm, Lat4], (instregex "VFC(E|H|HE)DBS$")>;
-def : InstRW<[VecXsPm, Lat4], (instregex "WFC(E|H|HE)DBS$")>;
-def : InstRW<[VecXsPm, Lat4], (instregex "WF(C|K)$")>;
-def : InstRW<[VecXsPm, Lat4], (instregex "WF(C|K)DB$")>;
+def : InstRW<[WLat2, WLat2, VecXsPm, NormalGr], (instregex "VFC(E|H|HE)$")>;
+def : InstRW<[WLat2, WLat2, VecXsPm, NormalGr], (instregex "VFC(E|H|HE)DB$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "WFC(E|H|HE)DB$")>;
+def : InstRW<[WLat3, WLat3, VecXsPm, NormalGr], (instregex "VFC(E|H|HE)DBS$")>;
+def : InstRW<[WLat3, WLat3, VecXsPm, NormalGr], (instregex "WFC(E|H|HE)DBS$")>;
+def : InstRW<[WLat3, VecXsPm, NormalGr], (instregex "WF(C|K)$")>;
+def : InstRW<[WLat3, VecXsPm, NormalGr], (instregex "WF(C|K)DB$")>;
 
 //===----------------------------------------------------------------------===//
 // Vector: Floating-point insertion and extraction
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[FXb], (instregex "LEFR$")>;
-def : InstRW<[FXb, Lat4], (instregex "LFER$")>;
+def : InstRW<[WLat1, FXb, NormalGr], (instregex "LEFR$")>;
+def : InstRW<[WLat4, FXb, NormalGr], (instregex "LFER$")>;
 
 //===----------------------------------------------------------------------===//
 // Vector: String instructions
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[VecStr], (instregex "VFAE(B)?$")>;
-def : InstRW<[VecStr, Lat5], (instregex "VFAEBS$")>;
-def : InstRW<[VecStr], (instregex "VFAE(F|H)$")>;
-def : InstRW<[VecStr, Lat5], (instregex "VFAE(F|H)S$")>;
-def : InstRW<[VecStr], (instregex "VFAEZ(B|F|H)$")>;
-def : InstRW<[VecStr, Lat5], (instregex "VFAEZ(B|F|H)S$")>;
-def : InstRW<[VecStr], (instregex "VFEE(B|F|H|ZB|ZF|ZH)?$")>;
-def : InstRW<[VecStr, Lat5], (instregex "VFEE(B|F|H|ZB|ZF|ZH)S$")>;
-def : InstRW<[VecStr], (instregex "VFENE(B|F|H|ZB|ZF|ZH)?$")>;
-def : InstRW<[VecStr, Lat5], (instregex "VFENE(B|F|H|ZB|ZF|ZH)S$")>;
-def : InstRW<[VecStr], (instregex "VISTR(B|F|H)?$")>;
-def : InstRW<[VecStr, Lat5], (instregex "VISTR(B|F|H)S$")>;
-def : InstRW<[VecStr], (instregex "VSTRC(B|F|H)?$")>;
-def : InstRW<[VecStr, Lat5], (instregex "VSTRC(B|F|H)S$")>;
-def : InstRW<[VecStr], (instregex "VSTRCZ(B|F|H)$")>;
-def : InstRW<[VecStr, Lat5], (instregex "VSTRCZ(B|F|H)S$")>;
+def : InstRW<[WLat3, VecStr, NormalGr], (instregex "VFAE(B)?$")>;
+def : InstRW<[WLat3, VecStr, NormalGr], (instregex "VFAE(F|H)$")>;
+def : InstRW<[WLat4, WLat4, VecStr, NormalGr], (instregex "VFAE(B|F|H)S$")>;
+def : InstRW<[WLat3, VecStr, NormalGr], (instregex "VFAEZ(B|F|H)$")>;
+def : InstRW<[WLat4, WLat4, VecStr, NormalGr], (instregex "VFAEZ(B|F|H)S$")>;
+def : InstRW<[WLat3, VecStr, NormalGr], (instregex "VFEE(B|F|H|ZB|ZF|ZH)?$")>;
+def : InstRW<[WLat4, WLat4, VecStr, NormalGr],
+             (instregex "VFEE(B|F|H|ZB|ZF|ZH)S$")>;
+def : InstRW<[WLat3, VecStr, NormalGr], (instregex "VFENE(B|F|H|ZB|ZF|ZH)?$")>;
+def : InstRW<[WLat4, WLat4, VecStr, NormalGr],
+             (instregex "VFENE(B|F|H|ZB|ZF|ZH)S$")>;
+def : InstRW<[WLat3, VecStr, NormalGr], (instregex "VISTR(B|F|H)?$")>;
+def : InstRW<[WLat4, WLat4, VecStr, NormalGr], (instregex "VISTR(B|F|H)S$")>;
+def : InstRW<[WLat3, VecStr, NormalGr], (instregex "VSTRC(B|F|H)?$")>;
+def : InstRW<[WLat4, WLat4, VecStr, NormalGr], (instregex "VSTRC(B|F|H)S$")>;
+def : InstRW<[WLat3, VecStr, NormalGr], (instregex "VSTRCZ(B|F|H)$")>;
+def : InstRW<[WLat4, WLat4, VecStr, NormalGr], (instregex "VSTRCZ(B|F|H)S$")>;
 
 
 // -------------------------------- System ---------------------------------- //
@@ -1339,156 +1420,150 @@ def : InstRW<[VecStr, Lat5], (instregex "VSTRCZ(B|F|H)S$")>;
 // System: Program-Status Word Instructions
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[FXb, Lat30], (instregex "EPSW$")>;
-def : InstRW<[FXb, LSU, Lat30], (instregex "LPSW(E)?$")>;
-def : InstRW<[FXa, Lat3, GroupAlone], (instregex "IPK$")>;
-def : InstRW<[LSU, EndGroup], (instregex "SPKA$")>;
-def : InstRW<[LSU, EndGroup], (instregex "SSM$")>;
-def : InstRW<[FXb, LSU, GroupAlone], (instregex "ST(N|O)SM$")>;
-def : InstRW<[FXa, Lat3], (instregex "IAC$")>;
-def : InstRW<[LSU, EndGroup], (instregex "SAC(F)?$")>;
+def : InstRW<[WLat30, WLat30, MCD], (instregex "EPSW$")>;
+def : InstRW<[WLat30, MCD], (instregex "LPSW(E)?$")>;
+def : InstRW<[WLat3, FXa, GroupAlone], (instregex "IPK$")>;
+def : InstRW<[WLat1, LSU, EndGroup], (instregex "SPKA$")>;
+def : InstRW<[WLat1, LSU, EndGroup], (instregex "SSM$")>;
+def : InstRW<[WLat1, FXb, LSU, GroupAlone], (instregex "ST(N|O)SM$")>;
+def : InstRW<[WLat3, FXa, NormalGr], (instregex "IAC$")>;
+def : InstRW<[WLat1, LSU, EndGroup], (instregex "SAC(F)?$")>;
 
 //===----------------------------------------------------------------------===//
 // System: Control Register Instructions
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[FXb, LSU, Lat30], (instregex "LCTL(G)?$")>;
-def : InstRW<[LSU, Lat30], (instregex "STCT(L|G)$")>;
-def : InstRW<[LSU], (instregex "E(P|S)A(I)?R$")>;
-def : InstRW<[FXb, Lat30], (instregex "SSA(I)?R$")>;
-def : InstRW<[FXb, Lat30], (instregex "ESEA$")>;
+def : InstRW<[WLat4LSU, WLat4LSU, LSU2, GroupAlone], (instregex "LCTL(G)?$")>;
+def : InstRW<[WLat1, LSU5, GroupAlone], (instregex "STCT(L|G)$")>;
+def : InstRW<[LSULatency, LSU, NormalGr], (instregex "E(P|S)A(I)?R$")>;
+def : InstRW<[WLat30, MCD], (instregex "SSA(I)?R$")>;
+def : InstRW<[WLat30, MCD], (instregex "ESEA$")>;
 
 //===----------------------------------------------------------------------===//
 // System: Prefix-Register Instructions
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[FXb, LSU, Lat30], (instregex "SPX$")>;
-def : InstRW<[FXb, LSU, Lat30], (instregex "STPX$")>;
+def : InstRW<[WLat30, MCD], (instregex "S(T)?PX$")>;
 
 //===----------------------------------------------------------------------===//
 // System: Storage-Key and Real Memory Instructions
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[FXb, Lat30], (instregex "ISKE$")>;
-def : InstRW<[FXb, Lat30], (instregex "IVSK$")>;
-def : InstRW<[FXb, Lat30], (instregex "SSKE(Opt)?$")>;
-def : InstRW<[FXb, Lat30], (instregex "RRB(E|M)$")>;
-def : InstRW<[FXb, Lat30], (instregex "PFMF$")>;
-def : InstRW<[FXb, Lat30], (instregex "TB$")>;
-def : InstRW<[FXb, LSU, Lat30], (instregex "PGIN$")>;
-def : InstRW<[FXb, LSU, Lat30], (instregex "PGOUT$")>;
+def : InstRW<[WLat30, MCD], (instregex "ISKE$")>;
+def : InstRW<[WLat30, MCD], (instregex "IVSK$")>;
+def : InstRW<[WLat30, MCD], (instregex "SSKE(Opt)?$")>;
+def : InstRW<[WLat30, MCD], (instregex "RRB(E|M)$")>;
+def : InstRW<[WLat30, MCD], (instregex "PFMF$")>;
+def : InstRW<[WLat30, WLat30, MCD], (instregex "TB$")>;
+def : InstRW<[WLat30, MCD], (instregex "PGIN$")>;
+def : InstRW<[WLat30, MCD], (instregex "PGOUT$")>;
 
 //===----------------------------------------------------------------------===//
 // System: Dynamic-Address-Translation Instructions
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[FXb, LSU, Lat30], (instregex "IPTE(Opt)?(Opt)?$")>;
-def : InstRW<[FXb, Lat30], (instregex "IDTE(Opt)?$")>;
-def : InstRW<[FXb, Lat30], (instregex "CRDTE(Opt)?$")>;
-def : InstRW<[FXb, Lat30], (instregex "PTLB$")>;
-def : InstRW<[FXb, LSU, Lat30], (instregex "CSP(G)?$")>;
-def : InstRW<[FXb, LSU, Lat30], (instregex "LPTEA$")>;
-def : InstRW<[FXb, LSU, Lat30], (instregex "LRA(Y|G)?$")>;
-def : InstRW<[FXb, LSU, Lat30], (instregex "STRAG$")>;
-def : InstRW<[FXb, LSU, Lat30], (instregex "LURA(G)?$")>;
-def : InstRW<[FXb, LSU, Lat30], (instregex "STUR(A|G)$")>;
-def : InstRW<[FXb, LSU, Lat30], (instregex "TPROT$")>;
+def : InstRW<[WLat30, MCD], (instregex "IPTE(Opt)?(Opt)?$")>;
+def : InstRW<[WLat30, MCD], (instregex "IDTE(Opt)?$")>;
+def : InstRW<[WLat30, MCD], (instregex "CRDTE(Opt)?$")>;
+def : InstRW<[WLat30, MCD], (instregex "PTLB$")>;
+def : InstRW<[WLat30, WLat30, MCD], (instregex "CSP(G)?$")>;
+def : InstRW<[WLat30, WLat30, WLat30, MCD], (instregex "LPTEA$")>;
+def : InstRW<[WLat30, WLat30, MCD], (instregex "LRA(Y|G)?$")>;
+def : InstRW<[WLat30, MCD], (instregex "STRAG$")>;
+def : InstRW<[WLat30, MCD], (instregex "LURA(G)?$")>;
+def : InstRW<[WLat30, MCD], (instregex "STUR(A|G)$")>;
+def : InstRW<[WLat30, MCD], (instregex "TPROT$")>;
 
 //===----------------------------------------------------------------------===//
 // System: Memory-move Instructions
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[FXa, FXa, FXb, LSU, Lat8, GroupAlone], (instregex "MVC(K|P|S)$")>;
-def : InstRW<[FXa, LSU, Lat6, GroupAlone], (instregex "MVC(S|D)K$")>;
-def : InstRW<[FXb, LSU, Lat30], (instregex "MVCOS$")>;
-def : InstRW<[LSU, Lat30, GroupAlone], (instregex "MVPG$")>;
+def : InstRW<[WLat4LSU, FXa2, FXb, LSU5, GroupAlone], (instregex "MVC(K|P|S)$")>;
+def : InstRW<[WLat1, FXa, LSU5, GroupAlone], (instregex "MVC(S|D)K$")>;
+def : InstRW<[WLat30, MCD], (instregex "MVCOS$")>;
+def : InstRW<[WLat30, MCD], (instregex "MVPG$")>;
 
 //===----------------------------------------------------------------------===//
 // System: Address-Space Instructions
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[FXb, LSU, Lat30], (instregex "LASP$")>;
-def : InstRW<[LSU, GroupAlone], (instregex "PALB$")>;
-def : InstRW<[FXb, LSU, Lat30], (instregex "PC$")>;
-def : InstRW<[FXb, Lat30], (instregex "PR$")>;
-def : InstRW<[FXb, Lat30], (instregex "PT(I)?$")>;
-def : InstRW<[FXb, LSU, Lat30], (instregex "RP$")>;
-def : InstRW<[FXb, Lat30], (instregex "BS(G|A)$")>;
-def : InstRW<[FXb, Lat20], (instregex "TAR$")>;
+def : InstRW<[WLat30, MCD], (instregex "LASP$")>;
+def : InstRW<[WLat1, LSU, GroupAlone], (instregex "PALB$")>;
+def : InstRW<[WLat30, MCD], (instregex "PC$")>;
+def : InstRW<[WLat30, MCD], (instregex "PR$")>;
+def : InstRW<[WLat30, MCD], (instregex "PT(I)?$")>;
+def : InstRW<[WLat30, MCD], (instregex "RP$")>;
+def : InstRW<[WLat30, MCD], (instregex "BS(G|A)$")>;
+def : InstRW<[WLat30, MCD], (instregex "TAR$")>;
 
 //===----------------------------------------------------------------------===//
 // System: Linkage-Stack Instructions
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[FXb, Lat30, EndGroup], (instregex "BAKR$")>;
-def : InstRW<[FXb, Lat30], (instregex "EREG(G)?$")>;
-def : InstRW<[FXb, Lat30], (instregex "(E|M)STA$")>;
+def : InstRW<[WLat30, MCD], (instregex "BAKR$")>;
+def : InstRW<[WLat30, MCD], (instregex "EREG(G)?$")>;
+def : InstRW<[WLat30, WLat30, MCD], (instregex "(E|M)STA$")>;
 
 //===----------------------------------------------------------------------===//
 // System: Time-Related Instructions
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[FXb, Lat30], (instregex "PTFF$")>;
-def : InstRW<[FXb, LSU, Lat20], (instregex "SCK$")>;
-def : InstRW<[FXb, Lat30], (instregex "SCKPF$")>;
-def : InstRW<[FXb, LSU, Lat20], (instregex "SCKC$")>;
-def : InstRW<[LSU, LSU, GroupAlone], (instregex "SPT$")>;
-def : InstRW<[LSU, LSU, LSU, FXa, FXa, FXb, Lat9, GroupAlone],
-             (instregex "STCK(F)?$")>;
-def : InstRW<[LSU, LSU, LSU, LSU, FXa, FXa, FXb, FXb, Lat11, GroupAlone],
-             (instregex "STCKE$")>;
-def : InstRW<[FXb, LSU, Lat9], (instregex "STCKC$")>;
-def : InstRW<[LSU, LSU, FXb, Lat5, BeginGroup], (instregex "STPT$")>;
+def : InstRW<[WLat30, MCD], (instregex "PTFF$")>;
+def : InstRW<[WLat30, MCD], (instregex "SCK(PF|C)?$")>;
+def : InstRW<[WLat1, LSU2, GroupAlone], (instregex "SPT$")>;
+def : InstRW<[WLat15, LSU3, FXa2, FXb, GroupAlone], (instregex "STCK(F)?$")>;
+def : InstRW<[WLat20, LSU4, FXa2, FXb2, GroupAlone], (instregex "STCKE$")>;
+def : InstRW<[WLat30, MCD], (instregex "STCKC$")>;
+def : InstRW<[WLat1, LSU2, FXb, Cracked], (instregex "STPT$")>;
 
 //===----------------------------------------------------------------------===//
 // System: CPU-Related Instructions
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[FXb, LSU, Lat30], (instregex "STAP$")>;
-def : InstRW<[FXb, LSU, Lat30], (instregex "STIDP$")>;
-def : InstRW<[FXb, LSU, Lat30], (instregex "STSI$")>;
-def : InstRW<[FXb, LSU, Lat30], (instregex "STFL(E)?$")>;
-def : InstRW<[FXb, LSU, Lat30], (instregex "ECAG$")>;
-def : InstRW<[FXa, LSU, Lat30], (instregex "ECTG$")>;
-def : InstRW<[FXb, Lat30], (instregex "PTF$")>;
-def : InstRW<[FXb, Lat30], (instregex "PCKMO$")>;
+def : InstRW<[WLat30, MCD], (instregex "STAP$")>;
+def : InstRW<[WLat30, MCD], (instregex "STIDP$")>;
+def : InstRW<[WLat30, WLat30, MCD], (instregex "STSI$")>;
+def : InstRW<[WLat30, WLat30, MCD], (instregex "STFL(E)?$")>;
+def : InstRW<[WLat30, MCD], (instregex "ECAG$")>;
+def : InstRW<[WLat30, WLat30, MCD], (instregex "ECTG$")>;
+def : InstRW<[WLat30, MCD], (instregex "PTF$")>;
+def : InstRW<[WLat30, MCD], (instregex "PCKMO$")>;
 
 //===----------------------------------------------------------------------===//
 // System: Miscellaneous Instructions
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[FXb, Lat30], (instregex "SVC$")>;
-def : InstRW<[FXb, GroupAlone], (instregex "MC$")>;
-def : InstRW<[FXb, Lat30], (instregex "DIAG$")>;
-def : InstRW<[FXb], (instregex "TRAC(E|G)$")>;
-def : InstRW<[FXb, Lat30], (instregex "TRAP(2|4)$")>;
-def : InstRW<[FXb, Lat30], (instregex "SIGP$")>;
-def : InstRW<[FXb, LSU, Lat30], (instregex "SIGA$")>;
-def : InstRW<[FXb, LSU, Lat30], (instregex "SIE$")>;
+def : InstRW<[WLat30, MCD], (instregex "SVC$")>;
+def : InstRW<[WLat1, FXb, GroupAlone], (instregex "MC$")>;
+def : InstRW<[WLat30, MCD], (instregex "DIAG$")>;
+def : InstRW<[WLat1, FXb, NormalGr], (instregex "TRAC(E|G)$")>;
+def : InstRW<[WLat30, MCD], (instregex "TRAP(2|4)$")>;
+def : InstRW<[WLat30, MCD], (instregex "SIG(P|A)$")>;
+def : InstRW<[WLat30, MCD], (instregex "SIE$")>;
 
 //===----------------------------------------------------------------------===//
 // System: CPU-Measurement Facility Instructions
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[FXb], (instregex "LPP$")>;
-def : InstRW<[FXb, Lat30], (instregex "ECPGA$")>;
-def : InstRW<[FXb, Lat30], (instregex "E(C|P)CTR$")>;
-def : InstRW<[FXb, Lat30], (instregex "LCCTL$")>;
-def : InstRW<[FXb, LSU, Lat30], (instregex "L(P|S)CTL$")>;
-def : InstRW<[FXb, LSU, Lat30], (instregex "Q(S|CTR)I$")>;
-def : InstRW<[FXb, Lat30], (instregex "S(C|P)CTR$")>;
+def : InstRW<[WLat1, FXb, NormalGr], (instregex "LPP$")>;
+def : InstRW<[WLat30, WLat30, MCD], (instregex "ECPGA$")>;
+def : InstRW<[WLat30, WLat30, MCD], (instregex "E(C|P)CTR$")>;
+def : InstRW<[WLat30, MCD], (instregex "LCCTL$")>;
+def : InstRW<[WLat30, MCD], (instregex "L(P|S)CTL$")>;
+def : InstRW<[WLat30, MCD], (instregex "Q(S|CTR)I$")>;
+def : InstRW<[WLat30, MCD], (instregex "S(C|P)CTR$")>;
 
 //===----------------------------------------------------------------------===//
 // System: I/O Instructions
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[FXb, Lat30], (instregex "(C|H|R|X)SCH$")>;
-def : InstRW<[FXb, LSU, Lat30], (instregex "(M|S|ST|T)SCH$")>;
-def : InstRW<[FXb, Lat30], (instregex "RCHP$")>;
-def : InstRW<[FXb, Lat30], (instregex "SCHM$")>;
-def : InstRW<[FXb, LSU, Lat30], (instregex "STC(PS|RW)$")>;
-def : InstRW<[FXb, LSU, Lat30], (instregex "TPI$")>;
-def : InstRW<[FXb, Lat30], (instregex "SAL$")>;
+def : InstRW<[WLat30, MCD], (instregex "(C|H|R|X)SCH$")>;
+def : InstRW<[WLat30, MCD], (instregex "(M|S|ST|T)SCH$")>;
+def : InstRW<[WLat30, MCD], (instregex "RCHP$")>;
+def : InstRW<[WLat30, MCD], (instregex "SCHM$")>;
+def : InstRW<[WLat30, MCD], (instregex "STC(PS|RW)$")>;
+def : InstRW<[WLat30, MCD], (instregex "TPI$")>;
+def : InstRW<[WLat30, MCD], (instregex "SAL$")>;
 
 }
 

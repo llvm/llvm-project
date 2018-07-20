@@ -50,18 +50,6 @@
 
 using namespace llvm;
 
-static bool allocateKernArg(unsigned ValNo, MVT ValVT, MVT LocVT,
-                            CCValAssign::LocInfo LocInfo,
-                            ISD::ArgFlagsTy ArgFlags, CCState &State) {
-  MachineFunction &MF = State.getMachineFunction();
-  AMDGPUMachineFunction *MFI = MF.getInfo<AMDGPUMachineFunction>();
-
-  uint64_t Offset = MFI->allocateKernArg(LocVT.getStoreSize(),
-                                         ArgFlags.getOrigAlign());
-  State.addLoc(CCValAssign::getCustomMem(ValNo, ValVT, Offset, LocVT, LocInfo));
-  return true;
-}
-
 #include "R600GenCallingConv.inc"
 
 R600TargetLowering::R600TargetLowering(const TargetMachine &TM,
@@ -234,7 +222,7 @@ R600TargetLowering::R600TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FMA, MVT::f32, Expand);
     setOperationAction(ISD::FMA, MVT::f64, Expand);
   }
- 
+
   // FIXME: This was moved from AMDGPUTargetLowering, I'm not sure if we
   // need it for R600.
   if (!Subtarget->hasFP32Denormals())
@@ -1583,7 +1571,7 @@ CCAssignFn *R600TargetLowering::CCAssignFnForCall(CallingConv::ID CC,
   case CallingConv::C:
   case CallingConv::Fast:
   case CallingConv::Cold:
-    return CC_R600_Kernel;
+    llvm_unreachable("kernels should not be handled here");
   case CallingConv::AMDGPU_VS:
   case CallingConv::AMDGPU_GS:
   case CallingConv::AMDGPU_PS:
@@ -1658,13 +1646,12 @@ SDValue R600TargetLowering::LowerFormalArguments(
 
     unsigned ValBase = ArgLocs[In.getOrigArgIndex()].getLocMemOffset();
     unsigned PartOffset = VA.getLocMemOffset();
-    unsigned Offset = Subtarget->getExplicitKernelArgOffset(MF.getFunction()) +
-                      VA.getLocMemOffset();
 
     MachinePointerInfo PtrInfo(UndefValue::get(PtrTy), PartOffset - ValBase);
     SDValue Arg = DAG.getLoad(
         ISD::UNINDEXED, Ext, VT, DL, Chain,
-        DAG.getConstant(Offset, DL, MVT::i32), DAG.getUNDEF(MVT::i32), PtrInfo,
+        DAG.getConstant(PartOffset, DL, MVT::i32), DAG.getUNDEF(MVT::i32),
+        PtrInfo,
         MemVT, /* Alignment = */ 4, MachineMemOperand::MONonTemporal |
                                         MachineMemOperand::MODereferenceable |
                                         MachineMemOperand::MOInvariant);

@@ -81,6 +81,9 @@ defm : AtomWriteResPair<WriteADC,    [AtomPort01], [AtomPort0]>;
 defm : AtomWriteResPair<WriteIMul,   [AtomPort01], [AtomPort01],  7,  7,  [7],  [7]>;
 defm : AtomWriteResPair<WriteIMul64, [AtomPort01], [AtomPort01], 12, 12, [12], [12]>;
 
+defm : AtomWriteResPair<WriteBSWAP32,    [AtomPort0], [AtomPort0]>;
+defm : AtomWriteResPair<WriteBSWAP64,    [AtomPort0], [AtomPort0]>;
+
 defm : AtomWriteResPair<WriteDiv8,   [AtomPort01], [AtomPort01], 50, 68, [50], [68]>;
 defm : AtomWriteResPair<WriteDiv16,  [AtomPort01], [AtomPort01], 50, 50, [50], [50]>;
 defm : AtomWriteResPair<WriteDiv32,  [AtomPort01], [AtomPort01], 50, 50, [50], [50]>;
@@ -489,7 +492,6 @@ def AtomWrite0_1 : SchedWriteRes<[AtomPort0]> {
   let ResourceCycles = [1];
 }
 def : InstRW<[AtomWrite0_1], (instrs FXAM, LD_Frr,
-                                     BSWAP32r, BSWAP64r,
                                      MOVSX64rr32)>;
 def : SchedAlias<WriteALURMW, AtomWrite0_1>;
 def : SchedAlias<WriteADCRMW, AtomWrite0_1>;
