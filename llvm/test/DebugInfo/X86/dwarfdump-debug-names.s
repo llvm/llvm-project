@@ -44,7 +44,7 @@
 	.byte	46                      # Abbrev code
 	.byte	46                      # DW_TAG_subprogram
 	.byte	3                       # DW_IDX_die_offset
-	.byte	6                       # DW_FORM_data4
+	.byte	19                      # DW_FORM_ref4
 	.byte	0                       # End of abbrev
 	.byte	0                       # End of abbrev
 	.byte	0                       # End of abbrev list
@@ -52,11 +52,11 @@
 .Lnames_entries0:
 .Lnames0:
 	.byte	46                      # Abbrev code
-	.long	.Ldie0                  # DW_IDX_die_offset
+	.long	.Ldie0-.Lcu_begin0      # DW_IDX_die_offset
 	.long	0                       # End of list: foo
 .Lnames1:
 	.byte	46                      # Abbrev code
-	.long	.Ldie0                  # DW_IDX_die_offset
+	.long	.Ldie0-.Lcu_begin0      # DW_IDX_die_offset
 	.long	0                       # End of list: _Z3foov
 	.p2align	2
 .Lnames_end0:
@@ -81,7 +81,7 @@
 	.byte	52                      # Abbrev code
 	.byte	52                      # DW_TAG_variable
 	.byte	3                       # DW_IDX_die_offset
-	.byte	6                       # DW_FORM_data4
+	.byte	19                      # DW_FORM_ref4
 	.byte	0                       # End of abbrev
 	.byte	0                       # End of abbrev
 	.byte	0                       # End of abbrev list
@@ -89,7 +89,7 @@
 .Lnames_entries1:
 .Lnames2:
 	.byte	52                      # Abbrev code
-	.long	.Ldie1                  # DW_IDX_die_offset
+	.long	.Ldie1-.Lcu_begin1      # DW_IDX_die_offset
 	.long	0                       # End of list: bar
 	.p2align	2
 .Lnames_end1:
@@ -113,7 +113,7 @@
 # CHECK-NEXT:   Abbreviations [
 # CHECK-NEXT:     Abbreviation 0x2e {
 # CHECK-NEXT:       Tag: DW_TAG_subprogram
-# CHECK-NEXT:       DW_IDX_die_offset: DW_FORM_data4
+# CHECK-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
 # CHECK-NEXT:     }
 # CHECK-NEXT:   ]
 # CHECK-NEXT:   Bucket 0 [
@@ -159,7 +159,7 @@
 # CHECK-NEXT:   Abbreviations [
 # CHECK-NEXT:     Abbreviation 0x34 {
 # CHECK-NEXT:       Tag: DW_TAG_variable
-# CHECK-NEXT:       DW_IDX_die_offset: DW_FORM_data4
+# CHECK-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
 # CHECK-NEXT:     }
 # CHECK-NEXT:   ]
 # CHECK-NEXT:   Bucket 0 [
@@ -169,7 +169,7 @@
 # CHECK-NEXT:       Entry @ 0xa3 {
 # CHECK-NEXT:         Abbrev: 0x34
 # CHECK-NEXT:         Tag: DW_TAG_variable
-# CHECK-NEXT:         DW_IDX_die_offset: 0x00000003
+# CHECK-NEXT:         DW_IDX_die_offset: 0x00000001
 # CHECK-NEXT:       }
 # CHECK-NEXT:     }
 # CHECK-NEXT:   ]

@@ -27,11 +27,15 @@
 ; CHECK-NEXT: debug_line[{{.*}}]
 ; CHECK-NEXT: Line table prologue:
 ; CHECK-NEXT: total_length: 0x00000038
-; CHECK: file_names[  1]    0 0x00000000 0x00000000 simple.c
+; CHECK: file_names[  1]:
+; CHECK-NEXT: name: "simple.c"
+; CHECK-NEXT: dir_index: 0
 ; CHECK: debug_line[{{.*}}]
 ; CHECK-NEXT: Line table prologue:
 ; CHECK-NEXT: total_length: 0x00000039
-; CHECK: file_names[  1]    0 0x00000000 0x00000000 simple2.c
+; CHECK: file_names[  1]:
+; CHECK-NEXT: name: "simple2.c"
+; CHECK-NEXT: dir_index: 0
 ; CHECK-NOT: file_names
 
 ; DWARF3: .debug_info contents:
@@ -46,21 +50,25 @@
 ; DWARF3-NEXT: debug_line[{{.*}}]
 ; DWARF3-NEXT: Line table prologue:
 ; DWARF3-NEXT: total_length: 0x00000038
-; DWARF3: file_names[  1]    0 0x00000000 0x00000000 simple.c
+; DWARF3: file_names[  1]:
+; DWARF3-NEXT: name: "simple.c"
+; DWARF3-NEXT: dir_index: 0
 ; DWARF3: debug_line[{{.*}}]
 ; DWARF3-NEXT: Line table prologue:
 ; DWARF3-NEXT: total_length: 0x00000039
-; DWARF3: file_names[  1]    0 0x00000000 0x00000000 simple2.c
+; DWARF3: file_names[  1]:
+; DWARF3-NEXT: name: "simple2.c"
+; DWARF3-NEXT: dir_index: 0
 ; DWARF3-NOT: file_names
 
 ; PR15408
 ; ASM: Lcu_begin0:
 ; ASM-NOT: Lcu_begin
-; ASM: Lset[[LT:[0-9]+]] = Lline_table_start0-Lsection_line ## DW_AT_stmt_list
+; ASM: .set Lset[[LT:[0-9]+]], Lline_table_start0-Lsection_line ## DW_AT_stmt_list
 ; ASM-NEXT: .long   Lset[[LT]]
 ; ASM: Lcu_begin1:
 ; ASM-NOT: Lcu_begin
-; ASM: Lset[[LT:[0-9]+]] = Lline_table_start0-Lsection_line ## DW_AT_stmt_list
+; ASM: .set Lset[[LT:[0-9]+]], Lline_table_start0-Lsection_line ## DW_AT_stmt_list
 ; ASM-NEXT: .long   Lset[[LT]]
 define i32 @test(i32 %a) nounwind uwtable ssp !dbg !5 {
 entry:
@@ -87,13 +95,13 @@ entry:
 !llvm.module.flags = !{!25}
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.3", isOptimized: false, emissionKind: FullDebug, file: !23, enums: !1, retainedTypes: !1, globals: !1, imports:  !1)
 !1 = !{}
-!5 = distinct !DISubprogram(name: "test", line: 2, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 3, file: !23, scope: !6, type: !7, variables: !1)
+!5 = distinct !DISubprogram(name: "test", line: 2, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 3, file: !23, scope: !6, type: !7, retainedNodes: !1)
 !6 = !DIFile(filename: "simple.c", directory: "/private/tmp")
 !7 = !DISubroutineType(types: !8)
 !8 = !{!9, !9}
 !9 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !10 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.3 (trunk 172862)", isOptimized: false, emissionKind: FullDebug, file: !24, enums: !1, retainedTypes: !1, globals: !1, imports:  !1)
-!13 = distinct !DISubprogram(name: "fn", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !10, scopeLine: 1, file: !24, scope: !14, type: !7, variables: !1)
+!13 = distinct !DISubprogram(name: "fn", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !10, scopeLine: 1, file: !24, scope: !14, type: !7, retainedNodes: !1)
 !14 = !DIFile(filename: "simple2.c", directory: "/private/tmp")
 !15 = !DILocalVariable(name: "a", line: 2, arg: 1, scope: !5, file: !6, type: !9)
 !16 = !DILocation(line: 2, scope: !5)

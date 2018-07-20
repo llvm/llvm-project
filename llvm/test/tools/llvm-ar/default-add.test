@@ -14,5 +14,21 @@ RUN: not grep -q __.SYMDEF %t.ar
 RUN: llvm-ar crs %t.ar %t-macho.o
 RUN: not grep -q __.SYMDEF %t.ar
 
+RUN: rm -f %t.ar
+Test that multiple dashed options works.
+RUN: llvm-ar -c -r -s %t.ar %t-macho.o
+RUN: grep -q __.SYMDEF %t.ar
+Test with duplicated options.
+RUN: llvm-ar -c -r -s -c -s %t.ar %t-coff.o
+RUN: grep -q __.SYMDEF %t.ar
+
+RUN: rm -f %t.ar
+Test with the options in a different order.
+RUN: llvm-ar rsc %t.ar %t-macho.o
+RUN: grep -q __.SYMDEF %t.ar
+Test with options everywhere.
+RUN: llvm-ar rsc -cs -sc %t.ar %t-coff.o -cs -sc
+RUN: grep -q __.SYMDEF %t.ar
+
 Ensure that we select the existing format when updating.
 

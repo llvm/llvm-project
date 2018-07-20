@@ -838,10 +838,10 @@ bool ARMBaseRegisterInfo::shouldCoalesce(MachineInstr *MI,
   auto AFI = MF->getInfo<ARMFunctionInfo>();
   auto It = AFI->getCoalescedWeight(MBB);
 
-  DEBUG(dbgs() << "\tARM::shouldCoalesce - Coalesced Weight: "
-    << It->second << "\n");
-  DEBUG(dbgs() << "\tARM::shouldCoalesce - Reg Weight: "
-    << NewRCWeight.RegWeight << "\n");
+  LLVM_DEBUG(dbgs() << "\tARM::shouldCoalesce - Coalesced Weight: "
+                    << It->second << "\n");
+  LLVM_DEBUG(dbgs() << "\tARM::shouldCoalesce - Reg Weight: "
+                    << NewRCWeight.RegWeight << "\n");
 
   // This number is the largest round number that which meets the criteria:
   //  (1) addresses PR18825

@@ -17,6 +17,11 @@ namespace llvm {
 class BPFTargetMachine;
 
 FunctionPass *createBPFISelDag(BPFTargetMachine &TM);
+FunctionPass *createBPFMIPeepholePass();
+FunctionPass *createBPFMIPreEmitPeepholePass();
+
+void initializeBPFMIPeepholePass(PassRegistry&);
+void initializeBPFMIPreEmitPeepholePass(PassRegistry&);
 }
 
 #endif

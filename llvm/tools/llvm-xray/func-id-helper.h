@@ -13,6 +13,7 @@
 #ifndef LLVM_TOOLS_LLVM_XRAY_FUNC_ID_HELPER_H
 #define LLVM_TOOLS_LLVM_XRAY_FUNC_ID_HELPER_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/DebugInfo/Symbolize/Symbolize.h"
 #include <unordered_map>
 
@@ -28,6 +29,7 @@ private:
   std::string BinaryInstrMap;
   symbolize::LLVMSymbolizer &Symbolizer;
   const FunctionAddressMap &FunctionAddresses;
+  mutable llvm::DenseMap<int32_t, std::string> CachedNames;
 
 public:
   FuncIdConversionHelper(std::string BinaryInstrMap,

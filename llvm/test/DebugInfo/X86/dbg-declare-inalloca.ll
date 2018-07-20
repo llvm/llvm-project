@@ -67,7 +67,7 @@
 ; OBJ:   VarName: a
 ; OBJ: }
 ; OBJ: DefRangeRegisterRelSym {
-; OBJ:   BaseRegister: ESP (0x15)
+; OBJ:   BaseRegister: CVRegESP (0x15)
 ; OBJ:   BasePointerOffset: 12
 ; OBJ: }
 ; OBJ: LocalSym {
@@ -78,7 +78,7 @@
 ; OBJ:   VarName: b
 ; OBJ: }
 ; OBJ: DefRangeRegisterRelSym {
-; OBJ:   BaseRegister: ESP (0x15)
+; OBJ:   BaseRegister: CVRegESP (0x15)
 ; OBJ:   BasePointerOffset: 16
 ; OBJ: }
 ; FIXME: Retain unused.
@@ -90,7 +90,7 @@
 ; OBJ:   VarName: c
 ; OBJ: }
 ; OBJ: DefRangeRegisterRelSym {
-; OBJ:   BaseRegister: ESP (0x15)
+; OBJ:   BaseRegister: CVRegESP (0x15)
 ; OBJ:   BasePointerOffset: 24
 ; OBJ: }
 ; OBJ-LABEL: ProcEnd {
@@ -159,7 +159,7 @@ attributes #4 = { nounwind }
 !4 = !{i32 2, !"CodeView", i32 1}
 !5 = !{i32 2, !"Debug Info Version", i32 3}
 !6 = !{!"clang version 5.0.0 "}
-!7 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 8, type: !8, isLocal: false, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !19)
+!7 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 8, type: !8, isLocal: false, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !19)
 !8 = !DISubroutineType(types: !9)
 !9 = !{null, !10, !13, !13, !13}
 !10 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "NonTrivial", file: !1, line: 1, size: 32, elements: !11, identifier: ".?AUNonTrivial@@")

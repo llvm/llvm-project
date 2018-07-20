@@ -55,26 +55,27 @@ class BasicAAResult : public AAResultBase<BasicAAResult> {
   friend AAResultBase<BasicAAResult>;
 
   const DataLayout &DL;
+  const Function &F;
   const TargetLibraryInfo &TLI;
   AssumptionCache &AC;
   DominatorTree *DT;
   LoopInfo *LI;
 
 public:
-  BasicAAResult(const DataLayout &DL, const TargetLibraryInfo &TLI,
-                AssumptionCache &AC, DominatorTree *DT = nullptr,
-                LoopInfo *LI = nullptr)
-      : AAResultBase(), DL(DL), TLI(TLI), AC(AC), DT(DT), LI(LI) {}
+  BasicAAResult(const DataLayout &DL, const Function &F,
+                const TargetLibraryInfo &TLI, AssumptionCache &AC,
+                DominatorTree *DT = nullptr, LoopInfo *LI = nullptr)
+      : AAResultBase(), DL(DL), F(F), TLI(TLI), AC(AC), DT(DT), LI(LI) {}
 
   BasicAAResult(const BasicAAResult &Arg)
-      : AAResultBase(Arg), DL(Arg.DL), TLI(Arg.TLI), AC(Arg.AC), DT(Arg.DT),
-        LI(Arg.LI) {}
-  BasicAAResult(BasicAAResult &&Arg)
-      : AAResultBase(std::move(Arg)), DL(Arg.DL), TLI(Arg.TLI), AC(Arg.AC),
+      : AAResultBase(Arg), DL(Arg.DL), F(Arg.F), TLI(Arg.TLI), AC(Arg.AC),
         DT(Arg.DT), LI(Arg.LI) {}
+  BasicAAResult(BasicAAResult &&Arg)
+      : AAResultBase(std::move(Arg)), DL(Arg.DL), F(Arg.F), TLI(Arg.TLI),
+        AC(Arg.AC), DT(Arg.DT), LI(Arg.LI) {}
 
   /// Handle invalidation events in the new pass manager.
-  bool invalidate(Function &F, const PreservedAnalyses &PA,
+  bool invalidate(Function &Fn, const PreservedAnalyses &PA,
                   FunctionAnalysisManager::Invalidator &Inv);
 
   AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB);
@@ -94,7 +95,7 @@ public:
 
   /// Returns the behavior when calling the given function. For use when the
   /// call site is not known.
-  FunctionModRefBehavior getModRefBehavior(const Function *F);
+  FunctionModRefBehavior getModRefBehavior(const Function *Fn);
 
 private:
   // A linear transformation of a Value; this class represents ZExt(SExt(V,
@@ -171,9 +172,9 @@ private:
 
   static bool isGEPBaseAtNegativeOffset(const GEPOperator *GEPOp,
       const DecomposedGEP &DecompGEP, const DecomposedGEP &DecompObject,
-      uint64_t ObjectAccessSize);
+      LocationSize ObjectAccessSize);
 
-  /// \brief A Heuristic for aliasGEP that searches for a constant offset
+  /// A Heuristic for aliasGEP that searches for a constant offset
   /// between the variables.
   ///
   /// GetLinearExpression has some limitations, as generally zext(%x + 1)
@@ -183,31 +184,33 @@ private:
   /// the addition overflows.
   bool
   constantOffsetHeuristic(const SmallVectorImpl<VariableGEPIndex> &VarIndices,
-                          uint64_t V1Size, uint64_t V2Size, int64_t BaseOffset,
-                          AssumptionCache *AC, DominatorTree *DT);
+                          LocationSize V1Size, LocationSize V2Size,
+                          int64_t BaseOffset, AssumptionCache *AC,
+                          DominatorTree *DT);
 
   bool isValueEqualInPotentialCycles(const Value *V1, const Value *V2);
 
   void GetIndexDifference(SmallVectorImpl<VariableGEPIndex> &Dest,
                           const SmallVectorImpl<VariableGEPIndex> &Src);
 
-  AliasResult aliasGEP(const GEPOperator *V1, uint64_t V1Size,
+  AliasResult aliasGEP(const GEPOperator *V1, LocationSize V1Size,
                        const AAMDNodes &V1AAInfo, const Value *V2,
-                       uint64_t V2Size, const AAMDNodes &V2AAInfo,
+                       LocationSize V2Size, const AAMDNodes &V2AAInfo,
                        const Value *UnderlyingV1, const Value *UnderlyingV2);
 
-  AliasResult aliasPHI(const PHINode *PN, uint64_t PNSize,
+  AliasResult aliasPHI(const PHINode *PN, LocationSize PNSize,
                        const AAMDNodes &PNAAInfo, const Value *V2,
-                       uint64_t V2Size, const AAMDNodes &V2AAInfo,
+                       LocationSize V2Size, const AAMDNodes &V2AAInfo,
                        const Value *UnderV2);
 
-  AliasResult aliasSelect(const SelectInst *SI, uint64_t SISize,
+  AliasResult aliasSelect(const SelectInst *SI, LocationSize SISize,
                           const AAMDNodes &SIAAInfo, const Value *V2,
-                          uint64_t V2Size, const AAMDNodes &V2AAInfo,
+                          LocationSize V2Size, const AAMDNodes &V2AAInfo,
                           const Value *UnderV2);
 
-  AliasResult aliasCheck(const Value *V1, uint64_t V1Size, AAMDNodes V1AATag,
-                         const Value *V2, uint64_t V2Size, AAMDNodes V2AATag,
+  AliasResult aliasCheck(const Value *V1, LocationSize V1Size,
+                         AAMDNodes V1AATag, const Value *V2,
+                         LocationSize V2Size, AAMDNodes V2AATag,
                          const Value *O1 = nullptr, const Value *O2 = nullptr);
 };
 

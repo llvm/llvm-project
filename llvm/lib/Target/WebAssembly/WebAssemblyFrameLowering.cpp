@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file contains the WebAssembly implementation of
+/// This file contains the WebAssembly implementation of
 /// TargetFrameLowering class.
 ///
 /// On WebAssembly, there aren't a lot of things to do here. There are no
@@ -106,29 +106,9 @@ static void writeSPToMemory(unsigned SrcReg, MachineFunction &MF,
 
   const char *ES = "__stack_pointer";
   auto *SPSymbol = MF.createExternalSymbolName(ES);
-  if (MF.getSubtarget<WebAssemblySubtarget>()
-        .getTargetTriple().isOSBinFormatELF()) {
-    MachineRegisterInfo &MRI = MF.getRegInfo();
-    const TargetRegisterClass *PtrRC =
-        MRI.getTargetRegisterInfo()->getPointerRegClass(MF);
-    unsigned Zero = MRI.createVirtualRegister(PtrRC);
-
-    BuildMI(MBB, InsertAddr, DL, TII->get(WebAssembly::CONST_I32), Zero)
-        .addImm(0);
-    MachineMemOperand *MMO = MF.getMachineMemOperand(
-        MachinePointerInfo(MF.getPSVManager().getExternalSymbolCallEntry(ES)),
-        MachineMemOperand::MOStore, 4, 4);
-    BuildMI(MBB, InsertStore, DL, TII->get(WebAssembly::STORE_I32))
-        .addImm(2)  // p2align
-        .addExternalSymbol(SPSymbol)
-        .addReg(Zero)
-        .addReg(SrcReg)
-        .addMemOperand(MMO);
-  } else {
-    BuildMI(MBB, InsertStore, DL, TII->get(WebAssembly::SET_GLOBAL_I32))
-        .addExternalSymbol(SPSymbol)
-        .addReg(SrcReg);
-  }
+  BuildMI(MBB, InsertStore, DL, TII->get(WebAssembly::SET_GLOBAL_I32))
+      .addExternalSymbol(SPSymbol)
+      .addReg(SrcReg);
 }
 
 MachineBasicBlock::iterator
@@ -172,25 +152,8 @@ void WebAssemblyFrameLowering::emitPrologue(MachineFunction &MF,
 
   const char *ES = "__stack_pointer";
   auto *SPSymbol = MF.createExternalSymbolName(ES);
-  if (MF.getSubtarget<WebAssemblySubtarget>()
-        .getTargetTriple().isOSBinFormatELF()) {
-    unsigned Zero = MRI.createVirtualRegister(PtrRC);
-
-    BuildMI(MBB, InsertPt, DL, TII->get(WebAssembly::CONST_I32), Zero)
-        .addImm(0);
-    MachineMemOperand *LoadMMO = MF.getMachineMemOperand(
-        MachinePointerInfo(MF.getPSVManager().getExternalSymbolCallEntry(ES)),
-        MachineMemOperand::MOLoad, 4, 4);
-    // Load the SP value.
-    BuildMI(MBB, InsertPt, DL, TII->get(WebAssembly::LOAD_I32), SPReg)
-        .addImm(2)       // p2align
-        .addExternalSymbol(SPSymbol)
-        .addReg(Zero)    // addr
-        .addMemOperand(LoadMMO);
-  } else {
-    BuildMI(MBB, InsertPt, DL, TII->get(WebAssembly::GET_GLOBAL_I32), SPReg)
-        .addExternalSymbol(SPSymbol);
-  }
+  BuildMI(MBB, InsertPt, DL, TII->get(WebAssembly::GET_GLOBAL_I32), SPReg)
+      .addExternalSymbol(SPSymbol);
 
   bool HasBP = hasBP(MF);
   if (HasBP) {

@@ -152,8 +152,8 @@ supported include:
 ``foreach <var> = [ <list> ] in <def>``
     Replicate <body> or <def>, replacing instances of <var> with each value
     in <list>.  <var> is scoped at the level of the ``foreach`` loop and must
-    not conflict with any other object introduced in <body> or <def>.  Currently
-    only ``def``\s are expanded within <body>.
+    not conflict with any other object introduced in <body> or <def>.  Only
+    ``def``\s and ``defm``\s are expanded within <body>.
 
 ``foreach <var> = 0-15 in ...``
 
@@ -164,6 +164,24 @@ supported include:
     a dag value.  The first element is required to be a record definition, the
     remaining elements in the list may be arbitrary other values, including
     nested ```dag``' values.
+
+``!con(a, b, ...)``
+    Concatenate two or more DAG nodes. Their operations must equal.
+
+    Example: !con((op a1:$name1, a2:$name2), (op b1:$name3)) results in
+    the DAG node (op a1:$name1, a2:$name2, b1:$name3).
+
+``!dag(op, children, names)``
+    Generate a DAG node programmatically. 'children' and 'names' must be lists
+    of equal length or unset ('?'). 'names' must be a 'list<string>'.
+
+    Due to limitations of the type system, 'children' must be a list of items
+    of a common type. In practice, this means that they should either have the
+    same type or be records with a common superclass. Mixing dag and non-dag
+    items is not possible. However, '?' can be used.
+
+    Example: !dag(op, [a1, a2, ?], ["name1", "name2", "name3"]) results in
+    (op a1:$name1, a2:$name2, ?:$name3).
 
 ``!listconcat(a, b, ...)``
     A list value that is the result of concatenating the 'a' and 'b' lists.
@@ -182,19 +200,48 @@ supported include:
     the operand of the paste.
 
 ``!cast<type>(a)``
-    A symbol of type *type* obtained by looking up the string 'a' in the symbol
-    table.  If the type of 'a' does not match *type*, TableGen aborts with an
-    error. !cast<string> is a special case in that the argument must be an
-    object defined by a 'def' construct.
+    If 'a' is a string, a record of type *type* obtained by looking up the
+    string 'a' in the list of all records defined by the time that all template
+    arguments in 'a' are fully resolved.
+
+    For example, if !cast<type>(a) appears in a multiclass definition, or in a
+    class instantiated inside of a multiclass definition, and 'a' does not
+    reference any template arguments of the multiclass, then a record of name
+    'a' must be instantiated earlier in the source file. If 'a' does reference
+    a template argument, then the lookup is delayed until defm statements
+    instantiating the multiclass (or later, if the defm occurs in another
+    multiclass and template arguments of the inner multiclass that are
+    referenced by 'a' are substituted by values that themselves contain
+    references to template arguments of the outer multiclass).
+
+    If the type of 'a' does not match *type*, TableGen aborts with an error.
+
+    Otherwise, perform a normal type cast e.g. between an int and a bit, or
+    between record types. This allows casting a record to a subclass, though if
+    the types do not match, constant folding will be inhibited. !cast<string>
+    is a special case in that the argument can be an int or a record. In the
+    latter case, the record's name is returned.
+
+``!isa<type>(a)``
+    Returns an integer: 1 if 'a' is dynamically of the given type, 0 otherwise.
 
 ``!subst(a, b, c)``
     If 'a' and 'b' are of string type or are symbol references, substitute 'b'
     for 'a' in 'c.'  This operation is analogous to $(subst) in GNU make.
 
 ``!foreach(a, b, c)``
-    For each member of dag or list 'b' apply operator 'c.'  'a' is a dummy
-    variable that should be declared as a member variable of an instantiated
-    class.  This operation is analogous to $(foreach) in GNU make.
+    For each member of dag or list 'b' apply operator 'c'. 'a' is the name
+    of a variable that will be substituted by members of 'b' in 'c'.
+    This operation is analogous to $(foreach) in GNU make.
+
+``!foldl(start, lst, a, b, expr)``
+    Perform a left-fold over 'lst' with the given starting value. 'a' and 'b'
+    are variable names which will be substituted in 'expr'. If you think of
+    expr as a function f(a,b), the fold will compute
+    'f(...f(f(start, lst[0]), lst[1]), ...), lst[n-1])' for a list of length n.
+    As usual, 'a' will be of the type of 'start', and 'b' will be of the type
+    of elements of 'lst'. These types need not be the same, but 'expr' must be
+    of the same type as 'start'.
 
 ``!head(a)``
     The first element of list 'a.'
@@ -205,6 +252,9 @@ supported include:
 ``!empty(a)``
     An integer {0,1} indicating whether list 'a' is empty.
 
+``!size(a)``
+    An integer indicating the number of elements in list 'a'.
+
 ``!if(a,b,c)``
   'b' if the result of 'int' or 'bit' operator 'a' is nonzero, 'c' otherwise.
 
@@ -213,8 +263,19 @@ supported include:
     on string, int and bit objects.  Use !cast<string> to compare other types of
     objects.
 
-``!shl(a,b)`` ``!srl(a,b)`` ``!sra(a,b)`` ``!add(a,b)`` ``!and(a,b)``
-    The usual binary and arithmetic operators.
+``!ne(a,b)``
+    The negation of ``!eq(a,b)``.
+
+``!le(a,b), !lt(a,b), !ge(a,b), !gt(a,b)``
+    (Signed) comparison of integer values that returns bit 1 or 0 depending on
+    the result of the comparison.
+
+``!shl(a,b)`` ``!srl(a,b)`` ``!sra(a,b)``
+    The usual shift operators. Operations are on 64-bit integers, the result
+    is undefined for shift counts outside [0, 63].
+
+``!add(a,b,...)`` ``!and(a,b,...)`` ``!or(a,b,...)``
+    The usual arithmetic and binary operators.
 
 Note that all of the values have rules specifying how they convert to values
 for different types.  These rules allow you to assign a value like "``7``"
@@ -286,6 +347,23 @@ the ``V`` field for all of its subclasses:
 In this case, the ``Z`` definition will have a zero value for its ``V`` value,
 despite the fact that it derives (indirectly) from the ``C`` class, because the
 ``D`` class overrode its value.
+
+References between variables in a record are substituted late, which gives
+``let`` expressions unusual power. Consider this admittedly silly example:
+
+.. code-block:: text
+
+  class A<int x> {
+    int Y = x;
+    int Yplus1 = !add(Y, 1);
+    int xplus1 = !add(x, 1);
+  }
+  def Z : A<5> {
+    let Y = 10;
+  }
+
+The value of ``Z.xplus1`` will be 6, but the value of ``Z.Yplus1`` is 11. Use
+this power wisely.
 
 .. _template arguments:
 

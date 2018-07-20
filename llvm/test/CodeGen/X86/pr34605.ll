@@ -19,7 +19,7 @@ define void @pr34605(i8* nocapture %s, i32 %p) {
 ; CHECK-NEXT:    kandq %k1, %k0, %k1
 ; CHECK-NEXT:    vmovdqu8 {{\.LCPI.*}}, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vmovdqu32 %zmm0, (%eax)
+; CHECK-NEXT:    vmovdqu64 %zmm0, (%eax)
 ; CHECK-NEXT:    vmovups %zmm1, 64(%eax)
 ; CHECK-NEXT:    vmovups %zmm1, 128(%eax)
 ; CHECK-NEXT:    vmovups %zmm1, 192(%eax)

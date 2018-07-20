@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple x86_64-unknown-unknown -mcpu=skx  --show-encoding %s | FileCheck %s
+// RUN: llvm-mc -triple x86_64-unknown-unknown --show-encoding %s | FileCheck %s
 
 // CHECK: vblendmpd %xmm19, %xmm20, %xmm27
 // CHECK:  encoding: [0x62,0x22,0xdd,0x00,0x65,0xdb]

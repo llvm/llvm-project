@@ -175,6 +175,39 @@ void llvm::report_bad_alloc_error(const char *Reason, bool GenCrashDiag) {
 #endif
 }
 
+#ifdef LLVM_ENABLE_EXCEPTIONS
+// Do not set custom new handler if exceptions are enabled. In this case OOM
+// errors are handled by throwing 'std::bad_alloc'.
+void llvm::install_out_of_memory_new_handler() {
+}
+#else
+// Causes crash on allocation failure. It is called prior to the handler set by
+// 'install_bad_alloc_error_handler'.
+static void out_of_memory_new_handler() {
+  llvm::report_bad_alloc_error("Allocation failed");
+}
+
+// Installs new handler that causes crash on allocation failure. It does not
+// need to be called explicitly, if this file is linked to application, because
+// in this case it is called during construction of 'new_handler_installer'.
+void llvm::install_out_of_memory_new_handler() {
+  static bool out_of_memory_new_handler_installed = false;
+  if (!out_of_memory_new_handler_installed) {
+    std::set_new_handler(out_of_memory_new_handler);
+    out_of_memory_new_handler_installed = true;
+  }
+}
+
+// Static object that causes installation of 'out_of_memory_new_handler' before
+// execution of 'main'.
+static class NewHandlerInstaller {
+public:
+  NewHandlerInstaller() {
+    install_out_of_memory_new_handler();
+  }
+} new_handler_installer;
+#endif
+
 void llvm::llvm_unreachable_internal(const char *msg, const char *file,
                                      unsigned line) {
   // This code intentionally doesn't call the ErrorHandler callback, because
@@ -210,7 +243,7 @@ void LLVMResetFatalErrorHandler() {
   remove_fatal_error_handler();
 }
 
-#ifdef LLVM_ON_WIN32
+#ifdef _WIN32
 
 #include <winerror.h>
 

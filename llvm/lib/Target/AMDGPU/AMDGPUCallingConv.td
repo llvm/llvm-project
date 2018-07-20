@@ -85,22 +85,6 @@ def RetCC_SI_Shader : CallingConv<[
   ]>>
 ]>;
 
-// Calling convention for R600
-def CC_R600 : CallingConv<[
-  CCIfInReg<CCIfType<[v4f32, v4i32] , CCAssignToReg<[
-    T0_XYZW, T1_XYZW, T2_XYZW, T3_XYZW, T4_XYZW, T5_XYZW, T6_XYZW, T7_XYZW,
-    T8_XYZW, T9_XYZW, T10_XYZW, T11_XYZW, T12_XYZW, T13_XYZW, T14_XYZW, T15_XYZW,
-    T16_XYZW, T17_XYZW, T18_XYZW, T19_XYZW, T20_XYZW, T21_XYZW, T22_XYZW,
-    T23_XYZW, T24_XYZW, T25_XYZW, T26_XYZW, T27_XYZW, T28_XYZW, T29_XYZW,
-    T30_XYZW, T31_XYZW, T32_XYZW
-  ]>>>
-]>;
-
-// Calling convention for compute kernels
-def CC_AMDGPU_Kernel : CallingConv<[
-  CCCustom<"allocateKernArg">
-]>;
-
 def CSR_AMDGPU_VGPRs_24_255 : CalleeSavedRegs<
   (sequence "VGPR%u", 24, 255)
 >;
@@ -127,7 +111,7 @@ def CC_AMDGPU_Func : CallingConv<[
     VGPR8, VGPR9, VGPR10, VGPR11, VGPR12, VGPR13, VGPR14, VGPR15,
     VGPR16, VGPR17, VGPR18, VGPR19, VGPR20, VGPR21, VGPR22, VGPR23,
     VGPR24, VGPR25, VGPR26, VGPR27, VGPR28, VGPR29, VGPR30, VGPR31]>>,
-  CCIfType<[i64, f64, v2i32, v2f32, v4i32, v4f32, v8i32, v8f32, v16i32, v16f32, v2i64, v2f64], CCCustom<"allocateVGPRTuple">>,
+  CCIfType<[i64, f64, v2i32, v2f32, v4i32, v4f32, v8i32, v8f32, v16i32, v16f32, v2i64, v2f64, v4i16, v4f16], CCCustom<"allocateVGPRTuple">>,
   CCIfType<[i32, f32, v2i16, v2f16, i16, f16, i1], CCAssignToStack<4, 4>>,
   CCIfType<[i64, f64, v2i32, v2f32], CCAssignToStack<8, 4>>,
   CCIfType<[v4i32, v4f32, v2i64, v2f64], CCAssignToStack<16, 4>>,
@@ -144,30 +128,16 @@ def RetCC_AMDGPU_Func : CallingConv<[
     VGPR8, VGPR9, VGPR10, VGPR11, VGPR12, VGPR13, VGPR14, VGPR15,
     VGPR16, VGPR17, VGPR18, VGPR19, VGPR20, VGPR21, VGPR22, VGPR23,
     VGPR24, VGPR25, VGPR26, VGPR27, VGPR28, VGPR29, VGPR30, VGPR31]>>,
-  CCIfType<[i64, f64, v2i32, v2f32, v4i32, v4f32, v8i32, v8f32, v16i32, v16f32, v2i64, v2f64], CCCustom<"allocateVGPRTuple">>
+  CCIfType<[i64, f64, v2i32, v2f32, v4i32, v4f32, v8i32, v8f32, v16i32, v16f32, v2i64, v2f64, v4i16, v4f16], CCCustom<"allocateVGPRTuple">>
 ]>;
 
 def CC_AMDGPU : CallingConv<[
-  CCIf<"static_cast<const AMDGPUSubtarget&>"
-        "(State.getMachineFunction().getSubtarget()).getGeneration() >="
-          "AMDGPUSubtarget::SOUTHERN_ISLANDS && "
-        "!AMDGPU::isShader(State.getCallingConv())",
-       CCDelegateTo<CC_AMDGPU_Kernel>>,
-  CCIf<"static_cast<const AMDGPUSubtarget&>"
-        "(State.getMachineFunction().getSubtarget()).getGeneration() < "
-          "AMDGPUSubtarget::SOUTHERN_ISLANDS && "
-         "!AMDGPU::isShader(State.getCallingConv())",
-        CCDelegateTo<CC_AMDGPU_Kernel>>,
-   CCIf<"static_cast<const AMDGPUSubtarget&>"
+   CCIf<"static_cast<const GCNSubtarget&>"
          "(State.getMachineFunction().getSubtarget()).getGeneration() >= "
            "AMDGPUSubtarget::SOUTHERN_ISLANDS",
         CCDelegateTo<CC_SI>>,
-   CCIf<"static_cast<const AMDGPUSubtarget&>"
+   CCIf<"static_cast<const GCNSubtarget&>"
          "(State.getMachineFunction().getSubtarget()).getGeneration() >= "
            "AMDGPUSubtarget::SOUTHERN_ISLANDS && State.getCallingConv() == CallingConv::C",
-        CCDelegateTo<CC_AMDGPU_Func>>,
-   CCIf<"static_cast<const AMDGPUSubtarget&>"
-          "(State.getMachineFunction().getSubtarget()).getGeneration() < "
-            "AMDGPUSubtarget::SOUTHERN_ISLANDS",
-        CCDelegateTo<CC_R600>>
+        CCDelegateTo<CC_AMDGPU_Func>>
 ]>;

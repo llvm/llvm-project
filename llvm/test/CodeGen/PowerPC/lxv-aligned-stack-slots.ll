@@ -24,7 +24,7 @@ define void @unaligned_slot() #0 {
   %1 = alloca %class2, align 8
   %2 = getelementptr inbounds %class2, %class2* %1, i64 0, i32 0, i32 0, i32 2
   %3 = bitcast %union.anon* %2 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull getelementptr inbounds (%class1, %class1* @ext, i64 0, i32 0, i32 1, i64 8), i8* nonnull %3, i64 16, i32 8, i1 false) #2
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 nonnull getelementptr inbounds (%class1, %class1* @ext, i64 0, i32 0, i32 1, i64 8), i8* align 8 nonnull %3, i64 16, i1 false) #2
   ret void
 }
 ; CHECK-LABEL: aligned_slot:
@@ -34,12 +34,12 @@ define void @aligned_slot() #0 {
   %1 = alloca %class2, align 16
   %2 = getelementptr inbounds %class2, %class2* %1, i64 0, i32 0, i32 0, i32 2
   %3 = bitcast %union.anon* %2 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull getelementptr inbounds (%class1, %class1* @ext, i64 0, i32 0, i32 1, i64 8), i8* nonnull %3, i64 16, i32 8, i1 false) #2
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 nonnull getelementptr inbounds (%class1, %class1* @ext, i64 0, i32 0, i32 1, i64 8), i8* align 8 nonnull %3, i64 16, i1 false) #2
   ret void
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i32, i1) #1
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1) #1
 
 attributes #0 = { nounwind "target-cpu"="pwr9" "target-features"="+altivec,+bpermd,+crypto,+direct-move,+extdiv,+htm,+power8-vector,+power9-vector,+vsx,-qpx" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { argmemonly nounwind }

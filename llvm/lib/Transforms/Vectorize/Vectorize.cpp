@@ -34,10 +34,6 @@ void LLVMInitializeVectorization(LLVMPassRegistryRef R) {
   initializeVectorization(*unwrap(R));
 }
 
-// DEPRECATED: Remove after the LLVM 5 release.
-void LLVMAddBBVectorizePass(LLVMPassManagerRef PM) {
-}
-
 void LLVMAddLoopVectorizePass(LLVMPassManagerRef PM) {
   unwrap(PM)->add(createLoopVectorizePass());
 }

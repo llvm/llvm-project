@@ -32,10 +32,11 @@ enum class EHPersonality {
   MSVC_Win64SEH,
   MSVC_CXX,
   CoreCLR,
-  Rust
+  Rust,
+  Wasm_CXX
 };
 
-/// \brief See if the given exception handling personality function is one
+/// See if the given exception handling personality function is one
 /// that we understand.  If so, return a description of it; otherwise return
 /// Unknown.
 EHPersonality classifyEHPersonality(const Value *Pers);
@@ -44,7 +45,7 @@ StringRef getEHPersonalityName(EHPersonality Pers);
 
 EHPersonality getDefaultEHPersonality(const Triple &T);
 
-/// \brief Returns true if this personality function catches asynchronous
+/// Returns true if this personality function catches asynchronous
 /// exceptions.
 inline bool isAsynchronousEHPersonality(EHPersonality Pers) {
   // The two SEH personality functions can catch asynch exceptions. We assume
@@ -59,7 +60,7 @@ inline bool isAsynchronousEHPersonality(EHPersonality Pers) {
   llvm_unreachable("invalid enum");
 }
 
-/// \brief Returns true if this is a personality function that invokes
+/// Returns true if this is a personality function that invokes
 /// handler funclets (which must return to it).
 inline bool isFuncletEHPersonality(EHPersonality Pers) {
   switch (Pers) {
@@ -74,7 +75,23 @@ inline bool isFuncletEHPersonality(EHPersonality Pers) {
   llvm_unreachable("invalid enum");
 }
 
-/// \brief Return true if this personality may be safely removed if there
+/// Returns true if this personality uses scope-style EH IR instructions:
+/// catchswitch, catchpad/ret, and cleanuppad/ret.
+inline bool isScopedEHPersonality(EHPersonality Pers) {
+  switch (Pers) {
+  case EHPersonality::MSVC_CXX:
+  case EHPersonality::MSVC_X86SEH:
+  case EHPersonality::MSVC_Win64SEH:
+  case EHPersonality::CoreCLR:
+  case EHPersonality::Wasm_CXX:
+    return true;
+  default:
+    return false;
+  }
+  llvm_unreachable("invalid enum");
+}
+
+/// Return true if this personality may be safely removed if there
 /// are no invoke instructions remaining in the current function.
 inline bool isNoOpWithoutInvoke(EHPersonality Pers) {
   switch (Pers) {
@@ -91,7 +108,7 @@ bool canSimplifyInvokeNoUnwind(const Function *F);
 
 typedef TinyPtrVector<BasicBlock *> ColorVector;
 
-/// \brief If an EH funclet personality is in use (see isFuncletEHPersonality),
+/// If an EH funclet personality is in use (see isFuncletEHPersonality),
 /// this will recompute which blocks are in which funclet. It is possible that
 /// some blocks are in multiple funclets. Consider this analysis to be
 /// expensive.

@@ -169,7 +169,7 @@ declare i32 @something(...)
 ; CHECK-NEXT: bne 0, .[[LOOP]]
 ;
 ; Next BB
-; CHECK: %for.end
+; CHECK: %for.exit
 ; CHECK: mtlr {{[0-9]+}}
 ; CHECK-NEXT: blr
 define i32 @freqSaveAndRestoreOutsideLoop2(i32 %cond) {
@@ -328,7 +328,7 @@ declare void @somethingElse(...)
 ; Shift second argument by one and store into returned register.
 ; ENABLE: slwi 3, 4, 1
 ; ENABLE-NEXT: blr
-define i32 @loopInfoRestoreOutsideLoop(i32 %cond, i32 %N) #0 {
+define i32 @loopInfoRestoreOutsideLoop(i32 %cond, i32 %N) nounwind {
 entry:
   %tobool = icmp eq i32 %cond, 0
   br i1 %tobool, label %if.else, label %if.then

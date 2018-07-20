@@ -53,7 +53,7 @@ entry:
   ; MMR3:         andi16  $[[T1:[0-9]+]], $4, 1
   ; MMR3:         divu    $zero, $[[T1]], $[[T0]]
   ; MMR3:         teq     $[[T0]], $zero, 7
-  ; MMR3:         mfhi    $[[T2:[0-9]+]]
+  ; MMR3:         mfhi16  $[[T2:[0-9]+]]
   ; MMR3:         andi16  $[[T0]], $[[T0]], 1
   ; MMR3:         li16    $[[T1:[0-9]+]], 0
   ; MMR3:         subu16  $2, $[[T1]], $[[T0]]
@@ -98,7 +98,7 @@ entry:
   ; MMR3:         andi16  $[[T1:[0-9]+]], $4, 255
   ; MMR3:         divu    $zero, $[[T1]], $[[T0]]
   ; MMR3:         teq     $[[T0]], $zero, 7
-  ; MMR3:         mfhi    $[[T2:[0-9]+]]
+  ; MMR3:         mfhi16  $[[T2:[0-9]+]]
   ; MMR3:         seb     $2, $[[T2]]
 
   ; MMR6:         andi16  $[[T0:[0-9]+]], $5, 255
@@ -140,7 +140,7 @@ entry:
   ; MMR3:         andi16  $[[T1:[0-9]+]], $4, 65535
   ; MMR3:         divu    $zero, $[[T1]], $[[T0]]
   ; MMR3:         teq     $[[T0]], $zero, 7
-  ; MMR3:         mfhi    $[[T2:[0-9]+]]
+  ; MMR3:         mfhi16  $[[T2:[0-9]+]]
   ; MMR3:         seh     $2, $[[T2]]
 
   ; MMR6:         andi16  $[[T0:[0-9]+]], $5, 65535
@@ -166,7 +166,7 @@ entry:
 
   ; MMR3:         divu    $zero, $4, $5
   ; MMR3:         teq     $5, $zero, 7
-  ; MMR3:         mfhi    $2
+  ; MMR3:         mfhi16  $2
 
   ; MMR6:         modu    $2, $4, $5
   ; MMR6:         teq     $5, $zero, 7

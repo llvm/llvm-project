@@ -62,6 +62,7 @@ private:
   unsigned StackPtr;
   unsigned SlotSize;
   int64_t StackProbeSize;
+  bool NoStackArgProbe;
 
   StringRef getPassName() const override { return "X86 WinAlloca Expander"; }
   static char ID;
@@ -240,13 +241,21 @@ void X86WinAllocaExpander::lower(MachineInstr* MI, Lowering L) {
     }
     break;
   case Probe:
-    // The probe lowering expects the amount in RAX/EAX.
-    BuildMI(*MBB, MI, DL, TII->get(TargetOpcode::COPY), RegA)
-        .addReg(MI->getOperand(0).getReg());
+    if (!NoStackArgProbe) {
+      // The probe lowering expects the amount in RAX/EAX.
+      BuildMI(*MBB, MI, DL, TII->get(TargetOpcode::COPY), RegA)
+          .addReg(MI->getOperand(0).getReg());
 
-    // Do the probe.
-    STI->getFrameLowering()->emitStackProbe(*MBB->getParent(), *MBB, MI, DL,
-                                            /*InPrologue=*/false);
+      // Do the probe.
+      STI->getFrameLowering()->emitStackProbe(*MBB->getParent(), *MBB, MI, DL,
+                                              /*InPrologue=*/false);
+    } else {
+      // Sub
+      BuildMI(*MBB, I, DL, TII->get(Is64Bit ? X86::SUB64rr : X86::SUB32rr),
+              StackPtr)
+          .addReg(StackPtr)
+          .addReg(MI->getOperand(0).getReg());
+    }
     break;
   }
 
@@ -285,6 +294,9 @@ bool X86WinAllocaExpander::runOnMachineFunction(MachineFunction &MF) {
         .getValueAsString()
         .getAsInteger(0, StackProbeSize);
   }
+  NoStackArgProbe = MF.getFunction().hasFnAttribute("no-stack-arg-probe");
+  if (NoStackArgProbe)
+    StackProbeSize = INT64_MAX;
 
   LoweringMap Lowerings;
   computeLowerings(MF, Lowerings);

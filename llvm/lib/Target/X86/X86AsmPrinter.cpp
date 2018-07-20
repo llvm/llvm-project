@@ -19,9 +19,9 @@
 #include "X86InstrInfo.h"
 #include "X86MachineFunctionInfo.h"
 #include "llvm/BinaryFormat/COFF.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Mangler.h"
@@ -31,11 +31,13 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCSectionCOFF.h"
+#include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MachineValueType.h"
 #include "llvm/Support/TargetRegistry.h"
 using namespace llvm;
 
@@ -372,6 +374,12 @@ static bool printAsmMRegister(X86AsmPrinter &P, const MachineOperand &MO,
   unsigned Reg = MO.getReg();
   bool EmitPercent = true;
 
+  if (!X86::GR8RegClass.contains(Reg) &&
+      !X86::GR16RegClass.contains(Reg) &&
+      !X86::GR32RegClass.contains(Reg) &&
+      !X86::GR64RegClass.contains(Reg))
+    return true;
+
   switch (Mode) {
   default: return true;  // Unknown mode.
   case 'b': // Print QImode register
@@ -482,7 +490,7 @@ bool X86AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
       printPCRelImm(*this, MI, OpNo, O);
       return false;
 
-    case 'n':  // Negate the immediate or print a '-' before the operand.
+    case 'n': // Negate the immediate or print a '-' before the operand.
       // Note: this is a temporary solution. It should be handled target
       // independently as part of the 'MC' work.
       if (MO.isImm()) {
@@ -533,6 +541,42 @@ bool X86AsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
 void X86AsmPrinter::EmitStartOfAsmFile(Module &M) {
   const Triple &TT = TM.getTargetTriple();
 
+  if (TT.isOSBinFormatELF()) {
+    // Assemble feature flags that may require creation of a note section.
+    unsigned FeatureFlagsAnd = 0;
+    if (M.getModuleFlag("cf-protection-branch"))
+      FeatureFlagsAnd |= ELF::GNU_PROPERTY_X86_FEATURE_1_IBT;
+    if (M.getModuleFlag("cf-protection-return"))
+      FeatureFlagsAnd |= ELF::GNU_PROPERTY_X86_FEATURE_1_SHSTK;
+
+    if (FeatureFlagsAnd) {
+      // Emit a .note.gnu.property section with the flags.
+      if (!TT.isArch32Bit() && !TT.isArch64Bit())
+        llvm_unreachable("CFProtection used on invalid architecture!");
+      MCSection *Cur = OutStreamer->getCurrentSectionOnly();
+      MCSection *Nt = MMI->getContext().getELFSection(
+          ".note.gnu.property", ELF::SHT_NOTE, ELF::SHF_ALLOC);
+      OutStreamer->SwitchSection(Nt);
+
+      // Emitting note header.
+      int WordSize = TT.isArch64Bit() ? 8 : 4;
+      EmitAlignment(WordSize == 4 ? 2 : 3);
+      OutStreamer->EmitIntValue(4, 4 /*size*/); // data size for "GNU\0"
+      OutStreamer->EmitIntValue(8 + WordSize, 4 /*size*/); // Elf_Prop size
+      OutStreamer->EmitIntValue(ELF::NT_GNU_PROPERTY_TYPE_0, 4 /*size*/);
+      OutStreamer->EmitBytes(StringRef("GNU", 4)); // note name
+
+      // Emitting an Elf_Prop for the CET properties.
+      OutStreamer->EmitIntValue(ELF::GNU_PROPERTY_X86_FEATURE_1_AND, 4);
+      OutStreamer->EmitIntValue(WordSize, 4);               // data size
+      OutStreamer->EmitIntValue(FeatureFlagsAnd, WordSize); // data
+      EmitAlignment(WordSize == 4 ? 2 : 3);                 // padding
+
+      OutStreamer->endSection(Nt);
+      OutStreamer->SwitchSection(Cur);
+    }
+  }
+
   if (TT.isOSBinFormatMachO())
     OutStreamer->SwitchSection(getObjFileLowering().getTextSection());
 
@@ -564,29 +608,6 @@ void X86AsmPrinter::EmitStartOfAsmFile(Module &M) {
     OutStreamer->EmitAssemblerFlag(MCAF_Code16);
 }
 
-static void
-emitNonLazySymbolPointer(MCStreamer &OutStreamer, MCSymbol *StubLabel,
-                         MachineModuleInfoImpl::StubValueTy &MCSym) {
-  // L_foo$stub:
-  OutStreamer.EmitLabel(StubLabel);
-  //   .indirect_symbol _foo
-  OutStreamer.EmitSymbolAttribute(MCSym.getPointer(), MCSA_IndirectSymbol);
-
-  if (MCSym.getInt())
-    // External to current translation unit.
-    OutStreamer.EmitIntValue(0, 4/*size*/);
-  else
-    // Internal to current translation unit.
-    //
-    // When we place the LSDA into the TEXT section, the type info
-    // pointers need to be indirect and pc-rel. We accomplish this by
-    // using NLPs; however, sometimes the types are local to the file.
-    // We need to fill in the value for the NLP in those cases.
-    OutStreamer.EmitValue(
-        MCSymbolRefExpr::create(MCSym.getPointer(), OutStreamer.getContext()),
-        4 /*size*/);
-}
-
 MCSymbol *X86AsmPrinter::GetCPISymbol(unsigned CPID) const {
   if (Subtarget->isTargetKnownWindowsMSVC()) {
     const MachineConstantPoolEntry &CPE =
@@ -610,41 +631,71 @@ MCSymbol *X86AsmPrinter::GetCPISymbol(unsigned CPID) const {
   return AsmPrinter::GetCPISymbol(CPID);
 }
 
+static void
+emitNonLazySymbolPointer(MCStreamer &OutStreamer, MCSymbol *StubLabel,
+                         MachineModuleInfoImpl::StubValueTy &MCSym) {
+  // L_foo$stub:
+  OutStreamer.EmitLabel(StubLabel);
+  //   .indirect_symbol _foo
+  OutStreamer.EmitSymbolAttribute(MCSym.getPointer(), MCSA_IndirectSymbol);
+
+  if (MCSym.getInt())
+    // External to current translation unit.
+    OutStreamer.EmitIntValue(0, 4/*size*/);
+  else
+    // Internal to current translation unit.
+    //
+    // When we place the LSDA into the TEXT section, the type info
+    // pointers need to be indirect and pc-rel. We accomplish this by
+    // using NLPs; however, sometimes the types are local to the file.
+    // We need to fill in the value for the NLP in those cases.
+    OutStreamer.EmitValue(
+        MCSymbolRefExpr::create(MCSym.getPointer(), OutStreamer.getContext()),
+        4 /*size*/);
+}
+
+static void emitNonLazyStubs(MachineModuleInfo *MMI, MCStreamer &OutStreamer) {
+
+  MachineModuleInfoMachO &MMIMacho =
+      MMI->getObjFileInfo<MachineModuleInfoMachO>();
+
+  // Output stubs for dynamically-linked functions.
+  MachineModuleInfoMachO::SymbolListTy Stubs;
+
+  // Output stubs for external and common global variables.
+  Stubs = MMIMacho.GetGVStubList();
+  if (!Stubs.empty()) {
+    OutStreamer.SwitchSection(MMI->getContext().getMachOSection(
+        "__IMPORT", "__pointers", MachO::S_NON_LAZY_SYMBOL_POINTERS,
+        SectionKind::getMetadata()));
+
+    for (auto &Stub : Stubs)
+      emitNonLazySymbolPointer(OutStreamer, Stub.first, Stub.second);
+
+    Stubs.clear();
+    OutStreamer.AddBlankLine();
+  }
+}
+
 void X86AsmPrinter::EmitEndOfAsmFile(Module &M) {
   const Triple &TT = TM.getTargetTriple();
 
   if (TT.isOSBinFormatMachO()) {
-    // All darwin targets use mach-o.
-    MachineModuleInfoMachO &MMIMacho =
-        MMI->getObjFileInfo<MachineModuleInfoMachO>();
+    // Mach-O uses non-lazy symbol stubs to encode per-TU information into
+    // global table for symbol lookup.
+    emitNonLazyStubs(MMI, *OutStreamer);
 
-    // Output stubs for dynamically-linked functions.
-    MachineModuleInfoMachO::SymbolListTy Stubs;
-
-    // Output stubs for external and common global variables.
-    Stubs = MMIMacho.GetGVStubList();
-    if (!Stubs.empty()) {
-      MCSection *TheSection = OutContext.getMachOSection(
-          "__IMPORT", "__pointers", MachO::S_NON_LAZY_SYMBOL_POINTERS,
-          SectionKind::getMetadata());
-      OutStreamer->SwitchSection(TheSection);
-
-      for (auto &Stub : Stubs)
-        emitNonLazySymbolPointer(*OutStreamer, Stub.first, Stub.second);
-
-      Stubs.clear();
-      OutStreamer->AddBlankLine();
-    }
-
+    // Emit stack and fault map information.
     SM.serializeToStackMapSection();
     FM.serializeToFaultMapSection();
 
-    // Funny Darwin hack: This flag tells the linker that no global symbols
-    // contain code that falls through to other global symbols (e.g. the obvious
-    // implementation of multiple entry points).  If this doesn't occur, the
-    // linker can safely perform dead code stripping.  Since LLVM never
-    // generates code that does this, it is always safe to set.
+    // This flag tells the linker that no global symbols contain code that fall
+    // through to other global symbols (e.g. an implementation of multiple entry
+    // points). If this doesn't occur, the linker can safely perform dead code
+    // stripping. Since LLVM never generates code that does this, it is always
+    // safe to set.
     OutStreamer->EmitAssemblerFlag(MCAF_SubsectionsViaSymbols);
+    return;
   }
 
   if (TT.isKnownWindowsMSVCEnvironment() && MMI->usesVAFloatArgument()) {
@@ -652,36 +703,18 @@ void X86AsmPrinter::EmitEndOfAsmFile(Module &M) {
         (TT.getArch() == Triple::x86_64) ? "_fltused" : "__fltused";
     MCSymbol *S = MMI->getContext().getOrCreateSymbol(SymbolName);
     OutStreamer->EmitSymbolAttribute(S, MCSA_Global);
+    return;
   }
 
   if (TT.isOSBinFormatCOFF()) {
-    const TargetLoweringObjectFileCOFF &TLOFCOFF =
-        static_cast<const TargetLoweringObjectFileCOFF&>(getObjFileLowering());
-
-    std::string Flags;
-    raw_string_ostream FlagsOS(Flags);
-
-    for (const auto &Function : M)
-      TLOFCOFF.emitLinkerFlagsForGlobal(FlagsOS, &Function);
-    for (const auto &Global : M.globals())
-      TLOFCOFF.emitLinkerFlagsForGlobal(FlagsOS, &Global);
-    for (const auto &Alias : M.aliases())
-      TLOFCOFF.emitLinkerFlagsForGlobal(FlagsOS, &Alias);
-
-    FlagsOS.flush();
-
-    // Output collected flags.
-    if (!Flags.empty()) {
-      OutStreamer->SwitchSection(TLOFCOFF.getDrectveSection());
-      OutStreamer->EmitBytes(Flags);
-    }
-
     SM.serializeToStackMapSection();
+    return;
   }
 
   if (TT.isOSBinFormatELF()) {
     SM.serializeToStackMapSection();
     FM.serializeToFaultMapSection();
+    return;
   }
 }
 

@@ -25,26 +25,26 @@
 name:            test1
 tracksRegLiveness: true
 liveins:
-  - { reg: '%r0' }
+  - { reg: '$r0' }
 body: |
   bb.0.entry:
     successors: %bb.1.foo
-    liveins: %r0
+    liveins: $r0
   bb.1.foo:
     successors: %bb.2.if.then, %bb.1.foo
-    liveins: %r0
+    liveins: $r0
 
-    t2CMNri %r0, 78, 14, _, implicit-def %cpsr
-    %r1 = t2MOVi 0, 14, _, _
-    BUNDLE implicit-def dead %itstate, implicit-def %r1, implicit killed %cpsr {
-      t2IT 12, 8, implicit-def %itstate
-      %r1 = t2MOVi 1, 12, killed %cpsr, _, implicit killed %itstate
-    t2CMNri %r0, 77, 14, _, implicit-def %cpsr
-    t2Bcc %bb.1.foo, 11, killed %cpsr
+    t2CMNri $r0, 78, 14, _, implicit-def $cpsr
+    $r1 = t2MOVi 0, 14, _, _
+    BUNDLE implicit-def dead $itstate, implicit-def $r1, implicit killed $cpsr {
+      t2IT 12, 8, implicit-def $itstate
+      $r1 = t2MOVi 1, 12, killed $cpsr, _, implicit killed $itstate
+    t2CMNri $r0, 77, 14, _, implicit-def $cpsr
+    t2Bcc %bb.1.foo, 11, killed $cpsr
   ; CHECK: [[@LINE+1]]:3: expected '}'
   bb.2.if.then:
-    liveins: %r1
+    liveins: $r1
 
-    %r0 = tMOVr killed %r1, 14, _
-    tBX_RET 14, _, implicit killed %r0
+    $r0 = tMOVr killed $r1, 14, _
+    tBX_RET 14, _, implicit killed $r0
 ...

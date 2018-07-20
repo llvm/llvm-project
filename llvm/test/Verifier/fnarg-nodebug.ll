@@ -39,7 +39,7 @@ attributes #3 = { nounwind readnone }
 !4 = !{i32 2, !"Debug Info Version", i32 3}
 !5 = !{i32 1, !"PIC Level", i32 2}
 !6 = !{!"clang version 5.0.0 (trunk 297153) (llvm/trunk 297155)"}
-!7 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 2, type: !8, isLocal: false, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !11)
+!7 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 2, type: !8, isLocal: false, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !11)
 !8 = !DISubroutineType(types: !9)
 !9 = !{!10, !10}
 !10 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
@@ -50,7 +50,7 @@ attributes #3 = { nounwind readnone }
 !14 = !DILocation(line: 2, column: 42, scope: !7)
 !15 = !DILocation(line: 2, column: 54, scope: !7)
 !16 = !DILocation(line: 2, column: 47, scope: !7)
-!17 = distinct !DISubprogram(name: "g", scope: !1, file: !1, line: 3, type: !8, isLocal: false, isDefinition: true, scopeLine: 3, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !18)
+!17 = distinct !DISubprogram(name: "g", scope: !1, file: !1, line: 3, type: !8, isLocal: false, isDefinition: true, scopeLine: 3, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !18)
 !18 = !{!19}
 ; CHECK: !DILocalVariable(name: "j", arg: 1
 !19 = !DILocalVariable(name: "j", arg: 1, scope: !17, file: !1, line: 3, type: !10)

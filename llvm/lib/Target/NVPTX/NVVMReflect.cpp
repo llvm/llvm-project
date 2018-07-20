@@ -153,7 +153,7 @@ bool NVVMReflect::runOnFunction(Function &F) {
 
     StringRef ReflectArg = cast<ConstantDataSequential>(Operand)->getAsString();
     ReflectArg = ReflectArg.substr(0, ReflectArg.size() - 1);
-    DEBUG(dbgs() << "Arg of _reflect : " << ReflectArg << "\n");
+    LLVM_DEBUG(dbgs() << "Arg of _reflect : " << ReflectArg << "\n");
 
     int ReflectVal = 0; // The default value is 0
     if (ReflectArg == "__CUDA_FTZ") {

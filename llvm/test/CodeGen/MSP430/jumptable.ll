@@ -7,13 +7,16 @@ target triple = "msp430---elf"
 define i16 @test(i16 %i) #0 {
 entry:
 ; CHECK-LABEL: test:
+; CHECK:      sub.w   #4, r1
+; CHECK-NEXT: mov.w   r12, 0(r1)
+; CHECK-NEXT: cmp.w   #4, r12
+; CHECK-NEXT: jhs     .LBB0_3
   %retval = alloca i16, align 2
   %i.addr = alloca i16, align 2
   store i16 %i, i16* %i.addr, align 2
   %0 = load i16, i16* %i.addr, align 2
-; CHECK: mov.w #2, r13
-; CHECK: call #__mspabi_mpyi
-; CHECK: br .LJTI0_0(r12)
+; CHECK:      rla.w r12
+; CHECK-NEXT: br .LJTI0_0(r12)
   switch i16 %0, label %sw.default [
     i16 0, label %sw.bb
     i16 1, label %sw.bb1

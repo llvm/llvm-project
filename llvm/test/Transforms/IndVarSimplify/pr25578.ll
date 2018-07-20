@@ -1,6 +1,8 @@
 ; RUN: opt < %s -indvars -S | FileCheck %s
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
+declare void @use(i64 %x)
+
 ; CHECK-LABEL: @foo
 define void @foo() {
 entry:
@@ -15,6 +17,7 @@ L1_header:
 L2_header:
   %i = phi i32 [ 0, %L1_header ], [ %i_next, %L2_latch ]
   %i_prom = sext i32 %i to i64
+  call void @use(i64 %i_prom)
   br label %L3_header
 
 L3_header:

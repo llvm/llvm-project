@@ -120,7 +120,7 @@ define void @fn1() "target-features"="+strict-align"  {
 entry:
   %a = alloca [4 x i16], align 2
   %0 = bitcast [4 x i16]* %a to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %0, i8* bitcast ([4 x i16]* @fn1.a to i8*), i32 8, i32 2, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 2 %0, i8* align 2 bitcast ([4 x i16]* @fn1.a to i8*), i32 8, i1 false)
   ret void
 }
 
@@ -128,7 +128,7 @@ define void @fn2() "target-features"="+strict-align"  {
 entry:
   %a = alloca [8 x i8], align 2
   %0 = bitcast [8 x i8]* %a to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %0, i8* bitcast ([8 x i8]* @fn2.a to i8*), i32 16, i32 1, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %0, i8* bitcast ([8 x i8]* @fn2.a to i8*), i32 16, i1 false)
   ret void
 }
 
@@ -156,7 +156,7 @@ define void @pr32130() #0 {
 ; CHECK-V7: [[x]]:
 ; CHECK-V7: .asciz "s\000\000"
 define void @test10(i8* %a) local_unnamed_addr #0 {
-  call void @llvm.memmove.p0i8.p0i8.i32(i8* %a, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str, i32 0, i32 0), i32 1, i32 1, i1 false)
+  call void @llvm.memmove.p0i8.p0i8.i32(i8* align 1 %a, i8* align 1 getelementptr inbounds ([2 x i8], [2 x i8]* @.str, i32 0, i32 0), i32 1, i1 false)
   ret void
 }
 
@@ -174,16 +174,16 @@ define void @test10(i8* %a) local_unnamed_addr #0 {
 ; CHECK-V7ARM: .short 3
 ; CHECK-V7ARM: .short 4
 define void @test11(i16* %a) local_unnamed_addr #0 {
-  call void @llvm.memmove.p0i16.p0i16.i32(i16* %a, i16* getelementptr inbounds ([2 x i16], [2 x i16]* @.arr1, i32 0, i32 0), i32 2, i32 2, i1 false)
+  call void @llvm.memmove.p0i16.p0i16.i32(i16* align 2 %a, i16* align 2 getelementptr inbounds ([2 x i16], [2 x i16]* @.arr1, i32 0, i32 0), i32 2, i1 false)
   ret void
 }
 
 
 declare void @b(i8*) #1
 declare void @c(i16*) #1
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture writeonly, i8* nocapture readonly, i32, i32, i1)
-declare void @llvm.memmove.p0i8.p0i8.i32(i8*, i8*, i32, i32, i1) local_unnamed_addr
-declare void @llvm.memmove.p0i16.p0i16.i32(i16*, i16*, i32, i32, i1) local_unnamed_addr
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture writeonly, i8* nocapture readonly, i32, i1)
+declare void @llvm.memmove.p0i8.p0i8.i32(i8*, i8*, i32, i1) local_unnamed_addr
+declare void @llvm.memmove.p0i16.p0i16.i32(i16*, i16*, i32, i1) local_unnamed_addr
 
 attributes #0 = { nounwind "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }

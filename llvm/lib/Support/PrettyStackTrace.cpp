@@ -88,7 +88,11 @@ extern "C" {
 CRASH_REPORTER_CLIENT_HIDDEN 
 struct crashreporter_annotations_t gCRAnnotations 
         __attribute__((section("__DATA," CRASHREPORTER_ANNOTATIONS_SECTION))) 
+#if CRASHREPORTER_ANNOTATIONS_VERSION < 5
         = { CRASHREPORTER_ANNOTATIONS_VERSION, 0, 0, 0, 0, 0, 0 };
+#else
+        = { CRASHREPORTER_ANNOTATIONS_VERSION, 0, 0, 0, 0, 0, 0, 0 };
+#endif
 }
 #elif defined(__APPLE__) && HAVE_CRASHREPORTER_INFO
 extern "C" const char *__crashreporter_info__
@@ -114,9 +118,9 @@ static void CrashHandler(void *) {
   if (!TmpStr.empty()) {
 #ifdef HAVE_CRASHREPORTERCLIENT_H
     // Cast to void to avoid warning.
-    (void)CRSetCrashLogMessage(std::string(TmpStr.str()).c_str());
+    (void)CRSetCrashLogMessage(TmpStr.c_str());
 #elif HAVE_CRASHREPORTER_INFO 
-    __crashreporter_info__ = strdup(std::string(TmpStr.str()).c_str());
+    __crashreporter_info__ = strdup(TmpStr.c_str());
 #endif
     errs() << TmpStr.str();
   }

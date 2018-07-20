@@ -23,7 +23,7 @@
 namespace llvm {
 namespace PBQP {
 
-  /// \brief Reduce a node of degree one.
+  /// Reduce a node of degree one.
   ///
   /// Propagate costs from the given node, which must be of degree one, to its
   /// neighbor. Notify the problem domain.
@@ -166,7 +166,7 @@ namespace PBQP {
   }
 #endif
 
-  // \brief Find a solution to a fully reduced graph by backpropagation.
+  // Find a solution to a fully reduced graph by backpropagation.
   //
   // Given a graph and a reduction order, pop each node from the reduction
   // order and greedily compute a minimum solution based on the node costs, and

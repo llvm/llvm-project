@@ -60,6 +60,11 @@ void DbiModuleDescriptorBuilder::setPdbFilePathNI(uint32_t NI) {
   PdbFilePathNI = NI;
 }
 
+void DbiModuleDescriptorBuilder::setFirstSectionContrib(
+    const SectionContrib &SC) {
+  Layout.SC = SC;
+}
+
 void DbiModuleDescriptorBuilder::addSymbol(CVSymbol Symbol) {
   Symbols.push_back(Symbol);
   // Symbols written to a PDB file are required to be 4 byte aligned.  The same
@@ -90,7 +95,7 @@ uint32_t DbiModuleDescriptorBuilder::calculateSerializedLength() const {
 }
 
 void DbiModuleDescriptorBuilder::finalize() {
-  Layout.SC.ModuleIndex = Layout.Mod;
+  Layout.SC.Imod = Layout.Mod;
   Layout.FileNameOffs = 0; // TODO: Fix this
   Layout.Flags = 0;        // TODO: Fix this
   Layout.C11Bytes = 0;

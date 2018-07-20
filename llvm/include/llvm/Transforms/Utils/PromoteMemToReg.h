@@ -23,7 +23,7 @@ class DominatorTree;
 class AliasSetTracker;
 class AssumptionCache;
 
-/// \brief Return true if this alloca is legal for promotion.
+/// Return true if this alloca is legal for promotion.
 ///
 /// This is true if there are only loads, stores, and lifetime markers
 /// (transitively) using this alloca. This also enforces that there is only
@@ -31,7 +31,7 @@ class AssumptionCache;
 /// markers.
 bool isAllocaPromotable(const AllocaInst *AI);
 
-/// \brief Promote the specified list of alloca instructions into scalar
+/// Promote the specified list of alloca instructions into scalar
 /// registers, inserting PHI nodes as appropriate.
 ///
 /// This function makes use of DominanceFrontier information.  This function

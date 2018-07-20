@@ -1,7 +1,10 @@
-; RUN: llc -mtriple=arm64-apple-ios -mattr=+reserve-x18 -o - %s | FileCheck %s --check-prefix=CHECK-RESERVE-X18
-; RUN: llc -mtriple=arm64-freebsd-gnu -mattr=+reserve-x18 -o - %s | FileCheck %s --check-prefix=CHECK-RESERVE-X18
+; RUN: llc -mtriple=arm64-apple-ios -mattr=+reserve-x18 -o - %s | FileCheck %s --check-prefix=CHECK-RESERVE --check-prefix=CHECK-RESERVE-X18
+; RUN: llc -mtriple=arm64-freebsd-gnu -mattr=+reserve-x18 -o - %s | FileCheck %s --check-prefix=CHECK-RESERVE --check-prefix=CHECK-RESERVE-X18
+; RUN: llc -mtriple=aarch64-fuchsia -mattr=+reserve-x20 -o - %s | FileCheck %s --check-prefix=CHECK-RESERVE --check-prefix=CHECK-RESERVE-X20
+; RUN: llc -mtriple=aarch64-fuchsia -mattr=+reserve-x18,+reserve-x20 -o - %s | FileCheck %s --check-prefix=CHECK-RESERVE --check-prefix=CHECK-RESERVE-X18 --check-prefix=CHECK-RESERVE-X20
 ; RUN: llc -mtriple=arm64-linux-gnu -o - %s | FileCheck %s
-; RUN: llc -mtriple=aarch64-windows -o - %s | FileCheck %s --check-prefix=CHECK-RESERVE-X18
+; RUN: llc -mtriple=aarch64-fuchsia -o - %s | FileCheck %s --check-prefix=CHECK-RESERVE --check-prefix=CHECK-RESERVE-X18
+; RUN: llc -mtriple=aarch64-windows -o - %s | FileCheck %s --check-prefix=CHECK-RESERVE --check-prefix=CHECK-RESERVE-X18
 
 ; x18 is reserved as a platform register on Darwin but not on other
 ; systems. Create loads of register pressure and make sure this is respected.
@@ -18,11 +21,13 @@ define void @keep_live() {
 ; CHECK: ldr x18
 ; CHECK: str x18
 
-; CHECK-RESERVE-X18-NOT: ldr fp
+; CHECK-RESERVE-NOT: ldr fp
 ; CHECK-RESERVE-X18-NOT: ldr x18
-; CHECK-RESERVE-X18: Spill
-; CHECK-RESERVE-X18-NOT: ldr fp
+; CHECK-RESERVE-X20-NOT: ldr x20
+; CHECK-RESERVE: Spill
+; CHECK-RESERVE-NOT: ldr fp
 ; CHECK-RESERVE-X18-NOT: ldr x18
-; CHECK-RESERVE-X18: ret
+; CHECK-RESERVE-X20-NOT: ldr x20
+; CHECK-RESERVE: ret
   ret void
 }

@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=x86_64-apple-darwin < %s -o -
+; RUN: llc -mtriple=x86_64-pc-linux-gnu < %s -o - | FileCheck --check-prefix=IGNORE_INTRIN %s
 
 ; PR16954
 ;
@@ -17,8 +18,22 @@ entry:
   ret i32 %1
 }
 
+define i32 @IgnoreIntrinsicTest() #1 {
+; IGNORE_INTRIN: IgnoreIntrinsicTest:
+  %1 = alloca i32, align 4
+  %2 = bitcast i32* %1 to i8*
+  call void @llvm.dbg.declare(metadata i32* %1, metadata !73, metadata !DIExpression()), !dbg !74
+  store volatile i32 1, i32* %1, align 4
+  %3 = load volatile i32, i32* %1, align 4
+  %4 = mul nsw i32 %3, 42
+  ret i32 %4
+; IGNORE_INTRIN-NOT: callq __stack_chk_fail
+; IGNORE_INTRIN:     .cfi_endproc
+}
+
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
+declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
 attributes #0 = { sspreq }
 
@@ -33,7 +48,7 @@ attributes #0 = { sspreq }
 !5 = !{}
 !6 = !{!7}
 !7 = !DIEnumerator(name: "max_frame_size", value: 0) ; [ DW_TAG_enumerator ] [max_frame_size :: 0]
-!9 = distinct !DISubprogram(name: "read_response_size", linkageName: "_Z18read_response_sizev", line: 27, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 27, file: !1, scope: !10, type: !11, variables: !14)
+!9 = distinct !DISubprogram(name: "read_response_size", linkageName: "_Z18read_response_sizev", line: 27, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 27, file: !1, scope: !10, type: !11, retainedNodes: !14)
 !10 = !DIFile(filename: "<unknown>", directory: "/Users/matt/ryan_bug")
 !11 = !DISubroutineType(types: !12)
 !12 = !{!13}
@@ -48,7 +63,7 @@ attributes #0 = { sspreq }
 !21 = !{i32 2, !"Dwarf Version", i32 2}
 !22 = !{i64* getelementptr inbounds ({ i64, [56 x i8] }, { i64, [56 x i8] }* @a, i32 0, i32 0)}
 !23 = !DILocalVariable(name: "p2", line: 12, arg: 2, scope: !24, file: !10, type: !32)
-!24 = distinct !DISubprogram(name: "min<unsigned long long>", linkageName: "_ZN3__13minIyEERKT_S3_RS1_", line: 12, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 12, file: !1, scope: !25, type: !27, templateParams: !33, variables: !35)
+!24 = distinct !DISubprogram(name: "min<unsigned long long>", linkageName: "_ZN3__13minIyEERKT_S3_RS1_", line: 12, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 12, file: !1, scope: !25, type: !27, templateParams: !33, retainedNodes: !35)
 !25 = !DINamespace(name: "__1", scope: null)
 !26 = !DIFile(filename: "main.cpp", directory: "/Users/matt/ryan_bug")
 !27 = !DISubroutineType(types: !28)
@@ -65,7 +80,7 @@ attributes #0 = { sspreq }
 !38 = !DILocation(line: 33, scope: !9)
 !39 = !DILocation(line: 12, scope: !24, inlinedAt: !38)
 !40 = !DILocation(line: 9, scope: !41, inlinedAt: !59)
-!41 = distinct !DISubprogram(name: "min<unsigned long long, __1::A>", linkageName: "_ZN3__13minIyNS_1AEEERKT_S4_RS2_T0_", line: 7, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 8, file: !1, scope: !25, type: !42, templateParams: !53, variables: !55)
+!41 = distinct !DISubprogram(name: "min<unsigned long long, __1::A>", linkageName: "_ZN3__13minIyNS_1AEEERKT_S4_RS2_T0_", line: 7, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 8, file: !1, scope: !25, type: !42, templateParams: !53, retainedNodes: !55)
 !42 = !DISubroutineType(types: !43)
 !43 = !{!29, !29, !32, !44}
 !44 = !DICompositeType(tag: DW_TAG_structure_type, name: "A", size: 8, align: 8, file: !1, scope: !25, elements: !45)
@@ -85,7 +100,7 @@ attributes #0 = { sspreq }
 !59 = !DILocation(line: 13, scope: !24, inlinedAt: !38)
 !63 = !{i32 undef}
 !64 = !DILocalVariable(name: "p1", line: 1, arg: 2, scope: !65, file: !10, type: !50)
-!65 = distinct !DISubprogram(name: "operator()", linkageName: "_ZN3__11AclERKiS2_", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 2, file: !1, scope: !25, type: !47, declaration: !46, variables: !66)
+!65 = distinct !DISubprogram(name: "operator()", linkageName: "_ZN3__11AclERKiS2_", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 2, file: !1, scope: !25, type: !47, declaration: !46, retainedNodes: !66)
 !66 = !{!67, !69, !70}
 !67 = !DILocalVariable(name: "this", arg: 1, flags: DIFlagArtificial | DIFlagObjectPointer, scope: !65, type: !68)
 !68 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, align: 64, baseType: !44)
@@ -93,3 +108,6 @@ attributes #0 = { sspreq }
 !70 = !DILocalVariable(name: "", line: 2, arg: 3, scope: !65, file: !10, type: !50)
 !71 = !DILocation(line: 1, scope: !65, inlinedAt: !40)
 !72 = !{i32 1, !"Debug Info Version", i32 3}
+!73 = !DILocalVariable(name: "x", scope: !74, file: !1, line: 2, type: !13)
+!74 = distinct !DISubprogram(name: "IgnoreIntrinsicTest", linkageName: "IgnoreIntrinsicTest", scope: !1, file: !1, line: 1, type: !13, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !5)
+!75 = !DILocation(line: 2, column: 16, scope: !7)

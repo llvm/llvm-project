@@ -29,7 +29,7 @@ class DataLayout;
 class TargetTransformInfo;
 class Value;
 
-/// \brief Check whether a call will lower to something small.
+/// Check whether a call will lower to something small.
 ///
 /// This tests checks whether this callsite will lower to something
 /// significantly cheaper than a traditional call, often a single
@@ -37,64 +37,64 @@ class Value;
 /// return true, so will this function.
 bool callIsSmall(ImmutableCallSite CS);
 
-/// \brief Utility to calculate the size and a few similar metrics for a set
+/// Utility to calculate the size and a few similar metrics for a set
 /// of basic blocks.
 struct CodeMetrics {
-  /// \brief True if this function contains a call to setjmp or other functions
+  /// True if this function contains a call to setjmp or other functions
   /// with attribute "returns twice" without having the attribute itself.
   bool exposesReturnsTwice = false;
 
-  /// \brief True if this function calls itself.
+  /// True if this function calls itself.
   bool isRecursive = false;
 
-  /// \brief True if this function cannot be duplicated.
+  /// True if this function cannot be duplicated.
   ///
   /// True if this function contains one or more indirect branches, or it contains
   /// one or more 'noduplicate' instructions.
   bool notDuplicatable = false;
 
-  /// \brief True if this function contains a call to a convergent function.
+  /// True if this function contains a call to a convergent function.
   bool convergent = false;
 
-  /// \brief True if this function calls alloca (in the C sense).
+  /// True if this function calls alloca (in the C sense).
   bool usesDynamicAlloca = false;
 
-  /// \brief Number of instructions in the analyzed blocks.
+  /// Number of instructions in the analyzed blocks.
   unsigned NumInsts = false;
 
-  /// \brief Number of analyzed blocks.
+  /// Number of analyzed blocks.
   unsigned NumBlocks = false;
 
-  /// \brief Keeps track of basic block code size estimates.
+  /// Keeps track of basic block code size estimates.
   DenseMap<const BasicBlock *, unsigned> NumBBInsts;
 
-  /// \brief Keep track of the number of calls to 'big' functions.
+  /// Keep track of the number of calls to 'big' functions.
   unsigned NumCalls = false;
 
-  /// \brief The number of calls to internal functions with a single caller.
+  /// The number of calls to internal functions with a single caller.
   ///
   /// These are likely targets for future inlining, likely exposed by
   /// interleaved devirtualization.
   unsigned NumInlineCandidates = 0;
 
-  /// \brief How many instructions produce vector values.
+  /// How many instructions produce vector values.
   ///
   /// The inliner is more aggressive with inlining vector kernels.
   unsigned NumVectorInsts = 0;
 
-  /// \brief How many 'ret' instructions the blocks contain.
+  /// How many 'ret' instructions the blocks contain.
   unsigned NumRets = 0;
 
-  /// \brief Add information about a block to the current state.
+  /// Add information about a block to the current state.
   void analyzeBasicBlock(const BasicBlock *BB, const TargetTransformInfo &TTI,
                          const SmallPtrSetImpl<const Value*> &EphValues);
 
-  /// \brief Collect a loop's ephemeral values (those used only by an assume
+  /// Collect a loop's ephemeral values (those used only by an assume
   /// or similar intrinsics in the loop).
   static void collectEphemeralValues(const Loop *L, AssumptionCache *AC,
                                      SmallPtrSetImpl<const Value *> &EphValues);
 
-  /// \brief Collect a functions's ephemeral values (those used only by an
+  /// Collect a functions's ephemeral values (those used only by an
   /// assume or similar intrinsics in the function).
   static void collectEphemeralValues(const Function *L, AssumptionCache *AC,
                                      SmallPtrSetImpl<const Value *> &EphValues);

@@ -24,7 +24,7 @@ namespace llvm {
   class raw_ostream;
   class DILocation;
 
-  /// \brief A debug info location.
+  /// A debug info location.
   ///
   /// This class is a wrapper around a tracking reference to an \a DILocation
   /// pointer.
@@ -37,10 +37,10 @@ namespace llvm {
   public:
     DebugLoc() = default;
 
-    /// \brief Construct from an \a DILocation.
+    /// Construct from an \a DILocation.
     DebugLoc(const DILocation *L);
 
-    /// \brief Construct from an \a MDNode.
+    /// Construct from an \a MDNode.
     ///
     /// Note: if \c N is not an \a DILocation, a verifier check will fail, and
     /// accessors will crash.  However, construction from other nodes is
@@ -48,7 +48,7 @@ namespace llvm {
     /// IR.
     explicit DebugLoc(const MDNode *N);
 
-    /// \brief Get the underlying \a DILocation.
+    /// Get the underlying \a DILocation.
     ///
     /// \pre !*this or \c isa<DILocation>(getAsMDNode()).
     /// @{
@@ -58,7 +58,7 @@ namespace llvm {
     DILocation &operator*() const { return *get(); }
     /// @}
 
-    /// \brief Check for null.
+    /// Check for null.
     ///
     /// Check for null in a way that is safe with broken debug info.  Unlike
     /// the conversion to \c DILocation, this doesn't require that \c Loc is of
@@ -66,10 +66,10 @@ namespace llvm {
     /// \a Instruction::hasMetadata().
     explicit operator bool() const { return Loc; }
 
-    /// \brief Check whether this has a trivial destructor.
+    /// Check whether this has a trivial destructor.
     bool hasTrivialDestructor() const { return Loc.hasTrivialDestructor(); }
 
-    /// \brief Create a new DebugLoc.
+    /// Create a new DebugLoc.
     ///
     /// Create a new DebugLoc at the specified line/col and scope/inline.  This
     /// forwards to \a DILocation::get().
@@ -95,12 +95,12 @@ namespace llvm {
     MDNode *getScope() const;
     DILocation *getInlinedAt() const;
 
-    /// \brief Get the fully inlined-at scope for a DebugLoc.
+    /// Get the fully inlined-at scope for a DebugLoc.
     ///
     /// Gets the inlined-at scope for a DebugLoc.
     MDNode *getInlinedAtScope() const;
 
-    /// \brief Find the debug info location for the start of the function.
+    /// Find the debug info location for the start of the function.
     ///
     /// Walk up the scope chain of given debug loc and find line number info
     /// for the function.
@@ -109,7 +109,7 @@ namespace llvm {
     /// find the subprogram, and then DILocation::get().
     DebugLoc getFnDebugLoc() const;
 
-    /// \brief Return \c this as a bar \a MDNode.
+    /// Return \c this as a bar \a MDNode.
     MDNode *getAsMDNode() const { return Loc; }
 
     bool operator==(const DebugLoc &DL) const { return Loc == DL.Loc; }
@@ -117,7 +117,7 @@ namespace llvm {
 
     void dump() const;
 
-    /// \brief prints source location /path/to/file.exe:line:col @[inlined at]
+    /// prints source location /path/to/file.exe:line:col @[inlined at]
     void print(raw_ostream &OS) const;
   };
 

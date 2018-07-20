@@ -33,6 +33,7 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpander.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Dominators.h"
@@ -47,8 +48,8 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include <cassert>
 #include <iterator>
@@ -246,15 +247,14 @@ bool PPCLoopPreIncPrep::runOnLoop(Loop *L) {
   if (!L->empty())
     return MadeChange;
 
-  DEBUG(dbgs() << "PIP: Examining: " << *L << "\n");
+  LLVM_DEBUG(dbgs() << "PIP: Examining: " << *L << "\n");
 
   BasicBlock *Header = L->getHeader();
 
   const PPCSubtarget *ST =
     TM ? TM->getSubtargetImpl(*Header->getParent()) : nullptr;
 
-  unsigned HeaderLoopPredCount =
-    std::distance(pred_begin(Header), pred_end(Header));
+  unsigned HeaderLoopPredCount = pred_size(Header);
 
   // Collect buckets of comparable addresses used by loads and stores.
   SmallVector<Bucket, 16> Buckets;
@@ -294,6 +294,19 @@ bool PPCLoopPreIncPrep::runOnLoop(Loop *L) {
       if (const SCEVAddRecExpr *LARSCEV = dyn_cast<SCEVAddRecExpr>(LSCEV)) {
         if (LARSCEV->getLoop() != L)
           continue;
+        // See getPreIndexedAddressParts, the displacement for LDU/STDU has to
+        // be 4's multiple (DS-form). For i64 loads/stores when the displacement
+        // fits in a 16-bit signed field but isn't a multiple of 4, it will be
+        // useless and possible to break some original well-form addressing mode
+        // to make this pre-inc prep for it.
+        if (PtrValue->getType()->getPointerElementType()->isIntegerTy(64)) {
+          if (const SCEVConstant *StepConst =
+                  dyn_cast<SCEVConstant>(LARSCEV->getStepRecurrence(*SE))) {
+            const APInt &ConstInt = StepConst->getValue()->getValue();
+            if (ConstInt.isSignedIntN(16) && ConstInt.srem(4) != 0)
+              continue;
+          }
+        }
       } else {
         continue;
       }
@@ -332,7 +345,7 @@ bool PPCLoopPreIncPrep::runOnLoop(Loop *L) {
   if (!LoopPredecessor)
     return MadeChange;
 
-  DEBUG(dbgs() << "PIP: Found " << Buckets.size() << " buckets\n");
+  LLVM_DEBUG(dbgs() << "PIP: Found " << Buckets.size() << " buckets\n");
 
   SmallSet<BasicBlock *, 16> BBChanged;
   for (unsigned i = 0, e = Buckets.size(); i != e; ++i) {
@@ -381,7 +394,7 @@ bool PPCLoopPreIncPrep::runOnLoop(Loop *L) {
     if (!BasePtrSCEV->isAffine())
       continue;
 
-    DEBUG(dbgs() << "PIP: Transforming: " << *BasePtrSCEV << "\n");
+    LLVM_DEBUG(dbgs() << "PIP: Transforming: " << *BasePtrSCEV << "\n");
     assert(BasePtrSCEV->getLoop() == L &&
            "AddRec for the wrong loop?");
 
@@ -407,7 +420,7 @@ bool PPCLoopPreIncPrep::runOnLoop(Loop *L) {
     if (!isSafeToExpand(BasePtrStartSCEV, *SE))
       continue;
 
-    DEBUG(dbgs() << "PIP: New start is: " << *BasePtrStartSCEV << "\n");
+    LLVM_DEBUG(dbgs() << "PIP: New start is: " << *BasePtrStartSCEV << "\n");
 
     if (alreadyPrepared(L, MemI, BasePtrStartSCEV, BasePtrIncSCEV))
       continue;

@@ -1,5 +1,6 @@
-; RUN: llc -march=r600 -mtriple=r600---amdgiz -mcpu=redwood < %s | FileCheck %s -check-prefix=R600 -check-prefix=FUNC
-; RUN: opt -S -mtriple=r600-unknown-unknown-amdgiz -mcpu=redwood -amdgpu-promote-alloca < %s | FileCheck -check-prefix=OPT %s
+; RUN: llc -march=r600 -mcpu=redwood -disable-promote-alloca-to-vector < %s | FileCheck %s -check-prefix=R600 -check-prefix=FUNC
+; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck %s -check-prefix=R600-VECT -check-prefix=FUNC
+; RUN: opt -S -mtriple=r600-unknown-unknown -mcpu=redwood -amdgpu-promote-alloca -disable-promote-alloca-to-vector < %s | FileCheck -check-prefix=OPT %s
 target datalayout = "A5"
 
 declare i32 @llvm.r600.read.tidig.x() nounwind readnone
@@ -110,7 +111,7 @@ for.end:
 
 ; FUNC-LABEL: {{^}}short_array:
 
-; R600: MOVA_INT
+; R600-VECT: MOVA_INT
 define amdgpu_kernel void @short_array(i32 addrspace(1)* %out, i32 %index) #0 {
 entry:
   %0 = alloca [2 x i16], addrspace(5)
@@ -127,7 +128,7 @@ entry:
 
 ; FUNC-LABEL: {{^}}char_array:
 
-; R600: MOVA_INT
+; R600-VECT: MOVA_INT
 define amdgpu_kernel void @char_array(i32 addrspace(1)* %out, i32 %index) #0 {
 entry:
   %0 = alloca [2 x i8], addrspace(5)

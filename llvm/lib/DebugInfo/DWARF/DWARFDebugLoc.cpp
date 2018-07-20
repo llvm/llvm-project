@@ -16,6 +16,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cinttypes>
@@ -33,19 +34,21 @@ static void dumpExpression(raw_ostream &OS, ArrayRef<char> Data,
                            const MCRegisterInfo *MRI) {
   DWARFDataExtractor Extractor(StringRef(Data.data(), Data.size()),
                                IsLittleEndian, AddressSize);
-  DWARFExpression(Extractor, AddressSize, dwarf::DWARF_VERSION).print(OS, MRI);
+  DWARFExpression(Extractor, dwarf::DWARF_VERSION, AddressSize).print(OS, MRI);
 }
 
 void DWARFDebugLoc::LocationList::dump(raw_ostream &OS, bool IsLittleEndian,
                                        unsigned AddressSize,
                                        const MCRegisterInfo *MRI,
+                                       uint64_t BaseAddress,
                                        unsigned Indent) const {
   for (const Entry &E : Entries) {
     OS << '\n';
     OS.indent(Indent);
     OS << format("[0x%*.*" PRIx64 ", ", AddressSize * 2, AddressSize * 2,
-                 E.Begin)
-       << format(" 0x%*.*" PRIx64 ")", AddressSize * 2, AddressSize * 2, E.End);
+                 BaseAddress + E.Begin);
+    OS << format(" 0x%*.*" PRIx64 ")", AddressSize * 2, AddressSize * 2,
+                 BaseAddress + E.End);
     OS << ": ";
 
     dumpExpression(OS, E.Loc, IsLittleEndian, AddressSize, MRI);
@@ -66,7 +69,7 @@ void DWARFDebugLoc::dump(raw_ostream &OS, const MCRegisterInfo *MRI,
                          Optional<uint64_t> Offset) const {
   auto DumpLocationList = [&](const LocationList &L) {
     OS << format("0x%8.8x: ", L.Offset);
-    L.dump(OS, IsLittleEndian, AddressSize, MRI, 12);
+    L.dump(OS, IsLittleEndian, AddressSize, MRI, 0, 12);
     OS << "\n\n";
   };
 
@@ -91,7 +94,7 @@ DWARFDebugLoc::parseOneLocationList(DWARFDataExtractor Data, unsigned *Offset) {
   while (true) {
     Entry E;
     if (!Data.isValidOffsetForDataOfSize(*Offset, 2 * Data.getAddressSize())) {
-      llvm::errs() << "Location list overflows the debug_loc section.\n";
+      WithColor::error() << "location list overflows the debug_loc section.\n";
       return None;
     }
 
@@ -108,13 +111,13 @@ DWARFDebugLoc::parseOneLocationList(DWARFDataExtractor Data, unsigned *Offset) {
       return LL;
 
     if (!Data.isValidOffsetForDataOfSize(*Offset, 2)) {
-      llvm::errs() << "Location list overflows the debug_loc section.\n";
+      WithColor::error() << "location list overflows the debug_loc section.\n";
       return None;
     }
 
     unsigned Bytes = Data.getU16(Offset);
     if (!Data.isValidOffsetForDataOfSize(*Offset, Bytes)) {
-      llvm::errs() << "Location list overflows the debug_loc section.\n";
+      WithColor::error() << "location list overflows the debug_loc section.\n";
       return None;
     }
     // A single location description describing the location of the object...
@@ -138,7 +141,7 @@ void DWARFDebugLoc::parse(const DWARFDataExtractor &data) {
       break;
   }
   if (data.isValidOffset(Offset))
-    errs() << "error: failed to consume entire .debug_loc section\n";
+    WithColor::error() << "failed to consume entire .debug_loc section\n";
 }
 
 Optional<DWARFDebugLocDWO::LocationList>
@@ -150,8 +153,8 @@ DWARFDebugLocDWO::parseOneLocationList(DataExtractor Data, unsigned *Offset) {
   while (auto Kind =
              static_cast<dwarf::LocationListEntry>(Data.getU8(Offset))) {
     if (Kind != dwarf::DW_LLE_startx_length) {
-      llvm::errs() << "error: dumping support for LLE of kind " << (int)Kind
-                   << " not implemented\n";
+      WithColor::error() << "dumping support for LLE of kind " << (int)Kind
+                         << " not implemented\n";
       return None;
     }
 

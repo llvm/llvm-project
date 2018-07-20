@@ -31,6 +31,8 @@ public:
   void dumpRight(PDBSymDumper &Dumper) const override;
   void dumpArgList(raw_ostream &OS) const;
 
+  bool isCVarArgs() const;
+
   FORWARD_SYMBOL_METHOD(getCallingConvention)
   FORWARD_SYMBOL_ID_METHOD(getClassParent)
   FORWARD_SYMBOL_ID_METHOD(getUnmodifiedType)

@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file lowers br_unless into br_if with an inverted condition.
+/// This file lowers br_unless into br_if with an inverted condition.
 ///
 /// br_unless is not currently in the spec, but it's very convenient for LLVM
 /// to use. This pass allows LLVM to use it, for now.
@@ -47,14 +47,17 @@ public:
 } // end anonymous namespace
 
 char WebAssemblyLowerBrUnless::ID = 0;
+INITIALIZE_PASS(WebAssemblyLowerBrUnless, DEBUG_TYPE,
+                "Lowers br_unless into inverted br_if", false, false)
+
 FunctionPass *llvm::createWebAssemblyLowerBrUnless() {
   return new WebAssemblyLowerBrUnless();
 }
 
 bool WebAssemblyLowerBrUnless::runOnMachineFunction(MachineFunction &MF) {
-  DEBUG(dbgs() << "********** Lowering br_unless **********\n"
-                  "********** Function: "
-               << MF.getName() << '\n');
+  LLVM_DEBUG(dbgs() << "********** Lowering br_unless **********\n"
+                       "********** Function: "
+                    << MF.getName() << '\n');
 
   auto &MFI = *MF.getInfo<WebAssemblyFunctionInfo>();
   const auto &TII = *MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();

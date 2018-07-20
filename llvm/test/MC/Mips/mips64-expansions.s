@@ -269,3 +269,200 @@ sym:
 # CHECK: daddu $1, $1, $9     # encoding: [0x2d,0x08,0x29,0x00]
 # CHECK: lwl   $8, 3($1)      # encoding: [0x03,0x00,0x28,0x88]
 # CHECK: lwr   $8, 0($1)      # encoding: [0x00,0x00,0x28,0x98]
+
+# Test lb/sb/ld/sd/lld with offsets exceeding 16-bits in size.
+
+    ld  $4, 0x8000
+# CHECK:      lui     $4, 1
+# CHECK-NEXT: ld      $4, -32768($4)
+
+    ld  $4, 0x20008($3)
+# CHECK:      lui     $4, 2
+# CHECK-NEXT: addu    $4, $4, $3
+# CHECK-NEXT: ld      $4, 8($4)
+
+    ld  $4,0x100010004
+# CHECK:      addiu   $4, $zero, 1
+# CHECK-NEXT: dsll    $4, $4, 16
+# CHECK-NEXT: ori     $4, $4, 1
+# CHECK-NEXT: dsll    $4, $4, 16
+# CHECK-NEXT: ld      $4, 4($4)
+
+    ld  $4,0x1800180018004
+# CHECK:      lui     $4, 1
+# CHECK-NEXT: ori     $4, $4, 32769
+# CHECK-NEXT: dsll    $4, $4, 16
+# CHECK-NEXT: ori     $4, $4, 32770
+# CHECK-NEXT: dsll    $4, $4, 16
+# CHECK-NEXT: ld      $4, -32764($4)
+
+    ld  $4,0x1800180018004($3)
+# CHECK:      lui     $4, 1
+# CHECK-NEXT: ori     $4, $4, 32769
+# CHECK-NEXT: dsll    $4, $4, 16
+# CHECK-NEXT: ori     $4, $4, 32770
+# CHECK-NEXT: dsll    $4, $4, 16
+# CHECK-NEXT: daddu   $4, $4, $3
+# CHECK-NEXT: ld      $4, -32764($4)
+
+    sd  $4, 0x8000
+# CHECK:      lui     $1, 1
+# CHECK-NEXT: sd      $4, -32768($1)
+
+    sd  $4, 0x20008($3)
+# CHECK:      lui     $1, 2
+# CHECK-NEXT: addu    $1, $1, $3
+# CHECK-NEXT: sd      $4, 8($1)
+
+    sd  $4,0x100010004
+# CHECK:      addiu   $1, $zero, 1
+# CHECK-NEXT: dsll    $1, $1, 16
+# CHECK-NEXT: ori     $1, $1, 1
+# CHECK-NEXT: dsll    $1, $1, 16
+# CHECK-NEXT: sd      $4, 4($1)
+
+    sd  $4,0x1800180018004
+# CHECK:      lui     $1, 1
+# CHECK-NEXT: ori     $1, $1, 32769
+# CHECK-NEXT: dsll    $1, $1, 16
+# CHECK-NEXT: ori     $1, $1, 32770
+# CHECK-NEXT: dsll    $1, $1, 16
+# CHECK-NEXT: sd      $4, -32764($1)
+
+    sd  $4,0x1800180018004($3)
+# CHECK:      lui     $1, 1
+# CHECK-NEXT: ori     $1, $1, 32769
+# CHECK-NEXT: dsll    $1, $1, 16
+# CHECK-NEXT: ori     $1, $1, 32770
+# CHECK-NEXT: dsll    $1, $1, 16
+# CHECK-NEXT: daddu   $1, $1, $3
+# CHECK-NEXT: sd      $4, -32764($1)
+
+    lld $4, 0x8000
+# CHECK:      lui     $4, 1
+# CHECK-NEXT: lld     $4, -32768($4)
+
+    lld $4, 0x20008($3)
+# CHECK:      lui     $4, 2
+# CHECK-NEXT: addu    $4, $4, $3
+# CHECK-NEXT: lld     $4, 8($4)
+
+    lld $4,0x100010004
+# CHECK:      addiu   $4, $zero, 1
+# CHECK-NEXT: dsll    $4, $4, 16
+# CHECK-NEXT: ori     $4, $4, 1
+# CHECK-NEXT: dsll    $4, $4, 16
+# CHECK-NEXT: lld     $4, 4($4)
+
+    lld $4,0x1800180018004
+# CHECK:      lui     $4, 1
+# CHECK-NEXT: ori     $4, $4, 32769
+# CHECK-NEXT: dsll    $4, $4, 16
+# CHECK-NEXT: ori     $4, $4, 32770
+# CHECK-NEXT: dsll    $4, $4, 16
+# CHECK-NEXT: lld     $4, -32764($4)
+
+    lld $4,0x1800180018004($3)
+# CHECK:      lui     $4, 1
+# CHECK-NEXT: ori     $4, $4, 32769
+# CHECK-NEXT: dsll    $4, $4, 16
+# CHECK-NEXT: ori     $4, $4, 32770
+# CHECK-NEXT: dsll    $4, $4, 16
+# CHECK-NEXT: daddu   $4, $4, $3
+# CHECK-NEXT: lld     $4, -32764($4)
+
+    lb  $4,0x100010004
+# CHECK:      addiu   $4, $zero, 1
+# CHECK-NEXT: dsll    $4, $4, 16
+# CHECK-NEXT: ori     $4, $4, 1
+# CHECK-NEXT: dsll    $4, $4, 16
+# CHECK-NEXT: lb      $4, 4($4)
+
+    lb  $4,0x1800180018004
+# CHECK:      lui     $4, 1
+# CHECK-NEXT: ori     $4, $4, 32769
+# CHECK-NEXT: dsll    $4, $4, 16
+# CHECK-NEXT: ori     $4, $4, 32770
+# CHECK-NEXT: dsll    $4, $4, 16
+# CHECK-NEXT: lb      $4, -32764($4)
+
+    lb  $4,0x1800180018004($3)
+# CHECK:      lui     $4, 1
+# CHECK-NEXT: ori     $4, $4, 32769
+# CHECK-NEXT: dsll    $4, $4, 16
+# CHECK-NEXT: ori     $4, $4, 32770
+# CHECK-NEXT: dsll    $4, $4, 16
+# CHECK-NEXT: daddu   $4, $4, $3
+# CHECK-NEXT: lb      $4, -32764($4)
+
+    sb  $4,0x100010004
+# CHECK:      addiu   $1, $zero, 1
+# CHECK-NEXT: dsll    $1, $1, 16
+# CHECK-NEXT: ori     $1, $1, 1
+# CHECK-NEXT: dsll    $1, $1, 16
+# CHECK-NEXT: sb      $4, 4($1)
+
+    sb  $4,0x1800180018004
+# CHECK:      lui     $1, 1
+# CHECK-NEXT: ori     $1, $1, 32769
+# CHECK-NEXT: dsll    $1, $1, 16
+# CHECK-NEXT: ori     $1, $1, 32770
+# CHECK-NEXT: dsll    $1, $1, 16
+# CHECK-NEXT: sb      $4, -32764($1)
+
+    sb  $4,0x1800180018004($3)
+# CHECK:      lui     $1, 1
+# CHECK-NEXT: ori     $1, $1, 32769
+# CHECK-NEXT: dsll    $1, $1, 16
+# CHECK-NEXT: ori     $1, $1, 32770
+# CHECK-NEXT: dsll    $1, $1, 16
+# CHECK-NEXT: daddu   $1, $1, $3
+# CHECK-NEXT: sb      $4, -32764($1)
+
+    lh  $4,0x100010004
+# CHECK:      addiu   $4, $zero, 1
+# CHECK-NEXT: dsll    $4, $4, 16
+# CHECK-NEXT: ori     $4, $4, 1
+# CHECK-NEXT: dsll    $4, $4, 16
+# CHECK-NEXT: lh      $4, 4($4)
+
+    lh  $4,0x1800180018004
+# CHECK:      lui     $4, 1
+# CHECK-NEXT: ori     $4, $4, 32769
+# CHECK-NEXT: dsll    $4, $4, 16
+# CHECK-NEXT: ori     $4, $4, 32770
+# CHECK-NEXT: dsll    $4, $4, 16
+# CHECK-NEXT: lh      $4, -32764($4)
+
+    lh  $4,0x1800180018004($3)
+# CHECK:      lui     $4, 1
+# CHECK-NEXT: ori     $4, $4, 32769
+# CHECK-NEXT: dsll    $4, $4, 16
+# CHECK-NEXT: ori     $4, $4, 32770
+# CHECK-NEXT: dsll    $4, $4, 16
+# CHECK-NEXT: daddu   $4, $4, $3
+# CHECK-NEXT: lh      $4, -32764($4)
+
+    lhu $4,0x100010004
+# CHECK:      addiu   $4, $zero, 1
+# CHECK-NEXT: dsll    $4, $4, 16
+# CHECK-NEXT: ori     $4, $4, 1
+# CHECK-NEXT: dsll    $4, $4, 16
+# CHECK-NEXT: lhu     $4, 4($4)
+
+    lhu $4,0x1800180018004
+# CHECK:      lui     $4, 1
+# CHECK-NEXT: ori     $4, $4, 32769
+# CHECK-NEXT: dsll    $4, $4, 16
+# CHECK-NEXT: ori     $4, $4, 32770
+# CHECK-NEXT: dsll    $4, $4, 16
+# CHECK-NEXT: lhu     $4, -32764($4)
+
+    lhu $4,0x1800180018004($3)
+# CHECK:      lui     $4, 1
+# CHECK-NEXT: ori     $4, $4, 32769
+# CHECK-NEXT: dsll    $4, $4, 16
+# CHECK-NEXT: ori     $4, $4, 32770
+# CHECK-NEXT: dsll    $4, $4, 16
+# CHECK-NEXT: daddu   $4, $4, $3
+# CHECK-NEXT: lhu     $4, -32764($4)

@@ -85,7 +85,7 @@ _ZN7MessageD1Ev.exit33:                           ; preds = %delete.notnull.i.i.
 if.end:                                           ; preds = %_ZN7MessageD1Ev.exit33, %entry
   %message_.i.i = getelementptr inbounds %class.AssertionResult.24.249.299.1324.2349, %class.AssertionResult.24.249.299.1324.2349* %gtest_ar, i32 0, i32 1
   %call.i.i.i = call %class.scoped_ptr.23.248.298.1323.2348* @_ZN10scoped_ptrI25Trans_NS___1_basic_stringIciiEED2Ev(%class.scoped_ptr.23.248.298.1323.2348* %message_.i.i)
-  call void @llvm.memset.p0i8.i32(i8* null, i8 0, i32 12, i32 4, i1 false)
+  call void @llvm.memset.p0i8.i32(i8* align 4 null, i8 0, i32 12, i1 false)
   call void @_ZN25Trans_NS___1_basic_stringIciiE5m_fn2Ev(%class.Trans_NS___1_basic_string.18.243.293.1318.2343* nonnull %ref.tmp)
   call void @_Z19CreateSOCKSv5Paramsv(%class.scoped_refptr.19.244.294.1319.2344* nonnull sret %agg.tmp16)
   %callback_.i = getelementptr inbounds %class.TestCompletionCallback.9.234.284.1309.2334, %class.TestCompletionCallback.9.234.284.1309.2334* %callback, i32 0, i32 1
@@ -137,7 +137,7 @@ declare void @_ZN18ClientSocketHandle5m_fn3IPiEEvRK25Trans_NS___1_basic_stringIc
 declare void @_Z19CreateSOCKSv5Paramsv(%class.scoped_refptr.19.244.294.1319.2344* sret)
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.memset.p0i8.i32(i8* nocapture, i8, i32, i32, i1) #0
+declare void @llvm.memset.p0i8.i32(i8* nocapture, i8, i32, i1) #0
 
 declare %class.BoundNetLog.20.245.295.1320.2345* @_ZN11BoundNetLogD1Ev(%class.BoundNetLog.20.245.295.1320.2345* returned) unnamed_addr
 

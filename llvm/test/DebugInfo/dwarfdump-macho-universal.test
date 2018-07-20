@@ -1,4 +1,4 @@
-Reuse a test input from llvm-dsymutil, it's perfect for what we want to exercise
+Reuse a test input from dsymutil, it's perfect for what we want to exercise
 RUN: llvm-dwarfdump -v %S/Inputs/fat-test.o --debug-info | FileCheck %s
 
 CHECK: fat-test.o(x86_64):	file format Mach-O 64-bit x86-64

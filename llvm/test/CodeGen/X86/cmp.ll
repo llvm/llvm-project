@@ -240,17 +240,20 @@ define i32 @test12() ssp uwtable {
 ; CHECK-NEXT:    pushq %rax # encoding: [0x50]
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    callq test12b # encoding: [0xe8,A,A,A,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: test12b-4, kind: FK_PCRel_4
+; CHECK-NEXT:    # fixup A - offset: 1, value: test12b-4, kind: reloc_branch_4byte_pcrel
 ; CHECK-NEXT:    testb %al, %al # encoding: [0x84,0xc0]
 ; CHECK-NEXT:    je .LBB12_2 # encoding: [0x74,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB12_2-1, kind: FK_PCRel_1
 ; CHECK-NEXT:  # %bb.1: # %T
 ; CHECK-NEXT:    movl $1, %eax # encoding: [0xb8,0x01,0x00,0x00,0x00]
 ; CHECK-NEXT:    popq %rcx # encoding: [0x59]
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ; CHECK-NEXT:  .LBB12_2: # %F
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    movl $2, %eax # encoding: [0xb8,0x02,0x00,0x00,0x00]
 ; CHECK-NEXT:    popq %rcx # encoding: [0x59]
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
   %tmp1 = call zeroext i1 @test12b()

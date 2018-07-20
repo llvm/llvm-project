@@ -199,11 +199,12 @@ static MachineBasicBlock::iterator moveInstrOut(MachineInstr &MI,
 }
 
 bool HexagonPacketizer::runOnMachineFunction(MachineFunction &MF) {
-  if (DisablePacketizer || skipFunction(MF.getFunction()))
+  auto &HST = MF.getSubtarget<HexagonSubtarget>();
+  if (DisablePacketizer || !HST.usePackets() || skipFunction(MF.getFunction()))
     return false;
 
-  HII = MF.getSubtarget<HexagonSubtarget>().getInstrInfo();
-  HRI = MF.getSubtarget<HexagonSubtarget>().getRegisterInfo();
+  HII = HST.getInstrInfo();
+  HRI = HST.getRegisterInfo();
   auto &MLI = getAnalysis<MachineLoopInfo>();
   auto *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
   auto *MBPI = &getAnalysis<MachineBranchProbabilityInfo>();
@@ -374,7 +375,7 @@ bool HexagonPacketizerList::promoteToDotCur(MachineInstr &MI,
 void HexagonPacketizerList::cleanUpDotCur() {
   MachineInstr *MI = nullptr;
   for (auto BI : CurrentPacketMIs) {
-    DEBUG(dbgs() << "Cleanup packet has "; BI->dump(););
+    LLVM_DEBUG(dbgs() << "Cleanup packet has "; BI->dump(););
     if (HII->isDotCurInst(*BI)) {
       MI = BI;
       continue;
@@ -389,7 +390,7 @@ void HexagonPacketizerList::cleanUpDotCur() {
     return;
   // We did not find a use of the CUR, so de-cur it.
   MI->setDesc(HII->get(HII->getNonDotCurOp(*MI)));
-  DEBUG(dbgs() << "Demoted CUR "; MI->dump(););
+  LLVM_DEBUG(dbgs() << "Demoted CUR "; MI->dump(););
 }
 
 // Check to see if an instruction can be dot cur.
@@ -413,11 +414,10 @@ bool HexagonPacketizerList::canPromoteToDotCur(const MachineInstr &MI,
     return false;
 
   // Make sure candidate instruction uses cur.
-  DEBUG(dbgs() << "Can we DOT Cur Vector MI\n";
-        MI.dump();
-        dbgs() << "in packet\n";);
+  LLVM_DEBUG(dbgs() << "Can we DOT Cur Vector MI\n"; MI.dump();
+             dbgs() << "in packet\n";);
   MachineInstr &MJ = *MII;
-  DEBUG({
+  LLVM_DEBUG({
     dbgs() << "Checking CUR against ";
     MJ.dump();
   });
@@ -432,12 +432,12 @@ bool HexagonPacketizerList::canPromoteToDotCur(const MachineInstr &MI,
   // Check for existing uses of a vector register within the packet which
   // would be affected by converting a vector load into .cur formt.
   for (auto BI : CurrentPacketMIs) {
-    DEBUG(dbgs() << "packet has "; BI->dump(););
+    LLVM_DEBUG(dbgs() << "packet has "; BI->dump(););
     if (BI->readsRegister(DepReg, MF.getSubtarget().getRegisterInfo()))
       return false;
   }
 
-  DEBUG(dbgs() << "Can Dot CUR MI\n"; MI.dump(););
+  LLVM_DEBUG(dbgs() << "Can Dot CUR MI\n"; MI.dump(););
   // We can convert the opcode into a .cur.
   return true;
 }
@@ -529,6 +529,9 @@ bool HexagonPacketizerList::updateOffset(SUnit *SUI, SUnit *SUJ) {
     return false;
 
   int64_t Offset = MI.getOperand(OPI).getImm();
+  if (!HII->isValidOffset(MI.getOpcode(), Offset+Incr, HRI))
+    return false;
+
   MI.getOperand(OPI).setImm(Offset + Incr);
   ChangedOffset = Offset;
   return true;
@@ -1033,7 +1036,7 @@ void HexagonPacketizerList::initPacketizerState() {
 // Ignore bundling of pseudo instructions.
 bool HexagonPacketizerList::ignorePseudoInstruction(const MachineInstr &MI,
                                                     const MachineBasicBlock *) {
-  if (MI.isDebugValue())
+  if (MI.isDebugInstr())
     return true;
 
   if (MI.isCFIInstruction())
@@ -1095,7 +1098,7 @@ bool HexagonPacketizerList::isSoloInstruction(const MachineInstr &MI) {
 static bool cannotCoexistAsymm(const MachineInstr &MI, const MachineInstr &MJ,
       const HexagonInstrInfo &HII) {
   const MachineFunction *MF = MI.getParent()->getParent();
-  if (MF->getSubtarget<HexagonSubtarget>().hasV60TOpsOnly() &&
+  if (MF->getSubtarget<HexagonSubtarget>().hasV60OpsOnly() &&
       HII.isHVXMemWithAIndirect(MI, MJ))
     return true;
 
@@ -1112,6 +1115,10 @@ static bool cannotCoexistAsymm(const MachineInstr &MI, const MachineInstr &MJ,
   case Hexagon::S4_stored_locked:
   case Hexagon::L2_loadw_locked:
   case Hexagon::L4_loadd_locked:
+  case Hexagon::Y2_dccleana:
+  case Hexagon::Y2_dccleaninva:
+  case Hexagon::Y2_dcinva:
+  case Hexagon::Y2_dczeroa:
   case Hexagon::Y4_l2fetch:
   case Hexagon::Y5_l2fetch: {
     // These instructions can only be grouped with ALU32 or non-floating-point
@@ -1513,7 +1520,7 @@ bool HexagonPacketizerList::isLegalToPacketizeTogether(SUnit *SUI, SUnit *SUJ) {
       bool IsVecJ = HII->isHVXVec(J);
       bool IsVecI = HII->isHVXVec(I);
 
-      if (Slot1Store && MF.getSubtarget<HexagonSubtarget>().hasV65TOps() &&
+      if (Slot1Store && MF.getSubtarget<HexagonSubtarget>().hasV65Ops() &&
           ((LoadJ && StoreI && !NVStoreI) ||
            (StoreJ && LoadI && !NVStoreJ)) &&
           (J.getOpcode() != Hexagon::S2_allocframe &&
@@ -1683,8 +1690,12 @@ HexagonPacketizerList::addToPacket(MachineInstr &MI) {
     PacketStalls = false;
   PacketStalls |= producesStall(MI);
 
-  if (MI.isImplicitDef())
+  if (MI.isImplicitDef()) {
+    // Add to the packet to allow subsequent instructions to be checked
+    // properly.
+    CurrentPacketMIs.push_back(&MI);
     return MII;
+  }
   assert(ResourceTracker->canReserveResources(MI));
 
   bool ExtMI = HII->isExtended(MI) || HII->isConstExtended(MI);
@@ -1754,7 +1765,7 @@ void HexagonPacketizerList::endPacket(MachineBasicBlock *MBB,
   bool memShufDisabled = getmemShufDisabled();
   if (memShufDisabled && !foundLSInPacket()) {
     setmemShufDisabled(false);
-    DEBUG(dbgs() << "  Not added to NoShufPacket\n");
+    LLVM_DEBUG(dbgs() << "  Not added to NoShufPacket\n");
   }
   memShufDisabled = getmemShufDisabled();
 
@@ -1773,7 +1784,7 @@ void HexagonPacketizerList::endPacket(MachineBasicBlock *MBB,
   CurrentPacketMIs.clear();
 
   ResourceTracker->clearResources();
-  DEBUG(dbgs() << "End packet\n");
+  LLVM_DEBUG(dbgs() << "End packet\n");
 }
 
 bool HexagonPacketizerList::shouldAddToPacket(const MachineInstr &MI) {
@@ -1803,17 +1814,18 @@ bool HexagonPacketizerList::producesStall(const MachineInstr &I) {
 
   SUnit *SUI = MIToSUnit[const_cast<MachineInstr *>(&I)];
 
-  // Check if the latency is 0 between this instruction and any instruction
-  // in the current packet. If so, we disregard any potential stalls due to
-  // the instructions in the previous packet. Most of the instruction pairs
-  // that can go together in the same packet have 0 latency between them.
-  // Only exceptions are newValueJumps as they're generated much later and
-  // the latencies can't be changed at that point. Another is .cur
-  // instructions if its consumer has a 0 latency successor (such as .new).
-  // In this case, the latency between .cur and the consumer stays non-zero
-  // even though we can have  both .cur and .new in the same packet. Changing
-  // the latency to 0 is not an option as it causes software pipeliner to
-  // not pipeline in some cases.
+  // If the latency is 0 and there is a data dependence between this
+  // instruction and any instruction in the current packet, we disregard any
+  // potential stalls due to the instructions in the previous packet. Most of
+  // the instruction pairs that can go together in the same packet have 0
+  // latency between them. The exceptions are
+  // 1. NewValueJumps as they're generated much later and the latencies can't
+  // be changed at that point.
+  // 2. .cur instructions, if its consumer has a 0 latency successor (such as
+  // .new). In this case, the latency between .cur and the consumer stays
+  // non-zero even though we can have  both .cur and .new in the same packet.
+  // Changing the latency to 0 is not an option as it causes software pipeliner
+  // to not pipeline in some cases.
 
   // For Example:
   // {
@@ -1826,19 +1838,10 @@ bool HexagonPacketizerList::producesStall(const MachineInstr &I) {
   for (auto J : CurrentPacketMIs) {
     SUnit *SUJ = MIToSUnit[J];
     for (auto &Pred : SUI->Preds)
-      if (Pred.getSUnit() == SUJ &&
-          (Pred.getLatency() == 0 || HII->isNewValueJump(I) ||
-           HII->isToBeScheduledASAP(*J, I)))
-        return false;
-  }
-
-  // Check if the latency is greater than one between this instruction and any
-  // instruction in the previous packet.
-  for (auto J : OldPacketMIs) {
-    SUnit *SUJ = MIToSUnit[J];
-    for (auto &Pred : SUI->Preds)
-      if (Pred.getSUnit() == SUJ && Pred.getLatency() > 1)
-        return true;
+      if (Pred.getSUnit() == SUJ)
+        if ((Pred.getLatency() == 0 && Pred.isAssignedRegDep()) ||
+            HII->isNewValueJump(I) || HII->isToBeScheduledASAP(*J, I))
+          return false;
   }
 
   // Check if the latency is greater than one between this instruction and any

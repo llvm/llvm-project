@@ -26,7 +26,7 @@ bb:
 ; CHECK: rep;stosl
 
   %tmp5 = bitcast i32* %tmp4 to i8*
-  call void @llvm.memset.p0i8.i64(i8* %tmp5, i8 0, i64 84, i32 4, i1 false)
+  call void @llvm.memset.p0i8.i64(i8* align 4 %tmp5, i8 0, i64 84, i1 false)
   %tmp6 = getelementptr inbounds %struct.type, %struct.type* %s, i32 0, i32 62
   store i32* null, i32** %tmp6, align 8
   br label %bb1
@@ -36,4 +36,4 @@ bb1:
   ret i32 42
 }
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1) nounwind
+declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) nounwind

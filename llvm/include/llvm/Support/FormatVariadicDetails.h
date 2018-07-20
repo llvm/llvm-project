@@ -17,6 +17,7 @@
 
 namespace llvm {
 template <typename T, typename Enable = void> struct format_provider {};
+class Error;
 
 namespace detail {
 class format_adapter {
@@ -36,6 +37,17 @@ public:
   void format(llvm::raw_ostream &S, StringRef Options) override {
     format_provider<typename std::decay<T>::type>::format(Item, S, Options);
   }
+};
+
+template <typename T>
+class stream_operator_format_adapter : public format_adapter {
+  T Item;
+
+public:
+  explicit stream_operator_format_adapter(T &&Item)
+      : Item(std::forward<T>(Item)) {}
+
+  void format(llvm::raw_ostream &S, StringRef Options) override { S << Item; }
 };
 
 template <typename T> class missing_format_adapter;
@@ -59,6 +71,23 @@ public:
       (sizeof(test<llvm::format_provider<Decayed>>(nullptr)) == 1);
 };
 
+// Test if raw_ostream& << T -> raw_ostream& is findable via ADL.
+template <class T> class has_StreamOperator {
+public:
+  using ConstRefT = const typename std::decay<T>::type &;
+
+  template <typename U>
+  static char test(typename std::enable_if<
+                   std::is_same<decltype(std::declval<llvm::raw_ostream &>()
+                                         << std::declval<U>()),
+                                llvm::raw_ostream &>::value,
+                   int *>::type);
+
+  template <typename U> static double test(...);
+
+  static bool const value = (sizeof(test<ConstRefT>(nullptr)) == 1);
+};
+
 // Simple template that decides whether a type T should use the member-function
 // based format() invocation.
 template <typename T>
@@ -77,15 +106,24 @@ struct uses_format_provider
           bool, !uses_format_member<T>::value && has_FormatProvider<T>::value> {
 };
 
+// Simple template that decides whether a type T should use the operator<<
+// based format() invocation.  This takes last priority.
+template <typename T>
+struct uses_stream_operator
+    : public std::integral_constant<bool, !uses_format_member<T>::value &&
+                                              !uses_format_provider<T>::value &&
+                                              has_StreamOperator<T>::value> {};
+
 // Simple template that decides whether a type T has neither a member-function
 // nor format_provider based implementation that it can use.  Mostly used so
 // that the compiler spits out a nice diagnostic when a type with no format
 // implementation can be located.
 template <typename T>
 struct uses_missing_provider
-    : public std::integral_constant<bool,
-                                    !uses_format_member<T>::value &&
-                                        !uses_format_provider<T>::value> {};
+    : public std::integral_constant<bool, !uses_format_member<T>::value &&
+                                              !uses_format_provider<T>::value &&
+                                              !uses_stream_operator<T>::value> {
+};
 
 template <typename T>
 typename std::enable_if<uses_format_member<T>::value, T>::type
@@ -98,6 +136,19 @@ typename std::enable_if<uses_format_provider<T>::value,
                         provider_format_adapter<T>>::type
 build_format_adapter(T &&Item) {
   return provider_format_adapter<T>(std::forward<T>(Item));
+}
+
+template <typename T>
+typename std::enable_if<uses_stream_operator<T>::value,
+                        stream_operator_format_adapter<T>>::type
+build_format_adapter(T &&Item) {
+  // If the caller passed an Error by value, then stream_operator_format_adapter
+  // would be responsible for consuming it.
+  // Make the caller opt into this by calling fmt_consume().
+  static_assert(
+      !std::is_same<llvm::Error, typename std::remove_cv<T>::type>::value,
+      "llvm::Error-by-value must be wrapped in fmt_consume() for formatv");
+  return stream_operator_format_adapter<T>(std::forward<T>(Item));
 }
 
 template <typename T>

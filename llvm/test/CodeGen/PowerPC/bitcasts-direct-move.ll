@@ -18,7 +18,7 @@ define i64 @f64toi64(double %a) {
 entry:
   %0 = bitcast double %a to i64
   ret i64 %0
-; CHECK-P7: stxsdx 1,
+; CHECK-P7: stfdx 1,
 ; CHECK-P7: ld 3,
 ; CHECK: mffprd 3, 1
 }
@@ -39,7 +39,7 @@ entry:
   %0 = bitcast i64 %a to double
   ret double %0
 ; CHECK-P7: std 3,
-; CHECK-P7: lxsdx 1,
+; CHECK-P7: lfdx 1,
 ; CHECK: mtvsrd 1, 3
 }
 
@@ -58,7 +58,7 @@ define i64 @f64toi64u(double %a) {
 entry:
   %0 = bitcast double %a to i64
   ret i64 %0
-; CHECK-P7: stxsdx 1,
+; CHECK-P7: stfdx 1,
 ; CHECK-P7: ld 3,
 ; CHECK: mffprd 3, 1
 }
@@ -79,6 +79,6 @@ entry:
   %0 = bitcast i64 %a to double
   ret double %0
 ; CHECK-P7: std 3,
-; CHECK-P7: lxsdx 1,
+; CHECK-P7: lfdx 1,
 ; CHECK: mtvsrd 1, 3
 }

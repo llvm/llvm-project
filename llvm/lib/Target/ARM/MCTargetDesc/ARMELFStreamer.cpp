@@ -33,6 +33,7 @@
 #include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstPrinter.h"
+#include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSectionELF.h"
@@ -441,9 +442,9 @@ public:
   friend class ARMTargetELFStreamer;
 
   ARMELFStreamer(MCContext &Context, std::unique_ptr<MCAsmBackend> TAB,
-                 raw_pwrite_stream &OS, std::unique_ptr<MCCodeEmitter> Emitter,
+                 std::unique_ptr<MCObjectWriter> OW, std::unique_ptr<MCCodeEmitter> Emitter,
                  bool IsThumb)
-      : MCELFStreamer(Context, std::move(TAB), OS, std::move(Emitter)),
+      : MCELFStreamer(Context, std::move(TAB), std::move(OW), std::move(Emitter)),
         IsThumb(IsThumb) {
     EHReset();
   }
@@ -512,9 +513,11 @@ public:
 
       assert(IsThumb);
       EmitThumbMappingSymbol();
+      // Thumb wide instructions are emitted as a pair of 16-bit words of the
+      // appropriate endianness.
       for (unsigned II = 0, IE = Size; II != IE; II = II + 2) {
-        const unsigned I0 = LittleEndian ? II + 0 : (Size - II - 1);
-        const unsigned I1 = LittleEndian ? II + 1 : (Size - II - 2);
+        const unsigned I0 = LittleEndian ? II + 0 : II + 1;
+        const unsigned I1 = LittleEndian ? II + 1 : II + 0;
         Buffer[Size - II - 2] = uint8_t(Inst >> I0 * CHAR_BIT);
         Buffer[Size - II - 1] = uint8_t(Inst >> I1 * CHAR_BIT);
       }
@@ -856,6 +859,8 @@ void ARMTargetELFStreamer::emitArchDefaultAttributes() {
   case ARM::ArchKind::ARMV8A:
   case ARM::ArchKind::ARMV8_1A:
   case ARM::ArchKind::ARMV8_2A:
+  case ARM::ArchKind::ARMV8_3A:
+  case ARM::ArchKind::ARMV8_4A:
     setAttributeItem(CPU_arch_profile, ApplicationProfile, false);
     setAttributeItem(ARM_ISA_use, Allowed, false);
     setAttributeItem(THUMB_ISA_use, AllowThumb32, false);
@@ -1066,7 +1071,7 @@ void ARMTargetELFStreamer::finishAttributeSection() {
   if (Contents.empty())
     return;
 
-  std::sort(Contents.begin(), Contents.end(), AttributeItem::LessTag);
+  llvm::sort(Contents.begin(), Contents.end(), AttributeItem::LessTag);
 
   ARMELFStreamer &Streamer = getStreamer();
 
@@ -1492,10 +1497,10 @@ MCTargetStreamer *createARMObjectTargetStreamer(MCStreamer &S,
 
 MCELFStreamer *createARMELFStreamer(MCContext &Context,
                                     std::unique_ptr<MCAsmBackend> TAB,
-                                    raw_pwrite_stream &OS,
+                                    std::unique_ptr<MCObjectWriter> OW,
                                     std::unique_ptr<MCCodeEmitter> Emitter,
                                     bool RelaxAll, bool IsThumb) {
-  ARMELFStreamer *S = new ARMELFStreamer(Context, std::move(TAB), OS,
+  ARMELFStreamer *S = new ARMELFStreamer(Context, std::move(TAB), std::move(OW),
                                          std::move(Emitter), IsThumb);
   // FIXME: This should eventually end up somewhere else where more
   // intelligent flag decisions can be made. For now we are just maintaining

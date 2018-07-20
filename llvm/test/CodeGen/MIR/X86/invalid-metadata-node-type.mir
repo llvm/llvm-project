@@ -38,9 +38,10 @@ tracksRegLiveness: true
 frameInfo:
   maxAlignment:    16
 stack:
-# CHECK: [[@LINE+1]]:75: expected a reference to a 'DILocalVariable' metadata node
-  - { id: 0, name: y.i, offset: 0, size: 256, alignment: 16, di-variable: '!8',
-      di-expression: '!7', di-location: '!8' }
+  - { id: 0, name: y.i, offset: 0, size: 256, alignment: 16,
+# CHECK: [[@LINE+1]]:28: expected a reference to a 'DILocalVariable' metadata node
+      debug-info-variable: '!8', debug-info-expression: '!7',
+      debug-info-location: '!8' }
 body: |
   bb.0.entry:
     successors: %bb.1.for.body

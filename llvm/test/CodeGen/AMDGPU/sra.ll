@@ -1,6 +1,6 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=verde -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI -check-prefix=FUNC %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI -check-prefix=FUNC %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=r600 -mtriple=r600---amdgiz -mcpu=redwood -verify-machineinstrs < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=verde -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=GCN -check-prefix=SI -check-prefix=FUNC %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=GCN -check-prefix=VI -check-prefix=FUNC %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=r600 -mtriple=r600---amdgiz -mcpu=redwood -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=EG -check-prefix=FUNC %s
 
 declare i32 @llvm.r600.read.tidig.x() #0
 
@@ -231,11 +231,11 @@ define amdgpu_kernel void @ashr_v4i64(<4 x i64> addrspace(1)* %out, <4 x i64> ad
 }
 
 ; GCN-LABEL: {{^}}s_ashr_32_i64:
-; GCN: s_load_dword s[[HI:[0-9]+]], {{s\[[0-9]+:[0-9]+\]}}, {{0xc|0x30}}
+; GCN: s_load_dword s[[HI:[0-9]+]], {{s\[[0-9]+:[0-9]+\]}}, {{0x14|0x50}}
 ; GCN: s_ashr_i32 s[[SHIFT:[0-9]+]], s[[HI]], 31
 ; GCN: s_add_u32 s{{[0-9]+}}, s[[HI]], s{{[0-9]+}}
 ; GCN: s_addc_u32 s{{[0-9]+}}, s[[SHIFT]], s{{[0-9]+}}
-define amdgpu_kernel void @s_ashr_32_i64(i64 addrspace(1)* %out, i64 %a, i64 %b) {
+define amdgpu_kernel void @s_ashr_32_i64(i64 addrspace(1)* %out, [8 x i32], i64 %a, [8 x i32], i64 %b) {
   %result = ashr i64 %a, 32
   %add = add i64 %result, %b
   store i64 %add, i64 addrspace(1)* %out
@@ -258,11 +258,11 @@ define amdgpu_kernel void @v_ashr_32_i64(i64 addrspace(1)* %out, i64 addrspace(1
 }
 
 ; GCN-LABEL: {{^}}s_ashr_63_i64:
-; GCN: s_load_dword s[[HI:[0-9]+]], {{s\[[0-9]+:[0-9]+\]}}, {{0xc|0x30}}
+; GCN: s_load_dword s[[HI:[0-9]+]], {{s\[[0-9]+:[0-9]+\]}}, {{0x14|0x50}}
 ; GCN: s_ashr_i32 s[[SHIFT:[0-9]+]], s[[HI]], 31
 ; GCN: s_add_u32 {{s[0-9]+}}, s[[SHIFT]], {{s[0-9]+}}
 ; GCN: s_addc_u32 {{s[0-9]+}}, s[[SHIFT]], {{s[0-9]+}}
-define amdgpu_kernel void @s_ashr_63_i64(i64 addrspace(1)* %out, i64 %a, i64 %b) {
+define amdgpu_kernel void @s_ashr_63_i64(i64 addrspace(1)* %out, [8 x i32], i64 %a, [8 x i32], i64 %b) {
   %result = ashr i64 %a, 63
   %add = add i64 %result, %b
   store i64 %add, i64 addrspace(1)* %out

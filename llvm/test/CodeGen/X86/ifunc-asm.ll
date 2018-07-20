@@ -12,4 +12,4 @@ entry:
 @foo = ifunc i32 (i32), i64 ()* @foo_ifunc
 ; CHECK: .type foo,@function
 ; CHECK-NEXT: .type foo,@gnu_indirect_function
-; CHECK-NEXT: foo = foo_ifunc
+; CHECK-NEXT: .set foo, foo_ifunc

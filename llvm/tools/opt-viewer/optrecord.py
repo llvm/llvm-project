@@ -328,6 +328,6 @@ def find_opt_files(*dirs_or_files):
                 subdirs[:] = [d for d in subdirs
                               if not os.path.ismount(os.path.join(dir, d))]
                 for file in files:
-                    if fnmatch.fnmatch(file, "*.opt.yaml"):
+                    if fnmatch.fnmatch(file, "*.opt.yaml*"):
                         all.append(os.path.join(dir, file))
     return all

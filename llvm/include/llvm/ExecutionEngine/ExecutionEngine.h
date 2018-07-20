@@ -60,7 +60,7 @@ class ObjectFile;
 
 } // end namespace object
 
-/// \brief Helper class for helping synchronize access to the global address map
+/// Helper class for helping synchronize access to the global address map
 /// table.  Access to this class should be serialized under a mutex.
 class ExecutionEngineState {
 public:
@@ -86,7 +86,7 @@ public:
     return GlobalAddressReverseMap;
   }
 
-  /// \brief Erase an entry from the mapping table.
+  /// Erase an entry from the mapping table.
   ///
   /// \returns The address that \p ToUnmap was happed to.
   uint64_t RemoveMapping(StringRef Name);
@@ -94,7 +94,7 @@ public:
 
 using FunctionCreator = std::function<void *(const std::string &)>;
 
-/// \brief Abstract interface for implementation execution of LLVM modules,
+/// Abstract interface for implementation execution of LLVM modules,
 /// designed to support both interpreter and just-in-time (JIT) compiler
 /// implementations.
 class ExecutionEngine {
@@ -137,17 +137,15 @@ protected:
   virtual char *getMemoryForGV(const GlobalVariable *GV);
 
   static ExecutionEngine *(*MCJITCtor)(
-                                std::unique_ptr<Module> M,
-                                std::string *ErrorStr,
-                                std::shared_ptr<MCJITMemoryManager> MM,
-                                std::shared_ptr<JITSymbolResolver> SR,
-                                std::unique_ptr<TargetMachine> TM);
+      std::unique_ptr<Module> M, std::string *ErrorStr,
+      std::shared_ptr<MCJITMemoryManager> MM,
+      std::shared_ptr<LegacyJITSymbolResolver> SR,
+      std::unique_ptr<TargetMachine> TM);
 
   static ExecutionEngine *(*OrcMCJITReplacementCtor)(
-                                std::string *ErrorStr,
-                                std::shared_ptr<MCJITMemoryManager> MM,
-                                std::shared_ptr<JITSymbolResolver> SR,
-                                std::unique_ptr<TargetMachine> TM);
+      std::string *ErrorStr, std::shared_ptr<MCJITMemoryManager> MM,
+      std::shared_ptr<LegacyJITSymbolResolver> SR,
+      std::unique_ptr<TargetMachine> TM);
 
   static ExecutionEngine *(*InterpCtor)(std::unique_ptr<Module> M,
                                         std::string *ErrorStr);
@@ -532,7 +530,7 @@ private:
   std::string *ErrorStr;
   CodeGenOpt::Level OptLevel;
   std::shared_ptr<MCJITMemoryManager> MemMgr;
-  std::shared_ptr<JITSymbolResolver> Resolver;
+  std::shared_ptr<LegacyJITSymbolResolver> Resolver;
   TargetOptions Options;
   Optional<Reloc::Model> RelocModel;
   Optional<CodeModel::Model> CMModel;
@@ -571,8 +569,7 @@ public:
   EngineBuilder&
   setMemoryManager(std::unique_ptr<MCJITMemoryManager> MM);
 
-  EngineBuilder&
-  setSymbolResolver(std::unique_ptr<JITSymbolResolver> SR);
+  EngineBuilder &setSymbolResolver(std::unique_ptr<LegacyJITSymbolResolver> SR);
 
   /// setErrorStr - Set the error string to write to on error.  This option
   /// defaults to NULL.
@@ -637,7 +634,7 @@ public:
     return *this;
   }
 
-  // \brief Use OrcMCJITReplacement instead of MCJIT. Off by default.
+  // Use OrcMCJITReplacement instead of MCJIT. Off by default.
   void setUseOrcMCJITReplacement(bool UseOrcMCJITReplacement) {
     this->UseOrcMCJITReplacement = UseOrcMCJITReplacement;
   }
@@ -645,7 +642,7 @@ public:
   void setEmulatedTLS(bool EmulatedTLS) {
     this->EmulatedTLS = EmulatedTLS;
   }
-  
+
   TargetMachine *selectTarget();
 
   /// selectTarget - Pick a target either via -march or by guessing the native

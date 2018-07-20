@@ -33,11 +33,11 @@
 #include "llvm/Bitcode/LLVMBitCodes.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/SHA1.h"
-#include "llvm/Support/Signals.h"
+#include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
@@ -75,7 +75,9 @@ namespace {
 /// CurStreamTypeType - A type for CurStreamType
 enum CurStreamTypeType {
   UnknownBitstream,
-  LLVMIRBitstream
+  LLVMIRBitstream,
+  ClangSerializedASTBitstream,
+  ClangSerializedDiagnosticsBitstream,
 };
 
 }
@@ -306,6 +308,7 @@ static const char *GetCodeName(unsigned CodeID, unsigned BlockID,
       return nullptr;
       STRINGIFY_CODE(FS, PERMODULE)
       STRINGIFY_CODE(FS, PERMODULE_PROFILE)
+      STRINGIFY_CODE(FS, PERMODULE_RELBF)
       STRINGIFY_CODE(FS, PERMODULE_GLOBALVAR_INIT_REFS)
       STRINGIFY_CODE(FS, COMBINED)
       STRINGIFY_CODE(FS, COMBINED_PROFILE)
@@ -314,6 +317,7 @@ static const char *GetCodeName(unsigned CodeID, unsigned BlockID,
       STRINGIFY_CODE(FS, COMBINED_ALIAS)
       STRINGIFY_CODE(FS, COMBINED_ORIGINAL_NAME)
       STRINGIFY_CODE(FS, VERSION)
+      STRINGIFY_CODE(FS, FLAGS)
       STRINGIFY_CODE(FS, TYPE_TESTS)
       STRINGIFY_CODE(FS, TYPE_TEST_ASSUME_VCALLS)
       STRINGIFY_CODE(FS, TYPE_CHECKED_LOAD_VCALLS)
@@ -322,6 +326,7 @@ static const char *GetCodeName(unsigned CodeID, unsigned BlockID,
       STRINGIFY_CODE(FS, VALUE_GUID)
       STRINGIFY_CODE(FS, CFI_FUNCTION_DEFS)
       STRINGIFY_CODE(FS, CFI_FUNCTION_DECLS)
+      STRINGIFY_CODE(FS, TYPE_ID)
     }
   case bitc::METADATA_ATTACHMENT_ID:
     switch(CodeID) {
@@ -442,7 +447,7 @@ static std::map<unsigned, PerBlockIDStats> BlockIDStats;
 /// ReportError - All bitcode analysis errors go through this function, making this a
 /// good place to breakpoint if debugging.
 static bool ReportError(const Twine &Err) {
-  errs() << Err << "\n";
+  WithColor::error() << Err << "\n";
   return true;
 }
 
@@ -597,7 +602,7 @@ static bool ParseBlock(BitstreamCursor &Stream, BitstreamBlockInfo &BlockInfo,
     ++BlockStats.NumRecords;
 
     StringRef Blob;
-    unsigned CurrentRecordPos = Stream.GetCurrentBitNo();
+    uint64_t CurrentRecordPos = Stream.GetCurrentBitNo();
     unsigned Code = Stream.readRecord(Entry.ID, Record, &Blob);
 
     // Increment the # occurrences of this code.
@@ -743,6 +748,35 @@ static void PrintSize(uint64_t Bits) {
                    (double)Bits/8, (unsigned long)(Bits/32));
 }
 
+static CurStreamTypeType ReadSignature(BitstreamCursor &Stream) {
+  char Signature[6];
+  Signature[0] = Stream.Read(8);
+  Signature[1] = Stream.Read(8);
+
+  // Autodetect the file contents, if it is one we know.
+  if (Signature[0] == 'C' && Signature[1] == 'P') {
+    Signature[2] = Stream.Read(8);
+    Signature[3] = Stream.Read(8);
+    if (Signature[2] == 'C' && Signature[3] == 'H')
+      return ClangSerializedASTBitstream;
+  } else if (Signature[0] == 'D' && Signature[1] == 'I') {
+    Signature[2] = Stream.Read(8);
+    Signature[3] = Stream.Read(8);
+    if (Signature[2] == 'A' && Signature[3] == 'G')
+      return ClangSerializedDiagnosticsBitstream;
+  } else {
+    Signature[2] = Stream.Read(4);
+    Signature[3] = Stream.Read(4);
+    Signature[4] = Stream.Read(4);
+    Signature[5] = Stream.Read(4);
+    if (Signature[0] == 'B' && Signature[1] == 'C' &&
+        Signature[2] == 0x0 && Signature[3] == 0xC &&
+        Signature[4] == 0xE && Signature[5] == 0xD)
+      return LLVMIRBitstream;
+  }
+  return UnknownBitstream;
+}
+
 static bool openBitcodeFile(StringRef Path,
                             std::unique_ptr<MemoryBuffer> &MemBuf,
                             BitstreamCursor &Stream,
@@ -786,22 +820,7 @@ static bool openBitcodeFile(StringRef Path,
   }
 
   Stream = BitstreamCursor(ArrayRef<uint8_t>(BufPtr, EndBufPtr));
-
-  // Read the stream signature.
-  char Signature[6];
-  Signature[0] = Stream.Read(8);
-  Signature[1] = Stream.Read(8);
-  Signature[2] = Stream.Read(4);
-  Signature[3] = Stream.Read(4);
-  Signature[4] = Stream.Read(4);
-  Signature[5] = Stream.Read(4);
-
-  // Autodetect the file contents, if it is one we know.
-  CurStreamType = UnknownBitstream;
-  if (Signature[0] == 'B' && Signature[1] == 'C' &&
-      Signature[2] == 0x0 && Signature[3] == 0xC &&
-      Signature[4] == 0xE && Signature[5] == 0xD)
-    CurStreamType = LLVMIRBitstream;
+  CurStreamType = ReadSignature(Stream);
 
   return false;
 }
@@ -870,8 +889,18 @@ static int AnalyzeBitcode() {
   outs() << "\n";
   outs() << "        Stream type: ";
   switch (CurStreamType) {
-  case UnknownBitstream: outs() << "unknown\n"; break;
-  case LLVMIRBitstream:  outs() << "LLVM IR\n"; break;
+  case UnknownBitstream:
+    outs() << "unknown\n";
+    break;
+  case LLVMIRBitstream:
+    outs() << "LLVM IR\n";
+    break;
+  case ClangSerializedASTBitstream:
+    outs() << "Clang Serialized AST\n";
+    break;
+  case ClangSerializedDiagnosticsBitstream:
+    outs() << "Clang Serialized Diagnostics\n";
+    break;
   }
   outs() << "  # Toplevel Blocks: " << NumTopBlocks << "\n";
   outs() << "\n";
@@ -961,11 +990,7 @@ static int AnalyzeBitcode() {
 
 
 int main(int argc, char **argv) {
-  // Print a stack trace if we signal out.
-  sys::PrintStackTraceOnErrorSignal(argv[0]);
-  PrettyStackTraceProgram X(argc, argv);
-  llvm_shutdown_obj Y;  // Call llvm_shutdown() on exit.
+  InitLLVM X(argc, argv);
   cl::ParseCommandLineOptions(argc, argv, "llvm-bcanalyzer file analyzer\n");
-
   return AnalyzeBitcode();
 }

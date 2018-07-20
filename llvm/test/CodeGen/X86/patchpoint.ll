@@ -98,6 +98,21 @@ entry:
   ret i64 %result
 }
 
+declare i64 @consume_attributes(i64, i8* nest, i64)
+define i64 @test_patchpoint_with_attributes() {
+entry:
+; CHECK-LABEL: test_patchpoint_with_attributes:
+; CHECK: movl $42, %edi
+; CHECK: xorl %r10d, %r10d
+; CHECK: movl $17, %esi
+; CHECK: movabsq $_consume_attributes, %r11
+; CHECK-NEXT: callq *%r11
+; CHECK-NEXT: xchgw %ax, %ax
+; CHECK: retq
+  %result = tail call i64 (i64, i32, i8*, i32, ...) @llvm.experimental.patchpoint.i64(i64 21, i32 15, i8* bitcast (i64 (i64, i8*, i64)* @consume_attributes to i8*), i32 3, i64 42, i8* nest null, i64 17)
+  ret i64 %result
+}
+
 declare void @llvm.experimental.stackmap(i64, i32, ...)
 declare void @llvm.experimental.patchpoint.void(i64, i32, i8*, i32, ...)
 declare i64 @llvm.experimental.patchpoint.i64(i64, i32, i8*, i32, ...)

@@ -10,8 +10,8 @@
 #ifndef LLVM_LIB_TARGET_AARCH64_AARCH64TARGETOBJECTFILE_H
 #define LLVM_LIB_TARGET_AARCH64_AARCH64TARGETOBJECTFILE_H
 
-#include "llvm/CodeGen/TargetLoweringObjectFile.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
+#include "llvm/Target/TargetLoweringObjectFile.h"
 
 namespace llvm {
 class AArch64TargetMachine;

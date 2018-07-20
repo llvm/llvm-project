@@ -26,11 +26,13 @@ using namespace llvm;
 #define DEBUG_TYPE "post-RA-sched"
 
 void HexagonHazardRecognizer::Reset() {
-  DEBUG(dbgs() << "Reset hazard recognizer\n");
+  LLVM_DEBUG(dbgs() << "Reset hazard recognizer\n");
   Resources->clearResources();
   PacketNum = 0;
   UsesDotCur = nullptr;
   DotCurPNum = -1;
+  UsesLoad = false;
+  PrefVectorStoreNew = nullptr;
   RegDefs.clear();
 }
 
@@ -41,7 +43,7 @@ HexagonHazardRecognizer::getHazardType(SUnit *SU, int stalls) {
     return NoHazard;
 
   if (!Resources->canReserveResources(*MI)) {
-    DEBUG(dbgs() << "*** Hazard in cycle " << PacketNum << ", " << *MI);
+    LLVM_DEBUG(dbgs() << "*** Hazard in cycle " << PacketNum << ", " << *MI);
     HazardType RetVal = Hazard;
     if (TII->mayBeNewStore(*MI)) {
       // Make sure the register to be stored is defined by an instruction in the
@@ -57,14 +59,16 @@ HexagonHazardRecognizer::getHazardType(SUnit *SU, int stalls) {
                                MI->getDebugLoc());
       if (Resources->canReserveResources(*NewMI))
         RetVal = NoHazard;
-      DEBUG(dbgs() << "*** Try .new version? " << (RetVal == NoHazard) << "\n");
+      LLVM_DEBUG(dbgs() << "*** Try .new version? " << (RetVal == NoHazard)
+                        << "\n");
       MF->DeleteMachineInstr(NewMI);
     }
     return RetVal;
   }
 
   if (SU == UsesDotCur && DotCurPNum != (int)PacketNum) {
-    DEBUG(dbgs() << "*** .cur Hazard in cycle " << PacketNum << ", " << *MI);
+    LLVM_DEBUG(dbgs() << "*** .cur Hazard in cycle " << PacketNum << ", "
+                      << *MI);
     return Hazard;
   }
 
@@ -72,21 +76,33 @@ HexagonHazardRecognizer::getHazardType(SUnit *SU, int stalls) {
 }
 
 void HexagonHazardRecognizer::AdvanceCycle() {
-  DEBUG(dbgs() << "Advance cycle, clear state\n");
+  LLVM_DEBUG(dbgs() << "Advance cycle, clear state\n");
   Resources->clearResources();
   if (DotCurPNum != -1 && DotCurPNum != (int)PacketNum) {
     UsesDotCur = nullptr;
     DotCurPNum = -1;
   }
+  UsesLoad = false;
+  PrefVectorStoreNew = nullptr;
   PacketNum++;
   RegDefs.clear();
 }
 
-/// If a packet contains a dot cur instruction, then we may prefer the
-/// instruction that can use the dot cur result. Or, if the use
-/// isn't scheduled in the same packet, then prefer other instructions
-/// in the subsequent packet.
+/// Handle the cases when we prefer one instruction over another. Case 1 - we
+/// prefer not to generate multiple loads in the packet to avoid a potential
+/// bank conflict. Case 2 - if a packet contains a dot cur instruction, then we
+/// prefer the instruction that can use the dot cur result. However, if the use
+/// is not scheduled in the same packet, then prefer other instructions in the
+/// subsequent packet. Case 3 - we prefer a vector store that can be converted
+/// to a .new store. The packetizer will not generate the .new store if the
+/// store doesn't have resources to fit in the packet (but the .new store may
+/// have resources). We attempt to schedule the store as soon as possible to
+/// help packetize the two instructions together.
 bool HexagonHazardRecognizer::ShouldPreferAnother(SUnit *SU) {
+  if (PrefVectorStoreNew != nullptr && PrefVectorStoreNew != SU)
+    return true;
+  if (UsesLoad && SU->isInstr() && SU->getInstr()->mayLoad())
+    return true;
   return UsesDotCur && ((SU == UsesDotCur) ^ (DotCurPNum == (int)PacketNum));
 }
 
@@ -118,17 +134,16 @@ void HexagonHazardRecognizer::EmitInstruction(SUnit *SU) {
   }
   else
     Resources->reserveResources(*MI);
-  DEBUG(dbgs() << " Add instruction " << *MI);
+  LLVM_DEBUG(dbgs() << " Add instruction " << *MI);
 
   // When scheduling a dot cur instruction, check if there is an instruction
   // that can use the dot cur in the same packet. If so, we'll attempt to
-  // schedule it before other instructions. We only do this if the use has
-  // the same height as the dot cur. Otherwise, we may miss scheduling an
-  // instruction with a greater height, which is more important.
+  // schedule it before other instructions. We only do this if the load has a
+  // single zero-latency use.
   if (TII->mayBeCurLoad(*MI))
     for (auto &S : SU->Succs)
       if (S.isAssignedRegDep() && S.getLatency() == 0 &&
-          SU->getHeight() == S.getSUnit()->getHeight()) {
+          S.getSUnit()->NumPredsLeft == 1) {
         UsesDotCur = S.getSUnit();
         DotCurPNum = PacketNum;
         break;
@@ -137,4 +152,15 @@ void HexagonHazardRecognizer::EmitInstruction(SUnit *SU) {
     UsesDotCur = nullptr;
     DotCurPNum = -1;
   }
+
+  UsesLoad = MI->mayLoad();
+
+  if (TII->isHVXVec(*MI) && !MI->mayLoad() && !MI->mayStore())
+    for (auto &S : SU->Succs)
+      if (S.isAssignedRegDep() && S.getLatency() == 0 &&
+          TII->mayBeNewStore(*S.getSUnit()->getInstr()) &&
+          Resources->canReserveResources(*S.getSUnit()->getInstr())) {
+        PrefVectorStoreNew = S.getSUnit();
+        break;
+      }
 }

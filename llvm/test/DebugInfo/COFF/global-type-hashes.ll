@@ -107,7 +107,7 @@ attributes #2 = { noinline nounwind optnone "correctly-rounded-divide-sqrt-fp-ma
 !5 = !{i32 2, !"Debug Info Version", i32 3}
 !6 = !{i32 1, !"wchar_size", i32 2}
 !7 = !{!"clang version 6.0.0 "}
-!8 = distinct !DISubprogram(name: "main", scope: !9, file: !9, line: 8, type: !10, isLocal: false, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
+!8 = distinct !DISubprogram(name: "main", scope: !9, file: !9, line: 8, type: !10, isLocal: false, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
 !9 = !DIFile(filename: "foo.cpp", directory: "D:\5Csrc\5Cllvmbuild\5Cclang\5CDebug\5Cx86", checksumkind: CSK_MD5, checksum: "6279449503d9075c38e615e8387667c3")
 !10 = !DISubroutineType(types: !11)
 !11 = !{!12, !12, !13}
@@ -132,14 +132,14 @@ attributes #2 = { noinline nounwind optnone "correctly-rounded-divide-sqrt-fp-ma
 !30 = !{!12, !27}
 !31 = !DILocation(line: 9, scope: !8)
 !32 = !DILocation(line: 10, scope: !8)
-!33 = distinct !DISubprogram(name: "Foo", linkageName: "\01??0Foo@@QAE@HH@Z", scope: !20, file: !9, line: 2, type: !25, isLocal: false, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: false, unit: !0, declaration: !24, variables: !2)
+!33 = distinct !DISubprogram(name: "Foo", linkageName: "\01??0Foo@@QAE@HH@Z", scope: !20, file: !9, line: 2, type: !25, isLocal: false, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: false, unit: !0, declaration: !24, retainedNodes: !2)
 !34 = !DILocalVariable(name: "y", arg: 3, scope: !33, file: !9, line: 2, type: !12)
 !35 = !DILocation(line: 2, scope: !33)
 !36 = !DILocalVariable(name: "x", arg: 2, scope: !33, file: !9, line: 2, type: !12)
 !37 = !DILocalVariable(name: "this", arg: 1, scope: !33, type: !38, flags: DIFlagArtificial | DIFlagObjectPointer)
 !38 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !20, size: 32)
 !39 = !DILocation(line: 0, scope: !33)
-!40 = distinct !DISubprogram(name: "method", linkageName: "\01?method@Foo@@QAEHXZ", scope: !20, file: !9, line: 3, type: !29, isLocal: false, isDefinition: true, scopeLine: 3, flags: DIFlagPrototyped, isOptimized: false, unit: !0, declaration: !28, variables: !2)
+!40 = distinct !DISubprogram(name: "method", linkageName: "\01?method@Foo@@QAEHXZ", scope: !20, file: !9, line: 3, type: !29, isLocal: false, isDefinition: true, scopeLine: 3, flags: DIFlagPrototyped, isOptimized: false, unit: !0, declaration: !28, retainedNodes: !2)
 !41 = !DILocalVariable(name: "this", arg: 1, scope: !40, type: !38, flags: DIFlagArtificial | DIFlagObjectPointer)
 !42 = !DILocation(line: 0, scope: !40)
 !43 = !DILocation(line: 3, scope: !40)
@@ -273,24 +273,24 @@ attributes #2 = { noinline nounwind optnone "correctly-rounded-divide-sqrt-fp-ma
 ; YAML:     Alignment:       4
 ; YAML:     GlobalHashes:
 ; YAML:       Version:         0
-; YAML:       HashAlgorithm:   0
+; YAML:       HashAlgorithm:   1
 ; YAML:       HashValues:
-; YAML:         - 9E56666824DC4B12E25261D4E09E6E9DA0F4EE31
-; YAML:         - FDEC3D2D96287486127C66070B248ED52E421F55
-; YAML:         - 074AE5CC2D68AF9F0A3BEF23993968F7FD82CA84
-; YAML:         - BF0439C1A64C9070C6A6ADB0A34D21DAD0FFC3E9
-; YAML:         - CF1B3AD4A96BA628E6556FD28A222FBBEBBE140E
-; YAML:         - EC50195BFE148C0DC6A87A59D49CA1D9B146DB86
-; YAML:         - 123C8BA63AD23386897AB6D814A9932F03846156
-; YAML:         - 0F135243878289B83835BC2DB9EE25A1D4D0DA2B
-; YAML:         - 9069CA78E7450A285173431B3E52C5C25299E473
-; YAML:         - ADA6E11350E9F2069D4689E3646C90D67B28DA62
-; YAML:         - BD535FA9877A4DD123840AF849F3B0110EEB1D7A
-; YAML:         - 8044F70193FE40B71867158C5E50F0467485FA99
-; YAML:         - 558606D57A76D125B705FC6DD18EEE3C1C0C4C09
-; YAML:         - A64A018D9EB1EB8015917925662C8508D81CDA68
-; YAML:         - 51E89AD9992AC6F11F9E3F1665F41C53BDA8AFC4
-; YAML:         - 4F1C3BCA73099EF3466AAC99CC4951767DF890F5
+; YAML:         - 800309EE1ED8BB5B
+; YAML:         - 5397319F1CC14E2C
+; YAML:         - DF04AA3125BBC50E
+; YAML:         - 95CEBA304A2C4493
+; YAML:         - C324F82D24D22283
+; YAML:         - 74698BE366891D3D
+; YAML:         - DDE23757322DB7C3
+; YAML:         - 3C458A5105FEA7C1
+; YAML:         - D341E2F9BE57A1C7
+; YAML:         - 243F76AED6D8FB79
+; YAML:         - B038D36C0C67EEEA
+; YAML:         - C0A51CE268B50087
+; YAML:         - 0634944401BCC520
+; YAML:         - 8CFC595FACFE1AB2
+; YAML:         - F1795EA10053AC52
+; YAML:         - 17D3CDC3384402DD
 ; ...
 
 
@@ -298,15 +298,9 @@ attributes #2 = { noinline nounwind optnone "correctly-rounded-divide-sqrt-fp-ma
 ; ASM-NEXT: .p2align        2
 ; ASM-NEXT: .long   20171205                # Magic
 ; ASM-NEXT: .short  0                       # Section Version
-; ASM-NEXT: .short  0                       # Hash Algorithm
-; ASM-NEXT: .byte   0x9e, 0x56, 0x66, 0x68  # 0x1000 [9E56666824DC4B12E25261D4E09E6E9DA0F4EE31]
-; ASM-NEXT: .byte   0x24, 0xdc, 0x4b, 0x12
-; ASM-NEXT: .byte   0xe2, 0x52, 0x61, 0xd4
-; ASM-NEXT: .byte   0xe0, 0x9e, 0x6e, 0x9d
-; ASM-NEXT: .byte   0xa0, 0xf4, 0xee, 0x31
-; ASM-NEXT: .byte   0xfd, 0xec, 0x3d, 0x2d  # 0x1001 [FDEC3D2D96287486127C66070B248ED52E421F55]
-; ASM-NEXT: .byte   0x96, 0x28, 0x74, 0x86
-; ASM-NEXT: .byte   0x12, 0x7c, 0x66, 0x07
-; ASM-NEXT: .byte   0x0b, 0x24, 0x8e, 0xd5
-; ASM-NEXT: .byte   0x2e, 0x42, 0x1f, 0x55
-; ASM-NEXT: .byte   0x07, 0x4a, 0xe5, 0xcc  # 0x1002 [074AE5CC2D68AF9F0A3BEF23993968F7FD82CA84]
+; ASM-NEXT: .short  1                       # Hash Algorithm
+; ASM-NEXT: .byte   0x80, 0x03, 0x09, 0xee  # 0x1000 [800309EE1ED8BB5B]
+; ASM-NEXT: .byte   0x1e, 0xd8, 0xbb, 0x5b
+; ASM-NEXT: .byte   0x53, 0x97, 0x31, 0x9f  # 0x1001 [5397319F1CC14E2C]
+; ASM-NEXT: .byte   0x1c, 0xc1, 0x4e, 0x2c
+; ASM-NEXT: .byte   0xdf, 0x04, 0xaa, 0x31  # 0x1002 [DF04AA3125BBC50E]

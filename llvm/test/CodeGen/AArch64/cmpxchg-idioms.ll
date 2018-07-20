@@ -45,8 +45,7 @@ define i1 @test_return_bool(i8* %value, i8 %oldValue, i8 %newValue) {
 
 ; CHECK: [[FAILED]]:
 ; CHECK-NOT: cmp {{w[0-9]+}}, {{w[0-9]+}}
-; CHECK: mov [[TMP:w[0-9]+]], wzr
-; CHECK: eor w0, [[TMP]], #0x1
+; CHECK: eor w0, wzr, #0x1
 ; CHECK: ret
 
   %pair = cmpxchg i8* %value, i8 %oldValue, i8 %newValue acq_rel monotonic

@@ -1,7 +1,7 @@
 # RUN: llvm-mc -triple i386-unknown-unknown %s 2> %t.err | FileCheck %s
 # RUN: FileCheck --check-prefix=CHECK-WARNINGS %s < %t.err
-# RUN: llvm-mc -triple i386-unknown-unknown -filetype=obj -o %t.o %s 2> %t.err
-# RUN: FileCheck --check-prefix=OBJ-WARNINGS %s < %t.err
+# RUN: not llvm-mc -triple i386-unknown-unknown -filetype=obj -o %t.o %s 2> %t.err2
+# RUN: FileCheck --check-prefix=OBJ-ERRS %s < %t.err2
 
 # CHECK: TEST0:
 # CHECK: .fill 1, 1, 0xa
@@ -47,7 +47,7 @@ TEST7:
 
 # CHECK: TEST8
 # CHECK: .fill -1, 8, 0x1
-# OBJ-WARNINGS: '.fill' directive with negative repeat count has no effect
+# OBJ-ERRS: '.fill' directive with negative repeat count has no effect
 TEST8:
 	.fill -1, 8, 1
 
@@ -66,7 +66,14 @@ TEST11:
   .fill TEST11 - TEST10
 
 # CHECK: TEST12
-# CHECK: .fill TEST11-TEST12, 3, 0x12345678
-# OBJ-WARNINGS: '.fill' directive with negative repeat count has no effect
+# CHECK: .fill TEST11-TEST12, 4, 0x12345678
+# OBJ-ERRS: '.fill' directive with negative repeat count has no effect
 TEST12:
-  .fill TEST11 - TEST12, 3, 0x12345678
+	.fill TEST11 - TEST12, 4, 0x12345678
+
+# CHECK: TEST13
+# CHECK: .fill (TEST11-TEST12)+i, 4, 0x12345678
+# OBJ-ERRS: [[@LINE+2]]:8: error: expected assembly-time absolute expression
+TEST13:
+	.fill TEST11 - TEST12+i, 4, 0x12345678
+

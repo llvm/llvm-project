@@ -23,16 +23,16 @@
 name:            compute
 body: |
   bb.0.body:
-    %eax = IMUL32rri8 %edi, 11, implicit-def %eflags
-    RETQ %eax
+    $eax = IMUL32rri8 $edi, 11, implicit-def $eflags
+    RETQ $eax
 ...
 ---
 name:            foo
 body: |
   bb.0.entry:
-    ; CHECK: PUSH64r undef %rax
-    PUSH64r undef %rax, implicit-def %rsp, implicit %rsp
-    CALL64pcrel32 @compute, csr_64, implicit %rsp, implicit %edi, implicit-def %rsp, implicit-def %eax
-    %rdx = POP64r implicit-def %rsp, implicit %rsp
-    RETQ %eax
+    ; CHECK: PUSH64r undef $rax
+    PUSH64r undef $rax, implicit-def $rsp, implicit $rsp
+    CALL64pcrel32 @compute, csr_64, implicit $rsp, implicit $edi, implicit-def $rsp, implicit-def $eax
+    $rdx = POP64r implicit-def $rsp, implicit $rsp
+    RETQ $eax
 ...

@@ -46,6 +46,7 @@ namespace PPC {
     DIR_750,
     DIR_970,
     DIR_A2,
+    DIR_E500,
     DIR_E500mc,
     DIR_E5500,
     DIR_PWR3,
@@ -94,6 +95,7 @@ protected:
   bool HasHardFloat;
   bool IsPPC64;
   bool HasAltivec;
+  bool HasFPU;
   bool HasSPE;
   bool HasQPX;
   bool HasVSX;
@@ -133,6 +135,7 @@ protected:
   bool HasFloat128;
   bool IsISA3_0;
   bool UseLongCalls;
+  bool SecurePlt;
 
   POPCNTDKind HasPOPCNTD;
 
@@ -238,6 +241,7 @@ public:
   bool hasFPCVT() const { return HasFPCVT; }
   bool hasAltivec() const { return HasAltivec; }
   bool hasSPE() const { return HasSPE; }
+  bool hasFPU() const { return HasFPU; }
   bool hasQPX() const { return HasQPX; }
   bool hasVSX() const { return HasVSX; }
   bool hasP8Vector() const { return HasP8Vector; }
@@ -255,6 +259,7 @@ public:
   bool hasOnlyMSYNC() const { return HasOnlyMSYNC; }
   bool isPPC4xx() const { return IsPPC4xx; }
   bool isPPC6xx() const { return IsPPC6xx; }
+  bool isSecurePlt() const {return SecurePlt; }
   bool isE500() const { return IsE500; }
   bool isFeatureMFTB() const { return FeatureMFTB; }
   bool isDeprecatedDST() const { return DeprecatedDST; }

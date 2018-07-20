@@ -12,6 +12,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/DataTypes.h"
 #include "gtest/gtest.h"
+#include <limits>
 #include <tuple>
 using namespace llvm;
 
@@ -278,7 +279,7 @@ TEST_F(StringMapTest, IterMapKeys) {
   Map["D"] = 3;
 
   auto Keys = to_vector<4>(Map.keys());
-  std::sort(Keys.begin(), Keys.end());
+  llvm::sort(Keys.begin(), Keys.end());
 
   SmallVector<StringRef, 4> Expected = {"A", "B", "C", "D"};
   EXPECT_EQ(Expected, Keys);
@@ -292,7 +293,7 @@ TEST_F(StringMapTest, IterSetKeys) {
   Set.insert("D");
 
   auto Keys = to_vector<4>(Set.keys());
-  std::sort(Keys.begin(), Keys.end());
+  llvm::sort(Keys.begin(), Keys.end());
 
   SmallVector<StringRef, 4> Expected = {"A", "B", "C", "D"};
   EXPECT_EQ(Expected, Keys);
@@ -490,6 +491,45 @@ TEST(StringMapCustomTest, EmplaceTest) {
   Map.try_emplace("abcd", 42);
   EXPECT_EQ(1u, Map.count("abcd"));
   EXPECT_EQ(42, Map["abcd"].Data);
+}
+
+// Test that StringMapEntryBase can handle size_t wide sizes.
+TEST(StringMapCustomTest, StringMapEntryBaseSize) {
+  size_t LargeValue;
+
+  // Test that the entry can represent max-unsigned.
+  if (sizeof(size_t) <= sizeof(unsigned))
+    LargeValue = std::numeric_limits<unsigned>::max();
+  else
+    LargeValue = std::numeric_limits<unsigned>::max() + 1ULL;
+  StringMapEntryBase LargeBase(LargeValue);
+  EXPECT_EQ(LargeValue, LargeBase.getKeyLength());
+
+  // Test that the entry can hold at least max size_t.
+  LargeValue = std::numeric_limits<size_t>::max();
+  StringMapEntryBase LargerBase(LargeValue);
+  LargeValue = std::numeric_limits<size_t>::max();
+  EXPECT_EQ(LargeValue, LargerBase.getKeyLength());
+}
+
+// Test that StringMapEntry can handle size_t wide sizes.
+TEST(StringMapCustomTest, StringMapEntrySize) {
+  size_t LargeValue;
+
+  // Test that the entry can represent max-unsigned.
+  if (sizeof(size_t) <= sizeof(unsigned))
+    LargeValue = std::numeric_limits<unsigned>::max();
+  else
+    LargeValue = std::numeric_limits<unsigned>::max() + 1ULL;
+  StringMapEntry<int> LargeEntry(LargeValue);
+  StringRef Key = LargeEntry.getKey();
+  EXPECT_EQ(LargeValue, Key.size());
+
+  // Test that the entry can hold at least max size_t.
+  LargeValue = std::numeric_limits<size_t>::max();
+  StringMapEntry<int> LargerEntry(LargeValue);
+  Key = LargerEntry.getKey();
+  EXPECT_EQ(LargeValue, Key.size());
 }
 
 } // end anonymous namespace

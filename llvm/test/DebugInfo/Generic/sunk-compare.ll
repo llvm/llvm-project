@@ -8,7 +8,7 @@
 ; We check that the compare instruction retains its debug loc after 
 ; it is sunk into other.bb by the codegen prepare pass.
 ; 
-; CHECK:       other.bb:
+; CHECK:       entry:
 ; CHECK-NEXT:  icmp{{.*}}%x, 0, !dbg ![[MDHANDLE:[0-9]*]]
 ; CHECK:       ![[MDHANDLE]] = !DILocation(line: 2
 ;
@@ -39,7 +39,7 @@ exit2.bb:
 !2 = !{}
 !3 = !{i32 2, !"Dwarf Version", i32 4}
 !4 = !{i32 2, !"Debug Info Version", i32 3}
-!5 = distinct !DISubprogram(name: "foo", linkageName: "foo", scope: !1, file: !1, line: 1, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
+!5 = distinct !DISubprogram(name: "foo", linkageName: "foo", scope: !1, file: !1, line: 1, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
 !6 = !DILocation(line: 2, column: 0, scope: !5)
 !7 = !DILocation(line: 3, column: 0, scope: !5)
 !8 = !DILocation(line: 4, column: 0, scope: !5)

@@ -1,8 +1,8 @@
 ; RUN: llc -march=hexagon -mcpu=hexagonv5 -hexagon-eif=0 -print-machineinstrs=if-converter %s -o /dev/null 2>&1 | FileCheck %s
 ; Check that the edge weights are updated correctly after if-conversion.
 
-; CHECK: %bb.3:
-; CHECK: Successors according to CFG: %bb.2({{[0-9a-fx/= ]+}}10.00%) %bb.1({{[0-9a-fx/= ]+}}90.00%)
+; CHECK: bb.3.if{{[0-9a-zA-Z.]*}}:
+; CHECK: successors: %bb.2(0x0ccccccd), %bb.1(0x73333333)
 @a = external global i32
 @d = external global i32
 

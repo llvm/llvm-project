@@ -22,8 +22,8 @@
 namespace llvm {
 namespace codeview {
 
-/// Distinguishes individual records in .debug$T section or PDB type stream. The
-/// documentation and headers talk about this as the "leaf" type.
+/// Distinguishes individual records in .debug$T or .debug$P section or PDB type
+/// stream. The documentation and headers talk about this as the "leaf" type.
 enum class TypeRecordKind : uint16_t {
 #define TYPE_RECORD(lf_ename, value, name) name = value,
 #include "CodeViewTypes.def"
@@ -531,7 +531,7 @@ enum LineFlags : uint16_t {
   LF_HaveColumns = 1, // CV_LINES_HAVE_COLUMNS
 };
 
-/// Data in the the SUBSEC_FRAMEDATA subection.
+/// Data in the SUBSEC_FRAMEDATA subection.
 struct FrameData {
   support::ulittle32_t RvaStart;
   support::ulittle32_t CodeSize;

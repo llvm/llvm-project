@@ -26,6 +26,7 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/IteratedDominanceFrontier.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
@@ -45,7 +46,6 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
 #include <algorithm>
 #include <cassert>
@@ -164,26 +164,27 @@ struct AllocaInfo {
   }
 };
 
-// Data package used by RenamePass()
-class RenamePassData {
-public:
+/// Data package used by RenamePass().
+struct RenamePassData {
   using ValVector = std::vector<Value *>;
+  using LocationVector = std::vector<DebugLoc>;
 
-  RenamePassData(BasicBlock *B, BasicBlock *P, ValVector V)
-      : BB(B), Pred(P), Values(std::move(V)) {}
+  RenamePassData(BasicBlock *B, BasicBlock *P, ValVector V, LocationVector L)
+      : BB(B), Pred(P), Values(std::move(V)), Locations(std::move(L)) {}
 
   BasicBlock *BB;
   BasicBlock *Pred;
   ValVector Values;
+  LocationVector Locations;
 };
 
-/// \brief This assigns and keeps a per-bb relative ordering of load/store
+/// This assigns and keeps a per-bb relative ordering of load/store
 /// instructions in the block that directly load or store an alloca.
 ///
 /// This functionality is important because it avoids scanning large basic
 /// blocks multiple times when promoting many allocas in the same block.
 class LargeBlockInfo {
-  /// \brief For each instruction that we track, keep the index of the
+  /// For each instruction that we track, keep the index of the
   /// instruction.
   ///
   /// The index starts out as the number of the instruction from the start of
@@ -242,7 +243,7 @@ struct PromoteMem2Reg {
   /// Reverse mapping of Allocas.
   DenseMap<AllocaInst *, unsigned> AllocaLookup;
 
-  /// \brief The PhiNodes we're adding.
+  /// The PhiNodes we're adding.
   ///
   /// That map is used to simplify some Phi nodes as we iterate over it, so
   /// it should have deterministic iterators.  We could use a MapVector, but
@@ -294,7 +295,7 @@ private:
   unsigned getNumPreds(const BasicBlock *BB) {
     unsigned &NP = BBNumPreds[BB];
     if (NP == 0)
-      NP = std::distance(pred_begin(BB), pred_end(BB)) + 1;
+      NP = pred_size(BB) + 1;
     return NP - 1;
   }
 
@@ -303,6 +304,7 @@ private:
                            SmallPtrSetImpl<BasicBlock *> &LiveInBlocks);
   void RenamePass(BasicBlock *BB, BasicBlock *Pred,
                   RenamePassData::ValVector &IncVals,
+                  RenamePassData::LocationVector &IncLocs,
                   std::vector<RenamePassData> &Worklist);
   bool QueuePhiNode(BasicBlock *BB, unsigned AllocaIdx, unsigned &Version);
 };
@@ -345,7 +347,7 @@ static void removeLifetimeIntrinsicUsers(AllocaInst *AI) {
   }
 }
 
-/// \brief Rewrite as many loads as possible given a single store.
+/// Rewrite as many loads as possible given a single store.
 ///
 /// When there is only a single store, we can use the domtree to trivially
 /// replace all of the dominated loads with the stored value. Do so, and return
@@ -475,7 +477,7 @@ static bool promoteSingleBlockAlloca(AllocaInst *AI, const AllocaInfo &Info,
 
   // Sort the stores by their index, making it efficient to do a lookup with a
   // binary search.
-  std::sort(StoresByIndex.begin(), StoresByIndex.end(), less_first());
+  llvm::sort(StoresByIndex.begin(), StoresByIndex.end(), less_first());
 
   // Walk all of the loads from this alloca, replacing them with the nearest
   // store above them, if any.
@@ -508,6 +510,11 @@ static bool promoteSingleBlockAlloca(AllocaInst *AI, const AllocaInfo &Info,
       if (AC && LI->getMetadata(LLVMContext::MD_nonnull) &&
           !isKnownNonZero(ReplVal, DL, 0, AC, LI, &DT))
         addAssumeNonNull(AC, LI);
+
+      // If the replacement value is the load, this must occur in unreachable
+      // code.
+      if (ReplVal == LI)
+        ReplVal = UndefValue::get(LI->getType());
 
       LI->replaceAllUsesWith(ReplVal);
     }
@@ -631,10 +638,10 @@ void PromoteMem2Reg::run() {
     SmallVector<BasicBlock *, 32> PHIBlocks;
     IDF.calculate(PHIBlocks);
     if (PHIBlocks.size() > 1)
-      std::sort(PHIBlocks.begin(), PHIBlocks.end(),
-                [this](BasicBlock *A, BasicBlock *B) {
-                  return BBNumbers.lookup(A) < BBNumbers.lookup(B);
-                });
+      llvm::sort(PHIBlocks.begin(), PHIBlocks.end(),
+                 [this](BasicBlock *A, BasicBlock *B) {
+                   return BBNumbers.lookup(A) < BBNumbers.lookup(B);
+                 });
 
     unsigned CurrentVersion = 0;
     for (BasicBlock *BB : PHIBlocks)
@@ -653,15 +660,20 @@ void PromoteMem2Reg::run() {
   for (unsigned i = 0, e = Allocas.size(); i != e; ++i)
     Values[i] = UndefValue::get(Allocas[i]->getAllocatedType());
 
+  // When handling debug info, treat all incoming values as if they have unknown
+  // locations until proven otherwise.
+  RenamePassData::LocationVector Locations(Allocas.size());
+
   // Walks all basic blocks in the function performing the SSA rename algorithm
   // and inserting the phi nodes we marked as necessary
   std::vector<RenamePassData> RenamePassWorkList;
-  RenamePassWorkList.emplace_back(&F.front(), nullptr, std::move(Values));
+  RenamePassWorkList.emplace_back(&F.front(), nullptr, std::move(Values),
+                                  std::move(Locations));
   do {
     RenamePassData RPD = std::move(RenamePassWorkList.back());
     RenamePassWorkList.pop_back();
     // RenamePass may add new worklist entries.
-    RenamePass(RPD.BB, RPD.Pred, RPD.Values, RenamePassWorkList);
+    RenamePass(RPD.BB, RPD.Pred, RPD.Values, RPD.Locations, RenamePassWorkList);
   } while (!RenamePassWorkList.empty());
 
   // The renamer uses the Visited set to avoid infinite loops.  Clear it now.
@@ -740,7 +752,7 @@ void PromoteMem2Reg::run() {
     // Ok, now we know that all of the PHI nodes are missing entries for some
     // basic blocks.  Start by sorting the incoming predecessors for efficient
     // access.
-    std::sort(Preds.begin(), Preds.end());
+    llvm::sort(Preds.begin(), Preds.end());
 
     // Now we loop through all BB's which have entries in SomePHI and remove
     // them from the Preds list.
@@ -772,7 +784,7 @@ void PromoteMem2Reg::run() {
   NewPhiNodes.clear();
 }
 
-/// \brief Determine which blocks the value is live in.
+/// Determine which blocks the value is live in.
 ///
 /// These are blocks which lead to uses.  Knowing this allows us to avoid
 /// inserting PHI nodes into blocks which don't lead to uses (thus, the
@@ -846,7 +858,7 @@ void PromoteMem2Reg::ComputeLiveInBlocks(
   }
 }
 
-/// \brief Queue a phi-node to be added to a basic-block for a specific Alloca.
+/// Queue a phi-node to be added to a basic-block for a specific Alloca.
 ///
 /// Returns true if there wasn't already a phi-node for that variable
 bool PromoteMem2Reg::QueuePhiNode(BasicBlock *BB, unsigned AllocaNo,
@@ -868,13 +880,24 @@ bool PromoteMem2Reg::QueuePhiNode(BasicBlock *BB, unsigned AllocaNo,
   return true;
 }
 
-/// \brief Recursively traverse the CFG of the function, renaming loads and
+/// Update the debug location of a phi. \p ApplyMergedLoc indicates whether to
+/// create a merged location incorporating \p DL, or to set \p DL directly.
+static void updateForIncomingValueLocation(PHINode *PN, DebugLoc DL,
+                                           bool ApplyMergedLoc) {
+  if (ApplyMergedLoc)
+    PN->applyMergedLocation(PN->getDebugLoc(), DL);
+  else
+    PN->setDebugLoc(DL);
+}
+
+/// Recursively traverse the CFG of the function, renaming loads and
 /// stores to the allocas which we are promoting.
 ///
 /// IncomingVals indicates what value each Alloca contains on exit from the
 /// predecessor block Pred.
 void PromoteMem2Reg::RenamePass(BasicBlock *BB, BasicBlock *Pred,
                                 RenamePassData::ValVector &IncomingVals,
+                                RenamePassData::LocationVector &IncomingLocs,
                                 std::vector<RenamePassData> &Worklist) {
 NextIteration:
   // If we are inserting any phi nodes into this BB, they will already be in the
@@ -898,6 +921,10 @@ NextIteration:
       BasicBlock::iterator PNI = BB->begin();
       do {
         unsigned AllocaNo = PhiToAllocaMap[APN];
+
+        // Update the location of the phi node.
+        updateForIncomingValueLocation(APN, IncomingLocs[AllocaNo],
+                                       APN->getNumIncomingValues() > 0);
 
         // Add N incoming values to the PHI node.
         for (unsigned i = 0; i != NumEdges; ++i)
@@ -960,8 +987,11 @@ NextIteration:
         continue;
 
       // what value were we writing?
-      IncomingVals[ai->second] = SI->getOperand(0);
+      unsigned AllocaNo = ai->second;
+      IncomingVals[AllocaNo] = SI->getOperand(0);
+
       // Record debuginfo for the store before removing it.
+      IncomingLocs[AllocaNo] = SI->getDebugLoc();
       for (DbgInfoIntrinsic *DII : AllocaDbgDeclares[ai->second])
         ConvertDebugDeclareToDebugValue(DII, SI, DIB);
       BB->getInstList().erase(SI);
@@ -984,7 +1014,7 @@ NextIteration:
 
   for (; I != E; ++I)
     if (VisitedSuccs.insert(*I).second)
-      Worklist.emplace_back(*I, Pred, IncomingVals);
+      Worklist.emplace_back(*I, Pred, IncomingVals, IncomingLocs);
 
   goto NextIteration;
 }

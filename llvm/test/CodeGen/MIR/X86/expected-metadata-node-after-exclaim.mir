@@ -23,7 +23,7 @@
   !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.7.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
   !1 = !DIFile(filename: "test.ll", directory: "")
   !2 = !{}
-  !4 = distinct !DISubprogram(name: "test", scope: !5, file: !5, line: 4, type: !6, isLocal: false, isDefinition: true, scopeLine: 4, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
+  !4 = distinct !DISubprogram(name: "test", scope: !5, file: !5, line: 4, type: !6, isLocal: false, isDefinition: true, scopeLine: 4, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
   !5 = !DIFile(filename: "test.c", directory: "")
   !6 = !DISubroutineType(types: !7)
   !7 = !{!8, !8}
@@ -48,10 +48,10 @@ stack:
   - { id: 0, name: x.addr, size: 4, alignment: 4 }
 body: |
   bb.0.entry:
-    %0 = COPY %edi
+    %0 = COPY $edi
     ; CHECK: [[@LINE+1]]:28: expected metadata id after '!'
     DBG_VALUE _, 0, !12, ! _
     MOV32mr %stack.0.x.addr, 1, _, 0, _, %0
-    %eax = COPY %0
-    RETQ %eax
+    $eax = COPY %0
+    RETQ $eax
 ...

@@ -80,7 +80,7 @@ identifiers, for different purposes:
    characters may be escaped using ``"\xx"`` where ``xx`` is the ASCII
    code for the character in hexadecimal. In this way, any character can
    be used in a name value, even quotes themselves. The ``"\01"`` prefix
-   can be used on global variables to suppress mangling.
+   can be used on global values to suppress mangling.
 #. Unnamed values are represented as an unsigned numeric value with
    their prefix. For example, ``%12``, ``@2``, ``%44``.
 #. Constants, which are described in the section Constants_ below.
@@ -324,9 +324,9 @@ added in the future:
     limitations:
 
     -  On *X86-32* only supports up to 4 bit type parameters. No
-       floating point types are supported.
+       floating-point types are supported.
     -  On *X86-64* only supports up to 10 bit type parameters and 6
-       floating point parameters.
+       floating-point parameters.
 
     This calling convention supports `tail call
     optimization <CodeGenerator.html#id80>`_ but requires both the
@@ -883,8 +883,8 @@ The selection kind must be one of the following:
     The linker may choose any COMDAT key but the sections must contain the
     same amount of data.
 
-Note that the Mach-O platform doesn't support COMDATs and ELF only supports
-``any`` as a selection kind.
+Note that the Mach-O platform doesn't support COMDATs, and ELF and WebAssembly
+only support ``any`` as a selection kind.
 
 Here is an example of a COMDAT group where a function will only be selected if
 the COMDAT key's section is the largest:
@@ -1063,6 +1063,8 @@ Currently, only the following parameter attributes are defined:
     loads and stores to the structure may be assumed by the callee not
     to trap and to be properly aligned. This is not a valid attribute
     for return values.
+
+.. _attr_align:
 
 ``align <n>``
     This indicates that the pointer value may be assumed by the optimizer to
@@ -1432,7 +1434,7 @@ example:
     internal linkage and only has one call site, so the original
     call is dead after inlining.
 ``noimplicitfloat``
-    This attributes disables implicit floating point instructions.
+    This attributes disables implicit floating-point instructions.
 ``noinline``
     This attribute indicates that the inliner should never inline this
     function in any situation. This attribute may not be used together
@@ -1459,6 +1461,17 @@ example:
     trap or generate asynchronous exceptions. Exception handling schemes
     that are recognized by LLVM to handle asynchronous exceptions, such
     as SEH, will still provide their implementation defined semantics.
+``"null-pointer-is-valid"``
+   If ``"null-pointer-is-valid"`` is set to ``"true"``, then ``null`` address
+   in address-space 0 is considered to be a valid address for memory loads and
+   stores. Any analysis or optimization should not treat dereferencing a
+   pointer to ``null`` as undefined behavior in this function.
+   Note: Comparing address of a global variable to ``null`` may still
+   evaluate to false because of a limitation in querying this attribute inside
+   constant expressions.
+``optforfuzzing``
+    This attribute indicates that this function should be optimized
+    for maximum fuzzing signal.
 ``optnone``
     This function attribute indicates that most optimization passes will skip
     this function, with the exception of interprocedural optimization passes.
@@ -1559,6 +1572,8 @@ example:
     inlined into a function that has no ``"stack-probe-size"`` attribute
     at all, the resulting function has the ``"stack-probe-size"`` attribute
     of the callee.
+``"no-stack-arg-probe"``
+    This attribute disables ABI-required stack probes, if any.
 ``writeonly``
     On a function, this attribute indicates that the function may write to but
     does not read from memory.
@@ -1680,9 +1695,9 @@ example:
     resulting function will have an ``sspstrong`` attribute.
 ``strictfp``
     This attribute indicates that the function was called from a scope that
-    requires strict floating point semantics.  LLVM will not attempt any
-    optimizations that require assumptions about the floating point rounding
-    mode or that might alter the state of floating point status flags that
+    requires strict floating-point semantics.  LLVM will not attempt any
+    optimizations that require assumptions about the floating-point rounding
+    mode or that might alter the state of floating-point status flags that
     might otherwise be set or cleared by calling this function.
 ``"thunk"``
     This attribute indicates that the function will delegate to some other
@@ -1695,6 +1710,17 @@ example:
     show that no exceptions passes by it. This is normally the case for
     the ELF x86-64 abi, but it can be disabled for some compilation
     units.
+``nocf_check``
+    This attribute indicates that no control-flow check will be performed on
+    the attributed entity. It disables -fcf-protection=<> for a specific
+    entity to fine grain the HW control flow protection mechanism. The flag
+    is target independent and currently appertains to a function or function
+    pointer.
+``shadowcallstack``
+    This attribute indicates that the ShadowCallStack checks are enabled for
+    the function. The instrumentation checks that the return address for the
+    function has not changed between the function prolog and eiplog. It is
+    currently x86_64-specific.
 
 .. _glattrs:
 
@@ -1903,13 +1929,22 @@ as follows:
     must be a multiple of 8-bits. If omitted, the natural stack
     alignment defaults to "unspecified", which does not prevent any
     alignment promotions.
+``P<address space>``
+    Specifies the address space that corresponds to program memory.
+    Harvard architectures can use this to specify what space LLVM
+    should place things such as functions into. If omitted, the
+    program memory space defaults to the default address space of 0,
+    which corresponds to a Von Neumann architecture that has code
+    and data in the same space.
 ``A<address space>``
-    Specifies the address space of  objects created by '``alloca``'.
+    Specifies the address space of objects created by '``alloca``'.
     Defaults to the default address space of 0.
-``p[n]:<size>:<abi>:<pref>``
+``p[n]:<size>:<abi>:<pref>:<idx>``
     This specifies the *size* of a pointer and its ``<abi>`` and
-    ``<pref>``\erred alignments for address space ``n``. All sizes are in
-    bits. The address space, ``n``, is optional, and if not specified,
+    ``<pref>``\erred alignments for address space ``n``. The fourth parameter
+    ``<idx>`` is a size of index that used for address calculation. If not
+    specified, the default index size is equal to the pointer size. All sizes
+    are in bits. The address space, ``n``, is optional, and if not specified,
     denotes the default address space 0. The value of ``n`` must be
     in the range [1,2^23).
 ``i<size>:<abi>:<pref>``
@@ -1919,7 +1954,7 @@ as follows:
     This specifies the alignment for a vector type of a given bit
     ``<size>``.
 ``f<size>:<abi>:<pref>``
-    This specifies the alignment for a floating point type of a given bit
+    This specifies the alignment for a floating-point type of a given bit
     ``<size>``. Only values of ``<size>`` that are supported by the target
     will work. 32 (float) and 64 (double) are supported on all targets; 80
     or 128 (different flavors of long double) are also supported on some
@@ -1927,17 +1962,22 @@ as follows:
 ``a:<abi>:<pref>``
     This specifies the alignment for an object of aggregate type.
 ``m:<mangling>``
-    If present, specifies that llvm names are mangled in the output. The
+    If present, specifies that llvm names are mangled in the output. Symbols
+    prefixed with the mangling escape character ``\01`` are passed through
+    directly to the assembler without the escape character. The mangling style
     options are
 
     * ``e``: ELF mangling: Private symbols get a ``.L`` prefix.
     * ``m``: Mips mangling: Private symbols get a ``$`` prefix.
     * ``o``: Mach-O mangling: Private symbols get ``L`` prefix. Other
       symbols get a ``_`` prefix.
-    * ``w``: Windows COFF prefix:  Similar to Mach-O, but stdcall and fastcall
-      functions also get a suffix based on the frame size.
-    * ``x``: Windows x86 COFF prefix:  Similar to Windows COFF, but use a ``_``
-      prefix for ``__cdecl`` functions.
+    * ``x``: Windows x86 COFF mangling: Private symbols get the usual prefix.
+      Regular C symbols get a ``_`` prefix. Functions with ``__stdcall``,
+      ``__fastcall``, and ``__vectorcall`` have custom mangling that appends
+      ``@N`` where N is the number of bytes used to pass parameters. C++ symbols
+      starting with ``?`` are not mangled in any way.
+    * ``w``: Windows COFF mangling: Similar to ``x``, except that normal C
+      symbols do not receive a ``_`` prefix.
 ``n<size1>:<size2>:<size3>...``
     This specifies a set of native integer widths for the target CPU in
     bits. For example, it might contain ``n32`` for 32-bit PowerPC,
@@ -2271,6 +2311,32 @@ or ``syncscope("<target-scope>")`` *synchronizes with* and participates in the
 seq\_cst total orderings of other operations that are not marked
 ``syncscope("singlethread")`` or ``syncscope("<target-scope>")``.
 
+.. _floatenv:
+
+Floating-Point Environment
+--------------------------
+
+The default LLVM floating-point environment assumes that floating-point
+instructions do not have side effects. Results assume the round-to-nearest
+rounding mode. No floating-point exception state is maintained in this
+environment. Therefore, there is no attempt to create or preserve invalid
+operation (SNaN) or division-by-zero exceptions in these examples:
+
+.. code-block:: llvm
+
+      %A = fdiv 0x7ff0000000000001, %X  ; 64-bit SNaN hex value 
+      %B = fdiv %X, 0.0
+    Safe:
+      %A = NaN
+      %B = NaN
+
+The benefit of this exception-free assumption is that floating-point
+operations may be speculated freely without any other fast-math relaxations
+to the floating-point model.
+
+Code that requires different behavior than this should use the
+:ref:`Constrained Floating-Point Intrinsics <constrainedfp>`.
+
 .. _fastmath:
 
 Fast-Math Flags
@@ -2279,18 +2345,18 @@ Fast-Math Flags
 LLVM IR floating-point operations (:ref:`fadd <i_fadd>`,
 :ref:`fsub <i_fsub>`, :ref:`fmul <i_fmul>`, :ref:`fdiv <i_fdiv>`,
 :ref:`frem <i_frem>`, :ref:`fcmp <i_fcmp>`) and :ref:`call <i_call>`
-may use the following flags to enable otherwise unsafe 
+may use the following flags to enable otherwise unsafe
 floating-point transformations.
 
 ``nnan``
    No NaNs - Allow optimizations to assume the arguments and result are not
-   NaN. Such optimizations are required to retain defined behavior over
-   NaNs, but the value of the result is undefined.
+   NaN. If an argument is a nan, or the result would be a nan, it produces
+   a :ref:`poison value <poisonvalues>` instead.
 
 ``ninf``
    No Infs - Allow optimizations to assume the arguments and result are not
-   +/-Inf. Such optimizations are required to retain defined behavior over
-   +/-Inf, but the value of the result is undefined.
+   +/-Inf. If an argument is +/-Inf, or the result would be +/-Inf, it
+   produces a :ref:`poison value <poisonvalues>` instead.
 
 ``nsz``
    No Signed Zeros - Allow optimizations to treat the sign of a zero
@@ -2306,12 +2372,12 @@ floating-point transformations.
 
 ``afn``
    Approximate functions - Allow substitution of approximate calculations for
-   functions (sin, log, sqrt, etc). See floating-point intrinsic definitions 
-   for places where this can apply to LLVM's intrinsic math functions. 
+   functions (sin, log, sqrt, etc). See floating-point intrinsic definitions
+   for places where this can apply to LLVM's intrinsic math functions.
 
 ``reassoc``
-   Allow reassociation transformations for floating-point instructions. 
-   This may dramatically change results in floating point.
+   Allow reassociation transformations for floating-point instructions.
+   This may dramatically change results in floating-point.
 
 ``fast``
    This flag implies all of the others.
@@ -2500,7 +2566,7 @@ Examples:
 
 .. _t_floating:
 
-Floating Point Types
+Floating-Point Types
 """"""""""""""""""""
 
 .. list-table::
@@ -2510,22 +2576,26 @@ Floating Point Types
      - Description
 
    * - ``half``
-     - 16-bit floating point value
+     - 16-bit floating-point value
 
    * - ``float``
-     - 32-bit floating point value
+     - 32-bit floating-point value
 
    * - ``double``
-     - 64-bit floating point value
+     - 64-bit floating-point value
 
    * - ``fp128``
-     - 128-bit floating point value (112-bit mantissa)
+     - 128-bit floating-point value (112-bit mantissa)
 
    * - ``x86_fp80``
-     -  80-bit floating point value (X87)
+     -  80-bit floating-point value (X87)
 
    * - ``ppc_fp128``
-     - 128-bit floating point value (two 64-bits)
+     - 128-bit floating-point value (two 64-bits)
+
+The binary format of half, float, double, and fp128 correspond to the
+IEEE-754-2008 specifications for binary16, binary32, binary64, and binary128
+respectively.
 
 X86_mmx Type
 """"""""""""
@@ -2600,7 +2670,7 @@ type. Vector types are considered :ref:`first class <t_firstclass>`.
       < <# elements> x <elementtype> >
 
 The number of elements is a constant integer value larger than 0;
-elementtype may be any integer, floating point or pointer type. Vectors
+elementtype may be any integer, floating-point or pointer type. Vectors
 of size zero are not allowed.
 
 :Examples:
@@ -2711,7 +2781,7 @@ Here are some examples of multidimensional arrays:
 +-----------------------------+----------------------------------------------------------+
 | ``[3 x [4 x i32]]``         | 3x4 array of 32-bit integer values.                      |
 +-----------------------------+----------------------------------------------------------+
-| ``[12 x [10 x float]]``     | 12x10 array of single precision floating point values.   |
+| ``[12 x [10 x float]]``     | 12x10 array of single precision floating-point values.   |
 +-----------------------------+----------------------------------------------------------+
 | ``[2 x [3 x [4 x i16]]]``   | 2x3x4 array of 16-bit integer values.                    |
 +-----------------------------+----------------------------------------------------------+
@@ -2812,14 +2882,14 @@ Simple Constants
     Standard integers (such as '4') are constants of the
     :ref:`integer <t_integer>` type. Negative numbers may be used with
     integer types.
-**Floating point constants**
-    Floating point constants use standard decimal notation (e.g.
+**Floating-point constants**
+    Floating-point constants use standard decimal notation (e.g.
     123.421), exponential notation (e.g. 1.23421e+2), or a more precise
     hexadecimal notation (see below). The assembler requires the exact
     decimal value of a floating-point constant. For example, the
     assembler accepts 1.25 but rejects 1.3 because 1.3 is a repeating
-    decimal in binary. Floating point constants must have a :ref:`floating
-    point <t_floating>` type.
+    decimal in binary. Floating-point constants must have a 
+    :ref:`floating-point <t_floating>` type.
 **Null pointer constants**
     The identifier '``null``' is recognized as a null pointer constant
     and must be of :ref:`pointer type <t_pointer>`.
@@ -2828,12 +2898,12 @@ Simple Constants
     and must be of :ref:`token type <t_token>`.
 
 The one non-intuitive notation for constants is the hexadecimal form of
-floating point constants. For example, the form
+floating-point constants. For example, the form
 '``double    0x432ff973cafa8000``' is equivalent to (but harder to read
-than) '``double 4.5e+15``'. The only time hexadecimal floating point
+than) '``double 4.5e+15``'. The only time hexadecimal floating-point
 constants are required (and the only time that they are generated by the
-disassembler) is when a floating point constant must be emitted but it
-cannot be represented as a decimal floating point number in a reasonable
+disassembler) is when a floating-point constant must be emitted but it
+cannot be represented as a decimal floating-point number in a reasonable
 number of digits. For example, NaN's, infinities, and other special
 values are represented in their IEEE hexadecimal format so that assembly
 and disassembly do not cause any bits to change in the constants.
@@ -3024,17 +3094,17 @@ uses with" concept would not hold.
 
 .. code-block:: llvm
 
-      %A = fdiv undef, %X
-      %B = fdiv %X, undef
+      %A = sdiv undef, %X
+      %B = sdiv %X, undef
     Safe:
-      %A = undef
+      %A = 0
     b: unreachable
 
 These examples show the crucial difference between an *undefined value*
 and *undefined behavior*. An undefined value (like '``undef``') is
 allowed to have an arbitrary bit-pattern. This means that the ``%A``
-operation can be constant folded to '``undef``', because the '``undef``'
-could be an SNaN, and ``fdiv`` is not (currently) defined on SNaN's.
+operation can be constant folded to '``0``', because the '``undef``'
+could be zero, and zero divided by any value is zero.
 However, in the second example, we can make a more aggressive
 assumption: because the ``undef`` is allowed to be an arbitrary value,
 we are allowed to assume that it could be zero. Since a divide by zero
@@ -3051,11 +3121,11 @@ optimizer can assume that it occurs in dead code.
     a: <deleted>
     b: unreachable
 
-These examples reiterate the ``fdiv`` example: a store *of* an undefined
-value can be assumed to not have any effect; we can assume that the
-value is overwritten with bits that happen to match what was already
-there. However, a store *to* an undefined location could clobber
-arbitrary memory, therefore, it has undefined behavior.
+A store *of* an undefined value can be assumed to not have any effect;
+we can assume that the value is overwritten with bits that happen to
+match what was already there. However, a store *to* an undefined
+location could clobber arbitrary memory, therefore, it has undefined
+behavior.
 
 .. _poisonvalues:
 
@@ -3201,37 +3271,37 @@ The following is the syntax for constant expressions:
 ``sext (CST to TYPE)``
     Perform the :ref:`sext operation <i_sext>` on constants.
 ``fptrunc (CST to TYPE)``
-    Truncate a floating point constant to another floating point type.
+    Truncate a floating-point constant to another floating-point type.
     The size of CST must be larger than the size of TYPE. Both types
-    must be floating point.
+    must be floating-point.
 ``fpext (CST to TYPE)``
-    Floating point extend a constant to another type. The size of CST
+    Floating-point extend a constant to another type. The size of CST
     must be smaller or equal to the size of TYPE. Both types must be
-    floating point.
+    floating-point.
 ``fptoui (CST to TYPE)``
-    Convert a floating point constant to the corresponding unsigned
+    Convert a floating-point constant to the corresponding unsigned
     integer constant. TYPE must be a scalar or vector integer type. CST
-    must be of scalar or vector floating point type. Both CST and TYPE
+    must be of scalar or vector floating-point type. Both CST and TYPE
     must be scalars, or vectors of the same number of elements. If the
-    value won't fit in the integer type, the results are undefined.
+    value won't fit in the integer type, the result is a
+    :ref:`poison value <poisonvalues>`.
 ``fptosi (CST to TYPE)``
-    Convert a floating point constant to the corresponding signed
+    Convert a floating-point constant to the corresponding signed
     integer constant. TYPE must be a scalar or vector integer type. CST
-    must be of scalar or vector floating point type. Both CST and TYPE
+    must be of scalar or vector floating-point type. Both CST and TYPE
     must be scalars, or vectors of the same number of elements. If the
-    value won't fit in the integer type, the results are undefined.
+    value won't fit in the integer type, the result is a
+    :ref:`poison value <poisonvalues>`.
 ``uitofp (CST to TYPE)``
-    Convert an unsigned integer constant to the corresponding floating
-    point constant. TYPE must be a scalar or vector floating point type.
-    CST must be of scalar or vector integer type. Both CST and TYPE must
-    be scalars, or vectors of the same number of elements. If the value
-    won't fit in the floating point type, the results are undefined.
+    Convert an unsigned integer constant to the corresponding 
+    floating-point constant. TYPE must be a scalar or vector floating-point
+    type.  CST must be of scalar or vector integer type. Both CST and TYPE must
+    be scalars, or vectors of the same number of elements.
 ``sitofp (CST to TYPE)``
-    Convert a signed integer constant to the corresponding floating
-    point constant. TYPE must be a scalar or vector floating point type.
+    Convert a signed integer constant to the corresponding floating-point
+    constant. TYPE must be a scalar or vector floating-point type.
     CST must be of scalar or vector integer type. Both CST and TYPE must
-    be scalars, or vectors of the same number of elements. If the value
-    won't fit in the floating point type, the results are undefined.
+    be scalars, or vectors of the same number of elements.
 ``ptrtoint (CST to TYPE)``
     Perform the :ref:`ptrtoint operation <i_ptrtoint>` on constants.
 ``inttoptr (CST to TYPE)``
@@ -3280,7 +3350,7 @@ The following is the syntax for constant expressions:
     may be any of the :ref:`binary <binaryops>` or :ref:`bitwise
     binary <bitwiseops>` operations. The constraints on operands are
     the same as those for the corresponding instruction (e.g. no bitwise
-    operations on floating point values are allowed).
+    operations on floating-point values are allowed).
 
 Other Values
 ============
@@ -3650,8 +3720,8 @@ ARM and ARM's Thumb2 mode:
   ``d0-d31``, or ``q0-q15``.
 - ``x``: A 32, 64, or 128-bit floating-point/SIMD register: ``s0-s15``,
   ``d0-d7``, or ``q0-q3``.
-- ``t``: A floating-point/SIMD register, only supports 32-bit values:
-  ``s0-s31``.
+- ``t``: A low floating-point/SIMD register: ``s0-s31``, ``d0-d16``, or
+  ``q0-q8``.
 
 ARM's Thumb1 mode:
 
@@ -3670,8 +3740,8 @@ ARM's Thumb1 mode:
   ``d0-d31``, or ``q0-q15``.
 - ``x``: A 32, 64, or 128-bit floating-point/SIMD register: ``s0-s15``,
   ``d0-d7``, or ``q0-q3``.
-- ``t``: A floating-point/SIMD register, only supports 32-bit values:
-  ``s0-s31``.
+- ``t``: A low floating-point/SIMD register: ``s0-s31``, ``d0-d16``, or
+  ``q0-q8``.
 
 
 Hexagon:
@@ -3748,16 +3818,16 @@ PowerPC:
 - ``wc``: An individual CR bit in a CR register.
 - ``wa``, ``wd``, ``wf``: Any 128-bit VSX vector register, from the full VSX
   register set (overlapping both the floating-point and vector register files).
-- ``ws``: A 32 or 64-bit floating point register, from the full VSX register
+- ``ws``: A 32 or 64-bit floating-point register, from the full VSX register
   set.
 
 Sparc:
 
 - ``I``: An immediate 13-bit signed integer.
 - ``r``: A 32-bit integer register.
-- ``f``: Any floating-point register on SparcV8, or a floating point
+- ``f``: Any floating-point register on SparcV8, or a floating-point
   register in the "low" half of the registers on SparcV9.
-- ``e``: Any floating point register. (Same as ``f`` on SparcV8.)
+- ``e``: Any floating-point register. (Same as ``f`` on SparcV8.)
 
 SystemZ:
 
@@ -3779,7 +3849,7 @@ SystemZ:
   address context evaluates as zero).
 - ``h``: A 32-bit value in the high part of a 64bit data register
   (LLVM-specific)
-- ``f``: A 32, 64, or 128-bit floating point register.
+- ``f``: A 32, 64, or 128-bit floating-point register.
 
 X86:
 
@@ -4514,7 +4584,7 @@ The current supported vocabulary is limited:
 - ``DW_OP_plus_uconst, 93`` adds ``93`` to the working expression.
 - ``DW_OP_LLVM_fragment, 16, 8`` specifies the offset and size (``16`` and ``8``
   here, respectively) of the variable fragment from the working expression. Note
-  that contrary to DW_OP_bit_piece, the offset is describing the the location
+  that contrary to DW_OP_bit_piece, the offset is describing the location
   within the described source variable.
 - ``DW_OP_swap`` swaps top two stack entries.
 - ``DW_OP_xderef`` provides extended dereference mechanism. The entry at the top
@@ -4680,7 +4750,7 @@ As a concrete example, the type descriptor graph for the following program
     void f(struct Outer* outer, struct Inner* inner, float* f, int* i, char* c) {
       outer->f = 0;            // tag0: (OuterStructTy, FloatScalarTy, 0)
       outer->inner_a.i = 0;    // tag1: (OuterStructTy, IntScalarTy, 12)
-      outer->inner_a.f = 0.0;  // tag2: (OuterStructTy, IntScalarTy, 16)
+      outer->inner_a.f = 0.0;  // tag2: (OuterStructTy, FloatScalarTy, 16)
       *f = 0.0;                // tag3: (FloatScalarTy, FloatScalarTy, 0)
     }
 
@@ -4845,7 +4915,7 @@ For example,
 '``fpmath``' Metadata
 ^^^^^^^^^^^^^^^^^^^^^
 
-``fpmath`` metadata may be attached to any instruction of floating point
+``fpmath`` metadata may be attached to any instruction of floating-point
 type. It can be used to express the maximum acceptable error in the
 result of that instruction, in ULPs, thus potentially allowing the
 compiler to use a more efficient but less accurate method of computing
@@ -4871,10 +4941,11 @@ representing the maximum relative error, for example:
 
 ``range`` metadata may be attached only to ``load``, ``call`` and ``invoke`` of
 integer types. It expresses the possible ranges the loaded value or the value
-returned by the called function at this call site is in. The ranges are
-represented with a flattened list of integers. The loaded value or the value
-returned is known to be in the union of the ranges defined by each consecutive
-pair. Each pair has the following properties:
+returned by the called function at this call site is in. If the loaded or
+returned value is not in the specified range, the behavior is undefined. The
+ranges are represented with a flattened list of integers. The loaded value or
+the value returned is known to be in the union of the ranges defined by each
+consecutive pair. Each pair has the following properties:
 
 -  The type must match the type loaded by the instruction.
 -  The pair ``a,b`` represents the range ``[a,b)``.
@@ -5109,6 +5180,59 @@ For example:
 
    !0 = !{!"llvm.loop.unroll.full"}
 
+'``llvm.loop.unroll_and_jam``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This metadata is treated very similarly to the ``llvm.loop.unroll`` metadata
+above, but affect the unroll and jam pass. In addition any loop with
+``llvm.loop.unroll`` metadata but no ``llvm.loop.unroll_and_jam`` metadata will
+disable unroll and jam (so ``llvm.loop.unroll`` metadata will be left to the
+unroller, plus ``llvm.loop.unroll.disable`` metadata will disable unroll and jam
+too.)
+
+The metadata for unroll and jam otherwise is the same as for ``unroll``.
+``llvm.loop.unroll_and_jam.enable``, ``llvm.loop.unroll_and_jam.disable`` and
+``llvm.loop.unroll_and_jam.count`` do the same as for unroll.
+``llvm.loop.unroll_and_jam.full`` is not supported. Again these are only hints
+and the normal safety checks will still be performed.
+
+'``llvm.loop.unroll_and_jam.count``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This metadata suggests an unroll and jam factor to use, similarly to
+``llvm.loop.unroll.count``. The first operand is the string
+``llvm.loop.unroll_and_jam.count`` and the second operand is a positive integer
+specifying the unroll factor. For example:
+
+.. code-block:: llvm
+
+   !0 = !{!"llvm.loop.unroll_and_jam.count", i32 4}
+
+If the trip count of the loop is less than the unroll count the loop
+will be partially unroll and jammed.
+
+'``llvm.loop.unroll_and_jam.disable``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This metadata disables loop unroll and jamming. The metadata has a single
+operand which is the string ``llvm.loop.unroll_and_jam.disable``. For example:
+
+.. code-block:: llvm
+
+   !0 = !{!"llvm.loop.unroll_and_jam.disable"}
+
+'``llvm.loop.unroll_and_jam.enable``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This metadata suggests that the loop should be fully unroll and jammed if the
+trip count is known at compile time and partially unrolled if the trip count is
+not known at compile time. The metadata has a single operand which is the
+string ``llvm.loop.unroll_and_jam.enable``.  For example:
+
+.. code-block:: llvm
+
+   !0 = !{!"llvm.loop.unroll_and_jam.enable"}
+
 '``llvm.loop.licm_versioning.disable``' Metadata
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -5251,11 +5375,12 @@ Irreducible loop header weights are typically based on profile data.
 '``invariant.group``' Metadata
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The ``invariant.group`` metadata may be attached to ``load``/``store`` instructions.
+The experimental ``invariant.group`` metadata may be attached to 
+``load``/``store`` instructions referencing a single metadata with no entries.
 The existence of the ``invariant.group`` metadata on the instruction tells
 the optimizer that every ``load`` and ``store`` to the same pointer operand
-within the same invariant group can be assumed to load or store the same
-value (but see the ``llvm.invariant.group.barrier`` intrinsic which affects
+can be assumed to load or store the same
+value (but see the ``llvm.launder.invariant.group`` intrinsic which affects
 when two pointers are considered the same). Pointers returned by bitcast or
 getelementptr with only zero indices are considered the same.
 
@@ -5271,7 +5396,6 @@ Examples:
 
    %a = load i8, i8* %ptr, !invariant.group !0 ; Can assume that value under %ptr didn't change
    call void @foo(i8* %ptr)
-   %b = load i8, i8* %ptr, !invariant.group !1 ; Can't assume anything, because group changed
 
    %newPtr = call i8* @getPointer(i8* %ptr)
    %c = load i8, i8* %newPtr, !invariant.group !0 ; Can't assume anything, because we only have information about %ptr
@@ -5280,16 +5404,15 @@ Examples:
    store i8 %unknownValue, i8* %ptr, !invariant.group !0 ; Can assume that %unknownValue == 42
 
    call void @foo(i8* %ptr)
-   %newPtr2 = call i8* @llvm.invariant.group.barrier(i8* %ptr)
-   %d = load i8, i8* %newPtr2, !invariant.group !0  ; Can't step through invariant.group.barrier to get value of %ptr
+   %newPtr2 = call i8* @llvm.launder.invariant.group(i8* %ptr)
+   %d = load i8, i8* %newPtr2, !invariant.group !0  ; Can't step through launder.invariant.group to get value of %ptr
 
    ...
    declare void @foo(i8*)
    declare i8* @getPointer(i8*)
-   declare i8* @llvm.invariant.group.barrier(i8*)
+   declare i8* @llvm.launder.invariant.group(i8*)
 
-   !0 = !{!"magic ptr"}
-   !1 = !{!"other ptr"}
+   !0 = !{}
 
 The invariant.group metadata must be dropped when replacing one pointer by
 another based on aliasing information. This is because invariant.group is tied
@@ -5301,6 +5424,8 @@ to the SSA value of the pointer operand.
   ; if %x mustalias %y then we can replace the above instruction with
   %v = load i8, i8* %y
 
+Note that this is an experimental feature, which means that its semantics might
+change in the future.
 
 '``type``' Metadata
 ^^^^^^^^^^^^^^^^^^^
@@ -5636,6 +5761,310 @@ assembly writer or object file emitter.
 Each individual option is required to be either a valid option for the target's
 linker, or an option that is reserved by the target specific assembly writer or
 object file emitter. No other aspect of these options is defined by the IR.
+
+.. _summary:
+
+ThinLTO Summary
+===============
+
+Compiling with `ThinLTO <https://clang.llvm.org/docs/ThinLTO.html>`_
+causes the building of a compact summary of the module that is emitted into
+the bitcode. The summary is emitted into the LLVM assembly and identified
+in syntax by a caret ('``^``').
+
+*Note that temporarily the summary entries are skipped when parsing the
+assembly, although the parsing support is actively being implemented. The
+following describes when the summary entries will be parsed once implemented.*
+The summary will be parsed into a ModuleSummaryIndex object under the
+same conditions where summary index is currently built from bitcode.
+Specifically, tools that test the Thin Link portion of a ThinLTO compile
+(i.e. llvm-lto and llvm-lto2), or when parsing a combined index
+for a distributed ThinLTO backend via clang's "``-fthinlto-index=<>``" flag.
+Additionally, it will be parsed into a bitcode output, along with the Module
+IR, via the "``llvm-as``" tool. Tools that parse the Module IR for the purposes
+of optimization (e.g. "``clang -x ir``" and "``opt``"), will ignore the
+summary entries (just as they currently ignore summary entries in a bitcode
+input file).
+
+There are currently 3 types of summary entries in the LLVM assembly:
+:ref:`module paths<module_path_summary>`,
+:ref:`global values<gv_summary>`, and
+:ref:`type identifiers<typeid_summary>`.
+
+.. _module_path_summary:
+
+Module Path Summary Entry
+-------------------------
+
+Each module path summary entry lists a module containing global values included
+in the summary. For a single IR module there will be one such entry, but
+in a combined summary index produced during the thin link, there will be
+one module path entry per linked module with summary.
+
+Example:
+
+.. code-block:: llvm
+
+    ^0 = module: (path: "/path/to/file.o", hash: (2468601609, 1329373163, 1565878005, 638838075, 3148790418))
+
+The ``path`` field is a string path to the bitcode file, and the ``hash``
+field is the 160-bit SHA-1 hash of the IR bitcode contents, used for
+incremental builds and caching.
+
+.. _gv_summary:
+
+Global Value Summary Entry
+--------------------------
+
+Each global value summary entry corresponds to a global value defined or
+referenced by a summarized module.
+
+Example:
+
+.. code-block:: llvm
+
+    ^4 = gv: (name: "f"[, summaries: (Summary)[, (Summary)]*]?) ; guid = 14740650423002898831
+
+For declarations, there will not be a summary list. For definitions, a
+global value will contain a list of summaries, one per module containing
+a definition. There can be multiple entries in a combined summary index
+for symbols with weak linkage.
+
+Each ``Summary`` format will depend on whether the global value is a
+:ref:`function<function_summary>`, :ref:`variable<variable_summary>`, or
+:ref:`alias<alias_summary>`.
+
+.. _function_summary:
+
+Function Summary
+^^^^^^^^^^^^^^^^
+
+If the global value is a function, the ``Summary`` entry will look like:
+
+.. code-block:: llvm
+
+    function: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 2[, FuncFlags]?[, Calls]?[, TypeIdInfo]?[, Refs]?
+
+The ``module`` field includes the summary entry id for the module containing
+this definition, and the ``flags`` field contains information such as
+the linkage type, a flag indicating whether it is legal to import the
+definition, whether it is globally live and whether the linker resolved it
+to a local definition (the latter two are populated during the thin link).
+The ``insts`` field contains the number of IR instructions in the function.
+Finally, there are several optional fields: :ref:`FuncFlags<funcflags_summary>`,
+:ref:`Calls<calls_summary>`, :ref:`TypeIdInfo<typeidinfo_summary>`,
+:ref:`Refs<refs_summary>`.
+
+.. _variable_summary:
+
+Global Variable Summary
+^^^^^^^^^^^^^^^^^^^^^^^
+
+If the global value is a variable, the ``Summary`` entry will look like:
+
+.. code-block:: llvm
+
+    variable: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 0)[, Refs]?
+
+The variable entry contains a subset of the fields in a
+:ref:`function summary <function_summary>`, see the descriptions there.
+
+.. _alias_summary:
+
+Alias Summary
+^^^^^^^^^^^^^
+
+If the global value is an alias, the ``Summary`` entry will look like:
+
+.. code-block:: llvm
+
+    alias: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 0), aliasee: ^2)
+
+The ``module`` and ``flags`` fields are as described for a
+:ref:`function summary <function_summary>`. The ``aliasee`` field
+contains a reference to the global value summary entry of the aliasee.
+
+.. _funcflags_summary:
+
+Function Flags
+^^^^^^^^^^^^^^
+
+The optional ``FuncFlags`` field looks like:
+
+.. code-block:: llvm
+
+    funcFlags: (readNone: 0, readOnly: 0, noRecurse: 0, returnDoesNotAlias: 0)
+
+If unspecified, flags are assumed to hold the conservative ``false`` value of
+``0``.
+
+.. _calls_summary:
+
+Calls
+^^^^^
+
+The optional ``Calls`` field looks like:
+
+.. code-block:: llvm
+
+    calls: ((Callee)[, (Callee)]*)
+
+where each ``Callee`` looks like:
+
+.. code-block:: llvm
+
+    callee: ^1[, hotness: None]?[, relbf: 0]?
+
+The ``callee`` refers to the summary entry id of the callee. At most one
+of ``hotness`` (which can take the values ``Unknown``, ``Cold``, ``None``,
+``Hot``, and ``Critical``), and ``relbf`` (which holds the integer
+branch frequency relative to the entry frequency, scaled down by 2^8)
+may be specified. The defaults are ``Unknown`` and ``0``, respectively.
+
+.. _refs_summary:
+
+Refs
+^^^^
+
+The optional ``Refs`` field looks like:
+
+.. code-block:: llvm
+
+    refs: ((Ref)[, (Ref)]*)
+
+where each ``Ref`` contains a reference to the summary id of the referenced
+value (e.g. ``^1``).
+
+.. _typeidinfo_summary:
+
+TypeIdInfo
+^^^^^^^^^^
+
+The optional ``TypeIdInfo`` field, used for
+`Control Flow Integrity <http://clang.llvm.org/docs/ControlFlowIntegrity.html>`_,
+looks like:
+
+.. code-block:: llvm
+
+    typeIdInfo: [(TypeTests)]?[, (TypeTestAssumeVCalls)]?[, (TypeCheckedLoadVCalls)]?[, (TypeTestAssumeConstVCalls)]?[, (TypeCheckedLoadConstVCalls)]?
+
+These optional fields have the following forms:
+
+TypeTests
+"""""""""
+
+.. code-block:: llvm
+
+    typeTests: (TypeIdRef[, TypeIdRef]*)
+
+Where each ``TypeIdRef`` refers to a :ref:`type id<typeid_summary>`
+by summary id or ``GUID``.
+
+TypeTestAssumeVCalls
+""""""""""""""""""""
+
+.. code-block:: llvm
+
+    typeTestAssumeVCalls: (VFuncId[, VFuncId]*)
+
+Where each VFuncId has the format:
+
+.. code-block:: llvm
+
+    vFuncId: (TypeIdRef, offset: 16)
+
+Where each ``TypeIdRef`` refers to a :ref:`type id<typeid_summary>`
+by summary id or ``GUID`` preceeded by a ``guid:`` tag.
+
+TypeCheckedLoadVCalls
+"""""""""""""""""""""
+
+.. code-block:: llvm
+
+    typeCheckedLoadVCalls: (VFuncId[, VFuncId]*)
+
+Where each VFuncId has the format described for ``TypeTestAssumeVCalls``.
+
+TypeTestAssumeConstVCalls
+"""""""""""""""""""""""""
+
+.. code-block:: llvm
+
+    typeTestAssumeConstVCalls: (ConstVCall[, ConstVCall]*)
+
+Where each ConstVCall has the format:
+
+.. code-block:: llvm
+
+    VFuncId, args: (Arg[, Arg]*)
+
+and where each VFuncId has the format described for ``TypeTestAssumeVCalls``,
+and each Arg is an integer argument number.
+
+TypeCheckedLoadConstVCalls
+""""""""""""""""""""""""""
+
+.. code-block:: llvm
+
+    typeCheckedLoadConstVCalls: (ConstVCall[, ConstVCall]*)
+
+Where each ConstVCall has the format described for
+``TypeTestAssumeConstVCalls``.
+
+.. _typeid_summary:
+
+Type ID Summary Entry
+---------------------
+
+Each type id summary entry corresponds to a type identifier resolution
+which is generated during the LTO link portion of the compile when building
+with `Control Flow Integrity <http://clang.llvm.org/docs/ControlFlowIntegrity.html>`_,
+so these are only present in a combined summary index.
+
+Example:
+
+.. code-block:: llvm
+
+    ^4 = typeid: (name: "_ZTS1A", summary: (typeTestRes: (kind: allOnes, sizeM1BitWidth: 7[, alignLog2: 0]?[, sizeM1: 0]?[, bitMask: 0]?[, inlineBits: 0]?)[, WpdResolutions]?)) ; guid = 7004155349499253778
+
+The ``typeTestRes`` gives the type test resolution ``kind`` (which may
+be ``unsat``, ``byteArray``, ``inline``, ``single``, or ``allOnes``), and
+the ``size-1`` bit width. It is followed by optional flags, which default to 0,
+and an optional WpdResolutions (whole program devirtualization resolution)
+field that looks like:
+
+.. code-block:: llvm
+
+    wpdResolutions: ((offset: 0, WpdRes)[, (offset: 1, WpdRes)]*
+
+where each entry is a mapping from the given byte offset to the whole-program
+devirtualization resolution WpdRes, that has one of the following formats:
+
+.. code-block:: llvm
+
+    wpdRes: (kind: branchFunnel)
+    wpdRes: (kind: singleImpl, singleImplName: "_ZN1A1nEi")
+    wpdRes: (kind: indir)
+
+Additionally, each wpdRes has an optional ``resByArg`` field, which
+describes the resolutions for calls with all constant integer arguments:
+
+.. code-block:: llvm
+
+    resByArg: (ResByArg[, ResByArg]*)
+
+where ResByArg is:
+
+.. code-block:: llvm
+
+    args: (Arg[, Arg]*), byArg: (kind: UniformRetVal[, info: 0][, byte: 0][, bit: 0])
+
+Where the ``kind`` can be ``Indir``, ``UniformRetVal``, ``UniqueRetVal``
+or ``VirtualConstProp``. The ``info`` field is only used if the kind
+is ``UniformRetVal`` (indicates the uniform return value), or
+``UniqueRetVal`` (holds the return value associated with the unique vtable
+(0 or 1)). The ``byte`` and ``bit`` fields are only used if the target does
+not support the use of absolute symbols to store constants.
 
 .. _intrinsicglobalvariables:
 
@@ -6383,17 +6812,19 @@ The '``fadd``' instruction returns the sum of its two operands.
 Arguments:
 """"""""""
 
-The two arguments to the '``fadd``' instruction must be :ref:`floating
-point <t_floating>` or :ref:`vector <t_vector>` of floating point values.
-Both arguments must have identical types.
+The two arguments to the '``fadd``' instruction must be
+:ref:`floating-point <t_floating>` or :ref:`vector <t_vector>` of 
+floating-point values. Both arguments must have identical types.
 
 Semantics:
 """"""""""
 
-The value produced is the floating point sum of the two operands. This
-instruction can also take any number of :ref:`fast-math flags <fastmath>`,
-which are optimization hints to enable otherwise unsafe floating point
-optimizations:
+The value produced is the floating-point sum of the two operands.
+This instruction is assumed to execute in the default :ref:`floating-point
+environment <floatenv>`. 
+This instruction can also take any number of :ref:`fast-math
+flags <fastmath>`, which are optimization hints to enable otherwise
+unsafe floating-point optimizations:
 
 Example:
 """"""""
@@ -6478,17 +6909,19 @@ instruction present in most other intermediate representations.
 Arguments:
 """"""""""
 
-The two arguments to the '``fsub``' instruction must be :ref:`floating
-point <t_floating>` or :ref:`vector <t_vector>` of floating point values.
-Both arguments must have identical types.
+The two arguments to the '``fsub``' instruction must be
+:ref:`floating-point <t_floating>` or :ref:`vector <t_vector>` of 
+floating-point values. Both arguments must have identical types.
 
 Semantics:
 """"""""""
 
-The value produced is the floating point difference of the two operands.
+The value produced is the floating-point difference of the two operands.
+This instruction is assumed to execute in the default :ref:`floating-point
+environment <floatenv>`. 
 This instruction can also take any number of :ref:`fast-math
 flags <fastmath>`, which are optimization hints to enable otherwise
-unsafe floating point optimizations:
+unsafe floating-point optimizations:
 
 Example:
 """"""""
@@ -6571,17 +7004,19 @@ The '``fmul``' instruction returns the product of its two operands.
 Arguments:
 """"""""""
 
-The two arguments to the '``fmul``' instruction must be :ref:`floating
-point <t_floating>` or :ref:`vector <t_vector>` of floating point values.
-Both arguments must have identical types.
+The two arguments to the '``fmul``' instruction must be
+:ref:`floating-point <t_floating>` or :ref:`vector <t_vector>` of 
+floating-point values. Both arguments must have identical types.
 
 Semantics:
 """"""""""
 
-The value produced is the floating point product of the two operands.
+The value produced is the floating-point product of the two operands.
+This instruction is assumed to execute in the default :ref:`floating-point
+environment <floatenv>`. 
 This instruction can also take any number of :ref:`fast-math
 flags <fastmath>`, which are optimization hints to enable otherwise
-unsafe floating point optimizations:
+unsafe floating-point optimizations:
 
 Example:
 """"""""
@@ -6703,17 +7138,19 @@ The '``fdiv``' instruction returns the quotient of its two operands.
 Arguments:
 """"""""""
 
-The two arguments to the '``fdiv``' instruction must be :ref:`floating
-point <t_floating>` or :ref:`vector <t_vector>` of floating point values.
-Both arguments must have identical types.
+The two arguments to the '``fdiv``' instruction must be
+:ref:`floating-point <t_floating>` or :ref:`vector <t_vector>` of 
+floating-point values. Both arguments must have identical types.
 
 Semantics:
 """"""""""
 
-The value produced is the floating point quotient of the two operands.
+The value produced is the floating-point quotient of the two operands.
+This instruction is assumed to execute in the default :ref:`floating-point
+environment <floatenv>`. 
 This instruction can also take any number of :ref:`fast-math
 flags <fastmath>`, which are optimization hints to enable otherwise
-unsafe floating point optimizations:
+unsafe floating-point optimizations:
 
 Example:
 """"""""
@@ -6844,19 +7281,22 @@ its two operands.
 Arguments:
 """"""""""
 
-The two arguments to the '``frem``' instruction must be :ref:`floating
-point <t_floating>` or :ref:`vector <t_vector>` of floating point values.
-Both arguments must have identical types.
+The two arguments to the '``frem``' instruction must be
+:ref:`floating-point <t_floating>` or :ref:`vector <t_vector>` of 
+floating-point values. Both arguments must have identical types.
 
 Semantics:
 """"""""""
 
-Return the same value as a libm '``fmod``' function but without trapping or 
-setting ``errno``.
-
-The remainder has the same sign as the dividend. This instruction can also 
-take any number of :ref:`fast-math flags <fastmath>`, which are optimization
-hints to enable otherwise unsafe floating-point optimizations:
+The value produced is the floating-point remainder of the two operands.
+This is the same output as a libm '``fmod``' function, but without any
+possibility of setting ``errno``. The remainder has the same sign as the 
+dividend.
+This instruction is assumed to execute in the default :ref:`floating-point
+environment <floatenv>`. 
+This instruction can also take any number of :ref:`fast-math
+flags <fastmath>`, which are optimization hints to enable otherwise
+unsafe floating-point optimizations:
 
 Example:
 """"""""
@@ -6915,7 +7355,7 @@ by the corresponding shift amount in ``op2``.
 If the ``nuw`` keyword is present, then the shift produces a poison
 value if it shifts out any non-zero bits.
 If the ``nsw`` keyword is present, then the shift produces a poison
-value it shifts out any bits that disagree with the resultant sign bit.
+value if it shifts out any bits that disagree with the resultant sign bit.
 
 Example:
 """"""""
@@ -7217,7 +7657,8 @@ Semantics:
 
 The result is a scalar of the same type as the element type of ``val``.
 Its value is the value at position ``idx`` of ``val``. If ``idx``
-exceeds the length of ``val``, the results are undefined.
+exceeds the length of ``val``, the result is a
+:ref:`poison value <poisonvalues>`.
 
 Example:
 """"""""
@@ -7258,8 +7699,8 @@ Semantics:
 
 The result is a vector of the same type as ``val``. Its element values
 are those of ``val`` except at position ``idx``, where it gets the value
-``elt``. If ``idx`` exceeds the length of ``val``, the results are
-undefined.
+``elt``. If ``idx`` exceeds the length of ``val``, the result
+is a :ref:`poison value <poisonvalues>`.
 
 Example:
 """"""""
@@ -7475,9 +7916,9 @@ memory is automatically released when the function returns. The
 '``alloca``' instruction is commonly used to represent automatic
 variables that must have an address available. When the function returns
 (either with the ``ret`` or ``resume`` instructions), the memory is
-reclaimed. Allocating zero bytes is legal, but the result is undefined.
-The order in which memory is allocated (ie., which way the stack grows)
-is not specified.
+reclaimed. Allocating zero bytes is legal, but the returned pointer may not
+be unique. The order in which memory is allocated (ie., which way the stack
+grows) is not specified.
 
 Example:
 """"""""
@@ -7558,18 +7999,20 @@ metadata name ``<index>`` corresponding to a metadata node with no
 entries. If a load instruction tagged with the ``!invariant.load``
 metadata is executed, the optimizer may assume the memory location
 referenced by the load contains the same value at all points in the
-program where the memory location is known to be dereferenceable.
+program where the memory location is known to be dereferenceable;
+otherwise, the behavior is undefined.
 
 The optional ``!invariant.group`` metadata must reference a single metadata name
- ``<index>`` corresponding to a metadata node. See ``invariant.group`` metadata.
+ ``<index>`` corresponding to a metadata node with no entries.
+ See ``invariant.group`` metadata.
 
 The optional ``!nonnull`` metadata must reference a single
 metadata name ``<index>`` corresponding to a metadata node with no
 entries. The existence of the ``!nonnull`` metadata on the
 instruction tells the optimizer that the value loaded is known to
-never be null. This is analogous to the ``nonnull`` attribute
-on parameters and return values. This metadata can only be applied
-to loads of a pointer type.
+never be null. If the value is null at runtime, the behavior is undefined.
+This is analogous to the ``nonnull`` attribute on parameters and return
+values. This metadata can only be applied to loads of a pointer type.
 
 The optional ``!dereferenceable`` metadata must reference a single metadata
 name ``<deref_bytes_node>`` corresponding to a metadata node with one ``i64``
@@ -7596,7 +8039,8 @@ The existence of the ``!align`` metadata on the instruction tells the
 optimizer that the value loaded is known to be aligned to a boundary specified
 by the integer value in the metadata node. The alignment must be a power of 2.
 This is analogous to the ''align'' attribute on parameters and return values.
-This metadata can only be applied to loads of a pointer type.
+This metadata can only be applied to loads of a pointer type. If the returned
+value is not appropriately aligned at runtime, the behavior is undefined.
 
 Semantics:
 """"""""""
@@ -8293,8 +8737,8 @@ The '``fptrunc``' instruction truncates ``value`` to type ``ty2``.
 Arguments:
 """"""""""
 
-The '``fptrunc``' instruction takes a :ref:`floating point <t_floating>`
-value to cast and a :ref:`floating point <t_floating>` type to cast it to.
+The '``fptrunc``' instruction takes a :ref:`floating-point <t_floating>`
+value to cast and a :ref:`floating-point <t_floating>` type to cast it to.
 The size of ``value`` must be larger than the size of ``ty2``. This
 implies that ``fptrunc`` cannot be used to make a *no-op cast*.
 
@@ -8302,19 +8746,18 @@ Semantics:
 """"""""""
 
 The '``fptrunc``' instruction casts a ``value`` from a larger
-:ref:`floating point <t_floating>` type to a smaller :ref:`floating
-point <t_floating>` type. If the value cannot fit (i.e. overflows) within the
-destination type, ``ty2``, then the results are undefined. If the cast produces
-an inexact result, how rounding is performed (e.g. truncation, also known as
-round to zero) is undefined.
+:ref:`floating-point <t_floating>` type to a smaller :ref:`floating-point
+<t_floating>` type.  
+This instruction is assumed to execute in the default :ref:`floating-point
+environment <floatenv>`.
 
 Example:
 """"""""
 
 .. code-block:: llvm
 
-      %X = fptrunc double 123.0 to float         ; yields float:123.0
-      %Y = fptrunc double 1.0E+300 to float      ; yields undefined
+      %X = fptrunc double 16777217.0 to float    ; yields float:16777216.0
+      %Y = fptrunc double 1.0E+300 to half       ; yields half:+infinity
 
 '``fpext .. to``' Instruction
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -8329,24 +8772,24 @@ Syntax:
 Overview:
 """""""""
 
-The '``fpext``' extends a floating point ``value`` to a larger floating
-point value.
+The '``fpext``' extends a floating-point ``value`` to a larger floating-point
+value.
 
 Arguments:
 """"""""""
 
-The '``fpext``' instruction takes a :ref:`floating point <t_floating>`
-``value`` to cast, and a :ref:`floating point <t_floating>` type to cast it
+The '``fpext``' instruction takes a :ref:`floating-point <t_floating>`
+``value`` to cast, and a :ref:`floating-point <t_floating>` type to cast it
 to. The source type must be smaller than the destination type.
 
 Semantics:
 """"""""""
 
 The '``fpext``' instruction extends the ``value`` from a smaller
-:ref:`floating point <t_floating>` type to a larger :ref:`floating
-point <t_floating>` type. The ``fpext`` cannot be used to make a
+:ref:`floating-point <t_floating>` type to a larger :ref:`floating-point
+<t_floating>` type. The ``fpext`` cannot be used to make a
 *no-op cast* because it always changes bits. Use ``bitcast`` to make a
-*no-op cast* for a floating point cast.
+*no-op cast* for a floating-point cast.
 
 Example:
 """"""""
@@ -8369,25 +8812,25 @@ Syntax:
 Overview:
 """""""""
 
-The '``fptoui``' converts a floating point ``value`` to its unsigned
+The '``fptoui``' converts a floating-point ``value`` to its unsigned
 integer equivalent of type ``ty2``.
 
 Arguments:
 """"""""""
 
 The '``fptoui``' instruction takes a value to cast, which must be a
-scalar or vector :ref:`floating point <t_floating>` value, and a type to
+scalar or vector :ref:`floating-point <t_floating>` value, and a type to
 cast it to ``ty2``, which must be an :ref:`integer <t_integer>` type. If
-``ty`` is a vector floating point type, ``ty2`` must be a vector integer
+``ty`` is a vector floating-point type, ``ty2`` must be a vector integer
 type with the same number of elements as ``ty``
 
 Semantics:
 """"""""""
 
-The '``fptoui``' instruction converts its :ref:`floating
-point <t_floating>` operand into the nearest (rounding towards zero)
-unsigned integer value. If the value cannot fit in ``ty2``, the results
-are undefined.
+The '``fptoui``' instruction converts its :ref:`floating-point
+<t_floating>` operand into the nearest (rounding towards zero)
+unsigned integer value. If the value cannot fit in ``ty2``, the result
+is a :ref:`poison value <poisonvalues>`.
 
 Example:
 """"""""
@@ -8411,25 +8854,25 @@ Syntax:
 Overview:
 """""""""
 
-The '``fptosi``' instruction converts :ref:`floating point <t_floating>`
+The '``fptosi``' instruction converts :ref:`floating-point <t_floating>`
 ``value`` to type ``ty2``.
 
 Arguments:
 """"""""""
 
 The '``fptosi``' instruction takes a value to cast, which must be a
-scalar or vector :ref:`floating point <t_floating>` value, and a type to
+scalar or vector :ref:`floating-point <t_floating>` value, and a type to
 cast it to ``ty2``, which must be an :ref:`integer <t_integer>` type. If
-``ty`` is a vector floating point type, ``ty2`` must be a vector integer
+``ty`` is a vector floating-point type, ``ty2`` must be a vector integer
 type with the same number of elements as ``ty``
 
 Semantics:
 """"""""""
 
-The '``fptosi``' instruction converts its :ref:`floating
-point <t_floating>` operand into the nearest (rounding towards zero)
-signed integer value. If the value cannot fit in ``ty2``, the results
-are undefined.
+The '``fptosi``' instruction converts its :ref:`floating-point
+<t_floating>` operand into the nearest (rounding towards zero)
+signed integer value. If the value cannot fit in ``ty2``, the result
+is a :ref:`poison value <poisonvalues>`.
 
 Example:
 """"""""
@@ -8461,17 +8904,18 @@ Arguments:
 
 The '``uitofp``' instruction takes a value to cast, which must be a
 scalar or vector :ref:`integer <t_integer>` value, and a type to cast it to
-``ty2``, which must be an :ref:`floating point <t_floating>` type. If
-``ty`` is a vector integer type, ``ty2`` must be a vector floating point
+``ty2``, which must be an :ref:`floating-point <t_floating>` type. If
+``ty`` is a vector integer type, ``ty2`` must be a vector floating-point
 type with the same number of elements as ``ty``
 
 Semantics:
 """"""""""
 
 The '``uitofp``' instruction interprets its operand as an unsigned
-integer quantity and converts it to the corresponding floating point
-value. If the value cannot fit in the floating point value, the results
-are undefined.
+integer quantity and converts it to the corresponding floating-point
+value. If the value cannot be exactly represented, it is rounded using
+the default rounding mode.
+
 
 Example:
 """"""""
@@ -8502,17 +8946,17 @@ Arguments:
 
 The '``sitofp``' instruction takes a value to cast, which must be a
 scalar or vector :ref:`integer <t_integer>` value, and a type to cast it to
-``ty2``, which must be an :ref:`floating point <t_floating>` type. If
-``ty`` is a vector integer type, ``ty2`` must be a vector floating point
+``ty2``, which must be an :ref:`floating-point <t_floating>` type. If
+``ty`` is a vector integer type, ``ty2`` must be a vector floating-point
 type with the same number of elements as ``ty``
 
 Semantics:
 """"""""""
 
 The '``sitofp``' instruction interprets its operand as a signed integer
-quantity and converts it to the corresponding floating point value. If
-the value cannot fit in the floating point value, the results are
-undefined.
+quantity and converts it to the corresponding floating-point value. If the
+value cannot be exactly represented, it is rounded using the default rounding
+mode.
 
 Example:
 """"""""
@@ -8824,10 +9268,10 @@ Overview:
 The '``fcmp``' instruction returns a boolean value or vector of boolean
 values based on comparison of its operands.
 
-If the operands are floating point scalars, then the result type is a
+If the operands are floating-point scalars, then the result type is a
 boolean (:ref:`i1 <t_integer>`).
 
-If the operands are floating point vectors, then the result type is a
+If the operands are floating-point vectors, then the result type is a
 vector of boolean with the same number of elements as the operands being
 compared.
 
@@ -8858,9 +9302,9 @@ not a value, just a keyword. The possible condition codes are:
 *Ordered* means that neither operand is a QNAN while *unordered* means
 that either operand may be a QNAN.
 
-Each of ``val1`` and ``val2`` arguments must be either a :ref:`floating
-point <t_floating>` type or a :ref:`vector <t_vector>` of floating point
-type. They must have identical types.
+Each of ``val1`` and ``val2`` arguments must be either a :ref:`floating-point
+<t_floating>` type or a :ref:`vector <t_vector>` of floating-point type.
+They must have identical types.
 
 Semantics:
 """"""""""
@@ -8901,12 +9345,12 @@ always yields an :ref:`i1 <t_integer>` result, as follows:
 
 The ``fcmp`` instruction can also optionally take any number of
 :ref:`fast-math flags <fastmath>`, which are optimization hints to enable
-otherwise unsafe floating point optimizations.
+otherwise unsafe floating-point optimizations.
 
 Any set of fast-math flags are legal on an ``fcmp`` instruction, but the
 only flags that have any effect on its semantics are those that allow
 assumptions to be made about the values of input arguments; namely
-``nnan``, ``ninf``, and ``nsz``. See :ref:`fastmath` for more information.
+``nnan``, ``ninf``, and ``reassoc``. See :ref:`fastmath` for more information.
 
 Example:
 """"""""
@@ -9053,9 +9497,11 @@ This instruction requires several arguments:
    #. Arguments with the :ref:`inalloca <attr_inalloca>` attribute are
       forwarded in place.
 
-   Both markers imply that the callee does not access allocas or varargs from
-   the caller. Calls marked ``musttail`` must obey the following additional
-   rules:
+   Both markers imply that the callee does not access allocas from the caller.
+   The ``tail`` marker additionally implies that the callee does not access
+   varargs from the caller, while ``musttail`` implies that varargs from the
+   caller are passed to the callee. Calls marked ``musttail`` must obey the
+   following additional  rules:
 
    - The call must immediately precede a :ref:`ret <i_ret>` instruction,
      or a pointer bitcast followed by a ret instruction.
@@ -10359,9 +10805,9 @@ support all bit widths however.
 ::
 
       declare void @llvm.memcpy.p0i8.p0i8.i32(i8* <dest>, i8* <src>,
-                                              i32 <len>, i32 <align>, i1 <isvolatile>)
+                                              i32 <len>, i1 <isvolatile>)
       declare void @llvm.memcpy.p0i8.p0i8.i64(i8* <dest>, i8* <src>,
-                                              i64 <len>, i32 <align>, i1 <isvolatile>)
+                                              i64 <len>, i1 <isvolatile>)
 
 Overview:
 """""""""
@@ -10370,7 +10816,7 @@ The '``llvm.memcpy.*``' intrinsics copy a block of memory from the
 source location to the destination location.
 
 Note that, unlike the standard libc function, the ``llvm.memcpy.*``
-intrinsics do not return a value, takes extra alignment/isvolatile
+intrinsics do not return a value, takes extra isvolatile
 arguments and the pointers can be in specified address spaces.
 
 Arguments:
@@ -10378,13 +10824,11 @@ Arguments:
 
 The first argument is a pointer to the destination, the second is a
 pointer to the source. The third argument is an integer argument
-specifying the number of bytes to copy, the fourth argument is the
-alignment of the source and destination locations, and the fifth is a
+specifying the number of bytes to copy, and the fourth is a
 boolean indicating a volatile access.
 
-If the call to this intrinsic has an alignment value that is not 0 or 1,
-then the caller guarantees that both the source and destination pointers
-are aligned to that boundary.
+The :ref:`align <attr_align>` parameter attribute can be provided
+for the first and second arguments.
 
 If the ``isvolatile`` parameter is ``true``, the ``llvm.memcpy`` call is
 a :ref:`volatile operation <volatile>`. The detailed access behavior is not
@@ -10414,9 +10858,9 @@ bit widths however.
 ::
 
       declare void @llvm.memmove.p0i8.p0i8.i32(i8* <dest>, i8* <src>,
-                                               i32 <len>, i32 <align>, i1 <isvolatile>)
+                                               i32 <len>, i1 <isvolatile>)
       declare void @llvm.memmove.p0i8.p0i8.i64(i8* <dest>, i8* <src>,
-                                               i64 <len>, i32 <align>, i1 <isvolatile>)
+                                               i64 <len>, i1 <isvolatile>)
 
 Overview:
 """""""""
@@ -10427,21 +10871,19 @@ source location to the destination location. It is similar to the
 overlap.
 
 Note that, unlike the standard libc function, the ``llvm.memmove.*``
-intrinsics do not return a value, takes extra alignment/isvolatile
-arguments and the pointers can be in specified address spaces.
+intrinsics do not return a value, takes an extra isvolatile
+argument and the pointers can be in specified address spaces.
 
 Arguments:
 """"""""""
 
 The first argument is a pointer to the destination, the second is a
 pointer to the source. The third argument is an integer argument
-specifying the number of bytes to copy, the fourth argument is the
-alignment of the source and destination locations, and the fifth is a
+specifying the number of bytes to copy, and the fourth is a
 boolean indicating a volatile access.
 
-If the call to this intrinsic has an alignment value that is not 0 or 1,
-then the caller guarantees that the source and destination pointers are
-aligned to that boundary.
+The :ref:`align <attr_align>` parameter attribute can be provided
+for the first and second arguments.
 
 If the ``isvolatile`` parameter is ``true``, the ``llvm.memmove`` call
 is a :ref:`volatile operation <volatile>`. The detailed access behavior is
@@ -10471,9 +10913,9 @@ support all bit widths.
 ::
 
       declare void @llvm.memset.p0i8.i32(i8* <dest>, i8 <val>,
-                                         i32 <len>, i32 <align>, i1 <isvolatile>)
+                                         i32 <len>, i1 <isvolatile>)
       declare void @llvm.memset.p0i8.i64(i8* <dest>, i8 <val>,
-                                         i64 <len>, i32 <align>, i1 <isvolatile>)
+                                         i64 <len>, i1 <isvolatile>)
 
 Overview:
 """""""""
@@ -10482,8 +10924,8 @@ The '``llvm.memset.*``' intrinsics fill a block of memory with a
 particular byte value.
 
 Note that, unlike the standard libc function, the ``llvm.memset``
-intrinsic does not return a value and takes extra alignment/volatile
-arguments. Also, the destination can be in an arbitrary address space.
+intrinsic does not return a value and takes an extra volatile
+argument. Also, the destination can be in an arbitrary address space.
 
 Arguments:
 """"""""""
@@ -10491,11 +10933,10 @@ Arguments:
 The first argument is a pointer to the destination to fill, the second
 is the byte value with which to fill it, the third argument is an
 integer argument specifying the number of bytes to fill, and the fourth
-argument is the known alignment of the destination location.
+is a boolean indicating a volatile access.
 
-If the call to this intrinsic has an alignment value that is not 0 or 1,
-then the caller guarantees that the destination pointer is aligned to
-that boundary.
+The :ref:`align <attr_align>` parameter attribute can be provided
+for the first arguments.
 
 If the ``isvolatile`` parameter is ``true``, the ``llvm.memset`` call is
 a :ref:`volatile operation <volatile>`. The detailed access behavior is not
@@ -10505,9 +10946,7 @@ Semantics:
 """"""""""
 
 The '``llvm.memset.*``' intrinsics fill "len" bytes of memory starting
-at the destination location. If the argument is known to be aligned to
-some boundary, this can be specified as the fourth argument, otherwise
-it should be set to 0 or 1 (both meaning no alignment).
+at the destination location.
 
 '``llvm.sqrt.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -10541,10 +10980,10 @@ Semantics:
 """"""""""
 
 Return the same value as a corresponding libm '``sqrt``' function but without
-trapping or setting ``errno``. For types specified by IEEE-754, the result 
+trapping or setting ``errno``. For types specified by IEEE-754, the result
 matches a conforming libm implementation.
 
-When specified with the fast-math-flag 'afn', the result may be approximated 
+When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
 
 '``llvm.powi.*``' Intrinsic
@@ -10554,7 +10993,7 @@ Syntax:
 """""""
 
 This is an overloaded intrinsic. You can use ``llvm.powi`` on any
-floating point or vector of floating point type. Not all targets support
+floating-point or vector of floating-point type. Not all targets support
 all types however.
 
 ::
@@ -10570,7 +11009,7 @@ Overview:
 
 The '``llvm.powi.*``' intrinsics return the first operand raised to the
 specified (positive or negative) power. The order of evaluation of
-multiplications is not defined. When a vector of floating point type is
+multiplications is not defined. When a vector of floating-point type is
 used, the second argument remains a scalar integer value.
 
 Arguments:
@@ -10619,7 +11058,7 @@ Semantics:
 Return the same value as a corresponding libm '``sin``' function but without
 trapping or setting ``errno``.
 
-When specified with the fast-math-flag 'afn', the result may be approximated 
+When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
 
 '``llvm.cos.*``' Intrinsic
@@ -10656,7 +11095,7 @@ Semantics:
 Return the same value as a corresponding libm '``cos``' function but without
 trapping or setting ``errno``.
 
-When specified with the fast-math-flag 'afn', the result may be approximated 
+When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
 
 '``llvm.pow.*``' Intrinsic
@@ -10694,7 +11133,7 @@ Semantics:
 Return the same value as a corresponding libm '``pow``' function but without
 trapping or setting ``errno``.
 
-When specified with the fast-math-flag 'afn', the result may be approximated 
+When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
 
 '``llvm.exp.*``' Intrinsic
@@ -10732,7 +11171,7 @@ Semantics:
 Return the same value as a corresponding libm '``exp``' function but without
 trapping or setting ``errno``.
 
-When specified with the fast-math-flag 'afn', the result may be approximated 
+When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
 
 '``llvm.exp2.*``' Intrinsic
@@ -10770,7 +11209,7 @@ Semantics:
 Return the same value as a corresponding libm '``exp2``' function but without
 trapping or setting ``errno``.
 
-When specified with the fast-math-flag 'afn', the result may be approximated 
+When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
 
 '``llvm.log.*``' Intrinsic
@@ -10808,7 +11247,7 @@ Semantics:
 Return the same value as a corresponding libm '``log``' function but without
 trapping or setting ``errno``.
 
-When specified with the fast-math-flag 'afn', the result may be approximated 
+When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
 
 '``llvm.log10.*``' Intrinsic
@@ -10846,7 +11285,7 @@ Semantics:
 Return the same value as a corresponding libm '``log10``' function but without
 trapping or setting ``errno``.
 
-When specified with the fast-math-flag 'afn', the result may be approximated 
+When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
 
 '``llvm.log2.*``' Intrinsic
@@ -10884,7 +11323,7 @@ Semantics:
 Return the same value as a corresponding libm '``log2``' function but without
 trapping or setting ``errno``.
 
-When specified with the fast-math-flag 'afn', the result may be approximated 
+When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
 
 '``llvm.fma.*``' Intrinsic
@@ -10921,7 +11360,7 @@ Semantics:
 Return the same value as a corresponding libm '``fma``' function but without
 trapping or setting ``errno``.
 
-When specified with the fast-math-flag 'afn', the result may be approximated 
+When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
 
 '``llvm.fabs.*``' Intrinsic
@@ -10931,7 +11370,7 @@ Syntax:
 """""""
 
 This is an overloaded intrinsic. You can use ``llvm.fabs`` on any
-floating point or vector of floating point type. Not all targets support
+floating-point or vector of floating-point type. Not all targets support
 all types however.
 
 ::
@@ -10951,7 +11390,7 @@ operand.
 Arguments:
 """"""""""
 
-The argument and return value are floating point numbers of the same
+The argument and return value are floating-point numbers of the same
 type.
 
 Semantics:
@@ -10967,7 +11406,7 @@ Syntax:
 """""""
 
 This is an overloaded intrinsic. You can use ``llvm.minnum`` on any
-floating point or vector of floating point type. Not all targets support
+floating-point or vector of floating-point type. Not all targets support
 all types however.
 
 ::
@@ -10988,7 +11427,7 @@ arguments.
 Arguments:
 """"""""""
 
-The arguments and return value are floating point numbers of the same
+The arguments and return value are floating-point numbers of the same
 type.
 
 Semantics:
@@ -11009,7 +11448,7 @@ Syntax:
 """""""
 
 This is an overloaded intrinsic. You can use ``llvm.maxnum`` on any
-floating point or vector of floating point type. Not all targets support
+floating-point or vector of floating-point type. Not all targets support
 all types however.
 
 ::
@@ -11030,7 +11469,7 @@ arguments.
 Arguments:
 """"""""""
 
-The arguments and return value are floating point numbers of the same
+The arguments and return value are floating-point numbers of the same
 type.
 
 Semantics:
@@ -11050,7 +11489,7 @@ Syntax:
 """""""
 
 This is an overloaded intrinsic. You can use ``llvm.copysign`` on any
-floating point or vector of floating point type. Not all targets support
+floating-point or vector of floating-point type. Not all targets support
 all types however.
 
 ::
@@ -11070,7 +11509,7 @@ first operand and the sign of the second operand.
 Arguments:
 """"""""""
 
-The arguments and return value are floating point numbers of the same
+The arguments and return value are floating-point numbers of the same
 type.
 
 Semantics:
@@ -11086,7 +11525,7 @@ Syntax:
 """""""
 
 This is an overloaded intrinsic. You can use ``llvm.floor`` on any
-floating point or vector of floating point type. Not all targets support
+floating-point or vector of floating-point type. Not all targets support
 all types however.
 
 ::
@@ -11105,7 +11544,7 @@ The '``llvm.floor.*``' intrinsics return the floor of the operand.
 Arguments:
 """"""""""
 
-The argument and return value are floating point numbers of the same
+The argument and return value are floating-point numbers of the same
 type.
 
 Semantics:
@@ -11121,7 +11560,7 @@ Syntax:
 """""""
 
 This is an overloaded intrinsic. You can use ``llvm.ceil`` on any
-floating point or vector of floating point type. Not all targets support
+floating-point or vector of floating-point type. Not all targets support
 all types however.
 
 ::
@@ -11140,7 +11579,7 @@ The '``llvm.ceil.*``' intrinsics return the ceiling of the operand.
 Arguments:
 """"""""""
 
-The argument and return value are floating point numbers of the same
+The argument and return value are floating-point numbers of the same
 type.
 
 Semantics:
@@ -11156,7 +11595,7 @@ Syntax:
 """""""
 
 This is an overloaded intrinsic. You can use ``llvm.trunc`` on any
-floating point or vector of floating point type. Not all targets support
+floating-point or vector of floating-point type. Not all targets support
 all types however.
 
 ::
@@ -11176,7 +11615,7 @@ nearest integer not larger in magnitude than the operand.
 Arguments:
 """"""""""
 
-The argument and return value are floating point numbers of the same
+The argument and return value are floating-point numbers of the same
 type.
 
 Semantics:
@@ -11192,7 +11631,7 @@ Syntax:
 """""""
 
 This is an overloaded intrinsic. You can use ``llvm.rint`` on any
-floating point or vector of floating point type. Not all targets support
+floating-point or vector of floating-point type. Not all targets support
 all types however.
 
 ::
@@ -11213,7 +11652,7 @@ operand isn't an integer.
 Arguments:
 """"""""""
 
-The argument and return value are floating point numbers of the same
+The argument and return value are floating-point numbers of the same
 type.
 
 Semantics:
@@ -11229,7 +11668,7 @@ Syntax:
 """""""
 
 This is an overloaded intrinsic. You can use ``llvm.nearbyint`` on any
-floating point or vector of floating point type. Not all targets support
+floating-point or vector of floating-point type. Not all targets support
 all types however.
 
 ::
@@ -11249,7 +11688,7 @@ nearest integer.
 Arguments:
 """"""""""
 
-The argument and return value are floating point numbers of the same
+The argument and return value are floating-point numbers of the same
 type.
 
 Semantics:
@@ -11265,7 +11704,7 @@ Syntax:
 """""""
 
 This is an overloaded intrinsic. You can use ``llvm.round`` on any
-floating point or vector of floating point type. Not all targets support
+floating-point or vector of floating-point type. Not all targets support
 all types however.
 
 ::
@@ -11285,7 +11724,7 @@ nearest integer.
 Arguments:
 """"""""""
 
-The argument and return value are floating point numbers of the same
+The argument and return value are floating-point numbers of the same
 type.
 
 Semantics:
@@ -11496,6 +11935,98 @@ then the result is the size in bits of the type of ``src`` if
 ``llvm.cttz(2) = 1``.
 
 .. _int_overflow:
+
+'``llvm.fshl.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.fshl`` on any
+integer bit width or any vector of integer elements. Not all targets
+support all bit widths or vector types, however.
+
+::
+
+      declare i8  @llvm.fshl.i8 (i8 %a, i8 %b, i8 %c)
+      declare i67 @llvm.fshl.i67(i67 %a, i67 %b, i67 %c)
+      declare <2 x i32> @llvm.fshl.v2i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c)
+
+Overview:
+"""""""""
+
+The '``llvm.fshl``' family of intrinsic functions performs a funnel shift left:
+the first two values are concatenated as { %a : %b } (%a is the most significant
+bits of the wide value), the combined value is shifted left, and the most 
+significant bits are extracted to produce a result that is the same size as the 
+original arguments. If the first 2 arguments are identical, this is equivalent 
+to a rotate left operation. For vector types, the operation occurs for each 
+element of the vector. The shift argument is treated as an unsigned amount 
+modulo the element size of the arguments.
+
+Arguments:
+""""""""""
+
+The first two arguments are the values to be concatenated. The third
+argument is the shift amount. The arguments may be any integer type or a
+vector with integer element type. All arguments and the return value must
+have the same type.
+
+Example:
+""""""""
+
+.. code-block:: text
+
+      %r = call i8 @llvm.fshl.i8(i8 %x, i8 %y, i8 %z)  ; %r = i8: msb_extract((concat(x, y) << (z % 8)), 8)
+      %r = call i8 @llvm.fshl.i8(i8 255, i8 0, i8 15)  ; %r = i8: 128 (0b10000000)
+      %r = call i8 @llvm.fshl.i8(i8 15, i8 15, i8 11)  ; %r = i8: 120 (0b01111000)
+      %r = call i8 @llvm.fshl.i8(i8 0, i8 255, i8 8)   ; %r = i8: 0   (0b00000000)
+
+'``llvm.fshr.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.fshr`` on any
+integer bit width or any vector of integer elements. Not all targets
+support all bit widths or vector types, however.
+
+::
+
+      declare i8  @llvm.fshr.i8 (i8 %a, i8 %b, i8 %c)
+      declare i67 @llvm.fshr.i67(i67 %a, i67 %b, i67 %c)
+      declare <2 x i32> @llvm.fshr.v2i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c)
+
+Overview:
+"""""""""
+
+The '``llvm.fshr``' family of intrinsic functions performs a funnel shift right:
+the first two values are concatenated as { %a : %b } (%a is the most significant
+bits of the wide value), the combined value is shifted right, and the least 
+significant bits are extracted to produce a result that is the same size as the 
+original arguments. If the first 2 arguments are identical, this is equivalent 
+to a rotate right operation. For vector types, the operation occurs for each 
+element of the vector. The shift argument is treated as an unsigned amount 
+modulo the element size of the arguments.
+
+Arguments:
+""""""""""
+
+The first two arguments are the values to be concatenated. The third
+argument is the shift amount. The arguments may be any integer type or a
+vector with integer element type. All arguments and the return value must
+have the same type.
+
+Example:
+""""""""
+
+.. code-block:: text
+
+      %r = call i8 @llvm.fshr.i8(i8 %x, i8 %y, i8 %z)  ; %r = i8: lsb_extract((concat(x, y) >> (z % 8)), 8)
+      %r = call i8 @llvm.fshr.i8(i8 255, i8 0, i8 15)  ; %r = i8: 254 (0b11111110)
+      %r = call i8 @llvm.fshr.i8(i8 15, i8 15, i8 11)  ; %r = i8: 225 (0b11100001)
+      %r = call i8 @llvm.fshr.i8(i8 0, i8 255, i8 8)   ; %r = i8: 255 (0b11111111)
 
 Arithmetic with Overflow Intrinsics
 -----------------------------------
@@ -11838,7 +12369,7 @@ Overview:
 """""""""
 
 The '``llvm.canonicalize.*``' intrinsic returns the platform specific canonical
-encoding of a floating point number. This canonicalization is useful for
+encoding of a floating-point number. This canonicalization is useful for
 implementing certain numeric primitives such as frexp. The canonical encoding is
 defined by IEEE-754-2008 to be:
 
@@ -11856,7 +12387,7 @@ Examples of non-canonical encodings:
 
 - x87 pseudo denormals, pseudo NaNs, pseudo Infinity, Unnormals. These are
   converted to a canonical representation per hardware-specific protocol.
-- Many normal decimal floating point numbers have non-canonical alternative
+- Many normal decimal floating-point numbers have non-canonical alternative
   encodings.
 - Some machines, like GPUs or ARMv7 NEON, do not support subnormal values.
   These are treated as non-canonical encodings of zero and will be flushed to
@@ -11890,7 +12421,7 @@ The canonicalization operation may be optimized away if:
 - The input is known to be canonical. For example, it was produced by a
   floating-point operation that is required by the standard to be canonical.
 - The result is consumed only by (or fused with) other floating-point
-  operations. That is, the bits of the floating point value are not examined.
+  operations. That is, the bits of the floating-point value are not examined.
 
 '``llvm.fmuladd.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -11987,7 +12518,7 @@ Syntax:
 Overview:
 """""""""
 
-The '``llvm.experimental.vector.reduce.fadd.*``' intrinsics do a floating point
+The '``llvm.experimental.vector.reduce.fadd.*``' intrinsics do a floating-point
 ``ADD`` reduction of a vector, returning the result as a scalar. The return type
 matches the element-type of the vector input.
 
@@ -12003,7 +12534,7 @@ The first argument to this intrinsic is a scalar accumulator value, which is
 only used when there are no fast-math flags attached. This argument may be undef
 when fast-math flags are used.
 
-The second argument must be a vector of floating point values.
+The second argument must be a vector of floating-point values.
 
 Examples:
 """""""""
@@ -12050,7 +12581,7 @@ Syntax:
 Overview:
 """""""""
 
-The '``llvm.experimental.vector.reduce.fmul.*``' intrinsics do a floating point
+The '``llvm.experimental.vector.reduce.fmul.*``' intrinsics do a floating-point
 ``MUL`` reduction of a vector, returning the result as a scalar. The return type
 matches the element-type of the vector input.
 
@@ -12066,7 +12597,7 @@ The first argument to this intrinsic is a scalar accumulator value, which is
 only used when there are no fast-math flags attached. This argument may be undef
 when fast-math flags are used.
 
-The second argument must be a vector of floating point values.
+The second argument must be a vector of floating-point values.
 
 Examples:
 """""""""
@@ -12237,7 +12768,7 @@ Syntax:
 Overview:
 """""""""
 
-The '``llvm.experimental.vector.reduce.fmax.*``' intrinsics do a floating point
+The '``llvm.experimental.vector.reduce.fmax.*``' intrinsics do a floating-point
 ``MAX`` reduction of a vector, returning the result as a scalar. The return type
 matches the element-type of the vector input.
 
@@ -12246,7 +12777,7 @@ assume that NaNs are not present in the input vector.
 
 Arguments:
 """"""""""
-The argument to this intrinsic must be a vector of floating point values.
+The argument to this intrinsic must be a vector of floating-point values.
 
 '``llvm.experimental.vector.reduce.fmin.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -12262,7 +12793,7 @@ Syntax:
 Overview:
 """""""""
 
-The '``llvm.experimental.vector.reduce.fmin.*``' intrinsics do a floating point
+The '``llvm.experimental.vector.reduce.fmin.*``' intrinsics do a floating-point
 ``MIN`` reduction of a vector, returning the result as a scalar. The return type
 matches the element-type of the vector input.
 
@@ -12271,16 +12802,16 @@ assume that NaNs are not present in the input vector.
 
 Arguments:
 """"""""""
-The argument to this intrinsic must be a vector of floating point values.
+The argument to this intrinsic must be a vector of floating-point values.
 
-Half Precision Floating Point Intrinsics
+Half Precision Floating-Point Intrinsics
 ----------------------------------------
 
-For most target platforms, half precision floating point is a
+For most target platforms, half precision floating-point is a
 storage-only format. This means that it is a dense encoding (in memory)
 but does not support computation in the format.
 
-This means that code must first load the half-precision floating point
+This means that code must first load the half-precision floating-point
 value as an i16, then convert it to float with
 :ref:`llvm.convert.from.fp16 <int_convert_from_fp16>`. Computation can
 then be performed on the float value (including extending to double
@@ -12306,7 +12837,7 @@ Overview:
 """""""""
 
 The '``llvm.convert.to.fp16``' intrinsic function performs a conversion from a
-conventional floating point type to half precision floating point format.
+conventional floating-point type to half precision floating-point format.
 
 Arguments:
 """"""""""
@@ -12318,7 +12849,7 @@ Semantics:
 """"""""""
 
 The '``llvm.convert.to.fp16``' intrinsic function performs a conversion from a
-conventional floating point format to half precision floating point format. The
+conventional floating-point format to half precision floating-point format. The
 return value is an ``i16`` which contains the converted number.
 
 Examples:
@@ -12346,8 +12877,8 @@ Overview:
 """""""""
 
 The '``llvm.convert.from.fp16``' intrinsic function performs a
-conversion from half precision floating point format to single precision
-floating point format.
+conversion from half precision floating-point format to single precision
+floating-point format.
 
 Arguments:
 """"""""""
@@ -12359,8 +12890,8 @@ Semantics:
 """"""""""
 
 The '``llvm.convert.from.fp16``' intrinsic function performs a
-conversion from half single precision floating point format to single
-precision floating point format. The input half-float value is
+conversion from half single precision floating-point format to single
+precision floating-point format. The input half-float value is
 represented by an ``i16`` value.
 
 Examples:
@@ -12511,7 +13042,7 @@ LLVM provides intrinsics for predicated vector load and store operations. The pr
 
 Syntax:
 """""""
-This is an overloaded intrinsic. The loaded data is a vector of any integer, floating point or pointer data type.
+This is an overloaded intrinsic. The loaded data is a vector of any integer, floating-point or pointer data type.
 
 ::
 
@@ -12556,7 +13087,7 @@ The result of this operation is equivalent to a regular vector load instruction 
 
 Syntax:
 """""""
-This is an overloaded intrinsic. The data stored in memory is a vector of any integer, floating point or pointer data type.
+This is an overloaded intrinsic. The data stored in memory is a vector of any integer, floating-point or pointer data type.
 
 ::
 
@@ -12606,7 +13137,7 @@ LLVM provides intrinsics for vector gather and scatter operations. They are simi
 
 Syntax:
 """""""
-This is an overloaded intrinsic. The loaded data are multiple scalar values of any integer, floating point or pointer data type gathered together into one vector.
+This is an overloaded intrinsic. The loaded data are multiple scalar values of any integer, floating-point or pointer data type gathered together into one vector.
 
 ::
 
@@ -12660,7 +13191,7 @@ The semantics of this operation are equivalent to a sequence of conditional scal
 
 Syntax:
 """""""
-This is an overloaded intrinsic. The data stored in memory is a vector of any integer, floating point or pointer data type. Each vector element is stored in an arbitrary memory address. Scatter with overlapping addresses is guaranteed to be ordered from least-significant to most-significant element.
+This is an overloaded intrinsic. The data stored in memory is a vector of any integer, floating-point or pointer data type. Each vector element is stored in an arbitrary memory address. Scatter with overlapping addresses is guaranteed to be ordered from least-significant to most-significant element.
 
 ::
 
@@ -12703,6 +13234,126 @@ The '``llvm.masked.scatter``' intrinsics is designed for writing selected vector
        store i32 %val1, i32* %ptr1, align 4
        ..
        store i32 %val7, i32* %ptr7, align 4
+
+
+Masked Vector Expanding Load and Compressing Store Intrinsics
+-------------------------------------------------------------
+
+LLVM provides intrinsics for expanding load and compressing store operations. Data selected from a vector according to a mask is stored in consecutive memory addresses (compressed store), and vice-versa (expanding load). These operations effective map to "if (cond.i) a[j++] = v.i" and "if (cond.i) v.i = a[j++]" patterns, respectively. Note that when the mask starts with '1' bits followed by '0' bits, these operations are identical to :ref:`llvm.masked.store <int_mstore>` and :ref:`llvm.masked.load <int_mload>`.
+
+.. _int_expandload:
+
+'``llvm.masked.expandload.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic. Several values of integer, floating point or pointer data type are loaded from consecutive memory addresses and stored into the elements of a vector according to the mask.
+
+::
+
+      declare <16 x float>  @llvm.masked.expandload.v16f32 (float* <ptr>, <16 x i1> <mask>, <16 x float> <passthru>)
+      declare <2 x i64>     @llvm.masked.expandload.v2i64 (i64* <ptr>, <2 x i1>  <mask>, <2 x i64> <passthru>)
+
+Overview:
+"""""""""
+
+Reads a number of scalar values sequentially from memory location provided in '``ptr``' and spreads them in a vector. The '``mask``' holds a bit for each vector lane. The number of elements read from memory is equal to the number of '1' bits in the mask. The loaded elements are positioned in the destination vector according to the sequence of '1' and '0' bits in the mask. E.g., if the mask vector is '10010001', "explandload" reads 3 values from memory addresses ptr, ptr+1, ptr+2 and places them in lanes 0, 3 and 7 accordingly. The masked-off lanes are filled by elements from the corresponding lanes of the '``passthru``' operand.
+
+
+Arguments:
+""""""""""
+
+The first operand is the base pointer for the load. It has the same underlying type as the element of the returned vector. The second operand, mask, is a vector of boolean values with the same number of elements as the return type. The third is a pass-through value that is used to fill the masked-off lanes of the result. The return type and the type of the '``passthru``' operand have the same vector type.
+
+Semantics:
+""""""""""
+
+The '``llvm.masked.expandload``' intrinsic is designed for reading multiple scalar values from adjacent memory addresses into possibly non-adjacent vector lanes. It is useful for targets that support vector expanding loads and allows vectorizing loop with cross-iteration dependency like in the following example:
+
+.. code-block:: c
+
+    // In this loop we load from B and spread the elements into array A.
+    double *A, B; int *C;
+    for (int i = 0; i < size; ++i) {
+      if (C[i] != 0)
+        A[i] = B[j++];
+    }
+
+
+.. code-block:: llvm
+
+    ; Load several elements from array B and expand them in a vector.
+    ; The number of loaded elements is equal to the number of '1' elements in the Mask.
+    %Tmp = call <8 x double> @llvm.masked.expandload.v8f64(double* %Bptr, <8 x i1> %Mask, <8 x double> undef)
+    ; Store the result in A
+    call void @llvm.masked.store.v8f64.p0v8f64(<8 x double> %Tmp, <8 x double>* %Aptr, i32 8, <8 x i1> %Mask)
+    
+    ; %Bptr should be increased on each iteration according to the number of '1' elements in the Mask.
+    %MaskI = bitcast <8 x i1> %Mask to i8
+    %MaskIPopcnt = call i8 @llvm.ctpop.i8(i8 %MaskI)
+    %MaskI64 = zext i8 %MaskIPopcnt to i64
+    %BNextInd = add i64 %BInd, %MaskI64
+
+
+Other targets may support this intrinsic differently, for example, by lowering it into a sequence of conditional scalar load operations and shuffles.
+If all mask elements are '1', the intrinsic behavior is equivalent to the regular unmasked vector load.
+
+.. _int_compressstore:
+
+'``llvm.masked.compressstore.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic. A number of scalar values of integer, floating point or pointer data type are collected from an input vector and stored into adjacent memory addresses. A mask defines which elements to collect from the vector.
+
+::
+
+      declare void @llvm.masked.compressstore.v8i32  (<8  x i32>   <value>, i32*   <ptr>, <8  x i1> <mask>)
+      declare void @llvm.masked.compressstore.v16f32 (<16 x float> <value>, float* <ptr>, <16 x i1> <mask>)
+
+Overview:
+"""""""""
+
+Selects elements from input vector '``value``' according to the '``mask``'. All selected elements are written into adjacent memory addresses starting at address '`ptr`', from lower to higher. The mask holds a bit for each vector lane, and is used to select elements to be stored. The number of elements to be stored is equal to the number of active bits in the mask.
+
+Arguments:
+""""""""""
+
+The first operand is the input vector, from which elements are collected and written to memory. The second operand is the base pointer for the store, it has the same underlying type as the element of the input vector operand. The third operand is the mask, a vector of boolean values. The mask and the input vector must have the same number of vector elements.
+
+
+Semantics:
+""""""""""
+
+The '``llvm.masked.compressstore``' intrinsic is designed for compressing data in memory. It allows to collect elements from possibly non-adjacent lanes of a vector and store them contiguously in memory in one IR operation. It is useful for targets that support compressing store operations and allows vectorizing loops with cross-iteration dependences like in the following example:
+
+.. code-block:: c
+
+    // In this loop we load elements from A and store them consecutively in B
+    double *A, B; int *C;
+    for (int i = 0; i < size; ++i) {
+      if (C[i] != 0)
+        B[j++] = A[i]
+    }
+
+
+.. code-block:: llvm
+
+    ; Load elements from A.
+    %Tmp = call <8 x double> @llvm.masked.load.v8f64.p0v8f64(<8 x double>* %Aptr, i32 8, <8 x i1> %Mask, <8 x double> undef)
+    ; Store all selected elements consecutively in array B
+    call <void> @llvm.masked.compressstore.v8f64(<8 x double> %Tmp, double* %Bptr, <8 x i1> %Mask)
+    
+    ; %Bptr should be increased on each iteration according to the number of '1' elements in the Mask.
+    %MaskI = bitcast <8 x i1> %Mask to i8
+    %MaskIPopcnt = call i8 @llvm.ctpop.i8(i8 %MaskI)
+    %MaskI64 = zext i8 %MaskIPopcnt to i64
+    %BNextInd = add i64 %BInd, %MaskI64
+
+
+Other targets may support this intrinsic differently, for example, by lowering it into a sequence of branches that guard scalar store operations.
 
 
 Memory Use Markers
@@ -12838,7 +13489,7 @@ Semantics:
 
 This intrinsic indicates that the memory is mutable again.
 
-'``llvm.invariant.group.barrier``' Intrinsic
+'``llvm.launder.invariant.group``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
@@ -12849,40 +13500,82 @@ argument.
 
 ::
 
-      declare i8* @llvm.invariant.group.barrier.p0i8(i8* <ptr>)
+      declare i8* @llvm.launder.invariant.group.p0i8(i8* <ptr>)
 
 Overview:
 """""""""
 
-The '``llvm.invariant.group.barrier``' intrinsic can be used when an invariant
-established by invariant.group metadata no longer holds, to obtain a new pointer
-value that does not carry the invariant information.
+The '``llvm.launder.invariant.group``' intrinsic can be used when an invariant
+established by ``invariant.group`` metadata no longer holds, to obtain a new
+pointer value that carries fresh invariant group information. It is an
+experimental intrinsic, which means that its semantics might change in the
+future.
 
 
 Arguments:
 """"""""""
 
-The ``llvm.invariant.group.barrier`` takes only one argument, which is
-the pointer to the memory for which the ``invariant.group`` no longer holds.
+The ``llvm.launder.invariant.group`` takes only one argument, which is a pointer
+to the memory.
 
 Semantics:
 """"""""""
 
 Returns another pointer that aliases its argument but which is considered different
 for the purposes of ``load``/``store`` ``invariant.group`` metadata.
+It does not read any accessible memory and the execution can be speculated.
 
-Constrained Floating Point Intrinsics
+'``llvm.strip.invariant.group``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic. The memory object can belong to any address
+space. The returned pointer must belong to the same address space as the
+argument.
+
+::
+
+      declare i8* @llvm.strip.invariant.group.p0i8(i8* <ptr>)
+
+Overview:
+"""""""""
+
+The '``llvm.strip.invariant.group``' intrinsic can be used when an invariant
+established by ``invariant.group`` metadata no longer holds, to obtain a new pointer
+value that does not carry the invariant information. It is an experimental
+intrinsic, which means that its semantics might change in the future.
+
+
+Arguments:
+""""""""""
+
+The ``llvm.strip.invariant.group`` takes only one argument, which is a pointer
+to the memory.
+
+Semantics:
+""""""""""
+
+Returns another pointer that aliases its argument but which has no associated
+``invariant.group`` metadata.
+It does not read any memory and can be speculated.
+
+
+
+.. _constrainedfp:
+
+Constrained Floating-Point Intrinsics
 -------------------------------------
 
-These intrinsics are used to provide special handling of floating point
-operations when specific rounding mode or floating point exception behavior is
+These intrinsics are used to provide special handling of floating-point
+operations when specific rounding mode or floating-point exception behavior is
 required.  By default, LLVM optimization passes assume that the rounding mode is
-round-to-nearest and that floating point exceptions will not be monitored.
+round-to-nearest and that floating-point exceptions will not be monitored.
 Constrained FP intrinsics are used to support non-default rounding modes and
 accurately preserve exception behavior without compromising LLVM's ability to
 optimize FP code when the default behavior is used.
 
-Each of these intrinsics corresponds to a normal floating point operation.  The
+Each of these intrinsics corresponds to a normal floating-point operation.  The
 first two arguments and the return value are the same as the corresponding FP
 operation.
 
@@ -12917,7 +13610,7 @@ the specified rounding mode, but this is not guaranteed.  Using a specific
 non-dynamic rounding mode which does not match the actual rounding mode at
 runtime results in undefined behavior.
 
-The fourth argument to the constrained floating point intrinsics specifies the
+The fourth argument to the constrained floating-point intrinsics specifies the
 required exception behavior.  This argument must be one of the following
 strings:
 
@@ -12928,7 +13621,7 @@ strings:
       "fpexcept.strict"
 
 If this argument is "fpexcept.ignore" optimization passes may assume that the
-exception status flags will not be read and that floating point exceptions will
+exception status flags will not be read and that floating-point exceptions will
 be masked.  This allows transformations to be performed that may change the
 exception semantics of the original code.  For example, FP operations may be
 speculatively executed in this case whereas they must not be for either of the
@@ -12942,7 +13635,7 @@ original code.  For example, exceptions may be potentially hidden by constant
 folding.
 
 If the exception behavior argument is "fpexcept.strict" all transformations must
-strictly preserve the floating point exception semantics of the original code.
+strictly preserve the floating-point exception semantics of the original code.
 Any FP exception that would have been raised by the original code must be raised
 by the transformed code, and the transformed code must not raise any FP
 exceptions that would not have been raised by the original code.  This is the
@@ -12950,7 +13643,7 @@ exception behavior argument that will be used if the code being compiled reads
 the FP exception status flags, but this mode can also be used with code that
 unmasks FP exceptions.
 
-The number and order of floating point exceptions is NOT guaranteed.  For
+The number and order of floating-point exceptions is NOT guaranteed.  For
 example, a series of FP operations that each may raise exceptions may be
 vectorized into a single instruction that raises each unique exception a single
 time.
@@ -12980,8 +13673,8 @@ Arguments:
 """"""""""
 
 The first two arguments to the '``llvm.experimental.constrained.fadd``'
-intrinsic must be :ref:`floating point <t_floating>` or :ref:`vector <t_vector>`
-of floating point values. Both arguments must have identical types.
+intrinsic must be :ref:`floating-point <t_floating>` or :ref:`vector <t_vector>`
+of floating-point values. Both arguments must have identical types.
 
 The third and fourth arguments specify the rounding mode and exception
 behavior as described above.
@@ -12989,7 +13682,7 @@ behavior as described above.
 Semantics:
 """"""""""
 
-The value produced is the floating point sum of the two value operands and has
+The value produced is the floating-point sum of the two value operands and has
 the same type as the operands.
 
 
@@ -13017,8 +13710,8 @@ Arguments:
 """"""""""
 
 The first two arguments to the '``llvm.experimental.constrained.fsub``'
-intrinsic must be :ref:`floating point <t_floating>` or :ref:`vector <t_vector>`
-of floating point values. Both arguments must have identical types.
+intrinsic must be :ref:`floating-point <t_floating>` or :ref:`vector <t_vector>`
+of floating-point values. Both arguments must have identical types.
 
 The third and fourth arguments specify the rounding mode and exception
 behavior as described above.
@@ -13026,7 +13719,7 @@ behavior as described above.
 Semantics:
 """"""""""
 
-The value produced is the floating point difference of the two value operands
+The value produced is the floating-point difference of the two value operands
 and has the same type as the operands.
 
 
@@ -13054,8 +13747,8 @@ Arguments:
 """"""""""
 
 The first two arguments to the '``llvm.experimental.constrained.fmul``'
-intrinsic must be :ref:`floating point <t_floating>` or :ref:`vector <t_vector>`
-of floating point values. Both arguments must have identical types.
+intrinsic must be :ref:`floating-point <t_floating>` or :ref:`vector <t_vector>`
+of floating-point values. Both arguments must have identical types.
 
 The third and fourth arguments specify the rounding mode and exception
 behavior as described above.
@@ -13063,7 +13756,7 @@ behavior as described above.
 Semantics:
 """"""""""
 
-The value produced is the floating point product of the two value operands and
+The value produced is the floating-point product of the two value operands and
 has the same type as the operands.
 
 
@@ -13091,8 +13784,8 @@ Arguments:
 """"""""""
 
 The first two arguments to the '``llvm.experimental.constrained.fdiv``'
-intrinsic must be :ref:`floating point <t_floating>` or :ref:`vector <t_vector>`
-of floating point values. Both arguments must have identical types.
+intrinsic must be :ref:`floating-point <t_floating>` or :ref:`vector <t_vector>`
+of floating-point values. Both arguments must have identical types.
 
 The third and fourth arguments specify the rounding mode and exception
 behavior as described above.
@@ -13100,7 +13793,7 @@ behavior as described above.
 Semantics:
 """"""""""
 
-The value produced is the floating point quotient of the two value operands and
+The value produced is the floating-point quotient of the two value operands and
 has the same type as the operands.
 
 
@@ -13128,18 +13821,18 @@ Arguments:
 """"""""""
 
 The first two arguments to the '``llvm.experimental.constrained.frem``'
-intrinsic must be :ref:`floating point <t_floating>` or :ref:`vector <t_vector>`
-of floating point values. Both arguments must have identical types.
+intrinsic must be :ref:`floating-point <t_floating>` or :ref:`vector <t_vector>`
+of floating-point values. Both arguments must have identical types.
 
 The third and fourth arguments specify the rounding mode and exception
 behavior as described above.  The rounding mode argument has no effect, since
 the result of frem is never rounded, but the argument is included for
-consistency with the other constrained floating point intrinsics.
+consistency with the other constrained floating-point intrinsics.
 
 Semantics:
 """"""""""
 
-The value produced is the floating point remainder from the division of the two
+The value produced is the floating-point remainder from the division of the two
 value operands and has the same type as the operands.  The remainder has the
 same sign as the dividend.
 
@@ -13166,8 +13859,8 @@ Arguments:
 """"""""""
 
 The first three arguments to the '``llvm.experimental.constrained.fma``'
-intrinsic must be :ref:`floating point <t_floating>` or :ref:`vector
-<t_vector>` of floating point values. All arguments must have identical types.
+intrinsic must be :ref:`floating-point <t_floating>` or :ref:`vector
+<t_vector>` of floating-point values. All arguments must have identical types.
 
 The fourth and fifth arguments specify the rounding mode and exception behavior
 as described above.
@@ -13182,15 +13875,15 @@ precision.
 Constrained libm-equivalent Intrinsics
 --------------------------------------
 
-In addition to the basic floating point operations for which constrained
+In addition to the basic floating-point operations for which constrained
 intrinsics are described above, there are constrained versions of various
 operations which provide equivalent behavior to a corresponding libm function.
 These intrinsics allow the precise behavior of these operations with respect to
 rounding mode and exception behavior to be controlled.
 
-As with the basic constrained floating point intrinsics, the rounding mode
+As with the basic constrained floating-point intrinsics, the rounding mode
 and exception behavior arguments only control the behavior of the optimizer.
-They do not change the runtime floating point environment.
+They do not change the runtime floating-point environment.
 
 
 '``llvm.experimental.constrained.sqrt``' Intrinsic
@@ -13216,7 +13909,7 @@ functions would, but without setting ``errno``.
 Arguments:
 """"""""""
 
-The first argument and the return type are floating point numbers of the same
+The first argument and the return type are floating-point numbers of the same
 type.
 
 The second and third arguments specify the rounding mode and exception
@@ -13226,8 +13919,8 @@ Semantics:
 """"""""""
 
 This function returns the nonnegative square root of the specified value.
-If the value is less than negative zero, a floating point exception occurs
-and the the return value is architecture specific.
+If the value is less than negative zero, a floating-point exception occurs
+and the return value is architecture specific.
 
 
 '``llvm.experimental.constrained.pow``' Intrinsic
@@ -13252,7 +13945,7 @@ raised to the (positive or negative) power specified by the second operand.
 Arguments:
 """"""""""
 
-The first two arguments and the return value are floating point numbers of the
+The first two arguments and the return value are floating-point numbers of the
 same type.  The second argument specifies the power to which the first argument
 should be raised.
 
@@ -13285,14 +13978,14 @@ Overview:
 
 The '``llvm.experimental.constrained.powi``' intrinsic returns the first operand
 raised to the (positive or negative) power specified by the second operand. The
-order of evaluation of multiplications is not defined. When a vector of floating
-point type is used, the second argument remains a scalar integer value.
+order of evaluation of multiplications is not defined. When a vector of 
+floating-point type is used, the second argument remains a scalar integer value.
 
 
 Arguments:
 """"""""""
 
-The first argument and the return value are floating point numbers of the same
+The first argument and the return value are floating-point numbers of the same
 type.  The second argument is a 32-bit signed integer specifying the power to
 which the first argument should be raised.
 
@@ -13328,7 +14021,7 @@ first operand.
 Arguments:
 """"""""""
 
-The first argument and the return type are floating point numbers of the same
+The first argument and the return type are floating-point numbers of the same
 type.
 
 The second and third arguments specify the rounding mode and exception
@@ -13364,7 +14057,7 @@ first operand.
 Arguments:
 """"""""""
 
-The first argument and the return type are floating point numbers of the same
+The first argument and the return type are floating-point numbers of the same
 type.
 
 The second and third arguments specify the rounding mode and exception
@@ -13400,7 +14093,7 @@ exponential of the specified value.
 Arguments:
 """"""""""
 
-The first argument and the return value are floating point numbers of the same
+The first argument and the return value are floating-point numbers of the same
 type.
 
 The second and third arguments specify the rounding mode and exception
@@ -13436,7 +14129,7 @@ exponential of the specified value.
 Arguments:
 """"""""""
 
-The first argument and the return value are floating point numbers of the same
+The first argument and the return value are floating-point numbers of the same
 type.
 
 The second and third arguments specify the rounding mode and exception
@@ -13471,7 +14164,7 @@ logarithm of the specified value.
 Arguments:
 """"""""""
 
-The first argument and the return value are floating point numbers of the same
+The first argument and the return value are floating-point numbers of the same
 type.
 
 The second and third arguments specify the rounding mode and exception
@@ -13507,7 +14200,7 @@ logarithm of the specified value.
 Arguments:
 """"""""""
 
-The first argument and the return value are floating point numbers of the same
+The first argument and the return value are floating-point numbers of the same
 type.
 
 The second and third arguments specify the rounding mode and exception
@@ -13542,7 +14235,7 @@ logarithm of the specified value.
 Arguments:
 """"""""""
 
-The first argument and the return value are floating point numbers of the same
+The first argument and the return value are floating-point numbers of the same
 type.
 
 The second and third arguments specify the rounding mode and exception
@@ -13572,13 +14265,13 @@ Overview:
 """""""""
 
 The '``llvm.experimental.constrained.rint``' intrinsic returns the first
-operand rounded to the nearest integer. It may raise an inexact floating point
+operand rounded to the nearest integer. It may raise an inexact floating-point
 exception if the operand is not an integer.
 
 Arguments:
 """"""""""
 
-The first argument and the return value are floating point numbers of the same
+The first argument and the return value are floating-point numbers of the same
 type.
 
 The second and third arguments specify the rounding mode and exception
@@ -13590,7 +14283,7 @@ Semantics:
 This function returns the same values as the libm ``rint`` functions
 would, and handles error conditions in the same way.  The rounding mode is
 described, not determined, by the rounding mode argument.  The actual rounding
-mode is determined by the runtime floating point environment.  The rounding
+mode is determined by the runtime floating-point environment.  The rounding
 mode argument is only intended as information to the compiler.
 
 
@@ -13611,14 +14304,14 @@ Overview:
 """""""""
 
 The '``llvm.experimental.constrained.nearbyint``' intrinsic returns the first
-operand rounded to the nearest integer. It will not raise an inexact floating
-point exception if the operand is not an integer.
+operand rounded to the nearest integer. It will not raise an inexact 
+floating-point exception if the operand is not an integer.
 
 
 Arguments:
 """"""""""
 
-The first argument and the return value are floating point numbers of the same
+The first argument and the return value are floating-point numbers of the same
 type.
 
 The second and third arguments specify the rounding mode and exception
@@ -13630,7 +14323,7 @@ Semantics:
 This function returns the same values as the libm ``nearbyint`` functions
 would, and handles error conditions in the same way.  The rounding mode is
 described, not determined, by the rounding mode argument.  The actual rounding
-mode is determined by the runtime floating point environment.  The rounding
+mode is determined by the runtime floating-point environment.  The rounding
 mode argument is only intended as information to the compiler.
 
 
@@ -13922,10 +14615,10 @@ The ``llvm.objectsize`` intrinsic takes three arguments. The first argument is
 a pointer to or into the ``object``. The second argument determines whether
 ``llvm.objectsize`` returns 0 (if true) or -1 (if false) when the object size
 is unknown. The third argument controls how ``llvm.objectsize`` acts when
-``null`` is used as its pointer argument. If it's true and the pointer is in
-address space 0, ``null`` is treated as an opaque value with an unknown number
-of bytes. Otherwise, ``llvm.objectsize`` reports 0 bytes available when given
-``null``.
+``null`` in address space 0 is used as its pointer argument. If it's ``false``,
+``llvm.objectsize`` reports 0 bytes available when given ``null``. Otherwise, if
+the ``null`` is in a non-zero address space or if ``true`` is given for the
+third argument of ``llvm.objectsize``, we assume its size is unknown.
 
 The second and third arguments only accept constants.
 
@@ -14561,4 +15254,3 @@ lowered to a call to the symbol ``__llvm_memset_element_unordered_atomic_*``. Wh
 is replaced with an actual element size.
 
 The optimizer is allowed to inline the memory assignment when it's profitable to do so.
-

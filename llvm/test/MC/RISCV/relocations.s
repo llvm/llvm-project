@@ -1,4 +1,4 @@
-# RUN: llvm-mc -triple riscv32 -mattr=+c -riscv-no-aliases < %s -show-encoding \
+# RUN: llvm-mc -triple riscv32 -riscv-no-aliases < %s -show-encoding \
 # RUN:     | FileCheck -check-prefix=INSTR -check-prefix=FIXUP %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+c < %s \
 # RUN:     | llvm-readobj -r | FileCheck -check-prefix=RELOC %s
@@ -54,6 +54,26 @@ auipc t1, %pcrel_hi(foo+4)
 # INSTR: auipc t1, %pcrel_hi(foo+4)
 # FIXUP: fixup A - offset: 0, value: %pcrel_hi(foo+4), kind: fixup_riscv_pcrel_hi20
 
+addi t1, t1, %pcrel_lo(foo)
+# RELOC: R_RISCV_PCREL_LO12_I foo 0x0
+# INSTR: addi t1, t1, %pcrel_lo(foo)
+# FIXUP: fixup A - offset: 0, value: %pcrel_lo(foo), kind: fixup_riscv_pcrel_lo12_i
+
+addi t1, t1, %pcrel_lo(foo+4)
+# RELOC: R_RISCV_PCREL_LO12_I foo 0x4
+# INSTR: addi t1, t1, %pcrel_lo(foo+4)
+# FIXUP: fixup A - offset: 0, value: %pcrel_lo(foo+4), kind: fixup_riscv_pcrel_lo12_i
+
+sb t1, %pcrel_lo(foo)(a2)
+# RELOC: R_RISCV_PCREL_LO12_S foo 0x0
+# INSTR: sb t1, %pcrel_lo(foo)(a2)
+# FIXUP: fixup A - offset: 0, value: %pcrel_lo(foo), kind: fixup_riscv_pcrel_lo12_s
+
+sb t1, %pcrel_lo(foo+4)(a2)
+# RELOC: R_RISCV_PCREL_LO12_S foo 0x4
+# INSTR: sb t1, %pcrel_lo(foo+4)(a2)
+# FIXUP: fixup A - offset: 0, value: %pcrel_lo(foo+4), kind: fixup_riscv_pcrel_lo12_s
+
 jal zero, foo
 # RELOC: R_RISCV_JAL
 # INSTR: jal zero, foo
@@ -63,13 +83,3 @@ bgeu a0, a1, foo
 # RELOC: R_RISCV_BRANCH
 # INSTR: bgeu a0, a1, foo
 # FIXUP: fixup A - offset: 0, value: foo, kind: fixup_riscv_branch
-
-c.jal foo
-# RELOC: R_RISCV_RVC_JUMP
-# INSTR: c.jal foo
-# FIXUP: fixup A - offset: 0, value: foo, kind: fixup_riscv_rvc_jump
-
-c.bnez a0, foo
-# RELOC: R_RISCV_RVC_BRANCH
-# INSTR: c.bnez a0, foo
-# FIXUP: fixup A - offset: 0, value: foo, kind: fixup_riscv_rvc_branch

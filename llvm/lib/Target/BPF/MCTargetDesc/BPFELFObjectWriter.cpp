@@ -54,9 +54,7 @@ unsigned BPFELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
   }
 }
 
-std::unique_ptr<MCObjectWriter>
-llvm::createBPFELFObjectWriter(raw_pwrite_stream &OS, uint8_t OSABI,
-                               bool IsLittleEndian) {
-  return createELFObjectWriter(llvm::make_unique<BPFELFObjectWriter>(OSABI), OS,
-                               IsLittleEndian);
+std::unique_ptr<MCObjectTargetWriter>
+llvm::createBPFELFObjectWriter(uint8_t OSABI) {
+  return llvm::make_unique<BPFELFObjectWriter>(OSABI);
 }

@@ -30,6 +30,33 @@ else:
   ret i32 %t
 }
 
+define i32 @outer1_as1(i32 addrspace(1)* %ptr) {
+; CHECK-LABEL: @outer1_as1(
+; CHECK-NOT: call
+; CHECK: ret i32
+  %ptr1 = getelementptr inbounds i32, i32 addrspace(1)* %ptr, i32 0
+  %ptr2 = getelementptr inbounds i32, i32 addrspace(1)* %ptr, i32 42
+  %result = call i32 @inner1_as1(i32 addrspace(1)* %ptr1, i32 addrspace(1)* %ptr2)
+  ret i32 %result
+}
+
+; Make sure that the address space's larger size makes the ptrtoints
+; not no-ops preventing inlining
+define i32 @inner1_as1(i32 addrspace(1)* %begin, i32 addrspace(1)* %end) {
+  %begin.i = ptrtoint i32 addrspace(1)* %begin to i32
+  %end.i = ptrtoint i32 addrspace(1)* %end to i32
+  %distance = sub i32 %end.i, %begin.i
+  %icmp = icmp sle i32 %distance, 42
+  br i1 %icmp, label %then, label %else
+
+then:
+  ret i32 3
+
+else:
+  %t = load i32, i32 addrspace(1)* %begin
+  ret i32 %t
+}
+
 define i32 @outer2(i32* %ptr) {
 ; Test that an inbounds GEP disables this -- it isn't safe in general as
 ; wrapping changes the behavior of lessthan and greaterthan comparisons.
@@ -58,6 +85,30 @@ else:
   %t = load i32, i32* %begin
   ret i32 %t
 }
+
+define i32 @outer3(i16* addrspace(1)* %ptr) {
+; CHECK-LABEL: @outer3(
+; CHECK-NOT: call i32
+; CHECK: ret i32 3
+; CHECK-LABEL: @inner3(
+  %result = call i32 @inner3(i16* addrspace(1)* %ptr)
+  ret i32 %result
+}
+
+define i32 @inner3(i16* addrspace(1)* %ptr) {
+  call void @extern()
+  %ptr.i = ptrtoint i16* addrspace(1)* %ptr to i64
+  %distance = sub i64 %ptr.i, %ptr.i
+  %icmp = icmp eq i64 %distance, 0
+  br i1 %icmp, label %then, label %else
+
+then:
+  ret i32 3
+
+else:
+  ret i32 5
+}
+
 
 ; The inttoptrs are free since it is a smaller integer to a larger
 ; pointer size

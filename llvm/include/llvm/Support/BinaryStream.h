@@ -26,7 +26,7 @@ enum BinaryStreamFlags {
   LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ BSF_Append)
 };
 
-/// \brief An interface for accessing data in a stream-like format, but which
+/// An interface for accessing data in a stream-like format, but which
 /// discourages copying.  Instead of specifying a buffer in which to copy
 /// data on a read, the API returns an ArrayRef to data owned by the stream's
 /// implementation.  Since implementations may not necessarily store data in a
@@ -39,21 +39,21 @@ public:
 
   virtual llvm::support::endianness getEndian() const = 0;
 
-  /// \brief Given an offset into the stream and a number of bytes, attempt to
+  /// Given an offset into the stream and a number of bytes, attempt to
   /// read the bytes and set the output ArrayRef to point to data owned by the
   /// stream.
   virtual Error readBytes(uint32_t Offset, uint32_t Size,
                           ArrayRef<uint8_t> &Buffer) = 0;
 
-  /// \brief Given an offset into the stream, read as much as possible without
+  /// Given an offset into the stream, read as much as possible without
   /// copying any data.
   virtual Error readLongestContiguousChunk(uint32_t Offset,
                                            ArrayRef<uint8_t> &Buffer) = 0;
 
-  /// \brief Return the number of bytes of data in this stream.
+  /// Return the number of bytes of data in this stream.
   virtual uint32_t getLength() = 0;
 
-  /// \brief Return the properties of this stream.
+  /// Return the properties of this stream.
   virtual BinaryStreamFlags getFlags() const { return BSF_None; }
 
 protected:
@@ -66,7 +66,7 @@ protected:
   }
 };
 
-/// \brief A BinaryStream which can be read from as well as written to.  Note
+/// A BinaryStream which can be read from as well as written to.  Note
 /// that writing to a BinaryStream always necessitates copying from the input
 /// buffer to the stream's backing store.  Streams are assumed to be buffered
 /// so that to be portable it is necessary to call commit() on the stream when
@@ -75,15 +75,15 @@ class WritableBinaryStream : public BinaryStream {
 public:
   ~WritableBinaryStream() override = default;
 
-  /// \brief Attempt to write the given bytes into the stream at the desired
+  /// Attempt to write the given bytes into the stream at the desired
   /// offset. This will always necessitate a copy.  Cannot shrink or grow the
   /// stream, only writes into existing allocated space.
   virtual Error writeBytes(uint32_t Offset, ArrayRef<uint8_t> Data) = 0;
 
-  /// \brief For buffered streams, commits changes to the backing store.
+  /// For buffered streams, commits changes to the backing store.
   virtual Error commit() = 0;
 
-  /// \brief Return the properties of this stream.
+  /// Return the properties of this stream.
   BinaryStreamFlags getFlags() const override { return BSF_Write; }
 
 protected:

@@ -5,13 +5,6 @@
 
 @array = internal addrspace(3) global [10 x float] zeroinitializer, align 4
 @scalar = internal addrspace(3) global float 0.000000e+00, align 4
-@generic_scalar = internal global float 0.000000e+00, align 4
-
-define float @ld_from_shared() {
-  %1 = addrspacecast float* @generic_scalar to float addrspace(3)*
-  %2 = load float, float addrspace(3)* %1
-  ret float %2
-}
 
 ; Verifies nvptx-favor-non-generic correctly optimizes generic address space
 ; usage to non-generic address space usage for the patterns we claim to handle:

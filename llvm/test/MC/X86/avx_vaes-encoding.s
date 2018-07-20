@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple x86_64-unknown-unknown -mattr=vaes --show-encoding %s | FileCheck %s
+// RUN: llvm-mc -triple x86_64-unknown-unknown --show-encoding %s | FileCheck %s
 
 // CHECK: vaesenc %ymm3, %ymm2, %ymm1
 // CHECK: encoding: [0xc4,0xe2,0x6d,0xdc,0xcb]

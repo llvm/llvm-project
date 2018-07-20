@@ -13,6 +13,7 @@
 
 #include "llvm/Support/Path.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -37,7 +38,7 @@ namespace {
   using llvm::sys::path::Style;
 
   inline Style real_style(Style style) {
-#ifdef LLVM_ON_WIN32
+#ifdef _WIN32
     return (style == Style::posix) ? Style::posix : Style::windows;
 #else
     return (style == Style::windows) ? Style::windows : Style::posix;
@@ -90,10 +91,9 @@ namespace {
     return path.substr(0, end);
   }
 
+  // Returns the first character of the filename in str. For paths ending in
+  // '/', it returns the position of the '/'.
   size_t filename_pos(StringRef str, Style style) {
-    if (str.size() == 2 && is_separator(str[0], style) && str[0] == str[1])
-      return 0;
-
     if (str.size() > 0 && is_separator(str[str.size() - 1], style))
       return str.size() - 1;
 
@@ -110,16 +110,14 @@ namespace {
     return pos + 1;
   }
 
+  // Returns the position of the root directory in str. If there is no root
+  // directory in str, it returns StringRef::npos.
   size_t root_dir_start(StringRef str, Style style) {
     // case "c:/"
     if (real_style(style) == Style::windows) {
       if (str.size() > 2 && str[1] == ':' && is_separator(str[2], style))
         return 2;
     }
-
-    // case "//"
-    if (str.size() == 2 && is_separator(str[0], style) && str[0] == str[1])
-      return StringRef::npos;
 
     // case "//net"
     if (str.size() > 3 && is_separator(str[0], style) && str[0] == str[1] &&
@@ -134,22 +132,29 @@ namespace {
     return StringRef::npos;
   }
 
+  // Returns the position past the end of the "parent path" of path. The parent
+  // path will not end in '/', unless the parent is the root directory. If the
+  // path has no parent, 0 is returned.
   size_t parent_path_end(StringRef path, Style style) {
     size_t end_pos = filename_pos(path, style);
 
     bool filename_was_sep =
         path.size() > 0 && is_separator(path[end_pos], style);
 
-    // Skip separators except for root dir.
-    size_t root_dir_pos = root_dir_start(path.substr(0, end_pos), style);
-
-    while (end_pos > 0 && (end_pos - 1) != root_dir_pos &&
+    // Skip separators until we reach root dir (or the start of the string).
+    size_t root_dir_pos = root_dir_start(path, style);
+    while (end_pos > 0 &&
+           (root_dir_pos == StringRef::npos || end_pos > root_dir_pos) &&
            is_separator(path[end_pos - 1], style))
       --end_pos;
 
-    if (end_pos == 1 && root_dir_pos == 0 && filename_was_sep)
-      return StringRef::npos;
+    if (end_pos == root_dir_pos && !filename_was_sep) {
+      // We've reached the root dir and the input path was *not* ending in a
+      // sequence of slashes. Include the root dir in the parent path.
+      return root_dir_pos + 1;
+    }
 
+    // Otherwise, just include before the last slash.
     return end_pos;
   }
 } // end unnamed namespace
@@ -164,7 +169,7 @@ static std::error_code
 createUniqueEntity(const Twine &Model, int &ResultFD,
                    SmallVectorImpl<char> &ResultPath, bool MakeAbsolute,
                    unsigned Mode, FSEntity Type,
-                   sys::fs::OpenFlags Flags = sys::fs::F_None) {
+                   sys::fs::OpenFlags Flags = sys::fs::OF_None) {
   SmallString<128> ModelStorage;
   Model.toVector(ModelStorage);
 
@@ -196,8 +201,8 @@ retry_random_path:
   switch (Type) {
   case FS_File: {
     if (std::error_code EC =
-            sys::fs::openFileForWrite(Twine(ResultPath.begin()), ResultFD,
-                                      Flags | sys::fs::F_Excl, Mode)) {
+            sys::fs::openFileForReadWrite(Twine(ResultPath.begin()), ResultFD,
+                                          sys::fs::CD_CreateNew, Flags, Mode)) {
       if (EC == errc::file_exists)
         goto retry_random_path;
       return EC;
@@ -281,8 +286,8 @@ const_iterator &const_iterator::operator++() {
       ++Position;
     }
 
-    // Treat trailing '/' as a '.'.
-    if (Position == Path.size()) {
+    // Treat trailing '/' as a '.', unless it is the root dir.
+    if (Position == Path.size() && Component != "/") {
       --Position;
       Component = ".";
       return *this;
@@ -321,22 +326,22 @@ reverse_iterator rend(StringRef Path) {
 }
 
 reverse_iterator &reverse_iterator::operator++() {
-  // If we're at the end and the previous char was a '/', return '.' unless
-  // we are the root path.
   size_t root_dir_pos = root_dir_start(Path, S);
-  if (Position == Path.size() && Path.size() > root_dir_pos + 1 &&
-      is_separator(Path[Position - 1], S)) {
+
+  // Skip separators unless it's the root directory.
+  size_t end_pos = Position;
+  while (end_pos > 0 && (end_pos - 1) != root_dir_pos &&
+         is_separator(Path[end_pos - 1], S))
+    --end_pos;
+
+  // Treat trailing '/' as a '.', unless it is the root dir.
+  if (Position == Path.size() && !Path.empty() &&
+      is_separator(Path.back(), S) &&
+      (root_dir_pos == StringRef::npos || end_pos - 1 > root_dir_pos)) {
     --Position;
     Component = ".";
     return *this;
   }
-
-  // Skip separators unless it's the root directory.
-  size_t end_pos = Position;
-
-  while (end_pos > 0 && (end_pos - 1) != root_dir_pos &&
-         is_separator(Path[end_pos - 1], S))
-    --end_pos;
 
   // Find next separator.
   size_t start_pos = filename_pos(Path.substr(0, end_pos), S);
@@ -751,51 +756,64 @@ std::error_code getUniqueID(const Twine Path, UniqueID &Result) {
 
 std::error_code createUniqueFile(const Twine &Model, int &ResultFd,
                                  SmallVectorImpl<char> &ResultPath,
-                                 unsigned Mode, sys::fs::OpenFlags Flags) {
+                                 unsigned Mode) {
+  return createUniqueEntity(Model, ResultFd, ResultPath, false, Mode, FS_File);
+}
+
+static std::error_code createUniqueFile(const Twine &Model, int &ResultFd,
+                                        SmallVectorImpl<char> &ResultPath,
+                                        unsigned Mode, OpenFlags Flags) {
   return createUniqueEntity(Model, ResultFd, ResultPath, false, Mode, FS_File,
                             Flags);
 }
 
 std::error_code createUniqueFile(const Twine &Model,
-                                 SmallVectorImpl<char> &ResultPath) {
-  int Dummy;
-  return createUniqueEntity(Model, Dummy, ResultPath, false, 0, FS_Name);
+                                 SmallVectorImpl<char> &ResultPath,
+                                 unsigned Mode) {
+  int FD;
+  auto EC = createUniqueFile(Model, FD, ResultPath, Mode);
+  if (EC)
+    return EC;
+  // FD is only needed to avoid race conditions. Close it right away.
+  close(FD);
+  return EC;
 }
 
 static std::error_code
 createTemporaryFile(const Twine &Model, int &ResultFD,
-                    llvm::SmallVectorImpl<char> &ResultPath, FSEntity Type,
-                    sys::fs::OpenFlags Flags) {
+                    llvm::SmallVectorImpl<char> &ResultPath, FSEntity Type) {
   SmallString<128> Storage;
   StringRef P = Model.toNullTerminatedStringRef(Storage);
   assert(P.find_first_of(separators(Style::native)) == StringRef::npos &&
          "Model must be a simple filename.");
   // Use P.begin() so that createUniqueEntity doesn't need to recreate Storage.
   return createUniqueEntity(P.begin(), ResultFD, ResultPath, true,
-                            owner_read | owner_write, Type, Flags);
+                            owner_read | owner_write, Type);
 }
 
 static std::error_code
 createTemporaryFile(const Twine &Prefix, StringRef Suffix, int &ResultFD,
-                    llvm::SmallVectorImpl<char> &ResultPath, FSEntity Type,
-                    sys::fs::OpenFlags Flags = sys::fs::F_None) {
+                    llvm::SmallVectorImpl<char> &ResultPath, FSEntity Type) {
   const char *Middle = Suffix.empty() ? "-%%%%%%" : "-%%%%%%.";
   return createTemporaryFile(Prefix + Middle + Suffix, ResultFD, ResultPath,
-                             Type, Flags);
+                             Type);
 }
 
 std::error_code createTemporaryFile(const Twine &Prefix, StringRef Suffix,
                                     int &ResultFD,
-                                    SmallVectorImpl<char> &ResultPath,
-                                    sys::fs::OpenFlags Flags) {
-  return createTemporaryFile(Prefix, Suffix, ResultFD, ResultPath, FS_File,
-                             Flags);
+                                    SmallVectorImpl<char> &ResultPath) {
+  return createTemporaryFile(Prefix, Suffix, ResultFD, ResultPath, FS_File);
 }
 
 std::error_code createTemporaryFile(const Twine &Prefix, StringRef Suffix,
                                     SmallVectorImpl<char> &ResultPath) {
-  int Dummy;
-  return createTemporaryFile(Prefix, Suffix, Dummy, ResultPath, FS_Name);
+  int FD;
+  auto EC = createTemporaryFile(Prefix, Suffix, FD, ResultPath);
+  if (EC)
+    return EC;
+  // FD is only needed to avoid race conditions. Close it right away.
+  close(FD);
+  return EC;
 }
 
 
@@ -804,8 +822,22 @@ std::error_code createTemporaryFile(const Twine &Prefix, StringRef Suffix,
 std::error_code createUniqueDirectory(const Twine &Prefix,
                                       SmallVectorImpl<char> &ResultPath) {
   int Dummy;
-  return createUniqueEntity(Prefix + "-%%%%%%", Dummy, ResultPath,
-                            true, 0, FS_Dir);
+  return createUniqueEntity(Prefix + "-%%%%%%", Dummy, ResultPath, true, 0,
+                            FS_Dir);
+}
+
+std::error_code
+getPotentiallyUniqueFileName(const Twine &Model,
+                             SmallVectorImpl<char> &ResultPath) {
+  int Dummy;
+  return createUniqueEntity(Model, Dummy, ResultPath, false, 0, FS_Name);
+}
+
+std::error_code
+getPotentiallyUniqueTempFileName(const Twine &Prefix, StringRef Suffix,
+                                 SmallVectorImpl<char> &ResultPath) {
+  int Dummy;
+  return createTemporaryFile(Prefix, Suffix, Dummy, ResultPath, FS_Name);
 }
 
 static std::error_code make_absolute(const Twine &current_directory,
@@ -895,15 +927,7 @@ std::error_code create_directories(const Twine &Path, bool IgnoreExisting,
   return create_directory(P, IgnoreExisting, Perms);
 }
 
-std::error_code copy_file(const Twine &From, const Twine &To) {
-  int ReadFD, WriteFD;
-  if (std::error_code EC = openFileForRead(From, ReadFD))
-    return EC;
-  if (std::error_code EC = openFileForWrite(To, WriteFD, F_None)) {
-    close(ReadFD);
-    return EC;
-  }
-
+static std::error_code copy_file_internal(int ReadFD, int WriteFD) {
   const size_t BufSize = 4096;
   char *Buf = new char[BufSize];
   int BytesRead = 0, BytesWritten = 0;
@@ -920,13 +944,41 @@ std::error_code copy_file(const Twine &From, const Twine &To) {
     if (BytesWritten < 0)
       break;
   }
-  close(ReadFD);
-  close(WriteFD);
   delete[] Buf;
 
   if (BytesRead < 0 || BytesWritten < 0)
     return std::error_code(errno, std::generic_category());
   return std::error_code();
+}
+
+std::error_code copy_file(const Twine &From, const Twine &To) {
+  int ReadFD, WriteFD;
+  if (std::error_code EC = openFileForRead(From, ReadFD, OF_None))
+    return EC;
+  if (std::error_code EC =
+          openFileForWrite(To, WriteFD, CD_CreateAlways, OF_None)) {
+    close(ReadFD);
+    return EC;
+  }
+
+  std::error_code EC = copy_file_internal(ReadFD, WriteFD);
+
+  close(ReadFD);
+  close(WriteFD);
+
+  return EC;
+}
+
+std::error_code copy_file(const Twine &From, int ToFD) {
+  int ReadFD;
+  if (std::error_code EC = openFileForRead(From, ReadFD, OF_None))
+    return EC;
+
+  std::error_code EC = copy_file_internal(ReadFD, ToFD);
+
+  close(ReadFD);
+
+  return EC;
 }
 
 ErrorOr<MD5::MD5Result> md5_contents(int FD) {
@@ -951,7 +1003,7 @@ ErrorOr<MD5::MD5Result> md5_contents(int FD) {
 
 ErrorOr<MD5::MD5Result> md5_contents(const Twine &Path) {
   int FD;
-  if (auto EC = openFileForRead(Path, FD))
+  if (auto EC = openFileForRead(Path, FD, OF_None))
     return EC;
 
   auto Result = md5_contents(FD);
@@ -1048,7 +1100,7 @@ ErrorOr<perms> getPermissions(const Twine &Path) {
 #if defined(LLVM_ON_UNIX)
 #include "Unix/Path.inc"
 #endif
-#if defined(LLVM_ON_WIN32)
+#if defined(_WIN32)
 #include "Windows/Path.inc"
 #endif
 
@@ -1070,7 +1122,7 @@ Error TempFile::discard() {
   Done = true;
   std::error_code RemoveEC;
 // On windows closing will remove the file.
-#ifndef LLVM_ON_WIN32
+#ifndef _WIN32
   // Always try to close and remove.
   if (!TmpName.empty()) {
     RemoveEC = fs::remove(TmpName);
@@ -1094,14 +1146,15 @@ Error TempFile::keep(const Twine &Name) {
   assert(!Done);
   Done = true;
   // Always try to close and rename.
-#ifdef LLVM_ON_WIN32
-  // If we cant't cancel the delete don't rename.
-  std::error_code RenameEC = cancelDeleteOnClose(FD);
+#ifdef _WIN32
+  // If we can't cancel the delete don't rename.
+  auto H = reinterpret_cast<HANDLE>(_get_osfhandle(FD));
+  std::error_code RenameEC = setDeleteDisposition(H, false);
   if (!RenameEC)
     RenameEC = rename_fd(FD, Name);
   // If we can't rename, discard the temporary file.
   if (RenameEC)
-    removeFD(FD);
+    setDeleteDisposition(H, true);
 #else
   std::error_code RenameEC = fs::rename(TmpName, Name);
   // If we can't rename, discard the temporary file.
@@ -1126,8 +1179,9 @@ Error TempFile::keep() {
   assert(!Done);
   Done = true;
 
-#ifdef LLVM_ON_WIN32
-  if (std::error_code EC = cancelDeleteOnClose(FD))
+#ifdef _WIN32
+  auto H = reinterpret_cast<HANDLE>(_get_osfhandle(FD));
+  if (std::error_code EC = setDeleteDisposition(H, false))
     return errorCodeToError(EC);
 #else
   sys::DontRemoveFileOnSignal(TmpName);
@@ -1147,12 +1201,12 @@ Error TempFile::keep() {
 Expected<TempFile> TempFile::create(const Twine &Model, unsigned Mode) {
   int FD;
   SmallString<128> ResultPath;
-  if (std::error_code EC = createUniqueFile(Model, FD, ResultPath, Mode,
-                                            sys::fs::F_RW | sys::fs::F_Delete))
+  if (std::error_code EC =
+          createUniqueFile(Model, FD, ResultPath, Mode, OF_Delete))
     return errorCodeToError(EC);
 
   TempFile Ret(ResultPath, FD);
-#ifndef LLVM_ON_WIN32
+#ifndef _WIN32
   if (sys::RemoveFileOnSignal(ResultPath)) {
     // Make sure we delete the file when RemoveFileOnSignal fails.
     consumeError(Ret.discard());

@@ -17,11 +17,11 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/CodeGen/CallingConvLower.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/TargetCallingConv.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MachineValueType.h"
 #include <cstdint>
 #include <functional>
 
@@ -123,7 +123,7 @@ protected:
   }
 
   template <typename FuncInfoTy>
-  void setArgFlags(ArgInfo &Arg, unsigned OpNum, const DataLayout &DL,
+  void setArgFlags(ArgInfo &Arg, unsigned OpIdx, const DataLayout &DL,
                    const FuncInfoTy &FuncInfo) const;
 
   /// Invoke Handler::assignArg on each of the given \p Args and then use
@@ -131,7 +131,7 @@ protected:
   ///
   /// \return True if everything has succeeded, false otherwise.
   bool handleAssignments(MachineIRBuilder &MIRBuilder, ArrayRef<ArgInfo> Args,
-                         ValueHandler &Callback) const;
+                         ValueHandler &Handler) const;
 
 public:
   CallLowering(const TargetLowering *TLI) : TLI(TLI) {}

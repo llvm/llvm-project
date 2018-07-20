@@ -46,12 +46,15 @@ DebugStringTableSubsection::DebugStringTableSubsection()
     : DebugSubsection(DebugSubsectionKind::StringTable) {}
 
 uint32_t DebugStringTableSubsection::insert(StringRef S) {
-  auto P = Strings.insert({S, StringSize});
+  auto P = StringToId.insert({S, StringSize});
 
   // If a given string didn't exist in the string table, we want to increment
-  // the string table size.
-  if (P.second)
+  // the string table size and insert it into the reverse lookup.
+  if (P.second) {
+    IdToString.insert({P.first->getValue(), P.first->getKey()});
     StringSize += S.size() + 1; // +1 for '\0'
+  }
+
   return P.first->second;
 }
 
@@ -67,7 +70,7 @@ Error DebugStringTableSubsection::commit(BinaryStreamWriter &Writer) const {
   if (auto EC = Writer.writeCString(StringRef()))
     return EC;
 
-  for (auto &Pair : Strings) {
+  for (auto &Pair : StringToId) {
     StringRef S = Pair.getKey();
     uint32_t Offset = Begin + Pair.getValue();
     Writer.setOffset(Offset);
@@ -81,10 +84,25 @@ Error DebugStringTableSubsection::commit(BinaryStreamWriter &Writer) const {
   return Error::success();
 }
 
-uint32_t DebugStringTableSubsection::size() const { return Strings.size(); }
+uint32_t DebugStringTableSubsection::size() const { return StringToId.size(); }
 
-uint32_t DebugStringTableSubsection::getStringId(StringRef S) const {
-  auto Iter = Strings.find(S);
-  assert(Iter != Strings.end());
+std::vector<uint32_t> DebugStringTableSubsection::sortedIds() const {
+  std::vector<uint32_t> Result;
+  Result.reserve(IdToString.size());
+  for (const auto &Entry : IdToString)
+    Result.push_back(Entry.first);
+  llvm::sort(Result.begin(), Result.end());
+  return Result;
+}
+
+uint32_t DebugStringTableSubsection::getIdForString(StringRef S) const {
+  auto Iter = StringToId.find(S);
+  assert(Iter != StringToId.end());
+  return Iter->second;
+}
+
+StringRef DebugStringTableSubsection::getStringForId(uint32_t Id) const {
+  auto Iter = IdToString.find(Id);
+  assert(Iter != IdToString.end());
   return Iter->second;
 }

@@ -1,10 +1,10 @@
 ; RUN: opt < %s -sroa -S | FileCheck %s
 target datalayout = "e-p:64:64:64-p1:16:16:16-p2:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-n8:16:32:64-A2"
 
-declare void @llvm.memcpy.p2i8.p2i8.i32(i8 addrspace(2)* nocapture, i8 addrspace(2)* nocapture readonly, i32, i32, i1)
-declare void @llvm.memcpy.p1i8.p2i8.i32(i8 addrspace(1)* nocapture, i8 addrspace(2)* nocapture readonly, i32, i32, i1)
-declare void @llvm.memcpy.p2i8.p1i8.i32(i8 addrspace(2)* nocapture, i8 addrspace(1)* nocapture readonly, i32, i32, i1)
-declare void @llvm.memcpy.p1i8.p1i8.i32(i8 addrspace(1)* nocapture, i8 addrspace(1)* nocapture readonly, i32, i32, i1)
+declare void @llvm.memcpy.p2i8.p2i8.i32(i8 addrspace(2)* nocapture, i8 addrspace(2)* nocapture readonly, i32, i1)
+declare void @llvm.memcpy.p1i8.p2i8.i32(i8 addrspace(1)* nocapture, i8 addrspace(2)* nocapture readonly, i32, i1)
+declare void @llvm.memcpy.p2i8.p1i8.i32(i8 addrspace(2)* nocapture, i8 addrspace(1)* nocapture readonly, i32, i1)
+declare void @llvm.memcpy.p1i8.p1i8.i32(i8 addrspace(1)* nocapture, i8 addrspace(1)* nocapture readonly, i32, i1)
 
 
 
@@ -16,9 +16,9 @@ define void @test_address_space_1_1(<2 x i64> addrspace(1)* %a, i16 addrspace(1)
   %aa = alloca <2 x i64>, align 16, addrspace(2)
   %aptr = bitcast <2 x i64> addrspace(1)* %a to i8 addrspace(1)*
   %aaptr = bitcast <2 x i64> addrspace(2)* %aa to i8 addrspace(2)*
-  call void @llvm.memcpy.p2i8.p1i8.i32(i8 addrspace(2)* %aaptr, i8 addrspace(1)* %aptr, i32 16, i32 2, i1 false)
+  call void @llvm.memcpy.p2i8.p1i8.i32(i8 addrspace(2)* align 2 %aaptr, i8 addrspace(1)* align 2 %aptr, i32 16, i1 false)
   %bptr = bitcast i16 addrspace(1)* %b to i8 addrspace(1)*
-  call void @llvm.memcpy.p1i8.p2i8.i32(i8 addrspace(1)* %bptr, i8 addrspace(2)* %aaptr, i32 16, i32 2, i1 false)
+  call void @llvm.memcpy.p1i8.p2i8.i32(i8 addrspace(1)* align 2 %bptr, i8 addrspace(2)* align 2 %aaptr, i32 16, i1 false)
   ret void
 }
 
@@ -30,9 +30,9 @@ define void @test_address_space_1_0(<2 x i64> addrspace(1)* %a, i16 addrspace(2)
   %aa = alloca <2 x i64>, align 16, addrspace(2)
   %aptr = bitcast <2 x i64> addrspace(1)* %a to i8 addrspace(1)*
   %aaptr = bitcast <2 x i64> addrspace(2)* %aa to i8 addrspace(2)*
-  call void @llvm.memcpy.p2i8.p1i8.i32(i8 addrspace(2)* %aaptr, i8 addrspace(1)* %aptr, i32 16, i32 2, i1 false)
+  call void @llvm.memcpy.p2i8.p1i8.i32(i8 addrspace(2)* align 2 %aaptr, i8 addrspace(1)* align 2 %aptr, i32 16, i1 false)
   %bptr = bitcast i16 addrspace(2)* %b to i8 addrspace(2)*
-  call void @llvm.memcpy.p2i8.p2i8.i32(i8 addrspace(2)* %bptr, i8 addrspace(2)* %aaptr, i32 16, i32 2, i1 false)
+  call void @llvm.memcpy.p2i8.p2i8.i32(i8 addrspace(2)* align 2 %bptr, i8 addrspace(2)* align 2 %aaptr, i32 16, i1 false)
   ret void
 }
 
@@ -44,9 +44,9 @@ define void @test_address_space_0_1(<2 x i64> addrspace(2)* %a, i16 addrspace(1)
   %aa = alloca <2 x i64>, align 16, addrspace(2)
   %aptr = bitcast <2 x i64> addrspace(2)* %a to i8 addrspace(2)*
   %aaptr = bitcast <2 x i64> addrspace(2)* %aa to i8 addrspace(2)*
-  call void @llvm.memcpy.p2i8.p2i8.i32(i8 addrspace(2)* %aaptr, i8 addrspace(2)* %aptr, i32 16, i32 2, i1 false)
+  call void @llvm.memcpy.p2i8.p2i8.i32(i8 addrspace(2)* align 2 %aaptr, i8 addrspace(2)* align 2 %aptr, i32 16, i1 false)
   %bptr = bitcast i16 addrspace(1)* %b to i8 addrspace(1)*
-  call void @llvm.memcpy.p1i8.p2i8.i32(i8 addrspace(1)* %bptr, i8 addrspace(2)* %aaptr, i32 16, i32 2, i1 false)
+  call void @llvm.memcpy.p1i8.p2i8.i32(i8 addrspace(1)* align 2 %bptr, i8 addrspace(2)* align 2 %aaptr, i32 16, i1 false)
   ret void
 }
 
@@ -61,7 +61,7 @@ for.end:
   store [5 x i64] %in.coerce, [5 x i64] addrspace(2)* %0, align 8
   %scevgep9 = getelementptr %struct.struct_test_27.0.13, %struct.struct_test_27.0.13 addrspace(2)* %in, i32 0, i32 4, i32 0
   %scevgep910 = bitcast i32 addrspace(2)* %scevgep9 to i8 addrspace(2)*
-  call void @llvm.memcpy.p1i8.p2i8.i32(i8 addrspace(1)* undef, i8 addrspace(2)* %scevgep910, i32 16, i32 4, i1 false)
+  call void @llvm.memcpy.p1i8.p2i8.i32(i8 addrspace(1)* align 4 undef, i8 addrspace(2)* align 4 %scevgep910, i32 16, i1 false)
   ret void
 }
 

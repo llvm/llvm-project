@@ -203,14 +203,16 @@ define <8 x float> @combine_vpermilvar_vperm2f128_zero_8f32(<8 x float> %a0) {
 define <4 x double> @combine_vperm2f128_vpermilvar_as_vpblendpd(<4 x double> %a0) {
 ; X32-LABEL: combine_vperm2f128_vpermilvar_as_vpblendpd:
 ; X32:       # %bb.0:
-; X32-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
-; X32-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3]
+; X32-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[1,0,3,2]
+; X32-NEXT:    vmovapd %xmm0, %xmm0
+; X32-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[1,0,3,2]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: combine_vperm2f128_vpermilvar_as_vpblendpd:
 ; X64:       # %bb.0:
-; X64-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
-; X64-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3]
+; X64-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[1,0,3,2]
+; X64-NEXT:    vmovapd %xmm0, %xmm0
+; X64-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[1,0,3,2]
 ; X64-NEXT:    retq
   %1 = tail call <4 x double> @llvm.x86.avx.vpermilvar.pd.256(<4 x double> %a0, <4 x i64> <i64 2, i64 0, i64 2, i64 0>)
   %2 = shufflevector <4 x double> %1, <4 x double> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 4, i32 5>

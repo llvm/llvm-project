@@ -74,7 +74,7 @@ declare i32 @interp(%struct.ref_s.1.49.91.115.121.139.145.151.157.163.169.175.18
 
 declare i32 @dict_lookup(%struct.ref_s.1.49.91.115.121.139.145.151.157.163.169.175.181.211*, %struct.ref_s.1.49.91.115.121.139.145.151.157.163.169.175.181.211*, %struct.ref_s.1.49.91.115.121.139.145.151.157.163.169.175.181.211*, %struct.ref_s.1.49.91.115.121.139.145.151.157.163.169.175.181.211**)
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i32, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
 
 declare i32 @obj_compare(...)
 

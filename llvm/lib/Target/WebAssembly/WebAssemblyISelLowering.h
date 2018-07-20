@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file defines the interfaces that WebAssembly uses to lower LLVM
+/// This file defines the interfaces that WebAssembly uses to lower LLVM
 /// code into a selection DAG.
 ///
 //===----------------------------------------------------------------------===//
@@ -64,6 +64,9 @@ class WebAssemblyTargetLowering final : public TargetLowering {
                                       bool *Fast) const override;
   bool isIntDivCheap(EVT VT, AttributeList Attr) const override;
 
+  EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
+                         EVT VT) const override;
+
   SDValue LowerCall(CallLoweringInfo &CLI,
                     SmallVectorImpl<SDValue> &InVals) const override;
   bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
@@ -90,6 +93,7 @@ class WebAssemblyTargetLowering final : public TargetLowering {
   SDValue LowerJumpTable(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVASTART(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerCopyToReg(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;
 };
 
 namespace WebAssembly {

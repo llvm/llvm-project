@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O0 < %s | FileCheck %s
+; RUN: llc -march=hexagon -O0 -hexagon-align-loads=0 < %s | FileCheck %s
 
 ; CHECK-LABEL: danny:
 ; CHECK-DAG: [[T0:r[0-9]+]] = memuh(r0+#0)

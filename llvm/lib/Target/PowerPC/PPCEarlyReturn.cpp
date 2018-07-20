@@ -128,7 +128,7 @@ protected:
                 if (J->getOperand(i).isMBB() &&
                     J->getOperand(i).getMBB() == &ReturnMBB)
                   OtherReference = true;
-          } else if (!J->isTerminator() && !J->isDebugValue())
+          } else if (!J->isTerminator() && !J->isDebugInstr())
             break;
 
           if (J == (*PI)->begin())

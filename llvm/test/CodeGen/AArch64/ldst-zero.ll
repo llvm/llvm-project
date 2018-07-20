@@ -3,7 +3,7 @@
 ; Tests to check that zero stores which are generated as STP xzr, xzr aren't
 ; scheduled incorrectly due to incorrect alias information
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1)
+declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1)
 %struct.tree_common = type { i8*, i8*, i32 }
 
 ; Original test case which exhibited the bug
@@ -14,7 +14,7 @@ define void @test1(%struct.tree_common* %t, i32 %code, i8* %type) {
 ; CHECK-DAG: str xzr, [x0]
 entry:
   %0 = bitcast %struct.tree_common* %t to i8*
-  tail call void @llvm.memset.p0i8.i64(i8* %0, i8 0, i64 24, i32 8, i1 false)
+  tail call void @llvm.memset.p0i8.i64(i8* align 8 %0, i8 0, i64 24, i1 false)
   %code1 = getelementptr inbounds %struct.tree_common, %struct.tree_common* %t, i64 0, i32 2
   store i32 %code, i32* %code1, align 8
   %type2 = getelementptr inbounds %struct.tree_common, %struct.tree_common* %t, i64 0, i32 1

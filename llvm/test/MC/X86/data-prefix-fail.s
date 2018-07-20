@@ -5,8 +5,8 @@
 // RUN: not llvm-mc -triple i386-unknown-unknown-code16 --show-encoding %s 2> %t.err | FileCheck --check-prefix=16 %s
 // RUN: FileCheck --check-prefix=ERR16 < %t.err %s
 
-// ERR64: error: instruction requires: 16-bit mode
-// ERR32: error: instruction requires: 16-bit mode
+// ERR64: error: 'data32' is not supported in 64-bit mode
+// ERR32: error: redundant data32 prefix
 // 16: data32
 // 16: encoding: [0x66]
 // 16: lgdtw 0
@@ -21,5 +21,5 @@ data32 lgdt 0
 // 32: encoding: [0x66]
 // 32: lgdtl 0
 // 32: encoding: [0x0f,0x01,0x15,0x00,0x00,0x00,0x00]
-// ERR16: error: instruction requires: Not 16-bit mode
+// ERR16: error: redundant data16 prefix
 data16 lgdt 0

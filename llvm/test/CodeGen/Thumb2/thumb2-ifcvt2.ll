@@ -72,7 +72,7 @@ entry:
 
 cond_true:		; preds = %entry
 	tail call void @abort( )
-	unreachable
+	ret void
 
 cond_false:		; preds = %entry
 	ret void
@@ -82,7 +82,7 @@ define fastcc void @t2() nounwind {
 entry:
 ; CHECK-LABEL: t2:
 ; CHECK: cmp r0, #0
-; CHECK: %growMapping.exit
+; CHECK: trap
 	br i1 undef, label %bb.i.i3, label %growMapping.exit
 
 bb.i.i3:		; preds = %entry

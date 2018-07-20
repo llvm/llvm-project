@@ -82,8 +82,29 @@ Error GSIHashStreamBuilder::commit(BinaryStreamWriter &Writer) {
   return Error::success();
 }
 
+static bool isAsciiString(StringRef S) {
+  return llvm::all_of(S, [](char C) { return unsigned(C) < 0x80; });
+}
+
+// See `caseInsensitiveComparePchPchCchCch` in gsi.cpp
+static bool gsiRecordLess(StringRef S1, StringRef S2) {
+  size_t LS = S1.size();
+  size_t RS = S2.size();
+  // Shorter strings always compare less than longer strings.
+  if (LS != RS)
+    return LS < RS;
+
+  // If either string contains non ascii characters, memcmp them.
+  if (LLVM_UNLIKELY(!isAsciiString(S1) || !isAsciiString(S2)))
+    return memcmp(S1.data(), S2.data(), LS) < 0;
+
+  // Both strings are ascii, perform a case-insenstive comparison.
+  return S1.compare_lower(S2.data()) < 0;
+}
+
 void GSIHashStreamBuilder::finalizeBuckets(uint32_t RecordZeroOffset) {
-  std::array<std::vector<PSHashRecord>, IPHR_HASH + 1> TmpBuckets;
+  std::array<std::vector<std::pair<StringRef, PSHashRecord>>, IPHR_HASH + 1>
+      TmpBuckets;
   uint32_t SymOffset = RecordZeroOffset;
   for (const CVSymbol &Sym : Records) {
     PSHashRecord HR;
@@ -94,8 +115,7 @@ void GSIHashStreamBuilder::finalizeBuckets(uint32_t RecordZeroOffset) {
     // Hash the name to figure out which bucket this goes into.
     StringRef Name = getSymbolName(Sym);
     size_t BucketIdx = hashStringV1(Name) % IPHR_HASH;
-    TmpBuckets[BucketIdx].push_back(HR); // FIXME: Does order matter?
-
+    TmpBuckets[BucketIdx].push_back(std::make_pair(Name, HR));
     SymOffset += Sym.length();
   }
 
@@ -117,8 +137,21 @@ void GSIHashStreamBuilder::finalizeBuckets(uint32_t RecordZeroOffset) {
     ulittle32_t ChainStartOff =
         ulittle32_t(HashRecords.size() * SizeOfHROffsetCalc);
     HashBuckets.push_back(ChainStartOff);
-    for (const auto &HR : Bucket)
-      HashRecords.push_back(HR);
+
+    // Sort each bucket by memcmp of the symbol's name.  It's important that
+    // we use the same sorting algorithm as is used by the reference
+    // implementation to ensure that the search for a record within a bucket
+    // can properly early-out when it detects the record won't be found.  The
+    // algorithm used here corredsponds to the function
+    // caseInsensitiveComparePchPchCchCch in the reference implementation.
+    llvm::sort(Bucket.begin(), Bucket.end(),
+              [](const std::pair<StringRef, PSHashRecord> &Left,
+                 const std::pair<StringRef, PSHashRecord> &Right) {
+                return gsiRecordLess(Left.first, Right.first);
+              });
+
+    for (const auto &Entry : Bucket)
+      HashRecords.push_back(Entry.second);
   }
 }
 
@@ -150,14 +183,14 @@ Error GSIStreamBuilder::finalizeMsfLayout() {
   PSH->finalizeBuckets(PSHZero);
   GSH->finalizeBuckets(GSHZero);
 
-  Expected<uint32_t> Idx = Msf.addStream(calculatePublicsHashStreamSize());
-  if (!Idx)
-    return Idx.takeError();
-  PSH->StreamIndex = *Idx;
-  Idx = Msf.addStream(calculateGlobalsHashStreamSize());
+  Expected<uint32_t> Idx = Msf.addStream(calculateGlobalsHashStreamSize());
   if (!Idx)
     return Idx.takeError();
   GSH->StreamIndex = *Idx;
+  Idx = Msf.addStream(calculatePublicsHashStreamSize());
+  if (!Idx)
+    return Idx.takeError();
+  PSH->StreamIndex = *Idx;
 
   uint32_t RecordBytes =
       GSH->calculateRecordByteSize() + PSH->calculateRecordByteSize();

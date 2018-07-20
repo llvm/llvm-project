@@ -3,7 +3,7 @@ target datalayout = "e-p:64:64:64"
 
 declare fastcc void @bar()
 declare void @llvm.stackrestore(i8*)
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i32, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
 declare void @has_sret(i8* sret %p)
 declare void @has_noaliases(i32* noalias %p, i32* %q)
 declare void @one_arg(i32)
@@ -78,7 +78,7 @@ define i32 @foo() noreturn {
   call void (float) bitcast (void (i32)* @one_arg to void (float)*)(float 0.0)
 
 ; CHECK: Write to read-only memory
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* bitcast (i32* @CG to i8*), i8* bitcast (i32* @CG to i8*), i64 1, i32 1, i1 0)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* bitcast (i32* @CG to i8*), i8* bitcast (i32* @CG to i8*), i64 1, i1 0)
 
 ; CHECK: Undefined behavior: Buffer overflow
   %wider = bitcast i8* %buf to i16*

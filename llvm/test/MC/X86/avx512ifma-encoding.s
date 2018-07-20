@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple x86_64-unknown-unknown -mcpu=knl -mattr=+avx512ifma  --show-encoding %s | FileCheck %s
+// RUN: llvm-mc -triple x86_64-unknown-unknown --show-encoding %s | FileCheck %s
 
   vpmadd52luq %zmm4, %zmm5, %zmm6
 //CHECK: vpmadd52luq %zmm4, %zmm5, %zmm6

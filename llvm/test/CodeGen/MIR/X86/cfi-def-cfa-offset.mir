@@ -20,10 +20,10 @@ stack:
   - { id: 0, name: tmp, offset: -4176, size: 4168, alignment: 4 }
 body: |
   bb.0.entry:
-    %rsp = SUB64ri32 %rsp, 4040, implicit-def dead %eflags
+    $rsp = SUB64ri32 $rsp, 4040, implicit-def dead $eflags
     ; CHECK: CFI_INSTRUCTION def_cfa_offset 4048
     CFI_INSTRUCTION def_cfa_offset 4048
-    %rsp = ADD64ri32 %rsp, 4040, implicit-def dead %eflags
+    $rsp = ADD64ri32 $rsp, 4040, implicit-def dead $eflags
     RETQ
 ...
 

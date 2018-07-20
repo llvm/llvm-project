@@ -1051,7 +1051,7 @@ Value *SCEVExpander::expandIVInc(PHINode *PN, Value *StepV, const Loop *L,
   return IncV;
 }
 
-/// \brief Hoist the addrec instruction chain rooted in the loop phi above the
+/// Hoist the addrec instruction chain rooted in the loop phi above the
 /// position. This routine assumes that this is possible (has been checked).
 void SCEVExpander::hoistBeforePos(DominatorTree *DT, Instruction *InstToHoist,
                                   Instruction *Pos, PHINode *LoopPhi) {
@@ -1067,7 +1067,7 @@ void SCEVExpander::hoistBeforePos(DominatorTree *DT, Instruction *InstToHoist,
   } while (InstToHoist != LoopPhi);
 }
 
-/// \brief Check whether we can cheaply express the requested SCEV in terms of
+/// Check whether we can cheaply express the requested SCEV in terms of
 /// the available PHI SCEV by truncation and/or inversion of the step.
 static bool canBeCheaplyTransformed(ScalarEvolution &SE,
                                     const SCEVAddRecExpr *Phi,
@@ -1169,8 +1169,11 @@ SCEVExpander::getAddRecExprPHILiterally(const SCEVAddRecExpr *Normalized,
       if (!IsMatchingSCEV && !TryNonMatchingSCEV)
           continue;
 
+      // TODO: this possibly can be reworked to avoid this cast at all.
       Instruction *TempIncV =
-          cast<Instruction>(PN.getIncomingValueForBlock(LatchBlock));
+          dyn_cast<Instruction>(PN.getIncomingValueForBlock(LatchBlock));
+      if (!TempIncV)
+        continue;
 
       // Check whether we can reuse this PHI node.
       if (LSRMode) {
@@ -1387,7 +1390,7 @@ Value *SCEVExpander::expandAddRecExprLiterally(const SCEVAddRecExpr *S) {
       // IVUsers tries to prevent this case, so it is rare. However, it can
       // happen when an IVUser outside the loop is not dominated by the latch
       // block. Adjusting IVIncInsertPos before expansion begins cannot handle
-      // all cases. Consider a phi outide whose operand is replaced during
+      // all cases. Consider a phi outside whose operand is replaced during
       // expansion with the value of the postinc user. Without fundamentally
       // changing the way postinc users are tracked, the only remedy is
       // inserting an extra IV increment. StepV might fold into PostLoopOffset,
@@ -1407,7 +1410,7 @@ Value *SCEVExpander::expandAddRecExprLiterally(const SCEVAddRecExpr *S) {
   }
 
   // We have decided to reuse an induction variable of a dominating loop. Apply
-  // truncation and/or invertion of the step.
+  // truncation and/or inversion of the step.
   if (TruncTy) {
     Type *ResTy = Result->getType();
     // Normalize the result type.
@@ -1862,7 +1865,7 @@ SCEVExpander::replaceCongruentIVs(Loop *L, const DominatorTree *DT,
     Phis.push_back(&PN);
 
   if (TTI)
-    std::sort(Phis.begin(), Phis.end(), [](Value *LHS, Value *RHS) {
+    llvm::sort(Phis.begin(), Phis.end(), [](Value *LHS, Value *RHS) {
       // Put pointers at the back and make sure pointer < pointer = false.
       if (!LHS->getType()->isIntegerTy() || !RHS->getType()->isIntegerTy())
         return RHS->getType()->isIntegerTy() && !LHS->getType()->isIntegerTy();
@@ -2209,7 +2212,7 @@ Value *SCEVExpander::generateOverflowCheck(const SCEVAddRecExpr *AR,
 
   // If the backedge taken count type is larger than the AR type,
   // check that we don't drop any bits by truncating it. If we are
-  // droping bits, then we have overflow (unless the step is zero).
+  // dropping bits, then we have overflow (unless the step is zero).
   if (SE.getTypeSizeInBits(CountTy) > SE.getTypeSizeInBits(Ty)) {
     auto MaxVal = APInt::getMaxValue(DstBits).zext(SrcBits);
     auto *BackedgeCheck =

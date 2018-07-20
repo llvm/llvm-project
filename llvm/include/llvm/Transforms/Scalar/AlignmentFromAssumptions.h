@@ -33,12 +33,6 @@ struct AlignmentFromAssumptionsPass
   bool runImpl(Function &F, AssumptionCache &AC, ScalarEvolution *SE_,
                DominatorTree *DT_);
 
-  // For memory transfers, we need a common alignment for both the source and
-  // destination. If we have a new alignment for only one operand of a transfer
-  // instruction, save it in these maps.  If we reach the other operand through
-  // another assumption later, then we may change the alignment at that point.
-  DenseMap<MemTransferInst *, unsigned> NewDestAlignments, NewSrcAlignments;
-
   ScalarEvolution *SE = nullptr;
   DominatorTree *DT = nullptr;
 

@@ -364,7 +364,7 @@ void XCoreInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                          const TargetRegisterInfo *TRI) const
 {
   DebugLoc DL;
-  if (I != MBB.end() && !I->isDebugValue())
+  if (I != MBB.end() && !I->isDebugInstr())
     DL = I->getDebugLoc();
   MachineFunction *MF = MBB.getParent();
   const MachineFrameInfo &MFI = MF->getFrameInfo();
@@ -386,7 +386,7 @@ void XCoreInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                           const TargetRegisterInfo *TRI) const
 {
   DebugLoc DL;
-  if (I != MBB.end() && !I->isDebugValue())
+  if (I != MBB.end() && !I->isDebugInstr())
     DL = I->getDebugLoc();
   MachineFunction *MF = MBB.getParent();
   const MachineFrameInfo &MFI = MF->getFrameInfo();
@@ -429,7 +429,7 @@ MachineBasicBlock::iterator XCoreInstrInfo::loadImmediate(
                                               MachineBasicBlock::iterator MI,
                                               unsigned Reg, uint64_t Value) const {
   DebugLoc dl;
-  if (MI != MBB.end() && !MI->isDebugValue())
+  if (MI != MBB.end() && !MI->isDebugInstr())
     dl = MI->getDebugLoc();
   if (isImmMskBitp(Value)) {
     int N = Log2_32(Value) + 1;

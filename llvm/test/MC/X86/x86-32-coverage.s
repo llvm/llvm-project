@@ -1655,9 +1655,17 @@
 // CHECK:  encoding: [0xff,0xd1]
         	call	*%ecx
 
+// CHECK: notrack	calll	*%ecx
+// CHECK:  encoding: [0x3e,0xff,0xd1]
+            notrack	call	*%ecx
+
 // CHECK: calll	*3735928559(%ebx,%ecx,8)
 // CHECK:  encoding: [0xff,0x94,0xcb,0xef,0xbe,0xad,0xde]
         	call	*0xdeadbeef(%ebx,%ecx,8)
+
+// CHECK: notrack	calll	*3735928559(%ebx,%ecx,8)
+// CHECK:  encoding: [0x3e,0xff,0x94,0xcb,0xef,0xbe,0xad,0xde]
+            notrack	call	*0xdeadbeef(%ebx,%ecx,8)
 
 // CHECK: calll	*3135175374
 // CHECK:  encoding: [0xff,0x15,0xce,0xfa,0xde,0xba]
@@ -1686,6 +1694,10 @@
 // CHECK: jmpl	*3735928559(%ebx,%ecx,8)
 // CHECK:  encoding: [0xff,0xa4,0xcb,0xef,0xbe,0xad,0xde]
         	jmp	*0xdeadbeef(%ebx,%ecx,8)
+
+// CHECK: notrack	jmpl	*3735928559(%ebx,%ecx,8)
+// CHECK:  encoding: [0x3e,0xff,0xa4,0xcb,0xef,0xbe,0xad,0xde]
+             notrack	jmp	*0xdeadbeef(%ebx,%ecx,8)
 
 // CHECK: jmpl	*3135175374
 // CHECK:  encoding: [0xff,0x25,0xce,0xfa,0xde,0xba]
@@ -2775,6 +2787,10 @@
 // CHECK: wbinvd
 // CHECK:  encoding: [0x0f,0x09]
         	wbinvd
+
+// CHECK: wbnoinvd
+// CHECK:  encoding: [0xf3,0x0f,0x09]
+        	wbnoinvd
 
 // CHECK: cpuid
 // CHECK:  encoding: [0x0f,0xa2]
@@ -10223,9 +10239,6 @@
 // CHECK: 	jmp	305419896
         	jmp	0x12345678
 
-// CHECK: 	jmp	-77129852792157442
-        	jmp	0xfeedfacebabecafe
-
 // CHECK: 	jmpl	*3735928559(%ebx,%ecx,8)
         	jmp	*0xdeadbeef(%ebx,%ecx,8)
 
@@ -10280,9 +10293,6 @@
 // CHECK: 	jo	305419896
         	jo	0x12345678
 
-// CHECK: 	jo	-77129852792157442
-        	jo	0xfeedfacebabecafe
-
 // CHECK: 	jno	32493
         	jno	0x7eed
 
@@ -10291,9 +10301,6 @@
 
 // CHECK: 	jno	305419896
         	jno	0x12345678
-
-// CHECK: 	jno	-77129852792157442
-        	jno	0xfeedfacebabecafe
 
 // CHECK: 	jb	32493
         	jb	0x7eed
@@ -10304,9 +10311,6 @@
 // CHECK: 	jb	305419896
         	jb	0x12345678
 
-// CHECK: 	jb	-77129852792157442
-        	jb	0xfeedfacebabecafe
-
 // CHECK: 	jae	32493
         	jae	0x7eed
 
@@ -10315,9 +10319,6 @@
 
 // CHECK: 	jae	305419896
         	jae	0x12345678
-
-// CHECK: 	jae	-77129852792157442
-        	jae	0xfeedfacebabecafe
 
 // CHECK: 	je	32493
         	je	0x7eed
@@ -10328,9 +10329,6 @@
 // CHECK: 	je	305419896
         	je	0x12345678
 
-// CHECK: 	je	-77129852792157442
-        	je	0xfeedfacebabecafe
-
 // CHECK: 	jne	32493
         	jne	0x7eed
 
@@ -10339,9 +10337,6 @@
 
 // CHECK: 	jne	305419896
         	jne	0x12345678
-
-// CHECK: 	jne	-77129852792157442
-        	jne	0xfeedfacebabecafe
 
 // CHECK: 	jbe	32493
         	jbe	0x7eed
@@ -10352,9 +10347,6 @@
 // CHECK: 	jbe	305419896
         	jbe	0x12345678
 
-// CHECK: 	jbe	-77129852792157442
-        	jbe	0xfeedfacebabecafe
-
 // CHECK: 	ja	32493
         	ja	0x7eed
 
@@ -10363,9 +10355,6 @@
 
 // CHECK: 	ja	305419896
         	ja	0x12345678
-
-// CHECK: 	ja	-77129852792157442
-        	ja	0xfeedfacebabecafe
 
 // CHECK: 	js	32493
         	js	0x7eed
@@ -10376,9 +10365,6 @@
 // CHECK: 	js	305419896
         	js	0x12345678
 
-// CHECK: 	js	-77129852792157442
-        	js	0xfeedfacebabecafe
-
 // CHECK: 	jns	32493
         	jns	0x7eed
 
@@ -10387,9 +10373,6 @@
 
 // CHECK: 	jns	305419896
         	jns	0x12345678
-
-// CHECK: 	jns	-77129852792157442
-        	jns	0xfeedfacebabecafe
 
 // CHECK: 	jp	32493
         	jp	0x7eed
@@ -10400,9 +10383,6 @@
 // CHECK: 	jp	305419896
         	jp	0x12345678
 
-// CHECK: 	jp	-77129852792157442
-        	jp	0xfeedfacebabecafe
-
 // CHECK: 	jnp	32493
         	jnp	0x7eed
 
@@ -10411,9 +10391,6 @@
 
 // CHECK: 	jnp	305419896
         	jnp	0x12345678
-
-// CHECK: 	jnp	-77129852792157442
-        	jnp	0xfeedfacebabecafe
 
 // CHECK: 	jl	32493
         	jl	0x7eed
@@ -10424,9 +10401,6 @@
 // CHECK: 	jl	305419896
         	jl	0x12345678
 
-// CHECK: 	jl	-77129852792157442
-        	jl	0xfeedfacebabecafe
-
 // CHECK: 	jge	32493
         	jge	0x7eed
 
@@ -10435,9 +10409,6 @@
 
 // CHECK: 	jge	305419896
         	jge	0x12345678
-
-// CHECK: 	jge	-77129852792157442
-        	jge	0xfeedfacebabecafe
 
 // CHECK: 	jle	32493
         	jle	0x7eed
@@ -10448,9 +10419,6 @@
 // CHECK: 	jle	305419896
         	jle	0x12345678
 
-// CHECK: 	jle	-77129852792157442
-        	jle	0xfeedfacebabecafe
-
 // CHECK: 	jg	32493
         	jg	0x7eed
 
@@ -10459,9 +10427,6 @@
 
 // CHECK: 	jg	305419896
         	jg	0x12345678
-
-// CHECK: 	jg	-77129852792157442
-        	jg	0xfeedfacebabecafe
 
 // CHECK: 	int	$127
         	int	$0x7f
@@ -10532,8 +10497,8 @@
 // CHECK: 	skinit %eax
         	skinit %eax
 
-// CHECK: 	invlpga %ecx, %eax
-        	invlpga %ecx, %eax
+// CHECK: 	invlpga %eax, %ecx
+        	invlpga %eax, %ecx
 
 // CHECK:   blendvps	%xmm0, (%eax), %xmm1   # encoding: [0x66,0x0f,0x38,0x14,0x08]
             blendvps (%eax), %xmm1
@@ -10780,3 +10745,66 @@ btcl $4, (%eax)
 // CHECK:  encoding: [0xf0,0x01,0x37]
         	lock add %esi, (%edi)
 
+// CHECK: cldemote 4(%eax)
+// CHECK:  encoding: [0x0f,0x1c,0x40,0x04]
+        	cldemote 4(%eax)
+
+// CHECK: cldemote 3735928559(%ebx,%ecx,8)
+// CHECK:  encoding: [0x0f,0x1c,0x84,0xcb,0xef,0xbe,0xad,0xde]
+        	cldemote 0xdeadbeef(%ebx,%ecx,8)
+
+// CHECK: umonitor %eax
+// CHECK:  encoding: [0xf3,0x0f,0xae,0xf0]
+	umonitor %eax
+
+// CHECK: umonitor %ax
+// CHECK:  encoding: [0x67,0xf3,0x0f,0xae,0xf0]
+	umonitor %ax
+
+// CHECK: umwait %eax
+// CHECK:  encoding: [0xf2,0x0f,0xae,0xf0]
+	umwait %eax
+
+// CHECK: tpause %eax
+// CHECK:  encoding: [0x66,0x0f,0xae,0xf0]
+	tpause %eax
+
+// CHECK: movdiri %eax, 64(%edx,%edi)
+// CHECK: # encoding: [0x0f,0x38,0xf9,0x44,0x3a,0x40]
+          movdiri %eax, 64(%edx,%edi)
+
+// CHECK: movdir64b 485498096, %ecx
+// CHECK: # encoding: [0x66,0x0f,0x38,0xf8,0x0d,0xf0,0x1c,0xf0,0x1c]
+          movdir64b 485498096, %ecx
+
+// CHECK: movdir64b 485498096, %cx
+// CHECK: # encoding: [0x67,0x66,0x0f,0x38,0xf8,0x0d,0xf0,0x1c,0xf0,0x1c]
+          movdir64b 485498096, %cx
+
+// CHECK: movdir64b (%edx), %eax
+// CHECK: # encoding: [0x66,0x0f,0x38,0xf8,0x02]
+          movdir64b (%edx), %eax
+
+// CHECK: movdir64b (%esi), %eax
+// CHECK: # encoding: [0x66,0x0f,0x38,0xf8,0x06]
+          movdir64b (%esi), %eax
+
+// CHECK: movdir64b (%si), %ax
+// CHECK: # encoding: [0x67,0x66,0x0f,0x38,0xf8,0x04]
+          movdir64b (%si), %ax
+
+// CHECK: pconfig
+// CHECK: # encoding: [0x0f,0x01,0xc5]
+pconfig
+
+// CHECK: encls
+// CHECK: encoding: [0x0f,0x01,0xcf]
+encls
+
+// CHECK: enclu
+// CHECK: encoding: [0x0f,0x01,0xd7]
+enclu
+
+// CHECK: enclv
+// CHECK: encoding: [0x0f,0x01,0xc0]
+enclv

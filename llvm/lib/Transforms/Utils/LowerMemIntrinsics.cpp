@@ -409,8 +409,8 @@ void llvm::expandMemCpyAsLoop(MemCpyInst *Memcpy,
                               /* SrcAddr */ Memcpy->getRawSource(),
                               /* DstAddr */ Memcpy->getRawDest(),
                               /* CopyLen */ CI,
-                              /* SrcAlign */ Memcpy->getAlignment(),
-                              /* DestAlign */ Memcpy->getAlignment(),
+                              /* SrcAlign */ Memcpy->getSourceAlignment(),
+                              /* DestAlign */ Memcpy->getDestAlignment(),
                               /* SrcIsVolatile */ Memcpy->isVolatile(),
                               /* DstIsVolatile */ Memcpy->isVolatile(),
                               /* TargetTransformInfo */ TTI);
@@ -419,8 +419,8 @@ void llvm::expandMemCpyAsLoop(MemCpyInst *Memcpy,
                                 /* SrcAddr */ Memcpy->getRawSource(),
                                 /* DstAddr */ Memcpy->getRawDest(),
                                 /* CopyLen */ Memcpy->getLength(),
-                                /* SrcAlign */ Memcpy->getAlignment(),
-                                /* DestAlign */ Memcpy->getAlignment(),
+                                /* SrcAlign */ Memcpy->getSourceAlignment(),
+                                /* DestAlign */ Memcpy->getDestAlignment(),
                                 /* SrcIsVolatile */ Memcpy->isVolatile(),
                                 /* DstIsVolatile */ Memcpy->isVolatile(),
                                 /* TargetTransfomrInfo */ TTI);
@@ -432,8 +432,8 @@ void llvm::expandMemMoveAsLoop(MemMoveInst *Memmove) {
                     /* SrcAddr */ Memmove->getRawSource(),
                     /* DstAddr */ Memmove->getRawDest(),
                     /* CopyLen */ Memmove->getLength(),
-                    /* SrcAlign */ Memmove->getAlignment(),
-                    /* DestAlign */ Memmove->getAlignment(),
+                    /* SrcAlign */ Memmove->getSourceAlignment(),
+                    /* DestAlign */ Memmove->getDestAlignment(),
                     /* SrcIsVolatile */ Memmove->isVolatile(),
                     /* DstIsVolatile */ Memmove->isVolatile());
 }
@@ -443,6 +443,6 @@ void llvm::expandMemSetAsLoop(MemSetInst *Memset) {
                    /* DstAddr */ Memset->getRawDest(),
                    /* CopyLen */ Memset->getLength(),
                    /* SetValue */ Memset->getValue(),
-                   /* Alignment */ Memset->getAlignment(),
+                   /* Alignment */ Memset->getDestAlignment(),
                    Memset->isVolatile());
 }

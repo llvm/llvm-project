@@ -1,6 +1,11 @@
-; RUN: llc < %s -mcpu=generic -mtriple=x86_64-linux-gnu -relocation-model=pic -pie-copy-relocations \
+; RUN: llc < %s -emulated-tls -mcpu=generic -mtriple=x86_64-linux-gnu -relocation-model=pic -pie-copy-relocations \
 ; RUN:   | FileCheck -check-prefix=X64 %s
 ; RUN: llc < %s -emulated-tls -mcpu=generic -mtriple=i386-linux-gnu -relocation-model=pic -pie-copy-relocations \
+; RUN:   | FileCheck -check-prefix=X32 %s
+
+; RUN: llc < %s -mcpu=generic -mtriple=x86_64-linux-gnu -relocation-model=pic -pie-copy-relocations \
+; RUN:   | FileCheck -check-prefix=X64 %s
+; RUN: llc < %s -mcpu=generic -mtriple=i386-linux-gnu -relocation-model=pic -pie-copy-relocations \
 ; RUN:   | FileCheck -check-prefix=X32 %s
 
 ; External Linkage

@@ -117,11 +117,11 @@ attributes #4 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "n
 !12 = !{i32 2, !"Dwarf Version", i32 4}
 !13 = !{i32 2, !"Debug Info Version", i32 3}
 !14 = !{!"clang version 3.7.0 (trunk 227104) (llvm/trunk 227103)"}
-!15 = distinct !DISubprogram(name: "__cxx_global_var_init", scope: !2, file: !2, line: 8, type: !16, isLocal: true, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: false, unit: !8, variables: !9)
+!15 = distinct !DISubprogram(name: "__cxx_global_var_init", scope: !2, file: !2, line: 8, type: !16, isLocal: true, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: false, unit: !8, retainedNodes: !9)
 !16 = !DISubroutineType(types: !17)
 !17 = !{null}
 !18 = !DILocation(line: 8, column: 5, scope: !15)
-!19 = distinct !DISubprogram(name: "foo", linkageName: "_ZN3fooC2Ev", scope: !3, file: !2, line: 5, type: !20, isLocal: false, isDefinition: true, scopeLine: 5, flags: DIFlagArtificial | DIFlagPrototyped, isOptimized: false, unit: !8, declaration: !23, variables: !9)
+!19 = distinct !DISubprogram(name: "foo", linkageName: "_ZN3fooC2Ev", scope: !3, file: !2, line: 5, type: !20, isLocal: false, isDefinition: true, scopeLine: 5, flags: DIFlagArtificial | DIFlagPrototyped, isOptimized: false, unit: !8, declaration: !23, retainedNodes: !9)
 !20 = !DISubroutineType(types: !21)
 !21 = !{null, !22}
 !22 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !3, size: 64, align: 64, flags: DIFlagArtificial | DIFlagObjectPointer)
@@ -131,14 +131,14 @@ attributes #4 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "n
 !26 = !DIExpression()
 !27 = !DILocation(line: 0, scope: !19)
 !28 = !DILocation(line: 5, column: 8, scope: !19)
-!29 = distinct !DISubprogram(name: "~foo", linkageName: "_ZN3fooD2Ev", scope: !3, file: !2, line: 5, type: !20, isLocal: false, isDefinition: true, scopeLine: 5, flags: DIFlagArtificial | DIFlagPrototyped, isOptimized: false, unit: !8, declaration: !30, variables: !9)
+!29 = distinct !DISubprogram(name: "~foo", linkageName: "_ZN3fooD2Ev", scope: !3, file: !2, line: 5, type: !20, isLocal: false, isDefinition: true, scopeLine: 5, flags: DIFlagArtificial | DIFlagPrototyped, isOptimized: false, unit: !8, declaration: !30, retainedNodes: !9)
 !30 = !DISubprogram(name: "~foo", scope: !3, type: !20, isLocal: false, isDefinition: false, flags: DIFlagArtificial | DIFlagPrototyped, isOptimized: false)
 !31 = !DILocalVariable(name: "this", arg: 1, scope: !29, type: !25, flags: DIFlagArtificial | DIFlagObjectPointer)
 !32 = !DILocation(line: 0, scope: !29)
 !33 = !DILocation(line: 5, column: 8, scope: !34)
 !34 = distinct !DILexicalBlock(scope: !29, file: !2, line: 5, column: 8)
 !35 = !DILocation(line: 5, column: 8, scope: !29)
-!36 = distinct !DISubprogram(name: "base", linkageName: "_ZN4baseC2Ev", scope: !7, file: !2, line: 1, type: !37, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagArtificial | DIFlagPrototyped, isOptimized: false, unit: !8, declaration: !40, variables: !9)
+!36 = distinct !DISubprogram(name: "base", linkageName: "_ZN4baseC2Ev", scope: !7, file: !2, line: 1, type: !37, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagArtificial | DIFlagPrototyped, isOptimized: false, unit: !8, declaration: !40, retainedNodes: !9)
 !37 = !DISubroutineType(types: !38)
 !38 = !{null, !39}
 !39 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !7, size: 64, align: 64, flags: DIFlagArtificial | DIFlagObjectPointer)
@@ -148,6 +148,6 @@ attributes #4 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "n
 !43 = !DILocation(line: 0, scope: !36)
 !44 = !DILocation(line: 1, column: 8, scope: !36)
 !45 = !DILocation(line: 0, scope: !46)
-!46 = distinct !DISubprogram(linkageName: "_GLOBAL__sub_I_decl_derived_member.cpp", scope: !2, file: !2, type: !47, isLocal: true, isDefinition: true, flags: DIFlagArtificial, isOptimized: false, unit: !8, variables: !9)
+!46 = distinct !DISubprogram(linkageName: "_GLOBAL__sub_I_decl_derived_member.cpp", scope: !2, file: !2, type: !47, isLocal: true, isDefinition: true, flags: DIFlagArtificial, isOptimized: false, unit: !8, retainedNodes: !9)
 !47 = !DISubroutineType(types: !9)
 

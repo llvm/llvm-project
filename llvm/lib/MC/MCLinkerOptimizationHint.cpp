@@ -36,7 +36,7 @@ void MCLOHDirective::emit_impl(raw_ostream &OutStream,
 
 void MCLOHDirective::emit(MachObjectWriter &ObjWriter,
                           const MCAsmLayout &Layout) const {
-  raw_ostream &OutStream = ObjWriter.getStream();
+  raw_ostream &OutStream = ObjWriter.W.OS;
   emit_impl(OutStream, ObjWriter, Layout);
 }
 

@@ -1,0 +1,49 @@
+# RUN: yaml2obj %s > %t
+# RUN: cp %t %t1
+
+# RUN: llvm-strip -remove-section=.text.bar %t
+# RUN: llvm-readobj -file-headers -sections -symbols %t | FileCheck %s
+
+# RUN: llvm-objcopy -strip-all -remove-section=.text.bar %t1 %t1
+# RUN: cmp %t %t1
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .debug_foo
+    Type:            SHT_PROGBITS
+    Content:         "00000000"
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x0000000000000010
+    Content:         "00000000"
+  - Name:            .text.bar
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x0000000000000010
+    Content:         "00000000"
+Symbols:
+  Global:
+    - Name: debugfoo
+      Section: .debug_foo
+    - Name: foo
+      Section: .text
+    - Name: bar
+      Section: .text.bar
+ 
+# CHECK: SectionHeaderCount: 3
+
+# CHECK:     Name: .text
+# CHECK:     Name: .shstrtab
+# CHECK-NOT: Name: .text.bar
+# CHECK-NOT: Name: .debug_foo
+# CHECK-NOT: Name: .symtab
+
+# Check that *only* foo is copied and no debugfoo or textbar
+# CHECK:      Symbols [
+# CHECK-NEXT: ]

@@ -3,6 +3,34 @@
 
 %T = type { i8, i32 }
 
+; Ensure load-store forwarding of an aggregate is interpreted as
+; a memmove when the source and dest may alias
+define void @test_memmove(%T* align 8 %a, %T* align 16 %b) {
+; CHECK-LABEL: @test_memmove(
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast %T* [[B:%.*]] to i8*
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast %T* [[A:%.*]] to i8*
+; CHECK-NEXT:    call void @llvm.memmove.p0i8.p0i8.i64(i8* align 16 [[TMP1]], i8* align 8 [[TMP2]], i64 8, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %val = load %T, %T* %a, align 8
+  store %T %val, %T* %b, align 16
+  ret void
+}
+
+; Ensure load-store forwarding of an aggregate is interpreted as
+; a memcpy when the source and dest do not alias
+define void @test_memcpy(%T* noalias align 8 %a, %T* noalias align 16 %b) {
+; CHECK-LABEL: @test_memcpy(
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast %T* [[B:%.*]] to i8*
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast %T* [[A:%.*]] to i8*
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 [[TMP1]], i8* align 8 [[TMP2]], i64 8, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %val = load %T, %T* %a, align 8
+  store %T %val, %T* %b, align 16
+  ret void
+}
+
 ; memcpy(%d, %a) should not be generated since store2 may-aliases load %a.
 define void @f(%T* %a, %T* %b, %T* %c, %T* %d) {
 ; CHECK-LABEL: @f(

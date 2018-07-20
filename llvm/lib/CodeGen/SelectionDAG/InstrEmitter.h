@@ -113,6 +113,9 @@ public:
   MachineInstr *EmitDbgValue(SDDbgValue *SD,
                              DenseMap<SDValue, unsigned> &VRBaseMap);
 
+  /// Generate machine instruction for a dbg_label node.
+  MachineInstr *EmitDbgLabel(SDDbgLabel *SD);
+
   /// EmitNode - Generate machine code for a node and needed dependencies.
   ///
   void EmitNode(SDNode *Node, bool IsClone, bool IsCloned,

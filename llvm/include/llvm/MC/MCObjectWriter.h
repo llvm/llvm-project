@@ -12,6 +12,7 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/raw_ostream.h"
@@ -36,22 +37,9 @@ class MCValue;
 /// points. Once assembly is complete, the object writer is given the
 /// MCAssembler instance, which contains all the symbol and section data which
 /// should be emitted as part of writeObject().
-///
-/// The object writer also contains a number of helper methods for writing
-/// binary data to the output stream.
 class MCObjectWriter {
-  raw_pwrite_stream *OS;
-
 protected:
-  unsigned IsLittleEndian : 1;
-
-  // Can only create subclasses.
-  MCObjectWriter(raw_pwrite_stream &OS, bool IsLittleEndian)
-      : OS(&OS), IsLittleEndian(IsLittleEndian) {}
-
-  unsigned getInitialOffset() {
-    return OS->tell();
-  }
+  MCObjectWriter() = default;
 
 public:
   MCObjectWriter(const MCObjectWriter &) = delete;
@@ -60,11 +48,6 @@ public:
 
   /// lifetime management
   virtual void reset() {}
-
-  bool isLittleEndian() const { return IsLittleEndian; }
-
-  raw_pwrite_stream &getStream() { return *OS; }
-  void setStream(raw_pwrite_stream &NewOS) { OS = &NewOS; }
 
   /// \name High-Level API
   /// @{
@@ -109,90 +92,31 @@ public:
                                                       bool InSet,
                                                       bool IsPCRel) const;
 
-  /// Write the object file.
+  /// Tell the object writer to emit an address-significance table during
+  /// writeObject(). If this function is not called, all symbols are treated as
+  /// address-significant.
+  virtual void emitAddrsigSection() {}
+
+  /// Record the given symbol in the address-significance table to be written
+  /// diring writeObject().
+  virtual void addAddrsigSymbol(const MCSymbol *Sym) {}
+
+  /// Write the object file and returns the number of bytes written.
   ///
   /// This routine is called by the assembler after layout and relaxation is
   /// complete, fixups have been evaluated and applied, and relocations
   /// generated.
-  virtual void writeObject(MCAssembler &Asm, const MCAsmLayout &Layout) = 0;
+  virtual uint64_t writeObject(MCAssembler &Asm, const MCAsmLayout &Layout) = 0;
 
   /// @}
-  /// \name Binary Output
-  /// @{
+};
 
-  void write8(uint8_t Value) { *OS << char(Value); }
-
-  void writeLE16(uint16_t Value) {
-    support::endian::Writer<support::little>(*OS).write(Value);
-  }
-
-  void writeLE32(uint32_t Value) {
-    support::endian::Writer<support::little>(*OS).write(Value);
-  }
-
-  void writeLE64(uint64_t Value) {
-    support::endian::Writer<support::little>(*OS).write(Value);
-  }
-
-  void writeBE16(uint16_t Value) {
-    support::endian::Writer<support::big>(*OS).write(Value);
-  }
-
-  void writeBE32(uint32_t Value) {
-    support::endian::Writer<support::big>(*OS).write(Value);
-  }
-
-  void writeBE64(uint64_t Value) {
-    support::endian::Writer<support::big>(*OS).write(Value);
-  }
-
-  void write16(uint16_t Value) {
-    if (IsLittleEndian)
-      writeLE16(Value);
-    else
-      writeBE16(Value);
-  }
-
-  void write32(uint32_t Value) {
-    if (IsLittleEndian)
-      writeLE32(Value);
-    else
-      writeBE32(Value);
-  }
-
-  void write64(uint64_t Value) {
-    if (IsLittleEndian)
-      writeLE64(Value);
-    else
-      writeBE64(Value);
-  }
-
-  void WriteZeros(unsigned N) {
-    const char Zeros[16] = {0};
-
-    for (unsigned i = 0, e = N / 16; i != e; ++i)
-      *OS << StringRef(Zeros, 16);
-
-    *OS << StringRef(Zeros, N % 16);
-  }
-
-  void writeBytes(const SmallVectorImpl<char> &ByteVec,
-                  unsigned ZeroFillSize = 0) {
-    writeBytes(StringRef(ByteVec.data(), ByteVec.size()), ZeroFillSize);
-  }
-
-  void writeBytes(StringRef Str, unsigned ZeroFillSize = 0) {
-    // TODO: this version may need to go away once all fragment contents are
-    // converted to SmallVector<char, N>
-    assert(
-        (ZeroFillSize == 0 || Str.size() <= ZeroFillSize) &&
-        "data size greater than fill size, unexpected large write will occur");
-    *OS << Str;
-    if (ZeroFillSize)
-      WriteZeros(ZeroFillSize - Str.size());
-  }
-
-  /// @}
+/// Base class for classes that define behaviour that is specific to both the
+/// target and the object format.
+class MCObjectTargetWriter {
+public:
+  virtual ~MCObjectTargetWriter() = default;
+  virtual Triple::ObjectFormatType getFormat() const = 0;
 };
 
 } // end namespace llvm

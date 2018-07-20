@@ -4,15 +4,14 @@
 define void @i64_simplified(i64* noalias %st, i64* noalias %ld) {
 ; CHECK-LABEL: @i64_simplified(
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i64, i64* [[LD:%.*]], i64 1
-; CHECK-NEXT:    [[T0:%.*]] = load i64, i64* [[LD]], align 8
-; CHECK-NEXT:    [[T1:%.*]] = load i64, i64* [[ARRAYIDX1]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64* [[LD]] to <2 x i64>*
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, <2 x i64>* [[TMP1]], align 8
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i64> [[TMP2]], <2 x i64> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
 ; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i64, i64* [[ST:%.*]], i64 1
 ; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i64, i64* [[ST]], i64 2
 ; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds i64, i64* [[ST]], i64 3
-; CHECK-NEXT:    store i64 [[T0]], i64* [[ST]], align 8
-; CHECK-NEXT:    store i64 [[T1]], i64* [[ARRAYIDX3]], align 8
-; CHECK-NEXT:    store i64 [[T0]], i64* [[ARRAYIDX4]], align 8
-; CHECK-NEXT:    store i64 [[T1]], i64* [[ARRAYIDX5]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i64* [[ST]] to <4 x i64>*
+; CHECK-NEXT:    store <4 x i64> [[SHUFFLE]], <4 x i64>* [[TMP3]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %arrayidx1 = getelementptr inbounds i64, i64* %ld, i64 1
@@ -34,15 +33,15 @@ define void @i64_simplified(i64* noalias %st, i64* noalias %ld) {
 define void @i64_simplifiedi_reversed(i64* noalias %st, i64* noalias %ld) {
 ; CHECK-LABEL: @i64_simplifiedi_reversed(
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i64, i64* [[LD:%.*]], i64 1
-; CHECK-NEXT:    [[T0:%.*]] = load i64, i64* [[LD]], align 8
-; CHECK-NEXT:    [[T1:%.*]] = load i64, i64* [[ARRAYIDX1]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64* [[LD]] to <2 x i64>*
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, <2 x i64>* [[TMP1]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i64> [[TMP2]], <2 x i64> undef, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i64> [[TMP3]], <2 x i64> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
 ; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i64, i64* [[ST:%.*]], i64 1
 ; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i64, i64* [[ST]], i64 2
 ; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds i64, i64* [[ST]], i64 3
-; CHECK-NEXT:    store i64 [[T1]], i64* [[ST]], align 8
-; CHECK-NEXT:    store i64 [[T0]], i64* [[ARRAYIDX3]], align 8
-; CHECK-NEXT:    store i64 [[T1]], i64* [[ARRAYIDX4]], align 8
-; CHECK-NEXT:    store i64 [[T0]], i64* [[ARRAYIDX5]], align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i64* [[ST]] to <4 x i64>*
+; CHECK-NEXT:    store <4 x i64> [[SHUFFLE]], <4 x i64>* [[TMP4]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %arrayidx1 = getelementptr inbounds i64, i64* %ld, i64 1
@@ -60,3 +59,36 @@ define void @i64_simplifiedi_reversed(i64* noalias %st, i64* noalias %ld) {
   store i64 %t0, i64* %arrayidx5, align 8
   ret void
 }
+
+define void @i64_simplifiedi_extract(i64* noalias %st, i64* noalias %ld) {
+; CHECK-LABEL: @i64_simplifiedi_extract(
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i64, i64* [[LD:%.*]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64* [[LD]] to <2 x i64>*
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, <2 x i64>* [[TMP1]], align 8
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i64> [[TMP2]], <2 x i64> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 1>
+; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i64, i64* [[ST:%.*]], i64 1
+; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i64, i64* [[ST]], i64 2
+; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds i64, i64* [[ST]], i64 3
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i64* [[ST]] to <4 x i64>*
+; CHECK-NEXT:    store <4 x i64> [[SHUFFLE]], <4 x i64>* [[TMP3]], align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i64> [[SHUFFLE]], i32 3
+; CHECK-NEXT:    store i64 [[TMP4]], i64* [[LD]], align 8
+; CHECK-NEXT:    ret void
+;
+  %arrayidx1 = getelementptr inbounds i64, i64* %ld, i64 1
+
+  %t0 = load i64, i64* %ld, align 8
+  %t1 = load i64, i64* %arrayidx1, align 8
+
+  %arrayidx3 = getelementptr inbounds i64, i64* %st, i64 1
+  %arrayidx4 = getelementptr inbounds i64, i64* %st, i64 2
+  %arrayidx5 = getelementptr inbounds i64, i64* %st, i64 3
+
+  store i64 %t0, i64* %st, align 8
+  store i64 %t0, i64* %arrayidx3, align 8
+  store i64 %t0, i64* %arrayidx4, align 8
+  store i64 %t1, i64* %arrayidx5, align 8
+  store i64 %t1, i64* %ld, align 8
+  ret void
+}
+

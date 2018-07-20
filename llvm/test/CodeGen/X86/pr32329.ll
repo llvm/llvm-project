@@ -57,9 +57,13 @@ define void @foo() local_unnamed_addr {
 ; X86-NEXT:    imull %eax, %ebx
 ; X86-NEXT:    movb %bl, var_218
 ; X86-NEXT:    popl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 16
 ; X86-NEXT:    popl %edi
+; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    popl %ebx
+; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    popl %ebp
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: foo:
@@ -78,7 +82,7 @@ define void @foo() local_unnamed_addr {
 ; X64-NEXT:    imull %esi, %ecx
 ; X64-NEXT:    addl $-1437483407, %ecx # imm = 0xAA51BE71
 ; X64-NEXT:    movl $9, %edx
-; X64-NEXT:    # kill: def %cl killed %cl killed %ecx
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-NEXT:    shlq %cl, %rdx
 ; X64-NEXT:    movq %rdx, {{.*}}(%rip)
 ; X64-NEXT:    cmpl %eax, %esi

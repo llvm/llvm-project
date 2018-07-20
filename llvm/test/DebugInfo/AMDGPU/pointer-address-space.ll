@@ -5,11 +5,11 @@
 ; $clang -cl-std=CL2.0 -g -O0 -target amdgcn-amd-amdhsa -S -emit-llvm <path-to-file>
 ;
 ; kernel void kernel1() {
-;   global int *FuncVar0 = 0;
-;   constant int *FuncVar1 = 0;
-;   local int *FuncVar2 = 0;
-;   private int *FuncVar3 = 0;
-;   int *FuncVar4 = 0;
+;   global int  addrspace(5)*FuncVar0 = 0;
+;   constant int  addrspace(5)*FuncVar1 = 0;
+;   local int  addrspace(5)*FuncVar2 = 0;
+;   private int  addrspace(5)*FuncVar3 = 0;
+;   int  addrspace(5)*FuncVar4 = 0;
 ; }
 
 ; CHECK:      DW_AT_name {{.*}}"FuncVar0"
@@ -53,21 +53,21 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
 define amdgpu_kernel void @kernel1() !dbg !7 {
 entry:
-  %FuncVar0 = alloca i32 addrspace(1)*, align 4
-  %FuncVar1 = alloca i32 addrspace(2)*, align 4
-  %FuncVar2 = alloca i32 addrspace(3)*, align 4
-  %FuncVar3 = alloca i32*, align 4
-  %FuncVar4 = alloca i32 addrspace(4)*, align 4
-  call void @llvm.dbg.declare(metadata i32 addrspace(1)** %FuncVar0, metadata !10, metadata !13), !dbg !14
-  store i32 addrspace(1)* null, i32 addrspace(1)** %FuncVar0, align 4, !dbg !14
-  call void @llvm.dbg.declare(metadata i32 addrspace(2)** %FuncVar1, metadata !15, metadata !13), !dbg !16
-  store i32 addrspace(2)* null, i32 addrspace(2)** %FuncVar1, align 4, !dbg !16
-  call void @llvm.dbg.declare(metadata i32 addrspace(3)** %FuncVar2, metadata !17, metadata !13), !dbg !19
-  store i32 addrspace(3)* addrspacecast (i32 addrspace(4)* null to i32 addrspace(3)*), i32 addrspace(3)** %FuncVar2, align 4, !dbg !19
-  call void @llvm.dbg.declare(metadata i32** %FuncVar3, metadata !20, metadata !13), !dbg !22
-  store i32* addrspacecast (i32 addrspace(4)* null to i32*), i32** %FuncVar3, align 4, !dbg !22
-  call void @llvm.dbg.declare(metadata i32 addrspace(4)** %FuncVar4, metadata !23, metadata !13), !dbg !24
-  store i32 addrspace(4)* null, i32 addrspace(4)** %FuncVar4, align 4, !dbg !24
+  %FuncVar0 = alloca i32 addrspace(1)*, align 4, addrspace(5)
+  %FuncVar1 = alloca i32 addrspace(2)*, align 4, addrspace(5)
+  %FuncVar2 = alloca i32 addrspace(3)*, align 4, addrspace(5)
+  %FuncVar3 = alloca i32 addrspace(5)*, align 4, addrspace(5)
+  %FuncVar4 = alloca i32*, align 4, addrspace(5)
+  call void @llvm.dbg.declare(metadata i32 addrspace(1)* addrspace(5)* %FuncVar0, metadata !10, metadata !13), !dbg !14
+  store i32 addrspace(1)* null, i32 addrspace(1)* addrspace(5)* %FuncVar0, align 4, !dbg !14
+  call void @llvm.dbg.declare(metadata i32 addrspace(2)* addrspace(5)* %FuncVar1, metadata !15, metadata !13), !dbg !16
+  store i32 addrspace(2)* null, i32 addrspace(2)* addrspace(5)* %FuncVar1, align 4, !dbg !16
+  call void @llvm.dbg.declare(metadata i32 addrspace(3)* addrspace(5)* %FuncVar2, metadata !17, metadata !13), !dbg !19
+  store i32 addrspace(3)* addrspacecast (i32* null to i32 addrspace(3)*), i32 addrspace(3)* addrspace(5)* %FuncVar2, align 4, !dbg !19
+  call void @llvm.dbg.declare(metadata i32 addrspace(5)* addrspace(5)* %FuncVar3, metadata !20, metadata !13), !dbg !22
+  store i32 addrspace(5)* addrspacecast (i32* null to i32 addrspace(5)*), i32 addrspace(5)* addrspace(5)* %FuncVar3, align 4, !dbg !22
+  call void @llvm.dbg.declare(metadata i32* addrspace(5)* %FuncVar4, metadata !23, metadata !13), !dbg !24
+  store i32* null, i32* addrspace(5)* %FuncVar4, align 4, !dbg !24
   ret void, !dbg !25
 }
 
@@ -83,7 +83,7 @@ entry:
 !4 = !{i32 2, !"Dwarf Version", i32 2}
 !5 = !{i32 2, !"Debug Info Version", i32 3}
 !6 = !{!""}
-!7 = distinct !DISubprogram(name: "kernel1", scope: !1, file: !1, line: 1, type: !8, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: false, unit: !0, variables: !2)
+!7 = distinct !DISubprogram(name: "kernel1", scope: !1, file: !1, line: 1, type: !8, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: false, unit: !0, retainedNodes: !2)
 !8 = !DISubroutineType(types: !9)
 !9 = !{null}
 !10 = !DILocalVariable(name: "FuncVar0", scope: !7, file: !1, line: 2, type: !11)

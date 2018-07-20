@@ -14,18 +14,17 @@ bb6.lr.ph:                                        ; preds = %bb5.preheader
   br label %bb6
 
 bb6:                                              ; preds = %bb6.lr.ph, %bb6
-  %_tmp1423 = phi i16 [ undef, %bb6.lr.ph ], [ %_tmp142, %bb6 ]
+  %_tmp1423 = phi i64 [ undef, %bb6.lr.ph ], [ %_tmp142, %bb6 ]
   %_tmp123 = getelementptr [2 x [3 x [5 x i16]]], [2 x [3 x [5 x i16]]]* @x, i16 0, i64 undef
-  %_tmp125 = sext i16 %_tmp1423 to i64
-  %_tmp126 = getelementptr [3 x [5 x i16]], [3 x [5 x i16]]* %_tmp123, i16 0, i64 %_tmp125
+  %_tmp126 = getelementptr [3 x [5 x i16]], [3 x [5 x i16]]* %_tmp123, i16 0, i64 %_tmp1423
   %_tmp129 = getelementptr [5 x i16], [5 x i16]* %_tmp126, i16 0, i64 undef
   %_tmp130 = load i16, i16* %_tmp129
   store i16 undef, i16* getelementptr ([2 x [3 x [5 x i16]]], [2 x [3 x [5 x i16]]]* @x, i64 0, i64 undef, i64 undef, i64 undef)
-  %_tmp142 = add i16 %_tmp1423, 1
+  %_tmp142 = add i64 %_tmp1423, 1
   br i1 false, label %bb6, label %loop.exit
 
 loop.exit:                                ; preds = %bb6
-  %_tmp142.lcssa = phi i16 [ %_tmp142, %bb6 ]
+  %_tmp142.lcssa = phi i64 [ %_tmp142, %bb6 ]
   %split = phi i16 [ undef, %bb6 ]
 ; CHECK: %split = phi i16 [ undef, %bb6 ], [ undef, %bb6.lver.orig ]
   br label %bb9
@@ -41,18 +40,17 @@ bb6.lr.ph:                                        ; preds = %bb5.preheader
   br label %bb6
 
 bb6:                                              ; preds = %bb6.lr.ph, %bb6
-  %_tmp1423 = phi i16 [ undef, %bb6.lr.ph ], [ %_tmp142, %bb6 ]
+  %_tmp1423 = phi i64 [ undef, %bb6.lr.ph ], [ %_tmp142, %bb6 ]
   %_tmp123 = getelementptr [2 x [3 x [5 x i16]]], [2 x [3 x [5 x i16]]]* @x, i16 0, i64 undef
-  %_tmp125 = sext i16 %_tmp1423 to i64
-  %_tmp126 = getelementptr [3 x [5 x i16]], [3 x [5 x i16]]* %_tmp123, i16 0, i64 %_tmp125
+  %_tmp126 = getelementptr [3 x [5 x i16]], [3 x [5 x i16]]* %_tmp123, i16 0, i64 %_tmp1423
   %_tmp129 = getelementptr [5 x i16], [5 x i16]* %_tmp126, i16 0, i64 undef
   %_tmp130 = load i16, i16* %_tmp129
   store i16 undef, i16* getelementptr ([2 x [3 x [5 x i16]]], [2 x [3 x [5 x i16]]]* @x, i64 0, i64 undef, i64 undef, i64 undef)
-  %_tmp142 = add i16 %_tmp1423, 1
+  %_tmp142 = add i64 %_tmp1423, 1
   br i1 false, label %bb6, label %loop.exit
 
 loop.exit:                                ; preds = %bb6
-  %_tmp142.lcssa = phi i16 [ %_tmp142, %bb6 ]
+  %_tmp142.lcssa = phi i64 [ %_tmp142, %bb6 ]
   %split = phi i16 [ %t, %bb6 ]
 ; CHECK: %split = phi i16 [ %t, %bb6 ], [ %t, %bb6.lver.orig ]
   br label %bb9

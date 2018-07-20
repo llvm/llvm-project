@@ -54,12 +54,12 @@ define i8 @test_movb_hreg(i16 %a0) {
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    shrl $8, %eax
 ; X64-NEXT:    addb %dil, %al
-; X64-NEXT:    # kill: def %al killed %al killed %eax
+; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: test_movb_hreg:
 ; X32:       # %bb.0:
-; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    addb %al, %ah
 ; X32-NEXT:    movb %ah, %al
 ; X32-NEXT:    retl

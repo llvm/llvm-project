@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=i386-linux-gnu   -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=X32
-# RUN: llc -mtriple=x86_64-linux-gnu -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=X64
+# RUN: llc -mtriple=i386-linux-gnu   -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=X32
+# RUN: llc -mtriple=x86_64-linux-gnu -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=X64
 
 --- |
   define i8 @test_zext_i1toi8(i1 %a) {
@@ -51,24 +51,34 @@ name:            test_zext_i1toi8
 alignment:       4
 legalized:       true
 regBankSelected: true
-# ALL:      registers:
-# ALL-NEXT:   - { id: 0, class: gr8, preferred-register: '' }
-# ALL-NEXT:   - { id: 1, class: gr8, preferred-register: '' }
+# X32:      registers:
+# X32-NEXT:   - { id: 0, class: gr32_abcd, preferred-register: '' }
+# X32-NEXT:   - { id: 1, class: gr8, preferred-register: '' }
+# X32-NEXT:   - { id: 2, class: gr8, preferred-register: '' }
+#
+# X64:      registers:
+# X64-NEXT:   - { id: 0, class: gr32, preferred-register: '' }
+# X64-NEXT:   - { id: 1, class: gr8, preferred-register: '' }
+# X64-NEXT:   - { id: 2, class: gr8, preferred-register: '' }
 registers:
   - { id: 0, class: gpr, preferred-register: '' }
   - { id: 1, class: gpr, preferred-register: '' }
-# ALL:          %0:gr8 = COPY %dil
-# ALL-NEXT:     %1:gr8 = AND8ri %0, 1, implicit-def %eflags
-# ALL-NEXT:     %al = COPY %1
-# ALL-NEXT:     RET 0, implicit %al
+  - { id: 2, class: gpr, preferred-register: '' }
+# X32:          %0:gr32_abcd = COPY $edi
+# X64:          %0:gr32 = COPY $edi
+# ALL_NEXT:     %1:gr8 = COPY %0.sub_8bit
+# ALL_NEXT:     %2:gr8 = AND8ri %1, 1, implicit-def $eflags
+# ALL_NEXT:     $al = COPY %2
+# ALL_NEXT:     RET 0, implicit $al
 body:             |
   bb.1 (%ir-block.0):
-    liveins: %edi
+    liveins: $edi
 
-    %0(s1) = COPY %edi
-    %1(s8) = G_ZEXT %0(s1)
-    %al = COPY %1(s8)
-    RET 0, implicit %al
+    %0(s32) = COPY $edi
+    %1(s1) = G_TRUNC %0(s32)
+    %2(s8) = G_ZEXT %1(s1)
+    $al = COPY %2(s8)
+    RET 0, implicit $al
 
 ...
 ---
@@ -77,26 +87,37 @@ name:            test_zext_i1toi16
 alignment:       4
 legalized:       true
 regBankSelected: true
-# ALL:      registers:
-# ALL-NEXT:   - { id: 0, class: gr8, preferred-register: '' }
-# ALL-NEXT:   - { id: 1, class: gr16, preferred-register: '' }
-# ALL-NEXT:   - { id: 2, class: gr16, preferred-register: '' }
+# X32:      registers:
+# X32-NEXT:   - { id: 0, class: gr32_abcd, preferred-register: '' }
+# X32-NEXT:   - { id: 1, class: gr8, preferred-register: '' }
+# X32-NEXT:   - { id: 2, class: gr16, preferred-register: '' }
+# X32-NEXT:   - { id: 3, class: gr16, preferred-register: '' }
+#
+# X64:      registers:
+# X64-NEXT:   - { id: 0, class: gr32, preferred-register: '' }
+# X64-NEXT:   - { id: 1, class: gr8, preferred-register: '' }
+# X64-NEXT:   - { id: 2, class: gr16, preferred-register: '' }
+# X64-NEXT:   - { id: 3, class: gr16, preferred-register: '' }
 registers:
   - { id: 0, class: gpr, preferred-register: '' }
   - { id: 1, class: gpr, preferred-register: '' }
-# ALL:          %0:gr8 = COPY %dil
-# ALL-NEXT:     %2:gr16 = SUBREG_TO_REG 0, %0, %subreg.sub_8bit
-# ALL-NEXT:     %1:gr16 = AND16ri8 %2, 1, implicit-def %eflags
-# ALL-NEXT:     %ax = COPY %1
-# ALL-NEXT:     RET 0, implicit %ax
+  - { id: 2, class: gpr, preferred-register: '' }
+# X32:          %0:gr32_abcd = COPY $edi
+# X64:          %0:gr32 = COPY $edi
+# ALL_NEXT:     %1:gr8 = COPY %0.sub_8bit
+# ALL_NEXT:     %3:gr16 = SUBREG_TO_REG 0, %1, %subreg.sub_8bit
+# ALL_NEXT:     %2:gr16 = AND16ri8 %3, 1, implicit-def $eflags
+# ALL_NEXT:     $ax = COPY %2
+# ALL_NEXT:     RET 0, implicit $ax
 body:             |
   bb.1 (%ir-block.0):
-    liveins: %edi
+    liveins: $edi
 
-    %0(s1) = COPY %edi
-    %1(s16) = G_ZEXT %0(s1)
-    %ax = COPY %1(s16)
-    RET 0, implicit %ax
+    %0(s32) = COPY $edi
+    %1(s1) = G_TRUNC %0(s32)
+    %2(s16) = G_ZEXT %1(s1)
+    $ax = COPY %2(s16)
+    RET 0, implicit $ax
 
 ...
 ---
@@ -105,26 +126,37 @@ name:            test_zext_i1
 alignment:       4
 legalized:       true
 regBankSelected: true
-# ALL:      registers:
-# ALL-NEXT:   - { id: 0, class: gr8, preferred-register: '' }
-# ALL-NEXT:   - { id: 1, class: gr32, preferred-register: '' }
-# ALL-NEXT:   - { id: 2, class: gr32, preferred-register: '' }
+# X32:      registers:
+# X32-NEXT:   - { id: 0, class: gr32_abcd, preferred-register: '' }
+# X32-NEXT:   - { id: 1, class: gr8, preferred-register: '' }
+# X32-NEXT:   - { id: 2, class: gr32, preferred-register: '' }
+# X32-NEXT:   - { id: 3, class: gr32, preferred-register: '' }
+#
+# X64:      registers:
+# X64-NEXT:   - { id: 0, class: gr32, preferred-register: '' }
+# X64-NEXT:   - { id: 1, class: gr8, preferred-register: '' }
+# X64-NEXT:   - { id: 2, class: gr32, preferred-register: '' }
+# X64-NEXT:   - { id: 3, class: gr32, preferred-register: '' }
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
-# ALL:          %0:gr8 = COPY %dil
-# ALL-NEXT:     %2:gr32 = SUBREG_TO_REG 0, %0, %subreg.sub_8bit
-# ALL-NEXT:     %1:gr32 = AND32ri8 %2, 1, implicit-def %eflags
-# ALL-NEXT:     %eax = COPY %1
-# ALL-NEXT:     RET 0, implicit %eax
+  - { id: 2, class: gpr }
+# X32:          %0:gr32_abcd = COPY $edi
+# X64:          %0:gr32 = COPY $edi
+# ALL_NEXT:     %1:gr8 = COPY %0.sub_8bit
+# ALL_NEXT:     %3:gr32 = SUBREG_TO_REG 0, %1, %subreg.sub_8bit
+# ALL_NEXT:     %2:gr32 = AND32ri8 %3, 1, implicit-def $eflags
+# ALL_NEXT:     $eax = COPY %2
+# ALL_NEXT:     RET 0, implicit $eax
 body:             |
   bb.1 (%ir-block.0):
-    liveins: %edi
+    liveins: $edi
 
-    %0(s1) = COPY %edi
-    %1(s32) = G_ZEXT %0(s1)
-    %eax = COPY %1(s32)
-    RET 0, implicit %eax
+    %0(s32) = COPY $edi
+    %1(s1) = G_TRUNC %0(s32)
+    %2(s32) = G_ZEXT %1(s1)
+    $eax = COPY %2(s32)
+    RET 0, implicit $eax
 
 ...
 ---
@@ -139,18 +171,18 @@ regBankSelected: true
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
-# ALL:          %0:gr8 = COPY %dil
+# ALL:          %0:gr8 = COPY $dil
 # ALL-NEXT:     %1:gr32 = MOVZX32rr8 %0
-# ALL-NEXT:     %eax = COPY %1
-# ALL-NEXT:     RET 0, implicit %eax
+# ALL-NEXT:     $eax = COPY %1
+# ALL-NEXT:     RET 0, implicit $eax
 body:             |
   bb.1 (%ir-block.0):
-    liveins: %edi
+    liveins: $edi
 
-    %0(s8) = COPY %dil
+    %0(s8) = COPY $dil
     %1(s32) = G_ZEXT %0(s8)
-    %eax = COPY %1(s32)
-    RET 0, implicit %eax
+    $eax = COPY %1(s32)
+    RET 0, implicit $eax
 
 ...
 ---
@@ -165,18 +197,18 @@ regBankSelected: true
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
-# ALL:          %0:gr16 = COPY %di
+# ALL:          %0:gr16 = COPY $di
 # ALL-NEXT:     %1:gr32 = MOVZX32rr16 %0
-# ALL-NEXT:     %eax = COPY %1
-# ALL-NEXT:     RET 0, implicit %eax
+# ALL-NEXT:     $eax = COPY %1
+# ALL-NEXT:     RET 0, implicit $eax
 body:             |
   bb.1 (%ir-block.0):
-    liveins: %edi
+    liveins: $edi
 
-    %0(s16) = COPY %di
+    %0(s16) = COPY $di
     %1(s32) = G_ZEXT %0(s16)
-    %eax = COPY %1(s32)
-    RET 0, implicit %eax
+    $eax = COPY %1(s32)
+    RET 0, implicit $eax
 
 ...
 ---
@@ -191,18 +223,18 @@ regBankSelected: true
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
-# ALL:          %0:gr8 = COPY %dil
+# ALL:          %0:gr8 = COPY $dil
 # ALL-NEXT:     %1:gr32 = MOVSX32rr8 %0
-# ALL-NEXT:     %eax = COPY %1
-# ALL-NEXT:     RET 0, implicit %eax
+# ALL-NEXT:     $eax = COPY %1
+# ALL-NEXT:     RET 0, implicit $eax
 body:             |
   bb.1 (%ir-block.0):
-    liveins: %edi
+    liveins: $edi
 
-    %0(s8) = COPY %dil
+    %0(s8) = COPY $dil
     %1(s32) = G_SEXT %0(s8)
-    %eax = COPY %1(s32)
-    RET 0, implicit %eax
+    $eax = COPY %1(s32)
+    RET 0, implicit $eax
 
 ...
 ---
@@ -217,18 +249,18 @@ regBankSelected: true
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
-# ALL:          %0:gr16 = COPY %di
+# ALL:          %0:gr16 = COPY $di
 # ALL-NEXT:     %1:gr32 = MOVSX32rr16 %0
-# ALL-NEXT:     %eax = COPY %1
-# ALL-NEXT:     RET 0, implicit %eax
+# ALL-NEXT:     $eax = COPY %1
+# ALL-NEXT:     RET 0, implicit $eax
 body:             |
   bb.1 (%ir-block.0):
-    liveins: %edi
+    liveins: $edi
 
-    %0(s16) = COPY %di
+    %0(s16) = COPY $di
     %1(s32) = G_SEXT %0(s16)
-    %eax = COPY %1(s32)
-    RET 0, implicit %eax
+    $eax = COPY %1(s32)
+    RET 0, implicit $eax
 
 ...
 ---
@@ -250,21 +282,20 @@ registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
   - { id: 2, class: gpr }
-# X32:          %0:gr32_abcd = COPY %edi
-# X64:          %0:gr32 = COPY %edi
+# X32:          %0:gr32_abcd = COPY $edi
+# X64:          %0:gr32 = COPY $edi
 # ALL-NEXT:     %1:gr8 = COPY %0.sub_8bit
-# ALL-NEXT:     %2:gr8 = COPY %1
-# ALL-NEXT:     %al = COPY %2
-# ALL-NEXT:     RET 0, implicit %al
+# ALL-NEXT:     $al = COPY %1
+# ALL-NEXT:     RET 0, implicit $al
 body:             |
   bb.1 (%ir-block.0):
-    liveins: %edi
+    liveins: $edi
 
-    %0(s32) = COPY %edi
+    %0(s32) = COPY $edi
     %1(s1) = G_TRUNC %0(s32)
     %2(s8) = G_ANYEXT %1(s1)
-    %al = COPY %2(s8)
-    RET 0, implicit %al
+    $al = COPY %2(s8)
+    RET 0, implicit $al
 ...
 ---
 name:            test_anyext_i1toi16
@@ -285,21 +316,21 @@ registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
   - { id: 2, class: gpr }
-# X32:          %0:gr32_abcd = COPY %edi
-# X64:          %0:gr32 = COPY %edi
+# X32:          %0:gr32_abcd = COPY $edi
+# X64:          %0:gr32 = COPY $edi
 # ALL-NEXT:     %1:gr8 = COPY %0.sub_8bit
 # ALL-NEXT:     %2:gr16 = SUBREG_TO_REG 0, %1, %subreg.sub_8bit
-# ALL-NEXT:     %ax = COPY %2
-# ALL-NEXT:     RET 0, implicit %ax
+# ALL-NEXT:     $ax = COPY %2
+# ALL-NEXT:     RET 0, implicit $ax
 body:             |
   bb.1 (%ir-block.0):
-    liveins: %edi
+    liveins: $edi
 
-    %0(s32) = COPY %edi
+    %0(s32) = COPY $edi
     %1(s1) = G_TRUNC %0(s32)
     %2(s16) = G_ANYEXT %1(s1)
-    %ax = COPY %2(s16)
-    RET 0, implicit %ax
+    $ax = COPY %2(s16)
+    RET 0, implicit $ax
 ...
 ---
 name:            test_anyext_i1toi32
@@ -320,21 +351,21 @@ registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
   - { id: 2, class: gpr }
-# X32:          %0:gr32_abcd = COPY %edi
-# X64:          %0:gr32 = COPY %edi
+# X32:          %0:gr32_abcd = COPY $edi
+# X64:          %0:gr32 = COPY $edi
 # ALL-NEXT:     %1:gr8 = COPY %0.sub_8bit
 # ALL-NEXT:     %2:gr32 = SUBREG_TO_REG 0, %1, %subreg.sub_8bit
-# ALL-NEXT:     %eax = COPY %2
-# ALL-NEXT:     RET 0, implicit %eax
+# ALL-NEXT:     $eax = COPY %2
+# ALL-NEXT:     RET 0, implicit $eax
 body:             |
   bb.1 (%ir-block.0):
-    liveins: %edi
+    liveins: $edi
 
-    %0(s32) = COPY %edi
+    %0(s32) = COPY $edi
     %1(s1) = G_TRUNC %0(s32)
     %2(s32) = G_ANYEXT %1(s1)
-    %eax = COPY %2(s32)
-    RET 0, implicit %eax
+    $eax = COPY %2(s32)
+    RET 0, implicit $eax
 ...
 ---
 name:            test_anyext_i8toi16
@@ -355,21 +386,21 @@ registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
   - { id: 2, class: gpr }
-# X32:          %0:gr32_abcd = COPY %edi
-# X64:          %0:gr32 = COPY %edi
+# X32:          %0:gr32_abcd = COPY $edi
+# X64:          %0:gr32 = COPY $edi
 # ALL-NEXT:     %1:gr8 = COPY %0.sub_8bit
 # ALL-NEXT:     %2:gr16 = SUBREG_TO_REG 0, %1, %subreg.sub_8bit
-# ALL-NEXT:     %ax = COPY %2
-# ALL-NEXT:     RET 0, implicit %ax
+# ALL-NEXT:     $ax = COPY %2
+# ALL-NEXT:     RET 0, implicit $ax
 body:             |
   bb.1 (%ir-block.0):
-    liveins: %edi
+    liveins: $edi
 
-    %0(s32) = COPY %edi
+    %0(s32) = COPY $edi
     %1(s8) = G_TRUNC %0(s32)
     %2(s16) = G_ANYEXT %1(s8)
-    %ax = COPY %2(s16)
-    RET 0, implicit %ax
+    $ax = COPY %2(s16)
+    RET 0, implicit $ax
 ...
 ---
 name:            test_anyext_i8toi32
@@ -390,21 +421,21 @@ registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
   - { id: 2, class: gpr }
-# X32:          %0:gr32_abcd = COPY %edi
-# X64:          %0:gr32 = COPY %edi
+# X32:          %0:gr32_abcd = COPY $edi
+# X64:          %0:gr32 = COPY $edi
 # ALL-NEXT:     %1:gr8 = COPY %0.sub_8bit
 # ALL-NEXT:     %2:gr32 = MOVZX32rr8 %1
-# ALL-NEXT:     %eax = COPY %2
-# ALL-NEXT:     RET 0, implicit %eax
+# ALL-NEXT:     $eax = COPY %2
+# ALL-NEXT:     RET 0, implicit $eax
 body:             |
   bb.1 (%ir-block.0):
-    liveins: %edi
+    liveins: $edi
 
-    %0(s32) = COPY %edi
+    %0(s32) = COPY $edi
     %1(s8) = G_TRUNC %0(s32)
     %2(s32) = G_ANYEXT %1(s8)
-    %eax = COPY %2(s32)
-    RET 0, implicit %eax
+    $eax = COPY %2(s32)
+    RET 0, implicit $eax
 ...
 ---
 name:            test_anyext_i16toi32
@@ -420,18 +451,18 @@ registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
   - { id: 2, class: gpr }
-# ALL:          %0:gr32 = COPY %edi
+# ALL:          %0:gr32 = COPY $edi
 # ALL-NEXT:     %1:gr16 = COPY %0.sub_16bit
 # ALL-NEXT:     %2:gr32 = SUBREG_TO_REG 0, %1, %subreg.sub_16bit
-# ALL-NEXT:     %eax = COPY %2
-# ALL-NEXT:     RET 0, implicit %eax
+# ALL-NEXT:     $eax = COPY %2
+# ALL-NEXT:     RET 0, implicit $eax
 body:             |
   bb.1 (%ir-block.0):
-    liveins: %edi
+    liveins: $edi
 
-    %0(s32) = COPY %edi
+    %0(s32) = COPY $edi
     %1(s16) = G_TRUNC %0(s32)
     %2(s32) = G_ANYEXT %1(s16)
-    %eax = COPY %2(s32)
-    RET 0, implicit %eax
+    $eax = COPY %2(s32)
+    RET 0, implicit $eax
 ...

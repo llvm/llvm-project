@@ -23,7 +23,7 @@ target triple = "x86_64-apple-macosx"
 ; Compare the arguments and jump to exit.
 ; After the prologue is set.
 ; CHECK: movl %edi, [[ARG0CPY:%e[a-z]+]]
-; CHECK-NEXT: cmpl %esi, [[ARG0CPY]]
+; CHECK-NEXT: cmpl %esi, %edi
 ; CHECK-NEXT: jge [[EXIT_LABEL:LBB[0-9_]+]]
 ;
 ; Store %a in the alloca.
@@ -69,7 +69,7 @@ attributes #0 = { "no-frame-pointer-elim"="false" }
 ; Compare the arguments and jump to exit.
 ; After the prologue is set.
 ; CHECK: movl %edi, [[ARG0CPY:%e[a-z]+]]
-; CHECK-NEXT: cmpl %esi, [[ARG0CPY]]
+; CHECK-NEXT: cmpl %esi, %edi
 ; CHECK-NEXT: jge [[EXIT_LABEL:LBB[0-9_]+]]
 ;
 ; Prologue code.
@@ -115,7 +115,7 @@ attributes #1 = { "no-frame-pointer-elim"="true" }
 ; Compare the arguments and jump to exit.
 ; After the prologue is set.
 ; CHECK: movl %edi, [[ARG0CPY:%e[a-z]+]]
-; CHECK-NEXT: cmpl %esi, [[ARG0CPY]]
+; CHECK-NEXT: cmpl %esi, %edi
 ; CHECK-NEXT: jge [[EXIT_LABEL:LBB[0-9_]+]]
 ;
 ; Prologue code.
@@ -222,3 +222,105 @@ __go_ptr_strings_equal.exit:                      ; preds = %land.rhs.i.i, %if.e
 declare i32 @memcmp(i8* nocapture, i8* nocapture, i64) #5
 
 attributes #5 = { nounwind readonly ssp uwtable "split-stack" }
+
+; Check that correctly take into account the jumps to landing pad.
+; We used to consider function that may throw like regular
+; function calls.
+; Therefore, in this example, we were happily inserting the epilogue
+; right after the call to throw_exception. Because of that we would not
+; execute the epilogue when an execption occur and bad things will
+; happen.
+; PR36513
+;
+; CHECK-LABEL: with_nounwind:
+; Prologue
+; CHECK: push
+;
+; Jump to throw_exception:
+; CHECK-NEXT: testb $1, %dil
+; CHECK-NEXT: jne [[THROW_LABEL:LBB[0-9_]+]]
+; Else return exit
+; CHECK: popq
+; CHECK-NEXT: retq
+;
+; CHECK-NEXT: [[THROW_LABEL]]:
+; CHECK: callq	_throw_exception
+; Unreachable block...
+;
+; Epilogue must be after the landing pad.
+; CHECK-NOT: popq
+;
+; Look for the landing pad label.
+; CHECK: LBB{{[0-9_]+}}:
+; Epilogue on the landing pad
+; CHECK: popq
+; CHECK-NEXT: retq
+define void @with_nounwind(i1 %cond) nounwind personality i32 (...)* @my_personality {
+entry:
+  br i1 %cond, label %throw, label %return
+
+throw:
+  invoke void @throw_exception()
+          to label %unreachable unwind label %landing
+
+unreachable:
+  unreachable
+
+landing:
+  %pad = landingpad { i8*, i32 }
+          catch i8* null
+  ret void
+
+return:
+  ret void
+}
+
+; Check landing pad again.
+; This time checks that we can shrink-wrap when the epilogue does not
+; span accross several blocks.
+;
+; CHECK-LABEL: with_nounwind_same_succ:
+;
+; Jump to throw_exception:
+; CHECK: testb $1, %dil
+; CHECK-NEXT: je [[RET_LABEL:LBB[0-9_]+]]
+;
+; Prologue
+; CHECK: push
+; CHECK: callq	_throw_exception
+;
+; Fallthrough label
+; CHECK: [[FALLTHROUGH_LABEL:LBB[0-9_]+]]
+; CHECK: nop
+; CHECK: popq
+;
+; CHECK: [[RET_LABEL]]
+; CHECK: retq
+;
+; Look for the landing pad label.
+; CHECK: LBB{{[0-9_]+}}:
+; Landing pad jumps to fallthrough
+; CHECK: jmp [[FALLTHROUGH_LABEL]]
+define void @with_nounwind_same_succ(i1 %cond) nounwind personality i32 (...)* @my_personality2 {
+entry:
+  br i1 %cond, label %throw, label %return
+
+throw:
+  invoke void @throw_exception()
+          to label %fallthrough unwind label %landing
+landing:
+  %pad = landingpad { i8*, i32 }
+          catch i8* null
+  br label %fallthrough
+
+fallthrough:
+  tail call void asm "nop", ""()
+  br label %return
+
+return:
+  ret void
+}
+
+declare void @throw_exception()
+declare i32 @my_personality(...)
+declare i32 @my_personality2(...)

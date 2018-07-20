@@ -1,5 +1,6 @@
 add_llvm_library(LLVMTableGen
   Error.cpp
+  JSONBackend.cpp
   Main.cpp
   Record.cpp
   SetTheory.cpp

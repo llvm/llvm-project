@@ -16,7 +16,9 @@
 
 #include "AMDGPUArgumentUsageInfo.h"
 #include "AMDGPUMachineFunction.h"
+#include "SIInstrInfo.h"
 #include "SIRegisterInfo.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
@@ -34,7 +36,6 @@ namespace llvm {
 
 class MachineFrameInfo;
 class MachineFunction;
-class SIInstrInfo;
 class TargetRegisterClass;
 
 class AMDGPUImagePseudoSourceValue : public PseudoSourceValue {
@@ -50,15 +51,11 @@ public:
   }
 
   bool isAliased(const MachineFrameInfo *) const override {
-    // FIXME: If we ever change image intrinsics to accept fat pointers, then
-    // this could be true for some cases.
-    return false;
+    return true;
   }
 
   bool mayAlias(const MachineFrameInfo *) const override {
-    // FIXME: If we ever change image intrinsics to accept fat pointers, then
-    // this could be true for some cases.
-    return false;
+    return true;
   }
 };
 
@@ -74,15 +71,11 @@ public:
   }
 
   bool isAliased(const MachineFrameInfo *) const override {
-    // FIXME: If we ever change image intrinsics to accept fat pointers, then
-    // this could be true for some cases.
-    return false;
+    return true;
   }
 
   bool mayAlias(const MachineFrameInfo *) const override {
-    // FIXME: If we ever change image intrinsics to accept fat pointers, then
-    // this could be true for some cases.
-    return false;
+    return true;
   }
 };
 
@@ -150,6 +143,7 @@ private:
   bool HasSpilledSGPRs = false;
   bool HasSpilledVGPRs = false;
   bool HasNonSpillStackObjects = false;
+  bool IsStackRealigned = false;
 
   unsigned NumSpilledSGPRs = 0;
   unsigned NumSpilledVGPRs = 0;
@@ -161,9 +155,6 @@ private:
   bool KernargSegmentPtr : 1;
   bool DispatchID : 1;
   bool FlatScratchInit : 1;
-  bool GridWorkgroupCountX : 1;
-  bool GridWorkgroupCountY : 1;
-  bool GridWorkgroupCountZ : 1;
 
   // Feature bits required for inputs passed in system SGPRs.
   bool WorkGroupIDX : 1; // Always initialized.
@@ -190,25 +181,25 @@ private:
   // current hardware only allows a 16 bit value.
   unsigned GITPtrHigh;
 
-  MCPhysReg getNextUserSGPR() const {
-    assert(NumSystemSGPRs == 0 && "System SGPRs must be added after user SGPRs");
-    return AMDGPU::SGPR0 + NumUserSGPRs;
-  }
+  unsigned HighBitsOf32BitAddress;
 
-  MCPhysReg getNextSystemSGPR() const {
-    return AMDGPU::SGPR0 + NumUserSGPRs + NumSystemSGPRs;
-  }
+  // Current recorded maximum possible occupancy.
+  unsigned Occupancy;
+
+  MCPhysReg getNextUserSGPR() const;
+
+  MCPhysReg getNextSystemSGPR() const;
 
 public:
   struct SpilledReg {
-    unsigned VGPR = AMDGPU::NoRegister;
+    unsigned VGPR = 0;
     int Lane = -1;
 
     SpilledReg() = default;
     SpilledReg(unsigned R, int L) : VGPR (R), Lane (L) {}
 
     bool hasLane() { return Lane != -1;}
-    bool hasReg() { return VGPR != AMDGPU::NoRegister;}
+    bool hasReg() { return VGPR != 0;}
   };
 
   struct SGPRSpillVGPRCSR {
@@ -248,8 +239,8 @@ public:
   bool allocateSGPRSpillToVGPR(MachineFunction &MF, int FI);
   void removeSGPRToVGPRFrameIndices(MachineFrameInfo &MFI);
 
-  bool hasCalculatedTID() const { return TIDReg != AMDGPU::NoRegister; }
-  unsigned getTIDReg() const { return TIDReg; }
+  bool hasCalculatedTID() const { return TIDReg != 0; };
+  unsigned getTIDReg() const { return TIDReg; };
   void setTIDReg(unsigned Reg) { TIDReg = Reg; }
 
   unsigned getBytesInStackArgArea() const {
@@ -342,18 +333,6 @@ public:
     return FlatScratchInit;
   }
 
-  bool hasGridWorkgroupCountX() const {
-    return GridWorkgroupCountX;
-  }
-
-  bool hasGridWorkgroupCountY() const {
-    return GridWorkgroupCountY;
-  }
-
-  bool hasGridWorkgroupCountZ() const {
-    return GridWorkgroupCountZ;
-  }
-
   bool hasWorkGroupIDX() const {
     return WorkGroupIDX;
   }
@@ -415,6 +394,10 @@ public:
     return GITPtrHigh;
   }
 
+  unsigned get32BitAddressHighBits() const {
+    return HighBitsOf32BitAddress;
+  }
+
   unsigned getNumUserSGPRs() const {
     return NumUserSGPRs;
   }
@@ -427,14 +410,14 @@ public:
     return ArgInfo.PrivateSegmentWaveByteOffset.getRegister();
   }
 
-  /// \brief Returns the physical register reserved for use as the resource
+  /// Returns the physical register reserved for use as the resource
   /// descriptor for scratch accesses.
   unsigned getScratchRSrcReg() const {
     return ScratchRSrcReg;
   }
 
   void setScratchRSrcReg(unsigned Reg) {
-    assert(Reg != AMDGPU::NoRegister && "Should never be unset");
+    assert(Reg != 0 && "Should never be unset");
     ScratchRSrcReg = Reg;
   }
 
@@ -447,6 +430,7 @@ public:
   }
 
   void setStackPtrOffsetReg(unsigned Reg) {
+    assert(Reg != 0 && "Should never be unset");
     StackPtrOffsetReg = Reg;
   }
 
@@ -459,7 +443,7 @@ public:
   }
 
   void setScratchWaveOffsetReg(unsigned Reg) {
-    assert(Reg != AMDGPU::NoRegister && "Should never be unset");
+    assert(Reg != 0 && "Should never be unset");
     ScratchWaveOffsetReg = Reg;
     if (isEntryFunction())
       FrameOffsetReg = ScratchWaveOffsetReg;
@@ -495,6 +479,14 @@ public:
 
   void setHasNonSpillStackObjects(bool StackObject = true) {
     HasNonSpillStackObjects = StackObject;
+  }
+
+  bool isStackRealigned() const {
+    return IsStackRealigned;
+  }
+
+  void setIsStackRealigned(bool Realigned = true) {
+    IsStackRealigned = Realigned;
   }
 
   unsigned getNumSpilledSGPRs() const {
@@ -579,7 +571,7 @@ public:
     return DebuggerWorkGroupIDStackObjectIndices[Dim];
   }
 
-  /// \brief Sets stack object index for \p Dim's work group ID to \p ObjectIdx.
+  /// Sets stack object index for \p Dim's work group ID to \p ObjectIdx.
   void setDebuggerWorkGroupIDStackObjectIndex(unsigned Dim, int ObjectIdx) {
     assert(Dim < 3);
     DebuggerWorkGroupIDStackObjectIndices[Dim] = ObjectIdx;
@@ -591,7 +583,7 @@ public:
     return DebuggerWorkItemIDStackObjectIndices[Dim];
   }
 
-  /// \brief Sets stack object index for \p Dim's work item ID to \p ObjectIdx.
+  /// Sets stack object index for \p Dim's work item ID to \p ObjectIdx.
   void setDebuggerWorkItemIDStackObjectIndex(unsigned Dim, int ObjectIdx) {
     assert(Dim < 3);
     DebuggerWorkItemIDStackObjectIndices[Dim] = ObjectIdx;
@@ -614,20 +606,7 @@ public:
   }
 
   /// \returns VGPR used for \p Dim' work item ID.
-  unsigned getWorkItemIDVGPR(unsigned Dim) const {
-    switch (Dim) {
-    case 0:
-      assert(hasWorkItemIDX());
-      return AMDGPU::VGPR0;
-    case 1:
-      assert(hasWorkItemIDY());
-      return AMDGPU::VGPR1;
-    case 2:
-      assert(hasWorkItemIDZ());
-      return AMDGPU::VGPR2;
-    }
-    llvm_unreachable("unexpected dimension");
-  }
+  unsigned getWorkItemIDVGPR(unsigned Dim) const;
 
   unsigned getLDSWaveSpillSize() const {
     return LDSWaveSpillSize;
@@ -649,6 +628,29 @@ public:
       ImgRsrc,
       llvm::make_unique<AMDGPUImagePseudoSourceValue>(TII));
     return PSV.first->second.get();
+  }
+
+  unsigned getOccupancy() const {
+    return Occupancy;
+  }
+
+  unsigned getMinAllowedOccupancy() const {
+    if (!isMemoryBound() && !needsWaveLimiter())
+      return Occupancy;
+    return (Occupancy < 4) ? Occupancy : 4;
+  }
+
+  void limitOccupancy(const MachineFunction &MF);
+
+  void limitOccupancy(unsigned Limit) {
+    if (Occupancy > Limit)
+      Occupancy = Limit;
+  }
+
+  void increaseOccupancy(const MachineFunction &MF, unsigned Limit) {
+    if (Occupancy < Limit)
+      Occupancy = Limit;
+    limitOccupancy(MF);
   }
 };
 

@@ -1,12 +1,12 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=gfx900 -mattr=-fp64-fp16-denormals -fp-contract=on -verify-machineinstrs -enable-packed-inlinable-literals < %s | FileCheck -check-prefixes=GCN,GCN-STRICT,GFX9-FLUSH,GFX9 %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=gfx900 -mattr=-fp64-fp16-denormals -fp-contract=on -verify-machineinstrs -enable-packed-inlinable-literals < %s | FileCheck -check-prefixes=GCN,GCN-STRICT,GFX9-FLUSH,GFX9 %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=gfx900 -mattr=-fp64-fp16-denormals -fp-contract=fast -verify-machineinstrs -enable-packed-inlinable-literals < %s | FileCheck -check-prefixes=GCN,GCN-CONTRACT,GFX9-FLUSH,GFX9 %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=gfx900 -mattr=-fp64-fp16-denormals -fp-contract=fast -verify-machineinstrs -enable-packed-inlinable-literals < %s | FileCheck -check-prefixes=GCN,GCN-CONTRACT,GFX9-FLUSH,GFX9 %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=gfx900 -mattr=-fp64-fp16-denormals -fp-contract=on -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-STRICT,GFX9-FLUSH,GFX9 %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=gfx900 -mattr=-fp64-fp16-denormals -fp-contract=on -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-STRICT,GFX9-FLUSH,GFX9 %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=gfx900 -mattr=-fp64-fp16-denormals -fp-contract=fast -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-CONTRACT,GFX9-FLUSH,GFX9 %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=gfx900 -mattr=-fp64-fp16-denormals -fp-contract=fast -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-CONTRACT,GFX9-FLUSH,GFX9 %s
 
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=gfx900 -mattr=+fp64-fp16-denormals -fp-contract=on -verify-machineinstrs -enable-packed-inlinable-literals < %s | FileCheck -check-prefixes=GCN,GCN-STRICT,GFX9-DENORM-STRICT,GFX9-DENORM,GFX9 %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=gfx900 -mattr=+fp64-fp16-denormals -fp-contract=on -verify-machineinstrs -enable-packed-inlinable-literals < %s | FileCheck -check-prefixes=GCN,GCN-STRICT,GFX9-DENORM-STRICT,GFX9-DENORM,GFX9 %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=gfx900 -mattr=+fp64-fp16-denormals -fp-contract=fast -verify-machineinstrs -enable-packed-inlinable-literals < %s | FileCheck -check-prefixes=GCN,GCN-CONTRACT,GFX9-DENORM-CONTRACT,GFX9-DENORM,GFX9 %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=gfx900 -mattr=+fp64-fp16-denormals -fp-contract=fast -verify-machineinstrs -enable-packed-inlinable-literals < %s | FileCheck -check-prefixes=GCN,GCN-CONTRACT,GFX9-DENORM-CONTRACT,GFX9-DENORM,GFX9 %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=gfx900 -mattr=+fp64-fp16-denormals -fp-contract=on -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-STRICT,GFX9-DENORM-STRICT,GFX9-DENORM,GFX9 %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=gfx900 -mattr=+fp64-fp16-denormals -fp-contract=on -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-STRICT,GFX9-DENORM-STRICT,GFX9-DENORM,GFX9 %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=gfx900 -mattr=+fp64-fp16-denormals -fp-contract=fast -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-CONTRACT,GFX9-DENORM-CONTRACT,GFX9-DENORM,GFX9 %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=gfx900 -mattr=+fp64-fp16-denormals -fp-contract=fast -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-CONTRACT,GFX9-DENORM-CONTRACT,GFX9-DENORM,GFX9 %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() #1
 declare <2 x half> @llvm.fmuladd.v2f16(<2 x half>, <2 x half>, <2 x half>) #1

@@ -10,7 +10,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK-NOT: # %{{[a-zA-Z_]+}}
 ; CHECK: # %inner_loop_latch
 ; CHECK-NOT: # %{{[a-zA-Z_]+}}
-; CHECK: # %inner_loop_test
+; CHECK: # %inner_loop_top
 ; CHECK-NOT: # %{{[a-zA-Z_]+}}
 ; CHECK: # %exit
 define void @tail_dup_merge_loops(i32 %a, i8* %b, i8* %c) local_unnamed_addr #0 {
@@ -97,7 +97,7 @@ if.end19:                                         ; preds = %entry
   br i1 %or.cond203, label %cleanup, label %if.end50
 
 if.end50:                                         ; preds = %if.end19
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull %call, i8* undef, i64 %conv, i32 1, i1 false)
+  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull %call, i8* undef, i64 %conv, i1 false)
   %cmp1.i.i = icmp ugt i32 %mul, 3
   br i1 %cmp1.i.i, label %shared_preheader, label %wunpsect.exit.thread.loopexit391
 
@@ -185,6 +185,6 @@ declare void @cli_dbgmsg(i8*, ...) local_unnamed_addr #0
 declare i8* @cli_calloc(i64, i64) local_unnamed_addr #0
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i32, i1) #1
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1) #1
 attributes #0 = { nounwind }
 attributes #1 = { argmemonly nounwind }

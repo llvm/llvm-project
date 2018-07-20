@@ -1,8 +1,11 @@
-; RUN: llc -march=amdgcn -mtriple=amdgcn---amdgiz -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SI,SICIVI,FUNC %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,VI,SICIVI,FUNC %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9,FUNC %s
-; RUN: llc -march=r600 -mtriple=r600---amdgiz -mcpu=redwood -verify-machineinstrs < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn---amdgiz -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,SI,SICIVI,FUNC %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=tonga -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,VI,SICIVI,FUNC %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,GFX9,FUNC %s
+; RUN: llc -march=r600 -mtriple=r600---amdgiz -mcpu=redwood -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=EG -check-prefix=FUNC %s
 
+; Testing for ds_read/write_b128
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=+enable-ds128 < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=CIVI,FUNC %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=+enable-ds128 < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=CIVI,FUNC %s
 
 ; FUNC-LABEL: {{^}}local_load_i8:
 ; GCN-NOT: s_wqm_b64
@@ -1020,5 +1023,24 @@ define amdgpu_kernel void @local_sextload_v32i8_to_v32i16(<32 x i16> addrspace(3
 ;   store <64 x i16> %ext, <64 x i16> addrspace(3)* %out
 ;   ret void
 ; }
+
+; Tests if ds_read/write_b128 gets generated for the 16 byte aligned load.
+; FUNC-LABEL: {{^}}local_v16i8_to_128:
+
+; SI-NOT: ds_read_b128
+; SI-NOT: ds_write_b128
+
+; CIVI: ds_read_b128
+; CIVI: ds_write_b128
+
+; EG: LDS_READ_RET
+; EG: LDS_READ_RET
+; EG: LDS_READ_RET
+; EG: LDS_READ_RET
+define amdgpu_kernel void @local_v16i8_to_128(<16 x i8> addrspace(3)* %out, <16 x i8> addrspace(3)* %in) {
+  %ld = load <16 x i8>, <16 x i8> addrspace(3)* %in, align 16
+  store <16 x i8> %ld, <16 x i8> addrspace(3)* %out, align 16
+  ret void
+}
 
 attributes #0 = { nounwind }

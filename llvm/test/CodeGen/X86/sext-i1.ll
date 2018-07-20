@@ -124,7 +124,7 @@ define i32 @select_0_or_1s(i1 %cond) {
 ;
 ; X64-LABEL: select_0_or_1s:
 ; X64:       # %bb.0:
-; X64-NEXT:    # kill: def %edi killed %edi def %rdi
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X64-NEXT:    andl $1, %edi
 ; X64-NEXT:    leal -1(%rdi), %eax
 ; X64-NEXT:    retq
@@ -144,7 +144,7 @@ define i32 @select_0_or_1s_zeroext(i1 zeroext %cond) {
 ;
 ; X64-LABEL: select_0_or_1s_zeroext:
 ; X64:       # %bb.0:
-; X64-NEXT:    # kill: def %edi killed %edi def %rdi
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X64-NEXT:    leal -1(%rdi), %eax
 ; X64-NEXT:    retq
   %not = xor i1 %cond, 1
@@ -157,9 +157,8 @@ define i32 @select_0_or_1s_zeroext(i1 zeroext %cond) {
 define i32 @select_0_or_1s_signext(i1 signext %cond) {
 ; X32-LABEL: select_0_or_1s_signext:
 ; X32:       # %bb.0:
-; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X32-NEXT:    andb $1, %al
-; X32-NEXT:    movzbl %al, %eax
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    andl $1, %eax
 ; X32-NEXT:    decl %eax
 ; X32-NEXT:    retl
 ;

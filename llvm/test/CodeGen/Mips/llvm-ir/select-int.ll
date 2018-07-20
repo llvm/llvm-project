@@ -24,7 +24,7 @@
 ; RUN:    -check-prefixes=ALL,CMOV,CMOV-64
 ; RUN: llc < %s -march=mips64 -mcpu=mips64r6 | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,SEL,SEL-64
-; RUN: llc < %s -march=mips -mcpu=mips32r3 -mattr=+micromips | FileCheck %s \
+; RUN: llc < %s -march=mips -mcpu=mips32r3 -mattr=+micromips -asm-show-inst | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,MM32R3
 ; RUN: llc < %s -march=mips -mcpu=mips32r6 -mattr=+micromips | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,MMR6,MM32R6
@@ -53,7 +53,7 @@ entry:
   ; SEL:    or      $2, $[[T2]], $[[T1]]
 
   ; MM32R3:   andi16  $[[T0:[0-9]+]], $4, 1
-  ; MM32R3:   movn    $[[T1:[0-9]+]], $5, $[[T0]]
+  ; MM32R3:   movn    $[[T1:[0-9]+]], $5, $[[T0]]  # <MCInst #{{[0-9]+}} MOVN_I_MM
   ; MM32R3:   move    $2, $[[T1]]
 
   ; MMR6:     andi16  $[[T0:[0-9]+]], $4, 1
@@ -89,7 +89,7 @@ entry:
   ; SEL:    or      $2, $[[T2]], $[[T1]]
 
   ; MM32R3:   andi16  $[[T0:[0-9]+]], $4, 1
-  ; MM32R3:   movn    $[[T1:[0-9]+]], $5, $[[T0]]
+  ; MM32R3:   movn    $[[T1:[0-9]+]], $5, $[[T0]]  # <MCInst #{{[0-9]+}} MOVN_I_MM
   ; MM32R3:   move    $2, $[[T1]]
 
   ; MMR6:     andi16  $[[T0:[0-9]+]], $4, 1
@@ -125,7 +125,7 @@ entry:
   ; SEL:    or      $2, $[[T2]], $[[T1]]
 
   ; MM32R3:     andi16  $[[T0:[0-9]+]], $4, 1
-  ; MM32R3:     movn    $[[T1:[0-9]+]], $5, $[[T0]]
+  ; MM32R3:     movn    $[[T1:[0-9]+]], $5, $[[T0]]  # <MCInst #{{[0-9]+}} MOVN_I_MM
   ; MM32R3:     move    $2, $[[T1]]
 
   ; MMR6:       andi16  $[[T0:[0-9]+]], $4, 1
@@ -193,9 +193,9 @@ entry:
 
   ; MM32R3:     andi16  $[[T0:[0-9]+]], $4, 1
   ; MM32R3:     lw      $2, 16($sp)
-  ; MM32R3:     movn    $2, $6, $[[T0]]
+  ; MM32R3:     movn    $2, $6, $[[T0]]  # <MCInst #{{[0-9]+}} MOVN_I_MM
   ; MM32R3:     lw      $3, 20($sp)
-  ; MM32R3:     movn    $3, $7, $[[T0]]
+  ; MM32R3:     movn    $3, $7, $[[T0]]  # <MCInst #{{[0-9]+}} MOVN_I_MM
 
   ; MM32R6:     andi16  $[[T0:[0-9]+]], $4, 1
   ; MM32R6:     lw      $[[T2:[0-9]+]], 16($sp)
@@ -259,7 +259,7 @@ define i8* @tst_select_word_cst(i8* %a, i8* %b) {
   ; MM32R3:     li16    $[[T0:[0-9]+]], -1
   ; MM32R3:     xor     $[[T1:[0-9]+]], $5, $[[T0]]
   ; MM32R3:     li16    $[[T2:[0-9]+]], 0
-  ; MM32R3:     movn    $[[T3:[0-9]+]], $[[T2]], $[[T1]]
+  ; MM32R3:     movn    $[[T3:[0-9]+]], $[[T2]], $[[T1]]  # <MCInst #{{[0-9]+}} MOVN_I_MM
   ; MM32R3:     move    $2, $[[T3]]
 
   ; MM32R6:     li16    $[[T0:[0-9]+]], -1

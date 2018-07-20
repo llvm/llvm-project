@@ -71,7 +71,7 @@ public:
 private:
   bool runOnLoop(Loop *L);
 
-  /// \brief Check if the the stride of the accesses is large enough to
+  /// Check if the stride of the accesses is large enough to
   /// warrant a prefetch.
   bool isStrideLargeEnough(const SCEVAddRecExpr *AR);
 
@@ -244,9 +244,9 @@ bool LoopDataPrefetch::runOnLoop(Loop *L) {
   if (ItersAhead > getMaxPrefetchIterationsAhead())
     return MadeChange;
 
-  DEBUG(dbgs() << "Prefetching " << ItersAhead
-               << " iterations ahead (loop size: " << LoopSize << ") in "
-               << L->getHeader()->getParent()->getName() << ": " << *L);
+  LLVM_DEBUG(dbgs() << "Prefetching " << ItersAhead
+                    << " iterations ahead (loop size: " << LoopSize << ") in "
+                    << L->getHeader()->getParent()->getName() << ": " << *L);
 
   SmallVector<std::pair<Instruction *, const SCEVAddRecExpr *>, 16> PrefLoads;
   for (const auto BB : L->blocks()) {
@@ -275,7 +275,7 @@ bool LoopDataPrefetch::runOnLoop(Loop *L) {
       if (!LSCEVAddRec)
         continue;
 
-      // Check if the the stride of the accesses is large enough to warrant a
+      // Check if the stride of the accesses is large enough to warrant a
       // prefetch.
       if (!isStrideLargeEnough(LSCEVAddRec))
         continue;
@@ -320,8 +320,8 @@ bool LoopDataPrefetch::runOnLoop(Loop *L) {
            ConstantInt::get(I32, MemI->mayReadFromMemory() ? 0 : 1),
            ConstantInt::get(I32, 3), ConstantInt::get(I32, 1)});
       ++NumPrefetches;
-      DEBUG(dbgs() << "  Access: " << *PtrValue << ", SCEV: " << *LSCEV
-                   << "\n");
+      LLVM_DEBUG(dbgs() << "  Access: " << *PtrValue << ", SCEV: " << *LSCEV
+                        << "\n");
       ORE->emit([&]() {
         return OptimizationRemark(DEBUG_TYPE, "Prefetched", MemI)
                << "prefetched memory access";

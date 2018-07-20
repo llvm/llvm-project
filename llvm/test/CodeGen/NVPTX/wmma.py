@@ -2,7 +2,7 @@
 # generates correct instructions for them.
 
 # RUN: python %s > %t.ll
-# RUN: llc < %t.ll -march=nvptx64 -mcpu=sm_70 -mattr=+ptx60 | FileCheck %t.ll
+# RUN: llc < %t.ll -march=nvptx64 -mcpu=sm_70 -mattr=+ptx61 | FileCheck %t.ll
 
 from itertools import product
 from string import Template
@@ -15,38 +15,57 @@ def make_wmma_slice_ty(abcd, itype):
 def make_wmma_ld_ret_ty(abc, itype):
   return "{%s}" % ", ".join(make_wmma_slice_ty(abc, itype))
 
+# returns address space
+def get_aspace(space):
+  space_map = {
+      ".global" : 1,
+      ".shared" : 3,
+      ".const"  : 4,
+      ".local"  : 5,
+      ".param"  : 101,
+      ""        : 0,
+      ".generic": 0
+  }
+  return space_map[space];
+
+def get_pspace(space):
+  return "p%di8" % get_aspace(space);
+
 # Convenient test patterns.
 check_f16_8 = "{{%s}}" % ", *".join(["%hh[0-9]+"] * 8)
 check_f16_4 = "{{%s}}" % ", *".join(["%hh[0-9]+"] * 4)
 check_f32_8 = "{{%s}}" % ", *".join(["%f[0-9]+"] * 8)
 
+known_geoms = ["m16n16k16", "m8n32k16", "m32n8k16"]
+
 def gen_wmma_load_tests():
   load_template = """
-declare ${ret_ty} @llvm.nvvm.wmma.load.$intrinsic_suffix(i8* %src ${extra_args});
+declare ${ret_ty} @${intrinsic}(i8 ${as}* %src ${extra_args});
 
-; CHECK-LABEL: .func {{.*}}test_wmma_load_${function_suffix}(
-define ${ret_ty} @test_wmma_load_${function_suffix}(i8* %src ${extra_args}) {
-; CHECK wmma.load.${intrinsic_suffix}
+; CHECK-LABEL: .func {{.*}}test_${function}(
+define ${ret_ty} @test_${function}(i8 ${as}* %src ${extra_args}) {
+; CHECK: ${instruction}
 ; CHECK: {${check_result}}
 ; CHECK: [%rd{{[0-9]+}}]${stride_pattern}
-  %v0 = call ${ret_ty} @llvm.nvvm.wmma.load.${intrinsic_suffix}(i8* %src ${extra_args});
+  %v0 = call ${ret_ty} @${intrinsic}(i8 ${as}* %src ${extra_args});
   ret ${ret_ty} %v0;
 }
 
-; CHECK-LABEL: .func{{.*}}test_wmma_load_${function_suffix}_o(
-define ${ret_ty} @test_wmma_load_${function_suffix}_o(i8* %src ${extra_args}) {
-; CHECK wmma.load.${intrinsic_suffix}
+; CHECK-LABEL: .func{{.*}}test_${function}_o(
+define ${ret_ty} @test_${function}_o(i8 ${as}* %src ${extra_args}) {
+; CHECK: ${instruction}
 ; CHECK: {${check_result}}
 ; CHECK: [%rd{{[0-9]+}}+128]${stride_pattern}
-  %src1 = getelementptr i8, i8* %src, i32 128;
-  %v0 = call ${ret_ty} @llvm.nvvm.wmma.load.${intrinsic_suffix}(i8* %src1 ${extra_args});
+  %src1 = getelementptr i8, i8 ${as}* %src, i32 128;
+  %v0 = call ${ret_ty} @${intrinsic}(i8 ${as}* %src1 ${extra_args});
   ret ${ret_ty} %v0;
 }
 """
-  suffix_template = "${abc}.sync.${layout}.m16n16k16${space}${stride}.${itype}"
-  instruction_template = "${abc}.sync.${layout}.m16n16k16${space}.${itype}"
+  intrinsic_template = "llvm.nvvm.wmma.${geom}.load.${abc}.${layout}${stride}.${itype}.${pspace}"
+  instruction_template = "wmma.load.${abc}.sync.${layout}.${geom}${space}.${itype}"
 
-  for abc, layout, space, stride, itype in product(
+  for geom, abc, layout, space, stride, itype in product(
+      known_geoms,
       "abc",
       ["row","col"],
       ["",".shared",".global"],
@@ -58,16 +77,19 @@ define ${ret_ty} @test_wmma_load_${function_suffix}_o(i8* %src ${extra_args}) {
         "layout" : layout,
         "space" : space,
         "stride" : stride,
-        "itype" : itype
+        "itype" : itype,
+        "pspace" : get_pspace(space),
+        "as"     : "addrspace(%d)" % get_aspace(space),
+        "geom"   : geom,
     }
 
     if itype == "f32" and abc != "c":
       continue
 
     test_params = params
-    test_params["intrinsic_suffix"] = Template(suffix_template).substitute(params)
-    test_params["function_suffix"] = test_params["intrinsic_suffix"].replace(".","_")
-    test_params["instruction_suffix"] = Template(instruction_template).substitute(params)
+    test_params["intrinsic"] = Template(intrinsic_template).substitute(params)
+    test_params["function"] = test_params["intrinsic"].replace(".","_")
+    test_params["instruction"] = Template(instruction_template).substitute(params)
     test_params["ret_ty"] = make_wmma_ld_ret_ty(abc, itype)
     if abc == "c" :
       test_params["check_result"] = check_f16_4 if itype == "f16" else check_f32_8
@@ -89,31 +111,32 @@ def make_wmma_slice_args(itype, abcd, prefix="v"):
 
 def gen_wmma_store_tests():
   store_template = """
-declare void @llvm.nvvm.wmma.store.$intrinsic_suffix(i8* %src, ${args}${extra_args});
+declare void @${intrinsic}(i8 ${as}* %src, ${args}${extra_args});
 
-; CHECK-LABEL: .func {{.*}}test_wmma_store_${function_suffix}(
-define void @test_wmma_store_${function_suffix}(i8* %src, ${args}${extra_args}) {
-; CHECK wmma.store.${intrinsic_suffix} {{.*}}[%rd{{[0-9+]}}
+; CHECK-LABEL: .func {{.*}}test_${function}(
+define void @test_${function}(i8 ${as}* %src, ${args}${extra_args}) {
+; CHECK: ${instruction} {{.*}}[%rd{{[0-9+]}}
 ; CHECK: {${check_args}}
 ; CHECK: ${stride_pattern}
-  call void @llvm.nvvm.wmma.store.${intrinsic_suffix}(i8* %src, ${args} ${extra_args});
+  call void @${intrinsic}(i8 ${as}* %src, ${args} ${extra_args});
   ret void
 }
 
-; CHECK-LABEL: .func{{.*}}test_wmma_store_${function_suffix}_o(
-define void @test_wmma_store_${function_suffix}_o(i8* %src, ${args}${extra_args}) {
-; CHECK wmma.store.${intrinsic_suffix} {{.*}}[%rd{{[0-9+]}}+128]
+; CHECK-LABEL: .func{{.*}}test_${function}_o(
+define void @test_${function}_o(i8 ${as}* %src, ${args}${extra_args}) {
+; CHECK: ${instruction} {{.*}}[%rd{{[0-9+]}}+128]
 ; CHECK: ${check_args}
 ; CHECK: ${stride_pattern}
-  %src1 = getelementptr i8, i8* %src, i32 128;
-  call void @llvm.nvvm.wmma.store.${intrinsic_suffix}(i8* %src1, ${args}${extra_args});
+  %src1 = getelementptr i8, i8 ${as}* %src, i32 128;
+  call void @${intrinsic}(i8 ${as}* %src1, ${args}${extra_args});
   ret void
 }
 """
-  suffix_template = "${abc}.sync.${layout}.m16n16k16${space}${stride}.${itype}"
-  instruction_template = "${abc}.sync.${layout}.m16n16k16${space}.${itype}"
+  intrinsic_template = "llvm.nvvm.wmma.${geom}.store.${abc}.${layout}${stride}.${itype}.${pspace}"
+  instruction_template = "wmma.store.${abc}.sync.${layout}.${geom}${space}.${itype}"
 
-  for abc, layout, space, stride, itype in product(
+  for geom, abc, layout, space, stride, itype in product(
+      known_geoms,
       "d",
       ["row","col"],
       ["",".shared",".global"],
@@ -125,13 +148,16 @@ define void @test_wmma_store_${function_suffix}_o(i8* %src, ${args}${extra_args}
         "layout" : layout,
         "space" : space,
         "stride" : stride,
-        "itype" : itype
+        "itype" : itype,
+        "pspace" : get_pspace(space),
+        "as"     : "addrspace(%d)" % get_aspace(space),
+        "geom"   : geom,
     }
 
     test_params = params
-    test_params["intrinsic_suffix"] = Template(suffix_template).substitute(params)
-    test_params["function_suffix"] = test_params["intrinsic_suffix"].replace(".","_")
-    test_params["instruction_suffix"] = Template(instruction_template).substitute(params)
+    test_params["intrinsic"] = Template(intrinsic_template).substitute(params)
+    test_params["function"] = test_params["intrinsic"].replace(".","_")
+    test_params["instruction"] = Template(instruction_template).substitute(params)
     test_params["ret_ty"] = make_wmma_ld_ret_ty(abc, itype)
     test_params["check_args"] = check_f16_4 if itype == "f16" else check_f32_8
     if stride:
@@ -146,25 +172,27 @@ define void @test_wmma_store_${function_suffix}_o(i8* %src, ${args}${extra_args}
 
 def gen_wmma_mma_tests():
   mma_template = """
-declare ${ret_ty} @llvm.nvvm.wmma.mma.sync.$intrinsic_suffix(
+declare ${ret_ty} @${intrinsic}(
         ${args});
 
-; CHECK-LABEL: .func {{.*}}test_wmma_mma_${function_suffix}(
-define ${ret_ty} @test_wmma_mma_${function_suffix}(
+; CHECK-LABEL: .func {{.*}}test_${function}(
+define ${ret_ty} @test_${function}(
         ${args}) {
-; CHECK wmma.mma.${intrinsic_suffix} {{.*}}[%rd{{[0-9+]}}
-; CHECK ${check_d}
-; CHECK ${check_ab}
-; CHECK ${check_ab}
-; CHECK ${check_c}
-  %r = call ${ret_ty} @llvm.nvvm.wmma.mma.sync.${intrinsic_suffix}(
+; CHECK: ${instruction}
+; CHECK-NEXT: ${check_d}
+; CHECK-NEXT: ${check_ab}
+; CHECK-NEXT: ${check_ab}
+; CHECK-NEXT: ${check_c}
+  %r = call ${ret_ty} @${intrinsic}(
         ${args});
   ret ${ret_ty} %r;
 }
 """
-  suffix_template = "${alayout}.${blayout}.m16n16k16.${dtype}.${ctype}${satf}"
+  intrinsic_template = "llvm.nvvm.wmma.${geom}.mma.${alayout}.${blayout}.${dtype}.${ctype}${satf}"
+  instruction_template = "wmma.mma.sync.${alayout}.${blayout}.${geom}.${dtype}.${ctype}${satf}"
 
-  for alayout, blayout, ctype, dtype, satf in product(
+  for geom, alayout, blayout, ctype, dtype, satf in product(
+      known_geoms,
       ["row","col"],
       ["row","col"],
       ["f16", "f32"],
@@ -176,12 +204,14 @@ define ${ret_ty} @test_wmma_mma_${function_suffix}(
         "blayout" : blayout,
         "ctype" : ctype,
         "dtype" : dtype,
-        "satf"  : satf
+        "satf"  : satf,
+        "geom"  : geom,
     }
 
     test_params = params
-    test_params["intrinsic_suffix"] = Template(suffix_template).substitute(params)
-    test_params["function_suffix"] = test_params["intrinsic_suffix"].replace(".", "_")
+    test_params["intrinsic"] = Template(intrinsic_template).substitute(params)
+    test_params["function"] = test_params["intrinsic"].replace(".", "_")
+    test_params["instruction"] = Template(instruction_template).substitute(params)
     test_params["ret_ty"] = make_wmma_ld_ret_ty("d", dtype)
     test_params["check_ab"] = check_f16_8
     test_params["check_c"] = check_f16_4 if ctype == "f16" else check_f32_8

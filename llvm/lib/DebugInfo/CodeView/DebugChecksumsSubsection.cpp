@@ -109,7 +109,7 @@ Error DebugChecksumsSubsection::commit(BinaryStreamWriter &Writer) const {
 }
 
 uint32_t DebugChecksumsSubsection::mapChecksumOffset(StringRef FileName) const {
-  uint32_t Offset = Strings.getStringId(FileName);
+  uint32_t Offset = Strings.getIdForString(FileName);
   auto Iter = OffsetMap.find(Offset);
   assert(Iter != OffsetMap.end());
   return Iter->second;

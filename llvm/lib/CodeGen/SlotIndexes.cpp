@@ -10,6 +10,7 @@
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -73,7 +74,7 @@ bool SlotIndexes::runOnMachineFunction(MachineFunction &fn) {
     SlotIndex blockStartIndex(&indexList.back(), SlotIndex::Slot_Block);
 
     for (MachineInstr &MI : MBB) {
-      if (MI.isDebugValue())
+      if (MI.isDebugInstr())
         continue;
 
       // Insert a store index for the instr.
@@ -94,9 +95,9 @@ bool SlotIndexes::runOnMachineFunction(MachineFunction &fn) {
   }
 
   // Sort the Idx2MBBMap
-  std::sort(idx2MBBMap.begin(), idx2MBBMap.end(), Idx2MBBCompare());
+  llvm::sort(idx2MBBMap.begin(), idx2MBBMap.end(), Idx2MBBCompare());
 
-  DEBUG(mf->print(dbgs(), this));
+  LLVM_DEBUG(mf->print(dbgs(), this));
 
   // And we're done!
   return false;
@@ -146,7 +147,7 @@ void SlotIndexes::removeSingleMachineInstrFromMaps(MachineInstr &MI) {
 
 void SlotIndexes::renumberIndexes() {
   // Renumber updates the index of every element of the index list.
-  DEBUG(dbgs() << "\n*** Renumbering SlotIndexes ***\n");
+  LLVM_DEBUG(dbgs() << "\n*** Renumbering SlotIndexes ***\n");
   ++NumGlobalRenum;
 
   unsigned index = 0;
@@ -173,8 +174,8 @@ void SlotIndexes::renumberIndexes(IndexList::iterator curItr) {
     // If the next index is bigger, we have caught up.
   } while (curItr != indexList.end() && curItr->getIndex() <= index);
 
-  DEBUG(dbgs() << "\n*** Renumbered SlotIndexes " << startItr->getIndex() << '-'
-               << index << " ***\n");
+  LLVM_DEBUG(dbgs() << "\n*** Renumbered SlotIndexes " << startItr->getIndex()
+                    << '-' << index << " ***\n");
   ++NumLocalRenum;
 }
 
@@ -244,7 +245,7 @@ void SlotIndexes::repairIndexesInRange(MachineBasicBlock *MBB,
   for (MachineBasicBlock::iterator I = End; I != Begin;) {
     --I;
     MachineInstr &MI = *I;
-    if (!MI.isDebugValue() && mi2iMap.find(&MI) == mi2iMap.end())
+    if (!MI.isDebugInstr() && mi2iMap.find(&MI) == mi2iMap.end())
       insertMachineInstrInMaps(MI);
   }
 }

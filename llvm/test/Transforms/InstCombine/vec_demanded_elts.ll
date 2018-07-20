@@ -131,7 +131,6 @@ define <4 x float> @test_select(float %f, float %g) {
 }
 
 ; Check that instcombine doesn't wrongly fold away the select completely.
-; TODO: Should this be an insertelement rather than a shuffle?
 
 define <2 x i64> @PR24922(<2 x i64> %v) {
 ; CHECK-LABEL: @PR24922(
@@ -186,8 +185,6 @@ define <4 x i32> @inselt_shuf_no_demand_multiuse(i32 %a0, i32 %a1, <4 x i32> %b)
   %shuffle = shufflevector <4 x i32> %out0123, <4 x i32> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
   ret <4 x i32> %shuffle
 }
-
-; FIXME: We should be able to look past the bogus use of 'out12' and kill 'out1'.
 
 define <4 x float> @inselt_shuf_no_demand_bogus_insert_index_in_chain(float %a1, float %a2, float %a3, i32 %variable_index) {
 ; CHECK-LABEL: @inselt_shuf_no_demand_bogus_insert_index_in_chain(

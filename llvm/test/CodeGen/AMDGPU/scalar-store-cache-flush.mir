@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -run-pass si-insert-waits %s -o - | FileCheck %s
+# RUN: llc -march=amdgcn -run-pass si-insert-waitcnts %s -o - | FileCheck %s
 
 --- |
   define amdgpu_kernel void @basic_insert_dcache_wb() {
@@ -56,7 +56,7 @@ tracksRegLiveness: false
 
 body: |
   bb.0:
-    S_STORE_DWORD_SGPR undef %sgpr2, undef %sgpr0_sgpr1, undef %m0, 0
+    S_STORE_DWORD_SGPR undef $sgpr2, undef $sgpr0_sgpr1, undef $m0, 0
     S_ENDPGM
 ...
 ---
@@ -72,7 +72,7 @@ tracksRegLiveness: false
 
 body: |
   bb.0:
-    S_STORE_DWORD_SGPR undef %sgpr2, undef %sgpr0_sgpr1, undef %m0, 0
+    S_STORE_DWORD_SGPR undef $sgpr2, undef $sgpr0_sgpr1, undef $m0, 0
     S_DCACHE_WB
     S_ENDPGM
 ...
@@ -91,7 +91,7 @@ tracksRegLiveness: false
 body: |
   bb.0:
     S_DCACHE_WB
-    S_STORE_DWORD_SGPR undef %sgpr2, undef %sgpr0_sgpr1, undef %m0, 0
+    S_STORE_DWORD_SGPR undef $sgpr2, undef $sgpr0_sgpr1, undef $m0, 0
     S_ENDPGM
 ...
 ---
@@ -122,11 +122,11 @@ tracksRegLiveness: false
 
 body: |
   bb.0:
-    S_STORE_DWORD_SGPR undef %sgpr2, undef %sgpr0_sgpr1, undef %m0, 0
+    S_STORE_DWORD_SGPR undef $sgpr2, undef $sgpr0_sgpr1, undef $m0, 0
     S_ENDPGM
 
   bb.1:
-    S_STORE_DWORD_SGPR undef %sgpr4, undef %sgpr6_sgpr7, undef %m0, 0
+    S_STORE_DWORD_SGPR undef $sgpr4, undef $sgpr6_sgpr7, undef $m0, 0
     S_ENDPGM
 ...
 ...
@@ -152,7 +152,7 @@ body: |
     S_ENDPGM
 
   bb.1:
-    S_STORE_DWORD_SGPR undef %sgpr4, undef %sgpr6_sgpr7, undef %m0, 0
+    S_STORE_DWORD_SGPR undef $sgpr4, undef $sgpr6_sgpr7, undef $m0, 0
     S_ENDPGM
 ...
 ---
@@ -168,6 +168,6 @@ tracksRegLiveness: false
 
 body: |
   bb.0:
-    S_STORE_DWORD_SGPR undef %sgpr2, undef %sgpr0_sgpr1, undef %m0, 0
-    SI_RETURN_TO_EPILOG undef %vgpr0
+    S_STORE_DWORD_SGPR undef $sgpr2, undef $sgpr0_sgpr1, undef $m0, 0
+    SI_RETURN_TO_EPILOG undef $vgpr0
 ...

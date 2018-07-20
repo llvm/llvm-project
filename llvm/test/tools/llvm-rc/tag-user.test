@@ -20,6 +20,21 @@
 ; CHECK-NEXT:   0020: CDAB01EF CDAB                        |......|
 ; CHECK-NEXT: )
 
+; CHECK-DAG:  Resource type (int): 10
+; CHECK-NEXT: Resource name (int): 501
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x30
+; CHECK-NEXT: Language ID: 1033
+; CHECK-NEXT: Version (major): 0
+; CHECK-NEXT: Version (minor): 0
+; CHECK-NEXT: Characteristics: 0
+; CHECK-NEXT: Data size: 38
+; CHECK-NEXT: Data: (
+; CHECK-NEXT:   0000: 01000200 03000400 05006461 74617700  |..........dataw.|
+; CHECK-NEXT:   0010: 69006400 65002000 64006100 74006100  |i.d.e. .d.a.t.a.|
+; CHECK-NEXT:   0020: CDAB01EF CDAB                        |......|
+; CHECK-NEXT: )
+
 ; CHECK-DAG:  Resource type (string): NAME2
 ; CHECK-NEXT: Resource name (string): NAME1
 ; CHECK-NEXT: Data version: 0

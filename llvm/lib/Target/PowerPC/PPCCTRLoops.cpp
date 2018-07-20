@@ -30,11 +30,14 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/CodeMetrics.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/ScalarEvolutionExpander.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/IR/Constants.h"
@@ -50,8 +53,8 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 
 #ifndef NDEBUG
@@ -403,15 +406,16 @@ bool PPCCTRLoops::mightUseCTR(BasicBlock *BB) {
         }
 
         if (Opcode) {
-          MVT VTy = TLI->getSimpleValueType(
-              *DL, CI->getArgOperand(0)->getType(), true);
-          if (VTy == MVT::Other)
+          EVT EVTy =
+              TLI->getValueType(*DL, CI->getArgOperand(0)->getType(), true);
+
+          if (EVTy == MVT::Other)
             return true;
 
-          if (TLI->isOperationLegalOrCustom(Opcode, VTy))
+          if (TLI->isOperationLegalOrCustom(Opcode, EVTy))
             continue;
-          else if (VTy.isVector() &&
-                   TLI->isOperationLegalOrCustom(Opcode, VTy.getScalarType()))
+          else if (EVTy.isVector() &&
+                   TLI->isOperationLegalOrCustom(Opcode, EVTy.getScalarType()))
             continue;
 
           return true;
@@ -503,12 +507,18 @@ bool PPCCTRLoops::convertToCTRLoop(Loop *L) {
   // Process nested loops first.
   for (Loop::iterator I = L->begin(), E = L->end(); I != E; ++I) {
     MadeChange |= convertToCTRLoop(*I);
-    DEBUG(dbgs() << "Nested loop converted\n");
+    LLVM_DEBUG(dbgs() << "Nested loop converted\n");
   }
 
   // If a nested loop has been converted, then we can't convert this loop.
   if (MadeChange)
     return MadeChange;
+
+  // Bail out if the loop has irreducible control flow.
+  LoopBlocksRPO RPOT(L);
+  RPOT.perform(LI);
+  if (containsIrreducibleCFG<const BasicBlock *>(RPOT, *LI))
+    return false;
 
 #ifndef NDEBUG
   // Stop trying after reaching the limit (if any).
@@ -530,14 +540,35 @@ bool PPCCTRLoops::convertToCTRLoop(Loop *L) {
   SmallVector<BasicBlock*, 4> ExitingBlocks;
   L->getExitingBlocks(ExitingBlocks);
 
+  // If there is an exit edge known to be frequently taken,
+  // we should not transform this loop.
+  for (auto &BB : ExitingBlocks) {
+    Instruction *TI = BB->getTerminator();
+    if (!TI) continue;
+
+    if (BranchInst *BI = dyn_cast<BranchInst>(TI)) {
+      uint64_t TrueWeight = 0, FalseWeight = 0;
+      if (!BI->isConditional() ||
+          !BI->extractProfMetadata(TrueWeight, FalseWeight))
+        continue;
+
+      // If the exit path is more frequent than the loop path,
+      // we return here without further analysis for this loop.
+      bool TrueIsExit = !L->contains(BI->getSuccessor(0));
+      if (( TrueIsExit && FalseWeight < TrueWeight) ||
+          (!TrueIsExit && FalseWeight > TrueWeight))
+        return MadeChange;
+    }
+  }
+
   BasicBlock *CountedExitBlock = nullptr;
   const SCEV *ExitCount = nullptr;
   BranchInst *CountedExitBranch = nullptr;
   for (SmallVectorImpl<BasicBlock *>::iterator I = ExitingBlocks.begin(),
        IE = ExitingBlocks.end(); I != IE; ++I) {
     const SCEV *EC = SE->getExitCount(L, *I);
-    DEBUG(dbgs() << "Exit Count for " << *L << " from block " <<
-                    (*I)->getName() << ": " << *EC << "\n");
+    LLVM_DEBUG(dbgs() << "Exit Count for " << *L << " from block "
+                      << (*I)->getName() << ": " << *EC << "\n");
     if (isa<SCEVCouldNotCompute>(EC))
       continue;
     if (const SCEVConstant *ConstEC = dyn_cast<SCEVConstant>(EC)) {
@@ -549,9 +580,15 @@ bool PPCCTRLoops::convertToCTRLoop(Loop *L) {
     if (SE->getTypeSizeInBits(EC->getType()) > (TM->isPPC64() ? 64 : 32))
       continue;
 
+    // If this exiting block is contained in a nested loop, it is not eligible
+    // for insertion of the branch-and-decrement since the inner loop would
+    // end up messing up the value in the CTR.
+    if (LI->getLoopFor(*I) != L)
+      continue;
+
     // We now have a loop-invariant count of loop iterations (which is not the
     // constant zero) for which we know that this loop will not exit via this
-    // exisiting block.
+    // existing block.
 
     // We need to make sure that this block will run on every loop iteration.
     // For this to be true, we must dominate all blocks with backedges. Such
@@ -605,7 +642,8 @@ bool PPCCTRLoops::convertToCTRLoop(Loop *L) {
   if (!Preheader)
     return MadeChange;
 
-  DEBUG(dbgs() << "Preheader for exit count: " << Preheader->getName() << "\n");
+  LLVM_DEBUG(dbgs() << "Preheader for exit count: " << Preheader->getName()
+                    << "\n");
 
   // Insert the count into the preheader and replace the condition used by the
   // selected branch.
@@ -693,11 +731,12 @@ check_block:
     }
 
     if (I != BI && clobbersCTR(*I)) {
-      DEBUG(dbgs() << printMBBReference(*MBB) << " (" << MBB->getFullName()
-                   << ") instruction " << *I << " clobbers CTR, invalidating "
-                   << printMBBReference(*BI->getParent()) << " ("
-                   << BI->getParent()->getFullName() << ") instruction " << *BI
-                   << "\n");
+      LLVM_DEBUG(dbgs() << printMBBReference(*MBB) << " (" << MBB->getFullName()
+                        << ") instruction " << *I
+                        << " clobbers CTR, invalidating "
+                        << printMBBReference(*BI->getParent()) << " ("
+                        << BI->getParent()->getFullName() << ") instruction "
+                        << *BI << "\n");
       return false;
     }
 
@@ -711,10 +750,10 @@ check_block:
   if (CheckPreds) {
 queue_preds:
     if (MachineFunction::iterator(MBB) == MBB->getParent()->begin()) {
-      DEBUG(dbgs() << "Unable to find a MTCTR instruction for "
-                   << printMBBReference(*BI->getParent()) << " ("
-                   << BI->getParent()->getFullName() << ") instruction " << *BI
-                   << "\n");
+      LLVM_DEBUG(dbgs() << "Unable to find a MTCTR instruction for "
+                        << printMBBReference(*BI->getParent()) << " ("
+                        << BI->getParent()->getFullName() << ") instruction "
+                        << *BI << "\n");
       return false;
     }
 

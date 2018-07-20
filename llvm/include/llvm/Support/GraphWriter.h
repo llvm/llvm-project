@@ -41,7 +41,7 @@ namespace DOT {  // Private functions...
 
 std::string EscapeString(const std::string &Label);
 
-/// \brief Get a color string for this node number. Simply round-robin selects
+/// Get a color string for this node number. Simply round-robin selects
 /// from a reasonable number of colors.
 StringRef getColorString(unsigned NodeNumber);
 

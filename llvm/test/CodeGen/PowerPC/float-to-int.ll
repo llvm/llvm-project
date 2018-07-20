@@ -21,7 +21,7 @@ define i64 @foo(float %a) nounwind {
 
 ; CHECK-VSX: @foo
 ; CHECK-VSX: xscvdpsxds [[REG:[0-9]+]], 1
-; CHECK-VSX: stxsdx [[REG]],
+; CHECK-VSX: stfdx [[REG]],
 ; CHECK-VSX: ld 3,
 ; CHECK-VSX: blr
 
@@ -44,7 +44,7 @@ define i64 @foo2(double %a) nounwind {
 
 ; CHECK-VSX: @foo2
 ; CHECK-VSX: xscvdpsxds [[REG:[0-9]+]], 1
-; CHECK-VSX: stxsdx [[REG]],
+; CHECK-VSX: stfdx [[REG]],
 ; CHECK-VSX: ld 3,
 ; CHECK-VSX: blr
 
@@ -67,7 +67,7 @@ define i64 @foo3(float %a) nounwind {
 
 ; CHECK-VSX: @foo3
 ; CHECK-VSX: xscvdpuxds [[REG:[0-9]+]], 1
-; CHECK-VSX: stxsdx [[REG]],
+; CHECK-VSX: stfdx [[REG]],
 ; CHECK-VSX: ld 3,
 ; CHECK-VSX: blr
 
@@ -90,7 +90,7 @@ define i64 @foo4(double %a) nounwind {
 
 ; CHECK-VSX: @foo4
 ; CHECK-VSX: xscvdpuxds [[REG:[0-9]+]], 1
-; CHECK-VSX: stxsdx [[REG]],
+; CHECK-VSX: stfdx [[REG]],
 ; CHECK-VSX: ld 3,
 ; CHECK-VSX: blr
 

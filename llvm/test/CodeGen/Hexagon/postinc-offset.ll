@@ -2,8 +2,8 @@
 ; RUN:      < %s | FileCheck %s
 
 ; CHECK: {
-; CHECK: ={{ *}}memd([[REG0:(r[0-9]+)]]{{ *}}++{{ *}}#8)
-; CHECK-NOT: memw([[REG0]]{{ *}}+{{ *}}#0){{ *}}=
+; CHECK: = memd([[REG0:(r[0-9]+)]]++#8)
+; CHECK-NOT: memw([[REG0]]+#0) =
 ; CHECK: }
 
 define void @main() #0 {

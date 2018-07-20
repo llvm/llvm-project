@@ -68,7 +68,7 @@ bool LowerEmuTLS::runOnModule(Module &M) {
     return false;
 
   auto &TM = TPC->getTM<TargetMachine>();
-  if (!TM.Options.EmulatedTLS)
+  if (!TM.useEmulatedTLS())
     return false;
 
   bool Changed = false;

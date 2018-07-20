@@ -13,6 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ObjectYAML/CodeViewYAMLTypeHashing.h"
+
+#include "llvm/BinaryFormat/COFF.h"
 #include "llvm/Support/BinaryByteStream.h"
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/BinaryStreamWriter.h"
@@ -46,16 +48,17 @@ StringRef ScalarTraits<GlobalHash>::input(StringRef Scalar, void *Ctx,
 
 DebugHSection llvm::CodeViewYAML::fromDebugH(ArrayRef<uint8_t> DebugH) {
   assert(DebugH.size() >= 8);
-  assert((DebugH.size() - 8) % 20 == 0);
+  assert((DebugH.size() - 8) % 8 == 0);
 
   BinaryStreamReader Reader(DebugH, llvm::support::little);
   DebugHSection DHS;
   cantFail(Reader.readInteger(DHS.Magic));
   cantFail(Reader.readInteger(DHS.Version));
   cantFail(Reader.readInteger(DHS.HashAlgorithm));
+
   while (Reader.bytesRemaining() != 0) {
     ArrayRef<uint8_t> S;
-    cantFail(Reader.readBytes(S, 20));
+    cantFail(Reader.readBytes(S, 8));
     DHS.Hashes.emplace_back(S);
   }
   assert(Reader.bytesRemaining() == 0);
@@ -64,19 +67,20 @@ DebugHSection llvm::CodeViewYAML::fromDebugH(ArrayRef<uint8_t> DebugH) {
 
 ArrayRef<uint8_t> llvm::CodeViewYAML::toDebugH(const DebugHSection &DebugH,
                                                BumpPtrAllocator &Alloc) {
-  uint32_t Size = 8 + 20 * DebugH.Hashes.size();
+  uint32_t Size = 8 + 8 * DebugH.Hashes.size();
   uint8_t *Data = Alloc.Allocate<uint8_t>(Size);
   MutableArrayRef<uint8_t> Buffer(Data, Size);
   BinaryStreamWriter Writer(Buffer, llvm::support::little);
+
   cantFail(Writer.writeInteger(DebugH.Magic));
   cantFail(Writer.writeInteger(DebugH.Version));
   cantFail(Writer.writeInteger(DebugH.HashAlgorithm));
-  SmallString<20> Hash;
+  SmallString<8> Hash;
   for (const auto &H : DebugH.Hashes) {
     Hash.clear();
     raw_svector_ostream OS(Hash);
     H.Hash.writeAsBinary(OS);
-    assert((Hash.size() == 20) && "Invalid hash size!");
+    assert((Hash.size() == 8) && "Invalid hash size!");
     cantFail(Writer.writeFixedString(Hash));
   }
   assert(Writer.bytesRemaining() == 0);

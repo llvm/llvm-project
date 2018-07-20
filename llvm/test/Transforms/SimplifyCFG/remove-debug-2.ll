@@ -1,6 +1,7 @@
 ; RUN: opt < %s -simplifycfg -S | FileCheck %s
 
-; Check if the debug info for hoisted store for "ret = 0" is removed
+; Check that the debug location for the hoisted store for "ret = 0" is a
+; line-0 location.
 ;
 ; int foo(int x) {
 ;   int ret = 1;
@@ -12,12 +13,11 @@
 ; CHECK: store i32 1,{{.+}}!dbg ![[DLOC1:[0-9]+]]
 ; CHECK: icmp ne {{.+}}!dbg ![[DLOC2:[0-9]+]]
 ; CHECK: [[VREG:%[^ ]+]] = select
-; CHECK: store i32 [[VREG]]
-; CHECK-NOT: !dbg
-; CHECK-SAME: {{$}}
+; CHECK: store i32 [[VREG]],{{.*}} !dbg [[storeLoc:![0-9]+]]
 ; CHECK: ret {{.+}}!dbg ![[DLOC3:[0-9]+]]
 ; CHECK: ![[DLOC1]] = !DILocation(line: 2
 ; CHECK: ![[DLOC2]] = !DILocation(line: 3
+; CHECK: [[storeLoc]] = !DILocation(line: 0
 ; CHECK: ![[DLOC3]] = !DILocation(line: 5
 
 target triple = "x86_64-unknown-linux-gnu"
@@ -50,7 +50,7 @@ define i32 @foo(i32) !dbg !6 {
 !3 = !{i32 2, !"Dwarf Version", i32 4}
 !4 = !{i32 2, !"Debug Info Version", i32 3}
 !5 = !{}
-!6 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 1, type: !7, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
+!6 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 1, type: !7, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
 !7 = !DISubroutineType(types: !8)
 !8 = !{!9, !9}
 !9 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)

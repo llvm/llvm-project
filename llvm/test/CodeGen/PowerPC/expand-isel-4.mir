@@ -1,5 +1,5 @@
 # This file tests the scenario: ISEL R0, ZERO, RX, CR  (X != 0)
-# It also tests redundant liveins (%x7) and killed registers.
+# It also tests redundant liveins ($x7) and killed registers.
 # RUN: llc -ppc-gen-isel=false -run-pass ppc-expand-isel -o - %s | FileCheck %s
 
 --- |
@@ -23,9 +23,9 @@ regBankSelected: false
 selected:        false
 tracksRegLiveness: true
 liveins:
-  - { reg: '%x0' }
-  - { reg: '%x3' }
-  - { reg: '%x7' }
+  - { reg: '$x0' }
+  - { reg: '$x3' }
+  - { reg: '$x7' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -42,18 +42,18 @@ frameInfo:
   hasMustTailInVarArgFunc: false
 body:             |
   bb.0.entry:
-    liveins: %x0, %x3, %x7
+    liveins: $x0, $x3, $x7
 
-    %r5 = ADDI %r3, 1
-    %cr0 = CMPWI %r3, 0
-    %r0 = ISEL killed %zero, killed %r5, killed %cr0gt, implicit killed %cr0
-    ; CHECK: BC killed %cr0gt, %[[TRUE:bb.[0-9]+]]
+    $r5 = ADDI $r3, 1
+    $cr0 = CMPWI $r3, 0
+    $r0 = ISEL killed $zero, killed $r5, killed $cr0gt, implicit killed $cr0
+    ; CHECK: BC killed $cr0gt, %[[TRUE:bb.[0-9]+]]
     ; CHECK: %[[FALSE:bb.[0-9]+]]
-    ; CHECK: %r0 = ORI killed %r5, 0
+    ; CHECK: $r0 = ORI killed $r5, 0
     ; CHECK: B %[[SUCCESSOR:bb.[0-9]+]]
     ; CHECK: [[TRUE]]
-    ; CHECK: %r0 = ADDI killed %zero, 0
+    ; CHECK: $r0 = ADDI killed $zero, 0
 
-    %x0 = EXTSW_32_64 killed %r0
+    $x0 = EXTSW_32_64 killed $r0
 
 ...

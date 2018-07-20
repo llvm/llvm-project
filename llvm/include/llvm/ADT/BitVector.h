@@ -779,7 +779,7 @@ public:
   }
 
 private:
-  /// \brief Perform a logical left shift of \p Count words by moving everything
+  /// Perform a logical left shift of \p Count words by moving everything
   /// \p Count words to the right in memory.
   ///
   /// While confusing, words are stored from least significant at Bits[0] to
@@ -810,7 +810,7 @@ private:
     clear_unused_bits();
   }
 
-  /// \brief Perform a logical right shift of \p Count words by moving those
+  /// Perform a logical right shift of \p Count words by moving those
   /// words to the left in memory.  See wordShl for more information.
   ///
   void wordShr(uint32_t Count) {
@@ -828,7 +828,8 @@ private:
   }
 
   MutableArrayRef<BitWord> allocate(size_t NumWords) {
-    BitWord *RawBits = (BitWord *)std::malloc(NumWords * sizeof(BitWord));
+    BitWord *RawBits = static_cast<BitWord *>(
+        safe_malloc(NumWords * sizeof(BitWord)));
     return MutableArrayRef<BitWord>(RawBits, NumWords);
   }
 
@@ -867,8 +868,8 @@ private:
   void grow(unsigned NewSize) {
     size_t NewCapacity = std::max<size_t>(NumBitWords(NewSize), Bits.size() * 2);
     assert(NewCapacity > 0 && "realloc-ing zero space");
-    BitWord *NewBits =
-        (BitWord *)std::realloc(Bits.data(), NewCapacity * sizeof(BitWord));
+    BitWord *NewBits = static_cast<BitWord *>(
+        safe_realloc(Bits.data(), NewCapacity * sizeof(BitWord)));
     Bits = MutableArrayRef<BitWord>(NewBits, NewCapacity);
     clear_unused_bits();
   }

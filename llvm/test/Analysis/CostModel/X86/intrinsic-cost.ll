@@ -81,7 +81,7 @@ for.end:                                          ; preds = %vector.body
 ; CORE2: Cost Model: Found an estimated cost of 4 for instruction: %2 = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> %wide.load, <4 x float> %b, <4 x float> %c)
 
 ; COREI7: Printing analysis 'Cost Model Analysis' for function 'test3':
-; COREI7: Cost Model: Found an estimated cost of 4 for instruction: %2 = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> %wide.load, <4 x float> %b, <4 x float> %c)
+; COREI7: Cost Model: Found an estimated cost of 2 for instruction: %2 = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> %wide.load, <4 x float> %b, <4 x float> %c)
 
 }
 

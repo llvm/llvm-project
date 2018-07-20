@@ -34,6 +34,7 @@ public:
   FORWARD_SYMBOL_METHOD(getName)
 
   std::string getSourceFileName() const;
+  std::string getSourceFileFullPath() const;
 };
 }
 }

@@ -129,8 +129,8 @@ define void @f9(i64 %a, i64 %b, <2 x i64> *%dest) {
 ; CHECK-LABEL: f9:
 ; CHECK: ipm [[REG:%r[0-5]]]
 ; CHECK: afi [[REG]], -268435456
-; CHECK: risbg [[REG2:%r[0-5]]], [[REG]], 63, 191, 33
-; CHECK: lcgr  {{%r[0-5]}}, [[REG2]]
+; CHECK: sllg [[REG2:%r[0-5]]], [[REG]], 32
+; CHECK: srag {{%r[0-5]}}, [[REG2]], 63
 ; CHECK: br %r14
   %avec = bitcast i64 %a to <2 x i32>
   %bvec = bitcast i64 %b to <2 x i32>
@@ -145,8 +145,8 @@ define void @f10(i64 %a, i64 %b, <2 x i64> *%dest) {
 ; CHECK-LABEL: f10:
 ; CHECK: ipm [[REG:%r[0-5]]]
 ; CHECK: afi [[REG]], 1879048192
-; CHECK: risbg [[REG2:%r[0-5]]], [[REG]], 63, 191, 33
-; CHECK: lcgr  {{%r[0-5]}}, [[REG2]]
+; CHECK: sllg [[REG2:%r[0-5]]], [[REG]], 32
+; CHECK: srag {{%r[0-5]}}, [[REG2]], 63
 ; CHECK: br %r14
   %avec = bitcast i64 %a to <2 x i32>
   %bvec = bitcast i64 %b to <2 x i32>

@@ -1,5 +1,5 @@
-; RUN: llc < %s -verify-machineinstrs -mtriple=wasm32-unknown-unknown-wasm | FileCheck %s
-; RUN: llc < %s -verify-machineinstrs -mtriple=wasm32-unknown-unknown-wasm -fast-isel | FileCheck --check-prefix=CHECK-FAST %s
+; RUN: llc < %s -verify-machineinstrs -mtriple=wasm32-unknown-unknown | FileCheck %s
+; RUN: llc < %s -verify-machineinstrs -mtriple=wasm32-unknown-unknown -fast-isel | FileCheck --check-prefix=CHECK-FAST %s
 
 ; CHECK: DW_TAG_variable
 ; CHECK-FAST: DW_TAG_variable
@@ -8,7 +8,7 @@
 
 source_filename = "test/DebugInfo/WebAssembly/dbg-declare.ll"
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
-target triple = "wasm32-unknown-unknown-wasm"
+target triple = "wasm32-unknown-unknown"
 
 @key = external global [15 x i8], align 1
 
@@ -56,7 +56,7 @@ attributes #0 = { nounwind readnone }
 !12 = !{i32 2, !"Dwarf Version", i32 4}
 !13 = !{i32 2, !"Debug Info Version", i32 3}
 !14 = !{!"clang version 3.9.0 (trunk 273884) (llvm/trunk 273897)"}
-!15 = distinct !DISubprogram(name: "decode", scope: !1, file: !1, line: 11, type: !16, isLocal: false, isDefinition: true, scopeLine: 11, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
+!15 = distinct !DISubprogram(name: "decode", scope: !1, file: !1, line: 11, type: !16, isLocal: false, isDefinition: true, scopeLine: 11, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
 !16 = !DISubroutineType(types: !17)
 !17 = !{!7, !18, !7}
 !18 = !DIDerivedType(tag: DW_TAG_typedef, name: "size_t", file: !8, line: 124, baseType: !19)

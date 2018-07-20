@@ -15,6 +15,14 @@ ds_add_u32 v2, v4 offset:16
 // SICI: ds_add_u32 v2, v4 offset:16 ; encoding: [0x10,0x00,0x00,0xd8,0x02,0x04,0x00,0x00]
 // VI:   ds_add_u32 v2, v4 offset:16 ; encoding: [0x10,0x00,0x00,0xd8,0x02,0x04,0x00,0x00]
 
+ds_add_src2_f32 v255 offset:65535
+// NOSICI: error
+// VI: ds_add_src2_f32 v255 offset:65535 ; encoding: [0xff,0xff,0x2a,0xd9,0xff,0x00,0x00,0x00]
+
+ds_add_src2_f32 v0 offset:4 gds
+// NOSICI: error
+// VI: ds_add_src2_f32 v0 offset:4 gds ; encoding: [0x04,0x00,0x2b,0xd9,0x00,0x00,0x00,0x00]
+
 //===----------------------------------------------------------------------===//
 // Checks for 2 8-bit Offsets
 //===----------------------------------------------------------------------===//

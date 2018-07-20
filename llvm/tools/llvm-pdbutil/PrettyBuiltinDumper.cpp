@@ -87,7 +87,12 @@ StringRef BuiltinDumper::getTypeName(const PDBSymbolTypeBuiltin &Symbol) {
     return "HRESULT";
   case PDB_BuiltinType::BCD:
     return "HRESULT";
-  default:
-    return "void";
+  case PDB_BuiltinType::Char16:
+    return "char16_t";
+  case PDB_BuiltinType::Char32:
+    return "char32_t";
+  case PDB_BuiltinType::None:
+    return "...";
   }
+  llvm_unreachable("Unknown PDB_BuiltinType");
 }

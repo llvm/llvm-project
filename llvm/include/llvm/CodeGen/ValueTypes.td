@@ -8,8 +8,8 @@
 //===----------------------------------------------------------------------===//
 //
 // Value types - These values correspond to the register types defined in the
-// ValueTypes.h file.  If you update anything here, you must update it there as
-// well!
+// MachineValueTypes.h file.  If you update anything here, you must update it
+// there as well!
 //
 //===----------------------------------------------------------------------===//
 
@@ -69,7 +69,7 @@ def v4i32  : ValueType<128, 43>;   //  4 x i32 vector value
 def v8i32  : ValueType<256, 44>;   //  8 x i32 vector value
 def v16i32 : ValueType<512, 45>;   // 16 x i32 vector value
 def v32i32 : ValueType<1024,46>;   // 32 x i32 vector value
-def v64i32 : ValueType<2048,47>;   // 32 x i32 vector value
+def v64i32 : ValueType<2048,47>;   // 64 x i32 vector value
 
 def v1i64  : ValueType<64 , 48>;   //  1 x i64 vector value
 def v2i64  : ValueType<128, 49>;   //  2 x i64 vector value
@@ -145,6 +145,7 @@ def x86mmx : ValueType<64 , 109>;   // X86 MMX value
 def FlagVT : ValueType<0  , 110>;   // Pre-RA sched glue
 def isVoid : ValueType<0  , 111>;   // Produces no value
 def untyped: ValueType<8  , 112>;   // Produces an untyped value
+def ExceptRef: ValueType<0, 113>;   // WebAssembly's except_ref type
 def token  : ValueType<0  , 248>;   // TokenTy
 def MetadataVT: ValueType<0, 249>;  // Metadata
 

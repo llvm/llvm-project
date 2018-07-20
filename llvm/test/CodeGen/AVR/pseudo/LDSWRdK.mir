@@ -17,8 +17,8 @@ body: |
 
     ; CHECK-LABEL: test_ldswrdrr
 
-    ; CHECK:      %r30 = LDSRdK 2559
-    ; CHECK-NEXT: %r31 = LDSRdK 2560
+    ; CHECK:      $r30 = LDSRdK 2559
+    ; CHECK-NEXT: $r31 = LDSRdK 2560
 
-    %r31r30 = LDSWRdK 2559
+    $r31r30 = LDSWRdK 2559
 ...

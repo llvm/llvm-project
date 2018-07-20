@@ -48,13 +48,13 @@ class ValueSymbolTable {
 /// @name Types
 /// @{
 public:
-  /// @brief A mapping of names to values.
+  /// A mapping of names to values.
   using ValueMap = StringMap<Value*>;
 
-  /// @brief An iterator over a ValueMap.
+  /// An iterator over a ValueMap.
   using iterator = ValueMap::iterator;
 
-  /// @brief A const_iterator over a ValueMap.
+  /// A const_iterator over a ValueMap.
   using const_iterator = ValueMap::const_iterator;
 
 /// @}
@@ -71,35 +71,35 @@ public:
   /// This method finds the value with the given \p Name in the
   /// the symbol table.
   /// @returns the value associated with the \p Name
-  /// @brief Lookup a named Value.
+  /// Lookup a named Value.
   Value *lookup(StringRef Name) const { return vmap.lookup(Name); }
 
   /// @returns true iff the symbol table is empty
-  /// @brief Determine if the symbol table is empty
+  /// Determine if the symbol table is empty
   inline bool empty() const { return vmap.empty(); }
 
-  /// @brief The number of name/type pairs is returned.
+  /// The number of name/type pairs is returned.
   inline unsigned size() const { return unsigned(vmap.size()); }
 
   /// This function can be used from the debugger to display the
   /// content of the symbol table while debugging.
-  /// @brief Print out symbol table on stderr
+  /// Print out symbol table on stderr
   void dump() const;
 
 /// @}
 /// @name Iteration
 /// @{
 
-  /// @brief Get an iterator that from the beginning of the symbol table.
+  /// Get an iterator that from the beginning of the symbol table.
   inline iterator begin() { return vmap.begin(); }
 
-  /// @brief Get a const_iterator that from the beginning of the symbol table.
+  /// Get a const_iterator that from the beginning of the symbol table.
   inline const_iterator begin() const { return vmap.begin(); }
 
-  /// @brief Get an iterator to the end of the symbol table.
+  /// Get an iterator to the end of the symbol table.
   inline iterator end() { return vmap.end(); }
 
-  /// @brief Get a const_iterator to the end of the symbol table.
+  /// Get a const_iterator to the end of the symbol table.
   inline const_iterator end() const { return vmap.end(); }
 
   /// @}
@@ -111,7 +111,7 @@ private:
   /// This method adds the provided value \p N to the symbol table.  The Value
   /// must have a name which is used to place the value in the symbol table.
   /// If the inserted name conflicts, this renames the value.
-  /// @brief Add a named value to the symbol table
+  /// Add a named value to the symbol table
   void reinsertValue(Value *V);
 
   /// createValueName - This method attempts to create a value name and insert

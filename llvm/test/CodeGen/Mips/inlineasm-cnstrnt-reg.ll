@@ -41,5 +41,15 @@ entry:
   call i32 asm sideeffect "\09mtlo $3 \0A\09\09madd $1, $2 ", "=l,r,r,r"(i32 7, i32 6, i32 44) nounwind
   store volatile i32 %4, i32* %bosco, align 4
  
+; Check the 'l' constraint for 16-bit type.
+; CHECK:       #APP
+; CHECK:       mtlo ${{[0-9]+}}
+; CHECK-NEXT:  madd ${{[0-9]+}}, ${{[0-9]+}}
+; CHECK:       #NO_APP
+; CHECK-NEXT:  mflo ${{[0-9]+}}
+  %bosco16 = alloca i16, align 4
+  call i16 asm sideeffect "\09mtlo $3 \0A\09\09madd $1, $2 ", "=l,r,r,r"(i32 7, i32 6, i32 44) nounwind
+  store volatile i16 %5, i16* %bosco16, align 4
+
   ret i32 0
 }

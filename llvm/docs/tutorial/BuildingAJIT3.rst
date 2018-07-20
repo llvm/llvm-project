@@ -12,6 +12,11 @@ we welcome any feedback.
 Chapter 3 Introduction
 ======================
 
+**Warning: This text is currently out of date due to ORC API updates.**
+
+**The example code has been updated and can be used. The text will be updated
+once the API churn dies down.**
+
 Welcome to Chapter 3 of the "Building an ORC-based JIT in LLVM" tutorial. This
 chapter discusses lazy JITing and shows you how to enable it by adding an ORC
 CompileOnDemand layer the JIT from `Chapter 2 <BuildingAJIT2.html>`_.

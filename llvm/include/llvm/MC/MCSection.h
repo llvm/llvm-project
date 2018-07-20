@@ -40,7 +40,7 @@ class MCSection {
 public:
   enum SectionVariant { SV_COFF = 0, SV_ELF, SV_MachO, SV_Wasm };
 
-  /// \brief Express the state of bundle locked groups while emitting code.
+  /// Express the state of bundle locked groups while emitting code.
   enum BundleLockStateType {
     NotBundleLocked,
     BundleLocked,
@@ -65,13 +65,13 @@ private:
   /// The index of this section in the layout order.
   unsigned LayoutOrder;
 
-  /// \brief Keeping track of bundle-locked state.
+  /// Keeping track of bundle-locked state.
   BundleLockStateType BundleLockState = NotBundleLocked;
 
-  /// \brief Current nesting depth of bundle_lock directives.
+  /// Current nesting depth of bundle_lock directives.
   unsigned BundleLockNestingDepth = 0;
 
-  /// \brief We've seen a bundle_lock directive but not its first instruction
+  /// We've seen a bundle_lock directive but not its first instruction
   /// yet.
   bool BundleGroupBeforeFirstInst : 1;
 

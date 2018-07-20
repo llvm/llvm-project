@@ -1,5 +1,6 @@
 set(LLVM_LINK_COMPONENTS
   DebugInfoCodeView
+  DebugInfoDWARF
   Object
   BinaryFormat
   Support

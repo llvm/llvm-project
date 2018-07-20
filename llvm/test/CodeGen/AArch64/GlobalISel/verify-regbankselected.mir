@@ -17,6 +17,6 @@ registers:
   - { id: 0, class: _ }
 body: |
   bb.0:
-   liveins: %x0
-   %0(s64) = COPY %x0
+   liveins: $x0
+   %0(s64) = COPY $x0
 ...

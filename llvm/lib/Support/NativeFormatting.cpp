@@ -14,6 +14,8 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Format.h"
 
+#include <float.h>
+
 using namespace llvm;
 
 template<typename T, std::size_t N>

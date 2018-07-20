@@ -5,41 +5,41 @@ name: func0
 tracksRegLiveness: true
 body: |
   bb.0:
-    liveins: %sgpr7, %sgpr0_sgpr1_sgpr2_sgpr3
+    liveins: $sgpr7, $sgpr0_sgpr1_sgpr2_sgpr3
 
-    %sgpr33 = S_MOV_B32 %sgpr7
-    %sgpr32 = S_MOV_B32 %sgpr33
-    %sgpr10 = S_MOV_B32 5
-    %sgpr9 = S_MOV_B32 4
-    %sgpr8 = S_MOV_B32 3
-    BUNDLE implicit-def %sgpr6_sgpr7, implicit-def %sgpr6, implicit-def %sgpr7, implicit-def %scc {
-      %sgpr6_sgpr7 = S_GETPC_B64
-      %sgpr6 = S_ADD_U32 internal %sgpr6, 0, implicit-def %scc
-      %sgpr7 = S_ADDC_U32 internal %sgpr7,0, implicit-def %scc, implicit internal %scc
+    $sgpr33 = S_MOV_B32 $sgpr7
+    $sgpr32 = S_MOV_B32 $sgpr33
+    $sgpr10 = S_MOV_B32 5
+    $sgpr9 = S_MOV_B32 4
+    $sgpr8 = S_MOV_B32 3
+    BUNDLE implicit-def $sgpr6_sgpr7, implicit-def $sgpr6, implicit-def $sgpr7, implicit-def $scc {
+      $sgpr6_sgpr7 = S_GETPC_B64
+      $sgpr6 = S_ADD_U32 internal $sgpr6, 0, implicit-def $scc
+      $sgpr7 = S_ADDC_U32 internal $sgpr7,0, implicit-def $scc, implicit internal $scc
     }
-    %sgpr4 = S_MOV_B32 %sgpr33
-    %vgpr0 = V_MOV_B32_e32 %sgpr8, implicit %exec, implicit-def %vgpr0_vgpr1_vgpr2_vgpr3, implicit %sgpr8_sgpr9_sgpr10_sgpr11
-    %vgpr1 = V_MOV_B32_e32 %sgpr9, implicit %exec, implicit %sgpr8_sgpr9_sgpr10_sgpr11
-    %vgpr2 = V_MOV_B32_e32 %sgpr10, implicit %exec, implicit %sgpr8_sgpr9_sgpr10_sgpr11
-    %vgpr3 = V_MOV_B32_e32 %sgpr11, implicit %exec, implicit %sgpr8_sgpr9_sgpr10_sgpr11, implicit %exec
-    S_NOP 0, implicit killed %sgpr6_sgpr7, implicit %sgpr0_sgpr1_sgpr2_sgpr3, implicit %sgpr4, implicit killed %vgpr0_vgpr1_vgpr2_vgpr3
+    $sgpr4 = S_MOV_B32 $sgpr33
+    $vgpr0 = V_MOV_B32_e32 $sgpr8, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit $sgpr8_sgpr9_sgpr10_sgpr11
+    $vgpr1 = V_MOV_B32_e32 $sgpr9, implicit $exec, implicit $sgpr8_sgpr9_sgpr10_sgpr11
+    $vgpr2 = V_MOV_B32_e32 $sgpr10, implicit $exec, implicit $sgpr8_sgpr9_sgpr10_sgpr11
+    $vgpr3 = V_MOV_B32_e32 $sgpr11, implicit $exec, implicit $sgpr8_sgpr9_sgpr10_sgpr11, implicit $exec
+    S_NOP 0, implicit killed $sgpr6_sgpr7, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3
     S_ENDPGM
 ...
 # CHECK-LABEL: name: func0
-# CHECK: %sgpr10 = S_MOV_B32 5
-# CHECK: %sgpr9 = S_MOV_B32 4
-# CHECK: %sgpr8 = S_MOV_B32 3
-# CHECK: %sgpr33 = S_MOV_B32 killed %sgpr7
-# CHECK: %vgpr0 = V_MOV_B32_e32 %sgpr8, implicit %exec, implicit-def %vgpr0_vgpr1_vgpr2_vgpr3, implicit %sgpr8_sgpr9_sgpr10_sgpr11
-# CHECK: BUNDLE implicit-def %sgpr6_sgpr7, implicit-def %sgpr6, implicit-def %sgpr7, implicit-def %scc {
-# CHECK:   %sgpr6_sgpr7 = S_GETPC_B64
-# CHECK:   %sgpr6 = S_ADD_U32 internal %sgpr6, 0, implicit-def %scc
-# CHECK:   %sgpr7 = S_ADDC_U32 internal %sgpr7, 0, implicit-def %scc, implicit internal %scc
+# CHECK: $sgpr10 = S_MOV_B32 5
+# CHECK: $sgpr9 = S_MOV_B32 4
+# CHECK: $sgpr8 = S_MOV_B32 3
+# CHECK: $sgpr33 = S_MOV_B32 killed $sgpr7
+# CHECK: $vgpr0 = V_MOV_B32_e32 $sgpr8, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit $sgpr8_sgpr9_sgpr10_sgpr11
+# CHECK: BUNDLE implicit-def $sgpr6_sgpr7, implicit-def $sgpr6, implicit-def $sgpr7, implicit-def $scc {
+# CHECK:   $sgpr6_sgpr7 = S_GETPC_B64
+# CHECK:   $sgpr6 = S_ADD_U32 internal $sgpr6, 0, implicit-def $scc
+# CHECK:   $sgpr7 = S_ADDC_U32 internal $sgpr7, 0, implicit-def $scc, implicit internal $scc
 # CHECK: }
-# CHECK: %sgpr4 = S_MOV_B32 %sgpr33
-# CHECK: %vgpr1 = V_MOV_B32_e32 %sgpr9, implicit %exec, implicit %sgpr8_sgpr9_sgpr10_sgpr11
-# CHECK: %vgpr2 = V_MOV_B32_e32 %sgpr10, implicit %exec, implicit %sgpr8_sgpr9_sgpr10_sgpr11
-# CHECK: %vgpr3 = V_MOV_B32_e32 killed %sgpr11, implicit %exec, implicit %sgpr8_sgpr9_sgpr10_sgpr11, implicit %exec
-# CHECK: %sgpr32 = S_MOV_B32 killed %sgpr33
-# CHECK: S_NOP 0, implicit killed %sgpr6_sgpr7, implicit %sgpr0_sgpr1_sgpr2_sgpr3, implicit %sgpr4, implicit killed %vgpr0_vgpr1_vgpr2_vgpr3
+# CHECK: $sgpr4 = S_MOV_B32 $sgpr33
+# CHECK: $vgpr1 = V_MOV_B32_e32 $sgpr9, implicit $exec, implicit $sgpr8_sgpr9_sgpr10_sgpr11
+# CHECK: $vgpr2 = V_MOV_B32_e32 $sgpr10, implicit $exec, implicit $sgpr8_sgpr9_sgpr10_sgpr11
+# CHECK: $vgpr3 = V_MOV_B32_e32 killed $sgpr11, implicit $exec, implicit $sgpr8_sgpr9_sgpr10_sgpr11, implicit $exec
+# CHECK: $sgpr32 = S_MOV_B32 killed $sgpr33
+# CHECK: S_NOP 0, implicit killed $sgpr6_sgpr7, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3
 # CHECK: S_ENDPGM

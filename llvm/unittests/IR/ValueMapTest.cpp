@@ -195,7 +195,7 @@ struct LockMutex : ValueMapConfig<KeyT, MutexT> {
   static MutexT *getMutex(const ExtraData &Data) { return Data.M; }
 };
 // FIXME: These tests started failing on Windows.
-#if LLVM_ENABLE_THREADS && !defined(LLVM_ON_WIN32)
+#if LLVM_ENABLE_THREADS && !defined(_WIN32)
 TYPED_TEST(ValueMapTest, LocksMutex) {
   sys::Mutex M(false);  // Not recursive.
   bool CalledRAUW = false, CalledDeleted = false;

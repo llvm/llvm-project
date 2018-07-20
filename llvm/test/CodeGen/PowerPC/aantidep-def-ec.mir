@@ -46,8 +46,8 @@ alignment:       4
 exposesReturnsTwice: false
 tracksRegLiveness: true
 liveins:         
-  - { reg: '%x3' }
-  - { reg: '%x4' }
+  - { reg: '$x3' }
+  - { reg: '$x4' }
 frameInfo:       
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -63,36 +63,36 @@ frameInfo:
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
 fixedStack:      
-  - { id: 0, type: spill-slot, offset: -16, size: 8, alignment: 16, callee-saved-register: '%x30' }
-  - { id: 1, type: spill-slot, offset: -24, size: 8, alignment: 8, callee-saved-register: '%x29' }
+  - { id: 0, type: spill-slot, offset: -16, size: 8, alignment: 16, callee-saved-register: '$x30' }
+  - { id: 1, type: spill-slot, offset: -24, size: 8, alignment: 8, callee-saved-register: '$x29' }
 body:             |
   bb.0.entry:
-    liveins: %x3, %x4, %x29, %x30, %x29, %x30
+    liveins: $x3, $x4, $x29, $x30, $x29, $x30
   
-    %x0 = MFLR8 implicit %lr8
-    STD %x0, 16, %x1
-    %x1 = STDU %x1, -144, %x1
-    STD killed %x29, 120, %x1 :: (store 8 into %fixed-stack.1)
-    STD killed %x30, 128, %x1 :: (store 8 into %fixed-stack.0, align 16)
-    %x30 = OR8 %x4, %x4
-    %x3 = LD 0, killed %x3 :: (load 8 from %ir.p1)
-    %x29 = ADDI8 killed %x3, -48
-    %x3 = ADDIStocHA %x2, @tasklist_lock
-    %x3 = LDtocL @tasklist_lock, killed %x3, implicit %x2 :: (load 8 from got)
-    BL8_NOP @__raw_read_unlock, csr_svr464_altivec, implicit-def %lr8, implicit %rm, implicit %x3, implicit %x2, implicit-def %r1, implicit-def dead %x3
-    %r3 = LI 0
-    STW killed %r3, 0, killed %x30 :: (volatile store 4 into %ir.p2)
-    INLINEASM $"#compiler barrier", 25
-    INLINEASM $"\0Alwsync \0A1:\09lwarx\09$0,0,$1\09\09# atomic_dec_return\0A\09addic\09$0,$0,-1\0A\09stwcx.\09$0,0,$1\0A\09bne-\091b\0Async \0A", 25, 131083, def early-clobber %r3, 851977, killed %x29, 12, implicit-def dead early-clobber %cr0
+    $x0 = MFLR8 implicit $lr8
+    STD $x0, 16, $x1
+    $x1 = STDU $x1, -144, $x1
+    STD killed $x29, 120, $x1 :: (store 8 into %fixed-stack.1)
+    STD killed $x30, 128, $x1 :: (store 8 into %fixed-stack.0, align 16)
+    $x30 = OR8 $x4, $x4
+    $x3 = LD 0, killed $x3 :: (load 8 from %ir.p1)
+    $x29 = ADDI8 killed $x3, -48
+    $x3 = ADDIStocHA $x2, @tasklist_lock
+    $x3 = LDtocL @tasklist_lock, killed $x3, implicit $x2 :: (load 8 from got)
+    BL8_NOP @__raw_read_unlock, csr_svr464_altivec, implicit-def $lr8, implicit $rm, implicit $x3, implicit $x2, implicit-def $r1, implicit-def dead $x3
+    $r3 = LI 0
+    STW killed $r3, 0, killed $x30 :: (volatile store 4 into %ir.p2)
+    INLINEASM &"#compiler barrier", 25
+    INLINEASM &"\0Alwsync \0A1:\09lwarx\09$0,0,$1\09\09# atomic_dec_return\0A\09addic\09$0,$0,-1\0A\09stwcx.\09$0,0,$1\0A\09bne-\091b\0Async \0A", 25, 131083, def early-clobber $r3, 851977, killed $x29, 12, implicit-def dead early-clobber $cr0
     ; CHECK-LABEL: @mm_update_next_owner
     ; CHECK-NOT: lwarx 29, 0, 29
     ; CHECK-NOT: stwcx. 29, 0, 29
-    %cr0 = CMPLWI killed %r3, 0
-    %x30 = LD 128, %x1 :: (load 8 from %fixed-stack.0, align 16)
-    %x29 = LD 120, %x1 :: (load 8 from %fixed-stack.1)
-    %x1 = ADDI8 %x1, 144
-    %x0 = LD 16, %x1
-    MTLR8 %x0, implicit-def %lr8
-    BLR8 implicit %lr8, implicit %rm
+    $cr0 = CMPLWI killed $r3, 0
+    $x30 = LD 128, $x1 :: (load 8 from %fixed-stack.0, align 16)
+    $x29 = LD 120, $x1 :: (load 8 from %fixed-stack.1)
+    $x1 = ADDI8 $x1, 144
+    $x0 = LD 16, $x1
+    MTLR8 $x0, implicit-def $lr8
+    BLR8 implicit $lr8, implicit $rm
 
 ...

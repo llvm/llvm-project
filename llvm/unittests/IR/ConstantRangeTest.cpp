@@ -1021,4 +1021,103 @@ TEST(ConstantRange, GetEquivalentICmp) {
   EXPECT_EQ(RHS, APInt(32, -1));
 }
 
+TEST(ConstantRange, MakeGuaranteedNoWrapRegionMulUnsignedSingleValue) {
+  typedef OverflowingBinaryOperator OBO;
+
+  for (uint64_t I = std::numeric_limits<uint8_t>::min();
+       I <= std::numeric_limits<uint8_t>::max(); I++) {
+    auto Range = ConstantRange::makeGuaranteedNoWrapRegion(
+        Instruction::Mul, ConstantRange(APInt(8, I), APInt(8, I + 1)),
+        OBO::NoUnsignedWrap);
+
+    for (uint64_t V = std::numeric_limits<uint8_t>::min();
+         V <= std::numeric_limits<uint8_t>::max(); V++) {
+      bool Overflow;
+      (void)APInt(8, I).umul_ov(APInt(8, V), Overflow);
+      EXPECT_EQ(!Overflow, Range.contains(APInt(8, V)));
+    }
+  }
+}
+
+TEST(ConstantRange, MakeGuaranteedNoWrapRegionMulSignedSingleValue) {
+  typedef OverflowingBinaryOperator OBO;
+
+  for (int64_t I = std::numeric_limits<int8_t>::min();
+       I <= std::numeric_limits<int8_t>::max(); I++) {
+    auto Range = ConstantRange::makeGuaranteedNoWrapRegion(
+        Instruction::Mul,
+        ConstantRange(APInt(8, I, /*isSigned=*/true),
+                      APInt(8, I + 1, /*isSigned=*/true)),
+        OBO::NoSignedWrap);
+
+    for (int64_t V = std::numeric_limits<int8_t>::min();
+         V <= std::numeric_limits<int8_t>::max(); V++) {
+      bool Overflow;
+      (void)APInt(8, I, /*isSigned=*/true)
+          .smul_ov(APInt(8, V, /*isSigned=*/true), Overflow);
+      EXPECT_EQ(!Overflow, Range.contains(APInt(8, V, /*isSigned=*/true)));
+    }
+  }
+}
+
+TEST(ConstantRange, MakeGuaranteedNoWrapRegionMulUnsignedAndSignedSingleValue) {
+  typedef OverflowingBinaryOperator OBO;
+
+  for (uint64_t I = std::numeric_limits<uint8_t>::min();
+       I <= std::numeric_limits<uint8_t>::max(); I++) {
+    auto Range = ConstantRange::makeGuaranteedNoWrapRegion(
+        Instruction::Mul, ConstantRange(APInt(8, I), APInt(8, I + 1)),
+        OBO::NoUnsignedWrap | OBO::NoSignedWrap);
+
+    for (uint64_t V = std::numeric_limits<uint8_t>::min();
+         V <= std::numeric_limits<uint8_t>::max(); V++) {
+      bool UOverflow;
+      (void)APInt(8, I).umul_ov(APInt(8, V), UOverflow);
+      bool SOverflow;
+      (void)APInt(8, I).smul_ov(APInt(8, V), SOverflow);
+      EXPECT_EQ(!(UOverflow || SOverflow), Range.contains(APInt(8, V)));
+    }
+  }
+}
+
+TEST(ConstantRange, MakeGuaranteedNoWrapRegionMulUnsignedRange) {
+  typedef OverflowingBinaryOperator OBO;
+
+  for (uint64_t Lo = std::numeric_limits<uint8_t>::min();
+       Lo <= std::numeric_limits<uint8_t>::max(); Lo++) {
+    for (uint64_t Hi = Lo; Hi <= std::numeric_limits<uint8_t>::max(); Hi++) {
+      EXPECT_EQ(
+          ConstantRange::makeGuaranteedNoWrapRegion(
+              Instruction::Mul, ConstantRange(APInt(8, Lo), APInt(8, Hi + 1)),
+              OBO::NoUnsignedWrap),
+          ConstantRange::makeGuaranteedNoWrapRegion(
+              Instruction::Mul, ConstantRange(APInt(8, Hi), APInt(8, Hi + 1)),
+              OBO::NoUnsignedWrap));
+    }
+  }
+}
+
+TEST(ConstantRange, MakeGuaranteedNoWrapRegionMulSignedRange) {
+  typedef OverflowingBinaryOperator OBO;
+
+  int Lo = -12, Hi = 16;
+  auto Range = ConstantRange::makeGuaranteedNoWrapRegion(
+      Instruction::Mul,
+      ConstantRange(APInt(8, Lo, /*isSigned=*/true),
+                    APInt(8, Hi + 1, /*isSigned=*/true)),
+      OBO::NoSignedWrap);
+
+  for (int64_t V = std::numeric_limits<int8_t>::min();
+       V <= std::numeric_limits<int8_t>::max(); V++) {
+    bool AnyOverflow = false;
+    for (int64_t I = Lo; I <= Hi; I++) {
+      bool Overflow;
+      (void)APInt(8, I, /*isSigned=*/true)
+          .smul_ov(APInt(8, V, /*isSigned=*/true), Overflow);
+      AnyOverflow |= Overflow;
+    }
+    EXPECT_EQ(!AnyOverflow, Range.contains(APInt(8, V, /*isSigned=*/true)));
+  }
+}
+
 }  // anonymous namespace

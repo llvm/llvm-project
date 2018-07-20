@@ -1,15 +1,15 @@
 # RUN: llvm-mc --disassemble %s -triple=i386 --output-asm-variant=1 | FileCheck %s
 
-# CHECK: sgdt opaque ptr [eax]
+# CHECK: sgdtd [eax]
 0x0f 0x01 0x00
 
-# CHECK: sidt opaque ptr [eax]
+# CHECK: sidtd [eax]
 0x0f 0x01 0x08
 
-# CHECK: lgdt opaque ptr [eax]
+# CHECK: lgdtd [eax]
 0x0f 0x01 0x10
 
-# CHECK: lidt opaque ptr [eax]
+# CHECK: lidtd [eax]
 0x0f 0x01 0x18
 
 # CHECK: mov al, byte ptr [878082192]

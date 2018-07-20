@@ -32,9 +32,9 @@ endif:
 ; GCN: v_add_f64
 ; GCN: v_cndmask_b32_e32
 ; GCN: v_cndmask_b32_e32
-define amdgpu_kernel void @test_vccnz_sgpr_ifcvt_triangle64(double addrspace(1)* %out, double addrspace(2)* %in) #0 {
+define amdgpu_kernel void @test_vccnz_sgpr_ifcvt_triangle64(double addrspace(1)* %out, double addrspace(4)* %in) #0 {
 entry:
-  %v = load double, double addrspace(2)* %in
+  %v = load double, double addrspace(4)* %in
   %cc = fcmp oeq double %v, 1.000000e+00
   br i1 %cc, label %if, label %endif
 

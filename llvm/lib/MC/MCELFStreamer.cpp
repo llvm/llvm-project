@@ -41,9 +41,10 @@ using namespace llvm;
 
 MCELFStreamer::MCELFStreamer(MCContext &Context,
                              std::unique_ptr<MCAsmBackend> TAB,
-                             raw_pwrite_stream &OS,
+                             std::unique_ptr<MCObjectWriter> OW,
                              std::unique_ptr<MCCodeEmitter> Emitter)
-    : MCObjectStreamer(Context, std::move(TAB), OS, std::move(Emitter)) {}
+    : MCObjectStreamer(Context, std::move(TAB), std::move(OW),
+                       std::move(Emitter)) {}
 
 bool MCELFStreamer::isBundleLocked() const {
   return getCurrentSectionOnly()->isBundleLocked();
@@ -68,13 +69,8 @@ void MCELFStreamer::mergeFragment(MCDataFragment *DF,
     if (RequiredBundlePadding > 0) {
       SmallString<256> Code;
       raw_svector_ostream VecOS(Code);
-      {
-        auto OW = Assembler.getBackend().createObjectWriter(VecOS);
-
-        EF->setBundlePadding(static_cast<uint8_t>(RequiredBundlePadding));
-
-        Assembler.writeFragmentPadding(*EF, FSize, OW.get());
-      }
+      EF->setBundlePadding(static_cast<uint8_t>(RequiredBundlePadding));
+      Assembler.writeFragmentPadding(VecOS, *EF, FSize);
 
       DF->getContents().append(Code.begin(), Code.end());
     }
@@ -87,7 +83,8 @@ void MCELFStreamer::mergeFragment(MCDataFragment *DF,
                                  DF->getContents().size());
     DF->getFixups().push_back(EF->getFixups()[i]);
   }
-  DF->setHasInstructions(true);
+  if (DF->getSubtargetInfo() == nullptr && EF->getSubtargetInfo())
+    DF->setHasInstructions(*EF->getSubtargetInfo());
   DF->getContents().append(EF->getContents().begin(), EF->getContents().end());
 }
 
@@ -192,17 +189,6 @@ static unsigned CombineSymbolTypes(unsigned T1, unsigned T2) {
 
 bool MCELFStreamer::EmitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
   auto *Symbol = cast<MCSymbolELF>(S);
-  // Indirect symbols are handled differently, to match how 'as' handles
-  // them. This makes writing matching .o files easier.
-  if (Attribute == MCSA_IndirectSymbol) {
-    // Note that we intentionally cannot use the symbol data here; this is
-    // important for matching the string table that 'as' generates.
-    IndirectSymbolData ISD;
-    ISD.Symbol = Symbol;
-    ISD.Section = getCurrentSectionOnly();
-    getAssembler().getIndirectSymbols().push_back(ISD);
-    return true;
-  }
 
   // Adding a symbol attribute always introduces the symbol, note that an
   // important side effect of calling registerSymbol here is to register
@@ -337,6 +323,11 @@ void MCELFStreamer::emitELFSize(MCSymbol *Symbol, const MCExpr *Value) {
   cast<MCSymbolELF>(Symbol)->setSize(Value);
 }
 
+void MCELFStreamer::emitELFSymverDirective(StringRef AliasName,
+                                           const MCSymbol *Aliasee) {
+  getAssembler().Symvers.push_back({AliasName, Aliasee});
+}
+
 void MCELFStreamer::EmitLocalCommonSymbol(MCSymbol *S, uint64_t Size,
                                           unsigned ByteAlignment) {
   auto *Symbol = cast<MCSymbolELF>(S);
@@ -363,6 +354,12 @@ void MCELFStreamer::EmitValueToAlignment(unsigned ByteAlignment,
     report_fatal_error("Emitting values inside a locked bundle is forbidden");
   MCObjectStreamer::EmitValueToAlignment(ByteAlignment, Value,
                                          ValueSize, MaxBytesToEmit);
+}
+
+void MCELFStreamer::emitCGProfileEntry(const MCSymbolRefExpr *From,
+                                       const MCSymbolRefExpr *To,
+                                       uint64_t Count) {
+  getAssembler().CGProfile.push_back({From, To, Count});
 }
 
 void MCELFStreamer::EmitIdent(StringRef IdentString) {
@@ -414,6 +411,8 @@ void MCELFStreamer::fixSymbolsInTLSFixups(const MCExpr *expr) {
     case MCSymbolRefExpr::VK_PPC_TPREL_LO:
     case MCSymbolRefExpr::VK_PPC_TPREL_HI:
     case MCSymbolRefExpr::VK_PPC_TPREL_HA:
+    case MCSymbolRefExpr::VK_PPC_TPREL_HIGH:
+    case MCSymbolRefExpr::VK_PPC_TPREL_HIGHA:
     case MCSymbolRefExpr::VK_PPC_TPREL_HIGHER:
     case MCSymbolRefExpr::VK_PPC_TPREL_HIGHERA:
     case MCSymbolRefExpr::VK_PPC_TPREL_HIGHEST:
@@ -421,6 +420,8 @@ void MCELFStreamer::fixSymbolsInTLSFixups(const MCExpr *expr) {
     case MCSymbolRefExpr::VK_PPC_DTPREL_LO:
     case MCSymbolRefExpr::VK_PPC_DTPREL_HI:
     case MCSymbolRefExpr::VK_PPC_DTPREL_HA:
+    case MCSymbolRefExpr::VK_PPC_DTPREL_HIGH:
+    case MCSymbolRefExpr::VK_PPC_DTPREL_HIGHA:
     case MCSymbolRefExpr::VK_PPC_DTPREL_HIGHER:
     case MCSymbolRefExpr::VK_PPC_DTPREL_HIGHERA:
     case MCSymbolRefExpr::VK_PPC_DTPREL_HIGHEST:
@@ -457,6 +458,37 @@ void MCELFStreamer::fixSymbolsInTLSFixups(const MCExpr *expr) {
   }
 }
 
+void MCELFStreamer::finalizeCGProfileEntry(const MCSymbolRefExpr *&SRE) {
+  const MCSymbol *S = &SRE->getSymbol();
+  if (S->isTemporary()) {
+    if (!S->isInSection()) {
+      getContext().reportError(
+          SRE->getLoc(), Twine("Reference to undefined temporary symbol ") +
+                             "`" + S->getName() + "`");
+      return;
+    }
+    S = S->getSection().getBeginSymbol();
+    S->setUsedInReloc();
+    SRE =
+        MCSymbolRefExpr::create(S, SRE->getKind(), getContext(), SRE->getLoc());
+    return;
+  }
+  // Not a temporary, referece it as a weak undefined.
+  bool Created;
+  getAssembler().registerSymbol(*S, &Created);
+  if (Created) {
+    cast<MCSymbolELF>(S)->setBinding(ELF::STB_WEAK);
+    cast<MCSymbolELF>(S)->setExternal(true);
+  }
+}
+
+void MCELFStreamer::finalizeCGProfile() {
+  for (MCAssembler::CGProfileEntry &E : getAssembler().CGProfile) {
+    finalizeCGProfileEntry(E.From);
+    finalizeCGProfileEntry(E.To);
+  }
+}
+
 void MCELFStreamer::EmitInstToFragment(const MCInst &Inst,
                                        const MCSubtargetInfo &STI) {
   this->MCObjectStreamer::EmitInstToFragment(Inst, STI);
@@ -464,6 +496,15 @@ void MCELFStreamer::EmitInstToFragment(const MCInst &Inst,
 
   for (unsigned i = 0, e = F.getFixups().size(); i != e; ++i)
     fixSymbolsInTLSFixups(F.getFixups()[i].getValue());
+}
+
+// A fragment can only have one Subtarget, and when bundling is enabled we
+// sometimes need to use the same fragment. We give an error if there
+// are conflicting Subtargets.
+static void CheckBundleSubtargets(const MCSubtargetInfo *OldSTI,
+                                  const MCSubtargetInfo *NewSTI) {
+  if (OldSTI && NewSTI && OldSTI != NewSTI)
+    report_fatal_error("A Bundle can only have one Subtarget.");
 }
 
 void MCELFStreamer::EmitInstToData(const MCInst &Inst,
@@ -481,7 +522,7 @@ void MCELFStreamer::EmitInstToData(const MCInst &Inst,
   //
   // If bundling is disabled, append the encoded instruction to the current data
   // fragment (or create a new such fragment if the current fragment is not a
-  // data fragment).
+  // data fragment, or the Subtarget has changed).
   //
   // If bundling is enabled:
   // - If we're not in a bundle-locked group, emit the instruction into a
@@ -496,19 +537,23 @@ void MCELFStreamer::EmitInstToData(const MCInst &Inst,
 
   if (Assembler.isBundlingEnabled()) {
     MCSection &Sec = *getCurrentSectionOnly();
-    if (Assembler.getRelaxAll() && isBundleLocked())
+    if (Assembler.getRelaxAll() && isBundleLocked()) {
       // If the -mc-relax-all flag is used and we are bundle-locked, we re-use
       // the current bundle group.
       DF = BundleGroups.back();
+      CheckBundleSubtargets(DF->getSubtargetInfo(), &STI);
+    }
     else if (Assembler.getRelaxAll() && !isBundleLocked())
       // When not in a bundle-locked group and the -mc-relax-all flag is used,
       // we create a new temporary fragment which will be later merged into
       // the current fragment.
       DF = new MCDataFragment();
-    else if (isBundleLocked() && !Sec.isBundleGroupBeforeFirstInst())
+    else if (isBundleLocked() && !Sec.isBundleGroupBeforeFirstInst()) {
       // If we are bundle-locked, we re-use the current fragment.
       // The bundle-locking directive ensures this is a new data fragment.
       DF = cast<MCDataFragment>(getCurrentFragment());
+      CheckBundleSubtargets(DF->getSubtargetInfo(), &STI);
+    }
     else if (!isBundleLocked() && Fixups.size() == 0) {
       // Optimize memory usage by emitting the instruction to a
       // MCCompactEncodedInstFragment when not in a bundle-locked group and
@@ -516,6 +561,7 @@ void MCELFStreamer::EmitInstToData(const MCInst &Inst,
       MCCompactEncodedInstFragment *CEIF = new MCCompactEncodedInstFragment();
       insert(CEIF);
       CEIF->getContents().append(Code.begin(), Code.end());
+      CEIF->setHasInstructions(STI);
       return;
     } else {
       DF = new MCDataFragment();
@@ -533,7 +579,7 @@ void MCELFStreamer::EmitInstToData(const MCInst &Inst,
     // to be turned off.
     Sec.setBundleGroupBeforeFirstInst(false);
   } else {
-    DF = getOrCreateDataFragment();
+    DF = getOrCreateDataFragment(&STI);
   }
 
   // Add the fixups and data.
@@ -541,12 +587,12 @@ void MCELFStreamer::EmitInstToData(const MCInst &Inst,
     Fixups[i].setOffset(Fixups[i].getOffset() + DF->getContents().size());
     DF->getFixups().push_back(Fixups[i]);
   }
-  DF->setHasInstructions(true);
+  DF->setHasInstructions(STI);
   DF->getContents().append(Code.begin(), Code.end());
 
   if (Assembler.isBundlingEnabled() && Assembler.getRelaxAll()) {
     if (!isBundleLocked()) {
-      mergeFragment(getOrCreateDataFragment(), DF);
+      mergeFragment(getOrCreateDataFragment(&STI), DF);
       delete DF;
     }
   }
@@ -606,7 +652,7 @@ void MCELFStreamer::EmitBundleUnlock() {
 
     // FIXME: Use more separate fragments for nested groups.
     if (!isBundleLocked()) {
-      mergeFragment(getOrCreateDataFragment(), DF);
+      mergeFragment(getOrCreateDataFragment(DF->getSubtargetInfo()), DF);
       BundleGroups.pop_back();
       delete DF;
     }
@@ -622,6 +668,7 @@ void MCELFStreamer::FinishImpl() {
   MCSection *CurSection = getCurrentSectionOnly();
   setSectionAlignmentForBundling(getAssembler(), CurSection);
 
+  finalizeCGProfile();
   EmitFrames(nullptr);
 
   this->MCObjectStreamer::FinishImpl();
@@ -636,7 +683,8 @@ void MCELFStreamer::EmitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) {
 }
 
 void MCELFStreamer::EmitZerofill(MCSection *Section, MCSymbol *Symbol,
-                                 uint64_t Size, unsigned ByteAlignment) {
+                                 uint64_t Size, unsigned ByteAlignment,
+                                 SMLoc Loc) {
   llvm_unreachable("ELF doesn't support this directive");
 }
 
@@ -647,11 +695,11 @@ void MCELFStreamer::EmitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
 
 MCStreamer *llvm::createELFStreamer(MCContext &Context,
                                     std::unique_ptr<MCAsmBackend> &&MAB,
-                                    raw_pwrite_stream &OS,
+                                    std::unique_ptr<MCObjectWriter> &&OW,
                                     std::unique_ptr<MCCodeEmitter> &&CE,
                                     bool RelaxAll) {
   MCELFStreamer *S =
-      new MCELFStreamer(Context, std::move(MAB), OS, std::move(CE));
+      new MCELFStreamer(Context, std::move(MAB), std::move(OW), std::move(CE));
   if (RelaxAll)
     S->getAssembler().setRelaxAll(true);
   return S;

@@ -1228,9 +1228,23 @@ isReMaterializable = 1 in
                           [(set i16:$dst, (load addr:$memri))]>,
                    Requires<[HasSRAM]>;
 
+  // An identical pseudo instruction to LDDWRdPtrQ, expect restricted to the Y
+  // register and without the @earlyclobber flag.
+  //
+  // Used to work around a bug caused by the register allocator not
+  // being able to handle the expansion of a COPY into an machine instruction
+  // that has an earlyclobber flag. This is because the register allocator will
+  // try expand a copy from a register slot into an earlyclobber instruction.
+  // Instructions that are earlyclobber need to be in a dedicated earlyclobber slot.
+  //
+  // This pseudo instruction can be used pre-AVR pseudo expansion in order to
+  // get a frame index load without directly using earlyclobber instructions.
+  //
+  // The pseudo expansion pass trivially expands this into LDDWRdPtrQ.
+  //
+  // This instruction may be removed once PR13375 is fixed.
   let mayLoad = 1,
-  hasSideEffects = 0,
-  Constraints = "@earlyclobber $dst" in
+  hasSideEffects = 0 in
   def LDDWRdYQ : Pseudo<(outs DREGS:$dst),
                         (ins memri:$memri),
                         "lddw\t$dst, $memri",

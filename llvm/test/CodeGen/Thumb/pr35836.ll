@@ -37,13 +37,13 @@ while.body:
 ; CHECK: adds	r3, r0, r1
 ; CHECK: push	{r5}
 ; CHECK: pop	{r1}
-; CHECK: adcs	r1, r1
+; CHECK: adcs	r1, r5
 ; CHECK: ldr	r0, [sp, #12]           @ 4-byte Reload
 ; CHECK: ldr	r2, [sp, #8]            @ 4-byte Reload
 ; CHECK: adds	r2, r0, r2
 ; CHECK: push	{r5}
 ; CHECK: pop	{r4}
-; CHECK: adcs	r4, r4
+; CHECK: adcs	r4, r5
 ; CHECK: adds	r0, r2, r5
 ; CHECK: push	{r3}
 ; CHECK: pop	{r0}

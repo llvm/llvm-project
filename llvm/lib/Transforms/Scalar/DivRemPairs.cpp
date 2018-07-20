@@ -13,6 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/DivRemPairs.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -48,7 +50,10 @@ static bool optimizeDivRem(Function &F, const TargetTransformInfo &TTI,
 
   // Insert all divide and remainder instructions into maps keyed by their
   // operands and opcode (signed or unsigned).
-  DenseMap<DivRemMapKey, Instruction *> DivMap, RemMap;
+  DenseMap<DivRemMapKey, Instruction *> DivMap;
+  // Use a MapVector for RemMap so that instructions are moved/inserted in a
+  // deterministic order.
+  MapVector<DivRemMapKey, Instruction *> RemMap;
   for (auto &BB : F) {
     for (auto &I : BB) {
       if (I.getOpcode() == Instruction::SDiv)
@@ -67,14 +72,14 @@ static bool optimizeDivRem(Function &F, const TargetTransformInfo &TTI,
   // rare than division.
   for (auto &RemPair : RemMap) {
     // Find the matching division instruction from the division map.
-    Instruction *DivInst = DivMap[RemPair.getFirst()];
+    Instruction *DivInst = DivMap[RemPair.first];
     if (!DivInst)
       continue;
 
     // We have a matching pair of div/rem instructions. If one dominates the
     // other, hoist and/or replace one.
     NumPairs++;
-    Instruction *RemInst = RemPair.getSecond();
+    Instruction *RemInst = RemPair.second;
     bool IsSigned = DivInst->getOpcode() == Instruction::SDiv;
     bool HasDivRemOp = TTI.hasDivRemOp(DivInst->getType(), IsSigned);
 

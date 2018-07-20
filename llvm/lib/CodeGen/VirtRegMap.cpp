@@ -35,6 +35,7 @@
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Compiler.h"
@@ -241,10 +242,9 @@ bool VirtRegRewriter::runOnMachineFunction(MachineFunction &fn) {
   Indexes = &getAnalysis<SlotIndexes>();
   LIS = &getAnalysis<LiveIntervals>();
   VRM = &getAnalysis<VirtRegMap>();
-  DEBUG(dbgs() << "********** REWRITE VIRTUAL REGISTERS **********\n"
-               << "********** Function: "
-               << MF->getName() << '\n');
-  DEBUG(VRM->dump());
+  LLVM_DEBUG(dbgs() << "********** REWRITE VIRTUAL REGISTERS **********\n"
+                    << "********** Function: " << MF->getName() << '\n');
+  LLVM_DEBUG(VRM->dump());
 
   // Add kill flags while we still have virtual registers.
   LIS->addKillFlags(VRM);
@@ -376,7 +376,7 @@ bool VirtRegRewriter::readsUndefSubreg(const MachineOperand &MO) const {
 void VirtRegRewriter::handleIdentityCopy(MachineInstr &MI) const {
   if (!MI.isIdentityCopy())
     return;
-  DEBUG(dbgs() << "Identity copy: " << MI);
+  LLVM_DEBUG(dbgs() << "Identity copy: " << MI);
   ++NumIdCopies;
 
   // Copies like:
@@ -387,14 +387,14 @@ void VirtRegRewriter::handleIdentityCopy(MachineInstr &MI) const {
   // instruction to maintain this information.
   if (MI.getOperand(0).isUndef() || MI.getNumOperands() > 2) {
     MI.setDesc(TII->get(TargetOpcode::KILL));
-    DEBUG(dbgs() << "  replace by: " << MI);
+    LLVM_DEBUG(dbgs() << "  replace by: " << MI);
     return;
   }
 
   if (Indexes)
     Indexes->removeSingleMachineInstrFromMaps(MI);
   MI.eraseFromBundle();
-  DEBUG(dbgs() << "  deleted.\n");
+  LLVM_DEBUG(dbgs() << "  deleted.\n");
 }
 
 /// The liverange splitting logic sometimes produces bundles of copies when
@@ -406,6 +406,8 @@ void VirtRegRewriter::expandCopyBundle(MachineInstr &MI) const {
     return;
 
   if (MI.isBundledWithPred() && !MI.isBundledWithSucc()) {
+    SmallVector<MachineInstr *, 2> MIs({&MI});
+
     // Only do this when the complete bundle is made out of COPYs.
     MachineBasicBlock &MBB = *MI.getParent();
     for (MachineBasicBlock::reverse_instr_iterator I =
@@ -413,16 +415,53 @@ void VirtRegRewriter::expandCopyBundle(MachineInstr &MI) const {
          I != E && I->isBundledWithSucc(); ++I) {
       if (!I->isCopy())
         return;
+      MIs.push_back(&*I);
+    }
+    MachineInstr *FirstMI = MIs.back();
+
+    auto anyRegsAlias = [](const MachineInstr *Dst,
+                           ArrayRef<MachineInstr *> Srcs,
+                           const TargetRegisterInfo *TRI) {
+      for (const MachineInstr *Src : Srcs)
+        if (Src != Dst)
+          if (TRI->regsOverlap(Dst->getOperand(0).getReg(),
+                               Src->getOperand(1).getReg()))
+            return true;
+      return false;
+    };
+
+    // If any of the destination registers in the bundle of copies alias any of
+    // the source registers, try to schedule the instructions to avoid any
+    // clobbering.
+    for (int E = MIs.size(), PrevE = E; E > 1; PrevE = E) {
+      for (int I = E; I--; )
+        if (!anyRegsAlias(MIs[I], makeArrayRef(MIs).take_front(E), TRI)) {
+          if (I + 1 != E)
+            std::swap(MIs[I], MIs[E - 1]);
+          --E;
+        }
+      if (PrevE == E) {
+        MF->getFunction().getContext().emitError(
+            "register rewriting failed: cycle in copy bundle");
+        break;
+      }
     }
 
-    for (MachineBasicBlock::reverse_instr_iterator I = MI.getReverseIterator();
-         I->isBundledWithPred(); ) {
-      MachineInstr &MI = *I;
-      ++I;
+    MachineInstr *BundleStart = FirstMI;
+    for (MachineInstr *BundledMI : llvm::reverse(MIs)) {
+      // If instruction is in the middle of the bundle, move it before the
+      // bundle starts, otherwise, just unbundle it. When we get to the last
+      // instruction, the bundle will have been completely undone.
+      if (BundledMI != BundleStart) {
+        BundledMI->removeFromBundle();
+        MBB.insert(FirstMI, BundledMI);
+      } else if (BundledMI->isBundledWithSucc()) {
+        BundledMI->unbundleFromSucc();
+        BundleStart = &*std::next(BundledMI->getIterator());
+      }
 
-      MI.unbundleFromPred();
-      if (Indexes)
-        Indexes->insertMachineInstrInMaps(MI);
+      if (Indexes && BundledMI != FirstMI)
+        Indexes->insertMachineInstrInMaps(*BundledMI);
     }
   }
 }
@@ -461,7 +500,7 @@ void VirtRegRewriter::rewrite() {
 
   for (MachineFunction::iterator MBBI = MF->begin(), MBBE = MF->end();
        MBBI != MBBE; ++MBBI) {
-    DEBUG(MBBI->print(dbgs(), Indexes));
+    LLVM_DEBUG(MBBI->print(dbgs(), Indexes));
     for (MachineBasicBlock::instr_iterator
            MII = MBBI->instr_begin(), MIE = MBBI->instr_end(); MII != MIE;) {
       MachineInstr *MI = &*MII;
@@ -530,7 +569,7 @@ void VirtRegRewriter::rewrite() {
         // Rewrite. Note we could have used MachineOperand::substPhysReg(), but
         // we need the inlining here.
         MO.setReg(PhysReg);
-        MO.setIsRenamableIfNoExtraRegAllocReq();
+        MO.setIsRenamable(true);
       }
 
       // Add any missing super-register kills after rewriting the whole
@@ -544,7 +583,7 @@ void VirtRegRewriter::rewrite() {
       while (!SuperDefs.empty())
         MI->addRegisterDefined(SuperDefs.pop_back_val(), TRI);
 
-      DEBUG(dbgs() << "> " << *MI);
+      LLVM_DEBUG(dbgs() << "> " << *MI);
 
       expandCopyBundle(*MI);
 

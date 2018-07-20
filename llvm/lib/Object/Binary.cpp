@@ -75,6 +75,9 @@ Expected<std::unique_ptr<Binary>> object::createBinary(MemoryBufferRef Buffer,
     return MachOUniversalBinary::create(Buffer);
   case file_magic::windows_resource:
     return WindowsResource::createWindowsResource(Buffer);
+  case file_magic::pdb:
+    // PDB does not support the Binary interface.
+    return errorCodeToError(object_error::invalid_file_type);
   case file_magic::unknown:
   case file_magic::coff_cl_gl_object:
     // Unrecognized object file format.

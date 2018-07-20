@@ -1,5 +1,9 @@
 ; RUN: llc < %s -emulated-tls -relocation-model=pic -mtriple=i686-unknown-linux-gnu -fast-isel | FileCheck %s
+; RUN: llc < %s -relocation-model=pic -mtriple=i686-unknown-linux-gnu -fast-isel \
+; RUN: | FileCheck -check-prefix=NoEMU %s
 ; PR3654
+
+; NoEMU-NOT: __emutls
 
 @v = thread_local global i32 0
 define i32 @f() nounwind {

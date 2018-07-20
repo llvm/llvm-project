@@ -174,6 +174,7 @@ StringRef llvm::getEnumName(MVT::SimpleValueType T) {
   case MVT::iPTR:     return "MVT::iPTR";
   case MVT::iPTRAny:  return "MVT::iPTRAny";
   case MVT::Untyped:  return "MVT::Untyped";
+  case MVT::ExceptRef: return "MVT::ExceptRef";
   default: llvm_unreachable("ILLEGAL VALUE TYPE!");
   }
 }
@@ -224,6 +225,9 @@ Record *CodeGenTarget::getInstructionSet() const {
   return TargetRec->getValueAsDef("InstructionSet");
 }
 
+bool CodeGenTarget::getAllowRegisterRenaming() const {
+  return TargetRec->getValueAsInt("AllowRegisterRenaming");
+}
 
 /// getAsmParser - Return the AssemblyParser definition for this target.
 ///
@@ -274,7 +278,7 @@ CodeGenRegBank &CodeGenTarget::getRegBank() const {
 
 void CodeGenTarget::ReadRegAltNameIndices() const {
   RegAltNameIndices = Records.getAllDerivedDefinitions("RegAltNameIndex");
-  std::sort(RegAltNameIndices.begin(), RegAltNameIndices.end(), LessRecord());
+  llvm::sort(RegAltNameIndices.begin(), RegAltNameIndices.end(), LessRecord());
 }
 
 /// getRegisterByName - If there is a register with the specific AsmName,
@@ -299,7 +303,7 @@ std::vector<ValueTypeByHwMode> CodeGenTarget::getRegisterVTs(Record *R)
   }
 
   // Remove duplicates.
-  std::sort(Result.begin(), Result.end());
+  llvm::sort(Result.begin(), Result.end());
   Result.erase(std::unique(Result.begin(), Result.end()), Result.end());
   return Result;
 }
@@ -310,7 +314,7 @@ void CodeGenTarget::ReadLegalValueTypes() const {
     LegalValueTypes.insert(LegalValueTypes.end(), RC.VTs.begin(), RC.VTs.end());
 
   // Remove duplicates.
-  std::sort(LegalValueTypes.begin(), LegalValueTypes.end());
+  llvm::sort(LegalValueTypes.begin(), LegalValueTypes.end());
   LegalValueTypes.erase(std::unique(LegalValueTypes.begin(),
                                     LegalValueTypes.end()),
                         LegalValueTypes.end());
@@ -345,13 +349,18 @@ GetInstByName(const char *Name,
   return I->second.get();
 }
 
-/// \brief Return all of the instructions defined by the target, ordered by
+static const char *const FixedInstrs[] = {
+#define HANDLE_TARGET_OPCODE(OPC) #OPC,
+#include "llvm/Support/TargetOpcodes.def"
+    nullptr};
+
+unsigned CodeGenTarget::getNumFixedInstructions() {
+  return array_lengthof(FixedInstrs) - 1;
+}
+
+/// Return all of the instructions defined by the target, ordered by
 /// their enum value.
 void CodeGenTarget::ComputeInstrsByEnum() const {
-  static const char *const FixedInstrs[] = {
-#define HANDLE_TARGET_OPCODE(OPC) #OPC,
-#include "llvm/CodeGen/TargetOpcodes.def"
-      nullptr};
   const auto &Insts = getInstructions();
   for (const char *const *p = FixedInstrs; *p; ++p) {
     const CodeGenInstruction *Instr = GetInstByName(*p, Insts, Records);
@@ -360,21 +369,29 @@ void CodeGenTarget::ComputeInstrsByEnum() const {
     InstrsByEnum.push_back(Instr);
   }
   unsigned EndOfPredefines = InstrsByEnum.size();
+  assert(EndOfPredefines == getNumFixedInstructions() &&
+         "Missing generic opcode");
 
   for (const auto &I : Insts) {
     const CodeGenInstruction *CGI = I.second.get();
-    if (CGI->Namespace != "TargetOpcode")
+    if (CGI->Namespace != "TargetOpcode") {
       InstrsByEnum.push_back(CGI);
+      if (CGI->TheDef->getValueAsBit("isPseudo"))
+        ++NumPseudoInstructions;
+    }
   }
 
   assert(InstrsByEnum.size() == Insts.size() && "Missing predefined instr");
 
   // All of the instructions are now in random order based on the map iteration.
-  // Sort them by name.
-  std::sort(InstrsByEnum.begin() + EndOfPredefines, InstrsByEnum.end(),
-            [](const CodeGenInstruction *Rec1, const CodeGenInstruction *Rec2) {
-    return Rec1->TheDef->getName() < Rec2->TheDef->getName();
-  });
+  llvm::sort(
+      InstrsByEnum.begin() + EndOfPredefines, InstrsByEnum.end(),
+      [](const CodeGenInstruction *Rec1, const CodeGenInstruction *Rec2) {
+        const auto &D1 = *Rec1->TheDef;
+        const auto &D2 = *Rec2->TheDef;
+        return std::make_tuple(!D1.getValueAsBit("isPseudo"), D1.getName()) <
+               std::make_tuple(!D2.getValueAsBit("isPseudo"), D2.getName());
+      });
 }
 
 
@@ -496,11 +513,11 @@ CodeGenIntrinsicTable::CodeGenIntrinsicTable(const RecordKeeper &RC,
     if (isTarget == TargetOnly)
       Intrinsics.push_back(CodeGenIntrinsic(Defs[I]));
   }
-  std::sort(Intrinsics.begin(), Intrinsics.end(),
-            [](const CodeGenIntrinsic &LHS, const CodeGenIntrinsic &RHS) {
-              return std::tie(LHS.TargetPrefix, LHS.Name) <
-                     std::tie(RHS.TargetPrefix, RHS.Name);
-            });
+  llvm::sort(Intrinsics.begin(), Intrinsics.end(),
+             [](const CodeGenIntrinsic &LHS, const CodeGenIntrinsic &RHS) {
+               return std::tie(LHS.TargetPrefix, LHS.Name) <
+                      std::tie(RHS.TargetPrefix, RHS.Name);
+             });
   Targets.push_back({"", 0, 0});
   for (size_t I = 0, E = Intrinsics.size(); I < E; ++I)
     if (Intrinsics[I].TargetPrefix != Targets.back().Name) {
@@ -604,8 +621,12 @@ CodeGenIntrinsic::CodeGenIntrinsic(Record *R) {
     MVT::SimpleValueType VT;
     if (TyEl->isSubClassOf("LLVMMatchType")) {
       unsigned MatchTy = TyEl->getValueAsInt("Number");
-      assert(MatchTy < OverloadedVTs.size() &&
-             "Invalid matching number!");
+      if (MatchTy >= OverloadedVTs.size()) {
+        PrintError(R->getLoc(),
+                   "Parameter #" + Twine(i) + " has out of bounds matching "
+                   "number " + Twine(MatchTy));
+        PrintFatalError(Twine("ParamTypes is ") + TypeList->getAsString());
+      }
       VT = OverloadedVTs[MatchTy];
       // It only makes sense to use the extended and truncated vector element
       // variants with iAny types; otherwise, if the intrinsic is not
@@ -688,6 +709,6 @@ CodeGenIntrinsic::CodeGenIntrinsic(Record *R) {
   Properties = parseSDPatternOperatorProperties(R);
 
   // Sort the argument attributes for later benefit.
-  std::sort(ArgumentAttributes.begin(), ArgumentAttributes.end());
+  llvm::sort(ArgumentAttributes.begin(), ArgumentAttributes.end());
 }
 

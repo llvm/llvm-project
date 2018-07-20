@@ -24,7 +24,30 @@ for.body:                                         ; preds = %bb.nph, %for.body
 for.end:                                          ; preds = %for.body, %entry
   ret void
 ; CHECK-LABEL: @test1(
-; CHECK: call void @llvm.memset.p0i8.i64(i8* %Base, i8 0, i64 %Size, i32 1, i1 false)
+; CHECK: call void @llvm.memset.p0i8.i64(i8* align 1 %Base, i8 0, i64 %Size, i1 false)
+; CHECK-NOT: store
+}
+
+; Make sure memset is formed for larger than 1 byte stores, and that the
+; alignment of the store is preserved
+define void @test1_i16(i16* align 2 %Base, i64 %Size) nounwind ssp {
+bb.nph:                                           ; preds = %entry
+  br label %for.body
+
+for.body:                                         ; preds = %bb.nph, %for.body
+  %indvar = phi i64 [ 0, %bb.nph ], [ %indvar.next, %for.body ]
+  %I.0.014 = getelementptr i16, i16* %Base, i64 %indvar
+  store i16 0, i16* %I.0.014, align 2
+  %indvar.next = add i64 %indvar, 1
+  %exitcond = icmp eq i64 %indvar.next, %Size
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+; CHECK-LABEL: @test1_i16(
+; CHECK: %[[BaseBC:.*]] = bitcast i16* %Base to i8*
+; CHECK: %[[Sz:[0-9]+]] = shl i64 %Size, 1
+; CHECK: call void @llvm.memset.p0i8.i64(i8* align 2 %[[BaseBC]], i8 0, i64 %[[Sz]], i1 false)
 ; CHECK-NOT: store
 }
 
@@ -47,7 +70,7 @@ for.body.cont:
 for.end:                                          ; preds = %for.body, %entry
   ret void
 ; CHECK-LABEL: @test1a(
-; CHECK: call void @llvm.memset.p0i8.i64(i8* %Base, i8 0, i64 %Size, i32 1, i1 false)
+; CHECK: call void @llvm.memset.p0i8.i64(i8* align 1 %Base, i8 0, i64 %Size, i1 false)
 ; CHECK-NOT: store
 }
 
@@ -70,7 +93,7 @@ for.end:                                          ; preds = %for.body, %entry
 ; CHECK-LABEL: @test2(
 ; CHECK: br i1 %cmp10,
 ; CHECK: %0 = shl i64 %Size, 2
-; CHECK: call void @llvm.memset.p0i8.i64(i8* %Base1, i8 1, i64 %0, i32 4, i1 false)
+; CHECK: call void @llvm.memset.p0i8.i64(i8* align 4 %Base1, i8 1, i64 %0, i1 false)
 ; CHECK-NOT: store
 }
 
@@ -118,7 +141,7 @@ for.body:                                         ; preds = %bb.nph, %for.body
 for.end:                                          ; preds = %for.body, %entry
   ret void
 ; CHECK-LABEL: @test4(
-; CHECK: call void @llvm.memset.p0i8.i64(i8* %Base, i8 0, i64 100, i32 1, i1 false)
+; CHECK: call void @llvm.memset.p0i8.i64(i8* align 1 %Base, i8 0, i64 100, i1 false)
 }
 
 ; This can't be promoted: the memset is a store of a loop variant value.
@@ -164,7 +187,59 @@ for.body:                                         ; preds = %bb.nph, %for.body
 for.end:                                          ; preds = %for.body, %entry
   ret void
 ; CHECK-LABEL: @test6(
-; CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* %Dest, i8* %Base, i64 %Size, i32 1, i1 false)
+; CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %Dest, i8* align 1 %Base, i64 %Size, i1 false)
+; CHECK-NOT: store
+; CHECK: ret void
+}
+
+;; memcpy formation, check alignment
+define void @test6_dest_align(i32* noalias align 1 %Base, i32* noalias align 4 %Dest, i64 %Size) nounwind ssp {
+bb.nph:
+  br label %for.body
+
+for.body:                                         ; preds = %bb.nph, %for.body
+  %indvar = phi i64 [ 0, %bb.nph ], [ %indvar.next, %for.body ]
+  %I.0.014 = getelementptr i32, i32* %Base, i64 %indvar
+  %DestI = getelementptr i32, i32* %Dest, i64 %indvar
+  %V = load i32, i32* %I.0.014, align 1
+  store i32 %V, i32* %DestI, align 4
+  %indvar.next = add i64 %indvar, 1
+  %exitcond = icmp eq i64 %indvar.next, %Size
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+; CHECK-LABEL: @test6_dest_align(
+; CHECK: %[[Dst:.*]] = bitcast i32* %Dest to i8*
+; CHECK: %[[Src:.*]] = bitcast i32* %Base to i8*
+; CHECK: %[[Sz:[0-9]+]] = shl i64 %Size, 2
+; CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %[[Dst]], i8* align 1 %[[Src]], i64 %[[Sz]], i1 false)
+; CHECK-NOT: store
+; CHECK: ret void
+}
+
+;; memcpy formation, check alignment
+define void @test6_src_align(i32* noalias align 4 %Base, i32* noalias align 1 %Dest, i64 %Size) nounwind ssp {
+bb.nph:
+  br label %for.body
+
+for.body:                                         ; preds = %bb.nph, %for.body
+  %indvar = phi i64 [ 0, %bb.nph ], [ %indvar.next, %for.body ]
+  %I.0.014 = getelementptr i32, i32* %Base, i64 %indvar
+  %DestI = getelementptr i32, i32* %Dest, i64 %indvar
+  %V = load i32, i32* %I.0.014, align 4
+  store i32 %V, i32* %DestI, align 1
+  %indvar.next = add i64 %indvar, 1
+  %exitcond = icmp eq i64 %indvar.next, %Size
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+; CHECK-LABEL: @test6_src_align(
+; CHECK: %[[Dst]] = bitcast i32* %Dest to i8*
+; CHECK: %[[Src]] = bitcast i32* %Base to i8*
+; CHECK: %[[Sz:[0-9]+]] = shl i64 %Size, 2
+; CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %[[Dst]], i8* align 4 %[[Src]], i64 %[[Sz]], i1 false)
 ; CHECK-NOT: store
 ; CHECK: ret void
 }
@@ -189,7 +264,7 @@ for.body.cont:
 for.end:                                          ; preds = %for.body, %entry
   ret void
 ; CHECK-LABEL: @test7(
-; CHECK: call void @llvm.memset.p0i8.i64(i8* %Base, i8 0, i64 %Size, i32 1, i1 false)
+; CHECK: call void @llvm.memset.p0i8.i64(i8* align 1 %Base, i8 0, i64 %Size, i1 false)
 ; CHECK-NOT: store
 }
 
@@ -274,7 +349,7 @@ for.end13:                                        ; preds = %for.inc10
   ret void
 ; CHECK-LABEL: @test10(
 ; CHECK: entry:
-; CHECK-NEXT: call void @llvm.memset.p0i8.i64(i8* %X, i8 0, i64 10000, i32 1, i1 false)
+; CHECK-NEXT: call void @llvm.memset.p0i8.i64(i8* align 1 %X, i8 0, i64 10000, i1 false)
 ; CHECK-NOT: store
 ; CHECK: ret void
 }
@@ -322,7 +397,7 @@ for.end:                                          ; preds = %for.body
 ; CHECK-LABEL: @test12(
 ; CHECK-NEXT: entry:
 ; CHECK-NEXT: bitcast
-; CHECK-NEXT: call void @llvm.memset.p0i8.i64(i8* %P1, i8 0, i64 80000, i32 4, i1 false)
+; CHECK-NEXT: call void @llvm.memset.p0i8.i64(i8* align 4 %P1, i8 0, i64 80000, i1 false)
 ; CHECK-NOT: store
 ; CHECK: ret void
 }
@@ -439,7 +514,7 @@ for.body:
 for.cond.cleanup:
   ret void
 ; CHECK-LABEL: @test15(
-; CHECK: call void @llvm.memset.p0i8.i64(i8* %f1, i8 0, i64 262148, i32 4, i1 false)
+; CHECK: call void @llvm.memset.p0i8.i64(i8* align 4 %f1, i8 0, i64 262148, i1 false)
 ; CHECK-NOT: store
 ; CHECK: ret void
 }
@@ -559,7 +634,7 @@ for.end6:                                         ; preds = %for.inc4
   ret void
 ; CHECK-LABEL: @test19(
 ; CHECK: entry:
-; CHECK-NEXT: call void @llvm.memset.p0i8.i64(i8* %X, i8 0, i64 10000, i32 1, i1 false)
+; CHECK-NEXT: call void @llvm.memset.p0i8.i64(i8* align 1 %X, i8 0, i64 10000, i1 false)
 ; CHECK: ret void
 }
 
@@ -579,7 +654,7 @@ loop.ph:
 ; CHECK:       loop.ph:
 ; CHECK-NEXT:    %[[ZEXT_SIZE:.*]] = zext i32 %size to i64
 ; CHECK-NEXT:    %[[SCALED_SIZE:.*]] = shl i64 %[[ZEXT_SIZE]], 3
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* %{{.*}}, i8 0, i64 %[[SCALED_SIZE]], i32 8, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 8 %{{.*}}, i8 0, i64 %[[SCALED_SIZE]], i1 false)
 
 loop.body:
   %storemerge4 = phi i32 [ 0, %loop.ph ], [ %inc, %loop.body ]
@@ -611,7 +686,7 @@ loop.ph:
 ; CHECK:       loop.ph:
 ; CHECK-NEXT:    %[[ZEXT_SIZE:.*]] = zext i32 %size to i64
 ; CHECK-NEXT:    %[[SCALED_SIZE:.*]] = shl i64 %[[ZEXT_SIZE]], 3
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* %{{.*}}, i8* %{{.*}}, i64 %[[SCALED_SIZE]], i32 8, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 %{{.*}}, i8* align 8 %{{.*}}, i64 %[[SCALED_SIZE]], i1 false)
 
 loop.body:
   %storemerge4 = phi i32 [ 0, %loop.ph ], [ %inc, %loop.body ]

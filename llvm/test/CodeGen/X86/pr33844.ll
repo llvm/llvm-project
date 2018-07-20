@@ -15,7 +15,7 @@ define void @patatino() {
 ; CHECK-NEXT:    shrl $31, %ecx
 ; CHECK-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
 ; CHECK-NEXT:    shrl $31, %ecx
-; CHECK-NEXT:    andl $62, %ecx
+; CHECK-NEXT:    andl $-2, %ecx
 ; CHECK-NEXT:    andl $-536870912, %eax # imm = 0xE0000000
 ; CHECK-NEXT:    orl %ecx, %eax
 ; CHECK-NEXT:    movl %eax, {{.*}}(%rip)

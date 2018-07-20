@@ -15,7 +15,7 @@
 #define LLVM_UTILS_TABLEGEN_CODEGENINSTRUCTION_H
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/Support/MachineValueType.h"
 #include "llvm/Support/SMLoc.h"
 #include <string>
 #include <utility>
@@ -226,11 +226,13 @@ template <typename T> class ArrayRef;
     bool isIndirectBranch : 1;
     bool isCompare : 1;
     bool isMoveImm : 1;
+    bool isMoveReg : 1;
     bool isBitcast : 1;
     bool isSelect : 1;
     bool isBarrier : 1;
     bool isCall : 1;
     bool isAdd : 1;
+    bool isTrap : 1;
     bool canFoldAsLoad : 1;
     bool mayLoad : 1;
     bool mayLoad_Unset : 1;
@@ -258,6 +260,9 @@ template <typename T> class ArrayRef;
     bool isInsertSubreg : 1;
     bool isConvergent : 1;
     bool hasNoSchedulingInfo : 1;
+    bool FastISelShouldIgnore : 1;
+    bool hasChain : 1;
+    bool hasChain_Inferred : 1;
 
     std::string DeprecatedReason;
     bool HasComplexDeprecationPredicate;
@@ -350,7 +355,7 @@ template <typename T> class ArrayRef;
     /// of them are matched by the operand, the second value should be -1.
     std::vector<std::pair<unsigned, int> > ResultInstOperandIndex;
 
-    CodeGenInstAlias(Record *R, unsigned Variant, CodeGenTarget &T);
+    CodeGenInstAlias(Record *R, CodeGenTarget &T);
 
     bool tryAliasOpMatch(DagInit *Result, unsigned AliasOpNo,
                          Record *InstOpRec, bool hasSubOps, ArrayRef<SMLoc> Loc,

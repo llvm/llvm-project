@@ -97,10 +97,12 @@ AdjustStackOffset(MachineFrameInfo &MFI, int FrameIdx,
   Offset = (Offset + Align - 1) / Align * Align;
 
   if (StackGrowsDown) {
-    DEBUG(dbgs() << "alloc FI(" << FrameIdx << ") at SP[" << -Offset << "]\n");
+    LLVM_DEBUG(dbgs() << "alloc FI(" << FrameIdx << ") at SP[" << -Offset
+                      << "]\n");
     MFI.setObjectOffset(FrameIdx, -Offset); // Set the computed offset
   } else {
-    DEBUG(dbgs() << "alloc FI(" << FrameIdx << ") at SP[" << Offset << "]\n");
+    LLVM_DEBUG(dbgs() << "alloc FI(" << FrameIdx << ") at SP[" << Offset
+                      << "]\n");
     MFI.setObjectOffset(FrameIdx, Offset);
     Offset += MFI.getObjectSize(FrameIdx);
   }
@@ -163,14 +165,14 @@ NVPTXPrologEpilogPass::calculateFrameObjectOffsets(MachineFunction &Fn) {
     // Adjust to alignment boundary.
     Offset = (Offset + Align - 1) / Align * Align;
 
-    DEBUG(dbgs() << "Local frame base offset: " << Offset << "\n");
+    LLVM_DEBUG(dbgs() << "Local frame base offset: " << Offset << "\n");
 
     // Resolve offsets for objects in the local block.
     for (unsigned i = 0, e = MFI.getLocalFrameObjectCount(); i != e; ++i) {
       std::pair<int, int64_t> Entry = MFI.getLocalFrameObjectMap(i);
       int64_t FIOffset = (StackGrowsDown ? -Offset : Offset) + Entry.second;
-      DEBUG(dbgs() << "alloc FI(" << Entry.first << ") at SP[" <<
-            FIOffset << "]\n");
+      LLVM_DEBUG(dbgs() << "alloc FI(" << Entry.first << ") at SP[" << FIOffset
+                        << "]\n");
       MFI.setObjectOffset(Entry.first, FIOffset);
     }
     // Allocate the local block

@@ -49,6 +49,26 @@ public:
     return AddressSpace::ADDRESS_SPACE_GENERIC;
   }
 
+  // NVPTX has infinite registers of all kinds, but the actual machine doesn't.
+  // We conservatively return 1 here which is just enough to enable the
+  // vectorizers but disables heuristics based on the number of registers.
+  // FIXME: Return a more reasonable number, while keeping an eye on
+  // LoopVectorizer's unrolling heuristics.
+  unsigned getNumberOfRegisters(bool Vector) const { return 1; }
+
+  // Only <2 x half> should be vectorized, so always return 32 for the vector
+  // register size.
+  unsigned getRegisterBitWidth(bool Vector) const { return 32; }
+  unsigned getMinVectorRegisterBitWidth() const { return 32; }
+
+  // We don't want to prevent inlining because of target-cpu and -features
+  // attributes that were added to newer versions of LLVM/Clang: There are
+  // no incompatible functions in PTX, ptxas will throw errors in such cases.
+  bool areInlineCompatible(const Function *Caller,
+                           const Function *Callee) const {
+    return true;
+  }
+
   // Increase the inlining cost threshold by a factor of 5, reflecting that
   // calls are particularly expensive in NVPTX.
   unsigned getInliningThresholdMultiplier() { return 5; }

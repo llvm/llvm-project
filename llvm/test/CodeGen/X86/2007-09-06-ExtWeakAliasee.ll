@@ -10,4 +10,4 @@ define weak i32 @pthread_once(i32*, void ()*) {
 ; CHECK: pthread_once:
 
 ; CHECK: .weak   __gthrw_pthread_once
-; CHECK: __gthrw_pthread_once = pthread_once
+; CHECK: .set __gthrw_pthread_once, pthread_once

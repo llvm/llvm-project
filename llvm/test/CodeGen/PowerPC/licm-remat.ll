@@ -13,9 +13,9 @@
 @_ZN6snappy8internalL8wordmaskE = internal unnamed_addr constant [5 x i32] [i32 0, i32 255, i32 65535, i32 16777215, i32 -1], align 4
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.memmove.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i32, i1) #2
+declare void @llvm.memmove.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i1) #2
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i32, i1) #2
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1) #2
 
 define linkonce_odr void @ZN6snappyDecompressor_(%"class.snappy::SnappyDecompressor"* %this, %"class.snappy::SnappyIOVecWriter"* %writer) {
 ; CHECK-LABEL: ZN6snappyDecompressor_:
@@ -126,7 +126,7 @@ if.end18.i207:                                    ; preds = %if.then10.i193, %co
   %iov_base.i.i200 = getelementptr inbounds %"struct.snappy::iovec", %"struct.snappy::iovec"* %12, i64 %17, i32 0
   %18 = load i8*, i8** %iov_base.i.i200, align 8
   %add.ptr.i.i201 = getelementptr inbounds i8, i8* %18, i64 %15
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %add.ptr.i.i201, i8* %add.ptr24, i64 %.sroa.speculated.i199, i32 1, i1 false) #12
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %add.ptr.i.i201, i8* %add.ptr24, i64 %.sroa.speculated.i199, i1 false) #12
   %add30.i203 = add i64 0, %.sroa.speculated.i199
   store i64 %add30.i203, i64* null, align 8
   %.pre245 = load i64, i64* %0, align 8
@@ -164,7 +164,7 @@ cleanup102:                                       ; preds = %land.lhs.true5.i
   %iov_base.i.i = getelementptr inbounds %"struct.snappy::iovec", %"struct.snappy::iovec"* %7, i64 %8, i32 0
   %23 = load i8*, i8** %iov_base.i.i, align 8
   %add.ptr.i.i = getelementptr inbounds i8, i8* %23, i64 %9
-  call void @llvm.memmove.p0i8.p0i8.i64(i8* %add.ptr.i.i, i8* %incdec.ptr, i64 16, i32 1, i1 false) #12
+  call void @llvm.memmove.p0i8.p0i8.i64(i8* %add.ptr.i.i, i8* %incdec.ptr, i64 16, i1 false) #12
   %24 = load <2 x i64>, <2 x i64>* %1, align 8
   %25 = insertelement <2 x i64> undef, i64 %conv9, i32 0
   %26 = shufflevector <2 x i64> %25, <2 x i64> undef, <2 x i32> zeroinitializer

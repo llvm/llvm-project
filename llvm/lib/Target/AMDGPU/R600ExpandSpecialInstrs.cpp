@@ -21,6 +21,7 @@
 #include "R600RegisterInfo.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -95,16 +96,16 @@ bool R600ExpandSpecialInstrsPass::runOnMachineFunction(MachineFunction &MF) {
 
       // Expand LDS_*_RET instructions
       if (TII->isLDSRetInstr(MI.getOpcode())) {
-        int DstIdx = TII->getOperandIdx(MI.getOpcode(), AMDGPU::OpName::dst);
+        int DstIdx = TII->getOperandIdx(MI.getOpcode(), R600::OpName::dst);
         assert(DstIdx != -1);
         MachineOperand &DstOp = MI.getOperand(DstIdx);
         MachineInstr *Mov = TII->buildMovInstr(&MBB, I,
-                                               DstOp.getReg(), AMDGPU::OQAP);
-        DstOp.setReg(AMDGPU::OQAP);
+                                               DstOp.getReg(), R600::OQAP);
+        DstOp.setReg(R600::OQAP);
         int LDSPredSelIdx = TII->getOperandIdx(MI.getOpcode(),
-                                           AMDGPU::OpName::pred_sel);
+                                           R600::OpName::pred_sel);
         int MovPredSelIdx = TII->getOperandIdx(Mov->getOpcode(),
-                                           AMDGPU::OpName::pred_sel);
+                                           R600::OpName::pred_sel);
         // Copy the pred_sel bit
         Mov->getOperand(MovPredSelIdx).setReg(
             MI.getOperand(LDSPredSelIdx).getReg());
@@ -113,7 +114,7 @@ bool R600ExpandSpecialInstrsPass::runOnMachineFunction(MachineFunction &MF) {
       switch (MI.getOpcode()) {
       default: break;
       // Expand PRED_X to one of the PRED_SET instructions.
-      case AMDGPU::PRED_X: {
+      case R600::PRED_X: {
         uint64_t Flags = MI.getOperand(3).getImm();
         // The native opcode used by PRED_X is stored as an immediate in the
         // third operand.
@@ -121,17 +122,18 @@ bool R600ExpandSpecialInstrsPass::runOnMachineFunction(MachineFunction &MF) {
                                             MI.getOperand(2).getImm(), // opcode
                                             MI.getOperand(0).getReg(), // dst
                                             MI.getOperand(1).getReg(), // src0
-                                            AMDGPU::ZERO);             // src1
+                                            R600::ZERO);             // src1
         TII->addFlag(*PredSet, 0, MO_FLAG_MASK);
         if (Flags & MO_FLAG_PUSH) {
-          TII->setImmOperand(*PredSet, AMDGPU::OpName::update_exec_mask, 1);
+          TII->setImmOperand(*PredSet, R600::OpName::update_exec_mask, 1);
         } else {
-          TII->setImmOperand(*PredSet, AMDGPU::OpName::update_pred, 1);
+          TII->setImmOperand(*PredSet, R600::OpName::update_pred, 1);
         }
         MI.eraseFromParent();
         continue;
         }
-      case AMDGPU::DOT_4: {
+      case R600::DOT_4: {
+
         const R600RegisterInfo &TRI = TII->getRegisterInfo();
 
         unsigned DstReg = MI.getOperand(0).getReg();
@@ -140,7 +142,7 @@ bool R600ExpandSpecialInstrsPass::runOnMachineFunction(MachineFunction &MF) {
         for (unsigned Chan = 0; Chan < 4; ++Chan) {
           bool Mask = (Chan != TRI.getHWRegChan(DstReg));
           unsigned SubDstReg =
-              AMDGPU::R600_TReg32RegClass.getRegister((DstBase * 4) + Chan);
+              R600::R600_TReg32RegClass.getRegister((DstBase * 4) + Chan);
           MachineInstr *BMI =
               TII->buildSlotOfVectorInstruction(MBB, &MI, Chan, SubDstReg);
           if (Chan > 0) {
@@ -155,10 +157,10 @@ bool R600ExpandSpecialInstrsPass::runOnMachineFunction(MachineFunction &MF) {
           // While not strictly necessary from hw point of view, we force
           // all src operands of a dot4 inst to belong to the same slot.
           unsigned Src0 = BMI->getOperand(
-              TII->getOperandIdx(Opcode, AMDGPU::OpName::src0))
+              TII->getOperandIdx(Opcode, R600::OpName::src0))
               .getReg();
           unsigned Src1 = BMI->getOperand(
-              TII->getOperandIdx(Opcode, AMDGPU::OpName::src1))
+              TII->getOperandIdx(Opcode, R600::OpName::src1))
               .getReg();
           (void) Src0;
           (void) Src1;
@@ -205,26 +207,26 @@ bool R600ExpandSpecialInstrsPass::runOnMachineFunction(MachineFunction &MF) {
       // T0_W = CUBE T1_Y, T1_Z
       for (unsigned Chan = 0; Chan < 4; Chan++) {
         unsigned DstReg = MI.getOperand(
-                            TII->getOperandIdx(MI, AMDGPU::OpName::dst)).getReg();
+                            TII->getOperandIdx(MI, R600::OpName::dst)).getReg();
         unsigned Src0 = MI.getOperand(
-                           TII->getOperandIdx(MI, AMDGPU::OpName::src0)).getReg();
+                           TII->getOperandIdx(MI, R600::OpName::src0)).getReg();
         unsigned Src1 = 0;
 
         // Determine the correct source registers
         if (!IsCube) {
-          int Src1Idx = TII->getOperandIdx(MI, AMDGPU::OpName::src1);
+          int Src1Idx = TII->getOperandIdx(MI, R600::OpName::src1);
           if (Src1Idx != -1) {
             Src1 = MI.getOperand(Src1Idx).getReg();
           }
         }
         if (IsReduction) {
-          unsigned SubRegIndex = TRI.getSubRegFromChannel(Chan);
+          unsigned SubRegIndex = AMDGPURegisterInfo::getSubRegFromChannel(Chan);
           Src0 = TRI.getSubReg(Src0, SubRegIndex);
           Src1 = TRI.getSubReg(Src1, SubRegIndex);
         } else if (IsCube) {
           static const int CubeSrcSwz[] = {2, 2, 0, 1};
-          unsigned SubRegIndex0 = TRI.getSubRegFromChannel(CubeSrcSwz[Chan]);
-          unsigned SubRegIndex1 = TRI.getSubRegFromChannel(CubeSrcSwz[3 - Chan]);
+          unsigned SubRegIndex0 = AMDGPURegisterInfo::getSubRegFromChannel(CubeSrcSwz[Chan]);
+          unsigned SubRegIndex1 = AMDGPURegisterInfo::getSubRegFromChannel(CubeSrcSwz[3 - Chan]);
           Src1 = TRI.getSubReg(Src0, SubRegIndex1);
           Src0 = TRI.getSubReg(Src0, SubRegIndex0);
         }
@@ -233,14 +235,14 @@ bool R600ExpandSpecialInstrsPass::runOnMachineFunction(MachineFunction &MF) {
         bool Mask = false;
         bool NotLast = true;
         if (IsCube) {
-          unsigned SubRegIndex = TRI.getSubRegFromChannel(Chan);
+          unsigned SubRegIndex = AMDGPURegisterInfo::getSubRegFromChannel(Chan);
           DstReg = TRI.getSubReg(DstReg, SubRegIndex);
         } else {
           // Mask the write if the original instruction does not write to
           // the current Channel.
           Mask = (Chan != TRI.getHWRegChan(DstReg));
           unsigned DstBase = TRI.getEncodingValue(DstReg) & HW_REG_MASK;
-          DstReg = AMDGPU::R600_TReg32RegClass.getRegister((DstBase * 4) + Chan);
+          DstReg = R600::R600_TReg32RegClass.getRegister((DstBase * 4) + Chan);
         }
 
         // Set the IsLast bit
@@ -249,11 +251,11 @@ bool R600ExpandSpecialInstrsPass::runOnMachineFunction(MachineFunction &MF) {
         // Add the new instruction
         unsigned Opcode = MI.getOpcode();
         switch (Opcode) {
-        case AMDGPU::CUBE_r600_pseudo:
-          Opcode = AMDGPU::CUBE_r600_real;
+        case R600::CUBE_r600_pseudo:
+          Opcode = R600::CUBE_r600_real;
           break;
-        case AMDGPU::CUBE_eg_pseudo:
-          Opcode = AMDGPU::CUBE_eg_real;
+        case R600::CUBE_eg_pseudo:
+          Opcode = R600::CUBE_eg_real;
           break;
         default:
           break;
@@ -270,12 +272,12 @@ bool R600ExpandSpecialInstrsPass::runOnMachineFunction(MachineFunction &MF) {
         if (NotLast) {
           TII->addFlag(*NewMI, 0, MO_FLAG_NOT_LAST);
         }
-        SetFlagInNewMI(NewMI, &MI, AMDGPU::OpName::clamp);
-        SetFlagInNewMI(NewMI, &MI, AMDGPU::OpName::literal);
-        SetFlagInNewMI(NewMI, &MI, AMDGPU::OpName::src0_abs);
-        SetFlagInNewMI(NewMI, &MI, AMDGPU::OpName::src1_abs);
-        SetFlagInNewMI(NewMI, &MI, AMDGPU::OpName::src0_neg);
-        SetFlagInNewMI(NewMI, &MI, AMDGPU::OpName::src1_neg);
+        SetFlagInNewMI(NewMI, &MI, R600::OpName::clamp);
+        SetFlagInNewMI(NewMI, &MI, R600::OpName::literal);
+        SetFlagInNewMI(NewMI, &MI, R600::OpName::src0_abs);
+        SetFlagInNewMI(NewMI, &MI, R600::OpName::src1_abs);
+        SetFlagInNewMI(NewMI, &MI, R600::OpName::src0_neg);
+        SetFlagInNewMI(NewMI, &MI, R600::OpName::src1_neg);
       }
       MI.eraseFromParent();
     }

@@ -43,6 +43,9 @@ class TreePatternNode;
 class CodeGenDAGPatterns;
 class ComplexPattern;
 
+/// Shared pointer for TreePatternNode.
+using TreePatternNodePtr = std::shared_ptr<TreePatternNode>;
+
 /// This represents a set of MVTs. Since the underlying type for the MVT
 /// is uint8_t, there are at most 256 values. To reduce the number of memory
 /// allocations and deallocations, represent the set as a sequence of bits.
@@ -330,9 +333,21 @@ struct TypeInfer {
     TypeSetByHwMode &VTS;
   };
 
+  struct SuppressValidation {
+    SuppressValidation(TypeInfer &TI) : Infer(TI), SavedValidate(TI.Validate) {
+      Infer.Validate = false;
+    }
+    ~SuppressValidation() {
+      Infer.Validate = SavedValidate;
+    }
+    TypeInfer &Infer;
+    bool SavedValidate;
+  };
+
   TreePattern &TP;
   unsigned ForceMode;     // Mode to use when set.
   bool CodeGen = false;   // Set during generation of matcher code.
+  bool Validate = true;   // Indicate whether to validate types.
 
 private:
   TypeSetByHwMode getLegalTypes();
@@ -540,6 +555,10 @@ public:
   /// ValueType record for the memory VT.
   Record *getScalarMemoryVT() const;
 
+  // If true, indicates that GlobalISel-based C++ code was supplied.
+  bool hasGISelPredicateCode() const;
+  std::string getGISelPredicateCode() const;
+
 private:
   bool hasPredCode() const;
   bool hasImmCode() const;
@@ -552,9 +571,6 @@ private:
 };
 
 
-/// FIXME: TreePatternNode's can be shared in some cases (due to dag-shaped
-/// patterns), and as such should be ref counted.  We currently just leak all
-/// TreePatternNode objects!
 class TreePatternNode {
   /// The type of each node result.  Before and during type inference, each
   /// result may be a set of possible types.  After (successful) type inference,
@@ -581,18 +597,19 @@ class TreePatternNode {
   /// it can be substituted into the resulting instruction on a pattern match.
   Record *TransformFn;
 
-  std::vector<TreePatternNode*> Children;
+  std::vector<TreePatternNodePtr> Children;
+
 public:
-  TreePatternNode(Record *Op, const std::vector<TreePatternNode*> &Ch,
+  TreePatternNode(Record *Op, std::vector<TreePatternNodePtr> Ch,
                   unsigned NumResults)
-    : Operator(Op), Val(nullptr), TransformFn(nullptr), Children(Ch) {
+      : Operator(Op), Val(nullptr), TransformFn(nullptr),
+        Children(std::move(Ch)) {
     Types.resize(NumResults);
   }
   TreePatternNode(Init *val, unsigned NumResults)    // leaf ctor
     : Operator(nullptr), Val(val), TransformFn(nullptr) {
     Types.resize(NumResults);
   }
-  ~TreePatternNode();
 
   bool hasName() const { return !Name.empty(); }
   const std::string &getName() const { return Name; }
@@ -626,15 +643,17 @@ public:
   Record *getOperator() const { assert(!isLeaf()); return Operator; }
 
   unsigned getNumChildren() const { return Children.size(); }
-  TreePatternNode *getChild(unsigned N) const { return Children[N]; }
-  void setChild(unsigned i, TreePatternNode *N) {
-    Children[i] = N;
+  TreePatternNode *getChild(unsigned N) const { return Children[N].get(); }
+  const TreePatternNodePtr &getChildShared(unsigned N) const {
+    return Children[N];
   }
+  void setChild(unsigned i, TreePatternNodePtr N) { Children[i] = N; }
 
   /// hasChild - Return true if N is any of our children.
   bool hasChild(const TreePatternNode *N) const {
     for (unsigned i = 0, e = Children.size(); i != e; ++i)
-      if (Children[i] == N) return true;
+      if (Children[i].get() == N)
+        return true;
     return false;
   }
 
@@ -694,7 +713,7 @@ public:   // Higher level manipulation routines.
 
   /// clone - Return a new copy of this tree.
   ///
-  TreePatternNode *clone() const;
+  TreePatternNodePtr clone() const;
 
   /// RemoveAllTypes - Recursively strip all the types of this tree.
   void RemoveAllTypes();
@@ -708,13 +727,15 @@ public:   // Higher level manipulation routines.
 
   /// SubstituteFormalArguments - Replace the formal arguments in this tree
   /// with actual values specified by ArgMap.
-  void SubstituteFormalArguments(std::map<std::string,
-                                          TreePatternNode*> &ArgMap);
+  void
+  SubstituteFormalArguments(std::map<std::string, TreePatternNodePtr> &ArgMap);
 
   /// InlinePatternFragments - If this pattern refers to any pattern
-  /// fragments, inline them into place, giving us a pattern without any
-  /// PatFrag references.
-  TreePatternNode *InlinePatternFragments(TreePattern &TP);
+  /// fragments, return the set of inlined versions (this can be more than
+  /// one if a PatFrags record has multiple alternatives).
+  void InlinePatternFragments(TreePatternNodePtr T,
+                              TreePattern &TP,
+                              std::vector<TreePatternNodePtr> &OutAlternatives);
 
   /// ApplyTypeConstraints - Apply all of the type constraints relevant to
   /// this node and its children in the tree.  This returns true if it makes a
@@ -759,11 +780,11 @@ class TreePattern {
   /// Trees - The list of pattern trees which corresponds to this pattern.
   /// Note that PatFrag's only have a single tree.
   ///
-  std::vector<TreePatternNode*> Trees;
+  std::vector<TreePatternNodePtr> Trees;
 
   /// NamedNodes - This is all of the nodes that have names in the trees in this
   /// pattern.
-  StringMap<SmallVector<TreePatternNode*,1> > NamedNodes;
+  StringMap<SmallVector<TreePatternNode *, 1>> NamedNodes;
 
   /// TheRecord - The actual TableGen record corresponding to this pattern.
   ///
@@ -802,21 +823,21 @@ public:
               CodeGenDAGPatterns &ise);
   TreePattern(Record *TheRec, DagInit *Pat, bool isInput,
               CodeGenDAGPatterns &ise);
-  TreePattern(Record *TheRec, TreePatternNode *Pat, bool isInput,
+  TreePattern(Record *TheRec, TreePatternNodePtr Pat, bool isInput,
               CodeGenDAGPatterns &ise);
 
   /// getTrees - Return the tree patterns which corresponds to this pattern.
   ///
-  const std::vector<TreePatternNode*> &getTrees() const { return Trees; }
+  const std::vector<TreePatternNodePtr> &getTrees() const { return Trees; }
   unsigned getNumTrees() const { return Trees.size(); }
-  TreePatternNode *getTree(unsigned i) const { return Trees[i]; }
-  void setTree(unsigned i, TreePatternNode *Tree) { Trees[i] = Tree; }
-  TreePatternNode *getOnlyTree() const {
+  const TreePatternNodePtr &getTree(unsigned i) const { return Trees[i]; }
+  void setTree(unsigned i, TreePatternNodePtr Tree) { Trees[i] = Tree; }
+  const TreePatternNodePtr &getOnlyTree() const {
     assert(Trees.size() == 1 && "Doesn't have exactly one pattern!");
     return Trees[0];
   }
 
-  const StringMap<SmallVector<TreePatternNode*,1> > &getNamedNodesMap() {
+  const StringMap<SmallVector<TreePatternNode *, 1>> &getNamedNodesMap() {
     if (NamedNodes.empty())
       ComputeNamedNodes();
     return NamedNodes;
@@ -838,17 +859,20 @@ public:
 
   /// InlinePatternFragments - If this pattern refers to any pattern
   /// fragments, inline them into place, giving us a pattern without any
-  /// PatFrag references.
+  /// PatFrags references.  This may increase the number of trees in the
+  /// pattern if a PatFrags has multiple alternatives.
   void InlinePatternFragments() {
-    for (unsigned i = 0, e = Trees.size(); i != e; ++i)
-      Trees[i] = Trees[i]->InlinePatternFragments(*this);
+    std::vector<TreePatternNodePtr> Copy = Trees;
+    Trees.clear();
+    for (unsigned i = 0, e = Copy.size(); i != e; ++i)
+      Copy[i]->InlinePatternFragments(Copy[i], *this, Trees);
   }
 
   /// InferAllTypes - Infer/propagate as many types throughout the expression
   /// patterns as possible.  Return true if all types are inferred, false
   /// otherwise.  Bail out if a type contradiction is found.
-  bool InferAllTypes(const StringMap<SmallVector<TreePatternNode*,1> >
-                          *NamedTypes=nullptr);
+  bool InferAllTypes(
+      const StringMap<SmallVector<TreePatternNode *, 1>> *NamedTypes = nullptr);
 
   /// error - If this is the first error in the current resolution step,
   /// print it and set the error flag.  Otherwise, continue silently.
@@ -866,7 +890,7 @@ public:
   void dump() const;
 
 private:
-  TreePatternNode *ParseTreePattern(Init *DI, StringRef OpName);
+  TreePatternNodePtr ParseTreePattern(Init *DI, StringRef OpName);
   void ComputeNamedNodes();
   void ComputeNamedNodes(TreePatternNode *N);
 };
@@ -900,30 +924,29 @@ inline bool TreePatternNode::UpdateNodeType(unsigned ResNo,
 /// DAGDefaultOperand - One of these is created for each OperandWithDefaultOps
 /// that has a set ExecuteAlways / DefaultOps field.
 struct DAGDefaultOperand {
-  std::vector<TreePatternNode*> DefaultOps;
+  std::vector<TreePatternNodePtr> DefaultOps;
 };
 
 class DAGInstruction {
-  TreePattern *Pattern;
   std::vector<Record*> Results;
   std::vector<Record*> Operands;
   std::vector<Record*> ImpResults;
-  TreePatternNode *ResultPattern;
-public:
-  DAGInstruction(TreePattern *TP,
-                 const std::vector<Record*> &results,
-                 const std::vector<Record*> &operands,
-                 const std::vector<Record*> &impresults)
-    : Pattern(TP), Results(results), Operands(operands),
-      ImpResults(impresults), ResultPattern(nullptr) {}
+  TreePatternNodePtr SrcPattern;
+  TreePatternNodePtr ResultPattern;
 
-  TreePattern *getPattern() const { return Pattern; }
+public:
+  DAGInstruction(const std::vector<Record*> &results,
+                 const std::vector<Record*> &operands,
+                 const std::vector<Record*> &impresults,
+                 TreePatternNodePtr srcpattern = nullptr,
+                 TreePatternNodePtr resultpattern = nullptr)
+    : Results(results), Operands(operands), ImpResults(impresults),
+      SrcPattern(srcpattern), ResultPattern(resultpattern) {}
+
   unsigned getNumResults() const { return Results.size(); }
   unsigned getNumOperands() const { return Operands.size(); }
   unsigned getNumImpResults() const { return ImpResults.size(); }
   const std::vector<Record*>& getImpResults() const { return ImpResults; }
-
-  void setResultPattern(TreePatternNode *R) { ResultPattern = R; }
 
   Record *getResult(unsigned RN) const {
     assert(RN < Results.size());
@@ -940,7 +963,8 @@ public:
     return ImpResults[RN];
   }
 
-  TreePatternNode *getResultPattern() const { return ResultPattern; }
+  TreePatternNodePtr getSrcPattern() const { return SrcPattern; }
+  TreePatternNodePtr getResultPattern() const { return ResultPattern; }
 };
 
 /// This class represents a condition that has to be satisfied for a pattern
@@ -994,25 +1018,17 @@ public:
 /// processed to produce isel.
 class PatternToMatch {
 public:
-  PatternToMatch(Record *srcrecord, const std::vector<Predicate> &preds,
-                 TreePatternNode *src, TreePatternNode *dst,
-                 const std::vector<Record*> &dstregs,
-                 int complexity, unsigned uid, unsigned setmode = 0)
-    : SrcRecord(srcrecord), SrcPattern(src), DstPattern(dst),
-      Predicates(preds), Dstregs(std::move(dstregs)),
-      AddedComplexity(complexity), ID(uid), ForceMode(setmode) {}
-
-  PatternToMatch(Record *srcrecord, std::vector<Predicate> &&preds,
-                 TreePatternNode *src, TreePatternNode *dst,
-                 std::vector<Record*> &&dstregs,
-                 int complexity, unsigned uid, unsigned setmode = 0)
-    : SrcRecord(srcrecord), SrcPattern(src), DstPattern(dst),
-      Predicates(preds), Dstregs(std::move(dstregs)),
-      AddedComplexity(complexity), ID(uid), ForceMode(setmode) {}
+  PatternToMatch(Record *srcrecord, std::vector<Predicate> preds,
+                 TreePatternNodePtr src, TreePatternNodePtr dst,
+                 std::vector<Record *> dstregs, int complexity,
+                 unsigned uid, unsigned setmode = 0)
+      : SrcRecord(srcrecord), SrcPattern(src), DstPattern(dst),
+        Predicates(std::move(preds)), Dstregs(std::move(dstregs)),
+        AddedComplexity(complexity), ID(uid), ForceMode(setmode) {}
 
   Record          *SrcRecord;   // Originating Record for the pattern.
-  TreePatternNode *SrcPattern;  // Source pattern to match.
-  TreePatternNode *DstPattern;  // Resulting pattern.
+  TreePatternNodePtr SrcPattern;      // Source pattern to match.
+  TreePatternNodePtr DstPattern;      // Resulting pattern.
   std::vector<Predicate> Predicates;  // Top level predicate conditions
                                       // to match.
   std::vector<Record*> Dstregs; // Physical register defs being matched.
@@ -1021,8 +1037,10 @@ public:
   unsigned         ForceMode;   // Force this mode in type inference when set.
 
   Record          *getSrcRecord()  const { return SrcRecord; }
-  TreePatternNode *getSrcPattern() const { return SrcPattern; }
-  TreePatternNode *getDstPattern() const { return DstPattern; }
+  TreePatternNode *getSrcPattern() const { return SrcPattern.get(); }
+  TreePatternNodePtr getSrcPatternShared() const { return SrcPattern; }
+  TreePatternNode *getDstPattern() const { return DstPattern.get(); }
+  TreePatternNodePtr getDstPatternShared() const { return DstPattern; }
   const std::vector<Record*> &getDstRegs() const { return Dstregs; }
   int         getAddedComplexity() const { return AddedComplexity; }
   const std::vector<Predicate> &getPredicates() const { return Predicates; }
@@ -1156,7 +1174,7 @@ public:
 
   /// Parse the Pattern for an instruction, and insert the result in DAGInsts.
   typedef std::map<Record*, DAGInstruction, LessRecordByID> DAGInstMap;
-  const DAGInstruction &parseInstructionPattern(
+  void parseInstructionPattern(
       CodeGenInstruction &CGI, ListInit *Pattern,
       DAGInstMap &DAGInsts);
 
@@ -1193,13 +1211,15 @@ private:
 
   std::vector<Predicate> makePredList(ListInit *L);
 
+  void ParseOnePattern(Record *TheDef,
+                       TreePattern &Pattern, TreePattern &Result,
+                       const std::vector<Record *> &InstImpResults);
   void AddPatternToMatch(TreePattern *Pattern, PatternToMatch &&PTM);
-  void FindPatternInputsAndOutputs(TreePattern *I, TreePatternNode *Pat,
-                                   std::map<std::string,
-                                   TreePatternNode*> &InstInputs,
-                                   std::map<std::string,
-                                   TreePatternNode*> &InstResults,
-                                   std::vector<Record*> &InstImpResults);
+  void FindPatternInputsAndOutputs(
+      TreePattern &I, TreePatternNodePtr Pat,
+      std::map<std::string, TreePatternNodePtr> &InstInputs,
+      std::map<std::string, TreePatternNodePtr> &InstResults,
+      std::vector<Record *> &InstImpResults);
 };
 
 

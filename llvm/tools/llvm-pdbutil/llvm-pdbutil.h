@@ -75,6 +75,8 @@ bool compareFunctionSymbols(
 bool compareDataSymbols(const std::unique_ptr<llvm::pdb::PDBSymbolData> &F1,
                         const std::unique_ptr<llvm::pdb::PDBSymbolData> &F2);
 
+extern llvm::cl::list<std::string> WithName;
+
 extern llvm::cl::opt<bool> Compilands;
 extern llvm::cl::opt<bool> Symbols;
 extern llvm::cl::opt<bool> Globals;
@@ -142,7 +144,9 @@ extern llvm::cl::opt<bool> DumpLines;
 extern llvm::cl::opt<bool> DumpInlineeLines;
 extern llvm::cl::opt<bool> DumpXmi;
 extern llvm::cl::opt<bool> DumpXme;
+extern llvm::cl::opt<bool> DumpNamedStreams;
 extern llvm::cl::opt<bool> DumpStringTable;
+extern llvm::cl::opt<bool> DumpStringTableDetails;
 extern llvm::cl::opt<bool> DumpTypes;
 extern llvm::cl::opt<bool> DumpTypeData;
 extern llvm::cl::opt<bool> DumpTypeExtras;
@@ -158,6 +162,7 @@ extern llvm::cl::opt<uint32_t> DumpModi;
 extern llvm::cl::opt<bool> JustMyCode;
 extern llvm::cl::opt<bool> DumpSymbols;
 extern llvm::cl::opt<bool> DumpSymRecordBytes;
+extern llvm::cl::opt<bool> DumpGSIRecords;
 extern llvm::cl::opt<bool> DumpGlobals;
 extern llvm::cl::opt<bool> DumpGlobalExtras;
 extern llvm::cl::opt<bool> DumpPublics;
@@ -187,13 +192,19 @@ extern llvm::cl::list<ModuleSubsection> DumpModuleSubsections;
 extern llvm::cl::opt<bool> DumpModuleSyms;
 } // namespace pdb2yaml
 
-namespace diff {
-extern llvm::cl::opt<bool> PrintValueColumns;
-extern llvm::cl::opt<bool> PrintResultColumn;
-extern llvm::DenseMap<uint32_t, uint32_t> Equivalences;
-extern llvm::cl::opt<std::string> LeftRoot;
-extern llvm::cl::opt<std::string> RightRoot;
-} // namespace diff
+namespace explain {
+enum class InputFileType { PDBFile, PDBStream, DBIStream, Names, ModuleStream };
+
+extern llvm::cl::list<std::string> InputFilename;
+extern llvm::cl::list<uint64_t> Offsets;
+extern llvm::cl::opt<InputFileType> InputType;
+} // namespace explain
+
+namespace exportstream {
+extern llvm::cl::opt<std::string> OutputFile;
+extern llvm::cl::opt<std::string> Stream;
+extern llvm::cl::opt<bool> ForceName;
+} // namespace exportstream
 }
 
 #endif

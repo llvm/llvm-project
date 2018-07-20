@@ -28,7 +28,7 @@
 using namespace llvm;
 using namespace llvm::PatternMatch;
 
-/// \brief Identify if the intrinsic is trivially vectorizable.
+/// Identify if the intrinsic is trivially vectorizable.
 /// This method returns true if the intrinsic's argument types are all
 /// scalars for the scalar form of the intrinsic and all vectors for
 /// the vector form of the intrinsic.
@@ -67,7 +67,7 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   }
 }
 
-/// \brief Identifies if the intrinsic has a scalar operand. It check for
+/// Identifies if the intrinsic has a scalar operand. It check for
 /// ctlz,cttz and powi special intrinsics whose argument is scalar.
 bool llvm::hasVectorInstrinsicScalarOpd(Intrinsic::ID ID,
                                         unsigned ScalarOpdIdx) {
@@ -81,7 +81,7 @@ bool llvm::hasVectorInstrinsicScalarOpd(Intrinsic::ID ID,
   }
 }
 
-/// \brief Returns intrinsic ID for call.
+/// Returns intrinsic ID for call.
 /// For the input call instruction it finds mapping intrinsic and returns
 /// its ID, in case it does not found it return not_intrinsic.
 Intrinsic::ID llvm::getVectorIntrinsicIDForCall(const CallInst *CI,
@@ -97,7 +97,7 @@ Intrinsic::ID llvm::getVectorIntrinsicIDForCall(const CallInst *CI,
   return Intrinsic::not_intrinsic;
 }
 
-/// \brief Find the operand of the GEP that should be checked for consecutive
+/// Find the operand of the GEP that should be checked for consecutive
 /// stores. This ignores trailing indices that have no effect on the final
 /// pointer.
 unsigned llvm::getGEPInductionOperand(const GetElementPtrInst *Gep) {
@@ -121,7 +121,7 @@ unsigned llvm::getGEPInductionOperand(const GetElementPtrInst *Gep) {
   return LastOperand;
 }
 
-/// \brief If the argument is a GEP, then returns the operand identified by
+/// If the argument is a GEP, then returns the operand identified by
 /// getGEPInductionOperand. However, if there is some other non-loop-invariant
 /// operand, it returns that instead.
 Value *llvm::stripGetElementPtr(Value *Ptr, ScalarEvolution *SE, Loop *Lp) {
@@ -140,7 +140,7 @@ Value *llvm::stripGetElementPtr(Value *Ptr, ScalarEvolution *SE, Loop *Lp) {
   return GEP->getOperand(InductionOperand);
 }
 
-/// \brief If a value has only one user that is a CastInst, return it.
+/// If a value has only one user that is a CastInst, return it.
 Value *llvm::getUniqueCastUse(Value *Ptr, Loop *Lp, Type *Ty) {
   Value *UniqueCast = nullptr;
   for (User *U : Ptr->users()) {
@@ -155,7 +155,7 @@ Value *llvm::getUniqueCastUse(Value *Ptr, Loop *Lp, Type *Ty) {
   return UniqueCast;
 }
 
-/// \brief Get the stride of a pointer access in a loop. Looks for symbolic
+/// Get the stride of a pointer access in a loop. Looks for symbolic
 /// strides "a[i*stride]". Returns the symbolic stride, or null otherwise.
 Value *llvm::getStrideFromPointer(Value *Ptr, ScalarEvolution *SE, Loop *Lp) {
   auto *PtrTy = dyn_cast<PointerType>(Ptr->getType());
@@ -163,7 +163,7 @@ Value *llvm::getStrideFromPointer(Value *Ptr, ScalarEvolution *SE, Loop *Lp) {
     return nullptr;
 
   // Try to remove a gep instruction to make the pointer (actually index at this
-  // point) easier analyzable. If OrigPtr is equal to Ptr we are analzying the
+  // point) easier analyzable. If OrigPtr is equal to Ptr we are analyzing the
   // pointer, otherwise, we are analyzing the index.
   Value *OrigPtr = Ptr;
 
@@ -230,7 +230,7 @@ Value *llvm::getStrideFromPointer(Value *Ptr, ScalarEvolution *SE, Loop *Lp) {
   return Stride;
 }
 
-/// \brief Given a vector and an element number, see if the scalar value is
+/// Given a vector and an element number, see if the scalar value is
 /// already around as a register, for example if it were inserted then extracted
 /// from the vector.
 Value *llvm::findScalarElement(Value *V, unsigned EltNo) {
@@ -280,7 +280,7 @@ Value *llvm::findScalarElement(Value *V, unsigned EltNo) {
   return nullptr;
 }
 
-/// \brief Get splat value if the input is a splat vector or return nullptr.
+/// Get splat value if the input is a splat vector or return nullptr.
 /// This function is not fully general. It checks only 2 cases:
 /// the input value is (1) a splat constants vector or (2) a sequence
 /// of instructions that broadcast a single value into a vector.

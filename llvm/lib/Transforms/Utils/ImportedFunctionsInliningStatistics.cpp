@@ -161,7 +161,7 @@ void ImportedFunctionsInliningStatistics::dump(const bool Verbose) {
 
 void ImportedFunctionsInliningStatistics::calculateRealInlines() {
   // Removing duplicated Callers.
-  std::sort(NonImportedCallers.begin(), NonImportedCallers.end());
+  llvm::sort(NonImportedCallers.begin(), NonImportedCallers.end());
   NonImportedCallers.erase(
       std::unique(NonImportedCallers.begin(), NonImportedCallers.end()),
       NonImportedCallers.end());
@@ -190,13 +190,14 @@ ImportedFunctionsInliningStatistics::getSortedNodes() {
   for (const NodesMapTy::value_type& Node : NodesMap)
     SortedNodes.push_back(&Node);
 
-  std::sort(
+  llvm::sort(
       SortedNodes.begin(), SortedNodes.end(),
       [&](const SortedNodesTy::value_type &Lhs,
           const SortedNodesTy::value_type &Rhs) {
         if (Lhs->second->NumberOfInlines != Rhs->second->NumberOfInlines)
           return Lhs->second->NumberOfInlines > Rhs->second->NumberOfInlines;
-        if (Lhs->second->NumberOfRealInlines != Rhs->second->NumberOfRealInlines)
+        if (Lhs->second->NumberOfRealInlines !=
+            Rhs->second->NumberOfRealInlines)
           return Lhs->second->NumberOfRealInlines >
                  Rhs->second->NumberOfRealInlines;
         return Lhs->first() < Rhs->first();

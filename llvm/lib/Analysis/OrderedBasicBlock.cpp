@@ -30,7 +30,7 @@ OrderedBasicBlock::OrderedBasicBlock(const BasicBlock *BasicB)
   LastInstFound = BB->end();
 }
 
-/// \brief Given no cached results, find if \p A comes before \p B in \p BB.
+/// Given no cached results, find if \p A comes before \p B in \p BB.
 /// Cache and number out instruction while walking \p BB.
 bool OrderedBasicBlock::comesBefore(const Instruction *A,
                                     const Instruction *B) {
@@ -58,7 +58,7 @@ bool OrderedBasicBlock::comesBefore(const Instruction *A,
   return Inst != B;
 }
 
-/// \brief Find out whether \p A dominates \p B, meaning whether \p A
+/// Find out whether \p A dominates \p B, meaning whether \p A
 /// comes before \p B in \p BB. This is a simplification that considers
 /// cached instruction positions and ignores other basic blocks, being
 /// only relevant to compare relative instructions positions inside \p BB.

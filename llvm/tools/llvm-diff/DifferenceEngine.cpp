@@ -303,6 +303,26 @@ class FunctionDifferenceEngine {
       if (TryUnify) tryUnify(LI->getSuccessor(0), RI->getSuccessor(0));
       return false;
 
+    } else if (isa<IndirectBrInst>(L)) {
+      IndirectBrInst *LI = cast<IndirectBrInst>(L);
+      IndirectBrInst *RI = cast<IndirectBrInst>(R);
+      if (LI->getNumDestinations() != RI->getNumDestinations()) {
+        if (Complain) Engine.log("indirectbr # of destinations differ");
+        return true;
+      }
+
+      if (!equivalentAsOperands(LI->getAddress(), RI->getAddress())) {
+        if (Complain) Engine.log("indirectbr addresses differ");
+        return true;
+      }
+
+      if (TryUnify) {
+        for (unsigned i = 0; i < LI->getNumDestinations(); i++) {
+          tryUnify(LI->getDestination(i), RI->getDestination(i));
+        }
+      }
+      return false;
+
     } else if (isa<SwitchInst>(L)) {
       SwitchInst *LI = cast<SwitchInst>(L);
       SwitchInst *RI = cast<SwitchInst>(R);
@@ -377,9 +397,9 @@ class FunctionDifferenceEngine {
       return equivalentAsOperands(cast<ConstantExpr>(L),
                                   cast<ConstantExpr>(R));
 
-    // Nulls of the "same type" don't always actually have the same
+    // Constants of the "same type" don't always actually have the same
     // type; I don't know why.  Just white-list them.
-    if (isa<ConstantPointerNull>(L))
+    if (isa<ConstantPointerNull>(L) || isa<UndefValue>(L) || isa<ConstantAggregateZero>(L))
       return true;
 
     // Block addresses only match if we've already encountered the
@@ -387,6 +407,19 @@ class FunctionDifferenceEngine {
     if (isa<BlockAddress>(L))
       return Blocks[cast<BlockAddress>(L)->getBasicBlock()]
                  == cast<BlockAddress>(R)->getBasicBlock();
+
+    // If L and R are ConstantVectors, compare each element
+    if (isa<ConstantVector>(L)) {
+      ConstantVector *CVL = cast<ConstantVector>(L);
+      ConstantVector *CVR = cast<ConstantVector>(R);
+      if (CVL->getType()->getNumElements() != CVR->getType()->getNumElements())
+        return false;
+      for (unsigned i = 0; i < CVL->getType()->getNumElements(); i++) {
+        if (!equivalentAsOperands(CVL->getOperand(i), CVR->getOperand(i)))
+          return false;
+      }
+      return true;
+    }
 
     return false;
   }

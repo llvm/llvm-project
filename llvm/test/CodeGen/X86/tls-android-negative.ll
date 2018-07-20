@@ -1,6 +1,9 @@
 ; RUN: llc < %s -emulated-tls -mtriple=i686-linux-android -relocation-model=pic | FileCheck  %s
 ; RUN: llc < %s -emulated-tls -mtriple=x86_64-linux-android -relocation-model=pic | FileCheck  %s
 
+; RUN: llc < %s -mtriple=i686-linux-android -relocation-model=pic | FileCheck  %s
+; RUN: llc < %s -mtriple=x86_64-linux-android -relocation-model=pic | FileCheck  %s
+
 ; Make sure that some symboles are not emitted in emulated TLS model.
 
 @external_x = external thread_local global i32

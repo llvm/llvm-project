@@ -128,13 +128,13 @@ static_assert(
 // ErrorOr<int*> x(nullptr);
 // ErrorOr<std::unique_ptr<int>> y;
 // y = x; // invalid conversion
-static_assert(!std::is_assignable<ErrorOr<std::unique_ptr<int>>,
+static_assert(!std::is_assignable<ErrorOr<std::unique_ptr<int>>&,
                                   const ErrorOr<int *> &>::value,
               "do not invoke explicit ctors in assignment");
 
 // ErrorOr<std::unique_ptr<int>> x;
 // x = ErrorOr<int*>(nullptr); // invalid conversion
-static_assert(!std::is_assignable<ErrorOr<std::unique_ptr<int>>,
+static_assert(!std::is_assignable<ErrorOr<std::unique_ptr<int>>&,
                                   ErrorOr<int *> &&>::value,
               "do not invoke explicit ctors in assignment");
 } // end anon namespace

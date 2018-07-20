@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief Optimize calls with "returned" attributes for WebAssembly.
+/// Optimize calls with "returned" attributes for WebAssembly.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -48,6 +48,10 @@ public:
 } // End anonymous namespace
 
 char OptimizeReturned::ID = 0;
+INITIALIZE_PASS(OptimizeReturned, DEBUG_TYPE,
+                "Optimize calls with \"returned\" attributes for WebAssembly",
+                false, false)
+
 FunctionPass *llvm::createWebAssemblyOptimizeReturned() {
   return new OptimizeReturned();
 }

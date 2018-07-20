@@ -13,12 +13,12 @@ body: |
     ; testing this is not possible otherwise.
 
     ; CHECK: BUNDLE
-    ; CHECK-DAG: %r0 = A2_tfrsi
-    ; CHECK-DAG: %r1 = A2_tfrsi
-    ; CHECK-DAG: %r2 = A2_tfrsi
+    ; CHECK-DAG: $r0 = A2_tfrsi
+    ; CHECK-DAG: $r1 = A2_tfrsi
+    ; CHECK-DAG: $r2 = A2_tfrsi
     ; CHECK: }
-    %r0 = A2_tfrsi target-flags (hexagon-pcrel) 0
-    %r1 = A2_tfrsi target-flags (hexagon-pcrel) 0
-    %r2 = A2_tfrsi target-flags (hexagon-pcrel) 0
+    $r0 = A2_tfrsi target-flags (hexagon-pcrel) 0
+    $r1 = A2_tfrsi target-flags (hexagon-pcrel) 0
+    $r2 = A2_tfrsi target-flags (hexagon-pcrel) 0
 ...
 

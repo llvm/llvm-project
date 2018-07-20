@@ -142,12 +142,12 @@
 ; CHECK:   StringId (0x100D) {
 ; CHECK:     TypeLeafKind: LF_STRING_ID (0x1605)
 ; CHECK:     Id: 0x0
-; CHECK:     StringData: \t.cpp
+; CHECK:     StringData: /t.cpp
 ; CHECK:   }
 ; CHECK:   UdtSourceLine (0x100E) {
 ; CHECK:     TypeLeafKind: LF_UDT_SRC_LINE (0x1606)
 ; CHECK:     UDT: incomplete_struct (0x100C)
-; CHECK:     SourceFile: \t.cpp (0x100D)
+; CHECK:     SourceFile: /t.cpp (0x100D)
 ; CHECK:     LineNumber: 4
 ; CHECK:   }
 ; CHECK:   Modifier (0x100F) {
@@ -248,7 +248,7 @@ attributes #1 = { nounwind readnone }
 !32 = !{i32 2, !"CodeView", i32 1}
 !33 = !{i32 2, !"Debug Info Version", i32 3}
 !34 = !{!"clang version 3.9.0 (trunk 273874)"}
-!35 = distinct !DISubprogram(name: "foo", linkageName: "\01?foo@@YAXH@Z", scope: !3, file: !3, line: 8, type: !36, isLocal: false, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: false, unit: !2, variables: !4)
+!35 = distinct !DISubprogram(name: "foo", linkageName: "\01?foo@@YAXH@Z", scope: !3, file: !3, line: 8, type: !36, isLocal: false, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: false, unit: !2, retainedNodes: !4)
 !36 = !DISubroutineType(types: !37)
 !37 = !{null, !13}
 !38 = !DILocalVariable(name: "x", arg: 1, scope: !35, file: !3, line: 8, type: !13)

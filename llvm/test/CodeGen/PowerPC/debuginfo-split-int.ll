@@ -26,10 +26,10 @@ target triple = "ppc32"
 ; CHECK: [[DL:![0-9]+]] = !DILocalVariable(name: "result"
 ;
 ; High 32 bits in R3, low 32 bits in R4
-; CHECK: %0:gprc = COPY %r3
-; CHECK: DBG_VALUE debug-use %0, debug-use %noreg, [[DL]], !DIExpression(DW_OP_LLVM_fragment, 0, 32)
-; CHECK: %1:gprc = COPY %r4
-; CHECK: DBG_VALUE debug-use %1, debug-use %noreg, [[DL]], !DIExpression(DW_OP_LLVM_fragment, 32, 32)
+; CHECK: %0:gprc = COPY $r3
+; CHECK: DBG_VALUE debug-use %0, debug-use $noreg, [[DL]], !DIExpression(DW_OP_LLVM_fragment, 0, 32)
+; CHECK: %1:gprc = COPY $r4
+; CHECK: DBG_VALUE debug-use %1, debug-use $noreg, [[DL]], !DIExpression(DW_OP_LLVM_fragment, 32, 32)
 define void @bar() local_unnamed_addr #0 !dbg !6 {
   %1 = alloca i64, align 8
   %2 = tail call i64 @foo()
@@ -56,7 +56,7 @@ attributes #1 = { nounwind readnone speculatable }
 !3 = !{i32 2, !"Dwarf Version", i32 4}
 !4 = !{i32 2, !"Debug Info Version", i32 3}
 !5 = !{!"clang version 6.0.0"}
-!6 = distinct !DISubprogram(name: "bar", scope: !1, file: !1, line: 2, type: !7, isLocal: false, isDefinition: true, scopeLine: 2, isOptimized: true, unit: !0, variables: !9)
+!6 = distinct !DISubprogram(name: "bar", scope: !1, file: !1, line: 2, type: !7, isLocal: false, isDefinition: true, scopeLine: 2, isOptimized: true, unit: !0, retainedNodes: !9)
 !7 = !DISubroutineType(types: !8)
 !8 = !{null}
 !9 = !{!10}

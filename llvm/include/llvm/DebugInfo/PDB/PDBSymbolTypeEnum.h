@@ -10,6 +10,7 @@
 #ifndef LLVM_DEBUGINFO_PDB_PDBSYMBOLTYPEENUM_H
 #define LLVM_DEBUGINFO_PDB_PDBSYMBOLTYPEENUM_H
 
+#include "IPDBLineNumber.h"
 #include "PDBSymbol.h"
 #include "PDBSymbolTypeBuiltin.h"
 #include "PDBTypes.h"
@@ -38,6 +39,7 @@ public:
   FORWARD_SYMBOL_METHOD(getLength)
   FORWARD_SYMBOL_ID_METHOD(getLexicalParent)
   FORWARD_SYMBOL_METHOD(getName)
+  FORWARD_SYMBOL_METHOD(getSrcLineOnTypeDefn)
   FORWARD_SYMBOL_METHOD(isNested)
   FORWARD_SYMBOL_METHOD(hasOverloadedOperator)
   FORWARD_SYMBOL_METHOD(isPacked)

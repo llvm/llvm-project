@@ -1,7 +1,11 @@
 ; REQUIRES: asserts
-; RUN: opt < %s -loop-unswitch -stats -disable-output 2>&1 | grep "1 loop-unswitch - Number of branches unswitched" | count 1
+; RUN: opt < %s -loop-unswitch -stats -disable-output 2>&1 | FileCheck %s
 ; PR 3170
+
 define i32 @a(i32 %x, i32 %y) nounwind {
+; CHECK: 1 loop-unswitch - Number of branches unswitched
+; CHECK-NOT: Number of branches unswitched
+
 entry:
 	%0 = icmp ult i32 0, %y		; <i1> [#uses=1]
 	br i1 %0, label %bb.nph, label %bb4

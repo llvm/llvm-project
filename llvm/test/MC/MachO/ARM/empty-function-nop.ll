@@ -10,14 +10,14 @@ define internal fastcc void @empty_function() {
   unreachable
 }
 ; CHECK-T1:    SectionData (
-; CHECK-T1:      0000: C046                                 |.F|
+; CHECK-T1:      0000: FEDE                                 |..|
 ; CHECK-T1:    )
 ; CHECK-T2:    SectionData (
-; CHECK-T2:      0000: 00BF                                 |..|
+; CHECK-T2:      0000: FEDE                                 |..|
 ; CHECK-T2:    )
 ; CHECK-ARM:   SectionData (
-; CHECK-ARM:     0000: 0000A0E1                             |....|
+; CHECK-ARM:     0000: FEDEFFE7                             |....|
 ; CHECK-ARM:   )
 ; CHECK-ARMV7: SectionData (
-; CHECK-ARMV7:   0000: 00F020E3                             |.. .|
+; CHECK-ARMV7:   0000: FEDEFFE7                             |....|
 ; CHECK-ARMV7: )

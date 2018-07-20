@@ -93,12 +93,13 @@ public:
 
   /// An iterator to go through the expression operations.
   class iterator
-      : public iterator_facade_base<iterator, std::forward_iterator_tag, Operation> {
+      : public iterator_facade_base<iterator, std::forward_iterator_tag,
+                                    Operation> {
     friend class DWARFExpression;
-    DWARFExpression *Expr;
+    const DWARFExpression *Expr;
     uint32_t Offset;
     Operation Op;
-    iterator(DWARFExpression *Expr, uint32_t Offset)
+    iterator(const DWARFExpression *Expr, uint32_t Offset)
         : Expr(Expr), Offset(Offset) {
       Op.Error =
           Offset >= Expr->Data.getData().size() ||
@@ -127,10 +128,11 @@ public:
     assert(AddressSize == 8 || AddressSize == 4);
   }
 
-  iterator begin() { return iterator(this, 0); }
-  iterator end() { return iterator(this, Data.getData().size()); }
+  iterator begin() const { return iterator(this, 0); }
+  iterator end() const { return iterator(this, Data.getData().size()); }
 
-  void print(raw_ostream &OS, const MCRegisterInfo *RegInfo);
+  void print(raw_ostream &OS, const MCRegisterInfo *RegInfo,
+             bool IsEH = false) const;
 
 private:
   DataExtractor Data;

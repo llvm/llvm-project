@@ -43,10 +43,10 @@ class raw_ostream;
 namespace PBQP {
 namespace RegAlloc {
 
-/// @brief Spill option index.
+/// Spill option index.
 inline unsigned getSpillOptionIdx() { return 0; }
 
-/// \brief Metadata to speed allocatability test.
+/// Metadata to speed allocatability test.
 ///
 /// Keeps track of the number of infinities in each row and column.
 class MatrixMetadata {
@@ -89,7 +89,7 @@ private:
   std::unique_ptr<bool[]> UnsafeCols;
 };
 
-/// \brief Holds a vector of the allowed physical regs for a vreg.
+/// Holds a vector of the allowed physical regs for a vreg.
 class AllowedRegVector {
   friend hash_code hash_value(const AllowedRegVector &);
 
@@ -127,7 +127,7 @@ inline hash_code hash_value(const AllowedRegVector &OptRegs) {
                       hash_combine_range(OStart, OEnd));
 }
 
-/// \brief Holds graph-level metadata relevant to PBQP RA problems.
+/// Holds graph-level metadata relevant to PBQP RA problems.
 class GraphMetadata {
 private:
   using AllowedRegVecPool = ValuePool<AllowedRegVector>;
@@ -164,7 +164,7 @@ private:
   AllowedRegVecPool AllowedRegVecs;
 };
 
-/// \brief Holds solver state and other metadata relevant to each PBQP RA node.
+/// Holds solver state and other metadata relevant to each PBQP RA node.
 class NodeMetadata {
 public:
   using AllowedRegVector = RegAlloc::AllowedRegVector;
@@ -505,14 +505,14 @@ private:
 public:
   PBQPRAGraph(GraphMetadata Metadata) : BaseT(std::move(Metadata)) {}
 
-  /// @brief Dump this graph to dbgs().
+  /// Dump this graph to dbgs().
   void dump() const;
 
-  /// @brief Dump this graph to an output stream.
+  /// Dump this graph to an output stream.
   /// @param OS Output stream to print on.
   void dump(raw_ostream &OS) const;
 
-  /// @brief Print a representation of this graph in DOT format.
+  /// Print a representation of this graph in DOT format.
   /// @param OS Output stream to print on.
   void printDot(raw_ostream &OS) const;
 };
@@ -527,7 +527,7 @@ inline Solution solve(PBQPRAGraph& G) {
 } // end namespace RegAlloc
 } // end namespace PBQP
 
-/// @brief Create a PBQP register allocator instance.
+/// Create a PBQP register allocator instance.
 FunctionPass *
 createPBQPRegisterAllocator(char *customPassID = nullptr);
 

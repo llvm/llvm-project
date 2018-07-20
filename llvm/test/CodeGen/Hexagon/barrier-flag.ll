@@ -1,8 +1,7 @@
-; RUN: llc -O2 < %s
+; RUN: llc -march=hexagon -O2 < %s
 ; Check for successful compilation. It originally caused an abort due to
 ; the "isBarrier" flag set on instructions that were not meant to have it.
 
-target datalayout = "e-m:e-p:32:32-i1:32-i64:64-a:0-v32:32-n16:32"
 target triple = "hexagon"
 
 ; Function Attrs: nounwind optsize readnone
@@ -114,12 +113,9 @@ for.end50:                                        ; preds = %for.inc48
   ret void
 }
 
-attributes #0 = { nounwind optsize readnone "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { nounwind optsize "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind optsize readnone }
+attributes #1 = { nounwind optsize }
 
-!llvm.ident = !{!0}
-
-!0 = !{!"Clang 3.1"}
 !1 = !{!2, !2, i64 0}
 !2 = !{!"omnipotent char", !3, i64 0}
 !3 = !{!"Simple C/C++ TBAA"}

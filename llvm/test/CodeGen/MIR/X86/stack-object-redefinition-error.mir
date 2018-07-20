@@ -19,7 +19,7 @@
 name:            test
 tracksRegLiveness: true
 liveins:
-  - { reg: '%edi' }
+  - { reg: '$edi' }
 frameInfo:
   maxAlignment:    8
 stack:
@@ -28,10 +28,10 @@ stack:
   - { id: 0, name: x, offset: -24, size: 8, alignment: 8 }
 body: |
   bb.0.entry:
-    liveins: %edi
+    liveins: $edi
 
-    MOV32mr %rsp, 1, _, -4, _, killed %edi
-    MOV64mi32 %rsp, 1, _, -16, _, 2
-    %eax = MOV32rm %rsp, 1, _, -4, _
-    RETQ %eax
+    MOV32mr $rsp, 1, _, -4, _, killed $edi
+    MOV64mi32 $rsp, 1, _, -16, _, 2
+    $eax = MOV32rm $rsp, 1, _, -4, _
+    RETQ $eax
 ...

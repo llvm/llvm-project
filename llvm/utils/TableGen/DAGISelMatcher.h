@@ -13,8 +13,8 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/MachineValueType.h"
 
 namespace llvm {
   struct CodeGenRegister;

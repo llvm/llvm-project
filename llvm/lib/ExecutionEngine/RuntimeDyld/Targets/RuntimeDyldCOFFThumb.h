@@ -97,9 +97,9 @@ public:
     SmallString<32> RelTypeName;
     RelI->getTypeName(RelTypeName);
 #endif
-    DEBUG(dbgs() << "\t\tIn Section " << SectionID << " Offset " << Offset
-                 << " RelType: " << RelTypeName << " TargetName: " << TargetName
-                 << " Addend " << Addend << "\n");
+    LLVM_DEBUG(dbgs() << "\t\tIn Section " << SectionID << " Offset " << Offset
+                      << " RelType: " << RelTypeName << " TargetName: "
+                      << TargetName << " Addend " << Addend << "\n");
 
     unsigned TargetSectionID = -1;
     if (Section == Obj.section_end()) {
@@ -187,10 +187,11 @@ public:
               : Sections[RE.Sections.SectionA].getLoadAddressWithOffset(RE.Addend);
       Result |= ISASelectionBit;
       assert(Result <= UINT32_MAX && "relocation overflow");
-      DEBUG(dbgs() << "\t\tOffset: " << RE.Offset
-                   << " RelType: IMAGE_REL_ARM_ADDR32"
-                   << " TargetSection: " << RE.Sections.SectionA
-                   << " Value: " << format("0x%08" PRIx32, Result) << '\n');
+      LLVM_DEBUG(dbgs() << "\t\tOffset: " << RE.Offset
+                        << " RelType: IMAGE_REL_ARM_ADDR32"
+                        << " TargetSection: " << RE.Sections.SectionA
+                        << " Value: " << format("0x%08" PRIx32, Result)
+                        << '\n');
       writeBytesUnaligned(Result, Target, 4);
       break;
     }
@@ -200,10 +201,11 @@ public:
       uint64_t Result = Sections[RE.Sections.SectionA].getLoadAddress() -
                         Sections[0].getLoadAddress() + RE.Addend;
       assert(Result <= UINT32_MAX && "relocation overflow");
-      DEBUG(dbgs() << "\t\tOffset: " << RE.Offset
-                   << " RelType: IMAGE_REL_ARM_ADDR32NB"
-                   << " TargetSection: " << RE.Sections.SectionA
-                   << " Value: " << format("0x%08" PRIx32, Result) << '\n');
+      LLVM_DEBUG(dbgs() << "\t\tOffset: " << RE.Offset
+                        << " RelType: IMAGE_REL_ARM_ADDR32NB"
+                        << " TargetSection: " << RE.Sections.SectionA
+                        << " Value: " << format("0x%08" PRIx32, Result)
+                        << '\n');
       Result |= ISASelectionBit;
       writeBytesUnaligned(Result, Target, 4);
       break;
@@ -212,18 +214,18 @@ public:
       // 16-bit section index of the section that contains the target.
       assert(static_cast<uint32_t>(RE.SectionID) <= UINT16_MAX &&
              "relocation overflow");
-      DEBUG(dbgs() << "\t\tOffset: " << RE.Offset
-                   << " RelType: IMAGE_REL_ARM_SECTION Value: " << RE.SectionID
-                   << '\n');
+      LLVM_DEBUG(dbgs() << "\t\tOffset: " << RE.Offset
+                        << " RelType: IMAGE_REL_ARM_SECTION Value: "
+                        << RE.SectionID << '\n');
       writeBytesUnaligned(RE.SectionID, Target, 2);
       break;
     case COFF::IMAGE_REL_ARM_SECREL:
       // 32-bit offset of the target from the beginning of its section.
       assert(static_cast<uint64_t>(RE.Addend) <= UINT32_MAX &&
              "relocation overflow");
-      DEBUG(dbgs() << "\t\tOffset: " << RE.Offset
-                   << " RelType: IMAGE_REL_ARM_SECREL Value: " << RE.Addend
-                   << '\n');
+      LLVM_DEBUG(dbgs() << "\t\tOffset: " << RE.Offset
+                        << " RelType: IMAGE_REL_ARM_SECREL Value: " << RE.Addend
+                        << '\n');
       writeBytesUnaligned(RE.Addend, Target, 2);
       break;
     case COFF::IMAGE_REL_ARM_MOV32T: {
@@ -231,10 +233,11 @@ public:
       uint64_t Result =
           Sections[RE.Sections.SectionA].getLoadAddressWithOffset(RE.Addend);
       assert(Result <= UINT32_MAX && "relocation overflow");
-      DEBUG(dbgs() << "\t\tOffset: " << RE.Offset
-                   << " RelType: IMAGE_REL_ARM_MOV32T"
-                   << " TargetSection: " << RE.Sections.SectionA
-                   << " Value: " << format("0x%08" PRIx32, Result) << '\n');
+      LLVM_DEBUG(dbgs() << "\t\tOffset: " << RE.Offset
+                        << " RelType: IMAGE_REL_ARM_MOV32T"
+                        << " TargetSection: " << RE.Sections.SectionA
+                        << " Value: " << format("0x%08" PRIx32, Result)
+                        << '\n');
 
       // MOVW(T3): |11110|i|10|0|1|0|0|imm4|0|imm3|Rd|imm8|
       //            imm32 = zext imm4:i:imm3:imm8
@@ -262,9 +265,9 @@ public:
              "relocation overflow");
       assert(static_cast<int64_t>(RE.Addend) >= INT32_MIN &&
              "relocation underflow");
-      DEBUG(dbgs() << "\t\tOffset: " << RE.Offset
-                   << " RelType: IMAGE_REL_ARM_BRANCH20T"
-                   << " Value: " << static_cast<int32_t>(Value) << '\n');
+      LLVM_DEBUG(dbgs() << "\t\tOffset: " << RE.Offset
+                        << " RelType: IMAGE_REL_ARM_BRANCH20T"
+                        << " Value: " << static_cast<int32_t>(Value) << '\n');
       static_cast<void>(Value);
       llvm_unreachable("unimplemented relocation");
       break;
@@ -277,9 +280,9 @@ public:
              "relocation overflow");
       assert(static_cast<int64_t>(RE.Addend) >= INT32_MIN &&
              "relocation underflow");
-      DEBUG(dbgs() << "\t\tOffset: " << RE.Offset
-                   << " RelType: IMAGE_REL_ARM_BRANCH24T"
-                   << " Value: " << static_cast<int32_t>(Value) << '\n');
+      LLVM_DEBUG(dbgs() << "\t\tOffset: " << RE.Offset
+                        << " RelType: IMAGE_REL_ARM_BRANCH24T"
+                        << " Value: " << static_cast<int32_t>(Value) << '\n');
       static_cast<void>(Value);
       llvm_unreachable("unimplemented relocation");
       break;
@@ -292,9 +295,9 @@ public:
              "relocation overflow");
       assert(static_cast<int64_t>(RE.Addend) >= INT32_MIN &&
              "relocation underflow");
-      DEBUG(dbgs() << "\t\tOffset: " << RE.Offset
-                   << " RelType: IMAGE_REL_ARM_BLX23T"
-                   << " Value: " << static_cast<int32_t>(Value) << '\n');
+      LLVM_DEBUG(dbgs() << "\t\tOffset: " << RE.Offset
+                        << " RelType: IMAGE_REL_ARM_BLX23T"
+                        << " Value: " << static_cast<int32_t>(Value) << '\n');
       static_cast<void>(Value);
       llvm_unreachable("unimplemented relocation");
       break;

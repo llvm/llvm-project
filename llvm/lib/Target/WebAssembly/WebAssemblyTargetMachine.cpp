@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file defines the WebAssembly-specific subclass of TargetMachine.
+/// This file defines the WebAssembly-specific subclass of TargetMachine.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -25,6 +25,7 @@
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Utils.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "wasm"
@@ -48,9 +49,31 @@ extern "C" void LLVMInitializeWebAssemblyTarget() {
   RegisterTargetMachine<WebAssemblyTargetMachine> Y(
       getTheWebAssemblyTarget64());
 
-  // Register exception handling pass to opt
-  initializeWebAssemblyLowerEmscriptenEHSjLjPass(
-      *PassRegistry::getPassRegistry());
+  // Register backend passes
+  auto &PR = *PassRegistry::getPassRegistry();
+  initializeWebAssemblyAddMissingPrototypesPass(PR);
+  initializeWebAssemblyLowerEmscriptenEHSjLjPass(PR);
+  initializeLowerGlobalDtorsPass(PR);
+  initializeFixFunctionBitcastsPass(PR);
+  initializeOptimizeReturnedPass(PR);
+  initializeWebAssemblyArgumentMovePass(PR);
+  initializeWebAssemblySetP2AlignOperandsPass(PR);
+  initializeWebAssemblyReplacePhysRegsPass(PR);
+  initializeWebAssemblyPrepareForLiveIntervalsPass(PR);
+  initializeWebAssemblyOptimizeLiveIntervalsPass(PR);
+  initializeWebAssemblyStoreResultsPass(PR);
+  initializeWebAssemblyRegStackifyPass(PR);
+  initializeWebAssemblyRegColoringPass(PR);
+  initializeWebAssemblyExplicitLocalsPass(PR);
+  initializeWebAssemblyFixIrreducibleControlFlowPass(PR);
+  initializeWebAssemblyLateEHPreparePass(PR);
+  initializeWebAssemblyExceptionInfoPass(PR);
+  initializeWebAssemblyCFGSortPass(PR);
+  initializeWebAssemblyCFGStackifyPass(PR);
+  initializeWebAssemblyLowerBrUnlessPass(PR);
+  initializeWebAssemblyRegNumberingPass(PR);
+  initializeWebAssemblyPeepholePass(PR);
+  initializeWebAssemblyCallIndirectFixupPass(PR);
 }
 
 //===----------------------------------------------------------------------===//
@@ -74,11 +97,7 @@ WebAssemblyTargetMachine::WebAssemblyTargetMachine(
                                          : "e-m:e-p:32:32-i64:64-n32:64-S128",
                         TT, CPU, FS, Options, getEffectiveRelocModel(RM),
                         CM ? *CM : CodeModel::Large, OL),
-      TLOF(TT.isOSBinFormatELF() ?
-              static_cast<TargetLoweringObjectFile*>(
-                  new WebAssemblyTargetObjectFileELF()) :
-              static_cast<TargetLoweringObjectFile*>(
-                  new WebAssemblyTargetObjectFile())) {
+      TLOF(new WebAssemblyTargetObjectFile()) {
   // WebAssembly type-checks instructions, but a noreturn function with a return
   // type that doesn't match the context will cause a check failure. So we lower
   // LLVM 'unreachable' to ISD::TRAP and then lower that to WebAssembly's
@@ -87,11 +106,9 @@ WebAssemblyTargetMachine::WebAssemblyTargetMachine(
 
   // WebAssembly treats each function as an independent unit. Force
   // -ffunction-sections, effectively, so that we can emit them independently.
-  if (!TT.isOSBinFormatELF()) {
-    this->Options.FunctionSections = true;
-    this->Options.DataSections = true;
-    this->Options.UniqueSectionNames = true;
-  }
+  this->Options.FunctionSections = true;
+  this->Options.DataSections = true;
+  this->Options.UniqueSectionNames = true;
 
   initAsmInfo();
 
@@ -126,6 +143,22 @@ WebAssemblyTargetMachine::getSubtargetImpl(const Function &F) const {
 }
 
 namespace {
+class StripThreadLocal final : public ModulePass {
+  // The default thread model for wasm is single, where thread-local variables
+  // are identical to regular globals and should be treated the same. So this
+  // pass just converts all GlobalVariables to NotThreadLocal
+  static char ID;
+
+ public:
+  StripThreadLocal() : ModulePass(ID) {}
+  bool runOnModule(Module &M) override {
+    for (auto &GV : M.globals())
+      GV.setThreadLocalMode(GlobalValue::ThreadLocalMode::NotThreadLocal);
+    return true;
+  }
+};
+char StripThreadLocal::ID = 0;
+
 /// WebAssembly Code Generator Pass Configuration Options.
 class WebAssemblyPassConfig final : public TargetPassConfig {
 public:
@@ -166,13 +199,18 @@ FunctionPass *WebAssemblyPassConfig::createTargetRegisterAllocator(bool) {
 //===----------------------------------------------------------------------===//
 
 void WebAssemblyPassConfig::addIRPasses() {
-  if (TM->Options.ThreadModel == ThreadModel::Single)
+  if (TM->Options.ThreadModel == ThreadModel::Single) {
     // In "single" mode, atomics get lowered to non-atomics.
     addPass(createLowerAtomicPass());
-  else
+    addPass(new StripThreadLocal());
+  } else {
     // Expand some atomic operations. WebAssemblyTargetLowering has hooks which
     // control specifically what gets lowered.
     addPass(createAtomicExpandPass());
+  }
+
+  // Add signatures to prototype-less function declarations
+  addPass(createWebAssemblyAddMissingPrototypes());
 
   // Lower .llvm.global_dtors into .llvm_global_ctors with __cxa_atexit calls.
   addPass(createWebAssemblyLowerGlobalDtors());
@@ -190,7 +228,8 @@ void WebAssemblyPassConfig::addIRPasses() {
   // blocks. Lowering invokes when there is no EH support is done in
   // TargetPassConfig::addPassesToHandleExceptions, but this runs after this
   // function and SjLj handling expects all invokes to be lowered before.
-  if (!EnableEmException) {
+  if (!EnableEmException &&
+      TM->Options.ExceptionModel == ExceptionHandling::None) {
     addPass(createLowerInvokePass());
     // The lower invoke pass may create unreachable code. Remove it in order not
     // to process dead blocks in setjmp/longjmp handling.
@@ -225,16 +264,15 @@ void WebAssemblyPassConfig::addPostRegAlloc() {
   // virtual registers. Consider removing their restrictions and re-enabling
   // them.
 
-  // Has no asserts of its own, but was not written to handle virtual regs.
-  disablePass(&ShrinkWrapID);
-
   // These functions all require the NoVRegs property.
   disablePass(&MachineCopyPropagationID);
+  disablePass(&PostRAMachineSinkingID);
   disablePass(&PostRASchedulerID);
   disablePass(&FuncletLayoutID);
   disablePass(&StackMapLivenessID);
   disablePass(&LiveDebugValuesID);
   disablePass(&PatchableFunctionID);
+  disablePass(&ShrinkWrapID);
 
   TargetPassConfig::addPostRegAlloc();
 }
@@ -281,6 +319,9 @@ void WebAssemblyPassConfig::addPreEmitPass() {
 
   // Insert explicit get_local and set_local operators.
   addPass(createWebAssemblyExplicitLocals());
+
+  // Do various transformations for exception handling
+  addPass(createWebAssemblyLateEHPrepare());
 
   // Sort the blocks of the CFG into topological order, a prerequisite for
   // BLOCK and LOOP markers.

@@ -11,7 +11,7 @@ define fastcc void @t1() nounwind {
 ; CHECK-NEXT:    calll _memset
 ; CHECK-NEXT:    addl $16, %esp
 entry:
-  call void @llvm.memset.p0i8.i32(i8* null, i8 0, i32 188, i32 1, i1 false)
+  call void @llvm.memset.p0i8.i32(i8* null, i8 0, i32 188, i1 false)
   unreachable
 }
 
@@ -23,11 +23,11 @@ define fastcc void @t2(i8 signext %c) nounwind {
 ; CHECK-NEXT:    movl $76, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    calll _memset
 entry:
-  call void @llvm.memset.p0i8.i32(i8* undef, i8 %c, i32 76, i32 1, i1 false)
+  call void @llvm.memset.p0i8.i32(i8* undef, i8 %c, i32 76, i1 false)
   unreachable
 }
 
-declare void @llvm.memset.p0i8.i32(i8* nocapture, i8, i32, i32, i1) nounwind
+declare void @llvm.memset.p0i8.i32(i8* nocapture, i8, i32, i1) nounwind
 
 define void @t3(i8* nocapture %s, i8 %a) nounwind {
 ; CHECK-LABEL: t3:
@@ -39,7 +39,7 @@ define void @t3(i8* nocapture %s, i8 %a) nounwind {
 ; CHECK-NEXT:    movl %ecx, (%eax)
 ; CHECK-NEXT:    retl
 entry:
-  tail call void @llvm.memset.p0i8.i32(i8* %s, i8 %a, i32 8, i32 1, i1 false)
+  tail call void @llvm.memset.p0i8.i32(i8* %s, i8 %a, i32 8, i1 false)
   ret void
 }
 
@@ -56,6 +56,6 @@ define void @t4(i8* nocapture %s, i8 %a) nounwind {
 ; CHECK-NEXT:    movb %cl, 14(%eax)
 ; CHECK-NEXT:    retl
 entry:
-  tail call void @llvm.memset.p0i8.i32(i8* %s, i8 %a, i32 15, i32 1, i1 false)
+  tail call void @llvm.memset.p0i8.i32(i8* %s, i8 %a, i32 15, i1 false)
   ret void
 }

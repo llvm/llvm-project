@@ -15,8 +15,8 @@ body: |
 
     ; CHECK-LABEL: test
 
-    ; CHECK:      PUSHRr %r28, implicit-def %sp, implicit %sp
-    ; CHECK-NEXT: PUSHRr %r29, implicit-def %sp, implicit %sp
+    ; CHECK:      PUSHRr $r28, implicit-def $sp, implicit $sp
+    ; CHECK-NEXT: PUSHRr $r29, implicit-def $sp, implicit $sp
 
-    PUSHWRr %r29r28, implicit-def %sp, implicit %sp
+    PUSHWRr $r29r28, implicit-def $sp, implicit $sp
 ...

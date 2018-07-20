@@ -25,6 +25,26 @@ define <2 x i8> @vsel_mixedvec() {
   ret <2 x i8> %s
 }
 
+; FIXME: Allow for undef elements in a constant vector condition.
+
+define <3 x i8> @vsel_undef_true_op(<3 x i8> %x, <3 x i8> %y) {
+; CHECK-LABEL: @vsel_undef_true_op(
+; CHECK-NEXT:    [[S:%.*]] = select <3 x i1> <i1 true, i1 undef, i1 true>, <3 x i8> [[X:%.*]], <3 x i8> [[Y:%.*]]
+; CHECK-NEXT:    ret <3 x i8> [[S]]
+;
+  %s = select <3 x i1><i1 1, i1 undef, i1 1>, <3 x i8> %x, <3 x i8> %y
+  ret <3 x i8> %s
+}
+
+define <3 x i4> @vsel_undef_false_op(<3 x i4> %x, <3 x i4> %y) {
+; CHECK-LABEL: @vsel_undef_false_op(
+; CHECK-NEXT:    [[S:%.*]] = select <3 x i1> <i1 false, i1 undef, i1 undef>, <3 x i4> [[X:%.*]], <3 x i4> [[Y:%.*]]
+; CHECK-NEXT:    ret <3 x i4> [[S]]
+;
+  %s = select <3 x i1><i1 0, i1 undef, i1 undef>, <3 x i4> %x, <3 x i4> %y
+  ret <3 x i4> %s
+}
+
 define i32 @test1(i32 %x) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:    ret i32 %x
@@ -525,3 +545,22 @@ define i8 @do_not_assume_sel_cond(i1 %cond, i8 %x, i8 %y) {
   ret i8 %sel
 }
 
+define i32* @select_icmp_eq_0_gep_operand(i32* %base, i64 %n) {
+; CHECK-LABEL: @select_icmp_eq_0_gep_operand(
+; CHECK-NEXT: [[GEP:%.*]] = getelementptr
+; CHECK-NEXT: ret i32* [[GEP]]
+  %cond = icmp eq i64 %n, 0
+  %gep = getelementptr i32, i32* %base, i64 %n
+  %r = select i1 %cond, i32* %base, i32* %gep
+  ret i32* %r
+}
+
+define i32* @select_icmp_ne_0_gep_operand(i32* %base, i64 %n) {
+; CHECK-LABEL: @select_icmp_ne_0_gep_operand(
+; CHECK-NEXT: [[GEP:%.*]] = getelementptr
+; CHECK-NEXT: ret i32* [[GEP]]
+  %cond = icmp ne i64 %n, 0
+  %gep = getelementptr i32, i32* %base, i64 %n
+  %r = select i1 %cond, i32* %gep, i32* %base
+  ret i32* %r
+}

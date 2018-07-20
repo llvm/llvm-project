@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=x86_64-unknown-unknown -mcpu=x86-64 -mattr=sse -enable-unsafe-fp-math < %s | FileCheck %s --check-prefix=SSE
-; RUN: llc -mtriple=x86_64-unknown-unknown -mcpu=x86-64 -mattr=avx -enable-unsafe-fp-math < %s | FileCheck %s --check-prefix=AVX
+; RUN: llc -mtriple=x86_64-unknown-unknown -mcpu=x86-64 -mattr=sse -enable-unsafe-fp-math -machine-combiner-verify-pattern-order=true < %s | FileCheck %s --check-prefix=SSE
+; RUN: llc -mtriple=x86_64-unknown-unknown -mcpu=x86-64 -mattr=avx -enable-unsafe-fp-math -machine-combiner-verify-pattern-order=true < %s | FileCheck %s --check-prefix=AVX
 
 ; Incremental updates of the instruction depths should be enough for this test
 ; case.

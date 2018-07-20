@@ -6,6 +6,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: pushq
 ; CHECK: ud2
 ; CHECK-NEXT: popq
+; CHECK-NEXT: .cfi_def_cfa_offset 8
 ; CHECK-NEXT: retq
 define void @bar() {
 entry:

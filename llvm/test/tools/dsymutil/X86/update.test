@@ -1,0 +1,18 @@
+UNSUPPORTED: system-windows
+Remove UNSUPPORTED once we figure out why this fails on Windows.
+
+RUN: rm -rf %t.dir
+RUN: mkdir -p %t.dir
+RUN: cat %p/../Inputs/basic.macho.x86_64 > %t.dir/basic
+RUN: dsymutil -oso-prepend-path=%p/.. %t.dir/basic
+RUN: llvm-dwarfdump -a %t.dir/basic.dSYM | FileCheck %S/basic-linking-x86.test
+RUN: dsymutil --update %t.dir/basic.dSYM
+RUN: llvm-dwarfdump -a %t.dir/basic.dSYM | FileCheck %S/basic-linking-x86.test
+RUN: dsymutil -u %t.dir/basic.dSYM
+RUN: llvm-dwarfdump -a %t.dir/basic.dSYM | FileCheck %S/basic-linking-x86.test
+RUN: dsymutil --update %t.dir/basic.dSYM -o %t.dir/updated.dSYM
+RUN: llvm-dwarfdump -a %t.dir/updated.dSYM | FileCheck %S/basic-linking-x86.test
+
+RUN: dsymutil -f -o %t2 -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64
+RUN: dsymutil -f -u %t2 -o %t3
+RUN: llvm-dwarfdump -a %t3 | FileCheck %S/basic-linking-x86.test

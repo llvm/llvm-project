@@ -1,4 +1,4 @@
-;RUN: llc < %s -march=amdgcn -mcpu=verde -verify-machineinstrs | FileCheck %s
+;RUN: llc < %s -march=amdgcn -mcpu=verde -verify-machineinstrs | FileCheck -check-prefix=VERDE %s
 ;RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck %s
 
 ;CHECK-LABEL: {{^}}buffer_store:
@@ -65,7 +65,7 @@ main_body:
 ;CHECK-LABEL: {{^}}buffer_store_wait:
 ;CHECK-NOT: s_waitcnt
 ;CHECK: buffer_store_dwordx4 v[0:3], v4, s[0:3], 0 idxen
-;CHECK: s_waitcnt expcnt(0)
+;VERDE: s_waitcnt expcnt(0)
 ;CHECK: buffer_load_dwordx4 v[0:3], v5, s[0:3], 0 idxen
 ;CHECK: s_waitcnt vmcnt(0)
 ;CHECK: buffer_store_dwordx4 v[0:3], v6, s[0:3], 0 idxen

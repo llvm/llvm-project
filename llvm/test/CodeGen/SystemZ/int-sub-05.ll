@@ -132,12 +132,14 @@ define void @f8(i128 *%ptr0) {
   %ptr2 = getelementptr i128, i128 *%ptr0, i128 4
   %ptr3 = getelementptr i128, i128 *%ptr0, i128 6
   %ptr4 = getelementptr i128, i128 *%ptr0, i128 8
+  %ptr5 = getelementptr i128, i128 *%ptr0, i128 10
 
   %val0 = load i128 , i128 *%ptr0
   %val1 = load i128 , i128 *%ptr1
   %val2 = load i128 , i128 *%ptr2
   %val3 = load i128 , i128 *%ptr3
   %val4 = load i128 , i128 *%ptr4
+  %val5 = load i128 , i128 *%ptr5
 
   %retptr = call i128 *@foo()
 
@@ -147,7 +149,8 @@ define void @f8(i128 *%ptr0) {
   %sub2 = sub i128 %sub1, %val2
   %sub3 = sub i128 %sub2, %val3
   %sub4 = sub i128 %sub3, %val4
-  store i128 %sub4, i128 *%retptr
+  %sub5 = sub i128 %sub4, %val5
+  store i128 %sub5, i128 *%retptr
 
   ret void
 }

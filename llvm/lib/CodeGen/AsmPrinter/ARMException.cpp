@@ -91,7 +91,8 @@ void ARMException::endFunction(const MachineFunction *MF) {
     ATS.emitFnEnd();
 }
 
-void ARMException::emitTypeInfos(unsigned TTypeEncoding) {
+void ARMException::emitTypeInfos(unsigned TTypeEncoding,
+                                 MCSymbol *TTBaseLabel) {
   const MachineFunction *MF = Asm->MF;
   const std::vector<const GlobalValue *> &TypeInfos = MF->getTypeInfos();
   const std::vector<unsigned> &FilterIds = MF->getFilterIds();
@@ -111,6 +112,8 @@ void ARMException::emitTypeInfos(unsigned TTypeEncoding) {
       Asm->OutStreamer->AddComment("TypeInfo " + Twine(Entry--));
     Asm->EmitTTypeReference(GV, TTypeEncoding);
   }
+
+  Asm->OutStreamer->EmitLabel(TTBaseLabel);
 
   // Emit the Exception Specifications.
   if (VerboseAsm && !FilterIds.empty()) {

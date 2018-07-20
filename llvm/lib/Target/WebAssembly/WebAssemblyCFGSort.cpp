@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file implements a CFG sorting pass.
+/// This file implements a CFG sorting pass.
 ///
 /// This pass reorders the blocks in a function to put them into topological
 /// order, ignoring loop backedges, and without any loop being interrupted
@@ -56,6 +56,9 @@ public:
 } // end anonymous namespace
 
 char WebAssemblyCFGSort::ID = 0;
+INITIALIZE_PASS(WebAssemblyCFGSort, DEBUG_TYPE,
+                "Reorders blocks in topological order", false, false)
+
 FunctionPass *llvm::createWebAssemblyCFGSort() {
   return new WebAssemblyCFGSort();
 }
@@ -250,7 +253,7 @@ static void SortBlocks(MachineFunction &MF, const MachineLoopInfo &MLI,
       assert(OnStack.count(MLI.getLoopFor(&MBB)) &&
              "Blocks must be nested in their loops");
     }
-    while (OnStack.size() > 1 && &MBB == LoopBottom(OnStack.back()))
+    while (OnStack.size() > 1 && &MBB == WebAssembly::getBottom(OnStack.back()))
       OnStack.pop_back();
   }
   assert(OnStack.pop_back_val() == nullptr &&
@@ -261,9 +264,9 @@ static void SortBlocks(MachineFunction &MF, const MachineLoopInfo &MLI,
 }
 
 bool WebAssemblyCFGSort::runOnMachineFunction(MachineFunction &MF) {
-  DEBUG(dbgs() << "********** CFG Sorting **********\n"
-                  "********** Function: "
-               << MF.getName() << '\n');
+  LLVM_DEBUG(dbgs() << "********** CFG Sorting **********\n"
+                       "********** Function: "
+                    << MF.getName() << '\n');
 
   const auto &MLI = getAnalysis<MachineLoopInfo>();
   auto &MDT = getAnalysis<MachineDominatorTree>();

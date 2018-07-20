@@ -3,8 +3,25 @@
 FileHeader:
   Version:         0x00000001
 Sections:
+  - Type:            TYPE
+    Signatures:
+      - Index:           0
+        ReturnType:      NORESULT
+        ParamTypes:
+      - Index:           1
+        ReturnType:      NORESULT
+        ParamTypes:
+          - I32
   - Type:            FUNCTION
     FunctionTypes: [ 1, 0 ]
+  - Type:            CODE
+    Functions:
+      - Index:           0
+        Locals:
+        Body:            0B
+      - Index:           1
+        Locals:
+        Body:            0B
 ...
 # CHECK: --- !WASM
 # CHECK: FileHeader:

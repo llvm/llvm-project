@@ -5,7 +5,7 @@
 ; - a loop_memset idiom, or
 ; - a memset/memcpy idiom in a nested loop.
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1)
+declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1)
 @APPLES = common global i32 0, align 4
 @ORANGES = common global i32 0, align 4
 
@@ -28,7 +28,7 @@ for.body:                                         ; preds = %for.body.preheader,
   %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.inc ]
   %BASKET.013 = phi i32 [ %BASKET.1, %for.inc ], [ 0, %for.body.preheader ]
   %arraydecay = getelementptr inbounds [2048 x i8], [2048 x i8]* %DST, i64 %indvars.iv, i64 0
-  tail call void @llvm.memset.p0i8.i64(i8* %arraydecay, i8 -1, i64 2048, i32 1, i1 false)
+  tail call void @llvm.memset.p0i8.i64(i8* %arraydecay, i8 -1, i64 2048, i1 false)
   %0 = trunc i64 %indvars.iv to i32
   %rem11 = and i32 %0, 1
   %cmp1 = icmp eq i32 %rem11, 0

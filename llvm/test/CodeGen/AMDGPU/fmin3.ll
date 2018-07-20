@@ -82,9 +82,39 @@ define amdgpu_kernel void @test_fmin3_olt_1_f16(half addrspace(1)* %out, half ad
   ret void
 }
 
+; Checks whether the test passes; performMinMaxCombine() should not optimize vector patterns of min3
+; since there are no pack instructions for fmin3.
+; GCN-LABEL: {{^}}no_fmin3_v2f16:
+
+; SI: v_cvt_f16_f32_e32
+; SI: v_min_f32_e32
+; SI-NEXT: v_min_f32_e32
+; SI-NEXT: v_min3_f32
+; SI-NEXT: v_min3_f32
+
+; VI: v_min_f16_sdwa v4, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI: v_min_f16_e32 v0, v0, v1
+; VI: v_min_f16_sdwa v1, v2, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI: v_min_f16_e32 v0, v2, v0
+; VI: v_min_f16_sdwa v1, v1, v3 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; VI: v_min_f16_e32 v0, v0, v3
+; VI: v_or_b32_e32 v0, v0, v1
+
+; GFX9: v_pk_min_f16
+; GFX9: v_pk_min_f16
+; GFX9: v_pk_min_f16
+define <2 x half> @no_fmin3_v2f16(<2 x half> %a, <2 x half> %b, <2 x half> %c, <2 x half> %d) {
+entry:
+  %min = tail call fast <2 x half> @llvm.minnum.v2f16(<2 x half> %a, <2 x half> %b)
+  %min1 = tail call fast <2 x half> @llvm.minnum.v2f16(<2 x half> %c, <2 x half> %min)
+  %res = tail call fast <2 x half> @llvm.minnum.v2f16(<2 x half> %min1, <2 x half> %d)
+  ret <2 x half> %res
+}
+
 declare i32 @llvm.amdgcn.workitem.id.x() #1
 declare float @llvm.minnum.f32(float, float) #1
 declare half @llvm.minnum.f16(half, half) #1
+declare <2 x half> @llvm.minnum.v2f16(<2 x half>, <2 x half>)
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone speculatable }

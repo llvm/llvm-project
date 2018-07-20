@@ -13,6 +13,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata) #0
 define void @julia_fastshortest_6256() #1 {
 top:
   %cp = alloca %foo, align 8
+  %sink = alloca %foo, align 8
   call void @llvm.dbg.declare(metadata %foo* %cp, metadata !1, metadata !16), !dbg !17
   br i1 undef, label %idxend, label %fail
 
@@ -21,9 +22,10 @@ fail:                                             ; preds = %top
 
 idxend:                                           ; preds = %top
 ; CHECK-NOT: call void @llvm.dbg.value(metadata %foo* %cp,
-  %0 = load volatile %foo, %foo* %cp, align 8
-; CHECK: call void @llvm.dbg.value(metadata %foo %0,
-  store volatile %foo %0, %foo* undef, align 8
+  %0 = load %foo, %foo* %cp, align 8
+  store volatile %foo %0, %foo *%sink, align 8
+; CHECK: call void @llvm.dbg.value(metadata %foo %
+  store %foo %0, %foo* undef, align 8
   ret void
 }
 
@@ -40,7 +42,7 @@ attributes #1 = { sspreq }
 
 !0 = !{i32 1, !"Debug Info Version", i32 3}
 !1 = !DILocalVariable(name: "cp", scope: !2, file: !3, line: 106, type: !12)
-!2 = distinct !DISubprogram(name: "fastshortest", linkageName: "julia_fastshortest_6256", scope: null, file: !3, type: !4, isLocal: false, isDefinition: true, isOptimized: true, unit: !18, variables: !11)
+!2 = distinct !DISubprogram(name: "fastshortest", linkageName: "julia_fastshortest_6256", scope: null, file: !3, type: !4, isLocal: false, isDefinition: true, isOptimized: true, unit: !18, retainedNodes: !11)
 !3 = !DIFile(filename: "grisu/fastshortest.jl", directory: ".")
 !4 = !DISubroutineType(types: !5)
 !5 = !{!6, !7}

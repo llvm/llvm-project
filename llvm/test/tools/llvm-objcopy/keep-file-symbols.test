@@ -1,0 +1,79 @@
+# RUN: yaml2obj %s > %t
+# RUN: llvm-objcopy --strip-all --keep-file-symbols %t %t2
+# RUN: llvm-readobj -symbols %t2 | FileCheck %s --check-prefix=STRIPALL
+# RUN: llvm-objcopy --keep-file-symbols --strip-symbol foo %t %t2
+# RUN: llvm-readobj -symbols %t2 | FileCheck %s --check-prefix=STRIP
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1000
+    AddressAlign:    0x0000000000000010
+    Size:            64
+Symbols:
+  Local:
+    - Name:     foo
+      Type:     STT_FILE
+      Section:  .text
+  Global:
+    - Name:     bar
+      Type:     STT_FUNC
+      Section:  .text
+
+#STRIPALL: Symbols [
+#STRIPALL-NEXT:  Symbol {
+#STRIPALL-NEXT:    Name:
+#STRIPALL-NEXT:    Value: 0x0
+#STRIPALL-NEXT:    Size: 0
+#STRIPALL-NEXT:    Binding: Local
+#STRIPALL-NEXT:    Type: None
+#STRIPALL-NEXT:    Other: 0
+#STRIPALL-NEXT:    Section: Undefined
+#STRIPALL-NEXT:  }
+#STRIPALL-NEXT:  Symbol {
+#STRIPALL-NEXT:    Name: foo
+#STRIPALL-NEXT:    Value: 0x0
+#STRIPALL-NEXT:    Size: 0
+#STRIPALL-NEXT:    Binding: Local
+#STRIPALL-NEXT:    Type: File
+#STRIPALL-NEXT:    Other: 0
+#STRIPALL-NEXT:    Section: .text
+#STRIPALL-NEXT:  }
+#STRIPALL-NEXT:]
+
+#STRIP: Symbols [
+#STRIP-NEXT:  Symbol {
+#STRIP-NEXT:    Name:
+#STRIP-NEXT:    Value: 0x0
+#STRIP-NEXT:    Size: 0
+#STRIP-NEXT:    Binding: Local
+#STRIP-NEXT:    Type: None
+#STRIP-NEXT:    Other: 0
+#STRIP-NEXT:    Section: Undefined
+#STRIP-NEXT:  }
+#STRIP-NEXT:  Symbol {
+#STRIP-NEXT:    Name: foo
+#STRIP-NEXT:    Value: 0x0
+#STRIP-NEXT:    Size: 0
+#STRIP-NEXT:    Binding: Local
+#STRIP-NEXT:    Type: File
+#STRIP-NEXT:    Other: 0
+#STRIP-NEXT:    Section: .text
+#STRIP-NEXT:  }
+#STRIP-NEXT:  Symbol {
+#STRIP-NEXT:    Name: bar
+#STRIP-NEXT:    Value: 0x0
+#STRIP-NEXT:    Size: 0
+#STRIP-NEXT:    Binding: Global
+#STRIP-NEXT:    Type: Function
+#STRIP-NEXT:    Other: 0
+#STRIP-NEXT:    Section: .text
+#STRIP-NEXT:  }
+#STRIP-NEXT:]

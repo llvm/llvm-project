@@ -31,6 +31,7 @@ namespace llvm {
 struct DILineInfo {
   std::string FileName;
   std::string FunctionName;
+  Optional<StringRef> Source;
   uint32_t Line = 0;
   uint32_t Column = 0;
   uint32_t StartLine = 0;
@@ -159,6 +160,7 @@ struct DIDumpOptions {
   bool ShowForm = false;
   bool SummarizeTypes = false;
   bool Verbose = false;
+  bool DisplayRawContents = false;
 
   /// Return default option set for printing a single DIE without children.
   static DIDumpOptions getForSingleDIE() {

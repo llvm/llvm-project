@@ -17,7 +17,7 @@ using namespace llvm;
 
 namespace {
 
-/// \brief Regular expression corresponding to the value given in one of the
+/// Regular expression corresponding to the value given in one of the
 /// -pass-remarks* command line flags. Passes whose name matches this regexp
 /// will emit a diagnostic when calling the associated diagnostic function
 /// (emitOptimizationRemark, emitOptimizationRemarkMissed or

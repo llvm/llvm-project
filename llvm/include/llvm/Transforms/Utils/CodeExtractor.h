@@ -34,7 +34,7 @@ class Module;
 class Type;
 class Value;
 
-  /// \brief Utility class for extracting code into a new function.
+  /// Utility class for extracting code into a new function.
   ///
   /// This utility provides a simple interface for extracting some sequence of
   /// code into its own function, replacing it with a call to that function. It
@@ -65,20 +65,22 @@ class Value;
     Type *RetTy;
 
   public:
-    /// \brief Create a code extractor for a sequence of blocks.
+    /// Create a code extractor for a sequence of blocks.
     ///
     /// Given a sequence of basic blocks where the first block in the sequence
     /// dominates the rest, prepare a code extractor object for pulling this
     /// sequence out into its new function. When a DominatorTree is also given,
     /// extra checking and transformations are enabled. If AllowVarArgs is true,
     /// vararg functions can be extracted. This is safe, if all vararg handling
-    /// code is extracted, including vastart.
+    /// code is extracted, including vastart. If AllowAlloca is true, then
+    /// extraction of blocks containing alloca instructions would be possible,
+    /// however code extractor won't validate whether extraction is legal. 
     CodeExtractor(ArrayRef<BasicBlock *> BBs, DominatorTree *DT = nullptr,
                   bool AggregateArgs = false, BlockFrequencyInfo *BFI = nullptr,
                   BranchProbabilityInfo *BPI = nullptr,
-                  bool AllowVarArgs = false);
+                  bool AllowVarArgs = false, bool AllowAlloca = false);
 
-    /// \brief Create a code extractor for a loop body.
+    /// Create a code extractor for a loop body.
     ///
     /// Behaves just like the generic code sequence constructor, but uses the
     /// block sequence of the loop.
@@ -86,27 +88,19 @@ class Value;
                   BlockFrequencyInfo *BFI = nullptr,
                   BranchProbabilityInfo *BPI = nullptr);
 
-    /// \brief Check to see if a block is valid for extraction.
-    ///
-    /// Blocks containing EHPads, allocas and invokes are not valid. If
-    /// AllowVarArgs is true, blocks with vastart can be extracted. This is
-    /// safe, if all vararg handling code is extracted, including vastart.
-    static bool isBlockValidForExtraction(const BasicBlock &BB,
-                                          bool AllowVarArgs);
-
-    /// \brief Perform the extraction, returning the new function.
+    /// Perform the extraction, returning the new function.
     ///
     /// Returns zero when called on a CodeExtractor instance where isEligible
     /// returns false.
     Function *extractCodeRegion();
 
-    /// \brief Test whether this code extractor is eligible.
+    /// Test whether this code extractor is eligible.
     ///
     /// Based on the blocks used when constructing the code extractor,
     /// determine whether it is eligible for extraction.
     bool isEligible() const { return !Blocks.empty(); }
 
-    /// \brief Compute the set of input values and output values for the code.
+    /// Compute the set of input values and output values for the code.
     ///
     /// These can be used either when performing the extraction or to evaluate
     /// the expected size of a call to the extracted function. Note that this

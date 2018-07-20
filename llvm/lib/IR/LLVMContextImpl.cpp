@@ -48,6 +48,14 @@ LLVMContextImpl::~LLVMContextImpl() {
   while (!OwnedModules.empty())
     delete *OwnedModules.begin();
 
+#ifndef NDEBUG
+  // Check for metadata references from leaked Instructions.
+  for (auto &Pair : InstructionMetadata)
+    Pair.first->dump();
+  assert(InstructionMetadata.empty() &&
+         "Instructions with metadata have been leaked");
+#endif
+
   // Drop references for MDNodes.  Do this before Values get deleted to avoid
   // unnecessary RAUW when nodes are still unresolved.
   for (auto *I : DistinctMDNodes)
@@ -155,7 +163,7 @@ void Module::dropTriviallyDeadConstantArrays() {
 
 namespace llvm {
 
-/// \brief Make MDOperand transparent for hashing.
+/// Make MDOperand transparent for hashing.
 ///
 /// This overload of an implementation detail of the hashing library makes
 /// MDOperand hash to the same value as a \a Metadata pointer.
@@ -222,8 +230,8 @@ void LLVMContextImpl::getSyncScopeNames(
 
 /// Singleton instance of the OptBisect class.
 ///
-/// This singleton is accessed via the LLVMContext::getOptBisect() function.  It
-/// provides a mechanism to disable passes and individual optimizations at
+/// This singleton is accessed via the LLVMContext::getOptPassGate() function.
+/// It provides a mechanism to disable passes and individual optimizations at
 /// compile time based on a command line option (-opt-bisect-limit) in order to
 /// perform a bisecting search for optimization-related problems.
 ///
@@ -233,6 +241,12 @@ void LLVMContextImpl::getSyncScopeNames(
 /// enabled in order to enable a consistent bisect count.
 static ManagedStatic<OptBisect> OptBisector;
 
-OptBisect &LLVMContextImpl::getOptBisect() {
-  return *OptBisector;
+OptPassGate &LLVMContextImpl::getOptPassGate() const {
+  if (!OPG)
+    OPG = &(*OptBisector);
+  return *OPG;
+}
+
+void LLVMContextImpl::setOptPassGate(OptPassGate& OPG) {
+  this->OPG = &OPG;
 }

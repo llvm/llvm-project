@@ -737,7 +737,7 @@ int SystemZTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondT
       unsigned PredicateExtraCost = 0;
       if (I != nullptr) {
         // Some predicates cost one or two extra instructions.
-        switch (dyn_cast<CmpInst>(I)->getPredicate()) {
+        switch (cast<CmpInst>(I)->getPredicate()) {
         case CmpInst::Predicate::ICMP_NE:
         case CmpInst::Predicate::ICMP_UGE:
         case CmpInst::Predicate::ICMP_ULE:

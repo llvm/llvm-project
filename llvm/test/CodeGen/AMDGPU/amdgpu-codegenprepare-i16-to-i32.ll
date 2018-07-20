@@ -169,34 +169,6 @@ define amdgpu_kernel void @mul_nuw_nsw_i3(i3 %a, i3 %b) {
   ret void
 }
 
-; GCN-LABEL: @urem_i3(
-; SI: %r = urem i3 %a, %b
-; SI-NEXT: store volatile i3 %r
-; VI: %[[A_32:[0-9]+]] = zext i3 %a to i32
-; VI-NEXT: %[[B_32:[0-9]+]] = zext i3 %b to i32
-; VI-NEXT: %[[R_32:[0-9]+]] = urem i32 %[[A_32]], %[[B_32]]
-; VI-NEXT: %[[R_3:[0-9]+]] = trunc i32 %[[R_32]] to i3
-; VI-NEXT: store volatile i3 %[[R_3]]
-define amdgpu_kernel void @urem_i3(i3 %a, i3 %b) {
-  %r = urem i3 %a, %b
-  store volatile i3 %r, i3 addrspace(1)* undef
-  ret void
-}
-
-; GCN-LABEL: @srem_i3(
-; SI: %r = srem i3 %a, %b
-; SI-NEXT: store volatile i3 %r
-; VI: %[[A_32:[0-9]+]] = sext i3 %a to i32
-; VI-NEXT: %[[B_32:[0-9]+]] = sext i3 %b to i32
-; VI-NEXT: %[[R_32:[0-9]+]] = srem i32 %[[A_32]], %[[B_32]]
-; VI-NEXT: %[[R_3:[0-9]+]] = trunc i32 %[[R_32]] to i3
-; VI-NEXT: store volatile i3 %[[R_3]]
-define amdgpu_kernel void @srem_i3(i3 %a, i3 %b) {
-  %r = srem i3 %a, %b
-  store volatile i3 %r, i3 addrspace(1)* undef
-  ret void
-}
-
 ; GCN-LABEL: @shl_i3(
 ; SI: %r = shl i3 %a, %b
 ; SI-NEXT: store volatile i3 %r
@@ -748,34 +720,6 @@ define amdgpu_kernel void @mul_nuw_nsw_i16(i16 %a, i16 %b) {
   ret void
 }
 
-; GCN-LABEL: @urem_i16(
-; SI: %r = urem i16 %a, %b
-; SI-NEXT: store volatile i16 %r
-; VI: %[[A_32:[0-9]+]] = zext i16 %a to i32
-; VI-NEXT: %[[B_32:[0-9]+]] = zext i16 %b to i32
-; VI-NEXT: %[[R_32:[0-9]+]] = urem i32 %[[A_32]], %[[B_32]]
-; VI-NEXT: %[[R_16:[0-9]+]] = trunc i32 %[[R_32]] to i16
-; VI-NEXT: store volatile i16 %[[R_16]]
-define amdgpu_kernel void @urem_i16(i16 %a, i16 %b) {
-  %r = urem i16 %a, %b
-  store volatile i16 %r, i16 addrspace(1)* undef
-  ret void
-}
-
-; GCN-LABEL: @srem_i16(
-; SI: %r = srem i16 %a, %b
-; SI-NEXT: store volatile i16 %r
-; VI: %[[A_32:[0-9]+]] = sext i16 %a to i32
-; VI-NEXT: %[[B_32:[0-9]+]] = sext i16 %b to i32
-; VI-NEXT: %[[R_32:[0-9]+]] = srem i32 %[[A_32]], %[[B_32]]
-; VI-NEXT: %[[R_16:[0-9]+]] = trunc i32 %[[R_32]] to i16
-; VI-NEXT: store volatile i16 %[[R_16]]
-define amdgpu_kernel void @srem_i16(i16 %a, i16 %b) {
-  %r = srem i16 %a, %b
-  store volatile i16 %r, i16 addrspace(1)* undef
-  ret void
-}
-
 ; GCN-LABEL: @shl_i16(
 ; SI: %r = shl i16 %a, %b
 ; SI-NEXT: store volatile i16 %r
@@ -1312,34 +1256,6 @@ define amdgpu_kernel void @mul_nuw_nsw_3xi15(<3 x i15> %a, <3 x i15> %b) {
   ret void
 }
 
-; GCN-LABEL: @urem_3xi15(
-; SI: %r = urem <3 x i15> %a, %b
-; SI-NEXT: store volatile <3 x i15> %r
-; VI: %[[A_32:[0-9]+]] = zext <3 x i15> %a to <3 x i32>
-; VI-NEXT: %[[B_32:[0-9]+]] = zext <3 x i15> %b to <3 x i32>
-; VI-NEXT: %[[R_32:[0-9]+]] = urem <3 x i32> %[[A_32]], %[[B_32]]
-; VI-NEXT: %[[R_15:[0-9]+]] = trunc <3 x i32> %[[R_32]] to <3 x i15>
-; VI-NEXT: store volatile <3 x i15> %[[R_15]]
-define amdgpu_kernel void @urem_3xi15(<3 x i15> %a, <3 x i15> %b) {
-  %r = urem <3 x i15> %a, %b
-  store volatile <3 x i15> %r, <3 x i15> addrspace(1)* undef
-  ret void
-}
-
-; GCN-LABEL: @srem_3xi15(
-; SI: %r = srem <3 x i15> %a, %b
-; SI-NEXT: store volatile <3 x i15> %r
-; VI: %[[A_32:[0-9]+]] = sext <3 x i15> %a to <3 x i32>
-; VI-NEXT: %[[B_32:[0-9]+]] = sext <3 x i15> %b to <3 x i32>
-; VI-NEXT: %[[R_32:[0-9]+]] = srem <3 x i32> %[[A_32]], %[[B_32]]
-; VI-NEXT: %[[R_15:[0-9]+]] = trunc <3 x i32> %[[R_32]] to <3 x i15>
-; VI-NEXT: store volatile <3 x i15> %[[R_15]]
-define amdgpu_kernel void @srem_3xi15(<3 x i15> %a, <3 x i15> %b) {
-  %r = srem <3 x i15> %a, %b
-  store volatile <3 x i15> %r, <3 x i15> addrspace(1)* undef
-  ret void
-}
-
 ; GCN-LABEL: @shl_3xi15(
 ; SI: %r = shl <3 x i15> %a, %b
 ; SI-NEXT: store volatile <3 x i15> %r
@@ -1863,34 +1779,6 @@ define amdgpu_kernel void @mul_nuw_3xi16(<3 x i16> %a, <3 x i16> %b) {
 ; VI-NEXT: store volatile <3 x i16> %[[R_16]]
 define amdgpu_kernel void @mul_nuw_nsw_3xi16(<3 x i16> %a, <3 x i16> %b) {
   %r = mul nuw nsw <3 x i16> %a, %b
-  store volatile <3 x i16> %r, <3 x i16> addrspace(1)* undef
-  ret void
-}
-
-; GCN-LABEL: @urem_3xi16(
-; SI: %r = urem <3 x i16> %a, %b
-; SI-NEXT: store volatile <3 x i16> %r
-; VI: %[[A_32:[0-9]+]] = zext <3 x i16> %a to <3 x i32>
-; VI-NEXT: %[[B_32:[0-9]+]] = zext <3 x i16> %b to <3 x i32>
-; VI-NEXT: %[[R_32:[0-9]+]] = urem <3 x i32> %[[A_32]], %[[B_32]]
-; VI-NEXT: %[[R_16:[0-9]+]] = trunc <3 x i32> %[[R_32]] to <3 x i16>
-; VI-NEXT: store volatile <3 x i16> %[[R_16]]
-define amdgpu_kernel void @urem_3xi16(<3 x i16> %a, <3 x i16> %b) {
-  %r = urem <3 x i16> %a, %b
-  store volatile <3 x i16> %r, <3 x i16> addrspace(1)* undef
-  ret void
-}
-
-; GCN-LABEL: @srem_3xi16(
-; SI: %r = srem <3 x i16> %a, %b
-; SI-NEXT: store volatile <3 x i16> %r
-; VI: %[[A_32:[0-9]+]] = sext <3 x i16> %a to <3 x i32>
-; VI-NEXT: %[[B_32:[0-9]+]] = sext <3 x i16> %b to <3 x i32>
-; VI-NEXT: %[[R_32:[0-9]+]] = srem <3 x i32> %[[A_32]], %[[B_32]]
-; VI-NEXT: %[[R_16:[0-9]+]] = trunc <3 x i32> %[[R_32]] to <3 x i16>
-; VI-NEXT: store volatile <3 x i16> %[[R_16]]
-define amdgpu_kernel void @srem_3xi16(<3 x i16> %a, <3 x i16> %b) {
-  %r = srem <3 x i16> %a, %b
   store volatile <3 x i16> %r, <3 x i16> addrspace(1)* undef
   ret void
 }

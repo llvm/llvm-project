@@ -16,8 +16,10 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/GlobalsModRef.h"
+#include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
+#include "llvm/Analysis/MustExecute.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/Analysis/ScalarEvolutionExpander.h"
@@ -553,47 +555,48 @@ bool RecurrenceDescriptor::isReductionPHI(PHINode *Phi, Loop *TheLoop,
 
   if (AddReductionVar(Phi, RK_IntegerAdd, TheLoop, HasFunNoNaNAttr, RedDes, DB,
                       AC, DT)) {
-    DEBUG(dbgs() << "Found an ADD reduction PHI." << *Phi << "\n");
+    LLVM_DEBUG(dbgs() << "Found an ADD reduction PHI." << *Phi << "\n");
     return true;
   }
   if (AddReductionVar(Phi, RK_IntegerMult, TheLoop, HasFunNoNaNAttr, RedDes, DB,
                       AC, DT)) {
-    DEBUG(dbgs() << "Found a MUL reduction PHI." << *Phi << "\n");
+    LLVM_DEBUG(dbgs() << "Found a MUL reduction PHI." << *Phi << "\n");
     return true;
   }
   if (AddReductionVar(Phi, RK_IntegerOr, TheLoop, HasFunNoNaNAttr, RedDes, DB,
                       AC, DT)) {
-    DEBUG(dbgs() << "Found an OR reduction PHI." << *Phi << "\n");
+    LLVM_DEBUG(dbgs() << "Found an OR reduction PHI." << *Phi << "\n");
     return true;
   }
   if (AddReductionVar(Phi, RK_IntegerAnd, TheLoop, HasFunNoNaNAttr, RedDes, DB,
                       AC, DT)) {
-    DEBUG(dbgs() << "Found an AND reduction PHI." << *Phi << "\n");
+    LLVM_DEBUG(dbgs() << "Found an AND reduction PHI." << *Phi << "\n");
     return true;
   }
   if (AddReductionVar(Phi, RK_IntegerXor, TheLoop, HasFunNoNaNAttr, RedDes, DB,
                       AC, DT)) {
-    DEBUG(dbgs() << "Found a XOR reduction PHI." << *Phi << "\n");
+    LLVM_DEBUG(dbgs() << "Found a XOR reduction PHI." << *Phi << "\n");
     return true;
   }
   if (AddReductionVar(Phi, RK_IntegerMinMax, TheLoop, HasFunNoNaNAttr, RedDes,
                       DB, AC, DT)) {
-    DEBUG(dbgs() << "Found a MINMAX reduction PHI." << *Phi << "\n");
+    LLVM_DEBUG(dbgs() << "Found a MINMAX reduction PHI." << *Phi << "\n");
     return true;
   }
   if (AddReductionVar(Phi, RK_FloatMult, TheLoop, HasFunNoNaNAttr, RedDes, DB,
                       AC, DT)) {
-    DEBUG(dbgs() << "Found an FMult reduction PHI." << *Phi << "\n");
+    LLVM_DEBUG(dbgs() << "Found an FMult reduction PHI." << *Phi << "\n");
     return true;
   }
   if (AddReductionVar(Phi, RK_FloatAdd, TheLoop, HasFunNoNaNAttr, RedDes, DB,
                       AC, DT)) {
-    DEBUG(dbgs() << "Found an FAdd reduction PHI." << *Phi << "\n");
+    LLVM_DEBUG(dbgs() << "Found an FAdd reduction PHI." << *Phi << "\n");
     return true;
   }
   if (AddReductionVar(Phi, RK_FloatMinMax, TheLoop, HasFunNoNaNAttr, RedDes, DB,
                       AC, DT)) {
-    DEBUG(dbgs() << "Found an float MINMAX reduction PHI." << *Phi << "\n");
+    LLVM_DEBUG(dbgs() << "Found an float MINMAX reduction PHI." << *Phi
+                      << "\n");
     return true;
   }
   // Not a reduction of known type.
@@ -921,13 +924,13 @@ bool InductionDescriptor::isFPInductionPHI(PHINode *Phi, const Loop *TheLoop,
 }
 
 /// This function is called when we suspect that the update-chain of a phi node
-/// (whose symbolic SCEV expression sin \p PhiScev) contains redundant casts, 
-/// that can be ignored. (This can happen when the PSCEV rewriter adds a runtime 
-/// predicate P under which the SCEV expression for the phi can be the 
-/// AddRecurrence \p AR; See createAddRecFromPHIWithCast). We want to find the 
-/// cast instructions that are involved in the update-chain of this induction. 
-/// A caller that adds the required runtime predicate can be free to drop these 
-/// cast instructions, and compute the phi using \p AR (instead of some scev 
+/// (whose symbolic SCEV expression sin \p PhiScev) contains redundant casts,
+/// that can be ignored. (This can happen when the PSCEV rewriter adds a runtime
+/// predicate P under which the SCEV expression for the phi can be the
+/// AddRecurrence \p AR; See createAddRecFromPHIWithCast). We want to find the
+/// cast instructions that are involved in the update-chain of this induction.
+/// A caller that adds the required runtime predicate can be free to drop these
+/// cast instructions, and compute the phi using \p AR (instead of some scev
 /// expression with casts).
 ///
 /// For example, without a predicate the scev expression can take the following
@@ -962,7 +965,7 @@ static bool getCastsForInductionPHI(PredicatedScalarEvolution &PSE,
   assert(PSE.getSCEV(PN) == AR && "Unexpected phi node SCEV expression");
   const Loop *L = AR->getLoop();
 
-  // Find any cast instructions that participate in the def-use chain of 
+  // Find any cast instructions that participate in the def-use chain of
   // PhiScev in the loop.
   // FORNOW/TODO: We currently expect the def-use chain to include only
   // two-operand instructions, where one of the operands is an invariant.
@@ -1050,7 +1053,7 @@ bool InductionDescriptor::isInductionPHI(PHINode *Phi, const Loop *TheLoop,
     AR = PSE.getAsAddRec(Phi);
 
   if (!AR) {
-    DEBUG(dbgs() << "LV: PHI is not a poly recurrence.\n");
+    LLVM_DEBUG(dbgs() << "LV: PHI is not a poly recurrence.\n");
     return false;
   }
 
@@ -1084,14 +1087,15 @@ bool InductionDescriptor::isInductionPHI(
   const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(PhiScev);
 
   if (!AR) {
-    DEBUG(dbgs() << "LV: PHI is not a poly recurrence.\n");
+    LLVM_DEBUG(dbgs() << "LV: PHI is not a poly recurrence.\n");
     return false;
   }
 
   if (AR->getLoop() != TheLoop) {
     // FIXME: We should treat this as a uniform. Unfortunately, we
     // don't currently know how to handled uniform PHIs.
-    DEBUG(dbgs() << "LV: PHI is a recurrence with respect to an outer loop.\n");
+    LLVM_DEBUG(
+        dbgs() << "LV: PHI is a recurrence with respect to an outer loop.\n");
     return false;
   }
 
@@ -1172,11 +1176,12 @@ bool llvm::formDedicatedExitBlocks(Loop *L, DominatorTree *DT, LoopInfo *LI,
         BB, InLoopPredecessors, ".loopexit", DT, LI, PreserveLCSSA);
 
     if (!NewExitBB)
-      DEBUG(dbgs() << "WARNING: Can't create a dedicated exit block for loop: "
-                   << *L << "\n");
+      LLVM_DEBUG(
+          dbgs() << "WARNING: Can't create a dedicated exit block for loop: "
+                 << *L << "\n");
     else
-      DEBUG(dbgs() << "LoopSimplify: Creating dedicated exit block "
-                   << NewExitBB->getName() << "\n");
+      LLVM_DEBUG(dbgs() << "LoopSimplify: Creating dedicated exit block "
+                        << NewExitBB->getName() << "\n");
     return true;
   };
 
@@ -1199,7 +1204,7 @@ bool llvm::formDedicatedExitBlocks(Loop *L, DominatorTree *DT, LoopInfo *LI,
   return Changed;
 }
 
-/// \brief Returns the instructions that use values defined in the loop.
+/// Returns the instructions that use values defined in the loop.
 SmallVector<Instruction *, 8> llvm::findDefsUsedOutsideOfLoop(Loop *L) {
   SmallVector<Instruction *, 8> UsedOutside;
 
@@ -1276,7 +1281,7 @@ void llvm::initializeLoopPassPass(PassRegistry &Registry) {
   INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
 }
 
-/// \brief Find string metadata for loop
+/// Find string metadata for loop
 ///
 /// If it has a value (e.g. {"llvm.distribute", 1} return the value as an
 /// operand or null otherwise.  If the string metadata is not found return
@@ -1428,6 +1433,32 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT = nullptr,
     DT->deleteEdge(Preheader, L->getHeader());
   }
 
+  // Given LCSSA form is satisfied, we should not have users of instructions
+  // within the dead loop outside of the loop. However, LCSSA doesn't take
+  // unreachable uses into account. We handle them here.
+  // We could do it after drop all references (in this case all users in the
+  // loop will be already eliminated and we have less work to do but according
+  // to API doc of User::dropAllReferences only valid operation after dropping
+  // references, is deletion. So let's substitute all usages of
+  // instruction from the loop with undef value of corresponding type first.
+  for (auto *Block : L->blocks())
+    for (Instruction &I : *Block) {
+      auto *Undef = UndefValue::get(I.getType());
+      for (Value::use_iterator UI = I.use_begin(), E = I.use_end(); UI != E;) {
+        Use &U = *UI;
+        ++UI;
+        if (auto *Usr = dyn_cast<Instruction>(U.getUser()))
+          if (L->contains(Usr->getParent()))
+            continue;
+        // If we have a DT then we can check that uses outside a loop only in
+        // unreachable block.
+        if (DT)
+          assert(!DT->isReachableFromEntry(U) &&
+                 "Unexpected user in reachable block");
+        U.set(Undef);
+      }
+    }
+
   // Remove the block from the reference counting scheme, so that we can
   // delete it freely later.
   for (auto *Block : L->blocks())
@@ -1455,54 +1486,12 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT = nullptr,
   }
 }
 
-/// Returns true if the instruction in a loop is guaranteed to execute at least
-/// once.
-bool llvm::isGuaranteedToExecute(const Instruction &Inst,
-                                 const DominatorTree *DT, const Loop *CurLoop,
-                                 const LoopSafetyInfo *SafetyInfo) {
-  // We have to check to make sure that the instruction dominates all
-  // of the exit blocks.  If it doesn't, then there is a path out of the loop
-  // which does not execute this instruction, so we can't hoist it.
-
-  // If the instruction is in the header block for the loop (which is very
-  // common), it is always guaranteed to dominate the exit blocks.  Since this
-  // is a common case, and can save some work, check it now.
-  if (Inst.getParent() == CurLoop->getHeader())
-    // If there's a throw in the header block, we can't guarantee we'll reach
-    // Inst.
-    return !SafetyInfo->HeaderMayThrow;
-
-  // Somewhere in this loop there is an instruction which may throw and make us
-  // exit the loop.
-  if (SafetyInfo->MayThrow)
-    return false;
-
-  // Get the exit blocks for the current loop.
-  SmallVector<BasicBlock *, 8> ExitBlocks;
-  CurLoop->getExitBlocks(ExitBlocks);
-
-  // Verify that the block dominates each of the exit blocks of the loop.
-  for (BasicBlock *ExitBlock : ExitBlocks)
-    if (!DT->dominates(Inst.getParent(), ExitBlock))
-      return false;
-
-  // As a degenerate case, if the loop is statically infinite then we haven't
-  // proven anything since there are no exit blocks.
-  if (ExitBlocks.empty())
-    return false;
-
-  // FIXME: In general, we have to prove that the loop isn't an infinite loop.
-  // See http::llvm.org/PR24078 .  (The "ExitBlocks.empty()" check above is
-  // just a special case of this.)
-  return true;
-}
-
 Optional<unsigned> llvm::getLoopEstimatedTripCount(Loop *L) {
   // Only support loops with a unique exiting block, and a latch.
   if (!L->getExitingBlock())
     return None;
 
-  // Get the branch weights for the the loop's backedge.
+  // Get the branch weights for the loop's backedge.
   BranchInst *LatchBR =
       dyn_cast<BranchInst>(L->getLoopLatch()->getTerminator());
   if (!LatchBR || LatchBR->getNumSuccessors() != 2)
@@ -1530,7 +1519,7 @@ Optional<unsigned> llvm::getLoopEstimatedTripCount(Loop *L) {
     return (FalseVal + (TrueVal / 2)) / TrueVal;
 }
 
-/// \brief Adds a 'fast' flag to floating point operations.
+/// Adds a 'fast' flag to floating point operations.
 static Value *addFastMathFlag(Value *V) {
   if (isa<FPMathOperator>(V)) {
     FastMathFlags Flags;
@@ -1538,6 +1527,38 @@ static Value *addFastMathFlag(Value *V) {
     cast<Instruction>(V)->setFastMathFlags(Flags);
   }
   return V;
+}
+
+// Helper to generate an ordered reduction.
+Value *
+llvm::getOrderedReduction(IRBuilder<> &Builder, Value *Acc, Value *Src,
+                          unsigned Op,
+                          RecurrenceDescriptor::MinMaxRecurrenceKind MinMaxKind,
+                          ArrayRef<Value *> RedOps) {
+  unsigned VF = Src->getType()->getVectorNumElements();
+
+  // Extract and apply reduction ops in ascending order:
+  // e.g. ((((Acc + Scl[0]) + Scl[1]) + Scl[2]) + ) ... + Scl[VF-1]
+  Value *Result = Acc;
+  for (unsigned ExtractIdx = 0; ExtractIdx != VF; ++ExtractIdx) {
+    Value *Ext =
+        Builder.CreateExtractElement(Src, Builder.getInt32(ExtractIdx));
+
+    if (Op != Instruction::ICmp && Op != Instruction::FCmp) {
+      Result = Builder.CreateBinOp((Instruction::BinaryOps)Op, Result, Ext,
+                                   "bin.rdx");
+    } else {
+      assert(MinMaxKind != RecurrenceDescriptor::MRK_Invalid &&
+             "Invalid min/max");
+      Result = RecurrenceDescriptor::createMinMaxOp(Builder, MinMaxKind, Result,
+                                                    Ext);
+    }
+
+    if (!RedOps.empty())
+      propagateIRFlags(Result, RedOps);
+  }
+
+  return Result;
 }
 
 // Helper to generate a log2 shuffle reduction.

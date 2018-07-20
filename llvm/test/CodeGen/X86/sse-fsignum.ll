@@ -62,46 +62,18 @@ entry:
 ;
 
 define void @signum32b(<8 x float>*) {
-; AVX1-LABEL: signum32b:
-; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    vmovaps (%rdi), %ymm0
-; AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vcmpltps %ymm1, %ymm0, %ymm2
-; AVX1-NEXT:    vcvtdq2ps %ymm2, %ymm2
-; AVX1-NEXT:    vcmpltps %ymm0, %ymm1, %ymm0
-; AVX1-NEXT:    vcvtdq2ps %ymm0, %ymm0
-; AVX1-NEXT:    vsubps %ymm0, %ymm2, %ymm0
-; AVX1-NEXT:    vmovaps %ymm0, (%rdi)
-; AVX1-NEXT:    vzeroupper
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: signum32b:
-; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    vmovaps (%rdi), %ymm0
-; AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vcmpltps %ymm1, %ymm0, %ymm2
-; AVX2-NEXT:    vcvtdq2ps %ymm2, %ymm2
-; AVX2-NEXT:    vcmpltps %ymm0, %ymm1, %ymm0
-; AVX2-NEXT:    vcvtdq2ps %ymm0, %ymm0
-; AVX2-NEXT:    vsubps %ymm0, %ymm2, %ymm0
-; AVX2-NEXT:    vmovaps %ymm0, (%rdi)
-; AVX2-NEXT:    vzeroupper
-; AVX2-NEXT:    retq
-;
-; AVX512F-LABEL: signum32b:
-; AVX512F:       # %bb.0: # %entry
-; AVX512F-NEXT:    vmovaps (%rdi), %ymm0
-; AVX512F-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX512F-NEXT:    vcmpltps %zmm1, %zmm0, %k1
-; AVX512F-NEXT:    vpternlogd $255, %zmm2, %zmm2, %zmm2 {%k1} {z}
-; AVX512F-NEXT:    vcvtdq2ps %ymm2, %ymm2
-; AVX512F-NEXT:    vcmpltps %zmm0, %zmm1, %k1
-; AVX512F-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
-; AVX512F-NEXT:    vcvtdq2ps %ymm0, %ymm0
-; AVX512F-NEXT:    vsubps %ymm0, %ymm2, %ymm0
-; AVX512F-NEXT:    vmovaps %ymm0, (%rdi)
-; AVX512F-NEXT:    vzeroupper
-; AVX512F-NEXT:    retq
+; AVX-LABEL: signum32b:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    vmovaps (%rdi), %ymm0
+; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vcmpltps %ymm1, %ymm0, %ymm2
+; AVX-NEXT:    vcvtdq2ps %ymm2, %ymm2
+; AVX-NEXT:    vcmpltps %ymm0, %ymm1, %ymm0
+; AVX-NEXT:    vcvtdq2ps %ymm0, %ymm0
+; AVX-NEXT:    vsubps %ymm0, %ymm2, %ymm0
+; AVX-NEXT:    vmovaps %ymm0, (%rdi)
+; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    retq
 entry:
   %1 = load <8 x float>, <8 x float>* %0
   %2 = fcmp olt <8 x float> %1, zeroinitializer

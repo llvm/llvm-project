@@ -15,8 +15,8 @@ body: |
 
     ; CHECK-LABEL: test
 
-    ; CHECK:      early-clobber %r31r30 = STPtrPiRr killed %r31r30, %r28, 52
-    ; CHECK-NEXT: early-clobber %r31r30 = STPtrPiRr killed %r31r30, %r29, 52
+    ; CHECK:      early-clobber $r31r30 = STPtrPiRr killed $r31r30, $r28, 52
+    ; CHECK-NEXT: early-clobber $r31r30 = STPtrPiRr killed $r31r30, $r29, 52
 
-    %r31r30 = STWPtrPiRr %r31r30, %r29r28, 52
+    $r31r30 = STWPtrPiRr $r31r30, $r29r28, 52
 ...

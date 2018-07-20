@@ -1,6 +1,16 @@
 // RUN: llvm-mc -triple=aarch64-none-linux-gnu < %s | FileCheck %s
 // RUN: not llvm-mc -mattr=+no-neg-immediates -triple=aarch64-none-linux-gnu < %s 2>&1 | FileCheck %s --check-prefix=CHECK-NO-NEG-IMM
 
+        add w0, w2, #4096
+        sub w0, w2, #4096
+// CHECK: add w0, w2, #1, lsl #12
+// CHECK: sub w0, w2, #1, lsl #12
+
+        add w0, w2, #-4096
+        sub w0, w2, #-4096
+// CHECK: sub w0, w2, #1, lsl #12
+// CHECK: add w0, w2, #1, lsl #12
+
 // CHECK: sub w0, w2, #2, lsl #12
 // CHECK: sub w0, w2, #2, lsl #12
 // CHECK-NO-NEG-IMM: instruction requires: NegativeImmediates

@@ -19,5 +19,5 @@
 type = Library
 name = ARMDisassembler
 parent = ARM
-required_libraries = ARMDesc ARMInfo MCDisassembler Support
+required_libraries = ARMDesc ARMInfo MCDisassembler Support ARMUtils
 add_to_library_groups = ARM

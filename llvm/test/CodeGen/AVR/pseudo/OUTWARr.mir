@@ -15,8 +15,8 @@ body: |
 
     ; CHECK-LABEL: test
 
-    ; CHECK:      OUTARr 32, %r15
-    ; CHECK-NEXT: OUTARr 31, %r14
+    ; CHECK:      OUTARr 32, $r15
+    ; CHECK-NEXT: OUTARr 31, $r14
 
-    OUTWARr 31, %r15r14
+    OUTWARr 31, $r15r14
 ...

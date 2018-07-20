@@ -17,8 +17,8 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: movw  $15212, 4(%rdi)
 ; CHECK: movl  $1802117222, (%rdi)
 define void @foo(i8* %tmp2) {
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %tmp2, i8* getelementptr inbounds ([10 x i8], [10 x i8]* @0, i64 0, i64 3), i64 7, i32 1, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %tmp2, i8* getelementptr inbounds ([10 x i8], [10 x i8]* @0, i64 0, i64 3), i64 7, i1 false)
   ret void
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i32, i1)
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i1)

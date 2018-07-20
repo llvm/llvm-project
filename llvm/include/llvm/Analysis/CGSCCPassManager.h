@@ -119,7 +119,7 @@ extern template class AllAnalysesOn<LazyCallGraph::SCC>;
 
 extern template class AnalysisManager<LazyCallGraph::SCC, LazyCallGraph &>;
 
-/// \brief The CGSCC analysis manager.
+/// The CGSCC analysis manager.
 ///
 /// See the documentation for the AnalysisManager template for detail
 /// documentation. This type serves as a convenient way to refer to this
@@ -140,7 +140,7 @@ PassManager<LazyCallGraph::SCC, CGSCCAnalysisManager, LazyCallGraph &,
 extern template class PassManager<LazyCallGraph::SCC, CGSCCAnalysisManager,
                                   LazyCallGraph &, CGSCCUpdateResult &>;
 
-/// \brief The CGSCC pass manager.
+/// The CGSCC pass manager.
 ///
 /// See the documentation for the PassManager template for details. It runs
 /// a sequence of SCC passes over each SCC that the manager is run over. This
@@ -175,10 +175,10 @@ public:
   explicit Result(CGSCCAnalysisManager &InnerAM, LazyCallGraph &G)
       : InnerAM(&InnerAM), G(&G) {}
 
-  /// \brief Accessor for the analysis manager.
+  /// Accessor for the analysis manager.
   CGSCCAnalysisManager &getManager() { return *InnerAM; }
 
-  /// \brief Handler for invalidation of the Module.
+  /// Handler for invalidation of the Module.
   ///
   /// If the proxy analysis itself is preserved, then we assume that the set of
   /// SCCs in the Module hasn't changed. Thus any pointers to SCCs in the
@@ -302,7 +302,7 @@ struct CGSCCUpdateResult {
       &InlinedInternalEdges;
 };
 
-/// \brief The core module pass which does a post-order walk of the SCCs and
+/// The core module pass which does a post-order walk of the SCCs and
 /// runs a CGSCC pass over each one.
 ///
 /// Designed to allow composition of a CGSCCPass(Manager) and
@@ -338,7 +338,7 @@ public:
     return *this;
   }
 
-  /// \brief Runs the CGSCC pass across every SCC in the module.
+  /// Runs the CGSCC pass across every SCC in the module.
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM) {
     // Setup the CGSCC analysis manager from its proxy.
     CGSCCAnalysisManager &CGAM =
@@ -387,17 +387,17 @@ public:
       do {
         LazyCallGraph::RefSCC *RC = RCWorklist.pop_back_val();
         if (InvalidRefSCCSet.count(RC)) {
-          DEBUG(dbgs() << "Skipping an invalid RefSCC...\n");
+          LLVM_DEBUG(dbgs() << "Skipping an invalid RefSCC...\n");
           continue;
         }
 
         assert(CWorklist.empty() &&
                "Should always start with an empty SCC worklist");
 
-        DEBUG(dbgs() << "Running an SCC pass across the RefSCC: " << *RC
-                     << "\n");
+        LLVM_DEBUG(dbgs() << "Running an SCC pass across the RefSCC: " << *RC
+                          << "\n");
 
-        // Push the initial SCCs in reverse post-order as we'll pop off the the
+        // Push the initial SCCs in reverse post-order as we'll pop off the
         // back and so see this in post-order.
         for (LazyCallGraph::SCC &C : llvm::reverse(*RC))
           CWorklist.insert(&C);
@@ -409,12 +409,13 @@ public:
           // other RefSCCs should be queued above, so we just need to skip both
           // scenarios here.
           if (InvalidSCCSet.count(C)) {
-            DEBUG(dbgs() << "Skipping an invalid SCC...\n");
+            LLVM_DEBUG(dbgs() << "Skipping an invalid SCC...\n");
             continue;
           }
           if (&C->getOuterRefSCC() != RC) {
-            DEBUG(dbgs() << "Skipping an SCC that is now part of some other "
-                            "RefSCC...\n");
+            LLVM_DEBUG(dbgs()
+                       << "Skipping an SCC that is now part of some other "
+                          "RefSCC...\n");
             continue;
           }
 
@@ -436,7 +437,8 @@ public:
             // If the CGSCC pass wasn't able to provide a valid updated SCC,
             // the current SCC may simply need to be skipped if invalid.
             if (UR.InvalidatedSCCs.count(C)) {
-              DEBUG(dbgs() << "Skipping invalidated root or island SCC!\n");
+              LLVM_DEBUG(dbgs()
+                         << "Skipping invalidated root or island SCC!\n");
               break;
             }
             // Check that we didn't miss any update scenario.
@@ -464,9 +466,10 @@ public:
             // FIXME: If we ever start having RefSCC passes, we'll want to
             // iterate there too.
             if (UR.UpdatedC)
-              DEBUG(dbgs() << "Re-running SCC passes after a refinement of the "
-                              "current SCC: "
-                           << *UR.UpdatedC << "\n");
+              LLVM_DEBUG(dbgs()
+                         << "Re-running SCC passes after a refinement of the "
+                            "current SCC: "
+                         << *UR.UpdatedC << "\n");
 
             // Note that both `C` and `RC` may at this point refer to deleted,
             // invalid SCC and RefSCCs respectively. But we will short circuit
@@ -494,7 +497,7 @@ private:
   CGSCCPassT Pass;
 };
 
-/// \brief A function to deduce a function pass type and wrap it in the
+/// A function to deduce a function pass type and wrap it in the
 /// templated adaptor.
 template <typename CGSCCPassT>
 ModuleToPostOrderCGSCCPassAdaptor<CGSCCPassT>
@@ -517,7 +520,7 @@ public:
   public:
     explicit Result(FunctionAnalysisManager &FAM) : FAM(&FAM) {}
 
-    /// \brief Accessor for the analysis manager.
+    /// Accessor for the analysis manager.
     FunctionAnalysisManager &getManager() { return *FAM; }
 
     bool invalidate(LazyCallGraph::SCC &C, const PreservedAnalyses &PA,
@@ -552,7 +555,7 @@ LazyCallGraph::SCC &updateCGAndAnalysisManagerForFunctionPass(
     LazyCallGraph &G, LazyCallGraph::SCC &C, LazyCallGraph::Node &N,
     CGSCCAnalysisManager &AM, CGSCCUpdateResult &UR);
 
-/// \brief Adaptor that maps from a SCC to its functions.
+/// Adaptor that maps from a SCC to its functions.
 ///
 /// Designed to allow composition of a FunctionPass(Manager) and
 /// a CGSCCPassManager. Note that if this pass is constructed with a pointer
@@ -585,7 +588,7 @@ public:
     return *this;
   }
 
-  /// \brief Runs the function pass across every function in the module.
+  /// Runs the function pass across every function in the module.
   PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
                         LazyCallGraph &CG, CGSCCUpdateResult &UR) {
     // Setup the function analysis manager from its proxy.
@@ -601,7 +604,8 @@ public:
     // a pointer we can overwrite.
     LazyCallGraph::SCC *CurrentC = &C;
 
-    DEBUG(dbgs() << "Running function passes across an SCC: " << C << "\n");
+    LLVM_DEBUG(dbgs() << "Running function passes across an SCC: " << C
+                      << "\n");
 
     PreservedAnalyses PA = PreservedAnalyses::all();
     for (LazyCallGraph::Node *N : Nodes) {
@@ -652,7 +656,7 @@ private:
   FunctionPassT Pass;
 };
 
-/// \brief A function to deduce a function pass type and wrap it in the
+/// A function to deduce a function pass type and wrap it in the
 /// templated adaptor.
 template <typename FunctionPassT>
 CGSCCToFunctionPassAdaptor<FunctionPassT>
@@ -757,9 +761,9 @@ public:
         if (!F)
           return false;
 
-        DEBUG(dbgs() << "Found devirutalized call from "
-                     << CS.getParent()->getParent()->getName() << " to "
-                     << F->getName() << "\n");
+        LLVM_DEBUG(dbgs() << "Found devirutalized call from "
+                          << CS.getParent()->getParent()->getName() << " to "
+                          << F->getName() << "\n");
 
         // We now have a direct call where previously we had an indirect call,
         // so iterate to process this devirtualization site.
@@ -793,16 +797,18 @@ public:
 
       // Otherwise, if we've already hit our max, we're done.
       if (Iteration >= MaxIterations) {
-        DEBUG(dbgs() << "Found another devirtualization after hitting the max "
-                        "number of repetitions ("
-                     << MaxIterations << ") on SCC: " << *C << "\n");
+        LLVM_DEBUG(
+            dbgs() << "Found another devirtualization after hitting the max "
+                      "number of repetitions ("
+                   << MaxIterations << ") on SCC: " << *C << "\n");
         PA.intersect(std::move(PassPA));
         break;
       }
 
-      DEBUG(dbgs()
-            << "Repeating an SCC pass after finding a devirtualization in: "
-            << *C << "\n");
+      LLVM_DEBUG(
+          dbgs()
+          << "Repeating an SCC pass after finding a devirtualization in: " << *C
+          << "\n");
 
       // Move over the new call counts in preparation for iterating.
       CallCounts = std::move(NewCallCounts);
@@ -824,7 +830,7 @@ private:
   int MaxIterations;
 };
 
-/// \brief A function to deduce a function pass type and wrap it in the
+/// A function to deduce a function pass type and wrap it in the
 /// templated adaptor.
 template <typename PassT>
 DevirtSCCRepeatedPass<PassT> createDevirtSCCRepeatedPass(PassT Pass,

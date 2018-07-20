@@ -306,11 +306,13 @@ CodeGenInstruction::CodeGenInstruction(Record *R)
   isIndirectBranch = R->getValueAsBit("isIndirectBranch");
   isCompare    = R->getValueAsBit("isCompare");
   isMoveImm    = R->getValueAsBit("isMoveImm");
+  isMoveReg    = R->getValueAsBit("isMoveReg");
   isBitcast    = R->getValueAsBit("isBitcast");
   isSelect     = R->getValueAsBit("isSelect");
   isBarrier    = R->getValueAsBit("isBarrier");
   isCall       = R->getValueAsBit("isCall");
   isAdd        = R->getValueAsBit("isAdd");
+  isTrap       = R->getValueAsBit("isTrap");
   canFoldAsLoad = R->getValueAsBit("canFoldAsLoad");
   isPredicable = Operands.isPredicable || R->getValueAsBit("isPredicable");
   isConvertibleToThreeAddress = R->getValueAsBit("isConvertibleToThreeAddress");
@@ -327,6 +329,7 @@ CodeGenInstruction::CodeGenInstruction(Record *R)
   isInsertSubreg = R->getValueAsBit("isInsertSubreg");
   isConvergent = R->getValueAsBit("isConvergent");
   hasNoSchedulingInfo = R->getValueAsBit("hasNoSchedulingInfo");
+  FastISelShouldIgnore = R->getValueAsBit("FastISelShouldIgnore");
 
   bool Unset;
   mayLoad      = R->getValueAsBitOrUnset("mayLoad", Unset);
@@ -343,6 +346,10 @@ CodeGenInstruction::CodeGenInstruction(Record *R)
   isPseudo = R->getValueAsBit("isPseudo");
   ImplicitDefs = R->getValueAsListOfDefs("Defs");
   ImplicitUses = R->getValueAsListOfDefs("Uses");
+
+  // This flag is only inferred from the pattern.
+  hasChain = false;
+  hasChain_Inferred = false;
 
   // Parse Constraints.
   ParseConstraints(R->getValueAsString("Constraints"), Operands);
@@ -588,12 +595,10 @@ unsigned CodeGenInstAlias::ResultOperand::getMINumOperands() const {
   return MIOpInfo->getNumArgs();
 }
 
-CodeGenInstAlias::CodeGenInstAlias(Record *R, unsigned Variant,
-                                   CodeGenTarget &T)
+CodeGenInstAlias::CodeGenInstAlias(Record *R, CodeGenTarget &T)
     : TheDef(R) {
   Result = R->getValueAsDag("ResultInst");
   AsmString = R->getValueAsString("AsmString");
-  AsmString = CodeGenInstruction::FlattenAsmStringVariants(AsmString, Variant);
 
 
   // Verify that the root of the result is an instruction.
@@ -630,8 +635,14 @@ CodeGenInstAlias::CodeGenInstAlias(Record *R, unsigned Variant,
     // of a complex operand, in which case we include them anyways, as we
     // don't have any other way to specify the whole operand.
     if (ResultInst->Operands[i].MINumOperands == 1 &&
-        ResultInst->Operands[i].getTiedRegister() != -1)
-      continue;
+        ResultInst->Operands[i].getTiedRegister() != -1) {
+      // Tied operands of different RegisterClass should be explicit within an
+      // instruction's syntax and so cannot be skipped.
+      int TiedOpNum = ResultInst->Operands[i].getTiedRegister();
+      if (ResultInst->Operands[i].Rec->getName() ==
+          ResultInst->Operands[TiedOpNum].Rec->getName())
+        continue;
+    }
 
     if (AliasOpNo >= Result->getNumArgs())
       PrintFatalError(R->getLoc(), "not enough arguments for instruction!");

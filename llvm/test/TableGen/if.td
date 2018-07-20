@@ -56,6 +56,47 @@ def D128: S<128>;
 // CHECK: def D8
 // CHECK-NEXT: bits<2> val = { 0, 0 };
 
+// Make sure !if gets propagated across multiple layers of inheritance.
+class getInt<int c> {
+  int ret = !if(c, 0, 1);
+}
+class I1<int c> {
+  int i = getInt<c>.ret;
+}
+class I2<int c> : I1<c>;
+
+// CHECK: def DI1 {     // I1
+// CHECK-NEXT: int i = 0;
+def DI1: I1<1>;
+
+// CHECK: def DI2 {     // I1 I2
+// CHECK-NEXT: int i = 0;
+def DI2: I2<1>;
+
+// Check that !if with operands of different subtypes can initialize a
+// supertype variable.
+//
+// CHECK: def EXd1 {
+// CHECK:   E x = E1d;
+// CHECK: }
+//
+// CHECK: def EXd2 {
+// CHECK:   E x = E2d;
+// CHECK: }
+class E<int dummy> {}
+class E1<int dummy> : E<dummy> {}
+class E2<int dummy> : E<dummy> {}
+
+class EX<int cc, E1 b, E2 c> {
+  E x = !if(cc, b, c);
+}
+
+def E1d : E1<0>;
+def E2d : E2<0>;
+
+def EXd1 : EX<1, E1d, E2d>;
+def EXd2 : EX<0, E1d, E2d>;
+
 // CHECK:      def One
 // CHECK-NEXT: list<int> first = [1, 2, 3];
 // CHECK-NEXT: list<int> rest = [1, 2, 3];

@@ -206,15 +206,10 @@ void FunctionImportGlobalProcessing::processGlobalForThinLTO(GlobalValue &GV) {
   // definition.
   if (GV.hasName()) {
     ValueInfo VI = ImportIndex.getValueInfo(GV.getGUID());
-    if (VI) {
-      // Need to check all summaries are local in case of hash collisions.
-      bool IsLocal = VI.getSummaryList().size() &&
-          llvm::all_of(VI.getSummaryList(),
-                       [](const std::unique_ptr<GlobalValueSummary> &Summary) {
-                         return Summary->isDSOLocal();
-                       });
-      if (IsLocal)
-        GV.setDSOLocal(true);
+    if (VI && VI.isDSOLocal()) {
+      GV.setDSOLocal(true);
+      if (GV.hasDLLImportStorageClass())
+        GV.setDLLStorageClass(GlobalValue::DefaultStorageClass);
     }
   }
 

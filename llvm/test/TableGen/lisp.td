@@ -5,14 +5,12 @@
 // CHECK-NEXT:   string element = "Jeffrey Sinclair";
 // CHECK-NEXT:   list<string> rest = [];
 // CHECK-NEXT:   int null = 1;
-// CHECK-NEXT:   string NAME = ?;
 // CHECK-NEXT: }
 // CHECK-NEXT: def Three {
 // CHECK-NEXT:   list<string> names = ["Tom", "Dick", "Harry"];
 // CHECK-NEXT:   string element = "Tom";
 // CHECK-NEXT:   list<string> rest = ["Dick", "Harry"];
 // CHECK-NEXT:   int null = 0;
-// CHECK-NEXT:   string NAME = ?;
 // CHECK-NEXT: }
 
 class List<list<string> n> {

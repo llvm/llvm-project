@@ -21,6 +21,7 @@ enum class ExceptionHandling {
   SjLj,     /// setjmp/longjmp based exceptions
   ARM,      /// ARM EHABI
   WinEH,    /// Windows Exception Handling
+  Wasm,     /// WebAssembly Exception Handling
 };
 
 enum class DebugCompressionType {

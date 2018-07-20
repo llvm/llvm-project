@@ -3,5 +3,8 @@ RUN: llvm-mt /h | FileCheck %s -check-prefix=HELP
 HELP:      OVERVIEW: Manifest Tool
 
 RUN: not llvm-mt /foo 2>&1 >/dev/null | FileCheck %s -check-prefix=INVALID
+INVALID: llvm-mt: error: invalid option '/foo'
 
-INVALID: llvm-mt error: invalid option /foo
+RUN: not llvm-mt /oyt:%t 2>&1 | FileCheck %s -check-prefix=INVALID-BUT-CLOSE
+INVALID-BUT-CLOSE: llvm-mt: error: invalid option '/oyt:{{.*}}help.test.tmp', did you mean '/out:{{.*}}help.test.tmp'?
+

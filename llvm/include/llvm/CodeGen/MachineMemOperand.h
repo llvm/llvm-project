@@ -184,7 +184,7 @@ public:
   /// atomic operations the atomic ordering requirements when store does not
   /// occur must also be specified.
   MachineMemOperand(MachinePointerInfo PtrInfo, Flags flags, uint64_t s,
-                    unsigned base_alignment,
+                    uint64_t a,
                     const AAMDNodes &AAInfo = AAMDNodes(),
                     const MDNode *Ranges = nullptr,
                     SyncScope::ID SSID = SyncScope::System,
@@ -295,6 +295,9 @@ public:
   /// @{
   void print(raw_ostream &OS) const;
   void print(raw_ostream &OS, ModuleSlotTracker &MST) const;
+  void print(raw_ostream &OS, ModuleSlotTracker &MST,
+             SmallVectorImpl<StringRef> &SSNs, const LLVMContext &Context,
+             const MachineFrameInfo *MFI, const TargetInstrInfo *TII) const;
   /// @}
 
   friend bool operator==(const MachineMemOperand &LHS,

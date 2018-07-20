@@ -16,9 +16,9 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DIContext.h"
+#include "llvm/DebugInfo/DWARF/DWARFAddressRange.h"
 #include "llvm/DebugInfo/DWARF/DWARFAttribute.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugInfoEntry.h"
-#include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
 #include <cassert>
 #include <cstdint>
 #include <iterator>
@@ -104,11 +104,23 @@ public:
   /// invalid DWARFDie instance if it doesn't.
   DWARFDie getSibling() const;
 
+  /// Get the previous sibling of this DIE object.
+  ///
+  /// \returns a valid DWARFDie instance if this object has a sibling or an
+  /// invalid DWARFDie instance if it doesn't.
+  DWARFDie getPreviousSibling() const;
+
   /// Get the first child of this DIE object.
   ///
   /// \returns a valid DWARFDie instance if this object has children or an
   /// invalid DWARFDie instance if it doesn't.
   DWARFDie getFirstChild() const;
+
+  /// Get the last child of this DIE object.
+  ///
+  /// \returns a valid null DWARFDie instance if this object has children or an
+  /// invalid DWARFDie instance if it doesn't.
+  DWARFDie getLastChild() const;
 
   /// Dump the DIE and all of its attributes to the supplied stream.
   ///
@@ -207,7 +219,7 @@ public:
   ///
   /// \returns a address range vector that might be empty if no address range
   /// information is available.
-  DWARFAddressRangesVector getAddressRanges() const;
+  Expected<DWARFAddressRangesVector> getAddressRanges() const;
 
   /// Get all address ranges for any DW_TAG_subprogram DIEs in this DIE or any
   /// of its children.
@@ -288,6 +300,7 @@ public:
   explicit attribute_iterator(DWARFDie D, bool End);
 
   attribute_iterator &operator++();
+  attribute_iterator &operator--();
   explicit operator bool() const { return AttrValue.isValid(); }
   const DWARFAttribute &operator*() const { return AttrValue; }
   bool operator==(const attribute_iterator &X) const { return Index == X.Index; }
@@ -306,26 +319,23 @@ inline bool operator<(const DWARFDie &LHS, const DWARFDie &RHS) {
   return LHS.getOffset() < RHS.getOffset();
 }
 
-class DWARFDie::iterator : public iterator_facade_base<iterator,
-                                                      std::forward_iterator_tag,
-                                                      const DWARFDie> {
+class DWARFDie::iterator
+    : public iterator_facade_base<iterator, std::bidirectional_iterator_tag,
+                                  const DWARFDie> {
   DWARFDie Die;
-  void skipNull() {
-    if (Die && Die.isNULL())
-      Die = DWARFDie();
-  }
 public:
   iterator() = default;
 
   explicit iterator(DWARFDie D) : Die(D) {
-    // If we start out with only a Null DIE then invalidate.
-    skipNull();
   }
 
   iterator &operator++() {
     Die = Die.getSibling();
-    // Don't include the NULL die when iterating.
-    skipNull();
+    return *this;
+  }
+
+  iterator &operator--() {
+    Die = Die.getPreviousSibling();
     return *this;
   }
 
@@ -341,7 +351,7 @@ inline DWARFDie::iterator DWARFDie::begin() const {
 }
 
 inline DWARFDie::iterator DWARFDie::end() const {
-  return iterator();
+  return iterator(getLastChild());
 }
 
 inline iterator_range<DWARFDie::iterator> DWARFDie::children() const {

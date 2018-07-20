@@ -1,0 +1,42 @@
+# RUN: not llc -mtriple=aarch64-- -run-pass=legalizer %s -o - 2>&1 | FileCheck %s
+# REQUIRES: asserts
+
+# This is to demonstrate what kind of bugs we're missing w/o some kind
+# of validation for LegalizerInfo: G_INTTOPTR could only be legal /
+# could be legalized if its destination operand has a pointer type and
+# its source - a scalar type of an appropriate size. This test meets
+# the requirements for type index 0 (the pointer) and LLT-size
+# requirements for type index 1 (64 bits for AArch64), but has a
+# non-scalar (vector) type for type index 1. The Legalizer is expected
+# to fail on it with an appropriate error message. Prior to
+# LegalizerInfo::verify AArch64 legalizer had a subtle bug in its
+# definition that caused it to accept the following MIR as legal.
+# Namely, it checked that type index 0 is either s64 or p0 and
+# implicitly declared any type for type index 1 as legal (as soon as
+# its size is 64 bits). As LegalizerInfo::verify asserts on such a
+# definition due to type index 1 not being covered by a specific
+# action (not just `unsupportedIf`) it forces to review the definition
+# and fix the mistake: check that type index 0 is p0 and type index 1
+# is s64.
+
+# CHECK:      LLVM ERROR: unable to legalize instruction:
+# CHECK-SAME: %{{[0-9]+}}:_(p0) = G_INTTOPTR %{{[0-9]+}}:_(<4 x s16>)
+# CHECK-SAME: (in function: broken)
+
+---
+name:            broken
+alignment:       2
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body:             |
+  bb.1:
+    liveins: $d0
+
+    %0:_(<4 x s16>) = COPY $d0
+    %1:_(p0) = G_INTTOPTR %0(<4 x s16>)
+    $x0 = COPY %1(p0)
+    RET_ReallyLR implicit $x0
+
+...

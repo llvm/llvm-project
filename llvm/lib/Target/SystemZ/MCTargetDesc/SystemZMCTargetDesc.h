@@ -20,7 +20,7 @@ class MCAsmBackend;
 class MCCodeEmitter;
 class MCContext;
 class MCInstrInfo;
-class MCObjectWriter;
+class MCObjectTargetWriter;
 class MCRegisterInfo;
 class MCSubtargetInfo;
 class MCTargetOptions;
@@ -93,8 +93,7 @@ MCAsmBackend *createSystemZMCAsmBackend(const Target &T,
                                         const MCRegisterInfo &MRI,
                                         const MCTargetOptions &Options);
 
-std::unique_ptr<MCObjectWriter> createSystemZObjectWriter(raw_pwrite_stream &OS,
-                                                          uint8_t OSABI);
+std::unique_ptr<MCObjectTargetWriter> createSystemZObjectWriter(uint8_t OSABI);
 } // end namespace llvm
 
 // Defines symbolic names for SystemZ registers.

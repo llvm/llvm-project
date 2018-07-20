@@ -25,8 +25,11 @@ def MipsGenericModel : SchedMachineModel {
   int HighLatency = 37;
   list<Predicate> UnsupportedFeatures = [];
 
-  let CompleteModel = 1;
+  let CompleteModel = 0;
   let PostRAScheduler = 1;
+
+  // FIXME: Remove when all errors have been fixed.
+  let FullInstRWOverlapCheck = 0;
 }
 
 let SchedModel = MipsGenericModel in {
@@ -71,12 +74,12 @@ def : ItinRW<[GenericWriteMDUtoGPR], [II_MUL]>;
 def GenericWriteDIV : SchedWriteRes<[GenericIssueDIV]> {
   // Estimated worst case
   let Latency = 33;
-  let ResourceCycles = [1, 33];
+  let ResourceCycles = [33];
 }
 def GenericWriteDIVU : SchedWriteRes<[GenericIssueDIV]> {
   // Estimated worst case
   let Latency = 31;
-  let ResourceCycles = [1, 31];
+  let ResourceCycles = [31];
 }
 
 def : ItinRW<[GenericWriteDIV], [II_DIV]>;

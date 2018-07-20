@@ -1,8 +1,12 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv5 -disable-hsdr < %s | FileCheck %s
+; REQUIRES: asserts
+; RUN: llc -march=hexagon -mcpu=hexagonv5 -disable-hsdr --stats -o - 2>&1 < %s | FileCheck %s
 
 ; Check that store is post-incremented.
 ; CHECK-NOT: extractu(r{{[0-9]+}},#32,
 ; CHECK-NOT: insert
+; CHECK-NOT: Number of node order issues found
+; CHECK: Number of loops software pipelined
+; CHECK-NOT: Number of node order issues found
 target datalayout = "e-p:32:32:32-i64:64:64-i32:32:32-i16:16:16-i1:32:32-f64:64:64-f32:32:32-v64:64:64-v32:32:32-a0:0-n16:32"
 target triple = "hexagon"
 

@@ -54,7 +54,7 @@ struct isPodLike<std::pair<T, U>> {
   static const bool value = isPodLike<T>::value && isPodLike<U>::value;
 };
 
-/// \brief Metafunction that determines whether the given type is either an
+/// Metafunction that determines whether the given type is either an
 /// integral type or an enumeration type, including enum classes.
 ///
 /// Note that this accepts potentially more integral types than is_integral
@@ -73,7 +73,7 @@ public:
        std::is_convertible<UnderlyingT, unsigned long long>::value);
 };
 
-/// \brief If T is a pointer, just return it. If it is not, return T&.
+/// If T is a pointer, just return it. If it is not, return T&.
 template<typename T, typename Enable = void>
 struct add_lvalue_reference_if_not_pointer { using type = T &; };
 
@@ -83,7 +83,7 @@ struct add_lvalue_reference_if_not_pointer<
   using type = T;
 };
 
-/// \brief If T is a pointer to X, return a pointer to const X. If it is not,
+/// If T is a pointer to X, return a pointer to const X. If it is not,
 /// return const T.
 template<typename T, typename Enable = void>
 struct add_const_past_pointer { using type = const T; };
@@ -104,12 +104,51 @@ struct const_pointer_or_const_ref<
   using type = typename add_const_past_pointer<T>::type;
 };
 
+namespace detail {
+/// Internal utility to detect trivial copy construction.
+template<typename T> union copy_construction_triviality_helper {
+    T t;
+    copy_construction_triviality_helper() = default;
+    copy_construction_triviality_helper(const copy_construction_triviality_helper&) = default;
+    ~copy_construction_triviality_helper() = default;
+};
+/// Internal utility to detect trivial move construction.
+template<typename T> union move_construction_triviality_helper {
+    T t;
+    move_construction_triviality_helper() = default;
+    move_construction_triviality_helper(move_construction_triviality_helper&&) = default;
+    ~move_construction_triviality_helper() = default;
+};
+} // end namespace detail
+
+/// An implementation of `std::is_trivially_copy_constructible` since we have
+/// users with STLs that don't yet include it.
+template <typename T>
+struct is_trivially_copy_constructible
+    : std::is_copy_constructible<
+          ::llvm::detail::copy_construction_triviality_helper<T>> {};
+template <typename T>
+struct is_trivially_copy_constructible<T &> : std::true_type {};
+template <typename T>
+struct is_trivially_copy_constructible<T &&> : std::false_type {};
+
+/// An implementation of `std::is_trivially_move_constructible` since we have
+/// users with STLs that don't yet include it.
+template <typename T>
+struct is_trivially_move_constructible
+    : std::is_move_constructible<
+          ::llvm::detail::move_construction_triviality_helper<T>> {};
+template <typename T>
+struct is_trivially_move_constructible<T &> : std::true_type {};
+template <typename T>
+struct is_trivially_move_constructible<T &&> : std::true_type {};
+
 } // end namespace llvm
 
 // If the compiler supports detecting whether a class is final, define
 // an LLVM_IS_FINAL macro. If it cannot be defined properly, this
 // macro will be left undefined.
-#if __cplusplus >= 201402L
+#if __cplusplus >= 201402L || defined(_MSC_VER)
 #define LLVM_IS_FINAL(Ty) std::is_final<Ty>()
 #elif __has_feature(is_final) || LLVM_GNUC_PREREQ(4, 7, 0)
 #define LLVM_IS_FINAL(Ty) __is_final(Ty)

@@ -131,7 +131,8 @@ public:
    * To avoid filling the disk space, a few knobs are provided:
    *  - The pruning interval limit the frequency at which the garbage collector
    *    will try to scan the cache directory to prune it from expired entries.
-   *    Setting to -1 disable the pruning (default).
+   *    Setting to -1 disable the pruning (default). Setting to 0 will force
+   *    pruning to occur.
    *  - The pruning expiration time indicates to the garbage collector how old
    *    an entry needs to be to be removed.
    *  - Finally, the garbage collector can be instructed to prune the cache till
@@ -149,10 +150,9 @@ public:
   void setCacheDir(std::string Path) { CacheOptions.Path = std::move(Path); }
 
   /// Cache policy: interval (seconds) between two prunes of the cache. Set to a
-  /// negative value to disable pruning. A value of 0 will be ignored.
+  /// negative value to disable pruning. A value of 0 will force pruning to
+  /// occur.
   void setCachePruningInterval(int Interval) {
-    if (Interval == 0)
-      return;
     if(Interval < 0)
       CacheOptions.Policy.Interval.reset();
     else
@@ -168,8 +168,8 @@ public:
 
   /**
    * Sets the maximum cache size that can be persistent across build, in terms
-   * of percentage of the available space on the the disk. Set to 100 to
-   * indicate no limit, 50 to indicate that the cache size will not be left over
+   * of percentage of the available space on the disk. Set to 100 to indicate
+   * no limit, 50 to indicate that the cache size will not be left over
    * half the available space. A value over 100 will be reduced to 100, and a
    * value of 0 will be ignored.
    *
@@ -182,6 +182,21 @@ public:
   void setMaxCacheSizeRelativeToAvailableSpace(unsigned Percentage) {
     if (Percentage)
       CacheOptions.Policy.MaxSizePercentageOfAvailableSpace = Percentage;
+  }
+
+  /// Cache policy: the maximum size for the cache directory in bytes. A value
+  /// over the amount of available space on the disk will be reduced to the
+  /// amount of available space. A value of 0 will be ignored.
+  void setCacheMaxSizeBytes(unsigned MaxSizeBytes) {
+    if (MaxSizeBytes)
+      CacheOptions.Policy.MaxSizeBytes = MaxSizeBytes;
+  }
+
+  /// Cache policy: the maximum number of files in the cache directory. A value
+  /// of 0 will be ignored.
+  void setCacheMaxSizeFiles(unsigned MaxSizeFiles) {
+    if (MaxSizeFiles)
+      CacheOptions.Policy.MaxSizeFiles = MaxSizeFiles;
   }
 
   /**@}*/

@@ -19,22 +19,22 @@
 name:            foo
 tracksRegLiveness: true
 liveins:
-  - { reg: '%edi' }
+  - { reg: '$edi' }
 body: |
   ; CHECK: [[@LINE+1]]:3: expected a basic block definition before instructions
   successors: %bb.1.less, %bb.2.exit
-    liveins: %edi 44
+    liveins: $edi 44
 
-    CMP32ri8 %edi, 10, implicit-def %eflags
-    JG_1 %bb.2.exit, implicit killed %eflags
+    CMP32ri8 $edi, 10, implicit-def $eflags
+    JG_1 %bb.2.exit, implicit killed $eflags
 
   bb.1.less:
-    %eax = MOV32r0 implicit-def dead %eflags
-    RETQ killed %eax
+    $eax = MOV32r0 implicit-def dead $eflags
+    RETQ killed $eax
 
   bb.2.exit:
-    liveins: %edi
+    liveins: $edi
 
-    %eax = COPY killed %edi
-    RETQ killed %eax
+    $eax = COPY killed $edi
+    RETQ killed $eax
 ...

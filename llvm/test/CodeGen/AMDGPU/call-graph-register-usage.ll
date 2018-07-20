@@ -132,31 +132,31 @@ define amdgpu_kernel void @indirect_2_level_use_80_sgpr() #0 {
 ; GCN-LABEL: {{^}}use_stack0:
 ; GCN: ScratchSize: 2052
 define void @use_stack0() #1 {
-  %alloca = alloca [512 x i32], align 4
-  call void asm sideeffect "; use $0", "v"([512 x i32]* %alloca) #0
+  %alloca = alloca [512 x i32], align 4, addrspace(5)
+  call void asm sideeffect "; use $0", "v"([512 x i32] addrspace(5)* %alloca) #0
   ret void
 }
 
 ; GCN-LABEL: {{^}}use_stack1:
 ; GCN: ScratchSize: 404
 define void @use_stack1() #1 {
-  %alloca = alloca [100 x i32], align 4
-  call void asm sideeffect "; use $0", "v"([100 x i32]* %alloca) #0
+  %alloca = alloca [100 x i32], align 4, addrspace(5)
+  call void asm sideeffect "; use $0", "v"([100 x i32] addrspace(5)* %alloca) #0
   ret void
 }
 
 ; GCN-LABEL: {{^}}indirect_use_stack:
-; GCN: ScratchSize: 2124
+; GCN: ScratchSize: 2132
 define void @indirect_use_stack() #1 {
-  %alloca = alloca [16 x i32], align 4
-  call void asm sideeffect "; use $0", "v"([16 x i32]* %alloca) #0
+  %alloca = alloca [16 x i32], align 4, addrspace(5)
+  call void asm sideeffect "; use $0", "v"([16 x i32] addrspace(5)* %alloca) #0
   call void @use_stack0()
   ret void
 }
 
 ; GCN-LABEL: {{^}}indirect_2_level_use_stack:
 ; GCN: is_dynamic_callstack = 0
-; GCN: ScratchSize: 2124
+; GCN: ScratchSize: 2132
 define amdgpu_kernel void @indirect_2_level_use_stack() #0 {
   call void @indirect_use_stack()
   ret void
@@ -199,10 +199,10 @@ define amdgpu_kernel void @usage_external_recurse() #0 {
 }
 
 ; GCN-LABEL: {{^}}direct_recursion_use_stack:
-; GCN: ScratchSize: 2056
+; GCN: ScratchSize: 2064
 define void @direct_recursion_use_stack(i32 %val) #2 {
-  %alloca = alloca [512 x i32], align 4
-  call void asm sideeffect "; use $0", "v"([512 x i32]* %alloca) #0
+  %alloca = alloca [512 x i32], align 4, addrspace(5)
+  call void asm sideeffect "; use $0", "v"([512 x i32] addrspace(5)* %alloca) #0
   %cmp = icmp eq i32 %val, 0
   br i1 %cmp, label %ret, label %call
 
@@ -218,7 +218,7 @@ ret:
 ; GCN-LABEL: {{^}}usage_direct_recursion:
 ; GCN: is_ptr64 = 1
 ; GCN: is_dynamic_callstack = 1
-; GCN: workitem_private_segment_byte_size = 2056
+; GCN: workitem_private_segment_byte_size = 2064
 define amdgpu_kernel void @usage_direct_recursion(i32 %n) #0 {
   call void @direct_recursion_use_stack(i32 %n)
   ret void

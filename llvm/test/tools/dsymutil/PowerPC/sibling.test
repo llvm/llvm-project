@@ -1,0 +1,33 @@
+# Verify that we don't follow DW_AT_sibling references.
+#
+# Source:
+#   struct A { };
+#   struct B { };
+#
+#   struct C {
+#     A a;
+#   };
+#
+#   B b;
+#   C c;
+#
+# Compiled with Apple-GCC 4.0.1 (build 5370):
+#   g++ -g -c sibling.cpp -o sibling.o
+
+# RUN: dsymutil -arch ppc -f -oso-prepend-path=%p/../Inputs/ -y %s -o - | llvm-dwarfdump -debug-info - | FileCheck %s
+
+# CHECK: DW_TAG_structure_type
+# CHECK-NEXT: DW_AT_name	("A")
+# CHECK: DW_TAG_structure_type
+# CHECK-NEXT: DW_AT_name	("C")
+
+# CHECK-NOT: DW_AT_name	("B")
+
+---
+triple:          'ppc-apple-darwin'
+objects:
+  - filename:        sibling.o
+    timestamp:       1518197670
+    symbols:
+      - { sym: _c, objAddr: 0x000000000000017e, binAddr: 0x0000000100000FA0, size: 0x00000010 }
+...

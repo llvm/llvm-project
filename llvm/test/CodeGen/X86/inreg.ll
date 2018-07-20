@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=i686-pc-linux -mcpu=corei7 | FileCheck --check-prefix=DAG %s
-; RUN: llc < %s -mtriple=i686-pc-linux -mcpu=corei7 -O0 | FileCheck --check-prefix=FAST %s
+; RUN: llc -fast-isel-sink-local-values < %s -mtriple=i686-pc-linux -mcpu=corei7 | FileCheck --check-prefix=DAG %s
+; RUN: llc -fast-isel-sink-local-values < %s -mtriple=i686-pc-linux -mcpu=corei7 -O0 | FileCheck --check-prefix=FAST %s
 
 %struct.s1 = type { double, float }
 
@@ -20,7 +20,7 @@ entry:
 
   ; FAST-LABEL: g1:
   ; FAST: subl $[[AMT:.*]], %esp
-  ; FAST-NEXT: leal    8(%esp), %eax
+  ; FAST-NEXT: leal    16(%esp), %eax
   ; FAST-NEXT: movl    $41, %edx
   ; FAST-NEXT: movl    $42, %ecx
   ; FAST: $43, (%esp)

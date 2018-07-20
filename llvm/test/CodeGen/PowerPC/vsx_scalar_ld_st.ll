@@ -123,7 +123,7 @@ entry:
   store volatile float %conv, float* %ff, align 4
   ret void
 ; CHECK-LABEL: @dblToFloat
-; CHECK: lxsdx [[REGLD5:[0-9]+]],
+; CHECK: lfdx [[REGLD5:[0-9]+]],
 ; CHECK: stfsx [[REGLD5]],
 ; CHECK-P9-LABEL: @dblToFloat
 ; CHECK-P9: lfd [[REGLD5:[0-9]+]],
@@ -140,7 +140,7 @@ entry:
   ret void
 ; CHECK-LABEL: @floatToDbl
 ; CHECK: lfsx [[REGLD5:[0-9]+]],
-; CHECK: stxsdx [[REGLD5]],
+; CHECK: stfdx [[REGLD5]],
 ; CHECK-P9-LABEL: @floatToDbl
 ; CHECK-P9: lfs [[REGLD5:[0-9]+]],
 ; CHECK-P9: stfd [[REGLD5]],

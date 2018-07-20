@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/CrashRecoveryContext.h"
-#include "llvm/Config/config.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Mutex.h"
@@ -47,7 +47,7 @@ public:
       CurrentContext->set(Next);
   }
 
-  /// \brief Called when the separate crash-recovery thread was finished, to
+  /// Called when the separate crash-recovery thread was finished, to
   /// indicate that we don't need to clear the thread-local CurrentContext.
   void setSwitchedThread() { 
 #if defined(LLVM_ENABLE_THREADS) && LLVM_ENABLE_THREADS != 0
@@ -189,7 +189,7 @@ bool CrashRecoveryContext::RunSafely(function_ref<void()> Fn) {
 
 #else // !_MSC_VER
 
-#if defined(LLVM_ON_WIN32)
+#if defined(_WIN32)
 // This is a non-MSVC compiler, probably mingw gcc or clang without
 // -fms-extensions. Use vectored exception handling (VEH).
 //
@@ -272,7 +272,7 @@ static void uninstallExceptionOrSignalHandlers() {
   }
 }
 
-#else // !LLVM_ON_WIN32
+#else // !_WIN32
 
 // Generic POSIX implementation.
 //
@@ -342,7 +342,7 @@ static void uninstallExceptionOrSignalHandlers() {
     sigaction(Signals[i], &PrevActions[i], nullptr);
 }
 
-#endif // !LLVM_ON_WIN32
+#endif // !_WIN32
 
 bool CrashRecoveryContext::RunSafely(function_ref<void()> Fn) {
   // If crash recovery is disabled, do nothing.

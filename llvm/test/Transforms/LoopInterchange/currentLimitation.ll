@@ -1,11 +1,13 @@
-; RUN: opt < %s -basicaa -loop-interchange -S | FileCheck %s
-;; These are test that fail to interchange due to current limitation. This will go off once we extend the loop interchange pass.
+; RUN: opt < %s -basicaa -loop-interchange -pass-remarks-missed='loop-interchange' \
+; RUN:   -pass-remarks-output=%t -verify-loop-info -verify-dom-info -S | FileCheck -check-prefix=IR %s
+; RUN: FileCheck --input-file=%t %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
  
 @A = common global [100 x [100 x i32]] zeroinitializer
 @B = common global [100 x [100 x [100 x i32]]] zeroinitializer
+@C = common global [100 x [100 x i64]] zeroinitializer
  
 ;;--------------------------------------Test case 01------------------------------------
 ;; [FIXME] This loop though valid is currently not interchanged due to the limitation that we cannot split the inner loop latch due to multiple use of inner induction
@@ -13,6 +15,13 @@ target triple = "x86_64-unknown-linux-gnu"
 ;;  for(int i=0;i<N-1;i++)
 ;;    for(int j=1;j<N-1;j++)
 ;;      A[j+1][i+1] = A[j+1][i+1] + k;
+
+; FIXME: Currently fails because of DA changes.
+; IR-LABEL: @interchange_01
+; IR-NOT: split
+
+; CHECK:      Name:            Dependence
+; CHECK-NEXT: Function:        interchange_01
 
 define void @interchange_01(i32 %k, i32 %N) {
  entry:
@@ -49,10 +58,40 @@ define void @interchange_01(i32 %k, i32 %N) {
  for.end17: 
    ret void
 }
-;; Inner loop not split so it is not interchanged.
-; CHECK-LABEL: @interchange_01
-; CHECK:      for.body4:
-; CHECK-NEXT:   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body4 ], [ 1, %for.body4.preheader ]
-; CHECK-NEXT:   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-; CHECK-NEXT:   %arrayidx7 = getelementptr inbounds [100 x [100 x i32]], [100 x [100 x i32]]* @A, i64 0, i64 %indvars.iv.next, i64 %indvars.iv.next29
- 
+
+; When currently cannot interchange this loop, because transform currently
+; expects the latches to be the exiting blocks too.
+
+; IR-LABEL: @interchange_02
+; IR-NOT: split
+;
+; CHECK:      Name:            ExitingNotLatch
+; CHECK-NEXT: Function:        interchange_02
+define void @interchange_02(i64 %k, i64 %N) {
+entry:
+  br label %for1.header
+
+for1.header:
+  %j23 = phi i64 [ 0, %entry ], [ %j.next24, %for1.inc10 ]
+  br label %for2
+
+for2:
+  %j = phi i64 [ %j.next, %latch ], [ 0, %for1.header ]
+  %arrayidx5 = getelementptr inbounds [100 x [100 x i64]], [100 x [100 x i64]]* @C, i64 0, i64 %j, i64 %j23
+  %lv = load i64, i64* %arrayidx5
+  %add = add nsw i64 %lv, %k
+  store i64 %add, i64* %arrayidx5
+  %exitcond = icmp eq i64 %j, 99
+  br i1 %exitcond, label %for1.inc10, label %latch
+latch:
+  %j.next = add nuw nsw i64 %j, 1
+  br label %for2
+
+for1.inc10:
+  %j.next24 = add nuw nsw i64 %j23, 1
+  %exitcond26 = icmp eq i64 %j23, 99
+  br i1 %exitcond26, label %for.end12, label %for1.header
+
+for.end12:
+  ret void
+}

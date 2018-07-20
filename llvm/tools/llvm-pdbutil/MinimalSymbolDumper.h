@@ -19,6 +19,7 @@ class LazyRandomTypeCollection;
 
 namespace pdb {
 class LinePrinter;
+class SymbolGroup;
 
 class MinimalSymbolDumper : public codeview::SymbolVisitorCallbacks {
 public:
@@ -26,10 +27,18 @@ public:
                       codeview::LazyRandomTypeCollection &Ids,
                       codeview::LazyRandomTypeCollection &Types)
       : P(P), RecordBytes(RecordBytes), Ids(Ids), Types(Types) {}
+  MinimalSymbolDumper(LinePrinter &P, bool RecordBytes,
+                      const SymbolGroup &SymGroup,
+                      codeview::LazyRandomTypeCollection &Ids,
+                      codeview::LazyRandomTypeCollection &Types)
+      : P(P), RecordBytes(RecordBytes), SymGroup(&SymGroup), Ids(Ids),
+        Types(Types) {}
 
   Error visitSymbolBegin(codeview::CVSymbol &Record) override;
   Error visitSymbolBegin(codeview::CVSymbol &Record, uint32_t Offset) override;
   Error visitSymbolEnd(codeview::CVSymbol &Record) override;
+
+  void setSymbolGroup(const SymbolGroup *Group) { SymGroup = Group; }
 
 #define SYMBOL_RECORD(EnumName, EnumVal, Name)                                 \
   virtual Error visitKnownRecord(codeview::CVSymbol &CVR,                      \
@@ -45,6 +54,7 @@ private:
 
   LinePrinter &P;
   bool RecordBytes;
+  const SymbolGroup *SymGroup = nullptr;
   codeview::LazyRandomTypeCollection &Ids;
   codeview::LazyRandomTypeCollection &Types;
 };

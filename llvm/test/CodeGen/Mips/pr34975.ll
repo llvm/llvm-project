@@ -60,7 +60,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !16 = distinct !DIGlobalVariable(name: "d", scope: !0, file: !6, line: 8, type: !12, isLocal: false, isDefinition: true)
 !17 = !{i32 2, !"Debug Info Version", i32 3}
 !18 = !{i32 7, !"PIC Level", i32 2}
-!19 = distinct !DISubprogram(name: "e", scope: !6, file: !6, line: 9, type: !20, isLocal: false, isDefinition: true, scopeLine: 9, isOptimized: true, unit: !0, variables: !22)
+!19 = distinct !DISubprogram(name: "e", scope: !6, file: !6, line: 9, type: !20, isLocal: false, isDefinition: true, scopeLine: 9, isOptimized: true, unit: !0, retainedNodes: !22)
 !20 = !DISubroutineType(types: !21)
 !21 = !{!12}
 !22 = !{!23}

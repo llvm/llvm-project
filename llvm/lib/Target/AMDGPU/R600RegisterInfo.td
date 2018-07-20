@@ -245,7 +245,7 @@ def R600_Reg128Vertical : RegisterClass<"AMDGPU", [v4f32, v4i32], 128,
   (add V0123_W, V0123_Z, V0123_Y, V0123_X)
 >;
 
-def R600_Reg64 : RegisterClass<"AMDGPU", [v2f32, v2i32], 64,
+def R600_Reg64 : RegisterClass<"AMDGPU", [v2f32, v2i32, i64, f64], 64,
                                 (add (sequence "T%u_XY", 0, 63))>;
 
 def R600_Reg64Vertical : RegisterClass<"AMDGPU", [v2f32, v2i32], 64,

@@ -62,10 +62,6 @@ void HexagonLowerToMC(const MCInstrInfo &MCII, const MachineInstr *MI,
 
 #define DEBUG_TYPE "asm-printer"
 
-static cl::opt<bool> AlignCalls(
-         "hexagon-align-calls", cl::Hidden, cl::init(true),
-          cl::desc("Insert falign after call instruction for Hexagon target"));
-
 // Given a scalar register return its pair.
 inline static unsigned getHexagonRegisterPair(unsigned Reg,
       const MCRegisterInfo *RI) {
@@ -76,16 +72,13 @@ inline static unsigned getHexagonRegisterPair(unsigned Reg,
   return Pair;
 }
 
-HexagonAsmPrinter::HexagonAsmPrinter(TargetMachine &TM,
-                                     std::unique_ptr<MCStreamer> Streamer)
-    : AsmPrinter(TM, std::move(Streamer)) {}
-
 void HexagonAsmPrinter::printOperand(const MachineInstr *MI, unsigned OpNo,
                                      raw_ostream &O) {
   const MachineOperand &MO = MI->getOperand(OpNo);
 
   switch (MO.getType()) {
-  default: llvm_unreachable ("<unknown operand type>");
+  default:
+    llvm_unreachable ("<unknown operand type>");
   case MachineOperand::MO_Register:
     O << HexagonInstPrinter::getRegisterName(MO.getReg());
     return;
@@ -112,8 +105,8 @@ void HexagonAsmPrinter::printOperand(const MachineInstr *MI, unsigned OpNo,
 // for the case in which the basic block is reachable by a fall through but
 // through an indirect from a jump table. In this case, the jump table
 // will contain a label not defined by AsmPrinter.
-bool HexagonAsmPrinter::
-isBlockOnlyReachableByFallthrough(const MachineBasicBlock *MBB) const {
+bool HexagonAsmPrinter::isBlockOnlyReachableByFallthrough(
+      const MachineBasicBlock *MBB) const {
   if (MBB->hasAddressTaken())
     return false;
   return AsmPrinter::isBlockOnlyReachableByFallthrough(MBB);
@@ -167,7 +160,8 @@ bool HexagonAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
 }
 
 bool HexagonAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
-                                              unsigned OpNo, unsigned AsmVariant,
+                                              unsigned OpNo,
+                                              unsigned AsmVariant,
                                               const char *ExtraCode,
                                               raw_ostream &O) {
   if (ExtraCode && ExtraCode[0])
@@ -183,10 +177,10 @@ bool HexagonAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
 
   if (Offset.isImm()) {
     if (Offset.getImm())
-      O << " + #" << Offset.getImm();
-  }
-  else
+      O << "+#" << Offset.getImm();
+  } else {
     llvm_unreachable("Unimplemented");
+  }
 
   return false;
 }
@@ -285,7 +279,8 @@ void HexagonAsmPrinter::HexagonProcessInstruction(MCInst &Inst,
   unsigned VectorSize = HRI.getRegSizeInBits(Hexagon::HvxVRRegClass) / 8;
 
   switch (Inst.getOpcode()) {
-  default: return;
+  default:
+    return;
 
   case Hexagon::A2_iconst: {
     Inst.setOpcode(Hexagon::A2_addi);
@@ -300,30 +295,40 @@ void HexagonAsmPrinter::HexagonProcessInstruction(MCInst &Inst,
     break;
   }
 
-  case Hexagon::A2_tfrf:
+  case Hexagon::A2_tfrf: {
+    const MCConstantExpr *Zero = MCConstantExpr::create(0, OutContext);
     Inst.setOpcode(Hexagon::A2_paddif);
-    Inst.addOperand(MCOperand::createExpr(MCConstantExpr::create(0, OutContext)));
+    Inst.addOperand(MCOperand::createExpr(Zero));
     break;
+  }
 
-  case Hexagon::A2_tfrt:
+  case Hexagon::A2_tfrt: {
+    const MCConstantExpr *Zero = MCConstantExpr::create(0, OutContext);
     Inst.setOpcode(Hexagon::A2_paddit);
-    Inst.addOperand(MCOperand::createExpr(MCConstantExpr::create(0, OutContext)));
+    Inst.addOperand(MCOperand::createExpr(Zero));
     break;
+  }
 
-  case Hexagon::A2_tfrfnew:
+  case Hexagon::A2_tfrfnew: {
+    const MCConstantExpr *Zero = MCConstantExpr::create(0, OutContext);
     Inst.setOpcode(Hexagon::A2_paddifnew);
-    Inst.addOperand(MCOperand::createExpr(MCConstantExpr::create(0, OutContext)));
+    Inst.addOperand(MCOperand::createExpr(Zero));
     break;
+  }
 
-  case Hexagon::A2_tfrtnew:
+  case Hexagon::A2_tfrtnew: {
+    const MCConstantExpr *Zero = MCConstantExpr::create(0, OutContext);
     Inst.setOpcode(Hexagon::A2_padditnew);
-    Inst.addOperand(MCOperand::createExpr(MCConstantExpr::create(0, OutContext)));
+    Inst.addOperand(MCOperand::createExpr(Zero));
     break;
+  }
 
-  case Hexagon::A2_zxtb:
+  case Hexagon::A2_zxtb: {
+    const MCConstantExpr *C255 = MCConstantExpr::create(255, OutContext);
     Inst.setOpcode(Hexagon::A2_andir);
-    Inst.addOperand(MCOperand::createExpr(MCConstantExpr::create(255, OutContext)));
+    Inst.addOperand(MCOperand::createExpr(C255));
     break;
+  }
 
   // "$dst = CONST64(#$src1)",
   case Hexagon::CONST64:
@@ -525,10 +530,12 @@ void HexagonAsmPrinter::HexagonProcessInstruction(MCInst &Inst,
     bool Success = MO.getExpr()->evaluateAsAbsolute(Imm);
     if (Success && Imm < 0) {
       const MCExpr *MOne = MCConstantExpr::create(-1, OutContext);
-      TmpInst.addOperand(MCOperand::createExpr(HexagonMCExpr::create(MOne, OutContext)));
+      const HexagonMCExpr *E = HexagonMCExpr::create(MOne, OutContext);
+      TmpInst.addOperand(MCOperand::createExpr(E));
     } else {
       const MCExpr *Zero = MCConstantExpr::create(0, OutContext);
-      TmpInst.addOperand(MCOperand::createExpr(HexagonMCExpr::create(Zero, OutContext)));
+      const HexagonMCExpr *E = HexagonMCExpr::create(Zero, OutContext);
+      TmpInst.addOperand(MCOperand::createExpr(E));
     }
     TmpInst.addOperand(MO);
     MappedInst = TmpInst;
@@ -569,9 +576,9 @@ void HexagonAsmPrinter::HexagonProcessInstruction(MCInst &Inst,
     MO.setReg(High);
     // Add a new operand for the second register in the pair.
     MappedInst.addOperand(MCOperand::createReg(Low));
-    MappedInst.setOpcode((Inst.getOpcode() == Hexagon::A2_tfrptnew)
-                          ? Hexagon::C2_ccombinewnewt
-                          : Hexagon::C2_ccombinewnewf);
+    MappedInst.setOpcode(Inst.getOpcode() == Hexagon::A2_tfrptnew
+                            ? Hexagon::C2_ccombinewnewt
+                            : Hexagon::C2_ccombinewnewf);
     return;
   }
 
@@ -615,6 +622,7 @@ void HexagonAsmPrinter::HexagonProcessInstruction(MCInst &Inst,
     MappedInst = TmpInst;
     return;
   }
+
   case Hexagon::V6_vdd0: {
     MCInst TmpInst;
     assert (Inst.getOperand(0).isReg() &&
@@ -627,6 +635,7 @@ void HexagonAsmPrinter::HexagonProcessInstruction(MCInst &Inst,
     MappedInst = TmpInst;
     return;
   }
+
   case Hexagon::V6_vL32Ub_pi:
   case Hexagon::V6_vL32b_cur_pi:
   case Hexagon::V6_vL32b_nt_cur_pi:
@@ -735,12 +744,10 @@ void HexagonAsmPrinter::HexagonProcessInstruction(MCInst &Inst,
   case Hexagon::V6_vS32b_srls_pi:
     MappedInst = ScaleVectorOffset(Inst, 2, VectorSize, OutContext);
     return;
-
   }
 }
 
-/// printMachineInstruction -- Print out a single Hexagon MI in Darwin syntax to
-/// the current output stream.
+/// Print out a single Hexagon MI to the current output stream.
 void HexagonAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   MCInst MCB;
   MCB.setOpcode(Hexagon::BUNDLE);
@@ -748,21 +755,27 @@ void HexagonAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   const MCInstrInfo &MCII = *Subtarget->getInstrInfo();
 
   if (MI->isBundle()) {
+    assert(Subtarget->usePackets() && "Support for packets is disabled");
     const MachineBasicBlock* MBB = MI->getParent();
     MachineBasicBlock::const_instr_iterator MII = MI->getIterator();
 
     for (++MII; MII != MBB->instr_end() && MII->isInsideBundle(); ++MII)
-      if (!MII->isDebugValue() && !MII->isImplicitDef())
+      if (!MII->isDebugInstr() && !MII->isImplicitDef())
         HexagonLowerToMC(MCII, &*MII, MCB, *this);
-  }
-  else
+  } else {
     HexagonLowerToMC(MCII, MI, MCB, *this);
+  }
 
-  bool Ok = HexagonMCInstrInfo::canonicalizePacket(
-      MCII, *Subtarget, OutStreamer->getContext(), MCB, nullptr);
-  assert(Ok);
-  (void)Ok;
-  if(HexagonMCInstrInfo::bundleSize(MCB) == 0)
+  const MachineFunction &MF = *MI->getParent()->getParent();
+  const auto &HII = *MF.getSubtarget<HexagonSubtarget>().getInstrInfo();
+  if (MI->isBundle() && HII.getBundleNoShuf(*MI))
+    HexagonMCInstrInfo::setMemReorderDisabled(MCB);
+
+  MCContext &Ctx = OutStreamer->getContext();
+  bool Ok = HexagonMCInstrInfo::canonicalizePacket(MCII, *Subtarget, Ctx,
+                                                   MCB, nullptr);
+  assert(Ok); (void)Ok;
+  if (HexagonMCInstrInfo::bundleSize(MCB) == 0)
     return;
   OutStreamer->EmitInstruction(MCB, getSubtargetInfo());
 }

@@ -1,0 +1,42 @@
+
+# RUN: llc -mtriple=aarch64--- -verify-machineinstrs -simplify-mir -run-pass=machine-outliner %s -o - | FileCheck %s
+--- |
+
+  define void @foo() #0 {
+    ret void
+  }
+
+  attributes #0 = { noredzone }
+...
+---
+name:            foo
+tracksRegLiveness: true
+constants:       
+  - id:              0
+    value:           'float 1.990000e+02'
+    alignment:       4
+    isTargetSpecific: false
+body:             |
+    bb.0:
+    liveins: $w1, $w10, $x14, $x15, $x16, $x10, $lr
+    ; CHECK-NOT: BL
+
+    $w10 = MOVZWi 4, 0, implicit-def $x10
+
+    renamable $x14 = ADRP target-flags(aarch64-page) %const.0
+    renamable $x15 = ADRP target-flags(aarch64-page) %const.0
+    renamable $x16 = ADRP target-flags(aarch64-page) %const.0
+
+    $w10 = MOVZWi 5, 0, implicit-def $x10
+
+    renamable $x14 = ADRP target-flags(aarch64-page) %const.0
+    renamable $x15 = ADRP target-flags(aarch64-page) %const.0
+    renamable $x16 = ADRP target-flags(aarch64-page) %const.0
+
+    $w10 = MOVZWi 6, 0, implicit-def $x10
+
+    renamable $x14 = ADRP target-flags(aarch64-page) %const.0
+    renamable $x15 = ADRP target-flags(aarch64-page) %const.0
+    renamable $x16 = ADRP target-flags(aarch64-page) %const.0
+
+    RET undef $lr

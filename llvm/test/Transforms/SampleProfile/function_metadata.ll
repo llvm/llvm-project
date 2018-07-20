@@ -28,7 +28,7 @@ define void @test_liveness() !dbg !12 {
 
 ; GUIDs of foo, bar, foo1, foo2 and foo3 should be included in the metadata to
 ; make sure hot inline stacks are imported.
-; CHECK: ![[ENTRY_TEST]] = !{!"function_entry_count", i64 1, i64 2494702099028631698, i64 6699318081062747564, i64 7682762345278052905,  i64 -7908226060800700466, i64 -2012135647395072713}
+; CHECK: ![[ENTRY_TEST]] = !{!"function_entry_count", i64 1, i64 2494702099028631698, i64 6699318081062747564, i64 7546896869197086323, i64 7682762345278052905,  i64 -7908226060800700466, i64 -2012135647395072713}
 
 ; Check GUIDs for both foo and foo_available are included in the metadata to
 ; make sure the liveness analysis can capture the dependency from test_liveness
@@ -43,12 +43,12 @@ define void @test_liveness() !dbg !12 {
 !1 = !DIFile(filename: "calls.cc", directory: ".")
 !2 = !{}
 !6 = !DISubroutineType(types: !2)
-!7 = distinct !DISubprogram(name: "test", line: 7, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 7, file: !1, scope: !1, type: !6, variables: !2)
+!7 = distinct !DISubprogram(name: "test", line: 7, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 7, file: !1, scope: !1, type: !6, retainedNodes: !2)
 !8 = !{i32 2, !"Dwarf Version", i32 4}
 !9 = !{i32 1, !"Debug Info Version", i32 3}
 !10 = !{!"clang version 3.5 "}
-!11 = distinct !DISubprogram(name: "foo_available", line: 7, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 7, file: !1, scope: !1, type: !6, variables: !2)
-!12 = distinct !DISubprogram(name: "test_liveness", line: 7, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 7, file: !1, scope: !1, type: !6, variables: !2)
+!11 = distinct !DISubprogram(name: "foo_available", line: 7, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 7, file: !1, scope: !1, type: !6, retainedNodes: !2)
+!12 = distinct !DISubprogram(name: "test_liveness", line: 7, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 7, file: !1, scope: !1, type: !6, retainedNodes: !2)
 !15 = !DILexicalBlockFile(discriminator: 1, file: !1, scope: !7)
 !17 = distinct !DILexicalBlock(line: 10, column: 0, file: !1, scope: !7)
 !18 = !DILocation(line: 10, scope: !17)

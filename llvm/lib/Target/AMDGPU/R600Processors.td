@@ -7,6 +7,62 @@
 //
 //===----------------------------------------------------------------------===//
 
+class SubtargetFeatureFetchLimit <string Value> :
+                          SubtargetFeature <"fetch"#Value,
+  "TexVTXClauseSize",
+  Value,
+  "Limit the maximum number of fetches in a clause to "#Value
+>;
+
+def FeatureR600ALUInst : SubtargetFeature<"R600ALUInst",
+  "R600ALUInst",
+  "false",
+  "Older version of ALU instructions encoding"
+>;
+
+def FeatureFetchLimit8 : SubtargetFeatureFetchLimit <"8">;
+def FeatureFetchLimit16 : SubtargetFeatureFetchLimit <"16">;
+
+def FeatureVertexCache : SubtargetFeature<"HasVertexCache",
+  "HasVertexCache",
+  "true",
+  "Specify use of dedicated vertex cache"
+>;
+
+def FeatureCaymanISA : SubtargetFeature<"caymanISA",
+  "CaymanISA",
+  "true",
+  "Use Cayman ISA"
+>;
+
+def FeatureCFALUBug : SubtargetFeature<"cfalubug",
+  "CFALUBug",
+  "true",
+  "GPU has CF_ALU bug"
+>;
+
+class R600SubtargetFeatureGeneration <string Value,
+                                  list<SubtargetFeature> Implies> :
+        SubtargetFeatureGeneration <Value, "R600Subtarget", Implies>;
+
+def FeatureR600 : R600SubtargetFeatureGeneration<"R600",
+  [FeatureR600ALUInst, FeatureFetchLimit8, FeatureLocalMemorySize0]
+>;
+
+def FeatureR700 : R600SubtargetFeatureGeneration<"R700",
+  [FeatureFetchLimit16, FeatureLocalMemorySize0]
+>;
+
+def FeatureEvergreen : R600SubtargetFeatureGeneration<"EVERGREEN",
+  [FeatureFetchLimit16, FeatureLocalMemorySize32768]
+>;
+
+def FeatureNorthernIslands : R600SubtargetFeatureGeneration<"NORTHERN_ISLANDS",
+  [FeatureFetchLimit16, FeatureWavefrontSize64,
+   FeatureLocalMemorySize32768]
+>;
+
+
 //===----------------------------------------------------------------------===//
 // Radeon HD 2000/3000 Series (R600).
 //===----------------------------------------------------------------------===//

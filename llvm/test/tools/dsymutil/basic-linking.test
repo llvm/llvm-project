@@ -1,7 +1,7 @@
-RUN: llvm-dsymutil -no-output -verbose -oso-prepend-path=%p %p/Inputs/basic.macho.x86_64 | FileCheck %s
-RUN: llvm-dsymutil -no-output -verbose -oso-prepend-path=%p %p/Inputs/basic-lto.macho.x86_64 | FileCheck %s --check-prefix=CHECK-LTO
-RUN: llvm-dsymutil -no-output -verbose -oso-prepend-path=%p %p/Inputs/basic-archive.macho.x86_64 | FileCheck %s --check-prefix=CHECK-ARCHIVE
-RUN: llvm-dsymutil -no-output -verbose -oso-prepend-path=%p %p/Inputs/basic.macho.x86_64 %p/Inputs/basic-lto.macho.x86_64 %p/Inputs/basic-archive.macho.x86_64 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-LTO --check-prefix=CHECK-ARCHIVE 
+RUN: dsymutil -no-output -verbose -oso-prepend-path=%p %p/Inputs/basic.macho.x86_64 | FileCheck %s
+RUN: dsymutil -no-output -verbose -oso-prepend-path=%p %p/Inputs/basic-lto.macho.x86_64 | FileCheck %s --check-prefix=CHECK-LTO
+RUN: dsymutil -no-output -verbose -oso-prepend-path=%p %p/Inputs/basic-archive.macho.x86_64 | FileCheck %s --check-prefix=CHECK-ARCHIVE
+RUN: dsymutil -no-output -verbose -oso-prepend-path=%p %p/Inputs/basic.macho.x86_64 %p/Inputs/basic-lto.macho.x86_64 %p/Inputs/basic-archive.macho.x86_64 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-LTO --check-prefix=CHECK-ARCHIVE
 
 This test check the basic Dwarf linking process through the debug dumps.
 
@@ -11,17 +11,24 @@ CHECK: Input compilation unit:
 CHECK-NEXT: TAG_compile_unit
 CHECK-NOT: TAG
 CHECK: AT_name {{.*}}basic1.c
-CHECK-NOT: Found valid debug map entry
-CHECK: Found valid debug map entry: _main 	0000000000000000 => 0000000100000ea0
-CHECK-NEXT: DW_TAG_subprogram
-CHECK-NEXT:   DW_AT_name{{.*}}"main"
 
 CHECK: DEBUG MAP OBJECT: {{.*}}basic2.macho.x86_64.o
 CHECK: Input compilation unit:
 CHECK-NEXT: TAG_compile_unit
 CHECK-NOT: TAG
 CHECK: AT_name {{.*}}basic2.c
+
+CHECK: DEBUG MAP OBJECT: {{.*}}basic3.macho.x86_64.o
+CHECK: Input compilation unit:
+CHECK-NEXT: TAG_compile_unit
+CHECK-NOT: TAG
+CHECK: AT_name {{.*}}basic3.c
+
 CHECK-NOT: Found valid debug map entry
+CHECK: Found valid debug map entry: _main 	0000000000000000 => 0000000100000ea0
+CHECK-NEXT: DW_TAG_subprogram
+CHECK-NEXT:   DW_AT_name{{.*}}"main"
+
 CHECK: Found valid debug map entry: _private_int 	0000000000000560 => 0000000100001008
 CHECK-NEXT: DW_TAG_variable
 CHECK-NEXT:   DW_AT_name {{.*}}"private_int"
@@ -38,11 +45,6 @@ CHECK: Found valid debug map entry: _inc 	0000000000000070 => 0000000100000f20
 CHECK-NEXT: DW_TAG_subprogram
 CHECK-NEXT:   DW_AT_name {{.*}}"inc"
 
-CHECK: DEBUG MAP OBJECT: {{.*}}basic3.macho.x86_64.o
-CHECK: Input compilation unit:
-CHECK-NEXT: TAG_compile_unit
-CHECK-NOT: TAG
-CHECK: AT_name {{.*}}basic3.c
 CHECK-NOT: Found valid debug map entry
 CHECK: Found valid debug map entry: _val 	ffffffffffffffff => 0000000100001004
 CHECK-NEXT: DW_TAG_variable
@@ -104,16 +106,24 @@ CHECK-ARCHIVE: Input compilation unit:
 CHECK-ARCHIVE-NEXT: TAG_compile_unit
 CHECK-ARCHIVE-NOT: TAG
 CHECK-ARCHIVE: AT_name {{.*}}basic1.c
-CHECK-ARCHIVE-NOT: Found valid debug map entry
-CHECK-ARCHIVE: Found valid debug map entry: _main 	0000000000000000 => 0000000100000ea0
-CHECK-ARCHIVE-NEXT: DW_TAG_subprogram
-CHECK-ARCHIVE-NEXT:   DW_AT_name{{.*}}"main"
 
 CHECK-ARCHIVE: DEBUG MAP OBJECT: {{.*}}libbasic.a(basic2.macho.x86_64.o)
 CHECK-ARCHIVE: Input compilation unit:
 CHECK-ARCHIVE-NEXT: TAG_compile_unit
 CHECK-ARCHIVE-NOT: TAG
 CHECK-ARCHIVE: AT_name {{.*}}basic2.c
+
+CHECK-ARCHIVE: DEBUG MAP OBJECT: {{.*}}libbasic.a(basic3.macho.x86_64.o)
+CHECK-ARCHIVE: Input compilation unit:
+CHECK-ARCHIVE-NEXT: TAG_compile_unit
+CHECK-ARCHIVE-NOT: TAG
+CHECK-ARCHIVE: AT_name {{.*}}basic3.c
+
+CHECK-ARCHIVE-NOT: Found valid debug map entry
+CHECK-ARCHIVE: Found valid debug map entry: _main 	0000000000000000 => 0000000100000ea0
+CHECK-ARCHIVE-NEXT: DW_TAG_subprogram
+CHECK-ARCHIVE-NEXT:   DW_AT_name{{.*}}"main"
+
 CHECK-ARCHIVE-NOT: Found valid debug map entry
 CHECK-ARCHIVE: Found valid debug map entry: _private_int 	0000000000000560 => 0000000100001004
 CHECK-ARCHIVE-NEXT: DW_TAG_variable
@@ -131,11 +141,6 @@ CHECK-ARCHIVE: Found valid debug map entry: _inc 	0000000000000070 => 0000000100
 CHECK-ARCHIVE-NEXT: DW_TAG_subprogram
 CHECK-ARCHIVE-NEXT:   DW_AT_name {{.*}}"inc"
 
-CHECK-ARCHIVE: DEBUG MAP OBJECT: {{.*}}libbasic.a(basic3.macho.x86_64.o)
-CHECK-ARCHIVE: Input compilation unit:
-CHECK-ARCHIVE-NEXT: TAG_compile_unit
-CHECK-ARCHIVE-NOT: TAG
-CHECK-ARCHIVE: AT_name {{.*}}basic3.c
 CHECK-ARCHIVE-NOT: Found valid debug map entry
 CHECK-ARCHIVE: Found valid debug map entry: _val 	ffffffffffffffff => 0000000100001008
 CHECK-ARCHIVE-NEXT: DW_TAG_variable

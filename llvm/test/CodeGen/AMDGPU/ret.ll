@@ -2,12 +2,12 @@
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}vgpr:
-; GCN: v_mov_b32_e32 v1, v0
-; GCN-DAG: v_add_f32_e32 v0, 1.0, v1
-; GCN-DAG: exp mrt0 v1, v1, v1, v1 done vm
+; GCN-DAG: v_mov_b32_e32 v1, v0
+; GCN-DAG: exp mrt0 v0, v0, v0, v0 done vm
 ; GCN: s_waitcnt expcnt(0)
+; GCN: v_add_f32_e32 v0, 1.0, v1
 ; GCN-NOT: s_endpgm
-define amdgpu_vs { float, float } @vgpr([9 x <16 x i8>] addrspace(2)* byval %arg, i32 inreg %arg1, i32 inreg %arg2, float %arg3) #0 {
+define amdgpu_vs { float, float } @vgpr([9 x <16 x i8>] addrspace(4)* byval %arg, i32 inreg %arg1, i32 inreg %arg2, float %arg3) #0 {
 bb:
   call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %arg3, float %arg3, float %arg3, float %arg3, i1 true, i1 true) #0
   %x = fadd float %arg3, 1.000000e+00
@@ -26,7 +26,7 @@ bb:
 ; GCN-DAG: v_mov_b32_e32 v3, -1.0
 ; GCN: s_waitcnt expcnt(0)
 ; GCN-NOT: s_endpgm
-define amdgpu_vs { float, float, float, float } @vgpr_literal([9 x <16 x i8>] addrspace(2)* byval %arg, i32 inreg %arg1, i32 inreg %arg2, float %arg3) #0 {
+define amdgpu_vs { float, float, float, float } @vgpr_literal([9 x <16 x i8>] addrspace(4)* byval %arg, i32 inreg %arg1, i32 inreg %arg2, float %arg3) #0 {
 bb:
   call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %arg3, float %arg3, float %arg3, float %arg3, i1 true, i1 true) #0
   ret { float, float, float, float } { float 1.000000e+00, float 2.000000e+00, float 4.000000e+00, float -1.000000e+00 }
@@ -43,7 +43,7 @@ bb:
 ; GCN: v_mov_b32_e32 v3, v4
 ; GCN: v_mov_b32_e32 v4, v6
 ; GCN-NOT: s_endpgm
-define amdgpu_ps { float, float, float, float, float } @vgpr_ps_addr0([9 x <16 x i8>] addrspace(2)* byval %arg, i32 inreg %arg1, i32 inreg %arg2, <2 x i32> %arg3, <2 x i32> %arg4, <2 x i32> %arg5, <3 x i32> %arg6, <2 x i32> %arg7, <2 x i32> %arg8, <2 x i32> %arg9, float %arg10, float %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18) #1 {
+define amdgpu_ps { float, float, float, float, float } @vgpr_ps_addr0([9 x <16 x i8>] addrspace(4)* byval %arg, i32 inreg %arg1, i32 inreg %arg2, <2 x i32> %arg3, <2 x i32> %arg4, <2 x i32> %arg5, <3 x i32> %arg6, <2 x i32> %arg7, <2 x i32> %arg8, <2 x i32> %arg9, float %arg10, float %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18) #1 {
 bb:
   %i0 = extractelement <2 x i32> %arg4, i32 0
   %i1 = extractelement <2 x i32> %arg4, i32 1
@@ -68,7 +68,7 @@ bb:
 ; GCN-LABEL: {{^}}ps_input_ena_no_inputs:
 ; GCN: v_mov_b32_e32 v0, 1.0
 ; GCN-NOT: s_endpgm
-define amdgpu_ps float @ps_input_ena_no_inputs([9 x <16 x i8>] addrspace(2)* byval %arg, i32 inreg %arg1, i32 inreg %arg2, <2 x i32> %arg3, <2 x i32> %arg4, <2 x i32> %arg5, <3 x i32> %arg6, <2 x i32> %arg7, <2 x i32> %arg8, <2 x i32> %arg9, float %arg10, float %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18) #1 {
+define amdgpu_ps float @ps_input_ena_no_inputs([9 x <16 x i8>] addrspace(4)* byval %arg, i32 inreg %arg1, i32 inreg %arg2, <2 x i32> %arg3, <2 x i32> %arg4, <2 x i32> %arg5, <3 x i32> %arg6, <2 x i32> %arg7, <2 x i32> %arg8, <2 x i32> %arg9, float %arg10, float %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18) #1 {
 bb:
   ret float 1.000000e+00
 }
@@ -82,7 +82,7 @@ bb:
 ; GCN-DAG: v_mov_b32_e32 v1, v2
 ; GCN: v_mov_b32_e32 v2, v3
 ; GCN-NOT: s_endpgm
-define amdgpu_ps { float, <2 x float> } @ps_input_ena_pos_w([9 x <16 x i8>] addrspace(2)* byval %arg, i32 inreg %arg1, i32 inreg %arg2, <2 x i32> %arg3, <2 x i32> %arg4, <2 x i32> %arg5, <3 x i32> %arg6, <2 x i32> %arg7, <2 x i32> %arg8, <2 x i32> %arg9, float %arg10, float %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18) #1 {
+define amdgpu_ps { float, <2 x float> } @ps_input_ena_pos_w([9 x <16 x i8>] addrspace(4)* byval %arg, i32 inreg %arg1, i32 inreg %arg2, <2 x i32> %arg3, <2 x i32> %arg4, <2 x i32> %arg5, <3 x i32> %arg6, <2 x i32> %arg7, <2 x i32> %arg8, <2 x i32> %arg9, float %arg10, float %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18) #1 {
 bb:
   %f = bitcast <2 x i32> %arg8 to <2 x float>
   %s = insertvalue { float, <2 x float> } undef, float %arg14, 0
@@ -101,7 +101,7 @@ bb:
 ; GCN-DAG: v_mov_b32_e32 v3, v6
 ; GCN-DAG: v_mov_b32_e32 v4, v8
 ; GCN-NOT: s_endpgm
-define amdgpu_ps { float, float, float, float, float } @vgpr_ps_addr1([9 x <16 x i8>] addrspace(2)* byval %arg, i32 inreg %arg1, i32 inreg %arg2, <2 x i32> %arg3, <2 x i32> %arg4, <2 x i32> %arg5, <3 x i32> %arg6, <2 x i32> %arg7, <2 x i32> %arg8, <2 x i32> %arg9, float %arg10, float %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18) #2 {
+define amdgpu_ps { float, float, float, float, float } @vgpr_ps_addr1([9 x <16 x i8>] addrspace(4)* byval %arg, i32 inreg %arg1, i32 inreg %arg2, <2 x i32> %arg3, <2 x i32> %arg4, <2 x i32> %arg5, <3 x i32> %arg6, <2 x i32> %arg7, <2 x i32> %arg8, <2 x i32> %arg9, float %arg10, float %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18) #2 {
 bb:
   %i0 = extractelement <2 x i32> %arg4, i32 0
   %i1 = extractelement <2 x i32> %arg4, i32 1
@@ -126,11 +126,11 @@ bb:
 ; GCN-LABEL: {{^}}vgpr_ps_addr119:
 ; GCN-DAG: v_mov_b32_e32 v0, v2
 ; GCN-DAG: v_mov_b32_e32 v1, v3
-; GCN: v_mov_b32_e32 v2, v6
-; GCN: v_mov_b32_e32 v3, v8
-; GCN: v_mov_b32_e32 v4, v12
+; GCN-DAG: v_mov_b32_e32 v2, v6
+; GCN-DAG: v_mov_b32_e32 v3, v8
+; GCN-DAG: v_mov_b32_e32 v4, v12
 ; GCN-NOT: s_endpgm
-define amdgpu_ps { float, float, float, float, float } @vgpr_ps_addr119([9 x <16 x i8>] addrspace(2)* byval %arg, i32 inreg %arg1, i32 inreg %arg2, <2 x i32> %arg3, <2 x i32> %arg4, <2 x i32> %arg5, <3 x i32> %arg6, <2 x i32> %arg7, <2 x i32> %arg8, <2 x i32> %arg9, float %arg10, float %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18) #3 {
+define amdgpu_ps { float, float, float, float, float } @vgpr_ps_addr119([9 x <16 x i8>] addrspace(4)* byval %arg, i32 inreg %arg1, i32 inreg %arg2, <2 x i32> %arg3, <2 x i32> %arg4, <2 x i32> %arg5, <3 x i32> %arg6, <2 x i32> %arg7, <2 x i32> %arg8, <2 x i32> %arg9, float %arg10, float %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18) #3 {
 bb:
   %i0 = extractelement <2 x i32> %arg4, i32 0
   %i1 = extractelement <2 x i32> %arg4, i32 1
@@ -159,7 +159,7 @@ bb:
 ; GCN: v_mov_b32_e32 v3, v4
 ; GCN: v_mov_b32_e32 v4, v8
 ; GCN-NOT: s_endpgm
-define amdgpu_ps { float, float, float, float, float } @vgpr_ps_addr418([9 x <16 x i8>] addrspace(2)* byval %arg, i32 inreg %arg1, i32 inreg %arg2, <2 x i32> %arg3, <2 x i32> %arg4, <2 x i32> %arg5, <3 x i32> %arg6, <2 x i32> %arg7, <2 x i32> %arg8, <2 x i32> %arg9, float %arg10, float %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18) #4 {
+define amdgpu_ps { float, float, float, float, float } @vgpr_ps_addr418([9 x <16 x i8>] addrspace(4)* byval %arg, i32 inreg %arg1, i32 inreg %arg2, <2 x i32> %arg3, <2 x i32> %arg4, <2 x i32> %arg5, <3 x i32> %arg6, <2 x i32> %arg7, <2 x i32> %arg8, <2 x i32> %arg9, float %arg10, float %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18) #4 {
 bb:
   %i0 = extractelement <2 x i32> %arg4, i32 0
   %i1 = extractelement <2 x i32> %arg4, i32 1
@@ -178,10 +178,10 @@ bb:
 }
 
 ; GCN-LABEL: {{^}}sgpr:
-; GCN: s_add_i32 s0, s3, 2
 ; GCN: s_mov_b32 s2, s3
+; GCN: s_add_i32 s0, s3, 2
 ; GCN-NOT: s_endpgm
-define amdgpu_vs { i32, i32, i32 } @sgpr([9 x <16 x i8>] addrspace(2)* byval %arg, i32 inreg %arg1, i32 inreg %arg2, float %arg3) #0 {
+define amdgpu_vs { i32, i32, i32 } @sgpr([9 x <16 x i8>] addrspace(4)* byval %arg, i32 inreg %arg1, i32 inreg %arg2, float %arg3) #0 {
 bb:
   %x = add i32 %arg2, 2
   %a = insertvalue { i32, i32, i32 } undef, i32 %x, 0
@@ -197,22 +197,22 @@ bb:
 ; GCN-DAG: s_mov_b32 s2, 7
 ; GCN-DAG: s_mov_b32 s3, 8
 ; GCN-NOT: s_endpgm
-define amdgpu_vs { i32, i32, i32, i32 } @sgpr_literal([9 x <16 x i8>] addrspace(2)* byval %arg, i32 inreg %arg1, i32 inreg %arg2, float %arg3) #0 {
+define amdgpu_vs { i32, i32, i32, i32 } @sgpr_literal([9 x <16 x i8>] addrspace(4)* byval %arg, i32 inreg %arg1, i32 inreg %arg2, float %arg3) #0 {
 bb:
   %x = add i32 %arg2, 2
   ret { i32, i32, i32, i32 } { i32 5, i32 6, i32 7, i32 8 }
 }
 
 ; GCN-LABEL: {{^}}both:
-; GCN: v_mov_b32_e32 v1, v0
-; GCN-DAG: exp mrt0 v1, v1, v1, v1 done vm
-; GCN-DAG: v_add_f32_e32 v0, 1.0, v1
-; GCN-DAG: s_add_i32 s0, s3, 2
+; GCN-DAG: exp mrt0 v0, v0, v0, v0 done vm
+; GCN-DAG: v_mov_b32_e32 v1, v0
 ; GCN-DAG: s_mov_b32 s1, s2
-; GCN: s_mov_b32 s2, s3
 ; GCN: s_waitcnt expcnt(0)
+; GCN: v_add_f32_e32 v0, 1.0, v1
+; GCN-DAG: s_add_i32 s0, s3, 2
+; GCN-DAG: s_mov_b32 s2, s3
 ; GCN-NOT: s_endpgm
-define amdgpu_vs { float, i32, float, i32, i32 } @both([9 x <16 x i8>] addrspace(2)* byval %arg, i32 inreg %arg1, i32 inreg %arg2, float %arg3) #0 {
+define amdgpu_vs { float, i32, float, i32, i32 } @both([9 x <16 x i8>] addrspace(4)* byval %arg, i32 inreg %arg1, i32 inreg %arg2, float %arg3) #0 {
 bb:
   call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %arg3, float %arg3, float %arg3, float %arg3, i1 true, i1 true) #0
   %v = fadd float %arg3, 1.000000e+00
@@ -235,7 +235,7 @@ bb:
 ; GCN-DAG: v_mov_b32_e32 v1, 2.0
 ; GCN-DAG: v_mov_b32_e32 v2, 4.0
 ; GCN: s_waitcnt expcnt(0)
-define amdgpu_vs { { float, i32 }, { i32, <2 x float> } } @structure_literal([9 x <16 x i8>] addrspace(2)* byval %arg, i32 inreg %arg1, i32 inreg %arg2, float %arg3) #0 {
+define amdgpu_vs { { float, i32 }, { i32, <2 x float> } } @structure_literal([9 x <16 x i8>] addrspace(4)* byval %arg, i32 inreg %arg1, i32 inreg %arg2, float %arg3) #0 {
 bb:
   call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %arg3, float %arg3, float %arg3, float %arg3, i1 true, i1 true) #0
   ret { { float, i32 }, { i32, <2 x float> } } { { float, i32 } { float 1.000000e+00, i32 2 }, { i32, <2 x float> } { i32 3, <2 x float> <float 2.000000e+00, float 4.000000e+00> } }

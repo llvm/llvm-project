@@ -22,34 +22,34 @@ namespace PBQP {
 
 using PBQPNum = float;
 
-/// \brief PBQP Vector class.
+/// PBQP Vector class.
 class Vector {
   friend hash_code hash_value(const Vector &);
 
 public:
-  /// \brief Construct a PBQP vector of the given size.
+  /// Construct a PBQP vector of the given size.
   explicit Vector(unsigned Length)
     : Length(Length), Data(llvm::make_unique<PBQPNum []>(Length)) {}
 
-  /// \brief Construct a PBQP vector with initializer.
+  /// Construct a PBQP vector with initializer.
   Vector(unsigned Length, PBQPNum InitVal)
     : Length(Length), Data(llvm::make_unique<PBQPNum []>(Length)) {
     std::fill(Data.get(), Data.get() + Length, InitVal);
   }
 
-  /// \brief Copy construct a PBQP vector.
+  /// Copy construct a PBQP vector.
   Vector(const Vector &V)
     : Length(V.Length), Data(llvm::make_unique<PBQPNum []>(Length)) {
     std::copy(V.Data.get(), V.Data.get() + Length, Data.get());
   }
 
-  /// \brief Move construct a PBQP vector.
+  /// Move construct a PBQP vector.
   Vector(Vector &&V)
     : Length(V.Length), Data(std::move(V.Data)) {
     V.Length = 0;
   }
 
-  /// \brief Comparison operator.
+  /// Comparison operator.
   bool operator==(const Vector &V) const {
     assert(Length != 0 && Data && "Invalid vector");
     if (Length != V.Length)
@@ -57,27 +57,27 @@ public:
     return std::equal(Data.get(), Data.get() + Length, V.Data.get());
   }
 
-  /// \brief Return the length of the vector
+  /// Return the length of the vector
   unsigned getLength() const {
     assert(Length != 0 && Data && "Invalid vector");
     return Length;
   }
 
-  /// \brief Element access.
+  /// Element access.
   PBQPNum& operator[](unsigned Index) {
     assert(Length != 0 && Data && "Invalid vector");
     assert(Index < Length && "Vector element access out of bounds.");
     return Data[Index];
   }
 
-  /// \brief Const element access.
+  /// Const element access.
   const PBQPNum& operator[](unsigned Index) const {
     assert(Length != 0 && Data && "Invalid vector");
     assert(Index < Length && "Vector element access out of bounds.");
     return Data[Index];
   }
 
-  /// \brief Add another vector to this one.
+  /// Add another vector to this one.
   Vector& operator+=(const Vector &V) {
     assert(Length != 0 && Data && "Invalid vector");
     assert(Length == V.Length && "Vector length mismatch.");
@@ -86,7 +86,7 @@ public:
     return *this;
   }
 
-  /// \brief Returns the index of the minimum value in this vector
+  /// Returns the index of the minimum value in this vector
   unsigned minIndex() const {
     assert(Length != 0 && Data && "Invalid vector");
     return std::min_element(Data.get(), Data.get() + Length) - Data.get();
@@ -97,14 +97,14 @@ private:
   std::unique_ptr<PBQPNum []> Data;
 };
 
-/// \brief Return a hash_value for the given vector.
+/// Return a hash_value for the given vector.
 inline hash_code hash_value(const Vector &V) {
   unsigned *VBegin = reinterpret_cast<unsigned*>(V.Data.get());
   unsigned *VEnd = reinterpret_cast<unsigned*>(V.Data.get() + V.Length);
   return hash_combine(V.Length, hash_combine_range(VBegin, VEnd));
 }
 
-/// \brief Output a textual representation of the given vector on the given
+/// Output a textual representation of the given vector on the given
 ///        output stream.
 template <typename OStream>
 OStream& operator<<(OStream &OS, const Vector &V) {
@@ -118,18 +118,18 @@ OStream& operator<<(OStream &OS, const Vector &V) {
   return OS;
 }
 
-/// \brief PBQP Matrix class
+/// PBQP Matrix class
 class Matrix {
 private:
   friend hash_code hash_value(const Matrix &);
 
 public:
-  /// \brief Construct a PBQP Matrix with the given dimensions.
+  /// Construct a PBQP Matrix with the given dimensions.
   Matrix(unsigned Rows, unsigned Cols) :
     Rows(Rows), Cols(Cols), Data(llvm::make_unique<PBQPNum []>(Rows * Cols)) {
   }
 
-  /// \brief Construct a PBQP Matrix with the given dimensions and initial
+  /// Construct a PBQP Matrix with the given dimensions and initial
   /// value.
   Matrix(unsigned Rows, unsigned Cols, PBQPNum InitVal)
     : Rows(Rows), Cols(Cols),
@@ -137,20 +137,20 @@ public:
     std::fill(Data.get(), Data.get() + (Rows * Cols), InitVal);
   }
 
-  /// \brief Copy construct a PBQP matrix.
+  /// Copy construct a PBQP matrix.
   Matrix(const Matrix &M)
     : Rows(M.Rows), Cols(M.Cols),
       Data(llvm::make_unique<PBQPNum []>(Rows * Cols)) {
     std::copy(M.Data.get(), M.Data.get() + (Rows * Cols), Data.get());
   }
 
-  /// \brief Move construct a PBQP matrix.
+  /// Move construct a PBQP matrix.
   Matrix(Matrix &&M)
     : Rows(M.Rows), Cols(M.Cols), Data(std::move(M.Data)) {
     M.Rows = M.Cols = 0;
   }
 
-  /// \brief Comparison operator.
+  /// Comparison operator.
   bool operator==(const Matrix &M) const {
     assert(Rows != 0 && Cols != 0 && Data && "Invalid matrix");
     if (Rows != M.Rows || Cols != M.Cols)
@@ -158,33 +158,33 @@ public:
     return std::equal(Data.get(), Data.get() + (Rows * Cols), M.Data.get());
   }
 
-  /// \brief Return the number of rows in this matrix.
+  /// Return the number of rows in this matrix.
   unsigned getRows() const {
     assert(Rows != 0 && Cols != 0 && Data && "Invalid matrix");
     return Rows;
   }
 
-  /// \brief Return the number of cols in this matrix.
+  /// Return the number of cols in this matrix.
   unsigned getCols() const {
     assert(Rows != 0 && Cols != 0 && Data && "Invalid matrix");
     return Cols;
   }
 
-  /// \brief Matrix element access.
+  /// Matrix element access.
   PBQPNum* operator[](unsigned R) {
     assert(Rows != 0 && Cols != 0 && Data && "Invalid matrix");
     assert(R < Rows && "Row out of bounds.");
     return Data.get() + (R * Cols);
   }
 
-  /// \brief Matrix element access.
+  /// Matrix element access.
   const PBQPNum* operator[](unsigned R) const {
     assert(Rows != 0 && Cols != 0 && Data && "Invalid matrix");
     assert(R < Rows && "Row out of bounds.");
     return Data.get() + (R * Cols);
   }
 
-  /// \brief Returns the given row as a vector.
+  /// Returns the given row as a vector.
   Vector getRowAsVector(unsigned R) const {
     assert(Rows != 0 && Cols != 0 && Data && "Invalid matrix");
     Vector V(Cols);
@@ -193,7 +193,7 @@ public:
     return V;
   }
 
-  /// \brief Returns the given column as a vector.
+  /// Returns the given column as a vector.
   Vector getColAsVector(unsigned C) const {
     assert(Rows != 0 && Cols != 0 && Data && "Invalid matrix");
     Vector V(Rows);
@@ -202,7 +202,7 @@ public:
     return V;
   }
 
-  /// \brief Matrix transpose.
+  /// Matrix transpose.
   Matrix transpose() const {
     assert(Rows != 0 && Cols != 0 && Data && "Invalid matrix");
     Matrix M(Cols, Rows);
@@ -212,7 +212,7 @@ public:
     return M;
   }
 
-  /// \brief Add the given matrix to this one.
+  /// Add the given matrix to this one.
   Matrix& operator+=(const Matrix &M) {
     assert(Rows != 0 && Cols != 0 && Data && "Invalid matrix");
     assert(Rows == M.Rows && Cols == M.Cols &&
@@ -234,7 +234,7 @@ private:
   std::unique_ptr<PBQPNum []> Data;
 };
 
-/// \brief Return a hash_code for the given matrix.
+/// Return a hash_code for the given matrix.
 inline hash_code hash_value(const Matrix &M) {
   unsigned *MBegin = reinterpret_cast<unsigned*>(M.Data.get());
   unsigned *MEnd =
@@ -242,7 +242,7 @@ inline hash_code hash_value(const Matrix &M) {
   return hash_combine(M.Rows, M.Cols, hash_combine_range(MBegin, MEnd));
 }
 
-/// \brief Output a textual representation of the given matrix on the given
+/// Output a textual representation of the given matrix on the given
 ///        output stream.
 template <typename OStream>
 OStream& operator<<(OStream &OS, const Matrix &M) {

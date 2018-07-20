@@ -5,11 +5,11 @@
 ; CHECK: %tmp10 = ashr exact i64 %tmp9, 32
 ; CHECK-NEXT: --> {{.*}} Exits: (sext i32 (-2 + (2 * %arg2)) to i64)
 ; CHECK: %tmp11 = getelementptr inbounds i32, i32* %arg, i64 %tmp10
-; CHECK-NEXT: --> {{.*}} Exits: ((4 * (sext i32 (-2 + (2 * %arg2)) to i64)) + %arg)
+; CHECK-NEXT: --> {{.*}} Exits: ((4 * (sext i32 (-2 + (2 * %arg2)) to i64))<nsw> + %arg)
 ; CHECK:  %tmp14 = or i64 %tmp10, 1
 ; CHECK-NEXT: --> {{.*}} Exits: (1 + (sext i32 (-2 + (2 * %arg2)) to i64))<nsw>
 ; CHECK: %tmp15 = getelementptr inbounds i32, i32* %arg, i64 %tmp14
-; CHECK-NEXT: --> {{.*}} Exits: (4 + (4 * (sext i32 (-2 + (2 * %arg2)) to i64)) + %arg)
+; CHECK-NEXT: --> {{.*}} Exits: (4 + (4 * (sext i32 (-2 + (2 * %arg2)) to i64))<nsw> + %arg)
 ; CHECK:Loop %bb7: backedge-taken count is (-1 + (zext i32 %arg2 to i64))<nsw>
 ; CHECK-NEXT:Loop %bb7: max backedge-taken count is -1
 ; CHECK-NEXT:Loop %bb7: Predicated backedge-taken count is (-1 + (zext i32 %arg2 to i64))<nsw>

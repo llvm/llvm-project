@@ -80,7 +80,7 @@ public:
   bool visitTBAAMetadata(Instruction &I, const MDNode *MD);
 };
 
-/// \brief Check a function for errors, useful for use when debugging a
+/// Check a function for errors, useful for use when debugging a
 /// pass.
 ///
 /// If there are no errors, the function returns false. If an error is found,
@@ -88,7 +88,7 @@ public:
 /// returned.
 bool verifyFunction(const Function &F, raw_ostream *OS = nullptr);
 
-/// \brief Check a module for errors.
+/// Check a module for errors.
 ///
 /// If there are no errors, the function returns false. If an error is
 /// found, a message describing the error is written to OS (if
@@ -124,7 +124,7 @@ public:
 /// "recovered" from by stripping the debug info.
 bool verifyModule(bool &BrokenDebugInfo, const Module &M, raw_ostream *OS);
 
-/// \brief Create a verifier pass.
+/// Create a verifier pass.
 ///
 /// Check a module or function for validity. This is essentially a pass wrapped
 /// around the above verifyFunction and verifyModule routines and

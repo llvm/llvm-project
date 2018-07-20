@@ -45,15 +45,15 @@ if.then:
   br i1 %val2, label %phi.2, label %phi.3
 
 phi.3:
-; CHECK: 5 = MemoryPhi({entry,1},{if.then,2})
-; CHECK: 3 = MemoryDef(5)
+; CHECK: 7 = MemoryPhi({entry,1},{if.then,2})
+; CHECK: 3 = MemoryDef(7)
 ; CHECK-NEXT: store i8 3, i8* %local2
   store i8 3, i8* %local2
   br i1 %val3, label %phi.2, label %phi.1
 
 phi.2:
-; CHECK: 6 = MemoryPhi({if.then,2},{phi.3,3})
-; CHECK: 4 = MemoryDef(6)
+; CHECK: 5 = MemoryPhi({if.then,2},{phi.3,3})
+; CHECK: 4 = MemoryDef(5)
 ; CHECK-NEXT: store i8 4, i8* %local2
   store i8 4, i8* %local2
   br label %phi.1
@@ -61,7 +61,7 @@ phi.2:
 phi.1:
 ; Order matters here; phi.2 needs to come before phi.3, because that's the order
 ; they're visited in.
-; CHECK: 7 = MemoryPhi({phi.2,4},{phi.3,3})
+; CHECK: 6 = MemoryPhi({phi.2,4},{phi.3,3})
 ; CHECK: MemoryUse(1)
 ; CHECK-NEXT: load i8, i8* %local
   load i8, i8* %local
@@ -120,15 +120,15 @@ define void @looped(i8* noalias %p1, i8* noalias %p2) {
   br label %loop.1
 
 loop.1:
-; CHECK: 5 = MemoryPhi({%0,1},{loop.3,4})
-; CHECK: 2 = MemoryDef(5)
+; CHECK: 6 = MemoryPhi({%0,1},{loop.3,4})
+; CHECK: 2 = MemoryDef(6)
 ; CHECK-NEXT: store i8 0, i8* %p2
   store i8 0, i8* %p2
   br i1 undef, label %loop.2, label %loop.3
 
 loop.2:
-; CHECK: 6 = MemoryPhi({loop.1,2},{loop.3,4})
-; CHECK: 3 = MemoryDef(6)
+; CHECK: 5 = MemoryPhi({loop.1,2},{loop.3,4})
+; CHECK: 3 = MemoryDef(5)
 ; CHECK-NEXT: store i8 1, i8* %p2
   store i8 1, i8* %p2
   br label %loop.3
@@ -149,12 +149,12 @@ define void @looped_visitedonlyonce(i8* noalias %p1, i8* noalias %p2) {
   br label %while.cond
 
 while.cond:
-; CHECK: 4 = MemoryPhi({%0,liveOnEntry},{if.end,3})
+; CHECK: 5 = MemoryPhi({%0,liveOnEntry},{if.end,3})
 ; CHECK-NEXT: br i1 undef, label %if.then, label %if.end
   br i1 undef, label %if.then, label %if.end
 
 if.then:
-; CHECK: 1 = MemoryDef(4)
+; CHECK: 1 = MemoryDef(5)
 ; CHECK-NEXT: store i8 0, i8* %p1
   store i8 0, i8* %p1
   br i1 undef, label %if.end, label %if.then2
@@ -166,14 +166,14 @@ if.then2:
   br label %if.end
 
 if.end:
-; CHECK: 5 = MemoryPhi({while.cond,4},{if.then,1},{if.then2,2})
-; CHECK: MemoryUse(5)
+; CHECK: 4 = MemoryPhi({while.cond,5},{if.then,1},{if.then2,2})
+; CHECK: MemoryUse(4)
 ; CHECK-NEXT: load i8, i8* %p1
   load i8, i8* %p1
-; CHECK: 3 = MemoryDef(5)
+; CHECK: 3 = MemoryDef(4)
 ; CHECK-NEXT: store i8 2, i8* %p2
   store i8 2, i8* %p2
-; CHECK: MemoryUse(5)
+; CHECK: MemoryUse(4)
 ; CHECK-NEXT: load i8, i8* %p1
   load i8, i8* %p1
   br label %while.cond

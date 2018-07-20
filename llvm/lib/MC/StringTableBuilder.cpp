@@ -31,6 +31,7 @@ void StringTableBuilder::initSize() {
   // correct.
   switch (K) {
   case RAW:
+  case DWARF:
     Size = 0;
     break;
   case MachO:
@@ -116,6 +117,7 @@ tailcall:
 }
 
 void StringTableBuilder::finalize() {
+  assert(K != DWARF);
   finalizeStringTable(/*Optimize=*/true);
 }
 

@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file implements the WebAssembly-specific subclass of
+/// This file implements the WebAssembly-specific subclass of
 /// TargetSubtarget.
 ///
 //===----------------------------------------------------------------------===//
@@ -41,9 +41,9 @@ WebAssemblySubtarget::WebAssemblySubtarget(const Triple &TT,
                                            const std::string &FS,
                                            const TargetMachine &TM)
     : WebAssemblyGenSubtargetInfo(TT, CPU, FS), HasSIMD128(false),
-      HasAtomics(false), HasNontrappingFPToInt(false), CPUString(CPU),
-      TargetTriple(TT), FrameLowering(),
-      InstrInfo(initializeSubtargetDependencies(FS)), TSInfo(),
+      HasAtomics(false), HasNontrappingFPToInt(false), HasSignExt(false),
+      HasExceptionHandling(false), CPUString(CPU), TargetTriple(TT),
+      FrameLowering(), InstrInfo(initializeSubtargetDependencies(FS)), TSInfo(),
       TLInfo(TM, *this) {}
 
 bool WebAssemblySubtarget::enableMachineScheduler() const {

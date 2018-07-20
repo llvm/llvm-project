@@ -108,6 +108,10 @@ SystemZRegisterInfo::getRegAllocationHints(unsigned VirtReg,
 
 const MCPhysReg *
 SystemZRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
+  const SystemZSubtarget &Subtarget = MF->getSubtarget<SystemZSubtarget>();
+  if (MF->getFunction().getCallingConv() == CallingConv::AnyReg)
+    return Subtarget.hasVector()? CSR_SystemZ_AllRegs_Vector_SaveList
+                                : CSR_SystemZ_AllRegs_SaveList;
   if (MF->getSubtarget().getTargetLowering()->supportSwiftError() &&
       MF->getFunction().getAttributes().hasAttrSomewhere(
           Attribute::SwiftError))
@@ -118,6 +122,10 @@ SystemZRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
 const uint32_t *
 SystemZRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
                                           CallingConv::ID CC) const {
+  const SystemZSubtarget &Subtarget = MF.getSubtarget<SystemZSubtarget>();
+  if (CC == CallingConv::AnyReg)
+    return Subtarget.hasVector()? CSR_SystemZ_AllRegs_Vector_RegMask
+                                : CSR_SystemZ_AllRegs_RegMask;
   if (MF.getSubtarget().getTargetLowering()->supportSwiftError() &&
       MF.getFunction().getAttributes().hasAttrSomewhere(
           Attribute::SwiftError))
@@ -307,3 +315,11 @@ SystemZRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   const SystemZFrameLowering *TFI = getFrameLowering(MF);
   return TFI->hasFP(MF) ? SystemZ::R11D : SystemZ::R15D;
 }
+
+const TargetRegisterClass *
+SystemZRegisterInfo::getCrossCopyRegClass(const TargetRegisterClass *RC) const {
+  if (RC == &SystemZ::CCRRegClass)
+    return &SystemZ::GR32BitRegClass;
+  return RC;
+}
+

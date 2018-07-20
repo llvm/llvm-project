@@ -11,8 +11,7 @@ entry:
   ret float %conv1
 
 ; FPCVT-LABEL: @fool
-; FPCVT: fctidz [[REG1:[0-9]+]], 1
-; FPCVT: fcfids 1, [[REG1]]
+; FPCVT: friz 1, 1
 ; FPCVT: blr
 
 ; PPC64-LABEL: @fool
@@ -30,8 +29,7 @@ entry:
   ret double %conv1
 
 ; FPCVT-LABEL: @foodl
-; FPCVT: fctidz [[REG1:[0-9]+]], 1
-; FPCVT: fcfid 1, [[REG1]]
+; FPCVT: friz 1, 1
 ; FPCVT: blr
 
 ; PPC64-LABEL: @foodl
@@ -48,8 +46,7 @@ entry:
   ret float %conv1
 
 ; FPCVT-LABEL: @fooul
-; FPCVT: fctiduz [[REG1:[0-9]+]], 1
-; FPCVT: fcfidus 1, [[REG1]]
+; FPCVT: friz 1, 1
 ; FPCVT: blr
 }
 
@@ -61,10 +58,9 @@ entry:
   ret double %conv1
 
 ; FPCVT-LABEL: @fooudl
-; FPCVT: fctiduz [[REG1:[0-9]+]], 1
-; FPCVT: fcfidu 1, [[REG1]]
+; FPCVT: friz 1, 1
 ; FPCVT: blr
 }
 
-attributes #0 = { nounwind readnone }
+attributes #0 = { nounwind readnone "no-signed-zeros-fp-math"="true" }
 

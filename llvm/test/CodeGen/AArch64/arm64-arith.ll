@@ -123,8 +123,7 @@ entry:
 define i64 @t14(i16 %a, i64 %x) nounwind ssp {
 entry:
 ; CHECK-LABEL: t14:
-; CHECK: and	w8, w0, #0xffff
-; CHECK: add	x0, x1, w8, uxtw #3
+; CHECK: add   x0, x1, w0, uxth #3
 ; CHECK: ret
   %c = zext i16 %a to i64
   %d = shl i64 %c, 3

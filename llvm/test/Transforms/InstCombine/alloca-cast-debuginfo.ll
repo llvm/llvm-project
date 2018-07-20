@@ -41,7 +41,10 @@ entry:
 ; CHECK: %local = alloca i64, align 8
 ; CHECK: call void @llvm.dbg.declare(metadata i64* %local, metadata !22, metadata !DIExpression())
 ; CHECK: [[simplified:%.*]] = bitcast i64* %local to i8*
-; CHECK: call void @llvm.dbg.value(metadata i8* [[simplified]], metadata !22, metadata !DIExpression())
+;
+; Another dbg.value for "local" would be redundant here.
+; CHECK-NOT: call void @llvm.dbg.value(metadata i8* [[simplified]], metadata !22, metadata !DIExpression())
+;
 ; CHECK: call void @escape(i8* [[simplified]])
 ; CHECK: ret void
 
@@ -64,7 +67,7 @@ declare void @escape(i8*)
 !8 = !{i32 1, !"wchar_size", i32 2}
 !9 = !{i32 7, !"PIC Level", i32 2}
 !10 = !{!"clang version 6.0.0 "}
-!11 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 5, type: !12, isLocal: false, isDefinition: true, scopeLine: 5, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !20)
+!11 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 5, type: !12, isLocal: false, isDefinition: true, scopeLine: 5, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !20)
 !12 = !DISubroutineType(types: !13)
 !13 = !{null, !14}
 !14 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !15, size: 64)

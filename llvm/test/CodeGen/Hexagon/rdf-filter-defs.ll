@@ -120,7 +120,7 @@ b18:
   %t45 = getelementptr inbounds i8, i8* %t42, i32 %p1
   %t46 = load i32, i32* %t0, align 4
   %t47 = sub i32 %t46, %p1
-  tail call void @llvm.memmove.p0i8.p0i8.i32(i8* %t44, i8* %t45, i32 %t47, i32 1, i1 false) #1
+  tail call void @llvm.memmove.p0i8.p0i8.i32(i8* %t44, i8* %t45, i32 %t47, i1 false) #1
   %t48 = icmp eq %type.0* %p0, %p2
   %t49 = load i32, i32* %t22, align 4
   %t50 = icmp ugt i32 %t49, 15
@@ -158,7 +158,7 @@ b25:
   %t61 = select i1 %t60, i32 %t13, i32 0
   %t62 = add i32 %t61, %p3
   %t63 = getelementptr inbounds i8, i8* %t59, i32 %t62
-  tail call void @llvm.memmove.p0i8.p0i8.i32(i8* %t55, i8* %t63, i32 %t13, i32 1, i1 false) #1
+  tail call void @llvm.memmove.p0i8.p0i8.i32(i8* %t55, i8* %t63, i32 %t13, i1 false) #1
   br label %b27
 
 b26:
@@ -171,7 +171,7 @@ b26:
   %t70 = bitcast %type.3* %t67 to i8*
   %t71 = select i1 %t66, i8* %t69, i8* %t70
   %t72 = getelementptr inbounds i8, i8* %t71, i32 %p3
-  tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* %t55, i8* %t72, i32 %t13, i32 1, i1 false) #1
+  tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* %t55, i8* %t72, i32 %t13, i1 false) #1
   br label %b27
 
 b27:
@@ -203,8 +203,8 @@ b33:
   ret %type.0* %p0
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture writeonly, i8* nocapture readonly, i32, i32, i1) #0
-declare void @llvm.memmove.p0i8.p0i8.i32(i8* nocapture, i8* nocapture readonly, i32, i32, i1) #0
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture writeonly, i8* nocapture readonly, i32, i1) #0
+declare void @llvm.memmove.p0i8.p0i8.i32(i8* nocapture, i8* nocapture readonly, i32, i1) #0
 
 declare void @blah(%type.4*) local_unnamed_addr
 declare void @danny(%type.4*) local_unnamed_addr

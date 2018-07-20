@@ -122,44 +122,35 @@ void BPFMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
                               computeAvailableFeatures(STI.getFeatureBits()));
 
   unsigned Opcode = MI.getOpcode();
-  support::endian::Writer<support::little> LE(OS);
-  support::endian::Writer<support::big> BE(OS);
+  support::endian::Writer OSE(OS,
+                              IsLittleEndian ? support::little : support::big);
 
   if (Opcode == BPF::LD_imm64 || Opcode == BPF::LD_pseudo) {
     uint64_t Value = getBinaryCodeForInstr(MI, Fixups, STI);
-    LE.write<uint8_t>(Value >> 56);
+    OS << char(Value >> 56);
     if (IsLittleEndian)
-      LE.write<uint8_t>((Value >> 48) & 0xff);
+      OS << char((Value >> 48) & 0xff);
     else
-      LE.write<uint8_t>(SwapBits((Value >> 48) & 0xff));
-    LE.write<uint16_t>(0);
-    if (IsLittleEndian)
-      LE.write<uint32_t>(Value & 0xffffFFFF);
-    else
-      BE.write<uint32_t>(Value & 0xffffFFFF);
+      OS << char(SwapBits((Value >> 48) & 0xff));
+    OSE.write<uint16_t>(0);
+    OSE.write<uint32_t>(Value & 0xffffFFFF);
 
     const MCOperand &MO = MI.getOperand(1);
     uint64_t Imm = MO.isImm() ? MO.getImm() : 0;
-    LE.write<uint8_t>(0);
-    LE.write<uint8_t>(0);
-    LE.write<uint16_t>(0);
-    if (IsLittleEndian)
-      LE.write<uint32_t>(Imm >> 32);
-    else
-      BE.write<uint32_t>(Imm >> 32);
+    OSE.write<uint8_t>(0);
+    OSE.write<uint8_t>(0);
+    OSE.write<uint16_t>(0);
+    OSE.write<uint32_t>(Imm >> 32);
   } else {
     // Get instruction encoding and emit it
     uint64_t Value = getBinaryCodeForInstr(MI, Fixups, STI);
-    LE.write<uint8_t>(Value >> 56);
-    if (IsLittleEndian) {
-      LE.write<uint8_t>((Value >> 48) & 0xff);
-      LE.write<uint16_t>((Value >> 32) & 0xffff);
-      LE.write<uint32_t>(Value & 0xffffFFFF);
-    } else {
-      LE.write<uint8_t>(SwapBits((Value >> 48) & 0xff));
-      BE.write<uint16_t>((Value >> 32) & 0xffff);
-      BE.write<uint32_t>(Value & 0xffffFFFF);
-    }
+    OS << char(Value >> 56);
+    if (IsLittleEndian)
+      OS << char((Value >> 48) & 0xff);
+    else
+      OS << char(SwapBits((Value >> 48) & 0xff));
+    OSE.write<uint16_t>((Value >> 32) & 0xffff);
+    OSE.write<uint32_t>(Value & 0xffffFFFF);
   }
 }
 

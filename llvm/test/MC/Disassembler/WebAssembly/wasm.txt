@@ -1,0 +1,33 @@
+# RUN: llvm-mc --disassemble %s -triple=wasm32-unknown-unknown | FileCheck %s
+
+# CHECK: .text
+
+# CHECK: nop
+0x01
+
+# CHECK: i32.add
+0x6a
+
+# CHECK: i64.const -1
+0x42 0x7F
+
+# CHECK: i64.load32_u 16, :p2align=1
+# FIXME: fix p2align output in WebAssemblyInstPrinter
+0x35 0x01 0x10
+
+# CHECK: block
+# 3
+# FIXME: WebAssemblyInstPrinter does not currently print block number.
+0x02 0x03
+
+# CHECK: call_indirect
+# $0=, 128, 0
+# FIXME: WebAssemblyInstPrinter does not print immediates.
+0x11 0x80 0x01 0x00
+
+# CHECK: get_local 128
+0x20 0x80 0x01
+
+# Prefix byte example:
+# CHECK: i64.trunc_u:sat/f64
+0xFC 0x07

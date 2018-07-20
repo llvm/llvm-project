@@ -69,12 +69,15 @@ public:
 
   CVPLatticeVal() : LatticeState(Undefined) {}
   CVPLatticeVal(CVPLatticeStateTy LatticeState) : LatticeState(LatticeState) {}
-  CVPLatticeVal(std::set<Function *, Compare> &&Functions)
-      : LatticeState(FunctionSet), Functions(Functions) {}
+  CVPLatticeVal(std::vector<Function *> &&Functions)
+      : LatticeState(FunctionSet), Functions(std::move(Functions)) {
+    assert(std::is_sorted(this->Functions.begin(), this->Functions.end(),
+                          Compare()));
+  }
 
   /// Get a reference to the functions held by this lattice value. The number
   /// of functions will be zero for states other than FunctionSet.
-  const std::set<Function *, Compare> &getFunctions() const {
+  const std::vector<Function *> &getFunctions() const {
     return Functions;
   }
 
@@ -99,7 +102,8 @@ private:
   /// MaxFunctionsPerValue. Since most LLVM values are expected to be in
   /// uninteresting states (i.e., overdefined), CVPLatticeVal objects should be
   /// small and efficiently copyable.
-  std::set<Function *, Compare> Functions;
+  // FIXME: This could be a TinyPtrVector and/or merge with LatticeState.
+  std::vector<Function *> Functions;
 };
 
 /// The custom lattice function used by the generic sparse propagation solver.
@@ -150,11 +154,10 @@ public:
       return getOverdefinedVal();
     if (X == getUndefVal() && Y == getUndefVal())
       return getUndefVal();
-    std::set<Function *, CVPLatticeVal::Compare> Union;
+    std::vector<Function *> Union;
     std::set_union(X.getFunctions().begin(), X.getFunctions().end(),
                    Y.getFunctions().begin(), Y.getFunctions().end(),
-                   std::inserter(Union, Union.begin()),
-                   CVPLatticeVal::Compare{});
+                   std::back_inserter(Union), CVPLatticeVal::Compare{});
     if (Union.size() > MaxFunctionsPerValue)
       return getOverdefinedVal();
     return CVPLatticeVal(std::move(Union));
@@ -265,6 +268,10 @@ private:
 
     // If we can't track the function's return values, there's nothing to do.
     if (!F || !canTrackReturnsInterprocedurally(F)) {
+      // Void return, No need to create and update CVPLattice state as no one
+      // can use it.
+      if (I->getType()->isVoidTy())
+        return;
       ChangedValues[RegI] = getOverdefinedVal();
       return;
     }
@@ -280,6 +287,12 @@ private:
       ChangedValues[RegFormal] =
           MergeValues(SS.getValueState(RegFormal), SS.getValueState(RegActual));
     }
+
+    // Void return, No need to create and update CVPLattice state as no one can
+    // use it.
+    if (I->getType()->isVoidTy())
+      return;
+
     ChangedValues[RegI] =
         MergeValues(SS.getValueState(RegI), SS.getValueState(RetF));
   }
@@ -377,8 +390,7 @@ static bool runCVP(Module &M) {
     CVPLatticeVal LV = Solver.getExistingValueState(RegI);
     if (!LV.isFunctionSet() || LV.getFunctions().empty())
       continue;
-    MDNode *Callees = MDB.createCallees(SmallVector<Function *, 4>(
-        LV.getFunctions().begin(), LV.getFunctions().end()));
+    MDNode *Callees = MDB.createCallees(LV.getFunctions());
     C->setMetadata(LLVMContext::MD_callees, Callees);
     Changed = true;
   }

@@ -89,4 +89,4 @@ $vftable = comdat largest
 ; CHECK: .globl  _f6
 ; CHECK: .section        .rdata,"dr",largest,_vftable
 ; CHECK: .globl  _vftable
-; CHECK: _vftable = L_some_name+4
+; CHECK: .set _vftable, L_some_name+4

@@ -38,9 +38,9 @@ entry:
 define zeroext i32 @TEST_mm512_mask_test_epi16_mask(i32 %__U, <8 x i64> %__A, <8 x i64> %__B) local_unnamed_addr #0 {
 ; CHECK-LABEL: TEST_mm512_mask_test_epi16_mask:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vptestmw %zmm0, %zmm1, %k0 {%k1}
+; CHECK-NEXT:    vptestmw %zmm0, %zmm1, %k0
 ; CHECK-NEXT:    kmovd %k0, %eax
+; CHECK-NEXT:    andl %edi, %eax
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
 entry:
@@ -57,9 +57,9 @@ entry:
 define zeroext i64 @TEST_mm512_mask_test_epi8_mask(i64 %__U, <8 x i64> %__A, <8 x i64> %__B) local_unnamed_addr #0 {
 ; CHECK-LABEL: TEST_mm512_mask_test_epi8_mask:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    kmovq %rdi, %k1
-; CHECK-NEXT:    vptestmb %zmm0, %zmm1, %k0 {%k1}
+; CHECK-NEXT:    vptestmb %zmm0, %zmm1, %k0
 ; CHECK-NEXT:    kmovq %k0, %rax
+; CHECK-NEXT:    andq %rdi, %rax
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
 entry:
@@ -109,9 +109,9 @@ entry:
 define zeroext i32 @TEST_mm512_mask_testn_epi16_mask(i32 %__U, <8 x i64> %__A, <8 x i64> %__B) local_unnamed_addr #0 {
 ; CHECK-LABEL: TEST_mm512_mask_testn_epi16_mask:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vptestnmw %zmm0, %zmm1, %k0 {%k1}
+; CHECK-NEXT:    vptestnmw %zmm0, %zmm1, %k0
 ; CHECK-NEXT:    kmovd %k0, %eax
+; CHECK-NEXT:    andl %edi, %eax
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
 entry:
@@ -128,9 +128,9 @@ entry:
 define zeroext i64 @TEST_mm512_mask_testn_epi8_mask(i64 %__U, <8 x i64> %__A, <8 x i64> %__B) local_unnamed_addr #0 {
 ; CHECK-LABEL: TEST_mm512_mask_testn_epi8_mask:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    kmovq %rdi, %k1
-; CHECK-NEXT:    vptestnmb %zmm0, %zmm1, %k0 {%k1}
+; CHECK-NEXT:    vptestnmb %zmm0, %zmm1, %k0
 ; CHECK-NEXT:    kmovq %k0, %rax
+; CHECK-NEXT:    andq %rdi, %rax
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
 entry:

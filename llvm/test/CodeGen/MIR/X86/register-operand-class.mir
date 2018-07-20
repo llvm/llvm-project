@@ -14,14 +14,14 @@
 name: func
 body: |
   bb.0:
-    %0 : gr32 = COPY %rax
-    %1.sub_32bit : gr64 = COPY %eax
-    %rdx = COPY %1
-    %2 = COPY %ecx
-    %ecx = COPY %2 : gr32
+    %0 : gr32 = COPY $rax
+    %1.sub_32bit : gr64 = COPY $eax
+    $rdx = COPY %1
+    %2 = COPY $ecx
+    $ecx = COPY %2 : gr32
 
-    %3 : gr16 = COPY %bx
-    %bx = COPY %3 : gr16
+    %3 : gr16 = COPY $bx
+    $bx = COPY %3 : gr16
 
-    %4 : _(s32) = COPY %edx
+    %4 : _(s32) = COPY $edx
 ...

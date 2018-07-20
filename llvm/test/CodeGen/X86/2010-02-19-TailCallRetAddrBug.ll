@@ -17,10 +17,10 @@
 
 %tupl = type [9 x i32]
 
-declare fastcc void @l297(i32 %r10, i32 %r9, i32 %r8, i32 %r7, i32 %r6, i32 %r5, i32 %r3, i32 %r2) noreturn nounwind
-declare fastcc void @l298(i32 %r10, i32 %r9, i32 %r4) noreturn nounwind
+declare fastcc void @l297(i32 %r10, i32 %r9, i32 %r8, i32 %r7, i32 %r6, i32 %r5, i32 %r3, i32 %r2) nounwind
+declare fastcc void @l298(i32 %r10, i32 %r9, i32 %r4) nounwind
 
-define fastcc void @l186(%tupl* %r1) noreturn nounwind {
+define fastcc void @l186(%tupl* %r1) nounwind {
 entry:
   %ptr1 = getelementptr %tupl, %tupl* %r1, i32 0, i32 0
   %r2 = load i32, i32* %ptr1
@@ -44,10 +44,10 @@ entry:
   br i1 %cond, label %true, label %false
 
 true:
-  tail call fastcc void @l297(i32 %r10, i32 %r9, i32 %r8, i32 %r7, i32 %r6, i32 %r5, i32 %r3, i32 %r2) noreturn nounwind
+  tail call fastcc void @l297(i32 %r10, i32 %r9, i32 %r8, i32 %r7, i32 %r6, i32 %r5, i32 %r3, i32 %r2) nounwind
   ret void
 
 false:
-  tail call fastcc void @l298(i32 %r10, i32 %r9, i32 %r4) noreturn nounwind
+  tail call fastcc void @l298(i32 %r10, i32 %r9, i32 %r4) nounwind
   ret void
 }

@@ -43,7 +43,7 @@ IF13:                                             ; preds = %ELSE
   %20 = load <4 x float>, <4 x float> addrspace(8)* null
   %21 = extractelement <4 x float> %20, i32 0
   %22 = fsub float -0.000000e+00, %21
-  %23 = fadd float 0xFFF8000000000000, %22
+  %23 = fadd float 0x3FF8000000000000, %22
   br label %ENDIF
 }
 

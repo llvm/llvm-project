@@ -22,7 +22,7 @@
 namespace llvm {
 class Module;
 class Function;
-/// \brief Calculate and dump ThinLTO specific inliner stats.
+/// Calculate and dump ThinLTO specific inliner stats.
 /// The main statistics are:
 /// (1) Number of inlined imported functions,
 /// (2) Number of imported functions inlined into importing module (indirect),

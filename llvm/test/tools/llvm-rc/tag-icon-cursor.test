@@ -1,13 +1,5 @@
-; This .ico file used to write this test was lost when the author left
-; before comitting, and the binary wasn't uploaded to Phabricator.  This
-; will be fixed as soon as we can recover the file.
-; XFAIL: *
 ; RUN: rm -rf %t
 ; RUN: mkdir %t
-; RUN: cd %t
-; RUN: cp %p/Inputs/icon*.ico .
-; RUN: cp %p/Inputs/cursor*.cur .
-; RUN: cp %p/Inputs/tag-icon-cursor-nonsense.rc .
 
 ; RUN: llvm-rc /FO %t/tag-icon-cursor.res %p/Inputs/tag-icon-cursor.rc
 ; RUN: llvm-readobj %t/tag-icon-cursor.res | FileCheck %s
@@ -330,28 +322,10 @@
 
 ; RUN: not llvm-rc /FO %t/1 %p/Inputs/tag-icon-cursor-nonexistent.rc 2>&1 | FileCheck %s --check-prefix NOFILE
 ; NOFILE: llvm-rc: Error in CURSOR statement (ID 500):
-; NOFILE-NEXT: Error opening cursor 'this-file-does-not-exist.cur':
+; NOFILE-NEXT: file not found : this-file-does-not-exist.cur
 
 
 ; RUN: not llvm-rc /FO %t/1 %p/Inputs/tag-icon-cursor-nonsense.rc 2>&1 | FileCheck %s --check-prefix NONSENSE
 
 ; NONSENSE: llvm-rc: Error in ICON statement (ID 1):
 ; NONSENSE-NEXT: Incorrect icon/cursor Reserved field; should be 0.
-
-
-; RUN: not llvm-rc /FO %t/1 %p/Inputs/tag-icon-cursor-eof.rc 2>&1 | FileCheck %s --check-prefix EOF
-
-; EOF: llvm-rc: Error in CURSOR statement (ID 72):
-; EOF-NEXT: Stream Error: The stream is too short to perform the requested operation.
-
-
-; RUN: not llvm-rc /FO %t/1 %p/Inputs/tag-icon-cursor-bad-offset.rc 2>&1 | FileCheck %s --check-prefix OFFSET
-
-; OFFSET: llvm-rc: Error in CURSOR statement (ID 50):
-; OFFSET-NEXT: Stream Error: The specified offset is invalid for the current stream.
-
-
-; RUN: not llvm-rc /FO %t/1 %p/Inputs/tag-icon-cursor-bad-type.rc 2>&1 | FileCheck %s --check-prefix BADTYPE
-
-; BADTYPE: llvm-rc: Error in ICON statement (ID 100):
-; BADTYPE-NEXT: Incorrect icon/cursor ResType field; should be 1.

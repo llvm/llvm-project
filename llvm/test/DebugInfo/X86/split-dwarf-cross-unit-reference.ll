@@ -118,7 +118,7 @@ entry:
   call void @llvm.dbg.declare(metadata %struct.t1* %t, metadata !23, metadata !16), !dbg !24
   %0 = bitcast %struct.t1* %agg.tmp to i8*, !dbg !25
   %1 = bitcast %struct.t1* %t to i8*, !dbg !25
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %0, i8* %1, i64 4, i32 4, i1 false), !dbg !25
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %0, i8* align 4 %1, i64 4, i1 false), !dbg !25
   %coerce.dive1 = getelementptr inbounds %struct.t1, %struct.t1* %agg.tmp, i32 0, i32 0, !dbg !26
   %2 = load i32, i32* %coerce.dive1, align 4, !dbg !26
   %coerce.dive.i = getelementptr inbounds %struct.t1, %struct.t1* %t.i, i32 0, i32 0
@@ -128,7 +128,7 @@ entry:
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i32, i1) #4
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1) #4
 
 ; Function Attrs: noinline uwtable
 define void @_Z3bar2t1(i32 %t.coerce) #3 !dbg !29 {
@@ -142,7 +142,7 @@ entry:
   call void @llvm.dbg.declare(metadata %struct.t1* %t, metadata !32, metadata !16), !dbg !33
   %0 = bitcast %struct.t1* %agg.tmp to i8*, !dbg !34
   %1 = bitcast %struct.t1* %t to i8*, !dbg !34
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %0, i8* %1, i64 4, i32 4, i1 false), !dbg !34
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %0, i8* align 4 %1, i64 4, i1 false), !dbg !34
   %coerce.dive1 = getelementptr inbounds %struct.t1, %struct.t1* %agg.tmp, i32 0, i32 0, !dbg !35
   %2 = load i32, i32* %coerce.dive1, align 4, !dbg !35
   %coerce.dive.i = getelementptr inbounds %struct.t1, %struct.t1* %t.i, i32 0, i32 0
@@ -163,7 +163,7 @@ entry:
 !5 = !{!"clang version 5.0.0 (trunk 302809) (llvm/trunk 302815)"}
 !6 = !{i32 2, !"Dwarf Version", i32 4}
 !7 = !{i32 2, !"Debug Info Version", i32 3}
-!8 = distinct !DISubprogram(name: "f1", linkageName: "_Z2f12t1", scope: !1, file: !1, line: 3, type: !9, isLocal: false, isDefinition: true, scopeLine: 3, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
+!8 = distinct !DISubprogram(name: "f1", linkageName: "_Z2f12t1", scope: !1, file: !1, line: 3, type: !9, isLocal: false, isDefinition: true, scopeLine: 3, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
 !9 = !DISubroutineType(types: !10)
 !10 = !{null, !11}
 !11 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "t1", file: !1, line: 1, size: 32, elements: !12, identifier: "_ZTS2t1")
@@ -175,7 +175,7 @@ entry:
 !17 = !DILocation(line: 3, column: 43, scope: !8)
 !18 = !DILocation(line: 4, column: 3, scope: !8)
 !19 = !DILocation(line: 5, column: 1, scope: !8)
-!20 = distinct !DISubprogram(name: "foo", linkageName: "_Z3foo2t1", scope: !1, file: !1, line: 6, type: !9, isLocal: false, isDefinition: true, scopeLine: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
+!20 = distinct !DISubprogram(name: "foo", linkageName: "_Z3foo2t1", scope: !1, file: !1, line: 6, type: !9, isLocal: false, isDefinition: true, scopeLine: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
 !21 = !DILocation(line: 3, column: 43, scope: !8, inlinedAt: !22)
 !22 = distinct !DILocation(line: 7, column: 3, scope: !20)
 !23 = !DILocalVariable(name: "t", arg: 1, scope: !20, file: !1, line: 6, type: !11)
@@ -184,7 +184,7 @@ entry:
 !26 = !DILocation(line: 7, column: 3, scope: !20)
 !27 = !DILocation(line: 4, column: 3, scope: !8, inlinedAt: !22)
 !28 = !DILocation(line: 8, column: 1, scope: !20)
-!29 = distinct !DISubprogram(name: "bar", linkageName: "_Z3bar2t1", scope: !4, file: !4, line: 3, type: !9, isLocal: false, isDefinition: true, scopeLine: 3, flags: DIFlagPrototyped, isOptimized: false, unit: !3, variables: !2)
+!29 = distinct !DISubprogram(name: "bar", linkageName: "_Z3bar2t1", scope: !4, file: !4, line: 3, type: !9, isLocal: false, isDefinition: true, scopeLine: 3, flags: DIFlagPrototyped, isOptimized: false, unit: !3, retainedNodes: !2)
 !30 = !DILocation(line: 3, column: 43, scope: !8, inlinedAt: !31)
 !31 = distinct !DILocation(line: 4, column: 3, scope: !29)
 !32 = !DILocalVariable(name: "t", arg: 1, scope: !29, file: !4, line: 3, type: !11)

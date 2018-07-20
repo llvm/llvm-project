@@ -85,9 +85,23 @@ public:
 /// stack offsets of the object, eliminating all MO_FrameIndex operands from
 /// the program.
 ///
-/// @brief Abstract Stack Frame Information
+/// Abstract Stack Frame Information
 class MachineFrameInfo {
+public:
+  /// Stack Smashing Protection (SSP) rules require that vulnerable stack
+  /// allocations are located close the stack protector.
+  enum SSPLayoutKind {
+    SSPLK_None,       ///< Did not trigger a stack protector.  No effect on data
+                      ///< layout.
+    SSPLK_LargeArray, ///< Array or nested array >= SSP-buffer-size.  Closest
+                      ///< to the stack protector.
+    SSPLK_SmallArray, ///< Array or nested array < SSP-buffer-size. 2nd closest
+                      ///< to the stack protector.
+    SSPLK_AddrOf      ///< The address of this allocation is exposed and
+                      ///< triggered protection.  3rd closest to the protector.
+  };
 
+private:
   // Represent a single object allocated on the stack.
   struct StackObject {
     // The offset of this object from the stack pointer on entry to
@@ -123,6 +137,9 @@ class MachineFrameInfo {
     /// necessarily reside in the same contiguous memory block as other stack
     /// objects. Objects with differing stack IDs should not be merged or
     /// replaced substituted for each other.
+    //
+    /// It is assumed a target uses consecutive, increasing stack IDs starting
+    /// from 1.
     uint8_t StackID;
 
     /// If this stack object is originated from an Alloca instruction
@@ -145,12 +162,15 @@ class MachineFrameInfo {
     /// If true, the object has been zero-extended.
     bool isSExt = false;
 
+    uint8_t SSPLayout;
+
     StackObject(uint64_t Size, unsigned Alignment, int64_t SPOffset,
                 bool IsImmutable, bool IsSpillSlot, const AllocaInst *Alloca,
                 bool IsAliased, uint8_t StackID = 0)
       : SPOffset(SPOffset), Size(Size), Alignment(Alignment),
         isImmutable(IsImmutable), isSpillSlot(IsSpillSlot),
-        StackID(StackID), Alloca(Alloca), isAliased(IsAliased) {}
+        StackID(StackID), Alloca(Alloca), isAliased(IsAliased),
+        SSPLayout(SSPLK_None) {}
   };
 
   /// The alignment of the stack.
@@ -483,6 +503,20 @@ public:
     assert(!isDeadObjectIndex(ObjectIdx) &&
            "Setting frame offset for a dead object?");
     Objects[ObjectIdx+NumFixedObjects].SPOffset = SPOffset;
+  }
+
+  SSPLayoutKind getObjectSSPLayout(int ObjectIdx) const {
+    assert(unsigned(ObjectIdx+NumFixedObjects) < Objects.size() &&
+           "Invalid Object Idx!");
+    return (SSPLayoutKind)Objects[ObjectIdx+NumFixedObjects].SSPLayout;
+  }
+
+  void setObjectSSPLayout(int ObjectIdx, SSPLayoutKind Kind) {
+    assert(unsigned(ObjectIdx+NumFixedObjects) < Objects.size() &&
+           "Invalid Object Idx!");
+    assert(!isDeadObjectIndex(ObjectIdx) &&
+           "Setting SSP layout for a dead object?");
+    Objects[ObjectIdx+NumFixedObjects].SSPLayout = Kind;
   }
 
   /// Return the number of bytes that must be allocated to hold

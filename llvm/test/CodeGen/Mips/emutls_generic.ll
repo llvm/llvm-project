@@ -3,6 +3,11 @@
 ; RUN: llc < %s -emulated-tls -mtriple=mips64el-linux-android -relocation-model=pic \
 ; RUN:     | FileCheck -check-prefix=MIPS_64 %s
 
+; RUN: llc < %s -mtriple=mipsel-linux-android -relocation-model=pic \
+; RUN:     | FileCheck -check-prefix=MIPS_32 %s
+; RUN: llc < %s -mtriple=mips64el-linux-android -relocation-model=pic \
+; RUN:     | FileCheck -check-prefix=MIPS_64 %s
+
 ; Make sure that TLS symbols are emitted in expected order.
 
 @external_x = external thread_local global i32, align 8

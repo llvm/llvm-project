@@ -18,4 +18,4 @@
 type = Tool
 name = llvm-objcopy
 parent = Tools
-required_libraries = Object Support MC
+required_libraries = Object Option Support MC

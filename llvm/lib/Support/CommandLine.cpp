@@ -25,6 +25,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Config/config.h"
 #include "llvm/Support/ConvertUTF.h"
@@ -973,7 +974,7 @@ static bool ExpandResponseFile(StringRef FName, StringSaver &Saver,
   return true;
 }
 
-/// \brief Expand response files on a command line recursively using the given
+/// Expand response files on a command line recursively using the given
 /// StringSaver and tokenization strategy.
 bool cl::ExpandResponseFiles(StringSaver &Saver, TokenizerCallback Tokenizer,
                              SmallVectorImpl<const char *> &Argv,
@@ -1080,7 +1081,10 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
   SmallVector<const char *, 20> newArgv(argv, argv + argc);
   BumpPtrAllocator A;
   StringSaver Saver(A);
-  ExpandResponseFiles(Saver, TokenizeGNUCommandLine, newArgv);
+  ExpandResponseFiles(Saver,
+         Triple(sys::getProcessTriple()).isOSWindows() ?
+         cl::TokenizeWindowsCommandLine : cl::TokenizeGNUCommandLine,
+         newArgv);
   argv = &newArgv[0];
   argc = static_cast<int>(newArgv.size());
 
@@ -1266,8 +1270,15 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
 
     // If this is a named positional argument, just remember that it is the
     // active one...
-    if (Handler->getFormattingFlag() == cl::Positional)
+    if (Handler->getFormattingFlag() == cl::Positional) {
+      if ((Handler->getMiscFlags() & PositionalEatsArgs) && !Value.empty()) {
+        Handler->error("This argument does not take a value.\n"
+                       "\tInstead, it consumes any positional arguments until "
+                       "the next recognized option.", *Errs);
+        ErrorParsing = true;
+      }
       ActivePositionalArg = Handler;
+    }
     else
       ErrorParsing |= ProvideOption(Handler, ArgName, Value, argc, argv, i);
   }
@@ -1371,9 +1382,9 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
   // Now that we know if -debug is specified, we can use it.
   // Note that if ReadResponseFiles == true, this must be done before the
   // memory allocated for the expanded command line is free()d below.
-  DEBUG(dbgs() << "Args: ";
-        for (int i = 0; i < argc; ++i) dbgs() << argv[i] << ' ';
-        dbgs() << '\n';);
+  LLVM_DEBUG(dbgs() << "Args: ";
+             for (int i = 0; i < argc; ++i) dbgs() << argv[i] << ' ';
+             dbgs() << '\n';);
 
   // Free all of the memory allocated to the map.  Command line options may only
   // be processed once!
@@ -1392,15 +1403,15 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
 // Option Base class implementation
 //
 
-bool Option::error(const Twine &Message, StringRef ArgName) {
+bool Option::error(const Twine &Message, StringRef ArgName, raw_ostream &Errs) {
   if (!ArgName.data())
     ArgName = ArgStr;
   if (ArgName.empty())
-    errs() << HelpStr; // Be nice for positional arguments
+    Errs << HelpStr; // Be nice for positional arguments
   else
-    errs() << GlobalParser->ProgramName << ": for the -" << ArgName;
+    Errs << GlobalParser->ProgramName << ": for the -" << ArgName;
 
-  errs() << " option: " << Message << "\n";
+  Errs << " option: " << Message << "\n";
   return true;
 }
 
@@ -1470,8 +1481,12 @@ void alias::printOptionInfo(size_t GlobalWidth) const {
 size_t basic_parser_impl::getOptionWidth(const Option &O) const {
   size_t Len = O.ArgStr.size();
   auto ValName = getValueName();
-  if (!ValName.empty())
-    Len += getValueStr(O, ValName).size() + 3;
+  if (!ValName.empty()) {
+    size_t FormattingLen = 3;
+    if (O.getMiscFlags() & PositionalEatsArgs)
+      FormattingLen = 6;
+    Len += getValueStr(O, ValName).size() + FormattingLen;
+  }
 
   return Len + 6;
 }
@@ -1484,8 +1499,13 @@ void basic_parser_impl::printOptionInfo(const Option &O,
   outs() << "  -" << O.ArgStr;
 
   auto ValName = getValueName();
-  if (!ValName.empty())
-    outs() << "=<" << getValueStr(O, ValName) << '>';
+  if (!ValName.empty()) {
+    if (O.getMiscFlags() & PositionalEatsArgs) {
+      outs() << " <" << getValueStr(O, ValName) << ">...";
+    } else {
+      outs() << "=<" << getValueStr(O, ValName) << '>';
+    }
+  }
 
   Option::printHelpStr(O.HelpStr, GlobalWidth, getOptionWidth(O));
 }

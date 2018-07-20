@@ -247,18 +247,12 @@ inline FILETIME toFILETIME(TimePoint<> TP) {
   return Time;
 }
 
-namespace path {
-std::error_code widenPath(const Twine &Path8,
-                          SmallVectorImpl<wchar_t> &Path16);
-} // end namespace path
-
 namespace windows {
-std::error_code UTF8ToUTF16(StringRef utf8, SmallVectorImpl<wchar_t> &utf16);
-std::error_code UTF16ToUTF8(const wchar_t *utf16, size_t utf16_len,
-                            SmallVectorImpl<char> &utf8);
-/// Convert from UTF16 to the current code page used in the system
-std::error_code UTF16ToCurCP(const wchar_t *utf16, size_t utf16_len,
-                             SmallVectorImpl<char> &utf8);
+// Returns command line arguments. Unlike arguments given to main(),
+// this function guarantees that the returned arguments are encoded in
+// UTF-8 regardless of the current code page setting.
+std::error_code GetCommandLineArguments(SmallVectorImpl<const char *> &Args,
+                                        BumpPtrAllocator &Alloc);
 } // end namespace windows
 } // end namespace sys
 } // end namespace llvm.

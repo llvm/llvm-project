@@ -1,0 +1,388 @@
+# RUN: llc -march=amdgcn -mcpu=gfx902 -verify-machineinstrs -run-pass=phi-node-elimination,si-form-memory-clauses %s -o - | FileCheck -check-prefix=GCN %s
+
+# GCN-LABEL: {{^}}name: vector_clause{{$}}
+# GCN:         early-clobber %2:vreg_128, early-clobber %4:vreg_128, early-clobber %1:vreg_128, early-clobber %3:vreg_128 = BUNDLE %0, implicit $exec {
+# GCN-NEXT:    %1:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 0, 0, 0, implicit $exec
+# GCN-NEXT:    %2:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 16, 0, 0, implicit $exec
+# GCN-NEXT:    %3:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 32, 0, 0, implicit $exec
+# GCN-NEXT:    %4:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 48, 0, 0, implicit $exec
+# GCN-NEXT:  }
+# GCN-NEXT:  GLOBAL_STORE_DWORDX4 %0, %1, 0, 0, 0, implicit $exec
+
+---
+name:            vector_clause
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vreg_64 }
+  - { id: 1, class: vreg_128 }
+  - { id: 2, class: vreg_128 }
+  - { id: 3, class: vreg_128 }
+  - { id: 4, class: vreg_128 }
+body:             |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    %1:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 0, 0, 0, implicit $exec
+    %2:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 16, 0, 0, implicit $exec
+    %3:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 32, 0, 0, implicit $exec
+    %4:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 48, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %0, %1, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %0, %2, 16, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %0, %3, 32, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %0, %4, 48, 0, 0, implicit $exec
+...
+
+# GCN-LABEL: {{^}}name: subreg_full{{$}}
+# GCN:      early-clobber %1:vreg_128 = BUNDLE %0, implicit $exec {
+# GCN-NEXT:   undef %1.sub0:vreg_128 = GLOBAL_LOAD_DWORD %0.sub0_sub1, 0, 0, 0, implicit $exec
+# GCN-NEXT:   internal %1.sub1:vreg_128 = GLOBAL_LOAD_DWORD %0.sub1_sub2, 16, 0, 0, implicit $exec
+# GCN-NEXT:   internal %1.sub2:vreg_128 = GLOBAL_LOAD_DWORD %0.sub2_sub3, 32, 0, 0, implicit $exec
+# GCN-NEXT:   internal %1.sub3:vreg_128 = GLOBAL_LOAD_DWORD %0.sub2_sub3, 32, 0, 0, implicit $exec
+# GCN-NEXT: }
+# GCN-NEXT: GLOBAL_STORE_DWORDX4 %0.sub0_sub1, %1, 0, 0, 0, implicit $exec
+
+---
+name:            subreg_full
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vreg_128 }
+  - { id: 1, class: vreg_128 }
+body:             |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    undef %1.sub0:vreg_128 = GLOBAL_LOAD_DWORD %0.sub0_sub1, 0, 0, 0, implicit $exec
+    %1.sub1:vreg_128 = GLOBAL_LOAD_DWORD %0.sub1_sub2, 16, 0, 0, implicit $exec
+    %1.sub2:vreg_128 = GLOBAL_LOAD_DWORD %0.sub2_sub3, 32, 0, 0, implicit $exec
+    %1.sub3:vreg_128 = GLOBAL_LOAD_DWORD %0.sub2_sub3, 32, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %0.sub0_sub1, %1, 0, 0, 0, implicit $exec
+...
+
+# GCN-LABEL: {{^}}name: subreg_part{{$}}
+# GCN:      undef early-clobber %1.sub0_sub1:vreg_128, undef early-clobber %1.sub3:vreg_128 = BUNDLE %0, implicit $exec {
+# GCN-NEXT:   undef %1.sub0:vreg_128 = GLOBAL_LOAD_DWORD %0.sub0_sub1, 0, 0, 0, implicit $exec
+# GCN-NEXT:   internal %1.sub1:vreg_128 = GLOBAL_LOAD_DWORD %0.sub1_sub2, 16, 0, 0, implicit $exec
+# GCN-NEXT:   internal %1.sub3:vreg_128 = GLOBAL_LOAD_DWORD %0.sub2_sub3, 32, 0, 0, implicit $exec
+# GCN-NEXT: }
+# GCN-NEXT: GLOBAL_STORE_DWORDX4 %0.sub0_sub1, %1, 0, 0, 0, implicit $exec
+
+---
+name:            subreg_part
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vreg_128 }
+  - { id: 1, class: vreg_128 }
+body:             |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    undef %1.sub0:vreg_128 = GLOBAL_LOAD_DWORD %0.sub0_sub1, 0, 0, 0, implicit $exec
+    %1.sub1:vreg_128 = GLOBAL_LOAD_DWORD %0.sub1_sub2, 16, 0, 0, implicit $exec
+    %1.sub3:vreg_128 = GLOBAL_LOAD_DWORD %0.sub2_sub3, 32, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %0.sub0_sub1, %1, 0, 0, 0, implicit $exec
+...
+
+# GCN-LABEL: {{^}}name: dead{{$}}
+# GCN:      dead early-clobber %2:vreg_128, dead early-clobber %4:vreg_128, dead early-clobber %1:vreg_128, dead early-clobber %3:vreg_128 = BUNDLE %0, implicit $exec {
+# GCN-NEXT:   dead %1:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 0, 0, 0, implicit $exec
+# GCN-NEXT:   %2:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 16, 0, 0, implicit $exec
+# GCN-NEXT:   dead %3:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 32, 0, 0, implicit $exec
+# GCN-NEXT:   dead %4:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 48, 0, 0, implicit $exec
+# GCN-NEXT: }
+
+---
+name:            dead
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vreg_64 }
+  - { id: 1, class: vreg_128 }
+  - { id: 2, class: vreg_128 }
+  - { id: 3, class: vreg_128 }
+  - { id: 4, class: vreg_128 }
+body:             |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    dead %1:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 0, 0, 0, implicit $exec
+    dead %2:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 16, 0, 0, implicit $exec
+    dead %3:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 32, 0, 0, implicit $exec
+    dead %4:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 48, 0, 0, implicit $exec
+...
+
+# GCN-LABEL: {{^}}name: subreg_dead{{$}}
+# GCN:      early-clobber %1:vreg_64 = BUNDLE %0, implicit $exec {
+# GCN-NEXT:    %1.sub0:vreg_64 = GLOBAL_LOAD_DWORD %0, 16, 0, 0, implicit $exec
+# GCN-NEXT:    dead %1.sub1:vreg_64 = GLOBAL_LOAD_DWORD %0, 32, 0, 0, implicit $exec
+# GCN-NEXT: }
+# GCN-NEXT: GLOBAL_STORE_DWORD %0, %1.sub0, 0, 0, 0, implicit $exec
+
+---
+name:            subreg_dead
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vreg_64 }
+  - { id: 1, class: vreg_64 }
+body:             |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    undef %1.sub0:vreg_64 = GLOBAL_LOAD_DWORD %0, 16, 0, 0, implicit $exec
+    dead %1.sub1:vreg_64 = GLOBAL_LOAD_DWORD %0, 32, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD %0, %1.sub0, 0, 0, 0, implicit $exec
+...
+
+# GCN-LABEL: {{^}}name: kill{{$}}
+# GCN:      early-clobber %2:vreg_128, early-clobber %3:vreg_128 = BUNDLE %0, %1, implicit $exec {
+# GCN-NEXT:   %2:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 0, 0, 0, implicit $exec
+# GCN-NEXT:   %3:vreg_128 = GLOBAL_LOAD_DWORDX4 %1, 16, 0, 0, implicit $exec
+# GCN-NEXT: }
+
+---
+name:            kill
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vreg_64 }
+  - { id: 1, class: vreg_64 }
+  - { id: 2, class: vreg_128 }
+  - { id: 3, class: vreg_128 }
+body:             |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    %2:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 0, 0, 0, implicit $exec
+    %3:vreg_128 = GLOBAL_LOAD_DWORDX4 killed %1, 16, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %0, %2, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %0, %3, 16, 0, 0, implicit $exec
+...
+
+# GCN-LABEL: {{^}}name: indirect{{$}}
+# GCN:      %1:vreg_64 = GLOBAL_LOAD_DWORDX2 %0, 0, 0, 0, implicit $exec
+# GCN-NEXT:   early-clobber %2:vreg_128, early-clobber %3:vreg_128 = BUNDLE %1, implicit $exec {
+# GCN-NEXT:   %2:vreg_128 = GLOBAL_LOAD_DWORDX4 %1, 0, 0, 0, implicit $exec
+# GCN-NEXT:   %3:vreg_128 = GLOBAL_LOAD_DWORDX4 %1, 16, 0, 0, implicit $exec
+# GCN-NEXT: }
+
+---
+name:            indirect
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vreg_64 }
+  - { id: 1, class: vreg_64 }
+  - { id: 2, class: vreg_128 }
+  - { id: 3, class: vreg_128 }
+body:             |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    %1:vreg_64 = GLOBAL_LOAD_DWORDX2 %0, 0, 0, 0, implicit $exec
+    %2:vreg_128 = GLOBAL_LOAD_DWORDX4 %1, 0, 0, 0, implicit $exec
+    %3:vreg_128 = GLOBAL_LOAD_DWORDX4 %1, 16, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %0, %2, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %0, %3, 16, 0, 0, implicit $exec
+...
+
+# GCN-LABEL: {{^}}name: stack{{$}}
+# GCN:      %0:vreg_64 = IMPLICIT_DEF
+# GCN-NEXT: %1:vreg_128 = GLOBAL_LOAD_DWORDX4 %stack.0, 0, 0, 0, implicit $exec
+# GCN-NEXT: %2:vreg_128 = GLOBAL_LOAD_DWORDX4 %stack.0, 16, 0, 0, implicit $exec
+# GCN-NEXT: GLOBAL_STORE_DWORDX4 %0, %1, 0, 0, 0, implicit $exec
+
+---
+name:            stack
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vreg_64 }
+  - { id: 1, class: vreg_128 }
+  - { id: 2, class: vreg_128 }
+stack:
+  - { id: 0, type: default, offset: 0, size: 64, alignment: 8 }
+body:             |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    %1:vreg_128 = GLOBAL_LOAD_DWORDX4 %stack.0, 0, 0, 0, implicit $exec
+    %2:vreg_128 = GLOBAL_LOAD_DWORDX4 %stack.0, 16, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %0, %1, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %0, %2, 16, 0, 0, implicit $exec
+...
+
+# GCN-LABEL: {{^}}name: overflow_counter{{$}}
+# GCN:      dead early-clobber %7:vgpr_32, dead early-clobber %14:vgpr_32, dead early-clobber %2:vgpr_32, dead early-clobber %9:vgpr_32, dead early-clobber %4:vgpr_32, dead early-clobber %11:vgpr_32, dead early-clobber %6:vgpr_32, dead early-clobber %13:vgpr_32, dead early-clobber %1:vgpr_32, dead early-clobber %8:vgpr_32, dead early-clobber %15:vgpr_32, dead early-clobber %3:vgpr_32, dead early-clobber %10:vgpr_32, dead early-clobber %5:vgpr_32, dead early-clobber %12:vgpr_32 = BUNDLE %0, implicit $exec {
+# GCN-NEXT:   dead %1:vgpr_32 = GLOBAL_LOAD_DWORD %0, 0, 0, 0, implicit $exec
+# GCN-NEXT:   dead %2:vgpr_32 = GLOBAL_LOAD_DWORD %0, 4, 0, 0, implicit $exec
+# GCN-NEXT:   dead %3:vgpr_32 = GLOBAL_LOAD_DWORD %0, 8, 0, 0, implicit $exec
+# GCN-NEXT:   dead %4:vgpr_32 = GLOBAL_LOAD_DWORD %0, 12, 0, 0, implicit $exec
+# GCN-NEXT:   dead %5:vgpr_32 = GLOBAL_LOAD_DWORD %0, 16, 0, 0, implicit $exec
+# GCN-NEXT:   dead %6:vgpr_32 = GLOBAL_LOAD_DWORD %0, 20, 0, 0, implicit $exec
+# GCN-NEXT:   dead %7:vgpr_32 = GLOBAL_LOAD_DWORD %0, 24, 0, 0, implicit $exec
+# GCN-NEXT:   dead %8:vgpr_32 = GLOBAL_LOAD_DWORD %0, 28, 0, 0, implicit $exec
+# GCN-NEXT:   dead %9:vgpr_32 = GLOBAL_LOAD_DWORD %0, 32, 0, 0, implicit $exec
+# GCN-NEXT:   dead %10:vgpr_32 = GLOBAL_LOAD_DWORD %0, 36, 0, 0, implicit $exec
+# GCN-NEXT:   dead %11:vgpr_32 = GLOBAL_LOAD_DWORD %0, 40, 0, 0, implicit $exec
+# GCN-NEXT:   dead %12:vgpr_32 = GLOBAL_LOAD_DWORD %0, 44, 0, 0, implicit $exec
+# GCN-NEXT:   dead %13:vgpr_32 = GLOBAL_LOAD_DWORD %0, 48, 0, 0, implicit $exec
+# GCN-NEXT:   dead %14:vgpr_32 = GLOBAL_LOAD_DWORD %0, 52, 0, 0, implicit $exec
+# GCN-NEXT:   dead %15:vgpr_32 = GLOBAL_LOAD_DWORD %0, 56, 0, 0, implicit $exec
+# GCN-NEXT: }
+# GCN-NEXT: dead early-clobber %16:vgpr_32, dead early-clobber %17:vgpr_32 = BUNDLE %0, implicit $exec {
+# GCN-NEXT:   dead %16:vgpr_32 = GLOBAL_LOAD_DWORD %0, 60, 0, 0, implicit $exec
+# GCN-NEXT:   dead %17:vgpr_32 = GLOBAL_LOAD_DWORD %0, 64, 0, 0, implicit $exec
+# GCN-NEXT: }
+
+---
+name:            overflow_counter
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vreg_64 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: vgpr_32 }
+  - { id: 3, class: vgpr_32 }
+  - { id: 4, class: vgpr_32 }
+  - { id: 5, class: vgpr_32 }
+  - { id: 6, class: vgpr_32 }
+  - { id: 7, class: vgpr_32 }
+  - { id: 8, class: vgpr_32 }
+  - { id: 9, class: vgpr_32 }
+  - { id: 10, class: vgpr_32 }
+  - { id: 11, class: vgpr_32 }
+  - { id: 12, class: vgpr_32 }
+  - { id: 13, class: vgpr_32 }
+  - { id: 14, class: vgpr_32 }
+  - { id: 15, class: vgpr_32 }
+  - { id: 16, class: vgpr_32 }
+  - { id: 17, class: vgpr_32 }
+body:             |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    %1:vgpr_32 = GLOBAL_LOAD_DWORD %0, 0, 0, 0, implicit $exec
+    %2:vgpr_32 = GLOBAL_LOAD_DWORD %0, 4, 0, 0, implicit $exec
+    %3:vgpr_32 = GLOBAL_LOAD_DWORD %0, 8, 0, 0, implicit $exec
+    %4:vgpr_32 = GLOBAL_LOAD_DWORD %0, 12, 0, 0, implicit $exec
+    %5:vgpr_32 = GLOBAL_LOAD_DWORD %0, 16, 0, 0, implicit $exec
+    %6:vgpr_32 = GLOBAL_LOAD_DWORD %0, 20, 0, 0, implicit $exec
+    %7:vgpr_32 = GLOBAL_LOAD_DWORD %0, 24, 0, 0, implicit $exec
+    %8:vgpr_32 = GLOBAL_LOAD_DWORD %0, 28, 0, 0, implicit $exec
+    %9:vgpr_32 = GLOBAL_LOAD_DWORD %0, 32, 0, 0, implicit $exec
+    %10:vgpr_32 = GLOBAL_LOAD_DWORD %0, 36, 0, 0, implicit $exec
+    %11:vgpr_32 = GLOBAL_LOAD_DWORD %0, 40, 0, 0, implicit $exec
+    %12:vgpr_32 = GLOBAL_LOAD_DWORD %0, 44, 0, 0, implicit $exec
+    %13:vgpr_32 = GLOBAL_LOAD_DWORD %0, 48, 0, 0, implicit $exec
+    %14:vgpr_32 = GLOBAL_LOAD_DWORD %0, 52, 0, 0, implicit $exec
+    %15:vgpr_32 = GLOBAL_LOAD_DWORD %0, 56, 0, 0, implicit $exec
+    %16:vgpr_32 = GLOBAL_LOAD_DWORD %0, 60, 0, 0, implicit $exec
+    %17:vgpr_32 = GLOBAL_LOAD_DWORD %0, 64, 0, 0, implicit $exec
+...
+
+# GCN-LABEL: {{^}}name: reg_pressure{{$}}
+# GCN:      dead early-clobber %2:vreg_128, dead early-clobber %4:vreg_128, dead early-clobber %1:vreg_128, dead early-clobber %3:vreg_128, dead early-clobber %5:vreg_128 = BUNDLE %0, implicit $exec {
+# GCN-NEXT:   dead %1:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 0, 0, 0, implicit $exec
+# GCN-NEXT:   dead %2:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 16, 0, 0, implicit $exec
+# GCN-NEXT:   dead %3:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 32, 0, 0, implicit $exec
+# GCN-NEXT:   dead %4:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 48, 0, 0, implicit $exec
+# GCN-NEXT:   dead %5:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 64, 0, 0, implicit $exec
+# GCN-NEXT: }
+# GCN-NEXT: dead early-clobber %7:vreg_128, dead early-clobber %6:vreg_128 = BUNDLE %0, implicit $exec {
+# GCN-NEXT:   dead %6:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 80, 0, 0, implicit $exec
+# GCN-NEXT:   dead %7:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 96, 0, 0, implicit $exec
+# GCN-NEXT: }
+
+---
+name:            reg_pressure
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vreg_64 }
+  - { id: 1, class: vreg_128 }
+  - { id: 2, class: vreg_128 }
+  - { id: 3, class: vreg_128 }
+  - { id: 4, class: vreg_128 }
+  - { id: 5, class: vreg_128 }
+  - { id: 6, class: vreg_128 }
+  - { id: 7, class: vreg_128 }
+body:             |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    %1:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 0, 0, 0, implicit $exec
+    %2:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 16, 0, 0, implicit $exec
+    %3:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 32, 0, 0, implicit $exec
+    %4:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 48, 0, 0, implicit $exec
+    %5:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 64, 0, 0, implicit $exec
+    %6:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 80, 0, 0, implicit $exec
+    %7:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 96, 0, 0, implicit $exec
+...
+
+# GCN-LABEL: {{^}}name: image_clause{{$}}
+# GCN:      early-clobber %4:vreg_128, early-clobber %3:vreg_128, early-clobber %5:vreg_128 = BUNDLE %0, undef %2:sreg_128, %1, implicit $exec {
+# GCN-NEXT:   %3:vreg_128 = IMAGE_SAMPLE_LZ_V4_V2 %0, %1, undef %2:sreg_128, 15, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+# GCN-NEXT:   %4:vreg_128 = IMAGE_SAMPLE_LZ_V4_V2 %0, %1, undef %2:sreg_128, 15, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+# GCN-NEXT:   %5:vreg_128 = IMAGE_SAMPLE_LZ_V4_V2 %0, %1, undef %2:sreg_128, 15, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+# GCN-NEXT: }
+# GCN-NEXT: IMAGE_STORE_V4_V2 %3, %0, %1, 15, -1, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+
+---
+name:            image_clause
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vreg_64 }
+  - { id: 1, class: sreg_256 }
+  - { id: 2, class: sreg_128 }
+  - { id: 3, class: vreg_128 }
+  - { id: 4, class: vreg_128 }
+  - { id: 5, class: vreg_128 }
+body:             |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    %3:vreg_128 = IMAGE_SAMPLE_LZ_V4_V2 %0, %1, undef %2:sreg_128, 15, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    %4:vreg_128 = IMAGE_SAMPLE_LZ_V4_V2 %0, %1, undef %2:sreg_128, 15, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    %5:vreg_128 = IMAGE_SAMPLE_LZ_V4_V2 %0, %1, undef %2:sreg_128, 15, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    IMAGE_STORE_V4_V2 %3, %0, %1, 15, -1, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    IMAGE_STORE_V4_V2 %4, %0, %1, 15, -1, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    IMAGE_STORE_V4_V2 %5, %0, %1, 15, -1, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+...
+
+# GCN-LABEL: {{^}}name: mixed_clause{{$}}
+# GCN:      dead early-clobber %4:vreg_128, dead early-clobber %3:vreg_128, dead early-clobber %5:vgpr_32 = BUNDLE %0, %2, %1, implicit $exec {
+# GCN-NEXT:   dead %3:vreg_128 = IMAGE_SAMPLE_LZ_V4_V2 %0, %1, %2, 15, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+# GCN-NEXT:   dead %4:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 0, 0, 0, implicit $exec
+# GCN-NEXT:   dead %5:vgpr_32 = BUFFER_LOAD_DWORD_ADDR64 %0, %2, 0, 0, 0, 0, 0, implicit $exec
+# GCN-NEXT: }
+
+---
+name:            mixed_clause
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vreg_64 }
+  - { id: 1, class: sreg_256 }
+  - { id: 2, class: sreg_128 }
+  - { id: 3, class: vreg_128 }
+  - { id: 4, class: vreg_128 }
+  - { id: 5, class: vgpr_32 }
+body:             |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    %2 = IMPLICIT_DEF
+    %3:vreg_128 = IMAGE_SAMPLE_LZ_V4_V2 %0, %1, %2, 15, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    %4:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 0, 0, 0, implicit $exec
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_ADDR64 %0, %2, 0, 0, 0, 0, 0, implicit $exec
+...
+
+# GCN-LABEL: {{^}}name: atomic{{$}}
+# GCN:      %1:vgpr_32 = IMPLICIT_DEF
+# GCN-NEXT: dead %2:vgpr_32 = FLAT_ATOMIC_ADD_RTN %0, %1, 0, 0, implicit $exec, implicit $flat_scr
+# GCN-NEXT: dead %3:vgpr_32 = FLAT_ATOMIC_ADD_RTN %0, %1, 0, 0, implicit $exec, implicit $flat_scr
+# GCN-NEXT: FLAT_ATOMIC_ADD %0, %1, 0, 0, implicit $exec, implicit $flat_scr
+# GCN-NEXT: FLAT_ATOMIC_ADD %0, %1, 0, 0, implicit $exec, implicit $flat_scr
+# GCN-NEXT: S_ENDPGM
+
+---
+name:            atomic
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vreg_64 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: vgpr_32 }
+  - { id: 3, class: vgpr_32 }
+body:             |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    %2:vgpr_32 = FLAT_ATOMIC_ADD_RTN %0, %1, 0, 0, implicit $exec, implicit $flat_scr
+    %3:vgpr_32 = FLAT_ATOMIC_ADD_RTN %0, %1, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_ATOMIC_ADD %0, %1, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_ATOMIC_ADD %0, %1, 0, 0, implicit $exec, implicit $flat_scr
+    S_ENDPGM
+...

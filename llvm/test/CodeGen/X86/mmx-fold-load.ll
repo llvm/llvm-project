@@ -26,7 +26,7 @@ define i64 @t0(<1 x i64>* %a, i32* %b) nounwind {
 ; X64-NEXT:    movq (%rdi), %mm0
 ; X64-NEXT:    movd (%rsi), %mm1
 ; X64-NEXT:    psllq %mm1, %mm0
-; X64-NEXT:    movd %mm0, %rax
+; X64-NEXT:    movq %mm0, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64>* %a to x86_mmx*
@@ -62,7 +62,7 @@ define i64 @t1(<1 x i64>* %a, i32* %b) nounwind {
 ; X64-NEXT:    movq (%rdi), %mm0
 ; X64-NEXT:    movd (%rsi), %mm1
 ; X64-NEXT:    psrlq %mm1, %mm0
-; X64-NEXT:    movd %mm0, %rax
+; X64-NEXT:    movq %mm0, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64>* %a to x86_mmx*
@@ -98,7 +98,7 @@ define i64 @t2(<1 x i64>* %a, i32* %b) nounwind {
 ; X64-NEXT:    movq (%rdi), %mm0
 ; X64-NEXT:    movd (%rsi), %mm1
 ; X64-NEXT:    psllw %mm1, %mm0
-; X64-NEXT:    movd %mm0, %rax
+; X64-NEXT:    movq %mm0, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64>* %a to x86_mmx*
@@ -134,7 +134,7 @@ define i64 @t3(<1 x i64>* %a, i32* %b) nounwind {
 ; X64-NEXT:    movq (%rdi), %mm0
 ; X64-NEXT:    movd (%rsi), %mm1
 ; X64-NEXT:    psrlw %mm1, %mm0
-; X64-NEXT:    movd %mm0, %rax
+; X64-NEXT:    movq %mm0, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64>* %a to x86_mmx*
@@ -170,7 +170,7 @@ define i64 @t4(<1 x i64>* %a, i32* %b) nounwind {
 ; X64-NEXT:    movq (%rdi), %mm0
 ; X64-NEXT:    movd (%rsi), %mm1
 ; X64-NEXT:    pslld %mm1, %mm0
-; X64-NEXT:    movd %mm0, %rax
+; X64-NEXT:    movq %mm0, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64>* %a to x86_mmx*
@@ -206,7 +206,7 @@ define i64 @t5(<1 x i64>* %a, i32* %b) nounwind {
 ; X64-NEXT:    movq (%rdi), %mm0
 ; X64-NEXT:    movd (%rsi), %mm1
 ; X64-NEXT:    psrld %mm1, %mm0
-; X64-NEXT:    movd %mm0, %rax
+; X64-NEXT:    movq %mm0, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64>* %a to x86_mmx*
@@ -242,7 +242,7 @@ define i64 @t6(<1 x i64>* %a, i32* %b) nounwind {
 ; X64-NEXT:    movq (%rdi), %mm0
 ; X64-NEXT:    movd (%rsi), %mm1
 ; X64-NEXT:    psraw %mm1, %mm0
-; X64-NEXT:    movd %mm0, %rax
+; X64-NEXT:    movq %mm0, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64>* %a to x86_mmx*
@@ -278,7 +278,7 @@ define i64 @t7(<1 x i64>* %a, i32* %b) nounwind {
 ; X64-NEXT:    movq (%rdi), %mm0
 ; X64-NEXT:    movd (%rsi), %mm1
 ; X64-NEXT:    psrad %mm1, %mm0
-; X64-NEXT:    movd %mm0, %rax
+; X64-NEXT:    movq %mm0, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64>* %a to x86_mmx*
@@ -310,7 +310,7 @@ define i64 @tt0(x86_mmx %t, x86_mmx* %q) nounwind {
 ; X64-LABEL: tt0:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    paddb (%rdi), %mm0
-; X64-NEXT:    movd %mm0, %rax
+; X64-NEXT:    movq %mm0, %rax
 ; X64-NEXT:    emms
 ; X64-NEXT:    retq
 entry:
@@ -343,7 +343,7 @@ define i64 @tt1(x86_mmx %t, x86_mmx* %q) nounwind {
 ; X64-LABEL: tt1:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    paddw (%rdi), %mm0
-; X64-NEXT:    movd %mm0, %rax
+; X64-NEXT:    movq %mm0, %rax
 ; X64-NEXT:    emms
 ; X64-NEXT:    retq
 entry:
@@ -375,7 +375,7 @@ define i64 @tt2(x86_mmx %t, x86_mmx* %q) nounwind {
 ; X64-LABEL: tt2:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    paddd (%rdi), %mm0
-; X64-NEXT:    movd %mm0, %rax
+; X64-NEXT:    movq %mm0, %rax
 ; X64-NEXT:    emms
 ; X64-NEXT:    retq
 entry:
@@ -407,7 +407,7 @@ define i64 @tt3(x86_mmx %t, x86_mmx* %q) nounwind {
 ; X64-LABEL: tt3:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    paddq (%rdi), %mm0
-; X64-NEXT:    movd %mm0, %rax
+; X64-NEXT:    movq %mm0, %rax
 ; X64-NEXT:    emms
 ; X64-NEXT:    retq
 entry:
@@ -439,7 +439,7 @@ define i64 @tt4(x86_mmx %t, x86_mmx* %q) nounwind {
 ; X64-LABEL: tt4:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    paddusb (%rdi), %mm0
-; X64-NEXT:    movd %mm0, %rax
+; X64-NEXT:    movq %mm0, %rax
 ; X64-NEXT:    emms
 ; X64-NEXT:    retq
 entry:
@@ -471,7 +471,7 @@ define i64 @tt5(x86_mmx %t, x86_mmx* %q) nounwind {
 ; X64-LABEL: tt5:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    paddusw (%rdi), %mm0
-; X64-NEXT:    movd %mm0, %rax
+; X64-NEXT:    movq %mm0, %rax
 ; X64-NEXT:    emms
 ; X64-NEXT:    retq
 entry:
@@ -503,7 +503,7 @@ define i64 @tt6(x86_mmx %t, x86_mmx* %q) nounwind {
 ; X64-LABEL: tt6:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    psrlw (%rdi), %mm0
-; X64-NEXT:    movd %mm0, %rax
+; X64-NEXT:    movq %mm0, %rax
 ; X64-NEXT:    emms
 ; X64-NEXT:    retq
 entry:
@@ -535,7 +535,7 @@ define i64 @tt7(x86_mmx %t, x86_mmx* %q) nounwind {
 ; X64-LABEL: tt7:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    psrld (%rdi), %mm0
-; X64-NEXT:    movd %mm0, %rax
+; X64-NEXT:    movq %mm0, %rax
 ; X64-NEXT:    emms
 ; X64-NEXT:    retq
 entry:
@@ -567,7 +567,7 @@ define i64 @tt8(x86_mmx %t, x86_mmx* %q) nounwind {
 ; X64-LABEL: tt8:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    psrlq (%rdi), %mm0
-; X64-NEXT:    movd %mm0, %rax
+; X64-NEXT:    movq %mm0, %rax
 ; X64-NEXT:    emms
 ; X64-NEXT:    retq
 entry:
@@ -582,20 +582,15 @@ declare x86_mmx @llvm.x86.mmx.psrl.q(x86_mmx, x86_mmx)
 define void @test_psrlq_by_volatile_shift_amount(x86_mmx* %t) nounwind {
 ; X86-LABEL: test_psrlq_by_volatile_shift_amount:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    pushl %ebp
-; X86-NEXT:    movl %esp, %ebp
-; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $16, %esp
-; X86-NEXT:    movl 8(%ebp), %eax
-; X86-NEXT:    movl $1, {{[0-9]+}}(%esp)
-; X86-NEXT:    movd {{[0-9]+}}(%esp), %mm0
-; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl $255, {{[0-9]+}}(%esp)
-; X86-NEXT:    movq {{[0-9]+}}(%esp), %mm1
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl $1, (%esp)
+; X86-NEXT:    movd (%esp), %mm0
+; X86-NEXT:    movl $255, %ecx
+; X86-NEXT:    movd %ecx, %mm1
 ; X86-NEXT:    psrlq %mm0, %mm1
 ; X86-NEXT:    movq %mm1, (%eax)
-; X86-NEXT:    movl %ebp, %esp
-; X86-NEXT:    popl %ebp
+; X86-NEXT:    popl %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_psrlq_by_volatile_shift_amount:
@@ -603,7 +598,7 @@ define void @test_psrlq_by_volatile_shift_amount(x86_mmx* %t) nounwind {
 ; X64-NEXT:    movl $1, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    movd -{{[0-9]+}}(%rsp), %mm0
 ; X64-NEXT:    movl $255, %eax
-; X64-NEXT:    movd %rax, %mm1
+; X64-NEXT:    movd %eax, %mm1
 ; X64-NEXT:    psrlq %mm0, %mm1
 ; X64-NEXT:    movq %mm1, (%rdi)
 ; X64-NEXT:    retq

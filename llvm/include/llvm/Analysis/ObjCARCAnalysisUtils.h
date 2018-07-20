@@ -34,6 +34,7 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ValueHandle.h"
 #include "llvm/Pass.h"
 
 namespace llvm {
@@ -43,10 +44,10 @@ class raw_ostream;
 namespace llvm {
 namespace objcarc {
 
-/// \brief A handy option to enable/disable all ARC Optimizations.
+/// A handy option to enable/disable all ARC Optimizations.
 extern bool EnableARCOpts;
 
-/// \brief Test if the given module looks interesting to run ARC optimization
+/// Test if the given module looks interesting to run ARC optimization
 /// on.
 inline bool ModuleHasARC(const Module &M) {
   return
@@ -71,7 +72,7 @@ inline bool ModuleHasARC(const Module &M) {
     M.getNamedValue("clang.arc.use");
 }
 
-/// \brief This is a wrapper around getUnderlyingObject which also knows how to
+/// This is a wrapper around getUnderlyingObject which also knows how to
 /// look through objc_retain and objc_autorelease calls, which we know to return
 /// their argument verbatim.
 inline const Value *GetUnderlyingObjCPtr(const Value *V,
@@ -84,6 +85,18 @@ inline const Value *GetUnderlyingObjCPtr(const Value *V,
   }
 
   return V;
+}
+
+/// A wrapper for GetUnderlyingObjCPtr used for results memoization.
+inline const Value *
+GetUnderlyingObjCPtrCached(const Value *V, const DataLayout &DL,
+                           DenseMap<const Value *, WeakTrackingVH> &Cache) {
+  if (auto InCache = Cache.lookup(V))
+    return InCache;
+
+  const Value *Computed = GetUnderlyingObjCPtr(V, DL);
+  Cache[V] = const_cast<Value *>(Computed);
+  return Computed;
 }
 
 /// The RCIdentity root of a value \p V is a dominating value U for which
@@ -119,7 +132,7 @@ inline Value *GetRCIdentityRoot(Value *V) {
   return const_cast<Value *>(GetRCIdentityRoot((const Value *)V));
 }
 
-/// \brief Assuming the given instruction is one of the special calls such as
+/// Assuming the given instruction is one of the special calls such as
 /// objc_retain or objc_release, return the RCIdentity root of the argument of
 /// the call.
 inline Value *GetArgRCIdentityRoot(Value *Inst) {
@@ -136,7 +149,7 @@ inline bool IsNoopInstruction(const Instruction *I) {
      cast<GetElementPtrInst>(I)->hasAllZeroIndices());
 }
 
-/// \brief Test whether the given value is possible a retainable object pointer.
+/// Test whether the given value is possible a retainable object pointer.
 inline bool IsPotentialRetainableObjPtr(const Value *Op) {
   // Pointers to static or stack storage are not valid retainable object
   // pointers.
@@ -181,7 +194,7 @@ inline bool IsPotentialRetainableObjPtr(const Value *Op,
   return true;
 }
 
-/// \brief Helper for GetARCInstKind. Determines what kind of construct CS
+/// Helper for GetARCInstKind. Determines what kind of construct CS
 /// is.
 inline ARCInstKind GetCallSiteClass(ImmutableCallSite CS) {
   for (ImmutableCallSite::arg_iterator I = CS.arg_begin(), E = CS.arg_end();
@@ -192,7 +205,7 @@ inline ARCInstKind GetCallSiteClass(ImmutableCallSite CS) {
   return CS.onlyReadsMemory() ? ARCInstKind::None : ARCInstKind::Call;
 }
 
-/// \brief Return true if this value refers to a distinct and identifiable
+/// Return true if this value refers to a distinct and identifiable
 /// object.
 ///
 /// This is similar to AliasAnalysis's isIdentifiedObject, except that it uses

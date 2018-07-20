@@ -7,14 +7,14 @@
 name: m0_sendmsg
 body: |
   ; GCN-LABEL: name: m0_sendmsg
-  ; GCN:  %m0 = S_MOV_B32 -1
+  ; GCN:  $m0 = S_MOV_B32 -1
   ; VI-NEXT: S_NOP 0
   ; GFX9-NEXT: S_NOP 0
-  ; GCN-NEXT: S_SENDMSG 3, implicit %exec, implicit %m0
+  ; GCN-NEXT: S_SENDMSG 3, implicit $exec, implicit $m0
 
   bb.0:
-    %m0 = S_MOV_B32 -1
-    S_SENDMSG 3, implicit %exec, implicit %m0
+    $m0 = S_MOV_B32 -1
+    S_SENDMSG 3, implicit $exec, implicit $m0
     S_ENDPGM
 ...
 ---
@@ -22,14 +22,14 @@ body: |
 name: m0_sendmsghalt
 body: |
   ; GCN-LABEL: name: m0_sendmsghalt
-  ; GCN:  %m0 = S_MOV_B32 -1
+  ; GCN:  $m0 = S_MOV_B32 -1
   ; VI-NEXT: S_NOP 0
   ; GFX9-NEXT: S_NOP 0
-  ; GCN-NEXT: S_SENDMSGHALT 3, implicit %exec, implicit %m0
+  ; GCN-NEXT: S_SENDMSGHALT 3, implicit $exec, implicit $m0
 
   bb.0:
-    %m0 = S_MOV_B32 -1
-    S_SENDMSGHALT 3, implicit %exec, implicit %m0
+    $m0 = S_MOV_B32 -1
+    S_SENDMSGHALT 3, implicit $exec, implicit $m0
     S_ENDPGM
 ...
 ---
@@ -37,13 +37,13 @@ body: |
 name: m0_ttracedata
 body: |
   ; GCN-LABEL: name: m0_ttracedata
-  ; GCN:  %m0 = S_MOV_B32 -1
+  ; GCN:  $m0 = S_MOV_B32 -1
   ; VI-NEXT: S_NOP 0
   ; GFX9-NEXT: S_NOP 0
-  ; GCN-NEXT: S_TTRACEDATA implicit %m0
+  ; GCN-NEXT: S_TTRACEDATA implicit $m0
 
   bb.0:
-    %m0 = S_MOV_B32 -1
-    S_TTRACEDATA implicit %m0
+    $m0 = S_MOV_B32 -1
+    S_TTRACEDATA implicit $m0
     S_ENDPGM
 ...

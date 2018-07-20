@@ -13,13 +13,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/Memory.h"
-#include "llvm/Config/config.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Valgrind.h"
 
 // Include the platform-specific parts of this class.
 #ifdef LLVM_ON_UNIX
 #include "Unix/Memory.inc"
 #endif
-#ifdef LLVM_ON_WIN32
+#ifdef _WIN32
 #include "Windows/Memory.inc"
 #endif

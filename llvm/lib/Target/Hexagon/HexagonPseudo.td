@@ -24,7 +24,7 @@ let PrintMethod = "printGlobalOperand" in {
 let isPseudo = 1 in {
 let isCodeGenOnly = 0 in
 def A2_iconst : Pseudo<(outs IntRegs:$Rd32),
-    (ins s27_2Imm:$Ii), "${Rd32}=iconst(#${Ii})">;
+    (ins s27_2Imm:$Ii), "${Rd32} = iconst(#${Ii})">;
 
 def DUPLEX_Pseudo : InstHexagon<(outs),
     (ins s32_0Imm:$offset), "DUPLEX", [], "", DUPLEX, TypePSEUDO>;
@@ -34,7 +34,7 @@ let isExtendable = 1, opExtendable = 1, opExtentBits = 6,
     isAsmParserOnly = 1 in
 def TFRI64_V2_ext : InstHexagon<(outs DoubleRegs:$dst),
     (ins s32_0Imm:$src1, s8_0Imm:$src2),
-    "$dst=combine(#$src1,#$src2)", [], "",
+    "$dst = combine(#$src1,#$src2)", [], "",
     A2_combineii.Itinerary, TypeALU32_2op>, OpcodeHexagon;
 
 // HI/LO Instructions
@@ -44,7 +44,7 @@ class REG_IMMED<string RegHalf, bit Rs, bits<3> MajOp, bit MinOp,
                 InstHexagon rootInst>
   : InstHexagon<(outs IntRegs:$dst),
                 (ins u16_0Imm:$imm_value),
-                "$dst"#RegHalf#"=#$imm_value", [], "",
+                "$dst"#RegHalf#" = #$imm_value", [], "",
                 rootInst.Itinerary, rootInst.Type>, OpcodeHexagon {
     bits<5> dst;
     bits<32> imm_value;
@@ -100,6 +100,13 @@ let isBranch = 1, isTerminator = 1, hasSideEffects = 0,
 def ENDLOOP1 : Endloop<(outs), (ins b30_2Imm:$offset),
                        ":endloop1",
                        []>;
+}
+
+let isBranch = 1, isTerminator = 1, hasSideEffects = 0,
+    Defs = [PC, LC0, LC1], Uses = [SA0, SA1, LC0, LC1] in {
+def ENDLOOP01 : Endloop<(outs), (ins b30_2Imm:$offset),
+                        ":endloop01",
+                        []>;
 }
 
 let isExtendable = 1, isExtentSigned = 1, opExtentBits = 9, opExtentAlign = 2,
@@ -316,7 +323,7 @@ def LDriw_pred : LDInst<(outs PredRegs:$dst),
 // Load modifier.
 let isExtendable = 1, opExtendable = 2, isExtentSigned = 1, opExtentBits = 13,
     isCodeGenOnly = 1, isPseudo = 1, hasSideEffects = 0 in
-def LDriw_mod : LDInst<(outs ModRegs:$dst),
+def LDriw_ctr : LDInst<(outs CtrRegs:$dst),
                         (ins IntRegs:$addr, s32_0Imm:$off),
                         ".error \"should not emit\"", []>;
 
@@ -399,42 +406,42 @@ let isCall = 1, Uses = [R29, R31], isAsmParserOnly = 1 in {
 }
 
 // Vector store pseudos
-let Predicates = [HasV60T, UseHVX], isPseudo = 1, isCodeGenOnly = 1,
+let Predicates = [HasV60,UseHVX], isPseudo = 1, isCodeGenOnly = 1,
     mayStore = 1, accessSize = HVXVectorAccess, hasSideEffects = 0 in
 class STrivv_template<RegisterClass RC, InstHexagon rootInst>
   : InstHexagon<(outs), (ins IntRegs:$addr, s32_0Imm:$off, RC:$src),
     "", [], "", rootInst.Itinerary, rootInst.Type>;
 
 def PS_vstorerw_ai: STrivv_template<HvxWR, V6_vS32b_ai>,
-      Requires<[HasV60T,UseHVX]>;
+      Requires<[HasV60,UseHVX]>;
 def PS_vstorerw_nt_ai: STrivv_template<HvxWR, V6_vS32b_nt_ai>,
-      Requires<[HasV60T,UseHVX]>;
+      Requires<[HasV60,UseHVX]>;
 def PS_vstorerwu_ai: STrivv_template<HvxWR, V6_vS32Ub_ai>,
-      Requires<[HasV60T,UseHVX]>;
+      Requires<[HasV60,UseHVX]>;
 
 let isPseudo = 1, isCodeGenOnly = 1, mayStore = 1, hasSideEffects = 0 in
 def PS_vstorerq_ai: Pseudo<(outs),
       (ins IntRegs:$Rs, s32_0Imm:$Off, HvxQR:$Qt), "", []>,
-      Requires<[HasV60T,UseHVX]>;
+      Requires<[HasV60,UseHVX]>;
 
 // Vector load pseudos
-let Predicates = [HasV60T, UseHVX], isPseudo = 1, isCodeGenOnly = 1,
+let Predicates = [HasV60, UseHVX], isPseudo = 1, isCodeGenOnly = 1,
     mayLoad = 1, accessSize = HVXVectorAccess, hasSideEffects = 0 in
 class LDrivv_template<RegisterClass RC, InstHexagon rootInst>
   : InstHexagon<(outs RC:$dst), (ins IntRegs:$addr, s32_0Imm:$off),
     "", [], "", rootInst.Itinerary, rootInst.Type>;
 
 def PS_vloadrw_ai: LDrivv_template<HvxWR, V6_vL32b_ai>,
-      Requires<[HasV60T,UseHVX]>;
+      Requires<[HasV60,UseHVX]>;
 def PS_vloadrw_nt_ai: LDrivv_template<HvxWR, V6_vL32b_nt_ai>,
-      Requires<[HasV60T,UseHVX]>;
+      Requires<[HasV60,UseHVX]>;
 def PS_vloadrwu_ai: LDrivv_template<HvxWR, V6_vL32Ub_ai>,
-      Requires<[HasV60T,UseHVX]>;
+      Requires<[HasV60,UseHVX]>;
 
 let isPseudo = 1, isCodeGenOnly = 1, mayLoad = 1, hasSideEffects = 0 in
 def PS_vloadrq_ai: Pseudo<(outs HvxQR:$Qd),
       (ins IntRegs:$Rs, s32_0Imm:$Off), "", []>,
-      Requires<[HasV60T,UseHVX]>;
+      Requires<[HasV60,UseHVX]>;
 
 
 let isCodeGenOnly = 1, isPseudo = 1, hasSideEffects = 0 in
@@ -443,10 +450,20 @@ class VSELInst<dag outs, dag ins, InstHexagon rootInst>
 
 def PS_vselect: VSELInst<(outs HvxVR:$dst),
       (ins PredRegs:$src1, HvxVR:$src2, HvxVR:$src3), V6_vcmov>,
-      Requires<[HasV60T,UseHVX]>;
+      Requires<[HasV60,UseHVX]>;
 def PS_wselect: VSELInst<(outs HvxWR:$dst),
       (ins PredRegs:$src1, HvxWR:$src2, HvxWR:$src3), V6_vccombine>,
-      Requires<[HasV60T,UseHVX]>;
+      Requires<[HasV60,UseHVX]>;
+
+let hasSideEffects = 0, isReMaterializable = 1, isPseudo = 1,
+    isCodeGenOnly = 1 in {
+  def PS_qtrue:  InstHexagon<(outs HvxQR:$Qd), (ins), "", [], "",
+                 V6_veqw.Itinerary, TypeCVI_VA>;
+  def PS_qfalse: InstHexagon<(outs HvxQR:$Qd), (ins), "", [], "",
+                 V6_vgtw.Itinerary, TypeCVI_VA>;
+  def PS_vdd0:   InstHexagon<(outs HvxWR:$Vd), (ins), "", [], "",
+                 V6_vsubw_dv.Itinerary, TypeCVI_VA_DV>;
+}
 
 // Store predicate.
 let isExtendable = 1, opExtendable = 1, isExtentSigned = 1, opExtentBits = 13,
@@ -457,8 +474,8 @@ def STriw_pred : STInst<(outs),
 // Store modifier.
 let isExtendable = 1, opExtendable = 1, isExtentSigned = 1, opExtentBits = 13,
     isCodeGenOnly = 1, isPseudo = 1, hasSideEffects = 0 in
-def STriw_mod : STInst<(outs),
-      (ins IntRegs:$addr, s32_0Imm:$off, ModRegs:$src1),
+def STriw_ctr : STInst<(outs),
+      (ins IntRegs:$addr, s32_0Imm:$off, CtrRegs:$src1),
       ".error \"should not emit\"", []>;
 
 let isExtendable = 1, opExtendable = 1, opExtentBits = 6,
@@ -499,3 +516,46 @@ def DuplexIClassC:  InstDuplex < 0xC >;
 def DuplexIClassD:  InstDuplex < 0xD >;
 def DuplexIClassE:  InstDuplex < 0xE >;
 def DuplexIClassF:  InstDuplex < 0xF >;
+
+// Pseudos for circular buffer instructions. These are needed in order to
+// allocate the correct pair of CSx and Mx registers.
+multiclass NewCircularLoad<RegisterClass RC, MemAccessSize MS> {
+
+let isCodeGenOnly = 1, isPseudo = 1, Defs = [CS], Uses = [CS],
+    addrMode = PostInc, accessSize = MS, hasSideEffects = 0 in {
+  def NAME#_pci : LDInst<(outs RC:$Rd32, IntRegs:$Rx32),
+       (ins IntRegs:$Rx32in, s4_0Imm:$Ii, ModRegs:$Mu2, IntRegs:$Cs),
+       ".error \"should not emit\" ", [], "$Rx32 = $Rx32in", tc_4403ca65>;
+
+  def NAME#_pcr : LDInst<(outs RC:$Rd32, IntRegs:$Rx32),
+       (ins IntRegs:$Rx32in, ModRegs:$Mu2, IntRegs:$Cs),
+       ".error \"should not emit\" ", [], "$Rx32 = $Rx32in", tc_2fc0c436>;
+}
+}
+
+defm PS_loadrub : NewCircularLoad<IntRegs, ByteAccess>;
+defm PS_loadrb : NewCircularLoad<IntRegs, ByteAccess>;
+defm PS_loadruh : NewCircularLoad<IntRegs, HalfWordAccess>;
+defm PS_loadrh : NewCircularLoad<IntRegs, HalfWordAccess>;
+defm PS_loadri : NewCircularLoad<IntRegs, WordAccess>;
+defm PS_loadrd : NewCircularLoad<DoubleRegs, DoubleWordAccess>;
+
+multiclass NewCircularStore<RegisterClass RC, MemAccessSize MS> {
+
+let isCodeGenOnly = 1, isPseudo = 1, Defs = [CS], Uses = [CS],
+    addrMode = PostInc, accessSize = MS, hasSideEffects = 0 in {
+  def NAME#_pci : STInst<(outs IntRegs:$Rx32),
+       (ins IntRegs:$Rx32in, s4_0Imm:$Ii, ModRegs:$Mu2, RC:$Rt32, IntRegs:$Cs),
+       ".error \"should not emit\" ", [], "$Rx32 = $Rx32in", tc_9fdb5406>;
+
+  def NAME#_pcr : STInst<(outs IntRegs:$Rx32),
+       (ins IntRegs:$Rx32in, ModRegs:$Mu2, RC:$Rt32, IntRegs:$Cs),
+       ".error \"should not emit\" ", [], "$Rx32 = $Rx32in", tc_f86c328a>;
+}
+}
+
+defm PS_storerb : NewCircularStore<IntRegs, ByteAccess>;
+defm PS_storerh : NewCircularStore<IntRegs, HalfWordAccess>;
+defm PS_storerf : NewCircularStore<IntRegs, HalfWordAccess>;
+defm PS_storeri : NewCircularStore<IntRegs, WordAccess>;
+defm PS_storerd : NewCircularStore<DoubleRegs, WordAccess>;

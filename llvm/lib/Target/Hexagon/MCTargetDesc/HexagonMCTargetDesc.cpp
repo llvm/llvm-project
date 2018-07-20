@@ -29,6 +29,7 @@
 #include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -147,7 +148,7 @@ public:
     auto PacketBundle = Contents.rsplit('\n');
     auto HeadTail = PacketBundle.first.split('\n');
     StringRef Separator = "\n";
-    StringRef Indent = "\t\t";
+    StringRef Indent = "\t";
     OS << "\t{\n";
     while (!HeadTail.first.empty()) {
       StringRef InstTxt;
@@ -164,7 +165,7 @@ public:
     }
 
     if (HexagonMCInstrInfo::isMemReorderDisabled(Inst))
-      OS << "\n\t}:mem_noshuf" << PacketBundle.second;
+      OS << "\n\t} :mem_noshuf" << PacketBundle.second;
     else
       OS << "\t}" << PacketBundle.second;
   }
@@ -248,10 +249,10 @@ createMCAsmTargetStreamer(MCStreamer &S, formatted_raw_ostream &OS,
 
 static MCStreamer *createMCStreamer(Triple const &T, MCContext &Context,
                                     std::unique_ptr<MCAsmBackend> &&MAB,
-                                    raw_pwrite_stream &OS,
+                                    std::unique_ptr<MCObjectWriter> &&OW,
                                     std::unique_ptr<MCCodeEmitter> &&Emitter,
                                     bool RelaxAll) {
-  return createHexagonELFStreamer(T, Context, std::move(MAB), OS,
+  return createHexagonELFStreamer(T, Context, std::move(MAB), std::move(OW),
                                   std::move(Emitter));
 }
 
@@ -308,6 +309,7 @@ static bool isCPUValid(std::string CPU)
 {
   std::vector<std::string> table
   {
+    "generic",
     "hexagonv4",
     "hexagonv5",
     "hexagonv55",
@@ -342,8 +344,7 @@ FeatureBitset Hexagon_MC::completeHVXFeatures(const FeatureBitset &S) {
     break;
   }
   bool UseHvx = false;
-  for (unsigned F : {ExtensionHVX, ExtensionHVX64B, ExtensionHVX128B,
-                     ExtensionHVXDbl}) {
+  for (unsigned F : {ExtensionHVX, ExtensionHVX64B, ExtensionHVX128B}) {
     if (!FB.test(F))
       continue;
     UseHvx = true;

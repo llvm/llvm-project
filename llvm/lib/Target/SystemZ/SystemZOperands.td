@@ -115,13 +115,13 @@ class AddressingMode<string seltype, string bitsize, string dispsize,
 class BDMode<string type, string bitsize, string dispsize, string suffix>
   : AddressingMode<type, bitsize, dispsize, suffix, "", 2, "BDAddr",
                    (ops !cast<RegisterOperand>("ADDR"##bitsize),
-                        !cast<Immediate>("disp"##dispsize##"imm"##bitsize))>;
+                        !cast<Operand>("disp"##dispsize##"imm"##bitsize))>;
 
 // An addressing mode with a base, displacement and index.
 class BDXMode<string type, string bitsize, string dispsize, string suffix>
   : AddressingMode<type, bitsize, dispsize, suffix, "", 3, "BDXAddr",
                    (ops !cast<RegisterOperand>("ADDR"##bitsize),
-                        !cast<Immediate>("disp"##dispsize##"imm"##bitsize),
+                        !cast<Operand>("disp"##dispsize##"imm"##bitsize),
                         !cast<RegisterOperand>("ADDR"##bitsize))>;
 
 // A BDMode paired with an immediate length operand of LENSIZE bits.
@@ -130,21 +130,21 @@ class BDLMode<string type, string bitsize, string dispsize, string suffix,
   : AddressingMode<type, bitsize, dispsize, suffix, "Len"##lensize, 3,
                    "BDLAddr",
                    (ops !cast<RegisterOperand>("ADDR"##bitsize),
-                        !cast<Immediate>("disp"##dispsize##"imm"##bitsize),
-                        !cast<Immediate>("imm"##bitsize))>;
+                        !cast<Operand>("disp"##dispsize##"imm"##bitsize),
+                        !cast<Operand>("imm"##bitsize))>;
 
 // A BDMode paired with a register length operand.
 class BDRMode<string type, string bitsize, string dispsize, string suffix>
   : AddressingMode<type, bitsize, dispsize, suffix, "", 3, "BDRAddr",
                    (ops !cast<RegisterOperand>("ADDR"##bitsize),
-                        !cast<Immediate>("disp"##dispsize##"imm"##bitsize),
+                        !cast<Operand>("disp"##dispsize##"imm"##bitsize),
                         !cast<RegisterOperand>("GR"##bitsize))>;
 
 // An addressing mode with a base, displacement and a vector index.
 class BDVMode<string bitsize, string dispsize>
   : AddressOperand<bitsize, dispsize, "", "BDVAddr",
                    (ops !cast<RegisterOperand>("ADDR"##bitsize),
-                        !cast<Immediate>("disp"##dispsize##"imm"##bitsize),
+                        !cast<Operand>("disp"##dispsize##"imm"##bitsize),
                         !cast<RegisterOperand>("VR128"))>;
 
 //===----------------------------------------------------------------------===//
@@ -219,6 +219,12 @@ def SIMM16 : SDNodeXForm<imm, [{
                                    MVT::i64);
 }]>;
 
+// Negate and then truncate an immediate to a 16-bit signed quantity.
+def NEGSIMM16 : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(int16_t(-N->getZExtValue()), SDLoc(N),
+                                   MVT::i64);
+}]>;
+
 // Truncate an immediate to a 16-bit unsigned quantity.
 def UIMM16 : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(uint16_t(N->getZExtValue()), SDLoc(N),
@@ -231,9 +237,21 @@ def SIMM32 : SDNodeXForm<imm, [{
                                    MVT::i64);
 }]>;
 
+// Negate and then truncate an immediate to a 32-bit unsigned quantity.
+def NEGSIMM32 : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(int32_t(-N->getZExtValue()), SDLoc(N),
+                                   MVT::i64);
+}]>;
+
 // Truncate an immediate to a 32-bit unsigned quantity.
 def UIMM32 : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(uint32_t(N->getZExtValue()), SDLoc(N),
+                                   MVT::i64);
+}]>;
+
+// Negate and then truncate an immediate to a 32-bit unsigned quantity.
+def NEGUIMM32 : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(uint32_t(-N->getZExtValue()), SDLoc(N),
                                    MVT::i64);
 }]>;
 
@@ -241,12 +259,6 @@ def UIMM32 : SDNodeXForm<imm, [{
 def UIMM48 : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(uint64_t(N->getZExtValue()) & 0xffffffffffff,
                                    SDLoc(N), MVT::i64);
-}]>;
-
-// Negate and then truncate an immediate to a 32-bit unsigned quantity.
-def NEGIMM32 : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(uint32_t(-N->getZExtValue()), SDLoc(N),
-                                   MVT::i64);
 }]>;
 
 //===----------------------------------------------------------------------===//
@@ -336,6 +348,10 @@ def imm32sx16 : Immediate<i32, [{
   return isInt<16>(N->getSExtValue());
 }], SIMM16, "S16Imm">;
 
+def imm32sx16n : Immediate<i32, [{
+  return isInt<16>(-N->getSExtValue());
+}], NEGSIMM16, "S16Imm">;
+
 def imm32zx16 : Immediate<i32, [{
   return isUInt<16>(N->getZExtValue());
 }], UIMM16, "U16Imm">;
@@ -347,6 +363,10 @@ def imm32sx16trunc : Immediate<i32, [{}], SIMM16, "S16Imm">;
 // while NILF requires unsigned ones.
 def simm32 : Immediate<i32, [{}], SIMM32, "S32Imm">;
 def uimm32 : Immediate<i32, [{}], UIMM32, "U32Imm">;
+
+def simm32n : Immediate<i32, [{
+  return isInt<32>(-N->getSExtValue());
+}], NEGSIMM32, "S32Imm">;
 
 def imm32 : ImmLeaf<i32, [{}]>;
 
@@ -423,6 +443,10 @@ def imm64sx16 : Immediate<i64, [{
   return isInt<16>(N->getSExtValue());
 }], SIMM16, "S16Imm">;
 
+def imm64sx16n : Immediate<i64, [{
+  return isInt<16>(-N->getSExtValue());
+}], NEGSIMM16, "S16Imm">;
+
 def imm64zx16 : Immediate<i64, [{
   return isUInt<16>(N->getZExtValue());
 }], UIMM16, "U16Imm">;
@@ -431,13 +455,17 @@ def imm64sx32 : Immediate<i64, [{
   return isInt<32>(N->getSExtValue());
 }], SIMM32, "S32Imm">;
 
+def imm64sx32n : Immediate<i64, [{
+  return isInt<32>(-N->getSExtValue());
+}], NEGSIMM32, "S32Imm">;
+
 def imm64zx32 : Immediate<i64, [{
   return isUInt<32>(N->getZExtValue());
 }], UIMM32, "U32Imm">;
 
 def imm64zx32n : Immediate<i64, [{
   return isUInt<32>(-N->getSExtValue());
-}], NEGIMM32, "U32Imm">;
+}], NEGUIMM32, "U32Imm">;
 
 def imm64zx48 : Immediate<i64, [{
   return isUInt<64>(N->getZExtValue());

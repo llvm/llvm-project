@@ -40,6 +40,10 @@ public:
   void setGuid(codeview::GUID G);
   void addFeature(PdbRaw_FeatureSig Sig);
 
+  uint32_t getAge() const { return Age; }
+  codeview::GUID getGuid() const { return Guid; }
+  Optional<uint32_t> getSignature() const { return Signature; }
+
   uint32_t finalize();
 
   Error finalizeMsfLayout();
@@ -52,8 +56,8 @@ private:
 
   std::vector<PdbRaw_FeatureSig> Features;
   PdbRaw_ImplVer Ver;
-  uint32_t Sig;
   uint32_t Age;
+  Optional<uint32_t> Signature;
   codeview::GUID Guid;
 
   NamedStreamMap &NamedStreams;

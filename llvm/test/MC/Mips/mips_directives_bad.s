@@ -57,3 +57,13 @@
 # CHECK-NEXT:    :{{[0-9]+}}:{{[0-9]+}}: error: unexpected token, expected end of statement
 # CHECK-NEXT:    .option pic2 pic3
 # CHECK-NEXT:                 ^
+
+    .set 123, $a0
+# CHECK-NEXT:    :{{[0-9]+}}:{{[0-9]+}}: error: expected identifier after .set
+# CHECK-NEXT:    .set  123
+# CHECK-NEXT:          ^
+
+    .set reg.
+# CHECK-NEXT:    :{{[0-9]+}}:{{[0-9]+}}: error: unexpected token, expected comma
+# CHECK-NEXT:    .set  reg.
+# CHECK-NEXT:             ^

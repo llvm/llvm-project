@@ -3,7 +3,7 @@
 ; Test the register stackifier pass.
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
-target triple = "wasm32-unknown-unknown-wasm"
+target triple = "wasm32-unknown-unknown"
 
 ; No because of pointer aliasing.
 
@@ -485,7 +485,7 @@ define i32 @call_indirect_stackify(%class.call_indirect** %objptr, i32 %arg) {
 !1 = distinct !DICompileUnit(language: DW_LANG_C99, file: !2, producer: "clang version 3.9.0 (trunk 266005) (llvm/trunk 266105)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !3)
 !2 = !DIFile(filename: "test.c", directory: "/")
 !3 = !{}
-!5 = distinct !DISubprogram(name: "test", scope: !2, file: !2, line: 10, type: !6, isLocal: false, isDefinition: true, scopeLine: 11, flags: DIFlagPrototyped, isOptimized: true, unit: !1, variables: !3)
+!5 = distinct !DISubprogram(name: "test", scope: !2, file: !2, line: 10, type: !6, isLocal: false, isDefinition: true, scopeLine: 11, flags: DIFlagPrototyped, isOptimized: true, unit: !1, retainedNodes: !3)
 !6 = !DISubroutineType(types: !3)
 !7 = !DILocalVariable(name: "nzcnt", scope: !5, file: !2, line: 15, type: !8)
 !8 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)

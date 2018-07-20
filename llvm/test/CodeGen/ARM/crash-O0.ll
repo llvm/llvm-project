@@ -12,7 +12,7 @@ entry:
 }
 
 @.str523 = private constant [256 x i8] c"<Unknown>\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00", align 4 ; <[256 x i8]*> [#uses=1]
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i32, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind
 
 ; This function uses the scavenger for an ADDri instruction.
 ; ARMBaseRegisterInfo::estimateRSStackSizeLimit must return a 255 limit.
@@ -21,8 +21,8 @@ entry:
   %letter = alloca i8                             ; <i8*> [#uses=0]
   %prodvers = alloca [256 x i8]                   ; <[256 x i8]*> [#uses=1]
   %buildver = alloca [256 x i8]                   ; <[256 x i8]*> [#uses=0]
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* undef, i8* getelementptr inbounds ([256 x i8], [256 x i8]* @.str523, i32 0, i32 0), i32 256, i32 1, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 undef, i8* align 1 getelementptr inbounds ([256 x i8], [256 x i8]* @.str523, i32 0, i32 0), i32 256, i1 false)
   %prodvers2 = bitcast [256 x i8]* %prodvers to i8* ; <i8*> [#uses=1]
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %prodvers2, i8* getelementptr inbounds ([256 x i8], [256 x i8]* @.str523, i32 0, i32 0), i32 256, i32 1, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 %prodvers2, i8* align 1 getelementptr inbounds ([256 x i8], [256 x i8]* @.str523, i32 0, i32 0), i32 256, i1 false)
   unreachable
 }

@@ -3,7 +3,11 @@
 ; PR18390
 ; We used to assert creating this label. The name itself is not critical. It
 ; just needs to be a unique local symbol.
-; CHECK:      .L.Lstr.DW.stub:
+; PR36885
+; The stub symbol should have pointer-size (8 byte) alignment.
+; CHECK:      .data
+; CHECK-NEXT: .p2align 3
+; CHECK-NEXT: .L.Lstr.DW.stub:
 ; CHECK-NEXT: .quad   .Lstr
 
 @str = private unnamed_addr constant [12 x i8] c"NSException\00"

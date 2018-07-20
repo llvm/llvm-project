@@ -16,7 +16,7 @@ for.body:                                         ; preds = %for.inc, %for.body.
   %cmp1 = icmp eq i32 %a, 12345
   br i1 %cmp1, label %if.then, label %if.else, !prof !0
 ; CHECK: %cmp1 = icmp eq i32 %a, 12345
-; CHECK-NEXT: br i1 %cmp1, label %for.body.preheader.split.us, label %for.body.preheader.split, !prof !0
+; CHECK-NEXT: br i1 %cmp1, label %for.body.us, label %for.body, !prof !0
 if.then:                                          ; preds = %for.body
 ; CHECK: for.body.us:
 ; CHECK: add nsw i32 %{{.*}}, 123
@@ -53,7 +53,7 @@ entry:
   br label %for.body
 ;CHECK: entry:
 ;CHECK-NEXT: %cmp1 = icmp eq i32 1, 2
-;CHECK-NEXT: br i1 %cmp1, label %entry.split, label %for.cond.cleanup.split, !prof !1
+;CHECK-NEXT: br i1 %cmp1, label %for.body, label %for.cond.cleanup.split, !prof !1
 ;CHECK: for.body:
 for.body:                                         ; preds = %for.inc, %entry
   %inc.i = phi i32 [ 0, %entry ], [ %inc, %if.then ]

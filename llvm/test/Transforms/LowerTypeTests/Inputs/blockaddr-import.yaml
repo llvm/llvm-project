@@ -1,0 +1,9 @@
+---
+TypeIdMap:
+  typeid1:
+    TTRes:
+      Kind:            AllOnes
+CfiFunctionDefs:
+  - m
+CfiFunctionDecls:
+...

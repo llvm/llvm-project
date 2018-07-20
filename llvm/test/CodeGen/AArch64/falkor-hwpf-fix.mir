@@ -3,147 +3,147 @@
 # Verify that the tag collision between the loads is resolved for various load opcodes.
 
 # CHECK-LABEL: name: hwpf1
-# CHECK: %[[BASE:[a-z0-9]+]] = ORRXrs %xzr, %x1, 0
-# CHECK: LDRWui %[[BASE]], 0
-# CHECK: LDRWui %x1, 1
+# CHECK: $[[BASE:[a-z0-9]+]] = ORRXrs $xzr, $x1, 0
+# CHECK: LDRWui $[[BASE]], 0
+# CHECK: LDRWui $x1, 1
 name:            hwpf1
 tracksRegLiveness: true
 body: |
   bb.0:
-    liveins: %w0, %x1
+    liveins: $w0, $x1
 
-    %w2 = LDRWui %x1, 0 :: ("aarch64-strided-access" load 4)
-    %w2 = LDRWui %x1, 1
+    $w2 = LDRWui $x1, 0 :: ("aarch64-strided-access" load 4)
+    $w2 = LDRWui $x1, 1
 
-    %w0 = SUBWri %w0, 1, 0
-    %wzr = SUBSWri %w0, 0, 0, implicit-def %nzcv
-    Bcc 9, %bb.0, implicit %nzcv
+    $w0 = SUBWri $w0, 1, 0
+    $wzr = SUBSWri $w0, 0, 0, implicit-def $nzcv
+    Bcc 9, %bb.0, implicit $nzcv
 
   bb.1:
     RET_ReallyLR
 ...
 ---
 # CHECK-LABEL: name: hwpf2
-# CHECK: %[[BASE:[a-z0-9]+]] = ORRXrs %xzr, %x1, 0
-# CHECK: LD1i64 %q2, 0, %[[BASE]]
-# CHECK: LDRWui %x1, 0
+# CHECK: $[[BASE:[a-z0-9]+]] = ORRXrs $xzr, $x1, 0
+# CHECK: LD1i64 $q2, 0, $[[BASE]]
+# CHECK: LDRWui $x1, 0
 name:            hwpf2
 tracksRegLiveness: true
 body: |
   bb.0:
-    liveins: %w0, %x1, %q2
+    liveins: $w0, $x1, $q2
 
-    %q2 = LD1i64 %q2, 0, %x1 :: ("aarch64-strided-access" load 4)
-    %w2 = LDRWui %x1, 0
+    $q2 = LD1i64 $q2, 0, $x1 :: ("aarch64-strided-access" load 4)
+    $w2 = LDRWui $x1, 0
 
-    %w0 = SUBWri %w0, 1, 0
-    %wzr = SUBSWri %w0, 0, 0, implicit-def %nzcv
-    Bcc 9, %bb.0, implicit %nzcv
+    $w0 = SUBWri $w0, 1, 0
+    $wzr = SUBSWri $w0, 0, 0, implicit-def $nzcv
+    Bcc 9, %bb.0, implicit $nzcv
 
   bb.1:
     RET_ReallyLR
 ...
 ---
 # CHECK-LABEL: name: hwpf3
-# CHECK: %[[BASE:[a-z0-9]+]] = ORRXrs %xzr, %x1, 0
-# CHECK: LD1i8 %q2, 0, %[[BASE]]
-# CHECK: LDRWui %x1, 0
+# CHECK: $[[BASE:[a-z0-9]+]] = ORRXrs $xzr, $x1, 0
+# CHECK: LD1i8 $q2, 0, $[[BASE]]
+# CHECK: LDRWui $x1, 0
 name:            hwpf3
 tracksRegLiveness: true
 body: |
   bb.0:
-    liveins: %w0, %x1, %q2
+    liveins: $w0, $x1, $q2
 
-    %q2 = LD1i8 %q2, 0, %x1 :: ("aarch64-strided-access" load 4)
-    %w0 = LDRWui %x1, 0
+    $q2 = LD1i8 $q2, 0, $x1 :: ("aarch64-strided-access" load 4)
+    $w0 = LDRWui $x1, 0
 
-    %w0 = SUBWri %w0, 1, 0
-    %wzr = SUBSWri %w0, 0, 0, implicit-def %nzcv
-    Bcc 9, %bb.0, implicit %nzcv
+    $w0 = SUBWri $w0, 1, 0
+    $wzr = SUBSWri $w0, 0, 0, implicit-def $nzcv
+    Bcc 9, %bb.0, implicit $nzcv
 
   bb.1:
     RET_ReallyLR
 ...
 ---
 # CHECK-LABEL: name: hwpf4
-# CHECK: %[[BASE:[a-z0-9]+]] = ORRXrs %xzr, %x1, 0
-# CHECK: LD1Onev1d %[[BASE]]
-# CHECK: LDRWui %x1, 0
+# CHECK: $[[BASE:[a-z0-9]+]] = ORRXrs $xzr, $x1, 0
+# CHECK: LD1Onev1d $[[BASE]]
+# CHECK: LDRWui $x1, 0
 name:            hwpf4
 tracksRegLiveness: true
 body: |
   bb.0:
-    liveins: %w0, %x1
+    liveins: $w0, $x1
 
-    %d2 = LD1Onev1d %x1 :: ("aarch64-strided-access" load 4)
-    %w2 = LDRWui %x1, 0
+    $d2 = LD1Onev1d $x1 :: ("aarch64-strided-access" load 4)
+    $w2 = LDRWui $x1, 0
 
-    %w0 = SUBWri %w0, 1, 0
-    %wzr = SUBSWri %w0, 0, 0, implicit-def %nzcv
-    Bcc 9, %bb.0, implicit %nzcv
+    $w0 = SUBWri $w0, 1, 0
+    $wzr = SUBSWri $w0, 0, 0, implicit-def $nzcv
+    Bcc 9, %bb.0, implicit $nzcv
 
   bb.1:
     RET_ReallyLR
 ...
 ---
 # CHECK-LABEL: name: hwpf5
-# CHECK: %[[BASE:[a-z0-9]+]] = ORRXrs %xzr, %x1, 0
-# CHECK: LD1Twov1d %[[BASE]]
-# CHECK: LDRWui %x1, 0
+# CHECK: $[[BASE:[a-z0-9]+]] = ORRXrs $xzr, $x1, 0
+# CHECK: LD1Twov1d $[[BASE]]
+# CHECK: LDRWui $x1, 0
 name:            hwpf5
 tracksRegLiveness: true
 body: |
   bb.0:
-    liveins: %w0, %x1
+    liveins: $w0, $x1
 
-    %d2_d3 = LD1Twov1d %x1 :: ("aarch64-strided-access" load 4)
-    %w0 = LDRWui %x1, 0
+    $d2_d3 = LD1Twov1d $x1 :: ("aarch64-strided-access" load 4)
+    $w0 = LDRWui $x1, 0
 
-    %w0 = SUBWri %w0, 1, 0
-    %wzr = SUBSWri %w0, 0, 0, implicit-def %nzcv
-    Bcc 9, %bb.0, implicit %nzcv
+    $w0 = SUBWri $w0, 1, 0
+    $wzr = SUBSWri $w0, 0, 0, implicit-def $nzcv
+    Bcc 9, %bb.0, implicit $nzcv
 
   bb.1:
     RET_ReallyLR
 ...
 ---
 # CHECK-LABEL: name: hwpf6
-# CHECK: %[[BASE:[a-z0-9]+]] = ORRXrs %xzr, %x1, 0
-# CHECK: LDPQi %[[BASE]]
-# CHECK: LDRWui %x1, 3
+# CHECK: $[[BASE:[a-z0-9]+]] = ORRXrs $xzr, $x1, 0
+# CHECK: LDPQi $[[BASE]]
+# CHECK: LDRWui $x1, 3
 name:            hwpf6
 tracksRegLiveness: true
 body: |
   bb.0:
-    liveins: %w0, %x1
+    liveins: $w0, $x1
 
-    %q2, %q3 = LDPQi %x1, 3 :: ("aarch64-strided-access" load 4)
-    %w0 = LDRWui %x1, 3
+    $q2, $q3 = LDPQi $x1, 3 :: ("aarch64-strided-access" load 4)
+    $w0 = LDRWui $x1, 3
 
-    %w0 = SUBWri %w0, 1, 0
-    %wzr = SUBSWri %w0, 0, 0, implicit-def %nzcv
-    Bcc 9, %bb.0, implicit %nzcv
+    $w0 = SUBWri $w0, 1, 0
+    $wzr = SUBSWri $w0, 0, 0, implicit-def $nzcv
+    Bcc 9, %bb.0, implicit $nzcv
 
   bb.1:
     RET_ReallyLR
 ...
 ---
 # CHECK-LABEL: name: hwpf7
-# CHECK: %[[BASE:[a-z0-9]+]] = ORRXrs %xzr, %x1, 0
-# CHECK: LDPXi %[[BASE]]
-# CHECK: LDRWui %x1, 2
+# CHECK: $[[BASE:[a-z0-9]+]] = ORRXrs $xzr, $x1, 0
+# CHECK: LDPXi $[[BASE]]
+# CHECK: LDRWui $x1, 2
 name:            hwpf7
 tracksRegLiveness: true
 body: |
   bb.0:
-    liveins: %w0, %x1
+    liveins: $w0, $x1
 
-    %x2, %x3 = LDPXi %x1, 3 :: ("aarch64-strided-access" load 4)
-    %w2 = LDRWui %x1, 2
+    $x2, $x3 = LDPXi $x1, 3 :: ("aarch64-strided-access" load 4)
+    $w2 = LDRWui $x1, 2
 
-    %w0 = SUBWri %w0, 1, 0
-    %wzr = SUBSWri %w0, 0, 0, implicit-def %nzcv
-    Bcc 9, %bb.0, implicit %nzcv
+    $w0 = SUBWri $w0, 1, 0
+    $wzr = SUBSWri $w0, 0, 0, implicit-def $nzcv
+    Bcc 9, %bb.0, implicit $nzcv
 
   bb.1:
     RET_ReallyLR
@@ -153,154 +153,154 @@ body: |
 # for post increment addressing for various load opcodes.
 
 # CHECK-LABEL: name: hwpfinc1
-# CHECK: %[[BASE:[a-z0-9]+]] = ORRXrs %xzr, %x1, 0
-# CHECK: LDRWpost %[[BASE]], 0
-# CHECK: %x1 = ORRXrs %xzr, %[[BASE]], 0
-# CHECK: LDRWui %x1, 1
+# CHECK: $[[BASE:[a-z0-9]+]] = ORRXrs $xzr, $x1, 0
+# CHECK: LDRWpost $[[BASE]], 0
+# CHECK: $x1 = ORRXrs $xzr, $[[BASE]], 0
+# CHECK: LDRWui $x1, 1
 name:            hwpfinc1
 tracksRegLiveness: true
 body: |
   bb.0:
-    liveins: %w0, %x1
+    liveins: $w0, $x1
 
-    %x1, %w2 = LDRWpost %x1, 0 :: ("aarch64-strided-access" load 4)
-    %w2 = LDRWui %x1, 1
+    $x1, $w2 = LDRWpost $x1, 0 :: ("aarch64-strided-access" load 4)
+    $w2 = LDRWui $x1, 1
 
-    %w0 = SUBWri %w0, 1, 0
-    %wzr = SUBSWri %w0, 0, 0, implicit-def %nzcv
-    Bcc 9, %bb.0, implicit %nzcv
+    $w0 = SUBWri $w0, 1, 0
+    $wzr = SUBSWri $w0, 0, 0, implicit-def $nzcv
+    Bcc 9, %bb.0, implicit $nzcv
 
   bb.1:
     RET_ReallyLR
 ...
 ---
 # CHECK-LABEL: name: hwpfinc2
-# CHECK: %[[BASE:[a-z0-9]+]] = ORRXrs %xzr, %x1, 0
-# CHECK: LD1i64_POST %q2, 0, %[[BASE]]
-# CHECK: %x1 = ORRXrs %xzr, %[[BASE]], 0
-# CHECK: LDRWui %x1, 1
+# CHECK: $[[BASE:[a-z0-9]+]] = ORRXrs $xzr, $x1, 0
+# CHECK: LD1i64_POST $q2, 0, $[[BASE]]
+# CHECK: $x1 = ORRXrs $xzr, $[[BASE]], 0
+# CHECK: LDRWui $x1, 1
 name:            hwpfinc2
 tracksRegLiveness: true
 body: |
   bb.0:
-    liveins: %w0, %x1, %q2
+    liveins: $w0, $x1, $q2
 
-    %x1, %q2 = LD1i64_POST %q2, 0, %x1, %x1 :: ("aarch64-strided-access" load 4)
-    %w2 = LDRWui %x1, 132
+    $x1, $q2 = LD1i64_POST $q2, 0, $x1, $x1 :: ("aarch64-strided-access" load 4)
+    $w2 = LDRWui $x1, 132
 
-    %w0 = SUBWri %w0, 1, 0
-    %wzr = SUBSWri %w0, 0, 0, implicit-def %nzcv
-    Bcc 9, %bb.0, implicit %nzcv
+    $w0 = SUBWri $w0, 1, 0
+    $wzr = SUBSWri $w0, 0, 0, implicit-def $nzcv
+    Bcc 9, %bb.0, implicit $nzcv
 
   bb.1:
     RET_ReallyLR
 ...
 ---
 # CHECK-LABEL: name: hwpfinc3
-# CHECK: %[[BASE:[a-z0-9]+]] = ORRXrs %xzr, %x1, 0
-# CHECK: LD1i8_POST %q2, 0, %[[BASE]]
-# CHECK: %x1 = ORRXrs %xzr, %[[BASE]], 0
-# CHECK: LDRWui %x1, 132
+# CHECK: $[[BASE:[a-z0-9]+]] = ORRXrs $xzr, $x1, 0
+# CHECK: LD1i8_POST $q2, 0, $[[BASE]]
+# CHECK: $x1 = ORRXrs $xzr, $[[BASE]], 0
+# CHECK: LDRWui $x1, 132
 name:            hwpfinc3
 tracksRegLiveness: true
 body: |
   bb.0:
-    liveins: %w0, %x1, %q2
+    liveins: $w0, $x1, $q2
 
-    %x1, %q2 = LD1i8_POST %q2, 0, %x1, %x1 :: ("aarch64-strided-access" load 4)
-    %w0 = LDRWui %x1, 132
+    $x1, $q2 = LD1i8_POST $q2, 0, $x1, $x1 :: ("aarch64-strided-access" load 4)
+    $w0 = LDRWui $x1, 132
 
-    %w0 = SUBWri %w0, 1, 0
-    %wzr = SUBSWri %w0, 0, 0, implicit-def %nzcv
-    Bcc 9, %bb.0, implicit %nzcv
+    $w0 = SUBWri $w0, 1, 0
+    $wzr = SUBSWri $w0, 0, 0, implicit-def $nzcv
+    Bcc 9, %bb.0, implicit $nzcv
 
   bb.1:
     RET_ReallyLR
 ...
 ---
 # CHECK-LABEL: name: hwpfinc4
-# CHECK: %[[BASE:[a-z0-9]+]] = ORRXrs %xzr, %x1, 0
-# CHECK: LD1Rv1d_POST %[[BASE]]
-# CHECK: %x1 = ORRXrs %xzr, %[[BASE]], 0
-# CHECK: LDRWui %x1, 252
+# CHECK: $[[BASE:[a-z0-9]+]] = ORRXrs $xzr, $x1, 0
+# CHECK: LD1Rv1d_POST $[[BASE]]
+# CHECK: $x1 = ORRXrs $xzr, $[[BASE]], 0
+# CHECK: LDRWui $x1, 252
 name:            hwpfinc4
 tracksRegLiveness: true
 body: |
   bb.0:
-    liveins: %w0, %x1, %q2
+    liveins: $w0, $x1, $q2
 
-    %x1, %d2 = LD1Rv1d_POST %x1, %xzr :: ("aarch64-strided-access" load 4)
-    %w2 = LDRWui %x1, 252
+    $x1, $d2 = LD1Rv1d_POST $x1, $xzr :: ("aarch64-strided-access" load 4)
+    $w2 = LDRWui $x1, 252
 
-    %w0 = SUBWri %w0, 1, 0
-    %wzr = SUBSWri %w0, 0, 0, implicit-def %nzcv
-    Bcc 9, %bb.0, implicit %nzcv
+    $w0 = SUBWri $w0, 1, 0
+    $wzr = SUBSWri $w0, 0, 0, implicit-def $nzcv
+    Bcc 9, %bb.0, implicit $nzcv
 
   bb.1:
     RET_ReallyLR
 ...
 ---
 # CHECK-LABEL: name: hwpfinc5
-# CHECK: %[[BASE:[a-z0-9]+]] = ORRXrs %xzr, %x1, 0
-# CHECK: LD3Threev2s_POST %[[BASE]]
-# CHECK: %x1 = ORRXrs %xzr, %[[BASE]], 0
-# CHECK: LDRWroX %x17, %x0
+# CHECK: $[[BASE:[a-z0-9]+]] = ORRXrs $xzr, $x1, 0
+# CHECK: LD3Threev2s_POST $[[BASE]]
+# CHECK: $x1 = ORRXrs $xzr, $[[BASE]], 0
+# CHECK: LDRWroX $x17, $x0
 name:            hwpfinc5
 tracksRegLiveness: true
 body: |
   bb.0:
-    liveins: %w0, %x1, %x17, %q2
+    liveins: $w0, $x1, $x17, $q2
 
-    %x1, %d2_d3_d4 = LD3Threev2s_POST %x1, %x0 :: ("aarch64-strided-access" load 4)
-    %w0 = LDRWroX %x17, %x0, 0, 0
+    $x1, $d2_d3_d4 = LD3Threev2s_POST $x1, $x0 :: ("aarch64-strided-access" load 4)
+    $w0 = LDRWroX $x17, $x0, 0, 0
 
-    %w0 = SUBWri %w0, 1, 0
-    %wzr = SUBSWri %w0, 0, 0, implicit-def %nzcv
-    Bcc 9, %bb.0, implicit %nzcv
+    $w0 = SUBWri $w0, 1, 0
+    $wzr = SUBSWri $w0, 0, 0, implicit-def $nzcv
+    Bcc 9, %bb.0, implicit $nzcv
 
   bb.1:
     RET_ReallyLR
 ...
 ---
 # CHECK-LABEL: name: hwpfinc6
-# CHECK: %[[BASE:[a-z0-9]+]] = ORRXrs %xzr, %x1, 0
-# CHECK: LDPDpost %[[BASE]]
-# CHECK: %x1 = ORRXrs %xzr, %[[BASE]], 0
-# CHECK: LDRWui %x17, 2
+# CHECK: $[[BASE:[a-z0-9]+]] = ORRXrs $xzr, $x1, 0
+# CHECK: LDPDpost $[[BASE]]
+# CHECK: $x1 = ORRXrs $xzr, $[[BASE]], 0
+# CHECK: LDRWui $x17, 2
 name:            hwpfinc6
 tracksRegLiveness: true
 body: |
   bb.0:
-    liveins: %w0, %x1, %x17, %q2
+    liveins: $w0, $x1, $x17, $q2
 
-    %x1, %d2, %d3 = LDPDpost %x1, 3 :: ("aarch64-strided-access" load 4)
-    %w16 = LDRWui %x17, 2
+    $x1, $d2, $d3 = LDPDpost $x1, 3 :: ("aarch64-strided-access" load 4)
+    $w16 = LDRWui $x17, 2
 
-    %w0 = SUBWri %w0, 1, 0
-    %wzr = SUBSWri %w0, 0, 0, implicit-def %nzcv
-    Bcc 9, %bb.0, implicit %nzcv
+    $w0 = SUBWri $w0, 1, 0
+    $wzr = SUBSWri $w0, 0, 0, implicit-def $nzcv
+    Bcc 9, %bb.0, implicit $nzcv
 
   bb.1:
     RET_ReallyLR
 ...
 ---
 # CHECK-LABEL: name: hwpfinc7
-# CHECK: %[[BASE:[a-z0-9]+]] = ORRXrs %xzr, %x1, 0
-# CHECK: LDPXpost %[[BASE]]
-# CHECK: %x1 = ORRXrs %xzr, %[[BASE]], 0
-# CHECK: LDRWui %x17, 2
+# CHECK: $[[BASE:[a-z0-9]+]] = ORRXrs $xzr, $x1, 0
+# CHECK: LDPXpost $[[BASE]]
+# CHECK: $x1 = ORRXrs $xzr, $[[BASE]], 0
+# CHECK: LDRWui $x17, 2
 name:            hwpfinc7
 tracksRegLiveness: true
 body: |
   bb.0:
-    liveins: %w0, %x1, %x17, %q2
+    liveins: $w0, $x1, $x17, $q2
 
-    %x1, %x2, %x3 = LDPXpost %x1, 3 :: ("aarch64-strided-access" load 4)
-    %w18 = LDRWui %x17, 2
+    $x1, $x2, $x3 = LDPXpost $x1, 3 :: ("aarch64-strided-access" load 4)
+    $w18 = LDRWui $x17, 2
 
-    %w0 = SUBWri %w0, 1, 0
-    %wzr = SUBSWri %w0, 0, 0, implicit-def %nzcv
-    Bcc 9, %bb.0, implicit %nzcv
+    $w0 = SUBWri $w0, 1, 0
+    $wzr = SUBSWri $w0, 0, 0, implicit-def $nzcv
+    Bcc 9, %bb.0, implicit $nzcv
 
   bb.1:
     RET_ReallyLR
@@ -309,23 +309,23 @@ body: |
 # Check that we handle case of strided load with no HW prefetcher tag correctly.
 
 # CHECK-LABEL: name: hwpf_notagbug
-# CHECK-NOT: ORRXrs %xzr
-# CHECK: LDARW %x1
-# CHECK-NOT: ORRXrs %xzr
-# CHECK: LDRWui %x1
+# CHECK-NOT: ORRXrs $xzr
+# CHECK: LDARW $x1
+# CHECK-NOT: ORRXrs $xzr
+# CHECK: LDRWui $x1
 name:            hwpf_notagbug
 tracksRegLiveness: true
 body: |
   bb.0:
-    liveins: %w0, %x1, %x17
+    liveins: $w0, $x1, $x17
 
-    %w1 = LDARW %x1 :: ("aarch64-strided-access" load 4)
-    %w1 = LDRWui %x1, 0 :: ("aarch64-strided-access" load 4)
-    %w17 = LDRWui %x17, 0 :: ("aarch64-strided-access" load 4)
+    $w1 = LDARW $x1 :: ("aarch64-strided-access" load 4)
+    $w1 = LDRWui $x1, 0 :: ("aarch64-strided-access" load 4)
+    $w17 = LDRWui $x17, 0 :: ("aarch64-strided-access" load 4)
 
-    %w0 = SUBWri %w0, 1, 0
-    %wzr = SUBSWri %w0, 0, 0, implicit-def %nzcv
-    Bcc 9, %bb.0, implicit %nzcv
+    $w0 = SUBWri $w0, 1, 0
+    $wzr = SUBSWri $w0, 0, 0, implicit-def $nzcv
+    Bcc 9, %bb.0, implicit $nzcv
 
   bb.1:
     RET_ReallyLR
@@ -334,21 +334,46 @@ body: |
 # Check that we treat sp based loads as non-prefetching.
 
 # CHECK-LABEL: name: hwpf_spbase
-# CHECK-NOT: ORRXrs %xzr
-# CHECK: LDRWui %x15
-# CHECK: LDRWui %sp
+# CHECK-NOT: ORRXrs $xzr
+# CHECK: LDRWui $x15
+# CHECK: LDRWui $sp
 name:            hwpf_spbase
 tracksRegLiveness: true
 body: |
   bb.0:
-    liveins: %w0, %x15
+    liveins: $w0, $x15
 
-    %w1 = LDRWui %x15, 0 :: ("aarch64-strided-access" load 4)
-    %w17 = LDRWui %sp, 0
+    $w1 = LDRWui $x15, 0 :: ("aarch64-strided-access" load 4)
+    $w17 = LDRWui $sp, 0
 
-    %w0 = SUBWri %w0, 1, 0
-    %wzr = SUBSWri %w0, 0, 0, implicit-def %nzcv
-    Bcc 9, %bb.0, implicit %nzcv
+    $w0 = SUBWri $w0, 1, 0
+    $wzr = SUBSWri $w0, 0, 0, implicit-def $nzcv
+    Bcc 9, %bb.0, implicit $nzcv
+
+  bb.1:
+    RET_ReallyLR
+...
+---
+# Check that non-base registers are considered live when finding a
+# scratch register by making sure we don't use $x2 for the scratch
+# register for the inserted ORRXrs.
+# CHECK-LABEL: name: hwpf_offreg
+# CHECK: $x3 = ORRXrs $xzr, $x1, 0
+# CHECK: $w10 = LDRWroX $x3, $x2, 0, 0
+name:            hwpf_offreg
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $w0, $x1, $x2, $x17, $x18
+
+    $w10 = LDRWroX $x1, $x2, 0, 0 :: ("aarch64-strided-access" load 4)
+
+    $x2 = ORRXrs $xzr, $x10, 0
+    $w26 = LDRWroX $x1, $x2, 0, 0
+
+    $w0 = SUBWri $w0, 1, 0
+    $wzr = SUBSWri $w0, 0, 0, implicit-def $nzcv
+    Bcc 9, %bb.0, implicit $nzcv
 
   bb.1:
     RET_ReallyLR

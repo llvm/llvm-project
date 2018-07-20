@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/ThreadLocal.h"
-#include "llvm/Config/config.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Compiler.h"
 
 //===----------------------------------------------------------------------===//
@@ -41,8 +41,8 @@ void ThreadLocalImpl::removeInstance() {
 }
 #elif defined(LLVM_ON_UNIX)
 #include "Unix/ThreadLocal.inc"
-#elif defined( LLVM_ON_WIN32)
+#elif defined( _WIN32)
 #include "Windows/ThreadLocal.inc"
 #else
-#warning Neither LLVM_ON_UNIX nor LLVM_ON_WIN32 set in Support/ThreadLocal.cpp
+#warning Neither LLVM_ON_UNIX nor _WIN32 set in Support/ThreadLocal.cpp
 #endif

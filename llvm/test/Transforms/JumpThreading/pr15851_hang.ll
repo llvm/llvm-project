@@ -2,9 +2,19 @@
 
 ; CHECK-LABEL: @f(
 ; CHECK-LABEL: entry
-; CHECK: ret void
-; CHECK-NOT: for.cond1
-; CHECK-NOT: for.body
+; CHECK-NEXT: ret void
+;
+; JumpThreading must detect the next two blocks are unreachable from entry
+; and leave them alone. A subsequent pass will remove them from @f.
+;
+; CHECK: for.cond1:
+; CHECK-NEXT: phi
+; CHECK-NEXT: icmp
+; CHECK-NEXT: br i1 %cmp, label %for.body, label %for.cond1
+; CHECK: for.body:
+; CHECK-NEXT: add
+; CHECK-NEXT: icmp
+; CHECK-NEXT: br i1 %a, label %for.cond1, label %for.cond1
 
 define void @f() {
 entry:

@@ -1,3 +1,3 @@
 // Whether this is found depends on whether the /I flag searches within the
 // "nested" subdirectory
-foo BITMAP "nested-bitmap.bmp"
+foo BITMAP "nested_bitmap.bmp"

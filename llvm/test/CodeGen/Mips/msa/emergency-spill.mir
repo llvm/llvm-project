@@ -77,11 +77,11 @@ selected:        false
 tracksRegLiveness: true
 registers:
 liveins:
-  - { reg: '%a0_64', virtual-reg: '' }
-  - { reg: '%a1_64', virtual-reg: '' }
-  - { reg: '%a2_64', virtual-reg: '' }
-  - { reg: '%a3_64', virtual-reg: '' }
-  - { reg: '%t0_64', virtual-reg: '' }
+  - { reg: '$a0_64', virtual-reg: '' }
+  - { reg: '$a1_64', virtual-reg: '' }
+  - { reg: '$a2_64', virtual-reg: '' }
+  - { reg: '$a3_64', virtual-reg: '' }
+  - { reg: '$t0_64', virtual-reg: '' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -102,111 +102,120 @@ frameInfo:
 fixedStack:
 stack:
   - { id: 0, name: retval, type: default, offset: 0, size: 16, alignment: 16,
-      callee-saved-register: '', di-variable: '', di-expression: '', di-location: '' }
+      callee-saved-register: '', debug-info-variable: '',
+      debug-info-expression: '', debug-info-location: '' }
   - { id: 1, name: a, type: default, offset: 0, size: 16, alignment: 16,
-      callee-saved-register: '', di-variable: '', di-expression: '', di-location: '' }
+      callee-saved-register: '', debug-info-variable: '',
+      debug-info-expression: '', debug-info-location: '' }
   - { id: 2, name: b, type: default, offset: 0, size: 16, alignment: 16,
-      callee-saved-register: '', di-variable: '', di-expression: '', di-location: '' }
+      callee-saved-register: '', debug-info-variable: '',
+      debug-info-expression: '', debug-info-location: '' }
   - { id: 3, name: a.addr, type: default, offset: 0, size: 16, alignment: 16,
-      callee-saved-register: '', di-variable: '', di-expression: '', di-location: '' }
+      callee-saved-register: '', debug-info-variable: '',
+      debug-info-expression: '', debug-info-location: '' }
   - { id: 4, name: b.addr, type: default, offset: 0, size: 16, alignment: 16,
-      callee-saved-register: '', di-variable: '', di-expression: '', di-location: '' }
+      callee-saved-register: '', debug-info-variable: '',
+      debug-info-expression: '', debug-info-location: '' }
   - { id: 5, name: c.addr, type: default, offset: 0, size: 4, alignment: 4,
-      callee-saved-register: '', di-variable: '', di-expression: '', di-location: '' }
+      callee-saved-register: '', debug-info-variable: '',
+      debug-info-expression: '', debug-info-location: '' }
   - { id: 6, name: g, type: default, offset: 0, size: 8, alignment: 8,
-      callee-saved-register: '', di-variable: '', di-expression: '', di-location: '' }
+      callee-saved-register: '', debug-info-variable: '',
+      debug-info-expression: '', debug-info-location: '' }
   - { id: 7, name: d, type: default, offset: 0, size: 8, alignment: 8,
-      callee-saved-register: '', di-variable: '', di-expression: '', di-location: '' }
+      callee-saved-register: '', debug-info-variable: '',
+      debug-info-expression: '', debug-info-location: '' }
   - { id: 8, name: '', type: default, offset: 0, size: 6400,
-      alignment: 16, callee-saved-register: '', di-variable: '', di-expression: '', di-location: '' }
+      alignment: 16, callee-saved-register: '', debug-info-variable: '',
+      debug-info-expression: '', debug-info-location: '' }
 constants:
 body:             |
   bb.0.entry:
-    liveins: %a0_64, %a1_64, %a2_64, %a3_64, %t0_64
+    liveins: $a0_64, $a1_64, $a2_64, $a3_64, $t0_64
 
-    SD killed %a0_64, %stack.1.a, 0 :: (store 8 into %ir.1, align 16)
-    SD killed %a1_64, %stack.1.a, 8 :: (store 8 into %ir.2)
-    %w0 = LD_B %stack.1.a, 0 :: (dereferenceable load 16 from %ir.a)
-    SD killed %a2_64, %stack.2.b, 0 :: (store 8 into %ir.4, align 16)
-    SD killed %a3_64, %stack.2.b, 8 :: (store 8 into %ir.5)
-    %w1 = LD_B %stack.2.b, 0 :: (dereferenceable load 16 from %ir.b)
-    ST_B killed %w0, %stack.3.a.addr, 0 :: (store 16 into %ir.a.addr)
-    ST_B killed %w1, %stack.4.b.addr, 0 :: (store 16 into %ir.b.addr)
-    SW %t0, %stack.5.c.addr, 0, implicit killed %t0_64 :: (store 4 into %ir.c.addr)
-    %at_64 = LEA_ADDiu64 %stack.8, 0
-    SD killed %at_64, %stack.6.g, 0 :: (store 8 into %ir.g)
-    %a1_64 = LD %stack.6.g, 0 :: (dereferenceable load 8 from %ir.g)
-    ADJCALLSTACKDOWN 0, 0, implicit-def dead %sp, implicit %sp
-    %a0_64 = LEA_ADDiu64 %stack.4.b.addr, 0
-    JAL @h, csr_n64, implicit-def dead %ra, implicit %a0_64, implicit %a1_64, implicit-def %sp
-    ADJCALLSTACKUP 0, 0, implicit-def dead %sp, implicit %sp
-    %at_64 = LD %stack.6.g, 0 :: (dereferenceable load 8 from %ir.g)
-    %v0_64 = LD %stack.6.g, 0 :: (dereferenceable load 8 from %ir.g)
-    %v1_64 = LD %stack.6.g, 0 :: (dereferenceable load 8 from %ir.g)
-    %a0_64 = LD %stack.6.g, 0 :: (dereferenceable load 8 from %ir.g)
-    %a1_64 = LD %stack.6.g, 0 :: (dereferenceable load 8 from %ir.g)
-    %a2_64 = LD %stack.6.g, 0 :: (dereferenceable load 8 from %ir.g)
-    %a3_64 = LD %stack.6.g, 0 :: (dereferenceable load 8 from %ir.g)
-    %t0_64 = LD %stack.6.g, 0 :: (dereferenceable load 8 from %ir.g)
-    %t1_64 = LD %stack.6.g, 0 :: (dereferenceable load 8 from %ir.g)
-    %t2_64 = LD %stack.6.g, 0 :: (dereferenceable load 8 from %ir.g)
-    %t3_64 = LD %stack.6.g, 0 :: (dereferenceable load 8 from %ir.g)
-    %t4_64 = LD %stack.6.g, 0 :: (dereferenceable load 8 from %ir.g)
-    %t5_64 = LD %stack.6.g, 0 :: (dereferenceable load 8 from %ir.g)
-    %t6_64 = LD %stack.6.g, 0 :: (dereferenceable load 8 from %ir.g)
-    %t7_64 = LD %stack.6.g, 0 :: (dereferenceable load 8 from %ir.g)
-    %s0_64 = LD %stack.6.g, 0 :: (dereferenceable load 8 from %ir.g)
-    %s1_64 = LD %stack.6.g, 0 :: (dereferenceable load 8 from %ir.g)
-    %s2_64 = LD %stack.6.g, 0 :: (dereferenceable load 8 from %ir.g)
-    %s3_64 = LD %stack.6.g, 0 :: (dereferenceable load 8 from %ir.g)
-    %s4_64 = LD %stack.6.g, 0 :: (dereferenceable load 8 from %ir.g)
-    %s5_64 = LD %stack.6.g, 0 :: (dereferenceable load 8 from %ir.g)
-    %s6_64 = LD %stack.6.g, 0 :: (dereferenceable load 8 from %ir.g)
-    %s7_64 = LD %stack.6.g, 0 :: (dereferenceable load 8 from %ir.g)
-    %t8_64 = LD %stack.6.g, 0 :: (dereferenceable load 8 from %ir.g)
-    %t9_64 = LD %stack.6.g, 0 :: (dereferenceable load 8 from %ir.g)
-    %ra_64 = LD %stack.6.g, 0 :: (dereferenceable load 8 from %ir.g)
-    %w0 = LD_B %stack.3.a.addr, 0 :: (dereferenceable load 16 from %ir.a.addr)
-    SD %at_64, %stack.7.d, 0 :: (store 8 into %ir.d)
-    SD %v0_64, %stack.7.d, 0 :: (store 8 into %ir.d)
-    SD %v1_64, %stack.7.d, 0 :: (store 8 into %ir.d)
-    SD %a0_64, %stack.7.d, 0 :: (store 8 into %ir.d)
-    SD %a1_64, %stack.7.d, 0 :: (store 8 into %ir.d)
-    SD %a2_64, %stack.7.d, 0 :: (store 8 into %ir.d)
-    SD %a3_64, %stack.7.d, 0 :: (store 8 into %ir.d)
-    SD %t0_64, %stack.7.d, 0 :: (store 8 into %ir.d)
-    SD %t1_64, %stack.7.d, 0 :: (store 8 into %ir.d)
-    SD %t2_64, %stack.7.d, 0 :: (store 8 into %ir.d)
-    SD %t3_64, %stack.7.d, 0 :: (store 8 into %ir.d)
-    SD %t4_64, %stack.7.d, 0 :: (store 8 into %ir.d)
-    SD %t5_64, %stack.7.d, 0 :: (store 8 into %ir.d)
-    SD %t6_64, %stack.7.d, 0 :: (store 8 into %ir.d)
-    SD %t7_64, %stack.7.d, 0 :: (store 8 into %ir.d)
-    SD %s0_64, %stack.7.d, 0 :: (store 8 into %ir.d)
-    SD %s1_64, %stack.7.d, 0 :: (store 8 into %ir.d)
-    SD %s2_64, %stack.7.d, 0 :: (store 8 into %ir.d)
-    SD %s3_64, %stack.7.d, 0 :: (store 8 into %ir.d)
-    SD %s4_64, %stack.7.d, 0 :: (store 8 into %ir.d)
-    SD %s5_64, %stack.7.d, 0 :: (store 8 into %ir.d)
-    SD %s6_64, %stack.7.d, 0 :: (store 8 into %ir.d)
-    SD %s7_64, %stack.7.d, 0 :: (store 8 into %ir.d)
-    SD %t8_64, %stack.7.d, 0 :: (store 8 into %ir.d)
-    SD %t9_64, %stack.7.d, 0 :: (store 8 into %ir.d)
-    SD %ra_64, %stack.7.d, 0 :: (store 8 into %ir.d)
-    %at_64 = LD %stack.7.d, 0 :: (dereferenceable load 8 from %ir.d)
-    %v0 = LB %at_64, 0 :: (load 1 from %ir.arrayidx)
-    %w1 = FILL_B killed %v0
-    %w0 = ADDV_B killed %w0, killed %w1
-    %at = LB killed %at_64, 1 :: (load 1 from %ir.arrayidx3)
-    %w1 = FILL_B killed %at
-    %w0 = ADDV_B killed %w0, killed %w1
-    %w1 = LD_B %stack.4.b.addr, 0 :: (dereferenceable load 16 from %ir.b.addr)
-    %w0 = ADDV_B killed %w1, killed %w0
-    ST_B killed %w0, %stack.4.b.addr, 0 :: (store 16 into %ir.b.addr)
-    %w0 = LD_B %stack.4.b.addr, 0 :: (dereferenceable load 16 from %ir.b.addr)
-    ST_B killed %w0, %stack.0.retval, 0 :: (store 16 into %ir.retval)
-    %v0_64 = LD %stack.0.retval, 0 :: (dereferenceable load 8 from %ir.20, align 16)
-    %v1_64 = LD %stack.0.retval, 8 :: (dereferenceable load 8 from %ir.20 + 8, align 16)
-    RetRA implicit %v0_64, implicit %v1_64
+    SD killed $a0_64, %stack.1.a, 0 :: (store 8 into %ir.1, align 16)
+    SD killed $a1_64, %stack.1.a, 8 :: (store 8 into %ir.2)
+    $w0 = LD_B %stack.1.a, 0 :: (dereferenceable load 16 from %ir.a)
+    SD killed $a2_64, %stack.2.b, 0 :: (store 8 into %ir.4, align 16)
+    SD killed $a3_64, %stack.2.b, 8 :: (store 8 into %ir.5)
+    $w1 = LD_B %stack.2.b, 0 :: (dereferenceable load 16 from %ir.b)
+    ST_B killed $w0, %stack.3.a.addr, 0 :: (store 16 into %ir.a.addr)
+    ST_B killed $w1, %stack.4.b.addr, 0 :: (store 16 into %ir.b.addr)
+    SW $t0, %stack.5.c.addr, 0, implicit killed $t0_64 :: (store 4 into %ir.c.addr)
+    $at_64 = LEA_ADDiu64 %stack.8, 0
+    SD killed $at_64, %stack.6.g, 0 :: (store 8 into %ir.g)
+    $a1_64 = LD %stack.6.g, 0 :: (dereferenceable load 8 from %ir.g)
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+    $a0_64 = LEA_ADDiu64 %stack.4.b.addr, 0
+    JAL @h, csr_n64, implicit-def dead $ra, implicit $a0_64, implicit $a1_64, implicit-def $sp
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+    $at_64 = LD %stack.6.g, 0 :: (dereferenceable load 8 from %ir.g)
+    $v0_64 = LD %stack.6.g, 0 :: (dereferenceable load 8 from %ir.g)
+    $v1_64 = LD %stack.6.g, 0 :: (dereferenceable load 8 from %ir.g)
+    $a0_64 = LD %stack.6.g, 0 :: (dereferenceable load 8 from %ir.g)
+    $a1_64 = LD %stack.6.g, 0 :: (dereferenceable load 8 from %ir.g)
+    $a2_64 = LD %stack.6.g, 0 :: (dereferenceable load 8 from %ir.g)
+    $a3_64 = LD %stack.6.g, 0 :: (dereferenceable load 8 from %ir.g)
+    $t0_64 = LD %stack.6.g, 0 :: (dereferenceable load 8 from %ir.g)
+    $t1_64 = LD %stack.6.g, 0 :: (dereferenceable load 8 from %ir.g)
+    $t2_64 = LD %stack.6.g, 0 :: (dereferenceable load 8 from %ir.g)
+    $t3_64 = LD %stack.6.g, 0 :: (dereferenceable load 8 from %ir.g)
+    $t4_64 = LD %stack.6.g, 0 :: (dereferenceable load 8 from %ir.g)
+    $t5_64 = LD %stack.6.g, 0 :: (dereferenceable load 8 from %ir.g)
+    $t6_64 = LD %stack.6.g, 0 :: (dereferenceable load 8 from %ir.g)
+    $t7_64 = LD %stack.6.g, 0 :: (dereferenceable load 8 from %ir.g)
+    $s0_64 = LD %stack.6.g, 0 :: (dereferenceable load 8 from %ir.g)
+    $s1_64 = LD %stack.6.g, 0 :: (dereferenceable load 8 from %ir.g)
+    $s2_64 = LD %stack.6.g, 0 :: (dereferenceable load 8 from %ir.g)
+    $s3_64 = LD %stack.6.g, 0 :: (dereferenceable load 8 from %ir.g)
+    $s4_64 = LD %stack.6.g, 0 :: (dereferenceable load 8 from %ir.g)
+    $s5_64 = LD %stack.6.g, 0 :: (dereferenceable load 8 from %ir.g)
+    $s6_64 = LD %stack.6.g, 0 :: (dereferenceable load 8 from %ir.g)
+    $s7_64 = LD %stack.6.g, 0 :: (dereferenceable load 8 from %ir.g)
+    $t8_64 = LD %stack.6.g, 0 :: (dereferenceable load 8 from %ir.g)
+    $t9_64 = LD %stack.6.g, 0 :: (dereferenceable load 8 from %ir.g)
+    $ra_64 = LD %stack.6.g, 0 :: (dereferenceable load 8 from %ir.g)
+    $w0 = LD_B %stack.3.a.addr, 0 :: (dereferenceable load 16 from %ir.a.addr)
+    SD $at_64, %stack.7.d, 0 :: (store 8 into %ir.d)
+    SD $v0_64, %stack.7.d, 0 :: (store 8 into %ir.d)
+    SD $v1_64, %stack.7.d, 0 :: (store 8 into %ir.d)
+    SD $a0_64, %stack.7.d, 0 :: (store 8 into %ir.d)
+    SD $a1_64, %stack.7.d, 0 :: (store 8 into %ir.d)
+    SD $a2_64, %stack.7.d, 0 :: (store 8 into %ir.d)
+    SD $a3_64, %stack.7.d, 0 :: (store 8 into %ir.d)
+    SD $t0_64, %stack.7.d, 0 :: (store 8 into %ir.d)
+    SD $t1_64, %stack.7.d, 0 :: (store 8 into %ir.d)
+    SD $t2_64, %stack.7.d, 0 :: (store 8 into %ir.d)
+    SD $t3_64, %stack.7.d, 0 :: (store 8 into %ir.d)
+    SD $t4_64, %stack.7.d, 0 :: (store 8 into %ir.d)
+    SD $t5_64, %stack.7.d, 0 :: (store 8 into %ir.d)
+    SD $t6_64, %stack.7.d, 0 :: (store 8 into %ir.d)
+    SD $t7_64, %stack.7.d, 0 :: (store 8 into %ir.d)
+    SD $s0_64, %stack.7.d, 0 :: (store 8 into %ir.d)
+    SD $s1_64, %stack.7.d, 0 :: (store 8 into %ir.d)
+    SD $s2_64, %stack.7.d, 0 :: (store 8 into %ir.d)
+    SD $s3_64, %stack.7.d, 0 :: (store 8 into %ir.d)
+    SD $s4_64, %stack.7.d, 0 :: (store 8 into %ir.d)
+    SD $s5_64, %stack.7.d, 0 :: (store 8 into %ir.d)
+    SD $s6_64, %stack.7.d, 0 :: (store 8 into %ir.d)
+    SD $s7_64, %stack.7.d, 0 :: (store 8 into %ir.d)
+    SD $t8_64, %stack.7.d, 0 :: (store 8 into %ir.d)
+    SD $t9_64, %stack.7.d, 0 :: (store 8 into %ir.d)
+    SD $ra_64, %stack.7.d, 0 :: (store 8 into %ir.d)
+    $at_64 = LD %stack.7.d, 0 :: (dereferenceable load 8 from %ir.d)
+    $v0 = LB $at_64, 0 :: (load 1 from %ir.arrayidx)
+    $w1 = FILL_B killed $v0
+    $w0 = ADDV_B killed $w0, killed $w1
+    $at = LB killed $at_64, 1 :: (load 1 from %ir.arrayidx3)
+    $w1 = FILL_B killed $at
+    $w0 = ADDV_B killed $w0, killed $w1
+    $w1 = LD_B %stack.4.b.addr, 0 :: (dereferenceable load 16 from %ir.b.addr)
+    $w0 = ADDV_B killed $w1, killed $w0
+    ST_B killed $w0, %stack.4.b.addr, 0 :: (store 16 into %ir.b.addr)
+    $w0 = LD_B %stack.4.b.addr, 0 :: (dereferenceable load 16 from %ir.b.addr)
+    ST_B killed $w0, %stack.0.retval, 0 :: (store 16 into %ir.retval)
+    $v0_64 = LD %stack.0.retval, 0 :: (dereferenceable load 8 from %ir.20, align 16)
+    $v1_64 = LD %stack.0.retval, 8 :: (dereferenceable load 8 from %ir.20 + 8, align 16)
+    RetRA implicit $v0_64, implicit $v1_64
 
 ...

@@ -15,6 +15,6 @@ name:            foo
 body: |
   bb.0.entry:
     ; CHECK: [[@LINE+1]]:33: expected a register after register flags
-    %eax = MOV32r0 implicit-def 2
-    RETQ %eax
+    $eax = MOV32r0 implicit-def 2
+    RETQ $eax
 ...

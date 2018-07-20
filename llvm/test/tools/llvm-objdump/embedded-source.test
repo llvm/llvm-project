@@ -1,0 +1,23 @@
+; RUN: llvm-objdump -disassemble -line-numbers %p/Inputs/embedded-source | FileCheck --check-prefix=LINE %s
+; RUN: llvm-objdump -disassemble -source       %p/Inputs/embedded-source | FileCheck --check-prefix=SOURCE %s
+; REQUIRES: x86-registered-target
+
+; LINE: main:
+; LINE-NEXT: ; {{.*}}embedded-source.c:1
+; LINE-NEXT: pushq %rbp
+; LINE: ; {{.*}}embedded-source.c:2
+; LINE-NEXT: movl $2
+; LINE: ; {{.*}}embedded-source.c:3
+; LINE: addl $1
+; LINE: ; {{.*}}embedded-source.c:4
+; LINE: retq
+
+; SOURCE: main:
+; SOURCE-NEXT: ; int main(int argc, char *argv[]) {
+; SOURCE-NEXT: pushq %rbp
+; SOURCE: ; int i = 2;
+; SOURCE-NEXT: movl $2
+; SOURCE: ; i += 1;
+; SOURCE: addl $1
+; SOURCE: ; return i;
+; SOURCE: retq

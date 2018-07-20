@@ -19,23 +19,23 @@
 name:            foo
 tracksRegLiveness: true
 liveins:
-  - { reg: '%edi' }
+  - { reg: '$edi' }
 body: |
   bb.0.entry:
     successors: %bb.1.less, %bb.2.exit
   ; CHECK: [[@LINE+1]]:19: expected line break at the end of a list
-    liveins: %edi 44
+    liveins: $edi 44
 
-    CMP32ri8 %edi, 10, implicit-def %eflags
-    JG_1 %bb.2.exit, implicit killed %eflags
+    CMP32ri8 $edi, 10, implicit-def $eflags
+    JG_1 %bb.2.exit, implicit killed $eflags
 
   bb.1.less:
-    %eax = MOV32r0 implicit-def dead %eflags
-    RETQ killed %eax
+    $eax = MOV32r0 implicit-def dead $eflags
+    RETQ killed $eax
 
   bb.2.exit:
-    liveins: %edi
+    liveins: $edi
 
-    %eax = COPY killed %edi
-    RETQ killed %eax
+    $eax = COPY killed $edi
+    RETQ killed $eax
 ...

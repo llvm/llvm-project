@@ -55,6 +55,10 @@ static MCSymbolRefExpr::VariantKind getAccessVariant(const MCValue &Target,
     return MCSymbolRefExpr::VK_PPC_HI;
   case PPCMCExpr::VK_PPC_HA:
     return MCSymbolRefExpr::VK_PPC_HA;
+  case PPCMCExpr::VK_PPC_HIGH:
+    return MCSymbolRefExpr::VK_PPC_HIGH;
+  case PPCMCExpr::VK_PPC_HIGHA:
+    return MCSymbolRefExpr::VK_PPC_HIGHA;
   case PPCMCExpr::VK_PPC_HIGHERA:
     return MCSymbolRefExpr::VK_PPC_HIGHERA;
   case PPCMCExpr::VK_PPC_HIGHER:
@@ -151,6 +155,12 @@ unsigned PPCELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
       case MCSymbolRefExpr::VK_PPC_HA:
         Type = ELF::R_PPC_ADDR16_HA;
         break;
+      case MCSymbolRefExpr::VK_PPC_HIGH:
+        Type = ELF::R_PPC64_ADDR16_HIGH;
+        break;
+      case MCSymbolRefExpr::VK_PPC_HIGHA:
+        Type = ELF::R_PPC64_ADDR16_HIGHA;
+        break;
       case MCSymbolRefExpr::VK_PPC_HIGHER:
         Type = ELF::R_PPC64_ADDR16_HIGHER;
         break;
@@ -199,6 +209,12 @@ unsigned PPCELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
       case MCSymbolRefExpr::VK_PPC_TPREL_HA:
         Type = ELF::R_PPC_TPREL16_HA;
         break;
+      case MCSymbolRefExpr::VK_PPC_TPREL_HIGH:
+        Type = ELF::R_PPC64_TPREL16_HIGH;
+        break;
+      case MCSymbolRefExpr::VK_PPC_TPREL_HIGHA:
+        Type = ELF::R_PPC64_TPREL16_HIGHA;
+        break;
       case MCSymbolRefExpr::VK_PPC_TPREL_HIGHER:
         Type = ELF::R_PPC64_TPREL16_HIGHER;
         break;
@@ -222,6 +238,12 @@ unsigned PPCELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
         break;
       case MCSymbolRefExpr::VK_PPC_DTPREL_HA:
         Type = ELF::R_PPC64_DTPREL16_HA;
+        break;
+      case MCSymbolRefExpr::VK_PPC_DTPREL_HIGH:
+        Type = ELF::R_PPC64_DTPREL16_HIGH;
+        break;
+      case MCSymbolRefExpr::VK_PPC_DTPREL_HIGHA:
+        Type = ELF::R_PPC64_DTPREL16_HIGHA;
         break;
       case MCSymbolRefExpr::VK_PPC_DTPREL_HIGHER:
         Type = ELF::R_PPC64_DTPREL16_HIGHER;
@@ -417,9 +439,7 @@ bool PPCELFObjectWriter::needsRelocateWithSymbol(const MCSymbol &Sym,
   }
 }
 
-std::unique_ptr<MCObjectWriter>
-llvm::createPPCELFObjectWriter(raw_pwrite_stream &OS, bool Is64Bit,
-                               bool IsLittleEndian, uint8_t OSABI) {
-  auto MOTW = llvm::make_unique<PPCELFObjectWriter>(Is64Bit, OSABI);
-  return createELFObjectWriter(std::move(MOTW), OS, IsLittleEndian);
+std::unique_ptr<MCObjectTargetWriter>
+llvm::createPPCELFObjectWriter(bool Is64Bit, uint8_t OSABI) {
+  return llvm::make_unique<PPCELFObjectWriter>(Is64Bit, OSABI);
 }

@@ -9,9 +9,6 @@
 ;     return -1;
 ; }
 
-; CHECK: .loc 1 6 7
-; CHECK: mvn
-
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "armv7--linux-gnueabihf"
 
@@ -33,7 +30,17 @@ if.then:                                          ; preds = %entry
   br label %return, !dbg !18
 
 if.end:                                           ; preds = %entry
+; Materialize the constant.
+; CHECK:      .loc    1 0
+; CHECK-NEXT: mvn     r0, #0
+
+; The backend performs the store to %retval first, for some reason.
+; CHECK-NEXT: .loc    1 7 5
+; CHECK-NEXT: str     r0, [sp, #4]
   store i32 -1, i32* %x, align 4, !dbg !19
+
+; CHECK-NEXT: .loc    1 6 7
+; CHECK-NEXT: str     r0, [sp]
   store i32 -1, i32* %retval, !dbg !20
   br label %return, !dbg !20
 
@@ -51,7 +58,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "", isOptimized: false, emissionKind: FullDebug)
 !1 = !DIFile(filename: "test.c", directory: "/home/user/clang/build")
 !2 = !{}
-!4 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 1, type: !5, isLocal: false, isDefinition: true, scopeLine: 2, isOptimized: false, unit: !0, variables: !2)
+!4 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 1, type: !5, isLocal: false, isDefinition: true, scopeLine: 2, isOptimized: false, unit: !0, retainedNodes: !2)
 !5 = !DISubroutineType(types: !6)
 !6 = !{!7}
 !7 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)

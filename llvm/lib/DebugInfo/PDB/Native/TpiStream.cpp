@@ -152,7 +152,9 @@ FixedStreamArray<TypeIndexOffset> TpiStream::getTypeIndexOffsets() const {
   return TypeIndexOffsets;
 }
 
-HashTable &TpiStream::getHashAdjusters() { return HashAdjusters; }
+HashTable<support::ulittle32_t> &TpiStream::getHashAdjusters() {
+  return HashAdjusters;
+}
 
 CVTypeRange TpiStream::types(bool *HadError) const {
   return make_range(TypeRecords.begin(HadError), TypeRecords.end());

@@ -15,13 +15,17 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/Transforms/Utils/Local.h"
 using namespace llvm;
 using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "instcombine"
+
+static cl::opt<unsigned>
+MaxNumPhis("instcombine-max-num-phis", cl::init(512),
+           cl::desc("Maximum number phis to handle in intptr/ptrint folding"));
 
 /// The PHI arguments will be folded into a single operation with a PHI node
 /// as input. The debug location of the single operation will be the merged
@@ -176,8 +180,12 @@ Instruction *InstCombiner::FoldIntegerTypedPHI(PHINode &PN) {
   assert(AvailablePtrVals.size() == PN.getNumIncomingValues() &&
          "Not enough available ptr typed incoming values");
   PHINode *MatchingPtrPHI = nullptr;
+  unsigned NumPhis = 0;
   for (auto II = BB->begin(), EI = BasicBlock::iterator(BB->getFirstNonPHI());
-       II != EI; II++) {
+       II != EI; II++, NumPhis++) {
+    // FIXME: consider handling this in AggressiveInstCombine
+    if (NumPhis > MaxNumPhis)
+      return nullptr;
     PHINode *PtrPHI = dyn_cast<PHINode>(II);
     if (!PtrPHI || PtrPHI == &PN || PtrPHI->getType() != IntToPtr->getType())
       continue;
@@ -1008,10 +1016,9 @@ Instruction *InstCombiner::SliceUpIllegalIntegerPHI(PHINode &FirstPhi) {
   // extracted out of it.  First, sort the users by their offset and size.
   array_pod_sort(PHIUsers.begin(), PHIUsers.end());
 
-  DEBUG(dbgs() << "SLICING UP PHI: " << FirstPhi << '\n';
-        for (unsigned i = 1, e = PHIsToSlice.size(); i != e; ++i)
-          dbgs() << "AND USER PHI #" << i << ": " << *PHIsToSlice[i] << '\n';
-    );
+  LLVM_DEBUG(dbgs() << "SLICING UP PHI: " << FirstPhi << '\n';
+             for (unsigned i = 1, e = PHIsToSlice.size(); i != e; ++i) dbgs()
+             << "AND USER PHI #" << i << ": " << *PHIsToSlice[i] << '\n';);
 
   // PredValues - This is a temporary used when rewriting PHI nodes.  It is
   // hoisted out here to avoid construction/destruction thrashing.
@@ -1092,8 +1099,8 @@ Instruction *InstCombiner::SliceUpIllegalIntegerPHI(PHINode &FirstPhi) {
       }
       PredValues.clear();
 
-      DEBUG(dbgs() << "  Made element PHI for offset " << Offset << ": "
-                   << *EltPHI << '\n');
+      LLVM_DEBUG(dbgs() << "  Made element PHI for offset " << Offset << ": "
+                        << *EltPHI << '\n');
       ExtractedVals[LoweredPHIRecord(PN, Offset, Ty)] = EltPHI;
     }
 

@@ -1,5 +1,5 @@
 REQUIRES: libxml2
-UNSUPPORTED: windows
+UNSUPPORTED: system-windows
 
 RUN: llvm-mt /manifest %p/Inputs/test_manifest.manifest /manifest \
 RUN:   %p/Inputs/additional.manifest /out:%t

@@ -41,13 +41,15 @@ def pmap(func, iterable, processes, should_print_progress, *args, **kwargs):
     _total = multiprocessing.Value('i', len(iterable))
 
     func_and_args = [(func, arg, should_print_progress,) for arg in iterable]
-    if processes <= 1:
+    if processes == 1:
         result = map(_wrapped_func, func_and_args, *args, **kwargs)
     else:
         pool = multiprocessing.Pool(initializer=_init,
                                     initargs=(_current, _total,),
                                     processes=processes)
         result = pool.map(_wrapped_func, func_and_args, *args, **kwargs)
+        pool.close()
+        pool.join()
 
     if should_print_progress:
         sys.stdout.write('\r')

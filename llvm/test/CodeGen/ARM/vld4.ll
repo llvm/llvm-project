@@ -96,6 +96,19 @@ define <1 x i64> @vld4i64_update(i64** %ptr, i64* %A) nounwind {
         ret <1 x i64> %tmp4
 }
 
+define <1 x i64> @vld4i64_reg_update(i64** %ptr, i64* %A) nounwind {
+;CHECK-LABEL: vld4i64_reg_update:
+;CHECK: vld1.64 {d16, d17, d18, d19}, [{{r[0-9]+|lr}}:256], {{r[0-9]+|lr}}
+        %tmp0 = bitcast i64* %A to i8*
+        %tmp1 = call %struct.__neon_int64x1x4_t @llvm.arm.neon.vld4.v1i64.p0i8(i8* %tmp0, i32 64)
+        %tmp5 = getelementptr i64, i64* %A, i32 1
+        store i64* %tmp5, i64** %ptr
+        %tmp2 = extractvalue %struct.__neon_int64x1x4_t %tmp1, 0
+        %tmp3 = extractvalue %struct.__neon_int64x1x4_t %tmp1, 2
+        %tmp4 = add <1 x i64> %tmp2, %tmp3
+        ret <1 x i64> %tmp4
+}
+
 define <16 x i8> @vld4Qi8(i8* %A) nounwind {
 ;CHECK-LABEL: vld4Qi8:
 ;Check the alignment value.  Max for this instruction is 256 bits:

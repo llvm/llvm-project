@@ -4,7 +4,7 @@ define i32 @test0(i32 %X) {
   %tmp.1 = add i32 %X, 1
   ret i32 %tmp.1
 ; CHECK-LABEL: test0:
-; CHECK: r1 += 1
+; CHECK: r0 += 1
 }
 
 ; CHECK-LABEL: store_imm:

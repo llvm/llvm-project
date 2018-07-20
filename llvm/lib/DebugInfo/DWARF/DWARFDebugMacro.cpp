@@ -8,14 +8,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/DWARF/DWARFDebugMacro.h"
-#include "SyntaxHighlighting.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
 
 using namespace llvm;
 using namespace dwarf;
-using namespace syntax;
 
 void DWARFDebugMacro::dump(raw_ostream &OS) const {
   unsigned IndLevel = 0;
@@ -29,7 +28,7 @@ void DWARFDebugMacro::dump(raw_ostream &OS) const {
       OS << "  ";
     IndLevel += (E.Type == DW_MACINFO_start_file);
 
-    WithColor(OS, syntax::Macro).get() << MacinfoString(E.Type);
+    WithColor(OS, HighlightColor::Macro).get() << MacinfoString(E.Type);
     switch (E.Type) {
     default:
       // Got a corrupted ".debug_macinfo" section (invalid macinfo type).

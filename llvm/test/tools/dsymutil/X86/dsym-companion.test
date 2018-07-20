@@ -1,11 +1,11 @@
-RUN: llvm-dsymutil -o - %p/../Inputs/basic.macho.i386 -f | llvm-readobj -file-headers -program-headers -sections -symbols - | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK32
-RUN: llvm-dsymutil -o - -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64 -f | llvm-readobj -file-headers -program-headers -sections -symbols - | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK64
+RUN: dsymutil -o - %p/../Inputs/basic.macho.i386 -f | llvm-readobj -file-headers -program-headers -sections -symbols - | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK32
+RUN: dsymutil -o - -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64 -f | llvm-readobj -file-headers -program-headers -sections -symbols - | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK64
 
 This test checks that the dSYM companion binaries generated in 32 and 64 bits
 are correct. The check are pretty strict (we check even the offsets and sizes
 of the sections) in order to test the VM address layout algorithm. As the
 debug sections are generated, this is a bit risky, but I don't expect
-llvm-dsymutil's output to change much for these tiny C programs so this should
+dsymutil's output to change much for these tiny C programs so this should
 be OK.
 The 32bits version doesn't have object files, thus it has basically no debug
 sections.

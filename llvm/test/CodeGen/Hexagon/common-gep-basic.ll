@@ -1,4 +1,4 @@
-; RUN: llc -O2 -march=hexagon < %s | FileCheck %s
+; RUN: llc -march=hexagon < %s | FileCheck %s
 ; CHECK: mpyi
 ; CHECK-NOT: mpyi
 ; The mpyis from the two GEPs should be commoned out.

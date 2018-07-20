@@ -86,14 +86,3 @@ define void @f7(i64 %src, i64 %index, i32 %a) {
   ret void
 }
 
-; Check that volatile stores do not use STRV, which might access the
-; storage multple times.
-define void @f8(i32 *%dst, i32 %a) {
-; CHECK-LABEL: f8:
-; CHECK: lrvr [[REG:%r[0-5]]], %r3
-; CHECK: st [[REG]], 0(%r2)
-; CHECK: br %r14
-  %swapped = call i32 @llvm.bswap.i32(i32 %a)
-  store volatile i32 %swapped, i32 *%dst
-  ret void
-}

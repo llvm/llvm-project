@@ -36,10 +36,10 @@ name:            compute
 tracksRegLiveness: true
 body: |
   bb.0.body:
-    liveins: %edi
+    liveins: $edi
 
-    %eax = COPY killed %edi
-    RETQ killed %eax
+    $eax = COPY killed $edi
+    RETQ killed $eax
 ...
 ---
 name:            func
@@ -50,47 +50,47 @@ frameInfo:
   adjustsStack:    true
   hasCalls:        true
 # CHECK: fixedStack:
-# CHECK: callee-saved-register: '%rbx', callee-saved-restored: true }
+# CHECK: callee-saved-register: '$rbx', callee-saved-restored: true
 fixedStack:
-  - { id: 0, type: spill-slot, offset: -16, size: 8, alignment: 16, callee-saved-register: '%rbx' }
+  - { id: 0, type: spill-slot, offset: -16, size: 8, alignment: 16, callee-saved-register: '$rbx' }
 # CHECK: stack:
 # CHECK-NEXT: - { id: 0
-# CHECK: callee-saved-register: '%edi', callee-saved-restored: false
+# CHECK: callee-saved-register: '$edi', callee-saved-restored: false
 stack:
   - { id: 0, name: b, offset: -20, size: 4, alignment: 4 }
-  - { id: 1, offset: -24, size: 4, alignment: 4, callee-saved-register: '%edi',
+  - { id: 1, offset: -24, size: 4, alignment: 4, callee-saved-register: '$edi',
       callee-saved-restored: false }
 body: |
   bb.0.entry:
     successors: %bb.1.check
-    liveins: %edi, %rbx
+    liveins: $edi, $rbx
 
-    frame-setup PUSH64r killed %rbx, implicit-def %rsp, implicit %rsp
-    %rsp = frame-setup SUB64ri8 %rsp, 16, implicit-def dead %eflags
-    %ebx = COPY %edi
-    MOV32mr %rsp, 1, _, 12, _, %ebx
+    frame-setup PUSH64r killed $rbx, implicit-def $rsp, implicit $rsp
+    $rsp = frame-setup SUB64ri8 $rsp, 16, implicit-def dead $eflags
+    $ebx = COPY $edi
+    MOV32mr $rsp, 1, _, 12, _, $ebx
 
   bb.1.check:
     successors: %bb.2.loop, %bb.3.exit
-    liveins: %ebx
+    liveins: $ebx
 
-    CMP32ri8 %ebx, 10, implicit-def %eflags
-    JG_1 %bb.3.exit, implicit killed %eflags
+    CMP32ri8 $ebx, 10, implicit-def $eflags
+    JG_1 %bb.3.exit, implicit killed $eflags
     JMP_1 %bb.2.loop
 
   bb.2.loop:
     successors: %bb.1.check
-    liveins: %ebx
+    liveins: $ebx
 
-    %edi = MOV32rm %rsp, 1, _, 12, _
-    CALL64pcrel32 @compute, csr_64, implicit %rsp, implicit %edi, implicit-def %rsp, implicit-def %eax
-    %eax = DEC32r killed %eax, implicit-def dead %eflags
-    MOV32mr %rsp, 1, _, 12, _, killed %eax
+    $edi = MOV32rm $rsp, 1, _, 12, _
+    CALL64pcrel32 @compute, csr_64, implicit $rsp, implicit $edi, implicit-def $rsp, implicit-def $eax
+    $eax = DEC32r killed $eax, implicit-def dead $eflags
+    MOV32mr $rsp, 1, _, 12, _, killed $eax
     JMP_1 %bb.1.check
 
   bb.3.exit:
-    %eax = MOV32r0 implicit-def dead %eflags
-    %rsp = ADD64ri8 %rsp, 16, implicit-def dead %eflags
-    %rbx = POP64r implicit-def %rsp, implicit %rsp
-    RETQ %eax
+    $eax = MOV32r0 implicit-def dead $eflags
+    $rsp = ADD64ri8 $rsp, 16, implicit-def dead $eflags
+    $rbx = POP64r implicit-def $rsp, implicit $rsp
+    RETQ $eax
 ...

@@ -58,7 +58,10 @@ struct LocallyHashedType {
   }
 };
 
-enum class GlobalTypeHashAlg : uint16_t { SHA1 = 0 };
+enum class GlobalTypeHashAlg : uint16_t {
+  SHA1 = 0, // standard 20-byte SHA1 hash
+  SHA1_8    // last 8-bytes of standard SHA1 hash
+};
 
 /// A globally hashed type represents a hash value that is sufficient to
 /// uniquely identify a record across multiple type streams or type sequences.
@@ -77,10 +80,10 @@ struct GloballyHashedType {
   GloballyHashedType(StringRef H)
       : GloballyHashedType(ArrayRef<uint8_t>(H.bytes_begin(), H.bytes_end())) {}
   GloballyHashedType(ArrayRef<uint8_t> H) {
-    assert(H.size() == 20);
-    ::memcpy(Hash.data(), H.data(), 20);
+    assert(H.size() == 8);
+    ::memcpy(Hash.data(), H.data(), 8);
   }
-  std::array<uint8_t, 20> Hash;
+  std::array<uint8_t, 8> Hash;
 
   /// Given a sequence of bytes representing a record, compute a global hash for
   /// this record.  Due to the nature of global hashes incorporating the hashes

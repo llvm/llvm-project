@@ -2,8 +2,7 @@
 
 define i8 @test_64bit_add(i16* %a, i64 %b) {
 ; CHECK-LABEL: test_64bit_add:
-; CHECK: lsl [[REG:x[0-9]+]], x1, #1
-; CHECK: ldrb w0, [x0, [[REG]]]
+; CHECK: ldrh w0, [x0, x1, lsl #1]
 ; CHECK: ret
   %tmp1 = getelementptr inbounds i16, i16* %a, i64 %b
   %tmp2 = load i16, i16* %tmp1

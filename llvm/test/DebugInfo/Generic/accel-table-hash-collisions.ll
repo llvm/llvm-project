@@ -1,5 +1,5 @@
 ; REQUIRES: object-emission
-; RUN: %llc_dwarf -dwarf-accel-tables=Enable -filetype=obj -o - < %s \
+; RUN: %llc_dwarf -accel-tables=Apple -filetype=obj -o - < %s \
 ; RUN:   | llvm-dwarfdump -apple-names - | FileCheck %s
 
 ; Generated from the following C code using

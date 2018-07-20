@@ -91,11 +91,11 @@ declare void @foo() nounwind
 ; After simplifying, the max backedge count is refined.
 ; Second SCEV print:
 ; CHECK-LABEL: Determining loop execution counts for: @mergeExit
-; CHECK: Loop %while.cond191: <multiple exits> Unpredictable backedge-taken count.
+; CHECK: Loop %while.cond191: <multiple exits> backedge-taken count is 0
 ; CHECK: Loop %while.cond191: max backedge-taken count is 0
-; CHECK: Loop %while.cond191: Unpredictable predicated backedge-taken count.
+; CHECK: Loop %while.cond191: Predicated backedge-taken count is 0
 ; CHECK: Loop %while.cond191.outer: <multiple exits> Unpredictable backedge-taken count.
-; CHECK: Loop %while.cond191.outer: Unpredictable max backedge-taken count.
+; CHECK: Loop %while.cond191.outer: max backedge-taken count is false
 ; CHECK: Loop %while.cond191.outer: Unpredictable predicated backedge-taken count.
 define void @mergeExit(i32 %MapAttrCount) nounwind uwtable ssp {
 entry:

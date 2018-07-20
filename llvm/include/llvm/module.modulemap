@@ -20,15 +20,13 @@ module LLVM_Backend {
 
     // Exclude these; they're intended to be included into only a single
     // translation unit (or none) and aren't part of this module.
-    exclude header "CodeGen/CommandFlags.h"
     exclude header "CodeGen/LinkAllAsmWriterComponents.h"
     exclude header "CodeGen/LinkAllCodegenComponents.h"
 
     // These are intended for (repeated) textual inclusion.
-    textual header "CodeGen/CommandFlags.def"
+    textual header "CodeGen/CommandFlags.inc"
     textual header "CodeGen/DIEValue.def"
     textual header "CodeGen/RuntimeLibcalls.def"
-    textual header "CodeGen/TargetOpcodes.def"
   }
 
   module Target {
@@ -43,6 +41,7 @@ module LLVM_BinaryFormat {
     requires cplusplus
     umbrella "BinaryFormat" module * { export * }
     textual header "BinaryFormat/Dwarf.def"
+    textual header "BinaryFormat/DynamicTags.def"
     textual header "BinaryFormat/MachO.def"
     textual header "BinaryFormat/ELFRelocs/AArch64.def"
     textual header "BinaryFormat/ELFRelocs/AMDGPU.def"
@@ -60,7 +59,6 @@ module LLVM_BinaryFormat {
     textual header "BinaryFormat/ELFRelocs/Sparc.def"
     textual header "BinaryFormat/ELFRelocs/SystemZ.def"
     textual header "BinaryFormat/ELFRelocs/x86_64.def"
-    textual header "BinaryFormat/ELFRelocs/WebAssembly.def"
     textual header "BinaryFormat/WasmRelocs.def"
 }
 
@@ -90,16 +88,21 @@ module LLVM_DebugInfo_PDB {
   // FIXME: There should be a better way to specify this.
   exclude header "DebugInfo/PDB/DIA/DIADataStream.h"
   exclude header "DebugInfo/PDB/DIA/DIAEnumDebugStreams.h"
+  exclude header "DebugInfo/PDB/DIA/DIAEnumInjectedSources.h"
   exclude header "DebugInfo/PDB/DIA/DIAEnumLineNumbers.h"
+  exclude header "DebugInfo/PDB/DIA/DIAEnumSectionContribs.h"
   exclude header "DebugInfo/PDB/DIA/DIAEnumSourceFiles.h"
   exclude header "DebugInfo/PDB/DIA/DIAEnumSymbols.h"
   exclude header "DebugInfo/PDB/DIA/DIAEnumTables.h"
+  exclude header "DebugInfo/PDB/DIA/DIAInjectedSource.h"
   exclude header "DebugInfo/PDB/DIA/DIALineNumber.h"
   exclude header "DebugInfo/PDB/DIA/DIARawSymbol.h"
+  exclude header "DebugInfo/PDB/DIA/DIASectionContrib.h"
   exclude header "DebugInfo/PDB/DIA/DIASession.h"
   exclude header "DebugInfo/PDB/DIA/DIASourceFile.h"
   exclude header "DebugInfo/PDB/DIA/DIASupport.h"
   exclude header "DebugInfo/PDB/DIA/DIATable.h"
+  exclude header "DebugInfo/PDB/DIA/DIAUtils.h"
 }
 
 module LLVM_DebugInfo_PDB_DIA {
@@ -192,6 +195,8 @@ module LLVM_intrinsic_gen {
   module IR_CFG { header "IR/CFG.h" export * }
   module IR_ConstantRange { header "IR/ConstantRange.h" export * }
   module IR_Dominators { header "IR/Dominators.h" export * }
+  module Analysis_PostDominators { header "Analysis/PostDominators.h" export * }
+  module IR_DomTreeUpdater { header "IR/DomTreeUpdater.h" export * }
   module IR_IRBuilder { header "IR/IRBuilder.h" export * }
   module IR_PassManager { header "IR/PassManager.h" export * }
   module IR_PredIteratorCache { header "IR/PredIteratorCache.h" export * }
@@ -229,7 +234,7 @@ module LLVM_MC {
   umbrella "MC"
   module * { export * }
 
-  textual header "MC/MCTargetOptionsCommandFlags.def"
+  textual header "MC/MCTargetOptionsCommandFlags.inc"
 }
 
 // Used by llvm-tblgen
@@ -297,18 +302,13 @@ module LLVM_Utils {
     // These are intended for textual inclusion.
     textual header "Support/ARMTargetParser.def"
     textual header "Support/AArch64TargetParser.def"
+    textual header "Support/TargetOpcodes.def"
     textual header "Support/X86TargetParser.def"
   }
 
   // This part of the module is usable from both C and C++ code.
   module ConvertUTF {
     header "Support/ConvertUTF.h"
-    export *
-  }
-
-  module LLVM_CodeGen_MachineValueType {
-    requires cplusplus
-    header "CodeGen/MachineValueType.h"
     export *
   }
 }

@@ -17,9 +17,11 @@
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Native/PDBStringTableBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/RawConstants.h"
+#include "llvm/DebugInfo/PDB/Native/RawTypes.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/MemoryBuffer.h"
 
 #include <memory>
 #include <vector>
@@ -54,12 +56,34 @@ public:
   Error commit(StringRef Filename);
 
   Expected<uint32_t> getNamedStreamIndex(StringRef Name) const;
-  Error addNamedStream(StringRef Name, uint32_t Size);
+  Error addNamedStream(StringRef Name, StringRef Data);
+  void addInjectedSource(StringRef Name, std::unique_ptr<MemoryBuffer> Buffer);
 
 private:
-  Expected<msf::MSFLayout> finalizeMsfLayout();
+  struct InjectedSourceDescriptor {
+    // The full name of the stream that contains the contents of this injected
+    // source.  This is built as a concatenation of the literal "/src/files"
+    // plus the "vname".
+    std::string StreamName;
+
+    // The exact name of the file name as specified by the user.
+    uint32_t NameIndex;
+
+    // The string table index of the "vname" of the file.  As far as we
+    // understand, this is the same as the name, except it is lowercased and
+    // forward slashes are converted to backslashes.
+    uint32_t VNameIndex;
+    std::unique_ptr<MemoryBuffer> Content;
+  };
+
+  Error finalizeMsfLayout();
+  Expected<uint32_t> allocateNamedStream(StringRef Name, uint32_t Size);
 
   void commitFpm(WritableBinaryStream &MsfBuffer, const msf::MSFLayout &Layout);
+  void commitInjectedSources(WritableBinaryStream &MsfBuffer,
+                             const msf::MSFLayout &Layout);
+  void commitSrcHeaderBlock(WritableBinaryStream &MsfBuffer,
+                            const msf::MSFLayout &Layout);
 
   BumpPtrAllocator &Allocator;
 
@@ -71,7 +95,13 @@ private:
   std::unique_ptr<TpiStreamBuilder> Ipi;
 
   PDBStringTableBuilder Strings;
+  StringTableHashTraits InjectedSourceHashTraits;
+  HashTable<SrcHeaderBlockEntry, StringTableHashTraits> InjectedSourceTable;
+
+  SmallVector<InjectedSourceDescriptor, 2> InjectedSources;
+
   NamedStreamMap NamedStreams;
+  DenseMap<uint32_t, std::string> NamedStreamData;
 };
 }
 }

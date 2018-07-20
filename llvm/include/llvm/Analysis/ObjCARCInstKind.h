@@ -18,7 +18,7 @@ namespace objcarc {
 
 /// \enum ARCInstKind
 ///
-/// \brief Equivalence classes of instructions in the ARC Model.
+/// Equivalence classes of instructions in the ARC Model.
 ///
 /// Since we do not have "instructions" to represent ARC concepts in LLVM IR,
 /// we instead operate on equivalence classes of instructions.
@@ -57,32 +57,32 @@ enum class ARCInstKind {
 
 raw_ostream &operator<<(raw_ostream &OS, const ARCInstKind Class);
 
-/// \brief Test if the given class is a kind of user.
+/// Test if the given class is a kind of user.
 bool IsUser(ARCInstKind Class);
 
-/// \brief Test if the given class is objc_retain or equivalent.
+/// Test if the given class is objc_retain or equivalent.
 bool IsRetain(ARCInstKind Class);
 
-/// \brief Test if the given class is objc_autorelease or equivalent.
+/// Test if the given class is objc_autorelease or equivalent.
 bool IsAutorelease(ARCInstKind Class);
 
-/// \brief Test if the given class represents instructions which return their
+/// Test if the given class represents instructions which return their
 /// argument verbatim.
 bool IsForwarding(ARCInstKind Class);
 
-/// \brief Test if the given class represents instructions which do nothing if
+/// Test if the given class represents instructions which do nothing if
 /// passed a null pointer.
 bool IsNoopOnNull(ARCInstKind Class);
 
-/// \brief Test if the given class represents instructions which are always safe
+/// Test if the given class represents instructions which are always safe
 /// to mark with the "tail" keyword.
 bool IsAlwaysTail(ARCInstKind Class);
 
-/// \brief Test if the given class represents instructions which are never safe
+/// Test if the given class represents instructions which are never safe
 /// to mark with the "tail" keyword.
 bool IsNeverTail(ARCInstKind Class);
 
-/// \brief Test if the given class represents instructions which are always safe
+/// Test if the given class represents instructions which are always safe
 /// to mark with the nounwind attribute.
 bool IsNoThrow(ARCInstKind Class);
 
@@ -90,11 +90,11 @@ bool IsNoThrow(ARCInstKind Class);
 /// autoreleasepool pop.
 bool CanInterruptRV(ARCInstKind Class);
 
-/// \brief Determine if F is one of the special known Functions.  If it isn't,
+/// Determine if F is one of the special known Functions.  If it isn't,
 /// return ARCInstKind::CallOrUser.
 ARCInstKind GetFunctionClass(const Function *F);
 
-/// \brief Determine which objc runtime call instruction class V belongs to.
+/// Determine which objc runtime call instruction class V belongs to.
 ///
 /// This is similar to GetARCInstKind except that it only detects objc
 /// runtime calls. This allows it to be faster.

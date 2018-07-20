@@ -14,6 +14,7 @@
 #include "CoroInternal.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -35,8 +36,8 @@ struct Lowerer : coro::LowererBase {
   Lowerer(Module &M) : LowererBase(M) {}
 
   void elideHeapAllocations(Function *F, Type *FrameTy, AAResults &AA);
-  bool shouldElide() const;
-  bool processCoroId(CoroIdInst *, AAResults &AA);
+  bool shouldElide(Function *F, DominatorTree &DT) const;
+  bool processCoroId(CoroIdInst *, AAResults &AA, DominatorTree &DT);
 };
 } // end anonymous namespace
 
@@ -77,7 +78,6 @@ static bool operandReferences(CallInst *CI, AllocaInst *Frame, AAResults &AA) {
 // call implies that the function does not references anything on the stack.
 static void removeTailCallAttribute(AllocaInst *Frame, AAResults &AA) {
   Function &F = *Frame->getFunction();
-  MemoryLocation Mem(Frame);
   for (Instruction &I : instructions(F))
     if (auto *Call = dyn_cast<CallInst>(&I))
       if (Call->isTailCall() && operandReferences(Call, Frame, AA)) {
@@ -142,33 +142,54 @@ void Lowerer::elideHeapAllocations(Function *F, Type *FrameTy, AAResults &AA) {
   removeTailCallAttribute(Frame, AA);
 }
 
-bool Lowerer::shouldElide() const {
+bool Lowerer::shouldElide(Function *F, DominatorTree &DT) const {
   // If no CoroAllocs, we cannot suppress allocation, so elision is not
   // possible.
   if (CoroAllocs.empty())
     return false;
 
   // Check that for every coro.begin there is a coro.destroy directly
-  // referencing the SSA value of that coro.begin. If the value escaped, then
-  // coro.destroy would have been referencing a memory location storing that
-  // value and not the virtual register.
+  // referencing the SSA value of that coro.begin along a non-exceptional path.
+  // If the value escaped, then coro.destroy would have been referencing a
+  // memory location storing that value and not the virtual register.
 
-  SmallPtrSet<CoroBeginInst *, 8> ReferencedCoroBegins;
+  // First gather all of the non-exceptional terminators for the function.
+  SmallPtrSet<Instruction *, 8> Terminators;
+  for (BasicBlock &B : *F) {
+    auto *TI = B.getTerminator();
+    if (TI->getNumSuccessors() == 0 && !TI->isExceptional() &&
+        !isa<UnreachableInst>(TI))
+      Terminators.insert(TI);
+  }
 
+  // Filter out the coro.destroy that lie along exceptional paths.
+  SmallPtrSet<CoroSubFnInst *, 4> DAs;
   for (CoroSubFnInst *DA : DestroyAddr) {
+    for (Instruction *TI : Terminators) {
+      if (DT.dominates(DA, TI)) {
+        DAs.insert(DA);
+        break;
+      }
+    }
+  }
+
+  // Find all the coro.begin referenced by coro.destroy along happy paths.
+  SmallPtrSet<CoroBeginInst *, 8> ReferencedCoroBegins;
+  for (CoroSubFnInst *DA : DAs) {
     if (auto *CB = dyn_cast<CoroBeginInst>(DA->getFrame()))
       ReferencedCoroBegins.insert(CB);
     else
       return false;
   }
 
-  // If size of the set is the same as total number of CoroBegins, means we
-  // found a coro.free or coro.destroy mentioning a coro.begin and we can
+  // If size of the set is the same as total number of coro.begin, that means we
+  // found a coro.free or coro.destroy referencing each coro.begin, so we can
   // perform heap elision.
   return ReferencedCoroBegins.size() == CoroBegins.size();
 }
 
-bool Lowerer::processCoroId(CoroIdInst *CoroId, AAResults &AA) {
+bool Lowerer::processCoroId(CoroIdInst *CoroId, AAResults &AA,
+                            DominatorTree &DT) {
   CoroBegins.clear();
   CoroAllocs.clear();
   CoroFrees.clear();
@@ -214,7 +235,7 @@ bool Lowerer::processCoroId(CoroIdInst *CoroId, AAResults &AA) {
 
   replaceWithConstant(ResumeAddrConstant, ResumeAddr);
 
-  bool ShouldElide = shouldElide();
+  bool ShouldElide = shouldElide(CoroId->getFunction(), DT);
 
   auto *DestroyAddrConstant = ConstantExpr::getExtractValue(
       Resumers,
@@ -294,14 +315,16 @@ struct CoroElide : FunctionPass {
       return Changed;
 
     AAResults &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
+    DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
 
     for (auto *CII : L->CoroIds)
-      Changed |= L->processCoroId(CII, AA);
+      Changed |= L->processCoroId(CII, AA, DT);
 
     return Changed;
   }
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<AAResultsWrapperPass>();
+    AU.addRequired<DominatorTreeWrapperPass>();
   }
   StringRef getPassName() const override { return "Coroutine Elision"; }
 };

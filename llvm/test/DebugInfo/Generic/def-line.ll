@@ -79,10 +79,10 @@ attributes #1 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fp
 !8 = !{null}
 !9 = !DISubprogram(name: "f2", linkageName: "_ZN3foo2f2Ev", scope: !4, file: !1, line: 4, type: !7, isLocal: false, isDefinition: false, scopeLine: 4, flags: DIFlagPrototyped, isOptimized: false)
 !10 = !DISubprogram(name: "f3", linkageName: "_ZN3foo2f3Ev", scope: !4, file: !1, line: 5, type: !7, isLocal: false, isDefinition: false, scopeLine: 5, flags: DIFlagPrototyped, isOptimized: false)
-!12 = distinct !DISubprogram(name: "f2", linkageName: "_ZN3foo2f2Ev", scope: !4, file: !1, line: 7, type: !7, isLocal: false, isDefinition: true, scopeLine: 7, flags: DIFlagPrototyped, isOptimized: false, unit: !0, declaration: !9, variables: !2)
-!13 = distinct !DISubprogram(name: "f3", linkageName: "_ZN3foo2f3Ev", scope: !4, file: !14, line: 1, type: !7, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: false, unit: !0, declaration: !10, variables: !2)
+!12 = distinct !DISubprogram(name: "f2", linkageName: "_ZN3foo2f2Ev", scope: !4, file: !1, line: 7, type: !7, isLocal: false, isDefinition: true, scopeLine: 7, flags: DIFlagPrototyped, isOptimized: false, unit: !0, declaration: !9, retainedNodes: !2)
+!13 = distinct !DISubprogram(name: "f3", linkageName: "_ZN3foo2f3Ev", scope: !4, file: !14, line: 1, type: !7, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: false, unit: !0, declaration: !10, retainedNodes: !2)
 !14 = !DIFile(filename: "bar.cpp", directory: "/tmp/dbginfo")
-!15 = distinct !DISubprogram(name: "f1", linkageName: "_ZN3foo2f1Ev", scope: !4, file: !1, line: 2, type: !7, isLocal: false, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: false, unit: !0, declaration: !6, variables: !2)
+!15 = distinct !DISubprogram(name: "f1", linkageName: "_ZN3foo2f1Ev", scope: !4, file: !1, line: 2, type: !7, isLocal: false, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: false, unit: !0, declaration: !6, retainedNodes: !2)
 !16 = !{i32 2, !"Dwarf Version", i32 4}
 !17 = !{i32 2, !"Debug Info Version", i32 3}
 !18 = !{!"clang version 3.8.0 (trunk 249440) (llvm/trunk 249465)"}

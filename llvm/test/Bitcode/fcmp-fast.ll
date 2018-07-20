@@ -3,7 +3,7 @@
 ; RUN: diff %t0 %t1
 ; RUN: FileCheck < %t1 %s
 
-; Make sure flags on fcmp instructions are serialized/deserialized properly.
+; Make sure fast math flags on fcmp instructions are serialized/deserialized properly.
 
 define i1 @foo(float %a, float %b, double %c, double %d) {
   ; CHECK:   %plain = fcmp ueq float %a, %b

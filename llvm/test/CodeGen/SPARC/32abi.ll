@@ -88,36 +88,28 @@ define void @call_intarg(i32 %i0, i8* %i1) {
 ; SOFT-NEXT:  mov  %i2, %o0
 ; SOFT-NEXT: call __extendsfdf2
 ; SOFT-NEXT: nop
-; SOFT-NEXT:  mov  %o0, %i2
-; SOFT-NEXT:  mov  %o1, %g2
+; SOFT-NEXT:  mov  %o0, %o2
+; SOFT-NEXT:  mov  %o1, %o3
 ; SOFT-NEXT:  mov  %i0, %o0
 ; SOFT-NEXT:  mov  %i1, %o1
-; SOFT-NEXT:  mov  %i2, %o2
-; SOFT-NEXT:  mov  %g2, %o3
 ; SOFT-NEXT:  call __adddf3
 ; SOFT-NEXT:  nop
-; SOFT-NEXT:  mov  %o0, %i0
-; SOFT-NEXT:  mov  %o1, %i1
+; SOFT-NEXT:  mov  %o0, %o2
+; SOFT-NEXT:  mov  %o1, %o3
 ; SOFT-NEXT:  mov  %i3, %o0
 ; SOFT-NEXT:  mov  %i4, %o1
-; SOFT-NEXT:  mov  %i0, %o2
-; SOFT-NEXT:  mov  %i1, %o3
 ; SOFT-NEXT:  call __adddf3
 ; SOFT-NEXT:  nop
-; SOFT-NEXT:  mov  %o0, %i0
-; SOFT-NEXT:  mov  %o1, %i1
+; SOFT-NEXT:  mov  %o0, %o2
+; SOFT-NEXT:  mov  %o1, %o3
 ; SOFT-NEXT:  mov  %i5, %o0
 ; SOFT-NEXT:  mov  %l3, %o1
-; SOFT-NEXT:  mov  %i0, %o2
-; SOFT-NEXT:  mov  %i1, %o3
 ; SOFT-NEXT:  call __adddf3
 ; SOFT-NEXT:  nop
-; SOFT-NEXT:  mov  %o0, %i0
-; SOFT-NEXT:  mov  %o1, %i1
+; SOFT-NEXT:  mov  %o0, %o2
+; SOFT-NEXT:  mov  %o1, %o3
 ; SOFT-NEXT:  mov  %l1, %o0
 ; SOFT-NEXT:  mov  %l2, %o1
-; SOFT-NEXT:  mov  %i0, %o2
-; SOFT-NEXT:  mov  %i1, %o3
 ; SOFT-NEXT:  call __adddf3
 ; SOFT-NEXT:  nop
 ; SOFT-NEXT:  mov  %o0, %i0
@@ -156,9 +148,9 @@ define double @floatarg(double %a0,   ; %i0,%i1
 ; HARD-NEXT: std %o0, [%sp+96]
 ; HARD-NEXT: st %o1, [%sp+92]
 ; HARD-NEXT: mov %i0, %o2
-; HARD-NEXT: mov %o0, %o3
+; HARD-NEXT: mov %i1, %o3
 ; HARD-NEXT: mov %o1, %o4
-; HARD-NEXT: mov %o0, %o5
+; HARD-NEXT: mov %i1, %o5
 ; HARD-NEXT: call floatarg
 ; HARD: std %f0, [%i4]
 ; SOFT: st %i0, [%sp+104]
@@ -186,34 +178,34 @@ define void @call_floatarg(float %f1, double %d2, float %f5, double *%p) {
 ;; endian, since the 64-bit math needs to be split
 ; CHECK-LABEL: i64arg:
 ; CHECK:  save %sp, -96, %sp
-; CHECK-BE: ld [%fp+100], %g2
-; CHECK-BE-NEXT: ld [%fp+96], %g3
-; CHECK-BE-NEXT: ld [%fp+92], %g4
+; CHECK-BE: ld [%fp+104], %g2
+; CHECK-BE-NEXT: ld [%fp+100], %g3
+; CHECK-BE-NEXT: ld [%fp+96], %g4
+; CHECK-BE-NEXT: ld [%fp+92], %l0
 ; CHECK-BE-NEXT: addcc %i1, %i2, %i1
 ; CHECK-BE-NEXT: addxcc %i0, 0, %i0
 ; CHECK-BE-NEXT: addcc %i4, %i1, %i1
 ; CHECK-BE-NEXT: addxcc %i3, %i0, %i0
-; CHECK-BE-NEXT: addcc %g4, %i1, %i1
-; CHECK-BE-NEXT: ld [%fp+104], %i2
+; CHECK-BE-NEXT: addcc %l0, %i1, %i1
 ; CHECK-BE-NEXT: addxcc %i5, %i0, %i0
+; CHECK-BE-NEXT: addcc %g3, %i1, %i1
+; CHECK-BE-NEXT: addxcc %g4, %i0, %i0
 ; CHECK-BE-NEXT: addcc %g2, %i1, %i1
-; CHECK-BE-NEXT: addxcc %g3, %i0, %i0
-; CHECK-BE-NEXT: addcc %i2, %i1, %i1
 ; CHECK-BE-NEXT: addxcc %i0, 0, %i0
 ;
-; CHECK-LE: ld [%fp+96], %g2
-; CHECK-LE-NEXT: ld [%fp+100], %g3
-; CHECK-LE-NEXT: ld [%fp+92], %g4
+; CHECK-LE: ld [%fp+104], %g2
+; CHECK-LE-NEXT: ld [%fp+96], %g3
+; CHECK-LE-NEXT: ld [%fp+100], %g4
+; CHECK-LE-NEXT: ld [%fp+92], %l0
 ; CHECK-LE-NEXT: addcc %i0, %i2, %i0
 ; CHECK-LE-NEXT: addxcc %i1, 0, %i1
 ; CHECK-LE-NEXT: addcc %i3, %i0, %i0
 ; CHECK-LE-NEXT: addxcc %i4, %i1, %i1
 ; CHECK-LE-NEXT: addcc %i5, %i0, %i0
-; CHECK-LE-NEXT: ld [%fp+104], %i2
+; CHECK-LE-NEXT: addxcc %l0, %i1, %i1
+; CHECK-LE-NEXT: addcc %g3, %i0, %i0
 ; CHECK-LE-NEXT: addxcc %g4, %i1, %i1
 ; CHECK-LE-NEXT: addcc %g2, %i0, %i0
-; CHECK-LE-NEXT: addxcc %g3, %i1, %i1
-; CHECK-LE-NEXT: addcc %i2, %i0, %i0
 ; CHECK-LE-NEXT: addxcc %i1, 0, %i1
 ; CHECK-NEXT: restore
 

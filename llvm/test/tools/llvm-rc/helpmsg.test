@@ -7,6 +7,7 @@
 ; CHECK-DAG:  USAGE: rc [options] <inputs>
 ; CHECK-DAG:  OPTIONS:
 ; CHECK-NEXT:    /?          Display this help and exit.
+; CHECK-NEXT:    /C <value>  Set the codepage used for input strings.
 ; CHECK-NEXT:    /dry-run    Don't compile the input; only try to parse it.
 ; CHECK-NEXT:    /D <value>  Define a symbol for the C preprocessor.
 ; CHECK-NEXT:    /FO <value> Change the output file location.

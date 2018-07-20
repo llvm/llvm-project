@@ -1,12 +1,22 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -verify-machineinstrs -mcpu=tahiti -mattr=-fp32-denormals,+fast-fmaf -fp-contract=on   < %s | FileCheck -check-prefixes=GCN,GCN-FLUSH-STRICT,GCN-FLUSH,SI-FLUSH,GCN-FLUSH-FASTFMA,GCN-FLUSH-FASTFMA-STRICT,SI %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -verify-machineinstrs -mcpu=tahiti -mattr=+fp32-denormals,+fast-fmaf -fp-contract=on   < %s | FileCheck -check-prefixes=GCN,GCN-DENORM-STRICT,GCN-DENORM,SI-DENORM,GCN-DENORM-FASTFMA,GCN-DENORM-FASTFMA-STRICT,SI %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -verify-machineinstrs -mcpu=verde  -mattr=-fp32-denormals,-fast-fmaf -fp-contract=on   < %s | FileCheck -check-prefixes=GCN,GCN-FLUSH-STRICT,GCN-FLUSH,SI-FLUSH,GCN-FLUSH-SLOWFMA,GCN-FLUSH-SLOWFMA-STRICT,SI %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -verify-machineinstrs -mcpu=verde  -mattr=+fp32-denormals,-fast-fmaf -fp-contract=on   < %s | FileCheck -check-prefixes=GCN,GCN-DENORM-STRICT,GCN-DENORM,SI-DENORM,GCN-DENORM-SLOWFMA,GCN-DENORM-SLOWFMA-STRICT,SI %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -verify-machineinstrs -mcpu=tahiti -mattr=-fp32-denormals,+fast-fmaf -fp-contract=on < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-FLUSH,GCN-FLUSH-STRICT,GCN-FLUSH-MAD,GCN-FLUSH-FASTFMA,GCN-FLUSH-FASTFMA-STRICT,SI %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -verify-machineinstrs -mcpu=tahiti -mattr=+fp32-denormals,+fast-fmaf -fp-contract=on < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-DENORM-STRICT,GCN-DENORM,SI-DENORM,GCN-DENORM-FASTFMA,GCN-DENORM-FASTFMA-STRICT,SI %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -verify-machineinstrs -mcpu=verde -mattr=-fp32-denormals,-fast-fmaf -fp-contract=on < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-FLUSH,GCN-FLUSH-STRICT,GCN-FLUSH-MAD,SI-FLUSH,GCN-FLUSH-SLOWFMA,GCN-FLUSH-SLOWFMA-STRICT,SI %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -verify-machineinstrs -mcpu=verde -mattr=+fp32-denormals,-fast-fmaf -fp-contract=on < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-DENORM-STRICT,GCN-DENORM,SI-DENORM,GCN-DENORM-SLOWFMA,GCN-DENORM-SLOWFMA-STRICT,SI %s
 
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -verify-machineinstrs -mcpu=tahiti -mattr=-fp32-denormals,+fast-fmaf -fp-contract=fast < %s | FileCheck -check-prefixes=GCN,GCN-FLUSH-CONTRACT,GCN-FLUSH,SI-FLUSH,GCN-FLUSH-FASTFMA,GCN-FLUSH-FASTFMA-CONTRACT,SI %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -verify-machineinstrs -mcpu=tahiti -mattr=+fp32-denormals,+fast-fmaf -fp-contract=fast < %s | FileCheck -check-prefixes=GCN,GCN-DENORM-CONTRACT,GCN-DENORM,SI-DENORM,GCN-DENORM-FASTFMA,GCN-DENORM-FASTFMA-CONTRACT,SI %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -verify-machineinstrs -mcpu=verde  -mattr=-fp32-denormals,-fast-fmaf -fp-contract=fast < %s | FileCheck -check-prefixes=GCN,GCN-FLUSH-CONTRACT,GCN-FLUSH,SI-FLUSH,GCN-FLUSH-SLOWFMA,GCN-FLUSH-SLOWFMA-CONTRACT,SI %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -verify-machineinstrs -mcpu=verde  -mattr=+fp32-denormals,-fast-fmaf -fp-contract=fast < %s | FileCheck -check-prefixes=GCN,GCN-DENORM-CONTRACT,GCN-DENORM,SI-DENORM,GCN-DENORM-SLOWFMA,GCN-DENORM-SLOWFMA-CONTRACT,SI %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -verify-machineinstrs -mcpu=tahiti -mattr=-fp32-denormals,+fast-fmaf -fp-contract=fast < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-FLUSH,GCN-FLUSH-CONTRACT,GCN-FLUSH-MAD,SI-FLUSH,GCN-FLUSH-FASTFMA,GCN-FLUSH-FASTFMA-CONTRACT,SI %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -verify-machineinstrs -mcpu=tahiti -mattr=+fp32-denormals,+fast-fmaf -fp-contract=fast < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-DENORM-CONTRACT,GCN-DENORM,SI-DENORM,GCN-DENORM-FASTFMA,GCN-DENORM-FASTFMA-CONTRACT,SI %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -verify-machineinstrs -mcpu=verde -mattr=-fp32-denormals,-fast-fmaf -fp-contract=fast < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-FLUSH,GCN-FLUSH-CONTRACT,GCN-FLUSH-MAD,SI-FLUSH,GCN-FLUSH-SLOWFMA,GCN-FLUSH-SLOWFMA-CONTRACT,SI %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -verify-machineinstrs -mcpu=verde -mattr=+fp32-denormals,-fast-fmaf -fp-contract=fast < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-DENORM-CONTRACT,GCN-DENORM,SI-DENORM,GCN-DENORM-SLOWFMA,GCN-DENORM-SLOWFMA-CONTRACT,SI %s
+
+
+; RUN: llc -amdgpu-scalarize-global-loads=false -verify-machineinstrs -mcpu=gfx900 -mattr=-fp32-denormals -fp-contract=on < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-FLUSH,GCN-FLUSH-STRICT,GCN-FLUSH-MAD,GFX9-FLUSH,GCN-FLUSH-FASTFMA,GCN-FLUSH-FASTFMA-STRICT,GFX900 %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -verify-machineinstrs -mcpu=gfx900 -mattr=+fp32-denormals -fp-contract=on < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-DENORM-STRICT,GCN-DENORM,GFX9-DENORM,GCN-DENORM-FASTFMA,GCN-DENORM-FASTFMA-STRICT,GFX900 %s
+
+; RUN: llc -amdgpu-scalarize-global-loads=false -verify-machineinstrs -mcpu=gfx906 -mattr=-fp32-denormals -fp-contract=on < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-FLUSH,GCN-FLUSH-STRICT,GCN-FLUSH-FMAC,GFX9-FLUSH,GCN-FLUSH-FASTFMA,GCN-FLUSH-FASTFMA-STRICT,GFX906 %s
+
+; FIXME: Should probably test this, but sometimes selecting fmac is painful to match.
+; XUN: llc -amdgpu-scalarize-global-loads=false -verify-machineinstrs -mcpu=gfx906 -mattr=+fp32-denormals -fp-contract=on < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-DENORM-STRICT,GCN-DENORM,GFX9-DENORM,GCN-DENORM-FASTFMA,GCN-DENORM-FASTFMA-STRICT,GFX906 %s
+
 
 ; Test all permutations of: fp32 denormals, fast fp contract, fp contract enabled for fmuladd, fmaf fast/slow.
 
@@ -19,7 +29,8 @@ declare half @llvm.fmuladd.f16(half, half, half) #1
 declare float @llvm.fabs.f32(float) #1
 
 ; GCN-LABEL: {{^}}fmuladd_f32:
-; GCN-FLUSH: v_mac_f32_e32 {{v[0-9]+, v[0-9]+, v[0-9]+}}
+; GCN-FLUSH-MAD: v_mac_f32_e32 {{v[0-9]+, v[0-9]+, v[0-9]+}}
+; GCN-FLUSH-FMAC: v_fmac_f32_e32 {{v[0-9]+, v[0-9]+, v[0-9]+}}
 
 ; GCN-DENORM-FASTFMA: v_fma_f32 {{v[0-9]+, v[0-9]+, v[0-9]+}}
 
@@ -57,10 +68,11 @@ define amdgpu_kernel void @fmul_fadd_f32(float addrspace(1)* %out, float addrspa
 }
 
 ; GCN-LABEL: {{^}}fmuladd_2.0_a_b_f32
-; GCN: {{buffer|flat}}_load_dword [[R1:v[0-9]+]],
-; GCN: {{buffer|flat}}_load_dword [[R2:v[0-9]+]],
+; GCN: {{buffer|flat|global}}_load_dword [[R1:v[0-9]+]],
+; GCN: {{buffer|flat|global}}_load_dword [[R2:v[0-9]+]],
 
-; GCN-FLUSH: v_mac_f32_e32 [[R2]], 2.0, [[R1]]
+; GCN-FLUSH-MAD: v_mac_f32_e32 [[R2]], 2.0, [[R1]]
+; GCN-FLUSH-FMAC: v_fmac_f32_e32 [[R2]], 2.0, [[R1]]
 ; SI-FLUSH: buffer_store_dword [[R2]]
 ; VI-FLUSH: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[R2]]
 
@@ -86,12 +98,14 @@ define amdgpu_kernel void @fmuladd_2.0_a_b_f32(float addrspace(1)* %out, float a
 }
 
 ; GCN-LABEL: {{^}}fmuladd_a_2.0_b_f32
-; GCN: {{buffer|flat}}_load_dword [[R1:v[0-9]+]],
-; GCN: {{buffer|flat}}_load_dword [[R2:v[0-9]+]],
+; GCN: {{buffer|flat|global}}_load_dword [[R1:v[0-9]+]],
+; GCN: {{buffer|flat|global}}_load_dword [[R2:v[0-9]+]],
 
-; GCN-FLUSH: v_mac_f32_e32 [[R2]], 2.0, [[R1]]
+; GCN-FLUSH-MAD: v_mac_f32_e32 [[R2]], 2.0, [[R1]]
+; GCN-FLUSH-FMAC: v_fmac_f32_e32 [[R2]], 2.0, [[R1]]
+
 ; SI-FLUSH: buffer_store_dword [[R2]]
-; VI-FLUSH: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[R2]]
+; VI-FLUSH: {{global|flat}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[R2]]
 
 ; GCN-DENORM-FASTFMA: v_fma_f32 [[RESULT:v[0-9]+]], [[R1]], 2.0, [[R2]]
 
@@ -99,7 +113,7 @@ define amdgpu_kernel void @fmuladd_2.0_a_b_f32(float addrspace(1)* %out, float a
 ; GCN-DENORM-SLOWFMA: v_add_f32_e32 [[RESULT:v[0-9]+]], [[TMP]], [[R2]]
 
 ; SI-DENORM: buffer_store_dword [[RESULT]]
-; VI-DENORM: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
+; VI-DENORM: {{global|flat}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
 define amdgpu_kernel void @fmuladd_a_2.0_b_f32(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.0 = getelementptr float, float addrspace(1)* %out, i32 %tid
@@ -115,12 +129,13 @@ define amdgpu_kernel void @fmuladd_a_2.0_b_f32(float addrspace(1)* %out, float a
 }
 
 ; GCN-LABEL: {{^}}fadd_a_a_b_f32:
-; GCN: {{buffer|flat}}_load_dword [[R1:v[0-9]+]],
-; GCN: {{buffer|flat}}_load_dword [[R2:v[0-9]+]],
+; GCN: {{buffer|flat|global}}_load_dword [[R1:v[0-9]+]],
+; GCN: {{buffer|flat|global}}_load_dword [[R2:v[0-9]+]],
 
 ; GCN-FLUSH: v_mac_f32_e32 [[R2]], 2.0, [[R1]]
+
 ; SI-FLUSH: buffer_store_dword [[R2]]
-; VI-FLUSH: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[R2]]
+; VI-FLUSH: {{global|flat}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[R2]]
 
 ; GCN-DENORM-FASTFMA-CONTRACT: v_fma_f32 [[RESULT:v[0-9]+]], [[R1]], 2.0, [[R2]]
 
@@ -131,7 +146,7 @@ define amdgpu_kernel void @fmuladd_a_2.0_b_f32(float addrspace(1)* %out, float a
 ; GCN-DENORM-STRICT: v_add_f32_e32 [[RESULT:v[0-9]+]], [[TMP]], [[R2]]
 
 ; SI-DENORM: buffer_store_dword [[RESULT]]
-; VI-DENORM: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
+; VI-DENORM: {{global|flat}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
 define amdgpu_kernel void @fadd_a_a_b_f32(float addrspace(1)* %out,
                             float addrspace(1)* %in1,
                             float addrspace(1)* %in2) #0 {
@@ -150,12 +165,13 @@ define amdgpu_kernel void @fadd_a_a_b_f32(float addrspace(1)* %out,
 }
 
 ; GCN-LABEL: {{^}}fadd_b_a_a_f32:
-; GCN: {{buffer|flat}}_load_dword [[R1:v[0-9]+]],
-; GCN: {{buffer|flat}}_load_dword [[R2:v[0-9]+]],
+; GCN: {{buffer|flat|global}}_load_dword [[R1:v[0-9]+]],
+; GCN: {{buffer|flat|global}}_load_dword [[R2:v[0-9]+]],
 
 ; GCN-FLUSH: v_mac_f32_e32 [[R2]], 2.0, [[R1]]
+
 ; SI-FLUSH: buffer_store_dword [[R2]]
-; VI-FLUSH: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[R2]]
+; VI-FLUSH: {{global|flat}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[R2]]
 
 ; GCN-DENORM-FASTFMA-CONTRACT: v_fma_f32 [[RESULT:v[0-9]+]], [[R1]], 2.0, [[R2]]
 
@@ -166,7 +182,7 @@ define amdgpu_kernel void @fadd_a_a_b_f32(float addrspace(1)* %out,
 ; GCN-DENORM-STRICT: v_add_f32_e32 [[RESULT:v[0-9]+]], [[R2]], [[TMP]]
 
 ; SI-DENORM: buffer_store_dword [[RESULT]]
-; VI-DENORM: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
+; VI-DENORM: {{global|flat}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
 define amdgpu_kernel void @fadd_b_a_a_f32(float addrspace(1)* %out,
                             float addrspace(1)* %in1,
                             float addrspace(1)* %in2) #0 {
@@ -185,9 +201,10 @@ define amdgpu_kernel void @fadd_b_a_a_f32(float addrspace(1)* %out,
 }
 
 ; GCN-LABEL: {{^}}fmuladd_neg_2.0_a_b_f32
-; GCN: {{buffer|flat}}_load_dword [[R1:v[0-9]+]],
-; GCN: {{buffer|flat}}_load_dword [[R2:v[0-9]+]],
-; GCN-FLUSH: v_mac_f32_e32 [[R2]], -2.0, [[R1]]
+; GCN: {{buffer|flat|global}}_load_dword [[R1:v[0-9]+]],
+; GCN: {{buffer|flat|global}}_load_dword [[R2:v[0-9]+]],
+; GCN-FLUSH-MAD: v_mac_f32_e32 [[R2]], -2.0, [[R1]]
+; GCN-FLUSH-FMAC: v_fmac_f32_e32 [[R2]], -2.0, [[R1]]
 
 ; GCN-DENORM-FASTFMA: v_fma_f32 [[RESULT:v[0-9]+]], [[R1]], -2.0, [[R2]]
 
@@ -195,7 +212,7 @@ define amdgpu_kernel void @fadd_b_a_a_f32(float addrspace(1)* %out,
 ; GCN-DENORM-SLOWFMA: v_sub_f32_e32 [[RESULT:v[0-9]+]], [[R2]], [[TMP]]
 
 ; SI-DENORM: buffer_store_dword [[RESULT]]
-; VI-DENORM: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
+; VI-DENORM: {{global|flat}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
 define amdgpu_kernel void @fmuladd_neg_2.0_a_b_f32(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.0 = getelementptr float, float addrspace(1)* %out, i32 %tid
@@ -210,13 +227,16 @@ define amdgpu_kernel void @fmuladd_neg_2.0_a_b_f32(float addrspace(1)* %out, flo
   ret void
 }
 
+; XXX
 ; GCN-LABEL: {{^}}fmuladd_neg_2.0_neg_a_b_f32
-; GCN: {{buffer|flat}}_load_dword [[R1:v[0-9]+]],
-; GCN: {{buffer|flat}}_load_dword [[R2:v[0-9]+]],
+; GCN: {{buffer|flat|global}}_load_dword [[R1:v[0-9]+]],
+; GCN: {{buffer|flat|global}}_load_dword [[R2:v[0-9]+]],
 
-; GCN-FLUSH: v_mac_f32_e32 [[R2]], 2.0, [[R1]]
+; GCN-FLUSH-MAD: v_mac_f32_e32 [[R2]], 2.0, [[R1]]
+; GCN-FLUSH-FMAC: v_fmac_f32_e32 [[R2]], 2.0, [[R1]]
+
 ; SI-FLUSH: buffer_store_dword [[R2]]
-; VI-FLUSH: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[R2]]
+; VI-FLUSH: {{global|flat}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[R2]]
 
 ; GCN-DENORM-FASTFMA: v_fma_f32 [[RESULT:v[0-9]+]], [[R1]], 2.0, [[R2]]
 
@@ -224,7 +244,7 @@ define amdgpu_kernel void @fmuladd_neg_2.0_a_b_f32(float addrspace(1)* %out, flo
 ; GCN-DENORM-SLOWFMA: v_add_f32_e32 [[RESULT:v[0-9]+]], [[R2]], [[TMP]]
 
 ; SI-DENORM: buffer_store_dword [[RESULT]]
-; VI-DENORM: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
+; VI-DENORM: {{global|flat}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
 define amdgpu_kernel void @fmuladd_neg_2.0_neg_a_b_f32(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.0 = getelementptr float, float addrspace(1)* %out, i32 %tid
@@ -242,12 +262,14 @@ define amdgpu_kernel void @fmuladd_neg_2.0_neg_a_b_f32(float addrspace(1)* %out,
 }
 
 ; GCN-LABEL: {{^}}fmuladd_2.0_neg_a_b_f32:
-; GCN: {{buffer|flat}}_load_dword [[R1:v[0-9]+]],
-; GCN: {{buffer|flat}}_load_dword [[R2:v[0-9]+]],
+; GCN: {{buffer|flat|global}}_load_dword [[R1:v[0-9]+]],
+; GCN: {{buffer|flat|global}}_load_dword [[R2:v[0-9]+]],
 
-; GCN-FLUSH: v_mac_f32_e32 [[R2]], -2.0, [[R1]]
+; GCN-FLUSH-MAD: v_mac_f32_e32 [[R2]], -2.0, [[R1]]
+; GCN-FLUSH-FMAC: v_fmac_f32_e32 [[R2]], -2.0, [[R1]]
+
 ; SI-FLUSH: buffer_store_dword [[R2]]
-; VI-FLUSH: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[R2]]
+; VI-FLUSH: {{global|flat}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[R2]]
 
 ; GCN-DENORM-FASTFMA: v_fma_f32 [[RESULT:v[0-9]+]], [[R1]], -2.0, [[R2]]
 
@@ -255,7 +277,7 @@ define amdgpu_kernel void @fmuladd_neg_2.0_neg_a_b_f32(float addrspace(1)* %out,
 ; GCN-DENORM-SLOWFMA: v_sub_f32_e32 [[RESULT:v[0-9]+]], [[R2]], [[TMP]]
 
 ; SI-DENORM: buffer_store_dword [[RESULT]]
-; VI-DENORM: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
+; VI-DENORM: {{global|flat}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
 define amdgpu_kernel void @fmuladd_2.0_neg_a_b_f32(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.0 = getelementptr float, float addrspace(1)* %out, i32 %tid
@@ -273,11 +295,13 @@ define amdgpu_kernel void @fmuladd_2.0_neg_a_b_f32(float addrspace(1)* %out, flo
 }
 
 ; GCN-LABEL: {{^}}fmuladd_2.0_a_neg_b_f32:
-; GCN: {{buffer|flat}}_load_dword [[R1:v[0-9]+]],
-; GCN: {{buffer|flat}}_load_dword [[R2:v[0-9]+]],
-; GCN-FLUSH: v_mad_f32 [[RESULT:v[0-9]+]], [[R1]], 2.0, -[[R2]]
+; GCN: {{buffer|flat|global}}_load_dword [[R1:v[0-9]+]],
+; GCN: {{buffer|flat|global}}_load_dword [[R2:v[0-9]+]],
+; GCN-FLUSH-MAD: v_mad_f32 [[RESULT:v[0-9]+]], [[R1]], 2.0, -[[R2]]
+; GCN-FLUSH-FMAC: v_fma_f32 [[RESULT:v[0-9]+]], [[R1]], 2.0, -[[R2]]
+
 ; SI-FLUSH: buffer_store_dword [[RESULT]]
-; VI-FLUSH: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
+; VI-FLUSH: {{global|flat}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
 
 ; GCN-DENORM-FASTFMA: v_fma_f32 [[RESULT:v[0-9]+]], [[R1]], 2.0, -[[R2]]
 
@@ -285,7 +309,7 @@ define amdgpu_kernel void @fmuladd_2.0_neg_a_b_f32(float addrspace(1)* %out, flo
 ; GCN-DENORM-SLOWFMA: v_sub_f32_e32 [[RESULT:v[0-9]+]], [[TMP]], [[R2]]
 
 ; SI-DENORM: buffer_store_dword [[RESULT]]
-; VI-DENORM: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
+; VI-DENORM: {{global|flat}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
 define amdgpu_kernel void @fmuladd_2.0_a_neg_b_f32(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.0 = getelementptr float, float addrspace(1)* %out, i32 %tid
@@ -303,9 +327,9 @@ define amdgpu_kernel void @fmuladd_2.0_a_neg_b_f32(float addrspace(1)* %out, flo
 }
 
 ; GCN-LABEL: {{^}}mad_sub_f32:
-; GCN: {{buffer|flat}}_load_dword [[REGA:v[0-9]+]]
-; GCN: {{buffer|flat}}_load_dword [[REGB:v[0-9]+]]
-; GCN: {{buffer|flat}}_load_dword [[REGC:v[0-9]+]]
+; GCN: {{buffer|flat|global}}_load_dword [[REGA:v[0-9]+]]
+; GCN: {{buffer|flat|global}}_load_dword [[REGB:v[0-9]+]]
+; GCN: {{buffer|flat|global}}_load_dword [[REGC:v[0-9]+]]
 ; GCN-FLUSH: v_mad_f32 [[RESULT:v[0-9]+]], [[REGA]], [[REGB]], -[[REGC]]
 
 ; GCN-DENORM-FASTFMA-CONTRACT: v_fma_f32 [[RESULT:v[0-9]+]], [[REGA]], [[REGB]], -[[REGC]]
@@ -317,7 +341,7 @@ define amdgpu_kernel void @fmuladd_2.0_a_neg_b_f32(float addrspace(1)* %out, flo
 ; GCN-DENORM-STRICT: v_sub_f32_e32 [[RESULT:v[0-9]+]], [[TMP]], [[REGC]]
 
 ; SI: buffer_store_dword [[RESULT]]
-; VI: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
+; VI: {{global|flat}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
 define amdgpu_kernel void @mad_sub_f32(float addrspace(1)* noalias nocapture %out, float addrspace(1)* noalias nocapture readonly %ptr) #0 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
   %tid.ext = sext i32 %tid to i64
@@ -337,9 +361,9 @@ define amdgpu_kernel void @mad_sub_f32(float addrspace(1)* noalias nocapture %ou
 }
 
 ; GCN-LABEL: {{^}}mad_sub_inv_f32:
-; GCN: {{buffer|flat}}_load_dword [[REGA:v[0-9]+]]
-; GCN: {{buffer|flat}}_load_dword [[REGB:v[0-9]+]]
-; GCN: {{buffer|flat}}_load_dword [[REGC:v[0-9]+]]
+; GCN: {{buffer|flat|global}}_load_dword [[REGA:v[0-9]+]]
+; GCN: {{buffer|flat|global}}_load_dword [[REGB:v[0-9]+]]
+; GCN: {{buffer|flat|global}}_load_dword [[REGC:v[0-9]+]]
 
 ; GCN-FLUSH: v_mad_f32 [[RESULT:v[0-9]+]], -[[REGA]], [[REGB]], [[REGC]]
 
@@ -352,7 +376,7 @@ define amdgpu_kernel void @mad_sub_f32(float addrspace(1)* noalias nocapture %ou
 ; GCN-DENORM-STRICT: v_sub_f32_e32 [[RESULT:v[0-9]+]], [[REGC]], [[TMP]]
 
 ; SI: buffer_store_dword [[RESULT]]
-; VI: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
+; VI: {{global|flat}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
 define amdgpu_kernel void @mad_sub_inv_f32(float addrspace(1)* noalias nocapture %out, float addrspace(1)* noalias nocapture readonly %ptr) #0 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
   %tid.ext = sext i32 %tid to i64
@@ -372,9 +396,9 @@ define amdgpu_kernel void @mad_sub_inv_f32(float addrspace(1)* noalias nocapture
 }
 
 ; GCN-LABEL: {{^}}mad_sub_fabs_f32:
-; GCN: {{buffer|flat}}_load_dword [[REGA:v[0-9]+]]
-; GCN: {{buffer|flat}}_load_dword [[REGB:v[0-9]+]]
-; GCN: {{buffer|flat}}_load_dword [[REGC:v[0-9]+]]
+; GCN: {{buffer|flat|global}}_load_dword [[REGA:v[0-9]+]]
+; GCN: {{buffer|flat|global}}_load_dword [[REGB:v[0-9]+]]
+; GCN: {{buffer|flat|global}}_load_dword [[REGC:v[0-9]+]]
 ; GCN-FLUSH: v_mad_f32 [[RESULT:v[0-9]+]], [[REGA]], [[REGB]], -|[[REGC]]|
 
 ; GCN-DENORM-FASTFMA-CONTRACT: v_fma_f32 [[RESULT:v[0-9]+]], [[REGA]], [[REGB]], -|[[REGC]]|
@@ -386,7 +410,7 @@ define amdgpu_kernel void @mad_sub_inv_f32(float addrspace(1)* noalias nocapture
 ; GCN-DENORM-STRICT: v_sub_f32_e64 [[RESULT:v[0-9]+]],  [[TMP]], |[[REGC]]|
 
 ; SI: buffer_store_dword [[RESULT]]
-; VI: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
+; VI: {{global|flat}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
 define amdgpu_kernel void @mad_sub_fabs_f32(float addrspace(1)* noalias nocapture %out, float addrspace(1)* noalias nocapture readonly %ptr) #0 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
   %tid.ext = sext i32 %tid to i64
@@ -407,10 +431,11 @@ define amdgpu_kernel void @mad_sub_fabs_f32(float addrspace(1)* noalias nocaptur
 }
 
 ; GCN-LABEL: {{^}}mad_sub_fabs_inv_f32:
-; GCN: {{buffer|flat}}_load_dword [[REGA:v[0-9]+]]
-; GCN: {{buffer|flat}}_load_dword [[REGB:v[0-9]+]]
-; GCN: {{buffer|flat}}_load_dword [[REGC:v[0-9]+]]
-; GCN-FLUSH: v_mad_f32 [[RESULT:v[0-9]+]], -[[REGA]], [[REGB]], |[[REGC]]|
+; GCN: {{buffer|flat|global}}_load_dword [[REGA:v[0-9]+]]
+; GCN: {{buffer|flat|global}}_load_dword [[REGB:v[0-9]+]]
+; GCN: {{buffer|flat|global}}_load_dword [[REGC:v[0-9]+]]
+; GCN-FLUSH-MAD: v_mad_f32 [[RESULT:v[0-9]+]], -[[REGA]], [[REGB]], |[[REGC]]|
+; GCN-FLUSH-FMA: v_fma_f32 [[RESULT:v[0-9]+]], -[[REGA]], [[REGB]], |[[REGC]]|
 
 ; GCN-DENORM-FASTFMA-CONTRACT: v_fma_f32 [[RESULT:v[0-9]+]], -[[REGA]], [[REGB]], |[[REGC]]|
 
@@ -421,7 +446,7 @@ define amdgpu_kernel void @mad_sub_fabs_f32(float addrspace(1)* noalias nocaptur
 ; GCN-DENORM-STRICT: v_sub_f32_e64 [[RESULT:v[0-9]+]], |[[REGC]]|, [[TMP]]
 
 ; SI: buffer_store_dword [[RESULT]]
-; VI: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
+; VI: {{global|flat}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
 define amdgpu_kernel void @mad_sub_fabs_inv_f32(float addrspace(1)* noalias nocapture %out, float addrspace(1)* noalias nocapture readonly %ptr) #0 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
   %tid.ext = sext i32 %tid to i64
@@ -442,13 +467,13 @@ define amdgpu_kernel void @mad_sub_fabs_inv_f32(float addrspace(1)* noalias noca
 }
 
 ; GCN-LABEL: {{^}}neg_neg_mad_f32:
-; GCN: {{buffer|flat}}_load_dword [[REGA:v[0-9]+]]
-; GCN: {{buffer|flat}}_load_dword [[REGB:v[0-9]+]]
-; GCN: {{buffer|flat}}_load_dword [[REGC:v[0-9]+]]
+; GCN: {{buffer|flat|global}}_load_dword [[REGA:v[0-9]+]]
+; GCN: {{buffer|flat|global}}_load_dword [[REGB:v[0-9]+]]
+; GCN: {{buffer|flat|global}}_load_dword [[REGC:v[0-9]+]]
 
 ; GCN-FLUSH: v_mac_f32_e32 [[REGC]], [[REGA]], [[REGB]]
 ; SI-FLUSH: buffer_store_dword [[REGC]]
-; VI-FLUSH: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[REGC]]
+; VI-FLUSH: {{global|flat}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[REGC]]
 
 ; GCN-DENORM-FASTFMA-CONTRACT: v_fma_f32 [[RESULT:v[0-9]+]], [[REGA]], [[REGB]], [[REGC]]
 
@@ -459,7 +484,7 @@ define amdgpu_kernel void @mad_sub_fabs_inv_f32(float addrspace(1)* noalias noca
 ; GCN-DENORM-STRICT: v_add_f32_e32 [[RESULT:v[0-9]+]], [[REGC]], [[TMP]]
 
 ; SI-DENORM: buffer_store_dword [[RESULT]]
-; VI-DENORM: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
+; VI-DENORM: {{global|flat}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
 define amdgpu_kernel void @neg_neg_mad_f32(float addrspace(1)* noalias nocapture %out, float addrspace(1)* noalias nocapture readonly %ptr) #0 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
   %tid.ext = sext i32 %tid to i64
@@ -481,9 +506,9 @@ define amdgpu_kernel void @neg_neg_mad_f32(float addrspace(1)* noalias nocapture
 }
 
 ; GCN-LABEL: {{^}}mad_fabs_sub_f32:
-; GCN: {{buffer|flat}}_load_dword [[REGA:v[0-9]+]]
-; GCN: {{buffer|flat}}_load_dword [[REGB:v[0-9]+]]
-; GCN: {{buffer|flat}}_load_dword [[REGC:v[0-9]+]]
+; GCN: {{buffer|flat|global}}_load_dword [[REGA:v[0-9]+]]
+; GCN: {{buffer|flat|global}}_load_dword [[REGB:v[0-9]+]]
+; GCN: {{buffer|flat|global}}_load_dword [[REGC:v[0-9]+]]
 ; GCN-FLUSH: v_mad_f32 [[RESULT:v[0-9]+]], [[REGA]], |[[REGB]]|, -[[REGC]]
 
 ; GCN-DENORM-FASTFMA-CONTRACT: v_fma_f32 [[RESULT:v[0-9]+]], [[REGA]], |[[REGB]]|, -[[REGC]]
@@ -495,7 +520,7 @@ define amdgpu_kernel void @neg_neg_mad_f32(float addrspace(1)* noalias nocapture
 ; GCN-DENORM-STRICT: v_sub_f32_e32 [[RESULT:v[0-9]+]], [[TMP]], [[REGC]]
 
 ; SI: buffer_store_dword [[RESULT]]
-; VI: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
+; VI: {{global|flat}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
 define amdgpu_kernel void @mad_fabs_sub_f32(float addrspace(1)* noalias nocapture %out, float addrspace(1)* noalias nocapture readonly %ptr) #0 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
   %tid.ext = sext i32 %tid to i64
@@ -516,11 +541,11 @@ define amdgpu_kernel void @mad_fabs_sub_f32(float addrspace(1)* noalias nocaptur
 }
 
 ; GCN-LABEL: {{^}}fsub_c_fadd_a_a_f32:
-; GCN: {{buffer|flat}}_load_dword [[R1:v[0-9]+]],
-; GCN: {{buffer|flat}}_load_dword [[R2:v[0-9]+]],
+; GCN: {{buffer|flat|global}}_load_dword [[R1:v[0-9]+]],
+; GCN: {{buffer|flat|global}}_load_dword [[R2:v[0-9]+]],
 ; GCN-FLUSH: v_mac_f32_e32 [[R2]], -2.0, [[R1]]
 ; SI-FLUSH: buffer_store_dword [[R2]]
-; VI-FLUSH: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[R2]]
+; VI-FLUSH: {{global|flat}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[R2]]
 
 ; GCN-DENORM-FASTFMA-CONTRACT: v_fma_f32 [[RESULT:v[0-9]+]], [[R1]], -2.0, [[R2]]
 
@@ -531,7 +556,7 @@ define amdgpu_kernel void @mad_fabs_sub_f32(float addrspace(1)* noalias nocaptur
 ; GCN-DENORM-STRICT: v_sub_f32_e32 [[RESULT:v[0-9]+]], [[R2]], [[TMP]]
 
 ; SI-DENORM: buffer_store_dword [[RESULT]]
-; VI-DENORM: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
+; VI-DENORM: {{global|flat}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
 define amdgpu_kernel void @fsub_c_fadd_a_a_f32(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr float, float addrspace(1)* %out, i32 %tid
@@ -549,8 +574,8 @@ define amdgpu_kernel void @fsub_c_fadd_a_a_f32(float addrspace(1)* %out, float a
 }
 
 ; GCN-LABEL: {{^}}fsub_fadd_a_a_c_f32:
-; GCN: {{buffer|flat}}_load_dword [[R1:v[0-9]+]],
-; GCN: {{buffer|flat}}_load_dword [[R2:v[0-9]+]],
+; GCN: {{buffer|flat|global}}_load_dword [[R1:v[0-9]+]],
+; GCN: {{buffer|flat|global}}_load_dword [[R2:v[0-9]+]],
 ; GCN-FLUSH: v_mad_f32 [[RESULT:v[0-9]+]], [[R1]], 2.0, -[[R2]]
 
 ; GCN-DENORM-FASTFMA-CONTRACT: v_fma_f32 [[RESULT:v[0-9]+]], [[R1]], 2.0, -[[R2]]
@@ -562,7 +587,7 @@ define amdgpu_kernel void @fsub_c_fadd_a_a_f32(float addrspace(1)* %out, float a
 ; GCN-DENORM-STRICT: v_sub_f32_e32 [[RESULT:v[0-9]+]], [[TMP]], [[R2]]
 
 ; SI: buffer_store_dword [[RESULT]]
-; VI: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
+; VI: {{global|flat}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
 define amdgpu_kernel void @fsub_fadd_a_a_c_f32(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr float, float addrspace(1)* %out, i32 %tid

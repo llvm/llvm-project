@@ -27,15 +27,15 @@
 ; GCN: NumVgprs: 256
 ; GCN: ScratchSize: 1536
 
-define amdgpu_vs void @main([9 x <4 x i32>] addrspace(2)* byval %arg, [17 x <4 x i32>] addrspace(2)* byval %arg1, [17 x <4 x i32>] addrspace(2)* byval %arg2, [34 x <8 x i32>] addrspace(2)* byval %arg3, [16 x <4 x i32>] addrspace(2)* byval %arg4, i32 inreg %arg5, i32 inreg %arg6, i32 %arg7, i32 %arg8, i32 %arg9, i32 %arg10) #0 {
+define amdgpu_vs void @main([9 x <4 x i32>] addrspace(4)* byval %arg, [17 x <4 x i32>] addrspace(4)* byval %arg1, [17 x <4 x i32>] addrspace(4)* byval %arg2, [34 x <8 x i32>] addrspace(4)* byval %arg3, [16 x <4 x i32>] addrspace(4)* byval %arg4, i32 inreg %arg5, i32 inreg %arg6, i32 %arg7, i32 %arg8, i32 %arg9, i32 %arg10) #0 {
 bb:
-  %tmp = getelementptr [17 x <4 x i32>], [17 x <4 x i32>] addrspace(2)* %arg1, i64 0, i64 0
-  %tmp11 = load <4 x i32>, <4 x i32> addrspace(2)* %tmp, align 16, !tbaa !0
+  %tmp = getelementptr [17 x <4 x i32>], [17 x <4 x i32>] addrspace(4)* %arg1, i64 0, i64 0
+  %tmp11 = load <4 x i32>, <4 x i32> addrspace(4)* %tmp, align 16, !tbaa !0
   %tmp12 = call float @llvm.SI.load.const.v4i32(<4 x i32> %tmp11, i32 0)
   %tmp13 = call float @llvm.SI.load.const.v4i32(<4 x i32> %tmp11, i32 16)
   %tmp14 = call float @llvm.SI.load.const.v4i32(<4 x i32> %tmp11, i32 32)
-  %tmp15 = getelementptr [16 x <4 x i32>], [16 x <4 x i32>] addrspace(2)* %arg4, i64 0, i64 0
-  %tmp16 = load <4 x i32>, <4 x i32> addrspace(2)* %tmp15, align 16, !tbaa !0
+  %tmp15 = getelementptr [16 x <4 x i32>], [16 x <4 x i32>] addrspace(4)* %arg4, i64 0, i64 0
+  %tmp16 = load <4 x i32>, <4 x i32> addrspace(4)* %tmp15, align 16, !tbaa !0
   %tmp17 = add i32 %arg5, %arg7
   %tmp16.cast = bitcast <4 x i32> %tmp16 to <4 x i32>
   %tmp18 = call <4 x float> @llvm.amdgcn.buffer.load.format.v4f32(<4 x i32> %tmp16.cast, i32 %tmp17, i32 0, i1 false, i1 false)

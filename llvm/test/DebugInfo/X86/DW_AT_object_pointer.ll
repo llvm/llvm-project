@@ -53,12 +53,12 @@ entry:
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.2 (trunk 163586) (llvm/trunk 163570)", isOptimized: false, emissionKind: FullDebug, file: !37, enums: !1, retainedTypes: !1, globals: !1, imports:  !1)
 !1 = !{}
-!5 = distinct !DISubprogram(name: "foo", linkageName: "_Z3fooi", line: 7, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 7, file: !6, scope: !6, type: !7, variables: !1)
+!5 = distinct !DISubprogram(name: "foo", linkageName: "_Z3fooi", line: 7, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 7, file: !6, scope: !6, type: !7, retainedNodes: !1)
 !6 = !DIFile(filename: "bar.cpp", directory: "/Users/echristo/debug-tests")
 !7 = !DISubroutineType(types: !8)
 !8 = !{!9}
 !9 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
-!10 = distinct !DISubprogram(name: "A", linkageName: "_ZN1AC1Ev", line: 3, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 3, file: !6, scope: null, type: !11, declaration: !17, variables: !1)
+!10 = distinct !DISubprogram(name: "A", linkageName: "_ZN1AC1Ev", line: 3, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 3, file: !6, scope: null, type: !11, declaration: !17, retainedNodes: !1)
 !11 = !DISubroutineType(types: !12)
 !12 = !{null, !13}
 !13 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, align: 64, flags: DIFlagArtificial | DIFlagObjectPointer, baseType: !14)
@@ -66,7 +66,7 @@ entry:
 !15 = !{!16, !17}
 !16 = !DIDerivedType(tag: DW_TAG_member, name: "m_a", line: 4, size: 32, align: 32, file: !37, scope: !14, baseType: !9)
 !17 = !DISubprogram(name: "A", line: 3, isLocal: false, isDefinition: false, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 3, file: !6, scope: !14, type: !11)
-!20 = distinct !DISubprogram(name: "A", linkageName: "_ZN1AC2Ev", line: 3, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 3, file: !6, scope: null, type: !11, declaration: !17, variables: !1)
+!20 = distinct !DISubprogram(name: "A", linkageName: "_ZN1AC2Ev", line: 3, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 3, file: !6, scope: null, type: !11, declaration: !17, retainedNodes: !1)
 !21 = !DILocalVariable(name: "a", line: 8, scope: !22, file: !6, type: !14)
 !22 = distinct !DILexicalBlock(line: 7, column: 11, file: !6, scope: !5)
 !23 = !DILocation(line: 8, column: 5, scope: !22)

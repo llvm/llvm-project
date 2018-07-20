@@ -4,7 +4,7 @@
 ; Assertion `MMO->getFlags() == getFlags() && "Flags mismatch !"' failed.
 
 declare void @_Z3fn11F(%class.F* byval align 8) local_unnamed_addr
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i32, i1)
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1)
 declare signext i32 @_ZN1F11isGlobalRegEv(%class.F*) local_unnamed_addr
 declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
 declare void @_Z10EmitLValuev(%class.F* sret) local_unnamed_addr
@@ -28,7 +28,7 @@ entry:
   call void @_Z10EmitLValuev(%class.F* nonnull sret %XLValue)
   %1 = bitcast %class.F* %agg.tmp1 to i8*
   call void @llvm.lifetime.start.p0i8(i64 96, i8* nonnull %1)
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull %1, i8* nonnull %0, i64 96, i32 8, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 nonnull %1, i8* align 8 nonnull %0, i64 96, i1 false)
   call void @_Z3fn11F(%class.F* byval nonnull align 8 %XLValue)
   %call.i = call signext i32 @_ZN1F11isGlobalRegEv(%class.F* nonnull %agg.tmp1)
   call void @llvm.lifetime.end.p0i8(i64 96, i8* nonnull %1)

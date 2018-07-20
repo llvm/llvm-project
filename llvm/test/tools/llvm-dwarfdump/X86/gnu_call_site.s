@@ -12,7 +12,7 @@
 
 # CHECK:      DW_TAG_GNU_call_site
 # CHECK-NEXT:   DW_AT_low_pc  (0x0000000000000000)
-# CHECK-NEXT:   DW_AT_abstract_origin (cu + 0x0021 "test")
+# CHECK-NEXT:   DW_AT_abstract_origin (0x00000021 "test")
 
 # CHECK:      DW_TAG_GNU_call_site_parameter
 # CHECK-NEXT:   DW_AT_location      (DW_OP_reg0 EAX)

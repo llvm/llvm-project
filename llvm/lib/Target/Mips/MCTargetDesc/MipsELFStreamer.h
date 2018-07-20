@@ -34,7 +34,7 @@ class MipsELFStreamer : public MCELFStreamer {
 
 public:
   MipsELFStreamer(MCContext &Context, std::unique_ptr<MCAsmBackend> MAB,
-                  raw_pwrite_stream &OS,
+                  std::unique_ptr<MCObjectWriter> OW,
                   std::unique_ptr<MCCodeEmitter> Emitter);
 
   /// Overriding this function allows us to add arbitrary behaviour before the
@@ -67,7 +67,7 @@ public:
 
 MCELFStreamer *createMipsELFStreamer(MCContext &Context,
                                      std::unique_ptr<MCAsmBackend> MAB,
-                                     raw_pwrite_stream &OS,
+                                     std::unique_ptr<MCObjectWriter> OW,
                                      std::unique_ptr<MCCodeEmitter> Emitter,
                                      bool RelaxAll);
 } // end namespace llvm

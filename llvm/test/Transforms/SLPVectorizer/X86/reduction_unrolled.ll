@@ -16,28 +16,58 @@
 ; SSE2:  Adding cost 4 for reduction that starts with   %7 = load i32, i32* %arrayidx.7, align 4 (It is a splitting reduction)
 define i32 @test(i32* nocapture readonly %p) {
 ; CHECK-LABEL: @test(
-; CHECK:         [[BC:%.*]] = bitcast i32* %p to <8 x i32>*
-; CHECK-NEXT:    [[LD:%.*]] = load <8 x i32>, <8 x i32>* [[BC]], align 4
-; CHECK:         [[RDX_SHUF:%.*]] = shufflevector <8 x i32> [[LD]], <8 x i32> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <8 x i32> [[LD]], [[RDX_SHUF]]
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i32, i32* [[P:%.*]], i64 1
+; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 2
+; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 3
+; CHECK-NEXT:    [[ARRAYIDX_4:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 4
+; CHECK-NEXT:    [[ARRAYIDX_5:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 5
+; CHECK-NEXT:    [[ARRAYIDX_6:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 6
+; CHECK-NEXT:    [[ARRAYIDX_7:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 7
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[P]] to <8 x i32>*
+; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, <8 x i32>* [[TMP0]], align 4
+; CHECK-NEXT:    [[MUL_18:%.*]] = add i32 undef, undef
+; CHECK-NEXT:    [[MUL_29:%.*]] = add i32 undef, [[MUL_18]]
+; CHECK-NEXT:    [[MUL_310:%.*]] = add i32 undef, [[MUL_29]]
+; CHECK-NEXT:    [[MUL_411:%.*]] = add i32 undef, [[MUL_310]]
+; CHECK-NEXT:    [[MUL_512:%.*]] = add i32 undef, [[MUL_411]]
+; CHECK-NEXT:    [[MUL_613:%.*]] = add i32 undef, [[MUL_512]]
+; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <8 x i32> [[TMP1]], [[RDX_SHUF]]
 ; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <8 x i32> [[BIN_RDX]], <8 x i32> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX2:%.*]] = add <8 x i32> [[BIN_RDX]], [[RDX_SHUF1]]
 ; CHECK-NEXT:    [[RDX_SHUF3:%.*]] = shufflevector <8 x i32> [[BIN_RDX2]], <8 x i32> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX4:%.*]] = add <8 x i32> [[BIN_RDX2]], [[RDX_SHUF3]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <8 x i32> [[BIN_RDX4]], i32 0
-; CHECK:         ret i32 [[TMP2]]
+; CHECK-NEXT:    [[MUL_714:%.*]] = add i32 undef, [[MUL_613]]
+; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
 ; SSE2-LABEL: @test(
-; SSE2:         [[BC:%.*]] = bitcast i32* %p to <8 x i32>*
-; SSE2-NEXT:    [[LD:%.*]] = load <8 x i32>, <8 x i32>* [[BC]], align 4
-; SSE2:         [[RDX_SHUF:%.*]] = shufflevector <8 x i32> [[LD]], <8 x i32> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
-; SSE2-NEXT:    [[BIN_RDX:%.*]] = add <8 x i32> [[LD]], [[RDX_SHUF]]
+; SSE2-NEXT:  entry:
+; SSE2-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i32, i32* [[P:%.*]], i64 1
+; SSE2-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 2
+; SSE2-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 3
+; SSE2-NEXT:    [[ARRAYIDX_4:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 4
+; SSE2-NEXT:    [[ARRAYIDX_5:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 5
+; SSE2-NEXT:    [[ARRAYIDX_6:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 6
+; SSE2-NEXT:    [[ARRAYIDX_7:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 7
+; SSE2-NEXT:    [[TMP0:%.*]] = bitcast i32* [[P]] to <8 x i32>*
+; SSE2-NEXT:    [[TMP1:%.*]] = load <8 x i32>, <8 x i32>* [[TMP0]], align 4
+; SSE2-NEXT:    [[MUL_18:%.*]] = add i32 undef, undef
+; SSE2-NEXT:    [[MUL_29:%.*]] = add i32 undef, [[MUL_18]]
+; SSE2-NEXT:    [[MUL_310:%.*]] = add i32 undef, [[MUL_29]]
+; SSE2-NEXT:    [[MUL_411:%.*]] = add i32 undef, [[MUL_310]]
+; SSE2-NEXT:    [[MUL_512:%.*]] = add i32 undef, [[MUL_411]]
+; SSE2-NEXT:    [[MUL_613:%.*]] = add i32 undef, [[MUL_512]]
+; SSE2-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
+; SSE2-NEXT:    [[BIN_RDX:%.*]] = add <8 x i32> [[TMP1]], [[RDX_SHUF]]
 ; SSE2-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <8 x i32> [[BIN_RDX]], <8 x i32> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; SSE2-NEXT:    [[BIN_RDX2:%.*]] = add <8 x i32> [[BIN_RDX]], [[RDX_SHUF1]]
 ; SSE2-NEXT:    [[RDX_SHUF3:%.*]] = shufflevector <8 x i32> [[BIN_RDX2]], <8 x i32> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; SSE2-NEXT:    [[BIN_RDX4:%.*]] = add <8 x i32> [[BIN_RDX2]], [[RDX_SHUF3]]
 ; SSE2-NEXT:    [[TMP2:%.*]] = extractelement <8 x i32> [[BIN_RDX4]], i32 0
-; SSE2:         ret i32 [[TMP2]]
+; SSE2-NEXT:    [[MUL_714:%.*]] = add i32 undef, [[MUL_613]]
+; SSE2-NEXT:    ret i32 [[TMP2]]
 ;
 entry:
   %0 = load i32, i32* %p, align 4

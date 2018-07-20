@@ -32,6 +32,8 @@ enum PdbRaw_ImplVer : uint32_t {
   PdbImplVC140 = 20140508,
 };
 
+enum class PdbRaw_SrcHeaderBlockVer : uint32_t { SrcVerOne = 19980827 };
+
 enum class PdbRaw_FeatureSig : uint32_t {
   VC110 = PdbImplVC110,
   VC140 = PdbImplVC140,

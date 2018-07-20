@@ -1,6 +1,6 @@
 ; RUN: llvm-as <%s | llc | FileCheck %s
 ; PR 5247
-; check that cmp is not scheduled before the add
+; check that cmp/test is not scheduled before the add
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128"
 target triple = "x86_64-unknown-linux-gnu"
 
@@ -38,7 +38,7 @@ lt_init.exit:                                     ; preds = %if.end.i, %if.then.
   %5 = sub i64 %4, %2                             ; <i64> [#uses=1]
   %6 = atomicrmw add i64* getelementptr inbounds ([1216 x i64], [1216 x i64]* @__profiling_callsite_timestamps_live, i32 0, i32 51), i64 %5 monotonic
 ;CHECK: lock {{xadd|addq}} %rdx, __profiling_callsite_timestamps_live
-;CHECK-NEXT: cmpl $0,
+;CHECK-NEXT: testl [[REG:%e[a-z]+]], [[REG]]
 ;CHECK-NEXT: jne
   %cmp = icmp eq i32 %3, 0                        ; <i1> [#uses=1]
   br i1 %cmp, label %if.then, label %if.end

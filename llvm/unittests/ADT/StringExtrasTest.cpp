@@ -92,3 +92,10 @@ TEST(StringExtrasTest, printLowerCase) {
   printLowerCase("ABCdefg01234.,&!~`'}\"", OS);
   EXPECT_EQ("abcdefg01234.,&!~`'}\"", OS.str());
 }
+
+TEST(StringExtrasTest, printHTMLEscaped) {
+  std::string str;
+  raw_string_ostream OS(str);
+  printHTMLEscaped("ABCdef123&<>\"'", OS);
+  EXPECT_EQ("ABCdef123&amp;&lt;&gt;&quot;&apos;", OS.str());
+}

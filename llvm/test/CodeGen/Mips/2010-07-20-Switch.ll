@@ -28,7 +28,8 @@ entry:
 ; PIC-O32: addu $[[R5:[0-9]+]], $[[R4:[0-9]+]]
 ; PIC-O32: jr  $[[R5]]
 
-; STATIC-N64: mflo $[[R0:[0-9]]]
+; STATIC-N64: dsrl $[[I32:[0-9]]], ${{[0-9]+}}, 32
+; STATIC-N64: dsll $[[R0:[0-9]]], $[[I32]], 3
 ; STATIC-N64: lui $[[R1:[0-9]]], %highest(.LJTI0_0)
 ; STATIC-N64: daddiu $[[R2:[0-9]]], $[[R1]], %higher(.LJTI0_0)
 ; STATIC-N64: dsll $[[R3:[0-9]]], $[[R2]], 16

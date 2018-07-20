@@ -15,8 +15,8 @@ entry:
 ; A8-LABEL: t1:
 ; A8: vmul.f32
 ; A8: vadd.f32
-	%0 = fmul float %a, %b
-        %1 = fadd float %acc, %0
+  %0 = fmul float %a, %b
+  %1 = fadd float %acc, %0
 	ret float %1
 }
 
@@ -31,8 +31,8 @@ entry:
 ; A8-LABEL: t2:
 ; A8: vmul.f64
 ; A8: vadd.f64
-	%0 = fmul double %a, %b
-        %1 = fadd double %acc, %0
+  %0 = fmul double %a, %b
+  %1 = fadd double %acc, %0
 	ret double %1
 }
 
@@ -47,8 +47,8 @@ entry:
 ; A8-LABEL: t3:
 ; A8: vmul.f32
 ; A8: vadd.f32
-	%0 = fmul float %a, %b
-        %1 = fadd float %0, %acc
+  %0 = fmul float %a, %b
+  %1 = fadd float %0, %acc
 	ret float %1
 }
 

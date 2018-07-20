@@ -37,6 +37,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugLoc.h"
@@ -442,13 +443,15 @@ bool MipsConstantIslands::runOnMachineFunction(MachineFunction &mf) {
   MF = &mf;
   MCP = mf.getConstantPool();
   STI = &static_cast<const MipsSubtarget &>(mf.getSubtarget());
-  DEBUG(dbgs() << "constant island machine function " << "\n");
+  LLVM_DEBUG(dbgs() << "constant island machine function "
+                    << "\n");
   if (!STI->inMips16Mode() || !MipsSubtarget::useConstantIslands()) {
     return false;
   }
   TII = (const Mips16InstrInfo *)STI->getInstrInfo();
   MFI = MF->getInfo<MipsFunctionInfo>();
-  DEBUG(dbgs() << "constant island processing " << "\n");
+  LLVM_DEBUG(dbgs() << "constant island processing "
+                    << "\n");
   //
   // will need to make predermination if there is any constants we need to
   // put in constant islands. TBD.
@@ -479,7 +482,7 @@ bool MipsConstantIslands::runOnMachineFunction(MachineFunction &mf) {
   // constant pool users.
   initializeFunctionInfo(CPEMIs);
   CPEMIs.clear();
-  DEBUG(dumpBBs());
+  LLVM_DEBUG(dumpBBs());
 
   /// Remove dead constant pool entries.
   MadeChange |= removeUnusedCPEntries();
@@ -489,31 +492,31 @@ bool MipsConstantIslands::runOnMachineFunction(MachineFunction &mf) {
   unsigned NoCPIters = 0, NoBRIters = 0;
   (void)NoBRIters;
   while (true) {
-    DEBUG(dbgs() << "Beginning CP iteration #" << NoCPIters << '\n');
+    LLVM_DEBUG(dbgs() << "Beginning CP iteration #" << NoCPIters << '\n');
     bool CPChange = false;
     for (unsigned i = 0, e = CPUsers.size(); i != e; ++i)
       CPChange |= handleConstantPoolUser(i);
     if (CPChange && ++NoCPIters > 30)
       report_fatal_error("Constant Island pass failed to converge!");
-    DEBUG(dumpBBs());
+    LLVM_DEBUG(dumpBBs());
 
     // Clear NewWaterList now.  If we split a block for branches, it should
     // appear as "new water" for the next iteration of constant pool placement.
     NewWaterList.clear();
 
-    DEBUG(dbgs() << "Beginning BR iteration #" << NoBRIters << '\n');
+    LLVM_DEBUG(dbgs() << "Beginning BR iteration #" << NoBRIters << '\n');
     bool BRChange = false;
     for (unsigned i = 0, e = ImmBranches.size(); i != e; ++i)
       BRChange |= fixupImmediateBr(ImmBranches[i]);
     if (BRChange && ++NoBRIters > 30)
       report_fatal_error("Branch Fix Up pass failed to converge!");
-    DEBUG(dumpBBs());
+    LLVM_DEBUG(dumpBBs());
     if (!CPChange && !BRChange)
       break;
     MadeChange = true;
   }
 
-  DEBUG(dbgs() << '\n'; dumpBBs());
+  LLVM_DEBUG(dbgs() << '\n'; dumpBBs());
 
   BBInfo.clear();
   WaterList.clear();
@@ -580,10 +583,10 @@ MipsConstantIslands::doInitialPlacement(std::vector<MachineInstr*> &CPEMIs) {
     // Add a new CPEntry, but no corresponding CPUser yet.
     CPEntries.emplace_back(1, CPEntry(CPEMI, i));
     ++NumCPEs;
-    DEBUG(dbgs() << "Moved CPI#" << i << " to end of function, size = "
-                 << Size << ", align = " << Align <<'\n');
+    LLVM_DEBUG(dbgs() << "Moved CPI#" << i << " to end of function, size = "
+                      << Size << ", align = " << Align << '\n');
   }
-  DEBUG(BB->dump());
+  LLVM_DEBUG(BB->dump());
 }
 
 /// BBHasFallthrough - Return true if the specified basic block can fallthrough
@@ -660,7 +663,7 @@ initializeFunctionInfo(const std::vector<MachineInstr*> &CPEMIs) {
     if (!BBHasFallthrough(&MBB))
       WaterList.push_back(&MBB);
     for (MachineInstr &MI : MBB) {
-      if (MI.isDebugValue())
+      if (MI.isDebugInstr())
         continue;
 
       int Opc = MI.getOpcode();
@@ -986,7 +989,7 @@ bool MipsConstantIslands::isCPEntryInRange
   unsigned CPEOffset  = getOffsetOf(CPEMI);
 
   if (DoDump) {
-    DEBUG({
+    LLVM_DEBUG({
       unsigned Block = MI->getParent()->getNumber();
       const BasicBlockInfo &BBI = BBInfo[Block];
       dbgs() << "User of CPE#" << CPEMI->getOperand(0).getImm()
@@ -1059,7 +1062,7 @@ int MipsConstantIslands::findInRangeCPEntry(CPUser& U, unsigned UserOffset)
   // Check to see if the CPE is already in-range.
   if (isCPEntryInRange(UserMI, UserOffset, CPEMI, U.getMaxDisp(), U.NegOk,
                        true)) {
-    DEBUG(dbgs() << "In range\n");
+    LLVM_DEBUG(dbgs() << "In range\n");
     return 1;
   }
 
@@ -1075,8 +1078,8 @@ int MipsConstantIslands::findInRangeCPEntry(CPUser& U, unsigned UserOffset)
       continue;
     if (isCPEntryInRange(UserMI, UserOffset, CPEs[i].CPEMI, U.getMaxDisp(),
                      U.NegOk)) {
-      DEBUG(dbgs() << "Replacing CPE#" << CPI << " with CPE#"
-                   << CPEs[i].CPI << "\n");
+      LLVM_DEBUG(dbgs() << "Replacing CPE#" << CPI << " with CPE#"
+                        << CPEs[i].CPI << "\n");
       // Point the CPUser node to the replacement
       U.CPEMI = CPEs[i].CPEMI;
       // Change the CPI in the instruction operand to refer to the clone.
@@ -1113,7 +1116,7 @@ int MipsConstantIslands::findLongFormInRangeCPEntry
   if (isCPEntryInRange(UserMI, UserOffset, CPEMI,
                        U.getLongFormMaxDisp(), U.NegOk,
                        true)) {
-    DEBUG(dbgs() << "In range\n");
+    LLVM_DEBUG(dbgs() << "In range\n");
     UserMI->setDesc(TII->get(U.getLongFormOpcode()));
     U.setMaxDisp(U.getLongFormMaxDisp());
     return 2;  // instruction is longer length now
@@ -1131,8 +1134,8 @@ int MipsConstantIslands::findLongFormInRangeCPEntry
       continue;
     if (isCPEntryInRange(UserMI, UserOffset, CPEs[i].CPEMI,
                          U.getLongFormMaxDisp(), U.NegOk)) {
-      DEBUG(dbgs() << "Replacing CPE#" << CPI << " with CPE#"
-                   << CPEs[i].CPI << "\n");
+      LLVM_DEBUG(dbgs() << "Replacing CPE#" << CPI << " with CPE#"
+                        << CPEs[i].CPI << "\n");
       // Point the CPUser node to the replacement
       U.CPEMI = CPEs[i].CPEMI;
       // Change the CPI in the instruction operand to refer to the clone.
@@ -1197,8 +1200,8 @@ bool MipsConstantIslands::findAvailableWater(CPUser &U, unsigned UserOffset,
       // This is the least amount of required padding seen so far.
       BestGrowth = Growth;
       WaterIter = IP;
-      DEBUG(dbgs() << "Found water after " << printMBBReference(*WaterBB)
-                   << " Growth=" << Growth << '\n');
+      LLVM_DEBUG(dbgs() << "Found water after " << printMBBReference(*WaterBB)
+                        << " Growth=" << Growth << '\n');
 
       // Keep looking unless it is perfect.
       if (BestGrowth == 0)
@@ -1236,8 +1239,8 @@ void MipsConstantIslands::createNewWater(unsigned CPUserIndex,
     unsigned CPEOffset = UserBBI.postOffset(CPELogAlign) + Delta;
 
     if (isOffsetInRange(UserOffset, CPEOffset, U)) {
-      DEBUG(dbgs() << "Split at end of " << printMBBReference(*UserMBB)
-                   << format(", expected CPE offset %#x\n", CPEOffset));
+      LLVM_DEBUG(dbgs() << "Split at end of " << printMBBReference(*UserMBB)
+                        << format(", expected CPE offset %#x\n", CPEOffset));
       NewMBB = &*++UserMBB->getIterator();
       // Add an unconditional branch from UserMBB to fallthrough block.  Record
       // it for branch lengthening; this new branch will not get out of range,
@@ -1263,16 +1266,16 @@ void MipsConstantIslands::createNewWater(unsigned CPUserIndex,
   unsigned LogAlign = MF->getAlignment();
   assert(LogAlign >= CPELogAlign && "Over-aligned constant pool entry");
   unsigned BaseInsertOffset = UserOffset + U.getMaxDisp();
-  DEBUG(dbgs() << format("Split in middle of big block before %#x",
-                         BaseInsertOffset));
+  LLVM_DEBUG(dbgs() << format("Split in middle of big block before %#x",
+                              BaseInsertOffset));
 
   // The 4 in the following is for the unconditional branch we'll be inserting
   // Alignment of the island is handled
   // inside isOffsetInRange.
   BaseInsertOffset -= 4;
 
-  DEBUG(dbgs() << format(", adjusted to %#x", BaseInsertOffset)
-               << " la=" << LogAlign << '\n');
+  LLVM_DEBUG(dbgs() << format(", adjusted to %#x", BaseInsertOffset)
+                    << " la=" << LogAlign << '\n');
 
   // This could point off the end of the block if we've already got constant
   // pool entries following this block; only the last one is in the water list.
@@ -1280,7 +1283,7 @@ void MipsConstantIslands::createNewWater(unsigned CPUserIndex,
   // long unconditional).
   if (BaseInsertOffset + 8 >= UserBBI.postOffset()) {
     BaseInsertOffset = UserBBI.postOffset() - 8;
-    DEBUG(dbgs() << format("Move inside block: %#x\n", BaseInsertOffset));
+    LLVM_DEBUG(dbgs() << format("Move inside block: %#x\n", BaseInsertOffset));
   }
   unsigned EndInsertOffset = BaseInsertOffset + 4 +
     CPEMI->getOperand(2).getImm();
@@ -1336,7 +1339,7 @@ bool MipsConstantIslands::handleConstantPoolUser(unsigned CPUserIndex) {
   MachineBasicBlock *NewMBB;
   water_iterator IP;
   if (findAvailableWater(U, UserOffset, IP)) {
-    DEBUG(dbgs() << "Found water in range\n");
+    LLVM_DEBUG(dbgs() << "Found water in range\n");
     MachineBasicBlock *WaterBB = *IP;
 
     // If the original WaterList entry was "new water" on this iteration,
@@ -1355,7 +1358,7 @@ bool MipsConstantIslands::handleConstantPoolUser(unsigned CPUserIndex) {
       result = findLongFormInRangeCPEntry(U, UserOffset);
       if (result != 0) return true;
     }
-    DEBUG(dbgs() << "No water found\n");
+    LLVM_DEBUG(dbgs() << "No water found\n");
     createNewWater(CPUserIndex, UserOffset, NewMBB);
 
     // splitBlockBeforeInstr adds to WaterList, which is important when it is
@@ -1414,8 +1417,9 @@ bool MipsConstantIslands::handleConstantPoolUser(unsigned CPUserIndex) {
       break;
     }
 
-  DEBUG(dbgs() << "  Moved CPE to #" << ID << " CPI=" << CPI
-        << format(" offset=%#x\n", BBInfo[NewIsland->getNumber()].Offset));
+  LLVM_DEBUG(
+      dbgs() << "  Moved CPE to #" << ID << " CPI=" << CPI
+             << format(" offset=%#x\n", BBInfo[NewIsland->getNumber()].Offset));
 
   return true;
 }
@@ -1470,11 +1474,11 @@ bool MipsConstantIslands::isBBInRange
   unsigned BrOffset   = getOffsetOf(MI) + PCAdj;
   unsigned DestOffset = BBInfo[DestBB->getNumber()].Offset;
 
-  DEBUG(dbgs() << "Branch of destination " << printMBBReference(*DestBB)
-               << " from " << printMBBReference(*MI->getParent())
-               << " max delta=" << MaxDisp << " from " << getOffsetOf(MI)
-               << " to " << DestOffset << " offset "
-               << int(DestOffset - BrOffset) << "\t" << *MI);
+  LLVM_DEBUG(dbgs() << "Branch of destination " << printMBBReference(*DestBB)
+                    << " from " << printMBBReference(*MI->getParent())
+                    << " max delta=" << MaxDisp << " from " << getOffsetOf(MI)
+                    << " to " << DestOffset << " offset "
+                    << int(DestOffset - BrOffset) << "\t" << *MI);
 
   if (BrOffset <= DestOffset) {
     // Branch before the Dest.
@@ -1539,7 +1543,7 @@ MipsConstantIslands::fixupUnconditionalBr(ImmBranch &Br) {
   HasFarJump = true;
   ++NumUBrFixed;
 
-  DEBUG(dbgs() << "  Changed B to long jump " << *MI);
+  LLVM_DEBUG(dbgs() << "  Changed B to long jump " << *MI);
 
   return true;
 }
@@ -1594,8 +1598,9 @@ MipsConstantIslands::fixupConditionalBr(ImmBranch &Br) {
       MachineBasicBlock *NewDest = 
         BMI->getOperand(BMITargetOperand).getMBB();
       if (isBBInRange(MI, NewDest, Br.MaxDisp)) {
-        DEBUG(dbgs() << "  Invert Bcc condition and swap its destination with "
-                     << *BMI);
+        LLVM_DEBUG(
+            dbgs() << "  Invert Bcc condition and swap its destination with "
+                   << *BMI);
         MI->setDesc(TII->get(OppositeBranchOpcode));
         BMI->getOperand(BMITargetOperand).setMBB(DestBB);
         MI->getOperand(TargetOperand).setMBB(NewDest);
@@ -1615,9 +1620,9 @@ MipsConstantIslands::fixupConditionalBr(ImmBranch &Br) {
   }
   MachineBasicBlock *NextBB = &*++MBB->getIterator();
 
-  DEBUG(dbgs() << "  Insert B to " << printMBBReference(*DestBB)
-               << " also invert condition and change dest. to "
-               << printMBBReference(*NextBB) << "\n");
+  LLVM_DEBUG(dbgs() << "  Insert B to " << printMBBReference(*DestBB)
+                    << " also invert condition and change dest. to "
+                    << printMBBReference(*NextBB) << "\n");
 
   // Insert a new conditional branch and a new unconditional branch.
   // Also update the ImmBranch as well as adding a new entry for the new branch.
@@ -1653,19 +1658,19 @@ void MipsConstantIslands::prescanForConstants() {
       switch(I->getDesc().getOpcode()) {
         case Mips::LwConstant32: {
           PrescannedForConstants = true;
-          DEBUG(dbgs() << "constant island constant " << *I << "\n");
+          LLVM_DEBUG(dbgs() << "constant island constant " << *I << "\n");
           J = I->getNumOperands();
-          DEBUG(dbgs() << "num operands " << J << "\n");
+          LLVM_DEBUG(dbgs() << "num operands " << J << "\n");
           MachineOperand& Literal = I->getOperand(1);
           if (Literal.isImm()) {
             int64_t V = Literal.getImm();
-            DEBUG(dbgs() << "literal " << V << "\n");
+            LLVM_DEBUG(dbgs() << "literal " << V << "\n");
             Type *Int32Ty =
               Type::getInt32Ty(MF->getFunction().getContext());
             const Constant *C = ConstantInt::get(Int32Ty, V);
             unsigned index = MCP->getConstantPoolIndex(C, 4);
             I->getOperand(2).ChangeToImmediate(index);
-            DEBUG(dbgs() << "constant island constant " << *I << "\n");
+            LLVM_DEBUG(dbgs() << "constant island constant " << *I << "\n");
             I->setDesc(TII->get(Mips::LwRxPcTcp16));
             I->RemoveOperand(1);
             I->RemoveOperand(1);

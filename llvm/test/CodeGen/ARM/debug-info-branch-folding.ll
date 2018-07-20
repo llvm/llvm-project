@@ -2,11 +2,11 @@
 target datalayout = "e-p:32:32:32-i1:8:32-i8:8:32-i16:16:32-i32:32:32-i64:32:32-f32:32:32-f64:32:32-v64:32:64-v128:32:128-a0:0:32-n32"
 target triple = "thumbv7-apple-macosx10.6.7"
 
-;CHECK: 	vadd.f32	q4, q8, q8
+;CHECK: 	vadd.f32	q4, q8, q9
 ;CHECK-NEXT: LBB0_1
 
-;CHECK:         @DEBUG_VALUE: x <- %q4{{$}}
-;CHECK-NEXT:    @DEBUG_VALUE: y <- %q4{{$}}
+;CHECK:         @DEBUG_VALUE: x <- $q4{{$}}
+;CHECK-NEXT:    @DEBUG_VALUE: y <- $q4{{$}}
 ;CHECK:         beq LBB0_1
 
 
@@ -14,14 +14,14 @@ target triple = "thumbv7-apple-macosx10.6.7"
 
 declare <4 x float> @test0001(float) nounwind readnone ssp
 
-define i32 @main(i32 %argc, i8** nocapture %argv, i1 %cond) nounwind ssp !dbg !10 {
+define i32 @main(i32 %argc, i8** nocapture %argv, i1 %cond, <4 x float> %x) nounwind ssp !dbg !10 {
 entry:
   br label %for.body9
 
 for.body9:                                        ; preds = %for.body9, %entry
-  %add19 = fadd <4 x float> undef, <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 1.000000e+00>, !dbg !39
+  %add19 = fadd <4 x float> %x, <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 1.000000e+00>, !dbg !39
   tail call void @llvm.dbg.value(metadata <4 x float> %add19, metadata !27, metadata !DIExpression()), !dbg !39
-  %add20 = fadd <4 x float> undef, <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 1.000000e+00>, !dbg !39
+  %add20 = fadd <4 x float> %x, <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 1.000000e+00>, !dbg !39
   tail call void @llvm.dbg.value(metadata <4 x float> %add20, metadata !28, metadata !DIExpression()), !dbg !39
   br i1 %cond, label %for.end54, label %for.body9, !dbg !44
 
@@ -42,7 +42,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone
 !llvm.module.flags = !{!56}
 !llvm.dbg.cu = !{!2}
 
-!0 = distinct !DISubprogram(name: "test0001", line: 3, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !2, file: !54, scope: null, type: !3, variables: !51)
+!0 = distinct !DISubprogram(name: "test0001", line: 3, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !2, file: !54, scope: null, type: !3, retainedNodes: !51)
 !1 = !DIFile(filename: "build2.c", directory: "/private/tmp")
 !2 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.0 (trunk 129915)", isOptimized: true, emissionKind: FullDebug, file: !54, enums: !{}, retainedTypes: !{}, imports:  null)
 !3 = !DISubroutineType(types: !4)
@@ -52,11 +52,11 @@ declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone
 !7 = !DIBasicType(tag: DW_TAG_base_type, name: "float", size: 32, align: 32, encoding: DW_ATE_float)
 !8 = !{!9}
 !9 = !DISubrange(count: 4)
-!10 = distinct !DISubprogram(name: "main", line: 59, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !2, file: !54, scope: null, type: !11, variables: !52)
+!10 = distinct !DISubprogram(name: "main", line: 59, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !2, file: !54, scope: null, type: !11, retainedNodes: !52)
 !11 = !DISubroutineType(types: !12)
 !12 = !{!13}
 !13 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
-!14 = distinct !DISubprogram(name: "printFV", line: 41, isLocal: true, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !2, file: !55, scope: null, type: !16, variables: !53)
+!14 = distinct !DISubprogram(name: "printFV", line: 41, isLocal: true, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !2, file: !55, scope: null, type: !16, retainedNodes: !53)
 !15 = !DIFile(filename: "/Volumes/Lalgate/work/llvm/projects/llvm-test/SingleSource/UnitTests/Vector/helpers.h", directory: "/private/tmp")
 !16 = !DISubroutineType(types: !17)
 !17 = !{null}

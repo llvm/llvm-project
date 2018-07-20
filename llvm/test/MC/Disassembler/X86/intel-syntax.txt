@@ -114,13 +114,13 @@
 # CHECK: vpgatherdd xmm10, xmmword ptr [r15 + 2*xmm9], xmm8
 0xc4 0x02 0x39 0x90 0x14 0x4f
 
-# CHECK: xsave64 opaque ptr [rax]
+# CHECK: xsave64 [rax]
 0x48 0x0f 0xae 0x20
 
-# CHECK: xrstor64 opaque ptr [rax]
+# CHECK: xrstor64 [rax]
 0x48 0x0f 0xae 0x28
 
-# CHECK: xsaveopt64 opaque ptr [rax]
+# CHECK: xsaveopt64 [rax]
 0x48 0x0f 0xae 0x30
 
 # CHECK: movabs al, byte ptr [-6066930261531658096]

@@ -1,15 +1,15 @@
 REQUIRES: libxml2
-UNSUPPORTED: windows
+UNSUPPORTED: system-windows
 
 RUN: not llvm-mt /manifest %p/Inputs/bad.manifest 2>&1 >/dev/null | FileCheck \
 RUN:   %s
 
-CHECK: llvm-mt error: invalid xml document
+CHECK: llvm-mt: error: invalid xml document
 
 RUN: not llvm-mt /manifest %p/Inputs/empty.manifest 2>&1 >/dev/null | \
 RUN:   FileCheck %s -check-prefix=EMPTY
 
-EMPTY: llvm-mt error: attempted to merge empty manifest
+EMPTY: llvm-mt: error: attempted to merge empty manifest
 
 RUN: llvm-mt /inputresource:foo.res \
 RUN:   /manifest %p/Inputs/test_manifest.manifest \

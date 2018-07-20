@@ -33,50 +33,50 @@ namespace Intrinsic {
 enum ID : unsigned;
 }
 
-/// \brief Identify if the intrinsic is trivially vectorizable.
+/// Identify if the intrinsic is trivially vectorizable.
 /// This method returns true if the intrinsic's argument types are all
 /// scalars for the scalar form of the intrinsic and all vectors for
 /// the vector form of the intrinsic.
 bool isTriviallyVectorizable(Intrinsic::ID ID);
 
-/// \brief Identifies if the intrinsic has a scalar operand. It checks for
+/// Identifies if the intrinsic has a scalar operand. It checks for
 /// ctlz,cttz and powi special intrinsics whose argument is scalar.
 bool hasVectorInstrinsicScalarOpd(Intrinsic::ID ID, unsigned ScalarOpdIdx);
 
-/// \brief Returns intrinsic ID for call.
+/// Returns intrinsic ID for call.
 /// For the input call instruction it finds mapping intrinsic and returns
 /// its intrinsic ID, in case it does not found it return not_intrinsic.
 Intrinsic::ID getVectorIntrinsicIDForCall(const CallInst *CI,
                                           const TargetLibraryInfo *TLI);
 
-/// \brief Find the operand of the GEP that should be checked for consecutive
+/// Find the operand of the GEP that should be checked for consecutive
 /// stores. This ignores trailing indices that have no effect on the final
 /// pointer.
 unsigned getGEPInductionOperand(const GetElementPtrInst *Gep);
 
-/// \brief If the argument is a GEP, then returns the operand identified by
+/// If the argument is a GEP, then returns the operand identified by
 /// getGEPInductionOperand. However, if there is some other non-loop-invariant
 /// operand, it returns that instead.
 Value *stripGetElementPtr(Value *Ptr, ScalarEvolution *SE, Loop *Lp);
 
-/// \brief If a value has only one user that is a CastInst, return it.
+/// If a value has only one user that is a CastInst, return it.
 Value *getUniqueCastUse(Value *Ptr, Loop *Lp, Type *Ty);
 
-/// \brief Get the stride of a pointer access in a loop. Looks for symbolic
+/// Get the stride of a pointer access in a loop. Looks for symbolic
 /// strides "a[i*stride]". Returns the symbolic stride, or null otherwise.
 Value *getStrideFromPointer(Value *Ptr, ScalarEvolution *SE, Loop *Lp);
 
-/// \brief Given a vector and an element number, see if the scalar value is
+/// Given a vector and an element number, see if the scalar value is
 /// already around as a register, for example if it were inserted then extracted
 /// from the vector.
 Value *findScalarElement(Value *V, unsigned EltNo);
 
-/// \brief Get splat value if the input is a splat vector or return nullptr.
+/// Get splat value if the input is a splat vector or return nullptr.
 /// The value may be extracted from a splat constants vector or from
 /// a sequence of instructions that broadcast a single value into a vector.
 const Value *getSplatValue(const Value *V);
 
-/// \brief Compute a map of integer instructions to their minimum legal type
+/// Compute a map of integer instructions to their minimum legal type
 /// size.
 ///
 /// C semantics force sub-int-sized values (e.g. i8, i16) to be promoted to int
@@ -124,7 +124,7 @@ computeMinimumValueSizes(ArrayRef<BasicBlock*> Blocks,
 /// This function always sets a (possibly null) value for each K in Kinds.
 Instruction *propagateMetadata(Instruction *I, ArrayRef<Value *> VL);
 
-/// \brief Create an interleave shuffle mask.
+/// Create an interleave shuffle mask.
 ///
 /// This function creates a shuffle mask for interleaving \p NumVecs vectors of
 /// vectorization factor \p VF into a single wide vector. The mask is of the
@@ -138,7 +138,7 @@ Instruction *propagateMetadata(Instruction *I, ArrayRef<Value *> VL);
 Constant *createInterleaveMask(IRBuilder<> &Builder, unsigned VF,
                                unsigned NumVecs);
 
-/// \brief Create a stride shuffle mask.
+/// Create a stride shuffle mask.
 ///
 /// This function creates a shuffle mask whose elements begin at \p Start and
 /// are incremented by \p Stride. The mask can be used to deinterleave an
@@ -153,7 +153,7 @@ Constant *createInterleaveMask(IRBuilder<> &Builder, unsigned VF,
 Constant *createStrideMask(IRBuilder<> &Builder, unsigned Start,
                            unsigned Stride, unsigned VF);
 
-/// \brief Create a sequential shuffle mask.
+/// Create a sequential shuffle mask.
 ///
 /// This function creates shuffle mask whose elements are sequential and begin
 /// at \p Start.  The mask contains \p NumInts integers and is padded with \p
@@ -167,7 +167,7 @@ Constant *createStrideMask(IRBuilder<> &Builder, unsigned Start,
 Constant *createSequentialMask(IRBuilder<> &Builder, unsigned Start,
                                unsigned NumInts, unsigned NumUndefs);
 
-/// \brief Concatenate a list of vectors.
+/// Concatenate a list of vectors.
 ///
 /// This function generates code that concatenate the vectors in \p Vecs into a
 /// single large vector. The number of vectors should be greater than one, and

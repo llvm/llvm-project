@@ -21,6 +21,8 @@ CHECK:         Groups {
 CHECK-NEXT:      Group {
 CHECK-NEXT:        Name: .group (92)
 CHECK-NEXT:        Index: 1
+CHECK-NEXT:        Link: 23
+CHECK-NEXT:        Info: 17
 CHECK-NEXT:        Type: COMDAT (0x1)
 CHECK-NEXT:        Signature: _Z3fooIcEvT_
 CHECK-NEXT:        Section(s) in group [
@@ -31,6 +33,8 @@ CHECK-NEXT:      }
 CHECK-NEXT:      Group {
 CHECK-NEXT:        Name: .group (92)
 CHECK-NEXT:        Index: 2
+CHECK-NEXT:        Link: 23
+CHECK-NEXT:        Info: 18
 CHECK-NEXT:        Type: COMDAT (0x1)
 CHECK-NEXT:        Signature: _Z3fooIiEvT_
 CHECK-NEXT:        Section(s) in group [

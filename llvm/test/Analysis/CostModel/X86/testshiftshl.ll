@@ -31,7 +31,7 @@ entry:
   ; SSE2: shift8i16
   ; SSE2: cost of 32 {{.*}} shl
   ; SSE2-CODEGEN: shift8i16
-  ; SSE2-CODEGEN: psllw
+  ; SSE2-CODEGEN: pmullw
 
   %0 = shl %shifttype8i16 %a , %b
   ret %shifttype8i16 %0
@@ -43,7 +43,7 @@ entry:
   ; SSE2: shift16i16
   ; SSE2: cost of 64 {{.*}} shl
   ; SSE2-CODEGEN: shift16i16
-  ; SSE2-CODEGEN: psllw
+  ; SSE2-CODEGEN: pmullw
 
   %0 = shl %shifttype16i16 %a , %b
   ret %shifttype16i16 %0
@@ -55,7 +55,7 @@ entry:
   ; SSE2: shift32i16
   ; SSE2: cost of 128 {{.*}} shl
   ; SSE2-CODEGEN: shift32i16
-  ; SSE2-CODEGEN: psllw
+  ; SSE2-CODEGEN: pmullw
 
   %0 = shl %shifttype32i16 %a , %b
   ret %shifttype32i16 %0
@@ -211,7 +211,7 @@ entry:
   ; SSE2: shift8i8
   ; SSE2: cost of 32 {{.*}} shl
   ; SSE2-CODEGEN: shift8i8
-  ; SSE2-CODEGEN: psllw
+  ; SSE2-CODEGEN: pmullw
 
   %0 = shl %shifttype8i8 %a , %b
   ret %shifttype8i8 %0

@@ -218,7 +218,7 @@ static std::error_code GetFileNameFromHandle(HANDLE FileHandle,
   }
 }
 
-/// @brief Find program using shell lookup rules.
+/// Find program using shell lookup rules.
 /// @param Program This is either an absolute path, relative path, or simple a
 ///        program name. Look in PATH for any programs that match. If no
 ///        extension is present, try all extensions in PATHEXT.

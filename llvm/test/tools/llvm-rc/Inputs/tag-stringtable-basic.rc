@@ -4,9 +4,10 @@ CHARACTERISTICS 0x32 {
   0 "a"
 }
 
+// Commas are optional, so we make sure to test both cases.
 STRINGTABLE {
-  1 "b"
-  16 "bb"
+  1, "b"
+  16, "bb"
 }
 
 STRINGTABLE

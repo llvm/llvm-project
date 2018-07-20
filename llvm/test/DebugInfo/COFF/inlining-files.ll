@@ -89,7 +89,7 @@ attributes #0 = { norecurse nounwind uwtable "disable-tail-calls"="false" "less-
 !9 = !{i32 2, !"Debug Info Version", i32 3}
 !10 = !{i32 1, !"PIC Level", i32 2}
 !11 = !{!"clang version 3.9.0 "}
-!12 = distinct !DISubprogram(name: "f", scope: !3, file: !3, line: 7, type: !13, isLocal: false, isDefinition: true, scopeLine: 7, flags: DIFlagPrototyped, isOptimized: true, unit: !2, variables: !4)
+!12 = distinct !DISubprogram(name: "f", scope: !3, file: !3, line: 7, type: !13, isLocal: false, isDefinition: true, scopeLine: 7, flags: DIFlagPrototyped, isOptimized: true, unit: !2, retainedNodes: !4)
 !13 = !DISubroutineType(types: !14)
 !14 = !{null}
 !15 = !DILocation(line: 8, column: 3, scope: !12)
@@ -98,7 +98,7 @@ attributes #0 = { norecurse nounwind uwtable "disable-tail-calls"="false" "less-
 !18 = !{!"omnipotent char", !19, i64 0}
 !19 = !{!"Simple C/C++ TBAA"}
 !20 = !DILocation(line: 3, column: 4, scope: !21, inlinedAt: !22)
-!21 = distinct !DISubprogram(name: "file_change", scope: !3, file: !3, line: 2, type: !13, isLocal: true, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: true, unit: !2, variables: !4)
+!21 = distinct !DISubprogram(name: "file_change", scope: !3, file: !3, line: 2, type: !13, isLocal: true, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: true, unit: !2, retainedNodes: !4)
 !22 = distinct !DILocation(line: 9, column: 3, scope: !12)
 !23 = !DILocation(line: 1, column: 1, scope: !24, inlinedAt: !22)
 !24 = !DILexicalBlockFile(scope: !21, file: !25, discriminator: 0)

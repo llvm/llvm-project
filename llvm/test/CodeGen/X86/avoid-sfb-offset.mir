@@ -1,0 +1,107 @@
+# RUN: llc -o - %s -mtriple=x86_64-- -run-pass=x86-avoid-SFB | FileCheck %s
+--- |
+  ; ModuleID = '../test50419-2.ll'
+  source_filename = "nice.c"
+  target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+  target triple = "x86_64-unknown-linux-gnu"
+  
+  @.str = private unnamed_addr constant [3 x i8] c"%u\00", align 1
+  
+  define i32 @test_offset() #0 {
+  entry:
+    %a = alloca [36 x i32], align 16
+    %z = alloca [36 x i32], align 16
+    %0 = bitcast [36 x i32]* %z to i8*
+    %scevgep = getelementptr inbounds [36 x i32], [36 x i32]* %a, i64 0, i64 1
+    %scevgep40 = bitcast i32* %scevgep to i8*
+    %arrayidx.9 = getelementptr inbounds [36 x i32], [36 x i32]* %a, i64 0, i64 9
+    %1 = load i32, i32* %arrayidx.9, align 4
+    %add.9 = add i32 %1, 9
+    store i32 %add.9, i32* %arrayidx.9, align 4
+    call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 16 %0, i8* nonnull align 4 %scevgep40, i64 136, i1 false)
+    ret i32 %1
+  }
+  
+  ; Function Attrs: argmemonly nounwind
+  declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1) #1
+  
+  ; Function Attrs: nounwind
+  declare void @llvm.stackprotector(i8*, i8**) #2
+  
+  attributes #0 = { "target-cpu"="core-avx2" }
+  attributes #1 = { argmemonly nounwind "target-cpu"="core-avx2" }
+  attributes #2 = { nounwind }
+
+...
+---
+name:            test_offset
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+registers:       
+  - { id: 0, class: gr32, preferred-register: '' }
+  - { id: 1, class: gr32, preferred-register: '' }
+  - { id: 2, class: vr256, preferred-register: '' }
+  - { id: 3, class: vr256, preferred-register: '' }
+  - { id: 4, class: vr256, preferred-register: '' }
+  - { id: 5, class: gr64, preferred-register: '' }
+  - { id: 6, class: vr256, preferred-register: '' }
+liveins:         
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    16
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      
+stack:           
+  - { id: 0, name: a, type: default, offset: 0, size: 144, alignment: 16, 
+      stack-id: 0, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, name: z, type: default, offset: 0, size: 144, alignment: 16, 
+      stack-id: 0, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+constants:       
+body:             |
+  bb.0.entry:
+    %0:gr32 = MOV32rm %stack.0.a, 1, $noreg, 36, $noreg :: (dereferenceable load 4 from %ir.arrayidx.9)
+    %1:gr32 = ADD32ri8 %0, 9, implicit-def dead $eflags
+    MOV32mr %stack.0.a, 1, $noreg, 36, $noreg, killed %1 :: (store 4 into %ir.arrayidx.9)
+    %2:vr256 = VMOVUPSYrm %stack.0.a, 1, $noreg, 4, $noreg :: (dereferenceable load 32 from %ir.scevgep40, align 4)
+    VMOVUPSYmr %stack.1.z, 1, $noreg, 0, $noreg, killed %2 :: (store 32 into %ir.0, align 16)
+    %3:vr256 = VMOVUPSYrm %stack.0.a, 1, $noreg, 68, $noreg :: (dereferenceable load 32 from %ir.scevgep40 + 64, align 4)
+    VMOVUPSYmr %stack.1.z, 1, $noreg, 64, $noreg, killed %3 :: (store 32 into %ir.0 + 64, align 16)
+    %4:vr256 = VMOVUPSYrm %stack.0.a, 1, $noreg, 100, $noreg :: (dereferenceable load 32 from %ir.scevgep40 + 96, align 4)
+    VMOVUPSYmr %stack.1.z, 1, $noreg, 96, $noreg, killed %4 :: (store 32 into %ir.0 + 96, align 16)
+    %5:gr64 = MOV64rm %stack.0.a, 1, $noreg, 132, $noreg :: (dereferenceable load 8 from %ir.scevgep40 + 128, align 4)
+    MOV64mr %stack.1.z, 1, $noreg, 128, $noreg, killed %5 :: (store 8 into %ir.0 + 128, align 16)
+    ; CHECK: gr32 = MOV32rm %stack.0.a, 1, $noreg, 36, $noreg :: (dereferenceable load 4 from %ir.scevgep40 + 32)
+    ; CHECK-NEXT: MOV32mr %stack.1.z, 1, $noreg, 32, $noreg, killed %7 :: (store 4 into %ir.0 + 32, align 16)
+    ; CHECK-NEXT: %8:vr128 = VMOVUPSrm %stack.0.a, 1, $noreg, 40, $noreg :: (dereferenceable load 16 from %ir.scevgep40 + 36, align 4)
+    ; CHECK-NEXT: VMOVUPSmr %stack.1.z, 1, $noreg, 36, $noreg, killed %8 :: (store 16 into %ir.0 + 36)
+    ; CHECK-NEXT: %9:gr64 = MOV64rm %stack.0.a, 1, $noreg, 56, $noreg :: (dereferenceable load 8 from %ir.scevgep40 + 52, align 4)
+    ; CHECK-NEXT: MOV64mr %stack.1.z, 1, $noreg, 52, $noreg, killed %9 :: (store 8 into %ir.0 + 52, align 16)
+    ; CHECK-NEXT: %10:gr32 = MOV32rm %stack.0.a, 1, $noreg, 64, $noreg :: (dereferenceable load 4 from %ir.scevgep40 + 60)
+    ; CHECK-NEXT: MOV32mr %stack.1.z, 1, $noreg, 60, $noreg, killed %10 :: (store 4 into %ir.0 + 60, align 16)
+    %6:vr256 = VMOVUPSYrm %stack.0.a, 1, $noreg, 36, $noreg :: (dereferenceable load 32 from %ir.scevgep40 + 32, align 4)
+    VMOVUPSYmr %stack.1.z, 1, $noreg, 32, $noreg, killed %6 :: (store 32 into %ir.0 + 32, align 16)
+    $eax = COPY %0
+    RET 0, $eax
+
+...

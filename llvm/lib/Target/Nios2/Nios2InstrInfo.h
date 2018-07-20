@@ -39,6 +39,10 @@ public:
   const Nios2RegisterInfo &getRegisterInfo() const { return RI; };
 
   bool expandPostRAPseudo(MachineInstr &MI) const override;
+
+  void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
+                   const DebugLoc &DL, unsigned DestReg, unsigned SrcReg,
+                   bool KillSrc) const override;
 };
 } // namespace llvm
 

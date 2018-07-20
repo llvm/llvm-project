@@ -59,11 +59,11 @@ b0:
   store i32 875770417, i32* %v4, align 4
   %v11 = getelementptr inbounds [100 x i8], [100 x i8]* %v5, i32 0, i32 0
   call void @llvm.lifetime.start(i64 100, i8* %v11)
-  call void @llvm.memset.p0i8.i32(i8* %v11, i8 0, i32 100, i32 8, i1 false)
+  call void @llvm.memset.p0i8.i32(i8* align 8 %v11, i8 0, i32 100, i1 false)
   store i8 50, i8* %v11, align 8
   %v12 = getelementptr inbounds [101 x i8], [101 x i8]* %v6, i32 0, i32 0
   call void @llvm.lifetime.start(i64 101, i8* %v12)
-  call void @llvm.memset.p0i8.i32(i8* %v12, i8 0, i32 101, i32 8, i1 false)
+  call void @llvm.memset.p0i8.i32(i8* align 8 %v12, i8 0, i32 101, i1 false)
   store i8 49, i8* %v12, align 8
   call void @test3(i8* %v7, i8* %v8, i8* %v9, i8* %v10, i8* %v11, i8* %v12)
   call void @llvm.lifetime.end(i64 101, i8* %v12)
@@ -77,7 +77,7 @@ b0:
 
 declare void @llvm.lifetime.start(i64, i8* nocapture) #0
 declare void @llvm.lifetime.end(i64, i8* nocapture) #0
-declare void @llvm.memset.p0i8.i32(i8* nocapture writeonly, i8, i32, i32, i1) #0
+declare void @llvm.memset.p0i8.i32(i8* nocapture writeonly, i8, i32, i1) #0
 
 declare void @test3(i8*, i8*, i8*, i8*, i8*, i8*)
 declare void @test4(i8*, i8*, i8*, i8*)

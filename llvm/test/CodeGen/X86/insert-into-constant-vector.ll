@@ -440,9 +440,9 @@ define <8 x double> @elt1_v8f64(double %x) {
 ;
 ; X64AVX2-LABEL: elt1_v8f64:
 ; X64AVX2:       # %bb.0:
-; X64AVX2-NEXT:    vmovapd {{.*#+}} ymm1 = <42,u,2,3>
-; X64AVX2-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; X64AVX2-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3]
+; X64AVX2-NEXT:    vmovaps {{.*#+}} ymm1 = <42,u,2,3>
+; X64AVX2-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; X64AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
 ; X64AVX2-NEXT:    vmovaps {{.*#+}} ymm1 = [4.000000e+00,5.000000e+00,6.000000e+00,7.000000e+00]
 ; X64AVX2-NEXT:    retq
 ;

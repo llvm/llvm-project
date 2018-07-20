@@ -75,4 +75,5 @@ def SystemZAsmParser : AsmParser {
 def SystemZ : Target {
   let InstructionSet = SystemZInstrInfo;
   let AssemblyParsers = [SystemZAsmParser];
+  let AllowRegisterRenaming = 1;
 }

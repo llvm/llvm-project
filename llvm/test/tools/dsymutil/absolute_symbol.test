@@ -1,4 +1,4 @@
-RUN: llvm-dsymutil -dump-debug-map -oso-prepend-path %p %p/Inputs/absolute_sym.macho.i386 | FileCheck %s
+RUN: dsymutil -dump-debug-map -oso-prepend-path %p %p/Inputs/absolute_sym.macho.i386 | FileCheck %s
 
 The tested object file has been created by the dummy Objective-C code:
 @interface Foo

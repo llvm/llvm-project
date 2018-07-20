@@ -137,9 +137,9 @@ entry:
 ; Load the address of the result and put it onto stack
 ; The this pointer goes to ECX.
 ; (through %ecx in the -O0 build).
-; WIN32:      leal {{[0-9]*}}(%esp), %e{{[a-d]}}x
-; WIN32:      {{leal [1-9]+\(%esp\)|movl %esp}}, %ecx
-; WIN32:      {{pushl %e[a-d]x|movl %e[a-d]x, \(%esp\)}}
+; WIN32-DAG:  leal {{[0-9]*}}(%esp), %e{{[a-d]}}x
+; WIN32-DAG:  {{leal [1-9]+\(%esp\)|movl %esp}}, %ecx
+; WIN32-DAG:  {{pushl %e[a-d]x|movl %e[a-d]x, \(%esp\)}}
 ; WIN32-NEXT: calll "?foo@C5@@QAE?AUS5@@XZ"
 ; WIN32:      retl
   ret void
@@ -154,21 +154,21 @@ define void @test6_f(%struct.test6* %x) nounwind {
 ; LINUX-LABEL: test6_f:
 
 ; The %x argument is moved to %ecx. It will be the this pointer.
-; WIN32: movl    {{16|20}}(%esp), %ecx
+; WIN32-DAG: movl    {{16|20}}(%esp), %ecx
 
 
 ; The sret pointer is (%esp)
-; WIN32:      {{leal 4\(%esp\)|movl %esp}}, %eax
-; WIN32-NEXT:     {{pushl   %eax|movl %eax, \(%esp\)}}
+; WIN32-DAG:      {{leal 4\(%esp\)|movl %esp}}, %eax
+; WIN32-DAG:      {{pushl   %eax|movl %eax, \(%esp\)}}
 
 ; The sret pointer is %ecx
 ; The %x argument is moved to (%esp). It will be the this pointer.
-; MINGW_X86:      {{leal 4\(%esp\)|movl %esp}}, %ecx
-; MINGW_X86-NEXT: {{pushl   16\(%esp\)|movl %eax, \(%esp\)}}
+; MINGW_X86-DAG:  {{leal 4\(%esp\)|movl %esp}}, %ecx
+; MINGW_X86-DAG: {{pushl   16\(%esp\)|movl %eax, \(%esp\)}}
 ; MINGW_X86-NEXT: calll   _test6_g
 
-; CYGWIN:      {{leal 4\(%esp\)|movl %esp}}, %ecx
-; CYGWIN-NEXT: {{pushl   16\(%esp\)|movl %eax, \(%esp\)}}
+; CYGWIN-DAG:  {{leal 4\(%esp\)|movl %esp}}, %ecx
+; CYGWIN-DAG:  {{pushl   16\(%esp\)|movl %eax, \(%esp\)}}
 ; CYGWIN-NEXT: calll   _test6_g
 
   %tmp = alloca %struct.test6, align 4

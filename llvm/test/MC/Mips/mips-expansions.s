@@ -13,6 +13,42 @@
 # CHECK-LE: addiu   $8, $8, %lo($tmp0)    # encoding: [A,A,0x08,0x25]
 # CHECK-LE:                               #   fixup A - offset: 0, value: %lo($tmp0), kind: fixup_Mips_LO16
 
+  lb $4, 0x8000
+# CHECK-LE: lui     $4, 1                   # encoding: [0x01,0x00,0x04,0x3c]
+# CHECK-LE: lb      $4, -32768($4)          # encoding: [0x00,0x80,0x84,0x80]
+
+  lb  $4, 0x20004($3)
+# CHECK-LE: lui     $4, 2                   # encoding: [0x02,0x00,0x04,0x3c]
+# CHECK-LE: addu    $4, $4, $3              # encoding: [0x21,0x20,0x83,0x00]
+# CHECK-LE: lb      $4, 4($4)               # encoding: [0x04,0x00,0x84,0x80]
+
+  lbu $4, 0x8000
+# CHECK-LE: lui     $4, 1                   # encoding: [0x01,0x00,0x04,0x3c]
+# CHECK-LE: lbu     $4, -32768($4)          # encoding: [0x00,0x80,0x84,0x90]
+
+  lbu  $4, 0x20004($3)
+# CHECK-LE: lui     $4, 2                   # encoding: [0x02,0x00,0x04,0x3c]
+# CHECK-LE: addu    $4, $4, $3              # encoding: [0x21,0x20,0x83,0x00]
+# CHECK-LE: lbu     $4, 4($4)               # encoding: [0x04,0x00,0x84,0x90]
+
+  lh   $4, 0x8000
+# CHECK-LE: lui     $4, 1
+# CHECK-LE: lh      $4, -32768($4)
+
+  lh   $4, 0x20004($3)
+# CHECK-LE: lui     $4, 2
+# CHECK-LE: addu    $4, $4, $3
+# CHECK-LE: lh      $4, 4($4)
+
+  lhu  $4, 0x8000
+# CHECK-LE: lui     $4, 1
+# CHECK-LE: lhu     $4, -32768($4)
+
+  lhu  $4, 0x20004($3)
+# CHECK-LE: lui     $4, 2
+# CHECK-LE: addu    $4, $4, $3
+# CHECK-LE: lhu     $4, 4($4)
+
 # LW/SW and LDC1/SDC1 of symbol address, done by MipsAsmParser::expandMemInst():
   .set noat
   lw $10, symbol($4)

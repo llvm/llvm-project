@@ -40,8 +40,8 @@
 # CHECK-EL: addiusp 1024            # encoding: [0x01,0x4c]
 # CHECK-EL: addiusp 1028            # encoding: [0x03,0x4c]
 # CHECK-EL: addiusp -16             # encoding: [0xf9,0x4f]
-# CHECK-EL: mfhi    $9              # encoding: [0x09,0x46]
-# CHECK-EL: mflo    $9              # encoding: [0x49,0x46]
+# CHECK-EL: mfhi16  $9              # encoding: [0x09,0x46]
+# CHECK-EL: mflo16  $9              # encoding: [0x49,0x46]
 # CHECK-EL: move    $25, $1         # encoding: [0x21,0x0f]
 # CHECK-EL: movep   $5, $6, $2, $3  # encoding: [0x34,0x84]
 # CHECK-EL: jrc     $9              # encoding: [0xa9,0x45]
@@ -95,8 +95,8 @@
 # CHECK-EB: addiusp 1024            # encoding: [0x4c,0x01]
 # CHECK-EB: addiusp 1028            # encoding: [0x4c,0x03]
 # CHECK-EB: addiusp -16             # encoding: [0x4f,0xf9]
-# CHECK-EB: mfhi    $9              # encoding: [0x46,0x09]
-# CHECK-EB: mflo    $9              # encoding: [0x46,0x49]
+# CHECK-EB: mfhi16  $9              # encoding: [0x46,0x09]
+# CHECK-EB: mflo16  $9              # encoding: [0x46,0x49]
 # CHECK-EB: move    $25, $1         # encoding: [0x0f,0x21]
 # CHECK-EB: movep   $5, $6, $2, $3  # encoding: [0x84,0x34]
 # CHECK-EB: jrc     $9              # encoding: [0x45,0xa9]
@@ -148,8 +148,8 @@
     addiusp 1024
     addiusp 1028
     addiusp -16
-    mfhi    $9
-    mflo    $9
+    mfhi16  $9
+    mflo16  $9
     move    $25, $1
     movep   $5, $6, $2, $3
     jrc     $9

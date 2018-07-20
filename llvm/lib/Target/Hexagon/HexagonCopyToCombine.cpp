@@ -300,7 +300,7 @@ bool HexagonCopyToCombine::isSafeToMoveTogether(MachineInstr &I1,
       //   * reads I2's def reg
       //   * or has unmodelled side effects
       // we can't move I2 across it.
-      if (I->isDebugValue())
+      if (I->isDebugInstr())
         continue;
 
       if (isUnsafeToMoveAcross(*I, I2UseReg, I2DestReg, TRI)) {
@@ -358,7 +358,7 @@ bool HexagonCopyToCombine::isSafeToMoveTogether(MachineInstr &I1,
       //      to remove the implicit killed %d4 operand. For now, we are
       //      conservative and disallow the move.
       // we can't move I1 across it.
-      if (MI.isDebugValue()) {
+      if (MI.isDebugInstr()) {
         if (MI.readsRegister(I1DestReg, TRI)) // Move this instruction after I2.
           DbgMItoMove.push_back(&MI);
         continue;
@@ -396,7 +396,7 @@ void
 HexagonCopyToCombine::findPotentialNewifiableTFRs(MachineBasicBlock &BB) {
   DenseMap<unsigned, MachineInstr *> LastDef;
   for (MachineInstr &MI : BB) {
-    if (MI.isDebugValue())
+    if (MI.isDebugInstr())
       continue;
 
     // Mark TFRs that feed a potential new value store as such.
@@ -423,7 +423,7 @@ HexagonCopyToCombine::findPotentialNewifiableTFRs(MachineBasicBlock &BB) {
         MachineBasicBlock::iterator It(DefInst);
         unsigned NumInstsToDef = 0;
         while (&*It != &MI) {
-          if (!It->isDebugValue())
+          if (!It->isDebugInstr())
             ++NumInstsToDef;
           ++It;
         }
@@ -489,7 +489,7 @@ bool HexagonCopyToCombine::runOnMachineFunction(MachineFunction &MF) {
         MI != End;) {
       MachineInstr &I1 = *MI++;
 
-      if (I1.isDebugValue())
+      if (I1.isDebugInstr())
         continue;
 
       // Don't combine a TFR whose user could be newified (instructions that
@@ -526,7 +526,7 @@ MachineInstr *HexagonCopyToCombine::findPairable(MachineInstr &I1,
                                                  bool &DoInsertAtI1,
                                                  bool AllowC64) {
   MachineBasicBlock::iterator I2 = std::next(MachineBasicBlock::iterator(I1));
-  while (I2 != I1.getParent()->end() && I2->isDebugValue())
+  while (I2 != I1.getParent()->end() && I2->isDebugInstr())
     ++I2;
 
   unsigned I1DestReg = I1.getOperand(0).getReg();
@@ -649,7 +649,7 @@ void HexagonCopyToCombine::emitConst64(MachineBasicBlock::iterator &InsertPt,
                                        unsigned DoubleDestReg,
                                        MachineOperand &HiOperand,
                                        MachineOperand &LoOperand) {
-  DEBUG(dbgs() << "Found a CONST64\n");
+  LLVM_DEBUG(dbgs() << "Found a CONST64\n");
 
   DebugLoc DL = InsertPt->getDebugLoc();
   MachineBasicBlock *BB = InsertPt->getParent();

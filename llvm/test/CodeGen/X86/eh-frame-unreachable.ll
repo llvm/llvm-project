@@ -2,6 +2,7 @@
 ; Test that we don't emit a row that extends beyond the FDE's range_size.
 ;
 ; CHECK: movq	%rsp, %rbp
+; CHECK: ud2
 ; CHECK-NEXT:	.cfi_endproc
 ; CHECK-NOT: .cfi
 

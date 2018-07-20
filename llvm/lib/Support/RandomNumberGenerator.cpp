@@ -17,7 +17,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#ifdef LLVM_ON_WIN32
+#ifdef _WIN32
 #include "Windows/WindowsSupport.h"
 #else
 #include "Unix/Unix.h"
@@ -36,10 +36,8 @@ static cl::opt<unsigned long long>
          cl::desc("Seed for the random number generator"), cl::init(0));
 
 RandomNumberGenerator::RandomNumberGenerator(StringRef Salt) {
-  DEBUG(
-    if (Seed == 0)
-      dbgs() << "Warning! Using unseeded random number generator.\n"
-  );
+  LLVM_DEBUG(if (Seed == 0) dbgs()
+             << "Warning! Using unseeded random number generator.\n");
 
   // Combine seed and salts using std::seed_seq.
   // Data: Seed-low, Seed-high, Salt
@@ -63,7 +61,7 @@ RandomNumberGenerator::result_type RandomNumberGenerator::operator()() {
 
 // Get random vector of specified size
 std::error_code llvm::getRandomBytes(void *Buffer, size_t Size) {
-#ifdef LLVM_ON_WIN32
+#ifdef _WIN32
   HCRYPTPROV hProvider;
   if (CryptAcquireContext(&hProvider, 0, 0, PROV_RSA_FULL,
                            CRYPT_VERIFYCONTEXT | CRYPT_SILENT)) {

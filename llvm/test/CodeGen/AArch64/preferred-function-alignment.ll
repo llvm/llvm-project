@@ -14,7 +14,7 @@
 ; RUN: llc -mtriple=aarch64-unknown-linux -mcpu=cortex-a73 < %s | FileCheck --check-prefixes=ALIGN4,CHECK %s
 ; RUN: llc -mtriple=aarch64-unknown-linux -mcpu=exynos-m1 < %s | FileCheck ---check-prefixes=ALIGN4,CHECK %s
 ; RUN: llc -mtriple=aarch64-unknown-linux -mcpu=exynos-m2 < %s | FileCheck ---check-prefixes=ALIGN4,CHECK %s
-; RUN: llc -mtriple=aarch64-unknown-linux -mcpu=exynos-m3 < %s | FileCheck ---check-prefixes=ALIGN4,CHECK %s
+; RUN: llc -mtriple=aarch64-unknown-linux -mcpu=exynos-m3 < %s | FileCheck ---check-prefixes=ALIGN5,CHECK %s
 
 define void @test() {
   ret void
@@ -24,6 +24,7 @@ define void @test() {
 ; ALIGN2: .p2align 2
 ; ALIGN3: .p2align 3
 ; ALIGN4: .p2align 4
+; ALIGN5: .p2align 5
 
 define void @test_optsize() optsize {
   ret void

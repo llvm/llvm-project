@@ -13,7 +13,7 @@
 
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
-#include "llvm/CodeGen/CommandFlags.def"
+#include "llvm/CodeGen/CommandFlags.inc"
 #include "llvm/FuzzMutate/FuzzerCLI.h"
 #include "llvm/FuzzMutate/IRMutator.h"
 #include "llvm/IR/Verifier.h"
@@ -57,23 +57,49 @@ extern "C" LLVM_ATTRIBUTE_USED size_t LLVMFuzzerCustomMutator(
       "IR mutator should have been created during fuzzer initialization");
 
   LLVMContext Context;
-  auto M = parseModule(Data, Size, Context);
-  if (!M || verifyModule(*M, &errs())) {
+  auto M = parseAndVerify(Data, Size, Context);
+  if (!M) {
     errs() << "error: mutator input module is broken!\n";
     return 0;
   }
 
   Mutator->mutateModule(*M, Seed, Size, MaxSize);
 
-#ifndef NDEBUG
   if (verifyModule(*M, &errs())) {
     errs() << "mutation result doesn't pass verification\n";
+#ifndef NDEBUG
     M->dump();
-    abort();
-  }
 #endif
+    // Avoid adding incorrect test cases to the corpus.
+    return 0;
+  }
+  
+  std::string Buf;
+  {
+    raw_string_ostream OS(Buf);
+    WriteBitcodeToFile(*M, OS);
+  }
+  if (Buf.size() > MaxSize)
+    return 0;
+  
+  // There are some invariants which are not checked by the verifier in favor
+  // of having them checked by the parser. They may be considered as bugs in the
+  // verifier and should be fixed there. However until all of those are covered
+  // we want to check for them explicitly. Otherwise we will add incorrect input
+  // to the corpus and this is going to confuse the fuzzer which will start 
+  // exploration of the bitcode reader error handling code.
+  auto NewM = parseAndVerify(
+      reinterpret_cast<const uint8_t*>(Buf.data()), Buf.size(), Context);
+  if (!NewM) {
+    errs() << "mutator failed to re-read the module\n";
+#ifndef NDEBUG
+    M->dump();
+#endif
+    return 0;
+  }
 
-  return writeModule(*M, Data, MaxSize);
+  memcpy(Data, Buf.data(), Buf.size());
+  return Buf.size();
 }
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
@@ -87,8 +113,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   //
 
   LLVMContext Context;
-  auto M = parseModule(Data, Size, Context);
-  if (!M || verifyModule(*M, &errs())) {
+  auto M = parseAndVerify(Data, Size, Context);
+  if (!M) {
     errs() << "error: input module is broken!\n";
     return 0;
   }
@@ -166,6 +192,7 @@ extern "C" LLVM_ATTRIBUTE_USED int LLVMFuzzerInitialize(
   initializeAnalysis(Registry);
   initializeTransformUtils(Registry);
   initializeInstCombine(Registry);
+  initializeAggressiveInstCombine(Registry);
   initializeInstrumentation(Registry);
   initializeTarget(Registry);
 

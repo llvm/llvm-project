@@ -28,11 +28,12 @@
 ; CHECK-NEXT: DW_MACINFO_end_file
 
 ; CHECK-LABEL: .debug_line contents:
-; CHECK: Dir  Mod Time   File Len   File Name
-; CHECK: file_names[  1] {{.*}}debug-macro.cpp
-; CHECK: file_names[  2] {{.*}}debug-macro.h
-; CHECK: Dir  Mod Time   File Len   File Name
-; CHECK: file_names[  1] {{.*}}debug-macro1.cpp
+; CHECK: file_names[  1]:
+; CHECK: name: "debug-macro.cpp"
+; CHECK: file_names[  2]:
+; CHECK: name: "debug-macro.h"
+; CHECK: file_names[  1]:
+; CHECK: name: "debug-macro1.cpp"
 
 !llvm.dbg.cu = !{!0, !16, !20}
 !llvm.module.flags = !{!13, !14}

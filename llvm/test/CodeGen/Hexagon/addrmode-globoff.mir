@@ -13,13 +13,13 @@ tracksRegLiveness: true
 
 body: |
   bb.0:
-    liveins: %r0
+    liveins: $r0
 
     ; Make sure that the offset in @g0 is 8.
-    ; CHECK: S4_storerh_ur killed %r0, 2, @g0 + 8, %r0
+    ; CHECK: S4_storerh_ur killed $r0, 2, @g0 + 8, $r0
 
-    %r1 = A2_tfrsi @g0+4
-    %r2 = S2_addasl_rrri %r1, %r0, 2
-    S2_storerh_io %r2, 4, %r0
+    $r1 = A2_tfrsi @g0+4
+    $r2 = S2_addasl_rrri $r1, $r0, 2
+    S2_storerh_io $r2, 4, $r0
 ...
 

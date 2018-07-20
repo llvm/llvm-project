@@ -55,8 +55,8 @@ default:
 
 define void @bar(i32 %x, i32* %to) {
 ; CHECK-JT-PROB-LABEL: bar:
-; CHECK-JT-PROB: Successors according to CFG: %bb.6({{[0-9a-fx/= ]+}}14.29%) %bb.8({{[0-9a-fx/= ]+}}85.71%)
-; CHECK-JT-PROB: Successors according to CFG: %bb.1({{[0-9a-fx/= ]+}}16.67%) %bb.2({{[0-9a-fx/= ]+}}16.67%) %bb.3({{[0-9a-fx/= ]+}}16.67%) %bb.4({{[0-9a-fx/= ]+}}16.67%) %bb.5({{[0-9a-fx/= ]+}}33.33%)
+; CHECK-JT-PROB: successors: %bb.6(0x12492492), %bb.8(0x6db6db6e)
+; CHECK-JT-PROB: successors: %bb.1(0x15555555), %bb.2(0x15555555), %bb.3(0x15555555), %bb.4(0x15555555), %bb.5(0x2aaaaaab)
 
 entry:
   switch i32 %x, label %default [

@@ -6,6 +6,8 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 ; Perform LFTR using the original pointer-type IV.
 
+declare void @use(double %x)
+
 ;  for(char* p = base; p < base + n; ++p) {
 ;    *p = p-base;
 ;  }
@@ -102,9 +104,11 @@ loop:
   %diagidxw = sext i32 %diagidx to i64
   %matrixp = getelementptr inbounds [0 x double], [0 x double]* %matrix, i32 0, i64 %diagidxw
   %v1 = load double, double* %matrixp
+  call void @use(double %v1)
   %iw = sext i32 %i to i64
   %vectorp = getelementptr inbounds [0 x double], [0 x double]* %vector, i32 0, i64 %iw
   %v2 = load double, double* %vectorp
+  call void @use(double %v2)
   %row.inc = add nsw i32 %rowidx, %ilead
   %i.inc = add nsw i32 %i, 1
   %cmp196 = icmp slt i32 %i.inc, %irow
@@ -124,7 +128,6 @@ entry:
 ; CHECK-NOT: zext
 ; CHECK-NOT: add
 ; CHECK: loop:
-; CHECK: phi i64
 ; CHECK: phi i64
 ; CHECK-NOT: phi
 ; CHECK: icmp slt

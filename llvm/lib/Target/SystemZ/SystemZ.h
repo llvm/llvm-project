@@ -47,6 +47,22 @@ const unsigned CCMASK_CMP_O  = CCMASK_ANY ^ CCMASK_CMP_UO;
 const unsigned CCMASK_ICMP = CCMASK_0 | CCMASK_1 | CCMASK_2;
 const unsigned CCMASK_FCMP = CCMASK_0 | CCMASK_1 | CCMASK_2 | CCMASK_3;
 
+// Condition-code mask assignments for arithmetical operations.
+const unsigned CCMASK_ARITH_EQ       = CCMASK_0;
+const unsigned CCMASK_ARITH_LT       = CCMASK_1;
+const unsigned CCMASK_ARITH_GT       = CCMASK_2;
+const unsigned CCMASK_ARITH_OVERFLOW = CCMASK_3;
+const unsigned CCMASK_ARITH          = CCMASK_ANY;
+
+// Condition-code mask assignments for logical operations.
+const unsigned CCMASK_LOGICAL_ZERO     = CCMASK_0 | CCMASK_2;
+const unsigned CCMASK_LOGICAL_NONZERO  = CCMASK_1 | CCMASK_2;
+const unsigned CCMASK_LOGICAL_CARRY    = CCMASK_2 | CCMASK_3;
+const unsigned CCMASK_LOGICAL_NOCARRY  = CCMASK_0 | CCMASK_1;
+const unsigned CCMASK_LOGICAL_BORROW   = CCMASK_LOGICAL_NOCARRY;
+const unsigned CCMASK_LOGICAL_NOBORROW = CCMASK_LOGICAL_CARRY;
+const unsigned CCMASK_LOGICAL          = CCMASK_ANY;
+
 // Condition-code mask assignments for CS.
 const unsigned CCMASK_CS_EQ = CCMASK_0;
 const unsigned CCMASK_CS_NE = CCMASK_1;

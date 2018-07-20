@@ -1,4 +1,5 @@
 ; RUN: opt < %s -functionattrs -S | FileCheck %s
+; RUN: opt < %s -passes=function-attrs -S | FileCheck %s
 
 ; See PR26774
 

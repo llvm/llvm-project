@@ -74,7 +74,7 @@
 
 using namespace llvm;
 
-/// \brief This processes one or more 64-byte data blocks, but does NOT update
+/// This processes one or more 64-byte data blocks, but does NOT update
 ///the bit counters.  There are no alignment requirements.
 const uint8_t *MD5::body(ArrayRef<uint8_t> Data) {
   const uint8_t *ptr;
@@ -229,7 +229,7 @@ void MD5::update(StringRef Str) {
   update(SVal);
 }
 
-/// \brief Finish the hash and place the resulting hash into \p result.
+/// Finish the hash and place the resulting hash into \p result.
 /// \param Result is assumed to be a minimum of 16-bytes in size.
 void MD5::final(MD5Result &Result) {
   unsigned long used, free;

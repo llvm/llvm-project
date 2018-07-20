@@ -17,8 +17,8 @@ body: |
 
     ; CHECK-LABEL: test_adcwrdrr
 
-    ; CHECK:       %r14 = ADCRdRr %r14, %r20, implicit-def %sreg, implicit %sreg
-    ; CHECK-LABEL: %r15 = ADCRdRr %r15, %r21, implicit-def %sreg, implicit killed %sreg
+    ; CHECK:       $r14 = ADCRdRr $r14, $r20, implicit-def $sreg, implicit $sreg
+    ; CHECK-LABEL: $r15 = ADCRdRr $r15, $r21, implicit-def $sreg, implicit killed $sreg
 
-    %r15r14 = ADCWRdRr %r15r14, %r21r20, implicit-def %sreg, implicit %sreg
+    $r15r14 = ADCWRdRr $r15r14, $r21r20, implicit-def $sreg, implicit $sreg
 ...

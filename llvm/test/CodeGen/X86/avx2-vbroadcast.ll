@@ -189,12 +189,7 @@ define <2 x i64> @Q64(i64* %ptr) nounwind uwtable readnone ssp {
 ; X32-LABEL: Q64:
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl (%eax), %ecx
-; X32-NEXT:    movl 4(%eax), %eax
-; X32-NEXT:    vmovd %ecx, %xmm0
-; X32-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
-; X32-NEXT:    vpinsrd $2, %ecx, %xmm0, %xmm0
-; X32-NEXT:    vpinsrd $3, %eax, %xmm0, %xmm0
+; X32-NEXT:    vpbroadcastq (%eax), %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: Q64:
@@ -212,13 +207,8 @@ define <4 x i64> @QQ64(i64* %ptr) nounwind uwtable readnone ssp {
 ; X32-LABEL: QQ64:
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl (%eax), %ecx
-; X32-NEXT:    movl 4(%eax), %eax
-; X32-NEXT:    vmovd %ecx, %xmm0
-; X32-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
-; X32-NEXT:    vpinsrd $2, %ecx, %xmm0, %xmm0
-; X32-NEXT:    vpinsrd $3, %eax, %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
+; X32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X32-NEXT:    vbroadcastsd %xmm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: QQ64:
@@ -696,7 +686,7 @@ define void @crash() nounwind alwaysinline {
 ; X32-NEXT:  ## %bb.2: ## %ret
 ; X32-NEXT:    retl
 ; X32-NEXT:    .p2align 4, 0x90
-; X32-NEXT:  LBB33_1: ## %footer349VF
+; X32-NEXT:  LBB33_1: ## %footer329VF
 ; X32-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; X32-NEXT:    jmp LBB33_1
 ;
@@ -708,7 +698,7 @@ define void @crash() nounwind alwaysinline {
 ; X64-NEXT:  ## %bb.2: ## %ret
 ; X64-NEXT:    retq
 ; X64-NEXT:    .p2align 4, 0x90
-; X64-NEXT:  LBB33_1: ## %footer349VF
+; X64-NEXT:  LBB33_1: ## %footer329VF
 ; X64-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; X64-NEXT:    jmp LBB33_1
 WGLoopsEntry:
@@ -1075,9 +1065,7 @@ define void @isel_crash_16b(i8* %cV_R.addr) {
 ; X64:       ## %bb.0: ## %eintry
 ; X64-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; X64-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movb (%rdi), %al
-; X64-NEXT:    vmovd %eax, %xmm1
-; X64-NEXT:    vpbroadcastb %xmm1, %xmm1
+; X64-NEXT:    vpbroadcastb (%rdi), %xmm1
 ; X64-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    vmovdqa %xmm1, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    retq
@@ -1128,9 +1116,7 @@ define void @isel_crash_32b(i8* %cV_R.addr) {
 ; X64-NEXT:    subq $128, %rsp
 ; X64-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; X64-NEXT:    vmovaps %ymm0, (%rsp)
-; X64-NEXT:    movb (%rdi), %al
-; X64-NEXT:    vmovd %eax, %xmm1
-; X64-NEXT:    vpbroadcastb %xmm1, %ymm1
+; X64-NEXT:    vpbroadcastb (%rdi), %ymm1
 ; X64-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
 ; X64-NEXT:    vmovdqa %ymm1, {{[0-9]+}}(%rsp)
 ; X64-NEXT:    movq %rbp, %rsp
@@ -1170,9 +1156,7 @@ define void @isel_crash_8w(i16* %cV_R.addr) {
 ; X64:       ## %bb.0: ## %entry
 ; X64-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; X64-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movzwl (%rdi), %eax
-; X64-NEXT:    vmovd %eax, %xmm1
-; X64-NEXT:    vpbroadcastw %xmm1, %xmm1
+; X64-NEXT:    vpbroadcastw (%rdi), %xmm1
 ; X64-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    vmovdqa %xmm1, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    retq
@@ -1223,9 +1207,7 @@ define void @isel_crash_16w(i16* %cV_R.addr) {
 ; X64-NEXT:    subq $128, %rsp
 ; X64-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; X64-NEXT:    vmovaps %ymm0, (%rsp)
-; X64-NEXT:    movzwl (%rdi), %eax
-; X64-NEXT:    vmovd %eax, %xmm1
-; X64-NEXT:    vpbroadcastw %xmm1, %ymm1
+; X64-NEXT:    vpbroadcastw (%rdi), %ymm1
 ; X64-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
 ; X64-NEXT:    vmovdqa %ymm1, {{[0-9]+}}(%rsp)
 ; X64-NEXT:    movq %rbp, %rsp
@@ -1261,26 +1243,14 @@ define void @isel_crash_4d(i32* %cV_R.addr) {
 ; X32-NEXT:    addl $60, %esp
 ; X32-NEXT:    retl
 ;
-; X64-AVX2-LABEL: isel_crash_4d:
-; X64-AVX2:       ## %bb.0: ## %entry
-; X64-AVX2-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; X64-AVX2-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
-; X64-AVX2-NEXT:    movl (%rdi), %eax
-; X64-AVX2-NEXT:    vmovd %eax, %xmm1
-; X64-AVX2-NEXT:    vpbroadcastd %xmm1, %xmm1
-; X64-AVX2-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
-; X64-AVX2-NEXT:    vmovdqa %xmm1, -{{[0-9]+}}(%rsp)
-; X64-AVX2-NEXT:    retq
-;
-; X64-AVX512VL-LABEL: isel_crash_4d:
-; X64-AVX512VL:       ## %bb.0: ## %entry
-; X64-AVX512VL-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; X64-AVX512VL-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
-; X64-AVX512VL-NEXT:    movl (%rdi), %eax
-; X64-AVX512VL-NEXT:    vpbroadcastd %eax, %xmm1
-; X64-AVX512VL-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
-; X64-AVX512VL-NEXT:    vmovdqa %xmm1, -{{[0-9]+}}(%rsp)
-; X64-AVX512VL-NEXT:    retq
+; X64-LABEL: isel_crash_4d:
+; X64:       ## %bb.0: ## %entry
+; X64-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; X64-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    vbroadcastss (%rdi), %xmm1
+; X64-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    vmovaps %xmm1, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    retq
 entry:
   %__a.addr.i = alloca <2 x i64>, align 16
   %__b.addr.i = alloca <2 x i64>, align 16
@@ -1317,46 +1287,24 @@ define void @isel_crash_8d(i32* %cV_R.addr) {
 ; X32-NEXT:    vzeroupper
 ; X32-NEXT:    retl
 ;
-; X64-AVX2-LABEL: isel_crash_8d:
-; X64-AVX2:       ## %bb.0: ## %eintry
-; X64-AVX2-NEXT:    pushq %rbp
-; X64-AVX2-NEXT:    .cfi_def_cfa_offset 16
-; X64-AVX2-NEXT:    .cfi_offset %rbp, -16
-; X64-AVX2-NEXT:    movq %rsp, %rbp
-; X64-AVX2-NEXT:    .cfi_def_cfa_register %rbp
-; X64-AVX2-NEXT:    andq $-32, %rsp
-; X64-AVX2-NEXT:    subq $128, %rsp
-; X64-AVX2-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; X64-AVX2-NEXT:    vmovaps %ymm0, (%rsp)
-; X64-AVX2-NEXT:    movl (%rdi), %eax
-; X64-AVX2-NEXT:    vmovd %eax, %xmm1
-; X64-AVX2-NEXT:    vpbroadcastd %xmm1, %ymm1
-; X64-AVX2-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; X64-AVX2-NEXT:    vmovdqa %ymm1, {{[0-9]+}}(%rsp)
-; X64-AVX2-NEXT:    movq %rbp, %rsp
-; X64-AVX2-NEXT:    popq %rbp
-; X64-AVX2-NEXT:    vzeroupper
-; X64-AVX2-NEXT:    retq
-;
-; X64-AVX512VL-LABEL: isel_crash_8d:
-; X64-AVX512VL:       ## %bb.0: ## %eintry
-; X64-AVX512VL-NEXT:    pushq %rbp
-; X64-AVX512VL-NEXT:    .cfi_def_cfa_offset 16
-; X64-AVX512VL-NEXT:    .cfi_offset %rbp, -16
-; X64-AVX512VL-NEXT:    movq %rsp, %rbp
-; X64-AVX512VL-NEXT:    .cfi_def_cfa_register %rbp
-; X64-AVX512VL-NEXT:    andq $-32, %rsp
-; X64-AVX512VL-NEXT:    subq $128, %rsp
-; X64-AVX512VL-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; X64-AVX512VL-NEXT:    vmovaps %ymm0, (%rsp)
-; X64-AVX512VL-NEXT:    movl (%rdi), %eax
-; X64-AVX512VL-NEXT:    vpbroadcastd %eax, %ymm1
-; X64-AVX512VL-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; X64-AVX512VL-NEXT:    vmovdqa %ymm1, {{[0-9]+}}(%rsp)
-; X64-AVX512VL-NEXT:    movq %rbp, %rsp
-; X64-AVX512VL-NEXT:    popq %rbp
-; X64-AVX512VL-NEXT:    vzeroupper
-; X64-AVX512VL-NEXT:    retq
+; X64-LABEL: isel_crash_8d:
+; X64:       ## %bb.0: ## %eintry
+; X64-NEXT:    pushq %rbp
+; X64-NEXT:    .cfi_def_cfa_offset 16
+; X64-NEXT:    .cfi_offset %rbp, -16
+; X64-NEXT:    movq %rsp, %rbp
+; X64-NEXT:    .cfi_def_cfa_register %rbp
+; X64-NEXT:    andq $-32, %rsp
+; X64-NEXT:    subq $128, %rsp
+; X64-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; X64-NEXT:    vmovaps %ymm0, (%rsp)
+; X64-NEXT:    vbroadcastss (%rdi), %ymm1
+; X64-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; X64-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
+; X64-NEXT:    movq %rbp, %rsp
+; X64-NEXT:    popq %rbp
+; X64-NEXT:    vzeroupper
+; X64-NEXT:    retq
 eintry:
   %__a.addr.i = alloca <4 x i64>, align 16
   %__b.addr.i = alloca <4 x i64>, align 16
@@ -1380,37 +1328,20 @@ define void @isel_crash_2q(i64* %cV_R.addr) {
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; X32-NEXT:    vmovaps %xmm0, (%esp)
-; X32-NEXT:    movl (%eax), %ecx
-; X32-NEXT:    movl 4(%eax), %eax
-; X32-NEXT:    vmovd %ecx, %xmm1
-; X32-NEXT:    vpinsrd $1, %eax, %xmm1, %xmm1
-; X32-NEXT:    vpinsrd $2, %ecx, %xmm1, %xmm1
-; X32-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm1
+; X32-NEXT:    vpbroadcastq (%eax), %xmm1
 ; X32-NEXT:    vmovaps %xmm0, {{[0-9]+}}(%esp)
 ; X32-NEXT:    vmovdqa %xmm1, {{[0-9]+}}(%esp)
 ; X32-NEXT:    addl $60, %esp
 ; X32-NEXT:    retl
 ;
-; X64-AVX2-LABEL: isel_crash_2q:
-; X64-AVX2:       ## %bb.0: ## %entry
-; X64-AVX2-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; X64-AVX2-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
-; X64-AVX2-NEXT:    movq (%rdi), %rax
-; X64-AVX2-NEXT:    vmovq %rax, %xmm1
-; X64-AVX2-NEXT:    vpbroadcastq %xmm1, %xmm1
-; X64-AVX2-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
-; X64-AVX2-NEXT:    vmovdqa %xmm1, -{{[0-9]+}}(%rsp)
-; X64-AVX2-NEXT:    retq
-;
-; X64-AVX512VL-LABEL: isel_crash_2q:
-; X64-AVX512VL:       ## %bb.0: ## %entry
-; X64-AVX512VL-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; X64-AVX512VL-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
-; X64-AVX512VL-NEXT:    movq (%rdi), %rax
-; X64-AVX512VL-NEXT:    vpbroadcastq %rax, %xmm1
-; X64-AVX512VL-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
-; X64-AVX512VL-NEXT:    vmovdqa %xmm1, -{{[0-9]+}}(%rsp)
-; X64-AVX512VL-NEXT:    retq
+; X64-LABEL: isel_crash_2q:
+; X64:       ## %bb.0: ## %entry
+; X64-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; X64-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    vpbroadcastq (%rdi), %xmm1
+; X64-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    vmovdqa %xmm1, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    retq
 entry:
   %__a.addr.i = alloca <2 x i64>, align 16
   %__b.addr.i = alloca <2 x i64>, align 16
@@ -1438,60 +1369,33 @@ define void @isel_crash_4q(i64* %cV_R.addr) {
 ; X32-NEXT:    movl 8(%ebp), %eax
 ; X32-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; X32-NEXT:    vmovaps %ymm0, (%esp)
-; X32-NEXT:    movl (%eax), %ecx
-; X32-NEXT:    movl 4(%eax), %eax
-; X32-NEXT:    vmovd %ecx, %xmm1
-; X32-NEXT:    vpinsrd $1, %eax, %xmm1, %xmm1
-; X32-NEXT:    vpinsrd $2, %ecx, %xmm1, %xmm1
-; X32-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm1
-; X32-NEXT:    vinserti128 $1, %xmm1, %ymm1, %ymm1
+; X32-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; X32-NEXT:    vbroadcastsd %xmm1, %ymm1
 ; X32-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%esp)
-; X32-NEXT:    vmovdqa %ymm1, {{[0-9]+}}(%esp)
+; X32-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%esp)
 ; X32-NEXT:    movl %ebp, %esp
 ; X32-NEXT:    popl %ebp
 ; X32-NEXT:    vzeroupper
 ; X32-NEXT:    retl
 ;
-; X64-AVX2-LABEL: isel_crash_4q:
-; X64-AVX2:       ## %bb.0: ## %eintry
-; X64-AVX2-NEXT:    pushq %rbp
-; X64-AVX2-NEXT:    .cfi_def_cfa_offset 16
-; X64-AVX2-NEXT:    .cfi_offset %rbp, -16
-; X64-AVX2-NEXT:    movq %rsp, %rbp
-; X64-AVX2-NEXT:    .cfi_def_cfa_register %rbp
-; X64-AVX2-NEXT:    andq $-32, %rsp
-; X64-AVX2-NEXT:    subq $128, %rsp
-; X64-AVX2-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; X64-AVX2-NEXT:    vmovaps %ymm0, (%rsp)
-; X64-AVX2-NEXT:    movq (%rdi), %rax
-; X64-AVX2-NEXT:    vmovq %rax, %xmm1
-; X64-AVX2-NEXT:    vpbroadcastq %xmm1, %ymm1
-; X64-AVX2-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; X64-AVX2-NEXT:    vmovdqa %ymm1, {{[0-9]+}}(%rsp)
-; X64-AVX2-NEXT:    movq %rbp, %rsp
-; X64-AVX2-NEXT:    popq %rbp
-; X64-AVX2-NEXT:    vzeroupper
-; X64-AVX2-NEXT:    retq
-;
-; X64-AVX512VL-LABEL: isel_crash_4q:
-; X64-AVX512VL:       ## %bb.0: ## %eintry
-; X64-AVX512VL-NEXT:    pushq %rbp
-; X64-AVX512VL-NEXT:    .cfi_def_cfa_offset 16
-; X64-AVX512VL-NEXT:    .cfi_offset %rbp, -16
-; X64-AVX512VL-NEXT:    movq %rsp, %rbp
-; X64-AVX512VL-NEXT:    .cfi_def_cfa_register %rbp
-; X64-AVX512VL-NEXT:    andq $-32, %rsp
-; X64-AVX512VL-NEXT:    subq $128, %rsp
-; X64-AVX512VL-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; X64-AVX512VL-NEXT:    vmovaps %ymm0, (%rsp)
-; X64-AVX512VL-NEXT:    movq (%rdi), %rax
-; X64-AVX512VL-NEXT:    vpbroadcastq %rax, %ymm1
-; X64-AVX512VL-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; X64-AVX512VL-NEXT:    vmovdqa %ymm1, {{[0-9]+}}(%rsp)
-; X64-AVX512VL-NEXT:    movq %rbp, %rsp
-; X64-AVX512VL-NEXT:    popq %rbp
-; X64-AVX512VL-NEXT:    vzeroupper
-; X64-AVX512VL-NEXT:    retq
+; X64-LABEL: isel_crash_4q:
+; X64:       ## %bb.0: ## %eintry
+; X64-NEXT:    pushq %rbp
+; X64-NEXT:    .cfi_def_cfa_offset 16
+; X64-NEXT:    .cfi_offset %rbp, -16
+; X64-NEXT:    movq %rsp, %rbp
+; X64-NEXT:    .cfi_def_cfa_register %rbp
+; X64-NEXT:    andq $-32, %rsp
+; X64-NEXT:    subq $128, %rsp
+; X64-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; X64-NEXT:    vmovaps %ymm0, (%rsp)
+; X64-NEXT:    vbroadcastsd (%rdi), %ymm1
+; X64-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; X64-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
+; X64-NEXT:    movq %rbp, %rsp
+; X64-NEXT:    popq %rbp
+; X64-NEXT:    vzeroupper
+; X64-NEXT:    retq
 eintry:
   %__a.addr.i = alloca <4 x i64>, align 16
   %__b.addr.i = alloca <4 x i64>, align 16

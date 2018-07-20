@@ -76,7 +76,6 @@ public:
                              Instruction *I = nullptr) const override;
 
 private:
-  const TargetMachine &TM;
   const ARCSubtarget &Subtarget;
 
   // Lower Operand helpers

@@ -103,7 +103,7 @@ entry:
 !4 = !{i32 2, !"Debug Info Version", i32 3}
 !5 = !{i32 1, !"PIC Level", i32 2}
 !6 = !{!"clang version 4.0.0 (trunk 282540) (llvm/trunk 282542)"}
-!7 = distinct !DISubprogram(name: "may_alias", scope: !1, file: !1, line: 1, type: !8, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: true, unit: !0, variables: !2)
+!7 = distinct !DISubprogram(name: "may_alias", scope: !1, file: !1, line: 1, type: !8, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: true, unit: !0, retainedNodes: !2)
 !8 = !DISubroutineType(types: !2)
 !9 = !DILocation(line: 1, column: 13, scope: !7)
 !10 = !DILocation(line: 2, column: 10, scope: !7)

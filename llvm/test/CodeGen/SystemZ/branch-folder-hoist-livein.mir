@@ -1,0 +1,57 @@
+# RUN: llc -verify-machineinstrs -O1 -mtriple=s390x-ibm-linux -o - %s -run-pass=branch-folder | FileCheck %s
+--- |
+  target datalayout = "E-m:e-i1:8:16-i8:8:16-i64:64-f128:64-a:8:16-n32:64"
+  target triple = "s390x-ibm-linux"
+
+  @b = external global i16, align 1
+  @d = external global i16, align 1
+
+  define void @f1() {
+    ret void
+  }
+
+...
+---
+name:            f1
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.2(0x7fffffff), %bb.1(0x00000001)
+    liveins:
+
+    renamable $r1d = LGRL @b :: (load 4 from got, align 8)
+    renamable $r1l = LH killed renamable $r1d, 0, $noreg, implicit-def $r1d :: (dereferenceable load 1 from @b)
+    renamable $r2l = LHI 0
+    renamable $r3d = LGRL @d :: (load 4 from got, align 8)
+    renamable $r4d = LLILL 0, implicit-def $r4q
+
+    CHI killed renamable $r2l, 0, implicit-def $cc
+    BRC 14, 6, %bb.2, implicit killed $cc
+    J %bb.1
+
+  bb.1:
+    successors:
+    liveins: $r1l, $r3d, $r4q
+
+    renamable $r4d = COPY killed renamable $r4d, implicit killed $r4q
+    STH renamable $r1l, killed renamable $r3d, 0, $noreg, implicit killed $r4d :: (store 1 into @d)
+
+  bb.2:
+    liveins: $r1l, $r3d, $r4q
+
+    renamable $r4d = COPY killed renamable $r4d, implicit killed $r4q
+    STH renamable $r1l, killed renamable $r3d, 0, $noreg, implicit killed $r4d :: (store 1 into @d)
+    Return
+
+...
+
+# CHECK: renamable $r4d = COPY killed renamable $r4d, implicit killed $r4q
+# CHECK-NEXT: CHI killed renamable $r2l, 0, implicit-def $cc
+# CHECK-NEXT: BRC 14, 6, %bb.2, implicit killed $cc
+# CHECK-NEXT: {{^  $}}
+# CHECK-NEXT: bb.1:
+# CHECK-NEXT: successors:
+# CHECK-NEXT: liveins: $r1l, $r3d, $r4d
+
+# CHECK: bb.2:
+# CHECK-NEXT: liveins: $r1l, $r3d, $r4d

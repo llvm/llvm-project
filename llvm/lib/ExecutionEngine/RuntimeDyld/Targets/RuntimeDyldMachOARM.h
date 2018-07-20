@@ -47,6 +47,18 @@ public:
     return Addr;
   }
 
+  bool isAddrTargetThumb(unsigned SectionID, uint64_t Offset) {
+    auto TargetObjAddr = Sections[SectionID].getObjAddress() + Offset;
+    for (auto &KV : GlobalSymbolTable) {
+      auto &Entry = KV.second;
+      auto SymbolObjAddr =
+          Sections[Entry.getSectionID()].getObjAddress() + Entry.getOffset();
+      if (TargetObjAddr == SymbolObjAddr)
+        return (Entry.getFlags().getTargetFlags() & ARMJITSymbolFlags::Thumb);
+    }
+    return false;
+  }
+
   Expected<int64_t> decodeAddend(const RelocationEntry &RE) const {
     const SectionEntry &Section = Sections[RE.SectionID];
     uint8_t *LocalAddress = Section.getAddressWithOffset(RE.Offset);
@@ -161,11 +173,17 @@ public:
     // the value as being a thumb stub: we don't want to mix it up with an ARM
     // stub targeting the same function.
     if (RE.RelType == MachO::ARM_THUMB_RELOC_BR22)
-      Value.IsStubThumb = TargetIsLocalThumbFunc;
+      Value.IsStubThumb = true;
 
     if (RE.IsPCRel)
       makeValueAddendPCRel(Value, RelI,
                            (RE.RelType == MachO::ARM_THUMB_RELOC_BR22) ? 4 : 8);
+
+    // If this is a non-external branch target check whether Value points to a
+    // thumb func.
+    if (!Value.SymbolName && (RelType == MachO::ARM_RELOC_BR24 ||
+                              RelType == MachO::ARM_THUMB_RELOC_BR22))
+      RE.IsTargetThumbFunc = isAddrTargetThumb(Value.SectionID, Value.Offset);
 
     if (RE.RelType == MachO::ARM_RELOC_BR24 ||
         RE.RelType == MachO::ARM_THUMB_RELOC_BR22)
@@ -182,7 +200,7 @@ public:
   }
 
   void resolveRelocation(const RelocationEntry &RE, uint64_t Value) override {
-    DEBUG(dumpRelocationToResolve(RE, Value));
+    LLVM_DEBUG(dumpRelocationToResolve(RE, Value));
     const SectionEntry &Section = Sections[RE.SectionID];
     uint8_t *LocalAddress = Section.getAddressWithOffset(RE.Offset);
 
@@ -388,11 +406,11 @@ private:
     // addend = Encoded - Expected
     //        = Encoded - (AddrA - AddrB)
 
-    DEBUG(dbgs() << "Found SECTDIFF: AddrA: " << AddrA << ", AddrB: " << AddrB
-                 << ", Addend: " << Addend << ", SectionA ID: " << SectionAID
-                 << ", SectionAOffset: " << SectionAOffset
-                 << ", SectionB ID: " << SectionBID
-                 << ", SectionBOffset: " << SectionBOffset << "\n");
+    LLVM_DEBUG(dbgs() << "Found SECTDIFF: AddrA: " << AddrA
+                      << ", AddrB: " << AddrB << ", Addend: " << Addend
+                      << ", SectionA ID: " << SectionAID << ", SectionAOffset: "
+                      << SectionAOffset << ", SectionB ID: " << SectionBID
+                      << ", SectionBOffset: " << SectionBOffset << "\n");
     RelocationEntry R(SectionID, Offset, RelocType, Addend, SectionAID,
                       SectionAOffset, SectionBID, SectionBOffset, IsPCRel,
                       HalfDiffKindBits);

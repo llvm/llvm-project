@@ -33,11 +33,17 @@ class Module;
 /// based on the provided summary informations.
 class FunctionImporter {
 public:
-  /// Set of functions to import from a source module. Each entry is a map
-  /// containing all the functions to import for a source module.
-  /// The keys is the GUID identifying a function to import, and the value
-  /// is the threshold applied when deciding to import it.
-  using FunctionsToImportTy = std::map<GlobalValue::GUID, unsigned>;
+  /// Set of functions to import from a source module. Each entry is a set
+  /// containing all the GUIDs of all functions to import for a source module.
+  using FunctionsToImportTy = std::unordered_set<GlobalValue::GUID>;
+
+  /// Map of callee GUID considered for import into a given module to a pair
+  /// consisting of the largest threshold applied when deciding whether to
+  /// import it and, if we decided to import, a pointer to the summary instance
+  /// imported. If we decided not to import, the summary will be nullptr.
+  using ImportThresholdsTy =
+      DenseMap<GlobalValue::GUID,
+               std::pair<unsigned, const GlobalValueSummary *>>;
 
   /// The map contains an entry for every module to import from, the key being
   /// the module identifier to pass to the ModuleLoader. The value is the set of
@@ -107,12 +113,24 @@ void ComputeCrossModuleImportForModuleFromIndex(
     StringRef ModulePath, const ModuleSummaryIndex &Index,
     FunctionImporter::ImportMapTy &ImportList);
 
+/// PrevailingType enum used as a return type of callback passed
+/// to computeDeadSymbols. Yes and No values used when status explicitly
+/// set by symbols resolution, otherwise status is Unknown.
+enum class PrevailingType { Yes, No, Unknown };
+
 /// Compute all the symbols that are "dead": i.e these that can't be reached
 /// in the graph from any of the given symbols listed in
-/// \p GUIDPreservedSymbols.
+/// \p GUIDPreservedSymbols. Non-prevailing symbols are symbols without a
+/// prevailing copy anywhere in IR and are normally dead, \p isPrevailing
+/// predicate returns status of symbol.
 void computeDeadSymbols(
     ModuleSummaryIndex &Index,
-    const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols);
+    const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols,
+    function_ref<PrevailingType(GlobalValue::GUID)> isPrevailing);
+
+/// Converts value \p GV to declaration, or replaces with a declaration if
+/// it is an alias. Returns true if converted, false if replaced.
+bool convertToDeclaration(GlobalValue &GV);
 
 /// Compute the set of summaries needed for a ThinLTO backend compilation of
 /// \p ModulePath.
@@ -131,9 +149,9 @@ void gatherImportedSummariesForModule(
     std::map<std::string, GVSummaryMapTy> &ModuleToSummariesForIndex);
 
 /// Emit into \p OutputFilename the files module \p ModulePath will import from.
-std::error_code
-EmitImportsFiles(StringRef ModulePath, StringRef OutputFilename,
-                 const FunctionImporter::ImportMapTy &ModuleImports);
+std::error_code EmitImportsFiles(
+    StringRef ModulePath, StringRef OutputFilename,
+    const std::map<std::string, GVSummaryMapTy> &ModuleToSummariesForIndex);
 
 /// Resolve WeakForLinker values in \p TheModule based on the information
 /// recorded in the summaries during global summary-based analysis.

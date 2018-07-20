@@ -380,7 +380,7 @@ if __name__ == '__main__':
         print("Couldn't find a program to read symbols with", file=sys.stderr)
         exit(1)
     if not is_32bit_windows:
-        print("Couldn't find a program to determing the target", file=sys.stderr)
+        print("Couldn't find a program to determining the target", file=sys.stderr)
         exit(1)
 
     # How we determine which symbols to keep and which to discard depends on

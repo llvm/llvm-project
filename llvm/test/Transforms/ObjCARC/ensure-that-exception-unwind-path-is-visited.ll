@@ -115,7 +115,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone
 
 !0 = distinct !DICompileUnit(language: DW_LANG_ObjC, producer: "clang version 3.3 ", isOptimized: true, runtimeVersion: 2, emissionKind: FullDebug, file: !60, enums: !1, retainedTypes: !1, globals: !1)
 !1 = !{}
-!5 = distinct !DISubprogram(name: "main", line: 9, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: true, unit: !0, scopeLine: 10, file: !60, scope: !6, type: !7, variables: !11)
+!5 = distinct !DISubprogram(name: "main", line: 9, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: true, unit: !0, scopeLine: 10, file: !60, scope: !6, type: !7, retainedNodes: !11)
 !6 = !DIFile(filename: "test.m", directory: "/Volumes/Files/gottesmmcab/Radar/12906997")
 !7 = !DISubroutineType(types: !8)
 !8 = !{!9}
@@ -136,7 +136,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone
 !24 = !DIBasicType(tag: DW_TAG_base_type, name: "signed char", size: 8, align: 8, encoding: DW_ATE_signed_char)
 !25 = !DILocalVariable(name: "obj2", line: 15, scope: !26, file: !6, type: !14)
 !26 = distinct !DILexicalBlock(line: 14, column: 0, file: !60, scope: !22)
-!27 = distinct !DISubprogram(name: "ThrowFunc", line: 4, isLocal: true, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 5, file: !60, scope: !6, type: !28, variables: !31)
+!27 = distinct !DISubprogram(name: "ThrowFunc", line: 4, isLocal: true, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 5, file: !60, scope: !6, type: !28, retainedNodes: !31)
 !28 = !DISubroutineType(types: !29)
 !29 = !{null, !14}
 !31 = !{!32}

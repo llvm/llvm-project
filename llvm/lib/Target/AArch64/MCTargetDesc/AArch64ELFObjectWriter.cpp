@@ -31,7 +31,7 @@ namespace {
 
 class AArch64ELFObjectWriter : public MCELFObjectTargetWriter {
 public:
-  AArch64ELFObjectWriter(uint8_t OSABI, bool IsLittleEndian, bool IsILP32);
+  AArch64ELFObjectWriter(uint8_t OSABI, bool IsILP32);
 
   ~AArch64ELFObjectWriter() override = default;
 
@@ -43,9 +43,7 @@ protected:
 
 } // end anonymous namespace
 
-AArch64ELFObjectWriter::AArch64ELFObjectWriter(uint8_t OSABI,
-                                               bool IsLittleEndian,
-                                               bool IsILP32)
+AArch64ELFObjectWriter::AArch64ELFObjectWriter(uint8_t OSABI, bool IsILP32)
     : MCELFObjectTargetWriter(/*Is64Bit*/ true, OSABI, ELF::EM_AARCH64,
                               /*HasRelocationAddend*/ true),
       IsILP32(IsILP32) {}
@@ -429,10 +427,7 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
   llvm_unreachable("Unimplemented fixup -> relocation");
 }
 
-std::unique_ptr<MCObjectWriter>
-llvm::createAArch64ELFObjectWriter(raw_pwrite_stream &OS, uint8_t OSABI,
-                                   bool IsLittleEndian, bool IsILP32) {
-  auto MOTW =
-      llvm::make_unique<AArch64ELFObjectWriter>(OSABI, IsLittleEndian, IsILP32);
-  return createELFObjectWriter(std::move(MOTW), OS, IsLittleEndian);
+std::unique_ptr<MCObjectTargetWriter>
+llvm::createAArch64ELFObjectWriter(uint8_t OSABI, bool IsILP32) {
+  return llvm::make_unique<AArch64ELFObjectWriter>(OSABI, IsILP32);
 }

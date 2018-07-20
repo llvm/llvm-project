@@ -112,6 +112,8 @@ struct DbiBuildNo {
 
   static const uint16_t BuildMajorMask = 0x7F00;
   static const uint16_t BuildMajorShift = 8;
+
+  static const uint16_t NewVersionFormatMask = 0x8000;
 };
 
 /// The fixed size header that appears at the beginning of the DBI Stream.
@@ -175,18 +177,6 @@ struct DbiStreamHeader {
 };
 static_assert(sizeof(DbiStreamHeader) == 64, "Invalid DbiStreamHeader size!");
 
-struct SectionContribEntry {
-  support::ulittle16_t Section;
-  char Padding1[2];
-  support::little32_t Offset;
-  support::little32_t Size;
-  support::ulittle32_t Characteristics;
-  support::ulittle16_t ModuleIndex;
-  char Padding2[2];
-  support::ulittle32_t DataCrc;
-  support::ulittle32_t RelocCrc;
-};
-
 /// The header preceeding the File Info Substream of the DBI stream.
 struct FileInfoSubstreamHeader {
   /// Total # of modules, should match number of records in the ModuleInfo
@@ -228,7 +218,7 @@ struct ModuleInfoHeader {
   support::ulittle32_t Mod;
 
   /// First section contribution of this module.
-  SectionContribEntry SC;
+  SectionContrib SC;
 
   /// See ModInfoFlags definition.
   support::ulittle16_t Flags;
@@ -327,6 +317,34 @@ struct PDBStringTableHeader {
 };
 
 const uint32_t PDBStringTableSignature = 0xEFFEEFFE;
+
+/// The header preceding the /src/headerblock stream.
+struct SrcHeaderBlockHeader {
+  support::ulittle32_t Version; // PdbRaw_SrcHeaderBlockVer enumeration.
+  support::ulittle32_t Size;    // Size of entire stream.
+  uint64_t FileTime;            // Time stamp (Windows FILETIME format).
+  support::ulittle32_t Age;     // Age
+  uint8_t Padding[44];          // Pad to 64 bytes.
+};
+static_assert(sizeof(SrcHeaderBlockHeader) == 64, "Incorrect struct size!");
+
+/// A single file record entry within the /src/headerblock stream.
+struct SrcHeaderBlockEntry {
+  support::ulittle32_t Size;     // Record Length.
+  support::ulittle32_t Version;  // PdbRaw_SrcHeaderBlockVer enumeration.
+  support::ulittle32_t CRC;      // CRC of the original file contents.
+  support::ulittle32_t FileSize; // Size of original source file.
+  support::ulittle32_t FileNI;   // String table index of file name.
+  support::ulittle32_t ObjNI;    // String table index of object name.
+  support::ulittle32_t VFileNI;  // String table index of virtual file name.
+  uint8_t Compression;           // PDB_SourceCompression enumeration.
+  uint8_t IsVirtual;             // Is this a virtual file (injected)?
+  short Padding;                 // Pad to 4 bytes.
+  char Reserved[8];
+};
+
+constexpr int I = sizeof(SrcHeaderBlockEntry);
+static_assert(sizeof(SrcHeaderBlockEntry) == 40, "Incorrect struct size!");
 
 } // namespace pdb
 } // namespace llvm

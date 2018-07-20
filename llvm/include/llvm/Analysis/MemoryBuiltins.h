@@ -53,33 +53,33 @@ class Type;
 class UndefValue;
 class Value;
 
-/// \brief Tests if a value is a call or invoke to a library function that
+/// Tests if a value is a call or invoke to a library function that
 /// allocates or reallocates memory (either malloc, calloc, realloc, or strdup
 /// like).
 bool isAllocationFn(const Value *V, const TargetLibraryInfo *TLI,
                     bool LookThroughBitCast = false);
 
-/// \brief Tests if a value is a call or invoke to a function that returns a
+/// Tests if a value is a call or invoke to a function that returns a
 /// NoAlias pointer (including malloc/calloc/realloc/strdup-like functions).
 bool isNoAliasFn(const Value *V, const TargetLibraryInfo *TLI,
                  bool LookThroughBitCast = false);
 
-/// \brief Tests if a value is a call or invoke to a library function that
+/// Tests if a value is a call or invoke to a library function that
 /// allocates uninitialized memory (such as malloc).
 bool isMallocLikeFn(const Value *V, const TargetLibraryInfo *TLI,
                     bool LookThroughBitCast = false);
 
-/// \brief Tests if a value is a call or invoke to a library function that
+/// Tests if a value is a call or invoke to a library function that
 /// allocates zero-filled memory (such as calloc).
 bool isCallocLikeFn(const Value *V, const TargetLibraryInfo *TLI,
                     bool LookThroughBitCast = false);
 
-/// \brief Tests if a value is a call or invoke to a library function that
+/// Tests if a value is a call or invoke to a library function that
 /// allocates memory similar to malloc or calloc.
 bool isMallocOrCallocLikeFn(const Value *V, const TargetLibraryInfo *TLI,
                             bool LookThroughBitCast = false);
 
-/// \brief Tests if a value is a call or invoke to a library function that
+/// Tests if a value is a call or invoke to a library function that
 /// allocates memory (either malloc, calloc, or strdup like).
 bool isAllocLikeFn(const Value *V, const TargetLibraryInfo *TLI,
                    bool LookThroughBitCast = false);
@@ -170,14 +170,14 @@ struct ObjectSizeOpts {
   bool NullIsUnknownSize = false;
 };
 
-/// \brief Compute the size of the object pointed by Ptr. Returns true and the
+/// Compute the size of the object pointed by Ptr. Returns true and the
 /// object size in Size if successful, and false otherwise. In this context, by
 /// object we mean the region of memory starting at Ptr to the end of the
 /// underlying object pointed to by Ptr.
 bool getObjectSize(const Value *Ptr, uint64_t &Size, const DataLayout &DL,
                    const TargetLibraryInfo *TLI, ObjectSizeOpts Opts = {});
 
-/// Try to turn a call to @llvm.objectsize into an integer value of the given
+/// Try to turn a call to \@llvm.objectsize into an integer value of the given
 /// Type. Returns null on failure.
 /// If MustSucceed is true, this function will not return null, and may return
 /// conservative values governed by the second argument of the call to
@@ -189,7 +189,7 @@ ConstantInt *lowerObjectSizeCall(IntrinsicInst *ObjectSize,
 
 using SizeOffsetType = std::pair<APInt, APInt>;
 
-/// \brief Evaluate the size and offset of an object pointed to by a Value*
+/// Evaluate the size and offset of an object pointed to by a Value*
 /// statically. Fails if size or offset are not known at compile time.
 class ObjectSizeOffsetVisitor
   : public InstVisitor<ObjectSizeOffsetVisitor, SizeOffsetType> {
@@ -248,7 +248,7 @@ private:
 
 using SizeOffsetEvalType = std::pair<Value *, Value *>;
 
-/// \brief Evaluate the size and offset of an object pointed to by a Value*.
+/// Evaluate the size and offset of an object pointed to by a Value*.
 /// May create code to compute the result at run-time.
 class ObjectSizeOffsetEvaluator
   : public InstVisitor<ObjectSizeOffsetEvaluator, SizeOffsetEvalType> {

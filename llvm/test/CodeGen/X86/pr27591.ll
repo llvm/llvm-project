@@ -9,8 +9,8 @@ define void @test1(i32 %x) #0 {
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    cmpl $0, %edi
 ; CHECK-NEXT:    setne %al
-; CHECK-NEXT:    andb $1, %al
 ; CHECK-NEXT:    movzbl %al, %edi
+; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    callq callee1
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq

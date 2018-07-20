@@ -20,9 +20,9 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 !1 = !DIFile(filename: "f.c", directory: "/")
 !2 = !{}
 ; CHECK: ![[F]] = distinct !DISubprogram(name: "f"
-; CHECK-NOT: variables:
+; CHECK-NOT: retainedNodes:
 ; CHECK-NOT: distinct !DISubprogram(name: "f"
-!4 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 1, type: !5, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: false, unit: !0, variables: !2)
+!4 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 1, type: !5, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: false, unit: !0, retainedNodes: !2)
 !5 = !DISubroutineType(types: !6)
 !6 = !{null}
 !7 = !{i32 2, !"Dwarf Version", i32 2}

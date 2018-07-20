@@ -27,6 +27,7 @@ namespace llvm {
   class RecordKeeper;
   class RecTy;
   class Init;
+  struct ForeachLoop;
   struct MultiClass;
   struct SubClassReference;
   struct SubMultiClassReference;
@@ -41,15 +42,48 @@ namespace llvm {
     }
   };
 
+  /// RecordsEntry - Can be either a record or a foreach loop.
+  struct RecordsEntry {
+    std::unique_ptr<Record> Rec;
+    std::unique_ptr<ForeachLoop> Loop;
+
+    void dump() const;
+
+    RecordsEntry() {}
+    RecordsEntry(std::unique_ptr<Record> Rec) : Rec(std::move(Rec)) {}
+    RecordsEntry(std::unique_ptr<ForeachLoop> Loop)
+      : Loop(std::move(Loop)) {}
+  };
+
   /// ForeachLoop - Record the iteration state associated with a for loop.
   /// This is used to instantiate items in the loop body.
   struct ForeachLoop {
+    SMLoc Loc;
     VarInit *IterVar;
-    ListInit *ListValue;
+    Init *ListValue;
+    std::vector<RecordsEntry> Entries;
 
-    ForeachLoop(VarInit *IVar, ListInit *LValue)
-      : IterVar(IVar), ListValue(LValue) {}
+    void dump() const;
+
+    ForeachLoop(SMLoc Loc, VarInit *IVar, Init *LValue)
+      : Loc(Loc), IterVar(IVar), ListValue(LValue) {}
   };
+
+  struct DefsetRecord {
+    SMLoc Loc;
+    RecTy *EltTy;
+    SmallVector<Init *, 16> Elements;
+  };
+
+struct MultiClass {
+  Record Rec;  // Placeholder for template args and Name.
+  std::vector<RecordsEntry> Entries;
+
+  void dump() const;
+
+  MultiClass(StringRef Name, SMLoc Loc, RecordKeeper &Records) :
+    Rec(Name, Loc, Records) {}
+};
 
 class TGParser {
   TGLexer Lex;
@@ -58,8 +92,9 @@ class TGParser {
 
   /// Loops - Keep track of any foreach loops we are within.
   ///
-  typedef std::vector<ForeachLoop> LoopVector;
-  LoopVector Loops;
+  std::vector<std::unique_ptr<ForeachLoop>> Loops;
+
+  SmallVector<DefsetRecord *, 2> Defsets;
 
   /// CurMultiClass - If we are parsing a 'multiclass' definition, this is the
   /// current value.
@@ -67,8 +102,6 @@ class TGParser {
 
   // Record tracker
   RecordKeeper &Records;
-
-  unsigned AnonCounter;
 
   // A "named boolean" indicating how to parse identifiers.  Usually
   // identifiers map to some existing object but in special cases
@@ -79,12 +112,11 @@ class TGParser {
     ParseValueMode,   // We are parsing a value we expect to look up.
     ParseNameMode,    // We are parsing a name of an object that does not yet
                       // exist.
-    ParseForeachMode  // We are parsing a foreach init.
   };
 
 public:
   TGParser(SourceMgr &SrcMgr, RecordKeeper &records)
-      : Lex(SrcMgr), CurMultiClass(nullptr), Records(records), AnonCounter(0) {}
+      : Lex(SrcMgr), CurMultiClass(nullptr), Records(records) {}
 
   /// ParseFile - Main entrypoint for parsing a tblgen file.  These parser
   /// routines return true on error, or false on success.
@@ -107,44 +139,28 @@ private:  // Semantic analysis methods.
                 ArrayRef<unsigned> BitList, Init *V,
                 bool AllowSelfAssignment = false);
   bool AddSubClass(Record *Rec, SubClassReference &SubClass);
+  bool AddSubClass(RecordsEntry &Entry, SubClassReference &SubClass);
   bool AddSubMultiClass(MultiClass *CurMC,
                         SubMultiClassReference &SubMultiClass);
 
-  Init *GetNewAnonymousName();
+  using SubstStack = SmallVector<std::pair<Init *, Init *>, 8>;
 
-  // IterRecord: Map an iterator name to a value.
-  struct IterRecord {
-    VarInit *IterVar;
-    Init *IterValue;
-    IterRecord(VarInit *Var, Init *Val) : IterVar(Var), IterValue(Val) {}
-  };
-
-  // IterSet: The set of all iterator values at some point in the
-  // iteration space.
-  typedef std::vector<IterRecord> IterSet;
-
-  bool ProcessForeachDefs(Record *CurRec, SMLoc Loc);
-  bool ProcessForeachDefs(Record *CurRec, SMLoc Loc, IterSet &IterVals);
+  bool addEntry(RecordsEntry E);
+  bool resolve(const ForeachLoop &Loop, SubstStack &Stack, bool Final,
+               std::vector<RecordsEntry> *Dest, SMLoc *Loc = nullptr);
+  bool resolve(const std::vector<RecordsEntry> &Source, SubstStack &Substs,
+               bool Final, std::vector<RecordsEntry> *Dest,
+               SMLoc *Loc = nullptr);
+  bool addDefOne(std::unique_ptr<Record> Rec);
 
 private:  // Parser methods.
   bool ParseObjectList(MultiClass *MC = nullptr);
   bool ParseObject(MultiClass *MC);
   bool ParseClass();
   bool ParseMultiClass();
-  Record *InstantiateMulticlassDef(MultiClass &MC, Record *DefProto,
-                                   Init *&DefmPrefix, SMRange DefmPrefixRange,
-                                   ArrayRef<Init *> TArgs,
-                                   ArrayRef<Init *> TemplateVals);
-  bool ResolveMulticlassDefArgs(MultiClass &MC, Record *DefProto,
-                                SMLoc DefmPrefixLoc, SMLoc SubClassLoc,
-                                ArrayRef<Init *> TArgs,
-                                ArrayRef<Init *> TemplateVals, bool DeleteArgs);
-  bool ResolveMulticlassDef(MultiClass &MC,
-                            Record *CurRec,
-                            Record *DefProto,
-                            SMLoc DefmPrefixLoc);
   bool ParseDefm(MultiClass *CurMultiClass);
   bool ParseDef(MultiClass *CurMultiClass);
+  bool ParseDefset();
   bool ParseForeach(MultiClass *CurMultiClass);
   bool ParseTopLevelLet(MultiClass *CurMultiClass);
   void ParseLetList(SmallVectorImpl<LetRecord> &Result);
@@ -155,7 +171,7 @@ private:  // Parser methods.
 
   bool ParseTemplateArgList(Record *CurRec);
   Init *ParseDeclaration(Record *CurRec, bool ParsingTemplateArgs);
-  VarInit *ParseForeachDeclaration(ListInit *&ForeachListValue);
+  VarInit *ParseForeachDeclaration(Init *&ForeachListValue);
 
   SubClassReference ParseSubClassReference(Record *CurRec, bool isDefm);
   SubMultiClassReference ParseSubMultiClassReference(MultiClass *CurMC);
@@ -182,6 +198,7 @@ private:  // Parser methods.
   Record *ParseClassID();
   MultiClass *ParseMultiClassID();
   bool ApplyLetStack(Record *CurRec);
+  bool ApplyLetStack(RecordsEntry &Entry);
 };
 
 } // end namespace llvm

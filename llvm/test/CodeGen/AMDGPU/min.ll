@@ -1,7 +1,7 @@
-; RUN: llc -march=amdgcn -mtriple=amdgcn---amdgiz -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI -check-prefix=FUNC %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI -check-prefix=GFX89 -check-prefix=FUNC %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 -check-prefix=GFX89 -check-prefix=FUNC %s
-; RUN: llc -march=r600 -mtriple=r600---amdgiz -mcpu=cypress -verify-machineinstrs < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn-amd-amdhsa -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn-amd-amdhsa -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI -check-prefix=GFX89 -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 -check-prefix=GFX89 -check-prefix=FUNC %s
+; RUN: llc -march=r600 -mtriple=r600-- -mcpu=cypress -verify-machineinstrs < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
 
 ; FUNC-LABEL: {{^}}v_test_imin_sle_i32:
 ; GCN: v_min_i32_e32
@@ -65,48 +65,39 @@ define amdgpu_kernel void @s_test_imin_sle_v4i32(<4 x i32> addrspace(1)* %out, <
 ; GCN: s_sext_i32_i8
 ; GCN: s_sext_i32_i8
 ; GCN: s_min_i32
-define amdgpu_kernel void @s_test_imin_sle_i8(i8 addrspace(1)* %out, i8 %a, i8 %b) #0 {
+define amdgpu_kernel void @s_test_imin_sle_i8(i8 addrspace(1)* %out, [8 x i32], i8 %a, [8 x i32], i8 %b) #0 {
   %cmp = icmp sle i8 %a, %b
   %val = select i1 %cmp, i8 %a, i8 %b
   store i8 %val, i8 addrspace(1)* %out
   ret void
 }
 
-; XXX - should be able to use s_min if we stop unnecessarily doing
-; extloads with mubuf instructions.
-
+; FIXME: Why vector and sdwa for last element?
 ; FUNC-LABEL: {{^}}s_test_imin_sle_v4i8:
-; GCN: buffer_load_sbyte
-; GCN: buffer_load_sbyte
-; GCN: buffer_load_sbyte
-; GCN: buffer_load_sbyte
-; GCN: buffer_load_sbyte
-; GCN: buffer_load_sbyte
-; GCN: buffer_load_sbyte
-; GCN: buffer_load_sbyte
+; GCN: s_load_dword s
+; GCN: s_load_dword s
+; GCN-NOT: _load_
 
-; SI: v_min_i32
-; SI: v_min_i32
-; SI: v_min_i32
-; SI: v_min_i32
+; SI: s_min_i32
+; SI: s_min_i32
+; SI: s_min_i32
+; SI: s_min_i32
 
-; VI: v_min_i32
-; VI: v_min_i32
-; VI: v_min_i32
-; VI: v_min_i32
+; VI: s_min_i32
+; VI: s_min_i32
+; VI: s_min_i32
+; VI: v_min_i32_sdwa
 
 ; GFX9: v_min_i16
 ; GFX9: v_min_i16
 ; GFX9: v_min_i16
 ; GFX9: v_min_i16
 
-; GCN: s_endpgm
-
 ; EG: MIN_INT
 ; EG: MIN_INT
 ; EG: MIN_INT
 ; EG: MIN_INT
-define amdgpu_kernel void @s_test_imin_sle_v4i8(<4 x i8> addrspace(1)* %out, <4 x i8> %a, <4 x i8> %b) #0 {
+define amdgpu_kernel void @s_test_imin_sle_v4i8(<4 x i8> addrspace(1)* %out, [8 x i32], <4 x i8> %a, [8 x i32], <4 x i8> %b) #0 {
   %cmp = icmp sle <4 x i8> %a, %b
   %val = select <4 x i1> %cmp, <4 x i8> %a, <4 x i8> %b
   store <4 x i8> %val, <4 x i8> addrspace(1)* %out
@@ -114,11 +105,20 @@ define amdgpu_kernel void @s_test_imin_sle_v4i8(<4 x i8> addrspace(1)* %out, <4 
 }
 
 ; FUNC-LABEL: {{^}}s_test_imin_sle_v2i16:
-; SI: v_min_i32
-; SI: v_min_i32
+; GCN: s_load_dword s
+; GCN: s_load_dword s
 
-; VI: v_min_i32
-; VI: v_min_i32
+; SI: s_ashr_i32
+; SI: s_sext_i32_i16
+; SI: s_ashr_i32
+; SI: s_sext_i32_i16
+; SI: s_min_i32
+; SI: s_min_i32
+
+; VI: s_sext_i32_i16
+; VI: s_sext_i32_i16
+; VI: s_min_i32
+; VI: s_min_i32
 
 ; GFX9: v_pk_min_i16
 
@@ -131,17 +131,17 @@ define amdgpu_kernel void @s_test_imin_sle_v2i16(<2 x i16> addrspace(1)* %out, <
   ret void
 }
 
-; FIXME: VI use s_min_i32
 ; FUNC-LABEL: {{^}}s_test_imin_sle_v4i16:
-; SI: v_min_i32
-; SI: v_min_i32
-; SI: v_min_i32
-; SI: v_min_i32
+; SI-NOT: buffer_load
+; SI: s_min_i32
+; SI: s_min_i32
+; SI: s_min_i32
+; SI: s_min_i32
 
-; VI: v_min_i32
-; VI: v_min_i32
-; VI: v_min_i32
-; VI: v_min_i32
+; VI: s_min_i32
+; VI: s_min_i32
+; VI: s_min_i32
+; VI: s_min_i32
 
 ; GFX9: v_pk_min_i16
 ; GFX9: v_pk_min_i16
@@ -289,9 +289,9 @@ define amdgpu_kernel void @v_test_umin_ule_v3i32(<3 x i32> addrspace(1)* %out, <
 ; SI-NOT: v_min_u32_e32
 
 ; VI: v_min_u16_e32
-; VI: v_min_u16_sdwa
+; VI: v_min_u16_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 ; VI: v_min_u16_e32
-; VI-NOT: v_min_u16_e32
+; VI-NOT: v_min_u16
 
 ; GFX9: v_pk_min_u16
 ; GFX9: v_pk_min_u16
@@ -344,8 +344,8 @@ define amdgpu_kernel void @v_test_umin_ult_i32(i32 addrspace(1)* %out, i32 addrs
 }
 
 ; FUNC-LABEL: {{^}}v_test_umin_ult_i8:
-; SI: buffer_load_ubyte
-; SI: buffer_load_ubyte
+; SI: {{buffer|flat|global}}_load_ubyte
+; SI: {{buffer|flat|global}}_load_ubyte
 ; SI: v_min_u32_e32
 
 ; GFX89: {{flat|global}}_load_ubyte
@@ -452,23 +452,24 @@ define amdgpu_kernel void @s_test_umin_ult_v8i32(<8 x i32> addrspace(1)* %out, <
 }
 
 ; FUNC-LABEL: {{^}}s_test_umin_ult_v8i16:
-; SI: v_min_u32
-; SI: v_min_u32
-; SI: v_min_u32
-; SI: v_min_u32
-; SI: v_min_u32
-; SI: v_min_u32
-; SI: v_min_u32
-; SI: v_min_u32
+; GCN-NOT: {{buffer|flat|global}}_load
+; SI: s_min_u32
+; SI: s_min_u32
+; SI: s_min_u32
+; SI: s_min_u32
+; SI: s_min_u32
+; SI: s_min_u32
+; SI: s_min_u32
+; SI: s_min_u32
 
-; VI: v_min_u32
-; VI: v_min_u32
-; VI: v_min_u32
-; VI: v_min_u32
-; VI: v_min_u32
-; VI: v_min_u32
-; VI: v_min_u32
-; VI: v_min_u32
+; VI: s_min_u32
+; VI: s_min_u32
+; VI: s_min_u32
+; VI: s_min_u32
+; VI: s_min_u32
+; VI: s_min_u32
+; VI: s_min_u32
+; VI: s_min_u32
 
 ; EG: MIN_UINT
 ; EG: MIN_UINT
@@ -487,14 +488,14 @@ define amdgpu_kernel void @s_test_umin_ult_v8i16(<8 x i16> addrspace(1)* %out, <
 
 ; Make sure redundant and removed
 ; FUNC-LABEL: {{^}}simplify_demanded_bits_test_umin_ult_i16:
-; GCN-DAG: s_load_dword [[A:s[0-9]+]], {{s\[[0-9]+:[0-9]+\]}}, {{0xb|0x2c}}
-; GCN-DAG: s_load_dword [[B:s[0-9]+]], {{s\[[0-9]+:[0-9]+\]}}, {{0xc|0x30}}
+; GCN-DAG: s_load_dword [[A:s[0-9]+]], {{s\[[0-9]+:[0-9]+\]}}, {{0xa|0x28}}
+; GCN-DAG: s_load_dword [[B:s[0-9]+]], {{s\[[0-9]+:[0-9]+\]}}, {{0x13|0x4c}}
 ; GCN: s_min_u32 [[MIN:s[0-9]+]], [[A]], [[B]]
 ; GCN: v_mov_b32_e32 [[VMIN:v[0-9]+]], [[MIN]]
 ; GCN: buffer_store_dword [[VMIN]]
 
 ; EG: MIN_UINT
-define amdgpu_kernel void @simplify_demanded_bits_test_umin_ult_i16(i32 addrspace(1)* %out, i16 zeroext %a, i16 zeroext %b) #0 {
+define amdgpu_kernel void @simplify_demanded_bits_test_umin_ult_i16(i32 addrspace(1)* %out, [8 x i32], i16 zeroext %a, [8 x i32], i16 zeroext %b) #0 {
   %a.ext = zext i16 %a to i32
   %b.ext = zext i16 %b to i32
   %cmp = icmp ult i32 %a.ext, %b.ext
@@ -507,14 +508,17 @@ define amdgpu_kernel void @simplify_demanded_bits_test_umin_ult_i16(i32 addrspac
 ; Make sure redundant sign_extend_inreg removed.
 
 ; FUNC-LABEL: {{^}}simplify_demanded_bits_test_min_slt_i16:
-; GCN-DAG: s_load_dword [[A:s[0-9]+]], {{s\[[0-9]+:[0-9]+\]}}, {{0xb|0x2c}}
-; GCN-DAG: s_load_dword [[B:s[0-9]+]], {{s\[[0-9]+:[0-9]+\]}}, {{0xc|0x30}}
-; GCN: s_min_i32 [[MIN:s[0-9]+]], [[A]], [[B]]
+; GCN-DAG: s_load_dword [[A:s[0-9]+]], {{s\[[0-9]+:[0-9]+\]}}, {{0xa|0x28}}
+; GCN-DAG: s_load_dword [[B:s[0-9]+]], {{s\[[0-9]+:[0-9]+\]}}, {{0x13|0x4c}}
+; GCN-DAG: s_sext_i32_i16 [[EXT_A:s[0-9]+]], [[A]]
+; GCN-DAG: s_sext_i32_i16 [[EXT_B:s[0-9]+]], [[B]]
+
+; GCN: s_min_i32 [[MIN:s[0-9]+]], [[EXT_A]], [[EXT_B]]
 ; GCN: v_mov_b32_e32 [[VMIN:v[0-9]+]], [[MIN]]
 ; GCN: buffer_store_dword [[VMIN]]
 
 ; EG: MIN_INT
-define amdgpu_kernel void @simplify_demanded_bits_test_min_slt_i16(i32 addrspace(1)* %out, i16 signext %a, i16 signext %b) #0 {
+define amdgpu_kernel void @simplify_demanded_bits_test_min_slt_i16(i32 addrspace(1)* %out, [8 x i32], i16 signext %a, [8 x i32], i16 signext %b) #0 {
   %a.ext = sext i16 %a to i32
   %b.ext = sext i16 %b to i32
   %cmp = icmp slt i32 %a.ext, %b.ext

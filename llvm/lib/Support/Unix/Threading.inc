@@ -21,8 +21,8 @@
 
 #include <pthread.h>
 
-#if defined(__FreeBSD__)
-#include <pthread_np.h> // For pthread_getthreadid_np()
+#if defined(__FreeBSD__) || defined(__OpenBSD__)
+#include <pthread_np.h> // For pthread_getthreadid_np() / pthread_set_name_np()
 #endif
 
 #if defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
@@ -98,8 +98,6 @@ uint64_t llvm::get_threadid() {
   return uint64_t(gettid());
 #elif defined(__linux__)
   return uint64_t(syscall(SYS_gettid));
-#elif defined(LLVM_ON_WIN32)
-  return uint64_t(::GetCurrentThreadId());
 #else
   return uint64_t(pthread_self());
 #endif
@@ -119,6 +117,8 @@ static constexpr uint32_t get_max_thread_name_length_impl() {
 #endif
 #elif defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
   return 16;
+#elif defined(__OpenBSD__)
+  return 32;
 #else
   return 0;
 #endif
@@ -138,8 +138,9 @@ void llvm::set_thread_name(const Twine &Name) {
   // terminated, but additionally the end of a long thread name will usually
   // be more unique than the beginning, since a common pattern is for similar
   // threads to share a common prefix.
+  // Note that the name length includes the null terminator.
   if (get_max_thread_name_length() > 0)
-    NameStr = NameStr.take_back(get_max_thread_name_length());
+    NameStr = NameStr.take_back(get_max_thread_name_length() - 1);
   (void)NameStr;
 #if defined(__linux__)
 #if (defined(__GLIBC__) && defined(_GNU_SOURCE)) || defined(__ANDROID__)
@@ -147,7 +148,7 @@ void llvm::set_thread_name(const Twine &Name) {
   ::pthread_setname_np(::pthread_self(), NameStr.data());
 #endif
 #endif
-#elif defined(__FreeBSD__)
+#elif defined(__FreeBSD__) || defined(__OpenBSD__)
   ::pthread_set_name_np(::pthread_self(), NameStr.data());
 #elif defined(__NetBSD__)
   ::pthread_setname_np(::pthread_self(), "%s",
@@ -175,7 +176,7 @@ void llvm::get_thread_name(SmallVectorImpl<char> &Name) {
     if (kp == nullptr || (error != 0 && errno == ENOMEM)) {
       // Add extra space in case threads are added before next call.
       len += sizeof(*kp) + len / 10;
-      nkp = (struct kinfo_proc *)realloc(kp, len);
+      nkp = (struct kinfo_proc *)::realloc(kp, len);
       if (nkp == nullptr) {
         free(kp);
         return;
@@ -203,13 +204,11 @@ void llvm::get_thread_name(SmallVectorImpl<char> &Name) {
 
   Name.append(buf, buf + strlen(buf));
 #elif defined(__linux__)
-#if (defined(__GLIBC__) && defined(_GNU_SOURCE)) || defined(__ANDROID__)
 #if HAVE_PTHREAD_GETNAME_NP
   constexpr uint32_t len = get_max_thread_name_length_impl();
   char Buffer[len] = {'\0'};  // FIXME: working around MSan false positive.
   if (0 == ::pthread_getname_np(::pthread_self(), Buffer, len))
     Name.append(Buffer, Buffer + strlen(Buffer));
-#endif
 #endif
 #endif
 }

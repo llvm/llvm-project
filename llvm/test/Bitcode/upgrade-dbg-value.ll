@@ -22,7 +22,7 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "llc r309174", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug)
 !1 = !DIFile(filename: "a.c", directory: "/")
 !2 = !{i32 1, !"Debug Info Version", i32 3}
-!3 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 1, type: !4, isLocal: false, isDefinition: true, isOptimized: false, unit: !0, variables: !7)
+!3 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 1, type: !4, isLocal: false, isDefinition: true, isOptimized: false, unit: !0, retainedNodes: !7)
 !4 = !DISubroutineType(types: !5)
 !5 = !{!6}
 !6 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)

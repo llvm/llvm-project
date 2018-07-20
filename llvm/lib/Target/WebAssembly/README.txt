@@ -2,15 +2,42 @@
 
 This WebAssembly backend is presently under development.
 
-Currently the easiest way to use it is through Emscripten, which provides a
-compilation environment that includes standard libraries, tools, and packaging
-for producing WebAssembly applications that can run in browsers and other
-environments. For more information, see the Emscripten documentation in
-general, and this page in particular:
-  * https://github.com/kripken/emscripten/wiki/New-WebAssembly-Backend
+The most notable feature which is not yet stable is the ".o" file format.
+".o" file support is needed for many common ways of using LLVM, such as
+using it through "clang -c", so this backend is not yet considered widely
+usable. However, this backend is usable within some language toolchain
+packages:
 
-Other ways of using this backend, such as via a standalone "clang", are also
-under development, though they are not generally usable yet.
+Emscripten provides a C/C++ compilation environment that includes standard
+libraries, tools, and packaging for producing WebAssembly applications that
+can run in browsers and other environments. For more information, see the
+Emscripten documentation in general, and this page in particular:
+
+  * https://github.com/kripken/emscripten/wiki/New-WebAssembly-Backend
+ 
+Rust provides WebAssembly support integrated into Cargo. There are two
+main options:
+ - wasm32-unknown-unknown, which provides a relatively minimal environment
+   that has an emphasis on being "native"
+ - wasm32-unknown-emscripten, which uses Emscripten internally and
+   provides standard C/C++ libraries, filesystem emulation, GL and SDL
+   bindings
+For more information, see:
+  * https://www.hellorust.com/
+
+
+This backend does not yet support debug info. Full DWARF support needs a
+design for how DWARF should be represented in WebAssembly. Sourcemap support
+has an existing design and some corresponding browser implementations, so it
+just needs implementing in LLVM.
+
+Work-in-progress documentation for the ".o" file format is here:
+
+  * https://github.com/WebAssembly/tool-conventions/blob/master/Linking.md
+
+A corresponding linker implementation is also under development:
+
+  * https://lld.llvm.org/WebAssembly.html
 
 For more information on WebAssembly itself, see the home page:
   * https://webassembly.github.io/
@@ -29,6 +56,8 @@ known_gcc_test_failures.txt, all other tests should pass. The waterfall will
 turn red if not. Once most of these pass, further testing will use LLVM's own
 test suite. The tests can be run locally using:
   https://github.com/WebAssembly/waterfall/blob/master/src/compile_torture_tests.py
+
+Some notes on ways that the generated code could be improved follow:
 
 //===---------------------------------------------------------------------===//
 
@@ -127,7 +156,7 @@ However, if moving the binary operator to its user moves it to a place where
 its operands can't be moved to, it would be better to leave it in place, or
 perhaps move it up, so that it can stackify its operands. A binary operator
 has two operands and one result, so in such cases there could be a net win by
-prefering the operands.
+preferring the operands.
 
 //===---------------------------------------------------------------------===//
 
@@ -138,11 +167,10 @@ instructions advantageously for this purpose.
 
 //===---------------------------------------------------------------------===//
 
-WebAssembly is now officially a stack machine, rather than an AST, and this
-comes with additional opportunities for WebAssemblyRegStackify. Specifically,
-the stack doesn't need to be empty after an instruction with no return values.
-WebAssemblyRegStackify could be extended, or possibly rewritten, to take
-advantage of the new opportunities.
+WebAssemblyRegStackify currently assumes that the stack must be empty after
+an instruction with no return values, however wasm doesn't actually require
+this. WebAssemblyRegStackify could be extended, or possibly rewritten, to take
+full advantage of what WebAssembly permits.
 
 //===---------------------------------------------------------------------===//
 

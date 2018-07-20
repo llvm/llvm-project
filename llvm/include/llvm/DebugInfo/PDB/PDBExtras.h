@@ -34,6 +34,8 @@ raw_ostream &operator<<(raw_ostream &OS, const PDB_SymType &Tag);
 raw_ostream &operator<<(raw_ostream &OS, const PDB_MemberAccess &Access);
 raw_ostream &operator<<(raw_ostream &OS, const PDB_UdtType &Type);
 raw_ostream &operator<<(raw_ostream &OS, const PDB_Machine &Machine);
+raw_ostream &operator<<(raw_ostream &OS,
+                        const PDB_SourceCompression &Compression);
 
 raw_ostream &operator<<(raw_ostream &OS, const Variant &Value);
 raw_ostream &operator<<(raw_ostream &OS, const VersionInfo &Version);

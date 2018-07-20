@@ -6,7 +6,8 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Simplify CFG will try to sink the last instruction in a series of basic
 ; blocks, creating a "common" instruction in the successor block.  If the
 ; debug locations of the commoned instructions have different file/line
-; numbers the debug location of the common instruction should not be set.
+; numbers the debug location of the common instruction should be a merged
+; location.
 
 ; Generated from source:
 
@@ -24,8 +25,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: define i32 @test
 ; CHECK-LABEL: if.end:
 ; CHECK: %[[PHI:.*]] = phi i32 [ %call1, %if.else ], [ %call, %if.then ]
-; CHECK: sub nsw i32 %b, %[[PHI]]
-; CHECK-NOT: !dbg
+; CHECK: sub nsw i32 %b, %[[PHI]], !dbg [[testMergedLoc:![0-9]+]]
 ; CHECK: ret i32
 
 define i32 @test(i32 %a, i32 %b) !dbg !6 {
@@ -61,9 +61,8 @@ if.end:                                           ; preds = %if.else, %if.then
 ; CHECK: define i32 @test2
 ; CHECK-LABEL: if.end:
 ; CHECK: %[[PHI:.*]] = phi i32 [ %call1, %if.else ], [ %call, %if.then ]
-; CHECK: sub nsw i32 %b, %[[PHI]], !dbg ![[DBG:.*]]
+; CHECK: sub nsw i32 %b, %[[PHI]], !dbg [[test2Loc:![0-9]+]]
 ; CHECK: ret i32
-; CHECK: ![[DBG]] = !DILocation(line: 17, scope: !{{.*}})
 
 define i32 @test2(i32 %a, i32 %b) !dbg !15 {
 entry:
@@ -85,6 +84,9 @@ if.end:                                           ; preds = %if.else, %if.then
   ret i32 %b.addr.0, !dbg !17
 }
 
+; CHECK: [[testMergedLoc]] = !DILocation(line: 0
+; CHECK: [[test2Loc]] = !DILocation(line: 17
+
 declare i32 @foo()
 declare i32 @bar()
 
@@ -96,7 +98,7 @@ declare i32 @bar()
 !2 = !{}
 !3 = !{i32 2, !"Dwarf Version", i32 4}
 !4 = !{i32 2, !"Debug Info Version", i32 3}
-!6 = distinct !DISubprogram(name: "test", scope: !1, file: !1, line: 8, type: !7, isLocal: false, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
+!6 = distinct !DISubprogram(name: "test", scope: !1, file: !1, line: 8, type: !7, isLocal: false, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
 !7 = !DISubroutineType(types: !2)
 !8 = !DILocation(line: 9, column: 6, scope: !6)
 !9 = !DILocation(line: 10, column: 10, scope: !6)
@@ -105,6 +107,6 @@ declare i32 @bar()
 !12 = !DILocation(line: 12, column: 10, scope: !6)
 !13 = !DILocation(line: 12, column: 7, scope: !6)
 !14 = !DILocation(line: 13, column: 3, scope: !6)
-!15 = distinct !DISubprogram(name: "test2", scope: !1, file: !1, line: 16, type: !7, isLocal: false, isDefinition: true, scopeLine: 16, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
+!15 = distinct !DISubprogram(name: "test2", scope: !1, file: !1, line: 16, type: !7, isLocal: false, isDefinition: true, scopeLine: 16, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
 !16 = !DILocation(line: 17, scope: !15)
 !17 = !DILocation(line: 18, scope: !15)

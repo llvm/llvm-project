@@ -1,5 +1,6 @@
 add_llvm_library(LLVMDebugInfoDWARF
   DWARFAbbreviationDeclaration.cpp
+  DWARFAddressRange.cpp
   DWARFAcceleratorTable.cpp
   DWARFCompileUnit.cpp
   DWARFContext.cpp
@@ -14,6 +15,7 @@ add_llvm_library(LLVMDebugInfoDWARF
   DWARFDebugMacro.cpp
   DWARFDebugPubTable.cpp
   DWARFDebugRangeList.cpp
+  DWARFDebugRnglists.cpp
   DWARFDie.cpp
   DWARFExpression.cpp
   DWARFFormValue.cpp
@@ -22,7 +24,6 @@ add_llvm_library(LLVMDebugInfoDWARF
   DWARFUnitIndex.cpp
   DWARFUnit.cpp
   DWARFVerifier.cpp
-  SyntaxHighlighting.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/DebugInfo/DWARF

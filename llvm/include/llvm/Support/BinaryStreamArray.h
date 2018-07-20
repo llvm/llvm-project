@@ -111,7 +111,7 @@ public:
 
   bool empty() const { return Stream.getLength() == 0; }
 
-  /// \brief given an offset into the array's underlying stream, return an
+  /// given an offset into the array's underlying stream, return an
   /// iterator to the record at that offset.  This is considered unsafe
   /// since the behavior is undefined if \p Offset does not refer to the
   /// beginning of a valid record.

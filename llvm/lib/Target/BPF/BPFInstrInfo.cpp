@@ -36,6 +36,9 @@ void BPFInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   if (BPF::GPRRegClass.contains(DestReg, SrcReg))
     BuildMI(MBB, I, DL, get(BPF::MOV_rr), DestReg)
         .addReg(SrcReg, getKillRegState(KillSrc));
+  else if (BPF::GPR32RegClass.contains(DestReg, SrcReg))
+    BuildMI(MBB, I, DL, get(BPF::MOV_rr_32), DestReg)
+        .addReg(SrcReg, getKillRegState(KillSrc));
   else
     llvm_unreachable("Impossible reg-to-reg copy");
 }
@@ -54,6 +57,11 @@ void BPFInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
         .addReg(SrcReg, getKillRegState(IsKill))
         .addFrameIndex(FI)
         .addImm(0);
+  else if (RC == &BPF::GPR32RegClass)
+    BuildMI(MBB, I, DL, get(BPF::STW32))
+        .addReg(SrcReg, getKillRegState(IsKill))
+        .addFrameIndex(FI)
+        .addImm(0);
   else
     llvm_unreachable("Can't store this register to stack slot");
 }
@@ -69,6 +77,8 @@ void BPFInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
 
   if (RC == &BPF::GPRRegClass)
     BuildMI(MBB, I, DL, get(BPF::LDD), DestReg).addFrameIndex(FI).addImm(0);
+  else if (RC == &BPF::GPR32RegClass)
+    BuildMI(MBB, I, DL, get(BPF::LDW32), DestReg).addFrameIndex(FI).addImm(0);
   else
     llvm_unreachable("Can't load this register from stack slot");
 }
@@ -83,7 +93,7 @@ bool BPFInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
   MachineBasicBlock::iterator I = MBB.end();
   while (I != MBB.begin()) {
     --I;
-    if (I->isDebugValue())
+    if (I->isDebugInstr())
       continue;
 
     // Working from the bottom, when we see a non-terminator
@@ -158,7 +168,7 @@ unsigned BPFInstrInfo::removeBranch(MachineBasicBlock &MBB,
 
   while (I != MBB.begin()) {
     --I;
-    if (I->isDebugValue())
+    if (I->isDebugInstr())
       continue;
     if (I->getOpcode() != BPF::JMP)
       break;

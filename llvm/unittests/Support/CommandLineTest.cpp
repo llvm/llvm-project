@@ -10,8 +10,10 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/Config/config.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/StringSaver.h"
@@ -50,26 +52,11 @@ class TempEnvVar {
   const char *const name;
 };
 
-template <typename T>
-class StackOption : public cl::opt<T> {
-  typedef cl::opt<T> Base;
+template <typename T, typename Base = cl::opt<T>>
+class StackOption : public Base {
 public:
-  // One option...
-  template<class M0t>
-  explicit StackOption(const M0t &M0) : Base(M0) {}
-
-  // Two options...
-  template<class M0t, class M1t>
-  StackOption(const M0t &M0, const M1t &M1) : Base(M0, M1) {}
-
-  // Three options...
-  template<class M0t, class M1t, class M2t>
-  StackOption(const M0t &M0, const M1t &M1, const M2t &M2) : Base(M0, M1, M2) {}
-
-  // Four options...
-  template<class M0t, class M1t, class M2t, class M3t>
-  StackOption(const M0t &M0, const M1t &M1, const M2t &M2, const M3t &M3)
-    : Base(M0, M1, M2, M3) {}
+  template <class... Ts>
+  explicit StackOption(Ts &&... Ms) : Base(std::forward<Ts>(Ms)...) {}
 
   ~StackOption() override { this->removeArgument(); }
 
@@ -95,9 +82,9 @@ cl::OptionCategory TestCategory("Test Options", "Description");
 TEST(CommandLineTest, ModifyExisitingOption) {
   StackOption<int> TestOption("test-option", cl::desc("old description"));
 
-  const char Description[] = "New description";
-  const char ArgString[] = "new-test-option";
-  const char ValueString[] = "Integer";
+  static const char Description[] = "New description";
+  static const char ArgString[] = "new-test-option";
+  static const char ValueString[] = "Integer";
 
   StringMap<cl::Option *> &Map =
       cl::getRegisteredOptions(*cl::TopLevelSubCommand);
@@ -631,6 +618,40 @@ TEST(CommandLineTest, ArgumentLimit) {
   EXPECT_FALSE(llvm::sys::commandLineFitsWithinSystemLimits("cl", args.data()));
 }
 
+TEST(CommandLineTest, ResponseFileWindows) {
+  if (!Triple(sys::getProcessTriple()).isOSWindows())
+    return;
+
+  StackOption<std::string, cl::list<std::string>> InputFilenames(
+      cl::Positional, cl::desc("<input files>"), cl::ZeroOrMore);
+  StackOption<bool> TopLevelOpt("top-level", cl::init(false));
+
+  // Create response file.
+  int FileDescriptor;
+  SmallString<64> TempPath;
+  std::error_code EC =
+      llvm::sys::fs::createTemporaryFile("resp-", ".txt", FileDescriptor, TempPath);
+  EXPECT_TRUE(!EC);
+
+  std::ofstream RspFile(TempPath.c_str());
+  EXPECT_TRUE(RspFile.is_open());
+  RspFile << "-top-level\npath\\dir\\file1\npath/dir/file2";
+  RspFile.close();
+
+  llvm::SmallString<128> RspOpt;
+  RspOpt.append(1, '@');
+  RspOpt.append(TempPath.c_str());
+  const char *args[] = {"prog", RspOpt.c_str()};
+  EXPECT_FALSE(TopLevelOpt);
+  EXPECT_TRUE(
+      cl::ParseCommandLineOptions(2, args, StringRef(), &llvm::nulls()));
+  EXPECT_TRUE(TopLevelOpt);
+  EXPECT_TRUE(InputFilenames[0] == "path\\dir\\file1");
+  EXPECT_TRUE(InputFilenames[1] == "path/dir/file2");
+
+  llvm::sys::fs::remove(TempPath.c_str());
+}
+
 TEST(CommandLineTest, ResponseFiles) {
   llvm::SmallString<128> TestDir;
   std::error_code EC =
@@ -725,6 +746,7 @@ TEST(CommandLineTest, SetDefautValue) {
   EXPECT_TRUE(Opt1 == "true");
   EXPECT_TRUE(Opt2);
   EXPECT_TRUE(Opt3 == 3);
+  Alias.removeArgument();
 }
 
 TEST(CommandLineTest, ReadConfigFile) {
@@ -780,5 +802,42 @@ TEST(CommandLineTest, ReadConfigFile) {
   llvm::sys::fs::remove(TestCfg);
   llvm::sys::fs::remove(TestDir);
 }
+
+TEST(CommandLineTest, PositionalEatArgsError) {
+  StackOption<std::string, cl::list<std::string>> PosEatArgs(
+      "positional-eat-args", cl::Positional, cl::desc("<arguments>..."),
+      cl::ZeroOrMore, cl::PositionalEatsArgs);
+
+  const char *args[] = {"prog", "-positional-eat-args=XXXX"};
+  const char *args2[] = {"prog", "-positional-eat-args=XXXX", "-foo"};
+  const char *args3[] = {"prog", "-positional-eat-args", "-foo"};
+
+  std::string Errs;
+  raw_string_ostream OS(Errs);
+  EXPECT_FALSE(cl::ParseCommandLineOptions(2, args, StringRef(), &OS)); OS.flush();
+  EXPECT_FALSE(Errs.empty()); Errs.clear();
+  EXPECT_FALSE(cl::ParseCommandLineOptions(3, args2, StringRef(), &OS)); OS.flush();
+  EXPECT_FALSE(Errs.empty()); Errs.clear();
+  EXPECT_TRUE(cl::ParseCommandLineOptions(3, args3, StringRef(), &OS)); OS.flush();
+  EXPECT_TRUE(Errs.empty());
+}
+
+#ifdef _WIN32
+TEST(CommandLineTest, GetCommandLineArguments) {
+  int argc = __argc;
+  char **argv = __argv;
+
+  // GetCommandLineArguments is called in InitLLVM.
+  llvm::InitLLVM X(argc, argv);
+
+  EXPECT_EQ(llvm::sys::path::is_absolute(argv[0]),
+            llvm::sys::path::is_absolute(__argv[0]));
+
+  EXPECT_TRUE(llvm::sys::path::filename(argv[0])
+              .equals_lower("supporttests.exe"))
+      << "Filename of test executable is "
+      << llvm::sys::path::filename(argv[0]);
+}
+#endif
 
 }  // anonymous namespace

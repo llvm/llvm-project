@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple x86_64-unknown-unknown -x86-asm-syntax=intel -output-asm-variant=1 -mcpu=knl --show-encoding %s | FileCheck %s
+// RUN: llvm-mc -triple x86_64-unknown-unknown -x86-asm-syntax=intel -output-asm-variant=1 --show-encoding %s | FileCheck %s
 
 // CHECK: vaddps  zmm1, zmm1, zmmword ptr [rax]
 // CHECK: encoding: [0x62,0xf1,0x74,0x48,0x58,0x08]

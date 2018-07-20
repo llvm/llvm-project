@@ -46,7 +46,7 @@ namespace llvm {
   /// to speed up capture-tracker queries.
   bool PointerMayBeCapturedBefore(const Value *V, bool ReturnCaptures,
                                   bool StoreCaptures, const Instruction *I,
-                                  DominatorTree *DT, bool IncludeI = false,
+                                  const DominatorTree *DT, bool IncludeI = false,
                                   OrderedBasicBlock *OBB = nullptr);
 
   /// This callback is used in conjunction with PointerMayBeCaptured. In

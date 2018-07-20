@@ -1,4 +1,5 @@
 ; RUN: llc < %s -mtriple=x86_64-win32 -mattr=sse2 -mattr=avx | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-win32-gnu -mattr=sse2 -mattr=avx | FileCheck -check-prefix=MINGW %s
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-windows-msvc"
 
@@ -13,6 +14,14 @@ define double @double() {
 ; CHECK:      double:
 ; CHECK:               movsd   __real@0000000000800000(%rip), %xmm0
 ; CHECK-NEXT:          ret
+
+; MINGW:              .section        .rdata,"dr"
+; MINGW-NEXT:         .p2align  3
+; MINGW-NEXT: [[LABEL:\.LC.*]]:
+; MINGW-NEXT:         .quad   8388608
+; MINGW:      double:
+; MINGW:               movsd   [[LABEL]](%rip), %xmm0
+; MINGW-NEXT:          ret
 
 define <4 x i32> @vec1() {
   ret <4 x i32> <i32 3, i32 2, i32 1, i32 0>

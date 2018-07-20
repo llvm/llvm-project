@@ -24,9 +24,9 @@ stack:
   - { id: 0, name: b, size: 4, alignment: 4 }
 body: |
   bb.0.entry:
-    %0 = COPY %edi
+    %0 = COPY $edi
     ; CHECK: [[@LINE+1]]:13: the name of the stack object '%stack.0' isn't 'x'
     MOV32mr %stack.0.x, 1, _, 0, _, %0
-    %eax = COPY %0
-    RETQ %eax
+    $eax = COPY %0
+    RETQ $eax
 ...

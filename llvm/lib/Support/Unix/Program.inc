@@ -23,6 +23,7 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/StringSaver.h"
 #include "llvm/Support/raw_ostream.h"
 #if HAVE_SYS_STAT_H
 #include <sys/stat.h>
@@ -164,14 +165,36 @@ static void SetMemoryLimits(unsigned size) {
 
 }
 
-static bool Execute(ProcessInfo &PI, StringRef Program, const char **Args,
-                    const char **Envp, ArrayRef<Optional<StringRef>> Redirects,
+static std::vector<const char *>
+toNullTerminatedCStringArray(ArrayRef<StringRef> Strings, StringSaver &Saver) {
+  std::vector<const char *> Result;
+  for (StringRef S : Strings)
+    Result.push_back(Saver.save(S).data());
+  Result.push_back(nullptr);
+  return Result;
+}
+
+static bool Execute(ProcessInfo &PI, StringRef Program,
+                    ArrayRef<StringRef> Args, Optional<ArrayRef<StringRef>> Env,
+                    ArrayRef<Optional<StringRef>> Redirects,
                     unsigned MemoryLimit, std::string *ErrMsg) {
   if (!llvm::sys::fs::exists(Program)) {
     if (ErrMsg)
       *ErrMsg = std::string("Executable \"") + Program.str() +
                 std::string("\" doesn't exist!");
     return false;
+  }
+
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  std::vector<const char *> ArgVector, EnvVector;
+  const char **Argv = nullptr;
+  const char **Envp = nullptr;
+  ArgVector = toNullTerminatedCStringArray(Args, Saver);
+  Argv = ArgVector.data();
+  if (Env) {
+    EnvVector = toNullTerminatedCStringArray(*Env, Saver);
+    Envp = EnvVector.data();
   }
 
   // If this OS has posix_spawn and there is no memory limit being implied, use
@@ -227,7 +250,7 @@ static bool Execute(ProcessInfo &PI, StringRef Program, const char **Args,
     // positive.
     pid_t PID = 0;
     int Err = posix_spawn(&PID, Program.str().c_str(), FileActions,
-                          /*attrp*/nullptr, const_cast<char **>(Args),
+                          /*attrp*/ nullptr, const_cast<char **>(Argv),
                           const_cast<char **>(Envp));
 
     if (FileActions)
@@ -237,6 +260,7 @@ static bool Execute(ProcessInfo &PI, StringRef Program, const char **Args,
      return !MakeErrMsg(ErrMsg, "posix_spawn failed", Err);
 
     PI.Pid = PID;
+    PI.Process = PID;
 
     return true;
   }
@@ -279,12 +303,10 @@ static bool Execute(ProcessInfo &PI, StringRef Program, const char **Args,
       // Execute!
       std::string PathStr = Program;
       if (Envp != nullptr)
-        execve(PathStr.c_str(),
-               const_cast<char **>(Args),
+        execve(PathStr.c_str(), const_cast<char **>(Argv),
                const_cast<char **>(Envp));
       else
-        execv(PathStr.c_str(),
-              const_cast<char **>(Args));
+        execv(PathStr.c_str(), const_cast<char **>(Argv));
       // If the execve() failed, we should exit. Follow Unix protocol and
       // return 127 if the executable was not found, and 126 otherwise.
       // Use _exit rather than exit so that atexit functions and static
@@ -300,6 +322,7 @@ static bool Execute(ProcessInfo &PI, StringRef Program, const char **Args,
   }
 
   PI.Pid = child;
+  PI.Process = child;
 
   return true;
 }
@@ -404,14 +427,14 @@ ProcessInfo sys::Wait(const ProcessInfo &PI, unsigned SecondsToWait,
   return WaitResult;
 }
 
-  std::error_code sys::ChangeStdinToBinary(){
+std::error_code sys::ChangeStdinToBinary() {
   // Do nothing, as Unix doesn't differentiate between text and binary.
-    return std::error_code();
+  return std::error_code();
 }
 
-  std::error_code sys::ChangeStdoutToBinary(){
+std::error_code sys::ChangeStdoutToBinary() {
   // Do nothing, as Unix doesn't differentiate between text and binary.
-    return std::error_code();
+  return std::error_code();
 }
 
 std::error_code
@@ -432,29 +455,38 @@ llvm::sys::writeFileWithEncoding(StringRef FileName, StringRef Contents,
 }
 
 bool llvm::sys::commandLineFitsWithinSystemLimits(StringRef Program,
-                                                  ArrayRef<const char *> Args) {
+                                                  ArrayRef<StringRef> Args) {
   static long ArgMax = sysconf(_SC_ARG_MAX);
+  // POSIX requires that _POSIX_ARG_MAX is 4096, which is the lowest possible
+  // value for ARG_MAX on a POSIX compliant system.
+  static long ArgMin = _POSIX_ARG_MAX;
+
+  // This the same baseline used by xargs.
+  long EffectiveArgMax = 128 * 1024;
+
+  if (EffectiveArgMax > ArgMax)
+    EffectiveArgMax = ArgMax;
+  else if (EffectiveArgMax < ArgMin)
+    EffectiveArgMax = ArgMin;
 
   // System says no practical limit.
   if (ArgMax == -1)
     return true;
 
   // Conservatively account for space required by environment variables.
-  long HalfArgMax = ArgMax / 2;
+  long HalfArgMax = EffectiveArgMax / 2;
 
   size_t ArgLength = Program.size() + 1;
-  for (const char* Arg : Args) {
-    size_t length = strlen(Arg);
-
+  for (StringRef Arg : Args) {
     // Ensure that we do not exceed the MAX_ARG_STRLEN constant on Linux, which
     // does not have a constant unlike what the man pages would have you
     // believe. Since this limit is pretty high, perform the check
     // unconditionally rather than trying to be aggressive and limiting it to
     // Linux only.
-    if (length >= (32 * 4096))
+    if (Arg.size() >= (32 * 4096))
       return false;
 
-    ArgLength += length + 1;
+    ArgLength += Arg.size() + 1;
     if (ArgLength > size_t(HalfArgMax)) {
       return false;
     }

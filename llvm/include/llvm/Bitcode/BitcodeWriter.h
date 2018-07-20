@@ -86,7 +86,7 @@ class raw_ostream;
     /// Can be used to produce the same module hash for a minimized bitcode
     /// used just for the thin link as in the regular full bitcode that will
     /// be used in the backend.
-    void writeModule(const Module *M, bool ShouldPreserveUseListOrder = false,
+    void writeModule(const Module &M, bool ShouldPreserveUseListOrder = false,
                      const ModuleSummaryIndex *Index = nullptr,
                      bool GenerateHash = false, ModuleHash *ModHash = nullptr);
 
@@ -97,7 +97,7 @@ class raw_ostream;
     ///
     /// ModHash is for use in ThinLTO incremental build, generated while the
     /// IR bitcode file writing.
-    void writeThinLinkBitcode(const Module *M, const ModuleSummaryIndex &Index,
+    void writeThinLinkBitcode(const Module &M, const ModuleSummaryIndex &Index,
                               const ModuleHash &ModHash);
 
     void writeIndex(
@@ -105,7 +105,7 @@ class raw_ostream;
         const std::map<std::string, GVSummaryMapTy> *ModuleToSummariesForIndex);
   };
 
-  /// \brief Write the specified module to the specified raw output stream.
+  /// Write the specified module to the specified raw output stream.
   ///
   /// For streams where it matters, the given stream should be in "binary"
   /// mode.
@@ -126,7 +126,7 @@ class raw_ostream;
   /// Can be used to produce the same module hash for a minimized bitcode
   /// used just for the thin link as in the regular full bitcode that will
   /// be used in the backend.
-  void WriteBitcodeToFile(const Module *M, raw_ostream &Out,
+  void WriteBitcodeToFile(const Module &M, raw_ostream &Out,
                           bool ShouldPreserveUseListOrder = false,
                           const ModuleSummaryIndex *Index = nullptr,
                           bool GenerateHash = false,
@@ -139,7 +139,7 @@ class raw_ostream;
   ///
   /// ModHash is for use in ThinLTO incremental build, generated while the IR
   /// bitcode file writing.
-  void WriteThinLinkBitcodeToFile(const Module *M, raw_ostream &Out,
+  void WriteThinLinkBitcodeToFile(const Module &M, raw_ostream &Out,
                                   const ModuleSummaryIndex &Index,
                                   const ModuleHash &ModHash);
 

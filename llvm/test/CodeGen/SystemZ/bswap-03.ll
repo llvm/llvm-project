@@ -86,40 +86,23 @@ define i64 @f7(i64 %src, i64 %index) {
   ret i64 %swapped
 }
 
-; Check that volatile accesses do not use LRVG, which might access the
-; storage multple times.
-define i64 @f8(i64 *%src) {
-; CHECK-LABEL: f8:
-; CHECK: lg [[REG:%r[0-5]]], 0(%r2)
-; CHECK: lrvgr %r2, [[REG]]
-; CHECK: br %r14
-  %a = load volatile i64 , i64 *%src
-  %swapped = call i64 @llvm.bswap.i64(i64 %a)
-  ret i64 %swapped
-}
-
 ; Test a case where we spill the source of at least one LRVGR.  We want
 ; to use LRVG if possible.
-define void @f9(i64 *%ptr) {
-; CHECK-LABEL: f9:
+define i64 @f8(i64 *%ptr) {
+; CHECK-LABEL: f8:
 ; CHECK: lrvg {{%r[0-9]+}}, 160(%r15)
 ; CHECK: br %r14
-  %val0 = load volatile i64 , i64 *%ptr
-  %val1 = load volatile i64 , i64 *%ptr
-  %val2 = load volatile i64 , i64 *%ptr
-  %val3 = load volatile i64 , i64 *%ptr
-  %val4 = load volatile i64 , i64 *%ptr
-  %val5 = load volatile i64 , i64 *%ptr
-  %val6 = load volatile i64 , i64 *%ptr
-  %val7 = load volatile i64 , i64 *%ptr
-  %val8 = load volatile i64 , i64 *%ptr
-  %val9 = load volatile i64 , i64 *%ptr
-  %val10 = load volatile i64 , i64 *%ptr
-  %val11 = load volatile i64 , i64 *%ptr
-  %val12 = load volatile i64 , i64 *%ptr
-  %val13 = load volatile i64 , i64 *%ptr
-  %val14 = load volatile i64 , i64 *%ptr
-  %val15 = load volatile i64 , i64 *%ptr
+
+  %val0 = call i64 @foo()
+  %val1 = call i64 @foo()
+  %val2 = call i64 @foo()
+  %val3 = call i64 @foo()
+  %val4 = call i64 @foo()
+  %val5 = call i64 @foo()
+  %val6 = call i64 @foo()
+  %val7 = call i64 @foo()
+  %val8 = call i64 @foo()
+  %val9 = call i64 @foo()
 
   %swapped0 = call i64 @llvm.bswap.i64(i64 %val0)
   %swapped1 = call i64 @llvm.bswap.i64(i64 %val1)
@@ -131,46 +114,18 @@ define void @f9(i64 *%ptr) {
   %swapped7 = call i64 @llvm.bswap.i64(i64 %val7)
   %swapped8 = call i64 @llvm.bswap.i64(i64 %val8)
   %swapped9 = call i64 @llvm.bswap.i64(i64 %val9)
-  %swapped10 = call i64 @llvm.bswap.i64(i64 %val10)
-  %swapped11 = call i64 @llvm.bswap.i64(i64 %val11)
-  %swapped12 = call i64 @llvm.bswap.i64(i64 %val12)
-  %swapped13 = call i64 @llvm.bswap.i64(i64 %val13)
-  %swapped14 = call i64 @llvm.bswap.i64(i64 %val14)
-  %swapped15 = call i64 @llvm.bswap.i64(i64 %val15)
 
-  store volatile i64 %val0, i64 *%ptr
-  store volatile i64 %val1, i64 *%ptr
-  store volatile i64 %val2, i64 *%ptr
-  store volatile i64 %val3, i64 *%ptr
-  store volatile i64 %val4, i64 *%ptr
-  store volatile i64 %val5, i64 *%ptr
-  store volatile i64 %val6, i64 *%ptr
-  store volatile i64 %val7, i64 *%ptr
-  store volatile i64 %val8, i64 *%ptr
-  store volatile i64 %val9, i64 *%ptr
-  store volatile i64 %val10, i64 *%ptr
-  store volatile i64 %val11, i64 *%ptr
-  store volatile i64 %val12, i64 *%ptr
-  store volatile i64 %val13, i64 *%ptr
-  store volatile i64 %val14, i64 *%ptr
-  store volatile i64 %val15, i64 *%ptr
+  %ret1 = add i64 %swapped0, %swapped1
+  %ret2 = add i64 %ret1, %swapped2
+  %ret3 = add i64 %ret2, %swapped3
+  %ret4 = add i64 %ret3, %swapped4
+  %ret5 = add i64 %ret4, %swapped5
+  %ret6 = add i64 %ret5, %swapped6
+  %ret7 = add i64 %ret6, %swapped7
+  %ret8 = add i64 %ret7, %swapped8
+  %ret9 = add i64 %ret8, %swapped9
 
-  store volatile i64 %swapped0, i64 *%ptr
-  store volatile i64 %swapped1, i64 *%ptr
-  store volatile i64 %swapped2, i64 *%ptr
-  store volatile i64 %swapped3, i64 *%ptr
-  store volatile i64 %swapped4, i64 *%ptr
-  store volatile i64 %swapped5, i64 *%ptr
-  store volatile i64 %swapped6, i64 *%ptr
-  store volatile i64 %swapped7, i64 *%ptr
-  store volatile i64 %swapped8, i64 *%ptr
-  store volatile i64 %swapped9, i64 *%ptr
-  store volatile i64 %swapped10, i64 *%ptr
-  store volatile i64 %swapped11, i64 *%ptr
-  store volatile i64 %swapped12, i64 *%ptr
-  store volatile i64 %swapped13, i64 *%ptr
-  store volatile i64 %swapped14, i64 *%ptr
-  store volatile i64 %swapped15, i64 *%ptr
-
-  ret void
+  ret i64 %ret9
 }
+
+declare i64 @foo()

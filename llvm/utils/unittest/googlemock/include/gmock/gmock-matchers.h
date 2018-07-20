@@ -2654,7 +2654,7 @@ class WhenSortedByMatcher {
       LhsStlContainerReference lhs_stl_container = LhsView::ConstReference(lhs);
       ::std::vector<LhsValue> sorted_container(lhs_stl_container.begin(),
                                                lhs_stl_container.end());
-      ::std::sort(
+      ::llvm::sort(
            sorted_container.begin(), sorted_container.end(), comparator_);
 
       if (!listener->IsInterested()) {

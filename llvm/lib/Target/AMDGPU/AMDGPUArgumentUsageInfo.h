@@ -18,7 +18,7 @@ namespace llvm {
 
 class Function;
 class raw_ostream;
-class SISubtarget;
+class GCNSubtarget;
 class TargetMachine;
 class TargetRegisterClass;
 class TargetRegisterInfo;
@@ -111,9 +111,6 @@ struct AMDGPUFunctionArgInfo {
   ArgDescriptor DispatchID;
   ArgDescriptor FlatScratchInit;
   ArgDescriptor PrivateSegmentSize;
-  ArgDescriptor GridWorkGroupCountX;
-  ArgDescriptor GridWorkGroupCountY;
-  ArgDescriptor GridWorkGroupCountZ;
 
   // System SGPRs in kernels.
   ArgDescriptor WorkGroupIDX;

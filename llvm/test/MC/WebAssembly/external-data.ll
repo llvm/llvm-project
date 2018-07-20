@@ -1,4 +1,7 @@
-; RUN: llc -mtriple wasm32-unknown-unknown-wasm -filetype=obj %s -o - | obj2yaml | FileCheck %s
+; RUN: llc -filetype=obj %s -o - | obj2yaml | FileCheck %s
+
+target triple = "wasm32-unknown-unknown"
+
 ; Verify relocations are correctly generated for addresses of externals
 ; in the data section.
 
@@ -10,7 +13,7 @@
 ; CHECK:        - Type:            DATA
 ; CHECK-NEXT:     Relocations:
 ; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_MEMORY_ADDR_I32
-; CHECK-NEXT:         Index:           0
+; CHECK-NEXT:         Index:           2
 ; CHECK-NEXT:         Offset:          0x00000013
 ; CHECK-NEXT:     Segments:
 ; CHECK-NEXT:       - SectionOffset:   6
@@ -24,4 +27,4 @@
 ; CHECK-NEXT:         Offset:          
 ; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           8
-; CHECK-NEXT:         Content:         FFFFFFFF
+; CHECK-NEXT:         Content:         '00000000'

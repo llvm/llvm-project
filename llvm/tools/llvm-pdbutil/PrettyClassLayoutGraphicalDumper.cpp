@@ -50,12 +50,9 @@ bool PrettyClassLayoutGraphicalDumper::start(const UDTLayoutBase &Layout) {
     uint32_t RelativeOffset = Item->getOffsetInParent();
     CurrentAbsoluteOffset = ClassOffsetZero + RelativeOffset;
 
-    // Since there is storage there, it should be set!  However, this might
-    // be an empty base, in which case it could extend outside the bounds of
-    // the parent class.
+    // This might be an empty base, in which case it could extend outside the
+    // bounds of the parent class.
     if (RelativeOffset < UseMap.size() && (Item->getSize() > 0)) {
-      assert(UseMap.test(RelativeOffset));
-
       // If there is any remaining padding in this class, and the offset of the
       // new item is after the padding, then we must have just jumped over some
       // padding.  Print a padding row and then look for where the next block

@@ -8,20 +8,15 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file defines the functions of the WebAssembly-specific subclass
+/// This file defines the functions of the WebAssembly-specific subclass
 /// of TargetLoweringObjectFile.
 ///
 //===----------------------------------------------------------------------===//
 
 #include "WebAssemblyTargetObjectFile.h"
 #include "WebAssemblyTargetMachine.h"
-using namespace llvm;
 
-void WebAssemblyTargetObjectFileELF::Initialize(MCContext &Ctx,
-                                                const TargetMachine &TM) {
-  TargetLoweringObjectFileELF::Initialize(Ctx, TM);
-  InitializeELF(TM.Options.UseInitArray);
-}
+using namespace llvm;
 
 void WebAssemblyTargetObjectFile::Initialize(MCContext &Ctx,
                                              const TargetMachine &TM) {

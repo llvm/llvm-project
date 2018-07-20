@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple x86_64-unknown-unknown -mcpu=knl -mattr=+avx512vl -mattr=+avx512dq -x86-asm-syntax=intel -output-asm-variant=1 --show-encoding %s | FileCheck %s
+// RUN: llvm-mc -triple x86_64-unknown-unknown -x86-asm-syntax=intel -output-asm-variant=1 --show-encoding %s | FileCheck %s
 
 // CHECK:  vcvtps2qq xmm2 {k2} {z}, qword ptr [rcx + 128]
 // CHECK:  encoding: [0x62,0xf1,0x7d,0x8a,0x7b,0x51,0x10]
@@ -47,7 +47,6 @@
 // CHECK:  vcvttps2uqq xmm1, qword ptr [rcx + 128]
 // CHECK:  encoding: [0x62,0xf1,0x7d,0x08,0x78,0x49,0x10]
           vcvttps2uqq xmm1, qword ptr [rcx + 128]
-// RUN: llvm-mc -triple x86_64-unknown-unknown -mcpu=knl -mattr=+avx512vl -mattr=+avx512dq -x86-asm-syntax=intel -output-asm-variant=1 --show-encoding %s | FileCheck %s
 
 // CHECK:  vcvtps2qq xmm2 {k2} {z}, qword ptr [rcx + 128]
 // CHECK:  encoding: [0x62,0xf1,0x7d,0x8a,0x7b,0x51,0x10]

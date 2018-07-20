@@ -511,13 +511,18 @@ inline QuotingType needsQuotes(StringRef S) {
     return QuotingType::Single;
   if (isspace(S.front()) || isspace(S.back()))
     return QuotingType::Single;
-  if (S.front() == ',')
-    return QuotingType::Single;
   if (isNull(S))
     return QuotingType::Single;
   if (isBool(S))
     return QuotingType::Single;
   if (isNumeric(S))
+    return QuotingType::Single;
+
+  // 7.3.3 Plain Style
+  // Plain scalars must not begin with most indicators, as this would cause
+  // ambiguity with other YAML constructs.
+  static constexpr char Indicators[] = R"(-?:\,[]{}#&*!|>'"%@`)";
+  if (S.find_first_of(Indicators) == 0)
     return QuotingType::Single;
 
   QuotingType MaxQuotingNeeded = QuotingType::None;
@@ -535,11 +540,14 @@ inline QuotingType needsQuotes(StringRef S) {
     case '.':
     case ',':
     case ' ':
-    // TAB (0x9), LF (0xA), CR (0xD) and NEL (0x85) are allowed.
+    // TAB (0x9) is allowed in unquoted strings.
     case 0x9:
+      continue;
+    // LF(0xA) and CR(0xD) may delimit values and so require at least single
+    // quotes.
     case 0xA:
     case 0xD:
-    case 0x85:
+      MaxQuotingNeeded = QuotingType::Single;
       continue;
     // DEL (0x7F) are excluded from the allowed character range.
     case 0x7F:
@@ -1306,7 +1314,7 @@ public:
   Output(raw_ostream &, void *Ctxt = nullptr, int WrapColumn = 70);
   ~Output() override;
 
-  /// \brief Set whether or not to output optional values which are equal
+  /// Set whether or not to output optional values which are equal
   /// to the default value.  By default, when outputting if you attempt
   /// to write a value that is equal to the default, the value gets ignored.
   /// Sometimes, it is useful to be able to see these in the resulting YAML

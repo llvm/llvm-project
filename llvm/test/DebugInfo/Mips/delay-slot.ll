@@ -1,4 +1,4 @@
-; RUN: llc -filetype=obj -O0 -relocation-model=pic < %s -mtriple mips-unknown-linux-gnu | llvm-dwarfdump -a - | FileCheck %s
+; RUN: llc -fast-isel-sink-local-values -filetype=obj -O0 -relocation-model=pic < %s -mtriple mips-unknown-linux-gnu | llvm-dwarfdump -a - | FileCheck %s
 ; PR19815
 
 ; Generated using clang -target mips-linux-gnu -g test.c -S -o - -flto|opt -sroa -S
@@ -13,11 +13,9 @@
 ; CHECK: Address            Line   Column File   ISA Discriminator Flags
 ; CHECK: ------------------ ------ ------ ------ --- ------------- -------------
 ; CHECK: 0x0000000000000000      1      0      1   0             0  is_stmt
-; FIXME: The next address probably ought to be 0x0000000000000004 but there's
-;        a constant initialization before the prologue's end.
-; CHECK: 0x0000000000000008      2      0      1   0             0  is_stmt prologue_end
-; CHECK: 0x000000000000002c      3      0      1   0             0  is_stmt
-; CHECK: 0x000000000000003c      4      0      1   0             0  is_stmt
+; CHECK: 0x0000000000000004      2      0      1   0             0  is_stmt prologue_end
+; CHECK: 0x0000000000000024      3      0      1   0             0  is_stmt
+; CHECK: 0x0000000000000034      4      0      1   0             0  is_stmt
 ; CHECK: 0x0000000000000048      5      0      1   0             0  is_stmt
 ; CHECK: 0x0000000000000058      5      0      1   0             0  is_stmt end_sequence
 
@@ -59,7 +57,7 @@ attributes #1 = { nounwind readnone }
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.5.0 ", isOptimized: false, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
 !1 = !DIFile(filename: "test.c", directory: "/tmp")
 !2 = !{}
-!4 = distinct !DISubprogram(name: "foo", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 1, file: !1, scope: !5, type: !6, variables: !2)
+!4 = distinct !DISubprogram(name: "foo", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 1, file: !1, scope: !5, type: !6, retainedNodes: !2)
 !5 = !DIFile(filename: "test.c", directory: "/tmp")
 !6 = !DISubroutineType(types: !7)
 !7 = !{!8, !8}

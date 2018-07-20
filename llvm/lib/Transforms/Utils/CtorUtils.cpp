@@ -138,7 +138,7 @@ bool optimizeGlobalCtorsList(Module &M,
     if (!F)
       continue;
 
-    DEBUG(dbgs() << "Optimizing Global Constructor: " << *F << "\n");
+    LLVM_DEBUG(dbgs() << "Optimizing Global Constructor: " << *F << "\n");
 
     // We cannot simplify external ctor functions.
     if (F->empty())

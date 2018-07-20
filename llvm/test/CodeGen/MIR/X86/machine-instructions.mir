@@ -18,6 +18,6 @@ body: |
   bb.0.entry:
     ; CHECK:      MOV32rr
     ; CHECK-NEXT: RETQ
-    %eax = MOV32rr %eax
-     RETQ %eax
+    $eax = MOV32rr $eax
+     RETQ $eax
 ...

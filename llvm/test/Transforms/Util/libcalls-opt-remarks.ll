@@ -45,7 +45,7 @@ define i32 @f1(i1) !dbg !7 {
 !4 = !{i32 2, !"Debug Info Version", i32 3}
 !5 = !{i32 1, !"PIC Level", i32 2}
 !6 = !{!"Apple LLVM version 8.1.0 (clang-802.0.42)"}
-!7 = distinct !DISubprogram(name: "f1", scope: !1, file: !1, line: 9, type: !8, isLocal: false, isDefinition: true, scopeLine: 9, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !2)
+!7 = distinct !DISubprogram(name: "f1", scope: !1, file: !1, line: 9, type: !8, isLocal: false, isDefinition: true, scopeLine: 9, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !2)
 !8 = !DISubroutineType(types: !2)
 !9 = !DILocation(line: 10, column: 17, scope: !7)
 !10 = !DILocation(line: 10, column: 24, scope: !11)

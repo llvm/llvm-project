@@ -5,7 +5,7 @@
 ; llc -mtriple=x86_64-linux-gnu trivial.ll -filetype=obj -o trivial.obj.elf-x86-64 -relocation-model=pic
 ; llc -mtriple=i386-apple-darwin10 trivial.ll -filetype=obj -o trivial.obj.macho-i386 -relocation-model=pic
 ; llc -mtriple=x86_64-apple-darwin10 trivial.ll -filetype=obj -o trivial.obj.macho-x86-64 -relocation-model=pic
-; llc -mtriple=wasm32-unknown-unknown-wasm trivial.ll -filetype=obj -o trivial.obj.wasm
+; llc -mtriple=wasm32-unknown-unknown trivial.ll -filetype=obj -o trivial.obj.wasm
 
 @.str = private unnamed_addr constant [13 x i8] c"Hello World\0A\00", align 1
 

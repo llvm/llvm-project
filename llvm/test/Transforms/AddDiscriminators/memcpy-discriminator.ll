@@ -69,7 +69,7 @@ cond.true:
 
   %0 = bitcast { i64, i32 }* %g_b.coerce to i8*, !dbg !8
   %1 = bitcast %struct.B* @g_b to i8*, !dbg !8
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %0, i8* %1, i64 12, i32 4, i1 false), !dbg !8
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %0, i8* align 4 %1, i64 12, i1 false), !dbg !8
   %2 = getelementptr inbounds { i64, i32 }, { i64, i32 }* %g_b.coerce, i32 0, i32 0, !dbg !8
   %3 = load i64, i64* %2, align 4, !dbg !8
   %4 = getelementptr inbounds { i64, i32 }, { i64, i32 }* %g_b.coerce, i32 0, i32 1, !dbg !8
@@ -84,7 +84,7 @@ cond.end:                                         ; preds = %entry, %cond.true
 
 declare i32 @bar(i64, i32, i32)
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i32, i1) #1
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1) #1
 
 attributes #0 = { noinline nounwind uwtable }
 attributes #1 = { argmemonly nounwind }
@@ -97,7 +97,7 @@ attributes #1 = { argmemonly nounwind }
 !2 = !{}
 !3 = !{i32 2, !"Dwarf Version", i32 4}
 !4 = !{i32 2, !"Debug Info Version", i32 3}
-!5 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 15, type: !6, isLocal: false, isDefinition: true, scopeLine: 15, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
+!5 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 15, type: !6, isLocal: false, isDefinition: true, scopeLine: 15, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
 !6 = !DISubroutineType(types: !2)
 !7 = !DILocation(line: 16, column: 16, scope: !5)
 !8 = !DILocation(line: 16, column: 23, scope: !5)

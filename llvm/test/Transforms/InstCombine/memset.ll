@@ -12,12 +12,12 @@ define i32 @test([1024 x i8]* %target) {
   ;; CHECK-NEXT: store i64 72340172838076673, i64* [[P4]], align 8
   ;; CHECK-NEXT: ret i32 0
   %target_p = getelementptr [1024 x i8], [1024 x i8]* %target, i32 0, i32 0
-  call void @llvm.memset.p0i8.i32(i8* %target_p, i8 1, i32 0, i32 1, i1 false)
-  call void @llvm.memset.p0i8.i32(i8* %target_p, i8 1, i32 1, i32 1, i1 false)
-  call void @llvm.memset.p0i8.i32(i8* %target_p, i8 1, i32 2, i32 2, i1 false)
-  call void @llvm.memset.p0i8.i32(i8* %target_p, i8 1, i32 4, i32 4, i1 false)
-  call void @llvm.memset.p0i8.i32(i8* %target_p, i8 1, i32 8, i32 8, i1 false)
+  call void @llvm.memset.p0i8.i32(i8* %target_p, i8 1, i32 0, i1 false)
+  call void @llvm.memset.p0i8.i32(i8* %target_p, i8 1, i32 1, i1 false)
+  call void @llvm.memset.p0i8.i32(i8* align 2 %target_p, i8 1, i32 2, i1 false)
+  call void @llvm.memset.p0i8.i32(i8* align 4 %target_p, i8 1, i32 4, i1 false)
+  call void @llvm.memset.p0i8.i32(i8* align 8 %target_p, i8 1, i32 8, i1 false)
   ret i32 0
 }
 
-declare void @llvm.memset.p0i8.i32(i8* nocapture writeonly, i8, i32, i32, i1) argmemonly nounwind
+declare void @llvm.memset.p0i8.i32(i8* nocapture writeonly, i8, i32, i1) argmemonly nounwind

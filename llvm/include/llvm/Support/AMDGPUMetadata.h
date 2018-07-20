@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// \brief AMDGPU metadata definitions and in-memory representations.
+/// AMDGPU metadata definitions and in-memory representations.
 ///
 //
 //===----------------------------------------------------------------------===//
@@ -29,17 +29,17 @@ namespace AMDGPU {
 //===----------------------------------------------------------------------===//
 namespace HSAMD {
 
-/// \brief HSA metadata major version.
+/// HSA metadata major version.
 constexpr uint32_t VersionMajor = 1;
-/// \brief HSA metadata minor version.
+/// HSA metadata minor version.
 constexpr uint32_t VersionMinor = 0;
 
-/// \brief HSA metadata beginning assembler directive.
+/// HSA metadata beginning assembler directive.
 constexpr char AssemblerDirectiveBegin[] = ".amd_amdgpu_hsa_metadata";
-/// \brief HSA metadata ending assembler directive.
+/// HSA metadata ending assembler directive.
 constexpr char AssemblerDirectiveEnd[] = ".end_amd_amdgpu_hsa_metadata";
 
-/// \brief Access qualifiers.
+/// Access qualifiers.
 enum class AccessQualifier : uint8_t {
   Default   = 0,
   ReadOnly  = 1,
@@ -48,7 +48,7 @@ enum class AccessQualifier : uint8_t {
   Unknown   = 0xff
 };
 
-/// \brief Address space qualifiers.
+/// Address space qualifiers.
 enum class AddressSpaceQualifier : uint8_t {
   Private  = 0,
   Global   = 1,
@@ -59,7 +59,7 @@ enum class AddressSpaceQualifier : uint8_t {
   Unknown  = 0xff
 };
 
-/// \brief Value kinds.
+/// Value kinds.
 enum class ValueKind : uint8_t {
   ByValue                = 0,
   GlobalBuffer           = 1,
@@ -78,7 +78,7 @@ enum class ValueKind : uint8_t {
   Unknown                = 0xff
 };
 
-/// \brief Value types.
+/// Value types.
 enum class ValueType : uint8_t {
   Struct  = 0,
   I8      = 1,
@@ -106,29 +106,29 @@ namespace Kernel {
 namespace Attrs {
 
 namespace Key {
-/// \brief Key for Kernel::Attr::Metadata::mReqdWorkGroupSize.
+/// Key for Kernel::Attr::Metadata::mReqdWorkGroupSize.
 constexpr char ReqdWorkGroupSize[] = "ReqdWorkGroupSize";
-/// \brief Key for Kernel::Attr::Metadata::mWorkGroupSizeHint.
+/// Key for Kernel::Attr::Metadata::mWorkGroupSizeHint.
 constexpr char WorkGroupSizeHint[] = "WorkGroupSizeHint";
-/// \brief Key for Kernel::Attr::Metadata::mVecTypeHint.
+/// Key for Kernel::Attr::Metadata::mVecTypeHint.
 constexpr char VecTypeHint[] = "VecTypeHint";
-/// \brief Key for Kernel::Attr::Metadata::mRuntimeHandle.
+/// Key for Kernel::Attr::Metadata::mRuntimeHandle.
 constexpr char RuntimeHandle[] = "RuntimeHandle";
 } // end namespace Key
 
-/// \brief In-memory representation of kernel attributes metadata.
+/// In-memory representation of kernel attributes metadata.
 struct Metadata final {
-  /// \brief 'reqd_work_group_size' attribute. Optional.
+  /// 'reqd_work_group_size' attribute. Optional.
   std::vector<uint32_t> mReqdWorkGroupSize = std::vector<uint32_t>();
-  /// \brief 'work_group_size_hint' attribute. Optional.
+  /// 'work_group_size_hint' attribute. Optional.
   std::vector<uint32_t> mWorkGroupSizeHint = std::vector<uint32_t>();
-  /// \brief 'vec_type_hint' attribute. Optional.
+  /// 'vec_type_hint' attribute. Optional.
   std::string mVecTypeHint = std::string();
-  /// \brief External symbol created by runtime to store the kernel address
+  /// External symbol created by runtime to store the kernel address
   /// for enqueued blocks.
   std::string mRuntimeHandle = std::string();
 
-  /// \brief Default constructor.
+  /// Default constructor.
   Metadata() = default;
 
   /// \returns True if kernel attributes metadata is empty, false otherwise.
@@ -151,68 +151,68 @@ struct Metadata final {
 namespace Arg {
 
 namespace Key {
-/// \brief Key for Kernel::Arg::Metadata::mName.
+/// Key for Kernel::Arg::Metadata::mName.
 constexpr char Name[] = "Name";
-/// \brief Key for Kernel::Arg::Metadata::mTypeName.
+/// Key for Kernel::Arg::Metadata::mTypeName.
 constexpr char TypeName[] = "TypeName";
-/// \brief Key for Kernel::Arg::Metadata::mSize.
+/// Key for Kernel::Arg::Metadata::mSize.
 constexpr char Size[] = "Size";
-/// \brief Key for Kernel::Arg::Metadata::mAlign.
+/// Key for Kernel::Arg::Metadata::mAlign.
 constexpr char Align[] = "Align";
-/// \brief Key for Kernel::Arg::Metadata::mValueKind.
+/// Key for Kernel::Arg::Metadata::mValueKind.
 constexpr char ValueKind[] = "ValueKind";
-/// \brief Key for Kernel::Arg::Metadata::mValueType.
+/// Key for Kernel::Arg::Metadata::mValueType.
 constexpr char ValueType[] = "ValueType";
-/// \brief Key for Kernel::Arg::Metadata::mPointeeAlign.
+/// Key for Kernel::Arg::Metadata::mPointeeAlign.
 constexpr char PointeeAlign[] = "PointeeAlign";
-/// \brief Key for Kernel::Arg::Metadata::mAddrSpaceQual.
+/// Key for Kernel::Arg::Metadata::mAddrSpaceQual.
 constexpr char AddrSpaceQual[] = "AddrSpaceQual";
-/// \brief Key for Kernel::Arg::Metadata::mAccQual.
+/// Key for Kernel::Arg::Metadata::mAccQual.
 constexpr char AccQual[] = "AccQual";
-/// \brief Key for Kernel::Arg::Metadata::mActualAccQual.
+/// Key for Kernel::Arg::Metadata::mActualAccQual.
 constexpr char ActualAccQual[] = "ActualAccQual";
-/// \brief Key for Kernel::Arg::Metadata::mIsConst.
+/// Key for Kernel::Arg::Metadata::mIsConst.
 constexpr char IsConst[] = "IsConst";
-/// \brief Key for Kernel::Arg::Metadata::mIsRestrict.
+/// Key for Kernel::Arg::Metadata::mIsRestrict.
 constexpr char IsRestrict[] = "IsRestrict";
-/// \brief Key for Kernel::Arg::Metadata::mIsVolatile.
+/// Key for Kernel::Arg::Metadata::mIsVolatile.
 constexpr char IsVolatile[] = "IsVolatile";
-/// \brief Key for Kernel::Arg::Metadata::mIsPipe.
+/// Key for Kernel::Arg::Metadata::mIsPipe.
 constexpr char IsPipe[] = "IsPipe";
 } // end namespace Key
 
-/// \brief In-memory representation of kernel argument metadata.
+/// In-memory representation of kernel argument metadata.
 struct Metadata final {
-  /// \brief Name. Optional.
+  /// Name. Optional.
   std::string mName = std::string();
-  /// \brief Type name. Optional.
+  /// Type name. Optional.
   std::string mTypeName = std::string();
-  /// \brief Size in bytes. Required.
+  /// Size in bytes. Required.
   uint32_t mSize = 0;
-  /// \brief Alignment in bytes. Required.
+  /// Alignment in bytes. Required.
   uint32_t mAlign = 0;
-  /// \brief Value kind. Required.
+  /// Value kind. Required.
   ValueKind mValueKind = ValueKind::Unknown;
-  /// \brief Value type. Required.
+  /// Value type. Required.
   ValueType mValueType = ValueType::Unknown;
-  /// \brief Pointee alignment in bytes. Optional.
+  /// Pointee alignment in bytes. Optional.
   uint32_t mPointeeAlign = 0;
-  /// \brief Address space qualifier. Optional.
+  /// Address space qualifier. Optional.
   AddressSpaceQualifier mAddrSpaceQual = AddressSpaceQualifier::Unknown;
-  /// \brief Access qualifier. Optional.
+  /// Access qualifier. Optional.
   AccessQualifier mAccQual = AccessQualifier::Unknown;
-  /// \brief Actual access qualifier. Optional.
+  /// Actual access qualifier. Optional.
   AccessQualifier mActualAccQual = AccessQualifier::Unknown;
-  /// \brief True if 'const' qualifier is specified. Optional.
+  /// True if 'const' qualifier is specified. Optional.
   bool mIsConst = false;
-  /// \brief True if 'restrict' qualifier is specified. Optional.
+  /// True if 'restrict' qualifier is specified. Optional.
   bool mIsRestrict = false;
-  /// \brief True if 'volatile' qualifier is specified. Optional.
+  /// True if 'volatile' qualifier is specified. Optional.
   bool mIsVolatile = false;
-  /// \brief True if 'pipe' qualifier is specified. Optional.
+  /// True if 'pipe' qualifier is specified. Optional.
   bool mIsPipe = false;
 
-  /// \brief Default constructor.
+  /// Default constructor.
   Metadata() = default;
 };
 
@@ -224,67 +224,67 @@ struct Metadata final {
 namespace CodeProps {
 
 namespace Key {
-/// \brief Key for Kernel::CodeProps::Metadata::mKernargSegmentSize.
+/// Key for Kernel::CodeProps::Metadata::mKernargSegmentSize.
 constexpr char KernargSegmentSize[] = "KernargSegmentSize";
-/// \brief Key for Kernel::CodeProps::Metadata::mGroupSegmentFixedSize.
+/// Key for Kernel::CodeProps::Metadata::mGroupSegmentFixedSize.
 constexpr char GroupSegmentFixedSize[] = "GroupSegmentFixedSize";
-/// \brief Key for Kernel::CodeProps::Metadata::mPrivateSegmentFixedSize.
+/// Key for Kernel::CodeProps::Metadata::mPrivateSegmentFixedSize.
 constexpr char PrivateSegmentFixedSize[] = "PrivateSegmentFixedSize";
-/// \brief Key for Kernel::CodeProps::Metadata::mKernargSegmentAlign.
+/// Key for Kernel::CodeProps::Metadata::mKernargSegmentAlign.
 constexpr char KernargSegmentAlign[] = "KernargSegmentAlign";
-/// \brief Key for Kernel::CodeProps::Metadata::mWavefrontSize.
+/// Key for Kernel::CodeProps::Metadata::mWavefrontSize.
 constexpr char WavefrontSize[] = "WavefrontSize";
-/// \brief Key for Kernel::CodeProps::Metadata::mNumSGPRs.
+/// Key for Kernel::CodeProps::Metadata::mNumSGPRs.
 constexpr char NumSGPRs[] = "NumSGPRs";
-/// \brief Key for Kernel::CodeProps::Metadata::mNumVGPRs.
+/// Key for Kernel::CodeProps::Metadata::mNumVGPRs.
 constexpr char NumVGPRs[] = "NumVGPRs";
-/// \brief Key for Kernel::CodeProps::Metadata::mMaxFlatWorkGroupSize.
+/// Key for Kernel::CodeProps::Metadata::mMaxFlatWorkGroupSize.
 constexpr char MaxFlatWorkGroupSize[] = "MaxFlatWorkGroupSize";
-/// \brief Key for Kernel::CodeProps::Metadata::mIsDynamicCallStack.
+/// Key for Kernel::CodeProps::Metadata::mIsDynamicCallStack.
 constexpr char IsDynamicCallStack[] = "IsDynamicCallStack";
-/// \brief Key for Kernel::CodeProps::Metadata::mIsXNACKEnabled.
+/// Key for Kernel::CodeProps::Metadata::mIsXNACKEnabled.
 constexpr char IsXNACKEnabled[] = "IsXNACKEnabled";
-/// \brief Key for Kernel::CodeProps::Metadata::mNumSpilledSGPRs.
+/// Key for Kernel::CodeProps::Metadata::mNumSpilledSGPRs.
 constexpr char NumSpilledSGPRs[] = "NumSpilledSGPRs";
-/// \brief Key for Kernel::CodeProps::Metadata::mNumSpilledVGPRs.
+/// Key for Kernel::CodeProps::Metadata::mNumSpilledVGPRs.
 constexpr char NumSpilledVGPRs[] = "NumSpilledVGPRs";
 } // end namespace Key
 
-/// \brief In-memory representation of kernel code properties metadata.
+/// In-memory representation of kernel code properties metadata.
 struct Metadata final {
-  /// \brief Size in bytes of the kernarg segment memory. Kernarg segment memory
+  /// Size in bytes of the kernarg segment memory. Kernarg segment memory
   /// holds the values of the arguments to the kernel. Required.
   uint64_t mKernargSegmentSize = 0;
-  /// \brief Size in bytes of the group segment memory required by a workgroup.
+  /// Size in bytes of the group segment memory required by a workgroup.
   /// This value does not include any dynamically allocated group segment memory
   /// that may be added when the kernel is dispatched. Required.
   uint32_t mGroupSegmentFixedSize = 0;
-  /// \brief Size in bytes of the private segment memory required by a workitem.
+  /// Size in bytes of the private segment memory required by a workitem.
   /// Private segment memory includes arg, spill and private segments. Required.
   uint32_t mPrivateSegmentFixedSize = 0;
-  /// \brief Maximum byte alignment of variables used by the kernel in the
+  /// Maximum byte alignment of variables used by the kernel in the
   /// kernarg memory segment. Required.
   uint32_t mKernargSegmentAlign = 0;
-  /// \brief Wavefront size. Required.
+  /// Wavefront size. Required.
   uint32_t mWavefrontSize = 0;
-  /// \brief Total number of SGPRs used by a wavefront. Optional.
+  /// Total number of SGPRs used by a wavefront. Optional.
   uint16_t mNumSGPRs = 0;
-  /// \brief Total number of VGPRs used by a workitem. Optional.
+  /// Total number of VGPRs used by a workitem. Optional.
   uint16_t mNumVGPRs = 0;
-  /// \brief Maximum flat work-group size supported by the kernel. Optional.
+  /// Maximum flat work-group size supported by the kernel. Optional.
   uint32_t mMaxFlatWorkGroupSize = 0;
-  /// \brief True if the generated machine code is using a dynamically sized
+  /// True if the generated machine code is using a dynamically sized
   /// call stack. Optional.
   bool mIsDynamicCallStack = false;
-  /// \brief True if the generated machine code is capable of supporting XNACK.
+  /// True if the generated machine code is capable of supporting XNACK.
   /// Optional.
   bool mIsXNACKEnabled = false;
-  /// \brief Number of SGPRs spilled by a wavefront. Optional.
+  /// Number of SGPRs spilled by a wavefront. Optional.
   uint16_t mNumSpilledSGPRs = 0;
-  /// \brief Number of VGPRs spilled by a workitem. Optional.
+  /// Number of VGPRs spilled by a workitem. Optional.
   uint16_t mNumSpilledVGPRs = 0;
 
-  /// \brief Default constructor.
+  /// Default constructor.
   Metadata() = default;
 
   /// \returns True if kernel code properties metadata is empty, false
@@ -308,40 +308,40 @@ struct Metadata final {
 namespace DebugProps {
 
 namespace Key {
-/// \brief Key for Kernel::DebugProps::Metadata::mDebuggerABIVersion.
+/// Key for Kernel::DebugProps::Metadata::mDebuggerABIVersion.
 constexpr char DebuggerABIVersion[] = "DebuggerABIVersion";
-/// \brief Key for Kernel::DebugProps::Metadata::mReservedNumVGPRs.
+/// Key for Kernel::DebugProps::Metadata::mReservedNumVGPRs.
 constexpr char ReservedNumVGPRs[] = "ReservedNumVGPRs";
-/// \brief Key for Kernel::DebugProps::Metadata::mReservedFirstVGPR.
+/// Key for Kernel::DebugProps::Metadata::mReservedFirstVGPR.
 constexpr char ReservedFirstVGPR[] = "ReservedFirstVGPR";
-/// \brief Key for Kernel::DebugProps::Metadata::mPrivateSegmentBufferSGPR.
+/// Key for Kernel::DebugProps::Metadata::mPrivateSegmentBufferSGPR.
 constexpr char PrivateSegmentBufferSGPR[] = "PrivateSegmentBufferSGPR";
-/// \brief Key for
+/// Key for
 ///     Kernel::DebugProps::Metadata::mWavefrontPrivateSegmentOffsetSGPR.
 constexpr char WavefrontPrivateSegmentOffsetSGPR[] =
     "WavefrontPrivateSegmentOffsetSGPR";
 } // end namespace Key
 
-/// \brief In-memory representation of kernel debug properties metadata.
+/// In-memory representation of kernel debug properties metadata.
 struct Metadata final {
-  /// \brief Debugger ABI version. Optional.
+  /// Debugger ABI version. Optional.
   std::vector<uint32_t> mDebuggerABIVersion = std::vector<uint32_t>();
-  /// \brief Consecutive number of VGPRs reserved for debugger use. Must be 0 if
+  /// Consecutive number of VGPRs reserved for debugger use. Must be 0 if
   /// mDebuggerABIVersion is not set. Optional.
   uint16_t mReservedNumVGPRs = 0;
-  /// \brief First fixed VGPR reserved. Must be uint16_t(-1) if
+  /// First fixed VGPR reserved. Must be uint16_t(-1) if
   /// mDebuggerABIVersion is not set or mReservedFirstVGPR is 0. Optional.
   uint16_t mReservedFirstVGPR = uint16_t(-1);
-  /// \brief Fixed SGPR of the first of 4 SGPRs used to hold the scratch V# used
+  /// Fixed SGPR of the first of 4 SGPRs used to hold the scratch V# used
   /// for the entire kernel execution. Must be uint16_t(-1) if
   /// mDebuggerABIVersion is not set or SGPR not used or not known. Optional.
   uint16_t mPrivateSegmentBufferSGPR = uint16_t(-1);
-  /// \brief Fixed SGPR used to hold the wave scratch offset for the entire
+  /// Fixed SGPR used to hold the wave scratch offset for the entire
   /// kernel execution. Must be uint16_t(-1) if mDebuggerABIVersion is not set
   /// or SGPR is not used or not known. Optional.
   uint16_t mWavefrontPrivateSegmentOffsetSGPR = uint16_t(-1);
 
-  /// \brief Default constructor.
+  /// Default constructor.
   Metadata() = default;
 
   /// \returns True if kernel debug properties metadata is empty, false
@@ -360,75 +360,75 @@ struct Metadata final {
 } // end namespace DebugProps
 
 namespace Key {
-/// \brief Key for Kernel::Metadata::mName.
+/// Key for Kernel::Metadata::mName.
 constexpr char Name[] = "Name";
-/// \brief Key for Kernel::Metadata::mSymbolName.
+/// Key for Kernel::Metadata::mSymbolName.
 constexpr char SymbolName[] = "SymbolName";
-/// \brief Key for Kernel::Metadata::mLanguage.
+/// Key for Kernel::Metadata::mLanguage.
 constexpr char Language[] = "Language";
-/// \brief Key for Kernel::Metadata::mLanguageVersion.
+/// Key for Kernel::Metadata::mLanguageVersion.
 constexpr char LanguageVersion[] = "LanguageVersion";
-/// \brief Key for Kernel::Metadata::mAttrs.
+/// Key for Kernel::Metadata::mAttrs.
 constexpr char Attrs[] = "Attrs";
-/// \brief Key for Kernel::Metadata::mArgs.
+/// Key for Kernel::Metadata::mArgs.
 constexpr char Args[] = "Args";
-/// \brief Key for Kernel::Metadata::mCodeProps.
+/// Key for Kernel::Metadata::mCodeProps.
 constexpr char CodeProps[] = "CodeProps";
-/// \brief Key for Kernel::Metadata::mDebugProps.
+/// Key for Kernel::Metadata::mDebugProps.
 constexpr char DebugProps[] = "DebugProps";
 } // end namespace Key
 
-/// \brief In-memory representation of kernel metadata.
+/// In-memory representation of kernel metadata.
 struct Metadata final {
-  /// \brief Kernel source name. Required.
+  /// Kernel source name. Required.
   std::string mName = std::string();
-  /// \brief Kernel descriptor name. Required.
+  /// Kernel descriptor name. Required.
   std::string mSymbolName = std::string();
-  /// \brief Language. Optional.
+  /// Language. Optional.
   std::string mLanguage = std::string();
-  /// \brief Language version. Optional.
+  /// Language version. Optional.
   std::vector<uint32_t> mLanguageVersion = std::vector<uint32_t>();
-  /// \brief Attributes metadata. Optional.
+  /// Attributes metadata. Optional.
   Attrs::Metadata mAttrs = Attrs::Metadata();
-  /// \brief Arguments metadata. Optional.
+  /// Arguments metadata. Optional.
   std::vector<Arg::Metadata> mArgs = std::vector<Arg::Metadata>();
-  /// \brief Code properties metadata. Optional.
+  /// Code properties metadata. Optional.
   CodeProps::Metadata mCodeProps = CodeProps::Metadata();
-  /// \brief Debug properties metadata. Optional.
+  /// Debug properties metadata. Optional.
   DebugProps::Metadata mDebugProps = DebugProps::Metadata();
 
-  /// \brief Default constructor.
+  /// Default constructor.
   Metadata() = default;
 };
 
 } // end namespace Kernel
 
 namespace Key {
-/// \brief Key for HSA::Metadata::mVersion.
+/// Key for HSA::Metadata::mVersion.
 constexpr char Version[] = "Version";
-/// \brief Key for HSA::Metadata::mPrintf.
+/// Key for HSA::Metadata::mPrintf.
 constexpr char Printf[] = "Printf";
-/// \brief Key for HSA::Metadata::mKernels.
+/// Key for HSA::Metadata::mKernels.
 constexpr char Kernels[] = "Kernels";
 } // end namespace Key
 
-/// \brief In-memory representation of HSA metadata.
+/// In-memory representation of HSA metadata.
 struct Metadata final {
-  /// \brief HSA metadata version. Required.
+  /// HSA metadata version. Required.
   std::vector<uint32_t> mVersion = std::vector<uint32_t>();
-  /// \brief Printf metadata. Optional.
+  /// Printf metadata. Optional.
   std::vector<std::string> mPrintf = std::vector<std::string>();
-  /// \brief Kernels metadata. Required.
+  /// Kernels metadata. Required.
   std::vector<Kernel::Metadata> mKernels = std::vector<Kernel::Metadata>();
 
-  /// \brief Default constructor.
+  /// Default constructor.
   Metadata() = default;
 };
 
-/// \brief Converts \p String to \p HSAMetadata.
+/// Converts \p String to \p HSAMetadata.
 std::error_code fromString(std::string String, Metadata &HSAMetadata);
 
-/// \brief Converts \p HSAMetadata to \p String.
+/// Converts \p HSAMetadata to \p String.
 std::error_code toString(Metadata HSAMetadata, std::string &String);
 
 } // end namespace HSAMD
@@ -438,10 +438,10 @@ std::error_code toString(Metadata HSAMetadata, std::string &String);
 //===----------------------------------------------------------------------===//
 namespace PALMD {
 
-/// \brief PAL metadata assembler directive.
+/// PAL metadata assembler directive.
 constexpr char AssemblerDirective[] = ".amd_amdgpu_pal_metadata";
 
-/// \brief PAL metadata keys.
+/// PAL metadata keys.
 enum Key : uint32_t {
   LS_NUM_USED_VGPRS = 0x10000021,
   HS_NUM_USED_VGPRS = 0x10000022,
@@ -468,10 +468,10 @@ enum Key : uint32_t {
   CS_SCRATCH_SIZE = 0x1000004a
 };
 
-/// \brief PAL metadata represented as a vector.
+/// PAL metadata represented as a vector.
 typedef std::vector<uint32_t> Metadata;
 
-/// \brief Converts \p PALMetadata to \p String.
+/// Converts \p PALMetadata to \p String.
 std::error_code toString(const Metadata &PALMetadata, std::string &String);
 
 } // end namespace PALMD

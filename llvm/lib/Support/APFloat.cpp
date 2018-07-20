@@ -19,6 +19,7 @@
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
@@ -3031,27 +3032,29 @@ double IEEEFloat::convertToDouble() const {
 /// does not support these bit patterns:
 ///  exponent = all 1's, integer bit 0, significand 0 ("pseudoinfinity")
 ///  exponent = all 1's, integer bit 0, significand nonzero ("pseudoNaN")
-///  exponent = 0, integer bit 1 ("pseudodenormal")
 ///  exponent!=0 nor all 1's, integer bit 0 ("unnormal")
-/// At the moment, the first two are treated as NaNs, the second two as Normal.
+///  exponent = 0, integer bit 1 ("pseudodenormal")
+/// At the moment, the first three are treated as NaNs, the last one as Normal.
 void IEEEFloat::initFromF80LongDoubleAPInt(const APInt &api) {
   assert(api.getBitWidth()==80);
   uint64_t i1 = api.getRawData()[0];
   uint64_t i2 = api.getRawData()[1];
   uint64_t myexponent = (i2 & 0x7fff);
   uint64_t mysignificand = i1;
+  uint8_t myintegerbit = mysignificand >> 63;
 
   initialize(&semX87DoubleExtended);
   assert(partCount()==2);
 
   sign = static_cast<unsigned int>(i2>>15);
-  if (myexponent==0 && mysignificand==0) {
+  if (myexponent == 0 && mysignificand == 0) {
     // exponent, significand meaningless
     category = fcZero;
   } else if (myexponent==0x7fff && mysignificand==0x8000000000000000ULL) {
     // exponent, significand meaningless
     category = fcInfinity;
-  } else if (myexponent==0x7fff && mysignificand!=0x8000000000000000ULL) {
+  } else if ((myexponent == 0x7fff && mysignificand != 0x8000000000000000ULL) ||
+             (myexponent != 0x7fff && myexponent != 0 && myintegerbit == 0)) {
     // exponent meaningless
     category = fcNaN;
     significandParts()[0] = mysignificand;
@@ -4440,8 +4443,10 @@ APFloat::APFloat(const fltSemantics &Semantics, StringRef S)
 
 APFloat::opStatus APFloat::convert(const fltSemantics &ToSemantics,
                                    roundingMode RM, bool *losesInfo) {
-  if (&getSemantics() == &ToSemantics)
+  if (&getSemantics() == &ToSemantics) {
+    *losesInfo = false;
     return opOK;
+  }
   if (usesLayout<IEEEFloat>(getSemantics()) &&
       usesLayout<IEEEFloat>(ToSemantics))
     return U.IEEE.convert(ToSemantics, RM, losesInfo);

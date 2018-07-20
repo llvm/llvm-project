@@ -1,0 +1,27 @@
+# RUN: yaml2obj %s > %t
+# RUN: llvm-objcopy %t %t2
+# RUN: llvm-readobj -sections %t2 | FileCheck %s
+# RUN: cp %t %t3
+# RUN: llvm-strip --strip-debug %t3
+# RUN: llvm-readobj -sections %t3 | FileCheck %s
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .foo
+    Link:            .symtab
+    Type:            SHT_PROGBITS
+    Flags:           [ ]
+
+# CHECK:      Name: .foo
+# CHECK-NEXT: Type:
+# CHECK-NEXT: Flags [ (0x0)
+# CHECK-NEXT: ]
+# CHECK-NEXT: Address:
+# CHECK-NEXT: Offset:
+# CHECK-NEXT: Size:
+# CHECK-NEXT: Link: 0

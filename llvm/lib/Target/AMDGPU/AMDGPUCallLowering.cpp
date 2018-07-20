@@ -20,6 +20,7 @@
 #include "SIISelLowering.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIRegisterInfo.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -32,13 +33,17 @@ AMDGPUCallLowering::AMDGPUCallLowering(const AMDGPUTargetLowering &TLI)
 
 bool AMDGPUCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
                                      const Value *Val, unsigned VReg) const {
+  // FIXME: Add support for non-void returns.
+  if (Val)
+    return false;
+
   MIRBuilder.buildInstr(AMDGPU::S_ENDPGM);
   return true;
 }
 
 unsigned AMDGPUCallLowering::lowerParameterPtr(MachineIRBuilder &MIRBuilder,
                                                Type *ParamTy,
-                                               unsigned Offset) const {
+                                               uint64_t Offset) const {
 
   MachineFunction &MF = MIRBuilder.getMF();
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
@@ -61,7 +66,8 @@ unsigned AMDGPUCallLowering::lowerParameterPtr(MachineIRBuilder &MIRBuilder,
 }
 
 void AMDGPUCallLowering::lowerParameter(MachineIRBuilder &MIRBuilder,
-                                        Type *ParamTy, unsigned Offset,
+                                        Type *ParamTy, uint64_t Offset,
+                                        unsigned Align,
                                         unsigned DstReg) const {
   MachineFunction &MF = MIRBuilder.getMF();
   const Function &F = MF.getFunction();
@@ -69,7 +75,6 @@ void AMDGPUCallLowering::lowerParameter(MachineIRBuilder &MIRBuilder,
   PointerType *PtrTy = PointerType::get(ParamTy, AMDGPUASI.CONSTANT_ADDRESS);
   MachinePointerInfo PtrInfo(UndefValue::get(PtrTy));
   unsigned TypeSize = DL.getTypeStoreSize(ParamTy);
-  unsigned Align = DL.getABITypeAlignment(ParamTy);
   unsigned PtrReg = lowerParameterPtr(MIRBuilder, ParamTy, Offset);
 
   MachineMemOperand *MMO =
@@ -84,12 +89,16 @@ void AMDGPUCallLowering::lowerParameter(MachineIRBuilder &MIRBuilder,
 bool AMDGPUCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
                                               const Function &F,
                                               ArrayRef<unsigned> VRegs) const {
+  // AMDGPU_GS and AMDGP_HS are not supported yet.
+  if (F.getCallingConv() == CallingConv::AMDGPU_GS ||
+      F.getCallingConv() == CallingConv::AMDGPU_HS)
+    return false;
 
   MachineFunction &MF = MIRBuilder.getMF();
-  const SISubtarget *Subtarget = static_cast<const SISubtarget *>(&MF.getSubtarget());
+  const GCNSubtarget *Subtarget = &MF.getSubtarget<GCNSubtarget>();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
-  const SIRegisterInfo *TRI = MF.getSubtarget<SISubtarget>().getRegisterInfo();
+  const SIRegisterInfo *TRI = MF.getSubtarget<GCNSubtarget>().getRegisterInfo();
   const DataLayout &DL = F.getParent()->getDataLayout();
 
   SmallVector<CCValAssign, 16> ArgLocs;
@@ -116,7 +125,7 @@ bool AMDGPUCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
 
   if (Info->hasKernargSegmentPtr()) {
     unsigned InputPtrReg = Info->addKernargSegmentPtr(*TRI);
-    const LLT P2 = LLT::pointer(2, 64);
+    const LLT P2 = LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS, 64);
     unsigned VReg = MRI.createGenericVirtualRegister(P2);
     MRI.addLiveIn(InputPtrReg, VReg);
     MIRBuilder.getMBB().addLiveIn(InputPtrReg);
@@ -136,49 +145,106 @@ bool AMDGPUCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
     CCInfo.AllocateReg(FlatScratchInitReg);
   }
 
+  // The infrastructure for normal calling convention lowering is essentially
+  // useless for kernels. We want to avoid any kind of legalization or argument
+  // splitting.
+  if (F.getCallingConv() == CallingConv::AMDGPU_KERNEL) {
+    unsigned i = 0;
+    const unsigned KernArgBaseAlign = 16;
+    const unsigned BaseOffset = Subtarget->getExplicitKernelArgOffset(F);
+    uint64_t ExplicitArgOffset = 0;
+
+    // TODO: Align down to dword alignment and extract bits for extending loads.
+    for (auto &Arg : F.args()) {
+      Type *ArgTy = Arg.getType();
+      unsigned AllocSize = DL.getTypeAllocSize(ArgTy);
+      if (AllocSize == 0)
+        continue;
+
+      unsigned ABIAlign = DL.getABITypeAlignment(ArgTy);
+
+      uint64_t ArgOffset = alignTo(ExplicitArgOffset, ABIAlign) + BaseOffset;
+      ExplicitArgOffset = alignTo(ExplicitArgOffset, ABIAlign) + AllocSize;
+
+      unsigned Align = MinAlign(KernArgBaseAlign, ArgOffset);
+      ArgOffset = alignTo(ArgOffset, DL.getABITypeAlignment(ArgTy));
+      lowerParameter(MIRBuilder, ArgTy, ArgOffset, Align, VRegs[i]);
+      ++i;
+    }
+
+    return true;
+  }
+
   unsigned NumArgs = F.arg_size();
   Function::const_arg_iterator CurOrigArg = F.arg_begin();
   const AMDGPUTargetLowering &TLI = *getTLI<AMDGPUTargetLowering>();
+  unsigned PSInputNum = 0;
+  BitVector Skipped(NumArgs);
   for (unsigned i = 0; i != NumArgs; ++i, ++CurOrigArg) {
     EVT ValEVT = TLI.getValueType(DL, CurOrigArg->getType());
 
     // We can only hanlde simple value types at the moment.
-    if (!ValEVT.isSimple())
-      return false;
-    MVT ValVT = ValEVT.getSimpleVT();
     ISD::ArgFlagsTy Flags;
     ArgInfo OrigArg{VRegs[i], CurOrigArg->getType()};
     setArgFlags(OrigArg, i + 1, DL, F);
     Flags.setOrigAlign(DL.getABITypeAlignment(CurOrigArg->getType()));
+
+    if (F.getCallingConv() == CallingConv::AMDGPU_PS &&
+        !OrigArg.Flags.isInReg() && !OrigArg.Flags.isByVal() &&
+        PSInputNum <= 15) {
+      if (CurOrigArg->use_empty() && !Info->isPSInputAllocated(PSInputNum)) {
+        Skipped.set(i);
+        ++PSInputNum;
+        continue;
+      }
+
+      Info->markPSInputAllocated(PSInputNum);
+      if (!CurOrigArg->use_empty())
+        Info->markPSInputEnabled(PSInputNum);
+
+      ++PSInputNum;
+    }
+
     CCAssignFn *AssignFn = CCAssignFnForCall(F.getCallingConv(),
                                              /*IsVarArg=*/false);
-    bool Res =
-        AssignFn(i, ValVT, ValVT, CCValAssign::Full, OrigArg.Flags, CCInfo);
 
-    // Fail if we don't know how to handle this type.
-    if (Res)
-      return false;
+    if (ValEVT.isVector()) {
+      EVT ElemVT = ValEVT.getVectorElementType();
+      if (!ValEVT.isSimple())
+        return false;
+      MVT ValVT = ElemVT.getSimpleVT();
+      bool Res = AssignFn(i, ValVT, ValVT, CCValAssign::Full,
+                          OrigArg.Flags, CCInfo);
+      if (!Res)
+        return false;
+    } else {
+      MVT ValVT = ValEVT.getSimpleVT();
+      if (!ValEVT.isSimple())
+        return false;
+      bool Res =
+          AssignFn(i, ValVT, ValVT, CCValAssign::Full, OrigArg.Flags, CCInfo);
+
+      // Fail if we don't know how to handle this type.
+      if (Res)
+        return false;
+    }
   }
 
   Function::const_arg_iterator Arg = F.arg_begin();
 
-  if (F.getCallingConv() == CallingConv::AMDGPU_VS) {
-    for (unsigned i = 0; i != NumArgs; ++i, ++Arg) {
-      CCValAssign &VA = ArgLocs[i];
-      MRI.addLiveIn(VA.getLocReg(), VRegs[i]);
+  if (F.getCallingConv() == CallingConv::AMDGPU_VS ||
+      F.getCallingConv() == CallingConv::AMDGPU_PS) {
+    for (unsigned i = 0, OrigArgIdx = 0;
+         OrigArgIdx != NumArgs && i != ArgLocs.size(); ++Arg, ++OrigArgIdx) {
+       if (Skipped.test(OrigArgIdx))
+          continue;
+      CCValAssign &VA = ArgLocs[i++];
+      MRI.addLiveIn(VA.getLocReg(), VRegs[OrigArgIdx]);
       MIRBuilder.getMBB().addLiveIn(VA.getLocReg());
-      MIRBuilder.buildCopy(VRegs[i], VA.getLocReg());
+      MIRBuilder.buildCopy(VRegs[OrigArgIdx], VA.getLocReg());
     }
     return true;
   }
 
-  for (unsigned i = 0; i != NumArgs; ++i, ++Arg) {
-    // FIXME: We should be getting DebugInfo from the arguments some how.
-    CCValAssign &VA = ArgLocs[i];
-    lowerParameter(MIRBuilder, Arg->getType(),
-                   VA.getLocMemOffset() +
-                   Subtarget->getExplicitKernelArgOffset(MF), VRegs[i]);
-  }
-
-  return true;
+  return false;
 }

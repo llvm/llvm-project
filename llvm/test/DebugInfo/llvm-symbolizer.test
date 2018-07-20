@@ -20,6 +20,7 @@ RUN: echo "%p/Inputs/macho-universal 0x1f84" >> %t.input
 RUN: echo "%p/Inputs/macho-universal:i386 0x1f67" >> %t.input
 RUN: echo "%p/Inputs/macho-universal:x86_64 0x100000f05" >> %t.input
 RUN: echo "%p/Inputs/llvm-symbolizer-dwo-test 0x400514" >> %t.input
+RUN: echo "%p/Inputs/llvm-symbolizer-local-mem-func-gcc.elf-x86-64 0x61a" >> %t.input
 RUN: echo "%p/Inputs/fission-ranges.elf-x86_64 0x720" >> %t.input
 RUN: echo "%p/Inputs/arange-overlap.elf-x86_64 0x714" >> %t.input
 RUN: cp %p/Inputs/split-dwarf-test.dwo %t
@@ -126,6 +127,10 @@ CHECK:      _Z3inci
 
 CHECK: main
 CHECK-NEXT: llvm-symbolizer-dwo-test.cc:11
+
+CHECK-NOT: local_mem_func
+CHECK: _ZZ2f1vEN3foo14local_mem_funcEv
+CHECK-NEXT: {{.*}}local-mem-func.cpp:3:0
 
 CHECK: main
 CHECK-NEXT: {{.*}}fission-ranges.cc:6

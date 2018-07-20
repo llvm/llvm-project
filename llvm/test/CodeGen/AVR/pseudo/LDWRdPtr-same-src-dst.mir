@@ -24,6 +24,6 @@ body: |
     ; CHECK-NEXT: mov r31, [[SCRATCH]]
     ; CHECK-NEXT: pop r30
 
-    early-clobber %r31r30 = LDWRdPtr undef %r31r30
+    early-clobber $r31r30 = LDWRdPtr undef $r31r30
 ...
 

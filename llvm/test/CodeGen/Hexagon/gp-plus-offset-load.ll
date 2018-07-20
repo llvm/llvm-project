@@ -6,7 +6,7 @@
 @foo = common global %struct.struc zeroinitializer, align 4
 
 define void @loadWord(i32 %val1, i32 %val2, i32* nocapture %ival) nounwind {
-; CHECK: r{{[0-9]+}}{{ *}}={{ *}}memw(##foo{{ *}}+{{ *}}4)
+; CHECK: r{{[0-9]+}} = memw(##foo+4)
 entry:
   %cmp = icmp sgt i32 %val1, %val2
   br i1 %cmp, label %if.then, label %if.end
@@ -21,7 +21,7 @@ if.end:                                           ; preds = %if.then, %entry
 }
 
 define void @loadByte(i32 %val1, i32 %val2, i8* nocapture %ival) nounwind {
-; CHECK: r{{[0-9]+}}{{ *}}={{ *}}memub(##foo{{ *}}+{{ *}}1)
+; CHECK: r{{[0-9]+}} = memub(##foo+1)
 entry:
   %cmp = icmp sgt i32 %val1, %val2
   br i1 %cmp, label %if.then, label %if.end
@@ -36,7 +36,7 @@ if.end:                                           ; preds = %if.then, %entry
 }
 
 define void @loadHWord(i32 %val1, i32 %val2, i16* %ival) nounwind {
-; CHECK: r{{[0-9]+}}{{ *}}={{ *}}memuh(##foo{{ *}}+{{ *}}2)
+; CHECK: r{{[0-9]+}} = memuh(##foo+2)
 entry:
   %cmp = icmp sgt i32 %val1, %val2
   br i1 %cmp, label %if.then, label %if.end

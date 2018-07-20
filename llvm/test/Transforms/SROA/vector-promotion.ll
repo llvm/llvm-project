@@ -81,12 +81,12 @@ entry:
 ; CHECK-NOT: store
 
   %a.y.cast = bitcast <4 x i32>* %a.y to i8*
-  call void @llvm.memset.p0i8.i32(i8* %a.y.cast, i8 0, i32 16, i32 1, i1 false)
+  call void @llvm.memset.p0i8.i32(i8* %a.y.cast, i8 0, i32 16, i1 false)
 ; CHECK-NOT: memset
 
   %a.tmp1 = getelementptr inbounds [2 x <4 x i32>], [2 x <4 x i32>]* %a, i64 0, i64 0, i64 2
   %a.tmp1.cast = bitcast i32* %a.tmp1 to i8*
-  call void @llvm.memset.p0i8.i32(i8* %a.tmp1.cast, i8 -1, i32 4, i32 1, i1 false)
+  call void @llvm.memset.p0i8.i32(i8* %a.tmp1.cast, i8 -1, i32 4, i1 false)
   %tmp1 = load i32, i32* %a.tmp1
   %a.tmp2 = getelementptr inbounds [2 x <4 x i32>], [2 x <4 x i32>]* %a, i64 0, i64 1, i64 3
   %tmp2 = load i32, i32* %a.tmp2
@@ -120,14 +120,14 @@ entry:
 
   %a.y.cast = bitcast <4 x i32>* %a.y to i8*
   %z.cast = bitcast <4 x i32>* %z to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %a.y.cast, i8* %z.cast, i32 16, i32 1, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %a.y.cast, i8* %z.cast, i32 16, i1 false)
 ; CHECK-NOT: memcpy
 
   %a.tmp1 = getelementptr inbounds [2 x <4 x i32>], [2 x <4 x i32>]* %a, i64 0, i64 0, i64 2
   %a.tmp1.cast = bitcast i32* %a.tmp1 to i8*
   %z.tmp1 = getelementptr inbounds <4 x i32>, <4 x i32>* %z, i64 0, i64 2
   %z.tmp1.cast = bitcast i32* %z.tmp1 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %a.tmp1.cast, i8* %z.tmp1.cast, i32 4, i32 1, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %a.tmp1.cast, i8* %z.tmp1.cast, i32 4, i1 false)
   %tmp1 = load i32, i32* %a.tmp1
   %a.tmp2 = getelementptr inbounds [2 x <4 x i32>], [2 x <4 x i32>]* %a, i64 0, i64 1, i64 3
   %tmp2 = load i32, i32* %a.tmp2
@@ -150,7 +150,7 @@ entry:
 ; CHECK-NEXT: ret
 }
 
-declare void @llvm.memcpy.p0i8.p1i8.i32(i8* nocapture, i8 addrspace(1)* nocapture, i32, i32, i1) nounwind
+declare void @llvm.memcpy.p0i8.p1i8.i32(i8* nocapture, i8 addrspace(1)* nocapture, i32, i1) nounwind
 
 ; Same as test4 with a different sized address  space pointer source.
 define i32 @test4_as1(<4 x i32> %x, <4 x i32> %y, <4 x i32> addrspace(1)* %z) {
@@ -167,14 +167,14 @@ entry:
 
   %a.y.cast = bitcast <4 x i32>* %a.y to i8*
   %z.cast = bitcast <4 x i32> addrspace(1)* %z to i8 addrspace(1)*
-  call void @llvm.memcpy.p0i8.p1i8.i32(i8* %a.y.cast, i8 addrspace(1)* %z.cast, i32 16, i32 1, i1 false)
+  call void @llvm.memcpy.p0i8.p1i8.i32(i8* %a.y.cast, i8 addrspace(1)* %z.cast, i32 16, i1 false)
 ; CHECK-NOT: memcpy
 
   %a.tmp1 = getelementptr inbounds [2 x <4 x i32>], [2 x <4 x i32>]* %a, i64 0, i64 0, i64 2
   %a.tmp1.cast = bitcast i32* %a.tmp1 to i8*
   %z.tmp1 = getelementptr inbounds <4 x i32>, <4 x i32> addrspace(1)* %z, i16 0, i16 2
   %z.tmp1.cast = bitcast i32 addrspace(1)* %z.tmp1 to i8 addrspace(1)*
-  call void @llvm.memcpy.p0i8.p1i8.i32(i8* %a.tmp1.cast, i8 addrspace(1)* %z.tmp1.cast, i32 4, i32 1, i1 false)
+  call void @llvm.memcpy.p0i8.p1i8.i32(i8* %a.tmp1.cast, i8 addrspace(1)* %z.tmp1.cast, i32 4, i1 false)
   %tmp1 = load i32, i32* %a.tmp1
   %a.tmp2 = getelementptr inbounds [2 x <4 x i32>], [2 x <4 x i32>]* %a, i64 0, i64 1, i64 3
   %tmp2 = load i32, i32* %a.tmp2
@@ -213,14 +213,14 @@ entry:
 
   %a.y.cast = bitcast <4 x i32>* %a.y to i8*
   %a.x.cast = bitcast <4 x i32>* %a.x to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %a.x.cast, i8* %a.y.cast, i32 16, i32 1, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %a.x.cast, i8* %a.y.cast, i32 16, i1 false)
 ; CHECK-NOT: memcpy
 
   %a.tmp1 = getelementptr inbounds [2 x <4 x i32>], [2 x <4 x i32>]* %a, i64 0, i64 0, i64 2
   %a.tmp1.cast = bitcast i32* %a.tmp1 to i8*
   %z.tmp1 = getelementptr inbounds <4 x i32>, <4 x i32>* %z, i64 0, i64 2
   %z.tmp1.cast = bitcast i32* %z.tmp1 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %z.tmp1.cast, i8* %a.tmp1.cast, i32 4, i32 1, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %z.tmp1.cast, i8* %a.tmp1.cast, i32 4, i1 false)
   %tmp1 = load i32, i32* %a.tmp1
   %a.tmp2 = getelementptr inbounds [2 x <4 x i32>], [2 x <4 x i32>]* %a, i64 0, i64 1, i64 3
   %tmp2 = load i32, i32* %a.tmp2
@@ -242,8 +242,8 @@ entry:
 ; CHECK-NEXT: ret
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i32, i1) nounwind
-declare void @llvm.memset.p0i8.i32(i8* nocapture, i8, i32, i32, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind
+declare void @llvm.memset.p0i8.i32(i8* nocapture, i8, i32, i1) nounwind
 
 define i64 @test6(<4 x i64> %x, <4 x i64> %y, i64 %n) {
 ; CHECK-LABEL: @test6(
@@ -326,7 +326,7 @@ entry:
 ; CHECK-NEXT: ret <4 x i32> %[[ret]]
 }
 
-declare void @llvm.memset.p0i32.i32(i32* nocapture, i32, i32, i32, i1) nounwind
+declare void @llvm.memset.p0i32.i32(i32* nocapture, i32, i32, i1) nounwind
 
 define <4 x float> @test_subvec_memset() {
 ; CHECK-LABEL: @test_subvec_memset(
@@ -336,23 +336,23 @@ entry:
 
   %a.gep0 = getelementptr <4 x float>, <4 x float>* %a, i32 0, i32 0
   %a.cast0 = bitcast float* %a.gep0 to i8*
-  call void @llvm.memset.p0i8.i32(i8* %a.cast0, i8 0, i32 8, i32 0, i1 false)
+  call void @llvm.memset.p0i8.i32(i8* %a.cast0, i8 0, i32 8, i1 false)
 ; CHECK-NOT: store
 ; CHECK: select <4 x i1> <i1 true, i1 true, i1 false, i1 false>
 
   %a.gep1 = getelementptr <4 x float>, <4 x float>* %a, i32 0, i32 1
   %a.cast1 = bitcast float* %a.gep1 to i8*
-  call void @llvm.memset.p0i8.i32(i8* %a.cast1, i8 1, i32 8, i32 0, i1 false)
+  call void @llvm.memset.p0i8.i32(i8* %a.cast1, i8 1, i32 8, i1 false)
 ; CHECK-NEXT: select <4 x i1> <i1 false, i1 true, i1 true, i1 false>
 
   %a.gep2 = getelementptr <4 x float>, <4 x float>* %a, i32 0, i32 2
   %a.cast2 = bitcast float* %a.gep2 to i8*
-  call void @llvm.memset.p0i8.i32(i8* %a.cast2, i8 3, i32 8, i32 0, i1 false)
+  call void @llvm.memset.p0i8.i32(i8* %a.cast2, i8 3, i32 8, i1 false)
 ; CHECK-NEXT: select <4 x i1> <i1 false, i1 false, i1 true, i1 true>
 
   %a.gep3 = getelementptr <4 x float>, <4 x float>* %a, i32 0, i32 3
   %a.cast3 = bitcast float* %a.gep3 to i8*
-  call void @llvm.memset.p0i8.i32(i8* %a.cast3, i8 7, i32 4, i32 0, i1 false)
+  call void @llvm.memset.p0i8.i32(i8* %a.cast3, i8 7, i32 4, i1 false)
 ; CHECK-NEXT: insertelement <4 x float> 
 
   %ret = load <4 x float>, <4 x float>* %a
@@ -369,7 +369,7 @@ entry:
 
   %a.gep0 = getelementptr <4 x float>, <4 x float>* %a, i32 0, i32 0
   %a.cast0 = bitcast float* %a.gep0 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %a.cast0, i8* %x, i32 8, i32 0, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %a.cast0, i8* %x, i32 8, i1 false)
 ; CHECK:      %[[xptr:.*]] = bitcast i8* %x to <2 x float>*
 ; CHECK-NEXT: %[[x:.*]] = load <2 x float>, <2 x float>* %[[xptr]]
 ; CHECK-NEXT: %[[expand_x:.*]] = shufflevector <2 x float> %[[x]], <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
@@ -377,7 +377,7 @@ entry:
 
   %a.gep1 = getelementptr <4 x float>, <4 x float>* %a, i32 0, i32 1
   %a.cast1 = bitcast float* %a.gep1 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %a.cast1, i8* %y, i32 8, i32 0, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %a.cast1, i8* %y, i32 8, i1 false)
 ; CHECK-NEXT: %[[yptr:.*]] = bitcast i8* %y to <2 x float>*
 ; CHECK-NEXT: %[[y:.*]] = load <2 x float>, <2 x float>* %[[yptr]]
 ; CHECK-NEXT: %[[expand_y:.*]] = shufflevector <2 x float> %[[y]], <2 x float> undef, <4 x i32> <i32 undef, i32 0, i32 1, i32 undef>
@@ -385,7 +385,7 @@ entry:
 
   %a.gep2 = getelementptr <4 x float>, <4 x float>* %a, i32 0, i32 2
   %a.cast2 = bitcast float* %a.gep2 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %a.cast2, i8* %z, i32 8, i32 0, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %a.cast2, i8* %z, i32 8, i1 false)
 ; CHECK-NEXT: %[[zptr:.*]] = bitcast i8* %z to <2 x float>*
 ; CHECK-NEXT: %[[z:.*]] = load <2 x float>, <2 x float>* %[[zptr]]
 ; CHECK-NEXT: %[[expand_z:.*]] = shufflevector <2 x float> %[[z]], <2 x float> undef, <4 x i32> <i32 undef, i32 undef, i32 0, i32 1>
@@ -393,12 +393,12 @@ entry:
 
   %a.gep3 = getelementptr <4 x float>, <4 x float>* %a, i32 0, i32 3
   %a.cast3 = bitcast float* %a.gep3 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %a.cast3, i8* %f, i32 4, i32 0, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %a.cast3, i8* %f, i32 4, i1 false)
 ; CHECK-NEXT: %[[fptr:.*]] = bitcast i8* %f to float*
 ; CHECK-NEXT: %[[f:.*]] = load float, float* %[[fptr]]
 ; CHECK-NEXT: %[[insert_f:.*]] = insertelement <4 x float> 
 
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %out, i8* %a.cast2, i32 8, i32 0, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %out, i8* %a.cast2, i32 8, i1 false)
 ; CHECK-NEXT: %[[outptr:.*]] = bitcast i8* %out to <2 x float>*
 ; CHECK-NEXT: %[[extract_out:.*]] = shufflevector <4 x float> %[[insert_f]], <4 x float> undef, <2 x i32> <i32 2, i32 3>
 ; CHECK-NEXT: store <2 x float> %[[extract_out]], <2 x float>* %[[outptr]]

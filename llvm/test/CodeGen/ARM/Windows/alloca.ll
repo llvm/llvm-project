@@ -1,4 +1,6 @@
 ; RUN: llc -O0 -mtriple thumbv7-windows-itanium -filetype asm -o - %s | FileCheck %s
+; RUN: llc -O0 -mtriple thumbv7-windows-msvc -filetype asm -o - %s | FileCheck %s
+; RUN: llc -O0 -mtriple thumbv7-windows-mingw32 -filetype asm -o - %s | FileCheck %s
 
 declare arm_aapcs_vfpcc i32 @num_entries()
 

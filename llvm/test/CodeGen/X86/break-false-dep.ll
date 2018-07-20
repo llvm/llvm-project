@@ -1,6 +1,7 @@
 ; RUN: llc < %s -mtriple=x86_64-linux -mattr=+sse2 -mcpu=nehalem | FileCheck %s --check-prefix=SSE
 ; RUN: llc < %s -mtriple=x86_64-win32 -mattr=+sse2 -mcpu=nehalem | FileCheck %s --check-prefix=SSE
 ; RUN: llc < %s -mtriple=x86_64-win32 -mattr=+avx -mcpu=corei7-avx | FileCheck %s --check-prefix=AVX
+; RUN: llc < %s -mtriple=x86_64-win32 -mattr=+avx512vl -mcpu=skx | FileCheck %s --check-prefix=AVX
 
 define double @t1(float* nocapture %x) nounwind readonly ssp {
 entry:
@@ -67,7 +68,7 @@ declare double @llvm.sqrt.f64(double)
 ; SSE: for.body{{$}}
 ;
 ; This loop contains two cvtsi2ss instructions that update the same xmm
-; register.  Verify that the execution dependency fix pass breaks those
+; register.  Verify that the break false dependency fix pass breaks those
 ; dependencies by inserting xorps instructions.
 ;
 ; If the register allocator chooses different registers for the two cvtsi2ss
@@ -126,7 +127,7 @@ loop:
   %i = phi i64 [ 1, %entry ], [ %inc, %loop ]
   %s1 = phi i64 [ %vx, %entry ], [ %s2, %loop ]
   %fi = sitofp i64 %i to double
-  tail call void asm sideeffect "", "~{xmm0},~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{dirflag},~{fpsr},~{flags}"()
+  tail call void asm sideeffect "", "~{xmm0},~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{dirflag},~{fpsr},~{flags}"()
   %vy = load double, double* %y
   %fipy = fadd double %fi, %vy
   %iipy = fptosi double %fipy to i64
@@ -141,7 +142,7 @@ ret:
 ; This loop contains a cvtsi2sd instruction that has a loop-carried
 ; false dependency on an xmm that is modified by other scalar instructions
 ; that follow it in the loop. Additionally, the source of convert is a
-; memory operand. Verify the execution dependency fix pass breaks this
+; memory operand. Verify the break false dependency fix pass breaks this
 ; dependency by inserting a xor before the convert.
 @x = common global [1024 x double] zeroinitializer, align 16
 @y = common global [1024 x double] zeroinitializer, align 16
@@ -175,7 +176,7 @@ for.body3:
   store double %mul11, double* %arrayidx13, align 8
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 1024
-  tail call void asm sideeffect "", "~{xmm0},~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{dirflag},~{fpsr},~{flags}"()
+  tail call void asm sideeffect "", "~{xmm0},~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{dirflag},~{fpsr},~{flags}"()
   br i1 %exitcond, label %for.inc14, label %for.body3
 
 for.inc14:                                        ; preds = %for.body3
@@ -208,6 +209,10 @@ top:
   tail call void asm sideeffect "", "~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{dirflag},~{fpsr},~{flags}"()
   tail call void asm sideeffect "", "~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{dirflag},~{fpsr},~{flags}"()
   tail call void asm sideeffect "", "~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{dirflag},~{fpsr},~{flags}"()
+  tail call void asm sideeffect "", "~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{dirflag},~{fpsr},~{flags}"()
+  tail call void asm sideeffect "", "~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{dirflag},~{fpsr},~{flags}"()
+  tail call void asm sideeffect "", "~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{dirflag},~{fpsr},~{flags}"()
+  tail call void asm sideeffect "", "~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{dirflag},~{fpsr},~{flags}"()
   %tmp1 = sitofp i64 %arg to double
   ret double %tmp1
 ;AVX-LABEL:@inlineasmdep
@@ -224,6 +229,10 @@ top:
   tail call void asm sideeffect "", "~{xmm4},~{xmm5},~{xmm7},~{dirflag},~{fpsr},~{flags}"()
   tail call void asm sideeffect "", "~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{dirflag},~{fpsr},~{flags}"()
   tail call void asm sideeffect "", "~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{dirflag},~{fpsr},~{flags}"()
+  tail call void asm sideeffect "", "~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{dirflag},~{fpsr},~{flags}"()
+  tail call void asm sideeffect "", "~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{dirflag},~{fpsr},~{flags}"()
+  tail call void asm sideeffect "", "~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{dirflag},~{fpsr},~{flags}"()
+  tail call void asm sideeffect "", "~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{dirflag},~{fpsr},~{flags}"()
   %tmp1 = fpext float %arg to double
   ret double %tmp1
 ;AVX-LABEL:@truedeps
@@ -240,6 +249,10 @@ top:
   tail call void asm sideeffect "", "~{xmm4},~{xmm5},~{xmm7},~{dirflag},~{fpsr},~{flags}"()
   tail call void asm sideeffect "", "~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{dirflag},~{fpsr},~{flags}"()
   tail call void asm sideeffect "", "~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{dirflag},~{fpsr},~{flags}"()
+  tail call void asm sideeffect "", "~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{dirflag},~{fpsr},~{flags}"()
+  tail call void asm sideeffect "", "~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{dirflag},~{fpsr},~{flags}"()
+  tail call void asm sideeffect "", "~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{dirflag},~{fpsr},~{flags}"()
+  tail call void asm sideeffect "", "~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{dirflag},~{fpsr},~{flags}"()
   %tmp1 = sitofp i64 %arg to double
   ret double %tmp1
 ;AVX-LABEL:@clearence
@@ -262,6 +275,10 @@ loop:
   tail call void asm sideeffect "", "~{xmm0},~{xmm1},~{xmm2},~{xmm3},~{dirflag},~{fpsr},~{flags}"()
   tail call void asm sideeffect "", "~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{dirflag},~{fpsr},~{flags}"()
   tail call void asm sideeffect "", "~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{dirflag},~{fpsr},~{flags}"()
+  tail call void asm sideeffect "", "~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{dirflag},~{fpsr},~{flags}"()
+  tail call void asm sideeffect "", "~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{dirflag},~{fpsr},~{flags}"()
+  tail call void asm sideeffect "", "~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{dirflag},~{fpsr},~{flags}"()
+  tail call void asm sideeffect "", "~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{dirflag},~{fpsr},~{flags}"()
   %vy = load double, double* %y
   %fipy = fadd double %fi, %vy
   %iipy = fptosi double %fipy to i64
@@ -287,6 +304,10 @@ entry:
   tail call void asm sideeffect "", "~{xmm7},~{dirflag},~{fpsr},~{flags}"()
   tail call void asm sideeffect "", "~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{dirflag},~{fpsr},~{flags}"()
   tail call void asm sideeffect "", "~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{dirflag},~{fpsr},~{flags}"()
+  tail call void asm sideeffect "", "~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{dirflag},~{fpsr},~{flags}"()
+  tail call void asm sideeffect "", "~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{dirflag},~{fpsr},~{flags}"()
+  tail call void asm sideeffect "", "~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{dirflag},~{fpsr},~{flags}"()
+  tail call void asm sideeffect "", "~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{dirflag},~{fpsr},~{flags}"()
   br label %loop
 
 loop:

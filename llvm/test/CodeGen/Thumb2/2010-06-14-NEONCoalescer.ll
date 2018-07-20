@@ -5,8 +5,8 @@ target triple = "thumbv7-apple-darwin10"
 ; This is a case where the coalescer was too eager. These two copies were
 ; considered equivalent and coalescable:
 ;
-; 140 %reg1038:dsub_0 = VMOVD %reg1047:dsub_0, pred:14, pred:%reg0
-; 148 %reg1038:dsub_1 = VMOVD %reg1047:dsub_0, pred:14, pred:%reg0
+; 140 %reg1038:dsub_0 = VMOVD %reg1047:dsub_0, 14, %reg0
+; 148 %reg1038:dsub_1 = VMOVD %reg1047:dsub_0, 14, %reg0
 ;
 ; Only one can be coalesced.
 

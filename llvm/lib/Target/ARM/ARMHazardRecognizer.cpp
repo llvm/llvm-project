@@ -37,7 +37,7 @@ ARMHazardRecognizer::getHazardType(SUnit *SU, int Stalls) {
 
   MachineInstr *MI = SU->getInstr();
 
-  if (!MI->isDebugValue()) {
+  if (!MI->isDebugInstr()) {
     // Look for special VMLA / VMLS hazards. A VMUL / VADD / VSUB following
     // a VMLA / VMLS will cause 4 cycle stall.
     const MCInstrDesc &MCID = MI->getDesc();
@@ -81,7 +81,7 @@ void ARMHazardRecognizer::Reset() {
 
 void ARMHazardRecognizer::EmitInstruction(SUnit *SU) {
   MachineInstr *MI = SU->getInstr();
-  if (!MI->isDebugValue()) {
+  if (!MI->isDebugInstr()) {
     LastMI = MI;
     FpMLxStalls = 0;
   }

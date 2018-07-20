@@ -52,7 +52,7 @@ public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-/// \brief Simplify each loop in a loop nest recursively.
+/// Simplify each loop in a loop nest recursively.
 ///
 /// This takes a potentially un-simplified loop L (and its children) and turns
 /// it into a simplified loop nest with preheaders and single backedges. It will

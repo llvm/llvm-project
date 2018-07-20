@@ -32,12 +32,13 @@ subdirectories =
  llvm-dis
  llvm-dwarfdump
  llvm-dwp
+ llvm-exegesis
  llvm-extract
  llvm-jitlistener
  llvm-link
  llvm-lto
  llvm-mc
- llvm-mcmarkup
+ llvm-mca
  llvm-modextract
  llvm-mt
  llvm-nm

@@ -83,7 +83,7 @@ define amdgpu_kernel void @madmk_inline_imm_f32(float addrspace(1)* noalias %out
 ; GCN-NOT: v_madmk_f32
 ; GCN: v_mac_f32_e32
 ; GCN: s_endpgm
-define amdgpu_kernel void @s_s_madmk_f32(float addrspace(1)* noalias %out, float %a, float %b) nounwind {
+define amdgpu_kernel void @s_s_madmk_f32(float addrspace(1)* noalias %out, [8 x i32], float %a, [8 x i32], float %b) nounwind {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
 
@@ -205,9 +205,8 @@ bb2:                                              ; preds = %bb6, %bb
   br i1 %tmp5, label %bb1, label %bb6
 
 bb6:                                              ; preds = %bb2
-  %tmp4 = fmul float %tmp, undef
-  %tmp7 = fmul float %tmp4, 0x40E55DD180000000
-  %tmp8 = fadd float %tmp7, undef
+  %tmp7 = fmul float %tmp, 0x40E55DD180000000
+  %tmp8 = fadd float %tmp7, %tmp
   br label %bb2
 }
 

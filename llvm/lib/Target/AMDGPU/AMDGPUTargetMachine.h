@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// \brief The AMDGPU TargetMachine interface definition for hw codgen targets.
+/// The AMDGPU TargetMachine interface definition for hw codgen targets.
 //
 //===----------------------------------------------------------------------===//
 
@@ -34,7 +34,6 @@ namespace llvm {
 class AMDGPUTargetMachine : public LLVMTargetMachine {
 protected:
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
-  AMDGPUIntrinsicInfo IntrinsicInfo;
   AMDGPUAS AS;
 
   StringRef getGPUName(const Function &F) const;
@@ -42,6 +41,7 @@ protected:
 
 public:
   static bool EnableLateStructurizeCFG;
+  static bool EnableFunctionCalls;
 
   AMDGPUTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                       StringRef FS, TargetOptions Options,
@@ -49,13 +49,8 @@ public:
                       CodeGenOpt::Level OL);
   ~AMDGPUTargetMachine() override;
 
-  const AMDGPUSubtarget *getSubtargetImpl() const;
-  const AMDGPUSubtarget *getSubtargetImpl(const Function &) const override = 0;
-
-  const AMDGPUIntrinsicInfo *getIntrinsicInfo() const override {
-    return &IntrinsicInfo;
-  }
-  TargetTransformInfo getTargetTransformInfo(const Function &F) override;
+  const TargetSubtargetInfo *getSubtargetImpl() const;
+  const TargetSubtargetInfo *getSubtargetImpl(const Function &) const override = 0;
 
   TargetLoweringObjectFile *getObjFileLowering() const override {
     return TLOF.get();
@@ -91,6 +86,8 @@ public:
 
   const R600Subtarget *getSubtargetImpl(const Function &) const override;
 
+  TargetTransformInfo getTargetTransformInfo(const Function &F) override;
+
   bool isMachineVerifierClean() const override {
     return false;
   }
@@ -102,7 +99,8 @@ public:
 
 class GCNTargetMachine final : public AMDGPUTargetMachine {
 private:
-  mutable StringMap<std::unique_ptr<SISubtarget>> SubtargetMap;
+  AMDGPUIntrinsicInfo IntrinsicInfo;
+  mutable StringMap<std::unique_ptr<GCNSubtarget>> SubtargetMap;
 
 public:
   GCNTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
@@ -112,7 +110,13 @@ public:
 
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
 
-  const SISubtarget *getSubtargetImpl(const Function &) const override;
+  const GCNSubtarget *getSubtargetImpl(const Function &) const override;
+
+  TargetTransformInfo getTargetTransformInfo(const Function &F) override;
+
+  const AMDGPUIntrinsicInfo *getIntrinsicInfo() const override {
+    return &IntrinsicInfo;
+  }
 
   bool useIPRA() const override {
     return true;

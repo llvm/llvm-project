@@ -59,7 +59,7 @@ define void @getMemoryOpCost() {
     ; these types (they get extended to v.4h/v.2s).
     ; CHECK: cost of 16 {{.*}} store
     store <2 x i8> undef, <2 x i8> * undef
-    ; CHECK: cost of 64 {{.*}} store
+    ; CHECK: cost of 1 {{.*}} store
     store <4 x i8> undef, <4 x i8> * undef
     ; CHECK: cost of 16 {{.*}} load
     load <2 x i8> , <2 x i8> * undef

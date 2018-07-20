@@ -28,6 +28,17 @@ define void @store_at_gep_off_null(i64 %offset) {
    ret void
 }
 
+define void @store_at_gep_off_no_null_opt(i64 %offset) #0 {
+   %ptr = getelementptr i32, i32 *null, i64 %offset
+   store i32 24, i32* %ptr
+   ret void
+; CHECK-LABEL: @store_at_gep_off_no_null_opt(i64 %offset)
+; CHECK-NEXT: %ptr = getelementptr i32, i32* null, i64 %offset
+; CHECK-NEXT: store i32 24, i32* %ptr
+}
+
+attributes #0 = { "null-pointer-is-valid"="true" }
+
 ;; Simple sinking tests
 
 ; "if then else"

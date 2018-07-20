@@ -2,7 +2,7 @@
 
 ; Checking gvn-hoist in case of indirect branches.
 
-; Check that the bitcast is is not hoisted because it is after an indirect call
+; Check that the bitcast is not hoisted because it is after an indirect call
 ; CHECK-LABEL: @foo
 ; CHECK-LABEL: l1.preheader:
 ; CHECK-NEXT: bitcast

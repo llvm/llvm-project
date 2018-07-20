@@ -65,7 +65,8 @@ CoveragePrinter::createOutputStream(StringRef Path, StringRef Extension,
     return errorCodeToError(E);
 
   std::error_code E;
-  raw_ostream *RawStream = new raw_fd_ostream(FullPath, E, sys::fs::F_RW);
+  raw_ostream *RawStream =
+      new raw_fd_ostream(FullPath, E, sys::fs::FA_Read | sys::fs::FA_Write);
   auto OS = CoveragePrinter::OwnedStream(RawStream);
   if (E)
     return errorCodeToError(E);

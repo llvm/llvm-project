@@ -23,7 +23,9 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/MemAlloc.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -35,7 +37,7 @@
 
 namespace llvm {
 
-/// \brief CRTP base class providing obvious overloads for the core \c
+/// CRTP base class providing obvious overloads for the core \c
 /// Allocate() methods of LLVM-style allocators.
 ///
 /// This base class both documents the full public interface exposed by all
@@ -43,7 +45,7 @@ namespace llvm {
 /// set of methods which the derived class must define.
 template <typename DerivedT> class AllocatorBase {
 public:
-  /// \brief Allocate \a Size bytes of \a Alignment aligned memory. This method
+  /// Allocate \a Size bytes of \a Alignment aligned memory. This method
   /// must be implemented by \c DerivedT.
   void *Allocate(size_t Size, size_t Alignment) {
 #ifdef __clang__
@@ -57,7 +59,7 @@ public:
     return static_cast<DerivedT *>(this)->Allocate(Size, Alignment);
   }
 
-  /// \brief Deallocate \a Ptr to \a Size bytes of memory allocated by this
+  /// Deallocate \a Ptr to \a Size bytes of memory allocated by this
   /// allocator.
   void Deallocate(const void *Ptr, size_t Size) {
 #ifdef __clang__
@@ -74,12 +76,12 @@ public:
   // The rest of these methods are helpers that redirect to one of the above
   // core methods.
 
-  /// \brief Allocate space for a sequence of objects without constructing them.
+  /// Allocate space for a sequence of objects without constructing them.
   template <typename T> T *Allocate(size_t Num = 1) {
     return static_cast<T *>(Allocate(Num * sizeof(T), alignof(T)));
   }
 
-  /// \brief Deallocate space for a sequence of objects without constructing them.
+  /// Deallocate space for a sequence of objects without constructing them.
   template <typename T>
   typename std::enable_if<
       !std::is_same<typename std::remove_cv<T>::type, void>::value, void>::type
@@ -94,7 +96,7 @@ public:
 
   LLVM_ATTRIBUTE_RETURNS_NONNULL void *Allocate(size_t Size,
                                                 size_t /*Alignment*/) {
-    return malloc(Size);
+    return safe_malloc(Size);
   }
 
   // Pull in base class overloads.
@@ -119,7 +121,7 @@ void printBumpPtrAllocatorStats(unsigned NumSlabs, size_t BytesAllocated,
 
 } // end namespace detail
 
-/// \brief Allocate memory in an ever growing pool, as if by bump-pointer.
+/// Allocate memory in an ever growing pool, as if by bump-pointer.
 ///
 /// This isn't strictly a bump-pointer allocator as it uses backing slabs of
 /// memory rather than relying on a boundless contiguous heap. However, it has
@@ -187,7 +189,7 @@ public:
     return *this;
   }
 
-  /// \brief Deallocate all but the current slab and reset the current pointer
+  /// Deallocate all but the current slab and reset the current pointer
   /// to the beginning of it, freeing all memory allocated so far.
   void Reset() {
     // Deallocate all but the first slab, and deallocate all custom-sized slabs.
@@ -207,7 +209,7 @@ public:
     Slabs.erase(std::next(Slabs.begin()), Slabs.end());
   }
 
-  /// \brief Allocate space at the specified alignment.
+  /// Allocate space at the specified alignment.
   LLVM_ATTRIBUTE_RETURNS_NONNULL LLVM_ATTRIBUTE_RETURNS_NOALIAS void *
   Allocate(size_t Size, size_t Alignment) {
     assert(Alignment > 0 && "0-byte alignnment is not allowed. Use 1 instead.");
@@ -302,30 +304,30 @@ public:
   }
 
 private:
-  /// \brief The current pointer into the current slab.
+  /// The current pointer into the current slab.
   ///
   /// This points to the next free byte in the slab.
   char *CurPtr = nullptr;
 
-  /// \brief The end of the current slab.
+  /// The end of the current slab.
   char *End = nullptr;
 
-  /// \brief The slabs allocated so far.
+  /// The slabs allocated so far.
   SmallVector<void *, 4> Slabs;
 
-  /// \brief Custom-sized slabs allocated for too-large allocation requests.
+  /// Custom-sized slabs allocated for too-large allocation requests.
   SmallVector<std::pair<void *, size_t>, 0> CustomSizedSlabs;
 
-  /// \brief How many bytes we've allocated.
+  /// How many bytes we've allocated.
   ///
   /// Used so that we can compute how much space was wasted.
   size_t BytesAllocated = 0;
 
-  /// \brief The number of bytes to put between allocations when running under
+  /// The number of bytes to put between allocations when running under
   /// a sanitizer.
   size_t RedZoneSize = 1;
 
-  /// \brief The allocator instance we use to get slabs of memory.
+  /// The allocator instance we use to get slabs of memory.
   AllocatorT Allocator;
 
   static size_t computeSlabSize(unsigned SlabIdx) {
@@ -336,7 +338,7 @@ private:
     return SlabSize * ((size_t)1 << std::min<size_t>(30, SlabIdx / 128));
   }
 
-  /// \brief Allocate a new slab and move the bump pointers over into the new
+  /// Allocate a new slab and move the bump pointers over into the new
   /// slab, modifying CurPtr and End.
   void StartNewSlab() {
     size_t AllocatedSlabSize = computeSlabSize(Slabs.size());
@@ -351,7 +353,7 @@ private:
     End = ((char *)NewSlab) + AllocatedSlabSize;
   }
 
-  /// \brief Deallocate a sequence of slabs.
+  /// Deallocate a sequence of slabs.
   void DeallocateSlabs(SmallVectorImpl<void *>::iterator I,
                        SmallVectorImpl<void *>::iterator E) {
     for (; I != E; ++I) {
@@ -361,7 +363,7 @@ private:
     }
   }
 
-  /// \brief Deallocate all memory for custom sized slabs.
+  /// Deallocate all memory for custom sized slabs.
   void DeallocateCustomSizedSlabs() {
     for (auto &PtrAndSize : CustomSizedSlabs) {
       void *Ptr = PtrAndSize.first;
@@ -373,11 +375,11 @@ private:
   template <typename T> friend class SpecificBumpPtrAllocator;
 };
 
-/// \brief The standard BumpPtrAllocator which just uses the default template
+/// The standard BumpPtrAllocator which just uses the default template
 /// parameters.
 typedef BumpPtrAllocatorImpl<> BumpPtrAllocator;
 
-/// \brief A BumpPtrAllocator that allows only elements of a specific type to be
+/// A BumpPtrAllocator that allows only elements of a specific type to be
 /// allocated.
 ///
 /// This allows calling the destructor in DestroyAll() and when the allocator is
@@ -430,7 +432,7 @@ public:
     Allocator.Reset();
   }
 
-  /// \brief Allocate space for an array of objects without constructing them.
+  /// Allocate space for an array of objects without constructing them.
   T *Allocate(size_t num = 1) { return Allocator.Allocate<T>(num); }
 };
 

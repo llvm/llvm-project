@@ -7,7 +7,7 @@
 define void @main() nounwind ssp {
 ; CHECK-LABEL: main:
 entry:
-  call void @llvm.memset.p0i8.i64(i8* getelementptr inbounds (%struct.A, %struct.A* @c, i32 0, i32 0, i32 0), i8 0, i64 60, i32 1, i1 false)
+  call void @llvm.memset.p0i8.i64(i8* getelementptr inbounds (%struct.A, %struct.A* @c, i32 0, i32 0, i32 0), i8 0, i64 60, i1 false)
   unreachable  
   ; CHECK: movq    _c@TLVP(%rip), %rdi
   ; CHECK-NEXT: callq   *(%rdi)
@@ -31,7 +31,7 @@ entry:
   ret i32 %sub
 }
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1) nounwind
+declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) nounwind
 
 @a = thread_local global i32 0                    ; <i32*> [#uses=0]
 @b = thread_local global i32 0                    ; <i32*> [#uses=0]

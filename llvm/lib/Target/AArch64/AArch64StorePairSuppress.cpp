@@ -91,9 +91,9 @@ bool AArch64StorePairSuppress::shouldAddSTPToBlock(const MachineBasicBlock *BB) 
   if (SCDesc->isValid() && !SCDesc->isVariant()) {
     unsigned ResLenWithSTP = BBTrace.getResourceLength(None, SCDesc);
     if (ResLenWithSTP > ResLength) {
-      DEBUG(dbgs() << "  Suppress STP in BB: " << BB->getNumber()
-                   << " resources " << ResLength << " -> " << ResLenWithSTP
-                   << "\n");
+      LLVM_DEBUG(dbgs() << "  Suppress STP in BB: " << BB->getNumber()
+                        << " resources " << ResLength << " -> " << ResLenWithSTP
+                        << "\n");
       return false;
     }
   }
@@ -127,14 +127,14 @@ bool AArch64StorePairSuppress::runOnMachineFunction(MachineFunction &MF) {
   TII = static_cast<const AArch64InstrInfo *>(ST.getInstrInfo());
   TRI = ST.getRegisterInfo();
   MRI = &MF.getRegInfo();
-  SchedModel.init(ST.getSchedModel(), &ST, TII);
+  SchedModel.init(&ST);
   Traces = &getAnalysis<MachineTraceMetrics>();
   MinInstr = nullptr;
 
-  DEBUG(dbgs() << "*** " << getPassName() << ": " << MF.getName() << '\n');
+  LLVM_DEBUG(dbgs() << "*** " << getPassName() << ": " << MF.getName() << '\n');
 
   if (!SchedModel.hasInstrSchedModel()) {
-    DEBUG(dbgs() << "  Skipping pass: no machine model present.\n");
+    LLVM_DEBUG(dbgs() << "  Skipping pass: no machine model present.\n");
     return false;
   }
 
@@ -156,7 +156,7 @@ bool AArch64StorePairSuppress::runOnMachineFunction(MachineFunction &MF) {
           if (!SuppressSTP && shouldAddSTPToBlock(MI.getParent()))
             break;
           // Otherwise, continue unpairing the stores in this block.
-          DEBUG(dbgs() << "Unpairing store " << MI << "\n");
+          LLVM_DEBUG(dbgs() << "Unpairing store " << MI << "\n");
           SuppressSTP = true;
           TII->suppressLdStPair(MI);
         }

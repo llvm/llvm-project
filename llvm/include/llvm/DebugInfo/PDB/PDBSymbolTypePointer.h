@@ -32,7 +32,11 @@ public:
   FORWARD_SYMBOL_METHOD(getLength)
   FORWARD_SYMBOL_ID_METHOD(getLexicalParent)
   FORWARD_SYMBOL_METHOD(isReference)
+  FORWARD_SYMBOL_METHOD(isRValueReference)
+  FORWARD_SYMBOL_METHOD(isPointerToDataMember)
+  FORWARD_SYMBOL_METHOD(isPointerToMemberFunction)
   FORWARD_SYMBOL_ID_METHOD_WITH_NAME(getType, getPointeeType)
+  FORWARD_SYMBOL_METHOD(isRestrictedType)
   FORWARD_SYMBOL_METHOD(isUnalignedType)
   FORWARD_SYMBOL_METHOD(isVolatileType)
 };

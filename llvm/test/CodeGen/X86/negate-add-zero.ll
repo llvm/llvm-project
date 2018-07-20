@@ -1133,4 +1133,4 @@ declare %"struct.std::basic_ostream<char,std::char_traits<char> >"* @_ZlsIdLi5EL
 
 declare %"struct.std::basic_ostream<char,std::char_traits<char> >"* @_ZlsIdLi5ELi6EERSoS0_RK15FixedMatrixBaseIT_XT0_EXT1_EE(%"struct.std::basic_ostream<char,std::char_traits<char> >"*, %"struct.FixedMatrixBase<double,5,6>"*)
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1) nounwind
+declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) nounwind

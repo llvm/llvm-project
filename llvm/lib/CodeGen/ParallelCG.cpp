@@ -30,7 +30,7 @@ static void codegen(Module *M, llvm::raw_pwrite_stream &OS,
                     TargetMachine::CodeGenFileType FileType) {
   std::unique_ptr<TargetMachine> TM = TMFactory();
   legacy::PassManager CodeGenPasses;
-  if (TM->addPassesToEmitFile(CodeGenPasses, OS, FileType))
+  if (TM->addPassesToEmitFile(CodeGenPasses, OS, nullptr, FileType))
     report_fatal_error("Failed to setup codegen");
   CodeGenPasses.run(*M);
 }
@@ -44,7 +44,7 @@ std::unique_ptr<Module> llvm::splitCodeGen(
 
   if (OSs.size() == 1) {
     if (!BCOSs.empty())
-      WriteBitcodeToFile(M.get(), *BCOSs[0]);
+      WriteBitcodeToFile(*M, *BCOSs[0]);
     codegen(M.get(), *OSs[0], TMFactory, FileType);
     return M;
   }
@@ -66,7 +66,7 @@ std::unique_ptr<Module> llvm::splitCodeGen(
           // FIXME: Provide a more direct way to do this in LLVM.
           SmallString<0> BC;
           raw_svector_ostream BCOS(BC);
-          WriteBitcodeToFile(MPart.get(), BCOS);
+          WriteBitcodeToFile(*MPart, BCOS);
 
           if (!BCOSs.empty()) {
             BCOSs[ThreadCount]->write(BC.begin(), BC.size());

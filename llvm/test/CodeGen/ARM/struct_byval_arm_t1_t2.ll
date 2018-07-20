@@ -122,17 +122,17 @@ declare void @use_N(%struct.N* byval)
 ;THUMB1-LABEL: test_A_8:
 ;T1POST-LABEL: test_A_8:
   define void @test_A_8() {
-;ARM:         vld1.32 {d{{[0-9]+}}}, [r{{.*}}]!
+;ARM:         vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
 
-;THUMB2:      vld1.32 {d{{[0-9]+}}}, [r{{.*}}]!
+;THUMB2:      vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
 
 ;NO_NEON:     ldr     r{{[0-9]+}}, [{{.*}}], #4
-;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}}, [r{{.*}}]!
+;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
 
 ;THUMB1:      ldr     r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
 ;THUMB1:      adds    [[BASE]], #4
 
-;T1POST-NOT:  vld1.32 {d{{[0-9]+}}}, [r{{.*}}]!
+;T1POST-NOT:  vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
   entry:
     %a = alloca %struct.A, align 8
     call void @use_A(%struct.A* byval align 8 %a)
@@ -144,19 +144,19 @@ declare void @use_N(%struct.N* byval)
 ;THUMB1-LABEL: test_A_16:
 ;T1POST-LABEL: test_A_16:
   define void @test_A_16() {
-;ARM:         vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [r{{.*}}]!
+;ARM:         vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
 ;ARM:         ldrb    r{{[0-9]+}}, [{{.*}}], #1
 
-;THUMB2:      vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [r{{.*}}]!
+;THUMB2:      vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
 ;THUMB2:      ldrb    r{{[0-9]+}}, [{{.*}}], #1
 
 ;NO_NEON:     ldr     r{{[0-9]+}}, [{{.*}}], #4
-;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [r{{.*}}]!
+;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
 
 ;THUMB1:      ldr     r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
 ;THUMB1:      adds    [[BASE]], #4
 
-;T1POST-NOT:  vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [r{{.*}}]!
+;T1POST-NOT:  vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
   entry:
     %a = alloca %struct.A, align 16
     call void @use_A(%struct.A* byval align 16 %a)
@@ -239,21 +239,21 @@ declare void @use_N(%struct.N* byval)
 ;THUMB1-LABEL: test_B_8:
 ;T1POST-LABEL: test_B_8:
   define void @test_B_8() {
-;ARM:         vld1.32 {d{{[0-9]+}}}, [r{{.*}}]!
+;ARM:         vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
 ;ARM:         ldrb    r{{[0-9]+}}, [{{.*}}], #1
 
-;THUMB2:      vld1.32 {d{{[0-9]+}}}, [r{{.*}}]!
+;THUMB2:      vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
 ;THUMB2:      ldrb    r{{[0-9]+}}, [{{.*}}], #1
 
 ;NO_NEON:     ldr     r{{[0-9]+}}, [{{.*}}], #4
 ;NO_NEON:     ldrb    r{{[0-9]+}}, [{{.*}}], #1
-;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}}, [r{{.*}}]!
+;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
 
 ;THUMB1:      ldr     r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
 ;THUMB1:      adds    [[BASE]], #4
 ;THUMB1:      ldrb    r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
 
-;T1POST-NOT:  vld1.32 {d{{[0-9]+}}}, [r{{.*}}]!
+;T1POST-NOT:  vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
   entry:
     %a = alloca %struct.B, align 8
     call void @use_B(%struct.B* byval align 8 %a)
@@ -265,21 +265,21 @@ declare void @use_N(%struct.N* byval)
 ;THUMB1-LABEL: test_B_16:
 ;T1POST-LABEL: test_B_16:
   define void @test_B_16() {
-;ARM:         vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [r{{.*}}]!
+;ARM:         vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
 ;ARM:         ldrb    r{{[0-9]+}}, [{{.*}}], #1
 
-;THUMB2:      vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [r{{.*}}]!
+;THUMB2:      vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
 ;THUMB2:      ldrb    r{{[0-9]+}}, [{{.*}}], #1
 
 ;NO_NEON:     ldr     r{{[0-9]+}}, [{{.*}}], #4
 ;NO_NEON:     ldrb    r{{[0-9]+}}, [{{.*}}], #1
-;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [r{{.*}}]!
+;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
 
 ;THUMB1:      ldr     r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
 ;THUMB1:      adds    [[BASE]], #4
 ;THUMB1:      ldrb    r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
 
-;T1POST-NOT:  vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [r{{.*}}]!
+;T1POST-NOT:  vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
   entry:
     %a = alloca %struct.B, align 16
     call void @use_B(%struct.B* byval align 16 %a)
@@ -363,22 +363,22 @@ declare void @use_N(%struct.N* byval)
 ;THUMB1-LABEL: test_C_8:
 ;T1POST-LABEL: test_C_8:
   define void @test_C_8() {
-;ARM:         vld1.32 {d{{[0-9]+}}}, [r{{.*}}]!
+;ARM:         vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
 ;ARM:         ldrb    r{{[0-9]+}}, [{{.*}}], #1
 
-;THUMB2:      vld1.32 {d{{[0-9]+}}}, [r{{.*}}]!
+;THUMB2:      vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
 ;THUMB2:      ldrb    r{{[0-9]+}}, [{{.*}}], #1
 
 ;NO_NEON:     ldr     r{{[0-9]+}}, [{{.*}}], #4
 ;NO_NEON:     ldrb    r{{[0-9]+}}, [{{.*}}], #1
-;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}}, [r{{.*}}]!
+;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
 
 ;THUMB1:      ldr     r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
 ;THUMB1:      adds    [[BASE]], #4
 ;THUMB1:      ldrb    r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
 ;THUMB1:      adds    [[BASE]], #1
 
-;T1POST-NOT:  vld1.32 {d{{[0-9]+}}}, [r{{.*}}]!
+;T1POST-NOT:  vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
   entry:
     %a = alloca %struct.C, align 8
     call void @use_C(%struct.C* byval align 8 %a)
@@ -390,22 +390,22 @@ declare void @use_N(%struct.N* byval)
 ;THUMB1-LABEL: test_C_16:
 ;T1POST-LABEL: test_C_16:
   define void @test_C_16() {
-;ARM:         vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [r{{.*}}]!
+;ARM:         vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
 ;ARM:         ldrb    r{{[0-9]+}}, [{{.*}}], #1
 
-;THUMB2:      vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [r{{.*}}]!
+;THUMB2:      vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
 ;THUMB2:      ldrb    r{{[0-9]+}}, [{{.*}}], #1
 
 ;NO_NEON:     ldr     r{{[0-9]+}}, [{{.*}}], #4
 ;NO_NEON:     ldrb    r{{[0-9]+}}, [{{.*}}], #1
-;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [r{{.*}}]!
+;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
 
 ;THUMB1:      ldr     r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
 ;THUMB1:      adds    [[BASE]], #4
 ;THUMB1:      ldrb    r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
 ;THUMB1:      adds    [[BASE]], #1
 
-;T1POST-NOT:  vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [r{{.*}}]!
+;T1POST-NOT:  vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
   entry:
     %a = alloca %struct.C, align 16
     call void @use_C(%struct.C* byval align 16 %a)
@@ -492,21 +492,21 @@ declare void @use_N(%struct.N* byval)
 ;THUMB1-LABEL: test_D_8:
 ;T1POST-LABEL: test_D_8:
   define void @test_D_8() {
-;ARM:         vld1.32 {d{{[0-9]+}}}, [r{{.*}}]!
+;ARM:         vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
 ;ARM:         bne
 
-;THUMB2:      vld1.32 {d{{[0-9]+}}}, [r{{.*}}]!
+;THUMB2:      vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
 ;THUMB2:      bne
 
 ;NO_NEON:     ldr     r{{[0-9]+}}, [{{.*}}], #4
 ;NO_NEON:     bne
-;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}}, [r{{.*}}]!
+;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
 
 ;THUMB1:      ldr     r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
 ;THUMB1:      adds    [[BASE]], #4
 ;THUMB1:      bne
 
-;T1POST-NOT:  vld1.32 {d{{[0-9]+}}}, [r{{.*}}]!
+;T1POST-NOT:  vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
   entry:
     %a = alloca %struct.D, align 8
     call void @use_D(%struct.D* byval align 8 %a)
@@ -518,21 +518,21 @@ declare void @use_N(%struct.N* byval)
 ;THUMB1-LABEL: test_D_16:
 ;T1POST-LABEL: test_D_16:
   define void @test_D_16() {
-;ARM:         vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [r{{.*}}]!
+;ARM:         vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
 ;ARM:         bne
 
-;THUMB2:      vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [r{{.*}}]!
+;THUMB2:      vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
 ;THUMB2:      bne
 
 ;NO_NEON:     ldr     r{{[0-9]+}}, [{{.*}}], #4
 ;NO_NEON:     bne
-;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [r{{.*}}]!
+;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
 
 ;THUMB1:      ldr     r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
 ;THUMB1:      adds    [[BASE]], #4
 ;THUMB1:      bne
 
-;T1POST-NOT:  vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [r{{.*}}]!
+;T1POST-NOT:  vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
   entry:
     %a = alloca %struct.D, align 16
     call void @use_D(%struct.D* byval align 16 %a)
@@ -627,25 +627,25 @@ declare void @use_N(%struct.N* byval)
 ;THUMB1-LABEL: test_E_8:
 ;T1POST-LABEL: test_E_8:
   define void @test_E_8() {
-;ARM:         vld1.32 {d{{[0-9]+}}}, [r{{.*}}]!
+;ARM:         vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
 ;ARM:         bne
 ;ARM:         ldrb    r{{[0-9]+}}, [{{.*}}], #1
 
-;THUMB2:      vld1.32 {d{{[0-9]+}}}, [r{{.*}}]!
+;THUMB2:      vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
 ;THUMB2:      bne
 ;THUMB2:      ldrb    r{{[0-9]+}}, [{{.*}}], #1
 
 ;NO_NEON:     ldr     r{{[0-9]+}}, [{{.*}}], #4
 ;NO_NEON:     bne
 ;NO_NEON:     ldrb    r{{[0-9]+}}, [{{.*}}], #1
-;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}}, [r{{.*}}]!
+;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
 
 ;THUMB1:      ldr     r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
 ;THUMB1:      adds    [[BASE]], #4
 ;THUMB1:      bne
 ;THUMB1:      ldrb    r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
 
-;T1POST-NOT:  vld1.32 {d{{[0-9]+}}}, [r{{.*}}]!
+;T1POST-NOT:  vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
   entry:
     %a = alloca %struct.E, align 8
     call void @use_E(%struct.E* byval align 8 %a)
@@ -657,25 +657,25 @@ declare void @use_N(%struct.N* byval)
 ;THUMB1-LABEL: test_E_16:
 ;T1POST-LABEL: test_E_16:
   define void @test_E_16() {
-;ARM:         vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [r{{.*}}]!
+;ARM:         vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
 ;ARM:         bne
 ;ARM:         ldrb    r{{[0-9]+}}, [{{.*}}], #1
 
-;THUMB2:      vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [r{{.*}}]!
+;THUMB2:      vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
 ;THUMB2:      bne
 ;THUMB2:      ldrb    r{{[0-9]+}}, [{{.*}}], #1
 
 ;NO_NEON:     ldr     r{{[0-9]+}}, [{{.*}}], #4
 ;NO_NEON:     bne
 ;NO_NEON:     ldrb    r{{[0-9]+}}, [{{.*}}], #1
-;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [r{{.*}}]!
+;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
 
 ;THUMB1:      ldr     r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
 ;THUMB1:      adds    [[BASE]], #4
 ;THUMB1:      bne
 ;THUMB1:      ldrb    r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
 
-;T1POST-NOT:  vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [r{{.*}}]!
+;T1POST-NOT:  vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
   entry:
     %a = alloca %struct.E, align 16
     call void @use_E(%struct.E* byval align 16 %a)
@@ -771,18 +771,18 @@ declare void @use_N(%struct.N* byval)
 ;THUMB1-LABEL: test_F_8:
 ;T1POST-LABEL: test_F_8:
   define void @test_F_8() {
-;ARM:         vld1.32 {d{{[0-9]+}}}, [r{{.*}}]!
+;ARM:         vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
 ;ARM:         bne
 ;ARM:         ldrb    r{{[0-9]+}}, [{{.*}}], #1
 
-;THUMB2:      vld1.32 {d{{[0-9]+}}}, [r{{.*}}]!
+;THUMB2:      vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
 ;THUMB2:      bne
 ;THUMB2:      ldrb    r{{[0-9]+}}, [{{.*}}], #1
 
 ;NO_NEON:     ldr     r{{[0-9]+}}, [{{.*}}], #4
 ;NO_NEON:     bne
 ;NO_NEON:     ldrb    r{{[0-9]+}}, [{{.*}}], #1
-;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}}, [r{{.*}}]!
+;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
 
 ;THUMB1:      ldr     r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
 ;THUMB1:      adds    [[BASE]], #4
@@ -790,7 +790,7 @@ declare void @use_N(%struct.N* byval)
 ;THUMB1:      ldrb    r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
 ;THUMB1:      adds    [[BASE]], #1
 
-;T1POST-NOT:  vld1.32 {d{{[0-9]+}}}, [r{{.*}}]!
+;T1POST-NOT:  vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
   entry:
     %a = alloca %struct.F, align 8
     call void @use_F(%struct.F* byval align 8 %a)
@@ -802,18 +802,18 @@ declare void @use_N(%struct.N* byval)
 ;THUMB1-LABEL: test_F_16:
 ;T1POST-LABEL: test_F_16:
   define void @test_F_16() {
-;ARM:         vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [r{{.*}}]!
+;ARM:         vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
 ;ARM:         bne
 ;ARM:         ldrb    r{{[0-9]+}}, [{{.*}}], #1
 
-;THUMB2:      vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [r{{.*}}]!
+;THUMB2:      vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
 ;THUMB2:      bne
 ;THUMB2:      ldrb    r{{[0-9]+}}, [{{.*}}], #1
 
 ;NO_NEON:     ldr     r{{[0-9]+}}, [{{.*}}], #4
 ;NO_NEON:     bne
 ;NO_NEON:     ldrb    r{{[0-9]+}}, [{{.*}}], #1
-;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [r{{.*}}]!
+;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
 
 ;THUMB1:      ldr     r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
 ;THUMB1:      adds    [[BASE]], #4
@@ -821,7 +821,7 @@ declare void @use_N(%struct.N* byval)
 ;THUMB1:      ldrb    r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
 ;THUMB1:      adds    [[BASE]], #1
 
-;T1POST-NOT:  vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [r{{.*}}]!
+;T1POST-NOT:  vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
   entry:
     %a = alloca %struct.F, align 16
     call void @use_F(%struct.F* byval align 16 %a)
@@ -896,17 +896,17 @@ declare void @use_N(%struct.N* byval)
 ;THUMB1-LABEL: test_G_8:
 ;T1POST-LABEL: test_G_8:
   define void @test_G_8() {
-;ARM:         vld1.32 {d{{[0-9]+}}}, [r{{.*}}]!
+;ARM:         vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
 
-;THUMB2:      vld1.32 {d{{[0-9]+}}}, [r{{.*}}]!
+;THUMB2:      vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
 
 ;NO_NEON:     ldr     r{{[0-9]+}}, [{{.*}}], #4
-;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}}, [r{{.*}}]!
+;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
 
 ;THUMB1:      ldr     r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
 ;THUMB1:      adds    [[BASE]], #4
 
-;T1POST-NOT:  vld1.32 {d{{[0-9]+}}}, [r{{.*}}]!
+;T1POST-NOT:  vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
   entry:
     %a = alloca %struct.G, align 8
     call void @use_G(%struct.G* byval align 8 %a)
@@ -918,17 +918,17 @@ declare void @use_N(%struct.N* byval)
 ;THUMB1-LABEL: test_G_16:
 ;T1POST-LABEL: test_G_16:
   define void @test_G_16() {
-;ARM:         vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [r{{.*}}]!
+;ARM:         vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
 
-;THUMB2:      vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [r{{.*}}]!
+;THUMB2:      vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
 
 ;NO_NEON:     ldr     r{{[0-9]+}}, [{{.*}}], #4
-;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [r{{.*}}]!
+;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
 
 ;THUMB1:      ldr     r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
 ;THUMB1:      adds    [[BASE]], #4
 
-;T1POST-NOT:  vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [r{{.*}}]!
+;T1POST-NOT:  vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
   entry:
     %a = alloca %struct.G, align 16
     call void @use_G(%struct.G* byval align 16 %a)
@@ -1003,17 +1003,17 @@ declare void @use_N(%struct.N* byval)
 ;THUMB1-LABEL: test_H_8:
 ;T1POST-LABEL: test_H_8:
   define void @test_H_8() {
-;ARM:         vld1.32 {d{{[0-9]+}}}, [r{{.*}}]!
+;ARM:         vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
 
-;THUMB2:      vld1.32 {d{{[0-9]+}}}, [r{{.*}}]!
+;THUMB2:      vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
 
 ;NO_NEON:     ldr     r{{[0-9]+}}, [{{.*}}], #4
-;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}}, [r{{.*}}]!
+;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
 
 ;THUMB1:      ldr     r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
 ;THUMB1:      adds    [[BASE]], #4
 
-;T1POST-NOT:  vld1.32 {d{{[0-9]+}}}, [r{{.*}}]!
+;T1POST-NOT:  vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
   entry:
     %a = alloca %struct.H, align 8
     call void @use_H(%struct.H* byval align 8 %a)
@@ -1025,17 +1025,17 @@ declare void @use_N(%struct.N* byval)
 ;THUMB1-LABEL: test_H_16:
 ;T1POST-LABEL: test_H_16:
   define void @test_H_16() {
-;ARM:         vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [r{{.*}}]!
+;ARM:         vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
 
-;THUMB2:      vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [r{{.*}}]!
+;THUMB2:      vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
 
 ;NO_NEON:     ldr     r{{[0-9]+}}, [{{.*}}], #4
-;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [r{{.*}}]!
+;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
 
 ;THUMB1:      ldr     r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
 ;THUMB1:      adds    [[BASE]], #4
 
-;T1POST-NOT:  vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [r{{.*}}]!
+;T1POST-NOT:  vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
   entry:
     %a = alloca %struct.H, align 16
     call void @use_H(%struct.H* byval align 16 %a)
@@ -1110,17 +1110,17 @@ declare void @use_N(%struct.N* byval)
 ;THUMB1-LABEL: test_I_8:
 ;T1POST-LABEL: test_I_8:
   define void @test_I_8() {
-;ARM:         vld1.32 {d{{[0-9]+}}}, [r{{.*}}]!
+;ARM:         vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
 
-;THUMB2:      vld1.32 {d{{[0-9]+}}}, [r{{.*}}]!
+;THUMB2:      vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
 
 ;NO_NEON:     ldr     r{{[0-9]+}}, [{{.*}}], #4
-;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}}, [r{{.*}}]!
+;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
 
 ;THUMB1:      ldr     r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
 ;THUMB1:      adds    [[BASE]], #4
 
-;T1POST-NOT:  vld1.32 {d{{[0-9]+}}}, [r{{.*}}]!
+;T1POST-NOT:  vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
   entry:
     %a = alloca %struct.I, align 8
     call void @use_I(%struct.I* byval align 8 %a)
@@ -1132,17 +1132,17 @@ declare void @use_N(%struct.N* byval)
 ;THUMB1-LABEL: test_I_16:
 ;T1POST-LABEL: test_I_16:
   define void @test_I_16() {
-;ARM:         vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [r{{.*}}]!
+;ARM:         vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
 
-;THUMB2:      vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [r{{.*}}]!
+;THUMB2:      vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
 
 ;NO_NEON:     ldr     r{{[0-9]+}}, [{{.*}}], #4
-;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [r{{.*}}]!
+;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
 
 ;THUMB1:      ldr     r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
 ;THUMB1:      adds    [[BASE]], #4
 
-;T1POST-NOT:  vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [r{{.*}}]!
+;T1POST-NOT:  vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
   entry:
     %a = alloca %struct.I, align 16
     call void @use_I(%struct.I* byval align 16 %a)
@@ -1229,21 +1229,21 @@ declare void @use_N(%struct.N* byval)
 ;THUMB1-LABEL: test_J_8:
 ;T1POST-LABEL: test_J_8:
   define void @test_J_8() {
-;ARM:         vld1.32 {d{{[0-9]+}}}, [r{{.*}}]!
+;ARM:         vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
 ;ARM:         bne
 
-;THUMB2:      vld1.32 {d{{[0-9]+}}}, [r{{.*}}]!
+;THUMB2:      vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
 ;THUMB2:      bne
 
 ;NO_NEON:     ldr     r{{[0-9]+}}, [{{.*}}], #4
 ;NO_NEON:     bne
-;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}}, [r{{.*}}]!
+;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
 
 ;THUMB1:      ldr     r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
 ;THUMB1:      adds    [[BASE]], #4
 ;THUMB1:      bne
 
-;T1POST-NOT:  vld1.32 {d{{[0-9]+}}}, [r{{.*}}]!
+;T1POST-NOT:  vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
   entry:
     %a = alloca %struct.J, align 8
     call void @use_J(%struct.J* byval align 8 %a)
@@ -1255,21 +1255,21 @@ declare void @use_N(%struct.N* byval)
 ;THUMB1-LABEL: test_J_16:
 ;T1POST-LABEL: test_J_16:
   define void @test_J_16() {
-;ARM:         vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [r{{.*}}]!
+;ARM:         vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
 ;ARM:         bne
 
-;THUMB2:      vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [r{{.*}}]!
+;THUMB2:      vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
 ;THUMB2:      bne
 
 ;NO_NEON:     ldr     r{{[0-9]+}}, [{{.*}}], #4
 ;NO_NEON:     bne
-;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [r{{.*}}]!
+;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
 
 ;THUMB1:      ldr     r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
 ;THUMB1:      adds    [[BASE]], #4
 ;THUMB1:      bne
 
-;T1POST-NOT:  vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [r{{.*}}]!
+;T1POST-NOT:  vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
   entry:
     %a = alloca %struct.J, align 16
     call void @use_J(%struct.J* byval align 16 %a)
@@ -1356,21 +1356,21 @@ declare void @use_N(%struct.N* byval)
 ;THUMB1-LABEL: test_K_8:
 ;T1POST-LABEL: test_K_8:
   define void @test_K_8() {
-;ARM:         vld1.32 {d{{[0-9]+}}}, [r{{.*}}]!
+;ARM:         vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
 ;ARM:         bne
 
-;THUMB2:      vld1.32 {d{{[0-9]+}}}, [r{{.*}}]!
+;THUMB2:      vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
 ;THUMB2:      bne
 
 ;NO_NEON:     ldr     r{{[0-9]+}}, [{{.*}}], #4
 ;NO_NEON:     bne
-;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}}, [r{{.*}}]!
+;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
 
 ;THUMB1:      ldr     r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
 ;THUMB1:      adds    [[BASE]], #4
 ;THUMB1:      bne
 
-;T1POST-NOT:  vld1.32 {d{{[0-9]+}}}, [r{{.*}}]!
+;T1POST-NOT:  vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
   entry:
     %a = alloca %struct.K, align 8
     call void @use_K(%struct.K* byval align 8 %a)
@@ -1382,21 +1382,21 @@ declare void @use_N(%struct.N* byval)
 ;THUMB1-LABEL: test_K_16:
 ;T1POST-LABEL: test_K_16:
   define void @test_K_16() {
-;ARM:         vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [r{{.*}}]!
+;ARM:         vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
 ;ARM:         bne
 
-;THUMB2:      vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [r{{.*}}]!
+;THUMB2:      vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
 ;THUMB2:      bne
 
 ;NO_NEON:     ldr     r{{[0-9]+}}, [{{.*}}], #4
 ;NO_NEON:     bne
-;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [r{{.*}}]!
+;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
 
 ;THUMB1:      ldr     r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
 ;THUMB1:      adds    [[BASE]], #4
 ;THUMB1:      bne
 
-;T1POST-NOT:  vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [r{{.*}}]!
+;T1POST-NOT:  vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
   entry:
     %a = alloca %struct.K, align 16
     call void @use_K(%struct.K* byval align 16 %a)
@@ -1483,21 +1483,21 @@ declare void @use_N(%struct.N* byval)
 ;THUMB1-LABEL: test_L_8:
 ;T1POST-LABEL: test_L_8:
   define void @test_L_8() {
-;ARM:         vld1.32 {d{{[0-9]+}}}, [r{{.*}}]!
+;ARM:         vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
 ;ARM:         bne
 
-;THUMB2:      vld1.32 {d{{[0-9]+}}}, [r{{.*}}]!
+;THUMB2:      vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
 ;THUMB2:      bne
 
 ;NO_NEON:     ldr     r{{[0-9]+}}, [{{.*}}], #4
 ;NO_NEON:     bne
-;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}}, [r{{.*}}]!
+;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
 
 ;THUMB1:      ldr     r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
 ;THUMB1:      adds    [[BASE]], #4
 ;THUMB1:      bne
 
-;T1POST-NOT:  vld1.32 {d{{[0-9]+}}}, [r{{.*}}]!
+;T1POST-NOT:  vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
   entry:
     %a = alloca %struct.L, align 8
     call void @use_L(%struct.L* byval align 8 %a)
@@ -1509,21 +1509,21 @@ declare void @use_N(%struct.N* byval)
 ;THUMB1-LABEL: test_L_16:
 ;T1POST-LABEL: test_L_16:
   define void @test_L_16() {
-;ARM:         vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [r{{.*}}]!
+;ARM:         vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
 ;ARM:         bne
 
-;THUMB2:      vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [r{{.*}}]!
+;THUMB2:      vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
 ;THUMB2:      bne
 
 ;NO_NEON:     ldr     r{{[0-9]+}}, [{{.*}}], #4
 ;NO_NEON:     bne
-;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [r{{.*}}]!
+;NO_NEON-NOT: vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
 
 ;THUMB1:      ldr     r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
 ;THUMB1:      adds    [[BASE]], #4
 ;THUMB1:      bne
 
-;T1POST-NOT:  vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [r{{.*}}]!
+;T1POST-NOT:  vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
   entry:
     %a = alloca %struct.L, align 16
     call void @use_L(%struct.L* byval align 16 %a)

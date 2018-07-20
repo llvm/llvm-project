@@ -48,10 +48,6 @@ class NVPTXSubtarget : public NVPTXGenSubtargetInfo {
   // FrameLowering class because TargetFrameLowering is abstract.
   NVPTXFrameLowering FrameLowering;
 
-protected:
-  // Processor supports scoped atomic operations.
-  bool HasAtomScope;
-
 public:
   /// This constructor initializes the data members to match that
   /// of the specified module.
@@ -73,37 +69,15 @@ public:
     return &TSInfo;
   }
 
-  bool hasBrkPt() const { return SmVersion >= 11; }
-  bool hasAtomRedG32() const { return SmVersion >= 11; }
-  bool hasAtomRedS32() const { return SmVersion >= 12; }
-  bool hasAtomRedG64() const { return SmVersion >= 12; }
-  bool hasAtomRedS64() const { return SmVersion >= 20; }
-  bool hasAtomRedGen32() const { return SmVersion >= 20; }
-  bool hasAtomRedGen64() const { return SmVersion >= 20; }
-  bool hasAtomAddF32() const { return SmVersion >= 20; }
   bool hasAtomAddF64() const { return SmVersion >= 60; }
-  bool hasAtomScope() const { return HasAtomScope; }
+  bool hasAtomScope() const { return SmVersion >= 60; }
   bool hasAtomBitwise64() const { return SmVersion >= 32; }
   bool hasAtomMinMax64() const { return SmVersion >= 32; }
-  bool hasVote() const { return SmVersion >= 12; }
-  bool hasDouble() const { return SmVersion >= 13; }
-  bool reqPTX20() const { return SmVersion >= 20; }
-  bool hasF32FTZ() const { return SmVersion >= 20; }
-  bool hasFMAF32() const { return SmVersion >= 20; }
-  bool hasFMAF64() const { return SmVersion >= 13; }
   bool hasLDG() const { return SmVersion >= 32; }
-  bool hasLDU() const { return ((SmVersion >= 20) && (SmVersion < 30)); }
-  bool hasGenericLdSt() const { return SmVersion >= 20; }
   inline bool hasHWROT32() const { return SmVersion >= 32; }
-  inline bool hasSWROT32() const {
-    return ((SmVersion >= 20) && (SmVersion < 32));
-  }
-  inline bool hasROT32() const { return hasHWROT32() || hasSWROT32(); }
-  inline bool hasROT64() const { return SmVersion >= 20; }
   bool hasImageHandles() const;
   bool hasFP16Math() const { return SmVersion >= 53; }
   bool allowFP16Math() const;
-
   unsigned int getSmVersion() const { return SmVersion; }
   std::string getTargetName() const { return TargetName; }
 

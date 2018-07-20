@@ -1,4 +1,5 @@
-; RUN: opt < %s -basicaa -loop-interchange -S | FileCheck %s
+; REQUIRES: asserts
+; RUN: opt < %s -basicaa -loop-interchange -verify-dom-info -verify-loop-info -S -debug 2>&1 | FileCheck %s
 
 @A = common global [500 x [500 x i32]] zeroinitializer
 @X = common global i32 0
@@ -8,6 +9,9 @@
 ;;  for( int i=1;i<N;i++)
 ;;    for( int j=1;j<N;j++)
 ;;      X+=A[j][i];
+
+;; Loop is interchanged check that the phi nodes are split and the promoted value is used instead of the reduction phi.
+; CHECK: Loops interchanged.
 
 define void @reduction_01(i32 %N) {
 entry:
@@ -41,14 +45,6 @@ for.end8:                                         ; preds = %for.cond1.for.inc6_
   ret void
 }
 
-;; Loop is interchanged check that the phi nodes are split and the promoted value is used instead of the reduction phi.
-; CHECK-LABEL: @reduction_01
-; CHECK:  for.body3:                                        ; preds = %for.body3.preheader, %for.body3.split
-; CHECK:    %indvars.iv = phi i64 [ %indvars.iv.next, %for.body3.split ], [ 1, %for.body3.preheader ]
-; CHECK:    br label %for.body3.lr.ph.preheader
-; CHECK:    %add = add nsw i32 %X.promoted
-
-
 ;; Test for more than 1 reductions inside a loop.
 ;;  for( int i=1;i<N;i++)
 ;;    for( int j=1;j<N;j++)
@@ -56,6 +52,9 @@ for.end8:                                         ; preds = %for.cond1.for.inc6_
 ;;        X+=A[k][j];
 ;;        Y+=B[k][i];
 ;;      }
+
+;; Loop is interchanged check that the phi nodes are split and the promoted value is used instead of the reduction phi.
+; CHECK: Loops interchanged.
 
 define void @reduction_02(i32 %N)  {
 entry:
@@ -105,14 +104,6 @@ for.end19:                                        ; preds = %for.inc17, %entry
   ret void
 }
 
-;; Loop is interchanged check that the phi nodes are split and the promoted value is used instead of the reduction phi.
-; CHECK-LABEL: @reduction_02
-; CHECK:  for.body6:                                        ; preds = %for.body6.preheader, %for.body6.split
-; CHECK:    %indvars.iv = phi i64 [ %indvars.iv.next, %for.body6.split ], [ 1, %for.body6.preheader ]
-; CHECK:    br label %for.cond4.preheader.preheader.preheader
-; CHECK:    %add13 = add nsw i32 %Y.promoted
-
-
 ;; Not tightly nested. Do not interchange.
 ;;  for( int i=1;i<N;i++)
 ;;    for( int j=1;j<N;j++) {
@@ -121,6 +112,11 @@ for.end19:                                        ; preds = %for.inc17, %entry
 ;;      }
 ;;      Y+=B[j][i];
 ;;    }
+
+;; Not tightly nested. Do not interchange.
+;; Not interchanged hence the phi's in the inner loop will not be split.
+; CHECK: Outer loops with reductions are not supported currently.
+
 define void @reduction_03(i32 %N)  {
 entry:
   %cmp35 = icmp sgt i32 %N, 1
@@ -168,14 +164,6 @@ for.cond1.for.inc17_crit_edge:                    ; preds = %for.cond4.for.end_c
 for.end19:                                        ; preds = %for.cond1.for.inc17_crit_edge, %entry
   ret void
 }
-;; Not tightly nested. Do not interchange.
-;; Not interchanged hence the phi's in the inner loop will not be split. Check for the same.
-; CHECK-LABEL: @reduction_03
-; CHECK:  for.body6:                                        ; preds = %for.body6.preheader, %for.body6
-; CHECK:    %indvars.iv = phi i64 [ %indvars.iv.next, %for.body6 ], [ 1, %for.body6.preheader ]
-; CHECK:    %add31 = phi i32 [ %add, %for.body6 ], [ %X.promoted, %for.body6.preheader ]
-
-
 
 ;; Multiple use of reduction not safe. Do not interchange.
 ;;  for( int i=1;i<N;i++)
@@ -184,6 +172,10 @@ for.end19:                                        ; preds = %for.cond1.for.inc17
 ;;        X+=A[k][j];
 ;;        Y+=X;
 ;;      }
+
+;; Not interchanged hence the phi's in the inner loop will not be split.
+; CHECK: Only inner loops with induction or reduction PHI nodes are supported currently.
+
 define void @reduction_04(i32 %N) {
 entry:
   %cmp28 = icmp sgt i32 %N, 1
@@ -228,8 +220,43 @@ for.inc13:                                        ; preds = %for.cond4.for.inc10
 for.end15:                                        ; preds = %for.inc13, %entry
   ret void
 }
-;; Not interchanged hence the phi's in the inner loop will not be split. Check for the same.
-; CHECK-LABEL: @reduction_04
-; CHECK:  for.body6:                                        ; preds = %for.body6.preheader, %for.body6
-; CHECK:    %indvars.iv = phi i64 [ %indvars.iv.next, %for.body6 ], [ 1, %for.body6.preheader ]
-; CHECK:    %add925 = phi i32 [ %add9, %for.body6 ], [ %Y.promoted, %for.body6.preheader ]
+
+;;  for( int i=1;i<N;i++)
+;;    for( int j=1;j<N;j++)
+;;      X+=A[j][i];
+;;  Y = X
+; CHECK: Loops interchanged.
+define void @reduction_05(i32 %N) {
+entry:
+  %cmp16 = icmp sgt i32 %N, 1
+  br i1 %cmp16, label %for.body7.lr.ph, label %for.end8
+
+for.body7.lr.ph:                                  ; preds = %entry, %for.cond1.for.inc6_crit_edge
+  %indvars.iv18 = phi i64 [ %indvars.iv.next19, %for.cond1.for.inc6_crit_edge ], [ 1, %entry ]
+  %X.promoted = load i32, i32* @X
+  br label %for.body7
+
+for.body7:                                        ; preds = %for.body7, %for.body7.lr.ph
+  %indvars.iv = phi i64 [ 1, %for.body7.lr.ph ], [ %indvars.iv.next, %for.body7 ]
+  %add15 = phi i32 [ %X.promoted, %for.body7.lr.ph ], [ %add, %for.body7 ]
+  %arrayidx5 = getelementptr inbounds [500 x [500 x i32]], [500 x [500 x i32]]* @A, i64 0, i64 %indvars.iv, i64 %indvars.iv18
+  %0 = load i32, i32* %arrayidx5
+  %add = add nsw i32 %add15, %0
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %lftr.wideiv = trunc i64 %indvars.iv.next to i32
+  %exitcond = icmp eq i32 %lftr.wideiv, %N
+  br i1 %exitcond, label %for.cond1.for.inc6_crit_edge, label %for.body7
+
+for.cond1.for.inc6_crit_edge:                     ; preds = %for.body7
+  store i32 %add, i32* @X
+  %indvars.iv.next19 = add nuw nsw i64 %indvars.iv18, 1
+  %lftr.wideiv20 = trunc i64 %indvars.iv.next19 to i32
+  %exitcond21 = icmp eq i32 %lftr.wideiv20, %N
+  br i1 %exitcond21, label %for.end8, label %for.body7.lr.ph
+
+for.end8:                                         ; preds = %for.cond1.for.inc6_crit_edge, %entry
+  %add.res = phi i32 [ %add, %for.cond1.for.inc6_crit_edge], [ 0, %entry ]
+  store i32 %add.res, i32* @Y
+
+  ret void
+}

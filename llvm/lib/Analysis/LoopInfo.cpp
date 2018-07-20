@@ -21,6 +21,7 @@
 #include "llvm/Analysis/LoopInfoImpl.h"
 #include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugLoc.h"
@@ -375,69 +376,6 @@ Loop::LocRange Loop::getLocRange() const {
     return LocRange(HeadBB->getTerminator()->getDebugLoc());
 
   return LocRange();
-}
-
-bool Loop::hasDedicatedExits() const {
-  // Each predecessor of each exit block of a normal loop is contained
-  // within the loop.
-  SmallVector<BasicBlock *, 4> ExitBlocks;
-  getExitBlocks(ExitBlocks);
-  for (BasicBlock *BB : ExitBlocks)
-    for (BasicBlock *Predecessor : predecessors(BB))
-      if (!contains(Predecessor))
-        return false;
-  // All the requirements are met.
-  return true;
-}
-
-void Loop::getUniqueExitBlocks(
-    SmallVectorImpl<BasicBlock *> &ExitBlocks) const {
-  assert(hasDedicatedExits() &&
-         "getUniqueExitBlocks assumes the loop has canonical form exits!");
-
-  SmallVector<BasicBlock *, 32> SwitchExitBlocks;
-  for (BasicBlock *BB : this->blocks()) {
-    SwitchExitBlocks.clear();
-    for (BasicBlock *Successor : successors(BB)) {
-      // If block is inside the loop then it is not an exit block.
-      if (contains(Successor))
-        continue;
-
-      pred_iterator PI = pred_begin(Successor);
-      BasicBlock *FirstPred = *PI;
-
-      // If current basic block is this exit block's first predecessor
-      // then only insert exit block in to the output ExitBlocks vector.
-      // This ensures that same exit block is not inserted twice into
-      // ExitBlocks vector.
-      if (BB != FirstPred)
-        continue;
-
-      // If a terminator has more then two successors, for example SwitchInst,
-      // then it is possible that there are multiple edges from current block
-      // to one exit block.
-      if (std::distance(succ_begin(BB), succ_end(BB)) <= 2) {
-        ExitBlocks.push_back(Successor);
-        continue;
-      }
-
-      // In case of multiple edges from current block to exit block, collect
-      // only one edge in ExitBlocks. Use switchExitBlocks to keep track of
-      // duplicate edges.
-      if (!is_contained(SwitchExitBlocks, Successor)) {
-        SwitchExitBlocks.push_back(Successor);
-        ExitBlocks.push_back(Successor);
-      }
-    }
-  }
-}
-
-BasicBlock *Loop::getUniqueExitBlock() const {
-  SmallVector<BasicBlock *, 8> UniqueExitBlocks;
-  getUniqueExitBlocks(UniqueExitBlocks);
-  if (UniqueExitBlocks.size() == 1)
-    return UniqueExitBlocks[0];
-  return nullptr;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

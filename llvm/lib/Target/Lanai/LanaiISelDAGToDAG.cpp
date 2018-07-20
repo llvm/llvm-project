@@ -273,12 +273,9 @@ bool LanaiDAGToDAGISel::SelectInlineAsmMemoryOperand(
 void LanaiDAGToDAGISel::Select(SDNode *Node) {
   unsigned Opcode = Node->getOpcode();
 
-  // Dump information about the Node being selected
-  DEBUG(errs() << "Selecting: "; Node->dump(CurDAG); errs() << "\n");
-
   // If we have a custom node, we already have selected!
   if (Node->isMachineOpcode()) {
-    DEBUG(errs() << "== "; Node->dump(CurDAG); errs() << "\n");
+    LLVM_DEBUG(errs() << "== "; Node->dump(CurDAG); errs() << "\n");
     return;
   }
 
@@ -319,7 +316,7 @@ void LanaiDAGToDAGISel::Select(SDNode *Node) {
 void LanaiDAGToDAGISel::selectFrameIndex(SDNode *Node) {
   SDLoc DL(Node);
   SDValue Imm = CurDAG->getTargetConstant(0, DL, MVT::i32);
-  int FI = dyn_cast<FrameIndexSDNode>(Node)->getIndex();
+  int FI = cast<FrameIndexSDNode>(Node)->getIndex();
   EVT VT = Node->getValueType(0);
   SDValue TFI = CurDAG->getTargetFrameIndex(FI, VT);
   unsigned Opc = Lanai::ADD_I_LO;

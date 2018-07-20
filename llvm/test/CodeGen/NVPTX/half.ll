@@ -1,5 +1,9 @@
 ; RUN: llc < %s -march=nvptx | FileCheck %s
 
+; CHECK: .b8 half_array[8] = {1, 2, 3, 4, 5, 6, 7, 8};
+@"half_array" = addrspace(1) constant [4 x half]
+                [half 0xH0201, half 0xH0403, half 0xH0605, half 0xH0807]
+
 define void @test_load_store(half addrspace(1)* %in, half addrspace(1)* %out) {
 ; CHECK-LABEL: @test_load_store
 ; CHECK: ld.global.b16 [[TMP:%h[0-9]+]], [{{%r[0-9]+}}]

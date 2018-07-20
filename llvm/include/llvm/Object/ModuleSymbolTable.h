@@ -57,6 +57,15 @@ public:
   static void CollectAsmSymbols(
       const Module &M,
       function_ref<void(StringRef, object::BasicSymbolRef::Flags)> AsmSymbol);
+
+  /// Parse inline ASM and collect the symvers directives that are defined in
+  /// the current module.
+  ///
+  /// For each found symbol, call \p AsmSymver with the name of the symbol and
+  /// its alias.
+  static void
+  CollectAsmSymvers(const Module &M,
+                    function_ref<void(StringRef, StringRef)> AsmSymver);
 };
 
 } // end namespace llvm

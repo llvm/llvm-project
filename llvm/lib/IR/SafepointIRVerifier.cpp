@@ -59,23 +59,162 @@ using namespace llvm;
 static cl::opt<bool> PrintOnly("safepoint-ir-verifier-print-only",
                                cl::init(false));
 
-static void Verify(const Function &F, const DominatorTree &DT);
+namespace {
+
+/// This CFG Deadness finds dead blocks and edges. Algorithm starts with a set
+/// of blocks unreachable from entry then propagates deadness using foldable
+/// conditional branches without modifying CFG. So GVN does but it changes CFG
+/// by splitting critical edges. In most cases passes rely on SimplifyCFG to
+/// clean up dead blocks, but in some cases, like verification or loop passes
+/// it's not possible.
+class CFGDeadness {
+  const DominatorTree *DT = nullptr;
+  SetVector<const BasicBlock *> DeadBlocks;
+  SetVector<const Use *> DeadEdges; // Contains all dead edges from live blocks.
+
+public:
+  /// Return the edge that coresponds to the predecessor.
+  static const Use& getEdge(const_pred_iterator &PredIt) {
+    auto &PU = PredIt.getUse();
+    return PU.getUser()->getOperandUse(PU.getOperandNo());
+  }
+
+  /// Return true if there is at least one live edge that corresponds to the
+  /// basic block InBB listed in the phi node.
+  bool hasLiveIncomingEdge(const PHINode *PN, const BasicBlock *InBB) const {
+    assert(!isDeadBlock(InBB) && "block must be live");
+    const BasicBlock* BB = PN->getParent();
+    bool Listed = false;
+    for (const_pred_iterator PredIt(BB), End(BB, true); PredIt != End; ++PredIt) {
+      if (InBB == *PredIt) {
+        if (!isDeadEdge(&getEdge(PredIt)))
+          return true;
+        Listed = true;
+      }
+    }
+    assert(Listed && "basic block is not found among incoming blocks");
+    return false;
+  }
+
+
+  bool isDeadBlock(const BasicBlock *BB) const {
+    return DeadBlocks.count(BB);
+  }
+
+  bool isDeadEdge(const Use *U) const {
+    assert(dyn_cast<Instruction>(U->getUser())->isTerminator() &&
+           "edge must be operand of terminator");
+    assert(cast_or_null<BasicBlock>(U->get()) &&
+           "edge must refer to basic block");
+    assert(!isDeadBlock(dyn_cast<Instruction>(U->getUser())->getParent()) &&
+           "isDeadEdge() must be applied to edge from live block");
+    return DeadEdges.count(U);
+  }
+
+  bool hasLiveIncomingEdges(const BasicBlock *BB) const {
+    // Check if all incoming edges are dead.
+    for (const_pred_iterator PredIt(BB), End(BB, true); PredIt != End; ++PredIt) {
+      auto &PU = PredIt.getUse();
+      const Use &U = PU.getUser()->getOperandUse(PU.getOperandNo());
+      if (!isDeadBlock(*PredIt) && !isDeadEdge(&U))
+        return true; // Found a live edge.
+    }
+    return false;
+  }
+
+  void processFunction(const Function &F, const DominatorTree &DT) {
+    this->DT = &DT;
+
+    // Start with all blocks unreachable from entry.
+    for (const BasicBlock &BB : F)
+      if (!DT.isReachableFromEntry(&BB))
+        DeadBlocks.insert(&BB);
+
+    // Top-down walk of the dominator tree
+    ReversePostOrderTraversal<const Function *> RPOT(&F);
+    for (const BasicBlock *BB : RPOT) {
+      const TerminatorInst *TI = BB->getTerminator();
+      assert(TI && "blocks must be well formed");
+
+      // For conditional branches, we can perform simple conditional propagation on
+      // the condition value itself.
+      const BranchInst *BI = dyn_cast<BranchInst>(TI);
+      if (!BI || !BI->isConditional() || !isa<Constant>(BI->getCondition()))
+        continue;
+
+      // If a branch has two identical successors, we cannot declare either dead.
+      if (BI->getSuccessor(0) == BI->getSuccessor(1))
+        continue;
+
+      ConstantInt *Cond = dyn_cast<ConstantInt>(BI->getCondition());
+      if (!Cond)
+        continue;
+
+      addDeadEdge(BI->getOperandUse(Cond->getZExtValue() ? 1 : 2));
+    }
+  }
+
+protected:
+  void addDeadBlock(const BasicBlock *BB) {
+    SmallVector<const BasicBlock *, 4> NewDead;
+    SmallSetVector<const BasicBlock *, 4> DF;
+
+    NewDead.push_back(BB);
+    while (!NewDead.empty()) {
+      const BasicBlock *D = NewDead.pop_back_val();
+      if (isDeadBlock(D))
+        continue;
+
+      // All blocks dominated by D are dead.
+      SmallVector<BasicBlock *, 8> Dom;
+      DT->getDescendants(const_cast<BasicBlock*>(D), Dom);
+      // Do not need to mark all in and out edges dead
+      // because BB is marked dead and this is enough
+      // to run further.
+      DeadBlocks.insert(Dom.begin(), Dom.end());
+
+      // Figure out the dominance-frontier(D).
+      for (BasicBlock *B : Dom)
+        for (BasicBlock *S : successors(B))
+          if (!isDeadBlock(S) && !hasLiveIncomingEdges(S))
+            NewDead.push_back(S);
+    }
+  }
+
+  void addDeadEdge(const Use &DeadEdge) {
+    if (!DeadEdges.insert(&DeadEdge))
+      return;
+
+    BasicBlock *BB = cast_or_null<BasicBlock>(DeadEdge.get());
+    if (hasLiveIncomingEdges(BB))
+      return;
+
+    addDeadBlock(BB);
+  }
+};
+} // namespace
+
+static void Verify(const Function &F, const DominatorTree &DT,
+                   const CFGDeadness &CD);
 
 namespace {
+
 struct SafepointIRVerifier : public FunctionPass {
   static char ID; // Pass identification, replacement for typeid
-  DominatorTree DT;
   SafepointIRVerifier() : FunctionPass(ID) {
     initializeSafepointIRVerifierPass(*PassRegistry::getPassRegistry());
   }
 
   bool runOnFunction(Function &F) override {
-    DT.recalculate(F);
-    Verify(F, DT);
+    auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+    CFGDeadness CD;
+    CD.processFunction(F, DT);
+    Verify(F, DT, CD);
     return false; // no modifications
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequiredID(DominatorTreeWrapperPass::ID);
     AU.setPreservesAll();
   }
 
@@ -95,9 +234,10 @@ FunctionPass *llvm::createSafepointIRVerifierPass() {
 }
 
 INITIALIZE_PASS_BEGIN(SafepointIRVerifier, "verify-safepoint-ir",
-                      "Safepoint IR Verifier", false, true)
+                      "Safepoint IR Verifier", false, false)
+INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_END(SafepointIRVerifier, "verify-safepoint-ir",
-                    "Safepoint IR Verifier", false, true)
+                    "Safepoint IR Verifier", false, false)
 
 static bool isGCPointerType(Type *T) {
   if (auto *PT = dyn_cast<PointerType>(T))
@@ -292,6 +432,7 @@ class InstructionVerifier;
 /// considered to be unrelocated and no false alarm will happen.
 class GCPtrTracker {
   const Function &F;
+  const CFGDeadness &CD;
   SpecificBumpPtrAllocator<BasicBlockState> BSAllocator;
   DenseMap<const BasicBlock *, BasicBlockState *> BlockMap;
   // This set contains defs of unrelocated pointers that are proved to be legal
@@ -302,7 +443,12 @@ class GCPtrTracker {
   DenseSet<const Value *> PoisonedDefs;
 
 public:
-  GCPtrTracker(const Function &F, const DominatorTree &DT);
+  GCPtrTracker(const Function &F, const DominatorTree &DT,
+               const CFGDeadness &CD);
+
+  bool hasLiveIncomingEdge(const PHINode *PN, const BasicBlock *InBB) const {
+    return CD.hasLiveIncomingEdge(PN, InBB);
+  }
 
   BasicBlockState *getBasicBlockState(const BasicBlock *BB);
   const BasicBlockState *getBasicBlockState(const BasicBlock *BB) const;
@@ -317,6 +463,11 @@ public:
   /// inconsistent state.
   static void verifyFunction(GCPtrTracker &&Tracker,
                              InstructionVerifier &Verifier);
+
+  /// Returns true for reachable and live blocks.
+  bool isMapped(const BasicBlock *BB) const {
+    return BlockMap.find(BB) != BlockMap.end();
+  }
 
 private:
   /// Returns true if the instruction may be safely skipped during verification.
@@ -372,14 +523,17 @@ private:
 };
 } // end anonymous namespace
 
-GCPtrTracker::GCPtrTracker(const Function &F, const DominatorTree &DT) : F(F) {
-  // First, calculate Contribution of each BB.
-  for (const BasicBlock &BB : F) {
-    BasicBlockState *BBS = new (BSAllocator.Allocate()) BasicBlockState;
-    for (const auto &I : BB)
-      transferInstruction(I, BBS->Cleared, BBS->Contribution);
-    BlockMap[&BB] = BBS;
-  }
+GCPtrTracker::GCPtrTracker(const Function &F, const DominatorTree &DT,
+                           const CFGDeadness &CD) : F(F), CD(CD) {
+  // Calculate Contribution of each live BB.
+  // Allocate BB states for live blocks.
+  for (const BasicBlock &BB : F)
+    if (!CD.isDeadBlock(&BB)) {
+      BasicBlockState *BBS = new (BSAllocator.Allocate()) BasicBlockState;
+      for (const auto &I : BB)
+        transferInstruction(I, BBS->Cleared, BBS->Contribution);
+      BlockMap[&BB] = BBS;
+    }
 
   // Initialize AvailableIn/Out sets of each BB using only information about
   // dominating BBs.
@@ -396,9 +550,7 @@ GCPtrTracker::GCPtrTracker(const Function &F, const DominatorTree &DT) : F(F) {
 
 BasicBlockState *GCPtrTracker::getBasicBlockState(const BasicBlock *BB) {
   auto it = BlockMap.find(BB);
-  assert(it != BlockMap.end() &&
-         "No such BB in BlockMap! Probably BB from another function");
-  return it->second;
+  return it != BlockMap.end() ? it->second : nullptr;
 }
 
 const BasicBlockState *GCPtrTracker::getBasicBlockState(
@@ -419,6 +571,9 @@ void GCPtrTracker::verifyFunction(GCPtrTracker &&Tracker,
   ReversePostOrderTraversal<const Function *> RPOT(&Tracker.F);
   for (const BasicBlock *BB : RPOT) {
     BasicBlockState *BBS = Tracker.getBasicBlockState(BB);
+    if (!BBS)
+      continue;
+
     // We destructively modify AvailableIn as we traverse the block instruction
     // by instruction.
     AvailableValueSet &AvailableSet = BBS->AvailableIn;
@@ -448,11 +603,17 @@ void GCPtrTracker::recalculateBBsStates() {
   // The AvailableIn and AvailableOut sets decrease as we iterate.
   while (!Worklist.empty()) {
     const BasicBlock *BB = Worklist.pop_back_val();
-    BasicBlockState *BBS = BlockMap[BB];
+    BasicBlockState *BBS = getBasicBlockState(BB);
+    if (!BBS)
+      continue; // Ignore dead successors.
 
     size_t OldInCount = BBS->AvailableIn.size();
-    for (const BasicBlock *PBB : predecessors(BB))
-      set_intersect(BBS->AvailableIn, BlockMap[PBB]->AvailableOut);
+    for (const_pred_iterator PredIt(BB), End(BB, true); PredIt != End; ++PredIt) {
+      const BasicBlock *PBB = *PredIt;
+      BasicBlockState *PBBS = getBasicBlockState(PBB);
+      if (PBBS && !CD.isDeadEdge(&CFGDeadness::getEdge(PredIt)))
+        set_intersect(BBS->AvailableIn, PBBS->AvailableOut);
+    }
 
     assert(OldInCount >= BBS->AvailableIn.size() && "invariant!");
 
@@ -491,6 +652,10 @@ bool GCPtrTracker::removeValidUnrelocatedDefs(const BasicBlock *BB,
         bool HasUnrelocatedInputs = false;
         for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
           const BasicBlock *InBB = PN->getIncomingBlock(i);
+          if (!isMapped(InBB) ||
+              !CD.hasLiveIncomingEdge(PN, InBB))
+            continue; // Skip dead block or dead edge.
+
           const Value *InValue = PN->getIncomingValue(i);
 
           if (isNotExclusivelyConstantDerived(InValue)) {
@@ -535,16 +700,16 @@ bool GCPtrTracker::removeValidUnrelocatedDefs(const BasicBlock *BB,
       Contribution.erase(&I);
       PoisonedDefs.erase(&I);
       ValidUnrelocatedDefs.insert(&I);
-      DEBUG(dbgs() << "Removing urelocated " << I << " from Contribution of "
-                   << BB->getName() << "\n");
+      LLVM_DEBUG(dbgs() << "Removing urelocated " << I
+                        << " from Contribution of " << BB->getName() << "\n");
       ContributionChanged = true;
     } else if (PoisonedPointerDef) {
       // Mark pointer as poisoned, remove its def from Contribution and trigger
       // update of all successors.
       Contribution.erase(&I);
       PoisonedDefs.insert(&I);
-      DEBUG(dbgs() << "Removing poisoned " << I << " from Contribution of "
-                   << BB->getName() << "\n");
+      LLVM_DEBUG(dbgs() << "Removing poisoned " << I << " from Contribution of "
+                        << BB->getName() << "\n");
       ContributionChanged = true;
     } else {
       bool Cleared = false;
@@ -560,15 +725,18 @@ void GCPtrTracker::gatherDominatingDefs(const BasicBlock *BB,
                                         const DominatorTree &DT) {
   DomTreeNode *DTN = DT[const_cast<BasicBlock *>(BB)];
 
+  assert(DTN && "Unreachable blocks are ignored");
   while (DTN->getIDom()) {
     DTN = DTN->getIDom();
-    const auto &Defs = BlockMap[DTN->getBlock()]->Contribution;
+    auto BBS = getBasicBlockState(DTN->getBlock());
+    assert(BBS && "immediate dominator cannot be dead for a live block");
+    const auto &Defs = BBS->Contribution;
     Result.insert(Defs.begin(), Defs.end());
     // If this block is 'Cleared', then nothing LiveIn to this block can be
     // available after this block completes.  Note: This turns out to be
     // really important for reducing memory consuption of the initial available
     // sets and thus peak memory usage by this verifier.
-    if (BlockMap[DTN->getBlock()]->Cleared)
+    if (BBS->Cleared)
       return;
   }
 
@@ -594,11 +762,11 @@ void GCPtrTracker::transferBlock(const BasicBlock *BB, BasicBlockState &BBS,
     AvailableOut = std::move(Temp);
   }
 
-  DEBUG(dbgs() << "Transfered block " << BB->getName() << " from ";
-        PrintValueSet(dbgs(), AvailableIn.begin(), AvailableIn.end());
-        dbgs() << " to ";
-        PrintValueSet(dbgs(), AvailableOut.begin(), AvailableOut.end());
-        dbgs() << "\n";);
+  LLVM_DEBUG(dbgs() << "Transfered block " << BB->getName() << " from ";
+             PrintValueSet(dbgs(), AvailableIn.begin(), AvailableIn.end());
+             dbgs() << " to ";
+             PrintValueSet(dbgs(), AvailableOut.begin(), AvailableOut.end());
+             dbgs() << "\n";);
 }
 
 void GCPtrTracker::transferInstruction(const Instruction &I, bool &Cleared,
@@ -617,10 +785,15 @@ void InstructionVerifier::verifyInstruction(
     if (containsGCPtrType(PN->getType()))
       for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
         const BasicBlock *InBB = PN->getIncomingBlock(i);
+        const BasicBlockState *InBBS = Tracker->getBasicBlockState(InBB);
+        if (!InBBS ||
+            !Tracker->hasLiveIncomingEdge(PN, InBB))
+          continue; // Skip dead block or dead edge.
+
         const Value *InValue = PN->getIncomingValue(i);
 
         if (isNotExclusivelyConstantDerived(InValue) &&
-            !Tracker->getBasicBlockState(InBB)->AvailableOut.count(InValue))
+            !InBBS->AvailableOut.count(InValue))
           reportInvalidUse(*InValue, *PN);
       }
   } else if (isa<CmpInst>(I) &&
@@ -697,12 +870,14 @@ void InstructionVerifier::reportInvalidUse(const Value &V,
   AnyInvalidUses = true;
 }
 
-static void Verify(const Function &F, const DominatorTree &DT) {
-  DEBUG(dbgs() << "Verifying gc pointers in function: " << F.getName() << "\n");
+static void Verify(const Function &F, const DominatorTree &DT,
+                   const CFGDeadness &CD) {
+  LLVM_DEBUG(dbgs() << "Verifying gc pointers in function: " << F.getName()
+                    << "\n");
   if (PrintOnly)
     dbgs() << "Verifying gc pointers in function: " << F.getName() << "\n";
 
-  GCPtrTracker Tracker(F, DT);
+  GCPtrTracker Tracker(F, DT, CD);
 
   // We now have all the information we need to decide if the use of a heap
   // reference is legal or not, given our safepoint semantics.

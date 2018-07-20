@@ -15,19 +15,19 @@
 
 #include "CodeGenRegisters.h"
 #include "CodeGenTarget.h"
-#include "Types.h"
 #include "SequenceToOffsetTable.h"
+#include "Types.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SparseBitVector.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/MachineValueType.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
@@ -203,11 +203,11 @@ EmitRegUnitPressure(raw_ostream &OS, const CodeGenRegBank &RegBank,
      << "  static const RegClassWeight RCWeightTable[] = {\n";
   for (const auto &RC : RegBank.getRegClasses()) {
     const CodeGenRegister::Vec &Regs = RC.getMembers();
-    if (Regs.empty())
+    if (Regs.empty() || RC.Artificial)
       OS << "    {0, 0";
     else {
       std::vector<unsigned> RegUnits;
-      RC.buildRegUnitSet(RegUnits);
+      RC.buildRegUnitSet(RegBank, RegUnits);
       OS << "    {" << (*Regs.begin())->getWeight(RegBank)
          << ", " << RegBank.getRegUnitSetWeight(RegUnits);
     }
@@ -296,7 +296,7 @@ EmitRegUnitPressure(raw_ostream &OS, const CodeGenRegBank &RegBank,
            PSetE = PSetIDs.end(); PSetI != PSetE; ++PSetI) {
       PSets[i].push_back(RegBank.getRegPressureSet(*PSetI).Order);
     }
-    std::sort(PSets[i].begin(), PSets[i].end());
+    llvm::sort(PSets[i].begin(), PSets[i].end());
     PSetsSeqs.add(PSets[i]);
   }
 

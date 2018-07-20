@@ -485,3 +485,11 @@ entry:
   ret void
 }
 
+define void @test_weird_type(<3 x double> %in, <3 x i64>* %ptr) {
+; CHECK-LABEL: test_weird_type:
+; CHECK: vst1
+
+  %vec.int = bitcast <3 x double> %in to <3 x i64>
+  store <3 x i64> %vec.int, <3 x i64>* %ptr, align 8
+  ret void
+}

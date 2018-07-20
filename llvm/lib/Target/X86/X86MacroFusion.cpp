@@ -19,7 +19,7 @@
 
 using namespace llvm;
 
-/// \brief Check if the instr pair, FirstMI and SecondMI, should be fused
+/// Check if the instr pair, FirstMI and SecondMI, should be fused
 /// together. Given SecondMI, when FirstMI is unspecified, then check if
 /// SecondMI may be part of a fused pair at all.
 static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
@@ -86,7 +86,6 @@ static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
   case X86::TEST16mr:
   case X86::TEST32mr:
   case X86::TEST64mr:
-  case X86::TEST8ri_NOREX:
   case X86::AND16i16:
   case X86::AND16ri:
   case X86::AND16ri8:

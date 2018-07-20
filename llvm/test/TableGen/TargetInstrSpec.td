@@ -69,14 +69,6 @@ def VR128 : RegisterClass<[v2i64, v2f64],
 // Dummy for subst
 def REGCLASS : RegisterClass<[], []>;
 
-class decls {
-  // Dummy for foreach
-  dag pattern;
-  int operand;
-}
-
-def Decls : decls;
-
 // Define intrinsics
 def int_x86_sse2_add_ps : Intrinsic<"addps">;
 def int_x86_sse2_add_pd : Intrinsic<"addpd">;
@@ -85,17 +77,17 @@ def INTRINSIC : Intrinsic<"Dummy">;
 multiclass arith<bits<8> opcode, string asmstr, string intr, list<dag> patterns> {
   def PS : Inst<opcode, (outs VR128:$dst), (ins VR128:$src1, VR128:$src2),
                  !strconcat(asmstr, "\t$dst, $src1, $src2"),
-                 !foreach(Decls.pattern, patterns, 
-		          !foreach(Decls.operand, Decls.pattern, 
+                 !foreach(pattern, patterns,
+		          !foreach(operand, pattern,
 			           !subst(INTRINSIC, !cast<Intrinsic>(!subst("SUFFIX", "_ps", intr)), 
-				          !subst(REGCLASS, VR128, Decls.operand))))>;
+				          !subst(REGCLASS, VR128, operand))))>;
 
   def PD : Inst<opcode, (outs VR128:$dst), (ins VR128:$src1, VR128:$src2),
                  !strconcat(asmstr, "\t$dst, $src1, $src2"),
-                 !foreach(Decls.pattern, patterns, 
-		          !foreach(Decls.operand, Decls.pattern, 
+                 !foreach(pattern, patterns,
+		          !foreach(operand, pattern,
 			           !subst(INTRINSIC, !cast<Intrinsic>(!subst("SUFFIX", "_pd", intr)), 
-				          !subst(REGCLASS, VR128, Decls.operand))))>;
+				          !subst(REGCLASS, VR128, operand))))>;
 }
 
 defm ADD : arith<0x58, "add", "int_x86_sse2_addSUFFIX",

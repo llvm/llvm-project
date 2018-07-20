@@ -21,18 +21,18 @@ body: |
   bb.0.entry:
   ; CHECK: [[@LINE+1]]:29: expected an integer literal after '('
     successors: %bb.1.less (_), %bb.2.exit(32)
-    liveins: %edi
+    liveins: $edi
 
-    CMP32ri8 %edi, 10, implicit-def %eflags
-    JG_1 %bb.2.exit, implicit killed %eflags
+    CMP32ri8 $edi, 10, implicit-def $eflags
+    JG_1 %bb.2.exit, implicit killed $eflags
 
   bb.1.less:
-    %eax = MOV32r0 implicit-def dead %eflags
-    RETQ killed %eax
+    $eax = MOV32r0 implicit-def dead $eflags
+    RETQ killed $eax
 
   bb.2.exit:
-    liveins: %edi
+    liveins: $edi
 
-    %eax = COPY killed %edi
-    RETQ killed %eax
+    $eax = COPY killed $edi
+    RETQ killed $eax
 ...

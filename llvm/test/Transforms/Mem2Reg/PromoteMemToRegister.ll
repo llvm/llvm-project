@@ -1,8 +1,8 @@
 ; Simple sanity check testcase.  Both alloca's should be eliminated.
-; RUN: opt < %s -debugify -mem2reg -check-debugify -S | FileCheck %s
+; RUN: opt < %s -debugify -mem2reg -check-debugify -S 2>&1 | FileCheck %s
 
 ; CHECK-NOT: alloca
-; CHECK: CheckDebugify: PASS
+; CHECK: CheckModuleDebugify: PASS
 
 define double @testfunc(i32 %i, double %j) {
 	%I = alloca i32		; <i32*> [#uses=4]

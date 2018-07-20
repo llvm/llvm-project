@@ -26,7 +26,7 @@ declare <4 x float> @llvm.x86.sse41.blendps(<4 x float>, <4 x float>, i8) nounwi
 define <2 x double> @commute_fold_blendpd(<2 x double> %a, <2 x double>* %b) #0 {
 ; CHECK-LABEL: commute_fold_blendpd:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    blendpd {{.*#+}} xmm0 = xmm0[0],mem[1]
+; CHECK-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0,1],mem[2,3]
 ; CHECK-NEXT:    retq
   %1 = load <2 x double>, <2 x double>* %b
   %2 = call <2 x double> @llvm.x86.sse41.blendpd(<2 x double> %1, <2 x double> %a, i8 1)

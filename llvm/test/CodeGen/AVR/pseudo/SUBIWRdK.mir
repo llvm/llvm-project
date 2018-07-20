@@ -17,8 +17,8 @@ body: |
 
     ; CHECK-LABEL: test_subiwrdrr
 
-    ; CHECK:      %r20 = SUBIRdK %r20, 175, implicit-def %sreg
-    ; CHECK-NEXT: %r21 = SBCIRdK %r21, 250, implicit-def %sreg, implicit killed %sreg
+    ; CHECK:      $r20 = SUBIRdK $r20, 175, implicit-def $sreg
+    ; CHECK-NEXT: $r21 = SBCIRdK $r21, 250, implicit-def $sreg, implicit killed $sreg
 
-    %r21r20 = SUBIWRdK %r21r20, 64175, implicit-def %sreg
+    $r21r20 = SUBIWRdK $r21r20, 64175, implicit-def $sreg
 ...

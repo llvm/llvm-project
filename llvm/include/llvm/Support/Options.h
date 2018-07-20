@@ -56,7 +56,7 @@ char OptionKey<ValT, Base, Mem>::ID = 0;
 
 } // namespace detail
 
-/// \brief Singleton class used to register debug options.
+/// Singleton class used to register debug options.
 ///
 /// The OptionRegistry is responsible for managing lifetimes of the options and
 /// provides interfaces for option registration and reading values from options.
@@ -66,7 +66,7 @@ class OptionRegistry {
 private:
   DenseMap<void *, cl::Option *> Options;
 
-  /// \brief Adds a cl::Option to the registry.
+  /// Adds a cl::Option to the registry.
   ///
   /// \param Key unique key for option
   /// \param O option to map to \p Key
@@ -79,10 +79,10 @@ public:
   ~OptionRegistry();
   OptionRegistry() {}
 
-  /// \brief Returns a reference to the singleton instance.
+  /// Returns a reference to the singleton instance.
   static OptionRegistry &instance();
 
-  /// \brief Registers an option with the OptionRegistry singleton.
+  /// Registers an option with the OptionRegistry singleton.
   ///
   /// \tparam ValT type of the option's data
   /// \tparam Base class used to key the option
@@ -100,7 +100,7 @@ public:
     instance().addOption(&detail::OptionKey<ValT, Base, Mem>::ID, Option);
   }
 
-  /// \brief Returns the value of the option.
+  /// Returns the value of the option.
   ///
   /// \tparam ValT type of the option's data
   /// \tparam Base class used to key the option

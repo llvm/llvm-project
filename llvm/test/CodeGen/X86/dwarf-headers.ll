@@ -2,22 +2,27 @@
 ; RUN:     -filetype=obj -O0 -mtriple=x86_64-unknown-linux-gnu < %s \
 ; RUN:     | llvm-dwarfdump -v - | FileCheck %s --check-prefix=SINGLE-4
 
-; RUN: llc -split-dwarf-file=foo.dwo -dwarf-version=4 -generate-type-units \
+; RUN: llc -split-dwarf-file=foo.dwo -split-dwarf-output=%t.dwo \
+; RUN:     -dwarf-version=4 -generate-type-units \
 ; RUN:     -filetype=obj -O0 -mtriple=x86_64-unknown-linux-gnu < %s \
-; RUN:     | llvm-dwarfdump -v - | FileCheck %s --check-prefix=SPLIT-4
+; RUN:     | llvm-dwarfdump -v - | FileCheck %s --check-prefix=O-4
+; RUN: llvm-dwarfdump -v %t.dwo | FileCheck %s --check-prefix=DWO-4
 
 ; RUN: llc -dwarf-version=5 -generate-type-units \
 ; RUN:     -filetype=obj -O0 -mtriple=x86_64-unknown-linux-gnu < %s \
 ; RUN:     | llvm-dwarfdump -v - | FileCheck %s --check-prefix=SINGLE-5
 
-; RUN: llc -split-dwarf-file=foo.dwo -dwarf-version=5 -generate-type-units \
+; RUN: llc -split-dwarf-file=foo.dwo -split-dwarf-output=%t.dwo \
+; RUN:     -dwarf-version=5 -generate-type-units \
 ; RUN:     -filetype=obj -O0 -mtriple=x86_64-unknown-linux-gnu < %s \
-; RUN:     | llvm-dwarfdump -v - | FileCheck %s --check-prefix=SPLIT-5
+; RUN:     | llvm-dwarfdump -v - | FileCheck %s --check-prefix=O-5
+; RUN: llvm-dwarfdump -v %t.dwo | FileCheck %s --check-prefix=DWO-5
 
 ; Looking for DWARF headers to be generated correctly.
-; There are 7 variants: v4 CU, v4 TU, v5 (normal/skeleton/split) CU,
-; v5 (normal/split) TU.  The v5 CU variants and TU variants differ
-; only in the type-unit code.
+; There are 8 variants with 5 formats: v4 CU, v4 TU, v5 normal/partial CU,
+; v5 skeleton/split CU, v5 normal/split TU.  Some v5 variants differ only
+; in the unit_type code, and the skeleton/split CU differs from normal/partial
+; by having one extra field (dwo_id).
 ; (v2 thru v4 CUs are all the same, and TUs were invented in v4,
 ; so we don't bother checking older versions.)
 
@@ -42,17 +47,17 @@
 
 ; Verify the v4 split headers.
 ;
-; SPLIT-4: .debug_info contents:
-; SPLIT-4: 0x00000000: Compile Unit: {{.*}} version = 0x0004 abbr_offset
-; SPLIT-4: 0x0000000b: DW_TAG_compile_unit
+; O-4: .debug_info contents:
+; O-4: 0x00000000: Compile Unit: {{.*}} version = 0x0004 abbr_offset
+; O-4: 0x0000000b: DW_TAG_compile_unit
 ;
-; SPLIT-4: .debug_info.dwo contents:
-; SPLIT-4: 0x00000000: Compile Unit: {{.*}} version = 0x0004 abbr_offset
-; SPLIT-4: 0x0000000b: DW_TAG_compile_unit
+; DWO-4: .debug_info.dwo contents:
+; DWO-4: 0x00000000: Compile Unit: {{.*}} version = 0x0004 abbr_offset
+; DWO-4: 0x0000000b: DW_TAG_compile_unit
 ;
-; SPLIT-4: .debug_types.dwo contents:
-; SPLIT-4: 0x00000000: Type Unit: {{.*}} version = 0x0004 abbr_offset
-; SPLIT-4: 0x00000017: DW_TAG_type_unit
+; DWO-4: .debug_types.dwo contents:
+; DWO-4: 0x00000000: Type Unit: {{.*}} version = 0x0004 abbr_offset
+; DWO-4: 0x00000017: DW_TAG_type_unit
 
 ; Verify the v5 non-split headers.
 ;
@@ -67,18 +72,20 @@
 
 ; Verify the v5 split headers.
 ;
-; SPLIT-5: .debug_info contents:
-; SPLIT-5: 0x00000000: Compile Unit: {{.*}} version = 0x0005 unit_type = DW_UT_skeleton abbr_offset
-; SPLIT-5: 0x0000000c: DW_TAG_compile_unit
+; O-5: .debug_info contents:
+; O-5: 0x00000000: Compile Unit: {{.*}} version = 0x0005 unit_type = DW_UT_skeleton abbr_offset
+; O-5-SAME:        DWO_id = 0x4ed74084f749d96b
+; O-5: 0x00000014: DW_TAG_compile_unit
 ;
-; SPLIT-5: .debug_info.dwo contents:
-; SPLIT-5: 0x00000000: Compile Unit: {{.*}} version = 0x0005 unit_type = DW_UT_split_compile abbr_offset
-; SPLIT-5: 0x0000000c: DW_TAG_compile_unit
+; DWO-5: .debug_info.dwo contents:
+; DWO-5: 0x00000000: Compile Unit: {{.*}} version = 0x0005 unit_type = DW_UT_split_compile abbr_offset
+; DWO-5-SAME:        DWO_id = 0x4ed74084f749d96b
+; DWO-5: 0x00000014: DW_TAG_compile_unit
 ;
 ; FIXME: V5 wants type units in .debug_info.dwo not .debug_types.dwo.
-; SPLIT-5: .debug_types.dwo contents:
-; SPLIT-5: 0x00000000: Type Unit: {{.*}} version = 0x0005 unit_type = DW_UT_split_type abbr_offset
-; SPLIT-5: 0x00000018: DW_TAG_type_unit
+; DWO-5: .debug_types.dwo contents:
+; DWO-5: 0x00000000: Type Unit: {{.*}} version = 0x0005 unit_type = DW_UT_split_type abbr_offset
+; DWO-5: 0x00000018: DW_TAG_type_unit
 
 
 ; ModuleID = 't.cpp'

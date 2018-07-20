@@ -263,12 +263,10 @@ unsigned HexagonMCInstrInfo::getDuplexCandidateGroup(MCInst const &MCI) {
     break;
 
   case Hexagon::L4_return:
-
   case Hexagon::L2_deallocframe:
-
     return HexagonII::HSIG_L2;
-  case Hexagon::EH_RETURN_JMPR:
 
+  case Hexagon::EH_RETURN_JMPR:
   case Hexagon::J2_jumpr:
   case Hexagon::PS_jmpret:
     // jumpr r31
@@ -789,12 +787,12 @@ MCInst HexagonMCInstrInfo::deriveSubInst(MCInst const &Inst) {
       addOps(Result, Inst, 2);
       break; //  1,3 SUBInst $Rdd = combine(#2, #$u2)
     }
+    break;
   case Hexagon::A4_combineir:
     Result.setOpcode(Hexagon::SA1_combinezr);
     addOps(Result, Inst, 0);
     addOps(Result, Inst, 2);
     break; //    1,3 SUBInst $Rdd = combine(#0, $Rs)
-
   case Hexagon::A4_combineri:
     Result.setOpcode(Hexagon::SA1_combinerz);
     addOps(Result, Inst, 0);
@@ -901,6 +899,7 @@ MCInst HexagonMCInstrInfo::deriveSubInst(MCInst const &Inst) {
       addOps(Result, Inst, 1);
       break; //  2 1,2 SUBInst memb($Rs + #$u4_0)=#1
     }
+    break;
   case Hexagon::S2_storerb_io:
     Result.setOpcode(Hexagon::SS1_storeb_io);
     addOps(Result, Inst, 0);
@@ -937,6 +936,7 @@ MCInst HexagonMCInstrInfo::deriveSubInst(MCInst const &Inst) {
       addOps(Result, Inst, 2);
       break; //  1 2,3 SUBInst memw(r29 + #$u5_2) = $Rt
     }
+    break;
   case Hexagon::S2_storeri_io:
     if (Inst.getOperand(0).getReg() == Hexagon::R29) {
       Result.setOpcode(Hexagon::SS2_storew_sp);
@@ -1045,8 +1045,8 @@ HexagonMCInstrInfo::getDuplexPossibilties(MCInstrInfo const &MCII,
       bool bisReversable = true;
       if (isStoreInst(MCB.getOperand(j).getInst()->getOpcode()) &&
           isStoreInst(MCB.getOperand(k).getInst()->getOpcode())) {
-        DEBUG(dbgs() << "skip out of order write pair: " << k << "," << j
-                     << "\n");
+        LLVM_DEBUG(dbgs() << "skip out of order write pair: " << k << "," << j
+                          << "\n");
         bisReversable = false;
       }
       if (HexagonMCInstrInfo::isMemReorderDisabled(MCB)) // }:mem_noshuf
@@ -1066,14 +1066,14 @@ HexagonMCInstrInfo::getDuplexPossibilties(MCInstrInfo const &MCII,
 
         // Save off pairs for duplex checking.
         duplexToTry.push_back(DuplexCandidate(j, k, iClass));
-        DEBUG(dbgs() << "adding pair: " << j << "," << k << ":"
-                     << MCB.getOperand(j).getInst()->getOpcode() << ","
-                     << MCB.getOperand(k).getInst()->getOpcode() << "\n");
+        LLVM_DEBUG(dbgs() << "adding pair: " << j << "," << k << ":"
+                          << MCB.getOperand(j).getInst()->getOpcode() << ","
+                          << MCB.getOperand(k).getInst()->getOpcode() << "\n");
         continue;
       } else {
-        DEBUG(dbgs() << "skipping pair: " << j << "," << k << ":"
-                     << MCB.getOperand(j).getInst()->getOpcode() << ","
-                     << MCB.getOperand(k).getInst()->getOpcode() << "\n");
+        LLVM_DEBUG(dbgs() << "skipping pair: " << j << "," << k << ":"
+                          << MCB.getOperand(j).getInst()->getOpcode() << ","
+                          << MCB.getOperand(k).getInst()->getOpcode() << "\n");
       }
 
       // Try reverse.
@@ -1091,13 +1091,15 @@ HexagonMCInstrInfo::getDuplexPossibilties(MCInstrInfo const &MCII,
 
           // Save off pairs for duplex checking.
           duplexToTry.push_back(DuplexCandidate(k, j, iClass));
-          DEBUG(dbgs() << "adding pair:" << k << "," << j << ":"
-                       << MCB.getOperand(j).getInst()->getOpcode() << ","
-                       << MCB.getOperand(k).getInst()->getOpcode() << "\n");
+          LLVM_DEBUG(dbgs()
+                     << "adding pair:" << k << "," << j << ":"
+                     << MCB.getOperand(j).getInst()->getOpcode() << ","
+                     << MCB.getOperand(k).getInst()->getOpcode() << "\n");
         } else {
-          DEBUG(dbgs() << "skipping pair: " << k << "," << j << ":"
-                       << MCB.getOperand(j).getInst()->getOpcode() << ","
-                       << MCB.getOperand(k).getInst()->getOpcode() << "\n");
+          LLVM_DEBUG(dbgs()
+                     << "skipping pair: " << k << "," << j << ":"
+                     << MCB.getOperand(j).getInst()->getOpcode() << ","
+                     << MCB.getOperand(k).getInst()->getOpcode() << "\n");
         }
       }
     }

@@ -1,0 +1,57 @@
+# RUN: llc -simplify-mir -run-pass=machine-outliner -verify-machineinstrs %s -o - | FileCheck %s
+# CHECK-NOT: OUTLINED_FUNCTION
+--- |
+  target triple = "arm64----"
+  
+  @g = external global i64, align 8
+  
+  define void @foo() #0 {
+    ret void
+  }
+  
+  define void @foo2() #0 {
+    ret void
+  }
+  
+  define void @foo3() #0 {
+    ret void
+  }
+  
+  attributes #0 = { nounwind noredzone }
+
+...
+---
+name:            foo
+alignment:       2
+tracksRegLiveness: true
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: $x27, $lr
+    $x27 = ADRP target-flags(aarch64-page, aarch64-got) @g
+    $lr = ADRP target-flags(aarch64-page, aarch64-got) @g
+    RET undef $lr
+
+...
+---
+name:            foo2
+alignment:       2
+tracksRegLiveness: true
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: $x27, $lr
+    $x27 = ADRP target-flags(aarch64-page, aarch64-got) @g
+    $lr = ADRP target-flags(aarch64-page, aarch64-got) @g
+    RET undef $lr
+
+...
+---
+name:            foo3
+alignment:       2
+tracksRegLiveness: true
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: $x27, $lr
+    $x27 = ADRP target-flags(aarch64-page, aarch64-got) @g
+    $lr = ADRP target-flags(aarch64-page, aarch64-got) @g
+    RET undef $lr
+...

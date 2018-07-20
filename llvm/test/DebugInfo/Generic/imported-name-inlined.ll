@@ -51,7 +51,7 @@ declare void @_ZN2ns1fEv()
 !2 = !{}
 !3 = !{!4}
 !4 = !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: !5, entity: !8, file: !1, line: 5)
-!5 = distinct !DISubprogram(name: "f1", linkageName: "_Z2f1v", scope: !1, file: !1, line: 4, type: !6, isLocal: false, isDefinition: true, scopeLine: 4, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
+!5 = distinct !DISubprogram(name: "f1", linkageName: "_Z2f1v", scope: !1, file: !1, line: 4, type: !6, isLocal: false, isDefinition: true, scopeLine: 4, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
 !6 = !DISubroutineType(types: !7)
 !7 = !{null}
 !8 = !DISubprogram(name: "f", linkageName: "_ZN2ns1fEv", scope: !9, file: !1, line: 2, type: !6, isLocal: false, isDefinition: false, flags: DIFlagPrototyped, isOptimized: false)
@@ -60,7 +60,7 @@ declare void @_ZN2ns1fEv()
 !11 = !{i32 2, !"Debug Info Version", i32 3}
 !12 = !{i32 1, !"wchar_size", i32 4}
 !13 = !{!"clang version 6.0.0 (trunk 309061) (llvm/trunk 309076)"}
-!14 = distinct !DISubprogram(name: "f2", linkageName: "_Z2f2v", scope: !1, file: !1, line: 8, type: !6, isLocal: false, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
+!14 = distinct !DISubprogram(name: "f2", linkageName: "_Z2f2v", scope: !1, file: !1, line: 8, type: !6, isLocal: false, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
 !15 = !DILocation(line: 6, column: 3, scope: !5, inlinedAt: !16)
 !16 = distinct !DILocation(line: 8, column: 13, scope: !14)
 !17 = !DILocation(line: 8, column: 19, scope: !14)

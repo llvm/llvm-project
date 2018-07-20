@@ -1,4 +1,4 @@
-; RUN: llc < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s | FileCheck %s
 target datalayout = "e-m:x-p:32:32-i64:64-f80:32-n8:16:32-a:0:32-S32"
 target triple = "i686-pc-windows-msvc18.0.0"
 
@@ -10,7 +10,7 @@ entry:
   %g = alloca %struct.T, align 8
   %r = alloca i32, align 8
   store i32 0, i32* %r, align 4
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %p, i8* %q, i32 24, i32 8, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 8 %p, i8* align 8 %q, i32 24, i1 false)
   br label %while.body
 
 while.body:                                       ; preds = %while.body, %entry
@@ -26,7 +26,7 @@ while.end:                                        ; preds = %while.body
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture readonly, i32, i32, i1) #1
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture readonly, i32, i1) #1
 
 declare void @g(%struct.T*)
 
@@ -39,15 +39,12 @@ declare void @g(%struct.T*)
 ; CHECK:     leal 8(%esp), %esi
 
 ; CHECK:     decl     (%esp)
-; CHECK:     seto     %al
-; CHECK:     lahf
-; CHECK:     movl     %eax, %edi
+; CHECK:     setne    %[[NE_REG:.*]]
 ; CHECK:     pushl     %esi
 ; CHECK:     calll     _g
 ; CHECK:     addl     $4, %esp
-; CHECK:     movl     %edi, %eax
-; CHECK:     addb     $127, %al
-; CHECK:     sahf
+; CHECK:     testb    %[[NE_REG]], %[[NE_REG]]
+; CHECK:     jne
 
 attributes #0 = { nounwind optsize }
 attributes #1 = { argmemonly nounwind }

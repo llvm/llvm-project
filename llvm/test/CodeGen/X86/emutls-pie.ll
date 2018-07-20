@@ -7,6 +7,17 @@
 ; RUN: llc < %s -emulated-tls -mcpu=generic -mtriple=x86_64-linux-android -relocation-model=pic \
 ; RUN:   | FileCheck -check-prefix=X64 %s
 
+; RUN: llc < %s -mcpu=generic -mtriple=i386-linux-gnu -relocation-model=pic \
+; RUN:   | FileCheck -check-prefix=NoEMU %s
+; RUN: llc < %s -mcpu=generic -mtriple=x86_64-linux-gnu -relocation-model=pic \
+; RUN:   | FileCheck -check-prefix=NoEMU %s
+; RUN: llc < %s -mcpu=generic -mtriple=i386-linux-android -relocation-model=pic \
+; RUN:   | FileCheck -check-prefix=X32 %s
+; RUN: llc < %s -mcpu=generic -mtriple=x86_64-linux-android -relocation-model=pic \
+; RUN:   | FileCheck -check-prefix=X64 %s
+
+; NoEMU-NOT: __emutls
+
 ; Use my_emutls_get_address like __emutls_get_address.
 @my_emutls_v_xyz = external global i8*, align 4
 declare i8* @my_emutls_get_address(i8*)
@@ -18,13 +29,16 @@ define i32 @my_get_xyz() {
 ; X32-NEXT: calll my_emutls_get_address@PLT
 ; X32-NEXT: movl (%eax), %eax
 ; X32-NEXT: addl $8, %esp
+; X32-NEXT: .cfi_def_cfa_offset 8
 ; X32-NEXT: popl %ebx
+; X32-NEXT: .cfi_def_cfa_offset 4
 ; X32-NEXT: retl
 ; X64-LABEL: my_get_xyz:
 ; X64:      movq my_emutls_v_xyz@GOTPCREL(%rip), %rdi
 ; X64-NEXT: callq my_emutls_get_address@PLT
 ; X64-NEXT: movl (%rax), %eax
 ; X64-NEXT: popq %rcx
+; X64-NEXT: .cfi_def_cfa_offset 8
 ; X64-NEXT: retq
 
 entry:
@@ -44,13 +58,16 @@ define i32 @f1() {
 ; X32-NEXT: calll __emutls_get_address@PLT
 ; X32-NEXT: movl (%eax), %eax
 ; X32-NEXT: addl $8, %esp
+; X32-NEXT: .cfi_def_cfa_offset 8
 ; X32-NEXT: popl %ebx
+; X32-NEXT: .cfi_def_cfa_offset 4
 ; X32-NEXT: retl
 ; X64-LABEL: f1:
 ; X64:      leaq __emutls_v.i(%rip), %rdi
 ; X64-NEXT: callq __emutls_get_address@PLT
 ; X64-NEXT: movl (%rax), %eax
 ; X64-NEXT: popq %rcx
+; X64-NEXT: .cfi_def_cfa_offset 8
 ; X64-NEXT: retq
 
 entry:

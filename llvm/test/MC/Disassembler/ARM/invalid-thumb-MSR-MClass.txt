@@ -1,12 +1,12 @@
-# RUN: not llvm-mc -disassemble %s -triple=thumbv7em 2>&1 | FileCheck %s
-# RUN: not llvm-mc -disassemble %s -triple=thumbv7m 2>&1 | FileCheck --check-prefix=CHECK --check-prefix=CHECK-V7M %s
+# RUN: llvm-mc -disassemble %s -triple=thumbv7em 2>&1 | FileCheck %s
+# RUN: llvm-mc -disassemble %s -triple=thumbv7m 2>&1 | FileCheck --check-prefix=CHECK --check-prefix=CHECK-V7M %s
 
 #------------------------------------------------------------------------------
 # Undefined encodings for mrs
 #------------------------------------------------------------------------------
 
 # invalid SYSm
-# CHECK: warning: invalid instruction encoding
+# CHECK: warning: potentially undefined instruction encoding
 # CHECK-NEXT: [0xef 0xf3 0x80 0x80]
 [0xef 0xf3 0x80 0x80]
 
@@ -30,6 +30,6 @@
 [0x80 0xf3 0x00 0x84]
 
 # invalid SYSm
-# CHECK: warning: invalid instruction encoding
+# CHECK: warning: potentially undefined instruction encoding
 # CHECK-NEXT: [0x80 0xf3 0x80 0x88]
 [0x80 0xf3 0x80 0x88]

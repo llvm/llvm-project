@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// \brief This file exposes an interface to building/using memory SSA to
+/// This file exposes an interface to building/using memory SSA to
 /// walk memory instructions using a use/def graph.
 ///
 /// Memory SSA class builds an SSA form that links together memory access
@@ -93,6 +93,7 @@
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
+#include "llvm/IR/ValueHandle.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include <algorithm>
@@ -118,10 +119,10 @@ struct DefsOnlyTag {};
 
 } // end namespace MSSAHelpers
 
-enum {
+enum : unsigned {
   // Used to signify what the default invalid ID is for MemoryAccess's
   // getID()
-  INVALID_MEMORYACCESS_ID = 0
+  INVALID_MEMORYACCESS_ID = -1U
 };
 
 template <class T> class memoryaccess_def_iterator_base;
@@ -129,7 +130,7 @@ using memoryaccess_def_iterator = memoryaccess_def_iterator_base<MemoryAccess>;
 using const_memoryaccess_def_iterator =
     memoryaccess_def_iterator_base<const MemoryAccess>;
 
-// \brief The base for all memory accesses. All memory accesses in a block are
+// The base for all memory accesses. All memory accesses in a block are
 // linked together using an intrusive list.
 class MemoryAccess
     : public DerivedUser,
@@ -158,11 +159,11 @@ public:
   void print(raw_ostream &OS) const;
   void dump() const;
 
-  /// \brief The user iterators for a memory access
+  /// The user iterators for a memory access
   using iterator = user_iterator;
   using const_iterator = const_user_iterator;
 
-  /// \brief This iterator walks over all of the defs in a given
+  /// This iterator walks over all of the defs in a given
   /// MemoryAccess. For MemoryPhi nodes, this walks arguments. For
   /// MemoryUse/MemoryDef, this walks the defining access.
   memoryaccess_def_iterator defs_begin();
@@ -170,7 +171,7 @@ public:
   memoryaccess_def_iterator defs_end();
   const_memoryaccess_def_iterator defs_end() const;
 
-  /// \brief Get the iterators for the all access list and the defs only list
+  /// Get the iterators for the all access list and the defs only list
   /// We default to the all access list.
   AllAccessType::self_iterator getIterator() {
     return this->AllAccessType::getIterator();
@@ -204,11 +205,11 @@ protected:
   friend class MemoryUse;
   friend class MemoryUseOrDef;
 
-  /// \brief Used by MemorySSA to change the block of a MemoryAccess when it is
+  /// Used by MemorySSA to change the block of a MemoryAccess when it is
   /// moved.
   void setBlock(BasicBlock *BB) { Block = BB; }
 
-  /// \brief Used for debugging and tracking things about MemoryAccesses.
+  /// Used for debugging and tracking things about MemoryAccesses.
   /// Guaranteed unique among MemoryAccesses, no guarantees otherwise.
   inline unsigned getID() const;
 
@@ -217,8 +218,16 @@ protected:
       : DerivedUser(Type::getVoidTy(C), Vty, nullptr, NumOperands, DeleteValue),
         Block(BB) {}
 
+  // Use deleteValue() to delete a generic MemoryAccess.
+  ~MemoryAccess() = default;
+
 private:
   BasicBlock *Block;
+};
+
+template <>
+struct ilist_alloc_traits<MemoryAccess> {
+  static void deleteNode(MemoryAccess *MA) { MA->deleteValue(); }
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS, const MemoryAccess &MA) {
@@ -226,7 +235,7 @@ inline raw_ostream &operator<<(raw_ostream &OS, const MemoryAccess &MA) {
   return OS;
 }
 
-/// \brief Class that has the common methods + fields of memory uses/defs. It's
+/// Class that has the common methods + fields of memory uses/defs. It's
 /// a little awkward to have, but there are many cases where we want either a
 /// use or def, and there are many cases where uses are needed (defs aren't
 /// acceptable), and vice-versa.
@@ -239,10 +248,10 @@ public:
 
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(MemoryAccess);
 
-  /// \brief Get the instruction that this MemoryUse represents.
-  Instruction *getMemoryInst() const { return MemoryInst; }
+  /// Get the instruction that this MemoryUse represents.
+  Instruction *getMemoryInst() const { return MemoryInstruction; }
 
-  /// \brief Get the access that produces the memory state used by this Use.
+  /// Get the access that produces the memory state used by this Use.
   MemoryAccess *getDefiningAccess() const { return getOperand(0); }
 
   static bool classof(const Value *MA) {
@@ -255,7 +264,13 @@ public:
   inline MemoryAccess *getOptimized() const;
   inline void setOptimized(MemoryAccess *);
 
-  /// \brief Reset the ID of what this MemoryUse was optimized to, causing it to
+  // Retrieve AliasResult type of the optimized access. Ideally this would be
+  // returned by the caching walker and may go away in the future.
+  Optional<AliasResult> getOptimizedAccessType() const {
+    return OptimizedAccessAlias;
+  }
+
+  /// Reset the ID of what this MemoryUse was optimized to, causing it to
   /// be rewalked by the walker if necessary.
   /// This really should only be called by tests.
   inline void resetOptimized();
@@ -266,20 +281,31 @@ protected:
 
   MemoryUseOrDef(LLVMContext &C, MemoryAccess *DMA, unsigned Vty,
                  DeleteValueTy DeleteValue, Instruction *MI, BasicBlock *BB)
-      : MemoryAccess(C, Vty, DeleteValue, BB, 1), MemoryInst(MI) {
+      : MemoryAccess(C, Vty, DeleteValue, BB, 1), MemoryInstruction(MI),
+        OptimizedAccessAlias(MayAlias) {
     setDefiningAccess(DMA);
   }
 
-  void setDefiningAccess(MemoryAccess *DMA, bool Optimized = false) {
+  // Use deleteValue() to delete a generic MemoryUseOrDef.
+  ~MemoryUseOrDef() = default;
+
+  void setOptimizedAccessType(Optional<AliasResult> AR) {
+    OptimizedAccessAlias = AR;
+  }
+
+  void setDefiningAccess(MemoryAccess *DMA, bool Optimized = false,
+                         Optional<AliasResult> AR = MayAlias) {
     if (!Optimized) {
       setOperand(0, DMA);
       return;
     }
     setOptimized(DMA);
+    setOptimizedAccessType(AR);
   }
 
 private:
-  Instruction *MemoryInst;
+  Instruction *MemoryInstruction;
+  Optional<AliasResult> OptimizedAccessAlias;
 };
 
 template <>
@@ -287,7 +313,7 @@ struct OperandTraits<MemoryUseOrDef>
     : public FixedNumOperandTraits<MemoryUseOrDef, 1> {};
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(MemoryUseOrDef, MemoryAccess)
 
-/// \brief Represents read-only accesses to memory
+/// Represents read-only accesses to memory
 ///
 /// In particular, the set of Instructions that will be represented by
 /// MemoryUse's is exactly the set of Instructions for which
@@ -331,14 +357,14 @@ protected:
 private:
   static void deleteMe(DerivedUser *Self);
 
-  unsigned int OptimizedID = 0;
+  unsigned OptimizedID = INVALID_MEMORYACCESS_ID;
 };
 
 template <>
 struct OperandTraits<MemoryUse> : public FixedNumOperandTraits<MemoryUse, 1> {};
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(MemoryUse, MemoryAccess)
 
-/// \brief Represents a read-write access to memory, whether it is a must-alias,
+/// Represents a read-write access to memory, whether it is a must-alias,
 /// or a may-alias.
 ///
 /// In particular, the set of Instructions that will be represented by
@@ -369,7 +395,9 @@ public:
     OptimizedID = getDefiningAccess()->getID();
   }
 
-  MemoryAccess *getOptimized() const { return Optimized; }
+  MemoryAccess *getOptimized() const {
+    return cast_or_null<MemoryAccess>(Optimized);
+  }
 
   bool isOptimized() const {
     return getOptimized() && getDefiningAccess() &&
@@ -388,15 +416,15 @@ private:
   static void deleteMe(DerivedUser *Self);
 
   const unsigned ID;
-  MemoryAccess *Optimized = nullptr;
-  unsigned int OptimizedID = INVALID_MEMORYACCESS_ID;
+  unsigned OptimizedID = INVALID_MEMORYACCESS_ID;
+  WeakVH Optimized;
 };
 
 template <>
 struct OperandTraits<MemoryDef> : public FixedNumOperandTraits<MemoryDef, 1> {};
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(MemoryDef, MemoryAccess)
 
-/// \brief Represents phi nodes for memory accesses.
+/// Represents phi nodes for memory accesses.
 ///
 /// These have the same semantic as regular phi nodes, with the exception that
 /// only one phi will ever exist in a given basic block.
@@ -476,10 +504,10 @@ public:
 
   const_op_range incoming_values() const { return operands(); }
 
-  /// \brief Return the number of incoming edges
+  /// Return the number of incoming edges
   unsigned getNumIncomingValues() const { return getNumOperands(); }
 
-  /// \brief Return incoming value number x
+  /// Return incoming value number x
   MemoryAccess *getIncomingValue(unsigned I) const { return getOperand(I); }
   void setIncomingValue(unsigned I, MemoryAccess *V) {
     assert(V && "PHI node got a null value!");
@@ -489,17 +517,17 @@ public:
   static unsigned getOperandNumForIncomingValue(unsigned I) { return I; }
   static unsigned getIncomingValueNumForOperand(unsigned I) { return I; }
 
-  /// \brief Return incoming basic block number @p i.
+  /// Return incoming basic block number @p i.
   BasicBlock *getIncomingBlock(unsigned I) const { return block_begin()[I]; }
 
-  /// \brief Return incoming basic block corresponding
+  /// Return incoming basic block corresponding
   /// to an operand of the PHI.
   BasicBlock *getIncomingBlock(const Use &U) const {
     assert(this == U.getUser() && "Iterator doesn't point to PHI's Uses?");
     return getIncomingBlock(unsigned(&U - op_begin()));
   }
 
-  /// \brief Return incoming basic block corresponding
+  /// Return incoming basic block corresponding
   /// to value use iterator.
   BasicBlock *getIncomingBlock(MemoryAccess::const_user_iterator I) const {
     return getIncomingBlock(I.getUse());
@@ -510,7 +538,7 @@ public:
     block_begin()[I] = BB;
   }
 
-  /// \brief Add an incoming value to the end of the PHI list
+  /// Add an incoming value to the end of the PHI list
   void addIncoming(MemoryAccess *V, BasicBlock *BB) {
     if (getNumOperands() == ReservedSpace)
       growOperands(); // Get more space!
@@ -520,7 +548,7 @@ public:
     setIncomingBlock(getNumOperands() - 1, BB);
   }
 
-  /// \brief Return the first index of the specified basic
+  /// Return the first index of the specified basic
   /// block in the value list for this PHI.  Returns -1 if no instance.
   int getBasicBlockIndex(const BasicBlock *BB) const {
     for (unsigned I = 0, E = getNumOperands(); I != E; ++I)
@@ -529,10 +557,50 @@ public:
     return -1;
   }
 
-  Value *getIncomingValueForBlock(const BasicBlock *BB) const {
+  MemoryAccess *getIncomingValueForBlock(const BasicBlock *BB) const {
     int Idx = getBasicBlockIndex(BB);
     assert(Idx >= 0 && "Invalid basic block argument!");
     return getIncomingValue(Idx);
+  }
+
+  // After deleting incoming position I, the order of incoming may be changed.
+  void unorderedDeleteIncoming(unsigned I) {
+    unsigned E = getNumOperands();
+    assert(I < E && "Cannot remove out of bounds Phi entry.");
+    // MemoryPhi must have at least two incoming values, otherwise the MemoryPhi
+    // itself should be deleted.
+    assert(E >= 2 && "Cannot only remove incoming values in MemoryPhis with "
+                     "at least 2 values.");
+    setIncomingValue(I, getIncomingValue(E - 1));
+    setIncomingBlock(I, block_begin()[E - 1]);
+    setOperand(E - 1, nullptr);
+    block_begin()[E - 1] = nullptr;
+    setNumHungOffUseOperands(getNumOperands() - 1);
+  }
+
+  // After deleting incoming block BB, the incoming blocks order may be changed.
+  void unorderedDeleteIncomingBlock(const BasicBlock *BB) {
+    for (unsigned I = 0, E = getNumOperands(); I != E; ++I)
+      if (block_begin()[I] == BB) {
+        unorderedDeleteIncoming(I);
+        E = getNumOperands();
+        --I;
+      }
+    assert(getNumOperands() >= 1 &&
+           "Cannot remove all incoming blocks in a MemoryPhi.");
+  }
+
+  // After deleting incoming memory access MA, the incoming accesses order may
+  // be changed.
+  void unorderedDeleteIncomingValue(const MemoryAccess *MA) {
+    for (unsigned I = 0, E = getNumOperands(); I != E; ++I)
+      if (getIncomingValue(I) == MA) {
+        unorderedDeleteIncoming(I);
+        E = getNumOperands();
+        --I;
+      }
+    assert(getNumOperands() >= 1 &&
+           "Cannot remove all incoming values in a MemoryPhi.");
   }
 
   static bool classof(const Value *V) {
@@ -546,7 +614,7 @@ public:
 protected:
   friend class MemorySSA;
 
-  /// \brief this is more complicated than the generic
+  /// this is more complicated than the generic
   /// User::allocHungoffUses, because we have to allocate Uses for the incoming
   /// values and pointers to the incoming blocks, all in one allocation.
   void allocHungoffUses(unsigned N) {
@@ -558,7 +626,7 @@ private:
   const unsigned ID;
   unsigned ReservedSpace;
 
-  /// \brief This grows the operand list in response to a push_back style of
+  /// This grows the operand list in response to a push_back style of
   /// operation.  This grows the number of ops by 1.5 times.
   void growOperands() {
     unsigned E = getNumOperands();
@@ -607,7 +675,7 @@ inline void MemoryUseOrDef::resetOptimized() {
 template <> struct OperandTraits<MemoryPhi> : public HungoffOperandTraits<2> {};
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(MemoryPhi, MemoryAccess)
 
-/// \brief Encapsulates MemorySSA, including all data associated with memory
+/// Encapsulates MemorySSA, including all data associated with memory
 /// accesses.
 class MemorySSA {
 public:
@@ -616,7 +684,7 @@ public:
 
   MemorySSAWalker *getWalker();
 
-  /// \brief Given a memory Mod/Ref'ing instruction, get the MemorySSA
+  /// Given a memory Mod/Ref'ing instruction, get the MemorySSA
   /// access associated with it. If passed a basic block gets the memory phi
   /// node that exists for that block, if there is one. Otherwise, this will get
   /// a MemoryUseOrDef.
@@ -626,7 +694,7 @@ public:
   void dump() const;
   void print(raw_ostream &) const;
 
-  /// \brief Return true if \p MA represents the live on entry value
+  /// Return true if \p MA represents the live on entry value
   ///
   /// Loads and stores from pointer arguments and other global values may be
   /// defined by memory operations that do not occur in the current function, so
@@ -650,14 +718,14 @@ public:
   using DefsList =
       simple_ilist<MemoryAccess, ilist_tag<MSSAHelpers::DefsOnlyTag>>;
 
-  /// \brief Return the list of MemoryAccess's for a given basic block.
+  /// Return the list of MemoryAccess's for a given basic block.
   ///
   /// This list is not modifiable by the user.
   const AccessList *getBlockAccesses(const BasicBlock *BB) const {
     return getWritableBlockAccesses(BB);
   }
 
-  /// \brief Return the list of MemoryDef's and MemoryPhi's for a given basic
+  /// Return the list of MemoryDef's and MemoryPhi's for a given basic
   /// block.
   ///
   /// This list is not modifiable by the user.
@@ -665,19 +733,19 @@ public:
     return getWritableBlockDefs(BB);
   }
 
-  /// \brief Given two memory accesses in the same basic block, determine
+  /// Given two memory accesses in the same basic block, determine
   /// whether MemoryAccess \p A dominates MemoryAccess \p B.
   bool locallyDominates(const MemoryAccess *A, const MemoryAccess *B) const;
 
-  /// \brief Given two memory accesses in potentially different blocks,
+  /// Given two memory accesses in potentially different blocks,
   /// determine whether MemoryAccess \p A dominates MemoryAccess \p B.
   bool dominates(const MemoryAccess *A, const MemoryAccess *B) const;
 
-  /// \brief Given a MemoryAccess and a Use, determine whether MemoryAccess \p A
+  /// Given a MemoryAccess and a Use, determine whether MemoryAccess \p A
   /// dominates Use \p B.
   bool dominates(const MemoryAccess *A, const Use &B) const;
 
-  /// \brief Verify that MemorySSA is self consistent (IE definitions dominate
+  /// Verify that MemorySSA is self consistent (IE definitions dominate
   /// all uses, uses appear in the right places).  This is used by unit tests.
   void verifyMemorySSA() const;
 
@@ -694,6 +762,7 @@ protected:
   void verifyDefUses(Function &F) const;
   void verifyDomination(Function &F) const;
   void verifyOrdering(Function &F) const;
+  void verifyDominationNumbers(const Function &F) const;
 
   // This is used by the use optimizer and updater.
   AccessList *getWritableBlockAccesses(const BasicBlock *BB) const {
@@ -712,7 +781,7 @@ protected:
   // relies on the updater to fixup what it breaks, so it is not public.
 
   void moveTo(MemoryUseOrDef *What, BasicBlock *BB, AccessList::iterator Where);
-  void moveTo(MemoryUseOrDef *What, BasicBlock *BB, InsertionPlace Point);
+  void moveTo(MemoryAccess *What, BasicBlock *BB, InsertionPlace Point);
 
   // Rename the dominator tree branch rooted at BB.
   void renamePass(BasicBlock *BB, MemoryAccess *IncomingVal,
@@ -748,8 +817,7 @@ private:
   MemoryPhi *createMemoryPhi(BasicBlock *BB);
   MemoryUseOrDef *createNewAccess(Instruction *);
   MemoryAccess *findDominatingDef(BasicBlock *, enum InsertionPlace);
-  void placePHINodes(const SmallPtrSetImpl<BasicBlock *> &,
-                     const DenseMap<const BasicBlock *, unsigned int> &);
+  void placePHINodes(const SmallPtrSetImpl<BasicBlock *> &);
   MemoryAccess *renameBlock(BasicBlock *, MemoryAccess *, bool);
   void renameSuccessorPhis(BasicBlock *, MemoryAccess *, bool);
   void renamePass(DomTreeNode *, MemoryAccess *IncomingVal,
@@ -773,7 +841,7 @@ private:
   // corresponding list is empty.
   AccessMap PerBlockAccesses;
   DefsMap PerBlockDefs;
-  std::unique_ptr<MemoryAccess> LiveOnEntryDef;
+  std::unique_ptr<MemoryAccess, ValueDeleter> LiveOnEntryDef;
 
   // Domination mappings
   // Note that the numbering is local to a block, even though the map is
@@ -831,7 +899,7 @@ public:
   Result run(Function &F, FunctionAnalysisManager &AM);
 };
 
-/// \brief Printer pass for \c MemorySSA.
+/// Printer pass for \c MemorySSA.
 class MemorySSAPrinterPass : public PassInfoMixin<MemorySSAPrinterPass> {
   raw_ostream &OS;
 
@@ -841,12 +909,12 @@ public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-/// \brief Verifier pass for \c MemorySSA.
+/// Verifier pass for \c MemorySSA.
 struct MemorySSAVerifierPass : PassInfoMixin<MemorySSAVerifierPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-/// \brief Legacy analysis pass which computes \c MemorySSA.
+/// Legacy analysis pass which computes \c MemorySSA.
 class MemorySSAWrapperPass : public FunctionPass {
 public:
   MemorySSAWrapperPass();
@@ -867,7 +935,7 @@ private:
   std::unique_ptr<MemorySSA> MSSA;
 };
 
-/// \brief This is the generic walker interface for walkers of MemorySSA.
+/// This is the generic walker interface for walkers of MemorySSA.
 /// Walkers are used to be able to further disambiguate the def-use chains
 /// MemorySSA gives you, or otherwise produce better info than MemorySSA gives
 /// you.
@@ -885,7 +953,7 @@ public:
 
   using MemoryAccessSet = SmallVector<MemoryAccess *, 8>;
 
-  /// \brief Given a memory Mod/Ref/ModRef'ing instruction, calling this
+  /// Given a memory Mod/Ref/ModRef'ing instruction, calling this
   /// will give you the nearest dominating MemoryAccess that Mod's the location
   /// the instruction accesses (by skipping any def which AA can prove does not
   /// alias the location(s) accessed by the instruction given).
@@ -917,7 +985,7 @@ public:
   /// but takes a MemoryAccess instead of an Instruction.
   virtual MemoryAccess *getClobberingMemoryAccess(MemoryAccess *) = 0;
 
-  /// \brief Given a potentially clobbering memory access and a new location,
+  /// Given a potentially clobbering memory access and a new location,
   /// calling this will give you the nearest dominating clobbering MemoryAccess
   /// (by skipping non-aliasing def links).
   ///
@@ -931,7 +999,7 @@ public:
   virtual MemoryAccess *getClobberingMemoryAccess(MemoryAccess *,
                                                   const MemoryLocation &) = 0;
 
-  /// \brief Given a memory access, invalidate anything this walker knows about
+  /// Given a memory access, invalidate anything this walker knows about
   /// that access.
   /// This API is used by walkers that store information to perform basic cache
   /// invalidation.  This will be called by MemorySSA at appropriate times for
@@ -946,7 +1014,7 @@ protected:
   MemorySSA *MSSA;
 };
 
-/// \brief A MemorySSAWalker that does no alias queries, or anything else. It
+/// A MemorySSAWalker that does no alias queries, or anything else. It
 /// simply returns the links as they were constructed by the builder.
 class DoNothingMemorySSAWalker final : public MemorySSAWalker {
 public:
@@ -962,7 +1030,7 @@ public:
 using MemoryAccessPair = std::pair<MemoryAccess *, MemoryLocation>;
 using ConstMemoryAccessPair = std::pair<const MemoryAccess *, MemoryLocation>;
 
-/// \brief Iterator base class used to implement const and non-const iterators
+/// Iterator base class used to implement const and non-const iterators
 /// over the defining accesses of a MemoryAccess.
 template <class T>
 class memoryaccess_def_iterator_base
@@ -1035,7 +1103,7 @@ inline const_memoryaccess_def_iterator MemoryAccess::defs_end() const {
   return const_memoryaccess_def_iterator();
 }
 
-/// \brief GraphTraits for a MemoryAccess, which walks defs in the normal case,
+/// GraphTraits for a MemoryAccess, which walks defs in the normal case,
 /// and uses in the inverse case.
 template <> struct GraphTraits<MemoryAccess *> {
   using NodeRef = MemoryAccess *;
@@ -1055,7 +1123,7 @@ template <> struct GraphTraits<Inverse<MemoryAccess *>> {
   static ChildIteratorType child_end(NodeRef N) { return N->user_end(); }
 };
 
-/// \brief Provide an iterator that walks defs, giving both the memory access,
+/// Provide an iterator that walks defs, giving both the memory access,
 /// and the current pointer location, updating the pointer location as it
 /// changes due to phi node translation.
 ///

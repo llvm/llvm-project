@@ -149,10 +149,13 @@ public:
   CFIProtectionStatus validateCFIProtection(const GraphResult &Graph) const;
 
   // Returns the first place the operand register is clobbered between the CFI-
-  // check and the indirect CF instruction execution. If the register is not
-  // modified, returns the address of the indirect CF instruction. The result is
-  // undefined if the provided graph does not fall under either the
-  // FAIL_REGISTER_CLOBBERED or PROTECTED status (see CFIProtectionStatus).
+  // check and the indirect CF instruction execution. We do this by walking
+  // backwards from the indirect CF and ensuring there is at most one load
+  // involving the operand register (which is the indirect CF itself on x86).
+  // If the register is not modified, returns the address of the indirect CF
+  // instruction. The result is undefined if the provided graph does not fall
+  // under either the FAIL_REGISTER_CLOBBERED or PROTECTED status (see
+  // CFIProtectionStatus).
   uint64_t indirectCFOperandClobber(const GraphResult& Graph) const;
 
   // Prints an instruction to the provided stream using this object's pretty-

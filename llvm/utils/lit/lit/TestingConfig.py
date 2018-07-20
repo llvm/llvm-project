@@ -22,7 +22,7 @@ class TestingConfig:
             }
 
         pass_vars = ['LIBRARY_PATH', 'LD_LIBRARY_PATH', 'SYSTEMROOT', 'TERM',
-                     'LD_PRELOAD', 'ASAN_OPTIONS', 'UBSAN_OPTIONS',
+                     'CLANG', 'LD_PRELOAD', 'ASAN_OPTIONS', 'UBSAN_OPTIONS',
                      'LSAN_OPTIONS', 'ADB', 'ANDROID_SERIAL',
                      'SANITIZER_IGNORE_CVE_2016_2143', 'TMPDIR', 'TMP', 'TEMP',
                      'TEMPDIR', 'AVRLIT_BOARD', 'AVRLIT_PORT']
@@ -151,4 +151,29 @@ class TestingConfig:
             return self
         else:
             return self.parent.root
+
+class SubstituteCaptures:
+    """
+    Helper class to indicate that the substitutions contains backreferences.
+
+    This can be used as the following in lit.cfg to mark subsitutions as having
+    back-references::
+
+        config.substutions.append(('\b[^ ]*.cpp', SubstituteCaptures('\0.txt')))
+
+    """
+    def __init__(self, substitution):
+        self.substitution = substitution
+
+    def replace(self, pattern, replacement):
+        return self.substitution
+
+    def __str__(self):
+        return self.substitution
+
+    def __len__(self):
+        return len(self.substitution)
+
+    def __getitem__(self, item):
+        return self.substitution.__getitem__(item)
 

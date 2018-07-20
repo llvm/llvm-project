@@ -1,0 +1,63 @@
+# RUN: llc -mtriple=s390x-linux-gnu -mcpu=z13 -run-pass=postra-machine-sink -verify-machineinstrs -o - %s  | FileCheck %s
+
+---
+# Don't sink COPY to bb.2 since SLLK define r13l that is aliased with r12q.
+# CHECK-LABEL: name: donot_sink_copy
+# CHECK-LABEL: bb.0:
+# CHECK: renamable $r0l = COPY renamable $r12l, implicit killed $r12q
+# CHECK-LABEL: bb.2:
+# CHECK-NOT: COPY
+name:            donot_sink_copy
+tracksRegLiveness: true
+body:             |
+  bb.0 :
+    successors: %bb.1, %bb.2
+    liveins: $r2d, $r3d, $r4d, $r5d, $r12q
+
+    renamable $r0l = COPY renamable $r12l, implicit killed $r12q
+    renamable $r13l = SLLK renamable $r4l, $noreg, 1
+    CHIMux renamable $r3l, 0, implicit-def $cc, implicit killed $r3d
+    BRC 14, 6, %bb.2, implicit killed $cc
+    J %bb.1
+
+  bb.1:
+    successors:
+
+  bb.2:
+    successors:
+    liveins: $r2d, $r4d, $r5d, $r0l, $r13l
+
+    renamable $r0d = LGFR killed renamable $r0l
+    renamable $r11d = LGFR killed renamable $r13l
+...
+
+# Don't sink COPY to bb.2 since SLLK use r1l that is aliased with r0q.
+# CHECK-LABEL: name: donot_sink_copy2
+# CHECK-LABEL: bb.0:
+# CHECK: renamable $r0l = COPY renamable $r12l, implicit-def $r0q
+# CHECK-LABEL: bb.2:
+# CHECK-NOT: COPY
+name:            donot_sink_copy2
+tracksRegLiveness: true
+body:             |
+  bb.0 :
+    successors: %bb.1, %bb.2
+    liveins: $r2d, $r3d, $r4d, $r5d, $r12q
+
+    renamable $r0l = COPY renamable $r12l, implicit def $r0q
+    renamable $r13l = SLLK renamable $r1l, $noreg, 1
+    CHIMux renamable $r3l, 0, implicit-def $cc, implicit killed $r3d
+    BRC 14, 6, %bb.2, implicit killed $cc
+    J %bb.1
+
+  bb.1:
+    successors:
+
+  bb.2:
+    successors:
+    liveins: $r2d, $r4d, $r5d, $r0l, $r13l
+
+    renamable $r0d = LGFR killed renamable $r0l
+    renamable $r11d = LGFR killed renamable $r13l
+...
+

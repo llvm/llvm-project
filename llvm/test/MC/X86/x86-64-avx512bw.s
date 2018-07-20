@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple x86_64-unknown-unknown -mcpu=knl -mattr=+avx512bw  --show-encoding %s | FileCheck %s
+// RUN: llvm-mc -triple x86_64-unknown-unknown --show-encoding %s | FileCheck %s
 
 // CHECK: vpaddb %zmm23, %zmm24, %zmm19
 // CHECK:  encoding: [0x62,0xa1,0x3d,0x40,0xfc,0xdf]
@@ -4691,147 +4691,99 @@
 // CHECK:  encoding: [0x62,0x62,0x7d,0xc9,0x7b,0xc0]
           vpbroadcastw %eax, %zmm24 {%k1} {z}
 
-// CHECK: vpextrw.s $171, %xmm28, %eax
-// CHECK:  encoding: [0x62,0x63,0x7d,0x08,0x15,0xe0,0xab]
-          vpextrw.s $0xab, %xmm28, %eax
-
-// CHECK: vpextrw.s $123, %xmm28, %eax
-// CHECK:  encoding: [0x62,0x63,0x7d,0x08,0x15,0xe0,0x7b]
-          vpextrw.s $0x7b, %xmm28, %eax
-
-// CHECK: vpextrw.s $123, %xmm28, %r8d
-// CHECK:  encoding: [0x62,0x43,0x7d,0x08,0x15,0xe0,0x7b]
-          vpextrw.s $0x7b, %xmm28, %r8d
-
-// CHECK: vpextrw.s $171, %xmm28, %eax
-// CHECK:  encoding: [0x62,0x63,0x7d,0x08,0x15,0xe0,0xab]
-          vpextrw.s $0xab, %xmm28, %eax
-
-// CHECK: vpextrw.s $123, %xmm28, %eax
-// CHECK:  encoding: [0x62,0x63,0x7d,0x08,0x15,0xe0,0x7b]
-          vpextrw.s $0x7b, %xmm28, %eax
-
-// CHECK: vpextrw.s $123, %xmm28, %r8d
-// CHECK:  encoding: [0x62,0x43,0x7d,0x08,0x15,0xe0,0x7b]
-          vpextrw.s $0x7b, %xmm28, %r8d
-
-// CHECK: vpextrw.s $171, %xmm20, %eax
-// CHECK:  encoding: [0x62,0xe3,0x7d,0x08,0x15,0xe0,0xab]
-          vpextrw.s $0xab, %xmm20, %eax
-
-// CHECK: vpextrw.s $123, %xmm20, %eax
-// CHECK:  encoding: [0x62,0xe3,0x7d,0x08,0x15,0xe0,0x7b]
-          vpextrw.s $0x7b, %xmm20, %eax
-
-// CHECK: vpextrw.s $123, %xmm20, %r8d
-// CHECK:  encoding: [0x62,0xc3,0x7d,0x08,0x15,0xe0,0x7b]
-          vpextrw.s $0x7b, %xmm20, %r8d
-
-// CHECK: vpextrw.s $171, %xmm19, %eax
-// CHECK:  encoding: [0x62,0xe3,0x7d,0x08,0x15,0xd8,0xab]
-          vpextrw.s $0xab, %xmm19, %eax
-
-// CHECK: vpextrw.s $123, %xmm19, %eax
-// CHECK:  encoding: [0x62,0xe3,0x7d,0x08,0x15,0xd8,0x7b]
-          vpextrw.s $0x7b, %xmm19, %eax
-
-// CHECK: vpextrw.s $123, %xmm19, %r8d
-// CHECK:  encoding: [0x62,0xc3,0x7d,0x08,0x15,0xd8,0x7b]
-          vpextrw.s $0x7b, %xmm19, %r8d
-
-// CHECK: vmovdqu16.s %zmm19, %zmm22
+// CHECK: vmovdqu16 %zmm19, %zmm22
 // CHECK:  encoding: [0x62,0xa1,0xff,0x48,0x7f,0xde]
           vmovdqu16.s %zmm19, %zmm22
 
-// CHECK: vmovdqu16.s %zmm19, %zmm22 {%k3}
+// CHECK: vmovdqu16 %zmm19, %zmm22 {%k3}
 // CHECK:  encoding: [0x62,0xa1,0xff,0x4b,0x7f,0xde]
           vmovdqu16.s %zmm19, %zmm22 {%k3}
 
-// CHECK: vmovdqu16.s %zmm19, %zmm22 {%k3} {z}
+// CHECK: vmovdqu16 %zmm19, %zmm22 {%k3} {z}
 // CHECK:  encoding: [0x62,0xa1,0xff,0xcb,0x7f,0xde]
           vmovdqu16.s %zmm19, %zmm22 {%k3} {z}
 
-// CHECK: vmovdqu16.s %zmm22, %zmm20
+// CHECK: vmovdqu16 %zmm22, %zmm20
 // CHECK:  encoding: [0x62,0xa1,0xff,0x48,0x7f,0xf4]
           vmovdqu16.s %zmm22, %zmm20
 
-// CHECK: vmovdqu16.s %zmm22, %zmm20 {%k3}
+// CHECK: vmovdqu16 %zmm22, %zmm20 {%k3}
 // CHECK:  encoding: [0x62,0xa1,0xff,0x4b,0x7f,0xf4]
           vmovdqu16.s %zmm22, %zmm20 {%k3}
 
-// CHECK: vmovdqu16.s %zmm22, %zmm20 {%k3} {z}
+// CHECK: vmovdqu16 %zmm22, %zmm20 {%k3} {z}
 // CHECK:  encoding: [0x62,0xa1,0xff,0xcb,0x7f,0xf4]
           vmovdqu16.s %zmm22, %zmm20 {%k3} {z}
 
-// CHECK: vmovdqu16.s %zmm26, %zmm26
+// CHECK: vmovdqu16 %zmm26, %zmm26
 // CHECK:  encoding: [0x62,0x01,0xff,0x48,0x7f,0xd2]
           vmovdqu16.s %zmm26, %zmm26
 
-// CHECK: vmovdqu16.s %zmm26, %zmm26 {%k2}
+// CHECK: vmovdqu16 %zmm26, %zmm26 {%k2}
 // CHECK:  encoding: [0x62,0x01,0xff,0x4a,0x7f,0xd2]
           vmovdqu16.s %zmm26, %zmm26 {%k2}
 
-// CHECK: vmovdqu16.s %zmm26, %zmm26 {%k2} {z}
+// CHECK: vmovdqu16 %zmm26, %zmm26 {%k2} {z}
 // CHECK:  encoding: [0x62,0x01,0xff,0xca,0x7f,0xd2]
           vmovdqu16.s %zmm26, %zmm26 {%k2} {z}
 
-// CHECK: vmovdqu16.s %zmm22, %zmm19
+// CHECK: vmovdqu16 %zmm22, %zmm19
 // CHECK:  encoding: [0x62,0xa1,0xff,0x48,0x7f,0xf3]
           vmovdqu16.s %zmm22, %zmm19
 
-// CHECK: vmovdqu16.s %zmm22, %zmm19 {%k7}
+// CHECK: vmovdqu16 %zmm22, %zmm19 {%k7}
 // CHECK:  encoding: [0x62,0xa1,0xff,0x4f,0x7f,0xf3]
           vmovdqu16.s %zmm22, %zmm19 {%k7}
 
-// CHECK: vmovdqu16.s %zmm22, %zmm19 {%k7} {z}
+// CHECK: vmovdqu16 %zmm22, %zmm19 {%k7} {z}
 // CHECK:  encoding: [0x62,0xa1,0xff,0xcf,0x7f,0xf3]
           vmovdqu16.s %zmm22, %zmm19 {%k7} {z}
 
-// CHECK: vmovdqu8.s %zmm23, %zmm24
+// CHECK: vmovdqu8 %zmm23, %zmm24
 // CHECK:  encoding: [0x62,0x81,0x7f,0x48,0x7f,0xf8]
           vmovdqu8.s %zmm23, %zmm24
 
-// CHECK: vmovdqu8.s %zmm23, %zmm24 {%k3}
+// CHECK: vmovdqu8 %zmm23, %zmm24 {%k3}
 // CHECK:  encoding: [0x62,0x81,0x7f,0x4b,0x7f,0xf8]
           vmovdqu8.s %zmm23, %zmm24 {%k3}
 
-// CHECK: vmovdqu8.s %zmm23, %zmm24 {%k3} {z}
+// CHECK: vmovdqu8 %zmm23, %zmm24 {%k3} {z}
 // CHECK:  encoding: [0x62,0x81,0x7f,0xcb,0x7f,0xf8]
           vmovdqu8.s %zmm23, %zmm24 {%k3} {z}
 
-// CHECK: vmovdqu8.s %zmm27, %zmm23
+// CHECK: vmovdqu8 %zmm27, %zmm23
 // CHECK:  encoding: [0x62,0x21,0x7f,0x48,0x7f,0xdf]
           vmovdqu8.s %zmm27, %zmm23
 
-// CHECK: vmovdqu8.s %zmm27, %zmm23 {%k5}
+// CHECK: vmovdqu8 %zmm27, %zmm23 {%k5}
 // CHECK:  encoding: [0x62,0x21,0x7f,0x4d,0x7f,0xdf]
           vmovdqu8.s %zmm27, %zmm23 {%k5}
 
-// CHECK: vmovdqu8.s %zmm27, %zmm23 {%k5} {z}
+// CHECK: vmovdqu8 %zmm27, %zmm23 {%k5} {z}
 // CHECK:  encoding: [0x62,0x21,0x7f,0xcd,0x7f,0xdf]
           vmovdqu8.s %zmm27, %zmm23 {%k5} {z}
 
-// CHECK: vmovdqu8.s %zmm17, %zmm23
+// CHECK: vmovdqu8 %zmm17, %zmm23
 // CHECK:  encoding: [0x62,0xa1,0x7f,0x48,0x7f,0xcf]
           vmovdqu8.s %zmm17, %zmm23
 
-// CHECK: vmovdqu8.s %zmm17, %zmm23 {%k2}
+// CHECK: vmovdqu8 %zmm17, %zmm23 {%k2}
 // CHECK:  encoding: [0x62,0xa1,0x7f,0x4a,0x7f,0xcf]
           vmovdqu8.s %zmm17, %zmm23 {%k2}
 
-// CHECK: vmovdqu8.s %zmm17, %zmm23 {%k2} {z}
+// CHECK: vmovdqu8 %zmm17, %zmm23 {%k2} {z}
 // CHECK:  encoding: [0x62,0xa1,0x7f,0xca,0x7f,0xcf]
           vmovdqu8.s %zmm17, %zmm23 {%k2} {z}
 
-// CHECK: vmovdqu8.s %zmm19, %zmm28
+// CHECK: vmovdqu8 %zmm19, %zmm28
 // CHECK:  encoding: [0x62,0x81,0x7f,0x48,0x7f,0xdc]
           vmovdqu8.s %zmm19, %zmm28
 
-// CHECK: vmovdqu8.s %zmm19, %zmm28 {%k4}
+// CHECK: vmovdqu8 %zmm19, %zmm28 {%k4}
 // CHECK:  encoding: [0x62,0x81,0x7f,0x4c,0x7f,0xdc]
           vmovdqu8.s %zmm19, %zmm28 {%k4}
 
-// CHECK: vmovdqu8.s %zmm19, %zmm28 {%k4} {z}
+// CHECK: vmovdqu8 %zmm19, %zmm28 {%k4} {z}
 // CHECK:  encoding: [0x62,0x81,0x7f,0xcc,0x7f,0xdc]
           vmovdqu8.s %zmm19, %zmm28 {%k4} {z}
 

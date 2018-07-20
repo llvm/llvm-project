@@ -312,11 +312,6 @@ enum {
   EM_RISCV = 243,         // RISC-V
   EM_LANAI = 244,         // Lanai 32-bit processor
   EM_BPF = 247,           // Linux kernel bpf virtual machine
-
-  // A request has been made to the maintainer of the official registry for
-  // such numbers for an official value for WebAssembly. As soon as one is
-  // allocated, this enum will be updated to use it.
-  EM_WEBASSEMBLY = 0x4157, // WebAssembly architecture
 };
 
 // Object file classes.
@@ -644,18 +639,78 @@ enum {
 #include "ELFRelocs/Sparc.def"
 };
 
-// ELF Relocation types for WebAssembly
-enum {
-#include "ELFRelocs/WebAssembly.def"
-};
-
 // AMDGPU specific e_flags.
 enum : unsigned {
-  // AMDGPU machine architectures.
-  EF_AMDGPU_ARCH_NONE = 0x00000000, // None/unknown.
-  EF_AMDGPU_ARCH_R600 = 0x00000001, // AMD HD2XXX-HD6XXX GPUs.
-  EF_AMDGPU_ARCH_GCN = 0x00000002,  // AMD GCN GFX6+ GPUs.
-  EF_AMDGPU_ARCH = 0x0000000f       // EF_AMDGPU_ARCH_XXX selection mask.
+  // Processor selection mask for EF_AMDGPU_MACH_* values.
+  EF_AMDGPU_MACH = 0x0ff,
+
+  // Not specified processor.
+  EF_AMDGPU_MACH_NONE = 0x000,
+
+  // R600-based processors.
+
+  // Radeon HD 2000/3000 Series (R600).
+  EF_AMDGPU_MACH_R600_R600 = 0x001,
+  EF_AMDGPU_MACH_R600_R630 = 0x002,
+  EF_AMDGPU_MACH_R600_RS880 = 0x003,
+  EF_AMDGPU_MACH_R600_RV670 = 0x004,
+  // Radeon HD 4000 Series (R700).
+  EF_AMDGPU_MACH_R600_RV710 = 0x005,
+  EF_AMDGPU_MACH_R600_RV730 = 0x006,
+  EF_AMDGPU_MACH_R600_RV770 = 0x007,
+  // Radeon HD 5000 Series (Evergreen).
+  EF_AMDGPU_MACH_R600_CEDAR = 0x008,
+  EF_AMDGPU_MACH_R600_CYPRESS = 0x009,
+  EF_AMDGPU_MACH_R600_JUNIPER = 0x00a,
+  EF_AMDGPU_MACH_R600_REDWOOD = 0x00b,
+  EF_AMDGPU_MACH_R600_SUMO = 0x00c,
+  // Radeon HD 6000 Series (Northern Islands).
+  EF_AMDGPU_MACH_R600_BARTS = 0x00d,
+  EF_AMDGPU_MACH_R600_CAICOS = 0x00e,
+  EF_AMDGPU_MACH_R600_CAYMAN = 0x00f,
+  EF_AMDGPU_MACH_R600_TURKS = 0x010,
+
+  // Reserved for R600-based processors.
+  EF_AMDGPU_MACH_R600_RESERVED_FIRST = 0x011,
+  EF_AMDGPU_MACH_R600_RESERVED_LAST = 0x01f,
+
+  // First/last R600-based processors.
+  EF_AMDGPU_MACH_R600_FIRST = EF_AMDGPU_MACH_R600_R600,
+  EF_AMDGPU_MACH_R600_LAST = EF_AMDGPU_MACH_R600_TURKS,
+
+  // AMDGCN-based processors.
+
+  // AMDGCN GFX6.
+  EF_AMDGPU_MACH_AMDGCN_GFX600 = 0x020,
+  EF_AMDGPU_MACH_AMDGCN_GFX601 = 0x021,
+  // AMDGCN GFX7.
+  EF_AMDGPU_MACH_AMDGCN_GFX700 = 0x022,
+  EF_AMDGPU_MACH_AMDGCN_GFX701 = 0x023,
+  EF_AMDGPU_MACH_AMDGCN_GFX702 = 0x024,
+  EF_AMDGPU_MACH_AMDGCN_GFX703 = 0x025,
+  EF_AMDGPU_MACH_AMDGCN_GFX704 = 0x026,
+  // AMDGCN GFX8.
+  EF_AMDGPU_MACH_AMDGCN_GFX801 = 0x028,
+  EF_AMDGPU_MACH_AMDGCN_GFX802 = 0x029,
+  EF_AMDGPU_MACH_AMDGCN_GFX803 = 0x02a,
+  EF_AMDGPU_MACH_AMDGCN_GFX810 = 0x02b,
+  // AMDGCN GFX9.
+  EF_AMDGPU_MACH_AMDGCN_GFX900 = 0x02c,
+  EF_AMDGPU_MACH_AMDGCN_GFX902 = 0x02d,
+  EF_AMDGPU_MACH_AMDGCN_GFX904 = 0x02e,
+  EF_AMDGPU_MACH_AMDGCN_GFX906 = 0x02f,
+
+  // Reserved for AMDGCN-based processors.
+  EF_AMDGPU_MACH_AMDGCN_RESERVED0 = 0x027,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED1 = 0x030,
+
+  // First/last AMDGCN-based processors.
+  EF_AMDGPU_MACH_AMDGCN_FIRST = EF_AMDGPU_MACH_AMDGCN_GFX600,
+  EF_AMDGPU_MACH_AMDGCN_LAST = EF_AMDGPU_MACH_AMDGCN_GFX906,
+
+  // Indicates if the xnack target feature is enabled for all code contained in
+  // the object.
+  EF_AMDGPU_XNACK = 0x100,
 };
 
 // ELF Relocation types for AMDGPU
@@ -714,36 +769,46 @@ enum {
 
 // Section types.
 enum : unsigned {
-  SHT_NULL = 0,                    // No associated section (inactive entry).
-  SHT_PROGBITS = 1,                // Program-defined contents.
-  SHT_SYMTAB = 2,                  // Symbol table.
-  SHT_STRTAB = 3,                  // String table.
-  SHT_RELA = 4,                    // Relocation entries; explicit addends.
-  SHT_HASH = 5,                    // Symbol hash table.
-  SHT_DYNAMIC = 6,                 // Information for dynamic linking.
-  SHT_NOTE = 7,                    // Information about the file.
-  SHT_NOBITS = 8,                  // Data occupies no space in the file.
-  SHT_REL = 9,                     // Relocation entries; no explicit addends.
-  SHT_SHLIB = 10,                  // Reserved.
-  SHT_DYNSYM = 11,                 // Symbol table.
-  SHT_INIT_ARRAY = 14,             // Pointers to initialization functions.
-  SHT_FINI_ARRAY = 15,             // Pointers to termination functions.
-  SHT_PREINIT_ARRAY = 16,          // Pointers to pre-init functions.
-  SHT_GROUP = 17,                  // Section group.
-  SHT_SYMTAB_SHNDX = 18,           // Indices for SHN_XINDEX entries.
-  SHT_LOOS = 0x60000000,           // Lowest operating system-specific type.
+  SHT_NULL = 0,                         // No associated section (inactive entry).
+  SHT_PROGBITS = 1,                     // Program-defined contents.
+  SHT_SYMTAB = 2,                       // Symbol table.
+  SHT_STRTAB = 3,                       // String table.
+  SHT_RELA = 4,                         // Relocation entries; explicit addends.
+  SHT_HASH = 5,                         // Symbol hash table.
+  SHT_DYNAMIC = 6,                      // Information for dynamic linking.
+  SHT_NOTE = 7,                         // Information about the file.
+  SHT_NOBITS = 8,                       // Data occupies no space in the file.
+  SHT_REL = 9,                          // Relocation entries; no explicit addends.
+  SHT_SHLIB = 10,                       // Reserved.
+  SHT_DYNSYM = 11,                      // Symbol table.
+  SHT_INIT_ARRAY = 14,                  // Pointers to initialization functions.
+  SHT_FINI_ARRAY = 15,                  // Pointers to termination functions.
+  SHT_PREINIT_ARRAY = 16,               // Pointers to pre-init functions.
+  SHT_GROUP = 17,                       // Section group.
+  SHT_SYMTAB_SHNDX = 18,                // Indices for SHN_XINDEX entries.
+  // Experimental support for SHT_RELR sections. For details, see proposal
+  // at https://groups.google.com/forum/#!topic/generic-abi/bX460iggiKg
+  SHT_RELR = 19,                        // Relocation entries; only offsets.
+  SHT_LOOS = 0x60000000,                // Lowest operating system-specific type.
   // Android packed relocation section types.
   // https://android.googlesource.com/platform/bionic/+/6f12bfece5dcc01325e0abba56a46b1bcf991c69/tools/relocation_packer/src/elf_file.cc#37
   SHT_ANDROID_REL = 0x60000001,
   SHT_ANDROID_RELA = 0x60000002,
-  SHT_LLVM_ODRTAB = 0x6fff4c00,    // LLVM ODR table.
-  SHT_GNU_ATTRIBUTES = 0x6ffffff5, // Object attributes.
-  SHT_GNU_HASH = 0x6ffffff6,       // GNU-style hash table.
-  SHT_GNU_verdef = 0x6ffffffd,     // GNU version definitions.
-  SHT_GNU_verneed = 0x6ffffffe,    // GNU version references.
-  SHT_GNU_versym = 0x6fffffff,     // GNU symbol versions table.
-  SHT_HIOS = 0x6fffffff,           // Highest operating system-specific type.
-  SHT_LOPROC = 0x70000000,         // Lowest processor arch-specific type.
+  SHT_LLVM_ODRTAB = 0x6fff4c00,         // LLVM ODR table.
+  SHT_LLVM_LINKER_OPTIONS = 0x6fff4c01, // LLVM Linker Options.
+  SHT_LLVM_CALL_GRAPH_PROFILE = 0x6fff4c02, // LLVM Call Graph Profile.
+  SHT_LLVM_ADDRSIG = 0x6fff4c03,        // List of address-significant symbols
+                                        // for safe ICF.
+  // Android's experimental support for SHT_RELR sections.
+  // https://android.googlesource.com/platform/bionic/+/b7feec74547f84559a1467aca02708ff61346d2a/libc/include/elf.h#512
+  SHT_ANDROID_RELR = 0x6fffff00,        // Relocation entries; only offsets.
+  SHT_GNU_ATTRIBUTES = 0x6ffffff5,      // Object attributes.
+  SHT_GNU_HASH = 0x6ffffff6,            // GNU-style hash table.
+  SHT_GNU_verdef = 0x6ffffffd,          // GNU version definitions.
+  SHT_GNU_verneed = 0x6ffffffe,         // GNU version references.
+  SHT_GNU_versym = 0x6fffffff,          // GNU symbol versions table.
+  SHT_HIOS = 0x6fffffff,                // Highest operating system-specific type.
+  SHT_LOPROC = 0x70000000,              // Lowest processor arch-specific type.
   // Fixme: All this is duplicated in MCSectionELF. Why??
   // Exception Index table
   SHT_ARM_EXIDX = 0x70000001U,
@@ -753,18 +818,18 @@ enum : unsigned {
   SHT_ARM_ATTRIBUTES = 0x70000003U,
   SHT_ARM_DEBUGOVERLAY = 0x70000004U,
   SHT_ARM_OVERLAYSECTION = 0x70000005U,
-  SHT_HEX_ORDERED = 0x70000000,   // Link editor is to sort the entries in
-                                  // this section based on their sizes
-  SHT_X86_64_UNWIND = 0x70000001, // Unwind information
+  SHT_HEX_ORDERED = 0x70000000,         // Link editor is to sort the entries in
+                                        // this section based on their sizes
+  SHT_X86_64_UNWIND = 0x70000001,       // Unwind information
 
-  SHT_MIPS_REGINFO = 0x70000006,  // Register usage information
-  SHT_MIPS_OPTIONS = 0x7000000d,  // General options
-  SHT_MIPS_DWARF = 0x7000001e,    // DWARF debugging section.
-  SHT_MIPS_ABIFLAGS = 0x7000002a, // ABI information.
+  SHT_MIPS_REGINFO = 0x70000006,        // Register usage information
+  SHT_MIPS_OPTIONS = 0x7000000d,        // General options
+  SHT_MIPS_DWARF = 0x7000001e,          // DWARF debugging section.
+  SHT_MIPS_ABIFLAGS = 0x7000002a,       // ABI information.
 
-  SHT_HIPROC = 0x7fffffff, // Highest processor arch-specific type.
-  SHT_LOUSER = 0x80000000, // Lowest type reserved for applications.
-  SHT_HIUSER = 0xffffffff  // Highest type reserved for applications.
+  SHT_HIPROC = 0x7fffffff,              // Highest processor arch-specific type.
+  SHT_LOUSER = 0x80000000,              // Lowest type reserved for applications.
+  SHT_HIUSER = 0xffffffff               // Highest type reserved for applications.
 };
 
 // Section flags.
@@ -1000,6 +1065,9 @@ struct Elf32_Rela {
   }
 };
 
+// Relocation entry without explicit addend or info (relative relocations only).
+typedef Elf32_Word Elf32_Relr; // offset/bitmap for relative relocations
+
 // Relocation entry, without explicit addend.
 struct Elf64_Rel {
   Elf64_Addr r_offset; // Location (file byte offset, or program virtual addr).
@@ -1032,6 +1100,9 @@ struct Elf64_Rela {
     r_info = ((Elf64_Xword)s << 32) + (t & 0xffffffffL);
   }
 };
+
+// Relocation entry without explicit addend or info (relative relocations only).
+typedef Elf64_Xword Elf64_Relr; // offset/bitmap for relative relocations
 
 // Program header for ELF32.
 struct Elf32_Phdr {
@@ -1096,9 +1167,6 @@ enum {
   PT_MIPS_RTPROC = 0x70000001,   // Runtime procedure table.
   PT_MIPS_OPTIONS = 0x70000002,  // Options segment.
   PT_MIPS_ABIFLAGS = 0x70000003, // Abiflags segment.
-
-  // WebAssembly program header types.
-  PT_WEBASSEMBLY_FUNCTIONS = PT_LOPROC + 0, // Function definitions.
 };
 
 // Segment flag bits.
@@ -1130,154 +1198,9 @@ struct Elf64_Dyn {
 
 // Dynamic table entry tags.
 enum {
-  DT_NULL = 0,          // Marks end of dynamic array.
-  DT_NEEDED = 1,        // String table offset of needed library.
-  DT_PLTRELSZ = 2,      // Size of relocation entries in PLT.
-  DT_PLTGOT = 3,        // Address associated with linkage table.
-  DT_HASH = 4,          // Address of symbolic hash table.
-  DT_STRTAB = 5,        // Address of dynamic string table.
-  DT_SYMTAB = 6,        // Address of dynamic symbol table.
-  DT_RELA = 7,          // Address of relocation table (Rela entries).
-  DT_RELASZ = 8,        // Size of Rela relocation table.
-  DT_RELAENT = 9,       // Size of a Rela relocation entry.
-  DT_STRSZ = 10,        // Total size of the string table.
-  DT_SYMENT = 11,       // Size of a symbol table entry.
-  DT_INIT = 12,         // Address of initialization function.
-  DT_FINI = 13,         // Address of termination function.
-  DT_SONAME = 14,       // String table offset of a shared objects name.
-  DT_RPATH = 15,        // String table offset of library search path.
-  DT_SYMBOLIC = 16,     // Changes symbol resolution algorithm.
-  DT_REL = 17,          // Address of relocation table (Rel entries).
-  DT_RELSZ = 18,        // Size of Rel relocation table.
-  DT_RELENT = 19,       // Size of a Rel relocation entry.
-  DT_PLTREL = 20,       // Type of relocation entry used for linking.
-  DT_DEBUG = 21,        // Reserved for debugger.
-  DT_TEXTREL = 22,      // Relocations exist for non-writable segments.
-  DT_JMPREL = 23,       // Address of relocations associated with PLT.
-  DT_BIND_NOW = 24,     // Process all relocations before execution.
-  DT_INIT_ARRAY = 25,   // Pointer to array of initialization functions.
-  DT_FINI_ARRAY = 26,   // Pointer to array of termination functions.
-  DT_INIT_ARRAYSZ = 27, // Size of DT_INIT_ARRAY.
-  DT_FINI_ARRAYSZ = 28, // Size of DT_FINI_ARRAY.
-  DT_RUNPATH = 29,      // String table offset of lib search path.
-  DT_FLAGS = 30,        // Flags.
-  DT_ENCODING = 32,     // Values from here to DT_LOOS follow the rules
-                        // for the interpretation of the d_un union.
-
-  DT_PREINIT_ARRAY = 32,   // Pointer to array of preinit functions.
-  DT_PREINIT_ARRAYSZ = 33, // Size of the DT_PREINIT_ARRAY array.
-
-  DT_LOOS = 0x60000000,   // Start of environment specific tags.
-  DT_HIOS = 0x6FFFFFFF,   // End of environment specific tags.
-  DT_LOPROC = 0x70000000, // Start of processor specific tags.
-  DT_HIPROC = 0x7FFFFFFF, // End of processor specific tags.
-
-  // Android packed relocation section tags.
-  // https://android.googlesource.com/platform/bionic/+/6f12bfece5dcc01325e0abba56a46b1bcf991c69/tools/relocation_packer/src/elf_file.cc#31
-  DT_ANDROID_REL = 0x6000000F,
-  DT_ANDROID_RELSZ = 0x60000010,
-  DT_ANDROID_RELA = 0x60000011,
-  DT_ANDROID_RELASZ = 0x60000012,
-
-  DT_GNU_HASH = 0x6FFFFEF5, // Reference to the GNU hash table.
-  DT_TLSDESC_PLT =
-      0x6FFFFEF6, // Location of PLT entry for TLS descriptor resolver calls.
-  DT_TLSDESC_GOT = 0x6FFFFEF7, // Location of GOT entry used by TLS descriptor
-                               // resolver PLT entry.
-  DT_RELACOUNT = 0x6FFFFFF9,   // ELF32_Rela count.
-  DT_RELCOUNT = 0x6FFFFFFA,    // ELF32_Rel count.
-
-  DT_FLAGS_1 = 0X6FFFFFFB,    // Flags_1.
-  DT_VERSYM = 0x6FFFFFF0,     // The address of .gnu.version section.
-  DT_VERDEF = 0X6FFFFFFC,     // The address of the version definition table.
-  DT_VERDEFNUM = 0X6FFFFFFD,  // The number of entries in DT_VERDEF.
-  DT_VERNEED = 0X6FFFFFFE,    // The address of the version Dependency table.
-  DT_VERNEEDNUM = 0X6FFFFFFF, // The number of entries in DT_VERNEED.
-
-  // Hexagon specific dynamic table entries
-  DT_HEXAGON_SYMSZ = 0x70000000,
-  DT_HEXAGON_VER = 0x70000001,
-  DT_HEXAGON_PLT = 0x70000002,
-
-  // Mips specific dynamic table entry tags.
-  DT_MIPS_RLD_VERSION = 0x70000001,    // 32 bit version number for runtime
-                                       // linker interface.
-  DT_MIPS_TIME_STAMP = 0x70000002,     // Time stamp.
-  DT_MIPS_ICHECKSUM = 0x70000003,      // Checksum of external strings
-                                       // and common sizes.
-  DT_MIPS_IVERSION = 0x70000004,       // Index of version string
-                                       // in string table.
-  DT_MIPS_FLAGS = 0x70000005,          // 32 bits of flags.
-  DT_MIPS_BASE_ADDRESS = 0x70000006,   // Base address of the segment.
-  DT_MIPS_MSYM = 0x70000007,           // Address of .msym section.
-  DT_MIPS_CONFLICT = 0x70000008,       // Address of .conflict section.
-  DT_MIPS_LIBLIST = 0x70000009,        // Address of .liblist section.
-  DT_MIPS_LOCAL_GOTNO = 0x7000000a,    // Number of local global offset
-                                       // table entries.
-  DT_MIPS_CONFLICTNO = 0x7000000b,     // Number of entries
-                                       // in the .conflict section.
-  DT_MIPS_LIBLISTNO = 0x70000010,      // Number of entries
-                                       // in the .liblist section.
-  DT_MIPS_SYMTABNO = 0x70000011,       // Number of entries
-                                       // in the .dynsym section.
-  DT_MIPS_UNREFEXTNO = 0x70000012,     // Index of first external dynamic symbol
-                                       // not referenced locally.
-  DT_MIPS_GOTSYM = 0x70000013,         // Index of first dynamic symbol
-                                       // in global offset table.
-  DT_MIPS_HIPAGENO = 0x70000014,       // Number of page table entries
-                                       // in global offset table.
-  DT_MIPS_RLD_MAP = 0x70000016,        // Address of run time loader map,
-                                       // used for debugging.
-  DT_MIPS_DELTA_CLASS = 0x70000017,    // Delta C++ class definition.
-  DT_MIPS_DELTA_CLASS_NO = 0x70000018, // Number of entries
-                                       // in DT_MIPS_DELTA_CLASS.
-  DT_MIPS_DELTA_INSTANCE = 0x70000019, // Delta C++ class instances.
-  DT_MIPS_DELTA_INSTANCE_NO = 0x7000001A,     // Number of entries
-                                              // in DT_MIPS_DELTA_INSTANCE.
-  DT_MIPS_DELTA_RELOC = 0x7000001B,           // Delta relocations.
-  DT_MIPS_DELTA_RELOC_NO = 0x7000001C,        // Number of entries
-                                              // in DT_MIPS_DELTA_RELOC.
-  DT_MIPS_DELTA_SYM = 0x7000001D,             // Delta symbols that Delta
-                                              // relocations refer to.
-  DT_MIPS_DELTA_SYM_NO = 0x7000001E,          // Number of entries
-                                              // in DT_MIPS_DELTA_SYM.
-  DT_MIPS_DELTA_CLASSSYM = 0x70000020,        // Delta symbols that hold
-                                              // class declarations.
-  DT_MIPS_DELTA_CLASSSYM_NO = 0x70000021,     // Number of entries
-                                              // in DT_MIPS_DELTA_CLASSSYM.
-  DT_MIPS_CXX_FLAGS = 0x70000022,             // Flags indicating information
-                                              // about C++ flavor.
-  DT_MIPS_PIXIE_INIT = 0x70000023,            // Pixie information.
-  DT_MIPS_SYMBOL_LIB = 0x70000024,            // Address of .MIPS.symlib
-  DT_MIPS_LOCALPAGE_GOTIDX = 0x70000025,      // The GOT index of the first PTE
-                                              // for a segment
-  DT_MIPS_LOCAL_GOTIDX = 0x70000026,          // The GOT index of the first PTE
-                                              // for a local symbol
-  DT_MIPS_HIDDEN_GOTIDX = 0x70000027,         // The GOT index of the first PTE
-                                              // for a hidden symbol
-  DT_MIPS_PROTECTED_GOTIDX = 0x70000028,      // The GOT index of the first PTE
-                                              // for a protected symbol
-  DT_MIPS_OPTIONS = 0x70000029,               // Address of `.MIPS.options'.
-  DT_MIPS_INTERFACE = 0x7000002A,             // Address of `.interface'.
-  DT_MIPS_DYNSTR_ALIGN = 0x7000002B,          // Unknown.
-  DT_MIPS_INTERFACE_SIZE = 0x7000002C,        // Size of the .interface section.
-  DT_MIPS_RLD_TEXT_RESOLVE_ADDR = 0x7000002D, // Size of rld_text_resolve
-                                              // function stored in the GOT.
-  DT_MIPS_PERF_SUFFIX = 0x7000002E,  // Default suffix of DSO to be added
-                                     // by rld on dlopen() calls.
-  DT_MIPS_COMPACT_SIZE = 0x7000002F, // Size of compact relocation
-                                     // section (O32).
-  DT_MIPS_GP_VALUE = 0x70000030,     // GP value for auxiliary GOTs.
-  DT_MIPS_AUX_DYNAMIC = 0x70000031,  // Address of auxiliary .dynamic.
-  DT_MIPS_PLTGOT = 0x70000032,       // Address of the base of the PLTGOT.
-  DT_MIPS_RWPLT = 0x70000034,        // Points to the base
-                                     // of a writable PLT.
-  DT_MIPS_RLD_MAP_REL = 0x70000035,  // Relative offset of run time loader
-                                     // map, used for debugging.
-
-  // Sun machine-independent extensions.
-  DT_AUXILIARY = 0x7FFFFFFD, // Shared object to load before self
-  DT_FILTER = 0x7FFFFFFF     // Shared object to get values from
+#define DYNAMIC_TAG(name, value) DT_##name = value,
+#include "DynamicTags.def"
+#undef DYNAMIC_TAG
 };
 
 // DT_FLAGS values.
@@ -1380,6 +1303,20 @@ enum {
   NT_GNU_HWCAP = 2,
   NT_GNU_BUILD_ID = 3,
   NT_GNU_GOLD_VERSION = 4,
+  NT_GNU_PROPERTY_TYPE_0 = 5,
+};
+
+// Property types used in GNU_PROPERTY_TYPE_0 notes.
+enum : unsigned {
+  GNU_PROPERTY_STACK_SIZE = 1,
+  GNU_PROPERTY_NO_COPY_ON_PROTECTED = 2,
+  GNU_PROPERTY_X86_FEATURE_1_AND = 0xc0000002
+};
+
+// CET properties
+enum {
+  GNU_PROPERTY_X86_FEATURE_1_IBT = 1 << 0,
+  GNU_PROPERTY_X86_FEATURE_1_SHSTK = 1 << 1
 };
 
 // AMDGPU specific notes.
@@ -1421,6 +1358,20 @@ struct Elf64_Chdr {
   Elf64_Word ch_reserved;
   Elf64_Xword ch_size;
   Elf64_Xword ch_addralign;
+};
+
+// Node header for ELF32.
+struct Elf32_Nhdr {
+  Elf32_Word n_namesz;
+  Elf32_Word n_descsz;
+  Elf32_Word n_type;
+};
+
+// Node header for ELF64.
+struct Elf64_Nhdr {
+  Elf64_Word n_namesz;
+  Elf64_Word n_descsz;
+  Elf64_Word n_type;
 };
 
 // Legal values for ch_type field of compressed section header.

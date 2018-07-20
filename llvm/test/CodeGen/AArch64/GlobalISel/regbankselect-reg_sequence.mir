@@ -18,8 +18,8 @@ registers:
   - { id: 0, class: dd }
 body: |
   bb.0:
-    liveins: %d0, %d1
+    liveins: $d0, $d1
 
-    %0 = REG_SEQUENCE %d0, %subreg.dsub0, %d1, %subreg.dsub1
+    %0 = REG_SEQUENCE $d0, %subreg.dsub0, $d1, %subreg.dsub1
 
 ...

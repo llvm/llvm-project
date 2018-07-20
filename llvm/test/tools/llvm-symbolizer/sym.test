@@ -19,6 +19,8 @@
 
 RUN: llvm-symbolizer -print-address -obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck %s
 RUN: llvm-symbolizer -inlining -print-address -pretty-print -obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck --check-prefix="PRETTY" %s 
+RUN: echo "0x1" > %t.input
+RUN: llvm-symbolizer -obj=%p/Inputs/zero < %t.input | FileCheck --check-prefix="ZERO" %s
 
 #CHECK: some text
 #CHECK: 0x40054d
@@ -31,4 +33,6 @@ RUN: llvm-symbolizer -inlining -print-address -pretty-print -obj=%p/Inputs/addr.
 #PRETTY:  (inlined by) inc at {{[/\]+}}tmp{{[/\]+}}x.c:7:0
 #PRETTY   (inlined by) main at {{[/\]+}}tmp{{[/\]+}}x.c:14:0
 #PRETTY: some text2
-
+#
+#ZERO: ??
+#ZERO: ??:0:0

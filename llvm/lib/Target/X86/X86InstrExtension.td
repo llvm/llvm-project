@@ -14,104 +14,124 @@
 let hasSideEffects = 0 in {
   let Defs = [AX], Uses = [AL] in // AX = signext(AL)
   def CBW : I<0x98, RawFrm, (outs), (ins),
-              "{cbtw|cbw}", [], IIC_CBW>, OpSize16, Sched<[WriteALU]>;
+              "{cbtw|cbw}", []>, OpSize16, Sched<[WriteALU]>;
   let Defs = [EAX], Uses = [AX] in // EAX = signext(AX)
   def CWDE : I<0x98, RawFrm, (outs), (ins),
-              "{cwtl|cwde}", [], IIC_CBW>, OpSize32, Sched<[WriteALU]>;
+              "{cwtl|cwde}", []>, OpSize32, Sched<[WriteALU]>;
 
   let Defs = [AX,DX], Uses = [AX] in // DX:AX = signext(AX)
   def CWD : I<0x99, RawFrm, (outs), (ins),
-              "{cwtd|cwd}", [], IIC_CBW>, OpSize16, Sched<[WriteALU]>;
+              "{cwtd|cwd}", []>, OpSize16, Sched<[WriteALU]>;
   let Defs = [EAX,EDX], Uses = [EAX] in // EDX:EAX = signext(EAX)
   def CDQ : I<0x99, RawFrm, (outs), (ins),
-              "{cltd|cdq}", [], IIC_CBW>, OpSize32, Sched<[WriteALU]>;
+              "{cltd|cdq}", []>, OpSize32, Sched<[WriteALU]>;
 
 
   let Defs = [RAX], Uses = [EAX] in // RAX = signext(EAX)
   def CDQE : RI<0x98, RawFrm, (outs), (ins),
-               "{cltq|cdqe}", [], IIC_CBW>, Sched<[WriteALU]>;
+               "{cltq|cdqe}", []>, Sched<[WriteALU]>;
 
   let Defs = [RAX,RDX], Uses = [RAX] in // RDX:RAX = signext(RAX)
   def CQO  : RI<0x99, RawFrm, (outs), (ins),
-                "{cqto|cqo}", [], IIC_CBW>, Sched<[WriteALU]>;
+                "{cqto|cqo}", []>, Sched<[WriteALU]>;
 }
 
 // Sign/Zero extenders
 let hasSideEffects = 0 in {
 def MOVSX16rr8 : I<0xBE, MRMSrcReg, (outs GR16:$dst), (ins GR8:$src),
-                   "movs{bw|x}\t{$src, $dst|$dst, $src}", [], IIC_MOVSX_R16_R8>,
+                   "movs{bw|x}\t{$src, $dst|$dst, $src}", []>,
                    TB, OpSize16, Sched<[WriteALU]>;
 let mayLoad = 1 in
 def MOVSX16rm8 : I<0xBE, MRMSrcMem, (outs GR16:$dst), (ins i8mem:$src),
-                   "movs{bw|x}\t{$src, $dst|$dst, $src}", [], IIC_MOVSX_R16_M8>,
+                   "movs{bw|x}\t{$src, $dst|$dst, $src}", []>,
                    TB, OpSize16, Sched<[WriteALULd]>;
 } // hasSideEffects = 0
 def MOVSX32rr8 : I<0xBE, MRMSrcReg, (outs GR32:$dst), (ins GR8:$src),
                    "movs{bl|x}\t{$src, $dst|$dst, $src}",
-                   [(set GR32:$dst, (sext GR8:$src))], IIC_MOVSX>, TB,
+                   [(set GR32:$dst, (sext GR8:$src))]>, TB,
                    OpSize32, Sched<[WriteALU]>;
 def MOVSX32rm8 : I<0xBE, MRMSrcMem, (outs GR32:$dst), (ins i8mem :$src),
                    "movs{bl|x}\t{$src, $dst|$dst, $src}",
-                   [(set GR32:$dst, (sextloadi32i8 addr:$src))], IIC_MOVSX>, TB,
+                   [(set GR32:$dst, (sextloadi32i8 addr:$src))]>, TB,
                    OpSize32, Sched<[WriteALULd]>;
 def MOVSX32rr16: I<0xBF, MRMSrcReg, (outs GR32:$dst), (ins GR16:$src),
                    "movs{wl|x}\t{$src, $dst|$dst, $src}",
-                   [(set GR32:$dst, (sext GR16:$src))], IIC_MOVSX>, TB,
+                   [(set GR32:$dst, (sext GR16:$src))]>, TB,
                    OpSize32, Sched<[WriteALU]>;
 def MOVSX32rm16: I<0xBF, MRMSrcMem, (outs GR32:$dst), (ins i16mem:$src),
                    "movs{wl|x}\t{$src, $dst|$dst, $src}",
-                   [(set GR32:$dst, (sextloadi32i16 addr:$src))], IIC_MOVSX>,
+                   [(set GR32:$dst, (sextloadi32i16 addr:$src))]>,
                    OpSize32, TB, Sched<[WriteALULd]>;
 
 let hasSideEffects = 0 in {
 def MOVZX16rr8 : I<0xB6, MRMSrcReg, (outs GR16:$dst), (ins GR8:$src),
-                   "movz{bw|x}\t{$src, $dst|$dst, $src}", [], IIC_MOVZX_R16_R8>,
+                   "movz{bw|x}\t{$src, $dst|$dst, $src}", []>,
                    TB, OpSize16, Sched<[WriteALU]>;
 let mayLoad = 1 in
 def MOVZX16rm8 : I<0xB6, MRMSrcMem, (outs GR16:$dst), (ins i8mem:$src),
-                   "movz{bw|x}\t{$src, $dst|$dst, $src}", [], IIC_MOVZX_R16_M8>,
+                   "movz{bw|x}\t{$src, $dst|$dst, $src}", []>,
                    TB, OpSize16, Sched<[WriteALULd]>;
 } // hasSideEffects = 0
 def MOVZX32rr8 : I<0xB6, MRMSrcReg, (outs GR32:$dst), (ins GR8 :$src),
                    "movz{bl|x}\t{$src, $dst|$dst, $src}",
-                   [(set GR32:$dst, (zext GR8:$src))], IIC_MOVZX>, TB,
+                   [(set GR32:$dst, (zext GR8:$src))]>, TB,
                    OpSize32, Sched<[WriteALU]>;
 def MOVZX32rm8 : I<0xB6, MRMSrcMem, (outs GR32:$dst), (ins i8mem :$src),
                    "movz{bl|x}\t{$src, $dst|$dst, $src}",
-                   [(set GR32:$dst, (zextloadi32i8 addr:$src))], IIC_MOVZX>, TB,
+                   [(set GR32:$dst, (zextloadi32i8 addr:$src))]>, TB,
                    OpSize32, Sched<[WriteALULd]>;
 def MOVZX32rr16: I<0xB7, MRMSrcReg, (outs GR32:$dst), (ins GR16:$src),
                    "movz{wl|x}\t{$src, $dst|$dst, $src}",
-                   [(set GR32:$dst, (zext GR16:$src))], IIC_MOVZX>, TB,
+                   [(set GR32:$dst, (zext GR16:$src))]>, TB,
                    OpSize32, Sched<[WriteALU]>;
 def MOVZX32rm16: I<0xB7, MRMSrcMem, (outs GR32:$dst), (ins i16mem:$src),
                    "movz{wl|x}\t{$src, $dst|$dst, $src}",
-                   [(set GR32:$dst, (zextloadi32i16 addr:$src))], IIC_MOVZX>,
+                   [(set GR32:$dst, (zextloadi32i16 addr:$src))]>,
                    TB, OpSize32, Sched<[WriteALULd]>;
+
+// These instructions exist as a consequence of operand size prefix having
+// control of the destination size, but not the input size. Only support them
+// for the disassembler.
+let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0 in {
+def MOVSX16rr16: I<0xBF, MRMSrcReg, (outs GR16:$dst), (ins GR16:$src),
+                   "movs{ww|x}\t{$src, $dst|$dst, $src}",
+                   []>, TB, OpSize16, Sched<[WriteALU]>, NotMemoryFoldable;
+def MOVZX16rr16: I<0xB7, MRMSrcReg, (outs GR16:$dst), (ins GR16:$src),
+                   "movz{ww|x}\t{$src, $dst|$dst, $src}",
+                   []>, TB, OpSize16, Sched<[WriteALU]>, NotMemoryFoldable;
+let mayLoad = 1 in {
+def MOVSX16rm16: I<0xBF, MRMSrcMem, (outs GR16:$dst), (ins i16mem:$src),
+                   "movs{ww|x}\t{$src, $dst|$dst, $src}",
+                   []>, OpSize16, TB, Sched<[WriteALULd]>, NotMemoryFoldable;
+def MOVZX16rm16: I<0xB7, MRMSrcMem, (outs GR16:$dst), (ins i16mem:$src),
+                   "movz{ww|x}\t{$src, $dst|$dst, $src}",
+                   []>, TB, OpSize16, Sched<[WriteALULd]>, NotMemoryFoldable;
+} // mayLoad = 1
+} // isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0
 
 // These are the same as the regular MOVZX32rr8 and MOVZX32rm8
 // except that they use GR32_NOREX for the output operand register class
 // instead of GR32. This allows them to operate on h registers on x86-64.
 let hasSideEffects = 0, isCodeGenOnly = 1 in {
-def MOVZX32_NOREXrr8 : I<0xB6, MRMSrcReg,
+def MOVZX32rr8_NOREX : I<0xB6, MRMSrcReg,
                          (outs GR32_NOREX:$dst), (ins GR8_NOREX:$src),
-                         "movz{bl|x}\t{$src, $dst|$dst, $src}  # NOREX",
-                         [], IIC_MOVZX>, TB, OpSize32, Sched<[WriteALU]>;
+                         "movz{bl|x}\t{$src, $dst|$dst, $src}",
+                         []>, TB, OpSize32, Sched<[WriteALU]>;
 let mayLoad = 1 in
-def MOVZX32_NOREXrm8 : I<0xB6, MRMSrcMem,
+def MOVZX32rm8_NOREX : I<0xB6, MRMSrcMem,
                          (outs GR32_NOREX:$dst), (ins i8mem_NOREX:$src),
-                         "movz{bl|x}\t{$src, $dst|$dst, $src}  # NOREX",
-                         [], IIC_MOVZX>, TB, OpSize32, Sched<[WriteALULd]>;
+                         "movz{bl|x}\t{$src, $dst|$dst, $src}",
+                         []>, TB, OpSize32, Sched<[WriteALULd]>;
 
-def MOVSX32_NOREXrr8 : I<0xBE, MRMSrcReg,
+def MOVSX32rr8_NOREX : I<0xBE, MRMSrcReg,
                          (outs GR32_NOREX:$dst), (ins GR8_NOREX:$src),
-                         "movs{bl|x}\t{$src, $dst|$dst, $src}  # NOREX",
-                         [], IIC_MOVSX>, TB, OpSize32, Sched<[WriteALU]>;
+                         "movs{bl|x}\t{$src, $dst|$dst, $src}",
+                         []>, TB, OpSize32, Sched<[WriteALU]>;
 let mayLoad = 1 in
-def MOVSX32_NOREXrm8 : I<0xBE, MRMSrcMem,
+def MOVSX32rm8_NOREX : I<0xBE, MRMSrcMem,
                          (outs GR32_NOREX:$dst), (ins i8mem_NOREX:$src),
-                         "movs{bl|x}\t{$src, $dst|$dst, $src}  # NOREX",
-                         [], IIC_MOVSX>, TB, OpSize32, Sched<[WriteALULd]>;
+                         "movs{bl|x}\t{$src, $dst|$dst, $src}",
+                         []>, TB, OpSize32, Sched<[WriteALULd]>;
 }
 
 // MOVSX64rr8 always has a REX prefix and it has an 8-bit register
@@ -120,44 +140,44 @@ def MOVSX32_NOREXrm8 : I<0xBE, MRMSrcMem,
 // were generalized, this would require a special register class.
 def MOVSX64rr8 : RI<0xBE, MRMSrcReg, (outs GR64:$dst), (ins GR8 :$src),
                     "movs{bq|x}\t{$src, $dst|$dst, $src}",
-                    [(set GR64:$dst, (sext GR8:$src))], IIC_MOVSX>, TB,
+                    [(set GR64:$dst, (sext GR8:$src))]>, TB,
                     Sched<[WriteALU]>;
 def MOVSX64rm8 : RI<0xBE, MRMSrcMem, (outs GR64:$dst), (ins i8mem :$src),
                     "movs{bq|x}\t{$src, $dst|$dst, $src}",
-                    [(set GR64:$dst, (sextloadi64i8 addr:$src))], IIC_MOVSX>,
+                    [(set GR64:$dst, (sextloadi64i8 addr:$src))]>,
                     TB, Sched<[WriteALULd]>;
 def MOVSX64rr16: RI<0xBF, MRMSrcReg, (outs GR64:$dst), (ins GR16:$src),
                     "movs{wq|x}\t{$src, $dst|$dst, $src}",
-                    [(set GR64:$dst, (sext GR16:$src))], IIC_MOVSX>, TB,
+                    [(set GR64:$dst, (sext GR16:$src))]>, TB,
                     Sched<[WriteALU]>;
 def MOVSX64rm16: RI<0xBF, MRMSrcMem, (outs GR64:$dst), (ins i16mem:$src),
                     "movs{wq|x}\t{$src, $dst|$dst, $src}",
-                    [(set GR64:$dst, (sextloadi64i16 addr:$src))], IIC_MOVSX>,
+                    [(set GR64:$dst, (sextloadi64i16 addr:$src))]>,
                     TB, Sched<[WriteALULd]>;
 def MOVSX64rr32: RI<0x63, MRMSrcReg, (outs GR64:$dst), (ins GR32:$src),
                     "movs{lq|xd}\t{$src, $dst|$dst, $src}",
-                    [(set GR64:$dst, (sext GR32:$src))], IIC_MOVSX>,
+                    [(set GR64:$dst, (sext GR32:$src))]>,
                     Sched<[WriteALU]>, Requires<[In64BitMode]>;
 def MOVSX64rm32: RI<0x63, MRMSrcMem, (outs GR64:$dst), (ins i32mem:$src),
                     "movs{lq|xd}\t{$src, $dst|$dst, $src}",
-                    [(set GR64:$dst, (sextloadi64i32 addr:$src))], IIC_MOVSX>,
+                    [(set GR64:$dst, (sextloadi64i32 addr:$src))]>,
                     Sched<[WriteALULd]>, Requires<[In64BitMode]>;
 
 // movzbq and movzwq encodings for the disassembler
 let hasSideEffects = 0 in {
 def MOVZX64rr8 : RI<0xB6, MRMSrcReg, (outs GR64:$dst), (ins GR8:$src),
-                     "movz{bq|x}\t{$src, $dst|$dst, $src}", [], IIC_MOVZX>,
+                     "movz{bq|x}\t{$src, $dst|$dst, $src}", []>,
                      TB, Sched<[WriteALU]>;
 let mayLoad = 1 in
 def MOVZX64rm8 : RI<0xB6, MRMSrcMem, (outs GR64:$dst), (ins i8mem:$src),
-                     "movz{bq|x}\t{$src, $dst|$dst, $src}", [], IIC_MOVZX>,
+                     "movz{bq|x}\t{$src, $dst|$dst, $src}", []>,
                      TB, Sched<[WriteALULd]>;
 def MOVZX64rr16 : RI<0xB7, MRMSrcReg, (outs GR64:$dst), (ins GR16:$src),
-                     "movz{wq|x}\t{$src, $dst|$dst, $src}", [], IIC_MOVZX>,
+                     "movz{wq|x}\t{$src, $dst|$dst, $src}", []>,
                      TB, Sched<[WriteALU]>;
 let mayLoad = 1 in
 def MOVZX64rm16 : RI<0xB7, MRMSrcMem, (outs GR64:$dst), (ins i16mem:$src),
-                     "movz{wq|x}\t{$src, $dst|$dst, $src}", [], IIC_MOVZX>,
+                     "movz{wq|x}\t{$src, $dst|$dst, $src}", []>,
                      TB, Sched<[WriteALULd]>;
 }
 

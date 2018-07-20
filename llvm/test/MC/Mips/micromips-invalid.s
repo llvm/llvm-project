@@ -88,4 +88,4 @@
   jraddiusp 33      # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected both 7-bit unsigned immediate and multiple of 4
   jraddiusp 125     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected both 7-bit unsigned immediate and multiple of 4
   jraddiusp 132     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected both 7-bit unsigned immediate and multiple of 4
-  lwu $32, 4096($32)     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+  lwu $32, 4096($32)     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid register number

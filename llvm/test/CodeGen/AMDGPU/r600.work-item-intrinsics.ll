@@ -1,4 +1,5 @@
-; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
+; RUN: llc -march=r600 -mcpu=redwood -verify-machineinstrs < %s | \
+; RUN: FileCheck -check-prefix=EG -check-prefix=FUNC %s
 
 ; FUNC-LABEL: {{^}}tgid_x:
 ; EG: MEM_RAT_CACHELESS STORE_RAW T1.X
@@ -10,7 +11,8 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}tgid_y:
-; EG: MEM_RAT_CACHELESS STORE_RAW T1.Y
+; EG: MEM_RAT_CACHELESS STORE_RAW [[REG:T[0-9]+]].X
+; EG: MOV [[REG]].X, T1.Y
 define amdgpu_kernel void @tgid_y(i32 addrspace(1)* %out) {
 entry:
   %0 = call i32 @llvm.r600.read.tgid.y() #0
@@ -19,7 +21,8 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}tgid_z:
-; EG: MEM_RAT_CACHELESS STORE_RAW T1.Z
+; EG: MEM_RAT_CACHELESS STORE_RAW [[REG:T[0-9]+]].X
+; EG: MOV [[REG]].X, T1.Z
 define amdgpu_kernel void @tgid_z(i32 addrspace(1)* %out) {
 entry:
   %0 = call i32 @llvm.r600.read.tgid.z() #0
@@ -37,7 +40,8 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}tidig_y:
-; EG: MEM_RAT_CACHELESS STORE_RAW T0.Y
+; EG: MEM_RAT_CACHELESS STORE_RAW [[REG:T[0-9]+]].X
+; EG: MOV [[REG]].X, T0.Y
 define amdgpu_kernel void @tidig_y(i32 addrspace(1)* %out) {
 entry:
   %0 = call i32 @llvm.r600.read.tidig.y() #0
@@ -46,7 +50,8 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}tidig_z:
-; EG: MEM_RAT_CACHELESS STORE_RAW T0.Z
+; EG: MEM_RAT_CACHELESS STORE_RAW [[REG:T[0-9]+]].X
+; EG: MOV [[REG]].X, T0.Z
 define amdgpu_kernel void @tidig_z(i32 addrspace(1)* %out) {
 entry:
   %0 = call i32 @llvm.r600.read.tidig.z() #0

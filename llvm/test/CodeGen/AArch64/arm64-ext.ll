@@ -94,19 +94,6 @@ define <8 x i16> @test_vextRq_undef2(<8 x i16>* %A) nounwind {
 ; Tests for ReconstructShuffle function. Indices have to be carefully
 ; chosen to reach lowering phase as a BUILD_VECTOR.
 
-; One vector needs vext, the other can be handled by extract_subvector
-; Also checks interleaving of sources is handled correctly.
-; Essence: a vext is used on %A and something saner than stack load/store for final result.
-define <4 x i16> @test_interleaved(<8 x i16>* %A, <8 x i16>* %B) nounwind {
-;CHECK-LABEL: test_interleaved:
-;CHECK: ext.8b
-;CHECK: zip1.4h
-        %tmp1 = load <8 x i16>, <8 x i16>* %A
-        %tmp2 = load <8 x i16>, <8 x i16>* %B
-        %tmp3 = shufflevector <8 x i16> %tmp1, <8 x i16> %tmp2, <4 x i32> <i32 3, i32 8, i32 5, i32 9>
-        ret <4 x i16> %tmp3
-}
-
 ; An undef in the shuffle list should still be optimizable
 define <4 x i16> @test_undef(<8 x i16>* %A, <8 x i16>* %B) nounwind {
 ;CHECK-LABEL: test_undef:

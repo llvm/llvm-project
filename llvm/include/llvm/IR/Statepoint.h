@@ -196,7 +196,7 @@ public:
     return make_range(arg_begin(), arg_end());
   }
 
-  /// \brief Return true if the call or the callee has the given attribute.
+  /// Return true if the call or the callee has the given attribute.
   bool paramHasAttr(unsigned i, Attribute::AttrKind A) const {
     Function *F = getCalledFunction();
     return getCallSite().paramHasAttr(i + CallArgsBeginPos, A) ||
@@ -465,7 +465,7 @@ struct StatepointDirectives {
 /// AS.
 StatepointDirectives parseStatepointDirectivesFromAttrs(AttributeList AS);
 
-/// Return \c true if the the \p Attr is an attribute that is a statepoint
+/// Return \c true if the \p Attr is an attribute that is a statepoint
 /// directive.
 bool isStatepointDirectiveAttr(Attribute Attr);
 

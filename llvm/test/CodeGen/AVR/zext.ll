@@ -24,7 +24,7 @@ define i16 @zext2(i8 %x, i8 %y) {
 ; clr R25
 define i16 @zext_i1(i1 %x) {
 ; CHECK-LABEL: zext_i1:
-; CHECK: clr r25
+; CHECK: andi r25, 0
   %1 = zext i1 %x to i16
   ret i16 %1
 }

@@ -1,4 +1,4 @@
-RUN: llvm-dsymutil -oso-prepend-path %p/../Inputs %p/../Inputs/swift-dwarf-loc.macho.x86_64 -no-output -verbose | FileCheck %s
+RUN: dsymutil -oso-prepend-path %p/../Inputs %p/../Inputs/swift-dwarf-loc.macho.x86_64 -no-output -verbose | FileCheck %s
 
 This test checks that dsymutil generates a valid dwarf location for a symbol with no flags set.
 

@@ -93,7 +93,7 @@ define i32 @test4(i32 %n) {
 !1 = !DIFile(filename: "string.h", directory: "Game")
 !2 = !{}
 !3 = !{i32 1, !"Debug Info Version", i32 3}
-!4 = distinct !DISubprogram(name: "passthru", scope: !1, file: !1, line: 79, type: !5, isLocal: true, isDefinition: true, scopeLine: 79, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !8)
+!4 = distinct !DISubprogram(name: "passthru", scope: !1, file: !1, line: 79, type: !5, isLocal: true, isDefinition: true, scopeLine: 79, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !8)
 !5 = !DISubroutineType(types: !6)
 !6 = !{!7}
 !7 = !DIDerivedType(tag: DW_TAG_pointer_type, scope: !0, baseType: null, size: 64, align: 64)

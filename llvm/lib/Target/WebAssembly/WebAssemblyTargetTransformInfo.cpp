@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file defines the WebAssembly-specific TargetTransformInfo
+/// This file defines the WebAssembly-specific TargetTransformInfo
 /// implementation.
 ///
 //===----------------------------------------------------------------------===//

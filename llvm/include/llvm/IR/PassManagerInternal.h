@@ -29,17 +29,17 @@ template <typename IRUnitT> class AllAnalysesOn;
 template <typename IRUnitT, typename... ExtraArgTs> class AnalysisManager;
 class PreservedAnalyses;
 
-/// \brief Implementation details of the pass manager interfaces.
+/// Implementation details of the pass manager interfaces.
 namespace detail {
 
-/// \brief Template for the abstract base class used to dispatch
+/// Template for the abstract base class used to dispatch
 /// polymorphically over pass objects.
 template <typename IRUnitT, typename AnalysisManagerT, typename... ExtraArgTs>
 struct PassConcept {
   // Boiler plate necessary for the container of derived classes.
   virtual ~PassConcept() = default;
 
-  /// \brief The polymorphic API which runs the pass over a given IR entity.
+  /// The polymorphic API which runs the pass over a given IR entity.
   ///
   /// Note that actual pass object can omit the analysis manager argument if
   /// desired. Also that the analysis manager may be null if there is no
@@ -47,11 +47,11 @@ struct PassConcept {
   virtual PreservedAnalyses run(IRUnitT &IR, AnalysisManagerT &AM,
                                 ExtraArgTs... ExtraArgs) = 0;
 
-  /// \brief Polymorphic method to access the name of a pass.
+  /// Polymorphic method to access the name of a pass.
   virtual StringRef name() = 0;
 };
 
-/// \brief A template wrapper used to implement the polymorphic API.
+/// A template wrapper used to implement the polymorphic API.
 ///
 /// Can be instantiated for any object which provides a \c run method accepting
 /// an \c IRUnitT& and an \c AnalysisManager<IRUnit>&. It requires the pass to
@@ -85,7 +85,7 @@ struct PassModel : PassConcept<IRUnitT, AnalysisManagerT, ExtraArgTs...> {
   PassT Pass;
 };
 
-/// \brief Abstract concept of an analysis result.
+/// Abstract concept of an analysis result.
 ///
 /// This concept is parameterized over the IR unit that this result pertains
 /// to.
@@ -93,7 +93,7 @@ template <typename IRUnitT, typename PreservedAnalysesT, typename InvalidatorT>
 struct AnalysisResultConcept {
   virtual ~AnalysisResultConcept() = default;
 
-  /// \brief Method to try and mark a result as invalid.
+  /// Method to try and mark a result as invalid.
   ///
   /// When the outer analysis manager detects a change in some underlying
   /// unit of the IR, it will call this method on all of the results cached.
@@ -112,7 +112,7 @@ struct AnalysisResultConcept {
                           InvalidatorT &Inv) = 0;
 };
 
-/// \brief SFINAE metafunction for computing whether \c ResultT provides an
+/// SFINAE metafunction for computing whether \c ResultT provides an
 /// \c invalidate member function.
 template <typename IRUnitT, typename ResultT> class ResultHasInvalidateMethod {
   using EnabledType = char;
@@ -148,7 +148,7 @@ public:
   enum { Value = sizeof(check<ResultT>(rank<2>())) == sizeof(EnabledType) };
 };
 
-/// \brief Wrapper to model the analysis result concept.
+/// Wrapper to model the analysis result concept.
 ///
 /// By default, this will implement the invalidate method with a trivial
 /// implementation so that the actual analysis result doesn't need to provide
@@ -160,7 +160,7 @@ template <typename IRUnitT, typename PassT, typename ResultT,
               ResultHasInvalidateMethod<IRUnitT, ResultT>::Value>
 struct AnalysisResultModel;
 
-/// \brief Specialization of \c AnalysisResultModel which provides the default
+/// Specialization of \c AnalysisResultModel which provides the default
 /// invalidate functionality.
 template <typename IRUnitT, typename PassT, typename ResultT,
           typename PreservedAnalysesT, typename InvalidatorT>
@@ -184,7 +184,7 @@ struct AnalysisResultModel<IRUnitT, PassT, ResultT, PreservedAnalysesT,
     return *this;
   }
 
-  /// \brief The model bases invalidation solely on being in the preserved set.
+  /// The model bases invalidation solely on being in the preserved set.
   //
   // FIXME: We should actually use two different concepts for analysis results
   // rather than two different models, and avoid the indirect function call for
@@ -199,7 +199,7 @@ struct AnalysisResultModel<IRUnitT, PassT, ResultT, PreservedAnalysesT,
   ResultT Result;
 };
 
-/// \brief Specialization of \c AnalysisResultModel which delegates invalidate
+/// Specialization of \c AnalysisResultModel which delegates invalidate
 /// handling to \c ResultT.
 template <typename IRUnitT, typename PassT, typename ResultT,
           typename PreservedAnalysesT, typename InvalidatorT>
@@ -223,7 +223,7 @@ struct AnalysisResultModel<IRUnitT, PassT, ResultT, PreservedAnalysesT,
     return *this;
   }
 
-  /// \brief The model delegates to the \c ResultT method.
+  /// The model delegates to the \c ResultT method.
   bool invalidate(IRUnitT &IR, const PreservedAnalysesT &PA,
                   InvalidatorT &Inv) override {
     return Result.invalidate(IR, PA, Inv);
@@ -232,7 +232,7 @@ struct AnalysisResultModel<IRUnitT, PassT, ResultT, PreservedAnalysesT,
   ResultT Result;
 };
 
-/// \brief Abstract concept of an analysis pass.
+/// Abstract concept of an analysis pass.
 ///
 /// This concept is parameterized over the IR unit that it can run over and
 /// produce an analysis result.
@@ -241,7 +241,7 @@ template <typename IRUnitT, typename PreservedAnalysesT, typename InvalidatorT,
 struct AnalysisPassConcept {
   virtual ~AnalysisPassConcept() = default;
 
-  /// \brief Method to run this analysis over a unit of IR.
+  /// Method to run this analysis over a unit of IR.
   /// \returns A unique_ptr to the analysis result object to be queried by
   /// users.
   virtual std::unique_ptr<
@@ -249,11 +249,11 @@ struct AnalysisPassConcept {
   run(IRUnitT &IR, AnalysisManager<IRUnitT, ExtraArgTs...> &AM,
       ExtraArgTs... ExtraArgs) = 0;
 
-  /// \brief Polymorphic method to access the name of a pass.
+  /// Polymorphic method to access the name of a pass.
   virtual StringRef name() = 0;
 };
 
-/// \brief Wrapper to model the analysis pass concept.
+/// Wrapper to model the analysis pass concept.
 ///
 /// Can wrap any type which implements a suitable \c run method. The method
 /// must accept an \c IRUnitT& and an \c AnalysisManager<IRUnitT>& as arguments
@@ -283,7 +283,7 @@ struct AnalysisPassModel : AnalysisPassConcept<IRUnitT, PreservedAnalysesT,
       AnalysisResultModel<IRUnitT, PassT, typename PassT::Result,
                           PreservedAnalysesT, InvalidatorT>;
 
-  /// \brief The model delegates to the \c PassT::run method.
+  /// The model delegates to the \c PassT::run method.
   ///
   /// The return is wrapped in an \c AnalysisResultModel.
   std::unique_ptr<
@@ -293,7 +293,7 @@ struct AnalysisPassModel : AnalysisPassConcept<IRUnitT, PreservedAnalysesT,
     return llvm::make_unique<ResultModelT>(Pass.run(IR, AM, ExtraArgs...));
   }
 
-  /// \brief The model delegates to a static \c PassT::name method.
+  /// The model delegates to a static \c PassT::name method.
   ///
   /// The returned string ref must point to constant immutable data!
   StringRef name() override { return PassT::name(); }

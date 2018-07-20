@@ -186,7 +186,7 @@ bar.exit:                                         ; preds = %for.cond.i, %for.bo
 ; MaxBECount should be the minimum of them.
 ;
 ; CHECK-LABEL: @two_mustexit
-; CHECK: Loop %for.body.i: <multiple exits> Unpredictable backedge-taken count.
+; CHECK: Loop %for.body.i: <multiple exits> backedge-taken count is 1
 ; CHECK: Loop %for.body.i: max backedge-taken count is 1
 define i32 @two_mustexit() {
 entry:

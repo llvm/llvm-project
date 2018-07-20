@@ -1,4 +1,5 @@
 ; RUN: opt -basicaa -functionattrs -S < %s | FileCheck %s
+; RUN: opt -aa-pipeline=basic-aa -passes=function-attrs -S < %s | FileCheck %s
 
 ; Atomic load/store to local doesn't affect whether a function is
 ; readnone/readonly.
@@ -19,5 +20,5 @@ entry:
   ret i32 %r
 }
 
-; CHECK: attributes #0 = { norecurse readnone ssp uwtable }
-; CHECK: attributes #1 = { norecurse ssp uwtable }
+; CHECK: attributes #0 = { norecurse nounwind readnone ssp uwtable }
+; CHECK: attributes #1 = { norecurse nounwind ssp uwtable }

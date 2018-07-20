@@ -50,7 +50,7 @@ protected:
 
     TestAnalyses(MemorySSATest &Test)
         : DT(*Test.F), AC(*Test.F), AA(Test.TLI),
-          BAA(Test.DL, Test.TLI, AC, &DT) {
+          BAA(Test.DL, *Test.F, Test.TLI, AC, &DT) {
       AA.addAAResult(BAA);
       MSSA = make_unique<MemorySSA>(*Test.F, &AA, &DT);
       Walker = MSSA->getWalker();
@@ -908,4 +908,294 @@ TEST_F(MemorySSATest, Irreducible) {
       LoadInst, nullptr, AfterLoopBB, MemorySSA::Beginning));
   Updater.insertUse(LoadAccess);
   MSSA.verifyMemorySSA();
+}
+
+TEST_F(MemorySSATest, MoveToBeforeLiveOnEntryInvalidatesCache) {
+  // Create:
+  //   %1 = alloca i8
+  //   ; 1 = MemoryDef(liveOnEntry)
+  //   store i8 0, i8* %1
+  //   ; 2 = MemoryDef(1)
+  //   store i8 0, i8* %1
+  //
+  // ...And be sure that MSSA's caching doesn't give us `1` for the clobber of
+  // `2` after `1` is removed.
+  IRBuilder<> B(C);
+  F = Function::Create(
+      FunctionType::get(B.getVoidTy(), {B.getInt8PtrTy()}, false),
+      GlobalValue::ExternalLinkage, "F", &M);
+
+  BasicBlock *Entry = BasicBlock::Create(C, "if", F);
+  B.SetInsertPoint(Entry);
+
+  Value *A = B.CreateAlloca(B.getInt8Ty());
+  StoreInst *StoreA = B.CreateStore(B.getInt8(0), A);
+  StoreInst *StoreB = B.CreateStore(B.getInt8(0), A);
+
+  setupAnalyses();
+
+  MemorySSA &MSSA = *Analyses->MSSA;
+
+  auto *DefA = cast<MemoryDef>(MSSA.getMemoryAccess(StoreA));
+  auto *DefB = cast<MemoryDef>(MSSA.getMemoryAccess(StoreB));
+
+  MemoryAccess *BClobber = MSSA.getWalker()->getClobberingMemoryAccess(DefB);
+  ASSERT_EQ(DefA, BClobber);
+
+  MemorySSAUpdater(&MSSA).removeMemoryAccess(DefA);
+  StoreA->eraseFromParent();
+
+  EXPECT_EQ(DefB->getDefiningAccess(), MSSA.getLiveOnEntryDef());
+
+  EXPECT_EQ(MSSA.getWalker()->getClobberingMemoryAccess(DefB),
+            MSSA.getLiveOnEntryDef())
+      << "(DefA = " << DefA << ")";
+}
+
+TEST_F(MemorySSATest, RemovingDefInvalidatesCache) {
+  // Create:
+  //   %x = alloca i8
+  //   %y = alloca i8
+  //   ; 1 = MemoryDef(liveOnEntry)
+  //   store i8 0, i8* %x
+  //   ; 2 = MemoryDef(1)
+  //   store i8 0, i8* %y
+  //   ; 3 = MemoryDef(2)
+  //   store i8 0, i8* %x
+  //
+  // And be sure that MSSA's caching handles the removal of def `1`
+  // appropriately.
+  IRBuilder<> B(C);
+  F = Function::Create(
+      FunctionType::get(B.getVoidTy(), {B.getInt8PtrTy()}, false),
+      GlobalValue::ExternalLinkage, "F", &M);
+
+  BasicBlock *Entry = BasicBlock::Create(C, "if", F);
+  B.SetInsertPoint(Entry);
+
+  Value *X = B.CreateAlloca(B.getInt8Ty());
+  Value *Y = B.CreateAlloca(B.getInt8Ty());
+  StoreInst *StoreX1 = B.CreateStore(B.getInt8(0), X);
+  StoreInst *StoreY = B.CreateStore(B.getInt8(0), Y);
+  StoreInst *StoreX2 = B.CreateStore(B.getInt8(0), X);
+
+  setupAnalyses();
+
+  MemorySSA &MSSA = *Analyses->MSSA;
+
+  auto *DefX1 = cast<MemoryDef>(MSSA.getMemoryAccess(StoreX1));
+  auto *DefY = cast<MemoryDef>(MSSA.getMemoryAccess(StoreY));
+  auto *DefX2 = cast<MemoryDef>(MSSA.getMemoryAccess(StoreX2));
+
+  EXPECT_EQ(DefX2->getDefiningAccess(), DefY);
+  MemoryAccess *X2Clobber = MSSA.getWalker()->getClobberingMemoryAccess(DefX2);
+  ASSERT_EQ(DefX1, X2Clobber);
+
+  MemorySSAUpdater(&MSSA).removeMemoryAccess(DefX1);
+  StoreX1->eraseFromParent();
+
+  EXPECT_EQ(DefX2->getDefiningAccess(), DefY);
+  EXPECT_EQ(MSSA.getWalker()->getClobberingMemoryAccess(DefX2),
+            MSSA.getLiveOnEntryDef())
+      << "(DefX1 = " << DefX1 << ")";
+}
+
+// Test Must alias for optimized uses
+TEST_F(MemorySSATest, TestLoadMustAlias) {
+  F = Function::Create(FunctionType::get(B.getVoidTy(), {}, false),
+                       GlobalValue::ExternalLinkage, "F", &M);
+  B.SetInsertPoint(BasicBlock::Create(C, "", F));
+  Type *Int8 = Type::getInt8Ty(C);
+  Value *AllocaA = B.CreateAlloca(Int8, ConstantInt::get(Int8, 1), "A");
+  Value *AllocaB = B.CreateAlloca(Int8, ConstantInt::get(Int8, 1), "B");
+
+  B.CreateStore(ConstantInt::get(Int8, 1), AllocaB);
+  // Check load from LOE
+  LoadInst *LA1 = B.CreateLoad(AllocaA, "");
+  // Check load alias cached for second load
+  LoadInst *LA2 = B.CreateLoad(AllocaA, "");
+
+  B.CreateStore(ConstantInt::get(Int8, 1), AllocaA);
+  // Check load from store/def
+  LoadInst *LA3 = B.CreateLoad(AllocaA, "");
+  // Check load alias cached for second load
+  LoadInst *LA4 = B.CreateLoad(AllocaA, "");
+
+  setupAnalyses();
+  MemorySSA &MSSA = *Analyses->MSSA;
+
+  unsigned I = 0;
+  for (LoadInst *V : {LA1, LA2}) {
+    MemoryUse *MemUse = dyn_cast_or_null<MemoryUse>(MSSA.getMemoryAccess(V));
+    EXPECT_EQ(MemUse->getOptimizedAccessType(), None)
+        << "Load " << I << " doesn't have the correct alias information";
+    // EXPECT_EQ expands such that if we increment I above, it won't get
+    // incremented except when we try to print the error message.
+    ++I;
+  }
+  for (LoadInst *V : {LA3, LA4}) {
+    MemoryUse *MemUse = dyn_cast_or_null<MemoryUse>(MSSA.getMemoryAccess(V));
+    EXPECT_EQ(MemUse->getOptimizedAccessType(), MustAlias)
+        << "Load " << I << " doesn't have the correct alias information";
+    // EXPECT_EQ expands such that if we increment I above, it won't get
+    // incremented except when we try to print the error message.
+    ++I;
+  }
+}
+
+// Test Must alias for optimized defs.
+TEST_F(MemorySSATest, TestStoreMustAlias) {
+  F = Function::Create(FunctionType::get(B.getVoidTy(), {}, false),
+                       GlobalValue::ExternalLinkage, "F", &M);
+  B.SetInsertPoint(BasicBlock::Create(C, "", F));
+  Type *Int8 = Type::getInt8Ty(C);
+  Value *AllocaA = B.CreateAlloca(Int8, ConstantInt::get(Int8, 1), "A");
+  Value *AllocaB = B.CreateAlloca(Int8, ConstantInt::get(Int8, 1), "B");
+  StoreInst *SA1 = B.CreateStore(ConstantInt::get(Int8, 1), AllocaA);
+  StoreInst *SB1 = B.CreateStore(ConstantInt::get(Int8, 1), AllocaB);
+  StoreInst *SA2 = B.CreateStore(ConstantInt::get(Int8, 2), AllocaA);
+  StoreInst *SB2 = B.CreateStore(ConstantInt::get(Int8, 2), AllocaB);
+  StoreInst *SA3 = B.CreateStore(ConstantInt::get(Int8, 3), AllocaA);
+  StoreInst *SB3 = B.CreateStore(ConstantInt::get(Int8, 3), AllocaB);
+
+  setupAnalyses();
+  MemorySSA &MSSA = *Analyses->MSSA;
+  MemorySSAWalker *Walker = Analyses->Walker;
+
+  unsigned I = 0;
+  for (StoreInst *V : {SA1, SB1, SA2, SB2, SA3, SB3}) {
+    MemoryDef *MemDef = dyn_cast_or_null<MemoryDef>(MSSA.getMemoryAccess(V));
+    EXPECT_EQ(MemDef->isOptimized(), false)
+        << "Store " << I << " is optimized from the start?";
+    EXPECT_EQ(MemDef->getOptimizedAccessType(), MayAlias)
+        << "Store " << I
+        << " has correct alias information before being optimized?";
+    if (V == SA1)
+      Walker->getClobberingMemoryAccess(V);
+    else {
+      MemoryAccess *Def = MemDef->getDefiningAccess();
+      MemoryAccess *Clob = Walker->getClobberingMemoryAccess(V);
+      EXPECT_NE(Def, Clob) << "Store " << I
+                           << " has Defining Access equal to Clobbering Access";
+    }
+    EXPECT_EQ(MemDef->isOptimized(), true)
+        << "Store " << I << " was not optimized";
+    if (I == 0 || I == 1)
+      EXPECT_EQ(MemDef->getOptimizedAccessType(), None)
+          << "Store " << I << " doesn't have the correct alias information";
+    else
+      EXPECT_EQ(MemDef->getOptimizedAccessType(), MustAlias)
+          << "Store " << I << " doesn't have the correct alias information";
+    // EXPECT_EQ expands such that if we increment I above, it won't get
+    // incremented except when we try to print the error message.
+    ++I;
+  }
+}
+
+// Test May alias for optimized uses.
+TEST_F(MemorySSATest, TestLoadMayAlias) {
+  F = Function::Create(FunctionType::get(B.getVoidTy(),
+                                         {B.getInt8PtrTy(), B.getInt8PtrTy()},
+                                         false),
+                       GlobalValue::ExternalLinkage, "F", &M);
+  B.SetInsertPoint(BasicBlock::Create(C, "", F));
+  Type *Int8 = Type::getInt8Ty(C);
+  auto *ArgIt = F->arg_begin();
+  Argument *PointerA = &*ArgIt;
+  Argument *PointerB = &*(++ArgIt);
+  B.CreateStore(ConstantInt::get(Int8, 1), PointerB);
+  LoadInst *LA1 = B.CreateLoad(PointerA, "");
+  B.CreateStore(ConstantInt::get(Int8, 0), PointerA);
+  LoadInst *LB1 = B.CreateLoad(PointerB, "");
+  B.CreateStore(ConstantInt::get(Int8, 0), PointerA);
+  LoadInst *LA2 = B.CreateLoad(PointerA, "");
+  B.CreateStore(ConstantInt::get(Int8, 0), PointerB);
+  LoadInst *LB2 = B.CreateLoad(PointerB, "");
+
+  setupAnalyses();
+  MemorySSA &MSSA = *Analyses->MSSA;
+
+  unsigned I = 0;
+  for (LoadInst *V : {LA1, LB1}) {
+    MemoryUse *MemUse = dyn_cast_or_null<MemoryUse>(MSSA.getMemoryAccess(V));
+    EXPECT_EQ(MemUse->getOptimizedAccessType(), MayAlias)
+        << "Load " << I << " doesn't have the correct alias information";
+    // EXPECT_EQ expands such that if we increment I above, it won't get
+    // incremented except when we try to print the error message.
+    ++I;
+  }
+  for (LoadInst *V : {LA2, LB2}) {
+    MemoryUse *MemUse = dyn_cast_or_null<MemoryUse>(MSSA.getMemoryAccess(V));
+    EXPECT_EQ(MemUse->getOptimizedAccessType(), MustAlias)
+        << "Load " << I << " doesn't have the correct alias information";
+    // EXPECT_EQ expands such that if we increment I above, it won't get
+    // incremented except when we try to print the error message.
+    ++I;
+  }
+}
+
+// Test May alias for optimized defs.
+TEST_F(MemorySSATest, TestStoreMayAlias) {
+  F = Function::Create(FunctionType::get(B.getVoidTy(),
+                                         {B.getInt8PtrTy(), B.getInt8PtrTy()},
+                                         false),
+                       GlobalValue::ExternalLinkage, "F", &M);
+  B.SetInsertPoint(BasicBlock::Create(C, "", F));
+  Type *Int8 = Type::getInt8Ty(C);
+  auto *ArgIt = F->arg_begin();
+  Argument *PointerA = &*ArgIt;
+  Argument *PointerB = &*(++ArgIt);
+  Value *AllocaC = B.CreateAlloca(Int8, ConstantInt::get(Int8, 1), "C");
+  // Store into arg1, must alias because it's LOE => must
+  StoreInst *SA1 = B.CreateStore(ConstantInt::get(Int8, 0), PointerA);
+  // Store into arg2, may alias store to arg1 => may
+  StoreInst *SB1 = B.CreateStore(ConstantInt::get(Int8, 1), PointerB);
+  // Store into aloca, no alias with args, so must alias LOE => must
+  StoreInst *SC1 = B.CreateStore(ConstantInt::get(Int8, 2), AllocaC);
+  // Store into arg1, may alias store to arg2 => may
+  StoreInst *SA2 = B.CreateStore(ConstantInt::get(Int8, 3), PointerA);
+  // Store into arg2, may alias store to arg1 => may
+  StoreInst *SB2 = B.CreateStore(ConstantInt::get(Int8, 4), PointerB);
+  // Store into aloca, no alias with args, so must alias SC1 => must
+  StoreInst *SC2 = B.CreateStore(ConstantInt::get(Int8, 5), AllocaC);
+  // Store into arg2, must alias store to arg2 => must
+  StoreInst *SB3 = B.CreateStore(ConstantInt::get(Int8, 6), PointerB);
+  std::initializer_list<StoreInst *> Sts = {SA1, SB1, SC1, SA2, SB2, SC2, SB3};
+
+  setupAnalyses();
+  MemorySSA &MSSA = *Analyses->MSSA;
+  MemorySSAWalker *Walker = Analyses->Walker;
+
+  unsigned I = 0;
+  for (StoreInst *V : Sts) {
+    MemoryDef *MemDef = dyn_cast_or_null<MemoryDef>(MSSA.getMemoryAccess(V));
+    EXPECT_EQ(MemDef->isOptimized(), false)
+        << "Store " << I << " is optimized from the start?";
+    EXPECT_EQ(MemDef->getOptimizedAccessType(), MayAlias)
+        << "Store " << I
+        << " has correct alias information before being optimized?";
+    ++I;
+  }
+
+  for (StoreInst *V : Sts)
+    Walker->getClobberingMemoryAccess(V);
+
+  I = 0;
+  for (StoreInst *V : Sts) {
+    MemoryDef *MemDef = dyn_cast_or_null<MemoryDef>(MSSA.getMemoryAccess(V));
+    EXPECT_EQ(MemDef->isOptimized(), true)
+        << "Store " << I << " was not optimized";
+    if (I == 1 || I == 3 || I == 4)
+      EXPECT_EQ(MemDef->getOptimizedAccessType(), MayAlias)
+          << "Store " << I << " doesn't have the correct alias information";
+    else if (I == 0 || I == 2)
+      EXPECT_EQ(MemDef->getOptimizedAccessType(), None)
+          << "Store " << I << " doesn't have the correct alias information";
+    else
+      EXPECT_EQ(MemDef->getOptimizedAccessType(), MustAlias)
+          << "Store " << I << " doesn't have the correct alias information";
+    // EXPECT_EQ expands such that if we increment I above, it won't get
+    // incremented except when we try to print the error message.
+    ++I;
+  }
 }

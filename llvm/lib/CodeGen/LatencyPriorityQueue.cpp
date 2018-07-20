@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/LatencyPriorityQueue.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
@@ -139,3 +140,14 @@ void LatencyPriorityQueue::remove(SUnit *SU) {
     std::swap(*I, Queue.back());
   Queue.pop_back();
 }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void LatencyPriorityQueue::dump(ScheduleDAG *DAG) const {
+  dbgs() << "Latency Priority Queue\n";
+  dbgs() << "  Number of Queue Entries: " << Queue.size() << "\n";
+  for (auto const &SU : Queue) {
+    dbgs() << "    ";
+    SU->dump(DAG);
+  }
+}
+#endif

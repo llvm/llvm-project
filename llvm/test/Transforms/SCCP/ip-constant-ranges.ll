@@ -141,3 +141,29 @@ define double @test_struct({ double, double } %test) {
     %r = fmul double %v, %v
     ret double %r
 }
+
+; Constant range for %x is [47, 302)
+; CHECK-LABEL: @f5
+; CHECK-NEXT: entry:
+; CHECK-NEXT: %res1 = select i1 undef, i32 1, i32 2
+; CHECK-NEXT: %res2 = select i1 undef, i32 3, i32 4
+; CHECK-NEXT: %res = add i32 %res1, %res2
+; CHECK-NEXT: ret i32 %res
+define internal i32 @f5(i32 %x) {
+entry:
+  %cmp = icmp sgt i32 %x, undef
+  %cmp2 = icmp ne i32 undef, %x
+  %res1 = select i1 %cmp, i32 1, i32 2
+  %res2 = select i1 %cmp2, i32 3, i32 4
+
+  %res = add i32 %res1, %res2
+  ret i32 %res
+}
+
+define i32 @caller4() {
+entry:
+  %call1 = tail call i32 @f5(i32 47)
+  %call2 = tail call i32 @f5(i32 301)
+  %res = add nsw i32 %call1, %call2
+  ret i32 %res
+}

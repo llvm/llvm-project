@@ -21,9 +21,9 @@
 ; }
 
 ; CHECK-LABEL: _Z10get_stringv:
-; CHECK: #DEBUG_VALUE: get_string:result <- [%rdi+0]
+; CHECK: #DEBUG_VALUE: get_string:result <- [$rdi+0]
 ; CHECK: movq   %rdi, [[OFFS:[0-9]+]](%rsp)          # 8-byte Spill
-; CHECK: #DEBUG_VALUE: get_string:result <- [DW_OP_plus_uconst [[OFFS]], DW_OP_deref] [%rsp+0]
+; CHECK: #DEBUG_VALUE: get_string:result <- [DW_OP_plus_uconst [[OFFS]], DW_OP_deref] [$rsp+0]
 ; CHECK: callq  _ZN6stringC1Ei
 ; CHECK: #APP
 ; CHECK: #NO_APP
@@ -77,7 +77,7 @@ attributes #3 = { nounwind }
 !4 = !{i32 2, !"Debug Info Version", i32 3}
 !5 = !{i32 1, !"wchar_size", i32 4}
 !6 = !{!"clang version 6.0.0 "}
-!7 = distinct !DISubprogram(name: "get_string", linkageName: "_Z10get_stringv", scope: !1, file: !1, line: 13, type: !8, isLocal: false, isDefinition: true, scopeLine: 13, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !22)
+!7 = distinct !DISubprogram(name: "get_string", linkageName: "_Z10get_stringv", scope: !1, file: !1, line: 13, type: !8, isLocal: false, isDefinition: true, scopeLine: 13, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !22)
 !8 = !DISubroutineType(types: !9)
 !9 = !{!10}
 !10 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "string", file: !1, line: 7, size: 32, elements: !11, identifier: "_ZTS6string")

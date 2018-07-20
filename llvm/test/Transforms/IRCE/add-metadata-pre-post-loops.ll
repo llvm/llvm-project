@@ -1,4 +1,5 @@
 ; RUN: opt -irce -S < %s 2>&1 | FileCheck %s
+; RUN: opt -passes='require<branch-prob>,loop(irce)' -S < %s 2>&1 | FileCheck %s
 
 ; test that the pre and post loops have loop metadata which disables any further
 ; loop optimizations.

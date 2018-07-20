@@ -1,0 +1,40 @@
+# RUN: llc --mtriple=amdgcn--amdhsa -mcpu=fiji -verify-machineinstrs -run-pass si-fold-operands,si-shrink-instructions %s -o - | FileCheck %s
+--- |
+  define amdgpu_kernel void @test() #0 {
+    ret void
+  }
+
+  attributes #0 = { nounwind }
+
+...
+---
+
+# This used to crash / trigger an assertion, because re-scanning the use list
+# after constant-folding the definition of %3 lead to the definition of %2
+# being processed twice.
+
+# CHECK-LABEL: name: test
+# CHECK: %2:vgpr_32 = V_LSHLREV_B32_e32 2, killed %0, implicit $exec
+# CHECK: %4:vgpr_32 = V_AND_B32_e32 8, killed %2, implicit $exec
+
+name:            test
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vgpr_32 }
+  - { id: 1, class: sreg_32 }
+  - { id: 2, class: vgpr_32 }
+  - { id: 3, class: sreg_32 }
+  - { id: 4, class: vgpr_32 }
+  - { id: 5, class: sreg_128 }
+body:             |
+  bb.0 (%ir-block.0):
+    %0 = IMPLICIT_DEF
+    %1 = S_MOV_B32 2
+    %2 = V_LSHLREV_B32_e64 %1, killed %0, implicit $exec
+    %3 = S_LSHL_B32 %1, killed %1, implicit-def dead $scc
+    %4 = V_AND_B32_e64 killed %2, killed %3, implicit $exec
+    %5 = IMPLICIT_DEF
+    BUFFER_STORE_DWORD_OFFSET killed %4, killed %5, 0, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM
+
+...

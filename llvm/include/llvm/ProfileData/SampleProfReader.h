@@ -235,7 +235,7 @@ class raw_ostream;
 
 namespace sampleprof {
 
-/// \brief Sample-based profile reader.
+/// Sample-based profile reader.
 ///
 /// Each profile contains sample counts for all the functions
 /// executed. Inside each function, statements are annotated with the
@@ -264,105 +264,113 @@ namespace sampleprof {
 /// compact and I/O efficient. They can both be used interchangeably.
 class SampleProfileReader {
 public:
-  SampleProfileReader(std::unique_ptr<MemoryBuffer> B, LLVMContext &C)
-      : Profiles(0), Ctx(C), Buffer(std::move(B)) {}
+  SampleProfileReader(std::unique_ptr<MemoryBuffer> B, LLVMContext &C,
+                      SampleProfileFormat Format = SPF_None)
+      : Profiles(0), Ctx(C), Buffer(std::move(B)), Format(Format) {}
 
   virtual ~SampleProfileReader() = default;
 
-  /// \brief Read and validate the file header.
+  /// Read and validate the file header.
   virtual std::error_code readHeader() = 0;
 
-  /// \brief Read sample profiles from the associated file.
+  /// Read sample profiles from the associated file.
   virtual std::error_code read() = 0;
 
-  /// \brief Print the profile for \p FName on stream \p OS.
+  /// Print the profile for \p FName on stream \p OS.
   void dumpFunctionProfile(StringRef FName, raw_ostream &OS = dbgs());
 
-  /// \brief Print all the profiles on stream \p OS.
+  /// Print all the profiles on stream \p OS.
   void dump(raw_ostream &OS = dbgs());
 
-  /// \brief Return the samples collected for function \p F.
+  /// Return the samples collected for function \p F.
   FunctionSamples *getSamplesFor(const Function &F) {
     // The function name may have been updated by adding suffix. In sample
     // profile, the function names are all stripped, so we need to strip
     // the function name suffix before matching with profile.
-    if (Profiles.count(F.getName().split('.').first))
-      return &Profiles[(F.getName().split('.').first)];
+    StringRef Fname = F.getName().split('.').first;
+    std::string FGUID;
+    Fname = getRepInFormat(Fname, getFormat(), FGUID);
+    if (Profiles.count(Fname))
+      return &Profiles[Fname];
     return nullptr;
   }
 
-  /// \brief Return all the profiles.
+  /// Return all the profiles.
   StringMap<FunctionSamples> &getProfiles() { return Profiles; }
 
-  /// \brief Report a parse error message.
+  /// Report a parse error message.
   void reportError(int64_t LineNumber, Twine Msg) const {
     Ctx.diagnose(DiagnosticInfoSampleProfile(Buffer->getBufferIdentifier(),
                                              LineNumber, Msg));
   }
 
-  /// \brief Create a sample profile reader appropriate to the file format.
+  /// Create a sample profile reader appropriate to the file format.
   static ErrorOr<std::unique_ptr<SampleProfileReader>>
   create(const Twine &Filename, LLVMContext &C);
 
-  /// \brief Create a sample profile reader from the supplied memory buffer.
+  /// Create a sample profile reader from the supplied memory buffer.
   static ErrorOr<std::unique_ptr<SampleProfileReader>>
   create(std::unique_ptr<MemoryBuffer> &B, LLVMContext &C);
 
-  /// \brief Return the profile summary.
+  /// Return the profile summary.
   ProfileSummary &getSummary() { return *(Summary.get()); }
 
+  /// \brief Return the profile format.
+  SampleProfileFormat getFormat() { return Format; }
+
 protected:
-  /// \brief Map every function to its associated profile.
+  /// Map every function to its associated profile.
   ///
   /// The profile of every function executed at runtime is collected
   /// in the structure FunctionSamples. This maps function objects
   /// to their corresponding profiles.
   StringMap<FunctionSamples> Profiles;
 
-  /// \brief LLVM context used to emit diagnostics.
+  /// LLVM context used to emit diagnostics.
   LLVMContext &Ctx;
 
-  /// \brief Memory buffer holding the profile file.
+  /// Memory buffer holding the profile file.
   std::unique_ptr<MemoryBuffer> Buffer;
 
-  /// \brief Profile summary information.
+  /// Profile summary information.
   std::unique_ptr<ProfileSummary> Summary;
 
-  /// \brief Compute summary for this profile.
+  /// Compute summary for this profile.
   void computeSummary();
+
+  /// \brief The format of sample.
+  SampleProfileFormat Format = SPF_None;
 };
 
 class SampleProfileReaderText : public SampleProfileReader {
 public:
   SampleProfileReaderText(std::unique_ptr<MemoryBuffer> B, LLVMContext &C)
-      : SampleProfileReader(std::move(B), C) {}
+      : SampleProfileReader(std::move(B), C, SPF_Text) {}
 
-  /// \brief Read and validate the file header.
+  /// Read and validate the file header.
   std::error_code readHeader() override { return sampleprof_error::success; }
 
-  /// \brief Read sample profiles from the associated file.
+  /// Read sample profiles from the associated file.
   std::error_code read() override;
 
-  /// \brief Return true if \p Buffer is in the format supported by this class.
+  /// Return true if \p Buffer is in the format supported by this class.
   static bool hasFormat(const MemoryBuffer &Buffer);
 };
 
 class SampleProfileReaderBinary : public SampleProfileReader {
 public:
-  SampleProfileReaderBinary(std::unique_ptr<MemoryBuffer> B, LLVMContext &C)
-      : SampleProfileReader(std::move(B), C) {}
+  SampleProfileReaderBinary(std::unique_ptr<MemoryBuffer> B, LLVMContext &C,
+                            SampleProfileFormat Format = SPF_None)
+      : SampleProfileReader(std::move(B), C, Format) {}
 
-  /// \brief Read and validate the file header.
+  /// Read and validate the file header.
   std::error_code readHeader() override;
 
-  /// \brief Read sample profiles from the associated file.
+  /// Read sample profiles from the associated file.
   std::error_code read() override;
 
-  /// \brief Return true if \p Buffer is in the format supported by this class.
-  static bool hasFormat(const MemoryBuffer &Buffer);
-
 protected:
-  /// \brief Read a numeric value of type T from the profile.
+  /// Read a numeric value of type T from the profile.
   ///
   /// If an error occurs during decoding, a diagnostic message is emitted and
   /// EC is set.
@@ -370,7 +378,7 @@ protected:
   /// \returns the read value.
   template <typename T> ErrorOr<T> readNumber();
 
-  /// \brief Read a string from the profile.
+  /// Read a string from the profile.
   ///
   /// If an error occurs during decoding, a diagnostic message is emitted and
   /// EC is set.
@@ -378,29 +386,68 @@ protected:
   /// \returns the read value.
   ErrorOr<StringRef> readString();
 
-  /// Read a string indirectly via the name table.
-  ErrorOr<StringRef> readStringFromTable();
+  /// Read the string index and check whether it overflows the table.
+  template <typename T> inline ErrorOr<uint32_t> readStringIndex(T &Table);
 
-  /// \brief Return true if we've reached the end of file.
+  /// Return true if we've reached the end of file.
   bool at_eof() const { return Data >= End; }
 
   /// Read the contents of the given profile instance.
   std::error_code readProfile(FunctionSamples &FProfile);
 
-  /// \brief Points to the current location in the buffer.
+  /// Points to the current location in the buffer.
   const uint8_t *Data = nullptr;
 
-  /// \brief Points to the end of the buffer.
+  /// Points to the end of the buffer.
   const uint8_t *End = nullptr;
-
-  /// Function name table.
-  std::vector<StringRef> NameTable;
 
 private:
   std::error_code readSummaryEntry(std::vector<ProfileSummaryEntry> &Entries);
+  virtual std::error_code verifySPMagic(uint64_t Magic) = 0;
 
-  /// \brief Read profile summary.
+  /// Read profile summary.
   std::error_code readSummary();
+
+  /// Read the whole name table.
+  virtual std::error_code readNameTable() = 0;
+
+  /// Read a string indirectly via the name table.
+  virtual ErrorOr<StringRef> readStringFromTable() = 0;
+};
+
+class SampleProfileReaderRawBinary : public SampleProfileReaderBinary {
+private:
+  /// Function name table.
+  std::vector<StringRef> NameTable;
+  virtual std::error_code verifySPMagic(uint64_t Magic) override;
+  virtual std::error_code readNameTable() override;
+  /// Read a string indirectly via the name table.
+  virtual ErrorOr<StringRef> readStringFromTable() override;
+
+public:
+  SampleProfileReaderRawBinary(std::unique_ptr<MemoryBuffer> B, LLVMContext &C)
+      : SampleProfileReaderBinary(std::move(B), C, SPF_Binary) {}
+
+  /// \brief Return true if \p Buffer is in the format supported by this class.
+  static bool hasFormat(const MemoryBuffer &Buffer);
+};
+
+class SampleProfileReaderCompactBinary : public SampleProfileReaderBinary {
+private:
+  /// Function name table.
+  std::vector<std::string> NameTable;
+  virtual std::error_code verifySPMagic(uint64_t Magic) override;
+  virtual std::error_code readNameTable() override;
+  /// Read a string indirectly via the name table.
+  virtual ErrorOr<StringRef> readStringFromTable() override;
+
+public:
+  SampleProfileReaderCompactBinary(std::unique_ptr<MemoryBuffer> B,
+                                   LLVMContext &C)
+      : SampleProfileReaderBinary(std::move(B), C, SPF_Compact_Binary) {}
+
+  /// \brief Return true if \p Buffer is in the format supported by this class.
+  static bool hasFormat(const MemoryBuffer &Buffer);
 };
 
 using InlineCallStack = SmallVector<FunctionSamples *, 10>;
@@ -421,15 +468,16 @@ enum HistType {
 class SampleProfileReaderGCC : public SampleProfileReader {
 public:
   SampleProfileReaderGCC(std::unique_ptr<MemoryBuffer> B, LLVMContext &C)
-      : SampleProfileReader(std::move(B), C), GcovBuffer(Buffer.get()) {}
+      : SampleProfileReader(std::move(B), C, SPF_GCC),
+        GcovBuffer(Buffer.get()) {}
 
-  /// \brief Read and validate the file header.
+  /// Read and validate the file header.
   std::error_code readHeader() override;
 
-  /// \brief Read sample profiles from the associated file.
+  /// Read sample profiles from the associated file.
   std::error_code read() override;
 
-  /// \brief Return true if \p Buffer is in the format supported by this class.
+  /// Return true if \p Buffer is in the format supported by this class.
   static bool hasFormat(const MemoryBuffer &Buffer);
 
 protected:
@@ -441,7 +489,7 @@ protected:
   template <typename T> ErrorOr<T> readNumber();
   ErrorOr<StringRef> readString();
 
-  /// \brief Read the section tag and check that it's the same as \p Expected.
+  /// Read the section tag and check that it's the same as \p Expected.
   std::error_code readSectionTag(uint32_t Expected);
 
   /// GCOV buffer containing the profile.

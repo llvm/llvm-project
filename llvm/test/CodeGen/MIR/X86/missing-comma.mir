@@ -13,7 +13,7 @@ name:            foo
 body: |
   bb.0.entry:
     ; CHECK: [[@LINE+1]]:25: expected ',' before the next machine operand
-    %eax = XOR32rr %eax %eflags
-    RETQ %eax
+    $eax = XOR32rr $eax $eflags
+    RETQ $eax
 ...
 

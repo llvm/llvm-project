@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=fiji -mattr=-flat-for-global | FileCheck --check-prefix=GCN %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=fiji -mattr=-flat-for-global -amdgpu-load-store-vectorizer=0 | FileCheck --check-prefix=GCN %s
 
 ; Check that the waitcnt insertion algorithm correctly propagates wait counts
 ; from before a loop to the loop header.
@@ -17,24 +17,24 @@
 
 define amdgpu_kernel void @testKernel(i32 addrspace(1)* nocapture %arg) local_unnamed_addr #0 {
 bb:
-  store <2 x float> <float 1.000000e+00, float 1.000000e+00>, <2 x float> addrspace(4)* bitcast (float addrspace(4)* getelementptr ([100 x float], [100 x float] addrspace(4)* addrspacecast ([100 x float] addrspace(1)* @data_generic to [100 x float] addrspace(4)*), i64 0, i64 4) to <2 x float> addrspace(4)*), align 4
-  store <2 x float> <float 1.000000e+00, float 1.000000e+00>, <2 x float> addrspace(4)* bitcast (float addrspace(4)* getelementptr ([100 x float], [100 x float] addrspace(4)* addrspacecast ([100 x float] addrspace(1)* @data_reference to [100 x float] addrspace(4)*), i64 0, i64 4) to <2 x float> addrspace(4)*), align 4
+  store <2 x float> <float 1.000000e+00, float 1.000000e+00>, <2 x float>* bitcast (float* getelementptr ([100 x float], [100 x float]* addrspacecast ([100 x float] addrspace(1)* @data_generic to [100 x float]*), i64 0, i64 4) to <2 x float>*), align 4
+  store <2 x float> <float 1.000000e+00, float 1.000000e+00>, <2 x float>* bitcast (float* getelementptr ([100 x float], [100 x float]* addrspacecast ([100 x float] addrspace(1)* @data_reference to [100 x float]*), i64 0, i64 4) to <2 x float>*), align 4
   br label %bb18
 
 bb1:                                              ; preds = %bb18
-  %tmp = tail call i8 addrspace(2)* @llvm.amdgcn.dispatch.ptr()
+  %tmp = tail call i8 addrspace(4)* @llvm.amdgcn.dispatch.ptr()
   %tmp2 = tail call i32 @llvm.amdgcn.workitem.id.x()
   %tmp3 = tail call i32 @llvm.amdgcn.workgroup.id.x()
-  %tmp4 = getelementptr inbounds i8, i8 addrspace(2)* %tmp, i64 4
-  %tmp5 = bitcast i8 addrspace(2)* %tmp4 to i16 addrspace(2)*
-  %tmp6 = load i16, i16 addrspace(2)* %tmp5, align 4
+  %tmp4 = getelementptr inbounds i8, i8 addrspace(4)* %tmp, i64 4
+  %tmp5 = bitcast i8 addrspace(4)* %tmp4 to i16 addrspace(4)*
+  %tmp6 = load i16, i16 addrspace(4)* %tmp5, align 4
   %tmp7 = zext i16 %tmp6 to i32
   %tmp8 = mul i32 %tmp3, %tmp7
   %tmp9 = add i32 %tmp8, %tmp2
-  %tmp10 = tail call i8 addrspace(2)* @llvm.amdgcn.implicitarg.ptr()
+  %tmp10 = tail call i8 addrspace(4)* @llvm.amdgcn.implicitarg.ptr()
   %tmp11 = zext i32 %tmp9 to i64
-  %tmp12 = bitcast i8 addrspace(2)* %tmp10 to i64 addrspace(2)*
-  %tmp13 = load i64, i64 addrspace(2)* %tmp12, align 8
+  %tmp12 = bitcast i8 addrspace(4)* %tmp10 to i64 addrspace(4)*
+  %tmp13 = load i64, i64 addrspace(4)* %tmp12, align 8
   %tmp14 = add i64 %tmp13, %tmp11
   %tmp15 = zext i1 %tmp99 to i32
   %tmp16 = and i64 %tmp14, 4294967295
@@ -131,7 +131,7 @@ bb18:                                             ; preds = %bb18, %bb
 }
 
 ; Function Attrs: nounwind readnone speculatable
-declare i8 addrspace(2)* @llvm.amdgcn.dispatch.ptr() #1
+declare i8 addrspace(4)* @llvm.amdgcn.dispatch.ptr() #1
 
 ; Function Attrs: nounwind readnone speculatable
 declare i32 @llvm.amdgcn.workitem.id.x() #1
@@ -140,7 +140,7 @@ declare i32 @llvm.amdgcn.workitem.id.x() #1
 declare i32 @llvm.amdgcn.workgroup.id.x() #1
 
 ; Function Attrs: nounwind readnone speculatable
-declare i8 addrspace(2)* @llvm.amdgcn.implicitarg.ptr() #1
+declare i8 addrspace(4)* @llvm.amdgcn.implicitarg.ptr() #1
 
 attributes #0 = { "target-cpu"="fiji" "target-features"="-flat-for-global" }
 attributes #1 = { nounwind readnone speculatable }

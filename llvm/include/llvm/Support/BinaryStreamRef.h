@@ -147,7 +147,7 @@ protected:
   Optional<uint32_t> Length;
 };
 
-/// \brief BinaryStreamRef is to BinaryStream what ArrayRef is to an Array.  It
+/// BinaryStreamRef is to BinaryStream what ArrayRef is to an Array.  It
 /// provides copy-semantics and read only access to a "window" of the underlying
 /// BinaryStream. Note that BinaryStreamRef is *not* a BinaryStream.  That is to
 /// say, it does not inherit and override the methods of BinaryStream.  In
@@ -266,7 +266,7 @@ public:
   /// Conver this WritableBinaryStreamRef to a read-only BinaryStreamRef.
   operator BinaryStreamRef() const;
 
-  /// \brief For buffered streams, commits changes to the backing store.
+  /// For buffered streams, commits changes to the backing store.
   Error commit();
 };
 

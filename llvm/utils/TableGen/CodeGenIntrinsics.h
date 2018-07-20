@@ -15,7 +15,7 @@
 #define LLVM_UTILS_TABLEGEN_CODEGENINTRINSICS_H
 
 #include "SDNodeProperties.h"
-#include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/Support/MachineValueType.h"
 #include <string>
 #include <vector>
 

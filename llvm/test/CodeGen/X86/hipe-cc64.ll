@@ -87,6 +87,7 @@ define cc 11 { i64, i64, i64 } @tailcaller(i64 %hp, i64 %p) #0 {
   ; CHECK-NEXT: movl	$47, %ecx
   ; CHECK-NEXT: movl	$63, %r8d
   ; CHECK-NEXT: popq	%rax
+  ; CHECK-NEXT: .cfi_def_cfa_offset 16
   ; CHECK-NEXT: jmp	tailcallee
   %ret = tail call cc11 { i64, i64, i64 } @tailcallee(i64 %hp, i64 %p, i64 15,
      i64 31, i64 47, i64 63, i64 79) #1

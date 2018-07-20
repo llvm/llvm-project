@@ -20,7 +20,7 @@ namespace llvm {
 
 using namespace coverage;
 
-/// \brief A coverage printer for text output.
+/// A coverage printer for text output.
 class CoveragePrinterText : public CoveragePrinter {
 public:
   Expected<OwnedStream> createViewFile(StringRef Path,
@@ -36,7 +36,7 @@ public:
       : CoveragePrinter(Opts) {}
 };
 
-/// \brief A code coverage view which supports text-based rendering.
+/// A code coverage view which supports text-based rendering.
 class SourceCoverageViewText : public SourceCoverageView {
   void renderViewHeader(raw_ostream &OS) override;
 

@@ -1,7 +1,7 @@
-# RUN: llc -O0 -mtriple arm-linux -relocation-model=pic -mattr=+no-movt -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=CHECK,ELF
-# RUN: llc -O0 -mtriple arm-linux -relocation-model=pic -mattr=-no-movt,+v8m -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=CHECK,ELF
-# RUN: llc -O0 -mtriple arm-darwin -relocation-model=pic -mattr=+no-movt -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=CHECK,DARWIN-NOMOVT
-# RUN: llc -O0 -mtriple arm-darwin -relocation-model=pic -mattr=-no-movt,+v8m -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=CHECK,DARWIN-MOVT
+# RUN: llc -O0 -mtriple arm-linux -relocation-model=pic -mattr=+no-movt -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=CHECK,ELF
+# RUN: llc -O0 -mtriple arm-linux -relocation-model=pic -mattr=-no-movt,+v8m -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=CHECK,ELF
+# RUN: llc -O0 -mtriple arm-darwin -relocation-model=pic -mattr=+no-movt -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=CHECK,DARWIN-NOMOVT
+# RUN: llc -O0 -mtriple arm-darwin -relocation-model=pic -mattr=-no-movt,+v8m -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=CHECK,DARWIN-MOVT
 --- |
   @internal_global = internal global i32 42
   define void @test_internal_global() { ret void }
@@ -33,13 +33,13 @@ body:             |
     ; ELF: [[G:%[0-9]+]]:gpr = LDRLIT_ga_pcrel {{.*}}@internal_global
 
     %1(s32) = G_LOAD %0(p0) :: (load 4 from @internal_global)
-    ; CHECK: [[V:%[0-9]+]]:gpr = LDRi12 [[G]], 0, 14, %noreg :: (load 4 from @internal_global)
+    ; CHECK: [[V:%[0-9]+]]:gpr = LDRi12 [[G]], 0, 14, $noreg :: (load 4 from @internal_global)
 
-    %r0 = COPY %1(s32)
-    ; CHECK: %r0 = COPY [[V]]
+    $r0 = COPY %1(s32)
+    ; CHECK: $r0 = COPY [[V]]
 
-    BX_RET 14, %noreg, implicit %r0
-    ; CHECK: BX_RET 14, %noreg, implicit %r0
+    BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14, $noreg, implicit $r0
 ...
 ---
 name:            test_external_global
@@ -56,16 +56,16 @@ body:             |
     %0(p0) = G_GLOBAL_VALUE @external_global
     ; DARWIN-MOVT: [[G:%[0-9]+]]:gpr = MOV_ga_pcrel_ldr {{.*}} @external_global :: (load 4 from got)
     ; DARWIN-NOMOVT: [[G:%[0-9]+]]:gpr = LDRLIT_ga_pcrel_ldr {{.*}}@external_global :: (load 4 from got)
-    ; ELF: [[G:%[0-9]+]]:gpr = LDRLIT_ga_pcrel_ldr target-flags(<unknown>) @external_global :: (load 4 from got)
+    ; ELF: [[G:%[0-9]+]]:gpr = LDRLIT_ga_pcrel_ldr target-flags(arm-got) @external_global :: (load 4 from got)
 
     %1(s32) = G_LOAD %0(p0) :: (load 4 from @external_global)
-    ; CHECK: [[V:%[0-9]+]]:gpr = LDRi12 [[G]], 0, 14, %noreg :: (load 4 from @external_global)
+    ; CHECK: [[V:%[0-9]+]]:gpr = LDRi12 [[G]], 0, 14, $noreg :: (load 4 from @external_global)
 
-    %r0 = COPY %1(s32)
-    ; CHECK: %r0 = COPY [[V]]
+    $r0 = COPY %1(s32)
+    ; CHECK: $r0 = COPY [[V]]
 
-    BX_RET 14, %noreg, implicit %r0
-    ; CHECK: BX_RET 14, %noreg, implicit %r0
+    BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14, $noreg, implicit $r0
 ...
 ---
 name:            test_internal_constant
@@ -85,13 +85,13 @@ body:             |
     ; ELF: [[G:%[0-9]+]]:gpr = LDRLIT_ga_pcrel {{.*}}@internal_constant
 
     %1(s32) = G_LOAD %0(p0) :: (load 4 from @internal_constant)
-    ; CHECK: [[V:%[0-9]+]]:gpr = LDRi12 [[G]], 0, 14, %noreg :: (load 4 from @internal_constant)
+    ; CHECK: [[V:%[0-9]+]]:gpr = LDRi12 [[G]], 0, 14, $noreg :: (load 4 from @internal_constant)
 
-    %r0 = COPY %1(s32)
-    ; CHECK: %r0 = COPY [[V]]
+    $r0 = COPY %1(s32)
+    ; CHECK: $r0 = COPY [[V]]
 
-    BX_RET 14, %noreg, implicit %r0
-    ; CHECK: BX_RET 14, %noreg, implicit %r0
+    BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14, $noreg, implicit $r0
 ...
 ---
 name:            test_external_constant
@@ -108,14 +108,14 @@ body:             |
     %0(p0) = G_GLOBAL_VALUE @external_constant
     ; DARWIN-MOVT: [[G:%[0-9]+]]:gpr = MOV_ga_pcrel_ldr {{.*}} @external_constant :: (load 4 from got)
     ; DARWIN-NOMOVT: [[G:%[0-9]+]]:gpr = LDRLIT_ga_pcrel_ldr {{.*}}@external_constant :: (load 4 from got)
-    ; ELF: [[G:%[0-9]+]]:gpr = LDRLIT_ga_pcrel_ldr target-flags(<unknown>) @external_constant :: (load 4 from got)
+    ; ELF: [[G:%[0-9]+]]:gpr = LDRLIT_ga_pcrel_ldr target-flags(arm-got) @external_constant :: (load 4 from got)
 
     %1(s32) = G_LOAD %0(p0) :: (load 4 from @external_constant)
-    ; CHECK: [[V:%[0-9]+]]:gpr = LDRi12 [[G]], 0, 14, %noreg :: (load 4 from @external_constant)
+    ; CHECK: [[V:%[0-9]+]]:gpr = LDRi12 [[G]], 0, 14, $noreg :: (load 4 from @external_constant)
 
-    %r0 = COPY %1(s32)
-    ; CHECK: %r0 = COPY [[V]]
+    $r0 = COPY %1(s32)
+    ; CHECK: $r0 = COPY [[V]]
 
-    BX_RET 14, %noreg, implicit %r0
-    ; CHECK: BX_RET 14, %noreg, implicit %r0
+    BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14, $noreg, implicit $r0
 ...

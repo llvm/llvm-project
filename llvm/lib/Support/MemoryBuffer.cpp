@@ -21,6 +21,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
+#include "llvm/Support/SmallVectorMemoryBuffer.h"
 #include <cassert>
 #include <cerrno>
 #include <cstring>
@@ -139,15 +140,6 @@ MemoryBuffer::getMemBufferCopy(StringRef InputData, const Twine &BufferName) {
   return nullptr;
 }
 
-std::unique_ptr<MemoryBuffer>
-MemoryBuffer::getNewMemBuffer(size_t Size, StringRef BufferName) {
-  auto SB = WritableMemoryBuffer::getNewUninitMemBuffer(Size, BufferName);
-  if (!SB)
-    return nullptr;
-  memset(SB->getBufferStart(), 0, Size);
-  return std::move(SB);
-}
-
 ErrorOr<std::unique_ptr<MemoryBuffer>>
 MemoryBuffer::getFileOrSTDIN(const Twine &Filename, int64_t FileSize,
                              bool RequiresNullTerminator) {
@@ -171,7 +163,7 @@ MemoryBuffer::getFileSlice(const Twine &FilePath, uint64_t MapSize,
 //===----------------------------------------------------------------------===//
 
 namespace {
-/// \brief Memory maps a file descriptor using sys::fs::mapped_file_region.
+/// Memory maps a file descriptor using sys::fs::mapped_file_region.
 ///
 /// This handles converting the offset into a legal offset on the platform.
 template<typename MB>
@@ -193,10 +185,8 @@ class MemoryBufferMMapFile : public MB {
 public:
   MemoryBufferMMapFile(bool RequiresNullTerminator, int FD, uint64_t Len,
                        uint64_t Offset, std::error_code &EC)
-      : MFR(FD,
-            MB::Writable ? sys::fs::mapped_file_region::priv
-                         : sys::fs::mapped_file_region::readonly,
-            getLegalMapSize(Len, Offset), getLegalMapOffset(Offset), EC) {
+      : MFR(FD, MB::Mapmode, getLegalMapSize(Len, Offset),
+            getLegalMapOffset(Offset), EC) {
     if (!EC) {
       const char *Start = getStart(Len, Offset);
       MemoryBuffer::init(Start, Start + Len, RequiresNullTerminator);
@@ -226,7 +216,7 @@ getMemoryBufferForStream(int FD, const Twine &BufferName) {
   // Read into Buffer until we hit EOF.
   do {
     Buffer.reserve(Buffer.size() + ChunkSize);
-    ReadBytes = sys::RetryAfterSignal(-1, read, FD, Buffer.end(), ChunkSize);
+    ReadBytes = sys::RetryAfterSignal(-1, ::read, FD, Buffer.end(), ChunkSize);
     if (ReadBytes == -1)
       return std::error_code(errno, std::generic_category());
     Buffer.set_size(Buffer.size() + ReadBytes);
@@ -254,7 +244,7 @@ static ErrorOr<std::unique_ptr<MB>>
 getFileAux(const Twine &Filename, int64_t FileSize, uint64_t MapSize,
            uint64_t Offset, bool RequiresNullTerminator, bool IsVolatile) {
   int FD;
-  std::error_code EC = sys::fs::openFileForRead(Filename, FD);
+  std::error_code EC = sys::fs::openFileForRead(Filename, FD, sys::fs::OF_None);
 
   if (EC)
     return EC;
@@ -304,6 +294,15 @@ WritableMemoryBuffer::getNewUninitMemBuffer(size_t Size, const Twine &BufferName
 
   auto *Ret = new (Mem) MemBuffer(StringRef(Buf, Size), true);
   return std::unique_ptr<WritableMemoryBuffer>(Ret);
+}
+
+std::unique_ptr<WritableMemoryBuffer>
+WritableMemoryBuffer::getNewMemBuffer(size_t Size, const Twine &BufferName) {
+  auto SB = WritableMemoryBuffer::getNewUninitMemBuffer(Size, BufferName);
+  if (!SB)
+    return nullptr;
+  memset(SB->getBufferStart(), 0, Size);
+  return SB;
 }
 
 static bool shouldUseMmap(int FD,
@@ -359,6 +358,59 @@ static bool shouldUseMmap(int FD,
 #endif
 
   return true;
+}
+
+static ErrorOr<std::unique_ptr<WriteThroughMemoryBuffer>>
+getReadWriteFile(const Twine &Filename, uint64_t FileSize, uint64_t MapSize,
+                 uint64_t Offset) {
+  int FD;
+  std::error_code EC = sys::fs::openFileForReadWrite(
+      Filename, FD, sys::fs::CD_OpenExisting, sys::fs::OF_None);
+
+  if (EC)
+    return EC;
+
+  // Default is to map the full file.
+  if (MapSize == uint64_t(-1)) {
+    // If we don't know the file size, use fstat to find out.  fstat on an open
+    // file descriptor is cheaper than stat on a random path.
+    if (FileSize == uint64_t(-1)) {
+      sys::fs::file_status Status;
+      std::error_code EC = sys::fs::status(FD, Status);
+      if (EC)
+        return EC;
+
+      // If this not a file or a block device (e.g. it's a named pipe
+      // or character device), we can't mmap it, so error out.
+      sys::fs::file_type Type = Status.type();
+      if (Type != sys::fs::file_type::regular_file &&
+          Type != sys::fs::file_type::block_file)
+        return make_error_code(errc::invalid_argument);
+
+      FileSize = Status.getSize();
+    }
+    MapSize = FileSize;
+  }
+
+  std::unique_ptr<WriteThroughMemoryBuffer> Result(
+      new (NamedBufferAlloc(Filename))
+          MemoryBufferMMapFile<WriteThroughMemoryBuffer>(false, FD, MapSize,
+                                                         Offset, EC));
+  if (EC)
+    return EC;
+  return std::move(Result);
+}
+
+ErrorOr<std::unique_ptr<WriteThroughMemoryBuffer>>
+WriteThroughMemoryBuffer::getFile(const Twine &Filename, int64_t FileSize) {
+  return getReadWriteFile(Filename, FileSize, FileSize, 0);
+}
+
+/// Map a subrange of the specified file as a WritableMemoryBuffer.
+ErrorOr<std::unique_ptr<WriteThroughMemoryBuffer>>
+WriteThroughMemoryBuffer::getFileSlice(const Twine &Filename, uint64_t MapSize,
+                                       uint64_t Offset) {
+  return getReadWriteFile(Filename, -1, MapSize, Offset);
 }
 
 template <typename MB>
@@ -466,7 +518,7 @@ ErrorOr<std::unique_ptr<MemoryBuffer>> MemoryBuffer::getSTDIN() {
 ErrorOr<std::unique_ptr<MemoryBuffer>>
 MemoryBuffer::getFileAsStream(const Twine &Filename) {
   int FD;
-  std::error_code EC = sys::fs::openFileForRead(Filename, FD);
+  std::error_code EC = sys::fs::openFileForRead(Filename, FD, sys::fs::OF_None);
   if (EC)
     return EC;
   ErrorOr<std::unique_ptr<MemoryBuffer>> Ret =
@@ -480,3 +532,6 @@ MemoryBufferRef MemoryBuffer::getMemBufferRef() const {
   StringRef Identifier = getBufferIdentifier();
   return MemoryBufferRef(Data, Identifier);
 }
+
+void MemoryBuffer::anchor() {}
+void SmallVectorMemoryBuffer::anchor() {}

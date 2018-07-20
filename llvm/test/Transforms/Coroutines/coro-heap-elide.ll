@@ -81,6 +81,39 @@ entry:
   ret void
 }
 
+; CHECK-LABEL: @callResume_PR34897_no_elision(
+define void @callResume_PR34897_no_elision(i1 %cond) {
+; CHECK-LABEL: entry:
+entry:
+; CHECK: call i8* @CustomAlloc(
+  %hdl = call i8* @f()
+; CHECK: tail call void @bar(
+  tail call void @bar(i8* %hdl)
+; CHECK: tail call void @bar(
+  tail call void @bar(i8* null)
+  br i1 %cond, label %if.then, label %if.else
+
+; CHECK-LABEL: if.then:
+if.then:
+; CHECK: call fastcc void bitcast (void (%f.frame*)* @f.resume to void (i8*)*)(i8*
+  %0 = call i8* @llvm.coro.subfn.addr(i8* %hdl, i8 0)
+  %1 = bitcast i8* %0 to void (i8*)*
+  call fastcc void %1(i8* %hdl)
+; CHECK-NEXT: call fastcc void bitcast (void (%f.frame*)* @f.destroy to void (i8*)*)(i8*
+  %2 = call i8* @llvm.coro.subfn.addr(i8* %hdl, i8 1)
+  %3 = bitcast i8* %2 to void (i8*)*
+  call fastcc void %3(i8* %hdl)
+  br label %return
+
+if.else:
+  br label %return
+
+; CHECK-LABEL: return:
+return:
+; CHECK: ret void
+  ret void
+}
+
 ; a coroutine start function (cannot elide heap alloc, due to second argument to
 ; coro.begin not pointint to coro.alloc)
 define i8* @f_no_elision() personality i8* null {

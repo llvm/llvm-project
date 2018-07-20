@@ -41,7 +41,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone
 !llvm.module.flags = !{!20}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.0 (trunk 130845)", isOptimized: true, emissionKind: FullDebug, file: !18, enums: !19, retainedTypes: !19, imports:  null)
-!1 = distinct !DISubprogram(name: "foo", linkageName: "_Z3foov", line: 5, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 5, file: !18, scope: !2, type: !3, variables: !17)
+!1 = distinct !DISubprogram(name: "foo", linkageName: "_Z3foov", line: 5, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 5, file: !18, scope: !2, type: !3, retainedNodes: !17)
 !2 = !DIFile(filename: "k.cc", directory: "/private/tmp")
 !3 = !DISubroutineType(types: !4)
 !4 = !{null}

@@ -38,37 +38,37 @@ endif:
 ; SI: s_cbranch_scc0 [[IF:BB[0-9]+_[0-9]+]]
 
 ; SI: ; %bb.1: ; %else
-; SI: s_load_dword [[LOAD0:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0xe
-; SI: s_load_dword [[LOAD1:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0xf
+; SI: s_load_dword [[LOAD0:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x2e
+; SI: s_load_dword [[LOAD1:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x37
 ; SI-NOT: add
 ; SI: s_branch [[ENDIF:BB[0-9]+_[0-9]+]]
 
 ; SI: [[IF]]: ; %if
-; SI: s_load_dword [[LOAD0]], s{{\[[0-9]+:[0-9]+\]}}, 0xc
-; SI: s_load_dword [[LOAD1]], s{{\[[0-9]+:[0-9]+\]}}, 0xd
+; SI: s_load_dword [[LOAD0]], s{{\[[0-9]+:[0-9]+\]}}, 0x1c
+; SI: s_load_dword [[LOAD1]], s{{\[[0-9]+:[0-9]+\]}}, 0x25
 ; SI-NOT: add
 
 ; SI: [[ENDIF]]: ; %endif
 ; SI: s_add_i32 s{{[0-9]+}}, [[LOAD0]], [[LOAD1]]
 ; SI: buffer_store_dword
 ; SI-NEXT: s_endpgm
-define amdgpu_kernel void @sgpr_if_else_salu_br_opt(i32 addrspace(1)* %out, i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) {
+define amdgpu_kernel void @sgpr_if_else_salu_br_opt(i32 addrspace(1)* %out, [8 x i32], i32 %a, [8 x i32], i32 %b, [8 x i32], i32 %c, [8 x i32], i32 %d, [8 x i32], i32 %e) {
 entry:
-  %0 = icmp eq i32 %a, 0
-  br i1 %0, label %if, label %else
+  %cmp0 = icmp eq i32 %a, 0
+  br i1 %cmp0, label %if, label %else
 
 if:
-  %1 = add i32 %b, %c
+  %add0 = add i32 %b, %c
   br label %endif
 
 else:
-  %2 = add i32 %d, %e
+  %add1 = add i32 %d, %e
   br label %endif
 
 endif:
-  %3 = phi i32 [%1, %if], [%2, %else]
-  %4 = add i32 %3, %a
-  store i32 %4, i32 addrspace(1)* %out
+  %phi = phi i32 [%add0, %if], [%add1, %else]
+  %add2 = add i32 %phi, %a
+  store i32 %add2, i32 addrspace(1)* %out
   ret void
 }
 

@@ -279,3 +279,17 @@ bar:
 // CHECK-NEXT:     Flags [
 // CHECK-NEXT:       SHF_EXCLUDE
 // CHECK-NEXT:     ]
+
+// Test SHT_LLVM_LINKER_OPTIONS
+
+.section ".linker-options","e",@llvm_linker_options
+// ASM: .section ".linker-options","e",@llvm_linker_options
+
+// CHECK: Section {
+// CHECK:   Name: .linker-options
+// CHECK-NEXT:   Type: SHT_LLVM_LINKER_OPTIONS
+// CHECK-NEXT:   Flags [
+// CHECK-NEXT:     SHF_EXCLUDE
+// CHECK-NEXT:   ]
+// CHECK: }
+

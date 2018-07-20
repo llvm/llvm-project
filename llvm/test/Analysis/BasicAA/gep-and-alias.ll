@@ -6,13 +6,13 @@ target triple = "i386-apple-macosx10.6.0"
 ; The load and store address in the loop body could alias so the load
 ; can't be hoisted above the store and out of the loop.
 
-declare void @llvm.memset.p0i8.i32(i8* nocapture writeonly, i8, i32, i32, i1)
+declare void @llvm.memset.p0i8.i32(i8* nocapture writeonly, i8, i32, i1)
 
 define i32 @foo(i32 %x, i32 %z, i32 %n) {
 entry:
   %pool = alloca [59 x i32], align 4
   %tmp = bitcast [59 x i32]* %pool to i8*
-  call void @llvm.memset.p0i8.i32(i8* nonnull %tmp, i8 0, i32 236, i32 4, i1 false)
+  call void @llvm.memset.p0i8.i32(i8* align 4 nonnull %tmp, i8 0, i32 236, i1 false)
   %cmp3 = icmp eq i32 %n, 0
   br i1 %cmp3, label %for.end, label %for.body.lr.ph
 

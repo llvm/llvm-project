@@ -51,7 +51,7 @@ public:
   uint32_t getNumHashBuckets() const;
   FixedStreamArray<support::ulittle32_t> getHashValues() const;
   FixedStreamArray<codeview::TypeIndexOffset> getTypeIndexOffsets() const;
-  HashTable &getHashAdjusters();
+  HashTable<support::ulittle32_t> &getHashAdjusters();
 
   codeview::CVTypeRange types(bool *HadError) const;
   const codeview::CVTypeArray &typeArray() const { return TypeRecords; }
@@ -75,7 +75,7 @@ private:
   std::unique_ptr<BinaryStream> HashStream;
   FixedStreamArray<support::ulittle32_t> HashValues;
   FixedStreamArray<codeview::TypeIndexOffset> TypeIndexOffsets;
-  HashTable HashAdjusters;
+  HashTable<support::ulittle32_t> HashAdjusters;
 
   const TpiStreamHeader *Header;
 };

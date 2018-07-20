@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple x86_64-unknown-unknown -mcpu=knl -mattr=+avx512cd --show-encoding %s | FileCheck %s
+// RUN: llvm-mc -triple x86_64-unknown-unknown --show-encoding %s | FileCheck %s
 
 // CHECK: vplzcntq  %zmm22, %zmm21  
 // CHECK: encoding: [0x62,0xa2,0xfd,0x48,0x44,0xee]
@@ -359,7 +359,6 @@
 // CHECK: vpconflictd   (%rcx){1to16}, %zmm25 
 // CHECK: encoding: [0x62,0x62,0x7d,0x58,0xc4,0x09]
           vpconflictd   (%rcx){1to16}, %zmm25 
-// RUN: llvm-mc -triple x86_64-unknown-unknown -mcpu=knl -mattr=+avx512cd --show-encoding %s | FileCheck %s
 
 // CHECK: vpconflictd   4064(%rdx), %zmm25 
 // CHECK: encoding: [0x62,0x62,0x7d,0x48,0xc4,0x8a,0xe0,0x0f,0x00,0x00]

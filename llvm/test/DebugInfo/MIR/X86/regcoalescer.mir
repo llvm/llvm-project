@@ -22,7 +22,7 @@
   !7 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
   !12 = !{i32 2, !"Debug Info Version", i32 3}
   !13 = !{i32 1, !"wchar_size", i32 4}
-  !14 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 12, type: !15, isLocal: false, isDefinition: true, scopeLine: 12, isOptimized: true, unit: !0, variables: !17)
+  !14 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 12, type: !15, isLocal: false, isDefinition: true, scopeLine: 12, isOptimized: true, unit: !0, retainedNodes: !17)
   !15 = !DISubroutineType(types: !16)
   !16 = !{!7}
   !17 = !{!18}
@@ -39,12 +39,12 @@ registers:
   - { id: 0, class: gr32, preferred-register: '' }
 body:             |
   bb.0.entry:
-    %0 = MOV32r0 implicit-def dead %eflags, debug-location !19
+    %0 = MOV32r0 implicit-def dead $eflags, debug-location !19
     DBG_VALUE debug-use %0, debug-use _, !18, !DIExpression(), debug-location !20
-    %eax = COPY killed %0, debug-location !21
-    RET 0, killed %eax, debug-location !21
+    $eax = COPY killed %0, debug-location !21
+    RET 0, killed $eax, debug-location !21
 
 ...
 
-# CHECK: %eax = MOV32r0
-# CHECK-NEXT: DBG_VALUE debug-use %eax
+# CHECK: $eax = MOV32r0
+# CHECK-NEXT: DBG_VALUE debug-use $eax

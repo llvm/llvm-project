@@ -1,5 +1,5 @@
 REQUIRES: libxml2
-UNSUPPORTED: windows
+UNSUPPORTED: system-windows
 
 RUN: llvm-mt /manifest %p/Inputs/trust_info.manifest \
 RUN:   /manifest %p/Inputs/assembly_identity.manifest \

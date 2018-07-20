@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// \brief TargetRegisterInfo interface that is implemented by all hw codegen
+/// TargetRegisterInfo interface that is implemented by all hw codegen
 /// targets.
 //
 //===----------------------------------------------------------------------===//
@@ -21,15 +21,19 @@
 
 namespace llvm {
 
-class AMDGPUSubtarget;
+class GCNSubtarget;
 class TargetInstrInfo;
 
 struct AMDGPURegisterInfo : public AMDGPUGenRegisterInfo {
   AMDGPURegisterInfo();
 
+  bool enableMultipleCopyHints() const override { return true; }
+
   /// \returns the sub reg enum value for the given \p Channel
   /// (e.g. getSubRegFromChannel(0) -> AMDGPU::sub0)
-  unsigned getSubRegFromChannel(unsigned Channel) const;
+  static unsigned getSubRegFromChannel(unsigned Channel);
+
+  void reserveRegisterTuples(BitVector &, unsigned Reg) const;
 };
 
 } // End namespace llvm

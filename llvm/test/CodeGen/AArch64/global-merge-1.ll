@@ -22,10 +22,10 @@ define void @f1(i32 %a1, i32 %a2) {
 
 ;CHECK:	.type	.L_MergedGlobals,@object  // @_MergedGlobals
 ;CHECK:	.local	.L_MergedGlobals
-;CHECK:	.comm	.L_MergedGlobals,8,8
-;CHECK: m = .L_MergedGlobals
-;CHECK: n = .L_MergedGlobals+4
+;CHECK:	.comm	.L_MergedGlobals,8,4
+;CHECK: .set m, .L_MergedGlobals
+;CHECK: .set n, .L_MergedGlobals+4
 
-;CHECK-APPLE-IOS: .zerofill __DATA,__bss,__MergedGlobals,8,3 ; @_MergedGlobals
-;CHECK-APPLE-IOS-NOT: _m = l__MergedGlobals
-;CHECK-APPLE-IOS-NOT: _n = l__MergedGlobals+4
+;CHECK-APPLE-IOS: .zerofill __DATA,__bss,__MergedGlobals,8,2 ; @_MergedGlobals
+;CHECK-APPLE-IOS-NOT: .set _m, l__MergedGlobals
+;CHECK-APPLE-IOS-NOT: .set _n, l__MergedGlobals+4

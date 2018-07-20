@@ -29,21 +29,21 @@ entry:
   %i.f.i = bitcast i32 %i.i to float
   %j.f.i = bitcast i32 %j.i to float
   %p1.i = call float @llvm.amdgcn.interp.p1(float %i.f.i, i32 1, i32 0, i32 %arg5) #2
-  %p2.i = call float @llvm.amdgcn.interp.p2(float %p1.i, float %j.f.i, i32 1, i32 0, i32 %arg5) #2
-  %p87 = fmul float undef, %p2.i
-  %p88 = fadd float %p87, undef
-  %p93 = fadd float %p88, undef
-  %p97 = fmul float %p93, undef
-  %p102 = fsub float %p97, undef
-  %p104 = fmul float %p102, undef
+  %p2 = call float @llvm.amdgcn.interp.p2(float %p1.i, float %j.f.i, i32 1, i32 0, i32 %arg5) #2
+  %p87 = fmul float %p2, %p2
+  %p88 = fadd float %p87, %p87
+  %p93 = fadd float %p88, %p88
+  %p97 = fmul float %p93, %p93
+  %p102 = fsub float %p97, %p97
+  %p104 = fmul float %p102, %p102
   %p106 = fadd float 0.000000e+00, %p104
-  %p108 = fadd float undef, %p106
+  %p108 = fadd float %p106, %p106
   %uniform.cond = icmp slt i32 %arg17, 0
   br i1 %uniform.cond, label %ret.bb, label %else
 
 else:                                             ; preds = %main_body
   %p124 = fmul float %p108, %p108
-  %p125 = fsub float %p124, undef
+  %p125 = fsub float %p124, %p124
   %divergent.cond = fcmp olt float %p125, 0.000000e+00
   br i1 %divergent.cond, label %ret.bb, label %unreachable.bb
 
@@ -80,21 +80,21 @@ main_body:
   %i.f.i = bitcast i32 %i.i to float
   %j.f.i = bitcast i32 %j.i to float
   %p1.i = call float @llvm.amdgcn.interp.p1(float %i.f.i, i32 1, i32 0, i32 %arg5) #2
-  %p2.i = call float @llvm.amdgcn.interp.p2(float %p1.i, float %j.f.i, i32 1, i32 0, i32 %arg5) #2
-  %p87 = fmul float undef, %p2.i
-  %p88 = fadd float %p87, undef
-  %p93 = fadd float %p88, undef
-  %p97 = fmul float %p93, undef
-  %p102 = fsub float %p97, undef
-  %p104 = fmul float %p102, undef
+  %p2 = call float @llvm.amdgcn.interp.p2(float %p1.i, float %j.f.i, i32 1, i32 0, i32 %arg5) #2
+  %p87 = fmul float %p2, %p2
+  %p88 = fadd float %p87, %p87
+  %p93 = fadd float %p88, %p88
+  %p97 = fmul float %p93, %p93
+  %p102 = fsub float %p97, %p97
+  %p104 = fmul float %p102, %p102
   %p106 = fadd float 0.000000e+00, %p104
-  %p108 = fadd float undef, %p106
+  %p108 = fadd float %p106, %p106
   %uniform.cond = icmp slt i32 %arg18, 0
   br i1 %uniform.cond, label %ret.bb, label %else
 
 else:                                             ; preds = %main_body
   %p124 = fmul float %p108, %p108
-  %p125 = fsub float %p124, undef
+  %p125 = fsub float %p124, %p124
   %divergent.cond = fcmp olt float %p125, 0.000000e+00
   br i1 %divergent.cond, label %ret.bb, label %unreachable.bb
 

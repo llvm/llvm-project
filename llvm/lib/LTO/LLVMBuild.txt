@@ -20,6 +20,7 @@ type = Library
 name = LTO
 parent = Libraries
 required_libraries =
+ AggressiveInstCombine
  Analysis
  BitReader
  BitWriter

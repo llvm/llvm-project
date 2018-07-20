@@ -22,6 +22,8 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
+#include <limits>
+
 using namespace llvm;
 
 // This ugly hack is brought to you courtesy of constructor/destructor ordering
@@ -234,6 +236,15 @@ TimerGroup::TimerGroup(StringRef Name, StringRef Description)
   TimerGroupList = this;
 }
 
+TimerGroup::TimerGroup(StringRef Name, StringRef Description,
+                       const StringMap<TimeRecord> &Records)
+    : TimerGroup(Name, Description) {
+  TimersToPrint.reserve(Records.size());
+  for (const auto &P : Records)
+    TimersToPrint.emplace_back(P.getValue(), P.getKey(), P.getKey());
+  assert(TimersToPrint.size() == Records.size() && "Size mismatch");
+}
+
 TimerGroup::~TimerGroup() {
   // If the timer group is destroyed before the timers it owns, accumulate and
   // print the timing data.
@@ -284,7 +295,7 @@ void TimerGroup::addTimer(Timer &T) {
 
 void TimerGroup::PrintQueuedTimers(raw_ostream &OS) {
   // Sort the timers in descending order by amount of time taken.
-  std::sort(TimersToPrint.begin(), TimersToPrint.end());
+  llvm::sort(TimersToPrint.begin(), TimersToPrint.end());
 
   TimeRecord Total;
   for (const PrintRecord &Record : TimersToPrint)
@@ -336,10 +347,14 @@ void TimerGroup::prepareToPrintList() {
   // reset them.
   for (Timer *T = FirstTimer; T; T = T->Next) {
     if (!T->hasTriggered()) continue;
+    bool WasRunning = T->isRunning();
+    if (WasRunning)
+      T->stopTimer();
+
     TimersToPrint.emplace_back(T->Time, T->Name, T->Description);
 
-    // Clear out the time.
-    T->clear();
+    if (WasRunning)
+      T->startTimer();
   }
 }
 
@@ -363,13 +378,17 @@ void TimerGroup::printAll(raw_ostream &OS) {
 void TimerGroup::printJSONValue(raw_ostream &OS, const PrintRecord &R,
                                 const char *suffix, double Value) {
   assert(yaml::needsQuotes(Name) == yaml::QuotingType::None &&
-         "TimerGroup name needs no quotes");
+         "TimerGroup name should not need quotes");
   assert(yaml::needsQuotes(R.Name) == yaml::QuotingType::None &&
-         "Timer name needs no quotes");
-  OS << "\t\"time." << Name << '.' << R.Name << suffix << "\": " << Value;
+         "Timer name should not need quotes");
+  constexpr auto max_digits10 = std::numeric_limits<double>::max_digits10;
+  OS << "\t\"time." << Name << '.' << R.Name << suffix
+     << "\": " << format("%.*e", max_digits10 - 1, Value);
 }
 
 const char *TimerGroup::printJSONValues(raw_ostream &OS, const char *delim) {
+  sys::SmartScopedLock<true> L(*TimerLock);
+
   prepareToPrintList();
   for (const PrintRecord &R : TimersToPrint) {
     OS << delim;
@@ -381,6 +400,10 @@ const char *TimerGroup::printJSONValues(raw_ostream &OS, const char *delim) {
     printJSONValue(OS, R, ".user", T.getUserTime());
     OS << delim;
     printJSONValue(OS, R, ".sys", T.getSystemTime());
+    if (T.getMemUsed()) {
+      OS << delim;
+      printJSONValue(OS, R, ".mem", T.getMemUsed());
+    }
   }
   TimersToPrint.clear();
   return delim;

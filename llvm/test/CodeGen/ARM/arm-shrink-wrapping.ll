@@ -327,7 +327,7 @@ declare void @somethingElse(...)
 ; DISABLE-NEXT: pop {r4, r7, pc}
 ;
 ; ENABLE-NEXT: bx lr
-define i32 @loopInfoRestoreOutsideLoop(i32 %cond, i32 %N) "no-frame-pointer-elim"="true" #0 {
+define i32 @loopInfoRestoreOutsideLoop(i32 %cond, i32 %N) "no-frame-pointer-elim"="true" nounwind {
 entry:
   %tobool = icmp eq i32 %cond, 0
   br i1 %tobool, label %if.else, label %if.then

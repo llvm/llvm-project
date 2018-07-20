@@ -54,8 +54,8 @@
 
 @llvm.global_ctors = appending global [1 x { i32, void ()* }] [{ i32, void ()* } { i32 1, void ()* @asan.module_ctor }]
 @__asan_option_detect_stack_use_after_return = external global i32
-@__asan_gen_ = private unnamed_addr constant [11 x i8] c"1 32 8 1 A\00", align 1
-@__asan_gen_1 = private unnamed_addr constant [13 x i8] c"1 32 1 3 tmp\00", align 1
+@___asan_gen_ = private unnamed_addr constant [11 x i8] c"1 32 8 1 A\00", align 1
+@___asan_gen_1 = private unnamed_addr constant [13 x i8] c"1 32 1 3 tmp\00", align 1
 
 ; Function Attrs: noreturn sanitize_address
 define i32 @_Z3fn1v() #0 !dbg !22 {
@@ -78,7 +78,7 @@ entry:
   store i64 1102416563, i64* %9, !dbg !39
   %10 = add i64 %6, 8, !dbg !39
   %11 = inttoptr i64 %10 to i64*, !dbg !39
-  store i64 ptrtoint ([11 x i8]* @__asan_gen_ to i64), i64* %11, !dbg !39
+  store i64 ptrtoint ([11 x i8]* @___asan_gen_ to i64), i64* %11, !dbg !39
   %12 = add i64 %6, 16, !dbg !39
   %13 = inttoptr i64 %12 to i64*, !dbg !39
   store i64 ptrtoint (i32 ()* @_Z3fn1v to i64), i64* %13, !dbg !39
@@ -136,7 +136,7 @@ entry:
   store i64 1102416563, i64* %9, !dbg !48
   %10 = add i64 %6, 8, !dbg !48
   %11 = inttoptr i64 %10 to i64*, !dbg !48
-  store i64 ptrtoint ([13 x i8]* @__asan_gen_1 to i64), i64* %11, !dbg !48
+  store i64 ptrtoint ([13 x i8]* @___asan_gen_1 to i64), i64* %11, !dbg !48
   %12 = add i64 %6, 16, !dbg !48
   %13 = inttoptr i64 %12 to i64*, !dbg !48
   store i64 ptrtoint (void (%struct.C*)* @_ZN1C5m_fn3Ev to i64), i64* %13, !dbg !48
@@ -357,17 +357,17 @@ attributes #3 = { nounwind readnone }
 !18 = !DISubroutineType(types: !19)
 !19 = !{null, !20}
 !20 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, align: 64, flags: DIFlagArtificial | DIFlagObjectPointer, baseType: !14)
-!22 = distinct !DISubprogram(name: "fn1", linkageName: "_Z3fn1v", line: 16, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 16, file: !5, scope: !23, type: !24, variables: !26)
+!22 = distinct !DISubprogram(name: "fn1", linkageName: "_Z3fn1v", line: 16, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 16, file: !5, scope: !23, type: !24, retainedNodes: !26)
 !23 = !DIFile(filename: "incorrect-variable-debug-loc.cpp", directory: "/tmp/dbginfo")
 !24 = !DISubroutineType(types: !25)
 !25 = !{!8}
 !26 = !{!27}
 !27 = !DILocalVariable(name: "A", line: 17, scope: !22, file: !23, type: !4)
-!28 = distinct !DISubprogram(name: "m_fn3", linkageName: "_ZN1C5m_fn3Ev", line: 21, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 21, file: !5, scope: !4, type: !11, declaration: !10, variables: !29)
+!28 = distinct !DISubprogram(name: "m_fn3", linkageName: "_ZN1C5m_fn3Ev", line: 21, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 21, file: !5, scope: !4, type: !11, declaration: !10, retainedNodes: !29)
 !29 = !{!30}
 !30 = !DILocalVariable(name: "this", arg: 1, flags: DIFlagArtificial | DIFlagObjectPointer, scope: !28, type: !31)
 !31 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, align: 64, baseType: !4)
-!32 = distinct !DISubprogram(name: "m_fn2", linkageName: "_ZN1B5m_fn2Ev", line: 6, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 6, file: !5, scope: !14, type: !18, declaration: !17, variables: !33)
+!32 = distinct !DISubprogram(name: "m_fn2", linkageName: "_ZN1B5m_fn2Ev", line: 6, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 6, file: !5, scope: !14, type: !18, declaration: !17, retainedNodes: !33)
 !33 = !{!34}
 !34 = !DILocalVariable(name: "this", arg: 1, flags: DIFlagArtificial | DIFlagObjectPointer, scope: !32, type: !35)
 !35 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, align: 64, baseType: !14)

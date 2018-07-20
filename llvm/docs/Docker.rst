@@ -53,24 +53,15 @@ serve as a basis for anyone who wants to create their own Docker image with
 LLVM components, compiled from sources. The sources are checked out from the
 upstream svn repository when building the image.
 
-Inside each subfolder we host Dockerfiles for two images:
+The resulting image contains only the requested LLVM components and a few extra
+packages to make the image minimally useful for C++ development, e.g. libstdc++
+and binutils.
 
-- ``build/`` image is used to compile LLVM, it installs a system compiler and all
-  build dependencies of LLVM. After the build process is finished, the build
-  image will have an archive with compiled components at ``/tmp/clang.tar.gz``.
-- ``release/`` image usually only contains LLVM components, compiled by the
-  ``build/`` image, and also libstdc++ and binutils to make image minimally
-  useful for C++ development. The assumption is that you usually want clang to
-  be one of the provided components.
-
-To build both of those images, use ``build_docker_image.sh`` script.
-It will checkout LLVM sources and build clang in the ``build`` container, copy results
-of the build to the local filesystem and then build the ``release`` container using
-those. The ``build_docker_image.sh`` accepts a list of LLVM repositories to
-checkout, and arguments for CMake invocation.
+The interface to run the build is ``build_docker_image.sh`` script. It accepts a
+list of LLVM repositories to checkout and arguments for CMake invocation.
 
 If you want to write your own docker image, start with an ``example/`` subfolder.
-It provides incomplete Dockerfiles with (very few) FIXMEs explaining the steps
+It provides an incomplete Dockerfile with (very few) FIXMEs explaining the steps
 you need to take in order to make your Dockerfiles functional.
 
 Usage
@@ -110,10 +101,10 @@ this command will do that:
 	-DBOOTSTRAP_CMAKE_BUILD_TYPE=Release \
 	-DCLANG_ENABLE_BOOTSTRAP=ON -DCLANG_BOOTSTRAP_TARGETS="install-clang;install-clang-headers"
 	
-This will produce two images, a release image ``clang-debian8:staging`` and a
-build image ``clang-debian8-build:staging`` from the latest upstream revision.
-After the image is built you can run bash inside a container based on your
-image like this:
+This will produce a new image ``clang-debian8:staging`` from the latest
+upstream revision.
+After the image is built you can run bash inside a container based on your image
+like this:
 
 .. code-block:: bash
 
@@ -181,19 +172,14 @@ debian8-based image using the latest ``google/stable`` sources for you:
 
 Minimizing docker image size
 ============================
-Due to Docker restrictions we use two images (i.e., build and release folders)
-for the release image to be as small as possible. It's much easier to achieve
-that using two images, because Docker would store a filesystem layer for each
-command in the  Dockerfile, i.e. if you install some packages in one command,
-then remove  those in a separate command, the size of the resulting image will
-still be proportinal to the size of an image with installed packages.
-Therefore, we strive to provide a very simple release image which only copies
-compiled clang and does not do anything else.
-
-Docker 1.13 added a ``--squash`` flag that allows to flatten the layers of the
-image, i.e. remove the parts that were actually deleted. That is an easier way
-to produce the smallest images possible by using just a single image. We do not
-use it because as of today the flag is in experimental stage and not everyone
-may have the latest docker version available. When the flag is out of
-experimental stage, we should investigate replacing two images approach with
-just a single image, built using ``--squash`` flag.
+Due to how Docker's filesystem works, all intermediate writes are persisted in
+the resulting image, even if they are removed in the following commands.
+To minimize the resulting image size we use `multi-stage Docker builds
+<https://docs.docker.com/develop/develop-images/multistage-build/>`_.
+Internally Docker builds two images. The first image does all the work: installs
+build dependencies, checks out LLVM source code, compiles LLVM, etc.
+The first image is only used during build and does not have a descriptive name,
+i.e. it is only accessible via the hash value after the build is finished.
+The second image is our resulting image. It contains only the built binaries
+and not any build dependencies. It is also accessible via a descriptive name
+(specified by -d and -t flags).

@@ -59,7 +59,7 @@ declare i32 @puts(i8* nocapture) nounwind
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!48}
 
-!0 = distinct !DISubprogram(name: "printer", linkageName: "printer", line: 12, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !2, scopeLine: 12, file: !46, scope: !1, type: !3, variables: !43)
+!0 = distinct !DISubprogram(name: "printer", linkageName: "printer", line: 12, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !2, scopeLine: 12, file: !46, scope: !1, type: !3, retainedNodes: !43)
 !1 = !DIFile(filename: "a.c", directory: "/tmp/")
 !2 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "(LLVM build 00)", isOptimized: true, emissionKind: FullDebug, file: !46, enums: !47, retainedTypes: !47, imports:  null)
 !3 = !DISubroutineType(types: !4)
@@ -68,8 +68,8 @@ declare i32 @puts(i8* nocapture) nounwind
 !6 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 32, align: 32, file: !46, scope: !1, baseType: null)
 !7 = !DIBasicType(tag: DW_TAG_base_type, name: "double", size: 64, align: 32, encoding: DW_ATE_float)
 !8 = !DIBasicType(tag: DW_TAG_base_type, name: "unsigned char", size: 8, align: 8, encoding: DW_ATE_unsigned_char)
-!9 = distinct !DISubprogram(name: "inlineprinter", linkageName: "inlineprinter", line: 5, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !2, scopeLine: 5, file: !46, scope: !1, type: !3, variables: !44)
-!10 = distinct !DISubprogram(name: "main", linkageName: "main", line: 18, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !2, scopeLine: 18, file: !46, scope: !1, type: !11, variables: !45)
+!9 = distinct !DISubprogram(name: "inlineprinter", linkageName: "inlineprinter", line: 5, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !2, scopeLine: 5, file: !46, scope: !1, type: !3, retainedNodes: !44)
+!10 = distinct !DISubprogram(name: "main", linkageName: "main", line: 18, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !2, scopeLine: 18, file: !46, scope: !1, type: !11, retainedNodes: !45)
 !11 = !DISubroutineType(types: !12)
 !12 = !{!5, !5, !13}
 !13 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 32, align: 32, file: !46, scope: !1, baseType: !14)
@@ -82,9 +82,9 @@ declare i32 @puts(i8* nocapture) nounwind
 !20 = !DILocalVariable(name: "val", line: 4, arg: 2, scope: !9, file: !1, type: !7)
 !21 = !DILocalVariable(name: "c", line: 4, arg: 3, scope: !9, file: !1, type: !8)
 
-!49 = !DILocalVariable(name: "ptr", line: 4, arg: 1, scope: !9, file: !1, type: !6)
-!50 = !DILocalVariable(name: "val", line: 4, arg: 2, scope: !9, file: !1, type: !7)
-!51 = !DILocalVariable(name: "c", line: 4, arg: 2, scope: !9, file: !1, type: !8)
+!49 = !DILocalVariable(name: "ptr", line: 4, scope: !10, file: !1, type: !6)
+!50 = !DILocalVariable(name: "val", line: 4, scope: !10, file: !1, type: !7)
+!51 = !DILocalVariable(name: "c", line: 4, scope: !10, file: !1, type: !8)
 
 !22 = !DILocalVariable(name: "argc", line: 17, arg: 1, scope: !10, file: !1, type: !5)
 !23 = !DILocalVariable(name: "argv", line: 17, arg: 2, scope: !10, file: !1, type: !13)
@@ -102,7 +102,7 @@ declare i32 @puts(i8* nocapture) nounwind
 !35 = !DILocation(line: 19, scope: !25)
 !36 = !DILocation(line: 20, scope: !25)
 !37 = !DILocation(line: 21, scope: !25)
-!38 = !DILocation(line: 4, scope: !9, inlinedAt: !37)
+!38 = !DILocation(line: 4, scope: !10, inlinedAt: !37)
 !39 = !DILocation(line: 6, scope: !28, inlinedAt: !37)
 !40 = !DILocation(line: 22, scope: !25)
 !41 = !DILocation(line: 23, scope: !25)

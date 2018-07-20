@@ -19,7 +19,7 @@
 #ifndef LLVM_SUPPORT_TARGETREGISTRY_H
 #define LLVM_SUPPORT_TARGETREGISTRY_H
 
-#include "llvm-c/Disassembler.h"
+#include "llvm-c/DisassemblerTypes.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
@@ -46,6 +46,7 @@ class MCDisassembler;
 class MCInstPrinter;
 class MCInstrAnalysis;
 class MCInstrInfo;
+class MCObjectWriter;
 class MCRegisterInfo;
 class MCRelocationInfo;
 class MCStreamer;
@@ -60,27 +61,44 @@ class TargetMachine;
 class TargetOptions;
 
 MCStreamer *createNullStreamer(MCContext &Ctx);
-MCStreamer *createAsmStreamer(MCContext &Ctx,
-                              std::unique_ptr<formatted_raw_ostream> OS,
-                              bool isVerboseAsm, bool useDwarfDirectory,
-                              MCInstPrinter *InstPrint, MCCodeEmitter *CE,
-                              MCAsmBackend *TAB, bool ShowInst);
+// Takes ownership of \p TAB and \p CE.
 
-/// Takes ownership of \p TAB and \p CE.
+/// Create a machine code streamer which will print out assembly for the native
+/// target, suitable for compiling with a native assembler.
+///
+/// \param InstPrint - If given, the instruction printer to use. If not given
+/// the MCInst representation will be printed.  This method takes ownership of
+/// InstPrint.
+///
+/// \param CE - If given, a code emitter to use to show the instruction
+/// encoding inline with the assembly. This method takes ownership of \p CE.
+///
+/// \param TAB - If given, a target asm backend to use to show the fixup
+/// information in conjunction with encoding information. This method takes
+/// ownership of \p TAB.
+///
+/// \param ShowInst - Whether to show the MCInst representation inline with
+/// the assembly.
+MCStreamer *
+createAsmStreamer(MCContext &Ctx, std::unique_ptr<formatted_raw_ostream> OS,
+                  bool isVerboseAsm, bool useDwarfDirectory,
+                  MCInstPrinter *InstPrint, std::unique_ptr<MCCodeEmitter> &&CE,
+                  std::unique_ptr<MCAsmBackend> &&TAB, bool ShowInst);
+
 MCStreamer *createELFStreamer(MCContext &Ctx,
                               std::unique_ptr<MCAsmBackend> &&TAB,
-                              raw_pwrite_stream &OS,
+                              std::unique_ptr<MCObjectWriter> &&OW,
                               std::unique_ptr<MCCodeEmitter> &&CE,
                               bool RelaxAll);
 MCStreamer *createMachOStreamer(MCContext &Ctx,
                                 std::unique_ptr<MCAsmBackend> &&TAB,
-                                raw_pwrite_stream &OS,
+                                std::unique_ptr<MCObjectWriter> &&OW,
                                 std::unique_ptr<MCCodeEmitter> &&CE,
                                 bool RelaxAll, bool DWARFMustBeAtTheEnd,
                                 bool LabelSections = false);
 MCStreamer *createWasmStreamer(MCContext &Ctx,
                                std::unique_ptr<MCAsmBackend> &&TAB,
-                               raw_pwrite_stream &OS,
+                               std::unique_ptr<MCObjectWriter> &&OW,
                                std::unique_ptr<MCCodeEmitter> &&CE,
                                bool RelaxAll);
 
@@ -143,22 +161,22 @@ public:
   using ELFStreamerCtorTy =
       MCStreamer *(*)(const Triple &T, MCContext &Ctx,
                       std::unique_ptr<MCAsmBackend> &&TAB,
-                      raw_pwrite_stream &OS,
+                      std::unique_ptr<MCObjectWriter> &&OW,
                       std::unique_ptr<MCCodeEmitter> &&Emitter, bool RelaxAll);
   using MachOStreamerCtorTy =
       MCStreamer *(*)(MCContext &Ctx, std::unique_ptr<MCAsmBackend> &&TAB,
-                      raw_pwrite_stream &OS,
+                      std::unique_ptr<MCObjectWriter> &&OW,
                       std::unique_ptr<MCCodeEmitter> &&Emitter, bool RelaxAll,
                       bool DWARFMustBeAtTheEnd);
   using COFFStreamerCtorTy =
       MCStreamer *(*)(MCContext &Ctx, std::unique_ptr<MCAsmBackend> &&TAB,
-                      raw_pwrite_stream &OS,
+                      std::unique_ptr<MCObjectWriter> &&OW,
                       std::unique_ptr<MCCodeEmitter> &&Emitter, bool RelaxAll,
                       bool IncrementalLinkerCompatible);
   using WasmStreamerCtorTy =
       MCStreamer *(*)(const Triple &T, MCContext &Ctx,
                       std::unique_ptr<MCAsmBackend> &&TAB,
-                      raw_pwrite_stream &OS,
+                      std::unique_ptr<MCObjectWriter> &&OW,
                       std::unique_ptr<MCCodeEmitter> &&Emitter, bool RelaxAll);
   using NullTargetStreamerCtorTy = MCTargetStreamer *(*)(MCStreamer &S);
   using AsmTargetStreamerCtorTy = MCTargetStreamer *(*)(
@@ -441,12 +459,12 @@ public:
   /// \param T The target triple.
   /// \param Ctx The target context.
   /// \param TAB The target assembler backend object. Takes ownership.
-  /// \param OS The stream object.
+  /// \param OW The stream object.
   /// \param Emitter The target independent assembler object.Takes ownership.
   /// \param RelaxAll Relax all fixups?
   MCStreamer *createMCObjectStreamer(const Triple &T, MCContext &Ctx,
                                      std::unique_ptr<MCAsmBackend> &&TAB,
-                                     raw_pwrite_stream &OS,
+                                     std::unique_ptr<MCObjectWriter> &&OW,
                                      std::unique_ptr<MCCodeEmitter> &&Emitter,
                                      const MCSubtargetInfo &STI, bool RelaxAll,
                                      bool IncrementalLinkerCompatible,
@@ -457,32 +475,35 @@ public:
       llvm_unreachable("Unknown object format");
     case Triple::COFF:
       assert(T.isOSWindows() && "only Windows COFF is supported");
-      S = COFFStreamerCtorFn(Ctx, std::move(TAB), OS, std::move(Emitter),
-                             RelaxAll, IncrementalLinkerCompatible);
+      S = COFFStreamerCtorFn(Ctx, std::move(TAB), std::move(OW),
+                             std::move(Emitter), RelaxAll,
+                             IncrementalLinkerCompatible);
       break;
     case Triple::MachO:
       if (MachOStreamerCtorFn)
-        S = MachOStreamerCtorFn(Ctx, std::move(TAB), OS, std::move(Emitter),
-                                RelaxAll, DWARFMustBeAtTheEnd);
+        S = MachOStreamerCtorFn(Ctx, std::move(TAB), std::move(OW),
+                                std::move(Emitter), RelaxAll,
+                                DWARFMustBeAtTheEnd);
       else
-        S = createMachOStreamer(Ctx, std::move(TAB), OS, std::move(Emitter),
-                                RelaxAll, DWARFMustBeAtTheEnd);
+        S = createMachOStreamer(Ctx, std::move(TAB), std::move(OW),
+                                std::move(Emitter), RelaxAll,
+                                DWARFMustBeAtTheEnd);
       break;
     case Triple::ELF:
       if (ELFStreamerCtorFn)
-        S = ELFStreamerCtorFn(T, Ctx, std::move(TAB), OS, std::move(Emitter),
-                              RelaxAll);
+        S = ELFStreamerCtorFn(T, Ctx, std::move(TAB), std::move(OW),
+                              std::move(Emitter), RelaxAll);
       else
-        S = createELFStreamer(Ctx, std::move(TAB), OS, std::move(Emitter),
-                              RelaxAll);
+        S = createELFStreamer(Ctx, std::move(TAB), std::move(OW),
+                              std::move(Emitter), RelaxAll);
       break;
     case Triple::Wasm:
       if (WasmStreamerCtorFn)
-        S = WasmStreamerCtorFn(T, Ctx, std::move(TAB), OS, std::move(Emitter),
-                               RelaxAll);
+        S = WasmStreamerCtorFn(T, Ctx, std::move(TAB), std::move(OW),
+                               std::move(Emitter), RelaxAll);
       else
-        S = createWasmStreamer(Ctx, std::move(TAB), OS, std::move(Emitter),
-                               RelaxAll);
+        S = createWasmStreamer(Ctx, std::move(TAB), std::move(OW),
+                               std::move(Emitter), RelaxAll);
       break;
     }
     if (ObjectTargetStreamerCtorFn)
@@ -493,12 +514,14 @@ public:
   MCStreamer *createAsmStreamer(MCContext &Ctx,
                                 std::unique_ptr<formatted_raw_ostream> OS,
                                 bool IsVerboseAsm, bool UseDwarfDirectory,
-                                MCInstPrinter *InstPrint, MCCodeEmitter *CE,
-                                MCAsmBackend *TAB, bool ShowInst) const {
+                                MCInstPrinter *InstPrint,
+                                std::unique_ptr<MCCodeEmitter> &&CE,
+                                std::unique_ptr<MCAsmBackend> &&TAB,
+                                bool ShowInst) const {
     formatted_raw_ostream &OSRef = *OS;
-    MCStreamer *S = llvm::createAsmStreamer(Ctx, std::move(OS), IsVerboseAsm,
-                                            UseDwarfDirectory, InstPrint, CE,
-                                            TAB, ShowInst);
+    MCStreamer *S = llvm::createAsmStreamer(
+        Ctx, std::move(OS), IsVerboseAsm, UseDwarfDirectory, InstPrint,
+        std::move(CE), std::move(TAB), ShowInst);
     createAsmTargetStreamer(*S, OSRef, InstPrint, IsVerboseAsm);
     return S;
   }

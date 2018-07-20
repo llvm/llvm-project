@@ -306,39 +306,24 @@ void AArch64MachObjectWriter::recordRelocation(
     bool CanUseLocalRelocation =
         canUseLocalRelocation(Section, *Symbol, Log2Size);
     if (Symbol->isTemporary() && (Value || !CanUseLocalRelocation)) {
+      // Make sure that the symbol is actually in a section here. If it isn't,
+      // emit an error and exit.
+      if (!Symbol->isInSection()) {
+        Asm.getContext().reportError(
+            Fixup.getLoc(),
+            "unsupported relocation of local symbol '" + Symbol->getName() +
+                "'. Must have non-local symbol earlier in section.");
+        return;
+      }
       const MCSection &Sec = Symbol->getSection();
       if (!Asm.getContext().getAsmInfo()->isSectionAtomizableBySymbols(Sec))
         Symbol->setUsedInReloc();
     }
 
     const MCSymbol *Base = Asm.getAtom(*Symbol);
-
-    // If the symbol is a variable and we weren't able to get a Base for it
-    // (i.e., it's not in the symbol table associated with a section) resolve
-    // the relocation based its expansion instead.
-    if (Symbol->isVariable() && !Base) {
-      // If the evaluation is an absolute value, just use that directly
-      // to keep things easy.
-      int64_t Res;
-      if (Symbol->getVariableValue()->evaluateAsAbsolute(
-              Res, Layout, Writer->getSectionAddressMap())) {
-        FixedValue = Res;
-        return;
-      }
-
-      // FIXME: Will the Target we already have ever have any data in it
-      // we need to preserve and merge with the new Target? How about
-      // the FixedValue?
-      if (!Symbol->getVariableValue()->evaluateAsRelocatable(Target, &Layout,
-                                                             &Fixup)) {
-        Asm.getContext().reportError(Fixup.getLoc(),
-                                     "unable to resolve variable '" +
-                                         Symbol->getName() + "'");
-        return;
-      }
-      return recordRelocation(Writer, Asm, Layout, Fragment, Fixup, Target,
-                              FixedValue);
-    }
+    // If the symbol is a variable it can either be in a section and
+    // we have a base or it is absolute and should have been expanded.
+    assert(!Symbol->isVariable() || Base);
 
     // Relocations inside debug sections always use local relocations when
     // possible. This seems to be done because the debugger doesn't fully
@@ -377,19 +362,8 @@ void AArch64MachObjectWriter::recordRelocation(
         Value -= Writer->getFragmentAddress(Fragment, Layout) +
                  Fixup.getOffset() + (1ULL << Log2Size);
     } else {
-      // Resolve constant variables.
-      if (Symbol->isVariable()) {
-        int64_t Res;
-        if (Symbol->getVariableValue()->evaluateAsAbsolute(
-                Res, Layout, Writer->getSectionAddressMap())) {
-          FixedValue = Res;
-          return;
-        }
-      }
-      Asm.getContext().reportError(Fixup.getLoc(),
-                                  "unsupported relocation of variable '" +
-                                      Symbol->getName() + "'");
-      return;
+      llvm_unreachable(
+          "This constant variable should have been expanded during evaluation");
     }
   }
 
@@ -430,10 +404,7 @@ void AArch64MachObjectWriter::recordRelocation(
   Writer->addRelocation(RelSymbol, Fragment->getParent(), MRE);
 }
 
-std::unique_ptr<MCObjectWriter>
-llvm::createAArch64MachObjectWriter(raw_pwrite_stream &OS, uint32_t CPUType,
-                                    uint32_t CPUSubtype) {
-  return createMachObjectWriter(
-      llvm::make_unique<AArch64MachObjectWriter>(CPUType, CPUSubtype), OS,
-      /*IsLittleEndian=*/true);
+std::unique_ptr<MCObjectTargetWriter>
+llvm::createAArch64MachObjectWriter(uint32_t CPUType, uint32_t CPUSubtype) {
+  return llvm::make_unique<AArch64MachObjectWriter>(CPUType, CPUSubtype);
 }

@@ -387,14 +387,14 @@ define <4 x float> @simple_select_no_users(<4 x float> %a, <4 x float> %b, <4 x 
 ; to do this backwards this backwards
 define <4 x i32> @reconstruct(<4 x i32> %c) #0 {
 ; CHECK-LABEL: @reconstruct(
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i32> [[C:%.*]], i32 3
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i32> [[C]], i32 2
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i32> [[C]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i32> [[C]], i32 0
-; CHECK-NEXT:    [[RA:%.*]] = insertelement <4 x i32> undef, i32 [[TMP4]], i32 0
-; CHECK-NEXT:    [[RB:%.*]] = insertelement <4 x i32> [[RA]], i32 [[TMP3]], i32 1
-; CHECK-NEXT:    [[RC:%.*]] = insertelement <4 x i32> [[RB]], i32 [[TMP2]], i32 2
-; CHECK-NEXT:    [[RD:%.*]] = insertelement <4 x i32> [[RC]], i32 [[TMP1]], i32 3
+; CHECK-NEXT:    [[C0:%.*]] = extractelement <4 x i32> [[C:%.*]], i32 0
+; CHECK-NEXT:    [[C1:%.*]] = extractelement <4 x i32> [[C]], i32 1
+; CHECK-NEXT:    [[C2:%.*]] = extractelement <4 x i32> [[C]], i32 2
+; CHECK-NEXT:    [[C3:%.*]] = extractelement <4 x i32> [[C]], i32 3
+; CHECK-NEXT:    [[RA:%.*]] = insertelement <4 x i32> undef, i32 [[C0]], i32 0
+; CHECK-NEXT:    [[RB:%.*]] = insertelement <4 x i32> [[RA]], i32 [[C1]], i32 1
+; CHECK-NEXT:    [[RC:%.*]] = insertelement <4 x i32> [[RB]], i32 [[C2]], i32 2
+; CHECK-NEXT:    [[RD:%.*]] = insertelement <4 x i32> [[RC]], i32 [[C3]], i32 3
 ; CHECK-NEXT:    ret <4 x i32> [[RD]]
 ;
 ; ZEROTHRESH-LABEL: @reconstruct(

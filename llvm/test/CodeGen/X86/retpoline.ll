@@ -19,7 +19,7 @@ entry:
 ; X64-LABEL: icall_reg:
 ; X64-DAG:   movq %rdi, %[[fp:[^ ]*]]
 ; X64-DAG:   movl %esi, %[[x:[^ ]*]]
-; X64:       movl %[[x]], %edi
+; X64:       movl %esi, %edi
 ; X64:       callq bar
 ; X64-DAG:   movl %[[x]], %edi
 ; X64-DAG:   movq %[[fp]], %r11
@@ -111,7 +111,7 @@ define void @vcall(%struct.Foo* %obj) #0 {
 
 ; X64-LABEL: vcall:
 ; X64:       movq %rdi, %[[obj:[^ ]*]]
-; X64:       movq (%[[obj]]), %[[vptr:[^ ]*]]
+; X64:       movq (%rdi), %[[vptr:[^ ]*]]
 ; X64:       movq 8(%[[vptr]]), %[[fp:[^ ]*]]
 ; X64:       movq %[[fp]], %r11
 ; X64:       callq __llvm_retpoline_r11

@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief WebAssembly Floating-point operand code-gen constructs.
+/// WebAssembly Floating-point operand code-gen constructs.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -77,12 +77,14 @@ def : Pat<(setge f64:$lhs, f64:$rhs), (GE_F64 f64:$lhs, f64:$rhs)>;
 
 let Defs = [ARGUMENTS] in {
 
-def SELECT_F32 : I<(outs F32:$dst), (ins F32:$lhs, F32:$rhs, I32:$cond),
-                   [(set F32:$dst, (select I32:$cond, F32:$lhs, F32:$rhs))],
-                   "f32.select\t$dst, $lhs, $rhs, $cond", 0x1b>;
-def SELECT_F64 : I<(outs F64:$dst), (ins F64:$lhs, F64:$rhs, I32:$cond),
-                   [(set F64:$dst, (select I32:$cond, F64:$lhs, F64:$rhs))],
-                   "f64.select\t$dst, $lhs, $rhs, $cond", 0x1b>;
+defm SELECT_F32 : I<(outs F32:$dst), (ins F32:$lhs, F32:$rhs, I32:$cond),
+                    (outs), (ins),
+                    [(set F32:$dst, (select I32:$cond, F32:$lhs, F32:$rhs))],
+                    "f32.select\t$dst, $lhs, $rhs, $cond", "f32.select", 0x1b>;
+defm SELECT_F64 : I<(outs F64:$dst), (ins F64:$lhs, F64:$rhs, I32:$cond),
+                    (outs), (ins),
+                    [(set F64:$dst, (select I32:$cond, F64:$lhs, F64:$rhs))],
+                    "f64.select\t$dst, $lhs, $rhs, $cond", "f64.select", 0x1b>;
 
 } // Defs = [ARGUMENTS]
 

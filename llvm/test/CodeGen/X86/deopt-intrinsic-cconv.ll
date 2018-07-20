@@ -1,5 +1,6 @@
 ; RUN: llc < %s | FileCheck %s
 ; RUN: llc -debug-only=stackmaps < %s 2>&1 | FileCheck --check-prefix=STACKMAPS %s
+; RUN: opt -disable-output -debugify < %s
 ; REQUIRES: asserts
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"

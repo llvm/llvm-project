@@ -6,14 +6,14 @@ define i8* @warn(i8* returned, i8*, i64) local_unnamed_addr #0 !dbg !6 {
   tail call void @llvm.dbg.value(metadata i8* %0, i64 0, metadata !14, metadata !17), !dbg !18
   tail call void @llvm.dbg.value(metadata i8* %1, i64 0, metadata !15, metadata !17), !dbg !19
   tail call void @llvm.dbg.value(metadata i64 %2, i64 0, metadata !16, metadata !17), !dbg !20
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %0, i8* %1, i64 %2, i32 1, i1 false), !dbg !21
+  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %0, i8* %1, i64 %2, i1 false), !dbg !21
   %4 = tail call i8* @foo(i8* %0, i8* %1, i64 %2) #5, !dbg !22
   %5 = tail call fastcc i8* @bar(i8* %0), !dbg !23
   ret i8* %5, !dbg !24
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i32, i1) #1
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1) #1
 
 declare i8* @foo(i8*, i8*, i64) local_unnamed_addr #2
 
@@ -37,7 +37,7 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #4
 !3 = !{i32 2, !"Dwarf Version", i32 4}
 !4 = !{i32 2, !"Debug Info Version", i32 3}
 !5 = !{!"clang version 5.0.0 (trunk 292174) (llvm/trunk 292179)"}
-!6 = distinct !DISubprogram(name: "warn", scope: !1, file: !1, line: 4, type: !7, isLocal: false, isDefinition: true, scopeLine: 5, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !13)
+!6 = distinct !DISubprogram(name: "warn", scope: !1, file: !1, line: 4, type: !7, isLocal: false, isDefinition: true, scopeLine: 5, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !13)
 !7 = !DISubroutineType(types: !8)
 !8 = !{!9, !9, !10, !12}
 !9 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: null, size: 64)
@@ -56,7 +56,7 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #4
 !22 = !DILocation(line: 7, column: 2, scope: !6)
 !23 = !DILocation(line: 8, column: 9, scope: !6)
 !24 = !DILocation(line: 8, column: 2, scope: !6)
-!25 = distinct !DISubprogram(name: "bar", scope: !1, file: !1, line: 2, type: !7, isLocal: true, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !26)
+!25 = distinct !DISubprogram(name: "bar", scope: !1, file: !1, line: 2, type: !7, isLocal: true, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !26)
 !26 = !{!27, !28, !29}
 !27 = !DILocalVariable(name: "dst", arg: 1, scope: !25, file: !1, line: 2, type: !9)
 !28 = !DILocalVariable(name: "src", arg: 2, scope: !25, file: !1, line: 2, type: !10)

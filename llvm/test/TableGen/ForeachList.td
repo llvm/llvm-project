@@ -10,6 +10,18 @@ foreach i = [0, 1, 2, 3, 4, 5, 6, 7] in {
   def F#i : Register<"F"#i, i>;
 }
 
+def Defs {
+  list<int> a = [0, 1];
+  list<int> b = [2, 3];
+}
+
+foreach i = Defs.a in {
+  def X#i;
+}
+
+foreach i = !listconcat(Defs.a, Defs.b) in
+def Y#i;
+
 // CHECK: def F0
 // CHECK: string Name = "F0";
 // CHECK: int Index = 0;
@@ -73,3 +85,10 @@ foreach i = [0, 1, 2, 3, 4, 5, 6, 7] in {
 // CHECK: def R7
 // CHECK: string Name = "R7";
 // CHECK: int Index = 7;
+
+// CHECK: def X0
+// CHECK: def X1
+// CHECK: def Y0
+// CHECK: def Y1
+// CHECK: def Y2
+// CHECK: def Y3

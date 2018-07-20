@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file contains the WebAssembly implementation of the
+/// This file contains the WebAssembly implementation of the
 /// TargetInstrInfo class.
 ///
 //===----------------------------------------------------------------------===//
@@ -30,7 +30,8 @@ using namespace llvm;
 
 WebAssemblyInstrInfo::WebAssemblyInstrInfo(const WebAssemblySubtarget &STI)
     : WebAssemblyGenInstrInfo(WebAssembly::ADJCALLSTACKDOWN,
-                              WebAssembly::ADJCALLSTACKUP),
+                              WebAssembly::ADJCALLSTACKUP,
+                              WebAssembly::CATCHRET),
       RI(STI.getTargetTriple()) {}
 
 bool WebAssemblyInstrInfo::isReallyTriviallyReMaterializable(
@@ -151,7 +152,7 @@ unsigned WebAssemblyInstrInfo::removeBranch(MachineBasicBlock &MBB,
 
   while (I != MBB.instr_begin()) {
     --I;
-    if (I->isDebugValue())
+    if (I->isDebugInstr())
       continue;
     if (!I->isTerminator())
       break;

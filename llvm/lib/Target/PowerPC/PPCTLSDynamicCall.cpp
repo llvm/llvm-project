@@ -77,7 +77,7 @@ protected:
           continue;
         }
 
-        DEBUG(dbgs() << "TLS Dynamic Call Fixup:\n    " << MI);
+        LLVM_DEBUG(dbgs() << "TLS Dynamic Call Fixup:\n    " << MI);
 
         unsigned OutReg = MI.getOperand(0).getReg();
         unsigned InReg = MI.getOperand(1).getReg();
@@ -108,7 +108,7 @@ protected:
         }
 
         // We create ADJCALLSTACKUP and ADJCALLSTACKDOWN around _tls_get_addr
-        // as schduling fence to avoid it is scheduled before
+        // as scheduling fence to avoid it is scheduled before
         // mflr in the prologue and the address in LR is clobbered (PR25839).
         // We don't really need to save data to the stack - the clobbered
         // registers are already saved when the SDNode (e.g. PPCaddiTlsgdLAddr)

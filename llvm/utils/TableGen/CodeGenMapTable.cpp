@@ -243,7 +243,12 @@ void MapTableEmitter::buildRowInstrMap() {
     std::vector<Init*> KeyValue;
     ListInit *RowFields = InstrMapDesc.getRowFields();
     for (Init *RowField : RowFields->getValues()) {
-      Init *CurInstrVal = CurInstr->getValue(RowField)->getValue();
+      RecordVal *RecVal = CurInstr->getValue(RowField);
+      if (RecVal == nullptr)
+        PrintFatalError(CurInstr->getLoc(), "No value " +
+                        RowField->getAsString() + " found in \"" +
+                        CurInstr->getName() + "\" instruction description.");
+      Init *CurInstrVal = RecVal->getValue();
       KeyValue.push_back(CurInstrVal);
     }
 

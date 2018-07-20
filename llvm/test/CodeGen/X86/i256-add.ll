@@ -9,40 +9,30 @@ define void @add(i256* %p, i256* %q) nounwind {
 ; X32-NEXT:    pushl %ebx
 ; X32-NEXT:    pushl %edi
 ; X32-NEXT:    pushl %esi
-; X32-NEXT:    subl $12, %esp
+; X32-NEXT:    subl $8, %esp
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movl 8(%ecx), %edi
-; X32-NEXT:    movl (%ecx), %edx
-; X32-NEXT:    movl 4(%ecx), %ebx
-; X32-NEXT:    movl 28(%eax), %esi
-; X32-NEXT:    movl %esi, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    movl 24(%eax), %ebp
-; X32-NEXT:    addl (%eax), %edx
-; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    adcl 4(%eax), %ebx
-; X32-NEXT:    adcl 8(%eax), %edi
-; X32-NEXT:    movl %edi, (%esp) # 4-byte Spill
-; X32-NEXT:    movl 20(%eax), %edi
-; X32-NEXT:    movl 12(%eax), %edx
-; X32-NEXT:    movl 16(%eax), %esi
-; X32-NEXT:    adcl 12(%ecx), %edx
-; X32-NEXT:    adcl 16(%ecx), %esi
-; X32-NEXT:    adcl 20(%ecx), %edi
-; X32-NEXT:    movl %ebp, %eax
-; X32-NEXT:    adcl 24(%ecx), %eax
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebp # 4-byte Reload
-; X32-NEXT:    adcl %ebp, 28(%ecx)
-; X32-NEXT:    movl (%esp), %ebp # 4-byte Reload
-; X32-NEXT:    movl %ebp, 8(%ecx)
-; X32-NEXT:    movl %ebx, 4(%ecx)
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx # 4-byte Reload
-; X32-NEXT:    movl %ebx, (%ecx)
-; X32-NEXT:    movl %edx, 12(%ecx)
-; X32-NEXT:    movl %esi, 16(%ecx)
-; X32-NEXT:    movl %edi, 20(%ecx)
-; X32-NEXT:    movl %eax, 24(%ecx)
-; X32-NEXT:    addl $12, %esp
+; X32-NEXT:    movl 28(%eax), %ecx
+; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl 24(%eax), %ecx
+; X32-NEXT:    movl %ecx, (%esp) # 4-byte Spill
+; X32-NEXT:    movl 20(%eax), %esi
+; X32-NEXT:    movl 16(%eax), %edi
+; X32-NEXT:    movl 12(%eax), %ebx
+; X32-NEXT:    movl 8(%eax), %ebp
+; X32-NEXT:    movl (%eax), %ecx
+; X32-NEXT:    movl 4(%eax), %edx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    addl %ecx, (%eax)
+; X32-NEXT:    adcl %edx, 4(%eax)
+; X32-NEXT:    adcl %ebp, 8(%eax)
+; X32-NEXT:    adcl %ebx, 12(%eax)
+; X32-NEXT:    adcl %edi, 16(%eax)
+; X32-NEXT:    adcl %esi, 20(%eax)
+; X32-NEXT:    movl (%esp), %ecx # 4-byte Reload
+; X32-NEXT:    adcl %ecx, 24(%eax)
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx # 4-byte Reload
+; X32-NEXT:    adcl %ecx, 28(%eax)
+; X32-NEXT:    addl $8, %esp
 ; X32-NEXT:    popl %esi
 ; X32-NEXT:    popl %edi
 ; X32-NEXT:    popl %ebx
@@ -51,17 +41,14 @@ define void @add(i256* %p, i256* %q) nounwind {
 ;
 ; X64-LABEL: add:
 ; X64:       # %bb.0:
-; X64-NEXT:    movq 16(%rdi), %rax
-; X64-NEXT:    movq (%rdi), %rcx
-; X64-NEXT:    movq 8(%rdi), %rdx
-; X64-NEXT:    movq 24(%rsi), %r8
-; X64-NEXT:    addq (%rsi), %rcx
-; X64-NEXT:    adcq 8(%rsi), %rdx
-; X64-NEXT:    adcq 16(%rsi), %rax
-; X64-NEXT:    adcq %r8, 24(%rdi)
-; X64-NEXT:    movq %rax, 16(%rdi)
-; X64-NEXT:    movq %rdx, 8(%rdi)
-; X64-NEXT:    movq %rcx, (%rdi)
+; X64-NEXT:    movq 24(%rsi), %rax
+; X64-NEXT:    movq 16(%rsi), %rcx
+; X64-NEXT:    movq (%rsi), %rdx
+; X64-NEXT:    movq 8(%rsi), %rsi
+; X64-NEXT:    addq %rdx, (%rdi)
+; X64-NEXT:    adcq %rsi, 8(%rdi)
+; X64-NEXT:    adcq %rcx, 16(%rdi)
+; X64-NEXT:    adcq %rax, 24(%rdi)
 ; X64-NEXT:    retq
   %a = load i256, i256* %p
   %b = load i256, i256* %q
@@ -77,35 +64,28 @@ define void @sub(i256* %p, i256* %q) nounwind {
 ; X32-NEXT:    pushl %edi
 ; X32-NEXT:    pushl %esi
 ; X32-NEXT:    subl $8, %esp
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movl 16(%ecx), %eax
-; X32-NEXT:    movl 12(%ecx), %edx
-; X32-NEXT:    movl 8(%ecx), %edi
-; X32-NEXT:    movl (%ecx), %ebx
-; X32-NEXT:    movl 4(%ecx), %ebp
-; X32-NEXT:    subl (%esi), %ebx
-; X32-NEXT:    sbbl 4(%esi), %ebp
-; X32-NEXT:    sbbl 8(%esi), %edi
-; X32-NEXT:    sbbl 12(%esi), %edx
-; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    sbbl 16(%esi), %eax
-; X32-NEXT:    movl %eax, (%esp) # 4-byte Spill
-; X32-NEXT:    movl 20(%ecx), %edx
-; X32-NEXT:    sbbl 20(%esi), %edx
-; X32-NEXT:    movl 24(%ecx), %eax
-; X32-NEXT:    sbbl 24(%esi), %eax
-; X32-NEXT:    movl 28(%esi), %esi
-; X32-NEXT:    sbbl %esi, 28(%ecx)
-; X32-NEXT:    movl %edi, 8(%ecx)
-; X32-NEXT:    movl %ebp, 4(%ecx)
-; X32-NEXT:    movl %ebx, (%ecx)
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
-; X32-NEXT:    movl %esi, 12(%ecx)
-; X32-NEXT:    movl (%esp), %esi # 4-byte Reload
-; X32-NEXT:    movl %esi, 16(%ecx)
-; X32-NEXT:    movl %edx, 20(%ecx)
-; X32-NEXT:    movl %eax, 24(%ecx)
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl 28(%eax), %ecx
+; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl 24(%eax), %ecx
+; X32-NEXT:    movl %ecx, (%esp) # 4-byte Spill
+; X32-NEXT:    movl 20(%eax), %esi
+; X32-NEXT:    movl 16(%eax), %edi
+; X32-NEXT:    movl 12(%eax), %ebx
+; X32-NEXT:    movl 8(%eax), %ebp
+; X32-NEXT:    movl (%eax), %ecx
+; X32-NEXT:    movl 4(%eax), %edx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    subl %ecx, (%eax)
+; X32-NEXT:    sbbl %edx, 4(%eax)
+; X32-NEXT:    sbbl %ebp, 8(%eax)
+; X32-NEXT:    sbbl %ebx, 12(%eax)
+; X32-NEXT:    sbbl %edi, 16(%eax)
+; X32-NEXT:    sbbl %esi, 20(%eax)
+; X32-NEXT:    movl (%esp), %ecx # 4-byte Reload
+; X32-NEXT:    sbbl %ecx, 24(%eax)
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx # 4-byte Reload
+; X32-NEXT:    sbbl %ecx, 28(%eax)
 ; X32-NEXT:    addl $8, %esp
 ; X32-NEXT:    popl %esi
 ; X32-NEXT:    popl %edi
@@ -115,17 +95,14 @@ define void @sub(i256* %p, i256* %q) nounwind {
 ;
 ; X64-LABEL: sub:
 ; X64:       # %bb.0:
-; X64-NEXT:    movq 16(%rdi), %rax
-; X64-NEXT:    movq (%rdi), %rcx
-; X64-NEXT:    movq 8(%rdi), %rdx
-; X64-NEXT:    movq 24(%rsi), %r8
-; X64-NEXT:    subq (%rsi), %rcx
-; X64-NEXT:    sbbq 8(%rsi), %rdx
-; X64-NEXT:    sbbq 16(%rsi), %rax
-; X64-NEXT:    sbbq %r8, 24(%rdi)
-; X64-NEXT:    movq %rax, 16(%rdi)
-; X64-NEXT:    movq %rdx, 8(%rdi)
-; X64-NEXT:    movq %rcx, (%rdi)
+; X64-NEXT:    movq 24(%rsi), %rax
+; X64-NEXT:    movq 16(%rsi), %rcx
+; X64-NEXT:    movq (%rsi), %rdx
+; X64-NEXT:    movq 8(%rsi), %rsi
+; X64-NEXT:    subq %rdx, (%rdi)
+; X64-NEXT:    sbbq %rsi, 8(%rdi)
+; X64-NEXT:    sbbq %rcx, 16(%rdi)
+; X64-NEXT:    sbbq %rax, 24(%rdi)
 ; X64-NEXT:    retq
   %a = load i256, i256* %p
   %b = load i256, i256* %q

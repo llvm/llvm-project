@@ -2,6 +2,7 @@ add_llvm_library(LLVMipo
   AlwaysInliner.cpp
   ArgumentPromotion.cpp
   BarrierNoopPass.cpp
+  BlockExtractor.cpp
   CalledValuePropagation.cpp
   ConstantMerge.cpp
   CrossDSOCFI.cpp
@@ -27,8 +28,10 @@ add_llvm_library(LLVMipo
   PassManagerBuilder.cpp
   PruneEH.cpp
   SampleProfile.cpp
+  SCCP.cpp
   StripDeadPrototypes.cpp
   StripSymbols.cpp
+  SyntheticCountsPropagation.cpp
   ThinLTOBitcodeWriter.cpp
   WholeProgramDevirt.cpp
 

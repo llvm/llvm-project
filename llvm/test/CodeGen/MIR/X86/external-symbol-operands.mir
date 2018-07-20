@@ -32,33 +32,33 @@ tracksRegLiveness: true
 body: |
   bb.0.entry:
     successors: %bb.1.entry, %bb.2.entry
-    liveins: %edi
+    liveins: $edi
 
-    %rsp = SUB64ri32 %rsp, 520, implicit-def %eflags
-    %rcx = LOAD_STACK_GUARD
-    MOV64mr %rsp, 1, _, 512, _, %rcx
-    %rax = MOVSX64rr32 %edi
-    %eax = MOV32rm %rsp, 4, %rax, 0, _
-    CMP64rm %rcx, %rsp, 1, _, 512, _, implicit-def %eflags
-    JNE_1 %bb.2.entry, implicit %eflags
+    $rsp = SUB64ri32 $rsp, 520, implicit-def $eflags
+    $rcx = LOAD_STACK_GUARD
+    MOV64mr $rsp, 1, _, 512, _, $rcx
+    $rax = MOVSX64rr32 $edi
+    $eax = MOV32rm $rsp, 4, $rax, 0, _
+    CMP64rm $rcx, $rsp, 1, _, 512, _, implicit-def $eflags
+    JNE_1 %bb.2.entry, implicit $eflags
 
   bb.1.entry:
-    liveins: %eax
+    liveins: $eax
 
-    %rsp = ADD64ri32 %rsp, 520, implicit-def %eflags
-    RETQ %eax
+    $rsp = ADD64ri32 $rsp, 520, implicit-def $eflags
+    RETQ $eax
 
   bb.2.entry:
-    ; CHECK:      CALL64pcrel32 $__stack_chk_fail,
-    ; CHECK-NEXT: CALL64pcrel32 $__stack_chk_fail.09-_,
-    ; CHECK-NEXT: CALL64pcrel32 $"__stack_chk_fail$",
-    ; CHECK-NEXT: CALL64pcrel32 $"$Quoted \09 External symbol \11 ",
-    ; CHECK-NEXT: CALL64pcrel32 $__stack_chk_fail + 2,
-    ; CHECK-NEXT: CALL64pcrel32 $" check stack - 20" - 20,
-    CALL64pcrel32 $__stack_chk_fail, csr_64, implicit %rsp, implicit-def %rsp
-    CALL64pcrel32 $__stack_chk_fail.09-_, csr_64, implicit %rsp, implicit-def %rsp
-    CALL64pcrel32 $__stack_chk_fail$, csr_64, implicit %rsp, implicit-def %rsp
-    CALL64pcrel32 $"$Quoted \09 External symbol \11 ", csr_64, implicit %rsp, implicit-def %rsp
-    CALL64pcrel32 $__stack_chk_fail + 2, csr_64, implicit %rsp, implicit-def %rsp
-    CALL64pcrel32 $" check stack - 20" - 20, csr_64, implicit %rsp, implicit-def %rsp
+    ; CHECK:      CALL64pcrel32 &__stack_chk_fail,
+    ; CHECK-NEXT: CALL64pcrel32 &__stack_chk_fail.09-_,
+    ; CHECK-NEXT: CALL64pcrel32 &"__stack_chk_fail$",
+    ; CHECK-NEXT: CALL64pcrel32 &"$Quoted \09 External symbol \11 ",
+    ; CHECK-NEXT: CALL64pcrel32 &__stack_chk_fail + 2,
+    ; CHECK-NEXT: CALL64pcrel32 &" check stack - 20" - 20,
+    CALL64pcrel32 &__stack_chk_fail, csr_64, implicit $rsp, implicit-def $rsp
+    CALL64pcrel32 &__stack_chk_fail.09-_, csr_64, implicit $rsp, implicit-def $rsp
+    CALL64pcrel32 &__stack_chk_fail$, csr_64, implicit $rsp, implicit-def $rsp
+    CALL64pcrel32 &"$Quoted \09 External symbol \11 ", csr_64, implicit $rsp, implicit-def $rsp
+    CALL64pcrel32 &__stack_chk_fail + 2, csr_64, implicit $rsp, implicit-def $rsp
+    CALL64pcrel32 &" check stack - 20" - 20, csr_64, implicit $rsp, implicit-def $rsp
 ...

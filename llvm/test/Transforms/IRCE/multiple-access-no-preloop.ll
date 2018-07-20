@@ -1,4 +1,5 @@
 ; RUN: opt -verify-loop-info -irce -S < %s | FileCheck %s
+; RUN: opt -verify-loop-info -passes='require<branch-prob>,loop(irce)' -S < %s | FileCheck %s
 
 define void @multiple_access_no_preloop(
     i32* %arr_a, i32* %a_len_ptr, i32* %arr_b, i32* %b_len_ptr, i32 %n) {

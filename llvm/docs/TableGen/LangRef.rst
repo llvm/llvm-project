@@ -98,7 +98,9 @@ wide variety of meanings:
                :!eq     !if      !head    !tail      !con
                :!add    !shl     !sra     !srl       !and
                :!or     !empty   !subst   !foreach   !strconcat
-               :!cast   !listconcat
+               :!cast   !listconcat       !size      !foldl
+               :!isa    !dag     !le      !lt        !ge
+               :!gt     !ne
 
 
 Syntax
@@ -115,13 +117,15 @@ TableGen's top-level production consists of "objects".
 
 .. productionlist::
    TableGenFile: `Object`*
-   Object: `Class` | `Def` | `Defm` | `Let` | `MultiClass` | `Foreach`
+   Object: `Class` | `Def` | `Defm` | `Defset` | `Let` | `MultiClass` |
+           `Foreach`
 
 ``class``\es
 ------------
 
 .. productionlist::
    Class: "class" `TokIdentifier` [`TemplateArgList`] `ObjectBody`
+   TemplateArgList: "<" `Declaration` ("," `Declaration`)* ">"
 
 A ``class`` declaration creates a record which other records can inherit
 from. A class can be parametrized by a list of "template arguments", whose
@@ -142,8 +146,9 @@ forward declaration: note that records deriving from the forward-declared
 class will inherit no fields from it since the record expansion is done
 when the record is parsed.
 
-.. productionlist::
-   TemplateArgList: "<" `Declaration` ("," `Declaration`)* ">"
+Every class has an implicit template argument called ``NAME``, which is set
+to the name of the instantiating ``def`` or ``defm``. The result is undefined
+if the class is instantiated by an anonymous record.
 
 Declarations
 ------------
@@ -224,15 +229,17 @@ of:
        int Baz = Bar;
      }
 
+  Values defined in superclasses can be accessed the same way.
+
 * a template arg of a ``class``, such as the use of ``Bar`` in::
 
      class Foo<int Bar> {
        int Baz = Bar;
      }
 
-* value local to a ``multiclass``, such as the use of ``Bar`` in::
+* value local to a ``class``, such as the use of ``Bar`` in::
 
-     multiclass Foo {
+     class Foo {
        int Bar = 5;
        int Baz = Bar;
      }
@@ -240,8 +247,17 @@ of:
 * a template arg to a ``multiclass``, such as the use of ``Bar`` in::
 
      multiclass Foo<int Bar> {
-       int Baz = Bar;
+       def : SomeClass<Bar>;
      }
+
+* the iteration variable of a ``foreach``, such as the use of ``i`` in::
+
+     foreach i = 0-5 in
+     def Foo#i;
+
+* a variable defined by ``defset``
+
+* the implicit template argument ``NAME`` in a ``class`` or ``multiclass``
 
 .. productionlist::
    SimpleValue: `TokInteger`
@@ -291,7 +307,7 @@ given values.
    leave it out.
 
 .. productionlist::
-   SimpleValue: "(" `DagArg` `DagArgList` ")"
+   SimpleValue: "(" `DagArg` [`DagArgList`] ")"
    DagArgList: `DagArg` ("," `DagArg`)*
    DagArg: `Value` [":" `TokVarName`] | `TokVarName`
 
@@ -322,49 +338,93 @@ It is after parsing the base class list that the "let stack" is applied.
    Body: ";" | "{" BodyList "}"
    BodyList: BodyItem*
    BodyItem: `Declaration` ";"
-           :| "let" `TokIdentifier` [`RangeList`] "=" `Value` ";"
+           :| "let" `TokIdentifier` [ "{" `RangeList` "}" ] "=" `Value` ";"
 
 The ``let`` form allows overriding the value of an inherited field.
 
 ``def``
 -------
 
-.. TODO::
-   There can be pastes in the names here, like ``#NAME#``. Look into that
-   and document it (it boils down to ParseIDValue with IDParseMode ==
-   ParseNameMode). ParseObjectName calls into the general ParseValue, with
-   the only different from "arbitrary expression parsing" being IDParseMode
-   == Mode.
-
 .. productionlist::
-   Def: "def" `TokIdentifier` `ObjectBody`
+   Def: "def" [`Value`] `ObjectBody`
 
-Defines a record whose name is given by the :token:`TokIdentifier`. The
-fields of the record are inherited from the base classes and defined in the
-body.
+Defines a record whose name is given by the optional :token:`Value`. The value
+is parsed in a special mode where global identifiers (records and variables
+defined by ``defset``) are not recognized, and all unrecognized identifiers
+are interpreted as strings.
+
+If no name is given, the record is anonymous. The final name of anonymous
+records is undefined, but globally unique.
 
 Special handling occurs if this ``def`` appears inside a ``multiclass`` or
 a ``foreach``.
+
+When a non-anonymous record is defined in a multiclass and the given name
+does not contain a reference to the implicit template argument ``NAME``, such
+a reference will automatically be prepended. That is, the following are
+equivalent inside a multiclass::
+
+    def Foo;
+    def NAME#Foo;
 
 ``defm``
 --------
 
 .. productionlist::
-   Defm: "defm" `TokIdentifier` ":" `BaseClassListNE` ";"
+   Defm: "defm" [`Value`] ":" `BaseClassListNE` ";"
 
-Note that in the :token:`BaseClassList`, all of the ``multiclass``'s must
-precede any ``class``'s that appear.
+The :token:`BaseClassList` is a list of at least one ``multiclass`` and any
+number of ``class``'s. The ``multiclass``'s must occur before any ``class``'s.
+
+Instantiates all records defined in all given ``multiclass``'s and adds the
+given ``class``'s as superclasses.
+
+The name is parsed in the same special mode used by ``def``. If the name is
+missing, a globally unique string is used instead (but instantiated records
+are not considered to be anonymous, unless they were originally defined by an
+anonymous ``def``) That is, the following have different semantics::
+
+    defm : SomeMultiClass<...>;    // some globally unique name
+    defm "" : SomeMultiClass<...>; // empty name string
+
+When it occurs inside a multiclass, the second variant is equivalent to
+``defm NAME : ...``. More generally, when ``defm`` occurs in a multiclass and
+its name does not contain a reference to the implicit template argument
+``NAME``, such a reference will automatically be prepended. That is, the
+following are equivalent inside a multiclass::
+
+    defm Foo : SomeMultiClass<...>;
+    defm NAME#Foo : SomeMultiClass<...>;
+
+``defset``
+----------
+.. productionlist::
+   Defset: "defset" `Type` `TokIdentifier` "=" "{" `Object`* "}"
+
+All records defined inside the braces via ``def`` and ``defm`` are collected
+in a globally accessible list of the given name (in addition to being added
+to the global collection of records as usual). Anonymous records created inside
+initializier expressions using the ``Class<args...>`` syntax are never collected
+in a defset.
+
+The given type must be ``list<A>``, where ``A`` is some class. It is an error
+to define a record (via ``def`` or ``defm``) inside the braces which doesn't
+derive from ``A``.
 
 ``foreach``
 -----------
 
 .. productionlist::
-   Foreach: "foreach" `Declaration` "in" "{" `Object`* "}"
-          :| "foreach" `Declaration` "in" `Object`
+   Foreach: "foreach" `ForeachDeclaration` "in" "{" `Object`* "}"
+          :| "foreach" `ForeachDeclaration` "in" `Object`
+   ForeachDeclaration: ID "=" ( "{" `RangeList` "}" | `RangePiece` | `Value` )
 
 The value assigned to the variable in the declaration is iterated over and
 the object or object list is reevaluated with the variable set at each
 iterated value.
+
+Note that the productions involving RangeList and RangePiece have precedence
+over the more generic value parsing based on the first token.
 
 Top-Level ``let``
 -----------------

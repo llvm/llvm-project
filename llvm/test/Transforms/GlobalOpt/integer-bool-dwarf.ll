@@ -1,6 +1,10 @@
 ;RUN: opt -S -globalopt -f %s | FileCheck %s
 
-;CHECK: !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression(DW_OP_deref, DW_OP_constu, 111, DW_OP_mul, DW_OP_constu, 0, DW_OP_plus, DW_OP_stack_value))
+;CHECK: @foo = internal unnamed_addr global i1 false, align 4, !dbg ![[VAR:.*]]
+;CHECK: ![[VAR]] = !DIGlobalVariableExpression(var: !1, expr:
+;CHECK-SAME: !DIExpression(DW_OP_deref, DW_OP_constu, 111, DW_OP_mul,
+;CHECK-SAME:               DW_OP_constu, 0, DW_OP_plus, DW_OP_stack_value,
+;CHECK-SAME:               DW_OP_LLVM_fragment, 0, 1)) 
 
 @foo = internal global i32 0, align 4, !dbg !0
 
@@ -31,7 +35,7 @@ attributes #0 = { noinline nounwind optnone uwtable }
 !llvm.module.flags = !{!7, !8, !9}
 !llvm.ident = !{!10}
 
-!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression(DW_OP_LLVM_fragment, 0, 1))
 !1 = distinct !DIGlobalVariable(name: "foo", scope: !2, file: !3, line: 1, type: !6, isLocal: true, isDefinition: true)
 !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version 6.0.0 ", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !5)
 !3 = !DIFile(filename: "integer-bool-dwarf.c", directory: "/")
@@ -42,15 +46,15 @@ attributes #0 = { noinline nounwind optnone uwtable }
 !8 = !{i32 2, !"Debug Info Version", i32 3}
 !9 = !{i32 1, !"wchar_size", i32 4}
 !10 = !{!"clang version 6.0.0 "}
-!11 = distinct !DISubprogram(name: "set1", scope: !3, file: !3, line: 3, type: !12, isLocal: false, isDefinition: true, scopeLine: 4, isOptimized: false, unit: !2, variables: !4)
+!11 = distinct !DISubprogram(name: "set1", scope: !3, file: !3, line: 3, type: !12, isLocal: false, isDefinition: true, scopeLine: 4, isOptimized: false, unit: !2, retainedNodes: !4)
 !12 = !DISubroutineType(types: !13)
 !13 = !{null}
 !14 = !DILocation(line: 5, column: 7, scope: !11)
 !15 = !DILocation(line: 6, column: 1, scope: !11)
-!16 = distinct !DISubprogram(name: "set2", scope: !3, file: !3, line: 8, type: !12, isLocal: false, isDefinition: true, scopeLine: 9, isOptimized: false, unit: !2, variables: !4)
+!16 = distinct !DISubprogram(name: "set2", scope: !3, file: !3, line: 8, type: !12, isLocal: false, isDefinition: true, scopeLine: 9, isOptimized: false, unit: !2, retainedNodes: !4)
 !17 = !DILocation(line: 10, column: 7, scope: !16)
 !18 = !DILocation(line: 11, column: 1, scope: !16)
-!19 = distinct !DISubprogram(name: "get", scope: !3, file: !3, line: 13, type: !20, isLocal: false, isDefinition: true, scopeLine: 14, isOptimized: false, unit: !2, variables: !4)
+!19 = distinct !DISubprogram(name: "get", scope: !3, file: !3, line: 13, type: !20, isLocal: false, isDefinition: true, scopeLine: 14, isOptimized: false, unit: !2, retainedNodes: !4)
 !20 = !DISubroutineType(types: !21)
 !21 = !{!6}
 !22 = !DILocation(line: 15, column: 10, scope: !19)

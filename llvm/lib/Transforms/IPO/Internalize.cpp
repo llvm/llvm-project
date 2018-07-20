@@ -192,7 +192,7 @@ bool InternalizePass::internalizeModule(Module &M, CallGraph *CG) {
       ExternalNode->removeOneAbstractEdgeTo((*CG)[&I]);
 
     ++NumFunctions;
-    DEBUG(dbgs() << "Internalizing func " << I.getName() << "\n");
+    LLVM_DEBUG(dbgs() << "Internalizing func " << I.getName() << "\n");
   }
 
   // Never internalize the llvm.used symbol.  It is used to implement
@@ -221,7 +221,7 @@ bool InternalizePass::internalizeModule(Module &M, CallGraph *CG) {
     Changed = true;
 
     ++NumGlobals;
-    DEBUG(dbgs() << "Internalized gvar " << GV.getName() << "\n");
+    LLVM_DEBUG(dbgs() << "Internalized gvar " << GV.getName() << "\n");
   }
 
   // Mark all aliases that are not in the api as internal as well.
@@ -231,7 +231,7 @@ bool InternalizePass::internalizeModule(Module &M, CallGraph *CG) {
     Changed = true;
 
     ++NumAliases;
-    DEBUG(dbgs() << "Internalized alias " << GA.getName() << "\n");
+    LLVM_DEBUG(dbgs() << "Internalized alias " << GA.getName() << "\n");
   }
 
   return Changed;

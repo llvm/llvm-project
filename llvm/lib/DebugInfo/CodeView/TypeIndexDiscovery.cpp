@@ -58,7 +58,7 @@ static inline uint32_t getEncodedIntegerLength(ArrayRef<uint8_t> Data) {
       8,  // LF_UQUADWORD
   };
 
-  return Sizes[N - LF_NUMERIC];
+  return 2 + Sizes[N - LF_NUMERIC];
 }
 
 static inline uint32_t getCStringLength(ArrayRef<uint8_t> Data) {
@@ -393,7 +393,7 @@ static bool discoverTypeIndices(ArrayRef<uint8_t> Content, SymbolKind Kind,
     Refs.push_back({TiRefKind::TypeRef, 0, 1}); // Type
     break;
   case SymbolKind::S_REGISTER:
-    Refs.push_back({TiRefKind::TypeRef, 0, 1}); // Type;
+    Refs.push_back({TiRefKind::TypeRef, 0, 1}); // Type
     break;
   case SymbolKind::S_CONSTANT:
     Refs.push_back({TiRefKind::TypeRef, 0, 1}); // Type

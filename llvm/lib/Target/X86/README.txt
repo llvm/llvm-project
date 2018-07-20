@@ -1436,30 +1436,6 @@ bar:
 
 //===---------------------------------------------------------------------===//
 
-Consider the following two functions compiled with clang:
-_Bool foo(int *x) { return !(*x & 4); }
-unsigned bar(int *x) { return !(*x & 4); }
-
-foo:
-	movl	4(%esp), %eax
-	testb	$4, (%eax)
-	sete	%al
-	movzbl	%al, %eax
-	ret
-
-bar:
-	movl	4(%esp), %eax
-	movl	(%eax), %eax
-	shrl	$2, %eax
-	andl	$1, %eax
-	xorl	$1, %eax
-	ret
-
-The second function generates more code even though the two functions are
-are functionally identical.
-
-//===---------------------------------------------------------------------===//
-
 Take the following C code:
 int f(int a, int b) { return (unsigned char)a == (unsigned char)b; }
 

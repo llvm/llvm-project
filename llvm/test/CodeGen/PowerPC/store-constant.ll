@@ -44,10 +44,10 @@ define void @bar(%struct.S* %p) {
 
 ; CHECK-LABEL: @bar
 ; CHECK:       li 4, 2
-; CHECK:       stw 4, 12(3)
-; CHECK:       sth 4, 10(3)
-; CHECK:       std 4, 0(3)
-; CHECK:       stb 4, 8(3)
+; CHECK-DAG:       stw 4, 12(3)
+; CHECK-DAG:       sth 4, 10(3)
+; CHECK-DAG:       std 4, 0(3)
+; CHECK-DAG:       stb 4, 8(3)
 }
 
 ; Function Attrs: norecurse nounwind

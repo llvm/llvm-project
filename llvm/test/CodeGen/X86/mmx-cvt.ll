@@ -346,7 +346,7 @@ define <4 x float> @cvt_v2i32_v2f32(<1 x i64>*) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq (%rdi), %mm0
 ; X64-NEXT:    paddd %mm0, %mm0
-; X64-NEXT:    movd %mm0, %rax
+; X64-NEXT:    movq %mm0, %rax
 ; X64-NEXT:    movq %rax, %xmm0
 ; X64-NEXT:    cvtdq2ps %xmm0, %xmm0
 ; X64-NEXT:    retq

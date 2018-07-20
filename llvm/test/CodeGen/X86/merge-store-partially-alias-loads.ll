@@ -18,12 +18,12 @@
 ; DBGDAG-DAG: [[BASEPTR:t[0-9]+]]: i64,ch = CopyFromReg [[ENTRYTOKEN]],
 ; DBGDAG-DAG: [[ADDPTR:t[0-9]+]]: i64 = add {{(nuw )?}}[[BASEPTR]], Constant:i64<2>
 
-; DBGDAG-DAG: [[LD2:t[0-9]+]]: i16,ch = load<LD2[%tmp81](align=1)> [[ENTRYTOKEN]], [[BASEPTR]], undef:i64
-; DBGDAG-DAG: [[LD1:t[0-9]+]]: i8,ch = load<LD1[%tmp12]> [[ENTRYTOKEN]], [[ADDPTR]], undef:i64
+; DBGDAG-DAG: [[LD2:t[0-9]+]]: i16,ch = load<(load 2 from %ir.tmp81, align 1)> [[ENTRYTOKEN]], [[BASEPTR]], undef:i64
+; DBGDAG-DAG: [[LD1:t[0-9]+]]: i8,ch = load<(load 1 from %ir.tmp12)> [[ENTRYTOKEN]], [[ADDPTR]], undef:i64
 
-; DBGDAG-DAG: [[ST1:t[0-9]+]]: ch = store<ST1[%tmp14]> [[ENTRYTOKEN]], [[LD1]], t{{[0-9]+}}, undef:i64
+; DBGDAG-DAG: [[ST1:t[0-9]+]]: ch = store<(store 1 into %ir.tmp14)> [[ENTRYTOKEN]], [[LD1]], t{{[0-9]+}}, undef:i64
 ; DBGDAG-DAG: [[LOADTOKEN:t[0-9]+]]: ch = TokenFactor [[LD2]]:1, [[LD1]]:1
-; DBGDAG-DAG: [[ST2:t[0-9]+]]: ch = store<ST2[%tmp10](align=1)> [[LOADTOKEN]], [[LD2]], t{{[0-9]+}}, undef:i64
+; DBGDAG-DAG: [[ST2:t[0-9]+]]: ch = store<(store 2 into %ir.tmp10, align 1)> [[LOADTOKEN]], [[LD2]], t{{[0-9]+}}, undef:i64
 
 ; DBGDAG: X86ISD::RET_FLAG t{{[0-9]+}},
 

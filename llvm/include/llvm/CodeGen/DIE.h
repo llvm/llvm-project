@@ -136,7 +136,7 @@ class DIEAbbrevSet {
   /// The bump allocator to use when creating DIEAbbrev objects in the uniqued
   /// storage container.
   BumpPtrAllocator &Alloc;
-  /// \brief FoldingSet that uniques the abbreviations.
+  /// FoldingSet that uniques the abbreviations.
   FoldingSet<DIEAbbrev> AbbreviationsSet;
   /// A list of all the unique abbreviations in use.
   std::vector<DIEAbbrev *> Abbreviations;
@@ -190,7 +190,7 @@ public:
   uint64_t getValue() const { return Integer; }
   void setValue(uint64_t Val) { Integer = Val; }
 
-  void EmitValue(const AsmPrinter *AP, dwarf::Form Form) const;
+  void EmitValue(const AsmPrinter *Asm, dwarf::Form Form) const;
   unsigned SizeOf(const AsmPrinter *AP, dwarf::Form Form) const;
 
   void print(raw_ostream &O) const;
@@ -868,7 +868,7 @@ public:
     return dwarf::DW_FORM_block;
   }
 
-  void EmitValue(const AsmPrinter *AP, dwarf::Form Form) const;
+  void EmitValue(const AsmPrinter *Asm, dwarf::Form Form) const;
   unsigned SizeOf(const AsmPrinter *AP, dwarf::Form Form) const;
 
   void print(raw_ostream &O) const;
@@ -899,7 +899,7 @@ public:
     return dwarf::DW_FORM_block;
   }
 
-  void EmitValue(const AsmPrinter *AP, dwarf::Form Form) const;
+  void EmitValue(const AsmPrinter *Asm, dwarf::Form Form) const;
   unsigned SizeOf(const AsmPrinter *AP, dwarf::Form Form) const;
 
   void print(raw_ostream &O) const;

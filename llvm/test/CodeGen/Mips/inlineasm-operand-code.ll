@@ -63,6 +63,17 @@ entry:
   ret i32 0
 }
 
+; y with 4
+define i32 @constraint_y_4() nounwind {
+entry:
+; ALL-LABEL: constraint_y_4:
+; ALL:   #APP
+; ALL:   addiu ${{[0-9]+}}, ${{[0-9]+}}, 2
+; ALL:   #NO_APP
+  tail call i32 asm sideeffect "addiu $0, $1, ${2:y}", "=r,r,I"(i32 7, i32 4) ;
+  ret i32 0
+}
+
 ; z with -3
 define void @constraint_z_0() nounwind {
 entry:

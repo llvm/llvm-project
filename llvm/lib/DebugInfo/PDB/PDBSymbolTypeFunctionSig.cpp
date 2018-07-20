@@ -14,6 +14,7 @@
 #include "llvm/DebugInfo/PDB/IPDBSession.h"
 #include "llvm/DebugInfo/PDB/PDBSymDumper.h"
 #include "llvm/DebugInfo/PDB/PDBSymbol.h"
+#include "llvm/DebugInfo/PDB/PDBSymbolTypeBuiltin.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeFunctionArg.h"
 
 #include <utility>
@@ -83,4 +84,22 @@ void PDBSymbolTypeFunctionSig::dump(PDBSymDumper &Dumper) const {
 
 void PDBSymbolTypeFunctionSig::dumpRight(PDBSymDumper &Dumper) const {
   Dumper.dumpRight(*this);
+}
+
+bool PDBSymbolTypeFunctionSig::isCVarArgs() const {
+  auto SigArguments = getArguments();
+  if (!SigArguments)
+    return false;
+  uint32_t NumArgs = SigArguments->getChildCount();
+  if (NumArgs == 0)
+    return false;
+  auto Last = SigArguments->getChildAtIndex(NumArgs - 1);
+  if (auto Builtin = llvm::dyn_cast_or_null<PDBSymbolTypeBuiltin>(Last.get())) {
+    if (Builtin->getBuiltinType() == PDB_BuiltinType::None)
+      return true;
+  }
+
+  // Note that for a variadic template signature, this method always returns
+  // false since the parameters of the template are specialized.
+  return false;
 }

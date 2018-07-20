@@ -31,7 +31,7 @@ using namespace llvm;
 
 namespace {
 
-/// \brief Actual inliner pass implementation.
+/// Actual inliner pass implementation.
 ///
 /// The common implementation of the inlining logic is shared between this
 /// inliner pass and the always inliner pass. The two passes use different cost

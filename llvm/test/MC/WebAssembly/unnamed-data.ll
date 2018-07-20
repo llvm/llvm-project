@@ -1,4 +1,6 @@
-; RUN: llc -mtriple wasm32-unknown-unknown-wasm -filetype=obj %s -o - | obj2yaml | FileCheck %s
+; RUN: llc -filetype=obj %s -o - | obj2yaml | FileCheck %s
+
+target triple = "wasm32-unknown-unknown"
 
 @.str1 = private unnamed_addr constant [6 x i8] c"hello\00", align 1
 @.str2 = private unnamed_addr constant [6 x i8] c"world\00", align 1
@@ -7,43 +9,7 @@
 @b = global i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str2, i32 0, i32 0), align 8
 
 
-; CHECK:        - Type:            GLOBAL
-; CHECK-NEXT:     Globals:         
-; CHECK-NEXT:       - Type:            I32
-; CHECK-NEXT:         Mutable:         false
-; CHECK-NEXT:         InitExpr:        
-; CHECK-NEXT:           Opcode:          I32_CONST
-; CHECK-NEXT:           Value:           0
-; CHECK-NEXT:       - Type:            I32
-; CHECK-NEXT:         Mutable:         false
-; CHECK-NEXT:         InitExpr:        
-; CHECK-NEXT:           Opcode:          I32_CONST
-; CHECK-NEXT:           Value:           6
-; CHECK-NEXT:       - Type:            I32
-; CHECK-NEXT:         Mutable:         false
-; CHECK-NEXT:         InitExpr:        
-; CHECK-NEXT:           Opcode:          I32_CONST
-; CHECK-NEXT:           Value:           16
-; CHECK-NEXT:       - Type:            I32
-; CHECK-NEXT:         Mutable:         false
-; CHECK-NEXT:         InitExpr:
-; CHECK-NEXT:           Opcode:          I32_CONST
-; CHECK-NEXT:           Value:           24
-; CHECK-NEXT:   - Type:            EXPORT
-; CHECK-NEXT:     Exports:
-; CHECK-NEXT:       - Name:            .L.str1
-; CHECK-NEXT:         Kind:            GLOBAL
-; CHECK-NEXT:         Index:           0
-; CHECK-NEXT:       - Name:            .L.str2
-; CHECK-NEXT:         Kind:            GLOBAL
-; CHECK-NEXT:         Index:           1
-; CHECK-NEXT:       - Name:            a
-; CHECK-NEXT:         Kind:            GLOBAL
-; CHECK-NEXT:         Index:           2
-; CHECK-NEXT:       - Name:            b
-; CHECK-NEXT:         Kind:            GLOBAL
-; CHECK-NEXT:         Index:           3
-; CHECK-NEXT:   - Type:            DATA
+; CHECK:        - Type:            DATA
 ; CHECK-NEXT:     Relocations:     
 ; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_MEMORY_ADDR_I32
 ; CHECK-NEXT:         Index:           0
@@ -78,12 +44,32 @@
 ; CHECK-NEXT:         Content:         '06000000'
 ; CHECK-NEXT:   - Type:            CUSTOM
 ; CHECK-NEXT:     Name:            linking
-; CHECK-NEXT:     DataSize:        28
-; CHECK-NEXT:     SymbolInfo:      
-; CHECK-NEXT:       - Name:            .L.str1
+; CHECK-NEXT:     Version:         1
+; CHECK-NEXT:     SymbolTable:      
+; CHECK-NEXT:       - Index:           0
+; CHECK-NEXT:         Kind:            DATA
+; CHECK-NEXT:         Name:            .L.str1
 ; CHECK-NEXT:         Flags:           [ BINDING_LOCAL ]
-; CHECK-NEXT:       - Name:            .L.str2
+; CHECK-NEXT:         Segment:         0
+; CHECK-NEXT:         Size:            6
+; CHECK-NEXT:       - Index:           1
+; CHECK-NEXT:         Kind:            DATA
+; CHECK-NEXT:         Name:            .L.str2
 ; CHECK-NEXT:         Flags:           [ BINDING_LOCAL ]
+; CHECK-NEXT:         Segment:         1
+; CHECK-NEXT:         Size:            6
+; CHECK-NEXT:       - Index:           2
+; CHECK-NEXT:         Kind:            DATA
+; CHECK-NEXT:         Name:            a
+; CHECK-NEXT:         Flags:           [  ]
+; CHECK-NEXT:         Segment:         2
+; CHECK-NEXT:         Size:            4
+; CHECK-NEXT:       - Index:           3
+; CHECK-NEXT:         Kind:            DATA
+; CHECK-NEXT:         Name:            b
+; CHECK-NEXT:         Flags:           [  ]
+; CHECK-NEXT:         Segment:         3
+; CHECK-NEXT:         Size:            4
 ; CHECK-NEXT:     SegmentInfo:    
 ; CHECK-NEXT:       - Index:       0
 ; CHECK-NEXT:         Name:        .rodata..L.str1

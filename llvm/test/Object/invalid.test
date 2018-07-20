@@ -70,10 +70,6 @@ RUN: not llvm-readobj -r %p/Inputs/invalid-relocation-sec-sh_offset.elf-x86-64 2
 RUN:   FileCheck --check-prefix=INVALID-RELOC-SH-OFFSET %s
 INVALID-RELOC-SH-OFFSET: invalid section offset
 
-RUN: not llvm-readobj -t %p/Inputs/invalid-sections-address-alignment.x86-64 2>&1 | \
-RUN:   FileCheck --check-prefix=INVALID-SEC-ADDRESS-ALIGNMENT %s
-INVALID-SEC-ADDRESS-ALIGNMENT: invalid alignment of section headers
-
 RUN: not llvm-readobj -t %p/Inputs/invalid-section-size2.elf 2>&1 | \
 RUN:   FileCheck --check-prefix=INVALID-SECTION-SIZE2 %s
 INVALID-SECTION-SIZE2: invalid section offset

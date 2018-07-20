@@ -7,9 +7,12 @@ declare float @llvm.sqrt.f32(float %x);
 define float @fast_recip_sqrt(float %x) {
 ; X64-LABEL: fast_recip_sqrt:
 ; X64:       # %bb.0:
-; X64-NEXT:    sqrtss %xmm0, %xmm1
-; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X64-NEXT:    divss %xmm1, %xmm0
+; X64-NEXT:    rsqrtss %xmm0, %xmm1
+; X64-NEXT:    mulss   %xmm1, %xmm0
+; X64-NEXT:    mulss   %xmm1, %xmm0
+; X64-NEXT:    addss   {{.*}}(%rip), %xmm0
+; X64-NEXT:    mulss   {{.*}}(%rip), %xmm1
+; X64-NEXT:    mulss   %xmm1, %xmm0
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: fast_recip_sqrt:
@@ -29,18 +32,13 @@ declare float @llvm.fmuladd.f32(float %a, float %b, float %c);
 define float @fast_fmuladd_opts(float %a , float %b , float %c) {
 ; X64-LABEL: fast_fmuladd_opts:
 ; X64:       # %bb.0:
-; X64-NEXT:    movaps %xmm0, %xmm1
-; X64-NEXT:    addss %xmm1, %xmm1
-; X64-NEXT:    addss %xmm0, %xmm1
-; X64-NEXT:    movaps %xmm1, %xmm0
+; X64-NEXT:    mulss {{.*}}(%rip), %xmm0
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: fast_fmuladd_opts:
 ; X86:       # %bb.0:
 ; X86-NEXT:    flds {{[0-9]+}}(%esp)
-; X86-NEXT:    fld %st(0)
-; X86-NEXT:    fadd %st(1)
-; X86-NEXT:    faddp %st(1)
+; X86-NEXT:    fmuls {{.*}}
 ; X86-NEXT:    retl
   %res = call fast float @llvm.fmuladd.f32(float %a, float 2.0, float %a)
   ret float %res
@@ -53,9 +51,9 @@ define float @fast_fmuladd_opts(float %a , float %b , float %c) {
 define double @not_so_fast_mul_add(double %x) {
 ; X64-LABEL: not_so_fast_mul_add:
 ; X64:       # %bb.0:
-; X64-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; X64-NEXT:    movsd {{.*}}(%rip), %xmm1
 ; X64-NEXT:    mulsd %xmm0, %xmm1
-; X64-NEXT:    addsd %xmm1, %xmm0
+; X64-NEXT:    mulsd {{.*}}(%rip), %xmm0
 ; X64-NEXT:    movsd %xmm1, {{.*}}(%rip)
 ; X64-NEXT:    retq
 ;
@@ -64,7 +62,9 @@ define double @not_so_fast_mul_add(double %x) {
 ; X86-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X86-NEXT:    fld %st(0)
 ; X86-NEXT:    fmull {{\.LCPI.*}}
-; X86-NEXT:    fadd %st(0), %st(1)
+; X86-NEXT:    fxch %st(1)
+; X86-NEXT:    fmull {{\.LCPI.*}}
+; X86-NEXT:    fxch %st(1)
 ; X86-NEXT:    fstpl mul1
 ; X86-NEXT:    retl
   %m = fmul double %x, 4.2
@@ -80,10 +80,14 @@ define double @not_so_fast_mul_add(double %x) {
 define float @not_so_fast_recip_sqrt(float %x) {
 ; X64-LABEL: not_so_fast_recip_sqrt:
 ; X64:       # %bb.0:
-; X64-NEXT:    sqrtss %xmm0, %xmm1
-; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X64-NEXT:    divss %xmm1, %xmm0
-; X64-NEXT:    movss %xmm1, {{.*}}(%rip)
+; X64-NEXT:    rsqrtss %xmm0, %xmm1
+; X64-NEXT:    sqrtss  %xmm0, %xmm2
+; X64-NEXT:    mulss   %xmm1, %xmm0
+; X64-NEXT:    mulss   %xmm1, %xmm0
+; X64-NEXT:    addss   {{.*}}(%rip), %xmm0
+; X64-NEXT:    mulss   {{.*}}(%rip), %xmm1
+; X64-NEXT:    mulss   %xmm1, %xmm0
+; X64-NEXT:    movss   %xmm2, sqrt1(%rip)
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: not_so_fast_recip_sqrt:
@@ -102,3 +106,19 @@ define float @not_so_fast_recip_sqrt(float %x) {
   ret float %z
 }
 
+define float @div_arcp_by_const(half %x) {
+; X64-LABEL: .LCPI4_0:
+; X64-NEXT:  .long 1036828672
+; X64-LABEL: div_arcp_by_const:
+; X64:       movzwl %ax, %edi
+; X64:       mulss .LCPI4_0(%rip), %xmm0 
+;
+; X86-LABEL: .LCPI4_0:
+; X86-NEXT:  .long 1036828672
+; X86-LABEL: div_arcp_by_const:
+; X86:       movzwl %ax, %eax
+; X86:       fmuls .LCPI4_0
+  %rcp = fdiv arcp half %x, 10.0
+  %z = fpext half %rcp to float
+  ret float %z
+}

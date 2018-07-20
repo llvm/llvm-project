@@ -49,7 +49,7 @@ Function *checkSanitizerInterfaceFunction(Constant *FuncOrBitcast);
 Function *declareSanitizerInitFunction(Module &M, StringRef InitName,
                                        ArrayRef<Type *> InitArgTypes);
 
-/// \brief Creates sanitizer constructor function, and calls sanitizer's init
+/// Creates sanitizer constructor function, and calls sanitizer's init
 /// function from it.
 /// \return Returns pair of pointers to constructor, and init functions
 /// respectively.
@@ -62,10 +62,10 @@ std::pair<Function *, Function *> createSanitizerCtorAndInitFunctions(
 /// the list of public globals in the module.
 bool nameUnamedGlobals(Module &M);
 
-/// \brief Adds global values to the llvm.used list.
+/// Adds global values to the llvm.used list.
 void appendToUsed(Module &M, ArrayRef<GlobalValue *> Values);
 
-/// \brief Adds global values to the llvm.compiler.used list.
+/// Adds global values to the llvm.compiler.used list.
 void appendToCompilerUsed(Module &M, ArrayRef<GlobalValue *> Values);
 
 /// Filter out potentially dead comdat functions where other entries keep the
@@ -84,7 +84,7 @@ void appendToCompilerUsed(Module &M, ArrayRef<GlobalValue *> Values);
 void filterDeadComdatFunctions(
     Module &M, SmallVectorImpl<Function *> &DeadComdatFunctions);
 
-/// \brief Produce a unique identifier for this module by taking the MD5 sum of
+/// Produce a unique identifier for this module by taking the MD5 sum of
 /// the names of the module's strong external symbols that are not comdat
 /// members.
 ///

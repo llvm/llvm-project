@@ -365,7 +365,7 @@ abstract interface.
 
 When used in the native Windows C++ exception handling implementation, this
 intrinsic serves as a placeholder to delimit code before a catch handler is
-outlined.  When the handler is is outlined, this intrinsic will be replaced
+outlined.  When the handler is outlined, this intrinsic will be replaced
 by instructions that retrieve the exception object pointer from the frame
 allocation block.
 
@@ -839,3 +839,66 @@ or ``catchswitch`` to unwind.
 Finally, the funclet pads' unwind destinations cannot form a cycle.  This
 ensures that EH lowering can construct "try regions" with a tree-like
 structure, which funclet-based personalities may require.
+
+Exception Handling support on the target
+=================================================
+
+In order to support exception handling on particular target, there are a few
+items need to be implemented.
+
+* CFI directives
+
+  First, you have to assign each target register with a unique DWARF number.
+  Then in ``TargetFrameLowering``'s ``emitPrologue``, you have to emit `CFI
+  directives <https://sourceware.org/binutils/docs/as/CFI-directives.html>`_
+  to specify how to calculate the CFA (Canonical Frame Address) and how register
+  is restored from the address pointed by the CFA with an offset. The assembler
+  is instructed by CFI directives to build ``.eh_frame`` section, which is used
+  by th unwinder to unwind stack during exception handling.
+
+* ``getExceptionPointerRegister`` and ``getExceptionSelectorRegister``
+
+  ``TargetLowering`` must implement both functions. The *personality function*
+  passes the *exception structure* (a pointer) and *selector value* (an integer)
+  to the landing pad through the registers specified by ``getExceptionPointerRegister``
+  and ``getExceptionSelectorRegister`` respectively. On most platforms, they
+  will be GPRs and will be the same as the ones specified in the calling convention.
+
+* ``EH_RETURN``
+
+  The ISD node represents the undocumented GCC extension ``__builtin_eh_return (offset, handler)``,
+  which adjusts the stack by offset and then jumps to the handler. ``__builtin_eh_return``
+  is used in GCC unwinder (`libgcc <https://gcc.gnu.org/onlinedocs/gccint/Libgcc.html>`_),
+  but not in LLVM unwinder (`libunwind <https://clang.llvm.org/docs/Toolchain.html#unwind-library>`_).
+  If you are on the top of ``libgcc`` and have particular requirement on your target,
+  you have to handle ``EH_RETURN`` in ``TargetLowering``.
+
+If you don't leverage the existing runtime (``libstdc++`` and ``libgcc``),
+you have to take a look on `libc++ <https://libcxx.llvm.org/>`_ and
+`libunwind <https://clang.llvm.org/docs/Toolchain.html#unwind-library>`_
+to see what have to be done there. For ``libunwind``, you have to do the following
+
+* ``__libunwind_config.h``
+
+  Define macros for your target.
+
+* ``include/libunwind.h``
+
+  Define enum for the target registers.
+
+* ``src/Registers.hpp``
+
+  Define ``Registers`` class for your target, implement setter and getter functions.
+
+* ``src/UnwindCursor.hpp``
+
+  Define ``dwarfEncoding`` and ``stepWithCompactEncoding`` for your ``Registers``
+  class.
+
+* ``src/UnwindRegistersRestore.S``
+
+  Write an assembly function to restore all your target registers from the memory.
+
+* ``src/UnwindRegistersSave.S``
+
+  Write an assembly function to save all your target registers on the memory.

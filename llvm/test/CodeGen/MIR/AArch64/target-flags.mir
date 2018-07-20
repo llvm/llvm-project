@@ -21,19 +21,19 @@
 name:            sub_small
 body: |
   bb.0.entry:
-  ; CHECK:      %x8 = ADRP target-flags(aarch64-page) @var_i32
-  ; CHECK-NEXT: %x9 = ADRP target-flags(aarch64-page) @var_i64
-  ; CHECK-NEXT: %w10 = LDRWui %x8, target-flags(aarch64-pageoff, aarch64-nc) @var_i32
-  ; CHECK-NEXT: %x11 = LDRXui %x9, target-flags(aarch64-pageoff, aarch64-got, aarch64-nc) @var_i64
-  ; CHECK:      STRWui killed %w10, killed %x8, target-flags(aarch64-nc) @var_i32
-  ; CHECK:      STRXui killed %x11, killed %x9, target-flags(aarch64-pageoff, aarch64-nc) @var_i64
-    %x8 = ADRP target-flags(aarch64-page) @var_i32
-    %x9 = ADRP target-flags(aarch64-page) @var_i64
-    %w10 = LDRWui %x8, target-flags(aarch64-pageoff, aarch64-nc) @var_i32
-    %x11 = LDRXui %x9, target-flags(aarch64-pageoff, aarch64-got, aarch64-nc) @var_i64
-    %w10 = SUBWri killed %w10, 4095, 0
-    %x11 = SUBXri killed %x11, 52, 0
-    STRWui killed %w10, killed %x8, target-flags(aarch64-nc) @var_i32
-    STRXui killed %x11, killed %x9, target-flags(aarch64-pageoff, aarch64-nc) @var_i64
+  ; CHECK:      $x8 = ADRP target-flags(aarch64-page) @var_i32
+  ; CHECK-NEXT: $x9 = ADRP target-flags(aarch64-page) @var_i64
+  ; CHECK-NEXT: $w10 = LDRWui $x8, target-flags(aarch64-pageoff, aarch64-nc) @var_i32
+  ; CHECK-NEXT: $x11 = LDRXui $x9, target-flags(aarch64-pageoff, aarch64-got, aarch64-nc) @var_i64
+  ; CHECK:      STRWui killed $w10, killed $x8, target-flags(aarch64-nc) @var_i32
+  ; CHECK:      STRXui killed $x11, killed $x9, target-flags(aarch64-pageoff, aarch64-nc) @var_i64
+    $x8 = ADRP target-flags(aarch64-page) @var_i32
+    $x9 = ADRP target-flags(aarch64-page) @var_i64
+    $w10 = LDRWui $x8, target-flags(aarch64-pageoff, aarch64-nc) @var_i32
+    $x11 = LDRXui $x9, target-flags(aarch64-pageoff, aarch64-got, aarch64-nc) @var_i64
+    $w10 = SUBWri killed $w10, 4095, 0
+    $x11 = SUBXri killed $x11, 52, 0
+    STRWui killed $w10, killed $x8, target-flags(aarch64-nc) @var_i32
+    STRXui killed $x11, killed $x9, target-flags(aarch64-pageoff, aarch64-nc) @var_i64
     RET_ReallyLR
 ...

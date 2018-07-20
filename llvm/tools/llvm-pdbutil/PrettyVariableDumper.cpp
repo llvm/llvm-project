@@ -169,6 +169,9 @@ void VariableDumper::dumpRight(const PDBSymbolTypeFunctionSig &Symbol) {
     WithColor(Printer, PDB_ColorItem::Keyword).get() << " const";
   if (Symbol.isVolatileType())
     WithColor(Printer, PDB_ColorItem::Keyword).get() << " volatile";
+
+  if (Symbol.getRawSymbol().isRestrictedType())
+    WithColor(Printer, PDB_ColorItem::Keyword).get() << " __restrict";
 }
 
 void VariableDumper::dump(const PDBSymbolTypePointer &Symbol) {
@@ -189,6 +192,9 @@ void VariableDumper::dump(const PDBSymbolTypePointer &Symbol) {
     WithColor(Printer, PDB_ColorItem::Keyword).get() << " const ";
   if (Symbol.isVolatileType())
     WithColor(Printer, PDB_ColorItem::Keyword).get() << " volatile ";
+
+  if (Symbol.getRawSymbol().isRestrictedType())
+    WithColor(Printer, PDB_ColorItem::Keyword).get() << " __restrict ";
 }
 
 void VariableDumper::dumpRight(const PDBSymbolTypePointer &Symbol) {

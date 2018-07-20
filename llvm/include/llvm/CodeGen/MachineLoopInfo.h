@@ -54,7 +54,7 @@ public:
   /// that contains the header.
   MachineBasicBlock *getBottomBlock();
 
-  /// \brief Find the block that contains the loop control variable and the
+  /// Find the block that contains the loop control variable and the
   /// loop test. This will return the latch block if it's one of the exiting
   /// blocks. Otherwise, return the exiting block. Return 'null' when
   /// multiple exiting blocks are present.
@@ -97,7 +97,7 @@ public:
 
   LoopInfoBase<MachineBasicBlock, MachineLoop>& getBase() { return LI; }
 
-  /// \brief Find the block that either is the loop preheader, or could
+  /// Find the block that either is the loop preheader, or could
   /// speculatively be used as the preheader. This is e.g. useful to place
   /// loop setup code. Code that cannot be speculated should not be placed
   /// here. SpeculativePreheader is controlling whether it also tries to

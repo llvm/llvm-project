@@ -70,7 +70,7 @@ declare <8 x float> @llvm.x86.avx.blend.ps.256(<8 x float>, <8 x float>, i8) nou
 define <2 x double> @commute_fold_vblendpd_128(<2 x double> %a, <2 x double>* %b) #0 {
 ; CHECK-LABEL: commute_fold_vblendpd_128:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vblendpd {{.*#+}} xmm0 = xmm0[0],mem[1]
+; CHECK-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],mem[2,3]
 ; CHECK-NEXT:    retq
   %1 = load <2 x double>, <2 x double>* %b
   %2 = call <2 x double> @llvm.x86.sse41.blendpd(<2 x double> %1, <2 x double> %a, i8 1)
@@ -81,7 +81,7 @@ declare <2 x double> @llvm.x86.sse41.blendpd(<2 x double>, <2 x double>, i8) nou
 define <4 x double> @commute_fold_vblendpd_256(<4 x double> %a, <4 x double>* %b) #0 {
 ; CHECK-LABEL: commute_fold_vblendpd_256:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0,1,2],mem[3]
+; CHECK-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5],mem[6,7]
 ; CHECK-NEXT:    retq
   %1 = load <4 x double>, <4 x double>* %b
   %2 = call <4 x double> @llvm.x86.avx.blend.pd.256(<4 x double> %1, <4 x double> %a, i8 7)

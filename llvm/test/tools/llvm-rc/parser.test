@@ -145,11 +145,6 @@
 ; PLANGUAGE2:  llvm-rc: Error parsing file: expected '-', '~', integer or '(', got ,
 
 
-; RUN: not llvm-rc /dry-run /V %p/Inputs/parser-html-bad-string.rc 2>&1 | FileCheck %s --check-prefix PHTML1
-
-; PHTML1:  llvm-rc: Error parsing file: expected string, got ThisPassesInTheOriginalToolButDocSaysItShouldBeQuoted
-
-
 ; RUN: not llvm-rc /dry-run /V %p/Inputs/parser-html-extra-comma.rc 2>&1 | FileCheck %s --check-prefix PHTML2
 
 ; PHTML2:  llvm-rc: Error parsing file: expected string, got ,

@@ -18,8 +18,8 @@ registers:
   - { id: 2, class: gpr }
 body: |
   bb.0:
-   liveins: %x0
-   %0 = COPY %x0
+   liveins: $x0
+   %0 = COPY $x0
 
    ; CHECK: *** Bad machine code: Unexpected generic instruction in a Selected function ***
    ; CHECK: instruction: %1:gpr64 = G_ADD
@@ -28,5 +28,5 @@ body: |
    ; CHECK: *** Bad machine code: Generic virtual register invalid in a Selected function ***
    ; CHECK: instruction: %2:gpr(s64) = COPY
    ; CHECK: operand 0: %2
-   %2(s64) = COPY %x0
+   %2(s64) = COPY $x0
 ...

@@ -60,6 +60,16 @@ define i32 @test7(i32 %X) {
 	ret i32 %R
 }
 
+; CHECK-LABEL: @test7_no_null_opt(
+; CHECK: %V = getelementptr i32, i32* null
+; CHECK: %R = load i32, i32* %V
+define i32 @test7_no_null_opt(i32 %X) #0 {
+        %V = getelementptr i32, i32* null, i32 %X               ; <i32*> [#uses=1]
+        %R = load i32, i32* %V          ; <i32> [#uses=1]
+        ret i32 %R
+}
+attributes #0 = { "null-pointer-is-valid"="true" }
+
 ; CHECK-LABEL: @test8(
 ; CHECK-NOT: load
 define i32 @test8(i32* %P) {

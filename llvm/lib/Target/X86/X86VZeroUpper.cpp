@@ -264,8 +264,8 @@ void VZeroUpperInserter::processBasicBlock(MachineBasicBlock &MBB) {
     }
   }
 
-  DEBUG(dbgs() << "MBB #" << MBB.getNumber() << " exit state: "
-               << getBlockExitStateName(CurState) << '\n');
+  LLVM_DEBUG(dbgs() << "MBB #" << MBB.getNumber() << " exit state: "
+                    << getBlockExitStateName(CurState) << '\n');
 
   if (CurState == EXITS_DIRTY)
     for (MachineBasicBlock::succ_iterator SI = MBB.succ_begin(),
@@ -341,8 +341,8 @@ bool VZeroUpperInserter::runOnMachineFunction(MachineFunction &MF) {
     // successors need to be added to the worklist (if they haven't been
     // already).
     if (BBState.ExitState == PASS_THROUGH) {
-      DEBUG(dbgs() << "MBB #" << MBB.getNumber()
-                   << " was Pass-through, is now Dirty-out.\n");
+      LLVM_DEBUG(dbgs() << "MBB #" << MBB.getNumber()
+                        << " was Pass-through, is now Dirty-out.\n");
       for (MachineBasicBlock *Succ : MBB.successors())
         addDirtySuccessor(*Succ);
     }

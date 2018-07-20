@@ -547,6 +547,34 @@ l5:
 ; CHECK: }
 }
 
+define i1 @trunc_switch(i1 %arg) {
+; CHECK-LABEL: @trunc_switch
+top:
+; CHECK: br i1 %arg, label %exitA, label %exitB
+  br i1 %arg, label %common, label %B
+
+B:
+  br label %common
+
+common:
+  %phi = phi i8 [ 2, %B ], [ 1, %top ]
+  %trunc = trunc i8 %phi to i2
+; CHECK-NOT: switch
+  switch i2 %trunc, label %unreach [
+    i2 1, label %exitA
+    i2 -2, label %exitB
+  ]
+
+unreach:
+  unreachable
+
+exitA:
+  ret i1 true
+
+exitB:
+  ret i1 false
+}
+
 ; CHECK-LABEL: define void @h_con(i32 %p) {
 define void @h_con(i32 %p) {
   %x = icmp ult i32 %p, 5

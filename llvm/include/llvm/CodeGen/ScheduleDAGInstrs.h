@@ -190,7 +190,7 @@ namespace llvm {
     using SUList = std::list<SUnit *>;
 
   protected:
-    /// \brief A map from ValueType to SUList, used during DAG construction, as
+    /// A map from ValueType to SUList, used during DAG construction, as
     /// a means of remembering which SUs depend on which memory locations.
     class Value2SUsMap;
 
@@ -201,7 +201,7 @@ namespace llvm {
     void reduceHugeMemNodeMaps(Value2SUsMap &stores,
                                Value2SUsMap &loads, unsigned N);
 
-    /// \brief Adds a chain edge between SUa and SUb, but only if both
+    /// Adds a chain edge between SUa and SUb, but only if both
     /// AliasAnalysis and Target fail to deny the dependency.
     void addChainDependency(SUnit *SUa, SUnit *SUb,
                             unsigned Latency = 0);
@@ -286,7 +286,7 @@ namespace llvm {
     /// Cleans up after scheduling in the given block.
     virtual void finishBlock();
 
-    /// \brief Initialize the DAG and common scheduler state for a new
+    /// Initialize the DAG and common scheduler state for a new
     /// scheduling region. This does not actually create the DAG, only clears
     /// it. The scheduling driver may call BuildSchedGraph multiple times per
     /// scheduling region.
@@ -308,7 +308,7 @@ namespace llvm {
                          LiveIntervals *LIS = nullptr,
                          bool TrackLaneMasks = false);
 
-    /// \brief Adds dependencies from instructions in the current list of
+    /// Adds dependencies from instructions in the current list of
     /// instructions being scheduled to scheduling barrier. We want to make sure
     /// instructions which define registers that are either used by the
     /// terminator or are live-out are properly scheduled. This is especially

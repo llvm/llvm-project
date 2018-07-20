@@ -51,7 +51,7 @@ define void @t2(%struct.comment* %vc, i8* %tag, i8* %contents) {
   %tmp9 = call i8* @strcpy(i8* %tmp6, i8* %tag)
   %tmp6.len = call i32 @strlen(i8* %tmp6)
   %tmp6.indexed = getelementptr i8, i8* %tmp6, i32 %tmp6.len
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %tmp6.indexed, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @str215, i32 0, i32 0), i32 2, i32 1, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 %tmp6.indexed, i8* align 1 getelementptr inbounds ([2 x i8], [2 x i8]* @str215, i32 0, i32 0), i32 2, i1 false)
   %tmp15 = call i8* @strcat(i8* %tmp6, i8* %contents)
   call fastcc void @comment_add(%struct.comment* %vc, i8* %tmp6)
   ret void
@@ -65,4 +65,4 @@ declare fastcc void @comment_add(%struct.comment*, i8*)
 
 declare i8* @strcpy(i8*, i8*)
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i32, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind

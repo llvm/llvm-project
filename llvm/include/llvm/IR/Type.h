@@ -208,6 +208,9 @@ public:
     return getScalarType()->isIntegerTy(BitWidth);
   }
 
+  /// Return true if this is an integer type or a pointer type.
+  bool isIntOrPtrTy() const { return isIntegerTy() || isPointerTy(); }
+
   /// True if this is an instance of FunctionType.
   bool isFunctionTy() const { return getTypeID() == FunctionTyID; }
 
@@ -229,7 +232,7 @@ public:
   /// Return true if this type could be converted with a lossless BitCast to
   /// type 'Ty'. For example, i8* to i32*. BitCasts are valid for types of the
   /// same size only where no re-interpretation of the bits is done.
-  /// @brief Determine if this type could be losslessly bitcast to Ty
+  /// Determine if this type could be losslessly bitcast to Ty
   bool canLosslesslyBitCastTo(Type *Ty) const;
 
   /// Return true if this type is empty, that is, it has no elements or all of
@@ -407,6 +410,20 @@ public:
   static IntegerType *getInt32Ty(LLVMContext &C);
   static IntegerType *getInt64Ty(LLVMContext &C);
   static IntegerType *getInt128Ty(LLVMContext &C);
+  template <typename ScalarTy> static Type *getScalarTy(LLVMContext &C) {
+    int noOfBits = sizeof(ScalarTy) * CHAR_BIT;
+    if (std::is_integral<ScalarTy>::value) {
+      return (Type*) Type::getIntNTy(C, noOfBits);
+    } else if (std::is_floating_point<ScalarTy>::value) {
+      switch (noOfBits) {
+      case 32:
+        return Type::getFloatTy(C);
+      case 64:
+        return Type::getDoubleTy(C);
+      }
+    }
+    llvm_unreachable("Unsupported type in Type::getScalarTy");
+  }
 
   //===--------------------------------------------------------------------===//
   // Convenience methods for getting pointer types with one of the above builtin

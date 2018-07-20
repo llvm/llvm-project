@@ -38,7 +38,7 @@ vector.body:                                      ; preds = %vector.body.prehead
   %5 = bitcast float* %4 to <4 x float>*
   %wide.load = load <4 x float>, <4 x float>* %5, align 4
   %6 = fpext <4 x float> %wide.load to <4 x ppc_fp128>
-  %7 = fadd <4 x ppc_fp128> %6, undef
+  %7 = fadd <4 x ppc_fp128> %6, %6
   %8 = fptrunc <4 x ppc_fp128> %7 to <4 x float>
   %9 = bitcast float* %4 to <4 x float>*
   store <4 x float> %8, <4 x float>* %9, align 4
@@ -61,13 +61,13 @@ for.body:                                         ; preds = %for.body.preheader,
   %arrayidx.i = getelementptr inbounds float, float* %2, i64 %indvars.iv
   %11 = load float, float* %arrayidx.i, align 4
   %conv = fpext float %11 to ppc_fp128
-  %add = fadd ppc_fp128 %conv, undef
+  %add = fadd ppc_fp128 %conv, %conv
   %conv4 = fptrunc ppc_fp128 %add to float
   store float %conv4, float* %arrayidx.i, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, %wide.trip.count
   br i1 %exitcond, label %for.cond.cleanup.loopexit, label %for.body
-; CHECK: stxsdx
+; CHECK: stfdx
 ; CHECK: lxvd2x
 }
 

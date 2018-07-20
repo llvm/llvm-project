@@ -16,6 +16,7 @@
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCFragment.h"
+#include "llvm/Support/Endian.h"
 #include <cstdint>
 #include <memory>
 
@@ -29,6 +30,7 @@ struct MCFixupKindInfo;
 class MCFragment;
 class MCInst;
 class MCObjectStreamer;
+class MCObjectTargetWriter;
 class MCObjectWriter;
 struct MCCodePaddingContext;
 class MCRelaxableFragment;
@@ -41,21 +43,31 @@ class MCAsmBackend {
   std::unique_ptr<MCCodePadder> CodePadder;
 
 protected: // Can only create subclasses.
-  MCAsmBackend();
-  MCAsmBackend(std::unique_ptr<MCCodePadder> TargetCodePadder);
+  MCAsmBackend(support::endianness Endian);
 
 public:
   MCAsmBackend(const MCAsmBackend &) = delete;
   MCAsmBackend &operator=(const MCAsmBackend &) = delete;
   virtual ~MCAsmBackend();
 
+  const support::endianness Endian;
+
   /// lifetime management
   virtual void reset() {}
 
   /// Create a new MCObjectWriter instance for use by the assembler backend to
   /// emit the final object file.
-  virtual std::unique_ptr<MCObjectWriter>
-  createObjectWriter(raw_pwrite_stream &OS) const = 0;
+  std::unique_ptr<MCObjectWriter>
+  createObjectWriter(raw_pwrite_stream &OS) const;
+
+  /// Create an MCObjectWriter that writes two object files: a .o file which is
+  /// linked into the final program and a .dwo file which is used by debuggers.
+  /// This function is only supported with ELF targets.
+  std::unique_ptr<MCObjectWriter>
+  createDwoObjectWriter(raw_pwrite_stream &OS, raw_pwrite_stream &DwoOS) const;
+
+  virtual std::unique_ptr<MCObjectTargetWriter>
+  createObjectTargetWriter() const = 0;
 
   /// \name Target Fixup Interfaces
   /// @{
@@ -80,9 +92,16 @@ public:
   /// the offset specified by the fixup and following the fixup kind as
   /// appropriate. Errors (such as an out of range fixup value) should be
   /// reported via \p Ctx.
+  /// The  \p STI is present only for fragments of type MCRelaxableFragment and
+  /// MCDataFragment with hasInstructions() == true.
   virtual void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                           const MCValue &Target, MutableArrayRef<char> Data,
-                          uint64_t Value, bool IsResolved) const = 0;
+                          uint64_t Value, bool IsResolved,
+                          const MCSubtargetInfo *STI) const = 0;
+
+  /// Check whether the given target requires emitting differences of two
+  /// symbols as a set of relocations.
+  virtual bool requiresDiffExpressionRelocations() const { return false; }
 
   /// @}
 
@@ -92,14 +111,18 @@ public:
   /// Check whether the given instruction may need relaxation.
   ///
   /// \param Inst - The instruction to test.
-  virtual bool mayNeedRelaxation(const MCInst &Inst) const = 0;
+  /// \param STI - The MCSubtargetInfo in effect when the instruction was
+  /// encoded.
+  virtual bool mayNeedRelaxation(const MCInst &Inst,
+                                 const MCSubtargetInfo &STI) const = 0;
 
   /// Target specific predicate for whether a given fixup requires the
   /// associated instruction to be relaxed.
   virtual bool fixupNeedsRelaxationAdvanced(const MCFixup &Fixup, bool Resolved,
                                             uint64_t Value,
                                             const MCRelaxableFragment *DF,
-                                            const MCAsmLayout &Layout) const;
+                                            const MCAsmLayout &Layout,
+                                            const bool WasForced) const;
 
   /// Simple predicate for targets where !Resolved implies requiring relaxation
   virtual bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
@@ -127,7 +150,7 @@ public:
   /// target cannot generate such a sequence, it should return an error.
   ///
   /// \return - True on success.
-  virtual bool writeNopData(uint64_t Count, MCObjectWriter *OW) const = 0;
+  virtual bool writeNopData(raw_ostream &OS, uint64_t Count) const = 0;
 
   /// Give backend an opportunity to finish layout after relaxation
   virtual void finishLayout(MCAssembler const &Asm,
@@ -136,7 +159,7 @@ public:
   /// Handle any target-specific assembler flags. By default, do nothing.
   virtual void handleAssemblerFlag(MCAssemblerFlag Flag) {}
 
-  /// \brief Generate the compact unwind encoding for the CFI instructions.
+  /// Generate the compact unwind encoding for the CFI instructions.
   virtual uint32_t
       generateCompactUnwindEncoding(ArrayRef<MCCFIInstruction>) const {
     return 0;
@@ -173,7 +196,7 @@ public:
   /// \param PF The fragment to relax.
   /// \param Layout Code layout information.
   ///
-  /// \returns true iff any relaxation occured.
+  /// \returns true iff any relaxation occurred.
   bool relaxFragment(MCPaddingFragment *PF, MCAsmLayout &Layout);
 };
 

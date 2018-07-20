@@ -102,6 +102,13 @@ define i32 @test9() {
   ret i32 %x
 }
 
+define i32 @test9_no_null_opt() #0 {
+; CHECK-LABEL: define i32 @test9_no_null_opt(
+; CHECK: load atomic i32, i32* null unordered
+  %x = load atomic i32, i32* null unordered, align 4
+  ret i32 %x
+}
+
 ; FIXME: Could also fold
 define i32 @test10() {
 ; CHECK-LABEL: define i32 @test10(
@@ -110,9 +117,23 @@ define i32 @test10() {
   ret i32 %x
 }
 
+define i32 @test10_no_null_opt() #0 {
+; CHECK-LABEL: define i32 @test10_no_null_opt(
+; CHECK: load atomic i32, i32* null monotonic
+  %x = load atomic i32, i32* null monotonic, align 4
+  ret i32 %x
+}
+
 ; Would this be legal to fold?  Probably?
 define i32 @test11() {
 ; CHECK-LABEL: define i32 @test11(
+; CHECK: load atomic i32, i32* null seq_cst
+  %x = load atomic i32, i32* null seq_cst, align 4
+  ret i32 %x
+}
+
+define i32 @test11_no_null_opt() #0 {
+; CHECK-LABEL: define i32 @test11_no_null_opt(
 ; CHECK: load atomic i32, i32* null seq_cst
   %x = load atomic i32, i32* null seq_cst, align 4
   ret i32 %x
@@ -127,6 +148,13 @@ define i32 @test12() {
   ret i32 0
 }
 
+define i32 @test12_no_null_opt() #0 {
+; CHECK-LABEL: define i32 @test12_no_null_opt(
+; CHECK: store atomic i32 0, i32* null unordered
+  store atomic i32 0, i32* null unordered, align 4
+  ret i32 0
+}
+
 ; FIXME: Could also fold
 define i32 @test13() {
 ; CHECK-LABEL: define i32 @test13(
@@ -135,9 +163,23 @@ define i32 @test13() {
   ret i32 0
 }
 
+define i32 @test13_no_null_opt() #0 {
+; CHECK-LABEL: define i32 @test13_no_null_opt(
+; CHECK: store atomic i32 0, i32* null monotonic
+  store atomic i32 0, i32* null monotonic, align 4
+  ret i32 0
+}
+
 ; Would this be legal to fold?  Probably?
 define i32 @test14() {
 ; CHECK-LABEL: define i32 @test14(
+; CHECK: store atomic i32 0, i32* null seq_cst
+  store atomic i32 0, i32* null seq_cst, align 4
+  ret i32 0
+}
+
+define i32 @test14_no_null_opt() #0 {
+; CHECK-LABEL: define i32 @test14_no_null_opt(
 ; CHECK: store atomic i32 0, i32* null seq_cst
   store atomic i32 0, i32* null seq_cst, align 4
   ret i32 0
@@ -287,3 +329,5 @@ define void @no_atomic_vector_store(<2 x float> %p, i8* %p2) {
   store atomic i64 %1, i64* %2 unordered, align 8
   ret void
 }
+
+attributes #0 = { "null-pointer-is-valid"="true" }

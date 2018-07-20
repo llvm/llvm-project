@@ -10,7 +10,8 @@ define i32 @main() #0 !dbg !11 {
   %4 = alloca i32, align 4
   %5 = alloca i32, align 4
   ; There is a debug value in the middle of this section, make sure debug values are ignored.
-  ; CHECK: callq l_OUTLINED_FUNCTION_0
+  ; CHECK: callq
+  ; CHECK-SAME: OUTLINED_FUNCTION_0
   store i32 1, i32* %2, align 4
   store i32 2, i32* %3, align 4
   store i32 3, i32* %4, align 4
@@ -20,7 +21,8 @@ define i32 @main() #0 !dbg !11 {
   call void asm sideeffect "", "~{memory},~{dirflag},~{fpsr},~{flags}"()
   ; This is the same sequence of instructions without a debug value. It should be outlined
   ; in the same way.
-  ; CHECK: callq l_OUTLINED_FUNCTION_0
+  ; CHECK: callq
+  ; CHECK-SAME: OUTLINED_FUNCTION_0
   store i32 1, i32* %2, align 4
   store i32 2, i32* %3, align 4
   store i32 3, i32* %4, align 4
@@ -29,7 +31,7 @@ define i32 @main() #0 !dbg !11 {
   ret i32 0, !dbg !25
 }
 
-; CHECK-LABEL: l_OUTLINED_FUNCTION_0:
+; CHECK: OUTLINED_FUNCTION_0:
 ; CHECK-NOT:  .loc  {{[0-9]+}} {{[0-9]+}} {{[0-9]+}} {{^(is_stmt)}}
 ; CHECK-NOT:  ##DEBUG_VALUE: main:{{[a-z]}} <- {{[0-9]+}}
 ; CHECK:      movl  $1, -{{[0-9]+}}(%rbp)
@@ -59,7 +61,7 @@ attributes #0 = { noredzone nounwind ssp uwtable "no-frame-pointer-elim"="true" 
 !8 = !{i32 2, !"Debug Info Version", i32 3}
 !9 = !{i32 1, !"PIC Level", i32 2}
 !10 = !{!"clang version 5.0.0"}
-!11 = distinct !DISubprogram(name: "main", scope: !3, file: !3, line: 4, type: !12, isLocal: false, isDefinition: true, scopeLine: 4, flags: DIFlagPrototyped, isOptimized: false, unit: !2, variables: !4)
+!11 = distinct !DISubprogram(name: "main", scope: !3, file: !3, line: 4, type: !12, isLocal: false, isDefinition: true, scopeLine: 4, flags: DIFlagPrototyped, isOptimized: false, unit: !2, retainedNodes: !4)
 !12 = !DISubroutineType(types: !13)
 !13 = !{!6}
 !14 = !DILocation(line: 7, column: 4, scope: !11)

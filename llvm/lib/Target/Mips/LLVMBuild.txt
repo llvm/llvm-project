@@ -43,4 +43,5 @@ required_libraries =
  SelectionDAG
  Support
  Target
+ GlobalISel
 add_to_library_groups = Mips

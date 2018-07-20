@@ -18,8 +18,9 @@
 
 namespace llvm {
 class MCAsmBackend;
-class MCObjectWriter;
+class MCObjectTargetWriter;
 class MCRegisterInfo;
+class MCSubtargetInfo;
 class MCTargetOptions;
 class Target;
 class Triple;
@@ -28,12 +29,11 @@ class raw_pwrite_stream;
 
 Target &getTheNios2Target();
 
-MCAsmBackend *createNios2AsmBackend(const Target &T, const MCRegisterInfo &MRI,
-                                    const Triple &TT, StringRef CPU,
+MCAsmBackend *createNios2AsmBackend(const Target &T, const MCSubtargetInfo &STI,
+                                    const MCRegisterInfo &MRI,
                                     const MCTargetOptions &Options);
 
-std::unique_ptr<MCObjectWriter>
-createNios2ELFObjectWriter(raw_pwrite_stream &OS, uint8_t OSABI);
+std::unique_ptr<MCObjectTargetWriter> createNios2ELFObjectWriter(uint8_t OSABI);
 
 } // namespace llvm
 

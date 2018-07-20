@@ -42,7 +42,7 @@ enum VerifierKind {
 };
 }
 
-/// \brief Driver function to run the new pass manager over a module.
+/// Driver function to run the new pass manager over a module.
 ///
 /// This function only exists factored away from opt.cpp in order to prevent
 /// inclusion of the new pass manager headers and the old headers into the same

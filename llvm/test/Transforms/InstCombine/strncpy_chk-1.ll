@@ -16,7 +16,7 @@ define i8* @test_simplify1() {
   %dst = getelementptr inbounds [60 x i8], [60 x i8]* @a, i32 0, i32 0
   %src = getelementptr inbounds [12 x i8], [12 x i8]* @.str, i32 0, i32 0
 
-; CHECK-NEXT: call void @llvm.memcpy.p0i8.p0i8.i32(i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0), i8* getelementptr inbounds ([12 x i8], [12 x i8]* @.str, i32 0, i32 0), i32 12, i32 1, i1 false)
+; CHECK-NEXT: call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0), i8* align 1 getelementptr inbounds ([12 x i8], [12 x i8]* @.str, i32 0, i32 0), i32 12, i1 false)
 ; CHECK-NEXT: ret i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0)
   %ret = call i8* @__strncpy_chk(i8* %dst, i8* %src, i32 12, i32 60)
   ret i8* %ret
@@ -27,7 +27,7 @@ define i8* @test_simplify2() {
   %dst = getelementptr inbounds [60 x i8], [60 x i8]* @a, i32 0, i32 0
   %src = getelementptr inbounds [12 x i8], [12 x i8]* @.str, i32 0, i32 0
 
-; CHECK-NEXT: call void @llvm.memcpy.p0i8.p0i8.i32(i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0), i8* getelementptr inbounds ([12 x i8], [12 x i8]* @.str, i32 0, i32 0), i32 12, i32 1, i1 false)
+; CHECK-NEXT: call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0), i8* align 1 getelementptr inbounds ([12 x i8], [12 x i8]* @.str, i32 0, i32 0), i32 12, i1 false)
 ; CHECK-NEXT: ret i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0)
   %ret = call i8* @__strncpy_chk(i8* %dst, i8* %src, i32 12, i32 12)
   ret i8* %ret

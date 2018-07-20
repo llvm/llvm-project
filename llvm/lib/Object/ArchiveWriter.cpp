@@ -35,15 +35,6 @@
 
 using namespace llvm;
 
-// The SYM64 format is used when an archive's member offsets are larger than
-// 32-bits can hold. The need for this shift in format is detected by
-// writeArchive. To test this we need to generate a file with a member that has
-// an offset larger than 32-bits but this demands a very slow test. To speed
-// the test up we use this flag to pretend like the cutoff happens before
-// 32-bits and instead happens at some much smaller value.
-static cl::opt<int> Sym64Threshold("sym64-threshold", cl::Hidden,
-                                   cl::init(32));
-
 NewArchiveMember::NewArchiveMember(MemoryBufferRef BufRef)
     : Buf(MemoryBuffer::getMemBuffer(BufRef, false)),
       MemberName(BufRef.getBufferIdentifier()) {}
@@ -145,10 +136,8 @@ static bool isBSDLike(object::Archive::Kind Kind) {
 
 template <class T>
 static void print(raw_ostream &Out, object::Archive::Kind Kind, T Val) {
-  if (isBSDLike(Kind))
-    support::endian::Writer<support::little>(Out).write(Val);
-  else
-    support::endian::Writer<support::big>(Out).write(Val);
+  support::endian::write(Out, Val,
+                         isBSDLike(Kind) ? support::little : support::big);
 }
 
 static void printRestOfMemberHeader(
@@ -216,7 +205,7 @@ static std::string computeRelativePath(StringRef From, StringRef To) {
   for (auto ToE = sys::path::end(To); ToI != ToE; ++ToI)
     sys::path::append(Relative, *ToI);
 
-#ifdef LLVM_ON_WIN32
+#ifdef _WIN32
   // Replace backslashes with slashes so that the path is portable between *nix
   // and Windows.
   std::replace(Relative.begin(), Relative.end(), '\\', '/');
@@ -490,6 +479,19 @@ Error llvm::writeArchive(StringRef ArcName,
       // We assume 32-bit symbols to see if 32-bit symbols are possible or not.
       MaxOffset += M.Symbols.size() * 4;
     }
+
+    // The SYM64 format is used when an archive's member offsets are larger than
+    // 32-bits can hold. The need for this shift in format is detected by
+    // writeArchive. To test this we need to generate a file with a member that
+    // has an offset larger than 32-bits but this demands a very slow test. To
+    // speed the test up we use this environment variable to pretend like the
+    // cutoff happens before 32-bits and instead happens at some much smaller
+    // value.
+    const char *Sym64Env = std::getenv("SYM64_THRESHOLD");
+    int Sym64Threshold = 32;
+    if (Sym64Env)
+      StringRef(Sym64Env).getAsInteger(10, Sym64Threshold);
+
     // If LastOffset isn't going to fit in a 32-bit varible we need to switch
     // to 64-bit. Note that the file can be larger than 4GB as long as the last
     // member starts before the 4GB offset.

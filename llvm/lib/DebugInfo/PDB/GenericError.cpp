@@ -30,7 +30,7 @@ public:
       return "Type server PDB was not found.";
     case generic_error_code::dia_sdk_not_present:
       return "LLVM was not compiled with support for DIA.  This usually means "
-             "that you are are not using MSVC, or your Visual Studio "
+             "that you are not using MSVC, or your Visual Studio "
              "installation "
              "is corrupt.";
     case generic_error_code::invalid_path:

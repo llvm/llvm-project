@@ -38,8 +38,8 @@ exceptional_return:
   ret i64 addrspace(1)* %obj1.relocated1
 }
 ; CHECK-LABEL: GCC_except_table{{[0-9]+}}:
-; CHECK: .long  .Ltmp{{[0-9]+}}-.Ltmp{{[0-9]+}}
-; CHECK: .long  .Ltmp{{[0-9]+}}-.Lfunc_begin{{[0-9]+}}
+; CHECK: .uleb128  .Ltmp{{[0-9]+}}-.Ltmp{{[0-9]+}}
+; CHECK: .uleb128  .Ltmp{{[0-9]+}}-.Lfunc_begin{{[0-9]+}}
 ; CHECK: .byte  0
 ; CHECK: .p2align 4
 
@@ -68,8 +68,8 @@ exceptional_return:
   ret i64 addrspace(1)* %obj.relocated
 }
 ; CHECK-LABEL: GCC_except_table{{[0-9]+}}:
-; CHECK: .long .Ltmp{{[0-9]+}}-.Ltmp{{[0-9]+}}
-; CHECK: .long .Ltmp{{[0-9]+}}-.Lfunc_begin{{[0-9]+}}
+; CHECK: .uleb128 .Ltmp{{[0-9]+}}-.Ltmp{{[0-9]+}}
+; CHECK: .uleb128 .Ltmp{{[0-9]+}}-.Lfunc_begin{{[0-9]+}}
 ; CHECK: .byte 0
 ; CHECK: .p2align 4
 
@@ -142,6 +142,7 @@ normal_return:
   ; CHECK-LABEL: %normal_return
   ; CHECK: xorl %eax, %eax
   ; CHECK-NEXT: popq
+  ; CHECK-NEXT: .cfi_def_cfa_offset 8
   ; CHECK-NEXT: retq
   %null.relocated = call coldcc i64 addrspace(1)* @llvm.experimental.gc.relocate.p1i64(token %sp1, i32 13, i32 13)
   %undef.relocated = call coldcc i64 addrspace(1)* @llvm.experimental.gc.relocate.p1i64(token %sp1, i32 14, i32 14)
@@ -169,6 +170,7 @@ entry:
 normal_return:
   ; CHECK: leaq
   ; CHECK-NEXT: popq
+  ; CHECK-NEXT: .cfi_def_cfa_offset 8
   ; CHECK-NEXT: retq
   %aa.rel = call coldcc i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %sp, i32 13, i32 13)
   %aa.converted = bitcast i32 addrspace(1)* %aa.rel to i64 addrspace(1)*
@@ -177,6 +179,7 @@ normal_return:
 exceptional_return:
   ; CHECK: movl	$15
   ; CHECK-NEXT: popq
+  ; CHECK-NEXT: .cfi_def_cfa_offset 8
   ; CHECK-NEXT: retq
   %landing_pad = landingpad token
           cleanup

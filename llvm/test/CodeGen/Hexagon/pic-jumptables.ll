@@ -1,8 +1,8 @@
 ; RUN: llc -march=hexagon -relocation-model=pic < %s | FileCheck %s
 
-; CHECK: r{{[0-9]+}}{{ *}}={{ *}}add({{pc|PC}}{{ *}},{{ *}}##
-; CHECK: r{{[0-9]+}}{{ *}}={{ *}}memw(r{{[0-9]+}}{{ *}}+{{ *}}r{{[0-9]+}}{{ *}}<<{{ *}}#2)
-; CHECK: r{{[0-9]+}}{{ *}}={{ *}}add(r{{[0-9]+}}{{ *}},{{ *}}r{{[0-9]+}})
+; CHECK: r{{[0-9]+}} = add({{pc|PC}},##
+; CHECK: r{{[0-9]+}} = memw(r{{[0-9]+}}+r{{[0-9]+}}<<#2)
+; CHECK: r{{[0-9]+}} = add(r{{[0-9]+}},r{{[0-9]+}})
 
 
 define i32 @test(i32 %y) nounwind {

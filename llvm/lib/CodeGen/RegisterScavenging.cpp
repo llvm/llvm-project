@@ -111,7 +111,7 @@ void RegScavenger::determineKillsAndDefs() {
   assert(Tracking && "Must be tracking to determine kills and defs");
 
   MachineInstr &MI = *MBBI;
-  assert(!MI.isDebugValue() && "Debug values have no kills or defs");
+  assert(!MI.isDebugInstr() && "Debug values have no kills or defs");
 
   // Find out which registers are early clobbered, killed, defined, and marked
   // def-dead in this instruction.
@@ -158,7 +158,7 @@ void RegScavenger::unprocess() {
   assert(Tracking && "Cannot unprocess because we're not tracking");
 
   MachineInstr &MI = *MBBI;
-  if (!MI.isDebugValue()) {
+  if (!MI.isDebugInstr()) {
     determineKillsAndDefs();
 
     // Commit the changes.
@@ -195,7 +195,7 @@ void RegScavenger::forward() {
     I->Restore = nullptr;
   }
 
-  if (MI.isDebugValue())
+  if (MI.isDebugInstr())
     return;
 
   determineKillsAndDefs();
@@ -288,8 +288,8 @@ bool RegScavenger::isRegUsed(unsigned Reg, bool includeReserved) const {
 unsigned RegScavenger::FindUnusedReg(const TargetRegisterClass *RC) const {
   for (unsigned Reg : *RC) {
     if (!isRegUsed(Reg)) {
-      DEBUG(dbgs() << "Scavenger found unused reg: " << printReg(Reg, TRI)
-                   << "\n");
+      LLVM_DEBUG(dbgs() << "Scavenger found unused reg: " << printReg(Reg, TRI)
+                        << "\n");
       return Reg;
     }
   }
@@ -318,7 +318,7 @@ unsigned RegScavenger::findSurvivorReg(MachineBasicBlock::iterator StartMI,
 
   bool inVirtLiveRange = false;
   for (++MI; InstrLimit > 0 && MI != ME; ++MI, --InstrLimit) {
-    if (MI->isDebugValue()) {
+    if (MI->isDebugInstr()) {
       ++InstrLimit; // Don't count debug instructions
       continue;
     }
@@ -561,15 +561,15 @@ unsigned RegScavenger::scavengeRegister(const TargetRegisterClass *RC,
 
   // If we found an unused register there is no reason to spill it.
   if (!isRegUsed(SReg)) {
-    DEBUG(dbgs() << "Scavenged register: " << printReg(SReg, TRI) << "\n");
+    LLVM_DEBUG(dbgs() << "Scavenged register: " << printReg(SReg, TRI) << "\n");
     return SReg;
   }
 
   ScavengedInfo &Scavenged = spill(SReg, *RC, SPAdj, I, UseMI);
   Scavenged.Restore = &*std::prev(UseMI);
 
-  DEBUG(dbgs() << "Scavenged register (with spill): " << printReg(SReg, TRI)
-               << "\n");
+  LLVM_DEBUG(dbgs() << "Scavenged register (with spill): "
+                    << printReg(SReg, TRI) << "\n");
 
   return SReg;
 }
@@ -594,14 +594,15 @@ unsigned RegScavenger::scavengeRegisterBackwards(const TargetRegisterClass &RC,
     MachineBasicBlock::iterator ReloadAfter =
       RestoreAfter ? std::next(MBBI) : MBBI;
     MachineBasicBlock::iterator ReloadBefore = std::next(ReloadAfter);
-    DEBUG(dbgs() << "Reload before: " << *ReloadBefore << '\n');
+    LLVM_DEBUG(dbgs() << "Reload before: " << *ReloadBefore << '\n');
     ScavengedInfo &Scavenged = spill(Reg, RC, SPAdj, SpillBefore, ReloadBefore);
     Scavenged.Restore = &*std::prev(SpillBefore);
     LiveUnits.removeReg(Reg);
-    DEBUG(dbgs() << "Scavenged register with spill: " << printReg(Reg, TRI)
-                 << " until " << *SpillBefore);
+    LLVM_DEBUG(dbgs() << "Scavenged register with spill: " << printReg(Reg, TRI)
+                      << " until " << *SpillBefore);
   } else {
-    DEBUG(dbgs() << "Scavenged free register: " << printReg(Reg, TRI) << '\n');
+    LLVM_DEBUG(dbgs() << "Scavenged free register: " << printReg(Reg, TRI)
+                      << '\n');
   }
   return Reg;
 }
@@ -757,8 +758,8 @@ void llvm::scavengeFrameVirtualRegs(MachineFunction &MF, RegScavenger &RS) {
 
     bool Again = scavengeFrameVirtualRegsInBlock(MRI, RS, MBB);
     if (Again) {
-      DEBUG(dbgs() << "Warning: Required two scavenging passes for block "
-            << MBB.getName() << '\n');
+      LLVM_DEBUG(dbgs() << "Warning: Required two scavenging passes for block "
+                        << MBB.getName() << '\n');
       Again = scavengeFrameVirtualRegsInBlock(MRI, RS, MBB);
       // The target required a 2nd run (because it created new vregs while
       // spilling). Refuse to do another pass to keep compiletime in check.

@@ -3,375 +3,375 @@
 @vec_v8i16 = global <8 x i16> <i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8>
 
 ; CHECK-LABEL: movi_modimm_t1:
-define i16 @movi_modimm_t1() nounwind {
+define void @movi_modimm_t1() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    movi	   v[[REG2:[0-9]+]].4s, #1
   ; CHECK-NEXT:    add	   v[[REG1]].8h, v[[REG1]].8h, v[[REG2]].8h
-  ; CHECK-NEXT:    umov	   w{{[0-9]+}}, v[[REG1]].h[0]
+  ; CHECK-NEXT:    st1	   { v[[REG1]].8h }, [x{{[0-9]+}}]
   %in = load <8 x i16>, <8 x i16>* @vec_v8i16
   %rv = add <8 x i16> %in, <i16 1, i16 0, i16 1, i16 0, i16 1, i16 0, i16 1, i16 0>
-  %el = extractelement <8 x i16> %rv, i32 0
-  ret i16 %el
+  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  ret void
 }
 
 ; CHECK-LABEL: movi_modimm_t2:
-define i16 @movi_modimm_t2() nounwind {
+define void @movi_modimm_t2() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    movi	   v[[REG2:[0-9]+]].4s, #1, lsl #8
   ; CHECK-NEXT:    add	   v[[REG1]].8h, v[[REG1]].8h, v[[REG2]].8h
-  ; CHECK-NEXT:    umov	   w{{[0-9]+}}, v[[REG1]].h[0]
+  ; CHECK-NEXT:    st1	   { v[[REG1]].8h }, [x{{[0-9]+}}]
   %in = load <8 x i16>, <8 x i16>* @vec_v8i16
   %rv = add <8 x i16> %in, <i16 256, i16 0, i16 256, i16 0, i16 256, i16 0, i16 256, i16 0>
-  %el = extractelement <8 x i16> %rv, i32 0
-  ret i16 %el
+  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  ret void
 }
 
 ; CHECK-LABEL: movi_modimm_t3:
-define i16 @movi_modimm_t3() nounwind {
+define void @movi_modimm_t3() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    movi	   v[[REG2:[0-9]+]].4s, #1, lsl #16
   ; CHECK-NEXT:    add	   v[[REG1]].8h, v[[REG1]].8h, v[[REG2]].8h
-  ; CHECK-NEXT:    umov	   w{{[0-9]+}}, v[[REG1]].h[0]
+  ; CHECK-NEXT:    st1	   { v[[REG1]].8h }, [x{{[0-9]+}}]
   %in = load <8 x i16>, <8 x i16>* @vec_v8i16
   %rv = add <8 x i16> %in, <i16 0, i16 1, i16 0, i16 1, i16 0, i16 1, i16 0, i16 1>
-  %el = extractelement <8 x i16> %rv, i32 0
-  ret i16 %el
+  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  ret void
 }
 
 ; CHECK-LABEL: movi_modimm_t4:
-define i16 @movi_modimm_t4() nounwind {
+define void @movi_modimm_t4() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    movi	   v[[REG2:[0-9]+]].4s, #1, lsl #24
   ; CHECK-NEXT:    add	   v[[REG1]].8h, v[[REG1]].8h, v[[REG2]].8h
-  ; CHECK-NEXT:    umov	   w{{[0-9]+}}, v[[REG1]].h[0]
+  ; CHECK-NEXT:    st1	   { v[[REG1]].8h }, [x{{[0-9]+}}]
   %in = load <8 x i16>, <8 x i16>* @vec_v8i16
   %rv = add <8 x i16> %in, <i16 0, i16 256, i16 0, i16 256, i16 0, i16 256, i16 0, i16 256>
-  %el = extractelement <8 x i16> %rv, i32 0
-  ret i16 %el
+  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  ret void
 }
 
 ; CHECK-LABEL: movi_modimm_t5:
-define i16 @movi_modimm_t5() nounwind {
+define void @movi_modimm_t5() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    movi	   v[[REG2:[0-9]+]].8h, #1
   ; CHECK-NEXT:    add	   v[[REG1]].8h, v[[REG1]].8h, v[[REG2]].8h
-  ; CHECK-NEXT:    umov	   w{{[0-9]+}}, v[[REG1]].h[0]
+  ; CHECK-NEXT:    st1	   { v[[REG1]].8h }, [x{{[0-9]+}}]
   %in = load <8 x i16>, <8 x i16>* @vec_v8i16
   %rv = add <8 x i16> %in, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
-  %el = extractelement <8 x i16> %rv, i32 0
-  ret i16 %el
+  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  ret void
 }
 
 ; CHECK-LABEL: movi_modimm_t6:
-define i16 @movi_modimm_t6() nounwind {
+define void @movi_modimm_t6() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    movi	   v[[REG2:[0-9]+]].8h, #1, lsl #8
   ; CHECK-NEXT:    add	   v[[REG1]].8h, v[[REG1]].8h, v[[REG2]].8h
-  ; CHECK-NEXT:    umov	   w{{[0-9]+}}, v[[REG1]].h[0]
+  ; CHECK-NEXT:    st1	   { v[[REG1]].8h }, [x{{[0-9]+}}]
   %in = load <8 x i16>, <8 x i16>* @vec_v8i16
   %rv = add <8 x i16> %in, <i16 256, i16 256, i16 256, i16 256, i16 256, i16 256, i16 256, i16 256>
-  %el = extractelement <8 x i16> %rv, i32 0
-  ret i16 %el
+  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  ret void
 }
 
 ; CHECK-LABEL: movi_modimm_t7:
-define i16 @movi_modimm_t7() nounwind {
+define void @movi_modimm_t7() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    movi	   v[[REG2:[0-9]+]].4s, #1, msl #8
   ; CHECK-NEXT:    add	   v[[REG1]].8h, v[[REG1]].8h, v[[REG2]].8h
-  ; CHECK-NEXT:    umov	   w{{[0-9]+}}, v[[REG1]].h[0]
+  ; CHECK-NEXT:    st1	   { v[[REG1]].8h }, [x{{[0-9]+}}]
   %in = load <8 x i16>, <8 x i16>* @vec_v8i16
   %rv = add <8 x i16> %in, <i16 511, i16 0, i16 511, i16 0, i16 511, i16 0, i16 511, i16 0>
-  %el = extractelement <8 x i16> %rv, i32 0
-  ret i16 %el
+  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  ret void
 }
 
 ; CHECK-LABEL: movi_modimm_t8:
-define i16 @movi_modimm_t8() nounwind {
+define void @movi_modimm_t8() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    movi	   v[[REG2:[0-9]+]].4s, #1, msl #16
   ; CHECK-NEXT:    add	   v[[REG1]].8h, v[[REG1]].8h, v[[REG2]].8h
-  ; CHECK-NEXT:    umov	   w{{[0-9]+}}, v[[REG1]].h[0]
+  ; CHECK-NEXT:    st1	   { v[[REG1]].8h }, [x{{[0-9]+}}]
   %in = load <8 x i16>, <8 x i16>* @vec_v8i16
   %rv = add <8 x i16> %in, <i16 65535, i16 1, i16 65535, i16 1, i16 65535, i16 1, i16 65535, i16 1>
-  %el = extractelement <8 x i16> %rv, i32 0
-  ret i16 %el
+  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  ret void
 }
 
 ; CHECK-LABEL: movi_modimm_t9:
-define i16 @movi_modimm_t9() nounwind {
+define void @movi_modimm_t9() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    movi	   v[[REG2:[0-9]+]].16b, #1
   ; CHECK-NEXT:    add	   v[[REG1]].8h, v[[REG1]].8h, v[[REG2]].8h
-  ; CHECK-NEXT:    umov	   w{{[0-9]+}}, v[[REG1]].h[0]
+  ; CHECK-NEXT:    st1	   { v[[REG1]].8h }, [x{{[0-9]+}}]
   %in = load <8 x i16>, <8 x i16>* @vec_v8i16
   %rv = add <8 x i16> %in, <i16 257, i16 257, i16 257, i16 257, i16 257, i16 257, i16 257, i16 257>
-  %el = extractelement <8 x i16> %rv, i32 0
-  ret i16 %el
+  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  ret void
 }
 
 ; CHECK-LABEL: movi_modimm_t10:
-define i16 @movi_modimm_t10() nounwind {
+define void @movi_modimm_t10() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    movi	   v[[REG2:[0-9]+]].2d, #0x00ffff0000ffff
   ; CHECK-NEXT:    add	   v[[REG1]].8h, v[[REG1]].8h, v[[REG2]].8h
-  ; CHECK-NEXT:    umov	   w{{[0-9]+}}, v[[REG1]].h[0]
+  ; CHECK-NEXT:    st1	   { v[[REG1]].8h }, [x{{[0-9]+}}]
   %in = load <8 x i16>, <8 x i16>* @vec_v8i16
   %rv = add <8 x i16> %in, <i16 -1, i16 0, i16 -1, i16 0, i16 -1, i16 0, i16 -1, i16 0>
-  %el = extractelement <8 x i16> %rv, i32 0
-  ret i16 %el
+  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  ret void
 }
 
 ; CHECK-LABEL: fmov_modimm_t11:
-define i16 @fmov_modimm_t11() nounwind {
+define void @fmov_modimm_t11() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    fmov    v[[REG2:[0-9]+]].4s, #3.00000000
   ; CHECK-NEXT:    add	   v[[REG1]].8h, v[[REG1]].8h, v[[REG2]].8h
-  ; CHECK-NEXT:    umov	   w{{[0-9]+}}, v[[REG1]].h[0]
+  ; CHECK-NEXT:    st1	   { v[[REG1]].8h }, [x{{[0-9]+}}]
   %in = load <8 x i16>, <8 x i16>* @vec_v8i16
   %rv = add <8 x i16> %in, <i16 0, i16 16448, i16 0, i16 16448, i16 0, i16 16448, i16 0, i16 16448>
-  %el = extractelement <8 x i16> %rv, i32 0
-  ret i16 %el
+  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  ret void
 }
 
 ; CHECK-LABEL: fmov_modimm_t12:
-define i16 @fmov_modimm_t12() nounwind {
+define void @fmov_modimm_t12() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    fmov    v[[REG2:[0-9]+]].2d, #0.17968750
   ; CHECK-NEXT:    add	   v[[REG1]].8h, v[[REG1]].8h, v[[REG2]].8h
-  ; CHECK-NEXT:    umov	   w{{[0-9]+}}, v[[REG1]].h[0]
+  ; CHECK-NEXT:    st1	   { v[[REG1]].8h }, [x{{[0-9]+}}]
   %in = load <8 x i16>, <8 x i16>* @vec_v8i16
   %rv = add <8 x i16> %in, <i16 0, i16 0, i16 0, i16 16327, i16 0, i16 0, i16 0, i16 16327>
-  %el = extractelement <8 x i16> %rv, i32 0
-  ret i16 %el
+  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  ret void
 }
 
 ; CHECK-LABEL: mvni_modimm_t1:
-define i16 @mvni_modimm_t1() nounwind {
+define void @mvni_modimm_t1() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    mvni	   v[[REG2:[0-9]+]].4s, #1
   ; CHECK-NEXT:    add	   v[[REG1]].8h, v[[REG1]].8h, v[[REG2]].8h
-  ; CHECK-NEXT:    umov	   w{{[0-9]+}}, v[[REG1]].h[0]
+  ; CHECK-NEXT:    st1	   { v[[REG1]].8h }, [x{{[0-9]+}}]
   %in = load <8 x i16>, <8 x i16>* @vec_v8i16
   %rv = add <8 x i16> %in, <i16 65534, i16 65535, i16 65534, i16 65535, i16 65534, i16 65535, i16 65534, i16 65535>
-  %el = extractelement <8 x i16> %rv, i32 0
-  ret i16 %el
+  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  ret void
 }
 
 ; CHECK-LABEL: mvni_modimm_t2:
-define i16 @mvni_modimm_t2() nounwind {
+define void @mvni_modimm_t2() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    mvni	   v[[REG2:[0-9]+]].4s, #1, lsl #8
   ; CHECK-NEXT:    add	   v[[REG1]].8h, v[[REG1]].8h, v[[REG2]].8h
-  ; CHECK-NEXT:    umov	   w{{[0-9]+}}, v[[REG1]].h[0]
+  ; CHECK-NEXT:    st1	   { v[[REG1]].8h }, [x{{[0-9]+}}]
   %in = load <8 x i16>, <8 x i16>* @vec_v8i16
   %rv = add <8 x i16> %in, <i16 65279, i16 65535, i16 65279, i16 65535, i16 65279, i16 65535, i16 65279, i16 65535>
-  %el = extractelement <8 x i16> %rv, i32 0
-  ret i16 %el
+  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  ret void
 }
 
 ; CHECK-LABEL: mvni_modimm_t3:
-define i16 @mvni_modimm_t3() nounwind {
+define void @mvni_modimm_t3() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    mvni	   v[[REG2:[0-9]+]].4s, #1, lsl #16
   ; CHECK-NEXT:    add	   v[[REG1]].8h, v[[REG1]].8h, v[[REG2]].8h
-  ; CHECK-NEXT:    umov	   w{{[0-9]+}}, v[[REG1]].h[0]
+  ; CHECK-NEXT:    st1	   { v[[REG1]].8h }, [x{{[0-9]+}}]
   %in = load <8 x i16>, <8 x i16>* @vec_v8i16
   %rv = add <8 x i16> %in, <i16 65535, i16 65534, i16 65535, i16 65534, i16 65535, i16 65534, i16 65535, i16 65534>
-  %el = extractelement <8 x i16> %rv, i32 0
-  ret i16 %el
+  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  ret void
 }
 
 ; CHECK-LABEL: mvni_modimm_t4:
-define i16 @mvni_modimm_t4() nounwind {
+define void @mvni_modimm_t4() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    mvni	   v[[REG2:[0-9]+]].4s, #1, lsl #24
   ; CHECK-NEXT:    add	   v[[REG1]].8h, v[[REG1]].8h, v[[REG2]].8h
-  ; CHECK-NEXT:    umov	   w{{[0-9]+}}, v[[REG1]].h[0]
+  ; CHECK-NEXT:    st1	   { v[[REG1]].8h }, [x{{[0-9]+}}]
   %in = load <8 x i16>, <8 x i16>* @vec_v8i16
   %rv = add <8 x i16> %in, <i16 65535, i16 65279, i16 65535, i16 65279, i16 65535, i16 65279, i16 65535, i16 65279>
-  %el = extractelement <8 x i16> %rv, i32 0
-  ret i16 %el
+  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  ret void
 }
 
 ; CHECK-LABEL: mvni_modimm_t5:
-define i16 @mvni_modimm_t5() nounwind {
+define void @mvni_modimm_t5() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    mvni	   v[[REG2:[0-9]+]].8h, #1
   ; CHECK-NEXT:    add	   v[[REG1]].8h, v[[REG1]].8h, v[[REG2]].8h
-  ; CHECK-NEXT:    umov	   w{{[0-9]+}}, v[[REG1]].h[0]
+  ; CHECK-NEXT:    st1	   { v[[REG1]].8h }, [x{{[0-9]+}}]
   %in = load <8 x i16>, <8 x i16>* @vec_v8i16
   %rv = add <8 x i16> %in, <i16 65534, i16 65534, i16 65534, i16 65534, i16 65534, i16 65534, i16 65534, i16 65534>
-  %el = extractelement <8 x i16> %rv, i32 0
-  ret i16 %el
+  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  ret void
 }
 
 ; CHECK-LABEL: mvni_modimm_t6:
-define i16 @mvni_modimm_t6() nounwind {
+define void @mvni_modimm_t6() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    mvni	   v[[REG2:[0-9]+]].8h, #1, lsl #8
   ; CHECK-NEXT:    add	   v[[REG1]].8h, v[[REG1]].8h, v[[REG2]].8h
-  ; CHECK-NEXT:    umov	   w{{[0-9]+}}, v[[REG1]].h[0]
+  ; CHECK-NEXT:    st1	   { v[[REG1]].8h }, [x{{[0-9]+}}]
   %in = load <8 x i16>, <8 x i16>* @vec_v8i16
   %rv = add <8 x i16> %in, <i16 65279, i16 65279, i16 65279, i16 65279, i16 65279, i16 65279, i16 65279, i16 65279>
-  %el = extractelement <8 x i16> %rv, i32 0
-  ret i16 %el
+  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  ret void
 }
 
 ; CHECK-LABEL: mvni_modimm_t7:
-define i16 @mvni_modimm_t7() nounwind {
+define void @mvni_modimm_t7() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    mvni	   v[[REG2:[0-9]+]].4s, #1, msl #8
   ; CHECK-NEXT:    add	   v[[REG1]].8h, v[[REG1]].8h, v[[REG2]].8h
-  ; CHECK-NEXT:    umov	   w{{[0-9]+}}, v[[REG1]].h[0]
+  ; CHECK-NEXT:    st1	   { v[[REG1]].8h }, [x{{[0-9]+}}]
   %in = load <8 x i16>, <8 x i16>* @vec_v8i16
   %rv = add <8 x i16> %in, <i16 65024, i16 65535, i16 65024, i16 65535, i16 65024, i16 65535, i16 65024, i16 65535>
-  %el = extractelement <8 x i16> %rv, i32 0
-  ret i16 %el
+  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  ret void
 }
 
 ; CHECK-LABEL: mvni_modimm_t8:
-define i16 @mvni_modimm_t8() nounwind {
+define void @mvni_modimm_t8() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    mvni	   v[[REG2:[0-9]+]].4s, #1, msl #16
   ; CHECK-NEXT:    add	   v[[REG1]].8h, v[[REG1]].8h, v[[REG2]].8h
-  ; CHECK-NEXT:    umov	   w{{[0-9]+}}, v[[REG1]].h[0]
+  ; CHECK-NEXT:    st1	   { v[[REG1]].8h }, [x{{[0-9]+}}]
   %in = load <8 x i16>, <8 x i16>* @vec_v8i16
   %rv = add <8 x i16> %in, <i16 0, i16 65534, i16 0, i16 65534, i16 0, i16 65534, i16 0, i16 65534>
-  %el = extractelement <8 x i16> %rv, i32 0
-  ret i16 %el
+  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  ret void
 }
 
 ; CHECK-LABEL: bic_modimm_t1:
-define i16 @bic_modimm_t1() nounwind {
+define void @bic_modimm_t1() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    bic	   v[[REG2:[0-9]+]].4s, #1
-  ; CHECK-NEXT:    umov	   w{{[0-9]+}}, v[[REG1]].h[0]
+  ; CHECK-NEXT:    st1	   { v[[REG1]].8h }, [x{{[0-9]+}}]
   %in = load <8 x i16>, <8 x i16>* @vec_v8i16
   %rv = and <8 x i16> %in, <i16 65534, i16 65535, i16 65534, i16 65535, i16 65534, i16 65535, i16 65534, i16 65535>
-  %el = extractelement <8 x i16> %rv, i32 0
-  ret i16 %el
+  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  ret void
 }
 
 ; CHECK-LABEL: bic_modimm_t2:
-define i16 @bic_modimm_t2() nounwind {
+define void @bic_modimm_t2() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    bic	   v[[REG2:[0-9]+]].4s, #1, lsl #8
-  ; CHECK-NEXT:    umov	   w{{[0-9]+}}, v[[REG1]].h[0]
+  ; CHECK-NEXT:    st1	   { v[[REG1]].8h }, [x{{[0-9]+}}]
   %in = load <8 x i16>, <8 x i16>* @vec_v8i16
   %rv = and <8 x i16> %in, <i16 65279, i16 65535, i16 65279, i16 65535, i16 65279, i16 65535, i16 65279, i16 65535>
-  %el = extractelement <8 x i16> %rv, i32 0
-  ret i16 %el
+  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  ret void
 }
 
 ; CHECK-LABEL: bic_modimm_t3:
-define i16 @bic_modimm_t3() nounwind {
+define void @bic_modimm_t3() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    bic	   v[[REG2:[0-9]+]].4s, #1, lsl #16
-  ; CHECK-NEXT:    umov	   w{{[0-9]+}}, v[[REG1]].h[0]
+  ; CHECK-NEXT:    st1	   { v[[REG1]].8h }, [x{{[0-9]+}}]
   %in = load <8 x i16>, <8 x i16>* @vec_v8i16
   %rv = and <8 x i16> %in, <i16 65535, i16 65534, i16 65535, i16 65534, i16 65535, i16 65534, i16 65535, i16 65534>
-  %el = extractelement <8 x i16> %rv, i32 0
-  ret i16 %el
+  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  ret void
 }
 
 ; CHECK-LABEL: bic_modimm_t4:
-define i16 @bic_modimm_t4() nounwind {
+define void @bic_modimm_t4() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    bic	   v[[REG2:[0-9]+]].4s, #1, lsl #24
-  ; CHECK-NEXT:    umov	   w{{[0-9]+}}, v[[REG1]].h[0]
+  ; CHECK-NEXT:    st1	   { v[[REG1]].8h }, [x{{[0-9]+}}]
   %in = load <8 x i16>, <8 x i16>* @vec_v8i16
   %rv = and <8 x i16> %in, <i16 65535, i16 65279, i16 65535, i16 65279, i16 65535, i16 65279, i16 65535, i16 65279>
-  %el = extractelement <8 x i16> %rv, i32 0
-  ret i16 %el
+  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  ret void
 }
 
 ; CHECK-LABEL: bic_modimm_t5:
-define i16 @bic_modimm_t5() nounwind {
+define void @bic_modimm_t5() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    bic	   v[[REG2:[0-9]+]].8h, #1
-  ; CHECK-NEXT:    umov	   w{{[0-9]+}}, v[[REG1]].h[0]
+  ; CHECK-NEXT:    st1	   { v[[REG1]].8h }, [x{{[0-9]+}}]
   %in = load <8 x i16>, <8 x i16>* @vec_v8i16
   %rv = and <8 x i16> %in, <i16 65534, i16 65534, i16 65534, i16 65534, i16 65534, i16 65534, i16 65534, i16 65534>
-  %el = extractelement <8 x i16> %rv, i32 0
-  ret i16 %el
+  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  ret void
 }
 
 ; CHECK-LABEL: bic_modimm_t6:
-define i16 @bic_modimm_t6() nounwind {
+define void @bic_modimm_t6() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    bic	   v[[REG2:[0-9]+]].8h, #1, lsl #8
-  ; CHECK-NEXT:    umov	   w{{[0-9]+}}, v[[REG1]].h[0]
+  ; CHECK-NEXT:    st1	   { v[[REG1]].8h }, [x{{[0-9]+}}]
   %in = load <8 x i16>, <8 x i16>* @vec_v8i16
   %rv = and <8 x i16> %in, <i16 65279, i16 65279, i16 65279, i16 65279, i16 65279, i16 65279, i16 65279, i16 65279>
-  %el = extractelement <8 x i16> %rv, i32 0
-  ret i16 %el
+  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  ret void
 }
 
 ; CHECK-LABEL: orr_modimm_t1:
-define i16 @orr_modimm_t1() nounwind {
+define void @orr_modimm_t1() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    orr	   v[[REG2:[0-9]+]].4s, #1
-  ; CHECK-NEXT:    umov	   w{{[0-9]+}}, v[[REG1]].h[0]
+  ; CHECK-NEXT:    st1	   { v[[REG1]].8h }, [x{{[0-9]+}}]
   %in = load <8 x i16>, <8 x i16>* @vec_v8i16
   %rv = or <8 x i16> %in, <i16 1, i16 0, i16 1, i16 0, i16 1, i16 0, i16 1, i16 0>
-  %el = extractelement <8 x i16> %rv, i32 0
-  ret i16 %el
+  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  ret void
 }
 
 ; CHECK-LABEL: orr_modimm_t2:
-define i16 @orr_modimm_t2() nounwind {
+define void @orr_modimm_t2() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    orr     v[[REG2:[0-9]+]].4s, #1, lsl #8
-  ; CHECK-NEXT:    umov	   w{{[0-9]+}}, v[[REG1]].h[0]
+  ; CHECK-NEXT:    st1	   { v[[REG1]].8h }, [x{{[0-9]+}}]
   %in = load <8 x i16>, <8 x i16>* @vec_v8i16
   %rv = or <8 x i16> %in, <i16 256, i16 0, i16 256, i16 0, i16 256, i16 0, i16 256, i16 0>
-  %el = extractelement <8 x i16> %rv, i32 0
-  ret i16 %el
+  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  ret void
 }
 
 ; CHECK-LABEL: orr_modimm_t3:
-define i16 @orr_modimm_t3() nounwind {
+define void @orr_modimm_t3() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    orr	   v[[REG2:[0-9]+]].4s, #1, lsl #16
-  ; CHECK-NEXT:    umov	   w{{[0-9]+}}, v[[REG1]].h[0]
+  ; CHECK-NEXT:    st1	   { v[[REG1]].8h }, [x{{[0-9]+}}]
   %in = load <8 x i16>, <8 x i16>* @vec_v8i16
   %rv = or <8 x i16> %in, <i16 0, i16 1, i16 0, i16 1, i16 0, i16 1, i16 0, i16 1>
-  %el = extractelement <8 x i16> %rv, i32 0
-  ret i16 %el
+  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  ret void
 }
 
 ; CHECK-LABEL: orr_modimm_t4:
-define i16 @orr_modimm_t4() nounwind {
+define void @orr_modimm_t4() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    orr	   v[[REG2:[0-9]+]].4s, #1, lsl #24
-  ; CHECK-NEXT:    umov	   w{{[0-9]+}}, v[[REG1]].h[0]
+  ; CHECK-NEXT:    st1	   { v[[REG1]].8h }, [x{{[0-9]+}}]
   %in = load <8 x i16>, <8 x i16>* @vec_v8i16
   %rv = or <8 x i16> %in, <i16 0, i16 256, i16 0, i16 256, i16 0, i16 256, i16 0, i16 256>
-  %el = extractelement <8 x i16> %rv, i32 0
-  ret i16 %el
+  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  ret void
 }
 
 ; CHECK-LABEL: orr_modimm_t5:
-define i16 @orr_modimm_t5() nounwind {
+define void @orr_modimm_t5() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    orr	   v[[REG2:[0-9]+]].8h, #1
-  ; CHECK-NEXT:    umov	   w{{[0-9]+}}, v[[REG1]].h[0]
+  ; CHECK-NEXT:    st1	   { v[[REG1]].8h }, [x{{[0-9]+}}]
   %in = load <8 x i16>, <8 x i16>* @vec_v8i16
   %rv = or <8 x i16> %in, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
-  %el = extractelement <8 x i16> %rv, i32 0
-  ret i16 %el
+  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  ret void
 }
 
 ; CHECK-LABEL: orr_modimm_t6:
-define i16 @orr_modimm_t6() nounwind {
+define void @orr_modimm_t6() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    orr	   v[[REG2:[0-9]+]].8h, #1, lsl #8
-  ; CHECK-NEXT:    umov	   w{{[0-9]+}}, v[[REG1]].h[0]
+  ; CHECK-NEXT:    st1	   { v[[REG1]].8h }, [x{{[0-9]+}}]
   %in = load <8 x i16>, <8 x i16>* @vec_v8i16
   %rv = or <8 x i16> %in, <i16 256, i16 256, i16 256, i16 256, i16 256, i16 256, i16 256, i16 256>
-  %el = extractelement <8 x i16> %rv, i32 0
-  ret i16 %el
+  store <8 x i16> %rv, <8 x i16>* @vec_v8i16
+  ret void
 }
 
 declare i8 @f_v8i8(<8 x i8> %arg)

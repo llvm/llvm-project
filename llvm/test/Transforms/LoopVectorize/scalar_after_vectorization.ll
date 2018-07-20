@@ -13,7 +13,7 @@ target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 ; CHECK:   %[[T4:.+]] = getelementptr inbounds i32, i32* %a, i64 %[[T3]]
 ; CHECK:   %[[T5:.+]] = bitcast i32* %[[T4]] to <4 x i32>*
 ; CHECK:   load <4 x i32>, <4 x i32>* %[[T5]], align 4
-; CHECK:   %[[T6:.+]] = getelementptr i32, i32* %[[T4]], i64 4
+; CHECK:   %[[T6:.+]] = getelementptr inbounds i32, i32* %[[T4]], i64 4
 ; CHECK:   %[[T7:.+]] = bitcast i32* %[[T6]] to <4 x i32>*
 ; CHECK:   load <4 x i32>, <4 x i32>* %[[T7]], align 4
 ; CHECK:   br {{.*}}, label %middle.block, label %vector.body
@@ -31,10 +31,10 @@ target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 ; NO-IC:   %[[T7:.+]] = sub nsw i64 %[[T5]], %x
 ; NO-IC:   %[[T8:.+]] = getelementptr inbounds i32, i32* %a, i64 %[[T6]]
 ; NO-IC:   %[[T9:.+]] = getelementptr inbounds i32, i32* %a, i64 %[[T7]]
-; NO-IC:   %[[T10:.+]] = getelementptr i32, i32* %[[T8]], i32 0
+; NO-IC:   %[[T10:.+]] = getelementptr inbounds i32, i32* %[[T8]], i32 0
 ; NO-IC:   %[[T11:.+]] = bitcast i32* %[[T10]] to <4 x i32>*
 ; NO-IC:   load <4 x i32>, <4 x i32>* %[[T11]], align 4
-; NO-IC:   %[[T12:.+]] = getelementptr i32, i32* %[[T8]], i32 4
+; NO-IC:   %[[T12:.+]] = getelementptr inbounds i32, i32* %[[T8]], i32 4
 ; NO-IC:   %[[T13:.+]] = bitcast i32* %[[T12]] to <4 x i32>*
 ; NO-IC:   load <4 x i32>, <4 x i32>* %[[T13]], align 4
 ; NO-IC:   br {{.*}}, label %middle.block, label %vector.body

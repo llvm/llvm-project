@@ -23,21 +23,21 @@ frameInfo:
 # CHECK: stack:
 # CHECK-NEXT: - { id: 0, name: b, type: default, offset: -12, size: 4, alignment: 4,
 # CHECK-NEXT: stack-id: 0, callee-saved-register: '', callee-saved-restored: true,
-# CHECK-NEXT: di-variable: '', di-expression: '', di-location: '' }
+# CHECK-NEXT: debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
 # CHECK-NEXT: - { id: 1, name: x, type: default, offset: -24, size: 8, alignment: 8,
 # CHECK-NEXT: stack-id: 0, callee-saved-register: '', callee-saved-restored: true,
-# CHECK-NEXT: di-variable: '', di-expression: '', di-location: '' }
+# CHECK-NEXT: debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
 # CHECK-NEXT: - { id: 2, name: '', type: spill-slot, offset: -32, size: 4, alignment: 4,
 # CHECK-NEXT: stack-id: 0, callee-saved-register: '', callee-saved-restored: true,
-# CHECK-NEXT: di-variable: '', di-expression: '', di-location: '' }
+# CHECK-NEXT: debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
 stack:
   - { id: 0, name: b, offset: -12, size: 4, alignment: 4 }
   - { id: 1, name: x, offset: -24, size: 8, alignment: 8 }
   - { id: 2, type: spill-slot, offset: -32, size: 4, alignment: 4 }
 body: |
   bb.0.entry:
-    MOV32mr %rsp, 1, _, -4, _, %edi
-    MOV64mi32 %rsp, 1, _, -16, _, 2
-    %eax = MOV32rm %rsp, 1, _, -4, _
-    RETQ %eax
+    MOV32mr $rsp, 1, _, -4, _, $edi
+    MOV64mi32 $rsp, 1, _, -16, _, 2
+    $eax = MOV32rm $rsp, 1, _, -4, _
+    RETQ $eax
 ...

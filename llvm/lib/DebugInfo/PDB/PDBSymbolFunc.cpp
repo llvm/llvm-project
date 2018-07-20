@@ -105,3 +105,18 @@ bool PDBSymbolFunc::isDestructor() const {
     return true;
   return false;
 }
+
+std::unique_ptr<IPDBEnumLineNumbers> PDBSymbolFunc::getLineNumbers() const {
+  auto Len = RawSymbol->getLength();
+  return Session.findLineNumbersByAddress(RawSymbol->getVirtualAddress(),
+                                          Len ? Len : 1);
+}
+
+uint32_t PDBSymbolFunc::getCompilandId() const {
+  if (auto Lines = getLineNumbers()) {
+    if (auto FirstLine = Lines->getNext()) {
+      return FirstLine->getCompilandId();
+    }
+  }
+  return 0;
+}

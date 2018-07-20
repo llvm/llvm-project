@@ -73,7 +73,7 @@ int main(int argc, char **argv) {
         Err.print(argv[0], errs());
         return 1;
       }
-      Writer.writeModule(M.get());
+      Writer.writeModule(*M);
       OwnedMods.push_back(std::move(M));
     }
     Writer.writeStrtab();

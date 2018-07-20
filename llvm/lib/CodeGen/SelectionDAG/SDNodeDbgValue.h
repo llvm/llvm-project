@@ -32,7 +32,8 @@ public:
   enum DbgValueKind {
     SDNODE = 0,             ///< Value is the result of an expression.
     CONST = 1,              ///< Value is a constant.
-    FRAMEIX = 2             ///< Value is contents of a stack location.
+    FRAMEIX = 2,            ///< Value is contents of a stack location.
+    VREG = 3                ///< Value is a virtual register.
   };
 private:
   union {
@@ -42,6 +43,7 @@ private:
     } s;
     const Value *Const;     ///< Valid for constants.
     unsigned FrameIx;       ///< Valid for stack objects.
+    unsigned VReg;          ///< Valid for registers.
   } u;
   DIVariable *Var;
   DIExpression *Expr;
@@ -77,6 +79,14 @@ public:
     u.FrameIx = FI;
   }
 
+  /// Constructor for virtual registers.
+  SDDbgValue(DIVariable *Var, DIExpression *Expr, unsigned VReg, bool indir,
+             DebugLoc dl, unsigned O)
+      : Var(Var), Expr(Expr), DL(std::move(dl)), Order(O), IsIndirect(indir) {
+    kind = VREG;
+    u.VReg = VReg;
+  }
+
   /// Returns the kind.
   DbgValueKind getKind() const { return kind; }
 
@@ -98,6 +108,9 @@ public:
   /// Returns the FrameIx for a stack object
   unsigned getFrameIx() const { assert (kind==FRAMEIX); return u.FrameIx; }
 
+  /// Returns the Virtual Register for a VReg
+  unsigned getVReg() const { assert (kind==VREG); return u.VReg; }
+
   /// Returns whether this is an indirect value.
   bool isIndirect() const { return IsIndirect; }
 
@@ -113,6 +126,28 @@ public:
   /// deleted.
   void setIsInvalidated() { Invalid = true; }
   bool isInvalidated() const { return Invalid; }
+};
+
+/// Holds the information from a dbg_label node through SDISel.
+/// We do not use SDValue here to avoid including its header.
+class SDDbgLabel {
+  MDNode *Label;
+  DebugLoc DL;
+  unsigned Order;
+
+public:
+  SDDbgLabel(MDNode *Label, DebugLoc dl, unsigned O)
+      : Label(Label), DL(std::move(dl)), Order(O) {}
+
+  /// Returns the MDNode pointer for the label.
+  MDNode *getLabel() const { return Label; }
+
+  /// Returns the DebugLoc.
+  DebugLoc getDebugLoc() const { return DL; }
+
+  /// Returns the SDNodeOrder.  This is the order of the preceding node in the
+  /// input.
+  unsigned getOrder() const { return Order; }
 };
 
 } // end llvm namespace

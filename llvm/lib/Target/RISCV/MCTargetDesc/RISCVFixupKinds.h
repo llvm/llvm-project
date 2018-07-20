@@ -29,6 +29,12 @@ enum Fixups {
   // fixup_riscv_pcrel_hi20 - 20-bit fixup corresponding to pcrel_hi(foo) for
   // instructions like auipc
   fixup_riscv_pcrel_hi20,
+  // fixup_riscv_pcrel_lo12_i - 12-bit fixup corresponding to pcrel_lo(foo) for
+  // instructions like addi
+  fixup_riscv_pcrel_lo12_i,
+  // fixup_riscv_pcrel_lo12_s - 12-bit fixup corresponding to pcrel_lo(foo) for
+  // the S-type store instructions
+  fixup_riscv_pcrel_lo12_s,
   // fixup_riscv_jal - 20-bit fixup for symbol references in the jal
   // instruction
   fixup_riscv_jal,
@@ -41,6 +47,12 @@ enum Fixups {
   // fixup_riscv_rvc_branch - 8-bit fixup for symbol references in the
   // compressed branch instruction
   fixup_riscv_rvc_branch,
+  // fixup_riscv_call - A fixup representing a call attached to the auipc
+  // instruction in a pair composed of adjacent auipc+jalr instructions.
+  fixup_riscv_call,
+  // fixup_riscv_relax - Used to generate an R_RISCV_RELAX relocation type,
+  // which indicates the linker may relax the instruction pair.
+  fixup_riscv_relax,
 
   // fixup_riscv_invalid - used as a sentinel and a marker, must be last fixup
   fixup_riscv_invalid,

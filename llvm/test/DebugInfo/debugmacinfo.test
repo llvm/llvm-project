@@ -22,6 +22,12 @@ TEST_MACINFO:   DW_MACINFO_define - lineno: 3 macro: M2(x,y) ((x)+(y)* Value2)
 TEST_MACINFO: DW_MACINFO_end_file
 
 TEST_LINE: .debug_line contents:
-TEST_LINE: file_names[  1]    0 0x00000000 0x00000000 dwarfdump-macro.cc
-TEST_LINE: file_names[  2]    1 0x00000000 0x00000000 dwarfdump-macro-cmd.h
-TEST_LINE: file_names[  3]    0 0x00000000 0x00000000 dwarfdump-macro.h
+TEST_LINE: file_names[  1]:
+TEST_LINE-NEXT: name: "dwarfdump-macro.cc"
+TEST_LINE-NEXT: dir_index: 0
+TEST_LINE: file_names[  2]:
+TEST_LINE-NEXT: name: "dwarfdump-macro-cmd.h"
+TEST_LINE-NEXT: dir_index: 1
+TEST_LINE: file_names[  3]:
+TEST_LINE-NEXT: name: "dwarfdump-macro.h"
+TEST_LINE-NEXT: dir_index: 0

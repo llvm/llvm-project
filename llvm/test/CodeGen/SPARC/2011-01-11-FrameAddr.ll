@@ -1,6 +1,6 @@
-;RUN: llc -march=sparc < %s | FileCheck %s -check-prefix=V8
+;RUN: llc -march=sparc -show-mc-encoding < %s | FileCheck %s -check-prefix=V8
 ;RUN: llc -march=sparc -mattr=v9 < %s | FileCheck %s -check-prefix=V9
-;RUN: llc -march=sparc -regalloc=basic < %s | FileCheck %s -check-prefix=V8
+;RUN: llc -march=sparc -show-mc-encoding -regalloc=basic < %s | FileCheck %s -check-prefix=V8
 ;RUN: llc -march=sparc -regalloc=basic -mattr=v9 < %s | FileCheck %s -check-prefix=V9
 ;RUN: llc -march=sparcv9  < %s | FileCheck %s -check-prefix=SPARC64
 
@@ -31,7 +31,7 @@ entry:
 define i8* @frameaddr2() nounwind readnone {
 entry:
 ;V8-LABEL: frameaddr2:
-;V8: ta 3
+;V8: ta 3 ! encoding: [0x91,0xd0,0x20,0x03]
 ;V8: ld [%fp+56], {{.+}}
 ;V8: ld [{{.+}}+56], {{.+}}
 ;V8: ld [{{.+}}+56], {{.+}}

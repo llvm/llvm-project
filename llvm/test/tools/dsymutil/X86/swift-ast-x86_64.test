@@ -1,4 +1,4 @@
-RUN: llvm-dsymutil -oso-prepend-path %p/.. %p/../Inputs/swift-ast.macho.x86_64 -o %T/swift-ast.dSYM -verbose -no-swiftmodule-timestamp | FileCheck %s --check-prefix=DSYMUTIL
+RUN: dsymutil -oso-prepend-path %p/.. %p/../Inputs/swift-ast.macho.x86_64 -o %T/swift-ast.dSYM -verbose -no-swiftmodule-timestamp | FileCheck %s --check-prefix=DSYMUTIL
 RUN: llvm-readobj -sections -section-data %T/swift-ast.dSYM/Contents/Resources/DWARF/swift-ast.macho.x86_64 | FileCheck %s --check-prefix=READOBJ
 
 The tested object file has been created by the dummy Swift code:
@@ -9,11 +9,12 @@ Compiled with:
   ld swift-ast.o -add_ast_path Inputs/swift-ast.swiftmodule -arch x86_64 -lSystem -macosx_version_min 10.9.0
 
 DSYMUTIL: filename:{{.*}}swift-ast.swiftmodule
+DSYMUTIL-NOT: The file was not recognized as a valid object file
 DSYMUTIL: DEBUG MAP OBJECT:{{.*}}swift-ast.swiftmodule
 
 READOBJ: Name:{{.*}}__swift_ast
 READOBJ: |SWIFTMODULE DATA|
 READOBJ-NEXT: |.|
 
-RUN: llvm-dsymutil -oso-prepend-path %p/.. %p/../Inputs/swift-ast.macho.x86_64 -no-output -verbose 2>&1 | FileCheck %s --check-prefix=TIMESTAMP
-TIMESTAMP: Warning: Timestamp mismatch
+RUN: dsymutil -oso-prepend-path %p/.. %p/../Inputs/swift-ast.macho.x86_64 -no-output -verbose 2>&1 | FileCheck %s --check-prefix=TIMESTAMP
+TIMESTAMP: warning: Timestamp mismatch

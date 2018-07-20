@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// \brief This pass adds instructions to enable whole quad mode for pixel
+/// This pass adds instructions to enable whole quad mode for pixel
 /// shaders, and whole wavefront mode for all programs.
 ///
 /// Whole quad mode is required for derivative computations, but it interferes
@@ -60,6 +60,7 @@
 #include "AMDGPUSubtarget.h"
 #include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallVector.h"
@@ -325,9 +326,7 @@ char SIWholeQuadMode::scanInstructions(MachineFunction &MF,
       unsigned Opcode = MI.getOpcode();
       char Flags = 0;
 
-      if (TII->isDS(Opcode) && CallingConv == CallingConv::AMDGPU_PS) {
-        Flags = StateWQM;
-      } else if (TII->isWQM(Opcode)) {
+      if (TII->isWQM(Opcode)) {
         // Sampling instructions don't need to produce results for all pixels
         // in a quad, they just require all inputs of a quad to have been
         // computed for derivatives.
@@ -454,6 +453,11 @@ void SIWholeQuadMode::propagateInstruction(MachineInstr &MI,
 
   if (II.Needs != 0)
     markInstructionUses(MI, II.Needs, Worklist);
+
+  // Ensure we process a block containing WWM, even if it does not require any
+  // WQM transitions.
+  if (II.Needs & StateWWM)
+    BI.Needs |= StateWWM;
 }
 
 void SIWholeQuadMode::propagateBlock(MachineBasicBlock &MBB,
@@ -681,7 +685,8 @@ void SIWholeQuadMode::processBlock(MachineBasicBlock &MBB, unsigned LiveMaskReg,
   if (!isEntry && BI.Needs == StateWQM && BI.OutNeeds != StateExact)
     return;
 
-  DEBUG(dbgs() << "\nProcessing block " << printMBBReference(MBB) << ":\n");
+  LLVM_DEBUG(dbgs() << "\nProcessing block " << printMBBReference(MBB)
+                    << ":\n");
 
   unsigned SavedWQMReg = 0;
   unsigned SavedNonWWMReg = 0;
@@ -844,7 +849,7 @@ bool SIWholeQuadMode::runOnMachineFunction(MachineFunction &MF) {
   LowerToCopyInstrs.clear();
   CallingConv = MF.getFunction().getCallingConv();
 
-  const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
 
   TII = ST.getInstrInfo();
   TRI = &TII->getRegisterInfo();
@@ -884,7 +889,7 @@ bool SIWholeQuadMode::runOnMachineFunction(MachineFunction &MF) {
     }
   }
 
-  DEBUG(printInfo());
+  LLVM_DEBUG(printInfo());
 
   lowerCopyInstrs();
 

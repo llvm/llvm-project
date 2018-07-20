@@ -1,4 +1,5 @@
 ; RUN: opt -S -prune-eh < %s | FileCheck %s
+; RUN: opt -S -passes='function-attrs,function(simplify-cfg)' < %s | FileCheck %s
 
 declare void @may_throw()
 

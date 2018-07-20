@@ -14,6 +14,7 @@
 
 #include "llvm/ProfileData/GCOV.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
@@ -592,7 +593,7 @@ void FileInfo::print(raw_ostream &InfoOS, StringRef MainFilename,
   SmallVector<StringRef, 4> Filenames;
   for (const auto &LI : LineInfo)
     Filenames.push_back(LI.first());
-  std::sort(Filenames.begin(), Filenames.end());
+  llvm::sort(Filenames.begin(), Filenames.end());
 
   for (StringRef Filename : Filenames) {
     auto AllLines = LineConsumer(Filename);

@@ -29,12 +29,12 @@ namespace PBQP {
     using NodeId = unsigned;
     using EdgeId = unsigned;
 
-    /// @brief Returns a value representing an invalid (non-existent) node.
+    /// Returns a value representing an invalid (non-existent) node.
     static NodeId invalidNodeId() {
       return std::numeric_limits<NodeId>::max();
     }
 
-    /// @brief Returns a value representing an invalid (non-existent) edge.
+    /// Returns a value representing an invalid (non-existent) edge.
     static EdgeId invalidEdgeId() {
       return std::numeric_limits<EdgeId>::max();
     }
@@ -338,19 +338,19 @@ namespace PBQP {
       const NodeEntry &NE;
     };
 
-    /// @brief Construct an empty PBQP graph.
+    /// Construct an empty PBQP graph.
     Graph() = default;
 
-    /// @brief Construct an empty PBQP graph with the given graph metadata.
+    /// Construct an empty PBQP graph with the given graph metadata.
     Graph(GraphMetadata Metadata) : Metadata(std::move(Metadata)) {}
 
-    /// @brief Get a reference to the graph metadata.
+    /// Get a reference to the graph metadata.
     GraphMetadata& getMetadata() { return Metadata; }
 
-    /// @brief Get a const-reference to the graph metadata.
+    /// Get a const-reference to the graph metadata.
     const GraphMetadata& getMetadata() const { return Metadata; }
 
-    /// @brief Lock this graph to the given solver instance in preparation
+    /// Lock this graph to the given solver instance in preparation
     /// for running the solver. This method will call solver.handleAddNode for
     /// each node in the graph, and handleAddEdge for each edge, to give the
     /// solver an opportunity to set up any requried metadata.
@@ -363,13 +363,13 @@ namespace PBQP {
         Solver->handleAddEdge(EId);
     }
 
-    /// @brief Release from solver instance.
+    /// Release from solver instance.
     void unsetSolver() {
       assert(Solver && "Solver not set.");
       Solver = nullptr;
     }
 
-    /// @brief Add a node with the given costs.
+    /// Add a node with the given costs.
     /// @param Costs Cost vector for the new node.
     /// @return Node iterator for the added node.
     template <typename OtherVectorT>
@@ -382,7 +382,7 @@ namespace PBQP {
       return NId;
     }
 
-    /// @brief Add a node bypassing the cost allocator.
+    /// Add a node bypassing the cost allocator.
     /// @param Costs Cost vector ptr for the new node (must be convertible to
     ///        VectorPtr).
     /// @return Node iterator for the added node.
@@ -401,7 +401,7 @@ namespace PBQP {
       return NId;
     }
 
-    /// @brief Add an edge between the given nodes with the given costs.
+    /// Add an edge between the given nodes with the given costs.
     /// @param N1Id First node.
     /// @param N2Id Second node.
     /// @param Costs Cost matrix for new edge.
@@ -419,7 +419,7 @@ namespace PBQP {
       return EId;
     }
 
-    /// @brief Add an edge bypassing the cost allocator.
+    /// Add an edge bypassing the cost allocator.
     /// @param N1Id First node.
     /// @param N2Id Second node.
     /// @param Costs Cost matrix for new edge.
@@ -444,7 +444,7 @@ namespace PBQP {
       return EId;
     }
 
-    /// @brief Returns true if the graph is empty.
+    /// Returns true if the graph is empty.
     bool empty() const { return NodeIdSet(*this).empty(); }
 
     NodeIdSet nodeIds() const { return NodeIdSet(*this); }
@@ -452,15 +452,15 @@ namespace PBQP {
 
     AdjEdgeIdSet adjEdgeIds(NodeId NId) { return AdjEdgeIdSet(getNode(NId)); }
 
-    /// @brief Get the number of nodes in the graph.
+    /// Get the number of nodes in the graph.
     /// @return Number of nodes in the graph.
     unsigned getNumNodes() const { return NodeIdSet(*this).size(); }
 
-    /// @brief Get the number of edges in the graph.
+    /// Get the number of edges in the graph.
     /// @return Number of edges in the graph.
     unsigned getNumEdges() const { return EdgeIdSet(*this).size(); }
 
-    /// @brief Set a node's cost vector.
+    /// Set a node's cost vector.
     /// @param NId Node to update.
     /// @param Costs New costs to set.
     template <typename OtherVectorT>
@@ -471,7 +471,7 @@ namespace PBQP {
       getNode(NId).Costs = AllocatedCosts;
     }
 
-    /// @brief Get a VectorPtr to a node's cost vector. Rarely useful - use
+    /// Get a VectorPtr to a node's cost vector. Rarely useful - use
     ///        getNodeCosts where possible.
     /// @param NId Node id.
     /// @return VectorPtr to node cost vector.
@@ -483,7 +483,7 @@ namespace PBQP {
       return getNode(NId).Costs;
     }
 
-    /// @brief Get a node's cost vector.
+    /// Get a node's cost vector.
     /// @param NId Node id.
     /// @return Node cost vector.
     const Vector& getNodeCosts(NodeId NId) const {
@@ -502,7 +502,7 @@ namespace PBQP {
       return getNode(NId).getAdjEdgeIds().size();
     }
 
-    /// @brief Update an edge's cost matrix.
+    /// Update an edge's cost matrix.
     /// @param EId Edge id.
     /// @param Costs New cost matrix.
     template <typename OtherMatrixT>
@@ -513,7 +513,7 @@ namespace PBQP {
       getEdge(EId).Costs = AllocatedCosts;
     }
 
-    /// @brief Get a MatrixPtr to a node's cost matrix. Rarely useful - use
+    /// Get a MatrixPtr to a node's cost matrix. Rarely useful - use
     ///        getEdgeCosts where possible.
     /// @param EId Edge id.
     /// @return MatrixPtr to edge cost matrix.
@@ -525,7 +525,7 @@ namespace PBQP {
       return getEdge(EId).Costs;
     }
 
-    /// @brief Get an edge's cost matrix.
+    /// Get an edge's cost matrix.
     /// @param EId Edge id.
     /// @return Edge cost matrix.
     const Matrix& getEdgeCosts(EdgeId EId) const {
@@ -540,21 +540,21 @@ namespace PBQP {
       return getEdge(EId).Metadata;
     }
 
-    /// @brief Get the first node connected to this edge.
+    /// Get the first node connected to this edge.
     /// @param EId Edge id.
     /// @return The first node connected to the given edge.
     NodeId getEdgeNode1Id(EdgeId EId) const {
       return getEdge(EId).getN1Id();
     }
 
-    /// @brief Get the second node connected to this edge.
+    /// Get the second node connected to this edge.
     /// @param EId Edge id.
     /// @return The second node connected to the given edge.
     NodeId getEdgeNode2Id(EdgeId EId) const {
       return getEdge(EId).getN2Id();
     }
 
-    /// @brief Get the "other" node connected to this edge.
+    /// Get the "other" node connected to this edge.
     /// @param EId Edge id.
     /// @param NId Node id for the "given" node.
     /// @return The iterator for the "other" node connected to this edge.
@@ -566,7 +566,7 @@ namespace PBQP {
       return E.getN1Id();
     }
 
-    /// @brief Get the edge connecting two nodes.
+    /// Get the edge connecting two nodes.
     /// @param N1Id First node id.
     /// @param N2Id Second node id.
     /// @return An id for edge (N1Id, N2Id) if such an edge exists,
@@ -581,7 +581,7 @@ namespace PBQP {
       return invalidEdgeId();
     }
 
-    /// @brief Remove a node from the graph.
+    /// Remove a node from the graph.
     /// @param NId Node id.
     void removeNode(NodeId NId) {
       if (Solver)
@@ -598,7 +598,7 @@ namespace PBQP {
       FreeNodeIds.push_back(NId);
     }
 
-    /// @brief Disconnect an edge from the given node.
+    /// Disconnect an edge from the given node.
     ///
     /// Removes the given edge from the adjacency list of the given node.
     /// This operation leaves the edge in an 'asymmetric' state: It will no
@@ -631,14 +631,14 @@ namespace PBQP {
       E.disconnectFrom(*this, NId);
     }
 
-    /// @brief Convenience method to disconnect all neighbours from the given
+    /// Convenience method to disconnect all neighbours from the given
     ///        node.
     void disconnectAllNeighborsFromNode(NodeId NId) {
       for (auto AEId : adjEdgeIds(NId))
         disconnectEdge(AEId, getEdgeOtherNodeId(AEId, NId));
     }
 
-    /// @brief Re-attach an edge to its nodes.
+    /// Re-attach an edge to its nodes.
     ///
     /// Adds an edge that had been previously disconnected back into the
     /// adjacency set of the nodes that the edge connects.
@@ -649,7 +649,7 @@ namespace PBQP {
         Solver->handleReconnectEdge(EId, NId);
     }
 
-    /// @brief Remove an edge from the graph.
+    /// Remove an edge from the graph.
     /// @param EId Edge id.
     void removeEdge(EdgeId EId) {
       if (Solver)
@@ -660,7 +660,7 @@ namespace PBQP {
       Edges[EId].invalidate();
     }
 
-    /// @brief Remove all nodes and edges from the graph.
+    /// Remove all nodes and edges from the graph.
     void clear() {
       Nodes.clear();
       FreeNodeIds.clear();

@@ -1,7 +1,9 @@
 ; RUN: opt < %s -sroa -S | FileCheck %s
+; RUN: opt -debugify -sroa -S < %s | FileCheck %s -check-prefix DEBUGLOC
+
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-n8:16:32:64"
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8*, i8*, i32, i32, i1)
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8*, i8*, i32, i1)
 
 define void @test1({ i8, i8 }* %a, { i8, i8 }* %b) {
 ; CHECK-LABEL: @test1(
@@ -23,8 +25,8 @@ entry:
 
   store i8 420, i8* %gep_alloca, align 16
 
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %gep_alloca, i8* %gep_a, i32 2, i32 16, i1 false)
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %gep_b, i8* %gep_alloca, i32 2, i32 16, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 16 %gep_alloca, i8* align 16 %gep_a, i32 2, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 16 %gep_b, i8* align 16 %gep_alloca, i32 2, i1 false)
   ret void
 }
 
@@ -34,6 +36,13 @@ define void @test2() {
 ; CHECK: load i8, i8* %{{.*}}
 ; CHECK: store i8 42, i8* %{{.*}}
 ; CHECK: ret void
+
+; Check that when sroa rewrites the alloca partition
+; it preserves the original DebugLocation.
+; DEBUGLOC-LABEL: @test2(
+; DEBUGLOC: {{.*}} = alloca {{.*}} !dbg ![[DbgLoc:[0-9]+]]
+;
+; DEBUGLOC: ![[DbgLoc]] = !DILocation(
 
 entry:
   %a = alloca { i8, i8, i8, i8 }, align 2
@@ -57,9 +66,9 @@ entry:
   %aa = alloca <2 x i64>, align 16
   %aptr = bitcast <2 x i64>* %a to i8*
   %aaptr = bitcast <2 x i64>* %aa to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %aaptr, i8* %aptr, i32 16, i32 2, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 2 %aaptr, i8* align 2 %aptr, i32 16, i1 false)
   %bptr = bitcast i16* %b to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %bptr, i8* %aaptr, i32 16, i32 2, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 2 %bptr, i8* align 2 %aaptr, i32 16, i1 false)
   ret void
 }
 
@@ -77,10 +86,10 @@ entry:
   %a = alloca { i8*, i8*, i8* }
   %b = alloca { i8*, i8*, i8* }
   %a_raw = bitcast { i8*, i8*, i8* }* %a to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %a_raw, i8* %x, i32 22, i32 8, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 8 %a_raw, i8* align 8 %x, i32 22, i1 false)
   %b_raw = bitcast { i8*, i8*, i8* }* %b to i8*
   %b_gep = getelementptr i8, i8* %b_raw, i32 6
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %b_gep, i8* %x, i32 18, i32 2, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 2 %b_gep, i8* align 2 %x, i32 18, i1 false)
   ret void
 }
 
@@ -155,7 +164,7 @@ entry:
   %raw2 = getelementptr inbounds [16 x i8], [16 x i8]* %a, i32 0, i32 8
   %ptr2 = bitcast i8* %raw2 to double*
 
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %raw1, i8* %out, i32 16, i32 0, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %raw1, i8* %out, i32 16, i1 false)
 ; CHECK: %[[val2:.*]] = load double, double* %{{.*}}, align 1
 ; CHECK: %[[val1:.*]] = load double, double* %{{.*}}, align 1
 
@@ -165,7 +174,7 @@ entry:
   store double %val1, double* %ptr1, align 1
   store double %val2, double* %ptr2, align 1
 
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %out, i8* %raw1, i32 16, i32 0, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %out, i8* %raw1, i32 16, i1 false)
 ; CHECK: store double %[[val1]], double* %{{.*}}, align 1
 ; CHECK: store double %[[val2]], double* %{{.*}}, align 1
 

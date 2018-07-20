@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -disable-post-ra < %s | FileCheck %s
+; RUN: llc -march=hexagon < %s | FileCheck %s
 
 ; Make sure that if there's only one store to the stack, it gets packetized
 ; with allocframe as there's a latency of 2 cycles between allocframe and
@@ -26,7 +26,7 @@ b1:
   store %struct.0* %v5, %struct.0** %v2, align 4
   %v6 = bitcast %struct.0* %v5 to i8*
   %v7 = load i8*, i8** bitcast (%struct.0** @G to i8**), align 4
-  tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* %v6, i8* %v7, i32 48, i32 4, i1 false)
+  tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 %v6, i8* align 4 %v7, i32 48, i1 false)
   %v8 = getelementptr inbounds %struct.0, %struct.0* %a0, i32 0, i32 2, i32 0, i32 1
   store i32 5, i32* %v8, align 4
   %v9 = getelementptr inbounds %struct.0, %struct.0* %v5, i32 0, i32 2, i32 0, i32 1
@@ -64,14 +64,14 @@ b32:                                              ; preds = %b1
   %v33 = bitcast %struct.0* %a0 to i8**
   %v34 = load i8*, i8** %v33, align 4
   %v35 = bitcast %struct.0* %a0 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %v35, i8* %v34, i32 48, i32 4, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 %v35, i8* align 4 %v34, i32 48, i1 false)
   br label %b36
 
 b36:                                              ; preds = %b32, %b18
   ret i32 undef
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture writeonly, i8* nocapture readonly, i32, i32, i1) #1
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture writeonly, i8* nocapture readonly, i32, i1) #1
 
 declare i32 @f0(...) #0
 declare i32 @f1(...) #0

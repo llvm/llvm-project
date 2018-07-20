@@ -74,10 +74,10 @@ if.end:                                           ; preds = %entry
   %y3 = getelementptr inbounds %struct.r, %struct.r* %r, i32 0, i32 2, !dbg !32
   %2 = bitcast %struct.p* %y3 to i8*, !dbg !32
   %3 = bitcast %struct.p* %y to i8*, !dbg !32
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %2, i8* %3, i64 16, i32 8, i1 false), !dbg !32
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 %2, i8* align 8 %3, i64 16, i1 false), !dbg !32
   %4 = bitcast %struct.r* %agg.tmp to i8*, !dbg !33
   %5 = bitcast %struct.r* %r to i8*, !dbg !33
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %4, i8* %5, i64 40, i32 8, i1 false), !dbg !33
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 %4, i8* align 8 %5, i64 40, i1 false), !dbg !33
   %call4 = call i32 @_Z7call_me1r(%struct.r* byval align 8 %agg.tmp), !dbg !33
   store i32 %call4, i32* %retval, !dbg !33
   br label %return, !dbg !33
@@ -93,7 +93,7 @@ declare i32 @_Z5maybev()
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #2
 
 ; Function Attrs: nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i32, i1) #3
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i1) #3
 
 declare i32 @_Z7call_me1r(%struct.r* byval align 8)
 
@@ -121,7 +121,7 @@ attributes #3 = { nounwind }
 !13 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !14 = !DIDerivedType(tag: DW_TAG_member, name: "x", line: 10, size: 128, align: 64, offset: 64, file: !5, scope: !10, baseType: !4)
 !15 = !DIDerivedType(tag: DW_TAG_member, name: "y", line: 11, size: 128, align: 64, offset: 192, file: !5, scope: !10, baseType: !4)
-!17 = distinct !DISubprogram(name: "test", linkageName: "_Z4testv", line: 18, isLocal: false, isDefinition: true, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 18, file: !5, scope: !18, type: !19, variables: !2)
+!17 = distinct !DISubprogram(name: "test", linkageName: "_Z4testv", line: 18, isLocal: false, isDefinition: true, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 18, file: !5, scope: !18, type: !19, retainedNodes: !2)
 !18 = !DIFile(filename: "pr22393.cc", directory: "")
 !19 = !DISubroutineType(types: !20)
 !20 = !{!13}

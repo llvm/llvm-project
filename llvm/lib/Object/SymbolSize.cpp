@@ -66,6 +66,10 @@ llvm::object::computeSymbolSizes(const ObjectFile &O) {
     Addresses.push_back(
         {O.symbol_end(), Address + Size, 0, getSectionID(O, Sec)});
   }
+
+  if (Addresses.empty())
+    return Ret;
+
   array_pod_sort(Addresses.begin(), Addresses.end(), compareAddress);
 
   // Compute the size as the gap to the next symbol

@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -74,7 +75,8 @@ void MCTargetStreamer::emitValue(const MCExpr *Value) {
 void MCTargetStreamer::emitAssignment(MCSymbol *Symbol, const MCExpr *Value) {}
 
 MCStreamer::MCStreamer(MCContext &Ctx)
-    : Context(Ctx), CurrentWinFrameInfo(nullptr) {
+    : Context(Ctx), CurrentWinFrameInfo(nullptr),
+      UseAssemblerInfoForParsing(false) {
   SectionStack.push_back(std::pair<MCSectionSubPair, MCSectionSubPair>());
 }
 
@@ -120,20 +122,16 @@ void MCStreamer::EmitIntValue(uint64_t Value, unsigned Size) {
   EmitBytes(StringRef(buf, Size));
 }
 
-/// EmitULEB128Value - Special case of EmitULEB128Value that avoids the
+/// EmitULEB128IntValue - Special case of EmitULEB128Value that avoids the
 /// client having to pass in a MCExpr for constant integers.
-void MCStreamer::EmitPaddedULEB128IntValue(uint64_t Value, unsigned PadTo) {
+void MCStreamer::EmitULEB128IntValue(uint64_t Value) {
   SmallString<128> Tmp;
   raw_svector_ostream OSE(Tmp);
-  encodeULEB128(Value, OSE, PadTo);
+  encodeULEB128(Value, OSE);
   EmitBytes(OSE.str());
 }
 
-void MCStreamer::EmitULEB128IntValue(uint64_t Value) {
-  EmitPaddedULEB128IntValue(Value, 0);
-}
-
-/// EmitSLEB128Value - Special case of EmitSLEB128Value that avoids the
+/// EmitSLEB128IntValue - Special case of EmitSLEB128Value that avoids the
 /// client having to pass in a MCExpr for constant integers.
 void MCStreamer::EmitSLEB128IntValue(int64_t Value) {
   SmallString<128> Tmp;
@@ -187,25 +185,28 @@ void MCStreamer::emitFill(uint64_t NumBytes, uint8_t FillValue) {
   emitFill(*MCConstantExpr::create(NumBytes, getContext()), FillValue);
 }
 
-void MCStreamer::emitFill(uint64_t NumValues, int64_t Size, int64_t Expr) {
-  int64_t NonZeroSize = Size > 4 ? 4 : Size;
-  Expr &= ~0ULL >> (64 - NonZeroSize * 8);
-  for (uint64_t i = 0, e = NumValues; i != e; ++i) {
-    EmitIntValue(Expr, NonZeroSize);
-    if (NonZeroSize < Size)
-      EmitIntValue(0, Size - NonZeroSize);
-  }
-}
-
 /// The implementation in this class just redirects to emitFill.
 void MCStreamer::EmitZeros(uint64_t NumBytes) {
   emitFill(NumBytes, 0);
 }
 
-unsigned MCStreamer::EmitDwarfFileDirective(unsigned FileNo,
-                                            StringRef Directory,
-                                            StringRef Filename, unsigned CUID) {
-  return getContext().getDwarfFile(Directory, Filename, FileNo, CUID);
+Expected<unsigned>
+MCStreamer::tryEmitDwarfFileDirective(unsigned FileNo, StringRef Directory,
+                                      StringRef Filename,
+                                      MD5::MD5Result *Checksum,
+                                      Optional<StringRef> Source,
+                                      unsigned CUID) {
+  return getContext().getDwarfFile(Directory, Filename, FileNo, Checksum,
+                                   Source, CUID);
+}
+
+void MCStreamer::emitDwarfFile0Directive(StringRef Directory,
+                                         StringRef Filename,
+                                         MD5::MD5Result *Checksum,
+                                         Optional<StringRef> Source,
+                                         unsigned CUID) {
+  getContext().setMCLineTableRootFile(CUID, Directory, Filename, Checksum,
+                                      Source);
 }
 
 void MCStreamer::EmitDwarfLocDirective(unsigned FileNo, unsigned Line,
@@ -660,6 +661,10 @@ void MCStreamer::EmitWinEHHandlerData(SMLoc Loc) {
     getContext().reportError(Loc, "Chained unwind areas can't have handlers!");
 }
 
+void MCStreamer::emitCGProfileEntry(const MCSymbolRefExpr *From,
+                                    const MCSymbolRefExpr *To, uint64_t Count) {
+}
+
 static MCSection *getWinCFISection(MCContext &Context, unsigned *NextWinCFIID,
                                    MCSection *MainCFISec,
                                    const MCSection *TextSec) {
@@ -668,16 +673,31 @@ static MCSection *getWinCFISection(MCContext &Context, unsigned *NextWinCFIID,
     return MainCFISec;
 
   const auto *TextSecCOFF = cast<MCSectionCOFF>(TextSec);
+  auto *MainCFISecCOFF = cast<MCSectionCOFF>(MainCFISec);
   unsigned UniqueID = TextSecCOFF->getOrAssignWinCFISectionID(NextWinCFIID);
 
   // If this section is COMDAT, this unwind section should be COMDAT associative
   // with its group.
   const MCSymbol *KeySym = nullptr;
-  if (TextSecCOFF->getCharacteristics() & COFF::IMAGE_SCN_LNK_COMDAT)
+  if (TextSecCOFF->getCharacteristics() & COFF::IMAGE_SCN_LNK_COMDAT) {
     KeySym = TextSecCOFF->getCOMDATSymbol();
 
-  return Context.getAssociativeCOFFSection(cast<MCSectionCOFF>(MainCFISec),
-                                           KeySym, UniqueID);
+    // In a GNU environment, we can't use associative comdats. Instead, do what
+    // GCC does, which is to make plain comdat selectany section named like
+    // ".[px]data$_Z3foov".
+    if (!Context.getAsmInfo()->hasCOFFAssociativeComdats()) {
+      std::string SectionName =
+          (MainCFISecCOFF->getSectionName() + "$" +
+           TextSecCOFF->getSectionName().split('$').second)
+              .str();
+      return Context.getCOFFSection(
+          SectionName,
+          MainCFISecCOFF->getCharacteristics() | COFF::IMAGE_SCN_LNK_COMDAT,
+          MainCFISecCOFF->getKind(), "", COFF::IMAGE_COMDAT_SELECT_ANY);
+    }
+  }
+
+  return Context.getAssociativeCOFFSection(MainCFISecCOFF, KeySym, UniqueID);
 }
 
 MCSection *MCStreamer::getAssociatedPDataSection(const MCSection *TextSec) {
@@ -803,6 +823,8 @@ void MCStreamer::EmitWinCFIEndProlog(SMLoc Loc) {
 void MCStreamer::EmitCOFFSafeSEH(MCSymbol const *Symbol) {
 }
 
+void MCStreamer::EmitCOFFSymbolIndex(MCSymbol const *Symbol) {}
+
 void MCStreamer::EmitCOFFSectionIndex(MCSymbol const *Symbol) {
 }
 
@@ -826,10 +848,11 @@ void MCStreamer::EmitWindowsUnwindTables() {
 }
 
 void MCStreamer::Finish() {
-  if (!DwarfFrameInfos.empty() && !DwarfFrameInfos.back().End)
+  if ((!DwarfFrameInfos.empty() && !DwarfFrameInfos.back().End) ||
+      (!WinFrameInfos.empty() && !WinFrameInfos.back()->End)) {
     getContext().reportError(SMLoc(), "Unfinished frame!");
-  if (!WinFrameInfos.empty() && !WinFrameInfos.back()->End)
-    getContext().reportError(SMLoc(), "Unfinished frame!");
+    return;
+  }
 
   MCTargetStreamer *TS = getTargetStreamer();
   if (TS)
@@ -908,6 +931,16 @@ void MCStreamer::emitAbsoluteSymbolDiff(const MCSymbol *Hi, const MCSymbol *Lo,
   EmitSymbolValue(SetLabel, Size);
 }
 
+void MCStreamer::emitAbsoluteSymbolDiffAsULEB128(const MCSymbol *Hi,
+                                                 const MCSymbol *Lo) {
+  // Get the Hi-Lo expression.
+  const MCExpr *Diff =
+      MCBinaryExpr::createSub(MCSymbolRefExpr::create(Hi, Context),
+                              MCSymbolRefExpr::create(Lo, Context), Context);
+
+  EmitULEB128Value(Diff);
+}
+
 void MCStreamer::EmitAssemblerFlag(MCAssemblerFlag Flag) {}
 void MCStreamer::EmitThumbFunc(MCSymbol *Func) {}
 void MCStreamer::EmitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) {}
@@ -925,7 +958,7 @@ void MCStreamer::EmitCOFFSymbolType(int Type) {
   llvm_unreachable("this directive only supported on COFF targets");
 }
 void MCStreamer::emitELFSize(MCSymbol *Symbol, const MCExpr *Value) {}
-void MCStreamer::emitELFSymverDirective(MCSymbol *Alias,
+void MCStreamer::emitELFSymverDirective(StringRef AliasName,
                                         const MCSymbol *Aliasee) {}
 void MCStreamer::EmitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                                        unsigned ByteAlignment) {}

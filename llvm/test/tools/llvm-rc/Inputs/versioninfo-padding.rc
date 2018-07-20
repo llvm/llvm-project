@@ -1,0 +1,25 @@
+1 VERSIONINFO
+FILETYPE 2
+FILEOS 4
+PRODUCTVERSION 4,0,0,0
+FILEVERSION 4,0,0,0
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "040904E4"
+    BEGIN
+      VALUE "a", "bc"
+    END
+  END
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "040904E4"
+    BEGIN
+      VALUE "a", "bc"
+    END
+    BLOCK "040904E5"
+    BEGIN
+      VALUE "a", "bc"
+    END
+  END
+END

@@ -15,13 +15,14 @@
 #include "HexagonInstrInfo.h"
 #include "HexagonRegisterInfo.h"
 #include "HexagonSubtarget.h"
+#include "MCTargetDesc/HexagonMCTargetDesc.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "MCTargetDesc/HexagonMCTargetDesc.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/CodeGen/ScheduleDAGInstrs.h"
 #include "llvm/Support/CommandLine.h"
@@ -38,17 +39,6 @@ using namespace llvm;
 #define GET_SUBTARGETINFO_TARGET_DESC
 #include "HexagonGenSubtargetInfo.inc"
 
-static cl::opt<bool> EnableMemOps("enable-hexagon-memops",
-  cl::Hidden, cl::ZeroOrMore, cl::ValueDisallowed, cl::init(true),
-  cl::desc("Generate V4 MEMOP in code generation for Hexagon target"));
-
-static cl::opt<bool> DisableMemOps("disable-hexagon-memops",
-  cl::Hidden, cl::ZeroOrMore, cl::ValueDisallowed, cl::init(false),
-  cl::desc("Do not generate V4 MEMOP in code generation for Hexagon target"));
-
-static cl::opt<bool> EnableIEEERndNear("enable-hexagon-ieee-rnd-near",
-  cl::Hidden, cl::ZeroOrMore, cl::init(false),
-  cl::desc("Generate non-chopped conversion from fp to int."));
 
 static cl::opt<bool> EnableBSBSched("enable-bsb-sched",
   cl::Hidden, cl::ZeroOrMore, cl::init(true));
@@ -59,9 +49,6 @@ static cl::opt<bool> EnableTCLatencySched("enable-tc-latency-sched",
 static cl::opt<bool> EnableDotCurSched("enable-cur-sched",
   cl::Hidden, cl::ZeroOrMore, cl::init(true),
   cl::desc("Enable the scheduler to generate .cur"));
-
-static cl::opt<bool> EnableVecFrwdSched("enable-evec-frwd-sched",
-  cl::Hidden, cl::ZeroOrMore, cl::init(true));
 
 static cl::opt<bool> DisableHexagonMISched("disable-hexagon-misched",
   cl::Hidden, cl::ZeroOrMore, cl::init(false),
@@ -105,6 +92,7 @@ HexagonSubtarget::HexagonSubtarget(const Triple &TT, StringRef CPU,
 HexagonSubtarget &
 HexagonSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
   static std::map<StringRef, Hexagon::ArchEnum> CpuTable{
+      {"generic", Hexagon::ArchEnum::V60},
       {"hexagonv4", Hexagon::ArchEnum::V4},
       {"hexagonv5", Hexagon::ArchEnum::V5},
       {"hexagonv55", Hexagon::ArchEnum::V55},
@@ -123,9 +111,7 @@ HexagonSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
   UseHVX64BOps = false;
   UseLongCalls = false;
 
-  UseMemOps = DisableMemOps ? false : EnableMemOps;
-  ModeIEEERndNear = EnableIEEERndNear;
-  UseBSBScheduling = hasV60TOps() && EnableBSBSched;
+  UseBSBScheduling = hasV60Ops() && EnableBSBSched;
 
   ParseSubtargetFeatures(CPUString, FS);
 
@@ -204,11 +190,14 @@ bool HexagonSubtarget::CallMutation::shouldTFRICallBind(
          Type == HexagonII::TypeALU64 || Type == HexagonII::TypeM;
 }
 
-void HexagonSubtarget::CallMutation::apply(ScheduleDAGInstrs *DAG) {
+void HexagonSubtarget::CallMutation::apply(ScheduleDAGInstrs *DAGInstrs) {
+  ScheduleDAGMI *DAG = static_cast<ScheduleDAGMI*>(DAGInstrs);
   SUnit* LastSequentialCall = nullptr;
-  unsigned VRegHoldingRet = 0;
-  unsigned RetRegister;
-  SUnit* LastUseOfRet = nullptr;
+  // Map from virtual register to physical register from the copy.
+  DenseMap<unsigned, unsigned> VRegHoldingReg;
+  // Map from the physical register to the instruction that uses virtual
+  // register. This is used to create the barrier edge.
+  DenseMap<unsigned, SUnit *> LastVRegUse;
   auto &TRI = *DAG->MF.getSubtarget().getRegisterInfo();
   auto &HII = *DAG->MF.getSubtarget<HexagonSubtarget>().getInstrInfo();
 
@@ -220,13 +209,15 @@ void HexagonSubtarget::CallMutation::apply(ScheduleDAGInstrs *DAG) {
       LastSequentialCall = &DAG->SUnits[su];
     // Look for a compare that defines a predicate.
     else if (DAG->SUnits[su].getInstr()->isCompare() && LastSequentialCall)
-      DAG->SUnits[su].addPred(SDep(LastSequentialCall, SDep::Barrier));
+      DAG->addEdge(&DAG->SUnits[su], SDep(LastSequentialCall, SDep::Barrier));
     // Look for call and tfri* instructions.
     else if (SchedPredsCloser && LastSequentialCall && su > 1 && su < e-1 &&
              shouldTFRICallBind(HII, DAG->SUnits[su], DAG->SUnits[su+1]))
-      DAG->SUnits[su].addPred(SDep(&DAG->SUnits[su-1], SDep::Barrier));
-    // Prevent redundant register copies between two calls, which are caused by
-    // both the return value and the argument for the next call being in %r0.
+      DAG->addEdge(&DAG->SUnits[su], SDep(&DAG->SUnits[su-1], SDep::Barrier));
+    // Prevent redundant register copies due to reads and writes of physical
+    // registers. The original motivation for this was the code generated
+    // between two calls, which are caused both the return value and the
+    // argument for the next call being in %r0.
     // Example:
     //   1: <call1>
     //   2: %vreg = COPY %r0
@@ -235,21 +226,37 @@ void HexagonSubtarget::CallMutation::apply(ScheduleDAGInstrs *DAG) {
     //   5: <call2>
     // The scheduler would often swap 3 and 4, so an additional register is
     // needed. This code inserts a Barrier dependence between 3 & 4 to prevent
-    // this. The same applies for %d0 and %v0/%w0, which are also handled.
+    // this.
+    // The code below checks for all the physical registers, not just R0/D0/V0.
     else if (SchedRetvalOptimization) {
       const MachineInstr *MI = DAG->SUnits[su].getInstr();
-      if (MI->isCopy() && (MI->readsRegister(Hexagon::R0, &TRI) ||
-                           MI->readsRegister(Hexagon::V0, &TRI)))  {
-        // %vreg = COPY %r0
-        VRegHoldingRet = MI->getOperand(0).getReg();
-        RetRegister = MI->getOperand(1).getReg();
-        LastUseOfRet = nullptr;
-      } else if (VRegHoldingRet && MI->readsVirtualRegister(VRegHoldingRet))
-        // <use of %X>
-        LastUseOfRet = &DAG->SUnits[su];
-      else if (LastUseOfRet && MI->definesRegister(RetRegister, &TRI))
-        // %r0 = ...
-        DAG->SUnits[su].addPred(SDep(LastUseOfRet, SDep::Barrier));
+      if (MI->isCopy() &&
+          TargetRegisterInfo::isPhysicalRegister(MI->getOperand(1).getReg())) {
+        // %vregX = COPY %r0
+        VRegHoldingReg[MI->getOperand(0).getReg()] = MI->getOperand(1).getReg();
+        LastVRegUse.erase(MI->getOperand(1).getReg());
+      } else {
+        for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
+          const MachineOperand &MO = MI->getOperand(i);
+          if (!MO.isReg())
+            continue;
+          if (MO.isUse() && !MI->isCopy() &&
+              VRegHoldingReg.count(MO.getReg())) {
+            // <use of %vregX>
+            LastVRegUse[VRegHoldingReg[MO.getReg()]] = &DAG->SUnits[su];
+          } else if (MO.isDef() &&
+                     TargetRegisterInfo::isPhysicalRegister(MO.getReg())) {
+            for (MCRegAliasIterator AI(MO.getReg(), &TRI, true); AI.isValid();
+                 ++AI) {
+              if (LastVRegUse.count(*AI) &&
+                  LastVRegUse[*AI] != &DAG->SUnits[su])
+                // %r0 = ...
+                DAG->addEdge(&DAG->SUnits[su], SDep(LastVRegUse[*AI], SDep::Barrier));
+              LastVRegUse.erase(*AI);
+            }
+          }
+        }
+      }
     }
   }
 }
@@ -300,7 +307,7 @@ void HexagonSubtarget::BankConflictMutation::apply(ScheduleDAGInstrs *DAG) {
   }
 }
 
-/// \brief Enable use of alias analysis during code generation (during MI
+/// Enable use of alias analysis during code generation (during MI
 /// scheduling, DAGCombine, etc.).
 bool HexagonSubtarget::useAA() const {
   if (OptLevel != CodeGenOpt::None)
@@ -308,7 +315,7 @@ bool HexagonSubtarget::useAA() const {
   return false;
 }
 
-/// \brief Perform target specific adjustments to the latency of a schedule
+/// Perform target specific adjustments to the latency of a schedule
 /// dependency.
 void HexagonSubtarget::adjustSchedDependency(SUnit *Src, SUnit *Dst,
                                              SDep &Dep) const {
@@ -328,25 +335,30 @@ void HexagonSubtarget::adjustSchedDependency(SUnit *Src, SUnit *Dst,
     return;
   }
 
-  if (!hasV60TOps())
+  if (!hasV60Ops())
     return;
 
-  // If it's a REG_SEQUENCE, use its destination instruction to determine
+  // Set the latency for a copy to zero since we hope that is will get removed.
+  if (DstInst->isCopy())
+    Dep.setLatency(0);
+
+  // If it's a REG_SEQUENCE/COPY, use its destination instruction to determine
   // the correct latency.
-  if (DstInst->isRegSequence() && Dst->NumSuccs == 1) {
-    unsigned RSeqReg = DstInst->getOperand(0).getReg();
-    MachineInstr *RSeqDst = Dst->Succs[0].getSUnit()->getInstr();
+  if ((DstInst->isRegSequence() || DstInst->isCopy()) && Dst->NumSuccs == 1) {
+    unsigned DReg = DstInst->getOperand(0).getReg();
+    MachineInstr *DDst = Dst->Succs[0].getSUnit()->getInstr();
     unsigned UseIdx = -1;
-    for (unsigned OpNum = 0; OpNum < RSeqDst->getNumOperands(); OpNum++) {
-      const MachineOperand &MO = RSeqDst->getOperand(OpNum);
-      if (MO.isReg() && MO.getReg() && MO.isUse() && MO.getReg() == RSeqReg) {
+    for (unsigned OpNum = 0; OpNum < DDst->getNumOperands(); OpNum++) {
+      const MachineOperand &MO = DDst->getOperand(OpNum);
+      if (MO.isReg() && MO.getReg() && MO.isUse() && MO.getReg() == DReg) {
         UseIdx = OpNum;
         break;
       }
     }
-    unsigned RSeqLatency = (InstrInfo.getOperandLatency(&InstrItins, *SrcInst,
-                                                        0, *RSeqDst, UseIdx));
-    Dep.setLatency(RSeqLatency);
+    int DLatency = (InstrInfo.getOperandLatency(&InstrItins, *SrcInst,
+                                                0, *DDst, UseIdx));
+    DLatency = std::max(DLatency, 0);
+    Dep.setLatency((unsigned)DLatency);
   }
 
   // Try to schedule uses near definitions to generate .cur.
@@ -394,7 +406,7 @@ void HexagonSubtarget::updateLatency(MachineInstr &SrcInst,
     return;
   }
 
-  if (!hasV60TOps())
+  if (!hasV60Ops())
     return;
 
   auto &QII = static_cast<const HexagonInstrInfo&>(*getInstrInfo());
@@ -418,6 +430,7 @@ void HexagonSubtarget::restoreLatency(SUnit *Src, SUnit *Dst) const {
     }
     assert(DefIdx >= 0 && "Def Reg not found in Src MI");
     MachineInstr *DstI = Dst->getInstr();
+    SDep T = I;
     for (unsigned OpNum = 0; OpNum < DstI->getNumOperands(); OpNum++) {
       const MachineOperand &MO = DstI->getOperand(OpNum);
       if (MO.isReg() && MO.isUse() && MO.getReg() == DepR) {
@@ -426,8 +439,7 @@ void HexagonSubtarget::restoreLatency(SUnit *Src, SUnit *Dst) const {
 
         // For some instructions (ex: COPY), we might end up with < 0 latency
         // as they don't have any Itinerary class associated with them.
-        if (Latency <= 0)
-          Latency = 1;
+        Latency = std::max(Latency, 0);
 
         I.setLatency(Latency);
         updateLatency(*SrcI, *DstI, I);
@@ -435,11 +447,10 @@ void HexagonSubtarget::restoreLatency(SUnit *Src, SUnit *Dst) const {
     }
 
     // Update the latency of opposite edge too.
-    for (auto &J : Dst->Preds) {
-      if (J.getSUnit() != Src)
-        continue;
-      J.setLatency(I.getLatency());
-    }
+    T.setSUnit(Src);
+    auto F = std::find(Dst->Preds.begin(), Dst->Preds.end(), T);
+    assert(F != Dst->Preds.end());
+    F->setLatency(I.getLatency());
   }
 }
 
@@ -447,7 +458,7 @@ void HexagonSubtarget::restoreLatency(SUnit *Src, SUnit *Dst) const {
 void HexagonSubtarget::changeLatency(SUnit *Src, SUnit *Dst, unsigned Lat)
       const {
   for (auto &I : Src->Succs) {
-    if (I.getSUnit() != Dst)
+    if (!I.isAssignedRegDep() || I.getSUnit() != Dst)
       continue;
     SDep T = I;
     I.setLatency(Lat);
@@ -456,7 +467,7 @@ void HexagonSubtarget::changeLatency(SUnit *Src, SUnit *Dst, unsigned Lat)
     T.setSUnit(Src);
     auto F = std::find(Dst->Preds.begin(), Dst->Preds.end(), T);
     assert(F != Dst->Preds.end());
-    F->setLatency(I.getLatency());
+    F->setLatency(Lat);
   }
 }
 
@@ -519,13 +530,13 @@ bool HexagonSubtarget::isBestZeroLatency(SUnit *Src, SUnit *Dst,
   // Reassign the latency for the previous bests, which requires setting
   // the dependence edge in both directions.
   if (SrcBest != nullptr) {
-    if (!hasV60TOps())
+    if (!hasV60Ops())
       changeLatency(SrcBest, Dst, 1);
     else
       restoreLatency(SrcBest, Dst);
   }
   if (DstBest != nullptr) {
-    if (!hasV60TOps())
+    if (!hasV60Ops())
       changeLatency(Src, DstBest, 1);
     else
       restoreLatency(Src, DstBest);

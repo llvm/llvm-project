@@ -2,6 +2,7 @@
 --- |
   define amdgpu_kernel void @test0() { ret void }
   define amdgpu_kernel void @test1() { ret void }
+  define amdgpu_kernel void @test2() { ret void }
 ...
 ---
 # In the test below we have two independent def+use pairs of subregister1 which
@@ -50,7 +51,7 @@ registers:
 body: |
   bb.0:
     S_NOP 0, implicit-def undef %0.sub2
-    S_CBRANCH_VCCNZ %bb.1, implicit undef %vcc
+    S_CBRANCH_VCCNZ %bb.1, implicit undef $vcc
     S_BRANCH %bb.2
 
   bb.1:
@@ -65,5 +66,22 @@ body: |
 
   bb.2:
     S_NOP 0, implicit %0.sub2
+
+...
+# In this test, there are two pairs of tied operands
+# within the inline asm statement:
+# (1) %0.sub0 + %0.sub0 and (2) %0.sub1 + %0.sub1
+# Check that renaming (2) does not inadvertently rename (1).
+# CHECK-LABEL: name: test2
+# CHECK: INLINEASM &"", 32, 327690, def undef %0.sub0, 327690, def dead %1.sub1, 2147483657, undef %0.sub0(tied-def 3), 2147549193, %1.sub1(tied-def 5)
+name: test2
+body: |
+  bb.0:
+    undef %0.sub0:vreg_64 = IMPLICIT_DEF
+
+  bb.1:
+    undef %0.sub1:vreg_64 = V_ALIGNBIT_B32 %0.sub0:vreg_64, %0.sub0:vreg_64, 16, implicit $exec
+    INLINEASM &"", 32, 327690, def undef %0.sub0:vreg_64, 327690, def %0.sub1:vreg_64, 2147483657, undef %0.sub0:vreg_64(tied-def 3), 2147549193, %0.sub1:vreg_64(tied-def 5)
+    S_BRANCH %bb.1
 
 ...

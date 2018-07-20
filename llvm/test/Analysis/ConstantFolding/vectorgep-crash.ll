@@ -38,3 +38,29 @@ vector.body:
   %VectorGep = getelementptr [65 x %struct.A], [65 x %struct.A]* @G, <16 x i32> zeroinitializer, <16 x i64> <i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15, i64 16>, <16 x i32> zeroinitializer
   ret <16 x i32*> %VectorGep
 }
+
+@g = external global i8, align 1
+
+define <2 x i8*> @constant_zero_index() {
+; CHECK-LABEL: @constant_zero_index(
+; CHECK-NEXT:    ret <2 x i8*> <i8* @g, i8* @g>
+;
+  %gep = getelementptr i8, i8* @g, <2 x i64> zeroinitializer
+  ret <2 x i8*> %gep
+}
+
+define <2 x i8*> @constant_undef_index() {
+; CHECK-LABEL: @constant_undef_index(
+; CHECK-NEXT:    ret <2 x i8*> <i8* @g, i8* @g>
+;
+  %gep = getelementptr i8, i8* @g, <2 x i64> undef
+  ret <2 x i8*> %gep
+}
+
+define <2 x i8*> @constant_inbounds() {
+; CHECK-LABEL: @constant_inbounds(
+; CHECK-NEXT:    ret <2 x i8*> getelementptr inbounds (i8, i8* @g, <2 x i64> <i64 1, i64 1>)
+;
+  %gep = getelementptr i8, i8* @g, <2 x i64> <i64 1, i64 1>
+  ret <2 x i8*> %gep
+}

@@ -56,9 +56,6 @@
 /* Define if this is Unixish platform */
 #cmakedefine LLVM_ON_UNIX ${LLVM_ON_UNIX}
 
-/* Define if this is Win32ish platform */
-#cmakedefine LLVM_ON_WIN32 ${LLVM_ON_WIN32}
-
 /* Define if we have the Intel JIT API runtime support library */
 #cmakedefine01 LLVM_USE_INTEL_JITEVENTS
 
@@ -76,5 +73,10 @@
 
 /* LLVM version string */
 #define LLVM_VERSION_STRING "${PACKAGE_VERSION}"
+
+/* Whether LLVM records statistics for use with GetStatistics(),
+ * PrintStatistics() or PrintStatisticsJSON()
+ */
+#cmakedefine01 LLVM_FORCE_ENABLE_STATS
 
 #endif

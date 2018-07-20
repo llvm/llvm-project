@@ -51,7 +51,7 @@ define i32 @load_i32_by_i8_bswap(i32* %arg) {
 ; CHECK-ARMv6-NEXT: bx lr
   %tmp = bitcast i32* %arg to i8*
   %tmp1 = getelementptr inbounds i8, i8* %tmp, i32 0
-  %tmp2 = load i8, i8* %tmp, align 4
+  %tmp2 = load i8, i8* %tmp1, align 4
   %tmp3 = zext i8 %tmp2 to i32
   %tmp4 = getelementptr inbounds i8, i8* %tmp, i32 1
   %tmp5 = load i8, i8* %tmp4, align 1

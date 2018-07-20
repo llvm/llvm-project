@@ -66,6 +66,10 @@ bool NVPTXDAGToDAGISel::allowUnsafeFPMath() const {
   return TL->allowUnsafeFPMath(*MF);
 }
 
+bool NVPTXDAGToDAGISel::useShortPointers() const {
+  return TM.useShortPointers();
+}
+
 /// Select - Select instructions not customized! Used for
 /// expanded, promoted and normal instructions.
 void NVPTXDAGToDAGISel::Select(SDNode *N) {
@@ -496,325 +500,11 @@ void NVPTXDAGToDAGISel::Select(SDNode *N) {
   SelectCode(N);
 }
 
-// Each instruction has four addressing variants. WMMA_VARIANTS() macro below
-// constructs an array indexed by WmmaVariant which getWmmaLdVariant() uses to
-// look up the intrinsic ID of particular variant.
-enum WmmaVariant {
-  WMMA_VARIANT_ARI64,
-  WMMA_VARIANT_ARI64_STRIDE,
-  WMMA_VARIANT_AVAR,
-  WMMA_VARIANT_AVAR_STRIDE,
-};
-
-// clang-format off
-#define WMMA_VARIANTS(base) \
-  {{ base##_ari64, base##_ari64_stride, base##_avar, base##_avar_stride }}
-// clang-format on
-
-static unsigned getWmmaLdVariant(WmmaVariant Variant, bool Stride,
-                                 const std::array<unsigned, 4> Variants) {
-  if (Stride) {
-    if (Variant == WMMA_VARIANT_ARI64)
-      Variant = WMMA_VARIANT_ARI64_STRIDE;
-    else if (Variant == WMMA_VARIANT_AVAR)
-      Variant = WMMA_VARIANT_AVAR_STRIDE;
-  }
-  return Variants[Variant];
-}
-
-static Optional<unsigned>
-getWmmaLdStOpcode(unsigned IntrinsicID,
-                  WmmaVariant Variant = WMMA_VARIANT_ARI64) {
-  switch (IntrinsicID) {
-  default:
-    return None;
-  //
-  // WMMA_LOAD_A f16
-  //
-  case Intrinsic::nvvm_wmma_load_a_f16_col:
-    return getWmmaLdVariant(Variant, /*Stride=*/false,
-                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_A_col));
-  case Intrinsic::nvvm_wmma_load_a_f16_row:
-    return getWmmaLdVariant(Variant, /*Stride=*/false,
-                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_A_row));
-  case Intrinsic::nvvm_wmma_load_a_f16_col_stride:
-    return getWmmaLdVariant(Variant, /*Stride=*/true,
-                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_A_col));
-  case Intrinsic::nvvm_wmma_load_a_f16_row_stride:
-    return getWmmaLdVariant(Variant, /*Stride=*/true,
-                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_A_row));
-  case Intrinsic::nvvm_wmma_load_a_f16_col_shared:
-    return getWmmaLdVariant(Variant, /*Stride=*/false,
-                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_A_col_shared));
-  case Intrinsic::nvvm_wmma_load_a_f16_row_shared:
-    return getWmmaLdVariant(Variant, /*Stride=*/false,
-                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_A_row_shared));
-  case Intrinsic::nvvm_wmma_load_a_f16_col_shared_stride:
-    return getWmmaLdVariant(Variant, /*Stride=*/true,
-                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_A_col_shared));
-  case Intrinsic::nvvm_wmma_load_a_f16_row_shared_stride:
-    return getWmmaLdVariant(Variant, /*Stride=*/true,
-                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_A_row_shared));
-  case Intrinsic::nvvm_wmma_load_a_f16_col_global:
-    return getWmmaLdVariant(Variant, /*Stride=*/false,
-                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_A_col_global));
-  case Intrinsic::nvvm_wmma_load_a_f16_row_global:
-    return getWmmaLdVariant(Variant, /*Stride=*/false,
-                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_A_row_global));
-  case Intrinsic::nvvm_wmma_load_a_f16_col_global_stride:
-    return getWmmaLdVariant(Variant, /*Stride=*/true,
-                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_A_col_global));
-  case Intrinsic::nvvm_wmma_load_a_f16_row_global_stride:
-    return getWmmaLdVariant(Variant, /*Stride=*/true,
-                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_A_row_global));
-
-  //
-  // WMMA_LOAD_B f16
-  //
-  case Intrinsic::nvvm_wmma_load_b_f16_col:
-    return getWmmaLdVariant(Variant, /*Stride=*/false,
-                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_B_col));
-  case Intrinsic::nvvm_wmma_load_b_f16_row:
-    return getWmmaLdVariant(Variant, /*Stride=*/false,
-                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_B_row));
-  case Intrinsic::nvvm_wmma_load_b_f16_col_stride:
-    return getWmmaLdVariant(Variant, /*Stride=*/true,
-                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_B_col));
-  case Intrinsic::nvvm_wmma_load_b_f16_row_stride:
-    return getWmmaLdVariant(Variant, /*Stride=*/true,
-                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_B_row));
-  case Intrinsic::nvvm_wmma_load_b_f16_col_shared:
-    return getWmmaLdVariant(Variant, /*Stride=*/false,
-                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_B_col_shared));
-  case Intrinsic::nvvm_wmma_load_b_f16_row_shared:
-    return getWmmaLdVariant(Variant, /*Stride=*/false,
-                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_B_row_shared));
-  case Intrinsic::nvvm_wmma_load_b_f16_col_shared_stride:
-    return getWmmaLdVariant(Variant, /*Stride=*/true,
-                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_B_col_shared));
-  case Intrinsic::nvvm_wmma_load_b_f16_row_shared_stride:
-    return getWmmaLdVariant(Variant, /*Stride=*/true,
-                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_B_row_shared));
-  case Intrinsic::nvvm_wmma_load_b_f16_col_global:
-    return getWmmaLdVariant(Variant, /*Stride=*/false,
-                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_B_col_global));
-  case Intrinsic::nvvm_wmma_load_b_f16_row_global:
-    return getWmmaLdVariant(Variant, /*Stride=*/false,
-                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_B_row_global));
-  case Intrinsic::nvvm_wmma_load_b_f16_col_global_stride:
-    return getWmmaLdVariant(Variant, /*Stride=*/true,
-                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_B_col_global));
-  case Intrinsic::nvvm_wmma_load_b_f16_row_global_stride:
-    return getWmmaLdVariant(Variant, /*Stride=*/true,
-                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_B_row_global));
-
-  //
-  // WMMA_LOAD_C f16
-  //
-  case Intrinsic::nvvm_wmma_load_c_f16_col:
-    return getWmmaLdVariant(Variant, /*Stride=*/false,
-                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_C_f16_col));
-  case Intrinsic::nvvm_wmma_load_c_f16_row:
-    return getWmmaLdVariant(Variant, /*Stride=*/false,
-                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_C_f16_row));
-  case Intrinsic::nvvm_wmma_load_c_f16_col_stride:
-    return getWmmaLdVariant(Variant, /*Stride=*/true,
-                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_C_f16_col));
-  case Intrinsic::nvvm_wmma_load_c_f16_row_stride:
-    return getWmmaLdVariant(Variant, /*Stride=*/true,
-                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_C_f16_row));
-  case Intrinsic::nvvm_wmma_load_c_f16_col_shared:
-    return getWmmaLdVariant(
-        Variant, /*Stride=*/false,
-        WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_C_f16_col_shared));
-  case Intrinsic::nvvm_wmma_load_c_f16_row_shared:
-    return getWmmaLdVariant(
-        Variant, /*Stride=*/false,
-        WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_C_f16_row_shared));
-  case Intrinsic::nvvm_wmma_load_c_f16_col_shared_stride:
-    return getWmmaLdVariant(
-        Variant, /*Stride=*/true,
-        WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_C_f16_col_shared));
-  case Intrinsic::nvvm_wmma_load_c_f16_row_shared_stride:
-    return getWmmaLdVariant(
-        Variant, /*Stride=*/true,
-        WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_C_f16_row_shared));
-  case Intrinsic::nvvm_wmma_load_c_f16_col_global:
-    return getWmmaLdVariant(
-        Variant, /*Stride=*/false,
-        WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_C_f16_col_global));
-  case Intrinsic::nvvm_wmma_load_c_f16_row_global:
-    return getWmmaLdVariant(
-        Variant, /*Stride=*/false,
-        WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_C_f16_row_global));
-  case Intrinsic::nvvm_wmma_load_c_f16_col_global_stride:
-    return getWmmaLdVariant(
-        Variant, /*Stride=*/true,
-        WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_C_f16_col_global));
-  case Intrinsic::nvvm_wmma_load_c_f16_row_global_stride:
-    return getWmmaLdVariant(
-        Variant, /*Stride=*/true,
-        WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_C_f16_row_global));
-
-  //
-  // WMMA_LOAD_C f32
-  //
-  case Intrinsic::nvvm_wmma_load_c_f32_col:
-    return getWmmaLdVariant(Variant, /*Stride=*/false,
-                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_C_f32_col));
-  case Intrinsic::nvvm_wmma_load_c_f32_row:
-    return getWmmaLdVariant(Variant, /*Stride=*/false,
-                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_C_f32_row));
-  case Intrinsic::nvvm_wmma_load_c_f32_col_stride:
-    return getWmmaLdVariant(Variant, /*Stride=*/true,
-                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_C_f32_col));
-  case Intrinsic::nvvm_wmma_load_c_f32_row_stride:
-    return getWmmaLdVariant(Variant, /*Stride=*/true,
-                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_C_f32_row));
-  case Intrinsic::nvvm_wmma_load_c_f32_col_shared:
-    return getWmmaLdVariant(
-        Variant, /*Stride=*/false,
-        WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_C_f32_col_shared));
-  case Intrinsic::nvvm_wmma_load_c_f32_row_shared:
-    return getWmmaLdVariant(
-        Variant, /*Stride=*/false,
-        WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_C_f32_row_shared));
-  case Intrinsic::nvvm_wmma_load_c_f32_col_shared_stride:
-    return getWmmaLdVariant(
-        Variant, /*Stride=*/true,
-        WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_C_f32_col_shared));
-  case Intrinsic::nvvm_wmma_load_c_f32_row_shared_stride:
-    return getWmmaLdVariant(
-        Variant, /*Stride=*/true,
-        WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_C_f32_row_shared));
-  case Intrinsic::nvvm_wmma_load_c_f32_col_global:
-    return getWmmaLdVariant(
-        Variant, /*Stride=*/false,
-        WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_C_f32_col_global));
-  case Intrinsic::nvvm_wmma_load_c_f32_row_global:
-    return getWmmaLdVariant(
-        Variant, /*Stride=*/false,
-        WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_C_f32_row_global));
-  case Intrinsic::nvvm_wmma_load_c_f32_col_global_stride:
-    return getWmmaLdVariant(
-        Variant, /*Stride=*/true,
-        WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_C_f32_col_global));
-  case Intrinsic::nvvm_wmma_load_c_f32_row_global_stride:
-    return getWmmaLdVariant(
-        Variant, /*Stride=*/true,
-        WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_C_f32_row_global));
-
-  //
-  // WMMA_STORE_D f16
-  //
-  case Intrinsic::nvvm_wmma_store_d_f16_col:
-    return getWmmaLdVariant(Variant, /*Stride=*/false,
-                            WMMA_VARIANTS(NVPTX::INT_WMMA_STORE_D_f16_col));
-  case Intrinsic::nvvm_wmma_store_d_f16_row:
-    return getWmmaLdVariant(Variant, /*Stride=*/false,
-                            WMMA_VARIANTS(NVPTX::INT_WMMA_STORE_D_f16_row));
-  case Intrinsic::nvvm_wmma_store_d_f16_col_stride:
-    return getWmmaLdVariant(Variant, /*Stride=*/true,
-                            WMMA_VARIANTS(NVPTX::INT_WMMA_STORE_D_f16_col));
-  case Intrinsic::nvvm_wmma_store_d_f16_row_stride:
-    return getWmmaLdVariant(Variant, /*Stride=*/true,
-                            WMMA_VARIANTS(NVPTX::INT_WMMA_STORE_D_f16_row));
-  case Intrinsic::nvvm_wmma_store_d_f16_col_shared:
-    return getWmmaLdVariant(
-        Variant, /*Stride=*/false,
-        WMMA_VARIANTS(NVPTX::INT_WMMA_STORE_D_f16_col_shared));
-  case Intrinsic::nvvm_wmma_store_d_f16_row_shared:
-    return getWmmaLdVariant(
-        Variant, /*Stride=*/false,
-        WMMA_VARIANTS(NVPTX::INT_WMMA_STORE_D_f16_row_shared));
-  case Intrinsic::nvvm_wmma_store_d_f16_col_shared_stride:
-    return getWmmaLdVariant(
-        Variant, /*Stride=*/true,
-        WMMA_VARIANTS(NVPTX::INT_WMMA_STORE_D_f16_col_shared));
-  case Intrinsic::nvvm_wmma_store_d_f16_row_shared_stride:
-    return getWmmaLdVariant(
-        Variant, /*Stride=*/true,
-        WMMA_VARIANTS(NVPTX::INT_WMMA_STORE_D_f16_row_shared));
-  case Intrinsic::nvvm_wmma_store_d_f16_col_global:
-    return getWmmaLdVariant(
-        Variant, /*Stride=*/false,
-        WMMA_VARIANTS(NVPTX::INT_WMMA_STORE_D_f16_col_global));
-  case Intrinsic::nvvm_wmma_store_d_f16_row_global:
-    return getWmmaLdVariant(
-        Variant, /*Stride=*/false,
-        WMMA_VARIANTS(NVPTX::INT_WMMA_STORE_D_f16_row_global));
-  case Intrinsic::nvvm_wmma_store_d_f16_col_global_stride:
-    return getWmmaLdVariant(
-        Variant, /*Stride=*/true,
-        WMMA_VARIANTS(NVPTX::INT_WMMA_STORE_D_f16_col_global));
-  case Intrinsic::nvvm_wmma_store_d_f16_row_global_stride:
-    return getWmmaLdVariant(
-        Variant, /*Stride=*/true,
-        WMMA_VARIANTS(NVPTX::INT_WMMA_STORE_D_f16_row_global));
-
-  //
-  // WMMA_STORE_D f32
-  //
-  case Intrinsic::nvvm_wmma_store_d_f32_col:
-    return getWmmaLdVariant(Variant, /*Stride=*/false,
-                            WMMA_VARIANTS(NVPTX::INT_WMMA_STORE_D_f32_col));
-  case Intrinsic::nvvm_wmma_store_d_f32_row:
-    return getWmmaLdVariant(Variant, /*Stride=*/false,
-                            WMMA_VARIANTS(NVPTX::INT_WMMA_STORE_D_f32_row));
-  case Intrinsic::nvvm_wmma_store_d_f32_col_stride:
-    return getWmmaLdVariant(Variant, /*Stride=*/true,
-                            WMMA_VARIANTS(NVPTX::INT_WMMA_STORE_D_f32_col));
-  case Intrinsic::nvvm_wmma_store_d_f32_row_stride:
-    return getWmmaLdVariant(Variant, /*Stride=*/true,
-                            WMMA_VARIANTS(NVPTX::INT_WMMA_STORE_D_f32_row));
-  case Intrinsic::nvvm_wmma_store_d_f32_col_shared:
-    return getWmmaLdVariant(
-        Variant, /*Stride=*/false,
-        WMMA_VARIANTS(NVPTX::INT_WMMA_STORE_D_f32_col_shared));
-  case Intrinsic::nvvm_wmma_store_d_f32_row_shared:
-    return getWmmaLdVariant(
-        Variant, /*Stride=*/false,
-        WMMA_VARIANTS(NVPTX::INT_WMMA_STORE_D_f32_row_shared));
-  case Intrinsic::nvvm_wmma_store_d_f32_col_shared_stride:
-    return getWmmaLdVariant(
-        Variant, /*Stride=*/true,
-        WMMA_VARIANTS(NVPTX::INT_WMMA_STORE_D_f32_col_shared));
-  case Intrinsic::nvvm_wmma_store_d_f32_row_shared_stride:
-    return getWmmaLdVariant(
-        Variant, /*Stride=*/true,
-        WMMA_VARIANTS(NVPTX::INT_WMMA_STORE_D_f32_row_shared));
-  case Intrinsic::nvvm_wmma_store_d_f32_col_global:
-    return getWmmaLdVariant(
-        Variant, /*Stride=*/false,
-        WMMA_VARIANTS(NVPTX::INT_WMMA_STORE_D_f32_col_global));
-  case Intrinsic::nvvm_wmma_store_d_f32_row_global:
-    return getWmmaLdVariant(
-        Variant, /*Stride=*/false,
-        WMMA_VARIANTS(NVPTX::INT_WMMA_STORE_D_f32_row_global));
-  case Intrinsic::nvvm_wmma_store_d_f32_col_global_stride:
-    return getWmmaLdVariant(
-        Variant, /*Stride=*/true,
-        WMMA_VARIANTS(NVPTX::INT_WMMA_STORE_D_f32_col_global));
-  case Intrinsic::nvvm_wmma_store_d_f32_row_global_stride:
-    return getWmmaLdVariant(
-        Variant, /*Stride=*/true,
-        WMMA_VARIANTS(NVPTX::INT_WMMA_STORE_D_f32_row_global));
-  }
-}
-#undef WMMA_VARIANTS
-
 bool NVPTXDAGToDAGISel::tryIntrinsicChain(SDNode *N) {
   unsigned IID = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
-  if (getWmmaLdStOpcode(IID))
-    return tryWMMA_LDST(N);
-
   switch (IID) {
   default:
     return false;
-  case Intrinsic::nvvm_match_all_sync_i32p:
-  case Intrinsic::nvvm_match_all_sync_i64p:
-    SelectMatchAll(N);
-    return true;
   case Intrinsic::nvvm_ldg_global_f:
   case Intrinsic::nvvm_ldg_global_i:
   case Intrinsic::nvvm_ldg_global_p:
@@ -987,8 +677,10 @@ static bool canLowerToLDG(MemSDNode *N, const NVPTXSubtarget &Subtarget,
   // We have two ways of identifying invariant loads: Loads may be explicitly
   // marked as invariant, or we may infer them to be invariant.
   //
-  // We currently infer invariance only for kernel function pointer params that
-  // are noalias (i.e. __restrict) and never written to.
+  // We currently infer invariance for loads from
+  //  - constant global variables, and
+  //  - kernel function pointer params that are noalias (i.e. __restrict) and
+  //    never written to.
   //
   // TODO: Perform a more powerful invariance analysis (ideally IPO, and ideally
   // not during the SelectionDAG phase).
@@ -1002,23 +694,22 @@ static bool canLowerToLDG(MemSDNode *N, const NVPTXSubtarget &Subtarget,
   if (N->isInvariant())
     return true;
 
-  // Load wasn't explicitly invariant.  Attempt to infer invariance.
-  if (!isKernelFunction(F->getFunction()))
-    return false;
+  bool IsKernelFn = isKernelFunction(F->getFunction());
 
-  // We use GetUnderlyingObjects() here instead of
-  // GetUnderlyingObject() mainly because the former looks through phi
-  // nodes while the latter does not. We need to look through phi
-  // nodes to handle pointer induction variables.
+  // We use GetUnderlyingObjects() here instead of GetUnderlyingObject() mainly
+  // because the former looks through phi nodes while the latter does not. We
+  // need to look through phi nodes to handle pointer induction variables.
   SmallVector<Value *, 8> Objs;
   GetUnderlyingObjects(const_cast<Value *>(N->getMemOperand()->getValue()),
                        Objs, F->getDataLayout());
-  for (Value *Obj : Objs) {
-    auto *A = dyn_cast<const Argument>(Obj);
-    if (!A || !A->onlyReadsMemory() || !A->hasNoAliasAttr()) return false;
-  }
 
-  return true;
+  return all_of(Objs, [&](Value *V) {
+    if (auto *A = dyn_cast<const Argument>(V))
+      return IsKernelFn && A->onlyReadsMemory() && A->hasNoAliasAttr();
+    if (auto *GV = dyn_cast<const GlobalVariable>(V))
+      return GV->isConstant();
+    return false;
+  });
 }
 
 bool NVPTXDAGToDAGISel::tryIntrinsicNoChain(SDNode *N) {
@@ -1029,39 +720,6 @@ bool NVPTXDAGToDAGISel::tryIntrinsicNoChain(SDNode *N) {
   case Intrinsic::nvvm_texsurf_handle_internal:
     SelectTexSurfHandle(N);
     return true;
-  case Intrinsic::nvvm_wmma_mma_sync_col_col_f16_f16:
-  case Intrinsic::nvvm_wmma_mma_sync_col_col_f16_f16_satfinite:
-  case Intrinsic::nvvm_wmma_mma_sync_col_col_f16_f32:
-  case Intrinsic::nvvm_wmma_mma_sync_col_col_f16_f32_satfinite:
-  case Intrinsic::nvvm_wmma_mma_sync_col_col_f32_f16:
-  case Intrinsic::nvvm_wmma_mma_sync_col_col_f32_f16_satfinite:
-  case Intrinsic::nvvm_wmma_mma_sync_col_col_f32_f32:
-  case Intrinsic::nvvm_wmma_mma_sync_col_col_f32_f32_satfinite:
-  case Intrinsic::nvvm_wmma_mma_sync_col_row_f16_f16:
-  case Intrinsic::nvvm_wmma_mma_sync_col_row_f16_f16_satfinite:
-  case Intrinsic::nvvm_wmma_mma_sync_col_row_f16_f32:
-  case Intrinsic::nvvm_wmma_mma_sync_col_row_f16_f32_satfinite:
-  case Intrinsic::nvvm_wmma_mma_sync_col_row_f32_f16:
-  case Intrinsic::nvvm_wmma_mma_sync_col_row_f32_f16_satfinite:
-  case Intrinsic::nvvm_wmma_mma_sync_col_row_f32_f32:
-  case Intrinsic::nvvm_wmma_mma_sync_col_row_f32_f32_satfinite:
-  case Intrinsic::nvvm_wmma_mma_sync_row_col_f16_f16:
-  case Intrinsic::nvvm_wmma_mma_sync_row_col_f16_f16_satfinite:
-  case Intrinsic::nvvm_wmma_mma_sync_row_col_f16_f32:
-  case Intrinsic::nvvm_wmma_mma_sync_row_col_f16_f32_satfinite:
-  case Intrinsic::nvvm_wmma_mma_sync_row_col_f32_f16:
-  case Intrinsic::nvvm_wmma_mma_sync_row_col_f32_f16_satfinite:
-  case Intrinsic::nvvm_wmma_mma_sync_row_col_f32_f32:
-  case Intrinsic::nvvm_wmma_mma_sync_row_col_f32_f32_satfinite:
-  case Intrinsic::nvvm_wmma_mma_sync_row_row_f16_f16:
-  case Intrinsic::nvvm_wmma_mma_sync_row_row_f16_f16_satfinite:
-  case Intrinsic::nvvm_wmma_mma_sync_row_row_f16_f32:
-  case Intrinsic::nvvm_wmma_mma_sync_row_row_f16_f32_satfinite:
-  case Intrinsic::nvvm_wmma_mma_sync_row_row_f32_f16:
-  case Intrinsic::nvvm_wmma_mma_sync_row_row_f32_f16_satfinite:
-  case Intrinsic::nvvm_wmma_mma_sync_row_row_f32_f32:
-  case Intrinsic::nvvm_wmma_mma_sync_row_row_f32_f32_satfinite:
-    return tryWMMA_MMA(N);
   }
 }
 
@@ -1073,42 +731,11 @@ void NVPTXDAGToDAGISel::SelectTexSurfHandle(SDNode *N) {
                                         MVT::i64, GlobalVal));
 }
 
-void NVPTXDAGToDAGISel::SelectMatchAll(SDNode *N) {
-  SDLoc DL(N);
-  enum { IS_I64 = 4, HAS_CONST_VALUE = 2, HAS_CONST_MASK = 1 };
-  unsigned IID = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
-  unsigned OpcodeIndex =
-      (IID == Intrinsic::nvvm_match_all_sync_i64p) ? IS_I64 : 0;
-  SDValue MaskOp = N->getOperand(2);
-  SDValue ValueOp = N->getOperand(3);
-  if (ConstantSDNode *ValueConst = dyn_cast<ConstantSDNode>(ValueOp)) {
-    OpcodeIndex |= HAS_CONST_VALUE;
-    ValueOp = CurDAG->getTargetConstant(ValueConst->getZExtValue(), DL,
-                                        ValueConst->getValueType(0));
-  }
-  if (ConstantSDNode *MaskConst = dyn_cast<ConstantSDNode>(MaskOp)) {
-    OpcodeIndex |= HAS_CONST_MASK;
-    MaskOp = CurDAG->getTargetConstant(MaskConst->getZExtValue(), DL,
-                                       MaskConst->getValueType(0));
-  }
-  // Maps {IS_I64, HAS_CONST_VALUE, HAS_CONST_MASK} -> opcode
-  unsigned Opcodes[8] = {
-      NVPTX::MATCH_ALLP_SYNC_32rr, NVPTX::MATCH_ALLP_SYNC_32ri,
-      NVPTX::MATCH_ALLP_SYNC_32ir, NVPTX::MATCH_ALLP_SYNC_32ii,
-      NVPTX::MATCH_ALLP_SYNC_64rr, NVPTX::MATCH_ALLP_SYNC_64ri,
-      NVPTX::MATCH_ALLP_SYNC_64ir, NVPTX::MATCH_ALLP_SYNC_64ii};
-  SDNode *NewNode = CurDAG->getMachineNode(
-      Opcodes[OpcodeIndex], DL, {ValueOp->getValueType(0), MVT::i1, MVT::Other},
-      {MaskOp, ValueOp});
-  ReplaceNode(N, NewNode);
-}
-
 void NVPTXDAGToDAGISel::SelectAddrSpaceCast(SDNode *N) {
   SDValue Src = N->getOperand(0);
   AddrSpaceCastSDNode *CastN = cast<AddrSpaceCastSDNode>(N);
   unsigned SrcAddrSpace = CastN->getSrcAddressSpace();
   unsigned DstAddrSpace = CastN->getDestAddressSpace();
-
   assert(SrcAddrSpace != DstAddrSpace &&
          "addrspacecast must be between different address spaces");
 
@@ -1121,13 +748,19 @@ void NVPTXDAGToDAGISel::SelectAddrSpaceCast(SDNode *N) {
       Opc = TM.is64Bit() ? NVPTX::cvta_global_yes_64 : NVPTX::cvta_global_yes;
       break;
     case ADDRESS_SPACE_SHARED:
-      Opc = TM.is64Bit() ? NVPTX::cvta_shared_yes_64 : NVPTX::cvta_shared_yes;
+      Opc = TM.is64Bit() ? (useShortPointers() ? NVPTX::cvta_shared_yes_6432
+                                               : NVPTX::cvta_shared_yes_64)
+                         : NVPTX::cvta_shared_yes;
       break;
     case ADDRESS_SPACE_CONST:
-      Opc = TM.is64Bit() ? NVPTX::cvta_const_yes_64 : NVPTX::cvta_const_yes;
+      Opc = TM.is64Bit() ? (useShortPointers() ? NVPTX::cvta_const_yes_6432
+                                               : NVPTX::cvta_const_yes_64)
+                         : NVPTX::cvta_const_yes;
       break;
     case ADDRESS_SPACE_LOCAL:
-      Opc = TM.is64Bit() ? NVPTX::cvta_local_yes_64 : NVPTX::cvta_local_yes;
+      Opc = TM.is64Bit() ? (useShortPointers() ? NVPTX::cvta_local_yes_6432
+                                               : NVPTX::cvta_local_yes_64)
+                         : NVPTX::cvta_local_yes;
       break;
     }
     ReplaceNode(N, CurDAG->getMachineNode(Opc, SDLoc(N), N->getValueType(0),
@@ -1145,16 +778,19 @@ void NVPTXDAGToDAGISel::SelectAddrSpaceCast(SDNode *N) {
                          : NVPTX::cvta_to_global_yes;
       break;
     case ADDRESS_SPACE_SHARED:
-      Opc = TM.is64Bit() ? NVPTX::cvta_to_shared_yes_64
+      Opc = TM.is64Bit() ? (useShortPointers() ? NVPTX::cvta_to_shared_yes_3264
+                                                : NVPTX::cvta_to_shared_yes_64)
                          : NVPTX::cvta_to_shared_yes;
       break;
     case ADDRESS_SPACE_CONST:
-      Opc =
-          TM.is64Bit() ? NVPTX::cvta_to_const_yes_64 : NVPTX::cvta_to_const_yes;
+      Opc = TM.is64Bit() ? (useShortPointers() ? NVPTX::cvta_to_const_yes_3264
+                                             : NVPTX::cvta_to_const_yes_64)
+                         : NVPTX::cvta_to_const_yes;
       break;
     case ADDRESS_SPACE_LOCAL:
-      Opc =
-          TM.is64Bit() ? NVPTX::cvta_to_local_yes_64 : NVPTX::cvta_to_local_yes;
+      Opc = TM.is64Bit() ? (useShortPointers() ? NVPTX::cvta_to_local_yes_3264
+                                               : NVPTX::cvta_to_local_yes_64)
+                         : NVPTX::cvta_to_local_yes;
       break;
     case ADDRESS_SPACE_PARAM:
       Opc = TM.is64Bit() ? NVPTX::nvvm_ptr_gen_to_param_64
@@ -1210,18 +846,20 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
     return false;
 
   // Address Space Setting
-  unsigned int codeAddrSpace = getCodeAddrSpace(LD);
-
-  if (canLowerToLDG(LD, *Subtarget, codeAddrSpace, MF)) {
+  unsigned int CodeAddrSpace = getCodeAddrSpace(LD);
+  if (canLowerToLDG(LD, *Subtarget, CodeAddrSpace, MF)) {
     return tryLDGLDU(N);
   }
+
+  unsigned int PointerSize =
+      CurDAG->getDataLayout().getPointerSizeInBits(LD->getAddressSpace());
 
   // Volatile Setting
   // - .volatile is only availalble for .global and .shared
   bool isVolatile = LD->isVolatile();
-  if (codeAddrSpace != NVPTX::PTXLdStInstCode::GLOBAL &&
-      codeAddrSpace != NVPTX::PTXLdStInstCode::SHARED &&
-      codeAddrSpace != NVPTX::PTXLdStInstCode::GENERIC)
+  if (CodeAddrSpace != NVPTX::PTXLdStInstCode::GLOBAL &&
+      CodeAddrSpace != NVPTX::PTXLdStInstCode::SHARED &&
+      CodeAddrSpace != NVPTX::PTXLdStInstCode::GENERIC)
     isVolatile = false;
 
   // Type Setting: fromType + fromTypeWidth
@@ -1268,27 +906,27 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
         NVPTX::LD_f32_avar, NVPTX::LD_f64_avar);
     if (!Opcode)
       return false;
-    SDValue Ops[] = { getI32Imm(isVolatile, dl), getI32Imm(codeAddrSpace, dl),
+    SDValue Ops[] = { getI32Imm(isVolatile, dl), getI32Imm(CodeAddrSpace, dl),
                       getI32Imm(vecType, dl), getI32Imm(fromType, dl),
                       getI32Imm(fromTypeWidth, dl), Addr, Chain };
     NVPTXLD = CurDAG->getMachineNode(Opcode.getValue(), dl, TargetVT,
                                      MVT::Other, Ops);
-  } else if (TM.is64Bit() ? SelectADDRsi64(N1.getNode(), N1, Base, Offset)
-                          : SelectADDRsi(N1.getNode(), N1, Base, Offset)) {
+  } else if (PointerSize == 64 ? SelectADDRsi64(N1.getNode(), N1, Base, Offset)
+                               : SelectADDRsi(N1.getNode(), N1, Base, Offset)) {
     Opcode = pickOpcodeForVT(TargetVT, NVPTX::LD_i8_asi, NVPTX::LD_i16_asi,
                                  NVPTX::LD_i32_asi, NVPTX::LD_i64_asi,
                                  NVPTX::LD_f16_asi, NVPTX::LD_f16x2_asi,
                                  NVPTX::LD_f32_asi, NVPTX::LD_f64_asi);
     if (!Opcode)
       return false;
-    SDValue Ops[] = { getI32Imm(isVolatile, dl), getI32Imm(codeAddrSpace, dl),
+    SDValue Ops[] = { getI32Imm(isVolatile, dl), getI32Imm(CodeAddrSpace, dl),
                       getI32Imm(vecType, dl), getI32Imm(fromType, dl),
                       getI32Imm(fromTypeWidth, dl), Base, Offset, Chain };
     NVPTXLD = CurDAG->getMachineNode(Opcode.getValue(), dl, TargetVT,
                                      MVT::Other, Ops);
-  } else if (TM.is64Bit() ? SelectADDRri64(N1.getNode(), N1, Base, Offset)
-                          : SelectADDRri(N1.getNode(), N1, Base, Offset)) {
-    if (TM.is64Bit())
+  } else if (PointerSize == 64 ? SelectADDRri64(N1.getNode(), N1, Base, Offset)
+                               : SelectADDRri(N1.getNode(), N1, Base, Offset)) {
+    if (PointerSize == 64)
       Opcode = pickOpcodeForVT(
           TargetVT, NVPTX::LD_i8_ari_64, NVPTX::LD_i16_ari_64,
           NVPTX::LD_i32_ari_64, NVPTX::LD_i64_ari_64, NVPTX::LD_f16_ari_64,
@@ -1300,13 +938,13 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
           NVPTX::LD_f32_ari, NVPTX::LD_f64_ari);
     if (!Opcode)
       return false;
-    SDValue Ops[] = { getI32Imm(isVolatile, dl), getI32Imm(codeAddrSpace, dl),
+    SDValue Ops[] = { getI32Imm(isVolatile, dl), getI32Imm(CodeAddrSpace, dl),
                       getI32Imm(vecType, dl), getI32Imm(fromType, dl),
                       getI32Imm(fromTypeWidth, dl), Base, Offset, Chain };
     NVPTXLD = CurDAG->getMachineNode(Opcode.getValue(), dl, TargetVT,
                                      MVT::Other, Ops);
   } else {
-    if (TM.is64Bit())
+    if (PointerSize == 64)
       Opcode = pickOpcodeForVT(
           TargetVT, NVPTX::LD_i8_areg_64, NVPTX::LD_i16_areg_64,
           NVPTX::LD_i32_areg_64, NVPTX::LD_i64_areg_64, NVPTX::LD_f16_areg_64,
@@ -1319,7 +957,7 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
           NVPTX::LD_f32_areg, NVPTX::LD_f64_areg);
     if (!Opcode)
       return false;
-    SDValue Ops[] = { getI32Imm(isVolatile, dl), getI32Imm(codeAddrSpace, dl),
+    SDValue Ops[] = { getI32Imm(isVolatile, dl), getI32Imm(CodeAddrSpace, dl),
                       getI32Imm(vecType, dl), getI32Imm(fromType, dl),
                       getI32Imm(fromTypeWidth, dl), N1, Chain };
     NVPTXLD = CurDAG->getMachineNode(Opcode.getValue(), dl, TargetVT,
@@ -1353,10 +991,12 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
 
   // Address Space Setting
   unsigned int CodeAddrSpace = getCodeAddrSpace(MemSD);
-
   if (canLowerToLDG(MemSD, *Subtarget, CodeAddrSpace, MF)) {
     return tryLDGLDU(N);
   }
+
+  unsigned int PointerSize =
+      CurDAG->getDataLayout().getPointerSizeInBits(MemSD->getAddressSpace());
 
   // Volatile Setting
   // - .volatile is only availalble for .global and .shared
@@ -1440,8 +1080,9 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
                       getI32Imm(VecType, DL), getI32Imm(FromType, DL),
                       getI32Imm(FromTypeWidth, DL), Addr, Chain };
     LD = CurDAG->getMachineNode(Opcode.getValue(), DL, N->getVTList(), Ops);
-  } else if (TM.is64Bit() ? SelectADDRsi64(Op1.getNode(), Op1, Base, Offset)
-                          : SelectADDRsi(Op1.getNode(), Op1, Base, Offset)) {
+  } else if (PointerSize == 64
+                 ? SelectADDRsi64(Op1.getNode(), Op1, Base, Offset)
+                 : SelectADDRsi(Op1.getNode(), Op1, Base, Offset)) {
     switch (N->getOpcode()) {
     default:
       return false;
@@ -1466,9 +1107,10 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
                       getI32Imm(VecType, DL), getI32Imm(FromType, DL),
                       getI32Imm(FromTypeWidth, DL), Base, Offset, Chain };
     LD = CurDAG->getMachineNode(Opcode.getValue(), DL, N->getVTList(), Ops);
-  } else if (TM.is64Bit() ? SelectADDRri64(Op1.getNode(), Op1, Base, Offset)
-                          : SelectADDRri(Op1.getNode(), Op1, Base, Offset)) {
-    if (TM.is64Bit()) {
+  } else if (PointerSize == 64
+                 ? SelectADDRri64(Op1.getNode(), Op1, Base, Offset)
+                 : SelectADDRri(Op1.getNode(), Op1, Base, Offset)) {
+    if (PointerSize == 64) {
       switch (N->getOpcode()) {
       default:
         return false;
@@ -1516,7 +1158,7 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
 
     LD = CurDAG->getMachineNode(Opcode.getValue(), DL, N->getVTList(), Ops);
   } else {
-    if (TM.is64Bit()) {
+    if (PointerSize == 64) {
       switch (N->getOpcode()) {
       default:
         return false;
@@ -1615,6 +1257,12 @@ bool NVPTXDAGToDAGISel::tryLDGLDU(SDNode *N) {
   if (EltVT.isVector()) {
     NumElts = EltVT.getVectorNumElements();
     EltVT = EltVT.getVectorElementType();
+    // vectors of f16 are loaded/stored as multiples of v2f16 elements.
+    if (EltVT == MVT::f16 && N->getValueType(0) == MVT::v2f16) {
+      assert(NumElts % 2 == 0 && "Vector must have even number of elements");
+      EltVT = MVT::v2f16;
+      NumElts /= 2;
+    }
   }
 
   // Build the "promoted" result VTList for the load. If we are really loading
@@ -1632,6 +1280,7 @@ bool NVPTXDAGToDAGISel::tryLDGLDU(SDNode *N) {
     switch (N->getOpcode()) {
     default:
       return false;
+    case ISD::LOAD:
     case ISD::INTRINSIC_W_CHAIN:
       if (IsLDG)
         Opcode = pickOpcodeForVT(EltVT.getSimpleVT().SimpleTy,
@@ -1654,6 +1303,7 @@ bool NVPTXDAGToDAGISel::tryLDGLDU(SDNode *N) {
                                      NVPTX::INT_PTX_LDU_GLOBAL_f32avar,
                                      NVPTX::INT_PTX_LDU_GLOBAL_f64avar);
       break;
+    case NVPTXISD::LoadV2:
     case NVPTXISD::LDGV2:
       Opcode = pickOpcodeForVT(EltVT.getSimpleVT().SimpleTy,
                                    NVPTX::INT_PTX_LDG_G_v2i8_ELE_avar,
@@ -1676,6 +1326,7 @@ bool NVPTXDAGToDAGISel::tryLDGLDU(SDNode *N) {
                                    NVPTX::INT_PTX_LDU_G_v2f32_ELE_avar,
                                    NVPTX::INT_PTX_LDU_G_v2f64_ELE_avar);
       break;
+    case NVPTXISD::LoadV4:
     case NVPTXISD::LDGV4:
       Opcode = pickOpcodeForVT(EltVT.getSimpleVT().SimpleTy,
                                NVPTX::INT_PTX_LDG_G_v4i8_ELE_avar,
@@ -2052,14 +1703,16 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
     return false;
 
   // Address Space Setting
-  unsigned int codeAddrSpace = getCodeAddrSpace(ST);
+  unsigned int CodeAddrSpace = getCodeAddrSpace(ST);
+  unsigned int PointerSize =
+      CurDAG->getDataLayout().getPointerSizeInBits(ST->getAddressSpace());
 
   // Volatile Setting
   // - .volatile is only availalble for .global and .shared
   bool isVolatile = ST->isVolatile();
-  if (codeAddrSpace != NVPTX::PTXLdStInstCode::GLOBAL &&
-      codeAddrSpace != NVPTX::PTXLdStInstCode::SHARED &&
-      codeAddrSpace != NVPTX::PTXLdStInstCode::GENERIC)
+  if (CodeAddrSpace != NVPTX::PTXLdStInstCode::GLOBAL &&
+      CodeAddrSpace != NVPTX::PTXLdStInstCode::SHARED &&
+      CodeAddrSpace != NVPTX::PTXLdStInstCode::GENERIC)
     isVolatile = false;
 
   // Vector Setting
@@ -2102,12 +1755,12 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
     if (!Opcode)
       return false;
     SDValue Ops[] = { N1, getI32Imm(isVolatile, dl),
-                      getI32Imm(codeAddrSpace, dl), getI32Imm(vecType, dl),
+                      getI32Imm(CodeAddrSpace, dl), getI32Imm(vecType, dl),
                       getI32Imm(toType, dl), getI32Imm(toTypeWidth, dl), Addr,
                       Chain };
     NVPTXST = CurDAG->getMachineNode(Opcode.getValue(), dl, MVT::Other, Ops);
-  } else if (TM.is64Bit() ? SelectADDRsi64(N2.getNode(), N2, Base, Offset)
-                          : SelectADDRsi(N2.getNode(), N2, Base, Offset)) {
+  } else if (PointerSize == 64 ? SelectADDRsi64(N2.getNode(), N2, Base, Offset)
+                               : SelectADDRsi(N2.getNode(), N2, Base, Offset)) {
     Opcode = pickOpcodeForVT(SourceVT, NVPTX::ST_i8_asi, NVPTX::ST_i16_asi,
                              NVPTX::ST_i32_asi, NVPTX::ST_i64_asi,
                              NVPTX::ST_f16_asi, NVPTX::ST_f16x2_asi,
@@ -2115,13 +1768,13 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
     if (!Opcode)
       return false;
     SDValue Ops[] = { N1, getI32Imm(isVolatile, dl),
-                      getI32Imm(codeAddrSpace, dl), getI32Imm(vecType, dl),
+                      getI32Imm(CodeAddrSpace, dl), getI32Imm(vecType, dl),
                       getI32Imm(toType, dl), getI32Imm(toTypeWidth, dl), Base,
                       Offset, Chain };
     NVPTXST = CurDAG->getMachineNode(Opcode.getValue(), dl, MVT::Other, Ops);
-  } else if (TM.is64Bit() ? SelectADDRri64(N2.getNode(), N2, Base, Offset)
-                          : SelectADDRri(N2.getNode(), N2, Base, Offset)) {
-    if (TM.is64Bit())
+  } else if (PointerSize == 64 ? SelectADDRri64(N2.getNode(), N2, Base, Offset)
+                               : SelectADDRri(N2.getNode(), N2, Base, Offset)) {
+    if (PointerSize == 64)
       Opcode = pickOpcodeForVT(
           SourceVT, NVPTX::ST_i8_ari_64, NVPTX::ST_i16_ari_64,
           NVPTX::ST_i32_ari_64, NVPTX::ST_i64_ari_64, NVPTX::ST_f16_ari_64,
@@ -2135,12 +1788,12 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
       return false;
 
     SDValue Ops[] = { N1, getI32Imm(isVolatile, dl),
-                      getI32Imm(codeAddrSpace, dl), getI32Imm(vecType, dl),
+                      getI32Imm(CodeAddrSpace, dl), getI32Imm(vecType, dl),
                       getI32Imm(toType, dl), getI32Imm(toTypeWidth, dl), Base,
                       Offset, Chain };
     NVPTXST = CurDAG->getMachineNode(Opcode.getValue(), dl, MVT::Other, Ops);
   } else {
-    if (TM.is64Bit())
+    if (PointerSize == 64)
       Opcode =
           pickOpcodeForVT(SourceVT, NVPTX::ST_i8_areg_64, NVPTX::ST_i16_areg_64,
                           NVPTX::ST_i32_areg_64, NVPTX::ST_i64_areg_64,
@@ -2154,7 +1807,7 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
     if (!Opcode)
       return false;
     SDValue Ops[] = { N1, getI32Imm(isVolatile, dl),
-                      getI32Imm(codeAddrSpace, dl), getI32Imm(vecType, dl),
+                      getI32Imm(CodeAddrSpace, dl), getI32Imm(vecType, dl),
                       getI32Imm(toType, dl), getI32Imm(toTypeWidth, dl), N2,
                       Chain };
     NVPTXST = CurDAG->getMachineNode(Opcode.getValue(), dl, MVT::Other, Ops);
@@ -2183,11 +1836,12 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
 
   // Address Space Setting
   unsigned CodeAddrSpace = getCodeAddrSpace(MemSD);
-
   if (CodeAddrSpace == NVPTX::PTXLdStInstCode::CONSTANT) {
     report_fatal_error("Cannot store to pointer that points to constant "
                        "memory space");
   }
+  unsigned int PointerSize =
+      CurDAG->getDataLayout().getPointerSizeInBits(MemSD->getAddressSpace());
 
   // Volatile Setting
   // - .volatile is only availalble for .global and .shared
@@ -2268,8 +1922,8 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
       break;
     }
     StOps.push_back(Addr);
-  } else if (TM.is64Bit() ? SelectADDRsi64(N2.getNode(), N2, Base, Offset)
-                          : SelectADDRsi(N2.getNode(), N2, Base, Offset)) {
+  } else if (PointerSize == 64 ? SelectADDRsi64(N2.getNode(), N2, Base, Offset)
+                               : SelectADDRsi(N2.getNode(), N2, Base, Offset)) {
     switch (N->getOpcode()) {
     default:
       return false;
@@ -2290,9 +1944,9 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
     }
     StOps.push_back(Base);
     StOps.push_back(Offset);
-  } else if (TM.is64Bit() ? SelectADDRri64(N2.getNode(), N2, Base, Offset)
-                          : SelectADDRri(N2.getNode(), N2, Base, Offset)) {
-    if (TM.is64Bit()) {
+  } else if (PointerSize == 64 ? SelectADDRri64(N2.getNode(), N2, Base, Offset)
+                               : SelectADDRri(N2.getNode(), N2, Base, Offset)) {
+    if (PointerSize == 64) {
       switch (N->getOpcode()) {
       default:
         return false;
@@ -2335,7 +1989,7 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
     StOps.push_back(Base);
     StOps.push_back(Offset);
   } else {
-    if (TM.is64Bit()) {
+    if (PointerSize == 64) {
       switch (N->getOpcode()) {
       default:
         return false;
@@ -4067,173 +3721,4 @@ unsigned NVPTXDAGToDAGISel::GetConvertOpcode(MVT DestTy, MVT SrcTy,
       return IsSigned ? NVPTX::CVT_s32_s64 : NVPTX::CVT_u32_u64;
     }
   }
-}
-
-bool NVPTXDAGToDAGISel::tryWMMA_LDST(SDNode *N) {
-  SDValue Chain = N->getOperand(0);
-  unsigned IID = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
-  SDValue Op1 = N->getOperand(2);
-  SDValue Addr, Offset, Base;
-  Optional<unsigned> Opcode;
-  SDLoc DL(N);
-  MemSDNode *MemSD = cast<MemIntrinsicSDNode>(N);
-  WmmaVariant Variant;
-  SmallVector<SDValue, 12> Ops;
-  bool isStore = N->getNumValues() == 1; // Store ops only return a chain.
-
-  if (SelectDirectAddr(Op1, Addr)) {
-    Variant = WMMA_VARIANT_AVAR;
-    Ops.push_back(Addr);
-  } else if (SelectADDRsi64(Op1.getNode(), Op1, Base, Offset) ||
-             SelectADDRri64(Op1.getNode(), Op1, Base, Offset)) {
-    Variant = WMMA_VARIANT_ARI64;
-    Ops.push_back(Base);
-    Ops.push_back(Offset);
-  } else {
-    Variant = WMMA_VARIANT_AVAR;
-    Ops.push_back(Op1);
-  }
-  unsigned NumOps = N->getNumOperands();
-  // Pass through the rest of the operands to the machine node.
-  for (unsigned i = 3; i < NumOps; ++i)
-    Ops.push_back(N->getOperand(i));
-  Ops.push_back(Chain);
-
-  Opcode = getWmmaLdStOpcode(IID, Variant);
-  if (!Opcode) {
-    llvm::errs() << "tryWMMALD - no Opcode.\n";
-    return false;
-  }
-
-  EVT MemVT = MemSD->getMemoryVT();
-  assert(MemVT.isVector() && "Expected vector return type.");
-
-  SDNode *MN;
-  if (isStore) {
-    MN = CurDAG->getMachineNode(Opcode.getValue(), DL, MVT::Other, Ops);
-  } else {
-    SmallVector<EVT, 9> InstVTs(MemVT.getVectorNumElements(),
-                                MemSD->getValueType(0));
-    InstVTs.push_back(MVT::Other);
-    MN = CurDAG->getMachineNode(Opcode.getValue(), DL, InstVTs, Ops);
-  }
-
-  ReplaceNode(N, MN);
-  return true;
-}
-
-bool NVPTXDAGToDAGISel::tryWMMA_MMA(SDNode *N) {
-  unsigned IID = cast<ConstantSDNode>(N->getOperand(0))->getZExtValue();
-  SDLoc DL(N);
-  unsigned Opc;
-
-  switch (IID) {
-  default:
-    return false;
-  case Intrinsic::nvvm_wmma_mma_sync_col_col_f16_f16:
-    Opc = NVPTX::INT_WMMA_MMA_col_col_f16_f16;
-    break;
-  case Intrinsic::nvvm_wmma_mma_sync_col_col_f16_f16_satfinite:
-    Opc = NVPTX::INT_WMMA_MMA_col_col_f16_f16_satfinite;
-    break;
-  case Intrinsic::nvvm_wmma_mma_sync_col_col_f16_f32:
-    Opc = NVPTX::INT_WMMA_MMA_col_col_f16_f32;
-    break;
-  case Intrinsic::nvvm_wmma_mma_sync_col_col_f16_f32_satfinite:
-    Opc = NVPTX::INT_WMMA_MMA_col_col_f16_f32_satfinite;
-    break;
-  case Intrinsic::nvvm_wmma_mma_sync_col_col_f32_f16:
-    Opc = NVPTX::INT_WMMA_MMA_col_col_f32_f16;
-    break;
-  case Intrinsic::nvvm_wmma_mma_sync_col_col_f32_f16_satfinite:
-    Opc = NVPTX::INT_WMMA_MMA_col_col_f32_f16_satfinite;
-    break;
-  case Intrinsic::nvvm_wmma_mma_sync_col_col_f32_f32:
-    Opc = NVPTX::INT_WMMA_MMA_col_col_f32_f32;
-    break;
-  case Intrinsic::nvvm_wmma_mma_sync_col_col_f32_f32_satfinite:
-    Opc = NVPTX::INT_WMMA_MMA_col_col_f32_f32_satfinite;
-    break;
-  case Intrinsic::nvvm_wmma_mma_sync_col_row_f16_f16:
-    Opc = NVPTX::INT_WMMA_MMA_col_row_f16_f16;
-    break;
-  case Intrinsic::nvvm_wmma_mma_sync_col_row_f16_f16_satfinite:
-    Opc = NVPTX::INT_WMMA_MMA_col_row_f16_f16_satfinite;
-    break;
-  case Intrinsic::nvvm_wmma_mma_sync_col_row_f16_f32:
-    Opc = NVPTX::INT_WMMA_MMA_col_row_f16_f32;
-    break;
-  case Intrinsic::nvvm_wmma_mma_sync_col_row_f16_f32_satfinite:
-    Opc = NVPTX::INT_WMMA_MMA_col_row_f16_f32_satfinite;
-    break;
-  case Intrinsic::nvvm_wmma_mma_sync_col_row_f32_f16:
-    Opc = NVPTX::INT_WMMA_MMA_col_row_f32_f16;
-    break;
-  case Intrinsic::nvvm_wmma_mma_sync_col_row_f32_f16_satfinite:
-    Opc = NVPTX::INT_WMMA_MMA_col_row_f32_f16_satfinite;
-    break;
-  case Intrinsic::nvvm_wmma_mma_sync_col_row_f32_f32:
-    Opc = NVPTX::INT_WMMA_MMA_col_row_f32_f32;
-    break;
-  case Intrinsic::nvvm_wmma_mma_sync_col_row_f32_f32_satfinite:
-    Opc = NVPTX::INT_WMMA_MMA_col_row_f32_f32_satfinite;
-    break;
-  case Intrinsic::nvvm_wmma_mma_sync_row_col_f16_f16:
-    Opc = NVPTX::INT_WMMA_MMA_row_col_f16_f16;
-    break;
-  case Intrinsic::nvvm_wmma_mma_sync_row_col_f16_f16_satfinite:
-    Opc = NVPTX::INT_WMMA_MMA_row_col_f16_f16_satfinite;
-    break;
-  case Intrinsic::nvvm_wmma_mma_sync_row_col_f16_f32:
-    Opc = NVPTX::INT_WMMA_MMA_row_col_f16_f32;
-    break;
-  case Intrinsic::nvvm_wmma_mma_sync_row_col_f16_f32_satfinite:
-    Opc = NVPTX::INT_WMMA_MMA_row_col_f16_f32_satfinite;
-    break;
-  case Intrinsic::nvvm_wmma_mma_sync_row_col_f32_f16:
-    Opc = NVPTX::INT_WMMA_MMA_row_col_f32_f16;
-    break;
-  case Intrinsic::nvvm_wmma_mma_sync_row_col_f32_f16_satfinite:
-    Opc = NVPTX::INT_WMMA_MMA_row_col_f32_f16_satfinite;
-    break;
-  case Intrinsic::nvvm_wmma_mma_sync_row_col_f32_f32:
-    Opc = NVPTX::INT_WMMA_MMA_row_col_f32_f32;
-    break;
-  case Intrinsic::nvvm_wmma_mma_sync_row_col_f32_f32_satfinite:
-    Opc = NVPTX::INT_WMMA_MMA_row_col_f32_f32_satfinite;
-    break;
-  case Intrinsic::nvvm_wmma_mma_sync_row_row_f16_f16:
-    Opc = NVPTX::INT_WMMA_MMA_row_row_f16_f16;
-    break;
-  case Intrinsic::nvvm_wmma_mma_sync_row_row_f16_f16_satfinite:
-    Opc = NVPTX::INT_WMMA_MMA_row_row_f16_f16_satfinite;
-    break;
-  case Intrinsic::nvvm_wmma_mma_sync_row_row_f16_f32:
-    Opc = NVPTX::INT_WMMA_MMA_row_row_f16_f32;
-    break;
-  case Intrinsic::nvvm_wmma_mma_sync_row_row_f16_f32_satfinite:
-    Opc = NVPTX::INT_WMMA_MMA_row_row_f16_f32_satfinite;
-    break;
-  case Intrinsic::nvvm_wmma_mma_sync_row_row_f32_f16:
-    Opc = NVPTX::INT_WMMA_MMA_row_row_f32_f16;
-    break;
-  case Intrinsic::nvvm_wmma_mma_sync_row_row_f32_f16_satfinite:
-    Opc = NVPTX::INT_WMMA_MMA_row_row_f32_f16_satfinite;
-    break;
-  case Intrinsic::nvvm_wmma_mma_sync_row_row_f32_f32:
-    Opc = NVPTX::INT_WMMA_MMA_row_row_f32_f32;
-    break;
-  case Intrinsic::nvvm_wmma_mma_sync_row_row_f32_f32_satfinite:
-    Opc = NVPTX::INT_WMMA_MMA_row_row_f32_f32_satfinite;
-    break;
-  }
-
-  SmallVector<SDValue, 24> Ops;
-  // Pass through operands and return value types to the machine node.
-  for (unsigned i = 1; i < N->getNumOperands(); ++i)
-    Ops.push_back(N->getOperand(i));
-  SmallVector<EVT, 8> InstVTs(N->getNumValues(), N->getValueType(0));
-  SDNode *MN = CurDAG->getMachineNode(Opc, DL, InstVTs, Ops);
-  ReplaceNode(N, MN);
-  return true;
 }

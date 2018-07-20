@@ -1,4 +1,4 @@
-; RUN: llc -O2 -march=hexagon -mcpu=hexagonv62< %s | FileCheck %s
+; RUN: llc -O2 -march=hexagon -mcpu=hexagonv62 < %s | FileCheck %s
 ; CHECK: ParseFunc:
 ; CHECK: r[[ARG0:[0-9]+]] = memuh(r[[ARG1:[0-9]+]]+#[[OFFSET:[0-9]+]])
 ; CHECK: memw(r[[ARG1]]+#[[OFFSET]]) = r[[ARG0]]

@@ -14,22 +14,23 @@
 #ifndef LLVM_COV_COVERAGEEXPORTER_H
 #define LLVM_COV_COVERAGEEXPORTER_H
 
+#include "CoverageFilters.h"
 #include "CoverageSummaryInfo.h"
 #include "CoverageViewOptions.h"
 #include "llvm/ProfileData/Coverage/CoverageMapping.h"
 
 namespace llvm {
 
-/// \brief Exports the code coverage information.
+/// Exports the code coverage information.
 class CoverageExporter {
 protected:
-  /// \brief The full CoverageMapping object to export.
+  /// The full CoverageMapping object to export.
   const coverage::CoverageMapping &Coverage;
 
-  /// \brief The options passed to the tool.
+  /// The options passed to the tool.
   const CoverageViewOptions &Options;
 
-  /// \brief Output stream to print JSON to.
+  /// Output stream to print JSON to.
   raw_ostream &OS;
 
   CoverageExporter(const coverage::CoverageMapping &CoverageMapping,
@@ -39,10 +40,10 @@ protected:
 public:
   virtual ~CoverageExporter(){};
 
-  /// \brief Render the CoverageMapping object.
-  virtual void renderRoot() = 0;
+  /// Render the CoverageMapping object.
+  virtual void renderRoot(const CoverageFilters &IgnoreFilenameFilters) = 0;
 
-  /// \brief Render the CoverageMapping object for specified source files.
+  /// Render the CoverageMapping object for specified source files.
   virtual void renderRoot(const std::vector<std::string> &SourceFiles) = 0;
 };
 

@@ -17,26 +17,26 @@ name:            trivial_fp_func
 # CHECK-LABEL: name: trivial_fp_func
 body: |
   bb.0.entry:
-    ; CHECK: CFI_INSTRUCTION def_cfa %w29, 16
-    frame-setup CFI_INSTRUCTION def_cfa %w29, 16
-    ; CHECK: CFI_INSTRUCTION def_cfa_register %w29
-    frame-setup CFI_INSTRUCTION def_cfa_register %w29
+    ; CHECK: CFI_INSTRUCTION def_cfa $w29, 16
+    frame-setup CFI_INSTRUCTION def_cfa $w29, 16
+    ; CHECK: CFI_INSTRUCTION def_cfa_register $w29
+    frame-setup CFI_INSTRUCTION def_cfa_register $w29
     ; CHECK: CFI_INSTRUCTION def_cfa_offset -8
     frame-setup CFI_INSTRUCTION def_cfa_offset -8
-    ; CHECK: CFI_INSTRUCTION offset %w30, -8
-    frame-setup CFI_INSTRUCTION offset %w30, -8
-    ; CHECK: CFI_INSTRUCTION rel_offset %w30, -8
-    frame-setup CFI_INSTRUCTION rel_offset %w30, -8
+    ; CHECK: CFI_INSTRUCTION offset $w30, -8
+    frame-setup CFI_INSTRUCTION offset $w30, -8
+    ; CHECK: CFI_INSTRUCTION rel_offset $w30, -8
+    frame-setup CFI_INSTRUCTION rel_offset $w30, -8
     ; CHECK: CFI_INSTRUCTION adjust_cfa_offset -8
     frame-setup CFI_INSTRUCTION adjust_cfa_offset -8
-    CFI_INSTRUCTION restore %w30
-    ; CHECK: CFI_INSTRUCTION restore %w30
-    CFI_INSTRUCTION undefined %w30
-    ; CHECK: CFI_INSTRUCTION undefined %w30
-    CFI_INSTRUCTION same_value %w29
-    ; CHECK: CFI_INSTRUCTION same_value %w29
-    CFI_INSTRUCTION register %w20, %w30
-    ; CHECK: CFI_INSTRUCTION register %w20, %w30
+    CFI_INSTRUCTION restore $w30
+    ; CHECK: CFI_INSTRUCTION restore $w30
+    CFI_INSTRUCTION undefined $w30
+    ; CHECK: CFI_INSTRUCTION undefined $w30
+    CFI_INSTRUCTION same_value $w29
+    ; CHECK: CFI_INSTRUCTION same_value $w29
+    CFI_INSTRUCTION register $w20, $w30
+    ; CHECK: CFI_INSTRUCTION register $w20, $w30
     CFI_INSTRUCTION remember_state
     ; CHECK: CFI_INSTRUCTION remember_state
     CFI_INSTRUCTION restore_state

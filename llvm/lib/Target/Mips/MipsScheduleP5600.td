@@ -13,14 +13,13 @@ def MipsP5600Model : SchedMachineModel {
   int LoadLatency = 4;
   int MispredictPenalty = 8; // TODO: Estimated
 
-  let CompleteModel = 1;
+  let CompleteModel = 0;
+  let FullInstRWOverlapCheck = 1;
 
   list<Predicate> UnsupportedFeatures = [HasMips32r6, HasMips64r6,
-                                         HasMips64, HasMips64r2, HasCnMips,
+                                         HasMips3, HasMips64r2, HasCnMips,
                                          InMicroMips, InMips16Mode,
-                                         HasMicroMips32r6, HasDSP,
-                                         HasDSPR2, HasMT];
-
+                                         HasDSP, HasDSPR2, HasMT, HasCRC];
 }
 
 let SchedModel = MipsP5600Model in {
@@ -37,9 +36,8 @@ def P5600IssueALU : ProcResource<1> { let Super = P5600ALQ; }
 def P5600WriteALU : SchedWriteRes<[P5600IssueALU]>;
 
 // and, lui, nor, or, slti, sltiu, sub, subu, xor
-def : ItinRW<[P5600WriteALU],
-             [II_AND, II_LUI, II_NOR, II_OR, II_SLTI_SLTIU, II_SUB, II_SUBU,
-              II_XOR]>;
+def : InstRW<[P5600WriteALU], (instrs AND, LUi, NOR, OR, SLTi, SLTiu, SUB,
+                               SUBu, XOR)>;
 
 // AGQ Pipelines
 // =============
@@ -63,20 +61,35 @@ def P5600WriteJumpAndLink : SchedWriteRes<[P5600IssueCTISTD, P5600CTISTD]> {
 
 // b, beq, beql, bg[et]z, bl[et]z, bne, bnel, j, syscall, jal, bltzal,
 // jalr, jr.hb, jr
-def : ItinRW<[P5600WriteJump], [II_B, II_BCC, II_BCCZ, II_BCCZAL, II_J, II_JR,
-                                II_JR_HB, II_DERET, II_ERET, II_ERETNC, 
-                                II_SYSCALL, II_BREAK, II_SDBBP, II_SSNOP,
-                                II_TEQ, II_TEQI, II_TGE, II_TGEI, II_TGEIU,
-                                II_TGEU, II_TLT, II_TLTI, II_TLTU, II_TNE,
-                                II_TNEI, II_TRAP, II_TTLTIU, II_WAIT,
-                                II_PAUSE]>;
+def : InstRW<[P5600WriteJump], (instrs B, BAL, BAL_BR, BEQ, BEQL, BGEZ, BGEZAL,
+                                BGEZALL, BGEZL, BGTZ, BGTZL, BLEZ, BLEZL, BLTZ,
+                                BLTZAL, BLTZALL, BLTZL, BNE, BNEL, BREAK,
+                                DERET, ERET, ERETNC, J, JR, JR_HB,
+                                PseudoIndirectBranch,
+                                PseudoIndirectHazardBranch, PseudoReturn,
+                                SDBBP, SSNOP, SYSCALL, TAILCALL, TAILCALLREG,
+                                TAILCALLREGHB, TEQ, TEQI, TGE, TGEI, TGEIU,
+                                TGEU, TLT, TLTI, TLTU, TNE, TNEI, TRAP,
+                                TTLTIU, WAIT, PAUSE)>;
 
-def : ItinRW<[P5600WriteJumpAndLink], [II_JAL, II_JALR, II_JALR_HB]>;
+def : InstRW<[P5600WriteJumpAndLink], (instrs JAL, JALR, JALRHBPseudo,
+                                       JALRPseudo, JALR_HB)>;
+
+def : InstRW<[P5600WriteJumpAndLink], (instrs JALX)> {
+  let Unsupported = 1;
+}
 
 def P5600COP0 : SchedWriteRes<[P5600IssueCTISTD, P5600CTISTD]>;
 
-def : ItinRW<[P5600COP0], [II_TLBINV, II_TLBINVF, II_TLBP, II_TLBR, II_TLBWI,
-                           II_TLBWR, II_MFC0, II_MTC0]>;
+def : InstRW<[P5600COP0], (instrs TLBINV, TLBINVF, TLBP, TLBR, TLBWI, TLBWR,
+                           MFC0, MTC0)>;
+
+def P5600COP2 : SchedWriteRes<[P5600IssueCTISTD, P5600CTISTD]>;
+
+def : InstRW<[P5600COP2], (instrs MFC2, MTC2)> {
+  let Unsupported = 1;
+}
+
 // LDST Pipeline
 // -------------
 
@@ -106,21 +119,20 @@ def P5600WriteLoadToOtherUnits : SchedWriteRes<[P5600IssueLDST]> {
 }
 
 // l[bhw], l[bh]u, ll
-def : ItinRW<[P5600WriteLoad], [II_LB, II_LBE, II_LBU, II_LBUE, II_LH, II_LHE,
-                                II_LHU, II_LHUE, II_LW, II_LWE, II_LL, II_LLE,
-                                II_LWPC]>;
+def : InstRW<[P5600WriteLoad], (instrs LB, LBu, LH, LHu, LW, LL, LWC2, LWC3,
+                                LDC2, LDC3, LBE, LBuE, LHE, LHuE, LWE, LLE,
+                                LWPC)>;
 
 // lw[lr]
-def : ItinRW<[P5600WriteLoadShifted], [II_LWL, II_LWLE, II_LWR, II_LWRE]>;
+def : InstRW<[P5600WriteLoadShifted], (instrs LWL, LWR, LWLE, LWRE)>;
 
 // s[bhw], sw[lr]
-def : ItinRW<[P5600WriteStore], [II_SB, II_SBE, II_SH, II_SHE, II_SW, II_SWE,
-                                 II_SWL, II_SWLE, II_SWR, II_SWRE, II_SC,
-                                 II_SCE]>;
+def : InstRW<[P5600WriteStore], (instrs SB, SH, SW, SWC2, SWC3, SDC2, SDC3, SC,
+                                 SBE, SHE, SWE, SCE, SWL, SWR, SWLE, SWRE)>;
 
 // pref, cache, sync, synci
-def : ItinRW<[P5600WriteCache], [II_PREF, II_PREFE, II_CACHE, II_CACHEE,
-                                 II_SYNC, II_SYNCI]>;
+def : InstRW<[P5600WriteCache], (instrs PREF, PREFE, CACHE, CACHEE, SYNC,
+                                 SYNCI)>;
 
 // LDST is also used in moves from general purpose registers to floating point
 // and MSA.
@@ -154,28 +166,31 @@ def P5600WriteAL2MAdd: SchedWriteRes<[P5600IssueAL2, P5600CTISTD]> {
 }
 
 // clo, clz, di, ei, mfhi, mflo
-def : ItinRW<[P5600WriteAL2], [II_CLO, II_CLZ, II_DI, II_EI, II_MFHI_MFLO]>;
+def : InstRW<[P5600WriteAL2], (instrs CLO, CLZ, DI, EI, MFHI, MFLO,
+                               PseudoMFHI, PseudoMFLO)>;
 
 // ehb, rdhwr, rdpgpr, wrpgpr, wsbh
-def : ItinRW<[P5600WriteAL2ShadowMov], [II_EHB, II_RDHWR, II_WSBH]>;
+def : InstRW<[P5600WriteAL2ShadowMov], (instrs EHB, RDHWR, WSBH)>;
 
 // mov[nz]
-def : ItinRW<[P5600WriteAL2CondMov], [II_MOVN, II_MOVZ]>;
+def : InstRW<[P5600WriteAL2CondMov], (instrs MOVN_I_I, MOVZ_I_I)>;
 
 // divu?
-def : ItinRW<[P5600WriteAL2Div], [II_DIV]>;
-def : ItinRW<[P5600WriteAL2DivU], [II_DIVU]>;
+def : InstRW<[P5600WriteAL2Div], (instrs DIV, PseudoSDIV, SDIV)>;
+def : InstRW<[P5600WriteAL2DivU], (instrs DIVU, PseudoUDIV, UDIV)>;
 
 // mul
-def : ItinRW<[P5600WriteAL2Mul], [II_MUL]>;
+def : InstRW<[P5600WriteAL2Mul], (instrs MUL)>;
 // multu?, multu?
-def : ItinRW<[P5600WriteAL2Mult], [II_MULT, II_MULTU]>;
+def : InstRW<[P5600WriteAL2Mult], (instrs MULT, MULTu, PseudoMULT,
+                                   PseudoMULTu)>;
 // maddu?, msubu?, mthi, mtlo
-def : ItinRW<[P5600WriteAL2MAdd],
-             [II_MADD, II_MADDU, II_MSUB, II_MSUBU, II_MTHI_MTLO]>;
+def : InstRW<[P5600WriteAL2MAdd], (instrs MADD, MADDU, MSUB, MSUBU,
+                                   MTHI, MTLO, PseudoMADD, PseudoMADDU,
+                                   PseudoMSUB, PseudoMSUBU, PseudoMTLOHI)>;
 
 // ext, ins
-def : ItinRW<[P5600WriteAL2BitExt], [II_EXT, II_INS]>;
+def : InstRW<[P5600WriteAL2BitExt], (instrs EXT, INS)>;
 
 // Either ALU or AL2 Pipelines
 // ---------------------------
@@ -193,11 +208,9 @@ def P5600WriteEitherALU : SchedWriteVariant<
 
 // add, addi, addiu, addu, andi, ori, rotr, se[bh], sllv?, sr[al]v?, slt, sltu,
 // xori
-def : ItinRW<[P5600WriteEitherALU],
-             [II_ADD, II_ADDI, II_ADDIU, II_ANDI, II_ORI, II_ROTR, II_SEB, II_SEH,
-              II_SLT_SLTU, II_SLL, II_SRA, II_SRL, II_XORI, II_ADDU, II_SLLV,
-              II_SRAV, II_SRLV, II_LSA]>;
-def : InstRW<[], (instrs COPY)>;
+def : InstRW<[P5600WriteEitherALU], (instrs ADD, ADDi, ADDiu, ANDi, ORi, ROTR,
+                                     SEB, SEH, SLT, SLTu, SLL, SRA, SRL, XORi,
+                                     ADDu, SLLV, SRAV, SRLV, LSA, COPY)>;
 
 // FPU Pipelines
 // =============
@@ -300,8 +313,10 @@ def P5600WriteMoveFPULToOtherUnits : SchedWriteRes<[P5600IssueFPUL]>;
 // abs.[ds], abs.ps, bc1[tf]l?, mov[tf].[ds], mov[tf], mov.[ds], [cm][ft]c1,
 // m[ft]hc1, neg.[ds], neg.ps, nor.v, nori.b, or.v, ori.b, xor.v, xori.b,
 // sdxc1, sdc1, st.[bhwd], swc1, swxc1
-def : ItinRW<[P5600WriteFPUS], [II_ABS, II_MOVF_D, II_MOVF_S, II_MOVT_D,
-                                II_MOVT_S, II_MOV_D, II_MOV_S, II_NEG]>;
+def : InstRW<[P5600WriteFPUS], (instrs FABS_S, FABS_D32, FABS_D64, MOVF_D32,
+                                MOVF_D64, MOVF_S, MOVT_D32, MOVT_D64,
+                                MOVT_S, FMOV_D32, FMOV_D64, FMOV_S, FNEG_S,
+                                FNEG_D32, FNEG_D64)>;
 
 // adds_a.[bhwd], adds_[asu].[bhwd], addvi?.[bhwd], asub_[us].[bhwd],
 // aver?_[us].[bhwd], shf.[bhw], fill[bhwd], splat?.[bhwd]
@@ -320,23 +335,6 @@ def : InstRW<[P5600WriteMSAShortLogic], (instregex "^MOVE_V$")>;
 def : InstRW<[P5600WriteMSAShortLogic], (instregex "^LDI_[BHWD]$")>;
 def : InstRW<[P5600WriteMSAShortLogic], (instregex "^(AND|OR|[XN]OR)_V$")>;
 def : InstRW<[P5600WriteMSAShortLogic], (instregex "^(AND|OR|[XN]OR)I_B$")>;
-
-// vshf.[bhwd], binsl.[bhwd], binsr.[bhwd], insert.[bhwd], sld?.[bhwd],
-// bset.[bhwd], bclr.[bhwd], bneg.[bhwd], bsel_v, bseli_b
-def : InstRW<[P5600WriteMSAShortInt], (instregex "^VSHF_[BHWD]$")>;
-def : InstRW<[P5600WriteMSAShortInt], (instregex "^(BINSL|BINSLI)_[BHWD]$")>;
-def : InstRW<[P5600WriteMSAShortInt], (instregex "^(BINSR|BINSRI)_[BHWD]$")>;
-def : InstRW<[P5600WriteMSAShortInt], (instregex "^INSERT_[BHWD]$")>;
-def : InstRW<[P5600WriteMSAShortInt], (instregex "^(SLD|SLDI)_[BHWD]$")>;
-def : InstRW<[P5600WriteMSAShortInt], (instregex "^(BSET|BSETI)_[BHWD]$")>;
-def : InstRW<[P5600WriteMSAShortInt], (instregex "^(BCLR|BCLRI)_[BHWD]$")>;
-def : InstRW<[P5600WriteMSAShortInt], (instregex "^(BNEG|BNEGI)_[BHWD]$")>;
-def : InstRW<[P5600WriteMSAShortInt], (instregex "^(BSEL_V|BSELI_B)$")>;
-def : InstRW<[P5600WriteMSAShortInt], (instregex "^BMN*Z.*$")>;
-
-// pcnt.[bhwd], sat_s.[bhwd], sat_u.bhwd]
-def : InstRW<[P5600WriteMSAOther3], (instregex "^PCNT_[BHWD]$")>;
-def : InstRW<[P5600WriteMSAOther3], (instregex "^SAT_(S|U)_[BHWD]$")>;
 
 // fexp2_w, fexp2_d
 def : InstRW<[P5600WriteFPUS], (instregex "^FEXP2_(W|D)$")>;
@@ -424,7 +422,6 @@ def : InstRW<[P5600WriteMSAShortLogic], (instregex "^(SRLR|SRLRI)_[BHWD]$")>;
 def : InstRW<[P5600WriteMSAShortLogic], (instregex "^(SLL|SLLI)_[BHWD]$")>;
 def : InstRW<[P5600WriteMSAShortLogic], (instregex "^(PCKEV|PCKOD)_[BHWD]$")>;
 def : InstRW<[P5600WriteMSAShortLogic], (instregex "^(NLOC|NLZC)_[BHWD]$")>;
-def : InstRW<[P5600WriteMSAShortLogic], (instregex "^INSVE_[BHWD]$")>;
 
 // Long Pipe
 // ----------
@@ -432,24 +429,31 @@ def : InstRW<[P5600WriteMSAShortLogic], (instregex "^INSVE_[BHWD]$")>;
 // add.[ds], add.ps, cvt.d.[sw], cvt.s.[dw], cvt.w.[sd], cvt.[sw].ps,
 // cvt.ps.[sw], c.<cc>.[ds], c.<cc>.ps, mul.[ds], mul.ps, sub.[ds], sub.ps,
 // trunc.w.[ds], trunc.w.ps
-def : ItinRW<[P5600WriteFPUL],
-             [II_ADD_D, II_ADD_S, II_CVT, II_C_CC_D, II_C_CC_S, II_MUL_D,
-              II_MUL_S, II_SUB_D, II_SUB_S, II_TRUNC]>;
+def : InstRW<[P5600WriteFPUL],
+             (instrs FADD_D32, FADD_D64, FADD_S, FMUL_D32, FMUL_D64, FMUL_S,
+              FSUB_D32, FSUB_D64, FSUB_S)>;
+def : InstRW<[P5600WriteFPUL], (instregex "^TRUNC_(L|W)_(S|D32|D64)$")>;
+def : InstRW<[P5600WriteFPUL],
+             (instregex "^CVT_(S|D32|D64|L|W)_(S|D32|D64|L|W)$")>;
+def : InstRW<[P5600WriteFPUL], (instregex "^C_[A-Z]+_(S|D32|D64)$")>;
+def : InstRW<[P5600WriteFPUL], (instregex "^FCMP_(S32|D32|D64)$")>;
+def : InstRW<[P5600WriteFPUL], (instregex "^PseudoCVT_(S|D32|D64)_(L|W)$")>;
 
 // div.[ds], div.ps
-def : ItinRW<[P5600WriteFPUDivS], [II_DIV_S]>;
-def : ItinRW<[P5600WriteFPUDivD], [II_DIV_D]>;
+def : InstRW<[P5600WriteFPUDivS], (instrs FDIV_S)>;
+def : InstRW<[P5600WriteFPUDivD], (instrs FDIV_D32, FDIV_D64)>;
 
 // sqrt.[ds], sqrt.ps
-def : ItinRW<[P5600WriteFPUSqrtS], [II_SQRT_S]>;
-def : ItinRW<[P5600WriteFPUSqrtD], [II_SQRT_D]>;
+def : InstRW<[P5600WriteFPUSqrtS], (instrs FSQRT_S)>;
+def : InstRW<[P5600WriteFPUSqrtD], (instrs FSQRT_D32, FSQRT_D64)>;
 
 // frcp.[wd], frsqrt.[wd]
 def : InstRW<[P5600WriteFPURsqrtD], (instregex "^FRCP_(W|D)$")>;
 def : InstRW<[P5600WriteFPURsqrtD], (instregex "^FRSQRT_(W|D)$")>;
 
-def : ItinRW<[P5600WriteFPURsqrtD], [II_RECIP_D, II_RSQRT_D]>;
-def : ItinRW<[P5600WriteFPURsqrtS], [II_RECIP_S, II_RSQRT_S]>;
+def : InstRW<[P5600WriteFPURsqrtD], (instrs RECIP_D32, RECIP_D64, RSQRT_D32,
+                                     RSQRT_D64)>;
+def : InstRW<[P5600WriteFPURsqrtS], (instrs RECIP_S, RSQRT_S)>;
 
 // fmadd.[wd], fmsubb.[wd], fdiv.[wd], fsqrt.[wd], fmul.[wd], fadd.[wd],
 // fsub.[wd]
@@ -481,9 +485,9 @@ def : InstRW<[P5600WriteMSALongInt], (instregex "^MUL_Q_[HW]$")>;
 
 // madd.[ds], msub.[ds], nmadd.[ds], nmsub.[ds],
 // Operand 0 is read on cycle 5. All other operands are read on operand 0.
-def : ItinRW<[SchedReadAdvance<5>, P5600WriteFPUL_MADDSUB],
-             [II_MADD_D, II_MADD_S, II_MSUB_D, II_MSUB_S, II_NMADD_D,
-              II_NMADD_S, II_NMSUB_D, II_NMSUB_S]>;
+def : InstRW<[SchedReadAdvance<5>, P5600WriteFPUL_MADDSUB],
+             (instrs MADD_D32, MADD_D64, MADD_S, MSUB_D32, MSUB_D64, MSUB_S,
+              NMADD_D32, NMADD_D64, NMADD_S, NMSUB_D32, NMSUB_D64, NMSUB_S)>;
 
 // madd.ps, msub.ps, nmadd.ps, nmsub.ps
 // Operand 0 and 1 are read on cycle 5. All others are read on operand 0.
@@ -536,26 +540,30 @@ def P5600WriteLoadFPU : WriteSequence<[P5600WriteLoadToOtherUnits,
                                        P5600WriteLoadOtherUnitsToFPU]>;
 
 // ctc1, mtc1, mthc1
-def : ItinRW<[P5600WriteMoveGPRToFPU], [II_CTC1, II_MTC1, II_MTHC1]>;
+def : InstRW<[P5600WriteMoveGPRToFPU], (instrs CTC1, MTC1, MTC1_D64, MTHC1_D32,
+                                        MTHC1_D64, BuildPairF64,
+                                        BuildPairF64_64)>;
 
 // copy.[su]_[bhwd]
 def : InstRW<[P5600WriteMoveFPUToGPR], (instregex "^COPY_U_[BHW]$")>;
 def : InstRW<[P5600WriteMoveFPUToGPR], (instregex "^COPY_S_[BHWD]$")>;
 
 // bc1[ft], cfc1, mfc1, mfhc1, movf, movt
-def : ItinRW<[P5600WriteMoveFPUToGPR],
-             [II_BC1F, II_BC1FL, II_BC1T, II_BC1TL, II_CFC1, II_MFC1, II_MFHC1, II_MOVF, II_MOVT]>;
+def : InstRW<[P5600WriteMoveFPUToGPR], (instrs BC1F, BC1FL, BC1T, BC1TL, CFC1,
+                                        MFC1, MFC1_D64, MFHC1_D32, MFHC1_D64,
+                                        MOVF_I, MOVT_I, ExtractElementF64,
+                                        ExtractElementF64_64)>;
 
 // swc1, swxc1, st.[bhwd]
-def : ItinRW<[P5600WriteStoreFPUS], [II_SDC1, II_SDXC1, II_SUXC1, II_SWC1,
-                                     II_SWXC1]>;
+def : InstRW<[P5600WriteStoreFPUS], (instrs SDC1, SDXC1, SUXC1, SWC1, SWXC1)>;
 def : InstRW<[P5600WriteStoreFPUS], (instregex "^ST_[BHWD]$")>;
 
 // movn.[ds], movz.[ds]
-def : ItinRW<[P5600WriteStoreFPUL], [II_MOVN_D, II_MOVN_S, II_MOVZ_D, II_MOVZ_S]>;
+def : InstRW<[P5600WriteStoreFPUL], (instrs MOVN_I_D32, MOVN_I_D64, MOVN_I_S,
+                                     MOVZ_I_D32, MOVZ_I_D64, MOVZ_I_S)>;
 
 // l[dw]x?c1, ld.[bhwd]
-def : ItinRW<[P5600WriteLoadFPU], [II_LDC1, II_LDXC1, II_LWC1, II_LWXC1, II_LUXC1]>;
+def : InstRW<[P5600WriteLoadFPU], (instrs LDC1, LDXC1, LWC1, LWXC1, LUXC1)>;
 def : InstRW<[P5600WriteLoadFPU], (instregex "LD_[BHWD]")>;
 
 // Unsupported Instructions
@@ -577,10 +585,12 @@ def : InstRW<[P5600WriteLoadFPU], (instregex "LD_[BHWD]")>;
 
 // ceil.[lw].[ds], floor.[lw].[ds]
 // Reason behind guess: trunc.[lw].ds and the various cvt's are in FPUL
-def : ItinRW<[P5600WriteFPUL], [II_CEIL, II_FLOOR, II_ROUND]>;
+def : InstRW<[P5600WriteFPUL], (instregex "^CEIL_(L|W)_(S|D32|D64)$")>;
+def : InstRW<[P5600WriteFPUL], (instregex "^FLOOR_(L|W)_(S|D32|D64)$")>;
+def : InstRW<[P5600WriteFPUL], (instregex "^ROUND_(L|W)_(S|D32|D64)$")>;
 
 // rotrv
 // Reason behind guess: rotr is in the same category and the two register forms
 //                      generally follow the immediate forms in this category
-def : ItinRW<[P5600WriteEitherALU], [II_ROTRV]>;
+def : InstRW<[P5600WriteEitherALU], (instrs ROTRV)>;
 }

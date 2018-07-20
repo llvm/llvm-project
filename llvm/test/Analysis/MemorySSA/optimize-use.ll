@@ -18,16 +18,16 @@ entry:
 ; CHECK: 4 = MemoryDef(3)
 ; CHECK-NEXT:   store i32 7, i32* %1, align 4
   store i32 7, i32* %1, align 4
-; CHECK: MemoryUse(3)
+; CHECK: MemoryUse(3) MustAlias
 ; CHECK-NEXT:   %2 = load i32, i32* %0, align 4
   %2 = load i32, i32* %0, align 4
-; CHECK: MemoryUse(4)
+; CHECK: MemoryUse(4) MustAlias
 ; CHECK-NEXT:   %3 = load i32, i32* %1, align 4
   %3 = load i32, i32* %1, align 4
-; CHECK: MemoryUse(3)
+; CHECK: MemoryUse(3) MustAlias
 ; CHECK-NEXT:   %4 = load i32, i32* %0, align 4
   %4 = load i32, i32* %0, align 4
-; CHECK: MemoryUse(4)
+; CHECK: MemoryUse(4) MustAlias
 ; CHECK-NEXT:   %5 = load i32, i32* %1, align 4
   %5 = load i32, i32* %1, align 4
   %add = add nsw i32 %3, %5

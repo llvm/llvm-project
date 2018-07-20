@@ -211,7 +211,7 @@ public:
     // The Sparse array doesn't actually need to be initialized, so malloc
     // would be enough here, but that will cause tools like valgrind to
     // complain about branching on uninitialized data.
-    Sparse = reinterpret_cast<SparseT*>(calloc(U, sizeof(SparseT)));
+    Sparse = static_cast<SparseT*>(safe_calloc(U, sizeof(SparseT)));
     Universe = U;
   }
 

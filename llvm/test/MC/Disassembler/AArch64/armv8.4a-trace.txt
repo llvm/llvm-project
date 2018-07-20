@@ -1,0 +1,26 @@
+# RUN: llvm-mc -triple aarch64-none-linux-gnu -mattr=+v8.4a --disassemble < %s | FileCheck %s
+# RUN: llvm-mc -triple aarch64-none-linux-gnu -mattr=-v8.4a --disassemble < %s 2>&1 | FileCheck %s --check-prefix=CHECK-NO-V84
+
+[0x20,0x12,0x18,0xd5]
+[0x20,0x12,0x1c,0xd5]
+[0x20,0x12,0x1d,0xd5]
+[0x20,0x12,0x38,0xd5]
+[0x20,0x12,0x3c,0xd5]
+[0x20,0x12,0x3d,0xd5]
+[0x5f,0x22,0x03,0xd5]
+
+#CHECK:  msr TRFCR_EL1, x0
+#CHECK:  msr TRFCR_EL2, x0
+#CHECK:  msr TRFCR_EL12, x0
+#CHECK:  mrs x0, TRFCR_EL1
+#CHECK:  mrs x0, TRFCR_EL2
+#CHECK:  mrs x0, TRFCR_EL12
+#CHECK:  tsb csync
+
+#CHECK-NO-V84:  msr S3_0_C1_C2_1, x0
+#CHECK-NO-V84:  msr S3_4_C1_C2_1, x0
+#CHECK-NO-V84:  msr S3_5_C1_C2_1, x0
+#CHECK-NO-V84:  mrs x0, S3_0_C1_C2_1
+#CHECK-NO-V84:  mrs x0, S3_4_C1_C2_1
+#CHECK-NO-V84:  mrs x0, S3_5_C1_C2_1
+#CHECK-NO-V84:  hint #18

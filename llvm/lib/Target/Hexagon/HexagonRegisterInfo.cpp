@@ -19,6 +19,7 @@
 #include "HexagonTargetMachine.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -145,6 +146,13 @@ BitVector HexagonRegisterInfo::getReservedRegs(const MachineFunction &MF)
   Reserved.set(Hexagon::R30);
   Reserved.set(Hexagon::R31);
   Reserved.set(Hexagon::VTMP);
+
+  // Guest registers.
+  Reserved.set(Hexagon::GELR);        // G0
+  Reserved.set(Hexagon::GSR);         // G1
+  Reserved.set(Hexagon::GOSP);        // G2
+  Reserved.set(Hexagon::G3);          // G3
+
   // Control registers.
   Reserved.set(Hexagon::SA0);         // C0
   Reserved.set(Hexagon::LC0);         // C1
@@ -170,6 +178,9 @@ BitVector HexagonRegisterInfo::getReservedRegs(const MachineFunction &MF)
   // them here as well.
   Reserved.set(Hexagon::C8);
   Reserved.set(Hexagon::USR_OVF);
+
+  if (MF.getSubtarget<HexagonSubtarget>().hasReservedR19())
+    Reserved.set(Hexagon::R19);
 
   for (int x = Reserved.find_first(); x >= 0; x = Reserved.find_next(x))
     markSuperRegs(Reserved, x);
@@ -233,6 +244,55 @@ void HexagonRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 }
 
 
+bool HexagonRegisterInfo::shouldCoalesce(MachineInstr *MI,
+      const TargetRegisterClass *SrcRC, unsigned SubReg,
+      const TargetRegisterClass *DstRC, unsigned DstSubReg,
+      const TargetRegisterClass *NewRC, LiveIntervals &LIS) const {
+  // Coalescing will extend the live interval of the destination register.
+  // If the destination register is a vector pair, avoid introducing function
+  // calls into the interval, since it could result in a spilling of a pair
+  // instead of a single vector.
+  MachineFunction &MF = *MI->getParent()->getParent();
+  const HexagonSubtarget &HST = MF.getSubtarget<HexagonSubtarget>();
+  if (!HST.useHVXOps() || NewRC->getID() != Hexagon::HvxWRRegClass.getID())
+    return true;
+  bool SmallSrc = SrcRC->getID() == Hexagon::HvxVRRegClass.getID();
+  bool SmallDst = DstRC->getID() == Hexagon::HvxVRRegClass.getID();
+  if (!SmallSrc && !SmallDst)
+    return true;
+
+  unsigned DstReg = MI->getOperand(0).getReg();
+  unsigned SrcReg = MI->getOperand(1).getReg();
+  const SlotIndexes &Indexes = *LIS.getSlotIndexes();
+  auto HasCall = [&Indexes] (const LiveInterval::Segment &S) {
+    for (SlotIndex I = S.start.getBaseIndex(), E = S.end.getBaseIndex();
+         I != E; I = I.getNextIndex()) {
+      if (const MachineInstr *MI = Indexes.getInstructionFromIndex(I))
+        if (MI->isCall())
+          return true;
+    }
+    return false;
+  };
+
+  if (SmallSrc == SmallDst) {
+    // Both must be true, because the case for both being false was
+    // checked earlier. Both registers will be coalesced into a register
+    // of a wider class (HvxWR), and we don't want its live range to
+    // span over calls.
+    return !any_of(LIS.getInterval(DstReg), HasCall) &&
+           !any_of(LIS.getInterval(SrcReg), HasCall);
+  }
+
+  // If one register is large (HvxWR) and the other is small (HvxVR), then
+  // coalescing is ok if the large is already live across a function call,
+  // or if the small one is not.
+  unsigned SmallReg = SmallSrc ? SrcReg : DstReg;
+  unsigned LargeReg = SmallSrc ? DstReg : SrcReg;
+  return  any_of(LIS.getInterval(LargeReg), HasCall) ||
+         !any_of(LIS.getInterval(SmallReg), HasCall);
+}
+
+
 unsigned HexagonRegisterInfo::getRARegister() const {
   return Hexagon::R31;
 }
@@ -283,6 +343,11 @@ bool HexagonRegisterInfo::useFPForScavengingIndex(const MachineFunction &MF)
   return MF.getSubtarget<HexagonSubtarget>().getFrameLowering()->hasFP(MF);
 }
 
+const TargetRegisterClass *
+HexagonRegisterInfo::getPointerRegClass(const MachineFunction &MF,
+                                        unsigned Kind) const {
+  return &Hexagon::IntRegsRegClass;
+}
 
 unsigned HexagonRegisterInfo::getFirstCallerSavedNonParamReg() const {
   return Hexagon::R6;

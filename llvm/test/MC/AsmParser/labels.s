@@ -18,12 +18,12 @@ foo:
 // CHECK: addl $24, a$b+10(%eax)
         addl $24, ("a$b" + 10)(%eax)
 
-// CHECK: b$c = 10
+// CHECK: .set b$c, 10
 "b$c" = 10
 // CHECK: addl $10, %eax
         addl $"b$c", %eax
 
-// CHECK: "a 0" = 11
+// CHECK: .set "a 0", 11
         .set "a 0", 11
 
 // CHECK: .long 11
@@ -49,7 +49,7 @@ foo:
 // CHECX: .lsym "a 8",1
 //        .lsym "a 8", 1
 
-// CHECK: "a 9" = a-b
+// CHECK: .set "a 9", a-b
         .set "a 9", a - b
 
 // CHECK: .long "a 9"

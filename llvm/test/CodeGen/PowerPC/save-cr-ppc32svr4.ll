@@ -3,12 +3,12 @@
 ; Make sure that the CR register is saved correctly on PPC32/SVR4.
 
 ; CHECK-LABEL: fred:
-; CHECK: stwu 1, -32(1)
-; CHECK: stw 31, 28(1)
+; CHECK: stwu 1, -48(1)
+; CHECK: stw 31, 36(1)
 ; CHECK: mr 31, 1
-; CHECK: stw 30, 24(1)
-; CHECK: mfcr [[CR:[0-9]+]]
-; CHECK: stw [[CR]], 20(31)
+; CHECK-DAG: stw 30, 32(1)
+; CHECK-DAG: mfcr [[CR:[0-9]+]]
+; CHECK: stw [[CR]], 28(31)
 
 target datalayout = "E-m:e-p:32:32-i64:64-n32"
 target triple = "powerpc-unknown-freebsd"
@@ -16,7 +16,8 @@ target triple = "powerpc-unknown-freebsd"
 ; Function Attrs: norecurse nounwind readnone sspstrong
 define i64 @fred(double %a0) local_unnamed_addr #0 {
 b1:
-  %v2 = fcmp olt double %a0, 0x43E0000000000000
+  %a1 = tail call double asm "fadd $0, $1, $2", "=f,f,f,~{cr2}"(double %a0, double %a0)
+  %v2 = fcmp olt double %a1, 0x43E0000000000000
   br i1 %v2, label %b3, label %b7
 
 b3:                                               ; preds = %b1

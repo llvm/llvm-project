@@ -37,7 +37,7 @@ struct CachePruningPolicy {
   std::chrono::seconds Expiration = std::chrono::hours(7 * 24); // 1w
 
   /// The maximum size for the cache directory, in terms of percentage of the
-  /// available space on the the disk. Set to 100 to indicate no limit, 50 to
+  /// available space on the disk. Set to 100 to indicate no limit, 50 to
   /// indicate that the cache size will not be left over half the available disk
   /// space. A value over 100 will be reduced to 100. A value of 0 disables the
   /// percentage size-based pruning.
@@ -52,9 +52,11 @@ struct CachePruningPolicy {
   /// the number of files based pruning.
   ///
   /// This defaults to 1000000 because with that many files there are
-  /// diminishing returns on the effectiveness of the cache, and some file
-  /// systems have a limit on how many files can be contained in a directory
-  /// (notably ext4, which is limited to around 6000000 files).
+  /// diminishing returns on the effectiveness of the cache. Some systems have a
+  /// limit on total number of files, and some also limit the number of files
+  /// per directory, such as Linux ext4, with the default setting (block size is
+  /// 4096 and large_dir disabled), there is a per-directory entry limit of
+  /// 508*510*floor(4096/(40+8))~=20M for average filename length of 40.
   uint64_t MaxSizeFiles = 1000000;
 };
 
@@ -66,7 +68,7 @@ struct CachePruningPolicy {
 Expected<CachePruningPolicy> parseCachePruningPolicy(StringRef PolicyStr);
 
 /// Peform pruning using the supplied policy, returns true if pruning
-/// occured, i.e. if Policy.Interval was expired.
+/// occurred, i.e. if Policy.Interval was expired.
 ///
 /// As a safeguard against data loss if the user specifies the wrong directory
 /// as their cache directory, this function will ignore files not matching the

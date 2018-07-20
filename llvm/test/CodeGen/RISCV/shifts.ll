@@ -10,12 +10,7 @@ define i64 @lshr64(i64 %a, i64 %b) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp)
-; RV32I-NEXT:    sw s0, 8(sp)
-; RV32I-NEXT:    addi s0, sp, 16
-; RV32I-NEXT:    lui a3, %hi(__lshrdi3)
-; RV32I-NEXT:    addi a3, a3, %lo(__lshrdi3)
-; RV32I-NEXT:    jalr a3
-; RV32I-NEXT:    lw s0, 8(sp)
+; RV32I-NEXT:    call __lshrdi3
 ; RV32I-NEXT:    lw ra, 12(sp)
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -28,12 +23,7 @@ define i64 @ashr64(i64 %a, i64 %b) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp)
-; RV32I-NEXT:    sw s0, 8(sp)
-; RV32I-NEXT:    addi s0, sp, 16
-; RV32I-NEXT:    lui a3, %hi(__ashrdi3)
-; RV32I-NEXT:    addi a3, a3, %lo(__ashrdi3)
-; RV32I-NEXT:    jalr a3
-; RV32I-NEXT:    lw s0, 8(sp)
+; RV32I-NEXT:    call __ashrdi3
 ; RV32I-NEXT:    lw ra, 12(sp)
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -46,12 +36,7 @@ define i64 @shl64(i64 %a, i64 %b) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp)
-; RV32I-NEXT:    sw s0, 8(sp)
-; RV32I-NEXT:    addi s0, sp, 16
-; RV32I-NEXT:    lui a3, %hi(__ashldi3)
-; RV32I-NEXT:    addi a3, a3, %lo(__ashldi3)
-; RV32I-NEXT:    jalr a3
-; RV32I-NEXT:    lw s0, 8(sp)
+; RV32I-NEXT:    call __ashldi3
 ; RV32I-NEXT:    lw ra, 12(sp)
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret

@@ -1,4 +1,4 @@
-; RUN: llc < %s -O0 -verify-machineinstrs -mtriple=wasm32-unknown-unknown-wasm | FileCheck %s
+; RUN: llc < %s -O0 -verify-machineinstrs | FileCheck %s
 
 ; CHECK: %bb.0
 ; CHECK: #DEBUG_VALUE: usage:self <- %4
@@ -6,7 +6,7 @@
 ; CHECK: DW_TAG_variable
 source_filename = "test/CodeGen/WebAssembly/dbgvalue.ll"
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
-target triple = "wasm32-unknown-unknown-wasm"
+target triple = "wasm32-unknown-unknown"
 
 @key = external local_unnamed_addr global [15 x i8], align 1
 @.str = external unnamed_addr constant [33 x i8], align 1
@@ -56,7 +56,7 @@ attributes #0 = { nounwind readnone }
 !12 = !{i32 2, !"Dwarf Version", i32 4}
 !13 = !{i32 2, !"Debug Info Version", i32 3}
 !14 = !{!"clang version 3.9.0 (trunk 273884) (llvm/trunk 273897)"}
-!15 = distinct !DISubprogram(name: "usage", scope: !1, file: !1, line: 15, type: !16, isLocal: false, isDefinition: true, scopeLine: 15, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !21)
+!15 = distinct !DISubprogram(name: "usage", scope: !1, file: !1, line: 15, type: !16, isLocal: false, isDefinition: true, scopeLine: 15, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !21)
 !16 = !DISubroutineType(types: !17)
 !17 = !{!18, !19}
 !18 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)

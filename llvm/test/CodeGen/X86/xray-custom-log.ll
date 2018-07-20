@@ -1,6 +1,6 @@
-; RUN: llc -filetype=asm -o - -mtriple=x86_64-unknown-linux-gnu < %s | FileCheck %s
-; RUN: llc -filetype=asm -o - -mtriple=x86_64-unknown-linux-gnu \
-; RUN:    -relocation-model=pic < %s | FileCheck %s -check-prefix=PIC
+; RUN: llc -verify-machineinstrs -filetype=asm -o - -mtriple=x86_64-unknown-linux-gnu < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -filetype=asm -o - \
+; RUN:     -mtriple=x86_64-unknown-linux-gnu -relocation-model=pic < %s | FileCheck %s -check-prefix=PIC
 
 define i32 @fn() nounwind noinline uwtable "function-instrument"="xray-always" {
     %eventptr = alloca i8
@@ -11,8 +11,8 @@ define i32 @fn() nounwind noinline uwtable "function-instrument"="xray-always" {
     ; CHECK-LABEL: Lxray_event_sled_0:
     ; CHECK:       .byte 0xeb, 0x0f
     ; CHECK-NEXT:  pushq %rdi
-    ; CHECK-NEXT:  movq {{.*}}, %rdi
     ; CHECK-NEXT:  pushq %rsi
+    ; CHECK-NEXT:  movq {{.*}}, %rdi
     ; CHECK-NEXT:  movq {{.*}}, %rsi
     ; CHECK-NEXT:  callq __xray_CustomEvent
     ; CHECK-NEXT:  popq %rsi
@@ -21,8 +21,8 @@ define i32 @fn() nounwind noinline uwtable "function-instrument"="xray-always" {
     ; PIC-LABEL: Lxray_event_sled_0:
     ; PIC:       .byte 0xeb, 0x0f
     ; PIC-NEXT:  pushq %rdi
-    ; PIC-NEXT:  movq {{.*}}, %rdi
     ; PIC-NEXT:  pushq %rsi
+    ; PIC-NEXT:  movq {{.*}}, %rdi
     ; PIC-NEXT:  movq {{.*}}, %rsi
     ; PIC-NEXT:  callq __xray_CustomEvent@PLT
     ; PIC-NEXT:  popq %rsi

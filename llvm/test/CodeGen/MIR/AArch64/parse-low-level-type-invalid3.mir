@@ -1,0 +1,10 @@
+# RUN: not llc -mtriple=aarch64-- -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+# When a low-level type is a vector which element type does not start with 's' or 'p'
+---
+name: test_low_level_type_does_not_start_with_s_p
+body: |
+  bb.0:
+    liveins: $q0
+    ; CHECK: [[@LINE+1]]:10: expected <M x sN> or <M x pA> for vector type
+    %0:_(<2 x i64>) = COPY $q0
+...

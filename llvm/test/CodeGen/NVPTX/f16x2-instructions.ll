@@ -1,16 +1,16 @@
 ; ## Full FP16 support enabled by default.
 ; RUN: llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_53 -asm-verbose=false \
 ; RUN:          -O0 -disable-post-ra -disable-fp-elim -verify-machineinstrs \
-; RUN: | FileCheck -check-prefixes CHECK,CHECK-F16 %s
+; RUN: | FileCheck -allow-deprecated-dag-overlap -check-prefixes CHECK,CHECK-F16 %s
 ; ## FP16 support explicitly disabled.
 ; RUN: llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_53 -asm-verbose=false \
 ; RUN:          -O0 -disable-post-ra -disable-fp-elim --nvptx-no-f16-math \
 ; RUN:           -verify-machineinstrs \
-; RUN: | FileCheck -check-prefixes CHECK,CHECK-NOF16 %s
+; RUN: | FileCheck -allow-deprecated-dag-overlap -check-prefixes CHECK,CHECK-NOF16 %s
 ; ## FP16 is not supported by hardware.
 ; RUN: llc < %s -O0 -mtriple=nvptx64-nvidia-cuda -mcpu=sm_52 -asm-verbose=false \
 ; RUN:          -disable-post-ra -disable-fp-elim -verify-machineinstrs \
-; RUN: | FileCheck -check-prefixes CHECK,CHECK-NOF16 %s
+; RUN: | FileCheck -allow-deprecated-dag-overlap -check-prefixes CHECK,CHECK-NOF16 %s
 
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 
@@ -1421,6 +1421,22 @@ define <2 x half> @test_round(<2 x half> %a) #0 {
 define <2 x half> @test_fmuladd(<2 x half> %a, <2 x half> %b, <2 x half> %c) #0 {
   %r = call <2 x half> @llvm.fmuladd.f16(<2 x half> %a, <2 x half> %b, <2 x half> %c)
   ret <2 x half> %r
+}
+
+; CHECK-LABEL: test_shufflevector(
+; CHECK: mov.b32 {%h1, %h2}, %hh1;
+; CHECK: mov.b32 %hh2, {%h2, %h1};
+define <2 x half> @test_shufflevector(<2 x half> %a) #0 {
+  %s = shufflevector <2 x half> %a, <2 x half> undef, <2 x i32> <i32 1, i32 0>
+  ret <2 x half> %s
+}
+
+; CHECK-LABEL: test_insertelement(
+; CHECK: mov.b32 {%h2, %tmp_hi}, %hh1;
+; CHECK: mov.b32 %hh2, {%h2, %h1};
+define <2 x half> @test_insertelement(<2 x half> %a, half %x) #0 {
+  %i = insertelement <2 x half> %a, half %x, i64 1
+  ret <2 x half> %i
 }
 
 attributes #0 = { nounwind }

@@ -135,7 +135,7 @@ End-user Options
 .. option:: -stack-size-section
 
  Emit the .stack_sizes section which contains stack size metadata. The section
- contains an array of pairs of function symbol references (8 byte) and stack
+ contains an array of pairs of function symbol values (pointer size) and stack
  sizes (unsigned LEB128). The stack size values only include the space allocated
  in the function prologue. Functions with dynamic stack allocations are not
  included.

@@ -15,7 +15,6 @@
 
 namespace llvm {
 
-template <typename T> class ArrayRef;
 class MCAsmInfo;
 class MCInst;
 class MCInstrInfo;
@@ -36,13 +35,13 @@ enum Style {
 
 } // end namespace HexStyle
 
-/// \brief This is an instance of a target assembly language printer that
+/// This is an instance of a target assembly language printer that
 /// converts an MCInst to valid target assembly syntax.
 class MCInstPrinter {
 protected:
-  /// \brief A stream that comments can be emitted to if desired.  Each comment
+  /// A stream that comments can be emitted to if desired.  Each comment
   /// must end with a newline.  This will be null if verbose assembly emission
-  /// is disable.
+  /// is disabled.
   raw_ostream *CommentStream = nullptr;
   const MCAsmInfo &MAI;
   const MCInstrInfo &MII;
@@ -66,18 +65,18 @@ public:
 
   virtual ~MCInstPrinter();
 
-  /// \brief Specify a stream to emit comments to.
+  /// Specify a stream to emit comments to.
   void setCommentStream(raw_ostream &OS) { CommentStream = &OS; }
 
-  /// \brief Print the specified MCInst to the specified raw_ostream.
+  /// Print the specified MCInst to the specified raw_ostream.
   virtual void printInst(const MCInst *MI, raw_ostream &OS, StringRef Annot,
                          const MCSubtargetInfo &STI) = 0;
 
-  /// \brief Return the name of the specified opcode enum (e.g. "MOV32ri") or
+  /// Return the name of the specified opcode enum (e.g. "MOV32ri") or
   /// empty if we can't resolve it.
   StringRef getOpcodeName(unsigned Opcode) const;
 
-  /// \brief Print the assembler register name.
+  /// Print the assembler register name.
   virtual void printRegName(raw_ostream &OS, unsigned RegNo) const;
 
   bool getUseMarkup() const { return UseMarkup; }

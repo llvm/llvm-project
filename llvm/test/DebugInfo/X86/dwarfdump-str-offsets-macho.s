@@ -31,7 +31,7 @@ str_Variable3:
 
 	.section	__DWARF,__debug_str_offs,regular,debug
 Ldebug_str_offsets:
-        .long Ldebug_str_offsets_segment0_end-Ldebug_str_offsets_base0
+        .long Ldebug_str_offsets_segment0_end-Ldebug_str_offsets_base0+4
         .short 5    # DWARF version
         .short 0    # Padding
 Ldebug_str_offsets_base0:
@@ -47,7 +47,7 @@ Ldebug_str_offsets_segment0_end:
         .long 0
 # CU2's contribution (DWARF64 format)
         .long 0xffffffff
-        .quad Ldebug_str_offsets_segment1_end-Ldebug_str_offsets_base1
+        .quad Ldebug_str_offsets_segment1_end-Ldebug_str_offsets_base1+4
         .short 5    # DWARF version
         .short 0    # Padding
 Ldebug_str_offsets_base1:
@@ -56,7 +56,7 @@ Ldebug_str_offsets_base1:
         .quad str_CU2_dir
 Ldebug_str_offsets_segment1_end:
 # The TU's contribution
-        .long Ldebug_str_offsets_segment2_end-Ldebug_str_offsets_base2
+        .long Ldebug_str_offsets_segment2_end-Ldebug_str_offsets_base2+4
         .short 5    # DWARF version
         .short 0    # Padding
 Ldebug_str_offsets_base2:
@@ -250,7 +250,7 @@ TU_5_end:
 # 
 # The .debug_str_offsets section
 # COMMON:      .debug_str_offsets contents:
-# COMMON-NEXT: 0x00000000: Contribution size = 28, Format = DWARF32, Version = 5
+# COMMON-NEXT: 0x00000000: Contribution size = 32, Format = DWARF32, Version = 5
 # COMMON-NEXT: 0x00000008: 00000000 "Handmade DWARF producer"
 # COMMON-NEXT: 0x0000000c: 00000018 "Compile_Unit_1"
 # COMMON-NEXT: 0x00000010: 00000027 "/home/test/CU1"
@@ -259,10 +259,10 @@ TU_5_end:
 # COMMON-NEXT: 0x0000001c: 00000075 "MyVar2"
 # COMMON-NEXT: 0x00000020: 0000007c "MyVar3"
 # COMMON-NEXT: 0x00000024: Gap, length = 4
-# COMMON-NEXT: 0x00000028: Contribution size = 24, Format = DWARF64, Version = 5
+# COMMON-NEXT: 0x00000028: Contribution size = 28, Format = DWARF64, Version = 5
 # COMMON-NEXT: 0x00000038: 00000000 "Handmade DWARF producer"
 # COMMON-NEXT: 0x00000040: 00000036 "Compile_Unit_2"
 # COMMON-NEXT: 0x00000048: 00000045 "/home/test/CU2"
-# COMMON-NEXT: 0x00000050: Contribution size = 8, Format = DWARF32, Version = 5
+# COMMON-NEXT: 0x00000050: Contribution size = 12, Format = DWARF32, Version = 5
 # COMMON-NEXT: 0x00000058: 00000054 "Type_Unit"
 # COMMON-NEXT: 0x0000005c: 0000005e "MyStruct"

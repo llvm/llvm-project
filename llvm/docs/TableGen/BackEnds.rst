@@ -221,6 +221,22 @@ OptParserDefs
 
 **Purpose**: Print enum values for a class.
 
+SearchableTables
+----------------
+
+**Purpose**: Generate custom searchable tables.
+
+**Output**: Enums, global tables and lookup helper functions.
+
+**Usage**: This backend allows generating free-form, target-specific tables
+from TableGen records. The ARM and AArch64 targets use this backend to generate
+tables of system registers; the AMDGPU target uses it to generate meta-data
+about complex image and memory buffer instructions.
+
+More documentation is available in ``include/llvm/TableGen/SearchableTable.td``,
+which also contains the definitions of TableGen classes which must be
+instantiated in order to define the enums and tables emitted by this backend.
+
 CTags
 -----
 
@@ -418,6 +434,127 @@ AttrDocs
 
 **Purpose**: Creates ``AttributeReference.rst`` from ``AttrDocs.td``, and is
 used for documenting user-facing attributes.
+
+General BackEnds
+================
+
+JSON
+----
+
+**Purpose**: Output all the values in every ``def``, as a JSON data
+structure that can be easily parsed by a variety of languages. Useful
+for writing custom backends without having to modify TableGen itself,
+or for performing auxiliary analysis on the same TableGen data passed
+to a built-in backend.
+
+**Output**:
+
+The root of the output file is a JSON object (i.e. dictionary),
+containing the following fixed keys:
+
+* ``!tablegen_json_version``: a numeric version field that will
+  increase if an incompatible change is ever made to the structure of
+  this data. The format described here corresponds to version 1.
+
+* ``!instanceof``: a dictionary whose keys are the class names defined
+  in the TableGen input. For each key, the corresponding value is an
+  array of strings giving the names of ``def`` records that derive
+  from that class. So ``root["!instanceof"]["Instruction"]``, for
+  example, would list the names of all the records deriving from the
+  class ``Instruction``.
+
+For each ``def`` record, the root object also has a key for the record
+name. The corresponding value is a subsidiary object containing the
+following fixed keys:
+
+* ``!superclasses``: an array of strings giving the names of all the
+  classes that this record derives from.
+
+* ``!fields``: an array of strings giving the names of all the variables
+  in this record that were defined with the ``field`` keyword.
+
+* ``!name``: a string giving the name of the record. This is always
+  identical to the key in the JSON root object corresponding to this
+  record's dictionary. (If the record is anonymous, the name is
+  arbitrary.)
+
+* ``!anonymous``: a boolean indicating whether the record's name was
+  specified by the TableGen input (if it is ``false``), or invented by
+  TableGen itself (if ``true``).
+
+For each variable defined in a record, the ``def`` object for that
+record also has a key for the variable name. The corresponding value
+is a translation into JSON of the variable's value, using the
+conventions described below.
+
+Some TableGen data types are translated directly into the
+corresponding JSON type:
+
+* A completely undefined value (e.g. for a variable declared without
+  initializer in some superclass of this record, and never initialized
+  by the record itself or any other superclass) is emitted as the JSON
+  ``null`` value.
+
+* ``int`` and ``bit`` values are emitted as numbers. Note that
+  TableGen ``int`` values are capable of holding integers too large to
+  be exactly representable in IEEE double precision. The integer
+  literal in the JSON output will show the full exact integer value.
+  So if you need to retrieve large integers with full precision, you
+  should use a JSON reader capable of translating such literals back
+  into 64-bit integers without losing precision, such as Python's
+  standard ``json`` module.
+
+* ``string`` and ``code`` values are emitted as JSON strings.
+
+* ``list<T>`` values, for any element type ``T``, are emitted as JSON
+  arrays. Each element of the array is represented in turn using these
+  same conventions.
+
+* ``bits`` values are also emitted as arrays. A ``bits`` array is
+  ordered from least-significant bit to most-significant. So the
+  element with index ``i`` corresponds to the bit described as
+  ``x{i}`` in TableGen source. However, note that this means that
+  scripting languages are likely to *display* the array in the
+  opposite order from the way it appears in the TableGen source or in
+  the diagnostic ``-print-records`` output.
+
+All other TableGen value types are emitted as a JSON object,
+containing two standard fields: ``kind`` is a discriminator describing
+which kind of value the object represents, and ``printable`` is a
+string giving the same representation of the value that would appear
+in ``-print-records``.
+
+* A reference to a ``def`` object has ``kind=="def"``, and has an
+  extra field ``def`` giving the name of the object referred to.
+
+* A reference to another variable in the same record has
+  ``kind=="var"``, and has an extra field ``var`` giving the name of
+  the variable referred to.
+
+* A reference to a specific bit of a ``bits``-typed variable in the
+  same record has ``kind=="varbit"``, and has two extra fields:
+  ``var`` gives the name of the variable referred to, and ``index``
+  gives the index of the bit.
+
+* A value of type ``dag`` has ``kind=="dag"``, and has two extra
+  fields. ``operator`` gives the initial value after the opening
+  parenthesis of the dag initializer; ``args`` is an array giving the
+  following arguments. The elements of ``args`` are arrays of length
+  2, giving the value of each argument followed by its colon-suffixed
+  name (if any). For example, in the JSON representation of the dag
+  value ``(Op 22, "hello":$foo)`` (assuming that ``Op`` is the name of
+  a record defined elsewhere with a ``def`` statement):
+
+  * ``operator`` will be an object in which ``kind=="def"`` and
+    ``def=="Op"``
+
+  * ``args`` will be the array ``[[22, null], ["hello", "foo"]]``.
+
+* If any other kind of value or complicated expression appears in the
+  output, it will have ``kind=="complex"``, and no additional fields.
+  These values are not expected to be needed by backends. The standard
+  ``printable`` field can be used to extract a representation of them
+  in TableGen source syntax if necessary.
 
 How to write a back-end
 =======================

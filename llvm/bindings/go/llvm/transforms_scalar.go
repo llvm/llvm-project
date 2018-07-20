@@ -15,6 +15,7 @@ package llvm
 
 /*
 #include "llvm-c/Transforms/Scalar.h"
+#include "llvm-c/Transforms/Utils.h"
 */
 import "C"
 

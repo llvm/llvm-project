@@ -35,6 +35,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include <atomic>
 #include <cassert>
 #include <memory>
@@ -144,7 +145,7 @@ DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, const Value *V
   else if (auto *I = dyn_cast<Instruction>(V))
     Loc = I->getDebugLoc();
 
-  // Only include names that correspond to user variables.  FIXME: we should use
+  // Only include names that correspond to user variables.  FIXME: We should use
   // debug info if available to get the name of the user variable.
   if (isa<llvm::Argument>(V) || isa<GlobalValue>(V))
     Val = GlobalValue::dropLLVMManglingEscape(V->getName());
@@ -166,6 +167,9 @@ DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, StringRef S)
 
 DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, int N)
     : Key(Key), Val(itostr(N)) {}
+
+DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, float N)
+    : Key(Key), Val(llvm::to_string(N)) {}
 
 DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, long N)
     : Key(Key), Val(itostr(N)) {}

@@ -172,7 +172,7 @@ IMM_8 = 8
         nop
 
 # ALL-LABEL: t1b:
-# ASM-NEXT: IMM_8 = 8
+# ASM-NEXT: .set IMM_8, 8
 
 # O32-NOT: __cerror
 

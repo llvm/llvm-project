@@ -5,8 +5,6 @@ EMPTY: {{^$}}
 
 RUN: llvm-mc %S/brief.s -filetype obj -triple x86_64-apple-darwin -o - \
 RUN:   | llvm-dwarfdump -find=main - | FileCheck %s
-CHECK: .debug_info contents:
-CHECK-NOT: {{:}}
 CHECK: : DW_TAG_subprogram
 CHECK-NOT: {{:}}
 CHECK:     DW_AT_name ("main")
@@ -15,13 +13,13 @@ CHECK-NOT: {{:}}
 RUN: llvm-dwarfdump %S/../../dsymutil/Inputs/libfat-test.a \
 RUN:   -find=x86_64h_var -find=i386_var \
 RUN:   | FileCheck %s --check-prefix=MULTI
-MULTI: .debug_info contents:
+MULTI: libfat-test.a(i386)
 MULTI-NOT: {{: DW}}
 MULTI: : DW_TAG_variable
 MULTI-NOT: {{: DW}}
 MULTI:    DW_AT_name ("i386_var")
+MULTI: libfat-test.a(x86_64h)
 MULTI-NOT: {{: DW}}
-MULTI: .debug_info contents:
 MULTI: : DW_TAG_variable
 MULTI-NOT: {{: DW}}
 MULTI:    DW_AT_name ("x86_64h_var")
@@ -29,8 +27,6 @@ MULTI-NOT: {{: DW}}
 
 RUN: llvm-mc %S/brief.s -filetype obj -triple x86_64-apple-darwin -o - \
 RUN:   | llvm-dwarfdump -find=int - | FileCheck %s --check-prefix=TYPES
-TYPES: .debug_info contents:
-TYPES-NOT: {{:}}
 TYPES: : DW_TAG_base_type
 TYPES-NOT: {{:}}
 TYPES:     DW_AT_name ("int")

@@ -71,7 +71,7 @@ attributes #4 = { nounwind }
 !3 = !{i32 2, !"Dwarf Version", i32 4}
 !4 = !{i32 2, !"Debug Info Version", i32 3}
 !5 = !{!"clang version 3.9.0 (trunk 273450) (llvm/trunk 273521)"}
-!6 = distinct !DISubprogram(name: "PrintVector", linkageName: "_Z11PrintVectorv", scope: !1, file: !1, line: 18, type: !7, isLocal: false, isDefinition: true, scopeLine: 18, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !9)
+!6 = distinct !DISubprogram(name: "PrintVector", linkageName: "_Z11PrintVectorv", scope: !1, file: !1, line: 18, type: !7, isLocal: false, isDefinition: true, scopeLine: 18, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !9)
 !7 = !DISubroutineType(types: !8)
 !8 = !{null}
 !9 = !{!10, !25, !27, !28, !29, !38}
@@ -107,7 +107,7 @@ attributes #4 = { nounwind }
 !39 = distinct !DILexicalBlock(scope: !6, file: !1, line: 22, column: 3)
 !40 = !DILocation(line: 21, column: 3, scope: !6)
 !41 = !DILocation(line: 14, column: 3, scope: !42, inlinedAt: !56)
-!42 = distinct !DISubprogram(name: "Print<double>", linkageName: "_Z5PrintIdEvT_iiPiiP1A", scope: !1, file: !1, line: 13, type: !43, isLocal: false, isDefinition: true, scopeLine: 13, flags: DIFlagPrototyped, isOptimized: true, unit: !0, templateParams: !46, variables: !48)
+!42 = distinct !DISubprogram(name: "Print<double>", linkageName: "_Z5PrintIdEvT_iiPiiP1A", scope: !1, file: !1, line: 13, type: !43, isLocal: false, isDefinition: true, scopeLine: 13, flags: DIFlagPrototyped, isOptimized: true, unit: !0, templateParams: !46, retainedNodes: !48)
 !43 = !DISubroutineType(types: !44)
 !44 = !{null, !35, !26, !26, !45, !26, !11}
 !45 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !26, size: 64, align: 64)
@@ -125,7 +125,7 @@ attributes #4 = { nounwind }
 !57 = !DILexicalBlockFile(scope: !58, file: !1, discriminator: 1)
 !58 = distinct !DILexicalBlock(scope: !39, file: !1, line: 22, column: 3)
 !59 = !DILocation(line: 0, scope: !60, inlinedAt: !64)
-!60 = distinct !DISubprogram(name: "operator+=", linkageName: "_ZN1ApLEPKc", scope: !12, file: !1, line: 5, type: !15, isLocal: false, isDefinition: true, scopeLine: 5, flags: DIFlagPrototyped, isOptimized: true, unit: !0, declaration: !21, variables: !61)
+!60 = distinct !DISubprogram(name: "operator+=", linkageName: "_ZN1ApLEPKc", scope: !12, file: !1, line: 5, type: !15, isLocal: false, isDefinition: true, scopeLine: 5, flags: DIFlagPrototyped, isOptimized: true, unit: !0, declaration: !21, retainedNodes: !61)
 !61 = !{!62, !63}
 !62 = !DILocalVariable(name: "this", arg: 1, scope: !60, type: !11, flags: DIFlagArtificial | DIFlagObjectPointer)
 !63 = !DILocalVariable(name: "p1", arg: 2, scope: !60, file: !1, line: 5, type: !18)

@@ -115,14 +115,6 @@ static bool IsStoredObjCPointer(const Value *P) {
 
 bool ProvenanceAnalysis::relatedCheck(const Value *A, const Value *B,
                                       const DataLayout &DL) {
-  // Skip past provenance pass-throughs.
-  A = GetUnderlyingObjCPtr(A, DL);
-  B = GetUnderlyingObjCPtr(B, DL);
-
-  // Quick check.
-  if (A == B)
-    return true;
-
   // Ask regular AliasAnalysis, for a first approximation.
   switch (AA->alias(A, B)) {
   case NoAlias:
@@ -171,6 +163,13 @@ bool ProvenanceAnalysis::relatedCheck(const Value *A, const Value *B,
 
 bool ProvenanceAnalysis::related(const Value *A, const Value *B,
                                  const DataLayout &DL) {
+  A = GetUnderlyingObjCPtrCached(A, DL, UnderlyingObjCPtrCache);
+  B = GetUnderlyingObjCPtrCached(B, DL, UnderlyingObjCPtrCache);
+
+  // Quick check.
+  if (A == B)
+    return true;
+
   // Begin by inserting a conservative value into the map. If the insertion
   // fails, we have the answer already. If it succeeds, leave it there until we
   // compute the real answer to guard against recursive queries.

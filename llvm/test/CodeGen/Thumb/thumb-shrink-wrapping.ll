@@ -374,7 +374,7 @@ declare void @somethingElse(...)
 ;
 ; ENABLE-V5T-NEXT: {{LBB[0-9_]+}}: @ %if.end
 ; ENABLE-NEXT: bx lr
-define i32 @loopInfoRestoreOutsideLoop(i32 %cond, i32 %N) #0 {
+define i32 @loopInfoRestoreOutsideLoop(i32 %cond, i32 %N) nounwind {
 entry:
   %tobool = icmp eq i32 %cond, 0
   br i1 %tobool, label %if.else, label %if.then
@@ -598,7 +598,7 @@ declare void @abort() #0
 define i32 @b_to_bx(i32 %value) {
 ; CHECK-LABEL: b_to_bx:
 ; DISABLE: push {r7, lr}
-; CHECK: cmp r1, #49
+; CHECK: cmp r0, #49
 ; CHECK-NEXT: bgt [[ELSE_LABEL:LBB[0-9_]+]]
 ; ENABLE: push {r7, lr}
 
@@ -646,12 +646,12 @@ define i1 @beq_to_bx(i32* %y, i32 %head) {
 ; CHECK-NEXT: beq [[EXIT_LABEL:LBB[0-9_]+]]
 ; ENABLE: push {r4, lr}
 
-; CHECK: tst r3, r4
+; CHECK: lsls    r4, r3, #30
 ; ENABLE-NEXT: ldr [[POP:r[4567]]], [sp, #4]
 ; ENABLE-NEXT: mov lr, [[POP]]
 ; ENABLE-NEXT: pop {[[POP]]}
 ; ENABLE-NEXT: add sp, #4
-; CHECK-NEXT: beq [[EXIT_LABEL]]
+; CHECK-NEXT: bpl [[EXIT_LABEL]]
 
 ; CHECK: str r1, [r2]
 ; CHECK: str r3, [r2]

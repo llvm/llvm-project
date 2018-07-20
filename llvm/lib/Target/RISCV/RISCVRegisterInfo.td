@@ -38,8 +38,16 @@ def ABIRegAltName : RegAltNameIndex;
 } // Namespace = "RISCV"
 
 // Integer registers
+// CostPerUse is set higher for registers that may not be compressible as they
+// are not part of GPRC, the most restrictive register class used by the
+// compressed instruction set. This will influence the greedy register
+// allocator to reduce the use of registers that can't be encoded in 16 bit
+// instructions. This affects register allocation even when compressed
+// instruction isn't targeted, we see no major negative codegen impact.
+
 let RegAltNameIndices = [ABIRegAltName] in {
   def X0  : RISCVReg<0, "x0", ["zero"]>, DwarfRegNum<[0]>;
+  let CostPerUse = 1 in {
   def X1  : RISCVReg<1, "x1", ["ra"]>, DwarfRegNum<[1]>;
   def X2  : RISCVReg<2, "x2", ["sp"]>, DwarfRegNum<[2]>;
   def X3  : RISCVReg<3, "x3", ["gp"]>, DwarfRegNum<[3]>;
@@ -47,6 +55,7 @@ let RegAltNameIndices = [ABIRegAltName] in {
   def X5  : RISCVReg<5, "x5", ["t0"]>, DwarfRegNum<[5]>;
   def X6  : RISCVReg<6, "x6", ["t1"]>, DwarfRegNum<[6]>;
   def X7  : RISCVReg<7, "x7", ["t2"]>, DwarfRegNum<[7]>;
+  }
   def X8  : RISCVReg<8, "x8", ["s0"]>, DwarfRegNum<[8]>;
   def X9  : RISCVReg<9, "x9", ["s1"]>, DwarfRegNum<[9]>;
   def X10 : RISCVReg<10,"x10", ["a0"]>, DwarfRegNum<[10]>;
@@ -55,6 +64,7 @@ let RegAltNameIndices = [ABIRegAltName] in {
   def X13 : RISCVReg<13,"x13", ["a3"]>, DwarfRegNum<[13]>;
   def X14 : RISCVReg<14,"x14", ["a4"]>, DwarfRegNum<[14]>;
   def X15 : RISCVReg<15,"x15", ["a5"]>, DwarfRegNum<[15]>;
+  let CostPerUse = 1 in {
   def X16 : RISCVReg<16,"x16", ["a6"]>, DwarfRegNum<[16]>;
   def X17 : RISCVReg<17,"x17", ["a7"]>, DwarfRegNum<[17]>;
   def X18 : RISCVReg<18,"x18", ["s2"]>, DwarfRegNum<[18]>;
@@ -71,6 +81,7 @@ let RegAltNameIndices = [ABIRegAltName] in {
   def X29 : RISCVReg<29,"x29", ["t4"]>, DwarfRegNum<[29]>;
   def X30 : RISCVReg<30,"x30", ["t5"]>, DwarfRegNum<[30]>;
   def X31 : RISCVReg<31,"x31", ["t6"]>, DwarfRegNum<[31]>;
+  }
 }
 
 def XLenVT : ValueTypeByHwMode<[RV32, RV64, DefaultMode],
@@ -122,6 +133,19 @@ def GPRNoX0X2 : RegisterClass<"RISCV", [XLenVT], 32, (add
 def GPRC : RegisterClass<"RISCV", [XLenVT], 32, (add
     (sequence "X%u", 10, 15),
     (sequence "X%u", 8, 9)
+  )> {
+  let RegInfos = RegInfoByHwMode<
+      [RV32,              RV64,              DefaultMode],
+      [RegInfo<32,32,32>, RegInfo<64,64,64>, RegInfo<32,32,32>]>;
+}
+
+// For indirect tail calls, we can't use callee-saved registers, as they are
+// restored to the saved value before the tail call, which would clobber a call
+// address.
+def GPRTC : RegisterClass<"RISCV", [XLenVT], 32, (add
+    (sequence "X%u", 5, 7),
+    (sequence "X%u", 10, 17),
+    (sequence "X%u", 28, 31)
   )> {
   let RegInfos = RegInfoByHwMode<
       [RV32,              RV64,              DefaultMode],

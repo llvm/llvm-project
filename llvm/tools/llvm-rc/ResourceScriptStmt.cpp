@@ -57,6 +57,10 @@ raw_ostream &AcceleratorsResource::log(raw_ostream &OS) const {
   return OS;
 }
 
+raw_ostream &BitmapResource::log(raw_ostream &OS) const {
+  return OS << "Bitmap (" << ResName << "): " << BitmapLoc << "\n";
+}
+
 raw_ostream &CursorResource::log(raw_ostream &OS) const {
   return OS << "Cursor (" << ResName << "): " << CursorLoc << "\n";
 }
@@ -124,9 +128,22 @@ const StringMap<Control::CtlInfo> Control::SupportedCtls = {
     {"LTEXT", CtlInfo{0x50020000, ClsStatic, true}},
     {"CTEXT", CtlInfo{0x50020001, ClsStatic, true}},
     {"RTEXT", CtlInfo{0x50020002, ClsStatic, true}},
+    {"ICON", CtlInfo{0x50000003, ClsStatic, true}},
     {"PUSHBUTTON", CtlInfo{0x50010000, ClsButton, true}},
     {"DEFPUSHBUTTON", CtlInfo{0x50010001, ClsButton, true}},
+    {"AUTO3STATE", CtlInfo{0x50010006, ClsButton, true}},
+    {"AUTOCHECKBOX", CtlInfo{0x50010003, ClsButton, true}},
+    {"AUTORADIOBUTTON", CtlInfo{0x50000009, ClsButton, true}},
+    {"CHECKBOX", CtlInfo{0x50010002, ClsButton, true}},
+    {"GROUPBOX", CtlInfo{0x50000007, ClsButton, true}},
+    {"RADIOBUTTON", CtlInfo{0x50000004, ClsButton, true}},
+    {"STATE3", CtlInfo{0x50010005, ClsButton, true}},
+    {"PUSHBOX", CtlInfo{0x5001000A, ClsButton, true}},
     {"EDITTEXT", CtlInfo{0x50810000, ClsEdit, false}},
+    {"COMBOBOX", CtlInfo{0x50000000, ClsComboBox, false}},
+    {"LISTBOX", CtlInfo{0x50800001, ClsListBox, false}},
+    {"SCROLLBAR", CtlInfo{0x50000000, ClsScrollBar, false}},
+    {"CONTROL", CtlInfo{0x50000000, 0, true}},
 };
 
 raw_ostream &Control::log(raw_ostream &OS) const {
@@ -248,6 +265,10 @@ raw_ostream &VersionStmt::log(raw_ostream &OS) const {
 
 raw_ostream &CaptionStmt::log(raw_ostream &OS) const {
   return OS << "Caption: " << Value << "\n";
+}
+
+raw_ostream &ClassStmt::log(raw_ostream &OS) const {
+  return OS << "Class: " << Value << "\n";
 }
 
 raw_ostream &FontStmt::log(raw_ostream &OS) const {

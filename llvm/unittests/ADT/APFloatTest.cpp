@@ -983,6 +983,13 @@ TEST(APFloatTest, toString) {
   ASSERT_EQ("8.73183400000000010e+02", convertToString(873.1834, 0, 0, false));
   ASSERT_EQ("1.79769313486231570e+308",
             convertToString(1.7976931348623157E+308, 0, 0, false));
+
+  {
+    SmallString<64> Str;
+    APFloat UnnormalZero(APFloat::x87DoubleExtended(), APInt(80, {0, 1}));
+    UnnormalZero.toString(Str);
+    ASSERT_EQ("NaN", Str);
+  }
 }
 
 TEST(APFloatTest, toInteger) {

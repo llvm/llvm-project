@@ -69,9 +69,22 @@ public:
   ArrayRef<ArrayRef<uint8_t>> records() const;
   ArrayRef<GloballyHashedType> hashes() const;
 
-  using CreateRecord = llvm::function_ref<ArrayRef<uint8_t>()>;
+  template <typename CreateFunc>
+  TypeIndex insertRecordAs(GloballyHashedType Hash, size_t RecordSize,
+                           CreateFunc Create) {
+    auto Result = HashedRecords.try_emplace(Hash, nextTypeIndex());
 
-  TypeIndex insertRecordAs(GloballyHashedType Hash, CreateRecord Create);
+    if (LLVM_UNLIKELY(Result.second)) {
+      uint8_t *Stable = RecordStorage.Allocate<uint8_t>(RecordSize);
+      MutableArrayRef<uint8_t> Data(Stable, RecordSize);
+      SeenRecords.push_back(Create(Data));
+      SeenHashes.push_back(Hash);
+    }
+
+    // Update the caller's copy of Record to point a stable copy.
+    return Result.first->second;
+  }
+
   TypeIndex insertRecordBytes(ArrayRef<uint8_t> Data);
   TypeIndex insertRecord(ContinuationRecordBuilder &Builder);
 

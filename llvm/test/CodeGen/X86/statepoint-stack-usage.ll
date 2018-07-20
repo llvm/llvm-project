@@ -61,9 +61,9 @@ define i32 @back_to_back_deopt(i32 %a, i32 %b, i32 %c) #1
   gc "statepoint-example" {
 ; CHECK-LABEL: back_to_back_deopt
 ; The exact stores don't matter, but there need to be three stack slots created
-; CHECK-DAG: movl	%ebx, 12(%rsp)
-; CHECK-DAG: movl	%ebp, 8(%rsp)
-; CHECK-DAG: movl	%r14d, 4(%rsp)
+; CHECK-DAG: movl	%edi, 12(%rsp)
+; CHECK-DAG: movl	%esi, 8(%rsp)
+; CHECK-DAG: movl	%edx, 4(%rsp)
 ; CHECK: callq
 ; CHECK-DAG: movl	%ebx, 12(%rsp)
 ; CHECK-DAG: movl	%ebp, 8(%rsp)

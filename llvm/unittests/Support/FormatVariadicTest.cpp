@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "gtest/gtest.h"
 
@@ -143,6 +144,58 @@ TEST(FormatVariadicTest, ValidReplacementSequence) {
   EXPECT_EQ(0u, Replacements[0].Align);
   EXPECT_EQ(AlignStyle::Right, Replacements[0].Where);
   EXPECT_EQ("0:1", Replacements[0].Options);
+
+  // 9. Custom padding character
+  Replacements = formatv_object_base::parseFormatString("{0,p+4:foo}");
+  ASSERT_EQ(1u, Replacements.size());
+  EXPECT_EQ("0,p+4:foo", Replacements[0].Spec);
+  EXPECT_EQ(ReplacementType::Format, Replacements[0].Type);
+  EXPECT_EQ(0u, Replacements[0].Index);
+  EXPECT_EQ(4u, Replacements[0].Align);
+  EXPECT_EQ(AlignStyle::Right, Replacements[0].Where);
+  EXPECT_EQ('p', Replacements[0].Pad);
+  EXPECT_EQ("foo", Replacements[0].Options);
+
+  // Format string special characters are allowed as padding character
+  Replacements = formatv_object_base::parseFormatString("{0,-+4:foo}");
+  ASSERT_EQ(1u, Replacements.size());
+  EXPECT_EQ("0,-+4:foo", Replacements[0].Spec);
+  EXPECT_EQ(ReplacementType::Format, Replacements[0].Type);
+  EXPECT_EQ(0u, Replacements[0].Index);
+  EXPECT_EQ(4u, Replacements[0].Align);
+  EXPECT_EQ(AlignStyle::Right, Replacements[0].Where);
+  EXPECT_EQ('-', Replacements[0].Pad);
+  EXPECT_EQ("foo", Replacements[0].Options);
+
+  Replacements = formatv_object_base::parseFormatString("{0,+-4:foo}");
+  ASSERT_EQ(1u, Replacements.size());
+  EXPECT_EQ("0,+-4:foo", Replacements[0].Spec);
+  EXPECT_EQ(ReplacementType::Format, Replacements[0].Type);
+  EXPECT_EQ(0u, Replacements[0].Index);
+  EXPECT_EQ(4u, Replacements[0].Align);
+  EXPECT_EQ(AlignStyle::Left, Replacements[0].Where);
+  EXPECT_EQ('+', Replacements[0].Pad);
+  EXPECT_EQ("foo", Replacements[0].Options);
+
+  Replacements = formatv_object_base::parseFormatString("{0,==4:foo}");
+  ASSERT_EQ(1u, Replacements.size());
+  EXPECT_EQ("0,==4:foo", Replacements[0].Spec);
+  EXPECT_EQ(ReplacementType::Format, Replacements[0].Type);
+  EXPECT_EQ(0u, Replacements[0].Index);
+  EXPECT_EQ(4u, Replacements[0].Align);
+  EXPECT_EQ(AlignStyle::Center, Replacements[0].Where);
+  EXPECT_EQ('=', Replacements[0].Pad);
+  EXPECT_EQ("foo", Replacements[0].Options);
+
+  Replacements = formatv_object_base::parseFormatString("{0,:=4:foo}");
+  ASSERT_EQ(1u, Replacements.size());
+  EXPECT_EQ("0,:=4:foo", Replacements[0].Spec);
+  EXPECT_EQ(ReplacementType::Format, Replacements[0].Type);
+  EXPECT_EQ(0u, Replacements[0].Index);
+  EXPECT_EQ(4u, Replacements[0].Align);
+  EXPECT_EQ(AlignStyle::Center, Replacements[0].Where);
+  EXPECT_EQ(':', Replacements[0].Pad);
+  EXPECT_EQ("foo", Replacements[0].Options);
 }
 
 TEST(FormatVariadicTest, DefaultReplacementValues) {
@@ -421,6 +474,16 @@ TEST(FormatVariadicTest, DoubleFormatting) {
   EXPECT_EQ("  -0.001", formatv("{0,8:F3}", -.0012345678).str());
 }
 
+TEST(FormatVariadicTest, CustomPaddingCharacter) {
+  // 1. Padding with custom character
+  EXPECT_EQ("==123", formatv("{0,=+5}", 123).str());
+  EXPECT_EQ("=123=", formatv("{0,==5}", 123).str());
+  EXPECT_EQ("123==", formatv("{0,=-5}", 123).str());
+
+  // 2. Combined with zero padding
+  EXPECT_EQ("=00123=", formatv("{0,==7:5}", 123).str());
+}
+
 struct format_tuple {
   const char *Fmt;
   explicit format_tuple(const char *Fmt) : Fmt(Fmt) {}
@@ -608,4 +671,21 @@ TEST(FormatVariadicTest, CopiesAndMoves) {
   EXPECT_EQ("0C 3M", formatv("{0}", Recorder()).str());
   EXPECT_EQ(0, R.Copied);
   EXPECT_EQ(0, R.Moved);
+}
+
+namespace adl {
+struct X {};
+raw_ostream &operator<<(raw_ostream &OS, const X &) { return OS << "X"; }
+} // namespace adl
+TEST(FormatVariadicTest, FormatStreamable) {
+  adl::X X;
+  EXPECT_EQ("X", formatv("{0}", X).str());
+}
+
+TEST(FormatVariadicTest, FormatError) {
+  auto E1 = make_error<StringError>("X", inconvertibleErrorCode());
+  EXPECT_EQ("X", formatv("{0}", E1).str());
+  EXPECT_TRUE(E1.isA<StringError>()); // not consumed
+  EXPECT_EQ("X", formatv("{0}", fmt_consume(std::move(E1))).str());
+  EXPECT_FALSE(E1.isA<StringError>()); // consumed
 }

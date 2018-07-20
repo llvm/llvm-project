@@ -22,13 +22,13 @@ define internal fastcc void @memcpy2(i8* nocapture %dst, i8* nocapture readonly 
 entry:
   %vla = alloca i64, i64 %size, align 16
   %0 = bitcast i64* %vla to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %0, i8* %src, i64 %size, i32 1, i1 false)
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst, i8* %0, i64 %size, i32 1, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %0, i8* %src, i64 %size, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst, i8* %0, i64 %size, i1 false)
   ret void
 }
 
 ; Function Attrs: nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i32, i1) #2
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i1) #2
 
 attributes #0 = { nounwind ssp uwtable "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { inlinehint nounwind ssp uwtable "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }

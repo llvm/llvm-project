@@ -83,19 +83,34 @@ entry:
   store i16 1, i16* %a0i16ptr
 
   store i8 1, i8* %a2ptr
-; CHECK:      %[[mask1:.*]] = and i40 undef, 4294967295
-; CHECK-NEXT: %[[insert1:.*]] = or i40 %[[mask1]], 4294967296
 
   %a3i24ptr = bitcast i8* %a3ptr to i24*
   store i24 1, i24* %a3i24ptr
-; CHECK-NEXT: %[[mask2:.*]] = and i40 %[[insert1]], -4294967041
-; CHECK-NEXT: %[[insert2:.*]] = or i40 %[[mask2]], 256
 
   %a2i40ptr = bitcast i8* %a2ptr to i40*
   store i40 1, i40* %a2i40ptr
-; CHECK-NEXT: %[[ext3:.*]] = zext i40 1 to i56
-; CHECK-NEXT: %[[mask3:.*]] = and i56 undef, -1099511627776
-; CHECK-NEXT: %[[insert3:.*]] = or i56 %[[mask3]], %[[ext3]]
+
+; the alloca is splitted into multiple slices
+; Here, i8 1 is for %a[6]
+; CHECK: %[[ext1:.*]] = zext i8 1 to i40
+; CHECK-NEXT: %[[mask1:.*]] = and i40 undef, -256
+; CHECK-NEXT: %[[insert1:.*]] = or i40 %[[mask1]], %[[ext1]]
+
+; Here, i24 0 is for %a[3] to %a[5]
+; CHECK-NEXT: %[[ext2:.*]] = zext i24 0 to i40
+; CHECK-NEXT: %[[shift2:.*]] = shl i40 %[[ext2]], 8
+; CHECK-NEXT: %[[mask2:.*]] = and i40 %[[insert1]], -4294967041
+; CHECK-NEXT: %[[insert2:.*]] = or i40 %[[mask2]], %[[shift2]]
+
+; Here, i8 0 is for %a[2]
+; CHECK-NEXT: %[[ext3:.*]] = zext i8 0 to i40
+; CHECK-NEXT: %[[shift3:.*]] = shl i40 %[[ext3]], 32
+; CHECK-NEXT: %[[mask3:.*]] = and i40 %[[insert2]], 4294967295
+; CHECK-NEXT: %[[insert3:.*]] = or i40 %[[mask3]], %[[shift3]]
+
+; CHECK-NEXT: %[[ext4:.*]] = zext i40 %[[insert3]] to i56
+; CHECK-NEXT: %[[mask4:.*]] = and i56 undef, -1099511627776
+; CHECK-NEXT: %[[insert4:.*]] = or i56 %[[mask4]], %[[ext4]]
 
 ; CHECK-NOT: store
 ; CHECK-NOT: load
@@ -104,11 +119,12 @@ entry:
   %ai = load i56, i56* %aiptr
   %ret = zext i56 %ai to i64
   ret i64 %ret
-; CHECK-NEXT: %[[ext4:.*]] = zext i16 1 to i56
-; CHECK-NEXT: %[[shift4:.*]] = shl i56 %[[ext4]], 40
-; CHECK-NEXT: %[[mask4:.*]] = and i56 %[[insert3]], 1099511627775
-; CHECK-NEXT: %[[insert4:.*]] = or i56 %[[mask4]], %[[shift4]]
-; CHECK-NEXT: %[[ret:.*]] = zext i56 %[[insert4]] to i64
+; Here, i16 1 is for %a[0] to %a[1]
+; CHECK-NEXT: %[[ext5:.*]] = zext i16 1 to i56
+; CHECK-NEXT: %[[shift5:.*]] = shl i56 %[[ext5]], 40
+; CHECK-NEXT: %[[mask5:.*]] = and i56 %[[insert4]], 1099511627775
+; CHECK-NEXT: %[[insert5:.*]] = or i56 %[[mask5]], %[[shift5]]
+; CHECK-NEXT: %[[ret:.*]] = zext i56 %[[insert5]] to i64
 ; CHECK-NEXT: ret i64 %[[ret]]
 }
 
@@ -210,7 +226,7 @@ entry:
   store i64 34494054408, i64* %a2
   %tmp0 = bitcast { i32, i24 }* %a to i8*
   %tmp1 = bitcast i64* %a2 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %tmp0, i8* %tmp1, i64 8, i32 4, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %tmp0, i8* align 4 %tmp1, i64 8, i1 false)
 ; CHECK: %[[LO_SHR:.*]] = lshr i64 34494054408, 32
 ; CHECK: %[[LO_START:.*]] = trunc i64 %[[LO_SHR]] to i32
 ; CHECK: %[[HI_START:.*]] = trunc i64 34494054408 to i32
@@ -233,4 +249,4 @@ entry:
 ; CHECK: ret void
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8*, i8*, i64, i32, i1)
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8*, i8*, i64, i1)

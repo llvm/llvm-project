@@ -22,15 +22,16 @@ bb:
   %tmp15 = bitcast i8 addrspace(1)* %tmp14 to <4 x float> addrspace(1)*
   %tmp16 = getelementptr inbounds <4 x float>, <4 x float> addrspace(1)* %tmp15, i64 undef
   %tmp17 = load <4 x float>, <4 x float> addrspace(1)* %tmp16, align 16
-  %tmp18 = fsub <4 x float> undef, %tmp17
-  %tmp19 = fadd float undef, 0.000000e+00
+  %tmp18 = fsub <4 x float> %tmp17, %tmp17
+  %ext = extractelement <4 x float> %tmp18, i32 1
+  %tmp19 = fadd float %ext, 0.000000e+00
   %tmp20 = fcmp oeq float %tmp19, 0.000000e+00
   br i1 %tmp20, label %bb21, label %bb25
 
 bb21:                                             ; preds = %bb
-  %tmp22 = fmul <4 x float> %tmp18, undef
-  %tmp23 = fadd <4 x float> undef, %tmp22
-  %tmp24 = fmul <4 x float> undef, undef
+  %tmp22 = fmul <4 x float> %tmp18, %tmp18
+  %tmp23 = fadd <4 x float> %tmp22, %tmp22
+  %tmp24 = fmul <4 x float> %tmp23, %tmp23
   br label %bb28
 
 bb25:                                             ; preds = %bb

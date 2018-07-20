@@ -6,7 +6,7 @@ define i64 @t0(x86_mmx* %p) {
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movq (%rdi), %mm0
 ; CHECK-NEXT:    paddq %mm0, %mm0
-; CHECK-NEXT:    movd %mm0, %rax
+; CHECK-NEXT:    movq %mm0, %rax
 ; CHECK-NEXT:    retq
   %t = load x86_mmx, x86_mmx* %p
   %u = tail call x86_mmx @llvm.x86.mmx.padd.q(x86_mmx %t, x86_mmx %t)
@@ -19,7 +19,7 @@ define i64 @t1(x86_mmx* %p) {
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movq (%rdi), %mm0
 ; CHECK-NEXT:    paddd %mm0, %mm0
-; CHECK-NEXT:    movd %mm0, %rax
+; CHECK-NEXT:    movq %mm0, %rax
 ; CHECK-NEXT:    retq
   %t = load x86_mmx, x86_mmx* %p
   %u = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %t, x86_mmx %t)
@@ -32,7 +32,7 @@ define i64 @t2(x86_mmx* %p) {
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movq (%rdi), %mm0
 ; CHECK-NEXT:    paddw %mm0, %mm0
-; CHECK-NEXT:    movd %mm0, %rax
+; CHECK-NEXT:    movq %mm0, %rax
 ; CHECK-NEXT:    retq
   %t = load x86_mmx, x86_mmx* %p
   %u = tail call x86_mmx @llvm.x86.mmx.padd.w(x86_mmx %t, x86_mmx %t)
@@ -45,7 +45,7 @@ define i64 @t3(x86_mmx* %p) {
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movq (%rdi), %mm0
 ; CHECK-NEXT:    paddb %mm0, %mm0
-; CHECK-NEXT:    movd %mm0, %rax
+; CHECK-NEXT:    movq %mm0, %rax
 ; CHECK-NEXT:    retq
   %t = load x86_mmx, x86_mmx* %p
   %u = tail call x86_mmx @llvm.x86.mmx.padd.b(x86_mmx %t, x86_mmx %t)
@@ -58,8 +58,8 @@ define i64 @t3(x86_mmx* %p) {
 define void @t4(<1 x i64> %A, <1 x i64> %B) {
 ; CHECK-LABEL: t4:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    movd %rdi, %mm0
-; CHECK-NEXT:    movd %rsi, %mm1
+; CHECK-NEXT:    movq %rdi, %mm0
+; CHECK-NEXT:    movq %rsi, %mm1
 ; CHECK-NEXT:    paddusw %mm0, %mm1
 ; CHECK-NEXT:    movq _R@{{.*}}(%rip), %rax
 ; CHECK-NEXT:    movq %mm1, (%rax)
@@ -93,9 +93,9 @@ declare x86_mmx @llvm.x86.mmx.pslli.q(x86_mmx, i32)
 define <1 x i64> @t6(i64 %t) {
 ; CHECK-LABEL: t6:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    movd %rdi, %mm0
+; CHECK-NEXT:    movq %rdi, %mm0
 ; CHECK-NEXT:    psllq $48, %mm0
-; CHECK-NEXT:    movd %mm0, %rax
+; CHECK-NEXT:    movq %mm0, %rax
 ; CHECK-NEXT:    retq
   %t1 = insertelement <1 x i64> undef, i64 %t, i32 0
   %t0 = bitcast <1 x i64> %t1 to x86_mmx

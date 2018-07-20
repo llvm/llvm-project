@@ -65,8 +65,21 @@ void MachineDominatorTree::releaseMemory() {
 }
 
 void MachineDominatorTree::verifyAnalysis() const {
-  if (DT && VerifyMachineDomInfo)
-    verifyDomTree();
+  if (DT && VerifyMachineDomInfo) {
+    MachineFunction &F = *getRoot()->getParent();
+
+    DomTreeBase<MachineBasicBlock> OtherDT;
+    OtherDT.recalculate(F);
+    if (getRootNode()->getBlock() != OtherDT.getRootNode()->getBlock() ||
+        DT->compare(OtherDT)) {
+      errs() << "MachineDominatorTree for function " << F.getName()
+            << " is not up to date!\nComputed:\n";
+      DT->print(errs());
+      errs() << "\nActual:\n";
+      OtherDT.print(errs());
+      abort();
+    }
+  }
 }
 
 void MachineDominatorTree::print(raw_ostream &OS, const Module*) const {
@@ -137,22 +150,4 @@ void MachineDominatorTree::applySplitCriticalEdges() const {
   }
   NewBBs.clear();
   CriticalEdgesToSplit.clear();
-}
-
-void MachineDominatorTree::verifyDomTree() const {
-  if (!DT)
-    return;
-  MachineFunction &F = *getRoot()->getParent();
-
-  DomTreeBase<MachineBasicBlock> OtherDT;
-  OtherDT.recalculate(F);
-  if (getRootNode()->getBlock() != OtherDT.getRootNode()->getBlock() ||
-      DT->compare(OtherDT)) {
-    errs() << "MachineDominatorTree for function " << F.getName()
-           << " is not up to date!\nComputed:\n";
-    DT->print(errs());
-    errs() << "\nActual:\n";
-    OtherDT.print(errs());
-    abort();
-  }
 }

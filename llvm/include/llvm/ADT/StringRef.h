@@ -201,7 +201,7 @@ namespace llvm {
     LLVM_NODISCARD
     int compare_numeric(StringRef RHS) const;
 
-    /// \brief Determine the edit distance between this string and another
+    /// Determine the edit distance between this string and another
     /// string.
     ///
     /// \param Other the string to compare this string against.
@@ -725,10 +725,7 @@ namespace llvm {
     /// \returns The split substrings.
     LLVM_NODISCARD
     std::pair<StringRef, StringRef> split(char Separator) const {
-      size_t Idx = find(Separator);
-      if (Idx == npos)
-        return std::make_pair(*this, StringRef());
-      return std::make_pair(slice(0, Idx), slice(Idx+1, npos));
+      return split(StringRef(&Separator, 1));
     }
 
     /// Split into two substrings around the first occurrence of a separator
@@ -744,6 +741,24 @@ namespace llvm {
     LLVM_NODISCARD
     std::pair<StringRef, StringRef> split(StringRef Separator) const {
       size_t Idx = find(Separator);
+      if (Idx == npos)
+        return std::make_pair(*this, StringRef());
+      return std::make_pair(slice(0, Idx), slice(Idx + Separator.size(), npos));
+    }
+
+    /// Split into two substrings around the last occurrence of a separator
+    /// string.
+    ///
+    /// If \p Separator is in the string, then the result is a pair (LHS, RHS)
+    /// such that (*this == LHS + Separator + RHS) is true and RHS is
+    /// minimal. If \p Separator is not in the string, then the result is a
+    /// pair (LHS, RHS) where (*this == LHS) and (RHS == "").
+    ///
+    /// \param Separator - The string to split on.
+    /// \return - The split substrings.
+    LLVM_NODISCARD
+    std::pair<StringRef, StringRef> rsplit(StringRef Separator) const {
+      size_t Idx = rfind(Separator);
       if (Idx == npos)
         return std::make_pair(*this, StringRef());
       return std::make_pair(slice(0, Idx), slice(Idx + Separator.size(), npos));
@@ -796,10 +811,7 @@ namespace llvm {
     /// \return - The split substrings.
     LLVM_NODISCARD
     std::pair<StringRef, StringRef> rsplit(char Separator) const {
-      size_t Idx = rfind(Separator);
-      if (Idx == npos)
-        return std::make_pair(*this, StringRef());
-      return std::make_pair(slice(0, Idx), slice(Idx+1, npos));
+      return rsplit(StringRef(&Separator, 1));
     }
 
     /// Return string with consecutive \p Char characters starting from the
@@ -855,6 +867,10 @@ namespace llvm {
   /// constexpr StringLiteral S("test");
   ///
   class StringLiteral : public StringRef {
+  private:
+    constexpr StringLiteral(const char *Str, size_t N) : StringRef(Str, N) {
+    }
+
   public:
     template <size_t N>
     constexpr StringLiteral(const char (&Str)[N])
@@ -866,6 +882,12 @@ namespace llvm {
 #pragma clang diagnostic pop
 #endif
         : StringRef(Str, N - 1) {
+    }
+
+    // Explicit construction for strings like "foo\0bar".
+    template <size_t N>
+    static constexpr StringLiteral withInnerNUL(const char (&Str)[N]) {
+      return StringLiteral(Str, N - 1);
     }
   };
 
@@ -902,7 +924,7 @@ namespace llvm {
 
   /// @}
 
-  /// \brief Compute a hash_code for a StringRef.
+  /// Compute a hash_code for a StringRef.
   LLVM_NODISCARD
   hash_code hash_value(StringRef S);
 

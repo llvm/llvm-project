@@ -25,8 +25,8 @@ entry:
   %m = getelementptr inbounds %struct.n, %struct.n* %p, i32 0, i32 0
   %arraydecay = getelementptr inbounds [2 x %struct.l], [2 x %struct.l]* %m, i32 0, i32 0
   %3 = bitcast %struct.l* %arraydecay to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %3, i8* getelementptr inbounds ({ <{ { %struct.e, { i8, i8, i8, [5 x i8] }, %struct.e }, { %struct.e, { i8, i8, i8, [5 x i8] }, %struct.e } }> }, { <{ { %struct.e, { i8, i8, i8, [5 x i8] }, %struct.e }, { %struct.e, { i8, i8, i8, [5 x i8] }, %struct.e } }> }* @y, i32 0, i32 0, i32 0, i32 0, i32 0), i32 32, i32 4, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 %3, i8* align 4 getelementptr inbounds ({ <{ { %struct.e, { i8, i8, i8, [5 x i8] }, %struct.e }, { %struct.e, { i8, i8, i8, [5 x i8] }, %struct.e } }> }, { <{ { %struct.e, { i8, i8, i8, [5 x i8] }, %struct.e }, { %struct.e, { i8, i8, i8, [5 x i8] }, %struct.e } }> }* @y, i32 0, i32 0, i32 0, i32 0, i32 0), i32 32, i1 false)
   ret void
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i32, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind

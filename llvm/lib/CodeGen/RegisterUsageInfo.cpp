@@ -83,7 +83,7 @@ void PhysicalRegisterUsageInfo::print(raw_ostream &OS, const Module *M) const {
     FPRMPairVector.push_back(&RegMask);
 
   // sort the vector to print analysis in alphabatic order of function name.
-  std::sort(
+  llvm::sort(
       FPRMPairVector.begin(), FPRMPairVector.end(),
       [](const FuncPtrRegMaskPair *A, const FuncPtrRegMaskPair *B) -> bool {
         return A->first->getName() < B->first->getName();

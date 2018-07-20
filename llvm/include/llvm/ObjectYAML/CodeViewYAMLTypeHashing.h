@@ -32,10 +32,10 @@ namespace CodeViewYAML {
 struct GlobalHash {
   GlobalHash() = default;
   explicit GlobalHash(StringRef S) : Hash(S) {
-    assert(S.size() == 20 && "Invalid hash size!");
+    assert(S.size() == 8 && "Invalid hash size!");
   }
   explicit GlobalHash(ArrayRef<uint8_t> S) : Hash(S) {
-    assert(S.size() == 20 && "Invalid hash size!");
+    assert(S.size() == 8 && "Invalid hash size!");
   }
   yaml::BinaryRef Hash;
 };
@@ -47,7 +47,7 @@ struct DebugHSection {
   std::vector<GlobalHash> Hashes;
 };
 
-DebugHSection fromDebugH(ArrayRef<uint8_t> DebugT);
+DebugHSection fromDebugH(ArrayRef<uint8_t> DebugH);
 ArrayRef<uint8_t> toDebugH(const DebugHSection &DebugH,
                            BumpPtrAllocator &Alloc);
 

@@ -122,7 +122,10 @@ Expected<uint32_t> PDBStringTable::getIDForString(StringRef Str) const {
     // we iterate the entire array.
     uint32_t Index = (Start + I) % Count;
 
+    // If we find 0, it means the item isn't in the hash table.
     uint32_t ID = IDs[Index];
+    if (ID == 0)
+      return make_error<RawError>(raw_error_code::no_entry);
     auto ExpectedStr = getStringForID(ID);
     if (!ExpectedStr)
       return ExpectedStr.takeError();

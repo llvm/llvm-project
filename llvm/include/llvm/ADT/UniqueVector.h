@@ -72,16 +72,16 @@ public:
     return Vector[ID - 1];
   }
 
-  /// \brief Return an iterator to the start of the vector.
+  /// Return an iterator to the start of the vector.
   iterator begin() { return Vector.begin(); }
 
-  /// \brief Return an iterator to the start of the vector.
+  /// Return an iterator to the start of the vector.
   const_iterator begin() const { return Vector.begin(); }
 
-  /// \brief Return an iterator to the end of the vector.
+  /// Return an iterator to the end of the vector.
   iterator end() { return Vector.end(); }
 
-  /// \brief Return an iterator to the end of the vector.
+  /// Return an iterator to the end of the vector.
   const_iterator end() const { return Vector.end(); }
 
   /// size - Returns the number of entries in the vector.

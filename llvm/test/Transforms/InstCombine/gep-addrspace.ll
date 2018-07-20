@@ -32,3 +32,22 @@ entry:
   ret void
 }
 
+declare void @escape_alloca(i16*)
+
+; check that addrspacecast is not ignored (leading to an assertion failure)
+; when trying to mark a GEP as inbounds
+define { i8, i8 } @inbounds_after_addrspacecast() {
+top:
+; CHECK-LABEL: @inbounds_after_addrspacecast
+  %0 = alloca i16, align 2
+  call void @escape_alloca(i16* %0)
+  %tmpcast = bitcast i16* %0 to [2 x i8]*
+; CHECK: addrspacecast [2 x i8]* %tmpcast to [2 x i8] addrspace(11)*
+  %1 = addrspacecast [2 x i8]* %tmpcast to [2 x i8] addrspace(11)*
+; CHECK: getelementptr [2 x i8], [2 x i8] addrspace(11)* %1, i64 0, i64 1
+  %2 = getelementptr [2 x i8], [2 x i8] addrspace(11)* %1, i64 0, i64 1
+; CHECK: addrspace(11)
+  %3 = load i8, i8 addrspace(11)* %2, align 1
+  %.fca.1.insert = insertvalue { i8, i8 } zeroinitializer, i8 %3, 1
+  ret { i8, i8 } %.fca.1.insert
+}

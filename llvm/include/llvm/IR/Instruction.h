@@ -128,6 +128,7 @@ public:
   const char *getOpcodeName() const { return getOpcodeName(getOpcode()); }
   bool isTerminator() const { return isTerminator(getOpcode()); }
   bool isBinaryOp() const { return isBinaryOp(getOpcode()); }
+  bool isIntDivRem() const { return isIntDivRem(getOpcode()); }
   bool isShift() { return isShift(getOpcode()); }
   bool isCast() const { return isCast(getOpcode()); }
   bool isFuncletPad() const { return isFuncletPad(getOpcode()); }
@@ -140,6 +141,10 @@ public:
 
   static inline bool isBinaryOp(unsigned Opcode) {
     return Opcode >= BinaryOpsBegin && Opcode < BinaryOpsEnd;
+  }
+
+  static inline bool isIntDivRem(unsigned Opcode) {
+    return Opcode == UDiv || Opcode == SDiv || Opcode == URem || Opcode == SRem;
   }
 
   /// Determine if the Opcode is one of the shift instructions.
@@ -284,7 +289,7 @@ public:
   /// Return the debug location for this node as a DebugLoc.
   const DebugLoc &getDebugLoc() const { return DbgLoc; }
 
-  /// Set or clear the nsw flag on this instruction, which must be an operator
+  /// Set or clear the nuw flag on this instruction, which must be an operator
   /// which supports this flag. See LangRef.html for the meaning of this flag.
   void setHasNoUnsignedWrap(bool b = true);
 
@@ -535,6 +540,14 @@ public:
   /// matters, isSafeToSpeculativelyExecute may be more appropriate.
   bool mayHaveSideEffects() const { return mayWriteToMemory() || mayThrow(); }
 
+  /// Return true if the instruction can be removed if the result is unused.
+  ///
+  /// When constant folding some instructions cannot be removed even if their
+  /// results are unused. Specifically terminator instructions and calls that
+  /// may have side effects cannot be removed without semantically changing the
+  /// generated program.
+  bool isSafeToRemove() const;
+  
   /// Return true if the instruction is a variety of EH-block.
   bool isEHPad() const {
     switch (getOpcode()) {
@@ -546,6 +559,14 @@ public:
     default:
       return false;
     }
+  }
+
+  /// Return a pointer to the next non-debug instruction in the same basic
+  /// block as 'this', or nullptr if no such instruction exists.
+  const Instruction *getNextNonDebugInstruction() const;
+  Instruction *getNextNonDebugInstruction() {
+    return const_cast<Instruction *>(
+        static_cast<const Instruction *>(this)->getNextNonDebugInstruction());
   }
 
   /// Create a copy of 'this' instruction that is identical in all ways except
@@ -582,7 +603,7 @@ public:
   /// be identical.
   /// @returns true if the specified instruction is the same operation as
   /// the current one.
-  /// @brief Determine if one instruction is the same operation as another.
+  /// Determine if one instruction is the same operation as another.
   bool isSameOperationAs(const Instruction *I, unsigned flags = 0) const;
 
   /// Return true if there are any uses of this instruction in blocks other than

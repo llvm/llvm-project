@@ -15,6 +15,10 @@
 //===----------------------------------------------------------------------===//
 
 // C's ?: operator for floating-point operands.
+let Predicates = [FeatureVector] in {
+  def SelectVR32 : SelectWrapper<f32, VR32>;
+  def SelectVR64 : SelectWrapper<f64, VR64>;
+}
 def SelectF32  : SelectWrapper<f32, FP32>;
 def SelectF64  : SelectWrapper<f64, FP64>;
 let Predicates = [FeatureNoVectorEnhancements1] in
@@ -65,7 +69,7 @@ let Predicates = [FeatureNoVector] in {
 
 // Use a normal load-and-test for compare against zero in case of
 // vector support (via a pseudo to simplify instruction selection).
-let Defs = [CC], usesCustomInserter = 1 in {
+let Defs = [CC], usesCustomInserter = 1, hasNoSchedulingInfo = 1 in {
   def LTEBRCompare_VecPseudo : Pseudo<(outs), (ins FP32:$R1, FP32:$R2), []>;
   def LTDBRCompare_VecPseudo : Pseudo<(outs), (ins FP64:$R1, FP64:$R2), []>;
   def LTXBRCompare_VecPseudo : Pseudo<(outs), (ins FP128:$R1, FP128:$R2), []>;

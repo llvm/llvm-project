@@ -30,7 +30,7 @@ define i32 @func(i32) #0 !dbg !8 {
 ; CHECK: ldr     w[[REG:[0-9]+]], [sp, #8]
 ; CHECK-NEXT: .Ltmp
   call void @llvm.dbg.value(metadata i32 %.0, i64 0, metadata !15, metadata !13), !dbg !16
-; CHECK-NEXT:  //DEBUG_VALUE: func:c <- %w[[REG]]
+; CHECK-NEXT:  //DEBUG_VALUE: func:c <- $w[[REG]]
   %5 = add nsw i32 %.0, %0, !dbg !22
   call void @llvm.dbg.value(metadata i32 %5, i64 0, metadata !15, metadata !13), !dbg !16
   ret i32 %5, !dbg !23
@@ -57,7 +57,7 @@ attributes #1 = { nounwind readnone }
 !5 = !{i32 1, !"wchar_size", i32 4}
 !6 = !{i32 1, !"min_enum_size", i32 4}
 !7 = !{!"clang"}
-!8 = distinct !DISubprogram(name: "func", scope: !1, file: !1, line: 1, type: !9, isLocal: false, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
+!8 = distinct !DISubprogram(name: "func", scope: !1, file: !1, line: 1, type: !9, isLocal: false, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
 !9 = !DISubroutineType(types: !10)
 !10 = !{!11, !11}
 !11 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)

@@ -125,18 +125,36 @@ multiclass ArcBinaryInst<bits<5> major, bits<6> mincode,
                         (ins GPR32:$B, GPR32:$C),
                         !strconcat(opasm, "\t$A, $B, $C"),
                         []>;
+  def _f_rrr : F32_DOP_RR<major, mincode, 1, (outs GPR32:$A),
+                          (ins GPR32:$B, GPR32:$C),
+                          !strconcat(opasm, ".f\t$A, $B, $C"),
+                          []>
+  { let Defs = [STATUS32]; }
 
   // 2 register with unsigned 6-bit immediate variant.
   def _rru6 : F32_DOP_RU6<major, mincode, 0, (outs GPR32:$A),
                           (ins GPR32:$B, immU6:$U6),
                           !strconcat(opasm, "\t$A, $B, $U6"),
                           []>;
+  def _f_rru6 : F32_DOP_RU6<major, mincode, 1, (outs GPR32:$A),
+                            (ins GPR32:$B, immU6:$U6),
+                            !strconcat(opasm, ".f\t$A, $B, $U6"),
+                            []>
+  { let Defs = [STATUS32]; }
+
   // 2 register with 32-bit immediate variant.
   def _rrlimm : F32_DOP_RLIMM<major, mincode, 0,
-                      (outs GPR32:$A),
-                      (ins GPR32:$B, i32imm:$LImm),
-                      !strconcat(opasm, "\t$A, $B, $LImm"),
-                      []>;
+                              (outs GPR32:$A),
+                              (ins GPR32:$B, i32imm:$LImm),
+                              !strconcat(opasm, "\t$A, $B, $LImm"),
+                              []>;
+  def _f_rrlimm : F32_DOP_RLIMM<major, mincode, 1,
+                                (outs GPR32:$A),
+                                (ins GPR32:$B, i32imm:$LImm),
+                                !strconcat(opasm, ".f\t$A, $B, $LImm"),
+                                []>
+  { let Defs = [STATUS32]; }
+
   // 2 matched-register with signed 12-bit immediate variant (add r0, r0, -1).
   def _rrs12 : F32_DOP_RS12<major, mincode, 0,
                             (outs GPR32:$B),
@@ -144,6 +162,12 @@ multiclass ArcBinaryInst<bits<5> major, bits<6> mincode,
                             !strconcat(opasm, "\t$B, $in, $S12"),
                             []>
   { let Constraints = "$B = $in"; }
+  def _f_rrs12 : F32_DOP_RS12<major, mincode, 1,
+                              (outs GPR32:$B),
+                              (ins GPR32:$in, immS<12>:$S12),
+                              !strconcat(opasm, ".f\t$B, $in, $S12"),
+                              []>
+  { let Constraints = "$B = $in"; let Defs = [STATUS32]; }
 }
 
 // Special multivariant GEN4 DOP format instruction that take 2 registers.
@@ -168,6 +192,10 @@ multiclass ArcUnaryInst<bits<5> major, bits<6> subop,
                         string opasm> {
   def _rr : F32_SOP_RR<major, subop, 0, (outs GPR32:$B), (ins GPR32:$C),
                        !strconcat(opasm, "\t$B, $C"), []>;
+
+  def _f_rr : F32_SOP_RR<major, subop, 1, (outs GPR32:$B), (ins GPR32:$C),
+                       !strconcat(opasm, ".f\t$B, $C"), []>
+  { let Defs = [STATUS32]; }
 }
 
 
@@ -328,11 +356,19 @@ let isBranch = 1, isTerminator = 1 in {
                                  { let Size = 8; }
 } // let isBranch, isTerminator
 
-// Indirect, unconditional Jump.
-let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1 in
-def J :  F32_DOP_RR<0b00100, 0b100000, 0,
-               (outs), (ins GPR32:$C),
-               "j\t[$C]", [(brind i32:$C)]>;
+// Unconditional Jump.
+let isBranch = 1, isTerminator = 1, isBarrier = 1 in {
+  // Indirect.
+  let isIndirectBranch = 1 in
+  def J :  F32_DOP_RR<0b00100, 0b100000, 0,
+                      (outs), (ins GPR32:$C),
+                      "j\t[$C]", [(brind i32:$C)]>;
+
+  // Direct.
+  def J_LImm : F32_DOP_RLIMM<0b00100, 0b100000, 0,
+                             (outs), (ins i32imm:$LImm),
+                             "j\t$LImm", []>;
+}
 
 // Call instructions.
 let isCall = 1, isBarrier = 1, Defs = [BLINK], Uses = [SP] in {
@@ -344,6 +380,10 @@ let isCall = 1, isBarrier = 1, Defs = [BLINK], Uses = [SP] in {
   let isIndirectBranch = 1 in
   def JL : F32_DOP_RR<0b00100, 0b100010, 0, (outs), (ins GPR32:$C),
                      "jl\t[$C]", [(ARCJumpLink i32:$C)]>;
+
+  // Direct unconditional call.
+  def JL_LImm : F32_DOP_RLIMM<0b00100, 0b100010, 0, (outs), (ins i32imm:$LImm),
+                              "jl\t$LImm", []>;
 } // let isCall, isBarrier, Defs, Uses
 
 // Pattern to generate BL instruction.

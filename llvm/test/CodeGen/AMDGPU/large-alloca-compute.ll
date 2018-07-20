@@ -46,14 +46,14 @@
 ; GCNHSA: buffer_store_dword {{v[0-9]+}}, {{v[0-9]+}}, s[0:3], s9 offen
 ; GCNHSA: buffer_load_dword {{v[0-9]+}}, {{v[0-9]+}}, s[0:3], s9 offen
 
-; Scratch size = alloca size + emergency stack slot
+; Scratch size = alloca size + emergency stack slot, align {{.*}}, addrspace(5)
 ; ALL: ; ScratchSize: 32772
 define amdgpu_kernel void @large_alloca_compute_shader(i32 %x, i32 %y) #0 {
-  %large = alloca [8192 x i32], align 4
-  %gep = getelementptr [8192 x i32], [8192 x i32]* %large, i32 0, i32 8191
-  store volatile i32 %x, i32* %gep
-  %gep1 = getelementptr [8192 x i32], [8192 x i32]* %large, i32 0, i32 %y
-  %val = load volatile i32, i32* %gep1
+  %large = alloca [8192 x i32], align 4, addrspace(5)
+  %gep = getelementptr [8192 x i32], [8192 x i32] addrspace(5)* %large, i32 0, i32 8191
+  store volatile i32 %x, i32 addrspace(5)* %gep
+  %gep1 = getelementptr [8192 x i32], [8192 x i32] addrspace(5)* %large, i32 0, i32 %y
+  %val = load volatile i32, i32 addrspace(5)* %gep1
   store volatile i32 %val, i32 addrspace(1)* undef
   ret void
 }

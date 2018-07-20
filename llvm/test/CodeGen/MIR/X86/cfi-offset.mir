@@ -28,20 +28,20 @@ fixedStack:
   - { id: 0, type: spill-slot, offset: -16, size: 8, alignment: 16 }
 body: |
   bb.0.entry:
-    liveins: %ecx, %edi, %edx, %esi, %rbx
+    liveins: $ecx, $edi, $edx, $esi, $rbx
 
-    PUSH64r killed %rbx, implicit-def %rsp, implicit %rsp
+    PUSH64r killed $rbx, implicit-def $rsp, implicit $rsp
     CFI_INSTRUCTION def_cfa_offset 16
-    ; CHECK: CFI_INSTRUCTION offset %rbx, -16
-    CFI_INSTRUCTION offset %rbx, -16
-    %ebx = COPY %edi, implicit-def %rbx
-    %ebx = ADD32rr %ebx, killed %esi, implicit-def dead %eflags
-    %ebx = ADD32rr %ebx, killed %edx, implicit-def dead %eflags
-    %ebx = ADD32rr %ebx, killed %ecx, implicit-def dead %eflags
-    %edi = COPY %ebx
-    CALL64pcrel32 @foo, csr_64, implicit %rsp, implicit %edi, implicit-def %rsp
-    %eax = LEA64_32r killed %rbx, 1, %rbx, 0, _
-    %rbx = POP64r implicit-def %rsp, implicit %rsp
-    RETQ %eax
+    ; CHECK: CFI_INSTRUCTION offset $rbx, -16
+    CFI_INSTRUCTION offset $rbx, -16
+    $ebx = COPY $edi, implicit-def $rbx
+    $ebx = ADD32rr $ebx, killed $esi, implicit-def dead $eflags
+    $ebx = ADD32rr $ebx, killed $edx, implicit-def dead $eflags
+    $ebx = ADD32rr $ebx, killed $ecx, implicit-def dead $eflags
+    $edi = COPY $ebx
+    CALL64pcrel32 @foo, csr_64, implicit $rsp, implicit $edi, implicit-def $rsp
+    $eax = LEA64_32r killed $rbx, 1, $rbx, 0, _
+    $rbx = POP64r implicit-def $rsp, implicit $rsp
+    RETQ $eax
 ...
 

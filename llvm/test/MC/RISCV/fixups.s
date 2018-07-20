@@ -48,3 +48,25 @@ addi zero, zero, 0
 .set val, 0x12345678
 
 # CHECK-REL-NOT: R_RISCV
+
+# Testing the function call offset could resovled by assembler
+# when the function and the callsite within the same compile unit
+# and the linker relaxation is disabled.
+func:
+.fill 100
+call func
+# CHECK-FIXUP: fixup A - offset: 0, value: func, kind: fixup_riscv_call
+# CHECK-INSTR: auipc   ra, 0
+# CHECK-INSTR: jalr    ra, ra, -100
+
+.fill 10000
+call func
+# CHECK-FIXUP: fixup A - offset: 0, value: func, kind: fixup_riscv_call
+# CHECK-INSTR: auipc   ra, 1048574
+# CHECK-INSTR: jalr    ra, ra, -1916
+
+.fill 20888
+call func
+# CHECK-FIXUP: fixup A - offset: 0, value: func, kind: fixup_riscv_call
+# CHECK-INSTR: auipc   ra, 1048568
+# CHECK-INSTR: jalr    ra, ra, 1764

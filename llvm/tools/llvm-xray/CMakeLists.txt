@@ -4,18 +4,18 @@ set(LLVM_LINK_COMPONENTS
   Object
   Support
   Symbolize
-  XRay)
+  XRay
+  )
 
-set(LLVM_XRAY_TOOLS
-  func-id-helper.cc
-  xray-account.cc
-  xray-color-helper.cc
-  xray-converter.cc
-  xray-extract.cc
-  xray-extract.cc
-  xray-graph.cc
-  xray-graph-diff.cc
-  xray-stacks.cc
-  xray-registry.cc)
-
-add_llvm_tool(llvm-xray llvm-xray.cc ${LLVM_XRAY_TOOLS})
+add_llvm_tool(llvm-xray
+  func-id-helper.cpp
+  llvm-xray.cpp
+  xray-account.cpp
+  xray-color-helper.cpp
+  xray-converter.cpp
+  xray-extract.cpp
+  xray-graph-diff.cpp
+  xray-graph.cpp
+  xray-registry.cpp
+  xray-stacks.cpp
+  )

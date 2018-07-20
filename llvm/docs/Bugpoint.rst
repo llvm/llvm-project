@@ -198,14 +198,14 @@ desired ranges.  For example:
 
   static int calledCount = 0;
   calledCount++;
-  DEBUG(if (calledCount < 212) return false);
-  DEBUG(if (calledCount > 217) return false);
-  DEBUG(if (calledCount == 213) return false);
-  DEBUG(if (calledCount == 214) return false);
-  DEBUG(if (calledCount == 215) return false);
-  DEBUG(if (calledCount == 216) return false);
-  DEBUG(dbgs() << "visitXOR calledCount: " << calledCount << "\n");
-  DEBUG(dbgs() << "I: "; I->dump());
+  LLVM_DEBUG(if (calledCount < 212) return false);
+  LLVM_DEBUG(if (calledCount > 217) return false);
+  LLVM_DEBUG(if (calledCount == 213) return false);
+  LLVM_DEBUG(if (calledCount == 214) return false);
+  LLVM_DEBUG(if (calledCount == 215) return false);
+  LLVM_DEBUG(if (calledCount == 216) return false);
+  LLVM_DEBUG(dbgs() << "visitXOR calledCount: " << calledCount << "\n");
+  LLVM_DEBUG(dbgs() << "I: "; I->dump());
 
 could be added to ``visitXOR`` to limit ``visitXor`` to being applied only to
 calls 212 and 217. This is from an actual test case and raises an important

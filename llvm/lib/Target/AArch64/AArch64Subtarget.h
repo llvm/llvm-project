@@ -48,6 +48,7 @@ public:
     CortexA75,
     Cyclone,
     ExynosM1,
+    ExynosM3,
     Falkor,
     Kryo,
     Saphira,
@@ -65,6 +66,7 @@ protected:
   bool HasV8_1aOps = false;
   bool HasV8_2aOps = false;
   bool HasV8_3aOps = false;
+  bool HasV8_4aOps = false;
 
   bool HasFPARMv8 = false;
   bool HasNEON = false;
@@ -77,9 +79,18 @@ protected:
   bool HasPerfMon = false;
   bool HasFullFP16 = false;
   bool HasSPE = false;
+
+  // ARMv8.4 Crypto extensions
+  bool HasSM4 = true;
+  bool HasSHA3 = true;
+
+  bool HasSHA2 = true;
+  bool HasAES = true;
+
   bool HasLSLFast = false;
   bool HasSVE = false;
   bool HasRCPC = false;
+  bool HasAggressiveFMA = false;
 
   // HasZeroCycleRegMove - Has zero-cycle register mov instructions.
   bool HasZeroCycleRegMove = false;
@@ -98,10 +109,10 @@ protected:
   unsigned MinVectorRegisterBitWidth = 64;
 
   bool UseAA = false;
-  bool Limit16FPRegs = false;
   bool PredictableSelectIsExpensive = false;
   bool BalanceFPOps = false;
   bool CustomAsCheapAsMove = false;
+  bool ExynosAsCheapAsMove = false;
   bool UsePostRAScheduler = false;
   bool Misaligned128StoreIsSlow = false;
   bool Paired128IsSlow = false;
@@ -109,7 +120,9 @@ protected:
   bool UseAlternateSExtLoadCVTF32Pattern = false;
   bool HasArithmeticBccFusion = false;
   bool HasArithmeticCbzFusion = false;
+  bool HasFuseAddress = false;
   bool HasFuseAES = false;
+  bool HasFuseCCSelect = false;
   bool HasFuseLiterals = false;
   bool DisableLatencySchedHeuristic = false;
   bool UseRSqrt = false;
@@ -126,6 +139,9 @@ protected:
 
   // ReserveX18 - X18 is not available as a general purpose register.
   bool ReserveX18;
+
+  // ReserveX20 - X20 is not available as a general purpose register.
+  bool ReserveX20 = false;
 
   bool IsLittle;
 
@@ -194,6 +210,7 @@ public:
   bool hasV8_1aOps() const { return HasV8_1aOps; }
   bool hasV8_2aOps() const { return HasV8_2aOps; }
   bool hasV8_3aOps() const { return HasV8_3aOps; }
+  bool hasV8_4aOps() const { return HasV8_4aOps; }
 
   bool hasZeroCycleRegMove() const { return HasZeroCycleRegMove; }
 
@@ -212,7 +229,7 @@ public:
   }
 
   bool isX18Reserved() const { return ReserveX18; }
-  bool limit16FPRegs() const { return Limit16FPRegs; }
+  bool isX20Reserved() const { return ReserveX20; }
   bool hasFPARMv8() const { return HasFPARMv8; }
   bool hasNEON() const { return HasNEON; }
   bool hasCrypto() const { return HasCrypto; }
@@ -221,11 +238,16 @@ public:
   bool hasLSE() const { return HasLSE; }
   bool hasRAS() const { return HasRAS; }
   bool hasRDM() const { return HasRDM; }
+  bool hasSM4() const { return HasSM4; }
+  bool hasSHA3() const { return HasSHA3; }
+  bool hasSHA2() const { return HasSHA2; }
+  bool hasAES() const { return HasAES; }
   bool balanceFPOps() const { return BalanceFPOps; }
   bool predictableSelectIsExpensive() const {
     return PredictableSelectIsExpensive;
   }
   bool hasCustomCheapAsMoveHandling() const { return CustomAsCheapAsMove; }
+  bool hasExynosCheapAsMoveHandling() const { return ExynosAsCheapAsMove; }
   bool isMisaligned128StoreSlow() const { return Misaligned128StoreIsSlow; }
   bool isPaired128Slow() const { return Paired128IsSlow; }
   bool isSTRQroSlow() const { return STRQroIsSlow; }
@@ -234,13 +256,15 @@ public:
   }
   bool hasArithmeticBccFusion() const { return HasArithmeticBccFusion; }
   bool hasArithmeticCbzFusion() const { return HasArithmeticCbzFusion; }
+  bool hasFuseAddress() const { return HasFuseAddress; }
   bool hasFuseAES() const { return HasFuseAES; }
+  bool hasFuseCCSelect() const { return HasFuseCCSelect; }
   bool hasFuseLiterals() const { return HasFuseLiterals; }
 
-  /// \brief Return true if the CPU supports any kind of instruction fusion.
+  /// Return true if the CPU supports any kind of instruction fusion.
   bool hasFusion() const {
     return hasArithmeticBccFusion() || hasArithmeticCbzFusion() ||
-           hasFuseAES() || hasFuseLiterals();
+           hasFuseAES() || hasFuseCCSelect() || hasFuseLiterals();
   }
 
   bool useRSqrt() const { return UseRSqrt; }
@@ -271,6 +295,7 @@ public:
   bool hasLSLFast() const { return HasLSLFast; }
   bool hasSVE() const { return HasSVE; }
   bool hasRCPC() const { return HasRCPC; }
+  bool hasAggressiveFMA() const { return HasAggressiveFMA; }
 
   bool isLittleEndian() const { return IsLittle; }
 
@@ -328,6 +353,8 @@ public:
       return false;
     }
   }
+
+  void mirFileLoaded(MachineFunction &MF) const override;
 };
 } // End llvm namespace
 

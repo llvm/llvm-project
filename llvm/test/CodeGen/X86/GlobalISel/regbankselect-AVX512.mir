@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f -global-isel                       -run-pass=regbankselect %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=FAST
-# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f -global-isel -regbankselect-greedy -run-pass=regbankselect %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=GREEDY
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f                       -run-pass=regbankselect %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=FAST
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f -regbankselect-greedy -run-pass=regbankselect %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=GREEDY
 
 --- |
 
@@ -100,12 +100,12 @@ registers:
   - { id: 1, class: _ }
 body:             |
   bb.1 (%ir-block.0):
-    liveins: %rdi
+    liveins: $rdi
 
-    %0(p0) = COPY %rdi
+    %0(p0) = COPY $rdi
     %1(<16 x s32>) = G_LOAD %0(p0) :: (load 64 from %ir.p1, align 1)
-    %zmm0 = COPY %1(<16 x s32>)
-    RET 0, implicit %zmm0
+    $zmm0 = COPY %1(<16 x s32>)
+    RET 0, implicit $zmm0
 
 ...
 ---
@@ -122,10 +122,10 @@ registers:
   - { id: 1, class: _ }
 body:             |
   bb.1 (%ir-block.0):
-    liveins: %rdi, %zmm0
+    liveins: $rdi, $zmm0
 
-    %0(<16 x s32>) = COPY %zmm0
-    %1(p0) = COPY %rdi
+    %0(<16 x s32>) = COPY $zmm0
+    %1(p0) = COPY $rdi
     G_STORE %0(<16 x s32>), %1(p0) :: (store 64 into %ir.p1, align 1)
     RET 0
 

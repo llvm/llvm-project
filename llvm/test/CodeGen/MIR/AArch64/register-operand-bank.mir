@@ -12,9 +12,9 @@
 name: func
 body: |
   bb.0:
-    %0 : gpr(s64) = COPY %x9
-    %x9 = COPY %0
+    %0 : gpr(s64) = COPY $x9
+    $x9 = COPY %0
 
-    %3 : fpr(s64) = COPY %d0
-    %d1 = COPY %3 : fpr
+    %3 : fpr(s64) = COPY $d0
+    $d1 = COPY %3 : fpr
 ...

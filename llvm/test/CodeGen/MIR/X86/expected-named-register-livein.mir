@@ -15,6 +15,6 @@ body: |
     ; CHECK: [[@LINE+1]]:14: expected a named register
     liveins: %0
 
-    %eax = COPY %edi
-    RETQ %eax
+    $eax = COPY $edi
+    RETQ $eax
 ...

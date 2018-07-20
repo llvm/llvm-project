@@ -56,8 +56,8 @@ define void @vect_zext_bitcast_i8_st1_to_i32_idx(i8 addrspace(1)* %arg1, i32 %ba
   ret void
 }
 
-; TODO: This can be vectorized, but currently vectorizer unable to do it.
 ; CHECK-LABEL: @vect_zext_bitcast_i8_st4_to_i32_idx
+; CHECK: load <4 x i32>
 define void @vect_zext_bitcast_i8_st4_to_i32_idx(i8 addrspace(1)* %arg1, i32 %base) {
   %add1 = add nuw i32 %base, 0
   %zext1 = zext i32 %add1 to i64
@@ -74,10 +74,27 @@ define void @vect_zext_bitcast_i8_st4_to_i32_idx(i8 addrspace(1)* %arg1, i32 %ba
   %gep3 = getelementptr inbounds i8, i8 addrspace(1)* %arg1, i64 %zext3
   %f2i3 = bitcast i8 addrspace(1)* %gep3 to i32 addrspace(1)*
   %load3 = load i32, i32 addrspace(1)* %f2i3, align 4
-  %add4 = add nuw i32 %base, 16
+  %add4 = add nuw i32 %base, 12
   %zext4 = zext i32 %add4 to i64
   %gep4 = getelementptr inbounds i8, i8 addrspace(1)* %arg1, i64 %zext4
   %f2i4 = bitcast i8 addrspace(1)* %gep4 to i32 addrspace(1)*
   %load4 = load i32, i32 addrspace(1)* %f2i4, align 4
+  ret void
+}
+
+; CHECK-LABEL: @vect_zext_bitcast_negative_ptr_delta
+; CHECK: load <2 x i32>
+define void @vect_zext_bitcast_negative_ptr_delta(i32 addrspace(1)* %p, i32 %base) {
+  %p.bitcasted = bitcast i32 addrspace(1)* %p to i16 addrspace(1)*
+  %a.offset = add nuw i32 %base, 4
+  %t.offset.zexted = zext i32 %base to i64
+  %a.offset.zexted = zext i32 %a.offset to i64
+  %t.ptr = getelementptr inbounds i16, i16 addrspace(1)* %p.bitcasted, i64 %t.offset.zexted
+  %a.ptr = getelementptr inbounds i16, i16 addrspace(1)* %p.bitcasted, i64 %a.offset.zexted
+  %b.ptr = getelementptr inbounds i16, i16 addrspace(1)* %t.ptr, i64 6
+  %a.ptr.bitcasted = bitcast i16 addrspace(1)* %a.ptr to i32 addrspace(1)*
+  %b.ptr.bitcasted = bitcast i16 addrspace(1)* %b.ptr to i32 addrspace(1)*
+  %a.val = load i32, i32 addrspace(1)* %a.ptr.bitcasted
+  %b.val = load i32, i32 addrspace(1)* %b.ptr.bitcasted
   ret void
 }

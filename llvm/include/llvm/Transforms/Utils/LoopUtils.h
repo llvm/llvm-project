@@ -23,6 +23,7 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/DemandedBits.h"
 #include "llvm/Analysis/EHPersonalities.h"
+#include "llvm/Analysis/MustExecute.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
@@ -47,17 +48,6 @@ class SCEV;
 class TargetLibraryInfo;
 class TargetTransformInfo;
 
-/// \brief Captures loop safety information.
-/// It keep information for loop & its header may throw exception.
-struct LoopSafetyInfo {
-  bool MayThrow = false;       // The current loop contains an instruction which
-                               // may throw.
-  bool HeaderMayThrow = false; // Same as previous, but specific to loop header
-  // Used to update funclet bundle operands.
-  DenseMap<BasicBlock *, ColorVector> BlockColors;
-
-  LoopSafetyInfo() = default;
-};
 
 /// The RecurrenceDescriptor is used to identify recurrences variables in a
 /// loop. Reduction is a special case of recurrence that has uses of the
@@ -299,16 +289,16 @@ public:
   /// induction, the induction descriptor \p D will contain the data describing
   /// this induction. If by some other means the caller has a better SCEV
   /// expression for \p Phi than the one returned by the ScalarEvolution
-  /// analysis, it can be passed through \p Expr. If the def-use chain 
+  /// analysis, it can be passed through \p Expr. If the def-use chain
   /// associated with the phi includes casts (that we know we can ignore
   /// under proper runtime checks), they are passed through \p CastsToIgnore.
-  static bool 
+  static bool
   isInductionPHI(PHINode *Phi, const Loop* L, ScalarEvolution *SE,
                  InductionDescriptor &D, const SCEV *Expr = nullptr,
                  SmallVectorImpl<Instruction *> *CastsToIgnore = nullptr);
 
   /// Returns true if \p Phi is a floating point induction in the loop \p L.
-  /// If \p Phi is an induction, the induction descriptor \p D will contain 
+  /// If \p Phi is an induction, the induction descriptor \p D will contain
   /// the data describing this induction.
   static bool isFPInductionPHI(PHINode *Phi, const Loop* L,
                                ScalarEvolution *SE, InductionDescriptor &D);
@@ -344,11 +334,11 @@ public:
       Instruction::BinaryOpsEnd;
   }
 
-  /// Returns a reference to the type cast instructions in the induction 
+  /// Returns a reference to the type cast instructions in the induction
   /// update chain, that are redundant when guarded with a runtime
   /// SCEV overflow check.
-  const SmallVectorImpl<Instruction *> &getCastInsts() const { 
-    return RedundantCasts; 
+  const SmallVectorImpl<Instruction *> &getCastInsts() const {
+    return RedundantCasts;
   }
 
 private:
@@ -395,7 +385,7 @@ bool formDedicatedExitBlocks(Loop *L, DominatorTree *DT, LoopInfo *LI,
 bool formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
                               DominatorTree &DT, LoopInfo &LI);
 
-/// \brief Put loop into LCSSA form.
+/// Put loop into LCSSA form.
 ///
 /// Looks at all instructions in the loop which have uses outside of the
 /// current loop. For each, an LCSSA PHI node is inserted and the uses outside
@@ -408,7 +398,7 @@ bool formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
 /// Returns true if any modifications are made to the loop.
 bool formLCSSA(Loop &L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution *SE);
 
-/// \brief Put a loop nest into LCSSA form.
+/// Put a loop nest into LCSSA form.
 ///
 /// This recursively forms LCSSA for a loop nest.
 ///
@@ -420,7 +410,7 @@ bool formLCSSA(Loop &L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution *SE);
 bool formLCSSARecursively(Loop &L, DominatorTree &DT, LoopInfo *LI,
                           ScalarEvolution *SE);
 
-/// \brief Walk the specified region of the CFG (defined by all blocks
+/// Walk the specified region of the CFG (defined by all blocks
 /// dominated by the specified block, and that are in the current loop) in
 /// reverse depth first order w.r.t the DominatorTree. This allows us to visit
 /// uses before definitions, allowing us to sink a loop body in one pass without
@@ -433,7 +423,7 @@ bool sinkRegion(DomTreeNode *, AliasAnalysis *, LoopInfo *, DominatorTree *,
                 AliasSetTracker *, LoopSafetyInfo *,
                 OptimizationRemarkEmitter *ORE);
 
-/// \brief Walk the specified region of the CFG (defined by all blocks
+/// Walk the specified region of the CFG (defined by all blocks
 /// dominated by the specified block, and that are in the current loop) in depth
 /// first order w.r.t the DominatorTree.  This allows us to visit definitions
 /// before uses, allowing us to hoist a loop body in one pass without iteration.
@@ -459,7 +449,7 @@ bool hoistRegion(DomTreeNode *, AliasAnalysis *, LoopInfo *, DominatorTree *,
 void deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
                     LoopInfo *LI);
 
-/// \brief Try to promote memory values to scalars by sinking stores out of
+/// Try to promote memory values to scalars by sinking stores out of
 /// the loop and moving loads to before the loop.  We do this by looping over
 /// the stores in the loop, looking for stores to Must pointers which are
 /// loop invariant. It takes a set of must-alias values, Loop exit blocks
@@ -480,22 +470,10 @@ bool promoteLoopAccessesToScalars(const SmallSetVector<Value *, 8> &,
 SmallVector<DomTreeNode *, 16> collectChildrenInLoop(DomTreeNode *N,
                                                      const Loop *CurLoop);
 
-/// \brief Computes safety information for a loop
-/// checks loop body & header for the possibility of may throw
-/// exception, it takes LoopSafetyInfo and loop as argument.
-/// Updates safety information in LoopSafetyInfo argument.
-void computeLoopSafetyInfo(LoopSafetyInfo *, Loop *);
-
-/// Returns true if the instruction in a loop is guaranteed to execute at least
-/// once.
-bool isGuaranteedToExecute(const Instruction &Inst, const DominatorTree *DT,
-                           const Loop *CurLoop,
-                           const LoopSafetyInfo *SafetyInfo);
-
-/// \brief Returns the instructions that use values defined in the loop.
+/// Returns the instructions that use values defined in the loop.
 SmallVector<Instruction *, 8> findDefsUsedOutsideOfLoop(Loop *L);
 
-/// \brief Find string metadata for loop
+/// Find string metadata for loop
 ///
 /// If it has a value (e.g. {"llvm.distribute", 1} return the value as an
 /// operand or null otherwise.  If the string metadata is not found return
@@ -503,11 +481,11 @@ SmallVector<Instruction *, 8> findDefsUsedOutsideOfLoop(Loop *L);
 Optional<const MDOperand *> findStringMetadataForLoop(Loop *TheLoop,
                                                       StringRef Name);
 
-/// \brief Set input string into loop metadata by keeping other values intact.
+/// Set input string into loop metadata by keeping other values intact.
 void addStringMetadataToLoop(Loop *TheLoop, const char *MDString,
                              unsigned V = 0);
 
-/// \brief Get a loop's estimated trip count based on branch weight metadata.
+/// Get a loop's estimated trip count based on branch weight metadata.
 /// Returns 0 when the count is estimated to be 0, or None when a meaningful
 /// estimate can not be made.
 Optional<unsigned> getLoopEstimatedTripCount(Loop *L);
@@ -531,11 +509,18 @@ bool canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
                         LoopSafetyInfo *SafetyInfo,
                         OptimizationRemarkEmitter *ORE = nullptr);
 
+/// Generates an ordered vector reduction using extracts to reduce the value.
+Value *
+getOrderedReduction(IRBuilder<> &Builder, Value *Acc, Value *Src, unsigned Op,
+                    RecurrenceDescriptor::MinMaxRecurrenceKind MinMaxKind =
+                        RecurrenceDescriptor::MRK_Invalid,
+                    ArrayRef<Value *> RedOps = None);
+
 /// Generates a vector reduction using shufflevectors to reduce the value.
 Value *getShuffleReduction(IRBuilder<> &Builder, Value *Src, unsigned Op,
                            RecurrenceDescriptor::MinMaxRecurrenceKind
                                MinMaxKind = RecurrenceDescriptor::MRK_Invalid,
-                           ArrayRef<Value *> RedOps = ArrayRef<Value *>());
+                           ArrayRef<Value *> RedOps = None);
 
 /// Create a target reduction of the given vector. The reduction operation
 /// is described by the \p Opcode parameter. min/max reductions require
@@ -547,7 +532,7 @@ createSimpleTargetReduction(IRBuilder<> &B, const TargetTransformInfo *TTI,
                             unsigned Opcode, Value *Src,
                             TargetTransformInfo::ReductionFlags Flags =
                                 TargetTransformInfo::ReductionFlags(),
-                            ArrayRef<Value *> RedOps = ArrayRef<Value *>());
+                            ArrayRef<Value *> RedOps = None);
 
 /// Create a generic target reduction using a recurrence descriptor \p Desc
 /// The target is queried to determine if intrinsics or shuffle sequences are

@@ -61,7 +61,7 @@ AMDGPUAAResult::ASAliasRulesTy::ASAliasRulesTy(AMDGPUAS AS_, Triple::ArchType Ar
   /* Region   */ {NoAlias , NoAlias , NoAlias , NoAlias , MayAlias, MayAlias}
   };
   static const AliasResult ASAliasRulesGenIsZero[6][6] = {
-  /*             Flat       Global    Constant  Group     Region    Private */
+  /*             Flat       Global    Region    Group     Constant  Private */
   /* Flat     */ {MayAlias, MayAlias, MayAlias, MayAlias, MayAlias, MayAlias},
   /* Global   */ {MayAlias, MayAlias, NoAlias , NoAlias , NoAlias , NoAlias},
   /* Constant */ {MayAlias, NoAlias , MayAlias, NoAlias , NoAlias,  NoAlias},
@@ -72,9 +72,9 @@ AMDGPUAAResult::ASAliasRulesTy::ASAliasRulesTy(AMDGPUAS AS_, Triple::ArchType Ar
   assert(AS.MAX_COMMON_ADDRESS <= 5);
   if (AS.FLAT_ADDRESS == 0) {
     assert(AS.GLOBAL_ADDRESS   == 1 &&
-           AS.REGION_ADDRESS   == 4 &&
+           AS.REGION_ADDRESS   == 2 &&
            AS.LOCAL_ADDRESS    == 3 &&
-           AS.CONSTANT_ADDRESS == 2 &&
+           AS.CONSTANT_ADDRESS == 4 &&
            AS.PRIVATE_ADDRESS  == 5);
     ASAliasRules = &ASAliasRulesGenIsZero;
   } else {
@@ -115,7 +115,8 @@ bool AMDGPUAAResult::pointsToConstantMemory(const MemoryLocation &Loc,
                                             bool OrLocal) {
   const Value *Base = GetUnderlyingObject(Loc.Ptr, DL);
 
-  if (Base->getType()->getPointerAddressSpace() == AS.CONSTANT_ADDRESS) {
+  if (Base->getType()->getPointerAddressSpace() == AS.CONSTANT_ADDRESS ||
+      Base->getType()->getPointerAddressSpace() == AS.CONSTANT_ADDRESS_32BIT) {
     return true;
   }
 

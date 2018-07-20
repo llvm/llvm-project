@@ -48,16 +48,16 @@ define i32 @foo_f() {
 ; CHECK-DAG: .protected	bar_p
 @bar_p = protected alias i32, i32* @bar
 
-; CHECK-DAG: test2 = bar+4
+; CHECK-DAG: .set test2, bar+4
 @test2 = alias i32, getelementptr(i32, i32* @bar, i32 1)
 
-; CHECK-DAG: test3 = 42
+; CHECK-DAG: .set test3, 42
 @test3 = alias i32, inttoptr(i32 42 to i32*)
 
-; CHECK-DAG: test4 = bar
+; CHECK-DAG: .set test4, bar
 @test4 = alias i32, inttoptr(i64 ptrtoint (i32* @bar to i64) to i32*)
 
-; CHECK-DAG: test5 = test2-bar
+; CHECK-DAG: .set test5, test2-bar
 @test5 = alias i32, inttoptr(i32 sub (i32 ptrtoint (i32* @test2 to i32),
                                  i32 ptrtoint (i32* @bar to i32)) to i32*)
 

@@ -53,7 +53,7 @@ define i32 @test_x86_rdfsbase_32() {
 ;
 ; ZNVER1-LABEL: test_x86_rdfsbase_32:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    rdfsbasel %eax # sched: [100:?]
+; ZNVER1-NEXT:    rdfsbasel %eax # sched: [100:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %res = call i32 @llvm.x86.rdfsbase.32()
   ret i32 %res
@@ -103,7 +103,7 @@ define i32 @test_x86_rdgsbase_32() {
 ;
 ; ZNVER1-LABEL: test_x86_rdgsbase_32:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    rdgsbasel %eax # sched: [100:?]
+; ZNVER1-NEXT:    rdgsbasel %eax # sched: [100:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %res = call i32 @llvm.x86.rdgsbase.32()
   ret i32 %res
@@ -153,7 +153,7 @@ define i64 @test_x86_rdfsbase_64() {
 ;
 ; ZNVER1-LABEL: test_x86_rdfsbase_64:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    rdfsbaseq %rax # sched: [100:?]
+; ZNVER1-NEXT:    rdfsbaseq %rax # sched: [100:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %res = call i64 @llvm.x86.rdfsbase.64()
   ret i64 %res
@@ -203,7 +203,7 @@ define i64 @test_x86_rdgsbase_64() {
 ;
 ; ZNVER1-LABEL: test_x86_rdgsbase_64:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    rdgsbaseq %rax # sched: [100:?]
+; ZNVER1-NEXT:    rdgsbaseq %rax # sched: [100:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %res = call i64 @llvm.x86.rdgsbase.64()
   ret i64 %res
@@ -253,7 +253,7 @@ define void @test_x86_wrfsbase_32(i32 %x) {
 ;
 ; ZNVER1-LABEL: test_x86_wrfsbase_32:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    wrfsbasel %edi # sched: [100:?]
+; ZNVER1-NEXT:    wrfsbasel %edi # sched: [100:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   call void @llvm.x86.wrfsbase.32(i32 %x)
   ret void
@@ -303,7 +303,7 @@ define void @test_x86_wrgsbase_32(i32 %x) {
 ;
 ; ZNVER1-LABEL: test_x86_wrgsbase_32:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    wrgsbasel %edi # sched: [100:?]
+; ZNVER1-NEXT:    wrgsbasel %edi # sched: [100:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   call void @llvm.x86.wrgsbase.32(i32 %x)
   ret void
@@ -353,7 +353,7 @@ define void @test_x86_wrfsbase_64(i64 %x) {
 ;
 ; ZNVER1-LABEL: test_x86_wrfsbase_64:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    wrfsbaseq %rdi # sched: [100:?]
+; ZNVER1-NEXT:    wrfsbaseq %rdi # sched: [100:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   call void @llvm.x86.wrfsbase.64(i64 %x)
   ret void
@@ -403,7 +403,7 @@ define void @test_x86_wrgsbase_64(i64 %x) {
 ;
 ; ZNVER1-LABEL: test_x86_wrgsbase_64:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    wrgsbaseq %rdi # sched: [100:?]
+; ZNVER1-NEXT:    wrgsbaseq %rdi # sched: [100:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   call void @llvm.x86.wrgsbase.64(i64 %x)
   ret void

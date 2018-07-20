@@ -27,6 +27,7 @@
 #include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
@@ -49,10 +50,10 @@
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/RecyclingAllocator.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include <cassert>
 #include <deque>
 #include <memory>
@@ -70,13 +71,16 @@ STATISTIC(NumCSELoad,  "Number of load instructions CSE'd");
 STATISTIC(NumCSECall,  "Number of call instructions CSE'd");
 STATISTIC(NumDSE,      "Number of trivial dead stores removed");
 
+DEBUG_COUNTER(CSECounter, "early-cse",
+              "Controls which instructions are removed");
+
 //===----------------------------------------------------------------------===//
 // SimpleValue
 //===----------------------------------------------------------------------===//
 
 namespace {
 
-/// \brief Struct representing the available values in the scoped hash table.
+/// Struct representing the available values in the scoped hash table.
 struct SimpleValue {
   Instruction *Inst;
 
@@ -151,10 +155,13 @@ unsigned DenseMapInfo<SimpleValue>::getHashValue(SimpleValue Val) {
   SelectPatternFlavor SPF = matchSelectPattern(Inst, A, B).Flavor;
   // TODO: We should also detect FP min/max.
   if (SPF == SPF_SMIN || SPF == SPF_SMAX ||
-      SPF == SPF_UMIN || SPF == SPF_UMAX ||
-      SPF == SPF_ABS || SPF == SPF_NABS) {
+      SPF == SPF_UMIN || SPF == SPF_UMAX) {
     if (A > B)
       std::swap(A, B);
+    return hash_combine(Inst->getOpcode(), SPF, A, B);
+  }
+  if (SPF == SPF_ABS || SPF == SPF_NABS) {
+    // ABS/NABS always puts the input in A and its negation in B.
     return hash_combine(Inst->getOpcode(), SPF, A, B);
   }
 
@@ -226,8 +233,13 @@ bool DenseMapInfo<SimpleValue>::isEqual(SimpleValue LHS, SimpleValue RHS) {
       LSPF == SPF_ABS || LSPF == SPF_NABS) {
     Value *RHSA, *RHSB;
     SelectPatternFlavor RSPF = matchSelectPattern(RHSI, RHSA, RHSB).Flavor;
-    return (LSPF == RSPF && ((LHSA == RHSA && LHSB == RHSB) ||
-                             (LHSA == RHSB && LHSB == RHSA)));
+    if (LSPF == RSPF) {
+      // Abs results are placed in a defined order by matchSelectPattern.
+      if (LSPF == SPF_ABS || LSPF == SPF_NABS)
+        return LHSA == RHSA && LHSB == RHSB;
+      return ((LHSA == RHSA && LHSB == RHSB) ||
+              (LHSA == RHSB && LHSB == RHSA));
+    }
   }
 
   return false;
@@ -239,7 +251,7 @@ bool DenseMapInfo<SimpleValue>::isEqual(SimpleValue LHS, SimpleValue RHS) {
 
 namespace {
 
-/// \brief Struct representing the available call values in the scoped hash
+/// Struct representing the available call values in the scoped hash
 /// table.
 struct CallValue {
   Instruction *Inst;
@@ -305,7 +317,7 @@ bool DenseMapInfo<CallValue>::isEqual(CallValue LHS, CallValue RHS) {
 
 namespace {
 
-/// \brief A simple and fast domtree-based CSE pass.
+/// A simple and fast domtree-based CSE pass.
 ///
 /// This pass does a simple depth-first walk over the dominator tree,
 /// eliminating trivially redundant instructions and using instsimplify to
@@ -329,7 +341,7 @@ public:
       ScopedHashTable<SimpleValue, Value *, DenseMapInfo<SimpleValue>,
                       AllocatorTy>;
 
-  /// \brief A scoped hash table of the current values of all of our simple
+  /// A scoped hash table of the current values of all of our simple
   /// scalar expressions.
   ///
   /// As we walk down the domtree, we look to see if instructions are in this:
@@ -337,8 +349,8 @@ public:
   /// that dominated values can succeed in their lookup.
   ScopedHTType AvailableValues;
 
-  /// A scoped hash table of the current values of previously encounted memory
-  /// locations.
+  /// A scoped hash table of the current values of previously encountered
+  /// memory locations.
   ///
   /// This allows us to get efficient access to dominating loads or stores when
   /// we have a fully redundant load.  In addition to the most recent load, we
@@ -356,13 +368,12 @@ public:
     unsigned Generation = 0;
     int MatchingId = -1;
     bool IsAtomic = false;
-    bool IsInvariant = false;
 
     LoadValue() = default;
     LoadValue(Instruction *Inst, unsigned Generation, unsigned MatchingId,
-              bool IsAtomic, bool IsInvariant)
+              bool IsAtomic)
         : DefInst(Inst), Generation(Generation), MatchingId(MatchingId),
-          IsAtomic(IsAtomic), IsInvariant(IsInvariant) {}
+          IsAtomic(IsAtomic) {}
   };
 
   using LoadMapAllocator =
@@ -373,8 +384,19 @@ public:
                       LoadMapAllocator>;
 
   LoadHTType AvailableLoads;
+  
+  // A scoped hash table mapping memory locations (represented as typed
+  // addresses) to generation numbers at which that memory location became
+  // (henceforth indefinitely) invariant.
+  using InvariantMapAllocator =
+      RecyclingAllocator<BumpPtrAllocator,
+                         ScopedHashTableVal<MemoryLocation, unsigned>>;
+  using InvariantHTType =
+      ScopedHashTable<MemoryLocation, unsigned, DenseMapInfo<MemoryLocation>,
+                      InvariantMapAllocator>;
+  InvariantHTType AvailableInvariants;
 
-  /// \brief A scoped hash table of the current values of read-only call
+  /// A scoped hash table of the current values of read-only call
   /// values.
   ///
   /// It uses the same generation count as loads.
@@ -382,10 +404,10 @@ public:
       ScopedHashTable<CallValue, std::pair<Instruction *, unsigned>>;
   CallHTType AvailableCalls;
 
-  /// \brief This is the current generation of the memory value.
+  /// This is the current generation of the memory value.
   unsigned CurrentGeneration = 0;
 
-  /// \brief Set up the EarlyCSE runner for a particular function.
+  /// Set up the EarlyCSE runner for a particular function.
   EarlyCSE(const DataLayout &DL, const TargetLibraryInfo &TLI,
            const TargetTransformInfo &TTI, DominatorTree &DT,
            AssumptionCache &AC, MemorySSA *MSSA)
@@ -401,15 +423,16 @@ private:
   class NodeScope {
   public:
     NodeScope(ScopedHTType &AvailableValues, LoadHTType &AvailableLoads,
-              CallHTType &AvailableCalls)
-        : Scope(AvailableValues), LoadScope(AvailableLoads),
-          CallScope(AvailableCalls) {}
+              InvariantHTType &AvailableInvariants, CallHTType &AvailableCalls)
+      : Scope(AvailableValues), LoadScope(AvailableLoads),
+        InvariantScope(AvailableInvariants), CallScope(AvailableCalls) {}
     NodeScope(const NodeScope &) = delete;
     NodeScope &operator=(const NodeScope &) = delete;
 
   private:
     ScopedHTType::ScopeTy Scope;
     LoadHTType::ScopeTy LoadScope;
+    InvariantHTType::ScopeTy InvariantScope;
     CallHTType::ScopeTy CallScope;
   };
 
@@ -420,10 +443,13 @@ private:
   class StackNode {
   public:
     StackNode(ScopedHTType &AvailableValues, LoadHTType &AvailableLoads,
-              CallHTType &AvailableCalls, unsigned cg, DomTreeNode *n,
-              DomTreeNode::iterator child, DomTreeNode::iterator end)
+              InvariantHTType &AvailableInvariants, CallHTType &AvailableCalls,
+              unsigned cg, DomTreeNode *n, DomTreeNode::iterator child,
+              DomTreeNode::iterator end)
         : CurrentGeneration(cg), ChildGeneration(cg), Node(n), ChildIter(child),
-          EndIter(end), Scopes(AvailableValues, AvailableLoads, AvailableCalls)
+          EndIter(end),
+          Scopes(AvailableValues, AvailableLoads, AvailableInvariants,
+                 AvailableCalls)
           {}
     StackNode(const StackNode &) = delete;
     StackNode &operator=(const StackNode &) = delete;
@@ -455,7 +481,7 @@ private:
     bool Processed = false;
   };
 
-  /// \brief Wrapper class to handle memory instructions, including loads,
+  /// Wrapper class to handle memory instructions, including loads,
   /// stores and intrinsic loads and stores defined by the target.
   class ParseMemoryInst {
   public:
@@ -532,12 +558,7 @@ private:
 
     Value *getPointerOperand() const {
       if (IsTargetMemInst) return Info.PtrVal;
-      if (LoadInst *LI = dyn_cast<LoadInst>(Inst)) {
-        return LI->getPointerOperand();
-      } else if (StoreInst *SI = dyn_cast<StoreInst>(Inst)) {
-        return SI->getPointerOperand();
-      }
-      return nullptr;
+      return getLoadStorePointerOperand(Inst);
     }
 
     bool mayReadFromMemory() const {
@@ -558,6 +579,9 @@ private:
 
   bool processNode(DomTreeNode *Node);
 
+  bool handleBranchCondition(Instruction *CondInst, const BranchInst *BI,
+                             const BasicBlock *BB, const BasicBlock *Pred);
+
   Value *getOrCreateResult(Value *Inst, Type *ExpectedType) const {
     if (auto *LI = dyn_cast<LoadInst>(Inst))
       return LI;
@@ -567,6 +591,10 @@ private:
     return TTI.getOrCreateResultFromMemIntrinsic(cast<IntrinsicInst>(Inst),
                                                  ExpectedType);
   }
+
+  /// Return true if the instruction is known to only operate on memory
+  /// provably invariant in the given "generation".
+  bool isOperatingOnInvariantMemAt(Instruction *I, unsigned GenAt);
 
   bool isSameMemGeneration(unsigned EarlierGeneration, unsigned LaterGeneration,
                            Instruction *EarlierInst, Instruction *LaterInst);
@@ -661,6 +689,79 @@ bool EarlyCSE::isSameMemGeneration(unsigned EarlierGeneration,
   return MSSA->dominates(LaterDef, EarlierMA);
 }
 
+bool EarlyCSE::isOperatingOnInvariantMemAt(Instruction *I, unsigned GenAt) {
+  // A location loaded from with an invariant_load is assumed to *never* change
+  // within the visible scope of the compilation.
+  if (auto *LI = dyn_cast<LoadInst>(I))
+    if (LI->getMetadata(LLVMContext::MD_invariant_load))
+      return true;
+
+  auto MemLocOpt = MemoryLocation::getOrNone(I);
+  if (!MemLocOpt)
+    // "target" intrinsic forms of loads aren't currently known to
+    // MemoryLocation::get.  TODO
+    return false;
+  MemoryLocation MemLoc = *MemLocOpt;
+  if (!AvailableInvariants.count(MemLoc))
+    return false;
+
+  // Is the generation at which this became invariant older than the
+  // current one?
+  return AvailableInvariants.lookup(MemLoc) <= GenAt;
+}
+
+bool EarlyCSE::handleBranchCondition(Instruction *CondInst,
+                                     const BranchInst *BI, const BasicBlock *BB,
+                                     const BasicBlock *Pred) {
+  assert(BI->isConditional() && "Should be a conditional branch!");
+  assert(BI->getCondition() == CondInst && "Wrong condition?");
+  assert(BI->getSuccessor(0) == BB || BI->getSuccessor(1) == BB);
+  auto *TorF = (BI->getSuccessor(0) == BB)
+                   ? ConstantInt::getTrue(BB->getContext())
+                   : ConstantInt::getFalse(BB->getContext());
+  auto MatchBinOp = [](Instruction *I, unsigned Opcode) {
+    if (BinaryOperator *BOp = dyn_cast<BinaryOperator>(I))
+      return BOp->getOpcode() == Opcode;
+    return false;
+  };
+  // If the condition is AND operation, we can propagate its operands into the
+  // true branch. If it is OR operation, we can propagate them into the false
+  // branch.
+  unsigned PropagateOpcode =
+      (BI->getSuccessor(0) == BB) ? Instruction::And : Instruction::Or;
+
+  bool MadeChanges = false;
+  SmallVector<Instruction *, 4> WorkList;
+  SmallPtrSet<Instruction *, 4> Visited;
+  WorkList.push_back(CondInst);
+  while (!WorkList.empty()) {
+    Instruction *Curr = WorkList.pop_back_val();
+
+    AvailableValues.insert(Curr, TorF);
+    LLVM_DEBUG(dbgs() << "EarlyCSE CVP: Add conditional value for '"
+                      << Curr->getName() << "' as " << *TorF << " in "
+                      << BB->getName() << "\n");
+    if (!DebugCounter::shouldExecute(CSECounter)) {
+      LLVM_DEBUG(dbgs() << "Skipping due to debug counter\n");
+    } else {
+      // Replace all dominated uses with the known value.
+      if (unsigned Count = replaceDominatedUsesWith(Curr, TorF, DT,
+                                                    BasicBlockEdge(Pred, BB))) {
+        NumCSECVP += Count;
+        MadeChanges = true;
+      }
+    }
+
+    if (MatchBinOp(Curr, PropagateOpcode))
+      for (auto &Op : cast<BinaryOperator>(Curr)->operands())
+        if (Instruction *OPI = dyn_cast<Instruction>(Op))
+          if (SimpleValue::canHandle(OPI) && Visited.insert(OPI).second)
+            WorkList.push_back(OPI);
+  }
+
+  return MadeChanges;
+}
+
 bool EarlyCSE::processNode(DomTreeNode *Node) {
   bool Changed = false;
   BasicBlock *BB = Node->getBlock();
@@ -684,22 +785,8 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
     auto *BI = dyn_cast<BranchInst>(Pred->getTerminator());
     if (BI && BI->isConditional()) {
       auto *CondInst = dyn_cast<Instruction>(BI->getCondition());
-      if (CondInst && SimpleValue::canHandle(CondInst)) {
-        assert(BI->getSuccessor(0) == BB || BI->getSuccessor(1) == BB);
-        auto *TorF = (BI->getSuccessor(0) == BB)
-                         ? ConstantInt::getTrue(BB->getContext())
-                         : ConstantInt::getFalse(BB->getContext());
-        AvailableValues.insert(CondInst, TorF);
-        DEBUG(dbgs() << "EarlyCSE CVP: Add conditional value for '"
-                     << CondInst->getName() << "' as " << *TorF << " in "
-                     << BB->getName() << "\n");
-        // Replace all dominated uses with the known value.
-        if (unsigned Count = replaceDominatedUsesWith(
-                CondInst, TorF, DT, BasicBlockEdge(Pred, BB))) {
-          Changed = true;
-          NumCSECVP += Count;
-        }
-      }
+      if (CondInst && SimpleValue::canHandle(CondInst))
+        Changed |= handleBranchCondition(CondInst, BI, BB, Pred);
     }
   }
 
@@ -716,7 +803,11 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
 
     // Dead instructions should just be removed.
     if (isInstructionTriviallyDead(Inst, &TLI)) {
-      DEBUG(dbgs() << "EarlyCSE DCE: " << *Inst << '\n');
+      LLVM_DEBUG(dbgs() << "EarlyCSE DCE: " << *Inst << '\n');
+      if (!DebugCounter::shouldExecute(CSECounter)) {
+        LLVM_DEBUG(dbgs() << "Skipping due to debug counter\n");
+        continue;
+      }
       salvageDebugInfo(*Inst);
       removeMSSA(Inst);
       Inst->eraseFromParent();
@@ -733,31 +824,44 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
       auto *CondI =
           dyn_cast<Instruction>(cast<CallInst>(Inst)->getArgOperand(0));
       if (CondI && SimpleValue::canHandle(CondI)) {
-        DEBUG(dbgs() << "EarlyCSE considering assumption: " << *Inst << '\n');
+        LLVM_DEBUG(dbgs() << "EarlyCSE considering assumption: " << *Inst
+                          << '\n');
         AvailableValues.insert(CondI, ConstantInt::getTrue(BB->getContext()));
       } else
-        DEBUG(dbgs() << "EarlyCSE skipping assumption: " << *Inst << '\n');
+        LLVM_DEBUG(dbgs() << "EarlyCSE skipping assumption: " << *Inst << '\n');
       continue;
     }
 
     // Skip sideeffect intrinsics, for the same reason as assume intrinsics.
     if (match(Inst, m_Intrinsic<Intrinsic::sideeffect>())) {
-      DEBUG(dbgs() << "EarlyCSE skipping sideeffect: " << *Inst << '\n');
+      LLVM_DEBUG(dbgs() << "EarlyCSE skipping sideeffect: " << *Inst << '\n');
       continue;
     }
 
-    // Skip invariant.start intrinsics since they only read memory, and we can
-    // forward values across it. Also, we dont need to consume the last store
-    // since the semantics of invariant.start allow us to perform DSE of the
-    // last store, if there was a store following invariant.start. Consider:
+    // We can skip all invariant.start intrinsics since they only read memory,
+    // and we can forward values across it. For invariant starts without
+    // invariant ends, we can use the fact that the invariantness never ends to
+    // start a scope in the current generaton which is true for all future
+    // generations.  Also, we dont need to consume the last store since the
+    // semantics of invariant.start allow us to perform   DSE of the last
+    // store, if there was a store following invariant.start. Consider: 
     //
     // store 30, i8* p
     // invariant.start(p)
     // store 40, i8* p
     // We can DSE the store to 30, since the store 40 to invariant location p
     // causes undefined behaviour.
-    if (match(Inst, m_Intrinsic<Intrinsic::invariant_start>()))
+    if (match(Inst, m_Intrinsic<Intrinsic::invariant_start>())) {
+      // If there are any uses, the scope might end.  
+      if (!Inst->use_empty())
+        continue;
+      auto *CI = cast<CallInst>(Inst);
+      MemoryLocation MemLoc = MemoryLocation::getForArgument(CI, 1, TLI);
+      // Don't start a scope if we already have a better one pushed
+      if (!AvailableInvariants.count(MemLoc))
+        AvailableInvariants.insert(MemLoc, CurrentGeneration);
       continue;
+    }
 
     if (match(Inst, m_Intrinsic<Intrinsic::experimental_guard>())) {
       if (auto *CondI =
@@ -768,7 +872,8 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
             // Is the condition known to be true?
             if (isa<ConstantInt>(KnownCond) &&
                 cast<ConstantInt>(KnownCond)->isOne()) {
-              DEBUG(dbgs() << "EarlyCSE removing guard: " << *Inst << '\n');
+              LLVM_DEBUG(dbgs()
+                         << "EarlyCSE removing guard: " << *Inst << '\n');
               removeMSSA(Inst);
               Inst->eraseFromParent();
               Changed = true;
@@ -793,29 +898,39 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
     // If the instruction can be simplified (e.g. X+0 = X) then replace it with
     // its simpler value.
     if (Value *V = SimplifyInstruction(Inst, SQ)) {
-      DEBUG(dbgs() << "EarlyCSE Simplify: " << *Inst << "  to: " << *V << '\n');
-      bool Killed = false;
-      if (!Inst->use_empty()) {
-        Inst->replaceAllUsesWith(V);
-        Changed = true;
+      LLVM_DEBUG(dbgs() << "EarlyCSE Simplify: " << *Inst << "  to: " << *V
+                        << '\n');
+      if (!DebugCounter::shouldExecute(CSECounter)) {
+        LLVM_DEBUG(dbgs() << "Skipping due to debug counter\n");
+      } else {
+        bool Killed = false;
+        if (!Inst->use_empty()) {
+          Inst->replaceAllUsesWith(V);
+          Changed = true;
+        }
+        if (isInstructionTriviallyDead(Inst, &TLI)) {
+          removeMSSA(Inst);
+          Inst->eraseFromParent();
+          Changed = true;
+          Killed = true;
+        }
+        if (Changed)
+          ++NumSimplify;
+        if (Killed)
+          continue;
       }
-      if (isInstructionTriviallyDead(Inst, &TLI)) {
-        removeMSSA(Inst);
-        Inst->eraseFromParent();
-        Changed = true;
-        Killed = true;
-      }
-      if (Changed)
-        ++NumSimplify;
-      if (Killed)
-        continue;
     }
 
     // If this is a simple instruction that we can value number, process it.
     if (SimpleValue::canHandle(Inst)) {
       // See if the instruction has an available value.  If so, use it.
       if (Value *V = AvailableValues.lookup(Inst)) {
-        DEBUG(dbgs() << "EarlyCSE CSE: " << *Inst << "  to: " << *V << '\n');
+        LLVM_DEBUG(dbgs() << "EarlyCSE CSE: " << *Inst << "  to: " << *V
+                          << '\n');
+        if (!DebugCounter::shouldExecute(CSECounter)) {
+          LLVM_DEBUG(dbgs() << "Skipping due to debug counter\n");
+          continue;
+        }
         if (auto *I = dyn_cast<Instruction>(V))
           I->andIRFlags(Inst);
         Inst->replaceAllUsesWith(V);
@@ -841,6 +956,17 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
         ++CurrentGeneration;
       }
 
+      if (MemInst.isInvariantLoad()) {
+        // If we pass an invariant load, we know that memory location is
+        // indefinitely constant from the moment of first dereferenceability.
+        // We conservatively treat the invariant_load as that moment.  If we
+        // pass a invariant load after already establishing a scope, don't
+        // restart it since we want to preserve the earliest point seen.
+        auto MemLoc = MemoryLocation::get(Inst);
+        if (!AvailableInvariants.count(MemLoc))
+          AvailableInvariants.insert(MemLoc, CurrentGeneration);
+      }
+
       // If we have an available version of this load, and if it is the right
       // generation or the load is known to be from an invariant location,
       // replace this instruction.
@@ -855,13 +981,17 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
           !MemInst.isVolatile() && MemInst.isUnordered() &&
           // We can't replace an atomic load with one which isn't also atomic.
           InVal.IsAtomic >= MemInst.isAtomic() &&
-          (InVal.IsInvariant || MemInst.isInvariantLoad() ||
+          (isOperatingOnInvariantMemAt(Inst, InVal.Generation) ||
            isSameMemGeneration(InVal.Generation, CurrentGeneration,
                                InVal.DefInst, Inst))) {
         Value *Op = getOrCreateResult(InVal.DefInst, Inst->getType());
         if (Op != nullptr) {
-          DEBUG(dbgs() << "EarlyCSE CSE LOAD: " << *Inst
-                       << "  to: " << *InVal.DefInst << '\n');
+          LLVM_DEBUG(dbgs() << "EarlyCSE CSE LOAD: " << *Inst
+                            << "  to: " << *InVal.DefInst << '\n');
+          if (!DebugCounter::shouldExecute(CSECounter)) {
+            LLVM_DEBUG(dbgs() << "Skipping due to debug counter\n");
+            continue;
+          }
           if (!Inst->use_empty())
             Inst->replaceAllUsesWith(Op);
           removeMSSA(Inst);
@@ -876,7 +1006,7 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
       AvailableLoads.insert(
           MemInst.getPointerOperand(),
           LoadValue(Inst, CurrentGeneration, MemInst.getMatchingId(),
-                    MemInst.isAtomic(), MemInst.isInvariantLoad()));
+                    MemInst.isAtomic()));
       LastStore = nullptr;
       continue;
     }
@@ -899,8 +1029,12 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
       if (InVal.first != nullptr &&
           isSameMemGeneration(InVal.second, CurrentGeneration, InVal.first,
                               Inst)) {
-        DEBUG(dbgs() << "EarlyCSE CSE CALL: " << *Inst
-                     << "  to: " << *InVal.first << '\n');
+        LLVM_DEBUG(dbgs() << "EarlyCSE CSE CALL: " << *Inst
+                          << "  to: " << *InVal.first << '\n');
+        if (!DebugCounter::shouldExecute(CSECounter)) {
+          LLVM_DEBUG(dbgs() << "Skipping due to debug counter\n");
+          continue;
+        }
         if (!Inst->use_empty())
           Inst->replaceAllUsesWith(InVal.first);
         removeMSSA(Inst);
@@ -939,8 +1073,9 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
           InVal.MatchingId == MemInst.getMatchingId() &&
           // We don't yet handle removing stores with ordering of any kind.
           !MemInst.isVolatile() && MemInst.isUnordered() &&
-          isSameMemGeneration(InVal.Generation, CurrentGeneration,
-                              InVal.DefInst, Inst)) {
+          (isOperatingOnInvariantMemAt(Inst, InVal.Generation) ||
+           isSameMemGeneration(InVal.Generation, CurrentGeneration,
+                               InVal.DefInst, Inst))) {
         // It is okay to have a LastStore to a different pointer here if MemorySSA
         // tells us that the load and store are from the same memory generation.
         // In that case, LastStore should keep its present value since we're
@@ -950,7 +1085,11 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
                     MemInst.getPointerOperand() ||
                 MSSA) &&
                "can't have an intervening store if not using MemorySSA!");
-        DEBUG(dbgs() << "EarlyCSE DSE (writeback): " << *Inst << '\n');
+        LLVM_DEBUG(dbgs() << "EarlyCSE DSE (writeback): " << *Inst << '\n');
+        if (!DebugCounter::shouldExecute(CSECounter)) {
+          LLVM_DEBUG(dbgs() << "Skipping due to debug counter\n");
+          continue;
+        }
         removeMSSA(Inst);
         Inst->eraseFromParent();
         Changed = true;
@@ -981,13 +1120,17 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
                  !LastStoreMemInst.isVolatile() &&
                  "Violated invariant");
           if (LastStoreMemInst.isMatchingMemLoc(MemInst)) {
-            DEBUG(dbgs() << "EarlyCSE DEAD STORE: " << *LastStore
-                         << "  due to: " << *Inst << '\n');
-            removeMSSA(LastStore);
-            LastStore->eraseFromParent();
-            Changed = true;
-            ++NumDSE;
-            LastStore = nullptr;
+            LLVM_DEBUG(dbgs() << "EarlyCSE DEAD STORE: " << *LastStore
+                              << "  due to: " << *Inst << '\n');
+            if (!DebugCounter::shouldExecute(CSECounter)) {
+              LLVM_DEBUG(dbgs() << "Skipping due to debug counter\n");
+            } else {
+              removeMSSA(LastStore);
+              LastStore->eraseFromParent();
+              Changed = true;
+              ++NumDSE;
+              LastStore = nullptr;
+            }
           }
           // fallthrough - we can exploit information about this store
         }
@@ -1000,7 +1143,7 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
         AvailableLoads.insert(
             MemInst.getPointerOperand(),
             LoadValue(Inst, CurrentGeneration, MemInst.getMatchingId(),
-                      MemInst.isAtomic(), /*IsInvariant=*/false));
+                      MemInst.isAtomic()));
 
         // Remember that this was the last unordered store we saw for DSE. We
         // don't yet handle DSE on ordered or volatile stores since we don't
@@ -1032,8 +1175,9 @@ bool EarlyCSE::run() {
 
   // Process the root node.
   nodesToProcess.push_back(new StackNode(
-      AvailableValues, AvailableLoads, AvailableCalls, CurrentGeneration,
-      DT.getRootNode(), DT.getRootNode()->begin(), DT.getRootNode()->end()));
+      AvailableValues, AvailableLoads, AvailableInvariants, AvailableCalls,
+      CurrentGeneration, DT.getRootNode(),
+      DT.getRootNode()->begin(), DT.getRootNode()->end()));
 
   // Save the current generation.
   unsigned LiveOutGeneration = CurrentGeneration;
@@ -1057,9 +1201,9 @@ bool EarlyCSE::run() {
       // Push the next child onto the stack.
       DomTreeNode *child = NodeToProcess->nextChild();
       nodesToProcess.push_back(
-          new StackNode(AvailableValues, AvailableLoads, AvailableCalls,
-                        NodeToProcess->childGeneration(), child, child->begin(),
-                        child->end()));
+          new StackNode(AvailableValues, AvailableLoads, AvailableInvariants,
+                        AvailableCalls, NodeToProcess->childGeneration(),
+                        child, child->begin(), child->end()));
     } else {
       // It has been processed, and there are no more children to process,
       // so delete it and pop it off the stack.
@@ -1098,7 +1242,7 @@ PreservedAnalyses EarlyCSEPass::run(Function &F,
 
 namespace {
 
-/// \brief A simple and fast domtree-based CSE pass.
+/// A simple and fast domtree-based CSE pass.
 ///
 /// This pass does a simple depth-first walk over the dominator tree,
 /// eliminating trivially redundant instructions and using instsimplify to

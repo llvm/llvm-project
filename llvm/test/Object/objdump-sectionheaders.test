@@ -7,7 +7,7 @@
 ; CHECK: Sections:
 ; CHECK: Idx Name          Size      Address          Type
 ; CHECK:   0               00000000 0000000000000000
-; CHECK:   1 .text         00000026 0000000000000000 TEXT DATA
+; CHECK:   1 .text         00000026 0000000000000000 TEXT
 ; CHECK:   2 .rodata.str1.1 0000000d 0000000000000026 DATA
 ; CHECK:   3 .note.GNU-stack 00000000 0000000000000033
 ; CHECK:   4 .rela.text    00000048 0000000000000038

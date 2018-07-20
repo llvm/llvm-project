@@ -9,8 +9,8 @@ entry:
   %r = load <16 x i8>, <16 x i8>* %p, align 1
   ret <16 x i8> %r
 
-; CHECK-NOT: v4i32,ch = llvm.ppc.altivec.lvx{{.*}}<LD31[%p+4294967281](align=1)>
-; CHECK:     v4i32,ch = llvm.ppc.altivec.lvx{{.*}}<LD31[%p+-15](align=1)>
+; CHECK-NOT: v4i32,ch = llvm.ppc.altivec.lvx{{.*}}<(load 31 from %ir.p + 4294967281, align 1)>
+; CHECK:     v4i32,ch = llvm.ppc.altivec.lvx{{.*}}<(load 31 from %ir.p - 15, align 1)>
 }
 
 attributes #0 = { nounwind "target-cpu"="pwr7" }

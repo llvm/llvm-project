@@ -433,7 +433,7 @@ data structure, but there are only 20 lines of meaningful code.)
 
 .. code-block:: c++
 
-  /// @brief The map for a single function's stack frame.  One of these is
+  /// The map for a single function's stack frame.  One of these is
   ///        compiled as constant data into the executable for each function.
   ///
   /// Storage of metadata values is elided if the %metadata parameter to
@@ -444,7 +444,7 @@ data structure, but there are only 20 lines of meaningful code.)
     const void *Meta[0]; //< Metadata for each root.
   };
 
-  /// @brief A link in the dynamic shadow stack.  One of these is embedded in
+  /// A link in the dynamic shadow stack.  One of these is embedded in
   ///        the stack frame of each function on the call stack.
   struct StackEntry {
     StackEntry *Next;    //< Link to next stack entry (the caller's).
@@ -452,13 +452,13 @@ data structure, but there are only 20 lines of meaningful code.)
     void *Roots[0];      //< Stack roots (in-place array).
   };
 
-  /// @brief The head of the singly-linked list of StackEntries.  Functions push
+  /// The head of the singly-linked list of StackEntries.  Functions push
   ///        and pop onto this in their prologue and epilogue.
   ///
   /// Since there is only a global list, this technique is not threadsafe.
   StackEntry *llvm_gc_root_chain;
 
-  /// @brief Calls Visitor(root, meta) for each GC root on the stack.
+  /// Calls Visitor(root, meta) for each GC root on the stack.
   ///        root and meta are exactly the values passed to
   ///        @llvm.gcroot.
   ///
@@ -1032,7 +1032,7 @@ a realistic example:
 
       // Emit PointCount.
       OS.AddComment("safe point count");
-      AP.EmitInt32(MD.size());
+      AP.emitInt32(MD.size());
 
       // And each safe point...
       for (GCFunctionInfo::iterator PI = MD.begin(),
@@ -1049,18 +1049,18 @@ a realistic example:
 
       // Emit the stack frame size.
       OS.AddComment("stack frame size (in words)");
-      AP.EmitInt32(MD.getFrameSize() / IntPtrSize);
+      AP.emitInt32(MD.getFrameSize() / IntPtrSize);
 
       // Emit stack arity, i.e. the number of stacked arguments.
       unsigned RegisteredArgs = IntPtrSize == 4 ? 5 : 6;
       unsigned StackArity = MD.getFunction().arg_size() > RegisteredArgs ?
                             MD.getFunction().arg_size() - RegisteredArgs : 0;
       OS.AddComment("stack arity");
-      AP.EmitInt32(StackArity);
+      AP.emitInt32(StackArity);
 
       // Emit the number of live roots in the function.
       OS.AddComment("live root count");
-      AP.EmitInt32(MD.live_size(PI));
+      AP.emitInt32(MD.live_size(PI));
 
       // And for each live root...
       for (GCFunctionInfo::live_iterator LI = MD.live_begin(PI),
@@ -1068,7 +1068,7 @@ a realistic example:
                                          LI != LE; ++LI) {
         // Emit live root's offset within the stack frame.
         OS.AddComment("stack index (offset / wordsize)");
-        AP.EmitInt32(LI->StackOffset);
+        AP.emitInt32(LI->StackOffset);
       }
     }
   }

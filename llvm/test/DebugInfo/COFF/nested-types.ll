@@ -134,7 +134,7 @@ target triple = "x86_64-pc-windows-msvc19.0.24215"
 ; CHECK-NEXT:   }
 ; CHECK-NEXT: }
 ;
-; CHECK:      Struct (0x1007) {
+; CHECK:      Struct (0x{{.*}}) {
 ; CHECK-NEXT:   TypeLeafKind: LF_STRUCTURE (0x1505)
 ; CHECK-NEXT:   MemberCount: 4
 ; CHECK-NEXT:   Properties [ (0x210)

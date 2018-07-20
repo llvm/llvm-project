@@ -122,25 +122,18 @@ public:
 
     // Output the constant in big/little endian byte order.
     unsigned Size = Desc.getSize();
+    support::endianness E = IsLittleEndian ? support::little : support::big;
     switch (Size) {
     case 0:
       break;
     case 4:
-      if (IsLittleEndian) {
-        support::endian::Writer<support::little>(OS).write<uint32_t>(Bits);
-      } else {
-        support::endian::Writer<support::big>(OS).write<uint32_t>(Bits);
-      }
+      support::endian::write<uint32_t>(OS, Bits, E);
       break;
     case 8:
       // If we emit a pair of instructions, the first one is
       // always in the top 32 bits, even on little-endian.
-      if (IsLittleEndian) {
-        uint64_t Swapped = (Bits << 32) | (Bits >> 32);
-        support::endian::Writer<support::little>(OS).write<uint64_t>(Swapped);
-      } else {
-        support::endian::Writer<support::big>(OS).write<uint64_t>(Bits);
-      }
+      support::endian::write<uint32_t>(OS, Bits >> 32, E);
+      support::endian::write<uint32_t>(OS, Bits, E);
       break;
     default:
       llvm_unreachable("Invalid instruction size");

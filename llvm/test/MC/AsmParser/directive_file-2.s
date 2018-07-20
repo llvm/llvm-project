@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple i386-unknown-unknown %s | FileCheck %s
+// RUN: llvm-mc -g -triple i386-unknown-unknown %s | FileCheck %s
 // Test for Bug 11740
 // This testcase has two directive files,
 // when compiled with -g, this testcase will not report error,

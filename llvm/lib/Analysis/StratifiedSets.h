@@ -29,7 +29,7 @@ typedef unsigned StratifiedIndex;
 /// NOTE: ^ This can't be a short -- bootstrapping clang has a case where
 /// ~1M sets exist.
 
-// \brief Container of information related to a value in a StratifiedSet.
+// Container of information related to a value in a StratifiedSet.
 struct StratifiedInfo {
   StratifiedIndex Index;
   /// For field sensitivity, etc. we can tack fields on here.
@@ -37,7 +37,7 @@ struct StratifiedInfo {
 
 /// A "link" between two StratifiedSets.
 struct StratifiedLink {
-  /// \brief This is a value used to signify "does not exist" where the
+  /// This is a value used to signify "does not exist" where the
   /// StratifiedIndex type is used.
   ///
   /// This is used instead of Optional<StratifiedIndex> because
@@ -63,7 +63,7 @@ struct StratifiedLink {
   void clearAbove() { Above = SetSentinel; }
 };
 
-/// \brief These are stratified sets, as described in "Fast algorithms for
+/// These are stratified sets, as described in "Fast algorithms for
 /// Dyck-CFL-reachability with applications to Alias Analysis" by Zhang Q, Lyu M
 /// R, Yuan H, and Su Z. -- in short, this is meant to represent different sets
 /// of Value*s. If two Value*s are in the same set, or if both sets have
@@ -172,7 +172,7 @@ private:
 /// remap has occurred, and use this information so we can defer renumbering set
 /// elements until build time.
 template <typename T> class StratifiedSetsBuilder {
-  /// \brief Represents a Stratified Set, with information about the Stratified
+  /// Represents a Stratified Set, with information about the Stratified
   /// Set above it, the set below it, and whether the current set has been
   /// remapped to another.
   struct BuilderLink {
@@ -263,7 +263,7 @@ template <typename T> class StratifiedSetsBuilder {
     StratifiedIndex Remap;
   };
 
-  /// \brief This function performs all of the set unioning/value renumbering
+  /// This function performs all of the set unioning/value renumbering
   /// that we've been putting off, and generates a vector<StratifiedLink> that
   /// may be placed in a StratifiedSets instance.
   void finalizeSets(std::vector<StratifiedLink> &StratLinks) {
@@ -302,7 +302,7 @@ template <typename T> class StratifiedSetsBuilder {
     }
   }
 
-  /// \brief There's a guarantee in StratifiedLink where all bits set in a
+  /// There's a guarantee in StratifiedLink where all bits set in a
   /// Link.externals will be set in all Link.externals "below" it.
   static void propagateAttrs(std::vector<StratifiedLink> &Links) {
     const auto getHighestParentAbove = [&Links](StratifiedIndex Idx) {
@@ -351,7 +351,7 @@ public:
     return addAtMerging(Main, NewIndex);
   }
 
-  /// \brief Restructures the stratified sets as necessary to make "ToAdd" in a
+  /// Restructures the stratified sets as necessary to make "ToAdd" in a
   /// set above "Main". There are some cases where this is not possible (see
   /// above), so we merge them such that ToAdd and Main are in the same set.
   bool addAbove(const T &Main, const T &ToAdd) {
@@ -364,7 +364,7 @@ public:
     return addAtMerging(ToAdd, Above);
   }
 
-  /// \brief Restructures the stratified sets as necessary to make "ToAdd" in a
+  /// Restructures the stratified sets as necessary to make "ToAdd" in a
   /// set below "Main". There are some cases where this is not possible (see
   /// above), so we merge them such that ToAdd and Main are in the same set.
   bool addBelow(const T &Main, const T &ToAdd) {
@@ -437,7 +437,7 @@ private:
     return *Current;
   }
 
-  /// \brief Merges two sets into one another. Assumes that these sets are not
+  /// Merges two sets into one another. Assumes that these sets are not
   /// already one in the same.
   void merge(StratifiedIndex Idx1, StratifiedIndex Idx2) {
     assert(inbounds(Idx1) && inbounds(Idx2));
@@ -458,7 +458,7 @@ private:
     mergeDirect(Idx1, Idx2);
   }
 
-  /// \brief Merges two sets assuming that the set at `Idx1` is unreachable from
+  /// Merges two sets assuming that the set at `Idx1` is unreachable from
   /// traversing above or below the set at `Idx2`.
   void mergeDirect(StratifiedIndex Idx1, StratifiedIndex Idx2) {
     assert(inbounds(Idx1) && inbounds(Idx2));

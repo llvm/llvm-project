@@ -302,8 +302,8 @@ TEST(STLExtrasTest, PartitionAdaptor) {
   ASSERT_EQ(V.begin() + 4, I);
 
   // Sort the two halves as partition may have messed with the order.
-  std::sort(V.begin(), I);
-  std::sort(I, V.end());
+  llvm::sort(V.begin(), I);
+  llvm::sort(I, V.end());
 
   EXPECT_EQ(2, V[0]);
   EXPECT_EQ(4, V[1]);

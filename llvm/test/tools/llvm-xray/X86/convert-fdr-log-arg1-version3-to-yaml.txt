@@ -1,0 +1,17 @@
+; RUN: llvm-xray convert %S/Inputs/fdr-log-arg1-version-3.xray -f=yaml -o - | FileCheck %s
+
+; CHECK:      ---
+; CHECK-NEXT: header:
+; CHECK-NEXT:   version:         3
+; CHECK-NEXT:   type:            1
+; CHECK-NEXT:   constant-tsc:    true
+; CHECK-NEXT:   nonstop-tsc:     true
+; CHECK-NEXT:   cycle-frequency: 3900000000
+; CHECK-NEXT: records:
+; CHECK-NEXT:   - { type: 0, func-id: 3, function: '3', cpu: 6, thread: 2631, process: 2631, kind: function-enter, tsc: 2034042117104344 }
+; CHECK-NEXT:   - { type: 0, func-id: 3, function: '3', cpu: 6, thread: 2631, process: 2631, kind: function-exit, tsc: 2034042117199088 }
+; CHECK-NEXT:   - { type: 0, func-id: 2, function: '2', cpu: 6, thread: 2631, process: 2631, kind: function-enter, tsc: 2034043145686378 }
+; CHECK-NEXT:   - { type: 0, func-id: 2, function: '2', cpu: 6, thread: 2631, process: 2631, kind: function-exit, tsc: 2034043145762200 }
+; CHECK-NEXT:   - { type: 0, func-id: 1, function: '1', args: [ 67 ], cpu: 6, thread: 2631, process: 2631, kind: function-enter-arg, tsc: 2034049739853430 }
+; CHECK-NEXT:   - { type: 0, func-id: 1, function: '1', cpu: 6, thread: 2631, process: 2631, kind: function-exit, tsc: 2034049739878154 }
+; CHECK-NEXT: ...

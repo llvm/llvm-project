@@ -268,12 +268,12 @@ TEST_F(OptionalTest, MoveOnlyMoveConstruction) {
   Optional<MoveOnly> A(MoveOnly(3));
   MoveOnly::ResetCounts();
   Optional<MoveOnly> B(std::move(A));
-  EXPECT_FALSE((bool)A);
+  EXPECT_TRUE((bool)A);
   EXPECT_TRUE((bool)B);
   EXPECT_EQ(3, B->val);
   EXPECT_EQ(1u, MoveOnly::MoveConstructions);
   EXPECT_EQ(0u, MoveOnly::MoveAssignments);
-  EXPECT_EQ(1u, MoveOnly::Destructions);
+  EXPECT_EQ(0u, MoveOnly::Destructions);
 }
 
 TEST_F(OptionalTest, MoveOnlyAssignment) {
@@ -292,12 +292,12 @@ TEST_F(OptionalTest, MoveOnlyInitializingAssignment) {
   Optional<MoveOnly> B;
   MoveOnly::ResetCounts();
   B = std::move(A);
-  EXPECT_FALSE((bool)A);
+  EXPECT_TRUE((bool)A);
   EXPECT_TRUE((bool)B);
   EXPECT_EQ(3, B->val);
   EXPECT_EQ(1u, MoveOnly::MoveConstructions);
   EXPECT_EQ(0u, MoveOnly::MoveAssignments);
-  EXPECT_EQ(1u, MoveOnly::Destructions);
+  EXPECT_EQ(0u, MoveOnly::Destructions);
 }
 
 TEST_F(OptionalTest, MoveOnlyNullingAssignment) {
@@ -317,12 +317,12 @@ TEST_F(OptionalTest, MoveOnlyAssigningAssignment) {
   Optional<MoveOnly> B(MoveOnly(4));
   MoveOnly::ResetCounts();
   B = std::move(A);
-  EXPECT_FALSE((bool)A);
+  EXPECT_TRUE((bool)A);
   EXPECT_TRUE((bool)B);
   EXPECT_EQ(3, B->val);
   EXPECT_EQ(0u, MoveOnly::MoveConstructions);
   EXPECT_EQ(1u, MoveOnly::MoveAssignments);
-  EXPECT_EQ(1u, MoveOnly::Destructions);
+  EXPECT_EQ(0u, MoveOnly::Destructions);
 }
 
 struct Immovable {
@@ -517,6 +517,14 @@ TEST_F(OptionalTest, OperatorGreaterEqual) {
   IsLess = true;
   CheckRelation<GreaterEqual>(InequalityLhs, InequalityRhs, !IsLess);
 }
+
+#if __has_feature(is_trivially_copyable) && defined(_LIBCPP_VERSION)
+static_assert(std::is_trivially_copyable<Optional<int>>::value,
+              "Should be trivially copyable");
+static_assert(
+    !std::is_trivially_copyable<Optional<NonDefaultConstructible>>::value,
+    "Shouldn't be trivially copyable");
+#endif
 
 } // end anonymous namespace
 

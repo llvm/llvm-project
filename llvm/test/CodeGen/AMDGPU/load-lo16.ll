@@ -269,10 +269,10 @@ entry:
 
 ; VI: flat_load_ushort v{{[0-9]+}}
 ; VI: v_or_b32_e32
-define void @load_flat_lo_v2i16_reghi_vreg(i16 addrspace(4)* %in, i32 %reg) #0 {
+define void @load_flat_lo_v2i16_reghi_vreg(i16* %in, i32 %reg) #0 {
 entry:
   %reg.bc = bitcast i32 %reg to <2 x i16>
-  %load = load i16, i16 addrspace(4)* %in
+  %load = load i16, i16* %in
   %build1 = insertelement <2 x i16> %reg.bc, i16 %load, i32 0
   store <2 x i16> %build1, <2 x i16> addrspace(1)* undef
   ret void
@@ -288,10 +288,10 @@ entry:
 
 ; VI: flat_load_ushort v{{[0-9]+}}
 ; VI: v_or_b32_e32
-define void @load_flat_lo_v2f16_reghi_vreg(half addrspace(4)* %in, i32 %reg) #0 {
+define void @load_flat_lo_v2f16_reghi_vreg(half* %in, i32 %reg) #0 {
 entry:
   %reg.bc = bitcast i32 %reg to <2 x half>
-  %load = load half, half addrspace(4)* %in
+  %load = load half, half* %in
   %build1 = insertelement <2 x half> %reg.bc, half %load, i32 0
   store <2 x half> %build1, <2 x half> addrspace(1)* undef
   ret void
@@ -307,10 +307,10 @@ entry:
 
 ; VI: flat_load_ubyte v{{[0-9]+}}
 ; VI: v_or_b32_e32
-define void @load_flat_lo_v2i16_reglo_vreg_zexti8(i8 addrspace(4)* %in, i32 %reg) #0 {
+define void @load_flat_lo_v2i16_reglo_vreg_zexti8(i8* %in, i32 %reg) #0 {
 entry:
   %reg.bc = bitcast i32 %reg to <2 x i16>
-  %load = load i8, i8 addrspace(4)* %in
+  %load = load i8, i8* %in
   %ext = zext i8 %load to i16
   %build1 = insertelement <2 x i16> %reg.bc, i16 %ext, i32 0
   store <2 x i16> %build1, <2 x i16> addrspace(1)* undef
@@ -328,10 +328,10 @@ entry:
 ; VI: flat_load_sbyte v{{[0-9]+}}
 ; VI: v_or_b32_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 
-define void @load_flat_lo_v2i16_reglo_vreg_sexti8(i8 addrspace(4)* %in, i32 %reg) #0 {
+define void @load_flat_lo_v2i16_reglo_vreg_sexti8(i8* %in, i32 %reg) #0 {
 entry:
   %reg.bc = bitcast i32 %reg to <2 x i16>
-  %load = load i8, i8 addrspace(4)* %in
+  %load = load i8, i8* %in
   %ext = sext i8 %load to i16
   %build1 = insertelement <2 x i16> %reg.bc, i16 %ext, i32 0
   store <2 x i16> %build1, <2 x i16> addrspace(1)* undef
@@ -347,11 +347,11 @@ entry:
 ; GFX9-NEXT: s_setpc_b64
 
 ; VI: buffer_load_ushort v{{[0-9]+}}, off, s[0:3], s5 offset:4094{{$}}
-define void @load_private_lo_v2i16_reglo_vreg(i16* byval %in, i32 %reg) #0 {
+define void @load_private_lo_v2i16_reglo_vreg(i16 addrspace(5)* byval %in, i32 %reg) #0 {
 entry:
   %reg.bc = bitcast i32 %reg to <2 x i16>
-  %gep = getelementptr inbounds i16, i16* %in, i64 2045
-  %load = load i16, i16* %gep
+  %gep = getelementptr inbounds i16, i16 addrspace(5)* %in, i64 2045
+  %load = load i16, i16 addrspace(5)* %gep
   %build1 = insertelement <2 x i16> %reg.bc, i16 %load, i32 0
   store <2 x i16> %build1, <2 x i16> addrspace(1)* undef
   ret void
@@ -369,10 +369,10 @@ entry:
 ; GFX9-NEXT: s_setpc_b64
 
 ; VI: buffer_load_ushort v{{[0-9]+}}, off, s[0:3], s5 offset:4094{{$}}
-define void @load_private_lo_v2i16_reghi_vreg(i16* byval %in, i16 %reg) #0 {
+define void @load_private_lo_v2i16_reghi_vreg(i16 addrspace(5)* byval %in, i16 %reg) #0 {
 entry:
-  %gep = getelementptr inbounds i16, i16* %in, i64 2045
-  %load = load i16, i16* %gep
+  %gep = getelementptr inbounds i16, i16 addrspace(5)* %in, i64 2045
+  %load = load i16, i16 addrspace(5)* %gep
   %build0 = insertelement <2 x i16> undef, i16 %reg, i32 1
   %build1 = insertelement <2 x i16> %build0, i16 %load, i32 0
   store <2 x i16> %build1, <2 x i16> addrspace(1)* undef
@@ -388,11 +388,11 @@ entry:
 ; GFX9-NEXT: s_setpc_b64
 
 ; VI: buffer_load_ushort v{{[0-9]+}}, off, s[0:3], s5 offset:4094{{$}}
-define void @load_private_lo_v2f16_reglo_vreg(half* byval %in, i32 %reg) #0 {
+define void @load_private_lo_v2f16_reglo_vreg(half addrspace(5)* byval %in, i32 %reg) #0 {
 entry:
   %reg.bc = bitcast i32 %reg to <2 x half>
-  %gep = getelementptr inbounds half, half* %in, i64 2045
-  %load = load half, half* %gep
+  %gep = getelementptr inbounds half, half addrspace(5)* %in, i64 2045
+  %load = load half, half addrspace(5)* %gep
   %build1 = insertelement <2 x half> %reg.bc, half %load, i32 0
   store <2 x half> %build1, <2 x half> addrspace(1)* undef
   ret void
@@ -407,10 +407,10 @@ entry:
 ; GFX9-NEXT: s_setpc_b64
 
 ; VI: buffer_load_ushort v{{[0-9]+}}, off, s[0:3], s4 offset:4094{{$}}
-define void @load_private_lo_v2i16_reglo_vreg_nooff(i16* %in, i32 %reg) #0 {
+define void @load_private_lo_v2i16_reglo_vreg_nooff(i16 addrspace(5)* %in, i32 %reg) #0 {
 entry:
   %reg.bc = bitcast i32 %reg to <2 x i16>
-  %load = load volatile i16, i16* inttoptr (i32 4094 to i16*)
+  %load = load volatile i16, i16 addrspace(5)* inttoptr (i32 4094 to i16 addrspace(5)*)
   %build1 = insertelement <2 x i16> %reg.bc, i16 %load, i32 0
   store <2 x i16> %build1, <2 x i16> addrspace(1)* undef
   ret void
@@ -425,10 +425,10 @@ entry:
 ; GFX9-NEXT: s_setpc_b64
 
 ; VI: buffer_load_ushort v{{[0-9]+}}, off, s[0:3], s4 offset:4094{{$}}
-define void @load_private_lo_v2i16_reghi_vreg_nooff(i16* %in, i32 %reg) #0 {
+define void @load_private_lo_v2i16_reghi_vreg_nooff(i16 addrspace(5)* %in, i32 %reg) #0 {
 entry:
   %reg.bc = bitcast i32 %reg to <2 x i16>
-  %load = load volatile i16, i16* inttoptr (i32 4094 to i16*)
+  %load = load volatile i16, i16 addrspace(5)* inttoptr (i32 4094 to i16 addrspace(5)*)
   %build1 = insertelement <2 x i16> %reg.bc, i16 %load, i32 0
   store <2 x i16> %build1, <2 x i16> addrspace(1)* undef
   ret void
@@ -443,10 +443,10 @@ entry:
 ; GFX9-NEXT: s_setpc_b64
 
 ; VI: buffer_load_ushort v{{[0-9]+}}, off, s[0:3], s4 offset:4094{{$}}
-define void @load_private_lo_v2f16_reglo_vreg_nooff(half* %in, i32 %reg) #0 {
+define void @load_private_lo_v2f16_reglo_vreg_nooff(half addrspace(5)* %in, i32 %reg) #0 {
 entry:
   %reg.bc = bitcast i32 %reg to <2 x half>
-  %load = load volatile half, half* inttoptr (i32 4094 to half*)
+  %load = load volatile half, half addrspace(5)* inttoptr (i32 4094 to half addrspace(5)*)
   %build1 = insertelement <2 x half> %reg.bc, half %load, i32 0
   store <2 x half> %build1, <2 x half> addrspace(1)* undef
   ret void
@@ -461,11 +461,11 @@ entry:
 ; GFX9-NEXT: s_setpc_b64
 
 ; VI: buffer_load_ubyte v{{[0-9]+}}, off, s[0:3], s5 offset:4095{{$}}
-define void @load_private_lo_v2i16_reglo_vreg_zexti8(i8* byval %in, i32 %reg) #0 {
+define void @load_private_lo_v2i16_reglo_vreg_zexti8(i8 addrspace(5)* byval %in, i32 %reg) #0 {
 entry:
   %reg.bc = bitcast i32 %reg to <2 x i16>
-  %gep = getelementptr inbounds i8, i8* %in, i64 4091
-  %load = load i8, i8* %gep
+  %gep = getelementptr inbounds i8, i8 addrspace(5)* %in, i64 4091
+  %load = load i8, i8 addrspace(5)* %gep
   %ext = zext i8 %load to i16
   %build1 = insertelement <2 x i16> %reg.bc, i16 %ext, i32 0
   store <2 x i16> %build1, <2 x i16> addrspace(1)* undef
@@ -481,11 +481,11 @@ entry:
 ; GFX9-NEXT: s_setpc_b64
 
 ; VI: buffer_load_sbyte v{{[0-9]+}}, off, s[0:3], s5 offset:4095{{$}}
-define void @load_private_lo_v2i16_reglo_vreg_sexti8(i8* byval %in, i32 %reg) #0 {
+define void @load_private_lo_v2i16_reglo_vreg_sexti8(i8 addrspace(5)* byval %in, i32 %reg) #0 {
 entry:
   %reg.bc = bitcast i32 %reg to <2 x i16>
-  %gep = getelementptr inbounds i8, i8* %in, i64 4091
-  %load = load i8, i8* %gep
+  %gep = getelementptr inbounds i8, i8 addrspace(5)* %in, i64 4091
+  %load = load i8, i8 addrspace(5)* %gep
   %ext = sext i8 %load to i16
   %build1 = insertelement <2 x i16> %reg.bc, i16 %ext, i32 0
   store <2 x i16> %build1, <2 x i16> addrspace(1)* undef
@@ -501,10 +501,10 @@ entry:
 ; GFX9-NEXT: s_setpc_b64
 
 ; VI: buffer_load_ubyte v0, off, s[0:3], s4 offset:4094{{$}}
-define void @load_private_lo_v2i16_reglo_vreg_nooff_zexti8(i8* %in, i32 %reg) #0 {
+define void @load_private_lo_v2i16_reglo_vreg_nooff_zexti8(i8 addrspace(5)* %in, i32 %reg) #0 {
 entry:
   %reg.bc = bitcast i32 %reg to <2 x i16>
-  %load = load volatile i8, i8* inttoptr (i32 4094 to i8*)
+  %load = load volatile i8, i8 addrspace(5)* inttoptr (i32 4094 to i8 addrspace(5)*)
   %ext = zext i8 %load to i16
   %build1 = insertelement <2 x i16> %reg.bc, i16 %ext, i32 0
   store <2 x i16> %build1, <2 x i16> addrspace(1)* undef
@@ -520,10 +520,10 @@ entry:
 ; GFX9-NEXT: s_setpc_b64
 
 ; VI: buffer_load_sbyte v0, off, s[0:3], s4 offset:4094{{$}}
-define void @load_private_lo_v2i16_reglo_vreg_nooff_sexti8(i8* %in, i32 %reg) #0 {
+define void @load_private_lo_v2i16_reglo_vreg_nooff_sexti8(i8 addrspace(5)* %in, i32 %reg) #0 {
 entry:
   %reg.bc = bitcast i32 %reg to <2 x i16>
-  %load = load volatile i8, i8* inttoptr (i32 4094 to i8*)
+  %load = load volatile i8, i8 addrspace(5)* inttoptr (i32 4094 to i8 addrspace(5)*)
   %ext = sext i8 %load to i16
   %build1 = insertelement <2 x i16> %reg.bc, i16 %ext, i32 0
   store <2 x i16> %build1, <2 x i16> addrspace(1)* undef
@@ -539,10 +539,10 @@ entry:
 ; GFX9-NEXT: s_setpc_b64
 
 ; VI: buffer_load_ubyte v0, off, s[0:3], s4 offset:4094{{$}}
-define void @load_private_lo_v2f16_reglo_vreg_nooff_zexti8(i8* %in, i32 %reg) #0 {
+define void @load_private_lo_v2f16_reglo_vreg_nooff_zexti8(i8 addrspace(5)* %in, i32 %reg) #0 {
 entry:
   %reg.bc = bitcast i32 %reg to <2 x half>
-  %load = load volatile i8, i8* inttoptr (i32 4094 to i8*)
+  %load = load volatile i8, i8 addrspace(5)* inttoptr (i32 4094 to i8 addrspace(5)*)
   %ext = zext i8 %load to i16
   %bc.ext = bitcast i16 %ext to half
   %build1 = insertelement <2 x half> %reg.bc, half %bc.ext, i32 0
@@ -559,11 +559,11 @@ entry:
 ; GFX9-NEXT: s_setpc_b64
 
 ; VI: flat_load_ushort
-define void @load_constant_lo_v2i16_reglo_vreg(i16 addrspace(2)* %in, i32 %reg) #0 {
+define void @load_constant_lo_v2i16_reglo_vreg(i16 addrspace(4)* %in, i32 %reg) #0 {
 entry:
   %reg.bc = bitcast i32 %reg to <2 x i16>
-  %gep = getelementptr inbounds i16, i16 addrspace(2)* %in, i64 -2047
-  %load = load i16, i16 addrspace(2)* %gep
+  %gep = getelementptr inbounds i16, i16 addrspace(4)* %in, i64 -2047
+  %load = load i16, i16 addrspace(4)* %gep
   %build1 = insertelement <2 x i16> %reg.bc, i16 %load, i32 0
   store <2 x i16> %build1, <2 x i16> addrspace(1)* undef
   ret void
@@ -578,11 +578,11 @@ entry:
 ; GFX9-NEXT: s_setpc_b64
 
 ; VI: flat_load_ushort
-define void @load_constant_lo_v2f16_reglo_vreg(half addrspace(2)* %in, i32 %reg) #0 {
+define void @load_constant_lo_v2f16_reglo_vreg(half addrspace(4)* %in, i32 %reg) #0 {
 entry:
   %reg.bc = bitcast i32 %reg to <2 x half>
-  %gep = getelementptr inbounds half, half addrspace(2)* %in, i64 -2047
-  %load = load half, half addrspace(2)* %gep
+  %gep = getelementptr inbounds half, half addrspace(4)* %in, i64 -2047
+  %load = load half, half addrspace(4)* %gep
   %build1 = insertelement <2 x half> %reg.bc, half %load, i32 0
   store <2 x half> %build1, <2 x half> addrspace(1)* undef
   ret void
@@ -595,13 +595,13 @@ entry:
 ; VI: buffer_load_ushort v
 define void @load_private_lo_v2i16_reglo_vreg_to_offset(i32 %reg) #0 {
 entry:
-  %obj0 = alloca [10 x i32], align 4
-  %obj1 = alloca [4096 x i16], align 2
+  %obj0 = alloca [10 x i32], align 4, addrspace(5)
+  %obj1 = alloca [4096 x i16], align 2, addrspace(5)
   %reg.bc = bitcast i32 %reg to <2 x i16>
-  %bc = bitcast [10 x i32]* %obj0 to i32*
-  store volatile i32 123, i32* %bc
-  %gep = getelementptr inbounds [4096 x i16], [4096 x i16]* %obj1, i32 0, i32 2025
-  %load = load volatile i16, i16* %gep
+  %bc = bitcast [10 x i32] addrspace(5)* %obj0 to i32 addrspace(5)*
+  store volatile i32 123, i32 addrspace(5)* %bc
+  %gep = getelementptr inbounds [4096 x i16], [4096 x i16] addrspace(5)* %obj1, i32 0, i32 2025
+  %load = load volatile i16, i16 addrspace(5)* %gep
   %build1 = insertelement <2 x i16> %reg.bc, i16 %load, i32 0
   store <2 x i16> %build1, <2 x i16> addrspace(1)* undef
   ret void
@@ -614,13 +614,13 @@ entry:
 ; VI: buffer_load_sbyte v
 define void @load_private_lo_v2i16_reglo_vreg_sexti8_to_offset(i32 %reg) #0 {
 entry:
-  %obj0 = alloca [10 x i32], align 4
-  %obj1 = alloca [4096 x i8], align 2
+  %obj0 = alloca [10 x i32], align 4, addrspace(5)
+  %obj1 = alloca [4096 x i8], align 2, addrspace(5)
   %reg.bc = bitcast i32 %reg to <2 x i16>
-  %bc = bitcast [10 x i32]* %obj0 to i32*
-  store volatile i32 123, i32* %bc
-  %gep = getelementptr inbounds [4096 x i8], [4096 x i8]* %obj1, i32 0, i32 4051
-  %load = load volatile i8, i8* %gep
+  %bc = bitcast [10 x i32] addrspace(5)* %obj0 to i32 addrspace(5)*
+  store volatile i32 123, i32 addrspace(5)* %bc
+  %gep = getelementptr inbounds [4096 x i8], [4096 x i8] addrspace(5)* %obj1, i32 0, i32 4051
+  %load = load volatile i8, i8 addrspace(5)* %gep
   %load.ext = sext i8 %load to i16
   %build1 = insertelement <2 x i16> %reg.bc, i16 %load.ext, i32 0
   store <2 x i16> %build1, <2 x i16> addrspace(1)* undef
@@ -634,13 +634,13 @@ entry:
 ; VI: buffer_load_ubyte v
 define void @load_private_lo_v2i16_reglo_vreg_zexti8_to_offset(i32 %reg) #0 {
 entry:
-  %obj0 = alloca [10 x i32], align 4
-  %obj1 = alloca [4096 x i8], align 2
+  %obj0 = alloca [10 x i32], align 4, addrspace(5)
+  %obj1 = alloca [4096 x i8], align 2, addrspace(5)
   %reg.bc = bitcast i32 %reg to <2 x i16>
-  %bc = bitcast [10 x i32]* %obj0 to i32*
-  store volatile i32 123, i32* %bc
-  %gep = getelementptr inbounds [4096 x i8], [4096 x i8]* %obj1, i32 0, i32 4051
-  %load = load volatile i8, i8* %gep
+  %bc = bitcast [10 x i32] addrspace(5)* %obj0 to i32 addrspace(5)*
+  store volatile i32 123, i32 addrspace(5)* %bc
+  %gep = getelementptr inbounds [4096 x i8], [4096 x i8] addrspace(5)* %obj1, i32 0, i32 4051
+  %load = load volatile i8, i8 addrspace(5)* %gep
   %load.ext = zext i8 %load to i16
   %build1 = insertelement <2 x i16> %reg.bc, i16 %load.ext, i32 0
   store <2 x i16> %build1, <2 x i16> addrspace(1)* undef

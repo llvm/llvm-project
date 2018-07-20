@@ -266,3 +266,48 @@ TEST(Option, FlagAliasToJoined) {
   EXPECT_EQ(1U, AL.getAllArgValues(OPT_B).size());
   EXPECT_EQ("", AL.getAllArgValues(OPT_B)[0]);
 }
+
+TEST(Option, FindNearest) {
+  TestOptTable T;
+  std::string Nearest;
+
+  // Options that are too short should not be considered
+  // "near" other short options.
+  EXPECT_GT(T.findNearest("-A", Nearest), 4U);
+  EXPECT_GT(T.findNearest("/C", Nearest), 4U);
+  EXPECT_GT(T.findNearest("--C=foo", Nearest), 4U);
+
+  // The nearest candidate should mirror the amount of prefix
+  // characters used in the original string.
+  EXPECT_EQ(1U, T.findNearest("-blorb", Nearest));
+  EXPECT_EQ(Nearest, "-blorp");
+  EXPECT_EQ(1U, T.findNearest("--blorm", Nearest));
+  EXPECT_EQ(Nearest, "--blorp");
+  EXPECT_EQ(1U, T.findNearest("-fjormp", Nearest));
+  EXPECT_EQ(Nearest, "--fjormp");
+
+  // The nearest candidate respects the prefix and value delimiter
+  // of the original string.
+  EXPECT_EQ(1U, T.findNearest("/framb:foo", Nearest));
+  EXPECT_EQ(Nearest, "/cramb:foo");
+
+  // Flags should be included and excluded as specified.
+  EXPECT_EQ(1U, T.findNearest("-doopf", Nearest, /*FlagsToInclude=*/OptFlag2));
+  EXPECT_EQ(Nearest, "-doopf2");
+  EXPECT_EQ(1U, T.findNearest("-doopf", Nearest,
+                              /*FlagsToInclude=*/0,
+                              /*FlagsToExclude=*/OptFlag2));
+  EXPECT_EQ(Nearest, "-doopf1");
+}
+
+TEST(DISABLED_Option, FindNearestFIXME) {
+  TestOptTable T;
+  std::string Nearest;
+
+  // FIXME: Options with joined values should not have those values considered
+  // when calculating distance. The test below would fail if run, but it should
+  // succeed.
+  EXPECT_EQ(1U, T.findNearest("--erbghFoo", Nearest));
+  EXPECT_EQ(Nearest, "--ermghFoo");
+
+}

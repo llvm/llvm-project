@@ -611,6 +611,12 @@ bool Thumb1FrameLowering::emitPopSpecialFixUp(MachineBasicBlock &MBB,
   unsigned TemporaryReg = 0;
   BitVector PopFriendly =
       TRI.getAllocatableSet(MF, TRI.getRegClass(ARM::tGPRRegClassID));
+  // R7 may be used as a frame pointer, hence marked as not generally
+  // allocatable, however there's no reason to not use it as a temporary for
+  // restoring LR.
+  if (STI.useR7AsFramePointer())
+    PopFriendly.set(ARM::R7);
+
   assert(PopFriendly.any() && "No allocatable pop-friendly register?!");
   // Rebuild the GPRs from the high registers because they are removed
   // form the GPR reg class for thumb1.
@@ -622,17 +628,20 @@ bool Thumb1FrameLowering::emitPopSpecialFixUp(MachineBasicBlock &MBB,
   GPRsNoLRSP.reset(ARM::PC);
   findTemporariesForLR(GPRsNoLRSP, PopFriendly, UsedRegs, PopReg, TemporaryReg);
 
-  // If we couldn't find a pop-friendly register, restore LR before popping the
-  // other callee-saved registers, so we can use one of them as a temporary.
+  // If we couldn't find a pop-friendly register, try restoring LR before
+  // popping the other callee-saved registers, so we could use one of them as a
+  // temporary.
   bool UseLDRSP = false;
   if (!PopReg && MBBI != MBB.begin()) {
     auto PrevMBBI = MBBI;
     PrevMBBI--;
     if (PrevMBBI->getOpcode() == ARM::tPOP) {
-      MBBI = PrevMBBI;
-      UsedRegs.stepBackward(*MBBI);
+      UsedRegs.stepBackward(*PrevMBBI);
       findTemporariesForLR(GPRsNoLRSP, PopFriendly, UsedRegs, PopReg, TemporaryReg);
-      UseLDRSP = true;
+      if (PopReg) {
+        MBBI = PrevMBBI;
+        UseLDRSP = true;
+      }
     }
   }
 

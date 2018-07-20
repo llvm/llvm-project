@@ -9,7 +9,7 @@ define amdgpu_ps void @if_with_kill(i32 %arg) {
   br i1 %cmp, label %then, label %endif
 
 then:
-  tail call void @llvm.AMDGPU.kilp()
+  tail call void @llvm.amdgcn.kill(i1 false)
   br label %endif
 
 endif:
@@ -35,7 +35,7 @@ loop:
   br i1 %cc, label %loop, label %break
 
 break:
-  tail call void @llvm.AMDGPU.kilp()
+  tail call void @llvm.amdgcn.kill(i1 false)
   br label %endif
 
 endif:
@@ -58,7 +58,7 @@ loop:
   %ind = phi i32 [%sub, %then], [%dec, %loop]
   %dec = sub i32 %ind, 1
   %cc = icmp ne i32 %ind, 0
-  tail call void @llvm.AMDGPU.kilp()
+  tail call void @llvm.amdgcn.kill(i1 false)
   br i1 %cc, label %loop, label %break
 
 break:
@@ -68,4 +68,6 @@ endif:
   ret void
 }
 
-declare void @llvm.AMDGPU.kilp()
+declare void @llvm.amdgcn.kill(i1) #0
+
+attributes #0 = { nounwind }

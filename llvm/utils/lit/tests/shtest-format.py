@@ -39,6 +39,7 @@
 #
 # CHECK: Command Output (stdout):
 # CHECK-NEXT: --
+# CHECK-NEXT: $ ":" "RUN: at line 1"
 # CHECK-NEXT: $ "printf"
 # CHECK-NEXT: # command output:
 # CHECK-NEXT: line 1: failed test output on stdout

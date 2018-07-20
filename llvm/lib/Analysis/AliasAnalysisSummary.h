@@ -13,7 +13,7 @@
 /// Summary-based analysis, also known as bottom-up analysis, is a style of
 /// interprocedrual static analysis that tries to analyze the callees before the
 /// callers get analyzed. The key idea of summary-based analysis is to first
-/// process each function indepedently, outline its behavior in a condensed
+/// process each function independently, outline its behavior in a condensed
 /// summary, and then instantiate the summary at the callsite when the said
 /// function is called elsewhere. This is often in contrast to another style
 /// called top-down analysis, in which callers are always analyzed first before

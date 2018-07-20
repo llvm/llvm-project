@@ -78,6 +78,28 @@ bb2:
   ret void
 }
 
+define void @test5_no_null_opt(i1 %cond, i8* %ptr) #0 {
+
+; CHECK-LABEL: test5_no_null_opt
+; CHECK: entry:
+; CHECK: %[[SEL:.*]] = select i1 %cond, i8* null, i8* %ptr
+; CHECK: store i8 2, i8* %[[SEL]]
+
+entry:
+  br i1 %cond, label %bb1, label %bb3
+
+bb3:
+ br label %bb2
+
+bb1:
+ br label %bb2
+
+bb2:
+  %ptr.2 = phi i8* [ %ptr, %bb3 ], [ null, %bb1 ]
+  store i8 2, i8* %ptr.2, align 8
+  ret void
+}
+
 ; CHECK-LABEL: test6
 ; CHECK: entry:
 ; CHECK-NOT: select
@@ -96,6 +118,25 @@ bb2:
   store i8 2, i8* %ptr.2, align 8
   ret void
 }
+
+; CHECK-LABEL: test6_no_null_opt
+; CHECK: entry:
+; CHECK: %[[SEL:.*]] = select i1 %cond, i8* null, i8* %ptr
+; CHECK: store i8 2, i8* %[[SEL]]
+
+define void @test6_no_null_opt(i1 %cond, i8* %ptr) #0 {
+entry:
+  br i1 %cond, label %bb1, label %bb2
+
+bb1:
+  br label %bb2
+
+bb2:
+  %ptr.2 = phi i8* [ %ptr, %entry ], [ null, %bb1 ]
+  store i8 2, i8* %ptr.2, align 8
+  ret void
+}
+
 
 define i32 @test7(i1 %X) {
 entry:
@@ -127,3 +168,21 @@ else:
 }
 ; CHECK-LABEL: define void @test8(
 ; CHECK: call void %Y(
+
+define void @test8_no_null_opt(i1 %X, void ()* %Y) #0 {
+entry:
+  br i1 %X, label %if, label %else
+
+if:
+  br label %else
+
+else:
+  %phi = phi void ()* [ %Y, %entry ], [ null, %if ]
+  call void %phi()
+  ret void
+}
+attributes #0 = { "null-pointer-is-valid"="true" }
+
+; CHECK-LABEL: define void @test8_no_null_opt(
+; CHECK: %[[SEL:.*]] = select i1 %X, void ()* null, void ()* %Y
+; CHECK: call void %[[SEL]]

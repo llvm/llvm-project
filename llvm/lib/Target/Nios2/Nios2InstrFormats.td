@@ -20,14 +20,44 @@ class Format<bits<6> val> {
   bits<6> Value = val;
 }
 
-def Pseudo : Format<0>;
-def FrmI : Format<1>;
-def FrmR : Format<2>;
-def FrmJ : Format<3>;
-def FrmOther : Format<4>; // Instruction w/ a custom format
+def Pseudo     : Format<0>;
+// Nios2 R1 instr formats:
+def FrmI       : Format<1>;
+def FrmR       : Format<2>;
+def FrmJ       : Format<3>;
+def FrmOther   : Format<4>;  // Instruction w/ a custom format
+// Nios2 R2 instr 32-bit formats:
+def FrmL26     : Format<5>;  // corresponds to J format in R1
+def FrmF2I16   : Format<6>;  // corresponds to I format in R1
+def FrmF2X4I12 : Format<7>;
+def FrmF1X4I12 : Format<8>;
+def FrmF1X4L17 : Format<9>;
+def FrmF3X6L5  : Format<10>; // corresponds to R format in R1
+def FrmF2X6L10 : Format<11>;
+def FrmF3X6    : Format<12>; // corresponds to R format in R1
+def FrmF3X8    : Format<13>; // corresponds to custom format in R1
+// Nios2 R2 instr 16-bit formats:
+def FrmI10     : Format<14>;
+def FrmT1I7    : Format<15>; 
+def FrmT2I4    : Format<16>;
+def FrmT1X1I6  : Format<17>;
+def FrmX1I7    : Format<18>;
+def FrmL5I4X1  : Format<19>;
+def FrmT2X1L3  : Format<20>;
+def FrmT2X1I3  : Format<21>;
+def FrmT3X1    : Format<22>;
+def FrmT2X3    : Format<23>;
+def FrmF1X1    : Format<24>;
+def FrmX2L5    : Format<25>;
+def FrmF1I5    : Format<26>;
+def FrmF2      : Format<27>;
 
-def isNios2r1  : Predicate<"Subtarget->isNios2r1()">;
-def isNios2r2  : Predicate<"Subtarget->isNios2r2()">;
+//===----------------------------------------------------------------------===//
+// Instruction Predicates:
+//===----------------------------------------------------------------------===//
+
+def isNios2r1 : Predicate<"Subtarget->isNios2r1()">;
+def isNios2r2 : Predicate<"Subtarget->isNios2r2()">;
 
 class PredicateControl {
   // Predicates related to specific target CPU features
@@ -151,6 +181,27 @@ class FJ<bits<6> op, dag outs, dag ins, string asmstr, list<dag> pattern,
 }
 
 //===----------------------------------------------------------------------===//
+// Format F3X6 (R2) instruction : <|opx|RSV|C|B|A|opcode|>
+//===----------------------------------------------------------------------===//
+
+class F3X6<bits<6> opx, dag outs, dag ins, string asmstr, list<dag> pattern,
+           InstrItinClass itin>:
+      Nios2R2Inst32<outs, ins, asmstr, pattern, itin, FrmF3X6> {
+  bits<5> rC;
+  bits<5> rB;
+  bits<5> rA;
+  bits<5> rsv = 0;
+
+  let Opcode = 0x20; /* opcode is always 0x20 (OPX group) for F3X6 instr. */
+
+  let Inst{31-26} = opx; /* opx stands for opcode extension */
+  let Inst{25-21} = rsv;
+  let Inst{20-16} = rC;
+  let Inst{15-11} = rB;
+  let Inst{10-6}  = rA;
+}
+
+//===----------------------------------------------------------------------===//
 // Multiclasses for common instructions of both R1 and R2:
 //===----------------------------------------------------------------------===//
 
@@ -160,6 +211,7 @@ multiclass CommonInstr_R_F3X6_opx<bits<6> opxR1, bits<6> opxR2, dag outs,
                                   dag ins, string asmstr, list<dag> pattern,
                                   InstrItinClass itin> {
   def NAME#_R1 : FR<opxR1, outs, ins, asmstr, pattern, itin>;
+  def NAME#_R2 : F3X6<opxR2, outs, ins, asmstr, pattern, itin>;
 }
 
 // Multiclass for instructions that have R format in R1 and F3X6 format in R2

@@ -1,4 +1,4 @@
-#RUN: llvm-dsymutil -f -oso-prepend-path=%p/Inputs/ -y %s -no-output 2>&1 \
+#RUN: dsymutil -f -oso-prepend-path=%p/Inputs/ -y %s -no-output 2>&1 \
 #RUN:   |  FileCheck %s
 
 # CHECK: warning: could not find referenced DIE
@@ -26,7 +26,7 @@
 # To generate the debug map:
 #
 #   $ ld -arch x86_64 -macosx_version_min 10.13.0 -lSystem null_die.o -o null_die
-#   $ llvm-dsymutil -dump-debug-map null_die
+#   $ dsymutil -dump-debug-map null_die
 
 ---
 triple:          'x86_64-apple-darwin'

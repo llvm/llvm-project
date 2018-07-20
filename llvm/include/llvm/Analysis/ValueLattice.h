@@ -49,14 +49,73 @@ class ValueLatticeElement {
     overdefined
   };
 
-  /// Val: This stores the current lattice value along with the Constant* for
-  /// the constant if this is a 'constant' or 'notconstant' value.
   ValueLatticeElementTy Tag;
-  Constant *Val;
-  ConstantRange Range;
+
+  /// The union either stores a pointer to a constant or a constant range,
+  /// associated to the lattice element. We have to ensure that Range is
+  /// initialized or destroyed when changing state to or from constantrange.
+  union {
+    Constant *ConstVal;
+    ConstantRange Range;
+  };
 
 public:
-  ValueLatticeElement() : Tag(undefined), Val(nullptr), Range(1, true) {}
+  // Const and Range are initialized on-demand.
+  ValueLatticeElement() : Tag(undefined) {}
+
+  /// Custom destructor to ensure Range is properly destroyed, when the object
+  /// is deallocated.
+  ~ValueLatticeElement() {
+    switch (Tag) {
+    case overdefined:
+    case undefined:
+    case constant:
+    case notconstant:
+      break;
+    case constantrange:
+      Range.~ConstantRange();
+      break;
+    };
+  }
+
+  /// Custom copy constructor, to ensure Range gets initialized when
+  /// copying a constant range lattice element.
+  ValueLatticeElement(const ValueLatticeElement &Other) : Tag(undefined) {
+    *this = Other;
+  }
+
+  /// Custom assignment operator, to ensure Range gets initialized when
+  /// assigning a constant range lattice element.
+  ValueLatticeElement &operator=(const ValueLatticeElement &Other) {
+    // If we change the state of this from constant range to non constant range,
+    // destroy Range.
+    if (isConstantRange() && !Other.isConstantRange())
+      Range.~ConstantRange();
+
+    // If we change the state of this from a valid ConstVal to another a state
+    // without a valid ConstVal, zero the pointer.
+    if ((isConstant() || isNotConstant()) && !Other.isConstant() &&
+        !Other.isNotConstant())
+      ConstVal = nullptr;
+
+    switch (Other.Tag) {
+    case constantrange:
+      if (!isConstantRange())
+        new (&Range) ConstantRange(Other.Range);
+      else
+        Range = Other.Range;
+      break;
+    case constant:
+    case notconstant:
+      ConstVal = Other.ConstVal;
+      break;
+    case overdefined:
+    case undefined:
+      break;
+    }
+    Tag = Other.Tag;
+    return *this;
+  }
 
   static ValueLatticeElement get(Constant *C) {
     ValueLatticeElement Res;
@@ -89,12 +148,12 @@ public:
 
   Constant *getConstant() const {
     assert(isConstant() && "Cannot get the constant of a non-constant!");
-    return Val;
+    return ConstVal;
   }
 
   Constant *getNotConstant() const {
     assert(isNotConstant() && "Cannot get the constant of a non-notconstant!");
-    return Val;
+    return ConstVal;
   }
 
   const ConstantRange &getConstantRange() const {
@@ -104,10 +163,10 @@ public:
   }
 
   Optional<APInt> asConstantInteger() const {
-    if (isConstant() && isa<ConstantInt>(Val)) {
-      return cast<ConstantInt>(Val)->getValue();
-    } else if (isConstantRange() && Range.isSingleElement()) {
-      return *Range.getSingleElement();
+    if (isConstant() && isa<ConstantInt>(getConstant())) {
+      return cast<ConstantInt>(getConstant())->getValue();
+    } else if (isConstantRange() && getConstantRange().isSingleElement()) {
+      return *getConstantRange().getSingleElement();
     }
     return None;
   }
@@ -116,6 +175,10 @@ private:
   void markOverdefined() {
     if (isOverdefined())
       return;
+    if (isConstant() || isNotConstant())
+      ConstVal = nullptr;
+    if (isConstantRange())
+      Range.~ConstantRange();
     Tag = overdefined;
   }
 
@@ -132,7 +195,7 @@ private:
            "Marking constant with different value");
     assert(isUndefined());
     Tag = constant;
-    Val = V;
+    ConstVal = V;
   }
 
   void markNotConstant(Constant *V) {
@@ -150,7 +213,7 @@ private:
            "Marking !constant with different value");
     assert(isUndefined() || isConstant());
     Tag = notconstant;
-    Val = V;
+    ConstVal = V;
   }
 
   void markConstantRange(ConstantRange NewR) {
@@ -168,7 +231,7 @@ private:
       markOverdefined();
     else {
       Tag = constantrange;
-      Range = std::move(NewR);
+      new (&Range) ConstantRange(std::move(NewR));
     }
   }
 
@@ -189,14 +252,14 @@ public:
     }
 
     if (isConstant()) {
-      if (RHS.isConstant() && Val == RHS.Val)
+      if (RHS.isConstant() && getConstant() == RHS.getConstant())
         return false;
       markOverdefined();
       return true;
     }
 
     if (isNotConstant()) {
-      if (RHS.isNotConstant() && Val == RHS.Val)
+      if (RHS.isNotConstant() && getNotConstant() == RHS.getNotConstant())
         return false;
       markOverdefined();
       return true;
@@ -209,9 +272,11 @@ public:
       markOverdefined();
       return true;
     }
-    ConstantRange NewR = Range.unionWith(RHS.getConstantRange());
+    ConstantRange NewR = getConstantRange().unionWith(RHS.getConstantRange());
     if (NewR.isFullSet())
       markOverdefined();
+    else if (NewR == getConstantRange())
+      return false;
     else
       markConstantRange(std::move(NewR));
     return true;
@@ -223,24 +288,32 @@ public:
     return cast<ConstantInt>(getConstant());
   }
 
-  bool satisfiesPredicate(CmpInst::Predicate Pred,
-                          const ValueLatticeElement &Other) const {
-    // TODO: share with LVI getPredicateResult.
-
+  /// Compares this symbolic value with Other using Pred and returns either
+  /// true, false or undef constants, or nullptr if the comparison cannot be
+  /// evaluated.
+  Constant *getCompare(CmpInst::Predicate Pred, Type *Ty,
+                       const ValueLatticeElement &Other) const {
     if (isUndefined() || Other.isUndefined())
-      return true;
+      return UndefValue::get(Ty);
 
-    if (isConstant() && Other.isConstant() && Pred == CmpInst::FCMP_OEQ)
-      return getConstant() == Other.getConstant();
+    if (isConstant() && Other.isConstant())
+      return ConstantExpr::getCompare(Pred, getConstant(), Other.getConstant());
 
     // Integer constants are represented as ConstantRanges with single
     // elements.
     if (!isConstantRange() || !Other.isConstantRange())
-      return false;
+      return nullptr;
 
     const auto &CR = getConstantRange();
     const auto &OtherCR = Other.getConstantRange();
-    return ConstantRange::makeSatisfyingICmpRegion(Pred, OtherCR).contains(CR);
+    if (ConstantRange::makeSatisfyingICmpRegion(Pred, OtherCR).contains(CR))
+      return ConstantInt::getTrue(Ty);
+    if (ConstantRange::makeSatisfyingICmpRegion(
+            CmpInst::getInversePredicate(Pred), OtherCR)
+            .contains(CR))
+      return ConstantInt::getFalse(Ty);
+
+    return nullptr;
   }
 };
 

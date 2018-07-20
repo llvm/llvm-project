@@ -17,8 +17,8 @@ body: |
 
     ; CHECK-LABEL: test_eorwrdrr
 
-    ; CHECK:      %r14 = EORRdRr %r14, %r20, implicit-def dead %sreg
-    ; CHECK-NEXT: %r15 = EORRdRr %r15, %r21, implicit-def %sreg
+    ; CHECK:      $r14 = EORRdRr $r14, $r20, implicit-def dead $sreg
+    ; CHECK-NEXT: $r15 = EORRdRr $r15, $r21, implicit-def $sreg
 
-    %r15r14 = EORWRdRr %r15r14, %r21r20, implicit-def %sreg
+    $r15r14 = EORWRdRr $r15r14, $r21r20, implicit-def $sreg
 ...

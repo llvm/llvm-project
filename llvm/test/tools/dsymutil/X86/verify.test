@@ -1,14 +1,14 @@
 # Positive tests in regular and verbose mode.
-# RUN: llvm-dsymutil -verify -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64 %p/../Inputs/basic-archive.macho.x86_64 %p/../Inputs/basic-lto.macho.x86_64 %p/../Inputs/basic-lto-dw4.macho.x86_64 -o %t 2>&1 | FileCheck %s --allow-empty --check-prefix=QUIET-SUCCESS
-# RUN: llvm-dsymutil -verify -verbose -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64 %p/../Inputs/basic-archive.macho.x86_64 %p/../Inputs/basic-lto.macho.x86_64 %p/../Inputs/basic-lto-dw4.macho.x86_64 -o %t 2>&1 | FileCheck %s --check-prefix=QUIET-SUCCESS --check-prefix=VERBOSE
+# RUN: dsymutil -verify -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64 %p/../Inputs/basic-archive.macho.x86_64 %p/../Inputs/basic-lto.macho.x86_64 %p/../Inputs/basic-lto-dw4.macho.x86_64 -o %t 2>&1 | FileCheck %s --allow-empty --check-prefix=QUIET-SUCCESS
+# RUN: dsymutil -verify -verbose -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64 %p/../Inputs/basic-archive.macho.x86_64 %p/../Inputs/basic-lto.macho.x86_64 %p/../Inputs/basic-lto-dw4.macho.x86_64 -o %t 2>&1 | FileCheck %s --check-prefix=QUIET-SUCCESS --check-prefix=VERBOSE
 
 # VERBOSE: Verifying DWARF for architecture: x86_64
 # QUIET-SUCCESS-NOT: error: verification failed
 
 # Negative tests in regular and verbose mode.
 # (Invalid object generated from ../Inputs/invalid.s by modified the low PC.)
-# RUN: not llvm-dsymutil -verify -oso-prepend-path=%p/../Inputs -y %s -o %t 2>&1 | FileCheck %s --check-prefix=QUIET-FAIL
-# RUN: not llvm-dsymutil -verify -verbose -oso-prepend-path=%p/../Inputs -y %s -o %t 2>&1 | FileCheck %s --check-prefix=QUIET-FAIL --check-prefix=VERBOSE
+# RUN: not dsymutil -verify -oso-prepend-path=%p/../Inputs -y %s -o %t 2>&1 | FileCheck %s --check-prefix=QUIET-FAIL
+# RUN: not dsymutil -verify -verbose -oso-prepend-path=%p/../Inputs -y %s -o %t 2>&1 | FileCheck %s --check-prefix=QUIET-FAIL --check-prefix=VERBOSE
 
 # QUIET-FAIL: error: verification failed
 

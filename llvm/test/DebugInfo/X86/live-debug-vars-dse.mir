@@ -13,12 +13,12 @@
 
 # CHECK-LABEL: f: # @f
 # CHECK: movl    %ecx, [[OFF_X:[0-9]+]](%rsp)
-# CHECK: #DEBUG_VALUE: f:x <- [DW_OP_plus_uconst [[OFF_X]]] [%rsp+0]
+# CHECK: #DEBUG_VALUE: f:x <- [DW_OP_plus_uconst [[OFF_X]]] [$rsp+0]
 # CHECK: leaq [[OFF_X]](%rsp), %rsi
 # CHECK: callq   escape
 # CHECK: #DEBUG_VALUE: f:x <- 1
 # CHECK: movl    $1, global(%rip)
-# CHECK: #DEBUG_VALUE: f:x <- [DW_OP_plus_uconst [[OFF_X]]] [%rsp+0]
+# CHECK: #DEBUG_VALUE: f:x <- [DW_OP_plus_uconst [[OFF_X]]] [$rsp+0]
 # CHECK: movl    $2, [[OFF_X]](%rsp)
 # CHECK: callq   escape
 # CHECK: retq
@@ -71,7 +71,7 @@
   !5 = !{i32 1, !"wchar_size", i32 2}
   !6 = !{i32 7, !"PIC Level", i32 2}
   !7 = !{!"clang version 6.0.0 "}
-  !8 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 3, type: !9, isLocal: false, isDefinition: true, scopeLine: 3, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !12)
+  !8 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 3, type: !9, isLocal: false, isDefinition: true, scopeLine: 3, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !12)
   !9 = !DISubroutineType(types: !10)
   !10 = !{null, !11}
   !11 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
@@ -98,7 +98,7 @@ registers:
   - { id: 0, class: gr32, preferred-register: '' }
   - { id: 1, class: gr64, preferred-register: '' }
 liveins:         
-  - { reg: '%ecx', virtual-reg: '%0' }
+  - { reg: '$ecx', virtual-reg: '%0' }
 frameInfo:       
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -119,29 +119,29 @@ frameInfo:
 fixedStack:      
 stack:           
   - { id: 0, name: x.addr, type: default, offset: 0, size: 4, alignment: 4, 
-      stack-id: 0, callee-saved-register: '', di-variable: '', di-expression: '', 
-      di-location: '' }
+      stack-id: 0, callee-saved-register: '', debug-info-variable: '',
+      debug-info-expression: '', debug-info-location: '' }
 constants:       
 body:             |
   bb.0.entry:
-    liveins: %ecx
+    liveins: $ecx
   
-    %0 = COPY %ecx
+    %0 = COPY $ecx
     MOV32mr %stack.0.x.addr, 1, _, 0, _, %0 :: (store 4 into %ir.x.addr)
     DBG_VALUE %stack.0.x.addr, 0, !13, !DIExpression(), debug-location !14
-    ADJCALLSTACKDOWN64 32, 0, 0, implicit-def dead %rsp, implicit-def dead %eflags, implicit-def dead %ssp, implicit %rsp, implicit %ssp, debug-location !15
+    ADJCALLSTACKDOWN64 32, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp, debug-location !15
     %1 = LEA64r %stack.0.x.addr, 1, _, 0, _
-    %rcx = COPY %1, debug-location !15
-    CALL64pcrel32 @escape, csr_win64, implicit %rsp, implicit %ssp, implicit %rcx, implicit-def %rsp, implicit-def %ssp, debug-location !15
-    ADJCALLSTACKUP64 32, 0, implicit-def dead %rsp, implicit-def dead %eflags, implicit-def dead %ssp, implicit %rsp, implicit %ssp, debug-location !15
+    $rcx = COPY %1, debug-location !15
+    CALL64pcrel32 @escape, csr_win64, implicit $rsp, implicit $ssp, implicit $rcx, implicit-def $rsp, implicit-def $ssp, debug-location !15
+    ADJCALLSTACKUP64 32, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp, debug-location !15
     DBG_VALUE 1, debug-use _, !13, !DIExpression(), debug-location !16
-    MOV32mi %rip, 1, _, @global, _, 1, debug-location !17 :: (store 4 into @global)
+    MOV32mi $rip, 1, _, @global, _, 1, debug-location !17 :: (store 4 into @global)
     DBG_VALUE %stack.0.x.addr, 0, !13, !DIExpression(), debug-location !18
     MOV32mi %stack.0.x.addr, 1, _, 0, _, 2, debug-location !18 :: (store 4 into %ir.x.addr)
-    ADJCALLSTACKDOWN64 32, 0, 0, implicit-def dead %rsp, implicit-def dead %eflags, implicit-def dead %ssp, implicit %rsp, implicit %ssp, debug-location !19
-    %rcx = COPY %1, debug-location !19
-    CALL64pcrel32 @escape, csr_win64, implicit %rsp, implicit %ssp, implicit %rcx, implicit-def %rsp, implicit-def %ssp, debug-location !19
-    ADJCALLSTACKUP64 32, 0, implicit-def dead %rsp, implicit-def dead %eflags, implicit-def dead %ssp, implicit %rsp, implicit %ssp, debug-location !19
+    ADJCALLSTACKDOWN64 32, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp, debug-location !19
+    $rcx = COPY %1, debug-location !19
+    CALL64pcrel32 @escape, csr_win64, implicit $rsp, implicit $ssp, implicit $rcx, implicit-def $rsp, implicit-def $ssp, debug-location !19
+    ADJCALLSTACKUP64 32, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp, debug-location !19
     RET 0, debug-location !20
 
 ...

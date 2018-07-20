@@ -10,6 +10,51 @@ define i32 @ld_global(i32 addrspace(1)* %ptr) {
   ret i32 %a
 }
 
+; CHECK-LABEL: @ld_global_v2f16
+define half @ld_global_v2f16(<2 x half> addrspace(1)* %ptr) {
+; Load of v2f16 is weird. We consider it to be a legal type, which happens to be
+; loaded/stored as a 32-bit scalar.
+; CHECK: ld.global.nc.b32
+  %a = load <2 x half>, <2 x half> addrspace(1)* %ptr, !invariant.load !0
+  %v1 = extractelement <2 x half> %a, i32 0
+  %v2 = extractelement <2 x half> %a, i32 1
+  %sum = fadd half %v1, %v2
+  ret half %sum
+}
+
+; CHECK-LABEL: @ld_global_v4f16
+define half @ld_global_v4f16(<4 x half> addrspace(1)* %ptr) {
+; Larger f16 vectors may be split into individual f16 elements and multiple
+; loads/stores may be vectorized using f16 element type. Practically it's
+; limited to v4 variant only.
+; CHECK: ld.global.nc.v4.b16
+  %a = load <4 x half>, <4 x half> addrspace(1)* %ptr, !invariant.load !0
+  %v1 = extractelement <4 x half> %a, i32 0
+  %v2 = extractelement <4 x half> %a, i32 1
+  %v3 = extractelement <4 x half> %a, i32 2
+  %v4 = extractelement <4 x half> %a, i32 3
+  %sum1 = fadd half %v1, %v2
+  %sum2 = fadd half %v3, %v4
+  %sum = fadd half %sum1, %sum2
+  ret half %sum
+}
+
+; CHECK-LABEL: @ld_global_v8f16
+define half @ld_global_v8f16(<8 x half> addrspace(1)* %ptr) {
+; Larger vectors are, again, loaded as v4i32. PTX has no v8 variants of loads/stores,
+; so load/store vectorizer has to convert v8f16 -> v4 x v2f16.
+; CHECK: ld.global.nc.v4.b32
+  %a = load <8 x half>, <8 x half> addrspace(1)* %ptr, !invariant.load !0
+  %v1 = extractelement <8 x half> %a, i32 0
+  %v2 = extractelement <8 x half> %a, i32 2
+  %v3 = extractelement <8 x half> %a, i32 4
+  %v4 = extractelement <8 x half> %a, i32 6
+  %sum1 = fadd half %v1, %v2
+  %sum2 = fadd half %v3, %v4
+  %sum = fadd half %sum1, %sum2
+  ret half %sum
+}
+
 ; CHECK-LABEL: @ld_global_v2i32
 define i32 @ld_global_v2i32(<2 x i32> addrspace(1)* %ptr) {
 ; CHECK: ld.global.nc.v2.{{[a-z]}}32

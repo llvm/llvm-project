@@ -3,10 +3,10 @@
 # Avoid crash/assert when using an emptystring in an INLINEASM.
 # CHECK-LABEL: name: emptystring
 # CHECK: bb.0:
-# CHECK:   INLINEASM $"", 1
+# CHECK:   INLINEASM &"", 1
 # CHECK:   RET 0
 name: emptystring
 body: |
   bb.0:
-    INLINEASM $"", 1
+    INLINEASM &"", 1
     RET 0

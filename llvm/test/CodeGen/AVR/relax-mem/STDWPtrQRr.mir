@@ -16,16 +16,16 @@ body: |
     ; CHECK-LABEL: test
 
     ; We shouldn't expand things which already have 6-bit imms.
-    ; CHECK: STDWPtrQRr %r29r28, 63, %r1r0
-    STDWPtrQRr %r29r28, 63, %r1r0
+    ; CHECK: STDWPtrQRr $r29r28, 63, $r1r0
+    STDWPtrQRr $r29r28, 63, $r1r0
 
     ; We shouldn't expand things which already have 6-bit imms.
-    ; CHECK-NEXT: STDWPtrQRr %r29r28, 0, %r1r0
-    STDWPtrQRr %r29r28, 0, %r1r0
+    ; CHECK-NEXT: STDWPtrQRr $r29r28, 0, $r1r0
+    STDWPtrQRr $r29r28, 0, $r1r0
 
-    ; CHECK-NEXT: PUSHWRr %r29r28, implicit-def %sp, implicit %sp
-    ; CHECK-NEXT: %r29r28 = SBCIWRdK %r29r28, -64, implicit-def %sreg, implicit %sreg
-    ; CHECK-NEXT: STWPtrRr %r29r28, %r1r0
-    ; CHECK-NEXT: POPWRd %r29r28, implicit-def %sp, implicit %sp
-    STDWPtrQRr %r29r28, 64, %r1r0
+    ; CHECK-NEXT: PUSHWRr $r29r28, implicit-def $sp, implicit $sp
+    ; CHECK-NEXT: $r29r28 = SBCIWRdK $r29r28, -64, implicit-def $sreg, implicit $sreg
+    ; CHECK-NEXT: STWPtrRr $r29r28, $r1r0
+    ; CHECK-NEXT: POPWRd $r29r28, implicit-def $sp, implicit $sp
+    STDWPtrQRr $r29r28, 64, $r1r0
 ...

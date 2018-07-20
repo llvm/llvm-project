@@ -1,0 +1,34 @@
+# RUN: llc -mtriple=powerpc64le-unknown-linux-gnu -run-pass=if-converter %s -o - | FileCheck %s
+---
+name:           foo
+body:           |
+  bb.0:
+  liveins: $x0, $x3
+  successors: %bb.1(0x40000000), %bb.2(0x40000000)
+
+  dead renamable $x3 = ANDIo8 killed renamable $x3, 1, implicit-def dead $cr0, implicit-def $cr0gt
+  $cr2lt = CROR $cr0gt, $cr0gt
+  BCn killed renamable $cr2lt, %bb.2
+  B %bb.1
+
+  bb.1:
+    renamable $x3 = LIS8 4096
+    MTLR8 $x0, implicit-def $lr8
+    BLR8 implicit $lr8, implicit $rm, implicit $x3
+
+  bb.2:
+    renamable $x3 = LIS8 4096
+    MTLR8 $x0, implicit-def $lr8
+    BLR8 implicit $lr8, implicit $rm, implicit $x3
+...
+
+# Diamond testcase with equivalent branches terminating in returns.
+
+# CHECK: body:             |          
+# CHECK:  bb.0:
+# CHECK:    dead renamable $x3 = ANDIo8 killed renamable $x3, 1, implicit-def dead $cr0, implicit-def $cr0gt
+# CHECK:    $cr2lt = CROR $cr0gt, $cr0gt
+# CHECK:    renamable $x3 = LIS8 4096
+# CHECK:    MTLR8 $x0, implicit-def $lr8
+# CHECK:    BLR8 implicit $lr8, implicit $rm, implicit $x3
+

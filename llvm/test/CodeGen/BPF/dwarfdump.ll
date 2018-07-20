@@ -32,7 +32,7 @@ attributes #1 = { nounwind readnone }
 
 !0 = distinct !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "myvar_c", scope: !2, file: !3, line: 3, type: !6, isLocal: true, isDefinition: true)
-!2 = distinct !DISubprogram(name: "testprog", scope: !3, file: !3, line: 1, type: !4, isLocal: false, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: true, unit: !7, variables: !10)
+!2 = distinct !DISubprogram(name: "testprog", scope: !3, file: !3, line: 1, type: !4, isLocal: false, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: true, unit: !7, retainedNodes: !10)
 !3 = !DIFile(filename: "testprog.c", directory: "/w/llvm/bld")
 !4 = !DISubroutineType(types: !5)
 !5 = !{!6, !6, !6}
@@ -59,6 +59,8 @@ attributes #1 = { nounwind readnone }
 !26 = !DILocation(line: 7, column: 17, scope: !2)
 !27 = !DILocation(line: 9, column: 9, scope: !2)
 
-; CHECK: file_names[  1]    0 0x00000000 0x00000000 testprog.c
+; CHECK: file_names[  1]:
+; CHECK-NEXT: name: "testprog.c"
+; CHECK-NEXT: dir_index: 0
 ; CHECK: 0x0000000000000000      2
-; CHECK: 0x0000000000000020      7
+; CHECK: 0x0000000000000028      7

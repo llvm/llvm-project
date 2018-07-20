@@ -15,8 +15,8 @@ body: |
 
     ; CHECK-LABEL: test
 
-    ; CHECK:      %r14 = INRdA 31
-    ; CHECK-NEXT: %r15 = INRdA 32
+    ; CHECK:      $r14 = INRdA 31
+    ; CHECK-NEXT: $r15 = INRdA 32
 
-    %r15r14 = INWRdA 31
+    $r15r14 = INWRdA 31
 ...

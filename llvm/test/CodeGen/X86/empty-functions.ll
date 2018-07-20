@@ -11,7 +11,7 @@ entry:
 ; MachO cannot handle an empty function.
 ; CHECK-NO-FP:     _func:
 ; CHECK-NO-FP-NEXT: .cfi_startproc
-; CHECK-NO-FP:     nop
+; CHECK-NO-FP:     ud2
 ; CHECK-NO-FP-NEXT: .cfi_endproc
 
 ; CHECK-FP:      _func:
@@ -21,7 +21,8 @@ entry:
 ; CHECK-FP-NEXT: .cfi_def_cfa_offset 16
 ; CHECK-FP-NEXT: .cfi_offset %rbp, -16
 ; CHECK-FP-NEXT: movq %rsp, %rbp
-; CHECK-FP-NEXT: .cfi_endproc
+; CHECK-FP: ud2
+; CHECK-FP: .cfi_endproc
 
 ; An empty function is perfectly fine on ELF.
 ; LINUX-NO-FP: func:

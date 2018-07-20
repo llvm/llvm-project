@@ -205,6 +205,9 @@ fence r,w
 # CHECK-INST: fence w, ir
 # CHECK: encoding: [0x0f,0x00,0xa0,0x01]
 fence w,ir
+# CHECK-INST: fence.tso
+# CHECK: encoding: [0x0f,0x00,0x30,0x83]
+fence.tso
 
 # CHECK-INST: fence.i
 # CHECK: encoding: [0x0f,0x10,0x00,0x00]

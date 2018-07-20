@@ -126,22 +126,23 @@ bool RRInfo::Merge(const RRInfo &Other) {
 //===----------------------------------------------------------------------===//
 
 void PtrState::SetKnownPositiveRefCount() {
-  DEBUG(dbgs() << "        Setting Known Positive.\n");
+  LLVM_DEBUG(dbgs() << "        Setting Known Positive.\n");
   KnownPositiveRefCount = true;
 }
 
 void PtrState::ClearKnownPositiveRefCount() {
-  DEBUG(dbgs() << "        Clearing Known Positive.\n");
+  LLVM_DEBUG(dbgs() << "        Clearing Known Positive.\n");
   KnownPositiveRefCount = false;
 }
 
 void PtrState::SetSeq(Sequence NewSeq) {
-  DEBUG(dbgs() << "            Old: " << GetSeq() << "; New: " << NewSeq << "\n");
+  LLVM_DEBUG(dbgs() << "            Old: " << GetSeq() << "; New: " << NewSeq
+                    << "\n");
   Seq = NewSeq;
 }
 
 void PtrState::ResetSequenceProgress(Sequence NewSeq) {
-  DEBUG(dbgs() << "        Resetting sequence progress.\n");
+  LLVM_DEBUG(dbgs() << "        Resetting sequence progress.\n");
   SetSeq(NewSeq);
   Partial = false;
   RRI.clear();
@@ -184,7 +185,8 @@ bool BottomUpPtrState::InitBottomUp(ARCMDKindCache &Cache, Instruction *I) {
   // simple and avoids adding overhead for the non-nested case.
   bool NestingDetected = false;
   if (GetSeq() == S_Release || GetSeq() == S_MovableRelease) {
-    DEBUG(dbgs() << "        Found nested releases (i.e. a release pair)\n");
+    LLVM_DEBUG(
+        dbgs() << "        Found nested releases (i.e. a release pair)\n");
     NestingDetected = true;
   }
 
@@ -234,8 +236,8 @@ bool BottomUpPtrState::HandlePotentialAlterRefCount(Instruction *Inst,
   if (!CanAlterRefCount(Inst, Ptr, PA, Class))
     return false;
 
-  DEBUG(dbgs() << "            CanAlterRefCount: Seq: " << S << "; " << *Ptr
-               << "\n");
+  LLVM_DEBUG(dbgs() << "            CanAlterRefCount: Seq: " << S << "; "
+                    << *Ptr << "\n");
   switch (S) {
   case S_Use:
     SetSeq(S_CanRelease);
@@ -266,6 +268,11 @@ void BottomUpPtrState::HandlePotentialUse(BasicBlock *BB, Instruction *Inst,
     if (isa<InvokeInst>(Inst)) {
       const auto IP = BB->getFirstInsertionPt();
       InsertAfter = IP == BB->end() ? std::prev(BB->end()) : IP;
+      if (isa<CatchSwitchInst>(InsertAfter))
+        // A catchswitch must be the only non-phi instruction in its basic
+        // block, so attempting to insert an instruction into such a block would
+        // produce invalid IR.
+        SetCFGHazardAfflicted(true);
     } else {
       InsertAfter = std::next(Inst->getIterator());
     }
@@ -277,26 +284,26 @@ void BottomUpPtrState::HandlePotentialUse(BasicBlock *BB, Instruction *Inst,
   case S_Release:
   case S_MovableRelease:
     if (CanUse(Inst, Ptr, PA, Class)) {
-      DEBUG(dbgs() << "            CanUse: Seq: " << GetSeq() << "; " << *Ptr
-                   << "\n");
+      LLVM_DEBUG(dbgs() << "            CanUse: Seq: " << GetSeq() << "; "
+                        << *Ptr << "\n");
       SetSeqAndInsertReverseInsertPt(S_Use);
     } else if (Seq == S_Release && IsUser(Class)) {
-      DEBUG(dbgs() << "            PreciseReleaseUse: Seq: " << GetSeq() << "; "
-                   << *Ptr << "\n");
+      LLVM_DEBUG(dbgs() << "            PreciseReleaseUse: Seq: " << GetSeq()
+                        << "; " << *Ptr << "\n");
       // Non-movable releases depend on any possible objc pointer use.
       SetSeqAndInsertReverseInsertPt(S_Stop);
     } else if (const auto *Call = getreturnRVOperand(*Inst, Class)) {
       if (CanUse(Call, Ptr, PA, GetBasicARCInstKind(Call))) {
-        DEBUG(dbgs() << "            ReleaseUse: Seq: " << GetSeq() << "; "
-                     << *Ptr << "\n");
+        LLVM_DEBUG(dbgs() << "            ReleaseUse: Seq: " << GetSeq() << "; "
+                          << *Ptr << "\n");
         SetSeqAndInsertReverseInsertPt(S_Stop);
       }
     }
     break;
   case S_Stop:
     if (CanUse(Inst, Ptr, PA, Class)) {
-      DEBUG(dbgs() << "            PreciseStopUse: Seq: " << GetSeq() << "; "
-                   << *Ptr << "\n");
+      LLVM_DEBUG(dbgs() << "            PreciseStopUse: Seq: " << GetSeq()
+                        << "; " << *Ptr << "\n");
       SetSeq(S_Use);
     }
     break;
@@ -377,8 +384,8 @@ bool TopDownPtrState::HandlePotentialAlterRefCount(Instruction *Inst,
       Class != ARCInstKind::IntrinsicUser)
     return false;
 
-  DEBUG(dbgs() << "            CanAlterRefCount: Seq: " << GetSeq() << "; " << *Ptr
-               << "\n");
+  LLVM_DEBUG(dbgs() << "            CanAlterRefCount: Seq: " << GetSeq() << "; "
+                    << *Ptr << "\n");
   ClearKnownPositiveRefCount();
   switch (GetSeq()) {
   case S_Retain:
@@ -410,8 +417,8 @@ void TopDownPtrState::HandlePotentialUse(Instruction *Inst, const Value *Ptr,
   case S_CanRelease:
     if (!CanUse(Inst, Ptr, PA, Class))
       return;
-    DEBUG(dbgs() << "             CanUse: Seq: " << GetSeq() << "; " << *Ptr
-                 << "\n");
+    LLVM_DEBUG(dbgs() << "             CanUse: Seq: " << GetSeq() << "; "
+                      << *Ptr << "\n");
     SetSeq(S_Use);
     return;
   case S_Retain:

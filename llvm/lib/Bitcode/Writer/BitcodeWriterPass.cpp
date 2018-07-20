@@ -23,7 +23,7 @@ PreservedAnalyses BitcodeWriterPass::run(Module &M, ModuleAnalysisManager &AM) {
   const ModuleSummaryIndex *Index =
       EmitSummaryIndex ? &(AM.getResult<ModuleSummaryIndexAnalysis>(M))
                        : nullptr;
-  WriteBitcodeToFile(&M, OS, ShouldPreserveUseListOrder, Index, EmitModuleHash);
+  WriteBitcodeToFile(M, OS, ShouldPreserveUseListOrder, Index, EmitModuleHash);
   return PreservedAnalyses::all();
 }
 
@@ -55,7 +55,7 @@ namespace {
           EmitSummaryIndex
               ? &(getAnalysis<ModuleSummaryIndexWrapperPass>().getIndex())
               : nullptr;
-      WriteBitcodeToFile(&M, OS, ShouldPreserveUseListOrder, Index,
+      WriteBitcodeToFile(M, OS, ShouldPreserveUseListOrder, Index,
                          EmitModuleHash);
       return false;
     }
@@ -79,4 +79,8 @@ ModulePass *llvm::createBitcodeWriterPass(raw_ostream &Str,
                                           bool EmitSummaryIndex, bool EmitModuleHash) {
   return new WriteBitcodePass(Str, ShouldPreserveUseListOrder,
                               EmitSummaryIndex, EmitModuleHash);
+}
+
+bool llvm::isBitcodeWriterPass(Pass *P) {
+  return P->getPassID() == (llvm::AnalysisID)&WriteBitcodePass::ID;
 }

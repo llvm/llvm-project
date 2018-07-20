@@ -36,6 +36,7 @@
  */
 
 #include <sys/types.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
@@ -47,12 +48,6 @@
 #include "regex2.h"
 
 #include "llvm/Config/config.h"
-#if HAVE_STDINT_H
-#include <stdint.h>
-#else
-/* Pessimistically bound memory use */
-#define SIZE_MAX UINT_MAX
-#endif
 
 /* character-class table */
 static struct cclass {

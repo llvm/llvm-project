@@ -44,7 +44,7 @@ std::unique_ptr<Module> parseAssembly(LLVMContext &Context,
 static void writeModuleToBuffer(std::unique_ptr<Module> Mod,
                                 SmallVectorImpl<char> &Buffer) {
   raw_svector_ostream OS(Buffer);
-  WriteBitcodeToFile(Mod.get(), OS);
+  WriteBitcodeToFile(*Mod, OS);
 }
 
 static std::unique_ptr<Module> getLazyModuleFromAssembly(LLVMContext &Context,

@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file contains the WebAssembly implementation of the
+/// This file contains the WebAssembly implementation of the
 /// TargetRegisterInfo class.
 ///
 //===----------------------------------------------------------------------===//

@@ -32,7 +32,6 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
@@ -53,6 +52,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Support/MachineValueType.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -99,6 +99,11 @@ static cl::opt<bool> BPermRewriterNoMasking(
 static cl::opt<bool> EnableBranchHint(
   "ppc-use-branch-hint", cl::init(true),
     cl::desc("Enable static hinting of branches on ppc"),
+    cl::Hidden);
+
+static cl::opt<bool> EnableTLSOpt(
+  "ppc-tls-opt", cl::init(true),
+    cl::desc("Enable tls optimization peephole"),
     cl::Hidden);
 
 enum ICmpInGPRType { ICGPR_All, ICGPR_None, ICGPR_I32, ICGPR_I64,
@@ -199,6 +204,14 @@ namespace {
     bool tryBitPermutation(SDNode *N);
     bool tryIntCompareInGPR(SDNode *N);
 
+    // tryTLSXFormLoad - Convert an ISD::LOAD fed by a PPCISD::ADD_TLS into
+    // an X-Form load instruction with the offset being a relocation coming from
+    // the PPCISD::ADD_TLS.
+    bool tryTLSXFormLoad(LoadSDNode *N);
+    // tryTLSXFormStore - Convert an ISD::STORE fed by a PPCISD::ADD_TLS into
+    // an X-Form store instruction with the offset being a relocation coming from
+    // the PPCISD::ADD_TLS.
+    bool tryTLSXFormStore(StoreSDNode *N);
     /// SelectCC - Select a comparison of the specified values with the
     /// specified condition code, returning the CR# of the expression.
     SDValue SelectCC(SDValue LHS, SDValue RHS, ISD::CondCode CC,
@@ -314,6 +327,7 @@ private:
 
     bool isOffsetMultipleOf(SDNode *N, unsigned Val) const;
     void transferMemOperands(SDNode *N, SDNode *Result);
+    MachineSDNode *flipSignBit(const SDValue &N, SDNode **SignBit = nullptr);
   };
 
 } // end anonymous namespace
@@ -417,6 +431,16 @@ SDNode *PPCDAGToDAGISel::getGlobalBaseReg() {
         BuildMI(FirstMBB, MBBI, dl, TII.get(PPC::MFLR), GlobalBaseReg);
       }
     } else {
+      // We must ensure that this sequence is dominated by the prologue.
+      // FIXME: This is a bit of a big hammer since we don't get the benefits
+      // of shrink-wrapping whenever we emit this instruction. Considering
+      // this is used in any function where we emit a jump table, this may be
+      // a significant limitation. We should consider inserting this in the
+      // block where it is used and then commoning this sequence up if it
+      // appears in multiple places.
+      // Note: on ISA 3.0 cores, we can use lnia (addpcis) instead of
+      // MovePCtoLR8.
+      MF->getInfo<PPCFunctionInfo>()->setShrinkWrapDisabled(true);
       GlobalBaseReg = RegInfo->createVirtualRegister(&PPC::G8RC_and_G8RC_NOX0RegClass);
       BuildMI(FirstMBB, MBBI, dl, TII.get(PPC::MovePCtoLR8));
       BuildMI(FirstMBB, MBBI, dl, TII.get(PPC::MFLR8), GlobalBaseReg);
@@ -494,10 +518,10 @@ static unsigned getBranchHint(unsigned PCC, FunctionLoweringInfo *FuncInfo,
   if (std::max(TProb, FProb) / Threshold < std::min(TProb, FProb))
     return PPC::BR_NO_HINT;
 
-  DEBUG(dbgs() << "Use branch hint for '" << FuncInfo->Fn->getName() << "::"
-               << BB->getName() << "'\n"
-               << " -> " << TBB->getName() << ": " << TProb << "\n"
-               << " -> " << FBB->getName() << ": " << FProb << "\n");
+  LLVM_DEBUG(dbgs() << "Use branch hint for '" << FuncInfo->Fn->getName()
+                    << "::" << BB->getName() << "'\n"
+                    << " -> " << TBB->getName() << ": " << TProb << "\n"
+                    << " -> " << FBB->getName() << ": " << FProb << "\n");
 
   const BasicBlockSDNode *BBDN = cast<BasicBlockSDNode>(DestMBB);
 
@@ -570,6 +594,90 @@ bool PPCDAGToDAGISel::isRotateAndMask(SDNode *N, unsigned Mask,
     return isRunOfOnes(Mask, MB, ME);
   }
   return false;
+}
+
+bool PPCDAGToDAGISel::tryTLSXFormStore(StoreSDNode *ST) {
+  SDValue Base = ST->getBasePtr();
+  if (Base.getOpcode() != PPCISD::ADD_TLS)
+    return false;
+  SDValue Offset = ST->getOffset();
+  if (!Offset.isUndef())
+    return false;
+
+  SDLoc dl(ST);
+  EVT MemVT = ST->getMemoryVT();
+  EVT RegVT = ST->getValue().getValueType();
+
+  unsigned Opcode;
+  switch (MemVT.getSimpleVT().SimpleTy) {
+    default:
+      return false;
+    case MVT::i8: {
+      Opcode = (RegVT == MVT::i32) ? PPC::STBXTLS_32 : PPC::STBXTLS;
+      break;
+    }
+    case MVT::i16: {
+      Opcode = (RegVT == MVT::i32) ? PPC::STHXTLS_32 : PPC::STHXTLS;
+      break;
+    }
+    case MVT::i32: {
+      Opcode = (RegVT == MVT::i32) ? PPC::STWXTLS_32 : PPC::STWXTLS;
+      break;
+    }
+    case MVT::i64: {
+      Opcode = PPC::STDXTLS;
+      break;
+    }
+  }
+  SDValue Chain = ST->getChain();
+  SDVTList VTs = ST->getVTList();
+  SDValue Ops[] = {ST->getValue(), Base.getOperand(0), Base.getOperand(1),
+                   Chain};
+  SDNode *MN = CurDAG->getMachineNode(Opcode, dl, VTs, Ops);
+  transferMemOperands(ST, MN);
+  ReplaceNode(ST, MN);
+  return true;
+}
+
+bool PPCDAGToDAGISel::tryTLSXFormLoad(LoadSDNode *LD) {
+  SDValue Base = LD->getBasePtr();
+  if (Base.getOpcode() != PPCISD::ADD_TLS)
+    return false;
+  SDValue Offset = LD->getOffset();
+  if (!Offset.isUndef())
+    return false;
+
+  SDLoc dl(LD);
+  EVT MemVT = LD->getMemoryVT();
+  EVT RegVT = LD->getValueType(0);
+  unsigned Opcode;
+  switch (MemVT.getSimpleVT().SimpleTy) {
+    default:
+      return false;
+    case MVT::i8: {
+      Opcode = (RegVT == MVT::i32) ? PPC::LBZXTLS_32 : PPC::LBZXTLS;
+      break;
+    }
+    case MVT::i16: {
+      Opcode = (RegVT == MVT::i32) ? PPC::LHZXTLS_32 : PPC::LHZXTLS;
+      break;
+    }
+    case MVT::i32: {
+      Opcode = (RegVT == MVT::i32) ? PPC::LWZXTLS_32 : PPC::LWZXTLS;
+      break;
+    }
+    case MVT::i64: {
+      Opcode = PPC::LDXTLS;
+      break;
+    }
+  }
+  SDValue Chain = LD->getChain();
+  SDVTList VTs = LD->getVTList();
+  SDValue Ops[] = {Base.getOperand(0), Base.getOperand(1), Chain};
+  SDNode *MN = CurDAG->getMachineNode(Opcode, dl, VTs, Ops);
+  transferMemOperands(LD, MN);
+  ReplaceNode(LD, MN);
+  return true;
 }
 
 /// Turn an or of two masked values into the rotate left word immediate then
@@ -1023,8 +1131,8 @@ class BitPermutationSelector {
     BitGroup(SDValue V, unsigned R, unsigned S, unsigned E)
       : V(V), RLAmt(R), StartIdx(S), EndIdx(E), Repl32(false), Repl32CR(false),
         Repl32Coalesced(false) {
-      DEBUG(dbgs() << "\tbit group for " << V.getNode() << " RLAmt = " << R <<
-                      " [" << S << ", " << E << "]\n");
+      LLVM_DEBUG(dbgs() << "\tbit group for " << V.getNode() << " RLAmt = " << R
+                        << " [" << S << ", " << E << "]\n");
     }
   };
 
@@ -1052,6 +1160,10 @@ class BitPermutationSelector {
       else if (NumGroups > Other.NumGroups)
         return true;
       else if (NumGroups < Other.NumGroups)
+        return false;
+      else if (RLAmt == 0 && Other.RLAmt != 0)
+        return true;
+      else if (RLAmt != 0 && Other.RLAmt == 0)
         return false;
       else if (FirstGroupStartIdx < Other.FirstGroupStartIdx)
         return true;
@@ -1180,7 +1292,7 @@ class BitPermutationSelector {
         Bits[i] = ValueBit(ValueBit::ConstZero);
 
       return std::make_pair(Interesting, &Bits);
-      }
+    }
     }
 
     for (unsigned i = 0; i < NumBits; ++i)
@@ -1258,7 +1370,7 @@ class BitPermutationSelector {
           BitGroups[BitGroups.size()-1].EndIdx == Bits.size()-1 &&
           BitGroups[0].V == BitGroups[BitGroups.size()-1].V &&
           BitGroups[0].RLAmt == BitGroups[BitGroups.size()-1].RLAmt) {
-        DEBUG(dbgs() << "\tcombining final bit group with initial one\n");
+        LLVM_DEBUG(dbgs() << "\tcombining final bit group with initial one\n");
         BitGroups[BitGroups.size()-1].EndIdx = BitGroups[0].EndIdx;
         BitGroups.erase(BitGroups.begin());
       }
@@ -1266,7 +1378,9 @@ class BitPermutationSelector {
   }
 
   // Take all (SDValue, RLAmt) pairs and sort them by the number of groups
-  // associated with each. If there is a degeneracy, pick the one that occurs
+  // associated with each. If the number of groups are same, we prefer a group
+  // which does not require rotate, i.e. RLAmt is 0, to avoid the first rotate
+  // instruction. If there is a degeneracy, pick the one that occurs
   // first (in the final value).
   void collectValueRotInfo() {
     ValueRots.clear();
@@ -1287,7 +1401,7 @@ class BitPermutationSelector {
     for (auto &I : ValueRots) {
       ValueRotsVec.push_back(I.second);
     }
-    std::sort(ValueRotsVec.begin(), ValueRotsVec.end());
+    llvm::sort(ValueRotsVec.begin(), ValueRotsVec.end());
   }
 
   // In 64-bit mode, rlwinm and friends have a rotation operator that
@@ -1336,6 +1450,20 @@ class BitPermutationSelector {
     };
 
     for (auto &BG : BitGroups) {
+      // If this bit group has RLAmt of 0 and will not be merged with
+      // another bit group, we don't benefit from Repl32. We don't mark
+      // such group to give more freedom for later instruction selection.
+      if (BG.RLAmt == 0) {
+        auto PotentiallyMerged = [this](BitGroup & BG) {
+          for (auto &BG2 : BitGroups)
+            if (&BG != &BG2 && BG.V == BG2.V &&
+                (BG2.RLAmt == 0 || BG2.RLAmt == 32))
+              return true;
+          return false;
+        };
+        if (!PotentiallyMerged(BG))
+          continue;
+      }
       if (BG.StartIdx < 32 && BG.EndIdx < 32) {
         if (IsAllLow32(BG)) {
           if (BG.RLAmt >= 32) {
@@ -1345,9 +1473,9 @@ class BitPermutationSelector {
 
           BG.Repl32 = true;
 
-          DEBUG(dbgs() << "\t32-bit replicated bit group for " <<
-                          BG.V.getNode() << " RLAmt = " << BG.RLAmt <<
-                          " [" << BG.StartIdx << ", " << BG.EndIdx << "]\n");
+          LLVM_DEBUG(dbgs() << "\t32-bit replicated bit group for "
+                            << BG.V.getNode() << " RLAmt = " << BG.RLAmt << " ["
+                            << BG.StartIdx << ", " << BG.EndIdx << "]\n");
         }
       }
     }
@@ -1361,11 +1489,11 @@ class BitPermutationSelector {
       if (I->Repl32 && IP->Repl32 && I->V == IP->V && I->RLAmt == IP->RLAmt &&
           I->StartIdx == (IP->EndIdx + 1) % 64 && I != IP) {
 
-        DEBUG(dbgs() << "\tcombining 32-bit replicated bit group for " <<
-                        I->V.getNode() << " RLAmt = " << I->RLAmt <<
-                        " [" << I->StartIdx << ", " << I->EndIdx <<
-                        "] with group with range [" <<
-                        IP->StartIdx << ", " << IP->EndIdx << "]\n");
+        LLVM_DEBUG(dbgs() << "\tcombining 32-bit replicated bit group for "
+                          << I->V.getNode() << " RLAmt = " << I->RLAmt << " ["
+                          << I->StartIdx << ", " << I->EndIdx
+                          << "] with group with range [" << IP->StartIdx << ", "
+                          << IP->EndIdx << "]\n");
 
         IP->EndIdx = I->EndIdx;
         IP->Repl32CR = IP->Repl32CR || I->Repl32CR;
@@ -1389,12 +1517,12 @@ class BitPermutationSelector {
               IP->EndIdx == 31 && IN->StartIdx == 0 && I != IP &&
               IsAllLow32(*I)) {
 
-            DEBUG(dbgs() << "\tcombining bit group for " <<
-                            I->V.getNode() << " RLAmt = " << I->RLAmt <<
-                            " [" << I->StartIdx << ", " << I->EndIdx <<
-                            "] with 32-bit replicated groups with ranges [" <<
-                            IP->StartIdx << ", " << IP->EndIdx << "] and [" <<
-                            IN->StartIdx << ", " << IN->EndIdx << "]\n");
+            LLVM_DEBUG(dbgs() << "\tcombining bit group for " << I->V.getNode()
+                              << " RLAmt = " << I->RLAmt << " [" << I->StartIdx
+                              << ", " << I->EndIdx
+                              << "] with 32-bit replicated groups with ranges ["
+                              << IP->StartIdx << ", " << IP->EndIdx << "] and ["
+                              << IN->StartIdx << ", " << IN->EndIdx << "]\n");
 
             if (IP == IN) {
               // There is only one other group; change it to cover the whole
@@ -1503,15 +1631,15 @@ class BitPermutationSelector {
                              (unsigned) (ANDIMask != 0 && ANDISMask != 0) +
                              (unsigned) (bool) Res;
 
-      DEBUG(dbgs() << "\t\trotation groups for " << VRI.V.getNode() <<
-                      " RL: " << VRI.RLAmt << ":" <<
-                      "\n\t\t\tisel using masking: " << NumAndInsts <<
-                      " using rotates: " << VRI.NumGroups << "\n");
+      LLVM_DEBUG(dbgs() << "\t\trotation groups for " << VRI.V.getNode()
+                        << " RL: " << VRI.RLAmt << ":"
+                        << "\n\t\t\tisel using masking: " << NumAndInsts
+                        << " using rotates: " << VRI.NumGroups << "\n");
 
       if (NumAndInsts >= VRI.NumGroups)
         continue;
 
-      DEBUG(dbgs() << "\t\t\t\tusing masking\n");
+      LLVM_DEBUG(dbgs() << "\t\t\t\tusing masking\n");
 
       if (InstCnt) *InstCnt += NumAndInsts;
 
@@ -1859,10 +1987,10 @@ class BitPermutationSelector {
         FirstBG = false;
       }
 
-      DEBUG(dbgs() << "\t\trotation groups for " << VRI.V.getNode() <<
-                      " RL: " << VRI.RLAmt << (VRI.Repl32 ? " (32):" : ":") <<
-                      "\n\t\t\tisel using masking: " << NumAndInsts <<
-                      " using rotates: " << NumRLInsts << "\n");
+      LLVM_DEBUG(dbgs() << "\t\trotation groups for " << VRI.V.getNode()
+                        << " RL: " << VRI.RLAmt << (VRI.Repl32 ? " (32):" : ":")
+                        << "\n\t\t\tisel using masking: " << NumAndInsts
+                        << " using rotates: " << NumRLInsts << "\n");
 
       // When we'd use andi/andis, we bias toward using the rotates (andi only
       // has a record form, and is cracked on POWER cores). However, when using
@@ -1876,7 +2004,7 @@ class BitPermutationSelector {
       if ((Use32BitInsts || MoreBG) && NumAndInsts == NumRLInsts)
         continue;
 
-      DEBUG(dbgs() << "\t\t\t\tusing masking\n");
+      LLVM_DEBUG(dbgs() << "\t\t\t\tusing masking\n");
 
       if (InstCnt) *InstCnt += NumAndInsts;
 
@@ -2127,9 +2255,9 @@ public:
       return nullptr;
     Bits = std::move(*Result.second);
 
-    DEBUG(dbgs() << "Considering bit-permutation-based instruction"
-                    " selection for:    ");
-    DEBUG(N->dump(CurDAG));
+    LLVM_DEBUG(dbgs() << "Considering bit-permutation-based instruction"
+                         " selection for:    ");
+    LLVM_DEBUG(N->dump(CurDAG));
 
     // Fill it RLAmt and set HasZeros.
     computeRotationAmounts();
@@ -2145,22 +2273,22 @@ public:
     // set of bit groups, and then mask in the zeros at the end. With early
     // masking, we only insert the non-zero parts of the result at every step.
 
-    unsigned InstCnt, InstCntLateMask;
-    DEBUG(dbgs() << "\tEarly masking:\n");
+    unsigned InstCnt = 0, InstCntLateMask = 0;
+    LLVM_DEBUG(dbgs() << "\tEarly masking:\n");
     SDNode *RN = Select(N, false, &InstCnt);
-    DEBUG(dbgs() << "\t\tisel would use " << InstCnt << " instructions\n");
+    LLVM_DEBUG(dbgs() << "\t\tisel would use " << InstCnt << " instructions\n");
 
-    DEBUG(dbgs() << "\tLate masking:\n");
+    LLVM_DEBUG(dbgs() << "\tLate masking:\n");
     SDNode *RNLM = Select(N, true, &InstCntLateMask);
-    DEBUG(dbgs() << "\t\tisel would use " << InstCntLateMask <<
-                    " instructions\n");
+    LLVM_DEBUG(dbgs() << "\t\tisel would use " << InstCntLateMask
+                      << " instructions\n");
 
     if (InstCnt <= InstCntLateMask) {
-      DEBUG(dbgs() << "\tUsing early-masking for isel\n");
+      LLVM_DEBUG(dbgs() << "\tUsing early-masking for isel\n");
       return RN;
     }
 
-    DEBUG(dbgs() << "\tUsing late-masking for isel\n");
+    LLVM_DEBUG(dbgs() << "\tUsing late-masking for isel\n");
     return RNLM;
   }
 };
@@ -3288,7 +3416,7 @@ static bool allUsesExtend(SDValue Compare, SelectionDAG *CurDAG) {
 }
 
 /// Returns an equivalent of a SETCC node but with the result the same width as
-/// the inputs. This can nalso be used for SELECT_CC if either the true or false
+/// the inputs. This can also be used for SELECT_CC if either the true or false
 /// values is a power of two while the other is zero.
 SDValue IntegerCompareEliminator::getSETCCInGPR(SDValue Compare,
                                                 SetccInGPROpts ConvOpts) {
@@ -3488,10 +3616,63 @@ SDValue PPCDAGToDAGISel::SelectCC(SDValue LHS, SDValue RHS, ISD::CondCode CC,
       Opc = PPC::CMPD;
     }
   } else if (LHS.getValueType() == MVT::f32) {
-    Opc = PPC::FCMPUS;
+    if (PPCSubTarget->hasSPE()) {
+      switch (CC) {
+        default:
+        case ISD::SETEQ:
+        case ISD::SETNE:
+          Opc = PPC::EFSCMPEQ;
+          break;
+        case ISD::SETLT:
+        case ISD::SETGE:
+        case ISD::SETOLT:
+        case ISD::SETOGE:
+        case ISD::SETULT:
+        case ISD::SETUGE:
+          Opc = PPC::EFSCMPLT;
+          break;
+        case ISD::SETGT:
+        case ISD::SETLE:
+        case ISD::SETOGT:
+        case ISD::SETOLE:
+        case ISD::SETUGT:
+        case ISD::SETULE:
+          Opc = PPC::EFSCMPGT;
+          break;
+      }
+    } else
+      Opc = PPC::FCMPUS;
+  } else if (LHS.getValueType() == MVT::f64) {
+    if (PPCSubTarget->hasSPE()) {
+      switch (CC) {
+        default:
+        case ISD::SETEQ:
+        case ISD::SETNE:
+          Opc = PPC::EFDCMPEQ;
+          break;
+        case ISD::SETLT:
+        case ISD::SETGE:
+        case ISD::SETOLT:
+        case ISD::SETOGE:
+        case ISD::SETULT:
+        case ISD::SETUGE:
+          Opc = PPC::EFDCMPLT;
+          break;
+        case ISD::SETGT:
+        case ISD::SETLE:
+        case ISD::SETOGT:
+        case ISD::SETOLE:
+        case ISD::SETUGT:
+        case ISD::SETULE:
+          Opc = PPC::EFDCMPGT;
+          break;
+      }
+    } else
+      Opc = PPCSubTarget->hasVSX() ? PPC::XSCMPUDP : PPC::FCMPUD;
   } else {
-    assert(LHS.getValueType() == MVT::f64 && "Unknown vt!");
-    Opc = PPCSubTarget->hasVSX() ? PPC::XSCMPUDP : PPC::FCMPUD;
+    assert(LHS.getValueType() == MVT::f128 && "Unknown vt!");
+    assert(PPCSubTarget->hasVSX() && "__float128 requires VSX");
+    Opc = PPC::XSCMPUQP;
   }
   return SDValue(CurDAG->getMachineNode(Opc, dl, MVT::i32, LHS, RHS), 0);
 }
@@ -3765,7 +3946,7 @@ bool PPCDAGToDAGISel::trySETCC(SDNode *N) {
   // Altivec Vector compare instructions do not set any CR register by default and
   // vector compare operations return the same type as the operands.
   if (LHS.getValueType().isVector()) {
-    if (PPCSubTarget->hasQPX())
+    if (PPCSubTarget->hasQPX() || PPCSubTarget->hasSPE())
       return false;
 
     EVT VecVT = LHS.getValueType();
@@ -3794,6 +3975,12 @@ bool PPCDAGToDAGISel::trySETCC(SDNode *N) {
   unsigned Idx = getCRIdxForSetCC(CC, Inv);
   SDValue CCReg = SelectCC(LHS, RHS, CC, dl);
   SDValue IntCR;
+
+  // SPE e*cmp* instructions only set the 'gt' bit, so hard-code that
+  // The correct compare instruction is already set by SelectCC()
+  if (PPCSubTarget->hasSPE() && LHS.getValueType().isFloatingPoint()) {
+    Idx = 1;
+  }
 
   // Force the ccreg into CR7.
   SDValue CR7Reg = CurDAG->getRegister(PPC::CR7, MVT::i32);
@@ -3830,19 +4017,27 @@ bool PPCDAGToDAGISel::isOffsetMultipleOf(SDNode *N, unsigned Val) const {
   else if (STN)
     AddrOp = STN->getOperand(2);
 
+  // If the address points a frame object or a frame object with an offset,
+  // we need to check the object alignment.
   short Imm = 0;
-  if (AddrOp.getOpcode() == ISD::ADD) {
+  if (FrameIndexSDNode *FI = dyn_cast<FrameIndexSDNode>(
+          AddrOp.getOpcode() == ISD::ADD ? AddrOp.getOperand(0) :
+                                           AddrOp)) {
     // If op0 is a frame index that is under aligned, we can't do it either,
     // because it is translated to r31 or r1 + slot + offset. We won't know the
     // slot number until the stack frame is finalized.
-    if (FrameIndexSDNode *FI = dyn_cast<FrameIndexSDNode>(AddrOp.getOperand(0))) {
-      const MachineFrameInfo &MFI = CurDAG->getMachineFunction().getFrameInfo();
-      unsigned SlotAlign = MFI.getObjectAlignment(FI->getIndex());
-      if ((SlotAlign % Val) != 0)
-        return false;
-    }
-    return isIntS16Immediate(AddrOp.getOperand(1), Imm) && !(Imm % Val);
+    const MachineFrameInfo &MFI = CurDAG->getMachineFunction().getFrameInfo();
+    unsigned SlotAlign = MFI.getObjectAlignment(FI->getIndex());
+    if ((SlotAlign % Val) != 0)
+      return false;
+
+    // If we have an offset, we need further check on the offset.
+    if (AddrOp.getOpcode() != ISD::ADD)
+      return true;
   }
+
+  if (AddrOp.getOpcode() == ISD::ADD)
+    return isIntS16Immediate(AddrOp.getOperand(1), Imm) && !(Imm % Val);
 
   // If the address comes from the outside, the offset will be zero.
   return AddrOp.getOpcode() == ISD::CopyFromReg;
@@ -3853,6 +4048,51 @@ void PPCDAGToDAGISel::transferMemOperands(SDNode *N, SDNode *Result) {
   MachineSDNode::mmo_iterator MemOp = MF->allocateMemRefsArray(1);
   MemOp[0] = cast<MemSDNode>(N)->getMemOperand();
   cast<MachineSDNode>(Result)->setMemRefs(MemOp, MemOp + 1);
+}
+
+/// This method returns a node after flipping the MSB of each element
+/// of vector integer type. Additionally, if SignBitVec is non-null,
+/// this method sets a node with one at MSB of all elements
+/// and zero at other bits in SignBitVec.
+MachineSDNode *
+PPCDAGToDAGISel::flipSignBit(const SDValue &N, SDNode **SignBitVec) {
+  SDLoc dl(N);
+  EVT VecVT = N.getValueType();
+  if (VecVT == MVT::v4i32) {
+    if (SignBitVec) {
+      SDNode *ZV = CurDAG->getMachineNode(PPC::V_SET0, dl, MVT::v4i32);
+      *SignBitVec = CurDAG->getMachineNode(PPC::XVNEGSP, dl, VecVT,
+                                        SDValue(ZV, 0));
+    }
+    return CurDAG->getMachineNode(PPC::XVNEGSP, dl, VecVT, N);
+  }
+  else if (VecVT == MVT::v8i16) {
+    SDNode *Hi = CurDAG->getMachineNode(PPC::LIS, dl, MVT::i32,
+                                     getI32Imm(0x8000, dl));
+    SDNode *ScaImm = CurDAG->getMachineNode(PPC::ORI, dl, MVT::i32,
+                                         SDValue(Hi, 0),
+                                         getI32Imm(0x8000, dl));
+    SDNode *VecImm = CurDAG->getMachineNode(PPC::MTVSRWS, dl, VecVT,
+                                         SDValue(ScaImm, 0));
+    /*
+    Alternatively, we can do this as follow to use VRF instead of GPR.
+      vspltish 5, 1
+      vspltish 6, 15
+      vslh 5, 6, 5
+    */
+    if (SignBitVec) *SignBitVec = VecImm;
+    return CurDAG->getMachineNode(PPC::VADDUHM, dl, VecVT, N,
+                                  SDValue(VecImm, 0));
+  }
+  else if (VecVT == MVT::v16i8) {
+    SDNode *VecImm = CurDAG->getMachineNode(PPC::XXSPLTIB, dl, MVT::i32,
+                                         getI32Imm(0x80, dl));
+    if (SignBitVec) *SignBitVec = VecImm;
+    return CurDAG->getMachineNode(PPC::VADDUBM, dl, VecVT, N,
+                                  SDValue(VecImm, 0));
+  }
+  else
+    llvm_unreachable("Unsupported vector data type for flipSignBit");
 }
 
 // Select - Convert the specified operand from a target-independent to a
@@ -3892,6 +4132,27 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
   case ISD::SETCC:
     if (trySETCC(N))
       return;
+    break;
+
+  case PPCISD::CALL: {
+    const Module *M = MF->getFunction().getParent();
+
+    if (PPCLowering->getPointerTy(CurDAG->getDataLayout()) != MVT::i32 ||
+        !PPCSubTarget->isSecurePlt() || !PPCSubTarget->isTargetELF() ||
+        M->getPICLevel() == PICLevel::SmallPIC)
+      break;
+
+    SDValue Op = N->getOperand(1);
+
+    if (GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(Op)) {
+      if (GA->getTargetFlags() == PPCII::MO_PLT)
+        getGlobalBaseReg();
+    }
+    else if (ExternalSymbolSDNode *ES = dyn_cast<ExternalSymbolSDNode>(Op)) {
+      if (ES->getTargetFlags() == PPCII::MO_PLT)
+        getGlobalBaseReg();
+    }
+  }
     break;
 
   case PPCISD::GlobalBaseReg:
@@ -3939,14 +4200,28 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
     }
   }
 
+  case ISD::STORE: {
+    // Change TLS initial-exec D-form stores to X-form stores.
+    StoreSDNode *ST = cast<StoreSDNode>(N);
+    if (EnableTLSOpt && PPCSubTarget->isELFv2ABI() &&
+        ST->getAddressingMode() != ISD::PRE_INC)
+      if (tryTLSXFormStore(ST))
+        return;
+    break;
+  }
   case ISD::LOAD: {
     // Handle preincrement loads.
     LoadSDNode *LD = cast<LoadSDNode>(N);
     EVT LoadedVT = LD->getMemoryVT();
 
     // Normal loads are handled by code generated from the .td file.
-    if (LD->getAddressingMode() != ISD::PRE_INC)
+    if (LD->getAddressingMode() != ISD::PRE_INC) {
+      // Change TLS initial-exec D-form loads to X-form loads.
+      if (EnableTLSOpt && PPCSubTarget->isELFv2ABI())
+        if (tryTLSXFormLoad(LD))
+          return;
       break;
+    }
 
     SDValue Offset = LD->getOffset();
     if (Offset.getOpcode() == ISD::TargetConstant ||
@@ -4338,16 +4613,24 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
       SelectCCOp = PPC::SELECT_CC_I4;
     else if (N->getValueType(0) == MVT::i64)
       SelectCCOp = PPC::SELECT_CC_I8;
-    else if (N->getValueType(0) == MVT::f32)
+    else if (N->getValueType(0) == MVT::f32) {
       if (PPCSubTarget->hasP8Vector())
         SelectCCOp = PPC::SELECT_CC_VSSRC;
+      else if (PPCSubTarget->hasSPE())
+        SelectCCOp = PPC::SELECT_CC_SPE4;
       else
         SelectCCOp = PPC::SELECT_CC_F4;
-    else if (N->getValueType(0) == MVT::f64)
+    } else if (N->getValueType(0) == MVT::f64) {
       if (PPCSubTarget->hasVSX())
         SelectCCOp = PPC::SELECT_CC_VSFRC;
+      else if (PPCSubTarget->hasSPE())
+        SelectCCOp = PPC::SELECT_CC_SPE;
       else
         SelectCCOp = PPC::SELECT_CC_F8;
+    } else if (N->getValueType(0) == MVT::f128)
+      SelectCCOp = PPC::SELECT_CC_F16;
+    else if (PPCSubTarget->hasSPE())
+      SelectCCOp = PPC::SELECT_CC_SPE;
     else if (PPCSubTarget->hasQPX() && N->getValueType(0) == MVT::v4f64)
       SelectCCOp = PPC::SELECT_CC_QFRC;
     else if (PPCSubTarget->hasQPX() && N->getValueType(0) == MVT::v4f32)
@@ -4632,6 +4915,55 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
                                             SDValue(Tmp2, 0)));
       return;
     }
+  }
+  case ISD::ABS: {
+    assert(PPCSubTarget->hasP9Vector() && "ABS is supported with P9 Vector");
+
+    // For vector absolute difference, we use VABSDUW instruction of POWER9.
+    // Since VABSDU instructions are for unsigned integers, we need adjustment
+    // for signed integers.
+    // For abs(sub(a, b)), we generate VABSDUW(a+0x80000000, b+0x80000000).
+    // Otherwise, abs(sub(-1, 0)) returns 0xFFFFFFFF(=-1) instead of 1.
+    // For abs(a), we generate VABSDUW(a+0x80000000, 0x80000000).
+    EVT VecVT = N->getOperand(0).getValueType();
+    SDNode *AbsOp = nullptr;
+    unsigned AbsOpcode;
+
+    if (VecVT == MVT::v4i32)
+      AbsOpcode = PPC::VABSDUW;
+    else if (VecVT == MVT::v8i16)
+      AbsOpcode = PPC::VABSDUH;
+    else if (VecVT == MVT::v16i8)
+      AbsOpcode = PPC::VABSDUB;
+    else
+      llvm_unreachable("Unsupported vector data type for ISD::ABS");
+
+    // Even for signed integers, we can skip adjustment if all values are
+    // known to be positive (as signed integer) due to zero-extended inputs.
+    if (N->getOperand(0).getOpcode() == ISD::SUB &&
+        N->getOperand(0)->getOperand(0).getOpcode() == ISD::ZERO_EXTEND &&
+        N->getOperand(0)->getOperand(1).getOpcode() == ISD::ZERO_EXTEND) {
+      AbsOp = CurDAG->getMachineNode(AbsOpcode, dl, VecVT,
+                                     SDValue(N->getOperand(0)->getOperand(0)),
+                                     SDValue(N->getOperand(0)->getOperand(1)));
+      ReplaceNode(N, AbsOp);
+      return;
+    }
+    if (N->getOperand(0).getOpcode() == ISD::SUB) {
+      SDValue SubVal = N->getOperand(0);
+      SDNode *Op0 = flipSignBit(SubVal->getOperand(0));
+      SDNode *Op1 = flipSignBit(SubVal->getOperand(1));
+      AbsOp = CurDAG->getMachineNode(AbsOpcode, dl, VecVT,
+                                     SDValue(Op0, 0), SDValue(Op1, 0));
+    }
+    else {
+      SDNode *Op1 = nullptr;
+      SDNode *Op0 = flipSignBit(N->getOperand(0), &Op1);
+      AbsOp = CurDAG->getMachineNode(AbsOpcode, dl, VecVT, SDValue(Op0, 0),
+                                     SDValue(Op1, 0));
+    }
+    ReplaceNode(N, AbsOp);
+    return;
   }
   }
 
@@ -4924,8 +5256,7 @@ void PPCDAGToDAGISel::foldBoolExts(SDValue &Res, SDNode *&N) {
 }
 
 void PPCDAGToDAGISel::PreprocessISelDAG() {
-  SelectionDAG::allnodes_iterator Position(CurDAG->getRoot().getNode());
-  ++Position;
+  SelectionDAG::allnodes_iterator Position = CurDAG->allnodes_end();
 
   bool MadeChange = false;
   while (Position != CurDAG->allnodes_begin()) {
@@ -4945,11 +5276,11 @@ void PPCDAGToDAGISel::PreprocessISelDAG() {
       foldBoolExts(Res, N);
 
     if (Res) {
-      DEBUG(dbgs() << "PPC DAG preprocessing replacing:\nOld:    ");
-      DEBUG(N->dump(CurDAG));
-      DEBUG(dbgs() << "\nNew: ");
-      DEBUG(Res.getNode()->dump(CurDAG));
-      DEBUG(dbgs() << "\n");
+      LLVM_DEBUG(dbgs() << "PPC DAG preprocessing replacing:\nOld:    ");
+      LLVM_DEBUG(N->dump(CurDAG));
+      LLVM_DEBUG(dbgs() << "\nNew: ");
+      LLVM_DEBUG(Res.getNode()->dump(CurDAG));
+      LLVM_DEBUG(dbgs() << "\n");
 
       CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 0), Res);
       MadeChange = true;
@@ -5026,13 +5357,13 @@ void PPCDAGToDAGISel::SwapAllSelectUsers(SDNode *N) {
                              User->getOperand(2),
                              User->getOperand(1));
 
-      DEBUG(dbgs() << "CR Peephole replacing:\nOld:    ");
-      DEBUG(User->dump(CurDAG));
-      DEBUG(dbgs() << "\nNew: ");
-      DEBUG(ResNode->dump(CurDAG));
-      DEBUG(dbgs() << "\n");
+    LLVM_DEBUG(dbgs() << "CR Peephole replacing:\nOld:    ");
+    LLVM_DEBUG(User->dump(CurDAG));
+    LLVM_DEBUG(dbgs() << "\nNew: ");
+    LLVM_DEBUG(ResNode->dump(CurDAG));
+    LLVM_DEBUG(dbgs() << "\n");
 
-      ReplaceUses(User, ResNode);
+    ReplaceUses(User, ResNode);
   }
 }
 
@@ -5083,6 +5414,8 @@ void PPCDAGToDAGISel::PeepholeCROps() {
       case PPC::SELECT_QFRC:
       case PPC::SELECT_QSRC:
       case PPC::SELECT_QBRC:
+      case PPC::SELECT_SPE:
+      case PPC::SELECT_SPE4:
       case PPC::SELECT_VRRC:
       case PPC::SELECT_VSFRC:
       case PPC::SELECT_VSSRC:
@@ -5402,6 +5735,8 @@ void PPCDAGToDAGISel::PeepholeCROps() {
       case PPC::SELECT_QFRC:
       case PPC::SELECT_QSRC:
       case PPC::SELECT_QBRC:
+      case PPC::SELECT_SPE:
+      case PPC::SELECT_SPE4:
       case PPC::SELECT_VRRC:
       case PPC::SELECT_VSFRC:
       case PPC::SELECT_VSSRC:
@@ -5440,11 +5775,11 @@ void PPCDAGToDAGISel::PeepholeCROps() {
         SwapAllSelectUsers(MachineNode);
 
       if (ResNode != MachineNode) {
-        DEBUG(dbgs() << "CR Peephole replacing:\nOld:    ");
-        DEBUG(MachineNode->dump(CurDAG));
-        DEBUG(dbgs() << "\nNew: ");
-        DEBUG(ResNode->dump(CurDAG));
-        DEBUG(dbgs() << "\n");
+        LLVM_DEBUG(dbgs() << "CR Peephole replacing:\nOld:    ");
+        LLVM_DEBUG(MachineNode->dump(CurDAG));
+        LLVM_DEBUG(dbgs() << "\nNew: ");
+        LLVM_DEBUG(ResNode->dump(CurDAG));
+        LLVM_DEBUG(dbgs() << "\n");
 
         ReplaceUses(MachineNode, ResNode);
         IsModified = true;
@@ -5613,8 +5948,7 @@ void PPCDAGToDAGISel::PeepholePPC64ZExt() {
   // unnecessary. When that happens, we remove it here, and redefine the
   // relevant 32-bit operation to be a 64-bit operation.
 
-  SelectionDAG::allnodes_iterator Position(CurDAG->getRoot().getNode());
-  ++Position;
+  SelectionDAG::allnodes_iterator Position = CurDAG->allnodes_end();
 
   bool MadeChange = false;
   while (Position != CurDAG->allnodes_begin()) {
@@ -5739,25 +6073,25 @@ void PPCDAGToDAGISel::PeepholePPC64ZExt() {
         else
           NewVTs.push_back(VTs.VTs[i]);
 
-      DEBUG(dbgs() << "PPC64 ZExt Peephole morphing:\nOld:    ");
-      DEBUG(PN->dump(CurDAG));
+      LLVM_DEBUG(dbgs() << "PPC64 ZExt Peephole morphing:\nOld:    ");
+      LLVM_DEBUG(PN->dump(CurDAG));
 
       CurDAG->SelectNodeTo(PN, NewOpcode, CurDAG->getVTList(NewVTs), Ops);
 
-      DEBUG(dbgs() << "\nNew: ");
-      DEBUG(PN->dump(CurDAG));
-      DEBUG(dbgs() << "\n");
+      LLVM_DEBUG(dbgs() << "\nNew: ");
+      LLVM_DEBUG(PN->dump(CurDAG));
+      LLVM_DEBUG(dbgs() << "\n");
     }
 
     // Now we replace the original zero extend and its associated INSERT_SUBREG
     // with the value feeding the INSERT_SUBREG (which has now been promoted to
     // return an i64).
 
-    DEBUG(dbgs() << "PPC64 ZExt Peephole replacing:\nOld:    ");
-    DEBUG(N->dump(CurDAG));
-    DEBUG(dbgs() << "\nNew: ");
-    DEBUG(Op32.getNode()->dump(CurDAG));
-    DEBUG(dbgs() << "\n");
+    LLVM_DEBUG(dbgs() << "PPC64 ZExt Peephole replacing:\nOld:    ");
+    LLVM_DEBUG(N->dump(CurDAG));
+    LLVM_DEBUG(dbgs() << "\nNew: ");
+    LLVM_DEBUG(Op32.getNode()->dump(CurDAG));
+    LLVM_DEBUG(dbgs() << "\n");
 
     ReplaceUses(N, Op32.getNode());
   }
@@ -5771,8 +6105,7 @@ void PPCDAGToDAGISel::PeepholePPC64() {
   if (PPCSubTarget->isDarwin() || !PPCSubTarget->isPPC64())
     return;
 
-  SelectionDAG::allnodes_iterator Position(CurDAG->getRoot().getNode());
-  ++Position;
+  SelectionDAG::allnodes_iterator Position = CurDAG->allnodes_end();
 
   while (Position != CurDAG->allnodes_begin()) {
     SDNode *N = &*--Position;
@@ -5782,28 +6115,37 @@ void PPCDAGToDAGISel::PeepholePPC64() {
 
     unsigned FirstOp;
     unsigned StorageOpcode = N->getMachineOpcode();
+    bool RequiresMod4Offset = false;
 
     switch (StorageOpcode) {
     default: continue;
 
+    case PPC::LWA:
+    case PPC::LD:
+    case PPC::DFLOADf64:
+    case PPC::DFLOADf32:
+      RequiresMod4Offset = true;
+      LLVM_FALLTHROUGH;
     case PPC::LBZ:
     case PPC::LBZ8:
-    case PPC::LD:
     case PPC::LFD:
     case PPC::LFS:
     case PPC::LHA:
     case PPC::LHA8:
     case PPC::LHZ:
     case PPC::LHZ8:
-    case PPC::LWA:
     case PPC::LWZ:
     case PPC::LWZ8:
       FirstOp = 0;
       break;
 
+    case PPC::STD:
+    case PPC::DFSTOREf64:
+    case PPC::DFSTOREf32:
+      RequiresMod4Offset = true;
+      LLVM_FALLTHROUGH;
     case PPC::STB:
     case PPC::STB8:
-    case PPC::STD:
     case PPC::STFD:
     case PPC::STFS:
     case PPC::STH:
@@ -5850,9 +6192,7 @@ void PPCDAGToDAGISel::PeepholePPC64() {
       // For these cases, the immediate may not be divisible by 4, in
       // which case the fold is illegal for DS-form instructions.  (The
       // other cases provide aligned addresses and are always safe.)
-      if ((StorageOpcode == PPC::LWA ||
-           StorageOpcode == PPC::LD  ||
-           StorageOpcode == PPC::STD) &&
+      if (RequiresMod4Offset &&
           (!isa<ConstantSDNode>(Base.getOperand(1)) ||
            Base.getConstantOperandVal(1) % 4 != 0))
         continue;
@@ -5914,8 +6254,7 @@ void PPCDAGToDAGISel::PeepholePPC64() {
       if (auto *C = dyn_cast<ConstantSDNode>(ImmOpnd)) {
         Offset += C->getSExtValue();
 
-        if ((StorageOpcode == PPC::LWA || StorageOpcode == PPC::LD ||
-             StorageOpcode == PPC::STD) && (Offset % 4) != 0)
+        if (RequiresMod4Offset && (Offset % 4) != 0)
           continue;
 
         if (!isInt<16>(Offset))
@@ -5932,11 +6271,11 @@ void PPCDAGToDAGISel::PeepholePPC64() {
     // immediate and substitute them into the load or store.  If
     // needed, update the target flags for the immediate operand to
     // reflect the necessary relocation information.
-    DEBUG(dbgs() << "Folding add-immediate into mem-op:\nBase:    ");
-    DEBUG(Base->dump(CurDAG));
-    DEBUG(dbgs() << "\nN: ");
-    DEBUG(N->dump(CurDAG));
-    DEBUG(dbgs() << "\n");
+    LLVM_DEBUG(dbgs() << "Folding add-immediate into mem-op:\nBase:    ");
+    LLVM_DEBUG(Base->dump(CurDAG));
+    LLVM_DEBUG(dbgs() << "\nN: ");
+    LLVM_DEBUG(N->dump(CurDAG));
+    LLVM_DEBUG(dbgs() << "\n");
 
     // If the relocation information isn't already present on the
     // immediate operand, add it now.
@@ -5947,9 +6286,8 @@ void PPCDAGToDAGISel::PeepholePPC64() {
         // We can't perform this optimization for data whose alignment
         // is insufficient for the instruction encoding.
         if (GV->getAlignment() < 4 &&
-            (StorageOpcode == PPC::LD || StorageOpcode == PPC::STD ||
-             StorageOpcode == PPC::LWA || (Offset % 4) != 0)) {
-          DEBUG(dbgs() << "Rejected this candidate for alignment.\n\n");
+            (RequiresMod4Offset || (Offset % 4) != 0)) {
+          LLVM_DEBUG(dbgs() << "Rejected this candidate for alignment.\n\n");
           continue;
         }
         ImmOpnd = CurDAG->getTargetGlobalAddress(GV, dl, MVT::i64, Offset, Flags);

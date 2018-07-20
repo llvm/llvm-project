@@ -8,7 +8,7 @@ target triple = "thumbv7-apple-ios0.0.0"
 
 ; CHECK-LABEL: foo:
 ; CHECK: ldrb r[[R0:[0-9]+]], [r0]
-; CHECK: tst.w r[[R0]], #1
+; CHECK: lsls r{{[0-9]+}}, r[[R0]], #31
 define void @foo(i8* %call, double* %p) nounwind {
 entry:
   %tmp2 = load i8, i8* %call

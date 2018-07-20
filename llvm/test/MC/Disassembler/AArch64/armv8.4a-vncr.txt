@@ -1,0 +1,11 @@
+# RUN: llvm-mc -triple aarch64-none-linux-gnu -mattr=+v8.4a --disassemble < %s | FileCheck %s
+# RUN: llvm-mc -triple aarch64-none-linux-gnu -mattr=-v8.4a --disassemble < %s 2>&1 | FileCheck %s --check-prefix=CHECK-NO-V84
+
+[0x00,0x22,0x3c,0xd5]
+[0x00,0x22,0x1c,0xd5]
+
+# CHECK:  mrs x0, VNCR_EL2
+# CHECK:  msr VNCR_EL2, x0
+
+# CHECK-NO-V84:  mrs x0, S3_4_C2_C2_0
+# CHECK-NO-V84:  msr S3_4_C2_C2_0, x0

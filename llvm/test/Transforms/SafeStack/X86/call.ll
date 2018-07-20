@@ -30,7 +30,7 @@ entry:
   ; CHECK: ret void
   %q = alloca [10 x i8], align 1
   %arraydecay = getelementptr inbounds [10 x i8], [10 x i8]* %q, i32 0, i32 0
-  call void @llvm.memset.p0i8.i64(i8* %arraydecay, i8 1, i64 %len, i32 1, i1 false)
+  call void @llvm.memset.p0i8.i64(i8* %arraydecay, i8 1, i64 %len, i1 false)
   ret void
 }
 
@@ -41,7 +41,7 @@ entry:
   ; CHECK: ret void
   %q = alloca [10 x i8], align 1
   %arraydecay = getelementptr inbounds [10 x i8], [10 x i8]* %q, i32 0, i32 2
-  call void @llvm.memset.p0i8.i64(i8* %arraydecay, i8 1, i64 7, i32 1, i1 false)
+  call void @llvm.memset.p0i8.i64(i8* %arraydecay, i8 1, i64 7, i1 false)
   ret void
 }
 
@@ -52,7 +52,7 @@ entry:
   ; CHECK: ret void
   %q = alloca [10 x i8], align 1
   %arraydecay = getelementptr inbounds [10 x i8], [10 x i8]* %q, i32 0, i32 7
-  call void @llvm.memset.p0i8.i64(i8* %arraydecay, i8 1, i64 5, i32 1, i1 false)
+  call void @llvm.memset.p0i8.i64(i8* %arraydecay, i8 1, i64 5, i1 false)
   ret void
 }
 
@@ -63,7 +63,7 @@ entry:
   ; CHECK: ret void
   %q = alloca [10 x i8], align 1
   %arraydecay = getelementptr [10 x i8], [10 x i8]* %q, i32 0, i32 -1
-  call void @llvm.memset.p0i8.i64(i8* %arraydecay, i8 1, i64 3, i32 1, i1 false)
+  call void @llvm.memset.p0i8.i64(i8* %arraydecay, i8 1, i64 3, i1 false)
   ret void
 }
 
@@ -172,7 +172,7 @@ declare void @capture(i8* readnone) readnone
 declare void @readnone(i8* nocapture) readnone
 declare void @readnone0(i8* nocapture readnone, i8* nocapture)
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1) nounwind argmemonly
+declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) nounwind argmemonly
 
 declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) nounwind argmemonly
 declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) nounwind argmemonly

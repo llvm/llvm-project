@@ -156,7 +156,7 @@ public:
   }
 };
 
-/// @brief Create a Binary from Source, autodetecting the file type.
+/// Create a Binary from Source, autodetecting the file type.
 ///
 /// @param Source The data to create the Binary from.
 Expected<std::unique_ptr<Binary>> createBinary(MemoryBufferRef Source,

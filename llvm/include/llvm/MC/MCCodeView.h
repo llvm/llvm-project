@@ -27,7 +27,7 @@ class MCObjectStreamer;
 class MCStreamer;
 class CodeViewContext;
 
-/// \brief Instances of this class represent the information from a
+/// Instances of this class represent the information from a
 /// .cv_loc directive.
 class MCCVLoc {
   uint32_t FunctionId;
@@ -50,13 +50,13 @@ private: // CodeViewContext manages these
 public:
   unsigned getFunctionId() const { return FunctionId; }
 
-  /// \brief Get the FileNum of this MCCVLoc.
+  /// Get the FileNum of this MCCVLoc.
   unsigned getFileNum() const { return FileNum; }
 
-  /// \brief Get the Line of this MCCVLoc.
+  /// Get the Line of this MCCVLoc.
   unsigned getLine() const { return Line; }
 
-  /// \brief Get the Column of this MCCVLoc.
+  /// Get the Column of this MCCVLoc.
   unsigned getColumn() const { return Column; }
 
   bool isPrologueEnd() const { return PrologueEnd; }
@@ -64,13 +64,13 @@ public:
 
   void setFunctionId(unsigned FID) { FunctionId = FID; }
 
-  /// \brief Set the FileNum of this MCCVLoc.
+  /// Set the FileNum of this MCCVLoc.
   void setFileNum(unsigned fileNum) { FileNum = fileNum; }
 
-  /// \brief Set the Line of this MCCVLoc.
+  /// Set the Line of this MCCVLoc.
   void setLine(unsigned line) { Line = line; }
 
-  /// \brief Set the Column of this MCCVLoc.
+  /// Set the Column of this MCCVLoc.
   void setColumn(unsigned column) {
     assert(column <= UINT16_MAX);
     Column = column;
@@ -80,7 +80,7 @@ public:
   void setIsStmt(bool IS) { IsStmt = IS; }
 };
 
-/// \brief Instances of this class represent the line information for
+/// Instances of this class represent the line information for
 /// the CodeView line table entries.  Which is created after a machine
 /// instruction is assembled and uses an address from a temporary label
 /// created at the current address in the current section and the info from
@@ -201,7 +201,7 @@ public:
 
   bool isValidCVFileNumber(unsigned FileNumber);
 
-  /// \brief Add a line entry.
+  /// Add a line entry.
   void addLineEntry(const MCCVLineEntry &LineEntry);
 
   std::vector<MCCVLineEntry> getFunctionLineEntries(unsigned FuncId);

@@ -17,8 +17,8 @@ body: |
 
     ; CHECK-LABEL: test_stwptrrr
 
-    ; CHECK:      STPtrRr %r31r30, %r16
-    ; CHECK-NEXT: STDPtrQRr %r31r30, 1, %r17
+    ; CHECK:      STPtrRr $r31r30, $r16
+    ; CHECK-NEXT: STDPtrQRr $r31r30, 1, $r17
 
-    STWPtrRr %r31r30, %r17r16
+    STWPtrRr $r31r30, $r17r16
 ...

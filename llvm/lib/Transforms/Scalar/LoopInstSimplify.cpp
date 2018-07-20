@@ -20,8 +20,10 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/DataLayout.h"
@@ -34,7 +36,6 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Transforms/Scalar.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include <algorithm>
 #include <utility>
@@ -45,118 +46,116 @@ using namespace llvm;
 
 STATISTIC(NumSimplified, "Number of redundant instructions simplified");
 
-static bool SimplifyLoopInst(Loop *L, DominatorTree *DT, LoopInfo *LI,
-                             AssumptionCache *AC,
-                             const TargetLibraryInfo *TLI) {
-  SmallVector<BasicBlock *, 8> ExitBlocks;
-  L->getUniqueExitBlocks(ExitBlocks);
-  array_pod_sort(ExitBlocks.begin(), ExitBlocks.end());
+static bool simplifyLoopInst(Loop &L, DominatorTree &DT, LoopInfo &LI,
+                             AssumptionCache &AC,
+                             const TargetLibraryInfo &TLI) {
+  const DataLayout &DL = L.getHeader()->getModule()->getDataLayout();
+  SimplifyQuery SQ(DL, &TLI, &DT, &AC);
 
+  // On the first pass over the loop body we try to simplify every instruction.
+  // On subsequent passes, we can restrict this to only simplifying instructions
+  // where the inputs have been updated. We end up needing two sets: one
+  // containing the instructions we are simplifying in *this* pass, and one for
+  // the instructions we will want to simplify in the *next* pass. We use
+  // pointers so we can swap between two stably allocated sets.
   SmallPtrSet<const Instruction *, 8> S1, S2, *ToSimplify = &S1, *Next = &S2;
 
-  // The bit we are stealing from the pointer represents whether this basic
-  // block is the header of a subloop, in which case we only process its phis.
-  using WorklistItem = PointerIntPair<BasicBlock *, 1>;
-  SmallVector<WorklistItem, 16> VisitStack;
-  SmallPtrSet<BasicBlock *, 32> Visited;
+  // Track the PHI nodes that have already been visited during each iteration so
+  // that we can identify when it is necessary to iterate.
+  SmallPtrSet<PHINode *, 4> VisitedPHIs;
+
+  // While simplifying we may discover dead code or cause code to become dead.
+  // Keep track of all such instructions and we will delete them at the end.
+  SmallVector<Instruction *, 8> DeadInsts;
+
+  // First we want to create an RPO traversal of the loop body. By processing in
+  // RPO we can ensure that definitions are processed prior to uses (for non PHI
+  // uses) in all cases. This ensures we maximize the simplifications in each
+  // iteration over the loop and minimizes the possible causes for continuing to
+  // iterate.
+  LoopBlocksRPO RPOT(&L);
+  RPOT.perform(&LI);
 
   bool Changed = false;
-  bool LocalChanged;
-  do {
-    LocalChanged = false;
+  for (;;) {
+    for (BasicBlock *BB : RPOT) {
+      for (Instruction &I : *BB) {
+        if (auto *PI = dyn_cast<PHINode>(&I))
+          VisitedPHIs.insert(PI);
 
-    VisitStack.clear();
-    Visited.clear();
-
-    VisitStack.push_back(WorklistItem(L->getHeader(), false));
-
-    while (!VisitStack.empty()) {
-      WorklistItem Item = VisitStack.pop_back_val();
-      BasicBlock *BB = Item.getPointer();
-      bool IsSubloopHeader = Item.getInt();
-      const DataLayout &DL = L->getHeader()->getModule()->getDataLayout();
-
-      // Simplify instructions in the current basic block.
-      for (BasicBlock::iterator BI = BB->begin(), BE = BB->end(); BI != BE;) {
-        Instruction *I = &*BI++;
-
-        // The first time through the loop ToSimplify is empty and we try to
-        // simplify all instructions. On later iterations ToSimplify is not
-        // empty and we only bother simplifying instructions that are in it.
-        if (!ToSimplify->empty() && !ToSimplify->count(I))
-          continue;
-
-        // Don't bother simplifying unused instructions.
-        if (!I->use_empty()) {
-          Value *V = SimplifyInstruction(I, {DL, TLI, DT, AC});
-          if (V && LI->replacementPreservesLCSSAForm(I, V)) {
-            // Mark all uses for resimplification next time round the loop.
-            for (User *U : I->users())
-              Next->insert(cast<Instruction>(U));
-
-            I->replaceAllUsesWith(V);
-            LocalChanged = true;
-            ++NumSimplified;
-          }
-        }
-        if (RecursivelyDeleteTriviallyDeadInstructions(I, TLI)) {
-          // RecursivelyDeleteTriviallyDeadInstruction can remove more than one
-          // instruction, so simply incrementing the iterator does not work.
-          // When instructions get deleted re-iterate instead.
-          BI = BB->begin();
-          BE = BB->end();
-          LocalChanged = true;
-        }
-
-        if (IsSubloopHeader && !isa<PHINode>(I))
-          break;
-      }
-
-      // Add all successors to the worklist, except for loop exit blocks and the
-      // bodies of subloops. We visit the headers of loops so that we can
-      // process
-      // their phis, but we contract the rest of the subloop body and only
-      // follow
-      // edges leading back to the original loop.
-      for (succ_iterator SI = succ_begin(BB), SE = succ_end(BB); SI != SE;
-           ++SI) {
-        BasicBlock *SuccBB = *SI;
-        if (!Visited.insert(SuccBB).second)
-          continue;
-
-        const Loop *SuccLoop = LI->getLoopFor(SuccBB);
-        if (SuccLoop && SuccLoop->getHeader() == SuccBB &&
-            L->contains(SuccLoop)) {
-          VisitStack.push_back(WorklistItem(SuccBB, true));
-
-          SmallVector<BasicBlock *, 8> SubLoopExitBlocks;
-          SuccLoop->getExitBlocks(SubLoopExitBlocks);
-
-          for (unsigned i = 0; i < SubLoopExitBlocks.size(); ++i) {
-            BasicBlock *ExitBB = SubLoopExitBlocks[i];
-            if (LI->getLoopFor(ExitBB) == L && Visited.insert(ExitBB).second)
-              VisitStack.push_back(WorklistItem(ExitBB, false));
-          }
-
+        if (I.use_empty()) {
+          if (isInstructionTriviallyDead(&I, &TLI))
+            DeadInsts.push_back(&I);
           continue;
         }
 
-        bool IsExitBlock =
-            std::binary_search(ExitBlocks.begin(), ExitBlocks.end(), SuccBB);
-        if (IsExitBlock)
+        // We special case the first iteration which we can detect due to the
+        // empty `ToSimplify` set.
+        bool IsFirstIteration = ToSimplify->empty();
+
+        if (!IsFirstIteration && !ToSimplify->count(&I))
           continue;
 
-        VisitStack.push_back(WorklistItem(SuccBB, false));
+        Value *V = SimplifyInstruction(&I, SQ.getWithInstruction(&I));
+        if (!V || !LI.replacementPreservesLCSSAForm(&I, V))
+          continue;
+
+        for (Value::use_iterator UI = I.use_begin(), UE = I.use_end();
+             UI != UE;) {
+          Use &U = *UI++;
+          auto *UserI = cast<Instruction>(U.getUser());
+          U.set(V);
+
+          // If the instruction is used by a PHI node we have already processed
+          // we'll need to iterate on the loop body to converge, so add it to
+          // the next set.
+          if (auto *UserPI = dyn_cast<PHINode>(UserI))
+            if (VisitedPHIs.count(UserPI)) {
+              Next->insert(UserPI);
+              continue;
+            }
+
+          // If we are only simplifying targeted instructions and the user is an
+          // instruction in the loop body, add it to our set of targeted
+          // instructions. Because we process defs before uses (outside of PHIs)
+          // we won't have visited it yet.
+          //
+          // We also skip any uses outside of the loop being simplified. Those
+          // should always be PHI nodes due to LCSSA form, and we don't want to
+          // try to simplify those away.
+          assert((L.contains(UserI) || isa<PHINode>(UserI)) &&
+                 "Uses outside the loop should be PHI nodes due to LCSSA!");
+          if (!IsFirstIteration && L.contains(UserI))
+            ToSimplify->insert(UserI);
+        }
+
+        assert(I.use_empty() && "Should always have replaced all uses!");
+        if (isInstructionTriviallyDead(&I, &TLI))
+          DeadInsts.push_back(&I);
+        ++NumSimplified;
+        Changed = true;
       }
     }
 
-    // Place the list of instructions to simplify on the next loop iteration
-    // into ToSimplify.
-    std::swap(ToSimplify, Next);
-    Next->clear();
+    // Delete any dead instructions found thus far now that we've finished an
+    // iteration over all instructions in all the loop blocks.
+    if (!DeadInsts.empty()) {
+      Changed = true;
+      RecursivelyDeleteTriviallyDeadInstructions(DeadInsts, &TLI);
+    }
 
-    Changed |= LocalChanged;
-  } while (LocalChanged);
+    // If we never found a PHI that needs to be simplified in the next
+    // iteration, we're done.
+    if (Next->empty())
+      break;
+
+    // Otherwise, put the next set in place for the next iteration and reset it
+    // and the visited PHIs for that iteration.
+    std::swap(Next, ToSimplify);
+    Next->clear();
+    VisitedPHIs.clear();
+    DeadInsts.clear();
+  }
 
   return Changed;
 }
@@ -174,21 +173,20 @@ public:
   bool runOnLoop(Loop *L, LPPassManager &LPM) override {
     if (skipLoop(L))
       return false;
-    DominatorTreeWrapperPass *DTWP =
-        getAnalysisIfAvailable<DominatorTreeWrapperPass>();
-    DominatorTree *DT = DTWP ? &DTWP->getDomTree() : nullptr;
-    LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-    AssumptionCache *AC =
-        &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(
+    DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+    LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+    AssumptionCache &AC =
+        getAnalysis<AssumptionCacheTracker>().getAssumptionCache(
             *L->getHeader()->getParent());
-    const TargetLibraryInfo *TLI =
-        &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
+    const TargetLibraryInfo &TLI =
+        getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
 
-    return SimplifyLoopInst(L, DT, LI, AC, TLI);
+    return simplifyLoopInst(*L, DT, LI, AC, TLI);
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<AssumptionCacheTracker>();
+    AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<TargetLibraryInfoWrapperPass>();
     AU.setPreservesCFG();
     getLoopAnalysisUsage(AU);
@@ -200,7 +198,7 @@ public:
 PreservedAnalyses LoopInstSimplifyPass::run(Loop &L, LoopAnalysisManager &AM,
                                             LoopStandardAnalysisResults &AR,
                                             LPMUpdater &) {
-  if (!SimplifyLoopInst(&L, &AR.DT, &AR.LI, &AR.AC, &AR.TLI))
+  if (!simplifyLoopInst(L, AR.DT, AR.LI, AR.AC, AR.TLI))
     return PreservedAnalyses::all();
 
   auto PA = getLoopPassPreservedAnalyses();

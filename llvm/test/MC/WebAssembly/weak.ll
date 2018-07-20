@@ -1,4 +1,6 @@
-; RUN: llc -mtriple wasm32-unknown-unknown-wasm -filetype=obj %s -o - | obj2yaml | FileCheck %s
+; RUN: llc -filetype=obj %s -o - | obj2yaml | FileCheck %s
+
+target triple = "wasm32-unknown-unknown"
 
 ; Weak external data reference
 @weak_external_data = extern_weak global i32, align 4
@@ -16,24 +18,16 @@ entry:
 ; CHECK-NEXT:         Field:           __linear_memory
 ; CHECK:            - Module:          env
 ; CHECK-NEXT:         Field:           __indirect_function_table
-; CHECK:            - Module:          env
-; CHECK-NEXT:         Field:           weak_external_data
-; CHECK-NEXT:         Kind:            GLOBAL
-; CHECK-NEXT:         GlobalType:      I32
-; CHECK-NEXT:         GlobalMutable:   false
 
 
-; CHECK:        - Type:            CUSTOM
-; CHECK-NEXT:     Name:            name
-; CHECK-NEXT:     FunctionNames:   
+; CHECK:          SymbolTable:      
 ; CHECK-NEXT:       - Index:           0
+; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         Name:            weak_function
-; CHECK-NEXT:   - Type:            CUSTOM
-; CHECK-NEXT:     Name:            linking
-; CHECK-NEXT:     DataSize:        0
-; CHECK-NEXT:     SymbolInfo:      
-; CHECK-NEXT:       - Name:            weak_external_data
-; CHECK-NEXT:         Flags:           [ BINDING_WEAK ]
-; CHECK-NEXT:       - Name:            weak_function
 ; CHECK-NEXT:         Flags:           [ BINDING_WEAK, VISIBILITY_HIDDEN ]
+; CHECK-NEXT:         Function:        0
+; CHECK-NEXT:       - Index:           1
+; CHECK-NEXT:         Kind:            DATA
+; CHECK-NEXT:         Name:            weak_external_data
+; CHECK-NEXT:         Flags:           [ BINDING_WEAK, UNDEFINED ]
 ; CHECK-NEXT: ...

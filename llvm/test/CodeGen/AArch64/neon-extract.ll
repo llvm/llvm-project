@@ -26,6 +26,7 @@ entry:
 
 define <1 x i64> @test_vext_s64(<1 x i64> %a, <1 x i64> %b) {
 ; CHECK-LABEL: test_vext_s64:
+; CHECK-NOT: ext {{v[0-9]+}}
 entry:
   %vext = shufflevector <1 x i64> %a, <1 x i64> %b, <1 x i32> <i32 0>
   ret <1 x i64> %vext
@@ -136,6 +137,7 @@ entry:
 
 define <1 x double> @test_vext_f64(<1 x double> %a, <1 x double> %b) {
 ; CHECK-LABEL: test_vext_f64:
+; CHECK-NOT: ext {{v[0-9]+}}
 entry:
   %vext = shufflevector <1 x double> %a, <1 x double> %b, <1 x i32> <i32 0>
   ret <1 x double> %vext

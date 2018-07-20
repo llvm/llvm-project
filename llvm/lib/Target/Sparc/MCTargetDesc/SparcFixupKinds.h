@@ -30,6 +30,9 @@ namespace llvm {
       fixup_sparc_br16_2,
       fixup_sparc_br16_14,
 
+      /// fixup_sparc_13 - 13-bit fixup
+      fixup_sparc_13,
+
       /// fixup_sparc_hi22  - 22-bit fixup corresponding to %hi(foo)
       /// for sethi
       fixup_sparc_hi22,
@@ -63,6 +66,9 @@ namespace llvm {
 
       /// fixup_sparc_got10 - 10-bit fixup corresponding to %got10(foo)
       fixup_sparc_got10,
+
+      /// fixup_sparc_got13 - 13-bit fixup corresponding to %got13(foo)
+      fixup_sparc_got13,
 
       /// fixup_sparc_wplt30
       fixup_sparc_wplt30,

@@ -1,0 +1,40 @@
+# RUN: cp %p/Inputs/groups.o %t
+# RUN: llvm-objcopy -strip-dwo %t
+# RUN: llvm-readobj -elf-section-groups %t | FileCheck %s
+
+// Source code of groups.o:
+//
+// template <class T>
+// struct S {
+//    static constexpr T X = T(1);
+//    T getX() { return X; }
+// };
+// void f() {
+//  S<int> A;
+//  S<double> B;
+//  int a = A.getX();
+//  int b = B.getX();
+// }
+//
+// clang -g -gsplit-dwarf -std=c++11 -c groups.cpp -o groups.o
+
+// `llvm-objcopy -strip-dwo` strips out dwo sections, as a result, the index of 
+// the symbol table, the indices of the symbols and the indices of the sections 
+// which go after the removed ones will change. Consequently, the fields 
+// Link, Info and the content of .group need to be updated. In the past 
+// `llvm-objcopy -strip-dwo` used to produce invalid binaries with 
+// broken .group section, this test verifies the correctness of 
+// Link, Info and the content of this section.
+
+CHECK:          Name: .group (179)
+CHECK-NEXT:     Index: 17
+CHECK-NEXT:     Link: 19
+CHECK-NEXT:     Info: 14
+CHECK:          .text._ZN1SIiE4getXEv (2)
+
+CHECK:          Name: .group (179)
+CHECK-NEXT:     Index: 18
+CHECK-NEXT:     Link: 19
+CHECK-NEXT:     Info: 13
+CHECK:          .text._ZN1SIdE4getXEv (4)
+CHECK-NEXT:     .rela.text._ZN1SIdE4getXEv (21)

@@ -1,7 +1,6 @@
-; RUN: llc -O2 < %s
+; RUN: llc -march=hexagon -O2 < %s
 ; REQUIRES: asserts
 
-target datalayout = "e-m:e-p:32:32-i1:32-i64:64-a:0-v32:32-n16:32"
 target triple = "hexagon-unknown--elf"
 
 %struct.cpumask = type { [1 x i32] }
@@ -106,15 +105,10 @@ if.end43:                                         ; preds = %if.else37, %if.then
 }
 
 declare i32 @get_update_sysctl_factor() #0
-declare i32 @__bitmap_weight(i32*, i32) #1
+declare i32 @__bitmap_weight(i32*, i32) #0
 
-attributes #0 = { noinline nounwind "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #2 = { nounwind }
+attributes #0 = { noinline nounwind }
 
-!llvm.ident = !{!0}
-
-!0 = !{!"Clang 3.1"}
 !1 = !{!2, !2, i64 0}
 !2 = !{!"int", !3, i64 0}
 !3 = !{!"omnipotent char", !4, i64 0}

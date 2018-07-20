@@ -28,7 +28,7 @@ define void @test() !dbg !5 {
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.3 (trunk 176994)", isOptimized: false, emissionKind: FullDebug, file: !11, enums: !3, retainedTypes: !3, globals: !3)
 !2 = !DIFile(filename: "version", directory: "/usr/local/google/home/nlewycky")
 !3 = !{}
-!5 = distinct !DISubprogram(name: "test", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 1, file: !10, scope: !6, type: !7, variables: !3)
+!5 = distinct !DISubprogram(name: "test", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 1, file: !10, scope: !6, type: !7, retainedNodes: !3)
 !6 = !DIFile(filename: "<stdin>", directory: ".")
 !7 = !DISubroutineType(types: !{null})
 !8 = !DILocation(line: 1, scope: !5)

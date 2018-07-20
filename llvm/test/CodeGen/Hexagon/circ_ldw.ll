@@ -1,5 +1,5 @@
 ; RUN: llc -march=hexagon -mcpu=hexagonv5 < %s | FileCheck %s
-; CHECK: r{{[0-9]*}} = memw(r{{[0-9]*}}++#-4:circ(m0))
+; CHECK: r{{[0-9]*}} = memw(r{{[0-9]+}}++#-4:circ(m0))
 
 
 %union.vect64 = type { i64 }

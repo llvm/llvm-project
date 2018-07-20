@@ -29,7 +29,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.2 (trunk 155696:155697) (llvm/trunk 155696)", isOptimized: false, emissionKind: FullDebug, file: !14, enums: !1, retainedTypes: !1, globals: !1, imports:  !1)
 !1 = !{}
-!5 = distinct !DISubprogram(name: "run", linkageName: "_Z3runv", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 1, file: !14, scope: !6, type: !7, variables: !1)
+!5 = distinct !DISubprogram(name: "run", linkageName: "_Z3runv", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 1, file: !14, scope: !6, type: !7, retainedNodes: !1)
 !6 = !DIFile(filename: "test.cc", directory: "/home/samsonov/debuginfo")
 !7 = !DISubroutineType(types: !8)
 !8 = !{null}

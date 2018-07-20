@@ -3,7 +3,8 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=skylake | FileCheck %s --check-prefix=CHECK --check-prefix=SKYLAKE --check-prefix=SKL
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=skx | FileCheck %s --check-prefix=CHECK --check-prefix=SKYLAKE --check-prefix=SKX
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=cannonlake | FileCheck %s --check-prefix=CHECK --check-prefix=SKYLAKE --check-prefix=CNL
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=icelake | FileCheck %s --check-prefix=CHECK --check-prefix=SKYLAKE --check-prefix=ICL
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=icelake-client | FileCheck %s --check-prefix=CHECK --check-prefix=SKYLAKE --check-prefix=ICL
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=icelake-server | FileCheck %s --check-prefix=CHECK --check-prefix=SKYLAKE --check-prefix=ICL
 
 define i32 @test_xbegin() nounwind uwtable {
 ; GENERIC-LABEL: test_xbegin:

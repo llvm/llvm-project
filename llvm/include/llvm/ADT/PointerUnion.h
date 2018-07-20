@@ -346,6 +346,12 @@ struct PointerLikeTypeTraits<PointerUnion3<PT1, PT2, PT3>> {
   };
 };
 
+template <typename PT1, typename PT2, typename PT3>
+bool operator<(PointerUnion3<PT1, PT2, PT3> lhs,
+               PointerUnion3<PT1, PT2, PT3> rhs) {
+  return lhs.getOpaqueValue() < rhs.getOpaqueValue();
+}
+
 /// A pointer union of four pointer types. See documentation for PointerUnion
 /// for usage.
 template <typename PT1, typename PT2, typename PT3, typename PT4>

@@ -15,8 +15,8 @@ body: |
 
     ; CHECK-LABEL: test
 
-    ; CHECK:      STDPtrQRr %r29r28, 10, %r0
-    ; CHECK-NEXT: STDPtrQRr %r29r28, 11, %r1
+    ; CHECK:      STDPtrQRr $r29r28, 10, $r0
+    ; CHECK-NEXT: STDPtrQRr $r29r28, 11, $r1
 
-    STDWPtrQRr %r29r28, 10, %r1r0
+    STDWPtrQRr $r29r28, 10, $r1r0
 ...

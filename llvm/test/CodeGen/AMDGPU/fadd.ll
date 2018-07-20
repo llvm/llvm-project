@@ -66,7 +66,7 @@ define amdgpu_kernel void @fadd_v8f32(<8 x float> addrspace(1)* %out, <8 x float
 ; FUNC-LABEL: {{^}}fadd_0_nsz_attr_f32:
 ; SI-NOT: v_add_f32
 define amdgpu_kernel void @fadd_0_nsz_attr_f32(float addrspace(1)* %out, float %a) #1 {
-   %add = fadd float %a, 0.0
+   %add = fadd nsz float %a, 0.0
    store float %add, float addrspace(1)* %out, align 4
    ret void
 }

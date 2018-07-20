@@ -34,6 +34,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFUnitIndex.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Host.h"
 #include <cstdint>
@@ -43,7 +44,6 @@
 
 namespace llvm {
 
-class DataExtractor;
 class MCRegisterInfo;
 class MemoryBuffer;
 class raw_ostream;
@@ -205,6 +205,9 @@ public:
 
   DWARFCompileUnit *getDWOCompileUnitForHash(uint64_t Hash);
 
+  /// Return the compile unit that includes an offset (relative to .debug_info).
+  DWARFCompileUnit *getCompileUnitForOffset(uint32_t Offset);
+
   /// Get a DIE given an exact offset.
   DWARFDie getDIEForOffset(uint32_t Offset);
 
@@ -259,7 +262,21 @@ public:
   const AppleAcceleratorTable &getAppleObjC();
 
   /// Get a pointer to a parsed line table corresponding to a compile unit.
-  const DWARFDebugLine::LineTable *getLineTableForUnit(DWARFUnit *cu);
+  /// Report any parsing issues as warnings on stderr.
+  const DWARFDebugLine::LineTable *getLineTableForUnit(DWARFUnit *U);
+
+  /// Get a pointer to a parsed line table corresponding to a compile unit.
+  /// Report any recoverable parsing problems using the callback.
+  Expected<const DWARFDebugLine::LineTable *>
+  getLineTableForUnit(DWARFUnit *U,
+                      std::function<void(Error)> RecoverableErrorCallback);
+
+  DataExtractor getStringExtractor() const {
+    return DataExtractor(DObj->getStringSection(), false, 0);
+  }
+  DataExtractor getLineStringExtractor() const {
+    return DataExtractor(DObj->getLineStringSection(), false, 0);
+  }
 
   /// Wraps the returned DIEs for a given address.
   struct DIEsForAddress {
@@ -307,9 +324,6 @@ public:
   Error loadRegisterInfo(const object::ObjectFile &Obj);
 
 private:
-  /// Return the compile unit that includes an offset (relative to .debug_info).
-  DWARFCompileUnit *getCompileUnitForOffset(uint32_t Offset);
-
   /// Return the compile unit which contains instruction with provided
   /// address.
   DWARFCompileUnit *getCompileUnitForAddress(uint64_t Address);

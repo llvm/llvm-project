@@ -14,4 +14,4 @@ entry:
 declare <32 x i32> @llvm.hexagon.V6.vrdelta.128B(<32 x i32>, <32 x i32>)
 declare <32 x i32> @llvm.hexagon.V6.vmux.128B(<1024 x i1>, <32 x i32>, <32 x i32>)
 
-attributes #0 = { nounwind "target-cpu"="hexagonv60" "target-features"="+hvxv60,+hvx-length128b" }
+attributes #0 = { nounwind "target-cpu"="hexagonv60" "target-features"="+hvx,+hvx-length128b" }

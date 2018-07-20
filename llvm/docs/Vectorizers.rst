@@ -428,12 +428,3 @@ through clang using the command line flag:
 .. code-block:: console
 
    $ clang -fno-slp-vectorize file.c
-
-LLVM has a second basic block vectorization phase
-which is more compile-time intensive (The BB vectorizer). This optimization
-can be enabled through clang using the command line flag:
-
-.. code-block:: console
-
-   $ clang -fslp-vectorize-aggressive file.c
-

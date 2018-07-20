@@ -18,7 +18,6 @@
 #include "llvm/CodeGen/GCMetadata.h"
 #include "llvm/CodeGen/GCMetadataPrinter.h"
 #include "llvm/CodeGen/GCs.h"
-#include "llvm/CodeGen/TargetLoweringObjectFile.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Mangler.h"
@@ -27,6 +26,7 @@
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Target/TargetLoweringObjectFile.h"
 #include <cctype>
 #include <cstddef>
 #include <cstdint>
@@ -129,7 +129,7 @@ void OcamlGCMetadataPrinter::finishAssembly(Module &M, GCModuleInfo &Info,
     // Very rude!
     report_fatal_error(" Too much descriptor for ocaml GC");
   }
-  AP.EmitInt16(NumDescriptors);
+  AP.emitInt16(NumDescriptors);
   AP.EmitAlignment(IntPtrSize == 4 ? 2 : 3);
 
   for (GCModuleInfo::FuncInfoVec::iterator I = Info.funcinfo_begin(),
@@ -166,8 +166,8 @@ void OcamlGCMetadataPrinter::finishAssembly(Module &M, GCModuleInfo &Info,
       }
 
       AP.OutStreamer->EmitSymbolValue(J->Label, IntPtrSize);
-      AP.EmitInt16(FrameSize);
-      AP.EmitInt16(LiveCount);
+      AP.emitInt16(FrameSize);
+      AP.emitInt16(LiveCount);
 
       for (GCFunctionInfo::live_iterator K = FI.live_begin(J),
                                          KE = FI.live_end(J);
@@ -178,7 +178,7 @@ void OcamlGCMetadataPrinter::finishAssembly(Module &M, GCModuleInfo &Info,
               "GC root stack offset is outside of fixed stack frame and out "
               "of range for ocaml GC!");
         }
-        AP.EmitInt16(K->StackOffset);
+        AP.emitInt16(K->StackOffset);
       }
 
       AP.EmitAlignment(IntPtrSize == 4 ? 2 : 3);

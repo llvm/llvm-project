@@ -25,7 +25,7 @@ define <3 x double> @v3f2d_ext_vec(<3 x float> %v1) nounwind {
 ; SSE-NEXT:    cvtps2pd %xmm0, %xmm0
 ; SSE-NEXT:    movlps %xmm0, -{{[0-9]+}}(%rsp)
 ; SSE-NEXT:    movaps %xmm2, %xmm1
-; SSE-NEXT:    movhlps {{.*#+}} xmm1 = xmm1[1,1]
+; SSE-NEXT:    movhlps {{.*#+}} xmm1 = xmm2[1],xmm1[1]
 ; SSE-NEXT:    fldl -{{[0-9]+}}(%rsp)
 ; SSE-NEXT:    movaps %xmm2, %xmm0
 ; SSE-NEXT:    retq

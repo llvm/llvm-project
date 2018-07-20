@@ -23,6 +23,7 @@
 #include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -33,7 +34,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/SimplifyIndVar.h"
@@ -63,8 +63,7 @@ UnrollVerifyDomtree("unroll-verify-domtree", cl::Hidden,
 
 /// Convert the instruction operands from referencing the current values into
 /// those specified by VMap.
-static inline void remapInstruction(Instruction *I,
-                                    ValueToValueMapTy &VMap) {
+void llvm::remapInstruction(Instruction *I, ValueToValueMapTy &VMap) {
   for (unsigned op = 0, E = I->getNumOperands(); op != E; ++op) {
     Value *Op = I->getOperand(op);
 
@@ -97,16 +96,10 @@ static inline void remapInstruction(Instruction *I,
 
 /// Folds a basic block into its predecessor if it only has one predecessor, and
 /// that predecessor only has one successor.
-/// The LoopInfo Analysis that is passed will be kept consistent.  If folding is
-/// successful references to the containing loop must be removed from
-/// ScalarEvolution by calling ScalarEvolution::forgetLoop because SE may have
-/// references to the eliminated BB.  The argument ForgottenLoops contains a set
-/// of loops that have already been forgotten to prevent redundant, expensive
-/// calls to ScalarEvolution::forgetLoop.  Returns the new combined block.
-static BasicBlock *
-foldBlockIntoPredecessor(BasicBlock *BB, LoopInfo *LI, ScalarEvolution *SE,
-                         SmallPtrSetImpl<Loop *> &ForgottenLoops,
-                         DominatorTree *DT) {
+/// The LoopInfo Analysis that is passed will be kept consistent.
+BasicBlock *llvm::foldBlockIntoPredecessor(BasicBlock *BB, LoopInfo *LI,
+                                           ScalarEvolution *SE,
+                                           DominatorTree *DT) {
   // Merge basic blocks into their predecessor if there is only one distinct
   // pred, and if there is only one distinct successor of the predecessor, and
   // if there are no PHI nodes.
@@ -116,7 +109,8 @@ foldBlockIntoPredecessor(BasicBlock *BB, LoopInfo *LI, ScalarEvolution *SE,
   if (OnlyPred->getTerminator()->getNumSuccessors() != 1)
     return nullptr;
 
-  DEBUG(dbgs() << "Merging: " << *BB << "into: " << *OnlyPred);
+  LLVM_DEBUG(dbgs() << "Merging: " << BB->getName() << " into "
+                    << OnlyPred->getName() << "\n");
 
   // Resolve any PHI nodes at the start of the block.  They are all
   // guaranteed to have exactly one entry if they exist, unless there are
@@ -149,13 +143,6 @@ foldBlockIntoPredecessor(BasicBlock *BB, LoopInfo *LI, ScalarEvolution *SE,
       DT->eraseNode(BB);
     }
 
-  // ScalarEvolution holds references to loop exit blocks.
-  if (SE) {
-    if (Loop *L = LI->getLoopFor(BB)) {
-      if (ForgottenLoops.insert(L).second)
-        SE->forgetLoop(L);
-    }
-  }
   LI->removeBlock(BB);
 
   // Inherit predecessor's name if it exists...
@@ -265,6 +252,48 @@ static bool isEpilogProfitable(Loop *L) {
   return false;
 }
 
+/// Perform some cleanup and simplifications on loops after unrolling. It is
+/// useful to simplify the IV's in the new loop, as well as do a quick
+/// simplify/dce pass of the instructions.
+void llvm::simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
+                                   ScalarEvolution *SE, DominatorTree *DT,
+                                   AssumptionCache *AC) {
+  // Simplify any new induction variables in the partially unrolled loop.
+  if (SE && SimplifyIVs) {
+    SmallVector<WeakTrackingVH, 16> DeadInsts;
+    simplifyLoopIVs(L, SE, DT, LI, DeadInsts);
+
+    // Aggressively clean up dead instructions that simplifyLoopIVs already
+    // identified. Any remaining should be cleaned up below.
+    while (!DeadInsts.empty())
+      if (Instruction *Inst =
+              dyn_cast_or_null<Instruction>(&*DeadInsts.pop_back_val()))
+        RecursivelyDeleteTriviallyDeadInstructions(Inst);
+  }
+
+  // At this point, the code is well formed.  We now do a quick sweep over the
+  // inserted code, doing constant propagation and dead code elimination as we
+  // go.
+  const DataLayout &DL = L->getHeader()->getModule()->getDataLayout();
+  const std::vector<BasicBlock *> &NewLoopBlocks = L->getBlocks();
+  for (BasicBlock *BB : NewLoopBlocks) {
+    for (BasicBlock::iterator I = BB->begin(), E = BB->end(); I != E;) {
+      Instruction *Inst = &*I++;
+
+      if (Value *V = SimplifyInstruction(Inst, {DL, nullptr, DT, AC}))
+        if (LI->replacementPreservesLCSSAForm(Inst, V))
+          Inst->replaceAllUsesWith(V);
+      if (isInstructionTriviallyDead(Inst))
+        BB->getInstList().erase(Inst);
+    }
+  }
+
+  // TODO: after peeling or unrolling, previously loop variant conditions are
+  // likely to fold to constants, eagerly propagating those here will require
+  // fewer cleanup passes to be run.  Alternatively, a LoopEarlyCSE might be
+  // appropriate.
+}
+
 /// Unroll the given loop by Count. The loop must be in LCSSA form.  Unrolling
 /// can only fail when the loop's latch block is not terminated by a conditional
 /// branch instruction. However, if the trip count (and multiple) are not known,
@@ -310,19 +339,19 @@ LoopUnrollResult llvm::UnrollLoop(
 
   BasicBlock *Preheader = L->getLoopPreheader();
   if (!Preheader) {
-    DEBUG(dbgs() << "  Can't unroll; loop preheader-insertion failed.\n");
+    LLVM_DEBUG(dbgs() << "  Can't unroll; loop preheader-insertion failed.\n");
     return LoopUnrollResult::Unmodified;
   }
 
   BasicBlock *LatchBlock = L->getLoopLatch();
   if (!LatchBlock) {
-    DEBUG(dbgs() << "  Can't unroll; loop exit-block-insertion failed.\n");
+    LLVM_DEBUG(dbgs() << "  Can't unroll; loop exit-block-insertion failed.\n");
     return LoopUnrollResult::Unmodified;
   }
 
   // Loops with indirectbr cannot be cloned.
   if (!L->isSafeToClone()) {
-    DEBUG(dbgs() << "  Can't unroll; Loop body cannot be cloned.\n");
+    LLVM_DEBUG(dbgs() << "  Can't unroll; Loop body cannot be cloned.\n");
     return LoopUnrollResult::Unmodified;
   }
 
@@ -335,8 +364,9 @@ LoopUnrollResult llvm::UnrollLoop(
 
   if (!BI || BI->isUnconditional()) {
     // The loop-rotate pass can be helpful to avoid this in many cases.
-    DEBUG(dbgs() <<
-             "  Can't unroll; loop not terminated by a conditional branch.\n");
+    LLVM_DEBUG(
+        dbgs()
+        << "  Can't unroll; loop not terminated by a conditional branch.\n");
     return LoopUnrollResult::Unmodified;
   }
 
@@ -345,22 +375,22 @@ LoopUnrollResult llvm::UnrollLoop(
   };
 
   if (!CheckSuccessors(0, 1) && !CheckSuccessors(1, 0)) {
-    DEBUG(dbgs() << "Can't unroll; only loops with one conditional latch"
-                    " exiting the loop can be unrolled\n");
+    LLVM_DEBUG(dbgs() << "Can't unroll; only loops with one conditional latch"
+                         " exiting the loop can be unrolled\n");
     return LoopUnrollResult::Unmodified;
   }
 
   if (Header->hasAddressTaken()) {
     // The loop-rotate pass can be helpful to avoid this in many cases.
-    DEBUG(dbgs() <<
-          "  Won't unroll loop: address of header block is taken.\n");
+    LLVM_DEBUG(
+        dbgs() << "  Won't unroll loop: address of header block is taken.\n");
     return LoopUnrollResult::Unmodified;
   }
 
   if (TripCount != 0)
-    DEBUG(dbgs() << "  Trip Count = " << TripCount << "\n");
+    LLVM_DEBUG(dbgs() << "  Trip Count = " << TripCount << "\n");
   if (TripMultiple != 1)
-    DEBUG(dbgs() << "  Trip Multiple = " << TripMultiple << "\n");
+    LLVM_DEBUG(dbgs() << "  Trip Multiple = " << TripMultiple << "\n");
 
   // Effectively "DCE" unrolled iterations that are beyond the tripcount
   // and will never be executed.
@@ -369,7 +399,7 @@ LoopUnrollResult llvm::UnrollLoop(
 
   // Don't enter the unroll code if there is nothing to do.
   if (TripCount == 0 && Count < 2 && PeelCount == 0) {
-    DEBUG(dbgs() << "Won't unroll; almost nothing to do\n");
+    LLVM_DEBUG(dbgs() << "Won't unroll; almost nothing to do\n");
     return LoopUnrollResult::Unmodified;
   }
 
@@ -403,8 +433,9 @@ LoopUnrollResult llvm::UnrollLoop(
          "Did not expect runtime trip-count unrolling "
          "and peeling for the same loop");
 
+  bool Peeled = false;
   if (PeelCount) {
-    bool Peeled = peelLoop(L, PeelCount, LI, SE, DT, AC, PreserveLCSSA);
+    Peeled = peelLoop(L, PeelCount, LI, SE, DT, AC, PreserveLCSSA);
 
     // Successful peeling may result in a change in the loop preheader/trip
     // counts. If we later unroll the loop, we want these to be updated.
@@ -419,7 +450,7 @@ LoopUnrollResult llvm::UnrollLoop(
 
   // Loops containing convergent instructions must have a count that divides
   // their TripMultiple.
-  DEBUG(
+  LLVM_DEBUG(
       {
         bool HasConvergent = false;
         for (auto &BB : L->blocks())
@@ -442,17 +473,11 @@ LoopUnrollResult llvm::UnrollLoop(
     if (Force)
       RuntimeTripCount = false;
     else {
-      DEBUG(
-          dbgs() << "Wont unroll; remainder loop could not be generated"
-                    "when assuming runtime trip count\n");
+      LLVM_DEBUG(dbgs() << "Won't unroll; remainder loop could not be "
+                           "generated when assuming runtime trip count\n");
       return LoopUnrollResult::Unmodified;
     }
   }
-
-  // Notify ScalarEvolution that the loop will be substantially changed,
-  // if not outright eliminated.
-  if (SE)
-    SE->forgetLoop(L);
 
   // If we know the trip count, we know the multiple...
   unsigned BreakoutTrip = 0;
@@ -468,8 +493,8 @@ LoopUnrollResult llvm::UnrollLoop(
   using namespace ore;
   // Report the unrolling decision.
   if (CompletelyUnroll) {
-    DEBUG(dbgs() << "COMPLETELY UNROLLING loop %" << Header->getName()
-                 << " with trip count " << TripCount << "!\n");
+    LLVM_DEBUG(dbgs() << "COMPLETELY UNROLLING loop %" << Header->getName()
+                      << " with trip count " << TripCount << "!\n");
     if (ORE)
       ORE->emit([&]() {
         return OptimizationRemark(DEBUG_TYPE, "FullyUnrolled", L->getStartLoc(),
@@ -478,8 +503,8 @@ LoopUnrollResult llvm::UnrollLoop(
                << NV("UnrollCount", TripCount) << " iterations";
       });
   } else if (PeelCount) {
-    DEBUG(dbgs() << "PEELING loop %" << Header->getName()
-                 << " with iteration count " << PeelCount << "!\n");
+    LLVM_DEBUG(dbgs() << "PEELING loop %" << Header->getName()
+                      << " with iteration count " << PeelCount << "!\n");
     if (ORE)
       ORE->emit([&]() {
         return OptimizationRemark(DEBUG_TYPE, "Peeled", L->getStartLoc(),
@@ -495,30 +520,41 @@ LoopUnrollResult llvm::UnrollLoop(
                   << NV("UnrollCount", Count);
     };
 
-    DEBUG(dbgs() << "UNROLLING loop %" << Header->getName()
-          << " by " << Count);
+    LLVM_DEBUG(dbgs() << "UNROLLING loop %" << Header->getName() << " by "
+                      << Count);
     if (TripMultiple == 0 || BreakoutTrip != TripMultiple) {
-      DEBUG(dbgs() << " with a breakout at trip " << BreakoutTrip);
+      LLVM_DEBUG(dbgs() << " with a breakout at trip " << BreakoutTrip);
       if (ORE)
         ORE->emit([&]() {
           return DiagBuilder() << " with a breakout at trip "
                                << NV("BreakoutTrip", BreakoutTrip);
         });
     } else if (TripMultiple != 1) {
-      DEBUG(dbgs() << " with " << TripMultiple << " trips per branch");
+      LLVM_DEBUG(dbgs() << " with " << TripMultiple << " trips per branch");
       if (ORE)
         ORE->emit([&]() {
           return DiagBuilder() << " with " << NV("TripMultiple", TripMultiple)
                                << " trips per branch";
         });
     } else if (RuntimeTripCount) {
-      DEBUG(dbgs() << " with run-time trip count");
+      LLVM_DEBUG(dbgs() << " with run-time trip count");
       if (ORE)
         ORE->emit(
             [&]() { return DiagBuilder() << " with run-time trip count"; });
     }
-    DEBUG(dbgs() << "!\n");
+    LLVM_DEBUG(dbgs() << "!\n");
   }
+
+  // We are going to make changes to this loop. SCEV may be keeping cached info
+  // about it, in particular about backedge taken count. The changes we make
+  // are guaranteed to invalidate this information for our loop. It is tempting
+  // to only invalidate the loop being unrolled, but it is incorrect as long as
+  // all exiting branches from all inner loops have impact on the outer loops,
+  // and if something changes inside them then any of outer loops may also
+  // change. When we forget outermost loop, we also forget all contained loops
+  // and this is what we need here.
+  if (SE)
+    SE->forgetTopmostLoop(L);
 
   bool ContinueOnTrue = L->contains(BI->getSuccessor(0));
   BasicBlock *LoopExit = BI->getSuccessor(ContinueOnTrue);
@@ -577,13 +613,8 @@ LoopUnrollResult llvm::UnrollLoop(
              "Header should not be in a sub-loop");
       // Tell LI about New.
       const Loop *OldLoop = addClonedBlockToLoopInfo(*BB, New, LI, NewLoops);
-      if (OldLoop) {
+      if (OldLoop)
         LoopsToSimplify.insert(NewLoops[OldLoop]);
-
-        // Forget the old loop, since its inputs may have changed.
-        if (SE)
-          SE->forgetLoop(OldLoop);
-      }
 
       if (*BB == Header)
         // Loop over all of the PHI nodes in the block, changing them to use
@@ -769,17 +800,15 @@ LoopUnrollResult llvm::UnrollLoop(
     }
   }
 
-  if (DT && UnrollVerifyDomtree)
-    DT->verifyDomTree();
+  assert(!DT || !UnrollVerifyDomtree ||
+      DT->verify(DominatorTree::VerificationLevel::Fast));
 
   // Merge adjacent basic blocks, if possible.
-  SmallPtrSet<Loop *, 4> ForgottenLoops;
   for (BasicBlock *Latch : Latches) {
     BranchInst *Term = cast<BranchInst>(Latch->getTerminator());
     if (Term->isUnconditional()) {
       BasicBlock *Dest = Term->getSuccessor(0);
-      if (BasicBlock *Fold =
-              foldBlockIntoPredecessor(Dest, LI, SE, ForgottenLoops, DT)) {
+      if (BasicBlock *Fold = foldBlockIntoPredecessor(Dest, LI, SE, DT)) {
         // Dest has been folded into Fold. Update our worklists accordingly.
         std::replace(Latches.begin(), Latches.end(), Dest, Fold);
         UnrolledLoopBlocks.erase(std::remove(UnrolledLoopBlocks.begin(),
@@ -789,40 +818,10 @@ LoopUnrollResult llvm::UnrollLoop(
     }
   }
 
-  // Simplify any new induction variables in the partially unrolled loop.
-  if (SE && !CompletelyUnroll && Count > 1) {
-    SmallVector<WeakTrackingVH, 16> DeadInsts;
-    simplifyLoopIVs(L, SE, DT, LI, DeadInsts);
-
-    // Aggressively clean up dead instructions that simplifyLoopIVs already
-    // identified. Any remaining should be cleaned up below.
-    while (!DeadInsts.empty())
-      if (Instruction *Inst =
-              dyn_cast_or_null<Instruction>(&*DeadInsts.pop_back_val()))
-        RecursivelyDeleteTriviallyDeadInstructions(Inst);
-  }
-
-  // At this point, the code is well formed.  We now do a quick sweep over the
-  // inserted code, doing constant propagation and dead code elimination as we
-  // go.
-  const DataLayout &DL = Header->getModule()->getDataLayout();
-  const std::vector<BasicBlock*> &NewLoopBlocks = L->getBlocks();
-  for (BasicBlock *BB : NewLoopBlocks) {
-    for (BasicBlock::iterator I = BB->begin(), E = BB->end(); I != E; ) {
-      Instruction *Inst = &*I++;
-
-      if (Value *V = SimplifyInstruction(Inst, {DL, nullptr, DT, AC}))
-        if (LI->replacementPreservesLCSSAForm(Inst, V))
-          Inst->replaceAllUsesWith(V);
-      if (isInstructionTriviallyDead(Inst))
-        BB->getInstList().erase(Inst);
-    }
-  }
-
-  // TODO: after peeling or unrolling, previously loop variant conditions are
-  // likely to fold to constants, eagerly propagating those here will require
-  // fewer cleanup passes to be run.  Alternatively, a LoopEarlyCSE might be
-  // appropriate.
+  // At this point, the code is well formed.  We now simplify the unrolled loop,
+  // doing constant propagation and dead code elimination as we go.
+  simplifyLoopAfterUnroll(L, !CompletelyUnroll && (Count > 1 || Peeled), LI, SE,
+                          DT, AC);
 
   NumCompletelyUnrolled += CompletelyUnroll;
   ++NumUnrolled;

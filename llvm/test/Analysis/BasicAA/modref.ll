@@ -11,7 +11,7 @@ define i32 @test0(i8* %P) {
 
   store i32 0, i32* %A
 
-  call void @llvm.memset.p0i8.i32(i8* %P, i8 0, i32 42, i32 1, i1 false)
+  call void @llvm.memset.p0i8.i32(i8* %P, i8 0, i32 42, i1 false)
 
   %B = load i32, i32* %A
   ret i32 %B
@@ -27,7 +27,7 @@ define i8 @test1() {
 
   store i8 2, i8* %B  ;; Not written to by memcpy
 
-  call void @llvm.memcpy.p0i8.p0i8.i8(i8* %A, i8* %B, i8 -1, i32 0, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i8(i8* %A, i8* %B, i8 -1, i1 false)
 
   %C = load i8, i8* %B
   ret i8 %C
@@ -38,7 +38,7 @@ define i8 @test2(i8* %P) {
 ; CHECK-LABEL: @test2
   %P2 = getelementptr i8, i8* %P, i32 127
   store i8 1, i8* %P2  ;; Not dead across memset
-  call void @llvm.memset.p0i8.i8(i8* %P, i8 2, i8 127, i32 0, i1 false)
+  call void @llvm.memset.p0i8.i8(i8* %P, i8 2, i8 127, i1 false)
   %A = load i8, i8* %P2
   ret i8 %A
 ; CHECK: ret i8 1
@@ -51,7 +51,7 @@ define i8 @test2a(i8* %P) {
   ;; FIXME: DSE isn't zapping this dead store.
   store i8 1, i8* %P2  ;; Dead, clobbered by memset.
 
-  call void @llvm.memset.p0i8.i8(i8* %P, i8 2, i8 127, i32 0, i1 false)
+  call void @llvm.memset.p0i8.i8(i8* %P, i8 2, i8 127, i1 false)
   %A = load i8, i8* %P2
   ret i8 %A
 ; CHECK-NOT: load
@@ -91,7 +91,7 @@ define void @test3a(i8* %P, i8 %X) {
 
 define i32 @test4(i8* %P) {
   %tmp = load i32, i32* @G1
-  call void @llvm.memset.p0i8.i32(i8* bitcast ([4000 x i32]* @G2 to i8*), i8 0, i32 4000, i32 1, i1 false)
+  call void @llvm.memset.p0i8.i32(i8* bitcast ([4000 x i32]* @G2 to i8*), i8 0, i32 4000, i1 false)
   %tmp2 = load i32, i32* @G1
   %sub = sub i32 %tmp2, %tmp
   ret i32 %sub
@@ -106,7 +106,7 @@ define i32 @test4(i8* %P) {
 ; write to G1.
 define i32 @test5(i8* %P, i32 %Len) {
   %tmp = load i32, i32* @G1
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* bitcast ([4000 x i32]* @G2 to i8*), i8* bitcast (i32* @G1 to i8*), i32 %Len, i32 1, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* bitcast ([4000 x i32]* @G2 to i8*), i8* bitcast (i32* @G1 to i8*), i32 %Len, i1 false)
   %tmp2 = load i32, i32* @G1
   %sub = sub i32 %tmp2, %tmp
   ret i32 %sub
@@ -227,7 +227,7 @@ define i32 @test13(i32* %P, i32* %P2) {
   ; CHECK: ret i32 0
 }
 
-declare void @llvm.memset.p0i8.i32(i8* nocapture, i8, i32, i32, i1) nounwind
-declare void @llvm.memset.p0i8.i8(i8* nocapture, i8, i8, i32, i1) nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i8(i8* nocapture, i8* nocapture, i8, i32, i1) nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i32, i1) nounwind
+declare void @llvm.memset.p0i8.i32(i8* nocapture, i8, i32, i1) nounwind
+declare void @llvm.memset.p0i8.i8(i8* nocapture, i8, i8, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i8(i8* nocapture, i8* nocapture, i8, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind

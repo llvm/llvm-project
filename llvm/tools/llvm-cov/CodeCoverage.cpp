@@ -49,66 +49,66 @@ void exportCoverageDataToJson(const coverage::CoverageMapping &CoverageMapping,
                               raw_ostream &OS);
 
 namespace {
-/// \brief The implementation of the coverage tool.
+/// The implementation of the coverage tool.
 class CodeCoverageTool {
 public:
   enum Command {
-    /// \brief The show command.
+    /// The show command.
     Show,
-    /// \brief The report command.
+    /// The report command.
     Report,
-    /// \brief The export command.
+    /// The export command.
     Export
   };
 
   int run(Command Cmd, int argc, const char **argv);
 
 private:
-  /// \brief Print the error message to the error output stream.
+  /// Print the error message to the error output stream.
   void error(const Twine &Message, StringRef Whence = "");
 
-  /// \brief Print the warning message to the error output stream.
+  /// Print the warning message to the error output stream.
   void warning(const Twine &Message, StringRef Whence = "");
 
-  /// \brief Convert \p Path into an absolute path and append it to the list
+  /// Convert \p Path into an absolute path and append it to the list
   /// of collected paths.
   void addCollectedPath(const std::string &Path);
 
-  /// \brief If \p Path is a regular file, collect the path. If it's a
+  /// If \p Path is a regular file, collect the path. If it's a
   /// directory, recursively collect all of the paths within the directory.
   void collectPaths(const std::string &Path);
 
-  /// \brief Return a memory buffer for the given source file.
+  /// Return a memory buffer for the given source file.
   ErrorOr<const MemoryBuffer &> getSourceFile(StringRef SourceFile);
 
-  /// \brief Create source views for the expansions of the view.
+  /// Create source views for the expansions of the view.
   void attachExpansionSubViews(SourceCoverageView &View,
                                ArrayRef<ExpansionRecord> Expansions,
                                const CoverageMapping &Coverage);
 
-  /// \brief Create the source view of a particular function.
+  /// Create the source view of a particular function.
   std::unique_ptr<SourceCoverageView>
   createFunctionView(const FunctionRecord &Function,
                      const CoverageMapping &Coverage);
 
-  /// \brief Create the main source view of a particular source file.
+  /// Create the main source view of a particular source file.
   std::unique_ptr<SourceCoverageView>
   createSourceFileView(StringRef SourceFile, const CoverageMapping &Coverage);
 
-  /// \brief Load the coverage mapping data. Return nullptr if an error occurred.
+  /// Load the coverage mapping data. Return nullptr if an error occurred.
   std::unique_ptr<CoverageMapping> load();
 
-  /// \brief Create a mapping from files in the Coverage data to local copies
+  /// Create a mapping from files in the Coverage data to local copies
   /// (path-equivalence).
   void remapPathNames(const CoverageMapping &Coverage);
 
-  /// \brief Remove input source files which aren't mapped by \p Coverage.
+  /// Remove input source files which aren't mapped by \p Coverage.
   void removeUnmappedInputs(const CoverageMapping &Coverage);
 
-  /// \brief If a demangler is available, demangle all symbol names.
+  /// If a demangler is available, demangle all symbol names.
   void demangleSymbols(const CoverageMapping &Coverage);
 
-  /// \brief Write out a source file view to the filesystem.
+  /// Write out a source file view to the filesystem.
   void writeSourceFileView(StringRef SourceFile, CoverageMapping *Coverage,
                            CoveragePrinter *Printer, bool ShowFilenames);
 
@@ -126,6 +126,7 @@ private:
   std::vector<StringRef> ObjectFilenames;
   CoverageViewOptions ViewOpts;
   CoverageFiltersMatchAll Filters;
+  CoverageFilters IgnoreFilenameFilters;
 
   /// The path to the indexed profile.
   std::string PGOFilename;
@@ -189,7 +190,8 @@ void CodeCoverageTool::addCollectedPath(const std::string &Path) {
     return;
   }
   sys::path::remove_dots(EffectivePath, /*remove_dot_dots=*/true);
-  SourceFiles.emplace_back(EffectivePath.str());
+  if (!IgnoreFilenameFilters.matchesFilename(EffectivePath))
+    SourceFiles.emplace_back(EffectivePath.str());
 }
 
 void CodeCoverageTool::collectPaths(const std::string &Path) {
@@ -199,7 +201,7 @@ void CodeCoverageTool::collectPaths(const std::string &Path) {
     if (PathRemapping)
       addCollectedPath(Path);
     else
-      error("Missing source file", Path);
+      warning("Source file doesn't exist, proceeded by ignoring it.", Path);
     return;
   }
 
@@ -211,12 +213,16 @@ void CodeCoverageTool::collectPaths(const std::string &Path) {
   if (llvm::sys::fs::is_directory(Status)) {
     std::error_code EC;
     for (llvm::sys::fs::recursive_directory_iterator F(Path, EC), E;
-         F != E && !EC; F.increment(EC)) {
+         F != E; F.increment(EC)) {
+
+      if (EC) {
+        warning(EC.message(), F->path());
+        continue;
+      }
+
       if (llvm::sys::fs::is_regular_file(F->path()))
         addCollectedPath(F->path());
     }
-    if (EC)
-      warning(EC.message(), Path);
   }
 }
 
@@ -472,14 +478,13 @@ void CodeCoverageTool::demangleSymbols(const CoverageMapping &Coverage) {
   OutputTOF.os().close();
 
   // Invoke the demangler.
-  std::vector<const char *> ArgsV;
-  for (const std::string &Arg : ViewOpts.DemanglerOpts)
-    ArgsV.push_back(Arg.c_str());
-  ArgsV.push_back(nullptr);
+  std::vector<StringRef> ArgsV;
+  for (StringRef Arg : ViewOpts.DemanglerOpts)
+    ArgsV.push_back(Arg);
   Optional<StringRef> Redirects[] = {InputPath.str(), OutputPath.str(), {""}};
   std::string ErrMsg;
-  int RC = sys::ExecuteAndWait(ViewOpts.DemanglerOpts[0], ArgsV.data(),
-                               /*env=*/nullptr, Redirects, /*secondsToWait=*/0,
+  int RC = sys::ExecuteAndWait(ViewOpts.DemanglerOpts[0], ArgsV,
+                               /*env=*/None, Redirects, /*secondsToWait=*/0,
                                /*memoryLimit=*/0, &ErrMsg);
   if (RC) {
     error(ErrMsg, ViewOpts.DemanglerOpts[0]);
@@ -590,6 +595,12 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
   cl::list<std::string> NameRegexFilters(
       "name-regex", cl::Optional,
       cl::desc("Show code coverage only for functions that match the given "
+               "regular expression"),
+      cl::ZeroOrMore, cl::cat(FilteringCategory));
+
+  cl::list<std::string> IgnoreFilenameRegexFilters(
+      "ignore-filename-regex", cl::Optional,
+      cl::desc("Skip source code files with file paths that match the given "
                "regular expression"),
       cl::ZeroOrMore, cl::cat(FilteringCategory));
 
@@ -710,6 +721,7 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
             llvm::make_unique<NameRegexCoverageFilter>(Regex));
       Filters.push_back(std::move(NameFilterer));
     }
+
     if (RegionCoverageLtFilter.getNumOccurrences() ||
         RegionCoverageGtFilter.getNumOccurrences() ||
         LineCoverageLtFilter.getNumOccurrences() ||
@@ -730,6 +742,11 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       Filters.push_back(std::move(StatFilterer));
     }
 
+    // Create the ignore filename filters.
+    for (const auto &RE : IgnoreFilenameRegexFilters)
+      IgnoreFilenameFilters.push_back(
+          llvm::make_unique<NameRegexCoverageFilter>(RE));
+
     if (!Arches.empty()) {
       for (const std::string &Arch : Arches) {
         if (Triple(Arch).getArch() == llvm::Triple::ArchType::UnknownArch) {
@@ -744,6 +761,7 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       }
     }
 
+    // IgnoreFilenameFilters are applied even when InputSourceFiles specified.
     for (const std::string &File : InputSourceFiles)
       collectPaths(File);
 
@@ -858,8 +876,10 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
 
   if (SourceFiles.empty())
     // Get the source files from the function coverage mapping.
-    for (StringRef Filename : Coverage->getUniqueSourceFiles())
-      SourceFiles.push_back(Filename);
+    for (StringRef Filename : Coverage->getUniqueSourceFiles()) {
+      if (!IgnoreFilenameFilters.matchesFilename(Filename))
+        SourceFiles.push_back(Filename);
+    }
 
   // Create an index out of the source files.
   if (ViewOpts.hasOutputDirectory()) {
@@ -958,7 +978,7 @@ int CodeCoverageTool::doReport(int argc, const char **argv,
   CoverageReport Report(ViewOpts, *Coverage.get());
   if (!ShowFunctionSummaries) {
     if (SourceFiles.empty())
-      Report.renderFileReports(llvm::outs());
+      Report.renderFileReports(llvm::outs(), IgnoreFilenameFilters);
     else
       Report.renderFileReports(llvm::outs(), SourceFiles);
   } else {
@@ -994,7 +1014,7 @@ int CodeCoverageTool::doExport(int argc, const char **argv,
   auto Exporter = CoverageExporterJson(*Coverage.get(), ViewOpts, outs());
 
   if (SourceFiles.empty())
-    Exporter.renderRoot();
+    Exporter.renderRoot(IgnoreFilenameFilters);
   else
     Exporter.renderRoot(SourceFiles);
 

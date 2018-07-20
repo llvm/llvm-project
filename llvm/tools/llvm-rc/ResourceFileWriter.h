@@ -25,15 +25,25 @@ class MemoryBuffer;
 
 namespace rc {
 
-struct SearchParams {
+enum CodePage {
+  CpAcp = 0,        // The current used codepage. Since there's no such
+                    // notion in LLVM what codepage it actually means,
+                    // this only allows ASCII.
+  CpWin1252 = 1252, // A codepage where most 8 bit values correspond to
+                    // unicode code points with the same value.
+  CpUtf8 = 65001,   // UTF-8.
+};
+
+struct WriterParams {
   std::vector<std::string> Include;   // Additional folders to search for files.
   std::vector<std::string> NoInclude; // Folders to exclude from file search.
   StringRef InputFilePath;            // The full path of the input file.
+  int CodePage = CpAcp;               // The codepage for interpreting characters.
 };
 
 class ResourceFileWriter : public Visitor {
 public:
-  ResourceFileWriter(const SearchParams &Params,
+  ResourceFileWriter(const WriterParams &Params,
                      std::unique_ptr<raw_fd_ostream> Stream)
       : Params(Params), FS(std::move(Stream)), IconCursorID(1) {
     assert(FS && "Output stream needs to be provided to the serializator");
@@ -52,6 +62,7 @@ public:
 
   Error visitCaptionStmt(const CaptionStmt *) override;
   Error visitCharacteristicsStmt(const CharacteristicsStmt *) override;
+  Error visitClassStmt(const ClassStmt *) override;
   Error visitFontStmt(const FontStmt *) override;
   Error visitLanguageStmt(const LanguageResource *) override;
   Error visitStyleStmt(const StyleStmt *) override;
@@ -78,8 +89,11 @@ public:
       uint32_t Charset;
     };
     Optional<FontInfo> Font;
+    IntOrString Class;
 
-    ObjectInfo() : LanguageInfo(0), Characteristics(0), VersionInfo(0) {}
+    ObjectInfo()
+        : LanguageInfo(0), Characteristics(0), VersionInfo(0),
+          Class(StringRef()) {}
   } ObjectData;
 
   struct StringTableInfo {
@@ -90,10 +104,12 @@ public:
     struct Bundle {
       std::array<Optional<StringRef>, 16> Data;
       ObjectInfo DeclTimeInfo;
-      Bundle(const ObjectInfo &Info) : DeclTimeInfo(Info) {}
+      uint16_t MemoryFlags;
+      Bundle(const ObjectInfo &Info, uint16_t Flags)
+          : DeclTimeInfo(Info), MemoryFlags(Flags) {}
     };
     std::map<BundleKey, Bundle> BundleData;
-    // Bundles are listed in the order of their first occurence.
+    // Bundles are listed in the order of their first occurrence.
     std::vector<BundleKey> BundleList;
   } StringTableData;
 
@@ -111,6 +127,10 @@ private:
   Error writeSingleAccelerator(const AcceleratorsResource::Accelerator &,
                                bool IsLastItem);
   Error writeAcceleratorsBody(const RCResource *);
+
+  // BitmapResource
+  Error visitBitmapResource(const RCResource *) override;
+  Error writeBitmapBody(const RCResource *);
 
   // CursorResource and IconResource
   Error visitIconOrCursorResource(const RCResource *);
@@ -146,7 +166,7 @@ private:
   Error writeVersionInfoBlock(const VersionInfoBlock &);
   Error writeVersionInfoValue(const VersionInfoValue &);
 
-  const SearchParams &Params;
+  const WriterParams &Params;
 
   // Output stream handling.
   std::unique_ptr<raw_fd_ostream> FS;

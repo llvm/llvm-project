@@ -7,14 +7,17 @@ target triple = "nvptx-nvidia-cuda"
 
 ; CHECK: .global .align 4 .u32 myglobal = 42;
 @myglobal = internal global i32 42, align 4
-; CHECK: .global .align 4 .u32 myconst = 42;
-@myconst = internal constant i32 42, align 4
+; CHECK: .global .align 4 .u32 myconst = 420;
+@myconst = internal constant i32 420, align 4
 
 
 define void @foo(i32* %a, i32* %b) {
-; CHECK: cvta.global.u32
+; Expect one load -- @myconst isn't loaded from, because we know its value
+; statically.
+; CHECK: ld.global.u32
+; CHECK: st.global.u32
+; CHECK: st.global.u32
   %ld1 = load i32, i32* @myglobal
-; CHECK: cvta.global.u32
   %ld2 = load i32, i32* @myconst
   store i32 %ld1, i32* %a
   store i32 %ld2, i32* %b

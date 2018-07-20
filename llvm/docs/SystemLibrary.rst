@@ -209,10 +209,9 @@ Implementations of the System Library interface are separated by their general
 class of operating system. Currently only Unix and Win32 classes are defined
 but more could be added for other operating system classifications.  To
 distinguish which implementation to compile, the code in ``lib/System`` uses
-the ``LLVM_ON_UNIX`` and ``LLVM_ON_WIN32`` ``#defines`` provided via configure
-through the ``llvm/Config/config.h`` file. Each source file in ``lib/System``,
-after implementing the generic (operating system independent) functionality
-needs to include the correct implementation using a set of
+the ``LLVM_ON_UNIX`` and ``_WIN32`` ``#defines``.  Each source file in
+``lib/System``, after implementing the generic (operating system independent)
+functionality needs to include the correct implementation using a set of
 ``#if defined(LLVM_ON_XYZ)`` directives. For example, if we had
 ``lib/System/File.cpp``, we'd expect to see in that file:
 
@@ -221,7 +220,7 @@ needs to include the correct implementation using a set of
   #if defined(LLVM_ON_UNIX)
   #include "Unix/File.cpp"
   #endif
-  #if defined(LLVM_ON_WIN32)
+  #if defined(_WIN32)
   #include "Win32/File.cpp"
   #endif
 

@@ -3,11 +3,10 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GFX89 -check-prefix=GFX9 %s
 
 ; GCN-LABEL: {{^}}s_cvt_pkrtz_v2f16_f32:
-; GCN-DAG: s_load_dword [[X:s[0-9]+]], s[0:1], 0x{{b|2c}}
-; GCN-DAG: s_load_dword [[SY:s[0-9]+]], s[0:1], 0x{{c|30}}
-; GCN: v_mov_b32_e32 [[VY:v[0-9]+]], [[SY]]
-; SI: v_cvt_pkrtz_f16_f32_e32 v{{[0-9]+}}, [[X]], [[VY]]
-; GFX89: v_cvt_pkrtz_f16_f32 v{{[0-9]+}}, [[X]], [[VY]]
+; GCN-DAG: s_load_dwordx2 s{{\[}}[[SX:[0-9]+]]:[[SY:[0-9]+]]{{\]}}, s[0:1], 0x{{b|2c}}
+; GCN: v_mov_b32_e32 [[VY:v[0-9]+]], s[[SY]]
+; SI: v_cvt_pkrtz_f16_f32_e32 v{{[0-9]+}}, s[[SX]], [[VY]]
+; GFX89: v_cvt_pkrtz_f16_f32 v{{[0-9]+}}, s[[SX]], [[VY]]
 define amdgpu_kernel void @s_cvt_pkrtz_v2f16_f32(<2 x half> addrspace(1)* %out, float %x, float %y) #0 {
   %result = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float %x, float %y)
   store <2 x half> %result, <2 x half> addrspace(1)* %out
@@ -23,12 +22,9 @@ define amdgpu_kernel void @s_cvt_pkrtz_samereg_v2f16_f32(<2 x half> addrspace(1)
   ret void
 }
 
-; FIXME: Folds to 0 on gfx9
 ; GCN-LABEL: {{^}}s_cvt_pkrtz_undef_undef:
 ; GCN-NEXT: ; %bb.0
-; SI-NEXT: s_endpgm
-; VI-NEXT: s_endpgm
-; GFX9: v_mov_b32_e32 v{{[0-9]+}}, 0{{$}}
+; GCN-NEXT: s_endpgm
 define amdgpu_kernel void @s_cvt_pkrtz_undef_undef(<2 x half> addrspace(1)* %out) #0 {
   %result = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float undef, float undef)
   store <2 x half> %result, <2 x half> addrspace(1)* %out

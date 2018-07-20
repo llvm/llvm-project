@@ -1,6 +1,39 @@
 # RUN: yaml2obj %s > %t
+# RUN: cp %t %t3
 # RUN: llvm-objcopy --strip-all %t %t2
 # RUN: llvm-readobj -file-headers -sections %t2 | FileCheck %s
+
+# Verify that the previous llvm-objcopy's run has not modified the input.
+# RUN: cmp %t %t3
+
+# RUN: llvm-strip %t3 
+# RUN: cmp %t2 %t3
+
+# RUN: cp %t %t4
+# RUN: llvm-strip %t4 -o %t5
+# RUN: cmp %t2 %t5
+
+# Verify that the previous llvm-strip's run has not modified the input.
+# RUN: cmp %t %t4
+
+# RUN: cp %t %t-should-remain-the-same
+# RUN: llvm-strip %t4 -o %t-should-remain-the-same -o %t-should-be-stripped
+# RUN: cmp %t2 %t-should-be-stripped
+# RUN: cmp %t %t-should-remain-the-same
+
+# RUN: rm -f %t.a
+# RUN: llvm-ar crs %t.a %t
+# RUN: llvm-objcopy --strip-all %t.a %t.a
+# RUN: llvm-ar p %t.a > %t6
+# RUN: cmp %t2 %t6
+
+# RUN: cp %t %t7
+# RUN: llvm-strip -strip-all %t7
+# RUN: cmp %t2 %t7
+
+# RUN: cp %t %t8
+# RUN: llvm-strip --strip-all %t8
+# RUN: cmp %t2 %t8
 
 !ELF
 FileHeader:

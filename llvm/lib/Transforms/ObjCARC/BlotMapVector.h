@@ -18,7 +18,7 @@
 
 namespace llvm {
 
-/// \brief An associative container with fast insertion-order (deterministic)
+/// An associative container with fast insertion-order (deterministic)
 /// iteration over its elements. Plus the special blot operation.
 template <class KeyT, class ValueT> class BlotMapVector {
   /// Map keys to indices in Vector.

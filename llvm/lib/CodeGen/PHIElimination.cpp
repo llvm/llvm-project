@@ -75,7 +75,7 @@ namespace {
       initializePHIEliminationPass(*PassRegistry::getPassRegistry());
     }
 
-    bool runOnMachineFunction(MachineFunction &Fn) override;
+    bool runOnMachineFunction(MachineFunction &MF) override;
     void getAnalysisUsage(AnalysisUsage &AU) const override;
 
   private:
@@ -91,7 +91,7 @@ namespace {
     /// register which is used in a PHI node. We map that to the BB the
     /// vreg is coming from. This is used later to determine when the vreg
     /// is killed in the BB.
-    void analyzePHINodes(const MachineFunction& Fn);
+    void analyzePHINodes(const MachineFunction& MF);
 
     /// Split critical edges where necessary for good coalescer performance.
     bool SplitPHIEdges(MachineFunction &MF, MachineBasicBlock &MBB,
@@ -270,7 +270,8 @@ void PHIElimination::LowerPHINode(MachineBasicBlock &MBB,
       IncomingReg = entry;
       reusedIncoming = true;
       ++NumReused;
-      DEBUG(dbgs() << "Reusing " << printReg(IncomingReg) << " for " << *MPhi);
+      LLVM_DEBUG(dbgs() << "Reusing " << printReg(IncomingReg) << " for "
+                        << *MPhi);
     } else {
       const TargetRegisterClass *RC = MF.getRegInfo().getRegClass(DestReg);
       entry = IncomingReg = MF.getRegInfo().createVirtualRegister(RC);
@@ -295,9 +296,9 @@ void PHIElimination::LowerPHINode(MachineBasicBlock &MBB,
       // AfterPHIsIt, so it appears before the current PHICopy.
       if (reusedIncoming)
         if (MachineInstr *OldKill = VI.findKill(&MBB)) {
-          DEBUG(dbgs() << "Remove old kill from " << *OldKill);
+          LLVM_DEBUG(dbgs() << "Remove old kill from " << *OldKill);
           LV->removeVirtualRegisterKilled(IncomingReg, *OldKill);
-          DEBUG(MBB.dump());
+          LLVM_DEBUG(MBB.dump());
         }
 
       // Add information to LiveVariables to know that the incoming value is
@@ -452,7 +453,7 @@ void PHIElimination::LowerPHINode(MachineBasicBlock &MBB,
           KillInst = FirstTerm;
           while (KillInst != opBlock.begin()) {
             --KillInst;
-            if (KillInst->isDebugValue())
+            if (KillInst->isDebugInstr())
               continue;
             if (KillInst->readsRegister(SrcReg))
               break;
@@ -512,7 +513,7 @@ void PHIElimination::LowerPHINode(MachineBasicBlock &MBB,
               KillInst = FirstTerm;
               while (KillInst != opBlock.begin()) {
                 --KillInst;
-                if (KillInst->isDebugValue())
+                if (KillInst->isDebugInstr())
                   continue;
                 if (KillInst->readsRegister(SrcReg))
                   break;
@@ -593,9 +594,9 @@ bool PHIElimination::SplitPHIEdges(MachineFunction &MF,
       if (!ShouldSplit && !NoPhiElimLiveOutEarlyExit)
         continue;
       if (ShouldSplit) {
-        DEBUG(dbgs() << printReg(Reg) << " live-out before critical edge "
-                     << printMBBReference(*PreMBB) << " -> "
-                     << printMBBReference(MBB) << ": " << *BBI);
+        LLVM_DEBUG(dbgs() << printReg(Reg) << " live-out before critical edge "
+                          << printMBBReference(*PreMBB) << " -> "
+                          << printMBBReference(MBB) << ": " << *BBI);
       }
 
       // If Reg is not live-in to MBB, it means it must be live-in to some
@@ -610,10 +611,12 @@ bool PHIElimination::SplitPHIEdges(MachineFunction &MF,
 
       // Check for a loop exiting edge.
       if (!ShouldSplit && CurLoop != PreLoop) {
-        DEBUG({
+        LLVM_DEBUG({
           dbgs() << "Split wouldn't help, maybe avoid loop copies?\n";
-          if (PreLoop) dbgs() << "PreLoop: " << *PreLoop;
-          if (CurLoop) dbgs() << "CurLoop: " << *CurLoop;
+          if (PreLoop)
+            dbgs() << "PreLoop: " << *PreLoop;
+          if (CurLoop)
+            dbgs() << "CurLoop: " << *CurLoop;
         });
         // This edge could be entering a loop, exiting a loop, or it could be
         // both: Jumping directly form one loop to the header of a sibling
@@ -624,7 +627,7 @@ bool PHIElimination::SplitPHIEdges(MachineFunction &MF,
       if (!ShouldSplit && !SplitAllCriticalEdges)
         continue;
       if (!PreMBB->SplitCriticalEdge(&MBB, *this)) {
-        DEBUG(dbgs() << "Failed to split critical edge.\n");
+        LLVM_DEBUG(dbgs() << "Failed to split critical edge.\n");
         continue;
       }
       Changed = true;

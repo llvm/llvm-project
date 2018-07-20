@@ -1,5 +1,5 @@
 ; RUN: llc -march=hexagon < %s | FileCheck %s
-; CHECK: memub(r{{[0-9]+}}{{ *}}<<{{ *}}#1{{ *}}+{{ *}}##a)
+; CHECK: memub(r{{[0-9]+}}<<#1+##a)
 
 @a = external global [5 x [2 x i8]]
 

@@ -88,8 +88,8 @@ define void @f5(i32 %a1) #0 {
 
 ; CHECK-DAG: .zerofill __DATA,__bss,_o5,4,2
 
-; CHECK-DAG: .zerofill __DATA,__bss,[[SET1]],8,3
-; CHECK-DAG: .zerofill __DATA,__bss,[[SET2]],12,3
-; CHECK-DAG: .zerofill __DATA,__bss,[[SET3]],12,3
+; CHECK-DAG: .zerofill __DATA,__bss,[[SET1]],8,2
+; CHECK-DAG: .zerofill __DATA,__bss,[[SET2]],12,2
+; CHECK-DAG: .zerofill __DATA,__bss,[[SET3]],12,2
 
 attributes #0 = { nounwind }

@@ -58,14 +58,14 @@ entry:
 	%up_mvd116 = getelementptr [8 x %struct.x], [8 x %struct.x]* %up_mvd, i32 0, i32 0		; <%struct.x*> [#uses=1]
 	%tmp110117 = bitcast [8 x %struct.x]* %up_mvd to i8*		; <i8*> [#uses=1]
 
-	call void @llvm.memset.p0i8.i64(i8* %tmp110117, i8 0, i64 32, i32 8, i1 false)
+	call void @llvm.memset.p0i8.i64(i8* align 8 %tmp110117, i8 0, i64 32, i1 false)
 	call void @foo( %struct.x* %up_mvd116 ) nounwind
 	ret void
 }
 
 declare void @foo(%struct.x*)
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1) nounwind
+declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) nounwind
 
 ; Ensure that alignment of '0' in an @llvm.memset intrinsic results in
 ; unaligned loads and stores.
@@ -97,6 +97,6 @@ define void @PR15348(i8* %a) {
 ; YMM-NEXT:    vmovups %xmm0, (%eax)
 ; YMM-NEXT:    movb $0, 16(%eax)
 ; YMM-NEXT:    retl
-  call void @llvm.memset.p0i8.i64(i8* %a, i8 0, i64 17, i32 0, i1 false)
+  call void @llvm.memset.p0i8.i64(i8* %a, i8 0, i64 17, i1 false)
   ret void
 }

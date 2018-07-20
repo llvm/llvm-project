@@ -26,7 +26,7 @@ namespace llvm {
 class BasicBlock;
 
 //===----------------------------------------------------------------------===//
-/// @brief Hierarchical RegionNode successor iterator.
+/// Hierarchical RegionNode successor iterator.
 ///
 /// This iterator iterates over all successors of a RegionNode.
 ///
@@ -102,7 +102,7 @@ public:
   using Self = RNSuccIterator<NodeRef, BlockT, RegionT>;
   using value_type = typename super::value_type;
 
-  /// @brief Create begin iterator of a RegionNode.
+  /// Create begin iterator of a RegionNode.
   inline RNSuccIterator(NodeRef node)
       : Node(node, node->isSubRegion() ? ItRgBegin : ItBB),
         BItor(BlockTraits::child_begin(node->getEntry())) {
@@ -115,7 +115,7 @@ public:
       advanceRegionSucc();
   }
 
-  /// @brief Create an end iterator.
+  /// Create an end iterator.
   inline RNSuccIterator(NodeRef node, bool)
       : Node(node, node->isSubRegion() ? ItRgEnd : ItBB),
         BItor(BlockTraits::child_end(node->getEntry())) {}
@@ -158,7 +158,7 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
-/// @brief Flat RegionNode iterator.
+/// Flat RegionNode iterator.
 ///
 /// The Flat Region iterator will iterate over all BasicBlock RegionNodes that
 /// are contained in the Region and its subregions. This is close to a virtual
@@ -177,7 +177,7 @@ public:
   using Self = RNSuccIterator<FlatIt<NodeRef>, BlockT, RegionT>;
   using value_type = typename super::value_type;
 
-  /// @brief Create the iterator from a RegionNode.
+  /// Create the iterator from a RegionNode.
   ///
   /// Note that the incoming node must be a bb node, otherwise it will trigger
   /// an assertion when we try to get a BasicBlock.
@@ -193,7 +193,7 @@ public:
       ++Itor;
   }
 
-  /// @brief Create an end iterator
+  /// Create an end iterator
   inline RNSuccIterator(NodeRef node, bool)
       : Node(node), Itor(BlockTraits::child_end(node->getEntry())) {
     assert(!Node->isSubRegion() &&

@@ -6,6 +6,38 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+//
+// This pass merges loads/stores to/from sequential memory addresses into vector
+// loads/stores.  Although there's nothing GPU-specific in here, this pass is
+// motivated by the microarchitectural quirks of nVidia and AMD GPUs.
+//
+// (For simplicity below we talk about loads only, but everything also applies
+// to stores.)
+//
+// This pass is intended to be run late in the pipeline, after other
+// vectorization opportunities have been exploited.  So the assumption here is
+// that immediately following our new vector load we'll need to extract out the
+// individual elements of the load, so we can operate on them individually.
+//
+// On CPUs this transformation is usually not beneficial, because extracting the
+// elements of a vector register is expensive on most architectures.  It's
+// usually better just to load each element individually into its own scalar
+// register.
+//
+// However, nVidia and AMD GPUs don't have proper vector registers.  Instead, a
+// "vector load" loads directly into a series of scalar registers.  In effect,
+// extracting the elements of the vector is free.  It's therefore always
+// beneficial to vectorize a sequence of loads on these architectures.
+//
+// Vectorizing (perhaps a better name might be "coalescing") loads can have
+// large performance impacts on GPU kernels, and opportunities for vectorizing
+// are common in GPU code.  This pass tries very hard to find such
+// opportunities; its runtime is quadratic in the number of loads in a BB.
+//
+// Some CPU architectures, such as ARM, have instructions that load into
+// multiple scalar registers, similar to a GPU vectorized load.  In theory ARM
+// could use this pass (with some modifications), but currently it implements
+// its own pass to do something similar to what we do here.
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -21,6 +53,7 @@
 #include "llvm/Analysis/OrderedBasicBlock.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Attributes.h"
@@ -45,7 +78,6 @@
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Vectorize.h"
 #include <algorithm>
 #include <cassert>
@@ -86,10 +118,6 @@ public:
   bool run();
 
 private:
-  Value *getPointerOperand(Value *I) const;
-
-  GetElementPtrInst *getSourceGEP(Value *Src) const;
-
   unsigned getPointerAddressSpace(Value *I);
 
   unsigned getAlignment(LoadInst *LI) const {
@@ -109,6 +137,8 @@ private:
   }
 
   bool isConsecutiveAccess(Value *A, Value *B);
+  bool areConsecutivePointers(Value *PtrA, Value *PtrB, APInt Size);
+  bool lookThroughComplexAddresses(Value *PtrA, Value *PtrB, APInt PtrDelta);
 
   /// After vectorization, reorder the instructions that I depends on
   /// (the instructions defining its operands), to ensure they dominate I.
@@ -239,14 +269,6 @@ bool Vectorizer::run() {
   return Changed;
 }
 
-Value *Vectorizer::getPointerOperand(Value *I) const {
-  if (LoadInst *LI = dyn_cast<LoadInst>(I))
-    return LI->getPointerOperand();
-  if (StoreInst *SI = dyn_cast<StoreInst>(I))
-    return SI->getPointerOperand();
-  return nullptr;
-}
-
 unsigned Vectorizer::getPointerAddressSpace(Value *I) {
   if (LoadInst *L = dyn_cast<LoadInst>(I))
     return L->getPointerAddressSpace();
@@ -255,23 +277,10 @@ unsigned Vectorizer::getPointerAddressSpace(Value *I) {
   return -1;
 }
 
-GetElementPtrInst *Vectorizer::getSourceGEP(Value *Src) const {
-  // First strip pointer bitcasts. Make sure pointee size is the same with
-  // and without casts.
-  // TODO: a stride set by the add instruction below can match the difference
-  // in pointee type size here. Currently it will not be vectorized.
-  Value *SrcPtr = getPointerOperand(Src);
-  Value *SrcBase = SrcPtr->stripPointerCasts();
-  if (DL.getTypeStoreSize(SrcPtr->getType()->getPointerElementType()) ==
-      DL.getTypeStoreSize(SrcBase->getType()->getPointerElementType()))
-    SrcPtr = SrcBase;
-  return dyn_cast<GetElementPtrInst>(SrcPtr);
-}
-
 // FIXME: Merge with llvm::isConsecutiveAccess
 bool Vectorizer::isConsecutiveAccess(Value *A, Value *B) {
-  Value *PtrA = getPointerOperand(A);
-  Value *PtrB = getPointerOperand(B);
+  Value *PtrA = getLoadStorePointerOperand(A);
+  Value *PtrB = getLoadStorePointerOperand(B);
   unsigned ASA = getPointerAddressSpace(A);
   unsigned ASB = getPointerAddressSpace(B);
 
@@ -280,18 +289,25 @@ bool Vectorizer::isConsecutiveAccess(Value *A, Value *B) {
     return false;
 
   // Make sure that A and B are different pointers of the same size type.
-  unsigned PtrBitWidth = DL.getPointerSizeInBits(ASA);
   Type *PtrATy = PtrA->getType()->getPointerElementType();
   Type *PtrBTy = PtrB->getType()->getPointerElementType();
   if (PtrA == PtrB ||
+      PtrATy->isVectorTy() != PtrBTy->isVectorTy() ||
       DL.getTypeStoreSize(PtrATy) != DL.getTypeStoreSize(PtrBTy) ||
       DL.getTypeStoreSize(PtrATy->getScalarType()) !=
           DL.getTypeStoreSize(PtrBTy->getScalarType()))
     return false;
 
+  unsigned PtrBitWidth = DL.getPointerSizeInBits(ASA);
   APInt Size(PtrBitWidth, DL.getTypeStoreSize(PtrATy));
 
-  APInt OffsetA(PtrBitWidth, 0), OffsetB(PtrBitWidth, 0);
+  return areConsecutivePointers(PtrA, PtrB, Size);
+}
+
+bool Vectorizer::areConsecutivePointers(Value *PtrA, Value *PtrB, APInt Size) {
+  unsigned PtrBitWidth = DL.getPointerTypeSizeInBits(PtrA->getType());
+  APInt OffsetA(PtrBitWidth, 0);
+  APInt OffsetB(PtrBitWidth, 0);
   PtrA = PtrA->stripAndAccumulateInBoundsConstantOffsets(DL, OffsetA);
   PtrB = PtrB->stripAndAccumulateInBoundsConstantOffsets(DL, OffsetB);
 
@@ -314,26 +330,58 @@ bool Vectorizer::isConsecutiveAccess(Value *A, Value *B) {
   if (X == PtrSCEVB)
     return true;
 
+  // The above check will not catch the cases where one of the pointers is
+  // factorized but the other one is not, such as (C + (S * (A + B))) vs
+  // (AS + BS). Get the minus scev. That will allow re-combining the expresions
+  // and getting the simplified difference.
+  const SCEV *Dist = SE.getMinusSCEV(PtrSCEVB, PtrSCEVA);
+  if (C == Dist)
+    return true;
+
   // Sometimes even this doesn't work, because SCEV can't always see through
   // patterns that look like (gep (ext (add (shl X, C1), C2))). Try checking
   // things the hard way.
+  return lookThroughComplexAddresses(PtrA, PtrB, BaseDelta);
+}
+
+bool Vectorizer::lookThroughComplexAddresses(Value *PtrA, Value *PtrB,
+                                             APInt PtrDelta) {
+  auto *GEPA = dyn_cast<GetElementPtrInst>(PtrA);
+  auto *GEPB = dyn_cast<GetElementPtrInst>(PtrB);
+  if (!GEPA || !GEPB)
+    return false;
 
   // Look through GEPs after checking they're the same except for the last
   // index.
-  GetElementPtrInst *GEPA = getSourceGEP(A);
-  GetElementPtrInst *GEPB = getSourceGEP(B);
-  if (!GEPA || !GEPB || GEPA->getNumOperands() != GEPB->getNumOperands())
+  if (GEPA->getNumOperands() != GEPB->getNumOperands() ||
+      GEPA->getPointerOperand() != GEPB->getPointerOperand())
     return false;
-  unsigned FinalIndex = GEPA->getNumOperands() - 1;
-  for (unsigned i = 0; i < FinalIndex; i++)
-    if (GEPA->getOperand(i) != GEPB->getOperand(i))
+  gep_type_iterator GTIA = gep_type_begin(GEPA);
+  gep_type_iterator GTIB = gep_type_begin(GEPB);
+  for (unsigned I = 0, E = GEPA->getNumIndices() - 1; I < E; ++I) {
+    if (GTIA.getOperand() != GTIB.getOperand())
       return false;
+    ++GTIA;
+    ++GTIB;
+  }
 
-  Instruction *OpA = dyn_cast<Instruction>(GEPA->getOperand(FinalIndex));
-  Instruction *OpB = dyn_cast<Instruction>(GEPB->getOperand(FinalIndex));
+  Instruction *OpA = dyn_cast<Instruction>(GTIA.getOperand());
+  Instruction *OpB = dyn_cast<Instruction>(GTIB.getOperand());
   if (!OpA || !OpB || OpA->getOpcode() != OpB->getOpcode() ||
       OpA->getType() != OpB->getType())
     return false;
+
+  if (PtrDelta.isNegative()) {
+    if (PtrDelta.isMinSignedValue())
+      return false;
+    PtrDelta.negate();
+    std::swap(OpA, OpB);
+  }
+  uint64_t Stride = DL.getTypeAllocSize(GTIA.getIndexedType());
+  if (PtrDelta.urem(Stride) != 0)
+    return false;
+  unsigned IdxBitWidth = OpA->getType()->getScalarSizeInBits();
+  APInt IdxDiff = PtrDelta.udiv(Stride).zextOrSelf(IdxBitWidth);
 
   // Only look through a ZExt/SExt.
   if (!isa<SExtInst>(OpA) && !isa<ZExtInst>(OpA))
@@ -341,44 +389,46 @@ bool Vectorizer::isConsecutiveAccess(Value *A, Value *B) {
 
   bool Signed = isa<SExtInst>(OpA);
 
-  OpA = dyn_cast<Instruction>(OpA->getOperand(0));
+  // At this point A could be a function parameter, i.e. not an instruction
+  Value *ValA = OpA->getOperand(0);
   OpB = dyn_cast<Instruction>(OpB->getOperand(0));
-  if (!OpA || !OpB || OpA->getType() != OpB->getType())
+  if (!OpB || ValA->getType() != OpB->getType())
     return false;
 
-  // Now we need to prove that adding 1 to OpA won't overflow.
+  // Now we need to prove that adding IdxDiff to ValA won't overflow.
   bool Safe = false;
-  // First attempt: if OpB is an add with NSW/NUW, and OpB is 1 added to OpA,
-  // we're okay.
+  // First attempt: if OpB is an add with NSW/NUW, and OpB is IdxDiff added to
+  // ValA, we're okay.
   if (OpB->getOpcode() == Instruction::Add &&
       isa<ConstantInt>(OpB->getOperand(1)) &&
-      cast<ConstantInt>(OpB->getOperand(1))->getSExtValue() > 0) {
+      IdxDiff.sle(cast<ConstantInt>(OpB->getOperand(1))->getSExtValue())) {
     if (Signed)
       Safe = cast<BinaryOperator>(OpB)->hasNoSignedWrap();
     else
       Safe = cast<BinaryOperator>(OpB)->hasNoUnsignedWrap();
   }
 
-  unsigned BitWidth = OpA->getType()->getScalarSizeInBits();
+  unsigned BitWidth = ValA->getType()->getScalarSizeInBits();
 
   // Second attempt:
-  // If any bits are known to be zero other than the sign bit in OpA, we can
-  // add 1 to it while guaranteeing no overflow of any sort.
+  // If all set bits of IdxDiff or any higher order bit other than the sign bit
+  // are known to be zero in ValA, we can add Diff to it while guaranteeing no
+  // overflow of any sort.
   if (!Safe) {
+    OpA = dyn_cast<Instruction>(ValA);
+    if (!OpA)
+      return false;
     KnownBits Known(BitWidth);
     computeKnownBits(OpA, Known, DL, 0, nullptr, OpA, &DT);
-    if (Known.countMaxTrailingOnes() < (BitWidth - 1))
-      Safe = true;
+    if (Known.Zero.trunc(BitWidth - 1).zext(IdxBitWidth).ult(IdxDiff))
+      return false;
   }
 
-  if (!Safe)
-    return false;
-
-  const SCEV *OffsetSCEVA = SE.getSCEV(OpA);
+  const SCEV *OffsetSCEVA = SE.getSCEV(ValA);
   const SCEV *OffsetSCEVB = SE.getSCEV(OpB);
-  const SCEV *One = SE.getConstant(APInt(BitWidth, 1));
-  const SCEV *X2 = SE.getAddExpr(OffsetSCEVA, One);
-  return X2 == OffsetSCEVB;
+  const SCEV *C = SE.getConstant(IdxDiff.trunc(BitWidth));
+  const SCEV *X = SE.getAddExpr(OffsetSCEVA, C);
+  return X == OffsetSCEVB;
 }
 
 void Vectorizer::reorder(Instruction *I) {
@@ -448,7 +498,7 @@ Vectorizer::getBoundaryInstrs(ArrayRef<Instruction *> Chain) {
 void Vectorizer::eraseInstructions(ArrayRef<Instruction *> Chain) {
   SmallVector<Instruction *, 16> Instrs;
   for (Instruction *I : Chain) {
-    Value *PtrOperand = getPointerOperand(I);
+    Value *PtrOperand = getLoadStorePointerOperand(I);
     assert(PtrOperand && "Instruction must have a pointer operand.");
     Instrs.push_back(I);
     if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(PtrOperand))
@@ -484,7 +534,7 @@ Vectorizer::getVectorizablePrefix(ArrayRef<Instruction *> Chain) {
   SmallVector<Instruction *, 16> ChainInstrs;
 
   bool IsLoadChain = isa<LoadInst>(Chain[0]);
-  DEBUG({
+  LLVM_DEBUG({
     for (Instruction *I : Chain) {
       if (IsLoadChain)
         assert(isa<LoadInst>(I) &&
@@ -506,11 +556,12 @@ Vectorizer::getVectorizablePrefix(ArrayRef<Instruction *> Chain) {
                    Intrinsic::sideeffect) {
       // Ignore llvm.sideeffect calls.
     } else if (IsLoadChain && (I.mayWriteToMemory() || I.mayThrow())) {
-      DEBUG(dbgs() << "LSV: Found may-write/throw operation: " << I << '\n');
+      LLVM_DEBUG(dbgs() << "LSV: Found may-write/throw operation: " << I
+                        << '\n');
       break;
     } else if (!IsLoadChain && (I.mayReadOrWriteMemory() || I.mayThrow())) {
-      DEBUG(dbgs() << "LSV: Found may-read/write/throw operation: " << I
-                   << '\n');
+      LLVM_DEBUG(dbgs() << "LSV: Found may-read/write/throw operation: " << I
+                        << '\n');
       break;
     }
   }
@@ -536,32 +587,40 @@ Vectorizer::getVectorizablePrefix(ArrayRef<Instruction *> Chain) {
       if (BarrierMemoryInstr && OBB.dominates(BarrierMemoryInstr, MemInstr))
         break;
 
-      if (isa<LoadInst>(MemInstr) && isa<LoadInst>(ChainInstr))
+      auto *MemLoad = dyn_cast<LoadInst>(MemInstr);
+      auto *ChainLoad = dyn_cast<LoadInst>(ChainInstr);
+      if (MemLoad && ChainLoad)
         continue;
+
+      // We can ignore the alias if the we have a load store pair and the load
+      // is known to be invariant. The load cannot be clobbered by the store.
+      auto IsInvariantLoad = [](const LoadInst *LI) -> bool {
+        return LI->getMetadata(LLVMContext::MD_invariant_load);
+      };
 
       // We can ignore the alias as long as the load comes before the store,
       // because that means we won't be moving the load past the store to
       // vectorize it (the vectorized load is inserted at the location of the
       // first load in the chain).
-      if (isa<StoreInst>(MemInstr) && isa<LoadInst>(ChainInstr) &&
-          OBB.dominates(ChainInstr, MemInstr))
+      if (isa<StoreInst>(MemInstr) && ChainLoad &&
+          (IsInvariantLoad(ChainLoad) || OBB.dominates(ChainLoad, MemInstr)))
         continue;
 
       // Same case, but in reverse.
-      if (isa<LoadInst>(MemInstr) && isa<StoreInst>(ChainInstr) &&
-          OBB.dominates(MemInstr, ChainInstr))
+      if (MemLoad && isa<StoreInst>(ChainInstr) &&
+          (IsInvariantLoad(MemLoad) || OBB.dominates(MemLoad, ChainInstr)))
         continue;
 
       if (!AA.isNoAlias(MemoryLocation::get(MemInstr),
                         MemoryLocation::get(ChainInstr))) {
-        DEBUG({
+        LLVM_DEBUG({
           dbgs() << "LSV: Found alias:\n"
                     "  Aliasing instruction and pointer:\n"
                  << "  " << *MemInstr << '\n'
-                 << "  " << *getPointerOperand(MemInstr) << '\n'
+                 << "  " << *getLoadStorePointerOperand(MemInstr) << '\n'
                  << "  Aliased instruction and pointer:\n"
                  << "  " << *ChainInstr << '\n'
-                 << "  " << *getPointerOperand(ChainInstr) << '\n';
+                 << "  " << *getLoadStorePointerOperand(ChainInstr) << '\n';
         });
         // Save this aliasing memory instruction as a barrier, but allow other
         // instructions that precede the barrier to be vectorized with this one.
@@ -632,8 +691,12 @@ Vectorizer::collectInstructions(BasicBlock *BB) {
       unsigned AS = Ptr->getType()->getPointerAddressSpace();
       unsigned VecRegSize = TTI.getLoadStoreVecRegBitWidth(AS);
 
+      unsigned VF = VecRegSize / TySize;
+      VectorType *VecTy = dyn_cast<VectorType>(Ty);
+
       // No point in looking at these if they're too big to vectorize.
-      if (TySize > VecRegSize / 2)
+      if (TySize > VecRegSize / 2 ||
+          (VecTy && TTI.getLoadVectorFactor(VF, TySize, TySize / 8, VecTy) == 0))
         continue;
 
       // Make sure all the users of a vector are constant-index extracts.
@@ -675,8 +738,12 @@ Vectorizer::collectInstructions(BasicBlock *BB) {
       unsigned AS = Ptr->getType()->getPointerAddressSpace();
       unsigned VecRegSize = TTI.getLoadStoreVecRegBitWidth(AS);
 
+      unsigned VF = VecRegSize / TySize;
+      VectorType *VecTy = dyn_cast<VectorType>(Ty);
+
       // No point in looking at these if they're too big to vectorize.
-      if (TySize > VecRegSize / 2)
+      if (TySize > VecRegSize / 2 ||
+          (VecTy && TTI.getStoreVectorFactor(VF, TySize, TySize / 8, VecTy) == 0))
         continue;
 
       if (isa<VectorType>(Ty) && !llvm::all_of(SI->users(), [](const User *U) {
@@ -702,7 +769,7 @@ bool Vectorizer::vectorizeChains(InstrListMap &Map) {
     if (Size < 2)
       continue;
 
-    DEBUG(dbgs() << "LSV: Analyzing a chain of length " << Size << ".\n");
+    LLVM_DEBUG(dbgs() << "LSV: Analyzing a chain of length " << Size << ".\n");
 
     // Process the stores in chunks of 64.
     for (unsigned CI = 0, CE = Size; CI < CE; CI += 64) {
@@ -716,7 +783,8 @@ bool Vectorizer::vectorizeChains(InstrListMap &Map) {
 }
 
 bool Vectorizer::vectorizeInstructions(ArrayRef<Instruction *> Instrs) {
-  DEBUG(dbgs() << "LSV: Vectorizing " << Instrs.size() << " instructions.\n");
+  LLVM_DEBUG(dbgs() << "LSV: Vectorizing " << Instrs.size()
+                    << " instructions.\n");
   SmallVector<int, 16> Heads, Tails;
   int ConsecutiveChain[64];
 
@@ -852,14 +920,14 @@ bool Vectorizer::vectorizeStoreChain(
   // vector factor, break it into two pieces.
   unsigned TargetVF = TTI.getStoreVectorFactor(VF, Sz, SzInBytes, VecTy);
   if (ChainSize > VF || (VF != TargetVF && TargetVF < ChainSize)) {
-    DEBUG(dbgs() << "LSV: Chain doesn't match with the vector factor."
-                    " Creating two separate arrays.\n");
+    LLVM_DEBUG(dbgs() << "LSV: Chain doesn't match with the vector factor."
+                         " Creating two separate arrays.\n");
     return vectorizeStoreChain(Chain.slice(0, TargetVF),
                                InstructionsProcessed) |
            vectorizeStoreChain(Chain.slice(TargetVF), InstructionsProcessed);
   }
 
-  DEBUG({
+  LLVM_DEBUG({
     dbgs() << "LSV: Stores to vectorize:\n";
     for (Instruction *I : Chain)
       dbgs() << "  " << *I << "\n";
@@ -1000,8 +1068,8 @@ bool Vectorizer::vectorizeLoadChain(
   // vector factor, break it into two pieces.
   unsigned TargetVF = TTI.getLoadVectorFactor(VF, Sz, SzInBytes, VecTy);
   if (ChainSize > VF || (VF != TargetVF && TargetVF < ChainSize)) {
-    DEBUG(dbgs() << "LSV: Chain doesn't match with the vector factor."
-                    " Creating two separate arrays.\n");
+    LLVM_DEBUG(dbgs() << "LSV: Chain doesn't match with the vector factor."
+                         " Creating two separate arrays.\n");
     return vectorizeLoadChain(Chain.slice(0, TargetVF), InstructionsProcessed) |
            vectorizeLoadChain(Chain.slice(TargetVF), InstructionsProcessed);
   }
@@ -1024,7 +1092,7 @@ bool Vectorizer::vectorizeLoadChain(
     Alignment = NewAlign;
   }
 
-  DEBUG({
+  LLVM_DEBUG({
     dbgs() << "LSV: Loads to vectorize:\n";
     for (Instruction *I : Chain)
       I->dump();
@@ -1107,7 +1175,7 @@ bool Vectorizer::accessIsMisaligned(unsigned SzInBytes, unsigned AddressSpace,
   bool Allows = TTI.allowsMisalignedMemoryAccesses(F.getParent()->getContext(),
                                                    SzInBytes * 8, AddressSpace,
                                                    Alignment, &Fast);
-  DEBUG(dbgs() << "LSV: Target said misaligned is allowed? " << Allows
-               << " and fast? " << Fast << "\n";);
+  LLVM_DEBUG(dbgs() << "LSV: Target said misaligned is allowed? " << Allows
+                    << " and fast? " << Fast << "\n";);
   return !Allows || !Fast;
 }

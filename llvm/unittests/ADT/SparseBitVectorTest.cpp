@@ -68,7 +68,7 @@ TEST(SparseBitVectorTest, SelfAssignment) {
 
   Vec.set(23);
   Vec.set(234);
-  Vec = Vec;
+  Vec = static_cast<SparseBitVector<> &>(Vec);
   EXPECT_TRUE(Vec.test(23));
   EXPECT_TRUE(Vec.test(234));
 

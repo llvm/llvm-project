@@ -52,14 +52,14 @@ entry:
 !10 = !DIGlobalVariable(name: "version", scope: !4, file: !1, line: 2, type: !7, isLocal: false, isDefinition: true)
 !11 = !{!12, !16}
 !12 = !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: !4, entity: !13, file: !1, line: 8)
-!13 = distinct !DISubprogram(name: "a", linkageName: "_ZN1A1aEv", scope: !4, file: !1, line: 7, type: !14, isLocal: false, isDefinition: true, scopeLine: 7, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !5)
+!13 = distinct !DISubprogram(name: "a", linkageName: "_ZN1A1aEv", scope: !4, file: !1, line: 7, type: !14, isLocal: false, isDefinition: true, scopeLine: 7, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !5)
 !14 = !DISubroutineType(types: !15)
 !15 = !{null}
 !16 = !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: !17, entity: !19, file: !1, line: 8)
 !17 = distinct !DILexicalBlock(scope: !18, file: !1, line: 9, column: 8)
-!18 = distinct !DISubprogram(name: "c", linkageName: "_ZN1A1cEv", scope: !4, file: !1, line: 9, type: !14, isLocal: false, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !5)
+!18 = distinct !DISubprogram(name: "c", linkageName: "_ZN1A1cEv", scope: !4, file: !1, line: 9, type: !14, isLocal: false, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !5)
 !19 = distinct !DILexicalBlock(scope: !20, file: !1, line: 10, column: 8)
-!20 = distinct !DISubprogram(name: "d", linkageName: "_ZN1A1dEv", scope: !4, file: !1, line: 10, type: !14, isLocal: false, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !5)
+!20 = distinct !DISubprogram(name: "d", linkageName: "_ZN1A1dEv", scope: !4, file: !1, line: 10, type: !14, isLocal: false, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !5)
 !21 = !{!22}
 !22 = !DIMacroFile(file: !1, nodes: !23)
 !23 = !{!24}
@@ -67,9 +67,9 @@ entry:
 !25 = !{i32 2, !"Dwarf Version", i32 4}
 !26 = !{i32 2, !"Debug Info Version", i32 3}
 !27 = !{!"clang version 4.0.0 (trunk 286863) (llvm/trunk 286875)"}
-!28 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 1, type: !14, isLocal: false, isDefinition: true, scopeLine: 2, isOptimized: false, unit: !0, variables: !5)
+!28 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 1, type: !14, isLocal: false, isDefinition: true, scopeLine: 2, isOptimized: false, unit: !0, retainedNodes: !5)
 !29 = !DILocation(line: 3, column: 1, scope: !28)
 !30 = !DILocation(line: 7, column: 12, scope: !13)
-!31 = distinct !DISubprogram(name: "b", linkageName: "_ZN1A1bEv", scope: !4, file: !1, line: 8, type: !14, isLocal: true, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !5)
+!31 = distinct !DISubprogram(name: "b", linkageName: "_ZN1A1bEv", scope: !4, file: !1, line: 8, type: !14, isLocal: true, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !5)
 !32 = !DILocation(line: 8, column: 24, scope: !31)
 

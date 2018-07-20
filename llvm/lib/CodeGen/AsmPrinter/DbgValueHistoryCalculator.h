@@ -52,6 +52,10 @@ public:
   void clear() { VarInstrRanges.clear(); }
   InstrRangesMap::const_iterator begin() const { return VarInstrRanges.begin(); }
   InstrRangesMap::const_iterator end() const { return VarInstrRanges.end(); }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  LLVM_DUMP_METHOD void dump() const;
+#endif
 };
 
 void calculateDbgValueHistory(const MachineFunction *MF,

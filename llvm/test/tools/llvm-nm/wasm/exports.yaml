@@ -1,7 +1,6 @@
 # RUN: yaml2obj < %s | llvm-nm - | FileCheck -strict-whitespace %s
 
-# That wasm exports of functions and globals are displayed as global data and
-# code symbols.
+# Check that wasm exports of functions/globals/data are displayed correctly
 
 --- !WASM
 FileHeader:
@@ -9,52 +8,59 @@ FileHeader:
 Sections:
   - Type:            TYPE
     Signatures:
-      - ReturnType:      I32
+      - Index:           0
+        ReturnType:      I32
         ParamTypes:
           - I32
   - Type:            FUNCTION
-    FunctionTypes: [ 0, 0, 0, 0, 0 ]
+    FunctionTypes: [ 0 ]
   - Type:            GLOBAL
     Globals:
-      - Type:        I32
+      - Index:       0
+        Type:        I32
         Mutable:     false
         InitExpr:
           Opcode:          I64_CONST
           Value:           32
-      - Type:        I32
-        Mutable:     false
-        InitExpr:
+  - Type:            CODE
+    Functions:
+      - Index:           0
+        Locals:
+        Body:            00
+  - Type:            DATA
+    Segments:
+      - SectionOffset:   6
+        MemoryIndex:     0
+        Offset:
           Opcode:          I32_CONST
-          Value:           64
-      - Type:        I32
-        Mutable:     false
-        InitExpr:
-          Opcode:          I32_CONST
-          Value:           1024
-  - Type:            IMPORT
-    Imports:
-      - Module:          env
-        Field:           fimport
-        Kind:            FUNCTION
-        SigIndex:        0
-      - Module:          env
-        Field:           gimport
-        Kind:            GLOBAL
-        GlobalType:      I32
-        GlobalMutable:   false
-  - Type:            EXPORT
-    Exports:
-      - Name:            foo
-        Kind:            FUNCTION
-        Index:           0x00000004
-      - Name:            bar
-        Kind:            GLOBAL
-        Index:           0x00000003
+          Value:           0
+        Content:         '616263'
   - Type:            CUSTOM
-    Name:            "linking"
-    DataSize:        0
+    Name:            linking
+    Version:         1
+    SymbolTable:
+       - Index:           0
+         Kind:            FUNCTION
+         Name:            fexport
+         Flags:           [  ]
+         Function:        0
+       - Index:           1
+         Kind:            GLOBAL
+         Name:            gexport
+         Flags:           [  ]
+         Global:          0
+       - Index:           2
+         Kind:            DATA
+         Name:            dexport
+         Flags:           [  ]
+         Segment:         0
+         Size:            3
+    SegmentInfo:
+      - Index:           0
+        Name:            .rodata.constantData
+        Alignment:       1
+        Flags:           [  ]
 
-# CHECK:      00000400 D bar
-# CHECK-NEXT:          U fimport
-# CHECK-NEXT: 00000004 T foo
-# CHECK-NEXT:          U gimport
+# CHECK:      00000000 D dexport
+# CHECK-NEXT: 00000000 T fexport
+# CHECK-NEXT: 00000000 D gexport

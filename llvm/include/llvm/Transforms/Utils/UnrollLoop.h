@@ -19,11 +19,13 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Transforms/Utils/ValueMapper.h"
 
 namespace llvm {
 
 class AssumptionCache;
 class BasicBlock;
+class DependenceInfo;
 class DominatorTree;
 class Loop;
 class LoopInfo;
@@ -71,12 +73,53 @@ bool UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
 
 void computePeelCount(Loop *L, unsigned LoopSize,
                       TargetTransformInfo::UnrollingPreferences &UP,
-                      unsigned &TripCount);
+                      unsigned &TripCount, ScalarEvolution &SE);
+
+bool canPeel(Loop *L);
 
 bool peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI, ScalarEvolution *SE,
               DominatorTree *DT, AssumptionCache *AC, bool PreserveLCSSA);
 
+LoopUnrollResult UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
+                                  unsigned TripMultiple, bool UnrollRemainder,
+                                  LoopInfo *LI, ScalarEvolution *SE,
+                                  DominatorTree *DT, AssumptionCache *AC,
+                                  OptimizationRemarkEmitter *ORE);
+
+bool isSafeToUnrollAndJam(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
+                          DependenceInfo &DI);
+
+bool computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
+                        DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
+                        const SmallPtrSetImpl<const Value *> &EphValues,
+                        OptimizationRemarkEmitter *ORE, unsigned &TripCount,
+                        unsigned MaxTripCount, unsigned &TripMultiple,
+                        unsigned LoopSize,
+                        TargetTransformInfo::UnrollingPreferences &UP,
+                        bool &UseUpperBound);
+
+BasicBlock *foldBlockIntoPredecessor(BasicBlock *BB, LoopInfo *LI,
+                                     ScalarEvolution *SE, DominatorTree *DT);
+
+void remapInstruction(Instruction *I, ValueToValueMapTy &VMap);
+
+void simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
+                             ScalarEvolution *SE, DominatorTree *DT,
+                             AssumptionCache *AC);
+
 MDNode *GetUnrollMetadata(MDNode *LoopID, StringRef Name);
+
+TargetTransformInfo::UnrollingPreferences gatherUnrollingPreferences(
+    Loop *L, ScalarEvolution &SE, const TargetTransformInfo &TTI, int OptLevel,
+    Optional<unsigned> UserThreshold, Optional<unsigned> UserCount,
+    Optional<bool> UserAllowPartial, Optional<bool> UserRuntime,
+    Optional<bool> UserUpperBound, Optional<bool> UserAllowPeeling);
+
+unsigned ApproximateLoopSize(const Loop *L, unsigned &NumCalls,
+                             bool &NotDuplicatable, bool &Convergent,
+                             const TargetTransformInfo &TTI,
+                             const SmallPtrSetImpl<const Value *> &EphValues,
+                             unsigned BEInsns);
 
 } // end namespace llvm
 

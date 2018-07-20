@@ -1,14 +1,14 @@
 ; RUN: llc -O1 -filetype=asm -mtriple x86_64-unknown-linux-gnu -mcpu=x86-64 -o - %s -stop-after=livedebugvars | FileCheck %s
 
-; CHECK: %eax = MOV32rm
-; CHECK: DBG_VALUE %eax
-; CHECK: %eax = SHL32rCL killed renamable %eax
-; CHECK: DBG_VALUE %eax
-; CHECK: DBG_VALUE %rsp, 0, !{{[0-9]+}}, !DIExpression(DW_OP_constu, 4, DW_OP_minus)
-; CHECK: DBG_VALUE %eax
-; CHECK: %eax = SHL32rCL killed renamable %eax
-; CHECK: DBG_VALUE %eax
-; CHECK: RETQ %eax
+; CHECK: $eax = MOV32rm
+; CHECK: DBG_VALUE debug-use $eax
+; CHECK: $eax = SHL32rCL killed renamable $eax
+; CHECK: DBG_VALUE debug-use $eax
+; CHECK: DBG_VALUE debug-use $rsp, 0, !{{[0-9]+}}, !DIExpression(DW_OP_constu, 4, DW_OP_minus)
+; CHECK: DBG_VALUE debug-use $eax
+; CHECK: $eax = SHL32rCL killed renamable $eax
+; CHECK: DBG_VALUE debug-use $eax
+; CHECK: RETQ $eax
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -49,7 +49,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !10 = !{i32 2, !"Dwarf Version", i32 4}
 !11 = !{i32 2, !"Debug Info Version", i32 3}
 !12 = !{i32 1, !"wchar_size", i32 4}
-!14 = distinct !DISubprogram(name: "main", scope: !3, file: !3, line: 12, type: !15, isLocal: false, isDefinition: true, scopeLine: 12, isOptimized: true, unit: !2, variables: !17)
+!14 = distinct !DISubprogram(name: "main", scope: !3, file: !3, line: 12, type: !15, isLocal: false, isDefinition: true, scopeLine: 12, isOptimized: true, unit: !2, retainedNodes: !17)
 !15 = !DISubroutineType(types: !16)
 !16 = !{!9}
 !17 = !{!18}

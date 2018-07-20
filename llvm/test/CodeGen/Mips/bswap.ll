@@ -1,12 +1,17 @@
-; RUN: llc  < %s -march=mipsel -mcpu=mips32r2 | FileCheck %s -check-prefix=MIPS32
-; RUN: llc  < %s -march=mips64el -mcpu=mips64r2 | FileCheck %s -check-prefix=MIPS64
-; RUN: llc  < %s -mtriple=mipsel-linux-gnu -march=mipsel -mcpu=mips32r2 -mattr=+mips16 | FileCheck %s -check-prefix=MIPS16
+; RUN: llc  < %s -march=mipsel -mcpu=mips32r2 | FileCheck -allow-deprecated-dag-overlap %s -check-prefix=MIPS32
+; RUN: llc  < %s -mtriple=mipsel-mti-linux-gnu -mcpu=mips32r2 -mattr=+micromips | FileCheck -allow-deprecated-dag-overlap %s -check-prefix=MM
+; RUN: llc  < %s -march=mips64el -mcpu=mips64r2 | FileCheck -allow-deprecated-dag-overlap %s -check-prefix=MIPS64
+; RUN: llc  < %s -mtriple=mipsel-linux-gnu -march=mipsel -mcpu=mips32r2 -mattr=+mips16 | FileCheck -allow-deprecated-dag-overlap %s -check-prefix=MIPS16
 
 define i32 @bswap32(i32 signext %x) nounwind readnone {
 entry:
 ; MIPS32-LABEL: bswap32:
 ; MIPS32: wsbh $[[R0:[0-9]+]]
 ; MIPS32: rotr ${{[0-9]+}}, $[[R0]], 16
+
+; MM-LABEL: bswap32:
+; MM: wsbh $[[R0:[0-9]+]]
+; MM: rotr ${{[0-9]+}}, $[[R0]], 16
 
 ; MIPS64-LABEL: bswap32:
 ; MIPS64: wsbh $[[R0:[0-9]+]]
@@ -36,6 +41,12 @@ entry:
 ; MIPS32: rotr ${{[0-9]+}}, $[[R0]], 16
 ; MIPS32: wsbh $[[R0:[0-9]+]]
 ; MIPS32: rotr ${{[0-9]+}}, $[[R0]], 16
+
+; MM-LABEL: bswap64:
+; MM: wsbh $[[R0:[0-9]+]]
+; MM: rotr ${{[0-9]+}}, $[[R0]], 16
+; MM: wsbh $[[R0:[0-9]+]]
+; MM: rotr ${{[0-9]+}}, $[[R0]], 16
 
 ; MIPS64-LABEL: bswap64:
 ; MIPS64: dsbh $[[R0:[0-9]+]]
@@ -80,6 +91,16 @@ entry:
 ; MIPS32-DAG: rotr ${{[0-9]+}}, $[[R0]], 16
 ; MIPS32-DAG: wsbh $[[R0:[0-9]+]]
 ; MIPS32-DAG: rotr ${{[0-9]+}}, $[[R0]], 16
+
+; MM-LABEL: bswapv4i32:
+; MM-DAG: wsbh $[[R0:[0-9]+]]
+; MM-DAG: rotr ${{[0-9]+}}, $[[R0]], 16
+; MM-DAG: wsbh $[[R0:[0-9]+]]
+; MM-DAG: rotr ${{[0-9]+}}, $[[R0]], 16
+; MM-DAG: wsbh $[[R0:[0-9]+]]
+; MM-DAG: rotr ${{[0-9]+}}, $[[R0]], 16
+; MM-DAG: wsbh $[[R0:[0-9]+]]
+; MM-DAG: rotr ${{[0-9]+}}, $[[R0]], 16
 
 ; MIPS64-LABEL: bswapv4i32:
 ; MIPS64-DAG: wsbh $[[R0:[0-9]+]]

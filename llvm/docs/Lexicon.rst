@@ -133,6 +133,12 @@ H
 I
 -
 
+**ICE**
+    Internal Compiler Error. This abbreviation is used to describe errors
+    that occur in LLVM or Clang as they are compiling source code. For example,
+    if a valid C++ source program were to trigger an assert in Clang when
+    compiled, that could be referred to as an "ICE".
+
 **IPA**
     Inter-Procedural Analysis. Refers to any variety of code analysis that
     occurs between procedures, functions or compilation units (modules).
