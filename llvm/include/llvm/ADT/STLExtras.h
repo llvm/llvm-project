@@ -61,7 +61,8 @@ using ValueOfRange = typename std::remove_reference<decltype(
 //     Extra additions to <type_traits>
 //===----------------------------------------------------------------------===//
 
-template <typename T> struct negation : std::bool_constant<!bool(T::value)> {};
+template <typename T>
+struct negation : std::integral_constant<bool, !bool(T::value)> {};
 
 template <typename...> struct conjunction : std::true_type {};
 template <typename B1> struct conjunction<B1> : B1 {};
