@@ -184,7 +184,7 @@ void TracePC::UpdateObservedPCs() {
 
   auto Observe = [&](const PCTableEntry &TE) {
     if (TE.PCFlags & 1)
-      if (ObservedFuncs.insert(TE.PC).second && NumPrintNewFuncs)
+      if (++ObservedFuncs[TE.PC] == 1 && NumPrintNewFuncs)
         CoveredFuncs.push_back(TE.PC);
     ObservePC(TE.PC);
   };
@@ -209,7 +209,8 @@ void TracePC::UpdateObservedPCs() {
     }
   }
 
-  for (size_t i = 0, N = Min(CoveredFuncs.size(), NumPrintNewFuncs); i < N; i++) {
+  for (size_t i = 0, N = Min(CoveredFuncs.size(), NumPrintNewFuncs); i < N;
+       i++) {
     Printf("\tNEW_FUNC[%zd/%zd]: ", i + 1, CoveredFuncs.size());
     PrintPC("%p %F %L", "%p", CoveredFuncs[i] + 1);
     Printf("\n");
@@ -251,7 +252,7 @@ void TracePC::IterateCoveredFunctions(CallBack CB) {
         NextFE++;
       } while (NextFE < M.Stop && !(NextFE->PCFlags & 1));
       if (ObservedFuncs.count(FE->PC))
-        CB(FE, NextFE);
+        CB(FE, NextFE, ObservedFuncs[FE->PC]);
     }
   }
 }
@@ -298,28 +299,30 @@ void TracePC::PrintCoverage() {
     return;
   }
   Printf("COVERAGE:\n");
-  auto CoveredFunctionCallback = [&](const PCTableEntry *First, const PCTableEntry *Last) {
+  auto CoveredFunctionCallback = [&](const PCTableEntry *First,
+                                     const PCTableEntry *Last,
+                                     uintptr_t Counter) {
     assert(First < Last);
     auto VisualizePC = GetNextInstructionPc(First->PC);
     std::string FileStr = DescribePC("%s", VisualizePC);
-    if (!IsInterestingCoverageFile(FileStr)) return;
+    if (!IsInterestingCoverageFile(FileStr))
+      return;
     std::string FunctionStr = DescribePC("%F", VisualizePC);
+    if (FunctionStr.find("in ") == 0)
+      FunctionStr = FunctionStr.substr(3);
     std::string LineStr = DescribePC("%l", VisualizePC);
     size_t Line = std::stoul(LineStr);
+    size_t NumEdges = Last - First;
     Vector<uintptr_t> UncoveredPCs;
     for (auto TE = First; TE < Last; TE++)
       if (!ObservedPCs.count(TE->PC))
         UncoveredPCs.push_back(TE->PC);
-    Printf("COVERED_FUNC: ");
-    UncoveredPCs.empty()
-        ? Printf("all")
-        : Printf("%zd/%zd", (Last - First) - UncoveredPCs.size(), Last - First);
-    Printf(" PCs covered %s %s:%zd\n", FunctionStr.c_str(), FileStr.c_str(),
-           Line);
-    for (auto PC: UncoveredPCs) {
+    Printf("COVERED_FUNC: hits: %zd", Counter);
+    Printf(" edges: %zd/%zd", NumEdges - UncoveredPCs.size(), NumEdges);
+    Printf(" %s %s:%zd\n", FunctionStr.c_str(), FileStr.c_str(), Line);
+    for (auto PC: UncoveredPCs)
       Printf("  UNCOVERED_PC: %s\n",
              DescribePC("%s:%l", GetNextInstructionPc(PC)).c_str());
-    }
   };
 
   IterateCoveredFunctions(CoveredFunctionCallback);

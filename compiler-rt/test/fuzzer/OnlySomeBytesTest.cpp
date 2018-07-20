@@ -12,10 +12,13 @@
 const size_t N = 2048;
 typedef const uint8_t *IN;
 
+static volatile int one = 1;
+
 extern "C" {
 __attribute__((noinline)) void bad() {
   fprintf(stderr, "BINGO\n");
-  abort();
+  if (one)
+    abort();
 }
 
 __attribute__((noinline)) void f0(IN in) {

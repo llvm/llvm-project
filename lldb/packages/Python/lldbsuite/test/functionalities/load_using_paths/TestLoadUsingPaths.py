@@ -103,10 +103,27 @@ class LoadUsingPathsTestCase(TestBase):
         out_spec = lldb.SBFileSpec()
         token = process.LoadImageUsingPaths(relative_spec, paths, out_spec, error)
 
-        self.assertNotEqual(token, lldb.LLDB_INVALID_IMAGE_TOKEN, "Got a valid token")
-        self.assertEqual(out_spec, lldb.SBFileSpec(self.hidden_lib), "Found the expected library")
+        self.assertNotEqual(token, lldb.LLDB_INVALID_IMAGE_TOKEN, "Got a valid token with relative path")
+        self.assertEqual(out_spec, lldb.SBFileSpec(self.hidden_lib), "Found the expected library with relative path")
 
         process.UnloadImage(token)
+        
+        # Make sure the presence of an empty path doesn't mess anything up:
+        paths.Clear()
+        paths.AppendString("")
+        paths.AppendString(os.path.join(self.wd, "no_such_dir"))
+        paths.AppendString(self.wd)
+        relative_spec = lldb.SBFileSpec(os.path.join("hidden", self.lib_name))
+
+        out_spec = lldb.SBFileSpec()
+        token = process.LoadImageUsingPaths(relative_spec, paths, out_spec, error)
+
+        self.assertNotEqual(token, lldb.LLDB_INVALID_IMAGE_TOKEN, "Got a valid token with included empty path")
+        self.assertEqual(out_spec, lldb.SBFileSpec(self.hidden_lib), "Found the expected library with included empty path")
+
+        process.UnloadImage(token)
+        
+
 
         # Finally, passing in an absolute path should work like the basename:
         # This should NOT work because we've taken hidden_dir off the paths:
