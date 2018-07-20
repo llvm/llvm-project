@@ -92,6 +92,7 @@ devirt-13.C  # bad main signature
 devirt-14.C  # bad main signature
 devirt-21.C  # bad main signature
 devirt-23.C  # bad main signature
+lifetime2.C  # violates C++ DR1696
 
 # Untriaged C++ failures
 spec5.C

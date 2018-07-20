@@ -4106,6 +4106,13 @@ def ext_explicit_specialization_storage_class : ExtWarn<
 def err_explicit_specialization_inconsistent_storage_class : Error<
   "explicit specialization has extraneous, inconsistent storage class "
   "'%select{none|extern|static|__private_extern__|auto|register}0'">;
+def err_dependent_function_template_spec_no_match : Error<
+  "no candidate function template was found for dependent"
+  " friend function template specialization">;
+def note_dependent_function_template_spec_discard_reason : Note<
+  "candidate ignored: %select{not a function template"
+  "|not a member of the enclosing namespace;"
+  " did you mean to explicitly qualify the specialization?}0">;
 
 // C++ class template specializations and out-of-line definitions
 def err_template_spec_needs_header : Error<

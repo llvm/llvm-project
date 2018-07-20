@@ -55,13 +55,13 @@ define <4 x i32> @combine_vec_srem_by_negone(<4 x i32> %x) {
 define i32 @combine_srem_by_minsigned(i32 %x) {
 ; CHECK-LABEL: combine_srem_by_minsigned:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    sarl $31, %eax
 ; CHECK-NEXT:    shrl %eax
 ; CHECK-NEXT:    addl %edi, %eax
 ; CHECK-NEXT:    andl $-2147483648, %eax # imm = 0x80000000
-; CHECK-NEXT:    subl %eax, %edi
-; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    leal (%rax,%rdi), %eax
 ; CHECK-NEXT:    retq
   %1 = srem i32 %x, -2147483648
   ret i32 %1
@@ -248,11 +248,9 @@ define <4 x i32> @combine_vec_srem_by_pow2a_neg(<4 x i32> %x) {
 ; SSE-NEXT:    paddd %xmm0, %xmm1
 ; SSE-NEXT:    psrad $2, %xmm1
 ; SSE-NEXT:    pxor %xmm2, %xmm2
-; SSE-NEXT:    pxor %xmm3, %xmm3
-; SSE-NEXT:    psubd %xmm1, %xmm3
-; SSE-NEXT:    pslld $2, %xmm3
-; SSE-NEXT:    psubd %xmm3, %xmm2
-; SSE-NEXT:    psubd %xmm2, %xmm0
+; SSE-NEXT:    psubd %xmm1, %xmm2
+; SSE-NEXT:    pslld $2, %xmm2
+; SSE-NEXT:    paddd %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_srem_by_pow2a_neg:
@@ -264,8 +262,7 @@ define <4 x i32> @combine_vec_srem_by_pow2a_neg(<4 x i32> %x) {
 ; AVX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX-NEXT:    vpsubd %xmm1, %xmm2, %xmm1
 ; AVX-NEXT:    vpslld $2, %xmm1, %xmm1
-; AVX-NEXT:    vpsubd %xmm1, %xmm2, %xmm1
-; AVX-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = srem <4 x i32> %x, <i32 -4, i32 -4, i32 -4, i32 -4>
   ret <4 x i32> %1
@@ -362,10 +359,9 @@ define <4 x i32> @combine_vec_srem_by_pow2b_neg(<4 x i32> %x) {
 ; SSE-NEXT:    psrad $1, %xmm1
 ; SSE-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1,2,3],xmm2[4,5,6,7]
 ; SSE-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1],xmm3[2,3],xmm1[4,5],xmm3[6,7]
-; SSE-NEXT:    pxor %xmm2, %xmm2
-; SSE-NEXT:    psubd %xmm1, %xmm2
-; SSE-NEXT:    pmulld {{.*}}(%rip), %xmm2
-; SSE-NEXT:    psubd %xmm2, %xmm0
+; SSE-NEXT:    pmulld {{.*}}(%rip), %xmm1
+; SSE-NEXT:    paddd %xmm0, %xmm1
+; SSE-NEXT:    movdqa %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: combine_vec_srem_by_pow2b_neg:
@@ -386,10 +382,8 @@ define <4 x i32> @combine_vec_srem_by_pow2b_neg(<4 x i32> %x) {
 ; AVX1-NEXT:    vpsrad $1, %xmm1, %xmm1
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1,2,3],xmm3[4,5,6,7]
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1],xmm2[2,3],xmm1[4,5],xmm2[6,7]
-; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX1-NEXT:    vpsubd %xmm1, %xmm2, %xmm1
 ; AVX1-NEXT:    vpmulld {{.*}}(%rip), %xmm1, %xmm1
-; AVX1-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: combine_vec_srem_by_pow2b_neg:
@@ -398,10 +392,8 @@ define <4 x i32> @combine_vec_srem_by_pow2b_neg(<4 x i32> %x) {
 ; AVX2-NEXT:    vpsrlvd {{.*}}(%rip), %xmm1, %xmm1
 ; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm1
 ; AVX2-NEXT:    vpsravd {{.*}}(%rip), %xmm1, %xmm1
-; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX2-NEXT:    vpsubd %xmm1, %xmm2, %xmm1
 ; AVX2-NEXT:    vpmulld {{.*}}(%rip), %xmm1, %xmm1
-; AVX2-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
   %1 = srem <4 x i32> %x, <i32 -2, i32 -4, i32 -8, i32 -16>
   ret <4 x i32> %1

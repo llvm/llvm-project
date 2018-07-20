@@ -659,7 +659,19 @@ EmitArrayConstant(CodeGenModule &CGM, const ConstantArrayType *DestType,
   if (TrailingZeroes >= 8) {
     assert(Elements.size() >= NonzeroLength &&
            "missing initializer for non-zero element");
-    Elements.resize(NonzeroLength + 1);
+
+    // If all the elements had the same type up to the trailing zeroes, emit a
+    // struct of two arrays (the nonzero data and the zeroinitializer).
+    if (CommonElementType && NonzeroLength >= 8) {
+      llvm::Constant *Initial = llvm::ConstantArray::get(
+          llvm::ArrayType::get(CommonElementType, NonzeroLength),
+          makeArrayRef(Elements).take_front(NonzeroLength));
+      Elements.resize(2);
+      Elements[0] = Initial;
+    } else {
+      Elements.resize(NonzeroLength + 1);
+    }
+
     auto *FillerType =
         CommonElementType
             ? CommonElementType

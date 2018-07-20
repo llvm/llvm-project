@@ -62,17 +62,22 @@ TEST_CASE(symlink_test_case)
 
 TEST_CASE(file_size_error_cases)
 {
-    const path testCases[] = {
-        StaticEnv::Dir,
-        StaticEnv::SymlinkToDir,
-        StaticEnv::BadSymlink,
-        StaticEnv::DNE
-    };
+  struct {
+    path p;
+    std::errc expected_err;
+  } TestCases[] = {
+      {StaticEnv::Dir, std::errc::is_a_directory},
+      {StaticEnv::SymlinkToDir, std::errc::is_a_directory},
+      {StaticEnv::BadSymlink, std::errc::no_such_file_or_directory},
+      {StaticEnv::DNE, std::errc::no_such_file_or_directory}};
     const uintmax_t expect = static_cast<uintmax_t>(-1);
-    for (auto& TC : testCases) {
-        std::error_code ec;
-        TEST_CHECK(file_size(TC, ec) == expect);
-        TEST_CHECK(ec);
+    for (auto& TC : TestCases) {
+      std::error_code ec = GetTestEC();
+      TEST_CHECK(file_size(TC.p, ec) == expect);
+      TEST_CHECK(ErrorIs(ec, TC.expected_err));
+
+      ExceptionChecker Checker(TC.p, TC.expected_err);
+      TEST_CHECK_THROW_RESULT(filesystem_error, Checker, file_size(TC.p));
     }
 }
 
