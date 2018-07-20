@@ -3371,9 +3371,8 @@ static void
 GetLibrarySearchPaths(std::vector<std::string> &paths,
                       const swift::SearchPathOptions &search_path_opts) {
   paths.clear();
-  paths.resize(search_path_opts.LibrarySearchPaths.size() + 1);
-  std::copy(search_path_opts.LibrarySearchPaths.begin(),
-            search_path_opts.LibrarySearchPaths.end(), paths.begin());
+  paths.assign(search_path_opts.LibrarySearchPaths.begin(),
+            search_path_opts.LibrarySearchPaths.end());
   paths.push_back(search_path_opts.RuntimeLibraryPath);
 }
 
