@@ -23,12 +23,12 @@
 #include <cstddef>
 #include <cassert>
 
-#include "filesystem_time_helper.h"
+#include "filesystem_common.h"
 
 using namespace std::chrono;
 namespace fs = std::experimental::filesystem;
 using fs::file_time_type;
-using fs::fs_time_util;
+using fs::detail::fs_time_util;
 
 enum TestKind { TK_64Bit, TK_32Bit, TK_FloatingPoint };
 
