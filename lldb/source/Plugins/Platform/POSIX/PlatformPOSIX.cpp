@@ -1164,6 +1164,10 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
     size_t buffer_size = 0;
     std::string path_array;
     for (auto path : *paths) {
+      // Don't insert empty paths, they will make us abort the path
+      // search prematurely.
+      if (path.empty())
+        continue;
       size_t path_size = path.size();
       path_array.append(path);
       path_array.push_back('\0');
