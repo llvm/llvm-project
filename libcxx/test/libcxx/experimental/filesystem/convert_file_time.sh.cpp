@@ -28,7 +28,7 @@
 using namespace std::chrono;
 namespace fs = std::experimental::filesystem;
 using fs::file_time_type;
-using fs::detail::fs_time_util;
+using fs::detail::time_util::fs_time_util;
 
 enum TestKind { TK_64Bit, TK_32Bit, TK_FloatingPoint };
 
