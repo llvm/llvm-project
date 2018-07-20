@@ -20,7 +20,7 @@ define double @f2(float %f1, float *%ptr) {
 ; CHECK-LABEL: f2:
 ; CHECK: mdeb %f0, 0(%r2)
 ; CHECK: br %r14
-  %f2 = load float , float *%ptr
+  %f2 = load float, float *%ptr
   %f1x = fpext float %f1 to double
   %f2x = fpext float %f2 to double
   %res = fmul double %f1x, %f2x
@@ -33,7 +33,7 @@ define double @f3(float %f1, float *%base) {
 ; CHECK: mdeb %f0, 4092(%r2)
 ; CHECK: br %r14
   %ptr = getelementptr float, float *%base, i64 1023
-  %f2 = load float , float *%ptr
+  %f2 = load float, float *%ptr
   %f1x = fpext float %f1 to double
   %f2x = fpext float %f2 to double
   %res = fmul double %f1x, %f2x
@@ -48,7 +48,7 @@ define double @f4(float %f1, float *%base) {
 ; CHECK: mdeb %f0, 0(%r2)
 ; CHECK: br %r14
   %ptr = getelementptr float, float *%base, i64 1024
-  %f2 = load float , float *%ptr
+  %f2 = load float, float *%ptr
   %f1x = fpext float %f1 to double
   %f2x = fpext float %f2 to double
   %res = fmul double %f1x, %f2x
@@ -62,7 +62,7 @@ define double @f5(float %f1, float *%base) {
 ; CHECK: mdeb %f0, 0(%r2)
 ; CHECK: br %r14
   %ptr = getelementptr float, float *%base, i64 -1
-  %f2 = load float , float *%ptr
+  %f2 = load float, float *%ptr
   %f1x = fpext float %f1 to double
   %f2x = fpext float %f2 to double
   %res = fmul double %f1x, %f2x
@@ -77,7 +77,7 @@ define double @f6(float %f1, float *%base, i64 %index) {
 ; CHECK: br %r14
   %ptr1 = getelementptr float, float *%base, i64 %index
   %ptr2 = getelementptr float, float *%ptr1, i64 100
-  %f2 = load float , float *%ptr2
+  %f2 = load float, float *%ptr2
   %f1x = fpext float %f1 to double
   %f2x = fpext float %f2 to double
   %res = fmul double %f1x, %f2x
@@ -101,17 +101,17 @@ define float @f7(float *%ptr0) {
   %ptr9 = getelementptr float, float *%ptr0, i64 18
   %ptr10 = getelementptr float, float *%ptr0, i64 20
 
-  %val0 = load float , float *%ptr0
-  %val1 = load float , float *%ptr1
-  %val2 = load float , float *%ptr2
-  %val3 = load float , float *%ptr3
-  %val4 = load float , float *%ptr4
-  %val5 = load float , float *%ptr5
-  %val6 = load float , float *%ptr6
-  %val7 = load float , float *%ptr7
-  %val8 = load float , float *%ptr8
-  %val9 = load float , float *%ptr9
-  %val10 = load float , float *%ptr10
+  %val0 = load float, float *%ptr0
+  %val1 = load float, float *%ptr1
+  %val2 = load float, float *%ptr2
+  %val3 = load float, float *%ptr3
+  %val4 = load float, float *%ptr4
+  %val5 = load float, float *%ptr5
+  %val6 = load float, float *%ptr6
+  %val7 = load float, float *%ptr7
+  %val8 = load float, float *%ptr8
+  %val9 = load float, float *%ptr9
+  %val10 = load float, float *%ptr10
 
   %frob0 = fadd float %val0, %val0
   %frob1 = fadd float %val1, %val1

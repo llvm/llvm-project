@@ -41,8 +41,8 @@ define void @f1(double *%dst) {
   call void @foo(float *%start1, float *%start2)
   %ptr1 = getelementptr inbounds [978 x float], [978 x float]* %region1, i64 0, i64 1
   %ptr2 = getelementptr inbounds [978 x float], [978 x float]* %region2, i64 0, i64 1
-  %float1 = load float , float *%ptr1
-  %float2 = load float , float *%ptr2
+  %float1 = load float, float *%ptr1
+  %float2 = load float, float *%ptr2
   %double1 = fpext float %float1 to double
   %double2 = fpext float %float2 to double
   store volatile double %double1, double *%dst
@@ -68,8 +68,8 @@ define void @f2(double *%dst) {
   call void @foo(float *%start1, float *%start2)
   %ptr1 = getelementptr inbounds [978 x float], [978 x float]* %region1, i64 0, i64 2
   %ptr2 = getelementptr inbounds [978 x float], [978 x float]* %region2, i64 0, i64 2
-  %float1 = load float , float *%ptr1
-  %float2 = load float , float *%ptr2
+  %float1 = load float, float *%ptr1
+  %float2 = load float, float *%ptr2
   %double1 = fpext float %float1 to double
   %double2 = fpext float %float2 to double
   store volatile double %double1, double *%dst
@@ -95,8 +95,8 @@ define void @f3(double *%dst) {
   call void @foo(float *%start1, float *%start2)
   %ptr1 = getelementptr inbounds [978 x float], [978 x float]* %region1, i64 0, i64 3
   %ptr2 = getelementptr inbounds [978 x float], [978 x float]* %region2, i64 0, i64 3
-  %float1 = load float , float *%ptr1
-  %float2 = load float , float *%ptr2
+  %float1 = load float, float *%ptr1
+  %float2 = load float, float *%ptr2
   %double1 = fpext float %float1 to double
   %double2 = fpext float %float2 to double
   store volatile double %double1, double *%dst
@@ -122,8 +122,8 @@ define void @f4(double *%dst) {
   call void @foo(float *%start1, float *%start2)
   %ptr1 = getelementptr inbounds [2002 x float], [2002 x float]* %region1, i64 0, i64 1
   %ptr2 = getelementptr inbounds [2002 x float], [2002 x float]* %region2, i64 0, i64 1
-  %float1 = load float , float *%ptr1
-  %float2 = load float , float *%ptr2
+  %float1 = load float, float *%ptr1
+  %float2 = load float, float *%ptr2
   %double1 = fpext float %float1 to double
   %double2 = fpext float %float2 to double
   store volatile double %double1, double *%dst
@@ -149,8 +149,8 @@ define void @f5(double *%dst) {
   call void @foo(float *%start1, float *%start2)
   %ptr1 = getelementptr inbounds [2002 x float], [2002 x float]* %region1, i64 0, i64 2
   %ptr2 = getelementptr inbounds [2002 x float], [2002 x float]* %region2, i64 0, i64 2
-  %float1 = load float , float *%ptr1
-  %float2 = load float , float *%ptr2
+  %float1 = load float, float *%ptr1
+  %float2 = load float, float *%ptr2
   %double1 = fpext float %float1 to double
   %double2 = fpext float %float2 to double
   store volatile double %double1, double *%dst
@@ -176,8 +176,8 @@ define void @f6(double *%dst) {
   call void @foo(float *%start1, float *%start2)
   %ptr1 = getelementptr inbounds [2002 x float], [2002 x float]* %region1, i64 0, i64 3
   %ptr2 = getelementptr inbounds [2002 x float], [2002 x float]* %region2, i64 0, i64 3
-  %float1 = load float , float *%ptr1
-  %float2 = load float , float *%ptr2
+  %float1 = load float, float *%ptr1
+  %float2 = load float, float *%ptr2
   %double1 = fpext float %float1 to double
   %double2 = fpext float %float2 to double
   store volatile double %double1, double *%dst
@@ -205,8 +205,8 @@ define void @f7(double *%dst) {
   call void @foo(float *%start1, float *%start2)
   %ptr1 = getelementptr inbounds [2004 x float], [2004 x float]* %region1, i64 0, i64 1023
   %ptr2 = getelementptr inbounds [2004 x float], [2004 x float]* %region2, i64 0, i64 1023
-  %float1 = load float , float *%ptr1
-  %float2 = load float , float *%ptr2
+  %float1 = load float, float *%ptr1
+  %float2 = load float, float *%ptr2
   %double1 = fpext float %float1 to double
   %double2 = fpext float %float2 to double
   store volatile double %double1, double *%dst
@@ -233,8 +233,8 @@ define void @f8(double *%dst) {
   call void @foo(float *%start1, float *%start2)
   %ptr1 = getelementptr inbounds [2006 x float], [2006 x float]* %region1, i64 0, i64 1023
   %ptr2 = getelementptr inbounds [2006 x float], [2006 x float]* %region2, i64 0, i64 1023
-  %float1 = load float , float *%ptr1
-  %float2 = load float , float *%ptr2
+  %float1 = load float, float *%ptr1
+  %float2 = load float, float *%ptr2
   %double1 = fpext float %float1 to double
   %double2 = fpext float %float2 to double
   store volatile double %double1, double *%dst
@@ -262,8 +262,8 @@ define void @f9(double *%dst) {
   call void @foo(float *%start1, float *%start2)
   %ptr1 = getelementptr inbounds [2006 x float], [2006 x float]* %region1, i64 0, i64 1024
   %ptr2 = getelementptr inbounds [2006 x float], [2006 x float]* %region2, i64 0, i64 1024
-  %float1 = load float , float *%ptr1
-  %float2 = load float , float *%ptr2
+  %float1 = load float, float *%ptr1
+  %float2 = load float, float *%ptr2
   %double1 = fpext float %float1 to double
   %double2 = fpext float %float2 to double
   store volatile double %double1, double *%dst
@@ -296,15 +296,15 @@ define void @f10(i32 *%vptr, double *%dst) {
   call void @foo(float *%start1, float *%start2)
   %ptr1 = getelementptr inbounds [978 x float], [978 x float]* %region1, i64 0, i64 2
   %ptr2 = getelementptr inbounds [978 x float], [978 x float]* %region2, i64 0, i64 2
-  %i0 = load volatile i32 , i32 *%vptr
-  %i1 = load volatile i32 , i32 *%vptr
-  %i2 = load volatile i32 , i32 *%vptr
-  %i3 = load volatile i32 , i32 *%vptr
-  %i4 = load volatile i32 , i32 *%vptr
-  %i5 = load volatile i32 , i32 *%vptr
-  %i14 = load volatile i32 , i32 *%vptr
-  %float1 = load float , float *%ptr1
-  %float2 = load float , float *%ptr2
+  %i0 = load volatile i32, i32 *%vptr
+  %i1 = load volatile i32, i32 *%vptr
+  %i2 = load volatile i32, i32 *%vptr
+  %i3 = load volatile i32, i32 *%vptr
+  %i4 = load volatile i32, i32 *%vptr
+  %i5 = load volatile i32, i32 *%vptr
+  %i14 = load volatile i32, i32 *%vptr
+  %float1 = load float, float *%ptr1
+  %float2 = load float, float *%ptr2
   %double1 = fpext float %float1 to double
   %double2 = fpext float %float2 to double
   store volatile double %double1, double *%dst
@@ -345,8 +345,8 @@ define void @f11(double *%dst, i64 %index) {
   %addr2 = add i64 %base2, %index
   %ptr1 = inttoptr i64 %addr1 to float *
   %ptr2 = inttoptr i64 %addr2 to float *
-  %float1 = load float , float *%ptr1
-  %float2 = load float , float *%ptr2
+  %float1 = load float, float *%ptr1
+  %float2 = load float, float *%ptr2
   %double1 = fpext float %float1 to double
   %double2 = fpext float %float2 to double
   store volatile double %double1, double *%dst

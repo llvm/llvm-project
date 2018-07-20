@@ -88,8 +88,8 @@ void UnmapOrDie(void *addr, uptr size);
 // Behaves just like MmapOrDie, but tolerates out of memory condition, in that
 // case returns nullptr.
 void *MmapOrDieOnFatalError(uptr size, const char *mem_type);
-void *MmapFixedNoReserve(uptr fixed_addr, uptr size,
-                         const char *name = nullptr);
+bool MmapFixedNoReserve(uptr fixed_addr, uptr size, const char *name = nullptr)
+     WARN_UNUSED_RESULT;
 void *MmapNoReserveOrDie(uptr size, const char *mem_type);
 void *MmapFixedOrDie(uptr fixed_addr, uptr size);
 // Behaves just like MmapFixedOrDie, but tolerates out of memory condition, in

@@ -75,7 +75,7 @@ define void @f6(i64 %dummy, i64 %a, i32 *%src, i64 *%dest) {
 ; CHECK: dsgf %r2, 0(%r4)
 ; CHECK: stg %r3, 0(%r5)
 ; CHECK: br %r14
-  %b = load i32 , i32 *%src
+  %b = load i32, i32 *%src
   %bext = sext i32 %b to i64
   %div = sdiv i64 %a, %bext
   store i64 %div, i64 *%dest
@@ -89,7 +89,7 @@ define void @f7(i64 %dummy, i64 %a, i32 *%src, i64 *%dest) {
 ; CHECK: dsgf %r2, 0(%r4)
 ; CHECK: stg %r2, 0(%r5)
 ; CHECK: br %r14
-  %b = load i32 , i32 *%src
+  %b = load i32, i32 *%src
   %bext = sext i32 %b to i64
   %rem = srem i64 %a, %bext
   store i64 %rem, i64 *%dest
@@ -104,7 +104,7 @@ define i64 @f8(i64 %dummy, i64 %a, i32 *%src) {
 ; CHECK-NOT: {{dsgf|dsgfr}}
 ; CHECK: ogr %r2, %r3
 ; CHECK: br %r14
-  %b = load i32 , i32 *%src
+  %b = load i32, i32 *%src
   %bext = sext i32 %b to i64
   %div = sdiv i64 %a, %bext
   %rem = srem i64 %a, %bext
@@ -118,7 +118,7 @@ define i64 @f9(i64 %dummy, i64 %a, i32 *%src) {
 ; CHECK: dsgf %r2, 524284(%r4)
 ; CHECK: br %r14
   %ptr = getelementptr i32, i32 *%src, i64 131071
-  %b = load i32 , i32 *%ptr
+  %b = load i32, i32 *%ptr
   %bext = sext i32 %b to i64
   %rem = srem i64 %a, %bext
   ret i64 %rem
@@ -132,7 +132,7 @@ define i64 @f10(i64 %dummy, i64 %a, i32 *%src) {
 ; CHECK: dsgf %r2, 0(%r4)
 ; CHECK: br %r14
   %ptr = getelementptr i32, i32 *%src, i64 131072
-  %b = load i32 , i32 *%ptr
+  %b = load i32, i32 *%ptr
   %bext = sext i32 %b to i64
   %rem = srem i64 %a, %bext
   ret i64 %rem
@@ -144,7 +144,7 @@ define i64 @f11(i64 %dummy, i64 %a, i32 *%src) {
 ; CHECK: dsgf %r2, -4(%r4)
 ; CHECK: br %r14
   %ptr = getelementptr i32, i32 *%src, i64 -1
-  %b = load i32 , i32 *%ptr
+  %b = load i32, i32 *%ptr
   %bext = sext i32 %b to i64
   %rem = srem i64 %a, %bext
   ret i64 %rem
@@ -156,7 +156,7 @@ define i64 @f12(i64 %dummy, i64 %a, i32 *%src) {
 ; CHECK: dsgf %r2, -524288(%r4)
 ; CHECK: br %r14
   %ptr = getelementptr i32, i32 *%src, i64 -131072
-  %b = load i32 , i32 *%ptr
+  %b = load i32, i32 *%ptr
   %bext = sext i32 %b to i64
   %rem = srem i64 %a, %bext
   ret i64 %rem
@@ -170,7 +170,7 @@ define i64 @f13(i64 %dummy, i64 %a, i32 *%src) {
 ; CHECK: dsgf %r2, 0(%r4)
 ; CHECK: br %r14
   %ptr = getelementptr i32, i32 *%src, i64 -131073
-  %b = load i32 , i32 *%ptr
+  %b = load i32, i32 *%ptr
   %bext = sext i32 %b to i64
   %rem = srem i64 %a, %bext
   ret i64 %rem
@@ -184,7 +184,7 @@ define i64 @f14(i64 %dummy, i64 %a, i64 %src, i64 %index) {
   %add1 = add i64 %src, %index
   %add2 = add i64 %add1, 524287
   %ptr = inttoptr i64 %add2 to i32 *
-  %b = load i32 , i32 *%ptr
+  %b = load i32, i32 *%ptr
   %bext = sext i32 %b to i64
   %rem = srem i64 %a, %bext
   ret i64 %rem
@@ -199,7 +199,7 @@ define void @f15(i64 *%dest, i32 *%src) {
 ; CHECK: lgr %r1, %r2
 ; CHECK: dsgfr %r0, [[B]]
 ; CHECK: br %r14
-  %b = load i32 , i32 *%src
+  %b = load i32, i32 *%src
   %a = call i64 @foo()
   %ext = sext i32 %b to i64
   %div = sdiv i64 %a, %ext

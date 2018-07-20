@@ -24,7 +24,7 @@ static Distro::DistroType DetectDistro(vfs::FileSystem &VFS) {
     StringRef Data = File.get()->getBuffer();
     SmallVector<StringRef, 16> Lines;
     Data.split(Lines, "\n");
-	Distro::DistroType Version = Distro::UnknownDistro;
+    Distro::DistroType Version = Distro::UnknownDistro;
     for (StringRef Line : Lines)
       if (Version == Distro::UnknownDistro && Line.startswith("DISTRIB_CODENAME="))
         Version = llvm::StringSwitch<Distro::DistroType>(Line.substr(17))

@@ -52,8 +52,3 @@ def CC_R600 : CallingConv<[
     T30_XYZW, T31_XYZW, T32_XYZW
   ]>>>
 ]>;
-
-// Calling convention for compute kernels
-def CC_R600_Kernel : CallingConv<[
-  CCCustom<"allocateKernArg">
-]>;

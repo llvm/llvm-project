@@ -3150,6 +3150,15 @@ Sema::IsQualificationConversion(QualType FromType, QualType ToType,
       = PreviousToQualsIncludeConst && ToQuals.hasConst();
   }
 
+  // Allows address space promotion by language rules implemented in
+  // Type::Qualifiers::isAddressSpaceSupersetOf.
+  Qualifiers FromQuals = FromType.getQualifiers();
+  Qualifiers ToQuals = ToType.getQualifiers();
+  if (!ToQuals.isAddressSpaceSupersetOf(FromQuals) &&
+      !FromQuals.isAddressSpaceSupersetOf(ToQuals)) {
+    return false;
+  }
+
   // We are left with FromType and ToType being the pointee types
   // after unwrapping the original FromType and ToType the same number
   // of types. If we unwrapped any pointers, and if FromType and

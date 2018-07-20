@@ -87,8 +87,8 @@ FuzzyMatcher::FuzzyMatcher(StringRef Pattern)
     for (int W = 0; W < P; ++W)
       for (Action A : {Miss, Match})
         Scores[P][W][A] = {AwfulScore, Miss};
-  if (PatN > 0)
-    calculateRoles(Pat, PatRole, PatTypeSet, PatN);
+  PatTypeSet =
+      calculateRoles(StringRef(Pat, PatN), makeMutableArrayRef(PatRole, PatN));
 }
 
 Optional<float> FuzzyMatcher::match(StringRef Word) {
@@ -110,25 +110,6 @@ Optional<float> FuzzyMatcher::match(StringRef Word) {
   return Score;
 }
 
-// Segmentation of words and patterns.
-// A name like "fooBar_baz" consists of several parts foo, bar, baz.
-// Aligning segmentation of word and pattern improves the fuzzy-match.
-// For example: [lol] matches "LaughingOutLoud" better than "LionPopulation"
-//
-// First we classify each character into types (uppercase, lowercase, etc).
-// Then we look at the sequence: e.g. [upper, lower] is the start of a segment.
-
-// We only distinguish the types of characters that affect segmentation.
-// It's not obvious how to segment digits, we treat them as lowercase letters.
-// As we don't decode UTF-8, we treat bytes over 127 as lowercase too.
-// This means we require exact (case-sensitive) match.
-enum FuzzyMatcher::CharType : unsigned char {
-  Empty = 0,       // Before-the-start and after-the-end (and control chars).
-  Lower = 1,       // Lowercase letters, digits, and non-ASCII bytes.
-  Upper = 2,       // Uppercase letters.
-  Punctuation = 3, // ASCII punctuation (including Space)
-};
-
 // We get CharTypes from a lookup table. Each is 2 bits, 4 fit in each byte.
 // The top 6 bits of the char select the byte, the bottom 2 select the offset.
 // e.g. 'q' = 010100 01 = byte 28 (55), bits 3-2 (01) -> Lower.
@@ -145,17 +126,6 @@ constexpr static uint8_t CharTypes[] = {
     0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, // (probably UTF-8).
     0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
     0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
-};
-
-// Each character's Role is the Head or Tail of a segment, or a Separator.
-// e.g. XMLHttpRequest_Async
-//      +--+---+------ +----
-//      ^Head   ^Tail ^Separator
-enum FuzzyMatcher::CharRole : unsigned char {
-  Unknown = 0,   // Stray control characters or impossible states.
-  Tail = 1,      // Part of a word segment, but not the first character.
-  Head = 2,      // The first character of a word segment.
-  Separator = 3, // Punctuation characters that separate word segments.
 };
 
 // The Role can be determined from the Type of a character and its neighbors:
@@ -183,26 +153,28 @@ constexpr static uint8_t CharRoles[] = {
 template <typename T> static T packedLookup(const uint8_t *Data, int I) {
   return static_cast<T>((Data[I >> 2] >> ((I & 3) * 2)) & 3);
 }
-void FuzzyMatcher::calculateRoles(const char *Text, CharRole *Out, int &TypeSet,
-                                  int N) {
-  assert(N > 0);
+CharTypeSet calculateRoles(StringRef Text, MutableArrayRef<CharRole> Roles) {
+  assert(Text.size() == Roles.size());
+  if (Text.size() == 0)
+    return 0;
   CharType Type = packedLookup<CharType>(CharTypes, Text[0]);
-  TypeSet = 1 << Type;
+  CharTypeSet TypeSet = 1 << Type;
   // Types holds a sliding window of (Prev, Curr, Next) types.
   // Initial value is (Empty, Empty, type of Text[0]).
   int Types = Type;
   // Rotate slides in the type of the next character.
   auto Rotate = [&](CharType T) { Types = ((Types << 2) | T) & 0x3f; };
-  for (int I = 0; I < N - 1; ++I) {
+  for (unsigned I = 0; I < Text.size() - 1; ++I) {
     // For each character, rotate in the next, and look up the role.
     Type = packedLookup<CharType>(CharTypes, Text[I + 1]);
     TypeSet |= 1 << Type;
     Rotate(Type);
-    *Out++ = packedLookup<CharRole>(CharRoles, Types);
+    Roles[I] = packedLookup<CharRole>(CharRoles, Types);
   }
   // For the last character, the "next character" is Empty.
   Rotate(Empty);
-  *Out++ = packedLookup<CharRole>(CharRoles, Types);
+  Roles[Text.size() - 1] = packedLookup<CharRole>(CharRoles, Types);
+  return TypeSet;
 }
 
 // Sets up the data structures matching Word.
@@ -228,7 +200,8 @@ bool FuzzyMatcher::init(StringRef NewWord) {
   // FIXME: some words are hard to tokenize algorithmically.
   // e.g. vsprintf is V S Print F, and should match [pri] but not [int].
   // We could add a tokenization dictionary for common stdlib names.
-  calculateRoles(Word, WordRole, WordTypeSet, WordN);
+  WordTypeSet = calculateRoles(StringRef(Word, WordN),
+                               makeMutableArrayRef(WordRole, WordN));
   return true;
 }
 

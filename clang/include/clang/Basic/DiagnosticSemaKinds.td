@@ -9102,9 +9102,9 @@ def note_equivalent_internal_linkage_decl : Note<
   "declared here%select{ in module '%1'|}0">;
 
 def note_redefinition_modules_same_file : Note<
-	"'%0' included multiple times, additional include site in header from module '%1'">;
+  "'%0' included multiple times, additional include site in header from module '%1'">;
 def note_redefinition_include_same_file : Note<
-	"'%0' included multiple times, additional include site here">;
+  "'%0' included multiple times, additional include site here">;
 }
 
 let CategoryName = "Coroutines Issue" in {
