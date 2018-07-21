@@ -1,6 +1,7 @@
 // Test sanitizer link flags on Darwin.
 
 // RUN: %clang -no-canonical-prefixes -### -target x86_64-darwin \
+// RUN:   -resource-dir %S/Inputs/resource_dir \
 // RUN:   -stdlib=platform -fsanitize=address %s -o %t.o 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-ASAN %s
 
@@ -12,6 +13,14 @@
 // CHECK-ASAN: "-rpath" "{{.*}}lib{{.*}}darwin"
 
 // RUN: %clang -no-canonical-prefixes -### -target x86_64-darwin \
+// RUN:   -resource-dir %S/Inputs/fake_resource_dir \
+// RUN:   -stdlib=platform -fsanitize=address %s -o %t.o 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-LOAD-FAIL %s
+
+// CHECK-LOAD-FAIL: error: unsupported option '-fsanitize=address' for target 'x86_64--darwin'
+
+// RUN: %clang -no-canonical-prefixes -### -target x86_64-darwin \
+// RUN:   -resource-dir %S/Inputs/resource_dir \
 // RUN:   -fPIC -shared -fsanitize=address %s -o %t.so 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-DYN-ASAN %s
 
@@ -22,6 +31,7 @@
 // CHECK-DYN-ASAN: "-rpath" "{{.*}}lib{{.*}}darwin"
 
 // RUN: %clang -no-canonical-prefixes -### -target x86_64-darwin \
+// RUN:   -resource-dir %S/Inputs/resource_dir \
 // RUN:   -stdlib=platform -fsanitize=undefined %s -o %t.o 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-UBSAN %s
 
@@ -34,6 +44,7 @@
 
 // RUN: %clang -no-canonical-prefixes -### -target x86_64-darwin \
 // RUN:   -fsanitize=bounds -fsanitize-undefined-trap-on-error \
+// RUN:   -resource-dir %S/Inputs/resource_dir \
 // RUN:   %s -o %t.o 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-BOUNDS %s
 
@@ -42,6 +53,7 @@
 
 // RUN: %clang -no-canonical-prefixes -### -target x86_64-darwin \
 // RUN:   -fPIC -shared -fsanitize=undefined %s -o %t.so 2>&1 \
+// RUN:   -resource-dir %S/Inputs/resource_dir \
 // RUN:   | FileCheck --check-prefix=CHECK-DYN-UBSAN %s
 
 // CHECK-DYN-UBSAN: "{{.*}}ld{{(.exe)?}}"
@@ -52,6 +64,7 @@
 
 // RUN: %clang -no-canonical-prefixes -### -target x86_64-darwin \
 // RUN:   -fsanitize=bounds -fsanitize-undefined-trap-on-error \
+// RUN:   -resource-dir %S/Inputs/resource_dir \
 // RUN:   %s -o %t.so -fPIC -shared 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-DYN-BOUNDS %s
 
@@ -60,6 +73,7 @@
 
 // RUN: %clang -no-canonical-prefixes -### -target x86_64-darwin \
 // RUN:   -stdlib=platform -fsanitize=address -mios-simulator-version-min=7.0 \
+// RUN:   -resource-dir %S/Inputs/resource_dir \
 // RUN:   %s -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-ASAN-IOSSIM %s
 
 // CHECK-ASAN-IOSSIM: "{{.*}}ld{{(.exe)?}}"
@@ -70,6 +84,7 @@
 // CHECK-ASAN-IOSSIM: "-rpath" "{{.*}}lib{{.*}}darwin"
 
 // RUN: %clang -no-canonical-prefixes -### -target x86_64-darwin \
+// RUN:   -resource-dir %S/Inputs/resource_dir \
 // RUN:   -stdlib=platform -fsanitize=address \
 // RUN:   -mtvos-simulator-version-min=8.3.0 %s -o %t.o 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-ASAN-TVOSSIM %s
@@ -83,6 +98,7 @@
 
 // RUN: %clang -no-canonical-prefixes -### -target x86_64-darwin \
 // RUN:   -stdlib=platform -fsanitize=address \
+// RUN:   -resource-dir %S/Inputs/resource_dir \
 // RUN:   -mwatchos-simulator-version-min=2.0.0 %s -o %t.o 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-ASAN-WATCHOSSIM %s
 
@@ -94,6 +110,7 @@
 // CHECK-ASAN-WATCHOSSIM: "-rpath" "{{.*}}lib{{.*}}darwin"
 
 // RUN: %clang -no-canonical-prefixes -### -target armv7-apple-ios  \
+// RUN:   -resource-dir %S/Inputs/resource_dir \
 // RUN:   -stdlib=platform -fsanitize=address -miphoneos-version-min=7 \
 // RUN:   %s -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-ASAN-IOS %s
 
@@ -106,6 +123,7 @@
 
 // RUN: %clang -no-canonical-prefixes -### -target arm64-apple-tvos \
 // RUN:   -stdlib=platform -fsanitize=address -mtvos-version-min=8.3 \
+// RUN:   -resource-dir %S/Inputs/resource_dir \
 // RUN:   %s -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-ASAN-TVOS %s
 
 // CHECK-ASAN-TVOS: "{{.*}}ld{{(.exe)?}}"
@@ -117,6 +135,7 @@
 
 // RUN: %clang -no-canonical-prefixes -### -target armv7k-apple-watchos \
 // RUN:   -stdlib=platform -fsanitize=address -mwatchos-version-min=2.0 \
+// RUN:   -resource-dir %S/Inputs/resource_dir \
 // RUN:   %s -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-ASAN-WATCHOS %s
 
 // CHECK-ASAN-WATCHOS: "{{.*}}ld{{(.exe)?}}"

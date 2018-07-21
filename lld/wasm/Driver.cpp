@@ -74,7 +74,7 @@ private:
 
 bool lld::wasm::link(ArrayRef<const char *> Args, bool CanExitEarly,
                      raw_ostream &Error) {
-  errorHandler().LogName = Args[0];
+  errorHandler().LogName = sys::path::filename(Args[0]);
   errorHandler().ErrorOS = &Error;
   errorHandler().ColorDiagnostics = Error.has_colors();
   errorHandler().ErrorLimitExceededMsg =

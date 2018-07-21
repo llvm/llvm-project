@@ -526,7 +526,7 @@ void CodeGenModule::Release() {
     // floating point values to 0.  (This corresponds to its "__CUDA_FTZ"
     // property.)
     getModule().addModuleFlag(llvm::Module::Override, "nvvm-reflect-ftz",
-                              LangOpts.CUDADeviceFlushDenormalsToZero ? 1 : 0);
+                              CodeGenOpts.FlushDenorm ? 1 : 0);
   }
 
   // Emit OpenCL specific module metadata: OpenCL/SPIR version.

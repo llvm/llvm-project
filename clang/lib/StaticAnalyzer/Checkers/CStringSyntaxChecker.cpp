@@ -147,7 +147,7 @@ bool WalkAST::containsBadStrlcpyPattern(const CallExpr *CE) {
   const Expr *DstArg = CE->getArg(0);
   const Expr *LenArg = CE->getArg(2);
 
-  const auto *DstArgDecl = dyn_cast<DeclRefExpr>(DstArg->IgnoreParenCasts());
+  const auto *DstArgDecl = dyn_cast<DeclRefExpr>(DstArg->IgnoreParenImpCasts());
   const auto *LenArgDecl = dyn_cast<DeclRefExpr>(LenArg->IgnoreParenLValueCasts());
   // - size_t dstlen = sizeof(dst)
   if (LenArgDecl) {
@@ -159,14 +159,15 @@ bool WalkAST::containsBadStrlcpyPattern(const CallExpr *CE) {
   // - integral value
   // We try to figure out if the last argument is possibly longer
   // than the destination can possibly handle if its size can be defined
-  if (const auto *IL = dyn_cast<IntegerLiteral>(LenArg->IgnoreParenCasts())) {
+  if (const auto *IL = dyn_cast<IntegerLiteral>(LenArg->IgnoreParenImpCasts())) {
     uint64_t ILRawVal = IL->getValue().getZExtValue();
-    if (const auto *Buffer = dyn_cast<ConstantArrayType>(DstArgDecl->getType())) {
-      ASTContext &C = BR.getContext();
-      uint64_t Usize = C.getTypeSizeInChars(DstArg->getType()).getQuantity();
-      uint64_t BufferLen = BR.getContext().getTypeSize(Buffer) / Usize;
-      if (BufferLen < ILRawVal)
-        return true;
+    if (DstArgDecl) {
+      if (const auto *Buffer = dyn_cast<ConstantArrayType>(DstArgDecl->getType())) {
+        ASTContext &C = BR.getContext();
+        uint64_t BufferLen = C.getTypeSize(Buffer) / 8;
+        if (BufferLen < ILRawVal)
+          return true;
+      }
     }
   }
 

@@ -11142,7 +11142,7 @@ static bool EvaluateCPlusPlus11IntegralConstantExpr(const ASTContext &Ctx,
                                                     const Expr *E,
                                                     llvm::APSInt *Value,
                                                     SourceLocation *Loc) {
-  if (!E->getType()->isIntegralOrEnumerationType()) {
+  if (!E->getType()->isIntegralOrUnscopedEnumerationType()) {
     if (Loc) *Loc = E->getExprLoc();
     return false;
   }

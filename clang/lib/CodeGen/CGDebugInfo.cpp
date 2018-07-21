@@ -1298,10 +1298,6 @@ void CGDebugInfo::CollectRecordFields(
   else {
     const ASTRecordLayout &layout = CGM.getContext().getASTRecordLayout(record);
 
-    // Debug info for nested types is included in the member list only for
-    // CodeView.
-    bool IncludeNestedTypes = CGM.getCodeGenOpts().EmitCodeView;
-
     // Field number for non-static fields.
     unsigned fieldNo = 0;
 
@@ -1311,6 +1307,13 @@ void CGDebugInfo::CollectRecordFields(
       if (const auto *V = dyn_cast<VarDecl>(I)) {
         if (V->hasAttr<NoDebugAttr>())
           continue;
+
+        // Skip variable template specializations when emitting CodeView. MSVC
+        // doesn't emit them.
+        if (CGM.getCodeGenOpts().EmitCodeView &&
+            isa<VarTemplateSpecializationDecl>(V))
+          continue;
+
         // Reuse the existing static member declaration if one exists
         auto MI = StaticDataMemberCache.find(V->getCanonicalDecl());
         if (MI != StaticDataMemberCache.end()) {
@@ -1327,7 +1330,9 @@ void CGDebugInfo::CollectRecordFields(
 
         // Bump field number for next field.
         ++fieldNo;
-      } else if (IncludeNestedTypes) {
+      } else if (CGM.getCodeGenOpts().EmitCodeView) {
+        // Debug info for nested types is included in the member list only for
+        // CodeView.
         if (const auto *nestedType = dyn_cast<TypeDecl>(I))
           if (!nestedType->isImplicit() &&
               nestedType->getDeclContext() == record)

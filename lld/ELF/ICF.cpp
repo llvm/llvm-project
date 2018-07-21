@@ -163,7 +163,7 @@ template <class ELFT> static uint32_t getHash(InputSection *S) {
 
 // Returns true if section S is subject of ICF.
 static bool isEligible(InputSection *S) {
-  if (!S->Live || S->KeepUnique || !(S->Flags & SHF_ALLOC))
+  if (!S->Live || !(S->Flags & SHF_ALLOC))
     return false;
 
   // Don't merge writable sections. .data.rel.ro sections are marked as writable
@@ -468,10 +468,29 @@ template <class ELFT> void ICF<ELFT>::run() {
   forEachClassRange(0, Sections.size(), [&](size_t Begin, size_t End) {
     if (End - Begin == 1)
       return;
-    print("selected section " + toString(Sections[Begin]));
-    for (size_t I = Begin + 1; I < End; ++I) {
+    InputSection *Target = nullptr;
+    bool SeenUnique = false, Replaced = false;
+    for (size_t I = Begin; I < End; ++I) {
+      // We aren't allowed to merge two KeepUnique sections as this would break
+      // the guarantees provided by --keep-unique and --icf=safe, but there's
+      // no reason why we can't merge a non-KeepUnique section with a KeepUnique
+      // section. We implement this by only considering the first KeepUnique
+      // section in the equivalence class for merging. If we see any more
+      // KeepUnique sections, we ignore them.
+      if (Sections[I]->KeepUnique) {
+        if (SeenUnique)
+          continue;
+        SeenUnique = true;
+      }
+      if (!Target) {
+        Target = Sections[I];
+        continue;
+      }
+      if (!Replaced)
+        print("selected section " + toString(Target));
       print("  removing identical section " + toString(Sections[I]));
-      Sections[Begin]->replace(Sections[I]);
+      Target->replace(Sections[I]);
+      Replaced = true;
 
       // At this point we know sections merged are fully identical and hence
       // we want to remove duplicate implicit dependencies such as link order
