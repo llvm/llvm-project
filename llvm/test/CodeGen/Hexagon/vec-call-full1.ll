@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O2 < %s | FileCheck %s
+; RUN: llc -march=hexagon < %s | FileCheck %s
 
 ; CHECK-DAG: v{{[0-9]+}} = vmem(r{{[0-9]+}}+#0)
 ; CHECK-DAG: v{{[0-9]+}} = vmem(r{{[0-9]+}}+#0)
@@ -16,4 +16,4 @@ b0:
 
 declare void @f1(<32 x i32>, <32 x i32>, <32 x i32>, <32 x i32>, <32 x i32>, <32 x i32>, <32 x i32>, <32 x i32>, <32 x i32>, <32 x i32>, <32 x i32>, <32 x i32>, <32 x i32>, <32 x i32>, <32 x i32>, <32 x i32>, <32 x i32>, <32 x i32>) #0
 
-attributes #0 = { nounwind "target-cpu"="hexagonv60" "target-features"="+hvxv60,+hvx-length128b" }
+attributes #0 = { nounwind "target-cpu"="hexagonv60" "target-features"="+hvxv60,+hvx-length128b,-packets" }

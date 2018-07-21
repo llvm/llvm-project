@@ -9,7 +9,7 @@ define double @f1(double %a, double %b, i16 *%ptr) {
 ; CHECK: clhhsi 0(%r2), 0
 ; CHECK-NEXT: ber %r14
 ; CHECK: br %r14
-  %val = load i16 , i16 *%ptr
+  %val = load i16, i16 *%ptr
   %ext = zext i16 %val to i64
   %cond = icmp eq i64 %ext, 0
   %res = select i1 %cond, double %a, double %b
@@ -22,7 +22,7 @@ define double @f2(double %a, double %b, i16 *%ptr) {
 ; CHECK: clhhsi 0(%r2), 65535
 ; CHECK-NEXT: ber %r14
 ; CHECK: br %r14
-  %val = load i16 , i16 *%ptr
+  %val = load i16, i16 *%ptr
   %ext = zext i16 %val to i64
   %cond = icmp eq i64 %ext, 65535
   %res = select i1 %cond, double %a, double %b
@@ -34,7 +34,7 @@ define double @f3(double %a, double %b, i16 *%ptr) {
 ; CHECK-LABEL: f3:
 ; CHECK-NOT: clhhsi
 ; CHECK: br %r14
-  %val = load i16 , i16 *%ptr
+  %val = load i16, i16 *%ptr
   %ext = zext i16 %val to i64
   %cond = icmp eq i64 %ext, 65536
   %res = select i1 %cond, double %a, double %b
@@ -47,7 +47,7 @@ define double @f4(double %a, double %b, i16 *%ptr) {
 ; CHECK-LABEL: f4:
 ; CHECK-NOT: clhhsi
 ; CHECK: br %r14
-  %val = load i16 , i16 *%ptr
+  %val = load i16, i16 *%ptr
   %ext = zext i16 %val to i64
   %cond = icmp eq i64 %ext, -1
   %res = select i1 %cond, double %a, double %b
@@ -60,7 +60,7 @@ define double @f5(double %a, double %b, i16 *%ptr) {
 ; CHECK: clhhsi 0(%r2), 0
 ; CHECK-NEXT: ber %r14
 ; CHECK: br %r14
-  %val = load i16 , i16 *%ptr
+  %val = load i16, i16 *%ptr
   %ext = sext i16 %val to i64
   %cond = icmp eq i64 %ext, 0
   %res = select i1 %cond, double %a, double %b
@@ -73,7 +73,7 @@ define double @f6(double %a, double %b, i16 *%ptr) {
 ; CHECK: clhhsi 0(%r2), 32767
 ; CHECK-NEXT: ber %r14
 ; CHECK: br %r14
-  %val = load i16 , i16 *%ptr
+  %val = load i16, i16 *%ptr
   %ext = sext i16 %val to i64
   %cond = icmp eq i64 %ext, 32767
   %res = select i1 %cond, double %a, double %b
@@ -86,7 +86,7 @@ define double @f7(double %a, double %b, i16 *%ptr) {
 ; CHECK-LABEL: f7:
 ; CHECK-NOT: clhhsi
 ; CHECK: br %r14
-  %val = load i16 , i16 *%ptr
+  %val = load i16, i16 *%ptr
   %ext = sext i16 %val to i64
   %cond = icmp eq i64 %ext, 32768
   %res = select i1 %cond, double %a, double %b
@@ -99,7 +99,7 @@ define double @f8(double %a, double %b, i16 *%ptr) {
 ; CHECK: clhhsi 0(%r2), 65535
 ; CHECK-NEXT: ber %r14
 ; CHECK: br %r14
-  %val = load i16 , i16 *%ptr
+  %val = load i16, i16 *%ptr
   %ext = sext i16 %val to i64
   %cond = icmp eq i64 %ext, -1
   %res = select i1 %cond, double %a, double %b
@@ -112,7 +112,7 @@ define double @f9(double %a, double %b, i16 *%ptr) {
 ; CHECK: clhhsi 0(%r2), 32768
 ; CHECK-NEXT: ber %r14
 ; CHECK: br %r14
-  %val = load i16 , i16 *%ptr
+  %val = load i16, i16 *%ptr
   %ext = sext i16 %val to i64
   %cond = icmp eq i64 %ext, -32768
   %res = select i1 %cond, double %a, double %b
@@ -125,7 +125,7 @@ define double @f10(double %a, double %b, i16 *%ptr) {
 ; CHECK-LABEL: f10:
 ; CHECK-NOT: clhhsi
 ; CHECK: br %r14
-  %val = load i16 , i16 *%ptr
+  %val = load i16, i16 *%ptr
   %ext = sext i16 %val to i64
   %cond = icmp eq i64 %ext, -32769
   %res = select i1 %cond, double %a, double %b

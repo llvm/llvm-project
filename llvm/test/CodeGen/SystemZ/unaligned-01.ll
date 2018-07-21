@@ -25,7 +25,7 @@ define i16 @f2(i16 *%src, i16 *%dst) {
 ; CHECK: lh %r2, 0(%r2)
 ; CHECK: sth %r2, 0(%r3)
 ; CHECK: br %r14
-  %val = load i16 , i16 *%src, align 1
+  %val = load i16, i16 *%src, align 1
   store i16 %val, i16 *%dst, align 1
   ret i16 %val
 }
@@ -37,8 +37,8 @@ define i32 @f3(i32 *%src1, i32 *%src2, i32 *%dst) {
 ; CHECK: s %r2, 0(%r3)
 ; CHECK: st %r2, 0(%r4)
 ; CHECK: br %r14
-  %val1 = load i32 , i32 *%src1, align 1
-  %val2 = load i32 , i32 *%src2, align 2
+  %val1 = load i32, i32 *%src1, align 1
+  %val2 = load i32, i32 *%src2, align 2
   %sub = sub i32 %val1, %val2
   store i32 %sub, i32 *%dst, align 1
   ret i32 %sub
@@ -51,8 +51,8 @@ define i64 @f4(i64 *%src1, i64 *%src2, i64 *%dst) {
 ; CHECK: sg %r2, 0(%r3)
 ; CHECK: stg %r2, 0(%r4)
 ; CHECK: br %r14
-  %val1 = load i64 , i64 *%src1, align 1
-  %val2 = load i64 , i64 *%src2, align 2
+  %val1 = load i64, i64 *%src1, align 1
+  %val2 = load i64, i64 *%src2, align 2
   %sub = sub i64 %val1, %val2
   store i64 %sub, i64 *%dst, align 4
   ret i64 %sub

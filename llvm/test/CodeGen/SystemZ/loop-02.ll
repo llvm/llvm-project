@@ -19,7 +19,7 @@ entry:
 loop:
   %count = phi i32 [ 0, %entry ], [ %next, %loop.next ]
   %next = add i32 %count, 1
-  %val = load volatile i32 , i32 *%src
+  %val = load volatile i32, i32 *%src
   %cmp = icmp eq i32 %val, 0
   br i1 %cmp, label %loop.next, label %loop.store
 

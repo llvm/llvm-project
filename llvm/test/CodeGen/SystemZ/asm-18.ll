@@ -19,10 +19,10 @@ define void @f1(i32 *%ptr1, i32 *%ptr2) {
 ; CHECK: br %r14
   %ptr3 = getelementptr i32, i32 *%ptr1, i64 1024
   %ptr4 = getelementptr i32, i32 *%ptr2, i64 131071
-  %old1 = load i32 , i32 *%ptr1
-  %old2 = load i32 , i32 *%ptr2
-  %old3 = load i32 , i32 *%ptr3
-  %old4 = load i32 , i32 *%ptr4
+  %old1 = load i32, i32 *%ptr1
+  %old2 = load i32, i32 *%ptr2
+  %old3 = load i32, i32 *%ptr3
+  %old4 = load i32, i32 *%ptr4
   %res = call { i32, i32, i32, i32 } asm "blah $0, $1, $2, $3",
               "=h,=r,=h,=r,0,1,2,3"(i32 %old1, i32 %old2, i32 %old3, i32 %old4)
   %new1 = extractvalue { i32, i32, i32, i32 } %res, 0
@@ -63,10 +63,10 @@ define void @f3(i8 *%ptr1, i8 *%ptr2) {
 ; CHECK: br %r14
   %ptr3 = getelementptr i8, i8 *%ptr1, i64 4096
   %ptr4 = getelementptr i8, i8 *%ptr2, i64 524287
-  %val1 = load i8 , i8 *%ptr1
-  %val2 = load i8 , i8 *%ptr2
-  %val3 = load i8 , i8 *%ptr3
-  %val4 = load i8 , i8 *%ptr4
+  %val1 = load i8, i8 *%ptr1
+  %val2 = load i8, i8 *%ptr2
+  %val3 = load i8, i8 *%ptr3
+  %val4 = load i8, i8 *%ptr4
   %ext1 = sext i8 %val1 to i32
   %ext2 = sext i8 %val2 to i32
   %ext3 = sext i8 %val3 to i32
@@ -87,10 +87,10 @@ define void @f4(i16 *%ptr1, i16 *%ptr2) {
 ; CHECK: br %r14
   %ptr3 = getelementptr i16, i16 *%ptr1, i64 2048
   %ptr4 = getelementptr i16, i16 *%ptr2, i64 262143
-  %val1 = load i16 , i16 *%ptr1
-  %val2 = load i16 , i16 *%ptr2
-  %val3 = load i16 , i16 *%ptr3
-  %val4 = load i16 , i16 *%ptr4
+  %val1 = load i16, i16 *%ptr1
+  %val2 = load i16, i16 *%ptr2
+  %val3 = load i16, i16 *%ptr3
+  %val4 = load i16, i16 *%ptr4
   %ext1 = sext i16 %val1 to i32
   %ext2 = sext i16 %val2 to i32
   %ext3 = sext i16 %val3 to i32
@@ -111,10 +111,10 @@ define void @f5(i8 *%ptr1, i8 *%ptr2) {
 ; CHECK: br %r14
   %ptr3 = getelementptr i8, i8 *%ptr1, i64 4096
   %ptr4 = getelementptr i8, i8 *%ptr2, i64 524287
-  %val1 = load i8 , i8 *%ptr1
-  %val2 = load i8 , i8 *%ptr2
-  %val3 = load i8 , i8 *%ptr3
-  %val4 = load i8 , i8 *%ptr4
+  %val1 = load i8, i8 *%ptr1
+  %val2 = load i8, i8 *%ptr2
+  %val3 = load i8, i8 *%ptr3
+  %val4 = load i8, i8 *%ptr4
   %ext1 = zext i8 %val1 to i32
   %ext2 = zext i8 %val2 to i32
   %ext3 = zext i8 %val3 to i32
@@ -135,10 +135,10 @@ define void @f6(i16 *%ptr1, i16 *%ptr2) {
 ; CHECK: br %r14
   %ptr3 = getelementptr i16, i16 *%ptr1, i64 2048
   %ptr4 = getelementptr i16, i16 *%ptr2, i64 262143
-  %val1 = load i16 , i16 *%ptr1
-  %val2 = load i16 , i16 *%ptr2
-  %val3 = load i16 , i16 *%ptr3
-  %val4 = load i16 , i16 *%ptr4
+  %val1 = load i16, i16 *%ptr1
+  %val2 = load i16, i16 *%ptr2
+  %val3 = load i16, i16 *%ptr3
+  %val4 = load i16, i16 *%ptr4
   %ext1 = zext i16 %val1 to i32
   %ext2 = zext i16 %val2 to i32
   %ext3 = zext i16 %val3 to i32
@@ -718,11 +718,11 @@ define void @f33(i32 *%ptr1, i32 *%ptr2) {
 ; CHECK: clhf [[REG2]], 0(%r3)
 ; CHECK: br %r14
   %res1 = call i32 asm "stepa $0", "=h"()
-  %load1 = load i32 , i32 *%ptr1
+  %load1 = load i32, i32 *%ptr1
   %cmp1 = icmp sle i32 %res1, %load1
   %sel1 = select i1 %cmp1, i32 0, i32 1
   %res2 = call i32 asm "stepb $0, $1", "=h,r"(i32 %sel1)
-  %load2 = load i32 , i32 *%ptr2
+  %load2 = load i32, i32 *%ptr2
   %cmp2 = icmp ule i32 %res2, %load2
   %sel2 = select i1 %cmp2, i32 0, i32 1
   store i32 %sel2, i32 *%ptr1
@@ -738,11 +738,11 @@ define void @f34(i32 *%ptr1, i32 *%ptr2) {
 ; CHECK: cl [[REG2]], 0(%r3)
 ; CHECK: br %r14
   %res1 = call i32 asm "stepa $0", "=r"()
-  %load1 = load i32 , i32 *%ptr1
+  %load1 = load i32, i32 *%ptr1
   %cmp1 = icmp sle i32 %res1, %load1
   %sel1 = select i1 %cmp1, i32 0, i32 1
   %res2 = call i32 asm "stepb $0, $1", "=r,r"(i32 %sel1)
-  %load2 = load i32 , i32 *%ptr2
+  %load2 = load i32, i32 *%ptr2
   %cmp2 = icmp ule i32 %res2, %load2
   %sel2 = select i1 %cmp2, i32 0, i32 1
   store i32 %sel2, i32 *%ptr1

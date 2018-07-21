@@ -279,6 +279,9 @@ class DwarfDebug : public DebugHandlerBase {
   ///Allow emission of the .debug_loc section.
   bool UseLocSection = true;
 
+  /// Generate DWARF v4 type units.
+  bool GenerateTypeUnits;
+
   /// DWARF5 Experimental Options
   /// @{
   AccelTableKind TheAccelTableKind;
@@ -342,9 +345,9 @@ class DwarfDebug : public DebugHandlerBase {
   /// Construct a DIE for this abstract scope.
   void constructAbstractSubprogramScopeDIE(DwarfCompileUnit &SrcCU, LexicalScope *Scope);
 
-  /// Helper function to add a name to the .debug_names table, using the
-  /// appropriate string pool.
-  void addAccelDebugName(StringRef Name, const DIE &Die);
+  template <typename DataT>
+  void addAccelNameImpl(AccelTable<DataT> &AppleAccel, StringRef Name,
+                        const DIE &Die);
 
   void finishVariableDefinitions();
 
@@ -545,6 +548,9 @@ public:
 
   /// Returns whether .debug_loc section should be emitted.
   bool useLocSection() const { return UseLocSection; }
+
+  /// Returns whether to generate DWARF v4 type units.
+  bool generateTypeUnits() const { return GenerateTypeUnits; }
 
   // Experimental DWARF5 features.
 

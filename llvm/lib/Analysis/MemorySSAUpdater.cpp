@@ -499,6 +499,35 @@ static MemoryAccess *onlySingleValue(MemoryPhi *MP) {
   return MA;
 }
 
+void MemorySSAUpdater::wireOldPredecessorsToNewImmediatePredecessor(
+    BasicBlock *Old, BasicBlock *New, ArrayRef<BasicBlock *> Preds) {
+  assert(!MSSA->getWritableBlockAccesses(New) &&
+         "Access list should be null for a new block.");
+  MemoryPhi *Phi = MSSA->getMemoryAccess(Old);
+  if (!Phi)
+    return;
+  if (pred_size(Old) == 1) {
+    assert(pred_size(New) == Preds.size() &&
+           "Should have moved all predecessors.");
+    MSSA->moveTo(Phi, New, MemorySSA::Beginning);
+  } else {
+    assert(!Preds.empty() && "Must be moving at least one predecessor to the "
+                             "new immediate predecessor.");
+    MemoryPhi *NewPhi = MSSA->createMemoryPhi(New);
+    SmallPtrSet<BasicBlock *, 16> PredsSet(Preds.begin(), Preds.end());
+    Phi->unorderedDeleteIncomingIf([&](MemoryAccess *MA, BasicBlock *B) {
+      if (PredsSet.count(B)) {
+        NewPhi->addIncoming(MA, B);
+        return true;
+      }
+      return false;
+    });
+    Phi->addIncoming(NewPhi, New);
+    if (onlySingleValue(NewPhi))
+      removeMemoryAccess(NewPhi);
+  }
+}
+
 void MemorySSAUpdater::removeMemoryAccess(MemoryAccess *MA) {
   assert(!MSSA->isLiveOnEntryDef(MA) &&
          "Trying to remove the live on entry def");

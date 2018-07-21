@@ -8,7 +8,7 @@ define void @f1(i8 *%ptr) {
 ; CHECK-LABEL: f1:
 ; CHECK: xi 0(%r2), 254
 ; CHECK: br %r14
-  %val = load i8 , i8 *%ptr
+  %val = load i8, i8 *%ptr
   %ext = zext i8 %val to i32
   %xor = xor i32 %ext, -2
   %trunc = trunc i32 %xor to i8
@@ -21,7 +21,7 @@ define void @f2(i8 *%ptr) {
 ; CHECK-LABEL: f2:
 ; CHECK: xi 0(%r2), 254
 ; CHECK: br %r14
-  %val = load i8 , i8 *%ptr
+  %val = load i8, i8 *%ptr
   %ext = zext i8 %val to i64
   %xor = xor i64 %ext, -2
   %trunc = trunc i64 %xor to i8
@@ -34,7 +34,7 @@ define void @f3(i8 *%ptr) {
 ; CHECK-LABEL: f3:
 ; CHECK: xi 0(%r2), 254
 ; CHECK: br %r14
-  %val = load i8 , i8 *%ptr
+  %val = load i8, i8 *%ptr
   %ext = zext i8 %val to i32
   %xor = xor i32 %ext, 254
   %trunc = trunc i32 %xor to i8
@@ -47,7 +47,7 @@ define void @f4(i8 *%ptr) {
 ; CHECK-LABEL: f4:
 ; CHECK: xi 0(%r2), 254
 ; CHECK: br %r14
-  %val = load i8 , i8 *%ptr
+  %val = load i8, i8 *%ptr
   %ext = zext i8 %val to i64
   %xor = xor i64 %ext, 254
   %trunc = trunc i64 %xor to i8
@@ -60,7 +60,7 @@ define void @f5(i8 *%ptr) {
 ; CHECK-LABEL: f5:
 ; CHECK: xi 0(%r2), 254
 ; CHECK: br %r14
-  %val = load i8 , i8 *%ptr
+  %val = load i8, i8 *%ptr
   %ext = sext i8 %val to i32
   %xor = xor i32 %ext, -2
   %trunc = trunc i32 %xor to i8
@@ -73,7 +73,7 @@ define void @f6(i8 *%ptr) {
 ; CHECK-LABEL: f6:
 ; CHECK: xi 0(%r2), 254
 ; CHECK: br %r14
-  %val = load i8 , i8 *%ptr
+  %val = load i8, i8 *%ptr
   %ext = sext i8 %val to i64
   %xor = xor i64 %ext, -2
   %trunc = trunc i64 %xor to i8
@@ -86,7 +86,7 @@ define void @f7(i8 *%ptr) {
 ; CHECK-LABEL: f7:
 ; CHECK: xi 0(%r2), 254
 ; CHECK: br %r14
-  %val = load i8 , i8 *%ptr
+  %val = load i8, i8 *%ptr
   %ext = sext i8 %val to i32
   %xor = xor i32 %ext, 254
   %trunc = trunc i32 %xor to i8
@@ -99,7 +99,7 @@ define void @f8(i8 *%ptr) {
 ; CHECK-LABEL: f8:
 ; CHECK: xi 0(%r2), 254
 ; CHECK: br %r14
-  %val = load i8 , i8 *%ptr
+  %val = load i8, i8 *%ptr
   %ext = sext i8 %val to i64
   %xor = xor i64 %ext, 254
   %trunc = trunc i64 %xor to i8

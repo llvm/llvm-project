@@ -233,10 +233,10 @@ define void @f10(i32 *%vptr, i8 %byte) {
 ; CHECK-FP: stc %r3, 0([[REGISTER]],%r11)
 ; CHECK-FP: lg [[REGISTER]], [[OFFSET]](%r11)
 ; CHECK-FP: br %r14
-  %i0 = load volatile i32 , i32 *%vptr
-  %i1 = load volatile i32 , i32 *%vptr
-  %i4 = load volatile i32 , i32 *%vptr
-  %i5 = load volatile i32 , i32 *%vptr
+  %i0 = load volatile i32, i32 *%vptr
+  %i1 = load volatile i32, i32 *%vptr
+  %i4 = load volatile i32, i32 *%vptr
+  %i5 = load volatile i32, i32 *%vptr
   %region1 = alloca [524104 x i8], align 8
   %region2 = alloca [524104 x i8], align 8
   %ptr1 = getelementptr inbounds [524104 x i8], [524104 x i8]* %region1, i64 0, i64 8
@@ -272,19 +272,19 @@ define void @f11(i32 *%vptr, i8 %byte) {
 ; CHECK-FP: lg [[REGISTER]], [[OFFSET]](%r11)
 ; CHECK-FP: lmg %r6, %r15,
 ; CHECK-FP: br %r14
-  %i0 = load volatile i32 , i32 *%vptr
-  %i1 = load volatile i32 , i32 *%vptr
-  %i4 = load volatile i32 , i32 *%vptr
-  %i5 = load volatile i32 , i32 *%vptr
-  %i6 = load volatile i32 , i32 *%vptr
-  %i7 = load volatile i32 , i32 *%vptr
-  %i8 = load volatile i32 , i32 *%vptr
-  %i9 = load volatile i32 , i32 *%vptr
-  %i10 = load volatile i32 , i32 *%vptr
-  %i11 = load volatile i32 , i32 *%vptr
-  %i12 = load volatile i32 , i32 *%vptr
-  %i13 = load volatile i32 , i32 *%vptr
-  %i14 = load volatile i32 , i32 *%vptr
+  %i0 = load volatile i32, i32 *%vptr
+  %i1 = load volatile i32, i32 *%vptr
+  %i4 = load volatile i32, i32 *%vptr
+  %i5 = load volatile i32, i32 *%vptr
+  %i6 = load volatile i32, i32 *%vptr
+  %i7 = load volatile i32, i32 *%vptr
+  %i8 = load volatile i32, i32 *%vptr
+  %i9 = load volatile i32, i32 *%vptr
+  %i10 = load volatile i32, i32 *%vptr
+  %i11 = load volatile i32, i32 *%vptr
+  %i12 = load volatile i32, i32 *%vptr
+  %i13 = load volatile i32, i32 *%vptr
+  %i14 = load volatile i32, i32 *%vptr
   %region1 = alloca [524104 x i8], align 8
   %region2 = alloca [524104 x i8], align 8
   %ptr1 = getelementptr inbounds [524104 x i8], [524104 x i8]* %region1, i64 0, i64 8

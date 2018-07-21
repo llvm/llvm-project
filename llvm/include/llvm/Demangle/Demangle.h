@@ -16,7 +16,7 @@ namespace llvm {
 /// The mangled_name is demangled into buf and returned. If the buffer is not
 /// large enough, realloc is used to expand it.
 ///
-/// The *status will be set to a value from the enumeration
+/// The *status will be set to a value from the following enumeration
 enum : int {
   demangle_unknown_error = -4,
   demangle_invalid_args = -3,
@@ -27,6 +27,8 @@ enum : int {
 
 char *itaniumDemangle(const char *mangled_name, char *buf, size_t *n,
                       int *status);
+char *microsoftDemangle(const char *mangled_name, char *buf, size_t *n,
+                        int *status);
 
 /// "Partial" demangler. This supports demangling a string into an AST
 /// (typically an intermediate stage in itaniumDemangle) and querying certain
