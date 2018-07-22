@@ -28,7 +28,7 @@ TEST_SUITE(directory_entry_obs_testsuite)
 TEST_CASE(signatures) {
   using namespace fs;
   {
-    const fs::directory_entry e;
+    const directory_entry e = {};
     std::error_code ec;
     static_assert(std::is_same<decltype(e.hard_link_count()), uintmax_t>::value, "");
     static_assert(std::is_same<decltype(e.hard_link_count(ec)), uintmax_t>::value,
