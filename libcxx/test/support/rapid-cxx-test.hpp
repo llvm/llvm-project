@@ -826,8 +826,8 @@ namespace rapid_cxx_test
                 get_reporter().test_case_end();
             }
             auto exit_code = get_reporter().failure_count() ? EXIT_FAILURE : EXIT_SUCCESS;
-            if (exit_code == EXIT_FAILURE)
-                get_reporter().print_summary(m_ts.name());
+            if (exit_code == EXIT_FAILURE || get_reporter().unsupported_count())
+              get_reporter().print_summary(m_ts.name());
             return exit_code;
         }
 
