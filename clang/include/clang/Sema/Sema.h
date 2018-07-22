@@ -4303,6 +4303,7 @@ public:
   ExprResult ActOnUnaryOp(Scope *S, SourceLocation OpLoc,
                           tok::TokenKind Op, Expr *Input);
 
+  bool isQualifiedMemberAccess(Expr *E);
   QualType CheckAddressOfOperand(ExprResult &Operand, SourceLocation OpLoc);
 
   ExprResult CreateUnaryExprOrTypeTraitExpr(TypeSourceInfo *TInfo,
