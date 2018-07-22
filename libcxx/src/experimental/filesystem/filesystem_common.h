@@ -94,18 +94,18 @@ using namespace chrono;
 template <class FileTimeT,
           bool IsFloat = is_floating_point<typename FileTimeT::rep>::value>
 struct fs_time_util_base {
-  static constexpr auto max_seconds =
+  static constexpr seconds::rep max_seconds =
       duration_cast<seconds>(FileTimeT::duration::max()).count();
 
-  static constexpr auto max_nsec =
+  static constexpr nanoseconds::rep max_nsec =
       duration_cast<nanoseconds>(FileTimeT::duration::max() -
                                  seconds(max_seconds))
           .count();
 
-  static constexpr auto min_seconds =
+  static constexpr seconds::rep min_seconds =
       duration_cast<seconds>(FileTimeT::duration::min()).count();
 
-  static constexpr auto min_nsec_timespec =
+  static constexpr nanoseconds::rep min_nsec_timespec =
       duration_cast<nanoseconds>(
           (FileTimeT::duration::min() - seconds(min_seconds)) + seconds(1))
           .count();
