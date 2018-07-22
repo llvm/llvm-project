@@ -62,14 +62,17 @@ int main(int argc, char **argv) {
       // them to the terminal a second time.  If they're coming from redirected
       // input, however, then we should display the input line so that the
       // mangled and demangled name can be easily correlated in the output.
-      if (!sys::Process::StandardInIsUserInput())
+      if (!sys::Process::StandardInIsUserInput()) {
         outs() << Line << "\n";
+        outs().flush();
+      }
       demangle(Line);
       outs() << "\n";
     }
   } else {
     for (StringRef S : Symbols) {
       outs() << S << "\n";
+      outs().flush();
       demangle(S);
       outs() << "\n";
     }

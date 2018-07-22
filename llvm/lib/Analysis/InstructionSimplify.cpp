@@ -1081,6 +1081,10 @@ static Value *simplifyRem(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
 /// If not, this returns null.
 static Value *SimplifySDivInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
                                unsigned MaxRecurse) {
+  // If two operands are negated and no signed overflow, return -1.
+  if (isKnownNegation(Op0, Op1, /*NeedNSW=*/true))
+    return Constant::getAllOnesValue(Op0->getType());
+
   return simplifyDiv(Instruction::SDiv, Op0, Op1, Q, MaxRecurse);
 }
 
@@ -1111,7 +1115,7 @@ static Value *SimplifySRemInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
 
   // If the two operands are negated, return 0.
   if (isKnownNegation(Op0, Op1))
-   return ConstantInt::getNullValue(Op0->getType());
+    return ConstantInt::getNullValue(Op0->getType());
 
   return simplifyRem(Instruction::SRem, Op0, Op1, Q, MaxRecurse);
 }

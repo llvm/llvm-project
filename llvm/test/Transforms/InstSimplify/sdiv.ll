@@ -3,9 +3,7 @@
 
 define i32 @negated_operand(i32 %x) {
 ; CHECK-LABEL: @negated_operand(
-; CHECK-NEXT:    [[NEGX:%.*]] = sub nsw i32 0, [[X:%.*]]
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[NEGX]], [[X]]
-; CHECK-NEXT:    ret i32 [[DIV]]
+; CHECK-NEXT:    ret i32 -1
 ;
   %negx = sub nsw i32 0, %x
   %div = sdiv i32 %negx, %x
@@ -14,9 +12,7 @@ define i32 @negated_operand(i32 %x) {
 
 define <2 x i32> @negated_operand_commute_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @negated_operand_commute_vec(
-; CHECK-NEXT:    [[NEGX:%.*]] = sub nsw <2 x i32> zeroinitializer, [[X:%.*]]
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv <2 x i32> [[NEGX]], [[X]]
-; CHECK-NEXT:    ret <2 x i32> [[DIV]]
+; CHECK-NEXT:    ret <2 x i32> <i32 -1, i32 -1>
 ;
   %negx = sub nsw <2 x i32> zeroinitializer, %x
   %div = sdiv <2 x i32> %negx, %x
@@ -25,10 +21,7 @@ define <2 x i32> @negated_operand_commute_vec(<2 x i32> %x) {
 
 define i32 @knownnegation(i32 %x, i32 %y) {
 ; CHECK-LABEL: @knownnegation(
-; CHECK-NEXT:    [[XY:%.*]] = sub nsw i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[YX:%.*]] = sub nsw i32 [[Y]], [[X]]
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[XY]], [[YX]]
-; CHECK-NEXT:    ret i32 [[DIV]]
+; CHECK-NEXT:    ret i32 -1
 ;
   %xy = sub nsw i32 %x, %y
   %yx = sub nsw i32 %y, %x
@@ -38,10 +31,7 @@ define i32 @knownnegation(i32 %x, i32 %y) {
 
 define <2 x i32> @knownnegation_commute_vec(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @knownnegation_commute_vec(
-; CHECK-NEXT:    [[XY:%.*]] = sub nsw <2 x i32> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[YX:%.*]] = sub nsw <2 x i32> [[Y]], [[X]]
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv <2 x i32> [[XY]], [[YX]]
-; CHECK-NEXT:    ret <2 x i32> [[DIV]]
+; CHECK-NEXT:    ret <2 x i32> <i32 -1, i32 -1>
 ;
   %xy = sub nsw <2 x i32> %x, %y
   %yx = sub nsw <2 x i32> %y, %x
@@ -51,10 +41,7 @@ define <2 x i32> @knownnegation_commute_vec(<2 x i32> %x, <2 x i32> %y) {
 
 define i32 @negated_operand_2(i32 %t) {
 ; CHECK-LABEL: @negated_operand_2(
-; CHECK-NEXT:    [[X:%.*]] = sub i32 [[T:%.*]], 5
-; CHECK-NEXT:    [[NEGX:%.*]] = sub nsw i32 0, [[X]]
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[NEGX]], [[X]]
-; CHECK-NEXT:    ret i32 [[DIV]]
+; CHECK-NEXT:    ret i32 -1
 ;
   %x = sub i32 %t, 5 
   %negx = sub nsw i32 0, %x
@@ -64,9 +51,7 @@ define i32 @negated_operand_2(i32 %t) {
 
 define i32 @negated_operand_commute(i32 %x) {
 ; CHECK-LABEL: @negated_operand_commute(
-; CHECK-NEXT:    [[NEGX:%.*]] = sub nsw i32 0, [[X]]
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[X]], [[NEGX]]
-; CHECK-NEXT:    ret i32 [[DIV]]
+; CHECK-NEXT:    ret i32 -1
 ;
   %negx = sub nsw i32 0, %x
   %div = sdiv i32 %x, %negx
@@ -175,9 +160,7 @@ define <2 x i32> @knownnegation_commute_vec_bad3(<2 x i32> %x, <2 x i32> %y) {
 
 define <3 x i32> @negated_operand_vec_undef(<3 x i32> %x) {
 ; CHECK-LABEL: @negated_operand_vec_undef(
-; CHECK-NEXT:    [[NEGX:%.*]] = sub nsw <3 x i32> <i32 0, i32 undef, i32 0>, [[X:%.*]]
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv <3 x i32> [[NEGX]], [[X]]
-; CHECK-NEXT:    ret <3 x i32> [[DIV]]
+; CHECK-NEXT:    ret <3 x i32> <i32 -1, i32 -1, i32 -1>
 ;
   %negx = sub nsw <3 x i32> <i32 0, i32 undef, i32 0>, %x
   %div = sdiv <3 x i32> %negx, %x

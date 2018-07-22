@@ -5,15 +5,93 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f | FileCheck %s --check-prefixes=AVX,AVX256,AVX512,AVX512F
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512bw | FileCheck %s --check-prefixes=AVX,AVX256,AVX512,AVX512BW
 
-define i32 @_Z10test_shortPsS_i(i16* nocapture readonly, i16* nocapture readonly, i32) local_unnamed_addr #0 {
-; SSE2-LABEL: _Z10test_shortPsS_i:
+define i32 @_Z10test_shortPsS_i_128(i16* nocapture readonly, i16* nocapture readonly, i32) local_unnamed_addr #0 {
+; SSE2-LABEL: _Z10test_shortPsS_i_128:
+; SSE2:       # %bb.0: # %entry
+; SSE2-NEXT:    movl %edx, %eax
+; SSE2-NEXT:    pxor %xmm0, %xmm0
+; SSE2-NEXT:    xorl %ecx, %ecx
+; SSE2-NEXT:    .p2align 4, 0x90
+; SSE2-NEXT:  .LBB0_1: # %vector.body
+; SSE2-NEXT:    # =>This Inner Loop Header: Depth=1
+; SSE2-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
+; SSE2-NEXT:    movq {{.*#+}} xmm2 = mem[0],zero
+; SSE2-NEXT:    movdqa %xmm2, %xmm3
+; SSE2-NEXT:    pmulhw %xmm1, %xmm3
+; SSE2-NEXT:    pmullw %xmm1, %xmm2
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1],xmm2[2],xmm3[2],xmm2[3],xmm3[3]
+; SSE2-NEXT:    paddd %xmm2, %xmm0
+; SSE2-NEXT:    addq $8, %rcx
+; SSE2-NEXT:    cmpq %rcx, %rax
+; SSE2-NEXT:    jne .LBB0_1
+; SSE2-NEXT:  # %bb.2: # %middle.block
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; SSE2-NEXT:    paddd %xmm0, %xmm1
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
+; SSE2-NEXT:    paddd %xmm1, %xmm0
+; SSE2-NEXT:    movd %xmm0, %eax
+; SSE2-NEXT:    retq
+;
+; AVX-LABEL: _Z10test_shortPsS_i_128:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    movl %edx, %eax
+; AVX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    xorl %ecx, %ecx
+; AVX-NEXT:    .p2align 4, 0x90
+; AVX-NEXT:  .LBB0_1: # %vector.body
+; AVX-NEXT:    # =>This Inner Loop Header: Depth=1
+; AVX-NEXT:    vpmovsxwd (%rdi,%rcx,2), %xmm1
+; AVX-NEXT:    vpmovsxwd (%rsi,%rcx,2), %xmm2
+; AVX-NEXT:    vpmulld %xmm1, %xmm2, %xmm1
+; AVX-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    addq $8, %rcx
+; AVX-NEXT:    cmpq %rcx, %rax
+; AVX-NEXT:    jne .LBB0_1
+; AVX-NEXT:  # %bb.2: # %middle.block
+; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vmovd %xmm0, %eax
+; AVX-NEXT:    retq
+entry:
+  %3 = zext i32 %2 to i64
+  br label %vector.body
+
+vector.body:
+  %index = phi i64 [ %index.next, %vector.body ], [ 0, %entry ]
+  %vec.phi = phi <4 x i32> [ %11, %vector.body ], [ zeroinitializer, %entry ]
+  %4 = getelementptr inbounds i16, i16* %0, i64 %index
+  %5 = bitcast i16* %4 to <4 x i16>*
+  %wide.load = load <4 x i16>, <4 x i16>* %5, align 2
+  %6 = sext <4 x i16> %wide.load to <4 x i32>
+  %7 = getelementptr inbounds i16, i16* %1, i64 %index
+  %8 = bitcast i16* %7 to <4 x i16>*
+  %wide.load14 = load <4 x i16>, <4 x i16>* %8, align 2
+  %9 = sext <4 x i16> %wide.load14 to <4 x i32>
+  %10 = mul nsw <4 x i32> %9, %6
+  %11 = add nsw <4 x i32> %10, %vec.phi
+  %index.next = add i64 %index, 8
+  %12 = icmp eq i64 %index.next, %3
+  br i1 %12, label %middle.block, label %vector.body
+
+middle.block:
+  %rdx.shuf15 = shufflevector <4 x i32> %11, <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+  %bin.rdx16 = add <4 x i32> %11, %rdx.shuf15
+  %rdx.shuf17 = shufflevector <4 x i32> %bin.rdx16, <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+  %bin.rdx18 = add <4 x i32> %bin.rdx16, %rdx.shuf17
+  %13 = extractelement <4 x i32> %bin.rdx18, i32 0
+  ret i32 %13
+}
+
+define i32 @_Z10test_shortPsS_i_256(i16* nocapture readonly, i16* nocapture readonly, i32) local_unnamed_addr #0 {
+; SSE2-LABEL: _Z10test_shortPsS_i_256:
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    movl %edx, %eax
 ; SSE2-NEXT:    pxor %xmm0, %xmm0
 ; SSE2-NEXT:    xorl %ecx, %ecx
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
 ; SSE2-NEXT:    .p2align 4, 0x90
-; SSE2-NEXT:  .LBB0_1: # %vector.body
+; SSE2-NEXT:  .LBB1_1: # %vector.body
 ; SSE2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; SSE2-NEXT:    movdqu (%rdi,%rcx,2), %xmm2
 ; SSE2-NEXT:    movdqu (%rsi,%rcx,2), %xmm3
@@ -21,7 +99,7 @@ define i32 @_Z10test_shortPsS_i(i16* nocapture readonly, i16* nocapture readonly
 ; SSE2-NEXT:    paddd %xmm3, %xmm1
 ; SSE2-NEXT:    addq $8, %rcx
 ; SSE2-NEXT:    cmpq %rcx, %rax
-; SSE2-NEXT:    jne .LBB0_1
+; SSE2-NEXT:    jne .LBB1_1
 ; SSE2-NEXT:  # %bb.2: # %middle.block
 ; SSE2-NEXT:    paddd %xmm0, %xmm1
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,0,1]
@@ -31,13 +109,13 @@ define i32 @_Z10test_shortPsS_i(i16* nocapture readonly, i16* nocapture readonly
 ; SSE2-NEXT:    movd %xmm1, %eax
 ; SSE2-NEXT:    retq
 ;
-; AVX1-LABEL: _Z10test_shortPsS_i:
+; AVX1-LABEL: _Z10test_shortPsS_i_256:
 ; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    movl %edx, %eax
 ; AVX1-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    xorl %ecx, %ecx
 ; AVX1-NEXT:    .p2align 4, 0x90
-; AVX1-NEXT:  .LBB0_1: # %vector.body
+; AVX1-NEXT:  .LBB1_1: # %vector.body
 ; AVX1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX1-NEXT:    vmovdqu (%rsi,%rcx,2), %xmm1
 ; AVX1-NEXT:    vpmaddwd (%rdi,%rcx,2), %xmm1, %xmm1
@@ -45,7 +123,7 @@ define i32 @_Z10test_shortPsS_i(i16* nocapture readonly, i16* nocapture readonly
 ; AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
 ; AVX1-NEXT:    addq $8, %rcx
 ; AVX1-NEXT:    cmpq %rcx, %rax
-; AVX1-NEXT:    jne .LBB0_1
+; AVX1-NEXT:    jne .LBB1_1
 ; AVX1-NEXT:  # %bb.2: # %middle.block
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
@@ -56,20 +134,20 @@ define i32 @_Z10test_shortPsS_i(i16* nocapture readonly, i16* nocapture readonly
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
-; AVX256-LABEL: _Z10test_shortPsS_i:
+; AVX256-LABEL: _Z10test_shortPsS_i_256:
 ; AVX256:       # %bb.0: # %entry
 ; AVX256-NEXT:    movl %edx, %eax
 ; AVX256-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX256-NEXT:    xorl %ecx, %ecx
 ; AVX256-NEXT:    .p2align 4, 0x90
-; AVX256-NEXT:  .LBB0_1: # %vector.body
+; AVX256-NEXT:  .LBB1_1: # %vector.body
 ; AVX256-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX256-NEXT:    vmovdqu (%rsi,%rcx,2), %xmm1
 ; AVX256-NEXT:    vpmaddwd (%rdi,%rcx,2), %xmm1, %xmm1
 ; AVX256-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
 ; AVX256-NEXT:    addq $8, %rcx
 ; AVX256-NEXT:    cmpq %rcx, %rax
-; AVX256-NEXT:    jne .LBB0_1
+; AVX256-NEXT:    jne .LBB1_1
 ; AVX256-NEXT:  # %bb.2: # %middle.block
 ; AVX256-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX256-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
@@ -121,7 +199,7 @@ define i32 @_Z10test_shortPsS_i_512(i16* nocapture readonly, i16* nocapture read
 ; SSE2-NEXT:    pxor %xmm3, %xmm3
 ; SSE2-NEXT:    pxor %xmm2, %xmm2
 ; SSE2-NEXT:    .p2align 4, 0x90
-; SSE2-NEXT:  .LBB1_1: # %vector.body
+; SSE2-NEXT:  .LBB2_1: # %vector.body
 ; SSE2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; SSE2-NEXT:    movdqu (%rdi,%rcx,2), %xmm4
 ; SSE2-NEXT:    movdqu 16(%rdi,%rcx,2), %xmm8
@@ -145,7 +223,7 @@ define i32 @_Z10test_shortPsS_i_512(i16* nocapture readonly, i16* nocapture read
 ; SSE2-NEXT:    paddd %xmm7, %xmm2
 ; SSE2-NEXT:    addq $16, %rcx
 ; SSE2-NEXT:    cmpq %rcx, %rax
-; SSE2-NEXT:    jne .LBB1_1
+; SSE2-NEXT:    jne .LBB2_1
 ; SSE2-NEXT:  # %bb.2: # %middle.block
 ; SSE2-NEXT:    paddd %xmm3, %xmm0
 ; SSE2-NEXT:    paddd %xmm2, %xmm1
@@ -164,7 +242,7 @@ define i32 @_Z10test_shortPsS_i_512(i16* nocapture readonly, i16* nocapture read
 ; AVX1-NEXT:    xorl %ecx, %ecx
 ; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    .p2align 4, 0x90
-; AVX1-NEXT:  .LBB1_1: # %vector.body
+; AVX1-NEXT:  .LBB2_1: # %vector.body
 ; AVX1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX1-NEXT:    vmovdqu (%rdi,%rcx,2), %ymm2
 ; AVX1-NEXT:    vmovdqu (%rsi,%rcx,2), %ymm3
@@ -178,7 +256,7 @@ define i32 @_Z10test_shortPsS_i_512(i16* nocapture readonly, i16* nocapture read
 ; AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm1, %ymm1
 ; AVX1-NEXT:    addq $16, %rcx
 ; AVX1-NEXT:    cmpq %rcx, %rax
-; AVX1-NEXT:    jne .LBB1_1
+; AVX1-NEXT:    jne .LBB2_1
 ; AVX1-NEXT:  # %bb.2: # %middle.block
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
@@ -199,14 +277,14 @@ define i32 @_Z10test_shortPsS_i_512(i16* nocapture readonly, i16* nocapture read
 ; AVX2-NEXT:    xorl %ecx, %ecx
 ; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    .p2align 4, 0x90
-; AVX2-NEXT:  .LBB1_1: # %vector.body
+; AVX2-NEXT:  .LBB2_1: # %vector.body
 ; AVX2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX2-NEXT:    vmovdqu (%rsi,%rcx,2), %ymm2
 ; AVX2-NEXT:    vpmaddwd (%rdi,%rcx,2), %ymm2, %ymm2
 ; AVX2-NEXT:    vpaddd %ymm1, %ymm2, %ymm1
 ; AVX2-NEXT:    addq $16, %rcx
 ; AVX2-NEXT:    cmpq %rcx, %rax
-; AVX2-NEXT:    jne .LBB1_1
+; AVX2-NEXT:    jne .LBB2_1
 ; AVX2-NEXT:  # %bb.2: # %middle.block
 ; AVX2-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
@@ -224,14 +302,14 @@ define i32 @_Z10test_shortPsS_i_512(i16* nocapture readonly, i16* nocapture read
 ; AVX512-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    xorl %ecx, %ecx
 ; AVX512-NEXT:    .p2align 4, 0x90
-; AVX512-NEXT:  .LBB1_1: # %vector.body
+; AVX512-NEXT:  .LBB2_1: # %vector.body
 ; AVX512-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX512-NEXT:    vmovdqu (%rsi,%rcx,2), %ymm1
 ; AVX512-NEXT:    vpmaddwd (%rdi,%rcx,2), %ymm1, %ymm1
 ; AVX512-NEXT:    vpaddd %zmm0, %zmm1, %zmm0
 ; AVX512-NEXT:    addq $16, %rcx
 ; AVX512-NEXT:    cmpq %rcx, %rax
-; AVX512-NEXT:    jne .LBB1_1
+; AVX512-NEXT:    jne .LBB2_1
 ; AVX512-NEXT:  # %bb.2: # %middle.block
 ; AVX512-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
 ; AVX512-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
@@ -278,31 +356,335 @@ middle.block:
   ret i32 %13
 }
 
-define i32 @test_unsigned_short(i16* nocapture readonly, i16* nocapture readonly, i32) local_unnamed_addr #0 {
-; SSE2-LABEL: test_unsigned_short:
+define i32 @_Z10test_shortPsS_i_1024(i16* nocapture readonly, i16* nocapture readonly, i32) local_unnamed_addr #0 {
+; SSE2-LABEL: _Z10test_shortPsS_i_1024:
+; SSE2:       # %bb.0: # %entry
+; SSE2-NEXT:    movl %edx, %eax
+; SSE2-NEXT:    pxor %xmm8, %xmm8
+; SSE2-NEXT:    xorl %ecx, %ecx
+; SSE2-NEXT:    pxor %xmm3, %xmm3
+; SSE2-NEXT:    pxor %xmm9, %xmm9
+; SSE2-NEXT:    pxor %xmm10, %xmm10
+; SSE2-NEXT:    pxor %xmm4, %xmm4
+; SSE2-NEXT:    pxor %xmm6, %xmm6
+; SSE2-NEXT:    pxor %xmm5, %xmm5
+; SSE2-NEXT:    pxor %xmm7, %xmm7
+; SSE2-NEXT:    .p2align 4, 0x90
+; SSE2-NEXT:  .LBB3_1: # %vector.body
+; SSE2-NEXT:    # =>This Inner Loop Header: Depth=1
+; SSE2-NEXT:    movdqu 48(%rdi,%rcx,2), %xmm0
+; SSE2-NEXT:    movdqu 48(%rsi,%rcx,2), %xmm1
+; SSE2-NEXT:    movdqa %xmm1, %xmm2
+; SSE2-NEXT:    pmulhw %xmm0, %xmm2
+; SSE2-NEXT:    pmullw %xmm0, %xmm1
+; SSE2-NEXT:    movdqa %xmm1, %xmm0
+; SSE2-NEXT:    punpckhwd {{.*#+}} xmm0 = xmm0[4],xmm2[4],xmm0[5],xmm2[5],xmm0[6],xmm2[6],xmm0[7],xmm2[7]
+; SSE2-NEXT:    paddd %xmm0, %xmm7
+; SSE2-NEXT:    movdqu 32(%rdi,%rcx,2), %xmm0
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1],xmm1[2],xmm2[2],xmm1[3],xmm2[3]
+; SSE2-NEXT:    movdqu 32(%rsi,%rcx,2), %xmm2
+; SSE2-NEXT:    paddd %xmm1, %xmm5
+; SSE2-NEXT:    movdqa %xmm2, %xmm1
+; SSE2-NEXT:    pmulhw %xmm0, %xmm1
+; SSE2-NEXT:    pmullw %xmm0, %xmm2
+; SSE2-NEXT:    movdqa %xmm2, %xmm0
+; SSE2-NEXT:    punpckhwd {{.*#+}} xmm0 = xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
+; SSE2-NEXT:    paddd %xmm0, %xmm6
+; SSE2-NEXT:    movdqu (%rdi,%rcx,2), %xmm0
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1],xmm2[2],xmm1[2],xmm2[3],xmm1[3]
+; SSE2-NEXT:    movdqu (%rsi,%rcx,2), %xmm1
+; SSE2-NEXT:    paddd %xmm2, %xmm4
+; SSE2-NEXT:    movdqa %xmm1, %xmm2
+; SSE2-NEXT:    pmulhw %xmm0, %xmm2
+; SSE2-NEXT:    pmullw %xmm0, %xmm1
+; SSE2-NEXT:    movdqa %xmm1, %xmm0
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3]
+; SSE2-NEXT:    paddd %xmm0, %xmm8
+; SSE2-NEXT:    movdqu 16(%rdi,%rcx,2), %xmm0
+; SSE2-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4],xmm2[4],xmm1[5],xmm2[5],xmm1[6],xmm2[6],xmm1[7],xmm2[7]
+; SSE2-NEXT:    movdqu 16(%rsi,%rcx,2), %xmm2
+; SSE2-NEXT:    paddd %xmm1, %xmm3
+; SSE2-NEXT:    movdqa %xmm2, %xmm1
+; SSE2-NEXT:    pmulhw %xmm0, %xmm1
+; SSE2-NEXT:    pmullw %xmm0, %xmm2
+; SSE2-NEXT:    movdqa %xmm2, %xmm0
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; SSE2-NEXT:    paddd %xmm0, %xmm9
+; SSE2-NEXT:    punpckhwd {{.*#+}} xmm2 = xmm2[4],xmm1[4],xmm2[5],xmm1[5],xmm2[6],xmm1[6],xmm2[7],xmm1[7]
+; SSE2-NEXT:    paddd %xmm2, %xmm10
+; SSE2-NEXT:    addq $16, %rcx
+; SSE2-NEXT:    cmpq %rcx, %rax
+; SSE2-NEXT:    jne .LBB3_1
+; SSE2-NEXT:  # %bb.2: # %middle.block
+; SSE2-NEXT:    paddd %xmm6, %xmm3
+; SSE2-NEXT:    paddd %xmm7, %xmm10
+; SSE2-NEXT:    paddd %xmm3, %xmm10
+; SSE2-NEXT:    paddd %xmm4, %xmm8
+; SSE2-NEXT:    paddd %xmm5, %xmm9
+; SSE2-NEXT:    paddd %xmm10, %xmm9
+; SSE2-NEXT:    paddd %xmm8, %xmm9
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm9[2,3,0,1]
+; SSE2-NEXT:    paddd %xmm9, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; SSE2-NEXT:    paddd %xmm0, %xmm1
+; SSE2-NEXT:    movd %xmm1, %eax
+; SSE2-NEXT:    retq
+;
+; AVX1-LABEL: _Z10test_shortPsS_i_1024:
+; AVX1:       # %bb.0: # %entry
+; AVX1-NEXT:    movl %edx, %eax
+; AVX1-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    xorl %ecx, %ecx
+; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX1-NEXT:    .p2align 4, 0x90
+; AVX1-NEXT:  .LBB3_1: # %vector.body
+; AVX1-NEXT:    # =>This Inner Loop Header: Depth=1
+; AVX1-NEXT:    vpmovsxwd 56(%rdi,%rcx,2), %xmm4
+; AVX1-NEXT:    vpmovsxwd 48(%rdi,%rcx,2), %xmm5
+; AVX1-NEXT:    vpackssdw %xmm4, %xmm5, %xmm4
+; AVX1-NEXT:    vpmovsxwd 8(%rdi,%rcx,2), %xmm5
+; AVX1-NEXT:    vpmovsxwd (%rdi,%rcx,2), %xmm6
+; AVX1-NEXT:    vpackssdw %xmm5, %xmm6, %xmm5
+; AVX1-NEXT:    vpmovsxwd 24(%rdi,%rcx,2), %xmm6
+; AVX1-NEXT:    vpmovsxwd 16(%rdi,%rcx,2), %xmm7
+; AVX1-NEXT:    vpackssdw %xmm6, %xmm7, %xmm8
+; AVX1-NEXT:    vpmovsxwd 40(%rdi,%rcx,2), %xmm7
+; AVX1-NEXT:    vpmovsxwd 32(%rdi,%rcx,2), %xmm6
+; AVX1-NEXT:    vpackssdw %xmm7, %xmm6, %xmm9
+; AVX1-NEXT:    vpmovsxwd 56(%rsi,%rcx,2), %xmm7
+; AVX1-NEXT:    vpmovsxwd 48(%rsi,%rcx,2), %xmm6
+; AVX1-NEXT:    vpackssdw %xmm7, %xmm6, %xmm6
+; AVX1-NEXT:    vpmaddwd %xmm4, %xmm6, %xmm10
+; AVX1-NEXT:    vpmovsxwd 8(%rsi,%rcx,2), %xmm6
+; AVX1-NEXT:    vpmovsxwd (%rsi,%rcx,2), %xmm7
+; AVX1-NEXT:    vpackssdw %xmm6, %xmm7, %xmm6
+; AVX1-NEXT:    vpmaddwd %xmm5, %xmm6, %xmm5
+; AVX1-NEXT:    vpmovsxwd 24(%rsi,%rcx,2), %xmm6
+; AVX1-NEXT:    vpmovsxwd 16(%rsi,%rcx,2), %xmm7
+; AVX1-NEXT:    vpackssdw %xmm6, %xmm7, %xmm6
+; AVX1-NEXT:    vpmaddwd %xmm8, %xmm6, %xmm6
+; AVX1-NEXT:    vpmovsxwd 40(%rsi,%rcx,2), %xmm7
+; AVX1-NEXT:    vpmovsxwd 32(%rsi,%rcx,2), %xmm4
+; AVX1-NEXT:    vpackssdw %xmm7, %xmm4, %xmm4
+; AVX1-NEXT:    vpmaddwd %xmm9, %xmm4, %xmm4
+; AVX1-NEXT:    vpaddd %xmm1, %xmm4, %xmm4
+; AVX1-NEXT:    vblendps {{.*#+}} ymm1 = ymm4[0,1,2,3],ymm1[4,5,6,7]
+; AVX1-NEXT:    vpaddd %xmm2, %xmm6, %xmm4
+; AVX1-NEXT:    vblendps {{.*#+}} ymm2 = ymm4[0,1,2,3],ymm2[4,5,6,7]
+; AVX1-NEXT:    vpaddd %xmm0, %xmm5, %xmm4
+; AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm4[0,1,2,3],ymm0[4,5,6,7]
+; AVX1-NEXT:    vpaddd %xmm3, %xmm10, %xmm4
+; AVX1-NEXT:    vblendps {{.*#+}} ymm3 = ymm4[0,1,2,3],ymm3[4,5,6,7]
+; AVX1-NEXT:    addq $16, %rcx
+; AVX1-NEXT:    cmpq %rcx, %rax
+; AVX1-NEXT:    jne .LBB3_1
+; AVX1-NEXT:  # %bb.2: # %middle.block
+; AVX1-NEXT:    vpaddd %xmm3, %xmm2, %xmm4
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm5
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm6
+; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm3
+; AVX1-NEXT:    vpaddd %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vpaddd %xmm2, %xmm6, %xmm2
+; AVX1-NEXT:    vpaddd %xmm2, %xmm5, %xmm2
+; AVX1-NEXT:    vpaddd %xmm4, %xmm1, %xmm1
+; AVX1-NEXT:    vpaddd %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    vmovd %xmm0, %eax
+; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: _Z10test_shortPsS_i_1024:
+; AVX2:       # %bb.0: # %entry
+; AVX2-NEXT:    movl %edx, %eax
+; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX2-NEXT:    xorl %ecx, %ecx
+; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX2-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX2-NEXT:    .p2align 4, 0x90
+; AVX2-NEXT:  .LBB3_1: # %vector.body
+; AVX2-NEXT:    # =>This Inner Loop Header: Depth=1
+; AVX2-NEXT:    vpmovsxwd (%rdi,%rcx,2), %ymm12
+; AVX2-NEXT:    vpmovsxwd 16(%rdi,%rcx,2), %ymm6
+; AVX2-NEXT:    vpmovsxwd 32(%rdi,%rcx,2), %ymm7
+; AVX2-NEXT:    vpmovsxwd 48(%rdi,%rcx,2), %ymm8
+; AVX2-NEXT:    vpmovsxwd (%rsi,%rcx,2), %ymm13
+; AVX2-NEXT:    vpmovsxwd 16(%rsi,%rcx,2), %ymm9
+; AVX2-NEXT:    vpmovsxwd 32(%rsi,%rcx,2), %ymm10
+; AVX2-NEXT:    vpmovsxwd 48(%rsi,%rcx,2), %ymm11
+; AVX2-NEXT:    vextracti128 $1, %ymm8, %xmm4
+; AVX2-NEXT:    vpackssdw %xmm4, %xmm8, %xmm4
+; AVX2-NEXT:    vextracti128 $1, %ymm11, %xmm5
+; AVX2-NEXT:    vpackssdw %xmm5, %xmm11, %xmm5
+; AVX2-NEXT:    vpmaddwd %xmm4, %xmm5, %xmm4
+; AVX2-NEXT:    vpaddd %ymm3, %ymm4, %ymm3
+; AVX2-NEXT:    vextracti128 $1, %ymm7, %xmm4
+; AVX2-NEXT:    vpackssdw %xmm4, %xmm7, %xmm4
+; AVX2-NEXT:    vextracti128 $1, %ymm10, %xmm5
+; AVX2-NEXT:    vpackssdw %xmm5, %xmm10, %xmm5
+; AVX2-NEXT:    vpmaddwd %xmm4, %xmm5, %xmm4
+; AVX2-NEXT:    vpaddd %ymm2, %ymm4, %ymm2
+; AVX2-NEXT:    vextracti128 $1, %ymm6, %xmm4
+; AVX2-NEXT:    vpackssdw %xmm4, %xmm6, %xmm4
+; AVX2-NEXT:    vextracti128 $1, %ymm9, %xmm5
+; AVX2-NEXT:    vpackssdw %xmm5, %xmm9, %xmm5
+; AVX2-NEXT:    vpmaddwd %xmm4, %xmm5, %xmm4
+; AVX2-NEXT:    vpaddd %ymm1, %ymm4, %ymm1
+; AVX2-NEXT:    vextracti128 $1, %ymm12, %xmm4
+; AVX2-NEXT:    vpackssdw %xmm4, %xmm12, %xmm4
+; AVX2-NEXT:    vextracti128 $1, %ymm13, %xmm5
+; AVX2-NEXT:    vpackssdw %xmm5, %xmm13, %xmm5
+; AVX2-NEXT:    vpmaddwd %xmm4, %xmm5, %xmm4
+; AVX2-NEXT:    vpaddd %ymm0, %ymm4, %ymm0
+; AVX2-NEXT:    addq $16, %rcx
+; AVX2-NEXT:    cmpq %rcx, %rax
+; AVX2-NEXT:    jne .LBB3_1
+; AVX2-NEXT:  # %bb.2: # %middle.block
+; AVX2-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vpaddd %ymm3, %ymm1, %ymm1
+; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vphaddd %ymm0, %ymm0, %ymm0
+; AVX2-NEXT:    vmovd %xmm0, %eax
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: _Z10test_shortPsS_i_1024:
+; AVX512F:       # %bb.0: # %entry
+; AVX512F-NEXT:    movl %edx, %eax
+; AVX512F-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX512F-NEXT:    xorl %ecx, %ecx
+; AVX512F-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512F-NEXT:    .p2align 4, 0x90
+; AVX512F-NEXT:  .LBB3_1: # %vector.body
+; AVX512F-NEXT:    # =>This Inner Loop Header: Depth=1
+; AVX512F-NEXT:    vpmovsxwd (%rdi,%rcx,2), %zmm2
+; AVX512F-NEXT:    vpmovsxwd 32(%rdi,%rcx,2), %zmm3
+; AVX512F-NEXT:    vpmovsxwd (%rsi,%rcx,2), %zmm4
+; AVX512F-NEXT:    vpmovsxwd 32(%rsi,%rcx,2), %zmm5
+; AVX512F-NEXT:    vpmovdw %zmm3, %ymm3
+; AVX512F-NEXT:    vpmovdw %zmm5, %ymm5
+; AVX512F-NEXT:    vpmaddwd %ymm3, %ymm5, %ymm3
+; AVX512F-NEXT:    vpaddd %zmm1, %zmm3, %zmm1
+; AVX512F-NEXT:    vpmovdw %zmm2, %ymm2
+; AVX512F-NEXT:    vpmovdw %zmm4, %ymm3
+; AVX512F-NEXT:    vpmaddwd %ymm2, %ymm3, %ymm2
+; AVX512F-NEXT:    vpaddd %zmm0, %zmm2, %zmm0
+; AVX512F-NEXT:    addq $16, %rcx
+; AVX512F-NEXT:    cmpq %rcx, %rax
+; AVX512F-NEXT:    jne .LBB3_1
+; AVX512F-NEXT:  # %bb.2: # %middle.block
+; AVX512F-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
+; AVX512F-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
+; AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX512F-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
+; AVX512F-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; AVX512F-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
+; AVX512F-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; AVX512F-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
+; AVX512F-NEXT:    vmovd %xmm0, %eax
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
+;
+; AVX512BW-LABEL: _Z10test_shortPsS_i_1024:
+; AVX512BW:       # %bb.0: # %entry
+; AVX512BW-NEXT:    movl %edx, %eax
+; AVX512BW-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX512BW-NEXT:    xorl %ecx, %ecx
+; AVX512BW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512BW-NEXT:    .p2align 4, 0x90
+; AVX512BW-NEXT:  .LBB3_1: # %vector.body
+; AVX512BW-NEXT:    # =>This Inner Loop Header: Depth=1
+; AVX512BW-NEXT:    vmovdqu64 (%rsi,%rcx,2), %zmm2
+; AVX512BW-NEXT:    vpmaddwd (%rdi,%rcx,2), %zmm2, %zmm2
+; AVX512BW-NEXT:    vpaddd %zmm1, %zmm2, %zmm1
+; AVX512BW-NEXT:    addq $16, %rcx
+; AVX512BW-NEXT:    cmpq %rcx, %rax
+; AVX512BW-NEXT:    jne .LBB3_1
+; AVX512BW-NEXT:  # %bb.2: # %middle.block
+; AVX512BW-NEXT:    vpaddd %zmm0, %zmm1, %zmm0
+; AVX512BW-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
+; AVX512BW-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
+; AVX512BW-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX512BW-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
+; AVX512BW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; AVX512BW-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
+; AVX512BW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; AVX512BW-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
+; AVX512BW-NEXT:    vmovd %xmm0, %eax
+; AVX512BW-NEXT:    vzeroupper
+; AVX512BW-NEXT:    retq
+entry:
+  %3 = zext i32 %2 to i64
+  br label %vector.body
+
+vector.body:
+  %index = phi i64 [ %index.next, %vector.body ], [ 0, %entry ]
+  %vec.phi = phi <32 x i32> [ %11, %vector.body ], [ zeroinitializer, %entry ]
+  %4 = getelementptr inbounds i16, i16* %0, i64 %index
+  %5 = bitcast i16* %4 to <32 x i16>*
+  %wide.load = load <32 x i16>, <32 x i16>* %5, align 2
+  %6 = sext <32 x i16> %wide.load to <32 x i32>
+  %7 = getelementptr inbounds i16, i16* %1, i64 %index
+  %8 = bitcast i16* %7 to <32 x i16>*
+  %wide.load14 = load <32 x i16>, <32 x i16>* %8, align 2
+  %9 = sext <32 x i16> %wide.load14 to <32 x i32>
+  %10 = mul nsw <32 x i32> %9, %6
+  %11 = add nsw <32 x i32> %10, %vec.phi
+  %index.next = add i64 %index, 16
+  %12 = icmp eq i64 %index.next, %3
+  br i1 %12, label %middle.block, label %vector.body
+
+middle.block:
+  %rdx.shuf2 = shufflevector <32 x i32> %11, <32 x i32> undef, <32 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %bin.rdx2 = add <32 x i32> %11, %rdx.shuf2
+  %rdx.shuf1 = shufflevector <32 x i32> %bin.rdx2, <32 x i32> undef, <32 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %bin.rdx1 = add <32 x i32> %bin.rdx2, %rdx.shuf1
+  %rdx.shuf = shufflevector <32 x i32> %bin.rdx1, <32 x i32> undef, <32 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %bin.rdx = add <32 x i32> %bin.rdx1, %rdx.shuf
+  %rdx.shuf15 = shufflevector <32 x i32> %bin.rdx, <32 x i32> undef, <32 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %bin.rdx16 = add <32 x i32> %bin.rdx, %rdx.shuf15
+  %rdx.shuf17 = shufflevector <32 x i32> %bin.rdx16, <32 x i32> undef, <32 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %bin.rdx18 = add <32 x i32> %bin.rdx16, %rdx.shuf17
+  %13 = extractelement <32 x i32> %bin.rdx18, i32 0
+  ret i32 %13
+}
+
+define i32 @_Z9test_charPcS_i_128(i8* nocapture readonly, i8* nocapture readonly, i32) local_unnamed_addr #0 {
+; SSE2-LABEL: _Z9test_charPcS_i_128:
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    movl %edx, %eax
 ; SSE2-NEXT:    pxor %xmm0, %xmm0
 ; SSE2-NEXT:    xorl %ecx, %ecx
-; SSE2-NEXT:    pxor %xmm1, %xmm1
 ; SSE2-NEXT:    .p2align 4, 0x90
-; SSE2-NEXT:  .LBB2_1: # %vector.body
+; SSE2-NEXT:  .LBB4_1: # %vector.body
 ; SSE2-NEXT:    # =>This Inner Loop Header: Depth=1
-; SSE2-NEXT:    movdqu (%rdi,%rcx,2), %xmm2
-; SSE2-NEXT:    movdqu (%rsi,%rcx,2), %xmm3
-; SSE2-NEXT:    movdqa %xmm3, %xmm4
-; SSE2-NEXT:    pmulhuw %xmm2, %xmm4
-; SSE2-NEXT:    pmullw %xmm2, %xmm3
-; SSE2-NEXT:    movdqa %xmm3, %xmm2
-; SSE2-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm4[0],xmm2[1],xmm4[1],xmm2[2],xmm4[2],xmm2[3],xmm4[3]
+; SSE2-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3]
+; SSE2-NEXT:    psrad $24, %xmm1
+; SSE2-NEXT:    movd {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0,0,1,1,2,2,3,3]
+; SSE2-NEXT:    psrad $24, %xmm2
+; SSE2-NEXT:    pmullw %xmm1, %xmm2
+; SSE2-NEXT:    pslld $16, %xmm2
+; SSE2-NEXT:    psrad $16, %xmm2
 ; SSE2-NEXT:    paddd %xmm2, %xmm0
-; SSE2-NEXT:    punpckhwd {{.*#+}} xmm3 = xmm3[4],xmm4[4],xmm3[5],xmm4[5],xmm3[6],xmm4[6],xmm3[7],xmm4[7]
-; SSE2-NEXT:    paddd %xmm3, %xmm1
-; SSE2-NEXT:    addq $8, %rcx
+; SSE2-NEXT:    addq $16, %rcx
 ; SSE2-NEXT:    cmpq %rcx, %rax
-; SSE2-NEXT:    jne .LBB2_1
+; SSE2-NEXT:    jne .LBB4_1
 ; SSE2-NEXT:  # %bb.2: # %middle.block
-; SSE2-NEXT:    paddd %xmm1, %xmm0
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
 ; SSE2-NEXT:    paddd %xmm0, %xmm1
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
@@ -310,27 +692,103 @@ define i32 @test_unsigned_short(i16* nocapture readonly, i16* nocapture readonly
 ; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    retq
 ;
-; AVX1-LABEL: test_unsigned_short:
+; AVX-LABEL: _Z9test_charPcS_i_128:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    movl %edx, %eax
+; AVX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    xorl %ecx, %ecx
+; AVX-NEXT:    .p2align 4, 0x90
+; AVX-NEXT:  .LBB4_1: # %vector.body
+; AVX-NEXT:    # =>This Inner Loop Header: Depth=1
+; AVX-NEXT:    vpmovsxbd (%rdi,%rcx), %xmm1
+; AVX-NEXT:    vpmovsxbd (%rsi,%rcx), %xmm2
+; AVX-NEXT:    vpmulld %xmm1, %xmm2, %xmm1
+; AVX-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    addq $16, %rcx
+; AVX-NEXT:    cmpq %rcx, %rax
+; AVX-NEXT:    jne .LBB4_1
+; AVX-NEXT:  # %bb.2: # %middle.block
+; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vmovd %xmm0, %eax
+; AVX-NEXT:    retq
+entry:
+  %3 = zext i32 %2 to i64
+  br label %vector.body
+
+vector.body:
+  %index = phi i64 [ %index.next, %vector.body ], [ 0, %entry ]
+  %vec.phi = phi <4 x i32> [ %11, %vector.body ], [ zeroinitializer, %entry ]
+  %4 = getelementptr inbounds i8, i8* %0, i64 %index
+  %5 = bitcast i8* %4 to <4 x i8>*
+  %wide.load = load <4 x i8>, <4 x i8>* %5, align 1
+  %6 = sext <4 x i8> %wide.load to <4 x i32>
+  %7 = getelementptr inbounds i8, i8* %1, i64 %index
+  %8 = bitcast i8* %7 to <4 x i8>*
+  %wide.load14 = load <4 x i8>, <4 x i8>* %8, align 1
+  %9 = sext <4 x i8> %wide.load14 to <4 x i32>
+  %10 = mul nsw <4 x i32> %9, %6
+  %11 = add nsw <4 x i32> %10, %vec.phi
+  %index.next = add i64 %index, 16
+  %12 = icmp eq i64 %index.next, %3
+  br i1 %12, label %middle.block, label %vector.body
+
+middle.block:
+  %rdx.shuf17 = shufflevector <4 x i32> %11, <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+  %bin.rdx18 = add <4 x i32> %11, %rdx.shuf17
+  %rdx.shuf19 = shufflevector <4 x i32> %bin.rdx18, <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+  %bin.rdx20 = add <4 x i32> %bin.rdx18, %rdx.shuf19
+  %13 = extractelement <4 x i32> %bin.rdx20, i32 0
+  ret i32 %13
+}
+
+define i32 @_Z9test_charPcS_i_256(i8* nocapture readonly, i8* nocapture readonly, i32) local_unnamed_addr #0 {
+; SSE2-LABEL: _Z9test_charPcS_i_256:
+; SSE2:       # %bb.0: # %entry
+; SSE2-NEXT:    movl %edx, %eax
+; SSE2-NEXT:    pxor %xmm0, %xmm0
+; SSE2-NEXT:    xorl %ecx, %ecx
+; SSE2-NEXT:    pxor %xmm1, %xmm1
+; SSE2-NEXT:    .p2align 4, 0x90
+; SSE2-NEXT:  .LBB5_1: # %vector.body
+; SSE2-NEXT:    # =>This Inner Loop Header: Depth=1
+; SSE2-NEXT:    movq {{.*#+}} xmm2 = mem[0],zero
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; SSE2-NEXT:    psraw $8, %xmm2
+; SSE2-NEXT:    movq {{.*#+}} xmm3 = mem[0],zero
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm3 = xmm3[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; SSE2-NEXT:    psraw $8, %xmm3
+; SSE2-NEXT:    pmaddwd %xmm2, %xmm3
+; SSE2-NEXT:    paddd %xmm3, %xmm1
+; SSE2-NEXT:    addq $16, %rcx
+; SSE2-NEXT:    cmpq %rcx, %rax
+; SSE2-NEXT:    jne .LBB5_1
+; SSE2-NEXT:  # %bb.2: # %middle.block
+; SSE2-NEXT:    paddd %xmm0, %xmm1
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,0,1]
+; SSE2-NEXT:    paddd %xmm1, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; SSE2-NEXT:    paddd %xmm0, %xmm1
+; SSE2-NEXT:    movd %xmm1, %eax
+; SSE2-NEXT:    retq
+;
+; AVX1-LABEL: _Z9test_charPcS_i_256:
 ; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    movl %edx, %eax
 ; AVX1-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    xorl %ecx, %ecx
 ; AVX1-NEXT:    .p2align 4, 0x90
-; AVX1-NEXT:  .LBB2_1: # %vector.body
+; AVX1-NEXT:  .LBB5_1: # %vector.body
 ; AVX1-NEXT:    # =>This Inner Loop Header: Depth=1
-; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm1 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
-; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm2 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
-; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm3 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
-; AVX1-NEXT:    vpmulld %xmm1, %xmm3, %xmm1
-; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm3 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
-; AVX1-NEXT:    vpmulld %xmm2, %xmm3, %xmm2
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; AVX1-NEXT:    vpaddd %xmm3, %xmm1, %xmm1
-; AVX1-NEXT:    vpaddd %xmm0, %xmm2, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX1-NEXT:    addq $8, %rcx
+; AVX1-NEXT:    vpmovsxbw (%rdi,%rcx), %xmm1
+; AVX1-NEXT:    vpmovsxbw (%rsi,%rcx), %xmm2
+; AVX1-NEXT:    vpmaddwd %xmm1, %xmm2, %xmm1
+; AVX1-NEXT:    vpaddd %xmm0, %xmm1, %xmm1
+; AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
+; AVX1-NEXT:    addq $16, %rcx
 ; AVX1-NEXT:    cmpq %rcx, %rax
-; AVX1-NEXT:    jne .LBB2_1
+; AVX1-NEXT:    jne .LBB5_1
 ; AVX1-NEXT:  # %bb.2: # %middle.block
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
@@ -341,21 +799,21 @@ define i32 @test_unsigned_short(i16* nocapture readonly, i16* nocapture readonly
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
-; AVX256-LABEL: test_unsigned_short:
+; AVX256-LABEL: _Z9test_charPcS_i_256:
 ; AVX256:       # %bb.0: # %entry
 ; AVX256-NEXT:    movl %edx, %eax
 ; AVX256-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX256-NEXT:    xorl %ecx, %ecx
 ; AVX256-NEXT:    .p2align 4, 0x90
-; AVX256-NEXT:  .LBB2_1: # %vector.body
+; AVX256-NEXT:  .LBB5_1: # %vector.body
 ; AVX256-NEXT:    # =>This Inner Loop Header: Depth=1
-; AVX256-NEXT:    vpmovzxwd {{.*#+}} ymm1 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
-; AVX256-NEXT:    vpmovzxwd {{.*#+}} ymm2 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
-; AVX256-NEXT:    vpmulld %ymm1, %ymm2, %ymm1
+; AVX256-NEXT:    vpmovsxbw (%rdi,%rcx), %xmm1
+; AVX256-NEXT:    vpmovsxbw (%rsi,%rcx), %xmm2
+; AVX256-NEXT:    vpmaddwd %xmm1, %xmm2, %xmm1
 ; AVX256-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
-; AVX256-NEXT:    addq $8, %rcx
+; AVX256-NEXT:    addq $16, %rcx
 ; AVX256-NEXT:    cmpq %rcx, %rax
-; AVX256-NEXT:    jne .LBB2_1
+; AVX256-NEXT:    jne .LBB5_1
 ; AVX256-NEXT:  # %bb.2: # %middle.block
 ; AVX256-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX256-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
@@ -372,216 +830,33 @@ entry:
 vector.body:
   %index = phi i64 [ %index.next, %vector.body ], [ 0, %entry ]
   %vec.phi = phi <8 x i32> [ %11, %vector.body ], [ zeroinitializer, %entry ]
-  %4 = getelementptr inbounds i16, i16* %0, i64 %index
-  %5 = bitcast i16* %4 to <8 x i16>*
-  %wide.load = load <8 x i16>, <8 x i16>* %5, align 2
-  %6 = zext <8 x i16> %wide.load to <8 x i32>
-  %7 = getelementptr inbounds i16, i16* %1, i64 %index
-  %8 = bitcast i16* %7 to <8 x i16>*
-  %wide.load14 = load <8 x i16>, <8 x i16>* %8, align 2
-  %9 = zext <8 x i16> %wide.load14 to <8 x i32>
+  %4 = getelementptr inbounds i8, i8* %0, i64 %index
+  %5 = bitcast i8* %4 to <8 x i8>*
+  %wide.load = load <8 x i8>, <8 x i8>* %5, align 1
+  %6 = sext <8 x i8> %wide.load to <8 x i32>
+  %7 = getelementptr inbounds i8, i8* %1, i64 %index
+  %8 = bitcast i8* %7 to <8 x i8>*
+  %wide.load14 = load <8 x i8>, <8 x i8>* %8, align 1
+  %9 = sext <8 x i8> %wide.load14 to <8 x i32>
   %10 = mul nsw <8 x i32> %9, %6
   %11 = add nsw <8 x i32> %10, %vec.phi
-  %index.next = add i64 %index, 8
-  %12 = icmp eq i64 %index.next, %3
-  br i1 %12, label %middle.block, label %vector.body
-
-middle.block:
-  %rdx.shuf = shufflevector <8 x i32> %11, <8 x i32> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx = add <8 x i32> %11, %rdx.shuf
-  %rdx.shuf15 = shufflevector <8 x i32> %bin.rdx, <8 x i32> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx16 = add <8 x i32> %bin.rdx, %rdx.shuf15
-  %rdx.shuf17 = shufflevector <8 x i32> %bin.rdx16, <8 x i32> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx18 = add <8 x i32> %bin.rdx16, %rdx.shuf17
-  %13 = extractelement <8 x i32> %bin.rdx18, i32 0
-  ret i32 %13
-}
-
-define i32 @test_unsigned_short_512(i16* nocapture readonly, i16* nocapture readonly, i32) local_unnamed_addr #0 {
-; SSE2-LABEL: test_unsigned_short_512:
-; SSE2:       # %bb.0: # %entry
-; SSE2-NEXT:    movl %edx, %eax
-; SSE2-NEXT:    pxor %xmm0, %xmm0
-; SSE2-NEXT:    xorl %ecx, %ecx
-; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    pxor %xmm3, %xmm3
-; SSE2-NEXT:    pxor %xmm2, %xmm2
-; SSE2-NEXT:    .p2align 4, 0x90
-; SSE2-NEXT:  .LBB3_1: # %vector.body
-; SSE2-NEXT:    # =>This Inner Loop Header: Depth=1
-; SSE2-NEXT:    movdqu (%rdi,%rcx,2), %xmm4
-; SSE2-NEXT:    movdqu 16(%rdi,%rcx,2), %xmm8
-; SSE2-NEXT:    movdqu (%rsi,%rcx,2), %xmm6
-; SSE2-NEXT:    movdqu 16(%rsi,%rcx,2), %xmm7
-; SSE2-NEXT:    movdqa %xmm6, %xmm5
-; SSE2-NEXT:    pmulhuw %xmm4, %xmm5
-; SSE2-NEXT:    pmullw %xmm4, %xmm6
-; SSE2-NEXT:    movdqa %xmm6, %xmm4
-; SSE2-NEXT:    punpcklwd {{.*#+}} xmm4 = xmm4[0],xmm5[0],xmm4[1],xmm5[1],xmm4[2],xmm5[2],xmm4[3],xmm5[3]
-; SSE2-NEXT:    paddd %xmm4, %xmm0
-; SSE2-NEXT:    punpckhwd {{.*#+}} xmm6 = xmm6[4],xmm5[4],xmm6[5],xmm5[5],xmm6[6],xmm5[6],xmm6[7],xmm5[7]
-; SSE2-NEXT:    paddd %xmm6, %xmm1
-; SSE2-NEXT:    movdqa %xmm7, %xmm4
-; SSE2-NEXT:    pmulhuw %xmm8, %xmm4
-; SSE2-NEXT:    pmullw %xmm8, %xmm7
-; SSE2-NEXT:    movdqa %xmm7, %xmm5
-; SSE2-NEXT:    punpcklwd {{.*#+}} xmm5 = xmm5[0],xmm4[0],xmm5[1],xmm4[1],xmm5[2],xmm4[2],xmm5[3],xmm4[3]
-; SSE2-NEXT:    paddd %xmm5, %xmm3
-; SSE2-NEXT:    punpckhwd {{.*#+}} xmm7 = xmm7[4],xmm4[4],xmm7[5],xmm4[5],xmm7[6],xmm4[6],xmm7[7],xmm4[7]
-; SSE2-NEXT:    paddd %xmm7, %xmm2
-; SSE2-NEXT:    addq $16, %rcx
-; SSE2-NEXT:    cmpq %rcx, %rax
-; SSE2-NEXT:    jne .LBB3_1
-; SSE2-NEXT:  # %bb.2: # %middle.block
-; SSE2-NEXT:    paddd %xmm3, %xmm0
-; SSE2-NEXT:    paddd %xmm2, %xmm1
-; SSE2-NEXT:    paddd %xmm0, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,0,1]
-; SSE2-NEXT:    paddd %xmm1, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
-; SSE2-NEXT:    paddd %xmm0, %xmm1
-; SSE2-NEXT:    movd %xmm1, %eax
-; SSE2-NEXT:    retq
-;
-; AVX1-LABEL: test_unsigned_short_512:
-; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    movl %edx, %eax
-; AVX1-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    xorl %ecx, %ecx
-; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    .p2align 4, 0x90
-; AVX1-NEXT:  .LBB3_1: # %vector.body
-; AVX1-NEXT:    # =>This Inner Loop Header: Depth=1
-; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm2 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
-; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm3 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
-; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm4 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
-; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm5 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
-; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm6 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
-; AVX1-NEXT:    vpmulld %xmm2, %xmm6, %xmm2
-; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm6 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
-; AVX1-NEXT:    vpmulld %xmm3, %xmm6, %xmm3
-; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm6 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
-; AVX1-NEXT:    vpmulld %xmm4, %xmm6, %xmm4
-; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm6 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
-; AVX1-NEXT:    vpmulld %xmm5, %xmm6, %xmm5
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm6
-; AVX1-NEXT:    vpaddd %xmm6, %xmm2, %xmm2
-; AVX1-NEXT:    vpaddd %xmm1, %xmm3, %xmm1
-; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX1-NEXT:    vpaddd %xmm2, %xmm4, %xmm2
-; AVX1-NEXT:    vpaddd %xmm0, %xmm5, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
-; AVX1-NEXT:    addq $16, %rcx
-; AVX1-NEXT:    cmpq %rcx, %rax
-; AVX1-NEXT:    jne .LBB3_1
-; AVX1-NEXT:  # %bb.2: # %middle.block
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
-; AVX1-NEXT:    vpaddd %xmm3, %xmm2, %xmm2
-; AVX1-NEXT:    vpaddd %xmm2, %xmm1, %xmm1
-; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vmovd %xmm0, %eax
-; AVX1-NEXT:    vzeroupper
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: test_unsigned_short_512:
-; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    movl %edx, %eax
-; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    xorl %ecx, %ecx
-; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    .p2align 4, 0x90
-; AVX2-NEXT:  .LBB3_1: # %vector.body
-; AVX2-NEXT:    # =>This Inner Loop Header: Depth=1
-; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm2 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
-; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm3 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
-; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm4 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
-; AVX2-NEXT:    vpmulld %ymm2, %ymm4, %ymm2
-; AVX2-NEXT:    vpaddd %ymm1, %ymm2, %ymm1
-; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm2 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
-; AVX2-NEXT:    vpmulld %ymm3, %ymm2, %ymm2
-; AVX2-NEXT:    vpaddd %ymm0, %ymm2, %ymm0
-; AVX2-NEXT:    addq $16, %rcx
-; AVX2-NEXT:    cmpq %rcx, %rax
-; AVX2-NEXT:    jne .LBB3_1
-; AVX2-NEXT:  # %bb.2: # %middle.block
-; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vphaddd %ymm0, %ymm0, %ymm0
-; AVX2-NEXT:    vmovd %xmm0, %eax
-; AVX2-NEXT:    vzeroupper
-; AVX2-NEXT:    retq
-;
-; AVX512-LABEL: test_unsigned_short_512:
-; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    movl %edx, %eax
-; AVX512-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    xorl %ecx, %ecx
-; AVX512-NEXT:    .p2align 4, 0x90
-; AVX512-NEXT:  .LBB3_1: # %vector.body
-; AVX512-NEXT:    # =>This Inner Loop Header: Depth=1
-; AVX512-NEXT:    vpmovzxwd {{.*#+}} zmm1 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero,mem[8],zero,mem[9],zero,mem[10],zero,mem[11],zero,mem[12],zero,mem[13],zero,mem[14],zero,mem[15],zero
-; AVX512-NEXT:    vpmovzxwd {{.*#+}} zmm2 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero,mem[8],zero,mem[9],zero,mem[10],zero,mem[11],zero,mem[12],zero,mem[13],zero,mem[14],zero,mem[15],zero
-; AVX512-NEXT:    vpmulld %zmm1, %zmm2, %zmm1
-; AVX512-NEXT:    vpaddd %zmm0, %zmm1, %zmm0
-; AVX512-NEXT:    addq $16, %rcx
-; AVX512-NEXT:    cmpq %rcx, %rax
-; AVX512-NEXT:    jne .LBB3_1
-; AVX512-NEXT:  # %bb.2: # %middle.block
-; AVX512-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; AVX512-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
-; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
-; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; AVX512-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
-; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
-; AVX512-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
-; AVX512-NEXT:    vmovd %xmm0, %eax
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    retq
-entry:
-  %3 = zext i32 %2 to i64
-  br label %vector.body
-
-vector.body:
-  %index = phi i64 [ %index.next, %vector.body ], [ 0, %entry ]
-  %vec.phi = phi <16 x i32> [ %11, %vector.body ], [ zeroinitializer, %entry ]
-  %4 = getelementptr inbounds i16, i16* %0, i64 %index
-  %5 = bitcast i16* %4 to <16 x i16>*
-  %wide.load = load <16 x i16>, <16 x i16>* %5, align 2
-  %6 = zext <16 x i16> %wide.load to <16 x i32>
-  %7 = getelementptr inbounds i16, i16* %1, i64 %index
-  %8 = bitcast i16* %7 to <16 x i16>*
-  %wide.load14 = load <16 x i16>, <16 x i16>* %8, align 2
-  %9 = zext <16 x i16> %wide.load14 to <16 x i32>
-  %10 = mul nsw <16 x i32> %9, %6
-  %11 = add nsw <16 x i32> %10, %vec.phi
   %index.next = add i64 %index, 16
   %12 = icmp eq i64 %index.next, %3
   br i1 %12, label %middle.block, label %vector.body
 
 middle.block:
-  %rdx.shuf1 = shufflevector <16 x i32> %11, <16 x i32> undef, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx1 = add <16 x i32> %11, %rdx.shuf1
-  %rdx.shuf = shufflevector <16 x i32> %bin.rdx1, <16 x i32> undef, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx = add <16 x i32> %bin.rdx1, %rdx.shuf
-  %rdx.shuf15 = shufflevector <16 x i32> %bin.rdx, <16 x i32> undef, <16 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx16 = add <16 x i32> %bin.rdx, %rdx.shuf15
-  %rdx.shuf17 = shufflevector <16 x i32> %bin.rdx16, <16 x i32> undef, <16 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx18 = add <16 x i32> %bin.rdx16, %rdx.shuf17
-  %13 = extractelement <16 x i32> %bin.rdx18, i32 0
+  %rdx.shuf15 = shufflevector <8 x i32> %11, <8 x i32> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
+  %bin.rdx16 = add <8 x i32> %11, %rdx.shuf15
+  %rdx.shuf17 = shufflevector <8 x i32> %bin.rdx16, <8 x i32> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %bin.rdx18 = add <8 x i32> %bin.rdx16, %rdx.shuf17
+  %rdx.shuf19 = shufflevector <8 x i32> %bin.rdx18, <8 x i32> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %bin.rdx20 = add <8 x i32> %bin.rdx18, %rdx.shuf19
+  %13 = extractelement <8 x i32> %bin.rdx20, i32 0
   ret i32 %13
 }
 
-define i32 @_Z9test_charPcS_i(i8* nocapture readonly, i8* nocapture readonly, i32) local_unnamed_addr #0 {
-; SSE2-LABEL: _Z9test_charPcS_i:
+define i32 @_Z9test_charPcS_i_512(i8* nocapture readonly, i8* nocapture readonly, i32) local_unnamed_addr #0 {
+; SSE2-LABEL: _Z9test_charPcS_i_512:
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    movl %edx, %eax
 ; SSE2-NEXT:    pxor %xmm0, %xmm0
@@ -590,7 +865,7 @@ define i32 @_Z9test_charPcS_i(i8* nocapture readonly, i8* nocapture readonly, i3
 ; SSE2-NEXT:    pxor %xmm3, %xmm3
 ; SSE2-NEXT:    pxor %xmm2, %xmm2
 ; SSE2-NEXT:    .p2align 4, 0x90
-; SSE2-NEXT:  .LBB4_1: # %vector.body
+; SSE2-NEXT:  .LBB6_1: # %vector.body
 ; SSE2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; SSE2-NEXT:    movq {{.*#+}} xmm4 = mem[0],zero
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm4 = xmm4[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
@@ -620,7 +895,7 @@ define i32 @_Z9test_charPcS_i(i8* nocapture readonly, i8* nocapture readonly, i3
 ; SSE2-NEXT:    paddd %xmm4, %xmm2
 ; SSE2-NEXT:    addq $16, %rcx
 ; SSE2-NEXT:    cmpq %rcx, %rax
-; SSE2-NEXT:    jne .LBB4_1
+; SSE2-NEXT:    jne .LBB6_1
 ; SSE2-NEXT:  # %bb.2: # %middle.block
 ; SSE2-NEXT:    paddd %xmm3, %xmm0
 ; SSE2-NEXT:    paddd %xmm2, %xmm1
@@ -632,14 +907,14 @@ define i32 @_Z9test_charPcS_i(i8* nocapture readonly, i8* nocapture readonly, i3
 ; SSE2-NEXT:    movd %xmm1, %eax
 ; SSE2-NEXT:    retq
 ;
-; AVX1-LABEL: _Z9test_charPcS_i:
+; AVX1-LABEL: _Z9test_charPcS_i_512:
 ; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    movl %edx, %eax
 ; AVX1-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    xorl %ecx, %ecx
 ; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    .p2align 4, 0x90
-; AVX1-NEXT:  .LBB4_1: # %vector.body
+; AVX1-NEXT:  .LBB6_1: # %vector.body
 ; AVX1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX1-NEXT:    vpmovsxbw (%rdi,%rcx), %xmm2
 ; AVX1-NEXT:    vpmovsxbw 8(%rdi,%rcx), %xmm3
@@ -653,7 +928,7 @@ define i32 @_Z9test_charPcS_i(i8* nocapture readonly, i8* nocapture readonly, i3
 ; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm1, %ymm1
 ; AVX1-NEXT:    addq $16, %rcx
 ; AVX1-NEXT:    cmpq %rcx, %rax
-; AVX1-NEXT:    jne .LBB4_1
+; AVX1-NEXT:    jne .LBB6_1
 ; AVX1-NEXT:  # %bb.2: # %middle.block
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
@@ -667,14 +942,14 @@ define i32 @_Z9test_charPcS_i(i8* nocapture readonly, i8* nocapture readonly, i3
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
-; AVX2-LABEL: _Z9test_charPcS_i:
+; AVX2-LABEL: _Z9test_charPcS_i_512:
 ; AVX2:       # %bb.0: # %entry
 ; AVX2-NEXT:    movl %edx, %eax
 ; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX2-NEXT:    xorl %ecx, %ecx
 ; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    .p2align 4, 0x90
-; AVX2-NEXT:  .LBB4_1: # %vector.body
+; AVX2-NEXT:  .LBB6_1: # %vector.body
 ; AVX2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX2-NEXT:    vpmovsxbw (%rdi,%rcx), %ymm2
 ; AVX2-NEXT:    vpmovsxbw (%rsi,%rcx), %ymm3
@@ -682,7 +957,7 @@ define i32 @_Z9test_charPcS_i(i8* nocapture readonly, i8* nocapture readonly, i3
 ; AVX2-NEXT:    vpaddd %ymm1, %ymm2, %ymm1
 ; AVX2-NEXT:    addq $16, %rcx
 ; AVX2-NEXT:    cmpq %rcx, %rax
-; AVX2-NEXT:    jne .LBB4_1
+; AVX2-NEXT:    jne .LBB6_1
 ; AVX2-NEXT:  # %bb.2: # %middle.block
 ; AVX2-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
@@ -694,13 +969,13 @@ define i32 @_Z9test_charPcS_i(i8* nocapture readonly, i8* nocapture readonly, i3
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: _Z9test_charPcS_i:
+; AVX512-LABEL: _Z9test_charPcS_i_512:
 ; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    movl %edx, %eax
 ; AVX512-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    xorl %ecx, %ecx
 ; AVX512-NEXT:    .p2align 4, 0x90
-; AVX512-NEXT:  .LBB4_1: # %vector.body
+; AVX512-NEXT:  .LBB6_1: # %vector.body
 ; AVX512-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX512-NEXT:    vpmovsxbw (%rdi,%rcx), %ymm1
 ; AVX512-NEXT:    vpmovsxbw (%rsi,%rcx), %ymm2
@@ -708,7 +983,7 @@ define i32 @_Z9test_charPcS_i(i8* nocapture readonly, i8* nocapture readonly, i3
 ; AVX512-NEXT:    vpaddd %zmm0, %zmm1, %zmm0
 ; AVX512-NEXT:    addq $16, %rcx
 ; AVX512-NEXT:    cmpq %rcx, %rax
-; AVX512-NEXT:    jne .LBB4_1
+; AVX512-NEXT:    jne .LBB6_1
 ; AVX512-NEXT:  # %bb.2: # %middle.block
 ; AVX512-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
 ; AVX512-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
@@ -755,8 +1030,8 @@ middle.block:
   ret i32 %13
 }
 
-define i32 @_Z9test_charPcS_i_512(i8* nocapture readonly, i8* nocapture readonly, i32) local_unnamed_addr #0 {
-; SSE2-LABEL: _Z9test_charPcS_i_512:
+define i32 @_Z9test_charPcS_i_1024(i8* nocapture readonly, i8* nocapture readonly, i32) local_unnamed_addr #0 {
+; SSE2-LABEL: _Z9test_charPcS_i_1024:
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    movl %edx, %eax
 ; SSE2-NEXT:    pxor %xmm8, %xmm8
@@ -769,7 +1044,7 @@ define i32 @_Z9test_charPcS_i_512(i8* nocapture readonly, i8* nocapture readonly
 ; SSE2-NEXT:    pxor %xmm12, %xmm12
 ; SSE2-NEXT:    pxor %xmm7, %xmm7
 ; SSE2-NEXT:    .p2align 4, 0x90
-; SSE2-NEXT:  .LBB5_1: # %vector.body
+; SSE2-NEXT:  .LBB7_1: # %vector.body
 ; SSE2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3],xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
@@ -825,7 +1100,7 @@ define i32 @_Z9test_charPcS_i_512(i8* nocapture readonly, i8* nocapture readonly
 ; SSE2-NEXT:    paddd %xmm0, %xmm12
 ; SSE2-NEXT:    addq $32, %rcx
 ; SSE2-NEXT:    cmpq %rcx, %rax
-; SSE2-NEXT:    jne .LBB5_1
+; SSE2-NEXT:    jne .LBB7_1
 ; SSE2-NEXT:  # %bb.2: # %middle.block
 ; SSE2-NEXT:    paddd %xmm6, %xmm13
 ; SSE2-NEXT:    paddd %xmm7, %xmm10
@@ -841,7 +1116,7 @@ define i32 @_Z9test_charPcS_i_512(i8* nocapture readonly, i8* nocapture readonly
 ; SSE2-NEXT:    movd %xmm1, %eax
 ; SSE2-NEXT:    retq
 ;
-; AVX1-LABEL: _Z9test_charPcS_i_512:
+; AVX1-LABEL: _Z9test_charPcS_i_1024:
 ; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    movl %edx, %eax
 ; AVX1-NEXT:    vpxor %xmm0, %xmm0, %xmm0
@@ -850,7 +1125,7 @@ define i32 @_Z9test_charPcS_i_512(i8* nocapture readonly, i8* nocapture readonly
 ; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; AVX1-NEXT:    .p2align 4, 0x90
-; AVX1-NEXT:  .LBB5_1: # %vector.body
+; AVX1-NEXT:  .LBB7_1: # %vector.body
 ; AVX1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX1-NEXT:    vpmovsxbw 24(%rdi,%rcx), %xmm4
 ; AVX1-NEXT:    vpmovsxbw 16(%rdi,%rcx), %xmm5
@@ -874,7 +1149,7 @@ define i32 @_Z9test_charPcS_i_512(i8* nocapture readonly, i8* nocapture readonly
 ; AVX1-NEXT:    vblendps {{.*#+}} ymm3 = ymm4[0,1,2,3],ymm3[4,5,6,7]
 ; AVX1-NEXT:    addq $32, %rcx
 ; AVX1-NEXT:    cmpq %rcx, %rax
-; AVX1-NEXT:    jne .LBB5_1
+; AVX1-NEXT:    jne .LBB7_1
 ; AVX1-NEXT:  # %bb.2: # %middle.block
 ; AVX1-NEXT:    vpaddd %xmm3, %xmm2, %xmm4
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm5
@@ -894,7 +1169,7 @@ define i32 @_Z9test_charPcS_i_512(i8* nocapture readonly, i8* nocapture readonly
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
-; AVX2-LABEL: _Z9test_charPcS_i_512:
+; AVX2-LABEL: _Z9test_charPcS_i_1024:
 ; AVX2:       # %bb.0: # %entry
 ; AVX2-NEXT:    movl %edx, %eax
 ; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
@@ -903,7 +1178,7 @@ define i32 @_Z9test_charPcS_i_512(i8* nocapture readonly, i8* nocapture readonly
 ; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX2-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; AVX2-NEXT:    .p2align 4, 0x90
-; AVX2-NEXT:  .LBB5_1: # %vector.body
+; AVX2-NEXT:  .LBB7_1: # %vector.body
 ; AVX2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX2-NEXT:    vpmovsxbw (%rdi,%rcx), %xmm4
 ; AVX2-NEXT:    vpmovsxbw 8(%rdi,%rcx), %xmm5
@@ -923,7 +1198,7 @@ define i32 @_Z9test_charPcS_i_512(i8* nocapture readonly, i8* nocapture readonly
 ; AVX2-NEXT:    vpaddd %ymm0, %ymm4, %ymm0
 ; AVX2-NEXT:    addq $32, %rcx
 ; AVX2-NEXT:    cmpq %rcx, %rax
-; AVX2-NEXT:    jne .LBB5_1
+; AVX2-NEXT:    jne .LBB7_1
 ; AVX2-NEXT:  # %bb.2: # %middle.block
 ; AVX2-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    vpaddd %ymm3, %ymm1, %ymm1
@@ -937,14 +1212,14 @@ define i32 @_Z9test_charPcS_i_512(i8* nocapture readonly, i8* nocapture readonly
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
-; AVX512F-LABEL: _Z9test_charPcS_i_512:
+; AVX512F-LABEL: _Z9test_charPcS_i_1024:
 ; AVX512F:       # %bb.0: # %entry
 ; AVX512F-NEXT:    movl %edx, %eax
 ; AVX512F-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX512F-NEXT:    xorl %ecx, %ecx
 ; AVX512F-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512F-NEXT:    .p2align 4, 0x90
-; AVX512F-NEXT:  .LBB5_1: # %vector.body
+; AVX512F-NEXT:  .LBB7_1: # %vector.body
 ; AVX512F-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX512F-NEXT:    vpmovsxbw (%rdi,%rcx), %ymm2
 ; AVX512F-NEXT:    vpmovsxbw 16(%rdi,%rcx), %ymm3
@@ -956,7 +1231,7 @@ define i32 @_Z9test_charPcS_i_512(i8* nocapture readonly, i8* nocapture readonly
 ; AVX512F-NEXT:    vpaddd %zmm0, %zmm2, %zmm0
 ; AVX512F-NEXT:    addq $32, %rcx
 ; AVX512F-NEXT:    cmpq %rcx, %rax
-; AVX512F-NEXT:    jne .LBB5_1
+; AVX512F-NEXT:    jne .LBB7_1
 ; AVX512F-NEXT:  # %bb.2: # %middle.block
 ; AVX512F-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
 ; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
@@ -971,14 +1246,14 @@ define i32 @_Z9test_charPcS_i_512(i8* nocapture readonly, i8* nocapture readonly
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
-; AVX512BW-LABEL: _Z9test_charPcS_i_512:
+; AVX512BW-LABEL: _Z9test_charPcS_i_1024:
 ; AVX512BW:       # %bb.0: # %entry
 ; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX512BW-NEXT:    xorl %ecx, %ecx
 ; AVX512BW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512BW-NEXT:    .p2align 4, 0x90
-; AVX512BW-NEXT:  .LBB5_1: # %vector.body
+; AVX512BW-NEXT:  .LBB7_1: # %vector.body
 ; AVX512BW-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX512BW-NEXT:    vpmovsxbw (%rdi,%rcx), %zmm2
 ; AVX512BW-NEXT:    vpmovsxbw (%rsi,%rcx), %zmm3
@@ -986,7 +1261,7 @@ define i32 @_Z9test_charPcS_i_512(i8* nocapture readonly, i8* nocapture readonly
 ; AVX512BW-NEXT:    vpaddd %zmm1, %zmm2, %zmm1
 ; AVX512BW-NEXT:    addq $32, %rcx
 ; AVX512BW-NEXT:    cmpq %rcx, %rax
-; AVX512BW-NEXT:    jne .LBB5_1
+; AVX512BW-NEXT:    jne .LBB7_1
 ; AVX512BW-NEXT:  # %bb.2: # %middle.block
 ; AVX512BW-NEXT:    vpaddd %zmm0, %zmm1, %zmm0
 ; AVX512BW-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
@@ -1033,6 +1308,645 @@ middle.block:
   %rdx.shuf19 = shufflevector <32 x i32> %bin.rdx18, <32 x i32> undef, <32 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   %bin.rdx20 = add <32 x i32> %bin.rdx18, %rdx.shuf19
   %13 = extractelement <32 x i32> %bin.rdx20, i32 0
+  ret i32 %13
+}
+
+define i32 @test_unsigned_short_128(i16* nocapture readonly, i16* nocapture readonly, i32) local_unnamed_addr #0 {
+; SSE2-LABEL: test_unsigned_short_128:
+; SSE2:       # %bb.0: # %entry
+; SSE2-NEXT:    movl %edx, %eax
+; SSE2-NEXT:    pxor %xmm0, %xmm0
+; SSE2-NEXT:    xorl %ecx, %ecx
+; SSE2-NEXT:    .p2align 4, 0x90
+; SSE2-NEXT:  .LBB8_1: # %vector.body
+; SSE2-NEXT:    # =>This Inner Loop Header: Depth=1
+; SSE2-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
+; SSE2-NEXT:    movq {{.*#+}} xmm2 = mem[0],zero
+; SSE2-NEXT:    movdqa %xmm2, %xmm3
+; SSE2-NEXT:    pmulhuw %xmm1, %xmm3
+; SSE2-NEXT:    pmullw %xmm1, %xmm2
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1],xmm2[2],xmm3[2],xmm2[3],xmm3[3]
+; SSE2-NEXT:    paddd %xmm2, %xmm0
+; SSE2-NEXT:    addq $16, %rcx
+; SSE2-NEXT:    cmpq %rcx, %rax
+; SSE2-NEXT:    jne .LBB8_1
+; SSE2-NEXT:  # %bb.2: # %middle.block
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; SSE2-NEXT:    paddd %xmm0, %xmm1
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
+; SSE2-NEXT:    paddd %xmm1, %xmm0
+; SSE2-NEXT:    movd %xmm0, %eax
+; SSE2-NEXT:    retq
+;
+; AVX-LABEL: test_unsigned_short_128:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    movl %edx, %eax
+; AVX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    xorl %ecx, %ecx
+; AVX-NEXT:    .p2align 4, 0x90
+; AVX-NEXT:  .LBB8_1: # %vector.body
+; AVX-NEXT:    # =>This Inner Loop Header: Depth=1
+; AVX-NEXT:    vpmovzxwd {{.*#+}} xmm1 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
+; AVX-NEXT:    vpmovzxwd {{.*#+}} xmm2 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
+; AVX-NEXT:    vpmulld %xmm1, %xmm2, %xmm1
+; AVX-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    addq $16, %rcx
+; AVX-NEXT:    cmpq %rcx, %rax
+; AVX-NEXT:    jne .LBB8_1
+; AVX-NEXT:  # %bb.2: # %middle.block
+; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vmovd %xmm0, %eax
+; AVX-NEXT:    retq
+entry:
+  %3 = zext i32 %2 to i64
+  br label %vector.body
+
+vector.body:
+  %index = phi i64 [ %index.next, %vector.body ], [ 0, %entry ]
+  %vec.phi = phi <4 x i32> [ %11, %vector.body ], [ zeroinitializer, %entry ]
+  %4 = getelementptr inbounds i16, i16* %0, i64 %index
+  %5 = bitcast i16* %4 to <4 x i16>*
+  %wide.load = load <4 x i16>, <4 x i16>* %5, align 2
+  %6 = zext <4 x i16> %wide.load to <4 x i32>
+  %7 = getelementptr inbounds i16, i16* %1, i64 %index
+  %8 = bitcast i16* %7 to <4 x i16>*
+  %wide.load14 = load <4 x i16>, <4 x i16>* %8, align 2
+  %9 = zext <4 x i16> %wide.load14 to <4 x i32>
+  %10 = mul nsw <4 x i32> %9, %6
+  %11 = add nsw <4 x i32> %10, %vec.phi
+  %index.next = add i64 %index, 16
+  %12 = icmp eq i64 %index.next, %3
+  br i1 %12, label %middle.block, label %vector.body
+
+middle.block:
+  %rdx.shuf15 = shufflevector <4 x i32> %11, <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+  %bin.rdx16 = add <4 x i32> %11, %rdx.shuf15
+  %rdx.shuf17 = shufflevector <4 x i32> %bin.rdx16, <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+  %bin.rdx18 = add <4 x i32> %bin.rdx16, %rdx.shuf17
+  %13 = extractelement <4 x i32> %bin.rdx18, i32 0
+  ret i32 %13
+}
+
+define i32 @test_unsigned_short_256(i16* nocapture readonly, i16* nocapture readonly, i32) local_unnamed_addr #0 {
+; SSE2-LABEL: test_unsigned_short_256:
+; SSE2:       # %bb.0: # %entry
+; SSE2-NEXT:    movl %edx, %eax
+; SSE2-NEXT:    pxor %xmm0, %xmm0
+; SSE2-NEXT:    xorl %ecx, %ecx
+; SSE2-NEXT:    pxor %xmm1, %xmm1
+; SSE2-NEXT:    .p2align 4, 0x90
+; SSE2-NEXT:  .LBB9_1: # %vector.body
+; SSE2-NEXT:    # =>This Inner Loop Header: Depth=1
+; SSE2-NEXT:    movdqu (%rdi,%rcx,2), %xmm2
+; SSE2-NEXT:    movdqu (%rsi,%rcx,2), %xmm3
+; SSE2-NEXT:    movdqa %xmm3, %xmm4
+; SSE2-NEXT:    pmulhuw %xmm2, %xmm4
+; SSE2-NEXT:    pmullw %xmm2, %xmm3
+; SSE2-NEXT:    movdqa %xmm3, %xmm2
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm4[0],xmm2[1],xmm4[1],xmm2[2],xmm4[2],xmm2[3],xmm4[3]
+; SSE2-NEXT:    paddd %xmm2, %xmm0
+; SSE2-NEXT:    punpckhwd {{.*#+}} xmm3 = xmm3[4],xmm4[4],xmm3[5],xmm4[5],xmm3[6],xmm4[6],xmm3[7],xmm4[7]
+; SSE2-NEXT:    paddd %xmm3, %xmm1
+; SSE2-NEXT:    addq $16, %rcx
+; SSE2-NEXT:    cmpq %rcx, %rax
+; SSE2-NEXT:    jne .LBB9_1
+; SSE2-NEXT:  # %bb.2: # %middle.block
+; SSE2-NEXT:    paddd %xmm1, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; SSE2-NEXT:    paddd %xmm0, %xmm1
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
+; SSE2-NEXT:    paddd %xmm1, %xmm0
+; SSE2-NEXT:    movd %xmm0, %eax
+; SSE2-NEXT:    retq
+;
+; AVX1-LABEL: test_unsigned_short_256:
+; AVX1:       # %bb.0: # %entry
+; AVX1-NEXT:    movl %edx, %eax
+; AVX1-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    xorl %ecx, %ecx
+; AVX1-NEXT:    .p2align 4, 0x90
+; AVX1-NEXT:  .LBB9_1: # %vector.body
+; AVX1-NEXT:    # =>This Inner Loop Header: Depth=1
+; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm1 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
+; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm2 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
+; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm3 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
+; AVX1-NEXT:    vpmulld %xmm1, %xmm3, %xmm1
+; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm3 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
+; AVX1-NEXT:    vpmulld %xmm2, %xmm3, %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
+; AVX1-NEXT:    vpaddd %xmm3, %xmm1, %xmm1
+; AVX1-NEXT:    vpaddd %xmm0, %xmm2, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    addq $16, %rcx
+; AVX1-NEXT:    cmpq %rcx, %rax
+; AVX1-NEXT:    jne .LBB9_1
+; AVX1-NEXT:  # %bb.2: # %middle.block
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    vmovd %xmm0, %eax
+; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    retq
+;
+; AVX256-LABEL: test_unsigned_short_256:
+; AVX256:       # %bb.0: # %entry
+; AVX256-NEXT:    movl %edx, %eax
+; AVX256-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX256-NEXT:    xorl %ecx, %ecx
+; AVX256-NEXT:    .p2align 4, 0x90
+; AVX256-NEXT:  .LBB9_1: # %vector.body
+; AVX256-NEXT:    # =>This Inner Loop Header: Depth=1
+; AVX256-NEXT:    vpmovzxwd {{.*#+}} ymm1 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
+; AVX256-NEXT:    vpmovzxwd {{.*#+}} ymm2 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
+; AVX256-NEXT:    vpmulld %ymm1, %ymm2, %ymm1
+; AVX256-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
+; AVX256-NEXT:    addq $16, %rcx
+; AVX256-NEXT:    cmpq %rcx, %rax
+; AVX256-NEXT:    jne .LBB9_1
+; AVX256-NEXT:  # %bb.2: # %middle.block
+; AVX256-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX256-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; AVX256-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; AVX256-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; AVX256-NEXT:    vphaddd %ymm0, %ymm0, %ymm0
+; AVX256-NEXT:    vmovd %xmm0, %eax
+; AVX256-NEXT:    vzeroupper
+; AVX256-NEXT:    retq
+entry:
+  %3 = zext i32 %2 to i64
+  br label %vector.body
+
+vector.body:
+  %index = phi i64 [ %index.next, %vector.body ], [ 0, %entry ]
+  %vec.phi = phi <8 x i32> [ %11, %vector.body ], [ zeroinitializer, %entry ]
+  %4 = getelementptr inbounds i16, i16* %0, i64 %index
+  %5 = bitcast i16* %4 to <8 x i16>*
+  %wide.load = load <8 x i16>, <8 x i16>* %5, align 2
+  %6 = zext <8 x i16> %wide.load to <8 x i32>
+  %7 = getelementptr inbounds i16, i16* %1, i64 %index
+  %8 = bitcast i16* %7 to <8 x i16>*
+  %wide.load14 = load <8 x i16>, <8 x i16>* %8, align 2
+  %9 = zext <8 x i16> %wide.load14 to <8 x i32>
+  %10 = mul nsw <8 x i32> %9, %6
+  %11 = add nsw <8 x i32> %10, %vec.phi
+  %index.next = add i64 %index, 16
+  %12 = icmp eq i64 %index.next, %3
+  br i1 %12, label %middle.block, label %vector.body
+
+middle.block:
+  %rdx.shuf = shufflevector <8 x i32> %11, <8 x i32> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
+  %bin.rdx = add <8 x i32> %11, %rdx.shuf
+  %rdx.shuf15 = shufflevector <8 x i32> %bin.rdx, <8 x i32> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %bin.rdx16 = add <8 x i32> %bin.rdx, %rdx.shuf15
+  %rdx.shuf17 = shufflevector <8 x i32> %bin.rdx16, <8 x i32> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %bin.rdx18 = add <8 x i32> %bin.rdx16, %rdx.shuf17
+  %13 = extractelement <8 x i32> %bin.rdx18, i32 0
+  ret i32 %13
+}
+
+define i32 @test_unsigned_short_512(i16* nocapture readonly, i16* nocapture readonly, i32) local_unnamed_addr #0 {
+; SSE2-LABEL: test_unsigned_short_512:
+; SSE2:       # %bb.0: # %entry
+; SSE2-NEXT:    movl %edx, %eax
+; SSE2-NEXT:    pxor %xmm0, %xmm0
+; SSE2-NEXT:    xorl %ecx, %ecx
+; SSE2-NEXT:    pxor %xmm1, %xmm1
+; SSE2-NEXT:    pxor %xmm3, %xmm3
+; SSE2-NEXT:    pxor %xmm2, %xmm2
+; SSE2-NEXT:    .p2align 4, 0x90
+; SSE2-NEXT:  .LBB10_1: # %vector.body
+; SSE2-NEXT:    # =>This Inner Loop Header: Depth=1
+; SSE2-NEXT:    movdqu (%rdi,%rcx,2), %xmm4
+; SSE2-NEXT:    movdqu 16(%rdi,%rcx,2), %xmm8
+; SSE2-NEXT:    movdqu (%rsi,%rcx,2), %xmm6
+; SSE2-NEXT:    movdqu 16(%rsi,%rcx,2), %xmm7
+; SSE2-NEXT:    movdqa %xmm6, %xmm5
+; SSE2-NEXT:    pmulhuw %xmm4, %xmm5
+; SSE2-NEXT:    pmullw %xmm4, %xmm6
+; SSE2-NEXT:    movdqa %xmm6, %xmm4
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm4 = xmm4[0],xmm5[0],xmm4[1],xmm5[1],xmm4[2],xmm5[2],xmm4[3],xmm5[3]
+; SSE2-NEXT:    paddd %xmm4, %xmm0
+; SSE2-NEXT:    punpckhwd {{.*#+}} xmm6 = xmm6[4],xmm5[4],xmm6[5],xmm5[5],xmm6[6],xmm5[6],xmm6[7],xmm5[7]
+; SSE2-NEXT:    paddd %xmm6, %xmm1
+; SSE2-NEXT:    movdqa %xmm7, %xmm4
+; SSE2-NEXT:    pmulhuw %xmm8, %xmm4
+; SSE2-NEXT:    pmullw %xmm8, %xmm7
+; SSE2-NEXT:    movdqa %xmm7, %xmm5
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm5 = xmm5[0],xmm4[0],xmm5[1],xmm4[1],xmm5[2],xmm4[2],xmm5[3],xmm4[3]
+; SSE2-NEXT:    paddd %xmm5, %xmm3
+; SSE2-NEXT:    punpckhwd {{.*#+}} xmm7 = xmm7[4],xmm4[4],xmm7[5],xmm4[5],xmm7[6],xmm4[6],xmm7[7],xmm4[7]
+; SSE2-NEXT:    paddd %xmm7, %xmm2
+; SSE2-NEXT:    addq $16, %rcx
+; SSE2-NEXT:    cmpq %rcx, %rax
+; SSE2-NEXT:    jne .LBB10_1
+; SSE2-NEXT:  # %bb.2: # %middle.block
+; SSE2-NEXT:    paddd %xmm3, %xmm0
+; SSE2-NEXT:    paddd %xmm2, %xmm1
+; SSE2-NEXT:    paddd %xmm0, %xmm1
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,0,1]
+; SSE2-NEXT:    paddd %xmm1, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; SSE2-NEXT:    paddd %xmm0, %xmm1
+; SSE2-NEXT:    movd %xmm1, %eax
+; SSE2-NEXT:    retq
+;
+; AVX1-LABEL: test_unsigned_short_512:
+; AVX1:       # %bb.0: # %entry
+; AVX1-NEXT:    movl %edx, %eax
+; AVX1-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    xorl %ecx, %ecx
+; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    .p2align 4, 0x90
+; AVX1-NEXT:  .LBB10_1: # %vector.body
+; AVX1-NEXT:    # =>This Inner Loop Header: Depth=1
+; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm2 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
+; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm3 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
+; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm4 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
+; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm5 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
+; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm6 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
+; AVX1-NEXT:    vpmulld %xmm2, %xmm6, %xmm2
+; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm6 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
+; AVX1-NEXT:    vpmulld %xmm3, %xmm6, %xmm3
+; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm6 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
+; AVX1-NEXT:    vpmulld %xmm4, %xmm6, %xmm4
+; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm6 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
+; AVX1-NEXT:    vpmulld %xmm5, %xmm6, %xmm5
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm6
+; AVX1-NEXT:    vpaddd %xmm6, %xmm2, %xmm2
+; AVX1-NEXT:    vpaddd %xmm1, %xmm3, %xmm1
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; AVX1-NEXT:    vpaddd %xmm2, %xmm4, %xmm2
+; AVX1-NEXT:    vpaddd %xmm0, %xmm5, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX1-NEXT:    addq $16, %rcx
+; AVX1-NEXT:    cmpq %rcx, %rax
+; AVX1-NEXT:    jne .LBB10_1
+; AVX1-NEXT:  # %bb.2: # %middle.block
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
+; AVX1-NEXT:    vpaddd %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vpaddd %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    vmovd %xmm0, %eax
+; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: test_unsigned_short_512:
+; AVX2:       # %bb.0: # %entry
+; AVX2-NEXT:    movl %edx, %eax
+; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX2-NEXT:    xorl %ecx, %ecx
+; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX2-NEXT:    .p2align 4, 0x90
+; AVX2-NEXT:  .LBB10_1: # %vector.body
+; AVX2-NEXT:    # =>This Inner Loop Header: Depth=1
+; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm2 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
+; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm3 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
+; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm4 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
+; AVX2-NEXT:    vpmulld %ymm2, %ymm4, %ymm2
+; AVX2-NEXT:    vpaddd %ymm1, %ymm2, %ymm1
+; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm2 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
+; AVX2-NEXT:    vpmulld %ymm3, %ymm2, %ymm2
+; AVX2-NEXT:    vpaddd %ymm0, %ymm2, %ymm0
+; AVX2-NEXT:    addq $16, %rcx
+; AVX2-NEXT:    cmpq %rcx, %rax
+; AVX2-NEXT:    jne .LBB10_1
+; AVX2-NEXT:  # %bb.2: # %middle.block
+; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vphaddd %ymm0, %ymm0, %ymm0
+; AVX2-NEXT:    vmovd %xmm0, %eax
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: test_unsigned_short_512:
+; AVX512:       # %bb.0: # %entry
+; AVX512-NEXT:    movl %edx, %eax
+; AVX512-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    xorl %ecx, %ecx
+; AVX512-NEXT:    .p2align 4, 0x90
+; AVX512-NEXT:  .LBB10_1: # %vector.body
+; AVX512-NEXT:    # =>This Inner Loop Header: Depth=1
+; AVX512-NEXT:    vpmovzxwd {{.*#+}} zmm1 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero,mem[8],zero,mem[9],zero,mem[10],zero,mem[11],zero,mem[12],zero,mem[13],zero,mem[14],zero,mem[15],zero
+; AVX512-NEXT:    vpmovzxwd {{.*#+}} zmm2 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero,mem[8],zero,mem[9],zero,mem[10],zero,mem[11],zero,mem[12],zero,mem[13],zero,mem[14],zero,mem[15],zero
+; AVX512-NEXT:    vpmulld %zmm1, %zmm2, %zmm1
+; AVX512-NEXT:    vpaddd %zmm0, %zmm1, %zmm0
+; AVX512-NEXT:    addq $16, %rcx
+; AVX512-NEXT:    cmpq %rcx, %rax
+; AVX512-NEXT:    jne .LBB10_1
+; AVX512-NEXT:  # %bb.2: # %middle.block
+; AVX512-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
+; AVX512-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX512-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; AVX512-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; AVX512-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vmovd %xmm0, %eax
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
+entry:
+  %3 = zext i32 %2 to i64
+  br label %vector.body
+
+vector.body:
+  %index = phi i64 [ %index.next, %vector.body ], [ 0, %entry ]
+  %vec.phi = phi <16 x i32> [ %11, %vector.body ], [ zeroinitializer, %entry ]
+  %4 = getelementptr inbounds i16, i16* %0, i64 %index
+  %5 = bitcast i16* %4 to <16 x i16>*
+  %wide.load = load <16 x i16>, <16 x i16>* %5, align 2
+  %6 = zext <16 x i16> %wide.load to <16 x i32>
+  %7 = getelementptr inbounds i16, i16* %1, i64 %index
+  %8 = bitcast i16* %7 to <16 x i16>*
+  %wide.load14 = load <16 x i16>, <16 x i16>* %8, align 2
+  %9 = zext <16 x i16> %wide.load14 to <16 x i32>
+  %10 = mul nsw <16 x i32> %9, %6
+  %11 = add nsw <16 x i32> %10, %vec.phi
+  %index.next = add i64 %index, 16
+  %12 = icmp eq i64 %index.next, %3
+  br i1 %12, label %middle.block, label %vector.body
+
+middle.block:
+  %rdx.shuf1 = shufflevector <16 x i32> %11, <16 x i32> undef, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %bin.rdx1 = add <16 x i32> %11, %rdx.shuf1
+  %rdx.shuf = shufflevector <16 x i32> %bin.rdx1, <16 x i32> undef, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %bin.rdx = add <16 x i32> %bin.rdx1, %rdx.shuf
+  %rdx.shuf15 = shufflevector <16 x i32> %bin.rdx, <16 x i32> undef, <16 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %bin.rdx16 = add <16 x i32> %bin.rdx, %rdx.shuf15
+  %rdx.shuf17 = shufflevector <16 x i32> %bin.rdx16, <16 x i32> undef, <16 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %bin.rdx18 = add <16 x i32> %bin.rdx16, %rdx.shuf17
+  %13 = extractelement <16 x i32> %bin.rdx18, i32 0
+  ret i32 %13
+}
+
+define i32 @test_unsigned_short_1024(i16* nocapture readonly, i16* nocapture readonly, i32) local_unnamed_addr #0 {
+; SSE2-LABEL: test_unsigned_short_1024:
+; SSE2:       # %bb.0: # %entry
+; SSE2-NEXT:    movl %edx, %eax
+; SSE2-NEXT:    pxor %xmm8, %xmm8
+; SSE2-NEXT:    xorl %ecx, %ecx
+; SSE2-NEXT:    pxor %xmm3, %xmm3
+; SSE2-NEXT:    pxor %xmm9, %xmm9
+; SSE2-NEXT:    pxor %xmm10, %xmm10
+; SSE2-NEXT:    pxor %xmm4, %xmm4
+; SSE2-NEXT:    pxor %xmm6, %xmm6
+; SSE2-NEXT:    pxor %xmm5, %xmm5
+; SSE2-NEXT:    pxor %xmm7, %xmm7
+; SSE2-NEXT:    .p2align 4, 0x90
+; SSE2-NEXT:  .LBB11_1: # %vector.body
+; SSE2-NEXT:    # =>This Inner Loop Header: Depth=1
+; SSE2-NEXT:    movdqu 48(%rdi,%rcx,2), %xmm0
+; SSE2-NEXT:    movdqu 48(%rsi,%rcx,2), %xmm1
+; SSE2-NEXT:    movdqa %xmm1, %xmm2
+; SSE2-NEXT:    pmulhuw %xmm0, %xmm2
+; SSE2-NEXT:    pmullw %xmm0, %xmm1
+; SSE2-NEXT:    movdqa %xmm1, %xmm0
+; SSE2-NEXT:    punpckhwd {{.*#+}} xmm0 = xmm0[4],xmm2[4],xmm0[5],xmm2[5],xmm0[6],xmm2[6],xmm0[7],xmm2[7]
+; SSE2-NEXT:    paddd %xmm0, %xmm7
+; SSE2-NEXT:    movdqu 32(%rdi,%rcx,2), %xmm0
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1],xmm1[2],xmm2[2],xmm1[3],xmm2[3]
+; SSE2-NEXT:    movdqu 32(%rsi,%rcx,2), %xmm2
+; SSE2-NEXT:    paddd %xmm1, %xmm5
+; SSE2-NEXT:    movdqa %xmm2, %xmm1
+; SSE2-NEXT:    pmulhuw %xmm0, %xmm1
+; SSE2-NEXT:    pmullw %xmm0, %xmm2
+; SSE2-NEXT:    movdqa %xmm2, %xmm0
+; SSE2-NEXT:    punpckhwd {{.*#+}} xmm0 = xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
+; SSE2-NEXT:    paddd %xmm0, %xmm6
+; SSE2-NEXT:    movdqu (%rdi,%rcx,2), %xmm0
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1],xmm2[2],xmm1[2],xmm2[3],xmm1[3]
+; SSE2-NEXT:    movdqu (%rsi,%rcx,2), %xmm1
+; SSE2-NEXT:    paddd %xmm2, %xmm4
+; SSE2-NEXT:    movdqa %xmm1, %xmm2
+; SSE2-NEXT:    pmulhuw %xmm0, %xmm2
+; SSE2-NEXT:    pmullw %xmm0, %xmm1
+; SSE2-NEXT:    movdqa %xmm1, %xmm0
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3]
+; SSE2-NEXT:    paddd %xmm0, %xmm8
+; SSE2-NEXT:    movdqu 16(%rdi,%rcx,2), %xmm0
+; SSE2-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4],xmm2[4],xmm1[5],xmm2[5],xmm1[6],xmm2[6],xmm1[7],xmm2[7]
+; SSE2-NEXT:    movdqu 16(%rsi,%rcx,2), %xmm2
+; SSE2-NEXT:    paddd %xmm1, %xmm3
+; SSE2-NEXT:    movdqa %xmm2, %xmm1
+; SSE2-NEXT:    pmulhuw %xmm0, %xmm1
+; SSE2-NEXT:    pmullw %xmm0, %xmm2
+; SSE2-NEXT:    movdqa %xmm2, %xmm0
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; SSE2-NEXT:    paddd %xmm0, %xmm9
+; SSE2-NEXT:    punpckhwd {{.*#+}} xmm2 = xmm2[4],xmm1[4],xmm2[5],xmm1[5],xmm2[6],xmm1[6],xmm2[7],xmm1[7]
+; SSE2-NEXT:    paddd %xmm2, %xmm10
+; SSE2-NEXT:    addq $16, %rcx
+; SSE2-NEXT:    cmpq %rcx, %rax
+; SSE2-NEXT:    jne .LBB11_1
+; SSE2-NEXT:  # %bb.2: # %middle.block
+; SSE2-NEXT:    paddd %xmm6, %xmm3
+; SSE2-NEXT:    paddd %xmm7, %xmm10
+; SSE2-NEXT:    paddd %xmm3, %xmm10
+; SSE2-NEXT:    paddd %xmm4, %xmm8
+; SSE2-NEXT:    paddd %xmm5, %xmm9
+; SSE2-NEXT:    paddd %xmm10, %xmm9
+; SSE2-NEXT:    paddd %xmm8, %xmm9
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm9[2,3,0,1]
+; SSE2-NEXT:    paddd %xmm9, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; SSE2-NEXT:    paddd %xmm0, %xmm1
+; SSE2-NEXT:    movd %xmm1, %eax
+; SSE2-NEXT:    retq
+;
+; AVX1-LABEL: test_unsigned_short_1024:
+; AVX1:       # %bb.0: # %entry
+; AVX1-NEXT:    movl %edx, %eax
+; AVX1-NEXT:    vpxor %xmm8, %xmm8, %xmm8
+; AVX1-NEXT:    xorl %ecx, %ecx
+; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vpxor %xmm9, %xmm9, %xmm9
+; AVX1-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX1-NEXT:    .p2align 4, 0x90
+; AVX1-NEXT:  .LBB11_1: # %vector.body
+; AVX1-NEXT:    # =>This Inner Loop Header: Depth=1
+; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm4 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
+; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm5 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
+; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm6 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
+; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm7 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
+; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
+; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm12 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
+; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm10 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
+; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm11 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
+; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm1 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
+; AVX1-NEXT:    vpmulld %xmm4, %xmm1, %xmm1
+; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm4 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
+; AVX1-NEXT:    vpmulld %xmm5, %xmm4, %xmm4
+; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm5 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
+; AVX1-NEXT:    vpmulld %xmm6, %xmm5, %xmm5
+; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm6 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
+; AVX1-NEXT:    vpmulld %xmm7, %xmm6, %xmm6
+; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm7 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
+; AVX1-NEXT:    vpmulld %xmm0, %xmm7, %xmm13
+; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm7 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
+; AVX1-NEXT:    vpmulld %xmm12, %xmm7, %xmm7
+; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
+; AVX1-NEXT:    vpmulld %xmm10, %xmm0, %xmm10
+; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
+; AVX1-NEXT:    vpmulld %xmm11, %xmm0, %xmm11
+; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm0
+; AVX1-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vpaddd %xmm2, %xmm4, %xmm1
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm2
+; AVX1-NEXT:    vextractf128 $1, %ymm8, %xmm0
+; AVX1-NEXT:    vpaddd %xmm0, %xmm5, %xmm0
+; AVX1-NEXT:    vpaddd %xmm8, %xmm6, %xmm1
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm8
+; AVX1-NEXT:    vextractf128 $1, %ymm9, %xmm0
+; AVX1-NEXT:    vpaddd %xmm0, %xmm13, %xmm0
+; AVX1-NEXT:    vpaddd %xmm9, %xmm7, %xmm1
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm9
+; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm0
+; AVX1-NEXT:    vpaddd %xmm0, %xmm10, %xmm0
+; AVX1-NEXT:    vpaddd %xmm3, %xmm11, %xmm1
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm3
+; AVX1-NEXT:    addq $16, %rcx
+; AVX1-NEXT:    cmpq %rcx, %rax
+; AVX1-NEXT:    jne .LBB11_1
+; AVX1-NEXT:  # %bb.2: # %middle.block
+; AVX1-NEXT:    vpaddd %xmm3, %xmm2, %xmm0
+; AVX1-NEXT:    vextractf128 $1, %ymm8, %xmm1
+; AVX1-NEXT:    vextractf128 $1, %ymm9, %xmm4
+; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm3
+; AVX1-NEXT:    vpaddd %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vpaddd %xmm2, %xmm4, %xmm2
+; AVX1-NEXT:    vpaddd %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpaddd %xmm0, %xmm9, %xmm0
+; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpaddd %xmm0, %xmm8, %xmm0
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    vmovd %xmm0, %eax
+; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: test_unsigned_short_1024:
+; AVX2:       # %bb.0: # %entry
+; AVX2-NEXT:    movl %edx, %eax
+; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX2-NEXT:    xorl %ecx, %ecx
+; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX2-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX2-NEXT:    .p2align 4, 0x90
+; AVX2-NEXT:  .LBB11_1: # %vector.body
+; AVX2-NEXT:    # =>This Inner Loop Header: Depth=1
+; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm4 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
+; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm5 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
+; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm6 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
+; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm7 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
+; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm8 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
+; AVX2-NEXT:    vpmulld %ymm4, %ymm8, %ymm4
+; AVX2-NEXT:    vpaddd %ymm2, %ymm4, %ymm2
+; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm4 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
+; AVX2-NEXT:    vpmulld %ymm5, %ymm4, %ymm4
+; AVX2-NEXT:    vpaddd %ymm1, %ymm4, %ymm1
+; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm4 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
+; AVX2-NEXT:    vpmulld %ymm6, %ymm4, %ymm4
+; AVX2-NEXT:    vpaddd %ymm0, %ymm4, %ymm0
+; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm4 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
+; AVX2-NEXT:    vpmulld %ymm7, %ymm4, %ymm4
+; AVX2-NEXT:    vpaddd %ymm3, %ymm4, %ymm3
+; AVX2-NEXT:    addq $16, %rcx
+; AVX2-NEXT:    cmpq %rcx, %rax
+; AVX2-NEXT:    jne .LBB11_1
+; AVX2-NEXT:  # %bb.2: # %middle.block
+; AVX2-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vpaddd %ymm3, %ymm1, %ymm1
+; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vphaddd %ymm0, %ymm0, %ymm0
+; AVX2-NEXT:    vmovd %xmm0, %eax
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: test_unsigned_short_1024:
+; AVX512:       # %bb.0: # %entry
+; AVX512-NEXT:    movl %edx, %eax
+; AVX512-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    xorl %ecx, %ecx
+; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512-NEXT:    .p2align 4, 0x90
+; AVX512-NEXT:  .LBB11_1: # %vector.body
+; AVX512-NEXT:    # =>This Inner Loop Header: Depth=1
+; AVX512-NEXT:    vpmovzxwd {{.*#+}} zmm2 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero,mem[8],zero,mem[9],zero,mem[10],zero,mem[11],zero,mem[12],zero,mem[13],zero,mem[14],zero,mem[15],zero
+; AVX512-NEXT:    vpmovzxwd {{.*#+}} zmm3 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero,mem[8],zero,mem[9],zero,mem[10],zero,mem[11],zero,mem[12],zero,mem[13],zero,mem[14],zero,mem[15],zero
+; AVX512-NEXT:    vpmovzxwd {{.*#+}} zmm4 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero,mem[8],zero,mem[9],zero,mem[10],zero,mem[11],zero,mem[12],zero,mem[13],zero,mem[14],zero,mem[15],zero
+; AVX512-NEXT:    vpmulld %zmm2, %zmm4, %zmm2
+; AVX512-NEXT:    vpaddd %zmm1, %zmm2, %zmm1
+; AVX512-NEXT:    vpmovzxwd {{.*#+}} zmm2 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero,mem[8],zero,mem[9],zero,mem[10],zero,mem[11],zero,mem[12],zero,mem[13],zero,mem[14],zero,mem[15],zero
+; AVX512-NEXT:    vpmulld %zmm3, %zmm2, %zmm2
+; AVX512-NEXT:    vpaddd %zmm0, %zmm2, %zmm0
+; AVX512-NEXT:    addq $16, %rcx
+; AVX512-NEXT:    cmpq %rcx, %rax
+; AVX512-NEXT:    jne .LBB11_1
+; AVX512-NEXT:  # %bb.2: # %middle.block
+; AVX512-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
+; AVX512-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX512-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; AVX512-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; AVX512-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vmovd %xmm0, %eax
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
+entry:
+  %3 = zext i32 %2 to i64
+  br label %vector.body
+
+vector.body:
+  %index = phi i64 [ %index.next, %vector.body ], [ 0, %entry ]
+  %vec.phi = phi <32 x i32> [ %11, %vector.body ], [ zeroinitializer, %entry ]
+  %4 = getelementptr inbounds i16, i16* %0, i64 %index
+  %5 = bitcast i16* %4 to <32 x i16>*
+  %wide.load = load <32 x i16>, <32 x i16>* %5, align 2
+  %6 = zext <32 x i16> %wide.load to <32 x i32>
+  %7 = getelementptr inbounds i16, i16* %1, i64 %index
+  %8 = bitcast i16* %7 to <32 x i16>*
+  %wide.load14 = load <32 x i16>, <32 x i16>* %8, align 2
+  %9 = zext <32 x i16> %wide.load14 to <32 x i32>
+  %10 = mul nsw <32 x i32> %9, %6
+  %11 = add nsw <32 x i32> %10, %vec.phi
+  %index.next = add i64 %index, 16
+  %12 = icmp eq i64 %index.next, %3
+  br i1 %12, label %middle.block, label %vector.body
+
+middle.block:
+  %rdx.shuf2 = shufflevector <32 x i32> %11, <32 x i32> undef, <32 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %bin.rdx2 = add <32 x i32> %11, %rdx.shuf2
+  %rdx.shuf1 = shufflevector <32 x i32> %bin.rdx2, <32 x i32> undef, <32 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %bin.rdx1 = add <32 x i32> %bin.rdx2, %rdx.shuf1
+  %rdx.shuf = shufflevector <32 x i32> %bin.rdx1, <32 x i32> undef, <32 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %bin.rdx = add <32 x i32> %bin.rdx1, %rdx.shuf
+  %rdx.shuf15 = shufflevector <32 x i32> %bin.rdx, <32 x i32> undef, <32 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %bin.rdx16 = add <32 x i32> %bin.rdx, %rdx.shuf15
+  %rdx.shuf17 = shufflevector <32 x i32> %bin.rdx16, <32 x i32> undef, <32 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %bin.rdx18 = add <32 x i32> %bin.rdx16, %rdx.shuf17
+  %13 = extractelement <32 x i32> %bin.rdx18, i32 0
   ret i32 %13
 }
 
