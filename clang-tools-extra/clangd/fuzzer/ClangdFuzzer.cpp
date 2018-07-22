@@ -20,7 +20,8 @@
 #include <stdio.h>
 
 extern "C" int LLVMFuzzerTestOneInput(uint8_t *data, size_t size) {
-  clang::clangd::JSONOutput Out(llvm::nulls(), llvm::nulls(), nullptr);
+  clang::clangd::JSONOutput Out(llvm::nulls(), llvm::nulls(),
+                                clang::clangd::Logger::Error, nullptr);
   clang::clangd::CodeCompleteOptions CCOpts;
   CCOpts.EnableSnippets = false;
   clang::clangd::ClangdServer::Options Opts;
