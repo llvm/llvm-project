@@ -716,7 +716,7 @@ bool __copy_file(const path& from, const path& to, copy_options options,
   if (to_exists && skip_existing)
     return false;
 
-  auto ShouldCopy = [&]() {
+  bool ShouldCopy = [&]() {
     if (to_exists && update_existing) {
       auto from_time = detail::extract_mtime(from_stat);
       auto to_time = detail::extract_mtime(to_stat_path);
@@ -730,13 +730,15 @@ bool __copy_file(const path& from, const path& to, copy_options options,
     if (!to_exists || overwrite_existing)
       return true;
     return Error(make_error_code(errc::file_exists));
-  };
-  if (!ShouldCopy())
+  }();
+  if (!ShouldCopy)
     return false;
 
   // Don't truncate right away. We may not be opening the file we originally
   // looked at; we'll check this later.
-  int to_open_flags = O_WRONLY | O_CREAT;
+  int to_open_flags = O_WRONLY;
+  if (!to_exists)
+    to_open_flags |= O_CREAT;
   FileDescriptor to_fd = FileDescriptor::create_with_status(
       &to, m_ec, to_open_flags, from_stat.st_mode);
   if (m_ec)
@@ -745,6 +747,7 @@ bool __copy_file(const path& from, const path& to, copy_options options,
   if (to_exists) {
     // Check that the file we initially stat'ed is equivalent to the one
     // we opened.
+    // FIXME: report this better.
     if (!detail::stat_equivalent(to_stat_path, to_fd.get_stat()))
       return Error(make_error_code(errc::bad_file_descriptor));
 
@@ -761,7 +764,6 @@ bool __copy_file(const path& from, const path& to, copy_options options,
   }
 
   return true;
-
 }
 
 void __copy_symlink(const path& existing_symlink, const path& new_symlink,
