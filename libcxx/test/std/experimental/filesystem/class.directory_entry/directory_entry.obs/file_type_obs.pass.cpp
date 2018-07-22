@@ -32,7 +32,7 @@ TEST_CASE(file_dne) {
 
 TEST_CASE(signatures) {
   using namespace fs;
-  const directory_entry e;
+  const directory_entry e = {};
   std::error_code ec;
 #define TEST_FUNC(name)                                                        \
   static_assert(std::is_same<decltype(e.name()), bool>::value,                 \
