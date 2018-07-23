@@ -82,6 +82,8 @@ enum class SymbolSubKind : uint8_t {
   SwiftAccessorDidSet,
   SwiftAccessorAddressor,
   SwiftAccessorMutableAddressor,
+  SwiftAccessorRead,
+  SwiftAccessorModify,
 
   SwiftExtensionOfStruct,
   SwiftExtensionOfClass,
