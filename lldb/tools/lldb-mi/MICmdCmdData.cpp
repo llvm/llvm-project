@@ -44,6 +44,7 @@
 #include "MICmnLLDBUtilSBValue.h"
 #include "MICmnMIResultRecord.h"
 #include "MICmnMIValueConst.h"
+#include "Platform.h"
 
 namespace {
 CMIUtilString IntToHexAddrStr(uint32_t number) {
