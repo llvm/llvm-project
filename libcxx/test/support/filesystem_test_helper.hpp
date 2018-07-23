@@ -9,8 +9,11 @@
 #include <random>
 #include <chrono>
 #include <vector>
+#include <regex>
 
+#include "test_macros.h"
 #include "rapid-cxx-test.hpp"
+#include "format_string.hpp"
 
 // static test helpers
 
@@ -442,25 +445,77 @@ inline bool PathEq(fs::path const& LHS, fs::path const& RHS) {
 }
 
 struct ExceptionChecker {
-  std::vector<std::errc> expected_err_list;
+  std::errc expected_err;
   fs::path expected_path1;
   fs::path expected_path2;
+  unsigned num_paths;
+  const char* func_name;
+  std::string opt_message;
 
-  template <class... ErrcT>
-  explicit ExceptionChecker(fs::path p, std::errc first_err, ErrcT... rest_err)
-      : expected_err_list({first_err, rest_err...}), expected_path1(p) {}
+  explicit ExceptionChecker(std::errc first_err, const char* func_name,
+                            std::string opt_msg = {})
+      : expected_err{first_err}, num_paths(0), func_name(func_name),
+        opt_message(opt_msg) {}
+  explicit ExceptionChecker(fs::path p, std::errc first_err,
+                            const char* func_name, std::string opt_msg = {})
+      : expected_err(first_err), expected_path1(p), num_paths(1),
+        func_name(func_name), opt_message(opt_msg) {}
 
-  template <class... ErrcT>
   explicit ExceptionChecker(fs::path p1, fs::path p2, std::errc first_err,
-                            ErrcT... rest_err)
-      : expected_err_list({first_err, rest_err...}), expected_path1(p1),
-        expected_path2(p2) {}
+                            const char* func_name, std::string opt_msg = {})
+      : expected_err(first_err), expected_path1(p1), expected_path2(p2),
+        num_paths(2), func_name(func_name), opt_message(opt_msg) {}
 
-  void operator()(fs::filesystem_error const& Err) const {
-    TEST_CHECK(ErrorIsImp(Err.code(), expected_err_list));
+  void operator()(fs::filesystem_error const& Err) {
+    TEST_CHECK(ErrorIsImp(Err.code(), {expected_err}));
     TEST_CHECK(Err.path1() == expected_path1);
     TEST_CHECK(Err.path2() == expected_path2);
+    LIBCPP_ONLY(check_libcxx_string(Err));
   }
+
+  void check_libcxx_string(fs::filesystem_error const& Err) {
+    std::string message = std::make_error_code(expected_err).message();
+
+    std::string additional_msg = "";
+    if (!opt_message.empty()) {
+      additional_msg = opt_message + ": ";
+    }
+    auto transform_path = [](const fs::path& p) {
+      if (p.native().empty())
+        return "\"\"";
+      return p.c_str();
+    };
+    std::string format = [&]() -> std::string {
+      switch (num_paths) {
+      case 0:
+        return format_string("filesystem error: in %s: %s%s", func_name,
+                             additional_msg, message);
+      case 1:
+        return format_string("filesystem error: in %s: %s%s [%s]", func_name,
+                             additional_msg, message,
+                             transform_path(expected_path1));
+      case 2:
+        return format_string("filesystem error: in %s: %s%s [%s] [%s]",
+                             func_name, additional_msg, message,
+                             transform_path(expected_path1),
+                             transform_path(expected_path2));
+      default:
+        TEST_CHECK(false && "unexpected case");
+        return "";
+      }
+    }();
+    TEST_CHECK(format == Err.what());
+    if (format != Err.what()) {
+      fprintf(stderr,
+              "filesystem_error::what() does not match expected output:\n");
+      fprintf(stderr, "  expected: \"%s\"\n", format.c_str());
+      fprintf(stderr, "  actual:   \"%s\"\n\n", Err.what());
+    }
+  }
+
+  ExceptionChecker(ExceptionChecker const&) = delete;
+  ExceptionChecker& operator=(ExceptionChecker const&) = delete;
+
 };
 
 #endif /* FILESYSTEM_TEST_HELPER_HPP */

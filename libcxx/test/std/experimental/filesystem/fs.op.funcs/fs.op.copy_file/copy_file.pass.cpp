@@ -64,7 +64,7 @@ TEST_CASE(test_error_reporting) {
     TEST_CHECK(fs::copy_file(file, file, copy_options::overwrite_existing,
                              ec) == false);
     TEST_CHECK(ErrorIs(ec, std::errc::file_exists));
-    ExceptionChecker Checker(file, file, std::errc::file_exists);
+    ExceptionChecker Checker(file, file, std::errc::file_exists, "copy_file");
     TEST_CHECK_THROW_RESULT(filesystem_error, Checker, copy_file(file, file, copy_options::overwrite_existing));
 
   }
@@ -72,7 +72,7 @@ TEST_CASE(test_error_reporting) {
     std::error_code ec;
     TEST_CHECK(fs::copy_file(file, file2, ec) == false);
     TEST_CHECK(ErrorIs(ec, std::errc::file_exists));
-    ExceptionChecker Checker(file, file, std::errc::file_exists);
+    ExceptionChecker Checker(file, file, std::errc::file_exists, "copy_file");
     TEST_CHECK_THROW_RESULT(filesystem_error, Checker, copy_file(file, file, copy_options::overwrite_existing));
 
   }

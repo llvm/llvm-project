@@ -88,7 +88,7 @@ static file_time_type get_write_time(const WIN32_FIND_DATA& data) {
 } // namespace
 } // namespace detail
 
-using detail::set_or_throw;
+using detail::ErrorHandler;
 
 #if defined(_LIBCPP_WIN32API)
 class __dir_stream {
@@ -231,27 +231,30 @@ public:
 directory_iterator::directory_iterator(const path& p, error_code *ec,
                                        directory_options opts)
 {
-    std::error_code m_ec;
-    __imp_ = make_shared<__dir_stream>(p, opts, m_ec);
-    if (ec) *ec = m_ec;
-    if (!__imp_->good()) {
-        __imp_.reset();
-        if (m_ec)
-            set_or_throw(m_ec, ec,
-                         "directory_iterator::directory_iterator(...)", p);
-    }
+  ErrorHandler<void> err("directory_iterator::directory_iterator(...)", ec, &p);
+
+  std::error_code m_ec;
+  __imp_ = make_shared<__dir_stream>(p, opts, m_ec);
+  if (ec)
+    *ec = m_ec;
+  if (!__imp_->good()) {
+    __imp_.reset();
+    if (m_ec)
+      err.report(m_ec);
+  }
 }
 
 directory_iterator& directory_iterator::__increment(error_code *ec)
 {
     _LIBCPP_ASSERT(__imp_, "Attempting to increment an invalid iterator");
+    ErrorHandler<void> err("directory_iterator::operator++()", ec);
+
     std::error_code m_ec;
     if (!__imp_->advance(m_ec)) {
-        __imp_.reset();
-        if (m_ec)
-            set_or_throw(m_ec, ec, "directory_iterator::operator++()");
-    } else {
-        if (ec) ec->clear();
+      path root = std::move(__imp_->__root_);
+      __imp_.reset();
+      if (m_ec)
+        err.report(m_ec, "at root \"%s\"", root);
     }
     return *this;
 
@@ -273,15 +276,18 @@ recursive_directory_iterator::recursive_directory_iterator(const path& p,
     directory_options opt, error_code *ec)
     : __imp_(nullptr), __rec_(true)
 {
-    if (ec) ec->clear();
-    std::error_code m_ec;
-    __dir_stream new_s(p, opt, m_ec);
-    if (m_ec) set_or_throw(m_ec, ec, "recursive_directory_iterator", p);
-    if (m_ec || !new_s.good()) return;
+  ErrorHandler<void> err("recursive_directory_iterator", ec, &p);
 
-    __imp_ = _VSTD::make_shared<__shared_imp>();
-    __imp_->__options_ = opt;
-    __imp_->__stack_.push(_VSTD::move(new_s));
+  std::error_code m_ec;
+  __dir_stream new_s(p, opt, m_ec);
+  if (m_ec)
+    err.report(m_ec);
+  if (m_ec || !new_s.good())
+    return;
+
+  __imp_ = _VSTD::make_shared<__shared_imp>();
+  __imp_->__options_ = opt;
+  __imp_->__stack_.push(_VSTD::move(new_s));
 }
 
 void recursive_directory_iterator::__pop(error_code* ec)
@@ -321,42 +327,50 @@ recursive_directory_iterator::__increment(error_code *ec)
 }
 
 void recursive_directory_iterator::__advance(error_code* ec) {
-    // REQUIRES: ec must be cleared before calling this function.
-    const directory_iterator end_it;
-    auto& stack = __imp_->__stack_;
-    std::error_code m_ec;
-    while (stack.size() > 0) {
-        if (stack.top().advance(m_ec))
-            return;
-        if (m_ec) break;
-        stack.pop();
-    }
-    __imp_.reset();
+  ErrorHandler<void> err("recursive_directory_iterator::operator++()", ec);
+
+  const directory_iterator end_it;
+  auto& stack = __imp_->__stack_;
+  std::error_code m_ec;
+  while (stack.size() > 0) {
+    if (stack.top().advance(m_ec))
+      return;
     if (m_ec)
-        set_or_throw(m_ec, ec, "recursive_directory_iterator::operator++()");
+      break;
+    stack.pop();
+  }
+
+    if (m_ec) {
+      path root = std::move(stack.top().__root_);
+      __imp_.reset();
+      err.report(m_ec, "at root \"%s\"", root);
+    } else {
+      __imp_.reset();
+    }
 }
 
 bool recursive_directory_iterator::__try_recursion(error_code *ec) {
-    bool rec_sym =
-        bool(options() & directory_options::follow_directory_symlink);
+  ErrorHandler<void> err("recursive_directory_iterator::operator++()", ec);
 
-    auto& curr_it = __imp_->__stack_.top();
+  bool rec_sym = bool(options() & directory_options::follow_directory_symlink);
 
-    bool skip_rec = false;
-    std::error_code m_ec;
-    if (!rec_sym) {
-      file_status st = curr_it.__entry_.symlink_status(m_ec);
-      if (m_ec && status_known(st))
-        m_ec.clear();
-      if (m_ec || is_symlink(st) || !is_directory(st))
-        skip_rec = true;
-    } else {
-      file_status st = curr_it.__entry_.status(m_ec);
-      if (m_ec && status_known(st))
-        m_ec.clear();
-      if (m_ec || !is_directory(st))
-        skip_rec = true;
-    }
+  auto& curr_it = __imp_->__stack_.top();
+
+  bool skip_rec = false;
+  std::error_code m_ec;
+  if (!rec_sym) {
+    file_status st = curr_it.__entry_.symlink_status(m_ec);
+    if (m_ec && status_known(st))
+      m_ec.clear();
+    if (m_ec || is_symlink(st) || !is_directory(st))
+      skip_rec = true;
+  } else {
+    file_status st = curr_it.__entry_.status(m_ec);
+    if (m_ec && status_known(st))
+      m_ec.clear();
+    if (m_ec || !is_directory(st))
+      skip_rec = true;
+  }
 
     if (!skip_rec) {
         __dir_stream new_it(curr_it.__entry_.path(), __imp_->__options_, m_ec);
@@ -371,9 +385,9 @@ bool recursive_directory_iterator::__try_recursion(error_code *ec) {
         if (m_ec.value() == EACCES && allow_eacess) {
           if (ec) ec->clear();
         } else {
+          path at_ent = std::move(curr_it.__entry_.__p_);
           __imp_.reset();
-          set_or_throw(m_ec, ec,
-                       "recursive_directory_iterator::operator++()");
+          err.report(m_ec, "attempting recursion into \"%s\"", at_ent);
         }
     }
     return false;

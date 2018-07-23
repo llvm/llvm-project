@@ -102,7 +102,7 @@ TEST_CASE(not_regular_file) {
     TEST_CHECK(ec == other_ec);
     TEST_CHECK(ErrorIs(ec, TC.expected_err));
 
-    ExceptionChecker Checker(p, TC.expected_err);
+    ExceptionChecker Checker(p, TC.expected_err, "directory_entry::file_size");
     TEST_CHECK_THROW_RESULT(filesystem_error, Checker, ent.file_size());
   }
 }
@@ -134,7 +134,8 @@ TEST_CASE(error_reporting) {
     TEST_CHECK(ErrorIs(ec, std::errc::no_such_file_or_directory));
 
     ExceptionChecker Checker(StaticEnv::DNE,
-                             std::errc::no_such_file_or_directory);
+                             std::errc::no_such_file_or_directory,
+                             "directory_entry::file_size");
     TEST_CHECK_THROW_RESULT(filesystem_error, Checker, ent.file_size());
   }
   // test a dead symlink
@@ -156,7 +157,8 @@ TEST_CASE(error_reporting) {
     TEST_CHECK(ErrorIs(ec, std::errc::no_such_file_or_directory));
 
     ExceptionChecker Checker(StaticEnv::BadSymlink,
-                             std::errc::no_such_file_or_directory);
+                             std::errc::no_such_file_or_directory,
+                             "directory_entry::file_size");
     TEST_CHECK_THROW_RESULT(filesystem_error, Checker, ent.file_size());
   }
   // test a file w/o appropriate permissions.
@@ -174,7 +176,7 @@ TEST_CASE(error_reporting) {
     TEST_CHECK(ent.file_size(ec) == uintmax_t(-1));
     TEST_CHECK(ErrorIs(ec, std::errc::permission_denied));
 
-    ExceptionChecker Checker(file, std::errc::permission_denied);
+    ExceptionChecker Checker(file, std::errc::permission_denied, "file_size");
     TEST_CHECK_THROW_RESULT(filesystem_error, Checker, ent.file_size());
 
     permissions(dir, old_perms);
@@ -199,7 +201,8 @@ TEST_CASE(error_reporting) {
     TEST_CHECK(ent.file_size(ec) == uintmax_t(-1));
     TEST_CHECK(ErrorIs(ec, std::errc::permission_denied));
 
-    ExceptionChecker Checker(sym_in_dir, std::errc::permission_denied);
+    ExceptionChecker Checker(sym_in_dir, std::errc::permission_denied,
+                             "file_size");
     TEST_CHECK_THROW_RESULT(filesystem_error, Checker, ent.file_size());
 
     permissions(dir, old_perms);
@@ -224,7 +227,8 @@ TEST_CASE(error_reporting) {
     TEST_CHECK(ent.file_size(ec) == uintmax_t(-1));
     TEST_CHECK(ErrorIs(ec, std::errc::permission_denied));
 
-    ExceptionChecker Checker(sym_out_of_dir, std::errc::permission_denied);
+    ExceptionChecker Checker(sym_out_of_dir, std::errc::permission_denied,
+                             "file_size");
     TEST_CHECK_THROW_RESULT(filesystem_error, Checker, ent.file_size());
 
     permissions(dir, old_perms);

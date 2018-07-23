@@ -106,7 +106,8 @@ TEST_CASE(error_reporting) {
     TEST_CHECK(ErrorIs(ec, std::errc::no_such_file_or_directory));
 
     ExceptionChecker Checker(StaticEnv::DNE,
-                             std::errc::no_such_file_or_directory);
+                             std::errc::no_such_file_or_directory,
+                             "directory_entry::last_write_time");
     TEST_CHECK_THROW_RESULT(filesystem_error, Checker, ent.last_write_time());
   }
   // test a dead symlink
@@ -128,7 +129,8 @@ TEST_CASE(error_reporting) {
     TEST_CHECK(ErrorIs(ec, std::errc::no_such_file_or_directory));
 
     ExceptionChecker Checker(StaticEnv::BadSymlink,
-                             std::errc::no_such_file_or_directory);
+                             std::errc::no_such_file_or_directory,
+                             "directory_entry::last_write_time");
     TEST_CHECK_THROW_RESULT(filesystem_error, Checker, ent.last_write_time());
   }
   // test a file w/o appropriate permissions.
@@ -146,7 +148,8 @@ TEST_CASE(error_reporting) {
     TEST_CHECK(ent.last_write_time(ec) == file_time_type::min());
     TEST_CHECK(ErrorIs(ec, std::errc::permission_denied));
 
-    ExceptionChecker Checker(file, std::errc::permission_denied);
+    ExceptionChecker Checker(file, std::errc::permission_denied,
+                             "last_write_time");
     TEST_CHECK_THROW_RESULT(filesystem_error, Checker, ent.last_write_time());
 
     permissions(dir, old_perms);
@@ -171,7 +174,8 @@ TEST_CASE(error_reporting) {
     TEST_CHECK(ent.last_write_time(ec) == file_time_type::min());
     TEST_CHECK(ErrorIs(ec, std::errc::permission_denied));
 
-    ExceptionChecker Checker(sym_in_dir, std::errc::permission_denied);
+    ExceptionChecker Checker(sym_in_dir, std::errc::permission_denied,
+                             "last_write_time");
     TEST_CHECK_THROW_RESULT(filesystem_error, Checker, ent.last_write_time());
 
     permissions(dir, old_perms);
@@ -196,7 +200,8 @@ TEST_CASE(error_reporting) {
     TEST_CHECK(ent.last_write_time(ec) == file_time_type::min());
     TEST_CHECK(ErrorIs(ec, std::errc::permission_denied));
 
-    ExceptionChecker Checker(sym_out_of_dir, std::errc::permission_denied);
+    ExceptionChecker Checker(sym_out_of_dir, std::errc::permission_denied,
+                             "last_write_time");
     TEST_CHECK_THROW_RESULT(filesystem_error, Checker, ent.last_write_time());
 
     permissions(dir, old_perms);
