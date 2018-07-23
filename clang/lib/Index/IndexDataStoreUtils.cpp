@@ -129,6 +129,10 @@ SymbolSubKind index::getSymbolSubKind(indexstore_symbol_subkind_t K) {
     return SymbolSubKind::SwiftAccessorAddressor;
   case INDEXSTORE_SYMBOL_SUBKIND_SWIFTACCESSORMUTABLEADDRESSOR:
     return SymbolSubKind::SwiftAccessorMutableAddressor;
+  case INDEXSTORE_SYMBOL_SUBKIND_SWIFTACCESSORREAD:
+    return SymbolSubKind::SwiftAccessorRead;
+  case INDEXSTORE_SYMBOL_SUBKIND_SWIFTACCESSORMODIFY:
+    return SymbolSubKind::SwiftAccessorModify;
   case INDEXSTORE_SYMBOL_SUBKIND_SWIFTEXTENSIONOFSTRUCT:
     return SymbolSubKind::SwiftExtensionOfStruct;
   case INDEXSTORE_SYMBOL_SUBKIND_SWIFTEXTENSIONOFCLASS:
@@ -269,6 +273,10 @@ indexstore_symbol_subkind_t index::getIndexStoreSubKind(SymbolSubKind K) {
     return INDEXSTORE_SYMBOL_SUBKIND_SWIFTACCESSORADDRESSOR;
   case SymbolSubKind::SwiftAccessorMutableAddressor:
     return INDEXSTORE_SYMBOL_SUBKIND_SWIFTACCESSORMUTABLEADDRESSOR;
+  case SymbolSubKind::SwiftAccessorRead:
+    return INDEXSTORE_SYMBOL_SUBKIND_SWIFTACCESSORREAD;
+  case SymbolSubKind::SwiftAccessorModify:
+    return INDEXSTORE_SYMBOL_SUBKIND_SWIFTACCESSORMODIFY;
   case SymbolSubKind::SwiftExtensionOfStruct:
     return INDEXSTORE_SYMBOL_SUBKIND_SWIFTEXTENSIONOFSTRUCT;
   case SymbolSubKind::SwiftExtensionOfClass:

@@ -484,6 +484,8 @@ StringRef index::getSymbolSubKindString(SymbolSubKind K) {
   case SymbolSubKind::SwiftAccessorDidSet: return "acc-didset";
   case SymbolSubKind::SwiftAccessorAddressor: return "acc-addr";
   case SymbolSubKind::SwiftAccessorMutableAddressor: return "acc-mutaddr";
+  case SymbolSubKind::SwiftAccessorRead: return "acc-read";
+  case SymbolSubKind::SwiftAccessorModify: return "acc-modify";
   case SymbolSubKind::SwiftExtensionOfStruct: return "ext-struct";
   case SymbolSubKind::SwiftExtensionOfClass: return "ext-class";
   case SymbolSubKind::SwiftExtensionOfEnum: return "ext-enum";
