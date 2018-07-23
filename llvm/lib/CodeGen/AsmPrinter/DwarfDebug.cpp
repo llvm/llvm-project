@@ -94,6 +94,11 @@ static cl::opt<bool> GenerateARangeSection("generate-arange-section",
                                            cl::desc("Generate dwarf aranges"),
                                            cl::init(false));
 
+static cl::opt<bool>
+    GenerateDwarfTypeUnits("generate-type-units", cl::Hidden,
+                           cl::desc("Generate DWARF4 type units."),
+                           cl::init(false));
+
 static cl::opt<bool> SplitDwarfCrossCuReferences(
     "split-dwarf-cross-cu-references", cl::Hidden,
     cl::desc("Enable cross-cu references in DWO files"), cl::init(false));
@@ -284,6 +289,29 @@ void DbgVariable::addMMIEntry(const DbgVariable &V) {
          "conflicting locations for variable");
 }
 
+static AccelTableKind computeAccelTableKind(unsigned DwarfVersion,
+                                            bool GenerateTypeUnits,
+                                            DebuggerKind Tuning,
+                                            const Triple &TT) {
+  // Honor an explicit request.
+  if (AccelTables != AccelTableKind::Default)
+    return AccelTables;
+
+  // Accelerator tables with type units are currently not supported.
+  if (GenerateTypeUnits)
+    return AccelTableKind::None;
+
+  // Accelerator tables get emitted if targetting DWARF v5 or LLDB.  DWARF v5
+  // always implies debug_names. For lower standard versions we use apple
+  // accelerator tables on apple platforms and debug_names elsewhere.
+  if (DwarfVersion >= 5)
+    return AccelTableKind::Dwarf;
+  if (Tuning == DebuggerKind::LLDB)
+    return TT.isOSBinFormatMachO() ? AccelTableKind::Apple
+                                   : AccelTableKind::Dwarf;
+  return AccelTableKind::None;
+}
+
 DwarfDebug::DwarfDebug(AsmPrinter *A, Module *M)
     : DebugHandlerBase(A), DebugLocs(A->OutStreamer->isVerboseAsm()),
       InfoHolder(A, "info_string", DIEValueAllocator),
@@ -301,16 +329,6 @@ DwarfDebug::DwarfDebug(AsmPrinter *A, Module *M)
     DebuggerTuning = DebuggerKind::SCE;
   else
     DebuggerTuning = DebuggerKind::GDB;
-
-  // Turn on accelerator tables by default, if tuning for LLDB and the target is
-  // supported.
-  if (AccelTables == AccelTableKind::Default) {
-    if (tuneForLLDB() && A->TM.getTargetTriple().isOSBinFormatMachO())
-      TheAccelTableKind = AccelTableKind::Apple;
-    else
-      TheAccelTableKind = AccelTableKind::None;
-  } else
-    TheAccelTableKind = AccelTables;
 
   if (DwarfInlinedStrings == Default)
     UseInlineStrings = TT.isNVPTX();
@@ -345,6 +363,11 @@ DwarfDebug::DwarfDebug(AsmPrinter *A, Module *M)
     UseSectionsAsReferences = TT.isNVPTX();
   else
     UseSectionsAsReferences = DwarfSectionsAsReferences == Enable;
+
+  GenerateTypeUnits = GenerateDwarfTypeUnits;
+
+  TheAccelTableKind = computeAccelTableKind(
+      DwarfVersion, GenerateTypeUnits, DebuggerTuning, A->TM.getTargetTriple());
 
   // Work around a GDB bug. GDB doesn't support the standard opcode;
   // SCE doesn't support GNU's; LLDB prefers the standard opcode, which
@@ -2384,67 +2407,50 @@ void DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
   CU.addDIETypeSignature(RefDie, Signature);
 }
 
-void DwarfDebug::addAccelDebugName(StringRef Name, const DIE &Die) {
-  assert(getAccelTableKind() == AccelTableKind::Dwarf);
+// Add the Name along with its companion DIE to the appropriate accelerator
+// table (for AccelTableKind::Dwarf it's always AccelDebugNames, for
+// AccelTableKind::Apple, we use the table we got as an argument). If
+// accelerator tables are disabled, this function does nothing.
+template <typename DataT>
+void DwarfDebug::addAccelNameImpl(AccelTable<DataT> &AppleAccel, StringRef Name,
+                                  const DIE &Die) {
+  if (getAccelTableKind() == AccelTableKind::None)
+    return;
 
   DwarfFile &Holder = useSplitDwarf() ? SkeletonHolder : InfoHolder;
-  AccelDebugNames.addName(Holder.getStringPool().getEntry(*Asm, Name), Die);
-}
+  DwarfStringPoolEntryRef Ref =
+      Holder.getStringPool().getEntry(*Asm, Name);
 
-// Accelerator table mutators - add each name along with its companion
-// DIE to the proper table while ensuring that the name that we're going
-// to reference is in the string table. We do this since the names we
-// add may not only be identical to the names in the DIE.
-void DwarfDebug::addAccelName(StringRef Name, const DIE &Die) {
   switch (getAccelTableKind()) {
   case AccelTableKind::Apple:
-    AccelNames.addName(InfoHolder.getStringPool().getEntry(*Asm, Name), &Die);
+    AppleAccel.addName(Ref, Die);
     break;
   case AccelTableKind::Dwarf:
-    addAccelDebugName(Name, Die);
+    AccelDebugNames.addName(Ref, Die);
     break;
-  case AccelTableKind::None:
-    return;
   case AccelTableKind::Default:
     llvm_unreachable("Default should have already been resolved.");
+  case AccelTableKind::None:
+    llvm_unreachable("None handled above");
   }
+}
+
+void DwarfDebug::addAccelName(StringRef Name, const DIE &Die) {
+  addAccelNameImpl(AccelNames, Name, Die);
 }
 
 void DwarfDebug::addAccelObjC(StringRef Name, const DIE &Die) {
-  if (getAccelTableKind() != AccelTableKind::Apple)
-    return;
-  AccelObjC.addName(InfoHolder.getStringPool().getEntry(*Asm, Name), &Die);
+  // ObjC names go only into the Apple accelerator tables.
+  if (getAccelTableKind() == AccelTableKind::Apple)
+    addAccelNameImpl(AccelObjC, Name, Die);
 }
 
 void DwarfDebug::addAccelNamespace(StringRef Name, const DIE &Die) {
-  switch (getAccelTableKind()) {
-  case AccelTableKind::Apple:
-    AccelNamespace.addName(InfoHolder.getStringPool().getEntry(*Asm, Name),
-                           &Die);
-    break;
-  case AccelTableKind::Dwarf:
-    addAccelDebugName(Name, Die);
-    break;
-  case AccelTableKind::None:
-    return;
-  case AccelTableKind::Default:
-    llvm_unreachable("Default should have already been resolved.");
-  }
+  addAccelNameImpl(AccelNamespace, Name, Die);
 }
 
 void DwarfDebug::addAccelType(StringRef Name, const DIE &Die, char Flags) {
-  switch (getAccelTableKind()) {
-  case AccelTableKind::Apple:
-    AccelTypes.addName(InfoHolder.getStringPool().getEntry(*Asm, Name), &Die);
-    break;
-  case AccelTableKind::Dwarf:
-    addAccelDebugName(Name, Die);
-    break;
-  case AccelTableKind::None:
-    return;
-  case AccelTableKind::Default:
-    llvm_unreachable("Default should have already been resolved.");
-  }
+  addAccelNameImpl(AccelTypes, Name, Die);
 }
 
 uint16_t DwarfDebug::getDwarfVersion() const {

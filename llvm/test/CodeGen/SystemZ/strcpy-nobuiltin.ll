@@ -35,7 +35,7 @@ define i32 @f3(i32 %dummy, i8 *%dest, i8 *%src, i32 *%resptr, i32 *%storeptr) {
 ; CHECK: brasl %r14, strcpy
 ; CHECK: mvhi 0(%r6), 0
 ; CHECK: br %r14
-  %res = load i32 , i32 *%resptr
+  %res = load i32, i32 *%resptr
   %unused = call i8 *@strcpy(i8 *%dest, i8 *%src) nobuiltin
   store i32 0, i32 *%storeptr
   ret i32 %res

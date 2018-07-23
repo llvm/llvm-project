@@ -180,7 +180,7 @@ define i32 @f14(i32 %a, i32 *%ptr) {
 ; CHECK: l %r1, 0(%r3)
 ; CHECK: rll %r2, %r2, 0(%r1)
 ; CHECK: br %r14
-  %amt = load i32 , i32 *%ptr
+  %amt = load i32, i32 *%ptr
   %amtb = sub i32 32, %amt
   %parta = shl i32 %a, %amt
   %partb = lshr i32 %a, %amtb

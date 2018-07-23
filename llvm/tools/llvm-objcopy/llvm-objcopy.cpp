@@ -133,6 +133,7 @@ struct CopyConfig {
   std::vector<StringRef> SymbolsToWeaken;
   std::vector<StringRef> SymbolsToRemove;
   std::vector<StringRef> SymbolsToKeep;
+  StringMap<StringRef> SectionsToRename;
   StringMap<StringRef> SymbolsToRename;
   bool StripAll = false;
   bool StripAllGNU = false;
@@ -430,6 +431,14 @@ static void HandleArgs(const CopyConfig &Config, Object &Obj,
 
   Obj.removeSections(RemovePred);
 
+  if (!Config.SectionsToRename.empty()) {
+    for (auto &Sec : Obj.sections()) {
+      const auto Iter = Config.SectionsToRename.find(Sec.Name);
+      if (Iter != Config.SectionsToRename.end())
+        Sec.Name = Iter->second;
+    }
+  }
+
   if (!Config.AddSection.empty()) {
     for (const auto &Flag : Config.AddSection) {
       auto SecPair = Flag.split("=");
@@ -585,6 +594,14 @@ static CopyConfig ParseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
     auto Old2New = StringRef(Arg->getValue()).split('=');
     if (!Config.SymbolsToRename.insert(Old2New).second)
       error("Multiple redefinition of symbol " + Old2New.first);
+  }
+
+  for (auto Arg : InputArgs.filtered(OBJCOPY_rename_section)) {
+    if (!StringRef(Arg->getValue()).contains('='))
+      error("Bad format for --rename-section");
+    auto Old2New = StringRef(Arg->getValue()).split('=');
+    if (!Config.SectionsToRename.insert(Old2New).second)
+      error("Already have a section rename for " + Old2New.first);
   }
 
   for (auto Arg : InputArgs.filtered(OBJCOPY_remove_section))

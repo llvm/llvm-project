@@ -108,7 +108,7 @@ define i32 @f11(i32 %a, i32 *%ptr) {
 ; CHECK: l %r1, 0(%r3)
 ; CHECK: sra %r2, 0(%r1)
 ; CHECK: br %r14
-  %amt = load i32 , i32 *%ptr
+  %amt = load i32, i32 *%ptr
   %shift = ashr i32 %a, %amt
   ret i32 %shift
 }

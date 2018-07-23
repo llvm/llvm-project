@@ -30,7 +30,7 @@ TEST_SUITE(directory_entry_obs_testsuite)
 TEST_CASE(signatures) {
   using namespace fs;
   {
-    const fs::directory_entry e;
+    const fs::directory_entry e = {};
     std::error_code ec;
     static_assert(std::is_same<decltype(e.file_size()), uintmax_t>::value, "");
     static_assert(std::is_same<decltype(e.file_size(ec)), uintmax_t>::value,

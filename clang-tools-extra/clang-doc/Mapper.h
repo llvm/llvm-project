@@ -18,6 +18,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_DOC_MAPPER_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_DOC_MAPPER_H
 
+#include "Representation.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Tooling/Execution.h"
 
@@ -30,8 +31,8 @@ namespace doc {
 class MapASTVisitor : public clang::RecursiveASTVisitor<MapASTVisitor>,
                       public ASTConsumer {
 public:
-  explicit MapASTVisitor(ASTContext *Ctx, ExecutionContext *ECtx)
-      : ECtx(ECtx) {}
+  explicit MapASTVisitor(ASTContext *Ctx, ClangDocContext CDCtx)
+      : CDCtx(CDCtx) {}
 
   void HandleTranslationUnit(ASTContext &Context) override;
   bool VisitNamespaceDecl(const NamespaceDecl *D);
@@ -48,7 +49,7 @@ private:
   comments::FullComment *getComment(const NamedDecl *D,
                                     const ASTContext &Context) const;
 
-  ExecutionContext *ECtx;
+  ClangDocContext CDCtx;
 };
 
 } // namespace doc

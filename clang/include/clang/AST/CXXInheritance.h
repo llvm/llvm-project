@@ -125,18 +125,36 @@ class CXXBasePaths {
   /// Paths - The actual set of paths that can be taken from the
   /// derived class to the same base class.
   std::list<CXXBasePath> Paths;
-  
+
   /// ClassSubobjects - Records the class subobjects for each class
-  /// type that we've seen. The first element in the pair says
+  /// type that we've seen. The first element IsVirtBase says
   /// whether we found a path to a virtual base for that class type,
-  /// while the element contains the number of non-virtual base
+  /// while NumberOfNonVirtBases contains the number of non-virtual base
   /// class subobjects for that class type. The key of the map is
   /// the cv-unqualified canonical type of the base class subobject.
-  llvm::SmallDenseMap<QualType, std::pair<bool, unsigned>, 8> ClassSubobjects;
+  struct IsVirtBaseAndNumberNonVirtBases {
+    unsigned IsVirtBase : 1;
+    unsigned NumberOfNonVirtBases : 31;
+  };
+  llvm::SmallDenseMap<QualType, IsVirtBaseAndNumberNonVirtBases, 8>
+      ClassSubobjects;
 
   /// VisitedDependentRecords - Records the dependent records that have been
   /// already visited.
-  llvm::SmallDenseSet<const CXXRecordDecl *, 4> VisitedDependentRecords;
+  llvm::SmallPtrSet<const CXXRecordDecl *, 4> VisitedDependentRecords;
+
+  /// DetectedVirtual - The base class that is virtual.
+  const RecordType *DetectedVirtual = nullptr;
+
+  /// ScratchPath - A BasePath that is used by Sema::lookupInBases
+  /// to help build the set of paths.
+  CXXBasePath ScratchPath;
+
+  /// Array of the declarations that have been found. This
+  /// array is constructed only if needed, e.g., to iterate over the
+  /// results within LookupResult.
+  std::unique_ptr<NamedDecl *[]> DeclsFound;
+  unsigned NumDeclsFound = 0;
 
   /// FindAmbiguities - Whether Sema::IsDerivedFrom should try find
   /// ambiguous paths while it is looking for a path from a derived
@@ -152,20 +170,7 @@ class CXXBasePaths {
   /// if it finds a path that goes across a virtual base. The virtual class
   /// is also recorded.
   bool DetectVirtual;
-  
-  /// ScratchPath - A BasePath that is used by Sema::lookupInBases
-  /// to help build the set of paths.
-  CXXBasePath ScratchPath;
 
-  /// DetectedVirtual - The base class that is virtual.
-  const RecordType *DetectedVirtual = nullptr;
-  
-  /// Array of the declarations that have been found. This
-  /// array is constructed only if needed, e.g., to iterate over the
-  /// results within LookupResult.
-  std::unique_ptr<NamedDecl *[]> DeclsFound;
-  unsigned NumDeclsFound = 0;
-  
   void ComputeDeclsFound();
 
   bool lookupInBases(ASTContext &Context, const CXXRecordDecl *Record,

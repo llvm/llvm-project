@@ -17,6 +17,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_DOC_CLANGDOC_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_DOC_CLANGDOC_H
 
+#include "Representation.h"
 #include "clang/Tooling/Execution.h"
 #include "clang/Tooling/StandaloneExecution.h"
 #include "clang/Tooling/Tooling.h"
@@ -25,7 +26,7 @@ namespace clang {
 namespace doc {
 
 std::unique_ptr<tooling::FrontendActionFactory>
-newMapperActionFactory(tooling::ExecutionContext *ECtx);
+newMapperActionFactory(ClangDocContext CDCtx);
 
 } // namespace doc
 } // namespace clang

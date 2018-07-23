@@ -231,10 +231,6 @@ if(WIN32 AND NOT UNIX)
   set(CPACK_NSIS_MUI_UNIICON "${CMAKE_CURRENT_SOURCE_DIR}\\\\cmake\\\\nsis_icon.ico")
   set(CPACK_NSIS_MODIFY_PATH "ON")
   set(CPACK_NSIS_ENABLE_UNINSTALL_BEFORE_INSTALL "ON")
-  set(CPACK_NSIS_EXTRA_INSTALL_COMMANDS
-    "ExecWait '$INSTDIR/tools/msbuild/install.bat'")
-  set(CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS
-    "ExecWait '$INSTDIR/tools/msbuild/uninstall.bat'")
   if( CMAKE_CL_64 )
     set(CPACK_NSIS_INSTALL_ROOT "$PROGRAMFILES64")
   endif()

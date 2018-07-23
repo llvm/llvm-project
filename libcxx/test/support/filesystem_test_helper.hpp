@@ -105,6 +105,20 @@ static const fs::path RecDirFollowSymlinksIterationList[] = {
 #error LIBCXX_FILESYSTEM_DYNAMIC_TEST_HELPER must be defined
 #endif
 
+namespace random_utils {
+inline char to_hex(int ch) {
+  return ch < 10 ? static_cast<char>('0' + ch)
+                 : static_cast<char>('a' + (ch - 10));
+}
+
+inline char random_hex_char() {
+  static std::mt19937 rd{std::random_device{}()};
+  static std::uniform_int_distribution<int> mrand{0, 15};
+  return to_hex(mrand(rd));
+}
+
+} // namespace random_utils
+
 struct scoped_test_env
 {
     scoped_test_env() : test_root(random_env_path())
@@ -179,21 +193,11 @@ struct scoped_test_env
     fs::path const test_root;
 
 private:
-    static char to_hex(int ch) {
-        return ch < 10 ? static_cast<char>('0' + ch)
-                       : static_cast<char>('a' + (ch - 10));
-    }
-
-    static char random_hex_char() {
-        static std::mt19937 rd { std::random_device{}() };
-        static std::uniform_int_distribution<int> mrand{0, 15};
-        return to_hex( mrand(rd) );
-    }
-
     static std::string unique_path_suffix() {
         std::string model = "test.%%%%%%";
         for (auto & ch :  model) {
-            if (ch == '%') ch = random_hex_char();
+          if (ch == '%')
+            ch = random_utils::random_hex_char();
         }
         return model;
     }

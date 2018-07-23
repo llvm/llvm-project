@@ -195,6 +195,13 @@ def FeatureDontWidenVMOVS : SubtargetFeature<"dont-widen-vmovs",
                                              "DontWidenVMOVS", "true",
                                              "Don't widen VMOVS to VMOVD">;
 
+// Some targets (e.g. Cortex-A15) prefer to avoid mixing operations on different
+// VFP register widths.
+def FeatureSplatVFPToNeon : SubtargetFeature<"splat-vfp-neon",
+                                             "SplatVFPToNeon", "true",
+                                             "Splat register from VFP to NEON",
+                                             [FeatureDontWidenVMOVS]>;
+
 // Whether or not it is profitable to expand VFP/NEON MLA/MLS instructions.
 def FeatureExpandMLx      : SubtargetFeature<"expand-fp-mlx",
                                              "ExpandMLx", "true",
@@ -819,6 +826,7 @@ def : ProcessorModel<"cortex-a12",  CortexA9Model,      [ARMv7a, ProcA12,
 
 def : ProcessorModel<"cortex-a15",  CortexA9Model,      [ARMv7a, ProcA15,
                                                          FeatureDontWidenVMOVS,
+                                                         FeatureSplatVFPToNeon,
                                                          FeatureHasRetAddrStack,
                                                          FeatureMuxedUnits,
                                                          FeatureTrustZone,

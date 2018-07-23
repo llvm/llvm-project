@@ -2,7 +2,7 @@
 
 // The number of supported attributes should never go down!
 
-// CHECK: #pragma clang attribute supports 70 attributes:
+// CHECK: #pragma clang attribute supports 72 attributes:
 // CHECK-NEXT: AMDGPUFlatWorkGroupSize (SubjectMatchRule_function)
 // CHECK-NEXT: AMDGPUNumSGPR (SubjectMatchRule_function)
 // CHECK-NEXT: AMDGPUNumVGPR (SubjectMatchRule_function)
@@ -15,6 +15,8 @@
 // CHECK-NEXT: AnyX86NoCfCheck (SubjectMatchRule_hasType_functionType)
 // CHECK-NEXT: AssumeAligned (SubjectMatchRule_objc_method, SubjectMatchRule_function)
 // CHECK-NEXT: Availability ((SubjectMatchRule_record, SubjectMatchRule_enum, SubjectMatchRule_enum_constant, SubjectMatchRule_field, SubjectMatchRule_function, SubjectMatchRule_namespace, SubjectMatchRule_objc_category, SubjectMatchRule_objc_interface, SubjectMatchRule_objc_method, SubjectMatchRule_objc_property, SubjectMatchRule_objc_protocol, SubjectMatchRule_record, SubjectMatchRule_type_alias, SubjectMatchRule_variable))
+// CHECK-NEXT: CPUDispatch (SubjectMatchRule_function)
+// CHECK-NEXT: CPUSpecific (SubjectMatchRule_function)
 // CHECK-NEXT: CXX11NoReturn (SubjectMatchRule_function)
 // CHECK-NEXT: CallableWhen (SubjectMatchRule_function_is_member)
 // CHECK-NEXT: CarriesDependency (SubjectMatchRule_variable_is_parameter, SubjectMatchRule_objc_method, SubjectMatchRule_function)

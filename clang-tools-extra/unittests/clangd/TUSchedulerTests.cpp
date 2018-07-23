@@ -251,6 +251,7 @@ TEST_F(TUSchedulerTests, ManyUpdates) {
 }
 
 TEST_F(TUSchedulerTests, EvictedAST) {
+  std::atomic<int> BuiltASTCounter(0);
   ASTRetentionPolicy Policy;
   Policy.MaxRetainedASTs = 2;
   TUScheduler S(
@@ -267,8 +268,6 @@ TEST_F(TUSchedulerTests, EvictedAST) {
   auto Bar = testPath("bar.cpp");
   auto Baz = testPath("baz.cpp");
 
-  std::atomic<int> BuiltASTCounter;
-  BuiltASTCounter = false;
   // Build one file in advance. We will not access it later, so it will be the
   // one that the cache will evict.
   S.update(Foo, getInputs(Foo, SourceContents), WantDiagnostics::Yes,

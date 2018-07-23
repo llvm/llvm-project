@@ -171,8 +171,20 @@ static RecordDecl *getDeclForType(const QualType &T) {
   return Ty->getDecl()->getDefinition();
 }
 
-static void parseFields(RecordInfo &I, const RecordDecl *D) {
+static bool isPublic(const clang::AccessSpecifier AS,
+                     const clang::Linkage Link) {
+  if (AS == clang::AccessSpecifier::AS_private)
+    return false;
+  else if ((Link == clang::Linkage::ModuleLinkage) ||
+           (Link == clang::Linkage::ExternalLinkage))
+    return true;
+  return false; // otherwise, linkage is some form of internal linkage
+}
+
+static void parseFields(RecordInfo &I, const RecordDecl *D, bool PublicOnly) {
   for (const FieldDecl *F : D->fields()) {
+    if (PublicOnly && !isPublic(F->getAccessUnsafe(), F->getLinkageInternal()))
+      continue;
     if (const auto *T = getDeclForType(F->getTypeSourceInfo()->getType())) {
       // Use getAccessUnsafe so that we just get the default AS_none if it's not
       // valid, as opposed to an assert.
@@ -295,25 +307,32 @@ static void populateFunctionInfo(FunctionInfo &I, const FunctionDecl *D,
 }
 
 std::string emitInfo(const NamespaceDecl *D, const FullComment *FC,
-                     int LineNumber, llvm::StringRef File) {
+                     int LineNumber, llvm::StringRef File, bool PublicOnly) {
+  if (PublicOnly && ((D->isAnonymousNamespace()) ||
+                     !isPublic(D->getAccess(), D->getLinkageInternal())))
+    return "";
   NamespaceInfo I;
   populateInfo(I, D, FC);
   return serialize(I);
 }
 
 std::string emitInfo(const RecordDecl *D, const FullComment *FC, int LineNumber,
-                     llvm::StringRef File) {
+                     llvm::StringRef File, bool PublicOnly) {
+  if (PublicOnly && !isPublic(D->getAccess(), D->getLinkageInternal()))
+    return "";
   RecordInfo I;
   populateSymbolInfo(I, D, FC, LineNumber, File);
   I.TagType = D->getTagKind();
-  parseFields(I, D);
+  parseFields(I, D, PublicOnly);
   if (const auto *C = dyn_cast<CXXRecordDecl>(D))
     parseBases(I, C);
   return serialize(I);
 }
 
 std::string emitInfo(const FunctionDecl *D, const FullComment *FC,
-                     int LineNumber, llvm::StringRef File) {
+                     int LineNumber, llvm::StringRef File, bool PublicOnly) {
+  if (PublicOnly && !isPublic(D->getAccess(), D->getLinkageInternal()))
+    return "";
   FunctionInfo I;
   populateFunctionInfo(I, D, FC, LineNumber, File);
   I.Access = clang::AccessSpecifier::AS_none;
@@ -321,7 +340,9 @@ std::string emitInfo(const FunctionDecl *D, const FullComment *FC,
 }
 
 std::string emitInfo(const CXXMethodDecl *D, const FullComment *FC,
-                     int LineNumber, llvm::StringRef File) {
+                     int LineNumber, llvm::StringRef File, bool PublicOnly) {
+  if (PublicOnly && !isPublic(D->getAccess(), D->getLinkageInternal()))
+    return "";
   FunctionInfo I;
   populateFunctionInfo(I, D, FC, LineNumber, File);
   I.IsMethod = true;
@@ -332,7 +353,9 @@ std::string emitInfo(const CXXMethodDecl *D, const FullComment *FC,
 }
 
 std::string emitInfo(const EnumDecl *D, const FullComment *FC, int LineNumber,
-                     llvm::StringRef File) {
+                     llvm::StringRef File, bool PublicOnly) {
+  if (PublicOnly && !isPublic(D->getAccess(), D->getLinkageInternal()))
+    return "";
   EnumInfo I;
   populateSymbolInfo(I, D, FC, LineNumber, File);
   I.Scoped = D->isScoped();

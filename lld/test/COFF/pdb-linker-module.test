@@ -1,4 +1,5 @@
-RUN: lld-link /debug /pdb:%t.pdb /nodefaultlib /entry:main %S/Inputs/pdb-diff.obj
+RUN: echo "/nodefaultlib" > %t.rsp
+RUN: lld-link /debug /pdb:%t.pdb @%t.rsp /entry:main %S/Inputs/pdb-diff.obj
 RUN: llvm-pdbutil dump -modules %t.pdb | FileCheck --check-prefix=MODS %s
 RUN: llvm-pdbutil dump -symbols %t.pdb | FileCheck --check-prefix=SYMS %s
 

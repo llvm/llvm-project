@@ -15,14 +15,14 @@ ImpLibName2 = Implementation2 == AltTestFunction2
 ImpLibName3 = kernel32.Sleep
 
 ; CHECK:      U AltTestFunction
-; CHECK-NEXT: w TestFunction
+; CHECK-NEXT: W TestFunction
 ; CHECK:      U __imp_AltTestFunction
-; CHECK-NEXT: w __imp_TestFunction
+; CHECK-NEXT: W __imp_TestFunction
 ; CHECK:      T ImpLibName
 ; CHECK-NEXT: T __imp_ImpLibName
 ; CHECK:      U AltTestFunction2
-; CHECK-NEXT: w ImpLibName2
+; CHECK-NEXT: W ImpLibName2
 ; CHECK:      U __imp_AltTestFunction2
-; CHECK-NEXT: w __imp_ImpLibName2
+; CHECK-NEXT: W __imp_ImpLibName2
 ; CHECK:      T ImpLibName3
 ; CHECK-NEXT: T __imp_ImpLibName3

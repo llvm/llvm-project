@@ -173,7 +173,7 @@ Windows Support
      the pch file (matching cl.exe).  This speeds up builds using pch files
      by around 30%.
 
-   - The /Ycfoo.h and /Yufoo.h flags an now be used without /FIfoo.h when
+   - The /Ycfoo.h and /Yufoo.h flags can now be used without /FIfoo.h when
      foo.h is instead included by an explicit `#include` directive. This means
      Visual Studio's default stdafx.h setup now uses precompiled headers with
      clang-cl.

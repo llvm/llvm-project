@@ -35,7 +35,7 @@ define float @f3(float %a, fp128 *%bptr) {
 ; CHECK: ld [[BLOW:%f[0-7]]], 8(%r2)
 ; CHECK: cpsdr %f0, [[BHIGH]], %f0
 ; CHECK: br %r14
-  %bl = load volatile fp128 , fp128 *%bptr
+  %bl = load volatile fp128, fp128 *%bptr
   %b = fptrunc fp128 %bl to float
   %res = call float @copysignf(float %a, float %b) readnone
   ret float %res
@@ -69,7 +69,7 @@ define double @f6(double %a, fp128 *%bptr) {
 ; CHECK: ld [[BLOW:%f[0-7]]], 8(%r2)
 ; CHECK: cpsdr %f0, [[BHIGH]], %f0
 ; CHECK: br %r14
-  %bl = load volatile fp128 , fp128 *%bptr
+  %bl = load volatile fp128, fp128 *%bptr
   %b = fptrunc fp128 %bl to double
   %res = call double @copysign(double %a, double %b) readnone
   ret double %res
@@ -86,7 +86,7 @@ define void @f7(fp128 *%cptr, fp128 *%aptr, float %bf) {
 ; CHECK: std [[AHIGH]], 0(%r2)
 ; CHECK: std [[ALOW]], 8(%r2)
 ; CHECK: br %r14
-  %a = load volatile fp128 , fp128 *%aptr
+  %a = load volatile fp128, fp128 *%aptr
   %b = fpext float %bf to fp128
   %c = call fp128 @copysignl(fp128 %a, fp128 %b) readnone
   store fp128 %c, fp128 *%cptr
@@ -102,7 +102,7 @@ define void @f8(fp128 *%cptr, fp128 *%aptr, double %bd) {
 ; CHECK: std [[AHIGH]], 0(%r2)
 ; CHECK: std [[ALOW]], 8(%r2)
 ; CHECK: br %r14
-  %a = load volatile fp128 , fp128 *%aptr
+  %a = load volatile fp128, fp128 *%aptr
   %b = fpext double %bd to fp128
   %c = call fp128 @copysignl(fp128 %a, fp128 %b) readnone
   store fp128 %c, fp128 *%cptr
@@ -120,8 +120,8 @@ define void @f9(fp128 *%cptr, fp128 *%aptr, fp128 *%bptr) {
 ; CHECK: std [[AHIGH]], 0(%r2)
 ; CHECK: std [[ALOW]], 8(%r2)
 ; CHECK: br %r14
-  %a = load volatile fp128 , fp128 *%aptr
-  %b = load volatile fp128 , fp128 *%bptr
+  %a = load volatile fp128, fp128 *%aptr
+  %b = load volatile fp128, fp128 *%bptr
   %c = call fp128 @copysignl(fp128 %a, fp128 %b) readnone
   store fp128 %c, fp128 *%cptr
   ret void

@@ -137,17 +137,11 @@ bool PMDataManager::isPassDebuggingExecutionsOrMore() const {
 
 unsigned PMDataManager::initSizeRemarkInfo(Module &M) {
   // Only calculate getInstructionCount if the size-info remark is requested.
-  if (M.getContext().getDiagHandlerPtr()->isAnalysisRemarkEnabled("size-info"))
-    return M.getInstructionCount();
-  return 0;
+  return M.getInstructionCount();
 }
 
 void PMDataManager::emitInstrCountChangedRemark(Pass *P, Module &M,
                                                 unsigned CountBefore) {
-  // Did the user request the remark? If not, quit.
-  if (!M.getContext().getDiagHandlerPtr()->isAnalysisRemarkEnabled("size-info"))
-    return;
-
   // We need a function containing at least one basic block in order to output
   // remarks. Since it's possible that the first function in the module doesn't
   // actually contain a basic block, we have to go and find one that's suitable
@@ -1349,6 +1343,8 @@ bool BBPassManager::runOnFunction(Function &F) {
   bool Changed = doInitialization(F);
   Module &M = *F.getParent();
 
+  unsigned InstrCount = 0;
+  bool EmitICRemark = M.shouldEmitInstrCountChangedRemark();
   for (BasicBlock &BB : F)
     for (unsigned Index = 0; Index < getNumContainedPasses(); ++Index) {
       BasicBlockPass *BP = getContainedPass(Index);
@@ -1363,9 +1359,11 @@ bool BBPassManager::runOnFunction(Function &F) {
         // If the pass crashes, remember this.
         PassManagerPrettyStackEntry X(BP, BB);
         TimeRegion PassTimer(getPassTimer(BP));
-        unsigned InstrCount = initSizeRemarkInfo(M);
+        if (EmitICRemark)
+          InstrCount = initSizeRemarkInfo(M);
         LocalChanged |= BP->runOnBasicBlock(BB);
-        emitInstrCountChangedRemark(BP, M, InstrCount);
+        if (EmitICRemark)
+          emitInstrCountChangedRemark(BP, M, InstrCount);
       }
 
       Changed |= LocalChanged;
@@ -1569,6 +1567,8 @@ bool FPPassManager::runOnFunction(Function &F) {
   // Collect inherited analysis from Module level pass manager.
   populateInheritedAnalysis(TPM->activeStack);
 
+  unsigned InstrCount = 0;
+  bool EmitICRemark = M.shouldEmitInstrCountChangedRemark();
   for (unsigned Index = 0; Index < getNumContainedPasses(); ++Index) {
     FunctionPass *FP = getContainedPass(Index);
     bool LocalChanged = false;
@@ -1581,9 +1581,11 @@ bool FPPassManager::runOnFunction(Function &F) {
     {
       PassManagerPrettyStackEntry X(FP, F);
       TimeRegion PassTimer(getPassTimer(FP));
-      unsigned InstrCount = initSizeRemarkInfo(M);
+      if (EmitICRemark)
+        InstrCount = initSizeRemarkInfo(M);
       LocalChanged |= FP->runOnFunction(F);
-      emitInstrCountChangedRemark(FP, M, InstrCount);
+      if (EmitICRemark)
+        emitInstrCountChangedRemark(FP, M, InstrCount);
     }
 
     Changed |= LocalChanged;
@@ -1647,6 +1649,8 @@ MPPassManager::runOnModule(Module &M) {
   for (unsigned Index = 0; Index < getNumContainedPasses(); ++Index)
     Changed |= getContainedPass(Index)->doInitialization(M);
 
+  unsigned InstrCount = 0;
+  bool EmitICRemark = M.shouldEmitInstrCountChangedRemark();
   for (unsigned Index = 0; Index < getNumContainedPasses(); ++Index) {
     ModulePass *MP = getContainedPass(Index);
     bool LocalChanged = false;
@@ -1660,9 +1664,11 @@ MPPassManager::runOnModule(Module &M) {
       PassManagerPrettyStackEntry X(MP, M);
       TimeRegion PassTimer(getPassTimer(MP));
 
-      unsigned InstrCount = initSizeRemarkInfo(M);
+      if (EmitICRemark)
+        InstrCount = initSizeRemarkInfo(M);
       LocalChanged |= MP->runOnModule(M);
-      emitInstrCountChangedRemark(MP, M, InstrCount);
+      if (EmitICRemark)
+        emitInstrCountChangedRemark(MP, M, InstrCount);
     }
 
     Changed |= LocalChanged;

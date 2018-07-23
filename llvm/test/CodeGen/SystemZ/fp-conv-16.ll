@@ -81,7 +81,7 @@ define i32 @f7(fp128 *%src) {
 ; CHECK: vrepg %v2, %v0, 1
 ; CHECK: clfxbr %r2, 5, %f0, 0
 ; CHECK: br %r14
-  %f = load fp128 , fp128 *%src
+  %f = load fp128, fp128 *%src
   %conv = fptoui fp128 %f to i32
   ret i32 %conv
 }
@@ -93,7 +93,7 @@ define i64 @f8(fp128 *%src) {
 ; CHECK: vrepg %v2, %v0, 1
 ; CHECK: clgxbr %r2, 5, %f0, 0
 ; CHECK: br %r14
-  %f = load fp128 , fp128 *%src
+  %f = load fp128, fp128 *%src
   %conv = fptoui fp128 %f to i64
   ret i64 %conv
 }
