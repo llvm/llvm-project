@@ -11,6 +11,7 @@
 #define FILESYSTEM_COMMON_H
 
 #include "experimental/__config"
+#include "array"
 #include "chrono"
 #include "cstdlib"
 #include "climits"
@@ -66,26 +67,149 @@ _LIBCPP_BEGIN_NAMESPACE_EXPERIMENTAL_FILESYSTEM
 namespace detail {
 namespace {
 
+static std::string format_string_imp(const char* msg, ...) {
+  // we might need a second shot at this, so pre-emptivly make a copy
+  struct GuardVAList {
+    va_list& target;
+    bool active = true;
+    void clear() {
+      if (active)
+        va_end(target);
+      active = false;
+    }
+    ~GuardVAList() {
+      if (active)
+        va_end(target);
+    }
+  };
+  va_list args;
+  va_start(args, msg);
+  GuardVAList args_guard = {args};
+
+  va_list args_cp;
+  va_copy(args_cp, args);
+  GuardVAList args_copy_guard = {args_cp};
+
+  std::array<char, 256> local_buff;
+  std::size_t size = local_buff.size();
+  auto ret = ::vsnprintf(local_buff.data(), size, msg, args_cp);
+
+  args_copy_guard.clear();
+
+  // handle empty expansion
+  if (ret == 0)
+    return std::string{};
+  if (static_cast<std::size_t>(ret) < size)
+    return std::string(local_buff.data());
+
+  // we did not provide a long enough buffer on our first attempt.
+  // add 1 to size to account for null-byte in size cast to prevent overflow
+  size = static_cast<std::size_t>(ret) + 1;
+  auto buff_ptr = std::unique_ptr<char[]>(new char[size]);
+  ret = ::vsnprintf(buff_ptr.get(), size, msg, args);
+  return std::string(buff_ptr.get());
+}
+
+const char* unwrap(string const& s) { return s.c_str(); }
+const char* unwrap(path const& p) { return p.native().c_str(); }
+template <class Arg>
+Arg const& unwrap(Arg const& a) {
+  static_assert(!is_class<Arg>::value, "cannot pass class here");
+  return a;
+}
+
+template <class... Args>
+std::string format_string(const char* fmt, Args const&... args) {
+  return format_string_imp(fmt, unwrap(args)...);
+}
+
 std::error_code capture_errno() {
   _LIBCPP_ASSERT(errno, "Expected errno to be non-zero");
   return std::error_code(errno, std::generic_category());
 }
 
-void set_or_throw(std::error_code const& m_ec, std::error_code* ec,
-                  const char* msg, path const& p = {}, path const& p2 = {}) {
-  if (ec) {
-    *ec = m_ec;
-  } else {
-    string msg_s("std::experimental::filesystem::");
-    msg_s += msg;
-    __throw_filesystem_error(msg_s, p, p2, m_ec);
-  }
+template <class T>
+T error_value();
+template <>
+constexpr void error_value<void>() {}
+template <>
+constexpr bool error_value<bool>() {
+  return false;
+}
+template <>
+constexpr uintmax_t error_value<uintmax_t>() {
+  return uintmax_t(-1);
+}
+template <>
+constexpr file_time_type error_value<file_time_type>() {
+  return file_time_type::min();
+}
+template <>
+path error_value<path>() {
+  return {};
 }
 
-void set_or_throw(std::error_code* ec, const char* msg, path const& p = {},
-                  path const& p2 = {}) {
-  return set_or_throw(capture_errno(), ec, msg, p, p2);
-}
+template <class T>
+struct ErrorHandler {
+  const char* func_name;
+  error_code* ec = nullptr;
+  const path* p1 = nullptr;
+  const path* p2 = nullptr;
+
+  ErrorHandler(const char* fname, error_code* ec, const path* p1 = nullptr,
+               const path* p2 = nullptr)
+      : func_name(fname), ec(ec), p1(p1), p2(p2) {
+    if (ec)
+      ec->clear();
+  }
+
+  T report(const error_code& m_ec) const {
+    if (ec) {
+      *ec = m_ec;
+      return error_value<T>();
+    }
+    string what = string("in ") + func_name;
+    switch (bool(p1) + bool(p2)) {
+    case 0:
+      __throw_filesystem_error(what, m_ec);
+    case 1:
+      __throw_filesystem_error(what, *p1, m_ec);
+    case 2:
+      __throw_filesystem_error(what, *p1, *p2, m_ec);
+    }
+    _LIBCPP_UNREACHABLE();
+  }
+
+  template <class... Args>
+  T report(const error_code& m_ec, const char* msg, Args const&... args) const {
+    if (ec) {
+      *ec = m_ec;
+      return error_value<T>();
+    }
+    string what =
+        string("in ") + func_name + ": " + format_string(msg, args...);
+    switch (bool(p1) + bool(p2)) {
+    case 0:
+      __throw_filesystem_error(what, m_ec);
+    case 1:
+      __throw_filesystem_error(what, *p1, m_ec);
+    case 2:
+      __throw_filesystem_error(what, *p1, *p2, m_ec);
+    }
+    _LIBCPP_UNREACHABLE();
+  }
+
+  T report(errc const& err) const { return report(make_error_code(err)); }
+
+  template <class... Args>
+  T report(errc const& err, const char* msg, Args const&... args) const {
+    return report(make_error_code(err), msg, args...);
+  }
+
+private:
+  ErrorHandler(ErrorHandler const&) = delete;
+  ErrorHandler& operator=(ErrorHandler const&) = delete;
+};
 
 namespace time_util {
 
