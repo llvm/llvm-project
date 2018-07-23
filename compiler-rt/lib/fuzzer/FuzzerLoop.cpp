@@ -465,11 +465,15 @@ void Fuzzer::CheckForUnstableCounters(const uint8_t *Data, size_t Size) {
 
   // First Rerun
   CBSetupAndRun();
-  TPC.UpdateUnstableCounters();
+  TPC.UpdateUnstableCounters(Options.HandleUnstable);
 
   // Second Rerun
   CBSetupAndRun();
-  TPC.UpdateUnstableCounters();
+  TPC.UpdateUnstableCounters(Options.HandleUnstable);
+
+  // Move minimum hit counts back to ModuleInline8bitCounters
+  if (Options.HandleUnstable)
+    TPC.ApplyUnstableCounters();
 }
 
 bool Fuzzer::RunOne(const uint8_t *Data, size_t Size, bool MayDeleteFile,
@@ -482,6 +486,17 @@ bool Fuzzer::RunOne(const uint8_t *Data, size_t Size, bool MayDeleteFile,
   UniqFeatureSetTmp.clear();
   size_t FoundUniqFeaturesOfII = 0;
   size_t NumUpdatesBefore = Corpus.NumFeatureUpdates();
+  bool NewFeaturesUnstable = false;
+
+  if (Options.HandleUnstable || Options.PrintUnstableStats) {
+    TPC.CollectFeatures([&](size_t Feature) {
+      if (Corpus.IsFeatureNew(Feature, Size, Options.Shrink))
+        NewFeaturesUnstable = true;
+    });
+    if (NewFeaturesUnstable)
+      CheckForUnstableCounters(Data, Size);
+  }
+
   TPC.CollectFeatures([&](size_t Feature) {
     if (Corpus.AddFeature(Feature, Size, Options.Shrink))
       UniqFeatureSetTmp.push_back(Feature);
@@ -490,15 +505,11 @@ bool Fuzzer::RunOne(const uint8_t *Data, size_t Size, bool MayDeleteFile,
                              II->UniqFeatureSet.end(), Feature))
         FoundUniqFeaturesOfII++;
   });
+
   if (FoundUniqFeatures)
     *FoundUniqFeatures = FoundUniqFeaturesOfII;
   PrintPulseAndReportSlowInput(Data, Size);
   size_t NumNewFeatures = Corpus.NumFeatureUpdates() - NumUpdatesBefore;
-
-  // If print_unstable_stats, execute the same input two more times to detect
-  // unstable edges.
-  if (NumNewFeatures && Options.PrintUnstableStats)
-    CheckForUnstableCounters(Data, Size);
 
   if (NumNewFeatures) {
     TPC.UpdateObservedPCs();

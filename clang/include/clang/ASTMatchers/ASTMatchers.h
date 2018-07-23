@@ -5111,6 +5111,18 @@ AST_TYPELOC_TRAVERSE_MATCHER_DECL(hasValueType, getValue,
 ///   matches "auto n" and "auto i"
 extern const AstTypeMatcher<AutoType> autoType;
 
+/// Matches types nodes representing C++11 decltype(<expr>) types.
+///
+/// Given:
+/// \code
+///   short i = 1;
+///   int j = 42;
+///   decltype(i + j) result = i + j;
+/// \endcode
+/// decltypeType() 
+///   matches "decltype(i + j)"
+extern const AstTypeMatcher<DecltypeType> decltypeType;
+
 /// Matches \c AutoType nodes where the deduced type is a specific type.
 ///
 /// Note: There is no \c TypeLoc for the deduced type and thus no
@@ -5127,6 +5139,20 @@ extern const AstTypeMatcher<AutoType> autoType;
 /// Usable as: Matcher<AutoType>
 AST_TYPE_TRAVERSE_MATCHER(hasDeducedType, getDeducedType,
                           AST_POLYMORPHIC_SUPPORTED_TYPES(AutoType));
+
+/// Matches \c DecltypeType nodes to find out the underlying type.
+///
+/// Given
+/// \code
+///   decltype(1) a = 1;
+///   decltype(2.0) b = 2.0;
+/// \endcode
+/// decltypeType(hasUnderlyingType(isInteger()))
+///   matches "auto a"
+///
+/// Usable as: Matcher<DecltypeType>
+AST_TYPE_TRAVERSE_MATCHER(hasUnderlyingType, getUnderlyingType,
+                          AST_POLYMORPHIC_SUPPORTED_TYPES(DecltypeType));
 
 /// Matches \c FunctionType nodes.
 ///

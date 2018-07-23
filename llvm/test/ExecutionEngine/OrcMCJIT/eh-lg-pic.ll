@@ -15,8 +15,14 @@ define void @throwException() {
   unreachable
 }
 
+; Make an internal function so we exercise R_X86_64_GOTOFF64 relocations.
+define internal dso_local void @use_gotoff() {
+  ret void
+}
+
 define i32 @main() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
 entry:
+  call void @use_gotoff()
   invoke void @throwException()
           to label %try.cont unwind label %lpad
 

@@ -30,6 +30,11 @@ def main():
   parser.add_argument(
       '--extra_scrub', action='store_true',
       help='Always use additional regex to further reduce diffs between various subtargets')
+  parser.add_argument(
+      '--x86_scrub_rip', action='store_true', default=True,
+      help='Use more regex for x86 matching to reduce diffs between various subtargets')
+  parser.add_argument(
+      '--no_x86_scrub_rip', action='store_false', dest='x86_scrub_rip')
   parser.add_argument('tests', nargs='+')
   args = parser.parse_args()
 

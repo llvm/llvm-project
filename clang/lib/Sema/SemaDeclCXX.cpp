@@ -3946,53 +3946,6 @@ Sema::BuildMemInitializer(Decl *ConstructorD,
   return BuildBaseInitializer(BaseType, TInfo, Init, ClassDecl, EllipsisLoc);
 }
 
-/// Checks a member initializer expression for cases where reference (or
-/// pointer) members are bound to by-value parameters (or their addresses).
-static void CheckForDanglingReferenceOrPointer(Sema &S, ValueDecl *Member,
-                                               Expr *Init,
-                                               SourceLocation IdLoc) {
-  QualType MemberTy = Member->getType();
-
-  // We only handle pointers and references currently.
-  // FIXME: Would this be relevant for ObjC object pointers? Or block pointers?
-  if (!MemberTy->isReferenceType() && !MemberTy->isPointerType())
-    return;
-
-  const bool IsPointer = MemberTy->isPointerType();
-  if (IsPointer) {
-    if (const UnaryOperator *Op
-          = dyn_cast<UnaryOperator>(Init->IgnoreParenImpCasts())) {
-      // The only case we're worried about with pointers requires taking the
-      // address.
-      if (Op->getOpcode() != UO_AddrOf)
-        return;
-
-      Init = Op->getSubExpr();
-    } else {
-      // We only handle address-of expression initializers for pointers.
-      return;
-    }
-  }
-
-  if (const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(Init->IgnoreParens())) {
-    // We only warn when referring to a non-reference parameter declaration.
-    const ParmVarDecl *Parameter = dyn_cast<ParmVarDecl>(DRE->getDecl());
-    if (!Parameter || Parameter->getType()->isReferenceType())
-      return;
-
-    S.Diag(Init->getExprLoc(),
-           IsPointer ? diag::warn_init_ptr_member_to_parameter_addr
-                     : diag::warn_bind_ref_member_to_parameter)
-      << Member << Parameter << Init->getSourceRange();
-  } else {
-    // Other initializers are fine.
-    return;
-  }
-
-  S.Diag(Member->getLocation(), diag::note_ref_or_ptr_member_declared_here)
-    << (unsigned)IsPointer;
-}
-
 MemInitResult
 Sema::BuildMemberInitializer(ValueDecl *Member, Expr *Init,
                              SourceLocation IdLoc) {
@@ -4046,8 +3999,6 @@ Sema::BuildMemberInitializer(ValueDecl *Member, Expr *Init,
                                             nullptr);
     if (MemberInit.isInvalid())
       return true;
-
-    CheckForDanglingReferenceOrPointer(*this, Member, MemberInit.get(), IdLoc);
 
     // C++11 [class.base.init]p7:
     //   The initialization of each base and member constitutes a

@@ -1804,7 +1804,8 @@ def err_destructor_template : Error<
 
 // C++ initialization
 def err_init_conversion_failed : Error<
-  "cannot initialize %select{a variable|a parameter|return object|an "
+  "cannot initialize %select{a variable|a parameter|return object|"
+  "statement expression result|an "
   "exception object|a member subobject|an array element|a new value|a value|a "
   "base class|a constructor delegation|a vector element|a block element|a "
   "block element|a complex element|a lambda capture|a compound literal "
@@ -1939,34 +1940,29 @@ def warn_unsequenced_mod_mod : Warning<
 def warn_unsequenced_mod_use : Warning<
   "unsequenced modification and access to %0">, InGroup<Unsequenced>;
 
+def select_initialized_entity_kind : TextSubstitution<
+  "%select{copying variable|copying parameter|"
+  "returning object|initializing statement expression result|"
+  "throwing object|copying member subobject|copying array element|"
+  "allocating object|copying temporary|initializing base subobject|"
+  "initializing vector element|capturing value}0">;
+
 def err_temp_copy_no_viable : Error<
-  "no viable constructor %select{copying variable|copying parameter|"
-  "returning object|throwing object|copying member subobject|copying array "
-  "element|allocating object|copying temporary|initializing base subobject|"
-  "initializing vector element|capturing value}0 of type %1">;
+  "no viable constructor %sub{select_initialized_entity_kind}0 of type %1">;
 def ext_rvalue_to_reference_temp_copy_no_viable : Extension<
-  "no viable constructor %select{copying variable|copying parameter|"
-  "returning object|throwing object|copying member subobject|copying array "
-  "element|allocating object|copying temporary|initializing base subobject|"
-  "initializing vector element|capturing value}0 of type %1; C++98 requires a copy "
-  "constructor when binding a reference to a temporary">,
+  "no viable constructor %sub{select_initialized_entity_kind}0 of type %1; "
+  "C++98 requires a copy constructor when binding a reference to a temporary">,
   InGroup<BindToTemporaryCopy>;
 def err_temp_copy_ambiguous : Error<
-  "ambiguous constructor call when %select{copying variable|copying "
-  "parameter|returning object|throwing object|copying member subobject|copying "
-  "array element|allocating object|copying temporary|initializing base subobject|"
-  "initializing vector element|capturing value}0 of type %1">;
+  "ambiguous constructor call when %sub{select_initialized_entity_kind}0 "
+  "of type %1">;
 def err_temp_copy_deleted : Error<
-  "%select{copying variable|copying parameter|returning object|throwing "
-  "object|copying member subobject|copying array element|allocating object|"
-  "copying temporary|initializing base subobject|initializing vector element|"
-  "capturing value}0 of type %1 invokes deleted constructor">;
+  "%sub{select_initialized_entity_kind}0 of type %1 "
+  "invokes deleted constructor">;
 def err_temp_copy_incomplete : Error<
   "copying a temporary object of incomplete type %0">;
 def warn_cxx98_compat_temp_copy : Warning<
-  "%select{copying variable|copying parameter|returning object|throwing "
-  "object|copying member subobject|copying array element|allocating object|"
-  "copying temporary|initializing base subobject|initializing vector element}1 "
+  "%sub{select_initialized_entity_kind}1 "
   "of type %2 when binding a reference to a temporary would %select{invoke "
   "an inaccessible constructor|find no viable constructor|find ambiguous "
   "constructors|invoke a deleted constructor}0 in C++98">,
@@ -7870,11 +7866,11 @@ def note_ref_var_local_bind : Note<
 // Check for initializing a member variable with the address or a reference to
 // a constructor parameter.
 def warn_bind_ref_member_to_parameter : Warning<
-  "binding reference member %0 to stack allocated parameter %1">,
-  InGroup<DanglingField>;
+  "binding reference member %0 to stack allocated "
+  "%select{variable|parameter}2 %1">, InGroup<DanglingField>;
 def warn_init_ptr_member_to_parameter_addr : Warning<
-  "initializing pointer member %0 with the stack address of parameter %1">,
-  InGroup<DanglingField>;
+  "initializing pointer member %0 with the stack address of "
+  "%select{variable|parameter}2 %1">, InGroup<DanglingField>;
 def note_ref_or_ptr_member_declared_here : Note<
   "%select{reference|pointer}0 member declared here">;
 

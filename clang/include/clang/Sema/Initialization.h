@@ -59,6 +59,9 @@ public:
     /// The entity being initialized is the result of a function call.
     EK_Result,
 
+    /// The entity being initialized is the result of a statement expression.
+    EK_StmtExprResult,
+
     /// The entity being initialized is an exception object that
     /// is being thrown.
     EK_Exception,
@@ -283,6 +286,11 @@ public:
   static InitializedEntity InitializeResult(SourceLocation ReturnLoc,
                                             QualType Type, bool NRVO) {
     return InitializedEntity(EK_Result, ReturnLoc, Type, NRVO);
+  }
+
+  static InitializedEntity InitializeStmtExprResult(SourceLocation ReturnLoc,
+                                            QualType Type) {
+    return InitializedEntity(EK_StmtExprResult, ReturnLoc, Type);
   }
 
   static InitializedEntity InitializeBlock(SourceLocation BlockVarLoc,

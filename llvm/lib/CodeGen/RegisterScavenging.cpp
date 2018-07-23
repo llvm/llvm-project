@@ -162,8 +162,8 @@ void RegScavenger::unprocess() {
     determineKillsAndDefs();
 
     // Commit the changes.
-    setUsed(KillRegUnits);
     setUnused(DefRegUnits);
+    setUsed(KillRegUnits);
   }
 
   if (MBBI == MBB->begin()) {

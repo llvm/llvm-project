@@ -188,6 +188,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(decayedType);
   REGISTER_MATCHER(decl);
   REGISTER_MATCHER(declaratorDecl);
+  REGISTER_MATCHER(decltypeType);
   REGISTER_MATCHER(declCountIs);
   REGISTER_MATCHER(declRefExpr);
   REGISTER_MATCHER(declStmt);

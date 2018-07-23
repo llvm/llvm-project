@@ -8788,11 +8788,14 @@ static void CheckMemaccessSize(Sema &S, unsigned BId, const CallExpr *Call) {
   const Expr *SizeArg =
     Call->getArg(BId == Builtin::BImemset ? 2 : 1)->IgnoreImpCasts();
 
+  auto isLiteralZero = [](const Expr *E) {
+    return isa<IntegerLiteral>(E) && cast<IntegerLiteral>(E)->getValue() == 0;
+  };
+
   // If we're memsetting or bzeroing 0 bytes, then this is likely an error.
   SourceLocation CallLoc = Call->getRParenLoc();
   SourceManager &SM = S.getSourceManager();
-  if (isa<IntegerLiteral>(SizeArg) &&
-      cast<IntegerLiteral>(SizeArg)->getValue() == 0 &&
+  if (isLiteralZero(SizeArg) &&
       !isArgumentExpandedFromMacro(SM, CallLoc, SizeArg->getExprLoc())) {
 
     SourceLocation DiagLoc = SizeArg->getExprLoc();
@@ -8804,7 +8807,7 @@ static void CheckMemaccessSize(Sema &S, unsigned BId, const CallExpr *Call) {
                                     CallLoc, SM, S.getLangOpts()) == "bzero")) {
       S.Diag(DiagLoc, diag::warn_suspicious_bzero_size);
       S.Diag(DiagLoc, diag::note_suspicious_bzero_size_silence);
-    } else {
+    } else if (!isLiteralZero(Call->getArg(1)->IgnoreImpCasts())) {
       S.Diag(DiagLoc, diag::warn_suspicious_sizeof_memset) << 0;
       S.Diag(DiagLoc, diag::note_suspicious_sizeof_memset_silence) << 0;
     }

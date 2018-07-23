@@ -21,88 +21,50 @@
 namespace isl {
 inline namespace noexceptions {
 
-template <typename DerivedT, typename ElementT, typename ListT>
-struct iterator_base : public llvm::iterator_facade_base<
-                           iterator_base<DerivedT, ElementT, ListT>,
-                           std::forward_iterator_tag, ElementT> {
-  explicit iterator_base(const ListT &List) : List(&List) {
-    Position = static_cast<DerivedT *>(this)->list_size();
-  }
-  iterator_base(const ListT &List, int Position)
-      : List(&List), Position(Position) {}
-  iterator_base &operator=(const iterator_base &R) = default;
+template <typename ListT>
+using list_element_type = decltype(std::declval<ListT>().get_at(0));
 
-  bool operator==(const iterator_base &O) const {
+template <typename ListT>
+struct isl_iterator
+    : public llvm::iterator_facade_base<isl_iterator<ListT>,
+                                        std::forward_iterator_tag,
+                                        list_element_type<ListT>> {
+
+  using ElementT = list_element_type<ListT>;
+
+  explicit isl_iterator(const ListT &List)
+      : List(&List), Position(List.size()) {}
+  isl_iterator(const ListT &List, int Position)
+      : List(&List), Position(Position) {}
+  isl_iterator &operator=(const isl_iterator &R) = default;
+
+  bool operator==(const isl_iterator &O) const {
     return List == O.List && Position == O.Position;
   }
 
-  DerivedT &operator++() {
+  isl_iterator &operator++() {
     ++Position;
-    return *static_cast<DerivedT *>(this);
+    return *this;
   }
 
-  DerivedT operator++(int) {
-    DerivedT Copy{static_cast<DerivedT *>(this)};
+  isl_iterator operator++(int) {
+    isl_iterator Copy{*this};
     ++Position;
     return Copy;
   }
+
+  ElementT operator*() const { return List->get_at(this->Position); }
 
 protected:
   const ListT *List;
   int Position = 0;
 };
 
-struct map_iterator : iterator_base<map_iterator, isl::map, isl::map_list> {
-  using BaseT = iterator_base<map_iterator, isl::map, isl::map_list>;
-  using BaseT::BaseT;
-  isl::map operator*() const { return List->get_map(this->Position); }
-  int list_size() const { return this->List->n_map(); }
-};
-
-struct basic_map_iterator
-    : iterator_base<basic_map_iterator, isl::basic_map, isl::basic_map_list> {
-  using BaseT =
-      iterator_base<basic_map_iterator, isl::basic_map, isl::basic_map_list>;
-  using BaseT::BaseT;
-  isl::basic_map operator*() const {
-    return List->get_basic_map(this->Position);
-  }
-  int list_size() const { return this->List->n_basic_map(); }
-};
-
-struct set_iterator : iterator_base<set_iterator, isl::set, isl::set_list> {
-  using BaseT = iterator_base<set_iterator, isl::set, isl::set_list>;
-  using BaseT::BaseT;
-  isl::set operator*() const { return List->get_set(this->Position); }
-  int list_size() const { return this->List->n_set(); }
-};
-
-struct basic_set_iterator
-    : iterator_base<basic_set_iterator, isl::basic_set, isl::basic_set_list> {
-  using BaseT =
-      iterator_base<basic_set_iterator, isl::basic_set, isl::basic_set_list>;
-  using BaseT::BaseT;
-  isl::basic_set operator*() const {
-    return List->get_basic_set(this->Position);
-  }
-  int list_size() const { return this->List->n_basic_set(); }
-};
-
-inline map_iterator begin(const isl::map_list &M) { return map_iterator(M, 0); }
-inline map_iterator end(const isl::map_list &M) { return map_iterator(M); }
-inline set_iterator begin(const isl::set_list &M) { return set_iterator(M, 0); }
-inline set_iterator end(const isl::set_list &M) { return set_iterator(M); }
-inline basic_map_iterator begin(const isl::basic_map_list &M) {
-  return basic_map_iterator(M, 0);
+template <typename T> isl_iterator<T> begin(const T &t) {
+  return isl_iterator<T>(t, 0);
 }
-inline basic_map_iterator end(const isl::basic_map_list &M) {
-  return basic_map_iterator(M);
-}
-inline basic_set_iterator begin(const isl::basic_set_list &M) {
-  return basic_set_iterator(M, 0);
-}
-inline basic_set_iterator end(const isl::basic_set_list &M) {
-  return basic_set_iterator(M);
+template <typename T> isl_iterator<T> end(const T &t) {
+  return isl_iterator<T>(t);
 }
 
 } // namespace noexceptions
