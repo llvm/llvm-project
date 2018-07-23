@@ -318,8 +318,8 @@ private:
   /// \sa shouldDisplayNotesAsEvents
   Optional<bool> DisplayNotesAsEvents;
 
-  /// \sa shouldAggressivelySimplifyRelationalComparison
-  Optional<bool> AggressiveRelationalComparisonSimplification;
+  /// \sa shouldAggressivelySimplifyBinaryOperation
+  Optional<bool> AggressiveBinaryOperationSimplification;
 
   /// \sa getCTUDir
   Optional<StringRef> CTUDir;
@@ -690,19 +690,19 @@ public:
   /// to false when unset.
   bool shouldDisplayNotesAsEvents();
 
-  /// Returns true if SValBuilder should rearrange comparisons of symbolic
-  /// expressions which consist of a sum of a symbol and a concrete integer
-  /// into the format where symbols are on the left-hand side and the integer
-  /// is on the right. This is only done if both symbols and both concrete
-  /// integers are signed, greater than or equal to the quarter of the minimum
-  /// value of the type and less than or equal to the quarter of the maximum
-  /// value of that type.
+  /// Returns true if SValBuilder should rearrange comparisons and additive
+  /// operations of symbolic expressions which consist of a sum of a symbol and
+  /// a concrete integer into the format where symbols are on the left-hand
+  /// side and the integer is on the right. This is only done if both symbols
+  /// and both concrete integers are signed, greater than or equal to the
+  /// quarter of the minimum value of the type and less than or equal to the
+  /// quarter of the maximum value of that type.
   ///
-  /// A + n <REL> B + m becomes A - B <REL> m - n, where A and B symbolic,
-  /// n and m are integers. <REL> is any of '==', '!=', '<', '<=', '>' or '>='.
-  /// The rearrangement also happens with '-' instead of '+' on either or both
-  /// side and also if any or both integers are missing.
-  bool shouldAggressivelySimplifyRelationalComparison();
+  /// A + n <OP> B + m becomes A - B <OP> m - n, where A and B symbolic,
+  /// n and m are integers. <OP> is any of '==', '!=', '<', '<=', '>', '>=',
+  /// '+' or '-'. The rearrangement also happens with '-' instead of '+' on
+  // either or both side and also if any or both integers are missing.
+  bool shouldAggressivelySimplifyBinaryOperation();
 
   /// Returns the directory containing the CTU related files.
   StringRef getCTUDir();

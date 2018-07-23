@@ -463,12 +463,12 @@ bool AnalyzerOptions::shouldDisplayNotesAsEvents() {
   return DisplayNotesAsEvents.getValue();
 }
 
-bool AnalyzerOptions::shouldAggressivelySimplifyRelationalComparison() {
-  if (!AggressiveRelationalComparisonSimplification.hasValue())
-    AggressiveRelationalComparisonSimplification =
-      getBooleanOption("aggressive-relational-comparison-simplification",
+bool AnalyzerOptions::shouldAggressivelySimplifyBinaryOperation() {
+  if (!AggressiveBinaryOperationSimplification.hasValue())
+    AggressiveBinaryOperationSimplification =
+      getBooleanOption("aggressive-binary-operation-simplification",
                        /*Default=*/false);
-  return AggressiveRelationalComparisonSimplification.getValue();
+  return AggressiveBinaryOperationSimplification.getValue();
 }
 
 StringRef AnalyzerOptions::getCTUDir() {

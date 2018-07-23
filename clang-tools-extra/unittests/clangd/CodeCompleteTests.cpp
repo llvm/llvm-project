@@ -18,6 +18,7 @@
 #include "SyncAPI.h"
 #include "TestFS.h"
 #include "index/MemIndex.h"
+#include "clang/Sema/CodeCompleteConsumer.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
@@ -1319,6 +1320,21 @@ TEST(CompletionTest, ScopeOfClassFieldInConstructorInitializer) {
       )cpp");
   EXPECT_THAT(Results.Completions,
               UnorderedElementsAre(AllOf(Scope("ns::X::"), Named("x_"))));
+}
+
+TEST(CompletionTest, CodeCompletionContext) {
+  auto Results = completions(
+      R"cpp(
+        namespace ns {
+          class X { public: X(); int x_; };
+          void f() {
+            X x;
+            x.^;
+          }
+        }
+      )cpp");
+
+  EXPECT_THAT(Results.Context, CodeCompletionContext::CCC_DotMemberAccess);
 }
 
 } // namespace

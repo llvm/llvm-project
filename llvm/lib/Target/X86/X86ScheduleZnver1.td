@@ -93,7 +93,7 @@ def : ReadAdvance<ReadAfterLd, 4>;
 // The Integer PRF for Zen is 168 entries, and it holds the architectural and
 // speculative version of the 64-bit integer registers.
 // Reference: "Software Optimization Guide for AMD Family 17h Processors"
-def ZnIntegerPRF : RegisterFile<168, [GR8, GR16, GR32, GR64, CCR]>;
+def ZnIntegerPRF : RegisterFile<168, [GR64, CCR]>;
 
 // 36 Entry (9x4 entries) floating-point Scheduler
 def ZnFPU     : ProcResGroup<[ZnFPU0, ZnFPU1, ZnFPU2, ZnFPU3]> {

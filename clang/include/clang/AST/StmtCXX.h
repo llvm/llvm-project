@@ -62,21 +62,22 @@ public:
 
 /// CXXTryStmt - A C++ try block, including all handlers.
 ///
-class CXXTryStmt : public Stmt {
+class CXXTryStmt final : public Stmt,
+                         private llvm::TrailingObjects<CXXTryStmt, Stmt *> {
+
+  friend TrailingObjects;
+  friend class ASTStmtReader;
+
   SourceLocation TryLoc;
   unsigned NumHandlers;
+  size_t numTrailingObjects(OverloadToken<Stmt *>) const { return NumHandlers; }
 
   CXXTryStmt(SourceLocation tryLoc, Stmt *tryBlock, ArrayRef<Stmt*> handlers);
-
   CXXTryStmt(EmptyShell Empty, unsigned numHandlers)
     : Stmt(CXXTryStmtClass), NumHandlers(numHandlers) { }
 
-  Stmt const * const *getStmts() const {
-    return reinterpret_cast<Stmt const * const*>(this + 1);
-  }
-  Stmt **getStmts() {
-    return reinterpret_cast<Stmt **>(this + 1);
-  }
+  Stmt *const *getStmts() const { return getTrailingObjects<Stmt *>(); }
+  Stmt **getStmts() { return getTrailingObjects<Stmt *>(); }
 
 public:
   static CXXTryStmt *Create(const ASTContext &C, SourceLocation tryLoc,
@@ -115,8 +116,6 @@ public:
   child_range children() {
     return child_range(getStmts(), getStmts() + getNumHandlers() + 1);
   }
-
-  friend class ASTStmtReader;
 };
 
 /// CXXForRangeStmt - This represents C++0x [stmt.ranged]'s ranged for

@@ -25,6 +25,8 @@
 #include "rapid-cxx-test.hpp"
 #include "filesystem_test_helper.hpp"
 
+#include <iostream>
+
 using namespace fs;
 
 TEST_SUITE(recursive_directory_iterator_increment_tests)
@@ -290,18 +292,15 @@ TEST_CASE(test_PR35078)
     }
     {
       bool SeenNestedFile = false;
-      recursive_directory_iterator it = SetupState(true, SeenNestedFile);
+      recursive_directory_iterator it = SetupState(false, SeenNestedFile);
       TEST_REQUIRE(it != endIt);
       TEST_REQUIRE(*it == nestedDir);
-      ec = GetTestEC();
-      it.increment(ec);
-      TEST_CHECK(!ec);
-      if (SeenNestedFile) {
-        TEST_CHECK(it == endIt);
-      } else {
-        TEST_REQUIRE(it != endIt);
-        TEST_CHECK(*it == nestedFile);
-      }
+
+      ExceptionChecker Checker(std::errc::permission_denied,
+                               "recursive_directory_iterator::operator++()",
+                               format_string("attempting recursion into \"%s\"",
+                                             nestedDir.native()));
+      TEST_CHECK_THROW_RESULT(filesystem_error, Checker, ++it);
     }
 }
 
