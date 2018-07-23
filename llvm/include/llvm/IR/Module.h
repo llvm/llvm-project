@@ -256,9 +256,16 @@ public:
   /// versions when the pass does not change.
   std::unique_ptr<RandomNumberGenerator> createRNG(const Pass* P) const;
 
-/// @}
-/// @name Module Level Mutators
-/// @{
+  /// Return true if size-info optimization remark is enabled, false
+  /// otherwise.
+  bool shouldEmitInstrCountChangedRemark() {
+    return getContext().getDiagHandlerPtr()->isAnalysisRemarkEnabled(
+        "size-info");
+  }
+
+  /// @}
+  /// @name Module Level Mutators
+  /// @{
 
   /// Set the module identifier.
   void setModuleIdentifier(StringRef ID) { ModuleID = ID; }

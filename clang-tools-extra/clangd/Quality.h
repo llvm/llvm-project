@@ -26,6 +26,7 @@
 //===---------------------------------------------------------------------===//
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_QUALITY_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_QUALITY_H
+#include "clang/Sema/CodeCompleteConsumer.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include <algorithm>
@@ -97,6 +98,11 @@ struct SymbolRelevanceSignals {
     CodeComplete,
     Generic,
   } Query = Generic;
+
+  CodeCompletionContext::Kind Context = CodeCompletionContext::CCC_Other;
+
+  // Whether symbol is an instance member of a class.
+  bool IsInstanceMember = false;
 
   void merge(const CodeCompletionResult &SemaResult);
   void merge(const Symbol &IndexResult);

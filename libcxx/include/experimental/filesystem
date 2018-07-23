@@ -1265,40 +1265,51 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     filesystem_error(const string& __what, error_code __ec)
         : system_error(__ec, __what),
-          __paths_(make_shared<_Storage>(path(), path()))
-    {}
+          __storage_(make_shared<_Storage>(path(), path())) {
+      __create_what(0);
+    }
 
     _LIBCPP_INLINE_VISIBILITY
     filesystem_error(const string& __what, const path& __p1, error_code __ec)
         : system_error(__ec, __what),
-        __paths_(make_shared<_Storage>(__p1, path()))
-    {}
+          __storage_(make_shared<_Storage>(__p1, path())) {
+      __create_what(1);
+    }
 
     _LIBCPP_INLINE_VISIBILITY
     filesystem_error(const string& __what, const path& __p1, const path& __p2,
                      error_code __ec)
         : system_error(__ec, __what),
-          __paths_(make_shared<_Storage>(__p1, __p2))
-    {}
-
-    _LIBCPP_INLINE_VISIBILITY
-    const path& path1() const _NOEXCEPT {
-        return __paths_->first;
+          __storage_(make_shared<_Storage>(__p1, __p2)) {
+      __create_what(2);
     }
 
     _LIBCPP_INLINE_VISIBILITY
-    const path& path2() const _NOEXCEPT {
-        return __paths_->second;
-    }
+    const path& path1() const _NOEXCEPT { return __storage_->__p1_; }
+
+    _LIBCPP_INLINE_VISIBILITY
+    const path& path2() const _NOEXCEPT { return __storage_->__p2_; }
 
     ~filesystem_error() override; // key function
 
-    // TODO(ericwf): Create a custom error message.
-    //const char* what() const _NOEXCEPT;
+    _LIBCPP_INLINE_VISIBILITY
+    const char* what() const _NOEXCEPT override {
+      return __storage_->__what_.c_str();
+    }
 
-private:
-    typedef pair<path, path> _Storage;
-    shared_ptr<_Storage> __paths_;
+    _LIBCPP_FUNC_VIS
+    void __create_what(int __num_paths);
+
+  private:
+    struct _Storage {
+      _LIBCPP_INLINE_VISIBILITY
+      _Storage(const path& __p1, const path& __p2) : __p1_(__p1), __p2_(__p2) {}
+
+      path __p1_;
+      path __p2_;
+      string __what_;
+    };
+    shared_ptr<_Storage> __storage_;
 };
 
 template <class... _Args>
@@ -1314,7 +1325,6 @@ void __throw_filesystem_error(_Args&&...)
     _VSTD::abort();
 }
 #endif
-
 
 // operational functions
 
@@ -2226,12 +2236,13 @@ private:
         return;
       }
       if (__ec && (!__allow_dne || !__is_dne_error(__ec)))
-        __throw_filesystem_error(__msg, __p_, _Path{}, __ec);
+        __throw_filesystem_error(__msg, __p_, __ec);
     }
 
     _LIBCPP_INLINE_VISIBILITY
     void __refresh(error_code* __ec = nullptr) {
-      __handle_error("refresh", __ec, __do_refresh(), /*allow_dne*/ true);
+      __handle_error("in directory_entry::refresh", __ec, __do_refresh(),
+                     /*allow_dne*/ true);
     }
 
     _LIBCPP_INLINE_VISIBILITY
@@ -2322,11 +2333,11 @@ private:
       case _RefreshNonSymlink: {
         error_code __m_ec;
         file_status __st(__get_ft(&__m_ec));
-        __handle_error("directory_entry::file_size", __ec, __m_ec);
+        __handle_error("in directory_entry::file_size", __ec, __m_ec);
         if (_VSTD_FS::exists(__st) && !_VSTD_FS::is_regular_file(__st)) {
           errc __err_kind = _VSTD_FS::is_directory(__st) ? errc::is_a_directory
                                                          : errc::not_supported;
-          __handle_error("directory_entry::file_size", __ec,
+          __handle_error("in directory_entry::file_size", __ec,
                          make_error_code(__err_kind));
         }
         return __data_.__size_;
@@ -2347,7 +2358,7 @@ private:
       case _RefreshNonSymlink: {
         error_code __m_ec;
         (void)__get_ft(&__m_ec);
-        __handle_error("directory_entry::hard_link_count", __ec, __m_ec);
+        __handle_error("in directory_entry::hard_link_count", __ec, __m_ec);
         return __data_.__nlink_;
       }
       }
@@ -2366,10 +2377,10 @@ private:
       case _RefreshNonSymlink: {
         error_code __m_ec;
         file_status __st(__get_ft(&__m_ec));
-        __handle_error("directory_entry::last_write_time", __ec, __m_ec);
+        __handle_error("in directory_entry::last_write_time", __ec, __m_ec);
         if (_VSTD_FS::exists(__st) &&
             __data_.__write_time_ == file_time_type::min())
-          __handle_error("directory_entry::last_write_time", __ec,
+          __handle_error("in directory_entry::last_write_time", __ec,
                          make_error_code(errc::value_too_large));
         return __data_.__write_time_;
       }

@@ -1,5 +1,7 @@
 ; RUN: llc -mtriple=mipsel-- -disable-mips-delay-filler -relocation-model=pic < %s | \
 ; RUN:     FileCheck %s -check-prefixes=PIC,CHECK
+; RUN: llc -mtriple=mipsel-- -mattr=+micromips -disable-mips-delay-filler \
+; RUN:     -relocation-model=pic < %s | FileCheck %s -check-prefixes=MM,CHECK
 ; RUN: llc -mtriple=mipsel-- -relocation-model=static -disable-mips-delay-filler < \
 ; RUN:     %s | FileCheck %s -check-prefixes=STATIC,CHECK
 ; RUN: llc -mtriple=mipsel-- -relocation-model=static -disable-mips-delay-filler \
@@ -19,6 +21,13 @@ entry:
 ; PIC-DAG:   addiu   $4, $[[R0]], %tlsgd(t1)
 ; PIC-DAG:   jalr    $25
 ; PIC-DAG:   lw      $2, 0($2)
+
+; MM-LABEL:       f1:
+; MM-DAG:   addu    $[[R0:[a-z0-9]+]], $2, $25
+; MM-DAG:   lw      $25, %call16(__tls_get_addr)($[[R0]])
+; MM-DAG:   addiu   $4, $[[R0]], %tlsgd(t1)
+; MM-DAG:   jalr    $25
+; MM-DAG:   lw16    $2, 0($2)
 
 ; STATIC-LABEL:   f1:
 ; STATIC:   lui     $[[R0:[0-9]+]], %tprel_hi(t1)
@@ -42,6 +51,13 @@ entry:
 ; PIC-DAG:   addiu   $4, $[[R0]], %tlsgd(t2)
 ; PIC-DAG:   jalr    $25
 ; PIC-DAG:   lw      $2, 0($2)
+
+; MM-LABEL:       f2:
+; MM-DAG:   addu    $[[R0:[a-z0-9]+]], $2, $25
+; MM-DAG:   lw      $25, %call16(__tls_get_addr)($[[R0]])
+; MM-DAG:   addiu   $4, $[[R0]], %tlsgd(t2)
+; MM-DAG:   jalr    $25
+; MM-DAG:   lw16    $2, 0($2)
 
 ; STATICGP-LABEL: f2:
 ; STATICGP: lui     $[[R0:[0-9]+]], %hi(__gnu_local_gp)
@@ -68,6 +84,12 @@ entry:
 ; PIC:   lui     $[[R0:[0-9]+]], %dtprel_hi(f3.i)
 ; PIC:   addu    $[[R1:[0-9]+]], $[[R0]], $2
 ; PIC:   lw      ${{[0-9]+}}, %dtprel_lo(f3.i)($[[R1]])
+
+; MM:   addiu   $4, ${{[a-z0-9]+}}, %tlsldm(f3.i)
+; MM:   jalr    $25
+; MM:   lui     $[[R0:[0-9]+]], %dtprel_hi(f3.i)
+; MM:   addu16  $[[R1:[0-9]+]], $[[R0]], $2
+; MM:   lw      ${{[0-9]+}}, %dtprel_lo(f3.i)($[[R1]])
 
   %0 = load i32, i32* @f3.i, align 4
   %inc = add nsw i32 %0, 1

@@ -3098,6 +3098,10 @@ multiclass MipsHiLoRelocs<Instruction Lui, Instruction Addiu,
               (Addiu GPROpnd:$hi, tglobaltlsaddr:$lo)>;
 }
 
+// wrapper_pic
+class WrapperPat<SDNode node, Instruction ADDiuOp, RegisterClass RC>:
+      MipsPat<(MipsWrapper RC:$gp, node:$in), (ADDiuOp RC:$gp, node:$in)>;
+
 let AdditionalPredicates = [NotInMicroMips] in {
   defm : MipsHiLoRelocs<LUi, ADDiu, ZERO, GPR32Opnd>, ISA_MIPS1;
 
@@ -3110,11 +3114,6 @@ let AdditionalPredicates = [NotInMicroMips] in {
                 (ADDiu GPR32:$gp, tglobaladdr:$in)>, ISA_MIPS1, ABI_NOT_N64;
   def : MipsPat<(add GPR32:$gp, (MipsGPRel tconstpool:$in)),
                 (ADDiu GPR32:$gp, tconstpool:$in)>, ISA_MIPS1, ABI_NOT_N64;
-
-  // wrapper_pic
-  class WrapperPat<SDNode node, Instruction ADDiuOp, RegisterClass RC>:
-        MipsPat<(MipsWrapper RC:$gp, node:$in),
-                (ADDiuOp RC:$gp, node:$in)>;
 
   def : WrapperPat<tglobaladdr, ADDiu, GPR32>, ISA_MIPS1;
   def : WrapperPat<tconstpool, ADDiu, GPR32>, ISA_MIPS1;

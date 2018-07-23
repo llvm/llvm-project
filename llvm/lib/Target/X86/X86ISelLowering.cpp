@@ -38559,15 +38559,9 @@ static SDValue combineLoopMAddPattern(SDNode *N, SelectionDAG &DAG,
 
   EVT VT = N->getValueType(0);
 
-  unsigned RegSize = 128;
-  if (Subtarget.useBWIRegs())
-    RegSize = 512;
-  else if (Subtarget.hasAVX())
-    RegSize = 256;
-  unsigned VectorSize = VT.getVectorNumElements() * 16;
   // If the vector size is less than 128, or greater than the supported RegSize,
   // do not use PMADD.
-  if (VectorSize < 128 || VectorSize > RegSize)
+  if (VT.getVectorNumElements() < 8)
     return SDValue();
 
   SDLoc DL(N);

@@ -168,7 +168,7 @@ private:
   SmallVector<MachineInstr *, 16>
   tracePredStateThroughCFG(MachineFunction &MF, ArrayRef<BlockCondInfo> Infos);
 
-  void checkAllLoads(MachineFunction &MF);
+  void hardenAllLoads(MachineFunction &MF);
 
   unsigned saveEFLAGS(MachineBasicBlock &MBB,
                       MachineBasicBlock::iterator InsertPt, DebugLoc Loc);
@@ -504,8 +504,8 @@ bool X86SpeculativeLoadHardeningPass::runOnMachineFunction(
     }
   }
 
-  // Now check all of the loads using the predicate state.
-  checkAllLoads(MF);
+  // Now harden all of the loads in the function using the predicate state.
+  hardenAllLoads(MF);
 
   // Now rewrite all the uses of the pred state using the SSA updater so that
   // we track updates through the CFG.
@@ -525,7 +525,11 @@ bool X86SpeculativeLoadHardeningPass::runOnMachineFunction(
         continue;
 
       MachineInstr &MI = MBB.back();
-      if (!MI.isReturn())
+
+      // We only care about returns that are not also calls. For calls, that
+      // happen to also be returns (tail calls) we will have already handled
+      // them as calls.
+      if (!MI.isReturn() || MI.isCall())
         continue;
 
       hardenReturnInstr(MI);
@@ -1224,7 +1228,24 @@ static bool isEFLAGSLive(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
   return MBB.isLiveIn(X86::EFLAGS);
 }
 
-void X86SpeculativeLoadHardeningPass::checkAllLoads(MachineFunction &MF) {
+/// Harden all of the loads (including implicit loads) in the function.
+///
+/// This operates in two passes. First, we analyze the loads to determine which
+/// strategy will be used to harden them: hardening the address or hardening the
+/// loaded value when loaded into a register amenable to hardening. We have to
+/// process these first because the two strategies may interact -- later
+/// hardening may change what strategy we wish to use. We also will analyze
+/// data dependencies between loads and avoid hardening those loads that are
+/// data dependent on a load with a hardened address. We also skip hardening
+/// loads already behind an LFENCE as that is sufficient to harden them against
+/// misspeculation.
+///
+/// Second, we apply the hardening steps we determined necessary in the first
+/// pass.
+///
+/// These two passes are applied to each basic block. We operate one block at
+/// a time to simplify reasoning about reachability and sequencing.
+void X86SpeculativeLoadHardeningPass::hardenAllLoads(MachineFunction &MF) {
   // If the actual checking of loads is disabled, skip doing anything here.
   if (!HardenLoads)
     return;

@@ -12809,7 +12809,7 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
 /// Determine whether the given expression is a qualified member
 /// access expression, of a form that could be turned into a pointer to member
 /// with the address-of operator.
-static bool isQualifiedMemberAccess(Expr *E) {
+bool Sema::isQualifiedMemberAccess(Expr *E) {
   if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E)) {
     if (!DRE->getQualifier())
       return false;
