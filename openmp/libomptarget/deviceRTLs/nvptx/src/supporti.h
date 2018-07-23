@@ -155,8 +155,7 @@ INLINE int IsTeamMaster(int ompThreadId) { return (ompThreadId == 0); }
 INLINE int GetNumberOfProcsInDevice() {
   if (isGenericMode())
     return GetNumberOfWorkersInTeam();
-  else
-    return GetNumberOfThreadsInBlock();
+  return GetNumberOfThreadsInBlock();
 }
 
 INLINE int GetNumberOfProcsInTeam() { return GetNumberOfProcsInDevice(); }
