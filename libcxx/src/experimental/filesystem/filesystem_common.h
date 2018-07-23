@@ -72,6 +72,7 @@ static std::string format_string_imp(const char* msg, ...) {
   struct GuardVAList {
     va_list& target;
     bool active = true;
+    GuardVAList(va_list &target) : target(target), active(true) {}
     void clear() {
       if (active)
         va_end(target);
@@ -84,11 +85,11 @@ static std::string format_string_imp(const char* msg, ...) {
   };
   va_list args;
   va_start(args, msg);
-  GuardVAList args_guard = {args};
+  GuardVAList args_guard(args);
 
   va_list args_cp;
   va_copy(args_cp, args);
-  GuardVAList args_copy_guard = {args_cp};
+  GuardVAList args_copy_guard(args_cp);
 
   std::array<char, 256> local_buff;
   std::size_t size = local_buff.size();
@@ -131,7 +132,7 @@ std::error_code capture_errno() {
 template <class T>
 T error_value();
 template <>
-constexpr void error_value<void>() {}
+_LIBCPP_CONSTEXPR_AFTER_CXX11 void error_value<void>() {}
 template <>
 constexpr bool error_value<bool>() {
   return false;
@@ -141,7 +142,7 @@ constexpr uintmax_t error_value<uintmax_t>() {
   return uintmax_t(-1);
 }
 template <>
-constexpr file_time_type error_value<file_time_type>() {
+_LIBCPP_CONSTEXPR_AFTER_CXX11 file_time_type error_value<file_time_type>() {
   return file_time_type::min();
 }
 template <>
@@ -369,7 +370,7 @@ TimeSpec extract_atime(StatT const& st) { return st.st_atim; }
 using TimeStruct = struct ::timeval;
 using TimeStructArray = TimeStruct[2];
 #else
-using TimeStruct = struct ::timespec;
+using TimeStruct = TimeSpec;
 using TimeStructArray = TimeStruct[2];
 #endif
 
@@ -413,8 +414,6 @@ bool SetTimeStructTo(TimeStruct& TS, file_time_type NewTime) {
 
 _LIBCPP_END_NAMESPACE_EXPERIMENTAL_FILESYSTEM
 
-#if defined(__GNUC__)
-#pragma GCC diagnostic pop
-#endif
+
 
 #endif // FILESYSTEM_COMMON_H
