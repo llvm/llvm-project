@@ -11,7 +11,9 @@
 #include "URI.h"
 #include "index/Index.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclVisitor.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/SourceManager.h"
@@ -139,6 +141,27 @@ categorize(const index::SymbolInfo &D) {
   llvm_unreachable("Unknown index::SymbolKind");
 }
 
+static bool isInstanceMember(const NamedDecl *ND) {
+  if (!ND)
+    return false;
+  if (const auto *TP = dyn_cast<FunctionTemplateDecl>(ND))
+    ND = TP->TemplateDecl::getTemplatedDecl();
+  if (const auto *CM = dyn_cast<CXXMethodDecl>(ND))
+    return !CM->isStatic();
+  return isa<FieldDecl>(ND); // Note that static fields are VarDecl.
+}
+
+static bool isInstanceMember(const index::SymbolInfo &D) {
+  switch (D.Kind) {
+  case index::SymbolKind::InstanceMethod:
+  case index::SymbolKind::InstanceProperty:
+  case index::SymbolKind::Field:
+    return true;
+  default:
+    return false;
+  }
+}
+
 void SymbolQualitySignals::merge(const CodeCompletionResult &SemaCCResult) {
   if (SemaCCResult.Availability == CXAvailability_Deprecated)
     Deprecated = true;
@@ -231,6 +254,7 @@ void SymbolRelevanceSignals::merge(const Symbol &IndexResult) {
   // relevant to non-completion requests, we should recognize class members etc.
 
   SymbolURI = IndexResult.CanonicalDeclaration.FileURI;
+  IsInstanceMember |= isInstanceMember(IndexResult.SymInfo);
 }
 
 void SymbolRelevanceSignals::merge(const CodeCompletionResult &SemaCCResult) {
@@ -247,6 +271,7 @@ void SymbolRelevanceSignals::merge(const CodeCompletionResult &SemaCCResult) {
                               ? 1.0
                               : 0.6;
     SemaProximityScore = std::max(DeclProximity, SemaProximityScore);
+    IsInstanceMember |= isInstanceMember(SemaCCResult.Declaration);
   }
 
   // Declarations are scoped, others (like macros) are assumed global.
@@ -296,6 +321,13 @@ float SymbolRelevanceSignals::evaluate() const {
     }
   }
 
+  // Penalize non-instance members when they are accessed via a class instance.
+  if (!IsInstanceMember &&
+      (Context == CodeCompletionContext::CCC_DotMemberAccess ||
+       Context == CodeCompletionContext::CCC_ArrowMemberAccess)) {
+    Score *= 0.5;
+  }
+
   return Score;
 }
 
@@ -303,6 +335,8 @@ raw_ostream &operator<<(raw_ostream &OS, const SymbolRelevanceSignals &S) {
   OS << formatv("=== Symbol relevance: {0}\n", S.evaluate());
   OS << formatv("\tName match: {0}\n", S.NameMatch);
   OS << formatv("\tForbidden: {0}\n", S.Forbidden);
+  OS << formatv("\tIsInstanceMember: {0}\n", S.IsInstanceMember);
+  OS << formatv("\tContext: {0}\n", getCompletionKindString(S.Context));
   OS << formatv("\tSymbol URI: {0}\n", S.SymbolURI);
   if (S.FileProximityMatch) {
     auto Score = proximityScore(S.SymbolURI, S.FileProximityMatch);
