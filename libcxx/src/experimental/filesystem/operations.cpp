@@ -36,6 +36,12 @@
 # define _LIBCPP_USE_COPYFILE
 #endif
 
+#if defined(_LIBCPP_COMPILER_GCC)
+#if _GNUC_VER < 500
+#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
+#endif
+#endif
+
 _LIBCPP_BEGIN_NAMESPACE_EXPERIMENTAL_FILESYSTEM
 
 filesystem_error::~filesystem_error() {}
@@ -446,7 +452,7 @@ bool stat_equivalent(const StatT& st1, const StatT& st2) {
 file_status FileDescriptor::refresh_status(std::error_code& ec) {
   // FD must be open and good.
   m_status = file_status{};
-  m_stat = StatT{};
+  m_stat = {};
   std::error_code m_ec;
   if (::fstat(fd, &m_stat) == -1)
     m_ec = capture_errno();
