@@ -727,10 +727,10 @@ bool __copy_file(const path& from, const path& to, copy_options options,
 
   const bool to_exists = exists(to_st);
   if (to_exists && !is_regular_file(to_st))
-    return err.report(make_error_code(errc::not_supported));
+    return err.report(errc::not_supported);
 
   if (to_exists && detail::stat_equivalent(from_stat, to_stat_path))
-    return err.report(make_error_code(errc::file_exists));
+    return err.report(errc::file_exists);
 
   if (to_exists && skip_existing)
     return false;
