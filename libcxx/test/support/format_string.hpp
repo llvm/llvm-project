@@ -11,7 +11,9 @@ inline std::string format_string_imp(const char* msg, ...) {
   // we might need a second shot at this, so pre-emptivly make a copy
   struct GuardVAList {
     va_list& target;
-    bool active = true;
+    bool active;
+    GuardVAList(va_list& target) : target(target), active(true) {}
+
     void clear() {
       if (active)
         va_end(target);
@@ -24,11 +26,11 @@ inline std::string format_string_imp(const char* msg, ...) {
   };
   va_list args;
   va_start(args, msg);
-  GuardVAList args_guard = {args};
+  GuardVAList args_guard(args);
 
   va_list args_cp;
   va_copy(args_cp, args);
-  GuardVAList args_copy_guard = {args_cp};
+  GuardVAList args_copy_guard(args_cp);
 
   std::array<char, 256> local_buff;
   std::size_t size = local_buff.size();
