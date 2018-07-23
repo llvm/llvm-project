@@ -1062,6 +1062,7 @@ private:
       Output.Completions.back().Score = C.second;
     }
     Output.HasMore = Incomplete;
+    Output.Context = Recorder->CCContext.getKind();
     return Output;
   }
 
@@ -1156,6 +1157,7 @@ private:
                     CompletionCandidate::Bundle Bundle) {
     SymbolQualitySignals Quality;
     SymbolRelevanceSignals Relevance;
+    Relevance.Context = Recorder->CCContext.getKind();
     Relevance.Query = SymbolRelevanceSignals::CodeComplete;
     Relevance.FileProximityMatch = FileProximity.getPointer();
     auto &First = Bundle.front();
@@ -1290,6 +1292,7 @@ raw_ostream &operator<<(raw_ostream &OS, const CodeCompletion &C) {
 
 raw_ostream &operator<<(raw_ostream &OS, const CodeCompleteResult &R) {
   OS << "CodeCompleteResult: " << R.Completions.size() << (R.HasMore ? "+" : "")
+     << " (" << getCompletionKindString(R.Context) << ")"
      << " items:\n";
   for (const auto &C : R.Completions)
     OS << C << "\n";

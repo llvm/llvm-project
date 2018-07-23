@@ -21,6 +21,7 @@
 #include "Protocol.h"
 #include "index/Index.h"
 #include "clang/Frontend/PrecompiledPreamble.h"
+#include "clang/Sema/CodeCompleteConsumer.h"
 #include "clang/Sema/CodeCompleteOptions.h"
 #include "clang/Tooling/CompilationDatabase.h"
 
@@ -144,6 +145,7 @@ raw_ostream &operator<<(raw_ostream &, const CodeCompletion &);
 struct CodeCompleteResult {
   std::vector<CodeCompletion> Completions;
   bool HasMore = false;
+  CodeCompletionContext::Kind Context = CodeCompletionContext::CCC_Other;
 };
 raw_ostream &operator<<(raw_ostream &, const CodeCompleteResult &);
 
