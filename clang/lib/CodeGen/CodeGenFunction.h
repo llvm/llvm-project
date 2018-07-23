@@ -4113,12 +4113,13 @@ public:
 
   void EmitSanitizerStatReport(llvm::SanitizerStatKind SSK);
 
-  struct MultiVersionResolverOption {
+  struct TargetMultiVersionResolverOption {
     llvm::Function *Function;
     TargetAttr::ParsedTargetAttr ParsedAttribute;
     unsigned Priority;
-    MultiVersionResolverOption(const TargetInfo &TargInfo, llvm::Function *F,
-                               const clang::TargetAttr::ParsedTargetAttr &PT)
+    TargetMultiVersionResolverOption(
+        const TargetInfo &TargInfo, llvm::Function *F,
+        const clang::TargetAttr::ParsedTargetAttr &PT)
         : Function(F), ParsedAttribute(PT), Priority(0u) {
       for (StringRef Feat : PT.Features)
         Priority = std::max(Priority,
@@ -4129,12 +4130,30 @@ public:
                             TargInfo.multiVersionSortPriority(PT.Architecture));
     }
 
-    bool operator>(const MultiVersionResolverOption &Other) const {
+    bool operator>(const TargetMultiVersionResolverOption &Other) const {
       return Priority > Other.Priority;
     }
   };
-  void EmitMultiVersionResolver(llvm::Function *Resolver,
-                                ArrayRef<MultiVersionResolverOption> Options);
+  void EmitTargetMultiVersionResolver(
+      llvm::Function *Resolver,
+      ArrayRef<TargetMultiVersionResolverOption> Options);
+
+  struct CPUDispatchMultiVersionResolverOption {
+    llvm::Function *Function;
+    // Note: EmitX86CPUSupports only has 32 bits available, so we store the mask
+    // as 32 bits here.  When 64-bit support is added to __builtin_cpu_supports,
+    // this can be extended to 64 bits.
+    uint32_t FeatureMask;
+    CPUDispatchMultiVersionResolverOption(llvm::Function *F, uint64_t Mask)
+        : Function(F), FeatureMask(static_cast<uint32_t>(Mask)) {}
+    bool operator>(const CPUDispatchMultiVersionResolverOption &Other) const {
+      return FeatureMask > Other.FeatureMask;
+    }
+  };
+  void EmitCPUDispatchMultiVersionResolver(
+      llvm::Function *Resolver,
+      ArrayRef<CPUDispatchMultiVersionResolverOption> Options);
+  static uint32_t GetX86CpuSupportsMask(ArrayRef<StringRef> FeatureStrs);
 
 private:
   QualType getVarArgType(const Expr *Arg);
@@ -4151,8 +4170,10 @@ private:
   llvm::Value *EmitX86CpuIs(StringRef CPUStr);
   llvm::Value *EmitX86CpuSupports(const CallExpr *E);
   llvm::Value *EmitX86CpuSupports(ArrayRef<StringRef> FeatureStrs);
+  llvm::Value *EmitX86CpuSupports(uint32_t Mask);
   llvm::Value *EmitX86CpuInit();
-  llvm::Value *FormResolverCondition(const MultiVersionResolverOption &RO);
+  llvm::Value *
+  FormResolverCondition(const TargetMultiVersionResolverOption &RO);
 };
 
 /// Helper class with most of the code for saving a value for a

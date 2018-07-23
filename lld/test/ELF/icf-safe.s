@@ -6,6 +6,8 @@
 # RUN: ld.lld %t1.o %t2.o -o %t2 --icf=safe --print-icf-sections | FileCheck %s
 # RUN: ld.lld %t1.o %t2.o -o %t3 --icf=safe --print-icf-sections -shared | FileCheck --check-prefix=EXPORT %s
 # RUN: ld.lld %t1.o %t2.o -o %t3 --icf=safe --print-icf-sections --export-dynamic | FileCheck --check-prefix=EXPORT %s
+# RUN: ld.lld %t1.o %t2.o -o %t2 --icf=all --print-icf-sections | FileCheck --check-prefix=ALL %s
+# RUN: ld.lld %t1.o %t2.o -o %t2 --icf=all --print-icf-sections --export-dynamic | FileCheck --check-prefix=ALL-EXPORT %s
 # RUN: ld.lld %t1copy.o -o %t4 --icf=safe 2>&1 | FileCheck --check-prefix=OBJCOPY %s
 
 # CHECK-NOT: selected section {{.*}}:(.rodata.l1)
@@ -26,6 +28,28 @@
 
 # CHECK-NOT: selected section {{.*}}:(.text.non_addrsig{{.}})
 
+# With --icf=all address-significance implies keep-unique only for rodata, not
+# text.
+# ALL-NOT: selected section {{.*}}:(.rodata.l1)
+# ALL: selected section {{.*}}:(.rodata.l3)
+# ALL:   removing identical section {{.*}}:(.rodata.l4)
+
+# ALL: selected section {{.*}}:(.text.f3)
+# ALL:   removing identical section {{.*}}:(.text.f4)
+
+# ALL: selected section {{.*}}:(.text.f1)
+# ALL:   removing identical section {{.*}}:(.text.f2)
+# ALL:   removing identical section {{.*}}:(.text.non_addrsig1)
+# ALL:   removing identical section {{.*}}:(.text.non_addrsig2)
+
+# ALL-NOT: selected section {{.*}}:(.rodata.h1)
+# ALL: selected section {{.*}}:(.rodata.h3)
+# ALL:   removing identical section {{.*}}:(.rodata.h4)
+
+# ALL-NOT: selected section {{.*}}:(.rodata.g1)
+# ALL: selected section {{.*}}:(.rodata.g3)
+# ALL:   removing identical section {{.*}}:(.rodata.g4)
+
 # llvm-mc normally emits an empty .text section into every object file. Since
 # nothing actually refers to it via a relocation, it doesn't have any associated
 # symbols (thus nor can anything refer to it via a relocation, making it safe to
@@ -43,6 +67,27 @@
 # EXPORT: selected section {{.*}}:(.text)
 # EXPORT:   removing identical section {{.*}}:(.text)
 # EXPORT-NOT: selected section
+
+# If --icf=all is specified when exporting we can also merge the exported text
+# sections, but not the exported rodata.
+# ALL-EXPORT-NOT: selected section
+# ALL-EXPORT: selected section {{.*}}:(.rodata.l3)
+# ALL-EXPORT:   removing identical section {{.*}}:(.rodata.l4)
+# ALL-EXPORT-NOT: selected section
+# ALL-EXPORT: selected section {{.*}}:(.text.f3)
+# ALL-EXPORT:   removing identical section {{.*}}:(.text.f4)
+# ALL-EXPORT-NOT: selected section
+# ALL-EXPORT: selected section {{.*}}:(.text.f1)
+# ALL-EXPORT:   removing identical section {{.*}}:(.text.f2)
+# ALL-EXPORT:   removing identical section {{.*}}:(.text.non_addrsig1)
+# ALL-EXPORT:   removing identical section {{.*}}:(.text.non_addrsig2)
+# ALL-EXPORT-NOT: selected section
+# ALL-EXPORT: selected section {{.*}}:(.rodata.h3)
+# ALL-EXPORT:   removing identical section {{.*}}:(.rodata.h4)
+# ALL-EXPORT-NOT: selected section
+# ALL-EXPORT: selected section {{.*}}:(.text)
+# ALL-EXPORT:   removing identical section {{.*}}:(.text)
+# ALL-EXPORT-NOT: selected section
 
 # OBJCOPY: --icf=safe is incompatible with object files created using objcopy or ld -r
 

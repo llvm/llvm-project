@@ -40,7 +40,7 @@ void CXXBasePaths::ComputeDeclsFound() {
   assert(NumDeclsFound == 0 && !DeclsFound &&
          "Already computed the set of declarations");
 
-  llvm::SetVector<NamedDecl *, SmallVector<NamedDecl *, 8>> Decls;
+  llvm::SmallSetVector<NamedDecl *, 8> Decls;
   for (paths_iterator Path = begin(), PathEnd = end(); Path != PathEnd; ++Path)
     Decls.insert(Path->Decls.front());
 
@@ -63,8 +63,8 @@ CXXBasePaths::decl_range CXXBasePaths::found_decls() {
 /// an unqualified, canonical class type.
 bool CXXBasePaths::isAmbiguous(CanQualType BaseType) {
   BaseType = BaseType.getUnqualifiedType();
-  std::pair<bool, unsigned>& Subobjects = ClassSubobjects[BaseType];
-  return Subobjects.second + (Subobjects.first? 1 : 0) > 1;
+  IsVirtBaseAndNumberNonVirtBases Subobjects = ClassSubobjects[BaseType];
+  return Subobjects.NumberOfNonVirtBases + (Subobjects.IsVirtBase ? 1 : 0) > 1;
 }
 
 /// clear - Clear out all prior path information.
@@ -217,21 +217,21 @@ bool CXXBasePaths::lookupInBases(ASTContext &Context,
     
     // Determine whether we need to visit this base class at all,
     // updating the count of subobjects appropriately.
-    std::pair<bool, unsigned>& Subobjects = ClassSubobjects[BaseType];
+    IsVirtBaseAndNumberNonVirtBases &Subobjects = ClassSubobjects[BaseType];
     bool VisitBase = true;
     bool SetVirtual = false;
     if (BaseSpec.isVirtual()) {
-      VisitBase = !Subobjects.first;
-      Subobjects.first = true;
+      VisitBase = !Subobjects.IsVirtBase;
+      Subobjects.IsVirtBase = true;
       if (isDetectingVirtual() && DetectedVirtual == nullptr) {
         // If this is the first virtual we find, remember it. If it turns out
         // there is no base path here, we'll reset it later.
         DetectedVirtual = BaseType->getAs<RecordType>();
         SetVirtual = true;
       }
-    } else
-      ++Subobjects.second;
-    
+    } else {
+      ++Subobjects.NumberOfNonVirtBases;
+    }
     if (isRecordingPaths()) {
       // Add this base specifier to the current path.
       CXXBasePathElement Element;
@@ -240,7 +240,7 @@ bool CXXBasePaths::lookupInBases(ASTContext &Context,
       if (BaseSpec.isVirtual())
         Element.SubobjectNumber = 0;
       else
-        Element.SubobjectNumber = Subobjects.second;
+        Element.SubobjectNumber = Subobjects.NumberOfNonVirtBases;
       ScratchPath.push_back(Element);
 
       // Calculate the "top-down" access to this base class.

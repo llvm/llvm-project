@@ -42,6 +42,8 @@ void f() {
   __stosw(0, 0, 0);
 
 #ifdef _M_X64
+  __shiftleft128(1, 2, 3);
+  __shiftright128(1, 2, 3);
   __movsq(0, 0, 0);
   __stosq(0, 0, 0);
 #endif

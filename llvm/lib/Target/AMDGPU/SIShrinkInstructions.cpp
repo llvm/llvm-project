@@ -64,17 +64,6 @@ FunctionPass *llvm::createSIShrinkInstructionsPass() {
   return new SIShrinkInstructions();
 }
 
-static bool isVGPR(const MachineOperand *MO, const SIRegisterInfo &TRI,
-                   const MachineRegisterInfo &MRI) {
-  if (!MO->isReg())
-    return false;
-
-  if (TargetRegisterInfo::isVirtualRegister(MO->getReg()))
-    return TRI.hasVGPRs(MRI.getRegClass(MO->getReg()));
-
-  return TRI.hasVGPRs(TRI.getPhysRegClass(MO->getReg()));
-}
-
 static bool canShrink(MachineInstr &MI, const SIInstrInfo *TII,
                       const SIRegisterInfo &TRI,
                       const MachineRegisterInfo &MRI) {
@@ -92,16 +81,18 @@ static bool canShrink(MachineInstr &MI, const SIInstrInfo *TII,
 
       case AMDGPU::V_ADDC_U32_e64:
       case AMDGPU::V_SUBB_U32_e64:
-      case AMDGPU::V_SUBBREV_U32_e64:
-        if (!isVGPR(TII->getNamedOperand(MI, AMDGPU::OpName::src1), TRI, MRI))
+      case AMDGPU::V_SUBBREV_U32_e64: {
+        const MachineOperand *Src1
+          = TII->getNamedOperand(MI, AMDGPU::OpName::src1);
+        if (!Src1->isReg() || !TRI.isVGPR(MRI, Src1->getReg()))
           return false;
         // Additional verification is needed for sdst/src2.
         return true;
-
+      }
       case AMDGPU::V_MAC_F32_e64:
       case AMDGPU::V_MAC_F16_e64:
       case AMDGPU::V_FMAC_F32_e64:
-        if (!isVGPR(Src2, TRI, MRI) ||
+        if (!Src2->isReg() || !TRI.isVGPR(MRI, Src2->getReg()) ||
             TII->hasModifiersSet(MI, AMDGPU::OpName::src2_modifiers))
           return false;
         break;
@@ -112,7 +103,7 @@ static bool canShrink(MachineInstr &MI, const SIInstrInfo *TII,
   }
 
   const MachineOperand *Src1 = TII->getNamedOperand(MI, AMDGPU::OpName::src1);
-  if (Src1 && (!isVGPR(Src1, TRI, MRI) ||
+  if (Src1 && (!Src1->isReg() || !TRI.isVGPR(MRI, Src1->getReg()) ||
                TII->hasModifiersSet(MI, AMDGPU::OpName::src1_modifiers)))
     return false;
 

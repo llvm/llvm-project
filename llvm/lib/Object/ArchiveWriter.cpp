@@ -294,8 +294,7 @@ static bool isArchiveSymbol(const object::BasicSymbolRef &S) {
     return false;
   if (!(Symflags & object::SymbolRef::SF_Global))
     return false;
-  if (Symflags & object::SymbolRef::SF_Undefined &&
-      !(Symflags & object::SymbolRef::SF_Indirect))
+  if (Symflags & object::SymbolRef::SF_Undefined)
     return false;
   return true;
 }

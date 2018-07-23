@@ -345,9 +345,9 @@ class DwarfDebug : public DebugHandlerBase {
   /// Construct a DIE for this abstract scope.
   void constructAbstractSubprogramScopeDIE(DwarfCompileUnit &SrcCU, LexicalScope *Scope);
 
-  /// Helper function to add a name to the .debug_names table, using the
-  /// appropriate string pool.
-  void addAccelDebugName(StringRef Name, const DIE &Die);
+  template <typename DataT>
+  void addAccelNameImpl(AccelTable<DataT> &AppleAccel, StringRef Name,
+                        const DIE &Die);
 
   void finishVariableDefinitions();
 

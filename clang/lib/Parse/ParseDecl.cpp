@@ -215,6 +215,15 @@ static bool attributeHasIdentifierArg(const IdentifierInfo &II) {
 #undef CLANG_ATTR_IDENTIFIER_ARG_LIST
 }
 
+/// Determine whether the given attribute has a variadic identifier argument.
+static bool attributeHasVariadicIdentifierArg(const IdentifierInfo &II) {
+#define CLANG_ATTR_VARIADIC_IDENTIFIER_ARG_LIST
+  return llvm::StringSwitch<bool>(normalizeAttrName(II.getName()))
+#include "clang/Parse/AttrParserStringSwitches.inc"
+           .Default(false);
+#undef CLANG_ATTR_VARIADIC_IDENTIFIER_ARG_LIST
+}
+
 /// Determine whether the given attribute parses a type argument.
 static bool attributeIsTypeArgAttr(const IdentifierInfo &II) {
 #define CLANG_ATTR_TYPE_ARG_LIST
@@ -282,7 +291,8 @@ unsigned Parser::ParseAttributeArgsCommon(
   ArgsVector ArgExprs;
   if (Tok.is(tok::identifier)) {
     // If this attribute wants an 'identifier' argument, make it so.
-    bool IsIdentifierArg = attributeHasIdentifierArg(*AttrName);
+    bool IsIdentifierArg = attributeHasIdentifierArg(*AttrName) ||
+                           attributeHasVariadicIdentifierArg(*AttrName);
     ParsedAttr::Kind AttrKind =
         ParsedAttr::getKind(AttrName, ScopeName, Syntax);
 
@@ -305,19 +315,25 @@ unsigned Parser::ParseAttributeArgsCommon(
 
     // Parse the non-empty comma-separated list of expressions.
     do {
-      bool Uneval = attributeParsedArgsUnevaluated(*AttrName);
-      EnterExpressionEvaluationContext Unevaluated(
-          Actions,
-          Uneval ? Sema::ExpressionEvaluationContext::Unevaluated
-                 : Sema::ExpressionEvaluationContext::ConstantEvaluated);
+      ExprResult ArgExpr;
+      if (Tok.is(tok::identifier) &&
+          attributeHasVariadicIdentifierArg(*AttrName)) {
+        ArgExprs.push_back(ParseIdentifierLoc());
+      } else {
+        bool Uneval = attributeParsedArgsUnevaluated(*AttrName);
+        EnterExpressionEvaluationContext Unevaluated(
+            Actions,
+            Uneval ? Sema::ExpressionEvaluationContext::Unevaluated
+                   : Sema::ExpressionEvaluationContext::ConstantEvaluated);
 
-      ExprResult ArgExpr(
-          Actions.CorrectDelayedTyposInExpr(ParseAssignmentExpression()));
-      if (ArgExpr.isInvalid()) {
-        SkipUntil(tok::r_paren, StopAtSemi);
-        return 0;
+        ExprResult ArgExpr(
+            Actions.CorrectDelayedTyposInExpr(ParseAssignmentExpression()));
+        if (ArgExpr.isInvalid()) {
+          SkipUntil(tok::r_paren, StopAtSemi);
+          return 0;
+        }
+        ArgExprs.push_back(ArgExpr.get());
       }
-      ArgExprs.push_back(ArgExpr.get());
       // Eat the comma, move to the next argument
     } while (TryConsumeToken(tok::comma));
   }

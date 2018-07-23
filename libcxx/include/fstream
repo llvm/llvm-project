@@ -170,6 +170,7 @@ typedef basic_fstream<wchar_t> wfstream;
 #include <istream>
 #include <__locale>
 #include <cstdio>
+#include <cstdlib>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
@@ -217,10 +218,17 @@ public:
 #endif
     _LIBCPP_INLINE_VISIBILITY
     basic_filebuf* open(const string& __s, ios_base::openmode __mode);
+
+    _LIBCPP_INLINE_VISIBILITY
+    basic_filebuf* __open(int __fd, ios_base::openmode __mode);
 #endif
     basic_filebuf* close();
 
-protected:
+    _LIBCPP_INLINE_VISIBILITY
+    inline static const char*
+    __make_mdstring(ios_base::openmode __mode) _NOEXCEPT;
+
+  protected:
     // 27.9.1.5 Overridden virtual functions:
     virtual int_type underflow();
     virtual int_type pbackfail(int_type __c = traits_type::eof());
@@ -234,25 +242,25 @@ protected:
     virtual void imbue(const locale& __loc);
 
 private:
-    char*       __extbuf_;
-    const char* __extbufnext_;
-    const char* __extbufend_;
-    char __extbuf_min_[8];
-    size_t __ebs_;
-    char_type* __intbuf_;
-    size_t __ibs_;
-    FILE* __file_;
-    const codecvt<char_type, char, state_type>* __cv_;
-    state_type __st_;
-    state_type __st_last_;
-    ios_base::openmode __om_;
-    ios_base::openmode __cm_;
-    bool __owns_eb_;
-    bool __owns_ib_;
-    bool __always_noconv_;
+  char* __extbuf_;
+  const char* __extbufnext_;
+  const char* __extbufend_;
+  char __extbuf_min_[8];
+  size_t __ebs_;
+  char_type* __intbuf_;
+  size_t __ibs_;
+  FILE* __file_;
+  const codecvt<char_type, char, state_type>* __cv_;
+  state_type __st_;
+  state_type __st_last_;
+  ios_base::openmode __om_;
+  ios_base::openmode __cm_;
+  bool __owns_eb_;
+  bool __owns_ib_;
+  bool __always_noconv_;
 
-    bool __read_mode();
-    void __write_mode();
+  bool __read_mode();
+  void __write_mode();
 };
 
 template <class _CharT, class _Traits>
@@ -473,6 +481,46 @@ basic_filebuf<_CharT, _Traits>::is_open() const
     return __file_ != 0;
 }
 
+template <class _CharT, class _Traits>
+const char* basic_filebuf<_CharT, _Traits>::__make_mdstring(
+    ios_base::openmode __mode) _NOEXCEPT {
+  switch (__mode & ~ios_base::ate) {
+  case ios_base::out:
+  case ios_base::out | ios_base::trunc:
+    return "w";
+  case ios_base::out | ios_base::app:
+  case ios_base::app:
+    return "a";
+  case ios_base::in:
+    return "r";
+  case ios_base::in | ios_base::out:
+    return "r+";
+  case ios_base::in | ios_base::out | ios_base::trunc:
+    return "w+";
+  case ios_base::in | ios_base::out | ios_base::app:
+  case ios_base::in | ios_base::app:
+    return "a+";
+  case ios_base::out | ios_base::binary:
+  case ios_base::out | ios_base::trunc | ios_base::binary:
+    return "wb";
+  case ios_base::out | ios_base::app | ios_base::binary:
+  case ios_base::app | ios_base::binary:
+    return "ab";
+  case ios_base::in | ios_base::binary:
+    return "rb";
+  case ios_base::in | ios_base::out | ios_base::binary:
+    return "r+b";
+  case ios_base::in | ios_base::out | ios_base::trunc | ios_base::binary:
+    return "w+b";
+  case ios_base::in | ios_base::out | ios_base::app | ios_base::binary:
+  case ios_base::in | ios_base::app | ios_base::binary:
+    return "a+b";
+  default:
+    return nullptr;
+  }
+  _LIBCPP_UNREACHABLE();
+}
+
 #ifndef _LIBCPP_HAS_NO_GLOBAL_FILESYSTEM_NAMESPACE
 template <class _CharT, class _Traits>
 basic_filebuf<_CharT, _Traits>*
@@ -481,77 +529,47 @@ basic_filebuf<_CharT, _Traits>::open(const char* __s, ios_base::openmode __mode)
     basic_filebuf<_CharT, _Traits>* __rt = 0;
     if (__file_ == 0)
     {
+      if (const char* __mdstr = __make_mdstring(__mode)) {
         __rt = this;
-        const char* __mdstr;
-        switch (__mode & ~ios_base::ate)
-        {
-        case ios_base::out:
-        case ios_base::out | ios_base::trunc:
-            __mdstr = "w";
-            break;
-        case ios_base::out | ios_base::app:
-        case ios_base::app:
-            __mdstr = "a";
-            break;
-        case ios_base::in:
-            __mdstr = "r";
-            break;
-        case ios_base::in | ios_base::out:
-            __mdstr = "r+";
-            break;
-        case ios_base::in | ios_base::out | ios_base::trunc:
-            __mdstr = "w+";
-            break;
-        case ios_base::in | ios_base::out | ios_base::app:
-        case ios_base::in | ios_base::app:
-            __mdstr = "a+";
-            break;
-        case ios_base::out | ios_base::binary:
-        case ios_base::out | ios_base::trunc | ios_base::binary:
-            __mdstr = "wb";
-            break;
-        case ios_base::out | ios_base::app | ios_base::binary:
-        case ios_base::app | ios_base::binary:
-            __mdstr = "ab";
-            break;
-        case ios_base::in | ios_base::binary:
-            __mdstr = "rb";
-            break;
-        case ios_base::in | ios_base::out | ios_base::binary:
-            __mdstr = "r+b";
-            break;
-        case ios_base::in | ios_base::out | ios_base::trunc | ios_base::binary:
-            __mdstr = "w+b";
-            break;
-        case ios_base::in | ios_base::out | ios_base::app | ios_base::binary:
-        case ios_base::in | ios_base::app | ios_base::binary:
-            __mdstr = "a+b";
-            break;
-        default:
-            __rt = 0;
-            break;
-        }
-        if (__rt)
-        {
-            __file_ = fopen(__s, __mdstr);
-            if (__file_)
-            {
-                __om_ = __mode;
-                if (__mode & ios_base::ate)
-                {
-                    if (fseek(__file_, 0, SEEK_END))
-                    {
-                        fclose(__file_);
-                        __file_ = 0;
-                        __rt = 0;
-                    }
-                }
+        __file_ = fopen(__s, __mdstr);
+        if (__file_) {
+          __om_ = __mode;
+          if (__mode & ios_base::ate) {
+            if (fseek(__file_, 0, SEEK_END)) {
+              fclose(__file_);
+              __file_ = 0;
+              __rt = 0;
             }
-            else
-                __rt = 0;
-        }
+          }
+        } else
+          __rt = 0;
+      }
     }
     return __rt;
+}
+
+template <class _CharT, class _Traits>
+_LIBCPP_INLINE_VISIBILITY basic_filebuf<_CharT, _Traits>*
+basic_filebuf<_CharT, _Traits>::__open(int __fd, ios_base::openmode __mode) {
+  basic_filebuf<_CharT, _Traits>* __rt = 0;
+  if (__file_ == 0) {
+    if (const char* __mdstr = __make_mdstring(__mode)) {
+      __rt = this;
+      __file_ = fdopen(__fd, __mdstr);
+      if (__file_) {
+        __om_ = __mode;
+        if (__mode & ios_base::ate) {
+          if (fseek(__file_, 0, SEEK_END)) {
+            fclose(__file_);
+            __file_ = 0;
+            __rt = 0;
+          }
+        }
+      } else
+        __rt = 0;
+    }
+  }
+  return __rt;
 }
 
 #ifdef _LIBCPP_HAS_OPEN_WITH_WCHAR
@@ -1131,6 +1149,9 @@ public:
     void open(const wchar_t* __s, ios_base::openmode __mode = ios_base::in);
 #endif
     void open(const string& __s, ios_base::openmode __mode = ios_base::in);
+
+    _LIBCPP_INLINE_VISIBILITY
+    void __open(int __fd, ios_base::openmode __mode);
 #endif
     _LIBCPP_INLINE_VISIBILITY
     void close();
@@ -1265,6 +1286,15 @@ basic_ifstream<_CharT, _Traits>::open(const string& __s, ios_base::openmode __mo
     else
         this->setstate(ios_base::failbit);
 }
+
+template <class _CharT, class _Traits>
+void basic_ifstream<_CharT, _Traits>::__open(int __fd,
+                                             ios_base::openmode __mode) {
+  if (__sb_.__open(__fd, __mode | ios_base::in))
+    this->clear();
+  else
+    this->setstate(ios_base::failbit);
+}
 #endif
 
 template <class _CharT, class _Traits>
@@ -1319,6 +1349,9 @@ public:
     void open(const wchar_t* __s, ios_base::openmode __mode = ios_base::out);
 #endif
     void open(const string& __s, ios_base::openmode __mode = ios_base::out);
+
+    _LIBCPP_INLINE_VISIBILITY
+    void __open(int __fd, ios_base::openmode __mode);
 #endif
     _LIBCPP_INLINE_VISIBILITY
     void close();
@@ -1452,6 +1485,15 @@ basic_ofstream<_CharT, _Traits>::open(const string& __s, ios_base::openmode __mo
         this->clear();
     else
         this->setstate(ios_base::failbit);
+}
+
+template <class _CharT, class _Traits>
+void basic_ofstream<_CharT, _Traits>::__open(int __fd,
+                                             ios_base::openmode __mode) {
+  if (__sb_.__open(__fd, __mode | ios_base::out))
+    this->clear();
+  else
+    this->setstate(ios_base::failbit);
 }
 #endif
 

@@ -12658,9 +12658,11 @@ TreeTransform<Derived>::RebuildCXXOperatorCallExpr(OverloadedOperatorKind Op,
     // -> is never a builtin operation.
     return SemaRef.BuildOverloadedArrowExpr(nullptr, First, OpLoc);
   } else if (Second == nullptr || isPostIncDec) {
-    if (!First->getType()->isOverloadableType()) {
-      // The argument is not of overloadable type, so try to create a
-      // built-in unary operation.
+    if (!First->getType()->isOverloadableType() ||
+        (Op == OO_Amp && getSema().isQualifiedMemberAccess(First))) {
+      // The argument is not of overloadable type, or this is an expression
+      // of the form &Class::member, so try to create a built-in unary
+      // operation.
       UnaryOperatorKind Opc
         = UnaryOperator::getOverloadedOpcode(Op, isPostIncDec);
 

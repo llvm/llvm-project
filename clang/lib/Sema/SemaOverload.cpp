@@ -5988,7 +5988,7 @@ Sema::AddOverloadCandidate(FunctionDecl *Function,
   Candidate.IgnoreObjectArgument = false;
   Candidate.ExplicitCallArguments = Args.size();
 
-  if (Function->isMultiVersion() &&
+  if (Function->isMultiVersion() && Function->hasAttr<TargetAttr>() &&
       !Function->getAttr<TargetAttr>()->isDefaultVersion()) {
     Candidate.Viable = false;
     Candidate.FailureKind = ovl_non_default_multiversion_function;
@@ -6623,7 +6623,7 @@ Sema::AddMethodCandidate(CXXMethodDecl *Method, DeclAccessPair FoundDecl,
     return;
   }
 
-  if (Method->isMultiVersion() &&
+  if (Method->isMultiVersion() && Method->hasAttr<TargetAttr>() &&
       !Method->getAttr<TargetAttr>()->isDefaultVersion()) {
     Candidate.Viable = false;
     Candidate.FailureKind = ovl_non_default_multiversion_function;
@@ -7032,7 +7032,7 @@ Sema::AddConversionCandidate(CXXConversionDecl *Conversion,
     return;
   }
 
-  if (Conversion->isMultiVersion() &&
+  if (Conversion->isMultiVersion() && Conversion->hasAttr<TargetAttr>() &&
       !Conversion->getAttr<TargetAttr>()->isDefaultVersion()) {
     Candidate.Viable = false;
     Candidate.FailureKind = ovl_non_default_multiversion_function;
@@ -8987,6 +8987,47 @@ static Comparison compareEnableIfAttrs(const Sema &S, const FunctionDecl *Cand1,
   return Cand1I == Cand1Attrs.end() ? Comparison::Equal : Comparison::Better;
 }
 
+static bool isBetterMultiversionCandidate(const OverloadCandidate &Cand1,
+                                          const OverloadCandidate &Cand2) {
+  if (!Cand1.Function || !Cand1.Function->isMultiVersion() || !Cand2.Function ||
+      !Cand2.Function->isMultiVersion())
+    return false;
+
+  // If this is a cpu_dispatch/cpu_specific multiversion situation, prefer
+  // cpu_dispatch, else arbitrarily based on the identifiers.
+  bool Cand1CPUDisp = Cand1.Function->hasAttr<CPUDispatchAttr>();
+  bool Cand2CPUDisp = Cand2.Function->hasAttr<CPUDispatchAttr>();
+  const auto *Cand1CPUSpec = Cand1.Function->getAttr<CPUSpecificAttr>();
+  const auto *Cand2CPUSpec = Cand2.Function->getAttr<CPUSpecificAttr>();
+
+  if (!Cand1CPUDisp && !Cand2CPUDisp && !Cand1CPUSpec && !Cand2CPUSpec)
+    return false;
+
+  if (Cand1CPUDisp && !Cand2CPUDisp)
+    return true;
+  if (Cand2CPUDisp && !Cand1CPUDisp)
+    return false;
+
+  if (Cand1CPUSpec && Cand2CPUSpec) {
+    if (Cand1CPUSpec->cpus_size() != Cand2CPUSpec->cpus_size())
+      return Cand1CPUSpec->cpus_size() < Cand2CPUSpec->cpus_size();
+
+    std::pair<CPUSpecificAttr::cpus_iterator, CPUSpecificAttr::cpus_iterator>
+        FirstDiff = std::mismatch(
+            Cand1CPUSpec->cpus_begin(), Cand1CPUSpec->cpus_end(),
+            Cand2CPUSpec->cpus_begin(),
+            [](const IdentifierInfo *LHS, const IdentifierInfo *RHS) {
+              return LHS->getName() == RHS->getName();
+            });
+
+    assert(FirstDiff.first != Cand1CPUSpec->cpus_end() &&
+           "Two different cpu-specific versions should not have the same "
+           "identifier list, otherwise they'd be the same decl!");
+    return (*FirstDiff.first)->getName() < (*FirstDiff.second)->getName();
+  }
+  llvm_unreachable("No way to get here unless both had cpu_dispatch");
+}
+
 /// isBetterOverloadCandidate - Determines whether the first overload
 /// candidate is a better candidate than the second (C++ 13.3.3p1).
 bool clang::isBetterOverloadCandidate(
@@ -9184,7 +9225,10 @@ bool clang::isBetterOverloadCandidate(
                 functionHasPassObjectSizeParams(Cand1.Function);
   bool HasPS2 = Cand2.Function != nullptr &&
                 functionHasPassObjectSizeParams(Cand2.Function);
-  return HasPS1 != HasPS2 && HasPS1;
+  if (HasPS1 != HasPS2 && HasPS1)
+    return true;
+
+  return isBetterMultiversionCandidate(Cand1, Cand2);
 }
 
 /// Determine whether two declarations are "equivalent" for the purposes of
@@ -9503,7 +9547,8 @@ void Sema::NoteOverloadCandidate(NamedDecl *Found, FunctionDecl *Fn,
                                  QualType DestType, bool TakingAddress) {
   if (TakingAddress && !checkAddressOfCandidateIsAvailable(*this, Fn))
     return;
-  if (Fn->isMultiVersion() && !Fn->getAttr<TargetAttr>()->isDefaultVersion())
+  if (Fn->isMultiVersion() && Fn->hasAttr<TargetAttr>() &&
+      !Fn->getAttr<TargetAttr>()->isDefaultVersion())
     return;
 
   std::string FnDesc;
@@ -11056,8 +11101,7 @@ private:
             return false;
       if (FunDecl->isMultiVersion()) {
         const auto *TA = FunDecl->getAttr<TargetAttr>();
-        assert(TA && "Multiversioned functions require a target attribute");
-        if (!TA->isDefaultVersion())
+        if (TA && !TA->isDefaultVersion())
           return false;
       }
 
@@ -11355,7 +11399,8 @@ bool Sema::resolveAndFixAddressOfOnlyViableOverloadCandidate(
 
   DeclAccessPair DAP;
   FunctionDecl *Found = resolveAddressOfOnlyViableOverloadCandidate(E, DAP);
-  if (!Found)
+  if (!Found || Found->isCPUDispatchMultiVersion() ||
+      Found->isCPUSpecificMultiVersion())
     return false;
 
   // Emitting multiple diagnostics for a function that is both inaccessible and

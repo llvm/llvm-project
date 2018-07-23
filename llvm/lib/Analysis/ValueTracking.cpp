@@ -4511,21 +4511,25 @@ static SelectPatternResult matchMinMax(CmpInst::Predicate Pred,
   return {SPF_UNKNOWN, SPNB_NA, false};
 }
 
-bool llvm::isKnownNegation(const Value *X, const Value *Y) {
+bool llvm::isKnownNegation(const Value *X, const Value *Y, bool NeedNSW) {
   assert(X && Y && "Invalid operand");
 
-  // X = sub (0, Y)
-  if (match(X, m_Neg(m_Specific(Y))))
+  // X = sub (0, Y) || X = sub nsw (0, Y)
+  if ((!NeedNSW && match(X, m_Sub(m_ZeroInt(), m_Specific(Y)))) ||
+      (NeedNSW && match(X, m_NSWSub(m_ZeroInt(), m_Specific(Y)))))
     return true;
 
-  // Y = sub (0, X)
-  if (match(Y, m_Neg(m_Specific(X))))
+  // Y = sub (0, X) || Y = sub nsw (0, X)
+  if ((!NeedNSW && match(Y, m_Sub(m_ZeroInt(), m_Specific(X)))) ||
+      (NeedNSW && match(Y, m_NSWSub(m_ZeroInt(), m_Specific(X)))))
     return true;
 
-  // X = sub (A, B), Y = sub (B, A)
+  // X = sub (A, B), Y = sub (B, A) || X = sub nsw (A, B), Y = sub nsw (B, A)
   Value *A, *B;
-  return match(X, m_Sub(m_Value(A), m_Value(B))) &&
-         match(Y, m_Sub(m_Specific(B), m_Specific(A)));
+  return (!NeedNSW && (match(X, m_Sub(m_Value(A), m_Value(B))) &&
+                        match(Y, m_Sub(m_Specific(B), m_Specific(A))))) ||
+         (NeedNSW && (match(X, m_NSWSub(m_Value(A), m_Value(B))) &&
+                       match(Y, m_NSWSub(m_Specific(B), m_Specific(A)))));
 }
 
 static SelectPatternResult matchSelectPattern(CmpInst::Predicate Pred,

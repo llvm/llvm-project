@@ -150,6 +150,14 @@ public:
 
   bool validateCpuIs(StringRef Name) const override;
 
+  bool validateCPUSpecificCPUDispatch(StringRef Name) const override;
+
+  char CPUSpecificManglingCharacter(StringRef Name) const override;
+
+  void getCPUSpecificCPUDispatchFeatures(
+      StringRef Name,
+      llvm::SmallVectorImpl<StringRef> &Features) const override;
+
   bool validateAsmConstraint(const char *&Name,
                              TargetInfo::ConstraintInfo &info) const override;
 

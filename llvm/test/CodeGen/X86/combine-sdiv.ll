@@ -465,12 +465,10 @@ define <16 x i8> @combine_vec_sdiv_by_pow2b_v16i8(<16 x i8> %x) {
 ; XOP-LABEL: combine_vec_sdiv_by_pow2b_v16i8:
 ; XOP:       # %bb.0:
 ; XOP-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; XOP-NEXT:    vpcmpgtb %xmm0, %xmm1, %xmm2
-; XOP-NEXT:    vpsubb {{.*}}(%rip), %xmm1, %xmm3
-; XOP-NEXT:    vpshlb %xmm3, %xmm2, %xmm2
-; XOP-NEXT:    vpaddb %xmm2, %xmm0, %xmm2
-; XOP-NEXT:    vpsubb {{.*}}(%rip), %xmm1, %xmm1
-; XOP-NEXT:    vpshab %xmm1, %xmm2, %xmm1
+; XOP-NEXT:    vpcmpgtb %xmm0, %xmm1, %xmm1
+; XOP-NEXT:    vpshlb {{.*}}(%rip), %xmm1, %xmm1
+; XOP-NEXT:    vpaddb %xmm1, %xmm0, %xmm1
+; XOP-NEXT:    vpshab {{.*}}(%rip), %xmm1, %xmm1
 ; XOP-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255]
 ; XOP-NEXT:    vpblendvb %xmm2, %xmm1, %xmm0, %xmm0
 ; XOP-NEXT:    retq
@@ -571,13 +569,10 @@ define <8 x i16> @combine_vec_sdiv_by_pow2b_v8i16(<8 x i16> %x) {
 ;
 ; XOP-LABEL: combine_vec_sdiv_by_pow2b_v8i16:
 ; XOP:       # %bb.0:
-; XOP-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; XOP-NEXT:    vpsubw {{.*}}(%rip), %xmm1, %xmm2
-; XOP-NEXT:    vpsraw $15, %xmm0, %xmm3
-; XOP-NEXT:    vpshlw %xmm2, %xmm3, %xmm2
-; XOP-NEXT:    vpaddw %xmm2, %xmm0, %xmm2
-; XOP-NEXT:    vpsubw {{.*}}(%rip), %xmm1, %xmm1
-; XOP-NEXT:    vpshaw %xmm1, %xmm2, %xmm1
+; XOP-NEXT:    vpsraw $15, %xmm0, %xmm1
+; XOP-NEXT:    vpshlw {{.*}}(%rip), %xmm1, %xmm1
+; XOP-NEXT:    vpaddw %xmm1, %xmm0, %xmm1
+; XOP-NEXT:    vpshaw {{.*}}(%rip), %xmm1, %xmm1
 ; XOP-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3,4,5,6,7]
 ; XOP-NEXT:    retq
   %1 = sdiv <8 x i16> %x, <i16 1, i16 4, i16 2, i16 16, i16 8, i16 32, i16 64, i16 2>
@@ -734,19 +729,18 @@ define <16 x i16> @combine_vec_sdiv_by_pow2b_v16i16(<16 x i16> %x) {
 ;
 ; XOP-LABEL: combine_vec_sdiv_by_pow2b_v16i16:
 ; XOP:       # %bb.0:
-; XOP-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; XOP-NEXT:    vpsubw {{.*}}(%rip), %xmm1, %xmm2
-; XOP-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; XOP-NEXT:    vpsraw $15, %xmm3, %xmm4
-; XOP-NEXT:    vpshlw %xmm2, %xmm4, %xmm4
-; XOP-NEXT:    vpaddw %xmm4, %xmm3, %xmm3
-; XOP-NEXT:    vpsubw {{.*}}(%rip), %xmm1, %xmm1
-; XOP-NEXT:    vpshaw %xmm1, %xmm3, %xmm3
+; XOP-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; XOP-NEXT:    vpsraw $15, %xmm1, %xmm2
+; XOP-NEXT:    vmovdqa {{.*#+}} xmm3 = [65520,65522,65521,65524,65523,65525,65526,65521]
+; XOP-NEXT:    vpshlw %xmm3, %xmm2, %xmm2
+; XOP-NEXT:    vpaddw %xmm2, %xmm1, %xmm1
+; XOP-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,65534,65535,65532,65533,65531,65530,65535]
+; XOP-NEXT:    vpshaw %xmm2, %xmm1, %xmm1
 ; XOP-NEXT:    vpsraw $15, %xmm0, %xmm4
-; XOP-NEXT:    vpshlw %xmm2, %xmm4, %xmm2
-; XOP-NEXT:    vpaddw %xmm2, %xmm0, %xmm2
-; XOP-NEXT:    vpshaw %xmm1, %xmm2, %xmm1
-; XOP-NEXT:    vinsertf128 $1, %xmm3, %ymm1, %ymm1
+; XOP-NEXT:    vpshlw %xmm3, %xmm4, %xmm3
+; XOP-NEXT:    vpaddw %xmm3, %xmm0, %xmm3
+; XOP-NEXT:    vpshaw %xmm2, %xmm3, %xmm2
+; XOP-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm1
 ; XOP-NEXT:    vpcmov {{.*}}(%rip), %ymm0, %ymm1, %ymm0
 ; XOP-NEXT:    retq
   %1 = sdiv <16 x i16> %x, <i16 1, i16 4, i16 2, i16 16, i16 8, i16 32, i16 64, i16 2, i16 1, i16 4, i16 2, i16 16, i16 8, i16 32, i16 64, i16 2>
@@ -1025,31 +1019,30 @@ define <32 x i16> @combine_vec_sdiv_by_pow2b_v32i16(<32 x i16> %x) {
 ;
 ; XOP-LABEL: combine_vec_sdiv_by_pow2b_v32i16:
 ; XOP:       # %bb.0:
-; XOP-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; XOP-NEXT:    vpsubw {{.*}}(%rip), %xmm2, %xmm3
-; XOP-NEXT:    vextractf128 $1, %ymm0, %xmm4
-; XOP-NEXT:    vpsraw $15, %xmm4, %xmm5
-; XOP-NEXT:    vpshlw %xmm3, %xmm5, %xmm5
-; XOP-NEXT:    vpaddw %xmm5, %xmm4, %xmm4
-; XOP-NEXT:    vpsubw {{.*}}(%rip), %xmm2, %xmm2
-; XOP-NEXT:    vpshaw %xmm2, %xmm4, %xmm4
+; XOP-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; XOP-NEXT:    vpsraw $15, %xmm2, %xmm3
+; XOP-NEXT:    vmovdqa {{.*#+}} xmm4 = [65520,65522,65521,65524,65523,65525,65526,65521]
+; XOP-NEXT:    vpshlw %xmm4, %xmm3, %xmm3
+; XOP-NEXT:    vpaddw %xmm3, %xmm2, %xmm2
+; XOP-NEXT:    vmovdqa {{.*#+}} xmm3 = [0,65534,65535,65532,65533,65531,65530,65535]
+; XOP-NEXT:    vpshaw %xmm3, %xmm2, %xmm2
 ; XOP-NEXT:    vpsraw $15, %xmm0, %xmm5
-; XOP-NEXT:    vpshlw %xmm3, %xmm5, %xmm5
+; XOP-NEXT:    vpshlw %xmm4, %xmm5, %xmm5
 ; XOP-NEXT:    vpaddw %xmm5, %xmm0, %xmm5
-; XOP-NEXT:    vpshaw %xmm2, %xmm5, %xmm5
-; XOP-NEXT:    vinsertf128 $1, %xmm4, %ymm5, %ymm4
+; XOP-NEXT:    vpshaw %xmm3, %xmm5, %xmm5
+; XOP-NEXT:    vinsertf128 $1, %xmm2, %ymm5, %ymm2
 ; XOP-NEXT:    vmovdqa {{.*#+}} ymm5 = [0,65535,65535,65535,65535,65535,65535,65535,0,65535,65535,65535,65535,65535,65535,65535]
-; XOP-NEXT:    vpcmov %ymm5, %ymm0, %ymm4, %ymm0
-; XOP-NEXT:    vextractf128 $1, %ymm1, %xmm4
-; XOP-NEXT:    vpsraw $15, %xmm4, %xmm6
-; XOP-NEXT:    vpshlw %xmm3, %xmm6, %xmm6
-; XOP-NEXT:    vpaddw %xmm6, %xmm4, %xmm4
-; XOP-NEXT:    vpshaw %xmm2, %xmm4, %xmm4
+; XOP-NEXT:    vpcmov %ymm5, %ymm0, %ymm2, %ymm0
+; XOP-NEXT:    vextractf128 $1, %ymm1, %xmm2
+; XOP-NEXT:    vpsraw $15, %xmm2, %xmm6
+; XOP-NEXT:    vpshlw %xmm4, %xmm6, %xmm6
+; XOP-NEXT:    vpaddw %xmm6, %xmm2, %xmm2
+; XOP-NEXT:    vpshaw %xmm3, %xmm2, %xmm2
 ; XOP-NEXT:    vpsraw $15, %xmm1, %xmm6
-; XOP-NEXT:    vpshlw %xmm3, %xmm6, %xmm3
-; XOP-NEXT:    vpaddw %xmm3, %xmm1, %xmm3
-; XOP-NEXT:    vpshaw %xmm2, %xmm3, %xmm2
-; XOP-NEXT:    vinsertf128 $1, %xmm4, %ymm2, %ymm2
+; XOP-NEXT:    vpshlw %xmm4, %xmm6, %xmm4
+; XOP-NEXT:    vpaddw %xmm4, %xmm1, %xmm4
+; XOP-NEXT:    vpshaw %xmm3, %xmm4, %xmm3
+; XOP-NEXT:    vinsertf128 $1, %xmm2, %ymm3, %ymm2
 ; XOP-NEXT:    vpcmov %ymm5, %ymm1, %ymm2, %ymm1
 ; XOP-NEXT:    retq
   %1 = sdiv <32 x i16> %x, <i16 1, i16 4, i16 2, i16 16, i16 8, i16 32, i16 64, i16 2, i16 1, i16 4, i16 2, i16 16, i16 8, i16 32, i16 64, i16 2, i16 1, i16 4, i16 2, i16 16, i16 8, i16 32, i16 64, i16 2, i16 1, i16 4, i16 2, i16 16, i16 8, i16 32, i16 64, i16 2>
@@ -1544,17 +1537,13 @@ define <2 x i64> @combine_vec_sdiv_by_pow2b_v2i64(<2 x i64> %x) {
 ;
 ; XOP-LABEL: combine_vec_sdiv_by_pow2b_v2i64:
 ; XOP:       # %bb.0:
-; XOP-NEXT:    movl $2, %eax
-; XOP-NEXT:    vmovq %rax, %xmm1
-; XOP-NEXT:    vpslldq {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,xmm1[0,1,2,3,4,5,6,7]
-; XOP-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; XOP-NEXT:    vpsubq %xmm1, %xmm2, %xmm1
-; XOP-NEXT:    vpsubq {{.*}}(%rip), %xmm2, %xmm3
-; XOP-NEXT:    vpshaq %xmm3, %xmm0, %xmm3
-; XOP-NEXT:    vpsubq {{.*}}(%rip), %xmm2, %xmm2
-; XOP-NEXT:    vpshlq %xmm2, %xmm3, %xmm2
-; XOP-NEXT:    vpaddq %xmm2, %xmm0, %xmm2
-; XOP-NEXT:    vpshaq %xmm1, %xmm2, %xmm1
+; XOP-NEXT:    vpshaq {{.*}}(%rip), %xmm0, %xmm1
+; XOP-NEXT:    vpshlq {{.*}}(%rip), %xmm1, %xmm1
+; XOP-NEXT:    vpaddq %xmm1, %xmm0, %xmm1
+; XOP-NEXT:    movq $-2, %rax
+; XOP-NEXT:    vmovq %rax, %xmm2
+; XOP-NEXT:    vpslldq {{.*#+}} xmm2 = zero,zero,zero,zero,zero,zero,zero,zero,xmm2[0,1,2,3,4,5,6,7]
+; XOP-NEXT:    vpshaq %xmm2, %xmm1, %xmm1
 ; XOP-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm1[4,5,6,7]
 ; XOP-NEXT:    retq
   %1 = sdiv <2 x i64> %x, <i64 1, i64 4>
@@ -1658,25 +1647,20 @@ define <4 x i64> @combine_vec_sdiv_by_pow2b_v4i64(<4 x i64> %x) {
 ;
 ; XOP-LABEL: combine_vec_sdiv_by_pow2b_v4i64:
 ; XOP:       # %bb.0:
-; XOP-NEXT:    movl $2, %eax
-; XOP-NEXT:    vmovq %rax, %xmm1
-; XOP-NEXT:    vpslldq {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,xmm1[0,1,2,3,4,5,6,7]
-; XOP-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; XOP-NEXT:    vpsubq %xmm1, %xmm2, %xmm1
-; XOP-NEXT:    vpsubq {{.*}}(%rip), %xmm2, %xmm3
-; XOP-NEXT:    vpshaq %xmm3, %xmm0, %xmm4
-; XOP-NEXT:    vpsubq {{.*}}(%rip), %xmm2, %xmm5
-; XOP-NEXT:    vpshlq %xmm5, %xmm4, %xmm4
-; XOP-NEXT:    vpaddq %xmm4, %xmm0, %xmm4
-; XOP-NEXT:    vpshaq %xmm1, %xmm4, %xmm1
-; XOP-NEXT:    vextractf128 $1, %ymm0, %xmm4
-; XOP-NEXT:    vpshaq %xmm3, %xmm4, %xmm3
-; XOP-NEXT:    vpsubq {{.*}}(%rip), %xmm2, %xmm5
-; XOP-NEXT:    vpshlq %xmm5, %xmm3, %xmm3
-; XOP-NEXT:    vpaddq %xmm3, %xmm4, %xmm3
-; XOP-NEXT:    vpsubq {{.*}}(%rip), %xmm2, %xmm2
-; XOP-NEXT:    vpshaq %xmm2, %xmm3, %xmm2
-; XOP-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
+; XOP-NEXT:    vmovdqa {{.*#+}} xmm1 = [18446744073709551553,18446744073709551553]
+; XOP-NEXT:    vpshaq %xmm1, %xmm0, %xmm2
+; XOP-NEXT:    vpshlq {{.*}}(%rip), %xmm2, %xmm2
+; XOP-NEXT:    vpaddq %xmm2, %xmm0, %xmm2
+; XOP-NEXT:    movq $-2, %rax
+; XOP-NEXT:    vmovq %rax, %xmm3
+; XOP-NEXT:    vpslldq {{.*#+}} xmm3 = zero,zero,zero,zero,zero,zero,zero,zero,xmm3[0,1,2,3,4,5,6,7]
+; XOP-NEXT:    vpshaq %xmm3, %xmm2, %xmm2
+; XOP-NEXT:    vextractf128 $1, %ymm0, %xmm3
+; XOP-NEXT:    vpshaq %xmm1, %xmm3, %xmm1
+; XOP-NEXT:    vpshlq {{.*}}(%rip), %xmm1, %xmm1
+; XOP-NEXT:    vpaddq %xmm1, %xmm3, %xmm1
+; XOP-NEXT:    vpshaq {{.*}}(%rip), %xmm1, %xmm1
+; XOP-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm1
 ; XOP-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3,4,5,6,7]
 ; XOP-NEXT:    retq
   %1 = sdiv <4 x i64> %x, <i64 1, i64 4, i64 8, i64 16>
@@ -1841,36 +1825,34 @@ define <8 x i64> @combine_vec_sdiv_by_pow2b_v8i64(<8 x i64> %x) {
 ;
 ; XOP-LABEL: combine_vec_sdiv_by_pow2b_v8i64:
 ; XOP:       # %bb.0:
-; XOP-NEXT:    movl $2, %eax
-; XOP-NEXT:    vmovq %rax, %xmm2
-; XOP-NEXT:    vpslldq {{.*#+}} xmm2 = zero,zero,zero,zero,zero,zero,zero,zero,xmm2[0,1,2,3,4,5,6,7]
-; XOP-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; XOP-NEXT:    vpsubq %xmm2, %xmm3, %xmm9
-; XOP-NEXT:    vpsubq {{.*}}(%rip), %xmm3, %xmm4
-; XOP-NEXT:    vpshaq %xmm4, %xmm0, %xmm5
-; XOP-NEXT:    vpsubq {{.*}}(%rip), %xmm3, %xmm6
-; XOP-NEXT:    vpshlq %xmm6, %xmm5, %xmm5
-; XOP-NEXT:    vpaddq %xmm5, %xmm0, %xmm5
-; XOP-NEXT:    vpshaq %xmm9, %xmm5, %xmm8
-; XOP-NEXT:    vextractf128 $1, %ymm0, %xmm7
-; XOP-NEXT:    vpshaq %xmm4, %xmm7, %xmm5
-; XOP-NEXT:    vpsubq {{.*}}(%rip), %xmm3, %xmm2
-; XOP-NEXT:    vpshlq %xmm2, %xmm5, %xmm5
-; XOP-NEXT:    vpaddq %xmm5, %xmm7, %xmm5
-; XOP-NEXT:    vpsubq {{.*}}(%rip), %xmm3, %xmm3
-; XOP-NEXT:    vpshaq %xmm3, %xmm5, %xmm5
-; XOP-NEXT:    vinsertf128 $1, %xmm5, %ymm8, %ymm5
-; XOP-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm5[2,3,4,5,6,7]
-; XOP-NEXT:    vpshaq %xmm4, %xmm1, %xmm5
-; XOP-NEXT:    vpshlq %xmm6, %xmm5, %xmm5
-; XOP-NEXT:    vpaddq %xmm5, %xmm1, %xmm5
-; XOP-NEXT:    vpshaq %xmm9, %xmm5, %xmm5
-; XOP-NEXT:    vextractf128 $1, %ymm1, %xmm6
-; XOP-NEXT:    vpshaq %xmm4, %xmm6, %xmm4
-; XOP-NEXT:    vpshlq %xmm2, %xmm4, %xmm2
-; XOP-NEXT:    vpaddq %xmm2, %xmm6, %xmm2
-; XOP-NEXT:    vpshaq %xmm3, %xmm2, %xmm2
-; XOP-NEXT:    vinsertf128 $1, %xmm2, %ymm5, %ymm2
+; XOP-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; XOP-NEXT:    vmovdqa {{.*#+}} xmm3 = [18446744073709551553,18446744073709551553]
+; XOP-NEXT:    vpshaq %xmm3, %xmm2, %xmm4
+; XOP-NEXT:    vmovdqa {{.*#+}} xmm8 = [18446744073709551555,18446744073709551556]
+; XOP-NEXT:    vpshlq %xmm8, %xmm4, %xmm4
+; XOP-NEXT:    vpaddq %xmm4, %xmm2, %xmm2
+; XOP-NEXT:    vmovdqa {{.*#+}} xmm4 = [18446744073709551613,18446744073709551612]
+; XOP-NEXT:    vpshaq %xmm4, %xmm2, %xmm2
+; XOP-NEXT:    vpshaq %xmm3, %xmm0, %xmm6
+; XOP-NEXT:    vmovdqa {{.*#+}} xmm7 = [18446744073709551552,18446744073709551554]
+; XOP-NEXT:    vpshlq %xmm7, %xmm6, %xmm6
+; XOP-NEXT:    vpaddq %xmm6, %xmm0, %xmm6
+; XOP-NEXT:    movq $-2, %rax
+; XOP-NEXT:    vmovq %rax, %xmm5
+; XOP-NEXT:    vpslldq {{.*#+}} xmm5 = zero,zero,zero,zero,zero,zero,zero,zero,xmm5[0,1,2,3,4,5,6,7]
+; XOP-NEXT:    vpshaq %xmm5, %xmm6, %xmm6
+; XOP-NEXT:    vinsertf128 $1, %xmm2, %ymm6, %ymm2
+; XOP-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm2[2,3,4,5,6,7]
+; XOP-NEXT:    vextractf128 $1, %ymm1, %xmm2
+; XOP-NEXT:    vpshaq %xmm3, %xmm2, %xmm6
+; XOP-NEXT:    vpshlq %xmm8, %xmm6, %xmm6
+; XOP-NEXT:    vpaddq %xmm6, %xmm2, %xmm2
+; XOP-NEXT:    vpshaq %xmm4, %xmm2, %xmm2
+; XOP-NEXT:    vpshaq %xmm3, %xmm1, %xmm3
+; XOP-NEXT:    vpshlq %xmm7, %xmm3, %xmm3
+; XOP-NEXT:    vpaddq %xmm3, %xmm1, %xmm3
+; XOP-NEXT:    vpshaq %xmm5, %xmm3, %xmm3
+; XOP-NEXT:    vinsertf128 $1, %xmm2, %ymm3, %ymm2
 ; XOP-NEXT:    vblendps {{.*#+}} ymm1 = ymm1[0,1],ymm2[2,3,4,5,6,7]
 ; XOP-NEXT:    retq
   %1 = sdiv <8 x i64> %x, <i64 1, i64 4, i64 8, i64 16, i64 1, i64 4, i64 8, i64 16>
@@ -2235,11 +2217,9 @@ define <16 x i8> @non_splat_minus_one_divisor_1(<16 x i8> %A) {
 ; XOP:       # %bb.0:
 ; XOP-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; XOP-NEXT:    vpcmpgtb %xmm0, %xmm1, %xmm2
-; XOP-NEXT:    vpsubb {{.*}}(%rip), %xmm1, %xmm3
-; XOP-NEXT:    vpshlb %xmm3, %xmm2, %xmm2
+; XOP-NEXT:    vpshlb {{.*}}(%rip), %xmm2, %xmm2
 ; XOP-NEXT:    vpaddb %xmm2, %xmm0, %xmm2
-; XOP-NEXT:    vpsubb {{.*}}(%rip), %xmm1, %xmm3
-; XOP-NEXT:    vpshab %xmm3, %xmm2, %xmm2
+; XOP-NEXT:    vpshab {{.*}}(%rip), %xmm2, %xmm2
 ; XOP-NEXT:    vmovdqa {{.*#+}} xmm3 = [0,0,255,0,0,0,255,0,0,255,255,255,255,255,255,255]
 ; XOP-NEXT:    vpblendvb %xmm3, %xmm2, %xmm0, %xmm0
 ; XOP-NEXT:    vpsubb %xmm0, %xmm1, %xmm1
