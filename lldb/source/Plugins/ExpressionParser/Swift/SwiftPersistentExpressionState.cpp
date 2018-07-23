@@ -92,7 +92,6 @@ bool SwiftPersistentExpressionState::SwiftDeclMap::DeclsAreEquivalent(
   if (lhs_kind != rhs_kind)
     return false;
 
-  bool equivalent = false;
   switch (lhs_kind) {
   // All the decls that define types of things should only allow one
   // instance, so in this case, erase what is there, and copy in the new
@@ -102,54 +101,28 @@ bool SwiftPersistentExpressionState::SwiftDeclMap::DeclsAreEquivalent(
   case swift::DeclKind::Enum:
   case swift::DeclKind::TypeAlias:
   case swift::DeclKind::Protocol:
-    equivalent = true;
-    break;
+    return true;
+
   // For functions, we check that the signature is the same, and only replace it
   // if it
   // is, otherwise we just add it.
   case swift::DeclKind::Func: {
     swift::FuncDecl *lhs_func_decl = llvm::cast<swift::FuncDecl>(lhs_decl);
     swift::FuncDecl *rhs_func_decl = llvm::cast<swift::FuncDecl>(rhs_decl);
-    // Okay, they have the same number of arguments, are they of the same type?
-    auto lhs_patterns = lhs_func_decl->getParameterLists();
-    auto rhs_patterns = rhs_func_decl->getParameterLists();
-    size_t num_patterns = lhs_patterns.size();
-    bool body_params_equal = true;
-    if (num_patterns == rhs_patterns.size()) {
-      auto &context = lhs_func_decl->getASTContext();
-      for (int idx = 0; idx < num_patterns; idx++) {
-        auto *lhs_param = lhs_patterns[idx];
-        auto *rhs_param = rhs_patterns[idx];
 
-        auto lhs_type = lhs_param->getInterfaceType(context);
-        auto rhs_type = rhs_param->getInterfaceType(context);
-        if (!lhs_type->isEqual(rhs_type)) {
-          body_params_equal = false;
-          break;
-        }
-      }
-      if (body_params_equal) {
-        // The bodies look the same, now try the return values:
-        auto lhs_result_type = lhs_func_decl->getResultInterfaceType();
-        auto rhs_result_type = rhs_func_decl->getResultInterfaceType();
+    return lhs_func_decl->getInterfaceType()
+        ->isEqual(rhs_func_decl->getInterfaceType());
+  }
 
-        if (lhs_result_type->isEqual(rhs_result_type)) {
-          equivalent = true;
-        }
-      }
-    }
-  } break;
   // Not really sure how to compare operators, so we just do last one wins...
   case swift::DeclKind::InfixOperator:
   case swift::DeclKind::PrefixOperator:
   case swift::DeclKind::PostfixOperator:
-    equivalent = true;
-    break;
+    return true;
+
   default:
-    equivalent = true;
-    break;
+    return true;
   }
-  return equivalent;
 }
 
 void SwiftPersistentExpressionState::SwiftDeclMap::AddDecl(
