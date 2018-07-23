@@ -54,6 +54,16 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
 
   Occupancy = getMaxWavesPerEU();
   limitOccupancy(MF);
+  CallingConv::ID CC = F.getCallingConv();
+
+  if (CC == CallingConv::AMDGPU_KERNEL || CC == CallingConv::SPIR_KERNEL) {
+    if (!F.arg_empty())
+      KernargSegmentPtr = true;
+    WorkGroupIDX = true;
+    WorkItemIDX = true;
+  } else if (CC == CallingConv::AMDGPU_PS) {
+    PSInputAddr = AMDGPU::getInitialPSInputAddr(F);
+  }
 
   if (!isEntryFunction()) {
     // Non-entry functions have no special inputs for now, other registers
@@ -73,19 +83,9 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
   } else {
     if (F.hasFnAttribute("amdgpu-implicitarg-ptr")) {
       KernargSegmentPtr = true;
-      assert(MaxKernArgAlign == 0);
-      MaxKernArgAlign =  ST.getAlignmentForImplicitArgPtr();
+      MaxKernArgAlign = std::max(ST.getAlignmentForImplicitArgPtr(),
+                                 MaxKernArgAlign);
     }
-  }
-
-  CallingConv::ID CC = F.getCallingConv();
-  if (CC == CallingConv::AMDGPU_KERNEL || CC == CallingConv::SPIR_KERNEL) {
-    if (!F.arg_empty())
-      KernargSegmentPtr = true;
-    WorkGroupIDX = true;
-    WorkItemIDX = true;
-  } else if (CC == CallingConv::AMDGPU_PS) {
-    PSInputAddr = AMDGPU::getInitialPSInputAddr(F);
   }
 
   if (ST.debuggerEmitPrologue()) {

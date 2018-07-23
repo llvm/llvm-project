@@ -65,8 +65,8 @@ define void @f7(<2 x i64> %val, <2 x i1> *%ptr) {
 ; CHECK-LABEL: f7:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vlgvg %r0, %v24, 0
-; CHECK-NEXT:    sll %r0, 1
-; CHECK-NEXT:    vlgvg %r1, %v24, 1
+; CHECK-DAG:     sll %r0, 1
+; CHECK-DAG:     vlgvg %r1, %v24, 1
 ; CHECK-NEXT:    rosbg %r0, %r1, 63, 63, 0
 ; CHECK-NEXT:    nilf %r0, 3
 ; CHECK-NEXT:    stc %r0, 0(%r2)

@@ -275,7 +275,15 @@ INTERCEPTOR(int, swapcontext, struct ucontext_t *oucp,
   uptr stack, ssize;
   ReadContextStack(ucp, &stack, &ssize);
   ClearShadowMemoryForContextStack(stack, ssize);
+#if __has_attribute(__indirect_return__) && \
+    (defined(__x86_64__) || defined(__i386__))
+  int (*real_swapcontext)(struct ucontext_t *, struct ucontext_t *)
+    __attribute__((__indirect_return__))
+    = REAL(swapcontext);
+  int res = real_swapcontext(oucp, ucp);
+#else
   int res = REAL(swapcontext)(oucp, ucp);
+#endif
   // swapcontext technically does not return, but program may swap context to
   // "oucp" later, that would look as if swapcontext() returned 0.
   // We need to clear shadow for ucp once again, as it may be in arbitrary

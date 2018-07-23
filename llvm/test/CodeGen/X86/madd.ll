@@ -51,8 +51,7 @@ define i32 @_Z10test_shortPsS_i(i16* nocapture readonly, i16* nocapture readonly
 ; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
 ; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
-; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    vmovd %xmm0, %eax
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
@@ -188,8 +187,7 @@ define i32 @_Z10test_shortPsS_i_512(i16* nocapture readonly, i16* nocapture read
 ; AVX1-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
 ; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
-; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    vmovd %xmm0, %eax
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
@@ -338,8 +336,7 @@ define i32 @test_unsigned_short(i16* nocapture readonly, i16* nocapture readonly
 ; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
 ; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
-; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    vmovd %xmm0, %eax
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
@@ -486,8 +483,7 @@ define i32 @test_unsigned_short_512(i16* nocapture readonly, i16* nocapture read
 ; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
 ; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
-; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    vmovd %xmm0, %eax
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
@@ -666,8 +662,7 @@ define i32 @_Z9test_charPcS_i(i8* nocapture readonly, i8* nocapture readonly, i3
 ; AVX1-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
 ; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
-; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    vmovd %xmm0, %eax
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
@@ -894,8 +889,7 @@ define i32 @_Z9test_charPcS_i_512(i8* nocapture readonly, i8* nocapture readonly
 ; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
 ; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
-; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    vmovd %xmm0, %eax
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq

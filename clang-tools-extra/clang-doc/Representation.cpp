@@ -42,7 +42,7 @@ llvm::Expected<std::unique_ptr<Info>>
 mergeInfos(std::vector<std::unique_ptr<Info>> &Values) {
   if (Values.empty())
     return llvm::make_error<llvm::StringError>("No info values to merge.\n",
-                                             llvm::inconvertibleErrorCode());
+                                               llvm::inconvertibleErrorCode());
 
   switch (Values[0]->IT) {
   case InfoType::IT_namespace:

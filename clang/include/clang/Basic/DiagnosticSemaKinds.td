@@ -608,6 +608,8 @@ def err_builtin_redeclare : Error<"cannot redeclare builtin function %0">;
 def err_arm_invalid_specialreg : Error<"invalid special register for builtin">;
 def err_invalid_cpu_supports : Error<"invalid cpu feature string for builtin">;
 def err_invalid_cpu_is : Error<"invalid cpu name for builtin">;
+def err_invalid_cpu_specific_dispatch_value : Error<
+"invalid option '%0' for %select{cpu_specific|cpu_dispatch}1">;
 def err_builtin_needs_feature : Error<"%0 needs target feature %1">;
 def err_function_needs_feature
     : Error<"always_inline function %1 requires target feature '%2', but would "
@@ -3788,8 +3790,8 @@ def err_ovl_no_viable_subscript :
 def err_ovl_no_oper :
     Error<"type %0 does not provide a %select{subscript|call}1 operator">;
 def err_ovl_unresolvable : Error<
-  "reference to overloaded function could not be resolved; "
-  "did you mean to call it%select{| with no arguments}0?">;
+  "reference to %select{overloaded|multiversioned}1 function could not be "
+  "resolved; did you mean to call it%select{| with no arguments}0?">;
 def err_bound_member_function : Error<
   "reference to non-static member function must be called"
   "%select{|; did you mean to call it with no arguments?}0">;
@@ -7868,11 +7870,11 @@ def note_ref_var_local_bind : Note<
 // Check for initializing a member variable with the address or a reference to
 // a constructor parameter.
 def warn_bind_ref_member_to_parameter : Warning<
-  "binding reference member %0 to stack allocated parameter %1">,
-  InGroup<DanglingField>;
+  "binding reference member %0 to stack allocated "
+  "%select{variable|parameter}2 %1">, InGroup<DanglingField>;
 def warn_init_ptr_member_to_parameter_addr : Warning<
-  "initializing pointer member %0 with the stack address of parameter %1">,
-  InGroup<DanglingField>;
+  "initializing pointer member %0 with the stack address of "
+  "%select{variable|parameter}2 %1">, InGroup<DanglingField>;
 def note_ref_or_ptr_member_declared_here : Note<
   "%select{reference|pointer}0 member declared here">;
 
@@ -9102,9 +9104,9 @@ def note_equivalent_internal_linkage_decl : Note<
   "declared here%select{ in module '%1'|}0">;
 
 def note_redefinition_modules_same_file : Note<
-	"'%0' included multiple times, additional include site in header from module '%1'">;
+  "'%0' included multiple times, additional include site in header from module '%1'">;
 def note_redefinition_include_same_file : Note<
-	"'%0' included multiple times, additional include site here">;
+  "'%0' included multiple times, additional include site here">;
 }
 
 let CategoryName = "Coroutines Issue" in {
@@ -9355,9 +9357,9 @@ def warn_shadow_field :
   InGroup<ShadowField>, DefaultIgnore;
 def note_shadow_field : Note<"declared here">;
 
-def err_target_required_in_redecl : Error<
-  "function declaration is missing 'target' attribute in a multiversioned "
-  "function">;
+def err_multiversion_required_in_redecl : Error<
+  "function declaration is missing %select{'target'|'cpu_specific' or "
+  "'cpu_dispatch'}0 attribute in a multiversioned function">;
 def note_multiversioning_caused_here : Note<
   "function multiversioning caused by this declaration">;
 def err_multiversion_after_used : Error<
@@ -9371,20 +9373,33 @@ def err_multiversion_duplicate : Error<
 def err_multiversion_noproto : Error<
   "multiversioned function must have a prototype">;
 def err_multiversion_no_other_attrs : Error<
-  "attribute 'target' multiversioning cannot be combined with other "
-  "attributes">;
+  "attribute '%select{target|cpu_specific|cpu_dispatch}0' multiversioning cannot be combined"
+  " with other attributes">;
 def err_multiversion_diff : Error<
   "multiversioned function declaration has a different %select{calling convention"
   "|return type|constexpr specification|inline specification|storage class|"
   "linkage}0">;
 def err_multiversion_doesnt_support : Error<
-  "multiversioned functions do not yet support %select{function templates|"
-  "virtual functions|deduced return types|constructors|destructors|"
-  "deleted functions|defaulted functions}0">;
+  "attribute '%select{target|cpu_specific|cpu_dispatch}0' multiversioned functions do not "
+  "yet support %select{function templates|virtual functions|"
+  "deduced return types|constructors|destructors|deleted functions|"
+  "defaulted functions|constexpr functions}1">;
 def err_multiversion_not_allowed_on_main : Error<
   "'main' cannot be a multiversioned function">;
 def err_multiversion_not_supported : Error<
  "function multiversioning is not supported on the current target">;
+def err_multiversion_types_mixed : Error<
+  "multiversioning attributes cannot be combined">;
+def err_cpu_dispatch_mismatch : Error<
+ "'cpu_dispatch' function redeclared with different CPUs">;
+def err_cpu_specific_multiple_defs : Error<
+ "multiple 'cpu_specific' functions cannot specify the same CPU: %0">;
+def warn_multiversion_duplicate_entries : Warning<
+ "CPU list contains duplicate entries; attribute ignored">,
+  InGroup<FunctionMultiVersioning>;
+def warn_dispatch_body_ignored : Warning<
+  "body of cpu_dispatch function will be ignored">,
+  InGroup<FunctionMultiVersioning>;
 
 // three-way comparison operator diagnostics
 def err_implied_comparison_category_type_not_found : Error<

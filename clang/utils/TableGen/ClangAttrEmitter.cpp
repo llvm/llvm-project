@@ -1173,6 +1173,13 @@ namespace {
     }
   };
 
+  class VariadicIdentifierArgument : public VariadicArgument {
+  public:
+    VariadicIdentifierArgument(const Record &Arg, StringRef Attr)
+      : VariadicArgument(Arg, Attr, "IdentifierInfo *")
+    {}
+  };
+
   class VariadicStringArgument : public VariadicArgument {
   public:
     VariadicStringArgument(const Record &Arg, StringRef Attr)
@@ -1278,6 +1285,8 @@ createArgument(const Record &Arg, StringRef Attr,
     Ptr = llvm::make_unique<VariadicParamIdxArgument>(Arg, Attr);
   else if (ArgName == "ParamIdxArgument")
     Ptr = llvm::make_unique<SimpleArgument>(Arg, Attr, "ParamIdx");
+  else if (ArgName == "VariadicIdentifierArgument")
+    Ptr = llvm::make_unique<VariadicIdentifierArgument>(Arg, Attr);
   else if (ArgName == "VersionArgument")
     Ptr = llvm::make_unique<VersionArgument>(Arg, Attr);
 
@@ -2104,6 +2113,34 @@ static bool isIdentifierArgument(Record *Arg) {
     .Case("EnumArgument", true)
     .Case("VariadicEnumArgument", true)
     .Default(false);
+}
+
+static bool isVariadicIdentifierArgument(Record *Arg) {
+  return !Arg->getSuperClasses().empty() &&
+         llvm::StringSwitch<bool>(
+             Arg->getSuperClasses().back().first->getName())
+             .Case("VariadicIdentifierArgument", true)
+             .Default(false);
+}
+
+static void emitClangAttrVariadicIdentifierArgList(RecordKeeper &Records,
+                                                   raw_ostream &OS) {
+  OS << "#if defined(CLANG_ATTR_VARIADIC_IDENTIFIER_ARG_LIST)\n";
+  std::vector<Record *> Attrs = Records.getAllDerivedDefinitions("Attr");
+  for (const auto *A : Attrs) {
+    // Determine whether the first argument is a variadic identifier.
+    std::vector<Record *> Args = A->getValueAsListOfDefs("Args");
+    if (Args.empty() || !isVariadicIdentifierArgument(Args[0]))
+      continue;
+
+    // All these spellings take an identifier argument.
+    forEachUniqueSpelling(*A, [&](const FlattenedSpelling &S) {
+      OS << ".Case(\"" << S.name() << "\", "
+         << "true"
+         << ")\n";
+    });
+  }
+  OS << "#endif // CLANG_ATTR_VARIADIC_IDENTIFIER_ARG_LIST\n\n";
 }
 
 // Emits the first-argument-is-identifier property for attributes.
@@ -3697,6 +3734,7 @@ void EmitClangAttrParserStringSwitches(RecordKeeper &Records,
   emitSourceFileHeader("Parser-related llvm::StringSwitch cases", OS);
   emitClangAttrArgContextList(Records, OS);
   emitClangAttrIdentifierArgList(Records, OS);
+  emitClangAttrVariadicIdentifierArgList(Records, OS);
   emitClangAttrTypeArgList(Records, OS);
   emitClangAttrLateParsedList(Records, OS);
 }

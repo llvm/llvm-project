@@ -241,7 +241,7 @@ namespace clang {
             LLVMIRGeneration.stopTimer();
         }
 
-	IRGenFinished = true;
+        IRGenFinished = true;
       }
 
       // Silently ignore if we weren't initialized for some reason.

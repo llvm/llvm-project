@@ -7,7 +7,7 @@ define float @f1(float *%src) {
 ; CHECK-LABEL: f1:
 ; CHECK: le %f0, 0(%r2)
 ; CHECK: br %r14
-  %val = load float , float *%src
+  %val = load float, float *%src
   ret float %val
 }
 
@@ -17,7 +17,7 @@ define float @f2(float *%src) {
 ; CHECK: le %f0, 4092(%r2)
 ; CHECK: br %r14
   %ptr = getelementptr float, float *%src, i64 1023
-  %val = load float , float *%ptr
+  %val = load float, float *%ptr
   ret float %val
 }
 
@@ -27,7 +27,7 @@ define float @f3(float *%src) {
 ; CHECK: ley %f0, 4096(%r2)
 ; CHECK: br %r14
   %ptr = getelementptr float, float *%src, i64 1024
-  %val = load float , float *%ptr
+  %val = load float, float *%ptr
   ret float %val
 }
 
@@ -37,7 +37,7 @@ define float @f4(float *%src) {
 ; CHECK: ley %f0, 524284(%r2)
 ; CHECK: br %r14
   %ptr = getelementptr float, float *%src, i64 131071
-  %val = load float , float *%ptr
+  %val = load float, float *%ptr
   ret float %val
 }
 
@@ -49,7 +49,7 @@ define float @f5(float *%src) {
 ; CHECK: le %f0, 0(%r2)
 ; CHECK: br %r14
   %ptr = getelementptr float, float *%src, i64 131072
-  %val = load float , float *%ptr
+  %val = load float, float *%ptr
   ret float %val
 }
 
@@ -59,7 +59,7 @@ define float @f6(float *%src) {
 ; CHECK: ley %f0, -4(%r2)
 ; CHECK: br %r14
   %ptr = getelementptr float, float *%src, i64 -1
-  %val = load float , float *%ptr
+  %val = load float, float *%ptr
   ret float %val
 }
 
@@ -69,7 +69,7 @@ define float @f7(float *%src) {
 ; CHECK: ley %f0, -524288(%r2)
 ; CHECK: br %r14
   %ptr = getelementptr float, float *%src, i64 -131072
-  %val = load float , float *%ptr
+  %val = load float, float *%ptr
   ret float %val
 }
 
@@ -81,7 +81,7 @@ define float @f8(float *%src) {
 ; CHECK: le %f0, 0(%r2)
 ; CHECK: br %r14
   %ptr = getelementptr float, float *%src, i64 -131073
-  %val = load float , float *%ptr
+  %val = load float, float *%ptr
   ret float %val
 }
 
@@ -93,7 +93,7 @@ define float @f9(i64 %src, i64 %index) {
   %add1 = add i64 %src, %index
   %add2 = add i64 %add1, 4092
   %ptr = inttoptr i64 %add2 to float *
-  %val = load float , float *%ptr
+  %val = load float, float *%ptr
   ret float %val
 }
 
@@ -105,6 +105,6 @@ define float @f10(i64 %src, i64 %index) {
   %add1 = add i64 %src, %index
   %add2 = add i64 %add1, 4096
   %ptr = inttoptr i64 %add2 to float *
-  %val = load float , float *%ptr
+  %val = load float, float *%ptr
   ret float %val
 }

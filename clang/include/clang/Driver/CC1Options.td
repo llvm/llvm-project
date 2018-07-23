@@ -37,7 +37,7 @@ def mfpmath : Separate<["-"], "mfpmath">,
   HelpText<"Which unit to use for fp math">;
 
 def fpadding_on_unsigned_fixed_point : Flag<["-"], "fpadding-on-unsigned-fixed-point">,
-		  HelpText<"Force each unsigned fixed point type to have an extra bit of padding to align their scales with those of signed fixed point types">;
+  HelpText<"Force each unsigned fixed point type to have an extra bit of padding to align their scales with those of signed fixed point types">;
 def fno_padding_on_unsigned_fixed_point : Flag<["-"], "fno-padding-on-unsigned-fixed-point">;
 
 //===----------------------------------------------------------------------===//

@@ -102,9 +102,15 @@ extern "C" void *__mmap(void *addr, size_t len, int prot, int flags, int fildes,
 extern "C" int __munmap(void *, size_t) SANITIZER_WEAK_ATTRIBUTE;
 
 // ---------------------- sanitizer_libc.h
+
+// From <mach/vm_statistics.h>, but not on older OSs.
+#ifndef VM_MEMORY_SANITIZER
+#define VM_MEMORY_SANITIZER 99
+#endif
+
 uptr internal_mmap(void *addr, size_t length, int prot, int flags,
                    int fd, u64 offset) {
-  if (fd == -1) fd = VM_MAKE_TAG(VM_MEMORY_ANALYSIS_TOOL);
+  if (fd == -1) fd = VM_MAKE_TAG(VM_MEMORY_SANITIZER);
   if (&__mmap) return (uptr)__mmap(addr, length, prot, flags, fd, offset);
   return (uptr)mmap(addr, length, prot, flags, fd, offset);
 }

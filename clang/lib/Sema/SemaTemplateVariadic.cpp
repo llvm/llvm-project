@@ -919,8 +919,8 @@ bool Sema::containsUnexpandedParameterPacks(Declarator &D) {
 
       if (Chunk.Fun.hasTrailingReturnType()) {
         QualType T = Chunk.Fun.getTrailingReturnType().get();
-	if (!T.isNull() && T->containsUnexpandedParameterPack())
-	  return true;
+        if (!T.isNull() && T->containsUnexpandedParameterPack())
+          return true;
       }
       break;
 
@@ -931,7 +931,7 @@ bool Sema::containsUnexpandedParameterPacks(Declarator &D) {
       break;
     }
   }
-  
+
   return false;
 }
 
@@ -993,12 +993,12 @@ ExprResult Sema::ActOnSizeofParameterPackExpr(Scope *S,
   case LookupResult::FoundOverloaded:
   case LookupResult::FoundUnresolvedValue:
     break;
-    
+
   case LookupResult::Ambiguous:
     DiagnoseAmbiguousLookup(R);
     return ExprError();
   }
-  
+
   if (!ParameterPack || !ParameterPack->isParameterPack()) {
     Diag(NameLoc, diag::err_sizeof_pack_no_pack_name)
       << &Name;

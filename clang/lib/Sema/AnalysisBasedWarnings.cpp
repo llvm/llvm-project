@@ -417,9 +417,10 @@ static ControlFlowKind CheckFallThrough(AnalysisDeclContext &AC) {
   CFGBlock::FilterOptions FO;
   FO.IgnoreDefaultsWithCoveredEnums = 1;
 
-  for (CFGBlock::filtered_pred_iterator
-	 I = cfg->getExit().filtered_pred_start_end(FO); I.hasMore(); ++I) {
-    const CFGBlock& B = **I;
+  for (CFGBlock::filtered_pred_iterator I =
+           cfg->getExit().filtered_pred_start_end(FO);
+       I.hasMore(); ++I) {
+    const CFGBlock &B = **I;
     if (!live[B.getBlockID()])
       continue;
 
@@ -657,6 +658,11 @@ static void CheckFallThroughForBody(Sema &S, const Decl *D, const Stmt *Body,
     else
       S.Diag(Loc, DiagID);
   };
+
+  // cpu_dispatch functions permit empty function bodies for ICC compatibility.
+  if (D->getAsFunction() && D->getAsFunction()->isCPUDispatchMultiVersion())
+    return;
+
   // Either in a function body compound statement, or a function-try-block.
   switch (CheckFallThrough(AC)) {
     case UnknownFallThrough:

@@ -21,7 +21,7 @@ define void @f2(fp128 *%dst, float *%ptr) {
 ; CHECK: std %f0, 0(%r2)
 ; CHECK: std %f2, 8(%r2)
 ; CHECK: br %r14
-  %val = load float , float *%ptr
+  %val = load float, float *%ptr
   %res = fpext float %val to fp128
   store fp128 %res, fp128 *%dst
   ret void
@@ -35,7 +35,7 @@ define void @f3(fp128 *%dst, float *%base) {
 ; CHECK: std %f2, 8(%r2)
 ; CHECK: br %r14
   %ptr = getelementptr float, float *%base, i64 1023
-  %val = load float , float *%ptr
+  %val = load float, float *%ptr
   %res = fpext float %val to fp128
   store fp128 %res, fp128 *%dst
   ret void
@@ -51,7 +51,7 @@ define void @f4(fp128 *%dst, float *%base) {
 ; CHECK: std %f2, 8(%r2)
 ; CHECK: br %r14
   %ptr = getelementptr float, float *%base, i64 1024
-  %val = load float , float *%ptr
+  %val = load float, float *%ptr
   %res = fpext float %val to fp128
   store fp128 %res, fp128 *%dst
   ret void
@@ -66,7 +66,7 @@ define void @f5(fp128 *%dst, float *%base) {
 ; CHECK: std %f2, 8(%r2)
 ; CHECK: br %r14
   %ptr = getelementptr float, float *%base, i64 -1
-  %val = load float , float *%ptr
+  %val = load float, float *%ptr
   %res = fpext float %val to fp128
   store fp128 %res, fp128 *%dst
   ret void
@@ -82,7 +82,7 @@ define void @f6(fp128 *%dst, float *%base, i64 %index) {
 ; CHECK: br %r14
   %ptr1 = getelementptr float, float *%base, i64 %index
   %ptr2 = getelementptr float, float *%ptr1, i64 100
-  %val = load float , float *%ptr2
+  %val = load float, float *%ptr2
   %res = fpext float %val to fp128
   store fp128 %res, fp128 *%dst
   ret void
@@ -94,23 +94,23 @@ define void @f7(fp128 *%ptr1, float *%ptr2) {
 ; CHECK-LABEL: f7:
 ; CHECK: lxeb {{%f[0-9]+}}, 16{{[04]}}(%r15)
 ; CHECK: br %r14
-  %val0 = load volatile float , float *%ptr2
-  %val1 = load volatile float , float *%ptr2
-  %val2 = load volatile float , float *%ptr2
-  %val3 = load volatile float , float *%ptr2
-  %val4 = load volatile float , float *%ptr2
-  %val5 = load volatile float , float *%ptr2
-  %val6 = load volatile float , float *%ptr2
-  %val7 = load volatile float , float *%ptr2
-  %val8 = load volatile float , float *%ptr2
-  %val9 = load volatile float , float *%ptr2
-  %val10 = load volatile float , float *%ptr2
-  %val11 = load volatile float , float *%ptr2
-  %val12 = load volatile float , float *%ptr2
-  %val13 = load volatile float , float *%ptr2
-  %val14 = load volatile float , float *%ptr2
-  %val15 = load volatile float , float *%ptr2
-  %val16 = load volatile float , float *%ptr2
+  %val0 = load volatile float, float *%ptr2
+  %val1 = load volatile float, float *%ptr2
+  %val2 = load volatile float, float *%ptr2
+  %val3 = load volatile float, float *%ptr2
+  %val4 = load volatile float, float *%ptr2
+  %val5 = load volatile float, float *%ptr2
+  %val6 = load volatile float, float *%ptr2
+  %val7 = load volatile float, float *%ptr2
+  %val8 = load volatile float, float *%ptr2
+  %val9 = load volatile float, float *%ptr2
+  %val10 = load volatile float, float *%ptr2
+  %val11 = load volatile float, float *%ptr2
+  %val12 = load volatile float, float *%ptr2
+  %val13 = load volatile float, float *%ptr2
+  %val14 = load volatile float, float *%ptr2
+  %val15 = load volatile float, float *%ptr2
+  %val16 = load volatile float, float *%ptr2
 
   %ext0 = fpext float %val0 to fp128
   %ext1 = fpext float %val1 to fp128

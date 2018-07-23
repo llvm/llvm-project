@@ -54,6 +54,7 @@ enum BlockByrefFlags {
 };
 
 enum BlockLiteralFlags {
+  BLOCK_IS_NOESCAPE      =  (1 << 23),
   BLOCK_HAS_COPY_DISPOSE =  (1 << 25),
   BLOCK_HAS_CXX_OBJ =       (1 << 26),
   BLOCK_IS_GLOBAL =         (1 << 28),
@@ -214,7 +215,8 @@ public:
   /// no non-constant captures.
   bool CanBeGlobal : 1;
 
-  /// True if the block needs a custom copy or dispose function.
+  /// True if the block has captures that would necessitate custom copy or
+  /// dispose helper functions if the block were escaping.
   bool NeedsCopyDispose : 1;
 
   /// HasCXXObject - True if the block's custom copy/dispose functions
@@ -276,6 +278,11 @@ public:
   }
 
   CGBlockInfo(const BlockDecl *blockDecl, StringRef Name);
+
+  // Indicates whether the block needs a custom copy or dispose function.
+  bool needsCopyDisposeHelpers() const {
+    return NeedsCopyDispose && !Block->doesNotEscape();
+  }
 };
 
 }  // end namespace CodeGen

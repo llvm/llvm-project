@@ -118,6 +118,9 @@ defm WriteIMul64 : X86SchedWritePair; // Integer 64-bit multiplication.
 def  WriteIMulH  : SchedWrite;        // Integer multiplication, high part.
 def  WriteLEA    : SchedWrite;        // LEA instructions can't fold loads.
 
+defm WriteBSWAP32: X86SchedWritePair; // Byte Order (Endiannes) Swap
+defm WriteBSWAP64: X86SchedWritePair; // Byte Order (Endiannes) Swap
+
 // Integer division.
 defm WriteDiv8   : X86SchedWritePair;
 defm WriteDiv16  : X86SchedWritePair;

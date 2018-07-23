@@ -1,0 +1,25 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Rule
+      Name="LLVMGeneral"
+      DisplayName="LLVM"
+      PageTemplate="generic"
+      Description="LLVM"
+      xmlns="http://schemas.microsoft.com/build/2009/properties">
+  <Rule.Categories>
+    <Category Name="General" DisplayName="General" Description="General" />
+  </Rule.Categories>
+  <Rule.DataSource>
+    <DataSource Persistence="ProjectFile" Label="Configuration" />
+  </Rule.DataSource>
+
+  <StringProperty Name="ClangClExecutable"
+                  DisplayName="Clang-CL Executable"
+                  Description="Specifies the path to clang-cl.exe."
+                  Category="General"
+                  Default="$(LLVMInstallDir)bin\clang-cl.exe"
+                  Subtype="file">
+    <StringProperty.DataSource>
+      <DataSource Persistence="ProjectFile" Label="" />
+    </StringProperty.DataSource>
+  </StringProperty>
+</Rule>

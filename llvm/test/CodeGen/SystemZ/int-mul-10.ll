@@ -58,7 +58,7 @@ define i64 @f4(i64 %dummy, i64 %a, i64 *%src) {
 ; CHECK-NOT: {{%r[234]}}
 ; CHECK: mg %r2, 0(%r4)
 ; CHECK: br %r14
-  %b = load i64 , i64 *%src
+  %b = load i64, i64 *%src
   %ax = sext i64 %a to i128
   %bx = sext i64 %b to i128
   %mulx = mul i128 %ax, %bx
@@ -73,7 +73,7 @@ define i64 @f5(i64 %dummy, i64 %a, i64 *%src) {
 ; CHECK: mg %r2, 524280(%r4)
 ; CHECK: br %r14
   %ptr = getelementptr i64, i64 *%src, i64 65535
-  %b = load i64 , i64 *%ptr
+  %b = load i64, i64 *%ptr
   %ax = sext i64 %a to i128
   %bx = sext i64 %b to i128
   %mulx = mul i128 %ax, %bx
@@ -90,7 +90,7 @@ define i64 @f6(i64 %dummy, i64 %a, i64 *%src) {
 ; CHECK: mg %r2, 0(%r4)
 ; CHECK: br %r14
   %ptr = getelementptr i64, i64 *%src, i64 65536
-  %b = load i64 , i64 *%ptr
+  %b = load i64, i64 *%ptr
   %ax = sext i64 %a to i128
   %bx = sext i64 %b to i128
   %mulx = mul i128 %ax, %bx
@@ -105,7 +105,7 @@ define i64 @f7(i64 %dummy, i64 %a, i64 *%src) {
 ; CHECK: mg %r2, -8(%r4)
 ; CHECK: br %r14
   %ptr = getelementptr i64, i64 *%src, i64 -1
-  %b = load i64 , i64 *%ptr
+  %b = load i64, i64 *%ptr
   %ax = sext i64 %a to i128
   %bx = sext i64 %b to i128
   %mulx = mul i128 %ax, %bx
@@ -120,7 +120,7 @@ define i64 @f8(i64 %dummy, i64 %a, i64 *%src) {
 ; CHECK: mg %r2, -524288(%r4)
 ; CHECK: br %r14
   %ptr = getelementptr i64, i64 *%src, i64 -65536
-  %b = load i64 , i64 *%ptr
+  %b = load i64, i64 *%ptr
   %ax = sext i64 %a to i128
   %bx = sext i64 %b to i128
   %mulx = mul i128 %ax, %bx
@@ -137,7 +137,7 @@ define i64 @f9(i64 *%dest, i64 %a, i64 *%src) {
 ; CHECK: mg %r2, 0(%r4)
 ; CHECK: br %r14
   %ptr = getelementptr i64, i64 *%src, i64 -65537
-  %b = load i64 , i64 *%ptr
+  %b = load i64, i64 *%ptr
   %ax = sext i64 %a to i128
   %bx = sext i64 %b to i128
   %mulx = mul i128 %ax, %bx
@@ -154,7 +154,7 @@ define i64 @f10(i64 *%dest, i64 %a, i64 %src, i64 %index) {
   %add1 = add i64 %src, %index
   %add2 = add i64 %add1, 524287
   %ptr = inttoptr i64 %add2 to i64 *
-  %b = load i64 , i64 *%ptr
+  %b = load i64, i64 *%ptr
   %ax = sext i64 %a to i128
   %bx = sext i64 %b to i128
   %mulx = mul i128 %ax, %bx

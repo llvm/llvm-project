@@ -33,7 +33,7 @@ define amdgpu_kernel void @opencl_kernel_implicitarg_ptr_empty() #1 {
 ; GCN: enable_sgpr_kernarg_segment_ptr = 1
 
 ; HSA: kernarg_segment_byte_size = 112
-; MESA: kernarg_segment_byte_size = 464
+; MESA: kernarg_segment_byte_size = 128
 
 ; HSA: s_load_dword s0, s[4:5], 0x1c
 define amdgpu_kernel void @kernel_implicitarg_ptr([112 x i8]) #0 {
@@ -47,7 +47,7 @@ define amdgpu_kernel void @kernel_implicitarg_ptr([112 x i8]) #0 {
 ; GCN: enable_sgpr_kernarg_segment_ptr = 1
 
 ; HSA: kernarg_segment_byte_size = 160
-; MESA: kernarg_segment_byte_size = 464
+; MESA: kernarg_segment_byte_size = 128
 
 ; HSA: s_load_dword s0, s[4:5], 0x1c
 define amdgpu_kernel void @opencl_kernel_implicitarg_ptr([112 x i8]) #1 {
@@ -118,10 +118,10 @@ define amdgpu_kernel void @opencl_kernel_call_implicitarg_ptr_func_empty() #1 {
 ; GCN-LABEL: {{^}}kernel_call_implicitarg_ptr_func:
 ; GCN: enable_sgpr_kernarg_segment_ptr = 1
 ; HSA: kernarg_segment_byte_size = 112
-; MESA: kernarg_segment_byte_size = 464
+; MESA: kernarg_segment_byte_size = 128
 
 ; HSA: s_add_u32 s6, s4, 0x70
-; MESA: s_add_u32 s6, s4, 0x1c0
+; MESA: s_add_u32 s6, s4, 0x70
 
 ; GCN: s_addc_u32 s7, s5, 0{{$}}
 ; GCN: s_swappc_b64
@@ -133,10 +133,9 @@ define amdgpu_kernel void @kernel_call_implicitarg_ptr_func([112 x i8]) #0 {
 ; GCN-LABEL: {{^}}opencl_kernel_call_implicitarg_ptr_func:
 ; GCN: enable_sgpr_kernarg_segment_ptr = 1
 ; HSA: kernarg_segment_byte_size = 160
-; MESA: kernarg_segment_byte_size = 464
+; MESA: kernarg_segment_byte_size = 128
 
-; HSA: s_add_u32 s6, s4, 0x70
-; MESA: s_add_u32 s6, s4, 0x1c0
+; GCN: s_add_u32 s6, s4, 0x70
 
 ; GCN: s_addc_u32 s7, s5, 0{{$}}
 ; GCN: s_swappc_b64
@@ -219,8 +218,7 @@ define void @opencl_func_kernarg_implicitarg_ptr() #0 {
 
 ; GCN-LABEL: {{^}}kernel_call_kernarg_implicitarg_ptr_func:
 ; GCN: s_mov_b64 s[6:7], s[4:5]
-; HSA: s_add_u32 s8, s6, 0x70
-; MESA: s_add_u32 s8, s6, 0x1c0
+; GCN: s_add_u32 s8, s6, 0x70
 ; GCN: s_addc_u32 s9, s7, 0
 ; GCN: s_swappc_b64
 define amdgpu_kernel void @kernel_call_kernarg_implicitarg_ptr_func([112 x i8]) #0 {

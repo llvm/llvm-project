@@ -97,6 +97,13 @@ static cl::opt<bool> VerboseVerbose(
     "vv", cl::init(false),
     cl::desc("Print information helpful in diagnosing internal FileCheck\n"
              "issues.  Implies -v.\n"));
+static const char * DumpInputEnv = "FILECHECK_DUMP_INPUT_ON_FAILURE";
+
+static cl::opt<bool> DumpInputOnFailure(
+    "dump-input-on-failure", cl::init(std::getenv(DumpInputEnv)),
+    cl::desc("Dump original input to stderr before failing.\n"
+             "The value can be also controlled using\n"
+             "FILECHECK_DUMP_INPUT_ON_FAILURE environment variable.\n"));
 
 typedef cl::list<std::string>::const_iterator prefix_iterator;
 
@@ -1283,17 +1290,23 @@ size_t CheckString::CheckDag(const SourceMgr &SM, StringRef Buffer,
   if (DagNotStrings.empty())
     return 0;
 
-  size_t LastPos = 0;
-  size_t StartPos = LastPos;
+  // The start of the search range.
+  size_t StartPos = 0;
 
-  // A sorted list of ranges for non-overlapping dag matches.
-  struct Match {
+  struct MatchRange {
     size_t Pos;
     size_t End;
   };
-  std::list<Match> Matches;
+  // A sorted list of ranges for non-overlapping CHECK-DAG matches.  Match
+  // ranges are erased from this list once they are no longer in the search
+  // range.
+  std::list<MatchRange> MatchRanges;
 
-  for (const Pattern &Pat : DagNotStrings) {
+  // We need PatItr and PatEnd later for detecting the end of a CHECK-DAG
+  // group, so we don't use a range-based for loop here.
+  for (auto PatItr = DagNotStrings.begin(), PatEnd = DagNotStrings.end();
+       PatItr != PatEnd; ++PatItr) {
+    const Pattern &Pat = *PatItr;
     assert((Pat.getCheckTy() == Check::CheckDAG ||
             Pat.getCheckTy() == Check::CheckNot) &&
            "Invalid CHECK-DAG or CHECK-NOT!");
@@ -1310,7 +1323,7 @@ size_t CheckString::CheckDag(const SourceMgr &SM, StringRef Buffer,
 
     // Search for a match that doesn't overlap a previous match in this
     // CHECK-DAG group.
-    for (auto MI = Matches.begin(), ME = Matches.end(); true; ++MI) {
+    for (auto MI = MatchRanges.begin(), ME = MatchRanges.end(); true; ++MI) {
       StringRef MatchBuffer = Buffer.substr(MatchPos);
       size_t MatchPosBuf = Pat.Match(MatchBuffer, MatchLen, VariableTable);
       // With a group of CHECK-DAGs, a single mismatching means the match on
@@ -1325,10 +1338,21 @@ size_t CheckString::CheckDag(const SourceMgr &SM, StringRef Buffer,
       if (VerboseVerbose)
         PrintMatch(true, SM, Prefix, Pat.getLoc(), Pat, Buffer, VariableTable,
                    MatchPos, MatchLen);
-      if (AllowDeprecatedDagOverlap)
+      MatchRange M{MatchPos, MatchPos + MatchLen};
+      if (AllowDeprecatedDagOverlap) {
+        // We don't need to track all matches in this mode, so we just maintain
+        // one match range that encompasses the current CHECK-DAG group's
+        // matches.
+        if (MatchRanges.empty())
+          MatchRanges.insert(MatchRanges.end(), M);
+        else {
+          auto Block = MatchRanges.begin();
+          Block->Pos = std::min(Block->Pos, M.Pos);
+          Block->End = std::max(Block->End, M.End);
+        }
         break;
+      }
       // Iterate previous matches until overlapping match or insertion point.
-      Match M{MatchPos, MatchPos + MatchLen};
       bool Overlap = false;
       for (; MI != ME; ++MI) {
         if (M.Pos < MI->End) {
@@ -1340,7 +1364,7 @@ size_t CheckString::CheckDag(const SourceMgr &SM, StringRef Buffer,
       }
       if (!Overlap) {
         // Insert non-overlapping match into list.
-        Matches.insert(MI, M);
+        MatchRanges.insert(MI, M);
         break;
       }
       if (VerboseVerbose) {
@@ -1357,46 +1381,29 @@ size_t CheckString::CheckDag(const SourceMgr &SM, StringRef Buffer,
       PrintMatch(true, SM, Prefix, Pat.getLoc(), Pat, Buffer, VariableTable,
                  MatchPos, MatchLen);
 
-    if (!NotStrings.empty()) {
-      if (MatchPos < LastPos) {
-        // Reordered?
-        SM.PrintMessage(SMLoc::getFromPointer(Buffer.data() + MatchPos),
-                        SourceMgr::DK_Error,
-                        Prefix + "-DAG: found a match of CHECK-DAG"
-                                 " reordering across a CHECK-NOT");
-        SM.PrintMessage(SMLoc::getFromPointer(Buffer.data() + LastPos),
-                        SourceMgr::DK_Note,
-                        Prefix + "-DAG: the farthest match of CHECK-DAG"
-                                 " is found here");
-        SM.PrintMessage(NotStrings[0]->getLoc(), SourceMgr::DK_Note,
-                        Prefix + "-NOT: the crossed pattern specified"
-                                 " here");
-        SM.PrintMessage(Pat.getLoc(), SourceMgr::DK_Note,
-                        Prefix + "-DAG: the reordered pattern specified"
-                                 " here");
-        return StringRef::npos;
+    // Handle the end of a CHECK-DAG group.
+    if (std::next(PatItr) == PatEnd ||
+        std::next(PatItr)->getCheckTy() == Check::CheckNot) {
+      if (!NotStrings.empty()) {
+        // If there are CHECK-NOTs between two CHECK-DAGs or from CHECK to
+        // CHECK-DAG, verify that there are no 'not' strings occurred in that
+        // region.
+        StringRef SkippedRegion =
+            Buffer.slice(StartPos, MatchRanges.begin()->Pos);
+        if (CheckNot(SM, SkippedRegion, NotStrings, VariableTable))
+          return StringRef::npos;
+        // Clear "not strings".
+        NotStrings.clear();
       }
-      // All subsequent CHECK-DAGs should be matched from the farthest
-      // position of all precedent CHECK-DAGs (not including this one).
-      StartPos = LastPos;
+      // All subsequent CHECK-DAGs and CHECK-NOTs should be matched from the
+      // end of this CHECK-DAG group's match range.
+      StartPos = MatchRanges.rbegin()->End;
       // Don't waste time checking for (impossible) overlaps before that.
-      Matches.clear();
-      Matches.push_back(Match{MatchPos, MatchPos + MatchLen});
-      // If there's CHECK-NOTs between two CHECK-DAGs or from CHECK to
-      // CHECK-DAG, verify that there's no 'not' strings occurred in that
-      // region.
-      StringRef SkippedRegion = Buffer.slice(LastPos, MatchPos);
-      if (CheckNot(SM, SkippedRegion, NotStrings, VariableTable))
-        return StringRef::npos;
-      // Clear "not strings".
-      NotStrings.clear();
+      MatchRanges.clear();
     }
-
-    // Update the last position with CHECK-DAG matches.
-    LastPos = std::max(MatchPos + MatchLen, LastPos);
   }
 
-  return LastPos;
+  return StartPos;
 }
 
 // A check prefix must contain only alphanumeric, hyphens and underscores.
@@ -1605,5 +1612,9 @@ int main(int argc, char **argv) {
                             InputFileText, InputFile.getBufferIdentifier()),
                         SMLoc());
 
-  return CheckInput(SM, InputFileText, CheckStrings) ? EXIT_SUCCESS : 1;
+  int ExitCode = CheckInput(SM, InputFileText, CheckStrings) ? EXIT_SUCCESS : 1;
+  if (ExitCode == 1 && DumpInputOnFailure)
+    errs() << "Full input was:\n<<<<<<\n" << InputFileText << "\n>>>>>>\n";
+
+  return ExitCode;
 }

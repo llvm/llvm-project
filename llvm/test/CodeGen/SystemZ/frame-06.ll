@@ -29,20 +29,20 @@ define void @f1(i64 *%ptr) {
 ; CHECK: stg {{.*}}, 8(%r2)
 ; CHECK: lmg %r6, %r15, 48(%r15)
 ; CHECK: br %r14
-  %l0 = load volatile i64 , i64 *%ptr
-  %l1 = load volatile i64 , i64 *%ptr
-  %l3 = load volatile i64 , i64 *%ptr
-  %l4 = load volatile i64 , i64 *%ptr
-  %l5 = load volatile i64 , i64 *%ptr
-  %l6 = load volatile i64 , i64 *%ptr
-  %l7 = load volatile i64 , i64 *%ptr
-  %l8 = load volatile i64 , i64 *%ptr
-  %l9 = load volatile i64 , i64 *%ptr
-  %l10 = load volatile i64 , i64 *%ptr
-  %l11 = load volatile i64 , i64 *%ptr
-  %l12 = load volatile i64 , i64 *%ptr
-  %l13 = load volatile i64 , i64 *%ptr
-  %l14 = load volatile i64 , i64 *%ptr
+  %l0 = load volatile i64, i64 *%ptr
+  %l1 = load volatile i64, i64 *%ptr
+  %l3 = load volatile i64, i64 *%ptr
+  %l4 = load volatile i64, i64 *%ptr
+  %l5 = load volatile i64, i64 *%ptr
+  %l6 = load volatile i64, i64 *%ptr
+  %l7 = load volatile i64, i64 *%ptr
+  %l8 = load volatile i64, i64 *%ptr
+  %l9 = load volatile i64, i64 *%ptr
+  %l10 = load volatile i64, i64 *%ptr
+  %l11 = load volatile i64, i64 *%ptr
+  %l12 = load volatile i64, i64 *%ptr
+  %l13 = load volatile i64, i64 *%ptr
+  %l14 = load volatile i64, i64 *%ptr
   %add0 = add i64 %l0, %l0
   %add1 = add i64 %l1, %add0
   %add3 = add i64 %l3, %add1
@@ -97,19 +97,19 @@ define void @f2(i64 *%ptr) {
 ; CHECK: stg {{.*}}, 8(%r2)
 ; CHECK: lmg %r7, %r15, 56(%r15)
 ; CHECK: br %r14
-  %l0 = load volatile i64 , i64 *%ptr
-  %l1 = load volatile i64 , i64 *%ptr
-  %l3 = load volatile i64 , i64 *%ptr
-  %l4 = load volatile i64 , i64 *%ptr
-  %l5 = load volatile i64 , i64 *%ptr
-  %l7 = load volatile i64 , i64 *%ptr
-  %l8 = load volatile i64 , i64 *%ptr
-  %l9 = load volatile i64 , i64 *%ptr
-  %l10 = load volatile i64 , i64 *%ptr
-  %l11 = load volatile i64 , i64 *%ptr
-  %l12 = load volatile i64 , i64 *%ptr
-  %l13 = load volatile i64 , i64 *%ptr
-  %l14 = load volatile i64 , i64 *%ptr
+  %l0 = load volatile i64, i64 *%ptr
+  %l1 = load volatile i64, i64 *%ptr
+  %l3 = load volatile i64, i64 *%ptr
+  %l4 = load volatile i64, i64 *%ptr
+  %l5 = load volatile i64, i64 *%ptr
+  %l7 = load volatile i64, i64 *%ptr
+  %l8 = load volatile i64, i64 *%ptr
+  %l9 = load volatile i64, i64 *%ptr
+  %l10 = load volatile i64, i64 *%ptr
+  %l11 = load volatile i64, i64 *%ptr
+  %l12 = load volatile i64, i64 *%ptr
+  %l13 = load volatile i64, i64 *%ptr
+  %l14 = load volatile i64, i64 *%ptr
   %add0 = add i64 %l0, %l0
   %add1 = add i64 %l1, %add0
   %add3 = add i64 %l3, %add1
@@ -160,12 +160,12 @@ define void @f3(i64 *%ptr) {
 ; CHECK: stg {{.*}}, 8(%r2)
 ; CHECK: lmg %r14, %r15, 112(%r15)
 ; CHECK: br %r14
-  %l0 = load volatile i64 , i64 *%ptr
-  %l1 = load volatile i64 , i64 *%ptr
-  %l3 = load volatile i64 , i64 *%ptr
-  %l4 = load volatile i64 , i64 *%ptr
-  %l5 = load volatile i64 , i64 *%ptr
-  %l14 = load volatile i64 , i64 *%ptr
+  %l0 = load volatile i64, i64 *%ptr
+  %l1 = load volatile i64, i64 *%ptr
+  %l3 = load volatile i64, i64 *%ptr
+  %l4 = load volatile i64, i64 *%ptr
+  %l5 = load volatile i64, i64 *%ptr
+  %l14 = load volatile i64, i64 *%ptr
   %add0 = add i64 %l0, %l0
   %add1 = add i64 %l1, %add0
   %add3 = add i64 %l3, %add1
@@ -196,11 +196,11 @@ define void @f4(i64 *%ptr) {
 ; CHECK-NOT: %r12
 ; CHECK-NOT: %r13
 ; CHECK: br %r14
-  %l0 = load volatile i64 , i64 *%ptr
-  %l1 = load volatile i64 , i64 *%ptr
-  %l3 = load volatile i64 , i64 *%ptr
-  %l4 = load volatile i64 , i64 *%ptr
-  %l5 = load volatile i64 , i64 *%ptr
+  %l0 = load volatile i64, i64 *%ptr
+  %l1 = load volatile i64, i64 *%ptr
+  %l3 = load volatile i64, i64 *%ptr
+  %l4 = load volatile i64, i64 *%ptr
+  %l5 = load volatile i64, i64 *%ptr
   %add0 = add i64 %l0, %l0
   %add1 = add i64 %l1, %add0
   %add3 = add i64 %l3, %add1

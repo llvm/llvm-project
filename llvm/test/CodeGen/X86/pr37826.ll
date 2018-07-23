@@ -9,19 +9,12 @@
 @e = common local_unnamed_addr global i32 0, align 4
 @.str.1 = private unnamed_addr constant [4 x i8] c"%d\0A\00", align 1
 
-; FIXME The generated code here is incorrect. We should only see a
-; single store to f (a bytes store to f+3).
+; We should only see a single store to f (a bytes store to f+3).
 define void @k(i32 %l) {
 ; CHECK-LABEL: k:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{.*}}(%rip), %eax
-; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    andl $2097151, %ecx # imm = 0x1FFFFF
-; CHECK-NEXT:    xorl {{.*}}(%rip), %ecx
-; CHECK-NEXT:    xorl $2097151, %ecx # imm = 0x1FFFFF
-; CHECK-NEXT:    andl $-16777216, %eax # imm = 0xFF000000
-; CHECK-NEXT:    orl %ecx, %eax
-; CHECK-NEXT:    movl %eax, {{.*}}(%rip)
+; CHECK-NEXT:    orl {{.*}}(%rip), %eax
 ; CHECK-NEXT:    shrl $24, %eax
 ; CHECK-NEXT:    movb %al, f+{{.*}}(%rip)
 ; CHECK-NEXT:    retq

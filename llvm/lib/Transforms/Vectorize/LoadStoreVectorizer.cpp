@@ -420,7 +420,10 @@ bool Vectorizer::lookThroughComplexAddresses(Value *PtrA, Value *PtrB,
       return false;
     KnownBits Known(BitWidth);
     computeKnownBits(OpA, Known, DL, 0, nullptr, OpA, &DT);
-    if (Known.Zero.trunc(BitWidth - 1).zext(IdxBitWidth).ult(IdxDiff))
+    APInt BitsAllowedToBeSet = Known.Zero.zext(IdxDiff.getBitWidth());
+    if (Signed)
+      BitsAllowedToBeSet.clearBit(BitWidth - 1);
+    if (BitsAllowedToBeSet.ult(IdxDiff))
       return false;
   }
 
