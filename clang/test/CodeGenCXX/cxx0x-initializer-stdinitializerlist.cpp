@@ -72,18 +72,18 @@ std::initializer_list<int> thread_local x = {1, 2, 3, 4};
 
 // X86: @_ZN15partly_constant1kE = global i32 0, align 4
 // X86: @_ZN15partly_constant2ilE = global {{.*}} null, align 8
-// X86: @[[PARTLY_CONSTANT_OUTER:_ZGRN15partly_constant2ilE_]] = internal global {{.*}} zeroinitializer, align 8
-// X86: @[[PARTLY_CONSTANT_INNER:_ZGRN15partly_constant2ilE0_]] = internal global [3 x {{.*}}] zeroinitializer, align 8
-// X86: @[[PARTLY_CONSTANT_FIRST:_ZGRN15partly_constant2ilE1_]] = internal constant [3 x i32] [i32 1, i32 2, i32 3], align 4
-// X86: @[[PARTLY_CONSTANT_SECOND:_ZGRN15partly_constant2ilE2_]] = internal global [2 x i32] zeroinitializer, align 4
-// X86: @[[PARTLY_CONSTANT_THIRD:_ZGRN15partly_constant2ilE3_]] = internal constant [4 x i32] [i32 5, i32 6, i32 7, i32 8], align 4
+// X86: @[[PARTLY_CONSTANT_OUTER:_ZGRN15partly_constant2ilE.*]] = internal global {{.*}} zeroinitializer, align 8
+// X86: @[[PARTLY_CONSTANT_INNER:_ZGRN15partly_constant2ilE.*]] = internal global [3 x {{.*}}] zeroinitializer, align 8
+// X86: @[[PARTLY_CONSTANT_FIRST:_ZGRN15partly_constant2ilE.*]] = internal constant [3 x i32] [i32 1, i32 2, i32 3], align 4
+// X86: @[[PARTLY_CONSTANT_SECOND:_ZGRN15partly_constant2ilE.*]] = internal global [2 x i32] zeroinitializer, align 4
+// X86: @[[PARTLY_CONSTANT_THIRD:_ZGRN15partly_constant2ilE.*]] = internal constant [4 x i32] [i32 5, i32 6, i32 7, i32 8], align 4
 // AMDGCN: @_ZN15partly_constant1kE = addrspace(1) global i32 0, align 4
 // AMDGCN: @_ZN15partly_constant2ilE = addrspace(4) global {{.*}} null, align 8
-// AMDGCN: @[[PARTLY_CONSTANT_OUTER:_ZGRN15partly_constant2ilE_]] = internal addrspace(4) global {{.*}} zeroinitializer, align 8
-// AMDGCN: @[[PARTLY_CONSTANT_INNER:_ZGRN15partly_constant2ilE0_]] = internal addrspace(4) global [3 x {{.*}}] zeroinitializer, align 8
-// AMDGCN: @[[PARTLY_CONSTANT_FIRST:_ZGRN15partly_constant2ilE1_]] = internal addrspace(4) constant [3 x i32] [i32 1, i32 2, i32 3], align 4
-// AMDGCN: @[[PARTLY_CONSTANT_SECOND:_ZGRN15partly_constant2ilE2_]] = internal addrspace(4) global [2 x i32] zeroinitializer, align 4
-// AMDGCN: @[[PARTLY_CONSTANT_THIRD:_ZGRN15partly_constant2ilE3_]] = internal addrspace(4) constant [4 x i32] [i32 5, i32 6, i32 7, i32 8], align 4
+// AMDGCN: @[[PARTLY_CONSTANT_OUTER:_ZGRN15partly_constant2ilE.*]] = internal addrspace(4) global {{.*}} zeroinitializer, align 8
+// AMDGCN: @[[PARTLY_CONSTANT_INNER:_ZGRN15partly_constant2ilE.*]] = internal addrspace(4) global [3 x {{.*}}] zeroinitializer, align 8
+// AMDGCN: @[[PARTLY_CONSTANT_FIRST:_ZGRN15partly_constant2ilE.*]] = internal addrspace(4) constant [3 x i32] [i32 1, i32 2, i32 3], align 4
+// AMDGCN: @[[PARTLY_CONSTANT_SECOND:_ZGRN15partly_constant2ilE.*]] = internal addrspace(4) global [2 x i32] zeroinitializer, align 4
+// AMDGCN: @[[PARTLY_CONSTANT_THIRD:_ZGRN15partly_constant2ilE.*]] = internal addrspace(4) constant [4 x i32] [i32 5, i32 6, i32 7, i32 8], align 4
 
 // X86: @[[REFTMP1:.*]] = private constant [2 x i32] [i32 42, i32 43], align 4
 // X86: @[[REFTMP2:.*]] = private constant [3 x %{{.*}}] [%{{.*}} { i32 1 }, %{{.*}} { i32 2 }, %{{.*}} { i32 3 }], align 4
@@ -375,7 +375,7 @@ namespace partly_constant {
   // CHECK-NOT: @[[PARTLY_CONSTANT_THIRD]],
   // CHECK: store i32* getelementptr inbounds ({{.*}}, {{.*}}* {{.*}}@[[PARTLY_CONSTANT_THIRD]]{{.*}}, i64 0, i64 0),
   // CHECK:       i32** getelementptr inbounds ({{.*}}, {{.*}}* {{.*}}@[[PARTLY_CONSTANT_INNER]]{{.*}}, i64 0, i64 2, i32 0)
-  // CHECK: store i64 4, i64* getelementptr inbounds ({{.*}}, {{.*}}* {{.*}}@[[PARTLY_CONSTANT_INNER]]{{.*}}, i64 0, i64 2, i32 1)
+  // CHECK: store i64 4, i64* getelementptr inbounds ({{.*}}, {{.*}}* {{.*}}@_ZGRN15partly_constant2ilE4_{{.*}}, i64 0, i64 2, i32 1)
   // CHECK-NOT: @[[PARTLY_CONSTANT_THIRD]],
   //
   // Outer init list.
