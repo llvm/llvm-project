@@ -19,8 +19,6 @@ namespace tidy {
 namespace fuchsia {
 
 namespace {
-const internal::VariadicDynCastAllOfMatcher<Type, DecltypeType> decltypeType;
-
 AST_MATCHER(FunctionDecl, hasTrailingReturn) {
   return Node.getType()->castAs<FunctionProtoType>()->hasTrailingReturn();
 }
