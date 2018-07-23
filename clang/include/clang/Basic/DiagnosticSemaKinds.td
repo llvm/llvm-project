@@ -7870,11 +7870,11 @@ def note_ref_var_local_bind : Note<
 // Check for initializing a member variable with the address or a reference to
 // a constructor parameter.
 def warn_bind_ref_member_to_parameter : Warning<
-  "binding reference member %0 to stack allocated "
-  "%select{variable|parameter}2 %1">, InGroup<DanglingField>;
+  "binding reference member %0 to stack allocated parameter %1">,
+  InGroup<DanglingField>;
 def warn_init_ptr_member_to_parameter_addr : Warning<
-  "initializing pointer member %0 with the stack address of "
-  "%select{variable|parameter}2 %1">, InGroup<DanglingField>;
+  "initializing pointer member %0 with the stack address of parameter %1">,
+  InGroup<DanglingField>;
 def note_ref_or_ptr_member_declared_here : Note<
   "%select{reference|pointer}0 member declared here">;
 

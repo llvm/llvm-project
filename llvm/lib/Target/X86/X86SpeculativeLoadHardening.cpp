@@ -525,7 +525,11 @@ bool X86SpeculativeLoadHardeningPass::runOnMachineFunction(
         continue;
 
       MachineInstr &MI = MBB.back();
-      if (!MI.isReturn())
+
+      // We only care about returns that are not also calls. For calls, that
+      // happen to also be returns (tail calls) we will have already handled
+      // them as calls.
+      if (!MI.isReturn() || MI.isCall())
         continue;
 
       hardenReturnInstr(MI);

@@ -766,6 +766,15 @@ static Value *ConstructSSAForLoadSet(LoadInst *LI,
     if (SSAUpdate.HasValueForBlock(BB))
       continue;
 
+    // If the value is the load that we will be eliminating, and the block it's
+    // available in is the block that the load is in, then don't add it as
+    // SSAUpdater will resolve the value to the relevant phi which may let it
+    // avoid phi construction entirely if there's actually only one value.
+    if (BB == LI->getParent() &&
+        ((AV.AV.isSimpleValue() && AV.AV.getSimpleValue() == LI) ||
+         (AV.AV.isCoercedLoadValue() && AV.AV.getCoercedLoadValue() == LI)))
+      continue;
+
     SSAUpdate.AddAvailableValue(BB, AV.MaterializeAdjustedValue(LI, gvn));
   }
 
