@@ -359,13 +359,13 @@ bool recursive_directory_iterator::__try_recursion(error_code *ec) {
   bool skip_rec = false;
   std::error_code m_ec;
   if (!rec_sym) {
-    file_status st = curr_it.__entry_.symlink_status(m_ec);
+    file_status st(curr_it.__entry_.__get_sym_ft(&m_ec));
     if (m_ec && status_known(st))
       m_ec.clear();
     if (m_ec || is_symlink(st) || !is_directory(st))
       skip_rec = true;
   } else {
-    file_status st = curr_it.__entry_.status(m_ec);
+    file_status st(curr_it.__entry_.__get_ft(&m_ec));
     if (m_ec && status_known(st))
       m_ec.clear();
     if (m_ec || !is_directory(st))
