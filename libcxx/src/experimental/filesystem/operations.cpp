@@ -330,7 +330,7 @@ struct FileDescriptor {
 
   bool status_known() const { return _VSTD_FS::status_known(m_status); }
 
-  file_status refresh_status(std::error_code& ec);
+  file_status refresh_status(error_code& ec);
 
   void close() noexcept {
     if (fd != -1)
@@ -363,9 +363,9 @@ perms posix_get_perms(const struct ::stat& st) noexcept {
   return static_cast< ::mode_t>(prms & perms::mask);
 }
 
-file_status create_file_status(std::error_code& m_ec, path const& p,
+file_status create_file_status(error_code& m_ec, path const& p,
                                const struct ::stat& path_stat,
-                               std::error_code* ec) {
+                               error_code* ec) {
   if (ec)
     *ec = m_ec;
   if (m_ec && (m_ec.value() == ENOENT || m_ec.value() == ENOTDIR)) {
@@ -401,33 +401,33 @@ file_status create_file_status(std::error_code& m_ec, path const& p,
 }
 
 file_status posix_stat(path const& p, struct ::stat& path_stat,
-                       std::error_code* ec) {
-  std::error_code m_ec;
+                       error_code* ec) {
+  error_code m_ec;
   if (::stat(p.c_str(), &path_stat) == -1)
     m_ec = detail::capture_errno();
   return create_file_status(m_ec, p, path_stat, ec);
 }
 
-file_status posix_stat(path const& p, std::error_code* ec) {
+file_status posix_stat(path const& p, error_code* ec) {
   struct ::stat path_stat;
   return posix_stat(p, path_stat, ec);
 }
 
 file_status posix_lstat(path const& p, struct ::stat& path_stat,
-                        std::error_code* ec) {
-  std::error_code m_ec;
+                        error_code* ec) {
+  error_code m_ec;
   if (::lstat(p.c_str(), &path_stat) == -1)
     m_ec = detail::capture_errno();
   return create_file_status(m_ec, p, path_stat, ec);
 }
 
-file_status posix_lstat(path const& p, std::error_code* ec) {
+file_status posix_lstat(path const& p, error_code* ec) {
   struct ::stat path_stat;
   return posix_lstat(p, path_stat, ec);
 }
 
 bool posix_ftruncate(const FileDescriptor& fd, size_t to_size,
-                     std::error_code& ec) {
+                     error_code& ec) {
   if (::ftruncate(fd.fd, to_size) == -1) {
     ec = capture_errno();
     return false;
@@ -449,11 +449,11 @@ bool stat_equivalent(const StatT& st1, const StatT& st2) {
   return (st1.st_dev == st2.st_dev && st1.st_ino == st2.st_ino);
 }
 
-file_status FileDescriptor::refresh_status(std::error_code& ec) {
+file_status FileDescriptor::refresh_status(error_code& ec) {
   // FD must be open and good.
   m_status = file_status{};
   m_stat = {};
-  std::error_code m_ec;
+  error_code m_ec;
   if (::fstat(fd, &m_stat) == -1)
     m_ec = capture_errno();
   m_status = create_file_status(m_ec, name, m_stat, &ec);
@@ -486,7 +486,7 @@ void filesystem_error::__create_what(int __num_paths) {
   }();
 }
 
-static path __do_absolute(const path& p, path *cwd, std::error_code *ec) {
+static path __do_absolute(const path& p, path *cwd, error_code *ec) {
   if (ec) ec->clear();
     if (p.is_absolute())
       return p;
@@ -496,12 +496,12 @@ static path __do_absolute(const path& p, path *cwd, std::error_code *ec) {
     return (*cwd) / p;
 }
 
-path __absolute(const path& p, std::error_code *ec) {
+path __absolute(const path& p, error_code *ec) {
     path cwd;
     return __do_absolute(p, &cwd, ec);
 }
 
-path __canonical(path const & orig_p, std::error_code *ec)
+path __canonical(path const & orig_p, error_code *ec)
 {
     path cwd;
     ErrorHandler<path> err("canonical", ec, &orig_p, &cwd);
@@ -515,7 +515,7 @@ path __canonical(path const & orig_p, std::error_code *ec)
 }
 
 void __copy(const path& from, const path& to, copy_options options,
-            std::error_code *ec)
+            error_code *ec)
 {
   ErrorHandler<void> err("copy", ec, &from, &to);
 
@@ -524,7 +524,7 @@ void __copy(const path& from, const path& to, copy_options options,
 
   const bool sym_status2 = bool(options & copy_options::copy_symlinks);
 
-  std::error_code m_ec1;
+  error_code m_ec1;
   struct ::stat f_st = {};
   const file_status f = sym_status || sym_status2
                             ? detail::posix_lstat(from, f_st, &m_ec1)
@@ -588,7 +588,7 @@ void __copy(const path& from, const path& to, copy_options options,
         directory_iterator it = ec ? directory_iterator(from, *ec)
                                    : directory_iterator(from);
         if (ec && *ec) { return; }
-        std::error_code m_ec2;
+        error_code m_ec2;
         for (; it != directory_iterator(); it.increment(m_ec2)) {
           if (m_ec2) {
             return err.report(m_ec2);
@@ -651,27 +651,27 @@ bool copy_file_impl_copyfile(FileDescriptor& read_fd, FileDescriptor& write_fd,
 __attribute__((unused)) bool copy_file_impl_default(FileDescriptor& read_fd,
                                                     FileDescriptor& write_fd,
                                                     error_code& ec) {
-  std::ifstream in;
-  in.__open(read_fd.fd, std::ios::binary);
+  ifstream in;
+  in.__open(read_fd.fd, ios::binary);
   if (!in.is_open()) {
     // This assumes that __open didn't reset the error code.
     ec = capture_errno();
     return false;
   }
-  std::ofstream out;
-  out.__open(write_fd.fd, std::ios::binary);
+  ofstream out;
+  out.__open(write_fd.fd, ios::binary);
   if (!out.is_open()) {
     ec = capture_errno();
     return false;
   }
 
   if (in.good() && out.good()) {
-    using InIt = std::istreambuf_iterator<char>;
-    using OutIt = std::ostreambuf_iterator<char>;
+    using InIt = istreambuf_iterator<char>;
+    using OutIt = ostreambuf_iterator<char>;
     InIt bin(in);
     InIt ein;
     OutIt bout(out);
-    std::copy(bin, ein, bout);
+    copy(bin, ein, bout);
   }
   if (out.fail() || in.fail()) {
     ec = make_error_code(errc::io_error);
@@ -696,12 +696,12 @@ bool copy_file_impl(FileDescriptor& from, FileDescriptor& to, error_code& ec) {
 } // namespace detail
 
 bool __copy_file(const path& from, const path& to, copy_options options,
-                 std::error_code *ec)
+                 error_code *ec)
 {
   using detail::FileDescriptor;
   ErrorHandler<bool> err("copy_file", ec, &to, &from);
 
-  std::error_code m_ec;
+  error_code m_ec;
   FileDescriptor from_fd =
       FileDescriptor::create_with_status(&from, m_ec, O_RDONLY | O_NONBLOCK);
   if (m_ec)
@@ -786,7 +786,7 @@ bool __copy_file(const path& from, const path& to, copy_options options,
 }
 
 void __copy_symlink(const path& existing_symlink, const path& new_symlink,
-                    std::error_code *ec)
+                    error_code *ec)
 {
     const path real_path(__read_symlink(existing_symlink, ec));
     if (ec && *ec) { return; }
@@ -796,11 +796,11 @@ void __copy_symlink(const path& existing_symlink, const path& new_symlink,
     __create_symlink(real_path, new_symlink, ec);
 }
 
-bool __create_directories(const path& p, std::error_code *ec)
+bool __create_directories(const path& p, error_code *ec)
 {
   ErrorHandler<bool> err("create_directories", ec, &p);
 
-  std::error_code m_ec;
+  error_code m_ec;
   auto const st = detail::posix_stat(p, &m_ec);
   if (!status_known(st))
     return err.report(m_ec);
@@ -824,7 +824,7 @@ bool __create_directories(const path& p, std::error_code *ec)
     return __create_directory(p, ec);
 }
 
-bool __create_directory(const path& p, std::error_code *ec)
+bool __create_directory(const path& p, error_code *ec)
 {
   ErrorHandler<bool> err("create_directory", ec, &p);
 
@@ -836,12 +836,12 @@ bool __create_directory(const path& p, std::error_code *ec)
 }
 
 bool __create_directory(path const & p, path const & attributes,
-                        std::error_code *ec)
+                        error_code *ec)
 {
   ErrorHandler<bool> err("create_directory", ec, &p, &attributes);
 
   StatT attr_stat;
-  std::error_code mec;
+  error_code mec;
   auto st = detail::posix_stat(attributes, attr_stat, &mec);
   if (!status_known(st))
     return err.report(mec);
@@ -854,31 +854,31 @@ bool __create_directory(path const & p, path const & attributes,
 }
 
 void __create_directory_symlink(path const& from, path const& to,
-                                std::error_code* ec) {
+                                error_code* ec) {
   ErrorHandler<void> err("create_directory_symlink", ec, &from, &to);
   if (::symlink(from.c_str(), to.c_str()) != 0)
     return err.report(capture_errno());
 }
 
-void __create_hard_link(const path& from, const path& to, std::error_code *ec){
+void __create_hard_link(const path& from, const path& to, error_code *ec){
   ErrorHandler<void> err("create_hard_link", ec, &from, &to);
   if (::link(from.c_str(), to.c_str()) == -1)
     return err.report(capture_errno());
 }
 
-void __create_symlink(path const & from, path const & to, std::error_code *ec) {
+void __create_symlink(path const & from, path const & to, error_code *ec) {
   ErrorHandler<void> err("create_symlink", ec, &from, &to);
   if (::symlink(from.c_str(), to.c_str()) == -1)
     return err.report(capture_errno());
 }
 
-path __current_path(std::error_code *ec) {
+path __current_path(error_code *ec) {
   ErrorHandler<path> err("current_path", ec);
 
   auto size = ::pathconf(".", _PC_PATH_MAX);
   _LIBCPP_ASSERT(size >= 0, "pathconf returned a 0 as max size");
 
-  auto buff = std::unique_ptr<char[]>(new char[size + 1]);
+  auto buff = unique_ptr<char[]>(new char[size + 1]);
   char* ret;
   if ((ret = ::getcwd(buff.get(), static_cast<size_t>(size))) == nullptr)
     return err.report(capture_errno(), "call to getcwd failed");
@@ -886,17 +886,17 @@ path __current_path(std::error_code *ec) {
   return {buff.get()};
 }
 
-void __current_path(const path& p, std::error_code *ec) {
+void __current_path(const path& p, error_code *ec) {
   ErrorHandler<void> err("current_path", ec, &p);
   if (::chdir(p.c_str()) == -1)
     err.report(capture_errno());
 }
 
-bool __equivalent(const path& p1, const path& p2, std::error_code *ec)
+bool __equivalent(const path& p1, const path& p2, error_code *ec)
 {
   ErrorHandler<bool> err("equivalent", ec, &p1, &p2);
 
-  std::error_code ec1, ec2;
+  error_code ec1, ec2;
   StatT st1 = {}, st2 = {};
   auto s1 = detail::posix_stat(p1.native(), st1, &ec1);
   if (!exists(s1))
@@ -909,11 +909,11 @@ bool __equivalent(const path& p1, const path& p2, std::error_code *ec)
 }
 
 
-std::uintmax_t __file_size(const path& p, std::error_code *ec)
+uintmax_t __file_size(const path& p, error_code *ec)
 {
   ErrorHandler<uintmax_t> err("file_size", ec, &p);
 
-  std::error_code m_ec;
+  error_code m_ec;
   struct ::stat st;
   file_status fst = detail::posix_stat(p, st, &m_ec);
   if (!exists(fst) || !is_regular_file(fst)) {
@@ -924,27 +924,27 @@ std::uintmax_t __file_size(const path& p, std::error_code *ec)
     return err.report(m_ec);
   }
     // is_regular_file(p) == true
-    return static_cast<std::uintmax_t>(st.st_size);
+    return static_cast<uintmax_t>(st.st_size);
 }
 
-std::uintmax_t __hard_link_count(const path& p, std::error_code *ec)
+uintmax_t __hard_link_count(const path& p, error_code *ec)
 {
   ErrorHandler<uintmax_t> err("hard_link_count", ec, &p);
 
-  std::error_code m_ec;
+  error_code m_ec;
   StatT st;
   detail::posix_stat(p, st, &m_ec);
   if (m_ec)
     return err.report(m_ec);
-  return static_cast<std::uintmax_t>(st.st_nlink);
+  return static_cast<uintmax_t>(st.st_nlink);
 }
 
 
-bool __fs_is_empty(const path& p, std::error_code *ec)
+bool __fs_is_empty(const path& p, error_code *ec)
 {
   ErrorHandler<bool> err("is_empty", ec, &p);
 
-  std::error_code m_ec;
+  error_code m_ec;
   StatT pst;
   auto st = detail::posix_stat(p, pst, &m_ec);
   if (m_ec)
@@ -957,7 +957,7 @@ bool __fs_is_empty(const path& p, std::error_code *ec)
       return false;
     return it == directory_iterator{};
   } else if (is_regular_file(st))
-    return static_cast<std::uintmax_t>(pst.st_size) == 0;
+    return static_cast<uintmax_t>(pst.st_size) == 0;
 
   _LIBCPP_UNREACHABLE();
 }
@@ -974,12 +974,12 @@ static file_time_type __extract_last_write_time(const path& p, const StatT& st,
   return FSTime::convert_timespec(ts);
 }
 
-file_time_type __last_write_time(const path& p, std::error_code *ec)
+file_time_type __last_write_time(const path& p, error_code *ec)
 {
-    using namespace ::std::chrono;
+    using namespace chrono;
     ErrorHandler<file_time_type> err("last_write_time", ec, &p);
 
-    std::error_code m_ec;
+    error_code m_ec;
     StatT st;
     detail::posix_stat(p, st, &m_ec);
     if (m_ec)
@@ -988,14 +988,14 @@ file_time_type __last_write_time(const path& p, std::error_code *ec)
 }
 
 void __last_write_time(const path& p, file_time_type new_time,
-                       std::error_code *ec)
+                       error_code *ec)
 {
-    using namespace std::chrono;
+    using namespace chrono;
     using namespace detail;
 
     ErrorHandler<void> err("last_write_time", ec, &p);
 
-    std::error_code m_ec;
+    error_code m_ec;
     TimeStructArray tbuf;
 #if !defined(_LIBCXX_USE_UTIMENSAT)
     // This implementation has a race condition between determining the
@@ -1020,7 +1020,7 @@ void __last_write_time(const path& p, file_time_type new_time,
 
 
 void __permissions(const path& p, perms prms, perm_options opts,
-                   std::error_code *ec)
+                   error_code *ec)
 {
   ErrorHandler<void> err("permissions", ec, &p);
 
@@ -1036,7 +1036,7 @@ void __permissions(const path& p, perms prms, perm_options opts,
   bool set_sym_perms = false;
   prms &= perms::mask;
   if (!resolve_symlinks || (add_perms || remove_perms)) {
-    std::error_code m_ec;
+    error_code m_ec;
     file_status st = resolve_symlinks ? detail::posix_stat(p, &m_ec)
                                       : detail::posix_lstat(p, &m_ec);
     set_sym_perms = is_symlink(st);
@@ -1066,11 +1066,11 @@ void __permissions(const path& p, perms prms, perm_options opts,
 }
 
 
-path __read_symlink(const path& p, std::error_code *ec) {
+path __read_symlink(const path& p, error_code *ec) {
   ErrorHandler<path> err("read_symlink", ec, &p);
 
   char buff[PATH_MAX + 1];
-  std::error_code m_ec;
+  error_code m_ec;
   ::ssize_t ret;
   if ((ret = ::readlink(p.c_str(), buff, PATH_MAX)) == -1) {
     return err.report(capture_errno());
@@ -1082,7 +1082,7 @@ path __read_symlink(const path& p, std::error_code *ec) {
 }
 
 
-bool __remove(const path& p, std::error_code *ec) {
+bool __remove(const path& p, error_code *ec) {
   ErrorHandler<bool> err("remove", ec, &p);
   if (::remove(p.c_str()) == -1) {
     if (errno != ENOENT)
@@ -1094,12 +1094,12 @@ bool __remove(const path& p, std::error_code *ec) {
 
 namespace {
 
-std::uintmax_t remove_all_impl(path const & p, std::error_code& ec)
+uintmax_t remove_all_impl(path const & p, error_code& ec)
 {
-    const auto npos = static_cast<std::uintmax_t>(-1);
+    const auto npos = static_cast<uintmax_t>(-1);
     const file_status st = __symlink_status(p, &ec);
     if (ec) return npos;
-     std::uintmax_t count = 1;
+     uintmax_t count = 1;
     if (is_directory(st)) {
         for (directory_iterator it(p, ec); !ec && it != directory_iterator();
              it.increment(ec)) {
@@ -1115,10 +1115,10 @@ std::uintmax_t remove_all_impl(path const & p, std::error_code& ec)
 
 } // end namespace
 
-std::uintmax_t __remove_all(const path& p, std::error_code *ec) {
+uintmax_t __remove_all(const path& p, error_code *ec) {
   ErrorHandler<uintmax_t> err("remove_all", ec, &p);
 
-  std::error_code mec;
+  error_code mec;
   auto count = remove_all_impl(p, mec);
   if (mec) {
     if (mec == errc::no_such_file_or_directory)
@@ -1128,32 +1128,32 @@ std::uintmax_t __remove_all(const path& p, std::error_code *ec) {
     return count;
 }
 
-void __rename(const path& from, const path& to, std::error_code *ec) {
+void __rename(const path& from, const path& to, error_code *ec) {
   ErrorHandler<void> err("rename", ec, &from, &to);
   if (::rename(from.c_str(), to.c_str()) == -1)
     err.report(capture_errno());
 }
 
-void __resize_file(const path& p, std::uintmax_t size, std::error_code *ec) {
+void __resize_file(const path& p, uintmax_t size, error_code *ec) {
   ErrorHandler<void> err("resize_file", ec, &p);
   if (::truncate(p.c_str(), static_cast< ::off_t>(size)) == -1)
     return err.report(capture_errno());
 }
 
-space_info __space(const path& p, std::error_code *ec) {
+space_info __space(const path& p, error_code *ec) {
   ErrorHandler<void> err("space", ec, &p);
   space_info si;
   struct statvfs m_svfs = {};
   if (::statvfs(p.c_str(), &m_svfs) == -1) {
     err.report(capture_errno());
-    si.capacity = si.free = si.available = static_cast<std::uintmax_t>(-1);
+    si.capacity = si.free = si.available = static_cast<uintmax_t>(-1);
     return si;
   }
     // Multiply with overflow checking.
-    auto do_mult = [&](std::uintmax_t& out, std::uintmax_t other) {
+    auto do_mult = [&](uintmax_t& out, uintmax_t other) {
       out = other * m_svfs.f_frsize;
       if (other == 0 || out / other != m_svfs.f_frsize)
-          out = static_cast<std::uintmax_t>(-1);
+          out = static_cast<uintmax_t>(-1);
     };
     do_mult(si.capacity, m_svfs.f_blocks);
     do_mult(si.free, m_svfs.f_bfree);
@@ -1161,28 +1161,28 @@ space_info __space(const path& p, std::error_code *ec) {
     return si;
 }
 
-file_status __status(const path& p, std::error_code *ec) {
+file_status __status(const path& p, error_code *ec) {
     return detail::posix_stat(p, ec);
 }
 
-file_status __symlink_status(const path& p, std::error_code *ec) {
+file_status __symlink_status(const path& p, error_code *ec) {
     return detail::posix_lstat(p, ec);
 }
 
-path __temp_directory_path(std::error_code* ec) {
+path __temp_directory_path(error_code* ec) {
   ErrorHandler<path> err("temp_directory_path", ec);
 
   const char* env_paths[] = {"TMPDIR", "TMP", "TEMP", "TEMPDIR"};
   const char* ret = nullptr;
 
   for (auto& ep : env_paths)
-    if ((ret = std::getenv(ep)))
+    if ((ret = getenv(ep)))
       break;
   if (ret == nullptr)
     ret = "/tmp";
 
   path p(ret);
-  std::error_code m_ec;
+  error_code m_ec;
   file_status st = detail::posix_stat(p, &m_ec);
   if (!status_known(st))
     return err.report(m_ec, "cannot access path \"%s\"", p);
@@ -1195,7 +1195,7 @@ path __temp_directory_path(std::error_code* ec) {
 }
 
 
-path __weakly_canonical(const path& p, std::error_code *ec) {
+path __weakly_canonical(const path& p, error_code *ec) {
   ErrorHandler<path> err("weakly_canonical", ec, &p);
 
   if (p.empty())
@@ -1206,11 +1206,11 @@ path __weakly_canonical(const path& p, std::error_code *ec) {
   tmp.__reserve(p.native().size());
   auto PP = PathParser::CreateEnd(p.native());
   --PP;
-  std::vector<string_view_t> DNEParts;
+  vector<string_view_t> DNEParts;
 
   while (PP.State != PathParser::PS_BeforeBegin) {
     tmp.assign(createView(p.native().data(), &PP.RawEntry.back()));
-    std::error_code m_ec;
+    error_code m_ec;
     file_status st = __status(tmp, &m_ec);
     if (!status_known(st)) {
       return err.report(m_ec);
@@ -1376,8 +1376,8 @@ path path::lexically_normal() const {
   if (__pn_.empty())
     return *this;
 
-  using PartKindPair = std::pair<string_view_t, PathPartKind>;
-  std::vector<PartKindPair> Parts;
+  using PartKindPair = pair<string_view_t, PathPartKind>;
+  vector<PartKindPair> Parts;
   // Guess as to how many elements the path has to avoid reallocating.
   Parts.reserve(32);
 
@@ -1533,7 +1533,7 @@ int path::__compare(string_view_t __s) const {
 size_t hash_value(const path& __p) noexcept {
   auto PP = PathParser::CreateBegin(__p.native());
   size_t hash_value = 0;
-  std::hash<string_view_t> hasher;
+  hash<string_view_t> hasher;
   while (PP) {
     hash_value = __hash_combine(hash_value, hasher(*PP));
     ++PP;
