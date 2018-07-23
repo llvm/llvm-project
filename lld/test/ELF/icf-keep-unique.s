@@ -11,13 +11,10 @@
 // CHECK-NEXT:   removing identical section {{.*}}:(.text.f4)
 // CHECK-NEXT:   removing identical section {{.*}}:(.text.f5)
 
-// With --keep-unique f2, f4 and f5 we expect only f2, f3 and f5 to be removed.
-// f2 can be removed despite being --keep-unique because all sections that are
-// merged into it are not --keep-unique.
+// With --keep-unique f2, f4 and f5 we expect only f3 and f5 to be removed.
 // f5 is not matched by --keep-unique as it is a local symbol.
 // CHECK-KEEP: warning: could not find symbol f5 to keep unique
 // CHECK-KEEP: selected section {{.*}}:(.text.f1)
-// CHECK-KEEP-NEXT:   removing identical section {{.*}}:(.text.f2)
 // CHECK-KEEP-NEXT:   removing identical section {{.*}}:(.text.f3)
 // CHECK-KEEP-NEXT:   removing identical section {{.*}}:(.text.f5)
  .globl _start, f1, f2, f3, f4
