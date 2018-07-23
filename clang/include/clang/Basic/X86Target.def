@@ -29,6 +29,14 @@
 #define FEATURE(ENUM)
 #endif
 
+#ifndef CPU_SPECIFIC
+#define CPU_SPECIFIC(NAME, MANGLING, FEATURES)
+#endif
+
+#ifndef CPU_SPECIFIC_ALIAS
+#define CPU_SPECIFIC_ALIAS(NEW_NAME, NAME)
+#endif
+
 #define PROC_64_BIT true
 #define PROC_32_BIT false
 
@@ -276,6 +284,45 @@ FEATURE(FEATURE_AVX5124VNNIW)
 FEATURE(FEATURE_AVX5124FMAPS)
 FEATURE(FEATURE_AVX512VPOPCNTDQ)
 
+
+// FIXME: When commented out features are supported in LLVM, enable them here.
+CPU_SPECIFIC("generic", 'A', "")
+CPU_SPECIFIC("pentium", 'B', "")
+CPU_SPECIFIC("pentium_pro", 'C', "+cmov")
+CPU_SPECIFIC("pentium_mmx", 'D', "+mmx")
+CPU_SPECIFIC("pentium_ii", 'E', "+cmov,+mmx")
+CPU_SPECIFIC("pentium_iii", 'H', "+cmov,+mmx,+sse")
+CPU_SPECIFIC("pentium_iii_no_xmm_regs", 'H',"+cmov,+sse")
+CPU_SPECIFIC("pentium_4", 'J', "+cmov,+mmx,+sse,+sse2")
+CPU_SPECIFIC("pentium_m", 'K', "+cmov,+mmx,+sse,+sse2")
+CPU_SPECIFIC("pentium_4_sse3", 'L', "+cmov,+mmx,+sse,+sse2,+sse3")
+CPU_SPECIFIC("core_2_duo_ssse3", 'M', "+cmov,+mmx,+sse,+sse2,+sse3,+ssse3")
+CPU_SPECIFIC("core_2_duo_sse4_1", 'N', "+cmov,+mmx,+sse,+sse2,+sse3,+ssse3,+sse4.1")
+CPU_SPECIFIC("atom", 'O', "+cmov,+mmx,+sse,+sse2,+sse3,+ssse3,+movbe")
+CPU_SPECIFIC("atom_sse4_2", 'c', "+cmov,+mmx,+sse,+sse2,+sse3,+ssse3,+sse4.1,+sse4.2,+popcnt")
+CPU_SPECIFIC("core_i7_sse4_2", 'P', "+cmov,+mmx,+sse,+sse2,+sse3,+ssse3,+sse4.1,+sse4.2,+popcnt")
+CPU_SPECIFIC("core_aes_pclmulqdq", 'Q', "+cmov,+mmx,+sse,+sse2,+sse3,+ssse3,+sse4.1,+sse4.2,+popcnt")
+CPU_SPECIFIC("atom_sse4_2_movbe", 'd', "+cmov,+mmx,+sse,+sse2,+sse3,+ssse3,+sse4.1,+sse4.2,+movbe,+popcnt")
+CPU_SPECIFIC("goldmont", 'i', "+cmov,+mmx,+sse,+sse2,+sse3,+ssse3,+sse4.1,+sse4.2,+movbe,+popcnt")
+CPU_SPECIFIC("sandybridge", 'R', "+cmov,+mmx,+sse,+sse2,+sse3,+ssse3,+sse4.1,+sse4.2,+popcnt,+avx")
+CPU_SPECIFIC_ALIAS("core_2nd_gen_avx", "sandybridge")
+CPU_SPECIFIC("ivybridge", 'S', "+cmov,+mmx,+sse,+sse2,+sse3,+ssse3,+sse4.1,+sse4.2,+popcnt,+f16c,+avx")
+CPU_SPECIFIC_ALIAS("core_3rd_gen_avx", "ivybridge")
+CPU_SPECIFIC("haswell", 'V', "+cmov,+mmx,+sse,+sse2,+sse3,+ssse3,+sse4.1,+sse4.2,+movbe,+popcnt,+f16c,+avx,+fma,+bmi,+lzcnt,+avx2")
+CPU_SPECIFIC_ALIAS("core_4th_gen_avx", "haswell")
+CPU_SPECIFIC("core_4th_gen_avx_tsx", 'W', "+cmov,+mmx,+sse,+sse2,+sse3,+ssse3,+sse4.1,+sse4.2,+movbe,+popcnt,+f16c,+avx,+fma,+bmi,+lzcnt,+avx2")
+CPU_SPECIFIC("broadwell", 'X', "+cmov,+mmx,+sse,+sse2,+sse3,+ssse3,+sse4.1,+sse4.2,+movbe,+popcnt,+f16c,+avx,+fma,+bmi,+lzcnt,+avx2,+adx")
+CPU_SPECIFIC_ALIAS("core_5th_gen_avx", "broadwell")
+CPU_SPECIFIC("core_5th_gen_avx_tsx", 'Y', "+cmov,+mmx,+sse,+sse2,+sse3,+ssse3,+sse4.1,+sse4.2,+movbe,+popcnt,+f16c,+avx,+fma,+bmi,+lzcnt,+avx2,+adx")
+CPU_SPECIFIC("knl", 'Z', "+cmov,+mmx,+sse,+sse2,+sse3,+ssse3,+sse4.1,+sse4.2,+movbe,+popcnt,+f16c,+avx,+fma,+bmi,+lzcnt,+avx2,+avx512f,+adx,+avx512er,+avx512pf,+avx512cd")
+CPU_SPECIFIC_ALIAS("mic_avx512", "knl")
+CPU_SPECIFIC("skylake", 'b', "+cmov,+mmx,+sse,+sse2,+sse3,+ssse3,+sse4.1,+sse4.2,+movbe,+popcnt,+f16c,+avx,+fma,+bmi,+lzcnt,+avx2,+adx,+mpx")
+CPU_SPECIFIC( "skylake_avx512", 'a', "+cmov,+mmx,+sse,+sse2,+sse3,+ssse3,+sse4.1,+sse4.2,+movbe,+popcnt,+f16c,+avx,+fma,+bmi,+lzcnt,+avx2,+avx512dq,+avx512f,+adx,+avx512cd,+avx512bw,+avx512vl,+clwb")
+CPU_SPECIFIC("cannonlake", 'e', "+cmov,+mmx,+sse,+sse2,+sse3,+ssse3,+sse4.1,+sse4.2,+movbe,+popcnt,+f16c,+avx,+fma,+bmi,+lzcnt,+avx2,+avx512dq,+avx512f,+adx,+avx512ifma,+avx512cd,+avx512bw,+avx512vl,+avx512vbmi")
+CPU_SPECIFIC("knm", 'j', "+cmov,+mmx,+sse,+sse2,+sse3,+ssse3,+sse4.1,+sse4.2,+movbe,+popcnt,+f16c,+avx,+fma,+bmi,+lzcnt,+avx2,+avx512f,+adx,+avx512er,+avx512pf,+avx512cd,+avx5124fmaps,+avx5124vnniw,+avx512vpopcntdq")
+
+#undef CPU_SPECIFIC_ALIAS
+#undef CPU_SPECIFIC
 #undef PROC_64_BIT
 #undef PROC_32_BIT
 #undef FEATURE

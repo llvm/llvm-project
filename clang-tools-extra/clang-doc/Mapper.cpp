@@ -33,10 +33,14 @@ template <typename T> bool MapASTVisitor::mapDecl(const T *D) {
   if (index::generateUSRForDecl(D, USR))
     return true;
 
-  ECtx->reportResult(llvm::toHex(llvm::toStringRef(serialize::hashUSR(USR))),
-                     serialize::emitInfo(D, getComment(D, D->getASTContext()),
-                                         getLine(D, D->getASTContext()),
-                                         getFile(D, D->getASTContext())));
+  std::string info = serialize::emitInfo(
+      D, getComment(D, D->getASTContext()), getLine(D, D->getASTContext()),
+      getFile(D, D->getASTContext()), CDCtx.PublicOnly);
+
+  if (info != "")
+    CDCtx.ECtx->reportResult(
+        llvm::toHex(llvm::toStringRef(serialize::hashUSR(USR))), info);
+
   return true;
 }
 

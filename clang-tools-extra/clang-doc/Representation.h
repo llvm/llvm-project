@@ -17,6 +17,7 @@
 
 #include "clang/AST/Type.h"
 #include "clang/Basic/Specifiers.h"
+#include "clang/Tooling/StandaloneExecution.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -238,6 +239,11 @@ struct EnumInfo : public SymbolInfo {
 // if they are different.
 llvm::Expected<std::unique_ptr<Info>>
 mergeInfos(std::vector<std::unique_ptr<Info>> &Values);
+
+struct ClangDocContext {
+  tooling::ExecutionContext *ECtx;
+  bool PublicOnly;
+};
 
 } // namespace doc
 } // namespace clang

@@ -16,12 +16,12 @@
 #define SCUDO_ALLOCATOR_COMBINED_H_
 
 #ifndef SCUDO_ALLOCATOR_H_
-#error "This file must be included inside scudo_allocator.h."
+# error "This file must be included inside scudo_allocator.h."
 #endif
 
 template <class PrimaryAllocator, class AllocatorCache,
     class SecondaryAllocator>
-class ScudoCombinedAllocator {
+class CombinedAllocator {
  public:
   void init(s32 ReleaseToOSIntervalMs) {
     Primary.Init(ReleaseToOSIntervalMs);

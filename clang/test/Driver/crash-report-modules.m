@@ -12,6 +12,10 @@
 // RUN: FileCheck --check-prefix=CHECKSH %s -input-file %T/crmdir/crash-report-*.sh
 // REQUIRES: crash-recovery
 
+// FIXME: This test creates excessively deep directory hierarchies that cause
+// problems on Windows.
+// UNSUPPORTED: system-windows
+
 @import simple;
 const int x = MODULE_MACRO;
 

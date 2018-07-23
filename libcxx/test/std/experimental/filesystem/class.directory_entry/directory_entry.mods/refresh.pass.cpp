@@ -168,7 +168,8 @@ TEST_CASE(refresh_cannot_resolve) {
     TEST_CHECK(ErrorIs(ec, std::errc::permission_denied));
     TEST_CHECK(ent.path() == file);
 
-    ExceptionChecker Checker(file, std::errc::permission_denied);
+    ExceptionChecker Checker(file, std::errc::permission_denied,
+                             "directory_entry::refresh");
     TEST_CHECK_THROW_RESULT(filesystem_error, Checker, ent.refresh());
   }
   permissions(dir, old_perms);
@@ -182,7 +183,8 @@ TEST_CASE(refresh_cannot_resolve) {
     TEST_CHECK(ErrorIs(ec, std::errc::permission_denied));
     TEST_CHECK(ent.path() == sym_in_dir);
 
-    ExceptionChecker Checker(sym_in_dir, std::errc::permission_denied);
+    ExceptionChecker Checker(sym_in_dir, std::errc::permission_denied,
+                             "directory_entry::refresh");
     TEST_CHECK_THROW_RESULT(filesystem_error, Checker, ent.refresh());
   }
   permissions(dir, old_perms);

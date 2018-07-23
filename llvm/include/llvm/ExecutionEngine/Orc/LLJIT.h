@@ -81,12 +81,9 @@ protected:
   LLJIT(std::unique_ptr<ExecutionSession> ES, std::unique_ptr<TargetMachine> TM,
         DataLayout DL);
 
-  std::shared_ptr<SymbolResolver> takeSymbolResolver(VModuleKey K);
-  RTDyldObjectLinkingLayer2::Resources getRTDyldResources(VModuleKey K);
+  std::shared_ptr<RuntimeDyld::MemoryManager> getMemoryManager(VModuleKey K);
 
   std::string mangle(StringRef UnmangledName);
-
-  std::unique_ptr<SymbolResolver> createResolverFor(VSO &V);
 
   Error applyDataLayout(Module &M);
 
@@ -98,12 +95,9 @@ protected:
   std::unique_ptr<TargetMachine> TM;
   DataLayout DL;
 
-  std::map<VSO *, VSOList> VSOLookupOrder;
-
   RTDyldObjectLinkingLayer2 ObjLinkingLayer;
   IRCompileLayer2 CompileLayer;
 
-  std::map<VModuleKey, std::shared_ptr<orc::SymbolResolver>> Resolvers;
   CtorDtorRunner2 CtorRunner, DtorRunner;
 };
 
@@ -135,10 +129,6 @@ private:
             std::unique_ptr<TargetMachine> TM, DataLayout DL, LLVMContext &Ctx,
             std::unique_ptr<JITCompileCallbackManager> CCMgr,
             std::function<std::unique_ptr<IndirectStubsManager>()> ISMBuilder);
-
-  std::shared_ptr<SymbolResolver> getSymbolResolver(VModuleKey K);
-
-  void setSymbolResolver(VModuleKey K, std::shared_ptr<SymbolResolver> R);
 
   std::unique_ptr<JITCompileCallbackManager> CCMgr;
   std::function<std::unique_ptr<IndirectStubsManager>()> ISMBuilder;

@@ -63,10 +63,6 @@ add_dependencies(clang clang-headers)
 
 if(NOT CLANG_LINKS_TO_CREATE)
   set(CLANG_LINKS_TO_CREATE clang++ clang-cl clang-cpp)
-
-  if (MSVC)
-    list(APPEND CLANG_LINKS_TO_CREATE ../msbuild-bin/cl)
-  endif()
 endif()
 
 foreach(link ${CLANG_LINKS_TO_CREATE})

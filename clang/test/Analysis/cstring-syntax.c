@@ -1,4 +1,7 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=unix.cstring.BadSizeArg -analyzer-store=region -Wno-strncat-size -Wno-strlcpy-strlcat-size -Wno-sizeof-array-argument -Wno-sizeof-pointer-memaccess -verify %s
+// RUN: %clang_analyze_cc1 -triple armv7-a15-linux -analyzer-checker=unix.cstring.BadSizeArg -analyzer-store=region -Wno-strncat-size -Wno-strlcpy-strlcat-size -Wno-sizeof-array-argument -Wno-sizeof-pointer-memaccess -verify %s
+// RUN: %clang_analyze_cc1 -triple aarch64_be-none-linux-gnu -analyzer-checker=unix.cstring.BadSizeArg -analyzer-store=region -Wno-strncat-size -Wno-strlcpy-strlcat-size -Wno-sizeof-array-argument -Wno-sizeof-pointer-memaccess -verify %s
+// RUN: %clang_analyze_cc1 -triple i386-apple-darwin10 -analyzer-checker=unix.cstring.BadSizeArg -analyzer-store=region -Wno-strncat-size -Wno-strlcpy-strlcat-size -Wno-sizeof-array-argument -Wno-sizeof-pointer-memaccess -verify %s
 
 typedef __SIZE_TYPE__ size_t;
 char  *strncat(char *, const char *, size_t);
@@ -27,4 +30,5 @@ void testStrlcpy(const char *src) {
   strlcpy(dest, src, 20); // expected-warning {{The third argument is larger than the size of the input buffer. Replace with the value 'sizeof(dest)` or lower}}
   strlcpy(dest, src, badlen); // expected-warning {{The third argument is larger than the size of the input buffer. Replace with the value 'sizeof(dest)` or lower}}
   strlcpy(dest, src, ulen);
+  strlcpy(dest + 5, src, 5);
 }

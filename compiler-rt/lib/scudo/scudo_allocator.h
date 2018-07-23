@@ -82,7 +82,7 @@ struct AP64 {
   static const uptr kFlags =
       SizeClassAllocator64FlagMasks::kRandomShuffleChunks;
 };
-typedef SizeClassAllocator64<AP64> PrimaryAllocator;
+typedef SizeClassAllocator64<AP64> PrimaryT;
 #else
 static const uptr NumRegions = SANITIZER_MMAP_RANGE_SIZE >> RegionSizeLog;
 # if SANITIZER_WORDSIZE == 32
@@ -102,16 +102,15 @@ struct AP32 {
       SizeClassAllocator32FlagMasks::kRandomShuffleChunks |
       SizeClassAllocator32FlagMasks::kUseSeparateSizeClassForBatch;
 };
-typedef SizeClassAllocator32<AP32> PrimaryAllocator;
+typedef SizeClassAllocator32<AP32> PrimaryT;
 #endif  // SANITIZER_CAN_USE_ALLOCATOR64
 
 #include "scudo_allocator_secondary.h"
 #include "scudo_allocator_combined.h"
 
-typedef SizeClassAllocatorLocalCache<PrimaryAllocator> AllocatorCache;
-typedef ScudoLargeMmapAllocator SecondaryAllocator;
-typedef ScudoCombinedAllocator<PrimaryAllocator, AllocatorCache,
-    SecondaryAllocator> ScudoBackendAllocator;
+typedef SizeClassAllocatorLocalCache<PrimaryT> AllocatorCacheT;
+typedef LargeMmapAllocator SecondaryT;
+typedef CombinedAllocator<PrimaryT, AllocatorCacheT, SecondaryT> BackendT;
 
 void initScudo();
 

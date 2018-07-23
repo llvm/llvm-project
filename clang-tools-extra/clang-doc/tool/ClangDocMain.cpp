@@ -64,6 +64,10 @@ static llvm::cl::opt<bool> DumpIntermediateResult(
     llvm::cl::desc("Dump intermediate results to bitcode file."),
     llvm::cl::init(false), llvm::cl::cat(ClangDocCategory));
 
+static llvm::cl::opt<bool>
+    PublicOnly("public", llvm::cl::desc("Document only public declarations."),
+               llvm::cl::init(false), llvm::cl::cat(ClangDocCategory));
+
 enum OutputFormatTy {
   yaml,
 };
@@ -171,9 +175,10 @@ int main(int argc, const char **argv) {
 
   // Mapping phase
   llvm::outs() << "Mapping decls...\n";
-  auto Err = Exec->get()->execute(
-      doc::newMapperActionFactory(Exec->get()->getExecutionContext()),
-      ArgAdjuster);
+  clang::doc::ClangDocContext CDCtx = {Exec->get()->getExecutionContext(),
+                                       PublicOnly};
+  auto Err =
+      Exec->get()->execute(doc::newMapperActionFactory(CDCtx), ArgAdjuster);
   if (Err) {
     llvm::errs() << toString(std::move(Err)) << "\n";
     return 1;

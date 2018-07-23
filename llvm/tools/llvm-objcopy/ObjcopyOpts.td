@@ -27,6 +27,9 @@ defm add_gnu_debuglink : Eq<"add-gnu-debuglink">,
 defm remove_section : Eq<"remove-section">,
                       MetaVarName<"section">,
                       HelpText<"Remove <section>">;
+defm rename_section : Eq<"rename-section">,
+                      MetaVarName<"old=new">,
+                      HelpText<"Renames a section from old to new">;
 defm redefine_symbol : Eq<"redefine-sym">,
                        MetaVarName<"old=new">,
                        HelpText<"Change the name of a symbol old to new">;

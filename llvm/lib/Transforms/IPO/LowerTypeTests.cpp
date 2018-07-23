@@ -771,10 +771,12 @@ void LowerTypeTestsModule::buildBitSetsFromGlobalVariables(
     // Compute the amount of padding required.
     uint64_t Padding = NextPowerOf2(InitSize - 1) - InitSize;
 
-    // Cap at 128 was found experimentally to have a good data/instruction
-    // overhead tradeoff.
-    if (Padding > 128)
-      Padding = alignTo(InitSize, 128) - InitSize;
+    // Experiments of different caps with Chromium on both x64 and ARM64
+    // have shown that the 32-byte cap generates the smallest binary on
+    // both platforms while different caps yield similar performance.
+    // (see https://lists.llvm.org/pipermail/llvm-dev/2018-July/124694.html)
+    if (Padding > 32)
+      Padding = alignTo(InitSize, 32) - InitSize;
 
     GlobalInits.push_back(
         ConstantAggregateZero::get(ArrayType::get(Int8Ty, Padding)));

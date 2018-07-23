@@ -168,7 +168,8 @@ Assume we have DAGs, NOTs, DAGs, NOTs, and then DAGs.  Let X, Y, and Z be
 the DAG groups such that the leading DAGs are x, y, and z.  y won't match
 overlaps with matches from:
 
-1. X.  Otherwise, we could get a spurious reordering complaint.
+1. X.  Otherwise, we used to get a spurious reordering complaint (back
+   when reordering complaints on DAG-NOT-DAG were still implemented).
 2. Y, because y is in Y.  To prevent these overlaps, the implementation must be
    careful not to drop y's match from the previous matches list when it drops
    matches from X to save search time.

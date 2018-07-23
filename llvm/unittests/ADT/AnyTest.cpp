@@ -1,0 +1,175 @@
+//===- llvm/unittest/Support/AnyTest.cpp - Any tests ---===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+
+#include "llvm/ADT/Any.h"
+#include "gtest/gtest.h"
+#include <cstdlib>
+
+using namespace llvm;
+
+namespace {
+
+// Make sure we can construct, copy-construct, move-construct, and assign Any's.
+TEST(AnyTest, ConstructionAndAssignment) {
+  llvm::Any A;
+  llvm::Any B{7};
+  llvm::Any C{8};
+  llvm::Any D{"hello"};
+  llvm::Any E{3.7};
+
+  // An empty Any is not anything.
+  EXPECT_FALSE(A.hasValue());
+  EXPECT_FALSE(any_isa<int>(A));
+
+  // An int is an int but not something else.
+  EXPECT_TRUE(B.hasValue());
+  EXPECT_TRUE(any_isa<int>(B));
+  EXPECT_FALSE(any_isa<float>(B));
+
+  EXPECT_TRUE(C.hasValue());
+  EXPECT_TRUE(any_isa<int>(C));
+
+  // A const char * is a const char * but not an int.
+  EXPECT_TRUE(D.hasValue());
+  EXPECT_TRUE(any_isa<const char *>(D));
+  EXPECT_FALSE(any_isa<int>(D));
+
+  // A double is a double but not a float.
+  EXPECT_TRUE(E.hasValue());
+  EXPECT_TRUE(any_isa<double>(E));
+  EXPECT_FALSE(any_isa<float>(E));
+
+  // After copy constructing from an int, the new item and old item are both
+  // ints.
+  llvm::Any F(B);
+  EXPECT_TRUE(B.hasValue());
+  EXPECT_TRUE(F.hasValue());
+  EXPECT_TRUE(any_isa<int>(F));
+  EXPECT_TRUE(any_isa<int>(B));
+
+  // After move constructing from an int, the new item is an int and the old one
+  // isn't.
+  llvm::Any G(std::move(C));
+  EXPECT_FALSE(C.hasValue());
+  EXPECT_TRUE(G.hasValue());
+  EXPECT_TRUE(any_isa<int>(G));
+  EXPECT_FALSE(any_isa<int>(C));
+
+  // After copy-assigning from an int, the new item and old item are both ints.
+  A = F;
+  EXPECT_TRUE(A.hasValue());
+  EXPECT_TRUE(F.hasValue());
+  EXPECT_TRUE(any_isa<int>(A));
+  EXPECT_TRUE(any_isa<int>(F));
+
+  // After move-assigning from an int, the new item and old item are both ints.
+  B = std::move(G);
+  EXPECT_TRUE(B.hasValue());
+  EXPECT_FALSE(G.hasValue());
+  EXPECT_TRUE(any_isa<int>(B));
+  EXPECT_FALSE(any_isa<int>(G));
+}
+
+TEST(AnyTest, GoodAnyCast) {
+  llvm::Any A;
+  llvm::Any B{7};
+  llvm::Any C{8};
+  llvm::Any D{"hello"};
+  llvm::Any E{'x'};
+
+  // Check each value twice to make sure it isn't damaged by the cast.
+  EXPECT_EQ(7, llvm::any_cast<int>(B));
+  EXPECT_EQ(7, llvm::any_cast<int>(B));
+
+  EXPECT_STREQ("hello", llvm::any_cast<const char *>(D));
+  EXPECT_STREQ("hello", llvm::any_cast<const char *>(D));
+
+  EXPECT_EQ('x', llvm::any_cast<char>(E));
+  EXPECT_EQ('x', llvm::any_cast<char>(E));
+
+  llvm::Any F(B);
+  EXPECT_EQ(7, llvm::any_cast<int>(F));
+  EXPECT_EQ(7, llvm::any_cast<int>(F));
+
+  llvm::Any G(std::move(C));
+  EXPECT_EQ(8, llvm::any_cast<int>(G));
+  EXPECT_EQ(8, llvm::any_cast<int>(G));
+
+  A = F;
+  EXPECT_EQ(7, llvm::any_cast<int>(A));
+  EXPECT_EQ(7, llvm::any_cast<int>(A));
+
+  E = std::move(G);
+  EXPECT_EQ(8, llvm::any_cast<int>(E));
+  EXPECT_EQ(8, llvm::any_cast<int>(E));
+
+  // Make sure we can any_cast from an rvalue and that it's properly destroyed
+  // in the process.
+  EXPECT_EQ(8, llvm::any_cast<int>(std::move(E)));
+  EXPECT_TRUE(E.hasValue());
+
+  // Make sure moving from pointers gives back pointers, and that we can modify
+  // the underlying value through those pointers.
+  EXPECT_EQ(7, *llvm::any_cast<int>(&A));
+  int *N = llvm::any_cast<int>(&A);
+  *N = 42;
+  EXPECT_EQ(42, llvm::any_cast<int>(A));
+
+  // Make sure that we can any_cast to a reference and this is considered a good
+  // cast, resulting in an lvalue which can be modified.
+  llvm::any_cast<int &>(A) = 43;
+  EXPECT_EQ(43, llvm::any_cast<int>(A));
+}
+
+TEST(AnyTest, CopiesAndMoves) {
+  struct TestType {
+    TestType() = default;
+    TestType(const TestType &Other)
+        : Copies(Other.Copies + 1), Moves(Other.Moves) {}
+    TestType(TestType &&Other) : Copies(Other.Copies), Moves(Other.Moves + 1) {}
+    int Copies = 0;
+    int Moves = 0;
+  };
+
+  // One move to get TestType into the Any, and one move on the cast.
+  TestType T1 = llvm::any_cast<TestType>(Any{TestType()});
+  EXPECT_EQ(0, T1.Copies);
+  EXPECT_EQ(2, T1.Moves);
+
+  // One move to get TestType into the Any, and one copy on the cast.
+  Any A{TestType()};
+  TestType T2 = llvm::any_cast<TestType>(A);
+  EXPECT_EQ(1, T2.Copies);
+  EXPECT_EQ(1, T2.Moves);
+
+  // One move to get TestType into the Any, and one move on the cast.
+  TestType T3 = llvm::any_cast<TestType>(std::move(A));
+  EXPECT_EQ(0, T3.Copies);
+  EXPECT_EQ(2, T3.Moves);
+}
+
+TEST(AnyTest, BadAnyCast) {
+  llvm::Any A;
+  llvm::Any B{7};
+  llvm::Any C{"hello"};
+  llvm::Any D{'x'};
+
+#if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
+  EXPECT_DEATH(llvm::any_cast<int>(A), "");
+
+  EXPECT_DEATH(llvm::any_cast<float>(B), "");
+  EXPECT_DEATH(llvm::any_cast<int *>(B), "");
+
+  EXPECT_DEATH(llvm::any_cast<std::string>(C), "");
+
+  EXPECT_DEATH(llvm::any_cast<unsigned char>(D), "");
+#endif
+}
+
+} // anonymous namespace

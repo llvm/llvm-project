@@ -366,6 +366,13 @@ private:
   llvm::MapVector<GlobalDecl, StringRef> MangledDeclNames;
   llvm::StringMap<GlobalDecl, llvm::BumpPtrAllocator> Manglings;
 
+  // An ordered map of canonical GlobalDecls paired with the cpu-index for
+  // cpu-specific name manglings.
+  llvm::MapVector<std::pair<GlobalDecl, unsigned>, StringRef>
+      CPUSpecificMangledDeclNames;
+  llvm::StringMap<std::pair<GlobalDecl, unsigned>, llvm::BumpPtrAllocator>
+      CPUSpecificManglings;
+
   /// Global annotations.
   std::vector<llvm::Constant*> Annotations;
 
@@ -1283,7 +1290,6 @@ private:
 
   llvm::Constant *GetOrCreateMultiVersionIFunc(GlobalDecl GD,
                                                llvm::Type *DeclTy,
-                                               StringRef MangledName,
                                                const FunctionDecl *FD);
   void UpdateMultiVersionNames(GlobalDecl GD, const FunctionDecl *FD);
 
@@ -1307,6 +1313,7 @@ private:
   void EmitGlobalVarDefinition(const VarDecl *D, bool IsTentative = false);
   void EmitAliasDefinition(GlobalDecl GD);
   void emitIFuncDefinition(GlobalDecl GD);
+  void emitCPUDispatchDefinition(GlobalDecl GD);
   void EmitObjCPropertyImplementations(const ObjCImplementationDecl *D);
   void EmitObjCIvarInitializations(ObjCImplementationDecl *D);
   
