@@ -98,8 +98,8 @@ public:
   __dir_stream& operator=(const __dir_stream&) = delete;
 
   __dir_stream(__dir_stream&& __ds) noexcept
-      : __stream_(__ds.__stream_), __root_(std::move(__ds.__root_)),
-        __entry_(std::move(__ds.__entry_)) {
+      : __stream_(__ds.__stream_), __root_(move(__ds.__root_)),
+        __entry_(move(__ds.__entry_)) {
     __ds.__stream_ = INVALID_HANDLE_VALUE;
   }
 
@@ -107,7 +107,7 @@ public:
       : __stream_(INVALID_HANDLE_VALUE), __root_(root) {
     __stream_ = ::FindFirstFileEx(root.c_str(),  &__data_);
     if (__stream_ == INVALID_HANDLE_VALUE) {
-      ec = error_code(::GetLastError(), std::generic_category());
+      ec = error_code(::GetLastError(), generic_category());
       const bool ignore_permission_denied =
           bool(opts & directory_options::skip_permission_denied);
       if (ignore_permission_denied && ec.value() == ERROR_ACCESS_DENIED)
@@ -138,16 +138,16 @@ public:
           directory_entry::__create_iter_result(get_file_type(__data)));
       return true;
     }
-    ec = error_code(::GetLastError(), std::generic_category());
+    ec = error_code(::GetLastError(), generic_category());
     close();
     return false;
   }
 
 private:
-  std::error_code close() noexcept {
-    std::error_code ec;
+  error_code close() noexcept {
+    error_code ec;
     if (!::FindClose(__stream_))
-      ec = error_code(::GetLastError(), std::generic_category());
+      ec = error_code(::GetLastError(), generic_category());
     __stream_ = INVALID_HANDLE_VALUE;
     return ec;
   }
@@ -166,8 +166,8 @@ public:
     __dir_stream& operator=(const __dir_stream&) = delete;
 
     __dir_stream(__dir_stream&& other) noexcept
-        : __stream_(other.__stream_), __root_(std::move(other.__root_)),
-          __entry_(std::move(other.__entry_))
+        : __stream_(other.__stream_), __root_(move(other.__root_)),
+          __entry_(move(other.__entry_))
     {
         other.__stream_ = nullptr;
     }
@@ -211,8 +211,8 @@ public:
         }
     }
 private:
-    std::error_code close() noexcept {
-        std::error_code m_ec;
+    error_code close() noexcept {
+        error_code m_ec;
         if (::closedir(__stream_) == -1)
            m_ec = detail::capture_errno();
         __stream_ = nullptr;
@@ -233,7 +233,7 @@ directory_iterator::directory_iterator(const path& p, error_code *ec,
 {
   ErrorHandler<void> err("directory_iterator::directory_iterator(...)", ec, &p);
 
-  std::error_code m_ec;
+  error_code m_ec;
   __imp_ = make_shared<__dir_stream>(p, opts, m_ec);
   if (ec)
     *ec = m_ec;
@@ -249,9 +249,9 @@ directory_iterator& directory_iterator::__increment(error_code *ec)
     _LIBCPP_ASSERT(__imp_, "Attempting to increment an invalid iterator");
     ErrorHandler<void> err("directory_iterator::operator++()", ec);
 
-    std::error_code m_ec;
+    error_code m_ec;
     if (!__imp_->advance(m_ec)) {
-      path root = std::move(__imp_->__root_);
+      path root = move(__imp_->__root_);
       __imp_.reset();
       if (m_ec)
         err.report(m_ec, "at root \"%s\"", root);
@@ -278,16 +278,16 @@ recursive_directory_iterator::recursive_directory_iterator(const path& p,
 {
   ErrorHandler<void> err("recursive_directory_iterator", ec, &p);
 
-  std::error_code m_ec;
+  error_code m_ec;
   __dir_stream new_s(p, opt, m_ec);
   if (m_ec)
     err.report(m_ec);
   if (m_ec || !new_s.good())
     return;
 
-  __imp_ = _VSTD::make_shared<__shared_imp>();
+  __imp_ = make_shared<__shared_imp>();
   __imp_->__options_ = opt;
-  __imp_->__stack_.push(_VSTD::move(new_s));
+  __imp_->__stack_.push(move(new_s));
 }
 
 void recursive_directory_iterator::__pop(error_code* ec)
@@ -331,7 +331,7 @@ void recursive_directory_iterator::__advance(error_code* ec) {
 
   const directory_iterator end_it;
   auto& stack = __imp_->__stack_;
-  std::error_code m_ec;
+  error_code m_ec;
   while (stack.size() > 0) {
     if (stack.top().advance(m_ec))
       return;
@@ -341,7 +341,7 @@ void recursive_directory_iterator::__advance(error_code* ec) {
   }
 
     if (m_ec) {
-      path root = std::move(stack.top().__root_);
+      path root = move(stack.top().__root_);
       __imp_.reset();
       err.report(m_ec, "at root \"%s\"", root);
     } else {
@@ -357,7 +357,7 @@ bool recursive_directory_iterator::__try_recursion(error_code *ec) {
   auto& curr_it = __imp_->__stack_.top();
 
   bool skip_rec = false;
-  std::error_code m_ec;
+  error_code m_ec;
   if (!rec_sym) {
     file_status st(curr_it.__entry_.__get_sym_ft(&m_ec));
     if (m_ec && status_known(st))
@@ -375,7 +375,7 @@ bool recursive_directory_iterator::__try_recursion(error_code *ec) {
     if (!skip_rec) {
         __dir_stream new_it(curr_it.__entry_.path(), __imp_->__options_, m_ec);
         if (new_it.good()) {
-            __imp_->__stack_.push(_VSTD::move(new_it));
+            __imp_->__stack_.push(move(new_it));
             return true;
         }
     }
@@ -385,7 +385,7 @@ bool recursive_directory_iterator::__try_recursion(error_code *ec) {
         if (m_ec.value() == EACCES && allow_eacess) {
           if (ec) ec->clear();
         } else {
-          path at_ent = std::move(curr_it.__entry_.__p_);
+          path at_ent = move(curr_it.__entry_.__p_);
           __imp_.reset();
           err.report(m_ec, "attempting recursion into \"%s\"", at_ent);
         }
