@@ -1,0 +1,36 @@
+# XFAIL: windows
+# -> llvm.org/pr24452
+#
+# RUN: %cc -o %t %p/inputs/data-info-line.c -g
+# RUN: %lldbmi %t < %s | FileCheck %s
+
+# Test lldb-mi -data-info-line command.
+
+# Check that we have a valid target created via '%lldbmi %t'.
+# CHECK: ^done
+
+-break-insert main
+# CHECK: ^done,bkpt={number="1"
+
+-exec-run
+# CHECK: ^running
+# CHECK: *stopped,reason="breakpoint-hit"
+
+-data-info-line *0x0
+# Test that -data-info-line fails when invalid address is specified.
+# CHECK: ^error,msg="Command 'data-info-line'. Error: The LineEntry is absent or has an unknown format."
+
+-data-info-line unknown_file:1
+# Test that -data-info-line fails when file is unknown.
+# CHECK: ^error,msg="Command 'data-info-line'. Error: The LineEntry is absent or has an unknown format."
+
+-data-info-line data-info-line.c:bad_line
+# Test that -data-info-line fails when line has invalid format.
+# CHECK: ^error,msg="Command 'data-info-line'. Error: The LineEntry is absent or has an unknown format."
+
+-data-info-line data-info-line.c:0
+# Test that -data-info-line fails when invalid line is specified.
+# CHECK: ^error,msg="Command 'data-info-line'. Error: The LineEntry is absent or has an unknown format."
+
+-data-info-line data-info-line.c:2
+# CHECK: ^done,start="0x{{[0-9a-f]+}}",end="0x{{[0-9a-f]+}}",file="{{.*}}data-info-line.c",line="{{[0-9]+}}"
