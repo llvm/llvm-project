@@ -220,8 +220,6 @@ set_target_properties(cxx_objects
     COMPILE_FLAGS "${LIBCXX_COMPILE_FLAGS}"
 )
 
-set(LIBCXX_TARGETS)
-
 # Build the shared library.
 if (LIBCXX_ENABLE_SHARED)
   add_library(cxx_shared SHARED $<TARGET_OBJECTS:cxx_objects>)
@@ -236,7 +234,10 @@ if (LIBCXX_ENABLE_SHARED)
       VERSION       "${LIBCXX_ABI_VERSION}.0"
       SOVERSION     "${LIBCXX_ABI_VERSION}"
   )
-  list(APPEND LIBCXX_TARGETS "cxx_shared")
+  list(APPEND LIBCXX_BUILD_TARGETS "cxx_shared")
+  if (LIBCXX_INSTALL_SHARED_LIBRARY)
+    list(APPEND LIBCXX_INSTALL_TARGETS "cxx_shared")
+  endif()
   if(WIN32 AND NOT MINGW AND NOT "${CMAKE_HOST_SYSTEM_NAME}" STREQUAL "Windows")
     # Since we most likely do not have a mt.exe replacement, disable the
     # manifest bundling.  This allows a normal cmake invocation to pass which
@@ -256,8 +257,10 @@ if (LIBCXX_ENABLE_STATIC)
       LINK_FLAGS    "${LIBCXX_LINK_FLAGS}"
       OUTPUT_NAME   "c++"
   )
-
-  list(APPEND LIBCXX_TARGETS "cxx_static")
+  list(APPEND LIBCXX_BUILD_TARGETS "cxx_static")
+  if (LIBCXX_INSTALL_STATIC_LIBRARY)
+    list(APPEND LIBCXX_INSTALL_TARGETS "cxx_static")
+  endif()
   # Attempt to merge the libc++.a archive and the ABI library archive into one.
   if (LIBCXX_STATICALLY_LINK_ABI_IN_STATIC_LIBRARY)
     set(MERGE_ARCHIVES_SEARCH_PATHS "")
@@ -286,7 +289,7 @@ if (LIBCXX_ENABLE_STATIC)
 endif()
 
 # Add a meta-target for both libraries.
-add_custom_target(cxx DEPENDS cxx-headers ${LIBCXX_TARGETS})
+add_custom_target(cxx DEPENDS cxx-headers ${LIBCXX_BUILD_TARGETS})
 
 if (LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY)
   file(GLOB LIBCXX_EXPERIMENTAL_SOURCES ../src/experimental/*.cpp)
@@ -362,7 +365,7 @@ if (LIBCXX_INSTALL_LIBRARY)
   if (LIBCXX_INSTALL_EXPERIMENTAL_LIBRARY)
     set(experimental_lib cxx_experimental)
   endif()
-  install(TARGETS ${LIBCXX_TARGETS} ${experimental_lib}
+  install(TARGETS ${LIBCXX_INSTALL_TARGETS} ${experimental_lib}
     LIBRARY DESTINATION ${LIBCXX_INSTALL_PREFIX}lib${LIBCXX_LIBDIR_SUFFIX} COMPONENT cxx
     ARCHIVE DESTINATION ${LIBCXX_INSTALL_PREFIX}lib${LIBCXX_LIBDIR_SUFFIX} COMPONENT cxx
     )

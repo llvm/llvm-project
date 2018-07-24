@@ -75,6 +75,13 @@ set(LIBCXXABI_GCC_TOOLCHAIN "" CACHE PATH "GCC toolchain for cross compiling.")
 set(LIBCXXABI_SYSROOT "" CACHE PATH "Sysroot for cross compiling.")
 set(LIBCXXABI_LIBCXX_LIBRARY_PATH "" CACHE PATH "The path to libc++ library.")
 
+cmake_dependent_option(LIBCXXABI_INSTALL_STATIC_LIBRARY
+  "Install the static libc++abi library." ON
+  "LIBCXXABI_ENABLE_STATIC;LIBCXXABI_INSTALL_LIBRARY" OFF)
+cmake_dependent_option(LIBCXXABI_INSTALL_SHARED_LIBRARY
+  "Install the shared libc++abi library." ON
+  "LIBCXXABI_ENABLE_SHARED;LIBCXXABI_INSTALL_LIBRARY" OFF)
+
 # Default to building a shared library so that the default options still test
 # the libc++abi that is being built. There are two problems with testing a
 # static libc++abi. In the case of a standalone build, the tests will link the
