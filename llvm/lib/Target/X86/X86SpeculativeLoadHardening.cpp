@@ -1884,104 +1884,36 @@ void X86SpeculativeLoadHardeningPass::hardenPostLoad(MachineInstr &MI) {
   auto *DefRC = MRI->getRegClass(OldDefReg);
   int DefRegBytes = TRI->getRegSizeInBits(*DefRC) / 8;
 
-  unsigned OrOpCodes[] = {X86::OR8rr, X86::OR16rr, X86::OR32rr, X86::OR64rr};
-  unsigned OrOpCode = OrOpCodes[Log2_32(DefRegBytes)];
+  unsigned StateReg = PS->SSA.GetValueAtEndOfBlock(&MBB);
 
-  unsigned SubRegImms[] = {X86::sub_8bit, X86::sub_16bit, X86::sub_32bit};
-
-  auto GetStateRegInRC = [&](const TargetRegisterClass &RC) {
-    unsigned StateReg = PS->SSA.GetValueAtEndOfBlock(&MBB);
-
-    int Bytes = TRI->getRegSizeInBits(RC) / 8;
-    // FIXME: Need to teach this about 32-bit mode.
-    if (Bytes != 8) {
-      unsigned SubRegImm = SubRegImms[Log2_32(Bytes)];
-      unsigned NarrowStateReg = MRI->createVirtualRegister(&RC);
-      BuildMI(MBB, MI.getIterator(), Loc, TII->get(TargetOpcode::COPY),
-              NarrowStateReg)
-          .addReg(StateReg, 0, SubRegImm);
-      StateReg = NarrowStateReg;
-    }
-    return StateReg;
-  };
+  // FIXME: Need to teach this about 32-bit mode.
+  if (DefRegBytes != 8) {
+    unsigned SubRegImms[] = {X86::sub_8bit, X86::sub_16bit, X86::sub_32bit};
+    unsigned SubRegImm = SubRegImms[Log2_32(DefRegBytes)];
+    unsigned NarrowStateReg = MRI->createVirtualRegister(DefRC);
+    BuildMI(MBB, MI.getIterator(), Loc, TII->get(TargetOpcode::COPY),
+            NarrowStateReg)
+        .addReg(StateReg, 0, SubRegImm);
+    StateReg = NarrowStateReg;
+  }
 
   auto InsertPt = std::next(MI.getIterator());
+
   unsigned FlagsReg = 0;
-  bool EFLAGSLive = isEFLAGSLive(MBB, InsertPt, *TRI);
-  if (EFLAGSLive && !Subtarget->hasBMI2()) {
+  if (isEFLAGSLive(MBB, InsertPt, *TRI))
     FlagsReg = saveEFLAGS(MBB, InsertPt, Loc);
-    EFLAGSLive = false;
-  }
 
-  if (!EFLAGSLive) {
-    unsigned StateReg = GetStateRegInRC(*DefRC);
-    unsigned NewDefReg = MRI->createVirtualRegister(DefRC);
-    DefOp.setReg(NewDefReg);
-    auto OrI = BuildMI(MBB, InsertPt, Loc, TII->get(OrOpCode), OldDefReg)
-                   .addReg(StateReg)
-                   .addReg(NewDefReg);
-    OrI->addRegisterDead(X86::EFLAGS, TRI);
-    ++NumInstsInserted;
-    LLVM_DEBUG(dbgs() << "  Inserting or: "; OrI->dump(); dbgs() << "\n");
-  } else {
-    assert(Subtarget->hasBMI2() &&
-           "Cannot harden loads and preserve EFLAGS without BMI2!");
+  unsigned NewDefReg = MRI->createVirtualRegister(DefRC);
+  DefOp.setReg(NewDefReg);
 
-    unsigned ShiftOpCode = DefRegBytes < 4 ? X86::SHRX32rr : X86::SHRX64rr;
-    auto &ShiftRC =
-        DefRegBytes < 4 ? X86::GR32_NOSPRegClass : X86::GR64_NOSPRegClass;
-    int ShiftRegBytes = TRI->getRegSizeInBits(ShiftRC) / 8;
-    unsigned DefSubRegImm = SubRegImms[Log2_32(DefRegBytes)];
-
-    unsigned StateReg = GetStateRegInRC(ShiftRC);
-
-    // First have the def instruction def a temporary register.
-    unsigned TmpReg = MRI->createVirtualRegister(DefRC);
-    DefOp.setReg(TmpReg);
-    // Now copy it into a register of the shift RC.
-    unsigned ShiftInputReg = TmpReg;
-    if (DefRegBytes != ShiftRegBytes) {
-      unsigned UndefReg = MRI->createVirtualRegister(&ShiftRC);
-      BuildMI(MBB, InsertPt, Loc, TII->get(X86::IMPLICIT_DEF), UndefReg);
-      ShiftInputReg = MRI->createVirtualRegister(&ShiftRC);
-      BuildMI(MBB, InsertPt, Loc, TII->get(X86::INSERT_SUBREG), ShiftInputReg)
-          .addReg(UndefReg)
-          .addReg(TmpReg)
-          .addImm(DefSubRegImm);
-    }
-
-    // We shift this once if the shift is wider than the def and thus we can
-    // shift *all* of the def'ed bytes out. Otherwise we need to do two shifts.
-
-    unsigned ShiftedReg = MRI->createVirtualRegister(&ShiftRC);
-    auto Shift1I =
-        BuildMI(MBB, InsertPt, Loc, TII->get(ShiftOpCode), ShiftedReg)
-            .addReg(ShiftInputReg)
-            .addReg(StateReg);
-    (void)Shift1I;
-    ++NumInstsInserted;
-    LLVM_DEBUG(dbgs() << "  Inserting shrx: "; Shift1I->dump(); dbgs() << "\n");
-
-    // The only way we have a bit left is if all 8 bytes were defined. Do an
-    // extra shift to get the last bit in this case.
-    if (DefRegBytes == ShiftRegBytes) {
-      // We can just directly def the old def register as its the same size.
-      ShiftInputReg = ShiftedReg;
-      auto Shift2I =
-          BuildMI(MBB, InsertPt, Loc, TII->get(ShiftOpCode), OldDefReg)
-              .addReg(ShiftInputReg)
-              .addReg(StateReg);
-      (void)Shift2I;
-      ++NumInstsInserted;
-      LLVM_DEBUG(dbgs() << "  Inserting shrx: "; Shift2I->dump();
-                 dbgs() << "\n");
-    } else {
-      // When we have different size shift register we need to fix up the
-      // class. We can do that as we copy into the old def register.
-      BuildMI(MBB, InsertPt, Loc, TII->get(TargetOpcode::COPY), OldDefReg)
-          .addReg(ShiftedReg, 0, DefSubRegImm);
-    }
-  }
+  unsigned OrOpCodes[] = {X86::OR8rr, X86::OR16rr, X86::OR32rr, X86::OR64rr};
+  unsigned OrOpCode = OrOpCodes[Log2_32(DefRegBytes)];
+  auto OrI = BuildMI(MBB, InsertPt, Loc, TII->get(OrOpCode), OldDefReg)
+                 .addReg(StateReg)
+                 .addReg(NewDefReg);
+  OrI->addRegisterDead(X86::EFLAGS, TRI);
+  ++NumInstsInserted;
+  LLVM_DEBUG(dbgs() << "  Inserting or: "; OrI->dump(); dbgs() << "\n");
 
   if (FlagsReg)
     restoreEFLAGS(MBB, InsertPt, Loc, FlagsReg);

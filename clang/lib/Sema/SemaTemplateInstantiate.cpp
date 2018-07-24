@@ -2083,6 +2083,11 @@ Sema::InstantiateClass(SourceLocation PointOfInstantiation,
     if (Member->getDeclContext() != Pattern)
       continue;
 
+    // BlockDecls can appear in a default-member-initializer. They must be the
+    // child of a BlockExpr, so we only know how to instantiate them from there.
+    if (isa<BlockDecl>(Member))
+      continue;
+
     if (Member->isInvalidDecl()) {
       Instantiation->setInvalidDecl();
       continue;

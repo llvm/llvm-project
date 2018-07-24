@@ -988,6 +988,7 @@ def FRINTP_S32 : SInst<"vrndp", "dd", "fQf">;
 def FRINTM_S32 : SInst<"vrndm", "dd", "fQf">;
 def FRINTX_S32 : SInst<"vrndx", "dd", "fQf">;
 def FRINTZ_S32 : SInst<"vrnd", "dd", "fQf">;
+def FRINTI_S32 : SInst<"vrndi", "dd", "fQf">;
 }
 
 let ArchGuard = "__ARM_ARCH >= 8 && defined(__aarch64__) && defined(__ARM_FEATURE_DIRECTED_ROUNDING)" in {
@@ -997,7 +998,7 @@ def FRINTP_S64 : SInst<"vrndp", "dd", "dQd">;
 def FRINTM_S64 : SInst<"vrndm", "dd", "dQd">;
 def FRINTX_S64 : SInst<"vrndx", "dd", "dQd">;
 def FRINTZ_S64 : SInst<"vrnd", "dd", "dQd">;
-def FRINTI_S64 : SInst<"vrndi", "dd", "fdQfQd">;
+def FRINTI_S64 : SInst<"vrndi", "dd", "dQd">;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1416,12 +1417,14 @@ let ArchGuard = "defined(__ARM_FEATURE_FP16_VECTOR_ARITHMETIC)" in {
   def VCVTP_U16    : SInst<"vcvtp_u16", "ud", "hQh">;
 
   // Vector rounding
-  def FRINTZH      : SInst<"vrnd",  "dd", "hQh">;
-  def FRINTNH      : SInst<"vrndn", "dd", "hQh">;
-  def FRINTAH      : SInst<"vrnda", "dd", "hQh">;
-  def FRINTPH      : SInst<"vrndp", "dd", "hQh">;
-  def FRINTMH      : SInst<"vrndm", "dd", "hQh">;
-  def FRINTXH      : SInst<"vrndx", "dd", "hQh">;
+  let ArchGuard = "__ARM_ARCH >= 8 && defined(__ARM_FEATURE_DIRECTED_ROUNDING) && defined(__ARM_FEATURE_FP16_VECTOR_ARITHMETIC)" in {
+    def FRINTZH      : SInst<"vrnd",  "dd", "hQh">;
+    def FRINTNH      : SInst<"vrndn", "dd", "hQh">;
+    def FRINTAH      : SInst<"vrnda", "dd", "hQh">;
+    def FRINTPH      : SInst<"vrndp", "dd", "hQh">;
+    def FRINTMH      : SInst<"vrndm", "dd", "hQh">;
+    def FRINTXH      : SInst<"vrndx", "dd", "hQh">;
+  }
 
   // Misc.
   def VABSH        : SInst<"vabs", "dd", "hQh">;
@@ -1463,8 +1466,10 @@ let ArchGuard = "defined(__ARM_FEATURE_FP16_VECTOR_ARITHMETIC)" in {
   // Max/Min
   def VMAXH         : SInst<"vmax", "ddd", "hQh">;
   def VMINH         : SInst<"vmin", "ddd", "hQh">;
-  def FMAXNMH       : SInst<"vmaxnm", "ddd", "hQh">;
-  def FMINNMH       : SInst<"vminnm", "ddd", "hQh">;
+  let ArchGuard = "__ARM_ARCH >= 8 && defined(__ARM_FEATURE_NUMERIC_MAXMIN) && defined(__ARM_FEATURE_FP16_VECTOR_ARITHMETIC)" in {
+    def FMAXNMH       : SInst<"vmaxnm", "ddd", "hQh">;
+    def FMINNMH       : SInst<"vminnm", "ddd", "hQh">;
+  }
 
   // Multiplication/Division
   def VMULH         : SOpInst<"vmul", "ddd", "hQh", OP_MUL>;

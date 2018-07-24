@@ -861,7 +861,7 @@ private:
 
   // Debug counter info.  When verifying, we have to reset the value numbering
   // debug counter to the same state it started in to get the same results.
-  std::pair<int, int> StartingVNCounter;
+  int64_t StartingVNCounter;
 };
 
 } // end anonymous namespace

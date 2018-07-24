@@ -2919,6 +2919,12 @@ namespaceDecl(isInline()) will match n::m.
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('isMain0')"><a name="isMain0Anchor">isMain</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isMain0"><pre>Determines whether the function is "main", which is the entry point
+into an executable program.
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('isNoReturn0')"><a name="isNoReturn0Anchor">isNoReturn</a></td><td></td></tr>
 <tr><td colspan="4" class="doc" id="isNoReturn0"><pre>Matches FunctionDecls that have a noreturn attribute.
 
@@ -3275,9 +3281,9 @@ Example
 matcher = objcMessagaeExpr(isInstanceMessage())
 matches
   NSString *x = @"hello";
-  [x containsString:@"h"]
+  [x containsString:@"h"];
 but not
-  [NSString stringWithFormat:@"format"]
+  [NSString stringWithFormat:@"format"];
 </pre></td></tr>
 
 
@@ -5894,7 +5900,7 @@ and the inner matcher matches on that instance.
 
 For example the method call in
   NSString *x = @"hello";
-  [x containsString:@"h"]
+  [x containsString:@"h"];
 is matched by
 objcMessageExpr(hasReceiver(declRefExpr(to(varDecl(hasName("x"))))))
 </pre></td></tr>
@@ -6564,7 +6570,7 @@ type of the matched node.
 For example, in:
   class A {};
   using B = A;
-The matcher type(hasUnqualifeidDesugaredType(recordType())) matches
+The matcher type(hasUnqualifiedDesugaredType(recordType())) matches
 both B and A.
 </pre></td></tr>
 

@@ -42,14 +42,18 @@ static file_type get_file_type(DirEntT *ent, int) {
     return file_type::regular;
   case DT_SOCK:
     return file_type::socket;
+  // Unlike in lstat, hitting "unknown" here simply means that the underlying
+  // filesystem doesn't support d_type. Report is as 'none' so we correctly
+  // set the cache to empty.
   case DT_UNKNOWN:
-    return file_type::unknown;
+    break;
   }
   return file_type::none;
 }
+
 template <class DirEntT>
 static file_type get_file_type(DirEntT *ent, long) {
-  return file_type::unknown;
+  return file_type::none;
 }
 
 static pair<string_view, file_type>

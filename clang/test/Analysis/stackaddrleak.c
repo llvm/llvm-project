@@ -37,7 +37,7 @@ void test_multi_return() {
 
 intptr_t returnAsNonLoc() {
   int x;
-  return (intptr_t)&x; // expected-warning{{Address of stack memory associated with local variable 'x' returned to caller}}
+  return (intptr_t)&x; // expected-warning{{Address of stack memory associated with local variable 'x' returned to caller}} expected-warning{{address of stack memory associated with local variable 'x' returned}}
 }
 
 bool returnAsBool() {

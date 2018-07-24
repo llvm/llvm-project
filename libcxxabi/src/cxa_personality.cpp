@@ -23,6 +23,16 @@
 #include "private_typeinfo.h"
 #include "unwind.h"
 
+#if defined(__SEH__) && !defined(__USING_SJLJ_EXCEPTIONS__)
+#include <windows.h>
+#include <winnt.h>
+
+extern "C" EXCEPTION_DISPOSITION _GCC_specific_handler(PEXCEPTION_RECORD,
+                                                       void *, PCONTEXT,
+                                                       PDISPATCHER_CONTEXT,
+                                                       _Unwind_Personality_Fn);
+#endif
+
 /*
     Exception Header Layout:
 
@@ -934,11 +944,15 @@ _UA_CLEANUP_PHASE
 */
 
 #if !defined(_LIBCXXABI_ARM_EHABI)
+#if defined(__SEH__) && !defined(__USING_SJLJ_EXCEPTIONS__)
+static _Unwind_Reason_Code __gxx_personality_imp
+#else
 _LIBCXXABI_FUNC_VIS _Unwind_Reason_Code
 #ifdef __USING_SJLJ_EXCEPTIONS__
 __gxx_personality_sj0
 #else
 __gxx_personality_v0
+#endif
 #endif
                     (int version, _Unwind_Action actions, uint64_t exceptionClass,
                      _Unwind_Exception* unwind_exception, _Unwind_Context* context)
@@ -1022,6 +1036,17 @@ __gxx_personality_v0
     // We were called improperly: neither a phase 1 or phase 2 search
     return _URC_FATAL_PHASE1_ERROR;
 }
+
+#if defined(__SEH__) && !defined(__USING_SJLJ_EXCEPTIONS__)
+extern "C" EXCEPTION_DISPOSITION
+__gxx_personality_seh0(PEXCEPTION_RECORD ms_exc, void *this_frame,
+                       PCONTEXT ms_orig_context, PDISPATCHER_CONTEXT ms_disp)
+{
+  return _GCC_specific_handler(ms_exc, this_frame, ms_orig_context, ms_disp,
+                               __gxx_personality_imp);
+}
+#endif
+
 #else
 
 extern "C" _Unwind_Reason_Code __gnu_unwind_frame(_Unwind_Exception*,

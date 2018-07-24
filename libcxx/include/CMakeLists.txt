@@ -128,6 +128,7 @@ set(files
   set
   setjmp.h
   shared_mutex
+  span
   sstream
   stack
   stdbool.h

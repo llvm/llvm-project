@@ -2200,8 +2200,16 @@ private:
     static __cached_data __create_iter_result(file_type __ft) {
       __cached_data __data;
       __data.__type_ = __ft;
-      __data.__cache_type_ =
-          __ft == file_type::symlink ? _IterSymlink : _IterNonSymlink;
+      __data.__cache_type_ = [&]() {
+          switch (__ft) {
+          case file_type::none:
+            return _Empty;
+          case file_type::symlink:
+            return _IterSymlink;
+          default:
+            return _IterNonSymlink;
+          }
+      }();
       return __data;
     }
 

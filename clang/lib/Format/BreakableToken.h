@@ -1,4 +1,4 @@
-//===--- BreakableToken.h - Format C++ code -------------------------------===//
+//===--- BreakableToken.h - Format C++ code ---------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //

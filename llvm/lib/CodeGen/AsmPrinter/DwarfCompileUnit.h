@@ -14,7 +14,7 @@
 #ifndef LLVM_LIB_CODEGEN_ASMPRINTER_DWARFCOMPILEUNIT_H
 #define LLVM_LIB_CODEGEN_ASMPRINTER_DWARFCOMPILEUNIT_H
 
-#include "DbgValueHistoryCalculator.h"
+#include "DbgEntityHistoryCalculator.h"
 #include "DwarfDebug.h"
 #include "DwarfUnit.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -81,7 +81,7 @@ class DwarfCompileUnit final : public DwarfUnit {
   const MCSymbol *BaseAddress = nullptr;
 
   DenseMap<const MDNode *, DIE *> AbstractSPDies;
-  DenseMap<const MDNode *, std::unique_ptr<DbgVariable>> AbstractVariables;
+  DenseMap<const DINode *, std::unique_ptr<DbgEntity>> AbstractEntities;
 
   /// DWO ID for correlating skeleton and split units.
   uint64_t DWOId = 0;
@@ -98,10 +98,10 @@ class DwarfCompileUnit final : public DwarfUnit {
     return DU->getAbstractSPDies();
   }
 
-  DenseMap<const MDNode *, std::unique_ptr<DbgVariable>> &getAbstractVariables() {
+  DenseMap<const DINode *, std::unique_ptr<DbgEntity>> &getAbstractEntities() {
     if (isDwoUnit() && !DD->shareAcrossDWOCUs())
-      return AbstractVariables;
-    return DU->getAbstractVariables();
+      return AbstractEntities;
+    return DU->getAbstractEntities();
   }
 
 public:
@@ -194,6 +194,9 @@ public:
   DIE *constructVariableDIE(DbgVariable &DV, const LexicalScope &Scope,
                             DIE *&ObjectPointer);
 
+  /// Construct a DIE for the given DbgLabel.
+  DIE *constructLabelDIE(DbgLabel &DL, const LexicalScope &Scope);
+
   /// A helper function to create children of a Scope DIE.
   DIE *createScopeChildrenDIE(LexicalScope *Scope,
                               SmallVectorImpl<DIE *> &Children,
@@ -210,14 +213,12 @@ public:
   DIE *constructImportedEntityDIE(const DIImportedEntity *Module);
 
   void finishSubprogramDefinition(const DISubprogram *SP);
-  void finishVariableDefinition(const DbgVariable &Var);
+  void finishEntityDefinition(const DbgEntity *Entity);
 
   /// Find abstract variable associated with Var.
   using InlinedVariable = DbgValueHistoryMap::InlinedVariable;
-  DbgVariable *getExistingAbstractVariable(InlinedVariable IV,
-                                           const DILocalVariable *&Cleansed);
-  DbgVariable *getExistingAbstractVariable(InlinedVariable IV);
-  void createAbstractVariable(const DILocalVariable *Var, LexicalScope *Scope);
+  DbgEntity *getExistingAbstractEntity(const DINode *Node);
+  void createAbstractEntity(const DINode *Node, LexicalScope *Scope);
 
   /// Set the skeleton unit associated with this unit.
   void setSkeleton(DwarfCompileUnit &Skel) { Skeleton = &Skel; }
@@ -287,6 +288,8 @@ public:
 
   void applySubprogramAttributesToDefinition(const DISubprogram *SP,
                                              DIE &SPDie);
+
+  void applyLabelAttributes(const DbgLabel &Label, DIE &LabelDie);
 
   /// getRangeLists - Get the vector of range lists.
   const SmallVectorImpl<RangeSpanList> &getRangeLists() const {

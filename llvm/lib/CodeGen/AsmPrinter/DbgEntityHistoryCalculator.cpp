@@ -1,4 +1,4 @@
-//===- llvm/CodeGen/AsmPrinter/DbgValueHistoryCalculator.cpp --------------===//
+//===- llvm/CodeGen/AsmPrinter/DbgEntityHistoryCalculator.cpp -------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "DbgValueHistoryCalculator.h"
+#include "DbgEntityHistoryCalculator.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -78,11 +78,17 @@ unsigned DbgValueHistoryMap::getRegisterForVar(InlinedVariable Var) const {
   return isDescribedByReg(*Ranges.back().first);
 }
 
+void DbgLabelInstrMap::addInstr(InlinedLabel Label, const MachineInstr &MI) {
+  assert(MI.isDebugLabel() && "not a DBG_LABEL");
+  LabelInstr[Label] = &MI;
+}
+
 namespace {
 
 // Maps physreg numbers to the variables they describe.
 using InlinedVariable = DbgValueHistoryMap::InlinedVariable;
 using RegDescribedVarsMap = std::map<unsigned, SmallVector<InlinedVariable, 1>>;
+using InlinedLabel = DbgLabelInstrMap::InlinedLabel;
 
 } // end anonymous namespace
 
@@ -187,9 +193,10 @@ static void collectChangingRegs(const MachineFunction *MF,
   }
 }
 
-void llvm::calculateDbgValueHistory(const MachineFunction *MF,
-                                    const TargetRegisterInfo *TRI,
-                                    DbgValueHistoryMap &Result) {
+void llvm::calculateDbgEntityHistory(const MachineFunction *MF,
+                                     const TargetRegisterInfo *TRI,
+                                     DbgValueHistoryMap &DbgValues,
+                                     DbgLabelInstrMap &DbgLabels) {
   BitVector ChangingRegs(TRI->getNumRegs());
   collectChangingRegs(MF, TRI, ChangingRegs);
 
@@ -210,14 +217,14 @@ void llvm::calculateDbgValueHistory(const MachineFunction *MF,
             // If this is a virtual register, only clobber it since it doesn't
             // have aliases.
             if (TRI->isVirtualRegister(MO.getReg()))
-              clobberRegisterUses(RegVars, MO.getReg(), Result, MI);
+              clobberRegisterUses(RegVars, MO.getReg(), DbgValues, MI);
             // If this is a register def operand, it may end a debug value
             // range.
             else {
               for (MCRegAliasIterator AI(MO.getReg(), TRI, true); AI.isValid();
                    ++AI)
                 if (ChangingRegs.test(*AI))
-                  clobberRegisterUses(RegVars, *AI, Result, MI);
+                  clobberRegisterUses(RegVars, *AI, DbgValues, MI);
             }
           } else if (MO.isRegMask()) {
             // If this is a register mask operand, clobber all debug values in
@@ -226,7 +233,7 @@ void llvm::calculateDbgValueHistory(const MachineFunction *MF,
               // Don't consider SP to be clobbered by register masks.
               if (unsigned(I) != SP && TRI->isPhysicalRegister(I) &&
                   MO.clobbersPhysReg(I)) {
-                clobberRegisterUses(RegVars, I, Result, MI);
+                clobberRegisterUses(RegVars, I, DbgValues, MI);
               }
             }
           }
@@ -234,26 +241,34 @@ void llvm::calculateDbgValueHistory(const MachineFunction *MF,
         continue;
       }
 
-      // Skip DBG_LABEL instructions.
-      if (MI.isDebugLabel())
-        continue;
+      if (MI.isDebugValue()) {
+        assert(MI.getNumOperands() > 1 && "Invalid DBG_VALUE instruction!");
+        // Use the base variable (without any DW_OP_piece expressions)
+        // as index into History. The full variables including the
+        // piece expressions are attached to the MI.
+        const DILocalVariable *RawVar = MI.getDebugVariable();
+        assert(RawVar->isValidLocationForIntrinsic(MI.getDebugLoc()) &&
+               "Expected inlined-at fields to agree");
+        InlinedVariable Var(RawVar, MI.getDebugLoc()->getInlinedAt());
 
-      assert(MI.getNumOperands() > 1 && "Invalid DBG_VALUE instruction!");
-      // Use the base variable (without any DW_OP_piece expressions)
-      // as index into History. The full variables including the
-      // piece expressions are attached to the MI.
-      const DILocalVariable *RawVar = MI.getDebugVariable();
-      assert(RawVar->isValidLocationForIntrinsic(MI.getDebugLoc()) &&
-             "Expected inlined-at fields to agree");
-      InlinedVariable Var(RawVar, MI.getDebugLoc()->getInlinedAt());
+        if (unsigned PrevReg = DbgValues.getRegisterForVar(Var))
+          dropRegDescribedVar(RegVars, PrevReg, Var);
 
-      if (unsigned PrevReg = Result.getRegisterForVar(Var))
-        dropRegDescribedVar(RegVars, PrevReg, Var);
+        DbgValues.startInstrRange(Var, MI);
 
-      Result.startInstrRange(Var, MI);
-
-      if (unsigned NewReg = isDescribedByReg(MI))
-        addRegDescribedVar(RegVars, NewReg, Var);
+        if (unsigned NewReg = isDescribedByReg(MI))
+          addRegDescribedVar(RegVars, NewReg, Var);
+      } else if (MI.isDebugLabel()) {
+        assert(MI.getNumOperands() == 1 && "Invalid DBG_LABEL instruction!");
+        const DILabel *RawLabel = MI.getDebugLabel();
+        assert(RawLabel->isValidLocationForIntrinsic(MI.getDebugLoc()) &&
+            "Expected inlined-at fields to agree");
+        // When collecting debug information for labels, there is no MCSymbol
+        // generated for it. So, we keep MachineInstr in DbgLabels in order
+        // to query MCSymbol afterward.
+        InlinedLabel L(RawLabel, MI.getDebugLoc()->getInlinedAt());
+        DbgLabels.addInstr(L, MI);
+      }
     }
 
     // Make sure locations for register-described variables are valid only
@@ -264,7 +279,7 @@ void llvm::calculateDbgValueHistory(const MachineFunction *MF,
         auto CurElem = I++; // CurElem can be erased below.
         if (TRI->isVirtualRegister(CurElem->first) ||
             ChangingRegs.test(CurElem->first))
-          clobberRegisterUses(RegVars, CurElem, Result, MBB.back());
+          clobberRegisterUses(RegVars, CurElem, DbgValues, MBB.back());
       }
     }
   }

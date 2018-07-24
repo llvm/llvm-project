@@ -139,11 +139,17 @@
 //
 // RUN: %clang -### -c -gdwarf-aranges %s 2>&1 | FileCheck -check-prefix=GARANGE %s
 //
-// RUN: %clang -### -fdebug-types-section %s 2>&1 \
+// RUN: %clang -### -fdebug-types-section -target x86_64-unknown-linux %s 2>&1 \
 // RUN:        | FileCheck -check-prefix=FDTS %s
 //
-// RUN: %clang -### -fdebug-types-section -fno-debug-types-section %s 2>&1 \
+// RUN: %clang -### -fdebug-types-section -fno-debug-types-section -target x86_64-unknown-linux %s 2>&1 \
 // RUN:        | FileCheck -check-prefix=NOFDTS %s
+//
+// RUN: %clang -### -fdebug-types-section -target x86_64-apple-darwin %s 2>&1 \
+// RUN:        | FileCheck -check-prefix=FDTSE %s
+//
+// RUN: %clang -### -fdebug-types-section -fno-debug-types-section -target x86_64-apple-darwin %s 2>&1 \
+// RUN:        | FileCheck -check-prefix=NOFDTSE %s
 //
 // RUN: %clang -### -g -gno-column-info %s 2>&1 \
 // RUN:        | FileCheck -check-prefix=NOCI %s
@@ -229,8 +235,10 @@
 // GARANGE: -generate-arange-section
 //
 // FDTS: "-mllvm" "-generate-type-units"
+// FDTSE: error: unsupported option '-fdebug-types-section' for target 'x86_64-apple-darwin'
 //
 // NOFDTS-NOT: "-mllvm" "-generate-type-units"
+// NOFDTSE-NOT: error: unsupported option '-fdebug-types-section' for target 'x86_64-apple-darwin'
 //
 // CI: "-dwarf-column-info"
 //

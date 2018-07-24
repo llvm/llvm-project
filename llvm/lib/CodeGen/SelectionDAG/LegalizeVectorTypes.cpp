@@ -755,6 +755,25 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::FMA:
     SplitVecRes_TernaryOp(N, Lo, Hi);
     break;
+  case ISD::STRICT_FADD:
+  case ISD::STRICT_FSUB:
+  case ISD::STRICT_FMUL:
+  case ISD::STRICT_FDIV:
+  case ISD::STRICT_FSQRT:
+  case ISD::STRICT_FMA:
+  case ISD::STRICT_FPOW:
+  case ISD::STRICT_FPOWI:
+  case ISD::STRICT_FSIN:
+  case ISD::STRICT_FCOS:
+  case ISD::STRICT_FEXP:
+  case ISD::STRICT_FEXP2:
+  case ISD::STRICT_FLOG:
+  case ISD::STRICT_FLOG10:
+  case ISD::STRICT_FLOG2:
+  case ISD::STRICT_FRINT:
+  case ISD::STRICT_FNEARBYINT:
+    SplitVecRes_StrictFPOp(N, Lo, Hi);
+    break;
   }
 
   // If Lo/Hi is null, the sub-method took care of registering results etc.
@@ -1032,6 +1051,56 @@ void DAGTypeLegalizer::SplitVecRes_ExtVecInRegOp(SDNode *N, SDValue &Lo,
 
   Lo = DAG.getNode(Opcode, dl, OutLoVT, InLo);
   Hi = DAG.getNode(Opcode, dl, OutHiVT, InHi);
+}
+
+void DAGTypeLegalizer::SplitVecRes_StrictFPOp(SDNode *N, SDValue &Lo,
+                                              SDValue &Hi) {
+  unsigned NumOps = N->getNumOperands();
+  SDValue Chain = N->getOperand(0);
+  EVT LoVT, HiVT;
+  SDLoc dl(N);
+  std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(N->getValueType(0));
+
+  SmallVector<SDValue, 4> OpsLo;
+  SmallVector<SDValue, 4> OpsHi;
+
+  // The Chain is the first operand.
+  OpsLo.push_back(Chain);
+  OpsHi.push_back(Chain);
+
+  // Now process the remaining operands. 
+  for (unsigned i = 1; i < NumOps; ++i) {
+    SDValue Op = N->getOperand(i); 
+    SDValue OpLo = Op; 
+    SDValue OpHi = Op;   
+
+    EVT InVT = Op.getValueType();
+    if (InVT.isVector()) { 
+      // If the input also splits, handle it directly for a
+      // compile time speedup. Otherwise split it by hand.
+      if (getTypeAction(InVT) == TargetLowering::TypeSplitVector)
+        GetSplitVector(Op, OpLo, OpHi);
+      else
+        std::tie(OpLo, OpHi) = DAG.SplitVectorOperand(N, i);
+    }
+
+    OpsLo.push_back(OpLo);
+    OpsHi.push_back(OpHi);
+  }
+
+  EVT LoValueVTs[] = {LoVT, MVT::Other};
+  EVT HiValueVTs[] = {HiVT, MVT::Other};
+  Lo = DAG.getNode(N->getOpcode(), dl, LoValueVTs, OpsLo);
+  Hi = DAG.getNode(N->getOpcode(), dl, HiValueVTs, OpsHi);
+  
+  // Build a factor node to remember that this Op is independent of the
+  // other one.
+  Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, 
+                      Lo.getValue(1), Hi.getValue(1));
+
+  // Legalize the chain result - switch anything that used the old chain to
+  // use the new one.
+  ReplaceValueWith(SDValue(N, 1), Chain);
 }
 
 void DAGTypeLegalizer::SplitVecRes_INSERT_VECTOR_ELT(SDNode *N, SDValue &Lo,
