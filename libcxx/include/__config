@@ -149,10 +149,8 @@
 
 #define __has_keyword(__x) !(__is_identifier(__x))
 
-#ifdef __has_include
-#  define __libcpp_has_include(__x) __has_include(__x)
-#else
-#  define __libcpp_has_include(__x) 0
+#ifndef __has_include
+#define __has_include(...) 0
 #endif
 
 #if defined(__clang__)
@@ -1066,7 +1064,7 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
       defined(__APPLE__) || \
       defined(__CloudABI__) || \
       defined(__sun__) || \
-      (defined(__MINGW32__) && __libcpp_has_include(<pthread.h>))
+      (defined(__MINGW32__) && __has_include(<pthread.h>))
 #    define _LIBCPP_HAS_THREAD_API_PTHREAD
 #  elif defined(_LIBCPP_WIN32API)
 #    define _LIBCPP_HAS_THREAD_API_WIN32
