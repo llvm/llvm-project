@@ -8,6 +8,11 @@
 if (p0) jump:nt #_start
 # CHECK: if (p0) jump:nt 0x11000
 
+# R_HEX_B32_PCREL_X
+# R_HEX_B15_PCREL_X
+if (p0) jump:nt ##_start
+# CHECK: if (p0) jump:nt 0x11000
+
 # R_HEX_B22_PCREL
 call #_start
 # CHECK: call 0x11000

@@ -189,6 +189,7 @@ const char *MipsTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case MipsISD::Hi:                return "MipsISD::Hi";
   case MipsISD::Lo:                return "MipsISD::Lo";
   case MipsISD::GotHi:             return "MipsISD::GotHi";
+  case MipsISD::TlsHi:             return "MipsISD::TlsHi";
   case MipsISD::GPRel:             return "MipsISD::GPRel";
   case MipsISD::ThreadPointer:     return "MipsISD::ThreadPointer";
   case MipsISD::Ret:               return "MipsISD::Ret";
@@ -2040,7 +2041,7 @@ lowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const
 
     SDValue TGAHi = DAG.getTargetGlobalAddress(GV, DL, PtrVT, 0,
                                                MipsII::MO_DTPREL_HI);
-    SDValue Hi = DAG.getNode(MipsISD::Hi, DL, PtrVT, TGAHi);
+    SDValue Hi = DAG.getNode(MipsISD::TlsHi, DL, PtrVT, TGAHi);
     SDValue TGALo = DAG.getTargetGlobalAddress(GV, DL, PtrVT, 0,
                                                MipsII::MO_DTPREL_LO);
     SDValue Lo = DAG.getNode(MipsISD::Lo, DL, PtrVT, TGALo);
@@ -2064,7 +2065,7 @@ lowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const
                                                MipsII::MO_TPREL_HI);
     SDValue TGALo = DAG.getTargetGlobalAddress(GV, DL, PtrVT, 0,
                                                MipsII::MO_TPREL_LO);
-    SDValue Hi = DAG.getNode(MipsISD::Hi, DL, PtrVT, TGAHi);
+    SDValue Hi = DAG.getNode(MipsISD::TlsHi, DL, PtrVT, TGAHi);
     SDValue Lo = DAG.getNode(MipsISD::Lo, DL, PtrVT, TGALo);
     Offset = DAG.getNode(ISD::ADD, DL, PtrVT, Hi, Lo);
   }

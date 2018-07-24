@@ -409,7 +409,7 @@ _LIBCPP_DECLARE_STRONG_ENUM_EPILOG(launch)
 
 #ifndef _LIBCPP_HAS_NO_STRONG_ENUMS
 
-#ifdef _LIBCXX_UNDERLYING_TYPE
+#ifdef _LIBCPP_UNDERLYING_TYPE
 typedef underlying_type<launch>::type __launch_underlying_type;
 #else
 typedef int __launch_underlying_type;

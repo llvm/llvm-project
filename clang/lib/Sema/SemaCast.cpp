@@ -89,6 +89,14 @@ namespace {
     void CheckCXXCStyleCast(bool FunctionalCast, bool ListInitialization);
     void CheckCStyleCast();
 
+    void updatePartOfExplicitCastFlags(CastExpr *CE) {
+      // Walk down from the CE to the OrigSrcExpr, and mark all immediate
+      // ImplicitCastExpr's as being part of ExplicitCastExpr. The original CE
+      // (which is a ExplicitCastExpr), and the OrigSrcExpr are not touched.
+      while ((CE = dyn_cast<ImplicitCastExpr>(CE->getSubExpr())))
+        CE->setIsPartOfExplicitCast(true);
+    }
+
     /// Complete an apparently-successful cast operation that yields
     /// the given expression.
     ExprResult complete(CastExpr *castExpr) {
@@ -100,6 +108,7 @@ namespace {
                                             CK_Dependent, castExpr, nullptr,
                                             castExpr->getValueKind());
       }
+      updatePartOfExplicitCastFlags(castExpr);
       return castExpr;
     }
 

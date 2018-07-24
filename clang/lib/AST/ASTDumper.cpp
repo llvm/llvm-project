@@ -2117,6 +2117,9 @@ void ASTDumper::VisitCastExpr(const CastExpr *Node) {
   }
   dumpBasePath(OS, Node);
   OS << ">";
+
+  if (Node->getIsPartOfExplicitCast())
+    OS << " part_of_explicit_cast";
 }
 
 void ASTDumper::VisitDeclRefExpr(const DeclRefExpr *Node) {

@@ -1,0 +1,39 @@
+RUN: %cpp_compiler %S/PrintUnstableStatsTest.cpp -o %t-HandleUnstableTest
+
+; Normal
+RUN: %run %t-HandleUnstableTest -print_coverage=1 -runs=100000 2>&1 | FileCheck %s --check-prefix=NORMAL
+NORMAL-DAG: det0()
+NORMAL-DAG: det1()
+NORMAL-DAG: det2()
+NORMAL-DAG: det3()
+NORMAL-DAG: det4()
+NORMAL-DAG: ini0()
+NORMAL-DAG: ini1()
+NORMAL-DAG: ini2()
+NORMAL-DAG: t0()
+NORMAL-DAG: t1()
+NORMAL-DAG: t2()
+NORMAL-DAG: t3()
+NORMAL-DAG: t4()
+
+; MinUnstable
+RUN: %run %t-HandleUnstableTest -print_coverage=1 -handle_unstable=1 -runs=100000 2>&1 | FileCheck %s --check-prefix=MIN
+MIN-NOT: ini0()
+MIN-NOT: ini1()
+MIN-NOT: ini2()
+MIN: det0()
+MIN: det1()
+MIN: det2()
+MIN: det3()
+MIN: det4()
+
+; ZeroUnstable
+RUN: %run %t-HandleUnstableTest -print_coverage=1 -handle_unstable=2 -runs=1 2>&1 | FileCheck %s --check-prefix=ZERO
+ZERO-NOT: ini0()
+ZERO-NOT: ini1()
+ZERO-NOT: ini2()
+ZERO: det0()
+ZERO: det1()
+ZERO: det2()
+ZERO: det3()
+ZERO: det4()

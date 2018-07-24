@@ -23,6 +23,7 @@
 #include "TestTU.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/Type.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "llvm/Support/Casting.h"
 #include "gmock/gmock.h"
@@ -185,13 +186,16 @@ TEST(QualityTests, SymbolQualitySignalsSanity) {
   EXPECT_GT(WithReferences.evaluate(), Default.evaluate());
   EXPECT_GT(ManyReferences.evaluate(), WithReferences.evaluate());
 
-  SymbolQualitySignals Keyword, Variable, Macro;
+  SymbolQualitySignals Keyword, Variable, Macro, Constructor, Function;
   Keyword.Category = SymbolQualitySignals::Keyword;
   Variable.Category = SymbolQualitySignals::Variable;
   Macro.Category = SymbolQualitySignals::Macro;
+  Constructor.Category = SymbolQualitySignals::Constructor;
+  Function.Category = SymbolQualitySignals::Function;
   EXPECT_GT(Variable.evaluate(), Default.evaluate());
   EXPECT_GT(Keyword.evaluate(), Variable.evaluate());
   EXPECT_LT(Macro.evaluate(), Default.evaluate());
+  EXPECT_LT(Constructor.evaluate(), Function.evaluate());
 }
 
 TEST(QualityTests, SymbolRelevanceSignalsSanity) {
@@ -315,6 +319,31 @@ TEST(QualityTests, IsInstanceMember) {
   Rel.IsInstanceMember = false;
   Rel.merge(CodeCompletionResult(Tpl, /*Priority=*/0));
   EXPECT_TRUE(Rel.IsInstanceMember);
+}
+
+TEST(QualityTests, ConstructorQuality) {
+  auto Header = TestTU::withHeaderCode(R"cpp(
+    class Foo {
+    public:
+      Foo(int);
+    };
+  )cpp");
+  auto Symbols = Header.headerSymbols();
+  auto AST = Header.build();
+
+  const NamedDecl *CtorDecl = &findAnyDecl(AST, [](const NamedDecl &ND) {
+    return (ND.getQualifiedNameAsString() == "Foo::Foo") &&
+           llvm::isa<CXXConstructorDecl>(&ND);
+  });
+
+  SymbolQualitySignals Q;
+  Q.merge(CodeCompletionResult(CtorDecl, /*Priority=*/0));
+  EXPECT_EQ(Q.Category, SymbolQualitySignals::Constructor);
+
+  Q.Category = SymbolQualitySignals::Unknown;
+  const Symbol &CtorSym = findSymbol(Symbols, "Foo::Foo");
+  Q.merge(CtorSym);
+  EXPECT_EQ(Q.Category, SymbolQualitySignals::Constructor);
 }
 
 } // namespace

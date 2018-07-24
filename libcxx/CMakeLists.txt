@@ -155,6 +155,14 @@ endif()
 # cannot be used with LIBCXX_ENABLE_ABI_LINKER_SCRIPT.
 option(LIBCXX_ENABLE_STATIC_ABI_LIBRARY "Statically link the ABI library" OFF)
 
+cmake_dependent_option(LIBCXX_STATICALLY_LINK_ABI_IN_STATIC_LIBRARY
+  "Statically link the ABI library to static library" ON
+  "LIBCXX_ENABLE_STATIC_ABI_LIBRARY;LIBCXX_ENABLE_STATIC" OFF)
+
+cmake_dependent_option(LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY
+  "Statically link the ABI library to shared library" ON
+  "LIBCXX_ENABLE_STATIC_ABI_LIBRARY;LIBCXX_ENABLE_STATIC" OFF)
+
 # Generate and install a linker script inplace of libc++.so. The linker script
 # will link libc++ to the correct ABI library. This option is on by default
 # on UNIX platforms other than Apple unless 'LIBCXX_ENABLE_STATIC_ABI_LIBRARY'
@@ -378,7 +386,6 @@ endif ()
 set(LIBCXX_COMPILER    ${CMAKE_CXX_COMPILER})
 set(LIBCXX_SOURCE_DIR  ${CMAKE_CURRENT_SOURCE_DIR})
 set(LIBCXX_BINARY_DIR  ${CMAKE_CURRENT_BINARY_DIR})
-set(LIBCXX_HEADER_DIR  ${LLVM_BINARY_DIR})
 set(LIBCXX_BINARY_INCLUDE_DIR "${LIBCXX_BINARY_DIR}/include/c++build")
 
 string(REGEX MATCH "[0-9]+\\.[0-9]+(\\.[0-9]+)?" CLANG_VERSION
@@ -391,8 +398,10 @@ if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
   set(LIBCXX_HEADER_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/clang/${CLANG_VERSION})
 elseif(LLVM_LIBRARY_OUTPUT_INTDIR)
   set(LIBCXX_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR})
+  set(LIBCXX_HEADER_DIR  ${LLVM_BINARY_DIR})
 else()
   set(LIBCXX_LIBRARY_DIR ${CMAKE_BINARY_DIR}/lib${LIBCXX_LIBDIR_SUFFIX})
+  set(LIBCXX_HEADER_DIR  ${CMAKE_BINARY_DIR})
 endif()
 
 file(MAKE_DIRECTORY "${LIBCXX_BINARY_INCLUDE_DIR}")

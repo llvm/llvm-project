@@ -14,7 +14,7 @@
 #ifndef LLVM_LIB_CODEGEN_ASMPRINTER_CODEVIEWDEBUG_H
 #define LLVM_LIB_CODEGEN_ASMPRINTER_CODEVIEWDEBUG_H
 
-#include "DbgEntityHistoryCalculator.h"
+#include "DbgValueHistoryCalculator.h"
 #include "DebugHandlerBase.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"

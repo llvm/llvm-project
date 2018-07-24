@@ -104,6 +104,7 @@ namespace llvm {
       case Intrinsic::dbg_declare:
       case Intrinsic::dbg_value:
       case Intrinsic::dbg_addr:
+      case Intrinsic::dbg_label:
         return true;
       default: return false;
       }
@@ -164,7 +165,7 @@ namespace llvm {
   };
 
   /// This represents the llvm.dbg.label instruction.
-  class DbgLabelInst : public IntrinsicInst {
+  class DbgLabelInst : public DbgInfoIntrinsic {
   public:
     DILabel *getLabel() const {
       return cast<DILabel>(getRawVariable());

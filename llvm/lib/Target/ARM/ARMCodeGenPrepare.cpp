@@ -42,7 +42,7 @@
 using namespace llvm;
 
 static cl::opt<bool>
-DisableCGP("arm-disable-cgp", cl::Hidden, cl::init(false),
+DisableCGP("arm-disable-cgp", cl::Hidden, cl::init(true),
            cl::desc("Disable ARM specific CodeGenPrepare pass"));
 
 static cl::opt<bool>

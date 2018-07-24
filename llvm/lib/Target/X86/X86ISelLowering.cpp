@@ -33721,18 +33721,14 @@ static SDValue combineMulSpecial(uint64_t MulAmt, SDNode *N, SelectionDAG &DAG,
     return DAG.getNode(ISD::ADD, DL, VT, N->getOperand(0),
                        combineMulShlAddOrSub(5, 2, /*isAdd*/ true));
   case 19:
-    // mul x, 19 => sub ((shl (mul x, 5), 2), x)
-    return combineMulShlAddOrSub(5, 2, /*isAdd*/ false);
+    // mul x, 19 => add ((shl (mul x, 9), 1), x)
+    return combineMulShlAddOrSub(9, 1, /*isAdd*/ true);
   case 13:
     // mul x, 13 => add ((shl (mul x, 3), 2), x)
     return combineMulShlAddOrSub(3, 2, /*isAdd*/ true);
   case 23:
-    // mul x, 13 => sub ((shl (mul x, 3), 3), x)
+    // mul x, 23 => sub ((shl (mul x, 3), 3), x)
     return combineMulShlAddOrSub(3, 3, /*isAdd*/ false);
-  case 14:
-    // mul x, 14 => add (add ((shl (mul x, 3), 2), x), x)
-    return DAG.getNode(ISD::ADD, DL, VT, N->getOperand(0),
-                       combineMulShlAddOrSub(3, 2, /*isAdd*/ true));
   case 26:
     // mul x, 26 => sub ((mul (mul x, 9), 3), x)
     return combineMulMulAddOrSub(/*isAdd*/ false);
@@ -33743,15 +33739,6 @@ static SDValue combineMulSpecial(uint64_t MulAmt, SDNode *N, SelectionDAG &DAG,
     // mul x, 29 => add (add ((mul (mul x, 9), 3), x), x)
     return DAG.getNode(ISD::ADD, DL, VT, N->getOperand(0),
                        combineMulMulAddOrSub(/*isAdd*/ true));
-  case 30:
-    // mul x, 30 => sub (sub ((shl x, 5), x), x)
-    return DAG.getNode(
-        ISD::SUB, DL, VT,
-        DAG.getNode(ISD::SUB, DL, VT,
-                    DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
-                                DAG.getConstant(5, DL, MVT::i8)),
-                    N->getOperand(0)),
-        N->getOperand(0));
   }
   return SDValue();
 }
@@ -33927,6 +33914,7 @@ static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
       int NumSign = SignMulAmt > 0 ? 1 : -1;
       bool IsPowerOf2_64PlusOne = isPowerOf2_64(NumSign * SignMulAmt - 1);
       bool IsPowerOf2_64MinusOne = isPowerOf2_64(NumSign * SignMulAmt + 1);
+      bool IsPowerOf2_64MinusTwo = isPowerOf2_64(NumSign * SignMulAmt + 2);
       if (IsPowerOf2_64PlusOne) {
         // (mul x, 2^N + 1) => (add (shl x, N), x)
         NewMul = DAG.getNode(
@@ -33942,9 +33930,16 @@ static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
                         DAG.getConstant(Log2_64(NumSign * SignMulAmt + 1), DL,
                                         MVT::i8)),
             N->getOperand(0));
+      } else if (IsPowerOf2_64MinusTwo && NumSign == 1) {
+        // (mul x, 2^N - 1) => (sub (shl x, N), x)
+        NewMul = DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
+                             DAG.getConstant(Log2_64(NumSign * SignMulAmt + 2),
+                                             DL, MVT::i8));
+        NewMul = DAG.getNode(ISD::SUB, DL, VT, NewMul, N->getOperand(0));
+        NewMul = DAG.getNode(ISD::SUB, DL, VT, NewMul, N->getOperand(0));
       }
       // To negate, subtract the number from zero
-      if ((IsPowerOf2_64PlusOne || IsPowerOf2_64MinusOne) && NumSign == -1)
+      if (NewMul && NumSign == -1)
         NewMul =
             DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), NewMul);
     }
