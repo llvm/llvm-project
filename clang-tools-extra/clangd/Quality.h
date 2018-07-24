@@ -58,6 +58,7 @@ struct SymbolQualitySignals {
     Macro,
     Type,
     Function,
+    Constructor,
     Namespace,
     Keyword,
   } Category = Unknown;

@@ -67,6 +67,7 @@ static SymbolQualitySignals::SymbolCategory categorize(const NamedDecl &ND) {
     MAP(TypeDecl, Type);
     MAP(TypeAliasTemplateDecl, Type);
     MAP(ClassTemplateDecl, Type);
+    MAP(CXXConstructorDecl, Constructor);
     MAP(ValueDecl, Variable);
     MAP(VarTemplateDecl, Variable);
     MAP(FunctionDecl, Function);
@@ -96,6 +97,8 @@ categorize(const CodeCompletionResult &R) {
     return SymbolQualitySignals::Type;
   case CXCursor_MemberRef:
     return SymbolQualitySignals::Variable;
+  case CXCursor_Constructor:
+    return SymbolQualitySignals::Constructor;
   default:
     return SymbolQualitySignals::Keyword;
   }
@@ -124,10 +127,11 @@ categorize(const index::SymbolInfo &D) {
   case index::SymbolKind::InstanceProperty:
   case index::SymbolKind::ClassProperty:
   case index::SymbolKind::StaticProperty:
-  case index::SymbolKind::Constructor:
   case index::SymbolKind::Destructor:
   case index::SymbolKind::ConversionFunction:
     return SymbolQualitySignals::Function;
+  case index::SymbolKind::Constructor:
+    return SymbolQualitySignals::Constructor;
   case index::SymbolKind::Variable:
   case index::SymbolKind::Field:
   case index::SymbolKind::EnumConstant:
@@ -210,6 +214,7 @@ float SymbolQualitySignals::evaluate() const {
     Score *= 0.2f;
     break;
   case Unknown:
+  case Constructor: // No boost constructors so they are after class types.
     break;
   }
 
