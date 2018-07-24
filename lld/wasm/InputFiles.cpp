@@ -42,6 +42,17 @@ Optional<MemoryBufferRef> lld::wasm::readFile(StringRef Path) {
   return MBRef;
 }
 
+InputFile *lld::wasm::createObjectFile(MemoryBufferRef MB) {
+  file_magic Magic = identify_magic(MB.getBuffer());
+  if (Magic == file_magic::wasm_object)
+    return make<ObjFile>(MB);
+
+  if (Magic == file_magic::bitcode)
+    return make<BitcodeFile>(MB);
+
+  fatal("unknown file type: " + MB.getBufferIdentifier());
+}
+
 void ObjFile::dumpInfo() const {
   log("info for: " + getName() +
       "\n              Symbols : " + Twine(Symbols.size()) +
@@ -360,18 +371,7 @@ void ArchiveFile::addMember(const Archive::Symbol *Sym) {
             "could not get the buffer for the member defining symbol " +
                 Sym->getName());
 
-  InputFile *Obj;
-
-  file_magic Magic = identify_magic(MB.getBuffer());
-  if (Magic == file_magic::wasm_object) {
-    Obj = make<ObjFile>(MB);
-  } else if (Magic == file_magic::bitcode) {
-    Obj = make<BitcodeFile>(MB);
-  } else {
-    error("unknown file type: " + MB.getBufferIdentifier());
-    return;
-  }
-
+  InputFile *Obj = createObjectFile(MB);
   Obj->ArchiveName = getName();
   Symtab->addFile(Obj);
 }
