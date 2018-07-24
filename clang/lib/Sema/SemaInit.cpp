@@ -6167,49 +6167,6 @@ PerformConstructorInitialization(Sema &S,
   return CurInit;
 }
 
-/// Determine whether the specified InitializedEntity definitely has a lifetime
-/// longer than the current full-expression. Conservatively returns false if
-/// it's unclear.
-static bool
-InitializedEntityOutlivesFullExpression(const InitializedEntity &Entity) {
-  const InitializedEntity *Top = &Entity;
-  while (Top->getParent())
-    Top = Top->getParent();
-
-  switch (Top->getKind()) {
-  case InitializedEntity::EK_Variable:
-  case InitializedEntity::EK_Result:
-  case InitializedEntity::EK_StmtExprResult:
-  case InitializedEntity::EK_Exception:
-  case InitializedEntity::EK_Member:
-  case InitializedEntity::EK_Binding:
-  case InitializedEntity::EK_New:
-  case InitializedEntity::EK_Base:
-  case InitializedEntity::EK_Delegating:
-    return true;
-
-  case InitializedEntity::EK_ArrayElement:
-  case InitializedEntity::EK_VectorElement:
-  case InitializedEntity::EK_BlockElement:
-  case InitializedEntity::EK_LambdaToBlockConversionBlockElement:
-  case InitializedEntity::EK_ComplexElement:
-    // Could not determine what the full initialization is. Assume it might not
-    // outlive the full-expression.
-    return false;
-
-  case InitializedEntity::EK_Parameter:
-  case InitializedEntity::EK_Parameter_CF_Audited:
-  case InitializedEntity::EK_Temporary:
-  case InitializedEntity::EK_LambdaCapture:
-  case InitializedEntity::EK_CompoundLiteralInit:
-  case InitializedEntity::EK_RelatedResult:
-    // The entity being initialized might not outlive the full-expression.
-    return false;
-  }
-
-  llvm_unreachable("unknown entity kind");
-}
-
 namespace {
 enum LifetimeKind {
   /// The lifetime of a temporary bound to this entity ends at the end of the
@@ -6391,6 +6348,13 @@ static bool isVarOnPath(IndirectLocalPath &Path, VarDecl *VD) {
     if (E.Kind == IndirectLocalPathEntry::VarInit && E.D == VD)
       return true;
   return false;
+}
+
+static bool pathContainsInit(IndirectLocalPath &Path) {
+  return std::any_of(Path.begin(), Path.end(), [=](IndirectLocalPathEntry E) {
+    return E.Kind == IndirectLocalPathEntry::DefaultInit ||
+           E.Kind == IndirectLocalPathEntry::VarInit;
+  });
 }
 
 static void visitLocalsRetainedByInitializer(IndirectLocalPath &Path,
@@ -6660,6 +6624,12 @@ static void visitLocalsRetainedByInitializer(IndirectLocalPath &Path,
     // If the initializer is the address of a local, we could have a lifetime
     // problem.
     if (UO->getOpcode() == UO_AddrOf) {
+      // If this is &rvalue, then it's ill-formed and we have already diagnosed
+      // it. Don't produce a redundant warning about the lifetime of the
+      // temporary.
+      if (isa<MaterializeTemporaryExpr>(UO->getSubExpr()))
+        return;
+
       Path.push_back({IndirectLocalPathEntry::AddressOf, UO});
       visitLocalsRetainedByReferenceBinding(Path, UO->getSubExpr(),
                                             RK_ReferenceBinding, Visit);
@@ -6761,9 +6731,14 @@ void Sema::checkInitializerLifetime(const InitializedEntity &Entity,
 
     case LK_Extended: {
       auto *MTE = dyn_cast<MaterializeTemporaryExpr>(L);
-      if (!MTE)
-        // FIXME: Warn on this.
+      if (!MTE) {
+        // The initialized entity has lifetime beyond the full-expression,
+        // and the local entity does too, so don't warn.
+        //
+        // FIXME: We should consider warning if a static / thread storage
+        // duration variable retains an automatic storage duration local.
         return false;
+      }
 
       // Lifetime-extend the temporary.
       if (Path.empty()) {
@@ -6779,30 +6754,36 @@ void Sema::checkInitializerLifetime(const InitializedEntity &Entity,
         // We're supposed to lifetime-extend the temporary along this path (per
         // the resolution of DR1815), but we don't support that yet.
         //
-        // FIXME: Properly handle these situations.
-        // For the default member initializer case, perhaps the easiest approach
+        // FIXME: Properly handle this situation. Perhaps the easiest approach
         // would be to clone the initializer expression on each use that would
         // lifetime extend its temporaries.
-        Diag(DiagLoc, RK == RK_ReferenceBinding
-                          ? diag::warn_unsupported_temporary_not_extended
-                          : diag::warn_unsupported_init_list_not_extended)
-            << DiagRange;
+        Diag(DiagLoc, diag::warn_unsupported_lifetime_extension)
+            << RK << DiagRange;
       } else {
-        // FIXME: Warn on this.
-        return false;
+        // If the path goes through the initialization of a variable or field,
+        // it can't possibly reach a temporary created in this full-expression.
+        // We will have already diagnosed any problems with the initializer.
+        if (pathContainsInit(Path))
+          return false;
+
+        Diag(DiagLoc, diag::warn_dangling_variable)
+            << RK << !Entity.getParent() << ExtendingEntity->getDecl()
+            << Init->isGLValue() << DiagRange;
       }
       break;
     }
 
     case LK_MemInitializer: {
-      if (auto *MTE = dyn_cast<MaterializeTemporaryExpr>(L)) {
+      if (isa<MaterializeTemporaryExpr>(L)) {
         // Under C++ DR1696, if a mem-initializer (or a default member
         // initializer used by the absence of one) would lifetime-extend a
         // temporary, the program is ill-formed.
         if (auto *ExtendingDecl =
                 ExtendingEntity ? ExtendingEntity->getDecl() : nullptr) {
           bool IsSubobjectMember = ExtendingEntity != &Entity;
-          Diag(DiagLoc, diag::err_bind_ref_member_to_temporary)
+          Diag(DiagLoc, shouldLifetimeExtendThroughPath(Path)
+                            ? diag::err_dangling_member
+                            : diag::warn_dangling_member)
               << ExtendingDecl << IsSubobjectMember << RK << DiagRange;
           // Don't bother adding a note pointing to the field if we're inside
           // its default member initializer; our primary diagnostic points to
@@ -6826,9 +6807,7 @@ void Sema::checkInitializerLifetime(const InitializedEntity &Entity,
         // Paths via a default initializer can only occur during error recovery
         // (there's no other way that a default initializer can refer to a
         // local). Don't produce a bogus warning on those cases.
-        if (std::any_of(Path.begin(), Path.end(), [](IndirectLocalPathEntry E) {
-              return E.Kind == IndirectLocalPathEntry::DefaultInit;
-            }))
+        if (pathContainsInit(Path))
           return false;
 
         auto *DRE = dyn_cast<DeclRefExpr>(L);
@@ -6854,11 +6833,11 @@ void Sema::checkInitializerLifetime(const InitializedEntity &Entity,
     }
 
     case LK_New:
-      if (auto *MTE = dyn_cast<MaterializeTemporaryExpr>(L)) {
+      if (isa<MaterializeTemporaryExpr>(L)) {
         Diag(DiagLoc, RK == RK_ReferenceBinding
                           ? diag::warn_new_dangling_reference
                           : diag::warn_new_dangling_initializer_list)
-            << (ExtendingEntity != &Entity) << DiagRange;
+            << !Entity.getParent() << DiagRange;
       } else {
         // We can't determine if the allocation outlives the local declaration.
         return false;
@@ -7182,21 +7161,6 @@ InitializationSequence::Perform(Sema &S,
     S.Diag(Args[0]->getLocStart(), diag::err_opencl_atomic_init) << 1 <<
     SourceRange(Entity.getDecl()->getLocStart(), Args[0]->getLocEnd());
     return ExprError();
-  }
-
-  // Diagnose cases where we initialize a pointer to an array temporary, and the
-  // pointer obviously outlives the temporary.
-  // FIXME: Fold this into checkInitializerLifetime.
-  if (Args.size() == 1 && Args[0]->getType()->isArrayType() &&
-      Entity.getType()->isPointerType() &&
-      InitializedEntityOutlivesFullExpression(Entity)) {
-    const Expr *Init = Args[0]->skipRValueSubobjectAdjustments();
-    if (auto *MTE = dyn_cast<MaterializeTemporaryExpr>(Init))
-      Init = MTE->GetTemporaryExpr();
-    Expr::LValueClassification Kind = Init->ClassifyLValue(S.Context);
-    if (Kind == Expr::LV_ClassTemporary || Kind == Expr::LV_ArrayTemporary)
-      S.Diag(Init->getLocStart(), diag::warn_temporary_array_to_pointer_decay)
-        << Init->getSourceRange();
   }
 
   QualType DestType = Entity.getType().getNonReferenceType();

@@ -191,7 +191,10 @@ private:
   sinkPostLoadHardenedInst(MachineInstr &MI,
                            SmallPtrSetImpl<MachineInstr *> &HardenedInstrs);
   bool canHardenRegister(unsigned Reg);
-  void hardenPostLoad(MachineInstr &MI);
+  unsigned hardenValueInRegister(unsigned Reg, MachineBasicBlock &MBB,
+                                 MachineBasicBlock::iterator InsertPt,
+                                 DebugLoc Loc);
+  unsigned hardenPostLoad(MachineInstr &MI);
   void hardenReturnInstr(MachineInstr &MI);
 };
 
@@ -1430,12 +1433,11 @@ void X86SpeculativeLoadHardeningPass::hardenAllLoads(MachineFunction &MF) {
           }
         }
 
-        // The register def'ed by this instruction is trivially hardened so map
-        // it to itself.
-        AddrRegToHardenedReg[MI.getOperand(0).getReg()] =
-            MI.getOperand(0).getReg();
+        unsigned HardenedReg = hardenPostLoad(MI);
 
-        hardenPostLoad(MI);
+        // Mark the resulting hardened register as such so we don't re-harden.
+        AddrRegToHardenedReg[HardenedReg] = HardenedReg;
+
         continue;
       }
 
@@ -1866,127 +1868,96 @@ bool X86SpeculativeLoadHardeningPass::canHardenRegister(unsigned Reg) {
   return RC->hasSuperClassEq(GPRRegClasses[Log2_32(RegBytes)]);
 }
 
-// We can harden non-leaking loads into register without touching the address
-// by just hiding all of the loaded bits. We use an `or` instruction to do
-// this because having the poison value be all ones allows us to use the same
-// value below. And the goal is just for the loaded bits to not be exposed to
-// execution and coercing them to one is sufficient.
-void X86SpeculativeLoadHardeningPass::hardenPostLoad(MachineInstr &MI) {
-  MachineBasicBlock &MBB = *MI.getParent();
-  DebugLoc Loc = MI.getDebugLoc();
+/// Harden a value in a register.
+///
+/// This is the low-level logic to fully harden a value sitting in a register
+/// against leaking during speculative execution.
+///
+/// Unlike hardening an address that is used by a load, this routine is required
+/// to hide *all* incoming bits in the register.
+///
+/// `Reg` must be a virtual register. Currently, it is required to be a GPR no
+/// larger than the predicate state register. FIXME: We should support vector
+/// registers here by broadcasting the predicate state.
+///
+/// The new, hardened virtual register is returned. It will have the same
+/// register class as `Reg`.
+unsigned X86SpeculativeLoadHardeningPass::hardenValueInRegister(
+    unsigned Reg, MachineBasicBlock &MBB, MachineBasicBlock::iterator InsertPt,
+    DebugLoc Loc) {
+  assert(canHardenRegister(Reg) && "Cannot harden this register!");
+  assert(TRI->isVirtualRegister(Reg) && "Cannot harden a physical register!");
 
-  // For all of these, the def'ed register operand is operand zero.
-  auto &DefOp = MI.getOperand(0);
-  unsigned OldDefReg = DefOp.getReg();
-  assert(canHardenRegister(OldDefReg) &&
-         "Cannot harden this instruction's defined register!");
+  auto *RC = MRI->getRegClass(Reg);
+  int Bytes = TRI->getRegSizeInBits(*RC) / 8;
 
-  auto *DefRC = MRI->getRegClass(OldDefReg);
-  int DefRegBytes = TRI->getRegSizeInBits(*DefRC) / 8;
+  unsigned StateReg = PS->SSA.GetValueAtEndOfBlock(&MBB);
 
-  unsigned OrOpCodes[] = {X86::OR8rr, X86::OR16rr, X86::OR32rr, X86::OR64rr};
-  unsigned OrOpCode = OrOpCodes[Log2_32(DefRegBytes)];
+  // FIXME: Need to teach this about 32-bit mode.
+  if (Bytes != 8) {
+    unsigned SubRegImms[] = {X86::sub_8bit, X86::sub_16bit, X86::sub_32bit};
+    unsigned SubRegImm = SubRegImms[Log2_32(Bytes)];
+    unsigned NarrowStateReg = MRI->createVirtualRegister(RC);
+    BuildMI(MBB, InsertPt, Loc, TII->get(TargetOpcode::COPY), NarrowStateReg)
+        .addReg(StateReg, 0, SubRegImm);
+    StateReg = NarrowStateReg;
+  }
 
-  unsigned SubRegImms[] = {X86::sub_8bit, X86::sub_16bit, X86::sub_32bit};
-
-  auto GetStateRegInRC = [&](const TargetRegisterClass &RC) {
-    unsigned StateReg = PS->SSA.GetValueAtEndOfBlock(&MBB);
-
-    int Bytes = TRI->getRegSizeInBits(RC) / 8;
-    // FIXME: Need to teach this about 32-bit mode.
-    if (Bytes != 8) {
-      unsigned SubRegImm = SubRegImms[Log2_32(Bytes)];
-      unsigned NarrowStateReg = MRI->createVirtualRegister(&RC);
-      BuildMI(MBB, MI.getIterator(), Loc, TII->get(TargetOpcode::COPY),
-              NarrowStateReg)
-          .addReg(StateReg, 0, SubRegImm);
-      StateReg = NarrowStateReg;
-    }
-    return StateReg;
-  };
-
-  auto InsertPt = std::next(MI.getIterator());
   unsigned FlagsReg = 0;
-  bool EFLAGSLive = isEFLAGSLive(MBB, InsertPt, *TRI);
-  if (EFLAGSLive && !Subtarget->hasBMI2()) {
+  if (isEFLAGSLive(MBB, InsertPt, *TRI))
     FlagsReg = saveEFLAGS(MBB, InsertPt, Loc);
-    EFLAGSLive = false;
-  }
 
-  if (!EFLAGSLive) {
-    unsigned StateReg = GetStateRegInRC(*DefRC);
-    unsigned NewDefReg = MRI->createVirtualRegister(DefRC);
-    DefOp.setReg(NewDefReg);
-    auto OrI = BuildMI(MBB, InsertPt, Loc, TII->get(OrOpCode), OldDefReg)
-                   .addReg(StateReg)
-                   .addReg(NewDefReg);
-    OrI->addRegisterDead(X86::EFLAGS, TRI);
-    ++NumInstsInserted;
-    LLVM_DEBUG(dbgs() << "  Inserting or: "; OrI->dump(); dbgs() << "\n");
-  } else {
-    assert(Subtarget->hasBMI2() &&
-           "Cannot harden loads and preserve EFLAGS without BMI2!");
-
-    unsigned ShiftOpCode = DefRegBytes < 4 ? X86::SHRX32rr : X86::SHRX64rr;
-    auto &ShiftRC =
-        DefRegBytes < 4 ? X86::GR32_NOSPRegClass : X86::GR64_NOSPRegClass;
-    int ShiftRegBytes = TRI->getRegSizeInBits(ShiftRC) / 8;
-    unsigned DefSubRegImm = SubRegImms[Log2_32(DefRegBytes)];
-
-    unsigned StateReg = GetStateRegInRC(ShiftRC);
-
-    // First have the def instruction def a temporary register.
-    unsigned TmpReg = MRI->createVirtualRegister(DefRC);
-    DefOp.setReg(TmpReg);
-    // Now copy it into a register of the shift RC.
-    unsigned ShiftInputReg = TmpReg;
-    if (DefRegBytes != ShiftRegBytes) {
-      unsigned UndefReg = MRI->createVirtualRegister(&ShiftRC);
-      BuildMI(MBB, InsertPt, Loc, TII->get(X86::IMPLICIT_DEF), UndefReg);
-      ShiftInputReg = MRI->createVirtualRegister(&ShiftRC);
-      BuildMI(MBB, InsertPt, Loc, TII->get(X86::INSERT_SUBREG), ShiftInputReg)
-          .addReg(UndefReg)
-          .addReg(TmpReg)
-          .addImm(DefSubRegImm);
-    }
-
-    // We shift this once if the shift is wider than the def and thus we can
-    // shift *all* of the def'ed bytes out. Otherwise we need to do two shifts.
-
-    unsigned ShiftedReg = MRI->createVirtualRegister(&ShiftRC);
-    auto Shift1I =
-        BuildMI(MBB, InsertPt, Loc, TII->get(ShiftOpCode), ShiftedReg)
-            .addReg(ShiftInputReg)
-            .addReg(StateReg);
-    (void)Shift1I;
-    ++NumInstsInserted;
-    LLVM_DEBUG(dbgs() << "  Inserting shrx: "; Shift1I->dump(); dbgs() << "\n");
-
-    // The only way we have a bit left is if all 8 bytes were defined. Do an
-    // extra shift to get the last bit in this case.
-    if (DefRegBytes == ShiftRegBytes) {
-      // We can just directly def the old def register as its the same size.
-      ShiftInputReg = ShiftedReg;
-      auto Shift2I =
-          BuildMI(MBB, InsertPt, Loc, TII->get(ShiftOpCode), OldDefReg)
-              .addReg(ShiftInputReg)
-              .addReg(StateReg);
-      (void)Shift2I;
-      ++NumInstsInserted;
-      LLVM_DEBUG(dbgs() << "  Inserting shrx: "; Shift2I->dump();
-                 dbgs() << "\n");
-    } else {
-      // When we have different size shift register we need to fix up the
-      // class. We can do that as we copy into the old def register.
-      BuildMI(MBB, InsertPt, Loc, TII->get(TargetOpcode::COPY), OldDefReg)
-          .addReg(ShiftedReg, 0, DefSubRegImm);
-    }
-  }
+  unsigned NewReg = MRI->createVirtualRegister(RC);
+  unsigned OrOpCodes[] = {X86::OR8rr, X86::OR16rr, X86::OR32rr, X86::OR64rr};
+  unsigned OrOpCode = OrOpCodes[Log2_32(Bytes)];
+  auto OrI = BuildMI(MBB, InsertPt, Loc, TII->get(OrOpCode), NewReg)
+                 .addReg(StateReg)
+                 .addReg(Reg);
+  OrI->addRegisterDead(X86::EFLAGS, TRI);
+  ++NumInstsInserted;
+  LLVM_DEBUG(dbgs() << "  Inserting or: "; OrI->dump(); dbgs() << "\n");
 
   if (FlagsReg)
     restoreEFLAGS(MBB, InsertPt, Loc, FlagsReg);
 
+  return NewReg;
+}
+
+/// Harden a load by hardening the loaded value in the defined register.
+///
+/// We can harden a non-leaking load into a register without touching the
+/// address by just hiding all of the loaded bits during misspeculation. We use
+/// an `or` instruction to do this because we set up our poison value as all
+/// ones. And the goal is just for the loaded bits to not be exposed to
+/// execution and coercing them to one is sufficient.
+///
+/// Returns the newly hardened register.
+unsigned X86SpeculativeLoadHardeningPass::hardenPostLoad(MachineInstr &MI) {
+  MachineBasicBlock &MBB = *MI.getParent();
+  DebugLoc Loc = MI.getDebugLoc();
+
+  auto &DefOp = MI.getOperand(0);
+  unsigned OldDefReg = DefOp.getReg();
+  auto *DefRC = MRI->getRegClass(OldDefReg);
+
+  // Because we want to completely replace the uses of this def'ed value with
+  // the hardened value, create a dedicated new register that will only be used
+  // to communicate the unhardened value to the hardening.
+  unsigned UnhardenedReg = MRI->createVirtualRegister(DefRC);
+  DefOp.setReg(UnhardenedReg);
+
+  // Now harden this register's value, getting a hardened reg that is safe to
+  // use. Note that we insert the instructions to compute this *after* the
+  // defining instruction, not before it.
+  unsigned HardenedReg = hardenValueInRegister(
+      UnhardenedReg, MBB, std::next(MI.getIterator()), Loc);
+
+  // Finally, replace the old register (which now only has the uses of the
+  // original def) with the hardened register.
+  MRI->replaceRegWith(/*FromReg*/ OldDefReg, /*ToReg*/ HardenedReg);
+
   ++NumPostLoadRegsHardened;
+  return HardenedReg;
 }
 
 /// Harden a return instruction.

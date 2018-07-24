@@ -300,7 +300,7 @@ namespace dr1696 { // dr1696: 7
 #if __cplusplus >= 201103L
   struct B {
     A &&a; // expected-note {{declared here}}
-    B() : a{} {} // expected-error {{reference member 'a' binds to a temporary object whose lifetime would be shorter than the constructed object}}
+    B() : a{} {} // expected-error {{reference member 'a' binds to a temporary object whose lifetime would be shorter than the lifetime of the constructed object}}
   } b;
 #endif
 
@@ -308,7 +308,7 @@ namespace dr1696 { // dr1696: 7
     C();
     const A &a; // expected-note {{declared here}}
   };
-  C::C() : a(A()) {} // expected-error {{reference member 'a' binds to a temporary object whose lifetime would be shorter than the constructed object}}
+  C::C() : a(A()) {} // expected-error {{reference member 'a' binds to a temporary object whose lifetime would be shorter than the lifetime of the constructed object}}
 
 #if __cplusplus >= 201103L
   // This is OK in C++14 onwards, per DR1815, though we don't support that yet:

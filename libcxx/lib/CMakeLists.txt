@@ -44,7 +44,7 @@ if (APPLE AND (LIBCXX_CXX_ABI_LIBNAME STREQUAL "libcxxabi" OR
   set(LIBCXX_OSX_REEXPORT_SYSTEM_ABI_LIBRARY ON)
 endif()
 
-if (LIBCXX_ENABLE_STATIC_ABI_LIBRARY)
+if (LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY)
   add_library_flags("-Wl,--whole-archive" "-Wl,-Bstatic")
   add_library_flags("${LIBCXX_CXX_ABI_LIBRARY}")
   add_library_flags("-Wl,-Bdynamic" "-Wl,--no-whole-archive")
@@ -259,14 +259,14 @@ if (LIBCXX_ENABLE_STATIC)
 
   list(APPEND LIBCXX_TARGETS "cxx_static")
   # Attempt to merge the libc++.a archive and the ABI library archive into one.
-  if (LIBCXX_ENABLE_STATIC_ABI_LIBRARY)
+  if (LIBCXX_STATICALLY_LINK_ABI_IN_STATIC_LIBRARY)
     set(MERGE_ARCHIVES_SEARCH_PATHS "")
     if (LIBCXX_CXX_ABI_LIBRARY_PATH)
       set(MERGE_ARCHIVES_SEARCH_PATHS "-L${LIBCXX_CXX_ABI_LIBRARY_PATH}")
     endif()
     if ((TARGET ${LIBCXX_CXX_ABI_LIBRARY}) OR
         (${LIBCXX_CXX_ABI_LIBRARY} MATCHES "cxxabi(_static|_shared)?" AND HAVE_LIBCXXABI))
-      set(MERGE_ARCHIVES_ABI_TARGET "$<TARGET_LINKER_FILE:${LIBCXX_CXX_ABI_LIBRARY}>")
+      set(MERGE_ARCHIVES_ABI_TARGET "$<TARGET_LINKER_FILE:cxxabi_static>")
     else()
       set(MERGE_ARCHIVES_ABI_TARGET
           "${CMAKE_STATIC_LIBRARY_PREFIX}${LIBCXX_CXX_ABI_LIBRARY}${CMAKE_STATIC_LIBRARY_SUFFIX}")

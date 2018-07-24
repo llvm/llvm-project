@@ -1845,10 +1845,6 @@ def err_reference_bind_failed : Error<
   "type $|could not bind to %select{rvalue|lvalue}1 of incompatible type}0,2">;
 def err_reference_bind_init_list : Error<
   "reference to type %0 cannot bind to an initializer list">;
-def warn_temporary_array_to_pointer_decay : Warning<
-  "pointer is initialized by a temporary array, which will be destroyed at the "
-  "end of the full-expression">,
-  InGroup<DiagGroup<"address-of-array-temporary">>;
 def err_init_list_bad_dest_type : Error<
   "%select{|non-aggregate }0type %1 cannot be initialized with an initializer "
   "list">;
@@ -7876,15 +7872,31 @@ def warn_init_ptr_member_to_parameter_addr : Warning<
 def note_ref_or_ptr_member_declared_here : Note<
   "%select{reference|pointer}0 member declared here">;
 
-def err_bind_ref_member_to_temporary : Error<
+def err_dangling_member : Error<
   "%select{reference|backing array for 'std::initializer_list'}2 "
   "%select{|subobject of }1member %0 "
   "%select{binds to|is}2 a temporary object "
-  "whose lifetime would be shorter than the constructed object">;
+  "whose lifetime would be shorter than the lifetime of "
+  "the constructed object">;
+def warn_dangling_member : Warning<
+  "%select{reference|backing array for 'std::initializer_list'}2 "
+  "%select{|subobject of }1member %0 "
+  "%select{binds to|is}2 a temporary object "
+  "whose lifetime is shorter than the lifetime of the constructed object">,
+  InGroup<DanglingField>;
 def note_lifetime_extending_member_declared_here : Note<
   "%select{%select{reference|'std::initializer_list'}0 member|"
   "member with %select{reference|'std::initializer_list'}0 subobject}1 "
   "declared here">;
+def warn_dangling_variable : Warning<
+  "%select{temporary %select{whose address is used as value of|bound to}3 "
+  "%select{%select{|reference }3member of local variable|"
+  "local %select{variable|reference}3}1|"
+  "array backing "
+  "%select{initializer list subobject of local variable|"
+  "local initializer list}1}0 "
+  "%2 will be destroyed at the end of the full-expression">,
+  InGroup<Dangling>;
 def warn_new_dangling_reference : Warning<
   "temporary bound to reference member of allocated object "
   "will be destroyed at the end of the full-expression">,
@@ -7895,16 +7907,12 @@ def warn_new_dangling_initializer_list : Warning<
   "the allocated initializer list}0 "
   "will be destroyed at the end of the full-expression">,
   InGroup<DanglingInitializerList>;
-def warn_unsupported_temporary_not_extended : Warning<
-  "sorry, lifetime extension of temporary created "
+def warn_unsupported_lifetime_extension : Warning<
+  "sorry, lifetime extension of "
+  "%select{temporary|backing array of initializer list}0 created "
   "by aggregate initialization using default member initializer "
-  "is not supported; lifetime of temporary "
-  "will end at the end of the full-expression">, InGroup<DanglingField>;
-def warn_unsupported_init_list_not_extended : Warning<
-  "sorry, lifetime extension of backing array of initializer list created "
-  "by aggregate initialization using default member initializer "
-  "is not supported; lifetime of backing array will end at the end of the "
-  "full-expression">, InGroup<DanglingInitializerList>;
+  "is not supported; lifetime of %select{temporary|backing array}0 "
+  "will end at the end of the full-expression">, InGroup<Dangling>;
 
 // For non-floating point, expressions of the form x == x or x != x
 // should result in a warning, since these always evaluate to a constant.

@@ -131,9 +131,9 @@ if(OS_NAME MATCHES "Linux|Fuchsia" AND COMPILER_RT_LIBCXX_PATH)
                  -DLIBCXX_ENABLE_EXCEPTIONS=OFF
                  -DLIBCXX_ENABLE_SHARED=OFF
                  -DLIBCXX_CXX_ABI=none)
-    target_compile_options(RTfuzzer.${arch} PRIVATE -isystem ${LIBCXX_${arch}_PREFIX}-bins/include/c++/v1)
+    target_compile_options(RTfuzzer.${arch} PRIVATE -isystem ${LIBCXX_${arch}_PREFIX}/include/c++/v1)
     add_dependencies(RTfuzzer.${arch} libcxx_fuzzer_${arch}-build)
-    target_compile_options(RTfuzzer_main.${arch} PRIVATE -isystem ${LIBCXX_${arch}_PREFIX}-bins/include/c++/v1)
+    target_compile_options(RTfuzzer_main.${arch} PRIVATE -isystem ${LIBCXX_${arch}_PREFIX}/include/c++/v1)
     add_dependencies(RTfuzzer_main.${arch} libcxx_fuzzer_${arch}-build)
     partially_link_libcxx(fuzzer_no_main ${LIBCXX_${arch}_PREFIX} ${arch})
     partially_link_libcxx(fuzzer ${LIBCXX_${arch}_PREFIX} ${arch})

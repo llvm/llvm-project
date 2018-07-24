@@ -723,6 +723,7 @@ void ASTStmtReader::VisitCastExpr(CastExpr *E) {
   assert(NumBaseSpecs == E->path_size());
   E->setSubExpr(Record.readSubExpr());
   E->setCastKind((CastKind)Record.readInt());
+  E->setIsPartOfExplicitCast(Record.readInt());
   CastExpr::path_iterator BaseI = E->path_begin();
   while (NumBaseSpecs--) {
     auto *BaseSpec = new (Record.getContext()) CXXBaseSpecifier;

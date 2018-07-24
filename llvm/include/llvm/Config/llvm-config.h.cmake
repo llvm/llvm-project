@@ -62,6 +62,9 @@
 /* Define if we have the oprofile JIT-support library */
 #cmakedefine01 LLVM_USE_OPROFILE
 
+/* Define if we have the perf JIT-support library */
+#cmakedefine01 LLVM_USE_PERF
+
 /* Major version of the LLVM API */
 #define LLVM_VERSION_MAJOR ${LLVM_VERSION_MAJOR}
 

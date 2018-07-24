@@ -137,10 +137,11 @@ entry:
 ; PIC64:   daddiu  $4, $[[R1]], %tlsldm(f3.i)
 ; PIC64:   ld      $25, %call16(__tls_get_addr)($[[R1]])
 ; PIC64:   jalr    $25
-; PIC64:   daddiu  $[[R0:[0-9]+]], $2, %dtprel_hi(f3.i)
-; PIC64:   lw      $[[R1:[0-9]+]], %dtprel_lo(f3.i)($[[R0]])
-; PIC64:   addiu   $[[R1]], $[[R1]], 1
-; PIC64:   sw      $[[R1]], %dtprel_lo(f3.i)($[[R0]])
+; PIC64:   lui     $[[R0:[0-9]+]], %dtprel_hi(f3.i)
+; PIC64:   daddu   $[[R1:[0-9]+]], $[[R0]], $2
+; PIC64:   lw      $[[R2:[0-9]+]], %dtprel_lo(f3.i)($[[R1]])
+; PIC64:   addiu   $[[R2]], $[[R2]], 1
+; PIC64:   sw      $[[R2]], %dtprel_lo(f3.i)($[[R1]])
 
 ; MM-LABEL:       f3:
 ; MM:   addiu   $4, ${{[a-z0-9]+}}, %tlsldm(f3.i)
