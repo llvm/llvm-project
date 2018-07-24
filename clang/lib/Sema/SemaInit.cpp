@@ -15,6 +15,7 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
+#include "clang/AST/ExprOpenMP.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/Designator.h"
@@ -1020,6 +1021,7 @@ static void warnBracedScalarInit(Sema &S, const InitializedEntity &Entity,
   case InitializedEntity::EK_BlockElement:
   case InitializedEntity::EK_LambdaToBlockConversionBlockElement:
   case InitializedEntity::EK_Binding:
+  case InitializedEntity::EK_StmtExprResult:
     llvm_unreachable("unexpected braced scalar init");
   }
 
@@ -3000,6 +3002,7 @@ DeclarationName InitializedEntity::getName() const {
     return DeclarationName(Capture.VarID);
       
   case EK_Result:
+  case EK_StmtExprResult:
   case EK_Exception:
   case EK_New:
   case EK_Temporary:
@@ -3030,6 +3033,7 @@ ValueDecl *InitializedEntity::getDecl() const {
     return reinterpret_cast<ParmVarDecl*>(Parameter & ~0x1);
 
   case EK_Result:
+  case EK_StmtExprResult:
   case EK_Exception:
   case EK_New:
   case EK_Temporary:
@@ -3055,6 +3059,7 @@ bool InitializedEntity::allowsNRVO() const {
   case EK_Exception:
     return LocAndNRVO.NRVO;
 
+  case EK_StmtExprResult:
   case EK_Variable:
   case EK_Parameter:
   case EK_Parameter_CF_Audited:
@@ -3090,6 +3095,7 @@ unsigned InitializedEntity::dumpImpl(raw_ostream &OS) const {
   case EK_Parameter_CF_Audited: OS << "CF audited function Parameter";
     break;
   case EK_Result: OS << "Result"; break;
+  case EK_StmtExprResult: OS << "StmtExprResult"; break;
   case EK_Exception: OS << "Exception"; break;
   case EK_Member: OS << "Member"; break;
   case EK_Binding: OS << "Binding"; break;
@@ -3534,7 +3540,8 @@ static void MaybeProduceObjCObject(Sema &S,
   /// retainable type, then returns need to immediately retain the
   /// object.  If an autorelease is required, it will be done at the
   /// last instant.
-  } else if (Entity.getKind() == InitializedEntity::EK_Result) {
+  } else if (Entity.getKind() == InitializedEntity::EK_Result ||
+             Entity.getKind() == InitializedEntity::EK_StmtExprResult) {
     if (!Entity.getType()->isObjCRetainableType())
       return;
 
@@ -5632,6 +5639,7 @@ getAssignmentAction(const InitializedEntity &Entity, bool Diagnose = false) {
     return !Diagnose ? Sema::AA_Passing : Sema::AA_Passing_CFAudited;
       
   case InitializedEntity::EK_Result:
+  case InitializedEntity::EK_StmtExprResult: // FIXME: Not quite right.
     return Sema::AA_Returning;
 
   case InitializedEntity::EK_Temporary:
@@ -5661,6 +5669,7 @@ static bool shouldBindAsTemporary(const InitializedEntity &Entity) {
   case InitializedEntity::EK_ArrayElement:
   case InitializedEntity::EK_Member:
   case InitializedEntity::EK_Result:
+  case InitializedEntity::EK_StmtExprResult:
   case InitializedEntity::EK_New:
   case InitializedEntity::EK_Variable:
   case InitializedEntity::EK_Base:
@@ -5690,6 +5699,7 @@ static bool shouldBindAsTemporary(const InitializedEntity &Entity) {
 static bool shouldDestroyEntity(const InitializedEntity &Entity) {
   switch (Entity.getKind()) {
     case InitializedEntity::EK_Result:
+    case InitializedEntity::EK_StmtExprResult:
     case InitializedEntity::EK_New:
     case InitializedEntity::EK_Base:
     case InitializedEntity::EK_Delegating:
@@ -5721,6 +5731,7 @@ static SourceLocation getInitializationLoc(const InitializedEntity &Entity,
                                            Expr *Initializer) {
   switch (Entity.getKind()) {
   case InitializedEntity::EK_Result:
+  case InitializedEntity::EK_StmtExprResult:
     return Entity.getReturnLoc();
 
   case InitializedEntity::EK_Exception:
@@ -6156,48 +6167,6 @@ PerformConstructorInitialization(Sema &S,
   return CurInit;
 }
 
-/// Determine whether the specified InitializedEntity definitely has a lifetime
-/// longer than the current full-expression. Conservatively returns false if
-/// it's unclear.
-static bool
-InitializedEntityOutlivesFullExpression(const InitializedEntity &Entity) {
-  const InitializedEntity *Top = &Entity;
-  while (Top->getParent())
-    Top = Top->getParent();
-
-  switch (Top->getKind()) {
-  case InitializedEntity::EK_Variable:
-  case InitializedEntity::EK_Result:
-  case InitializedEntity::EK_Exception:
-  case InitializedEntity::EK_Member:
-  case InitializedEntity::EK_Binding:
-  case InitializedEntity::EK_New:
-  case InitializedEntity::EK_Base:
-  case InitializedEntity::EK_Delegating:
-    return true;
-
-  case InitializedEntity::EK_ArrayElement:
-  case InitializedEntity::EK_VectorElement:
-  case InitializedEntity::EK_BlockElement:
-  case InitializedEntity::EK_LambdaToBlockConversionBlockElement:
-  case InitializedEntity::EK_ComplexElement:
-    // Could not determine what the full initialization is. Assume it might not
-    // outlive the full-expression.
-    return false;
-
-  case InitializedEntity::EK_Parameter:
-  case InitializedEntity::EK_Parameter_CF_Audited:
-  case InitializedEntity::EK_Temporary:
-  case InitializedEntity::EK_LambdaCapture:
-  case InitializedEntity::EK_CompoundLiteralInit:
-  case InitializedEntity::EK_RelatedResult:
-    // The entity being initialized might not outlive the full-expression.
-    return false;
-  }
-
-  llvm_unreachable("unknown entity kind");
-}
-
 namespace {
 enum LifetimeKind {
   /// The lifetime of a temporary bound to this entity ends at the end of the
@@ -6216,6 +6185,10 @@ enum LifetimeKind {
   /// the entity is a return object.
   LK_Return,
 
+  /// The lifetime of a temporary bound to this entity ends too soon, because
+  /// the entity is the result of a statement expression.
+  LK_StmtExprResult,
+
   /// This is a mem-initializer: if it would extend a temporary (other than via
   /// a default member initializer), the program is ill-formed.
   LK_MemInitializer,
@@ -6227,7 +6200,7 @@ using LifetimeResult =
 /// Determine the declaration which an initialized entity ultimately refers to,
 /// for the purpose of lifetime-extending a temporary bound to a reference in
 /// the initialization of \p Entity.
-static LifetimeResult getEntityForTemporaryLifetimeExtension(
+static LifetimeResult getEntityLifetime(
     const InitializedEntity *Entity,
     const InitializedEntity *InitField = nullptr) {
   // C++11 [class.temporary]p5:
@@ -6239,8 +6212,7 @@ static LifetimeResult getEntityForTemporaryLifetimeExtension(
   case InitializedEntity::EK_Member:
     // For subobjects, we look at the complete object.
     if (Entity->getParent())
-      return getEntityForTemporaryLifetimeExtension(Entity->getParent(),
-                                                    Entity);
+      return getEntityLifetime(Entity->getParent(), Entity);
 
     //   except:
     // C++17 [class.base.init]p8:
@@ -6275,6 +6247,11 @@ static LifetimeResult getEntityForTemporaryLifetimeExtension(
     //      destroyed at the end of the full-expression in the return statement.
     return {nullptr, LK_Return};
 
+  case InitializedEntity::EK_StmtExprResult:
+    // FIXME: Should we lifetime-extend through the result of a statement
+    // expression?
+    return {nullptr, LK_StmtExprResult};
+
   case InitializedEntity::EK_New:
     //   -- A temporary bound to a reference in a new-initializer persists
     //      until the completion of the full-expression containing the
@@ -6291,14 +6268,12 @@ static LifetimeResult getEntityForTemporaryLifetimeExtension(
 
   case InitializedEntity::EK_ArrayElement:
     // For subobjects, we look at the complete object.
-    return getEntityForTemporaryLifetimeExtension(Entity->getParent(),
-                                                  InitField);
+    return getEntityLifetime(Entity->getParent(), InitField);
 
   case InitializedEntity::EK_Base:
     // For subobjects, we look at the complete object.
     if (Entity->getParent())
-      return getEntityForTemporaryLifetimeExtension(Entity->getParent(),
-                                                    InitField);
+      return getEntityLifetime(Entity->getParent(), InitField);
     return {InitField, LK_MemInitializer};
 
   case InitializedEntity::EK_Delegating:
@@ -6311,52 +6286,95 @@ static LifetimeResult getEntityForTemporaryLifetimeExtension(
   case InitializedEntity::EK_BlockElement:
   case InitializedEntity::EK_LambdaToBlockConversionBlockElement:
   case InitializedEntity::EK_LambdaCapture:
-  case InitializedEntity::EK_Exception:
   case InitializedEntity::EK_VectorElement:
   case InitializedEntity::EK_ComplexElement:
+    return {nullptr, LK_FullExpression};
+
+  case InitializedEntity::EK_Exception:
+    // FIXME: Can we diagnose lifetime problems with exceptions?
     return {nullptr, LK_FullExpression};
   }
   llvm_unreachable("unknown entity kind");
 }
 
 namespace {
-enum ExtensionKind {
+enum ReferenceKind {
   /// Lifetime would be extended by a reference binding to a temporary.
-  EK_ReferenceBinding,
+  RK_ReferenceBinding,
   /// Lifetime would be extended by a std::initializer_list object binding to
   /// its backing array.
-  EK_StdInitializerList,
+  RK_StdInitializerList,
 };
-using IndirectTemporaryPathEntry =
-    llvm::PointerUnion<CXXDefaultInitExpr *, ValueDecl *>;
-using IndirectTemporaryPath = llvm::SmallVectorImpl<IndirectTemporaryPathEntry>;
+
+/// A temporary or local variable. This will be one of:
+///  * A MaterializeTemporaryExpr.
+///  * A DeclRefExpr whose declaration is a local.
+///  * An AddrLabelExpr.
+///  * A BlockExpr for a block with captures.
+using Local = Expr*;
+
+/// Expressions we stepped over when looking for the local state. Any steps
+/// that would inhibit lifetime extension or take us out of subexpressions of
+/// the initializer are included.
+struct IndirectLocalPathEntry {
+  enum EntryKind {
+    DefaultInit,
+    AddressOf,
+    VarInit,
+    LValToRVal,
+  } Kind;
+  Expr *E;
+  Decl *D = nullptr;
+  IndirectLocalPathEntry() {}
+  IndirectLocalPathEntry(EntryKind K, Expr *E) : Kind(K), E(E) {}
+  IndirectLocalPathEntry(EntryKind K, Expr *E, Decl *D) : Kind(K), E(E), D(D) {}
+};
+
+using IndirectLocalPath = llvm::SmallVectorImpl<IndirectLocalPathEntry>;
 
 struct RevertToOldSizeRAII {
-  IndirectTemporaryPath &Path;
+  IndirectLocalPath &Path;
   unsigned OldSize = Path.size();
-  RevertToOldSizeRAII(IndirectTemporaryPath &Path) : Path(Path) {}
+  RevertToOldSizeRAII(IndirectLocalPath &Path) : Path(Path) {}
   ~RevertToOldSizeRAII() { Path.resize(OldSize); }
 };
+
+using LocalVisitor = llvm::function_ref<bool(IndirectLocalPath &Path, Local L,
+                                             ReferenceKind RK)>;
 }
 
-template <typename TemporaryVisitor>
-static void visitTemporariesExtendedByInitializer(IndirectTemporaryPath &Path,
-                                                  Expr *Init,
-                                                  TemporaryVisitor Visit);
+static bool isVarOnPath(IndirectLocalPath &Path, VarDecl *VD) {
+  for (auto E : Path)
+    if (E.Kind == IndirectLocalPathEntry::VarInit && E.D == VD)
+      return true;
+  return false;
+}
 
-/// Visit the temporaries whose lifetimes would be extended by binding a
-/// reference to the glvalue expression \c Init.
-template <typename TemporaryVisitor>
-static void
-visitTemporariesExtendedByReferenceBinding(IndirectTemporaryPath &Path,
-                                           Expr *Init, ExtensionKind EK,
-                                           TemporaryVisitor Visit) {
+static bool pathContainsInit(IndirectLocalPath &Path) {
+  return std::any_of(Path.begin(), Path.end(), [=](IndirectLocalPathEntry E) {
+    return E.Kind == IndirectLocalPathEntry::DefaultInit ||
+           E.Kind == IndirectLocalPathEntry::VarInit;
+  });
+}
+
+static void visitLocalsRetainedByInitializer(IndirectLocalPath &Path,
+                                             Expr *Init, LocalVisitor Visit,
+                                             bool RevisitSubinits);
+
+/// Visit the locals that would be reachable through a reference bound to the
+/// glvalue expression \c Init.
+static void visitLocalsRetainedByReferenceBinding(IndirectLocalPath &Path,
+                                                  Expr *Init, ReferenceKind RK,
+                                                  LocalVisitor Visit) {
   RevertToOldSizeRAII RAII(Path);
 
   // Walk past any constructs which we can lifetime-extend across.
   Expr *Old;
   do {
     Old = Init;
+
+    if (auto *EWC = dyn_cast<ExprWithCleanups>(Init))
+      Init = EWC->getSubExpr();
 
     if (InitListExpr *ILE = dyn_cast<InitListExpr>(Init)) {
       // If this is just redundant braces around an initializer, step over it.
@@ -6375,46 +6393,105 @@ visitTemporariesExtendedByReferenceBinding(IndirectTemporaryPath &Path,
         Init = CE->getSubExpr();
 
     // Per the current approach for DR1299, look through array element access
-    // when performing lifetime extension.
-    if (auto *ASE = dyn_cast<ArraySubscriptExpr>(Init))
+    // on array glvalues when performing lifetime extension.
+    if (auto *ASE = dyn_cast<ArraySubscriptExpr>(Init)) {
       Init = ASE->getBase();
+      auto *ICE = dyn_cast<ImplicitCastExpr>(Init);
+      if (ICE && ICE->getCastKind() == CK_ArrayToPointerDecay)
+        Init = ICE->getSubExpr();
+      else
+        // We can't lifetime extend through this but we might still find some
+        // retained temporaries.
+        return visitLocalsRetainedByInitializer(Path, Init, Visit, true);
+    }
 
     // Step into CXXDefaultInitExprs so we can diagnose cases where a
     // constructor inherits one as an implicit mem-initializer.
     if (auto *DIE = dyn_cast<CXXDefaultInitExpr>(Init)) {
-      Path.push_back(DIE);
+      Path.push_back(
+          {IndirectLocalPathEntry::DefaultInit, DIE, DIE->getField()});
       Init = DIE->getExpr();
-
-      if (auto *EWC = dyn_cast<ExprWithCleanups>(Init))
-        Init = EWC->getSubExpr();
     }
   } while (Init != Old);
 
   if (auto *MTE = dyn_cast<MaterializeTemporaryExpr>(Init)) {
-    if (Visit(Path, MTE, EK))
-      visitTemporariesExtendedByInitializer(Path, MTE->GetTemporaryExpr(),
-                                            Visit);
+    if (Visit(Path, Local(MTE), RK))
+      visitLocalsRetainedByInitializer(Path, MTE->GetTemporaryExpr(), Visit,
+                                       true);
+  }
+
+  switch (Init->getStmtClass()) {
+  case Stmt::DeclRefExprClass: {
+    // If we find the name of a local non-reference parameter, we could have a
+    // lifetime problem.
+    auto *DRE = cast<DeclRefExpr>(Init);
+    auto *VD = dyn_cast<VarDecl>(DRE->getDecl());
+    if (VD && VD->hasLocalStorage() &&
+        !DRE->refersToEnclosingVariableOrCapture()) {
+      if (!VD->getType()->isReferenceType()) {
+        Visit(Path, Local(DRE), RK);
+      } else if (isa<ParmVarDecl>(DRE->getDecl())) {
+        // The lifetime of a reference parameter is unknown; assume it's OK
+        // for now.
+        break;
+      } else if (VD->getInit() && !isVarOnPath(Path, VD)) {
+        Path.push_back({IndirectLocalPathEntry::VarInit, DRE, VD});
+        visitLocalsRetainedByReferenceBinding(Path, VD->getInit(),
+                                              RK_ReferenceBinding, Visit);
+      }
+    }
+    break;
+  }
+
+  case Stmt::UnaryOperatorClass: {
+    // The only unary operator that make sense to handle here
+    // is Deref.  All others don't resolve to a "name."  This includes
+    // handling all sorts of rvalues passed to a unary operator.
+    const UnaryOperator *U = cast<UnaryOperator>(Init);
+    if (U->getOpcode() == UO_Deref)
+      visitLocalsRetainedByInitializer(Path, U->getSubExpr(), Visit, true);
+    break;
+  }
+
+  case Stmt::OMPArraySectionExprClass: {
+    visitLocalsRetainedByInitializer(
+        Path, cast<OMPArraySectionExpr>(Init)->getBase(), Visit, true);
+    break;
+  }
+
+  case Stmt::ConditionalOperatorClass:
+  case Stmt::BinaryConditionalOperatorClass: {
+    auto *C = cast<AbstractConditionalOperator>(Init);
+    if (!C->getTrueExpr()->getType()->isVoidType())
+      visitLocalsRetainedByReferenceBinding(Path, C->getTrueExpr(), RK, Visit);
+    if (!C->getFalseExpr()->getType()->isVoidType())
+      visitLocalsRetainedByReferenceBinding(Path, C->getFalseExpr(), RK, Visit);
+    break;
+  }
+
+  // FIXME: Visit the left-hand side of an -> or ->*.
+
+  default:
+    break;
   }
 }
 
-/// Visit the temporaries whose lifetimes would be extended by
-/// lifetime-extending the object initialized by the prvalue expression \c
-/// Init.
-template <typename TemporaryVisitor>
-static void visitTemporariesExtendedByInitializer(IndirectTemporaryPath &Path,
-                                                  Expr *Init,
-                                                  TemporaryVisitor Visit) {
+/// Visit the locals that would be reachable through an object initialized by
+/// the prvalue expression \c Init.
+static void visitLocalsRetainedByInitializer(IndirectLocalPath &Path,
+                                             Expr *Init, LocalVisitor Visit,
+                                             bool RevisitSubinits) {
   RevertToOldSizeRAII RAII(Path);
 
   // Step into CXXDefaultInitExprs so we can diagnose cases where a
   // constructor inherits one as an implicit mem-initializer.
   if (auto *DIE = dyn_cast<CXXDefaultInitExpr>(Init)) {
-    Path.push_back(DIE);
+    Path.push_back({IndirectLocalPathEntry::DefaultInit, DIE, DIE->getField()});
     Init = DIE->getExpr();
-
-    if (auto *EWC = dyn_cast<ExprWithCleanups>(Init))
-      Init = EWC->getSubExpr();
   }
+
+  if (auto *EWC = dyn_cast<ExprWithCleanups>(Init))
+    Init = EWC->getSubExpr();
 
   // Dig out the expression which constructs the extended temporary.
   Init = const_cast<Expr *>(Init->skipRValueSubobjectAdjustments());
@@ -6426,17 +6503,24 @@ static void visitTemporariesExtendedByInitializer(IndirectTemporaryPath &Path,
   //   initializing an initializer_list object from the array extends the
   //   lifetime of the array exactly like binding a reference to a temporary.
   if (auto *ILE = dyn_cast<CXXStdInitializerListExpr>(Init))
-    return visitTemporariesExtendedByReferenceBinding(
-        Path, ILE->getSubExpr(), EK_StdInitializerList, Visit);
+    return visitLocalsRetainedByReferenceBinding(Path, ILE->getSubExpr(),
+                                                 RK_StdInitializerList, Visit);
 
   if (InitListExpr *ILE = dyn_cast<InitListExpr>(Init)) {
+    // We already visited the elements of this initializer list while
+    // performing the initialization. Don't visit them again unless we've
+    // changed the lifetime of the initialized entity.
+    if (!RevisitSubinits)
+      return;
+
     if (ILE->isTransparent())
-      return visitTemporariesExtendedByInitializer(Path, ILE->getInit(0),
-                                                   Visit);
+      return visitLocalsRetainedByInitializer(Path, ILE->getInit(0), Visit,
+                                              RevisitSubinits);
 
     if (ILE->getType()->isArrayType()) {
       for (unsigned I = 0, N = ILE->getNumInits(); I != N; ++I)
-        visitTemporariesExtendedByInitializer(Path, ILE->getInit(I), Visit);
+        visitLocalsRetainedByInitializer(Path, ILE->getInit(I), Visit,
+                                         RevisitSubinits);
       return;
     }
 
@@ -6448,8 +6532,8 @@ static void visitTemporariesExtendedByInitializer(IndirectTemporaryPath &Path,
       // bound to temporaries, those temporaries are also lifetime-extended.
       if (RD->isUnion() && ILE->getInitializedFieldInUnion() &&
           ILE->getInitializedFieldInUnion()->getType()->isReferenceType())
-        visitTemporariesExtendedByReferenceBinding(Path, ILE->getInit(0),
-                                                   EK_ReferenceBinding, Visit);
+        visitLocalsRetainedByReferenceBinding(Path, ILE->getInit(0),
+                                              RK_ReferenceBinding, Visit);
       else {
         unsigned Index = 0;
         for (const auto *I : RD->fields()) {
@@ -6459,33 +6543,175 @@ static void visitTemporariesExtendedByInitializer(IndirectTemporaryPath &Path,
             continue;
           Expr *SubInit = ILE->getInit(Index);
           if (I->getType()->isReferenceType())
-            visitTemporariesExtendedByReferenceBinding(
-                Path, SubInit, EK_ReferenceBinding, Visit);
+            visitLocalsRetainedByReferenceBinding(Path, SubInit,
+                                                  RK_ReferenceBinding, Visit);
           else
             // This might be either aggregate-initialization of a member or
             // initialization of a std::initializer_list object. Regardless,
             // we should recursively lifetime-extend that initializer.
-            visitTemporariesExtendedByInitializer(Path, SubInit, Visit);
+            visitLocalsRetainedByInitializer(Path, SubInit, Visit,
+                                             RevisitSubinits);
           ++Index;
         }
       }
     }
+    return;
+  }
+
+  // Step over value-preserving rvalue casts.
+  while (auto *CE = dyn_cast<CastExpr>(Init)) {
+    switch (CE->getCastKind()) {
+    case CK_LValueToRValue:
+      // If we can match the lvalue to a const object, we can look at its
+      // initializer.
+      Path.push_back({IndirectLocalPathEntry::LValToRVal, CE});
+      return visitLocalsRetainedByReferenceBinding(
+          Path, Init, RK_ReferenceBinding,
+          [&](IndirectLocalPath &Path, Local L, ReferenceKind RK) -> bool {
+        if (auto *DRE = dyn_cast<DeclRefExpr>(L)) {
+          auto *VD = dyn_cast<VarDecl>(DRE->getDecl());
+          if (VD && VD->getType().isConstQualified() && VD->getInit()) {
+            Path.push_back({IndirectLocalPathEntry::VarInit, DRE, VD});
+            visitLocalsRetainedByInitializer(Path, VD->getInit(), Visit, true);
+          }
+        } else if (auto *MTE = dyn_cast<MaterializeTemporaryExpr>(L)) {
+          if (MTE->getType().isConstQualified())
+            visitLocalsRetainedByInitializer(Path, MTE->GetTemporaryExpr(),
+                                             Visit, true);
+        }
+        return false;
+      });
+
+      // We assume that objects can be retained by pointers cast to integers,
+      // but not if the integer is cast to floating-point type or to _Complex.
+      // We assume that casts to 'bool' do not preserve enough information to
+      // retain a local object.
+    case CK_NoOp:
+    case CK_BitCast:
+    case CK_BaseToDerived:
+    case CK_DerivedToBase:
+    case CK_UncheckedDerivedToBase:
+    case CK_Dynamic:
+    case CK_ToUnion:
+    case CK_IntegralToPointer:
+    case CK_PointerToIntegral:
+    case CK_VectorSplat:
+    case CK_IntegralCast:
+    case CK_CPointerToObjCPointerCast:
+    case CK_BlockPointerToObjCPointerCast:
+    case CK_AnyPointerToBlockPointerCast:
+    case CK_AddressSpaceConversion:
+      break;
+
+    case CK_ArrayToPointerDecay:
+      // Model array-to-pointer decay as taking the address of the array
+      // lvalue.
+      Path.push_back({IndirectLocalPathEntry::AddressOf, CE});
+      return visitLocalsRetainedByReferenceBinding(Path, CE->getSubExpr(),
+                                                   RK_ReferenceBinding, Visit);
+
+    default:
+      return;
+    }
+
+    Init = CE->getSubExpr();
+  }
+
+  Init = Init->IgnoreParens();
+  switch (Init->getStmtClass()) {
+  case Stmt::UnaryOperatorClass: {
+    auto *UO = cast<UnaryOperator>(Init);
+    // If the initializer is the address of a local, we could have a lifetime
+    // problem.
+    if (UO->getOpcode() == UO_AddrOf) {
+      // If this is &rvalue, then it's ill-formed and we have already diagnosed
+      // it. Don't produce a redundant warning about the lifetime of the
+      // temporary.
+      if (isa<MaterializeTemporaryExpr>(UO->getSubExpr()))
+        return;
+
+      Path.push_back({IndirectLocalPathEntry::AddressOf, UO});
+      visitLocalsRetainedByReferenceBinding(Path, UO->getSubExpr(),
+                                            RK_ReferenceBinding, Visit);
+    }
+    break;
+  }
+
+  case Stmt::BinaryOperatorClass: {
+    // Handle pointer arithmetic.
+    auto *BO = cast<BinaryOperator>(Init);
+    BinaryOperatorKind BOK = BO->getOpcode();
+    if (!BO->getType()->isPointerType() || (BOK != BO_Add && BOK != BO_Sub))
+      break;
+
+    if (BO->getLHS()->getType()->isPointerType())
+      visitLocalsRetainedByInitializer(Path, BO->getLHS(), Visit, true);
+    else if (BO->getRHS()->getType()->isPointerType())
+      visitLocalsRetainedByInitializer(Path, BO->getRHS(), Visit, true);
+    break;
+  }
+
+  case Stmt::ConditionalOperatorClass:
+  case Stmt::BinaryConditionalOperatorClass: {
+    auto *C = cast<AbstractConditionalOperator>(Init);
+    // In C++, we can have a throw-expression operand, which has 'void' type
+    // and isn't interesting from a lifetime perspective.
+    if (!C->getTrueExpr()->getType()->isVoidType())
+      visitLocalsRetainedByInitializer(Path, C->getTrueExpr(), Visit, true);
+    if (!C->getFalseExpr()->getType()->isVoidType())
+      visitLocalsRetainedByInitializer(Path, C->getFalseExpr(), Visit, true);
+    break;
+  }
+
+  case Stmt::BlockExprClass:
+    if (cast<BlockExpr>(Init)->getBlockDecl()->hasCaptures()) {
+      // This is a local block, whose lifetime is that of the function.
+      Visit(Path, Local(cast<BlockExpr>(Init)), RK_ReferenceBinding);
+    }
+    break;
+
+  case Stmt::AddrLabelExprClass:
+    // We want to warn if the address of a label would escape the function.
+    Visit(Path, Local(cast<AddrLabelExpr>(Init)), RK_ReferenceBinding);
+    break;
+
+  default:
+    break;
   }
 }
 
 /// Determine whether this is an indirect path to a temporary that we are
 /// supposed to lifetime-extend along (but don't).
-static bool shouldLifetimeExtendThroughPath(const IndirectTemporaryPath &Path) {
+static bool shouldLifetimeExtendThroughPath(const IndirectLocalPath &Path) {
   for (auto Elem : Path) {
-    if (!Elem.is<CXXDefaultInitExpr*>())
+    if (Elem.Kind != IndirectLocalPathEntry::DefaultInit)
       return false;
   }
   return true;
 }
 
+/// Find the range for the first interesting entry in the path at or after I.
+static SourceRange nextPathEntryRange(const IndirectLocalPath &Path, unsigned I,
+                                      Expr *E) {
+  for (unsigned N = Path.size(); I != N; ++I) {
+    switch (Path[I].Kind) {
+    case IndirectLocalPathEntry::AddressOf:
+    case IndirectLocalPathEntry::LValToRVal:
+      // These exist primarily to mark the path as not permitting or
+      // supporting lifetime extension.
+      break;
+
+    case IndirectLocalPathEntry::DefaultInit:
+    case IndirectLocalPathEntry::VarInit:
+      return Path[I].E->getSourceRange();
+    }
+  }
+  return E->getSourceRange();
+}
+
 void Sema::checkInitializerLifetime(const InitializedEntity &Entity,
                                     Expr *Init) {
-  LifetimeResult LR = getEntityForTemporaryLifetimeExtension(&Entity);
+  LifetimeResult LR = getEntityLifetime(&Entity);
   LifetimeKind LK = LR.getInt();
   const InitializedEntity *ExtendingEntity = LR.getPointer();
 
@@ -6494,14 +6720,26 @@ void Sema::checkInitializerLifetime(const InitializedEntity &Entity,
   if (LK == LK_FullExpression)
     return;
 
-  auto TemporaryVisitor = [&](IndirectTemporaryPath &Path,
-                              MaterializeTemporaryExpr *MTE,
-                              ExtensionKind EK) -> bool {
+  auto TemporaryVisitor = [&](IndirectLocalPath &Path, Local L,
+                              ReferenceKind RK) -> bool {
+    SourceRange DiagRange = nextPathEntryRange(Path, 0, L);
+    SourceLocation DiagLoc = DiagRange.getBegin();
+
     switch (LK) {
     case LK_FullExpression:
       llvm_unreachable("already handled this");
 
-    case LK_Extended:
+    case LK_Extended: {
+      auto *MTE = dyn_cast<MaterializeTemporaryExpr>(L);
+      if (!MTE) {
+        // The initialized entity has lifetime beyond the full-expression,
+        // and the local entity does too, so don't warn.
+        //
+        // FIXME: We should consider warning if a static / thread storage
+        // duration variable retains an automatic storage duration local.
+        return false;
+      }
+
       // Lifetime-extend the temporary.
       if (Path.empty()) {
         // Update the storage duration of the materialized temporary.
@@ -6519,63 +6757,137 @@ void Sema::checkInitializerLifetime(const InitializedEntity &Entity,
         // FIXME: Properly handle this situation. Perhaps the easiest approach
         // would be to clone the initializer expression on each use that would
         // lifetime extend its temporaries.
-        Diag(MTE->getExprLoc(),
-             EK == EK_ReferenceBinding
-                 ? diag::warn_default_member_init_temporary_not_extended
-                 : diag::warn_default_member_init_init_list_not_extended);
+        Diag(DiagLoc, diag::warn_unsupported_lifetime_extension)
+            << RK << DiagRange;
       } else {
-        llvm_unreachable("unexpected indirect temporary path");
+        // If the path goes through the initialization of a variable or field,
+        // it can't possibly reach a temporary created in this full-expression.
+        // We will have already diagnosed any problems with the initializer.
+        if (pathContainsInit(Path))
+          return false;
+
+        Diag(DiagLoc, diag::warn_dangling_variable)
+            << RK << !Entity.getParent() << ExtendingEntity->getDecl()
+            << Init->isGLValue() << DiagRange;
       }
       break;
+    }
 
-    case LK_MemInitializer:
-      // Under C++ DR1696, if a mem-initializer (or a default member
-      // initializer used by the absence of one) would lifetime-extend a
-      // temporary, the program is ill-formed.
-      if (auto *ExtendingDecl = ExtendingEntity->getDecl()) {
-        bool IsSubobjectMember = ExtendingEntity != &Entity;
-        Diag(MTE->getExprLoc(), diag::err_bind_ref_member_to_temporary)
-            << ExtendingDecl << Init->getSourceRange() << IsSubobjectMember
-            << EK;
-        // Don't bother adding a note pointing to the field if we're inside its
-        // default member initializer; our primary diagnostic points to the
-        // same place in that case.
-        if (Path.empty() || !Path.back().is<CXXDefaultInitExpr*>()) {
-          Diag(ExtendingDecl->getLocation(),
-               diag::note_lifetime_extending_member_declared_here)
-              << EK << IsSubobjectMember;
+    case LK_MemInitializer: {
+      if (isa<MaterializeTemporaryExpr>(L)) {
+        // Under C++ DR1696, if a mem-initializer (or a default member
+        // initializer used by the absence of one) would lifetime-extend a
+        // temporary, the program is ill-formed.
+        if (auto *ExtendingDecl =
+                ExtendingEntity ? ExtendingEntity->getDecl() : nullptr) {
+          bool IsSubobjectMember = ExtendingEntity != &Entity;
+          Diag(DiagLoc, shouldLifetimeExtendThroughPath(Path)
+                            ? diag::err_dangling_member
+                            : diag::warn_dangling_member)
+              << ExtendingDecl << IsSubobjectMember << RK << DiagRange;
+          // Don't bother adding a note pointing to the field if we're inside
+          // its default member initializer; our primary diagnostic points to
+          // the same place in that case.
+          if (Path.empty() ||
+              Path.back().Kind != IndirectLocalPathEntry::DefaultInit) {
+            Diag(ExtendingDecl->getLocation(),
+                 diag::note_lifetime_extending_member_declared_here)
+                << RK << IsSubobjectMember;
+          }
+        } else {
+          // We have a mem-initializer but no particular field within it; this
+          // is either a base class or a delegating initializer directly
+          // initializing the base-class from something that doesn't live long
+          // enough.
+          //
+          // FIXME: Warn on this.
+          return false;
         }
       } else {
-        // We have a mem-initializer but no particular field within it; this
-        // is either a base class or a delegating initializer directly
-        // initializing the base-class from something that doesn't live long
-        // enough. Either way, that can't happen.
-        // FIXME: Move CheckForDanglingReferenceOrPointer checks here.
-        llvm_unreachable(
-            "temporary initializer for base class / delegating ctor");
+        // Paths via a default initializer can only occur during error recovery
+        // (there's no other way that a default initializer can refer to a
+        // local). Don't produce a bogus warning on those cases.
+        if (pathContainsInit(Path))
+          return false;
+
+        auto *DRE = dyn_cast<DeclRefExpr>(L);
+        auto *VD = DRE ? dyn_cast<VarDecl>(DRE->getDecl()) : nullptr;
+        if (!VD) {
+          // A member was initialized to a local block.
+          // FIXME: Warn on this.
+          return false;
+        }
+
+        if (auto *Member =
+                ExtendingEntity ? ExtendingEntity->getDecl() : nullptr) {
+          bool IsPointer = Member->getType()->isAnyPointerType();
+          Diag(DiagLoc, IsPointer ? diag::warn_init_ptr_member_to_parameter_addr
+                                  : diag::warn_bind_ref_member_to_parameter)
+              << Member << VD << isa<ParmVarDecl>(VD) << DiagRange;
+          Diag(Member->getLocation(),
+               diag::note_ref_or_ptr_member_declared_here)
+              << (unsigned)IsPointer;
+        }
       }
       break;
+    }
 
     case LK_New:
-      if (EK == EK_ReferenceBinding) {
-        Diag(MTE->getExprLoc(), diag::warn_new_dangling_reference);
+      if (isa<MaterializeTemporaryExpr>(L)) {
+        Diag(DiagLoc, RK == RK_ReferenceBinding
+                          ? diag::warn_new_dangling_reference
+                          : diag::warn_new_dangling_initializer_list)
+            << !Entity.getParent() << DiagRange;
       } else {
-        Diag(MTE->getExprLoc(), diag::warn_new_dangling_initializer_list)
-            << (ExtendingEntity != &Entity);
+        // We can't determine if the allocation outlives the local declaration.
+        return false;
       }
       break;
 
     case LK_Return:
-      // FIXME: Move -Wreturn-stack-address checks here.
-      return false;
+    case LK_StmtExprResult:
+      if (auto *DRE = dyn_cast<DeclRefExpr>(L)) {
+        // We can't determine if the local variable outlives the statement
+        // expression.
+        if (LK == LK_StmtExprResult)
+          return false;
+        Diag(DiagLoc, diag::warn_ret_stack_addr_ref)
+            << Entity.getType()->isReferenceType() << DRE->getDecl()
+            << isa<ParmVarDecl>(DRE->getDecl()) << DiagRange;
+      } else if (isa<BlockExpr>(L)) {
+        Diag(DiagLoc, diag::err_ret_local_block) << DiagRange;
+      } else if (isa<AddrLabelExpr>(L)) {
+        Diag(DiagLoc, diag::warn_ret_addr_label) << DiagRange;
+      } else {
+        Diag(DiagLoc, diag::warn_ret_local_temp_addr_ref)
+         << Entity.getType()->isReferenceType() << DiagRange;
+      }
+      break;
     }
 
-    // FIXME: Model these as CodeSynthesisContexts to fix the note emission
-    // order.
-    for (auto Elem : llvm::reverse(Path)) {
-      if (auto *DIE = Elem.dyn_cast<CXXDefaultInitExpr*>()) {
-        Diag(DIE->getExprLoc(), diag::note_in_default_member_initalizer_here)
-            << DIE->getField();
+    for (unsigned I = 0; I != Path.size(); ++I) {
+      auto Elem = Path[I];
+
+      switch (Elem.Kind) {
+      case IndirectLocalPathEntry::AddressOf:
+      case IndirectLocalPathEntry::LValToRVal:
+        // These exist primarily to mark the path as not permitting or
+        // supporting lifetime extension.
+        break;
+
+      case IndirectLocalPathEntry::DefaultInit: {
+        auto *FD = cast<FieldDecl>(Elem.D);
+        Diag(FD->getLocation(), diag::note_init_with_default_member_initalizer)
+            << FD << nextPathEntryRange(Path, I + 1, L);
+        break;
+      }
+
+      case IndirectLocalPathEntry::VarInit:
+        const VarDecl *VD = cast<VarDecl>(Elem.D);
+        Diag(VD->getLocation(), diag::note_local_var_initializer)
+            << VD->getType()->isReferenceType() << VD->getDeclName()
+            << nextPathEntryRange(Path, I + 1, L);
+        break;
       }
     }
 
@@ -6584,12 +6896,12 @@ void Sema::checkInitializerLifetime(const InitializedEntity &Entity,
     return false;
   };
 
-  llvm::SmallVector<IndirectTemporaryPathEntry, 8> Path;
+  llvm::SmallVector<IndirectLocalPathEntry, 8> Path;
   if (Init->isGLValue())
-    visitTemporariesExtendedByReferenceBinding(Path, Init, EK_ReferenceBinding,
-                                               TemporaryVisitor);
+    visitLocalsRetainedByReferenceBinding(Path, Init, RK_ReferenceBinding,
+                                          TemporaryVisitor);
   else
-    visitTemporariesExtendedByInitializer(Path, Init, TemporaryVisitor);
+    visitLocalsRetainedByInitializer(Path, Init, TemporaryVisitor, false);
 }
 
 static void DiagnoseNarrowingInInitList(Sema &S,
@@ -6851,20 +7163,6 @@ InitializationSequence::Perform(Sema &S,
     return ExprError();
   }
 
-  // Diagnose cases where we initialize a pointer to an array temporary, and the
-  // pointer obviously outlives the temporary.
-  if (Args.size() == 1 && Args[0]->getType()->isArrayType() &&
-      Entity.getType()->isPointerType() &&
-      InitializedEntityOutlivesFullExpression(Entity)) {
-    const Expr *Init = Args[0]->skipRValueSubobjectAdjustments();
-    if (auto *MTE = dyn_cast<MaterializeTemporaryExpr>(Init))
-      Init = MTE->GetTemporaryExpr();
-    Expr::LValueClassification Kind = Init->ClassifyLValue(S.Context);
-    if (Kind == Expr::LV_ClassTemporary || Kind == Expr::LV_ArrayTemporary)
-      S.Diag(Init->getLocStart(), diag::warn_temporary_array_to_pointer_decay)
-        << Init->getSourceRange();
-  }
-
   QualType DestType = Entity.getType().getNonReferenceType();
   // FIXME: Ugly hack around the fact that Entity.getType() is not
   // the same as Entity.getDecl()->getType() in cases involving type merging,
@@ -7015,11 +7313,6 @@ InitializationSequence::Perform(Sema &S,
         }
       }
 
-      // Even though we didn't materialize a temporary, the binding may still
-      // extend the lifetime of a temporary. This happens if we bind a
-      // reference to the result of a cast to reference type.
-      S.checkInitializerLifetime(Entity, CurInit.get());
-
       CheckForNullPointerDereference(S, CurInit.get());
       break;
 
@@ -7035,10 +7328,6 @@ InitializationSequence::Perform(Sema &S,
       MaterializeTemporaryExpr *MTE = S.CreateMaterializeTemporaryExpr(
           Step->Type, CurInit.get(), Entity.getType()->isLValueReferenceType());
       CurInit = MTE;
-
-      // Maybe lifetime-extend the temporary's subobjects to match the
-      // entity's lifetime.
-      S.checkInitializerLifetime(Entity, CurInit.get());
 
       // If we're extending this temporary to automatic storage duration -- we
       // need to register its cleanup during the full-expression's cleanups.
@@ -7490,10 +7779,6 @@ InitializationSequence::Perform(Sema &S,
       // Wrap it in a construction of a std::initializer_list<T>.
       CurInit = new (S.Context) CXXStdInitializerListExpr(Step->Type, MTE);
 
-      // Maybe lifetime-extend the array temporary's subobjects to match the
-      // entity's lifetime.
-      S.checkInitializerLifetime(Entity, CurInit.get());
-
       // Bind the result, in case the library has given initializer_list a
       // non-trivial destructor.
       if (shouldBindAsTemporary(Entity))
@@ -7611,6 +7896,11 @@ InitializationSequence::Perform(Sema &S,
     }
     }
   }
+
+  // Check whether the initializer has a shorter lifetime than the initialized
+  // entity, and if not, either lifetime-extend or warn as appropriate.
+  if (auto *Init = CurInit.get())
+    S.checkInitializerLifetime(Entity, Init);
 
   // Diagnose non-fatal problems with the completed initialization.
   if (Entity.getKind() == InitializedEntity::EK_Member &&

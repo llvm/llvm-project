@@ -1784,6 +1784,9 @@ public:
   /// isComplexIntegerType() can be used to test for complex integers.
   bool isIntegerType() const;     // C99 6.2.5p17 (int, char, bool, enum)
   bool isEnumeralType() const;
+
+  /// Determine whether this type is a scoped enumeration type.
+  bool isScopedEnumeralType() const;
   bool isBooleanType() const;
   bool isCharType() const;
   bool isWideCharType() const;

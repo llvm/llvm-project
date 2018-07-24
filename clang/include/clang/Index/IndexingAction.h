@@ -1,4 +1,4 @@
-//===--- IndexingAction.h - Frontend index action -------------------------===//
+//===--- IndexingAction.h - Frontend index action ---------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //

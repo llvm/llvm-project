@@ -1,4 +1,4 @@
-//==-- SwiftCallingConv.h - Swift ABI lowering -----------------------------==//
+//==-- SwiftCallingConv.h - Swift ABI lowering ------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //

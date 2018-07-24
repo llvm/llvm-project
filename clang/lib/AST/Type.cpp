@@ -481,6 +481,12 @@ bool Type::isComplexIntegerType() const {
   return getAsComplexIntegerType();
 }
 
+bool Type::isScopedEnumeralType() const {
+  if (const auto *ET = getAs<EnumType>())
+    return ET->getDecl()->isScoped();
+  return false;
+}
+
 const ComplexType *Type::getAsComplexIntegerType() const {
   if (const auto *Complex = getAs<ComplexType>())
     if (Complex->getElementType()->isIntegerType())

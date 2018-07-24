@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify -pedantic %s
 
 enum class E { Foo, Bar = 97119 };
 
@@ -12,3 +12,9 @@ void switch_me(E e) {
       break;
   }
 }
+
+enum class E2;
+
+struct S {
+  static const E e = E::Foo;
+};

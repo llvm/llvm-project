@@ -3028,6 +3028,11 @@ static void RenderDebugOptions(const ToolChain &TC, const Driver &D,
 
   if (Args.hasFlag(options::OPT_fdebug_types_section,
                    options::OPT_fno_debug_types_section, false)) {
+    if (!T.isOSBinFormatELF())
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << Args.getLastArg(options::OPT_fdebug_types_section)
+                 ->getAsString(Args)
+          << T.getTriple();
     CmdArgs.push_back("-mllvm");
     CmdArgs.push_back("-generate-type-units");
   }

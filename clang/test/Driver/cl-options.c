@@ -565,6 +565,11 @@
 // (/Zs is for syntax-only, -Werror makes it fail hard on unknown options)
 // RUN: %clang_cl \
 // RUN:     --driver-mode=cl \
+// RUN:     -fblocks \
+// RUN:     -fno-blocks \
+// RUN:     -fbuiltin \
+// RUN:     -fno-builtin \
+// RUN:     -fno-builtin-strcpy \
 // RUN:     -fcolor-diagnostics \
 // RUN:     -fno-color-diagnostics \
 // RUN:     -fcoverage-mapping \

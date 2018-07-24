@@ -2908,6 +2908,10 @@ llvm::DICompositeType *CGDebugInfo::CreateLimitedType(const RecordType *Ty) {
       Flags |= llvm::DINode::FlagTypePassByReference;
     else
       Flags |= llvm::DINode::FlagTypePassByValue;
+
+    // Record if a C++ record is trivial type.
+    if (CXXRD->isTrivial())
+      Flags |= llvm::DINode::FlagTrivial;
   }
 
   llvm::DICompositeType *RealDecl = DBuilder.createReplaceableCompositeType(

@@ -12992,11 +12992,8 @@ Sema::ActOnStmtExpr(SourceLocation LPLoc, Stmt *SubStmt,
           LastExpr = rebuiltLastStmt;
         } else {
           LastExpr = PerformCopyInitialization(
-                            InitializedEntity::InitializeResult(LPLoc, 
-                                                                Ty,
-                                                                false),
-                                                   SourceLocation(),
-                                               LastExpr);
+              InitializedEntity::InitializeStmtExprResult(LPLoc, Ty),
+              SourceLocation(), LastExpr);
         }
 
         if (LastExpr.isInvalid())

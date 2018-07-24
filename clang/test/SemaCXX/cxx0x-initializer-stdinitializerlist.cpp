@@ -155,11 +155,11 @@ void dangle() {
 struct haslist1 {
   std::initializer_list<int> il // expected-note {{declared here}}
     = {1, 2, 3}; // ok, unused
-  std::initializer_list<int> jl{1, 2, 3}; // expected-error {{backing array for 'std::initializer_list' member 'jl' is a temporary object}}
+  std::initializer_list<int> jl{1, 2, 3}; // expected-note {{default member init}}
   haslist1();
 };
 
-haslist1::haslist1() // expected-note {{used here}}
+haslist1::haslist1() // expected-error {{backing array for 'std::initializer_list' member 'jl' is a temporary object}}
 : il{1, 2, 3} // expected-error {{backing array for 'std::initializer_list' member 'il' is a temporary object}}
 {}
 

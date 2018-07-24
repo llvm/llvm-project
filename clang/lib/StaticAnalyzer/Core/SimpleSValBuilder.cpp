@@ -456,14 +456,17 @@ static Optional<NonLoc> tryRearrange(ProgramStateRef State,
   auto &Opts =
     StateMgr.getOwningEngine()->getAnalysisManager().getAnalyzerOptions();
 
+  // FIXME: After putting complexity threshold to the symbols we can always
+  //        rearrange additive operations but rearrange comparisons only if
+  //        option is set.
+  if(!Opts.shouldAggressivelySimplifyBinaryOperation())
+    return None;
+
   SymbolRef LSym = Lhs.getAsSymbol();
   if (!LSym)
     return None;
 
-  // Always rearrange additive operations but rearrange comparisons only if
-  // option is set.
-  if (BinaryOperator::isComparisonOp(Op) &&
-      Opts.shouldAggressivelySimplifyRelationalComparison()) {
+  if (BinaryOperator::isComparisonOp(Op)) {
     SingleTy = LSym->getType();
     if (ResultTy != SVB.getConditionType())
       return None;

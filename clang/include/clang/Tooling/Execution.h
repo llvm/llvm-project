@@ -57,7 +57,7 @@ public:
 /// set of different results, or a large set of duplicated results.
 class InMemoryToolResults : public ToolResults {
 public:
-  InMemoryToolResults() : StringsPool(Arena) {}
+  InMemoryToolResults() : Strings(Arena) {}
   void addResult(StringRef Key, StringRef Value) override;
   std::vector<std::pair<llvm::StringRef, llvm::StringRef>>
   AllKVResults() override;
@@ -66,8 +66,7 @@ public:
 
 private:
   llvm::BumpPtrAllocator Arena;
-  llvm::StringSaver StringsPool;
-  llvm::DenseSet<llvm::StringRef> Strings;
+  llvm::UniqueStringSaver Strings;
 
   std::vector<std::pair<llvm::StringRef, llvm::StringRef>> KVResults;
 };

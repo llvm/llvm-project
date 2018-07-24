@@ -138,6 +138,88 @@ enum SanitizerHandler {
 #undef SANITIZER_CHECK
 };
 
+/// Helper class with most of the code for saving a value for a
+/// conditional expression cleanup.
+struct DominatingLLVMValue {
+  typedef llvm::PointerIntPair<llvm::Value*, 1, bool> saved_type;
+
+  /// Answer whether the given value needs extra work to be saved.
+  static bool needsSaving(llvm::Value *value) {
+    // If it's not an instruction, we don't need to save.
+    if (!isa<llvm::Instruction>(value)) return false;
+
+    // If it's an instruction in the entry block, we don't need to save.
+    llvm::BasicBlock *block = cast<llvm::Instruction>(value)->getParent();
+    return (block != &block->getParent()->getEntryBlock());
+  }
+
+  static saved_type save(CodeGenFunction &CGF, llvm::Value *value);
+  static llvm::Value *restore(CodeGenFunction &CGF, saved_type value);
+};
+
+/// A partial specialization of DominatingValue for llvm::Values that
+/// might be llvm::Instructions.
+template <class T> struct DominatingPointer<T,true> : DominatingLLVMValue {
+  typedef T *type;
+  static type restore(CodeGenFunction &CGF, saved_type value) {
+    return static_cast<T*>(DominatingLLVMValue::restore(CGF, value));
+  }
+};
+
+/// A specialization of DominatingValue for Address.
+template <> struct DominatingValue<Address> {
+  typedef Address type;
+
+  struct saved_type {
+    DominatingLLVMValue::saved_type SavedValue;
+    CharUnits Alignment;
+  };
+
+  static bool needsSaving(type value) {
+    return DominatingLLVMValue::needsSaving(value.getPointer());
+  }
+  static saved_type save(CodeGenFunction &CGF, type value) {
+    return { DominatingLLVMValue::save(CGF, value.getPointer()),
+             value.getAlignment() };
+  }
+  static type restore(CodeGenFunction &CGF, saved_type value) {
+    return Address(DominatingLLVMValue::restore(CGF, value.SavedValue),
+                   value.Alignment);
+  }
+};
+
+/// A specialization of DominatingValue for RValue.
+template <> struct DominatingValue<RValue> {
+  typedef RValue type;
+  class saved_type {
+    enum Kind { ScalarLiteral, ScalarAddress, AggregateLiteral,
+                AggregateAddress, ComplexAddress };
+
+    llvm::Value *Value;
+    unsigned K : 3;
+    unsigned Align : 29;
+    saved_type(llvm::Value *v, Kind k, unsigned a = 0)
+      : Value(v), K(k), Align(a) {}
+
+  public:
+    static bool needsSaving(RValue value);
+    static saved_type save(CodeGenFunction &CGF, RValue value);
+    RValue restore(CodeGenFunction &CGF);
+
+    // implementations in CGCleanup.cpp
+  };
+
+  static bool needsSaving(type value) {
+    return saved_type::needsSaving(value);
+  }
+  static saved_type save(CodeGenFunction &CGF, type value) {
+    return saved_type::save(CGF, value);
+  }
+  static type restore(CodeGenFunction &CGF, saved_type value) {
+    return value.restore(CGF);
+  }
+};
+
 /// CodeGenFunction - This class organizes the per-function state that is used
 /// while generating LLVM code.
 class CodeGenFunction : public CodeGenTypeCache {
@@ -427,10 +509,13 @@ public:
     /// The size of the following cleanup object.
     unsigned Size;
     /// The kind of cleanup to push: a value from the CleanupKind enumeration.
-    CleanupKind Kind;
+    unsigned Kind : 31;
+    /// Whether this is a conditional cleanup.
+    unsigned IsConditional : 1;
 
     size_t getSize() const { return Size; }
-    CleanupKind getKind() const { return Kind; }
+    CleanupKind getKind() const { return (CleanupKind)Kind; }
+    bool isConditional() const { return IsConditional; }
   };
 
   /// i32s containing the indexes of the cleanup destinations.
@@ -529,24 +614,48 @@ public:
   /// full-expression.
   template <class T, class... As>
   void pushCleanupAfterFullExpr(CleanupKind Kind, As... A) {
-    assert(!isInConditionalBranch() && "can't defer conditional cleanup");
+    if (!isInConditionalBranch())
+      return pushCleanupAfterFullExprImpl<T>(Kind, Address::invalid(), A...);
 
-    LifetimeExtendedCleanupHeader Header = { sizeof(T), Kind };
+    Address ActiveFlag = createCleanupActiveFlag();
+    assert(!DominatingValue<Address>::needsSaving(ActiveFlag) &&
+           "cleanup active flag should never need saving");
+
+    typedef std::tuple<typename DominatingValue<As>::saved_type...> SavedTuple;
+    SavedTuple Saved{saveValueInCond(A)...};
+
+    typedef EHScopeStack::ConditionalCleanup<T, As...> CleanupType;
+    pushCleanupAfterFullExprImpl<CleanupType>(Kind, ActiveFlag, Saved);
+  }
+
+  template <class T, class... As>
+  void pushCleanupAfterFullExprImpl(CleanupKind Kind, Address ActiveFlag,
+                                    As... A) {
+    LifetimeExtendedCleanupHeader Header = {sizeof(T), Kind,
+                                            ActiveFlag.isValid()};
 
     size_t OldSize = LifetimeExtendedCleanupStack.size();
     LifetimeExtendedCleanupStack.resize(
-        LifetimeExtendedCleanupStack.size() + sizeof(Header) + Header.Size);
+        LifetimeExtendedCleanupStack.size() + sizeof(Header) + Header.Size +
+        (Header.IsConditional ? sizeof(ActiveFlag) : 0));
 
     static_assert(sizeof(Header) % alignof(T) == 0,
                   "Cleanup will be allocated on misaligned address");
     char *Buffer = &LifetimeExtendedCleanupStack[OldSize];
     new (Buffer) LifetimeExtendedCleanupHeader(Header);
     new (Buffer + sizeof(Header)) T(A...);
+    if (Header.IsConditional)
+      new (Buffer + sizeof(Header) + sizeof(T)) Address(ActiveFlag);
   }
 
-  /// Set up the last cleaup that was pushed as a conditional
+  /// Set up the last cleanup that was pushed as a conditional
   /// full-expression cleanup.
-  void initFullExprCleanup();
+  void initFullExprCleanup() {
+    initFullExprCleanupWithFlag(createCleanupActiveFlag());
+  }
+
+  void initFullExprCleanupWithFlag(Address ActiveFlag);
+  Address createCleanupActiveFlag();
 
   /// PushDestructorCleanup - Push a cleanup to call the
   /// complete-object destructor of an object of the given type at the
@@ -4176,107 +4285,29 @@ private:
   FormResolverCondition(const TargetMultiVersionResolverOption &RO);
 };
 
-/// Helper class with most of the code for saving a value for a
-/// conditional expression cleanup.
-struct DominatingLLVMValue {
-  typedef llvm::PointerIntPair<llvm::Value*, 1, bool> saved_type;
+inline DominatingLLVMValue::saved_type
+DominatingLLVMValue::save(CodeGenFunction &CGF, llvm::Value *value) {
+  if (!needsSaving(value)) return saved_type(value, false);
 
-  /// Answer whether the given value needs extra work to be saved.
-  static bool needsSaving(llvm::Value *value) {
-    // If it's not an instruction, we don't need to save.
-    if (!isa<llvm::Instruction>(value)) return false;
+  // Otherwise, we need an alloca.
+  auto align = CharUnits::fromQuantity(
+            CGF.CGM.getDataLayout().getPrefTypeAlignment(value->getType()));
+  Address alloca =
+    CGF.CreateTempAlloca(value->getType(), align, "cond-cleanup.save");
+  CGF.Builder.CreateStore(value, alloca);
 
-    // If it's an instruction in the entry block, we don't need to save.
-    llvm::BasicBlock *block = cast<llvm::Instruction>(value)->getParent();
-    return (block != &block->getParent()->getEntryBlock());
-  }
+  return saved_type(alloca.getPointer(), true);
+}
 
-  /// Try to save the given value.
-  static saved_type save(CodeGenFunction &CGF, llvm::Value *value) {
-    if (!needsSaving(value)) return saved_type(value, false);
+inline llvm::Value *DominatingLLVMValue::restore(CodeGenFunction &CGF,
+                                                 saved_type value) {
+  // If the value says it wasn't saved, trust that it's still dominating.
+  if (!value.getInt()) return value.getPointer();
 
-    // Otherwise, we need an alloca.
-    auto align = CharUnits::fromQuantity(
-              CGF.CGM.getDataLayout().getPrefTypeAlignment(value->getType()));
-    Address alloca =
-      CGF.CreateTempAlloca(value->getType(), align, "cond-cleanup.save");
-    CGF.Builder.CreateStore(value, alloca);
-
-    return saved_type(alloca.getPointer(), true);
-  }
-
-  static llvm::Value *restore(CodeGenFunction &CGF, saved_type value) {
-    // If the value says it wasn't saved, trust that it's still dominating.
-    if (!value.getInt()) return value.getPointer();
-
-    // Otherwise, it should be an alloca instruction, as set up in save().
-    auto alloca = cast<llvm::AllocaInst>(value.getPointer());
-    return CGF.Builder.CreateAlignedLoad(alloca, alloca->getAlignment());
-  }
-};
-
-/// A partial specialization of DominatingValue for llvm::Values that
-/// might be llvm::Instructions.
-template <class T> struct DominatingPointer<T,true> : DominatingLLVMValue {
-  typedef T *type;
-  static type restore(CodeGenFunction &CGF, saved_type value) {
-    return static_cast<T*>(DominatingLLVMValue::restore(CGF, value));
-  }
-};
-
-/// A specialization of DominatingValue for Address.
-template <> struct DominatingValue<Address> {
-  typedef Address type;
-
-  struct saved_type {
-    DominatingLLVMValue::saved_type SavedValue;
-    CharUnits Alignment;
-  };
-
-  static bool needsSaving(type value) {
-    return DominatingLLVMValue::needsSaving(value.getPointer());
-  }
-  static saved_type save(CodeGenFunction &CGF, type value) {
-    return { DominatingLLVMValue::save(CGF, value.getPointer()),
-             value.getAlignment() };
-  }
-  static type restore(CodeGenFunction &CGF, saved_type value) {
-    return Address(DominatingLLVMValue::restore(CGF, value.SavedValue),
-                   value.Alignment);
-  }
-};
-
-/// A specialization of DominatingValue for RValue.
-template <> struct DominatingValue<RValue> {
-  typedef RValue type;
-  class saved_type {
-    enum Kind { ScalarLiteral, ScalarAddress, AggregateLiteral,
-                AggregateAddress, ComplexAddress };
-
-    llvm::Value *Value;
-    unsigned K : 3;
-    unsigned Align : 29;
-    saved_type(llvm::Value *v, Kind k, unsigned a = 0)
-      : Value(v), K(k), Align(a) {}
-
-  public:
-    static bool needsSaving(RValue value);
-    static saved_type save(CodeGenFunction &CGF, RValue value);
-    RValue restore(CodeGenFunction &CGF);
-
-    // implementations in CGCleanup.cpp
-  };
-
-  static bool needsSaving(type value) {
-    return saved_type::needsSaving(value);
-  }
-  static saved_type save(CodeGenFunction &CGF, type value) {
-    return saved_type::save(CGF, value);
-  }
-  static type restore(CodeGenFunction &CGF, saved_type value) {
-    return value.restore(CGF);
-  }
-};
+  // Otherwise, it should be an alloca instruction, as set up in save().
+  auto alloca = cast<llvm::AllocaInst>(value.getPointer());
+  return CGF.Builder.CreateAlignedLoad(alloca, alloca->getAlignment());
+}
 
 }  // end namespace CodeGen
 }  // end namespace clang
