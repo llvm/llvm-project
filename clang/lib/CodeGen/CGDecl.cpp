@@ -1651,9 +1651,6 @@ void CodeGenFunction::pushStackRestore(CleanupKind Kind, Address SPMem) {
 void CodeGenFunction::pushLifetimeExtendedDestroy(
     CleanupKind cleanupKind, Address addr, QualType type,
     Destroyer *destroyer, bool useEHCleanupForArray) {
-  assert(!isInConditionalBranch() &&
-         "performing lifetime extension from within conditional");
-
   // Push an EH-only cleanup for the object now.
   // FIXME: When popping normal cleanups, we need to keep this EH cleanup
   // around in case a temporary's destructor throws an exception.

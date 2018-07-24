@@ -281,7 +281,7 @@ void EHScopeStack::popNullFixups() {
     BranchFixups.pop_back();
 }
 
-void CodeGenFunction::initFullExprCleanup() {
+Address CodeGenFunction::createCleanupActiveFlag() {
   // Create a variable to decide whether the cleanup needs to be run.
   Address active = CreateTempAllocaWithoutCast(
       Builder.getInt1Ty(), CharUnits::One(), "cleanup.cond");
@@ -293,10 +293,14 @@ void CodeGenFunction::initFullExprCleanup() {
   // Initialize it to true at the current location.
   Builder.CreateStore(Builder.getTrue(), active);
 
+  return active;
+}
+
+void CodeGenFunction::initFullExprCleanupWithFlag(Address ActiveFlag) {
   // Set that as the active flag in the cleanup.
   EHCleanupScope &cleanup = cast<EHCleanupScope>(*EHStack.begin());
   assert(!cleanup.hasActiveFlag() && "cleanup already has active flag?");
-  cleanup.setActiveFlag(active);
+  cleanup.setActiveFlag(ActiveFlag);
 
   if (cleanup.isNormalCleanup()) cleanup.setTestFlagInNormalCleanup();
   if (cleanup.isEHCleanup()) cleanup.setTestFlagInEHCleanup();
@@ -494,6 +498,13 @@ void CodeGenFunction::PopCleanupBlocks(
                               &LifetimeExtendedCleanupStack[I],
                               Header.getSize());
     I += Header.getSize();
+
+    if (Header.isConditional()) {
+      Address ActiveFlag =
+          reinterpret_cast<Address &>(LifetimeExtendedCleanupStack[I]);
+      initFullExprCleanupWithFlag(ActiveFlag);
+      I += sizeof(ActiveFlag);
+    }
   }
   LifetimeExtendedCleanupStack.resize(OldLifetimeExtendedSize);
 }

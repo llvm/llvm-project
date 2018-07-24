@@ -317,23 +317,25 @@ namespace dr1696 { // dr1696: 7
   //   D1 d1 = {A()};
   // ... which lifetime-extends the A temporary.
   struct D1 {
-    const A &a = A();
 #if __cplusplus < 201402L
     // expected-error@-2 {{binds to a temporary}}
-    // expected-note@-4 {{here}}
-#else
-    // expected-warning-re@-5 {{sorry, lifetime extension {{.*}} not supported}}
 #endif
+    const A &a = A(); // expected-note {{default member init}}
   };
-  D1 d1 = {}; // expected-note {{here}}
+  D1 d1 = {};
+#if __cplusplus < 201402L
+    // expected-note@-2 {{first required here}}
+#else
+    // expected-warning-re@-4 {{sorry, lifetime extension {{.*}} not supported}}
+#endif
 
   struct D2 {
-    const A &a = A(); // expected-error {{binds to a temporary}}
-    D2() {} // expected-note {{used here}}
+    const A &a = A(); // expected-note {{default member init}}
+    D2() {} // expected-error {{binds to a temporary}}
   };
 
-  struct D3 { // expected-note {{used here}}
-    const A &a = A(); // expected-error {{binds to a temporary}}
+  struct D3 { // expected-error {{binds to a temporary}}
+    const A &a = A(); // expected-note {{default member init}}
   };
   D3 d3; // expected-note {{first required here}}
 
@@ -352,14 +354,14 @@ namespace dr1696 { // dr1696: 7
     std::initializer_list<int> il = {1, 2, 3};
   };
 
-  struct haslist4 { // expected-note {{in default member initializer}}
-    std::initializer_list<int> il = {1, 2, 3}; // expected-error {{backing array for 'std::initializer_list' member 'il' is a temporary object}}
+  struct haslist4 { // expected-error {{backing array for 'std::initializer_list' member 'il' is a temporary object}}
+    std::initializer_list<int> il = {1, 2, 3}; // expected-note {{default member initializer}}
   };
   haslist4 hl4; // expected-note {{in implicit default constructor}}
 
   struct haslist5 {
-    std::initializer_list<int> il = {1, 2, 3}; // expected-error {{backing array for 'std::initializer_list' member 'il' is a temporary object}}
-    haslist5() {} // expected-note {{in default member initializer}}
+    std::initializer_list<int> il = {1, 2, 3}; // expected-note {{default member initializer}}
+    haslist5() {} // expected-error {{backing array for 'std::initializer_list' member 'il' is a temporary object}}
   };
 #endif
 }

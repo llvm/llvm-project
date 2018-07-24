@@ -88,6 +88,7 @@ class WalkAST: public StmtVisitor<WalkAST> {
   ///   size_t cpy = 4;
   ///   strlcpy(dst, "abcd", sizeof("abcd") - 1);
   ///   strlcpy(dst, "abcd", 4);
+  ///   strlcpy(dst + 3, "abcd", 2);
   ///   strlcpy(dst, "abcd", cpy);
   bool containsBadStrlcpyPattern(const CallExpr *CE);
 
@@ -149,6 +150,7 @@ bool WalkAST::containsBadStrlcpyPattern(const CallExpr *CE) {
 
   const auto *DstArgDecl = dyn_cast<DeclRefExpr>(DstArg->IgnoreParenImpCasts());
   const auto *LenArgDecl = dyn_cast<DeclRefExpr>(LenArg->IgnoreParenLValueCasts());
+  uint64_t DstOff = 0;
   // - size_t dstlen = sizeof(dst)
   if (LenArgDecl) {
     const auto *LenArgVal = dyn_cast<VarDecl>(LenArgDecl->getDecl());
@@ -158,14 +160,28 @@ bool WalkAST::containsBadStrlcpyPattern(const CallExpr *CE) {
 
   // - integral value
   // We try to figure out if the last argument is possibly longer
-  // than the destination can possibly handle if its size can be defined
+  // than the destination can possibly handle if its size can be defined.
   if (const auto *IL = dyn_cast<IntegerLiteral>(LenArg->IgnoreParenImpCasts())) {
     uint64_t ILRawVal = IL->getValue().getZExtValue();
+
+    // Case when there is pointer arithmetic on the destination buffer
+    // especially when we offset from the base decreasing the
+    // buffer length accordingly.
+    if (!DstArgDecl) {
+      if (const auto *BE = dyn_cast<BinaryOperator>(DstArg->IgnoreParenImpCasts())) {
+        DstArgDecl = dyn_cast<DeclRefExpr>(BE->getLHS()->IgnoreParenImpCasts());
+        if (BE->getOpcode() == BO_Add) {
+          if ((IL = dyn_cast<IntegerLiteral>(BE->getRHS()->IgnoreParenImpCasts()))) {
+            DstOff = IL->getValue().getZExtValue();
+          }
+        }
+      }
+    }
     if (DstArgDecl) {
       if (const auto *Buffer = dyn_cast<ConstantArrayType>(DstArgDecl->getType())) {
         ASTContext &C = BR.getContext();
         uint64_t BufferLen = C.getTypeSize(Buffer) / 8;
-        if (BufferLen < ILRawVal)
+        if ((BufferLen - DstOff) < ILRawVal)
           return true;
       }
     }

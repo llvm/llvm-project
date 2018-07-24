@@ -67,7 +67,7 @@ _LIBCPP_BEGIN_NAMESPACE_EXPERIMENTAL_FILESYSTEM
 namespace detail {
 namespace {
 
-static std::string format_string_imp(const char* msg, ...) {
+static string format_string_imp(const char* msg, ...) {
   // we might need a second shot at this, so pre-emptivly make a copy
   struct GuardVAList {
     va_list& target;
@@ -91,24 +91,24 @@ static std::string format_string_imp(const char* msg, ...) {
   va_copy(args_cp, args);
   GuardVAList args_copy_guard(args_cp);
 
-  std::array<char, 256> local_buff;
-  std::size_t size = local_buff.size();
+  array<char, 256> local_buff;
+  size_t size = local_buff.size();
   auto ret = ::vsnprintf(local_buff.data(), size, msg, args_cp);
 
   args_copy_guard.clear();
 
   // handle empty expansion
   if (ret == 0)
-    return std::string{};
-  if (static_cast<std::size_t>(ret) < size)
-    return std::string(local_buff.data());
+    return string{};
+  if (static_cast<size_t>(ret) < size)
+    return string(local_buff.data());
 
   // we did not provide a long enough buffer on our first attempt.
   // add 1 to size to account for null-byte in size cast to prevent overflow
-  size = static_cast<std::size_t>(ret) + 1;
-  auto buff_ptr = std::unique_ptr<char[]>(new char[size]);
+  size = static_cast<size_t>(ret) + 1;
+  auto buff_ptr = unique_ptr<char[]>(new char[size]);
   ret = ::vsnprintf(buff_ptr.get(), size, msg, args);
-  return std::string(buff_ptr.get());
+  return string(buff_ptr.get());
 }
 
 const char* unwrap(string const& s) { return s.c_str(); }
@@ -120,13 +120,13 @@ Arg const& unwrap(Arg const& a) {
 }
 
 template <class... Args>
-std::string format_string(const char* fmt, Args const&... args) {
+string format_string(const char* fmt, Args const&... args) {
   return format_string_imp(fmt, unwrap(args)...);
 }
 
-std::error_code capture_errno() {
+error_code capture_errno() {
   _LIBCPP_ASSERT(errno, "Expected errno to be non-zero");
-  return std::error_code(errno, std::generic_category());
+  return error_code(errno, generic_category());
 }
 
 template <class T>
@@ -375,7 +375,7 @@ using TimeStructArray = TimeStruct[2];
 #endif
 
 bool SetFileTimes(const path& p, TimeStructArray const& TS,
-                  std::error_code& ec) {
+                  error_code& ec) {
 #if !defined(_LIBCXX_USE_UTIMENSAT)
   if (::utimes(p.c_str(), TS) == -1)
 #else

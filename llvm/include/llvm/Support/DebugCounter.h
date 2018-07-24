@@ -77,23 +77,19 @@ public:
     auto &Us = instance();
     auto Result = Us.Counters.find(CounterName);
     if (Result != Us.Counters.end()) {
-      auto &CounterPair = Result->second;
-      // We only execute while the skip (first) is zero and the count (second)
-      // is non-zero.
+      auto &CounterInfo = Result->second;
+      ++CounterInfo.Count;
+
+      // We only execute while the Skip is not smaller than Count,
+      // and the StopAfter + Skip is larger than Count.
       // Negative counters always execute.
-      if (CounterPair.first < 0)
+      if (CounterInfo.Skip < 0)
         return true;
-      if (CounterPair.first != 0) {
-        --CounterPair.first;
+      if (CounterInfo.Skip >= CounterInfo.Count)
         return false;
-      }
-      if (CounterPair.second < 0)
+      if (CounterInfo.StopAfter < 0)
         return true;
-      if (CounterPair.second != 0) {
-        --CounterPair.second;
-        return true;
-      }
-      return false;
+      return CounterInfo.StopAfter + CounterInfo.Skip >= CounterInfo.Count;
     }
     // Didn't find the counter, should we warn?
     return true;
@@ -104,21 +100,21 @@ public:
   // the command line).  This will return true even if those values are
   // currently in a state where the counter will always execute.
   static bool isCounterSet(unsigned ID) {
-    return instance().Counters.count(ID);
+    return instance().Counters[ID].IsSet;
   }
 
-  // Return the skip and count for a counter. This only works for set counters.
-  static std::pair<int, int> getCounterValue(unsigned ID) {
+  // Return the Count for a counter. This only works for set counters.
+  static int64_t getCounterValue(unsigned ID) {
     auto &Us = instance();
     auto Result = Us.Counters.find(ID);
     assert(Result != Us.Counters.end() && "Asking about a non-set counter");
-    return Result->second;
+    return Result->second.Count;
   }
 
-  // Set a registered counter to a given value.
-  static void setCounterValue(unsigned ID, const std::pair<int, int> &Val) {
+  // Set a registered counter to a given Count value.
+  static void setCounterValue(unsigned ID, int64_t Count) {
     auto &Us = instance();
-    Us.Counters[ID] = Val;
+    Us.Counters[ID].Count = Count;
   }
 
   // Dump or print the current counter set into llvm::dbgs().
@@ -136,7 +132,7 @@ public:
 
   // Return the name and description of the counter with the given ID.
   std::pair<std::string, std::string> getCounterInfo(unsigned ID) const {
-    return std::make_pair(RegisteredCounters[ID], CounterDesc.lookup(ID));
+    return std::make_pair(RegisteredCounters[ID], Counters.lookup(ID).Desc);
   }
 
   // Iterate through the registered counters
@@ -149,11 +145,19 @@ public:
 private:
   unsigned addCounter(const std::string &Name, const std::string &Desc) {
     unsigned Result = RegisteredCounters.insert(Name);
-    CounterDesc[Result] = Desc;
+    Counters[Result] = {};
+    Counters[Result].Desc = Desc;
     return Result;
   }
-  DenseMap<unsigned, std::pair<long, long>> Counters;
-  DenseMap<unsigned, std::string> CounterDesc;
+  // Struct to store counter info.
+  struct CounterInfo {
+    int64_t Count = 0;
+    int64_t Skip = 0;
+    int64_t StopAfter = -1;
+    bool IsSet = false;
+    std::string Desc;
+  };
+  DenseMap<unsigned, CounterInfo> Counters;
   CounterVector RegisteredCounters;
 };
 

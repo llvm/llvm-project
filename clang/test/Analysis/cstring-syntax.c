@@ -31,4 +31,5 @@ void testStrlcpy(const char *src) {
   strlcpy(dest, src, badlen); // expected-warning {{The third argument is larger than the size of the input buffer. Replace with the value 'sizeof(dest)` or lower}}
   strlcpy(dest, src, ulen);
   strlcpy(dest + 5, src, 5);
+  strlcpy(dest + 5, src, 10); // expected-warning {{The third argument is larger than the size of the input buffer.}}
 }

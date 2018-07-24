@@ -1020,7 +1020,7 @@ object.  For example:
      // Reading multiple documents in one file
      using llvm::yaml::Input;
 
-     LLVM_YAML_IS_DOCUMENT_LIST_VECTOR(std::vector<MyDocType>)
+     LLVM_YAML_IS_DOCUMENT_LIST_VECTOR(MyDocType)
      
      Input yin(mb.getBuffer());
      

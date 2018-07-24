@@ -2158,5 +2158,13 @@ TEST(IsAssignmentOperator, Basic) {
       notMatches("void x() { int a; if(a == 0) return; }", BinAsgmtOperator));
 }
 
+TEST(Matcher, isMain) {
+  EXPECT_TRUE(
+    matches("int main() {}", functionDecl(isMain())));
+
+  EXPECT_TRUE(
+    notMatches("int main2() {}", functionDecl(isMain())));
+}
+
 } // namespace ast_matchers
 } // namespace clang

@@ -34,6 +34,8 @@ class OutputStream {
       if (BufferCapacity < N + CurrentPosition)
         BufferCapacity = N + CurrentPosition;
       Buffer = static_cast<char *>(std::realloc(Buffer, BufferCapacity));
+      if (Buffer == nullptr)
+        std::terminate();
     }
   }
 
@@ -75,6 +77,8 @@ public:
 
     if (!StartBuf || !Size) {
       StartBuf = static_cast<char *>(std::malloc(AllocSize));
+      if (StartBuf == nullptr)
+        std::terminate();
       Size = &AllocSize;
     }
 

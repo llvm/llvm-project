@@ -128,11 +128,10 @@ struct RValue {
 RValue RVa;
 RValue RVb(RVa); // expected-error{{call to implicitly-deleted copy constructor}}
 
-// FIXME: The note on the class-name is attached to the location of the
+// FIXME: The error on the class-name is attached to the location of the
 // constructor. This is not especially clear.
-struct RValueTmp { // expected-note {{used here}}
-  int && ri = 1; // expected-note{{copy constructor of 'RValueTmp' is implicitly deleted because field 'ri' is of rvalue reference type 'int &&'}}
-  // expected-error@-1 {{reference member 'ri' binds to a temporary}}
+struct RValueTmp { // expected-error {{reference member 'ri' binds to a temporary}}
+  int && ri = 1; // expected-note{{copy constructor of 'RValueTmp' is implicitly deleted because field 'ri' is of rvalue reference type 'int &&'}} // expected-note {{default member init}}
 };
 RValueTmp RVTa; // expected-note {{implicit default constructor for 'RValueTmp' first required here}}
 RValueTmp RVTb(RVTa); // expected-error{{call to implicitly-deleted copy constructor}}

@@ -730,9 +730,21 @@ bool HCE::ExtRoot::operator< (const HCE::ExtRoot &ER) const {
     }
     case MachineOperand::MO_ExternalSymbol:
       return StringRef(V.SymbolName) < StringRef(ER.V.SymbolName);
-    case MachineOperand::MO_GlobalAddress:
-      assert(V.GV->hasName() && ER.V.GV->hasName());
-      return V.GV->getName() < ER.V.GV->getName();
+    case MachineOperand::MO_GlobalAddress: {
+      // Global values may not have names, so compare their positions
+      // in the parent module.
+      const Module &M = *V.GV->getParent();
+      auto FindPos = [&M] (const GlobalValue &V) {
+        unsigned P = 0;
+        for (const GlobalValue &T : M.global_values()) {
+          if (&T == &V)
+            return P;
+          P++;
+        }
+        llvm_unreachable("Global value not found in module");
+      };
+      return FindPos(*V.GV) < FindPos(*ER.V.GV);
+    }
     case MachineOperand::MO_BlockAddress: {
       const BasicBlock *ThisB = V.BA->getBasicBlock();
       const BasicBlock *OtherB = ER.V.BA->getBasicBlock();
