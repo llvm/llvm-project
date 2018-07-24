@@ -138,15 +138,16 @@ class TracePC {
   bool ObservedFocusFunction();
 
   void InitializeUnstableCounters();
-  void UpdateUnstableCounters();
+  void UpdateUnstableCounters(int UnstableMode);
+  void ApplyUnstableCounters();
 
 private:
-  // Value used to represent unstable edge.
-  static constexpr int16_t kUnstableCounter = -1;
+  struct UnstableEdge {
+    uint8_t Counter;
+    bool IsUnstable;
+  };
 
-  // Uses 16-bit signed type to be able to accommodate any possible value from
-  // uint8_t counter and -1 constant as well.
-  int16_t UnstableCounters[kNumPCs];
+  UnstableEdge UnstableCounters[kNumPCs];
 
   bool UseCounters = false;
   uint32_t UseValueProfileMask = false;

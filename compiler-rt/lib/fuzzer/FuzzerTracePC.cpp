@@ -75,17 +75,26 @@ void TracePC::IterateInline8bitCounters(CallBack CB) const {
 // counters.
 void TracePC::InitializeUnstableCounters() {
   IterateInline8bitCounters([&](int i, int j, int UnstableIdx) {
-    if (UnstableCounters[UnstableIdx] != kUnstableCounter)
-      UnstableCounters[UnstableIdx] = ModuleCounters[i].Start[j];
+    UnstableCounters[UnstableIdx].Counter = ModuleCounters[i].Start[j];
   });
 }
 
 // Compares the current counters with counters from previous runs
 // and records differences as unstable edges.
-void TracePC::UpdateUnstableCounters() {
+void TracePC::UpdateUnstableCounters(int UnstableMode) {
   IterateInline8bitCounters([&](int i, int j, int UnstableIdx) {
-    if (ModuleCounters[i].Start[j] != UnstableCounters[UnstableIdx])
-      UnstableCounters[UnstableIdx] = kUnstableCounter;
+    if (ModuleCounters[i].Start[j] != UnstableCounters[UnstableIdx].Counter)
+      UnstableCounters[UnstableIdx].IsUnstable = true;
+    if (UnstableMode &&
+        ModuleCounters[i].Start[j] < UnstableCounters[UnstableIdx].Counter)
+      UnstableCounters[UnstableIdx].Counter = ModuleCounters[i].Start[j];
+  });
+}
+
+// Moves the minimum hit counts to ModuleCounters.
+void TracePC::ApplyUnstableCounters() {
+  IterateInline8bitCounters([&](int i, int j, int UnstableIdx) {
+    ModuleCounters[i].Start[j] = UnstableCounters[UnstableIdx].Counter;
   });
 }
 
@@ -340,7 +349,7 @@ void TracePC::DumpCoverage() {
 void TracePC::PrintUnstableStats() {
   size_t count = 0;
   for (size_t i = 0; i < NumInline8bitCounters; i++)
-    if (UnstableCounters[i] == kUnstableCounter)
+    if (UnstableCounters[i].IsUnstable)
       count++;
   Printf("stat::stability_rate: %.2f\n",
          100 - static_cast<float>(count * 100) / NumInline8bitCounters);
