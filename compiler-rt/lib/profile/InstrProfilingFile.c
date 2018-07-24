@@ -318,11 +318,11 @@ static int parseFilenamePattern(const char *FilenamePat,
   if (lprofCurFilename.Filename)
     free((void *)lprofCurFilename.Filename);
 
-  memset(&lprofCurFilename, 0, sizeof(lprofCurFilename));
-
   if (lprofCurFilename.FilenamePat && lprofCurFilename.OwnsFilenamePat) {
     free((void *)lprofCurFilename.FilenamePat);
   }
+
+  memset(&lprofCurFilename, 0, sizeof(lprofCurFilename));
 
   if (!CopyFilenamePat)
     lprofCurFilename.FilenamePat = FilenamePat;

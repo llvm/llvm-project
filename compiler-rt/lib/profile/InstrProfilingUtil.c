@@ -243,23 +243,21 @@ lprofApplyPathPrefix(char *Dest, const char *PathStr, const char *Prefix,
 
 COMPILER_RT_VISIBILITY const char *
 lprofFindFirstDirSeparator(const char *Path) {
-  const char *Sep;
-  Sep = strchr(Path, DIR_SEPARATOR);
-  if (Sep)
-    return Sep;
+  const char *Sep = strchr(Path, DIR_SEPARATOR);
 #if defined(DIR_SEPARATOR_2)
-  Sep = strchr(Path, DIR_SEPARATOR_2);
+  const char *Sep2 = strchr(Path, DIR_SEPARATOR_2);
+  if (Sep2 && (!Sep || Sep2 < Sep))
+    Sep = Sep2;
 #endif
   return Sep;
 }
 
 COMPILER_RT_VISIBILITY const char *lprofFindLastDirSeparator(const char *Path) {
-  const char *Sep;
-  Sep = strrchr(Path, DIR_SEPARATOR);
-  if (Sep)
-    return Sep;
+  const char *Sep = strrchr(Path, DIR_SEPARATOR);
 #if defined(DIR_SEPARATOR_2)
-  Sep = strrchr(Path, DIR_SEPARATOR_2);
+  const char *Sep2 = strrchr(Path, DIR_SEPARATOR_2);
+  if (Sep2 && (!Sep || Sep2 > Sep))
+    Sep = Sep2;
 #endif
   return Sep;
 }

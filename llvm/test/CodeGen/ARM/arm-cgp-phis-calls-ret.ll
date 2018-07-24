@@ -1,7 +1,7 @@
-; RUN: llc -mtriple=thumbv7m %s -o - | FileCheck %s --check-prefix=CHECK-COMMON --check-prefix=CHECK-NODSP
-; RUN: llc -mtriple=thumbv8m.main %s -o - | FileCheck %s --check-prefix=CHECK-COMMON --check-prefix=CHECK-NODSP
-; RUN: llc -mtriple=thumbv8m.main -arm-enable-scalar-dsp=true -mcpu=cortex-m33 %s -o - | FileCheck %s --check-prefix=CHECK-COMMON --check-prefix=CHECK-DSP
-; RUN: llc -mtriple=thumbv7em %s -arm-enable-scalar-dsp=true -arm-enable-scalar-dsp-imms=true -o - | FileCheck %s --check-prefix=CHECK-COMMON --check-prefix=CHECK-DSP-IMM
+; RUN: llc -mtriple=thumbv7m -arm-disable-cgp=false %s -o - | FileCheck %s --check-prefix=CHECK-COMMON --check-prefix=CHECK-NODSP
+; RUN: llc -mtriple=thumbv8m.main -arm-disable-cgp=false %s -o - | FileCheck %s --check-prefix=CHECK-COMMON --check-prefix=CHECK-NODSP
+; RUN: llc -mtriple=thumbv8m.main -arm-disable-cgp=false -arm-enable-scalar-dsp=true -mcpu=cortex-m33 %s -o - | FileCheck %s --check-prefix=CHECK-COMMON --check-prefix=CHECK-DSP
+; RUN: llc -mtriple=thumbv7em %s -arm-disable-cgp=false -arm-enable-scalar-dsp=true -arm-enable-scalar-dsp-imms=true -o - | FileCheck %s --check-prefix=CHECK-COMMON --check-prefix=CHECK-DSP-IMM
 
 ; Test that ARMCodeGenPrepare can handle:
 ; - loops

@@ -84,6 +84,9 @@ class TargetRegisterClass;
       // Get the High 16 bits from a 32 bit immediate for accessing the GOT.
       GotHi,
 
+      // Get the High 16 bits from a 32-bit immediate for accessing TLS.
+      TlsHi,
+
       // Handle gp_rel (small data/bss sections) relocation.
       GPRel,
 

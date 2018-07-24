@@ -27,10 +27,8 @@
 #define TEST_HAS_FEATURE(X) 0
 #endif
 
-#ifdef __has_include
-#define TEST_HAS_INCLUDE(X) __has_include(X)
-#else
-#define TEST_HAS_INCLUDE(X) 0
+#ifndef __has_include
+#define __has_include(...) 0
 #endif
 
 #ifdef __has_extension
@@ -90,7 +88,7 @@
 #endif
 
 // Attempt to deduce GCC version
-#if defined(_LIBCPP_VERSION) && TEST_HAS_INCLUDE(<features.h>)
+#if defined(_LIBCPP_VERSION) && __has_include(<features.h>)
 #include <features.h>
 #define TEST_HAS_GLIBC
 #define TEST_GLIBC_PREREQ(major, minor) __GLIBC_PREREQ(major, minor)
