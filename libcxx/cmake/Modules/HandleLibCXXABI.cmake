@@ -48,12 +48,14 @@ macro(setup_abi_lib abidefines abilib abifiles abidirs)
             COMMENT "Copying C++ ABI header ${fpath}...")
         list(APPEND abilib_headers "${dst}")
 
-        set(dst "${LIBCXX_HEADER_DIR}/include/c++/v1/${dstdir}/${fpath}")
-        add_custom_command(OUTPUT ${dst}
-            DEPENDS ${src}
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different ${src} ${dst}
-            COMMENT "Copying C++ ABI header ${fpath}...")
-        list(APPEND abilib_headers "${dst}")
+        if (NOT LIBCXX_USING_INSTALLED_LLVM)
+          set(dst "${LIBCXX_HEADER_DIR}/include/c++/v1/${dstdir}/${fpath}")
+          add_custom_command(OUTPUT ${dst}
+              DEPENDS ${src}
+              COMMAND ${CMAKE_COMMAND} -E copy_if_different ${src} ${dst}
+              COMMENT "Copying C++ ABI header ${fpath}...")
+          list(APPEND abilib_headers "${dst}")
+        endif()
 
         if (LIBCXX_INSTALL_HEADERS)
           install(FILES "${LIBCXX_BINARY_INCLUDE_DIR}/${fpath}"
