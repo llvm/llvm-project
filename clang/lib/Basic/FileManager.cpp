@@ -316,7 +316,7 @@ const FileEntry *FileManager::getFile(StringRef Filename, bool openFile,
   UFE.File = std::move(F);
   UFE.IsValid = true;
   if (UFE.File)
-    if (auto RealPathName = UFE.File->getName())
+    if (auto RealPathName = UFE.File->getRealPath())
       UFE.RealPathName = *RealPathName;
   return &UFE;
 }

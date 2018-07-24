@@ -73,16 +73,14 @@ Status::Status(StringRef Name, UniqueID UID, sys::TimePoint<> MTime,
     : Name(Name), UID(UID), MTime(MTime), User(User), Group(Group), Size(Size),
       Type(Type), Perms(Perms) {}
 
-Status Status::copyWithNewName(const Status &In, StringRef NewName) {
-  return Status(NewName, In.getUniqueID(), In.getLastModificationTime(),
-                In.getUser(), In.getGroup(), In.getSize(), In.getType(),
-                In.getPermissions());
-}
+Status::Status(const file_status &In, StringRef NewName)
+    : Status(NewName, In.getUniqueID(), In.getLastModificationTime(),
+             In.getUser(), In.getGroup(), In.getSize(), In.type(),
+             In.permissions()) {}
 
-Status Status::copyWithNewName(const file_status &In, StringRef NewName) {
-  return Status(NewName, In.getUniqueID(), In.getLastModificationTime(),
-                In.getUser(), In.getGroup(), In.getSize(), In.type(),
-                In.permissions());
+Status Status::copyWithNewName(StringRef NewName) {
+  return Status(NewName, getUniqueID(), getLastModificationTime(), getUser(),
+                getGroup(), getSize(), getType(), getPermissions());
 }
 
 bool Status::equivalent(const Status &Other) const {
@@ -178,6 +176,7 @@ class RealFile : public File {
   Status S;
   std::string RealName;
 
+  // NewRealPathName is used only if non-empty.
   RealFile(int FD, StringRef NewName, StringRef NewRealPathName)
       : FD(FD), S(NewName, {}, {}, {}, {}, {},
                   llvm::sys::fs::file_type::status_error, {}),
@@ -189,7 +188,7 @@ public:
   ~RealFile() override;
 
   ErrorOr<Status> status() override;
-  ErrorOr<std::string> getName() override;
+  Optional<std::string> getRealPath() override;
   ErrorOr<std::unique_ptr<MemoryBuffer>> getBuffer(const Twine &Name,
                                                    int64_t FileSize,
                                                    bool RequiresNullTerminator,
@@ -207,13 +206,15 @@ ErrorOr<Status> RealFile::status() {
     file_status RealStatus;
     if (std::error_code EC = sys::fs::status(FD, RealStatus))
       return EC;
-    S = Status::copyWithNewName(RealStatus, S.getName());
+    S = Status(RealStatus, S.getName());
   }
   return S;
 }
 
-ErrorOr<std::string> RealFile::getName() {
-  return RealName.empty() ? S.getName().str() : RealName;
+Optional<std::string> RealFile::getRealPath() {
+  if (RealName.empty())
+    return llvm::None;
+  return RealName;
 }
 
 ErrorOr<std::unique_ptr<MemoryBuffer>>
@@ -251,7 +252,7 @@ ErrorOr<Status> RealFileSystem::status(const Twine &Path) {
   sys::fs::file_status RealStatus;
   if (std::error_code EC = sys::fs::status(Path, RealStatus))
     return EC;
-  return Status::copyWithNewName(RealStatus, Path.str());
+  return Status(RealStatus, Path.str());
 }
 
 ErrorOr<std::unique_ptr<File>>
@@ -303,7 +304,7 @@ public:
     if (Iter != llvm::sys::fs::directory_iterator()) {
       llvm::sys::fs::file_status S;
       std::error_code ErrorCode = llvm::sys::fs::status(Iter->path(), S, true);
-      CurrentEntry = Status::copyWithNewName(S, Iter->path());
+      CurrentEntry = Status(S, Iter->path());
       if (!EC)
         EC = ErrorCode;
     }
@@ -317,7 +318,7 @@ public:
     } else {
       llvm::sys::fs::file_status S;
       std::error_code ErrorCode = llvm::sys::fs::status(Iter->path(), S, true);
-      CurrentEntry = Status::copyWithNewName(S, Iter->path());
+      CurrentEntry = Status(S, Iter->path());
       if (!EC)
         EC = ErrorCode;
     }
@@ -1641,7 +1642,7 @@ static Status getRedirectedFileStatus(const Twine &Path, bool UseExternalNames,
                                       Status ExternalStatus) {
   Status S = ExternalStatus;
   if (!UseExternalNames)
-    S = Status::copyWithNewName(S, Path.str());
+    S = S.copyWithNewName(Path.str());
   S.IsVFSMapped = true;
   return S;
 }
@@ -1657,7 +1658,7 @@ ErrorOr<Status> RedirectingFileSystem::status(const Twine &Path, Entry *E) {
     return S;
   } else { // directory
     auto *DE = cast<RedirectingDirectoryEntry>(E);
-    return Status::copyWithNewName(DE->getStatus(), Path.str());
+    return DE->getStatus().copyWithNewName(Path.str());
   }
 }
 
