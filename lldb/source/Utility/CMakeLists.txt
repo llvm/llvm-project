@@ -52,7 +52,6 @@ add_lldb_library(lldbUtility
   DataExtractor.cpp
   Environment.cpp
   FileSpec.cpp
-  History.cpp
   IOObject.cpp
   JSON.cpp
   LLDBAssert.cpp

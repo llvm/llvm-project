@@ -2036,8 +2036,6 @@
 		26A0DA4D140F721D006DA411 /* HashedNameToDIE.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = HashedNameToDIE.h; sourceTree = "<group>"; };
 		2666ADC31B3CB675001FAFD3 /* HexagonDYLDRendezvous.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = HexagonDYLDRendezvous.cpp; sourceTree = "<group>"; };
 		2666ADC41B3CB675001FAFD3 /* HexagonDYLDRendezvous.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HexagonDYLDRendezvous.h; sourceTree = "<group>"; };
-		AFC2DCF21E6E30CF00283714 /* History.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = History.cpp; path = source/Utility/History.cpp; sourceTree = "<group>"; };
-		AFC2DCF41E6E30D800283714 /* History.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = History.h; path = include/lldb/Utility/History.h; sourceTree = "<group>"; };
 		AF1729D4182C907200E0AB97 /* HistoryThread.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = HistoryThread.cpp; path = Utility/HistoryThread.cpp; sourceTree = "<group>"; };
 		AF061F89182C980000B6A19C /* HistoryThread.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = HistoryThread.h; path = Utility/HistoryThread.h; sourceTree = "<group>"; };
 		AF1729D5182C907200E0AB97 /* HistoryUnwind.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = HistoryUnwind.cpp; path = Utility/HistoryUnwind.cpp; sourceTree = "<group>"; };
