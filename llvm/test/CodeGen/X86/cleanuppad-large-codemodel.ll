@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-pc-windows-msvc -code-model=large -o - < %s | FileCheck %s
+; RUN: llc -mtriple=x86_64-pc-windows-msvc -code-model=large -relocation-model=static -o - < %s | FileCheck %s
 
 declare i32 @__CxxFrameHandler3(...)
 

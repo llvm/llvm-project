@@ -1,4 +1,4 @@
-//===--- IndexSymbol.h - Types and functions for indexing symbols ---------===//
+//===- IndexSymbol.h - Types and functions for indexing symbols -*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //

@@ -33,10 +33,10 @@ namespace dr1813 { // dr1813: 7
 namespace dr1815 { // dr1815: no
 #if __cplusplus >= 201402L
   // FIXME: needs codegen test
-  struct A { int &&r = 0; }; // FIXME expected-warning {{not supported}}
-  A a = {}; // expected-note {{here}}
+  struct A { int &&r = 0; }; // expected-note {{default member init}}
+  A a = {}; // FIXME expected-warning {{not supported}}
 
-  struct B { int &&r = 0; }; // expected-error {{binds to a temporary}} expected-note {{here}}
+  struct B { int &&r = 0; }; // expected-error {{binds to a temporary}} expected-note {{default member init}}
   B b; // expected-note {{here}}
 #endif
 }

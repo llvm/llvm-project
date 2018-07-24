@@ -30,3 +30,7 @@ endif( LLVM_USE_OPROFILE )
 if( LLVM_USE_INTEL_JITEVENTS )
   add_subdirectory(IntelJITEvents)
 endif( LLVM_USE_INTEL_JITEVENTS )
+
+if( LLVM_USE_PERF )
+  add_subdirectory(PerfJITEvents)
+endif( LLVM_USE_PERF )

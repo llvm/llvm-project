@@ -2809,7 +2809,7 @@ public:
           C.MakeAction<OffloadUnbundlingJobAction>(HostAction);
       UnbundlingHostAction->registerDependentActionInfo(
           C.getSingleOffloadToolChain<Action::OFK_Host>(),
-          /*BoundArch=*/"all", Action::OFK_Host);
+          /*BoundArch=*/StringRef(), Action::OFK_Host);
       HostAction = UnbundlingHostAction;
     }
 
@@ -3868,7 +3868,7 @@ InputInfo Driver::BuildJobsForActionNoCache(
       StringRef Arch;
       if (TargetDeviceOffloadKind == Action::OFK_HIP) {
         if (UI.DependentOffloadKind == Action::OFK_Host)
-          Arch = "all";
+          Arch = StringRef();
         else
           Arch = UI.DependentBoundArch;
       } else

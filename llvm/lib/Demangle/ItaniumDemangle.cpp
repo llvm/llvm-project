@@ -1761,13 +1761,17 @@ class BumpPointerAllocator {
   BlockMeta* BlockList = nullptr;
 
   void grow() {
-    char* NewMeta = new char[AllocSize];
+    char* NewMeta = static_cast<char *>(std::malloc(AllocSize));
+    if (NewMeta == nullptr)
+      std::terminate();
     BlockList = new (NewMeta) BlockMeta{BlockList, 0};
   }
 
   void* allocateMassive(size_t NBytes) {
     NBytes += sizeof(BlockMeta);
-    BlockMeta* NewMeta = reinterpret_cast<BlockMeta*>(new char[NBytes]);
+    BlockMeta* NewMeta = reinterpret_cast<BlockMeta*>(std::malloc(NBytes));
+    if (NewMeta == nullptr)
+      std::terminate();
     BlockList->Next = new (NewMeta) BlockMeta{BlockList->Next, 0};
     return static_cast<void*>(NewMeta + 1);
   }
@@ -1793,7 +1797,7 @@ public:
       BlockMeta* Tmp = BlockList;
       BlockList = BlockList->Next;
       if (reinterpret_cast<char*>(Tmp) != InitialBuffer)
-        delete[] reinterpret_cast<char*>(Tmp);
+        std::free(Tmp);
     }
     BlockList = new (InitialBuffer) BlockMeta{nullptr, 0};
   }
@@ -1823,10 +1827,15 @@ class PODSmallVector {
     size_t S = size();
     if (isInline()) {
       auto* Tmp = static_cast<T*>(std::malloc(NewCap * sizeof(T)));
+      if (Tmp == nullptr)
+        std::terminate();
       std::copy(First, Last, Tmp);
       First = Tmp;
-    } else
+    } else {
       First = static_cast<T*>(std::realloc(First, NewCap * sizeof(T)));
+      if (First == nullptr)
+        std::terminate();
+    }
     Last = First + S;
     Cap = First + NewCap;
   }

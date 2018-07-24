@@ -14,14 +14,14 @@
 
 // CHECK: [[CLANG:".*clang.*"]] "-cc1" "-triple" "amdgcn-amd-amdhsa" 
 // CHECK-SAME: "-aux-triple" "x86_64--linux-gnu" "-emit-llvm-bc"
-// CHECK-SAME: {{.*}} "-main-file-name" "a.cu" {{.*}} "-fcuda-is-device"
-// CHECK-SAME: {{.*}} "-o" [[A_BC:".*bc"]] "-x" "hip"
+// CHECK-SAME: {{.*}} "-main-file-name" "a.cu" {{.*}} "-target-cpu" "gfx803"
+// CHECK-SAME: "-fcuda-is-device" {{.*}} "-o" [[A_BC:".*bc"]] "-x" "hip"
 // CHECK-SAME: {{.*}} [[A_SRC:".*a.cu"]]
 
 // CHECK: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
 // CHECK-SAME: "-aux-triple" "x86_64--linux-gnu" "-emit-llvm-bc"
-// CHECK-SAME: {{.*}} "-main-file-name" "b.hip" {{.*}} "-fcuda-is-device"
-// CHECK-SAME: {{.*}} "-o" [[B_BC:".*bc"]] "-x" "hip"
+// CHECK-SAME: {{.*}} "-main-file-name" "b.hip" {{.*}} "-target-cpu" "gfx803"
+// CHECK-SAME: "-fcuda-is-device" {{.*}} "-o" [[B_BC:".*bc"]] "-x" "hip"
 // CHECK-SAME: {{.*}} [[B_SRC:".*b.hip"]]
 
 // CHECK: [[LLVM_LINK:"*.llvm-link"]] [[A_BC]] [[B_BC]]
@@ -40,14 +40,14 @@
 
 // CHECK: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa" 
 // CHECK-SAME: "-aux-triple" "x86_64--linux-gnu" "-emit-llvm-bc"
-// CHECK-SAME: {{.*}} "-main-file-name" "a.cu" {{.*}} "-fcuda-is-device"
-// CHECK-SAME: {{.*}} "-o" [[A_BC:".*bc"]] "-x" "hip"
+// CHECK-SAME: {{.*}} "-main-file-name" "a.cu" {{.*}} "-target-cpu" "gfx900"
+// CHECK-SAME: "-fcuda-is-device" {{.*}} "-o" [[A_BC:".*bc"]] "-x" "hip"
 // CHECK-SAME: {{.*}} [[A_SRC]]
 
 // CHECK: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
 // CHECK-SAME: "-aux-triple" "x86_64--linux-gnu" "-emit-llvm-bc"
-// CHECK-SAME: {{.*}} "-main-file-name" "b.hip" {{.*}} "-fcuda-is-device"
-// CHECK-SAME: {{.*}} "-o" [[B_BC:".*bc"]] "-x" "hip"
+// CHECK-SAME: {{.*}} "-main-file-name" "b.hip" {{.*}} "-target-cpu" "gfx900"
+// CHECK-SAME: "-fcuda-is-device" {{.*}} "-o" [[B_BC:".*bc"]] "-x" "hip"
 // CHECK-SAME: {{.*}} [[B_SRC]]
 
 // CHECK: [[LLVM_LINK]] [[A_BC]] [[B_BC]]
@@ -80,5 +80,5 @@
 // CHECK-SAME: "-targets={{.*}},hip-amdgcn-amd-amdhsa-gfx803,hip-amdgcn-amd-amdhsa-gfx900"
 // CHECK-SAME: "-inputs={{.*}},[[IMG_DEV1]],[[IMG_DEV2]]" "-outputs=[[BUNDLE:.*o]]"
 
-// CHECK: [[LD:".*ld.lld"]] {{.*}} [[A_OBJ_HOST]] [[B_OBJ_HOST]]
+// CHECK: [[LD:".*ld.*"]] {{.*}} [[A_OBJ_HOST]] [[B_OBJ_HOST]]
 // CHECK-SAME: {{.*}} "-T" "{{.*}}.lk"

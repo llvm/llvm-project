@@ -559,6 +559,10 @@ module std [system] {
       header "experimental/set"
       export *
     }
+    module span {
+      header "span"
+      export *
+    }
     module string {
       header "experimental/string"
       export *

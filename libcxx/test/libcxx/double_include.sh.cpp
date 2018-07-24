@@ -102,6 +102,7 @@
 #ifndef _LIBCPP_HAS_NO_THREADS
 #include <shared_mutex>
 #endif
+#include <span>
 #include <sstream>
 #include <stack>
 #include <stdbool.h>

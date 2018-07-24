@@ -3984,6 +3984,8 @@ TargetLowering::expandUnalignedLoad(LoadSDNode *LD, SelectionDAG &DAG) const {
       if (!isOperationLegalOrCustom(ISD::LOAD, intVT)) {
         // Scalarize the load and let the individual components be handled.
         SDValue Scalarized = scalarizeVectorLoad(LD, DAG);
+        if (Scalarized->getOpcode() == ISD::MERGE_VALUES)
+	  return std::make_pair(Scalarized.getOperand(0), Scalarized.getOperand(1));
         return std::make_pair(Scalarized.getValue(0), Scalarized.getValue(1));
       }
 

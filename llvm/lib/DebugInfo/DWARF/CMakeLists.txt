@@ -20,6 +20,7 @@ add_llvm_library(LLVMDebugInfoDWARF
   DWARFExpression.cpp
   DWARFFormValue.cpp
   DWARFGdbIndex.cpp
+  DWARFListTable.cpp
   DWARFTypeUnit.cpp
   DWARFUnitIndex.cpp
   DWARFUnit.cpp

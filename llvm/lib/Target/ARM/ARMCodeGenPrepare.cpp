@@ -98,8 +98,6 @@ public:
 
   ARMCodeGenPrepare() : FunctionPass(ID) {}
 
-  ~ARMCodeGenPrepare() { delete Promoter; }
-
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<TargetPassConfig>();
   }
@@ -108,6 +106,7 @@ public:
 
   bool doInitialization(Module &M) override;
   bool runOnFunction(Function &F) override;
+  bool doFinalization(Module &M) override;
 };
 
 }
@@ -732,6 +731,11 @@ bool ARMCodeGenPrepare::runOnFunction(Function &F) {
     LLVM_DEBUG(dbgs() << "After ARMCodeGenPrepare: " << F << "\n");
 
   return MadeChange;
+}
+
+bool ARMCodeGenPrepare::doFinalization(Module &M) {
+  delete Promoter;
+  return false;
 }
 
 INITIALIZE_PASS_BEGIN(ARMCodeGenPrepare, DEBUG_TYPE,

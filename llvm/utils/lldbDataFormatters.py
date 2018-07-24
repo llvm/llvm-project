@@ -91,8 +91,18 @@ class ArrayRefSynthProvider:
         assert self.type_size != 0
 
 def OptionalSummaryProvider(valobj, internal_dict):
-    if not valobj.GetChildMemberWithName('hasVal').GetValueAsUnsigned(0):
+    storage = valobj.GetChildMemberWithName('Storage')
+    if not storage:
+        storage = valobj
+
+    failure = 2
+    hasVal = storage.GetChildMemberWithName('hasVal').GetValueAsUnsigned(failure)
+    if hasVal == failure:
+        return '<could not read llvm::Optional>'
+
+    if hasVal == 0:
         return 'None'
-    underlying_type = valobj.GetType().GetTemplateArgumentType(0)
-    storage = valobj.GetChildMemberWithName('storage')
+
+    underlying_type = storage.GetType().GetTemplateArgumentType(0)
+    storage = storage.GetChildMemberWithName('storage')
     return str(storage.Cast(underlying_type))

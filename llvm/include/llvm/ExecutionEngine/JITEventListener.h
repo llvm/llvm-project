@@ -117,6 +117,15 @@ public:
   }
 #endif // USE_OPROFILE
 
+#if LLVM_USE_PERF
+  static JITEventListener *createPerfJITEventListener();
+#else
+  static JITEventListener *createPerfJITEventListener()
+  {
+    return nullptr;
+  }
+#endif // USE_PERF
+
 private:
   virtual void anchor();
 };
@@ -131,6 +140,10 @@ LLVMJITEventListenerRef LLVMCreateIntelJITEventListener(void);
 
 #ifndef LLVM_USE_OPROFILE
 LLVMJITEventListenerRef LLVMCreateOProfileJITEventListener(void);
+#endif
+
+#ifndef LLVM_USE_PERF
+LLVMJITEventListenerRef LLVMCreatePerfJITEventListener(void);
 #endif
 
 #endif // LLVM_EXECUTIONENGINE_JITEVENTLISTENER_H

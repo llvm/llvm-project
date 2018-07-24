@@ -1,5 +1,6 @@
-// RUN: %clang_cc1 -emit-llvm %s -o - -triple=x86_64-apple-darwin9 -std=c++11 | FileCheck %s -check-prefixes=CHECK,NULL-INVALID
-// RUN: %clang_cc1 -emit-llvm %s -o - -triple=x86_64-apple-darwin9 -std=c++11 -fno-delete-null-pointer-checks | FileCheck %s -check-prefixes=CHECK,NULL-VALID
+// RUN: %clang_cc1 -emit-llvm %s -o - -triple=x86_64-apple-darwin9 -std=c++11 | FileCheck %s -check-prefixes=CHECK,NULL-INVALID,CHECK-CXX11
+// RUN: %clang_cc1 -emit-llvm %s -o - -triple=x86_64-apple-darwin9 -std=c++17 | FileCheck %s -check-prefixes=CHECK,NULL-INVALID,CHECK-CXX17
+// RUN: %clang_cc1 -emit-llvm %s -o - -triple=x86_64-apple-darwin9 -std=c++11 -fno-delete-null-pointer-checks | FileCheck %s -check-prefixes=CHECK,NULL-VALID,CHECK-CXX11
 
 namespace PR16263 {
   const unsigned int n = 1234;
@@ -46,7 +47,9 @@ namespace PR20227 {
 namespace BraceInit {
   typedef const int &CIR;
   CIR x = CIR{3};
-  // CHECK: @_ZGRN9BraceInit1xE_ = internal constant i32 3
+  // CHECK-CXX11: @_ZGRN9BraceInit1xE_ = internal constant i32 3
+  // FIXME: This should still be emitted as 'constant' in C++17.
+  // CHECK-CXX17: @_ZGRN9BraceInit1xE_ = internal global i32 3
   // CHECK: @_ZN9BraceInit1xE = constant i32* @_ZGRN9BraceInit1xE_
 }
 
@@ -803,4 +806,93 @@ namespace PR14130 {
   U v { { 0 } };
   // CHECK: call void @_ZN7PR141301SC1Ei({{.*}} @_ZGRN7PR141301vE_, i32 0)
   // CHECK: store {{.*}} @_ZGRN7PR141301vE_, {{.*}} @_ZN7PR141301vE
+}
+
+namespace Conditional {
+  struct A {};
+  struct B : A { B(); ~B(); };
+  struct C : A { C(); ~C(); };
+
+  void g();
+
+  // CHECK-LABEL: define {{.*}} @_ZN11Conditional1fEb(
+  void f(bool b) {
+    // CHECK: store i1 false, i1* %[[CLEANUP_B:.*]],
+    // CHECK: store i1 false, i1* %[[CLEANUP_C:.*]],
+    // CHECK: br i1
+    //
+    // CHECK: call {{.*}} @_ZN11Conditional1BC1Ev(
+    // CHECK: store i1 true, i1* %[[CLEANUP_B]],
+    // CHECK: br label
+    //
+    // CHECK: call {{.*}} @_ZN11Conditional1CC1Ev(
+    // CHECK: store i1 true, i1* %[[CLEANUP_C]],
+    // CHECK: br label
+    A &&r = b ? static_cast<A&&>(B()) : static_cast<A&&>(C());
+
+    // CHECK: call {{.*}} @_ZN11Conditional1gEv(
+    g();
+
+    // CHECK: load {{.*}} %[[CLEANUP_C]]
+    // CHECK: br i1
+    // CHECK: call {{.*}} @_ZN11Conditional1CD1Ev(
+    // CHECK: br label
+
+    // CHECK: load {{.*}} %[[CLEANUP_B]]
+    // CHECK: br i1
+    // CHECK: call {{.*}} @_ZN11Conditional1BD1Ev(
+    // CHECK: br label
+  }
+
+  struct D { A &&a; };
+  // CHECK-LABEL: define {{.*}} @_ZN11Conditional10f_indirectEb(
+  void f_indirect(bool b) {
+    // CHECK: store i1 false, i1* %[[CLEANUP_B:.*]],
+    // CHECK: store i1 false, i1* %[[CLEANUP_C:.*]],
+    // CHECK: br i1
+    //
+    // CHECK: call {{.*}} @_ZN11Conditional1BC1Ev(
+    // CHECK: store i1 true, i1* %[[CLEANUP_B]],
+    // CHECK: br label
+    //
+    // CHECK: call {{.*}} @_ZN11Conditional1CC1Ev(
+    // CHECK: store i1 true, i1* %[[CLEANUP_C]],
+    // CHECK: br label
+    D d = b ? D{B()} : D{C()};
+
+    // In C++17, the expression D{...} directly initializes the 'd' object, so
+    // lifetime-extending the temporaries to the lifetime of the D object
+    // extends them past the call to g().
+    //
+    // In C++14 and before, D is move-constructed from the result of the
+    // conditional expression, so no lifetime extension occurs.
+
+    // CHECK-CXX17: call {{.*}} @_ZN11Conditional1gEv(
+
+    // CHECK: load {{.*}} %[[CLEANUP_C]]
+    // CHECK: br i1
+    // CHECK: call {{.*}} @_ZN11Conditional1CD1Ev(
+    // CHECK: br label
+
+    // CHECK: load {{.*}} %[[CLEANUP_B]]
+    // CHECK: br i1
+    // CHECK: call {{.*}} @_ZN11Conditional1BD1Ev(
+    // CHECK: br label
+
+    // CHECK-CXX11: call {{.*}} @_ZN11Conditional1gEv(
+    g();
+  }
+
+  extern bool b;
+  // CHECK: load {{.*}} @_ZN11Conditional1b
+  // CHECK: br i1
+  //
+  // CHECK: call {{.*}} @_ZN11Conditional1BC1Ev({{.*}} @_ZGRN11Conditional1rE_)
+  // CHECK: call {{.*}} @__cxa_atexit({{.*}} @_ZN11Conditional1BD1Ev {{.*}} @_ZGRN11Conditional1rE_,
+  // CHECK: br label
+  //
+  // CHECK: call {{.*}} @_ZN11Conditional1CC1Ev({{.*}} @_ZGRN11Conditional1rE0_)
+  // CHECK: call {{.*}} @__cxa_atexit({{.*}} @_ZN11Conditional1CD1Ev {{.*}} @_ZGRN11Conditional1rE0_,
+  // CHECK: br label
+  A &&r = b ? static_cast<A&&>(B()) : static_cast<A&&>(C());
 }

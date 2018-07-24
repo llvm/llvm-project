@@ -1163,10 +1163,7 @@ bool ScriptInterpreterPython::ExecuteOneLineWithReturn(
     }
     }
 
-    if (success)
-      ret_success = true;
-    else
-      ret_success = false;
+    ret_success = success;
   }
 
   py_error.Reset(PyRefType::Borrowed, PyErr_Occurred());

@@ -42,7 +42,9 @@ public:
     while (Head) {
       assert(Head->Buf);
       delete[] Head->Buf;
-      Head = Head->Next;
+      AllocatorNode *Next = Head->Next;
+      delete Head;
+      Head = Next;
     }
   }
 
