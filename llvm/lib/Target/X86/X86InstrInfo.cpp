@@ -19,6 +19,7 @@
 #include "X86Subtarget.h"
 #include "X86TargetMachine.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
@@ -4652,6 +4653,32 @@ static void addOperands(MachineInstrBuilder &MIB, ArrayRef<MachineOperand> MOs,
   }
 }
 
+static void updateOperandRegConstraints(MachineFunction &MF,
+                                        MachineInstr &NewMI,
+                                        const TargetInstrInfo &TII) {
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  const TargetRegisterInfo &TRI = *MRI.getTargetRegisterInfo();
+
+  for (int Idx : llvm::seq<int>(0, NewMI.getNumOperands())) {
+    MachineOperand &MO = NewMI.getOperand(Idx);
+    // We only need to update constraints on virtual register operands.
+    if (!MO.isReg())
+      continue;
+    unsigned Reg = MO.getReg();
+    if (!TRI.isVirtualRegister(Reg))
+      continue;
+
+    auto *NewRC = MRI.constrainRegClass(
+        Reg, TII.getRegClass(NewMI.getDesc(), Idx, &TRI, MF));
+    if (!NewRC) {
+      LLVM_DEBUG(
+          dbgs() << "WARNING: Unable to update register constraint for operand "
+                 << Idx << " of instruction:\n";
+          NewMI.dump(); dbgs() << "\n");
+    }
+  }
+}
+
 static MachineInstr *FuseTwoAddrInst(MachineFunction &MF, unsigned Opcode,
                                      ArrayRef<MachineOperand> MOs,
                                      MachineBasicBlock::iterator InsertPt,
@@ -4674,6 +4701,8 @@ static MachineInstr *FuseTwoAddrInst(MachineFunction &MF, unsigned Opcode,
     MachineOperand &MO = MI.getOperand(i);
     MIB.add(MO);
   }
+
+  updateOperandRegConstraints(MF, *NewMI, TII);
 
   MachineBasicBlock *MBB = InsertPt->getParent();
   MBB->insert(InsertPt, NewMI);
@@ -4700,6 +4729,8 @@ static MachineInstr *FuseInst(MachineFunction &MF, unsigned Opcode,
       MIB.add(MO);
     }
   }
+
+  updateOperandRegConstraints(MF, *NewMI, TII);
 
   MachineBasicBlock *MBB = InsertPt->getParent();
   MBB->insert(InsertPt, NewMI);
@@ -7557,30 +7588,35 @@ enum MachineOutlinerClass {
   MachineOutlinerTailCall
 };
 
-outliner::TargetCostInfo
-X86InstrInfo::getOutliningCandidateInfo(
-  std::vector<outliner::Candidate> &RepeatedSequenceLocs) const {
-  unsigned SequenceSize = std::accumulate(
-      RepeatedSequenceLocs[0].front(), std::next(RepeatedSequenceLocs[0].back()),
-      0, [](unsigned Sum, const MachineInstr &MI) {
-        // FIXME: x86 doesn't implement getInstSizeInBytes, so we can't
-        // tell the cost.  Just assume each instruction is one byte.
-        if (MI.isDebugInstr() || MI.isKill())
-          return Sum;
-        return Sum + 1;
-      });
+outliner::TargetCostInfo X86InstrInfo::getOutliningCandidateInfo(
+    std::vector<outliner::Candidate> &RepeatedSequenceLocs) const {
+  unsigned SequenceSize =
+      std::accumulate(RepeatedSequenceLocs[0].front(),
+                      std::next(RepeatedSequenceLocs[0].back()), 0,
+                      [](unsigned Sum, const MachineInstr &MI) {
+                        // FIXME: x86 doesn't implement getInstSizeInBytes, so
+                        // we can't tell the cost.  Just assume each instruction
+                        // is one byte.
+                        if (MI.isDebugInstr() || MI.isKill())
+                          return Sum;
+                        return Sum + 1;
+                      });
 
   // FIXME: Use real size in bytes for call and ret instructions.
-  if (RepeatedSequenceLocs[0].back()->isTerminator())
-    return outliner::TargetCostInfo(SequenceSize,
-                               1, // Number of bytes to emit call.
-                               0, // Number of bytes to emit frame.
-                               MachineOutlinerTailCall, // Type of call.
-                               MachineOutlinerTailCall // Type of frame.
-                              );
+  if (RepeatedSequenceLocs[0].back()->isTerminator()) {
+    for (outliner::Candidate &C : RepeatedSequenceLocs)
+      C.setCallInfo(MachineOutlinerTailCall, 1);
 
-  return outliner::TargetCostInfo(SequenceSize, 1, 1, MachineOutlinerDefault,
-                             MachineOutlinerDefault);
+    return outliner::TargetCostInfo(SequenceSize,
+                                    0, // Number of bytes to emit frame.
+                                    MachineOutlinerTailCall // Type of frame.
+    );
+  }
+
+  for (outliner::Candidate &C : RepeatedSequenceLocs)
+    C.setCallInfo(MachineOutlinerDefault, 1);
+
+  return outliner::TargetCostInfo(SequenceSize, 1, MachineOutlinerDefault);
 }
 
 bool X86InstrInfo::isFunctionSafeToOutlineFrom(MachineFunction &MF,
@@ -7683,9 +7719,9 @@ MachineBasicBlock::iterator
 X86InstrInfo::insertOutlinedCall(Module &M, MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator &It,
                                  MachineFunction &MF,
-                                 const outliner::TargetCostInfo &TCI) const {
+                                 const outliner::Candidate &C) const {
   // Is it a tail call?
-  if (TCI.CallConstructionID == MachineOutlinerTailCall) {
+  if (C.CallConstructionID == MachineOutlinerTailCall) {
     // Yes, just insert a JMP.
     It = MBB.insert(It,
                   BuildMI(MF, DebugLoc(), get(X86::JMP_1))

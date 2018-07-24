@@ -1858,10 +1858,11 @@ def : Mips16Pat<(MipsHi tglobaladdr:$in),
                 (SllX16 (LiRxImmX16 tglobaladdr:$in), 16)>;
 def : Mips16Pat<(MipsHi tjumptable:$in),
                 (SllX16 (LiRxImmX16 tjumptable:$in), 16)>;
-def : Mips16Pat<(MipsHi tglobaltlsaddr:$in),
-                (SllX16 (LiRxImmX16 tglobaltlsaddr:$in), 16)>;
 
 def : Mips16Pat<(MipsLo tblockaddress:$in), (LiRxImmX16 tblockaddress:$in)>;
+
+def : Mips16Pat<(MipsTlsHi tglobaltlsaddr:$in),
+                (SllX16 (LiRxImmX16 tglobaltlsaddr:$in), 16)>;
 
 // wrapper_pic
 class Wrapper16Pat<SDNode node, Instruction ADDiuOp, RegisterClass RC>:

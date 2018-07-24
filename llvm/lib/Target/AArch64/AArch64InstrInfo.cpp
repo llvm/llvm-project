@@ -4936,10 +4936,6 @@ AArch64InstrInfo::getOutliningCandidateInfo(
       0, [this](unsigned Sum, const MachineInstr &MI) {
         return Sum + getInstSizeInBytes(MI);
       });
-  unsigned CallID = MachineOutlinerDefault;
-  unsigned FrameID = MachineOutlinerDefault;
-  unsigned NumBytesForCall = 12;
-  unsigned NumBytesToCreateFrame = 4;
 
   // Compute liveness information for each candidate.
   const TargetRegisterInfo &TRI = getRegisterInfo();
@@ -4976,21 +4972,29 @@ AArch64InstrInfo::getOutliningCandidateInfo(
 
   unsigned LastInstrOpcode = RepeatedSequenceLocs[0].back()->getOpcode();
 
+  // Helper lambda which sets call information for every candidate.
+  auto SetCandidateCallInfo =
+      [&RepeatedSequenceLocs](unsigned CallID, unsigned NumBytesForCall) {
+        for (outliner::Candidate &C : RepeatedSequenceLocs)
+          C.setCallInfo(CallID, NumBytesForCall);
+      };
+
+  unsigned FrameID = MachineOutlinerDefault;
+  unsigned NumBytesToCreateFrame = 4;
+
   // If the last instruction in any candidate is a terminator, then we should
   // tail call all of the candidates.
   if (RepeatedSequenceLocs[0].back()->isTerminator()) {
-    CallID = MachineOutlinerTailCall;
     FrameID = MachineOutlinerTailCall;
-    NumBytesForCall = 4;
     NumBytesToCreateFrame = 0;
+    SetCandidateCallInfo(MachineOutlinerTailCall, 4);
   }
 
   else if (LastInstrOpcode == AArch64::BL || LastInstrOpcode == AArch64::BLR) {
     // FIXME: Do we need to check if the code after this uses the value of LR?
-    CallID = MachineOutlinerThunk;
     FrameID = MachineOutlinerThunk;
-    NumBytesForCall = 4;
     NumBytesToCreateFrame = 0;
+    SetCandidateCallInfo(MachineOutlinerThunk, 4);
   }
 
   // Make sure that LR isn't live on entry to this candidate. The only
@@ -5002,10 +5006,16 @@ AArch64InstrInfo::getOutliningCandidateInfo(
                        [](outliner::Candidate &C) {
                          return C.LRU.available(AArch64::LR);
                          })) {
-    CallID = MachineOutlinerNoLRSave;
     FrameID = MachineOutlinerNoLRSave;
-    NumBytesForCall = 4;
     NumBytesToCreateFrame = 4;
+    SetCandidateCallInfo(MachineOutlinerNoLRSave, 4);
+  }
+
+  // LR is live, so we need to save it to the stack.
+  else {
+    FrameID = MachineOutlinerDefault;
+    NumBytesToCreateFrame = 4;
+    SetCandidateCallInfo(MachineOutlinerDefault, 12);
   }
 
   // Check if the range contains a call. These require a save + restore of the
@@ -5024,8 +5034,7 @@ AArch64InstrInfo::getOutliningCandidateInfo(
            RepeatedSequenceLocs[0].back()->isCall())
     NumBytesToCreateFrame += 8;
 
-  return outliner::TargetCostInfo(SequenceSize, NumBytesForCall,
-                             NumBytesToCreateFrame, CallID, FrameID);
+  return outliner::TargetCostInfo(SequenceSize, NumBytesToCreateFrame, FrameID);
 }
 
 bool AArch64InstrInfo::isFunctionSafeToOutlineFrom(
@@ -5420,10 +5429,10 @@ void AArch64InstrInfo::buildOutlinedFrame(
 
 MachineBasicBlock::iterator AArch64InstrInfo::insertOutlinedCall(
     Module &M, MachineBasicBlock &MBB, MachineBasicBlock::iterator &It,
-    MachineFunction &MF, const outliner::TargetCostInfo &TCI) const {
+    MachineFunction &MF, const outliner::Candidate &C) const {
 
   // Are we tail calling?
-  if (TCI.CallConstructionID == MachineOutlinerTailCall) {
+  if (C.CallConstructionID == MachineOutlinerTailCall) {
     // If yes, then we can just branch to the label.
     It = MBB.insert(It, BuildMI(MF, DebugLoc(), get(AArch64::TCRETURNdi))
                             .addGlobalAddress(M.getNamedValue(MF.getName()))
@@ -5432,8 +5441,8 @@ MachineBasicBlock::iterator AArch64InstrInfo::insertOutlinedCall(
   }
 
   // Are we saving the link register?
-  if (TCI.CallConstructionID == MachineOutlinerNoLRSave ||
-      TCI.CallConstructionID == MachineOutlinerThunk) {
+  if (C.CallConstructionID == MachineOutlinerNoLRSave ||
+      C.CallConstructionID == MachineOutlinerThunk) {
     // No, so just insert the call.
     It = MBB.insert(It, BuildMI(MF, DebugLoc(), get(AArch64::BL))
                             .addGlobalAddress(M.getNamedValue(MF.getName())));

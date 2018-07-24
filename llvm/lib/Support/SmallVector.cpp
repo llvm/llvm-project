@@ -14,10 +14,29 @@
 #include "llvm/ADT/SmallVector.h"
 using namespace llvm;
 
-// Check that no bytes are wasted.
+// Check that no bytes are wasted and everything is well-aligned.
+namespace {
+struct Struct16B {
+  alignas(16) void *X;
+};
+struct Struct32B {
+  alignas(32) void *X;
+};
+}
+static_assert(sizeof(SmallVector<void *, 0>) ==
+                  sizeof(unsigned) * 2 + sizeof(void *),
+              "wasted space in SmallVector size 0");
+static_assert(alignof(SmallVector<Struct16B, 0>) >= alignof(Struct16B),
+              "wrong alignment for 16-byte aligned T");
+static_assert(alignof(SmallVector<Struct32B, 0>) >= alignof(Struct32B),
+              "wrong alignment for 32-byte aligned T");
+static_assert(sizeof(SmallVector<Struct16B, 0>) >= alignof(Struct16B),
+              "missing padding for 16-byte aligned T");
+static_assert(sizeof(SmallVector<Struct32B, 0>) >= alignof(Struct32B),
+              "missing padding for 32-byte aligned T");
 static_assert(sizeof(SmallVector<void *, 1>) ==
                   sizeof(unsigned) * 2 + sizeof(void *) * 2,
-              "wasted space in SmallVector size 1; missing EBO?");
+              "wasted space in SmallVector size 1");
 
 /// grow_pod - This is an implementation of the grow() method which only works
 /// on POD-like datatypes and is out of line to reduce code duplication.
