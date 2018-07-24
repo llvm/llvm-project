@@ -20,6 +20,9 @@
 #include <stdio.h>
 
 extern "C" int LLVMFuzzerTestOneInput(uint8_t *data, size_t size) {
+  if (size == 0)
+    return 0;
+
   clang::clangd::JSONOutput Out(llvm::nulls(), llvm::nulls(),
                                 clang::clangd::Logger::Error, nullptr);
   clang::clangd::CodeCompleteOptions CCOpts;
