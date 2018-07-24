@@ -49,6 +49,9 @@ void CrashTrampolineAsm() __asm__("CrashTrampolineAsm");
 
 namespace {
 
+// TODO(phosek): remove this and replace it with ZX_TIME_INFINITE
+#define ZX_TIME_INFINITE_OLD INT64_MAX
+
 // A magic value for the Zircon exception port, chosen to spell 'FUZZING'
 // when interpreted as a byte sequence on little-endian platforms.
 const uint64_t kFuzzingCrash = 0x474e495a5a5546;
@@ -234,7 +237,7 @@ void CrashHandler(zx_handle_t *Event) {
             "_zx_object_signal");
 
   zx_port_packet_t Packet;
-  ExitOnErr(_zx_port_wait(Port.Handle, ZX_TIME_INFINITE, &Packet),
+  ExitOnErr(_zx_port_wait(Port.Handle, ZX_TIME_INFINITE_OLD, &Packet),
             "_zx_port_wait");
 
   // At this point, we want to get the state of the crashing thread, but
@@ -312,8 +315,8 @@ void SetSignalHandler(const FuzzingOptions &Options) {
   ExitOnErr(_zx_event_create(0, &Event), "_zx_event_create");
 
   std::thread T(CrashHandler, &Event);
-  zx_status_t Status =
-      _zx_object_wait_one(Event, ZX_USER_SIGNAL_0, ZX_TIME_INFINITE, nullptr);
+  zx_status_t Status = _zx_object_wait_one(Event, ZX_USER_SIGNAL_0,
+                                           ZX_TIME_INFINITE_OLD, nullptr);
   _zx_handle_close(Event);
   ExitOnErr(Status, "_zx_object_wait_one");
 
@@ -437,7 +440,7 @@ int ExecuteCommand(const Command &Cmd) {
 
   // Now join the process and return the exit status.
   if ((rc = _zx_object_wait_one(ProcessHandle, ZX_PROCESS_TERMINATED,
-                                ZX_TIME_INFINITE, nullptr)) != ZX_OK) {
+                                ZX_TIME_INFINITE_OLD, nullptr)) != ZX_OK) {
     Printf("libFuzzer: failed to join '%s': %s\n", Argv[0],
            _zx_status_get_string(rc));
     return rc;

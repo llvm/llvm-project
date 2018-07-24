@@ -63,7 +63,8 @@ int& ret_local_field_ref() {
 int* ret_conditional(bool cond) {
   int x = 1;
   int y = 2;
-  return cond ? &x : &y; // expected-warning {{address of stack memory}}
+  return cond ? &x // expected-warning {{address of stack memory associated with local variable 'x' returned}}
+              : &y; // expected-warning {{address of stack memory associated with local variable 'y' returned}}
 }
 
 int* ret_conditional_rhs(int *x, bool cond) {

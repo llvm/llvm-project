@@ -12,7 +12,6 @@ add_lldb_library(lldbHostMacOSXObjCXX
     lldbSymbol
     lldbTarget
     lldbUtility
-    ${LLDB_PLUGINS}
     ${EXTRA_LIBS}
 
   LINK_COMPONENTS

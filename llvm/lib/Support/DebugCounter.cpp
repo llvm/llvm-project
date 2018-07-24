@@ -66,7 +66,7 @@ void DebugCounter::push_back(const std::string &Val) {
   }
   // Now we have counter=value.
   // First, process value.
-  long CounterVal;
+  int64_t CounterVal;
   if (CounterPair.second.getAsInteger(0, CounterVal)) {
     errs() << "DebugCounter Error: " << CounterPair.second
            << " is not a number\n";
@@ -76,26 +76,24 @@ void DebugCounter::push_back(const std::string &Val) {
   // add it to the counter values.
   if (CounterPair.first.endswith("-skip")) {
     auto CounterName = CounterPair.first.drop_back(5);
-    unsigned CounterID = RegisteredCounters.idFor(CounterName);
+    unsigned CounterID = getCounterId(CounterName);
     if (!CounterID) {
       errs() << "DebugCounter Error: " << CounterName
              << " is not a registered counter\n";
       return;
     }
-
-    auto Res = Counters.insert({CounterID, {0, -1}});
-    Res.first->second.first = CounterVal;
+    Counters[CounterID].Skip = CounterVal;
+    Counters[CounterID].IsSet = true;
   } else if (CounterPair.first.endswith("-count")) {
     auto CounterName = CounterPair.first.drop_back(6);
-    unsigned CounterID = RegisteredCounters.idFor(CounterName);
+    unsigned CounterID = getCounterId(CounterName);
     if (!CounterID) {
       errs() << "DebugCounter Error: " << CounterName
              << " is not a registered counter\n";
       return;
     }
-
-    auto Res = Counters.insert({CounterID, {0, -1}});
-    Res.first->second.second = CounterVal;
+    Counters[CounterID].StopAfter = CounterVal;
+    Counters[CounterID].IsSet = true;
   } else {
     errs() << "DebugCounter Error: " << CounterPair.first
            << " does not end with -skip or -count\n";
@@ -106,7 +104,8 @@ void DebugCounter::print(raw_ostream &OS) const {
   OS << "Counters and values:\n";
   for (const auto &KV : Counters)
     OS << left_justify(RegisteredCounters[KV.first], 32) << ": {"
-       << KV.second.first << "," << KV.second.second << "}\n";
+       << KV.second.Count << "," << KV.second.Skip << ","
+       << KV.second.StopAfter << "}\n";
 }
 
 LLVM_DUMP_METHOD void DebugCounter::dump() const {

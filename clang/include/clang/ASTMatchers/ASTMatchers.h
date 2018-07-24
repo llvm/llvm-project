@@ -616,6 +616,12 @@ AST_MATCHER_P(FieldDecl, hasInClassInitializer, internal::Matcher<Expr>,
           InnerMatcher.matches(*Initializer, Finder, Builder));
 }
 
+/// Determines whether the function is "main", which is the entry point
+/// into an executable program.
+AST_MATCHER(FunctionDecl, isMain) {
+  return Node.isMain();
+}
+
 /// Matches the specialized template of a specialization declaration.
 ///
 /// Given

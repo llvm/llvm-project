@@ -65,7 +65,7 @@ const int *int6() {
 
 const int *int7(int x) {
   const int &x2 = x;  // expected-note{{binding reference variable 'x2' here}}
-  return &x2;  //  expected-warning{{address of stack memory associated with local variable 'x' returned}}
+  return &x2;  //  expected-warning{{address of stack memory associated with parameter 'x' returned}}
 }
 
 const int *int8(const int &x = 5) {

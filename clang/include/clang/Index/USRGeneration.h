@@ -1,4 +1,4 @@
-//===- USRGeneration.h - Routines for USR generation ----------------------===//
+//===- USRGeneration.h - Routines for USR generation ------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //

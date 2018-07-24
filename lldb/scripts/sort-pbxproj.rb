@@ -20,11 +20,6 @@
 # can lead to merge failures.
 segregated_filenames = ["Swift", "repl", "RPC"]
 
-if !File.exists?("project.pbxproj")
-    STDERR.puts "ERROR: project.pbxproj does not exist."
-    exit(1)
-end
-
 def read_pbxproj(fn)
     beginning  = Array.new   # All lines before "PBXBuildFile section"
     files      = Array.new   # PBXBuildFile section lines -- sort these
@@ -74,7 +69,20 @@ def read_pbxproj(fn)
     return beginning, files, middle, refs, ending
 end
 
-beginning, files, middle, refs, ending = read_pbxproj("project.pbxproj")
+xcodeproj_filename = nil
+[ "../lldb.xcodeproj/project.pbxproj", "lldb.xcodeproj/project.pbxproj", "project.pbxproj" ].each do |ent|
+    if File.exists?(ent)
+        xcodeproj_filename = ent
+        break
+    end
+end
+
+if xcodeproj_filename.nil?
+    STDERR.puts "Could not find xcode project file to sort."
+    exit(1)
+end
+
+beginning, files, middle, refs, ending = read_pbxproj(xcodeproj_filename)
 
 
 ### If we're given a "canonical" project.pbxproj file, get the uuid and fileref ids for
@@ -236,6 +244,8 @@ end
 
 ####### output the sorted pbxproj
 
-[ beginning, files, middle, refs, ending ].each do |arr|
-    arr.each {|l| puts l}
+File.open(xcodeproj_filename, 'w') do |outfile|
+    [ beginning, files, middle, refs, ending ].each do |arr|
+      arr.each {|l| outfile.puts l}
+    end
 end

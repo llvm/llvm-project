@@ -30,3 +30,12 @@ int main(void)
    noret((float)0.0, double(0.0)); // expected-note {{in instantiation of function template specialization 'noret<float, double>' requested here}}
 }
 
+namespace rdar41200624 {
+template <class T>
+struct S {
+  int (^p)() = ^{ return 0; };
+  T (^t)() = ^{ return T{}; };
+  T s = ^{ return T{}; }();
+};
+S<int> x;
+}

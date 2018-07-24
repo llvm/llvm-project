@@ -25,8 +25,6 @@
 #include "rapid-cxx-test.hpp"
 #include "filesystem_test_helper.hpp"
 
-#include <iostream>
-
 using namespace fs;
 
 TEST_SUITE(recursive_directory_iterator_increment_tests)
@@ -289,6 +287,21 @@ TEST_CASE(test_PR35078)
       TEST_CHECK(ec);
       TEST_CHECK(ec == eacess_ec);
       TEST_CHECK(it == endIt);
+    }
+    {
+      bool SeenNestedFile = false;
+      recursive_directory_iterator it = SetupState(true, SeenNestedFile);
+      TEST_REQUIRE(it != endIt);
+      TEST_REQUIRE(*it == nestedDir);
+      ec = GetTestEC();
+      it.increment(ec);
+      TEST_CHECK(!ec);
+      if (SeenNestedFile) {
+        TEST_CHECK(it == endIt);
+      } else {
+        TEST_REQUIRE(it != endIt);
+        TEST_CHECK(*it == nestedFile);
+      }
     }
     {
       bool SeenNestedFile = false;
