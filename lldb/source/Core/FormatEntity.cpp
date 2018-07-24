@@ -12,6 +12,7 @@
 #include "lldb/Core/Address.h"
 #include "lldb/Core/AddressRange.h" // for AddressRange
 #include "lldb/Core/Debugger.h"
+#include "lldb/Core/DumpRegisterValue.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/RegisterValue.h" // for RegisterValue
 #include "lldb/Core/ValueObject.h"
@@ -621,7 +622,7 @@ static bool DumpRegister(Stream &s, StackFrame *frame, RegisterKind reg_kind,
         if (reg_info) {
           RegisterValue reg_value;
           if (reg_ctx->ReadRegister(reg_info, reg_value)) {
-            reg_value.Dump(&s, reg_info, false, false, format);
+            DumpRegisterValue(reg_value, &s, reg_info, false, false, format);
             return true;
           }
         }
@@ -1018,7 +1019,7 @@ static bool DumpRegister(Stream &s, StackFrame *frame, const char *reg_name,
       if (reg_info) {
         RegisterValue reg_value;
         if (reg_ctx->ReadRegister(reg_info, reg_value)) {
-          reg_value.Dump(&s, reg_info, false, false, format);
+          DumpRegisterValue(reg_value, &s, reg_info, false, false, format);
           return true;
         }
       }
