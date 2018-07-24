@@ -129,8 +129,6 @@ set_target_properties(cxxabi_objects
                         POSITION_INDEPENDENT_CODE
                           ON)
 
-set(LIBCXXABI_TARGETS)
-
 # Build the shared library.
 if (LIBCXXABI_ENABLE_SHARED)
   add_library(cxxabi_shared SHARED $<TARGET_OBJECTS:cxxabi_objects>)
@@ -156,7 +154,10 @@ if (LIBCXXABI_ENABLE_SHARED)
                             "1"
                           VERSION
                             "1.0")
-  list(APPEND LIBCXXABI_TARGETS "cxxabi_shared")
+  list(APPEND LIBCXXABI_BUILD_TARGETS "cxxabi_shared")
+  if (LIBCXXABI_INSTALL_SHARED_LIBRARY)
+    list(APPEND LIBCXXABI_INSTALL_TARGETS "cxxabi_shared")
+  endif()
 endif()
 
 # Build the static library.
@@ -183,14 +184,17 @@ if (LIBCXXABI_ENABLE_STATIC)
                             "c++abi"
                           POSITION_INDEPENDENT_CODE
                             ON)
-  list(APPEND LIBCXXABI_TARGETS "cxxabi_static")
+  list(APPEND LIBCXXABI_BUILD_TARGETS "cxxabi_static")
+  if (LIBCXXABI_INSTALL_STATIC_LIBRARY)
+    list(APPEND LIBCXXABI_INSTALL_TARGETS "cxxabi_static")
+  endif()
 endif()
 
 # Add a meta-target for both libraries.
-add_custom_target(cxxabi DEPENDS ${LIBCXXABI_TARGETS})
+add_custom_target(cxxabi DEPENDS ${LIBCXXABI_BUILD_TARGETS})
 
 if (LIBCXXABI_INSTALL_LIBRARY)
-  install(TARGETS ${LIBCXXABI_TARGETS}
+  install(TARGETS ${LIBCXXABI_INSTALL_TARGETS}
     LIBRARY DESTINATION ${LIBCXXABI_INSTALL_PREFIX}lib${LIBCXXABI_LIBDIR_SUFFIX} COMPONENT cxxabi
     ARCHIVE DESTINATION ${LIBCXXABI_INSTALL_PREFIX}lib${LIBCXXABI_LIBDIR_SUFFIX} COMPONENT cxxabi
     )

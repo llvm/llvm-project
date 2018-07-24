@@ -137,6 +137,12 @@ option(LIBUNWIND_INCLUDE_DOCS "Build the libunwind documentation." ${LLVM_INCLUD
 set(LIBUNWIND_LIBDIR_SUFFIX "${LLVM_LIBDIR_SUFFIX}" CACHE STRING
     "Define suffix of library directory name (32/64)")
 option(LIBUNWIND_INSTALL_LIBRARY "Install the libunwind library." ON)
+cmake_dependent_option(LIBUNWIND_INSTALL_STATIC_LIBRARY
+  "Install the static libunwind library." ON
+  "LIBUNWIND_ENABLE_STATIC;LIBUNWIND_INSTALL_LIBRARY" OFF)
+cmake_dependent_option(LIBUNWIND_INSTALL_SHARED_LIBRARY
+  "Install the shared libunwind library." ON
+  "LIBUNWIND_ENABLE_SHARED;LIBUNWIND_INSTALL_LIBRARY" OFF)
 set(LIBUNWIND_TARGET_TRIPLE "" CACHE STRING "Target triple for cross compiling.")
 set(LIBUNWIND_GCC_TOOLCHAIN "" CACHE PATH "GCC toolchain for cross compiling.")
 set(LIBUNWIND_SYSROOT "" CACHE PATH "Sysroot for cross compiling.")
