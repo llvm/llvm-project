@@ -294,16 +294,40 @@ TSAN_INTERCEPTOR(void, xpc_connection_cancel, xpc_connection_t connection) {
 
 #endif  // #if defined(__has_include) && __has_include(<xpc/xpc.h>)
 
+// Is the Obj-C object a tagged pointer (i.e. isn't really a valid pointer and
+// contains data in the pointers bits instead)?
+static bool IsTaggedObjCPointer(void *obj) {
+  const uptr kPossibleTaggedBits = 0x8000000000000001ull;
+  return ((uptr)obj & kPossibleTaggedBits) != 0;
+}
+
+// Return an address on which we can synchronize (Acquire and Release) for a
+// Obj-C tagged pointer (which is not a valid pointer). Ideally should be a
+// derived address from 'obj', but for now just return the same global address.
+// TODO(kubamracek): Return different address for different pointers.
+static uptr SyncAddressForTaggedPointer(void *obj) {
+  (void)obj;
+  static u64 addr;
+  return (uptr)&addr;
+}
+
+// Address on which we can synchronize for an Objective-C object. Supports
+// tagged pointers.
+static uptr SyncAddressForObjCObject(void *obj) {
+  if (IsTaggedObjCPointer(obj)) return SyncAddressForTaggedPointer(obj);
+  return (uptr)obj;
+}
+
 TSAN_INTERCEPTOR(int, objc_sync_enter, void *obj) {
   SCOPED_TSAN_INTERCEPTOR(objc_sync_enter, obj);
   int result = REAL(objc_sync_enter)(obj);
-  if (obj) Acquire(thr, pc, (uptr)obj);
+  if (obj) Acquire(thr, pc, SyncAddressForObjCObject(obj));
   return result;
 }
 
 TSAN_INTERCEPTOR(int, objc_sync_exit, void *obj) {
   SCOPED_TSAN_INTERCEPTOR(objc_sync_enter, obj);
-  if (obj) Release(thr, pc, (uptr)obj);
+  if (obj) Release(thr, pc, SyncAddressForObjCObject(obj));
   return REAL(objc_sync_exit)(obj);
 }
 
