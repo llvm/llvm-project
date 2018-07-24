@@ -22,6 +22,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Chrono.h"
+#include "llvm/Support/ManagedStatic.h"
 #include <Block.h>
 
 using namespace clang;
@@ -43,6 +44,32 @@ static timespec toTimeSpec(sys::TimePoint<> tp) {
   ts.tv_nsec = nsec.count();
   return ts;
 }
+
+//===----------------------------------------------------------------------===//
+// Fatal error handling
+//===----------------------------------------------------------------------===//
+
+static void fatal_error_handler(void *user_data, const std::string& reason,
+                                bool gen_crash_diag) {
+  // Write the result out to stderr avoiding errs() because raw_ostreams can
+  // call report_fatal_error.
+  fprintf(stderr, "INDEXSTORE FATAL ERROR: %s\n", reason.c_str());
+  ::abort();
+}
+
+namespace {
+struct RegisterFatalErrorHandler {
+  RegisterFatalErrorHandler() {
+    llvm::install_fatal_error_handler(fatal_error_handler, nullptr);
+  }
+};
+}
+
+static llvm::ManagedStatic<RegisterFatalErrorHandler> RegisterFatalErrorHandlerOnce;
+
+//===----------------------------------------------------------------------===//
+// C API
+//===----------------------------------------------------------------------===//
 
 namespace {
 
@@ -69,6 +96,11 @@ indexstore_format_version(void) {
 
 indexstore_t
 indexstore_store_create(const char *store_path, indexstore_error_t *c_error) {
+  // Look through the managed static to trigger construction of the managed
+  // static which registers our fatal error handler. This ensures it is only
+  // registered once.
+  (void)*RegisterFatalErrorHandlerOnce;
+
   std::unique_ptr<IndexDataStore> store;
   std::string error;
   store = IndexDataStore::create(store_path, error);

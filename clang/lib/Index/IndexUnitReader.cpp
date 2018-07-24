@@ -270,6 +270,11 @@ bool IndexUnitReaderImpl::init(std::unique_ptr<MemoryBuffer> Buf,
   this->MemBuf = std::move(Buf);
   llvm::BitstreamCursor Stream(*MemBuf);
 
+  if (Stream.AtEndOfStream()) {
+    Error = "empty file";
+    return true;
+  }
+
   // Sniff for the signature.
   if (Stream.Read(8) != 'I' ||
       Stream.Read(8) != 'D' ||
