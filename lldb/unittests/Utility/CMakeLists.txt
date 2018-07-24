@@ -22,6 +22,7 @@ add_lldb_unittest(UtilityTests
   UriParserTest.cpp
   UUIDTest.cpp
   VASprintfTest.cpp
+  VMRangeTest.cpp
 
   LINK_LIBS
       lldbUtility
