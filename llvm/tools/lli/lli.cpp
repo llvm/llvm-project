@@ -522,6 +522,9 @@ int main(int argc, char **argv, char * const *envp) {
                 JITEventListener::createOProfileJITEventListener());
   EE->RegisterJITEventListener(
                 JITEventListener::createIntelJITEventListener());
+  if (!RemoteMCJIT)
+    EE->RegisterJITEventListener(
+                JITEventListener::createPerfJITEventListener());
 
   if (!NoLazyCompilation && RemoteMCJIT) {
     WithColor::warning(errs(), argv[0])

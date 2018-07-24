@@ -680,9 +680,14 @@ SDValue VectorLegalizer::ExpandLoad(SDValue Op) {
     Value = DAG.getBuildVector(Op.getNode()->getValueType(0), dl, Vals);
   } else {
     SDValue Scalarized = TLI.scalarizeVectorLoad(LD, DAG);
-
-    NewChain = Scalarized.getValue(1);
-    Value = Scalarized.getValue(0);
+    // Skip past MERGE_VALUE node if known.
+    if (Scalarized->getOpcode() == ISD::MERGE_VALUES) {
+      NewChain = Scalarized.getOperand(1);
+      Value = Scalarized.getOperand(0);
+    } else {
+      NewChain = Scalarized.getValue(1);
+      Value = Scalarized.getValue(0);
+    }
   }
 
   AddLegalizedOperand(Op.getValue(0), Value);

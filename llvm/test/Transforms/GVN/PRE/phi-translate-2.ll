@@ -177,5 +177,44 @@ if.end3:                                          ; preds = %if.then2, %if.else,
   ret i64 %sub.ptr.div7
 }
 
+; Here the load from arrayidx1 is partially redundant, but its value is
+; available in if.then. Check that we correctly phi-translate to the phi that
+; the load has been replaced with.
+; CHECK-LABEL: @test6
+define void @test6(i32* %ptr) {
+; CHECK: entry:
+; CHECK: %[[PREGEP:.*]] = getelementptr inbounds i32, i32* %ptr, i64 1
+; CHECK: %[[PRE:.*]] = load i32, i32* %[[PREGEP]]
+entry:
+  br label %while
+
+; CHECK: while:
+; CHECK: %[[PHI1:.*]] = phi i32 [ %[[PRE]], %entry ], [ %[[PHI2:.*]], %if.end ]
+; CHECK-NOT: load i32, i32* %arrayidx1
+; CHECK: %[[LOAD:.*]] = load i32, i32* %arrayidx2
+while:
+  %i = phi i64 [ 1, %entry ], [ %i.next, %if.end ]
+  %arrayidx1 = getelementptr inbounds i32, i32* %ptr, i64 %i
+  %0 = load i32, i32* %arrayidx1, align 4
+  %i.next = add nuw nsw i64 %i, 1
+  %arrayidx2 = getelementptr inbounds i32, i32* %ptr, i64 %i.next
+  %1 = load i32, i32* %arrayidx2, align 4
+  %cmp = icmp sgt i32 %0, %1
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
+  store i32 %1, i32* %arrayidx1, align 4
+  store i32 %0, i32* %arrayidx2, align 4
+  br label %if.end
+
+; CHECK: if.then:
+; CHECK: %[[PHI2]] = phi i32 [ %[[PHI1]], %if.then ], [ %[[LOAD]], %while ]
+if.end:
+  br i1 undef, label %while.end, label %while
+
+while.end:
+  ret void
+}
+
 ; CHECK: [[var_p0]] = !DILocalVariable
 ; CHECK: [[var_sub_ptr]] = !DILocalVariable

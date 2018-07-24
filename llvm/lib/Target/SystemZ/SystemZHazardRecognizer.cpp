@@ -151,7 +151,11 @@ void SystemZHazardRecognizer::dumpSU(SUnit *SU, raw_ostream &OS) const {
     std::string FU(PRD.Name);
     // trim e.g. Z13_FXaUnit -> FXa
     FU = FU.substr(FU.find("_") + 1);
-    FU.resize(FU.find("Unit"));
+    size_t Pos = FU.find("Unit");
+    if (Pos != std::string::npos)
+      FU.resize(Pos);
+    if (FU == "LS") // LSUnit -> LSU
+      FU = "LSU";
     OS << "/" << FU;
 
     if (PI->Cycles > 1)

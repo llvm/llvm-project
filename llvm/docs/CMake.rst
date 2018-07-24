@@ -375,6 +375,9 @@ LLVM-specific variables
   tools.
   Defaults to ON.
 
+  **LLVM_USE_PERF**:BOOL
+  Enable building support for Perf (linux profiling tool) JIT support. Defaults to OFF.
+
 **LLVM_ENABLE_ZLIB**:BOOL
   Enable building with zlib to support compression/uncompression in LLVM tools.
   Defaults to ON.

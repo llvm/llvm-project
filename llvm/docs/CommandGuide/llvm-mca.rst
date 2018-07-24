@@ -21,9 +21,9 @@ The main goal of this tool is not just to predict the performance of the code
 when run on the target, but also help with diagnosing potential performance
 issues.
 
-Given an assembly code sequence, llvm-mca estimates the IPC, as well as
-hardware resource pressure. The analysis and reporting style were inspired by
-the IACA tool from Intel.
+Given an assembly code sequence, llvm-mca estimates the Instructions Per Cycle
+(IPC), as well as hardware resource pressure. The analysis and reporting style
+were inspired by the IACA tool from Intel.
 
 :program:`llvm-mca` allows the usage of special code comments to mark regions of
 the assembly code to be analyzed.  A comment starting with substring
@@ -287,10 +287,10 @@ for a total of 900 dynamically executed instructions.
 The report is structured in three main sections.  The first section collects a
 few performance numbers; the goal of this section is to give a very quick
 overview of the performance throughput. In this example, the two important
-performance indicators are the predicted total number of cycles, and the
-Instructions Per Cycle (IPC).  IPC is probably the most important throughput
-indicator. A big delta between the Dispatch Width and the computed IPC is an
-indicator of potential performance issues.
+performance indicators are the predicted total number of cycles, and the IPC.
+IPC is probably the most important throughput indicator. A big delta between
+the Dispatch Width and the computed IPC is an indicator of potential
+performance issues.
 
 The second section of the report shows the latency and reciprocal
 throughput of every instruction in the sequence. That section also reports
