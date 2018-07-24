@@ -872,7 +872,13 @@ template <class ELFT> void MipsGotSection::build() {
     if (tryMergeGots(MergedGots.front(), SrcGot, true)) {
       File->MipsGotIndex = 0;
     } else {
-      if (!tryMergeGots(MergedGots.back(), SrcGot, false)) {
+      // If this is the first time we failed to merge with the primary GOT,
+      // MergedGots.back() will also be the primary GOT. We must make sure not
+      // to try to merge again with IsPrimary=false, as otherwise, if the
+      // inputs are just right, we could allow the primary GOT to become 1 or 2
+      // words too big due to ignoring the header size.
+      if (MergedGots.size() == 1 ||
+          !tryMergeGots(MergedGots.back(), SrcGot, false)) {
         MergedGots.emplace_back();
         std::swap(MergedGots.back(), SrcGot);
       }

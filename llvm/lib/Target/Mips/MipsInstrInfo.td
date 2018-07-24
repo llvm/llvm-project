@@ -73,12 +73,8 @@ def MipsGPRel : SDNode<"MipsISD::GPRel", SDTIntUnaryOp>;
 // Hi node for accessing the GOT.
 def MipsGotHi : SDNode<"MipsISD::GotHi", SDTIntUnaryOp>;
 
-// TlsGd node is used to handle General Dynamic TLS
-def MipsTlsGd : SDNode<"MipsISD::TlsGd", SDTIntUnaryOp>;
-
-// TprelHi and TprelLo nodes are used to handle Local Exec TLS
-def MipsTprelHi    : SDNode<"MipsISD::TprelHi", SDTIntUnaryOp>;
-def MipsTprelLo    : SDNode<"MipsISD::TprelLo", SDTIntUnaryOp>;
+// Hi node for handling TLS offsets
+def MipsTlsHi   : SDNode<"MipsISD::TlsHi", SDTIntUnaryOp>;
 
 // Thread pointer
 def MipsThreadPointer: SDNode<"MipsISD::ThreadPointer", SDT_MipsThreadPointer>;
@@ -3074,7 +3070,6 @@ multiclass MipsHiLoRelocs<Instruction Lui, Instruction Addiu,
   def : MipsPat<(MipsHi tblockaddress:$in), (Lui tblockaddress:$in)>;
   def : MipsPat<(MipsHi tjumptable:$in), (Lui tjumptable:$in)>;
   def : MipsPat<(MipsHi tconstpool:$in), (Lui tconstpool:$in)>;
-  def : MipsPat<(MipsHi tglobaltlsaddr:$in), (Lui tglobaltlsaddr:$in)>;
   def : MipsPat<(MipsHi texternalsym:$in), (Lui texternalsym:$in)>;
 
   def : MipsPat<(MipsLo tglobaladdr:$in), (Addiu ZeroReg, tglobaladdr:$in)>;
@@ -3107,6 +3102,9 @@ let AdditionalPredicates = [NotInMicroMips] in {
 
   def : MipsPat<(MipsGotHi tglobaladdr:$in), (LUi tglobaladdr:$in)>, ISA_MIPS1;
   def : MipsPat<(MipsGotHi texternalsym:$in), (LUi texternalsym:$in)>,
+        ISA_MIPS1;
+
+  def : MipsPat<(MipsTlsHi tglobaltlsaddr:$in), (LUi tglobaltlsaddr:$in)>,
         ISA_MIPS1;
 
   // gp_rel relocs

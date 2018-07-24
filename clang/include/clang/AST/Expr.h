@@ -2821,6 +2821,7 @@ protected:
               (op && op->containsUnexpandedParameterPack()))),
         Op(op) {
     CastExprBits.Kind = kind;
+    CastExprBits.PartOfExplicitCast = false;
     setBasePathSize(BasePathSize);
     assert(CastConsistency());
   }
@@ -2834,6 +2835,13 @@ protected:
 public:
   CastKind getCastKind() const { return (CastKind) CastExprBits.Kind; }
   void setCastKind(CastKind K) { CastExprBits.Kind = K; }
+
+  bool getIsPartOfExplicitCast() const {
+    return CastExprBits.PartOfExplicitCast;
+  }
+  void setIsPartOfExplicitCast(bool PartOfExplicitCast) {
+    CastExprBits.PartOfExplicitCast = PartOfExplicitCast;
+  }
 
   static const char *getCastKindName(CastKind CK);
   const char *getCastKindName() const { return getCastKindName(getCastKind()); }

@@ -140,6 +140,7 @@ template<class Container>
 
 */
 
+#include <__config>
 #include <cstddef>      // for ptrdiff_t
 #include <iterator>     // for iterators
 #include <array>        // for array
@@ -600,7 +601,8 @@ template<class _Container>
 template<class _Container>
     span(const _Container&) -> span<const typename _Container::value_type>;
 
+#endif // _LIBCPP_STD_VER > 17
+
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_STD_VER > 17
 #endif // _LIBCPP_SPAN

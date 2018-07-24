@@ -4927,7 +4927,7 @@ enum MachineOutlinerMBBFlags {
   HasCalls = 0x4
 };
 
-outliner::TargetCostInfo
+outliner::OutlinedFunction
 AArch64InstrInfo::getOutliningCandidateInfo(
     std::vector<outliner::Candidate> &RepeatedSequenceLocs) const {
   unsigned SequenceSize = std::accumulate(
@@ -4936,10 +4936,6 @@ AArch64InstrInfo::getOutliningCandidateInfo(
       0, [this](unsigned Sum, const MachineInstr &MI) {
         return Sum + getInstSizeInBytes(MI);
       });
-  unsigned CallID = MachineOutlinerDefault;
-  unsigned FrameID = MachineOutlinerDefault;
-  unsigned NumBytesForCall = 12;
-  unsigned NumBytesToCreateFrame = 4;
 
   // Compute liveness information for each candidate.
   const TargetRegisterInfo &TRI = getRegisterInfo();
@@ -4976,21 +4972,29 @@ AArch64InstrInfo::getOutliningCandidateInfo(
 
   unsigned LastInstrOpcode = RepeatedSequenceLocs[0].back()->getOpcode();
 
+  // Helper lambda which sets call information for every candidate.
+  auto SetCandidateCallInfo =
+      [&RepeatedSequenceLocs](unsigned CallID, unsigned NumBytesForCall) {
+        for (outliner::Candidate &C : RepeatedSequenceLocs)
+          C.setCallInfo(CallID, NumBytesForCall);
+      };
+
+  unsigned FrameID = MachineOutlinerDefault;
+  unsigned NumBytesToCreateFrame = 4;
+
   // If the last instruction in any candidate is a terminator, then we should
   // tail call all of the candidates.
   if (RepeatedSequenceLocs[0].back()->isTerminator()) {
-    CallID = MachineOutlinerTailCall;
     FrameID = MachineOutlinerTailCall;
-    NumBytesForCall = 4;
     NumBytesToCreateFrame = 0;
+    SetCandidateCallInfo(MachineOutlinerTailCall, 4);
   }
 
   else if (LastInstrOpcode == AArch64::BL || LastInstrOpcode == AArch64::BLR) {
     // FIXME: Do we need to check if the code after this uses the value of LR?
-    CallID = MachineOutlinerThunk;
     FrameID = MachineOutlinerThunk;
-    NumBytesForCall = 4;
     NumBytesToCreateFrame = 0;
+    SetCandidateCallInfo(MachineOutlinerThunk, 4);
   }
 
   // Make sure that LR isn't live on entry to this candidate. The only
@@ -5002,10 +5006,16 @@ AArch64InstrInfo::getOutliningCandidateInfo(
                        [](outliner::Candidate &C) {
                          return C.LRU.available(AArch64::LR);
                          })) {
-    CallID = MachineOutlinerNoLRSave;
     FrameID = MachineOutlinerNoLRSave;
-    NumBytesForCall = 4;
     NumBytesToCreateFrame = 4;
+    SetCandidateCallInfo(MachineOutlinerNoLRSave, 4);
+  }
+
+  // LR is live, so we need to save it to the stack.
+  else {
+    FrameID = MachineOutlinerDefault;
+    NumBytesToCreateFrame = 4;
+    SetCandidateCallInfo(MachineOutlinerDefault, 12);
   }
 
   // Check if the range contains a call. These require a save + restore of the
@@ -5024,8 +5034,8 @@ AArch64InstrInfo::getOutliningCandidateInfo(
            RepeatedSequenceLocs[0].back()->isCall())
     NumBytesToCreateFrame += 8;
 
-  return outliner::TargetCostInfo(SequenceSize, NumBytesForCall,
-                             NumBytesToCreateFrame, CallID, FrameID);
+  return outliner::OutlinedFunction(RepeatedSequenceLocs, SequenceSize,
+                                    NumBytesToCreateFrame, FrameID);
 }
 
 bool AArch64InstrInfo::isFunctionSafeToOutlineFrom(
@@ -5323,10 +5333,10 @@ void AArch64InstrInfo::fixupPostOutline(MachineBasicBlock &MBB) const {
 
 void AArch64InstrInfo::buildOutlinedFrame(
     MachineBasicBlock &MBB, MachineFunction &MF,
-    const outliner::TargetCostInfo &TCI) const {
+    const outliner::OutlinedFunction &OF) const {
   // For thunk outlining, rewrite the last instruction from a call to a
   // tail-call.
-  if (TCI.FrameConstructionID == MachineOutlinerThunk) {
+  if (OF.FrameConstructionID == MachineOutlinerThunk) {
     MachineInstr *Call = &*--MBB.instr_end();
     unsigned TailOpcode;
     if (Call->getOpcode() == AArch64::BL) {
@@ -5349,7 +5359,7 @@ void AArch64InstrInfo::buildOutlinedFrame(
   if (std::any_of(MBB.instr_begin(), MBB.instr_end(), IsNonTailCall)) {
     // Fix up the instructions in the range, since we're going to modify the
     // stack.
-    assert(TCI.FrameConstructionID != MachineOutlinerDefault &&
+    assert(OF.FrameConstructionID != MachineOutlinerDefault &&
            "Can only fix up stack references once");
     fixupPostOutline(MBB);
 
@@ -5359,8 +5369,8 @@ void AArch64InstrInfo::buildOutlinedFrame(
     MachineBasicBlock::iterator It = MBB.begin();
     MachineBasicBlock::iterator Et = MBB.end();
 
-    if (TCI.FrameConstructionID == MachineOutlinerTailCall ||
-        TCI.FrameConstructionID == MachineOutlinerThunk)
+    if (OF.FrameConstructionID == MachineOutlinerTailCall ||
+        OF.FrameConstructionID == MachineOutlinerThunk)
       Et = std::prev(MBB.end());
 
     // Insert a save before the outlined region
@@ -5400,8 +5410,8 @@ void AArch64InstrInfo::buildOutlinedFrame(
   }
 
   // If this is a tail call outlined function, then there's already a return.
-  if (TCI.FrameConstructionID == MachineOutlinerTailCall ||
-      TCI.FrameConstructionID == MachineOutlinerThunk)
+  if (OF.FrameConstructionID == MachineOutlinerTailCall ||
+      OF.FrameConstructionID == MachineOutlinerThunk)
     return;
 
   // It's not a tail call, so we have to insert the return ourselves.
@@ -5410,7 +5420,7 @@ void AArch64InstrInfo::buildOutlinedFrame(
   MBB.insert(MBB.end(), ret);
 
   // Did we have to modify the stack by saving the link register?
-  if (TCI.FrameConstructionID == MachineOutlinerNoLRSave)
+  if (OF.FrameConstructionID == MachineOutlinerNoLRSave)
     return;
 
   // We modified the stack.
@@ -5420,10 +5430,10 @@ void AArch64InstrInfo::buildOutlinedFrame(
 
 MachineBasicBlock::iterator AArch64InstrInfo::insertOutlinedCall(
     Module &M, MachineBasicBlock &MBB, MachineBasicBlock::iterator &It,
-    MachineFunction &MF, const outliner::TargetCostInfo &TCI) const {
+    MachineFunction &MF, const outliner::Candidate &C) const {
 
   // Are we tail calling?
-  if (TCI.CallConstructionID == MachineOutlinerTailCall) {
+  if (C.CallConstructionID == MachineOutlinerTailCall) {
     // If yes, then we can just branch to the label.
     It = MBB.insert(It, BuildMI(MF, DebugLoc(), get(AArch64::TCRETURNdi))
                             .addGlobalAddress(M.getNamedValue(MF.getName()))
@@ -5432,8 +5442,8 @@ MachineBasicBlock::iterator AArch64InstrInfo::insertOutlinedCall(
   }
 
   // Are we saving the link register?
-  if (TCI.CallConstructionID == MachineOutlinerNoLRSave ||
-      TCI.CallConstructionID == MachineOutlinerThunk) {
+  if (C.CallConstructionID == MachineOutlinerNoLRSave ||
+      C.CallConstructionID == MachineOutlinerThunk) {
     // No, so just insert the call.
     It = MBB.insert(It, BuildMI(MF, DebugLoc(), get(AArch64::BL))
                             .addGlobalAddress(M.getNamedValue(MF.getName())));

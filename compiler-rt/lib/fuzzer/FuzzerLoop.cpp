@@ -472,7 +472,8 @@ void Fuzzer::CheckForUnstableCounters(const uint8_t *Data, size_t Size) {
   TPC.UpdateUnstableCounters(Options.HandleUnstable);
 
   // Move minimum hit counts back to ModuleInline8bitCounters
-  if (Options.HandleUnstable)
+  if (Options.HandleUnstable == TracePC::MinUnstable ||
+      Options.HandleUnstable == TracePC::ZeroUnstable)
     TPC.ApplyUnstableCounters();
 }
 
