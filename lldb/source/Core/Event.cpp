@@ -10,7 +10,6 @@
 #include "lldb/Core/Event.h"
 
 #include "lldb/Core/Broadcaster.h"
-#include "lldb/Core/DumpDataExtractor.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/Stream.h"
@@ -134,14 +133,13 @@ const ConstString &EventDataBytes::GetFlavor() const {
 void EventDataBytes::Dump(Stream *s) const {
   size_t num_printable_chars =
       std::count_if(m_bytes.begin(), m_bytes.end(), isprint);
-  if (num_printable_chars == m_bytes.size()) {
-    s->Printf("\"%s\"", m_bytes.c_str());
-  } else if (!m_bytes.empty()) {
-    DataExtractor data;
-    data.SetData(m_bytes.data(), m_bytes.size(), endian::InlHostByteOrder());
-    DumpDataExtractor(data, s, 0, eFormatBytes, 1, m_bytes.size(), 32,
-                      LLDB_INVALID_ADDRESS, 0, 0);
-  }
+  if (num_printable_chars == m_bytes.size())
+    s->Format("\"{0}\"", m_bytes);
+  else
+    s->Format("{0:$[ ]@[x-2]}", llvm::make_range(
+                         reinterpret_cast<const uint8_t *>(m_bytes.data()),
+                         reinterpret_cast<const uint8_t *>(m_bytes.data() +
+                                                           m_bytes.size())));
 }
 
 const void *EventDataBytes::GetBytes() const {
