@@ -229,7 +229,7 @@ struct time_util_base {
           .count();
 
 private:
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER > 11 && !defined(_LIBCPP_HAS_NO_CXX14_CONSTEXPR)
   static constexpr fs_duration get_min_nsecs() {
     return duration_cast<fs_duration>(
         fs_nanoseconds(min_nsec_timespec) -
