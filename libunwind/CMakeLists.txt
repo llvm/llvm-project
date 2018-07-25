@@ -119,6 +119,7 @@ endif()
 #===============================================================================
 # Setup CMake Options
 #===============================================================================
+include(CMakeDependentOption)
 include(HandleCompilerRT)
 
 # Define options.
