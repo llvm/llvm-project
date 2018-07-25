@@ -61,7 +61,7 @@ of representing the range of the ``timespec`` struct?
 Problems To Consider
 ====================
 
-Before considering solutions, lets consider the problems they should solve,
+Before considering solutions, let's consider the problems they should solve,
 and how important solving those problems are:
 
 
@@ -187,7 +187,7 @@ Source Code Portability Across Implementations
 As we've discussed, ``file_time_type`` needs a representation that uses more
 than 64 bits. The possible solutions include using ``__int128_t``, emulating a
 128 bit integer using a class, or potentially defining a ``timespec`` like
-arithmetic type. All three will solve allow us to, at minimum, match the range
+arithmetic type. All three will allow us to, at minimum, match the range
 and resolution, and the last one might even allow us to match them exactly.
 
 But when considering these potential solutions we need to consider more than
@@ -214,7 +214,7 @@ code in some way:
 
   file_time_type correct_timespec_to_file_time_type(struct timespec ts) {
     // This is the correct version of the above example, where we
-    // avoid using the chrono typedefs as their not sufficient.
+    // avoid using the chrono typedefs as they're not sufficient.
     // Can we expect users to avoid this bug?
     using fs_seconds = chrono::duration<file_time_type::rep>;
     using fs_nanoseconds = chrono::duration<file_time_type::rep, nano>;
@@ -252,7 +252,7 @@ what the underlying system uses, and because it might allow us to match
 the range and resolution exactly. But would it work with chrono? And could
 it still act at all like a ``timespec`` struct?
 
-For ease of consideration, lets consider the what the implementation might
+For ease of consideration, let's consider what the implementation might
 look like.
 
 .. code-block:: cpp
@@ -278,11 +278,11 @@ directly. A ``chrono::duration`` represents its value as a tick period and a
 number of ticks stored using ``rep``. The representation is unaware of the
 tick period it is being used to represent, but ``timespec`` is setup to assume
 a nanosecond tick period; which is the only case where the names ``tv_sec``
-and ``tv_nsec`` matche the values they store.
+and ``tv_nsec`` match the values they store.
 
-When we convert a nanosecond duration to a seconds, ``fs_timespec_rep`` will
+When we convert a nanosecond duration to seconds, ``fs_timespec_rep`` will
 use ``tv_sec`` to represent the number of giga seconds, and ``tv_nsec`` the
-remaining seconds. Lets consider how this might cause a bug were users allowed
+remaining seconds. Let's consider how this might cause a bug were users allowed
 to manipulate the fields directly.
 
 .. code-block:: cpp
@@ -364,8 +364,8 @@ described by this paper.
 Obviously our implementation for 32-bit builds should act as similarly to the
 64-bit build as possible. Code which compiles in one, should compile in the other.
 This consideration is important when choosing between ``__int128_t`` and
-emulating ``timespec``. The solution which provides the most uniformity is
-the preferable one, with the least eccentricity is the preferable one.
+emulating ``timespec``. The solution which provides the most uniformity with
+the least eccentricity is the preferable one.
 
 Summary
 =======
@@ -391,7 +391,7 @@ The Potential Solutions
 
 Pros:
 
-* As a type ``long long`` places the nicest with others:
+* As a type ``long long`` plays the nicest with others:
 
   * It works with streaming operators and other library entities which support
     builtin integer types, but don't support ``__int128_t``.
