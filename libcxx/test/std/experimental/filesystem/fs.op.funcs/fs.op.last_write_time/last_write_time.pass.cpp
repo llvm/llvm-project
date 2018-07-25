@@ -567,23 +567,4 @@ TEST_CASE(test_exists_fails)
     TEST_CHECK_THROW_RESULT(filesystem_error, Checker, last_write_time(file));
 }
 
-TEST_CASE(my_test) {
-  scoped_test_env env;
-  const path p = env.create_file("file", 42);
-  using namespace std::chrono;
-  using TimeSpec = struct ::timespec;
-  TimeSpec ts[2];
-  ts[0].tv_sec = 0;
-  ts[0].tv_nsec = UTIME_OMIT;
-  ts[1].tv_sec = -1;
-  ts[1].tv_nsec =
-      duration_cast<nanoseconds>(seconds(1) - nanoseconds(13)).count();
-  if (::utimensat(AT_FDCWD, p.c_str(), ts, 0) == -1) {
-    TEST_CHECK(false);
-  }
-  TimeSpec new_ts = LastWriteTime(p);
-  TEST_CHECK(ts[1].tv_sec == new_ts.tv_sec);
-  TEST_CHECK(ts[1].tv_nsec == new_ts.tv_nsec);
-}
-
 TEST_SUITE_END()
