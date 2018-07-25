@@ -10,6 +10,7 @@ import urllib2
 
 CLANG_DIR = os.path.join(os.path.dirname(__file__), '../..')
 FORMAT_STYLE_FILE = os.path.join(CLANG_DIR, 'include/clang/Format/Format.h')
+INCLUDE_STYLE_FILE = os.path.join(CLANG_DIR, 'include/clang/Tooling/Inclusions/IncludeStyle.h')
 DOC_FILE = os.path.join(CLANG_DIR, 'docs/ClangFormatStyleOptions.rst')
 
 
@@ -115,7 +116,7 @@ def read_options(header):
   for line in header:
     line = line.strip()
     if state == State.BeforeStruct:
-      if line == 'struct FormatStyle {':
+      if line == 'struct FormatStyle {' or line == 'struct IncludeStyle {':
         state = State.InStruct
     elif state == State.InStruct:
       if line.startswith('///'):
@@ -188,6 +189,7 @@ def read_options(header):
   return options
 
 options = read_options(open(FORMAT_STYLE_FILE))
+options += read_options(open(INCLUDE_STYLE_FILE))
 
 options = sorted(options, key=lambda x: x.name)
 options_text = '\n\n'.join(map(str, options))

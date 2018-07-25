@@ -3335,6 +3335,10 @@ class EnumDecl : public TagDecl {
   /// information.
   MemberSpecializationInfo *SpecializationInfo = nullptr;
 
+  /// Store the ODRHash after first calculation.
+  unsigned HasODRHash : 1;
+  unsigned ODRHash;
+
   EnumDecl(ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
            SourceLocation IdLoc, IdentifierInfo *Id, EnumDecl *PrevDecl,
            bool Scoped, bool ScopedUsingClassTag, bool Fixed)
@@ -3346,6 +3350,8 @@ class EnumDecl : public TagDecl {
     IsScoped = Scoped;
     IsScopedUsingClassTag = ScopedUsingClassTag;
     IsFixed = Fixed;
+    HasODRHash = false;
+    ODRHash = 0;
   }
 
   void anchor() override;
@@ -3495,6 +3501,8 @@ public:
   bool isFixed() const {
     return IsFixed;
   }
+
+  unsigned getODRHash();
 
   /// Returns true if this can be considered a complete type.
   bool isComplete() const {

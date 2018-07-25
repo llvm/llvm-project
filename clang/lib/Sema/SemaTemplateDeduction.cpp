@@ -628,29 +628,6 @@ static bool IsPossiblyOpaquelyQualifiedType(QualType T) {
   }
 }
 
-/// Retrieve the depth and index of a template parameter.
-static std::pair<unsigned, unsigned>
-getDepthAndIndex(NamedDecl *ND) {
-  if (TemplateTypeParmDecl *TTP = dyn_cast<TemplateTypeParmDecl>(ND))
-    return std::make_pair(TTP->getDepth(), TTP->getIndex());
-
-  if (NonTypeTemplateParmDecl *NTTP = dyn_cast<NonTypeTemplateParmDecl>(ND))
-    return std::make_pair(NTTP->getDepth(), NTTP->getIndex());
-
-  TemplateTemplateParmDecl *TTP = cast<TemplateTemplateParmDecl>(ND);
-  return std::make_pair(TTP->getDepth(), TTP->getIndex());
-}
-
-/// Retrieve the depth and index of an unexpanded parameter pack.
-static std::pair<unsigned, unsigned>
-getDepthAndIndex(UnexpandedParameterPack UPP) {
-  if (const TemplateTypeParmType *TTP
-                          = UPP.first.dyn_cast<const TemplateTypeParmType *>())
-    return std::make_pair(TTP->getDepth(), TTP->getIndex());
-
-  return getDepthAndIndex(UPP.first.get<NamedDecl *>());
-}
-
 /// Helper function to build a TemplateParameter when we don't
 /// know its type statically.
 static TemplateParameter makeTemplateParameter(Decl *D) {

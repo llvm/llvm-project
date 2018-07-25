@@ -1099,6 +1099,10 @@ private:
   llvm::SmallDenseMap<FunctionDecl *, llvm::SmallVector<FunctionDecl *, 2>, 2>
       PendingFunctionOdrMergeFailures;
 
+  /// Enum definitions in which we found an ODR violation.
+  llvm::SmallDenseMap<EnumDecl *, llvm::SmallVector<EnumDecl *, 2>, 2>
+      PendingEnumOdrMergeFailures;
+
   /// DeclContexts in which we have diagnosed an ODR violation.
   llvm::SmallPtrSet<DeclContext*, 2> DiagnosedOdrMergeFailures;
 

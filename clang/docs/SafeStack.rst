@@ -126,7 +126,7 @@ and link command lines.
 Supported Platforms
 -------------------
 
-SafeStack was tested on Linux, FreeBSD and MacOSX.
+SafeStack was tested on Linux, NetBSD, FreeBSD and MacOSX.
 
 Low-level API
 -------------
