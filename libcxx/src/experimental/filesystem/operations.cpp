@@ -830,7 +830,7 @@ bool __create_directory(const path& p, error_code *ec)
 
   if (::mkdir(p.c_str(), static_cast<int>(perms::all)) == 0)
     return true;
-  if (errno != EEXIST || !is_directory(p))
+  if (errno != EEXIST)
     err.report(capture_errno());
   return false;
 }
@@ -845,10 +845,12 @@ bool __create_directory(path const & p, path const & attributes,
   auto st = detail::posix_stat(attributes, attr_stat, &mec);
   if (!status_known(st))
     return err.report(mec);
+  if (!is_directory(st))
+    return err.report(errc::not_a_directory, "the specified attribute path is invalid");
 
   if (::mkdir(p.c_str(), attr_stat.st_mode) == 0)
     return true;
-  if (errno != EEXIST || !is_directory(p))
+  if (errno != EEXIST)
     err.report(capture_errno());
   return false;
 }
