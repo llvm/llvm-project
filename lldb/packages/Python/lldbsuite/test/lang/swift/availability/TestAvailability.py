@@ -16,6 +16,21 @@ def getOSName(os):
     if os == 'watchos': return 'watchOS'
     return os
 
+def getArch(os):
+    if os == 'macosx': return 'x86_64'
+    if os == 'ios': return 'arm64'
+    if os == 'tvos': return 'arm64'
+    if os == 'watchos': return 'armv7k'
+    return os
+
+def getTriple(os, version):
+    return getArch(os) + '-apple-' + os + version
+
+def getOlderVersion(major, minor):
+    if minor != 0:
+        return '%d.%d' % (major, minor-1)
+    return '%d.%d' % (major-1, minor)
+
 class TestAvailability(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
@@ -28,11 +43,12 @@ class TestAvailability(TestBase):
 
     @skipIf(oslist=['linux', 'windows'])
     def testAvailability(self):
-        os_name = getOSName(lldbplatformutil.getPlatform())
+        platform_name = lldbplatformutil.getPlatform()
+        os_name = getOSName(platform_name)
         platform = lldb.DBG.GetSelectedPlatform()
-        version = '%d.%d.%d'%(platform.GetOSMajorVersion(),
-                              platform.GetOSMinorVersion(),
-                              platform.GetOSUpdateVersion())
+        major = platform.GetOSMajorVersion()
+        minor = platform.GetOSMinorVersion()
+        version = '%d.%d'%(major, minor)
         program = """
 @available(%s %s, *) func f() {}
 
@@ -106,7 +122,8 @@ print("in top_level") // break_7
         with open(self.getBuildArtifact("main.swift"), 'w') as main:
             main.write(program %(os_name, version))
 
-        self.build()
+        self.build(dictionary={'TRIPLE': getTriple(platform_name,
+                                                   getOlderVersion(major, minor))})
         source_spec = lldb.SBFileSpec("main.swift")
         (target, process, thread, brk0) = \
             lldbutil.run_to_source_breakpoint(self, "break_0", source_spec)
