@@ -129,21 +129,6 @@ if (APPLE AND NOT SKIP_DEBUGSERVER)
   else()
     find_library(COCOA_LIBRARY Cocoa)
   endif()
-  
-  target_link_libraries(lldbDebugserverCommon
-                        INTERFACE ${COCOA_LIBRARY}
-                        ${CORE_FOUNDATION_LIBRARY}
-                        ${FOUNDATION_LIBRARY}
-                        lldbDebugserverArchSupport
-                        lldbDebugserverDarwin_DarwinLog)
-  
-  set(LLVM_OPTIONAL_SOURCES ${lldbDebugserverCommonSources})
-  add_lldb_tool(debugserver INCLUDE_IN_FRAMEWORK
-    debugserver.cpp
-  
-    LINK_LIBS
-      lldbDebugserverCommon
-    )
 endif()
 
 if(HAVE_LIBCOMPRESSION)
