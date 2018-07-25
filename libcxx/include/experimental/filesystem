@@ -1037,7 +1037,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY path extension()      const { return string_type(__extension()); }
 
     // query
-    _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_INLINE_VISIBILITY 
+    _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_INLINE_VISIBILITY
     bool empty() const _NOEXCEPT { return __pn_.empty(); }
 
     _LIBCPP_INLINE_VISIBILITY bool has_root_name()      const { return !__root_name().empty(); }
@@ -1170,6 +1170,17 @@ u8path(_InputIt __f, _InputIt __l) {
 class _LIBCPP_TYPE_VIS path::iterator
 {
 public:
+    enum _ParserState : unsigned char {
+      _Singular,
+      _BeforeBegin,
+      _InRootName,
+      _InRootDir,
+      _InFilenames,
+      _InTrailingSep,
+      _AtEnd
+    };
+
+public:
     typedef bidirectional_iterator_tag iterator_category;
 
     typedef path                       value_type;
@@ -1178,10 +1189,11 @@ public:
     typedef const path&                reference;
 
     typedef void __stashing_iterator_tag; // See reverse_iterator and __is_stashing_iterator
+
 public:
     _LIBCPP_INLINE_VISIBILITY
     iterator() : __stashed_elem_(), __path_ptr_(nullptr),
-                 __entry_(), __state_(__singular) {}
+                 __entry_(), __state_(_Singular) {}
 
     iterator(const iterator&) = default;
     ~iterator() = default;
@@ -1200,9 +1212,9 @@ public:
 
     _LIBCPP_INLINE_VISIBILITY
     iterator& operator++() {
-        _LIBCPP_ASSERT(__state_ != __singular,
+        _LIBCPP_ASSERT(__state_ != _Singular,
                        "attempting to increment a singular iterator");
-        _LIBCPP_ASSERT(__state_ != __at_end,
+        _LIBCPP_ASSERT(__state_ != _AtEnd,
                       "attempting to increment the end iterator");
         return __increment();
     }
@@ -1216,7 +1228,7 @@ public:
 
     _LIBCPP_INLINE_VISIBILITY
     iterator& operator--() {
-        _LIBCPP_ASSERT(__state_ != __singular,
+        _LIBCPP_ASSERT(__state_ != _Singular,
                        "attempting to decrement a singular iterator");
         _LIBCPP_ASSERT(__entry_.data() != __path_ptr_->native().data(),
                        "attempting to decrement the begin iterator");
@@ -1233,9 +1245,6 @@ public:
 private:
     friend class path;
 
-    static constexpr unsigned char __singular = 0;
-    static constexpr unsigned char __at_end = 6;
-
     inline _LIBCPP_INLINE_VISIBILITY
     friend bool operator==(const iterator&, const iterator&);
 
@@ -1245,7 +1254,7 @@ private:
     path __stashed_elem_;
     const path* __path_ptr_;
     path::__string_view __entry_;
-    unsigned char __state_;
+    _ParserState __state_;
 };
 
 inline _LIBCPP_INLINE_VISIBILITY
