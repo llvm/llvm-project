@@ -846,11 +846,10 @@ void CodeGenFunction::EmitScalarInit(const Expr *init, const ValueDecl *D,
   EmitStoreOfScalar(value, lvalue, /* isInitialization */ true);
 }
 
-/// canEmitInitWithFewStoresAfterMemset - Decide whether we can emit the
-/// non-zero parts of the specified initializer with equal or fewer than
-/// NumStores scalar stores.
-static bool canEmitInitWithFewStoresAfterMemset(llvm::Constant *Init,
-                                                unsigned &NumStores) {
+/// Decide whether we can emit the non-zero parts of the specified initializer
+/// with equal or fewer than NumStores scalar stores.
+static bool canEmitInitWithFewStoresAfterBZero(llvm::Constant *Init,
+                                               unsigned &NumStores) {
   // Zero and Undef never requires any extra stores.
   if (isa<llvm::ConstantAggregateZero>(Init) ||
       isa<llvm::ConstantPointerNull>(Init) ||
@@ -865,7 +864,7 @@ static bool canEmitInitWithFewStoresAfterMemset(llvm::Constant *Init,
   if (isa<llvm::ConstantArray>(Init) || isa<llvm::ConstantStruct>(Init)) {
     for (unsigned i = 0, e = Init->getNumOperands(); i != e; ++i) {
       llvm::Constant *Elt = cast<llvm::Constant>(Init->getOperand(i));
-      if (!canEmitInitWithFewStoresAfterMemset(Elt, NumStores))
+      if (!canEmitInitWithFewStoresAfterBZero(Elt, NumStores))
         return false;
     }
     return true;
@@ -875,7 +874,7 @@ static bool canEmitInitWithFewStoresAfterMemset(llvm::Constant *Init,
         dyn_cast<llvm::ConstantDataSequential>(Init)) {
     for (unsigned i = 0, e = CDS->getNumElements(); i != e; ++i) {
       llvm::Constant *Elt = CDS->getElementAsConstant(i);
-      if (!canEmitInitWithFewStoresAfterMemset(Elt, NumStores))
+      if (!canEmitInitWithFewStoresAfterBZero(Elt, NumStores))
         return false;
     }
     return true;
@@ -885,15 +884,13 @@ static bool canEmitInitWithFewStoresAfterMemset(llvm::Constant *Init,
   return false;
 }
 
-/// emitStoresForInitAfterMemset - For inits that
-/// canEmitInitWithFewStoresAfterMemset returned true for, emit the scalar
-/// stores that would be required.
-static void emitStoresForInitAfterMemset(CodeGenModule &CGM,
-                                         llvm::Constant *Init, Address Loc,
-                                         bool isVolatile,
-                                         CGBuilderTy &Builder) {
+/// For inits that canEmitInitWithFewStoresAfterBZero returned true for, emit
+/// the scalar stores that would be required.
+static void emitStoresForInitAfterBZero(CodeGenModule &CGM,
+                                        llvm::Constant *Init, Address Loc,
+                                        bool isVolatile, CGBuilderTy &Builder) {
   assert(!Init->isNullValue() && !isa<llvm::UndefValue>(Init) &&
-         "called emitStoresForInitAfterMemset for zero or undef value.");
+         "called emitStoresForInitAfterBZero for zero or undef value.");
 
   if (isa<llvm::ConstantInt>(Init) || isa<llvm::ConstantFP>(Init) ||
       isa<llvm::ConstantVector>(Init) || isa<llvm::BlockAddress>(Init) ||
@@ -909,7 +906,7 @@ static void emitStoresForInitAfterMemset(CodeGenModule &CGM,
 
       // If necessary, get a pointer to the element and emit it.
       if (!Elt->isNullValue() && !isa<llvm::UndefValue>(Elt))
-        emitStoresForInitAfterMemset(
+        emitStoresForInitAfterBZero(
             CGM, Elt,
             Builder.CreateConstInBoundsGEP2_32(Loc, 0, i, CGM.getDataLayout()),
             isVolatile, Builder);
@@ -925,20 +922,19 @@ static void emitStoresForInitAfterMemset(CodeGenModule &CGM,
 
     // If necessary, get a pointer to the element and emit it.
     if (!Elt->isNullValue() && !isa<llvm::UndefValue>(Elt))
-      emitStoresForInitAfterMemset(
+      emitStoresForInitAfterBZero(
           CGM, Elt,
           Builder.CreateConstInBoundsGEP2_32(Loc, 0, i, CGM.getDataLayout()),
           isVolatile, Builder);
   }
 }
 
-/// shouldUseMemSetPlusStoresToInitialize - Decide whether we should use memset
-/// plus some stores to initialize a local variable instead of using a memcpy
-/// from a constant global.  It is beneficial to use memset if the global is all
-/// zeros, or mostly zeros and large.
-static bool shouldUseMemSetPlusStoresToInitialize(llvm::Constant *Init,
-                                                  uint64_t GlobalSize) {
-  // If a global is all zeros, always use a memset.
+/// Decide whether we should use bzero plus some stores to initialize a local
+/// variable instead of using a memcpy from a constant global.  It is beneficial
+/// to use bzero if the global is all zeros, or mostly zeros and large.
+static bool shouldUseBZeroPlusStoresToInitialize(llvm::Constant *Init,
+                                                 uint64_t GlobalSize) {
+  // If a global is all zeros, always use a bzero.
   if (isa<llvm::ConstantAggregateZero>(Init)) return true;
 
   // If a non-zero global is <= 32 bytes, always use a memcpy.  If it is large,
@@ -949,7 +945,7 @@ static bool shouldUseMemSetPlusStoresToInitialize(llvm::Constant *Init,
   uint64_t SizeLimit = 32;
 
   return GlobalSize > SizeLimit &&
-         canEmitInitWithFewStoresAfterMemset(Init, StoreBudget);
+         canEmitInitWithFewStoresAfterBZero(Init, StoreBudget);
 }
 
 /// EmitAutoVarDecl - Emit code and set up an entry in LocalDeclMap for a
@@ -1405,17 +1401,18 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
   if (Loc.getType() != BP)
     Loc = Builder.CreateBitCast(Loc, BP);
 
-  // If the initializer is all or mostly zeros, codegen with memset then do
-  // a few stores afterward.
-  if (shouldUseMemSetPlusStoresToInitialize(constant,
-                CGM.getDataLayout().getTypeAllocSize(constant->getType()))) {
+  // If the initializer is all or mostly zeros, codegen with bzero then do a
+  // few stores afterward.
+  if (shouldUseBZeroPlusStoresToInitialize(
+          constant,
+          CGM.getDataLayout().getTypeAllocSize(constant->getType()))) {
     Builder.CreateMemSet(Loc, llvm::ConstantInt::get(Int8Ty, 0), SizeVal,
                          isVolatile);
     // Zero and undef don't require a stores.
     if (!constant->isNullValue() && !isa<llvm::UndefValue>(constant)) {
       Loc = Builder.CreateBitCast(Loc,
         constant->getType()->getPointerTo(Loc.getAddressSpace()));
-      emitStoresForInitAfterMemset(CGM, constant, Loc, isVolatile, Builder);
+      emitStoresForInitAfterBZero(CGM, constant, Loc, isVolatile, Builder);
     }
   } else {
     // Otherwise, create a temporary global with the initializer then
