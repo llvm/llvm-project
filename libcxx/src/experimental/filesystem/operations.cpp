@@ -57,12 +57,12 @@ using PosPtr = path::value_type const*;
 struct PathParser {
   enum ParserState : unsigned char {
     // Zero is a special sentinel value used by default constructed iterators.
-    PS_BeforeBegin = 1,
-    PS_InRootName,
-    PS_InRootDir,
-    PS_InFilenames,
-    PS_InTrailingSep,
-    PS_AtEnd
+    PS_BeforeBegin = path::iterator::_BeforeBegin,
+    PS_InRootName = path::iterator::_InRootName,
+    PS_InRootDir = path::iterator::_InRootDir,
+    PS_InFilenames = path::iterator::_InFilenames,
+    PS_InTrailingSep = path::iterator::_InTrailingSep,
+    PS_AtEnd = path::iterator::_AtEnd
   };
 
   const string_view_t Path;
@@ -1548,7 +1548,7 @@ path::iterator path::begin() const
     auto PP = PathParser::CreateBegin(__pn_);
     iterator it;
     it.__path_ptr_ = this;
-    it.__state_ = PP.State;
+    it.__state_ = static_cast<path::iterator::_ParserState>(PP.State);
     it.__entry_ = PP.RawEntry;
     it.__stashed_elem_.__assign_view(*PP);
     return it;
@@ -1557,16 +1557,15 @@ path::iterator path::begin() const
 path::iterator path::end() const
 {
     iterator it{};
-    it.__state_ = PathParser::PS_AtEnd;
+    it.__state_ = path::iterator::_AtEnd;
     it.__path_ptr_ = this;
     return it;
 }
 
 path::iterator& path::iterator::__increment() {
-  static_assert(__at_end == PathParser::PS_AtEnd, "");
   PathParser PP(__path_ptr_->native(), __entry_, __state_);
   ++PP;
-  __state_ = PP.State;
+  __state_ = static_cast<_ParserState>(PP.State);
   __entry_ = PP.RawEntry;
   __stashed_elem_.__assign_view(*PP);
   return *this;
@@ -1575,7 +1574,7 @@ path::iterator& path::iterator::__increment() {
 path::iterator& path::iterator::__decrement() {
   PathParser PP(__path_ptr_->native(), __entry_, __state_);
   --PP;
-  __state_ = PP.State;
+  __state_ = static_cast<_ParserState>(PP.State);
   __entry_ = PP.RawEntry;
   __stashed_elem_.__assign_view(*PP);
   return *this;
