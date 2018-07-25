@@ -18,6 +18,8 @@ typedef signed char BOOL;
 
 @interface NSRunLoop : NSObject
 + (NSRunLoop *)currentRunLoop;
++ (NSRunLoop *)mainRunLoop;
+- (void) run;
 - (void)cancelPerformSelectorsWithTarget:(id)target;
 @end
 
@@ -33,3 +35,5 @@ void _Block_release(const void *aBlock);
 
 @interface CIFilter : NSObject
 @end
+
+extern void xpc_main(void);

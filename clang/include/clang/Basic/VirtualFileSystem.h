@@ -45,8 +45,7 @@ class MemoryBuffer;
 namespace clang {
 namespace vfs {
 
-/// File information from a \p File::status() operation.
-/// This is roughly equivalent to a `struct stat` plus a file path.
+/// The result of a \p status operation.
 class Status {
   std::string Name;
   llvm::sys::fs::UniqueID UID;
@@ -67,14 +66,13 @@ public:
          llvm::sys::TimePoint<> MTime, uint32_t User, uint32_t Group,
          uint64_t Size, llvm::sys::fs::file_type Type,
          llvm::sys::fs::perms Perms);
-  Status(const llvm::sys::fs::file_status &FSStatus, StringRef Name);
 
-  /// Get a copy of a this Status with a different name.
-  Status copyWithNewName(StringRef NewName);
+  /// Get a copy of a Status with a different name.
+  static Status copyWithNewName(const Status &In, StringRef NewName);
+  static Status copyWithNewName(const llvm::sys::fs::file_status &In,
+                                StringRef NewName);
 
   /// Returns the name that should be used for this file or directory.
-  /// This is usually the path that the file was opened as, without resolving
-  /// relative paths or symlinks.
   StringRef getName() const { return Name; }
 
   /// @name Status interface from llvm::sys::fs
@@ -109,16 +107,15 @@ public:
   virtual ~File();
 
   /// Get the status of the file.
-  /// This may access the filesystem (e.g. `stat()`), or return a cached value.
   virtual llvm::ErrorOr<Status> status() = 0;
 
-  /// Get the "real name" of the file, if available.
-  /// This should be absolute, and typically has symlinks resolved.
-  ///
-  /// Only some VFS implementations provide this, and only sometimes.
-  /// FIXME: these maybe-available semantics are not very useful. It would be
-  /// nice if this was more consistent with FileSystem::getRealPath().
-  virtual llvm::Optional<std::string> getRealPath() { return llvm::None; }
+  /// Get the name of the file
+  virtual llvm::ErrorOr<std::string> getName() {
+    if (auto Status = status())
+      return Status->getName().str();
+    else
+      return Status.getError();
+  }
 
   /// Get the contents of the file as a \p MemoryBuffer.
   virtual llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
