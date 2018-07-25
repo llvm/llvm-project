@@ -470,7 +470,7 @@ struct StaticLibcallNameMap {
   StaticLibcallNameMap() {
     static const std::pair<const char *, RTLIB::Libcall> NameLibcalls[] = {
 #define HANDLE_LIBCALL(code, name) {(const char *)name, RTLIB::code},
-#include "llvm/CodeGen/RuntimeLibcalls.def"
+#include "llvm/IR/RuntimeLibcalls.def"
 #undef HANDLE_LIBCALL
     };
     for (const auto &NameLibcall : NameLibcalls) {

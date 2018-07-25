@@ -12,6 +12,7 @@
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Disassembler.h"
 #include "lldb/Core/DumpDataExtractor.h"
+#include "lldb/Core/DumpRegisterValue.h"
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Target/ExecutionContext.h"
@@ -486,7 +487,7 @@ bool UnwindAssemblyInstEmulation::ReadRegister(EmulateInstruction *instruction,
     strm.Printf("UnwindAssemblyInstEmulation::ReadRegister  (name = \"%s\") => "
                 "synthetic_value = %i, value = ",
                 reg_info->name, synthetic);
-    reg_value.Dump(&strm, reg_info, false, false, eFormatDefault);
+    DumpRegisterValue(reg_value, &strm, reg_info, false, false, eFormatDefault);
     log->PutString(strm.GetString());
   }
   return true;
@@ -512,7 +513,7 @@ bool UnwindAssemblyInstEmulation::WriteRegister(
     strm.Printf(
         "UnwindAssemblyInstEmulation::WriteRegister (name = \"%s\", value = ",
         reg_info->name);
-    reg_value.Dump(&strm, reg_info, false, false, eFormatDefault);
+    DumpRegisterValue(reg_value, &strm, reg_info, false, false, eFormatDefault);
     strm.PutCString(", context = ");
     context.Dump(strm, instruction);
     log->PutString(strm.GetString());

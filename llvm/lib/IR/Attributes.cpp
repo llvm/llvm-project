@@ -1682,6 +1682,33 @@ adjustCallerStackProbeSize(Function &Caller, const Function &Callee) {
   }
 }
 
+/// If the inlined function defines a min legal vector width, then ensure
+/// the calling function has the same or larger min legal vector width. This
+/// function is called after the inlining decision has been made so we have to
+/// merge the attribute this way. Heuristics that would use
+/// min-legal-vector-width to determine inline compatibility would need to be
+/// handled as part of inline cost analysis.
+static void
+adjustMinLegalVectorWidth(Function &Caller, const Function &Callee) {
+  if (Callee.hasFnAttribute("min-legal-vector-width")) {
+    uint64_t CalleeVectorWidth;
+    Callee.getFnAttribute("min-legal-vector-width")
+          .getValueAsString()
+          .getAsInteger(0, CalleeVectorWidth);
+    if (Caller.hasFnAttribute("min-legal-vector-width")) {
+      uint64_t CallerVectorWidth;
+      Caller.getFnAttribute("min-legal-vector-width")
+            .getValueAsString()
+            .getAsInteger(0, CallerVectorWidth);
+      if (CallerVectorWidth < CalleeVectorWidth) {
+        Caller.addFnAttr(Callee.getFnAttribute("min-legal-vector-width"));
+      }
+    } else {
+      Caller.addFnAttr(Callee.getFnAttribute("min-legal-vector-width"));
+    }
+  }
+}
+
 #define GET_ATTR_COMPAT_FUNC
 #include "AttributesCompatFunc.inc"
 

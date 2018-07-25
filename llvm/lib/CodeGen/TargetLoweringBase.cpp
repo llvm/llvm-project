@@ -118,7 +118,7 @@ static cl::opt<int> MinPercentageForPredictableBranch(
 void TargetLoweringBase::InitLibcalls(const Triple &TT) {
 #define HANDLE_LIBCALL(code, name) \
   setLibcallName(RTLIB::code, name);
-#include "llvm/CodeGen/RuntimeLibcalls.def"
+#include "llvm/IR/RuntimeLibcalls.def"
 #undef HANDLE_LIBCALL
   // Initialize calling conventions to their default.
   for (int LC = 0; LC < RTLIB::UNKNOWN_LIBCALL; ++LC)
