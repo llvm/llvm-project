@@ -21,7 +21,7 @@ class Base {
 
 class Derived : public Base {};
 
-Derived &test_bad_cast(Base b) {
+Derived &test_bad_cast(Base& b) {
   return dynamic_cast<Derived&>(b);
 }
 
