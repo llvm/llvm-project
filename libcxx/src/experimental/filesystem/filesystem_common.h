@@ -362,8 +362,8 @@ public:
     // The tv_nsec and tv_usec fields must not be negative so adjust accordingly
     if (subsec_dur.count() < 0) {
       if (sec_dur.count() > min_seconds) {
-        sec_dur -= fs_seconds(1);
-        subsec_dur += fs_seconds(1);
+        sec_dur = sec_dur - fs_seconds(1);
+        subsec_dur = subsec_dur + fs_seconds(1);
       } else {
         subsec_dur = fs_nanoseconds::zero();
       }
