@@ -83,14 +83,14 @@ To get the same range, we would need to drop our resolution to that of seconds
 to come close to having the same range.
 
 This begs the question, is the range problem "really a problem"? Sane usages
-of file time stamps shouldn't exceed +/- 300, so should we care to support it?
+of file time stamps shouldn't exceed +/- 300 years, so should we care to support it?
 
 I believe the answer is yes. We're not designing the filesystem time API, we're
 providing glorified C++ wrappers for it. If the underlying API supports
 a value, then we should too. Our wrappers should not place artificial restrictions
 on users that are not present in the underlying filesystem.
 
-Additionally, having a smaller range that the underlying filesystem forces the
+Having a smaller range that the underlying filesystem forces the
 implementation to report ``value_too_large`` errors when it encounters a time
 point that it can't represent. This can cause the call to ``last_write_time``
 to throw in cases where the user was confident the call should succeed. (See below)
@@ -135,7 +135,7 @@ Having a Smaller Resolution than ``timespec``
 ---------------------------------------------
 
 As mentioned in the previous section, one way to solve the range problem
-is by reducing the resolution, and matching the range of ``timespec`` using a
+is by reducing the resolution. But matching the range of ``timespec`` using a
 64 bit representation requires limiting the resolution to seconds.
 
 So we might ask: Do users "need" nanosecond precision? Is seconds not good enough?
@@ -148,16 +148,16 @@ representation, not design it.
 Having a Larger Range than ``timespec``
 ----------------------------------------
 
-We also should consider the opposite problem of having ``file_time_type``
-be able to represent a larger range than that of ``timespec``. At least in
+We should also consider the opposite problem of having a ``file_time_type``
+that is able to represent a larger range than ``timespec``. At least in
 this case ``last_write_time`` can be used to get and set all possible values
 supported by the underlying filesystem; meaning ``last_write_time(p)`` will
-never throw a overflow error.
+never throw a overflow error when retrieving a value.
 
-However, this introduces a new problem, where users are allowed to create time
-points beyond what the filesystem can represent. Two particular values are
-``file_time_type::min()`` and ``file_time_type::max()``. As such the following
-code would throw:
+However, this introduces a new problem, where users are allowed to attempt to
+create a time point beyond what the filesystem can represent. Two particular
+values which cause this are ``file_time_type::min()`` and
+``file_time_type::max()``. As a result, the following code would throw:
 
 .. code-block:: cpp
 
@@ -167,8 +167,8 @@ code would throw:
   }
 
 Apart from cases explicitly using ``min`` and ``max``, I don't see users taking
-a valid time point, adding a couple hundred billions of years to it in error,
-and then trying to update a files write time with that value very often.
+a valid time point, adding a couple hundred billions of years in error,
+and then trying to update a file's write time to that value very often.
 
 Compared to having a smaller range, this problem seems preferable. At least
 now we can represent any time point the filesystem can, so users won't be forced
@@ -190,10 +190,10 @@ than 64 bits. The possible solutions include using ``__int128_t``, emulating a
 arithmetic type. All three will solve allow us to, at minimum, match the range
 and resolution, and the last one might even allow us to match them exactly.
 
-But when considering these potential solutions, we need to consider more than
-just the values they can represent. We need to consider the effect they will have
-on users and their code. For example, each of them breaks the following code
-in some way:
+But when considering these potential solutions we need to consider more than
+just the values they can represent. We need to consider the effects they will
+have on users and their code. For example, each of them breaks the following
+code in some way:
 
 .. code-block:: cpp
 
@@ -234,12 +234,12 @@ in some way:
 
 
 Each of the above examples would require a user to adjust their filesystem code
-to the particular eccentricities of the representation type, hopefully in
-such a way that the code is still portable across implementations.
+to the particular eccentricities of the representation, hopefully only in such
+a way that the code is still portable across implementations.
 
-It seems like at least some of the above issues are unavoidable, no matter
-what representation we choose. But some representations may be quirkier than
-others, and, as I'll argue later, using an actual arithmetic type (``__int128_t``)
+At least some of the above issues are unavoidable, no matter what
+representation we choose. But some representations may be quirkier than others,
+and, as I'll argue later, using an actual arithmetic type (``__int128_t``)
 provides the least aberrant behavior.
 
 
@@ -270,19 +270,19 @@ look like.
   // ... arithmetic operators ... //
 
 The first thing to notice is that we can't construct ``fs_timespec_rep`` like
-a ``timespec`` by passing ``{secs, nsecs}``. Instead we're limited to constructing
-it from a single 64 bit integer.
+a ``timespec`` by passing ``{secs, nsecs}``. Instead we're limited to
+constructing it from a single 64 bit integer.
 
 We also can't allow the user to inspect the ``tv_sec`` or ``tv_nsec`` values
 directly. A ``chrono::duration`` represents its value as a tick period and a
 number of ticks stored using ``rep``. The representation is unaware of the
-tick period its being used to represent, but ``timespec`` is setup to assume a
-nanosecond tick period. That's the only case where the names of the ``tv_sec``
-and ``tv_nsec`` members matches the values they store.
+tick period it is being used to represent, but ``timespec`` is setup to assume
+a nanosecond tick period; which is the only case where the names ``tv_sec``
+and ``tv_nsec`` matche the values they store.
 
-When we convert a nanosecond duration to a seconds, ``fs_timespec_rep``
-will be using ``tv_sec`` to represent the number of giga seconds, and ``tv_nsec``
-the remaining seconds. Lets consider how this might cause a bug were users allowed
+When we convert a nanosecond duration to a seconds, ``fs_timespec_rep`` will
+use ``tv_sec`` to represent the number of giga seconds, and ``tv_nsec`` the
+remaining seconds. Lets consider how this might cause a bug were users allowed
 to manipulate the fields directly.
 
 .. code-block:: cpp
@@ -309,7 +309,7 @@ to manipulate the fields directly.
     return secs.count().tv_sec; // Oops!
   }
 
-However, despite ``fs_timespec_rep`` not being usable in any manner resembling
+Despite ``fs_timespec_rep`` not being usable in any manner resembling
 ``timespec``, it still might buy us our goal of matching its range exactly,
 right?
 
@@ -330,10 +330,11 @@ and maximum values for a custom representation. It looks like this:
     }
   };
 
-Notice that ``duration_values`` doesn't tell the representation what tick period
-it's actually representing. This would indeed correctly limit the range of
-``duration<fs_timespec_rep, nano>`` to exactly that of ``timespec``. But
-nanoseconds isn't the only tick period it will be used to represent. For example:
+Notice that ``duration_values`` doesn't tell the representation what tick
+period it's actually representing. This would indeed correctly limit the range
+of ``duration<fs_timespec_rep, nano>`` to exactly that of ``timespec``. But
+nanoseconds isn't the only tick period it will be used to represent. For
+example:
 
 .. code-block:: cpp
 
@@ -344,7 +345,7 @@ nanoseconds isn't the only tick period it will be used to represent. For example
     fs_nsec nsecs(fs_seconds::max()); // Truncates
   }
 
-Though the above example may appear silly, I it follows from the incorrect
+Though the above example may appear silly, I think it follows from the incorrect
 notion that using a ``timespec`` rep in chrono actually makes it act as if it
 were an actual ``timespec``.
 
@@ -411,7 +412,7 @@ __int128_t
 Pros:
 
 * It is an integer type.
-* It makes the implementation simply and efficient.
+* It makes the implementation simple and efficient.
 * Acts exactly like other arithmetic types.
 * Can be implicitly converted to a builtin integer type by the user.
 
