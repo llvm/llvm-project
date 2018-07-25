@@ -608,29 +608,6 @@ void X86AsmPrinter::EmitStartOfAsmFile(Module &M) {
     OutStreamer->EmitAssemblerFlag(MCAF_Code16);
 }
 
-MCSymbol *X86AsmPrinter::GetCPISymbol(unsigned CPID) const {
-  if (Subtarget->isTargetKnownWindowsMSVC()) {
-    const MachineConstantPoolEntry &CPE =
-        MF->getConstantPool()->getConstants()[CPID];
-    if (!CPE.isMachineConstantPoolEntry()) {
-      const DataLayout &DL = MF->getDataLayout();
-      SectionKind Kind = CPE.getSectionKind(&DL);
-      const Constant *C = CPE.Val.ConstVal;
-      unsigned Align = CPE.Alignment;
-      if (const MCSectionCOFF *S = dyn_cast<MCSectionCOFF>(
-              getObjFileLowering().getSectionForConstant(DL, Kind, C, Align))) {
-        if (MCSymbol *Sym = S->getCOMDATSymbol()) {
-          if (Sym->isUndefined())
-            OutStreamer->EmitSymbolAttribute(Sym, MCSA_Global);
-          return Sym;
-        }
-      }
-    }
-  }
-
-  return AsmPrinter::GetCPISymbol(CPID);
-}
-
 static void
 emitNonLazySymbolPointer(MCStreamer &OutStreamer, MCSymbol *StubLabel,
                          MachineModuleInfoImpl::StubValueTy &MCSym) {

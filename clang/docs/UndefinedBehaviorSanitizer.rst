@@ -252,16 +252,10 @@ UndefinedBehaviorSanitizer is supported on the following OS:
 
 * Android
 * Linux
+* NetBSD
 * FreeBSD
+* OpenBSD
 * OS X 10.6 onwards
-
-and for the following architectures:
-
-* i386/x86\_64
-* ARM
-* AArch64
-* PowerPC64
-* MIPS/MIPS64
 
 Current Status
 ==============

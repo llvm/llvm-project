@@ -101,6 +101,27 @@ inline InheritableAttr *getDLLAttr(Decl *D) {
   return nullptr;
 }
 
+/// Retrieve the depth and index of a template parameter.
+inline std::pair<unsigned, unsigned> getDepthAndIndex(NamedDecl *ND) {
+  if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(ND))
+    return std::make_pair(TTP->getDepth(), TTP->getIndex());
+
+  if (const auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(ND))
+    return std::make_pair(NTTP->getDepth(), NTTP->getIndex());
+
+  const auto *TTP = cast<TemplateTemplateParmDecl>(ND);
+  return std::make_pair(TTP->getDepth(), TTP->getIndex());
+}
+
+/// Retrieve the depth and index of an unexpanded parameter pack.
+inline std::pair<unsigned, unsigned>
+getDepthAndIndex(UnexpandedParameterPack UPP) {
+  if (const auto *TTP = UPP.first.dyn_cast<const TemplateTypeParmType *>())
+    return std::make_pair(TTP->getDepth(), TTP->getIndex());
+
+  return getDepthAndIndex(UPP.first.get<NamedDecl *>());
+}
+
 class TypoCorrectionConsumer : public VisibleDeclConsumer {
   typedef SmallVector<TypoCorrection, 1> TypoResultList;
   typedef llvm::StringMap<TypoResultList> TypoResultsMap;

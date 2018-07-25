@@ -27,10 +27,10 @@ define <4 x double> @constrained_vector_fdiv_v4f64() {
 ; NO-FMA-LABEL: constrained_vector_fdiv_v4f64:
 ; NO-FMA:       # %bb.0:
 ; NO-FMA-NEXT:    movapd {{.*#+}} xmm2 = [1.000000e+01,1.000000e+01]
-; NO-FMA-NEXT:    movapd {{.*#+}} xmm1 = [3.000000e+00,4.000000e+00]
-; NO-FMA-NEXT:    divpd %xmm2, %xmm1
 ; NO-FMA-NEXT:    movapd {{.*#+}} xmm0 = [1.000000e+00,2.000000e+00]
 ; NO-FMA-NEXT:    divpd %xmm2, %xmm0
+; NO-FMA-NEXT:    movapd {{.*#+}} xmm1 = [3.000000e+00,4.000000e+00]
+; NO-FMA-NEXT:    divpd %xmm2, %xmm1
 ; NO-FMA-NEXT:    retq
 ;
 ; HAS-FMA-LABEL: constrained_vector_fdiv_v4f64:
@@ -72,10 +72,10 @@ entry:
 define <4 x double> @constrained_vector_fmul_v4f64() {
 ; NO-FMA-LABEL: constrained_vector_fmul_v4f64:
 ; NO-FMA:       # %bb.0: # %entry
-; NO-FMA-NEXT:    movapd {{.*#+}} xmm0 = [1.797693e+308,1.797693e+308]
-; NO-FMA-NEXT:    movapd {{.*#+}} xmm1 = [4.000000e+00,5.000000e+00]
-; NO-FMA-NEXT:    mulpd %xmm0, %xmm1
-; NO-FMA-NEXT:    mulpd {{.*}}(%rip), %xmm0
+; NO-FMA-NEXT:    movapd {{.*#+}} xmm1 = [1.797693e+308,1.797693e+308]
+; NO-FMA-NEXT:    movapd {{.*#+}} xmm0 = [2.000000e+00,3.000000e+00]
+; NO-FMA-NEXT:    mulpd %xmm1, %xmm0
+; NO-FMA-NEXT:    mulpd {{.*}}(%rip), %xmm1
 ; NO-FMA-NEXT:    retq
 ;
 ; HAS-FMA-LABEL: constrained_vector_fmul_v4f64:
@@ -119,10 +119,10 @@ entry:
 define <4 x double> @constrained_vector_fadd_v4f64() {
 ; NO-FMA-LABEL: constrained_vector_fadd_v4f64:
 ; NO-FMA:       # %bb.0: # %entry
-; NO-FMA-NEXT:    movapd {{.*#+}} xmm0 = [1.797693e+308,1.797693e+308]
-; NO-FMA-NEXT:    movapd {{.*#+}} xmm1 = [2.000000e+00,2.000000e-01]
-; NO-FMA-NEXT:    addpd %xmm0, %xmm1
-; NO-FMA-NEXT:    addpd {{.*}}(%rip), %xmm0
+; NO-FMA-NEXT:    movapd {{.*#+}} xmm1 = [1.797693e+308,1.797693e+308]
+; NO-FMA-NEXT:    movapd {{.*#+}} xmm0 = [1.000000e+00,1.000000e-01]
+; NO-FMA-NEXT:    addpd %xmm1, %xmm0
+; NO-FMA-NEXT:    addpd {{.*}}(%rip), %xmm1
 ; NO-FMA-NEXT:    retq
 ;
 ; HAS-FMA-LABEL: constrained_vector_fadd_v4f64:
@@ -165,10 +165,10 @@ entry:
 define <4 x double> @constrained_vector_fsub_v4f64() {
 ; NO-FMA-LABEL: constrained_vector_fsub_v4f64:
 ; NO-FMA:       # %bb.0: # %entry
-; NO-FMA-NEXT:    movapd {{.*#+}} xmm0 = [-1.797693e+308,-1.797693e+308]
-; NO-FMA-NEXT:    movapd %xmm0, %xmm1
-; NO-FMA-NEXT:    subpd {{.*}}(%rip), %xmm1
+; NO-FMA-NEXT:    movapd {{.*#+}} xmm1 = [-1.797693e+308,-1.797693e+308]
+; NO-FMA-NEXT:    movapd %xmm1, %xmm0
 ; NO-FMA-NEXT:    subpd {{.*}}(%rip), %xmm0
+; NO-FMA-NEXT:    subpd {{.*}}(%rip), %xmm1
 ; NO-FMA-NEXT:    retq
 ;
 ; HAS-FMA-LABEL: constrained_vector_fsub_v4f64:
@@ -425,8 +425,8 @@ entry:
 define <4 x double> @constrained_vector_sqrt_v4f64() {
 ; NO-FMA-LABEL: constrained_vector_sqrt_v4f64:
 ; NO-FMA:       # %bb.0: # %entry
-; NO-FMA-NEXT:    sqrtpd {{.*}}(%rip), %xmm1
 ; NO-FMA-NEXT:    sqrtpd {{.*}}(%rip), %xmm0
+; NO-FMA-NEXT:    sqrtpd {{.*}}(%rip), %xmm1
 ; NO-FMA-NEXT:    retq
 ;
 ; HAS-FMA-LABEL: constrained_vector_sqrt_v4f64:

@@ -2337,7 +2337,7 @@ static unsigned ComputeNumSignBitsImpl(const Value *V, unsigned Depth,
 
   case Instruction::Select:
     Tmp = ComputeNumSignBits(U->getOperand(1), Depth + 1, Q);
-    if (Tmp == 1) return 1;  // Early out.
+    if (Tmp == 1) break;
     Tmp2 = ComputeNumSignBits(U->getOperand(2), Depth + 1, Q);
     return std::min(Tmp, Tmp2);
 
@@ -2345,7 +2345,7 @@ static unsigned ComputeNumSignBitsImpl(const Value *V, unsigned Depth,
     // Add can have at most one carry bit.  Thus we know that the output
     // is, at worst, one more bit than the inputs.
     Tmp = ComputeNumSignBits(U->getOperand(0), Depth + 1, Q);
-    if (Tmp == 1) return 1;  // Early out.
+    if (Tmp == 1) break;
 
     // Special case decrementing a value (ADD X, -1):
     if (const auto *CRHS = dyn_cast<Constant>(U->getOperand(1)))
@@ -2365,12 +2365,12 @@ static unsigned ComputeNumSignBitsImpl(const Value *V, unsigned Depth,
       }
 
     Tmp2 = ComputeNumSignBits(U->getOperand(1), Depth + 1, Q);
-    if (Tmp2 == 1) return 1;
+    if (Tmp2 == 1) break;
     return std::min(Tmp, Tmp2)-1;
 
   case Instruction::Sub:
     Tmp2 = ComputeNumSignBits(U->getOperand(1), Depth + 1, Q);
-    if (Tmp2 == 1) return 1;
+    if (Tmp2 == 1) break;
 
     // Handle NEG.
     if (const auto *CLHS = dyn_cast<Constant>(U->getOperand(0)))
@@ -2393,15 +2393,15 @@ static unsigned ComputeNumSignBitsImpl(const Value *V, unsigned Depth,
     // Sub can have at most one carry bit.  Thus we know that the output
     // is, at worst, one more bit than the inputs.
     Tmp = ComputeNumSignBits(U->getOperand(0), Depth + 1, Q);
-    if (Tmp == 1) return 1;  // Early out.
+    if (Tmp == 1) break;
     return std::min(Tmp, Tmp2)-1;
 
   case Instruction::Mul: {
     // The output of the Mul can be at most twice the valid bits in the inputs.
     unsigned SignBitsOp0 = ComputeNumSignBits(U->getOperand(0), Depth + 1, Q);
-    if (SignBitsOp0 == 1) return 1;  // Early out.
+    if (SignBitsOp0 == 1) break;
     unsigned SignBitsOp1 = ComputeNumSignBits(U->getOperand(1), Depth + 1, Q);
-    if (SignBitsOp1 == 1) return 1;
+    if (SignBitsOp1 == 1) break;
     unsigned OutValidBits =
         (TyBits - SignBitsOp0 + 1) + (TyBits - SignBitsOp1 + 1);
     return OutValidBits > TyBits ? 1 : TyBits - OutValidBits + 1;

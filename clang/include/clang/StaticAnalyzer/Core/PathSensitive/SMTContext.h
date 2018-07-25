@@ -18,6 +18,7 @@
 namespace clang {
 namespace ento {
 
+/// Generic base class for SMT contexts
 class SMTContext {
 public:
   SMTContext() = default;
