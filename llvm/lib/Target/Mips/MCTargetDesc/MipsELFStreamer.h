@@ -54,9 +54,11 @@ public:
   void SwitchSection(MCSection *Section,
                      const MCExpr *Subsection = nullptr) override;
 
-  /// Overriding this function allows us to dismiss all labels that are
-  /// candidates for marking as microMIPS when .word directive is emitted.
+  /// Overriding these functions allows us to dismiss all labels that are
+  /// candidates for marking as microMIPS when .word/.long/.4byte etc
+  /// directives are emitted.
   void EmitValueImpl(const MCExpr *Value, unsigned Size, SMLoc Loc) override;
+  void EmitIntValue(uint64_t Value, unsigned Size) override;
 
   /// Emits all the option records stored up until the point it's called.
   void EmitMipsOptionRecords();

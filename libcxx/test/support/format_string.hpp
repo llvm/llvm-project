@@ -5,23 +5,24 @@
 #include <string>
 #include <memory>
 #include <array>
+#include <cstdarg>
 
 namespace format_string_detail {
 inline std::string format_string_imp(const char* msg, ...) {
   // we might need a second shot at this, so pre-emptivly make a copy
   struct GuardVAList {
-    va_list& target;
+    va_list& xtarget;
     bool active;
-    GuardVAList(va_list& target) : target(target), active(true) {}
+    GuardVAList(va_list& val) : xtarget(val), active(true) {}
 
     void clear() {
       if (active)
-        va_end(target);
+        va_end(xtarget);
       active = false;
     }
     ~GuardVAList() {
       if (active)
-        va_end(target);
+        va_end(xtarget);
     }
   };
   va_list args;

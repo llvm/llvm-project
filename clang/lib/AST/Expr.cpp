@@ -108,7 +108,7 @@ const Expr *Expr::skipRValueSubobjectAdjustments(
         }
       }
     } else if (const BinaryOperator *BO = dyn_cast<BinaryOperator>(E)) {
-      if (BO->isPtrMemOp()) {
+      if (BO->getOpcode() == BO_PtrMemD) {
         assert(BO->getRHS()->isRValue());
         E = BO->getLHS();
         const MemberPointerType *MPT =

@@ -1777,6 +1777,44 @@ ScalarEvolution::getZeroExtendExpr(const SCEV *Op, Type *Ty, unsigned Depth) {
         Ops.push_back(getZeroExtendExpr(Op, Ty, Depth + 1));
       return getAddExpr(Ops, SCEV::FlagNUW, Depth + 1);
     }
+
+    // zext(C + x + y + ...) --> (zext(D) + zext((C - D) + x + y + ...))<nuw>
+    // if D + (C - D + x + y + ...) could be proven to not unsigned wrap
+    // where D maximizes the number of trailing zeros of (C - D + x + y + ...)
+    //
+    // Useful while proving that address arithmetic expressions are equal or
+    // differ by a small constant amount, see LoadStoreVectorizer pass.
+    if (const auto *SC = dyn_cast<SCEVConstant>(SA->getOperand(0))) {
+      // Often address arithmetics contain expressions like
+      // (zext (add (shl X, C1), C2)), for instance, (zext (5 + (4 * X))).
+      // ConstantRange is unable to prove that it's possible to transform
+      // (5 + (4 * X)) to (1 + (4 + (4 * X))) w/o underflowing:
+      //
+      // |  Expression   |     ConstantRange      |       KnownBits       |
+      // |---------------|------------------------|-----------------------|
+      // | i8 4 * X      | [L: 0, U: 253)         | XXXX XX00             |
+      // |               |   => Min: 0, Max: 252  |   => Min: 0, Max: 252 |
+      // |               |                        |                       |
+      // | i8 4 * X + 5  | [L: 5, U: 2) (wrapped) | YYYY YY01             |
+      // |         (101) |   => Min: 0, Max: 255  |   => Min: 1, Max: 253 |
+      //
+      // As KnownBits are not available for SCEV expressions, use number of
+      // trailing zeroes instead:
+      APInt C = SC->getAPInt();
+      uint32_t TZ = C.getBitWidth();
+      for (unsigned I = 1, E = SA->getNumOperands(); I < E && TZ; ++I)
+        TZ = std::min(TZ, GetMinTrailingZeros(SA->getOperand(I)));
+      if (TZ) {
+        APInt D = TZ < C.getBitWidth() ? C.trunc(TZ).zext(C.getBitWidth()) : C;
+        if (D != 0) {
+          const SCEV *SZExtD = getZeroExtendExpr(getConstant(D), Ty, Depth);
+          const SCEV *SResidual =
+              getAddExpr(getConstant(-D), SA, SCEV::FlagAnyWrap, Depth);
+          const SCEV *SZExtR = getZeroExtendExpr(SResidual, Ty, Depth + 1);
+          return getAddExpr(SZExtD, SZExtR, SCEV::FlagNUW, Depth + 1);
+        }
+      }
+    }
   }
 
   if (auto *SM = dyn_cast<SCEVMulExpr>(Op)) {

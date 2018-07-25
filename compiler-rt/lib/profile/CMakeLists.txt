@@ -59,6 +59,7 @@ set(PROFILE_SOURCES
   InstrProfilingNameVar.c
   InstrProfilingWriter.c
   InstrProfilingPlatformDarwin.c
+  InstrProfilingPlatformFuchsia.c
   InstrProfilingPlatformLinux.c
   InstrProfilingPlatformOther.c
   InstrProfilingRuntime.cc

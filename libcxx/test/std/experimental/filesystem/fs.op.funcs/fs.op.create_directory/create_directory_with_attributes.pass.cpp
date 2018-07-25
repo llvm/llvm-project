@@ -82,9 +82,9 @@ TEST_CASE(create_directory_multi_level)
     const path dir = env.make_env_path("dir1/dir2");
     const path dir1 = env.make_env_path("dir1");
     const path attr_dir = env.create_dir("attr_dir");
-    std::error_code ec;
+    std::error_code ec = GetTestEC();
     TEST_CHECK(fs::create_directory(dir, attr_dir, ec) == false);
-    TEST_CHECK(ec);
+    TEST_CHECK(ErrorIs(ec, std::errc::no_such_file_or_directory));
     TEST_CHECK(!is_directory(dir));
     TEST_CHECK(!is_directory(dir1));
 }
@@ -94,10 +94,39 @@ TEST_CASE(dest_is_file)
     scoped_test_env env;
     const path file = env.create_file("file", 42);
     const path attr_dir = env.create_dir("attr_dir");
-    std::error_code ec;
+    std::error_code ec = GetTestEC();
     TEST_CHECK(fs::create_directory(file, attr_dir, ec) == false);
-    TEST_CHECK(ec);
+    TEST_CHECK(!ec);
     TEST_CHECK(is_regular_file(file));
+}
+
+TEST_CASE(attr_dir_is_invalid) {
+  scoped_test_env env;
+  const path file = env.create_file("file", 42);
+  const path dest = env.make_env_path("dir");
+  const path dne = env.make_env_path("dne");
+  {
+    std::error_code ec = GetTestEC();
+    TEST_CHECK(create_directory(dest, file, ec) == false);
+    TEST_CHECK(ErrorIs(ec, std::errc::not_a_directory));
+  }
+  TEST_REQUIRE(!exists(dest));
+  {
+    std::error_code ec = GetTestEC();
+    TEST_CHECK(create_directory(dest, dne, ec) == false);
+    TEST_CHECK(ErrorIs(ec, std::errc::not_a_directory));
+  }
+}
+
+TEST_CASE(dest_is_symlink) {
+  scoped_test_env env;
+  const path dir = env.create_dir("dir");
+  const path sym = env.create_symlink("dne_sym", "dne_sym_name");
+  {
+    std::error_code ec = GetTestEC();
+    TEST_CHECK(create_directory(sym, dir, ec) == false);
+    TEST_CHECK(!ec);
+  }
 }
 
 TEST_SUITE_END()

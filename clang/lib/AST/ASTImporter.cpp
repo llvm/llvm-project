@@ -460,6 +460,7 @@ namespace clang {
     Expr *VisitLambdaExpr(LambdaExpr *LE);
     Expr *VisitInitListExpr(InitListExpr *E);
     Expr *VisitCXXStdInitializerListExpr(CXXStdInitializerListExpr *E);
+    Expr *VisitCXXInheritedCtorInitExpr(CXXInheritedCtorInitExpr *E);
     Expr *VisitArrayInitLoopExpr(ArrayInitLoopExpr *E);
     Expr *VisitArrayInitIndexExpr(ArrayInitIndexExpr *E);
     Expr *VisitCXXDefaultInitExpr(CXXDefaultInitExpr *E);
@@ -6770,6 +6771,22 @@ Expr *ASTNodeImporter::VisitCXXStdInitializerListExpr(
     return nullptr;
 
   return new (Importer.getToContext()) CXXStdInitializerListExpr(T, SE);
+}
+
+Expr *ASTNodeImporter::VisitCXXInheritedCtorInitExpr(
+    CXXInheritedCtorInitExpr *E) {
+  QualType T = Importer.Import(E->getType());
+  if (T.isNull())
+    return nullptr;
+
+  auto *Ctor = cast_or_null<CXXConstructorDecl>(Importer.Import(
+      E->getConstructor()));
+  if (!Ctor)
+    return nullptr;
+
+  return new (Importer.getToContext()) CXXInheritedCtorInitExpr(
+      Importer.Import(E->getLocation()), T, Ctor,
+      E->constructsVBase(), E->inheritedFromVBase());
 }
 
 Expr *ASTNodeImporter::VisitArrayInitLoopExpr(ArrayInitLoopExpr *E) {

@@ -140,6 +140,72 @@ void test10(int X) {
   // CHECK: call void @bar
 }
 
+void nonzeroMemseti8() {
+  char arr[33] = { 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, };
+  // CHECK-LABEL: @nonzeroMemseti8(
+  // CHECK-NOT: store
+  // CHECK-NOT: memcpy
+  // CHECK: call void @llvm.memset.p0i8.i32(i8* {{.*}}, i8 42, i32 33, i1 false)
+}
+
+void nonzeroMemseti16() {
+  unsigned short arr[17] = { 0x4242, 0x4242, 0x4242, 0x4242, 0x4242, 0x4242, 0x4242, 0x4242, 0x4242, 0x4242, 0x4242, 0x4242, 0x4242, 0x4242, 0x4242, 0x4242, 0x4242, };
+  // CHECK-LABEL: @nonzeroMemseti16(
+  // CHECK-NOT: store
+  // CHECK-NOT: memcpy
+  // CHECK: call void @llvm.memset.p0i8.i32(i8* {{.*}}, i8 66, i32 34, i1 false)
+}
+
+void nonzeroMemseti32() {
+  unsigned arr[9] = { 0xF0F0F0F0, 0xF0F0F0F0, 0xF0F0F0F0, 0xF0F0F0F0, 0xF0F0F0F0, 0xF0F0F0F0, 0xF0F0F0F0, 0xF0F0F0F0, 0xF0F0F0F0, };
+  // CHECK-LABEL: @nonzeroMemseti32(
+  // CHECK-NOT: store
+  // CHECK-NOT: memcpy
+  // CHECK: call void @llvm.memset.p0i8.i32(i8* {{.*}}, i8 -16, i32 36, i1 false)
+}
+
+void nonzeroMemseti64() {
+  unsigned long long arr[7] = { 0xAAAAAAAAAAAAAAAA, 0xAAAAAAAAAAAAAAAA, 0xAAAAAAAAAAAAAAAA, 0xAAAAAAAAAAAAAAAA, 0xAAAAAAAAAAAAAAAA,  0xAAAAAAAAAAAAAAAA,  0xAAAAAAAAAAAAAAAA,  };
+  // CHECK-LABEL: @nonzeroMemseti64(
+  // CHECK-NOT: store
+  // CHECK-NOT: memcpy
+  // CHECK: call void @llvm.memset.p0i8.i32(i8* {{.*}}, i8 -86, i32 56, i1 false)
+}
+
+void nonzeroMemsetf32() {
+  float arr[9] = { 0x1.cacacap+75, 0x1.cacacap+75, 0x1.cacacap+75, 0x1.cacacap+75, 0x1.cacacap+75, 0x1.cacacap+75, 0x1.cacacap+75, 0x1.cacacap+75, 0x1.cacacap+75, };
+  // CHECK-LABEL: @nonzeroMemsetf32(
+  // CHECK-NOT: store
+  // CHECK-NOT: memcpy
+  // CHECK: call void @llvm.memset.p0i8.i32(i8* {{.*}}, i8 101, i32 36, i1 false)
+}
+
+void nonzeroMemsetf64() {
+  double arr[7] = { 0x1.4444444444444p+69, 0x1.4444444444444p+69, 0x1.4444444444444p+69, 0x1.4444444444444p+69, 0x1.4444444444444p+69, 0x1.4444444444444p+69, 0x1.4444444444444p+69, };
+  // CHECK-LABEL: @nonzeroMemsetf64(
+  // CHECK-NOT: store
+  // CHECK-NOT: memcpy
+  // CHECK: call void @llvm.memset.p0i8.i32(i8* {{.*}}, i8 68, i32 56, i1 false)
+}
+
+void nonzeroPaddedUnionMemset() {
+  union U { char c; int i; };
+  union U arr[9] = { 0xF0, 0xF0, 0xF0, 0xF0, 0xF0, 0xF0, 0xF0, 0xF0, 0xF0, };
+  // CHECK-LABEL: @nonzeroPaddedUnionMemset(
+  // CHECK-NOT: store
+  // CHECK-NOT: memcpy
+  // CHECK: call void @llvm.memset.p0i8.i32(i8* {{.*}}, i8 -16, i32 36, i1 false)
+}
+
+void nonzeroNestedMemset() {
+  union U { char c; int i; };
+  struct S { union U u; short i; };
+  struct S arr[5] = { { {0xF0}, 0xF0F0 }, { {0xF0}, 0xF0F0 }, { {0xF0}, 0xF0F0 }, { {0xF0}, 0xF0F0 }, { {0xF0}, 0xF0F0 }, };
+  // CHECK-LABEL: @nonzeroNestedMemset(
+  // CHECK-NOT: store
+  // CHECK-NOT: memcpy
+  // CHECK: call void @llvm.memset.p0i8.i32(i8* {{.*}}, i8 -16, i32 40, i1 false)
+}
 
 // PR9257
 struct test11S {

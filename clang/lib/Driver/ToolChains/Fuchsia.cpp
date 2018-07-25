@@ -109,6 +109,7 @@ void fuchsia::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   addSanitizerRuntimes(ToolChain, Args, CmdArgs);
 
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
+  ToolChain.addProfileRTLibs(Args, CmdArgs);
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
     if (Args.hasArg(options::OPT_static))
