@@ -172,6 +172,11 @@ static bool isEligible(InputSection *S) {
       !S->Name.startswith(".data.rel.ro."))
     return false;
 
+  // SHF_LINK_ORDER sections are ICF'd as a unit with their dependent sections,
+  // so we don't consider them for ICF individually.
+  if (S->Flags & SHF_LINK_ORDER)
+    return false;
+
   // Don't merge synthetic sections as their Data member is not valid and empty.
   // The Data member needs to be valid for ICF as it is used by ICF to determine
   // the equality of section contents.
