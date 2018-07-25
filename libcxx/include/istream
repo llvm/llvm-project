@@ -358,381 +358,162 @@ basic_istream<_CharT, _Traits>::~basic_istream()
 {
 }
 
-template <class _CharT, class _Traits>
+template <class _Tp, class _CharT, class _Traits>
+_LIBCPP_INLINE_VISIBILITY
 basic_istream<_CharT, _Traits>&
-basic_istream<_CharT, _Traits>::operator>>(unsigned short& __n)
-{
+__input_arithmetic(basic_istream<_CharT, _Traits>& __is, _Tp& __n) {
 #ifndef _LIBCPP_NO_EXCEPTIONS
     try
     {
 #endif  // _LIBCPP_NO_EXCEPTIONS
-        sentry __s(*this);
+        typename basic_istream<_CharT, _Traits>::sentry __s(__is);
         if (__s)
         {
-            typedef istreambuf_iterator<char_type, traits_type> _Ip;
-            typedef num_get<char_type, _Ip> _Fp;
+            typedef istreambuf_iterator<_CharT, _Traits> _Ip;
+            typedef num_get<_CharT, _Ip> _Fp;
             ios_base::iostate __err = ios_base::goodbit;
-            use_facet<_Fp>(this->getloc()).get(_Ip(*this), _Ip(), *this, __err, __n);
-            this->setstate(__err);
+            use_facet<_Fp>(__is.getloc()).get(_Ip(__is), _Ip(), __is, __err, __n);
+            __is.setstate(__err);
         }
 #ifndef _LIBCPP_NO_EXCEPTIONS
     }
     catch (...)
     {
-        this->__set_badbit_and_consider_rethrow();
+        __is.__set_badbit_and_consider_rethrow();
     }
 #endif  // _LIBCPP_NO_EXCEPTIONS
-    return *this;
+    return __is;
+}
+
+template <class _CharT, class _Traits>
+basic_istream<_CharT, _Traits>&
+basic_istream<_CharT, _Traits>::operator>>(unsigned short& __n)
+{
+    return _VSTD::__input_arithmetic<unsigned short>(*this, __n);
 }
 
 template <class _CharT, class _Traits>
 basic_istream<_CharT, _Traits>&
 basic_istream<_CharT, _Traits>::operator>>(unsigned int& __n)
 {
-#ifndef _LIBCPP_NO_EXCEPTIONS
-    try
-    {
-#endif  // _LIBCPP_NO_EXCEPTIONS
-        sentry __s(*this);
-        if (__s)
-        {
-            typedef istreambuf_iterator<char_type, traits_type> _Ip;
-            typedef num_get<char_type, _Ip> _Fp;
-            ios_base::iostate __err = ios_base::goodbit;
-            use_facet<_Fp>(this->getloc()).get(_Ip(*this), _Ip(), *this, __err, __n);
-            this->setstate(__err);
-        }
-#ifndef _LIBCPP_NO_EXCEPTIONS
-    }
-    catch (...)
-    {
-        this->__set_badbit_and_consider_rethrow();
-    }
-#endif  // _LIBCPP_NO_EXCEPTIONS
-    return *this;
+    return _VSTD::__input_arithmetic<unsigned int>(*this, __n);
 }
 
 template <class _CharT, class _Traits>
 basic_istream<_CharT, _Traits>&
 basic_istream<_CharT, _Traits>::operator>>(long& __n)
 {
-#ifndef _LIBCPP_NO_EXCEPTIONS
-    try
-    {
-#endif  // _LIBCPP_NO_EXCEPTIONS
-        sentry __s(*this);
-        if (__s)
-        {
-            typedef istreambuf_iterator<char_type, traits_type> _Ip;
-            typedef num_get<char_type, _Ip> _Fp;
-            ios_base::iostate __err = ios_base::goodbit;
-            use_facet<_Fp>(this->getloc()).get(_Ip(*this), _Ip(), *this, __err, __n);
-            this->setstate(__err);
-        }
-#ifndef _LIBCPP_NO_EXCEPTIONS
-    }
-    catch (...)
-    {
-        this->__set_badbit_and_consider_rethrow();
-    }
-#endif  // _LIBCPP_NO_EXCEPTIONS
-    return *this;
+    return _VSTD::__input_arithmetic<long>(*this, __n);
 }
 
 template <class _CharT, class _Traits>
 basic_istream<_CharT, _Traits>&
 basic_istream<_CharT, _Traits>::operator>>(unsigned long& __n)
 {
-#ifndef _LIBCPP_NO_EXCEPTIONS
-    try
-    {
-#endif  // _LIBCPP_NO_EXCEPTIONS
-        sentry __s(*this);
-        if (__s)
-        {
-            typedef istreambuf_iterator<char_type, traits_type> _Ip;
-            typedef num_get<char_type, _Ip> _Fp;
-            ios_base::iostate __err = ios_base::goodbit;
-            use_facet<_Fp>(this->getloc()).get(_Ip(*this), _Ip(), *this, __err, __n);
-            this->setstate(__err);
-        }
-#ifndef _LIBCPP_NO_EXCEPTIONS
-    }
-    catch (...)
-    {
-        this->__set_badbit_and_consider_rethrow();
-    }
-#endif  // _LIBCPP_NO_EXCEPTIONS
-    return *this;
+    return _VSTD::__input_arithmetic<unsigned long>(*this, __n);
 }
 
 template <class _CharT, class _Traits>
 basic_istream<_CharT, _Traits>&
 basic_istream<_CharT, _Traits>::operator>>(long long& __n)
 {
-#ifndef _LIBCPP_NO_EXCEPTIONS
-    try
-    {
-#endif  // _LIBCPP_NO_EXCEPTIONS
-        sentry __s(*this);
-        if (__s)
-        {
-            typedef istreambuf_iterator<char_type, traits_type> _Ip;
-            typedef num_get<char_type, _Ip> _Fp;
-            ios_base::iostate __err = ios_base::goodbit;
-            use_facet<_Fp>(this->getloc()).get(_Ip(*this), _Ip(), *this, __err, __n);
-            this->setstate(__err);
-        }
-#ifndef _LIBCPP_NO_EXCEPTIONS
-    }
-    catch (...)
-    {
-        this->__set_badbit_and_consider_rethrow();
-    }
-#endif  // _LIBCPP_NO_EXCEPTIONS
-    return *this;
+    return _VSTD::__input_arithmetic<long long>(*this, __n);
 }
 
 template <class _CharT, class _Traits>
 basic_istream<_CharT, _Traits>&
 basic_istream<_CharT, _Traits>::operator>>(unsigned long long& __n)
 {
-#ifndef _LIBCPP_NO_EXCEPTIONS
-    try
-    {
-#endif  // _LIBCPP_NO_EXCEPTIONS
-        sentry __s(*this);
-        if (__s)
-        {
-            typedef istreambuf_iterator<char_type, traits_type> _Ip;
-            typedef num_get<char_type, _Ip> _Fp;
-            ios_base::iostate __err = ios_base::goodbit;
-            use_facet<_Fp>(this->getloc()).get(_Ip(*this), _Ip(), *this, __err, __n);
-            this->setstate(__err);
-        }
-#ifndef _LIBCPP_NO_EXCEPTIONS
-    }
-    catch (...)
-    {
-        this->__set_badbit_and_consider_rethrow();
-    }
-#endif  // _LIBCPP_NO_EXCEPTIONS
-    return *this;
+    return _VSTD::__input_arithmetic<unsigned long long>(*this, __n);
 }
 
 template <class _CharT, class _Traits>
 basic_istream<_CharT, _Traits>&
 basic_istream<_CharT, _Traits>::operator>>(float& __n)
 {
-#ifndef _LIBCPP_NO_EXCEPTIONS
-    try
-    {
-#endif  // _LIBCPP_NO_EXCEPTIONS
-        sentry __s(*this);
-        if (__s)
-        {
-            typedef istreambuf_iterator<char_type, traits_type> _Ip;
-            typedef num_get<char_type, _Ip> _Fp;
-            ios_base::iostate __err = ios_base::goodbit;
-            use_facet<_Fp>(this->getloc()).get(_Ip(*this), _Ip(), *this, __err, __n);
-            this->setstate(__err);
-        }
-#ifndef _LIBCPP_NO_EXCEPTIONS
-    }
-    catch (...)
-    {
-        this->__set_badbit_and_consider_rethrow();
-    }
-#endif  // _LIBCPP_NO_EXCEPTIONS
-    return *this;
+    return _VSTD::__input_arithmetic<float>(*this, __n);
 }
 
 template <class _CharT, class _Traits>
 basic_istream<_CharT, _Traits>&
 basic_istream<_CharT, _Traits>::operator>>(double& __n)
 {
-#ifndef _LIBCPP_NO_EXCEPTIONS
-    try
-    {
-#endif  // _LIBCPP_NO_EXCEPTIONS
-        sentry __s(*this);
-        if (__s)
-        {
-            typedef istreambuf_iterator<char_type, traits_type> _Ip;
-            typedef num_get<char_type, _Ip> _Fp;
-            ios_base::iostate __err = ios_base::goodbit;
-            use_facet<_Fp>(this->getloc()).get(_Ip(*this), _Ip(), *this, __err, __n);
-            this->setstate(__err);
-        }
-#ifndef _LIBCPP_NO_EXCEPTIONS
-    }
-    catch (...)
-    {
-        this->__set_badbit_and_consider_rethrow();
-    }
-#endif  // _LIBCPP_NO_EXCEPTIONS
-    return *this;
+    return _VSTD::__input_arithmetic<double>(*this, __n);
 }
 
 template <class _CharT, class _Traits>
 basic_istream<_CharT, _Traits>&
 basic_istream<_CharT, _Traits>::operator>>(long double& __n)
 {
-#ifndef _LIBCPP_NO_EXCEPTIONS
-    try
-    {
-#endif  // _LIBCPP_NO_EXCEPTIONS
-        sentry __s(*this);
-        if (__s)
-        {
-            typedef istreambuf_iterator<char_type, traits_type> _Ip;
-            typedef num_get<char_type, _Ip> _Fp;
-            ios_base::iostate __err = ios_base::goodbit;
-            use_facet<_Fp>(this->getloc()).get(_Ip(*this), _Ip(), *this, __err, __n);
-            this->setstate(__err);
-        }
-#ifndef _LIBCPP_NO_EXCEPTIONS
-    }
-    catch (...)
-    {
-        this->__set_badbit_and_consider_rethrow();
-    }
-#endif  // _LIBCPP_NO_EXCEPTIONS
-    return *this;
+    return _VSTD::__input_arithmetic<long double>(*this, __n);
 }
 
 template <class _CharT, class _Traits>
 basic_istream<_CharT, _Traits>&
 basic_istream<_CharT, _Traits>::operator>>(bool& __n)
 {
-#ifndef _LIBCPP_NO_EXCEPTIONS
-    try
-    {
-#endif  // _LIBCPP_NO_EXCEPTIONS
-        sentry __s(*this);
-        if (__s)
-        {
-            typedef istreambuf_iterator<char_type, traits_type> _Ip;
-            typedef num_get<char_type, _Ip> _Fp;
-            ios_base::iostate __err = ios_base::goodbit;
-            use_facet<_Fp>(this->getloc()).get(_Ip(*this), _Ip(), *this, __err, __n);
-            this->setstate(__err);
-        }
-#ifndef _LIBCPP_NO_EXCEPTIONS
-    }
-    catch (...)
-    {
-        this->__set_badbit_and_consider_rethrow();
-    }
-#endif  // _LIBCPP_NO_EXCEPTIONS
-    return *this;
+    return _VSTD::__input_arithmetic<bool>(*this, __n);
 }
 
 template <class _CharT, class _Traits>
 basic_istream<_CharT, _Traits>&
 basic_istream<_CharT, _Traits>::operator>>(void*& __n)
 {
+    return _VSTD::__input_arithmetic<void*>(*this, __n);
+}
+
+template <class _Tp, class _CharT, class _Traits>
+_LIBCPP_INLINE_VISIBILITY
+basic_istream<_CharT, _Traits>&
+__input_arithmetic_with_numeric_limits(basic_istream<_CharT, _Traits>& __is, _Tp& __n) {
 #ifndef _LIBCPP_NO_EXCEPTIONS
     try
     {
 #endif  // _LIBCPP_NO_EXCEPTIONS
-        sentry __s(*this);
+        typename basic_istream<_CharT, _Traits>::sentry __s(__is);
         if (__s)
         {
-            typedef istreambuf_iterator<char_type, traits_type> _Ip;
-            typedef num_get<char_type, _Ip> _Fp;
+            typedef istreambuf_iterator<_CharT, _Traits> _Ip;
+            typedef num_get<_CharT, _Ip> _Fp;
             ios_base::iostate __err = ios_base::goodbit;
-            use_facet<_Fp>(this->getloc()).get(_Ip(*this), _Ip(), *this, __err, __n);
-            this->setstate(__err);
+            long __temp;
+            use_facet<_Fp>(__is.getloc()).get(_Ip(__is), _Ip(), __is, __err, __temp);
+            if (__temp < numeric_limits<_Tp>::min())
+            {
+                __err |= ios_base::failbit;
+                __n = numeric_limits<_Tp>::min();
+            }
+            else if (__temp > numeric_limits<_Tp>::max())
+            {
+                __err |= ios_base::failbit;
+                __n = numeric_limits<_Tp>::max();
+            }
+            else
+                __n = static_cast<_Tp>(__temp);
+            __is.setstate(__err);
         }
 #ifndef _LIBCPP_NO_EXCEPTIONS
     }
     catch (...)
     {
-        this->__set_badbit_and_consider_rethrow();
+        __is.__set_badbit_and_consider_rethrow();
     }
 #endif  // _LIBCPP_NO_EXCEPTIONS
-    return *this;
+    return __is;
 }
 
 template <class _CharT, class _Traits>
 basic_istream<_CharT, _Traits>&
 basic_istream<_CharT, _Traits>::operator>>(short& __n)
 {
-#ifndef _LIBCPP_NO_EXCEPTIONS
-    try
-    {
-#endif  // _LIBCPP_NO_EXCEPTIONS
-        sentry __s(*this);
-        if (__s)
-        {
-            typedef istreambuf_iterator<char_type, traits_type> _Ip;
-            typedef num_get<char_type, _Ip> _Fp;
-            ios_base::iostate __err = ios_base::goodbit;
-            long __temp;
-            use_facet<_Fp>(this->getloc()).get(_Ip(*this), _Ip(), *this, __err, __temp);
-            if (__temp < numeric_limits<short>::min())
-            {
-                __err |= ios_base::failbit;
-                __n = numeric_limits<short>::min();
-            }
-            else if (__temp > numeric_limits<short>::max())
-            {
-                __err |= ios_base::failbit;
-                __n = numeric_limits<short>::max();
-            }
-            else
-                __n = static_cast<short>(__temp);
-            this->setstate(__err);
-        }
-#ifndef _LIBCPP_NO_EXCEPTIONS
-    }
-    catch (...)
-    {
-        this->__set_badbit_and_consider_rethrow();
-    }
-#endif  // _LIBCPP_NO_EXCEPTIONS
-    return *this;
+    return _VSTD::__input_arithmetic_with_numeric_limits<short>(*this, __n);
 }
 
 template <class _CharT, class _Traits>
 basic_istream<_CharT, _Traits>&
 basic_istream<_CharT, _Traits>::operator>>(int& __n)
 {
-#ifndef _LIBCPP_NO_EXCEPTIONS
-    try
-    {
-#endif  // _LIBCPP_NO_EXCEPTIONS
-        sentry __s(*this);
-        if (__s)
-        {
-            typedef istreambuf_iterator<char_type, traits_type> _Ip;
-            typedef num_get<char_type, _Ip> _Fp;
-            ios_base::iostate __err = ios_base::goodbit;
-            long __temp;
-            use_facet<_Fp>(this->getloc()).get(_Ip(*this), _Ip(), *this, __err, __temp);
-            if (__temp < numeric_limits<int>::min())
-            {
-                __err |= ios_base::failbit;
-                __n = numeric_limits<int>::min();
-            }
-            else if (__temp > numeric_limits<int>::max())
-            {
-                __err |= ios_base::failbit;
-                __n = numeric_limits<int>::max();
-            }
-            else
-                __n = static_cast<int>(__temp);
-            this->setstate(__err);
-        }
-#ifndef _LIBCPP_NO_EXCEPTIONS
-    }
-    catch (...)
-    {
-        this->__set_badbit_and_consider_rethrow();
-    }
-#endif  // _LIBCPP_NO_EXCEPTIONS
-    return *this;
+    return _VSTD::__input_arithmetic_with_numeric_limits<int>(*this, __n);
 }
 
 template<class _CharT, class _Traits>
