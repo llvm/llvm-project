@@ -224,7 +224,7 @@ code in some way:
 
   // Implicit truncation during conversion bug.
   intmax_t get_time_in_seconds(path p) {
-    using fs_seconds = duration<file_time_type::rep, /* default ration */>;
+    using fs_seconds = duration<file_time_type::rep, ratio<1, 1> >;
     auto tp = last_write_time(p);
 
     // This works with truncation for __int128_t, but what does it do for
