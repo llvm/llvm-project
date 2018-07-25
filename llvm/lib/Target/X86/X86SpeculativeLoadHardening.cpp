@@ -70,6 +70,8 @@ STATISTIC(NumAddrRegsHardened,
           "Number of address mode used registers hardaned");
 STATISTIC(NumPostLoadRegsHardened,
           "Number of post-load register values hardened");
+STATISTIC(NumCallsOrJumpsHardened,
+          "Number of calls or jumps requiring extra hardening");
 STATISTIC(NumInstsInserted, "Number of instructions inserted");
 STATISTIC(NumLFENCEsInserted, "Number of lfence instructions inserted");
 
@@ -104,6 +106,13 @@ static cl::opt<bool>
                 cl::desc("Sanitize loads from memory. When disable, no "
                          "significant security is provided."),
                 cl::init(true), cl::Hidden);
+
+static cl::opt<bool> HardenIndirectCallsAndJumps(
+    PASS_KEY "-indirect",
+    cl::desc("Harden indirect calls and jumps against using speculatively "
+             "stored attacker controlled addresses. This is designed to "
+             "mitigate Spectre v1.2 style attacks."),
+    cl::init(true), cl::Hidden);
 
 namespace llvm {
 
@@ -168,7 +177,9 @@ private:
   SmallVector<MachineInstr *, 16>
   tracePredStateThroughCFG(MachineFunction &MF, ArrayRef<BlockCondInfo> Infos);
 
-  void hardenAllLoads(MachineFunction &MF);
+  void unfoldCallAndJumpLoads(MachineFunction &MF);
+
+  void tracePredStateThroughBlocksAndHarden(MachineFunction &MF);
 
   unsigned saveEFLAGS(MachineBasicBlock &MBB,
                       MachineBasicBlock::iterator InsertPt, DebugLoc Loc);
@@ -196,6 +207,9 @@ private:
                                  DebugLoc Loc);
   unsigned hardenPostLoad(MachineInstr &MI);
   void hardenReturnInstr(MachineInstr &MI);
+  void hardenIndirectCallOrJumpInstr(
+      MachineInstr &MI,
+      SmallDenseMap<unsigned, unsigned, 32> &AddrRegToHardenedReg);
 };
 
 } // end anonymous namespace
@@ -507,35 +521,24 @@ bool X86SpeculativeLoadHardeningPass::runOnMachineFunction(
     }
   }
 
-  // Now harden all of the loads in the function using the predicate state.
-  hardenAllLoads(MF);
+  // If we are going to harden calls and jumps we need to unfold their memory
+  // operands.
+  if (HardenIndirectCallsAndJumps)
+    unfoldCallAndJumpLoads(MF);
 
-  // Now rewrite all the uses of the pred state using the SSA updater so that
-  // we track updates through the CFG.
+  // Now that we have the predicate state available at the start of each block
+  // in the CFG, trace it through each block, hardening vulnerable instructions
+  // as we go.
+  tracePredStateThroughBlocksAndHarden(MF);
+
+  // Now rewrite all the uses of the pred state using the SSA updater to insert
+  // PHIs connecting the state between blocks along the CFG edges.
   for (MachineInstr *CMovI : CMovs)
     for (MachineOperand &Op : CMovI->operands()) {
       if (!Op.isReg() || Op.getReg() != PS->InitialReg)
         continue;
 
       PS->SSA.RewriteUse(Op);
-    }
-
-  // If we are hardening interprocedurally, find each returning block and
-  // protect the caller from being returned to through misspeculation.
-  if (HardenInterprocedurally)
-    for (MachineBasicBlock &MBB : MF) {
-      if (MBB.empty())
-        continue;
-
-      MachineInstr &MI = MBB.back();
-
-      // We only care about returns that are not also calls. For calls, that
-      // happen to also be returns (tail calls) we will have already handled
-      // them as calls.
-      if (!MI.isReturn() || MI.isCall())
-        continue;
-
-      hardenReturnInstr(MI);
     }
 
   LLVM_DEBUG(dbgs() << "Final speculative load hardened function:\n"; MF.dump();
@@ -815,6 +818,110 @@ X86SpeculativeLoadHardeningPass::tracePredStateThroughCFG(
   }
 
   return CMovs;
+}
+
+/// Compute the register class for the unfolded load.
+///
+/// FIXME: This should probably live in X86InstrInfo, potentially by adding
+/// a way to unfold into a newly created vreg rather than requiring a register
+/// input.
+static const TargetRegisterClass *
+getRegClassForUnfoldedLoad(MachineFunction &MF, const X86InstrInfo &TII,
+                           unsigned Opcode) {
+  unsigned Index;
+  unsigned UnfoldedOpc = TII.getOpcodeAfterMemoryUnfold(
+      Opcode, /*UnfoldLoad*/ true, /*UnfoldStore*/ false, &Index);
+  const MCInstrDesc &MCID = TII.get(UnfoldedOpc);
+  return TII.getRegClass(MCID, Index, &TII.getRegisterInfo(), MF);
+}
+
+void X86SpeculativeLoadHardeningPass::unfoldCallAndJumpLoads(
+    MachineFunction &MF) {
+  for (MachineBasicBlock &MBB : MF)
+    for (auto MII = MBB.instr_begin(), MIE = MBB.instr_end(); MII != MIE;) {
+      // Grab a reference and increment the iterator so we can remove this
+      // instruction if needed without disturbing the iteration.
+      MachineInstr &MI = *MII++;
+
+      // Must either be a call or a branch.
+      if (!MI.isCall() && !MI.isBranch())
+        continue;
+      // We only care about loading variants of these instructions.
+      if (!MI.mayLoad())
+        continue;
+
+      switch (MI.getOpcode()) {
+      default: {
+        LLVM_DEBUG(
+            dbgs() << "ERROR: Found an unexpected loading branch or call "
+                      "instruction:\n";
+            MI.dump(); dbgs() << "\n");
+        report_fatal_error("Unexpected loading branch or call!");
+      }
+
+      case X86::FARCALL16m:
+      case X86::FARCALL32m:
+      case X86::FARCALL64:
+      case X86::FARJMP16m:
+      case X86::FARJMP32m:
+      case X86::FARJMP64:
+        // We cannot mitigate far jumps or calls, but we also don't expect them
+        // to be vulnerable to Spectre v1.2 style attacks.
+        continue;
+
+      case X86::CALL16m:
+      case X86::CALL16m_NT:
+      case X86::CALL32m:
+      case X86::CALL32m_NT:
+      case X86::CALL64m:
+      case X86::CALL64m_NT:
+      case X86::JMP16m:
+      case X86::JMP16m_NT:
+      case X86::JMP32m:
+      case X86::JMP32m_NT:
+      case X86::JMP64m:
+      case X86::JMP64m_NT:
+      case X86::TAILJMPm64:
+      case X86::TAILJMPm64_REX:
+      case X86::TAILJMPm:
+      case X86::TCRETURNmi64:
+      case X86::TCRETURNmi: {
+        // Use the generic unfold logic now that we know we're dealing with
+        // expected instructions.
+        // FIXME: We don't have test coverage for all of these!
+        auto *UnfoldedRC = getRegClassForUnfoldedLoad(MF, *TII, MI.getOpcode());
+        if (!UnfoldedRC) {
+          LLVM_DEBUG(dbgs()
+                         << "ERROR: Unable to unfold load from instruction:\n";
+                     MI.dump(); dbgs() << "\n");
+          report_fatal_error("Unable to unfold load!");
+        }
+        unsigned Reg = MRI->createVirtualRegister(UnfoldedRC);
+        SmallVector<MachineInstr *, 2> NewMIs;
+        // If we were able to compute an unfolded reg class, any failure here
+        // is just a programming error so just assert.
+        bool Unfolded =
+            TII->unfoldMemoryOperand(MF, MI, Reg, /*UnfoldLoad*/ true,
+                                     /*UnfoldStore*/ false, NewMIs);
+        (void)Unfolded;
+        assert(Unfolded &&
+               "Computed unfolded register class but failed to unfold");
+        // Now stitch the new instructions into place and erase the old one.
+        for (auto *NewMI : NewMIs)
+          MBB.insert(MI.getIterator(), NewMI);
+        MI.eraseFromParent();
+        LLVM_DEBUG({
+          dbgs() << "Unfolded load successfully into:\n";
+          for (auto *NewMI : NewMIs) {
+            NewMI->dump();
+            dbgs() << "\n";
+          }
+        });
+        continue;
+      }
+      }
+      llvm_unreachable("Escaped switch with default!");
+    }
 }
 
 /// Returns true if the instruction has no behavior (specified or otherwise)
@@ -1231,28 +1338,35 @@ static bool isEFLAGSLive(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
   return MBB.isLiveIn(X86::EFLAGS);
 }
 
-/// Harden all of the loads (including implicit loads) in the function.
+/// Trace the predicate state through each of the blocks in the function,
+/// hardening everything necessary along the way.
 ///
-/// This operates in two passes. First, we analyze the loads to determine which
-/// strategy will be used to harden them: hardening the address or hardening the
-/// loaded value when loaded into a register amenable to hardening. We have to
-/// process these first because the two strategies may interact -- later
-/// hardening may change what strategy we wish to use. We also will analyze
-/// data dependencies between loads and avoid hardening those loads that are
-/// data dependent on a load with a hardened address. We also skip hardening
-/// loads already behind an LFENCE as that is sufficient to harden them against
-/// misspeculation.
+/// We call this routine once the initial predicate state has been established
+/// for each basic block in the function in the SSA updater. This routine traces
+/// it through the instructions within each basic block, and for non-returning
+/// blocks informs the SSA updater about the final state that lives out of the
+/// block. Along the way, it hardens any vulnerable instruction using the
+/// currently valid predicate state. We have to do these two things together
+/// because the SSA updater only works across blocks. Within a block, we track
+/// the current predicate state directly and update it as it changes.
 ///
-/// Second, we apply the hardening steps we determined necessary in the first
-/// pass.
+/// This operates in two passes over each block. First, we analyze the loads in
+/// the block to determine which strategy will be used to harden them: hardening
+/// the address or hardening the loaded value when loaded into a register
+/// amenable to hardening. We have to process these first because the two
+/// strategies may interact -- later hardening may change what strategy we wish
+/// to use. We also will analyze data dependencies between loads and avoid
+/// hardening those loads that are data dependent on a load with a hardened
+/// address. We also skip hardening loads already behind an LFENCE as that is
+/// sufficient to harden them against misspeculation.
 ///
-/// These two passes are applied to each basic block. We operate one block at
-/// a time to simplify reasoning about reachability and sequencing.
-void X86SpeculativeLoadHardeningPass::hardenAllLoads(MachineFunction &MF) {
-  // If the actual checking of loads is disabled, skip doing anything here.
-  if (!HardenLoads)
-    return;
-
+/// Second, we actively trace the predicate state through the block, applying
+/// the hardening steps we determined necessary in the first pass as we go.
+///
+/// These two passes are applied to each basic block. We operate one block at a
+/// time to simplify reasoning about reachability and sequencing.
+void X86SpeculativeLoadHardeningPass::tracePredStateThroughBlocksAndHarden(
+    MachineFunction &MF) {
   SmallPtrSet<MachineInstr *, 16> HardenPostLoad;
   SmallPtrSet<MachineInstr *, 16> HardenLoadAddr;
 
@@ -1266,112 +1380,117 @@ void X86SpeculativeLoadHardeningPass::hardenAllLoads(MachineFunction &MF) {
   SparseBitVector<> LoadDepRegs;
 
   for (MachineBasicBlock &MBB : MF) {
-    // We harden the loads of a basic block in several passes:
+    // The first pass over the block: collect all the loads which can have their
+    // loaded value hardened and all the loads that instead need their address
+    // hardened. During this walk we propagate load dependence for address
+    // hardened loads and also look for LFENCE to stop hardening wherever
+    // possible. When deciding whether or not to harden the loaded value or not,
+    // we check to see if any registers used in the address will have been
+    // hardened at this point and if so, harden any remaining address registers
+    // as that often successfully re-uses hardened addresses and minimizes
+    // instructions.
     //
-    // 1) Collect all the loads which can have their loaded value hardened
-    //    and all the loads that instead need their address hardened. During
-    //    this walk we propagate load dependence for address hardened loads and
-    //    also look for LFENCE to stop hardening wherever possible. When
-    //    deciding whether or not to harden the loaded value or not, we check
-    //    to see if any registers used in the address will have been hardened
-    //    at this point and if so, harden any remaining address registers as
-    //    that often successfully re-uses hardened addresses and minimizes
-    //    instructions. FIXME: We should consider an aggressive mode where we
-    //    continue to keep as many loads value hardened even when some address
-    //    register hardening would be free (due to reuse).
-    for (MachineInstr &MI : MBB) {
-      // We naively assume that all def'ed registers of an instruction have
-      // a data dependency on all of their operands.
-      // FIXME: Do a more careful analysis of x86 to build a conservative model
-      // here.
-      if (llvm::any_of(MI.uses(), [&](MachineOperand &Op) {
-            return Op.isReg() && LoadDepRegs.test(Op.getReg());
-          }))
+    // FIXME: We should consider an aggressive mode where we continue to keep as
+    // many loads value hardened even when some address register hardening would
+    // be free (due to reuse).
+    //
+    // Note that we only need this pass if we are actually hardening loads.
+    if (HardenLoads)
+      for (MachineInstr &MI : MBB) {
+        // We naively assume that all def'ed registers of an instruction have
+        // a data dependency on all of their operands.
+        // FIXME: Do a more careful analysis of x86 to build a conservative
+        // model here.
+        if (llvm::any_of(MI.uses(), [&](MachineOperand &Op) {
+              return Op.isReg() && LoadDepRegs.test(Op.getReg());
+            }))
+          for (MachineOperand &Def : MI.defs())
+            if (Def.isReg())
+              LoadDepRegs.set(Def.getReg());
+
+        // Both Intel and AMD are guiding that they will change the semantics of
+        // LFENCE to be a speculation barrier, so if we see an LFENCE, there is
+        // no more need to guard things in this block.
+        if (MI.getOpcode() == X86::LFENCE)
+          break;
+
+        // If this instruction cannot load, nothing to do.
+        if (!MI.mayLoad())
+          continue;
+
+        // Some instructions which "load" are trivially safe or unimportant.
+        if (MI.getOpcode() == X86::MFENCE)
+          continue;
+
+        // Extract the memory operand information about this instruction.
+        // FIXME: This doesn't handle loading pseudo instructions which we often
+        // could handle with similarly generic logic. We probably need to add an
+        // MI-layer routine similar to the MC-layer one we use here which maps
+        // pseudos much like this maps real instructions.
+        const MCInstrDesc &Desc = MI.getDesc();
+        int MemRefBeginIdx = X86II::getMemoryOperandNo(Desc.TSFlags);
+        if (MemRefBeginIdx < 0) {
+          LLVM_DEBUG(dbgs()
+                         << "WARNING: unable to harden loading instruction: ";
+                     MI.dump());
+          continue;
+        }
+
+        MemRefBeginIdx += X86II::getOperandBias(Desc);
+
+        MachineOperand &BaseMO =
+            MI.getOperand(MemRefBeginIdx + X86::AddrBaseReg);
+        MachineOperand &IndexMO =
+            MI.getOperand(MemRefBeginIdx + X86::AddrIndexReg);
+
+        // If we have at least one (non-frame-index, non-RIP) register operand,
+        // and neither operand is load-dependent, we need to check the load.
+        unsigned BaseReg = 0, IndexReg = 0;
+        if (!BaseMO.isFI() && BaseMO.getReg() != X86::RIP &&
+            BaseMO.getReg() != X86::NoRegister)
+          BaseReg = BaseMO.getReg();
+        if (IndexMO.getReg() != X86::NoRegister)
+          IndexReg = IndexMO.getReg();
+
+        if (!BaseReg && !IndexReg)
+          // No register operands!
+          continue;
+
+        // If any register operand is dependent, this load is dependent and we
+        // needn't check it.
+        // FIXME: Is this true in the case where we are hardening loads after
+        // they complete? Unclear, need to investigate.
+        if ((BaseReg && LoadDepRegs.test(BaseReg)) ||
+            (IndexReg && LoadDepRegs.test(IndexReg)))
+          continue;
+
+        // If post-load hardening is enabled, this load is compatible with
+        // post-load hardening, and we aren't already going to harden one of the
+        // address registers, queue it up to be hardened post-load. Notably,
+        // even once hardened this won't introduce a useful dependency that
+        // could prune out subsequent loads.
+        if (EnablePostLoadHardening && isDataInvariantLoad(MI) &&
+            MI.getDesc().getNumDefs() == 1 && MI.getOperand(0).isReg() &&
+            canHardenRegister(MI.getOperand(0).getReg()) &&
+            !HardenedAddrRegs.count(BaseReg) &&
+            !HardenedAddrRegs.count(IndexReg)) {
+          HardenPostLoad.insert(&MI);
+          HardenedAddrRegs.insert(MI.getOperand(0).getReg());
+          continue;
+        }
+
+        // Record this instruction for address hardening and record its register
+        // operands as being address-hardened.
+        HardenLoadAddr.insert(&MI);
+        if (BaseReg)
+          HardenedAddrRegs.insert(BaseReg);
+        if (IndexReg)
+          HardenedAddrRegs.insert(IndexReg);
+
         for (MachineOperand &Def : MI.defs())
           if (Def.isReg())
             LoadDepRegs.set(Def.getReg());
-
-      // Both Intel and AMD are guiding that they will change the semantics of
-      // LFENCE to be a speculation barrier, so if we see an LFENCE, there is
-      // no more need to guard things in this block.
-      if (MI.getOpcode() == X86::LFENCE)
-        break;
-
-      // If this instruction cannot load, nothing to do.
-      if (!MI.mayLoad())
-        continue;
-
-      // Some instructions which "load" are trivially safe or unimportant.
-      if (MI.getOpcode() == X86::MFENCE)
-        continue;
-
-      // Extract the memory operand information about this instruction.
-      // FIXME: This doesn't handle loading pseudo instructions which we often
-      // could handle with similarly generic logic. We probably need to add an
-      // MI-layer routine similar to the MC-layer one we use here which maps
-      // pseudos much like this maps real instructions.
-      const MCInstrDesc &Desc = MI.getDesc();
-      int MemRefBeginIdx = X86II::getMemoryOperandNo(Desc.TSFlags);
-      if (MemRefBeginIdx < 0) {
-        LLVM_DEBUG(dbgs() << "WARNING: unable to harden loading instruction: ";
-                   MI.dump());
-        continue;
       }
-
-      MemRefBeginIdx += X86II::getOperandBias(Desc);
-
-      MachineOperand &BaseMO = MI.getOperand(MemRefBeginIdx + X86::AddrBaseReg);
-      MachineOperand &IndexMO =
-          MI.getOperand(MemRefBeginIdx + X86::AddrIndexReg);
-
-      // If we have at least one (non-frame-index, non-RIP) register operand,
-      // and neither operand is load-dependent, we need to check the load.
-      unsigned BaseReg = 0, IndexReg = 0;
-      if (!BaseMO.isFI() && BaseMO.getReg() != X86::RIP &&
-          BaseMO.getReg() != X86::NoRegister)
-        BaseReg = BaseMO.getReg();
-      if (IndexMO.getReg() != X86::NoRegister)
-        IndexReg = IndexMO.getReg();
-
-      if (!BaseReg && !IndexReg)
-        // No register operands!
-        continue;
-
-      // If any register operand is dependent, this load is dependent and we
-      // needn't check it.
-      // FIXME: Is this true in the case where we are hardening loads after
-      // they complete? Unclear, need to investigate.
-      if ((BaseReg && LoadDepRegs.test(BaseReg)) ||
-          (IndexReg && LoadDepRegs.test(IndexReg)))
-        continue;
-
-      // If post-load hardening is enabled, this load is compatible with
-      // post-load hardening, and we aren't already going to harden one of the
-      // address registers, queue it up to be hardened post-load. Notably, even
-      // once hardened this won't introduce a useful dependency that could prune
-      // out subsequent loads.
-      if (EnablePostLoadHardening && isDataInvariantLoad(MI) &&
-          MI.getDesc().getNumDefs() == 1 && MI.getOperand(0).isReg() &&
-          canHardenRegister(MI.getOperand(0).getReg()) &&
-          !HardenedAddrRegs.count(BaseReg) &&
-          !HardenedAddrRegs.count(IndexReg)) {
-        HardenPostLoad.insert(&MI);
-        HardenedAddrRegs.insert(MI.getOperand(0).getReg());
-        continue;
-      }
-
-      // Record this instruction for address hardening and record its register
-      // operands as being address-hardened.
-      HardenLoadAddr.insert(&MI);
-      if (BaseReg)
-        HardenedAddrRegs.insert(BaseReg);
-      if (IndexReg)
-        HardenedAddrRegs.insert(IndexReg);
-
-      for (MachineOperand &Def : MI.defs())
-        if (Def.isReg())
-          LoadDepRegs.set(Def.getReg());
-    }
 
     // Now re-walk the instructions in the basic block, and apply whichever
     // hardening strategy we have elected. Note that we do this in a second
@@ -1386,71 +1505,89 @@ void X86SpeculativeLoadHardeningPass::hardenAllLoads(MachineFunction &MF) {
     // long as the in-block predicate state is used at the eventual hardening
     // site, this remains safe.
     for (MachineInstr &MI : MBB) {
-      // We cannot both require hardening the def of a load and its address.
-      assert(!(HardenLoadAddr.count(&MI) && HardenPostLoad.count(&MI)) &&
-             "Requested to harden both the address and def of a load!");
+      if (HardenLoads) {
+        // We cannot both require hardening the def of a load and its address.
+        assert(!(HardenLoadAddr.count(&MI) && HardenPostLoad.count(&MI)) &&
+               "Requested to harden both the address and def of a load!");
 
-      // Check if this is a load whose address needs to be hardened.
-      if (HardenLoadAddr.erase(&MI)) {
-        const MCInstrDesc &Desc = MI.getDesc();
-        int MemRefBeginIdx = X86II::getMemoryOperandNo(Desc.TSFlags);
-        assert(MemRefBeginIdx >= 0 && "Cannot have an invalid index here!");
+        // Check if this is a load whose address needs to be hardened.
+        if (HardenLoadAddr.erase(&MI)) {
+          const MCInstrDesc &Desc = MI.getDesc();
+          int MemRefBeginIdx = X86II::getMemoryOperandNo(Desc.TSFlags);
+          assert(MemRefBeginIdx >= 0 && "Cannot have an invalid index here!");
 
-        MemRefBeginIdx += X86II::getOperandBias(Desc);
+          MemRefBeginIdx += X86II::getOperandBias(Desc);
 
-        MachineOperand &BaseMO =
-            MI.getOperand(MemRefBeginIdx + X86::AddrBaseReg);
-        MachineOperand &IndexMO =
-            MI.getOperand(MemRefBeginIdx + X86::AddrIndexReg);
-        hardenLoadAddr(MI, BaseMO, IndexMO, AddrRegToHardenedReg);
-        continue;
-      }
-
-      // Test if this instruction is one of our post load instructions (and
-      // remove it from the set if so).
-      if (HardenPostLoad.erase(&MI)) {
-        assert(!MI.isCall() && "Must not try to post-load harden a call!");
-
-        // If this is a data-invariant load, we want to try and sink any
-        // hardening as far as possible.
-        if (isDataInvariantLoad(MI)) {
-          // Sink the instruction we'll need to harden as far as we can down the
-          // graph.
-          MachineInstr *SunkMI = sinkPostLoadHardenedInst(MI, HardenPostLoad);
-
-          // If we managed to sink this instruction, update everything so we
-          // harden that instruction when we reach it in the instruction
-          // sequence.
-          if (SunkMI != &MI) {
-            // If in sinking there was no instruction needing to be hardened,
-            // we're done.
-            if (!SunkMI)
-              continue;
-
-            // Otherwise, add this to the set of defs we harden.
-            HardenPostLoad.insert(SunkMI);
-            continue;
-          }
+          MachineOperand &BaseMO =
+              MI.getOperand(MemRefBeginIdx + X86::AddrBaseReg);
+          MachineOperand &IndexMO =
+              MI.getOperand(MemRefBeginIdx + X86::AddrIndexReg);
+          hardenLoadAddr(MI, BaseMO, IndexMO, AddrRegToHardenedReg);
+          continue;
         }
 
-        unsigned HardenedReg = hardenPostLoad(MI);
+        // Test if this instruction is one of our post load instructions (and
+        // remove it from the set if so).
+        if (HardenPostLoad.erase(&MI)) {
+          assert(!MI.isCall() && "Must not try to post-load harden a call!");
 
-        // Mark the resulting hardened register as such so we don't re-harden.
-        AddrRegToHardenedReg[HardenedReg] = HardenedReg;
+          // If this is a data-invariant load, we want to try and sink any
+          // hardening as far as possible.
+          if (isDataInvariantLoad(MI)) {
+            // Sink the instruction we'll need to harden as far as we can down
+            // the graph.
+            MachineInstr *SunkMI = sinkPostLoadHardenedInst(MI, HardenPostLoad);
 
+            // If we managed to sink this instruction, update everything so we
+            // harden that instruction when we reach it in the instruction
+            // sequence.
+            if (SunkMI != &MI) {
+              // If in sinking there was no instruction needing to be hardened,
+              // we're done.
+              if (!SunkMI)
+                continue;
+
+              // Otherwise, add this to the set of defs we harden.
+              HardenPostLoad.insert(SunkMI);
+              continue;
+            }
+          }
+
+          unsigned HardenedReg = hardenPostLoad(MI);
+
+          // Mark the resulting hardened register as such so we don't re-harden.
+          AddrRegToHardenedReg[HardenedReg] = HardenedReg;
+
+          continue;
+        }
+
+        // Check for an indirect call or branch that may need its input hardened
+        // even if we couldn't find the specific load used, or were able to
+        // avoid hardening it for some reason. Note that here we cannot break
+        // out afterward as we may still need to handle any call aspect of this
+        // instruction.
+        if ((MI.isCall() || MI.isBranch()) && HardenIndirectCallsAndJumps)
+          hardenIndirectCallOrJumpInstr(MI, AddrRegToHardenedReg);
+      }
+
+      // After we finish hardening loads we handle interprocedural hardening if
+      // enabled and relevant for this instruction.
+      if (!HardenInterprocedurally)
+        continue;
+      if (!MI.isCall() && !MI.isReturn())
+        continue;
+
+      // If this is a direct return (IE, not a tail call) just directly harden
+      // it.
+      if (MI.isReturn() && !MI.isCall()) {
+        hardenReturnInstr(MI);
         continue;
       }
 
-      // After we finish processing the instruction and doing any hardening
-      // necessary for it, we need to handle transferring the predicate state
-      // into a call and recovering it after the call returns (if it returns).
-      if (!MI.isCall())
-        continue;
-
-      // If we're not hardening interprocedurally, we can just skip calls.
-      if (!HardenInterprocedurally)
-        continue;
-
+      // Otherwise we have a call. We need to handle transferring the predicate
+      // state into a call and recovering it after the call returns unless this
+      // is a tail call.
+      assert(MI.isCall() && "Should only reach here for calls!");
       auto InsertPt = MI.getIterator();
       DebugLoc Loc = MI.getDebugLoc();
 
@@ -1460,11 +1597,12 @@ void X86SpeculativeLoadHardeningPass::hardenAllLoads(MachineFunction &MF) {
       unsigned StateReg = PS->SSA.GetValueAtEndOfBlock(&MBB);
       mergePredStateIntoSP(MBB, InsertPt, Loc, StateReg);
 
-      // If this call is also a return (because it is a tail call) we're done.
+      // If this call is also a return, it is a tail call and we don't need
+      // anything else to handle it so just continue.
       if (MI.isReturn())
         continue;
 
-      // Otherwise we need to step past the call and recover the predicate
+      // We need to step past the call and recover the predicate
       // state from SP after the return, and make this new state available.
       ++InsertPt;
       unsigned NewStateReg = extractPredStateFromSP(MBB, InsertPt, Loc);
@@ -2008,6 +2146,75 @@ void X86SpeculativeLoadHardeningPass::hardenReturnInstr(MachineInstr &MI) {
   // pointers canonical) and merge it into RSP. This will allow the caller to
   // extract it when we return (speculatively).
   mergePredStateIntoSP(MBB, InsertPt, Loc, PS->SSA.GetValueAtEndOfBlock(&MBB));
+}
+
+/// An attacker may speculatively store over a value that is then speculatively
+/// loaded and used as the target of an indirect call or jump instruction. This
+/// is called Spectre v1.2 or Bounds Check Bypass Store (BCBS) and is described
+/// in this paper:
+/// https://people.csail.mit.edu/vlk/spectre11.pdf
+///
+/// When this happens, the speculative execution of the call or jump will end up
+/// being steered to this attacker controlled address. While most such loads
+/// will be adequately hardened already, we want to ensure that they are
+/// definitively treated as needing post-load hardening. While address hardening
+/// is sufficient to prevent secret data from leaking to the attacker, it may
+/// not be sufficient to prevent an attacker from steering speculative
+/// execution. We forcibly unfolded all relevant loads above and so will always
+/// have an opportunity to post-load harden here, we just need to scan for cases
+/// not already flagged and add them.
+void X86SpeculativeLoadHardeningPass::hardenIndirectCallOrJumpInstr(
+    MachineInstr &MI,
+    SmallDenseMap<unsigned, unsigned, 32> &AddrRegToHardenedReg) {
+  switch (MI.getOpcode()) {
+  case X86::FARCALL16m:
+  case X86::FARCALL32m:
+  case X86::FARCALL64:
+  case X86::FARJMP16m:
+  case X86::FARJMP32m:
+  case X86::FARJMP64:
+    // We don't need to harden either far calls or far jumps as they are
+    // safe from Spectre.
+    return;
+
+  default:
+    break;
+  }
+
+  // We should never see a loading instruction at this point, as those should
+  // have been unfolded.
+  assert(!MI.mayLoad() && "Found a lingering loading instruction!");
+
+  // If the first operand isn't a register, this is a branch or call
+  // instruction with an immediate operand which doesn't need to be hardened.
+  if (!MI.getOperand(0).isReg())
+    return;
+
+  // For all of these, the target register is the first operand of the
+  // instruction.
+  auto &TargetOp = MI.getOperand(0);
+  unsigned OldTargetReg = TargetOp.getReg();
+
+  // Try to lookup a hardened version of this register. We retain a reference
+  // here as we want to update the map to track any newly computed hardened
+  // register.
+  unsigned &HardenedTargetReg = AddrRegToHardenedReg[OldTargetReg];
+
+  // If we don't have a hardened register yet, compute one. Otherwise, just use
+  // the already hardened register.
+  //
+  // FIXME: It is a little suspect that we use partially hardened registers that
+  // only feed addresses. The complexity of partial hardening with SHRX
+  // continues to pile up. Should definitively measure its value and consider
+  // eliminating it.
+  if (!HardenedTargetReg)
+    HardenedTargetReg = hardenValueInRegister(
+        OldTargetReg, *MI.getParent(), MI.getIterator(), MI.getDebugLoc());
+
+  // Set the target operand to the hardened register.
+  TargetOp.setReg(HardenedTargetReg);
+
+  ++NumCallsOrJumpsHardened;
 }
 
 INITIALIZE_PASS_BEGIN(X86SpeculativeLoadHardeningPass, DEBUG_TYPE,

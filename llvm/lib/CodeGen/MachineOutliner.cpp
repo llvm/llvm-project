@@ -716,6 +716,9 @@ struct MachineOutliner : public ModulePass {
       unsigned StringLen, std::vector<Candidate> &CandidatesForRepeatedSeq,
       OutlinedFunction &OF);
 
+  /// Remark output explaining that a function was outlined.
+  void emitOutlinedFunctionRemark(OutlinedFunction &OF);
+
   /// Find all repeated substrings that satisfy the outlining cost model.
   ///
   /// If a substring appears at least twice, then it must be represented by
@@ -859,6 +862,35 @@ void MachineOutliner::emitNotOutliningCheaperRemark(
   });
 }
 
+void MachineOutliner::emitOutlinedFunctionRemark(OutlinedFunction &OF) {
+  MachineBasicBlock *MBB = &*OF.MF->begin();
+  MachineOptimizationRemarkEmitter MORE(*OF.MF, nullptr);
+  MachineOptimizationRemark R(DEBUG_TYPE, "OutlinedFunction",
+                              MBB->findDebugLoc(MBB->begin()), MBB);
+  R << "Saved " << NV("OutliningBenefit", OF.getBenefit()) << " bytes by "
+    << "outlining " << NV("Length", OF.Sequence.size()) << " instructions "
+    << "from " << NV("NumOccurrences", OF.getOccurrenceCount())
+    << " locations. "
+    << "(Found at: ";
+
+  // Tell the user the other places the candidate was found.
+  for (size_t i = 0, e = OF.Candidates.size(); i < e; i++) {
+
+    // Skip over things that were pruned.
+    if (!OF.Candidates[i]->InCandidateList)
+      continue;
+
+    R << NV((Twine("StartLoc") + Twine(i)).str(),
+            OF.Candidates[i]->front()->getDebugLoc());
+    if (i != e - 1)
+      R << ", ";
+  }
+
+  R << ")";
+
+  MORE.emit(R);
+}
+
 unsigned MachineOutliner::findCandidates(
     SuffixTree &ST, const TargetInstrInfo &TII, InstructionMapper &Mapper,
     std::vector<std::shared_ptr<Candidate>> &CandidateList,
@@ -947,13 +979,12 @@ unsigned MachineOutliner::findCandidates(
     // We've found something we might want to outline.
     // Create an OutlinedFunction to store it and check if it'd be beneficial
     // to outline.
-    TargetCostInfo TCI =
-        TII.getOutliningCandidateInfo(CandidatesForRepeatedSeq);
+    OutlinedFunction OF = TII.getOutliningCandidateInfo(CandidatesForRepeatedSeq);
     std::vector<unsigned> Seq;
     for (unsigned i = Leaf->SuffixIdx; i < Leaf->SuffixIdx + StringLen; i++)
       Seq.push_back(ST.Str[i]);
-    OutlinedFunction OF(FunctionList.size(), CandidatesForRepeatedSeq, Seq,
-                        TCI);
+    OF.Sequence = Seq;
+    OF.Name = FunctionList.size();
 
     // Is it better to outline this candidate than not?
     if (OF.getBenefit() < 1) {
@@ -1166,7 +1197,7 @@ MachineOutliner::createOutlinedFunction(Module &M, const OutlinedFunction &OF,
     MBB.insert(MBB.end(), NewMI);
   }
 
-  TII.buildOutlinedFrame(MBB, MF, OF.TCI);
+  TII.buildOutlinedFrame(MBB, MF, OF);
 
   // If there's a DISubprogram associated with this outlined function, then
   // emit debug info for the outlined function.
@@ -1234,37 +1265,7 @@ bool MachineOutliner::outline(
     // Does this candidate have a function yet?
     if (!OF.MF) {
       OF.MF = createOutlinedFunction(M, OF, Mapper);
-      MachineBasicBlock *MBB = &*OF.MF->begin();
-
-      // Output a remark telling the user that an outlined function was created,
-      // and explaining where it came from.
-      MachineOptimizationRemarkEmitter MORE(*OF.MF, nullptr);
-      MachineOptimizationRemark R(DEBUG_TYPE, "OutlinedFunction",
-                                  MBB->findDebugLoc(MBB->begin()), MBB);
-      R << "Saved " << NV("OutliningBenefit", OF.getBenefit())
-        << " bytes by "
-        << "outlining " << NV("Length", OF.Sequence.size()) << " instructions "
-        << "from " << NV("NumOccurrences", OF.getOccurrenceCount())
-        << " locations. "
-        << "(Found at: ";
-
-      // Tell the user the other places the candidate was found.
-      for (size_t i = 0, e = OF.Candidates.size(); i < e; i++) {
-
-        // Skip over things that were pruned.
-        if (!OF.Candidates[i]->InCandidateList)
-          continue;
-
-        R << NV(
-            (Twine("StartLoc") + Twine(i)).str(),
-            OF.Candidates[i]->front()->getDebugLoc());
-        if (i != e - 1)
-          R << ", ";
-      }
-
-      R << ")";
-
-      MORE.emit(R);
+      emitOutlinedFunctionRemark(OF);
       FunctionsCreated++;
     }
 

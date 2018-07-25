@@ -32,28 +32,6 @@ namespace outliner {
 /// shouldn't actually impact the outlining result.
 enum InstrType { Legal, LegalTerminator, Illegal, Invisible };
 
-/// Describes the number of instructions that it will take to call and
-/// construct a frame for a given outlining candidate.
-struct TargetCostInfo {
-  /// Represents the size of a sequence in bytes. (Some instructions vary
-  /// widely in size, so just counting the instructions isn't very useful.)
-  unsigned SequenceSize;
-
-  /// Number of instructions to construct an outlined function frame
-  /// for this candidate.
-  unsigned FrameOverhead;
-
-  /// Represents the specific instructions that must be emitted to
-  /// construct a frame for this candidate's outlined function.
-  unsigned FrameConstructionID;
-
-  TargetCostInfo() {}
-  TargetCostInfo(unsigned SequenceSize, unsigned FrameOverhead,
-                 unsigned FrameConstructionID)
-      : SequenceSize(SequenceSize), FrameOverhead(FrameOverhead),
-        FrameConstructionID(FrameConstructionID) {}
-};
-
 /// An individual sequence of instructions to be replaced with a call to
 /// an outlined function.
 struct Candidate {
@@ -184,8 +162,15 @@ public:
   /// function.
   std::vector<unsigned> Sequence;
 
-  /// Contains all target-specific information for this \p OutlinedFunction.
-  TargetCostInfo TCI;
+  /// Represents the size of a sequence in bytes. (Some instructions vary
+  /// widely in size, so just counting the instructions isn't very useful.)
+  unsigned SequenceSize;
+
+  /// Target-defined overhead of constructing a frame for this function.
+  unsigned FrameOverhead;
+
+  /// Target-defined identifier for constructing a frame for this function.
+  unsigned FrameConstructionID;
 
   /// Return the number of candidates for this \p OutlinedFunction.
   unsigned getOccurrenceCount() { return OccurrenceCount; }
@@ -204,11 +189,11 @@ public:
     unsigned CallOverhead = 0;
     for (std::shared_ptr<Candidate> &C : Candidates)
       CallOverhead += C->getCallOverhead();
-    return CallOverhead + TCI.SequenceSize + TCI.FrameOverhead;
+    return CallOverhead + SequenceSize + FrameOverhead;
   }
 
   /// Return the size in bytes of the unoutlined sequences.
-  unsigned getNotOutlinedCost() { return OccurrenceCount * TCI.SequenceSize; }
+  unsigned getNotOutlinedCost() { return OccurrenceCount * SequenceSize; }
 
   /// Return the number of instructions that would be saved by outlining
   /// this function.
@@ -219,9 +204,11 @@ public:
                                             : NotOutlinedCost - OutlinedCost;
   }
 
-  OutlinedFunction(unsigned Name, std::vector<Candidate> &Cands,
-                   const std::vector<unsigned> &Sequence, TargetCostInfo &TCI)
-      : Name(Name), Sequence(Sequence), TCI(TCI) {
+  OutlinedFunction(std::vector<Candidate> &Cands,
+                   unsigned SequenceSize, unsigned FrameOverhead,
+                   unsigned FrameConstructionID)
+      : SequenceSize(SequenceSize), FrameOverhead(FrameOverhead),
+        FrameConstructionID(FrameConstructionID) {
     OccurrenceCount = Cands.size();
     for (Candidate &C : Cands)
       Candidates.push_back(std::make_shared<outliner::Candidate>(C));

@@ -86,6 +86,11 @@ void MipsELFStreamer::EmitValueImpl(const MCExpr *Value, unsigned Size,
   Labels.clear();
 }
 
+void MipsELFStreamer::EmitIntValue(uint64_t Value, unsigned Size) {
+  MCELFStreamer::EmitIntValue(Value, Size);
+  Labels.clear();
+}
+
 void MipsELFStreamer::EmitMipsOptionRecords() {
   for (const auto &I : MipsOptionRecords)
     I->EmitMipsOptionRecord();

@@ -1602,9 +1602,9 @@ public:
     return false;
   }
 
-  /// Returns a \p outliner::TargetCostInfo struct containing target-specific
+  /// Returns a \p outliner::OutlinedFunction struct containing target-specific
   /// information for a set of outlining candidates.
-  virtual outliner::TargetCostInfo getOutliningCandidateInfo(
+  virtual outliner::OutlinedFunction getOutliningCandidateInfo(
       std::vector<outliner::Candidate> &RepeatedSequenceLocs) const {
     llvm_unreachable(
         "Target didn't implement TargetInstrInfo::getOutliningCandidateInfo!");
@@ -1624,9 +1624,8 @@ public:
   }
 
   /// Insert a custom frame for outlined functions.
-  virtual void buildOutlinedFrame(MachineBasicBlock &MBB,
-                                      MachineFunction &MF,
-                                    const outliner::TargetCostInfo &TCI) const {
+  virtual void buildOutlinedFrame(MachineBasicBlock &MBB, MachineFunction &MF,
+                                  const outliner::OutlinedFunction &OF) const {
     llvm_unreachable(
         "Target didn't implement TargetInstrInfo::buildOutlinedFrame!");
   }

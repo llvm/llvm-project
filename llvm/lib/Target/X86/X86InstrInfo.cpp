@@ -7588,7 +7588,7 @@ enum MachineOutlinerClass {
   MachineOutlinerTailCall
 };
 
-outliner::TargetCostInfo X86InstrInfo::getOutliningCandidateInfo(
+outliner::OutlinedFunction X86InstrInfo::getOutliningCandidateInfo(
     std::vector<outliner::Candidate> &RepeatedSequenceLocs) const {
   unsigned SequenceSize =
       std::accumulate(RepeatedSequenceLocs[0].front(),
@@ -7607,16 +7607,17 @@ outliner::TargetCostInfo X86InstrInfo::getOutliningCandidateInfo(
     for (outliner::Candidate &C : RepeatedSequenceLocs)
       C.setCallInfo(MachineOutlinerTailCall, 1);
 
-    return outliner::TargetCostInfo(SequenceSize,
-                                    0, // Number of bytes to emit frame.
-                                    MachineOutlinerTailCall // Type of frame.
+    return outliner::OutlinedFunction(RepeatedSequenceLocs, SequenceSize,
+                                      0, // Number of bytes to emit frame.
+                                      MachineOutlinerTailCall // Type of frame.
     );
   }
 
   for (outliner::Candidate &C : RepeatedSequenceLocs)
     C.setCallInfo(MachineOutlinerDefault, 1);
 
-  return outliner::TargetCostInfo(SequenceSize, 1, MachineOutlinerDefault);
+  return outliner::OutlinedFunction(RepeatedSequenceLocs, SequenceSize, 1,
+                                    MachineOutlinerDefault);
 }
 
 bool X86InstrInfo::isFunctionSafeToOutlineFrom(MachineFunction &MF,
@@ -7703,10 +7704,10 @@ X86InstrInfo::getOutliningType(MachineBasicBlock::iterator &MIT,  unsigned Flags
 
 void X86InstrInfo::buildOutlinedFrame(MachineBasicBlock &MBB,
                                           MachineFunction &MF,
-                                          const outliner::TargetCostInfo &TCI)
+                                          const outliner::OutlinedFunction &OF)
                                           const {
   // If we're a tail call, we already have a return, so don't do anything.
-  if (TCI.FrameConstructionID == MachineOutlinerTailCall)
+  if (OF.FrameConstructionID == MachineOutlinerTailCall)
     return;
 
   // We're a normal call, so our sequence doesn't have a return instruction.

@@ -4927,7 +4927,7 @@ enum MachineOutlinerMBBFlags {
   HasCalls = 0x4
 };
 
-outliner::TargetCostInfo
+outliner::OutlinedFunction
 AArch64InstrInfo::getOutliningCandidateInfo(
     std::vector<outliner::Candidate> &RepeatedSequenceLocs) const {
   unsigned SequenceSize = std::accumulate(
@@ -5034,7 +5034,8 @@ AArch64InstrInfo::getOutliningCandidateInfo(
            RepeatedSequenceLocs[0].back()->isCall())
     NumBytesToCreateFrame += 8;
 
-  return outliner::TargetCostInfo(SequenceSize, NumBytesToCreateFrame, FrameID);
+  return outliner::OutlinedFunction(RepeatedSequenceLocs, SequenceSize,
+                                    NumBytesToCreateFrame, FrameID);
 }
 
 bool AArch64InstrInfo::isFunctionSafeToOutlineFrom(
@@ -5332,10 +5333,10 @@ void AArch64InstrInfo::fixupPostOutline(MachineBasicBlock &MBB) const {
 
 void AArch64InstrInfo::buildOutlinedFrame(
     MachineBasicBlock &MBB, MachineFunction &MF,
-    const outliner::TargetCostInfo &TCI) const {
+    const outliner::OutlinedFunction &OF) const {
   // For thunk outlining, rewrite the last instruction from a call to a
   // tail-call.
-  if (TCI.FrameConstructionID == MachineOutlinerThunk) {
+  if (OF.FrameConstructionID == MachineOutlinerThunk) {
     MachineInstr *Call = &*--MBB.instr_end();
     unsigned TailOpcode;
     if (Call->getOpcode() == AArch64::BL) {
@@ -5358,7 +5359,7 @@ void AArch64InstrInfo::buildOutlinedFrame(
   if (std::any_of(MBB.instr_begin(), MBB.instr_end(), IsNonTailCall)) {
     // Fix up the instructions in the range, since we're going to modify the
     // stack.
-    assert(TCI.FrameConstructionID != MachineOutlinerDefault &&
+    assert(OF.FrameConstructionID != MachineOutlinerDefault &&
            "Can only fix up stack references once");
     fixupPostOutline(MBB);
 
@@ -5368,8 +5369,8 @@ void AArch64InstrInfo::buildOutlinedFrame(
     MachineBasicBlock::iterator It = MBB.begin();
     MachineBasicBlock::iterator Et = MBB.end();
 
-    if (TCI.FrameConstructionID == MachineOutlinerTailCall ||
-        TCI.FrameConstructionID == MachineOutlinerThunk)
+    if (OF.FrameConstructionID == MachineOutlinerTailCall ||
+        OF.FrameConstructionID == MachineOutlinerThunk)
       Et = std::prev(MBB.end());
 
     // Insert a save before the outlined region
@@ -5409,8 +5410,8 @@ void AArch64InstrInfo::buildOutlinedFrame(
   }
 
   // If this is a tail call outlined function, then there's already a return.
-  if (TCI.FrameConstructionID == MachineOutlinerTailCall ||
-      TCI.FrameConstructionID == MachineOutlinerThunk)
+  if (OF.FrameConstructionID == MachineOutlinerTailCall ||
+      OF.FrameConstructionID == MachineOutlinerThunk)
     return;
 
   // It's not a tail call, so we have to insert the return ourselves.
@@ -5419,7 +5420,7 @@ void AArch64InstrInfo::buildOutlinedFrame(
   MBB.insert(MBB.end(), ret);
 
   // Did we have to modify the stack by saving the link register?
-  if (TCI.FrameConstructionID == MachineOutlinerNoLRSave)
+  if (OF.FrameConstructionID == MachineOutlinerNoLRSave)
     return;
 
   // We modified the stack.
