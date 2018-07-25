@@ -355,7 +355,6 @@ class MipsAsmParser : public MCTargetAsmParser {
 
   bool parseSetAssignment();
 
-  bool parseDataDirective(unsigned Size, SMLoc L);
   bool parseDirectiveGpWord();
   bool parseDirectiveGpDWord();
   bool parseDirectiveDtpRelWord();
@@ -487,6 +486,9 @@ public:
     MCAsmParserExtension::Initialize(parser);
 
     parser.addAliasForDirective(".asciiz", ".asciz");
+    parser.addAliasForDirective(".hword", ".2byte");
+    parser.addAliasForDirective(".word", ".4byte");
+    parser.addAliasForDirective(".dword", ".8byte");
 
     // Initialize the set of available features.
     setAvailableFeatures(ComputeAvailableFeatures(getSTI().getFeatureBits()));
@@ -7357,31 +7359,6 @@ bool MipsAsmParser::parseDirectiveSet() {
   return parseSetAssignment();
 }
 
-/// parseDataDirective
-///  ::= .word [ expression (, expression)* ]
-bool MipsAsmParser::parseDataDirective(unsigned Size, SMLoc L) {
-  MCAsmParser &Parser = getParser();
-  if (getLexer().isNot(AsmToken::EndOfStatement)) {
-    while (true) {
-      const MCExpr *Value;
-      if (getParser().parseExpression(Value))
-        return true;
-
-      getParser().getStreamer().EmitValue(Value, Size);
-
-      if (getLexer().is(AsmToken::EndOfStatement))
-        break;
-
-      if (getLexer().isNot(AsmToken::Comma))
-        return Error(L, "unexpected token, expected comma");
-      Parser.Lex();
-    }
-  }
-
-  Parser.Lex();
-  return false;
-}
-
 /// parseDirectiveGpWord
 ///  ::= .gpword local_sym
 bool MipsAsmParser::parseDirectiveGpWord() {
@@ -7961,10 +7938,6 @@ bool MipsAsmParser::ParseDirective(AsmToken DirectiveID) {
     parseDirectiveCpRestore(DirectiveID.getLoc());
     return false;
   }
-  if (IDVal == ".dword") {
-    parseDataDirective(8, DirectiveID.getLoc());
-    return false;
-  }
   if (IDVal == ".ent") {
     StringRef SymbolName;
 
@@ -8209,16 +8182,6 @@ bool MipsAsmParser::ParseDirective(AsmToken DirectiveID) {
 
   if (IDVal == ".tpreldword") {
     parseDirectiveTpRelDWord();
-    return false;
-  }
-
-  if (IDVal == ".word") {
-    parseDataDirective(4, DirectiveID.getLoc());
-    return false;
-  }
-
-  if (IDVal == ".hword") {
-    parseDataDirective(2, DirectiveID.getLoc());
     return false;
   }
 

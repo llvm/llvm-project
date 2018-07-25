@@ -1,6 +1,9 @@
 // RUN: %clangxx_asan -g %s -o %t
 // RUN: not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-FWRITE
 // RUN: not %run %t 1 2>&1 | FileCheck %s --check-prefix=CHECK-FREAD
+//
+// On FreeBSD stack overflow error instead
+// XFAIL: freebsd
 
 #include <stdio.h>
 #include <stdlib.h>

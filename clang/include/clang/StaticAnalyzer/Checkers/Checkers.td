@@ -568,6 +568,10 @@ def ObjCPropertyChecker : Checker<"ObjCProperty">,
 
 let ParentPackage = Cocoa in {
 
+def RunLoopAutoreleaseLeakChecker : Checker<"RunLoopAutoreleaseLeak">,
+  HelpText<"Check for leaked memory in autorelease pools that will never be drained">,
+  DescFile<"RunLoopAutoreleaseLeakChecker.cpp">;
+
 def ObjCAtSyncChecker : Checker<"AtSync">,
   HelpText<"Check for nil pointers used as mutexes for @synchronized">,
   DescFile<"ObjCAtSyncChecker.cpp">;

@@ -264,6 +264,7 @@
 		2579065F1BD0488D00178368 /* DomainSocket.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2579065E1BD0488D00178368 /* DomainSocket.cpp */; };
 		26F5C27710F3D9E4009D5894 /* Driver.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26F5C27310F3D9E4009D5894 /* Driver.cpp */; };
 		4C4EB7811E6A4DCC002035C0 /* DumpDataExtractor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C4EB77F1E6A4DB8002035C0 /* DumpDataExtractor.cpp */; };
+		AFA585D02107EB7400D7689A /* DumpRegisterValue.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFA585CF2107EB7300D7689A /* DumpRegisterValue.cpp */; };
 		9447DE431BD5963300E67212 /* DumpValueObjectOptions.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9447DE421BD5963300E67212 /* DumpValueObjectOptions.cpp */; };
 		268900EA13353E6F00698AC0 /* DynamicLoader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26BC7E7710F1B85900F91463 /* DynamicLoader.cpp */; };
 		AF27AD551D3603EA00CF2833 /* DynamicLoaderDarwin.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF27AD531D3603EA00CF2833 /* DynamicLoaderDarwin.cpp */; };
@@ -335,7 +336,6 @@
 		AE44FB301BB07EB20033EB62 /* GoUserExpression.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AE44FB2C1BB07DD80033EB62 /* GoUserExpression.cpp */; };
 		6D95DC011B9DC057000E318A /* HashedNameToDIE.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D95DBFE1B9DC057000E318A /* HashedNameToDIE.cpp */; };
 		2666ADC81B3CB675001FAFD3 /* HexagonDYLDRendezvous.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2666ADC31B3CB675001FAFD3 /* HexagonDYLDRendezvous.cpp */; };
-		AFC2DCF31E6E30CF00283714 /* History.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFC2DCF21E6E30CF00283714 /* History.cpp */; };
 		AF1729D6182C907200E0AB97 /* HistoryThread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF1729D4182C907200E0AB97 /* HistoryThread.cpp */; };
 		AF1729D7182C907200E0AB97 /* HistoryUnwind.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF1729D5182C907200E0AB97 /* HistoryUnwind.cpp */; };
 		2689007113353E1A00698AC0 /* Host.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69A01E1C1236C5D400C660B5 /* Host.cpp */; };
@@ -1735,6 +1735,7 @@
 		26F5C27410F3D9E4009D5894 /* Driver.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Driver.h; path = tools/driver/Driver.h; sourceTree = "<group>"; };
 		4C4EB77F1E6A4DB8002035C0 /* DumpDataExtractor.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = DumpDataExtractor.cpp; path = source/Core/DumpDataExtractor.cpp; sourceTree = "<group>"; };
 		4C4EB7821E6A4DE7002035C0 /* DumpDataExtractor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = DumpDataExtractor.h; path = include/lldb/Core/DumpDataExtractor.h; sourceTree = "<group>"; };
+		AFA585CF2107EB7300D7689A /* DumpRegisterValue.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = DumpRegisterValue.cpp; path = source/Core/DumpRegisterValue.cpp; sourceTree = "<group>"; };
 		9447DE421BD5963300E67212 /* DumpValueObjectOptions.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = DumpValueObjectOptions.cpp; path = source/DataFormatters/DumpValueObjectOptions.cpp; sourceTree = "<group>"; };
 		9447DE411BD5962900E67212 /* DumpValueObjectOptions.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = DumpValueObjectOptions.h; path = include/lldb/DataFormatters/DumpValueObjectOptions.h; sourceTree = "<group>"; };
 		26BC7E7710F1B85900F91463 /* DynamicLoader.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = DynamicLoader.cpp; path = source/Core/DynamicLoader.cpp; sourceTree = "<group>"; };
@@ -4484,8 +4485,6 @@
 				AFC2DCE61E6E2ED000283714 /* FastDemangle.cpp */,
 				AFC2DCED1E6E2F9800283714 /* FastDemangle.h */,
 				4CBFF0471F579A36004AFA92 /* Flags.h */,
-				AFC2DCF21E6E30CF00283714 /* History.cpp */,
-				AFC2DCF41E6E30D800283714 /* History.h */,
 				236124A61986B50E004EFC37 /* IOObject.h */,
 				236124A21986B4E2004EFC37 /* IOObject.cpp */,
 				4C73152119B7D71700F865A4 /* Iterable.h */,
@@ -4979,6 +4978,7 @@
 				26BC7E7610F1B85900F91463 /* Disassembler.cpp */,
 				4C4EB7821E6A4DE7002035C0 /* DumpDataExtractor.h */,
 				4C4EB77F1E6A4DB8002035C0 /* DumpDataExtractor.cpp */,
+				AFA585CF2107EB7300D7689A /* DumpRegisterValue.cpp */,
 				26BC7D5F10F1B77400F91463 /* dwarf.h */,
 				26D9FDC612F784E60003F2EE /* EmulateInstruction.h */,
 				26D9FDC812F784FD0003F2EE /* EmulateInstruction.cpp */,
@@ -7891,7 +7891,6 @@
 				26C7C4831BFFEA7E009BD01F /* WindowsMiniDump.cpp in Sources */,
 				49CA96FD1E6AACC900C03FEE /* DataBufferLLVM.cpp in Sources */,
 				268900D813353E6F00698AC0 /* Function.cpp in Sources */,
-				AFC2DCF31E6E30CF00283714 /* History.cpp in Sources */,
 				268900D913353E6F00698AC0 /* FuncUnwinders.cpp in Sources */,
 				268900DA13353E6F00698AC0 /* LineEntry.cpp in Sources */,
 				268900DB13353E6F00698AC0 /* LineTable.cpp in Sources */,
@@ -8033,6 +8032,7 @@
 				4CC7C6501D5298F30076FF94 /* OCamlLanguage.cpp in Sources */,
 				2692BA15136610C100F9E14D /* UnwindAssemblyInstEmulation.cpp in Sources */,
 				263E949F13661AEA00E7D1CE /* UnwindAssembly-x86.cpp in Sources */,
+				AFA585D02107EB7400D7689A /* DumpRegisterValue.cpp in Sources */,
 				3FDFDDBD199C3A06009756A7 /* FileAction.cpp in Sources */,
 				264D8D5013661BD7003A368F /* UnwindAssembly.cpp in Sources */,
 				AF23B4DB19009C66003E2A58 /* FreeBSDSignals.cpp in Sources */,

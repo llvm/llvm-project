@@ -190,8 +190,18 @@ float SymbolQualitySignals::evaluate() const {
 
   // This avoids a sharp gradient for tail symbols, and also neatly avoids the
   // question of whether 0 references means a bad symbol or missing data.
-  if (References >= 10)
-    Score *= std::log10(References);
+  if (References >= 10) {
+    // Use a sigmoid style boosting function, which flats out nicely for large
+    // numbers (e.g. 2.58 for 1M refererences).
+    // The following boosting function is equivalent to:
+    //   m = 0.06
+    //   f = 12.0
+    //   boost = f * sigmoid(m * std::log(References)) - 0.5 * f + 0.59
+    // Sample data points: (10, 1.00), (100, 1.41), (1000, 1.82),
+    //                     (10K, 2.21), (100K, 2.58), (1M, 2.94)
+    float s = std::pow(References, -0.06);
+    Score *= 6.0 * (1 - s) / (1 + s) + 0.59;
+  }
 
   if (Deprecated)
     Score *= 0.1f;
