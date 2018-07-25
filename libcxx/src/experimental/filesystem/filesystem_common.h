@@ -414,6 +414,4 @@ bool SetTimeStructTo(TimeStruct& TS, file_time_type NewTime) {
 
 _LIBCPP_END_NAMESPACE_EXPERIMENTAL_FILESYSTEM
 
-
-
 #endif // FILESYSTEM_COMMON_H
