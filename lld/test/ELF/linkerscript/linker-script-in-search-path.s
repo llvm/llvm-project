@@ -10,10 +10,10 @@
 # CHECK: Format: ELF64-x86-64
 
 # If the linker script specified with -T is missing we should emit an error
-# RUN: not ld.lld -Tfoo.script %t.o 2>&1 | FileCheck %s -check-prefix ERROR
-# ERROR: error: cannot find linker script foo.script
+# RUN: not ld.lld -T%basename_t.script %t.o 2>&1 | FileCheck %s -check-prefix ERROR
+# ERROR: error: cannot find linker script {{.*}}.script
 
 # But if it exists in the search path we should fall back to that instead:
 # RUN: rm %t.out
-# RUN: ld.lld -L %T/searchpath -Tfoo.script %t.o
+# RUN: ld.lld -L %T/searchpath -T%basename_t.script %t.o
 # RUN: llvm-readobj %t.out | FileCheck %s
