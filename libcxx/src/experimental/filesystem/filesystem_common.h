@@ -118,11 +118,11 @@ T error_value();
 template <>
 _LIBCPP_CONSTEXPR_AFTER_CXX11 void error_value<void>() {}
 template <>
-constexpr bool error_value<bool>() {
+bool error_value<bool>() {
   return false;
 }
 template <>
-constexpr uintmax_t error_value<uintmax_t>() {
+uintmax_t error_value<uintmax_t>() {
   return uintmax_t(-1);
 }
 template <>
