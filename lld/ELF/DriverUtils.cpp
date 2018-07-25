@@ -227,10 +227,10 @@ Optional<std::string> elf::searchLibrary(StringRef Name) {
   return None;
 }
 
-// If a linker script doesn't exist in the current directory, we also look for
-// the script in the '-L' search paths. This matches the behaviour of both '-T'
-// and linker script INPUT() directives in ld.bfd.
-Optional<std::string> elf::searchLinkerScript(StringRef Name) {
+// If a linker/version script doesn't exist in the current directory, we also
+// look for the script in the '-L' search paths. This matches the behaviour of
+// '-T', --version-script=, and linker script INPUT() command in ld.bfd.
+Optional<std::string> elf::searchScript(StringRef Name) {
   if (fs::exists(Name))
     return Name.str();
   return findFromSearchPaths(Name);
