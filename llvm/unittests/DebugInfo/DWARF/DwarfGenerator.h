@@ -89,14 +89,6 @@ public:
   /// \param U the unsigned integer to encode.
   void addAttribute(uint16_t Attr, dwarf::Form Form, uint64_t U);
 
-  /// Add an attribute value to be encoded as a DIEExpr
-  ///
-  /// \param Attr a dwarf::Attribute enumeration value or any uint16_t that
-  /// represents a user defined DWARF attribute.
-  /// \param Form the dwarf::Form to use when encoding the attribute.
-  /// \param Expr the MC expression used to compute the value
-  void addAttribute(uint16_t Attr, dwarf::Form Form, const MCExpr *Expr);
-
   /// Add an attribute value to be encoded as a DIEString or DIEInlinedString.
   ///
   /// \param Attr a dwarf::Attribute enumeration value or any uint16_t that
@@ -250,8 +242,6 @@ class Generator {
   std::vector<std::unique_ptr<LineTable>> LineTables;
   DIEAbbrevSet Abbreviations;
 
-  MCSymbol *StringOffsetsStartSym;
-
   SmallString<4096> FileBytes;
   /// The stream we use to generate the DWARF into as an ELF file.
   std::unique_ptr<raw_svector_ostream> Stream;
@@ -303,7 +293,6 @@ public:
   MCContext *getMCContext() const { return MC.get(); }
   DIEAbbrevSet &getAbbrevSet() { return Abbreviations; }
   DwarfStringPool &getStringPool() { return *StringPool; }
-  MCSymbol *getStringOffsetsStartSym() const { return StringOffsetsStartSym; }
 
   /// Save the generated DWARF file to disk.
   ///

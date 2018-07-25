@@ -19,7 +19,6 @@ namespace llvm {
 
 class AsmPrinter;
 class MCSection;
-class MCSymbol;
 
 // Collection of strings for this unit and assorted symbols.
 // A String->Symbol mapping of strings used by indirect
@@ -36,9 +35,6 @@ public:
   using EntryRef = DwarfStringPoolEntryRef;
 
   DwarfStringPool(BumpPtrAllocator &A, AsmPrinter &Asm, StringRef Prefix);
-
-  void emitStringOffsetsTableHeader(AsmPrinter &Asm, MCSection *OffsetSection,
-                                    MCSymbol *StartSym);
 
   void emit(AsmPrinter &Asm, MCSection *StrSection,
             MCSection *OffsetSection = nullptr,

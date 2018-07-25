@@ -27,6 +27,7 @@ using namespace ento;
 
 namespace {
 
+/// Configuration class for Z3
 class Z3Config {
   friend class Z3Context;
 
@@ -45,17 +46,21 @@ public:
   ~Z3Config() { Z3_del_config(Config); }
 }; // end class Z3Config
 
+// Function used to report errors
 void Z3ErrorHandler(Z3_context Context, Z3_error_code Error) {
   llvm::report_fatal_error("Z3 error: " +
                            llvm::Twine(Z3_get_error_msg_ex(Context, Error)));
 }
 
+/// Wrapper for Z3 context
 class Z3Context : public SMTContext {
 public:
   Z3_context Context;
 
   Z3Context() : SMTContext() {
     Context = Z3_mk_context_rc(Z3Config().Config);
+    // The error function is set here because the context is the first object
+    // created by the backend
     Z3_set_error_handler(Context, Z3ErrorHandler);
   }
 
@@ -65,6 +70,7 @@ public:
   }
 }; // end class Z3Context
 
+/// Wrapper for Z3 Sort
 class Z3Sort : public SMTSort {
   friend class Z3Solver;
 
@@ -73,6 +79,7 @@ class Z3Sort : public SMTSort {
   Z3_sort Sort;
 
 public:
+  /// Default constructor, mainly used by make_shared
   Z3Sort(Z3Context &C, Z3_sort ZS) : SMTSort(), Context(C), Sort(ZS) {
     Z3_inc_ref(Context.Context, reinterpret_cast<Z3_ast>(Sort));
   }
@@ -637,23 +644,23 @@ public:
                                   toZ3Expr(*T).AST, toZ3Expr(*F).AST)));
   }
 
-  SMTExprRef mkSignExt(unsigned i, const SMTExprRef &Exp) override {
+  SMTExprRef mkBVSignExt(unsigned i, const SMTExprRef &Exp) override {
     return newExprRef(Z3Expr(
         Context, Z3_mk_sign_ext(Context.Context, i, toZ3Expr(*Exp).AST)));
   }
 
-  SMTExprRef mkZeroExt(unsigned i, const SMTExprRef &Exp) override {
+  SMTExprRef mkBVZeroExt(unsigned i, const SMTExprRef &Exp) override {
     return newExprRef(Z3Expr(
         Context, Z3_mk_zero_ext(Context.Context, i, toZ3Expr(*Exp).AST)));
   }
 
-  SMTExprRef mkExtract(unsigned High, unsigned Low,
-                       const SMTExprRef &Exp) override {
+  SMTExprRef mkBVExtract(unsigned High, unsigned Low,
+                         const SMTExprRef &Exp) override {
     return newExprRef(Z3Expr(Context, Z3_mk_extract(Context.Context, High, Low,
                                                     toZ3Expr(*Exp).AST)));
   }
 
-  SMTExprRef mkConcat(const SMTExprRef &LHS, const SMTExprRef &RHS) override {
+  SMTExprRef mkBVConcat(const SMTExprRef &LHS, const SMTExprRef &RHS) override {
     return newExprRef(
         Z3Expr(Context, Z3_mk_concat(Context.Context, toZ3Expr(*LHS).AST,
                                      toZ3Expr(*RHS).AST)));
@@ -737,27 +744,23 @@ public:
     return Z3_get_bool_value(Context.Context, toZ3Expr(*Exp).AST) == Z3_L_TRUE;
   }
 
-  // Return an appropriate floating-point rounding mode.
   SMTExprRef getFloatRoundingMode() override {
     // TODO: Don't assume nearest ties to even rounding mode
     return newExprRef(Z3Expr(Context, Z3_mk_fpa_rne(Context.Context)));
   }
 
-  /// Construct a Z3Expr from a SymbolData, given a Z3_context.
   SMTExprRef fromData(const SymbolID ID, const QualType &Ty,
                       uint64_t BitWidth) override {
     llvm::Twine Name = "$" + llvm::Twine(ID);
     return mkSymbol(Name.str().c_str(), mkSort(Ty, BitWidth));
   }
 
-  /// Construct a Z3Expr from a boolean, given a Z3_context.
   SMTExprRef fromBoolean(const bool Bool) override {
     Z3_ast AST =
         Bool ? Z3_mk_true(Context.Context) : Z3_mk_false(Context.Context);
     return newExprRef(Z3Expr(Context, AST));
   }
 
-  /// Construct a Z3Expr from a finite APFloat, given a Z3_context.
   SMTExprRef fromAPFloat(const llvm::APFloat &Float) override {
     SMTSortRef Sort =
         getFloatSort(llvm::APFloat::semanticsSizeInBits(Float.getSemantics()));
@@ -769,7 +772,6 @@ public:
                                     toZ3Sort(*Sort).Sort)));
   }
 
-  /// Construct a Z3Expr from an APSInt, given a Z3_context.
   SMTExprRef fromAPSInt(const llvm::APSInt &Int) override {
     SMTSortRef Sort = getBitvectorSort(Int.getBitWidth());
     Z3_ast AST = Z3_mk_numeral(Context.Context, Int.toString(10).c_str(),
@@ -777,7 +779,6 @@ public:
     return newExprRef(Z3Expr(Context, AST));
   }
 
-  /// Construct a Z3Expr from an integer, given a Z3_context.
   SMTExprRef fromInt(const char *Int, uint64_t BitWidth) override {
     SMTSortRef Sort = getBitvectorSort(BitWidth);
     Z3_ast AST = Z3_mk_numeral(Context.Context, Int, toZ3Sort(*Sort).Sort);
@@ -823,7 +824,7 @@ public:
         Int = llvm::APSInt(llvm::APInt(Int.getBitWidth(), Value[0]),
                            Int.isUnsigned());
       } else if (Sort->getBitvectorSortSize() == 128) {
-        SMTExprRef ASTHigh = mkExtract(127, 64, AST);
+        SMTExprRef ASTHigh = mkBVExtract(127, 64, AST);
         Z3_get_numeral_uint64(Context.Context, toZ3Expr(*AST).AST,
                               reinterpret_cast<__uint64 *>(&Value[1]));
         Int = llvm::APSInt(llvm::APInt(Int.getBitWidth(), Value),
@@ -849,8 +850,6 @@ public:
     llvm_unreachable("Unsupported sort to integer!");
   }
 
-  /// Given an expression and a model, extract the value of this operand in
-  /// the model.
   bool getInterpretation(const SMTExprRef &Exp, llvm::APSInt &Int) override {
     Z3Model Model = getModel();
     Z3_func_decl Func = Z3_get_app_decl(
@@ -865,8 +864,6 @@ public:
     return toAPSInt(Sort, Assign, Int, true);
   }
 
-  /// Given an expression and a model, extract the value of this operand in
-  /// the model.
   bool getInterpretation(const SMTExprRef &Exp, llvm::APFloat &Float) override {
     Z3Model Model = getModel();
     Z3_func_decl Func = Z3_get_app_decl(
@@ -881,7 +878,6 @@ public:
     return toAPFloat(Sort, Assign, Float, true);
   }
 
-  /// Check if the constraints are satisfiable
   ConditionTruthVal check() const override {
     Z3_lbool res = Z3_solver_check(Context.Context, Solver);
     if (res == Z3_L_TRUE)
@@ -893,10 +889,8 @@ public:
     return ConditionTruthVal();
   }
 
-  /// Push the current solver state
   void push() override { return Z3_solver_push(Context.Context, Solver); }
 
-  /// Pop the previous solver state
   void pop(unsigned NumStates = 1) override {
     assert(Z3_solver_get_num_scopes(Context.Context, Solver) >= NumStates);
     return Z3_solver_pop(Context.Context, Solver, NumStates);

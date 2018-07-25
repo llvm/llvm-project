@@ -14,6 +14,7 @@
 #include "llvm-c/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/GenericValue.h"
+#include "llvm/ExecutionEngine/JITEventListener.h"
 #include "llvm/ExecutionEngine/RTDyldMemoryManager.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Module.h"
@@ -411,3 +412,26 @@ void LLVMDisposeMCJITMemoryManager(LLVMMCJITMemoryManagerRef MM) {
   delete unwrap(MM);
 }
 
+/*===-- JIT Event Listener functions -------------------------------------===*/
+
+
+#if !LLVM_USE_INTEL_JITEVENTS
+LLVMJITEventListenerRef LLVMCreateIntelJITEventListener(void)
+{
+  return nullptr;
+}
+#endif
+
+#if !LLVM_USE_OPROFILE
+LLVMJITEventListenerRef LLVMCreateOProfileJITEventListener(void)
+{
+  return nullptr;
+}
+#endif
+
+#if !LLVM_USE_PERF
+LLVMJITEventListenerRef LLVMCreatePerfJITEventListener(void)
+{
+  return nullptr;
+}
+#endif

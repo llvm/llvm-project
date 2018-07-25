@@ -91,6 +91,9 @@ public:
   /// Add a unit to the list of CUs.
   void addUnit(std::unique_ptr<DwarfCompileUnit> U);
 
+  /// Emit the string table offsets header.
+  void emitStringOffsetsTableHeader(MCSection *Section);
+
   /// Emit all of the units to the section listed with the given
   /// abbreviation section.
   void emitUnits(bool UseOffsets);

@@ -1506,9 +1506,8 @@ void DwarfDebug::emitAbbreviations() {
 
 void DwarfDebug::emitStringOffsetsTableHeader() {
   DwarfFile &Holder = useSplitDwarf() ? SkeletonHolder : InfoHolder;
-  Holder.getStringPool().emitStringOffsetsTableHeader(
-      *Asm, Asm->getObjFileLowering().getDwarfStrOffSection(),
-      Holder.getStringOffsetsStartSym());
+  Holder.emitStringOffsetsTableHeader(
+      Asm->getObjFileLowering().getDwarfStrOffSection());
 }
 
 template <typename AccelTableT>
@@ -2293,9 +2292,8 @@ void DwarfDebug::emitDebugLineDWO() {
 
 void DwarfDebug::emitStringOffsetsTableHeaderDWO() {
   assert(useSplitDwarf() && "No split dwarf?");
-  InfoHolder.getStringPool().emitStringOffsetsTableHeader(
-      *Asm, Asm->getObjFileLowering().getDwarfStrOffDWOSection(),
-      InfoHolder.getStringOffsetsStartSym());
+  InfoHolder.emitStringOffsetsTableHeader(
+      Asm->getObjFileLowering().getDwarfStrOffDWOSection());
 }
 
 // Emit the .debug_str.dwo section for separated dwarf. This contains the

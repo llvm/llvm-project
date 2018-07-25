@@ -3484,7 +3484,7 @@ Status ProcessGDBRemote::LaunchAndConnectToDebugserver(
     if (m_gdb_comm.IsConnected()) {
       // Finish the connection process by doing the handshake without
       // connecting (send NULL URL)
-      ConnectToDebugserver("");
+      error = ConnectToDebugserver("");
     } else {
       error.SetErrorString("connection failed");
     }

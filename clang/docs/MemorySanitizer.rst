@@ -185,7 +185,11 @@ self-built instrumented libc++ (as a replacement for libstdc++).
 Supported Platforms
 ===================
 
-MemorySanitizer is supported on Linux x86\_64/MIPS64/AArch64.
+MemorySanitizer is supported on the following OS:
+
+* Linux
+* NetBSD
+* FreeBSD
 
 Limitations
 ===========

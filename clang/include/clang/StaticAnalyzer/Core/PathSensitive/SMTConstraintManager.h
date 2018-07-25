@@ -58,10 +58,6 @@ public:
   LLVM_DUMP_METHOD void dump() const { Solver->dump(); }
 
 protected:
-  //===------------------------------------------------------------------===//
-  // Internal implementation.
-  //===------------------------------------------------------------------===//
-
   // Check whether a new model is satisfiable, and update the program state.
   virtual ProgramStateRef assumeExpr(ProgramStateRef State, SymbolRef Sym,
                                      const SMTExprRef &Exp) = 0;

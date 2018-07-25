@@ -2327,7 +2327,9 @@ HexagonTargetLowering::extractVector(SDValue VecV, SDValue IdxV,
     // If the value extracted is a single bit, use tstbit.
     if (ValWidth == 1) {
       SDValue A0 = getInstr(Hexagon::C2_tfrpr, dl, MVT::i32, {VecV}, DAG);
-      return DAG.getNode(HexagonISD::TSTBIT, dl, MVT::i1, A0, IdxV);
+      SDValue M0 = DAG.getConstant(8 / VecWidth, dl, MVT::i32);
+      SDValue I0 = DAG.getNode(ISD::MUL, dl, MVT::i32, IdxV, M0);
+      return DAG.getNode(HexagonISD::TSTBIT, dl, MVT::i1, A0, I0);
     }
 
     // Each bool vector (v2i1, v4i1, v8i1) always occupies 8 bits in

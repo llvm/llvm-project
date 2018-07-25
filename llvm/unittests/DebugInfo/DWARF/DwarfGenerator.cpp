@@ -54,36 +54,16 @@ void dwarfgen::DIE::addAttribute(uint16_t A, dwarf::Form Form, uint64_t U) {
 }
 
 void dwarfgen::DIE::addAttribute(uint16_t A, dwarf::Form Form,
-                                 const MCExpr *Expr) {
-  auto &DG = CU->getGenerator();
-  Die->addValue(DG.getAllocator(), static_cast<dwarf::Attribute>(A), Form,
-                DIEExpr(Expr));
-}
-
-void dwarfgen::DIE::addAttribute(uint16_t A, dwarf::Form Form,
                                  StringRef String) {
   auto &DG = CU->getGenerator();
-  switch (Form) {
-  case DW_FORM_string:
+  if (Form == DW_FORM_string) {
     Die->addValue(DG.getAllocator(), static_cast<dwarf::Attribute>(A), Form,
                   new (DG.getAllocator())
                       DIEInlineString(String, DG.getAllocator()));
-    break;
-
-  case DW_FORM_strp:
-  case DW_FORM_GNU_str_index:
-  case DW_FORM_strx:
-  case DW_FORM_strx1:
-  case DW_FORM_strx2:
-  case DW_FORM_strx3:
-  case DW_FORM_strx4:
+  } else {
     Die->addValue(
         DG.getAllocator(), static_cast<dwarf::Attribute>(A), Form,
         DIEString(DG.getStringPool().getEntry(*DG.getAsmPrinter(), String)));
-    break;
-
-  default:
-    llvm_unreachable("Unhandled form!");
   }
 }
 
@@ -447,7 +427,6 @@ llvm::Error dwarfgen::Generator::init(Triple TheTriple, uint16_t V) {
   Asm->setDwarfVersion(Version);
 
   StringPool = llvm::make_unique<DwarfStringPool>(Allocator, *Asm, StringRef());
-  StringOffsetsStartSym = Asm->createTempSymbol("str_offsets_base");
 
   return Error::success();
 }
@@ -469,12 +448,7 @@ StringRef dwarfgen::Generator::generate() {
     CU->setLength(CUOffset - 4);
   }
   Abbreviations.Emit(Asm.get(), MOFI->getDwarfAbbrevSection());
-
-  StringPool->emitStringOffsetsTableHeader(*Asm, MOFI->getDwarfStrOffSection(),
-                                           StringOffsetsStartSym);
-  StringPool->emit(*Asm, MOFI->getDwarfStrSection(),
-                   MOFI->getDwarfStrOffSection());
-
+  StringPool->emit(*Asm, MOFI->getDwarfStrSection());
   MS->SwitchSection(MOFI->getDwarfInfoSection());
   for (auto &CU : CompileUnits) {
     uint16_t Version = CU->getVersion();
