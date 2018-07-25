@@ -4,8 +4,8 @@
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
 # RUN: mkdir -p %T/searchpath
-# RUN: echo "OUTPUT(\"%t.out\")" > %T/searchpath/foo.script
-# RUN: ld.lld -T%T/searchpath/foo.script %t.o
+# RUN: echo 'OUTPUT("%t.out")' > %T/searchpath/%basename_t.script
+# RUN: ld.lld -T%T/searchpath/%basename_t.script %t.o
 # RUN: llvm-readobj %t.out | FileCheck %s
 # CHECK: Format: ELF64-x86-64
 
