@@ -476,11 +476,12 @@ TEST(CompletionTest, ScopedWithFilter) {
 }
 
 TEST(CompletionTest, ReferencesAffectRanking) {
-  auto Results = completions("int main() { abs^ }", {ns("absl"), func("abs")});
-  EXPECT_THAT(Results.Completions, HasSubsequence(Named("abs"), Named("absl")));
+  auto Results = completions("int main() { abs^ }", {ns("absl"), func("absb")});
+  EXPECT_THAT(Results.Completions, HasSubsequence(Named("absb"), Named("absl")));
   Results = completions("int main() { abs^ }",
-                        {withReferences(10000, ns("absl")), func("abs")});
-  EXPECT_THAT(Results.Completions, HasSubsequence(Named("absl"), Named("abs")));
+                        {withReferences(10000, ns("absl")), func("absb")});
+  EXPECT_THAT(Results.Completions,
+              HasSubsequence(Named("absl"), Named("absb")));
 }
 
 TEST(CompletionTest, GlobalQualified) {
