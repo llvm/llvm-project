@@ -948,6 +948,113 @@ static bool shouldUseBZeroPlusStoresToInitialize(llvm::Constant *Init,
          canEmitInitWithFewStoresAfterBZero(Init, StoreBudget);
 }
 
+/// A byte pattern.
+///
+/// Can be "any" pattern if the value was padding or known to be undef.
+/// Can be "none" pattern if a sequence doesn't exist.
+class BytePattern {
+  uint8_t Val;
+  enum class ValueType : uint8_t { Specific, Any, None } Type;
+  BytePattern(ValueType Type) : Type(Type) {}
+
+public:
+  BytePattern(uint8_t Value) : Val(Value), Type(ValueType::Specific) {}
+  static BytePattern Any() { return BytePattern(ValueType::Any); }
+  static BytePattern None() { return BytePattern(ValueType::None); }
+  bool isAny() const { return Type == ValueType::Any; }
+  bool isNone() const { return Type == ValueType::None; }
+  bool isValued() const { return Type == ValueType::Specific; }
+  uint8_t getValue() const {
+    assert(isValued());
+    return Val;
+  }
+  BytePattern merge(const BytePattern Other) const {
+    if (isNone() || Other.isNone())
+      return None();
+    if (isAny())
+      return Other;
+    if (Other.isAny())
+      return *this;
+    if (getValue() == Other.getValue())
+      return *this;
+    return None();
+  }
+};
+
+/// Figures out whether the constant can be initialized with memset.
+static BytePattern constantIsRepeatedBytePattern(llvm::Constant *C) {
+  if (isa<llvm::ConstantAggregateZero>(C) || isa<llvm::ConstantPointerNull>(C))
+    return BytePattern(0x00);
+  if (isa<llvm::UndefValue>(C))
+    return BytePattern::Any();
+
+  if (isa<llvm::ConstantInt>(C)) {
+    auto *Int = cast<llvm::ConstantInt>(C);
+    if (Int->getBitWidth() % 8 != 0)
+      return BytePattern::None();
+    const llvm::APInt &Value = Int->getValue();
+    if (Value.isSplat(8))
+      return BytePattern(Value.getLoBits(8).getLimitedValue());
+    return BytePattern::None();
+  }
+
+  if (isa<llvm::ConstantFP>(C)) {
+    auto *FP = cast<llvm::ConstantFP>(C);
+    llvm::APInt Bits = FP->getValueAPF().bitcastToAPInt();
+    if (Bits.getBitWidth() % 8 != 0)
+      return BytePattern::None();
+    if (!Bits.isSplat(8))
+      return BytePattern::None();
+    return BytePattern(Bits.getLimitedValue() & 0xFF);
+  }
+
+  if (isa<llvm::ConstantVector>(C)) {
+    llvm::Constant *Splat = cast<llvm::ConstantVector>(C)->getSplatValue();
+    if (Splat)
+      return constantIsRepeatedBytePattern(Splat);
+    return BytePattern::None();
+  }
+
+  if (isa<llvm::ConstantArray>(C) || isa<llvm::ConstantStruct>(C)) {
+    BytePattern Pattern(BytePattern::Any());
+    for (unsigned I = 0, E = C->getNumOperands(); I != E; ++I) {
+      llvm::Constant *Elt = cast<llvm::Constant>(C->getOperand(I));
+      Pattern = Pattern.merge(constantIsRepeatedBytePattern(Elt));
+      if (Pattern.isNone())
+        return Pattern;
+    }
+    return Pattern;
+  }
+
+  if (llvm::ConstantDataSequential *CDS =
+          dyn_cast<llvm::ConstantDataSequential>(C)) {
+    BytePattern Pattern(BytePattern::Any());
+    for (unsigned I = 0, E = CDS->getNumElements(); I != E; ++I) {
+      llvm::Constant *Elt = CDS->getElementAsConstant(I);
+      Pattern = Pattern.merge(constantIsRepeatedBytePattern(Elt));
+      if (Pattern.isNone())
+        return Pattern;
+    }
+    return Pattern;
+  }
+
+  // BlockAddress, ConstantExpr, and everything else is scary.
+  return BytePattern::None();
+}
+
+/// Decide whether we should use memset to initialize a local variable instead
+/// of using a memcpy from a constant global. Assumes we've already decided to
+/// not user bzero.
+/// FIXME We could be more clever, as we are for bzero above, and generate
+///       memset followed by stores. It's unclear that's worth the effort.
+static BytePattern shouldUseMemSetToInitialize(llvm::Constant *Init,
+                                               uint64_t GlobalSize) {
+  uint64_t SizeLimit = 32;
+  if (GlobalSize <= SizeLimit)
+    return BytePattern::None();
+  return constantIsRepeatedBytePattern(Init);
+}
+
 /// EmitAutoVarDecl - Emit code and set up an entry in LocalDeclMap for a
 /// variable declaration with auto, register, or no storage class specifier.
 /// These turn into simple stack objects, or GlobalValues depending on target.
@@ -1401,11 +1508,11 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
   if (Loc.getType() != BP)
     Loc = Builder.CreateBitCast(Loc, BP);
 
-  // If the initializer is all or mostly zeros, codegen with bzero then do a
-  // few stores afterward.
-  if (shouldUseBZeroPlusStoresToInitialize(
-          constant,
-          CGM.getDataLayout().getTypeAllocSize(constant->getType()))) {
+  // If the initializer is all or mostly the same, codegen with bzero / memset
+  // then do a few stores afterward.
+  uint64_t ConstantSize =
+      CGM.getDataLayout().getTypeAllocSize(constant->getType());
+  if (shouldUseBZeroPlusStoresToInitialize(constant, ConstantSize)) {
     Builder.CreateMemSet(Loc, llvm::ConstantInt::get(Int8Ty, 0), SizeVal,
                          isVolatile);
     // Zero and undef don't require a stores.
@@ -1414,28 +1521,36 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
         constant->getType()->getPointerTo(Loc.getAddressSpace()));
       emitStoresForInitAfterBZero(CGM, constant, Loc, isVolatile, Builder);
     }
-  } else {
-    // Otherwise, create a temporary global with the initializer then
-    // memcpy from the global to the alloca.
-    std::string Name = getStaticDeclName(CGM, D);
-    unsigned AS = CGM.getContext().getTargetAddressSpace(
-        CGM.getStringLiteralAddressSpace());
-    BP = llvm::PointerType::getInt8PtrTy(getLLVMContext(), AS);
-
-    llvm::GlobalVariable *GV =
-      new llvm::GlobalVariable(CGM.getModule(), constant->getType(), true,
-                               llvm::GlobalValue::PrivateLinkage,
-                               constant, Name, nullptr,
-                               llvm::GlobalValue::NotThreadLocal, AS);
-    GV->setAlignment(Loc.getAlignment().getQuantity());
-    GV->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
-
-    Address SrcPtr = Address(GV, Loc.getAlignment());
-    if (SrcPtr.getType() != BP)
-      SrcPtr = Builder.CreateBitCast(SrcPtr, BP);
-
-    Builder.CreateMemCpy(Loc, SrcPtr, SizeVal, isVolatile);
+    return;
   }
+
+  BytePattern Pattern = shouldUseMemSetToInitialize(constant, ConstantSize);
+  if (!Pattern.isNone()) {
+    uint8_t Value = Pattern.isAny() ? 0x00 : Pattern.getValue();
+    Builder.CreateMemSet(Loc, llvm::ConstantInt::get(Int8Ty, Value), SizeVal,
+                         isVolatile);
+    return;
+  }
+
+  // Otherwise, create a temporary global with the initializer then
+  // memcpy from the global to the alloca.
+  std::string Name = getStaticDeclName(CGM, D);
+  unsigned AS = CGM.getContext().getTargetAddressSpace(
+      CGM.getStringLiteralAddressSpace());
+  BP = llvm::PointerType::getInt8PtrTy(getLLVMContext(), AS);
+
+  llvm::GlobalVariable *GV = new llvm::GlobalVariable(
+      CGM.getModule(), constant->getType(), true,
+      llvm::GlobalValue::PrivateLinkage, constant, Name, nullptr,
+      llvm::GlobalValue::NotThreadLocal, AS);
+  GV->setAlignment(Loc.getAlignment().getQuantity());
+  GV->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+
+  Address SrcPtr = Address(GV, Loc.getAlignment());
+  if (SrcPtr.getType() != BP)
+    SrcPtr = Builder.CreateBitCast(SrcPtr, BP);
+
+  Builder.CreateMemCpy(Loc, SrcPtr, SizeVal, isVolatile);
 }
 
 /// Emit an expression as an initializer for an object (variable, field, etc.)
