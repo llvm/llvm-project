@@ -7,6 +7,8 @@
 |*
 \*===----------------------------------------------------------------------===*/
 
+#if !defined(__Fuchsia__)
+
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -717,3 +719,5 @@ int __llvm_profile_register_write_file_atexit(void) {
   HasBeenRegistered = 1;
   return atexit(writeFileWithoutReturn);
 }
+
+#endif

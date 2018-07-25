@@ -74,6 +74,11 @@ class TracePC {
   // How many bits of PC are used from __sanitizer_cov_trace_pc.
   static const size_t kTracePcBits = 18;
 
+  enum HandleUnstableOptions {
+    MinUnstable = 1,
+    ZeroUnstable = 2,
+  };
+
   void HandleInit(uint32_t *Start, uint32_t *Stop);
   void HandleInline8bitCountersInit(uint8_t *Start, uint8_t *Stop);
   void HandlePCsInit(const uintptr_t *Start, const uintptr_t *Stop);

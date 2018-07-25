@@ -83,11 +83,14 @@ void TracePC::InitializeUnstableCounters() {
 // and records differences as unstable edges.
 void TracePC::UpdateUnstableCounters(int UnstableMode) {
   IterateInline8bitCounters([&](int i, int j, int UnstableIdx) {
-    if (ModuleCounters[i].Start[j] != UnstableCounters[UnstableIdx].Counter)
+    if (ModuleCounters[i].Start[j] != UnstableCounters[UnstableIdx].Counter) {
       UnstableCounters[UnstableIdx].IsUnstable = true;
-    if (UnstableMode &&
-        ModuleCounters[i].Start[j] < UnstableCounters[UnstableIdx].Counter)
-      UnstableCounters[UnstableIdx].Counter = ModuleCounters[i].Start[j];
+      if (UnstableMode == ZeroUnstable)
+        UnstableCounters[UnstableIdx].Counter = 0;
+      else if (UnstableMode == MinUnstable)
+        UnstableCounters[UnstableIdx].Counter = std::min(
+            ModuleCounters[i].Start[j], UnstableCounters[UnstableIdx].Counter);
+    }
   });
 }
 
