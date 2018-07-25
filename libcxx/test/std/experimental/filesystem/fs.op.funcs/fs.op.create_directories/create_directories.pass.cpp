@@ -66,4 +66,36 @@ TEST_CASE(create_directories_multi_level)
     TEST_CHECK(is_directory(dir));
 }
 
+TEST_CASE(create_directory_symlinks) {
+  scoped_test_env env;
+  const path root = env.create_dir("dir");
+  const path sym_dest_dead = env.make_env_path("dead");
+  const path dead_sym = env.create_symlink(sym_dest_dead, "dir/sym_dir");
+  const path target = env.make_env_path("dir/sym_dir/foo");
+  {
+    std::error_code ec = GetTestEC();
+    TEST_CHECK(create_directories(target, ec) == false);
+    TEST_CHECK(ec);
+    TEST_CHECK(!exists(sym_dest_dead));
+    TEST_CHECK(!exists(dead_sym));
+  }
+}
+
+
+TEST_CASE(create_directory_through_symlinks) {
+  scoped_test_env env;
+  const path root = env.create_dir("dir");
+  const path sym_dir = env.create_symlink(root, "sym_dir");
+  const path target = env.make_env_path("sym_dir/foo");
+  const path resolved_target = env.make_env_path("dir/foo");
+  TEST_REQUIRE(is_directory(sym_dir));
+  {
+    std::error_code ec = GetTestEC();
+    TEST_CHECK(create_directories(target, ec) == true);
+    TEST_CHECK(!ec);
+    TEST_CHECK(is_directory(target));
+    TEST_CHECK(is_directory(resolved_target));
+  }
+}
+
 TEST_SUITE_END()
