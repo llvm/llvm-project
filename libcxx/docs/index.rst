@@ -134,6 +134,7 @@ Design Documents
    DesignDocs/ABIVersioning
    DesignDocs/VisibilityMacros
    DesignDocs/ThreadingSupportAPI
+   DesignDocs/FileTimeType
 
 * `<atomic> design <http://libcxx.llvm.org/atomic_design.html>`_
 * `<type_traits> design <http://libcxx.llvm.org/type_traits_design.html>`_
