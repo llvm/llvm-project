@@ -480,14 +480,17 @@ bool ExpressionSourceCode::GetText(
     case lldb::eLanguageTypeSwift: {
       llvm::SmallString<16> buffer;
       llvm::raw_svector_ostream os_vers(buffer);
-      auto platform = target->GetPlatform();
-      auto arch_spec = platform->GetSystemArchitecture();
+
+      auto arch_spec = target->GetArchitecture();
       auto triple = arch_spec.GetTriple();
       if (triple.isOSDarwin()) {
-        llvm::VersionTuple version = platform->GetOSVersion(
-                               target->GetProcessSP().get());
-        os_vers << getAvailabilityName(triple.getOS()) << " ";
-        os_vers << version.getAsString();
+        if (auto process_sp = exe_ctx.GetProcessSP()) {
+          llvm::VersionTuple version = 
+            process_sp->GetHostOSVersion();
+
+          os_vers << getAvailabilityName(triple.getOS()) << " ";
+          os_vers << version.getAsString();
+        }
       }
       SwiftASTManipulator::WrapExpression(wrap_stream, m_body.c_str(),
                                           language_flags, options, generic_info,
