@@ -15,12 +15,21 @@
 #ifndef LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_SMTSOLVER_H
 #define LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_SMTSOLVER_H
 
+#include "clang/AST/Expr.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/APSIntType.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/ConstraintManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SMTExpr.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SMTSort.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/SymbolManager.h"
 
 namespace clang {
 namespace ento {
 
+/// Generic base class for SMT Solvers
+///
+/// This class is responsible for wrapping all sorts and expression generation,
+/// through the mk* methods. It also provides methods to create SMT expressions
+/// straight from clang's AST, through the from* methods.
 class SMTSolver {
 public:
   SMTSolver() = default;
@@ -28,7 +37,7 @@ public:
 
   LLVM_DUMP_METHOD void dump() const { print(llvm::errs()); }
 
-  // Return an appropriate floating-point sort for the given bitwidth.
+  // Returns an appropriate floating-point sort for the given bitwidth.
   SMTSortRef getFloatSort(unsigned BitWidth) {
     switch (BitWidth) {
     case 16:
@@ -44,7 +53,7 @@ public:
     llvm_unreachable("Unsupported floating-point bitwidth!");
   }
 
-  // Return an appropriate sort, given a QualType
+  // Returns an appropriate sort, given a QualType and it's bit width.
   SMTSortRef mkSort(const QualType &Ty, unsigned BitWidth) {
     if (Ty->isBooleanType())
       return getBoolSort();
@@ -55,7 +64,7 @@ public:
     return getBitvectorSort(BitWidth);
   }
 
-  /// Construct a Z3Expr from a unary operator, given a Z3_context.
+  /// Constructs an SMTExprRef from an unary operator.
   SMTExprRef fromUnOp(const UnaryOperator::Opcode Op, const SMTExprRef &Exp) {
     switch (Op) {
     case UO_Minus:
@@ -72,8 +81,7 @@ public:
     llvm_unreachable("Unimplemented opcode");
   }
 
-  /// Construct a Z3Expr from a floating-point unary operator, given a
-  /// Z3_context.
+  /// Constructs an SMTExprRef from a floating-point unary operator.
   SMTExprRef fromFloatUnOp(const UnaryOperator::Opcode Op,
                            const SMTExprRef &Exp) {
     switch (Op) {
@@ -88,7 +96,7 @@ public:
     llvm_unreachable("Unimplemented opcode");
   }
 
-  /// Construct a Z3Expr from a n-ary binary operator.
+  /// Construct an SMTExprRef from a n-ary binary operator.
   SMTExprRef fromNBinOp(const BinaryOperator::Opcode Op,
                         const std::vector<SMTExprRef> &ASTs) {
     assert(!ASTs.empty());
@@ -102,7 +110,7 @@ public:
     return res;
   }
 
-  /// Construct a Z3Expr from a binary operator, given a Z3_context.
+  /// Construct an SMTExprRef from a binary operator.
   SMTExprRef fromBinOp(const SMTExprRef &LHS, const BinaryOperator::Opcode Op,
                        const SMTExprRef &RHS, bool isSigned) {
     assert(*getSort(LHS) == *getSort(RHS) && "AST's must have the same sort!");
@@ -118,21 +126,21 @@ public:
     case BO_Rem:
       return isSigned ? mkBVSRem(LHS, RHS) : mkBVURem(LHS, RHS);
 
-      // Additive operators
+    // Additive operators
     case BO_Add:
       return mkBVAdd(LHS, RHS);
 
     case BO_Sub:
       return mkBVSub(LHS, RHS);
 
-      // Bitwise shift operators
+    // Bitwise shift operators
     case BO_Shl:
       return mkBVShl(LHS, RHS);
 
     case BO_Shr:
       return isSigned ? mkBVAshr(LHS, RHS) : mkBVLshr(LHS, RHS);
 
-      // Relational operators
+    // Relational operators
     case BO_LT:
       return isSigned ? mkBVSlt(LHS, RHS) : mkBVUlt(LHS, RHS);
 
@@ -145,14 +153,14 @@ public:
     case BO_GE:
       return isSigned ? mkBVSge(LHS, RHS) : mkBVUge(LHS, RHS);
 
-      // Equality operators
+    // Equality operators
     case BO_EQ:
       return mkEqual(LHS, RHS);
 
     case BO_NE:
       return fromUnOp(UO_LNot, fromBinOp(LHS, BO_EQ, RHS, isSigned));
 
-      // Bitwise operators
+    // Bitwise operators
     case BO_And:
       return mkBVAnd(LHS, RHS);
 
@@ -162,7 +170,7 @@ public:
     case BO_Or:
       return mkBVOr(LHS, RHS);
 
-      // Logical operators
+    // Logical operators
     case BO_LAnd:
       return mkAnd(LHS, RHS);
 
@@ -174,8 +182,7 @@ public:
     llvm_unreachable("Unimplemented opcode");
   }
 
-  /// Construct a Z3Expr from a special floating-point binary operator, given
-  /// a Z3_context.
+  /// Construct an SMTExprRef from a special floating-point binary operator.
   SMTExprRef fromFloatSpecialBinOp(const SMTExprRef &LHS,
                                    const BinaryOperator::Opcode Op,
                                    const llvm::APFloat::fltCategory &RHS) {
@@ -206,8 +213,7 @@ public:
     llvm_unreachable("Unimplemented opcode");
   }
 
-  /// Construct a Z3Expr from a floating-point binary operator, given a
-  /// Z3_context.
+  /// Construct an SMTExprRef from a floating-point binary operator.
   SMTExprRef fromFloatBinOp(const SMTExprRef &LHS,
                             const BinaryOperator::Opcode Op,
                             const SMTExprRef &RHS) {
@@ -262,7 +268,8 @@ public:
     llvm_unreachable("Unimplemented opcode");
   }
 
-  /// Construct a Z3Expr from a SymbolCast, given a Z3_context.
+  /// Construct an SMTExprRef from a QualType FromTy to a QualType ToTy, and
+  /// their bit widths.
   SMTExprRef fromCast(const SMTExprRef &Exp, QualType ToTy, uint64_t ToBitWidth,
                       QualType FromTy, uint64_t FromBitWidth) {
     if ((FromTy->isIntegralOrEnumerationType() &&
@@ -279,11 +286,11 @@ public:
 
       if (ToBitWidth > FromBitWidth)
         return FromTy->isSignedIntegerOrEnumerationType()
-                   ? mkSignExt(ToBitWidth - FromBitWidth, Exp)
-                   : mkZeroExt(ToBitWidth - FromBitWidth, Exp);
+                   ? mkBVSignExt(ToBitWidth - FromBitWidth, Exp)
+                   : mkBVZeroExt(ToBitWidth - FromBitWidth, Exp);
 
       if (ToBitWidth < FromBitWidth)
-        return mkExtract(ToBitWidth - 1, 0, Exp);
+        return mkBVExtract(ToBitWidth - 1, 0, Exp);
 
       // Both are bitvectors with the same width, ignore the type cast
       return Exp;
@@ -318,7 +325,7 @@ public:
     return TargetType.convert(V);
   }
 
-  // Generate a Z3Expr that represents the given symbolic expression.
+  // Generate an SMTExprRef that represents the given symbolic expression.
   // Sets the hasComparison parameter if the expression has a comparison
   // operator.
   // Sets the RetTy parameter to the final return type after promotions and
@@ -332,7 +339,7 @@ public:
     return getSymExpr(Ctx, Sym, RetTy, hasComparison);
   }
 
-  // Generate a Z3Expr that compares the expression to zero.
+  // Generate an SMTExprRef that compares the expression to zero.
   SMTExprRef getZeroExpr(ASTContext &Ctx, const SMTExprRef &Exp, QualType Ty,
                          bool Assumption) {
 
@@ -358,14 +365,15 @@ public:
   }
 
   // Recursive implementation to unpack and generate symbolic expression.
-  // Sets the hasComparison and RetTy parameters. See getZ3Expr().
+  // Sets the hasComparison and RetTy parameters. See getExpr().
   SMTExprRef getSymExpr(ASTContext &Ctx, SymbolRef Sym, QualType *RetTy,
                         bool *hasComparison) {
     if (const SymbolData *SD = dyn_cast<SymbolData>(Sym)) {
       if (RetTy)
         *RetTy = Sym->getType();
 
-      return getDataExpr(Ctx, SD->getSymbolID(), Sym->getType());
+      return fromData(SD->getSymbolID(), Sym->getType(),
+                      Ctx.getTypeSize(Sym->getType()));
     }
 
     if (const SymbolCast *SC = dyn_cast<SymbolCast>(Sym)) {
@@ -394,21 +402,15 @@ public:
     llvm_unreachable("Unsupported SymbolRef type!");
   }
 
-  // Wrapper to generate Z3Expr from SymbolData.
-  SMTExprRef getDataExpr(ASTContext &Ctx, const SymbolID ID, QualType Ty) {
-    return fromData(ID, Ty, Ctx.getTypeSize(Ty));
-  }
-
-  // Wrapper to generate Z3Expr from SymbolCast.
+  // Wrapper to generate SMTExprRef from SymbolCast data.
   SMTExprRef getCastExpr(ASTContext &Ctx, const SMTExprRef &Exp,
                          QualType FromTy, QualType ToTy) {
-
     return fromCast(Exp, ToTy, Ctx.getTypeSize(ToTy), FromTy,
                     Ctx.getTypeSize(FromTy));
   }
 
-  // Wrapper to generate Z3Expr from BinarySymExpr.
-  // Sets the hasComparison and RetTy parameters. See getZ3Expr().
+  // Wrapper to generate SMTExprRef from BinarySymExpr.
+  // Sets the hasComparison and RetTy parameters. See getSMTExprRef().
   SMTExprRef getSymBinExpr(ASTContext &Ctx, const BinarySymExpr *BSE,
                            bool *hasComparison, QualType *RetTy) {
     QualType LTy, RTy;
@@ -439,8 +441,8 @@ public:
     llvm_unreachable("Unsupported BinarySymExpr type!");
   }
 
-  // Wrapper to generate Z3Expr from unpacked binary symbolic expression.
-  // Sets the RetTy parameter. See getZ3Expr().
+  // Wrapper to generate SMTExprRef from unpacked binary symbolic expression.
+  // Sets the RetTy parameter. See getSMTExprRef().
   SMTExprRef getBinExpr(ASTContext &Ctx, const SMTExprRef &LHS, QualType LTy,
                         BinaryOperator::Opcode Op, const SMTExprRef &RHS,
                         QualType RTy, QualType *RetTy) {
@@ -451,11 +453,10 @@ public:
     // Update the return type parameter if the output type has changed.
     if (RetTy) {
       // A boolean result can be represented as an integer type in C/C++, but at
-      // this point we only care about the Z3 type. Set it as a boolean type to
-      // avoid subsequent Z3 errors.
+      // this point we only care about the SMT sorts. Set it as a boolean type
+      // to avoid subsequent SMT errors.
       if (BinaryOperator::isComparisonOp(Op) ||
           BinaryOperator::isLogicalOp(Op)) {
-
         *RetTy = Ctx.BoolTy;
       } else {
         *RetTy = LTy;
@@ -474,8 +475,8 @@ public:
                            LTy->isSignedIntegerOrEnumerationType());
   }
 
-  // Wrapper to generate Z3Expr from a range. If From == To, an equality will
-  // be created instead.
+  // Wrapper to generate SMTExprRef from a range. If From == To, an equality
+  // will be created instead.
   SMTExprRef getRangeExpr(ASTContext &Ctx, SymbolRef Sym,
                           const llvm::APSInt &From, const llvm::APSInt &To,
                           bool InRange) {
@@ -492,8 +493,7 @@ public:
     // Construct single (in)equality
     if (From == To)
       return getBinExpr(Ctx, Exp, SymTy, InRange ? BO_EQ : BO_NE, FromExp,
-                        FromTy,
-                        /*RetTy=*/nullptr);
+                        FromTy, /*RetTy=*/nullptr);
 
     QualType ToTy;
     llvm::APSInt NewToInt;
@@ -515,7 +515,6 @@ public:
   // Recover the QualType of an APSInt.
   // TODO: Refactor to put elsewhere
   QualType getAPSIntType(ASTContext &Ctx, const llvm::APSInt &Int) {
-
     return Ctx.getIntTypeForBitwidth(Int.getBitWidth(), Int.isSigned());
   }
 
@@ -528,7 +527,6 @@ public:
     // but the former is not available in Clang. Instead, extend the APSInt
     // directly.
     if (Int.getBitWidth() == 1 && getAPSIntType(Ctx, Int).isNull()) {
-
       NewInt = Int.extend(Ctx.getTypeSize(Ctx.BoolTy));
     } else
       NewInt = Int;
@@ -732,188 +730,220 @@ public:
     }
   }
 
-  // Return a boolean sort.
+  // Returns a boolean sort.
   virtual SMTSortRef getBoolSort() = 0;
 
-  // Return an appropriate bitvector sort for the given bitwidth.
+  // Returns an appropriate bitvector sort for the given bitwidth.
   virtual SMTSortRef getBitvectorSort(const unsigned BitWidth) = 0;
 
-  // Return a floating-point sort of width 16
+  // Returns a floating-point sort of width 16
   virtual SMTSortRef getFloat16Sort() = 0;
 
-  // Return a floating-point sort of width 32
+  // Returns a floating-point sort of width 32
   virtual SMTSortRef getFloat32Sort() = 0;
 
-  // Return a floating-point sort of width 64
+  // Returns a floating-point sort of width 64
   virtual SMTSortRef getFloat64Sort() = 0;
 
-  // Return a floating-point sort of width 128
+  // Returns a floating-point sort of width 128
   virtual SMTSortRef getFloat128Sort() = 0;
 
-  // Return an appropriate sort for the given AST.
+  // Returns an appropriate sort for the given AST.
   virtual SMTSortRef getSort(const SMTExprRef &AST) = 0;
 
-  // Return a new SMTExprRef from an SMTExpr
+  // Returns a new SMTExprRef from an SMTExpr
   virtual SMTExprRef newExprRef(const SMTExpr &E) const = 0;
 
-  /// Given a constraint, add it to the solver
+  /// Given a constraint, adds it to the solver
   virtual void addConstraint(const SMTExprRef &Exp) const = 0;
 
-  /// Create a bitvector addition operation
+  /// Creates a bitvector addition operation
   virtual SMTExprRef mkBVAdd(const SMTExprRef &LHS, const SMTExprRef &RHS) = 0;
 
-  /// Create a bitvector subtraction operation
+  /// Creates a bitvector subtraction operation
   virtual SMTExprRef mkBVSub(const SMTExprRef &LHS, const SMTExprRef &RHS) = 0;
 
-  /// Create a bitvector multiplication operation
+  /// Creates a bitvector multiplication operation
   virtual SMTExprRef mkBVMul(const SMTExprRef &LHS, const SMTExprRef &RHS) = 0;
 
-  /// Create a bitvector signed modulus operation
+  /// Creates a bitvector signed modulus operation
   virtual SMTExprRef mkBVSRem(const SMTExprRef &LHS, const SMTExprRef &RHS) = 0;
 
-  /// Create a bitvector unsigned modulus operation
+  /// Creates a bitvector unsigned modulus operation
   virtual SMTExprRef mkBVURem(const SMTExprRef &LHS, const SMTExprRef &RHS) = 0;
 
-  /// Create a bitvector signed division operation
+  /// Creates a bitvector signed division operation
   virtual SMTExprRef mkBVSDiv(const SMTExprRef &LHS, const SMTExprRef &RHS) = 0;
 
-  /// Create a bitvector unsigned division operation
+  /// Creates a bitvector unsigned division operation
   virtual SMTExprRef mkBVUDiv(const SMTExprRef &LHS, const SMTExprRef &RHS) = 0;
 
-  /// Create a bitvector logical shift left operation
+  /// Creates a bitvector logical shift left operation
   virtual SMTExprRef mkBVShl(const SMTExprRef &LHS, const SMTExprRef &RHS) = 0;
 
-  /// Create a bitvector arithmetic shift right operation
+  /// Creates a bitvector arithmetic shift right operation
   virtual SMTExprRef mkBVAshr(const SMTExprRef &LHS, const SMTExprRef &RHS) = 0;
 
-  /// Create a bitvector logical shift right operation
+  /// Creates a bitvector logical shift right operation
   virtual SMTExprRef mkBVLshr(const SMTExprRef &LHS, const SMTExprRef &RHS) = 0;
 
-  /// Create a bitvector negation operation
+  /// Creates a bitvector negation operation
   virtual SMTExprRef mkBVNeg(const SMTExprRef &Exp) = 0;
 
-  /// Create a bitvector not operation
+  /// Creates a bitvector not operation
   virtual SMTExprRef mkBVNot(const SMTExprRef &Exp) = 0;
 
-  /// Create a bitvector xor operation
+  /// Creates a bitvector xor operation
   virtual SMTExprRef mkBVXor(const SMTExprRef &LHS, const SMTExprRef &RHS) = 0;
 
-  /// Create a bitvector or operation
+  /// Creates a bitvector or operation
   virtual SMTExprRef mkBVOr(const SMTExprRef &LHS, const SMTExprRef &RHS) = 0;
 
-  /// Create a bitvector and operation
+  /// Creates a bitvector and operation
   virtual SMTExprRef mkBVAnd(const SMTExprRef &LHS, const SMTExprRef &RHS) = 0;
 
-  /// Create a bitvector unsigned less-than operation
+  /// Creates a bitvector unsigned less-than operation
   virtual SMTExprRef mkBVUlt(const SMTExprRef &LHS, const SMTExprRef &RHS) = 0;
 
-  /// Create a bitvector signed less-than operation
+  /// Creates a bitvector signed less-than operation
   virtual SMTExprRef mkBVSlt(const SMTExprRef &LHS, const SMTExprRef &RHS) = 0;
 
-  /// Create a bitvector unsigned greater-than operation
+  /// Creates a bitvector unsigned greater-than operation
   virtual SMTExprRef mkBVUgt(const SMTExprRef &LHS, const SMTExprRef &RHS) = 0;
 
-  /// Create a bitvector signed greater-than operation
+  /// Creates a bitvector signed greater-than operation
   virtual SMTExprRef mkBVSgt(const SMTExprRef &LHS, const SMTExprRef &RHS) = 0;
 
-  /// Create a bitvector unsigned less-equal-than operation
+  /// Creates a bitvector unsigned less-equal-than operation
   virtual SMTExprRef mkBVUle(const SMTExprRef &LHS, const SMTExprRef &RHS) = 0;
 
-  /// Create a bitvector signed less-equal-than operation
+  /// Creates a bitvector signed less-equal-than operation
   virtual SMTExprRef mkBVSle(const SMTExprRef &LHS, const SMTExprRef &RHS) = 0;
 
-  /// Create a bitvector unsigned greater-equal-than operation
+  /// Creates a bitvector unsigned greater-equal-than operation
   virtual SMTExprRef mkBVUge(const SMTExprRef &LHS, const SMTExprRef &RHS) = 0;
 
-  /// Create a bitvector signed greater-equal-than operation
+  /// Creates a bitvector signed greater-equal-than operation
   virtual SMTExprRef mkBVSge(const SMTExprRef &LHS, const SMTExprRef &RHS) = 0;
 
-  /// Create a boolean not operation
+  /// Creates a boolean not operation
   virtual SMTExprRef mkNot(const SMTExprRef &Exp) = 0;
 
-  /// Create a bitvector equality operation
+  /// Creates a boolean equality operation
   virtual SMTExprRef mkEqual(const SMTExprRef &LHS, const SMTExprRef &RHS) = 0;
 
+  /// Creates a boolean and operation
   virtual SMTExprRef mkAnd(const SMTExprRef &LHS, const SMTExprRef &RHS) = 0;
 
+  /// Creates a boolean or operation
   virtual SMTExprRef mkOr(const SMTExprRef &LHS, const SMTExprRef &RHS) = 0;
 
+  /// Creates a boolean ite operation
   virtual SMTExprRef mkIte(const SMTExprRef &Cond, const SMTExprRef &T,
                            const SMTExprRef &F) = 0;
 
-  virtual SMTExprRef mkSignExt(unsigned i, const SMTExprRef &Exp) = 0;
+  /// Creates a bitvector sign extension operation
+  virtual SMTExprRef mkBVSignExt(unsigned i, const SMTExprRef &Exp) = 0;
 
-  virtual SMTExprRef mkZeroExt(unsigned i, const SMTExprRef &Exp) = 0;
+  /// Creates a bitvector zero extension operation
+  virtual SMTExprRef mkBVZeroExt(unsigned i, const SMTExprRef &Exp) = 0;
 
-  virtual SMTExprRef mkExtract(unsigned High, unsigned Low,
-                               const SMTExprRef &Exp) = 0;
+  /// Creates a bitvector extract operation
+  virtual SMTExprRef mkBVExtract(unsigned High, unsigned Low,
+                                 const SMTExprRef &Exp) = 0;
 
-  virtual SMTExprRef mkConcat(const SMTExprRef &LHS, const SMTExprRef &RHS) = 0;
+  /// Creates a bitvector concat operation
+  virtual SMTExprRef mkBVConcat(const SMTExprRef &LHS,
+                                const SMTExprRef &RHS) = 0;
 
+  /// Creates a floating-point negation operation
   virtual SMTExprRef mkFPNeg(const SMTExprRef &Exp) = 0;
 
+  /// Creates a floating-point isInfinite operation
   virtual SMTExprRef mkFPIsInfinite(const SMTExprRef &Exp) = 0;
 
+  /// Creates a floating-point isNaN operation
   virtual SMTExprRef mkFPIsNaN(const SMTExprRef &Exp) = 0;
 
+  /// Creates a floating-point isNormal operation
   virtual SMTExprRef mkFPIsNormal(const SMTExprRef &Exp) = 0;
 
+  /// Creates a floating-point isZero operation
   virtual SMTExprRef mkFPIsZero(const SMTExprRef &Exp) = 0;
 
+  /// Creates a floating-point multiplication operation
   virtual SMTExprRef mkFPMul(const SMTExprRef &LHS, const SMTExprRef &RHS) = 0;
 
+  /// Creates a floating-point division operation
   virtual SMTExprRef mkFPDiv(const SMTExprRef &LHS, const SMTExprRef &RHS) = 0;
 
+  /// Creates a floating-point remainder operation
   virtual SMTExprRef mkFPRem(const SMTExprRef &LHS, const SMTExprRef &RHS) = 0;
 
+  /// Creates a floating-point addition operation
   virtual SMTExprRef mkFPAdd(const SMTExprRef &LHS, const SMTExprRef &RHS) = 0;
 
+  /// Creates a floating-point subtraction operation
   virtual SMTExprRef mkFPSub(const SMTExprRef &LHS, const SMTExprRef &RHS) = 0;
 
+  /// Creates a floating-point less-than operation
   virtual SMTExprRef mkFPLt(const SMTExprRef &LHS, const SMTExprRef &RHS) = 0;
 
+  /// Creates a floating-point greater-than operation
   virtual SMTExprRef mkFPGt(const SMTExprRef &LHS, const SMTExprRef &RHS) = 0;
 
+  /// Creates a floating-point less-than-or-equal operation
   virtual SMTExprRef mkFPLe(const SMTExprRef &LHS, const SMTExprRef &RHS) = 0;
 
+  /// Creates a floating-point greater-than-or-equal operation
   virtual SMTExprRef mkFPGe(const SMTExprRef &LHS, const SMTExprRef &RHS) = 0;
 
+  /// Creates a floating-point equality operation
   virtual SMTExprRef mkFPEqual(const SMTExprRef &LHS,
                                const SMTExprRef &RHS) = 0;
 
+  /// Creates a floating-point conversion from floatint-point to floating-point
+  /// operation
   virtual SMTExprRef mkFPtoFP(const SMTExprRef &From, const SMTSortRef &To) = 0;
 
+  /// Creates a floating-point conversion from floatint-point to signed
+  /// bitvector operation
   virtual SMTExprRef mkFPtoSBV(const SMTExprRef &From,
                                const SMTSortRef &To) = 0;
 
+  /// Creates a floating-point conversion from floatint-point to unsigned
+  /// bitvector operation
   virtual SMTExprRef mkFPtoUBV(const SMTExprRef &From,
                                const SMTSortRef &To) = 0;
 
+  /// Creates a floating-point conversion from signed bitvector to
+  /// floatint-point operation
   virtual SMTExprRef mkSBVtoFP(const SMTExprRef &From, unsigned ToWidth) = 0;
 
+  /// Creates a floating-point conversion from unsigned bitvector to
+  /// floatint-point operation
   virtual SMTExprRef mkUBVtoFP(const SMTExprRef &From, unsigned ToWidth) = 0;
 
+  /// Creates a new symbol, given a name and a sort
   virtual SMTExprRef mkSymbol(const char *Name, SMTSortRef Sort) = 0;
 
-  // Return an appropriate floating-point rounding mode.
+  // Returns an appropriate floating-point rounding mode.
   virtual SMTExprRef getFloatRoundingMode() = 0;
 
+  // If the a model is available, returns the value of a given bitvector symbol
   virtual const llvm::APSInt getBitvector(const SMTExprRef &Exp) = 0;
 
+  // If the a model is available, returns the value of a given boolean symbol
   virtual bool getBoolean(const SMTExprRef &Exp) = 0;
 
-  /// Construct a const SMTExprRef &From a boolean.
+  /// Constructs an SMTExprRef from a boolean.
   virtual SMTExprRef mkBoolean(const bool b) = 0;
 
-  /// Construct a const SMTExprRef &From a finite APFloat.
+  /// Constructs an SMTExprRef from a finite APFloat.
   virtual SMTExprRef mkFloat(const llvm::APFloat Float) = 0;
 
-  /// Construct a const SMTExprRef &From an APSInt.
+  /// Constructs an SMTExprRef from an APSInt and its bit width
   virtual SMTExprRef mkBitvector(const llvm::APSInt Int, unsigned BitWidth) = 0;
-
-  SMTExprRef mkBitvector(const llvm::APSInt Int) {
-    return mkBitvector(Int, Int.getBitWidth());
-  }
 
   /// Given an expression, extract the value of this operand in the model.
   virtual bool getInterpretation(const SMTExprRef &Exp, llvm::APSInt &Int) = 0;
@@ -922,18 +952,19 @@ public:
   virtual bool getInterpretation(const SMTExprRef &Exp,
                                  llvm::APFloat &Float) = 0;
 
-  /// Construct a Z3Expr from a boolean, given a Z3_context.
+  /// Construct an SMTExprRef value from a boolean.
   virtual SMTExprRef fromBoolean(const bool Bool) = 0;
-  /// Construct a Z3Expr from a finite APFloat, given a Z3_context.
+
+  /// Construct an SMTExprRef value from a finite APFloat.
   virtual SMTExprRef fromAPFloat(const llvm::APFloat &Float) = 0;
 
-  /// Construct a Z3Expr from an APSInt, given a Z3_context.
+  /// Construct an SMTExprRef value from an APSInt.
   virtual SMTExprRef fromAPSInt(const llvm::APSInt &Int) = 0;
 
-  /// Construct a Z3Expr from an integer, given a Z3_context.
+  /// Construct an SMTExprRef value from an integer.
   virtual SMTExprRef fromInt(const char *Int, uint64_t BitWidth) = 0;
 
-  /// Construct a const SMTExprRef &From a SymbolData, given a SMT_context.
+  /// Construct an SMTExprRef from a SymbolData.
   virtual SMTExprRef fromData(const SymbolID ID, const QualType &Ty,
                               uint64_t BitWidth) = 0;
 
@@ -952,8 +983,10 @@ public:
   virtual void print(raw_ostream &OS) const = 0;
 };
 
+/// Shared pointer for SMTSolvers.
 using SMTSolverRef = std::shared_ptr<SMTSolver>;
 
+/// Convenience method to create and Z3Solver object
 std::unique_ptr<SMTSolver> CreateZ3Solver();
 
 } // namespace ento

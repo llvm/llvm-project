@@ -134,16 +134,4 @@ DEFINE_SIMPLE_CONVERSION_FUNCTIONS(JITEventListener, LLVMJITEventListenerRef)
 
 } // end namespace llvm
 
-#ifndef LLVM_USE_INTEL_JITEVENTS
-LLVMJITEventListenerRef LLVMCreateIntelJITEventListener(void);
-#endif
-
-#ifndef LLVM_USE_OPROFILE
-LLVMJITEventListenerRef LLVMCreateOProfileJITEventListener(void);
-#endif
-
-#ifndef LLVM_USE_PERF
-LLVMJITEventListenerRef LLVMCreatePerfJITEventListener(void);
-#endif
-
 #endif // LLVM_EXECUTIONENGINE_JITEVENTLISTENER_H

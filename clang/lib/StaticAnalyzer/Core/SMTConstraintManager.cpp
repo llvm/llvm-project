@@ -30,8 +30,7 @@ ProgramStateRef SMTConstraintManager::assumeSym(ProgramStateRef State,
     return assumeExpr(State, Sym,
                       Solver->getZeroExpr(Ctx, Exp, RetTy, !Assumption));
 
-  return assumeExpr(State, Sym,
-                    Assumption ? Exp : Solver->fromUnOp(UO_LNot, Exp));
+  return assumeExpr(State, Sym, Assumption ? Exp : Solver->mkNot(Exp));
 }
 
 ProgramStateRef SMTConstraintManager::assumeSymInclusiveRange(
@@ -56,10 +55,11 @@ ConditionTruthVal SMTConstraintManager::checkNull(ProgramStateRef State,
   QualType RetTy;
   // The expression may be casted, so we cannot call getZ3DataExpr() directly
   SMTExprRef VarExp = Solver->getExpr(Ctx, Sym, &RetTy);
-  SMTExprRef Exp = Solver->getZeroExpr(Ctx, VarExp, RetTy, true);
+  SMTExprRef Exp = Solver->getZeroExpr(Ctx, VarExp, RetTy, /*Assumption=*/true);
 
   // Negate the constraint
-  SMTExprRef NotExp = Solver->getZeroExpr(Ctx, VarExp, RetTy, false);
+  SMTExprRef NotExp =
+      Solver->getZeroExpr(Ctx, VarExp, RetTy, /*Assumption=*/false);
 
   Solver->reset();
   addStateConstraints(State);
@@ -95,7 +95,8 @@ const llvm::APSInt *SMTConstraintManager::getSymVal(ProgramStateRef State,
     llvm::APSInt Value(Ctx.getTypeSize(Ty),
                        !Ty->isSignedIntegerOrEnumerationType());
 
-    SMTExprRef Exp = Solver->getDataExpr(Ctx, SD->getSymbolID(), Ty);
+    SMTExprRef Exp =
+        Solver->fromData(SD->getSymbolID(), Ty, Ctx.getTypeSize(Ty));
 
     Solver->reset();
     addStateConstraints(State);

@@ -25,15 +25,23 @@
 
 #include "filesystem_common.h"
 
+#ifndef __SIZEOF_INT128__
+#define TEST_HAS_NO_INT128_T
+#endif
+
 using namespace std::chrono;
 namespace fs = std::experimental::filesystem;
 using fs::file_time_type;
-using fs::detail::time_util::fs_time_util;
+using fs::detail::time_util;
 
-enum TestKind { TK_64Bit, TK_32Bit, TK_FloatingPoint };
+#ifdef TEST_HAS_NO_INT128_T
+static_assert(sizeof(fs::file_time_type::rep) <= 8, "");
+#endif
 
-template <class FileTimeT, class TimeT, class TimeSpec>
-constexpr TestKind getTestKind() {
+enum TestKind { TK_128Bit, TK_64Bit, TK_32Bit, TK_FloatingPoint };
+
+template <class TimeT>
+constexpr TestKind getTimeTTestKind() {
   if (sizeof(TimeT) == 8 && !std::is_floating_point<TimeT>::value)
     return TK_64Bit;
   else if (sizeof(TimeT) == 4 && !std::is_floating_point<TimeT>::value)
@@ -43,17 +51,99 @@ constexpr TestKind getTestKind() {
   else
     assert(false && "test kind not supported");
 }
+template <class FileTimeT>
+constexpr TestKind getFileTimeTestKind() {
+  using Rep = typename FileTimeT::rep;
+  if (std::is_floating_point<Rep>::value)
+    return TK_FloatingPoint;
+  if (sizeof(Rep) == 16)
+    return TK_128Bit;
+  if (sizeof(Rep) == 8)
+    return TK_64Bit;
+  assert(false && "test kind not supported");
+}
 
 template <class FileTimeT, class TimeT, class TimeSpecT,
-          class Base = fs_time_util<FileTimeT, TimeT, TimeSpecT>,
-          TestKind = getTestKind<FileTimeT, TimeT, TimeSpecT>()>
-struct check_is_representable;
+          class Base = time_util<FileTimeT, TimeT, TimeSpecT>,
+          TestKind = getTimeTTestKind<TimeT>(),
+          TestKind = getFileTimeTestKind<FileTimeT>()>
+struct test_case;
 
 template <class FileTimeT, class TimeT, class TimeSpecT, class Base>
-struct check_is_representable<FileTimeT, TimeT, TimeSpecT, Base, TK_64Bit>
+struct test_case<FileTimeT, TimeT, TimeSpecT, Base, TK_64Bit, TK_128Bit>
     : public Base {
 
-  using Base::convert_timespec;
+  using Base::convert_from_timespec;
+  using Base::convert_to_timespec;
+  using Base::is_representable;
+  using Base::max_nsec;
+  using Base::max_seconds;
+  using Base::min_nsec_timespec;
+  using Base::min_seconds;
+
+  static constexpr auto max_time_t = std::numeric_limits<TimeT>::max();
+  static constexpr auto min_time_t = std::numeric_limits<TimeT>::min();
+
+  static constexpr bool test_timespec() {
+    static_assert(is_representable(TimeSpecT{max_time_t, 0}), "");
+    static_assert(is_representable(TimeSpecT{max_time_t, 999999999}), "");
+    static_assert(is_representable(TimeSpecT{max_time_t, 1000000000}), "");
+    static_assert(is_representable(TimeSpecT{max_time_t, max_nsec}), "");
+
+    static_assert(is_representable(TimeSpecT{min_time_t, 0}), "");
+    static_assert(is_representable(TimeSpecT{min_time_t, 999999999}), "");
+    static_assert(is_representable(TimeSpecT{min_time_t, 1000000000}), "");
+    static_assert(is_representable(TimeSpecT{min_time_t, min_nsec_timespec}),
+                  "");
+
+    return true;
+  }
+
+  static constexpr bool test_file_time_type() {
+    // This kinda sucks. Oh well.
+    static_assert(!Base::is_representable(FileTimeT::max()), "");
+    static_assert(!Base::is_representable(FileTimeT::min()), "");
+    return true;
+  }
+
+  static constexpr bool check_round_trip(TimeSpecT orig) {
+    TimeSpecT new_ts = {};
+    FileTimeT out = convert_from_timespec(orig);
+    assert(convert_to_timespec(new_ts, out));
+    return new_ts.tv_sec == orig.tv_sec && new_ts.tv_nsec == orig.tv_nsec;
+  }
+
+  static constexpr bool test_convert_timespec() {
+    static_assert(check_round_trip({0, 0}), "");
+    static_assert(check_round_trip({0, 1}), "");
+    static_assert(check_round_trip({1, 1}), "");
+    static_assert(check_round_trip({-1, 1}), "");
+    static_assert(check_round_trip({max_time_t, max_nsec}), "");
+    static_assert(check_round_trip({max_time_t, 123}), "");
+    static_assert(check_round_trip({min_time_t, min_nsec_timespec}), "");
+    static_assert(check_round_trip({min_time_t, 123}), "");
+    return true;
+  }
+
+  static bool test() {
+    static_assert(test_timespec(), "");
+    static_assert(test_file_time_type(), "");
+    static_assert(test_convert_timespec(), "");
+    return true;
+  }
+};
+
+template <class FileTimeT, class TimeT, class TimeSpecT, class Base>
+struct test_case<FileTimeT, TimeT, TimeSpecT, Base, TK_32Bit, TK_128Bit>
+    : public test_case<FileTimeT, TimeT, TimeSpecT, Base, TK_64Bit, TK_128Bit> {
+
+};
+
+template <class FileTimeT, class TimeT, class TimeSpecT, class Base>
+struct test_case<FileTimeT, TimeT, TimeSpecT, Base, TK_64Bit, TK_64Bit>
+    : public Base {
+
+  using Base::convert_from_timespec;
   using Base::is_representable;
   using Base::max_nsec;
   using Base::max_seconds;
@@ -88,24 +178,25 @@ struct check_is_representable<FileTimeT, TimeT, TimeSpecT, Base, TK_64Bit>
   }
 
   static constexpr bool test_convert_timespec() {
-    static_assert(convert_timespec(TimeSpecT{max_seconds, max_nsec}) ==
+    static_assert(convert_from_timespec(TimeSpecT{max_seconds, max_nsec}) ==
                       FileTimeT::max(),
                   "");
-    static_assert(convert_timespec(TimeSpecT{max_seconds, max_nsec - 1}) <
+    static_assert(convert_from_timespec(TimeSpecT{max_seconds, max_nsec - 1}) <
                       FileTimeT::max(),
                   "");
-    static_assert(convert_timespec(TimeSpecT{max_seconds - 1, 999999999}) <
+    static_assert(convert_from_timespec(TimeSpecT{max_seconds - 1, 999999999}) <
                       FileTimeT::max(),
                   "");
-    static_assert(convert_timespec(TimeSpecT{
+    static_assert(convert_from_timespec(TimeSpecT{
                       min_seconds - 1, min_nsec_timespec}) == FileTimeT::min(),
                   "");
-    static_assert(
-        convert_timespec(TimeSpecT{min_seconds - 1, min_nsec_timespec + 1}) >
-            FileTimeT::min(),
-        "");
-    static_assert(
-        convert_timespec(TimeSpecT{min_seconds, 0}) > FileTimeT::min(), "");
+    static_assert(convert_from_timespec(
+                      TimeSpecT{min_seconds - 1, min_nsec_timespec + 1}) >
+                      FileTimeT::min(),
+                  "");
+    static_assert(convert_from_timespec(TimeSpecT{min_seconds, 0}) >
+                      FileTimeT::min(),
+                  "");
     return true;
   }
 
@@ -118,12 +209,12 @@ struct check_is_representable<FileTimeT, TimeT, TimeSpecT, Base, TK_64Bit>
 };
 
 template <class FileTimeT, class TimeT, class TimeSpecT, class Base>
-struct check_is_representable<FileTimeT, TimeT, TimeSpecT, Base, TK_32Bit>
+struct test_case<FileTimeT, TimeT, TimeSpecT, Base, TK_32Bit, TK_64Bit>
     : public Base {
   static constexpr auto max_time_t = std::numeric_limits<TimeT>::max();
   static constexpr auto min_time_t = std::numeric_limits<TimeT>::min();
 
-  using Base::convert_timespec;
+  using Base::convert_from_timespec;
   using Base::is_representable;
   using Base::max_nsec;
   using Base::max_seconds;
@@ -158,9 +249,10 @@ struct check_is_representable<FileTimeT, TimeT, TimeSpecT, Base, TK_32Bit>
   }
 };
 
-template <class FileTimeT, class TimeT, class TimeSpec, class Base>
-struct check_is_representable<FileTimeT, TimeT, TimeSpec, Base,
-                              TK_FloatingPoint> : public Base {
+template <class FileTimeT, class TimeT, class TimeSpec, class Base,
+          TestKind FileTimeTKind>
+struct test_case<FileTimeT, TimeT, TimeSpec, Base, TK_FloatingPoint,
+                 FileTimeTKind> : public Base {
 
   static bool test() { return true; }
 };
@@ -182,19 +274,33 @@ struct TestClock {
   static time_point now() noexcept { return {}; }
 };
 
-template <class IntType, class Dur = duration<IntType, std::micro> >
-using TestFileTimeT = time_point<TestClock<Dur> >;
+template <class IntType, class Period = std::micro>
+using TestFileTimeT = time_point<TestClock<duration<IntType, Period> > >;
 
 int main() {
-  assert((
-      check_is_representable<file_time_type, time_t, struct timespec>::test()));
-  assert((check_is_representable<TestFileTimeT<int64_t>, int64_t,
-                                 TestTimeSpec<int64_t, long> >::test()));
-  assert((check_is_representable<TestFileTimeT<long long>, int32_t,
-                                 TestTimeSpec<int32_t, int32_t> >::test()));
-
-  // Test that insane platforms like ppc64 linux, which use long double as time_t,
-  // at least compile.
-  assert((check_is_representable<TestFileTimeT<long double>, double,
-                                 TestTimeSpec<long double, long> >::test()));
+  { assert((test_case<file_time_type, time_t, struct timespec>::test())); }
+  {
+    assert((test_case<TestFileTimeT<int64_t>, int64_t,
+                      TestTimeSpec<int64_t, long> >::test()));
+  }
+  {
+    assert((test_case<TestFileTimeT<long long>, int32_t,
+                      TestTimeSpec<int32_t, int32_t> >::test()));
+  }
+  {
+    // Test that insane platforms like ppc64 linux, which use long double as time_t,
+    // at least compile.
+    assert((test_case<TestFileTimeT<long double>, double,
+                      TestTimeSpec<long double, long> >::test()));
+  }
+#ifndef TEST_HAS_NO_INT128_T
+  {
+    assert((test_case<TestFileTimeT<__int128_t, std::nano>, int64_t,
+                      TestTimeSpec<int64_t, long> >::test()));
+  }
+  {
+    assert((test_case<TestFileTimeT<__int128_t, std::nano>, int32_t,
+                      TestTimeSpec<int32_t, int32_t> >::test()));
+  }
+#endif
 }

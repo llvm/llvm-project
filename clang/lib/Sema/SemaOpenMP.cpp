@@ -4909,7 +4909,8 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
     ExprResult IsUBGreater = SemaRef.BuildBinOp(CurScope, InitLoc, BO_GT,
                                                 UB.get(), LastIteration.get());
     ExprResult CondOp = SemaRef.ActOnConditionalOp(
-        InitLoc, InitLoc, IsUBGreater.get(), LastIteration.get(), UB.get());
+        LastIteration.get()->getExprLoc(), InitLoc, IsUBGreater.get(),
+        LastIteration.get(), UB.get());
     EUB = SemaRef.BuildBinOp(CurScope, InitLoc, BO_Assign, UB.get(),
                              CondOp.get());
     EUB = SemaRef.ActOnFinishFullExpr(EUB.get());
