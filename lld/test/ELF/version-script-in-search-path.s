@@ -4,7 +4,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
 # RUN: mkdir -p %T/searchpath
-# RUN: echo '{};' > %T/searchpath/t.script
-# RUN: ld.lld -L%T/searchpath --version-script=t.script %t.o -o /dev/null
-# RUN: not ld.lld --version-script=t.script %t.o 2>&1 | FileCheck -check-prefix ERROR %s
+# RUN: echo '{};' > %T/searchpath/%basename_t.script
+# RUN: ld.lld -L%T/searchpath --version-script=%basename_t.script %t.o -o /dev/null
+# RUN: not ld.lld --version-script=%basename_t.script %t.o 2>&1 | FileCheck -check-prefix ERROR %s
 # ERROR: error: cannot find version script
