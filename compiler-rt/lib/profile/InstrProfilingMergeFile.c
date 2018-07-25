@@ -10,6 +10,8 @@
 |* stored in files.
 \*===----------------------------------------------------------------------===*/
 
+#if !defined(__Fuchsia__)
+
 #include "InstrProfiling.h"
 #include "InstrProfilingInternal.h"
 #include "InstrProfilingUtil.h"
@@ -39,3 +41,5 @@ void lprofMergeValueProfData(ValueProfData *SrcValueProfData,
     VR = getValueProfRecordNext(VR);
   }
 }
+
+#endif

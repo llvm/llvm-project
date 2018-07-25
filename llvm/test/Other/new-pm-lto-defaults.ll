@@ -41,6 +41,8 @@
 ; CHECK-O2-NEXT: Running analysis: ProfileSummaryAnalysis
 ; CHECK-O2-NEXT: Running analysis: OptimizationRemarkEmitterAnalysis
 ; CHECK-O2-NEXT: Running pass: IPSCCPPass
+; CHECK-O2-DAG: Running analysis: AssumptionAnalysis on foo
+; CHECK-O2-DAG: Running analysis: DominatorTreeAnalysis on foo
 ; CHECK-O2-NEXT: Running pass: CalledValuePropagationPass
 ; CHECK-O-NEXT: Running pass: ModuleToPostOrderCGSCCPassAdaptor<{{.*}}PostOrderFunctionAttrsPass>
 ; CHECK-O-NEXT: Running analysis: InnerAnalysisManagerProxy<{{.*}}SCC
@@ -57,8 +59,6 @@
 ; CHECK-O1-NEXT: Running pass: LowerTypeTestsPass
 ; CHECK-O2-NEXT: Running pass: GlobalOptPass
 ; CHECK-O2-NEXT: Running pass: ModuleToFunctionPassAdaptor<{{.*}}PromotePass>
-; CHECK-O2-NEXT: Running analysis: DominatorTreeAnalysis
-; CHECK-O2-NEXT: Running analysis: AssumptionAnalysis
 ; CHECK-O2-NEXT: Running pass: ConstantMergePass
 ; CHECK-O2-NEXT: Running pass: DeadArgumentEliminationPass
 ; CHECK-O2-NEXT: Running pass: ModuleToFunctionPassAdaptor<{{.*}}PassManager{{.*}}>

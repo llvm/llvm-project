@@ -1355,8 +1355,7 @@ struct DeclaratorChunk {
     }
 
     void destroy() {
-      if (DeleteParams)
-        delete[] Params;
+      freeParams();
       switch (getExceptionSpecType()) {
       default:
         break;

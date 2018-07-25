@@ -186,6 +186,8 @@ bool OutgoingValueHandler::handle(ArrayRef<CCValAssign> ArgLocs,
 static bool isSupportedType(Type *T) {
   if (T->isIntegerTy() && T->getScalarSizeInBits() == 32)
     return true;
+  if (T->isPointerTy())
+    return true;
   return false;
 }
 

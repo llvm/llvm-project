@@ -3276,7 +3276,7 @@ void InnerLoopVectorizer::truncateToMinimalBitwidths() {
             SI->getOperand(1), VectorType::get(ScalarTruncatedTy, Elements1));
 
         NewI = B.CreateShuffleVector(O0, O1, SI->getMask());
-      } else if (isa<LoadInst>(I)) {
+      } else if (isa<LoadInst>(I) || isa<PHINode>(I)) {
         // Don't do anything with the operands, just extend the result.
         continue;
       } else if (auto *IE = dyn_cast<InsertElementInst>(I)) {
@@ -3291,7 +3291,8 @@ void InnerLoopVectorizer::truncateToMinimalBitwidths() {
             EE->getOperand(0), VectorType::get(ScalarTruncatedTy, Elements));
         NewI = B.CreateExtractElement(O0, EE->getOperand(2));
       } else {
-        llvm_unreachable("Unhandled instruction type!");
+        // If we don't know what to do, be conservative and don't do anything.
+        continue;
       }
 
       // Lastly, extend the result.

@@ -157,3 +157,9 @@ void ret_from_lambda() {
   (void) [&]() -> int& { int &a = b; return a; };
   (void) [=]() mutable -> int& { int &a = b; return a; };
 }
+
+namespace mem_ptr {
+  struct X {};
+  int X::*f();
+  int &r(X *p) { return p->*f(); }
+}
