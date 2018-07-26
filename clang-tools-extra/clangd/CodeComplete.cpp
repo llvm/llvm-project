@@ -704,7 +704,7 @@ public:
           CurrentArg, S, *Allocator, CCTUInfo, true);
       assert(CCS && "Expected the CodeCompletionString to be non-null");
       // FIXME: for headers, we need to get a comment from the index.
-      SigHelp.signatures.push_back(ProcessOverloadCandidate(
+      SigHelp.signatures.push_back(processOverloadCandidate(
           Candidate, *CCS,
           getParameterDocComment(S.getASTContext(), Candidate, CurrentArg,
                                  /*CommentsFromHeaders=*/false)));
@@ -719,7 +719,7 @@ private:
   // FIXME(ioeric): consider moving CodeCompletionString logic here to
   // CompletionString.h.
   SignatureInformation
-  ProcessOverloadCandidate(const OverloadCandidate &Candidate,
+  processOverloadCandidate(const OverloadCandidate &Candidate,
                            const CodeCompletionString &CCS,
                            llvm::StringRef DocComment) const {
     SignatureInformation Result;

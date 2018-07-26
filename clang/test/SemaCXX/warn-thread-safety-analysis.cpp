@@ -22,8 +22,6 @@
 #define SHARED_LOCK_FUNCTION(...)       __attribute__((acquire_shared_capability(__VA_ARGS__)))
 #define EXCLUSIVE_TRYLOCK_FUNCTION(...) __attribute__((try_acquire_capability(__VA_ARGS__)))
 #define SHARED_TRYLOCK_FUNCTION(...)    __attribute__((try_acquire_shared_capability(__VA_ARGS__)))
-#define EXCLUSIVE_UNLOCK_FUNCTION(...)  __attribute__((release_capability(__VA_ARGS__)))
-#define SHARED_UNLOCK_FUNCTION(...)     __attribute__((release_shared_capability(__VA_ARGS__)))
 #define EXCLUSIVE_LOCKS_REQUIRED(...)   __attribute__((requires_capability(__VA_ARGS__)))
 #define SHARED_LOCKS_REQUIRED(...)      __attribute__((requires_shared_capability(__VA_ARGS__)))
 #else
@@ -34,11 +32,11 @@
 #define SHARED_LOCK_FUNCTION(...)       __attribute__((shared_lock_function(__VA_ARGS__)))
 #define EXCLUSIVE_TRYLOCK_FUNCTION(...) __attribute__((exclusive_trylock_function(__VA_ARGS__)))
 #define SHARED_TRYLOCK_FUNCTION(...)    __attribute__((shared_trylock_function(__VA_ARGS__)))
-#define EXCLUSIVE_UNLOCK_FUNCTION(...)  __attribute__((unlock_function(__VA_ARGS__)))
-#define SHARED_UNLOCK_FUNCTION(...)     __attribute__((unlock_function(__VA_ARGS__)))
 #define EXCLUSIVE_LOCKS_REQUIRED(...)   __attribute__((exclusive_locks_required(__VA_ARGS__)))
 #define SHARED_LOCKS_REQUIRED(...)      __attribute__((shared_locks_required(__VA_ARGS__)))
 #endif
+#define EXCLUSIVE_UNLOCK_FUNCTION(...)  __attribute__((release_capability(__VA_ARGS__)))
+#define SHARED_UNLOCK_FUNCTION(...)     __attribute__((release_shared_capability(__VA_ARGS__)))
 #define UNLOCK_FUNCTION(...)            __attribute__((unlock_function(__VA_ARGS__)))
 #define LOCK_RETURNED(x)                __attribute__((lock_returned(x)))
 #define LOCKS_EXCLUDED(...)             __attribute__((locks_excluded(__VA_ARGS__)))
@@ -50,9 +48,14 @@ class LOCKABLE Mutex {
   void Lock() EXCLUSIVE_LOCK_FUNCTION();
   void ReaderLock() SHARED_LOCK_FUNCTION();
   void Unlock() UNLOCK_FUNCTION();
+  void ExclusiveUnlock() EXCLUSIVE_UNLOCK_FUNCTION();
+  void ReaderUnlock() SHARED_UNLOCK_FUNCTION();
   bool TryLock() EXCLUSIVE_TRYLOCK_FUNCTION(true);
   bool ReaderTryLock() SHARED_TRYLOCK_FUNCTION(true);
   void LockWhen(const int &cond) EXCLUSIVE_LOCK_FUNCTION();
+
+  void PromoteShared() SHARED_UNLOCK_FUNCTION() EXCLUSIVE_LOCK_FUNCTION();
+  void DemoteExclusive() EXCLUSIVE_UNLOCK_FUNCTION() SHARED_LOCK_FUNCTION();
 
   // for negative capabilities
   const Mutex& operator!() const { return *this; }
@@ -704,6 +707,26 @@ void shared_fun_8() {
   sls_mu.Unlock();
 }
 
+void shared_fun_9() {
+  sls_mu.Lock();
+  sls_mu.ExclusiveUnlock();
+
+  sls_mu.ReaderLock();
+  sls_mu.ReaderUnlock();
+}
+
+void shared_fun_10() {
+  sls_mu.Lock();
+  sls_mu.DemoteExclusive();
+  sls_mu.ReaderUnlock();
+}
+
+void shared_fun_11() {
+  sls_mu.ReaderLock();
+  sls_mu.PromoteShared();
+  sls_mu.Unlock();
+}
+
 void shared_bad_0() {
   sls_mu.Lock();  // \
     // expected-warning {{mutex 'sls_mu' is acquired exclusively and shared in the same scope}}
@@ -735,6 +758,32 @@ void shared_bad_2() {
       // expected-note {{the other acquisition of mutex 'sls_mu' is here}}
   *pgb_var = 1;
   sls_mu.Unlock();
+}
+
+void shared_bad_3() {
+  sls_mu.Lock();
+  sls_mu.ReaderUnlock(); // \
+    // expected-warning {{releasing mutex 'sls_mu' using shared access, expected exclusive access}}
+}
+
+void shared_bad_4() {
+  sls_mu.ReaderLock();
+  sls_mu.ExclusiveUnlock(); // \
+    // expected-warning {{releasing mutex 'sls_mu' using exclusive access, expected shared access}}
+}
+
+void shared_bad_5() {
+  sls_mu.Lock();
+  sls_mu.PromoteShared(); // \
+    // expected-warning {{releasing mutex 'sls_mu' using shared access, expected exclusive access}}
+  sls_mu.ExclusiveUnlock();
+}
+
+void shared_bad_6() {
+  sls_mu.ReaderLock();
+  sls_mu.DemoteExclusive(); // \
+    // expected-warning {{releasing mutex 'sls_mu' using exclusive access, expected shared access}}
+  sls_mu.ReaderUnlock();
 }
 
 // FIXME: Add support for functions (not only methods)

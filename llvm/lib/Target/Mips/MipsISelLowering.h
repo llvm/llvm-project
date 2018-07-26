@@ -280,6 +280,9 @@ class TargetRegisterClass;
       return MVT::i32;
     }
 
+    EVT getTypeForExtReturn(LLVMContext &Context, EVT VT,
+                            ISD::NodeType) const override;
+
     bool isCheapToSpeculateCttz() const override;
     bool isCheapToSpeculateCtlz() const override;
 

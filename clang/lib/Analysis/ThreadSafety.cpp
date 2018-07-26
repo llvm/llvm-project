@@ -109,9 +109,7 @@ class FactSet;
 /// along with additional information, such as where it was acquired, whether
 /// it is exclusive or shared, etc.
 ///
-/// FIXME: this analysis does not currently support either re-entrant
-/// locking or lock "upgrading" and "downgrading" between exclusive and
-/// shared.
+/// FIXME: this analysis does not currently support re-entrant locking.
 class FactEntry : public CapabilityExpr {
 private:
   /// Exclusive or shared.
@@ -1737,8 +1735,7 @@ void BuildLockset::handleCall(Expr *Exp, const NamedDecl *D, VarDecl *VD) {
     }
   }
 
-  for(Attr *Atconst : D->attrs()) {
-    auto *At = const_cast<Attr *>(Atconst);
+  for(const Attr *At : D->attrs()) {
     switch (At->getKind()) {
       // When we encounter a lock function, we need to add the lock to our
       // lockset.
@@ -1838,6 +1835,16 @@ void BuildLockset::handleCall(Expr *Exp, const NamedDecl *D, VarDecl *VD) {
     }
   }
 
+  // Remove locks first to allow lock upgrading/downgrading.
+  // FIXME -- should only fully remove if the attribute refers to 'this'.
+  bool Dtor = isa<CXXDestructorDecl>(D);
+  for (const auto &M : ExclusiveLocksToRemove)
+    Analyzer->removeLock(FSet, M, Loc, Dtor, LK_Exclusive, CapDiagKind);
+  for (const auto &M : SharedLocksToRemove)
+    Analyzer->removeLock(FSet, M, Loc, Dtor, LK_Shared, CapDiagKind);
+  for (const auto &M : GenericLocksToRemove)
+    Analyzer->removeLock(FSet, M, Loc, Dtor, LK_Generic, CapDiagKind);
+
   // Add locks.
   for (const auto &M : ExclusiveLocksToAdd)
     Analyzer->addLock(FSet, llvm::make_unique<LockableFactEntry>(
@@ -1864,16 +1871,6 @@ void BuildLockset::handleCall(Expr *Exp, const NamedDecl *D, VarDecl *VD) {
                           Scp, MLoc, ExclusiveLocksToAdd, SharedLocksToAdd),
                       CapDiagKind);
   }
-
-  // Remove locks.
-  // FIXME -- should only fully remove if the attribute refers to 'this'.
-  bool Dtor = isa<CXXDestructorDecl>(D);
-  for (const auto &M : ExclusiveLocksToRemove)
-    Analyzer->removeLock(FSet, M, Loc, Dtor, LK_Exclusive, CapDiagKind);
-  for (const auto &M : SharedLocksToRemove)
-    Analyzer->removeLock(FSet, M, Loc, Dtor, LK_Shared, CapDiagKind);
-  for (const auto &M : GenericLocksToRemove)
-    Analyzer->removeLock(FSet, M, Loc, Dtor, LK_Generic, CapDiagKind);
 }
 
 /// For unary operations which read and write a variable, we need to

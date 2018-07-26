@@ -931,7 +931,8 @@ public:
   virtual SMTExprRef getFloatRoundingMode() = 0;
 
   // If the a model is available, returns the value of a given bitvector symbol
-  virtual const llvm::APSInt getBitvector(const SMTExprRef &Exp) = 0;
+  virtual llvm::APSInt getBitvector(const SMTExprRef &Exp, unsigned BitWidth,
+                                    bool isUnsigned) = 0;
 
   // If the a model is available, returns the value of a given boolean symbol
   virtual bool getBoolean(const SMTExprRef &Exp) = 0;

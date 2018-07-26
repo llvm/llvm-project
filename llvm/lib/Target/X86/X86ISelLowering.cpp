@@ -33970,11 +33970,7 @@ static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
     }
   }
 
-  if (NewMul)
-    // Do not add new nodes to DAG combiner worklist.
-    return DCI.CombineTo(N, NewMul, false);
-
-  return SDValue();
+  return NewMul;
 }
 
 static SDValue combineShiftLeft(SDNode *N, SelectionDAG &DAG) {

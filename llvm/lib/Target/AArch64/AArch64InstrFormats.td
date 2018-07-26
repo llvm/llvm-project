@@ -5720,7 +5720,7 @@ multiclass SIMDDifferentThreeVectorBD<bit U, bits<4> opc, string asm,
   def v16i8  : BaseSIMDDifferentThreeVector<U, 0b001, opc,
                                             V128, V128, V128,
                                             asm#"2", ".8h", ".16b", ".16b", []>;
-  let Predicates = [HasCrypto] in {
+  let Predicates = [HasAES] in {
     def v1i64  : BaseSIMDDifferentThreeVector<U, 0b110, opc,
                                               V128, V64, V64,
                                               asm, ".1q", ".1d", ".1d", []>;
@@ -9920,7 +9920,6 @@ multiclass SIMDIndexedTiedComplexHSD<bit U, bit opc1, bit opc2, Operand rottype,
 // Crypto extensions
 //----------------------------------------------------------------------------
 
-let Predicates = [HasCrypto] in {
 let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in
 class AESBase<bits<4> opc, string asm, dag outs, dag ins, string cstr,
               list<dag> pat>
@@ -10010,7 +10009,103 @@ class SHATiedInstVV<bits<4> opc, string asm, Intrinsic OpNode>
 class SHAInstSS<bits<4> opc, string asm, Intrinsic OpNode>
   : SHA2OpInst<opc, asm, "", "", (outs FPR32:$Rd), (ins FPR32:$Rn),
                [(set (i32 FPR32:$Rd), (OpNode (i32 FPR32:$Rn)))]>;
-} // end of 'let Predicates = [HasCrypto]'
+
+// Armv8.2-A Crypto extensions
+class BaseCryptoV82<dag oops, dag iops, string asm, string asmops, string cst,
+                    list<dag> pattern>
+  : I <oops, iops, asm, asmops, cst, pattern>, Sched<[WriteV]> {
+  bits<5> Vd;
+  bits<5> Vn;
+  let Inst{31-25} = 0b1100111;
+  let Inst{9-5}   = Vn;
+  let Inst{4-0}   = Vd;
+}
+
+class CryptoRRTied<bits<1>op0, bits<2>op1, string asm, string asmops>
+  : BaseCryptoV82<(outs V128:$Vd), (ins V128:$Vn, V128:$Vm), asm, asmops,
+                  "$Vm = $Vd", []> {
+  let Inst{31-25} = 0b1100111;
+  let Inst{24-21} = 0b0110;
+  let Inst{20-15} = 0b000001;
+  let Inst{14}    = op0;
+  let Inst{13-12} = 0b00;
+  let Inst{11-10} = op1;
+}
+class CryptoRRTied_2D<bits<1>op0, bits<2>op1, string asm>
+  : CryptoRRTied<op0, op1, asm, "{\t$Vd.2d, $Vn.2d}">;
+class CryptoRRTied_4S<bits<1>op0, bits<2>op1, string asm>
+  : CryptoRRTied<op0, op1, asm, "{\t$Vd.4s, $Vn.4s}">;
+
+class CryptoRRR<bits<1> op0, bits<2>op1, dag oops, dag iops, string asm,
+                string asmops, string cst>
+  : BaseCryptoV82<oops, iops, asm , asmops, cst, []> {
+  bits<5> Vm;
+  let Inst{24-21} = 0b0011;
+  let Inst{20-16} = Vm;
+  let Inst{15}    = 0b1;
+  let Inst{14}    = op0;
+  let Inst{13-12} = 0b00;
+  let Inst{11-10} = op1;
+}
+class CryptoRRR_2D<bits<1> op0, bits<2>op1, string asm>
+  : CryptoRRR<op0, op1, (outs V128:$Vd), (ins V128:$Vn, V128:$Vm), asm,
+              "{\t$Vd.2d, $Vn.2d, $Vm.2d}", "">;
+class CryptoRRRTied_2D<bits<1> op0, bits<2>op1, string asm>
+  : CryptoRRR<op0, op1, (outs V128:$Vdst), (ins V128:$Vd, V128:$Vn, V128:$Vm), asm,
+              "{\t$Vd.2d, $Vn.2d, $Vm.2d}", "$Vd = $Vdst">;
+class CryptoRRR_4S<bits<1> op0, bits<2>op1, string asm>
+  : CryptoRRR<op0, op1, (outs V128:$Vd), (ins V128:$Vn, V128:$Vm), asm,
+              "{\t$Vd.4s, $Vn.4s, $Vm.4s}", "">;
+class CryptoRRRTied_4S<bits<1> op0, bits<2>op1, string asm>
+  : CryptoRRR<op0, op1, (outs V128:$Vdst), (ins V128:$Vd, V128:$Vn, V128:$Vm), asm,
+              "{\t$Vd.4s, $Vn.4s, $Vm.4s}", "$Vd = $Vdst">;
+class CryptoRRRTied<bits<1> op0, bits<2>op1, string asm>
+  : CryptoRRR<op0, op1, (outs FPR128:$Vdst), (ins FPR128:$Vd, FPR128:$Vn, V128:$Vm),
+              asm, "{\t$Vd, $Vn, $Vm.2d}", "$Vd = $Vdst">;
+
+class CryptoRRRR<bits<2>op0, string asm, string asmops>
+  : BaseCryptoV82<(outs V128:$Vd), (ins V128:$Vn, V128:$Vm, V128:$Va), asm,
+                  asmops, "", []> {
+  bits<5> Vm;
+  bits<5> Va;
+  let Inst{24-23} = 0b00;
+  let Inst{22-21} = op0;
+  let Inst{20-16} = Vm;
+  let Inst{15}    = 0b0;
+  let Inst{14-10} = Va;
+}
+class CryptoRRRR_16B<bits<2>op0, string asm>
+ : CryptoRRRR<op0, asm, "{\t$Vd.16b, $Vn.16b, $Vm.16b, $Va.16b}"> {
+}
+class CryptoRRRR_4S<bits<2>op0, string asm>
+ : CryptoRRRR<op0, asm, "{\t$Vd.4s, $Vn.4s, $Vm.4s, $Va.4s}"> {
+}
+
+class CryptoRRRi6<string asm>
+  : BaseCryptoV82<(outs V128:$Vd), (ins V128:$Vn, V128:$Vm, uimm6:$imm), asm,
+                  "{\t$Vd.2d, $Vn.2d, $Vm.2d, $imm}", "", []> {
+  bits<6> imm;
+  bits<5> Vm;
+  let Inst{24-21} = 0b0100;
+  let Inst{20-16} = Vm;
+  let Inst{15-10} = imm;
+  let Inst{9-5}   = Vn;
+  let Inst{4-0}   = Vd;
+}
+
+class CryptoRRRi2Tied<bits<1>op0, bits<2>op1, string asm>
+  : BaseCryptoV82<(outs V128:$Vdst),
+                  (ins V128:$Vd, V128:$Vn, V128:$Vm, VectorIndexS:$imm),
+                  asm, "{\t$Vd.4s, $Vn.4s, $Vm.s$imm}", "$Vd = $Vdst", []> {
+  bits<2> imm;
+  bits<5> Vm;
+  let Inst{24-21} = 0b0010;
+  let Inst{20-16} = Vm;
+  let Inst{15}    = 0b1;
+  let Inst{14}    = op0;
+  let Inst{13-12} = imm;
+  let Inst{11-10} = op1;
+}
 
 //----------------------------------------------------------------------------
 // v8.1 atomic instructions extension:
