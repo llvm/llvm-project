@@ -25,7 +25,7 @@ namespace {
 // Get the definition from a given declaration `D`.
 // Return nullptr if no definition is found, or the declaration type of `D` is
 // not supported.
-const Decl *GetDefinition(const Decl *D) {
+const Decl *getDefinition(const Decl *D) {
   assert(D);
   if (const auto *TD = dyn_cast<TagDecl>(D))
     return TD->getDefinition();
@@ -40,7 +40,7 @@ const Decl *GetDefinition(const Decl *D) {
 // HintPath is used to resolve the path of URI.
 // FIXME: figure out a good home for it, and share the implementation with
 // FindSymbols.
-llvm::Optional<Location> ToLSPLocation(const SymbolLocation &Loc,
+llvm::Optional<Location> toLSPLocation(const SymbolLocation &Loc,
                                        llvm::StringRef HintPath) {
   if (!Loc)
     return llvm::None;
@@ -116,7 +116,7 @@ public:
       // We don't use parameter `D`, as Parameter `D` is the canonical
       // declaration, which is the first declaration of a redeclarable
       // declaration, and it could be a forward declaration.
-      if (const auto *Def = GetDefinition(D)) {
+      if (const auto *Def = getDefinition(D)) {
         Decls.push_back(Def);
       } else {
         // Couldn't find a definition, fall back to use `D`.
@@ -279,7 +279,7 @@ std::vector<Location> findDefinitions(ParsedAST &AST, Position Pos,
     auto L = makeLocation(AST, SourceRange(Loc, Loc));
     // The declaration in the identified symbols is a definition if possible
     // otherwise it is declaration.
-    bool IsDef = GetDefinition(D) == D;
+    bool IsDef = getDefinition(D) == D;
     // Populate one of the slots with location for the AST.
     if (!IsDef)
       Candidate.Decl = L;
@@ -305,9 +305,9 @@ std::vector<Location> findDefinitions(ParsedAST &AST, Position Pos,
           auto &Value = It->second;
 
           if (!Value.Def)
-            Value.Def = ToLSPLocation(Sym.Definition, HintPath);
+            Value.Def = toLSPLocation(Sym.Definition, HintPath);
           if (!Value.Decl)
-            Value.Decl = ToLSPLocation(Sym.CanonicalDeclaration, HintPath);
+            Value.Decl = toLSPLocation(Sym.CanonicalDeclaration, HintPath);
         });
   }
 
@@ -410,7 +410,7 @@ std::vector<DocumentHighlight> findDocumentHighlights(ParsedAST &AST,
   return DocHighlightsFinder.takeHighlights();
 }
 
-static PrintingPolicy PrintingPolicyForDecls(PrintingPolicy Base) {
+static PrintingPolicy printingPolicyForDecls(PrintingPolicy Base) {
   PrintingPolicy Policy(Base);
 
   Policy.AnonymousTagLocations = false;
@@ -424,11 +424,11 @@ static PrintingPolicy PrintingPolicyForDecls(PrintingPolicy Base) {
 
 /// Return a string representation (e.g. "class MyNamespace::MyClass") of
 /// the type declaration \p TD.
-static std::string TypeDeclToString(const TypeDecl *TD) {
+static std::string typeDeclToString(const TypeDecl *TD) {
   QualType Type = TD->getASTContext().getTypeDeclType(TD);
 
   PrintingPolicy Policy =
-      PrintingPolicyForDecls(TD->getASTContext().getPrintingPolicy());
+      printingPolicyForDecls(TD->getASTContext().getPrintingPolicy());
 
   std::string Name;
   llvm::raw_string_ostream Stream(Name);
@@ -439,10 +439,10 @@ static std::string TypeDeclToString(const TypeDecl *TD) {
 
 /// Return a string representation (e.g. "namespace ns1::ns2") of
 /// the named declaration \p ND.
-static std::string NamedDeclQualifiedName(const NamedDecl *ND,
+static std::string namedDeclQualifiedName(const NamedDecl *ND,
                                           StringRef Prefix) {
   PrintingPolicy Policy =
-      PrintingPolicyForDecls(ND->getASTContext().getPrintingPolicy());
+      printingPolicyForDecls(ND->getASTContext().getPrintingPolicy());
 
   std::string Name;
   llvm::raw_string_ostream Stream(Name);
@@ -461,11 +461,11 @@ static llvm::Optional<std::string> getScopeName(const Decl *D) {
   if (isa<TranslationUnitDecl>(DC))
     return std::string("global namespace");
   if (const TypeDecl *TD = dyn_cast<TypeDecl>(DC))
-    return TypeDeclToString(TD);
+    return typeDeclToString(TD);
   else if (const NamespaceDecl *ND = dyn_cast<NamespaceDecl>(DC))
-    return NamedDeclQualifiedName(ND, "namespace");
+    return namedDeclQualifiedName(ND, "namespace");
   else if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(DC))
-    return NamedDeclQualifiedName(FD, "function");
+    return namedDeclQualifiedName(FD, "function");
 
   return llvm::None;
 }
@@ -492,7 +492,7 @@ static Hover getHoverContents(const Decl *D) {
   llvm::raw_string_ostream OS(DeclText);
 
   PrintingPolicy Policy =
-      PrintingPolicyForDecls(D->getASTContext().getPrintingPolicy());
+      printingPolicyForDecls(D->getASTContext().getPrintingPolicy());
 
   D->print(OS, Policy);
 
@@ -507,7 +507,7 @@ static Hover getHoverContents(QualType T, ASTContext &ASTCtx) {
   Hover H;
   std::string TypeText;
   llvm::raw_string_ostream OS(TypeText);
-  PrintingPolicy Policy = PrintingPolicyForDecls(ASTCtx.getPrintingPolicy());
+  PrintingPolicy Policy = printingPolicyForDecls(ASTCtx.getPrintingPolicy());
   T.print(OS, Policy);
   OS.flush();
   H.contents.value += TypeText;
