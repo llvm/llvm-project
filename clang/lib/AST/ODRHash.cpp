@@ -407,12 +407,17 @@ public:
     AddDecl(D->getTemplatedDecl());
     Inherited::VisitFunctionTemplateDecl(D);
   }
+
+  void VisitEnumConstantDecl(const EnumConstantDecl *D) {
+    AddStmt(D->getInitExpr());
+    Inherited::VisitEnumConstantDecl(D);
+  }
 };
 } // namespace
 
 // Only allow a small portion of Decl's to be processed.  Remove this once
 // all Decl's can be handled.
-bool ODRHash::isWhitelistedDecl(const Decl *D, const CXXRecordDecl *Parent) {
+bool ODRHash::isWhitelistedDecl(const Decl *D, const DeclContext *Parent) {
   if (D->isImplicit()) return false;
   if (D->getDeclContext() != Parent) return false;
 
@@ -423,6 +428,7 @@ bool ODRHash::isWhitelistedDecl(const Decl *D, const CXXRecordDecl *Parent) {
     case Decl::CXXConstructor:
     case Decl::CXXDestructor:
     case Decl::CXXMethod:
+    case Decl::EnumConstant: // Only found in EnumDecl's.
     case Decl::Field:
     case Decl::Friend:
     case Decl::FunctionTemplate:
@@ -552,6 +558,34 @@ void ODRHash::AddFunctionDecl(const FunctionDecl *Function,
     if (Body)
       AddStmt(Body);
   }
+}
+
+void ODRHash::AddEnumDecl(const EnumDecl *Enum) {
+  assert(Enum);
+  AddDeclarationName(Enum->getDeclName());
+
+  AddBoolean(Enum->isScoped());
+  if (Enum->isScoped())
+    AddBoolean(Enum->isScopedUsingClassTag());
+
+  if (Enum->getIntegerTypeSourceInfo())
+    AddQualType(Enum->getIntegerType());
+
+  // Filter out sub-Decls which will not be processed in order to get an
+  // accurate count of Decl's.
+  llvm::SmallVector<const Decl *, 16> Decls;
+  for (Decl *SubDecl : Enum->decls()) {
+    if (isWhitelistedDecl(SubDecl, Enum)) {
+      assert(isa<EnumConstantDecl>(SubDecl) && "Unexpected Decl");
+      Decls.push_back(SubDecl);
+    }
+  }
+
+  ID.AddInteger(Decls.size());
+  for (auto SubDecl : Decls) {
+    AddSubDecl(SubDecl);
+  }
+
 }
 
 void ODRHash::AddDecl(const Decl *D) {

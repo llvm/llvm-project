@@ -169,12 +169,12 @@ define i8 @rotr_i8_const_shift(i8 %x) nounwind {
 ; X32-SSE2-LABEL: rotr_i8_const_shift:
 ; X32-SSE2:       # %bb.0:
 ; X32-SSE2-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X32-SSE2-NEXT:    rolb $5, %al
+; X32-SSE2-NEXT:    rorb $3, %al
 ; X32-SSE2-NEXT:    retl
 ;
 ; X64-AVX2-LABEL: rotr_i8_const_shift:
 ; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    rolb $5, %dil
+; X64-AVX2-NEXT:    rorb $3, %dil
 ; X64-AVX2-NEXT:    movl %edi, %eax
 ; X64-AVX2-NEXT:    retq
   %f = call i8 @llvm.fshr.i8(i8 %x, i8 %x, i8 3)
@@ -185,12 +185,12 @@ define i32 @rotr_i32_const_shift(i32 %x) nounwind {
 ; X32-SSE2-LABEL: rotr_i32_const_shift:
 ; X32-SSE2:       # %bb.0:
 ; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-SSE2-NEXT:    roll $29, %eax
+; X32-SSE2-NEXT:    rorl $3, %eax
 ; X32-SSE2-NEXT:    retl
 ;
 ; X64-AVX2-LABEL: rotr_i32_const_shift:
 ; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    roll $29, %edi
+; X64-AVX2-NEXT:    rorl $3, %edi
 ; X64-AVX2-NEXT:    movl %edi, %eax
 ; X64-AVX2-NEXT:    retq
   %f = call i32 @llvm.fshr.i32(i32 %x, i32 %x, i32 3)

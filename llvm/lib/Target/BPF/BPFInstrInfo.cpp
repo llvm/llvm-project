@@ -43,6 +43,83 @@ void BPFInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     llvm_unreachable("Impossible reg-to-reg copy");
 }
 
+void BPFInstrInfo::expandMEMCPY(MachineBasicBlock::iterator MI) const {
+  unsigned DstReg = MI->getOperand(0).getReg();
+  unsigned SrcReg = MI->getOperand(1).getReg();
+  uint64_t CopyLen = MI->getOperand(2).getImm();
+  uint64_t Alignment = MI->getOperand(3).getImm();
+  unsigned ScratchReg = MI->getOperand(4).getReg();
+  MachineBasicBlock *BB = MI->getParent();
+  DebugLoc dl = MI->getDebugLoc();
+  unsigned LdOpc, StOpc;
+
+  switch (Alignment) {
+  case 1:
+    LdOpc = BPF::LDB;
+    StOpc = BPF::STB;
+    break;
+  case 2:
+    LdOpc = BPF::LDH;
+    StOpc = BPF::STH;
+    break;
+  case 4:
+    LdOpc = BPF::LDW;
+    StOpc = BPF::STW;
+    break;
+  case 8:
+    LdOpc = BPF::LDD;
+    StOpc = BPF::STD;
+    break;
+  default:
+    llvm_unreachable("unsupported memcpy alignment");
+  }
+
+  unsigned IterationNum = CopyLen >> Log2_64(Alignment);
+  for(unsigned I = 0; I < IterationNum; ++I) {
+    BuildMI(*BB, MI, dl, get(LdOpc))
+            .addReg(ScratchReg).addReg(SrcReg).addImm(I * Alignment);
+    BuildMI(*BB, MI, dl, get(StOpc))
+            .addReg(ScratchReg).addReg(DstReg).addImm(I * Alignment);
+  }
+
+  unsigned BytesLeft = CopyLen & (Alignment - 1);
+  unsigned Offset = IterationNum * Alignment;
+  bool Hanging4Byte = BytesLeft & 0x4;
+  bool Hanging2Byte = BytesLeft & 0x2;
+  bool Hanging1Byte = BytesLeft & 0x1;
+  if (Hanging4Byte) {
+    BuildMI(*BB, MI, dl, get(BPF::LDW))
+            .addReg(ScratchReg).addReg(SrcReg).addImm(Offset);
+    BuildMI(*BB, MI, dl, get(BPF::STW))
+            .addReg(ScratchReg).addReg(DstReg).addImm(Offset);
+    Offset += 4;
+  }
+  if (Hanging2Byte) {
+    BuildMI(*BB, MI, dl, get(BPF::LDH))
+            .addReg(ScratchReg).addReg(SrcReg).addImm(Offset);
+    BuildMI(*BB, MI, dl, get(BPF::STH))
+            .addReg(ScratchReg).addReg(DstReg).addImm(Offset);
+    Offset += 2;
+  }
+  if (Hanging1Byte) {
+    BuildMI(*BB, MI, dl, get(BPF::LDB))
+            .addReg(ScratchReg).addReg(SrcReg).addImm(Offset);
+    BuildMI(*BB, MI, dl, get(BPF::STB))
+            .addReg(ScratchReg).addReg(DstReg).addImm(Offset);
+  }
+
+  BB->erase(MI);
+}
+
+bool BPFInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
+  if (MI.getOpcode() == BPF::MEMCPY) {
+    expandMEMCPY(MI);
+    return true;
+  }
+
+  return false;
+}
+
 void BPFInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                        MachineBasicBlock::iterator I,
                                        unsigned SrcReg, bool IsKill, int FI,
