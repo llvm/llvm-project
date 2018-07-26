@@ -13,6 +13,8 @@ foreach(header
   list(APPEND framework_headers ${CMAKE_CURRENT_BINARY_DIR}/FrameworkHeaders/${basename})
 endforeach()
 
+add_custom_target(lldb-framework-headers DEPENDS ${framework_headers})
+
 add_custom_command(TARGET lldb-framework POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_BINARY_DIR}/FrameworkHeaders $<TARGET_FILE_DIR:liblldb>/Headers
   COMMAND ${LLDB_SOURCE_DIR}/scripts/framework-header-fix.sh $<TARGET_FILE_DIR:liblldb>/Headers ${LLDB_VERSION}
@@ -39,4 +41,5 @@ set_target_properties(liblldb PROPERTIES
   PUBLIC_HEADER "${framework_headers}")
 
 add_dependencies(lldb-framework
+  lldb-framework-headers
   lldb-suite)
