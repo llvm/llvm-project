@@ -1017,6 +1017,7 @@ file_time_type __last_write_time(const path& p, error_code *ec)
 void __last_write_time(const path& p, file_time_type new_time,
                        error_code *ec)
 {
+    using detail::fs_time;
     ErrorHandler<void> err("last_write_time", ec, &p);
 
     error_code m_ec;
@@ -1034,7 +1035,7 @@ void __last_write_time(const path& p, file_time_type new_time,
     tbuf[0].tv_sec = 0;
     tbuf[0].tv_nsec = UTIME_OMIT;
 #endif
-    if (detail::set_time_spec_to(tbuf[1], new_time))
+    if (!fs_time::convert_to_timespec(tbuf[1], new_time))
       return err.report(errc::value_too_large);
 
     detail::set_file_times(p, tbuf, m_ec);
