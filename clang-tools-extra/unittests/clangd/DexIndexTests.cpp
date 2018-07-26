@@ -24,7 +24,8 @@ namespace dex {
 using ::testing::ElementsAre;
 
 TEST(DexIndexIterators, DocumentIterator) {
-  auto DocIterator = create({4, 7, 8, 20, 42, 100});
+  const PostingList L = {4, 7, 8, 20, 42, 100};
+  auto DocIterator = create(L);
 
   EXPECT_EQ(DocIterator->peek(), 4U);
   EXPECT_EQ(DocIterator->reachedEnd(), false);
@@ -194,12 +195,18 @@ TEST(DexIndexIterators, QueryTree) {
   //  |1, 3, 5, 8, 9| |1, 5, 7, 9|           |Empty|    |0, 5|    |0, 1, 5|
   //  +-------------+ +----------+           +-----+    +----+    +-------+
 
+  const PostingList L0 = {1, 3, 5, 8, 9};
+  const PostingList L1 = {1, 5, 7, 9};
+  const PostingList L2 = {0, 5};
+  const PostingList L3 = {0, 1, 5};
+  const PostingList L4;
+
   // Root of the query tree: [1, 5]
   auto Root = createAnd({
       // Lower And Iterator: [1, 5, 9]
-      createAnd({create({1, 3, 5, 8, 9}), create({1, 5, 7, 9})}),
+      createAnd({create(L0), create(L1)}),
       // Lower Or Iterator: [0, 1, 5]
-      createOr({create({0, 5}), create({0, 1, 5}), create({})}),
+      createOr({create(L2), create(L3), create(L4)}),
   });
 
   EXPECT_EQ(Root->reachedEnd(), false);
@@ -218,12 +225,18 @@ TEST(DexIndexIterators, QueryTree) {
 }
 
 TEST(DexIndexIterators, StringRepresentation) {
-  EXPECT_EQ(llvm::to_string(*(create({4, 7, 8, 20, 42, 100}))),
-            "[4, 7, 8, 20, 42, 100]");
+  const PostingList L0 = {4, 7, 8, 20, 42, 100};
+  const PostingList L1 = {1, 3, 5, 8, 9};
+  const PostingList L2 = {1, 5, 7, 9};
+  const PostingList L3 = {0, 5};
+  const PostingList L4 = {0, 1, 5};
+  const PostingList L5;
+
+  EXPECT_EQ(llvm::to_string(*(create(L0))), "[4, 7, 8, 20, 42, 100]");
 
   auto Nested = createAnd({
-      createAnd({create({1, 3, 5, 8, 9}), create({1, 5, 7, 9})}),
-      createOr({create({0, 5}), create({0, 1, 5}), create({})}),
+      createAnd({create(L1), create(L2)}),
+      createOr({create(L3), create(L4), create(L5)}),
   });
 
   EXPECT_EQ(llvm::to_string(*Nested),
