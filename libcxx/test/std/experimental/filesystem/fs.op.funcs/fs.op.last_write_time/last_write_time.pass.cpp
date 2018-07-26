@@ -225,6 +225,24 @@ static const bool SupportsNanosecondRoundTrip = [] {
   }
 }();
 
+
+static const bool WorkaroundStatTruncatesToSeconds = [] {
+  MicroSec micros(3);
+  static_assert(std::is_same<file_time_type::period, std::nano>::value, "");
+
+  // Test for the behavior of OS X 10.11 and older, which truncates the result
+  // of st_mtimespec to seconds.
+  file_time_type ft(micros);
+  {
+    scoped_test_env env;
+    const path p = env.create_file("file", 42);
+    if (LastWriteTime(p).tv_nsec != 0)
+      return false;
+    last_write_time(p, ft);
+    return last_write_time(p) != ft && LastWriteTime(p).tv_nsec == 0;
+  }
+}();
+
 static const bool SupportsMinRoundTrip = [] {
   TimeSpec ts = {};
   if (!ConvertToTimeSpec(ts, file_time_type::min()))
@@ -244,7 +262,8 @@ static bool CompareTime(TimeSpec t1, TimeSpec t2) {
     return false;
 
   auto diff = std::abs(t1.tv_nsec - t2.tv_nsec);
-
+  if (WorkaroundStatTruncatesToSeconds)
+   return diff < duration_cast<NanoSec>(Sec(1)).count();
   return diff < duration_cast<NanoSec>(MicroSec(1)).count();
 }
 
@@ -275,8 +294,9 @@ static bool CompareTime(file_time_type t1, file_time_type t2) {
     dur = t1 - t2;
   else
     dur = t2 - t1;
-
-  return duration_cast<MicroSec>(dur).count() < 1;
+  if (WorkaroundStatTruncatesToSeconds)
+    return duration_cast<Sec>(dur).count() == 0;
+  return duration_cast<MicroSec>(dur).count() == 0;
 }
 
 // Check if a time point is representable on a given filesystem. Check that:
@@ -399,7 +419,6 @@ TEST_CASE(get_last_write_time_dynamic_env_test)
 TEST_CASE(set_last_write_time_dynamic_env_test)
 {
     using Clock = file_time_type::clock;
-    using SubSecT = file_time_type::duration;
     scoped_test_env env;
 
     const path file = env.create_file("file", 42);
@@ -453,12 +472,6 @@ TEST_CASE(set_last_write_time_dynamic_env_test)
         if (TimeIsRepresentableByFilesystem(TC.new_time)) {
             TEST_CHECK(got_time != old_time);
             TEST_CHECK(CompareTime(got_time, TC.new_time));
-
-            // FIXME(EricWF): Remove these after getting information from
-            // some failing bots.
-            std::cerr << (long long)got_time.time_since_epoch().count() << std::endl;
-            std::cerr << (long long)TC.new_time.time_since_epoch().count() << std::endl;
-
             TEST_CHECK(CompareTime(LastAccessTime(TC.p), old_times.access));
         }
     }
@@ -484,7 +497,11 @@ TEST_CASE(last_write_time_symlink_test)
 
     file_time_type  got_time = last_write_time(sym);
     TEST_CHECK(!CompareTime(got_time, old_times.write));
-    TEST_CHECK(got_time == new_time);
+    if (!WorkaroundStatTruncatesToSeconds) {
+      TEST_CHECK(got_time == new_time);
+    } else {
+      TEST_CHECK(CompareTime(got_time, new_time));
+    }
 
     TEST_CHECK(CompareTime(LastWriteTime(file), new_time));
     TEST_CHECK(CompareTime(LastAccessTime(sym), old_times.access));
@@ -575,6 +592,16 @@ TEST_CASE(test_exists_fails)
     ExceptionChecker Checker(file, std::errc::permission_denied,
                              "last_write_time");
     TEST_CHECK_THROW_RESULT(filesystem_error, Checker, last_write_time(file));
+}
+
+// Just for sanity ensure that WorkaroundStatTruncatesToSeconds is only
+// ever true on Apple platforms.
+TEST_CASE(apple_truncates_to_seconds_check) {
+#ifndef __APPLE__
+  TEST_CHECK(!WorkaroundStatTruncatesToSeconds);
+#else
+  TEST_CHECK(SupportsNanosecondRoundTrip != WorkaroundStatTruncatesToSeconds);
+#endif
 }
 
 TEST_SUITE_END()
