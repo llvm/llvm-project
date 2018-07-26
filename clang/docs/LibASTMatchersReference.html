@@ -1577,6 +1577,18 @@ Example matches i[1].
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Type.html">Type</a>&gt;</td><td class="name" onclick="toggle('decltypeType0')"><a name="decltypeType0Anchor">decltypeType</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1DecltypeType.html">DecltypeType</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="decltypeType0"><pre>Matches types nodes representing C++11 decltype(&lt;expr&gt;) types.
+
+Given:
+  short i = 1;
+  int j = 42;
+  decltype(i + j) result = i + j;
+decltypeType() 
+  matches "decltype(i + j)"
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Type.html">Type</a>&gt;</td><td class="name" onclick="toggle('dependentSizedArrayType0')"><a name="dependentSizedArrayType0Anchor">dependentSizedArrayType</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1DependentSizedArrayType.html">DependentSizedArrayType</a>&gt;...</td></tr>
 <tr><td colspan="4" class="doc" id="dependentSizedArrayType0"><pre>Matches C++ arrays whose size is a value-dependent expression.
 
@@ -5153,6 +5165,19 @@ Given
 
 cxxRcordDecl(hasDeclContext(namedDecl(hasName("M")))) matches the
 declaration of class D.
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1DecltypeType.html">DecltypeType</a>&gt;</td><td class="name" onclick="toggle('hasUnderlyingType0')"><a name="hasUnderlyingType0Anchor">hasUnderlyingType</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Type.html">Type</a>&gt;</td></tr>
+<tr><td colspan="4" class="doc" id="hasUnderlyingType0"><pre>Matches DecltypeType nodes to find out the underlying type.
+
+Given
+  decltype(1) a = 1;
+  decltype(2.0) b = 2.0;
+decltypeType(hasUnderlyingType(isInteger()))
+  matches "auto a"
+
+Usable as: Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1DecltypeType.html">DecltypeType</a>&gt;
 </pre></td></tr>
 
 

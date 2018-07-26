@@ -825,6 +825,45 @@ def : MipsPat<(atomic_store_32 addr:$a, GPR64:$v), (SW64 GPR64:$v, addr:$a)>,
 def : MipsPat<(atomic_store_64 addr:$a, GPR64:$v), (SD GPR64:$v, addr:$a)>,
       ISA_MIPS3, GPR_64;
 
+// Patterns used for matching away redundant sign extensions.
+// MIPS32 arithmetic instructions sign extend their result implicitly.
+def : MipsPat<(i64 (sext (i32 (add GPR32:$src, immSExt16:$imm16)))),
+              (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
+              (ADDiu GPR32:$src, immSExt16:$imm16), sub_32)>;
+def : MipsPat<(i64 (sext (i32 (add GPR32:$src, GPR32:$src2)))),
+              (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
+              (ADDu GPR32:$src, GPR32:$src2), sub_32)>;
+def : MipsPat<(i64 (sext (i32 (sub GPR32:$src, GPR32:$src2)))),
+              (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
+              (SUBu GPR32:$src, GPR32:$src2), sub_32)>;
+def : MipsPat<(i64 (sext (i32 (mul GPR32:$src, GPR32:$src2)))),
+              (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
+              (MUL GPR32:$src, GPR32:$src2), sub_32)>;
+def : MipsPat<(i64 (sext (i32 (MipsMFHI ACC64:$src)))),
+              (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
+              (PseudoMFHI ACC64:$src), sub_32)>;
+def : MipsPat<(i64 (sext (i32 (MipsMFLO ACC64:$src)))),
+              (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
+              (PseudoMFLO ACC64:$src), sub_32)>;
+def : MipsPat<(i64 (sext (i32 (shl GPR32:$src, immZExt5:$imm5)))),
+              (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
+              (SLL GPR32:$src, immZExt5:$imm5), sub_32)>;
+def : MipsPat<(i64 (sext (i32 (shl GPR32:$src, GPR32:$src2)))),
+              (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
+              (SLLV GPR32:$src, GPR32:$src2), sub_32)>;
+def : MipsPat<(i64 (sext (i32 (srl GPR32:$src, immZExt5:$imm5)))),
+              (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
+              (SRL GPR32:$src, immZExt5:$imm5), sub_32)>;
+def : MipsPat<(i64 (sext (i32 (srl GPR32:$src, GPR32:$src2)))),
+              (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
+              (SRLV GPR32:$src, GPR32:$src2), sub_32)>;
+def : MipsPat<(i64 (sext (i32 (sra GPR32:$src, immZExt5:$imm5)))),
+              (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
+              (SRA GPR32:$src, immZExt5:$imm5), sub_32)>;
+def : MipsPat<(i64 (sext (i32 (sra GPR32:$src, GPR32:$src2)))),
+              (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
+              (SRAV GPR32:$src, GPR32:$src2), sub_32)>;
+
 //===----------------------------------------------------------------------===//
 // Instruction aliases
 //===----------------------------------------------------------------------===//

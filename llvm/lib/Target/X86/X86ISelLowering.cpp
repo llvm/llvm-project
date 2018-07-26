@@ -3909,9 +3909,9 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();
 
     // Allocate a new Reg Mask and copy Mask.
-    RegMask = MF.allocateRegisterMask(TRI->getNumRegs());
-    unsigned RegMaskSize = (TRI->getNumRegs() + 31) / 32;
-    memcpy(RegMask, Mask, sizeof(uint32_t) * RegMaskSize);
+    RegMask = MF.allocateRegMask();
+    unsigned RegMaskSize = MachineOperand::getRegMaskSize(TRI->getNumRegs());
+    memcpy(RegMask, Mask, sizeof(RegMask[0]) * RegMaskSize);
 
     // Make sure all sub registers of the argument registers are reset
     // in the RegMask.
@@ -30627,7 +30627,6 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
         Hi = BC1.getOperand(Opcode == X86ISD::UNPCKH ? 1 : 0);
       }
       SDValue Horiz = DAG.getNode(Opcode0, DL, VT0, Lo, Hi);
-      DCI.AddToWorklist(Horiz.getNode());
       return DAG.getBitcast(VT, Horiz);
     }
   }
@@ -30718,10 +30717,6 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
         N11 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, SVT, N11, ZeroIdx);
         SDValue Scl = DAG.getNode(Opcode1, DL, SVT, N10, N11);
         SDValue SclVec = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VT, Scl);
-        DCI.AddToWorklist(N10.getNode());
-        DCI.AddToWorklist(N11.getNode());
-        DCI.AddToWorklist(Scl.getNode());
-        DCI.AddToWorklist(SclVec.getNode());
         return DAG.getNode(Opcode, DL, VT, N0, SclVec);
       }
     }
@@ -30843,10 +30838,8 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
       DMask[DOffset + 1] = DOffset + 0;
       MVT DVT = MVT::getVectorVT(MVT::i32, VT.getVectorNumElements() / 2);
       V = DAG.getBitcast(DVT, V);
-      DCI.AddToWorklist(V.getNode());
       V = DAG.getNode(X86ISD::PSHUFD, DL, DVT, V,
                       getV4X86ShuffleImm8ForMask(DMask, DL, DAG));
-      DCI.AddToWorklist(V.getNode());
       return DAG.getBitcast(VT, V);
     }
 
@@ -30877,7 +30870,6 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
             makeArrayRef(MappedMask).equals({4, 4, 5, 5, 6, 6, 7, 7})) {
           // We can replace all three shuffles with an unpack.
           V = DAG.getBitcast(VT, D.getOperand(0));
-          DCI.AddToWorklist(V.getNode());
           return DAG.getNode(MappedMask[0] == 0 ? X86ISD::UNPCKL
                                                 : X86ISD::UNPCKH,
                              DL, VT, V, V);
@@ -32807,7 +32799,6 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
       (VT.getVectorElementType() == MVT::i8 ||
        VT.getVectorElementType() == MVT::i16)) {
     Cond = DAG.getNode(ISD::SIGN_EXTEND, DL, VT, Cond);
-    DCI.AddToWorklist(Cond.getNode());
     return DAG.getNode(N->getOpcode(), DL, VT, Cond, LHS, RHS);
   }
 
@@ -33979,11 +33970,7 @@ static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
     }
   }
 
-  if (NewMul)
-    // Do not add new nodes to DAG combiner worklist.
-    return DCI.CombineTo(N, NewMul, false);
-
-  return SDValue();
+  return NewMul;
 }
 
 static SDValue combineShiftLeft(SDNode *N, SelectionDAG &DAG) {
@@ -39254,7 +39241,6 @@ static SDValue combineInsertSubvector(SDNode *N, SelectionDAG &DAG,
       if (!Vec.getOperand(0).isUndef() && Vec.hasOneUse()) {
         Vec = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, OpVT, DAG.getUNDEF(OpVT),
                           SubVec2, Vec.getOperand(2));
-        DCI.AddToWorklist(Vec.getNode());
         return DAG.getNode(ISD::INSERT_SUBVECTOR, dl, OpVT, Vec, SubVec,
                            N->getOperand(2));
 

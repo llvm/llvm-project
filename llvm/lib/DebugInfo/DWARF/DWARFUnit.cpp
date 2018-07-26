@@ -314,22 +314,24 @@ size_t DWARFUnit::extractDIEsIfNeeded(bool CUDieOnly) {
       else
         setRangesSection(&Context.getDWARFObj().getRnglistsSection(),
                          toSectionOffset(UnitDie.find(DW_AT_rnglists_base), 0));
-      // Parse the range list table header. Individual range lists are
-      // extracted lazily.
-      DWARFDataExtractor RangesDA(Context.getDWARFObj(), *RangeSection,
-                                  isLittleEndian, 0);
-      if (auto TableOrError =
-              parseRngListTableHeader(RangesDA, RangeSectionBase))
-        RngListTable = TableOrError.get();
-      else
-        WithColor::error() << "parsing a range list table: "
-                           << toString(TableOrError.takeError())
-                           << '\n';
+      if (RangeSection->Data.size()) {
+        // Parse the range list table header. Individual range lists are
+        // extracted lazily.
+        DWARFDataExtractor RangesDA(Context.getDWARFObj(), *RangeSection,
+                                    isLittleEndian, 0);
+        if (auto TableOrError =
+                parseRngListTableHeader(RangesDA, RangeSectionBase))
+          RngListTable = TableOrError.get();
+        else
+          WithColor::error() << "parsing a range list table: "
+                             << toString(TableOrError.takeError())
+                             << '\n';
 
-      // In a split dwarf unit, there is no DW_AT_rnglists_base attribute.
-      // Adjust RangeSectionBase to point past the table header.
-      if (isDWO && RngListTable)
-        RangeSectionBase = RngListTable->getHeaderSize();
+        // In a split dwarf unit, there is no DW_AT_rnglists_base attribute.
+        // Adjust RangeSectionBase to point past the table header.
+        if (isDWO && RngListTable)
+          RangeSectionBase = RngListTable->getHeaderSize();
+      }
     }
 
     // Don't fall back to DW_AT_GNU_ranges_base: it should be ignored for

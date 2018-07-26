@@ -34,10 +34,6 @@
 #include <map>
 #include <string>
 
-namespace llvm {
-void initializeRegUsageInfoPropagationPassPass(PassRegistry &);
-}
-
 using namespace llvm;
 
 #define DEBUG_TYPE "ip-regalloc"
@@ -45,54 +41,56 @@ using namespace llvm;
 #define RUIP_NAME "Register Usage Information Propagation"
 
 namespace {
-class RegUsageInfoPropagationPass : public MachineFunctionPass {
 
+class RegUsageInfoPropagation : public MachineFunctionPass {
 public:
-  RegUsageInfoPropagationPass() : MachineFunctionPass(ID) {
+  RegUsageInfoPropagation() : MachineFunctionPass(ID) {
     PassRegistry &Registry = *PassRegistry::getPassRegistry();
-    initializeRegUsageInfoPropagationPassPass(Registry);
+    initializeRegUsageInfoPropagationPass(Registry);
   }
 
   StringRef getPassName() const override { return RUIP_NAME; }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<PhysicalRegisterUsageInfo>();
+    AU.setPreservesAll();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
 
   static char ID;
 
 private:
-  static void setRegMask(MachineInstr &MI, const uint32_t *RegMask) {
+  static void setRegMask(MachineInstr &MI, ArrayRef<uint32_t> RegMask) {
+    assert(RegMask.size() ==
+           MachineOperand::getRegMaskSize(MI.getParent()->getParent()
+                                          ->getRegInfo().getTargetRegisterInfo()
+                                          ->getNumRegs())
+           && "expected register mask size");
     for (MachineOperand &MO : MI.operands()) {
       if (MO.isRegMask())
-        MO.setRegMask(RegMask);
+        MO.setRegMask(RegMask.data());
     }
   }
 };
-} // end of anonymous namespace
-char RegUsageInfoPropagationPass::ID = 0;
 
-INITIALIZE_PASS_BEGIN(RegUsageInfoPropagationPass, "reg-usage-propagation",
+} // end of anonymous namespace
+
+INITIALIZE_PASS_BEGIN(RegUsageInfoPropagation, "reg-usage-propagation",
                       RUIP_NAME, false, false)
 INITIALIZE_PASS_DEPENDENCY(PhysicalRegisterUsageInfo)
-INITIALIZE_PASS_END(RegUsageInfoPropagationPass, "reg-usage-propagation",
+INITIALIZE_PASS_END(RegUsageInfoPropagation, "reg-usage-propagation",
                     RUIP_NAME, false, false)
 
-FunctionPass *llvm::createRegUsageInfoPropPass() {
-  return new RegUsageInfoPropagationPass();
-}
-
-void RegUsageInfoPropagationPass::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<PhysicalRegisterUsageInfo>();
-  AU.setPreservesAll();
-  MachineFunctionPass::getAnalysisUsage(AU);
-}
+char RegUsageInfoPropagation::ID = 0;
 
 // Assumes call instructions have a single reference to a function.
-static const Function *findCalledFunction(const Module &M, MachineInstr &MI) {
-  for (MachineOperand &MO : MI.operands()) {
+static const Function *findCalledFunction(const Module &M,
+                                          const MachineInstr &MI) {
+  for (const MachineOperand &MO : MI.operands()) {
     if (MO.isGlobal())
-      return dyn_cast<Function>(MO.getGlobal());
+      return dyn_cast<const Function>(MO.getGlobal());
 
     if (MO.isSymbol())
       return M.getFunction(MO.getSymbolName());
@@ -101,8 +99,8 @@ static const Function *findCalledFunction(const Module &M, MachineInstr &MI) {
   return nullptr;
 }
 
-bool RegUsageInfoPropagationPass::runOnMachineFunction(MachineFunction &MF) {
-  const Module *M = MF.getFunction().getParent();
+bool RegUsageInfoPropagation::runOnMachineFunction(MachineFunction &MF) {
+  const Module &M = *MF.getFunction().getParent();
   PhysicalRegisterUsageInfo *PRUI = &getAnalysis<PhysicalRegisterUsageInfo>();
 
   LLVM_DEBUG(dbgs() << " ++++++++++++++++++++ " << getPassName()
@@ -124,16 +122,16 @@ bool RegUsageInfoPropagationPass::runOnMachineFunction(MachineFunction &MF) {
           << "Call Instruction Before Register Usage Info Propagation : \n");
       LLVM_DEBUG(dbgs() << MI << "\n");
 
-      auto UpdateRegMask = [&](const Function *F) {
-        const auto *RegMask = PRUI->getRegUsageInfo(F);
-        if (!RegMask)
+      auto UpdateRegMask = [&](const Function &F) {
+        const ArrayRef<uint32_t> RegMask = PRUI->getRegUsageInfo(F);
+        if (RegMask.empty())
           return;
-        setRegMask(MI, &(*RegMask)[0]);
+        setRegMask(MI, RegMask);
         Changed = true;
       };
 
-      if (const Function *F = findCalledFunction(*M, MI)) {
-        UpdateRegMask(F);
+      if (const Function *F = findCalledFunction(M, MI)) {
+        UpdateRegMask(*F);
       } else {
         LLVM_DEBUG(dbgs() << "Failed to find call target function\n");
       }
@@ -148,4 +146,8 @@ bool RegUsageInfoPropagationPass::runOnMachineFunction(MachineFunction &MF) {
       dbgs() << " +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
                 "++++++ \n");
   return Changed;
+}
+
+FunctionPass *llvm::createRegUsageInfoPropPass() {
+  return new RegUsageInfoPropagation();
 }

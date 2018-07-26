@@ -41,7 +41,7 @@ define void @T() {
 ; CHECK-NEXT:    store double 0x402422A497D6185E, double* [[SLOT]]
 ; CHECK-NEXT:    store double 0x403415E5BF6FB106, double* [[SLOT]]
 ; CHECK-NEXT:    store double 8.000000e+00, double* [[SLOT]]
-; CHECK-NEXT:    store double 0x3FF193EA7AAD030B, double* [[SLOT]]
+; CHECK-NEXT:    store double 0x3FF193EA7AAD030{{[AB]}}, double* [[SLOT]]
 ; CHECK-NEXT:    store double 0x3FDE8927964FD5FD, double* [[SLOT]]
 ; CHECK-NEXT:    store double 1.000000e+00, double* [[SLOT]]
 ; CHECK-NEXT:    store double 0x40240926E70949AE, double* [[SLOT]]

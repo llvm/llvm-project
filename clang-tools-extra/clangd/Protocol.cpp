@@ -208,10 +208,10 @@ bool fromJSON(const json::Value &Params, SymbolKindCapabilities &R) {
 }
 
 SymbolKind adjustKindToCapability(SymbolKind Kind,
-                                  SymbolKindBitset &supportedSymbolKinds) {
+                                  SymbolKindBitset &SupportedSymbolKinds) {
   auto KindVal = static_cast<size_t>(Kind);
-  if (KindVal >= SymbolKindMin && KindVal <= supportedSymbolKinds.size() &&
-      supportedSymbolKinds[KindVal])
+  if (KindVal >= SymbolKindMin && KindVal <= SupportedSymbolKinds.size() &&
+      SupportedSymbolKinds[KindVal])
     return Kind;
 
   switch (Kind) {

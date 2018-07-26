@@ -207,6 +207,7 @@ private:
                                  DebugLoc Loc);
   unsigned hardenPostLoad(MachineInstr &MI);
   void hardenReturnInstr(MachineInstr &MI);
+  void tracePredStateThroughCall(MachineInstr &MI);
   void hardenIndirectCallOrJumpInstr(
       MachineInstr &MI,
       SmallDenseMap<unsigned, unsigned, 32> &AddrRegToHardenedReg);
@@ -1588,25 +1589,7 @@ void X86SpeculativeLoadHardeningPass::tracePredStateThroughBlocksAndHarden(
       // state into a call and recovering it after the call returns unless this
       // is a tail call.
       assert(MI.isCall() && "Should only reach here for calls!");
-      auto InsertPt = MI.getIterator();
-      DebugLoc Loc = MI.getDebugLoc();
-
-      // First, we transfer the predicate state into the called function by
-      // merging it into the stack pointer. This will kill the current def of
-      // the state.
-      unsigned StateReg = PS->SSA.GetValueAtEndOfBlock(&MBB);
-      mergePredStateIntoSP(MBB, InsertPt, Loc, StateReg);
-
-      // If this call is also a return, it is a tail call and we don't need
-      // anything else to handle it so just continue.
-      if (MI.isReturn())
-        continue;
-
-      // We need to step past the call and recover the predicate
-      // state from SP after the return, and make this new state available.
-      ++InsertPt;
-      unsigned NewStateReg = extractPredStateFromSP(MBB, InsertPt, Loc);
-      PS->SSA.AddAvailableValue(&MBB, NewStateReg);
+      tracePredStateThroughCall(MI);
     }
 
     HardenPostLoad.clear();
@@ -2146,6 +2129,43 @@ void X86SpeculativeLoadHardeningPass::hardenReturnInstr(MachineInstr &MI) {
   // pointers canonical) and merge it into RSP. This will allow the caller to
   // extract it when we return (speculatively).
   mergePredStateIntoSP(MBB, InsertPt, Loc, PS->SSA.GetValueAtEndOfBlock(&MBB));
+}
+
+/// Trace the predicate state through a call.
+///
+/// There are several layers of this needed to handle the full complexity of
+/// calls.
+///
+/// First, we need to send the predicate state into the called function. We do
+/// this by merging it into the high bits of the stack pointer.
+///
+/// For tail calls, this is all we need to do.
+///
+/// For calls where we might return to control flow, we further need to extract
+/// the predicate state built up within that function from the high bits of the
+/// stack pointer, and make that the newly available predicate state.
+void X86SpeculativeLoadHardeningPass::tracePredStateThroughCall(
+    MachineInstr &MI) {
+  MachineBasicBlock &MBB = *MI.getParent();
+  auto InsertPt = MI.getIterator();
+  DebugLoc Loc = MI.getDebugLoc();
+
+  // First, we transfer the predicate state into the called function by merging
+  // it into the stack pointer. This will kill the current def of the state.
+  unsigned StateReg = PS->SSA.GetValueAtEndOfBlock(&MBB);
+  mergePredStateIntoSP(MBB, InsertPt, Loc, StateReg);
+
+  // If this call is also a return, it is a tail call and we don't need anything
+  // else to handle it so just continue.
+  // FIXME: We should also handle noreturn calls.
+  if (MI.isReturn())
+    return;
+
+  // We need to step past the call and recover the predicate state from SP after
+  // the return, and make this new state available.
+  ++InsertPt;
+  unsigned NewStateReg = extractPredStateFromSP(MBB, InsertPt, Loc);
+  PS->SSA.AddAvailableValue(&MBB, NewStateReg);
 }
 
 /// An attacker may speculatively store over a value that is then speculatively

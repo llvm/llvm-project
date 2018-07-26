@@ -2664,7 +2664,7 @@ MCSymbol *AsmPrinter::GetBlockAddressSymbol(const BasicBlock *BB) const {
 
 /// GetCPISymbol - Return the symbol for the specified constant pool entry.
 MCSymbol *AsmPrinter::GetCPISymbol(unsigned CPID) const {
-  if (getSubtargetInfo().getTargetTriple().isOSWindows()) {
+  if (getSubtargetInfo().getTargetTriple().isKnownWindowsMSVCEnvironment()) {
     const MachineConstantPoolEntry &CPE =
         MF->getConstantPool()->getConstants()[CPID];
     if (!CPE.isMachineConstantPoolEntry()) {

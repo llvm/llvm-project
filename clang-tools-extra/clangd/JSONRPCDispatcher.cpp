@@ -109,10 +109,10 @@ void clangd::reply(json::Value &&Result) {
       });
 }
 
-void clangd::replyError(ErrorCode code, const llvm::StringRef &Message) {
-  elog("Error {0}: {1}", static_cast<int>(code), Message);
+void clangd::replyError(ErrorCode Code, const llvm::StringRef &Message) {
+  elog("Error {0}: {1}", static_cast<int>(Code), Message);
   RequestSpan::attach([&](json::Object &Args) {
-    Args["Error"] = json::Object{{"code", static_cast<int>(code)},
+    Args["Error"] = json::Object{{"code", static_cast<int>(Code)},
                                  {"message", Message.str()}};
   });
 
@@ -123,7 +123,7 @@ void clangd::replyError(ErrorCode code, const llvm::StringRef &Message) {
         ->writeMessage(json::Object{
             {"jsonrpc", "2.0"},
             {"id", *ID},
-            {"error", json::Object{{"code", static_cast<int>(code)},
+            {"error", json::Object{{"code", static_cast<int>(Code)},
                                    {"message", Message}}},
         });
   }

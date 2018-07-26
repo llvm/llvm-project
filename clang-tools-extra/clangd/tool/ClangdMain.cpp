@@ -40,7 +40,7 @@ std::unique_ptr<SymbolIndex> buildStaticIndex(llvm::StringRef YamlSymbolFile) {
     llvm::errs() << "Can't open " << YamlSymbolFile << "\n";
     return nullptr;
   }
-  auto Slab = SymbolsFromYAML(Buffer.get()->getBuffer());
+  auto Slab = symbolsFromYAML(Buffer.get()->getBuffer());
   SymbolSlab::Builder SymsBuilder;
   for (auto Sym : Slab)
     SymsBuilder.insert(Sym);

@@ -30,7 +30,7 @@ ParsedAST TestTU::build() const {
     Cmd.push_back(FullHeaderName.c_str());
   }
   Cmd.insert(Cmd.end(), ExtraArgs.begin(), ExtraArgs.end());
-  auto AST = ParsedAST::Build(
+  auto AST = ParsedAST::build(
       createInvocationFromCommandLine(Cmd), nullptr,
       MemoryBuffer::getMemBufferCopy(Code),
       std::make_shared<PCHContainerOperations>(),
