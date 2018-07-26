@@ -33,13 +33,12 @@ void ignoreError(llvm::Error Err) {
 class TUSchedulerTests : public ::testing::Test {
 protected:
   ParseInputs getInputs(PathRef File, std::string Contents) {
-    return ParseInputs{*CDB.getCompileCommand(File), buildTestFS(Files),
-                       std::move(Contents)};
+    return ParseInputs{*CDB.getCompileCommand(File),
+                       buildTestFS(Files, Timestamps), std::move(Contents)};
   }
 
   llvm::StringMap<std::string> Files;
-
-private:
+  llvm::StringMap<time_t> Timestamps;
   MockCompilationDatabase CDB;
 };
 
@@ -263,6 +262,10 @@ TEST_F(TUSchedulerTests, EvictedAST) {
     int* a;
     double* b = a;
   )cpp";
+  llvm::StringLiteral OtherSourceContents = R"cpp(
+    int* a;
+    double* b = a + 0;
+  )cpp";
 
   auto Foo = testPath("foo.cpp");
   auto Bar = testPath("bar.cpp");
@@ -288,7 +291,7 @@ TEST_F(TUSchedulerTests, EvictedAST) {
   ASSERT_THAT(S.getFilesWithCachedAST(), UnorderedElementsAre(Bar, Baz));
 
   // Access the old file again.
-  S.update(Foo, getInputs(Foo, SourceContents), WantDiagnostics::Yes,
+  S.update(Foo, getInputs(Foo, OtherSourceContents), WantDiagnostics::Yes,
            [&BuiltASTCounter](std::vector<Diag> Diags) { ++BuiltASTCounter; });
   ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(1)));
   ASSERT_EQ(BuiltASTCounter.load(), 4);
@@ -332,6 +335,59 @@ TEST_F(TUSchedulerTests, RunWaitsForPreamble) {
   std::lock_guard<std::mutex> Lock(PreamblesMut);
   ASSERT_NE(Preambles[0], nullptr);
   ASSERT_THAT(Preambles, Each(Preambles[0]));
+}
+
+TEST_F(TUSchedulerTests, NoopOnEmptyChanges) {
+  TUScheduler S(
+      /*AsyncThreadsCount=*/getDefaultAsyncThreadsCount(),
+      /*StorePreambleInMemory=*/true, PreambleParsedCallback(),
+      /*UpdateDebounce=*/std::chrono::steady_clock::duration::zero(),
+      ASTRetentionPolicy());
+
+  auto Source = testPath("foo.cpp");
+  auto Header = testPath("foo.h");
+
+  Files[Header] = "int a;";
+  Timestamps[Header] = time_t(0);
+
+  auto SourceContents = R"cpp(
+      #include "foo.h"
+      int b = a;
+    )cpp";
+
+  // Return value indicates if the updated callback was received.
+  auto DoUpdate = [&](ParseInputs Inputs) -> bool {
+    std::atomic<bool> Updated(false);
+    Updated = false;
+    S.update(Source, std::move(Inputs), WantDiagnostics::Yes,
+             [&Updated](std::vector<Diag>) { Updated = true; });
+    bool UpdateFinished = S.blockUntilIdle(timeoutSeconds(1));
+    if (!UpdateFinished)
+      ADD_FAILURE() << "Updated has not finished in one second. Threading bug?";
+    return Updated;
+  };
+
+  // Test that subsequent updates with the same inputs do not cause rebuilds.
+  ASSERT_TRUE(DoUpdate(getInputs(Source, SourceContents)));
+  ASSERT_FALSE(DoUpdate(getInputs(Source, SourceContents)));
+
+  // Update to a header should cause a rebuild, though.
+  Files[Header] = time_t(1);
+  ASSERT_TRUE(DoUpdate(getInputs(Source, SourceContents)));
+  ASSERT_FALSE(DoUpdate(getInputs(Source, SourceContents)));
+
+  // Update to the contents should cause a rebuild.
+  auto OtherSourceContents = R"cpp(
+      #include "foo.h"
+      int c = d;
+    )cpp";
+  ASSERT_TRUE(DoUpdate(getInputs(Source, OtherSourceContents)));
+  ASSERT_FALSE(DoUpdate(getInputs(Source, OtherSourceContents)));
+
+  // Update to the compile commands should also cause a rebuild.
+  CDB.ExtraClangFlags.push_back("-DSOMETHING");
+  ASSERT_TRUE(DoUpdate(getInputs(Source, OtherSourceContents)));
+  ASSERT_FALSE(DoUpdate(getInputs(Source, OtherSourceContents)));
 }
 
 } // namespace clangd
