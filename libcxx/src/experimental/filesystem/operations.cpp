@@ -433,19 +433,19 @@ bool posix_ftruncate(const FileDescriptor& fd, size_t to_size,
                      error_code& ec) {
   if (::ftruncate(fd.fd, to_size) == -1) {
     ec = capture_errno();
-    return false;
+    return true;
   }
   ec.clear();
-  return true;
+  return false;
 }
 
 bool posix_fchmod(const FileDescriptor& fd, const StatT& st, error_code& ec) {
   if (::fchmod(fd.fd, st.st_mode) == -1) {
     ec = capture_errno();
-    return false;
+    return true;
   }
   ec.clear();
-  return true;
+  return false;
 }
 
 bool stat_equivalent(const StatT& st1, const StatT& st2) {
@@ -796,9 +796,9 @@ bool __copy_file(const path& from, const path& to, copy_options options,
       return err.report(errc::bad_file_descriptor);
 
     // Set the permissions and truncate the file we opened.
-    if (!detail::posix_fchmod(to_fd, from_stat, m_ec))
+    if (detail::posix_fchmod(to_fd, from_stat, m_ec))
       return err.report(m_ec);
-    if (!detail::posix_ftruncate(to_fd, 0, m_ec))
+    if (detail::posix_ftruncate(to_fd, 0, m_ec))
       return err.report(m_ec);
   }
 
