@@ -734,10 +734,11 @@ public:
                                     toZ3Sort(*Sort).Sort)));
   }
 
-  const llvm::APSInt getBitvector(const SMTExprRef &Exp) override {
-    // FIXME: this returns a string and the bitWidth is overridden
-    return llvm::APSInt(
-        Z3_get_numeral_string(Context.Context, toZ3Expr(*Exp).AST));
+  llvm::APSInt getBitvector(const SMTExprRef &Exp, unsigned BitWidth,
+                            bool isUnsigned) override {
+    return llvm::APSInt(llvm::APInt(
+        BitWidth, Z3_get_numeral_string(Context.Context, toZ3Expr(*Exp).AST),
+        10));
   }
 
   bool getBoolean(const SMTExprRef &Exp) override {
@@ -814,26 +815,20 @@ public:
         return false;
       }
 
-      uint64_t Value[2];
-      // Force cast because Z3 defines __uint64 to be a unsigned long long
-      // type, which isn't compatible with a unsigned long type, even if they
-      // are the same size.
-      Z3_get_numeral_uint64(Context.Context, toZ3Expr(*AST).AST,
-                            reinterpret_cast<__uint64 *>(&Value[0]));
-      if (Sort->getBitvectorSortSize() <= 64) {
-        Int = llvm::APSInt(llvm::APInt(Int.getBitWidth(), Value[0]),
-                           Int.isUnsigned());
-      } else if (Sort->getBitvectorSortSize() == 128) {
-        SMTExprRef ASTHigh = mkBVExtract(127, 64, AST);
-        Z3_get_numeral_uint64(Context.Context, toZ3Expr(*AST).AST,
-                              reinterpret_cast<__uint64 *>(&Value[1]));
-        Int = llvm::APSInt(llvm::APInt(Int.getBitWidth(), Value),
-                           Int.isUnsigned());
-      } else {
-        assert(false && "Bitwidth not supported!");
-        return false;
+      // FIXME: This function is also used to retrieve floating-point values,
+      // which can be 16, 32, 64 or 128 bits long. Bitvectors can be anything
+      // between 1 and 64 bits long, which is the reason we have this weird
+      // guard. In the future, we need proper calls in the backend to retrieve
+      // floating-points and its special values (NaN, +/-infinity, +/-zero),
+      // then we can drop this weird condition.
+      if (Sort->getBitvectorSortSize() <= 64 ||
+          Sort->getBitvectorSortSize() == 128) {
+        Int = getBitvector(AST, Int.getBitWidth(), Int.isUnsigned());
+        return true;
       }
-      return true;
+
+      assert(false && "Bitwidth not supported!");
+      return false;
     }
 
     if (Sort->isBooleanSort()) {

@@ -3714,6 +3714,13 @@ static std::pair<bool, bool> parsePhysicalReg(StringRef C, StringRef &Prefix,
                         true);
 }
 
+EVT MipsTargetLowering::getTypeForExtReturn(LLVMContext &Context, EVT VT,
+                                            ISD::NodeType) const {
+  bool Cond = !Subtarget.isABI_O32() && VT.getSizeInBits() == 32;
+  EVT MinVT = getRegisterType(Context, Cond ? MVT::i64 : MVT::i32);
+  return VT.bitsLT(MinVT) ? MinVT : VT;
+}
+
 std::pair<unsigned, const TargetRegisterClass *> MipsTargetLowering::
 parseRegForInlineAsmConstraint(StringRef C, MVT VT) const {
   const TargetRegisterInfo *TRI =

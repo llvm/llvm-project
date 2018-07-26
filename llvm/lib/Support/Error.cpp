@@ -112,6 +112,10 @@ std::error_code StringError::convertToErrorCode() const {
   return EC;
 }
 
+Error createStringError(std::error_code EC, char const *Msg) {
+  return make_error<StringError>(Msg, EC);
+}
+
 void report_fatal_error(Error Err, bool GenCrashDiag) {
   assert(Err && "report_fatal_error called with success value");
   std::string ErrMsg;

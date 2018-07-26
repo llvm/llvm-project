@@ -92,15 +92,14 @@
 ?j@@3P6GHCE@ZA
 ; CHECK: int __stdcall (*j)(signed char, unsigned char)
 
+?k@@3PTfoo@@DT1@
+; CHECK: char const volatile foo::*k
 
-; FIXME: We don't handle member pointers yet.
-; ?k@@3PTfoo@@DT1
-; FIXME: char const volatile foo::*k
+?k@@3PETfoo@@DET1@
+; CHECK: char const volatile foo::*k
 
-; ?k@@3PETfoo@@DET1
-; FIXME: char const volatile foo::*k
-
-; ?l@@3P8foo@@AEHH@ZQ1
+; FIXME: We don't support member function pointers yet.
+; ?l@@3P8foo@@AEHH@ZQ1@
 ; FIXME: int __thiscall (foo::*l)(int)
 
 ?g_cInt@@3HB

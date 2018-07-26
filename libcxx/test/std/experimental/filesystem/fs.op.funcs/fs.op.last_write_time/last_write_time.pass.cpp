@@ -208,20 +208,35 @@ static const bool SupportsMinTime = [] {
 
 static const bool SupportsNanosecondRoundTrip = [] {
   NanoSec ns(3);
-
-  // Test if the file_time_type period is less than that of nanoseconds.
-  auto ft_dur = duration_cast<file_time_type::duration>(ns);
-  if (duration_cast<NanoSec>(ft_dur) != ns)
-    return false;
+  static_assert(std::is_same<file_time_type::period, std::nano>::value, "");
 
   // Test that the system call we use to set the times also supports nanosecond
   // resolution. (utimes does not)
-  file_time_type ft(ft_dur);
+  file_time_type ft(ns);
   {
     scoped_test_env env;
     const path p = env.create_file("file", 42);
     last_write_time(p, ft);
     return last_write_time(p) == ft;
+  }
+}();
+
+// The HFS+ filesystem (used by default before macOS 10.13) stores timestamps at
+// a 1-second granularity, and APFS (now the default) at a 1 nanosecond granularity.
+// 1-second granularity is also the norm on many of the supported filesystems
+// on Linux as well.
+static const bool WorkaroundStatTruncatesToSeconds = [] {
+  MicroSec micros(3);
+  static_assert(std::is_same<file_time_type::period, std::nano>::value, "");
+
+  file_time_type ft(micros);
+  {
+    scoped_test_env env;
+    const path p = env.create_file("file", 42);
+    if (LastWriteTime(p).tv_nsec != 0)
+      return false;
+    last_write_time(p, ft);
+    return last_write_time(p) != ft && LastWriteTime(p).tv_nsec == 0;
   }
 }();
 
@@ -244,7 +259,8 @@ static bool CompareTime(TimeSpec t1, TimeSpec t2) {
     return false;
 
   auto diff = std::abs(t1.tv_nsec - t2.tv_nsec);
-
+  if (WorkaroundStatTruncatesToSeconds)
+   return diff < duration_cast<NanoSec>(Sec(1)).count();
   return diff < duration_cast<NanoSec>(MicroSec(1)).count();
 }
 
@@ -275,8 +291,9 @@ static bool CompareTime(file_time_type t1, file_time_type t2) {
     dur = t1 - t2;
   else
     dur = t2 - t1;
-
-  return duration_cast<MicroSec>(dur).count() < 1;
+  if (WorkaroundStatTruncatesToSeconds)
+    return duration_cast<Sec>(dur).count() == 0;
+  return duration_cast<MicroSec>(dur).count() == 0;
 }
 
 // Check if a time point is representable on a given filesystem. Check that:
@@ -399,7 +416,6 @@ TEST_CASE(get_last_write_time_dynamic_env_test)
 TEST_CASE(set_last_write_time_dynamic_env_test)
 {
     using Clock = file_time_type::clock;
-    using SubSecT = file_time_type::duration;
     scoped_test_env env;
 
     const path file = env.create_file("file", 42);
@@ -421,21 +437,23 @@ TEST_CASE(set_last_write_time_dynamic_env_test)
 #endif
 
     struct TestCase {
+      const char * case_name;
       path p;
       file_time_type new_time;
     } cases[] = {
-        {file, epoch_time},
-        {dir, epoch_time},
-        {file, future_time},
-        {dir, future_time},
-        {file, past_time},
-        {dir, past_time},
-        {file, before_epoch_time},
-        {dir, before_epoch_time},
-        {file, just_before_epoch_time},
-        {dir, just_before_epoch_time}
+        {"file, epoch_time", file, epoch_time},
+        {"dir, epoch_time", dir, epoch_time},
+        {"file, future_time", file, future_time},
+        {"dir, future_time", dir, future_time},
+        {"file, past_time", file, past_time},
+        {"dir, past_time", dir, past_time},
+        {"file, before_epoch_time", file, before_epoch_time},
+        {"dir, before_epoch_time", dir, before_epoch_time},
+        {"file, just_before_epoch_time", file, just_before_epoch_time},
+        {"dir, just_before_epoch_time", dir, just_before_epoch_time}
     };
     for (const auto& TC : cases) {
+        std::cerr << "Test Case = " << TC.case_name << "\n";
         const auto old_times = GetTimes(TC.p);
         file_time_type old_time;
         TEST_REQUIRE(ConvertFromTimeSpec(old_time, old_times.write));
@@ -444,7 +462,9 @@ TEST_CASE(set_last_write_time_dynamic_env_test)
         last_write_time(TC.p, TC.new_time, ec);
         TEST_CHECK(!ec);
 
-        file_time_type  got_time = last_write_time(TC.p);
+        ec = GetTestEC();
+        file_time_type  got_time = last_write_time(TC.p, ec);
+        TEST_REQUIRE(!ec);
 
         if (TimeIsRepresentableByFilesystem(TC.new_time)) {
             TEST_CHECK(got_time != old_time);
@@ -474,7 +494,11 @@ TEST_CASE(last_write_time_symlink_test)
 
     file_time_type  got_time = last_write_time(sym);
     TEST_CHECK(!CompareTime(got_time, old_times.write));
-    TEST_CHECK(got_time == new_time);
+    if (!WorkaroundStatTruncatesToSeconds) {
+      TEST_CHECK(got_time == new_time);
+    } else {
+      TEST_CHECK(CompareTime(got_time, new_time));
+    }
 
     TEST_CHECK(CompareTime(LastWriteTime(file), new_time));
     TEST_CHECK(CompareTime(LastAccessTime(sym), old_times.access));

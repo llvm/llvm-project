@@ -168,7 +168,7 @@ template <> struct ScalarEnumerationTraits<SymbolKind> {
 namespace clang {
 namespace clangd {
 
-SymbolSlab SymbolsFromYAML(llvm::StringRef YAMLContent) {
+SymbolSlab symbolsFromYAML(llvm::StringRef YAMLContent) {
   // Store data of pointer fields (excl. `StringRef`) like `Detail`.
   llvm::BumpPtrAllocator Arena;
   llvm::yaml::Input Yin(YAMLContent, &Arena);

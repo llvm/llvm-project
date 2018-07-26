@@ -522,6 +522,11 @@ public:
   /// \param Symbol - Symbol the section relative relocation should point to.
   virtual void EmitCOFFSecRel32(MCSymbol const *Symbol, uint64_t Offset);
 
+  /// Emits a COFF image relative relocation.
+  ///
+  /// \param Symbol - Symbol the image relative relocation should point to.
+  virtual void EmitCOFFImgRel32(MCSymbol const *Symbol, int64_t Offset);
+
   /// Emit an ELF .size directive.
   ///
   /// This corresponds to an assembler statement such as:

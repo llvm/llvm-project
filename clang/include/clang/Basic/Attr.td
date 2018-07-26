@@ -308,6 +308,7 @@ def TargetAVR : TargetArch<["avr"]>;
 def TargetMips32 : TargetArch<["mips", "mipsel"]>;
 def TargetAnyMips : TargetArch<["mips", "mipsel", "mips64", "mips64el"]>;
 def TargetMSP430 : TargetArch<["msp430"]>;
+def TargetRISCV : TargetArch<["riscv32", "riscv64"]>;
 def TargetX86 : TargetArch<["x86"]>;
 def TargetAnyX86 : TargetArch<["x86", "x86_64"]>;
 def TargetWindows : TargetArch<["x86", "x86_64", "arm", "thumb", "aarch64"]> {
@@ -1372,6 +1373,17 @@ def NoMicroMips : InheritableAttr, TargetSpecificAttr<TargetMips32> {
   let Spellings = [GCC<"nomicromips">];
   let Subjects = SubjectList<[Function], ErrorDiag>;
   let Documentation = [MicroMipsDocs];
+}
+
+def RISCVInterrupt : InheritableAttr, TargetSpecificAttr<TargetRISCV> {
+  let Spellings = [GCC<"interrupt">];
+  let Subjects = SubjectList<[Function]>;
+  let Args = [EnumArgument<"Interrupt", "InterruptType",
+                           ["user", "supervisor", "machine"],
+                           ["user", "supervisor", "machine"],
+                           1>];
+  let ParseKind = "Interrupt";
+  let Documentation = [RISCVInterruptDocs];
 }
 
 // This is not a TargetSpecificAttr so that is silently accepted and

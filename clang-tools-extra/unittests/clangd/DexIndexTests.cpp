@@ -19,6 +19,8 @@ namespace clang {
 namespace clangd {
 namespace dex {
 
+using ::testing::ElementsAre;
+
 testing::Matcher<std::vector<Token>>
 trigramsAre(std::initializer_list<std::string> Trigrams) {
   std::vector<Token> Tokens;

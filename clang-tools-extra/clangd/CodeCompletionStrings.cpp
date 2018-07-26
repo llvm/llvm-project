@@ -32,7 +32,7 @@ void appendEscapeSnippet(const llvm::StringRef Text, std::string *Out) {
   }
 }
 
-bool LooksLikeDocComment(llvm::StringRef CommentText) {
+bool looksLikeDocComment(llvm::StringRef CommentText) {
   // We don't report comments that only contain "special" chars.
   // This avoids reporting various delimiters, like:
   //   =================
@@ -67,7 +67,7 @@ std::string getDocComment(const ASTContext &Ctx,
   // write them into PCH, because they are racy and slow to load.
   assert(!Ctx.getSourceManager().isLoadedSourceLocation(RC->getLocStart()));
   std::string Doc = RC->getFormattedText(Ctx.getSourceManager(), Ctx.getDiagnostics());
-  if (!LooksLikeDocComment(Doc))
+  if (!looksLikeDocComment(Doc))
     return "";
   return Doc;
 }
@@ -86,7 +86,7 @@ getParameterDocComment(const ASTContext &Ctx,
   // write them into PCH, because they are racy and slow to load.
   assert(!Ctx.getSourceManager().isLoadedSourceLocation(RC->getLocStart()));
   std::string Doc = RC->getFormattedText(Ctx.getSourceManager(), Ctx.getDiagnostics());
-  if (!LooksLikeDocComment(Doc))
+  if (!looksLikeDocComment(Doc))
     return "";
   return Doc;
 }

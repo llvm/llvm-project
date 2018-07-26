@@ -1,3 +1,4 @@
+// REQUIRES: x86-registered-target
 // Test that by default -fnoopenmp-use-tls is passed to frontend.
 //
 // RUN: %clang %s -### -o %t.o 2>&1 -fopenmp=libomp | FileCheck --check-prefix=CHECK-DEFAULT %s
@@ -23,7 +24,9 @@
 
 // RUN: %clang %s -c -E -dM -fopenmp=libomp -fopenmp-version=45 | FileCheck --check-prefix=CHECK-45-VERSION %s
 // RUN: %clang %s -c -E -dM -fopenmp=libomp -fopenmp-simd | FileCheck --check-prefix=CHECK-45-VERSION %s
+// RUN: %clang %s -c -E -dM -fopenmp=libomp -fopenmp-targets=x86_64-unknown-unknown -o - | FileCheck --check-prefix=CHECK-45-VERSION --check-prefix=CHECK-45-VERSION2 %s
 // CHECK-45-VERSION: #define _OPENMP 201511
+// CHECK-45-VERSION2: #define _OPENMP 201511
 
 // RUN: %clang %s -c -E -dM -fopenmp-version=1 | FileCheck --check-prefix=CHECK-VERSION %s
 // RUN: %clang %s -c -E -dM -fopenmp-version=31 | FileCheck --check-prefix=CHECK-VERSION %s

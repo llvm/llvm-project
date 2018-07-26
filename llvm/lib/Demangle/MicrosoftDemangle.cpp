@@ -21,6 +21,7 @@
 #include "Utility.h"
 
 #include <cctype>
+#include <tuple>
 
 // This memory allocator is extremely fast, but it doesn't call dtors
 // for allocated objects. That means you can't use STL containers
@@ -115,7 +116,8 @@ enum class StorageClass : uint8_t {
 };
 
 enum class QualifierMangleMode { Drop, Mangle, Result };
-enum class QualifierMangleLocation { Member, NonMember, Detect };
+
+enum class PointerAffinity { Pointer, Reference };
 
 // Calling conventions
 enum class CallingConv : uint8_t {
@@ -140,6 +142,7 @@ enum class PrimTy : uint8_t {
   Function,
   Ptr,
   Ref,
+  MemberPtr,
   Array,
 
   Struct,
@@ -238,7 +241,17 @@ struct PointerType : public Type {
   void outputPre(OutputStream &OS) override;
   void outputPost(OutputStream &OS) override;
 
-  bool isMemberPointer() const { return false; }
+  // Represents a type X in "a pointer to X", "a reference to X",
+  // "an array of X", or "a function returning X".
+  Type *Pointee = nullptr;
+};
+
+struct MemberPointerType : public Type {
+  Type *clone(ArenaAllocator &Arena) const override;
+  void outputPre(OutputStream &OS) override;
+  void outputPost(OutputStream &OS) override;
+
+  Name *MemberName = nullptr;
 
   // Represents a type X in "a pointer to X", "a reference to X",
   // "an array of X", or "a function returning X".
@@ -280,6 +293,56 @@ struct ArrayType : public Type {
 };
 
 } // namespace
+
+static bool isMemberPointer(StringView MangledName) {
+  switch (MangledName.popFront()) {
+  case 'A':
+    // 'A' indicates a reference, and you cannot have a reference to a member
+    // function or member variable.
+    return false;
+  case 'P':
+  case 'Q':
+  case 'R':
+  case 'S':
+    // These 4 values indicate some kind of pointer, but we still don't know
+    // what.
+    break;
+  default:
+    assert(false && "Ty is not a pointer type!");
+  }
+
+  // If it starts with a number, then 6 indicates a non-member function
+  // pointer, and 8 indicates a member function pointer.
+  if (startsWithDigit(MangledName)) {
+    assert(MangledName[0] == '6' || MangledName[0] == '8');
+    return (MangledName[0] == '8');
+  }
+
+  // Remove ext qualifiers since those can appear on either type and are
+  // therefore not indicative.
+  MangledName.consumeFront('E'); // 64-bit
+  MangledName.consumeFront('I'); // restrict
+  MangledName.consumeFront('F'); // unaligned
+
+  assert(!MangledName.empty());
+
+  // The next value should be either ABCD (non-member) or QRST (member).
+  switch (MangledName.front()) {
+  case 'A':
+  case 'B':
+  case 'C':
+  case 'D':
+    return false;
+  case 'Q':
+  case 'R':
+  case 'S':
+  case 'T':
+    return true;
+  default:
+    assert(false);
+  }
+  return false;
+}
 
 static void outputCallingConvention(OutputStream &OS, CallingConv CC) {
   outputSpaceIfNecessary(OS);
@@ -515,6 +578,39 @@ void PointerType::outputPost(OutputStream &OS) {
   Type::outputPost(OS, *Pointee);
 }
 
+Type *MemberPointerType::clone(ArenaAllocator &Arena) const {
+  return Arena.alloc<MemberPointerType>(*this);
+}
+
+void MemberPointerType::outputPre(OutputStream &OS) {
+  Type::outputPre(OS, *Pointee);
+
+  outputSpaceIfNecessary(OS);
+
+  // "[]" and "()" (for function parameters) take precedence over "*",
+  // so "int *x(int)" means "x is a function returning int *". We need
+  // parentheses to supercede the default precedence. (e.g. we want to
+  // emit something like "int (*x)(int)".)
+  if (Pointee->Prim == PrimTy::Function || Pointee->Prim == PrimTy::Array)
+    OS << "(";
+
+  outputName(OS, MemberName);
+  OS << "::*";
+
+  // FIXME: We should output this, but it requires updating lots of tests.
+  // if (Ty.Quals & Q_Pointer64)
+  //  OS << " __ptr64";
+  if (Quals & Q_Restrict)
+    OS << " __restrict";
+}
+
+void MemberPointerType::outputPost(OutputStream &OS) {
+  if (Pointee->Prim == PrimTy::Function || Pointee->Prim == PrimTy::Array)
+    OS << ")";
+
+  Type::outputPost(OS, *Pointee);
+}
+
 Type *FunctionType::clone(ArenaAllocator &Arena) const {
   return Arena.alloc<FunctionType>(*this);
 }
@@ -614,6 +710,7 @@ private:
   Type *demangleBasicType();
   UdtType *demangleClassType();
   PointerType *demanglePointerType();
+  MemberPointerType *demangleMemberPointerType();
 
   ArrayType *demangleArrayType();
 
@@ -632,12 +729,7 @@ private:
   StorageClass demangleVariableStorageClass();
   ReferenceKind demangleReferenceKind();
 
-  Qualifiers demangleFunctionQualifiers();
-  Qualifiers demangleVariablQualifiers();
-  Qualifiers demangleReturnTypQualifiers();
-
-  Qualifiers demangleQualifiers(
-      QualifierMangleLocation Location = QualifierMangleLocation::Detect);
+  std::pair<Qualifiers, bool> demangleQualifiers();
 
   // The result is written to this stream.
   OutputStream OS;
@@ -704,27 +796,29 @@ Type *Demangler::demangleVariableEncoding() {
   //                 ::= <type> <pointee-cvr-qualifiers> # pointers, references
   switch (Ty->Prim) {
   case PrimTy::Ptr:
-  case PrimTy::Ref: {
+  case PrimTy::Ref:
+  case PrimTy::MemberPtr: {
     Qualifiers ExtraChildQuals = Q_None;
     Ty->Quals = Qualifiers(Ty->Quals | demanglePointerExtQualifiers());
 
-    PointerType *PTy = static_cast<PointerType *>(Ty);
-    QualifierMangleLocation Location = PTy->isMemberPointer()
-                                           ? QualifierMangleLocation::Member
-                                           : QualifierMangleLocation::NonMember;
+    bool IsMember = false;
+    std::tie(ExtraChildQuals, IsMember) = demangleQualifiers();
 
-    ExtraChildQuals = demangleQualifiers(Location);
-
-    if (PTy->isMemberPointer()) {
+    if (Ty->Prim == PrimTy::MemberPtr) {
+      assert(IsMember);
       Name *BackRefName = demangleName();
       (void)BackRefName;
+      MemberPointerType *MPTy = static_cast<MemberPointerType *>(Ty);
+      MPTy->Pointee->Quals = Qualifiers(MPTy->Pointee->Quals | ExtraChildQuals);
+    } else {
+      PointerType *PTy = static_cast<PointerType *>(Ty);
+      PTy->Pointee->Quals = Qualifiers(PTy->Pointee->Quals | ExtraChildQuals);
     }
 
-    PTy->Pointee->Quals = Qualifiers(PTy->Pointee->Quals | ExtraChildQuals);
     break;
   }
   default:
-    Ty->Quals = demangleQualifiers();
+    Ty->Quals = demangleQualifiers().first;
     break;
   }
 
@@ -848,6 +942,10 @@ Name *Demangler::demangleName() {
 
     Elem->Next = Head;
     Head = Elem;
+    if (MangledName.empty()) {
+      Error = true;
+      return nullptr;
+    }
   }
 
   return Head;
@@ -1021,26 +1119,6 @@ int Demangler::demangleFunctionClass() {
   return 0;
 }
 
-Qualifiers Demangler::demangleFunctionQualifiers() {
-  SwapAndRestore<StringView> RestoreOnError(MangledName, MangledName);
-  RestoreOnError.shouldRestore(false);
-
-  switch (MangledName.popFront()) {
-  case 'A':
-    return Q_None;
-  case 'B':
-    return Q_Const;
-  case 'C':
-    return Q_Volatile;
-  case 'D':
-    return Qualifiers(Q_Const | Q_Volatile);
-  }
-
-  Error = true;
-  RestoreOnError.shouldRestore(true);
-  return Q_None;
-}
-
 CallingConv Demangler::demangleCallingConvention() {
   switch (MangledName.popFront()) {
   case 'A':
@@ -1090,116 +1168,46 @@ StorageClass Demangler::demangleVariableStorageClass() {
   return StorageClass::None;
 }
 
-Qualifiers Demangler::demangleVariablQualifiers() {
-  SwapAndRestore<StringView> RestoreOnError(MangledName, MangledName);
-  RestoreOnError.shouldRestore(false);
+std::pair<Qualifiers, bool> Demangler::demangleQualifiers() {
 
   switch (MangledName.popFront()) {
+  // Member qualifiers
+  case 'Q':
+    return std::make_pair(Q_None, true);
+  case 'R':
+    return std::make_pair(Q_Const, true);
+  case 'S':
+    return std::make_pair(Q_Volatile, true);
+  case 'T':
+    return std::make_pair(Qualifiers(Q_Const | Q_Volatile), true);
+  // Non-Member qualifiers
   case 'A':
-    return Q_None;
+    return std::make_pair(Q_None, false);
   case 'B':
-    return Q_Const;
+    return std::make_pair(Q_Const, false);
   case 'C':
-    return Q_Volatile;
+    return std::make_pair(Q_Volatile, false);
   case 'D':
-    return Qualifiers(Q_Const | Q_Volatile);
-  case 'E':
-    return Q_Far;
-  case 'F':
-    return Qualifiers(Q_Const | Q_Far);
-  case 'G':
-    return Qualifiers(Q_Volatile | Q_Far);
-  case 'H':
-    return Qualifiers(Q_Const | Q_Volatile | Q_Far);
-  }
-
-  Error = true;
-  RestoreOnError.shouldRestore(true);
-  return Q_None;
-}
-
-Qualifiers Demangler::demangleReturnTypQualifiers() {
-  if (!MangledName.consumeFront("?"))
-    return Q_None;
-
-  SwapAndRestore<StringView> RestoreOnError(MangledName, MangledName);
-  RestoreOnError.shouldRestore(false);
-
-  switch (MangledName.popFront()) {
-  case 'A':
-    return Q_None;
-  case 'B':
-    return Q_Const;
-  case 'C':
-    return Q_Volatile;
-  case 'D':
-    return Qualifiers(Q_Const | Q_Volatile);
-  }
-
-  Error = true;
-  RestoreOnError.shouldRestore(true);
-  return Q_None;
-}
-
-Qualifiers Demangler::demangleQualifiers(QualifierMangleLocation Location) {
-  if (Location == QualifierMangleLocation::Detect) {
-    switch (MangledName.front()) {
-    case 'Q':
-    case 'R':
-    case 'S':
-    case 'T':
-      Location = QualifierMangleLocation::Member;
-      break;
-    case 'A':
-    case 'B':
-    case 'C':
-    case 'D':
-      Location = QualifierMangleLocation::NonMember;
-      break;
-    default:
-      Error = true;
-      return Q_None;
-    }
-  }
-
-  if (Location == QualifierMangleLocation::Member) {
-    switch (MangledName.popFront()) {
-    // Member qualifiers
-    case 'Q':
-      return Q_None;
-    case 'R':
-      return Q_Const;
-    case 'S':
-      return Q_Volatile;
-    case 'T':
-      return Qualifiers(Q_Const | Q_Volatile);
-    }
-  } else {
-    switch (MangledName.popFront()) {
-    // Non-Member qualifiers
-    case 'A':
-      return Q_None;
-    case 'B':
-      return Q_Const;
-    case 'C':
-      return Q_Volatile;
-    case 'D':
-      return Qualifiers(Q_Const | Q_Volatile);
-    }
+    return std::make_pair(Qualifiers(Q_Const | Q_Volatile), false);
   }
   Error = true;
-  return Q_None;
+  return std::make_pair(Q_None, false);
 }
 
 // <variable-type> ::= <type> <cvr-qualifiers>
 //                 ::= <type> <pointee-cvr-qualifiers> # pointers, references
 Type *Demangler::demangleType(QualifierMangleMode QMM) {
   Qualifiers Quals = Q_None;
-  if (QMM == QualifierMangleMode::Mangle)
-    Quals = Qualifiers(Quals | demangleQualifiers());
-  else if (QMM == QualifierMangleMode::Result) {
-    if (MangledName.consumeFront('?'))
-      Quals = Qualifiers(Quals | demangleQualifiers());
+  bool IsMember = false;
+  bool IsMemberKnown = false;
+  if (QMM == QualifierMangleMode::Mangle) {
+    std::tie(Quals, IsMember) = demangleQualifiers();
+    IsMemberKnown = true;
+  } else if (QMM == QualifierMangleMode::Result) {
+    if (MangledName.consumeFront('?')) {
+      std::tie(Quals, IsMember) = demangleQualifiers();
+      IsMemberKnown = true;
+    }
   }
 
   Type *Ty = nullptr;
@@ -1215,7 +1223,12 @@ Type *Demangler::demangleType(QualifierMangleMode QMM) {
   case 'Q': // foo *const
   case 'R': // foo *volatile
   case 'S': // foo *const volatile
-    Ty = demanglePointerType();
+    if (!IsMemberKnown)
+      IsMember = isMemberPointer(MangledName);
+    if (IsMember)
+      Ty = demangleMemberPointerType();
+    else
+      Ty = demanglePointerType();
     break;
   case 'Y':
     Ty = demangleArrayType();
@@ -1253,7 +1266,7 @@ Type *Demangler::demangleFunctionEncoding() {
   if (functionHasThisPtr(*FTy)) {
     FTy->Quals = demanglePointerExtQualifiers();
     FTy->RefKind = demangleReferenceKind();
-    FTy->Quals = Qualifiers(FTy->Quals | demangleQualifiers());
+    FTy->Quals = Qualifiers(FTy->Quals | demangleQualifiers().first);
   }
 
   // Fields that appear on both member and non-member functions.
@@ -1369,35 +1382,36 @@ UdtType *Demangler::demangleClassType() {
   return UTy;
 }
 
+static std::pair<Qualifiers, PointerAffinity>
+demanglePointerCVQualifiers(StringView &MangledName) {
+  switch (MangledName.popFront()) {
+  case 'A':
+    return std::make_pair(Q_None, PointerAffinity::Reference);
+  case 'P':
+    return std::make_pair(Q_None, PointerAffinity::Pointer);
+  case 'Q':
+    return std::make_pair(Q_Const, PointerAffinity::Pointer);
+  case 'R':
+    return std::make_pair(Q_Volatile, PointerAffinity::Pointer);
+  case 'S':
+    return std::make_pair(Qualifiers(Q_Const | Q_Volatile),
+                          PointerAffinity::Pointer);
+  default:
+    assert(false && "Ty is not a pointer type!");
+  }
+  return std::make_pair(Q_None, PointerAffinity::Pointer);
+}
+
 // <pointer-type> ::= E? <pointer-cvr-qualifiers> <ext-qualifiers> <type>
 //                       # the E is required for 64-bit non-static pointers
 PointerType *Demangler::demanglePointerType() {
   PointerType *Pointer = Arena.alloc<PointerType>();
 
-  Pointer->Quals = Q_None;
-  switch (MangledName.popFront()) {
-  case 'A':
-    Pointer->Prim = PrimTy::Ref;
-    break;
-  case 'P':
-    Pointer->Prim = PrimTy::Ptr;
-    break;
-  case 'Q':
-    Pointer->Prim = PrimTy::Ptr;
-    Pointer->Quals = Q_Const;
-    break;
-  case 'R':
-    Pointer->Quals = Q_Volatile;
-    Pointer->Prim = PrimTy::Ptr;
-    break;
-  case 'S':
-    Pointer->Quals = Qualifiers(Q_Const | Q_Volatile);
-    Pointer->Prim = PrimTy::Ptr;
-    break;
-  default:
-    assert(false && "Ty is not a pointer type!");
-  }
+  PointerAffinity Affinity;
+  std::tie(Pointer->Quals, Affinity) = demanglePointerCVQualifiers(MangledName);
 
+  Pointer->Prim =
+      (Affinity == PointerAffinity::Pointer) ? PrimTy::Ptr : PrimTy::Ref;
   if (MangledName.consumeFront("6")) {
     FunctionType *FTy = Arena.alloc<FunctionType>();
     FTy->Prim = PrimTy::Function;
@@ -1417,6 +1431,28 @@ PointerType *Demangler::demanglePointerType() {
   Pointer->Quals = Qualifiers(Pointer->Quals | ExtQuals);
 
   Pointer->Pointee = demangleType(QualifierMangleMode::Mangle);
+  return Pointer;
+}
+
+MemberPointerType *Demangler::demangleMemberPointerType() {
+  MemberPointerType *Pointer = Arena.alloc<MemberPointerType>();
+  Pointer->Prim = PrimTy::MemberPtr;
+
+  PointerAffinity Affinity;
+  std::tie(Pointer->Quals, Affinity) = demanglePointerCVQualifiers(MangledName);
+  assert(Affinity == PointerAffinity::Pointer);
+
+  Qualifiers ExtQuals = demanglePointerExtQualifiers();
+  Pointer->Quals = Qualifiers(Pointer->Quals | ExtQuals);
+
+  Qualifiers PointeeQuals = Q_None;
+  bool IsMember = false;
+  std::tie(PointeeQuals, IsMember) = demangleQualifiers();
+  assert(IsMember);
+  Pointer->MemberName = demangleName();
+
+  Pointer->Pointee = demangleType(QualifierMangleMode::Drop);
+  Pointer->Pointee->Quals = PointeeQuals;
   return Pointer;
 }
 

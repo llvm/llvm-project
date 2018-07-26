@@ -1,3 +1,7 @@
+UNSUPPORTED: system-windows
+Windows does not like renaming files that have open handles to them. We
+need to use TempFile::keep to move them in a portable way.
+
 RUN: dsymutil -accelerator=Dwarf -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64 -o %t.dwarf.dSYM
 RUN: dsymutil -accelerator=Apple -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64 -o %t.apple.dSYM
 
@@ -7,14 +11,14 @@ RUN: llvm-dwarfdump -verify %t.apple.dSYM
 RUN: llvm-dwarfdump -debug-names %t.dwarf.dSYM | FileCheck %s -check-prefix=NAMES -check-prefix=DWARF
 RUN: llvm-dwarfdump -apple-names -apple-namespaces -apple-types %t.apple.dSYM | FileCheck %s -check-prefix=NAMES -check-prefix=APPLE
 
-RUN: dsymutil -update -accelerator=Dwarf %t.apple.dSYM -o %t.dwarf.updated.dSYM
-RUN: dsymutil -update -accelerator=Apple %t.dwarf.dSYM -o %t.apple.updated.dSYM
+RUN: dsymutil -update -accelerator=Dwarf %t.apple.dSYM
+RUN: dsymutil -update -accelerator=Apple %t.dwarf.dSYM
 
-RUN: llvm-dwarfdump -verify %t.dwarf.updated.dSYM
-RUN: llvm-dwarfdump -verify %t.apple.updated.dSYM
+RUN: llvm-dwarfdump -verify %t.dwarf.dSYM
+RUN: llvm-dwarfdump -verify %t.apple.dSYM
 
-RUN: llvm-dwarfdump -debug-names %t.dwarf.updated.dSYM | FileCheck %s -check-prefix=NAMES -check-prefix=DWARF
-RUN: llvm-dwarfdump -apple-names -apple-namespaces -apple-types %t.apple.updated.dSYM | FileCheck %s -check-prefix=NAMES -check-prefix=APPLE
+RUN: llvm-dwarfdump -debug-names %t.apple.dSYM | FileCheck %s -check-prefix=NAMES -check-prefix=DWARF
+RUN: llvm-dwarfdump -apple-names -apple-namespaces -apple-types %t.dwarf.dSYM | FileCheck %s -check-prefix=NAMES -check-prefix=APPLE
 
 DWARF: .debug_names contents:
 DWARF: Compilation Unit offsets [

@@ -23,7 +23,8 @@ namespace clangd {
 // Builds a VFS that provides access to the provided files, plus temporary
 // directories.
 llvm::IntrusiveRefCntPtr<vfs::FileSystem>
-buildTestFS(llvm::StringMap<std::string> const &Files);
+buildTestFS(llvm::StringMap<std::string> const &Files,
+            llvm::StringMap<time_t> const &Timestamps = {});
 
 // A VFS provider that returns TestFSes containing a provided set of files.
 class MockFSProvider : public FileSystemProvider {

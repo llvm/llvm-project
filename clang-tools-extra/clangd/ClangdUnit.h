@@ -68,7 +68,7 @@ public:
   /// Attempts to run Clang and store parsed AST. If \p Preamble is non-null
   /// it is reused during parsing.
   static llvm::Optional<ParsedAST>
-  Build(std::unique_ptr<clang::CompilerInvocation> CI,
+  build(std::unique_ptr<clang::CompilerInvocation> CI,
         std::shared_ptr<const PreambleData> Preamble,
         std::unique_ptr<llvm::MemoryBuffer> Buffer,
         std::shared_ptr<PCHContainerOperations> PCHs,

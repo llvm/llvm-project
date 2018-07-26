@@ -147,11 +147,11 @@ private:
   static const unsigned MaxDepth = 3;
 
   bool isConsecutiveAccess(Value *A, Value *B);
-  bool areConsecutivePointers(Value *PtrA, Value *PtrB, APInt PtrDelta,
+  bool areConsecutivePointers(Value *PtrA, Value *PtrB, const APInt &PtrDelta,
                               unsigned Depth = 0) const;
   bool lookThroughComplexAddresses(Value *PtrA, Value *PtrB, APInt PtrDelta,
                                    unsigned Depth) const;
-  bool lookThroughSelects(Value *PtrA, Value *PtrB, APInt PtrDelta,
+  bool lookThroughSelects(Value *PtrA, Value *PtrB, const APInt &PtrDelta,
                           unsigned Depth) const;
 
   /// After vectorization, reorder the instructions that I depends on
@@ -319,7 +319,8 @@ bool Vectorizer::isConsecutiveAccess(Value *A, Value *B) {
 }
 
 bool Vectorizer::areConsecutivePointers(Value *PtrA, Value *PtrB,
-                                        APInt PtrDelta, unsigned Depth) const {
+                                        const APInt &PtrDelta,
+                                        unsigned Depth) const {
   unsigned PtrBitWidth = DL.getPointerTypeSizeInBits(PtrA->getType());
   APInt OffsetA(PtrBitWidth, 0);
   APInt OffsetB(PtrBitWidth, 0);
@@ -450,7 +451,8 @@ bool Vectorizer::lookThroughComplexAddresses(Value *PtrA, Value *PtrB,
   return X == OffsetSCEVB;
 }
 
-bool Vectorizer::lookThroughSelects(Value *PtrA, Value *PtrB, APInt PtrDelta,
+bool Vectorizer::lookThroughSelects(Value *PtrA, Value *PtrB,
+                                    const APInt &PtrDelta,
                                     unsigned Depth) const {
   if (Depth++ == MaxDepth)
     return false;

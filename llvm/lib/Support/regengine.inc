@@ -1013,7 +1013,7 @@ pchar(int ch)
 {
 	static char pbuf[10];
 
-	if (isprint(ch) || ch == ' ')
+	if (isPrint(ch) || ch == ' ')
 		(void)snprintf(pbuf, sizeof pbuf, "%c", ch);
 	else
 		(void)snprintf(pbuf, sizeof pbuf, "\\%o", ch);

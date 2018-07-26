@@ -129,7 +129,7 @@ bool TextInstrProfReader::hasFormat(const MemoryBuffer &Buffer) {
   StringRef buffer = Buffer.getBufferStart();
   return count == 0 ||
          std::all_of(buffer.begin(), buffer.begin() + count,
-                     [](char c) { return ::isprint(c) || ::isspace(c); });
+                     [](char c) { return isPrint(c) || ::isspace(c); });
 }
 
 // Read the profile variant flag from the header: ":FE" means this is a FE

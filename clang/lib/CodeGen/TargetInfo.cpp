@@ -8971,6 +8971,27 @@ class RISCVTargetCodeGenInfo : public TargetCodeGenInfo {
 public:
   RISCVTargetCodeGenInfo(CodeGen::CodeGenTypes &CGT, unsigned XLen)
       : TargetCodeGenInfo(new RISCVABIInfo(CGT, XLen)) {}
+
+  void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
+                           CodeGen::CodeGenModule &CGM) const override {
+    const auto *FD = dyn_cast_or_null<FunctionDecl>(D);
+    if (!FD) return;
+
+    const auto *Attr = FD->getAttr<RISCVInterruptAttr>();
+    if (!Attr)
+      return;
+
+    const char *Kind;
+    switch (Attr->getInterrupt()) {
+    case RISCVInterruptAttr::user: Kind = "user"; break;
+    case RISCVInterruptAttr::supervisor: Kind = "supervisor"; break;
+    case RISCVInterruptAttr::machine: Kind = "machine"; break;
+    }
+
+    auto *Fn = cast<llvm::Function>(GV);
+
+    Fn->addFnAttr("interrupt", Kind);
+  }
 };
 } // namespace
 

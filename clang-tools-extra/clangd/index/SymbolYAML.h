@@ -27,7 +27,7 @@ namespace clang {
 namespace clangd {
 
 // Read symbols from a YAML-format string.
-SymbolSlab SymbolsFromYAML(llvm::StringRef YAMLContent);
+SymbolSlab symbolsFromYAML(llvm::StringRef YAMLContent);
 
 // Read one symbol from a YAML-stream.
 // The arena must be the Input's context! (i.e. yaml::Input Input(Text, &Arena))

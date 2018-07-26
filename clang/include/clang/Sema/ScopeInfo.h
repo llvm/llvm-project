@@ -175,9 +175,13 @@ public:
   /// Used to determine if errors occurred in this function or block.
   DiagnosticErrorTrap ErrorTrap;
 
+  /// A SwitchStmt, along with a flag indicating if its list of case statements
+  /// is incomplete (because we dropped an invalid one while parsing).
+  using SwitchInfo = llvm::PointerIntPair<SwitchStmt*, 1, bool>;
+
   /// SwitchStack - This is the current set of active switch statements in the
   /// block.
-  SmallVector<SwitchStmt*, 8> SwitchStack;
+  SmallVector<SwitchInfo, 8> SwitchStack;
 
   /// The list of return statements that occur within the function or
   /// block, if there is any chance of applying the named return value

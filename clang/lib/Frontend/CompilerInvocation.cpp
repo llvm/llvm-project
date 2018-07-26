@@ -2594,13 +2594,15 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
       Opts.OpenMP && !Args.hasArg(options::OPT_fnoopenmp_use_tls);
   Opts.OpenMPIsDevice =
       Opts.OpenMP && Args.hasArg(options::OPT_fopenmp_is_device);
+  bool IsTargetSpecified =
+      Opts.OpenMPIsDevice || Args.hasArg(options::OPT_fopenmp_targets_EQ);
 
   if (Opts.OpenMP || Opts.OpenMPSimd) {
-    if (int Version =
-            getLastArgIntValue(Args, OPT_fopenmp_version_EQ,
-                               IsSimdSpecified ? 45 : Opts.OpenMP, Diags))
+    if (int Version = getLastArgIntValue(
+            Args, OPT_fopenmp_version_EQ,
+            (IsSimdSpecified || IsTargetSpecified) ? 45 : Opts.OpenMP, Diags))
       Opts.OpenMP = Version;
-    else if (IsSimdSpecified)
+    else if (IsSimdSpecified || IsTargetSpecified)
       Opts.OpenMP = 45;
     // Provide diagnostic when a given target is not expected to be an OpenMP
     // device or host.
