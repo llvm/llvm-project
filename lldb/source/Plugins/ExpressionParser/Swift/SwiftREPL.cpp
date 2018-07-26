@@ -255,7 +255,7 @@ lldb::REPLSP SwiftREPL::CreateInstanceFromDebugger(Status &err,
   cleanup.disable();
 
   std::string swift_full_version(swift::version::getSwiftFullVersion());
-  printf("Welcome to %s. Type :help for assistance.\n",
+  printf("Welcome to %s.\nType :help for assistance.\n",
          swift_full_version.c_str());
 
   return repl_sp;
