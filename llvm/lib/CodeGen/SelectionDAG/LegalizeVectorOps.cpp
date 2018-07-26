@@ -223,7 +223,8 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   for (const SDValue &Op : Node->op_values())
     Ops.push_back(LegalizeOp(Op));
 
-  SDValue Result = SDValue(DAG.UpdateNodeOperands(Op.getNode(), Ops), 0);
+  SDValue Result = SDValue(DAG.UpdateNodeOperands(Op.getNode(), Ops),
+                           Op.getResNo());
 
   bool HasVectorValue = false;
   if (Op.getOpcode() == ISD::LOAD) {

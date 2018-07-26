@@ -252,7 +252,9 @@ public:
     if (!hasAssociatedStmt())
       return child_range(child_iterator(), child_iterator());
     Stmt **ChildStorage = reinterpret_cast<Stmt **>(getClauses().end());
-    return child_range(ChildStorage, ChildStorage + NumChildren);
+    /// Do not mark all the special expression/statements as children, except
+    /// for the associated statement.
+    return child_range(ChildStorage, ChildStorage + 1);
   }
 
   ArrayRef<OMPClause *> clauses() { return getClauses(); }

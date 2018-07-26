@@ -37,7 +37,11 @@ getSecNameOrIndexAsSecRef(const object::ObjectFile *Obj, StringRef SecName) {
   char *StrPtr;
   long SectionIndex = strtol(SecName.data(), &StrPtr, 10);
   object::SectionRef Section;
-  long SecIndex = 0;
+  long SecIndex;
+  if (Obj->isELF())
+    SecIndex = 0;
+  else
+    SecIndex = 1;
   for (object::SectionRef SecRef : Obj->sections()) {
     if (*StrPtr) {
       StringRef SectionName;
@@ -90,11 +94,23 @@ void ObjDumper::printSectionAsString(const object::ObjectFile *Obj,
   }
 }
 
-void ObjDumper::SectionHexDump(StringRef SecName, const uint8_t *Section,
-                               size_t Size) {
-  const uint8_t *SecContent = Section;
-  const uint8_t *SecEnd = Section + Size;
-  W.startLine() << "Hex dump of section '" << SecName << "':\n";
+void ObjDumper::printSectionAsHex(const object::ObjectFile *Obj,
+                                  StringRef SecName) {
+  Expected<object::SectionRef> SectionRefOrError =
+      getSecNameOrIndexAsSecRef(Obj, SecName);
+  if (!SectionRefOrError)
+    error(std::move(SectionRefOrError));
+  object::SectionRef Section = *SectionRefOrError;
+  StringRef SectionName;
+
+  if (std::error_code E = Section.getName(SectionName))
+    error(E);
+  W.startLine() << "Hex dump of section '" << SectionName << "':\n";
+
+  StringRef SectionContent;
+  Section.getContents(SectionContent);
+  const uint8_t *SecContent = SectionContent.bytes_begin();
+  const uint8_t *SecEnd = SecContent + SectionContent.size();
 
   for (const uint8_t *SecPtr = SecContent; SecPtr < SecEnd; SecPtr += 16) {
     const uint8_t *TmpSecPtr = SecPtr;
@@ -121,12 +137,9 @@ void ObjDumper::SectionHexDump(StringRef SecName, const uint8_t *Section,
                               ' ');
 
     TmpSecPtr = SecPtr;
-    for (i = 0; TmpSecPtr + i < SecEnd && i < 16; ++i) {
-      if (isprint(TmpSecPtr[i]))
-        W.startLine() << TmpSecPtr[i];
-      else
-        W.startLine() << '.';
-    }
+    for (i = 0; TmpSecPtr + i < SecEnd && i < 16; ++i)
+      W.startLine() << (isprint(TmpSecPtr[i]) ? static_cast<char>(TmpSecPtr[i])
+                                              : '.');
 
     W.startLine() << '\n';
   }

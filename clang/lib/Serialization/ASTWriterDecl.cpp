@@ -431,6 +431,8 @@ void ASTDeclWriter::VisitEnumDecl(EnumDecl *D) {
   Record.push_back(D->isScoped());
   Record.push_back(D->isScopedUsingClassTag());
   Record.push_back(D->isFixed());
+  Record.push_back(D->getODRHash());
+
   if (MemberSpecializationInfo *MemberInfo = D->getMemberSpecializationInfo()) {
     Record.AddDeclRef(MemberInfo->getInstantiatedFrom());
     Record.push_back(MemberInfo->getTemplateSpecializationKind());
@@ -1865,6 +1867,7 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // isScoped
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // isScopedUsingClassTag
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // isFixed
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32));// ODRHash
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // InstantiatedMembEnum
   // DC
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // LexicalOffset

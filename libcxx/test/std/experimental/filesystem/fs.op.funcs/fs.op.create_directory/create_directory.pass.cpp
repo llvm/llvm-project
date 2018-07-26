@@ -94,9 +94,9 @@ TEST_CASE(dest_is_file)
 {
     scoped_test_env env;
     const path file = env.create_file("file", 42);
-    std::error_code ec;
+    std::error_code ec = GetTestEC();
     TEST_CHECK(fs::create_directory(file, ec) == false);
-    TEST_CHECK(ec);
+    TEST_CHECK(!ec);
     TEST_CHECK(is_regular_file(file));
 }
 

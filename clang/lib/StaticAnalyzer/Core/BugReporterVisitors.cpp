@@ -2370,34 +2370,6 @@ TaintBugVisitor::VisitNode(const ExplodedNode *N, const ExplodedNode *PrevN,
   return std::make_shared<PathDiagnosticEventPiece>(L, "Taint originated here");
 }
 
-static bool areConstraintsUnfeasible(BugReporterContext &BRC,
-                                     const ConstraintRangeTy &Cs) {
-  // Create a refutation manager
-  std::unique_ptr<ConstraintManager> RefutationMgr = CreateZ3ConstraintManager(
-      BRC.getStateManager(), BRC.getStateManager().getOwningEngine());
-
-  SMTConstraintManager *SMTRefutationMgr =
-      static_cast<SMTConstraintManager *>(RefutationMgr.get());
-
-  // Add constraints to the solver
-  SMTRefutationMgr->addRangeConstraints(Cs);
-
-  // And check for satisfiability
-  return SMTRefutationMgr->isModelFeasible().isConstrainedFalse();
-}
-
-static void addNewConstraints(ConstraintRangeTy &Cs,
-                              const ConstraintRangeTy &NewCs,
-                              ConstraintRangeTy::Factory &CF) {
-  // Add constraints if we don't have them yet
-  for (auto const &C : NewCs) {
-    const SymbolRef &Sym = C.first;
-    if (!Cs.contains(Sym)) {
-      Cs = CF.add(Cs, Sym, C.second);
-    }
-  }
-}
-
 FalsePositiveRefutationBRVisitor::FalsePositiveRefutationBRVisitor()
     : Constraints(ConstraintRangeTy::Factory().getEmptyMap()) {}
 
@@ -2406,8 +2378,26 @@ void FalsePositiveRefutationBRVisitor::finalizeVisitor(
   // Collect new constraints
   VisitNode(EndPathNode, nullptr, BRC, BR);
 
-  // Create a new refutation manager and check feasibility
-  if (areConstraintsUnfeasible(BRC, Constraints))
+  // Create a refutation manager
+  std::unique_ptr<SMTSolver> RefutationSolver = CreateZ3Solver();
+  ASTContext &Ctx = BRC.getASTContext();
+
+  // Add constraints to the solver
+  for (const auto &I : Constraints) {
+    SymbolRef Sym = I.first;
+
+    SMTExprRef Constraints = RefutationSolver->fromBoolean(false);
+    for (const auto &Range : I.second) {
+      Constraints = RefutationSolver->mkOr(
+          Constraints,
+          RefutationSolver->getRangeExpr(Ctx, Sym, Range.From(), Range.To(),
+                                         /*InRange=*/true));
+    }
+    RefutationSolver->addConstraint(Constraints);
+  }
+
+  // And check for satisfiability
+  if (RefutationSolver->check().isConstrainedFalse())
     BR.markInvalid("Infeasible constraints", EndPathNode->getLocationContext());
 }
 
@@ -2417,8 +2407,17 @@ FalsePositiveRefutationBRVisitor::VisitNode(const ExplodedNode *N,
                                             BugReporterContext &BRC,
                                             BugReport &BR) {
   // Collect new constraints
-  addNewConstraints(Constraints, N->getState()->get<ConstraintRange>(),
-                    N->getState()->get_context<ConstraintRange>());
+  const ConstraintRangeTy &NewCs = N->getState()->get<ConstraintRange>();
+  ConstraintRangeTy::Factory &CF =
+      N->getState()->get_context<ConstraintRange>();
+
+  // Add constraints if we don't have them yet
+  for (auto const &C : NewCs) {
+    const SymbolRef &Sym = C.first;
+    if (!Constraints.contains(Sym)) {
+      Constraints = CF.add(Constraints, Sym, C.second);
+    }
+  }
 
   return nullptr;
 }

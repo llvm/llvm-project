@@ -59,22 +59,8 @@ def : ReadAdvance<RegReadAdv, 4>;
 def : WriteRes<LSULatency, []> { let Latency = 4; let NumMicroOps = 0; }
 
 let NumMicroOps = 0 in {
-  def : WriteRes<WLat1, []> { let Latency = 1; }
-  def : WriteRes<WLat2, []> { let Latency = 2; }
-  def : WriteRes<WLat3, []> { let Latency = 3; }
-  def : WriteRes<WLat4, []> { let Latency = 4; }
-  def : WriteRes<WLat5, []> { let Latency = 5; }
-  def : WriteRes<WLat6, []> { let Latency = 6; }
-  def : WriteRes<WLat7, []> { let Latency = 7; }
-  def : WriteRes<WLat8, []> { let Latency = 8; }
-  def : WriteRes<WLat9, []> { let Latency = 9; }
-  def : WriteRes<WLat10, []> { let Latency = 10; }
-  def : WriteRes<WLat11, []> { let Latency = 11; }
-  def : WriteRes<WLat12, []> { let Latency = 12; }
-  def : WriteRes<WLat15, []> { let Latency = 15; }
-  def : WriteRes<WLat16, []> { let Latency = 16; }
-  def : WriteRes<WLat20, []> { let Latency = 20; }
-  def : WriteRes<WLat30, []> { let Latency = 30; }
+  foreach L = 1-30 in
+    def : WriteRes<!cast<SchedWrite>("WLat"#L), []> { let Latency = L; }
 }
 
 // Execution units.
@@ -88,36 +74,30 @@ def Z13_MCD         : ProcResource<1>;
 
 // Subtarget specific definitions of scheduling resources.
 let NumMicroOps = 0 in {
-  def : WriteRes<FXa,     [Z13_FXaUnit]>;
-  def : WriteRes<FXa2,    [Z13_FXaUnit]> { let ResourceCycles = [2]; }
-  def : WriteRes<FXa3,    [Z13_FXaUnit]> { let ResourceCycles = [3]; }
-  def : WriteRes<FXa4,    [Z13_FXaUnit]> { let ResourceCycles = [4]; }
-  def : WriteRes<FXb,     [Z13_FXbUnit]>;
-  def : WriteRes<FXb2,    [Z13_FXbUnit]> { let ResourceCycles = [2]; }
-  def : WriteRes<FXb3,    [Z13_FXbUnit]> { let ResourceCycles = [3]; }
-  def : WriteRes<FXb4,    [Z13_FXbUnit]> { let ResourceCycles = [4]; }
-  def : WriteRes<FXb5,    [Z13_FXbUnit]> { let ResourceCycles = [5]; }
-  def : WriteRes<LSU,     [Z13_LSUnit]>;
-  def : WriteRes<LSU2,    [Z13_LSUnit]> { let ResourceCycles = [2]; }
-  def : WriteRes<LSU3,    [Z13_LSUnit]> { let ResourceCycles = [3]; }
-  def : WriteRes<LSU4,    [Z13_LSUnit]> { let ResourceCycles = [4]; }
-  def : WriteRes<LSU5,    [Z13_LSUnit]> { let ResourceCycles = [5]; }
-  def : WriteRes<VecBF,   [Z13_VecUnit]>;
-  def : WriteRes<VecBF2,  [Z13_VecUnit]> { let ResourceCycles = [2]; }
-  def : WriteRes<VecBF4,  [Z13_VecUnit]> { let ResourceCycles = [4]; }
-  def : WriteRes<VecDF,   [Z13_VecUnit]>;
-  def : WriteRes<VecDF2,  [Z13_VecUnit]> { let ResourceCycles = [2]; }
-  def : WriteRes<VecDF4,  [Z13_VecUnit]> { let ResourceCycles = [4]; }
-  def : WriteRes<VecDFX,  [Z13_VecUnit]>;
-  def : WriteRes<VecDFX2, [Z13_VecUnit]> { let ResourceCycles = [2]; }
-  def : WriteRes<VecDFX4, [Z13_VecUnit]> { let ResourceCycles = [4]; }
-  def : WriteRes<VecFPd,  [Z13_VecFPdUnit]> { let ResourceCycles = [30]; }
+  def : WriteRes<FXa, [Z13_FXaUnit]>;
+  def : WriteRes<FXb, [Z13_FXbUnit]>;
+  def : WriteRes<LSU, [Z13_LSUnit]>;
+  def : WriteRes<VecBF,  [Z13_VecUnit]>;
+  def : WriteRes<VecDF,  [Z13_VecUnit]>;
+  def : WriteRes<VecDFX, [Z13_VecUnit]>;
   def : WriteRes<VecMul,  [Z13_VecUnit]>;
   def : WriteRes<VecStr,  [Z13_VecUnit]>;
   def : WriteRes<VecXsPm, [Z13_VecUnit]>;
-  def : WriteRes<VecXsPm2,[Z13_VecUnit]> { let ResourceCycles = [2]; }
-  // Virtual Branching Unit
-  def : WriteRes<VBU,     [Z13_VBUnit]>;
+  foreach Num = 2-5 in { let ResourceCycles = [Num] in {
+    def : WriteRes<!cast<SchedWrite>("FXa"#Num), [Z13_FXaUnit]>;
+    def : WriteRes<!cast<SchedWrite>("FXb"#Num), [Z13_FXbUnit]>;
+    def : WriteRes<!cast<SchedWrite>("LSU"#Num), [Z13_LSUnit]>;
+    def : WriteRes<!cast<SchedWrite>("VecBF"#Num), [Z13_VecUnit]>;
+    def : WriteRes<!cast<SchedWrite>("VecDF"#Num), [Z13_VecUnit]>;
+    def : WriteRes<!cast<SchedWrite>("VecDFX"#Num), [Z13_VecUnit]>;
+    def : WriteRes<!cast<SchedWrite>("VecMul"#Num), [Z13_VecUnit]>;
+    def : WriteRes<!cast<SchedWrite>("VecStr"#Num), [Z13_VecUnit]>;
+    def : WriteRes<!cast<SchedWrite>("VecXsPm"#Num), [Z13_VecUnit]>;
+  }}
+
+  def : WriteRes<VecFPd,  [Z13_VecFPdUnit]> { let ResourceCycles = [30]; }
+
+  def : WriteRes<VBU,     [Z13_VBUnit]>; // Virtual Branching Unit
 }
 
 def : WriteRes<MCD, [Z13_MCD]> { let NumMicroOps = 3;

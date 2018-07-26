@@ -5672,7 +5672,16 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
     SDValue Z = getValue(I.getArgOperand(2));
     EVT VT = X.getValueType();
 
-    // TODO: When X == Y, this is rotate. Create the node directly if legal.
+    // When X == Y, this is rotate. Create the node directly if legal.
+    // TODO: This should also be done if the operation is custom, but we have
+    // to make sure targets are handling the modulo shift amount as expected.
+    // TODO: If the rotate direction (left or right) corresponding to the shift
+    // is not available, adjust the shift value and invert the direction.
+    auto RotateOpcode = IsFSHL ? ISD::ROTL : ISD::ROTR;
+    if (X == Y && TLI.isOperationLegal(RotateOpcode, VT)) {
+      setValue(&I, DAG.getNode(RotateOpcode, sdl, VT, X, Z));
+      return nullptr;
+    }
 
     // Get the shift amount and inverse shift amount, modulo the bit-width.
     SDValue BitWidthC = DAG.getConstant(VT.getScalarSizeInBits(), sdl, VT);
@@ -7185,27 +7194,37 @@ static void GetRegistersForValue(SelectionDAG &DAG, const TargetLowering &TLI,
 
   unsigned NumRegs = 1;
   if (OpInfo.ConstraintVT != MVT::Other) {
-    // If this is a FP input in an integer register (or visa versa) insert a bit
-    // cast of the input value.  More generally, handle any case where the input
-    // value disagrees with the register class we plan to stick this in.
-    if (OpInfo.Type == InlineAsm::isInput && PhysReg.second &&
+    // If this is a FP operand in an integer register (or visa versa), or more
+    // generally if the operand value disagrees with the register class we plan
+    // to stick it in, fix the operand type.
+    //
+    // If this is an input value, the bitcast to the new type is done now.
+    // Bitcast for output value is done at the end of visitInlineAsm().
+    if ((OpInfo.Type == InlineAsm::isOutput ||
+         OpInfo.Type == InlineAsm::isInput) &&
+        PhysReg.second &&
         !TRI.isTypeLegalForClass(*PhysReg.second, OpInfo.ConstraintVT)) {
       // Try to convert to the first EVT that the reg class contains.  If the
       // types are identical size, use a bitcast to convert (e.g. two differing
-      // vector types).
+      // vector types).  Note: output bitcast is done at the end of
+      // visitInlineAsm().
       MVT RegVT = *TRI.legalclasstypes_begin(*PhysReg.second);
-      if (RegVT.getSizeInBits() == OpInfo.CallOperand.getValueSizeInBits()) {
-        OpInfo.CallOperand = DAG.getNode(ISD::BITCAST, DL,
-                                         RegVT, OpInfo.CallOperand);
+      if (RegVT.getSizeInBits() == OpInfo.ConstraintVT.getSizeInBits()) {
+        // Exclude indirect inputs while they are unsupported because the code
+        // to perform the load is missing and thus OpInfo.CallOperand still
+        // refer to the input address rather than the pointed-to value.
+        if (OpInfo.Type == InlineAsm::isInput && !OpInfo.isIndirect)
+          OpInfo.CallOperand =
+              DAG.getNode(ISD::BITCAST, DL, RegVT, OpInfo.CallOperand);
         OpInfo.ConstraintVT = RegVT;
+        // If the operand is a FP value and we want it in integer registers,
+        // use the corresponding integer type. This turns an f64 value into
+        // i64, which can be passed with two i32 values on a 32-bit machine.
       } else if (RegVT.isInteger() && OpInfo.ConstraintVT.isFloatingPoint()) {
-        // If the input is a FP value and we want it in FP registers, do a
-        // bitcast to the corresponding integer type.  This turns an f64 value
-        // into i64, which can be passed with two i32 values on a 32-bit
-        // machine.
         RegVT = MVT::getIntegerVT(OpInfo.ConstraintVT.getSizeInBits());
-        OpInfo.CallOperand = DAG.getNode(ISD::BITCAST, DL,
-                                         RegVT, OpInfo.CallOperand);
+        if (OpInfo.Type == InlineAsm::isInput)
+          OpInfo.CallOperand =
+              DAG.getNode(ISD::BITCAST, DL, RegVT, OpInfo.CallOperand);
         OpInfo.ConstraintVT = RegVT;
       }
     }
@@ -7717,12 +7736,18 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
     if (CS.getType()->isSingleValueType() && CS.getType()->isSized()) {
       EVT ResultType = TLI.getValueType(DAG.getDataLayout(), CS.getType());
 
-      // If any of the results of the inline asm is a vector, it may have the
-      // wrong width/num elts.  This can happen for register classes that can
-      // contain multiple different value types.  The preg or vreg allocated may
-      // not have the same VT as was expected.  Convert it to the right type
-      // with bit_convert.
-      if (ResultType != Val.getValueType() && Val.getValueType().isVector()) {
+      // If the type of the inline asm call site return value is different but
+      // has same size as the type of the asm output bitcast it.  One example
+      // of this is for vectors with different width / number of elements.
+      // This can happen for register classes that can contain multiple
+      // different value types.  The preg or vreg allocated may not have the
+      // same VT as was expected.
+      //
+      // This can also happen for a return value that disagrees with the
+      // register class it is put in, eg. a double in a general-purpose
+      // register on a 32-bit machine.
+      if (ResultType != Val.getValueType() &&
+          ResultType.getSizeInBits() == Val.getValueSizeInBits()) {
         Val = DAG.getNode(ISD::BITCAST, getCurSDLoc(),
                           ResultType, Val);
 

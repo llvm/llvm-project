@@ -9443,7 +9443,8 @@ void ASTReader::finishPendingActions() {
 
 void ASTReader::diagnoseOdrViolations() {
   if (PendingOdrMergeFailures.empty() && PendingOdrMergeChecks.empty() &&
-      PendingFunctionOdrMergeFailures.empty())
+      PendingFunctionOdrMergeFailures.empty() &&
+      PendingEnumOdrMergeFailures.empty())
     return;
 
   // Trigger the import of the full definition of each class that had any
@@ -9476,6 +9477,16 @@ void ASTReader::diagnoseOdrViolations() {
       FD->buildLookup();
       FD->decls_begin();
       FD->getBody();
+    }
+  }
+
+  // Trigger the import of enums.
+  auto EnumOdrMergeFailures = std::move(PendingEnumOdrMergeFailures);
+  PendingEnumOdrMergeFailures.clear();
+  for (auto &Merge : EnumOdrMergeFailures) {
+    Merge.first->decls_begin();
+    for (auto &Enum : Merge.second) {
+      Enum->decls_begin();
     }
   }
 
@@ -9561,7 +9572,8 @@ void ASTReader::diagnoseOdrViolations() {
     }
   }
 
-  if (OdrMergeFailures.empty() && FunctionOdrMergeFailures.empty())
+  if (OdrMergeFailures.empty() && FunctionOdrMergeFailures.empty() &&
+      EnumOdrMergeFailures.empty())
     return;
 
   // Ensure we don't accidentally recursively enter deserialization while
@@ -11305,6 +11317,194 @@ void ASTReader::diagnoseOdrViolations() {
       Diagnosed = true;
       break;
     }
+    (void)Diagnosed;
+    assert(Diagnosed && "Unable to emit ODR diagnostic.");
+  }
+
+  // Issue ODR failures diagnostics for enums.
+  for (auto &Merge : EnumOdrMergeFailures) {
+    enum ODREnumDifference {
+      SingleScopedEnum,
+      EnumTagKeywordMismatch,
+      SingleSpecifiedType,
+      DifferentSpecifiedTypes,
+      DifferentNumberEnumConstants,
+      EnumConstantName,
+      EnumConstantSingleInitilizer,
+      EnumConstantDifferentInitilizer,
+    };
+
+    // If we've already pointed out a specific problem with this enum, don't
+    // bother issuing a general "something's different" diagnostic.
+    if (!DiagnosedOdrMergeFailures.insert(Merge.first).second)
+      continue;
+
+    EnumDecl *FirstEnum = Merge.first;
+    std::string FirstModule = getOwningModuleNameForDiagnostic(FirstEnum);
+
+    using DeclHashes =
+        llvm::SmallVector<std::pair<EnumConstantDecl *, unsigned>, 4>;
+    auto PopulateHashes = [&ComputeSubDeclODRHash, FirstEnum](
+                              DeclHashes &Hashes, EnumDecl *Enum) {
+      for (auto *D : Enum->decls()) {
+        // Due to decl merging, the first EnumDecl is the parent of
+        // Decls in both records.
+        if (!ODRHash::isWhitelistedDecl(D, FirstEnum))
+          continue;
+        assert(isa<EnumConstantDecl>(D) && "Unexpected Decl kind");
+        Hashes.emplace_back(cast<EnumConstantDecl>(D),
+                            ComputeSubDeclODRHash(D));
+      }
+    };
+    DeclHashes FirstHashes;
+    PopulateHashes(FirstHashes, FirstEnum);
+    bool Diagnosed = false;
+    for (auto &SecondEnum : Merge.second) {
+
+      if (FirstEnum == SecondEnum)
+        continue;
+
+      std::string SecondModule =
+          getOwningModuleNameForDiagnostic(SecondEnum);
+
+      auto ODRDiagError = [FirstEnum, &FirstModule,
+                           this](SourceLocation Loc, SourceRange Range,
+                                 ODREnumDifference DiffType) {
+        return Diag(Loc, diag::err_module_odr_violation_enum)
+               << FirstEnum << FirstModule.empty() << FirstModule << Range
+               << DiffType;
+      };
+      auto ODRDiagNote = [&SecondModule, this](SourceLocation Loc,
+                                               SourceRange Range,
+                                               ODREnumDifference DiffType) {
+        return Diag(Loc, diag::note_module_odr_violation_enum)
+               << SecondModule << Range << DiffType;
+      };
+
+      if (FirstEnum->isScoped() != SecondEnum->isScoped()) {
+        ODRDiagError(FirstEnum->getLocation(), FirstEnum->getSourceRange(),
+                     SingleScopedEnum)
+            << FirstEnum->isScoped();
+        ODRDiagNote(SecondEnum->getLocation(), SecondEnum->getSourceRange(),
+                    SingleScopedEnum)
+            << SecondEnum->isScoped();
+        Diagnosed = true;
+        continue;
+      }
+
+      if (FirstEnum->isScoped() && SecondEnum->isScoped()) {
+        if (FirstEnum->isScopedUsingClassTag() !=
+            SecondEnum->isScopedUsingClassTag()) {
+          ODRDiagError(FirstEnum->getLocation(), FirstEnum->getSourceRange(),
+                       EnumTagKeywordMismatch)
+              << FirstEnum->isScopedUsingClassTag();
+          ODRDiagNote(SecondEnum->getLocation(), SecondEnum->getSourceRange(),
+                      EnumTagKeywordMismatch)
+              << SecondEnum->isScopedUsingClassTag();
+          Diagnosed = true;
+          continue;
+        }
+      }
+
+      QualType FirstUnderlyingType =
+          FirstEnum->getIntegerTypeSourceInfo()
+              ? FirstEnum->getIntegerTypeSourceInfo()->getType()
+              : QualType();
+      QualType SecondUnderlyingType =
+          SecondEnum->getIntegerTypeSourceInfo()
+              ? SecondEnum->getIntegerTypeSourceInfo()->getType()
+              : QualType();
+      if (FirstUnderlyingType.isNull() != SecondUnderlyingType.isNull()) {
+          ODRDiagError(FirstEnum->getLocation(), FirstEnum->getSourceRange(),
+                       SingleSpecifiedType)
+              << !FirstUnderlyingType.isNull();
+          ODRDiagNote(SecondEnum->getLocation(), SecondEnum->getSourceRange(),
+                      SingleSpecifiedType)
+              << !SecondUnderlyingType.isNull();
+          Diagnosed = true;
+          continue;
+      }
+
+      if (!FirstUnderlyingType.isNull() && !SecondUnderlyingType.isNull()) {
+        if (ComputeQualTypeODRHash(FirstUnderlyingType) !=
+            ComputeQualTypeODRHash(SecondUnderlyingType)) {
+          ODRDiagError(FirstEnum->getLocation(), FirstEnum->getSourceRange(),
+                       DifferentSpecifiedTypes)
+              << FirstUnderlyingType;
+          ODRDiagNote(SecondEnum->getLocation(), SecondEnum->getSourceRange(),
+                      DifferentSpecifiedTypes)
+              << SecondUnderlyingType;
+          Diagnosed = true;
+          continue;
+        }
+      }
+
+      DeclHashes SecondHashes;
+      PopulateHashes(SecondHashes, SecondEnum);
+
+      if (FirstHashes.size() != SecondHashes.size()) {
+        ODRDiagError(FirstEnum->getLocation(), FirstEnum->getSourceRange(),
+                     DifferentNumberEnumConstants)
+            << (int)FirstHashes.size();
+        ODRDiagNote(SecondEnum->getLocation(), SecondEnum->getSourceRange(),
+                    DifferentNumberEnumConstants)
+            << (int)SecondHashes.size();
+        Diagnosed = true;
+        continue;
+      }
+
+      for (unsigned I = 0; I < FirstHashes.size(); ++I) {
+        if (FirstHashes[I].second == SecondHashes[I].second)
+          continue;
+        const EnumConstantDecl *FirstEnumConstant = FirstHashes[I].first;
+        const EnumConstantDecl *SecondEnumConstant = SecondHashes[I].first;
+
+        if (FirstEnumConstant->getDeclName() !=
+            SecondEnumConstant->getDeclName()) {
+
+          ODRDiagError(FirstEnumConstant->getLocation(),
+                       FirstEnumConstant->getSourceRange(), EnumConstantName)
+              << I + 1 << FirstEnumConstant;
+          ODRDiagNote(SecondEnumConstant->getLocation(),
+                      SecondEnumConstant->getSourceRange(), EnumConstantName)
+              << I + 1 << SecondEnumConstant;
+          Diagnosed = true;
+          break;
+        }
+
+        const Expr *FirstInit = FirstEnumConstant->getInitExpr();
+        const Expr *SecondInit = SecondEnumConstant->getInitExpr();
+        if (!FirstInit && !SecondInit)
+          continue;
+
+        if (!FirstInit || !SecondInit) {
+          ODRDiagError(FirstEnumConstant->getLocation(),
+                       FirstEnumConstant->getSourceRange(),
+                       EnumConstantSingleInitilizer)
+              << I + 1 << FirstEnumConstant << (FirstInit != nullptr);
+          ODRDiagNote(SecondEnumConstant->getLocation(),
+                      SecondEnumConstant->getSourceRange(),
+                      EnumConstantSingleInitilizer)
+              << I + 1 << SecondEnumConstant << (SecondInit != nullptr);
+          Diagnosed = true;
+          break;
+        }
+
+        if (ComputeODRHash(FirstInit) != ComputeODRHash(SecondInit)) {
+          ODRDiagError(FirstEnumConstant->getLocation(),
+                       FirstEnumConstant->getSourceRange(),
+                       EnumConstantDifferentInitilizer)
+              << I + 1 << FirstEnumConstant;
+          ODRDiagNote(SecondEnumConstant->getLocation(),
+                      SecondEnumConstant->getSourceRange(),
+                      EnumConstantDifferentInitilizer)
+              << I + 1 << SecondEnumConstant;
+          Diagnosed = true;
+          break;
+        }
+      }
+    }
+
     (void)Diagnosed;
     assert(Diagnosed && "Unable to emit ODR diagnostic.");
   }

@@ -15,9 +15,10 @@ add_extra_unittest(ClangdTests
   CodeCompleteTests.cpp
   CodeCompletionStringsTests.cpp
   ContextTests.cpp
+  DexIndexTests.cpp
   DraftStoreTests.cpp
-  FileIndexTests.cpp
   FileDistanceTests.cpp
+  FileIndexTests.cpp
   FindSymbolsTests.cpp
   FuzzyMatchTests.cpp
   GlobalCompilationDatabaseTests.cpp
@@ -27,11 +28,11 @@ add_extra_unittest(ClangdTests
   SourceCodeTests.cpp
   SymbolCollectorTests.cpp
   SyncAPI.cpp
+  TUSchedulerTests.cpp
   TestFS.cpp
   TestTU.cpp
   ThreadingTests.cpp
   TraceTests.cpp
-  TUSchedulerTests.cpp
   URITests.cpp
   XRefsTests.cpp
   )

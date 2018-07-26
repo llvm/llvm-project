@@ -2063,10 +2063,16 @@ static bool populateInstruction(CodeGenTarget &Target,
 
 // emitFieldFromInstruction - Emit the templated helper function
 // fieldFromInstruction().
+// On Windows we make sure that this function is not inlined when
+// using the VS compiler. It has a bug which causes the function
+// to be optimized out in some circustances. See llvm.org/pr38292
 static void emitFieldFromInstruction(formatted_raw_ostream &OS) {
   OS << "// Helper function for extracting fields from encoded instructions.\n"
      << "template<typename InsnType>\n"
-   << "static InsnType fieldFromInstruction(InsnType insn, unsigned startBit,\n"
+     << "#if defined(_MSC_VER) && !defined(__clang__)\n"
+     << "__declspec(noinline)\n"
+     << "#endif\n"
+     << "static InsnType fieldFromInstruction(InsnType insn, unsigned startBit,\n"
      << "                                     unsigned numBits) {\n"
      << "    assert(startBit + numBits <= (sizeof(InsnType)*8) &&\n"
      << "           \"Instruction field out of bounds!\");\n"

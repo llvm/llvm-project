@@ -5,6 +5,7 @@ HELP-NOT: -reverse-iterate
 HELP: Color Options
 HELP: -color
 HELP: Specific Options:
+HELP: -accelerator
 HELP: -arch=<arch>
 HELP: -dump-debug-map
 HELP: -flat

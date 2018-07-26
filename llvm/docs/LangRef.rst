@@ -1048,7 +1048,7 @@ Currently, only the following parameter attributes are defined:
 
     When the call site is reached, the argument allocation must have
     been the most recent stack allocation that is still live, or the
-    results are undefined. It is possible to allocate additional stack
+    behavior is undefined. It is possible to allocate additional stack
     space after an argument allocation and before its call site, but it
     must be cleared off with :ref:`llvm.stackrestore
     <int_stackrestore>`.
@@ -1122,9 +1122,8 @@ Currently, only the following parameter attributes are defined:
 ``nonnull``
     This indicates that the parameter or return pointer is not null. This
     attribute may only be applied to pointer typed parameters. This is not
-    checked or enforced by LLVM, the caller must ensure that the pointer
-    passed in is non-null, or the callee must ensure that the returned pointer
-    is non-null.
+    checked or enforced by LLVM; if the parameter or return pointer is null,
+    the behavior is undefined.
 
 ``dereferenceable(<n>)``
     This indicates that the parameter or return pointer is dereferenceable. This
@@ -1387,11 +1386,13 @@ example:
 ``inaccessiblememonly``
     This attribute indicates that the function may only access memory that
     is not accessible by the module being compiled. This is a weaker form
-    of ``readnone``.
+    of ``readnone``. If the function reads or writes other memory, the
+    behavior is undefined.
 ``inaccessiblemem_or_argmemonly``
     This attribute indicates that the function may only access memory that is
     either not accessible by the module being compiled, or is pointed to
-    by its pointer arguments. This is a weaker form of  ``argmemonly``
+    by its pointer arguments. This is a weaker form of  ``argmemonly``. If the
+    function reads or writes other memory, the behavior is undefined.
 ``inlinehint``
     This attribute indicates that the source code contained a hint that
     inlining this function is desirable (such as the "inline" keyword in
@@ -1542,6 +1543,10 @@ example:
     On an argument, this attribute indicates that the function does not
     dereference that pointer argument, even though it may read or write the
     memory that the pointer points to if accessed through other pointers.
+
+    If a readnone function reads or writes memory visible to the program, or
+    has other side-effects, the behavior is undefined. If a function reads from
+    or writes to a readnone pointer argument, the behavior is undefined.
 ``readonly``
     On a function, this attribute indicates that the function does not write
     through any pointer arguments (including ``byval`` arguments) or otherwise
@@ -1557,6 +1562,10 @@ example:
     On an argument, this attribute indicates that the function does not write
     through this pointer argument, even though it may write to the memory that
     the pointer points to.
+
+    If a readonly function writes memory visible to the program, or
+    has other side-effects, the behavior is undefined. If a function writes to
+    a readonly pointer argument, the behavior is undefined.
 ``"stack-probe-size"``
     This attribute controls the behavior of stack probes: either
     the ``"probe-stack"`` attribute, or ABI-required stack probes, if any.
@@ -1581,14 +1590,22 @@ example:
     On an argument, this attribute indicates that the function may write to but
     does not read through this pointer argument (even though it may read from
     the memory that the pointer points to).
+
+    If a writeonly function reads memory visible to the program, or
+    has other side-effects, the behavior is undefined. If a function reads
+    from a writeonly pointer argument, the behavior is undefined.
 ``argmemonly``
     This attribute indicates that the only memory accesses inside function are
     loads and stores from objects pointed to by its pointer-typed arguments,
     with arbitrary offsets. Or in other words, all memory operations in the
     function can refer to memory only using pointers based on its function
     arguments.
+
     Note that ``argmemonly`` can be used together with ``readonly`` attribute
     in order to specify that function reads only from its arguments.
+
+    If an argmemonly function reads or writes memory other than the pointer
+    arguments, or has other side-effects, the behavior is undefined.
 ``returns_twice``
     This attribute indicates that this function can return twice. The C
     ``setjmp`` is an example of such a function. The compiler disables

@@ -939,8 +939,12 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
     Config->Undefined.push_back(Arg->getValue());
 
   for (auto *Arg : Args.filtered(OPT_version_script))
-    if (Optional<MemoryBufferRef> Buffer = readFile(Arg->getValue()))
-      readVersionScript(*Buffer);
+    if (Optional<std::string> Path = searchScript(Arg->getValue())) {
+      if (Optional<MemoryBufferRef> Buffer = readFile(*Path))
+        readVersionScript(*Buffer);
+    } else {
+      error(Twine("cannot find version script ") + Arg->getValue());
+    }
 }
 
 // Some Config members do not directly correspond to any particular
@@ -1022,7 +1026,7 @@ void LinkerDriver::createFiles(opt::InputArgList &Args) {
       break;
     }
     case OPT_script:
-      if (Optional<std::string> Path = searchLinkerScript(Arg->getValue())) {
+      if (Optional<std::string> Path = searchScript(Arg->getValue())) {
         if (Optional<MemoryBufferRef> MB = readFile(*Path))
           readLinkerScript(*MB);
         break;
