@@ -1699,33 +1699,6 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
           remainder.c_str());
 
     cmd_obj->Execute(remainder.c_str(), result);
-  } else {
-    // We didn't find the first command object, so complete the first argument.
-    Args command_args(command_string);
-    StringList matches;
-    unsigned cursor_char_position = strlen(command_args.GetArgumentAtIndex(0));
-    CompletionRequest request(command_line, cursor_char_position, 0, -1,
-                              matches);
-    int num_matches = HandleCompletionMatches(request);
-
-    if (num_matches > 0) {
-      std::string error_msg;
-      error_msg.assign("ambiguous command '");
-      error_msg.append(command_args.GetArgumentAtIndex(0));
-      error_msg.append("'.");
-
-      error_msg.append(" Possible completions:");
-      for (int i = 0; i < num_matches; i++) {
-        error_msg.append("\n\t");
-        error_msg.append(matches.GetStringAtIndex(i));
-      }
-      error_msg.append("\n");
-      result.AppendRawError(error_msg.c_str());
-    } else
-      result.AppendErrorWithFormat("Unrecognized command '%s'.\n",
-                                   command_args.GetArgumentAtIndex(0));
-
-    result.SetStatus(eReturnStatusFailed);
   }
 
   if (log)
