@@ -20,11 +20,12 @@ declare void @llvm.lifetime.end(i64, i8* nocapture)
 
 declare void @foo(i32*)
 
+; CHECK: DW_AT_name {{.*}}"f0"
 ; CHECK: DW_AT_name {{.*}}"e"
 ; CHECK: DW_TAG_variable
 ; CHECK-NEXT: DW_AT_location [DW_FORM_sec_offset] (
 ; CHECK-NEXT:   [0x00000028, 0x0000002c): DW_OP_reg1 AT_64
-; CHECK-NEXT:   [0x0000002c, 0x00000048): DW_OP_breg29 SP_64+16, DW_OP_deref)
+; CHECK-NEXT:   [0x0000002c, 0x00000048): DW_OP_breg29 SP_64+16)
 ; CHECK-NEXT: DW_AT_name [DW_FORM_strp]     ( .debug_str[0x0000006b] = "x")
 
 define i32 @f0(i32 signext %a, i32 signext %b, i32 signext %c, i32 signext %d, i32 signext %e) !dbg !4 {
@@ -55,7 +56,7 @@ entry:
 ; CHECK: DW_TAG_variable
 ; CHECK-NEXT: DW_AT_location [DW_FORM_sec_offset]  (
 ; CHECK-NEXT:   [0x00000080, 0x00000084): DW_OP_reg1 AT_64
-; CHECK-NEXT:   [0x00000084, 0x00000098): DW_OP_breg29 SP_64+16, DW_OP_deref)
+; CHECK-NEXT:   [0x00000084, 0x00000098): DW_OP_breg29 SP_64+16)
 ; CHECK-NEXT: DW_AT_name [DW_FORM_strp]     ( .debug_str[0x0000006b] = "x")
 
 define i32 @f1(i32 signext %a, i32 signext %b, i32 signext %c, i32 signext %d, i32 signext %e) !dbg !15 {

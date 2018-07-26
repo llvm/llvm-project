@@ -1758,7 +1758,25 @@ public:
   class AutoVarEmission;
 
   void emitByrefStructureInit(const AutoVarEmission &emission);
-  void enterByrefCleanup(const AutoVarEmission &emission);
+
+  /// Enter a cleanup to destroy a __block variable.  Note that this
+  /// cleanup should be a no-op if the variable hasn't left the stack
+  /// yet; if a cleanup is required for the variable itself, that needs
+  /// to be done externally.
+  ///
+  /// \param Kind Cleanup kind.
+  ///
+  /// \param Addr When \p LoadBlockVarAddr is false, the address of the __block
+  /// structure that will be passed to _Block_object_dispose. When
+  /// \p LoadBlockVarAddr is true, the address of the field of the block
+  /// structure that holds the address of the __block structure.
+  ///
+  /// \param Flags The flag that will be passed to _Block_object_dispose.
+  ///
+  /// \param LoadBlockVarAddr Indicates whether we need to emit a load from
+  /// \p Addr to get the address of the __block structure.
+  void enterByrefCleanup(CleanupKind Kind, Address Addr, BlockFieldFlags Flags,
+                         bool LoadBlockVarAddr);
 
   void setBlockContextParameter(const ImplicitParamDecl *D, unsigned argNum,
                                 llvm::Value *ptr);

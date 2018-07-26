@@ -23,10 +23,8 @@ int a() {
   // expected-note@-2 {{read of object outside its lifetime}}
 #endif
 
-  switch(1) {
-#if __cplusplus <= 199711L
-  // expected-warning@-2 {{no case matching constant switch condition '1'}}
-#endif
+  switch(1) { // do not warn that 1 is not a case value;
+              // 't' might have been expected to evalaute to 1
     case t:; // expected-note {{initializer of 't' is not a constant expression}}
 #if __cplusplus <= 199711L
     // expected-error@-2 {{not an integral constant expression}}

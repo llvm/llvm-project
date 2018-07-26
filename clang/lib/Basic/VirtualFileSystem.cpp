@@ -474,12 +474,28 @@ class InMemoryNode {
   Status Stat;
   InMemoryNodeKind Kind;
 
+protected:
+  /// Return Stat.  This should only be used for internal/debugging use.  When
+  /// clients wants the Status of this node, they should use
+  /// \p getStatus(StringRef).
+  const Status &getStatus() const { return Stat; }
+
 public:
   InMemoryNode(Status Stat, InMemoryNodeKind Kind)
       : Stat(std::move(Stat)), Kind(Kind) {}
   virtual ~InMemoryNode() = default;
 
-  const Status &getStatus() const { return Stat; }
+  /// Return the \p Status for this node. \p RequestedName should be the name
+  /// through which the caller referred to this node. It will override
+  /// \p Status::Name in the return value, to mimic the behavior of \p RealFile.
+  Status getStatus(StringRef RequestedName) const {
+    return Status::copyWithNewName(Stat, RequestedName);
+  }
+
+  /// Get the filename of this node (the name without the directory part).
+  StringRef getFileName() const {
+    return llvm::sys::path::filename(Stat.getName());
+  }
   InMemoryNodeKind getKind() const { return Kind; }
   virtual std::string toString(unsigned Indent) const = 0;
 };
@@ -504,14 +520,21 @@ public:
   }
 };
 
-/// Adapt a InMemoryFile for VFS' File interface.
+/// Adapt a InMemoryFile for VFS' File interface.  The goal is to make
+/// \p InMemoryFileAdaptor mimic as much as possible the behavior of
+/// \p RealFile.
 class InMemoryFileAdaptor : public File {
   InMemoryFile &Node;
+  /// The name to use when returning a Status for this file.
+  std::string RequestedName;
 
 public:
-  explicit InMemoryFileAdaptor(InMemoryFile &Node) : Node(Node) {}
+  explicit InMemoryFileAdaptor(InMemoryFile &Node, std::string RequestedName)
+      : Node(Node), RequestedName(std::move(RequestedName)) {}
 
-  llvm::ErrorOr<Status> status() override { return Node.getStatus(); }
+  llvm::ErrorOr<Status> status() override {
+    return Node.getStatus(RequestedName);
+  }
 
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
   getBuffer(const Twine &Name, int64_t FileSize, bool RequiresNullTerminator,
@@ -711,7 +734,7 @@ lookupInMemoryNode(const InMemoryFileSystem &FS, detail::InMemoryDirectory *Dir,
 llvm::ErrorOr<Status> InMemoryFileSystem::status(const Twine &Path) {
   auto Node = lookupInMemoryNode(*this, Root.get(), Path);
   if (Node)
-    return (*Node)->getStatus();
+    return (*Node)->getStatus(Path.str());
   return Node.getError();
 }
 
@@ -724,7 +747,8 @@ InMemoryFileSystem::openFileForRead(const Twine &Path) {
   // When we have a file provide a heap-allocated wrapper for the memory buffer
   // to match the ownership semantics for File.
   if (auto *F = dyn_cast<detail::InMemoryFile>(*Node))
-    return std::unique_ptr<File>(new detail::InMemoryFileAdaptor(*F));
+    return std::unique_ptr<File>(
+        new detail::InMemoryFileAdaptor(*F, Path.str()));
 
   // FIXME: errc::not_a_file?
   return make_error_code(llvm::errc::invalid_argument);
@@ -736,21 +760,33 @@ namespace {
 class InMemoryDirIterator : public clang::vfs::detail::DirIterImpl {
   detail::InMemoryDirectory::const_iterator I;
   detail::InMemoryDirectory::const_iterator E;
+  std::string RequestedDirName;
+
+  void setCurrentEntry() {
+    if (I != E) {
+      SmallString<256> Path(RequestedDirName);
+      llvm::sys::path::append(Path, I->second->getFileName());
+      CurrentEntry = I->second->getStatus(Path);
+    } else {
+      // When we're at the end, make CurrentEntry invalid and DirIterImpl will
+      // do the rest.
+      CurrentEntry = Status();
+    }
+  }
 
 public:
   InMemoryDirIterator() = default;
 
-  explicit InMemoryDirIterator(detail::InMemoryDirectory &Dir)
-      : I(Dir.begin()), E(Dir.end()) {
-    if (I != E)
-      CurrentEntry = I->second->getStatus();
+  explicit InMemoryDirIterator(detail::InMemoryDirectory &Dir,
+                               std::string RequestedDirName)
+      : I(Dir.begin()), E(Dir.end()),
+        RequestedDirName(std::move(RequestedDirName)) {
+    setCurrentEntry();
   }
 
   std::error_code increment() override {
     ++I;
-    // When we're at the end, make CurrentEntry invalid and DirIterImpl will do
-    // the rest.
-    CurrentEntry = I != E ? I->second->getStatus() : Status();
+    setCurrentEntry();
     return {};
   }
 };
@@ -766,7 +802,8 @@ directory_iterator InMemoryFileSystem::dir_begin(const Twine &Dir,
   }
 
   if (auto *DirNode = dyn_cast<detail::InMemoryDirectory>(*Node))
-    return directory_iterator(std::make_shared<InMemoryDirIterator>(*DirNode));
+    return directory_iterator(
+        std::make_shared<InMemoryDirIterator>(*DirNode, Dir.str()));
 
   EC = make_error_code(llvm::errc::not_a_directory);
   return directory_iterator(std::make_shared<InMemoryDirIterator>());

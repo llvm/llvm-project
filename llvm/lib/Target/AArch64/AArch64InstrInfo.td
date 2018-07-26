@@ -516,31 +516,34 @@ defm FCADD : SIMDThreeSameVectorComplexHSD<1, 0b111, complexrotateopodd,
 defm FCMLA : SIMDIndexedTiedComplexHSD<1, 0, 1, complexrotateop, "fcmla",
                                        null_frag>;
 
+// v8.3a Pointer Authentication
+// These instructions inhabit part of the hint space and so can be used for
+// armv8 targets
+let Uses = [LR], Defs = [LR] in {
+  def PACIAZ   : SystemNoOperands<0b000, "paciaz">;
+  def PACIBZ   : SystemNoOperands<0b010, "pacibz">;
+  def AUTIAZ   : SystemNoOperands<0b100, "autiaz">;
+  def AUTIBZ   : SystemNoOperands<0b110, "autibz">;
+}
+let Uses = [LR, SP], Defs = [LR] in {
+  def PACIASP  : SystemNoOperands<0b001, "paciasp">;
+  def PACIBSP  : SystemNoOperands<0b011, "pacibsp">;
+  def AUTIASP  : SystemNoOperands<0b101, "autiasp">;
+  def AUTIBSP  : SystemNoOperands<0b111, "autibsp">;
+}
+let Uses = [X16, X17], Defs = [X17], CRm = 0b0001 in {
+  def PACIA1716  : SystemNoOperands<0b000, "pacia1716">;
+  def PACIB1716  : SystemNoOperands<0b010, "pacib1716">;
+  def AUTIA1716  : SystemNoOperands<0b100, "autia1716">;
+  def AUTIB1716  : SystemNoOperands<0b110, "autib1716">;
+}
+
+let Uses = [LR], Defs = [LR], CRm = 0b0000 in {
+  def XPACLRI   : SystemNoOperands<0b111, "xpaclri">;
+}
+
+// These pointer authentication isntructions require armv8.3a
 let Predicates = [HasV8_3a] in {
-  // v8.3a Pointer Authentication
-  let Uses = [LR], Defs = [LR] in {
-    def PACIAZ   : SystemNoOperands<0b000, "paciaz">;
-    def PACIBZ   : SystemNoOperands<0b010, "pacibz">;
-    def AUTIAZ   : SystemNoOperands<0b100, "autiaz">;
-    def AUTIBZ   : SystemNoOperands<0b110, "autibz">;
-  }
-  let Uses = [LR, SP], Defs = [LR] in {
-    def PACIASP  : SystemNoOperands<0b001, "paciasp">;
-    def PACIBSP  : SystemNoOperands<0b011, "pacibsp">;
-    def AUTIASP  : SystemNoOperands<0b101, "autiasp">;
-    def AUTIBSP  : SystemNoOperands<0b111, "autibsp">;
-  }
-  let Uses = [X16, X17], Defs = [X17], CRm = 0b0001 in {
-    def PACIA1716  : SystemNoOperands<0b000, "pacia1716">;
-    def PACIB1716  : SystemNoOperands<0b010, "pacib1716">;
-    def AUTIA1716  : SystemNoOperands<0b100, "autia1716">;
-    def AUTIB1716  : SystemNoOperands<0b110, "autib1716">;
-  }
-
-  let Uses = [LR], Defs = [LR], CRm = 0b0000 in {
-    def XPACLRI   : SystemNoOperands<0b111, "xpaclri">;
-  }
-
   multiclass SignAuth<bits<3> prefix, bits<3> prefix_z, string asm> {
     def IA   : SignAuthOneData<prefix, 0b00, !strconcat(asm, "ia")>;
     def IB   : SignAuthOneData<prefix, 0b01, !strconcat(asm, "ib")>;
@@ -570,7 +573,7 @@ let Predicates = [HasV8_3a] in {
   def BLRAAZ  : AuthOneOperand<0b001, 0, "blraaz">;
   def BLRABZ  : AuthOneOperand<0b001, 1, "blrabz">;
 
-  let isReturn = 1 in {
+  let isReturn = 1, isTerminator = 1, isBarrier = 1 in {
     def RETAA   : AuthReturn<0b010, 0, "retaa">;
     def RETAB   : AuthReturn<0b010, 1, "retab">;
     def ERETAA  : AuthReturn<0b100, 0, "eretaa">;

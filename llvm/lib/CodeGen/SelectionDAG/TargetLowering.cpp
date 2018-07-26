@@ -1864,14 +1864,6 @@ SDValue TargetLowering::simplifySetCCWithAnd(EVT VT, SDValue N0, SDValue N1,
 SDValue TargetLowering::optimizeSetCCOfSignedTruncationCheck(
     EVT SCCVT, SDValue N0, SDValue N1, ISD::CondCode Cond, DAGCombinerInfo &DCI,
     const SDLoc &DL) const {
-  ISD::CondCode NewCond;
-  if (Cond == ISD::CondCode::SETULT)
-    NewCond = ISD::CondCode::SETEQ;
-  else if (Cond == ISD::CondCode::SETUGE)
-    NewCond = ISD::CondCode::SETNE;
-  else
-    return SDValue();
-
   // We must be comparing with a constant.
   ConstantSDNode *C1;
   if (!(C1 = dyn_cast<ConstantSDNode>(N1)))
@@ -1891,7 +1883,24 @@ SDValue TargetLowering::optimizeSetCCOfSignedTruncationCheck(
 
   // Validate constants ...
 
-  const APInt &I1 = C1->getAPIntValue();
+  APInt I1 = C1->getAPIntValue();
+
+  ISD::CondCode NewCond;
+  if (Cond == ISD::CondCode::SETULT) {
+    NewCond = ISD::CondCode::SETEQ;
+  } else if (Cond == ISD::CondCode::SETULE) {
+    NewCond = ISD::CondCode::SETEQ;
+    // But need to 'canonicalize' the constant.
+    I1 += 1;
+  } else if (Cond == ISD::CondCode::SETUGT) {
+    NewCond = ISD::CondCode::SETNE;
+    // But need to 'canonicalize' the constant.
+    I1 += 1;
+  } else if (Cond == ISD::CondCode::SETUGE) {
+    NewCond = ISD::CondCode::SETNE;
+  } else
+    return SDValue();
+
   const APInt &I01 = C01->getAPIntValue();
   // Both of them must be power-of-two, and the constant from setcc is bigger.
   if (!(I1.ugt(I01) && I1.isPowerOf2() && I01.isPowerOf2()))

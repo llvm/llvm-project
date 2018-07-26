@@ -28,26 +28,6 @@ void DwarfFile::addUnit(std::unique_ptr<DwarfCompileUnit> U) {
   CUs.push_back(std::move(U));
 }
 
-void DwarfFile::emitStringOffsetsTableHeader(MCSection *Section) {
-  if (StrPool.empty())
-    return;
-  Asm->OutStreamer->SwitchSection(Section);
-  unsigned EntrySize = 4;
-  // FIXME: DWARF64
-  // We are emitting the header for a contribution to the string offsets
-  // table. The header consists of an entry with the contribution's
-  // size (not including the size of the length field), the DWARF version and
-  // 2 bytes of padding.
-  Asm->emitInt32(StrPool.size() * EntrySize + 4);
-  Asm->emitInt16(Asm->getDwarfVersion());
-  Asm->emitInt16(0);
-  // Define the symbol that marks the start of the contribution. It is
-  // referenced by most unit headers via DW_AT_str_offsets_base.
-  // Split units do not use the attribute.
-  if (StringOffsetsStartSym)
-    Asm->OutStreamer->EmitLabel(StringOffsetsStartSym);
-}
-
 // Emit the various dwarf units to the unit section USection with
 // the abbreviations going into ASection.
 void DwarfFile::emitUnits(bool UseOffsets) {

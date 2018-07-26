@@ -160,7 +160,7 @@ raw_ostream &raw_ostream::write_escaped(StringRef Str,
       *this << '\\' << '"';
       break;
     default:
-      if (std::isprint(c)) {
+      if (isPrint(c)) {
         *this << c;
         break;
       }
@@ -436,7 +436,7 @@ raw_ostream &raw_ostream::operator<<(const FormattedBytes &FB) {
 
       // Print the ASCII char values for each byte on this line
       for (uint8_t Byte : Line) {
-        if (isprint(Byte))
+        if (isPrint(Byte))
           *this << static_cast<char>(Byte);
         else
           *this << '.';

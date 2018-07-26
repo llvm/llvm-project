@@ -70,43 +70,43 @@
 
   paciasp
 // CHECK: paciasp        // encoding: [0x3f,0x23,0x03,0xd5]
-// CHECK-REQ: error: instruction requires: armv8.3a
+// CHECK-REQ-NOT: error: instruction requires: armv8.3a
   autiasp
 // CHECK: autiasp        // encoding: [0xbf,0x23,0x03,0xd5]
-// CHECK-REQ: error: instruction requires: armv8.3a
+// CHECK-REQ-NOT: error: instruction requires: armv8.3a
   paciaz
 // CHECK: paciaz         // encoding: [0x1f,0x23,0x03,0xd5]
-// CHECK-REQ: error: instruction requires: armv8.3a
+// CHECK-REQ-NOT: error: instruction requires: armv8.3a
   autiaz
 // CHECK: autiaz         // encoding: [0x9f,0x23,0x03,0xd5]
-// CHECK-REQ: error: instruction requires: armv8.3a
+// CHECK-REQ-NOT: error: instruction requires: armv8.3a
   pacia1716
 // CHECK: pacia1716      // encoding: [0x1f,0x21,0x03,0xd5]
-// CHECK-REQ: error: instruction requires: armv8.3a
+// CHECK-REQ-NOT: error: instruction requires: armv8.3a
   autia1716
 // CHECK: autia1716      // encoding: [0x9f,0x21,0x03,0xd5]
-// CHECK-REQ: error: instruction requires: armv8.3a
+// CHECK-REQ-NOT: error: instruction requires: armv8.3a
   pacibsp
 // CHECK: pacibsp        // encoding: [0x7f,0x23,0x03,0xd5]
-// CHECK-REQ: error: instruction requires: armv8.3a
+// CHECK-REQ-NOT: error: instruction requires: armv8.3a
   autibsp
 // CHECK: autibsp        // encoding: [0xff,0x23,0x03,0xd5]
-// CHECK-REQ: error: instruction requires: armv8.3a
+// CHECK-REQ-NOT: error: instruction requires: armv8.3a
   pacibz
 // CHECK: pacibz         // encoding: [0x5f,0x23,0x03,0xd5]
-// CHECK-REQ: error: instruction requires: armv8.3a
+// CHECK-REQ-NOT: error: instruction requires: armv8.3a
   autibz
 // CHECK: autibz         // encoding: [0xdf,0x23,0x03,0xd5]
-// CHECK-REQ: error: instruction requires: armv8.3a
+// CHECK-REQ-NOT: error: instruction requires: armv8.3a
   pacib1716
 // CHECK: pacib1716      // encoding: [0x5f,0x21,0x03,0xd5]
-// CHECK-REQ: error: instruction requires: armv8.3a
+// CHECK-REQ-NOT: error: instruction requires: armv8.3a
   autib1716
 // CHECK: autib1716      // encoding: [0xdf,0x21,0x03,0xd5]
-// CHECK-REQ: error: instruction requires: armv8.3a
+// CHECK-REQ-NOT: error: instruction requires: armv8.3a
   xpaclri
 // CHECK: xpaclri           // encoding: [0xff,0x20,0x03,0xd5]
-// CHECK-REQ: error: instruction requires: armv8.3a
+// CHECK-REQ-NOT: error: instruction requires: armv8.3a
 
   pacia x0, x1
 // CHECK: pacia x0, x1     // encoding: [0x20,0x00,0xc1,0xda]

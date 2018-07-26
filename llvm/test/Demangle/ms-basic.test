@@ -30,13 +30,13 @@
 ; CHECK: void __cdecl x(float, int)
 
 ?x@@3P6AHMNH@ZEA
-; CHECK: int __cdecl (*x)(float, double, int)
+; CHECK: int (__cdecl *x)(float, double, int)
 
 ?x@@3P6AHP6AHM@ZN@ZEA
-; CHECK: int __cdecl (*x)(int __cdecl (*)(float), double)
+; CHECK: int (__cdecl *x)(int (__cdecl *)(float), double)
 
 ?x@@3P6AHP6AHM@Z0@ZEA
-; CHECK: int __cdecl (*x)(int __cdecl (*)(float), int __cdecl (*)(float))
+; CHECK: int (__cdecl *x)(int (__cdecl *)(float), int (__cdecl *)(float))
 
 ?x@ns@@3HA
 ; CHECK: int ns::x
@@ -87,7 +87,7 @@
 ; CHECK: class klass instance
 
 ?instance$initializer$@@3P6AXXZEA
-; CHECK: void __cdecl (*instance$initializer$)(void)
+; CHECK: void (__cdecl *instance$initializer$)(void)
 
 ??0klass@@QEAA@XZ
 ; CHECK: __cdecl klass::klass(void)
@@ -106,7 +106,7 @@
 
 
 ??4klass@@QEAAAEBV0@AEBV0@@Z
-; CHECK: class klass const &__cdecl klass::operator=(class klass const &)
+; CHECK: class klass const & __cdecl klass::operator=(class klass const &)
 
 ??7klass@@QEAA_NXZ
 ; CHECK: bool __cdecl klass::operator!(void)
@@ -211,16 +211,16 @@
 ; CHECK: int __cdecl klass::operator^=(int)
 
 ??6@YAAEBVklass@@AEBV0@H@Z
-; CHECK: class klass const &__cdecl operator<<(class klass const &, int)
+; CHECK: class klass const & __cdecl operator<<(class klass const &, int)
 
 ??5@YAAEBVklass@@AEBV0@_K@Z
-; CHECK: class klass const &__cdecl operator>>(class klass const &, unsigned __int64)
+; CHECK: class klass const & __cdecl operator>>(class klass const &, unsigned __int64)
 
 ??2@YAPEAX_KAEAVklass@@@Z
-; CHECK: void *__cdecl operator new(unsigned __int64, class klass &)
+; CHECK: void * __cdecl operator new(unsigned __int64, class klass &)
 
 ??_U@YAPEAX_KAEAVklass@@@Z
-; CHECK: void *__cdecl operator new[](unsigned __int64, class klass &)
+; CHECK: void * __cdecl operator new[](unsigned __int64, class klass &)
 
 ??3@YAXPEAXAEAVklass@@@Z
 ; CHECK: void __cdecl operator delete(void *, class klass &)

@@ -185,8 +185,9 @@ void pr19022_1a(int x) {
 
 void pr19022_1b(int x) {
   switch(x) {
-  case v  // expected-error{{use of undeclared identifier 'v'}}
-  }
+  case v  // expected-error{{use of undeclared identifier 'v'}} \
+          // expected-error{{expected ':' after 'case'}}
+  } // expected-error{{expected statement}}
  }
 
 void pr19022_2() {
@@ -209,7 +210,8 @@ int pr19022_4(int x) {
 
 void pr19022_5(int x) {
   switch(x) {
-  case 1: case
+  case 1: case // expected-error{{expected ':' after 'case'}} \
+               // expected-error{{expected statement}}
   }  // expected-error{{expected expression}}
 }
 

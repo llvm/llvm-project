@@ -973,6 +973,21 @@ Instruction *InstCombiner::visitUDiv(BinaryOperator &I) {
   if (Instruction *NarrowDiv = narrowUDivURem(I, Builder))
     return NarrowDiv;
 
+  // If the udiv operands are non-overflowing multiplies with a common operand,
+  // then eliminate the common factor:
+  // (A * B) / (A * X) --> B / X (and commuted variants)
+  // TODO: The code would be reduced if we had m_c_NUWMul pattern matching.
+  // TODO: If -reassociation handled this generally, we could remove this.
+  Value *A, *B;
+  if (match(Op0, m_NUWMul(m_Value(A), m_Value(B)))) {
+    if (match(Op1, m_NUWMul(m_Specific(A), m_Value(X))) ||
+        match(Op1, m_NUWMul(m_Value(X), m_Specific(A))))
+      return BinaryOperator::CreateUDiv(B, X);
+    if (match(Op1, m_NUWMul(m_Specific(B), m_Value(X))) ||
+        match(Op1, m_NUWMul(m_Value(X), m_Specific(B))))
+      return BinaryOperator::CreateUDiv(A, X);
+  }
+
   // (LHS udiv (select (select (...)))) -> (LHS >> (select (select (...))))
   SmallVector<UDivFoldAction, 6> UDivActions;
   if (visitUDivOperand(Op0, Op1, I, UDivActions))
