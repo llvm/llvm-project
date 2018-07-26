@@ -377,6 +377,8 @@ namespace ISD {
     /// When the 1st operand is a vector, the shift amount must be in the same
     /// type. (TLI.getShiftAmountTy() will return the same type when the input
     /// type is a vector.)
+    /// For rotates, the shift amount is treated as an unsigned amount modulo
+    /// the element size of the first operand.
     SHL, SRA, SRL, ROTL, ROTR,
 
     /// Byte Swap and Counting operators.

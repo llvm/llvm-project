@@ -206,6 +206,7 @@ unsigned checkArchVersion(StringRef Arch);
 unsigned  getDefaultFPU(StringRef CPU, ArchKind AK);
 unsigned  getDefaultExtensions(StringRef CPU, ArchKind AK);
 StringRef getDefaultCPU(StringRef Arch);
+AArch64::ArchKind getCPUArchKind(StringRef CPU);
 
 // Parser
 unsigned parseFPU(StringRef FPU);

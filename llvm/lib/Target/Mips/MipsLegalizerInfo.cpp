@@ -25,7 +25,7 @@ MipsLegalizerInfo::MipsLegalizerInfo(const MipsSubtarget &ST) {
   getActionDefinitionsBuilder(G_ADD).legalFor({s32});
 
   getActionDefinitionsBuilder({G_LOAD, G_STORE})
-      .legalFor({{s32, p0}});
+      .legalForCartesianProduct({p0, s32}, {p0});
 
   getActionDefinitionsBuilder(G_CONSTANT)
       .legalFor({s32});

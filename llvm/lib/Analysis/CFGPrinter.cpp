@@ -22,6 +22,11 @@
 #include "llvm/Support/FileSystem.h"
 using namespace llvm;
 
+static cl::opt<std::string> CFGFuncName(
+    "cfg-func-name", cl::Hidden,
+    cl::desc("The name of a function (or its substring)"
+             " whose CFG is viewed/printed."));
+
 namespace {
   struct CFGViewerLegacyPass : public FunctionPass {
     static char ID; // Pass identifcation, replacement for typeid
@@ -83,6 +88,8 @@ PreservedAnalyses CFGOnlyViewerPass::run(Function &F,
 }
 
 static void writeCFGToDotFile(Function &F, bool CFGOnly = false) {
+  if (!CFGFuncName.empty() && !F.getName().contains(CFGFuncName))
+     return;
   std::string Filename = ("cfg." + F.getName() + ".dot").str();
   errs() << "Writing '" << Filename << "'...";
 
@@ -162,6 +169,8 @@ PreservedAnalyses CFGOnlyPrinterPass::run(Function &F,
 /// being a 'dot' and 'gv' program in your path.
 ///
 void Function::viewCFG() const {
+  if (!CFGFuncName.empty() && !getName().contains(CFGFuncName))
+     return;
   ViewGraph(this, "cfg" + getName());
 }
 
@@ -171,6 +180,8 @@ void Function::viewCFG() const {
 /// this can make the graph smaller.
 ///
 void Function::viewCFGOnly() const {
+  if (!CFGFuncName.empty() && !getName().contains(CFGFuncName))
+     return;
   ViewGraph(this, "cfg" + getName(), true);
 }
 

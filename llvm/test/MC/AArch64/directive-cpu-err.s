@@ -28,7 +28,7 @@
 
     .cpu generic+nocrypto+crc
     aesd v0.16b, v2.16b
-    // CHECK: error: instruction requires: crypto
+    // CHECK: error: instruction requires: aes
     // CHECK-NEXT:   aesd v0.16b, v2.16b
     // CHECK-NEXT:   ^
 
@@ -42,3 +42,27 @@
     // CHECK: error: unsupported architectural extension
     // CHECK-NEXT:   .cpu generic+v8.1-a
     // CHECK-NEXT:   ^
+
+    .cpu generic+noaes
+    aese v0.16b, v1.16b
+    // CHECK:       error: instruction requires: aes
+    // CHECK-NEXT:  aese v0.16b, v1.16b
+    // CHECK-NEXT:  ^
+
+    .cpu generic+nosha2
+    sha1h s0, s1
+    // CHECK:       error: instruction requires: sha2
+    // CHECK-NEXT:  sha1h s0, s1
+    // CHECK-NEXT:  ^
+
+    .cpu generic+nosha3
+    sha512h q0, q1, v2.2d
+    // CHECK:       error: instruction requires: sha3
+    // CHECK-NEXT:  sha512h q0, q1, v2.2d
+    // CHECK-NEXT:  ^
+
+    .cpu generic+nosm4
+    sm4e v2.4s, v15.4s
+    // CHECK:       error: instruction requires: sm4
+    // CHECK-NEXT:  sm4e v2.4s, v15.4s
+    // CHECK-NEXT:  ^

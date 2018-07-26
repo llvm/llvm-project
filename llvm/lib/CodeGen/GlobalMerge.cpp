@@ -177,7 +177,7 @@ namespace {
     void setMustKeepGlobalVariables(Module &M);
 
     /// Collect every variables marked as "used"
-    void collectUsedGlobalVariables(Module &M);
+    void collectUsedGlobalVariables(Module &M, StringRef Name);
 
     /// Keep track of the GlobalVariable that must not be merged away
     SmallPtrSet<const GlobalVariable *, 16> MustKeepGlobalVariables;
@@ -440,6 +440,7 @@ bool GlobalMerge::doMerge(const SmallVectorImpl<GlobalVariable *> &Globals,
   assert(Globals.size() > 1);
 
   Type *Int32Ty = Type::getInt32Ty(M.getContext());
+  Type *Int8Ty = Type::getInt8Ty(M.getContext());
   auto &DL = M.getDataLayout();
 
   LLVM_DEBUG(dbgs() << " Trying to merge set, starts with #"
@@ -452,17 +453,31 @@ bool GlobalMerge::doMerge(const SmallVectorImpl<GlobalVariable *> &Globals,
     uint64_t MergedSize = 0;
     std::vector<Type*> Tys;
     std::vector<Constant*> Inits;
+    std::vector<unsigned> StructIdxs;
 
     bool HasExternal = false;
     StringRef FirstExternalName;
+    unsigned MaxAlign = 1;
+    unsigned CurIdx = 0;
     for (j = i; j != -1; j = GlobalSet.find_next(j)) {
       Type *Ty = Globals[j]->getValueType();
+      unsigned Align = DL.getPreferredAlignment(Globals[j]);
+      unsigned Padding = alignTo(MergedSize, Align) - MergedSize;
+      MergedSize += Padding;
       MergedSize += DL.getTypeAllocSize(Ty);
       if (MergedSize > MaxOffset) {
         break;
       }
+      if (Padding) {
+        Tys.push_back(ArrayType::get(Int8Ty, Padding));
+        Inits.push_back(ConstantAggregateZero::get(Tys.back()));
+        ++CurIdx;
+      }
       Tys.push_back(Ty);
       Inits.push_back(Globals[j]->getInitializer());
+      StructIdxs.push_back(CurIdx++);
+
+      MaxAlign = std::max(MaxAlign, Align);
 
       if (Globals[j]->hasExternalLinkage() && !HasExternal) {
         HasExternal = true;
@@ -481,7 +496,8 @@ bool GlobalMerge::doMerge(const SmallVectorImpl<GlobalVariable *> &Globals,
     GlobalValue::LinkageTypes Linkage = HasExternal
                                             ? GlobalValue::ExternalLinkage
                                             : GlobalValue::InternalLinkage;
-    StructType *MergedTy = StructType::get(M.getContext(), Tys);
+    // Use a packed struct so we can control alignment.
+    StructType *MergedTy = StructType::get(M.getContext(), Tys, true);
     Constant *MergedInit = ConstantStruct::get(MergedTy, Inits);
 
     // On Darwin external linkage needs to be preserved, otherwise
@@ -499,13 +515,9 @@ bool GlobalMerge::doMerge(const SmallVectorImpl<GlobalVariable *> &Globals,
         M, MergedTy, isConst, MergedLinkage, MergedInit, MergedName, nullptr,
         GlobalVariable::NotThreadLocal, AddrSpace);
 
-    const StructLayout *MergedLayout = DL.getStructLayout(MergedTy);
-    // Set the alignment of the merged struct as the maximum alignment of the
-    // globals to prevent over-alignment. We don't handle globals that are not
-    // default aligned, so the alignment of the MergedLayout struct is
-    // equivalent.
-    MergedGV->setAlignment(MergedLayout->getAlignment());
+    MergedGV->setAlignment(MaxAlign);
 
+    const StructLayout *MergedLayout = DL.getStructLayout(MergedTy);
     for (ssize_t k = i, idx = 0; k != j; k = GlobalSet.find_next(k), ++idx) {
       GlobalValue::LinkageTypes Linkage = Globals[k]->getLinkage();
       std::string Name = Globals[k]->getName();
@@ -514,11 +526,12 @@ bool GlobalMerge::doMerge(const SmallVectorImpl<GlobalVariable *> &Globals,
 
       // Copy metadata while adjusting any debug info metadata by the original
       // global's offset within the merged global.
-      MergedGV->copyMetadata(Globals[k], MergedLayout->getElementOffset(idx));
+      MergedGV->copyMetadata(Globals[k],
+                             MergedLayout->getElementOffset(StructIdxs[idx]));
 
       Constant *Idx[2] = {
-        ConstantInt::get(Int32Ty, 0),
-        ConstantInt::get(Int32Ty, idx),
+          ConstantInt::get(Int32Ty, 0),
+          ConstantInt::get(Int32Ty, StructIdxs[idx]),
       };
       Constant *GEP =
           ConstantExpr::getInBoundsGetElementPtr(MergedTy, MergedGV, Idx);
@@ -531,8 +544,8 @@ bool GlobalMerge::doMerge(const SmallVectorImpl<GlobalVariable *> &Globals,
       // It's not safe on Mach-O as the alias (and thus the portion of the
       // MergedGlobals variable) may be dead stripped at link time.
       if (Linkage != GlobalValue::InternalLinkage || !IsMachO) {
-        GlobalAlias *GA =
-            GlobalAlias::create(Tys[idx], AddrSpace, Linkage, Name, GEP, &M);
+        GlobalAlias *GA = GlobalAlias::create(Tys[StructIdxs[idx]], AddrSpace,
+                                              Linkage, Name, GEP, &M);
         GA->setDLLStorageClass(DLLStorage);
       }
 
@@ -545,9 +558,9 @@ bool GlobalMerge::doMerge(const SmallVectorImpl<GlobalVariable *> &Globals,
   return Changed;
 }
 
-void GlobalMerge::collectUsedGlobalVariables(Module &M) {
+void GlobalMerge::collectUsedGlobalVariables(Module &M, StringRef Name) {
   // Extract global variables from llvm.used array
-  const GlobalVariable *GV = M.getGlobalVariable("llvm.used");
+  const GlobalVariable *GV = M.getGlobalVariable(Name);
   if (!GV || !GV->hasInitializer()) return;
 
   // Should be an array of 'i8*'.
@@ -560,7 +573,8 @@ void GlobalMerge::collectUsedGlobalVariables(Module &M) {
 }
 
 void GlobalMerge::setMustKeepGlobalVariables(Module &M) {
-  collectUsedGlobalVariables(M);
+  collectUsedGlobalVariables(M, "llvm.used");
+  collectUsedGlobalVariables(M, "llvm.compiler.used");
 
   for (Function &F : M) {
     for (BasicBlock &BB : F) {
@@ -610,12 +624,6 @@ bool GlobalMerge::doInitialization(Module &M) {
 
     unsigned AddressSpace = PT->getAddressSpace();
 
-    // Ignore fancy-aligned globals for now.
-    unsigned Alignment = DL.getPreferredAlignment(&GV);
-    Type *Ty = GV.getValueType();
-    if (Alignment > DL.getABITypeAlignment(Ty))
-      continue;
-
     // Ignore all 'special' globals.
     if (GV.getName().startswith("llvm.") ||
         GV.getName().startswith(".llvm."))
@@ -625,6 +633,7 @@ bool GlobalMerge::doInitialization(Module &M) {
     if (isMustKeepGlobalVariable(&GV))
       continue;
 
+    Type *Ty = GV.getValueType();
     if (DL.getTypeAllocSize(Ty) < MaxOffset) {
       if (TM &&
           TargetLoweringObjectFile::getKindForGlobal(&GV, *TM).isBSSLocal())

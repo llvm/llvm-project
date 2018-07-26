@@ -235,6 +235,15 @@ void ARMAsmPrinter::printOperand(const MachineInstr *MI, int OpNum,
   }
 }
 
+MCSymbol *ARMAsmPrinter::GetCPISymbol(unsigned CPID) const {
+  // The AsmPrinter::GetCPISymbol superclass method tries to use CPID as
+  // indexes in MachineConstantPool, which isn't in sync with indexes used here.
+  const DataLayout &DL = getDataLayout();
+  return OutContext.getOrCreateSymbol(Twine(DL.getPrivateGlobalPrefix()) +
+                                      "CPI" + Twine(getFunctionNumber()) + "_" +
+                                      Twine(CPID));
+}
+
 //===--------------------------------------------------------------------===//
 
 MCSymbol *ARMAsmPrinter::

@@ -1396,12 +1396,7 @@ static std::string scalarConstantToHexString(const Constant *C) {
 MCSection *TargetLoweringObjectFileCOFF::getSectionForConstant(
     const DataLayout &DL, SectionKind Kind, const Constant *C,
     unsigned &Align) const {
-  if (Kind.isMergeableConst() && C &&
-      getContext().getAsmInfo()->hasCOFFComdatConstants()) {
-    // This creates comdat sections with the given symbol name, but unless
-    // AsmPrinter::GetCPISymbol actually makes the symbol global, the symbol
-    // will be created with a null storage class, which makes GNU binutils
-    // error out.
+  if (Kind.isMergeableConst() && C) {
     const unsigned Characteristics = COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
                                      COFF::IMAGE_SCN_MEM_READ |
                                      COFF::IMAGE_SCN_LNK_COMDAT;

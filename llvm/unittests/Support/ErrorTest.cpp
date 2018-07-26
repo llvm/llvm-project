@@ -443,6 +443,29 @@ TEST(Error, StringError) {
     << "Failed to convert StringError to error_code.";
 }
 
+TEST(Error, createStringError) {
+  static const char *Bar = "bar";
+  static const std::error_code EC = errc::invalid_argument;
+  std::string Msg;
+  raw_string_ostream S(Msg);
+  logAllUnhandledErrors(createStringError(EC, "foo%s%d0x%" PRIx8, Bar, 1, 0xff),
+                        S, "");
+  EXPECT_EQ(S.str(), "foobar10xff\n")
+    << "Unexpected createStringError() log result";
+
+  S.flush();
+  Msg.clear();
+  logAllUnhandledErrors(createStringError(EC, Bar), S, "");
+  EXPECT_EQ(S.str(), "bar\n")
+    << "Unexpected createStringError() (overloaded) log result";
+
+  S.flush();
+  Msg.clear();
+  auto Res = errorToErrorCode(createStringError(EC, "foo%s", Bar));
+  EXPECT_EQ(Res, EC)
+    << "Failed to convert createStringError() result to error_code.";
+}
+
 // Test that the ExitOnError utility works as expected.
 TEST(Error, ExitOnError) {
   ExitOnError ExitOnErr;
