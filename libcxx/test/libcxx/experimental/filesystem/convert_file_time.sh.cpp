@@ -56,11 +56,12 @@ constexpr TestKind getFileTimeTestKind() {
   using Rep = typename FileTimeT::rep;
   if (std::is_floating_point<Rep>::value)
     return TK_FloatingPoint;
-  if (sizeof(Rep) == 16)
+  else if (sizeof(Rep) == 16)
     return TK_128Bit;
-  if (sizeof(Rep) == 8)
+  else if (sizeof(Rep) == 8)
     return TK_64Bit;
-  assert(false && "test kind not supported");
+  else
+    assert(false && "test kind not supported");
 }
 
 template <class FileTimeT, class TimeT, class TimeSpecT,

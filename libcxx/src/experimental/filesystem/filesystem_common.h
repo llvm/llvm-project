@@ -19,6 +19,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <sys/statvfs.h>
+#include <sys/time.h> // for ::utimes as used in __last_write_time
 #include <fcntl.h> /* values for fchmodat */
 
 #include <experimental/filesystem>
@@ -31,14 +32,6 @@
 #if defined(UTIME_OMIT)
 #define _LIBCPP_USE_UTIMENSAT
 #endif
-#endif
-
-#if !defined(_LIBCPP_USE_UTIMENSAT)
-#include <sys/time.h> // for ::utimes as used in __last_write_time
-#endif
-
-#if !defined(UTIME_OMIT)
-#include <sys/time.h> // for ::utimes as used in __last_write_time
 #endif
 
 #if defined(__GNUC__)
@@ -118,11 +111,11 @@ T error_value();
 template <>
 _LIBCPP_CONSTEXPR_AFTER_CXX11 void error_value<void>() {}
 template <>
-constexpr bool error_value<bool>() {
+bool error_value<bool>() {
   return false;
 }
 template <>
-constexpr uintmax_t error_value<uintmax_t>() {
+uintmax_t error_value<uintmax_t>() {
   return uintmax_t(-1);
 }
 template <>
@@ -229,7 +222,7 @@ struct time_util_base {
           .count();
 
 private:
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER > 11 && !defined(_LIBCPP_HAS_NO_CXX14_CONSTEXPR)
   static constexpr fs_duration get_min_nsecs() {
     return duration_cast<fs_duration>(
         fs_nanoseconds(min_nsec_timespec) -
@@ -362,8 +355,8 @@ public:
     // The tv_nsec and tv_usec fields must not be negative so adjust accordingly
     if (subsec_dur.count() < 0) {
       if (sec_dur.count() > min_seconds) {
-        sec_dur -= fs_seconds(1);
-        subsec_dur += fs_seconds(1);
+        sec_dur = sec_dur - fs_seconds(1);
+        subsec_dur = subsec_dur + fs_seconds(1);
       } else {
         subsec_dur = fs_nanoseconds::zero();
       }
@@ -389,30 +382,47 @@ TimeSpec extract_mtime(StatT const& st) { return st.st_mtim; }
 TimeSpec extract_atime(StatT const& st) { return st.st_atim; }
 #endif
 
-bool set_file_times(const path& p, std::array<TimeSpec, 2> const& TS,
+// allow the utimes implementation to compile even it we're not going
+// to use it.
+
+bool posix_utimes(const path& p, std::array<TimeSpec, 2> const& TS,
                     error_code& ec) {
-#if !defined(_LIBCPP_USE_UTIMENSAT)
   using namespace chrono;
   auto Convert = [](long nsec) {
-    return duration_cast<microseconds>(nanoseconds(nsec)).count();
+    using int_type = decltype(std::declval<::timeval>().tv_usec);
+    auto dur = duration_cast<microseconds>(nanoseconds(nsec)).count();
+    return static_cast<int_type>(dur);
   };
   struct ::timeval ConvertedTS[2] = {{TS[0].tv_sec, Convert(TS[0].tv_nsec)},
                                      {TS[1].tv_sec, Convert(TS[1].tv_nsec)}};
-  if (::utimes(p.c_str(), ConvertedTS) == -1)
-#else
-  if (::utimensat(AT_FDCWD, p.c_str(), TS.data(), 0) == -1)
-#endif
-  {
+  if (::utimes(p.c_str(), ConvertedTS) == -1) {
     ec = capture_errno();
     return true;
   }
   return false;
 }
 
-bool set_time_spec_to(TimeSpec& TS, file_time_type NewTime) {
-  return !fs_time::set_times_checked(
-      &TS.tv_sec, &TS.tv_nsec, NewTime);
+#if defined(_LIBCPP_USE_UTIMENSAT)
+bool posix_utimensat(const path& p, std::array<TimeSpec, 2> const& TS,
+                    error_code& ec) {
+  if (::utimensat(AT_FDCWD, p.c_str(), TS.data(), 0) == -1)
+  {
+    ec = capture_errno();
+    return true;
+  }
+  return false;
 }
+#endif
+
+bool set_file_times(const path& p, std::array<TimeSpec, 2> const& TS,
+                    error_code& ec) {
+#if !defined(_LIBCPP_USE_UTIMENSAT)
+  return posix_utimes(p, TS, ec);
+#else
+  return posix_utimensat(p, TS, ec);
+#endif
+}
+
 
 } // namespace
 } // end namespace detail

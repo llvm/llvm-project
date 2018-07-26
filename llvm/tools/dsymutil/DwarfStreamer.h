@@ -27,6 +27,7 @@
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
@@ -121,6 +122,9 @@ public:
   void emitFDE(uint32_t CIEOffset, uint32_t AddreSize, uint32_t Address,
                StringRef Bytes);
 
+  /// Emit DWARF debug names.
+  void emitDebugNames(AccelTable<DWARF5AccelTableStaticData> &Table);
+
   /// Emit Apple namespaces accelerator table.
   void emitAppleNamespaces(AccelTable<AppleAccelTableStaticOffsetData> &Table);
 
@@ -161,6 +165,13 @@ private:
   uint32_t LocSectionSize;
   uint32_t LineSectionSize;
   uint32_t FrameSectionSize;
+
+  /// Keep track of emitted CUs and their Unique ID.
+  struct EmittedUnit {
+    unsigned ID;
+    MCSymbol *LabelBegin;
+  };
+  std::vector<EmittedUnit> EmittedUnits;
 
   /// Emit the pubnames or pubtypes section contribution for \p
   /// Unit into \p Sec. The data is provided in \p Names.

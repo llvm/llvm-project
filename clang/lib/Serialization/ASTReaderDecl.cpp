@@ -746,6 +746,9 @@ void ASTDeclReader::VisitEnumDecl(EnumDecl *ED) {
   ED->IsScopedUsingClassTag = Record.readInt();
   ED->IsFixed = Record.readInt();
 
+  ED->HasODRHash = true;
+  ED->ODRHash = Record.readInt();
+
   // If this is a definition subject to the ODR, and we already have a
   // definition, merge this one into it.
   if (ED->IsCompleteDefinition &&
@@ -766,6 +769,8 @@ void ASTDeclReader::VisitEnumDecl(EnumDecl *ED) {
       Reader.MergedDeclContexts.insert(std::make_pair(ED, OldDef));
       ED->IsCompleteDefinition = false;
       Reader.mergeDefinitionVisibility(OldDef, ED);
+      if (OldDef->getODRHash() != ED->getODRHash())
+        Reader.PendingEnumOdrMergeFailures[OldDef].push_back(ED);
     } else {
       OldDef = ED;
     }

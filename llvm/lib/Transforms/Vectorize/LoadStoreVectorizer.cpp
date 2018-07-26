@@ -97,8 +97,16 @@ static const unsigned StackAdjustedAlignment = 4;
 
 namespace {
 
+/// ChainID is an arbitrary token that is allowed to be different only for the
+/// accesses that are guaranteed to be considered non-consecutive by
+/// Vectorizer::isConsecutiveAccess. It's used for grouping instructions
+/// together and reducing the number of instructions the main search operates on
+/// at a time, i.e. this is to reduce compile time and nothing else as the main
+/// search has O(n^2) time complexity. The underlying type of ChainID should not
+/// be relied upon.
+using ChainID = const Value *;
 using InstrList = SmallVector<Instruction *, 8>;
-using InstrListMap = MapVector<Value *, InstrList>;
+using InstrListMap = MapVector<ChainID, InstrList>;
 
 class Vectorizer {
   Function &F;
@@ -136,9 +144,15 @@ private:
     return DL.getABITypeAlignment(SI->getValueOperand()->getType());
   }
 
+  static const unsigned MaxDepth = 3;
+
   bool isConsecutiveAccess(Value *A, Value *B);
-  bool areConsecutivePointers(Value *PtrA, Value *PtrB, APInt Size);
-  bool lookThroughComplexAddresses(Value *PtrA, Value *PtrB, APInt PtrDelta);
+  bool areConsecutivePointers(Value *PtrA, Value *PtrB, const APInt &PtrDelta,
+                              unsigned Depth = 0) const;
+  bool lookThroughComplexAddresses(Value *PtrA, Value *PtrB, APInt PtrDelta,
+                                   unsigned Depth) const;
+  bool lookThroughSelects(Value *PtrA, Value *PtrB, const APInt &PtrDelta,
+                          unsigned Depth) const;
 
   /// After vectorization, reorder the instructions that I depends on
   /// (the instructions defining its operands), to ensure they dominate I.
@@ -304,7 +318,9 @@ bool Vectorizer::isConsecutiveAccess(Value *A, Value *B) {
   return areConsecutivePointers(PtrA, PtrB, Size);
 }
 
-bool Vectorizer::areConsecutivePointers(Value *PtrA, Value *PtrB, APInt Size) {
+bool Vectorizer::areConsecutivePointers(Value *PtrA, Value *PtrB,
+                                        const APInt &PtrDelta,
+                                        unsigned Depth) const {
   unsigned PtrBitWidth = DL.getPointerTypeSizeInBits(PtrA->getType());
   APInt OffsetA(PtrBitWidth, 0);
   APInt OffsetB(PtrBitWidth, 0);
@@ -316,11 +332,11 @@ bool Vectorizer::areConsecutivePointers(Value *PtrA, Value *PtrB, APInt Size) {
   // Check if they are based on the same pointer. That makes the offsets
   // sufficient.
   if (PtrA == PtrB)
-    return OffsetDelta == Size;
+    return OffsetDelta == PtrDelta;
 
   // Compute the necessary base pointer delta to have the necessary final delta
-  // equal to the size.
-  APInt BaseDelta = Size - OffsetDelta;
+  // equal to the pointer delta requested.
+  APInt BaseDelta = PtrDelta - OffsetDelta;
 
   // Compute the distance with SCEV between the base pointers.
   const SCEV *PtrSCEVA = SE.getSCEV(PtrA);
@@ -341,15 +357,16 @@ bool Vectorizer::areConsecutivePointers(Value *PtrA, Value *PtrB, APInt Size) {
   // Sometimes even this doesn't work, because SCEV can't always see through
   // patterns that look like (gep (ext (add (shl X, C1), C2))). Try checking
   // things the hard way.
-  return lookThroughComplexAddresses(PtrA, PtrB, BaseDelta);
+  return lookThroughComplexAddresses(PtrA, PtrB, BaseDelta, Depth);
 }
 
 bool Vectorizer::lookThroughComplexAddresses(Value *PtrA, Value *PtrB,
-                                             APInt PtrDelta) {
+                                             APInt PtrDelta,
+                                             unsigned Depth) const {
   auto *GEPA = dyn_cast<GetElementPtrInst>(PtrA);
   auto *GEPB = dyn_cast<GetElementPtrInst>(PtrB);
   if (!GEPA || !GEPB)
-    return false;
+    return lookThroughSelects(PtrA, PtrB, PtrDelta, Depth);
 
   // Look through GEPs after checking they're the same except for the last
   // index.
@@ -432,6 +449,24 @@ bool Vectorizer::lookThroughComplexAddresses(Value *PtrA, Value *PtrB,
   const SCEV *C = SE.getConstant(IdxDiff.trunc(BitWidth));
   const SCEV *X = SE.getAddExpr(OffsetSCEVA, C);
   return X == OffsetSCEVB;
+}
+
+bool Vectorizer::lookThroughSelects(Value *PtrA, Value *PtrB,
+                                    const APInt &PtrDelta,
+                                    unsigned Depth) const {
+  if (Depth++ == MaxDepth)
+    return false;
+
+  if (auto *SelectA = dyn_cast<SelectInst>(PtrA)) {
+    if (auto *SelectB = dyn_cast<SelectInst>(PtrB)) {
+      return SelectA->getCondition() == SelectB->getCondition() &&
+             areConsecutivePointers(SelectA->getTrueValue(),
+                                    SelectB->getTrueValue(), PtrDelta, Depth) &&
+             areConsecutivePointers(SelectA->getFalseValue(),
+                                    SelectB->getFalseValue(), PtrDelta, Depth);
+    }
+  }
+  return false;
 }
 
 void Vectorizer::reorder(Instruction *I) {
@@ -656,6 +691,20 @@ Vectorizer::getVectorizablePrefix(ArrayRef<Instruction *> Chain) {
   return Chain.slice(0, ChainIdx);
 }
 
+static ChainID getChainID(const Value *Ptr, const DataLayout &DL) {
+  const Value *ObjPtr = GetUnderlyingObject(Ptr, DL);
+  if (const auto *Sel = dyn_cast<SelectInst>(ObjPtr)) {
+    // The select's themselves are distinct instructions even if they share the
+    // same condition and evaluate to consecutive pointers for true and false
+    // values of the condition. Therefore using the select's themselves for
+    // grouping instructions would put consecutive accesses into different lists
+    // and they won't be even checked for being consecutive, and won't be
+    // vectorized.
+    return Sel->getCondition();
+  }
+  return ObjPtr;
+}
+
 std::pair<InstrListMap, InstrListMap>
 Vectorizer::collectInstructions(BasicBlock *BB) {
   InstrListMap LoadRefs;
@@ -710,8 +759,8 @@ Vectorizer::collectInstructions(BasicBlock *BB) {
         continue;
 
       // Save the load locations.
-      Value *ObjPtr = GetUnderlyingObject(Ptr, DL);
-      LoadRefs[ObjPtr].push_back(LI);
+      const ChainID ID = getChainID(Ptr, DL);
+      LoadRefs[ID].push_back(LI);
     } else if (StoreInst *SI = dyn_cast<StoreInst>(&I)) {
       if (!SI->isSimple())
         continue;
@@ -756,8 +805,8 @@ Vectorizer::collectInstructions(BasicBlock *BB) {
         continue;
 
       // Save store location.
-      Value *ObjPtr = GetUnderlyingObject(Ptr, DL);
-      StoreRefs[ObjPtr].push_back(SI);
+      const ChainID ID = getChainID(Ptr, DL);
+      StoreRefs[ID].push_back(SI);
     }
   }
 
@@ -767,7 +816,7 @@ Vectorizer::collectInstructions(BasicBlock *BB) {
 bool Vectorizer::vectorizeChains(InstrListMap &Map) {
   bool Changed = false;
 
-  for (const std::pair<Value *, InstrList> &Chain : Map) {
+  for (const std::pair<ChainID, InstrList> &Chain : Map) {
     unsigned Size = Chain.second.size();
     if (Size < 2)
       continue;
