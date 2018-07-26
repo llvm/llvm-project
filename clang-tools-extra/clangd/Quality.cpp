@@ -27,7 +27,7 @@
 namespace clang {
 namespace clangd {
 using namespace llvm;
-static bool IsReserved(StringRef Name) {
+static bool isReserved(StringRef Name) {
   // FIXME: Should we exclude _Bool and others recognized by the standard?
   return Name.size() >= 2 && Name[0] == '_' &&
          (isUppercase(Name[1]) || Name[1] == '_');
@@ -174,15 +174,15 @@ void SymbolQualitySignals::merge(const CodeCompletionResult &SemaCCResult) {
 
   if (SemaCCResult.Declaration) {
     if (auto *ID = SemaCCResult.Declaration->getIdentifier())
-      ReservedName = ReservedName || IsReserved(ID->getName());
+      ReservedName = ReservedName || isReserved(ID->getName());
   } else if (SemaCCResult.Kind == CodeCompletionResult::RK_Macro)
-    ReservedName = ReservedName || IsReserved(SemaCCResult.Macro->getName());
+    ReservedName = ReservedName || isReserved(SemaCCResult.Macro->getName());
 }
 
 void SymbolQualitySignals::merge(const Symbol &IndexResult) {
   References = std::max(IndexResult.References, References);
   Category = categorize(IndexResult.SymInfo);
-  ReservedName = ReservedName || IsReserved(IndexResult.Name);
+  ReservedName = ReservedName || isReserved(IndexResult.Name);
 }
 
 float SymbolQualitySignals::evaluate() const {
@@ -199,8 +199,8 @@ float SymbolQualitySignals::evaluate() const {
     //   boost = f * sigmoid(m * std::log(References)) - 0.5 * f + 0.59
     // Sample data points: (10, 1.00), (100, 1.41), (1000, 1.82),
     //                     (10K, 2.21), (100K, 2.58), (1M, 2.94)
-    float s = std::pow(References, -0.06);
-    Score *= 6.0 * (1 - s) / (1 + s) + 0.59;
+    float S = std::pow(References, -0.06);
+    Score *= 6.0 * (1 - S) / (1 + S) + 0.59;
   }
 
   if (Deprecated)
@@ -241,7 +241,7 @@ raw_ostream &operator<<(raw_ostream &OS, const SymbolQualitySignals &S) {
 }
 
 static SymbolRelevanceSignals::AccessibleScope
-ComputeScope(const NamedDecl *D) {
+computeScope(const NamedDecl *D) {
   // Injected "Foo" within the class "Foo" has file scope, not class scope.
   const DeclContext *DC = D->getDeclContext();
   if (auto *R = dyn_cast_or_null<RecordDecl>(D))
@@ -291,7 +291,7 @@ void SymbolRelevanceSignals::merge(const CodeCompletionResult &SemaCCResult) {
 
   // Declarations are scoped, others (like macros) are assumed global.
   if (SemaCCResult.Declaration)
-    Scope = std::min(Scope, ComputeScope(SemaCCResult.Declaration));
+    Scope = std::min(Scope, computeScope(SemaCCResult.Declaration));
 }
 
 static std::pair<float, unsigned> proximityScore(llvm::StringRef SymbolURI,

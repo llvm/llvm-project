@@ -723,14 +723,14 @@ CompletionSnippetSuffix:    '-snippet'
 ...
 )";
 
-  auto Symbols1 = SymbolsFromYAML(YAML1);
+  auto Symbols1 = symbolsFromYAML(YAML1);
 
   EXPECT_THAT(Symbols1,
               UnorderedElementsAre(AllOf(QName("clang::Foo1"), Labeled("Foo1"),
                                          Doc("Foo doc"), ReturnType("int"),
                                          DeclURI("file:///path/foo.h"),
                                          ForCodeCompletion(true))));
-  auto Symbols2 = SymbolsFromYAML(YAML2);
+  auto Symbols2 = symbolsFromYAML(YAML2);
   EXPECT_THAT(Symbols2, UnorderedElementsAre(AllOf(
                             QName("clang::Foo2"), Labeled("Foo2-sig"),
                             Not(HasReturnType()), DeclURI("file:///path/bar.h"),
@@ -742,7 +742,7 @@ CompletionSnippetSuffix:    '-snippet'
     SymbolsToYAML(Symbols1, OS);
     SymbolsToYAML(Symbols2, OS);
   }
-  auto ConcatenatedSymbols = SymbolsFromYAML(ConcatenatedYAML);
+  auto ConcatenatedSymbols = symbolsFromYAML(ConcatenatedYAML);
   EXPECT_THAT(ConcatenatedSymbols,
               UnorderedElementsAre(QName("clang::Foo1"),
                                    QName("clang::Foo2")));
