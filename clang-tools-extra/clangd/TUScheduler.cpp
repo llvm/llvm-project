@@ -324,6 +324,11 @@ void ASTWorker::update(
     ParseInputs Inputs, WantDiagnostics WantDiags,
     llvm::unique_function<void(std::vector<Diag>)> OnUpdated) {
   auto Task = [=](decltype(OnUpdated) OnUpdated) mutable {
+    // Will be used to check if we can avoid rebuilding the AST.
+    bool InputsAreTheSame =
+        std::tie(FileInputs.CompileCommand, FileInputs.Contents) ==
+        std::tie(Inputs.CompileCommand, Inputs.Contents);
+
     tooling::CompileCommand OldCommand = std::move(FileInputs.CompileCommand);
     FileInputs = Inputs;
     // Remove the old AST if it's still in cache.
@@ -343,16 +348,38 @@ void ASTWorker::update(
       return;
     }
 
-    std::shared_ptr<const PreambleData> NewPreamble = buildPreamble(
-        FileName, *Invocation, getPossiblyStalePreamble(), OldCommand, Inputs,
-        PCHs, StorePreambleInMemory, PreambleCallback);
+    std::shared_ptr<const PreambleData> OldPreamble =
+        getPossiblyStalePreamble();
+    std::shared_ptr<const PreambleData> NewPreamble =
+        buildPreamble(FileName, *Invocation, OldPreamble, OldCommand, Inputs,
+                      PCHs, StorePreambleInMemory, PreambleCallback);
+
+    bool CanReuseAST = InputsAreTheSame && (OldPreamble == NewPreamble);
     {
       std::lock_guard<std::mutex> Lock(Mutex);
       if (NewPreamble)
         LastBuiltPreamble = NewPreamble;
     }
+    // Before doing the expensive AST reparse, we want to release our reference
+    // to the old preamble, so it can be freed if there are no other references
+    // to it.
+    OldPreamble.reset();
     PreambleWasBuilt.notify();
 
+    if (CanReuseAST) {
+      // Take a shortcut and don't build the AST, neither the inputs nor the
+      // preamble have changed.
+      // Note that we do not report the diagnostics, since they should not have
+      // changed either. All the clients should handle the lack of OnUpdated()
+      // call anyway, to handle empty result from buildAST.
+      // FIXME(ibiryukov): the AST could actually change if non-preamble
+      // includes changed, but we choose to ignore it.
+      // FIXME(ibiryukov): should we refresh the cache in IdleASTs for the
+      // current file at this point?
+      log("Skipping rebuild of the AST for {0}, inputs are the same.",
+          FileName);
+      return;
+    }
     // Build the AST for diagnostics.
     llvm::Optional<ParsedAST> AST =
         buildAST(FileName, std::move(Invocation), Inputs, NewPreamble, PCHs);
