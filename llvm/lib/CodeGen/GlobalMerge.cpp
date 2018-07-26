@@ -177,7 +177,7 @@ namespace {
     void setMustKeepGlobalVariables(Module &M);
 
     /// Collect every variables marked as "used"
-    void collectUsedGlobalVariables(Module &M);
+    void collectUsedGlobalVariables(Module &M, StringRef Name);
 
     /// Keep track of the GlobalVariable that must not be merged away
     SmallPtrSet<const GlobalVariable *, 16> MustKeepGlobalVariables;
@@ -558,9 +558,9 @@ bool GlobalMerge::doMerge(const SmallVectorImpl<GlobalVariable *> &Globals,
   return Changed;
 }
 
-void GlobalMerge::collectUsedGlobalVariables(Module &M) {
+void GlobalMerge::collectUsedGlobalVariables(Module &M, StringRef Name) {
   // Extract global variables from llvm.used array
-  const GlobalVariable *GV = M.getGlobalVariable("llvm.used");
+  const GlobalVariable *GV = M.getGlobalVariable(Name);
   if (!GV || !GV->hasInitializer()) return;
 
   // Should be an array of 'i8*'.
@@ -573,7 +573,8 @@ void GlobalMerge::collectUsedGlobalVariables(Module &M) {
 }
 
 void GlobalMerge::setMustKeepGlobalVariables(Module &M) {
-  collectUsedGlobalVariables(M);
+  collectUsedGlobalVariables(M, "llvm.used");
+  collectUsedGlobalVariables(M, "llvm.compiler.used");
 
   for (Function &F : M) {
     for (BasicBlock &BB : F) {

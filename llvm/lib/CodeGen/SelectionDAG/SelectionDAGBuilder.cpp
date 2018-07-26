@@ -5672,7 +5672,16 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
     SDValue Z = getValue(I.getArgOperand(2));
     EVT VT = X.getValueType();
 
-    // TODO: When X == Y, this is rotate. Create the node directly if legal.
+    // When X == Y, this is rotate. Create the node directly if legal.
+    // TODO: This should also be done if the operation is custom, but we have
+    // to make sure targets are handling the modulo shift amount as expected.
+    // TODO: If the rotate direction (left or right) corresponding to the shift
+    // is not available, adjust the shift value and invert the direction.
+    auto RotateOpcode = IsFSHL ? ISD::ROTL : ISD::ROTR;
+    if (X == Y && TLI.isOperationLegal(RotateOpcode, VT)) {
+      setValue(&I, DAG.getNode(RotateOpcode, sdl, VT, X, Z));
+      return nullptr;
+    }
 
     // Get the shift amount and inverse shift amount, modulo the bit-width.
     SDValue BitWidthC = DAG.getConstant(VT.getScalarSizeInBits(), sdl, VT);

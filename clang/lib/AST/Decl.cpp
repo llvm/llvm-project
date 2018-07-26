@@ -3973,6 +3973,17 @@ void EnumDecl::setInstantiationOfMemberEnum(ASTContext &C, EnumDecl *ED,
   SpecializationInfo = new (C) MemberSpecializationInfo(ED, TSK);
 }
 
+unsigned EnumDecl::getODRHash() {
+  if (HasODRHash)
+    return ODRHash;
+
+  class ODRHash Hash;
+  Hash.AddEnumDecl(this);
+  HasODRHash = true;
+  ODRHash = Hash.CalculateHash();
+  return ODRHash;
+}
+
 //===----------------------------------------------------------------------===//
 // RecordDecl Implementation
 //===----------------------------------------------------------------------===//

@@ -22,6 +22,13 @@ enum class OutputFileType {
   Assembly,
 };
 
+/// The kind of accelerator tables we should emit.
+enum class AccelTableKind {
+  Apple,   ///< .apple_names, .apple_namespaces, .apple_types, .apple_objc.
+  Dwarf,   ///< DWARF v5 .debug_names.
+  Default, ///< Dwarf for DWARF5 or later, Apple otherwise.
+};
+
 struct LinkOptions {
   /// Verbosity
   bool Verbose = false;
@@ -46,6 +53,9 @@ struct LinkOptions {
 
   // Output file type.
   OutputFileType FileType = OutputFileType::Object;
+
+  /// The accelerator table kind
+  AccelTableKind TheAccelTableKind;
 
   /// -oso-prepend-path
   std::string PrependPath;

@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DwarfStreamer.h"
+#include "CompileUnit.h"
 #include "LinkUtils.h"
 #include "MachOUtils.h"
 #include "llvm/ADT/Triple.h"
@@ -165,6 +166,9 @@ void DwarfStreamer::emitCompileUnitHeader(CompileUnit &Unit) {
   // start of the section.
   Asm->emitInt32(0);
   Asm->emitInt8(Unit.getOrigUnit().getAddressByteSize());
+
+  // Remember this CU.
+  EmittedUnits.push_back({Unit.getUniqueID(), Unit.getLabelBegin()});
 }
 
 /// Emit the \p Abbrevs array as the shared abbreviation table
@@ -195,6 +199,29 @@ void DwarfStreamer::emitStrings(const NonRelocatableStringpool &Pool) {
     // Emit a null terminator.
     Asm->emitInt8(0);
   }
+}
+
+void DwarfStreamer::emitDebugNames(
+    AccelTable<DWARF5AccelTableStaticData> &Table) {
+  if (EmittedUnits.empty())
+    return;
+
+  // Build up data structures needed to emit this section.
+  std::vector<MCSymbol *> CompUnits;
+  DenseMap<unsigned, size_t> UniqueIdToCuMap;
+  unsigned Id = 0;
+  for (auto &CU : EmittedUnits) {
+    CompUnits.push_back(CU.LabelBegin);
+    // We might be omitting CUs, so we need to remap them.
+    UniqueIdToCuMap[CU.ID] = Id++;
+  }
+
+  Asm->OutStreamer->SwitchSection(MOFI->getDwarfDebugNamesSection());
+  emitDWARF5AccelTable(
+      Asm.get(), Table, CompUnits,
+      [&UniqueIdToCuMap](const DWARF5AccelTableStaticData &Entry) {
+        return UniqueIdToCuMap[Entry.getCUIndex()];
+      });
 }
 
 void DwarfStreamer::emitAppleNamespaces(
