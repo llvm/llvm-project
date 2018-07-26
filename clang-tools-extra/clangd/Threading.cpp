@@ -50,7 +50,7 @@ bool AsyncTaskRunner::wait(Deadline D) const {
                       [&] { return InFlightTasks == 0; });
 }
 
-void AsyncTaskRunner::runAsync(llvm::Twine Name,
+void AsyncTaskRunner::runAsync(const llvm::Twine &Name,
                                llvm::unique_function<void()> Action) {
   {
     std::lock_guard<std::mutex> Lock(Mutex);
