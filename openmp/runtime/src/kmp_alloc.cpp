@@ -1548,33 +1548,6 @@ void *___kmp_allocate(size_t size KMP_SRC_LOC_DECL) {
   return ptr;
 } // func ___kmp_allocate
 
-#if (BUILD_MEMORY == FIRST_TOUCH)
-void *__kmp_ft_page_allocate(size_t size) {
-  void *adr, *aadr;
-
-  const int page_size = KMP_GET_PAGE_SIZE();
-
-  adr = (void *)__kmp_thread_malloc(__kmp_get_thread(),
-                                    size + page_size + KMP_PTR_SKIP);
-  if (adr == 0)
-    KMP_FATAL(OutOfHeapMemory);
-
-  /* check to see if adr is on a page boundary. */
-  if (((kmp_uintptr_t)adr & (page_size - 1)) == 0)
-    /* nothing to do if adr is already on a page boundary. */
-    aadr = adr;
-  else
-    /* else set aadr to the first page boundary in the allocated memory. */
-    aadr = (void *)(((kmp_uintptr_t)adr + page_size) & ~(page_size - 1));
-
-  /* the first touch by the owner thread. */
-  *((void **)aadr) = adr;
-
-  /* skip the memory space used for storing adr above. */
-  return (void *)((char *)aadr + KMP_PTR_SKIP);
-}
-#endif
-
 /* Allocate memory on page boundary, fill allocated memory with 0x00.
    Does not call this func directly! Use __kmp_page_allocate macro instead.
    NULL is NEVER returned, __kmp_abort() is called in case of memory allocation
