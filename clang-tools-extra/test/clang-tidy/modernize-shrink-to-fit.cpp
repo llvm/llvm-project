@@ -72,3 +72,16 @@ void h() {
   // CHECK-FIXES: {{^  }}COPY_AND_SWAP_INT_VEC(v);{{$}}
 }
 
+void PR38315() {
+  typedef std::vector<int> Vector;
+  Vector v;
+  Vector(v).swap(v);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: the shrink_to_fit method should
+  // CHECK-FIXES: {{^  }}v.shrink_to_fit();{{$}}
+
+  using Vector2 = std::vector<int>;
+  Vector2 v2;
+  Vector2(v2).swap(v2);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: the shrink_to_fit method should
+  // CHECK-FIXES: {{^  }}v2.shrink_to_fit();{{$}}
+}
