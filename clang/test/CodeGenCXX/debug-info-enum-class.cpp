@@ -15,7 +15,7 @@ D d;
 // CHECK-SAME:             baseType: ![[INT:[0-9]+]]
 // CHECK-SAME:             size: 32
 // CHECK-NOT:              offset:
-// CHECK-SAME:             flags: DIFlagFixedEnum
+// CHECK-NOT:              flags:
 // CHECK-SAME:             ){{$}}
 // CHECK: ![[INT]] = !DIBasicType(name: "int"
 // CHECK: !DICompositeType(tag: DW_TAG_enumeration_type, name: "B"
@@ -23,12 +23,12 @@ D d;
 // CHECK-SAME:             baseType: ![[ULONG:[0-9]+]]
 // CHECK-SAME:             size: 64
 // CHECK-NOT:              offset:
-// CHECK-SAME:             flags: DIFlagFixedEnum
+// CHECK-NOT:              flags:
 // CHECK-SAME:             ){{$}}
 // CHECK: ![[ULONG]] = !DIBasicType(name: "long unsigned int"
 // CHECK: !DICompositeType(tag: DW_TAG_enumeration_type, name: "C"
 // CHECK-SAME:             line: 5
-// CHECK-SAME:             baseType: ![[ULONG:[0-9]+]]
+// CHECK-NOT:              baseType:
 // CHECK-SAME:             size: 32
 // CHECK-NOT:              offset:
 // CHECK-NOT:              flags:
