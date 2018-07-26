@@ -12,4 +12,5 @@
 
 // RUN: echo '2 + 3' | %lldb --repl | FileCheck %s --check-prefix=INT
 // INT: Welcome to Swift
+// INT-NEXT: Type :help
 // INT-NEXT: $R0: Int = 5
