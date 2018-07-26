@@ -208,15 +208,11 @@ static const bool SupportsMinTime = [] {
 
 static const bool SupportsNanosecondRoundTrip = [] {
   NanoSec ns(3);
-
-  // Test if the file_time_type period is less than that of nanoseconds.
-  auto ft_dur = duration_cast<file_time_type::duration>(ns);
-  if (duration_cast<NanoSec>(ft_dur) != ns)
-    return false;
+  static_assert(std::is_same<file_time_type::period, std::nano>::value, "");
 
   // Test that the system call we use to set the times also supports nanosecond
   // resolution. (utimes does not)
-  file_time_type ft(ft_dur);
+  file_time_type ft(ns);
   {
     scoped_test_env env;
     const path p = env.create_file("file", 42);
@@ -225,13 +221,14 @@ static const bool SupportsNanosecondRoundTrip = [] {
   }
 }();
 
-
+// The HFS+ filesystem (used by default before macOS 10.13) stores timestamps at
+// a 1-second granularity, and APFS (now the default) at a 1 nanosecond granularity.
+// 1-second granularity is also the norm on many of the supported filesystems
+// on Linux as well.
 static const bool WorkaroundStatTruncatesToSeconds = [] {
   MicroSec micros(3);
   static_assert(std::is_same<file_time_type::period, std::nano>::value, "");
 
-  // Test for the behavior of OS X 10.11 and older, which truncates the result
-  // of st_mtimespec to seconds.
   file_time_type ft(micros);
   {
     scoped_test_env env;
@@ -592,16 +589,6 @@ TEST_CASE(test_exists_fails)
     ExceptionChecker Checker(file, std::errc::permission_denied,
                              "last_write_time");
     TEST_CHECK_THROW_RESULT(filesystem_error, Checker, last_write_time(file));
-}
-
-// Just for sanity ensure that WorkaroundStatTruncatesToSeconds is only
-// ever true on Apple platforms.
-TEST_CASE(apple_truncates_to_seconds_check) {
-#ifndef __APPLE__
-  TEST_CHECK(!WorkaroundStatTruncatesToSeconds);
-#else
-  TEST_CHECK(SupportsNanosecondRoundTrip != WorkaroundStatTruncatesToSeconds);
-#endif
 }
 
 TEST_SUITE_END()
