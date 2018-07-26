@@ -279,3 +279,14 @@ void test(ArraysInMethods *obj) {
   [obj simpleSugar:0]; // expected-warning {{null passed to a callee that requires a non-null argument}}
   [obj sugarWithTypedef:0]; // expected-warning {{null passed to a callee that requires a non-null argument}}
 }
+
+// Check that we don't propagate the nullability specifier on the receiver to
+// the result type of a message send if the result type cannot have a
+// nullability specifier.
+@interface C0
+-(int) count;
+@end
+
+void testMessageSendResultType(C0 * _Nullable c0) {
+  int *p = [c0 count]; // expected-warning {{incompatible integer to pointer conversion initializing 'int *' with an expression of type 'int'}}
+}

@@ -1357,6 +1357,11 @@ QualType Sema::getMessageSendResultType(QualType ReceiverType,
   if (isClassMessage)
     return resultType;
 
+  // There is nothing left to do if the result type cannot have a nullability
+  // specifier.
+  if (!resultType->canHaveNullability())
+    return resultType;
+
   // Map the nullability of the result into a table index.
   unsigned receiverNullabilityIdx = 0;
   if (auto nullability = ReceiverType->getNullability(Context))
