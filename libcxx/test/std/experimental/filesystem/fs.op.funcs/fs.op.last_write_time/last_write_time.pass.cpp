@@ -421,21 +421,23 @@ TEST_CASE(set_last_write_time_dynamic_env_test)
 #endif
 
     struct TestCase {
+      const char * case_name;
       path p;
       file_time_type new_time;
     } cases[] = {
-        {file, epoch_time},
-        {dir, epoch_time},
-        {file, future_time},
-        {dir, future_time},
-        {file, past_time},
-        {dir, past_time},
-        {file, before_epoch_time},
-        {dir, before_epoch_time},
-        {file, just_before_epoch_time},
-        {dir, just_before_epoch_time}
+        {"file, epoch_time", file, epoch_time},
+        {"dir, epoch_time", dir, epoch_time},
+        {"file, future_time", file, future_time},
+        {"dir, future_time", dir, future_time},
+        {"file, past_time", file, past_time},
+        {"dir, past_time", dir, past_time},
+        {"file, before_epoch_time", file, before_epoch_time},
+        {"dir, before_epoch_time", dir, before_epoch_time},
+        {"file, just_before_epoch_time", file, just_before_epoch_time},
+        {"dir, just_before_epoch_time", dir, just_before_epoch_time}
     };
     for (const auto& TC : cases) {
+        std::cerr << "Test Case = " << TC.case_name << "\n";
         const auto old_times = GetTimes(TC.p);
         file_time_type old_time;
         TEST_REQUIRE(ConvertFromTimeSpec(old_time, old_times.write));
@@ -444,11 +446,19 @@ TEST_CASE(set_last_write_time_dynamic_env_test)
         last_write_time(TC.p, TC.new_time, ec);
         TEST_CHECK(!ec);
 
-        file_time_type  got_time = last_write_time(TC.p);
+        ec = GetTestEC();
+        file_time_type  got_time = last_write_time(TC.p, ec);
+        TEST_REQUIRE(!ec);
 
         if (TimeIsRepresentableByFilesystem(TC.new_time)) {
             TEST_CHECK(got_time != old_time);
             TEST_CHECK(CompareTime(got_time, TC.new_time));
+
+            // FIXME(EricWF): Remove these after getting information from
+            // some failing bots.
+            std::cerr << (long long)got_time.time_since_epoch().count() << std::endl;
+            std::cerr << (long long)TC.new_time.time_since_epoch().count() << std::endl;
+
             TEST_CHECK(CompareTime(LastAccessTime(TC.p), old_times.access));
         }
     }
