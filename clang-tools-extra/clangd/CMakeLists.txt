@@ -43,7 +43,6 @@ add_clang_library(clangDaemon
   index/SymbolCollector.cpp
   index/SymbolYAML.cpp
 
-  index/dex/Iterator.cpp
   index/dex/Trigram.cpp
 
   LINK_LIBS

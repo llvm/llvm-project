@@ -54,17 +54,36 @@ void dwarfgen::DIE::addAttribute(uint16_t A, dwarf::Form Form, uint64_t U) {
                 DIEInteger(U));
 }
 
+void dwarfgen::DIE::addAttribute(uint16_t A, dwarf::Form Form, const MCExpr &Expr) {
+  auto &DG = CU->getGenerator();
+  Die->addValue(DG.getAllocator(), static_cast<dwarf::Attribute>(A), Form,
+                DIEExpr(&Expr));
+}
+
 void dwarfgen::DIE::addAttribute(uint16_t A, dwarf::Form Form,
                                  StringRef String) {
   auto &DG = CU->getGenerator();
-  if (Form == DW_FORM_string) {
+  switch (Form) {
+  case DW_FORM_string:
     Die->addValue(DG.getAllocator(), static_cast<dwarf::Attribute>(A), Form,
                   new (DG.getAllocator())
                       DIEInlineString(String, DG.getAllocator()));
-  } else {
+    break;
+
+  case DW_FORM_strp:
+  case DW_FORM_GNU_str_index:
+  case DW_FORM_strx:
+  case DW_FORM_strx1:
+  case DW_FORM_strx2:
+  case DW_FORM_strx3:
+  case DW_FORM_strx4:
     Die->addValue(
         DG.getAllocator(), static_cast<dwarf::Attribute>(A), Form,
         DIEString(DG.getStringPool().getEntry(*DG.getAsmPrinter(), String)));
+    break;
+
+  default:
+    llvm_unreachable("Unhandled form!");
   }
 }
 
@@ -95,6 +114,24 @@ void dwarfgen::DIE::addAttribute(uint16_t A, dwarf::Form Form) {
   assert(Form == DW_FORM_flag_present);
   Die->addValue(DG.getAllocator(), static_cast<dwarf::Attribute>(A), Form,
                 DIEInteger(1));
+}
+
+void dwarfgen::DIE::addStrOffsetsBaseAttribute() {
+  auto &DG = CU->getGenerator();
+  auto &MC = *DG.getMCContext();
+  AsmPrinter *Asm = DG.getAsmPrinter();
+
+  const MCSymbol *SectionStart =
+      Asm->getObjFileLowering().getDwarfStrOffSection()->getBeginSymbol();
+
+  const MCExpr *Expr =
+      MCSymbolRefExpr::create(DG.getStringOffsetsStartSym(), MC);
+
+  if (!Asm->MAI->doesDwarfUseRelocationsAcrossSections())
+    Expr = MCBinaryExpr::createSub(
+        Expr, MCSymbolRefExpr::create(SectionStart, MC), MC);
+
+  addAttribute(dwarf::DW_AT_str_offsets_base, DW_FORM_sec_offset, *Expr);
 }
 
 dwarfgen::DIE dwarfgen::DIE::addChild(dwarf::Tag Tag) {
@@ -429,6 +466,7 @@ llvm::Error dwarfgen::Generator::init(Triple TheTriple, uint16_t V) {
   Asm->setDwarfVersion(Version);
 
   StringPool = llvm::make_unique<DwarfStringPool>(Allocator, *Asm, StringRef());
+  StringOffsetsStartSym = Asm->createTempSymbol("str_offsets_base");
 
   return Error::success();
 }
@@ -450,7 +488,12 @@ StringRef dwarfgen::Generator::generate() {
     CU->setLength(CUOffset - 4);
   }
   Abbreviations.Emit(Asm.get(), TLOF->getDwarfAbbrevSection());
-  StringPool->emit(*Asm, TLOF->getDwarfStrSection());
+
+  StringPool->emitStringOffsetsTableHeader(*Asm, TLOF->getDwarfStrOffSection(),
+                                           StringOffsetsStartSym);
+  StringPool->emit(*Asm, TLOF->getDwarfStrSection(),
+                   TLOF->getDwarfStrOffSection());
+
   MS->SwitchSection(TLOF->getDwarfInfoSection());
   for (auto &CU : CompileUnits) {
     uint16_t Version = CU->getVersion();

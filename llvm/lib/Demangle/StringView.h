@@ -45,7 +45,7 @@ public:
 
   StringView dropFront(size_t N = 1) const {
     if (N >= size())
-      N = size() - 1;
+      N = size();
     return StringView(First + N, Last);
   }
 

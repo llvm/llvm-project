@@ -422,19 +422,17 @@ define i1 @add_ugecmp_i64_i8(i64 %x) nounwind {
 define i1 @add_ugtcmp_i16_i8(i16 %x) nounwind {
 ; X86-LABEL: add_ugtcmp_i16_i8:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl $128, %eax
-; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzwl %ax, %eax
-; X86-NEXT:    cmpl $255, %eax
-; X86-NEXT:    seta %al
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movsbl %al, %ecx
+; X86-NEXT:    cmpw %ax, %cx
+; X86-NEXT:    setne %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: add_ugtcmp_i16_i8:
 ; X64:       # %bb.0:
-; X64-NEXT:    subl $-128, %edi
-; X64-NEXT:    movzwl %di, %eax
-; X64-NEXT:    cmpl $255, %eax
-; X64-NEXT:    seta %al
+; X64-NEXT:    movsbl %dil, %eax
+; X64-NEXT:    cmpw %di, %ax
+; X64-NEXT:    setne %al
 ; X64-NEXT:    retq
   %tmp0 = add i16 %x, 128 ; 1U << (8-1)
   %tmp1 = icmp ugt i16 %tmp0, 255 ; (1U << 8) - 1

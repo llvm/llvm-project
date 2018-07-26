@@ -686,3 +686,77 @@ define <2 x i8> @div_factor_unsigned_vec(<2 x i8> %x, <2 x i8> %y) {
   ret <2 x i8> %r
 }
 
+define i8 @udiv_common_factor(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @udiv_common_factor(
+; CHECK-NEXT:    [[C:%.*]] = udiv i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[C]]
+;
+  %a = mul nuw i8 %z, %x
+  %b = mul nuw i8 %z, %y
+  %c = udiv i8 %a, %b
+  ret i8 %c
+}
+
+define <2 x i8> @udiv_common_factor_commute1_vec(<2 x i8> %x, <2 x i8> %y, <2 x i8> %z) {
+; CHECK-LABEL: @udiv_common_factor_commute1_vec(
+; CHECK-NEXT:    [[C:%.*]] = udiv <2 x i8> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret <2 x i8> [[C]]
+;
+  %a = mul nuw <2 x i8> %x, %z
+  %b = mul nuw <2 x i8> %z, %y
+  %c = udiv <2 x i8> %a, %b
+  ret <2 x i8> %c
+}
+
+define i8 @udiv_common_factor_commute2(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @udiv_common_factor_commute2(
+; CHECK-NEXT:    [[C:%.*]] = udiv i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[C]]
+;
+  %a = mul nuw i8 %x, %z
+  %b = mul nuw i8 %y, %z
+  %c = udiv i8 %a, %b
+  ret i8 %c
+}
+
+define i8 @udiv_common_factor_commute3(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @udiv_common_factor_commute3(
+; CHECK-NEXT:    [[C:%.*]] = udiv i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[C]]
+;
+  %a = mul nuw i8 %z, %x
+  %b = mul nuw i8 %y, %z
+  %c = udiv i8 %a, %b
+  ret i8 %c
+}
+
+; Negative test: both mul must be 'nuw'.
+
+define i8 @udiv_common_factor_not_nuw(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @udiv_common_factor_not_nuw(
+; CHECK-NEXT:    [[A:%.*]] = mul i8 [[Z:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = mul nuw i8 [[Z]], [[Y:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = udiv i8 [[A]], [[B]]
+; CHECK-NEXT:    ret i8 [[C]]
+;
+  %a = mul i8 %z, %x
+  %b = mul nuw i8 %z, %y
+  %c = udiv i8 %a, %b
+  ret i8 %c
+}
+
+; Negative test: both mul must be 'nuw'.
+
+define <2 x i8> @udiv_common_factor_not_nuw_vec(<2 x i8> %x, <2 x i8> %y, <2 x i8> %z) {
+; CHECK-LABEL: @udiv_common_factor_not_nuw_vec(
+; CHECK-NEXT:    [[A:%.*]] = mul nuw <2 x i8> [[Z:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = mul <2 x i8> [[Z]], [[Y:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = udiv <2 x i8> [[A]], [[B]]
+; CHECK-NEXT:    ret <2 x i8> [[C]]
+;
+  %a = mul nuw <2 x i8> %z, %x
+  %b = mul <2 x i8> %z, %y
+  %c = udiv <2 x i8> %a, %b
+  ret <2 x i8> %c
+}
+

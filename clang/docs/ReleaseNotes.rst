@@ -216,7 +216,21 @@ OpenCL C Language Changes in Clang
 OpenMP Support in Clang
 ----------------------------------
 
-- ...
+- Clang gained basic support for OpenMP 4.5 offloading for NVPTX target.
+   To compile your program for NVPTX target use the following options:
+   `-fopenmp -fopenmp-targets=nvptx64-nvidia-cuda` for 64 bit platforms or
+   `-fopenmp -fopenmp-targets=nvptx-nvidia-cuda` for 32 bit platform.
+
+- Passing options to the OpenMP device offloading toolchain can be done using
+  the `-Xopenmp-target=<triple> -opt=val` flag. In this way the `-opt=val`
+  option will be forwarded to the respective OpenMP device offloading toolchain
+  described by the triple. For example passing the compute capability to
+  the OpenMP NVPTX offloading toolchain can be done as follows:
+  `-Xopenmp-target=nvptx64-nvidia-cuda -march=sm_60`. For the case when only one
+  target offload toolchain is specified under the `-fopenmp-targets=<triples>`
+  option, then the triple can be skipped: `-Xopenmp-target -march=sm_60`.
+
+- Other bugfixes.
 
 CUDA Support in Clang
 ---------------------

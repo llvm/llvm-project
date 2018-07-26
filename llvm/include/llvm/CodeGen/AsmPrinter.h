@@ -201,6 +201,10 @@ public:
   /// Return a unique ID for the current function.
   unsigned getFunctionNumber() const;
 
+  /// Return symbol for the function pseudo stack if the stack frame is not a
+  /// register based.
+  virtual const MCSymbol *getFunctionFrameSymbol() const { return nullptr; }
+
   MCSymbol *getFunctionBegin() const { return CurrentFnBegin; }
   MCSymbol *getFunctionEnd() const { return CurrentFnEnd; }
   MCSymbol *getCurExceptionSym();

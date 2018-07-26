@@ -36,6 +36,12 @@ def CallSeqEnd   : SDNode<"ISD::CALLSEQ_END", SDT_RISCVCallSeqEnd,
                           [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
 def RetFlag      : SDNode<"RISCVISD::RET_FLAG", SDTNone,
                           [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
+def URetFlag     : SDNode<"RISCVISD::URET_FLAG", SDTNone,
+                          [SDNPHasChain, SDNPOptInGlue]>;
+def SRetFlag     : SDNode<"RISCVISD::SRET_FLAG", SDTNone,
+                          [SDNPHasChain, SDNPOptInGlue]>;
+def MRetFlag     : SDNode<"RISCVISD::MRET_FLAG", SDTNone,
+                          [SDNPHasChain, SDNPOptInGlue]>;
 def SelectCC     : SDNode<"RISCVISD::SELECT_CC", SDT_RISCVSelectCC,
                           [SDNPInGlue]>;
 def Tail         : SDNode<"RISCVISD::TAIL", SDT_RISCVCall,
@@ -683,6 +689,10 @@ def PseudoCALL : Pseudo<(outs), (ins bare_symbol:$func),
 }
 
 def : Pat<(Call texternalsym:$func), (PseudoCALL texternalsym:$func)>;
+
+def : Pat<(URetFlag), (URET X0, X0)>;
+def : Pat<(SRetFlag), (SRET X0, X0)>;
+def : Pat<(MRetFlag), (MRET X0, X0)>;
 
 let isCall = 1, Defs = [X1] in
 def PseudoCALLIndirect : Pseudo<(outs), (ins GPR:$rs1), [(Call GPR:$rs1)]>,

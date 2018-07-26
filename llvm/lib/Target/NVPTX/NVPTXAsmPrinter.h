@@ -310,6 +310,8 @@ public:
   }
 
   std::string getVirtualRegisterName(unsigned) const;
+
+  const MCSymbol *getFunctionFrameSymbol() const override;
 };
 
 } // end namespace llvm

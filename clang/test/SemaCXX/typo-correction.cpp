@@ -411,7 +411,7 @@ public:
 
 void testAccess() {
   Figure obj;
-  switch (obj.type()) {  // expected-warning {{enumeration values 'SQUARE', 'TRIANGLE', and 'CIRCLE' not handled in switch}}
+  switch (obj.type()) {
   case SQUARE:  // expected-error-re {{use of undeclared identifier 'SQUARE'{{$}}}}
   case TRIANGLE:  // expected-error-re {{use of undeclared identifier 'TRIANGLE'{{$}}}}
   case CIRCE:  // expected-error-re {{use of undeclared identifier 'CIRCE'{{$}}}}

@@ -12,6 +12,10 @@
 ?anonymous@?A@N@@3HA
 ; CHECK: int N::`anonymous namespace'::anonymous
 
+; FIXME: Reference Temporaries
+; ?$RT1@NeedsReferenceTemporary@@3ABHB
+; ?$RT1@NeedsReferenceTemporary@@3AEBHEB
+
 ?_c@@YAHXZ
 ; CHECK: int __cdecl _c(void)
 
@@ -61,10 +65,10 @@
 ; CHECK: int __cdecl foo::operator+(int)
 
 ?static_method@foo@@SAPAV1@XZ
-; CHECK: static class foo *__cdecl foo::static_method(void)
+; CHECK: static class foo * __cdecl foo::static_method(void)
 
 ?static_method@foo@@SAPEAV1@XZ
-; CHECK: static class foo *__cdecl foo::static_method(void)
+; CHECK: static class foo * __cdecl foo::static_method(void)
 
 ?g@bar@@2HA
 ; CHECK: static int bar::g
@@ -78,30 +82,31 @@
 ; CHECK: int const *const h2
 
 ?h3@@3QIAHIA
-; CHECK: int * __restrict const h3
+; CHECK: int *const __restrict h3
 
 ?h3@@3QEIAHEIA
-; CHECK: int * __restrict const h3
+; CHECK: int *const __restrict h3
 
 ?i@@3PAY0BE@HA
 ; CHECK: int (*i)[20]
 
 ?FunArr@@3PAY0BE@P6AHHH@ZA
-; CHECK: int __cdecl (*(*FunArr)[20])(int, int)
+; CHECK: int (__cdecl *(*FunArr)[20])(int, int)
 
 ?j@@3P6GHCE@ZA
-; CHECK: int __stdcall (*j)(signed char, unsigned char)
+; CHECK: int (__stdcall *j)(signed char, unsigned char)
 
+?funptr@@YAP6AHXZXZ
+; CHECK: int (__cdecl * __cdecl funptr(void))(void)
 
-; FIXME: We don't handle member pointers yet.
-; ?k@@3PTfoo@@DT1
-; FIXME: char const volatile foo::*k
+?k@@3PTfoo@@DT1@
+; CHECK: char const volatile foo::*k
 
-; ?k@@3PETfoo@@DET1
-; FIXME: char const volatile foo::*k
+?k@@3PETfoo@@DET1@
+; CHECK: char const volatile foo::*k
 
-; ?l@@3P8foo@@AEHH@ZQ1
-; FIXME: int __thiscall (foo::*l)(int)
+?l@@3P8foo@@AEHH@ZQ1@
+; CHECK: int (__thiscall foo::*l)(int)
 
 ?g_cInt@@3HB
 ; CHECK: int const g_cInt
@@ -143,19 +148,26 @@
 ; CHECK: void __cdecl epsilon(int (*const)[10][20])
 
 ?zeta@@YAXP6AHHH@Z@Z
-; CHECK: void __cdecl zeta(int __cdecl (*)(int, int))
+; CHECK: void __cdecl zeta(int (__cdecl *)(int, int))
 
 ?zeta@@YAXP6AHHH@Z@Z
-; CHECK: void __cdecl zeta(int __cdecl (*)(int, int))
+; CHECK: void __cdecl zeta(int (__cdecl *)(int, int))
+
+; FIXME: We don't support blocks yet.
+
+; ?eta@@YAXP_EAHHH@Z@Z
+; FIXME: void eta(int (^)(int, int))
+; ?theta@@YAXP_EAHHH@Z@Z
+; FIXME: void theta(int(int,int)^ block)
 
 ??2@YAPAXI@Z
-; CHECK: void *__cdecl operator new(unsigned int)
+; CHECK: void * __cdecl operator new(unsigned int)
 
 ??3@YAXPAX@Z
 ; CHECK: void __cdecl operator delete(void *)
 
 ??_U@YAPAXI@Z
-; CHECK: void *__cdecl operator new[](unsigned int)
+; CHECK: void * __cdecl operator new[](unsigned int)
 
 ??_V@YAXPAX@Z
 ; CHECK: void __cdecl operator delete[](void *)
@@ -173,51 +185,50 @@
 ; ?color4@@3QAY02$$CBNA
 ; FIXME-EXTRACONST: double const (*color4)[3]
 
-; FIXME-MEMBERPTR: We don't support member pointers yet.
-; ?memptr1@@3RESB@@HES1
-; FIXME-MEMBERPTR: volatile int B::*memptr2
+?memptr1@@3RESB@@HES1@
+; CHECK: int volatile B::*volatile memptr1
 
-; ?memptr2@@3PESB@@HES1
-; FIXME: volatile int B::*memptr2
+?memptr2@@3PESB@@HES1@
+; CHECK: int volatile B::*memptr2
 
-; ?memptr3@@3REQB@@HEQ1
-; FIXME-MEMBERPTR: int B::* volatile memptr3
+?memptr3@@3REQB@@HEQ1@
+; CHECK: int B::*volatile memptr3
 
-; ?funmemptr1@@3RESB@@R6AHXZES1
-; FIXME-MEMBERPTR: int __cdecl (* volatile B::* volatile funmemptr1)(void)
+?funmemptr1@@3RESB@@R6AHXZES1@
+; CHECK: int (__cdecl *volatile B::*volatile funmemptr1)(void)
 
-; ?funmemptr2@@3PESB@@R6AHXZES1
-; FIXME-MEMBERPTR: int __cdecl (* volatile B::*funmemptr2)(void)
+?funmemptr2@@3PESB@@R6AHXZES1@
+; CHECK: int (__cdecl *volatile B::*funmemptr2)(void)
 
-; ?funmemptr3@@3REQB@@P6AHXZEQ1
-; FIXME-MEMBERPTR: int __cdecl (* B::*volatile funmemptr3)(void)
+?funmemptr3@@3REQB@@P6AHXZEQ1@
+; CHECK: int (__cdecl *B::*volatile funmemptr3)(void)
 
-; ?memptrtofun1@@3R8B@@EAAXXZEQ1
-; FIXME-MEMBERPTR: void __cdecl (B::*volatile memptrtofun1)(void)
+?memptrtofun1@@3R8B@@EAAXXZEQ1@
+; CHECK: void (__cdecl B::*volatile memptrtofun1)(void)
 
-; ?memptrtofun2@@3P8B@@EAAXXZEQ1
-; FIXME-MEMBERPTR: void __cdecl (B::*memptrtofun2)(void)
+?memptrtofun2@@3P8B@@EAAXXZEQ1@
+; CHECK: void (__cdecl B::*memptrtofun2)(void)
 
-; ?memptrtofun3@@3P8B@@EAAXXZEQ1
-; FIXME-MEMBERPTR: void __cdecl (B::*memptrtofun3)(void)
+?memptrtofun3@@3P8B@@EAAXXZEQ1@
+; CHECK: void (__cdecl B::*memptrtofun3)(void)
 
-; ?memptrtofun4@@3R8B@@EAAHXZEQ1
-; FIXME-MEMBERPTR: int __cdecl (B::* volatile memptrtofun4)(void)
+?memptrtofun4@@3R8B@@EAAHXZEQ1@
+; CHECK: int (__cdecl B::*volatile memptrtofun4)(void)
 
-; ?memptrtofun5@@3P8B@@EAA?CHXZEQ1
-; FIXME-MEMBERPTR: int volatile __cdecl (B::*memptrtofun5)(void)
+?memptrtofun5@@3P8B@@EAA?CHXZEQ1@
+; CHECK: int volatile (__cdecl B::*memptrtofun5)(void)
 
-; ?memptrtofun6@@3P8B@@EAA?BHXZEQ1
-; FIXME-MEMBERPTR: int const __cdecl (B::*memptrtofun6)(void)
+?memptrtofun6@@3P8B@@EAA?BHXZEQ1@
+; CHECK: int const (__cdecl B::*memptrtofun6)(void)
 
-; ?memptrtofun7@@3R8B@@EAAP6AHXZXZEQ1
-; FIXME-MEMBERPTR: int __cdecl (*(__cdecl B::*volatile memptrtofun7)(void))(void)
+?memptrtofun7@@3R8B@@EAAP6AHXZXZEQ1@
+; CHECK: int (__cdecl * (__cdecl B::*volatile memptrtofun7)(void))(void)
 
-; ?memptrtofun8@@3P8B@@EAAR6AHXZXZEQ1
-; FIXME-MEMBERPTR: int __cdecl (*(__cdecl B::*memptrtofun8)(void))(void)
+?memptrtofun8@@3P8B@@EAAR6AHXZXZEQ1@
+; CHECK: int (__cdecl *volatile (__cdecl B::*memptrtofun8)(void))(void)
 
-; ?memptrtofun9@@3P8B@@EAAQ6AHXZXZEQ1
-; FIXME-MEMBERPTR: int __cdecl(*(__cdecl B::*memptrtofun9)(void))(void)
+?memptrtofun9@@3P8B@@EAAQ6AHXZXZEQ1@
+; CHECK: int (__cdecl *const (__cdecl B::*memptrtofun9)(void))(void)
 
 
 ?fooE@@YA?AW4E@@XZ
@@ -254,19 +265,25 @@
 ?s6@PR13182@@3PBQBDB
 ; CHECK: char const *const *PR13182::s6
 
-; FIXME-EXTERNC: We don't properly support static locals in extern c functions yet.
+; FIXME: We don't properly support static locals in functions yet.
 ; ?local@?1??extern_c_func@@9@4HA
-; FIXME-EXTERNC: int `extern_c_func'::`2'::local
+; FIXME: int `extern_c_func'::`2'::local
 
 ; ?local@?1??extern_c_func@@9@4HA
-; FIXME-EXTERNC: int `extern_c_func'::`2'::local
+; FIXME: int `extern_c_func'::`2'::local
+
+; ?v@?1??f@@YAHXZ@4U<unnamed-type-v>@?1??1@YAHXZ@A
+; FIXME: struct `int __cdecl f(void)'::`2'::<unnamed-type-v> `int __cdecl f(void)'::`2'::v
+
+; ?v@?1???$f@H@@YAHXZ@4U<unnamed-type-v>@?1???$f@H@@YAHXZ@A
+; FIXME: struct `int __cdecl f<int>(void)'::`2'::<unnamed-type-v> `int __cdecl f<int>(void)'::`2'::v
 
 ??2OverloadedNewDelete@@SAPAXI@Z
-; CHECK: static void *__cdecl OverloadedNewDelete::operator new(unsigned int)
+; CHECK: static void * __cdecl OverloadedNewDelete::operator new(unsigned int)
 
 
 ??_UOverloadedNewDelete@@SAPAXI@Z
-; CHECK: static void *__cdecl OverloadedNewDelete::operator new[](unsigned int)
+; CHECK: static void * __cdecl OverloadedNewDelete::operator new[](unsigned int)
 
 ??3OverloadedNewDelete@@SAXPAX@Z
 ; CHECK: static void __cdecl OverloadedNewDelete::operator delete(void *)
@@ -279,10 +296,10 @@
 ; CHECK: int __thiscall OverloadedNewDelete::operator+(int)
 
 ??2OverloadedNewDelete@@SAPEAX_K@Z
-; CHECK: static void *__cdecl OverloadedNewDelete::operator new(unsigned __int64)
+; CHECK: static void * __cdecl OverloadedNewDelete::operator new(unsigned __int64)
 
 ??_UOverloadedNewDelete@@SAPEAX_K@Z
-; CHECK: static void *__cdecl OverloadedNewDelete::operator new[](unsigned __int64)
+; CHECK: static void * __cdecl OverloadedNewDelete::operator new[](unsigned __int64)
 
 ??3OverloadedNewDelete@@SAXPEAX@Z
 ; CHECK: static void __cdecl OverloadedNewDelete::operator delete(void *)
@@ -296,11 +313,11 @@
 
 
 ??2TypedefNewDelete@@SAPAXI@Z
-; CHECK: static void *__cdecl TypedefNewDelete::operator new(unsigned int)
+; CHECK: static void * __cdecl TypedefNewDelete::operator new(unsigned int)
 
 
 ??_UTypedefNewDelete@@SAPAXI@Z
-; CHECK: static void *__cdecl TypedefNewDelete::operator new[](unsigned int)
+; CHECK: static void * __cdecl TypedefNewDelete::operator new[](unsigned int)
 
 ??3TypedefNewDelete@@SAXPAX@Z
 ; CHECK: static void __cdecl TypedefNewDelete::operator delete(void *)
@@ -311,13 +328,15 @@
 ?vector_func@@YQXXZ
 ; CHECK: void __vectorcall vector_func(void)
 
-; FIXME-EXTERNC: We don't support extern C funcs currently.
+; FIXME: We don't support extern C funcs currently.
 ; ??$fn_tmpl@$1?extern_c_func@@YAXXZ@@YAXXZ
-; FIXME-EXTERNC: void __cdecl fn_tmpl<&void __cdecl extern_c_func(void)>(void)
+; FIXME: void __cdecl fn_tmpl<&void __cdecl extern_c_func(void)>(void)
 
 ; ?overloaded_fn@@$$J0YAXXZ
 ; FIXME-EXTERNC: extern \"C\" void __cdecl overloaded_fn(void)
 
+; ?f@UnnamedType@@YAXQAPAU<unnamed-type-T1>@S@1@@Z
+; FIXME: void __cdecl UnnamedType::f(struct UnnamedType::S::<unnamed-type-T1> ** const)
 
 ?f@UnnamedType@@YAXUT2@S@1@@Z
 ; CHECK: void __cdecl UnnamedType::f(struct UnnamedType::S::T2)
@@ -339,6 +358,18 @@
 
 ?f@UnnamedType@@YAXUT5@S@1@@Z
 ; CHECK: void __cdecl UnnamedType::f(struct UnnamedType::S::T5)
+
+
+; ?foo@PassObjectSize@@YAHQAHW4__pass_object_size0@__clang@@@Z
+; FIXME: int foo(int *const i __attribute__((pass_object_size(0))));
+; ?bar@PassObjectSize@@YAHQAHW4__pass_object_size1@__clang@@@Z
+; FIXME: int bar(int *const i __attribute__((pass_object_size(1))));
+; ?qux@PassObjectSize@@YAHQAHW4__pass_object_size1@__clang@@0W4__pass_object_size0@3@@Z
+; FIXME: int qux(int *const i __attribute__((pass_object_size(1))), int *const j __attribute__((pass_object_size(0))));
+; ?zot@PassObjectSize@@YAHQAHW4__pass_object_size1@__clang@@01@Z
+; FIXME: int zot(int *const i __attribute__((pass_object_size(1))), int *const j __attribute__((pass_object_size(1))));
+
+
 
 ?f@Atomic@@YAXU?$_Atomic@H@__clang@@@Z
 ; CHECK: void __cdecl Atomic::f(struct __clang::_Atomic<int>)
