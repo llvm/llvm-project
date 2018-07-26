@@ -26,7 +26,7 @@ class UnknownCommandTestCase(TestBase):
         self.assertRegexpMatches(result.GetError(), "Ambiguous command 'g'. Possible matches:")
         self.assertRegexpMatches(result.GetError(), "gui")
         self.assertRegexpMatches(result.GetError(), "gdb-remote")
-        # FIXME: Somehow we get 'gui' and 'gdb-remote' twice in the output.
+        self.assertEquals(1, result.GetError().count("gdb-remote"))
 
     @no_debug_info_test
     def test_unknown_command(self):

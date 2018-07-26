@@ -2938,8 +2938,6 @@ CommandInterpreter::ResolveCommandImpl(std::string &command_line,
           actual_cmd_name_len = cmd_obj->GetCommandName().size();
         }
       } else {
-        if (!cmd_obj)
-          cmd_obj = GetCommandObject(next_word, &matches);
         if (cmd_obj) {
           llvm::StringRef cmd_name = cmd_obj->GetCommandName();
           actual_cmd_name_len += cmd_name.size();
