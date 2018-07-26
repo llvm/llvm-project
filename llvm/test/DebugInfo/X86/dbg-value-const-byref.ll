@@ -25,7 +25,7 @@
 ; CHECK-NEXT:  [0x{{0*.*}}, 0x[[C1:.*]]): DW_OP_consts +3
 ; CHECK-NEXT:      [0x[[C1]], 0x[[C2:.*]]): DW_OP_consts +7
 ; CHECK-NEXT:      [0x[[C2]], 0x[[R1:.*]]): DW_OP_reg0 RAX
-; CHECK-NEXT:      [0x[[R1]], 0x[[R2:.*]]): DW_OP_breg7 RSP+4, DW_OP_deref)
+; CHECK-NEXT:      [0x[[R1]], 0x[[R2:.*]]): DW_OP_breg7 RSP+4)
 ; CHECK-NOT: DW_TAG
 ; CHECK: DW_AT_name{{.*}}"i"
 

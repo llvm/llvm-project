@@ -20,10 +20,13 @@ entry:
   %0 = bitcast i32* %size to i8*, !dbg !15
   %call = call i8* @_Z3fooPv(i8* %0) #3, !dbg !15
   call void @llvm.dbg.value(metadata i32* %size, metadata !10, metadata !16), !dbg !17
+
+  ; The *location* of the variable should be $sp+12. This tells the debugger to
+  ; look up its value in [$sp+12].
   ; CHECK: .debug_info contents:
   ; CHECK: DW_TAG_variable
   ; CHECK-NEXT: DW_AT_location
-  ; CHECK-NEXT: DW_OP_breg31 WSP+12, DW_OP_deref
+  ; CHECK-NEXT: DW_OP_breg31 WSP+12
   ; CHECK-NEXT: DW_AT_name {{.*}}"size"
   ret void, !dbg !18
 }

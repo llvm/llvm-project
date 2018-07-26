@@ -7391,11 +7391,13 @@ SDDbgValue *SelectionDAG::getConstantDbgValue(DIVariable *Var,
 /// FrameIndex
 SDDbgValue *SelectionDAG::getFrameIndexDbgValue(DIVariable *Var,
                                                 DIExpression *Expr, unsigned FI,
+                                                bool IsIndirect,
                                                 const DebugLoc &DL,
                                                 unsigned O) {
   assert(cast<DILocalVariable>(Var)->isValidLocationForIntrinsic(DL) &&
          "Expected inlined-at fields to agree");
-  return new (DbgInfo->getAlloc()) SDDbgValue(Var, Expr, FI, DL, O);
+  return new (DbgInfo->getAlloc())
+      SDDbgValue(Var, Expr, FI, IsIndirect, DL, O, SDDbgValue::FRAMEIX);
 }
 
 /// VReg
@@ -7405,8 +7407,8 @@ SDDbgValue *SelectionDAG::getVRegDbgValue(DIVariable *Var,
                                           const DebugLoc &DL, unsigned O) {
   assert(cast<DILocalVariable>(Var)->isValidLocationForIntrinsic(DL) &&
          "Expected inlined-at fields to agree");
-  return new (DbgInfo->getAlloc()) SDDbgValue(Var, Expr, VReg, IsIndirect, DL,
-                                              O);
+  return new (DbgInfo->getAlloc())
+      SDDbgValue(Var, Expr, VReg, IsIndirect, DL, O, SDDbgValue::VREG);
 }
 
 void SelectionDAG::transferDbgValues(SDValue From, SDValue To,
