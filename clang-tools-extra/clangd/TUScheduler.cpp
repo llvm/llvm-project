@@ -159,7 +159,7 @@ public:
   /// is null, all requests will be processed on the calling thread
   /// synchronously instead. \p Barrier is acquired when processing each
   /// request, it is be used to limit the number of actively running threads.
-  static ASTWorkerHandle Create(PathRef FileName,
+  static ASTWorkerHandle create(PathRef FileName,
                                 TUScheduler::ASTCache &IdleASTs,
                                 AsyncTaskRunner *Tasks, Semaphore &Barrier,
                                 steady_clock::duration UpdateDebounce,
@@ -282,7 +282,7 @@ private:
   std::shared_ptr<ASTWorker> Worker;
 };
 
-ASTWorkerHandle ASTWorker::Create(PathRef FileName,
+ASTWorkerHandle ASTWorker::create(PathRef FileName,
                                   TUScheduler::ASTCache &IdleASTs,
                                   AsyncTaskRunner *Tasks, Semaphore &Barrier,
                                   steady_clock::duration UpdateDebounce,
@@ -639,7 +639,7 @@ void TUScheduler::update(
   std::unique_ptr<FileData> &FD = Files[File];
   if (!FD) {
     // Create a new worker to process the AST-related tasks.
-    ASTWorkerHandle Worker = ASTWorker::Create(
+    ASTWorkerHandle Worker = ASTWorker::create(
         File, *IdleASTs, WorkerThreads ? WorkerThreads.getPointer() : nullptr,
         Barrier, UpdateDebounce, PCHOps, StorePreamblesInMemory,
         PreambleCallback);
