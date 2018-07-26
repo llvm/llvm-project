@@ -36,11 +36,11 @@ class MCCodeEmitter;
 class MCContext;
 struct MCDwarfLineTableParams;
 class MCInstrInfo;
-class MCObjectFileInfo;
 class MCRegisterInfo;
 class MCStreamer;
 class MCSubtargetInfo;
 class raw_fd_ostream;
+class TargetLoweringObjectFile;
 class TargetMachine;
 class Triple;
 
@@ -227,7 +227,6 @@ private:
 class Generator {
   std::unique_ptr<MCRegisterInfo> MRI;
   std::unique_ptr<MCAsmInfo> MAI;
-  std::unique_ptr<MCObjectFileInfo> MOFI;
   std::unique_ptr<MCContext> MC;
   MCAsmBackend *MAB; // Owned by MCStreamer
   std::unique_ptr<MCInstrInfo> MII;
@@ -235,6 +234,7 @@ class Generator {
   MCCodeEmitter *MCE; // Owned by MCStreamer
   MCStreamer *MS;     // Owned by AsmPrinter
   std::unique_ptr<TargetMachine> TM;
+  TargetLoweringObjectFile *TLOF; // Owned by TargetMachine;
   std::unique_ptr<AsmPrinter> Asm;
   BumpPtrAllocator Allocator;
   std::unique_ptr<DwarfStringPool> StringPool; // Entries owned by Allocator.

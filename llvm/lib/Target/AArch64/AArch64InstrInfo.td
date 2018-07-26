@@ -28,6 +28,14 @@ def HasNEON          : Predicate<"Subtarget->hasNEON()">,
                                  AssemblerPredicate<"FeatureNEON", "neon">;
 def HasCrypto        : Predicate<"Subtarget->hasCrypto()">,
                                  AssemblerPredicate<"FeatureCrypto", "crypto">;
+def HasSM4           : Predicate<"Subtarget->hasSM4()">,
+                                 AssemblerPredicate<"FeatureSM4", "sm4">;
+def HasSHA3          : Predicate<"Subtarget->hasSHA3()">,
+                                 AssemblerPredicate<"FeatureSHA3", "sha3">;
+def HasSHA2          : Predicate<"Subtarget->hasSHA2()">,
+                                 AssemblerPredicate<"FeatureSHA2", "sha2">;
+def HasAES           : Predicate<"Subtarget->hasAES()">,
+                                 AssemblerPredicate<"FeatureAES", "aes">;
 def HasDotProd       : Predicate<"Subtarget->hasDotProd()">,
                                  AssemblerPredicate<"FeatureDotProd", "dotprod">;
 def HasCRC           : Predicate<"Subtarget->hasCRC()">,
@@ -467,6 +475,30 @@ defm SDOTlane : SIMDThreeSameVectorDotIndex<0, "sdot", int_aarch64_neon_sdot>;
 defm UDOTlane : SIMDThreeSameVectorDotIndex<1, "udot", int_aarch64_neon_udot>;
 }
 
+// Armv8.2-A Crypto extensions
+let Predicates = [HasSHA3] in {
+def SHA512H   : CryptoRRRTied<0b0, 0b00, "sha512h">;
+def SHA512H2  : CryptoRRRTied<0b0, 0b01, "sha512h2">;
+def SHA512SU0 : CryptoRRTied_2D<0b0, 0b00, "sha512su0">;
+def SHA512SU1 : CryptoRRRTied_2D<0b0, 0b10, "sha512su1">;
+def RAX1      : CryptoRRR_2D<0b0,0b11, "rax1">;
+def EOR3      : CryptoRRRR_16B<0b00, "eor3">;
+def BCAX      : CryptoRRRR_16B<0b01, "bcax">;
+def XAR       : CryptoRRRi6<"xar">;
+} // HasSHA3
+
+let Predicates = [HasSM4] in {
+def SM3TT1A   : CryptoRRRi2Tied<0b0, 0b00, "sm3tt1a">;
+def SM3TT1B   : CryptoRRRi2Tied<0b0, 0b01, "sm3tt1b">;
+def SM3TT2A   : CryptoRRRi2Tied<0b0, 0b10, "sm3tt2a">;
+def SM3TT2B   : CryptoRRRi2Tied<0b0, 0b11, "sm3tt2b">;
+def SM3SS1    : CryptoRRRR_4S<0b10, "sm3ss1">;
+def SM3PARTW1 : CryptoRRRTied_4S<0b1, 0b00, "sm3partw1">;
+def SM3PARTW2 : CryptoRRRTied_4S<0b1, 0b01, "sm3partw2">;
+def SM4ENCKEY : CryptoRRR_4S<0b1, 0b10, "sm4ekey">;
+def SM4E      : CryptoRRTied_4S<0b0, 0b01, "sm4e">;
+} // HasSM4
+
 let Predicates = [HasRCPC] in {
   // v8.3 Release Consistent Processor Consistent support, optional in v8.2.
   def LDAPRB  : RCPCLoad<0b00, "ldaprb", GPR32>;
@@ -555,7 +587,7 @@ let Predicates = [HasV8_3a] in {
     let Inst{31} = 0;
   }
 
-} // HasV8_3A
+} // HasV8_3a
 
 // v8.4 Flag manipulation instructions
 let Predicates = [HasV8_4a] in {
@@ -5606,10 +5638,12 @@ defm ST4 : SIMDLdSt4SingleAliases<"st4">;
 // Crypto extensions
 //----------------------------------------------------------------------------
 
+let Predicates = [HasAES] in {
 def AESErr   : AESTiedInst<0b0100, "aese",   int_aarch64_crypto_aese>;
 def AESDrr   : AESTiedInst<0b0101, "aesd",   int_aarch64_crypto_aesd>;
 def AESMCrr  : AESInst<    0b0110, "aesmc",  int_aarch64_crypto_aesmc>;
 def AESIMCrr : AESInst<    0b0111, "aesimc", int_aarch64_crypto_aesimc>;
+}
 
 // Pseudo instructions for AESMCrr/AESIMCrr with a register constraint required
 // for AES fusion on some CPUs.
@@ -5636,6 +5670,7 @@ def : Pat<(v16i8 (int_aarch64_crypto_aesimc
                                               (v16i8 V128:$src2)))))>,
           Requires<[HasFuseAES]>;
 
+let Predicates = [HasSHA2] in {
 def SHA1Crrr     : SHATiedInstQSV<0b000, "sha1c",   int_aarch64_crypto_sha1c>;
 def SHA1Prrr     : SHATiedInstQSV<0b001, "sha1p",   int_aarch64_crypto_sha1p>;
 def SHA1Mrrr     : SHATiedInstQSV<0b010, "sha1m",   int_aarch64_crypto_sha1m>;
@@ -5647,6 +5682,7 @@ def SHA256SU1rrr :SHATiedInstVVV<0b110, "sha256su1",int_aarch64_crypto_sha256su1
 def SHA1Hrr     : SHAInstSS<    0b0000, "sha1h",    int_aarch64_crypto_sha1h>;
 def SHA1SU1rr   : SHATiedInstVV<0b0001, "sha1su1",  int_aarch64_crypto_sha1su1>;
 def SHA256SU0rr : SHATiedInstVV<0b0010, "sha256su0",int_aarch64_crypto_sha256su0>;
+}
 
 //----------------------------------------------------------------------------
 // Compiler-pseudos

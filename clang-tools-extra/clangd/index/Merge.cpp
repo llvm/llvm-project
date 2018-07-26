@@ -77,7 +77,7 @@ class MergedIndex : public SymbolIndex {
 private:
   const SymbolIndex *Dynamic, *Static;
 };
-}
+} // namespace
 
 Symbol
 mergeSymbol(const Symbol &L, const Symbol &R, Symbol::Details *Scratch) {

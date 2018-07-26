@@ -63,7 +63,7 @@ private:
 void reply(llvm::json::Value &&Result);
 /// Sends an error response to the client, and logs it.
 /// Current context must derive from JSONRPCDispatcher::Handler.
-void replyError(ErrorCode code, const llvm::StringRef &Message);
+void replyError(ErrorCode Code, const llvm::StringRef &Message);
 /// Sends a request to the client.
 /// Current context must derive from JSONRPCDispatcher::Handler.
 void call(llvm::StringRef Method, llvm::json::Value &&Params);

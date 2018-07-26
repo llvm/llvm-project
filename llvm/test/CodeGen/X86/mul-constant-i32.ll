@@ -2081,25 +2081,25 @@ define i32 @mul_neg_fold(i32 %a, i32 %b) {
 ; X86-LABEL: mul_neg_fold:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    leal (%eax,%eax,8), %eax
-; X86-NEXT:    negl %eax
-; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    leal (%ecx,%ecx,8), %ecx
+; X86-NEXT:    subl %ecx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-HSW-LABEL: mul_neg_fold:
 ; X64-HSW:       # %bb.0:
 ; X64-HSW-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X64-HSW-NEXT:    leal (%rdi,%rdi,8), %eax # sched: [1:0.50]
-; X64-HSW-NEXT:    negl %eax # sched: [1:0.25]
-; X64-HSW-NEXT:    addl %esi, %eax # sched: [1:0.25]
+; X64-HSW-NEXT:    subl %eax, %esi # sched: [1:0.25]
+; X64-HSW-NEXT:    movl %esi, %eax # sched: [1:0.25]
 ; X64-HSW-NEXT:    retq # sched: [7:1.00]
 ;
 ; X64-JAG-LABEL: mul_neg_fold:
 ; X64-JAG:       # %bb.0:
 ; X64-JAG-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X64-JAG-NEXT:    leal (%rdi,%rdi,8), %eax # sched: [2:1.00]
-; X64-JAG-NEXT:    negl %eax # sched: [1:0.50]
-; X64-JAG-NEXT:    addl %esi, %eax # sched: [1:0.50]
+; X64-JAG-NEXT:    subl %eax, %esi # sched: [1:0.50]
+; X64-JAG-NEXT:    movl %esi, %eax # sched: [1:0.50]
 ; X64-JAG-NEXT:    retq # sched: [4:1.00]
 ;
 ; X86-NOOPT-LABEL: mul_neg_fold:
@@ -2124,8 +2124,8 @@ define i32 @mul_neg_fold(i32 %a, i32 %b) {
 ; X64-SLM:       # %bb.0:
 ; X64-SLM-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X64-SLM-NEXT:    leal (%rdi,%rdi,8), %eax # sched: [1:1.00]
-; X64-SLM-NEXT:    negl %eax # sched: [1:0.50]
-; X64-SLM-NEXT:    addl %esi, %eax # sched: [1:0.50]
+; X64-SLM-NEXT:    subl %eax, %esi # sched: [1:0.50]
+; X64-SLM-NEXT:    movl %esi, %eax # sched: [1:0.50]
 ; X64-SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SLM-NOOPT-LABEL: mul_neg_fold:

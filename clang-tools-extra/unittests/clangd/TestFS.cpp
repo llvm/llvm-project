@@ -19,13 +19,15 @@ namespace clangd {
 using namespace llvm;
 
 IntrusiveRefCntPtr<vfs::FileSystem>
-buildTestFS(StringMap<std::string> const &Files) {
+buildTestFS(llvm::StringMap<std::string> const &Files,
+            llvm::StringMap<time_t> const &Timestamps) {
   IntrusiveRefCntPtr<vfs::InMemoryFileSystem> MemFS(
       new vfs::InMemoryFileSystem);
   for (auto &FileAndContents : Files) {
-    MemFS->addFile(FileAndContents.first(), time_t(),
-                   MemoryBuffer::getMemBufferCopy(FileAndContents.second,
-                                                  FileAndContents.first()));
+    StringRef File = FileAndContents.first();
+    MemFS->addFile(
+        File, Timestamps.lookup(File),
+        MemoryBuffer::getMemBufferCopy(FileAndContents.second, File));
   }
   return MemFS;
 }

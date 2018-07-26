@@ -43,8 +43,8 @@ void ShrinkToFitCheck::registerMatchers(MatchFinder *Finder) {
 
   Finder->addMatcher(
       cxxMemberCallExpr(
-          on(hasType(namedDecl(
-              hasAnyName("std::basic_string", "std::deque", "std::vector")))),
+          on(hasType(hasCanonicalType(hasDeclaration(namedDecl(
+              hasAnyName("std::basic_string", "std::deque", "std::vector")))))),
           callee(cxxMethodDecl(hasName("swap"))),
           has(ignoringParenImpCasts(memberExpr(hasDescendant(CopyCtorCall)))),
           hasArgument(0, SwapParam.bind("ContainerToShrink")),

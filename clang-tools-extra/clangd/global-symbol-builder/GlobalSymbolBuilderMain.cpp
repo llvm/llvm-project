@@ -150,10 +150,23 @@ SymbolSlab mergeSymbols(tooling::ToolResults *Results) {
 int main(int argc, const char **argv) {
   llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
 
-  const char* Overview =
-      "This is an **experimental** tool to generate YAML-format "
-      "project-wide symbols for clangd (global code completion). It would be "
-      "changed and deprecated eventually. Don't use it in production code!";
+  const char *Overview = R"(
+  This is an **experimental** tool to generate YAML-format project-wide symbols
+  for clangd (global code completion). It would be changed and deprecated
+  eventually. Don't use it in production code!
+
+  Example usage for building index for the whole project using CMake compile
+  commands:
+
+  $ global-symbol-builder --executor=all-TUs compile_commands.json > index.yaml
+
+  Example usage for file sequence index without flags:
+
+  $ global-symbol-builder File1.cpp File2.cpp ... FileN.cpp > index.yaml
+
+  Note: only symbols from header files will be collected.
+  )";
+
   auto Executor = clang::tooling::createExecutorFromCommandLineArgs(
       argc, argv, cl::GeneralCategory, Overview);
 

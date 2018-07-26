@@ -2543,22 +2543,22 @@ TSAN_INTERCEPTOR(void, thr_exit, tid_t *state) {
 #define TSAN_MAYBE_INTERCEPT_THR_EXIT
 #endif
 
-TSAN_INTERCEPTOR_NETBSD_ALIAS(int, cond_init, void *c, void *a);
-TSAN_INTERCEPTOR_NETBSD_ALIAS(int, cond_signal, void *c);
-TSAN_INTERCEPTOR_NETBSD_ALIAS(int, cond_broadcast, void *c);
-TSAN_INTERCEPTOR_NETBSD_ALIAS(int, cond_wait, void *c, void *m);
-TSAN_INTERCEPTOR_NETBSD_ALIAS(int, cond_destroy, void *c);
-TSAN_INTERCEPTOR_NETBSD_ALIAS(int, mutex_init, void *m, void *a);
-TSAN_INTERCEPTOR_NETBSD_ALIAS(int, mutex_destroy, void *m);
-TSAN_INTERCEPTOR_NETBSD_ALIAS(int, mutex_trylock, void *m);
-TSAN_INTERCEPTOR_NETBSD_ALIAS(int, rwlock_init, void *m, void *a);
-TSAN_INTERCEPTOR_NETBSD_ALIAS(int, rwlock_destroy, void *m);
-TSAN_INTERCEPTOR_NETBSD_ALIAS(int, rwlock_rdlock, void *m);
-TSAN_INTERCEPTOR_NETBSD_ALIAS(int, rwlock_tryrdlock, void *m);
-TSAN_INTERCEPTOR_NETBSD_ALIAS(int, rwlock_wrlock, void *m);
-TSAN_INTERCEPTOR_NETBSD_ALIAS(int, rwlock_trywrlock, void *m);
-TSAN_INTERCEPTOR_NETBSD_ALIAS(int, rwlock_unlock, void *m);
-TSAN_INTERCEPTOR_NETBSD_ALIAS_THR(int, once, void *o, void (*f)());
+TSAN_INTERCEPTOR_NETBSD_ALIAS(int, cond_init, void *c, void *a)
+TSAN_INTERCEPTOR_NETBSD_ALIAS(int, cond_signal, void *c)
+TSAN_INTERCEPTOR_NETBSD_ALIAS(int, cond_broadcast, void *c)
+TSAN_INTERCEPTOR_NETBSD_ALIAS(int, cond_wait, void *c, void *m)
+TSAN_INTERCEPTOR_NETBSD_ALIAS(int, cond_destroy, void *c)
+TSAN_INTERCEPTOR_NETBSD_ALIAS(int, mutex_init, void *m, void *a)
+TSAN_INTERCEPTOR_NETBSD_ALIAS(int, mutex_destroy, void *m)
+TSAN_INTERCEPTOR_NETBSD_ALIAS(int, mutex_trylock, void *m)
+TSAN_INTERCEPTOR_NETBSD_ALIAS(int, rwlock_init, void *m, void *a)
+TSAN_INTERCEPTOR_NETBSD_ALIAS(int, rwlock_destroy, void *m)
+TSAN_INTERCEPTOR_NETBSD_ALIAS(int, rwlock_rdlock, void *m)
+TSAN_INTERCEPTOR_NETBSD_ALIAS(int, rwlock_tryrdlock, void *m)
+TSAN_INTERCEPTOR_NETBSD_ALIAS(int, rwlock_wrlock, void *m)
+TSAN_INTERCEPTOR_NETBSD_ALIAS(int, rwlock_trywrlock, void *m)
+TSAN_INTERCEPTOR_NETBSD_ALIAS(int, rwlock_unlock, void *m)
+TSAN_INTERCEPTOR_NETBSD_ALIAS_THR(int, once, void *o, void (*f)())
 
 namespace __tsan {
 

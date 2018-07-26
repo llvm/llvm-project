@@ -121,7 +121,7 @@ void clangd::dumpAST(ParsedAST &AST, llvm::raw_ostream &OS) {
 }
 
 llvm::Optional<ParsedAST>
-ParsedAST::Build(std::unique_ptr<clang::CompilerInvocation> CI,
+ParsedAST::build(std::unique_ptr<clang::CompilerInvocation> CI,
                  std::shared_ptr<const PreambleData> Preamble,
                  std::unique_ptr<llvm::MemoryBuffer> Buffer,
                  std::shared_ptr<PCHContainerOperations> PCHs,
@@ -367,7 +367,7 @@ llvm::Optional<ParsedAST> clangd::buildAST(
     // dirs.
   }
 
-  return ParsedAST::Build(
+  return ParsedAST::build(
       llvm::make_unique<CompilerInvocation>(*Invocation), Preamble,
       llvm::MemoryBuffer::getMemBufferCopy(Inputs.Contents), PCHs, Inputs.FS);
 }

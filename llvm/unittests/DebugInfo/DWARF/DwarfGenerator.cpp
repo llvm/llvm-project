@@ -30,6 +30,7 @@
 #include "llvm/PassAnalysisSupport.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 
@@ -372,10 +373,6 @@ llvm::Error dwarfgen::Generator::init(Triple TheTriple, uint16_t V) {
     return make_error<StringError>("no asm info for target " + TripleName,
                                    inconvertibleErrorCode());
 
-  MOFI.reset(new MCObjectFileInfo);
-  MC.reset(new MCContext(MAI.get(), MRI.get(), MOFI.get()));
-  MOFI->InitMCObjectFileInfo(TheTriple, /*PIC*/ false, *MC);
-
   MSTI.reset(TheTarget->createMCSubtargetInfo(TripleName, "", ""));
   if (!MSTI)
     return make_error<StringError>("no subtarget info for target " + TripleName,
@@ -392,6 +389,16 @@ llvm::Error dwarfgen::Generator::init(Triple TheTriple, uint16_t V) {
     return make_error<StringError>("no instr info info for target " +
                                        TripleName,
                                    inconvertibleErrorCode());
+
+  TM.reset(TheTarget->createTargetMachine(TripleName, "", "", TargetOptions(),
+                                          None));
+  if (!TM)
+    return make_error<StringError>("no target machine for target " + TripleName,
+                                   inconvertibleErrorCode());
+
+  TLOF = TM->getObjFileLowering();
+  MC.reset(new MCContext(MAI.get(), MRI.get(), TLOF));
+  TLOF->Initialize(*MC, *TM);
 
   MCE = TheTarget->createMCCodeEmitter(*MII, *MRI, *MC);
   if (!MCE)
@@ -410,13 +417,8 @@ llvm::Error dwarfgen::Generator::init(Triple TheTriple, uint16_t V) {
                                        TripleName,
                                    inconvertibleErrorCode());
 
-  // Finally create the AsmPrinter we'll use to emit the DIEs.
-  TM.reset(TheTarget->createTargetMachine(TripleName, "", "", TargetOptions(),
-                                          None));
-  if (!TM)
-    return make_error<StringError>("no target machine for target " + TripleName,
-                                   inconvertibleErrorCode());
 
+  // Finally create the AsmPrinter we'll use to emit the DIEs.
   Asm.reset(TheTarget->createAsmPrinter(*TM, std::unique_ptr<MCStreamer>(MS)));
   if (!Asm)
     return make_error<StringError>("no asm printer for target " + TripleName,
@@ -447,9 +449,9 @@ StringRef dwarfgen::Generator::generate() {
     SecOffset += CUOffset;
     CU->setLength(CUOffset - 4);
   }
-  Abbreviations.Emit(Asm.get(), MOFI->getDwarfAbbrevSection());
-  StringPool->emit(*Asm, MOFI->getDwarfStrSection());
-  MS->SwitchSection(MOFI->getDwarfInfoSection());
+  Abbreviations.Emit(Asm.get(), TLOF->getDwarfAbbrevSection());
+  StringPool->emit(*Asm, TLOF->getDwarfStrSection());
+  MS->SwitchSection(TLOF->getDwarfInfoSection());
   for (auto &CU : CompileUnits) {
     uint16_t Version = CU->getVersion();
     auto Length = CU->getLength();
@@ -468,7 +470,7 @@ StringRef dwarfgen::Generator::generate() {
     Asm->emitDwarfDIE(*CU->getUnitDIE().Die);
   }
 
-  MS->SwitchSection(MOFI->getDwarfLineSection());
+  MS->SwitchSection(TLOF->getDwarfLineSection());
   for (auto &LT : LineTables)
     LT->generate(*MC, *Asm);
 
