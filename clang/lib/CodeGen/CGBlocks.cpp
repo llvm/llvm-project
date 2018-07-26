@@ -1585,6 +1585,64 @@ static void findBlockCapturedManagedEntities(
   }
 }
 
+namespace {
+/// Release a __block variable.
+struct CallBlockRelease final : EHScopeStack::Cleanup {
+  Address Addr;
+  BlockFieldFlags FieldFlags;
+  bool LoadBlockVarAddr;
+
+  CallBlockRelease(Address Addr, BlockFieldFlags Flags, bool LoadValue)
+      : Addr(Addr), FieldFlags(Flags), LoadBlockVarAddr(LoadValue) {}
+
+  void Emit(CodeGenFunction &CGF, Flags flags) override {
+    llvm::Value *BlockVarAddr;
+    if (LoadBlockVarAddr) {
+      BlockVarAddr = CGF.Builder.CreateLoad(Addr);
+      BlockVarAddr = CGF.Builder.CreateBitCast(BlockVarAddr, CGF.VoidPtrTy);
+    } else {
+      BlockVarAddr = Addr.getPointer();
+    }
+
+    CGF.BuildBlockRelease(BlockVarAddr, FieldFlags);
+  }
+};
+} // end anonymous namespace
+
+static void pushCaptureCleanup(BlockCaptureEntityKind CaptureKind,
+                               Address Field, QualType CaptureType,
+                               BlockFieldFlags Flags, bool EHOnly,
+                               CodeGenFunction &CGF) {
+  switch (CaptureKind) {
+  case BlockCaptureEntityKind::CXXRecord:
+  case BlockCaptureEntityKind::ARCWeak:
+  case BlockCaptureEntityKind::NonTrivialCStruct:
+  case BlockCaptureEntityKind::ARCStrong: {
+    if (CaptureType.isDestructedType() &&
+        (!EHOnly || CGF.needsEHCleanup(CaptureType.isDestructedType()))) {
+      CodeGenFunction::Destroyer *Destroyer =
+          CaptureKind == BlockCaptureEntityKind::ARCStrong
+              ? CodeGenFunction::destroyARCStrongImprecise
+              : CGF.getDestroyer(CaptureType.isDestructedType());
+      CleanupKind Kind =
+          EHOnly ? EHCleanup
+                 : CGF.getCleanupKind(CaptureType.isDestructedType());
+      CGF.pushDestroy(Kind, Field, CaptureType, Destroyer, Kind & EHCleanup);
+    }
+    break;
+  }
+  case BlockCaptureEntityKind::BlockObject: {
+    if (!EHOnly || CGF.getLangOpts().Exceptions) {
+      CleanupKind Kind = EHOnly ? EHCleanup : NormalAndEHCleanup;
+      CGF.enterByrefCleanup(Kind, Field, Flags, /*LoadBlockVarAddr*/ true);
+    }
+    break;
+  }
+  case BlockCaptureEntityKind::None:
+    llvm_unreachable("unexpected BlockCaptureEntityKind");
+  }
+}
+
 /// Generate the copy-helper function for a block closure object:
 ///   static void block_copy_helper(block_t *dst, block_t *src);
 /// The runtime will have previously initialized 'dst' by doing a
@@ -1648,6 +1706,7 @@ CodeGenFunction::GenerateCopyHelperFunction(const CGBlockInfo &blockInfo) {
   for (const auto &CopiedCapture : CopiedCaptures) {
     const BlockDecl::Capture &CI = CopiedCapture.CI;
     const CGBlockInfo::Capture &capture = CopiedCapture.Capture;
+    QualType captureType = CI.getVariable()->getType();
     BlockFieldFlags flags = CopiedCapture.Flags;
 
     unsigned index = capture.getIndex();
@@ -1685,9 +1744,11 @@ CodeGenFunction::GenerateCopyHelperFunction(const CGBlockInfo &blockInfo) {
         } else {
           EmitARCRetainNonBlock(srcValue);
 
-          // We don't need this anymore, so kill it.  It's not quite
-          // worth the annoyance to avoid creating it in the first place.
-          cast<llvm::Instruction>(dstField.getPointer())->eraseFromParent();
+          // Unless EH cleanup is required, we don't need this anymore, so kill
+          // it. It's not quite worth the annoyance to avoid creating it in the
+          // first place.
+          if (!needsEHCleanup(captureType.isDestructedType()))
+            cast<llvm::Instruction>(dstField.getPointer())->eraseFromParent();
         }
       } else {
         assert(CopiedCapture.Kind == BlockCaptureEntityKind::BlockObject);
@@ -1715,6 +1776,11 @@ CodeGenFunction::GenerateCopyHelperFunction(const CGBlockInfo &blockInfo) {
         }
       }
     }
+
+    // Ensure that we destroy the copied object if an exception is thrown later
+    // in the helper function.
+    pushCaptureCleanup(CopiedCapture.Kind, dstField, captureType, flags, /*EHOnly*/ true,
+                       *this);
   }
 
   FinishFunction();
@@ -1830,36 +1896,8 @@ CodeGenFunction::GenerateDestroyHelperFunction(const CGBlockInfo &blockInfo) {
     Address srcField =
       Builder.CreateStructGEP(src, capture.getIndex(), capture.getOffset());
 
-    // If the captured record has a destructor then call it.
-    if (DestroyedCapture.Kind == BlockCaptureEntityKind::CXXRecord) {
-      const auto *Dtor =
-          CI.getVariable()->getType()->getAsCXXRecordDecl()->getDestructor();
-      PushDestructorCleanup(Dtor, srcField);
-
-      // If this is a __weak capture, emit the release directly.
-    } else if (DestroyedCapture.Kind == BlockCaptureEntityKind::ARCWeak) {
-      EmitARCDestroyWeak(srcField);
-
-    // Destroy strong objects with a call if requested.
-    } else if (DestroyedCapture.Kind == BlockCaptureEntityKind::ARCStrong) {
-      EmitARCDestroyStrong(srcField, ARCImpreciseLifetime);
-
-    // If this is a C struct that requires non-trivial destruction, emit a call
-    // to its destructor.
-    } else if (DestroyedCapture.Kind ==
-               BlockCaptureEntityKind::NonTrivialCStruct) {
-      QualType varType = CI.getVariable()->getType();
-      pushDestroy(varType.isDestructedType(), srcField, varType);
-
-    // Otherwise we call _Block_object_dispose.  It wouldn't be too
-    // hard to just emit this as a cleanup if we wanted to make sure
-    // that things were done in reverse.
-    } else {
-      assert(DestroyedCapture.Kind == BlockCaptureEntityKind::BlockObject);
-      llvm::Value *value = Builder.CreateLoad(srcField);
-      value = Builder.CreateBitCast(value, VoidPtrTy);
-      BuildBlockRelease(value, flags);
-    }
+    pushCaptureCleanup(DestroyedCapture.Kind, srcField,
+                       CI.getVariable()->getType(), flags, /*EHOnly*/ false, *this);
   }
 
   cleanups.ForceCleanup();
@@ -2538,30 +2576,10 @@ void CodeGenFunction::BuildBlockRelease(llvm::Value *V, BlockFieldFlags flags) {
   EmitNounwindRuntimeCall(F, args); // FIXME: throwing destructors?
 }
 
-namespace {
-  /// Release a __block variable.
-  struct CallBlockRelease final : EHScopeStack::Cleanup {
-    llvm::Value *Addr;
-    CallBlockRelease(llvm::Value *Addr) : Addr(Addr) {}
-
-    void Emit(CodeGenFunction &CGF, Flags flags) override {
-      // Should we be passing FIELD_IS_WEAK here?
-      CGF.BuildBlockRelease(Addr, BLOCK_FIELD_IS_BYREF);
-    }
-  };
-} // end anonymous namespace
-
-/// Enter a cleanup to destroy a __block variable.  Note that this
-/// cleanup should be a no-op if the variable hasn't left the stack
-/// yet; if a cleanup is required for the variable itself, that needs
-/// to be done externally.
-void CodeGenFunction::enterByrefCleanup(const AutoVarEmission &emission) {
-  // We don't enter this cleanup if we're in pure-GC mode.
-  if (CGM.getLangOpts().getGC() == LangOptions::GCOnly)
-    return;
-
-  EHStack.pushCleanup<CallBlockRelease>(NormalAndEHCleanup,
-                                        emission.Addr.getPointer());
+void CodeGenFunction::enterByrefCleanup(CleanupKind Kind, Address Addr,
+                                        BlockFieldFlags Flags,
+                                        bool LoadBlockVarAddr) {
+  EHStack.pushCleanup<CallBlockRelease>(Kind, Addr, Flags, LoadBlockVarAddr);
 }
 
 /// Adjust the declaration of something from the blocks API.
