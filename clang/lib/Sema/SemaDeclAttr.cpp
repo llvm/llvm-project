@@ -5372,6 +5372,64 @@ static void handleAVRSignalAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   handleSimpleAttribute<AVRSignalAttr>(S, D, AL);
 }
 
+
+static void handleRISCVInterruptAttr(Sema &S, Decl *D,
+                                     const ParsedAttr &AL) {
+  // Warn about repeated attributes.
+  if (const auto *A = D->getAttr<RISCVInterruptAttr>()) {
+    S.Diag(AL.getRange().getBegin(),
+      diag::warn_riscv_repeated_interrupt_attribute);
+    S.Diag(A->getLocation(), diag::note_riscv_repeated_interrupt_attribute);
+    return;
+  }
+
+  // Check the attribute argument. Argument is optional.
+  if (!checkAttributeAtMostNumArgs(S, AL, 1))
+    return;
+
+  StringRef Str;
+  SourceLocation ArgLoc;
+
+  // 'machine'is the default interrupt mode.
+  if (AL.getNumArgs() == 0)
+    Str = "machine";
+  else if (!S.checkStringLiteralArgumentAttr(AL, 0, Str, &ArgLoc))
+    return;
+
+  // Semantic checks for a function with the 'interrupt' attribute:
+  // - Must be a function.
+  // - Must have no parameters.
+  // - Must have the 'void' return type.
+  // - The attribute itself must either have no argument or one of the
+  //   valid interrupt types, see [RISCVInterruptDocs].
+
+  if (D->getFunctionType() == nullptr) {
+    S.Diag(D->getLocation(), diag::warn_attribute_wrong_decl_type)
+      << "'interrupt'" << ExpectedFunction;
+    return;
+  }
+
+  if (hasFunctionProto(D) && getFunctionOrMethodNumParams(D) != 0) {
+    S.Diag(D->getLocation(), diag::warn_riscv_interrupt_attribute) << 0;
+    return;
+  }
+
+  if (!getFunctionOrMethodResultType(D)->isVoidType()) {
+    S.Diag(D->getLocation(), diag::warn_riscv_interrupt_attribute) << 1;
+    return;
+  }
+
+  RISCVInterruptAttr::InterruptType Kind;
+  if (!RISCVInterruptAttr::ConvertStrToInterruptType(Str, Kind)) {
+    S.Diag(AL.getLoc(), diag::warn_attribute_type_not_supported)
+      << AL.getName() << Str << ArgLoc;
+    return;
+  }
+
+  D->addAttr(::new (S.Context) RISCVInterruptAttr(
+    AL.getLoc(), S.Context, Kind, AL.getAttributeSpellingListIndex()));
+}
+
 static void handleInterruptAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   // Dispatch the interrupt attribute based on the current target.
   switch (S.Context.getTargetInfo().getTriple().getArch()) {
@@ -5388,6 +5446,10 @@ static void handleInterruptAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     break;
   case llvm::Triple::avr:
     handleAVRInterruptAttr(S, D, AL);
+    break;
+  case llvm::Triple::riscv32:
+  case llvm::Triple::riscv64:
+    handleRISCVInterruptAttr(S, D, AL);
     break;
   default:
     handleARMInterruptAttr(S, D, AL);

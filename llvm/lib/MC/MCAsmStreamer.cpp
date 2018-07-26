@@ -815,7 +815,7 @@ static void PrintQuotedString(StringRef Data, raw_ostream &OS) {
       continue;
     }
 
-    if (isprint((unsigned char)C)) {
+    if (isPrint((unsigned char)C)) {
       OS << (char)C;
       continue;
     }

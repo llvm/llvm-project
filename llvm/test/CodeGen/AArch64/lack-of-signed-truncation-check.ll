@@ -257,10 +257,10 @@ define i1 @add_ugecmp_i64_i8(i64 %x) nounwind {
 define i1 @add_ugtcmp_i16_i8(i16 %x) nounwind {
 ; CHECK-LABEL: add_ugtcmp_i16_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add w8, w0, #128 // =128
+; CHECK-NEXT:    sxtb w8, w0
 ; CHECK-NEXT:    and w8, w8, #0xffff
-; CHECK-NEXT:    cmp w8, #255 // =255
-; CHECK-NEXT:    cset w0, hi
+; CHECK-NEXT:    cmp w8, w0, uxth
+; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
   %tmp0 = add i16 %x, 128 ; 1U << (8-1)
   %tmp1 = icmp ugt i16 %tmp0, 255 ; (1U << 8) - 1

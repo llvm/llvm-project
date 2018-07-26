@@ -29,7 +29,7 @@ ObjDumper::~ObjDumper() {
 
 static void printAsPrintable(raw_ostream &W, const uint8_t *Start, size_t Len) {
   for (size_t i = 0; i < Len; i++)
-    W << (isprint(Start[i]) ? static_cast<char>(Start[i]) : '.');
+    W << (isPrint(Start[i]) ? static_cast<char>(Start[i]) : '.');
 }
 
 static Expected<object::SectionRef>
@@ -138,7 +138,7 @@ void ObjDumper::printSectionAsHex(const object::ObjectFile *Obj,
 
     TmpSecPtr = SecPtr;
     for (i = 0; TmpSecPtr + i < SecEnd && i < 16; ++i)
-      W.startLine() << (isprint(TmpSecPtr[i]) ? static_cast<char>(TmpSecPtr[i])
+      W.startLine() << (isPrint(TmpSecPtr[i]) ? static_cast<char>(TmpSecPtr[i])
                                               : '.');
 
     W.startLine() << '\n';

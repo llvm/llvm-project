@@ -4698,7 +4698,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // For all the host OpenMP offloading compile jobs we need to pass the targets
   // information using -fopenmp-targets= option.
-  if (isa<CompileJobAction>(JA) && JA.isHostOffloading(Action::OFK_OpenMP)) {
+  if (JA.isHostOffloading(Action::OFK_OpenMP)) {
     SmallString<128> TargetInfo("-fopenmp-targets=");
 
     Arg *Tgts = Args.getLastArg(options::OPT_fopenmp_targets_EQ);

@@ -274,6 +274,14 @@ def warn_mips_interrupt_attribute : Warning<
    "MIPS 'interrupt' attribute only applies to functions that have "
    "%select{no parameters|a 'void' return type}0">,
    InGroup<IgnoredAttributes>;
+def warn_riscv_repeated_interrupt_attribute : Warning<
+  "repeated RISC-V 'interrupt' attribute">, InGroup<IgnoredAttributes>;
+def note_riscv_repeated_interrupt_attribute : Note<
+  "repeated RISC-V 'interrupt' attribute is here">;
+def warn_riscv_interrupt_attribute : Warning<
+   "RISC-V 'interrupt' attribute only applies to functions that have "
+   "%select{no parameters|a 'void' return type}0">,
+   InGroup<IgnoredAttributes>;
 def warn_unused_parameter : Warning<"unused parameter %0">,
   InGroup<UnusedParameter>, DefaultIgnore;
 def warn_unused_variable : Warning<"unused variable %0">,
@@ -281,7 +289,7 @@ def warn_unused_variable : Warning<"unused variable %0">,
 def warn_unused_local_typedef : Warning<
   "unused %select{typedef|type alias}0 %1">,
   InGroup<UnusedLocalTypedef>, DefaultIgnore;
-def warn_unused_property_backing_ivar : 
+def warn_unused_property_backing_ivar :
   Warning<"ivar %0 which backs the property is not "
   "referenced in this property's accessor">,
   InGroup<UnusedPropertyIvar>, DefaultIgnore;

@@ -967,6 +967,21 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
   }
 
   MachineFunction &MF = DAG.getMachineFunction();
+
+  const Function &Func = MF.getFunction();
+  if (Func.hasFnAttribute("interrupt")) {
+    if (!Func.arg_empty())
+      report_fatal_error(
+        "Functions with the interrupt attribute cannot have arguments!");
+
+    StringRef Kind =
+      MF.getFunction().getFnAttribute("interrupt").getValueAsString();
+
+    if (!(Kind == "user" || Kind == "supervisor" || Kind == "machine"))
+      report_fatal_error(
+        "Function interrupt attribute argument not supported!");
+  }
+
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
   MVT XLenVT = Subtarget.getXLenVT();
   unsigned XLenInBytes = Subtarget.getXLen() / 8;
@@ -1515,6 +1530,28 @@ RISCVTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     RetOps.push_back(Glue);
   }
 
+  // Interrupt service routines use different return instructions.
+  const Function &Func = DAG.getMachineFunction().getFunction();
+  if (Func.hasFnAttribute("interrupt")) {
+    if (!Func.getReturnType()->isVoidTy())
+      report_fatal_error(
+          "Functions with the interrupt attribute must have void return type!");
+
+    MachineFunction &MF = DAG.getMachineFunction();
+    StringRef Kind =
+      MF.getFunction().getFnAttribute("interrupt").getValueAsString();
+
+    unsigned RetOpc;
+    if (Kind == "user")
+      RetOpc = RISCVISD::URET_FLAG;
+    else if (Kind == "supervisor")
+      RetOpc = RISCVISD::SRET_FLAG;
+    else
+      RetOpc = RISCVISD::MRET_FLAG;
+
+    return DAG.getNode(RetOpc, DL, MVT::Other, RetOps);
+  }
+
   return DAG.getNode(RISCVISD::RET_FLAG, DL, MVT::Other, RetOps);
 }
 
@@ -1524,6 +1561,12 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
     break;
   case RISCVISD::RET_FLAG:
     return "RISCVISD::RET_FLAG";
+  case RISCVISD::URET_FLAG:
+    return "RISCVISD::URET_FLAG";
+  case RISCVISD::SRET_FLAG:
+    return "RISCVISD::SRET_FLAG";
+  case RISCVISD::MRET_FLAG:
+    return "RISCVISD::MRET_FLAG";
   case RISCVISD::CALL:
     return "RISCVISD::CALL";
   case RISCVISD::SELECT_CC:

@@ -3727,9 +3727,10 @@ public:
                                    SourceLocation EndLoc);
   void ActOnForEachDeclStmt(DeclGroupPtrTy Decl);
   StmtResult ActOnForEachLValueExpr(Expr *E);
-  StmtResult ActOnCaseStmt(SourceLocation CaseLoc, Expr *LHSVal,
-                                   SourceLocation DotDotDotLoc, Expr *RHSVal,
-                                   SourceLocation ColonLoc);
+  ExprResult ActOnCaseExpr(SourceLocation CaseLoc, ExprResult Val);
+  StmtResult ActOnCaseStmt(SourceLocation CaseLoc, ExprResult LHS,
+                           SourceLocation DotDotDotLoc, ExprResult RHS,
+                           SourceLocation ColonLoc);
   void ActOnCaseStmtBody(Stmt *CaseStmt, Stmt *SubStmt);
 
   StmtResult ActOnDefaultStmt(SourceLocation DefaultLoc,

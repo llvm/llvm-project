@@ -220,7 +220,7 @@ public:
   raw_ostream &write_uuid(const uuid_t UUID);
 
   /// Output \p Str, turning '\\', '\t', '\n', '"', and anything that doesn't
-  /// satisfy std::isprint into an escape sequence.
+  /// satisfy llvm::isPrint into an escape sequence.
   raw_ostream &write_escaped(StringRef Str, bool UseHexEscapes = false);
 
   raw_ostream &write(unsigned char C);
