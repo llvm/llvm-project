@@ -14,6 +14,7 @@
     %tmp2 = load i32, i32 addrspace(1)* %tmp1
     ret void
   }
+  define void @non_power_of_2() { ret void }
   declare i32 @llvm.amdgcn.workitem.id.x() #0
   attributes #0 = { nounwind readnone }
 ...
@@ -66,4 +67,20 @@ body: |
     liveins: $sgpr0_sgpr1
     %0:_(p1) = COPY $sgpr0_sgpr1
     %1:_(s32) = G_LOAD %0 :: (load 4 from %ir.tmp1)
+...
+
+---
+name: non_power_of_2
+legalized: true
+
+# CHECK-LABEL: name: non_power_of_2
+# CHECK: [[S448:%[0-9]+]]:sgpr(s448) = G_IMPLICIT_DEF
+# CHECK: sgpr(s32) = G_EXTRACT [[S448]](s448), 0
+
+body: |
+  bb.0:
+    %0:_(s448) = G_IMPLICIT_DEF
+    %1:_(s32) = G_EXTRACT %0:_(s448), 0
+    $sgpr0 = COPY %1:_(s32)
+    SI_RETURN_TO_EPILOG $sgpr0
 ...

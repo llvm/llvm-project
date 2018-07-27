@@ -1250,8 +1250,8 @@ public:
 
   /// Creates a FrameIndex SDDbgValue node.
   SDDbgValue *getFrameIndexDbgValue(DIVariable *Var, DIExpression *Expr,
-                                    unsigned FI, const DebugLoc &DL,
-                                    unsigned O);
+                                    unsigned FI, bool IsIndirect,
+                                    const DebugLoc &DL, unsigned O);
 
   /// Creates a VReg SDDbgValue node.
   SDDbgValue *getVRegDbgValue(DIVariable *Var, DIExpression *Expr,

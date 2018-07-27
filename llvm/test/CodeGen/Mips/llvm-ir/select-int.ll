@@ -113,16 +113,17 @@ entry:
   ; M2-M3:  move    $5, $6
   ; M2-M3:  [[BB0]]:
   ; M2-M3:  jr      $ra
-  ; M2-M3:  move    $2, $5
+  ; M3:     sll     $2, $5, 0
 
   ; CMOV:   andi    $[[T0:[0-9]+]], $4, 1
   ; CMOV:   movn    $6, $5, $[[T0]]
-  ; CMOV:   move    $2, $6
+  ; CMOV-64:sll     $2, $6, 0
 
   ; SEL:    andi    $[[T0:[0-9]+]], $4, 1
   ; SEL:    seleqz  $[[T1:[0-9]+]], $6, $[[T0]]
   ; SEL:    selnez  $[[T2:[0-9]+]], $5, $[[T0]]
-  ; SEL:    or      $2, $[[T2]], $[[T1]]
+  ; SEL:    or      $[[T3:[0-9]+]], $[[T2]], $[[T1]]
+  ; SEL-64: sll     $2, $[[T3]], 0
 
   ; MM32R3:     andi16  $[[T0:[0-9]+]], $4, 1
   ; MM32R3:     movn    $[[T1:[0-9]+]], $5, $[[T0]]  # <MCInst #{{[0-9]+}} MOVN_I_MM

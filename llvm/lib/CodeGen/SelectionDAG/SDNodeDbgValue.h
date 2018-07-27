@@ -71,20 +71,18 @@ public:
     u.Const = C;
   }
 
-  /// Constructor for frame indices.
-  SDDbgValue(DIVariable *Var, DIExpression *Expr, unsigned FI, DebugLoc dl,
-             unsigned O)
-      : Var(Var), Expr(Expr), DL(std::move(dl)), Order(O), IsIndirect(false) {
-    kind = FRAMEIX;
-    u.FrameIx = FI;
-  }
-
-  /// Constructor for virtual registers.
-  SDDbgValue(DIVariable *Var, DIExpression *Expr, unsigned VReg, bool indir,
-             DebugLoc dl, unsigned O)
-      : Var(Var), Expr(Expr), DL(std::move(dl)), Order(O), IsIndirect(indir) {
-    kind = VREG;
-    u.VReg = VReg;
+  /// Constructor for virtual registers and frame indices.
+  SDDbgValue(DIVariable *Var, DIExpression *Expr, unsigned VRegOrFrameIdx,
+             bool IsIndirect, DebugLoc DL, unsigned Order,
+             enum DbgValueKind Kind)
+      : Var(Var), Expr(Expr), DL(DL), Order(Order), IsIndirect(IsIndirect) {
+    assert((Kind == VREG || Kind == FRAMEIX) &&
+           "Invalid SDDbgValue constructor");
+    kind = Kind;
+    if (kind == VREG)
+      u.VReg = VRegOrFrameIdx;
+    else
+      u.FrameIx = VRegOrFrameIdx;
   }
 
   /// Returns the kind.

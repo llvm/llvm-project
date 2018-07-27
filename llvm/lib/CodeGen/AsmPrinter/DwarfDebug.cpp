@@ -820,6 +820,10 @@ void DwarfDebug::finalizeModuleInfo() {
       U.attachRangesOrLowHighPC(U.getUnitDie(), TheCU.takeRanges());
     }
 
+    if (getDwarfVersion() >= 5 && !useSplitDwarf() &&
+        !U.getRangeLists().empty())
+      U.addRnglistsBase();
+
     auto *CUNode = cast<DICompileUnit>(P.first);
     // If compile Unit has macros, emit "DW_AT_macro_info" attribute.
     if (CUNode->getMacros())
@@ -1506,8 +1510,9 @@ void DwarfDebug::emitAbbreviations() {
 
 void DwarfDebug::emitStringOffsetsTableHeader() {
   DwarfFile &Holder = useSplitDwarf() ? SkeletonHolder : InfoHolder;
-  Holder.emitStringOffsetsTableHeader(
-      Asm->getObjFileLowering().getDwarfStrOffSection());
+  Holder.getStringPool().emitStringOffsetsTableHeader(
+      *Asm, Asm->getObjFileLowering().getDwarfStrOffSection(),
+      Holder.getStringOffsetsStartSym());
 }
 
 template <typename AccelTableT>
@@ -2086,23 +2091,10 @@ static void emitRangeList(AsmPrinter *Asm, DwarfCompileUnit *CU,
   }
 }
 
-void DwarfDebug::emitDebugRnglists() {
-
-  // Don't emit a rangelist table if there are no ranges.
-  if (llvm::all_of(CUMap,
-                   [](const decltype(CUMap)::const_iterator::value_type &Pair) {
-                     DwarfCompileUnit *TheCU = Pair.second;
-                     if (auto *Skel = TheCU->getSkeleton())
-                       TheCU = Skel;
-                     return TheCU->getRangeLists().empty();
-                   }))
-    return;
-
-  assert(getDwarfVersion() >= 5 && "Dwarf version must be 5 or greater");
-  // FIXME: As long as we don't support DW_RLE_base_addrx, we cannot generate
-  // any tables in the .debug_rnglists.dwo section.
-  Asm->OutStreamer->SwitchSection(
-      Asm->getObjFileLowering().getDwarfRnglistsSection());
+// Emit the header of a DWARF 5 range list table. Returns the symbol that
+// designates the end of the table for the caller to emit when the table is
+// complete.
+static MCSymbol *emitRnglistsTableHeader(AsmPrinter *Asm, DwarfFile &Holder) {
   // The length is described by a starting label right after the length field
   // and an end label.
   MCSymbol *TableStart = Asm->createTempSymbol("debug_rnglist_table_start");
@@ -2111,56 +2103,52 @@ void DwarfDebug::emitDebugRnglists() {
   Asm->EmitLabelDifference(TableEnd, TableStart, 4);
   Asm->OutStreamer->EmitLabel(TableStart);
   // Version number (DWARF v5 and later).
-  Asm->emitInt16(getDwarfVersion());
+  Asm->emitInt16(Asm->OutStreamer->getContext().getDwarfVersion());
   // Address size.
   Asm->emitInt8(Asm->MAI->getCodePointerSize());
   // Segment selector size.
   Asm->emitInt8(0);
 
-  MCSymbol *RnglistTableBaseSym =
-      (useSplitDwarf() ? SkeletonHolder : InfoHolder).getRnglistsTableBaseSym();
+  MCSymbol *RnglistTableBaseSym = Holder.getRnglistsTableBaseSym();
 
   // FIXME: Generate the offsets table and use DW_FORM_rnglistx with the
   // DW_AT_ranges attribute. Until then set the number of offsets to 0.
   Asm->emitInt32(0);
   Asm->OutStreamer->EmitLabel(RnglistTableBaseSym);
-
-  // Emit the individual range lists.
-  for (const auto &I : CUMap) {
-    DwarfCompileUnit *TheCU = I.second;
-    if (auto *Skel = TheCU->getSkeleton())
-      TheCU = Skel;
-    for (const RangeSpanList &List : TheCU->getRangeLists())
-      emitRangeList(Asm, TheCU, List);
-  }
-
-  Asm->OutStreamer->EmitLabel(TableEnd);
+  return TableEnd;
 }
 
-/// Emit address ranges into the .debug_ranges section or DWARF v5 rangelists
-/// into the .debug_rnglists section.
+/// Emit address ranges into the .debug_ranges section or into the DWARF v5
+/// .debug_rnglists section.
 void DwarfDebug::emitDebugRanges() {
   if (CUMap.empty())
     return;
 
+  auto NoRangesPresent = [this]() {
+    return llvm::all_of(
+        CUMap, [](const decltype(CUMap)::const_iterator::value_type &Pair) {
+          return Pair.second->getRangeLists().empty();
+        });
+  };
+
   if (!useRangesSection()) {
-    assert(llvm::all_of(
-               CUMap,
-               [](const decltype(CUMap)::const_iterator::value_type &Pair) {
-                 return Pair.second->getRangeLists().empty();
-               }) &&
-           "No debug ranges expected.");
+    assert(NoRangesPresent() && "No debug ranges expected.");
     return;
   }
 
-  if (getDwarfVersion() >= 5) {
-    emitDebugRnglists();
+  if (getDwarfVersion() >= 5 && NoRangesPresent())
     return;
-  }
 
   // Start the dwarf ranges section.
-  Asm->OutStreamer->SwitchSection(
-      Asm->getObjFileLowering().getDwarfRangesSection());
+  MCSymbol *TableEnd = nullptr;
+  if (getDwarfVersion() >= 5) {
+    Asm->OutStreamer->SwitchSection(
+        Asm->getObjFileLowering().getDwarfRnglistsSection());
+    TableEnd = emitRnglistsTableHeader(Asm, useSplitDwarf() ? SkeletonHolder
+                                                            : InfoHolder);
+  } else
+    Asm->OutStreamer->SwitchSection(
+        Asm->getObjFileLowering().getDwarfRangesSection());
 
   // Grab the specific ranges for the compile units in the module.
   for (const auto &I : CUMap) {
@@ -2173,6 +2161,9 @@ void DwarfDebug::emitDebugRanges() {
     for (const RangeSpanList &List : TheCU->getRangeLists())
       emitRangeList(Asm, TheCU, List);
   }
+
+  if (TableEnd)
+    Asm->OutStreamer->EmitLabel(TableEnd);
 }
 
 void DwarfDebug::handleMacroNodes(DIMacroNodeArray Nodes, DwarfCompileUnit &U) {
@@ -2248,9 +2239,6 @@ void DwarfDebug::initSkeletonUnit(const DwarfUnit &U, DIE &Die,
   SkeletonHolder.addUnit(std::move(NewU));
 }
 
-// This DIE has the following attributes: DW_AT_comp_dir, DW_AT_stmt_list,
-// DW_AT_low_pc, DW_AT_high_pc, DW_AT_ranges, DW_AT_dwo_name, DW_AT_dwo_id,
-// DW_AT_addr_base, DW_AT_ranges_base or DW_AT_rnglists_base.
 DwarfCompileUnit &DwarfDebug::constructSkeletonCU(const DwarfCompileUnit &CU) {
 
   auto OwnedUnit = llvm::make_unique<DwarfCompileUnit>(
@@ -2292,8 +2280,9 @@ void DwarfDebug::emitDebugLineDWO() {
 
 void DwarfDebug::emitStringOffsetsTableHeaderDWO() {
   assert(useSplitDwarf() && "No split dwarf?");
-  InfoHolder.emitStringOffsetsTableHeader(
-      Asm->getObjFileLowering().getDwarfStrOffDWOSection());
+  InfoHolder.getStringPool().emitStringOffsetsTableHeader(
+      *Asm, Asm->getObjFileLowering().getDwarfStrOffDWOSection(),
+      InfoHolder.getStringOffsetsStartSym());
 }
 
 // Emit the .debug_str.dwo section for separated dwarf. This contains the
