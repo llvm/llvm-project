@@ -25,11 +25,10 @@
 #include <cstdlib>
 #include <cstring>
 #include <numeric>
+#include <utility>
 #include <vector>
 
-
 namespace {
-
 enum : int {
   demangle_unknown_error = -4,
   demangle_invalid_args = -3,
@@ -55,8 +54,7 @@ public:
     KEnableIfAttr,
     KObjCProtoName,
     KPointerType,
-    KLValueReferenceType,
-    KRValueReferenceType,
+    KReferenceType,
     KPointerToMemberType,
     KArrayType,
     KFunctionType,
@@ -136,6 +134,12 @@ public:
   virtual bool hasRHSComponentSlow(OutputStream &) const { return false; }
   virtual bool hasArraySlow(OutputStream &) const { return false; }
   virtual bool hasFunctionSlow(OutputStream &) const { return false; }
+
+  // Dig through "glue" nodes like ParameterPack and ForwardTemplateReference to
+  // get at a node that actually represents some concrete syntax.
+  virtual const Node *getSyntaxNode(OutputStream &) const {
+    return this;
+  }
 
   void print(OutputStream &S) const {
     printLeft(S);
@@ -447,60 +451,56 @@ public:
   }
 };
 
-class LValueReferenceType final : public Node {
-  const Node *Pointee;
-
-public:
-  LValueReferenceType(Node *Pointee_)
-      : Node(KLValueReferenceType, Pointee_->RHSComponentCache),
-        Pointee(Pointee_) {}
-
-  bool hasRHSComponentSlow(OutputStream &S) const override {
-    return Pointee->hasRHSComponent(S);
-  }
-
-  void printLeft(OutputStream &s) const override {
-    Pointee->printLeft(s);
-    if (Pointee->hasArray(s))
-      s += " ";
-    if (Pointee->hasArray(s) || Pointee->hasFunction(s))
-      s += "(&";
-    else
-      s += "&";
-  }
-  void printRight(OutputStream &s) const override {
-    if (Pointee->hasArray(s) || Pointee->hasFunction(s))
-      s += ")";
-    Pointee->printRight(s);
-  }
+enum class ReferenceKind {
+  LValue,
+  RValue,
 };
 
-class RValueReferenceType final : public Node {
+// Represents either a LValue or an RValue reference type.
+class ReferenceType : public Node {
   const Node *Pointee;
+  ReferenceKind RK;
+
+  // Dig through any refs to refs, collapsing the ReferenceTypes as we go. The
+  // rule here is rvalue ref to rvalue ref collapses to a rvalue ref, and any
+  // other combination collapses to a lvalue ref.
+  std::pair<ReferenceKind, const Node *> collapse(OutputStream &S) const {
+    auto SoFar = std::make_pair(RK, Pointee);
+    for (;;) {
+      const Node *SN = SoFar.second->getSyntaxNode(S);
+      if (SN->getKind() != KReferenceType)
+        break;
+      auto *RT = static_cast<const ReferenceType *>(SN);
+      SoFar.second = RT->Pointee;
+      SoFar.first = std::min(SoFar.first, RT->RK);
+    }
+    return SoFar;
+  }
 
 public:
-  RValueReferenceType(Node *Pointee_)
-      : Node(KRValueReferenceType, Pointee_->RHSComponentCache),
-        Pointee(Pointee_) {}
+  ReferenceType(Node *Pointee_, ReferenceKind RK_)
+      : Node(KReferenceType, Pointee_->RHSComponentCache),
+        Pointee(Pointee_), RK(RK_) {}
 
   bool hasRHSComponentSlow(OutputStream &S) const override {
     return Pointee->hasRHSComponent(S);
   }
 
   void printLeft(OutputStream &s) const override {
-    Pointee->printLeft(s);
-    if (Pointee->hasArray(s))
+    std::pair<ReferenceKind, const Node *> Collapsed = collapse(s);
+    Collapsed.second->printLeft(s);
+    if (Collapsed.second->hasArray(s))
       s += " ";
-    if (Pointee->hasArray(s) || Pointee->hasFunction(s))
-      s += "(&&";
-    else
-      s += "&&";
-  }
+    if (Collapsed.second->hasArray(s) || Collapsed.second->hasFunction(s))
+      s += "(";
 
+    s += (Collapsed.first == ReferenceKind::LValue ? "&" : "&&");
+  }
   void printRight(OutputStream &s) const override {
-    if (Pointee->hasArray(s) || Pointee->hasFunction(s))
+    std::pair<ReferenceKind, const Node *> Collapsed = collapse(s);
+    if (Collapsed.second->hasArray(s) || Collapsed.second->hasFunction(s))
       s += ")";
-    Pointee->printRight(s);
+    Collapsed.second->printRight(s);
   }
 };
 
@@ -919,6 +919,11 @@ public:
     size_t Idx = S.CurrentPackIndex;
     return Idx < Data.size() && Data[Idx]->hasFunction(S);
   }
+  const Node *getSyntaxNode(OutputStream &S) const override {
+    initializePackExpansion(S);
+    size_t Idx = S.CurrentPackIndex;
+    return Idx < Data.size() ? Data[Idx]->getSyntaxNode(S) : this;
+  }
 
   void printLeft(OutputStream &S) const override {
     initializePackExpansion(S);
@@ -1045,6 +1050,12 @@ struct ForwardTemplateReference : Node {
       return false;
     SwapAndRestore<bool> SavePrinting(Printing, true);
     return Ref->hasFunction(S);
+  }
+  const Node *getSyntaxNode(OutputStream &S) const override {
+    if (Printing)
+      return this;
+    SwapAndRestore<bool> SavePrinting(Printing, true);
+    return Ref->getSyntaxNode(S);
   }
 
   void printLeft(OutputStream &S) const override {
@@ -3444,7 +3455,7 @@ Node *Db::parseType() {
     Node *Ref = parseType();
     if (Ref == nullptr)
       return nullptr;
-    Result = make<LValueReferenceType>(Ref);
+    Result = make<ReferenceType>(Ref, ReferenceKind::LValue);
     break;
   }
   //             ::= O <type>        # r-value reference (C++11)
@@ -3453,7 +3464,7 @@ Node *Db::parseType() {
     Node *Ref = parseType();
     if (Ref == nullptr)
       return nullptr;
-    Result = make<RValueReferenceType>(Ref);
+    Result = make<ReferenceType>(Ref, ReferenceKind::RValue);
     break;
   }
   //             ::= C <type>        # complex pair (C99)
