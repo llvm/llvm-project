@@ -255,12 +255,14 @@ size_t ArchSpec::AutoComplete(CompletionRequest &request) {
     for (uint32_t i = 0; i < llvm::array_lengthof(g_core_definitions); ++i) {
       if (NameMatches(g_core_definitions[i].name, NameMatch::StartsWith,
                       request.GetCursorArgumentPrefix()))
-        request.GetMatches().AppendString(g_core_definitions[i].name);
+        request.AddCompletion(g_core_definitions[i].name);
     }
   } else {
-    ListSupportedArchNames(request.GetMatches());
+    StringList matches;
+    ListSupportedArchNames(matches);
+    request.AddCompletions(matches);
   }
-  return request.GetMatches().GetSize();
+  return request.GetNumberOfMatches();
 }
 
 #define CPU_ANY (UINT32_MAX)

@@ -33,6 +33,28 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::formatters;
 
+bool lldb_private::formatters::LibcxxOptionalSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  ValueObjectSP valobj_sp(valobj.GetNonSyntheticValue());
+  if (!valobj_sp)
+    return false;
+
+  // An optional either contains a value or not, the member __engaged_ is
+  // a bool flag, it is true if the optional has a value and false otherwise.
+  ValueObjectSP engaged_sp(
+      valobj_sp->GetChildMemberWithName(ConstString("__engaged_"), true));
+
+  if (!engaged_sp)
+    return false;
+
+  llvm::StringRef engaged_as_cstring(
+      engaged_sp->GetValueAsUnsigned(0) == 1 ? "true" : "false");
+
+  stream.Printf(" Has Value=%s ", engaged_as_cstring.data());
+
+  return true;
+}
+
 bool lldb_private::formatters::LibcxxSmartPointerSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
   ValueObjectSP valobj_sp(valobj.GetNonSyntheticValue());

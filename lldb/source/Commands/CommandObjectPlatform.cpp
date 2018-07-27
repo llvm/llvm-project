@@ -181,7 +181,7 @@ public:
   int HandleCompletion(CompletionRequest &request) override {
     CommandCompletions::PlatformPluginNames(GetCommandInterpreter(), request,
                                             nullptr);
-    return request.GetMatches().GetSize();
+    return request.GetNumberOfMatches();
   }
 
   Options *GetOptions() override { return &m_option_group; }
@@ -1583,9 +1583,9 @@ public:
           const uint32_t num_matches = process_infos.GetSize();
           if (num_matches > 0) {
             for (uint32_t i = 0; i < num_matches; ++i) {
-              request.GetMatches().AppendString(
+              request.AddCompletion(llvm::StringRef(
                   process_infos.GetProcessNameAtIndex(i),
-                  process_infos.GetProcessNameLengthAtIndex(i));
+                  process_infos.GetProcessNameLengthAtIndex(i)));
             }
           }
         }

@@ -48,7 +48,7 @@ public:
     CommandCompletions::InvokeCommonCompletionCallbacks(
         GetCommandInterpreter(), CommandCompletions::eDiskFileCompletion,
         request, nullptr);
-    return request.GetMatches().GetSize();
+    return request.GetNumberOfMatches();
   }
 
 protected:

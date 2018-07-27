@@ -241,7 +241,7 @@ public:
     CommandCompletions::InvokeCommonCompletionCallbacks(
         GetCommandInterpreter(), CommandCompletions::eDiskFileCompletion,
         request, nullptr);
-    return request.GetMatches().GetSize();
+    return request.GetNumberOfMatches();
   }
 
   Options *GetOptions() override { return &m_options; }
@@ -1429,7 +1429,7 @@ public:
     CommandCompletions::InvokeCommonCompletionCallbacks(
         GetCommandInterpreter(), CommandCompletions::eDiskFileCompletion,
         request, nullptr);
-    return request.GetMatches().GetSize();
+    return request.GetNumberOfMatches();
   }
 
   Options *GetOptions() override { return &m_options; }

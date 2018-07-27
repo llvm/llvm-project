@@ -20,6 +20,7 @@ CompletionRequest::CompletionRequest(llvm::StringRef command_line,
     : m_command(command_line), m_raw_cursor_pos(raw_cursor_pos),
       m_match_start_point(match_start_point),
       m_max_return_elements(max_return_elements), m_matches(&matches) {
+  matches.Clear();
 
   // We parse the argument up to the cursor, so the last argument in
   // parsed_line is the one containing the cursor, and the cursor is after the

@@ -2350,7 +2350,6 @@ size_t FormatEntity::AutoComplete(CompletionRequest &request) {
 
   request.SetWordComplete(false);
   str = str.drop_front(request.GetMatchStartPoint());
-  request.GetMatches().Clear();
 
   const size_t dollar_pos = str.rfind('$');
   if (dollar_pos == llvm::StringRef::npos)
@@ -2360,7 +2359,7 @@ size_t FormatEntity::AutoComplete(CompletionRequest &request) {
   if (dollar_pos == str.size() - 1) {
     std::string match = str.str();
     match.append("{");
-    request.GetMatches().AppendString(match);
+    request.AddCompletion(match);
     return 1;
   }
 
@@ -2378,8 +2377,10 @@ size_t FormatEntity::AutoComplete(CompletionRequest &request) {
   llvm::StringRef partial_variable(str.substr(dollar_pos + 2));
   if (partial_variable.empty()) {
     // Suggest all top level entites as we are just past "${"
-    AddMatches(&g_root, str, llvm::StringRef(), request.GetMatches());
-    return request.GetMatches().GetSize();
+    StringList new_matches;
+    AddMatches(&g_root, str, llvm::StringRef(), new_matches);
+    request.AddCompletions(new_matches);
+    return request.GetNumberOfMatches();
   }
 
   // We have a partially specified variable, find it
@@ -2395,19 +2396,23 @@ size_t FormatEntity::AutoComplete(CompletionRequest &request) {
     // Exact match
     if (n > 0) {
       // "${thread.info" <TAB>
-      request.GetMatches().AppendString(MakeMatch(str, "."));
+      request.AddCompletion(MakeMatch(str, "."));
     } else {
       // "${thread.id" <TAB>
-      request.GetMatches().AppendString(MakeMatch(str, "}"));
+      request.AddCompletion(MakeMatch(str, "}"));
       request.SetWordComplete(true);
     }
   } else if (remainder.equals(".")) {
     // "${thread." <TAB>
-    AddMatches(entry_def, str, llvm::StringRef(), request.GetMatches());
+    StringList new_matches;
+    AddMatches(entry_def, str, llvm::StringRef(), new_matches);
+    request.AddCompletions(new_matches);
   } else {
     // We have a partial match
     // "${thre" <TAB>
-    AddMatches(entry_def, str, remainder, request.GetMatches());
+    StringList new_matches;
+    AddMatches(entry_def, str, remainder, new_matches);
+    request.AddCompletions(new_matches);
   }
-  return request.GetMatches().GetSize();
+  return request.GetNumberOfMatches();
 }

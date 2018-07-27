@@ -27,6 +27,10 @@ bool LibcxxWStringSummaryProvider(
     ValueObject &valobj, Stream &stream,
     const TypeSummaryOptions &options); // libc++ std::wstring
 
+bool LibcxxOptionalSummaryProvider(
+    ValueObject &valobj, Stream &stream,
+    const TypeSummaryOptions &options); // libc++ std::optional<>
+
 bool LibcxxSmartPointerSummaryProvider(
     ValueObject &valobj, Stream &stream,
     const TypeSummaryOptions
@@ -132,6 +136,10 @@ SyntheticChildrenFrontEnd *LibcxxQueueFrontEndCreator(CXXSyntheticChildren *,
 
 SyntheticChildrenFrontEnd *LibcxxTupleFrontEndCreator(CXXSyntheticChildren *,
                                                       lldb::ValueObjectSP);
+
+SyntheticChildrenFrontEnd *
+LibcxxOptionalFrontEndCreator(CXXSyntheticChildren *,
+                              lldb::ValueObjectSP valobj_sp);
 
 } // namespace formatters
 } // namespace lldb_private
