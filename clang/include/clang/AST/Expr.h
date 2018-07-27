@@ -2830,19 +2830,13 @@ protected:
   /// Construct an empty cast.
   CastExpr(StmtClass SC, EmptyShell Empty, unsigned BasePathSize)
     : Expr(SC, Empty) {
+    CastExprBits.PartOfExplicitCast = false;
     setBasePathSize(BasePathSize);
   }
 
 public:
   CastKind getCastKind() const { return (CastKind) CastExprBits.Kind; }
   void setCastKind(CastKind K) { CastExprBits.Kind = K; }
-
-  bool getIsPartOfExplicitCast() const {
-    return CastExprBits.PartOfExplicitCast;
-  }
-  void setIsPartOfExplicitCast(bool PartOfExplicitCast) {
-    CastExprBits.PartOfExplicitCast = PartOfExplicitCast;
-  }
 
   static const char *getCastKindName(CastKind CK);
   const char *getCastKindName() const { return getCastKindName(getCastKind()); }
@@ -2930,6 +2924,11 @@ public:
   ImplicitCastExpr(OnStack_t _, QualType ty, CastKind kind, Expr *op,
                    ExprValueKind VK)
     : CastExpr(ImplicitCastExprClass, ty, VK, kind, op, 0) {
+  }
+
+  bool isPartOfExplicitCast() const { return CastExprBits.PartOfExplicitCast; }
+  void setIsPartOfExplicitCast(bool PartOfExplicitCast) {
+    CastExprBits.PartOfExplicitCast = PartOfExplicitCast;
   }
 
   static ImplicitCastExpr *Create(const ASTContext &Context, QualType T,
