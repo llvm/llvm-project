@@ -1709,7 +1709,6 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
 }
 
 int CommandInterpreter::HandleCompletionMatches(CompletionRequest &request) {
-  auto &matches = request.GetMatches();
   int num_command_matches = 0;
   bool look_for_subcommand = false;
 
@@ -1719,30 +1718,34 @@ int CommandInterpreter::HandleCompletionMatches(CompletionRequest &request) {
   if (request.GetCursorIndex() == -1) {
     // We got nothing on the command line, so return the list of commands
     bool include_aliases = true;
+    StringList new_matches;
     num_command_matches =
-        GetCommandNamesMatchingPartialString("", include_aliases, matches);
+        GetCommandNamesMatchingPartialString("", include_aliases, new_matches);
+    request.AddCompletions(new_matches);
   } else if (request.GetCursorIndex() == 0) {
     // The cursor is in the first argument, so just do a lookup in the
     // dictionary.
+    StringList new_matches;
     CommandObject *cmd_obj = GetCommandObject(
-        request.GetParsedLine().GetArgumentAtIndex(0), &matches);
-    num_command_matches = matches.GetSize();
+        request.GetParsedLine().GetArgumentAtIndex(0), &new_matches);
 
     if (num_command_matches == 1 && cmd_obj && cmd_obj->IsMultiwordObject() &&
-        matches.GetStringAtIndex(0) != nullptr &&
+        new_matches.GetStringAtIndex(0) != nullptr &&
         strcmp(request.GetParsedLine().GetArgumentAtIndex(0),
-               matches.GetStringAtIndex(0)) == 0) {
+               new_matches.GetStringAtIndex(0)) == 0) {
       if (request.GetParsedLine().GetArgumentCount() == 1) {
         request.SetWordComplete(true);
       } else {
         look_for_subcommand = true;
         num_command_matches = 0;
-        matches.DeleteStringAtIndex(0);
+        new_matches.DeleteStringAtIndex(0);
         request.GetParsedLine().AppendArgument(llvm::StringRef());
         request.SetCursorIndex(request.GetCursorIndex() + 1);
         request.SetCursorCharPosition(0);
       }
     }
+    request.AddCompletions(new_matches);
+    num_command_matches = request.GetNumberOfMatches();
   }
 
   if (request.GetCursorIndex() > 0 || look_for_subcommand) {
@@ -1779,8 +1782,7 @@ int CommandInterpreter::HandleCompletion(
       return 0;
     else if (first_arg[0] == CommandHistory::g_repeat_char) {
       if (auto hist_str = m_command_history.FindString(first_arg)) {
-        request.GetMatches().Clear();
-        request.GetMatches().InsertStringAtIndex(0, *hist_str);
+        matches.InsertStringAtIndex(0, *hist_str);
         return -2;
       } else
         return 0;
@@ -1818,7 +1820,7 @@ int CommandInterpreter::HandleCompletion(
         common_prefix.push_back(quote_char);
       common_prefix.push_back(' ');
     }
-    request.GetMatches().InsertStringAtIndex(0, common_prefix.c_str());
+    matches.InsertStringAtIndex(0, common_prefix.c_str());
   }
   return num_command_matches;
 }

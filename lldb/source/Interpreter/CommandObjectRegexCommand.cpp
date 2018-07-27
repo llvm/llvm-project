@@ -97,9 +97,8 @@ int CommandObjectRegexCommand::HandleCompletion(CompletionRequest &request) {
   if (m_completion_type_mask) {
     CommandCompletions::InvokeCommonCompletionCallbacks(
         GetCommandInterpreter(), m_completion_type_mask, request, nullptr);
-    return request.GetMatches().GetSize();
+    return request.GetNumberOfMatches();
   } else {
-    request.GetMatches().Clear();
     request.SetWordComplete(false);
   }
   return 0;

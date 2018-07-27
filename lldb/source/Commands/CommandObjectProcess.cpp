@@ -141,7 +141,7 @@ public:
     CommandCompletions::InvokeCommonCompletionCallbacks(
         GetCommandInterpreter(), CommandCompletions::eDiskFileCompletion,
         request, nullptr);
-    return request.GetMatches().GetSize();
+    return request.GetNumberOfMatches();
   }
 
   Options *GetOptions() override { return &m_options; }
@@ -410,9 +410,9 @@ public:
           const size_t num_matches = process_infos.GetSize();
           if (num_matches > 0) {
             for (size_t i = 0; i < num_matches; ++i) {
-              request.GetMatches().AppendString(
+              request.AddCompletion(llvm::StringRef(
                   process_infos.GetProcessNameAtIndex(i),
-                  process_infos.GetProcessNameLengthAtIndex(i));
+                  process_infos.GetProcessNameLengthAtIndex(i)));
             }
           }
         }
