@@ -4408,9 +4408,11 @@ tryAgain:
       auto *LE = cast<LambdaExpr>(E);
       CFGBlock *B = Block;
       for (Expr *Init : LE->capture_inits()) {
-        if (CFGBlock *R = VisitForTemporaryDtors(
-                Init, /*BindToTemporary=*/false, Context))
-          B = R;
+        if (Init) {
+          if (CFGBlock *R = VisitForTemporaryDtors(
+                  Init, /*BindToTemporary=*/false, Context))
+            B = R;
+        }
       }
       return B;
     }

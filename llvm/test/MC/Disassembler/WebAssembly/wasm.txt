@@ -11,8 +11,7 @@
 # CHECK: i64.const -1
 0x42 0x7F
 
-# CHECK: i64.load32_u 16, :p2align=1
-# FIXME: fix p2align output in WebAssemblyInstPrinter
+# CHECK: i64.load32_u 16:p2align=1
 0x35 0x01 0x10
 
 # CHECK: block

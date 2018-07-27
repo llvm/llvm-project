@@ -1,5 +1,5 @@
-; RUN: llc < %s -asm-verbose=false | FileCheck %s
-; RUN: llc < %s -asm-verbose=false -fast-isel -fast-isel-abort=1 | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -wasm-explicit-locals-codegen-test-mode | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -wasm-explicit-locals-codegen-test-mode -fast-isel -fast-isel-abort=1 | FileCheck %s
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
@@ -26,7 +26,7 @@ define i32 @return_i32_twice(i32 %a) {
 
 true:
   store i32 0, i32* null
-  ret i32 1 
+  ret i32 1
 
 false:
   store i32 2, i32* null

@@ -43,6 +43,19 @@ int main() {
       // Output of thread_id is needed to know on which thread task is executed
       printf("%" PRIu64 ": explicit_untied\n", ompt_get_thread_data()->value);
       print_ids(0);
+      print_frame(1);
+      x++;
+#pragma omp taskyield
+      printf("%" PRIu64 ": explicit_untied(2)\n",
+             ompt_get_thread_data()->value);
+      print_ids(0);
+      print_frame(1);
+      x++;
+#pragma omp taskwait
+      printf("%" PRIu64 ": explicit_untied(3)\n",
+             ompt_get_thread_data()->value);
+      print_ids(0);
+      print_frame(1);
       x++;
     }
 // explicit task with final
@@ -146,8 +159,24 @@ int main() {
   // may be multiple of those
   // CHECK: [[THREAD_ID_3:[0-9]+]]: explicit_untied
   // CHECK: [[THREAD_ID_3]]: task level 0: parallel_id=[[PARALLEL_ID]]
-  // CHECK-SAME: task_id=[[EXPLICIT_UNTIED_TASK_ID]], exit_frame={{[^\,]*}}
-  // CHECK-SAME: reenter_frame=[[NULL]]
+  // CHECK-SAME: task_id=[[EXPLICIT_UNTIED_TASK_ID]]
+  // CHECK-SAME: exit_frame={{0x[0-f]+}}, reenter_frame=[[NULL]]
+  // CHECK-SAME: task_type=ompt_task_explicit|ompt_task_untied=268435460
+  // CHECK-SAME: thread_num={{[01]}}
+
+  // after taskyield
+  // CHECK: [[THREAD_ID_3_2:[0-9]+]]: explicit_untied(2)
+  // CHECK: [[THREAD_ID_3_2]]: task level 0: parallel_id=[[PARALLEL_ID]]
+  // CHECK-SAME: task_id=[[EXPLICIT_UNTIED_TASK_ID]]
+  // CHECK-SAME: exit_frame={{0x[0-f]+}}, reenter_frame=[[NULL]]
+  // CHECK-SAME: task_type=ompt_task_explicit|ompt_task_untied=268435460
+  // CHECK-SAME: thread_num={{[01]}}
+
+  // after taskwait
+  // CHECK: [[THREAD_ID_3_3:[0-9]+]]: explicit_untied(3)
+  // CHECK: [[THREAD_ID_3_3]]: task level 0: parallel_id=[[PARALLEL_ID]]
+  // CHECK-SAME: task_id=[[EXPLICIT_UNTIED_TASK_ID]]
+  // CHECK-SAME: exit_frame={{0x[0-f]+}}, reenter_frame=[[NULL]]
   // CHECK-SAME: task_type=ompt_task_explicit|ompt_task_untied=268435460
   // CHECK-SAME: thread_num={{[01]}}
 

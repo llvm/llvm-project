@@ -1,6 +1,6 @@
 ; RUN: llc < %s -asm-verbose=false \
 ; RUN:   -fast-isel -fast-isel-abort=1 -verify-machineinstrs \
-; RUN:   -disable-wasm-explicit-locals \
+; RUN:   -wasm-register-codegen-test-mode \
 ; RUN:   | FileCheck %s
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"

@@ -134,3 +134,14 @@ template<typename T> struct B : virtual T {};
 
 template<typename> struct C {};
 template<typename T> struct D : C<T> {};
+
+// Check clang_tidy does not crash on this code.
+template <class T>
+struct WithTemplBase : T {
+  WithTemplBase();
+};
+
+int test_no_crash() {
+  auto foo = []() {};
+  WithTemplBase<decltype(foo)>();
+}

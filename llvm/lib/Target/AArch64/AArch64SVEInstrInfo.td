@@ -53,6 +53,17 @@ let Predicates = [HasSVE] in {
   defm MLA_ZPmZZ : sve_int_mlas_vvv_pred<0b0, "mla">;
   defm MLS_ZPmZZ : sve_int_mlas_vvv_pred<0b1, "mls">;
 
+  // SVE predicated integer reductions.
+  defm SADDV_VPZ : sve_int_reduce_0_saddv<0b000, "saddv">;
+  defm UADDV_VPZ : sve_int_reduce_0_uaddv<0b001, "uaddv">;
+  defm SMAXV_VPZ : sve_int_reduce_1<0b000, "smaxv">;
+  defm UMAXV_VPZ : sve_int_reduce_1<0b001, "umaxv">;
+  defm SMINV_VPZ : sve_int_reduce_1<0b010, "sminv">;
+  defm UMINV_VPZ : sve_int_reduce_1<0b011, "uminv">;
+  defm ORV_VPZ   : sve_int_reduce_2<0b000, "orv">;
+  defm EORV_VPZ  : sve_int_reduce_2<0b001, "eorv">;
+  defm ANDV_VPZ  : sve_int_reduce_2<0b010, "andv">;
+
   defm ORR_ZI : sve_int_log_imm<0b00, "orr", "orn">;
   defm EOR_ZI : sve_int_log_imm<0b01, "eor", "eon">;
   defm AND_ZI : sve_int_log_imm<0b10, "and", "bic">;
@@ -157,6 +168,14 @@ let Predicates = [HasSVE] in {
 
   defm FCMLA_ZZZI : sve_fp_fcmla_by_indexed_elem<"fcmla">;
   defm FMUL_ZZZI   : sve_fp_fmul_by_indexed_elem<"fmul">;
+
+  // SVE floating point reductions.
+  defm FADDA_VPZ   : sve_fp_2op_p_vd<0b000, "fadda">;
+  defm FADDV_VPZ   : sve_fp_fast_red<0b000, "faddv">;
+  defm FMAXNMV_VPZ : sve_fp_fast_red<0b100, "fmaxnmv">;
+  defm FMINNMV_VPZ : sve_fp_fast_red<0b101, "fminnmv">;
+  defm FMAXV_VPZ   : sve_fp_fast_red<0b110, "fmaxv">;
+  defm FMINV_VPZ   : sve_fp_fast_red<0b111, "fminv">;
 
   // Splat immediate (unpredicated)
   defm DUP_ZI   : sve_int_dup_imm<"dup">;

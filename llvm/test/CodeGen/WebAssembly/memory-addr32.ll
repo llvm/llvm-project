@@ -1,4 +1,4 @@
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -disable-wasm-explicit-locals | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-register-codegen-test-mode | FileCheck %s
 
 ; Test that basic memory operations assemble as expected with 32-bit addresses.
 

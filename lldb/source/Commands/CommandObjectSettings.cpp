@@ -172,7 +172,7 @@ insert-before or insert-after.");
         }
       }
     }
-    return request.GetMatches().GetSize();
+    return request.GetNumberOfMatches();
   }
 
 protected:
@@ -272,7 +272,7 @@ public:
     CommandCompletions::InvokeCommonCompletionCallbacks(
         GetCommandInterpreter(), CommandCompletions::eSettingsNameCompletion,
         request, nullptr);
-    return request.GetMatches().GetSize();
+    return request.GetNumberOfMatches();
   }
 
 protected:
@@ -338,7 +338,7 @@ public:
     CommandCompletions::InvokeCommonCompletionCallbacks(
         GetCommandInterpreter(), CommandCompletions::eSettingsNameCompletion,
         request, nullptr);
-    return request.GetMatches().GetSize();
+    return request.GetNumberOfMatches();
   }
 
 protected:
@@ -427,7 +427,7 @@ public:
       CommandCompletions::InvokeCommonCompletionCallbacks(
           GetCommandInterpreter(), CommandCompletions::eSettingsNameCompletion,
           request, nullptr);
-    return request.GetMatches().GetSize();
+    return request.GetNumberOfMatches();
   }
 
 protected:
@@ -544,7 +544,7 @@ public:
           GetCommandInterpreter(), CommandCompletions::eSettingsNameCompletion,
           request, nullptr);
 
-    return request.GetMatches().GetSize();
+    return request.GetNumberOfMatches();
   }
 
 protected:
@@ -644,7 +644,7 @@ public:
           GetCommandInterpreter(), CommandCompletions::eSettingsNameCompletion,
           request, nullptr);
 
-    return request.GetMatches().GetSize();
+    return request.GetNumberOfMatches();
   }
 
 protected:
@@ -749,7 +749,7 @@ public:
           GetCommandInterpreter(), CommandCompletions::eSettingsNameCompletion,
           request, nullptr);
 
-    return request.GetMatches().GetSize();
+    return request.GetNumberOfMatches();
   }
 
 protected:
@@ -843,7 +843,7 @@ public:
           GetCommandInterpreter(), CommandCompletions::eSettingsNameCompletion,
           request, nullptr);
 
-    return request.GetMatches().GetSize();
+    return request.GetNumberOfMatches();
   }
 
 protected:
@@ -924,7 +924,7 @@ public:
           GetCommandInterpreter(), CommandCompletions::eSettingsNameCompletion,
           request, nullptr);
 
-    return request.GetMatches().GetSize();
+    return request.GetNumberOfMatches();
   }
 
 protected:

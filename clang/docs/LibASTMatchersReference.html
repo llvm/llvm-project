@@ -1267,6 +1267,20 @@ Example matches @finally
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('objcIvarRefExpr0')"><a name="objcIvarRefExpr0Anchor">objcIvarRefExpr</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ObjCIvarRefExpr.html">ObjCIvarRefExpr</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="objcIvarRefExpr0"><pre>Matches a reference to an ObjCIvar.
+
+Example: matches "a" in "init" method:
+@implementation A {
+  NSString *a;
+}
+- (void) init {
+  a = @"hello";
+}
+}
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('objcMessageExpr0')"><a name="objcMessageExpr0Anchor">objcMessageExpr</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ObjCMessageExpr.html">ObjCMessageExpr</a>&gt;...</td></tr>
 <tr><td colspan="4" class="doc" id="objcMessageExpr0"><pre>Matches ObjectiveC Message invocation expressions.
 
@@ -4251,6 +4265,7 @@ The associated declaration is:
 - for MemberExpr, the declaration of the referenced member
 - for CXXConstructExpr, the declaration of the constructor
 - for CXXNewExpr, the declaration of the operator new
+- for ObjCIvarExpr, the declaration of the ivar
 
 For type nodes, hasDeclaration will generally match the declaration of the
 sugared type. Given
@@ -4547,6 +4562,7 @@ The associated declaration is:
 - for MemberExpr, the declaration of the referenced member
 - for CXXConstructExpr, the declaration of the constructor
 - for CXXNewExpr, the declaration of the operator new
+- for ObjCIvarExpr, the declaration of the ivar
 
 For type nodes, hasDeclaration will generally match the declaration of the
 sugared type. Given
@@ -4750,6 +4766,7 @@ The associated declaration is:
 - for MemberExpr, the declaration of the referenced member
 - for CXXConstructExpr, the declaration of the constructor
 - for CXXNewExpr, the declaration of the operator new
+- for ObjCIvarExpr, the declaration of the ivar
 
 For type nodes, hasDeclaration will generally match the declaration of the
 sugared type. Given
@@ -4900,6 +4917,7 @@ The associated declaration is:
 - for MemberExpr, the declaration of the referenced member
 - for CXXConstructExpr, the declaration of the constructor
 - for CXXNewExpr, the declaration of the operator new
+- for ObjCIvarExpr, the declaration of the ivar
 
 For type nodes, hasDeclaration will generally match the declaration of the
 sugared type. Given
@@ -5061,6 +5079,7 @@ The associated declaration is:
 - for MemberExpr, the declaration of the referenced member
 - for CXXConstructExpr, the declaration of the constructor
 - for CXXNewExpr, the declaration of the operator new
+- for ObjCIvarExpr, the declaration of the ivar
 
 For type nodes, hasDeclaration will generally match the declaration of the
 sugared type. Given
@@ -5247,6 +5266,7 @@ The associated declaration is:
 - for MemberExpr, the declaration of the referenced member
 - for CXXConstructExpr, the declaration of the constructor
 - for CXXNewExpr, the declaration of the operator new
+- for ObjCIvarExpr, the declaration of the ivar
 
 For type nodes, hasDeclaration will generally match the declaration of the
 sugared type. Given
@@ -5667,6 +5687,7 @@ The associated declaration is:
 - for MemberExpr, the declaration of the referenced member
 - for CXXConstructExpr, the declaration of the constructor
 - for CXXNewExpr, the declaration of the operator new
+- for ObjCIvarExpr, the declaration of the ivar
 
 For type nodes, hasDeclaration will generally match the declaration of the
 sugared type. Given
@@ -5700,6 +5721,7 @@ The associated declaration is:
 - for MemberExpr, the declaration of the referenced member
 - for CXXConstructExpr, the declaration of the constructor
 - for CXXNewExpr, the declaration of the operator new
+- for ObjCIvarExpr, the declaration of the ivar
 
 For type nodes, hasDeclaration will generally match the declaration of the
 sugared type. Given
@@ -5733,6 +5755,7 @@ The associated declaration is:
 - for MemberExpr, the declaration of the referenced member
 - for CXXConstructExpr, the declaration of the constructor
 - for CXXNewExpr, the declaration of the operator new
+- for ObjCIvarExpr, the declaration of the ivar
 
 For type nodes, hasDeclaration will generally match the declaration of the
 sugared type. Given
@@ -6093,6 +6116,7 @@ The associated declaration is:
 - for MemberExpr, the declaration of the referenced member
 - for CXXConstructExpr, the declaration of the constructor
 - for CXXNewExpr, the declaration of the operator new
+- for ObjCIvarExpr, the declaration of the ivar
 
 For type nodes, hasDeclaration will generally match the declaration of the
 sugared type. Given
@@ -6174,6 +6198,7 @@ The associated declaration is:
 - for MemberExpr, the declaration of the referenced member
 - for CXXConstructExpr, the declaration of the constructor
 - for CXXNewExpr, the declaration of the operator new
+- for ObjCIvarExpr, the declaration of the ivar
 
 For type nodes, hasDeclaration will generally match the declaration of the
 sugared type. Given
@@ -6326,6 +6351,7 @@ The associated declaration is:
 - for MemberExpr, the declaration of the referenced member
 - for CXXConstructExpr, the declaration of the constructor
 - for CXXNewExpr, the declaration of the operator new
+- for ObjCIvarExpr, the declaration of the ivar
 
 For type nodes, hasDeclaration will generally match the declaration of the
 sugared type. Given
@@ -6448,6 +6474,7 @@ The associated declaration is:
 - for MemberExpr, the declaration of the referenced member
 - for CXXConstructExpr, the declaration of the constructor
 - for CXXNewExpr, the declaration of the operator new
+- for ObjCIvarExpr, the declaration of the ivar
 
 For type nodes, hasDeclaration will generally match the declaration of the
 sugared type. Given
@@ -6501,6 +6528,7 @@ The associated declaration is:
 - for MemberExpr, the declaration of the referenced member
 - for CXXConstructExpr, the declaration of the constructor
 - for CXXNewExpr, the declaration of the operator new
+- for ObjCIvarExpr, the declaration of the ivar
 
 For type nodes, hasDeclaration will generally match the declaration of the
 sugared type. Given
@@ -6565,6 +6593,7 @@ The associated declaration is:
 - for MemberExpr, the declaration of the referenced member
 - for CXXConstructExpr, the declaration of the constructor
 - for CXXNewExpr, the declaration of the operator new
+- for ObjCIvarExpr, the declaration of the ivar
 
 For type nodes, hasDeclaration will generally match the declaration of the
 sugared type. Given
@@ -6629,6 +6658,7 @@ The associated declaration is:
 - for MemberExpr, the declaration of the referenced member
 - for CXXConstructExpr, the declaration of the constructor
 - for CXXNewExpr, the declaration of the operator new
+- for ObjCIvarExpr, the declaration of the ivar
 
 For type nodes, hasDeclaration will generally match the declaration of the
 sugared type. Given

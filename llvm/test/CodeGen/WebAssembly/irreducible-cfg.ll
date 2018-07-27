@@ -1,4 +1,4 @@
-; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-block-placement -disable-wasm-explicit-locals | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-block-placement -wasm-register-codegen-test-mode | FileCheck %s
 
 ; Test irreducible CFG handling.
 

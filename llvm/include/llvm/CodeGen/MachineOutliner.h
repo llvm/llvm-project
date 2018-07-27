@@ -217,6 +217,8 @@ public:
     for (std::shared_ptr<Candidate> &C : Candidates)
       C->Benefit = B;
   }
+
+  OutlinedFunction() {}
 };
 } // namespace outliner
 } // namespace llvm
