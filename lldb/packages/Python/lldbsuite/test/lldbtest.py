@@ -184,9 +184,10 @@ def CMD_MSG(str):
     return "Command '%s' returns successfully" % str
 
 
-def COMPLETION_MSG(str_before, str_after):
+def COMPLETION_MSG(str_before, str_after, completions):
     '''A generic message generator for the completion mechanism.'''
-    return "'%s' successfully completes to '%s'" % (str_before, str_after)
+    return ("'%s' successfully completes to '%s', but completions were:\n%s"
+           % (str_before, str_after, "\n".join(completions)))
 
 
 def EXP_MSG(str, actual, exe):
