@@ -281,6 +281,13 @@ void ObjFile::initializeSymbols() {
     if (auto *Def = Sym.getSectionDefinition())
       if (Def->Selection == IMAGE_COMDAT_SELECT_ASSOCIATIVE)
         readAssociativeDefinition(Sym, Def);
+    if (SparseChunks[Sym.getSectionNumber()] == PendingComdat) {
+      StringRef Name;
+      COFFObj->getSymbolName(Sym, Name);
+      log("comdat section " + Name +
+          " without leader and unassociated, discarding");
+      continue;
+    }
     Symbols[I] = createRegular(Sym);
   }
 
