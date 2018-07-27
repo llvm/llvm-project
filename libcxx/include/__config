@@ -474,19 +474,6 @@ namespace std {
   }
 }
 
-#if _LIBCPP_STD_VER >= 17
-#define _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM \
-  _LIBCPP_BEGIN_NAMESPACE_STD inline namespace __fs { namespace filesystem {
-#else
-#define _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM \
-  _LIBCPP_BEGIN_NAMESPACE_STD namespace __fs { namespace filesystem {
-#endif
-
-#define _LIBCPP_END_NAMESPACE_FILESYSTEM \
-  _LIBCPP_END_NAMESPACE_STD } }
-
-#define _VSTD_FS _VSTD::__fs::filesystem
-
 #if !defined(_LIBCPP_HAS_NO_ASAN) && !__has_feature(address_sanitizer)
 #define _LIBCPP_HAS_NO_ASAN
 #endif
@@ -658,6 +645,20 @@ namespace std {
 #define _LIBCPP_HAS_NO_ASAN
 
 #endif // _LIBCPP_COMPILER_[CLANG|GCC|MSVC|IBM]
+
+#if _LIBCPP_STD_VER >= 17
+#define _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM \
+  _LIBCPP_BEGIN_NAMESPACE_STD inline namespace __fs { namespace filesystem {
+#else
+#define _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM \
+  _LIBCPP_BEGIN_NAMESPACE_STD namespace __fs { namespace filesystem {
+#endif
+
+#define _LIBCPP_END_NAMESPACE_FILESYSTEM \
+  _LIBCPP_END_NAMESPACE_STD } }
+
+#define _VSTD_FS _VSTD::__fs::filesystem
+
 
 #if defined(_LIBCPP_OBJECT_FORMAT_COFF)
 
