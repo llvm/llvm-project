@@ -288,10 +288,6 @@ if (LIBCXX_ENABLE_STATIC)
   endif()
 endif()
 
-# Add a meta-target for both libraries.
-add_custom_target(cxx DEPENDS cxx-headers ${LIBCXX_BUILD_TARGETS})
-
-
 if (LIBCXX_ENABLE_FILESYSTEM)
   set(LIBCXX_FILESYSTEM_SOURCES
       ../src/filesystem/operations.cpp
@@ -322,6 +318,7 @@ if (LIBCXX_ENABLE_FILESYSTEM)
       COMPILE_FLAGS "${filesystem_flags}"
       OUTPUT_NAME   "c++fs"
   )
+  list(APPEND LIBCXX_BUILD_TARGETS cxx_filesystem)
 endif()
 
 
@@ -344,7 +341,12 @@ if (LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY)
       COMPILE_FLAGS "${experimental_flags}"
       OUTPUT_NAME   "c++experimental"
   )
+  list(APPEND LIBCXX_BUILD_TARGETS cxx_experimental)
 endif()
+
+
+# Add a meta-target for both libraries.
+add_custom_target(cxx DEPENDS cxx-headers ${LIBCXX_BUILD_TARGETS})
 
 
 if (LIBCXX_BUILD_EXTERNAL_THREAD_LIBRARY)
