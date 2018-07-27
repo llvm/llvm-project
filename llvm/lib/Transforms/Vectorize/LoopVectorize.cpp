@@ -2948,11 +2948,9 @@ BasicBlock *InnerLoopVectorizer::createVectorizedLoopSkeleton() {
   // Add a check in the middle block to see if we have completed
   // all of the iterations in the first vector loop.
   // If (N - N%VF) == N, then we *don't* need to run the remainder.
-  CmpInst *CmpN =
+  Value *CmpN =
       CmpInst::Create(Instruction::ICmp, CmpInst::ICMP_EQ, Count,
                       CountRoundDown, "cmp.n", MiddleBlock->getTerminator());
-  // Copy the DL from loop start location to the check.
-  CmpN->setDebugLoc(OrigLoop->getStartLoc());
   ReplaceInstWithInst(MiddleBlock->getTerminator(),
                       BranchInst::Create(ExitBlock, ScalarPH, CmpN));
 

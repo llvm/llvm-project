@@ -245,10 +245,10 @@ int IOHandlerDelegate::IOHandlerComplete(IOHandler &io_handler,
         io_handler.GetDebugger().GetCommandInterpreter(),
         CommandCompletions::eVariablePathCompletion, request, nullptr);
 
-    size_t num_matches = request.GetMatches().GetSize();
+    size_t num_matches = request.GetNumberOfMatches();
     if (num_matches > 0) {
       std::string common_prefix;
-      request.GetMatches().LongestCommonPrefix(common_prefix);
+      matches.LongestCommonPrefix(common_prefix);
       const size_t partial_name_len = request.GetCursorArgumentPrefix().size();
 
       // If we matched a unique single command, add a space... Only do this if

@@ -34,7 +34,70 @@ TEST(CompletionRequest, Constructor) {
 
   EXPECT_EQ(request.GetPartialParsedLine().GetArgumentCount(), 2u);
   EXPECT_STREQ(request.GetPartialParsedLine().GetArgumentAtIndex(1), "b");
+}
 
-  // This is the generated matches should be equal to our passed string list.
-  EXPECT_EQ(&request.GetMatches(), &matches);
+TEST(CompletionRequest, DuplicateFiltering) {
+  std::string command = "a bad c";
+  const unsigned cursor_pos = 3;
+  StringList matches;
+
+  CompletionRequest request(command, cursor_pos, 0, 0, matches);
+
+  EXPECT_EQ(0U, request.GetNumberOfMatches());
+
+  // Add foo twice
+  request.AddCompletion("foo");
+  EXPECT_EQ(1U, request.GetNumberOfMatches());
+  EXPECT_EQ(1U, matches.GetSize());
+  EXPECT_STREQ("foo", matches.GetStringAtIndex(0));
+
+  request.AddCompletion("foo");
+  EXPECT_EQ(1U, request.GetNumberOfMatches());
+  EXPECT_EQ(1U, matches.GetSize());
+  EXPECT_STREQ("foo", matches.GetStringAtIndex(0));
+
+  // Add bar twice
+  request.AddCompletion("bar");
+  EXPECT_EQ(2U, request.GetNumberOfMatches());
+  EXPECT_EQ(2U, matches.GetSize());
+  EXPECT_STREQ("foo", matches.GetStringAtIndex(0));
+  EXPECT_STREQ("bar", matches.GetStringAtIndex(1));
+
+  request.AddCompletion("bar");
+  EXPECT_EQ(2U, request.GetNumberOfMatches());
+  EXPECT_EQ(2U, matches.GetSize());
+  EXPECT_STREQ("foo", matches.GetStringAtIndex(0));
+  EXPECT_STREQ("bar", matches.GetStringAtIndex(1));
+
+  // Add foo again.
+  request.AddCompletion("foo");
+  EXPECT_EQ(2U, request.GetNumberOfMatches());
+  EXPECT_EQ(2U, matches.GetSize());
+  EXPECT_STREQ("foo", matches.GetStringAtIndex(0));
+  EXPECT_STREQ("bar", matches.GetStringAtIndex(1));
+
+  // Add something with an existing prefix
+  request.AddCompletion("foobar");
+  EXPECT_EQ(3U, request.GetNumberOfMatches());
+  EXPECT_EQ(3U, matches.GetSize());
+  EXPECT_STREQ("foo", matches.GetStringAtIndex(0));
+  EXPECT_STREQ("bar", matches.GetStringAtIndex(1));
+  EXPECT_STREQ("foobar", matches.GetStringAtIndex(2));
+}
+
+TEST(CompletionRequest, TestCompletionOwnership) {
+  std::string command = "a bad c";
+  const unsigned cursor_pos = 3;
+  StringList matches;
+
+  CompletionRequest request(command, cursor_pos, 0, 0, matches);
+
+  std::string Temporary = "bar";
+  request.AddCompletion(Temporary);
+  // Manipulate our completion. The request should have taken a copy, so that
+  // shouldn't influence anything.
+  Temporary[0] = 'f';
+
+  EXPECT_EQ(1U, request.GetNumberOfMatches());
+  EXPECT_STREQ("bar", matches.GetStringAtIndex(0));
 }

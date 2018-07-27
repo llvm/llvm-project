@@ -4967,6 +4967,10 @@ AArch64InstrInfo::getOutliningCandidateInfo(
                                             CantGuaranteeValueAcrossCall),
                              RepeatedSequenceLocs.end());
 
+  // If the sequence is empty, we're done.
+  if (RepeatedSequenceLocs.empty())
+    return outliner::OutlinedFunction();
+
   // At this point, we have only "safe" candidates to outline. Figure out
   // frame + call instruction information.
 

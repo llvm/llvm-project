@@ -410,6 +410,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(objcImplementationDecl);
   REGISTER_MATCHER(objcInterfaceDecl);
   REGISTER_MATCHER(objcIvarDecl);
+  REGISTER_MATCHER(objcIvarRefExpr);
   REGISTER_MATCHER(objcMessageExpr);
   REGISTER_MATCHER(objcMethodDecl);
   REGISTER_MATCHER(objcObjectPointerType);

@@ -555,6 +555,24 @@ bool SimplifyIndvar::eliminateTrunc(TruncInst *TI) {
       return false;
   }
 
+  auto CanUseZExt = [&](ICmpInst *ICI) {
+    // Unsigned comparison can be widened as unsigned.
+    if (ICI->isUnsigned())
+      return true;
+    // Is it profitable to do zext?
+    if (!DoesZExtCollapse)
+      return false;
+    // For equality, we can safely zext both parts.
+    if (ICI->isEquality())
+      return true;
+    // Otherwise we can only use zext when comparing two non-negative or two
+    // negative values. But in practice, we will never pass DoesZExtCollapse
+    // check for a negative value, because zext(trunc(x)) is non-negative. So
+    // it only make sense to check for non-negativity here.
+    const SCEV *SCEVOP1 = SE->getSCEV(ICI->getOperand(0));
+    const SCEV *SCEVOP2 = SE->getSCEV(ICI->getOperand(1));
+    return SE->isKnownNonNegative(SCEVOP1) && SE->isKnownNonNegative(SCEVOP2);
+  };
   // Replace all comparisons against trunc with comparisons against IV.
   for (auto *ICI : ICmpUsers) {
     auto *Op1 = ICI->getOperand(1);
@@ -565,17 +583,20 @@ bool SimplifyIndvar::eliminateTrunc(TruncInst *TI) {
     // then prefer zext as a more canonical form.
     // TODO: If we see a signed comparison which can be turned into unsigned,
     // we can do it here for canonicalization purposes.
-    if (ICI->isUnsigned() || (ICI->isEquality() && DoesZExtCollapse)) {
+    ICmpInst::Predicate Pred = ICI->getPredicate();
+    if (CanUseZExt(ICI)) {
       assert(DoesZExtCollapse && "Unprofitable zext?");
       Ext = new ZExtInst(Op1, IVTy, "zext", ICI);
+      Pred = ICmpInst::getUnsignedPredicate(Pred);
     } else {
       assert(DoesSExtCollapse && "Unprofitable sext?");
       Ext = new SExtInst(Op1, IVTy, "sext", ICI);
+      assert(Pred == ICmpInst::getSignedPredicate(Pred) && "Must be signed!");
     }
     bool Changed;
     L->makeLoopInvariant(Ext, Changed);
     (void)Changed;
-    ICmpInst *NewICI = new ICmpInst(ICI, ICI->getPredicate(), IV, Ext);
+    ICmpInst *NewICI = new ICmpInst(ICI, Pred, IV, Ext);
     ICI->replaceAllUsesWith(NewICI);
     DeadInsts.emplace_back(ICI);
   }

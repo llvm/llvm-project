@@ -37,11 +37,6 @@
 # ALL: selected section {{.*}}:(.rodata.h3)
 # ALL:   removing identical section {{.*}}:(.rodata.h4)
 
-# ALL: selected section {{.*}}:(.text.f1)
-# ALL:   removing identical section {{.*}}:(.text.f2)
-# ALL:   removing identical section {{.*}}:(.text.non_addrsig1)
-# ALL:   removing identical section {{.*}}:(.text.non_addrsig2)
-
 # ALL-NOT: selected section {{.*}}:(.rodata.l1)
 # ALL: selected section {{.*}}:(.rodata.l3)
 # ALL:   removing identical section {{.*}}:(.rodata.l4)
@@ -49,6 +44,11 @@
 # ALL-NOT: selected section {{.*}}:(.rodata.g1)
 # ALL: selected section {{.*}}:(.rodata.g3)
 # ALL:   removing identical section {{.*}}:(.rodata.g4)
+
+# ALL: selected section {{.*}}:(.text.f1)
+# ALL:   removing identical section {{.*}}:(.text.f2)
+# ALL:   removing identical section {{.*}}:(.text.non_addrsig1)
+# ALL:   removing identical section {{.*}}:(.text.non_addrsig2)
 
 # llvm-mc normally emits an empty .text section into every object file. Since
 # nothing actually refers to it via a relocation, it doesn't have any associated
@@ -77,16 +77,16 @@
 # ALL-EXPORT: selected section {{.*}}:(.rodata.h3)
 # ALL-EXPORT:   removing identical section {{.*}}:(.rodata.h4)
 # ALL-EXPORT-NOT: selected section
-# ALL-EXPORT: selected section {{.*}}:(.text.f1)
-# ALL-EXPORT:   removing identical section {{.*}}:(.text.f2)
-# ALL-EXPORT:   removing identical section {{.*}}:(.text.non_addrsig1)
-# ALL-EXPORT:   removing identical section {{.*}}:(.text.non_addrsig2)
-# ALL-EXPORT-NOT: selected section
 # ALL-EXPORT: selected section {{.*}}:(.text)
 # ALL-EXPORT:   removing identical section {{.*}}:(.text)
 # ALL-EXPORT-NOT: selected section
 # ALL-EXPORT: selected section {{.*}}:(.rodata.l3)
 # ALL-EXPORT:   removing identical section {{.*}}:(.rodata.l4)
+# ALL-EXPORT-NOT: selected section
+# ALL-EXPORT: selected section {{.*}}:(.text.f1)
+# ALL-EXPORT:   removing identical section {{.*}}:(.text.f2)
+# ALL-EXPORT:   removing identical section {{.*}}:(.text.non_addrsig1)
+# ALL-EXPORT:   removing identical section {{.*}}:(.text.non_addrsig2)
 # ALL-EXPORT-NOT: selected section
 
 # OBJCOPY: --icf=safe is incompatible with object files created using objcopy or ld -r

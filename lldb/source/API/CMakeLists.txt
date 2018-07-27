@@ -110,10 +110,20 @@ if (LLVM_COMPILER_IS_GCC_COMPATIBLE AND
     PROPERTY COMPILE_FLAGS " -Wno-sequence-point -Wno-cast-qual")
 endif ()
 
-set_target_properties(liblldb
-  PROPERTIES
-  VERSION ${LLDB_VERSION}
-)
+if (LLDB_BUILD_FRAMEWORK)
+  set_target_properties(liblldb
+    PROPERTIES
+    LIBRARY_OUTPUT_DIRECTORY ${LLDB_FRAMEWORK_DIR}/Versions/${LLDB_FRAMEWORK_VERSION}
+    PREFIX ""
+    SUFFIX ""
+    INSTALL_NAME_DIR "@rpath/LLDB.framework"
+    OUTPUT_NAME LLDB)
+else()
+  set_target_properties(liblldb
+    PROPERTIES
+    VERSION ${LLDB_VERSION}
+    OUTPUT_NAME lldb)
+endif()
 
 if (NOT CMAKE_SYSTEM_NAME MATCHES "Windows")
   if (NOT LLDB_EXPORT_ALL_SYMBOLS)
@@ -136,11 +146,6 @@ if ( CMAKE_SYSTEM_NAME MATCHES "Windows" )
   if (MSVC AND NOT LLDB_DISABLE_PYTHON)
     target_link_libraries(liblldb PRIVATE ${PYTHON_LIBRARY})
   endif()
-else()
-  set_target_properties(liblldb
-    PROPERTIES
-    OUTPUT_NAME lldb
-  )
 endif()
 
 if (LLDB_WRAP_PYTHON)

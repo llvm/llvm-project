@@ -5165,6 +5165,13 @@ Sema::PerformObjectArgumentInitialization(Expr *From,
     FromRecordType = From->getType();
     DestType = ImplicitParamRecordType;
     FromClassification = From->Classify(Context);
+
+    // When performing member access on an rvalue, materialize a temporary.
+    if (From->isRValue()) {
+      From = CreateMaterializeTemporaryExpr(FromRecordType, From,
+                                            Method->getRefQualifier() !=
+                                                RefQualifierKind::RQ_RValue);
+    }
   }
 
   // Note that we always use the true parent context when performing
