@@ -688,9 +688,7 @@ define <2 x i8> @div_factor_unsigned_vec(<2 x i8> %x, <2 x i8> %y) {
 
 define i8 @udiv_common_factor(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @udiv_common_factor(
-; CHECK-NEXT:    [[A:%.*]] = mul nuw i8 [[Z:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[B:%.*]] = mul nuw i8 [[Z]], [[Y:%.*]]
-; CHECK-NEXT:    [[C:%.*]] = udiv i8 [[A]], [[B]]
+; CHECK-NEXT:    [[C:%.*]] = udiv i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i8 [[C]]
 ;
   %a = mul nuw i8 %z, %x
@@ -701,9 +699,7 @@ define i8 @udiv_common_factor(i8 %x, i8 %y, i8 %z) {
 
 define <2 x i8> @udiv_common_factor_commute1_vec(<2 x i8> %x, <2 x i8> %y, <2 x i8> %z) {
 ; CHECK-LABEL: @udiv_common_factor_commute1_vec(
-; CHECK-NEXT:    [[A:%.*]] = mul nuw <2 x i8> [[X:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[B:%.*]] = mul nuw <2 x i8> [[Z]], [[Y:%.*]]
-; CHECK-NEXT:    [[C:%.*]] = udiv <2 x i8> [[A]], [[B]]
+; CHECK-NEXT:    [[C:%.*]] = udiv <2 x i8> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[C]]
 ;
   %a = mul nuw <2 x i8> %x, %z
@@ -714,9 +710,7 @@ define <2 x i8> @udiv_common_factor_commute1_vec(<2 x i8> %x, <2 x i8> %y, <2 x 
 
 define i8 @udiv_common_factor_commute2(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @udiv_common_factor_commute2(
-; CHECK-NEXT:    [[A:%.*]] = mul nuw i8 [[X:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[B:%.*]] = mul nuw i8 [[Y:%.*]], [[Z]]
-; CHECK-NEXT:    [[C:%.*]] = udiv i8 [[A]], [[B]]
+; CHECK-NEXT:    [[C:%.*]] = udiv i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i8 [[C]]
 ;
   %a = mul nuw i8 %x, %z
@@ -727,9 +721,7 @@ define i8 @udiv_common_factor_commute2(i8 %x, i8 %y, i8 %z) {
 
 define i8 @udiv_common_factor_commute3(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @udiv_common_factor_commute3(
-; CHECK-NEXT:    [[A:%.*]] = mul nuw i8 [[Z:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[B:%.*]] = mul nuw i8 [[Y:%.*]], [[Z]]
-; CHECK-NEXT:    [[C:%.*]] = udiv i8 [[A]], [[B]]
+; CHECK-NEXT:    [[C:%.*]] = udiv i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i8 [[C]]
 ;
   %a = mul nuw i8 %z, %x

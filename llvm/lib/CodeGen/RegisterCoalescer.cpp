@@ -2280,7 +2280,8 @@ std::pair<const VNInfo*, unsigned> JoinVals::followCopyChain(
       LiveQueryResult LRQ = LI.Query(Def);
       ValueIn = LRQ.valueIn();
     } else {
-      // Query subranges. Pick the first matching one.
+      // Query subranges. Ensure that all matching ones take us to the same def
+      // (allowing some of them to be undef).
       ValueIn = nullptr;
       for (const LiveInterval::SubRange &S : LI.subranges()) {
         // Transform lanemask to a mask in the joined live interval.
@@ -2288,8 +2289,12 @@ std::pair<const VNInfo*, unsigned> JoinVals::followCopyChain(
         if ((SMask & LaneMask).none())
           continue;
         LiveQueryResult LRQ = S.Query(Def);
-        ValueIn = LRQ.valueIn();
-        break;
+        if (!ValueIn) {
+          ValueIn = LRQ.valueIn();
+          continue;
+        }
+        if (LRQ.valueIn() && ValueIn != LRQ.valueIn())
+          return std::make_pair(VNI, TrackReg);
       }
     }
     if (ValueIn == nullptr) {

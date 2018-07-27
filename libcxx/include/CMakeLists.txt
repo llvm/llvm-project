@@ -93,6 +93,7 @@ set(files
   ext/__hash
   ext/hash_map
   ext/hash_set
+  filesystem
   float.h
   forward_list
   fstream

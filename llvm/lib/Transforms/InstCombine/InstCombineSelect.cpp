@@ -794,8 +794,11 @@ canonicalizeMinMaxWithConstant(SelectInst &Sel, ICmpInst &Cmp,
   return &Sel;
 }
 
-/// There are 4 select variants for each of ABS/NABS (different compare
-/// constants, compare predicates, select operands). Canonicalize to 1 pattern.
+/// There are many select variants for each of ABS/NABS.
+/// In matchSelectPattern(), there are different compare constants, compare
+/// predicates/operands and select operands.
+/// In isKnownNegation(), there are different formats of negated operands.
+/// Canonicalize all these variants to 1 pattern.
 /// This makes CSE more likely.
 static Instruction *canonicalizeAbsNabs(SelectInst &Sel, ICmpInst &Cmp,
                                         InstCombiner::BuilderTy &Builder) {
@@ -810,34 +813,61 @@ static Instruction *canonicalizeAbsNabs(SelectInst &Sel, ICmpInst &Cmp,
   if (SPF != SelectPatternFlavor::SPF_ABS &&
       SPF != SelectPatternFlavor::SPF_NABS)
     return nullptr;
-  
-  // TODO: later canonicalization change will move this condition check.
-  // Without this check, following assert will be hit.
-  if (match(Cmp.getOperand(0), m_Sub(m_Value(), m_Value())))
-    return nullptr;
 
-  // Is this already canonical?
-  if (match(Cmp.getOperand(1), m_ZeroInt()) &&
-      Cmp.getPredicate() == ICmpInst::ICMP_SLT)
-    return nullptr;
-
-  // Create the canonical compare.
-  Cmp.setPredicate(ICmpInst::ICMP_SLT);
-  Cmp.setOperand(1, ConstantInt::getNullValue(Cmp.getOperand(0)->getType()));
-
-  // If the select operands do not change, we're done.
   Value *TVal = Sel.getTrueValue();
   Value *FVal = Sel.getFalseValue();
+  assert(isKnownNegation(TVal, FVal) &&
+         "Unexpected result from matchSelectPattern");
+
+  // The compare may use the negated abs()/nabs() operand, or it may use
+  // negation in non-canonical form such as: sub A, B.
+  bool CmpUsesNegatedOp = match(Cmp.getOperand(0), m_Neg(m_Specific(TVal))) ||
+                          match(Cmp.getOperand(0), m_Neg(m_Specific(FVal)));
+
+  bool CmpCanonicalized = !CmpUsesNegatedOp &&
+                          match(Cmp.getOperand(1), m_ZeroInt()) &&
+                          Cmp.getPredicate() == ICmpInst::ICMP_SLT;
+  bool RHSCanonicalized = match(RHS, m_Neg(m_Specific(LHS)));
+
+  // Is this already canonical?
+  if (CmpCanonicalized && RHSCanonicalized)
+    return nullptr;
+
+  // If RHS is used by other instructions except compare and select, don't
+  // canonicalize it to not increase the instruction count.
+  if (!(RHS->hasOneUse() || (RHS->hasNUses(2) && CmpUsesNegatedOp)))
+    return nullptr;
+
+  // Create the canonical compare: icmp slt LHS 0.
+  if (!CmpCanonicalized) {
+    Cmp.setPredicate(ICmpInst::ICMP_SLT);
+    Cmp.setOperand(1, ConstantInt::getNullValue(Cmp.getOperand(0)->getType()));
+    if (CmpUsesNegatedOp)
+      Cmp.setOperand(0, LHS);
+  }
+
+  // Create the canonical RHS: RHS = sub (0, LHS).
+  if (!RHSCanonicalized) {
+    assert(RHS->hasOneUse() && "RHS use number is not right");
+    RHS = Builder.CreateNeg(LHS);
+    if (TVal == LHS) {
+      Sel.setFalseValue(RHS);
+      FVal = RHS;
+    } else {
+      Sel.setTrueValue(RHS);
+      TVal = RHS;
+    }
+  }
+
+  // If the select operands do not change, we're done.
   if (SPF == SelectPatternFlavor::SPF_NABS) {
-    if (TVal == LHS && match(FVal, m_Neg(m_Specific(TVal))))
+    if (TVal == LHS)
       return &Sel;
-    assert(FVal == LHS && match(TVal, m_Neg(m_Specific(FVal))) &&
-           "Unexpected results from matchSelectPattern");
+    assert(FVal == LHS && "Unexpected results from matchSelectPattern");
   } else {
-    if (FVal == LHS && match(TVal, m_Neg(m_Specific(FVal))))
+    if (FVal == LHS)
       return &Sel;
-    assert(TVal == LHS && match(FVal, m_Neg(m_Specific(TVal))) &&
-           "Unexpected results from matchSelectPattern");
+    assert(TVal == LHS && "Unexpected results from matchSelectPattern");
   }
 
   // We are swapping the select operands, so swap the metadata too.

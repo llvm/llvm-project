@@ -720,13 +720,9 @@ class Configuration(object):
         enable_fs = self.get_lit_bool('enable_filesystem', default=False)
         if not enable_fs:
             return
-        enable_experimental = self.get_lit_bool('enable_experimental', default=False)
-        if not enable_experimental:
-            self.lit_config.fatal(
-                'filesystem is enabled but libc++experimental.a is not.')
         self.config.available_features.add('c++filesystem')
         static_env = os.path.join(self.libcxx_src_root, 'test', 'std',
-                                  'experimental', 'filesystem', 'Inputs', 'static_test_env')
+                                  'input.output', 'filesystems', 'Inputs', 'static_test_env')
         static_env = os.path.realpath(static_env)
         assert os.path.isdir(static_env)
         self.cxx.compile_flags += ['-DLIBCXX_FILESYSTEM_STATIC_TEST_ROOT="%s"' % static_env]
@@ -821,6 +817,10 @@ class Configuration(object):
         if libcxx_experimental:
             self.config.available_features.add('c++experimental')
             self.cxx.link_flags += ['-lc++experimental']
+        libcxx_fs = self.get_lit_bool('enable_filesystem', default=False)
+        if libcxx_fs:
+            self.config.available_features.add('c++fs')
+            self.cxx.link_flags += ['-lc++fs']
         if self.link_shared:
             self.cxx.link_flags += ['-lc++']
         else:
