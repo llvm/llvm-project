@@ -49,7 +49,7 @@ class TestDataFormatterLibcxxBitset(TestBase):
     def test_ptr_and_ref(self):
         """Test that ref and ptr to std::bitset is displayed correctly"""
         self.build()
-        (_, process, _, bkpt) = lldbutil.run_to_source_breakpoint(self, 
+        (_, process, _, bkpt) = lldbutil.run_to_source_breakpoint(self,
                 'Check ref and ptr',
                 lldb.SBFileSpec("main.cpp", False))
 
@@ -57,6 +57,6 @@ class TestDataFormatterLibcxxBitset(TestBase):
         self.check("ptr", 13)
 
         lldbutil.continue_to_breakpoint(process, bkpt)
-        
+
         self.check("ref", 200)
         self.check("ptr", 200)

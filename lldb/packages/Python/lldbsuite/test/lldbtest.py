@@ -702,8 +702,8 @@ class Base(unittest2.TestCase):
         """Return the full path to the current test."""
         return os.path.join(os.environ["LLDB_BUILD"], self.mydir,
                             self.getBuildDirBasename())
-    
-     
+
+
     def makeBuildDir(self):
         """Create the test-specific working directory, deleting any previous
         contents."""
@@ -712,11 +712,11 @@ class Base(unittest2.TestCase):
         if os.path.isdir(bdir):
             shutil.rmtree(bdir)
         lldbutil.mkdir_p(bdir)
- 
+
     def getBuildArtifact(self, name="a.out"):
         """Return absolute path to an artifact in the test's build directory."""
         return os.path.join(self.getBuildDir(), name)
- 
+
     def getSourcePath(self, name):
         """Return absolute path to a file in the test's source directory."""
         return os.path.join(self.getSourceDir(), name)
@@ -1848,7 +1848,7 @@ class TestBase(Base):
         temp = os.path.join(self.getSourceDir(), template)
         with open(temp, 'r') as f:
             content = f.read()
-            
+
         public_api_dir = os.path.join(
             os.environ["LLDB_SRC"], "include", "lldb", "API")
 

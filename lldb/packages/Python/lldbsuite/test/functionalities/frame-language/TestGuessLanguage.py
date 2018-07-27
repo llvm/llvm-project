@@ -18,7 +18,7 @@ class TestFrameGuessLanguage(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    # If your test case doesn't stress debug info, the 
+    # If your test case doesn't stress debug info, the
     # set this to true.  That way it won't be run once for
     # each debug info format.
     NO_DEBUG_INFO_TESTCASE = True
@@ -84,6 +84,6 @@ class TestFrameGuessLanguage(TestBase):
         self.check_language(thread, 0, c_frame_language)
         self.check_language(thread, 1, lldb.eLanguageTypeC_plus_plus)
         self.check_language(thread, 2, lldb.eLanguageTypeC_plus_plus)
-        
-        
+
+
 

@@ -261,7 +261,7 @@ class CommandLineCompletionTestCase(TestBase):
         common_match = match_strings.GetStringAtIndex(0)
         if num_matches == 0:
             compare_string = str_input
-        else: 
+        else:
             if common_match != None and len(common_match) > 0:
                 compare_string = str_input + common_match
             else:

@@ -130,7 +130,7 @@ class LibcxxSetDataFormatterTestCase(TestBase):
         """Test that the data formatters work on ref and ptr."""
         self.build()
         (self.target, process, _, bkpt) = lldbutil.run_to_source_breakpoint(
-            self, "Stop here to check by ref and ptr.", 
+            self, "Stop here to check by ref and ptr.",
             lldb.SBFileSpec("main.cpp", False))
         # The reference should print just like the value:
         self.check_ii("ref")
@@ -139,4 +139,4 @@ class LibcxxSetDataFormatterTestCase(TestBase):
                     substrs=["ptr =", "size=7"])
         self.expect("expr ptr",
                     substrs=["size=7"])
-                    
+
