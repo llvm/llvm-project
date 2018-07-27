@@ -680,7 +680,7 @@ bool Options::HandleOptionCompletion(CompletionRequest &request,
           if (!def.short_option)
             continue;
           opt_str[1] = def.short_option;
-          request.GetMatches().AppendString(opt_str);
+          request.AddCompletion(opt_str);
         }
 
         return true;
@@ -692,7 +692,7 @@ bool Options::HandleOptionCompletion(CompletionRequest &request,
 
           full_name.erase(full_name.begin() + 2, full_name.end());
           full_name.append(def.long_option);
-          request.GetMatches().AppendString(full_name.c_str());
+          request.AddCompletion(full_name.c_str());
         }
         return true;
       } else if (opt_defs_index != OptionArgElement::eUnrecognizedArg) {
@@ -705,10 +705,10 @@ bool Options::HandleOptionCompletion(CompletionRequest &request,
             strcmp(opt_defs[opt_defs_index].long_option, cur_opt_str) != 0) {
           std::string full_name("--");
           full_name.append(opt_defs[opt_defs_index].long_option);
-          request.GetMatches().AppendString(full_name.c_str());
+          request.AddCompletion(full_name.c_str());
           return true;
         } else {
-          request.GetMatches().AppendString(request.GetCursorArgument());
+          request.AddCompletion(request.GetCursorArgument());
           return true;
         }
       } else {
@@ -728,17 +728,7 @@ bool Options::HandleOptionCompletion(CompletionRequest &request,
             if (strstr(def.long_option, cur_opt_str + 2) == def.long_option) {
               std::string full_name("--");
               full_name.append(def.long_option);
-              // The options definitions table has duplicates because of the
-              // way the grouping information is stored, so only add once.
-              bool duplicate = false;
-              for (size_t k = 0; k < request.GetMatches().GetSize(); k++) {
-                if (request.GetMatches().GetStringAtIndex(k) == full_name) {
-                  duplicate = true;
-                  break;
-                }
-              }
-              if (!duplicate)
-                request.GetMatches().AppendString(full_name.c_str());
+              request.AddCompletion(full_name.c_str());
             }
           }
         }
@@ -790,7 +780,7 @@ bool Options::HandleOptionArgumentCompletion(
     for (int i = 0; enum_values[i].string_value != nullptr; i++) {
       if (strstr(enum_values[i].string_value, match_string.c_str()) ==
           enum_values[i].string_value) {
-        request.GetMatches().AppendString(enum_values[i].string_value);
+        request.AddCompletion(enum_values[i].string_value);
         return_value = true;
       }
     }

@@ -1644,6 +1644,21 @@ extern const internal::VariadicDynCastAllOfMatcher<Stmt, Expr> expr;
 extern const internal::VariadicDynCastAllOfMatcher<Stmt, DeclRefExpr>
     declRefExpr;
 
+/// Matches a reference to an ObjCIvar.
+///
+/// Example: matches "a" in "init" method:
+/// \code
+/// @implementation A {
+///   NSString *a;
+/// }
+/// - (void) init {
+///   a = @"hello";
+/// }
+//}
+/// \endcode
+extern const internal::VariadicDynCastAllOfMatcher<Stmt, ObjCIvarRefExpr>
+    objcIvarRefExpr;
+
 /// Matches if statements.
 ///
 /// Example matches 'if (x) {}'
@@ -2655,6 +2670,7 @@ extern const internal::VariadicOperatorMatcherFunc<1, 1> unless;
 /// - for MemberExpr, the declaration of the referenced member
 /// - for CXXConstructExpr, the declaration of the constructor
 /// - for CXXNewExpr, the declaration of the operator new
+/// - for ObjCIvarExpr, the declaration of the ivar
 ///
 /// For type nodes, hasDeclaration will generally match the declaration of the
 /// sugared type. Given

@@ -141,6 +141,10 @@ def FeatureFPAO           : SubtargetFeature<"fpao", "HasFPAO", "true",
 def FeatureFuseAES        : SubtargetFeature<"fuse-aes", "HasFuseAES", "true",
                                              "CPU fuses AES crypto operations">;
 
+// Fast execution of bottom and top halves of literal generation
+def FeatureFuseLiterals   : SubtargetFeature<"fuse-literals", "HasFuseLiterals", "true",
+                                             "CPU fuses literal generation operations">;
+
 // The way of reading thread pointer                                             
 def FeatureReadTp :  SubtargetFeature<"read-tp-hard", "ReadTPHard", "true",
                                       "Reading thread pointer from register">;
