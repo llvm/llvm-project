@@ -665,7 +665,6 @@ void ASTStmtWriter::VisitCastExpr(CastExpr *E) {
   Record.push_back(E->path_size());
   Record.AddStmt(E->getSubExpr());
   Record.push_back(E->getCastKind()); // FIXME: stable encoding
-  Record.push_back(E->getIsPartOfExplicitCast());
 
   for (CastExpr::path_iterator
          PI = E->path_begin(), PE = E->path_end(); PI != PE; ++PI)
@@ -714,6 +713,7 @@ ASTStmtWriter::VisitBinaryConditionalOperator(BinaryConditionalOperator *E) {
 
 void ASTStmtWriter::VisitImplicitCastExpr(ImplicitCastExpr *E) {
   VisitCastExpr(E);
+  Record.push_back(E->isPartOfExplicitCast());
 
   if (E->path_size() == 0)
     AbbrevToUse = Writer.getExprImplicitCastAbbrev();

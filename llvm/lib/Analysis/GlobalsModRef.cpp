@@ -65,7 +65,7 @@ class GlobalsAAResult::FunctionInfo {
   /// Build a wrapper struct that has 8-byte alignment. All heap allocations
   /// should provide this much alignment at least, but this makes it clear we
   /// specifically rely on this amount of alignment.
-  struct LLVM_ALIGNAS(8) AlignedMap {
+  struct alignas(8) AlignedMap {
     AlignedMap() {}
     AlignedMap(const AlignedMap &Arg) : Map(Arg.Map) {}
     GlobalInfoMapType Map;

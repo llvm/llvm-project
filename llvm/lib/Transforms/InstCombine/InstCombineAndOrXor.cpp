@@ -2545,6 +2545,10 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
       }
     }
 
+    // ~(X - Y) --> ~X + Y
+    if (match(NotVal, m_OneUse(m_Sub(m_Value(X), m_Value(Y)))))
+      return BinaryOperator::CreateAdd(Builder.CreateNot(X), Y);
+
     // ~(~X >>s Y) --> (X >>s Y)
     if (match(NotVal, m_AShr(m_Not(m_Value(X)), m_Value(Y))))
       return BinaryOperator::CreateAShr(X, Y);

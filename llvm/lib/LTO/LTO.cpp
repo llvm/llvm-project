@@ -872,7 +872,8 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
       GlobalValue *GV =
           RegularLTO.CombinedModule->getNamedValue(R.second.IRName);
       // Ignore symbols defined in other partitions.
-      if (!GV || GV->hasLocalLinkage())
+      // Also skip declarations, which are not allowed to have internal linkage.
+      if (!GV || GV->hasLocalLinkage() || GV->isDeclaration())
         continue;
       GV->setUnnamedAddr(R.second.UnnamedAddr ? GlobalValue::UnnamedAddr::Global
                                               : GlobalValue::UnnamedAddr::None);

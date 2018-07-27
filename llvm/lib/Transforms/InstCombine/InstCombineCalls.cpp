@@ -2098,8 +2098,8 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     }
 
     // fma fabs(x), fabs(x), z -> fma x, x, z
-    if (match(Src0, m_Intrinsic<Intrinsic::fabs>(m_Value(X))) &&
-        match(Src1, m_Intrinsic<Intrinsic::fabs>(m_Specific(X)))) {
+    if (match(Src0, m_FAbs(m_Value(X))) &&
+        match(Src1, m_FAbs(m_Specific(X)))) {
       II->setArgOperand(0, X);
       II->setArgOperand(1, X);
       return II;
@@ -2146,7 +2146,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     Value *SrcSrc;
     Value *Src = II->getArgOperand(0);
     if (match(Src, m_FNeg(m_Value(SrcSrc))) ||
-        match(Src, m_Intrinsic<Intrinsic::fabs>(m_Value(SrcSrc)))) {
+        match(Src, m_FAbs(m_Value(SrcSrc)))) {
       // cos(-x) -> cos(x)
       // cos(fabs(x)) -> cos(x)
       II->setArgOperand(0, SrcSrc);

@@ -166,7 +166,7 @@ A MachineFunctionPass should use FunctionPass::skipFunction() as such:
 
   bool MyMachineFunctionPass::runOnMachineFunction(Function &MF) {
     if (skipFunction(*MF.getFunction())
-	  return false;
+      return false;
     // Otherwise, run the pass normally.
   }
 

@@ -723,7 +723,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
 #ifndef NDEBUG
   MatchFilterBB = (FilterDAGBasicBlockName.empty() ||
                    FilterDAGBasicBlockName ==
-                       FuncInfo->MBB->getBasicBlock()->getName().str());
+                       FuncInfo->MBB->getBasicBlock()->getName());
 #endif
 #ifdef NDEBUG
   if (ViewDAGCombine1 || ViewLegalizeTypesDAGs || ViewLegalizeDAGs ||

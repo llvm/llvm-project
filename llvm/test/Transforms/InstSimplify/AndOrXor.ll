@@ -964,3 +964,148 @@ define i32 @reversed_not(i32 %a) {
   %or = or i32 %a, %nega
   ret i32 %or
 }
+
+define i64 @shl_or_and1(i32 %a, i1 %b) {
+; CHECK-LABEL: @shl_or_and1(
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[A:%.*]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i1 [[B:%.*]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP1]], 32
+; CHECK-NEXT:    [[TMP4:%.*]] = or i64 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 1
+; CHECK-NEXT:    ret i64 [[TMP5]]
+;
+  %tmp1 = zext i32 %a to i64
+  %tmp2 = zext i1 %b to i64
+  %tmp3 = shl nuw i64 %tmp1, 32
+  %tmp4 = or i64 %tmp2, %tmp3
+  %tmp5 = and i64 %tmp4, 1
+  ret i64 %tmp5
+}
+
+define i64 @shl_or_and2(i32 %a, i1 %b) {
+; CHECK-LABEL: @shl_or_and2(
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i1 [[B:%.*]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[A:%.*]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP1]], 32
+; CHECK-NEXT:    [[TMP4:%.*]] = or i64 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 4294967296
+; CHECK-NEXT:    ret i64 [[TMP5]]
+;
+  %tmp1 = zext i1 %b to i64
+  %tmp2 = zext i32 %a to i64
+  %tmp3 = shl nuw i64 %tmp1, 32
+  %tmp4 = or i64 %tmp2, %tmp3
+  %tmp5 = and i64 %tmp4, 4294967296
+  ret i64 %tmp5
+}
+
+define i32 @shl_or_and3(i32 %a, i32 %b) {
+; concatinate two 32-bit integers and extract lower 32-bit
+; CHECK-LABEL: @shl_or_and3(
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[A:%.*]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[B:%.*]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP1]], 32
+; CHECK-NEXT:    [[TMP4:%.*]] = or i64 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 4294967295
+; CHECK-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP5]] to i32
+; CHECK-NEXT:    ret i32 [[TMP6]]
+;
+  %tmp1 = zext i32 %a to i64
+  %tmp2 = zext i32 %b to i64
+  %tmp3 = shl nuw i64 %tmp1, 32
+  %tmp4 = or i64 %tmp2, %tmp3
+  %tmp5 = and i64 %tmp4, 4294967295
+  %tmp6 = trunc i64 %tmp5 to i32
+  ret i32 %tmp6
+}
+
+define i32 @shl_or_and4(i16 %a, i16 %b) {
+; concatinate two 16-bit integers and extract higher 16-bit
+; CHECK-LABEL: @shl_or_and4(
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[A:%.*]] to i32
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i16 [[B:%.*]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i32 [[TMP1]], 16
+; CHECK-NEXT:    [[TMP4:%.*]] = or i32 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = and i32 [[TMP4]], -65536
+; CHECK-NEXT:    ret i32 [[TMP5]]
+;
+  %tmp1 = zext i16 %a to i32
+  %tmp2 = zext i16 %b to i32
+  %tmp3 = shl nuw i32 %tmp1, 16
+  %tmp4 = or i32 %tmp2, %tmp3
+  %tmp5 = and i32 %tmp4, 4294901760 ; mask with 0xFFFF0000
+  ret i32 %tmp5
+}
+
+define i64 @shl_or_and5(i64 %a, i1 %b) {
+; CHECK-LABEL: @shl_or_and5(
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i64 [[A:%.*]] to i128
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i1 [[B:%.*]] to i128
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i128 [[TMP1]], 64
+; CHECK-NEXT:    [[TMP4:%.*]] = or i128 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = and i128 [[TMP4]], 1
+; CHECK-NEXT:    [[TMP6:%.*]] = trunc i128 [[TMP5]] to i64
+; CHECK-NEXT:    ret i64 [[TMP6]]
+;
+  %tmp1 = zext i64 %a to i128
+  %tmp2 = zext i1 %b to i128
+  %tmp3 = shl nuw i128 %tmp1, 64
+  %tmp4 = or i128 %tmp2, %tmp3
+  %tmp5 = and i128 %tmp4, 1
+  %tmp6 = trunc i128 %tmp5 to i64
+  ret i64 %tmp6
+}
+
+define i32 @shl_or_and6(i16 %a, i16 %b) {
+; A variation of above test case, but fails due to the mask value
+; CHECK-LABEL: @shl_or_and6(
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[A:%.*]] to i32
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i16 [[B:%.*]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i32 [[TMP1]], 16
+; CHECK-NEXT:    [[TMP4:%.*]] = or i32 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = and i32 [[TMP4]], -65535
+; CHECK-NEXT:    ret i32 [[TMP5]]
+;
+  %tmp1 = zext i16 %a to i32
+  %tmp2 = zext i16 %b to i32
+  %tmp3 = shl nuw i32 %tmp1, 16
+  %tmp4 = or i32 %tmp2, %tmp3
+  %tmp5 = and i32 %tmp4, 4294901761 ; mask with 0xFFFF0001
+  ret i32 %tmp5
+}
+
+define i32 @shl_or_and7(i16 %a, i16 %b) {
+; A variation of above test case, but fails due to the mask value
+; CHECK-LABEL: @shl_or_and7(
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[A:%.*]] to i32
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i16 [[B:%.*]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i32 [[TMP1]], 16
+; CHECK-NEXT:    [[TMP4:%.*]] = or i32 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = and i32 [[TMP4]], -131072
+; CHECK-NEXT:    ret i32 [[TMP5]]
+;
+  %tmp1 = zext i16 %a to i32
+  %tmp2 = zext i16 %b to i32
+  %tmp3 = shl nuw i32 %tmp1, 16
+  %tmp4 = or i32 %tmp2, %tmp3
+  %tmp5 = and i32 %tmp4, 4294836224 ; mask with 0xFFFE0000
+  ret i32 %tmp5
+}
+
+define i32 @shl_or_and8(i16 %a, i16 %b) {
+; A variation of above test case, but fails due to the mask value
+; CHECK-LABEL: @shl_or_and8(
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[A:%.*]] to i32
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i16 [[B:%.*]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i32 [[TMP1]], 16
+; CHECK-NEXT:    [[TMP4:%.*]] = or i32 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = and i32 [[TMP4]], 131071
+; CHECK-NEXT:    ret i32 [[TMP5]]
+;
+  %tmp1 = zext i16 %a to i32
+  %tmp2 = zext i16 %b to i32
+  %tmp3 = shl nuw i32 %tmp1, 16
+  %tmp4 = or i32 %tmp2, %tmp3
+  %tmp5 = and i32 %tmp4, 131071 ; mask with 0x1FFFF
+  ret i32 %tmp5
+}
