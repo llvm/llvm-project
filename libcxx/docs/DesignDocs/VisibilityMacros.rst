@@ -40,7 +40,7 @@ Visibility Macros
   this macro therefore expands to `__declspec(dllexport)` when building the
   library and has an empty definition otherwise.
 
-**_LIBCPP_INLINE_VISIBILITY**
+**_LIBCPP_HIDE_FROM_ABI**
   Mark a function as not being part of the ABI of any final linked image that
   uses it, and also as being internal to each TU that uses that function. In
   other words, the address of a function marked with this attribute is not
@@ -154,6 +154,22 @@ Visibility Macros
   Exception types should be defined directly in namespace `std` and not the
   versioning namespace. This allows throwing and catching some exception types
   between libc++ and libstdc++.
+
+**_LIBCPP_INTERNAL_LINKAGE**
+  Mark the affected entity as having internal linkage (i.e. the `static`
+  keyword in C). This is only a best effort: when the `internal_linkage`
+  attribute is not available, we fall back to forcing the function to be
+  inlined, which approximates internal linkage since an externally visible
+  symbol is never generated for that function. This is an internal macro
+  used as an implementation detail by other visibility macros. Never mark
+  a function or a class with this macro directly.
+
+**_LIBCPP_ALWAYS_INLINE**
+  Forces inlining of the function it is applied to. For visibility purposes,
+  this macro is used to make sure that an externally visible symbol is never
+  generated in an object file when the `internal_linkage` attribute is not
+  available. This is an internal macro used by other visibility macros, and
+  it should not be used directly.
 
 Links
 =====
