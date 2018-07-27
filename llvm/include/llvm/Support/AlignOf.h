@@ -34,7 +34,7 @@ namespace llvm {
 
 template<std::size_t Alignment, std::size_t Size>
 struct AlignedCharArray {
-  LLVM_ALIGNAS(Alignment) char buffer[Size];
+  alignas(Alignment) char buffer[Size];
 };
 
 #else // _MSC_VER

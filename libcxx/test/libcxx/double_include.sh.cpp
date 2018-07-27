@@ -62,6 +62,7 @@
 #include <deque>
 #include <errno.h>
 #include <exception>
+#include <filesystem>
 #include <float.h>
 #include <forward_list>
 #include <fstream>

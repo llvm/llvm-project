@@ -52,8 +52,6 @@
 
 #define _VSTD_CORO _VSTD_EXPERIMENTAL::coroutines_v1
 
-#define _VSTD_FS ::std::experimental::filesystem::v1
-
 #define _LIBCPP_BEGIN_NAMESPACE_EXPERIMENTAL_SIMD \
     _LIBCPP_BEGIN_NAMESPACE_EXPERIMENTAL inline namespace parallelism_v2 {
 

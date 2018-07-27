@@ -175,3 +175,41 @@ define <2 x i8> @shl_by_sext_bool_vec(<2 x i1> %x, <2 x i8> %y) {
   ret <2 x i8> %r
 }
 
+define i32 @shl_or_shr(i32 %a, i32 %b) {
+; CHECK-LABEL: @shl_or_shr(
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[A:%.*]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[B:%.*]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP1]], 32
+; CHECK-NEXT:    [[TMP4:%.*]] = or i64 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP4]], 32
+; CHECK-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP5]] to i32
+; CHECK-NEXT:    ret i32 [[TMP6]]
+;
+  %tmp1 = zext i32 %a to i64
+  %tmp2 = zext i32 %b to i64
+  %tmp3 = shl nuw i64 %tmp1, 32
+  %tmp4 = or i64 %tmp2, %tmp3
+  %tmp5 = lshr i64 %tmp4, 32
+  %tmp6 = trunc i64 %tmp5 to i32
+  ret i32 %tmp6
+}
+
+define i32 @shl_or_shr2(i32 %a, i32 %b) {
+; Since shift count of shl is smaller than the size of %b, OR cannot be eliminated.
+; CHECK-LABEL: @shl_or_shr2(
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[A:%.*]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[B:%.*]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP1]], 31
+; CHECK-NEXT:    [[TMP4:%.*]] = or i64 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP4]], 31
+; CHECK-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP5]] to i32
+; CHECK-NEXT:    ret i32 [[TMP6]]
+;
+  %tmp1 = zext i32 %a to i64
+  %tmp2 = zext i32 %b to i64
+  %tmp3 = shl nuw i64 %tmp1, 31
+  %tmp4 = or i64 %tmp2, %tmp3
+  %tmp5 = lshr i64 %tmp4, 31
+  %tmp6 = trunc i64 %tmp5 to i32
+  ret i32 %tmp6
+}
