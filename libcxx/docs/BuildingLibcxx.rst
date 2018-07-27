@@ -242,11 +242,15 @@ libc++experimental Specific Options
 
 .. option:: LIBCXX_ENABLE_FILESYSTEM:BOOL
 
-  **Default**: ``LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY``
+  **Default**: ``ON``
 
-  Build filesystem as part of libc++experimental.a. This allows filesystem
-  to be disabled without turning off the entire experimental library.
+  Build filesystem as a standalone library libc++fs.a.
 
+.. option:: LIBCXX_INSTALL_FILESYSTEM_LIBRARY:BOOL
+
+  **Default**: ``LIBCXX_ENABLE_FILESYSTEM AND LIBCXX_INSTALL_LIBRARY``
+
+  Install libc++fs.a alongside libc++.
 
 .. _ABI Library Specific Options:
 
