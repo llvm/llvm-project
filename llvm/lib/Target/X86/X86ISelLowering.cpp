@@ -33928,45 +33928,43 @@ static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
            "Both cases that could cause potential overflows should have "
            "already been handled.");
     int64_t SignMulAmt = C->getSExtValue();
-    if ((SignMulAmt != INT64_MIN) && (SignMulAmt != INT64_MAX) &&
-        (SignMulAmt != -INT64_MAX)) {
-      int64_t AbsMulAmt = SignMulAmt < 0 ? -SignMulAmt : SignMulAmt;
-      if (isPowerOf2_64(AbsMulAmt - 1)) {
-        // (mul x, 2^N + 1) => (add (shl x, N), x)
-        NewMul = DAG.getNode(
-            ISD::ADD, DL, VT, N->getOperand(0),
-            DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
-                        DAG.getConstant(Log2_64(AbsMulAmt - 1), DL,
-                                        MVT::i8)));
-        // To negate, subtract the number from zero
-        if (SignMulAmt < 0)
-          NewMul = DAG.getNode(ISD::SUB, DL, VT,
-                               DAG.getConstant(0, DL, VT), NewMul);
-      } else if (isPowerOf2_64(AbsMulAmt + 1)) {
-        // (mul x, 2^N - 1) => (sub (shl x, N), x)
-        NewMul = DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
-                             DAG.getConstant(Log2_64(AbsMulAmt + 1),
-                                             DL, MVT::i8));
-        // To negate, reverse the operands of the subtract.
-        if (SignMulAmt < 0)
-          NewMul = DAG.getNode(ISD::SUB, DL, VT, N->getOperand(0), NewMul);
-        else
-          NewMul = DAG.getNode(ISD::SUB, DL, VT, NewMul, N->getOperand(0));
-      } else if (SignMulAmt >= 0 && isPowerOf2_64(AbsMulAmt - 2)) {
-        // (mul x, 2^N + 2) => (add (add (shl x, N), x), x)
-        NewMul = DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
-                             DAG.getConstant(Log2_64(AbsMulAmt - 2),
-                                             DL, MVT::i8));
-        NewMul = DAG.getNode(ISD::ADD, DL, VT, NewMul, N->getOperand(0));
-        NewMul = DAG.getNode(ISD::ADD, DL, VT, NewMul, N->getOperand(0));
-      } else if (SignMulAmt >= 0 && isPowerOf2_64(AbsMulAmt + 2)) {
-        // (mul x, 2^N - 2) => (sub (sub (shl x, N), x), x)
-        NewMul = DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
-                             DAG.getConstant(Log2_64(AbsMulAmt + 2),
-                                             DL, MVT::i8));
+    assert(SignMulAmt != INT64_MIN && "Int min should have been handled!");
+    uint64_t AbsMulAmt = SignMulAmt < 0 ? -SignMulAmt : SignMulAmt;
+    if (isPowerOf2_64(AbsMulAmt - 1)) {
+      // (mul x, 2^N + 1) => (add (shl x, N), x)
+      NewMul = DAG.getNode(
+          ISD::ADD, DL, VT, N->getOperand(0),
+          DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
+                      DAG.getConstant(Log2_64(AbsMulAmt - 1), DL,
+                                      MVT::i8)));
+      // To negate, subtract the number from zero
+      if (SignMulAmt < 0)
+        NewMul = DAG.getNode(ISD::SUB, DL, VT,
+                             DAG.getConstant(0, DL, VT), NewMul);
+    } else if (isPowerOf2_64(AbsMulAmt + 1)) {
+      // (mul x, 2^N - 1) => (sub (shl x, N), x)
+      NewMul = DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
+                           DAG.getConstant(Log2_64(AbsMulAmt + 1),
+                                           DL, MVT::i8));
+      // To negate, reverse the operands of the subtract.
+      if (SignMulAmt < 0)
+        NewMul = DAG.getNode(ISD::SUB, DL, VT, N->getOperand(0), NewMul);
+      else
         NewMul = DAG.getNode(ISD::SUB, DL, VT, NewMul, N->getOperand(0));
-        NewMul = DAG.getNode(ISD::SUB, DL, VT, NewMul, N->getOperand(0));
-      }
+    } else if (SignMulAmt >= 0 && isPowerOf2_64(AbsMulAmt - 2)) {
+      // (mul x, 2^N + 2) => (add (add (shl x, N), x), x)
+      NewMul = DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
+                           DAG.getConstant(Log2_64(AbsMulAmt - 2),
+                                           DL, MVT::i8));
+      NewMul = DAG.getNode(ISD::ADD, DL, VT, NewMul, N->getOperand(0));
+      NewMul = DAG.getNode(ISD::ADD, DL, VT, NewMul, N->getOperand(0));
+    } else if (SignMulAmt >= 0 && isPowerOf2_64(AbsMulAmt + 2)) {
+      // (mul x, 2^N - 2) => (sub (sub (shl x, N), x), x)
+      NewMul = DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
+                           DAG.getConstant(Log2_64(AbsMulAmt + 2),
+                                           DL, MVT::i8));
+      NewMul = DAG.getNode(ISD::SUB, DL, VT, NewMul, N->getOperand(0));
+      NewMul = DAG.getNode(ISD::SUB, DL, VT, NewMul, N->getOperand(0));
     }
   }
 

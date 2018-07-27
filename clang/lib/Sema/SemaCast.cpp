@@ -93,8 +93,8 @@ namespace {
       // Walk down from the CE to the OrigSrcExpr, and mark all immediate
       // ImplicitCastExpr's as being part of ExplicitCastExpr. The original CE
       // (which is a ExplicitCastExpr), and the OrigSrcExpr are not touched.
-      while ((CE = dyn_cast<ImplicitCastExpr>(CE->getSubExpr())))
-        CE->setIsPartOfExplicitCast(true);
+      for (; auto *ICE = dyn_cast<ImplicitCastExpr>(CE->getSubExpr()); CE = ICE)
+        ICE->setIsPartOfExplicitCast(true);
     }
 
     /// Complete an apparently-successful cast operation that yields

@@ -521,6 +521,7 @@ namespace  {
     // Exprs
     void VisitExpr(const Expr *Node);
     void VisitCastExpr(const CastExpr *Node);
+    void VisitImplicitCastExpr(const ImplicitCastExpr *Node);
     void VisitDeclRefExpr(const DeclRefExpr *Node);
     void VisitPredefinedExpr(const PredefinedExpr *Node);
     void VisitCharacterLiteral(const CharacterLiteral *Node);
@@ -2117,8 +2118,11 @@ void ASTDumper::VisitCastExpr(const CastExpr *Node) {
   }
   dumpBasePath(OS, Node);
   OS << ">";
+}
 
-  if (Node->getIsPartOfExplicitCast())
+void ASTDumper::VisitImplicitCastExpr(const ImplicitCastExpr *Node) {
+  VisitCastExpr(Node);
+  if (Node->isPartOfExplicitCast())
     OS << " part_of_explicit_cast";
 }
 
