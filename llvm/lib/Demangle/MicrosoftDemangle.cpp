@@ -751,7 +751,8 @@ private:
 
   ArrayType *demangleArrayType();
 
-  ParamList demangleParameterList();
+  ParamList demangleTemplateParameterList();
+  ParamList demangleFunctionParameterList();
 
   int demangleNumber();
   void demangleNamePiece(Name &Node, bool IsHead);
@@ -784,6 +785,22 @@ private:
 
   // Memory allocator.
   ArenaAllocator Arena;
+
+  // A single type uses one global back-ref table for all function params.
+  // This means back-refs can even go "into" other types.  Examples:
+  //
+  //  // Second int* is a back-ref to first.
+  //  void foo(int *, int*);
+  //
+  //  // Second int* is not a back-ref to first (first is not a function param).
+  //  int* foo(int*);
+  //
+  //  // Second int* is a back-ref to first (ALL function types share the same
+  //  // back-ref map.
+  //  using F = void(*)(int*);
+  //  F G(int *);
+  Type *FunctionParamBackRefs[10];
+  size_t FunctionParamBackRefCount = 0;
 
   // The first 10 BackReferences in a mangled name can be back-referenced by
   // special name @[0-9]. This is a storage for the first 10 BackReferences.
@@ -941,7 +958,7 @@ void Demangler::demangleNamePiece(Name &Node, bool IsHead) {
   } else if (MangledName.consumeFront("?$")) {
     // Class template.
     Node.Str = demangleString(false);
-    Node.TemplateParams = demangleParameterList();
+    Node.TemplateParams = demangleTemplateParameterList();
   } else if (!IsHead && MangledName.consumeFront("?A")) {
     // Anonymous namespace starts with ?A.  So does overloaded operator[],
     // but the distinguishing factor is that namespace themselves are not
@@ -1311,7 +1328,7 @@ FunctionType *Demangler::demangleFunctionType(bool HasThisQuals,
   if (!IsStructor)
     FTy->ReturnType = demangleType(QualifierMangleMode::Result);
 
-  FTy->Params = demangleParameterList();
+  FTy->Params = demangleFunctionParameterList();
 
   demangleThrowSpecification();
 
@@ -1543,14 +1560,8 @@ ArrayType *Demangler::demangleArrayType() {
 }
 
 // Reads a function or a template parameters.
-ParamList Demangler::demangleParameterList() {
-  // Within the same parameter list, you can backreference the first 10 types.
-  Type *BackRef[10];
-  int Idx = 0;
-
+ParamList Demangler::demangleFunctionParameterList() {
   // Empty parameter list.
-  // FIXME: Will this cause problems if demangleParameterList() is called in the
-  // context of a template parameter list?
   if (MangledName.consumeFront('X'))
     return {};
 
@@ -1558,29 +1569,34 @@ ParamList Demangler::demangleParameterList() {
   ParamList **Current = &Head;
   while (!Error && !MangledName.startsWith('@') &&
          !MangledName.startsWith('Z')) {
+
     if (startsWithDigit(MangledName)) {
-      int N = MangledName[0] - '0';
-      if (N >= Idx) {
+      size_t N = MangledName[0] - '0';
+      if (N >= FunctionParamBackRefCount) {
         Error = true;
         return {};
       }
       MangledName = MangledName.dropFront();
 
       *Current = Arena.alloc<ParamList>();
-      (*Current)->Current = BackRef[N]->clone(Arena);
+      (*Current)->Current = FunctionParamBackRefs[N]->clone(Arena);
       Current = &(*Current)->Next;
       continue;
     }
 
-    size_t ArrayDimension = MangledName.size();
+    size_t OldSize = MangledName.size();
 
     *Current = Arena.alloc<ParamList>();
     (*Current)->Current = demangleType(QualifierMangleMode::Drop);
 
-    // Single-letter types are ignored for backreferences because
-    // memorizing them doesn't save anything.
-    if (Idx <= 9 && ArrayDimension - MangledName.size() > 1)
-      BackRef[Idx++] = (*Current)->Current;
+    size_t CharsConsumed = OldSize - MangledName.size();
+    assert(CharsConsumed != 0);
+
+    // Single-letter types are ignored for backreferences because memorizing
+    // them doesn't save anything.
+    if (FunctionParamBackRefCount <= 9 && CharsConsumed > 1)
+      FunctionParamBackRefs[FunctionParamBackRefCount++] = (*Current)->Current;
+
     Current = &(*Current)->Next;
   }
 
@@ -1598,6 +1614,29 @@ ParamList Demangler::demangleParameterList() {
     return *Head;
   }
 
+  Error = true;
+  return {};
+}
+
+ParamList Demangler::demangleTemplateParameterList() {
+  ParamList *Head;
+  ParamList **Current = &Head;
+  while (!Error && !MangledName.startsWith('@')) {
+
+    // Template parameter lists don't participate in back-referencing.
+    *Current = Arena.alloc<ParamList>();
+    (*Current)->Current = demangleType(QualifierMangleMode::Drop);
+
+    Current = &(*Current)->Next;
+  }
+
+  if (Error)
+    return {};
+
+  // Template parameter lists cannot be variadic, so it can only be terminated
+  // by @.
+  if (MangledName.consumeFront('@'))
+    return *Head;
   Error = true;
   return {};
 }

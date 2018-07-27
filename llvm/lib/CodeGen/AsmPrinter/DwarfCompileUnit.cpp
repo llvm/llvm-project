@@ -426,8 +426,6 @@ void DwarfCompileUnit::addScopeRangeList(DIE &ScopeDIE,
   } else {
     addSectionLabel(ScopeDIE, dwarf::DW_AT_ranges, List.getSym(),
                     RangeSectionSym);
-    if (DD->getDwarfVersion() >= 5)
-      addRnglistsBase();
   }
 
   // Add the range list to the set of ranges to be emitted.

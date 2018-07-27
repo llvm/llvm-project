@@ -9130,6 +9130,7 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
       Expr *E = ListInit->getInit(0);
       auto *RD = E->getType()->getAsCXXRecordDecl();
       if (!isa<InitListExpr>(E) && RD &&
+          isCompleteType(Kind.getLocation(), E->getType()) &&
           isOrIsDerivedFromSpecializationOf(RD, Template))
         TryListConstructors = false;
     }

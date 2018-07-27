@@ -533,6 +533,11 @@ void MicrosoftARM64TargetInfo::getTargetDefines(const LangOptions &Opts,
   getVisualStudioDefines(Opts, Builder);
 }
 
+TargetInfo::CallingConvKind
+MicrosoftARM64TargetInfo::getCallingConvKind(bool ClangABICompat4) const {
+  return CCK_MicrosoftWin64;
+}
+
 MinGWARM64TargetInfo::MinGWARM64TargetInfo(const llvm::Triple &Triple,
                                            const TargetOptions &Opts)
     : WindowsARM64TargetInfo(Triple, Opts) {

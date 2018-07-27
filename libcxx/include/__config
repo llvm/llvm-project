@@ -43,6 +43,18 @@
 #  endif
 #endif
 
+#ifndef _LIBCPP_STD_VER
+#  if  __cplusplus <= 201103L
+#    define _LIBCPP_STD_VER 11
+#  elif __cplusplus <= 201402L
+#    define _LIBCPP_STD_VER 14
+#  elif __cplusplus <= 201703L
+#    define _LIBCPP_STD_VER 17
+#  else
+#    define _LIBCPP_STD_VER 18  // current year, or date of c++2a ratification
+#  endif
+#endif  // _LIBCPP_STD_VER
+
 #if defined(__ELF__)
 #  define _LIBCPP_OBJECT_FORMAT_ELF   1
 #elif defined(__MACH__)
@@ -461,6 +473,19 @@ namespace std {
   inline namespace _LIBCPP_NAMESPACE {
   }
 }
+
+#if _LIBCPP_STD_VER >= 17
+#define _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM \
+  _LIBCPP_BEGIN_NAMESPACE_STD inline namespace __fs { namespace filesystem {
+#else
+#define _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM \
+  _LIBCPP_BEGIN_NAMESPACE_STD namespace __fs { namespace filesystem {
+#endif
+
+#define _LIBCPP_END_NAMESPACE_FILESYSTEM \
+  _LIBCPP_END_NAMESPACE_STD } }
+
+#define _VSTD_FS _VSTD::__fs::filesystem
 
 #if !defined(_LIBCPP_HAS_NO_ASAN) && !__has_feature(address_sanitizer)
 #define _LIBCPP_HAS_NO_ASAN
@@ -958,18 +983,6 @@ template <unsigned> struct __static_assert_check {};
 #if defined(__APPLE__) || defined(__FreeBSD__) || defined(__sun__)
 #define _LIBCPP_WCTYPE_IS_MASK
 #endif
-
-#ifndef _LIBCPP_STD_VER
-#  if  __cplusplus <= 201103L
-#    define _LIBCPP_STD_VER 11
-#  elif __cplusplus <= 201402L
-#    define _LIBCPP_STD_VER 14
-#  elif __cplusplus <= 201703L
-#    define _LIBCPP_STD_VER 17
-#  else
-#    define _LIBCPP_STD_VER 18  // current year, or date of c++2a ratification
-#  endif
-#endif  // _LIBCPP_STD_VER
 
 #if _LIBCPP_STD_VER > 11
 #  define _LIBCPP_DEPRECATED [[deprecated]]

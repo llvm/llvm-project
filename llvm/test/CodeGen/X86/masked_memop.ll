@@ -976,8 +976,8 @@ define <4 x i64> @mload_constmask_v4i64(<4 x i64>* %addr, <4 x i64> %dst) {
 define <8 x double> @mload_constmask_v8f64(<8 x double>* %addr, <8 x double> %dst) {
 ; AVX-LABEL: mload_constmask_v8f64:
 ; AVX:       ## %bb.0:
-; AVX-NEXT:    vblendps {{.*#+}} ymm1 = ymm1[0,1,2,3,4,5],mem[6,7]
 ; AVX-NEXT:    vblendps {{.*#+}} ymm0 = mem[0,1,2,3,4,5],ymm0[6,7]
+; AVX-NEXT:    vblendps {{.*#+}} ymm1 = ymm1[0,1,2,3,4,5],mem[6,7]
 ; AVX-NEXT:    retq
 ;
 ; AVX512F-LABEL: mload_constmask_v8f64:

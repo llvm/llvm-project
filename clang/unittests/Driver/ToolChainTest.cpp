@@ -113,7 +113,7 @@ TEST(ToolChainTest, VFSGCCInstallationRelativeDir) {
   std::replace(S.begin(), S.end(), '\\', '/');
 #endif
   EXPECT_EQ("Found candidate GCC installation: "
-            "/home/test/bin/../lib/gcc/arm-linux-gnueabi/4.6.1\n"
+            "/home/test/lib/gcc/arm-linux-gnueabi/4.6.1\n"
             "Selected GCC installation: "
             "/home/test/bin/../lib/gcc/arm-linux-gnueabi/4.6.1\n"
             "Candidate multilib: .;@m32\n"

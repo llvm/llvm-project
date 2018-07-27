@@ -1206,9 +1206,10 @@ public:
   enum IdentType {
     Func,
     Function,
-    LFunction,  // Same as Function, but as wide string.
+    LFunction, // Same as Function, but as wide string.
     FuncDName,
     FuncSig,
+    LFuncSig, // Same as FuncSig, but as as wide string
     PrettyFunction,
     /// The same as PrettyFunction, except that the
     /// 'virtual' keyword is omitted for virtual member functions.
