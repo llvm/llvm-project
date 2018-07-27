@@ -291,12 +291,43 @@ endif()
 # Add a meta-target for both libraries.
 add_custom_target(cxx DEPENDS cxx-headers ${LIBCXX_BUILD_TARGETS})
 
+
+if (LIBCXX_ENABLE_FILESYSTEM)
+  set(LIBCXX_FILESYSTEM_SOURCES
+      ../src/filesystem/operations.cpp
+      ../src/filesystem/directory_iterator.cpp)
+
+  # Filesystem uses __int128_t, which requires a definition of __muloi4 when
+  # compiled with UBSAN. This definition is not provided by libgcc_s, but is
+  # provided by compiler-rt. So we need to disable it to avoid having multiple
+  # definitions. See filesystem/int128_builtins.cpp.
+  if (NOT LIBCXX_USE_COMPILER_RT)
+    list(APPEND LIBCXX_FILESYSTEM_SOURCES ../src/filesystem/int128_builtins.cpp)
+  endif()
+
+  add_library(cxx_filesystem STATIC ${LIBCXX_FILESYSTEM_SOURCES})
+  if (LIBCXX_ENABLE_SHARED)
+    target_link_libraries(cxx_filesystem cxx_shared)
+  else()
+    target_link_libraries(cxx_filesystem cxx_static)
+  endif()
+
+  set(filesystem_flags "${LIBCXX_COMPILE_FLAGS}")
+  check_flag_supported(-std=c++14)
+  if (NOT MSVC AND LIBCXX_SUPPORTS_STD_EQ_CXX14_FLAG)
+    string(REPLACE "-std=c++11" "-std=c++14" filesystem_flags "${LIBCXX_COMPILE_FLAGS}")
+  endif()
+  set_target_properties(cxx_filesystem
+    PROPERTIES
+      COMPILE_FLAGS "${filesystem_flags}"
+      OUTPUT_NAME   "c++fs"
+  )
+endif()
+
+
 if (LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY)
   file(GLOB LIBCXX_EXPERIMENTAL_SOURCES ../src/experimental/*.cpp)
-  if (LIBCXX_ENABLE_FILESYSTEM)
-    file(GLOB LIBCXX_FILESYSTEM_SOURCES ../src/experimental/filesystem/*.cpp)
-  endif()
-  add_library(cxx_experimental STATIC ${LIBCXX_EXPERIMENTAL_SOURCES} ${LIBCXX_FILESYSTEM_SOURCES})
+  add_library(cxx_experimental STATIC ${LIBCXX_EXPERIMENTAL_SOURCES})
   if (LIBCXX_ENABLE_SHARED)
     target_link_libraries(cxx_experimental cxx_shared)
   else()
@@ -314,6 +345,7 @@ if (LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY)
       OUTPUT_NAME   "c++experimental"
   )
 endif()
+
 
 if (LIBCXX_BUILD_EXTERNAL_THREAD_LIBRARY)
   file(GLOB LIBCXX_EXTERNAL_THREADING_SUPPORT_SOURCES ../test/support/external_threads.cpp)
@@ -362,10 +394,13 @@ if (LIBCXX_ENABLE_SHARED AND LIBCXX_ENABLE_ABI_LINKER_SCRIPT)
 endif()
 
 if (LIBCXX_INSTALL_LIBRARY)
+  if (LIBCXX_INSTALL_FILESYSTEM_LIBRARY)
+    set(filesystem_lib cxx_filesystem)
+  endif()
   if (LIBCXX_INSTALL_EXPERIMENTAL_LIBRARY)
     set(experimental_lib cxx_experimental)
   endif()
-  install(TARGETS ${LIBCXX_INSTALL_TARGETS} ${experimental_lib}
+  install(TARGETS ${LIBCXX_INSTALL_TARGETS} ${filesystem_lib} ${experimental_lib}
     LIBRARY DESTINATION ${LIBCXX_INSTALL_PREFIX}lib${LIBCXX_LIBDIR_SUFFIX} COMPONENT cxx
     ARCHIVE DESTINATION ${LIBCXX_INSTALL_PREFIX}lib${LIBCXX_LIBDIR_SUFFIX} COMPONENT cxx
     )
@@ -385,6 +420,9 @@ if (NOT CMAKE_CONFIGURATION_TYPES AND (LIBCXX_INSTALL_LIBRARY OR
     if(LIBCXX_INSTALL_LIBRARY)
       set(lib_install_target cxx)
     endif()
+    if (LIBCXX_INSTALL_FILESYSTEM_LIBRARY)
+      set(filesystem_lib_install_target cxx_filesystem)
+    endif()
     if (LIBCXX_INSTALL_EXPERIMENTAL_LIBRARY)
       set(experimental_lib_install_target cxx_experimental)
     endif()
@@ -394,6 +432,7 @@ if (NOT CMAKE_CONFIGURATION_TYPES AND (LIBCXX_INSTALL_LIBRARY OR
     add_custom_target(install-cxx
                       DEPENDS ${lib_install_target}
                               ${experimental_lib_install_target}
+                              ${filesystem_lib_install_target}
                               ${header_install_target}
                       COMMAND "${CMAKE_COMMAND}"
                       -DCMAKE_INSTALL_COMPONENT=cxx
@@ -401,6 +440,7 @@ if (NOT CMAKE_CONFIGURATION_TYPES AND (LIBCXX_INSTALL_LIBRARY OR
     add_custom_target(install-cxx-stripped
                       DEPENDS ${lib_install_target}
                               ${experimental_lib_install_target}
+                              ${filesystem_lib_install_target}
                               ${header_install_target}
                       COMMAND "${CMAKE_COMMAND}"
                       -DCMAKE_INSTALL_COMPONENT=cxx

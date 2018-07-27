@@ -264,6 +264,10 @@ module std [system] {
     header "exception"
     export *
   }
+  module filesystem {
+    header "filesystem"
+    export *
+  }
   module forward_list {
     header "forward_list"
     export initializer_list

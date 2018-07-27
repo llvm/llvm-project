@@ -107,6 +107,10 @@ option(LIBCXX_INSTALL_SUPPORT_HEADERS "Install libc++ support headers." ON)
 cmake_dependent_option(LIBCXX_INSTALL_EXPERIMENTAL_LIBRARY
         "Install libc++experimental.a" ON
         "LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY;LIBCXX_INSTALL_LIBRARY" OFF)
+cmake_dependent_option(LIBCXX_INSTALL_FILESYSTEM_LIBRARY
+        "Install libc++fs.a" ON
+        "LIBCXX_ENABLE_FILESYSTEM_LIBRARY;LIBCXX_INSTALL_LIBRARY" OFF)
+
 if (FUCHSIA)
   set(DEFAULT_ABI_VERSION 2)
 else()
