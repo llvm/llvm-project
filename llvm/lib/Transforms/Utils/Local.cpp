@@ -1419,12 +1419,13 @@ bool llvm::LowerDbgDeclare(Function &F) {
       } else if (LoadInst *LI = dyn_cast<LoadInst>(U)) {
         ConvertDebugDeclareToDebugValue(DDI, LI, DIB);
       } else if (CallInst *CI = dyn_cast<CallInst>(U)) {
-        // This is a call by-value or some other instruction that
-        // takes a pointer to the variable. Insert a *value*
-        // intrinsic that describes the alloca.
-        DIB.insertDbgValueIntrinsic(AI, DDI->getVariable(),
-                                    DDI->getExpression(), DDI->getDebugLoc(),
-                                    CI);
+        // This is a call by-value or some other instruction that takes a
+        // pointer to the variable. Insert a *value* intrinsic that describes
+        // the variable by dereferencing the alloca.
+        auto *DerefExpr =
+            DIExpression::append(DDI->getExpression(), dwarf::DW_OP_deref);
+        DIB.insertDbgValueIntrinsic(AI, DDI->getVariable(), DerefExpr,
+                                    DDI->getDebugLoc(), CI);
       }
     }
     DDI->eraseFromParent();

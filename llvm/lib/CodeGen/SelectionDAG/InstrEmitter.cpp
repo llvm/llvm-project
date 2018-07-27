@@ -697,11 +697,15 @@ InstrEmitter::EmitDbgValue(SDDbgValue *SD,
   if (SD->getKind() == SDDbgValue::FRAMEIX) {
     // Stack address; this needs to be lowered in target-dependent fashion.
     // EmitTargetCodeForFrameDebugValue is responsible for allocation.
-    return BuildMI(*MF, DL, TII->get(TargetOpcode::DBG_VALUE))
-        .addFrameIndex(SD->getFrameIx())
-        .addImm(0)
-        .addMetadata(Var)
-        .addMetadata(Expr);
+    auto FrameMI = BuildMI(*MF, DL, TII->get(TargetOpcode::DBG_VALUE))
+                       .addFrameIndex(SD->getFrameIx());
+    if (SD->isIndirect())
+      // Push [fi + 0] onto the DIExpression stack.
+      FrameMI.addImm(0);
+    else
+      // Push fi onto the DIExpression stack.
+      FrameMI.addReg(0);
+    return FrameMI.addMetadata(Var).addMetadata(Expr);
   }
   // Otherwise, we're going to create an instruction here.
   const MCInstrDesc &II = TII->get(TargetOpcode::DBG_VALUE);

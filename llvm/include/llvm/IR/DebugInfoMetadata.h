@@ -2444,6 +2444,12 @@ public:
                                       SmallVectorImpl<uint64_t> &Ops,
                                       bool StackValue = false);
 
+  /// Append the opcodes \p Ops to \p DIExpr. Unlike \ref appendToStack, the
+  /// returned expression is a stack value only if \p DIExpr is a stack value.
+  /// If \p DIExpr describes a fragment, the returned expression will describe
+  /// the same fragment.
+  static DIExpression *append(const DIExpression *Expr, ArrayRef<uint64_t> Ops);
+
   /// Convert \p DIExpr into a stack value if it isn't one already by appending
   /// DW_OP_deref if needed, and appending \p Ops to the resulting expression.
   /// If \p DIExpr describes a fragment, the returned expression will describe

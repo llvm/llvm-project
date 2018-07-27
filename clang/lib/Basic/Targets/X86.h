@@ -752,7 +752,7 @@ public:
 
   TargetInfo::CallingConvKind
   getCallingConvKind(bool ClangABICompat4) const override {
-    return CCK_MicrosoftX86_64;
+    return CCK_MicrosoftWin64;
   }
 };
 

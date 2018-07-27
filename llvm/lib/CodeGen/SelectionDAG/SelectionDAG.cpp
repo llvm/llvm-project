@@ -538,6 +538,34 @@ static void AddNodeIDCustom(FoldingSetNodeID &ID, const SDNode *N) {
     ID.AddInteger(ST->getPointerInfo().getAddrSpace());
     break;
   }
+  case ISD::MLOAD: {
+    const MaskedLoadSDNode *MLD = cast<MaskedLoadSDNode>(N);
+    ID.AddInteger(MLD->getMemoryVT().getRawBits());
+    ID.AddInteger(MLD->getRawSubclassData());
+    ID.AddInteger(MLD->getPointerInfo().getAddrSpace());
+    break;
+  }
+  case ISD::MSTORE: {
+    const MaskedStoreSDNode *MST = cast<MaskedStoreSDNode>(N);
+    ID.AddInteger(MST->getMemoryVT().getRawBits());
+    ID.AddInteger(MST->getRawSubclassData());
+    ID.AddInteger(MST->getPointerInfo().getAddrSpace());
+    break;
+  }
+  case ISD::MGATHER: {
+    const MaskedGatherSDNode *MG = cast<MaskedGatherSDNode>(N);
+    ID.AddInteger(MG->getMemoryVT().getRawBits());
+    ID.AddInteger(MG->getRawSubclassData());
+    ID.AddInteger(MG->getPointerInfo().getAddrSpace());
+    break;
+  }
+  case ISD::MSCATTER: {
+    const MaskedScatterSDNode *MS = cast<MaskedScatterSDNode>(N);
+    ID.AddInteger(MS->getMemoryVT().getRawBits());
+    ID.AddInteger(MS->getRawSubclassData());
+    ID.AddInteger(MS->getPointerInfo().getAddrSpace());
+    break;
+  }
   case ISD::ATOMIC_CMP_SWAP:
   case ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS:
   case ISD::ATOMIC_SWAP:
@@ -7391,11 +7419,13 @@ SDDbgValue *SelectionDAG::getConstantDbgValue(DIVariable *Var,
 /// FrameIndex
 SDDbgValue *SelectionDAG::getFrameIndexDbgValue(DIVariable *Var,
                                                 DIExpression *Expr, unsigned FI,
+                                                bool IsIndirect,
                                                 const DebugLoc &DL,
                                                 unsigned O) {
   assert(cast<DILocalVariable>(Var)->isValidLocationForIntrinsic(DL) &&
          "Expected inlined-at fields to agree");
-  return new (DbgInfo->getAlloc()) SDDbgValue(Var, Expr, FI, DL, O);
+  return new (DbgInfo->getAlloc())
+      SDDbgValue(Var, Expr, FI, IsIndirect, DL, O, SDDbgValue::FRAMEIX);
 }
 
 /// VReg
@@ -7405,8 +7435,8 @@ SDDbgValue *SelectionDAG::getVRegDbgValue(DIVariable *Var,
                                           const DebugLoc &DL, unsigned O) {
   assert(cast<DILocalVariable>(Var)->isValidLocationForIntrinsic(DL) &&
          "Expected inlined-at fields to agree");
-  return new (DbgInfo->getAlloc()) SDDbgValue(Var, Expr, VReg, IsIndirect, DL,
-                                              O);
+  return new (DbgInfo->getAlloc())
+      SDDbgValue(Var, Expr, VReg, IsIndirect, DL, O, SDDbgValue::VREG);
 }
 
 void SelectionDAG::transferDbgValues(SDValue From, SDValue To,

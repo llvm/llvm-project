@@ -187,6 +187,8 @@ struct Type;
 // Represents a list of parameters (template params or function arguments.
 // It's represented as a linked list.
 struct ParamList {
+  bool IsVariadic = false;
+
   Type *Current = nullptr;
 
   ParamList *Next = nullptr;
@@ -262,6 +264,10 @@ struct FunctionType : public Type {
   Type *clone(ArenaAllocator &Arena) const override;
   void outputPre(OutputStream &OS) override;
   void outputPost(OutputStream &OS) override;
+
+  // True if this FunctionType instance is the Pointee of a PointerType or
+  // MemberPointerType.
+  bool IsFunctionPointer = false;
 
   Type *ReturnType = nullptr;
   // If this is a reference, the type of reference.
@@ -382,6 +388,11 @@ static void outputCallingConvention(OutputStream &OS, CallingConv CC) {
 
 // Write a function or template parameter list.
 static void outputParameterList(OutputStream &OS, const ParamList &Params) {
+  if (!Params.Current) {
+    OS << "void";
+    return;
+  }
+
   const ParamList *Head = &Params;
   while (Head) {
     Type::outputPre(OS, *Head->Current);
@@ -476,6 +487,11 @@ void Type::outputPre(OutputStream &OS, Type &Ty) {
     outputSpaceIfNecessary(OS);
     OS << "volatile";
   }
+
+  if (Ty.Quals & Q_Restrict) {
+    outputSpaceIfNecessary(OS);
+    OS << "__restrict";
+  }
 }
 
 // Write the "second half" of a given type.
@@ -544,6 +560,34 @@ Type *PointerType::clone(ArenaAllocator &Arena) const {
   return Arena.alloc<PointerType>(*this);
 }
 
+static void outputPointerIndicator(OutputStream &OS, PointerAffinity Affinity,
+                                   const Name *MemberName,
+                                   const Type *Pointee) {
+  // "[]" and "()" (for function parameters) take precedence over "*",
+  // so "int *x(int)" means "x is a function returning int *". We need
+  // parentheses to supercede the default precedence. (e.g. we want to
+  // emit something like "int (*x)(int)".)
+  if (Pointee->Prim == PrimTy::Function || Pointee->Prim == PrimTy::Array) {
+    OS << "(";
+    if (Pointee->Prim == PrimTy::Function) {
+      const FunctionType *FTy = static_cast<const FunctionType *>(Pointee);
+      assert(FTy->IsFunctionPointer);
+      outputCallingConvention(OS, FTy->CallConvention);
+      OS << " ";
+    }
+  }
+
+  if (MemberName) {
+    outputName(OS, MemberName);
+    OS << "::";
+  }
+
+  if (Affinity == PointerAffinity::Pointer)
+    OS << "*";
+  else
+    OS << "&";
+}
+
 void PointerType::outputPre(OutputStream &OS) {
   Type::outputPre(OS, *Pointee);
 
@@ -552,23 +596,14 @@ void PointerType::outputPre(OutputStream &OS) {
   if (Quals & Q_Unaligned)
     OS << "__unaligned ";
 
-  // "[]" and "()" (for function parameters) take precedence over "*",
-  // so "int *x(int)" means "x is a function returning int *". We need
-  // parentheses to supercede the default precedence. (e.g. we want to
-  // emit something like "int (*x)(int)".)
-  if (Pointee->Prim == PrimTy::Function || Pointee->Prim == PrimTy::Array)
-    OS << "(";
+  PointerAffinity Affinity = (Prim == PrimTy::Ptr) ? PointerAffinity::Pointer
+                                                   : PointerAffinity::Reference;
 
-  if (Prim == PrimTy::Ptr)
-    OS << "*";
-  else
-    OS << "&";
+  outputPointerIndicator(OS, Affinity, nullptr, Pointee);
 
   // FIXME: We should output this, but it requires updating lots of tests.
   // if (Ty.Quals & Q_Pointer64)
   //  OS << " __ptr64";
-  if (Quals & Q_Restrict)
-    OS << " __restrict";
 }
 
 void PointerType::outputPost(OutputStream &OS) {
@@ -587,15 +622,7 @@ void MemberPointerType::outputPre(OutputStream &OS) {
 
   outputSpaceIfNecessary(OS);
 
-  // "[]" and "()" (for function parameters) take precedence over "*",
-  // so "int *x(int)" means "x is a function returning int *". We need
-  // parentheses to supercede the default precedence. (e.g. we want to
-  // emit something like "int (*x)(int)".)
-  if (Pointee->Prim == PrimTy::Function || Pointee->Prim == PrimTy::Array)
-    OS << "(";
-
-  outputName(OS, MemberName);
-  OS << "::*";
+  outputPointerIndicator(OS, PointerAffinity::Pointer, MemberName, Pointee);
 
   // FIXME: We should output this, but it requires updating lots of tests.
   // if (Ty.Quals & Q_Pointer64)
@@ -621,10 +648,16 @@ void FunctionType::outputPre(OutputStream &OS) {
       OS << "static ";
   }
 
-  if (ReturnType)
+  if (ReturnType) {
     Type::outputPre(OS, *ReturnType);
+    OS << " ";
+  }
 
-  outputCallingConvention(OS, CallConvention);
+  // Function pointers print the calling convention as void (__cdecl *)(params)
+  // rather than void __cdecl (*)(params).  So we need to let the PointerType
+  // class handle this.
+  if (!IsFunctionPointer)
+    outputCallingConvention(OS, CallConvention);
 }
 
 void FunctionType::outputPost(OutputStream &OS) {
@@ -635,6 +668,9 @@ void FunctionType::outputPost(OutputStream &OS) {
     OS << " const";
   if (Quals & Q_Volatile)
     OS << " volatile";
+
+  if (ReturnType)
+    Type::outputPost(OS, *ReturnType);
   return;
 }
 
@@ -711,10 +747,12 @@ private:
   UdtType *demangleClassType();
   PointerType *demanglePointerType();
   MemberPointerType *demangleMemberPointerType();
+  FunctionType *demangleFunctionType(bool HasThisQuals, bool IsFunctionPointer);
 
   ArrayType *demangleArrayType();
 
-  ParamList demangleParameterList();
+  ParamList demangleTemplateParameterList();
+  ParamList demangleFunctionParameterList();
 
   int demangleNumber();
   void demangleNamePiece(Name &Node, bool IsHead);
@@ -724,10 +762,11 @@ private:
   Name *demangleName();
   void demangleOperator(Name *);
   StringView demangleOperatorName();
-  int demangleFunctionClass();
+  FuncClass demangleFunctionClass();
   CallingConv demangleCallingConvention();
   StorageClass demangleVariableStorageClass();
   ReferenceKind demangleReferenceKind();
+  void demangleThrowSpecification();
 
   std::pair<Qualifiers, bool> demangleQualifiers();
 
@@ -746,6 +785,22 @@ private:
 
   // Memory allocator.
   ArenaAllocator Arena;
+
+  // A single type uses one global back-ref table for all function params.
+  // This means back-refs can even go "into" other types.  Examples:
+  //
+  //  // Second int* is a back-ref to first.
+  //  void foo(int *, int*);
+  //
+  //  // Second int* is not a back-ref to first (first is not a function param).
+  //  int* foo(int*);
+  //
+  //  // Second int* is a back-ref to first (ALL function types share the same
+  //  // back-ref map.
+  //  using F = void(*)(int*);
+  //  F G(int *);
+  Type *FunctionParamBackRefs[10];
+  size_t FunctionParamBackRefCount = 0;
 
   // The first 10 BackReferences in a mangled name can be back-referenced by
   // special name @[0-9]. This is a storage for the first 10 BackReferences.
@@ -903,11 +958,7 @@ void Demangler::demangleNamePiece(Name &Node, bool IsHead) {
   } else if (MangledName.consumeFront("?$")) {
     // Class template.
     Node.Str = demangleString(false);
-    Node.TemplateParams = demangleParameterList();
-    if (!MangledName.consumeFront('@')) {
-      Error = true;
-      return;
-    }
+    Node.TemplateParams = demangleTemplateParameterList();
   } else if (!IsHead && MangledName.consumeFront("?A")) {
     // Anonymous namespace starts with ?A.  So does overloaded operator[],
     // but the distinguishing factor is that namespace themselves are not
@@ -1067,7 +1118,7 @@ StringView Demangler::demangleOperatorName() {
   return "";
 }
 
-int Demangler::demangleFunctionClass() {
+FuncClass Demangler::demangleFunctionClass() {
   SwapAndRestore<StringView> RestoreOnError(MangledName, MangledName);
   RestoreOnError.shouldRestore(false);
 
@@ -1075,48 +1126,48 @@ int Demangler::demangleFunctionClass() {
   case 'A':
     return Private;
   case 'B':
-    return Private | Far;
+    return FuncClass(Private | Far);
   case 'C':
-    return Private | Static;
+    return FuncClass(Private | Static);
   case 'D':
-    return Private | Static;
+    return FuncClass(Private | Static);
   case 'E':
-    return Private | Virtual;
+    return FuncClass(Private | Virtual);
   case 'F':
-    return Private | Virtual;
+    return FuncClass(Private | Virtual);
   case 'I':
     return Protected;
   case 'J':
-    return Protected | Far;
+    return FuncClass(Protected | Far);
   case 'K':
-    return Protected | Static;
+    return FuncClass(Protected | Static);
   case 'L':
-    return Protected | Static | Far;
+    return FuncClass(Protected | Static | Far);
   case 'M':
-    return Protected | Virtual;
+    return FuncClass(Protected | Virtual);
   case 'N':
-    return Protected | Virtual | Far;
+    return FuncClass(Protected | Virtual | Far);
   case 'Q':
     return Public;
   case 'R':
-    return Public | Far;
+    return FuncClass(Public | Far);
   case 'S':
-    return Public | Static;
+    return FuncClass(Public | Static);
   case 'T':
-    return Public | Static | Far;
+    return FuncClass(Public | Static | Far);
   case 'U':
-    return Public | Virtual;
+    return FuncClass(Public | Virtual);
   case 'V':
-    return Public | Virtual | Far;
+    return FuncClass(Public | Virtual | Far);
   case 'Y':
     return Global;
   case 'Z':
-    return Global | Far;
+    return FuncClass(Global | Far);
   }
 
   Error = true;
   RestoreOnError.shouldRestore(true);
-  return 0;
+  return Public;
 }
 
 CallingConv Demangler::demangleCallingConvention() {
@@ -1241,15 +1292,6 @@ Type *Demangler::demangleType(QualifierMangleMode QMM) {
   return Ty;
 }
 
-static bool functionHasThisPtr(const FunctionType &Ty) {
-  assert(Ty.Prim == PrimTy::Function);
-  if (Ty.FunctionClass & Global)
-    return false;
-  if (Ty.FunctionClass & Static)
-    return false;
-  return true;
-}
-
 ReferenceKind Demangler::demangleReferenceKind() {
   if (MangledName.consumeFront('G'))
     return ReferenceKind::LValueRef;
@@ -1258,12 +1300,20 @@ ReferenceKind Demangler::demangleReferenceKind() {
   return ReferenceKind::None;
 }
 
-Type *Demangler::demangleFunctionEncoding() {
-  FunctionType *FTy = Arena.alloc<FunctionType>();
+void Demangler::demangleThrowSpecification() {
+  if (MangledName.consumeFront('Z'))
+    return;
 
+  Error = true;
+}
+
+FunctionType *Demangler::demangleFunctionType(bool HasThisQuals,
+                                              bool IsFunctionPointer) {
+  FunctionType *FTy = Arena.alloc<FunctionType>();
   FTy->Prim = PrimTy::Function;
-  FTy->FunctionClass = (FuncClass)demangleFunctionClass();
-  if (functionHasThisPtr(*FTy)) {
+  FTy->IsFunctionPointer = IsFunctionPointer;
+
+  if (HasThisQuals) {
     FTy->Quals = demanglePointerExtQualifiers();
     FTy->RefKind = demangleReferenceKind();
     FTy->Quals = Qualifiers(FTy->Quals | demangleQualifiers().first);
@@ -1278,7 +1328,19 @@ Type *Demangler::demangleFunctionEncoding() {
   if (!IsStructor)
     FTy->ReturnType = demangleType(QualifierMangleMode::Result);
 
-  FTy->Params = demangleParameterList();
+  FTy->Params = demangleFunctionParameterList();
+
+  demangleThrowSpecification();
+
+  return FTy;
+}
+
+Type *Demangler::demangleFunctionEncoding() {
+  FuncClass FC = demangleFunctionClass();
+
+  bool HasThisQuals = !(FC & (Global | Static));
+  FunctionType *FTy = demangleFunctionType(HasThisQuals, false);
+  FTy->FunctionClass = FC;
 
   return FTy;
 }
@@ -1413,17 +1475,7 @@ PointerType *Demangler::demanglePointerType() {
   Pointer->Prim =
       (Affinity == PointerAffinity::Pointer) ? PrimTy::Ptr : PrimTy::Ref;
   if (MangledName.consumeFront("6")) {
-    FunctionType *FTy = Arena.alloc<FunctionType>();
-    FTy->Prim = PrimTy::Function;
-    FTy->CallConvention = demangleCallingConvention();
-
-    FTy->ReturnType = demangleType(QualifierMangleMode::Drop);
-    FTy->Params = demangleParameterList();
-
-    if (!MangledName.consumeFront("@Z"))
-      MangledName.consumeFront("Z");
-
-    Pointer->Pointee = FTy;
+    Pointer->Pointee = demangleFunctionType(false, true);
     return Pointer;
   }
 
@@ -1445,14 +1497,20 @@ MemberPointerType *Demangler::demangleMemberPointerType() {
   Qualifiers ExtQuals = demanglePointerExtQualifiers();
   Pointer->Quals = Qualifiers(Pointer->Quals | ExtQuals);
 
-  Qualifiers PointeeQuals = Q_None;
-  bool IsMember = false;
-  std::tie(PointeeQuals, IsMember) = demangleQualifiers();
-  assert(IsMember);
-  Pointer->MemberName = demangleName();
+  if (MangledName.consumeFront("8")) {
+    Pointer->MemberName = demangleName();
+    Pointer->Pointee = demangleFunctionType(true, true);
+  } else {
+    Qualifiers PointeeQuals = Q_None;
+    bool IsMember = false;
+    std::tie(PointeeQuals, IsMember) = demangleQualifiers();
+    assert(IsMember);
+    Pointer->MemberName = demangleName();
 
-  Pointer->Pointee = demangleType(QualifierMangleMode::Drop);
-  Pointer->Pointee->Quals = PointeeQuals;
+    Pointer->Pointee = demangleType(QualifierMangleMode::Drop);
+    Pointer->Pointee->Quals = PointeeQuals;
+  }
+
   return Pointer;
 }
 
@@ -1502,42 +1560,85 @@ ArrayType *Demangler::demangleArrayType() {
 }
 
 // Reads a function or a template parameters.
-ParamList Demangler::demangleParameterList() {
-  // Within the same parameter list, you can backreference the first 10 types.
-  Type *BackRef[10];
-  int Idx = 0;
+ParamList Demangler::demangleFunctionParameterList() {
+  // Empty parameter list.
+  if (MangledName.consumeFront('X'))
+    return {};
 
   ParamList *Head;
   ParamList **Current = &Head;
   while (!Error && !MangledName.startsWith('@') &&
          !MangledName.startsWith('Z')) {
+
     if (startsWithDigit(MangledName)) {
-      int N = MangledName[0] - '0';
-      if (N >= Idx) {
+      size_t N = MangledName[0] - '0';
+      if (N >= FunctionParamBackRefCount) {
         Error = true;
         return {};
       }
       MangledName = MangledName.dropFront();
 
       *Current = Arena.alloc<ParamList>();
-      (*Current)->Current = BackRef[N]->clone(Arena);
+      (*Current)->Current = FunctionParamBackRefs[N]->clone(Arena);
       Current = &(*Current)->Next;
       continue;
     }
 
-    size_t ArrayDimension = MangledName.size();
+    size_t OldSize = MangledName.size();
 
     *Current = Arena.alloc<ParamList>();
     (*Current)->Current = demangleType(QualifierMangleMode::Drop);
 
-    // Single-letter types are ignored for backreferences because
-    // memorizing them doesn't save anything.
-    if (Idx <= 9 && ArrayDimension - MangledName.size() > 1)
-      BackRef[Idx++] = (*Current)->Current;
+    size_t CharsConsumed = OldSize - MangledName.size();
+    assert(CharsConsumed != 0);
+
+    // Single-letter types are ignored for backreferences because memorizing
+    // them doesn't save anything.
+    if (FunctionParamBackRefCount <= 9 && CharsConsumed > 1)
+      FunctionParamBackRefs[FunctionParamBackRefCount++] = (*Current)->Current;
+
     Current = &(*Current)->Next;
   }
 
-  return *Head;
+  if (Error)
+    return {};
+
+  // A non-empty parameter list is terminated by either 'Z' (variadic) parameter
+  // list or '@' (non variadic).  Careful not to consume "@Z", as in that case
+  // the following Z could be a throw specifier.
+  if (MangledName.consumeFront('@'))
+    return *Head;
+
+  if (MangledName.consumeFront('Z')) {
+    Head->IsVariadic = true;
+    return *Head;
+  }
+
+  Error = true;
+  return {};
+}
+
+ParamList Demangler::demangleTemplateParameterList() {
+  ParamList *Head;
+  ParamList **Current = &Head;
+  while (!Error && !MangledName.startsWith('@')) {
+
+    // Template parameter lists don't participate in back-referencing.
+    *Current = Arena.alloc<ParamList>();
+    (*Current)->Current = demangleType(QualifierMangleMode::Drop);
+
+    Current = &(*Current)->Next;
+  }
+
+  if (Error)
+    return {};
+
+  // Template parameter lists cannot be variadic, so it can only be terminated
+  // by @.
+  if (MangledName.consumeFront('@'))
+    return *Head;
+  Error = true;
+  return {};
 }
 
 void Demangler::output() {

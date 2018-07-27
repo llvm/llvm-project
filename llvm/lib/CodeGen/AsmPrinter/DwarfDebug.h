@@ -423,8 +423,13 @@ class DwarfDebug : public DebugHandlerBase {
   void initSkeletonUnit(const DwarfUnit &U, DIE &Die,
                         std::unique_ptr<DwarfCompileUnit> NewU);
 
-  /// Construct the split debug info compile unit for the debug info
-  /// section.
+  /// Construct the split debug info compile unit for the debug info section.
+  /// In DWARF v5, the skeleton unit DIE may have the following attributes:
+  /// DW_AT_addr_base, DW_AT_comp_dir, DW_AT_dwo_name, DW_AT_high_pc,
+  /// DW_AT_low_pc, DW_AT_ranges, DW_AT_stmt_list, and DW_AT_str_offsets_base.
+  /// Prior to DWARF v5 it may also have DW_AT_GNU_dwo_id. DW_AT_GNU_dwo_name
+  /// is used instead of DW_AT_dwo_name, Dw_AT_GNU_addr_base instead of
+  /// DW_AT_addr_base, and DW_AT_GNU_ranges_base instead of DW_AT_rnglists_base.
   DwarfCompileUnit &constructSkeletonCU(const DwarfCompileUnit &CU);
 
   /// Emit the debug info dwo section.

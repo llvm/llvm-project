@@ -841,9 +841,37 @@ DIExpression *DIExpression::prependOpcodes(const DIExpression *Expr,
   return DIExpression::get(Expr->getContext(), Ops);
 }
 
+DIExpression *DIExpression::append(const DIExpression *Expr,
+                                   ArrayRef<uint64_t> Ops) {
+  assert(Expr && !Ops.empty() && "Can't append ops to this expression");
+
+  // Copy Expr's current op list.
+  SmallVector<uint64_t, 16> NewOps;
+  for (auto Op : Expr->expr_ops()) {
+    // Append new opcodes before DW_OP_{stack_value, LLVM_fragment}.
+    if (Op.getOp() == dwarf::DW_OP_stack_value ||
+        Op.getOp() == dwarf::DW_OP_LLVM_fragment) {
+      NewOps.append(Ops.begin(), Ops.end());
+
+      // Ensure that the new opcodes are only appended once.
+      Ops = None;
+    }
+    Op.appendToVector(NewOps);
+  }
+
+  NewOps.append(Ops.begin(), Ops.end());
+  return DIExpression::get(Expr->getContext(), NewOps);
+}
+
 DIExpression *DIExpression::appendToStack(const DIExpression *Expr,
                                           ArrayRef<uint64_t> Ops) {
   assert(Expr && !Ops.empty() && "Can't append ops to this expression");
+  assert(none_of(Ops,
+                 [](uint64_t Op) {
+                   return Op == dwarf::DW_OP_stack_value ||
+                          Op == dwarf::DW_OP_LLVM_fragment;
+                 }) &&
+         "Can't append this op");
 
   // Append a DW_OP_deref after Expr's current op list if it's non-empty and
   // has no DW_OP_stack_value.
@@ -851,30 +879,21 @@ DIExpression *DIExpression::appendToStack(const DIExpression *Expr,
   // Match .* DW_OP_stack_value (DW_OP_LLVM_fragment A B)?.
   Optional<FragmentInfo> FI = Expr->getFragmentInfo();
   unsigned DropUntilStackValue = FI.hasValue() ? 3 : 0;
-  bool NeedsDeref =
-      (Expr->getNumElements() > DropUntilStackValue) &&
-      (Expr->getElements().drop_back(DropUntilStackValue).back() !=
-       dwarf::DW_OP_stack_value);
+  ArrayRef<uint64_t> ExprOpsBeforeFragment =
+      Expr->getElements().drop_back(DropUntilStackValue);
+  bool NeedsDeref = (Expr->getNumElements() > DropUntilStackValue) &&
+                    (ExprOpsBeforeFragment.back() != dwarf::DW_OP_stack_value);
+  bool NeedsStackValue = NeedsDeref || ExprOpsBeforeFragment.empty();
 
-  // Copy Expr's current op list, add a DW_OP_deref if needed, and ensure that
-  // a DW_OP_stack_value is present.
+  // Append a DW_OP_deref after Expr's current op list if needed, then append
+  // the new ops, and finally ensure that a single DW_OP_stack_value is present.
   SmallVector<uint64_t, 16> NewOps;
-  for (auto Op : Expr->expr_ops()) {
-    if (Op.getOp() == dwarf::DW_OP_stack_value ||
-        Op.getOp() == dwarf::DW_OP_LLVM_fragment)
-      break;
-    Op.appendToVector(NewOps);
-  }
   if (NeedsDeref)
     NewOps.push_back(dwarf::DW_OP_deref);
   NewOps.append(Ops.begin(), Ops.end());
-  NewOps.push_back(dwarf::DW_OP_stack_value);
-
-  // If Expr is a fragment, make the new expression a fragment as well.
-  if (FI)
-    NewOps.append(
-        {dwarf::DW_OP_LLVM_fragment, FI->OffsetInBits, FI->SizeInBits});
-  return DIExpression::get(Expr->getContext(), NewOps);
+  if (NeedsStackValue)
+    NewOps.push_back(dwarf::DW_OP_stack_value);
+  return DIExpression::append(Expr, NewOps);
 }
 
 Optional<DIExpression *> DIExpression::createFragmentExpression(
