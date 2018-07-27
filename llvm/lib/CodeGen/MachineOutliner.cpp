@@ -979,7 +979,13 @@ unsigned MachineOutliner::findCandidates(
     // We've found something we might want to outline.
     // Create an OutlinedFunction to store it and check if it'd be beneficial
     // to outline.
-    OutlinedFunction OF = TII.getOutliningCandidateInfo(CandidatesForRepeatedSeq);
+    OutlinedFunction OF =
+        TII.getOutliningCandidateInfo(CandidatesForRepeatedSeq);
+
+    // If we deleted every candidate, then there's nothing to outline.
+    if (OF.Candidates.empty())
+      continue;
+
     std::vector<unsigned> Seq;
     for (unsigned i = Leaf->SuffixIdx; i < Leaf->SuffixIdx + StringLen; i++)
       Seq.push_back(ST.Str[i]);

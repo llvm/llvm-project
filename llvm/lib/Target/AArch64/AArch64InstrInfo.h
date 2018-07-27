@@ -249,6 +249,7 @@ public:
   insertOutlinedCall(Module &M, MachineBasicBlock &MBB,
                      MachineBasicBlock::iterator &It, MachineFunction &MF,
                      const outliner::Candidate &C) const override;
+  bool shouldOutlineFromFunctionByDefault(MachineFunction &MF) const override;
   /// Returns true if the instruction sets to an immediate value that can be
   /// executed more efficiently.
   bool isExynosResetFast(const MachineInstr &MI) const;

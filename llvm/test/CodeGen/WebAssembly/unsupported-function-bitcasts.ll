@@ -1,4 +1,4 @@
-; RUN: llc < %s -asm-verbose=false | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -wasm-explicit-locals-codegen-test-mode | FileCheck %s
 
 ; Test that function pointer casts that require conversions are not converted
 ; to wrappers. In theory some conversions could be supported, but currently no

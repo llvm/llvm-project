@@ -77,9 +77,11 @@ void BPFInstrInfo::expandMEMCPY(MachineBasicBlock::iterator MI) const {
   unsigned IterationNum = CopyLen >> Log2_64(Alignment);
   for(unsigned I = 0; I < IterationNum; ++I) {
     BuildMI(*BB, MI, dl, get(LdOpc))
-            .addReg(ScratchReg).addReg(SrcReg).addImm(I * Alignment);
+            .addReg(ScratchReg, RegState::Define).addReg(SrcReg)
+            .addImm(I * Alignment);
     BuildMI(*BB, MI, dl, get(StOpc))
-            .addReg(ScratchReg).addReg(DstReg).addImm(I * Alignment);
+            .addReg(ScratchReg, RegState::Kill).addReg(DstReg)
+            .addImm(I * Alignment);
   }
 
   unsigned BytesLeft = CopyLen & (Alignment - 1);
@@ -89,23 +91,23 @@ void BPFInstrInfo::expandMEMCPY(MachineBasicBlock::iterator MI) const {
   bool Hanging1Byte = BytesLeft & 0x1;
   if (Hanging4Byte) {
     BuildMI(*BB, MI, dl, get(BPF::LDW))
-            .addReg(ScratchReg).addReg(SrcReg).addImm(Offset);
+            .addReg(ScratchReg, RegState::Define).addReg(SrcReg).addImm(Offset);
     BuildMI(*BB, MI, dl, get(BPF::STW))
-            .addReg(ScratchReg).addReg(DstReg).addImm(Offset);
+            .addReg(ScratchReg, RegState::Kill).addReg(DstReg).addImm(Offset);
     Offset += 4;
   }
   if (Hanging2Byte) {
     BuildMI(*BB, MI, dl, get(BPF::LDH))
-            .addReg(ScratchReg).addReg(SrcReg).addImm(Offset);
+            .addReg(ScratchReg, RegState::Define).addReg(SrcReg).addImm(Offset);
     BuildMI(*BB, MI, dl, get(BPF::STH))
-            .addReg(ScratchReg).addReg(DstReg).addImm(Offset);
+            .addReg(ScratchReg, RegState::Kill).addReg(DstReg).addImm(Offset);
     Offset += 2;
   }
   if (Hanging1Byte) {
     BuildMI(*BB, MI, dl, get(BPF::LDB))
-            .addReg(ScratchReg).addReg(SrcReg).addImm(Offset);
+            .addReg(ScratchReg, RegState::Define).addReg(SrcReg).addImm(Offset);
     BuildMI(*BB, MI, dl, get(BPF::STB))
-            .addReg(ScratchReg).addReg(DstReg).addImm(Offset);
+            .addReg(ScratchReg, RegState::Kill).addReg(DstReg).addImm(Offset);
   }
 
   BB->erase(MI);

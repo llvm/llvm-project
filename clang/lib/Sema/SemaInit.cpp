@@ -7406,16 +7406,6 @@ InitializationSequence::Perform(Sema &S,
         if (S.DiagnoseUseOfDecl(FoundFn, Kind.getLocation()))
           return ExprError();
 
-        // FIXME: Should we move this initialization into a separate
-        // derived-to-base conversion? I believe the answer is "no", because
-        // we don't want to turn off access control here for c-style casts.
-        CurInit = S.PerformObjectArgumentInitialization(CurInit.get(),
-                                                        /*Qualifier=*/nullptr,
-                                                        FoundFn, Conversion);
-        if (CurInit.isInvalid())
-          return ExprError();
-
-        // Build the actual call to the conversion function.
         CurInit = S.BuildCXXMemberCallExpr(CurInit.get(), FoundFn, Conversion,
                                            HadMultipleCandidates);
         if (CurInit.isInvalid())

@@ -1,4 +1,4 @@
-; RUN: llc < %s -asm-verbose=false -disable-wasm-explicit-locals -enable-emscripten-cxx-exceptions -wasm-temporary-workarounds=false | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -wasm-register-codegen-test-mode -enable-emscripten-cxx-exceptions -wasm-temporary-workarounds=false | FileCheck %s
 
 ; Test that function pointer casts are replaced with wrappers.
 

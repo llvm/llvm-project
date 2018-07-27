@@ -1,5 +1,5 @@
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -verify-machineinstrs | FileCheck %s
-; RUN: llc < %s -asm-verbose=false -fast-isel -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-explicit-locals-codegen-test-mode -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -wasm-explicit-locals-codegen-test-mode -fast-isel -verify-machineinstrs | FileCheck %s
 
 ; Test that FastISel does not generate instructions with NoReg
 

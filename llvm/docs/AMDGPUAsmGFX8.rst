@@ -22,6 +22,7 @@ DS
     ds_add_rtn_f32                 dst, src0, src1                :ref:`ds_offset16<amdgpu_synid_ds_offset16>` :ref:`gds<amdgpu_synid_gds>`
     ds_add_rtn_u32                 dst, src0, src1                :ref:`ds_offset16<amdgpu_synid_ds_offset16>` :ref:`gds<amdgpu_synid_gds>`
     ds_add_rtn_u64                 dst, src0, src1                :ref:`ds_offset16<amdgpu_synid_ds_offset16>` :ref:`gds<amdgpu_synid_gds>`
+    ds_add_src2_f32                src0                           :ref:`ds_offset16<amdgpu_synid_ds_offset16>` :ref:`gds<amdgpu_synid_gds>`
     ds_add_src2_u32                src0                           :ref:`ds_offset16<amdgpu_synid_ds_offset16>` :ref:`gds<amdgpu_synid_gds>`
     ds_add_src2_u64                src0                           :ref:`ds_offset16<amdgpu_synid_ds_offset16>` :ref:`gds<amdgpu_synid_gds>`
     ds_add_u32                     src0, src1                     :ref:`ds_offset16<amdgpu_synid_ds_offset16>` :ref:`gds<amdgpu_synid_gds>`
@@ -261,6 +262,10 @@ MIMG
     image_get_resinfo              dst, src0, src1                :ref:`dmask<amdgpu_synid_dmask>` :ref:`unorm<amdgpu_synid_unorm>` :ref:`glc<amdgpu_synid_glc>` :ref:`slc<amdgpu_synid_slc>` :ref:`tfe<amdgpu_synid_tfe>` :ref:`lwe<amdgpu_synid_lwe>` :ref:`da<amdgpu_synid_da>`
     image_load                     dst, src0, src1                :ref:`dmask<amdgpu_synid_dmask>` :ref:`unorm<amdgpu_synid_unorm>` :ref:`glc<amdgpu_synid_glc>` :ref:`slc<amdgpu_synid_slc>` :ref:`tfe<amdgpu_synid_tfe>` :ref:`lwe<amdgpu_synid_lwe>` :ref:`da<amdgpu_synid_da>` :ref:`d16<amdgpu_synid_d16>`
     image_load_mip                 dst, src0, src1                :ref:`dmask<amdgpu_synid_dmask>` :ref:`unorm<amdgpu_synid_unorm>` :ref:`glc<amdgpu_synid_glc>` :ref:`slc<amdgpu_synid_slc>` :ref:`tfe<amdgpu_synid_tfe>` :ref:`lwe<amdgpu_synid_lwe>` :ref:`da<amdgpu_synid_da>` :ref:`d16<amdgpu_synid_d16>`
+    image_load_mip_pck             dst, src0, src1                :ref:`dmask<amdgpu_synid_dmask>` :ref:`unorm<amdgpu_synid_unorm>` :ref:`glc<amdgpu_synid_glc>` :ref:`slc<amdgpu_synid_slc>` :ref:`tfe<amdgpu_synid_tfe>` :ref:`lwe<amdgpu_synid_lwe>` :ref:`da<amdgpu_synid_da>`
+    image_load_mip_pck_sgn         dst, src0, src1                :ref:`dmask<amdgpu_synid_dmask>` :ref:`unorm<amdgpu_synid_unorm>` :ref:`glc<amdgpu_synid_glc>` :ref:`slc<amdgpu_synid_slc>` :ref:`tfe<amdgpu_synid_tfe>` :ref:`lwe<amdgpu_synid_lwe>` :ref:`da<amdgpu_synid_da>`
+    image_load_pck                 dst, src0, src1                :ref:`dmask<amdgpu_synid_dmask>` :ref:`unorm<amdgpu_synid_unorm>` :ref:`glc<amdgpu_synid_glc>` :ref:`slc<amdgpu_synid_slc>` :ref:`tfe<amdgpu_synid_tfe>` :ref:`lwe<amdgpu_synid_lwe>` :ref:`da<amdgpu_synid_da>`
+    image_load_pck_sgn             dst, src0, src1                :ref:`dmask<amdgpu_synid_dmask>` :ref:`unorm<amdgpu_synid_unorm>` :ref:`glc<amdgpu_synid_glc>` :ref:`slc<amdgpu_synid_slc>` :ref:`tfe<amdgpu_synid_tfe>` :ref:`lwe<amdgpu_synid_lwe>` :ref:`da<amdgpu_synid_da>`
     image_sample                   dst, src0, src1, src2          :ref:`dmask<amdgpu_synid_dmask>` :ref:`unorm<amdgpu_synid_unorm>` :ref:`glc<amdgpu_synid_glc>` :ref:`slc<amdgpu_synid_slc>` :ref:`tfe<amdgpu_synid_tfe>` :ref:`lwe<amdgpu_synid_lwe>` :ref:`da<amdgpu_synid_da>` :ref:`d16<amdgpu_synid_d16>`
     image_sample_b                 dst, src0, src1, src2          :ref:`dmask<amdgpu_synid_dmask>` :ref:`unorm<amdgpu_synid_unorm>` :ref:`glc<amdgpu_synid_glc>` :ref:`slc<amdgpu_synid_slc>` :ref:`tfe<amdgpu_synid_tfe>` :ref:`lwe<amdgpu_synid_lwe>` :ref:`da<amdgpu_synid_da>` :ref:`d16<amdgpu_synid_d16>`
     image_sample_b_cl              dst, src0, src1, src2          :ref:`dmask<amdgpu_synid_dmask>` :ref:`unorm<amdgpu_synid_unorm>` :ref:`glc<amdgpu_synid_glc>` :ref:`slc<amdgpu_synid_slc>` :ref:`tfe<amdgpu_synid_tfe>` :ref:`lwe<amdgpu_synid_lwe>` :ref:`da<amdgpu_synid_da>` :ref:`d16<amdgpu_synid_d16>`
@@ -275,6 +280,8 @@ MIMG
     image_sample_lz                dst, src0, src1, src2          :ref:`dmask<amdgpu_synid_dmask>` :ref:`unorm<amdgpu_synid_unorm>` :ref:`glc<amdgpu_synid_glc>` :ref:`slc<amdgpu_synid_slc>` :ref:`tfe<amdgpu_synid_tfe>` :ref:`lwe<amdgpu_synid_lwe>` :ref:`da<amdgpu_synid_da>` :ref:`d16<amdgpu_synid_d16>`
     image_store                    src0, src1, src2               :ref:`dmask<amdgpu_synid_dmask>` :ref:`unorm<amdgpu_synid_unorm>` :ref:`glc<amdgpu_synid_glc>` :ref:`slc<amdgpu_synid_slc>` :ref:`lwe<amdgpu_synid_lwe>` :ref:`da<amdgpu_synid_da>` :ref:`d16<amdgpu_synid_d16>`
     image_store_mip                src0, src1, src2               :ref:`dmask<amdgpu_synid_dmask>` :ref:`unorm<amdgpu_synid_unorm>` :ref:`glc<amdgpu_synid_glc>` :ref:`slc<amdgpu_synid_slc>` :ref:`lwe<amdgpu_synid_lwe>` :ref:`da<amdgpu_synid_da>` :ref:`d16<amdgpu_synid_d16>`
+    image_store_mip_pck            src0, src1, src2               :ref:`dmask<amdgpu_synid_dmask>` :ref:`unorm<amdgpu_synid_unorm>` :ref:`glc<amdgpu_synid_glc>` :ref:`slc<amdgpu_synid_slc>` :ref:`lwe<amdgpu_synid_lwe>` :ref:`da<amdgpu_synid_da>`
+    image_store_pck                src0, src1, src2               :ref:`dmask<amdgpu_synid_dmask>` :ref:`unorm<amdgpu_synid_unorm>` :ref:`glc<amdgpu_synid_glc>` :ref:`slc<amdgpu_synid_slc>` :ref:`lwe<amdgpu_synid_lwe>` :ref:`da<amdgpu_synid_da>`
 
 MUBUF
 ===========================
@@ -336,6 +343,7 @@ MUBUF
     buffer_store_format_xy         src0, src1, src2, src3         :ref:`idxen<amdgpu_synid_idxen>` :ref:`offen<amdgpu_synid_offen>` :ref:`buf_offset12<amdgpu_synid_buf_offset12>` :ref:`glc<amdgpu_synid_glc>` :ref:`slc<amdgpu_synid_slc>`
     buffer_store_format_xyz        src0, src1, src2, src3         :ref:`idxen<amdgpu_synid_idxen>` :ref:`offen<amdgpu_synid_offen>` :ref:`buf_offset12<amdgpu_synid_buf_offset12>` :ref:`glc<amdgpu_synid_glc>` :ref:`slc<amdgpu_synid_slc>`
     buffer_store_format_xyzw       src0, src1, src2, src3         :ref:`idxen<amdgpu_synid_idxen>` :ref:`offen<amdgpu_synid_offen>` :ref:`buf_offset12<amdgpu_synid_buf_offset12>` :ref:`glc<amdgpu_synid_glc>` :ref:`slc<amdgpu_synid_slc>`
+    buffer_store_lds_dword         src0, src1                     :ref:`buf_offset12<amdgpu_synid_buf_offset12>` :ref:`lds<amdgpu_synid_lds>` :ref:`glc<amdgpu_synid_glc>` :ref:`slc<amdgpu_synid_slc>`
     buffer_store_short             src0, src1, src2, src3         :ref:`idxen<amdgpu_synid_idxen>` :ref:`offen<amdgpu_synid_offen>` :ref:`buf_offset12<amdgpu_synid_buf_offset12>` :ref:`glc<amdgpu_synid_glc>` :ref:`slc<amdgpu_synid_slc>`
     buffer_wbinvl1
     buffer_wbinvl1_vol
@@ -345,6 +353,8 @@ SMEM
 
 .. parsed-literal::
 
+    s_atc_probe                    src0, src1, src2
+    s_atc_probe_buffer             src0, src1, src2
     s_buffer_load_dword            dst, src0, src1                :ref:`glc<amdgpu_synid_glc>`
     s_buffer_load_dwordx16         dst, src0, src1                :ref:`glc<amdgpu_synid_glc>`
     s_buffer_load_dwordx2          dst, src0, src1                :ref:`glc<amdgpu_synid_glc>`
@@ -794,6 +804,8 @@ VOP2
     v_ashrrev_i32_dpp              dst, src0, src1                :ref:`dpp_ctrl<amdgpu_synid_dpp_ctrl>` :ref:`row_mask<amdgpu_synid_row_mask>` :ref:`bank_mask<amdgpu_synid_bank_mask>` :ref:`bound_ctrl<amdgpu_synid_bound_ctrl>`
     v_ashrrev_i32_sdwa             dst, src0, src1                :ref:`dst_sel<amdgpu_synid_dst_sel>` :ref:`dst_unused<amdgpu_synid_dst_unused>` :ref:`src0_sel<amdgpu_synid_src0_sel>` :ref:`src1_sel<amdgpu_synid_src1_sel>`
     v_cndmask_b32                  dst, src0, src1, src2
+    v_cndmask_b32_dpp              dst, src0, src1, src2          :ref:`dpp_ctrl<amdgpu_synid_dpp_ctrl>` :ref:`row_mask<amdgpu_synid_row_mask>` :ref:`bank_mask<amdgpu_synid_bank_mask>` :ref:`bound_ctrl<amdgpu_synid_bound_ctrl>`
+    v_cndmask_b32_sdwa             dst, src0, src1, src2          :ref:`dst_sel<amdgpu_synid_dst_sel>` :ref:`dst_unused<amdgpu_synid_dst_unused>` :ref:`src0_sel<amdgpu_synid_src0_sel>` :ref:`src1_sel<amdgpu_synid_src1_sel>`
     v_ldexp_f16                    dst, src0, src1
     v_ldexp_f16_dpp                dst, src0, src1                :ref:`dpp_ctrl<amdgpu_synid_dpp_ctrl>` :ref:`row_mask<amdgpu_synid_row_mask>` :ref:`bank_mask<amdgpu_synid_bank_mask>` :ref:`bound_ctrl<amdgpu_synid_bound_ctrl>`
     v_ldexp_f16_sdwa               dst, src0, src1                :ref:`clamp<amdgpu_synid_clamp>` :ref:`dst_sel<amdgpu_synid_dst_sel>` :ref:`dst_unused<amdgpu_synid_dst_unused>` :ref:`src0_sel<amdgpu_synid_src0_sel>` :ref:`src1_sel<amdgpu_synid_src1_sel>`

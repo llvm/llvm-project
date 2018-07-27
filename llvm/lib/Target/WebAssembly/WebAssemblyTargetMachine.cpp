@@ -317,9 +317,6 @@ void WebAssemblyPassConfig::addPreEmitPass() {
   // converted into a local.
   addPass(createWebAssemblyFixIrreducibleControlFlow());
 
-  // Insert explicit get_local and set_local operators.
-  addPass(createWebAssemblyExplicitLocals());
-
   // Do various transformations for exception handling
   addPass(createWebAssemblyLateEHPrepare());
 
@@ -336,6 +333,9 @@ void WebAssemblyPassConfig::addPreEmitPass() {
   // Perform the very last peephole optimizations on the code.
   if (getOptLevel() != CodeGenOpt::None)
     addPass(createWebAssemblyPeephole());
+
+  // Insert explicit get_local and set_local operators.
+  addPass(createWebAssemblyExplicitLocals());
 
   // Create a mapping from LLVM CodeGen virtual registers to wasm registers.
   addPass(createWebAssemblyRegNumbering());

@@ -4967,6 +4967,10 @@ AArch64InstrInfo::getOutliningCandidateInfo(
                                             CantGuaranteeValueAcrossCall),
                              RepeatedSequenceLocs.end());
 
+  // If the sequence is empty, we're done.
+  if (RepeatedSequenceLocs.empty())
+    return outliner::OutlinedFunction();
+
   // At this point, we have only "safe" candidates to outline. Figure out
   // frame + call instruction information.
 
@@ -5477,4 +5481,9 @@ MachineBasicBlock::iterator AArch64InstrInfo::insertOutlinedCall(
   It = MBB.insert(It, LDRXpost);
 
   return CallPt;
+}
+
+bool AArch64InstrInfo::shouldOutlineFromFunctionByDefault(
+  MachineFunction &MF) const {
+  return MF.getFunction().optForMinSize();
 }
