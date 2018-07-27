@@ -7,6 +7,8 @@
 void abcdefghi12(void) {
  const wchar_t (*ss)[12] = &STR2WSTR(__FUNCTION__);
  static int arr[sizeof(STR2WSTR(__FUNCTION__))==12*sizeof(wchar_t) ? 1 : -1];
+ const wchar_t (*ss2)[31] = &STR2WSTR(__FUNCSIG__);
+ static int arr2[sizeof(STR2WSTR(__FUNCSIG__))==31*sizeof(wchar_t) ? 1 : -1];
 }
 
 namespace PR13206 {

@@ -49,6 +49,24 @@ An example of using ``LD_LIBRARY_PATH``:
   $ export LD_LIBRARY_PATH=<libcxx-install-prefix>/lib
   $ ./a.out # Searches for libc++ along LD_LIBRARY_PATH
 
+
+Using ``<filesystem>`` and libc++fs
+====================================
+
+Libc++ provides the implementation of the filesystem library in a separate
+library. Users of ``<filesystem>`` and ``<experimental/filesystem>`` are
+required to link ``-lc++fs``.
+
+.. note::
+  Prior to libc++ 7.0, users of ``<experimental/filesystem>`` were required
+  to link libc++experimental.
+
+.. warning::
+  The Filesystem library is still experimental in nature. As such normal
+  guarantees about ABI stability and backwards compatibility do not yet apply
+  to it. In the future, this restriction will be removed.
+
+
 Using libc++experimental and ``<experimental/...>``
 =====================================================
 
@@ -64,6 +82,9 @@ Libc++experimental.a may not always be available, even when libc++ is already
 installed. For information on building libc++experimental from source see
 :ref:`Building Libc++ <build instructions>` and
 :ref:`libc++experimental CMake Options <libc++experimental options>`.
+
+Note that as of libc++ 7.0 using the ``<experimental/filesystem>`` requires linking
+libc++fs instead of libc++experimental.
 
 Also see the `Experimental Library Implementation Status <http://libcxx.llvm.org/ts1z_status.html>`__
 page.

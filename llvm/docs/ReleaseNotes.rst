@@ -101,6 +101,14 @@ Non-comprehensive list of changes in this release
 * Early support for UBsan, X-Ray instrumentation and libFuzzer (x86 and x86_64) for OpenBSD. Support for MSan
   (x86_64), X-Ray instrumentation and libFuzzer (x86 and x86_64) for FreeBSD.
 
+* ``SmallVector<T, 0>`` shrank from ``sizeof(void*) * 4 + sizeof(T)`` to
+  ``sizeof(void*) + sizeof(unsigned) * 2``, smaller than ``std::vector<T>`` on
+  64-bit platforms.  The maximum capacity is now restricted to ``UINT32_MAX``.
+  Since SmallVector doesn't have the exception-safety pessimizations some
+  implementations saddle std::vector with and is better at using ``realloc``,
+  it's now a better choice even on the heap (although when TinyPtrVector works,
+  it's even smaller).
+
 * Note..
 
 .. NOTE

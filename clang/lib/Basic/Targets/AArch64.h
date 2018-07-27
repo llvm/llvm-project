@@ -126,6 +126,8 @@ public:
                               MacroBuilder &Builder) const;
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
+  TargetInfo::CallingConvKind
+  getCallingConvKind(bool ClangABICompat4) const override;
 };
 
 // ARM64 MinGW target
