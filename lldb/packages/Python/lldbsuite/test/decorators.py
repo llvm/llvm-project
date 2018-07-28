@@ -791,7 +791,7 @@ def skipIfLLVMTargetMissing(target):
         if targets.GetItemAtIndex(i).GetStringValue(99) == target:
             found = True
             break
-    
+
     return unittest2.skipIf(not found, "requires " + target)
 
 # Call sysctl on darwin to see if a specified hardware feature is available on this machine.

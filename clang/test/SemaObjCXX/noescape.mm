@@ -88,3 +88,42 @@ void test0() {
 
   S5<&noescapeFunc2> ne1;
 }
+
+@protocol NoescapeProt
+-(void) m0:(int*)__attribute__((noescape)) p; // expected-note 2 {{parameter of overridden method is annotated with __attribute__((noescape))}}
++(void) m1:(int*)__attribute__((noescape)) p;
+-(void) m1:(int*) p;
+@end
+
+__attribute__((objc_root_class))
+@interface C3
+-(void) m0:(int*) p;
++(void) m1:(int*)__attribute__((noescape)) p;
+-(void) m1:(int*) p;
+@end
+
+@interface C3 () <NoescapeProt> // expected-note {{class extension conforms to protocol 'NoescapeProt' which defines method 'm0:'}}
+@end
+
+@implementation C3
+-(void) m0:(int*) p { // expected-warning {{parameter of overriding method should be annotated with __attribute__((noescape))}}
+}
++(void) m1:(int*)__attribute__((noescape)) p {
+}
+-(void) m1:(int*) p {
+}
+@end
+
+__attribute__((objc_root_class))
+@interface C4 <NoescapeProt>
+-(void) m0:(int*) p; // expected-warning {{parameter of overriding method should be annotated with __attribute__((noescape))}}
+@end
+
+@implementation C4
+-(void) m0:(int*) p {
+}
++(void) m1:(int*)__attribute__((noescape)) p {
+}
+-(void) m1:(int*) p {
+}
+@end

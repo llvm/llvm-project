@@ -90,7 +90,7 @@ class LibcxxListDataFormatterTestCase(TestBase):
 
         self.runCmd("n") # This gets up past the printf
         self.runCmd("n") # Now advance over the first push_back.
-        
+
         self.expect("frame variable numbers_list",
                     substrs=['list has 1 items',
                              '[0] = ',

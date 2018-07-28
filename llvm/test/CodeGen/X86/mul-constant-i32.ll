@@ -1997,6 +1997,118 @@ define i32 @test_mul_by_520(i32 %x) {
   ret i32 %mul
 }
 
+define i32 @test_mul_by_neg10(i32 %x) {
+; X86-LABEL: test_mul_by_neg10:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    addl %eax, %eax
+; X86-NEXT:    leal (%eax,%eax,4), %eax
+; X86-NEXT:    negl %eax
+; X86-NEXT:    retl
+;
+; X64-HSW-LABEL: test_mul_by_neg10:
+; X64-HSW:       # %bb.0:
+; X64-HSW-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-HSW-NEXT:    addl %edi, %edi # sched: [1:0.25]
+; X64-HSW-NEXT:    leal (%rdi,%rdi,4), %eax # sched: [1:0.50]
+; X64-HSW-NEXT:    negl %eax # sched: [1:0.25]
+; X64-HSW-NEXT:    retq # sched: [7:1.00]
+;
+; X64-JAG-LABEL: test_mul_by_neg10:
+; X64-JAG:       # %bb.0:
+; X64-JAG-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-JAG-NEXT:    addl %edi, %edi # sched: [1:0.50]
+; X64-JAG-NEXT:    leal (%rdi,%rdi,4), %eax # sched: [2:1.00]
+; X64-JAG-NEXT:    negl %eax # sched: [1:0.50]
+; X64-JAG-NEXT:    retq # sched: [4:1.00]
+;
+; X86-NOOPT-LABEL: test_mul_by_neg10:
+; X86-NOOPT:       # %bb.0:
+; X86-NOOPT-NEXT:    imull $-10, {{[0-9]+}}(%esp), %eax
+; X86-NOOPT-NEXT:    retl
+;
+; HSW-NOOPT-LABEL: test_mul_by_neg10:
+; HSW-NOOPT:       # %bb.0:
+; HSW-NOOPT-NEXT:    imull $-10, %edi, %eax # sched: [3:1.00]
+; HSW-NOOPT-NEXT:    retq # sched: [7:1.00]
+;
+; JAG-NOOPT-LABEL: test_mul_by_neg10:
+; JAG-NOOPT:       # %bb.0:
+; JAG-NOOPT-NEXT:    imull $-10, %edi, %eax # sched: [3:1.00]
+; JAG-NOOPT-NEXT:    retq # sched: [4:1.00]
+;
+; X64-SLM-LABEL: test_mul_by_neg10:
+; X64-SLM:       # %bb.0:
+; X64-SLM-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-SLM-NEXT:    addl %edi, %edi # sched: [1:0.50]
+; X64-SLM-NEXT:    leal (%rdi,%rdi,4), %eax # sched: [1:1.00]
+; X64-SLM-NEXT:    negl %eax # sched: [1:0.50]
+; X64-SLM-NEXT:    retq # sched: [4:1.00]
+;
+; SLM-NOOPT-LABEL: test_mul_by_neg10:
+; SLM-NOOPT:       # %bb.0:
+; SLM-NOOPT-NEXT:    imull $-10, %edi, %eax # sched: [3:1.00]
+; SLM-NOOPT-NEXT:    retq # sched: [4:1.00]
+  %mul = mul nsw i32 %x, -10
+  ret i32 %mul
+}
+
+define i32 @test_mul_by_neg36(i32 %x) {
+; X86-LABEL: test_mul_by_neg36:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    shll $2, %eax
+; X86-NEXT:    leal (%eax,%eax,8), %eax
+; X86-NEXT:    negl %eax
+; X86-NEXT:    retl
+;
+; X64-HSW-LABEL: test_mul_by_neg36:
+; X64-HSW:       # %bb.0:
+; X64-HSW-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-HSW-NEXT:    shll $2, %edi # sched: [1:0.50]
+; X64-HSW-NEXT:    leal (%rdi,%rdi,8), %eax # sched: [1:0.50]
+; X64-HSW-NEXT:    negl %eax # sched: [1:0.25]
+; X64-HSW-NEXT:    retq # sched: [7:1.00]
+;
+; X64-JAG-LABEL: test_mul_by_neg36:
+; X64-JAG:       # %bb.0:
+; X64-JAG-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-JAG-NEXT:    shll $2, %edi # sched: [1:0.50]
+; X64-JAG-NEXT:    leal (%rdi,%rdi,8), %eax # sched: [2:1.00]
+; X64-JAG-NEXT:    negl %eax # sched: [1:0.50]
+; X64-JAG-NEXT:    retq # sched: [4:1.00]
+;
+; X86-NOOPT-LABEL: test_mul_by_neg36:
+; X86-NOOPT:       # %bb.0:
+; X86-NOOPT-NEXT:    imull $-36, {{[0-9]+}}(%esp), %eax
+; X86-NOOPT-NEXT:    retl
+;
+; HSW-NOOPT-LABEL: test_mul_by_neg36:
+; HSW-NOOPT:       # %bb.0:
+; HSW-NOOPT-NEXT:    imull $-36, %edi, %eax # sched: [3:1.00]
+; HSW-NOOPT-NEXT:    retq # sched: [7:1.00]
+;
+; JAG-NOOPT-LABEL: test_mul_by_neg36:
+; JAG-NOOPT:       # %bb.0:
+; JAG-NOOPT-NEXT:    imull $-36, %edi, %eax # sched: [3:1.00]
+; JAG-NOOPT-NEXT:    retq # sched: [4:1.00]
+;
+; X64-SLM-LABEL: test_mul_by_neg36:
+; X64-SLM:       # %bb.0:
+; X64-SLM-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-SLM-NEXT:    shll $2, %edi # sched: [1:1.00]
+; X64-SLM-NEXT:    leal (%rdi,%rdi,8), %eax # sched: [1:1.00]
+; X64-SLM-NEXT:    negl %eax # sched: [1:0.50]
+; X64-SLM-NEXT:    retq # sched: [4:1.00]
+;
+; SLM-NOOPT-LABEL: test_mul_by_neg36:
+; SLM-NOOPT:       # %bb.0:
+; SLM-NOOPT-NEXT:    imull $-36, %edi, %eax # sched: [3:1.00]
+; SLM-NOOPT-NEXT:    retq # sched: [4:1.00]
+  %mul = mul nsw i32 %x, -36
+  ret i32 %mul
+}
+
 ; (x*9+42)*(x*5+2)
 define i32 @test_mul_spec(i32 %x) nounwind {
 ; X86-LABEL: test_mul_spec:

@@ -1,4 +1,4 @@
-; RUN: llc < %s -mattr=+atomics -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-register-codegen-test-mode | FileCheck %s
+; RUN: llc < %s -mattr=+atomics -asm-verbose=false -disable-wasm-fallthrough-return-opt -disable-wasm-explicit-locals | FileCheck %s
 
 ; Test loads and stores with custom alignment values.
 

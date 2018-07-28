@@ -326,9 +326,7 @@ if (APPLE)
   set(LLDB_FRAMEWORK_INSTALL_DIR Library/Frameworks CACHE STRING "Output directory for LLDB.framework")
   set(LLDB_FRAMEWORK_VERSION A CACHE STRING "LLDB.framework version (default is A)")
   set(LLDB_FRAMEWORK_RESOURCE_DIR
-    Versions/${LLDB_FRAMEWORK_VERSION}/Resources)
-  set(LLDB_FRAMEWORK_HEADER_DIR
-    Versions/${LLDB_FRAMEWORK_VERSION}/Headers)
+    LLDB.framework/Versions/${LLDB_FRAMEWORK_VERSION}/Resources)
 
   add_definitions( -DLIBXML2_DEFINED )
   list(APPEND system_libs xml2

@@ -450,6 +450,8 @@ class ReferenceType : public Node {
   const Node *Pointee;
   ReferenceKind RK;
 
+  mutable bool Printing = false;
+
   // Dig through any refs to refs, collapsing the ReferenceTypes as we go. The
   // rule here is rvalue ref to rvalue ref collapses to a rvalue ref, and any
   // other combination collapses to a lvalue ref.
@@ -476,6 +478,9 @@ public:
   }
 
   void printLeft(OutputStream &s) const override {
+    if (Printing)
+      return;
+    SwapAndRestore<bool> SavePrinting(Printing, true);
     std::pair<ReferenceKind, const Node *> Collapsed = collapse(s);
     Collapsed.second->printLeft(s);
     if (Collapsed.second->hasArray(s))
@@ -486,6 +491,9 @@ public:
     s += (Collapsed.first == ReferenceKind::LValue ? "&" : "&&");
   }
   void printRight(OutputStream &s) const override {
+    if (Printing)
+      return;
+    SwapAndRestore<bool> SavePrinting(Printing, true);
     std::pair<ReferenceKind, const Node *> Collapsed = collapse(s);
     if (Collapsed.second->hasArray(s) || Collapsed.second->hasFunction(s))
       s += ")";

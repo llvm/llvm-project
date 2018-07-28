@@ -23,7 +23,7 @@ namespace clang {
 
 class CFG;
 class CFGBlock;
-  
+
 // A class that performs reachability queries for CFGBlocks. Several internal
 // checks in this checker require reachability information. The requests all
 // tend to have a common destination, so we lazily do a predecessor search
@@ -45,7 +45,7 @@ public:
 private:
   void mapReachability(const CFGBlock *Dst);
 };
-  
+
 } // namespace clang
 
 #endif // LLVM_CLANG_ANALYSIS_ANALYSES_CFGREACHABILITYANALYSIS_H

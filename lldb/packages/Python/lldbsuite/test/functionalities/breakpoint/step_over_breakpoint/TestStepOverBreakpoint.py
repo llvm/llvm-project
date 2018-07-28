@@ -1,8 +1,8 @@
 """
 Test that breakpoints do not affect stepping.
-Check for correct StopReason when stepping to the line with breakpoint 
+Check for correct StopReason when stepping to the line with breakpoint
 which chould be eStopReasonBreakpoint in general,
-and eStopReasonPlanComplete when breakpoint's condition fails.  
+and eStopReasonPlanComplete when breakpoint's condition fails.
 """
 
 from __future__ import print_function
@@ -19,7 +19,7 @@ class StepOverBreakpointsTestCase(TestBase):
 
     def setUp(self):
         TestBase.setUp(self)
-       
+
         self.build()
         exe = self.getBuildArtifact("a.out")
         src = lldb.SBFileSpec("main.cpp")
@@ -32,7 +32,7 @@ class StepOverBreakpointsTestCase(TestBase):
         self.line1 = line_number('main.cpp', "breakpoint_1")
         self.line4 = line_number('main.cpp', "breakpoint_4")
 
-        self.breakpoint1 = self.target.BreakpointCreateByLocation(src, self.line1)        
+        self.breakpoint1 = self.target.BreakpointCreateByLocation(src, self.line1)
         self.assertTrue(
             self.breakpoint1 and self.breakpoint1.GetNumLocations() == 1,
             VALID_BREAKPOINT)
@@ -52,7 +52,7 @@ class StepOverBreakpointsTestCase(TestBase):
         self.thread = lldbutil.get_one_thread_stopped_at_breakpoint(self.process, self.breakpoint1)
         self.assertIsNotNone(self.thread, "Didn't stop at breakpoint 1.")
 
-    def test_step_instruction(self): 
+    def test_step_instruction(self):
         # Count instructions between breakpoint_1 and breakpoint_4
         contextList = self.target.FindFunctions('main', lldb.eFunctionNameTypeAuto)
         self.assertEquals(contextList.GetSize(), 1)
@@ -89,7 +89,7 @@ class StepOverBreakpointsTestCase(TestBase):
     @skipIf(bugnumber="llvm.org/pr31972", hostoslist=["windows"])
     def test_step_over(self):
         #lldb.DBG.EnableLog("lldb", ["step","breakpoint"])
-        
+
         self.thread.StepOver()
         # We should be stopped at the breakpoint_2 line with stop plan complete reason
         self.assertEquals(self.process.GetState(), lldb.eStateStopped)

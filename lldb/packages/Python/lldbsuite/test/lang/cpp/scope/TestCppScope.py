@@ -18,7 +18,7 @@ class TestCppScopes(TestBase):
     @expectedFailureAll(oslist=["windows"])
     def test_c(self):
         self.do_test(True)
-    
+
     def do_test(self, test_c):
         self.build()
 

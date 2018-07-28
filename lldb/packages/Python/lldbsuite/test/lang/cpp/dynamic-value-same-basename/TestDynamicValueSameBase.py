@@ -18,7 +18,7 @@ class DynamicValueSameBaseTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    # If your test case doesn't stress debug info, the 
+    # If your test case doesn't stress debug info, the
     # set this to true.  That way it won't be run once for
     # each debug info format.
     NO_DEBUG_INFO_TESTCASE = True
@@ -35,7 +35,7 @@ class DynamicValueSameBaseTestCase(TestBase):
 
     def sample_test(self):
         (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(self,
-                                   "Break here to get started", self.main_source_file) 
+                                   "Break here to get started", self.main_source_file)
 
         # Set breakpoints in the two class methods and run to them:
         namesp_bkpt = target.BreakpointCreateBySourceRegex("namesp function did something.", self.main_source_file)
@@ -62,5 +62,5 @@ class DynamicValueSameBaseTestCase(TestBase):
         virtual_type = virtual_this.GetType().GetUnqualifiedType()
         self.assertEqual(virtual_type.GetName(), "Virtual *", "Didn't get the right dynamic type")
 
-        
+
 

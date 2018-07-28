@@ -1,6 +1,6 @@
-; RUN: llc < %s -asm-verbose=false -wasm-register-codegen-test-mode | FileCheck %s --check-prefix=TYPEINFONAME
-; RUN: llc < %s -asm-verbose=false -wasm-register-codegen-test-mode | FileCheck %s --check-prefix=VTABLE
-; RUN: llc < %s -asm-verbose=false -wasm-register-codegen-test-mode | FileCheck %s --check-prefix=TYPEINFO
+; RUN: llc < %s -asm-verbose=false -disable-wasm-explicit-locals | FileCheck %s --check-prefix=TYPEINFONAME
+; RUN: llc < %s -asm-verbose=false -disable-wasm-explicit-locals | FileCheck %s --check-prefix=VTABLE
+; RUN: llc < %s -asm-verbose=false -disable-wasm-explicit-locals | FileCheck %s --check-prefix=TYPEINFO
 
 ; Test that simple vtables assemble as expected.
 ;
