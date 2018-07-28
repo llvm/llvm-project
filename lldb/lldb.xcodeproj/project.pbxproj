@@ -7642,6 +7642,8 @@
 			files = (
 			);
 			inputPaths = (
+                               "$(SRCROOT)/source/API",
+                               "$(SRCROOT)/include/API",
 			);
 			name = "Prepare Swig Bindings";
 			outputPaths = (
