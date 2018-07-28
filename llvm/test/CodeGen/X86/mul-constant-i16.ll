@@ -766,6 +766,50 @@ define i16 @test_mul_by_520(i16 %x) {
   ret i16 %mul
 }
 
+define i16 @test_mul_by_neg10(i16 %x) {
+; X86-LABEL: test_mul_by_neg10:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    addl %eax, %eax
+; X86-NEXT:    leal (%eax,%eax,4), %eax
+; X86-NEXT:    negl %eax
+; X86-NEXT:    # kill: def $ax killed $ax killed $eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_mul_by_neg10:
+; X64:       # %bb.0:
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    addl %edi, %edi
+; X64-NEXT:    leal (%rdi,%rdi,4), %eax
+; X64-NEXT:    negl %eax
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-NEXT:    retq
+  %mul = mul nsw i16 %x, -10
+  ret i16 %mul
+}
+
+define i16 @test_mul_by_neg36(i16 %x) {
+; X86-LABEL: test_mul_by_neg36:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    shll $2, %eax
+; X86-NEXT:    leal (%eax,%eax,8), %eax
+; X86-NEXT:    negl %eax
+; X86-NEXT:    # kill: def $ax killed $ax killed $eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_mul_by_neg36:
+; X64:       # %bb.0:
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    shll $2, %edi
+; X64-NEXT:    leal (%rdi,%rdi,8), %eax
+; X64-NEXT:    negl %eax
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-NEXT:    retq
+  %mul = mul nsw i16 %x, -36
+  ret i16 %mul
+}
+
 ; (x*9+42)*(x*5+2)
 define i16 @test_mul_spec(i16 %x) nounwind {
 ; X86-LABEL: test_mul_spec:

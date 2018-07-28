@@ -493,10 +493,6 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                   "libc++ std::tuple synthetic children",
                   ConstString("^std::__(ndk)?1::tuple<.*>(( )?&)?$"), stl_synth_flags,
                   true);
-  AddCXXSynthetic(cpp_category_sp, LibcxxOptionalFrontEndCreator,
-                  "libc++ std::optional synthetic children",
-                  ConstString("^std::__(ndk)?1::optional<.+>(( )?&)?$"),
-                  stl_synth_flags, true);
   AddCXXSynthetic(
       cpp_category_sp,
       lldb_private::formatters::LibcxxAtomicSyntheticFrontEndCreator,
@@ -588,11 +584,6 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       cpp_category_sp, lldb_private::formatters::LibCxxAtomicSummaryProvider,
       "libc++ std::atomic summary provider",
       ConstString("^std::__(ndk)?1::atomic<.+>$"), stl_summary_flags, true);
-  AddCXXSummary(cpp_category_sp,
-                lldb_private::formatters::LibcxxOptionalSummaryProvider,
-                "libc++ std::optional summary provider",
-                ConstString("^std::__(ndk)?1::optional<.+>(( )?&)?$"),
-                stl_summary_flags, true);
 
   stl_summary_flags.SetSkipPointers(true);
 

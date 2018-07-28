@@ -32,8 +32,8 @@ class Issue11581TestCase(TestBase):
         """valobj.AddressOf() should return correct values."""
         self.build()
 
-        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(self, 
-                                              'Set breakpoint here.', 
+        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(self,
+                                              'Set breakpoint here.',
                                               lldb.SBFileSpec("main.cpp", False))
         self.runCmd("command script import --allow-reload s11588.py")
         self.runCmd(

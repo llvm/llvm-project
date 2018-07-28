@@ -789,6 +789,10 @@ ExprResult Parser::ParseCastExpression(bool isUnaryExpression,
       // We have parsed the cast-expression and no postfix-expr pieces are
       // following.
       return Res;
+    case FoldExpr:
+      // We only parsed a fold-expression. There might be postfix-expr pieces
+      // afterwards; parse them now.
+      break;
     }
 
     break;
@@ -2523,8 +2527,9 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool stopIfCastExpr,
       Diag(Tok, diag::err_expected_lbrace_in_compound_literal);
       return ExprError();
     }
-  } else if (Tok.is(tok::ellipsis) &&
+  } else if (ExprType >= FoldExpr && Tok.is(tok::ellipsis) &&
              isFoldOperator(NextToken().getKind())) {
+    ExprType = FoldExpr;
     return ParseFoldExpression(ExprResult(), T);
   } else if (isTypeCast) {
     // Parse the expression-list.
@@ -2536,9 +2541,11 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool stopIfCastExpr,
     if (!ParseSimpleExpressionList(ArgExprs, CommaLocs)) {
       // FIXME: If we ever support comma expressions as operands to
       // fold-expressions, we'll need to allow multiple ArgExprs here.
-      if (ArgExprs.size() == 1 && isFoldOperator(Tok.getKind()) &&
-          NextToken().is(tok::ellipsis))
+      if (ExprType >= FoldExpr && ArgExprs.size() == 1 &&
+          isFoldOperator(Tok.getKind()) && NextToken().is(tok::ellipsis)) {
+        ExprType = FoldExpr;
         return ParseFoldExpression(ArgExprs[0], T);
+      }
 
       ExprType = SimpleExpr;
       Result = Actions.ActOnParenListExpr(OpenLoc, Tok.getLocation(),
@@ -2553,10 +2560,13 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool stopIfCastExpr,
       // expressions are parsed correctly.
       Result = Actions.CorrectDelayedTyposInExpr(Result);
     }
-    ExprType = SimpleExpr;
 
-    if (isFoldOperator(Tok.getKind()) && NextToken().is(tok::ellipsis))
+    if (ExprType >= FoldExpr && isFoldOperator(Tok.getKind()) &&
+        NextToken().is(tok::ellipsis)) {
+      ExprType = FoldExpr;
       return ParseFoldExpression(Result, T);
+    }
+    ExprType = SimpleExpr;
 
     // Don't build a paren expression unless we actually match a ')'.
     if (!Result.isInvalid() && Tok.is(tok::r_paren))

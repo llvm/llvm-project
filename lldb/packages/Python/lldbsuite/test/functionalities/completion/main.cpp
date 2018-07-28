@@ -7,8 +7,15 @@ public:
     }
 };
 
+struct Container { int MemberVar; };
+
 int main()
 {
-    Foo f;
-    f.Bar(1, 2);
+    Foo fooo;
+    Foo *ptr_fooo = &fooo;
+    fooo.Bar(1, 2);
+
+    Container container;
+    Container *ptr_container = &container;
+    return container.MemberVar = 3; // Break here
 }

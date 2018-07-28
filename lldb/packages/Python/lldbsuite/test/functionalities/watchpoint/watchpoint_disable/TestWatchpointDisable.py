@@ -65,9 +65,9 @@ class TestWatchpointSetEnable(TestBase):
 
         wp.SetEnabled(False)
         self.assertTrue(not wp.IsEnabled(), "The watchpoint thinks it is still enabled")
-        
+
         process.Continue()
-        
+
         stop_reason = thread.GetStopReason()
 
         self.assertEqual(stop_reason, lldb.eStopReasonBreakpoint, "We didn't stop at our breakpoint.")
@@ -78,4 +78,4 @@ class TestWatchpointSetEnable(TestBase):
             process.Continue()
             stop_reason = thread.GetStopReason()
             self.assertEqual(stop_reason, lldb.eStopReasonWatchpoint, "We didn't stop at our watchpoint")
-        
+

@@ -16,7 +16,7 @@ class SaveJITObjectsTestCase(TestBase):
 
     def enumerateJITFiles(self):
         return [f for f in os.listdir(self.getBuildDir()) if f.startswith("jit")]
-    
+
     def countJITFiles(self):
         return len(self.enumerateJITFiles())
 
@@ -31,7 +31,7 @@ class SaveJITObjectsTestCase(TestBase):
         os.chdir(self.getBuildDir())
         src_file = "main.c"
         src_file_spec = lldb.SBFileSpec(src_file)
-  
+
         (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
             self, "break", src_file_spec)
 

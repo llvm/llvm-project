@@ -898,7 +898,7 @@ void InstrProfiling::emitRegistration() {
 
   IRBuilder<> IRB(BasicBlock::Create(M->getContext(), "", RegisterF));
   for (Value *Data : UsedVars)
-    if (Data != NamesVar)
+    if (Data != NamesVar && !isa<Function>(Data))
       IRB.CreateCall(RuntimeRegisterF, IRB.CreateBitCast(Data, VoidPtrTy));
 
   if (NamesVar) {

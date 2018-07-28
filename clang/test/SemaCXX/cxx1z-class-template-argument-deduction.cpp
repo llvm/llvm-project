@@ -373,6 +373,35 @@ void bar(D<int>& d) {
 }
 }
 
+namespace rdar41330135 {
+template <int> struct A {};
+template <class T>
+struct S {
+  template <class U>
+  S(T a, U t, A<sizeof(t)>);
+};
+template <class T> struct D {
+  D(T t, A<sizeof(t)>);
+};
+int f() {
+  S s(0, 0, A<sizeof(int)>());
+  D d(0, A<sizeof(int)>());
+}
+
+namespace test_dupls {
+template<unsigned long> struct X {};
+template<typename T> struct A {
+  A(T t, X<sizeof(t)>);
+};
+A a(0, {});
+template<typename U> struct B {
+  B(U u, X<sizeof(u)>);
+};
+B b(0, {});
+}
+
+}
+
 #else
 
 // expected-no-diagnostics

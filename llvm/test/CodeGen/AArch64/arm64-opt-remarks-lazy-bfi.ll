@@ -26,8 +26,8 @@
 ; requested.  (This hard-codes the previous pass to the Assembly Printer,
 ; please adjust accordingly.)
 
-; HOTNESS:      Executing Pass 'Implement the 'patchable-function' attribute'
-; HOTNESS-NEXT:  Freeing Pass 'Implement the 'patchable-function' attribute'
+; HOTNESS:      Freeing Pass 'Machine Outliner'
+; HOTNESS-NEXT:  Executing Pass 'Function Pass Manager'
 ; HOTNESS-NEXT: Executing Pass 'Lazy Machine Block Frequency Analysis'
 ; HOTNESS-NEXT: Executing Pass 'Machine Optimization Remark Emitter'
 ; HOTNESS-NEXT: Building MachineBlockFrequencyInfo on the fly
@@ -41,8 +41,8 @@
 ; HOTNESS: arm64-summary-remarks.ll:5:0: 1 instructions in function (hotness: 33)
 
 
-; NO_HOTNESS:      Executing Pass 'Implement the 'patchable-function' attribute'
-; NO_HOTNESS-NEXT:  Freeing Pass 'Implement the 'patchable-function' attribute'
+; NO_HOTNESS:      Freeing Pass 'Machine Outliner'
+; NO_HOTNESS-NEXT:  Executing Pass 'Function Pass Manager'
 ; NO_HOTNESS-NEXT: Executing Pass 'Lazy Machine Block Frequency Analysis'
 ; NO_HOTNESS-NEXT: Executing Pass 'Machine Optimization Remark Emitter'
 ; NO_HOTNESS-NEXT: Executing Pass 'AArch64 Assembly Printer'

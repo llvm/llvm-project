@@ -22,7 +22,7 @@ class ExprXValuePrintingTestCase(TestBase):
         """Printing an xvalue should work."""
         self.build(dictionary=dictionary)
 
-        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(self, 
+        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(self,
                                           '// Break here', self.main_source_spec)
         frame = thread.GetFrameAtIndex(0)
 

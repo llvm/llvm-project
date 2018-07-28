@@ -49,7 +49,7 @@ class TestCppIncompleteTypes(TestBase):
         src_file = "main.cpp"
         src_file_spec = lldb.SBFileSpec(src_file)
 
-        (target, process, thread, main_breakpoint) = lldbutil.run_to_source_breakpoint(self, 
+        (target, process, thread, main_breakpoint) = lldbutil.run_to_source_breakpoint(self,
                 "break here", src_file_spec, exe_name = exe)
         # Get frame for current thread
         return thread.GetSelectedFrame()

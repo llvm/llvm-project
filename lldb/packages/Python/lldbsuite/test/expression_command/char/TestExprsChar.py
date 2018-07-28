@@ -22,7 +22,7 @@ class ExprCharTestCase(TestBase):
         """These basic expression commands should work as expected."""
         self.build(dictionary=dictionary)
 
-        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(self, 
+        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(self,
                                           '// Break here', self.main_source_spec)
         frame = thread.GetFrameAtIndex(0)
 

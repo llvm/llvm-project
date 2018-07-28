@@ -53,14 +53,14 @@ class TestTrivialABI(TestBase):
         options = lldb.SBExpressionOptions()
         inVal_expr = frame.EvaluateExpression("inVal", options)
         self.check_value(inVal_expr, 10)
-        
+
         thread.StepOut()
         outVal_ret = thread.GetStopReturnValue()
         self.check_value(outVal_ret, 30)
 
     def expr_test(self, trivial):
         (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(self,
-                                   "Set a breakpoint here", self.main_source_file) 
+                                   "Set a breakpoint here", self.main_source_file)
 
         # Stop in a function that takes a trivial value, and try both frame var & expr to get its value:
         if trivial:
