@@ -1729,6 +1729,8 @@ def warn_overriding_method_missing_noescape : Warning<
   "__attribute__((noescape))">, InGroup<MissingNoEscape>;
 def note_overridden_marked_noescape : Note<
   "parameter of overridden method is annotated with __attribute__((noescape))">;
+def note_cat_conform_to_noescape_prot : Note<
+  "%select{category|class extension}0 conforms to protocol %1 which defines method %2">;
 
 def err_covariant_return_inaccessible_base : Error<
   "invalid covariant return for virtual function: %1 is a "
