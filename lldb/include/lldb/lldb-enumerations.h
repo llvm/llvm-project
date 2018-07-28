@@ -754,8 +754,7 @@ enum StructuredDataType {
 };
 
 FLAGS_ENUM(TypeClass){
-    eTypeClassInvalid = (0u), 
-  eTypeClassArray = (1u << 0),
+    eTypeClassInvalid = (0u), eTypeClassArray = (1u << 0),
     eTypeClassBlockPointer = (1u << 1), eTypeClassBuiltin = (1u << 2),
     eTypeClassClass = (1u << 3), eTypeClassComplexFloat = (1u << 4),
     eTypeClassComplexInteger = (1u << 5), eTypeClassEnumeration = (1u << 6),
@@ -779,7 +778,7 @@ enum TemplateArgumentKind {
   eTemplateArgumentKindTemplateExpansion,
   eTemplateArgumentKindExpression,
   eTemplateArgumentKindPack,
-  eTemplateArgumentKindNullPtr
+  eTemplateArgumentKindNullPtr,
 };
 
 // Kind of argument for generics, either bound or unbound.
@@ -952,14 +951,14 @@ enum PathType {
                          // mach-o file in LLDB.framework (MacOSX) exists
   ePathTypeSupportExecutableDir, // Find LLDB support executable directory
                                  // (debugserver, etc)
-  ePathTypeSupportFileDir, // Find LLDB support file directory (non-executable
-                           // files)
-  ePathTypeHeaderDir,      // Find LLDB header file directory
-  ePathTypePythonDir,      // Find Python modules (PYTHONPATH) directory
-  ePathTypeLLDBSystemPlugins, // System plug-ins directory
-  ePathTypeLLDBUserPlugins,   // User plug-ins directory
-  ePathTypeLLDBTempSystemDir, // The LLDB temp directory for this system that
-                              // will be cleaned up on exit
+  ePathTypeSupportFileDir,       // Find LLDB support file directory
+                                 // (non-executable files)
+  ePathTypeHeaderDir,            // Find LLDB header file directory
+  ePathTypePythonDir,            // Find Python modules (PYTHONPATH) directory
+  ePathTypeLLDBSystemPlugins,    // System plug-ins directory
+  ePathTypeLLDBUserPlugins,      // User plug-ins directory
+  ePathTypeLLDBTempSystemDir,    // The LLDB temp directory for this system that
+                                 // will be cleaned up on exit
   ePathTypeGlobalLLDBTempSystemDir, // The LLDB temp directory for this system,
                                     // NOT cleaned up on a process exit.
   ePathTypeClangDir,                // Find path to Clang builtin headers
@@ -989,36 +988,26 @@ enum MatchType { eMatchTypeNormal, eMatchTypeRegex, eMatchTypeStartsWith };
 //----------------------------------------------------------------------
 // Bitmask that describes details about a type
 //----------------------------------------------------------------------
-FLAGS_ENUM(TypeFlags){eTypeHasChildren = (1u << 0),
-                      eTypeHasValue = (1u << 1),
-                      eTypeIsArray = (1u << 2),
-                      eTypeIsBlock = (1u << 3),
-                      eTypeIsBuiltIn = (1u << 4),
-                      eTypeIsClass = (1u << 5),
-                      eTypeIsCPlusPlus = (1u << 6),
-                      eTypeIsEnumeration = (1u << 7),
-                      eTypeIsFuncPrototype = (1u << 8),
-                      eTypeIsMember = (1u << 9),
-                      eTypeIsObjC = (1u << 10),
-                      eTypeIsPointer = (1u << 11),
-                      eTypeIsReference = (1u << 12),
-                      eTypeIsStructUnion = (1u << 13),
-                      eTypeIsTemplate = (1u << 14),
-                      eTypeIsTypedef = (1u << 15),
-                      eTypeIsVector = (1u << 16),
-                      eTypeIsScalar = (1u << 17),
-                      eTypeIsInteger = (1u << 18),
-                      eTypeIsFloat = (1u << 19),
-                      eTypeIsComplex = (1u << 20),
-                      eTypeIsSigned = (1u << 21),
-                      eTypeInstanceIsPointer = (1u << 22),
-                      eTypeIsSwift = (1u << 23),
-                      eTypeIsGenericTypeParam = (1u << 24),
-                      eTypeIsProtocol = (1u << 25),
-                      eTypeIsTuple = (1u << 26),
-                      eTypeIsMetatype = (1u << 27),
-                      eTypeIsGeneric = (1u << 28),
-                      eTypeIsBound = (1u << 29)};
+FLAGS_ENUM(TypeFlags){
+    eTypeHasChildren = (1u << 0),       eTypeHasValue = (1u << 1),
+    eTypeIsArray = (1u << 2),           eTypeIsBlock = (1u << 3),
+    eTypeIsBuiltIn = (1u << 4),         eTypeIsClass = (1u << 5),
+    eTypeIsCPlusPlus = (1u << 6),       eTypeIsEnumeration = (1u << 7),
+    eTypeIsFuncPrototype = (1u << 8),   eTypeIsMember = (1u << 9),
+    eTypeIsObjC = (1u << 10),           eTypeIsPointer = (1u << 11),
+    eTypeIsReference = (1u << 12),      eTypeIsStructUnion = (1u << 13),
+    eTypeIsTemplate = (1u << 14),       eTypeIsTypedef = (1u << 15),
+    eTypeIsVector = (1u << 16),         eTypeIsScalar = (1u << 17),
+    eTypeIsInteger = (1u << 18),        eTypeIsFloat = (1u << 19),
+    eTypeIsComplex = (1u << 20),        eTypeIsSigned = (1u << 21),
+    eTypeInstanceIsPointer = (1u << 22),
+    eTypeIsSwift = (1u << 23),
+    eTypeIsGenericTypeParam = (1u << 24),
+    eTypeIsProtocol = (1u << 25),
+    eTypeIsTuple = (1u << 26),
+    eTypeIsMetatype = (1u << 27),
+    eTypeIsGeneric = (1u << 28),
+    eTypeIsBound = (1u << 29)};
 
 FLAGS_ENUM(CommandFlags){
     //----------------------------------------------------------------------
