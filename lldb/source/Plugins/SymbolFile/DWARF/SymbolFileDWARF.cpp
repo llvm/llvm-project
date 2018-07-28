@@ -959,6 +959,53 @@ bool SymbolFileDWARF::ParseImportedModules(
   assert(sc.comp_unit);
   DWARFUnit *dwarf_cu = GetDWARFCompileUnit(sc.comp_unit);
   if (dwarf_cu) {
+    if (IsSwiftLanguage(sc.comp_unit->GetLanguage())) {
+      const DWARFDIE cu_die = dwarf_cu->DIE();
+      bool found_one = false;
+
+      if (cu_die) {
+        for (DWARFDIE child_die = cu_die.GetFirstChild(); child_die.IsValid();
+             child_die = child_die.GetSibling()) {
+          if (child_die.Tag() == DW_TAG_imported_module) {
+            dw_offset_t die_offset = child_die.GetAttributeValueAsReference(
+                DW_AT_import, DW_INVALID_OFFSET);
+
+            if (die_offset != DW_INVALID_OFFSET) {
+              const DWARFDIE import_die = dwarf_cu->GetDIE(die_offset);
+
+              if (import_die) {
+                const char *modulename = import_die.GetName();
+
+                if (modulename) {
+                  found_one = true;
+                  // Now we have to see if this imported_module tag is embedded
+                  // in a DW_TAG_MODULE,
+                  // that is how sub-module importation is expressed:
+                  std::string module_string(modulename);
+
+                  for (DWARFDIE parent_die = import_die.GetParent();
+                       parent_die.IsValid() &&
+                       parent_die.Tag() == DW_TAG_module;
+                       parent_die = parent_die.GetParent()) {
+                    const char *parent_name = parent_die.GetName();
+                    if (parent_name) {
+                      module_string.insert(0, ".");
+                      module_string.insert(0, parent_name);
+                    }
+                  }
+
+                  imported_modules.push_back(
+                      ConstString(module_string.c_str()));
+                }
+              }
+            }
+          }
+        }
+
+        return found_one;
+      }
+    } // IsSwiftLanguage
+
     if (ClangModulesDeclVendor::LanguageSupportsClangModules(
             sc.comp_unit->GetLanguage())) {
       UpdateExternalModuleListIfNeeded();
@@ -3504,6 +3551,10 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
         }
       }
 
+      if (tag == DW_TAG_variable && mangled &&
+          IsSwiftLanguage(sc.comp_unit->GetLanguage()))
+        mangled = NULL;
+
       const DWARFDIE parent_context_die = GetDeclContextDIEContainingDIE(die);
       const dw_tag_t parent_tag = die.GetParent().Tag();
       bool is_static_member =
@@ -3638,7 +3689,8 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
             }
           }
         } else {
-          if (location_is_const_value_data)
+          if (location_is_const_value_data &&
+              !IsSwiftLanguage(sc.comp_unit->GetLanguage()))
             scope = eValueTypeVariableStatic;
           else {
             scope = eValueTypeVariableLocal;
