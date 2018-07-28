@@ -1,5 +1,5 @@
-; RUN: llc -verify-machineinstrs < %s -mtriple=aarch64-none-linux-gnu -mcpu=cyclone | FileCheck %s
-; RUN: llc -verify-machineinstrs < %s -mtriple=aarch64-none-linux-gnu -mattr=-fp-armv8 | FileCheck --check-prefix=CHECK-NOFP %s
+; RUN: llc -enable-machine-outliner=never -verify-machineinstrs < %s -mtriple=aarch64-none-linux-gnu -mcpu=cyclone | FileCheck %s
+; RUN: llc -enable-machine-outliner=never -verify-machineinstrs < %s -mtriple=aarch64-none-linux-gnu -mattr=-fp-armv8 | FileCheck --check-prefix=CHECK-NOFP %s
 
 @var32 = global i32 0
 @var64 = global i64 0

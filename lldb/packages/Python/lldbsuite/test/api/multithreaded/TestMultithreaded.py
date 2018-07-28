@@ -16,7 +16,7 @@ import subprocess
 class SBBreakpointCallbackCase(TestBase):
 
     NO_DEBUG_INFO_TESTCASE = True
-   
+
     def setUp(self):
         TestBase.setUp(self)
         self.generateSource('driver.cpp')

@@ -39,6 +39,46 @@ class CommandLineCompletionTestCase(TestBase):
         self.complete_from_to('de', 'detach ')
 
     @skipIfFreeBSD  # timing out on the FreeBSD buildbot
+    def test_frame_variable(self):
+        self.build()
+        self.main_source = "main.cpp"
+        self.main_source_spec = lldb.SBFileSpec(self.main_source)
+        self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+
+        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(self,
+                                          '// Break here', self.main_source_spec)
+        self.assertEquals(process.GetState(), lldb.eStateStopped)
+        # FIXME: This pulls in the debug information to make the completions work,
+        # but the completions should also work without.
+        self.runCmd("frame variable fooo")
+
+        self.complete_from_to('frame variable fo',
+                              'frame variable fooo')
+        self.complete_from_to('frame variable fooo.',
+                              'frame variable fooo.')
+        self.complete_from_to('frame variable fooo.dd',
+                              'frame variable fooo.dd')
+
+        self.complete_from_to('frame variable ptr_fooo->',
+                              'frame variable ptr_fooo->')
+        self.complete_from_to('frame variable ptr_fooo->dd',
+                              'frame variable ptr_fooo->dd')
+
+        self.complete_from_to('frame variable cont',
+                              'frame variable container')
+        self.complete_from_to('frame variable container.',
+                              'frame variable container.MemberVar')
+        self.complete_from_to('frame variable container.Mem',
+                              'frame variable container.MemberVar')
+
+        self.complete_from_to('frame variable ptr_cont',
+                              'frame variable ptr_container')
+        self.complete_from_to('frame variable ptr_container->',
+                              'frame variable ptr_container->MemberVar')
+        self.complete_from_to('frame variable ptr_container->Mem',
+                              'frame variable ptr_container->MemberVar')
+
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
     def test_process_attach_dash_dash_con(self):
         """Test that 'process attach --con' completes to 'process attach --continue '."""
         self.complete_from_to(
@@ -261,7 +301,7 @@ class CommandLineCompletionTestCase(TestBase):
         common_match = match_strings.GetStringAtIndex(0)
         if num_matches == 0:
             compare_string = str_input
-        else: 
+        else:
             if common_match != None and len(common_match) > 0:
                 compare_string = str_input + common_match
             else:
@@ -273,8 +313,8 @@ class CommandLineCompletionTestCase(TestBase):
             if turn_off_re_match:
                 self.expect(
                     compare_string, msg=COMPLETION_MSG(
-                        str_input, p), exe=False, substrs=[p])
+                        str_input, p, match_strings), exe=False, substrs=[p])
             else:
                 self.expect(
                     compare_string, msg=COMPLETION_MSG(
-                        str_input, p), exe=False, patterns=[p])
+                        str_input, p, match_strings), exe=False, patterns=[p])

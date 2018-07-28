@@ -15,8 +15,8 @@ define i32 @test1(i32 %X) {
 ; CHECK-NEXT:    addl %eax, %edx
 ; CHECK-NEXT:    movl %edx, %eax
 ; CHECK-NEXT:    shll $8, %eax
-; CHECK-NEXT:    subl %edx, %eax
-; CHECK-NEXT:    subl %eax, %ecx
+; CHECK-NEXT:    subl %eax, %edx
+; CHECK-NEXT:    addl %edx, %ecx
 ; CHECK-NEXT:    movl %ecx, %eax
 ; CHECK-NEXT:    retl
   %tmp1 = srem i32 %X, 255
@@ -48,8 +48,8 @@ define i32 @test3(i32 %X) {
 ; CHECK-NEXT:    shrl $7, %edx
 ; CHECK-NEXT:    movl %edx, %eax
 ; CHECK-NEXT:    shll $8, %eax
-; CHECK-NEXT:    subl %edx, %eax
-; CHECK-NEXT:    subl %eax, %ecx
+; CHECK-NEXT:    subl %eax, %edx
+; CHECK-NEXT:    addl %edx, %ecx
 ; CHECK-NEXT:    movl %ecx, %eax
 ; CHECK-NEXT:    retl
   %tmp1 = urem i32 %X, 255

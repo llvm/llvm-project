@@ -191,7 +191,7 @@ class DwarfOpcodeParser(object):
                 break
 
             if val == DW_OP_regx:
-                # Read register number 
+                # Read register number
                 self.assertTrue(len(dwarf_opcode) > (index + 1))
                 reg_no = int(dwarf_opcode.pop(index + 1), 16)
 
@@ -201,7 +201,7 @@ class DwarfOpcodeParser(object):
                              ["read packet: $p{0:x}#00".format(reg_no),
                              {"direction": "send", "regex": r"^\$([0-9a-fA-F]+)#",
                              "capture": {1: "p_response"}}],True)
-                
+
                 Context = self.expect_gdbremote_sequence()
                 self.assertIsNotNone(Context)
                 p_response = Context.get("p_response")
@@ -219,7 +219,7 @@ class DwarfOpcodeParser(object):
             elif val == DW_OP_lit1:
                 # Push literal 1
                 dwarf_data.append(1)
-           
+
             elif val == DW_OP_lit26:
                 # Push literal 26
                 dwarf_data.append(26)

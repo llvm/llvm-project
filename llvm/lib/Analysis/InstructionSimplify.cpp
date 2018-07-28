@@ -65,6 +65,40 @@ static Value *SimplifyCastInst(unsigned, Value *, Type *,
 static Value *SimplifyGEPInst(Type *, ArrayRef<Value *>, const SimplifyQuery &,
                               unsigned);
 
+/// Fold
+///   %A = icmp ne/eq i8 %X, %V1
+///   %B = icmp ne/eq i8 %X, %V2
+///   %C = or/and i1 %A, %B
+///   %D = select i1 %C, i8 %X, i8 %V1
+/// To
+///   %X/%V1
+static Value *foldSelectWithBinaryOp(Value *Cond, Value *TrueVal,
+                                     Value *FalseVal) {
+  BinaryOperator::BinaryOps BinOpCode;
+  if (auto *BO = dyn_cast<BinaryOperator>(Cond))
+    BinOpCode = BO->getOpcode();
+  else
+    return nullptr;
+
+  CmpInst::Predicate ExpectedPred;
+  if (BinOpCode == BinaryOperator::Or) {
+    ExpectedPred = ICmpInst::ICMP_NE;
+  } else if (BinOpCode == BinaryOperator::And) {
+    ExpectedPred = ICmpInst::ICMP_EQ;
+  } else
+    return nullptr;
+
+  CmpInst::Predicate Pred1, Pred2;
+  if (!match(
+          Cond,
+          m_c_BinOp(m_c_ICmp(Pred1, m_Specific(TrueVal), m_Specific(FalseVal)),
+                    m_c_ICmp(Pred2, m_Specific(TrueVal), m_Value()))) ||
+      Pred1 != Pred2 || Pred1 != ExpectedPred)
+    return nullptr;
+
+  return BinOpCode == BinaryOperator::Or ? TrueVal : FalseVal;
+}
+
 /// For a boolean type or a vector of boolean type, return false or a vector
 /// with every element false.
 static Constant *getFalse(Type *Ty) {
@@ -3750,6 +3784,9 @@ static Value *SimplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
 
   if (Value *V =
           simplifySelectWithICmpCond(Cond, TrueVal, FalseVal, Q, MaxRecurse))
+    return V;
+
+  if (Value *V = foldSelectWithBinaryOp(Cond, TrueVal, FalseVal))
     return V;
 
   return nullptr;

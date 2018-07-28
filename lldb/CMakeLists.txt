@@ -51,16 +51,15 @@ if(LLDB_BUILD_FRAMEWORK)
     message(FATAL_ERROR "LLDB.framework can only be generated when targeting Apple platforms")
   endif()
 
-  add_custom_target(lldb-framework)
-  set(LLDB_SUITE_TARGET lldb-framework)
-  set(LLDB_FRAMEWORK_DIR
-    ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${LLDB_FRAMEWORK_INSTALL_DIR}/LLDB.framework)
   # These are used to fill out LLDB-Info.plist. These are relevant when building
   # the framework, and must be defined before building liblldb.
   set(PRODUCT_NAME "LLDB")
   set(EXECUTABLE_NAME "LLDB")
   set(CURRENT_PROJECT_VERSION "360.99.0")
-  include(LLDBFramework)
+  set(LLDB_SUITE_TARGET lldb-framework)
+
+  set(LLDB_FRAMEWORK_DIR
+    ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${LLDB_FRAMEWORK_INSTALL_DIR})
 endif()
 
 add_subdirectory(docs)
@@ -72,7 +71,7 @@ if (NOT LLDB_DISABLE_PYTHON)
   set(LLDB_PYTHON_TARGET_DIR ${LLDB_BINARY_DIR}/scripts)
   set(LLDB_WRAP_PYTHON ${LLDB_BINARY_DIR}/scripts/LLDBWrapPython.cpp)
   if(LLDB_BUILD_FRAMEWORK)
-    set(LLDB_PYTHON_TARGET_DIR "${LLDB_FRAMEWORK_DIR}/..")
+    set(LLDB_PYTHON_TARGET_DIR ${LLDB_FRAMEWORK_DIR})
     set(LLDB_WRAP_PYTHON ${LLDB_PYTHON_TARGET_DIR}/LLDBWrapPython.cpp)
   else()
     # Don't set -m when building the framework.
@@ -161,6 +160,11 @@ if(LLDB_INCLUDE_TESTS)
   add_subdirectory(unittests)
   add_subdirectory(lit)
   add_subdirectory(utils/lldb-dotest)
+endif()
+
+if (LLDB_BUILD_FRAMEWORK)
+  add_custom_target(lldb-framework)
+  include(LLDBFramework)
 endif()
 
 if (NOT LLDB_DISABLE_PYTHON)

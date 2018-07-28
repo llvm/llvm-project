@@ -47,7 +47,7 @@ class BundleWithDotInFilenameTestCase(TestBase):
         sleep(5)
 
         # Since the library that was dlopen()'ed is now removed, lldb will need to find the
-        # binary & dSYM via target.exec-search-paths 
+        # binary & dSYM via target.exec-search-paths
         settings_str = "settings set target.exec-search-paths " + self.get_process_working_directory() + "/hide.app"
         self.runCmd(settings_str)
 

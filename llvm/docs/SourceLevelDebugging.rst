@@ -244,6 +244,11 @@ argument is a `local variable <LangRef.html#dilocalvariable>`_ containing a
 description of the variable.  The third argument is a `complex expression
 <LangRef.html#diexpression>`_.
 
+An `llvm.dbg.value` intrinsic describes the *value* of a source variable
+directly, not its address.  Note that the value operand of this intrinsic may
+be indirect (i.e, a pointer to the source variable), provided that interpreting
+the complex expression derives the direct value.
+
 Object lifetimes and scoping
 ============================
 

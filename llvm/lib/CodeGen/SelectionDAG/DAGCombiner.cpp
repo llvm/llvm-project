@@ -1997,6 +1997,45 @@ static SDValue foldAddSubBoolOfMaskedVal(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(IsAdd ? ISD::SUB : ISD::ADD, DL, VT, C1, LowBit);
 }
 
+/// Try to fold a 'not' shifted sign-bit with add/sub with constant operand into
+/// a shift and add with a different constant.
+static SDValue foldAddSubOfSignBit(SDNode *N, SelectionDAG &DAG) {
+  assert((N->getOpcode() == ISD::ADD || N->getOpcode() == ISD::SUB) &&
+         "Expecting add or sub");
+
+  // We need a constant operand for the add/sub, and the other operand is a
+  // logical shift right: add (srl), C or sub C, (srl).
+  bool IsAdd = N->getOpcode() == ISD::ADD;
+  SDValue ConstantOp = IsAdd ? N->getOperand(1) : N->getOperand(0);
+  SDValue ShiftOp = IsAdd ? N->getOperand(0) : N->getOperand(1);
+  ConstantSDNode *C = isConstOrConstSplat(ConstantOp);
+  if (!C || ShiftOp.getOpcode() != ISD::SRL)
+    return SDValue();
+
+  // The shift must be of a 'not' value.
+  // TODO: Use isBitwiseNot() if it works with vectors.
+  SDValue Not = ShiftOp.getOperand(0);
+  if (!Not.hasOneUse() || Not.getOpcode() != ISD::XOR ||
+      !isAllOnesConstantOrAllOnesSplatConstant(Not.getOperand(1)))
+    return SDValue();
+
+  // The shift must be moving the sign bit to the least-significant-bit.
+  EVT VT = ShiftOp.getValueType();
+  SDValue ShAmt = ShiftOp.getOperand(1);
+  ConstantSDNode *ShAmtC = isConstOrConstSplat(ShAmt);
+  if (!ShAmtC || ShAmtC->getZExtValue() != VT.getScalarSizeInBits() - 1)
+    return SDValue();
+
+  // Eliminate the 'not' by adjusting the shift and add/sub constant:
+  // add (srl (not X), 31), C --> add (sra X, 31), (C + 1)
+  // sub C, (srl (not X), 31) --> add (srl X, 31), (C - 1)
+  SDLoc DL(N);
+  auto ShOpcode = IsAdd ? ISD::SRA : ISD::SRL;
+  SDValue NewShift = DAG.getNode(ShOpcode, DL, VT, Not.getOperand(0), ShAmt);
+  APInt NewC = IsAdd ? C->getAPIntValue() + 1 : C->getAPIntValue() - 1;
+  return DAG.getNode(ISD::ADD, DL, VT, NewShift, DAG.getConstant(NewC, DL, VT));
+}
+
 SDValue DAGCombiner::visitADD(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
@@ -2129,6 +2168,9 @@ SDValue DAGCombiner::visitADD(SDNode *N) {
   }
 
   if (SDValue V = foldAddSubBoolOfMaskedVal(N, DAG))
+    return V;
+
+  if (SDValue V = foldAddSubOfSignBit(N, DAG))
     return V;
 
   if (SimplifyDemandedBits(SDValue(N, 0)))
@@ -2629,6 +2671,12 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
     return DAG.getNode(ISD::SUB, DL, VT, N0.getOperand(0),
                        N0.getOperand(1).getOperand(0));
 
+  // fold (A-(B-C)) -> A+(C-B)
+  if (N1.getOpcode() == ISD::SUB && N1.hasOneUse())
+    return DAG.getNode(ISD::ADD, DL, VT, N0,
+                       DAG.getNode(ISD::SUB, DL, VT, N1.getOperand(1),
+                                   N1.getOperand(0)));
+
   // fold (X - (-Y * Z)) -> (X + (Y * Z))
   if (N1.getOpcode() == ISD::MUL && N1.hasOneUse()) {
     if (N1.getOperand(0).getOpcode() == ISD::SUB &&
@@ -2654,6 +2702,9 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
     return N1;
 
   if (SDValue V = foldAddSubBoolOfMaskedVal(N, DAG))
+    return V;
+
+  if (SDValue V = foldAddSubOfSignBit(N, DAG))
     return V;
 
   // fold Y = sra (X, size(X)-1); sub (xor (X, Y), Y) -> (abs X)

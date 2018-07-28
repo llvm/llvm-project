@@ -61,7 +61,7 @@ class StepUntilTestCase(TestBase):
         cmd_line = "thread until"
         for line_num in until_lines:
             cmd_line += " %d"%(line_num)
- 
+
         cmd_interp.HandleCommand(cmd_line, ret_obj)
         self.assertTrue(ret_obj.Succeeded(), "'%s' failed: %s."%(cmd_line, ret_obj.GetError()))
 

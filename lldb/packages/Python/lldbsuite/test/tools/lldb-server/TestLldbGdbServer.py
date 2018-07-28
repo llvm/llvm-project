@@ -1162,7 +1162,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
             BREAKPOINT_KIND = 1
 
         # Set default packet type to Z0 (software breakpoint)
-        z_packet_type = 0       
+        z_packet_type = 0
 
         # If hardware breakpoint is requested set packet type to Z1
         if want_hardware == True:
