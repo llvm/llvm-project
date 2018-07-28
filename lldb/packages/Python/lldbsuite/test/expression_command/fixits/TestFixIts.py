@@ -37,7 +37,7 @@ class ExprCommandWithFixits(TestBase):
 
     def try_expressions(self):
         """Test calling expressions with errors that can be fixed by the FixIts."""
-        (target, process, self.thread, bkpt) = lldbutil.run_to_source_breakpoint(self, 
+        (target, process, self.thread, bkpt) = lldbutil.run_to_source_breakpoint(self,
                                         'Stop here to evaluate expressions', self.main_source_spec)
 
         options = lldb.SBExpressionOptions()

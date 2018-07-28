@@ -52,7 +52,7 @@ function(add_lldb_library name)
       if (PARAM_SHARED)
         set(out_dir lib${LLVM_LIBDIR_SUFFIX})
         if(${name} STREQUAL "liblldb" AND LLDB_BUILD_FRAMEWORK)
-          set(out_dir ${LLDB_FRAMEWORK_INSTALL_DIR}/LLDB.framework/Versions/${LLDB_FRAMEWORK_VERSION})
+          set(out_dir ${LLDB_FRAMEWORK_INSTALL_DIR})
         endif()
         install(TARGETS ${name}
           COMPONENT ${name}
@@ -108,7 +108,7 @@ function(add_lldb_executable name)
       endif()
       string(REGEX REPLACE "[^/]+" ".." _dots ${LLDB_FRAMEWORK_INSTALL_DIR})
       set_target_properties(${name} PROPERTIES
-            RUNTIME_OUTPUT_DIRECTORY ${LLDB_FRAMEWORK_DIR}/${LLDB_FRAMEWORK_RESOURCE_DIR}
+            RUNTIME_OUTPUT_DIRECTORY $<TARGET_FILE_DIR:liblldb>${resource_dir}
             BUILD_WITH_INSTALL_RPATH On
             INSTALL_RPATH "@loader_path/../../../${resource_dots}${_dots}/${LLDB_FRAMEWORK_INSTALL_DIR}")
     endif()
@@ -123,7 +123,7 @@ function(add_lldb_executable name)
   if(ARG_GENERATE_INSTALL)
     set(out_dir "bin")
     if (LLDB_BUILD_FRAMEWORK AND ARG_INCLUDE_IN_SUITE)
-      set(out_dir ${LLDB_FRAMEWORK_INSTALL_DIR}/LLDB.framework/${LLDB_FRAMEWORK_RESOURCE_DIR})
+      set(out_dir ${LLDB_FRAMEWORK_INSTALL_DIR}/${LLDB_FRAMEWORK_RESOURCE_DIR})
     endif()
     install(TARGETS ${name}
           COMPONENT ${name}

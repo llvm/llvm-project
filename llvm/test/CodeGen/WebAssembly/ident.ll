@@ -1,4 +1,4 @@
-; RUN: llc < %s -asm-verbose=false -wasm-explicit-locals-codegen-test-mode | FileCheck %s
+; RUN: llc < %s -asm-verbose=false | FileCheck %s
 
 ; Test llvm.ident.
 

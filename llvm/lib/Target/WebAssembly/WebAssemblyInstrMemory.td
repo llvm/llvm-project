@@ -57,12 +57,11 @@ let Defs = [ARGUMENTS] in {
 
 // Defines atomic and non-atomic loads, regular and extending.
 multiclass WebAssemblyLoad<WebAssemblyRegClass rc, string Name, int Opcode> {
-  let mayLoad = 1 in
   defm "": I<(outs rc:$dst),
              (ins P2Align:$p2align, offset32_op:$off, I32:$addr),
              (outs), (ins P2Align:$p2align, offset32_op:$off),
              [], !strconcat(Name, "\t$dst, ${off}(${addr})${p2align}"),
-             !strconcat(Name, "\t${off}${p2align}"), Opcode>;
+             !strconcat(Name, "\t${off}, ${p2align}"), Opcode>;
 }
 
 // Basic load.
@@ -308,13 +307,12 @@ let Defs = [ARGUMENTS] in {
 
 // Defines atomic and non-atomic stores, regular and truncating
 multiclass WebAssemblyStore<WebAssemblyRegClass rc, string Name, int Opcode> {
-  let mayStore = 1 in
   defm "" : I<(outs),
               (ins P2Align:$p2align, offset32_op:$off, I32:$addr, rc:$val),
               (outs),
               (ins P2Align:$p2align, offset32_op:$off), [],
               !strconcat(Name, "\t${off}(${addr})${p2align}, $val"),
-              !strconcat(Name, "\t${off}${p2align}"), Opcode>;
+              !strconcat(Name, "\t${off}, ${p2align}"), Opcode>;
 }
 // Basic store.
 // Note: WebAssembly inverts SelectionDAG's usual operand order.
@@ -472,12 +470,12 @@ defm CURRENT_MEMORY_I32 : I<(outs I32:$dst), (ins i32imm:$flags),
 
 // Grow memory.
 defm MEMORY_GROW_I32 : I<(outs I32:$dst), (ins i32imm:$flags, I32:$delta),
-                         (outs), (ins i32imm:$flags),
+                         (outs), (ins i32imm:$flags, I32:$delta),
                          [(set I32:$dst,
                            (int_wasm_memory_grow (i32 imm:$flags),
                              I32:$delta))],
                          "memory.grow\t$dst, $flags, $delta",
-                         "memory.grow\t$flags", 0x3f>,
+                         "memory.grow\t$flags, $delta", 0x3f>,
                        Requires<[HasAddr32]>;
 defm MEM_GROW_I32 : I<(outs I32:$dst), (ins i32imm:$flags, I32:$delta),
                       (outs), (ins i32imm:$flags),

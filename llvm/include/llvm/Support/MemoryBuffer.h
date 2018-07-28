@@ -43,7 +43,6 @@ class MemoryBuffer {
   const char *BufferStart; // Start of the buffer.
   const char *BufferEnd;   // End of the buffer.
 
-
 protected:
   MemoryBuffer() = default;
 
@@ -148,9 +147,6 @@ public:
   virtual BufferKind getBufferKind() const = 0;
 
   MemoryBufferRef getMemBufferRef() const;
-
-private:
-  virtual void anchor();
 };
 
 /// This class is an extension of MemoryBuffer, which allows copy-on-write

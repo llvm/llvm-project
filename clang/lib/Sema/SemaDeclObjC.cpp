@@ -109,6 +109,30 @@ bool Sema::checkInitMethod(ObjCMethodDecl *method,
   return true;
 }
 
+/// Issue a warning if the parameter of the overridden method is non-escaping
+/// but the parameter of the overriding method is not.
+static bool diagnoseNoescape(const ParmVarDecl *NewD, const ParmVarDecl *OldD,
+                             Sema &S) {
+  if (OldD->hasAttr<NoEscapeAttr>() && !NewD->hasAttr<NoEscapeAttr>()) {
+    S.Diag(NewD->getLocation(), diag::warn_overriding_method_missing_noescape);
+    S.Diag(OldD->getLocation(), diag::note_overridden_marked_noescape);
+    return false;
+  }
+
+  return true;
+}
+
+/// Produce additional diagnostics if a category conforms to a protocol that
+/// defines a method taking a non-escaping parameter.
+static void diagnoseNoescape(const ParmVarDecl *NewD, const ParmVarDecl *OldD,
+                             const ObjCCategoryDecl *CD,
+                             const ObjCProtocolDecl *PD, Sema &S) {
+  if (!diagnoseNoescape(NewD, OldD, S))
+    S.Diag(CD->getLocation(), diag::note_cat_conform_to_noescape_prot)
+        << CD->IsClassExtension() << PD
+        << cast<ObjCMethodDecl>(NewD->getDeclContext());
+}
+
 void Sema::CheckObjCMethodOverride(ObjCMethodDecl *NewMethod, 
                                    const ObjCMethodDecl *Overridden) {
   if (Overridden->hasRelatedResultType() && 
@@ -192,13 +216,7 @@ void Sema::CheckObjCMethodOverride(ObjCMethodDecl *NewMethod,
       Diag(oldDecl->getLocation(), diag::note_previous_decl) << "parameter";
     }
 
-    // A parameter of the overriding method should be annotated with noescape
-    // if the corresponding parameter of the overridden method is annotated.
-    if (oldDecl->hasAttr<NoEscapeAttr>() && !newDecl->hasAttr<NoEscapeAttr>()) {
-      Diag(newDecl->getLocation(),
-           diag::warn_overriding_method_missing_noescape);
-      Diag(oldDecl->getLocation(), diag::note_overridden_marked_noescape);
-    }
+    diagnoseNoescape(newDecl, oldDecl, *this);
   }
 }
 
@@ -4643,6 +4661,22 @@ Decl *Sema::ActOnMethodDeclaration(
             << ObjCMethod->getDeclName();
         }
       }
+
+      // Warn if a method declared in a protocol to which a category or
+      // extension conforms is non-escaping and the implementation's method is
+      // escaping.
+      for (auto *C : IDecl->visible_categories())
+        for (auto &P : C->protocols())
+          if (auto *IMD = P->lookupMethod(ObjCMethod->getSelector(),
+                                          ObjCMethod->isInstanceMethod())) {
+            assert(ObjCMethod->parameters().size() ==
+                       IMD->parameters().size() &&
+                   "Methods have different number of parameters");
+            auto OI = IMD->param_begin(), OE = IMD->param_end();
+            auto NI = ObjCMethod->param_begin();
+            for (; OI != OE; ++OI, ++NI)
+              diagnoseNoescape(*NI, *OI, C, P, *this);
+          }
     }
   } else {
     cast<DeclContext>(ClassDecl)->addDecl(ObjCMethod);

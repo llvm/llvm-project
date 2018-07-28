@@ -1,4 +1,4 @@
-; RUN: llc < %s -O0 -wasm-explicit-locals-codegen-test-mode
+; RUN: llc < %s -O0
 ; PR36564
 ; PR37546
 

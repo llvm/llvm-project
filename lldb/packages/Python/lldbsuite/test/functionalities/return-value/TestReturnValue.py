@@ -68,7 +68,7 @@ class ReturnValueTestCase(TestBase):
 
         # Run again and we will stop in inner_sint the second time outer_sint is called.
         # Then test stepping out two frames at once:
-        
+
         thread_list = lldbutil.continue_to_breakpoint(self.process, inner_sint_bkpt)
         self.assertTrue(len(thread_list) == 1)
         thread = thread_list[0]

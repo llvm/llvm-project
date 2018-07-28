@@ -25,9 +25,9 @@ set(SWIG_INSTALL_DIR lib${LLVM_LIBDIR_SUFFIX})
 if(LLDB_BUILD_FRAMEWORK)
   set(framework_arg --framework --target-platform Darwin)
   set(SWIG_PYTHON_DIR
-    ${LLDB_FRAMEWORK_DIR}/${LLDB_FRAMEWORK_RESOURCE_DIR}/Python)
+    ${LLDB_PYTHON_TARGET_DIR}/${LLDB_FRAMEWORK_RESOURCE_DIR}/Python)
   set(SWIG_INSTALL_DIR
-    ${LLDB_FRAMEWORK_INSTALL_DIR}/LLDB.framework/${LLDB_FRAMEWORK_RESOURCE_DIR})
+    ${LLDB_FRAMEWORK_INSTALL_DIR}/${LLDB_FRAMEWORK_RESOURCE_DIR})
 endif()
 
 get_filename_component(CFGBLDDIR ${LLDB_WRAP_PYTHON} DIRECTORY)
@@ -52,7 +52,7 @@ add_custom_command(
   COMMENT "Python script building LLDB Python wrapper")
 add_custom_target(swig_wrapper ALL DEPENDS ${LLDB_WRAP_PYTHON})
 
-set_source_files_properties(${LLDB_PYTHON_TARGET_DIR}/lldb.py PROPERTIES GENERATED 1)
+set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/lldb.py PROPERTIES GENERATED 1)
 
 
 # Install the LLDB python module

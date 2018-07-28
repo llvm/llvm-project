@@ -1,4 +1,4 @@
-; RUN: llc < %s -asm-verbose=false -wasm-temporary-workarounds=false -wasm-explicit-locals-codegen-test-mode | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -wasm-temporary-workarounds=false | FileCheck %s
 
 ; Test that function pointer casts casting away varargs are replaced with
 ; wrappers.

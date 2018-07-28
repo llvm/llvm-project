@@ -1,5 +1,5 @@
-; RUN: llc < %s -mattr=+sign-ext -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-register-codegen-test-mode | FileCheck %s
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-register-codegen-test-mode | FileCheck %s --check-prefix=NOSIGNEXT
+; RUN: llc < %s -mattr=+sign-ext -asm-verbose=false -disable-wasm-fallthrough-return-opt -disable-wasm-explicit-locals | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -disable-wasm-explicit-locals | FileCheck %s --check-prefix=NOSIGNEXT
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"

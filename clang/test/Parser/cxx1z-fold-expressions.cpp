@@ -60,3 +60,29 @@ template <int... N> constexpr int nestedFoldOperator() {
 }
 
 static_assert(nestedFoldOperator<3, 1>() == 1);
+
+// A fold-expression is a primary-expression.
+template <typename T, typename... Ts>
+constexpr auto castSum(Ts... Args) {
+  return (T)(Args + ...).Value; // expected-error{{member reference base type 'int' is not a structure or union}}
+}
+
+template <typename... Ts>
+constexpr auto simpleSum(Ts... Args) {
+  return (... + Args).Value; // expected-error{{member reference base type 'int' is not a structure or union}}
+}
+
+void prim() {
+  castSum<int>(1, 2);
+  // expected-note@-1{{in instantiation of function template specialization}}
+  simpleSum(1, 2);
+  // expected-note@-1{{in instantiation of function template specialization}}
+
+  struct Number {
+    int Value;
+    constexpr Number operator+(Number Rhs) const { return {Rhs.Value + Value}; }
+  };
+
+  static_assert(castSum<long>(Number{1}, Number{2}) == 3);
+  static_assert(simpleSum(Number{1}, Number{2}) == 3);
+}

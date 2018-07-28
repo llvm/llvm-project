@@ -1,4 +1,4 @@
-; RUN: llc < %s -asm-verbose=false -wasm-register-codegen-test-mode -disable-wasm-fallthrough-return-opt | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-explicit-locals -disable-wasm-fallthrough-return-opt | FileCheck %s
 
 ; Test constant load and store address offsets.
 

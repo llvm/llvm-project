@@ -1,4 +1,4 @@
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-explicit-locals-codegen-test-mode | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt | FileCheck %s
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
@@ -138,7 +138,7 @@ define void @dynamic_alloca(i32 %alloc) {
  ; Target independent codegen bumps the stack pointer.
  ; CHECK: i32.sub
  ; Check that SP is written back to memory after decrement
- ; CHECK: set_global __stack_pointer,
+ ; CHECK: set_global __stack_pointer, 
  %r = alloca i32, i32 %alloc
  ; Target-independent codegen also calculates the store addr
  ; CHECK: call ext_func_i32@FUNCTION
