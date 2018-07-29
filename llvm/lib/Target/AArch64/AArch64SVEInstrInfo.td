@@ -224,6 +224,26 @@ let Predicates = [HasSVE] in {
   def FEXPA_ZZ_S : sve_int_bin_cons_misc_0_c<0b10000000, "fexpa", ZPR32>;
   def FEXPA_ZZ_D : sve_int_bin_cons_misc_0_c<0b11000000, "fexpa", ZPR64>;
 
+  def BRKPA_PPzPP  : sve_int_brkp<0b00, "brkpa">;
+  def BRKPAS_PPzPP : sve_int_brkp<0b10, "brkpas">;
+  def BRKPB_PPzPP  : sve_int_brkp<0b01, "brkpb">;
+  def BRKPBS_PPzPP : sve_int_brkp<0b11, "brkpbs">;
+
+  def BRKN_PPzP    : sve_int_brkn<0b0, "brkn">;
+  def BRKNS_PPzP   : sve_int_brkn<0b1, "brkns">;
+
+  defm BRKA_PPzP  : sve_int_break_z<0b000, "brka">;
+  defm BRKA_PPmP  : sve_int_break_m<0b001, "brka">;
+  defm BRKAS_PPzP : sve_int_break_z<0b010, "brkas">;
+  defm BRKB_PPzP  : sve_int_break_z<0b100, "brkb">;
+  defm BRKB_PPmP  : sve_int_break_m<0b101, "brkb">;
+  defm BRKBS_PPzP : sve_int_break_z<0b110, "brkbs">;
+
+  def PTEST_PP : sve_int_ptest<0b010000, "ptest">;
+  def PFALSE   : sve_int_pfalse<0b000000, "pfalse">;
+  defm PFIRST  : sve_int_pfirst<0b00000, "pfirst">;
+  defm PNEXT   : sve_int_pnext<0b00110, "pnext">;
+
   def AND_PPzPP   : sve_int_pred_log<0b0000, "and">;
   def BIC_PPzPP   : sve_int_pred_log<0b0001, "bic">;
   def EOR_PPzPP   : sve_int_pred_log<0b0010, "eor">;
@@ -730,6 +750,21 @@ let Predicates = [HasSVE] in {
   defm FCMLE_PPzZ0 : sve_fp_2op_p_pd<0b011, "fcmle">;
   defm FCMEQ_PPzZ0 : sve_fp_2op_p_pd<0b100, "fcmeq">;
   defm FCMNE_PPzZ0 : sve_fp_2op_p_pd<0b110, "fcmne">;
+
+  defm WHILELT_PWW : sve_int_while4_rr<0b010, "whilelt">;
+  defm WHILELE_PWW : sve_int_while4_rr<0b011, "whilele">;
+  defm WHILELO_PWW : sve_int_while4_rr<0b110, "whilelo">;
+  defm WHILELS_PWW : sve_int_while4_rr<0b111, "whilels">;
+
+  defm WHILELT_PXX : sve_int_while8_rr<0b010, "whilelt">;
+  defm WHILELE_PXX : sve_int_while8_rr<0b011, "whilele">;
+  defm WHILELO_PXX : sve_int_while8_rr<0b110, "whilelo">;
+  defm WHILELS_PXX : sve_int_while8_rr<0b111, "whilels">;
+
+  def CTERMEQ_WW : sve_int_cterm<0b0, 0b0, "ctermeq", GPR32>;
+  def CTERMNE_WW : sve_int_cterm<0b0, 0b1, "ctermne", GPR32>;
+  def CTERMEQ_XX : sve_int_cterm<0b1, 0b0, "ctermeq", GPR64>;
+  def CTERMNE_XX : sve_int_cterm<0b1, 0b1, "ctermne", GPR64>;
 
   def RDVLI_XI  : sve_int_read_vl_a<0b0, 0b11111, "rdvl">;
   def ADDVL_XXI : sve_int_arith_vl<0b0, "addvl">;

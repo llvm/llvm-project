@@ -40,8 +40,8 @@ define <2 x i8> @sub_not_vec(<2 x i8> %x, <2 x i8> %y) {
 
 define i8 @dec_sub(i8 %x, i8 %y) {
 ; CHECK-LABEL: @dec_sub(
-; CHECK-NEXT:    [[S:%.*]] = sub i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = add i8 [[S]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[Y:%.*]], -1
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %s = sub i8 %x, %y
@@ -64,8 +64,8 @@ define i8 @dec_sub_extra_use(i8 %x, i8 %y) {
 
 define <2 x i8> @dec_sub_vec(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @dec_sub_vec(
-; CHECK-NEXT:    [[S:%.*]] = sub <2 x i8> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = add <2 x i8> [[S]], <i8 -1, i8 undef>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i8> [[Y:%.*]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[R:%.*]] = add <2 x i8> [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %s = sub <2 x i8> %x, %y

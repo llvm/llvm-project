@@ -4,6 +4,7 @@
 
 declare float @llvm.minnum.f32(float, float) #0
 declare <2 x float> @llvm.minnum.v2f32(<2 x float>, <2 x float>) #0
+declare <3 x float> @llvm.minnum.v3f32(<3 x float>, <3 x float>) #0
 declare <4 x float> @llvm.minnum.v4f32(<4 x float>, <4 x float>) #0
 declare <8 x float> @llvm.minnum.v8f32(<8 x float>, <8 x float>) #0
 declare <16 x float> @llvm.minnum.v16f32(<16 x float>, <16 x float>) #0
@@ -276,6 +277,16 @@ define amdgpu_kernel void @fmin_literal_var_f32(float addrspace(1)* %out, float 
   %val = call float @llvm.minnum.f32(float 99.0, float %a) #0
   store float %val, float addrspace(1)* %out, align 4
   ret void
+}
+
+; FUNC-LABEL: {{^}}test_func_fmin_v3f32:
+; SI: v_min_f32_e32
+; SI: v_min_f32_e32
+; SI: v_min_f32_e32
+; SI-NOT: v_min_f32
+define <3 x float> @test_func_fmin_v3f32(<3 x float> %a, <3 x float> %b) nounwind {
+  %val = call <3 x float> @llvm.minnum.v3f32(<3 x float> %a, <3 x float> %b) #0
+  ret <3 x float> %val
 }
 
 attributes #0 = { nounwind readnone }

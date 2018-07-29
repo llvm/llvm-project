@@ -1224,6 +1224,7 @@ unsigned PPCTargetLowering::getByValTypeAlignment(Type *Ty,
 }
 
 unsigned PPCTargetLowering::getNumRegistersForCallingConv(LLVMContext &Context,
+                                                          CallingConv:: ID CC,
                                                           EVT VT) const {
   if (Subtarget.hasSPE() && VT == MVT::f64)
     return 2;
@@ -1231,6 +1232,7 @@ unsigned PPCTargetLowering::getNumRegistersForCallingConv(LLVMContext &Context,
 }
 
 MVT PPCTargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
+                                                     CallingConv:: ID CC,
                                                      EVT VT) const {
   if (Subtarget.hasSPE() && VT == MVT::f64)
     return MVT::i32;

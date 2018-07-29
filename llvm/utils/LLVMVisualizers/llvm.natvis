@@ -68,6 +68,10 @@ For later versions of Visual Studio, no setup is required.
     </Expand>
   </Type>
 
+  <Type Name="StringView">
+    <DisplayString>{First,[Last - First]s}</DisplayString>
+  </Type>
+  
   <Type Name="llvm::StringRef">
     <DisplayString>{Data,[Length]s}</DisplayString>
     <StringView>Data,[Length]s</StringView>

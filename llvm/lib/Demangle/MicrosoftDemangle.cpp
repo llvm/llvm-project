@@ -420,8 +420,10 @@ static void outputName(OutputStream &OS, const Name *TheName) {
 
   outputSpaceIfNecessary(OS);
 
+  const Name *Previous = nullptr;
   // Print out namespaces or outer class BackReferences.
   for (; TheName->Next; TheName = TheName->Next) {
+    Previous = TheName;
     OS << TheName->Str;
     outputTemplateParams(OS, *TheName);
     OS << "::";
@@ -435,14 +437,12 @@ static void outputName(OutputStream &OS, const Name *TheName) {
   }
 
   // Print out ctor or dtor.
+  if (TheName->Operator == "dtor")
+    OS << "~";
+
   if (TheName->Operator == "ctor" || TheName->Operator == "dtor") {
-    OS << TheName->Str;
-    outputTemplateParams(OS, *TheName);
-    OS << "::";
-    if (TheName->Operator == "dtor")
-      OS << "~";
-    OS << TheName->Str;
-    outputTemplateParams(OS, *TheName);
+    OS << Previous->Str;
+    outputTemplateParams(OS, *Previous);
     return;
   }
 
@@ -755,13 +755,24 @@ private:
   ParamList demangleFunctionParameterList();
 
   int demangleNumber();
-  void demangleNamePiece(Name &Node, bool IsHead);
 
-  StringView demangleString(bool memorize);
   void memorizeString(StringView s);
-  Name *demangleName();
+  Name *demangleFullyQualifiedTypeName();
+  Name *demangleFullyQualifiedSymbolName();
+
+  Name *demangleUnqualifiedTypeName();
+  Name *demangleUnqualifiedSymbolName();
+
+  Name *demangleNameScopeChain(Name *UnqualifiedName);
+  Name *demangleNameScopePiece();
+
+  Name *demangleBackRefName();
+  Name *demangleClassTemplateName();
+  Name *demangleOperatorName();
+  Name *demangleSimpleName(bool Memorize);
+  Name *demangleAnonymousNamespaceName();
+
   void demangleOperator(Name *);
-  StringView demangleOperatorName();
   FuncClass demangleFunctionClass();
   CallingConv demangleCallingConvention();
   StorageClass demangleVariableStorageClass();
@@ -821,7 +832,7 @@ void Demangler::parse() {
 
   // What follows is a main symbol name. This may include
   // namespaces or class BackReferences.
-  SymbolName = demangleName();
+  SymbolName = demangleFullyQualifiedSymbolName();
 
   // Read a variable.
   if (startsWithDigit(MangledName)) {
@@ -861,7 +872,7 @@ Type *Demangler::demangleVariableEncoding() {
 
     if (Ty->Prim == PrimTy::MemberPtr) {
       assert(IsMember);
-      Name *BackRefName = demangleName();
+      Name *BackRefName = demangleFullyQualifiedTypeName();
       (void)BackRefName;
       MemberPointerType *MPTy = static_cast<MemberPointerType *>(Ty);
       MPTy->Pointee->Quals = Qualifiers(MPTy->Pointee->Quals | ExtraChildQuals);
@@ -918,23 +929,6 @@ int Demangler::demangleNumber() {
   return 0;
 }
 
-// Read until the next '@'.
-StringView Demangler::demangleString(bool Memorize) {
-  for (size_t i = 0; i < MangledName.size(); ++i) {
-    if (MangledName[i] != '@')
-      continue;
-    StringView ret = MangledName.substr(0, i);
-    MangledName = MangledName.dropFront(i + 1);
-
-    if (Memorize)
-      memorizeString(ret);
-    return ret;
-  }
-
-  Error = true;
-  return "";
-}
-
 // First 10 strings can be referenced by special BackReferences ?0, ?1, ..., ?9.
 // Memorize it.
 void Demangler::memorizeString(StringView S) {
@@ -946,176 +940,247 @@ void Demangler::memorizeString(StringView S) {
   BackReferences[BackRefCount++] = S;
 }
 
-void Demangler::demangleNamePiece(Name &Node, bool IsHead) {
-  if (startsWithDigit(MangledName)) {
-    size_t I = MangledName[0] - '0';
-    if (I >= BackRefCount) {
-      Error = true;
-      return;
-    }
-    MangledName = MangledName.dropFront();
-    Node.Str = BackReferences[I];
-  } else if (MangledName.consumeFront("?$")) {
-    // Class template.
-    Node.Str = demangleString(false);
-    Node.TemplateParams = demangleTemplateParameterList();
-  } else if (!IsHead && MangledName.consumeFront("?A")) {
-    // Anonymous namespace starts with ?A.  So does overloaded operator[],
-    // but the distinguishing factor is that namespace themselves are not
-    // mangled, only the variables and functions inside of them are.  So
-    // an anonymous namespace will never occur as the first item in the
-    // name.
-    Node.Str = "`anonymous namespace'";
-    if (!MangledName.consumeFront('@')) {
-      Error = true;
-      return;
-    }
-  } else if (MangledName.consumeFront("?")) {
-    // Overloaded operator.
-    demangleOperator(&Node);
-  } else {
-    // Non-template functions or classes.
-    Node.Str = demangleString(true);
+Name *Demangler::demangleBackRefName() {
+  assert(startsWithDigit(MangledName));
+
+  size_t I = MangledName[0] - '0';
+  if (I >= BackRefCount) {
+    Error = true;
+    return nullptr;
   }
+
+  MangledName = MangledName.dropFront();
+  Name *Node = Arena.alloc<Name>();
+  Node->Str = BackReferences[I];
+  return Node;
 }
 
-// Parses a name in the form of A@B@C@@ which represents C::B::A.
-Name *Demangler::demangleName() {
-  Name *Head = nullptr;
+Name *Demangler::demangleClassTemplateName() {
+  assert(MangledName.startsWith("?$"));
+  MangledName.consumeFront("?$");
+
+  Name *Node = demangleSimpleName(false);
+  Node->TemplateParams = demangleTemplateParameterList();
+  return Node;
+}
+
+Name *Demangler::demangleOperatorName() {
+  assert(MangledName.startsWith('?'));
+  MangledName.consumeFront('?');
+
+  auto NameString = [this]() -> StringView {
+    switch (MangledName.popFront()) {
+    case '0':
+      return "ctor";
+    case '1':
+      return "dtor";
+    case '2':
+      return " new";
+    case '3':
+      return " delete";
+    case '4':
+      return "=";
+    case '5':
+      return ">>";
+    case '6':
+      return "<<";
+    case '7':
+      return "!";
+    case '8':
+      return "==";
+    case '9':
+      return "!=";
+    case 'A':
+      return "[]";
+    case 'C':
+      return "->";
+    case 'D':
+      return "*";
+    case 'E':
+      return "++";
+    case 'F':
+      return "--";
+    case 'G':
+      return "-";
+    case 'H':
+      return "+";
+    case 'I':
+      return "&";
+    case 'J':
+      return "->*";
+    case 'K':
+      return "/";
+    case 'L':
+      return "%";
+    case 'M':
+      return "<";
+    case 'N':
+      return "<=";
+    case 'O':
+      return ">";
+    case 'P':
+      return ">=";
+    case 'Q':
+      return ",";
+    case 'R':
+      return "()";
+    case 'S':
+      return "~";
+    case 'T':
+      return "^";
+    case 'U':
+      return "|";
+    case 'V':
+      return "&&";
+    case 'W':
+      return "||";
+    case 'X':
+      return "*=";
+    case 'Y':
+      return "+=";
+    case 'Z':
+      return "-=";
+    case '_': {
+      if (MangledName.empty())
+        break;
+
+      switch (MangledName.popFront()) {
+      case '0':
+        return "/=";
+      case '1':
+        return "%=";
+      case '2':
+        return ">>=";
+      case '3':
+        return "<<=";
+      case '4':
+        return "&=";
+      case '5':
+        return "|=";
+      case '6':
+        return "^=";
+      case 'U':
+        return " new[]";
+      case 'V':
+        return " delete[]";
+      case '_':
+        if (MangledName.consumeFront("L"))
+          return " co_await";
+      }
+    }
+    }
+    Error = true;
+    return "";
+  };
+
+  Name *Node = Arena.alloc<Name>();
+  Node->Operator = NameString();
+  return Node;
+}
+
+Name *Demangler::demangleSimpleName(bool Memorize) {
+  Name *Node = Arena.alloc<Name>();
+  for (size_t i = 0; i < MangledName.size(); ++i) {
+    if (MangledName[i] != '@')
+      continue;
+    Node->Str = MangledName.substr(0, i);
+    MangledName = MangledName.dropFront(i + 1);
+
+    if (Memorize)
+      memorizeString(Node->Str);
+    return Node;
+  }
+
+  Error = true;
+  return nullptr;
+}
+
+Name *Demangler::demangleAnonymousNamespaceName() {
+  assert(MangledName.startsWith("?A"));
+  MangledName.consumeFront("?A");
+
+  Name *Node = Arena.alloc<Name>();
+  Node->Str = "`anonymous namespace'";
+  if (MangledName.consumeFront('@'))
+    return Node;
+
+  Error = true;
+  return nullptr;
+}
+
+// Parses a type name in the form of A@B@C@@ which represents C::B::A.
+Name *Demangler::demangleFullyQualifiedTypeName() {
+  Name *TypeName = demangleUnqualifiedTypeName();
+  assert(TypeName);
+
+  Name *QualName = demangleNameScopeChain(TypeName);
+  assert(QualName);
+  return QualName;
+}
+
+// Parses a symbol name in the form of A@B@C@@ which represents C::B::A.
+// Symbol names have slightly different rules regarding what can appear
+// so we separate out the implementations for flexibility.
+Name *Demangler::demangleFullyQualifiedSymbolName() {
+  Name *SymbolName = demangleUnqualifiedSymbolName();
+  assert(SymbolName);
+
+  Name *QualName = demangleNameScopeChain(SymbolName);
+  assert(QualName);
+  return QualName;
+}
+
+Name *Demangler::demangleUnqualifiedTypeName() {
+  // An inner-most name can be a back-reference, because a fully-qualified name
+  // (e.g. Scope + Inner) can contain other fully qualified names inside of
+  // them (for example template parameters), and these nested parameters can
+  // refer to previously mangled types.
+  if (startsWithDigit(MangledName))
+    return demangleBackRefName();
+
+  if (MangledName.startsWith("?$"))
+    return demangleClassTemplateName();
+
+  return demangleSimpleName(true);
+}
+
+Name *Demangler::demangleUnqualifiedSymbolName() {
+  if (MangledName.startsWith('?'))
+    return demangleOperatorName();
+  return demangleSimpleName(true);
+}
+
+Name *Demangler::demangleNameScopePiece() {
+  if (startsWithDigit(MangledName))
+    return demangleBackRefName();
+
+  if (MangledName.startsWith("?$"))
+    return demangleClassTemplateName();
+
+  if (MangledName.startsWith("?A"))
+    return demangleAnonymousNamespaceName();
+
+  return demangleSimpleName(true);
+}
+
+Name *Demangler::demangleNameScopeChain(Name *UnqualifiedName) {
+  Name *Head = UnqualifiedName;
 
   while (!MangledName.consumeFront("@")) {
-    Name *Elem = Arena.alloc<Name>();
+    if (MangledName.empty()) {
+      Error = true;
+      return nullptr;
+    }
 
     assert(!Error);
-    demangleNamePiece(*Elem, Head == nullptr);
+    Name *Elem = demangleNameScopePiece();
     if (Error)
       return nullptr;
 
     Elem->Next = Head;
     Head = Elem;
-    if (MangledName.empty()) {
-      Error = true;
-      return nullptr;
-    }
   }
-
   return Head;
-}
-
-void Demangler::demangleOperator(Name *OpName) {
-  OpName->Operator = demangleOperatorName();
-  if (!Error && !MangledName.empty() && MangledName.front() != '@')
-    demangleNamePiece(*OpName, false);
-}
-
-StringView Demangler::demangleOperatorName() {
-  SwapAndRestore<StringView> RestoreOnError(MangledName, MangledName);
-  RestoreOnError.shouldRestore(false);
-
-  switch (MangledName.popFront()) {
-  case '0':
-    return "ctor";
-  case '1':
-    return "dtor";
-  case '2':
-    return " new";
-  case '3':
-    return " delete";
-  case '4':
-    return "=";
-  case '5':
-    return ">>";
-  case '6':
-    return "<<";
-  case '7':
-    return "!";
-  case '8':
-    return "==";
-  case '9':
-    return "!=";
-  case 'A':
-    return "[]";
-  case 'C':
-    return "->";
-  case 'D':
-    return "*";
-  case 'E':
-    return "++";
-  case 'F':
-    return "--";
-  case 'G':
-    return "-";
-  case 'H':
-    return "+";
-  case 'I':
-    return "&";
-  case 'J':
-    return "->*";
-  case 'K':
-    return "/";
-  case 'L':
-    return "%";
-  case 'M':
-    return "<";
-  case 'N':
-    return "<=";
-  case 'O':
-    return ">";
-  case 'P':
-    return ">=";
-  case 'Q':
-    return ",";
-  case 'R':
-    return "()";
-  case 'S':
-    return "~";
-  case 'T':
-    return "^";
-  case 'U':
-    return "|";
-  case 'V':
-    return "&&";
-  case 'W':
-    return "||";
-  case 'X':
-    return "*=";
-  case 'Y':
-    return "+=";
-  case 'Z':
-    return "-=";
-  case '_': {
-    if (MangledName.empty())
-      break;
-
-    switch (MangledName.popFront()) {
-    case '0':
-      return "/=";
-    case '1':
-      return "%=";
-    case '2':
-      return ">>=";
-    case '3':
-      return "<<=";
-    case '4':
-      return "&=";
-    case '5':
-      return "|=";
-    case '6':
-      return "^=";
-    case 'U':
-      return " new[]";
-    case 'V':
-      return " delete[]";
-    case '_':
-      if (MangledName.consumeFront("L"))
-        return " co_await";
-    }
-  }
-  }
-
-  Error = true;
-  RestoreOnError.shouldRestore(true);
-  return "";
 }
 
 FuncClass Demangler::demangleFunctionClass() {
@@ -1440,7 +1505,7 @@ UdtType *Demangler::demangleClassType() {
     assert(false);
   }
 
-  UTy->UdtName = demangleName();
+  UTy->UdtName = demangleFullyQualifiedTypeName();
   return UTy;
 }
 
@@ -1498,14 +1563,14 @@ MemberPointerType *Demangler::demangleMemberPointerType() {
   Pointer->Quals = Qualifiers(Pointer->Quals | ExtQuals);
 
   if (MangledName.consumeFront("8")) {
-    Pointer->MemberName = demangleName();
+    Pointer->MemberName = demangleFullyQualifiedSymbolName();
     Pointer->Pointee = demangleFunctionType(true, true);
   } else {
     Qualifiers PointeeQuals = Q_None;
     bool IsMember = false;
     std::tie(PointeeQuals, IsMember) = demangleQualifiers();
     assert(IsMember);
-    Pointer->MemberName = demangleName();
+    Pointer->MemberName = demangleFullyQualifiedSymbolName();
 
     Pointer->Pointee = demangleType(QualifierMangleMode::Drop);
     Pointer->Pointee->Quals = PointeeQuals;

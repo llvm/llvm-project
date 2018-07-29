@@ -2274,8 +2274,8 @@ int X86TTIImpl::getIntImmCost(const APInt &Imm, Type *Ty) {
 
   // Sign-extend all constants to a multiple of 64-bit.
   APInt ImmVal = Imm;
-  if (BitSize & 0x3f)
-    ImmVal = Imm.sext((BitSize + 63) & ~0x3fU);
+  if (BitSize % 64 != 0)
+    ImmVal = Imm.sext(alignTo(BitSize, 64));
 
   // Split the constant into 64-bit chunks and calculate the cost for each
   // chunk.
@@ -2332,9 +2332,15 @@ int X86TTIImpl::getIntImmCost(unsigned Opcode, unsigned Idx, const APInt &Imm,
     // immediates here as the normal path expects bit 31 to be sign extended.
     if (Idx == 1 && Imm.getBitWidth() == 64 && isUInt<32>(Imm.getZExtValue()))
       return TTI::TCC_Free;
-    LLVM_FALLTHROUGH;
+    ImmIdx = 1;
+    break;
   case Instruction::Add:
   case Instruction::Sub:
+    // For add/sub, we can use the opposite instruction for INT32_MIN.
+    if (Idx == 1 && Imm.getBitWidth() == 64 && isInt<32>(-Imm.getSExtValue()))
+      return TTI::TCC_Free;
+    ImmIdx = 1;
+    break;
   case Instruction::Mul:
   case Instruction::UDiv:
   case Instruction::SDiv:
@@ -2366,7 +2372,7 @@ int X86TTIImpl::getIntImmCost(unsigned Opcode, unsigned Idx, const APInt &Imm,
   }
 
   if (Idx == ImmIdx) {
-    int NumConstants = (BitSize + 63) / 64;
+    int NumConstants = divideCeil(BitSize, 64);
     int Cost = X86TTIImpl::getIntImmCost(Imm, Ty);
     return (Cost <= NumConstants * TTI::TCC_Basic)
                ? static_cast<int>(TTI::TCC_Free)

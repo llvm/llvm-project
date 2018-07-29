@@ -872,9 +872,11 @@ namespace llvm {
                                                MCContext &Ctx) const override;
 
     unsigned getNumRegistersForCallingConv(LLVMContext &Context,
+                                           CallingConv:: ID CC,
                                            EVT VT) const override;
 
     MVT getRegisterTypeForCallingConv(LLVMContext &Context,
+                                      CallingConv:: ID CC,
                                       EVT VT) const override;
 
   private:

@@ -17921,7 +17921,7 @@ SDValue DAGCombiner::BuildSDIV(SDNode *N) {
 
   std::vector<SDNode *> Built;
   SDValue S =
-      TLI.BuildSDIV(N, C->getAPIntValue(), DAG, LegalOperations, &Built);
+      TLI.BuildSDIV(N, C->getAPIntValue(), DAG, LegalOperations, Built);
 
   for (SDNode *N : Built)
     AddToWorklist(N);
@@ -17967,7 +17967,7 @@ SDValue DAGCombiner::BuildUDIV(SDNode *N) {
 
   std::vector<SDNode *> Built;
   SDValue S =
-      TLI.BuildUDIV(N, C->getAPIntValue(), DAG, LegalOperations, &Built);
+      TLI.BuildUDIV(N, C->getAPIntValue(), DAG, LegalOperations, Built);
 
   for (SDNode *N : Built)
     AddToWorklist(N);
