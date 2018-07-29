@@ -313,13 +313,6 @@ static std::string getOutputFileName(llvm::StringRef InputFile) {
   return BundleDir.str();
 }
 
-static Expected<sys::fs::TempFile> createTempFile() {
-  llvm::SmallString<128> TmpModel;
-  llvm::sys::path::system_temp_directory(true, TmpModel);
-  llvm::sys::path::append(TmpModel, "dsym.tmp%%%%%.dwarf");
-  return sys::fs::TempFile::create(TmpModel);
-}
-
 /// Parses the command line options into the LinkOptions struct and performs
 /// some sanity checking. Returns an error in case the latter fails.
 static Expected<LinkOptions> getOptions() {
@@ -399,18 +392,6 @@ static Expected<std::vector<std::string>> getInputs(bool DsymAsInput) {
   }
   return Inputs;
 }
-
-namespace {
-struct TempFileVector {
-  std::vector<sys::fs::TempFile> Files;
-  ~TempFileVector() {
-    for (sys::fs::TempFile &Tmp : Files) {
-      if (Error E = Tmp.discard())
-        errs() << toString(std::move(E));
-    }
-  }
-};
-} // namespace
 
 int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
@@ -523,8 +504,7 @@ int main(int argc, char **argv) {
         !DumpDebugMap && (OutputFileOpt != "-") &&
         (DebugMapPtrsOrErr->size() != 1 || OptionsOrErr->Update);
 
-    llvm::SmallVector<MachOUtils::ArchAndFilename, 4> TempFiles;
-    TempFileVector TempFileStore;
+    llvm::SmallVector<MachOUtils::ArchAndFile, 4> TempFiles;
     std::atomic_char AllOK(1);
     for (auto &Map : *DebugMapPtrsOrErr) {
       if (Verbose || DumpDebugMap)
@@ -543,16 +523,18 @@ int main(int argc, char **argv) {
       std::shared_ptr<raw_fd_ostream> OS;
       std::string OutputFile = getOutputFileName(InputFile);
       if (NeedsTempFiles) {
-        Expected<sys::fs::TempFile> T = createTempFile();
-        if (!T) {
-          errs() << toString(T.takeError());
+        TempFiles.emplace_back(Map->getTriple().getArchName().str());
+
+        auto E = TempFiles.back().createTempFile();
+        if (E) {
+          errs() << toString(std::move(E));
           return 1;
         }
-        OS = std::make_shared<raw_fd_ostream>(T->FD, /*shouldClose*/ false);
-        OutputFile = T->TmpName;
-        TempFileStore.Files.push_back(std::move(*T));
-        TempFiles.emplace_back(Map->getTriple().getArchName().str(),
-                               OutputFile);
+
+        auto &TempFile = *(TempFiles.back().File);
+        OS = std::make_shared<raw_fd_ostream>(TempFile.FD,
+                                              /*shouldClose*/ false);
+        OutputFile = TempFile.TmpName;
       } else {
         std::error_code EC;
         OS = std::make_shared<raw_fd_ostream>(NoOutput ? "-" : OutputFile, EC,
