@@ -12,13 +12,13 @@
 #include "Path.h"
 #include "Trace.h"
 #include "index/SymbolYAML.h"
+#include "clang/Basic/Version.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
-#include "clang/Basic/Version.h"
 #include <cstdlib>
 #include <iostream>
 #include <memory>
@@ -157,6 +157,13 @@ static llvm::cl::opt<bool>
                 llvm::cl::init(clangd::CodeCompleteOptions().ShowOrigins),
                 llvm::cl::Hidden);
 
+static llvm::cl::opt<bool> HeaderInsertionDecorators(
+    "header-insertion-decorators",
+    llvm::cl::desc("Prepend a circular dot or space before the completion "
+                   "label, depending on wether "
+                   "an include line will be inserted or not."),
+    llvm::cl::init(true));
+
 static llvm::cl::opt<Path> YamlSymbolFile(
     "yaml-symbol-file",
     llvm::cl::desc(
@@ -276,6 +283,10 @@ int main(int argc, char *argv[]) {
   CCOpts.Limit = LimitResults;
   CCOpts.BundleOverloads = CompletionStyle != Detailed;
   CCOpts.ShowOrigins = ShowOrigins;
+  if (!HeaderInsertionDecorators) {
+    CCOpts.IncludeIndicator.Insert.clear();
+    CCOpts.IncludeIndicator.NoInsert.clear();
+  }
 
   // Initialize and run ClangdLSPServer.
   ClangdLSPServer LSPServer(Out, CCOpts, CompileCommandsDirPath, Opts);
