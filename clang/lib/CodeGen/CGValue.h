@@ -479,12 +479,20 @@ class AggValueSlot {
   /// the size of the type.
   bool OverlapFlag : 1;
 
+  /// If is set to true, sanitizer checks are already generated for this address
+  /// or not required. For instance, if this address represents an object
+  /// created in 'new' expression, sanitizer checks for memory is made as a part
+  /// of 'operator new' emission and object constructor should not generate
+  /// them.
+  bool SanitizerCheckedFlag : 1;
+
 public:
   enum IsAliased_t { IsNotAliased, IsAliased };
   enum IsDestructed_t { IsNotDestructed, IsDestructed };
   enum IsZeroed_t { IsNotZeroed, IsZeroed };
   enum Overlap_t { DoesNotOverlap, MayOverlap };
   enum NeedsGCBarriers_t { DoesNotNeedGCBarriers, NeedsGCBarriers };
+  enum IsSanitizerChecked_t { IsNotSanitizerChecked, IsSanitizerChecked };
 
   /// ignored - Returns an aggregate value slot indicating that the
   /// aggregate value is being ignored.
@@ -509,7 +517,8 @@ public:
                               NeedsGCBarriers_t needsGC,
                               IsAliased_t isAliased,
                               Overlap_t mayOverlap,
-                              IsZeroed_t isZeroed = IsNotZeroed) {
+                              IsZeroed_t isZeroed = IsNotZeroed,
+                       IsSanitizerChecked_t isChecked = IsNotSanitizerChecked) {
     AggValueSlot AV;
     if (addr.isValid()) {
       AV.Addr = addr.getPointer();
@@ -524,6 +533,7 @@ public:
     AV.ZeroedFlag = isZeroed;
     AV.AliasedFlag = isAliased;
     AV.OverlapFlag = mayOverlap;
+    AV.SanitizerCheckedFlag = isChecked;
     return AV;
   }
 
@@ -532,9 +542,10 @@ public:
                                 NeedsGCBarriers_t needsGC,
                                 IsAliased_t isAliased,
                                 Overlap_t mayOverlap,
-                                IsZeroed_t isZeroed = IsNotZeroed) {
+                                IsZeroed_t isZeroed = IsNotZeroed,
+                       IsSanitizerChecked_t isChecked = IsNotSanitizerChecked) {
     return forAddr(LV.getAddress(), LV.getQuals(), isDestructed, needsGC,
-                   isAliased, mayOverlap, isZeroed);
+                   isAliased, mayOverlap, isZeroed, isChecked);
   }
 
   IsDestructed_t isExternallyDestructed() const {
@@ -584,6 +595,10 @@ public:
 
   Overlap_t mayOverlap() const {
     return Overlap_t(OverlapFlag);
+  }
+
+  bool isSanitizerChecked() const {
+    return SanitizerCheckedFlag;
   }
 
   RValue asRValue() const {

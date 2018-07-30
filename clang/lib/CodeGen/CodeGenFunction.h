@@ -2490,13 +2490,15 @@ public:
   void EmitCXXConstructorCall(const CXXConstructorDecl *D, CXXCtorType Type,
                               bool ForVirtualBase, bool Delegating,
                               Address This, const CXXConstructExpr *E,
-                              AggValueSlot::Overlap_t Overlap);
+                              AggValueSlot::Overlap_t Overlap,
+                              bool NewPointerIsChecked);
 
   void EmitCXXConstructorCall(const CXXConstructorDecl *D, CXXCtorType Type,
                               bool ForVirtualBase, bool Delegating,
                               Address This, CallArgList &Args,
                               AggValueSlot::Overlap_t Overlap,
-                              SourceLocation Loc);
+                              SourceLocation Loc,
+                              bool NewPointerIsChecked);
 
   /// Emit assumption load for all bases. Requires to be be called only on
   /// most-derived class and not under construction of the object.
@@ -2513,12 +2515,14 @@ public:
                                   const ArrayType *ArrayTy,
                                   Address ArrayPtr,
                                   const CXXConstructExpr *E,
+                                  bool NewPointerIsChecked,
                                   bool ZeroInitialization = false);
 
   void EmitCXXAggrConstructorCall(const CXXConstructorDecl *D,
                                   llvm::Value *NumElements,
                                   Address ArrayPtr,
                                   const CXXConstructExpr *E,
+                                  bool NewPointerIsChecked,
                                   bool ZeroInitialization = false);
 
   static Destroyer destroyCXXObject;

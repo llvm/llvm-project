@@ -1337,7 +1337,8 @@ unsigned TargetLoweringBase::getVectorTypeBreakdown(LLVMContext &Context, EVT VT
 /// type of the given function.  This does not require a DAG or a return value,
 /// and is suitable for use before any DAGs for the function are constructed.
 /// TODO: Move this out of TargetLowering.cpp.
-void llvm::GetReturnInfo(Type *ReturnType, AttributeList attr,
+void llvm::GetReturnInfo(CallingConv::ID CC, Type *ReturnType,
+                         AttributeList attr,
                          SmallVectorImpl<ISD::OutputArg> &Outs,
                          const TargetLowering &TLI, const DataLayout &DL) {
   SmallVector<EVT, 4> ValueVTs;
@@ -1365,9 +1366,9 @@ void llvm::GetReturnInfo(Type *ReturnType, AttributeList attr,
     }
 
     unsigned NumParts =
-        TLI.getNumRegistersForCallingConv(ReturnType->getContext(), VT);
+        TLI.getNumRegistersForCallingConv(ReturnType->getContext(), CC, VT);
     MVT PartVT =
-        TLI.getRegisterTypeForCallingConv(ReturnType->getContext(), VT);
+        TLI.getRegisterTypeForCallingConv(ReturnType->getContext(), CC, VT);
 
     // 'inreg' on function refers to return value
     ISD::ArgFlagsTy Flags = ISD::ArgFlagsTy();

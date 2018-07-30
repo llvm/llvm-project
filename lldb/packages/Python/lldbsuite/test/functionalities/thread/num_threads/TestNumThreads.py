@@ -92,7 +92,7 @@ class NumberOfThreadsTestCase(TestBase):
         self.assertTrue(
             num_threads >= 10,
             'Number of expected threads and actual threads do not match.')
-        
+
         # Attempt to walk each of the thread's executing the thread3 function to
         # the same breakpoint.
         def is_thread3(thread):

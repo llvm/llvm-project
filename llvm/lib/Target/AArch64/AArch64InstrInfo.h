@@ -249,6 +249,7 @@ public:
   insertOutlinedCall(Module &M, MachineBasicBlock &MBB,
                      MachineBasicBlock::iterator &It, MachineFunction &MF,
                      const outliner::Candidate &C) const override;
+  bool shouldOutlineFromFunctionByDefault(MachineFunction &MF) const override;
   /// Returns true if the instruction sets to an immediate value that can be
   /// executed more efficiently.
   bool isExynosResetFast(const MachineInstr &MI) const;
@@ -337,6 +338,32 @@ static inline bool isCondBranchOpcode(int Opc) {
 
 static inline bool isIndirectBranchOpcode(int Opc) {
   return Opc == AArch64::BR;
+}
+
+// struct TSFlags {
+#define TSFLAG_ELEMENT_SIZE_TYPE(X)      (X)       // 3-bits
+#define TSFLAG_DESTRUCTIVE_INST_TYPE(X) ((X) << 3) // 1-bit
+// }
+
+namespace AArch64 {
+
+enum ElementSizeType {
+  ElementSizeMask = TSFLAG_ELEMENT_SIZE_TYPE(0x7),
+  ElementSizeNone = TSFLAG_ELEMENT_SIZE_TYPE(0x0),
+  ElementSizeB    = TSFLAG_ELEMENT_SIZE_TYPE(0x1),
+  ElementSizeH    = TSFLAG_ELEMENT_SIZE_TYPE(0x2),
+  ElementSizeS    = TSFLAG_ELEMENT_SIZE_TYPE(0x3),
+  ElementSizeD    = TSFLAG_ELEMENT_SIZE_TYPE(0x4),
+};
+
+enum DestructiveInstType {
+  DestructiveInstTypeMask = TSFLAG_DESTRUCTIVE_INST_TYPE(0x1),
+  NotDestructive          = TSFLAG_DESTRUCTIVE_INST_TYPE(0x0),
+  Destructive             = TSFLAG_DESTRUCTIVE_INST_TYPE(0x1),
+};
+
+#undef TSFLAG_ELEMENT_SIZE_TYPE
+#undef TSFLAG_DESTRUCTIVE_INST_TYPE
 }
 
 } // end namespace llvm

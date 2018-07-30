@@ -6570,7 +6570,8 @@ static void visitLocalsRetainedByInitializer(IndirectLocalPath &Path,
           [&](IndirectLocalPath &Path, Local L, ReferenceKind RK) -> bool {
         if (auto *DRE = dyn_cast<DeclRefExpr>(L)) {
           auto *VD = dyn_cast<VarDecl>(DRE->getDecl());
-          if (VD && VD->getType().isConstQualified() && VD->getInit()) {
+          if (VD && VD->getType().isConstQualified() && VD->getInit() &&
+              !isVarOnPath(Path, VD)) {
             Path.push_back({IndirectLocalPathEntry::VarInit, DRE, VD});
             visitLocalsRetainedByInitializer(Path, VD->getInit(), Visit, true);
           }

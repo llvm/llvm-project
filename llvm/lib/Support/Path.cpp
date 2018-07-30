@@ -1157,9 +1157,13 @@ Error TempFile::keep(const Twine &Name) {
     setDeleteDisposition(H, true);
 #else
   std::error_code RenameEC = fs::rename(TmpName, Name);
-  // If we can't rename, discard the temporary file.
-  if (RenameEC)
-    remove(TmpName);
+  if (RenameEC) {
+    // If we can't rename, try to copy to work around cross-device link issues.
+    RenameEC = sys::fs::copy_file(TmpName, Name);
+    // If we can't rename or copy, discard the temporary file.
+    if (RenameEC)
+      remove(TmpName);
+  }
   sys::DontRemoveFileOnSignal(TmpName);
 #endif
 

@@ -1,20 +1,32 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s -o %t.o
 # RUN: ld.lld -r %t.o -o %t
-# RUN: llvm-readobj -file-headers %t | FileCheck %s
 
-## Check we are able to emit a valid ELF header when
+## Check we are able to link against relocatable file produced.
+# RUN: ld.lld %t -o %t.out
+
+## Check we emit a valid ELF header when
 ## sections amount is greater than SHN_LORESERVE.
-# CHECK:      ElfHeader {
-# CHECK:        SectionHeaderCount: 0 (65541)
-# CHECK-NEXT:   StringTableSectionIndex: 65535 (65539)
+# RUN: llvm-readobj -file-headers %t | FileCheck %s --check-prefix=HDR
+# HDR:      ElfHeader {
+# HDR:        SectionHeaderCount: 0 (65543)
+# HDR-NEXT:   StringTableSectionIndex: 65535 (65541)
 
-## Check that 65539 is really the index of .shstrtab section.
-# RUN: llvm-objdump -section-headers -section=.shstrtab %t \
-# RUN:   | FileCheck %s --check-prefix=SHSTRTAB
-# SHSTRTAB:      Sections:
-# SHSTRTAB-NEXT:  Idx   Name
-# SHSTRTAB-NEXT:  65539 .shstrtab
+## Check that:
+## 1) 65541 is the index of .shstrtab section.
+## 2) .symtab_shndxr is linked with .symtab.
+## 3) .symtab_shndxr entry size and alignment == 4.
+## 4) .symtab_shndxr has size equal to
+##    (sizeof(.symtab) / entsize(.symtab)) * entsize(.symtab_shndxr) = 0x4 * 0x180048 / 0x18 == 0x04000c
+# RUN: llvm-readelf -sections -symbols %t | FileCheck %s
+##              [Nr]    Name           Type                   Address          Off    Size   ES Flg  Lk    Inf    Al
+# CHECK:        [65538] .bar
+# CHECK-NEXT:   [65539] .symtab        SYMTAB                 0000000000000000 000040 180078 18      65542 65539  8
+# CHECK-NEXT:   [65540] .symtab_shndxr SYMTAB SECTION INDICES 0000000000000000 1800b8 040014 04      65539 0      4
+# CHECK-NEXT:   [65541] .shstrtab      STRTAB                 0000000000000000 1c00cc 0f0035 00      0     0      1
+# CHECK-NEXT:   [65542] .strtab        STRTAB                 0000000000000000 2b0101 00000c 00
+# 5) Check we are able to represent symbol foo with section (.bar) index  > 0xFF00 (SHN_LORESERVE).
+# CHECK: GLOBAL DEFAULT  65538 foo
 
 .macro gen_sections4 x
   .section a\x
@@ -88,5 +100,10 @@ gen_sections16384 b
 gen_sections16384 c
 gen_sections16384 d
 
+.section .bar
+.global foo
+foo:
+
+.section .text, "ax"
 .global _start
 _start:

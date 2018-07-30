@@ -14,3 +14,13 @@ smax    z0.b, p8/m, z0.b, z0.b
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: restricted predicate has range [0, 7].
 // CHECK-NEXT: smax    z0.b, p8/m, z0.b, z0.b
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+
+// --------------------------------------------------------------------------//
+// Negative tests for instructions that are incompatible with movprfx
+
+movprfx z31.d, p0/z, z6.d
+smax    z31.d, z31.d, #127
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a predicated movprfx, suggest using unpredicated movprfx
+// CHECK-NEXT: smax    z31.d, z31.d, #127
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:

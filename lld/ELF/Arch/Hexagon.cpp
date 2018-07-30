@@ -70,6 +70,12 @@ void Hexagon::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
   switch (Type) {
   case R_HEX_NONE:
     break;
+  case R_HEX_12_X:
+    or32le(Loc, applyMask(0x000007e0, Val));
+    break;
+  case R_HEX_32_6_X:
+    or32le(Loc, applyMask(0x0fff3fff, Val >> 6));
+    break;
   case R_HEX_B15_PCREL:
     or32le(Loc, applyMask(0x00df20fe, Val >> 2));
     break;

@@ -313,9 +313,8 @@ void CGRecordLowering::lowerUnion() {
     if (!SeenNamedMember) {
       SeenNamedMember = Field->getIdentifier();
       if (!SeenNamedMember)
-        if (const auto *FieldRD =
-                dyn_cast_or_null<RecordDecl>(Field->getType()->getAsTagDecl()))
-        SeenNamedMember = FieldRD->findFirstNamedDataMember();
+        if (const auto *FieldRD = Field->getType()->getAsRecordDecl())
+          SeenNamedMember = FieldRD->findFirstNamedDataMember();
       if (SeenNamedMember && !isZeroInitializable(Field)) {
         IsZeroInitializable = IsZeroInitializableAsBase = false;
         StorageType = FieldType;

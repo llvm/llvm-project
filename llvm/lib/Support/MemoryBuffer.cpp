@@ -533,5 +533,4 @@ MemoryBufferRef MemoryBuffer::getMemBufferRef() const {
   return MemoryBufferRef(Data, Identifier);
 }
 
-void MemoryBuffer::anchor() {}
-void SmallVectorMemoryBuffer::anchor() {}
+SmallVectorMemoryBuffer::~SmallVectorMemoryBuffer() {}

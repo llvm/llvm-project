@@ -4588,9 +4588,12 @@ DIExpression
 ``DIExpression`` nodes represent expressions that are inspired by the DWARF
 expression language. They are used in :ref:`debug intrinsics<dbg_intrinsics>`
 (such as ``llvm.dbg.declare`` and ``llvm.dbg.value``) to describe how the
-referenced LLVM variable relates to the source language variable.
+referenced LLVM variable relates to the source language variable. Debug
+intrinsics are interpreted left-to-right: start by pushing the value/address
+operand of the intrinsic onto a stack, then repeatedly push and evaluate
+opcodes from the DIExpression until the final variable description is produced.
 
-The current supported vocabulary is limited:
+The current supported opcode vocabulary is limited:
 
 - ``DW_OP_deref`` dereferences the top of the expression stack.
 - ``DW_OP_plus`` pops the last two entries from the expression stack, adds
@@ -4610,12 +4613,30 @@ The current supported vocabulary is limited:
 - ``DW_OP_stack_value`` marks a constant value.
 
 DWARF specifies three kinds of simple location descriptions: Register, memory,
-and implicit location descriptions. Register and memory location descriptions
-describe the *location* of a source variable (in the sense that a debugger might
-modify its value), whereas implicit locations describe merely the *value* of a
-source variable. DIExpressions also follow this model: A DIExpression that
-doesn't have a trailing ``DW_OP_stack_value`` will describe an *address* when
-combined with a concrete location.
+and implicit location descriptions.  Note that a location description is
+defined over certain ranges of a program, i.e the location of a variable may
+change over the course of the program. Register and memory location
+descriptions describe the *concrete location* of a source variable (in the
+sense that a debugger might modify its value), whereas *implicit locations*
+describe merely the actual *value* of a source variable which might not exist
+in registers or in memory (see ``DW_OP_stack_value``).
+
+A ``llvm.dbg.addr`` or ``llvm.dbg.declare`` intrinsic describes an indirect
+value (the address) of a source variable. The first operand of the intrinsic
+must be an address of some kind. A DIExpression attached to the intrinsic
+refines this address to produce a concrete location for the source variable.
+
+A ``llvm.dbg.value`` intrinsic describes the direct value of a source variable.
+The first operand of the intrinsic may be a direct or indirect value. A
+DIExpresion attached to the intrinsic refines the first operand to produce a
+direct value. For example, if the first operand is an indirect value, it may be
+necessary to insert ``DW_OP_deref`` into the DIExpresion in order to produce a
+valid debug intrinsic.
+
+.. note::
+
+   A DIExpression is interpreted in the same way regardless of which kind of
+   debug intrinsic it's attached to.
 
 .. code-block:: text
 

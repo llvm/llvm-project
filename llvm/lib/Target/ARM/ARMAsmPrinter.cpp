@@ -367,8 +367,9 @@ bool ARMAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
 
       unsigned NumVals = InlineAsm::getNumOperandRegisters(Flags);
       unsigned RC;
-      InlineAsm::hasRegClassConstraint(Flags, RC);
-      if (RC == ARM::GPRPairRegClassID) {
+      const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
+      if (InlineAsm::hasRegClassConstraint(Flags, RC) &&
+          ARM::GPRPairRegClass.hasSubClassEq(TRI->getRegClass(RC))) {
         if (NumVals != 1)
           return true;
         const MachineOperand &MO = MI->getOperand(OpNum);

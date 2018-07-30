@@ -483,9 +483,6 @@ namespace {
     /// returns false.
     bool findBetterNeighborChains(StoreSDNode *St);
 
-    /// Match "(X shl/srl V1) & V2" where V2 may not be present.
-    bool MatchRotateHalf(SDValue Op, SDValue &Shift, SDValue &Mask);
-
     /// Holds a pointer to an LSBaseSDNode as well as information on where it
     /// is located in a sequence of memory operations connected by a chain.
     struct MemOpLink {
@@ -2671,6 +2668,12 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
     return DAG.getNode(ISD::SUB, DL, VT, N0.getOperand(0),
                        N0.getOperand(1).getOperand(0));
 
+  // fold (A-(B-C)) -> A+(C-B)
+  if (N1.getOpcode() == ISD::SUB && N1.hasOneUse())
+    return DAG.getNode(ISD::ADD, DL, VT, N0,
+                       DAG.getNode(ISD::SUB, DL, VT, N1.getOperand(1),
+                                   N1.getOperand(0)));
+
   // fold (X - (-Y * Z)) -> (X + (Y * Z))
   if (N1.getOpcode() == ISD::MUL && N1.hasOneUse()) {
     if (N1.getOperand(0).getOpcode() == ISD::SUB &&
@@ -3343,14 +3346,12 @@ SDValue DAGCombiner::visitREM(SDNode *N) {
     if (DAG.isKnownToBeAPowerOfTwo(N1)) {
       // fold (urem x, pow2) -> (and x, pow2-1)
       SDValue Add = DAG.getNode(ISD::ADD, DL, VT, N1, NegOne);
-      AddToWorklist(Add.getNode());
       return DAG.getNode(ISD::AND, DL, VT, N0, Add);
     }
     if (N1.getOpcode() == ISD::SHL &&
         DAG.isKnownToBeAPowerOfTwo(N1.getOperand(0))) {
       // fold (urem x, (shl pow2, y)) -> (and x, (add (shl pow2, y), -1))
       SDValue Add = DAG.getNode(ISD::ADD, DL, VT, N1, NegOne);
-      AddToWorklist(Add.getNode());
       return DAG.getNode(ISD::AND, DL, VT, N0, Add);
     }
   }
@@ -3370,10 +3371,7 @@ SDValue DAGCombiner::visitREM(SDNode *N) {
     if (OptimizedDiv.getNode() && OptimizedDiv.getOpcode() != ISD::UDIVREM &&
         OptimizedDiv.getOpcode() != ISD::SDIVREM) {
       SDValue Mul = DAG.getNode(ISD::MUL, DL, VT, OptimizedDiv, N1);
-      SDValue Sub = DAG.getNode(ISD::SUB, DL, VT, N0, Mul);
-      AddToWorklist(OptimizedDiv.getNode());
-      AddToWorklist(Mul.getNode());
-      return Sub;
+      return DAG.getNode(ISD::SUB, DL, VT, N0, Mul);
     }
   }
 
@@ -5124,7 +5122,6 @@ SDValue DAGCombiner::visitOR(SDNode *N) {
     if (SDValue COR = DAG.FoldConstantArithmetic(
             ISD::OR, SDLoc(N1), VT, N1.getNode(), N0.getOperand(1).getNode())) {
       SDValue IOR = DAG.getNode(ISD::OR, SDLoc(N0), VT, N0.getOperand(0), N1);
-      AddToWorklist(IOR.getNode());
       return DAG.getNode(ISD::AND, SDLoc(N), VT, COR, IOR);
     }
   }
@@ -5148,23 +5145,138 @@ SDValue DAGCombiner::visitOR(SDNode *N) {
   return SDValue();
 }
 
-/// Match "(X shl/srl V1) & V2" where V2 may not be present.
-bool DAGCombiner::MatchRotateHalf(SDValue Op, SDValue &Shift, SDValue &Mask) {
-  if (Op.getOpcode() == ISD::AND) {
-    if (DAG.isConstantIntBuildVectorOrConstantInt(Op.getOperand(1))) {
-      Mask = Op.getOperand(1);
-      Op = Op.getOperand(0);
-    } else {
-      return false;
-    }
+static SDValue stripConstantMask(SelectionDAG &DAG, SDValue Op, SDValue &Mask) {
+  if (Op.getOpcode() == ISD::AND &&
+      DAG.isConstantIntBuildVectorOrConstantInt(Op.getOperand(1))) {
+    Mask = Op.getOperand(1);
+    return Op.getOperand(0);
   }
+  return Op;
+}
 
+/// Match "(X shl/srl V1) & V2" where V2 may not be present.
+static bool matchRotateHalf(SelectionDAG &DAG, SDValue Op, SDValue &Shift,
+                            SDValue &Mask) {
+  Op = stripConstantMask(DAG, Op, Mask);
   if (Op.getOpcode() == ISD::SRL || Op.getOpcode() == ISD::SHL) {
     Shift = Op;
     return true;
   }
-
   return false;
+}
+
+/// Helper function for visitOR to extract the needed side of a rotate idiom
+/// from a shl/srl/mul/udiv.  This is meant to handle cases where
+/// InstCombine merged some outside op with one of the shifts from
+/// the rotate pattern.
+/// \returns An empty \c SDValue if the needed shift couldn't be extracted.
+/// Otherwise, returns an expansion of \p ExtractFrom based on the following
+/// patterns:
+///
+///   (or (mul v c0) (shrl (mul v c1) c2)):
+///     expands (mul v c0) -> (shl (mul v c1) c3)
+///
+///   (or (udiv v c0) (shl (udiv v c1) c2)):
+///     expands (udiv v c0) -> (shrl (udiv v c1) c3)
+///
+///   (or (shl v c0) (shrl (shl v c1) c2)):
+///     expands (shl v c0) -> (shl (shl v c1) c3)
+///
+///   (or (shrl v c0) (shl (shrl v c1) c2)):
+///     expands (shrl v c0) -> (shrl (shrl v c1) c3)
+///
+/// Such that in all cases, c3+c2==bitwidth(op v c1).
+static SDValue extractShiftForRotate(SelectionDAG &DAG, SDValue OppShift,
+                                     SDValue ExtractFrom, SDValue &Mask,
+                                     const SDLoc &DL) {
+  assert(OppShift && ExtractFrom && "Empty SDValue");
+  assert(
+      (OppShift.getOpcode() == ISD::SHL || OppShift.getOpcode() == ISD::SRL) &&
+      "Existing shift must be valid as a rotate half");
+
+  ExtractFrom = stripConstantMask(DAG, ExtractFrom, Mask);
+  // Preconditions:
+  //    (or (op0 v c0) (shiftl/r (op0 v c1) c2))
+  //
+  // Find opcode of the needed shift to be extracted from (op0 v c0).
+  unsigned Opcode = ISD::DELETED_NODE;
+  bool IsMulOrDiv = false;
+  // Set Opcode and IsMulOrDiv if the extract opcode matches the needed shift
+  // opcode or its arithmetic (mul or udiv) variant.
+  auto SelectOpcode = [&](unsigned NeededShift, unsigned MulOrDivVariant) {
+    IsMulOrDiv = ExtractFrom.getOpcode() == MulOrDivVariant;
+    if (!IsMulOrDiv && ExtractFrom.getOpcode() != NeededShift)
+      return false;
+    Opcode = NeededShift;
+    return true;
+  };
+  // op0 must be either the needed shift opcode or the mul/udiv equivalent
+  // that the needed shift can be extracted from.
+  if ((OppShift.getOpcode() != ISD::SRL || !SelectOpcode(ISD::SHL, ISD::MUL)) &&
+      (OppShift.getOpcode() != ISD::SHL || !SelectOpcode(ISD::SRL, ISD::UDIV)))
+    return SDValue();
+
+  // op0 must be the same opcode on both sides, have the same LHS argument,
+  // and produce the same value type.
+  SDValue OppShiftLHS = OppShift.getOperand(0);
+  EVT ShiftedVT = OppShiftLHS.getValueType();
+  if (OppShiftLHS.getOpcode() != ExtractFrom.getOpcode() ||
+      OppShiftLHS.getOperand(0) != ExtractFrom.getOperand(0) ||
+      ShiftedVT != ExtractFrom.getValueType())
+    return SDValue();
+
+  // Amount of the existing shift.
+  ConstantSDNode *OppShiftCst = isConstOrConstSplat(OppShift.getOperand(1));
+  // Constant mul/udiv/shift amount from the RHS of the shift's LHS op.
+  ConstantSDNode *OppLHSCst = isConstOrConstSplat(OppShiftLHS.getOperand(1));
+  // Constant mul/udiv/shift amount from the RHS of the ExtractFrom op.
+  ConstantSDNode *ExtractFromCst =
+      isConstOrConstSplat(ExtractFrom.getOperand(1));
+  // TODO: We should be able to handle non-uniform constant vectors for these values
+  // Check that we have constant values.
+  if (!OppShiftCst || !OppShiftCst->getAPIntValue() ||
+      !OppLHSCst || !OppLHSCst->getAPIntValue() ||
+      !ExtractFromCst || !ExtractFromCst->getAPIntValue())
+    return SDValue();
+
+  // Compute the shift amount we need to extract to complete the rotate.
+  const unsigned VTWidth = ShiftedVT.getScalarSizeInBits();
+  APInt NeededShiftAmt = VTWidth - OppShiftCst->getAPIntValue();
+  if (NeededShiftAmt.isNegative())
+    return SDValue();
+  // Normalize the bitwidth of the two mul/udiv/shift constant operands.
+  APInt ExtractFromAmt = ExtractFromCst->getAPIntValue();
+  APInt OppLHSAmt = OppLHSCst->getAPIntValue();
+  zeroExtendToMatch(ExtractFromAmt, OppLHSAmt);
+
+  // Now try extract the needed shift from the ExtractFrom op and see if the
+  // result matches up with the existing shift's LHS op.
+  if (IsMulOrDiv) {
+    // Op to extract from is a mul or udiv by a constant.
+    // Check:
+    //     c2 / (1 << (bitwidth(op0 v c0) - c1)) == c0
+    //     c2 % (1 << (bitwidth(op0 v c0) - c1)) == 0
+    const APInt ExtractDiv = APInt::getOneBitSet(ExtractFromAmt.getBitWidth(),
+                                                 NeededShiftAmt.getZExtValue());
+    APInt ResultAmt;
+    APInt Rem;
+    APInt::udivrem(ExtractFromAmt, ExtractDiv, ResultAmt, Rem);
+    if (Rem != 0 || ResultAmt != OppLHSAmt)
+      return SDValue();
+  } else {
+    // Op to extract from is a shift by a constant.
+    // Check:
+    //      c2 - (bitwidth(op0 v c0) - c1) == c0
+    if (OppLHSAmt != ExtractFromAmt - NeededShiftAmt.zextOrTrunc(
+                                          ExtractFromAmt.getBitWidth()))
+      return SDValue();
+  }
+
+  // Return the expanded shift op that should allow a rotate to be formed.
+  EVT ShiftVT = OppShift.getOperand(1).getValueType();
+  EVT ResVT = ExtractFrom.getValueType();
+  SDValue NewShiftNode = DAG.getConstant(NeededShiftAmt, DL, ShiftVT);
+  return DAG.getNode(Opcode, DL, ResVT, OppShiftLHS, NewShiftNode);
 }
 
 // Return true if we can prove that, whenever Neg and Pos are both in the
@@ -5333,14 +5445,41 @@ SDNode *DAGCombiner::MatchRotate(SDValue LHS, SDValue RHS, const SDLoc &DL) {
   // Match "(X shl/srl V1) & V2" where V2 may not be present.
   SDValue LHSShift;   // The shift.
   SDValue LHSMask;    // AND value if any.
-  if (!MatchRotateHalf(LHS, LHSShift, LHSMask))
-    return nullptr; // Not part of a rotate.
+  matchRotateHalf(DAG, LHS, LHSShift, LHSMask);
 
   SDValue RHSShift;   // The shift.
   SDValue RHSMask;    // AND value if any.
-  if (!MatchRotateHalf(RHS, RHSShift, RHSMask))
-    return nullptr; // Not part of a rotate.
+  matchRotateHalf(DAG, RHS, RHSShift, RHSMask);
 
+  // If neither side matched a rotate half, bail
+  if (!LHSShift && !RHSShift)
+    return nullptr;
+
+  // InstCombine may have combined a constant shl, srl, mul, or udiv with one
+  // side of the rotate, so try to handle that here. In all cases we need to
+  // pass the matched shift from the opposite side to compute the opcode and
+  // needed shift amount to extract.  We still want to do this if both sides
+  // matched a rotate half because one half may be a potential overshift that
+  // can be broken down (ie if InstCombine merged two shl or srl ops into a
+  // single one).
+
+  // Have LHS side of the rotate, try to extract the needed shift from the RHS.
+  if (LHSShift)
+    if (SDValue NewRHSShift =
+            extractShiftForRotate(DAG, LHSShift, RHS, RHSMask, DL))
+      RHSShift = NewRHSShift;
+  // Have RHS side of the rotate, try to extract the needed shift from the LHS.
+  if (RHSShift)
+    if (SDValue NewLHSShift =
+            extractShiftForRotate(DAG, RHSShift, LHS, LHSMask, DL))
+      LHSShift = NewLHSShift;
+
+  // If a side is still missing, nothing else we can do.
+  if (!RHSShift || !LHSShift)
+    return nullptr;
+
+  // At this point we've matched or extracted a shift op on each side.
+  
   if (LHSShift.getOperand(0) != RHSShift.getOperand(0))
     return nullptr;   // Not shifting the same value.
 
@@ -5878,7 +6017,6 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
     SDLoc DL(N0);
     V = DAG.getNode(ISD::XOR, DL, V.getValueType(), V,
                     DAG.getConstant(1, DL, V.getValueType()));
-    AddToWorklist(V.getNode());
     return DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N), VT, V);
   }
 
@@ -5890,7 +6028,6 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
       unsigned NewOpcode = N0.getOpcode() == ISD::AND ? ISD::OR : ISD::AND;
       LHS = DAG.getNode(ISD::XOR, SDLoc(LHS), VT, LHS, N1); // LHS = ~LHS
       RHS = DAG.getNode(ISD::XOR, SDLoc(RHS), VT, RHS, N1); // RHS = ~RHS
-      AddToWorklist(LHS.getNode()); AddToWorklist(RHS.getNode());
       return DAG.getNode(NewOpcode, SDLoc(N), VT, LHS, RHS);
     }
   }
@@ -5902,7 +6039,6 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
       unsigned NewOpcode = N0.getOpcode() == ISD::AND ? ISD::OR : ISD::AND;
       LHS = DAG.getNode(ISD::XOR, SDLoc(LHS), VT, LHS, N1); // LHS = ~LHS
       RHS = DAG.getNode(ISD::XOR, SDLoc(RHS), VT, RHS, N1); // RHS = ~RHS
-      AddToWorklist(LHS.getNode()); AddToWorklist(RHS.getNode());
       return DAG.getNode(NewOpcode, SDLoc(N), VT, LHS, RHS);
     }
   }
@@ -5911,7 +6047,6 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
       N0->getOperand(1) == N1) {
     SDValue X = N0->getOperand(0);
     SDValue NotX = DAG.getNOT(SDLoc(X), X, VT);
-    AddToWorklist(NotX.getNode());
     return DAG.getNode(ISD::AND, SDLoc(N), VT, NotX, N1);
   }
 
@@ -6272,7 +6407,6 @@ SDValue DAGCombiner::visitSHL(SDNode *N) {
           SDValue NewSHL = DAG.getNode(ISD::SHL, DL, NewOp0.getValueType(),
                                        NewOp0,
                                        DAG.getConstant(c2, DL, CountVT));
-          AddToWorklist(NewSHL.getNode());
           return DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N0), VT, NewSHL);
         }
       }
@@ -6343,8 +6477,6 @@ SDValue DAGCombiner::visitSHL(SDNode *N) {
       isConstantOrConstantVector(N0.getOperand(1), /* No Opaques */ true)) {
     SDValue Shl0 = DAG.getNode(ISD::SHL, SDLoc(N0), VT, N0.getOperand(0), N1);
     SDValue Shl1 = DAG.getNode(ISD::SHL, SDLoc(N1), VT, N0.getOperand(1), N1);
-    AddToWorklist(Shl0.getNode());
-    AddToWorklist(Shl1.getNode());
     return DAG.getNode(N0.getOpcode(), SDLoc(N), VT, Shl0, Shl1);
   }
 
@@ -6626,7 +6758,6 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
     SDLoc DL(N);
     SDValue Mask =
         DAG.getNode(ISD::SRL, DL, VT, DAG.getAllOnesConstant(DL, VT), N1);
-    AddToWorklist(Mask.getNode());
     return DAG.getNode(ISD::AND, DL, VT, N0.getOperand(0), Mask);
   }
 
@@ -6645,7 +6776,6 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
                                        N0.getOperand(0),
                           DAG.getConstant(ShiftAmt, DL0,
                                           getShiftAmountTy(SmallVT)));
-      AddToWorklist(SmallShift.getNode());
       APInt Mask = APInt::getLowBitsSet(OpSizeInBits, OpSizeInBits - ShiftAmt);
       SDLoc DL(N);
       return DAG.getNode(ISD::AND, DL, VT,
@@ -6690,7 +6820,6 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
         Op = DAG.getNode(ISD::SRL, DL, VT, Op,
                   DAG.getConstant(ShAmt, DL,
                                   getShiftAmountTy(Op.getValueType())));
-        AddToWorklist(Op.getNode());
       }
 
       SDLoc DL(N);
@@ -7016,13 +7145,11 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
   // fold (select C, 0, X) -> (and (not C), X)
   if (VT == VT0 && VT == MVT::i1 && isNullConstant(N1)) {
     SDValue NOTNode = DAG.getNOT(SDLoc(N0), N0, VT);
-    AddToWorklist(NOTNode.getNode());
     return DAG.getNode(ISD::AND, DL, VT, NOTNode, N2);
   }
   // fold (select C, X, 1) -> (or (not C), X)
   if (VT == VT0 && VT == MVT::i1 && isOneConstant(N2)) {
     SDValue NOTNode = DAG.getNOT(SDLoc(N0), N0, VT);
-    AddToWorklist(NOTNode.getNode());
     return DAG.getNode(ISD::OR, DL, VT, NOTNode, N1);
   }
   // fold (select X, Y, X) -> (and X, Y)
@@ -7594,8 +7721,6 @@ SDValue DAGCombiner::visitVSELECT(SDNode *N) {
           ISD::SRA, DL, VT, LHS,
           DAG.getConstant(VT.getScalarSizeInBits() - 1, DL, VT));
       SDValue Add = DAG.getNode(ISD::ADD, DL, VT, LHS, Shift);
-      AddToWorklist(Shift.getNode());
-      AddToWorklist(Add.getNode());
       return DAG.getNode(ISD::XOR, DL, VT, Add, Shift);
     }
 
@@ -9311,10 +9436,8 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
       EVT AmtVT = TLI.getShiftAmountTy(VT, DAG.getDataLayout());
 
       SDValue Trunc = DAG.getNode(ISD::TRUNCATE, SL, VT, N0.getOperand(0));
-      if (AmtVT != Amt.getValueType()) {
+      if (AmtVT != Amt.getValueType())
         Amt = DAG.getZExtOrTrunc(Amt, SL, AmtVT);
-        AddToWorklist(Amt.getNode());
-      }
       return DAG.getNode(ISD::SHL, SL, VT, Trunc, Amt);
     }
   }
@@ -9418,7 +9541,6 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
           continue;
         }
         SDValue NV = DAG.getNode(ISD::TRUNCATE, SDLoc(V), VTs[i], V);
-        AddToWorklist(NV.getNode());
         Opnds.push_back(NV);
       }
       return DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(N), VT, Opnds);
@@ -10722,10 +10844,9 @@ SDValue DAGCombiner::visitFADD(SDNode *N) {
   } // enable-unsafe-fp-math
 
   // FADD -> FMA combines:
-  if (SDValue Fused = visitFADDForFMACombine(N)) {
-    AddToWorklist(Fused.getNode());
+  if (SDValue Fused = visitFADDForFMACombine(N))
     return Fused;
-  }
+
   return SDValue();
 }
 
@@ -10797,10 +10918,8 @@ SDValue DAGCombiner::visitFSUB(SDNode *N) {
   }
 
   // FSUB -> FMA combines:
-  if (SDValue Fused = visitFSUBForFMACombine(N)) {
-    AddToWorklist(Fused.getNode());
+  if (SDValue Fused = visitFSUBForFMACombine(N))
     return Fused;
-  }
 
   return SDValue();
 }
@@ -10949,10 +11068,8 @@ SDValue DAGCombiner::visitFMUL(SDNode *N) {
   }
 
   // FMUL -> FMA combines:
-  if (SDValue Fused = visitFMULForFMADistributiveCombine(N)) {
-    AddToWorklist(Fused.getNode());
+  if (SDValue Fused = visitFMULForFMADistributiveCombine(N))
     return Fused;
-  }
 
   return SDValue();
 }
@@ -11027,7 +11144,6 @@ SDValue DAGCombiner::visitFMA(SDNode *N) {
     if (N1CFP->isExactlyValue(-1.0) &&
         (!LegalOperations || TLI.isOperationLegal(ISD::FNEG, VT))) {
       SDValue RHSNeg = DAG.getNode(ISD::FNEG, DL, VT, N0);
-      AddToWorklist(RHSNeg.getNode());
       // TODO: The FMA node should have flags that propagate to this node.
       return DAG.getNode(ISD::FADD, DL, VT, N2, RHSNeg);
     }
@@ -11179,7 +11295,6 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
       if (SDValue RV = buildRsqrtEstimate(N1.getOperand(0).getOperand(0),
                                           Flags)) {
         RV = DAG.getNode(ISD::FP_EXTEND, SDLoc(N1), VT, RV);
-        AddToWorklist(RV.getNode());
         return DAG.getNode(ISD::FMUL, DL, VT, N0, RV, Flags);
       }
     } else if (N1.getOpcode() == ISD::FP_ROUND &&
@@ -11187,7 +11302,6 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
       if (SDValue RV = buildRsqrtEstimate(N1.getOperand(0).getOperand(0),
                                           Flags)) {
         RV = DAG.getNode(ISD::FP_ROUND, SDLoc(N1), VT, RV, N1.getOperand(1));
-        AddToWorklist(RV.getNode());
         return DAG.getNode(ISD::FMUL, DL, VT, N0, RV, Flags);
       }
     } else if (N1.getOpcode() == ISD::FMUL) {
@@ -11207,17 +11321,15 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
         // x / (y * sqrt(z)) -> x * (rsqrt(z) / y)
         if (SDValue RV = buildRsqrtEstimate(SqrtOp.getOperand(0), Flags)) {
           RV = DAG.getNode(ISD::FDIV, SDLoc(N1), VT, RV, OtherOp, Flags);
-          AddToWorklist(RV.getNode());
           return DAG.getNode(ISD::FMUL, DL, VT, N0, RV, Flags);
         }
       }
     }
 
     // Fold into a reciprocal estimate and multiply instead of a real divide.
-    if (SDValue RV = BuildReciprocalEstimate(N1, Flags)) {
-      AddToWorklist(RV.getNode());
+    if (SDValue RV = BuildReciprocalEstimate(N1, Flags))
       return DAG.getNode(ISD::FMUL, DL, VT, N0, RV, Flags);
-    }
+
   }
 
   // (fdiv (fneg X), (fneg Y)) -> (fdiv X, Y)
@@ -11577,7 +11689,6 @@ SDValue DAGCombiner::visitFP_ROUND(SDNode *N) {
   if (N0.getOpcode() == ISD::FCOPYSIGN && N0.getNode()->hasOneUse()) {
     SDValue Tmp = DAG.getNode(ISD::FP_ROUND, SDLoc(N0), VT,
                               N0.getOperand(0), N1);
-    AddToWorklist(Tmp.getNode());
     return DAG.getNode(ISD::FCOPYSIGN, SDLoc(N), VT,
                        Tmp, N0.getOperand(1));
   }
@@ -11737,7 +11848,6 @@ SDValue DAGCombiner::visitFNEG(SDNode *N) {
       SDLoc DL0(N0);
       Int = DAG.getNode(ISD::XOR, DL0, IntVT, Int,
                         DAG.getConstant(SignMask, DL0, IntVT));
-      AddToWorklist(Int.getNode());
       return DAG.getBitcast(VT, Int);
     }
   }
@@ -11842,7 +11952,6 @@ SDValue DAGCombiner::visitFABS(SDNode *N) {
       SDLoc DL(N0);
       Int = DAG.getNode(ISD::AND, DL, IntVT, Int,
                         DAG.getConstant(SignMask, DL, IntVT));
-      AddToWorklist(Int.getNode());
       return DAG.getBitcast(N->getValueType(0), Int);
     }
   }
@@ -14851,7 +14960,6 @@ SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {
       // Swap nodes.
       SDValue NewOp = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, VT,
                                   InVec.getOperand(0), InVal, EltNo);
-      AddToWorklist(NewOp.getNode());
       return DAG.getNode(ISD::INSERT_VECTOR_ELT, SDLoc(InVec.getNode()),
                          VT, NewOp, InVec.getOperand(1), InVec.getOperand(2));
     }
@@ -17237,7 +17345,6 @@ SDValue DAGCombiner::visitINSERT_SUBVECTOR(SDNode *N) {
       // Swap nodes.
       SDValue NewOp = DAG.getNode(ISD::INSERT_SUBVECTOR, SDLoc(N), VT,
                                   N0.getOperand(0), N1, N2);
-      AddToWorklist(NewOp.getNode());
       return DAG.getNode(ISD::INSERT_SUBVECTOR, SDLoc(N0.getNode()),
                          VT, NewOp, N0.getOperand(1), N0.getOperand(2));
     }
@@ -17915,7 +18022,7 @@ SDValue DAGCombiner::BuildSDIV(SDNode *N) {
 
   std::vector<SDNode *> Built;
   SDValue S =
-      TLI.BuildSDIV(N, C->getAPIntValue(), DAG, LegalOperations, &Built);
+      TLI.BuildSDIV(N, C->getAPIntValue(), DAG, LegalOperations, Built);
 
   for (SDNode *N : Built)
     AddToWorklist(N);
@@ -17961,7 +18068,7 @@ SDValue DAGCombiner::BuildUDIV(SDNode *N) {
 
   std::vector<SDNode *> Built;
   SDValue S =
-      TLI.BuildUDIV(N, C->getAPIntValue(), DAG, LegalOperations, &Built);
+      TLI.BuildUDIV(N, C->getAPIntValue(), DAG, LegalOperations, Built);
 
   for (SDNode *N : Built)
     AddToWorklist(N);

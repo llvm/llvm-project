@@ -2930,6 +2930,11 @@ std::shared_ptr<PathDiagnosticPiece> MallocChecker::MallocBugVisitor::VisitNode(
               OS << MemCallE->getMethodDecl()->getNameAsString();
             } else if (const auto *OpCallE = dyn_cast<CXXOperatorCallExpr>(S)) {
               OS << OpCallE->getDirectCallee()->getNameAsString();
+            } else if (const auto *CallE = dyn_cast<CallExpr>(S)) {
+              auto &CEMgr = BRC.getStateManager().getCallEventManager();
+              CallEventRef<> Call = CEMgr.getSimpleCall(CallE, state, CurrentLC);
+              const auto *D = dyn_cast_or_null<NamedDecl>(Call->getDecl());
+              OS << (D ? D->getNameAsString() : "unknown");
             }
             OS << "'";
           }

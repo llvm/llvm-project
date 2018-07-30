@@ -94,3 +94,19 @@ st4w { v0.4s, v1.4s, v2.4s }, p0, [x0]
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
 // CHECK-NEXT: st4w { v0.4s, v1.4s, v2.4s }, p0, [x0]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+
+// --------------------------------------------------------------------------//
+// Negative tests for instructions that are incompatible with movprfx
+
+movprfx z21.s, p5/z, z28.s
+st4w    { z21.s, z22.s, z23.s, z24.s }, p5, [x10, #20, mul vl]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
+// CHECK-NEXT: st4w    { z21.s, z22.s, z23.s, z24.s }, p5, [x10, #20, mul vl]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+movprfx z21, z28
+st4w    { z21.s, z22.s, z23.s, z24.s }, p5, [x10, #20, mul vl]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
+// CHECK-NEXT: st4w    { z21.s, z22.s, z23.s, z24.s }, p5, [x10, #20, mul vl]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:

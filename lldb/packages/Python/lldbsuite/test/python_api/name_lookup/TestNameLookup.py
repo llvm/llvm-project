@@ -23,7 +23,7 @@ class TestNameLookup(TestBase):
     @expectedFailureAll(oslist=["windows"], bugnumber='llvm.org/pr21765')
     def test_target(self):
         """Exercise SBTarget.FindFunctions() with various name masks.
-        
+
         A previous regression caused mangled names to not be able to be looked up.
         This test verifies that using a mangled name with eFunctionNameTypeFull works
         and that using a function basename with eFunctionNameTypeFull works for all
@@ -36,7 +36,7 @@ class TestNameLookup(TestBase):
         self.assertTrue(target, VALID_TARGET)
 
         exe_module = target.FindModule(target.GetExecutable())
-        
+
         c_name_to_symbol = {}
         cpp_name_to_symbol = {}
         mangled_to_symbol = {}
@@ -54,7 +54,7 @@ class TestNameLookup(TestBase):
                     c_name_to_symbol[name] = symbol
 
         # Make sure each mangled name turns up exactly one match when looking up
-        # functions by full name and using the mangled name as the name in the 
+        # functions by full name and using the mangled name as the name in the
         # lookup
         self.assertGreaterEqual(len(mangled_to_symbol), 6)
         for mangled in mangled_to_symbol.keys():
@@ -63,5 +63,5 @@ class TestNameLookup(TestBase):
             for symbol_context in symbol_contexts:
                 self.assertTrue(symbol_context.GetFunction().IsValid())
                 self.assertTrue(symbol_context.GetSymbol().IsValid())
-            
-            
+
+

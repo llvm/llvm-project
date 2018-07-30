@@ -122,7 +122,7 @@
 // || `[0x400000000000, 0x47ffffffffff]` || LowShadow  ||
 // || `[0x000000000000, 0x3fffffffffff]` || LowMem     ||
 //
-// Shadow mapping on NerBSD/i386 with SHADOW_OFFSET == 0x40000000:
+// Shadow mapping on NetBSD/i386 with SHADOW_OFFSET == 0x40000000:
 // || `[0x60000000, 0xfffff000]` || HighMem    ||
 // || `[0x4c000000, 0x5fffffff]` || HighShadow ||
 // || `[0x48000000, 0x4bffffff]` || ShadowGap  ||

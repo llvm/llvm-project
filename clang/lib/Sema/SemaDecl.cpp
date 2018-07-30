@@ -11914,14 +11914,25 @@ void Sema::FinalizeDeclaration(Decl *ThisDecl) {
         NewAttr->setInherited(true);
         VD->addAttr(NewAttr);
       }
-      // CUDA E.2.9.4: Within the body of a __device__ or __global__
-      // function, only __shared__ variables may be declared with
-      // static storage class.
-      if (getLangOpts().CUDA && !VD->hasAttr<CUDASharedAttr>() &&
-          CUDADiagIfDeviceCode(VD->getLocation(),
-                               diag::err_device_static_local_var)
-              << CurrentCUDATarget())
-        VD->setInvalidDecl();
+      // CUDA 8.0 E.3.9.4: Within the body of a __device__ or __global__
+      // function, only __shared__ variables or variables without any device
+      // memory qualifiers may be declared with static storage class.
+      // Note: It is unclear how a function-scope non-const static variable
+      // without device memory qualifier is implemented, therefore only static
+      // const variable without device memory qualifier is allowed.
+      [&]() {
+        if (!getLangOpts().CUDA)
+          return;
+        if (VD->hasAttr<CUDASharedAttr>())
+          return;
+        if (VD->getType().isConstQualified() &&
+            !(VD->hasAttr<CUDADeviceAttr>() || VD->hasAttr<CUDAConstantAttr>()))
+          return;
+        if (CUDADiagIfDeviceCode(VD->getLocation(),
+                                 diag::err_device_static_local_var)
+            << CurrentCUDATarget())
+          VD->setInvalidDecl();
+      }();
     }
   }
 

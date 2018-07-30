@@ -6985,8 +6985,14 @@ ABIArgInfo MipsABIInfo::classifyReturnType(QualType RetTy) const {
   if (const EnumType *EnumTy = RetTy->getAs<EnumType>())
     RetTy = EnumTy->getDecl()->getIntegerType();
 
-  return (RetTy->isPromotableIntegerType() ? ABIArgInfo::getExtend(RetTy)
-                                           : ABIArgInfo::getDirect());
+  if (RetTy->isPromotableIntegerType())
+    return ABIArgInfo::getExtend(RetTy);
+
+  if ((RetTy->isUnsignedIntegerOrEnumerationType() ||
+      RetTy->isSignedIntegerOrEnumerationType()) && Size == 32 && !IsO32)
+    return ABIArgInfo::getSignExtend(RetTy);
+
+  return ABIArgInfo::getDirect();
 }
 
 void MipsABIInfo::computeInfo(CGFunctionInfo &FI) const {

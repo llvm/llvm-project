@@ -77,3 +77,13 @@ orn p0.b, p0/m, p1.b, p2.b
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
 // CHECK-NEXT: orn p0.b, p0/m, p1.b, p2.b
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+
+// --------------------------------------------------------------------------//
+// Negative tests for instructions that are incompatible with movprfx
+
+movprfx z0.d, p0/z, z7.d
+orn     z0.d, z0.d, #0x6
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a predicated movprfx, suggest using unpredicated movprfx
+// CHECK-NEXT: orn     z0.d, z0.d, #0x6
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:

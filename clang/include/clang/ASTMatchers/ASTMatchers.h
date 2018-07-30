@@ -1654,7 +1654,6 @@ extern const internal::VariadicDynCastAllOfMatcher<Stmt, DeclRefExpr>
 /// - (void) init {
 ///   a = @"hello";
 /// }
-//}
 /// \endcode
 extern const internal::VariadicDynCastAllOfMatcher<Stmt, ObjCIvarRefExpr>
     objcIvarRefExpr;

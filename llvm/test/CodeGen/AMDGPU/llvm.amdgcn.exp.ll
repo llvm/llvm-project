@@ -480,5 +480,65 @@ define amdgpu_kernel void @test_export_vm_i32() #0 {
   ret void
 }
 
+; GCN-LABEL: {{^}}test_if_export_f32:
+; GCN: s_cbranch_execz
+; GCN: exp
+define amdgpu_ps void @test_if_export_f32(i32 %flag, float %x, float %y, float %z, float %w) #0 {
+  %cc = icmp eq i32 %flag, 0
+  br i1 %cc, label %end, label %exp
+
+exp:
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %x, float %y, float %z, float %w, i1 false, i1 false)
+  br label %end
+
+end:
+  ret void
+}
+
+; GCN-LABEL: {{^}}test_if_export_vm_f32:
+; GCN: s_cbranch_execz
+; GCN: exp
+define amdgpu_ps void @test_if_export_vm_f32(i32 %flag, float %x, float %y, float %z, float %w) #0 {
+  %cc = icmp eq i32 %flag, 0
+  br i1 %cc, label %end, label %exp
+
+exp:
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %x, float %y, float %z, float %w, i1 false, i1 true)
+  br label %end
+
+end:
+  ret void
+}
+
+; GCN-LABEL: {{^}}test_if_export_done_f32:
+; GCN: s_cbranch_execz
+; GCN: exp
+define amdgpu_ps void @test_if_export_done_f32(i32 %flag, float %x, float %y, float %z, float %w) #0 {
+  %cc = icmp eq i32 %flag, 0
+  br i1 %cc, label %end, label %exp
+
+exp:
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %x, float %y, float %z, float %w, i1 true, i1 false)
+  br label %end
+
+end:
+  ret void
+}
+
+; GCN-LABEL: {{^}}test_if_export_vm_done_f32:
+; GCN: s_cbranch_execz
+; GCN: exp
+define amdgpu_ps void @test_if_export_vm_done_f32(i32 %flag, float %x, float %y, float %z, float %w) #0 {
+  %cc = icmp eq i32 %flag, 0
+  br i1 %cc, label %end, label %exp
+
+exp:
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %x, float %y, float %z, float %w, i1 true, i1 true)
+  br label %end
+
+end:
+  ret void
+}
+
 attributes #0 = { nounwind }
 attributes #1 = { nounwind inaccessiblememonly }

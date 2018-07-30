@@ -1097,10 +1097,11 @@ namespace llvm {
     /// Customize the preferred legalization strategy for certain types.
     LegalizeTypeAction getPreferredVectorAction(EVT VT) const override;
 
-    MVT getRegisterTypeForCallingConv(LLVMContext &Context,
+    MVT getRegisterTypeForCallingConv(LLVMContext &Context, CallingConv::ID CC,
                                       EVT VT) const override;
 
     unsigned getNumRegistersForCallingConv(LLVMContext &Context,
+                                           CallingConv::ID CC,
                                            EVT VT) const override;
 
     bool isIntDivCheap(EVT VT, AttributeList Attr) const override;

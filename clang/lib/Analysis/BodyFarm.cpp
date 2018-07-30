@@ -342,7 +342,7 @@ static Stmt *create_call_once(ASTContext &C, const FunctionDecl *D) {
   // Nullable pointer, non-null iff function is a CXXRecordDecl.
   CXXRecordDecl *CallbackRecordDecl = CallbackType->getAsCXXRecordDecl();
   QualType FlagType = Flag->getType().getNonReferenceType();
-  auto *FlagRecordDecl = dyn_cast_or_null<RecordDecl>(FlagType->getAsTagDecl());
+  auto *FlagRecordDecl = FlagType->getAsRecordDecl();
 
   if (!FlagRecordDecl) {
     LLVM_DEBUG(llvm::dbgs() << "Flag field is not a record: "

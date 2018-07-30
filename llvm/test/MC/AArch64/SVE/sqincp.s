@@ -72,3 +72,19 @@ sqincp  z0.d, p0
 // CHECK-ENCODING: [0x00,0x80,0xe8,0x25]
 // CHECK-ERROR: instruction requires: sve
 // CHECK-UNKNOWN: 00 80 e8 25 <unknown>
+
+
+// --------------------------------------------------------------------------//
+// Test compatibility with MOVPRFX instruction.
+
+movprfx z0, z7
+// CHECK-INST: movprfx	z0, z7
+// CHECK-ENCODING: [0xe0,0xbc,0x20,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: e0 bc 20 04 <unknown>
+
+sqincp  z0.d, p0
+// CHECK-INST: sqincp	z0.d, p0
+// CHECK-ENCODING: [0x00,0x80,0xe8,0x25]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 80 e8 25 <unknown>

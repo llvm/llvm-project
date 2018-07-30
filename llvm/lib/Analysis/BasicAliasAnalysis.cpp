@@ -28,6 +28,7 @@
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/Analysis/PhiValues.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/CallSite.h"
@@ -93,7 +94,8 @@ bool BasicAAResult::invalidate(Function &Fn, const PreservedAnalyses &PA,
   // depend on them.
   if (Inv.invalidate<AssumptionAnalysis>(Fn, PA) ||
       (DT && Inv.invalidate<DominatorTreeAnalysis>(Fn, PA)) ||
-      (LI && Inv.invalidate<LoopAnalysis>(Fn, PA)))
+      (LI && Inv.invalidate<LoopAnalysis>(Fn, PA)) ||
+      (PV && Inv.invalidate<PhiValuesAnalysis>(Fn, PA)))
     return true;
 
   // Otherwise this analysis result remains valid.
@@ -1527,33 +1529,69 @@ AliasResult BasicAAResult::aliasPHI(const PHINode *PN, LocationSize PNSize,
       return Alias;
     }
 
-  SmallPtrSet<Value *, 4> UniqueSrc;
   SmallVector<Value *, 4> V1Srcs;
   bool isRecursive = false;
-  for (Value *PV1 : PN->incoming_values()) {
-    if (isa<PHINode>(PV1))
-      // If any of the source itself is a PHI, return MayAlias conservatively
-      // to avoid compile time explosion. The worst possible case is if both
-      // sides are PHI nodes. In which case, this is O(m x n) time where 'm'
-      // and 'n' are the number of PHI sources.
+  if (PV)  {
+    // If we have PhiValues then use it to get the underlying phi values.
+    const PhiValues::ValueSet &PhiValueSet = PV->getValuesForPhi(PN);
+    // If we have more phi values than the search depth then return MayAlias
+    // conservatively to avoid compile time explosion. The worst possible case
+    // is if both sides are PHI nodes. In which case, this is O(m x n) time
+    // where 'm' and 'n' are the number of PHI sources.
+    if (PhiValueSet.size() > MaxLookupSearchDepth)
       return MayAlias;
-
-    if (EnableRecPhiAnalysis)
-      if (GEPOperator *PV1GEP = dyn_cast<GEPOperator>(PV1)) {
-        // Check whether the incoming value is a GEP that advances the pointer
-        // result of this PHI node (e.g. in a loop). If this is the case, we
-        // would recurse and always get a MayAlias. Handle this case specially
-        // below.
-        if (PV1GEP->getPointerOperand() == PN && PV1GEP->getNumIndices() == 1 &&
-            isa<ConstantInt>(PV1GEP->idx_begin())) {
-          isRecursive = true;
-          continue;
+    // Add the values to V1Srcs
+    for (Value *PV1 : PhiValueSet) {
+      if (EnableRecPhiAnalysis) {
+        if (GEPOperator *PV1GEP = dyn_cast<GEPOperator>(PV1)) {
+          // Check whether the incoming value is a GEP that advances the pointer
+          // result of this PHI node (e.g. in a loop). If this is the case, we
+          // would recurse and always get a MayAlias. Handle this case specially
+          // below.
+          if (PV1GEP->getPointerOperand() == PN && PV1GEP->getNumIndices() == 1 &&
+              isa<ConstantInt>(PV1GEP->idx_begin())) {
+            isRecursive = true;
+            continue;
+          }
         }
       }
-
-    if (UniqueSrc.insert(PV1).second)
       V1Srcs.push_back(PV1);
+    }
+  } else {
+    // If we don't have PhiInfo then just look at the operands of the phi itself
+    // FIXME: Remove this once we can guarantee that we have PhiInfo always
+    SmallPtrSet<Value *, 4> UniqueSrc;
+    for (Value *PV1 : PN->incoming_values()) {
+      if (isa<PHINode>(PV1))
+        // If any of the source itself is a PHI, return MayAlias conservatively
+        // to avoid compile time explosion. The worst possible case is if both
+        // sides are PHI nodes. In which case, this is O(m x n) time where 'm'
+        // and 'n' are the number of PHI sources.
+        return MayAlias;
+
+      if (EnableRecPhiAnalysis)
+        if (GEPOperator *PV1GEP = dyn_cast<GEPOperator>(PV1)) {
+          // Check whether the incoming value is a GEP that advances the pointer
+          // result of this PHI node (e.g. in a loop). If this is the case, we
+          // would recurse and always get a MayAlias. Handle this case specially
+          // below.
+          if (PV1GEP->getPointerOperand() == PN && PV1GEP->getNumIndices() == 1 &&
+              isa<ConstantInt>(PV1GEP->idx_begin())) {
+            isRecursive = true;
+            continue;
+          }
+        }
+
+      if (UniqueSrc.insert(PV1).second)
+        V1Srcs.push_back(PV1);
+    }
   }
+
+  // If V1Srcs is empty then that means that the phi has no underlying non-phi
+  // value. This should only be possible in blocks unreachable from the entry
+  // block, but return MayAlias just in case.
+  if (V1Srcs.empty())
+    return MayAlias;
 
   // If this PHI node is recursive, set the size of the accessed memory to
   // unknown to represent all the possible values the GEP could advance the
@@ -1879,7 +1917,8 @@ BasicAAResult BasicAA::run(Function &F, FunctionAnalysisManager &AM) {
                        AM.getResult<TargetLibraryAnalysis>(F),
                        AM.getResult<AssumptionAnalysis>(F),
                        &AM.getResult<DominatorTreeAnalysis>(F),
-                       AM.getCachedResult<LoopAnalysis>(F));
+                       AM.getCachedResult<LoopAnalysis>(F),
+                       AM.getCachedResult<PhiValuesAnalysis>(F));
 }
 
 BasicAAWrapperPass::BasicAAWrapperPass() : FunctionPass(ID) {
@@ -1891,12 +1930,12 @@ char BasicAAWrapperPass::ID = 0;
 void BasicAAWrapperPass::anchor() {}
 
 INITIALIZE_PASS_BEGIN(BasicAAWrapperPass, "basicaa",
-                      "Basic Alias Analysis (stateless AA impl)", true, true)
+                      "Basic Alias Analysis (stateless AA impl)", false, true)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_END(BasicAAWrapperPass, "basicaa",
-                    "Basic Alias Analysis (stateless AA impl)", true, true)
+                    "Basic Alias Analysis (stateless AA impl)", false, true)
 
 FunctionPass *llvm::createBasicAAWrapperPass() {
   return new BasicAAWrapperPass();
@@ -1907,10 +1946,12 @@ bool BasicAAWrapperPass::runOnFunction(Function &F) {
   auto &TLIWP = getAnalysis<TargetLibraryInfoWrapperPass>();
   auto &DTWP = getAnalysis<DominatorTreeWrapperPass>();
   auto *LIWP = getAnalysisIfAvailable<LoopInfoWrapperPass>();
+  auto *PVWP = getAnalysisIfAvailable<PhiValuesWrapperPass>();
 
   Result.reset(new BasicAAResult(F.getParent()->getDataLayout(), F, TLIWP.getTLI(),
                                  ACT.getAssumptionCache(F), &DTWP.getDomTree(),
-                                 LIWP ? &LIWP->getLoopInfo() : nullptr));
+                                 LIWP ? &LIWP->getLoopInfo() : nullptr,
+                                 PVWP ? &PVWP->getResult() : nullptr));
 
   return false;
 }
@@ -1920,6 +1961,7 @@ void BasicAAWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<AssumptionCacheTracker>();
   AU.addRequired<DominatorTreeWrapperPass>();
   AU.addRequired<TargetLibraryInfoWrapperPass>();
+  AU.addUsedIfAvailable<PhiValuesWrapperPass>();
 }
 
 BasicAAResult llvm::createLegacyPMBasicAAResult(Pass &P, Function &F) {

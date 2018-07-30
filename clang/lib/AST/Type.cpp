@@ -1628,6 +1628,10 @@ CXXRecordDecl *Type::getAsCXXRecordDecl() const {
   return dyn_cast_or_null<CXXRecordDecl>(getAsTagDecl());
 }
 
+RecordDecl *Type::getAsRecordDecl() const {
+  return dyn_cast_or_null<RecordDecl>(getAsTagDecl());
+}
+
 TagDecl *Type::getAsTagDecl() const {
   if (const auto *TT = getAs<TagType>())
     return TT->getDecl();

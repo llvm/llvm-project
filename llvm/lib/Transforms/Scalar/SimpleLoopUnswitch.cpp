@@ -459,9 +459,11 @@ static bool unswitchTrivialBranch(Loop &L, BranchInst &BI, DominatorTree &DT,
                                               *ParentBB, *OldPH, FullUnswitch);
 
   // Now we need to update the dominator tree.
-  DT.insertEdge(OldPH, UnswitchedBB);
+  SmallVector<DominatorTree::UpdateType, 2> DTUpdates;
+  DTUpdates.push_back({DT.Insert, OldPH, UnswitchedBB});
   if (FullUnswitch)
-    DT.deleteEdge(ParentBB, UnswitchedBB);
+    DTUpdates.push_back({DT.Delete, ParentBB, LoopExitBB});
+  DT.applyUpdates(DTUpdates);
 
   // The constant we can replace all of our invariants with inside the loop
   // body. If any of the invariants have a value other than this the loop won't

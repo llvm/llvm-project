@@ -174,8 +174,8 @@ static cl::opt<bool> EnableEarlyCSEMemSSA(
     cl::desc("Enable the EarlyCSE w/ MemorySSA pass for the new PM (default = on)"));
 
 static cl::opt<bool> EnableGVNHoist(
-    "enable-npm-gvn-hoist", cl::init(false), cl::Hidden,
-    cl::desc("Enable the GVN hoisting pass for the new PM (default = off)"));
+    "enable-npm-gvn-hoist", cl::init(true), cl::Hidden,
+    cl::desc("Enable the GVN hoisting pass for the new PM (default = on)"));
 
 static cl::opt<bool> EnableGVNSink(
     "enable-npm-gvn-sink", cl::init(false), cl::Hidden,

@@ -740,7 +740,7 @@ def get_crashed_threads(test, process):
 def run_to_breakpoint_make_target(test, exe_name, in_cwd):
     if in_cwd:
         exe = test.getBuildArtifact(exe_name)
-    
+
     # Create the target
     target = test.dbg.CreateTarget(exe)
     test.assertTrue(target, "Target: %s is not valid."%(exe_name))
@@ -756,8 +756,8 @@ def run_to_breakpoint_do_run(test, target, bkpt, launch_info):
     error = lldb.SBError()
     process = target.Launch(launch_info, error)
 
-    test.assertTrue(process, 
-                    "Could not create a valid process for %s: %s"%(target.GetExecutable().GetFilename(), 
+    test.assertTrue(process,
+                    "Could not create a valid process for %s: %s"%(target.GetExecutable().GetFilename(),
                     error.GetCString()))
 
     # Frame #0 should be at our breakpoint.
@@ -768,7 +768,7 @@ def run_to_breakpoint_do_run(test, target, bkpt, launch_info):
     thread = threads[0]
     return (target, process, thread, bkpt)
 
-def run_to_name_breakpoint (test, bkpt_name, launch_info = None, 
+def run_to_name_breakpoint (test, bkpt_name, launch_info = None,
                             exe_name = "a.out",
                             bkpt_module = None,
                             in_cwd = True):
@@ -818,7 +818,7 @@ def run_to_source_breakpoint(test, bkpt_pattern, source_spec,
     # Set the breakpoints
     breakpoint = target.BreakpointCreateBySourceRegex(
             bkpt_pattern, source_spec, bkpt_module)
-    test.assertTrue(breakpoint.GetNumLocations() > 0, 
+    test.assertTrue(breakpoint.GetNumLocations() > 0,
                     'No locations found for source breakpoint: "%s", file: "%s", dir: "%s"'%(bkpt_pattern, source_spec.GetFilename(), source_spec.GetDirectory()))
     return run_to_breakpoint_do_run(test, target, breakpoint, launch_info)
 
