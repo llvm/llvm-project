@@ -64,11 +64,4 @@
 #define _LIBCPP_END_NAMESPACE_EXPERIMENTAL_SIMD_ABI \
     } _LIBCPP_END_NAMESPACE_EXPERIMENTAL_SIMD
 
-// TODO: support more targets
-#if defined(__AVX__)
-#define _LIBCPP_NATIVE_SIMD_WIDTH_IN_BYTES 32
-#else
-#define _LIBCPP_NATIVE_SIMD_WIDTH_IN_BYTES 16
-#endif
-
 #endif
