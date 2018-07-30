@@ -331,8 +331,6 @@ void ASTWorker::update(
 
     tooling::CompileCommand OldCommand = std::move(FileInputs.CompileCommand);
     FileInputs = Inputs;
-    // Remove the old AST if it's still in cache.
-    IdleASTs.take(this);
 
     log("Updating file {0} with command [{1}] {2}", FileName,
         Inputs.CompileCommand.Directory,
@@ -342,6 +340,8 @@ void ASTWorker::update(
         buildCompilerInvocation(Inputs);
     if (!Invocation) {
       elog("Could not build CompilerInvocation for file {0}", FileName);
+      // Remove the old AST if it's still in cache.
+      IdleASTs.take(this);
       // Make sure anyone waiting for the preamble gets notified it could not
       // be built.
       PreambleWasBuilt.notify();
@@ -380,6 +380,9 @@ void ASTWorker::update(
           FileName);
       return;
     }
+    // Remove the old AST if it's still in cache.
+    IdleASTs.take(this);
+
     // Build the AST for diagnostics.
     llvm::Optional<ParsedAST> AST =
         buildAST(FileName, std::move(Invocation), Inputs, NewPreamble, PCHs);
