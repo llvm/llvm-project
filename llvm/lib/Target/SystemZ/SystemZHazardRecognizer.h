@@ -134,7 +134,7 @@ public:
   /// new decoder group, this is negative if this fits the schedule or
   /// positive if it would mean ending a group prematurely. For normal
   /// instructions this returns 0.
-  int groupingCost(SUnit *SU) const; 
+  int groupingCost(SUnit *SU) const;
 
   /// Return the cost of SU in regards to processor resources usage.
   /// A positive value means it would be better to wait with SU, while

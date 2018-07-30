@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-//  This file provides the default implementation of the ExternalASTSource 
+//  This file provides the default implementation of the ExternalASTSource
 //  interface, which enables construction of AST nodes from some external
 //  source.
 //

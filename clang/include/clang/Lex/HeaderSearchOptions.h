@@ -14,7 +14,7 @@
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringRef.h"
-#include <cstdint> 
+#include <cstdint>
 #include <string>
 #include <vector>
 #include <map>
@@ -36,7 +36,7 @@ enum IncludeDirGroup {
   Angled,
 
   /// Like Angled, but marks header maps used when building frameworks.
-  IndexHeaderMap, 
+  IndexHeaderMap,
 
   /// Like Angled, but marks system directories.
   System,
@@ -70,7 +70,7 @@ public:
     std::string Path;
     frontend::IncludeDirGroup Group;
     unsigned IsFramework : 1;
-    
+
     /// IgnoreSysRoot - This is false if an absolute path should be treated
     /// relative to the sysroot, or true if it should always be the absolute
     /// path.

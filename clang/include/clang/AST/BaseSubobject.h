@@ -24,21 +24,21 @@ namespace clang {
 
 class CXXRecordDecl;
 
-// BaseSubobject - Uniquely identifies a direct or indirect base class. 
+// BaseSubobject - Uniquely identifies a direct or indirect base class.
 // Stores both the base class decl and the offset from the most derived class to
 // the base class. Used for vtable and VTT generation.
 class BaseSubobject {
   /// Base - The base class declaration.
   const CXXRecordDecl *Base;
-  
+
   /// BaseOffset - The offset from the most derived class to the base class.
   CharUnits BaseOffset;
-  
+
 public:
   BaseSubobject() = default;
   BaseSubobject(const CXXRecordDecl *Base, CharUnits BaseOffset)
       : Base(Base), BaseOffset(BaseOffset) {}
-  
+
   /// getBase - Returns the base class declaration.
   const CXXRecordDecl *getBase() const { return Base; }
 
@@ -74,7 +74,7 @@ template<> struct DenseMapInfo<clang::BaseSubobject> {
                                                      Base.getBaseOffset()));
   }
 
-  static bool isEqual(const clang::BaseSubobject &LHS, 
+  static bool isEqual(const clang::BaseSubobject &LHS,
                       const clang::BaseSubobject &RHS) {
     return LHS == RHS;
   }

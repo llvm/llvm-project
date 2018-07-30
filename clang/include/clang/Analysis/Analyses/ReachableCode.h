@@ -57,7 +57,7 @@ public:
 };
 
 /// ScanReachableFromBlock - Mark all blocks reachable from Start.
-/// Returns the total number of blocks that were marked reachable.  
+/// Returns the total number of blocks that were marked reachable.
 unsigned ScanReachableFromBlock(const CFGBlock *Start,
                                 llvm::BitVector &Reachable);
 

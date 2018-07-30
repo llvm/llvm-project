@@ -14,3 +14,13 @@ umin    z0.b, p8/m, z0.b, z0.b
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: restricted predicate has range [0, 7].
 // CHECK-NEXT: umin    z0.b, p8/m, z0.b, z0.b
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+
+// --------------------------------------------------------------------------//
+// Negative tests for instructions that are incompatible with movprfx
+
+movprfx z31.b, p0/z, z6.b
+umin    z31.b, z31.b, #255
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a predicated movprfx, suggest using unpredicated movprfx
+// CHECK-NEXT: umin    z31.b, z31.b, #255
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:

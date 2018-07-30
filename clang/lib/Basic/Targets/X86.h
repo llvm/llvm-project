@@ -132,7 +132,7 @@ public:
       : TargetInfo(Triple) {
     LongDoubleFormat = &llvm::APFloat::x87DoubleExtended();
   }
-  
+
   unsigned getFloatEvalMethod() const override {
     // X87 evaluates with 80 bits "long double" precision.
     return SSELevel == NoSSE ? 2 : 0;
@@ -238,7 +238,7 @@ public:
 
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
-  
+
   static void setSSELevel(llvm::StringMap<bool> &Features, X86SSEEnum Level,
                           bool Enabled);
 
@@ -577,7 +577,7 @@ public:
     IntPtrType = SignedLong;
     PtrDiffType = SignedLong;
   }
-  
+
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override {
     X86_32TargetInfo::getTargetDefines(Opts, Builder);
@@ -664,7 +664,7 @@ public:
   bool hasInt128Type() const override { return true; }
 
   unsigned getUnwindWordWidth() const override { return 64; }
-  
+
   unsigned getRegisterWidth() const override { return 64; }
 
   bool validateGlobalRegisterVariable(StringRef RegName, unsigned RegSize,

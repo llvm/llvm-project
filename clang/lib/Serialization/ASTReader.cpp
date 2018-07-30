@@ -6032,7 +6032,7 @@ QualType ASTReader::readTypeRecord(unsigned Index) {
     }
     QualType ResultType = readType(*Loc.F, Record, Idx);
     FunctionType::ExtInfo Info(Record[1], Record[2], Record[3],
-                               (CallingConv)Record[4], Record[5], Record[6], 
+                               (CallingConv)Record[4], Record[5], Record[6],
                                Record[7]);
     return Context.getFunctionNoProtoType(ResultType, Info);
   }

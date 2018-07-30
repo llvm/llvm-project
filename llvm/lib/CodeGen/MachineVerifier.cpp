@@ -1077,8 +1077,8 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
 
     auto VerifyStackMapConstant = [&](unsigned Offset) {
       if (!MI->getOperand(Offset).isImm() ||
-          MI->getOperand(Offset).getImm() != StackMaps::ConstantOp || 
-          !MI->getOperand(Offset + 1).isImm()) 
+          MI->getOperand(Offset).getImm() != StackMaps::ConstantOp ||
+          !MI->getOperand(Offset + 1).isImm())
         report("stack map constant to STATEPOINT not well formed!", MI);
     };
     const unsigned VarStart = StatepointOpers(MI).getVarIdx();

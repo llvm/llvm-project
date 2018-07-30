@@ -49,7 +49,7 @@ def err_pch_diagopt_mismatch : Error<"%0 is currently enabled, but was not in "
   "the PCH file">;
 def err_pch_modulecache_mismatch : Error<"PCH was compiled with module cache "
   "path '%0', but the path is currently '%1'">;
-  
+
 def err_pch_version_too_old : Error<
     "PCH file uses an older PCH format that is no longer supported">;
 def err_pch_version_too_new : Error<

@@ -64,7 +64,7 @@ PragmaHandler::~PragmaHandler() = default;
 
 EmptyPragmaHandler::EmptyPragmaHandler(StringRef Name) : PragmaHandler(Name) {}
 
-void EmptyPragmaHandler::HandlePragma(Preprocessor &PP, 
+void EmptyPragmaHandler::HandlePragma(Preprocessor &PP,
                                       PragmaIntroducerKind Introducer,
                                       Token &FirstToken) {}
 
@@ -99,7 +99,7 @@ void PragmaNamespace::RemovePragmaHandler(PragmaHandler *Handler) {
   Handlers.erase(Handler->getName());
 }
 
-void PragmaNamespace::HandlePragma(Preprocessor &PP, 
+void PragmaNamespace::HandlePragma(Preprocessor &PP,
                                    PragmaIntroducerKind Introducer,
                                    Token &Tok) {
   // Read the 'namespace' that the directive is in, e.g. STDC.  Do not macro
@@ -141,7 +141,7 @@ void Preprocessor::HandlePragmaDirective(SourceLocation IntroducerLoc,
   PragmaHandlers->HandlePragma(*this, Introducer, Tok);
 
   // If the pragma handler didn't read the rest of the line, consume it now.
-  if ((CurTokenLexer && CurTokenLexer->isParsingPreprocessorDirective()) 
+  if ((CurTokenLexer && CurTokenLexer->isParsingPreprocessorDirective())
    || (CurPPLexer && CurPPLexer->ParsingPreprocessorDirective))
     DiscardUntilEndOfDirective();
 }
@@ -468,7 +468,7 @@ void Preprocessor::HandlePragmaSystemHeader(Token &SysHeaderTok) {
   PresumedLoc PLoc = SourceMgr.getPresumedLoc(SysHeaderTok.getLocation());
   if (PLoc.isInvalid())
     return;
-  
+
   unsigned FilenameID = SourceMgr.getLineTableFilenameID(PLoc.getFilename());
 
   // Notify the client, if desired, that we are in a new source file.
@@ -601,7 +601,7 @@ void Preprocessor::HandlePragmaPushMacro(Token &PushMacroTok) {
 
   // Get the MacroInfo associated with IdentInfo.
   MacroInfo *MI = getMacroInfo(IdentInfo);
- 
+
   if (MI) {
     // Allow the original MacroInfo to be redefined later.
     MI->setIsAllowRedefinitionsWithoutWarning(true);
@@ -653,7 +653,7 @@ void Preprocessor::HandlePragmaPopMacro(Token &PopMacroTok) {
 }
 
 void Preprocessor::HandlePragmaIncludeAlias(Token &Tok) {
-  // We will either get a quoted filename or a bracketed filename, and we 
+  // We will either get a quoted filename or a bracketed filename, and we
   // have to track which we got.  The first filename is the source name,
   // and the second name is the mapped filename.  If the first is quoted,
   // the second must be as well (cannot mix and match quotes and brackets).
@@ -675,7 +675,7 @@ void Preprocessor::HandlePragmaIncludeAlias(Token &Tok) {
 
   StringRef SourceFileName;
   SmallString<128> FileNameBuffer;
-  if (SourceFilenameTok.is(tok::string_literal) || 
+  if (SourceFilenameTok.is(tok::string_literal) ||
       SourceFilenameTok.is(tok::angle_string_literal)) {
     SourceFileName = getSpelling(SourceFilenameTok, FileNameBuffer);
   } else if (SourceFilenameTok.is(tok::less)) {
@@ -706,7 +706,7 @@ void Preprocessor::HandlePragmaIncludeAlias(Token &Tok) {
   }
 
   StringRef ReplaceFileName;
-  if (ReplaceFilenameTok.is(tok::string_literal) || 
+  if (ReplaceFilenameTok.is(tok::string_literal) ||
       ReplaceFilenameTok.is(tok::angle_string_literal)) {
     ReplaceFileName = getSpelling(ReplaceFilenameTok, FileNameBuffer);
   } else if (ReplaceFilenameTok.is(tok::less)) {
@@ -732,8 +732,8 @@ void Preprocessor::HandlePragmaIncludeAlias(Token &Tok) {
   // they're both of the same type (angled vs non-angled)
   StringRef OriginalSource = SourceFileName;
 
-  bool SourceIsAngled = 
-    GetIncludeFilenameSpelling(SourceFilenameTok.getLocation(), 
+  bool SourceIsAngled =
+    GetIncludeFilenameSpelling(SourceFilenameTok.getLocation(),
                                 SourceFileName);
   bool ReplaceIsAngled =
     GetIncludeFilenameSpelling(ReplaceFilenameTok.getLocation(),
@@ -747,7 +747,7 @@ void Preprocessor::HandlePragmaIncludeAlias(Token &Tok) {
       DiagID = diag::warn_pragma_include_alias_mismatch_quote;
 
     Diag(SourceFilenameTok.getLocation(), DiagID)
-      << SourceFileName 
+      << SourceFileName
       << ReplaceFileName;
 
     return;
@@ -1615,7 +1615,7 @@ struct PragmaPopMacroHandler : public PragmaHandler {
   }
 };
 
-/// PragmaARCCFCodeAuditedHandler - 
+/// PragmaARCCFCodeAuditedHandler -
 ///   \#pragma clang arc_cf_code_audited begin/end
 struct PragmaARCCFCodeAuditedHandler : public PragmaHandler {
   PragmaARCCFCodeAuditedHandler() : PragmaHandler("arc_cf_code_audited") {}
@@ -1790,7 +1790,7 @@ void Preprocessor::RegisterBuiltinPragmas() {
   ModuleHandler->AddPragma(new PragmaModuleEndHandler());
   ModuleHandler->AddPragma(new PragmaModuleBuildHandler());
   ModuleHandler->AddPragma(new PragmaModuleLoadHandler());
-    
+
   // Add region pragmas.
   AddPragmaHandler(new PragmaRegionHandler("region"));
   AddPragmaHandler(new PragmaRegionHandler("endregion"));

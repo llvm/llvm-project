@@ -145,7 +145,7 @@ static bool areExprTypesCompatible(const Expr *E1, const Expr *E2) {
 namespace {
 
 class CFGBuilder;
-  
+
 /// The CFG builder uses a recursive algorithm to build the CFG.  When
 ///  we process an expression, sometimes we know that we must add the
 ///  subexpressions as block-level expressions.  For example:
@@ -279,7 +279,7 @@ public:
 
 private:
   BumpVectorContext ctx;
-  
+
   /// Automatic variables in order of declaration.
   AutomaticVarsTy Vars;
 
@@ -366,7 +366,7 @@ class TryResult {
 public:
   TryResult() = default;
   TryResult(bool b) : X(b ? 1 : 0) {}
-  
+
   bool isTrue() const { return X == 1; }
   bool isFalse() const { return X == 0; }
   bool isKnown() const { return X >= 0; }
@@ -492,11 +492,11 @@ class CFGBuilder {
 
   bool badCFG = false;
   const CFG::BuildOptions &BuildOpts;
-  
+
   // State to track for building switch statements.
   bool switchExclusivelyCovered = false;
   Expr::EvalResult *switchCond = nullptr;
-  
+
   CFG::BuildOptions::ForcedBlkExprs::value_type *cachedEntry = nullptr;
   const Stmt *lastLookup = nullptr;
 
@@ -516,7 +516,7 @@ public:
   std::unique_ptr<CFG> buildCFG(const Decl *D, Stmt *Statement);
 
   bool alwaysAdd(const Stmt *stmt);
-  
+
 private:
   // Visitors to walk an AST and construct the CFG.
   CFGBlock *VisitAddrLabelExpr(AddrLabelExpr *A, AddStmtChoice asc);
@@ -1067,7 +1067,7 @@ private:
   bool tryEvaluate(Expr *S, Expr::EvalResult &outResult) {
     if (!BuildOpts.PruneTriviallyFalseEdges)
       return false;
-    return !S->isTypeDependent() && 
+    return !S->isTypeDependent() &&
            !S->isValueDependent() &&
            S->EvaluateAsRValue(outResult, *Context);
   }
@@ -1183,18 +1183,18 @@ inline bool AddStmtChoice::alwaysAdd(CFGBuilder &builder,
 
 bool CFGBuilder::alwaysAdd(const Stmt *stmt) {
   bool shouldAdd = BuildOpts.alwaysAdd(stmt);
-  
+
   if (!BuildOpts.forcedBlkExprs)
     return shouldAdd;
 
-  if (lastLookup == stmt) {  
+  if (lastLookup == stmt) {
     if (cachedEntry) {
       assert(cachedEntry->first == stmt);
       return true;
     }
     return shouldAdd;
   }
-  
+
   lastLookup = stmt;
 
   // Perform the lookup!
@@ -1215,7 +1215,7 @@ bool CFGBuilder::alwaysAdd(const Stmt *stmt) {
   cachedEntry = &*itr;
   return true;
 }
-  
+
 // FIXME: Add support for dependent-sized array types in C++?
 // Does it even make sense to build a CFG for an uninstantiated template?
 static const VariableArrayType *FindVA(const Type *t) {
@@ -1427,7 +1427,7 @@ std::unique_ptr<CFG> CFGBuilder::buildCFG(const Decl *D, Stmt *Statement) {
       // If there is no target block that contains label, then we are looking
       // at an incomplete AST.  Handle this by not registering a successor.
       if (LI == LabelMap.end()) continue;
-      
+
       addSuccessor(B, LI->second.block);
     }
 
@@ -1513,7 +1513,7 @@ CFGBlock *CFGBuilder::addInitializer(CXXCtorInitializer *I) {
   return Block;
 }
 
-/// Retrieve the type of the temporary object whose lifetime was 
+/// Retrieve the type of the temporary object whose lifetime was
 /// extended by a local reference with the given initializer.
 static QualType getReferenceInitTemporaryType(const Expr *Init,
                                               bool *FoundMTE = nullptr) {
@@ -1766,7 +1766,7 @@ LocalScope* CFGBuilder::createOrReuseLocalScope(LocalScope* Scope) {
 }
 
 /// addLocalScopeForStmt - Add LocalScope to local scopes tree for statement
-/// that should create implicit scope (e.g. if/else substatements). 
+/// that should create implicit scope (e.g. if/else substatements).
 void CFGBuilder::addLocalScopeForStmt(Stmt *S) {
   if (!BuildOpts.AddImplicitDtors && !BuildOpts.AddLifetime &&
       !BuildOpts.AddScopes)
@@ -2574,7 +2574,7 @@ CFGBlock *CFGBuilder::VisitConditionalOperator(AbstractConditionalOperator *C,
     // At least one of this or the above will be run.
     return addStmt(BCO->getCommon());
   }
-  
+
   return addStmt(condExpr);
 }
 
@@ -2583,7 +2583,7 @@ CFGBlock *CFGBuilder::VisitDeclStmt(DeclStmt *DS) {
   // CFG entirely.
   if (isa<LabelDecl>(*DS->decl_begin()))
     return Block;
-  
+
   // This case also handles static_asserts.
   if (DS->isSingleDecl())
     return VisitDeclSubExpr(DS);
@@ -3032,7 +3032,7 @@ CFGBlock *CFGBuilder::VisitLambdaExpr(LambdaExpr *E, AddStmtChoice asc) {
   }
   return LastBlock;
 }
-  
+
 CFGBlock *CFGBuilder::VisitGotoStmt(GotoStmt *G) {
   // Goto is a control-flow statement.  Thus we stop processing the current
   // block and create a new one.
@@ -3146,7 +3146,7 @@ CFGBlock *CFGBuilder::VisitForStmt(ForStmt *F) {
     else if (badCFG)
       return nullptr;
   }
-  
+
   // Because of short-circuit evaluation, the condition of the loop can span
   // multiple basic blocks.  Thus we need the "Entry" and "Exit" blocks that
   // evaluate the condition.
@@ -3214,7 +3214,7 @@ CFGBlock *CFGBuilder::VisitForStmt(ForStmt *F) {
 
   // Link up the loop-back block to the entry condition block.
   addSuccessor(TransitionBlock, EntryConditionBlock);
-  
+
   // The condition block is the implicit successor for any code above the loop.
   Succ = EntryConditionBlock;
 
@@ -3334,7 +3334,7 @@ CFGBlock *CFGBuilder::VisitObjCForCollectionStmt(ObjCForCollectionStmt *S) {
     CFGBlock *LoopBackBlock = nullptr;
     Succ = LoopBackBlock = createBlock();
     LoopBackBlock->setLoopTarget(S);
-    
+
     BreakJumpTarget = JumpTarget(LoopSuccessor, ScopePos);
     ContinueJumpTarget = JumpTarget(Succ, ScopePos);
 
@@ -3401,7 +3401,7 @@ CFGBlock *CFGBuilder::VisitPseudoObjectExpr(PseudoObjectExpr *E) {
   // Add the PseudoObject as the last thing.
   appendStmt(Block, E);
 
-  CFGBlock *lastBlock = Block;  
+  CFGBlock *lastBlock = Block;
 
   // Before that, evaluate all of the semantics in order.  In
   // CFG-land, that means appending them in reverse order.
@@ -3734,7 +3734,7 @@ CFGBlock *CFGBuilder::VisitUnaryExprOrTypeTraitExpr(UnaryExprOrTypeTraitExpr *E,
 
   // VLA types have expressions that must be evaluated.
   CFGBlock *lastBlock = Block;
-  
+
   if (E->isArgumentType()) {
     for (const VariableArrayType *VA =FindVA(E->getArgumentType().getTypePtr());
          VA != nullptr; VA = FindVA(VA->getElementType().getTypePtr()))
@@ -3863,7 +3863,7 @@ CFGBlock *CFGBuilder::VisitSwitchStmt(SwitchStmt *Terminator) {
 
   return LastBlock;
 }
-  
+
 static bool shouldAddCase(bool &switchExclusivelyCovered,
                           const Expr::EvalResult *switchCond,
                           const CaseStmt *CS,
@@ -3878,7 +3878,7 @@ static bool shouldAddCase(bool &switchExclusivelyCovered,
       // Evaluate the LHS of the case value.
       const llvm::APSInt &lhsInt = CS->getLHS()->EvaluateKnownConstInt(Ctx);
       const llvm::APSInt &condInt = switchCond->Val.getInt();
-      
+
       if (condInt == lhsInt) {
         addCase = true;
         switchExclusivelyCovered = true;
@@ -3897,7 +3897,7 @@ static bool shouldAddCase(bool &switchExclusivelyCovered,
     else
       addCase = true;
   }
-  return addCase;  
+  return addCase;
 }
 
 CFGBlock *CFGBuilder::VisitCaseStmt(CaseStmt *CS) {
@@ -4069,7 +4069,7 @@ CFGBlock *CFGBuilder::VisitCXXCatchStmt(CXXCatchStmt *CS) {
   CFGBlock *CatchBlock = Block;
   if (!CatchBlock)
     CatchBlock = createBlock();
-  
+
   // CXXCatchStmt is more than just a label.  They have semantic meaning
   // as well, as they implicitly "initialize" the catch variable.  Add
   // it to the CFG as a CFGElement so that the control-flow of these
@@ -4624,7 +4624,7 @@ CFGImplicitDtor::getDestructorDecl(ASTContext &astContext) const {
       const RecordType *recordType = ty->getAs<RecordType>();
       const CXXRecordDecl *classDecl =
       cast<CXXRecordDecl>(recordType->getDecl());
-      return classDecl->getDestructor();      
+      return classDecl->getDestructor();
     }
     case CFGElement::DeleteDtor: {
       const CXXDeleteExpr *DE = castAs<CFGDeleteDtor>().getDeleteExpr();
@@ -4722,7 +4722,7 @@ public:
     for (CFG::const_iterator I = cfg->begin(), E = cfg->end(); I != E; ++I ) {
       unsigned j = 1;
       for (CFGBlock::const_iterator BI = (*I)->begin(), BEnd = (*I)->end() ;
-           BI != BEnd; ++BI, ++j ) {        
+           BI != BEnd; ++BI, ++j ) {
         if (Optional<CFGStmt> SE = BI->getAs<CFGStmt>()) {
           const Stmt *stmt= SE->getStmt();
           std::pair<unsigned, unsigned> P((*I)->getBlockID(), j);
@@ -5151,7 +5151,7 @@ static void print_block(raw_ostream &OS, const CFG* cfg,
   // Print the header.
   if (ShowColors)
     OS.changeColor(raw_ostream::YELLOW, true);
-  
+
   OS << "\n [B" << B.getBlockID();
 
   if (&B == &cfg->getEntry())
@@ -5164,7 +5164,7 @@ static void print_block(raw_ostream &OS, const CFG* cfg,
     OS << " (NORETURN)]\n";
   else
     OS << "]\n";
-  
+
   if (ShowColors)
     OS.resetColor();
 
@@ -5235,7 +5235,7 @@ static void print_block(raw_ostream &OS, const CFG* cfg,
     CFGBlockTerminatorPrint TPrinter(OS, &Helper, PP);
     TPrinter.print(B.getTerminator());
     OS << '\n';
-    
+
     if (ShowColors)
       OS.resetColor();
   }
@@ -5254,7 +5254,7 @@ static void print_block(raw_ostream &OS, const CFG* cfg,
 
       if (ShowColors)
         OS.changeColor(Color);
-      
+
       for (CFGBlock::const_pred_iterator I = B.pred_begin(), E = B.pred_end();
            I != E; ++I, ++i) {
         if (i % 10 == 8)
@@ -5271,7 +5271,7 @@ static void print_block(raw_ostream &OS, const CFG* cfg,
         if (!Reachable)
           OS << "(Unreachable)";
       }
-      
+
       if (ShowColors)
         OS.resetColor();
 

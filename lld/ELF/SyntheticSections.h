@@ -588,6 +588,16 @@ public:
   void writeTo(uint8_t *Buf) override;
 };
 
+class SymtabShndxSection final : public SyntheticSection {
+public:
+  SymtabShndxSection();
+
+  void writeTo(uint8_t *Buf) override;
+  size_t getSize() const override;
+  bool empty() const override;
+  void finalizeContents() override;
+};
+
 // Outputs GNU Hash section. For detailed explanation see:
 // https://blogs.oracle.com/ali/entry/gnu_hash_elf_sections
 class GnuHashTableSection final : public SyntheticSection {
@@ -992,6 +1002,7 @@ struct InX {
   static StringTableSection *ShStrTab;
   static StringTableSection *StrTab;
   static SymbolTableBaseSection *SymTab;
+  static SymtabShndxSection* SymTabShndx;
 };
 
 template <class ELFT> struct In {

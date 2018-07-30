@@ -385,7 +385,7 @@ static void __kmp_stg_parse_int(
 
 #if KMP_DEBUG_ADAPTIVE_LOCKS
 static void __kmp_stg_parse_file(char const *name, char const *value,
-                                 char *suffix, char **out) {
+                                 const char *suffix, char **out) {
   char buffer[256];
   char *t;
   int hasSuffix;
@@ -4236,7 +4236,7 @@ static void __kmp_stg_print_adaptive_lock_props(kmp_str_buf_t *buffer,
 static void __kmp_stg_parse_speculative_statsfile(char const *name,
                                                   char const *value,
                                                   void *data) {
-  __kmp_stg_parse_file(name, value, "", &__kmp_speculative_statsfile);
+  __kmp_stg_parse_file(name, value, "", CCAST(char**, &__kmp_speculative_statsfile));
 } // __kmp_stg_parse_speculative_statsfile
 
 static void __kmp_stg_print_speculative_statsfile(kmp_str_buf_t *buffer,

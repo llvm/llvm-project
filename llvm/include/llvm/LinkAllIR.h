@@ -44,7 +44,7 @@ namespace {
       llvm::LLVMContext Context;
       (void)new llvm::Module("", Context);
       (void)new llvm::UnreachableInst(Context);
-      (void)    llvm::createVerifierPass(); 
+      (void)    llvm::createVerifierPass();
     }
   } ForceVMCoreLinking;
 }

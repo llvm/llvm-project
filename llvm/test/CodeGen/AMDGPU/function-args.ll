@@ -739,6 +739,45 @@ define void @void_func_v32i32_v16i32_v16f32(<32 x i32> %arg0, <16 x i32> %arg1, 
   ret void
 }
 
+; Make sure v3 isn't a wasted register because of v3 types being promoted to v4
+; GCN-LABEL: {{^}}void_func_v3f32_wasted_reg:
+; GCN: s_waitcnt
+; GCN: ds_write_b32 v{{[0-9]+}}, v0
+; GCN-NEXT: ds_write_b32 v{{[0-9]+}}, v1
+; GCN-NEXT: ds_write_b32 v{{[0-9]+}}, v2
+; GCN-NEXT: ds_write_b32 v{{[0-9]+}}, v3
+; GCN-NEXT: s_waitcnt
+; GCN-NEXT: s_setpc_b64
+define void @void_func_v3f32_wasted_reg(<3 x float> %arg0, i32 %arg1) #0 {
+  %arg0.0 = extractelement <3 x float> %arg0, i32 0
+  %arg0.1 = extractelement <3 x float> %arg0, i32 1
+  %arg0.2 = extractelement <3 x float> %arg0, i32 2
+  store volatile float %arg0.0, float addrspace(3)* undef
+  store volatile float %arg0.1, float addrspace(3)* undef
+  store volatile float %arg0.2, float addrspace(3)* undef
+  store volatile i32 %arg1, i32 addrspace(3)* undef
+  ret void
+}
+
+; GCN-LABEL: {{^}}void_func_v3i32_wasted_reg:
+; GCN: s_waitcnt
+; GCN: ds_write_b32 v{{[0-9]+}}, v0
+; GCN-NEXT: ds_write_b32 v{{[0-9]+}}, v1
+; GCN-NEXT: ds_write_b32 v{{[0-9]+}}, v2
+; GCN-NEXT: ds_write_b32 v{{[0-9]+}}, v3
+; GCN-NEXT: s_waitcnt
+; GCN-NEXT: s_setpc_b64
+define void @void_func_v3i32_wasted_reg(<3 x i32> %arg0, i32 %arg1) #0 {
+  %arg0.0 = extractelement <3 x i32> %arg0, i32 0
+  %arg0.1 = extractelement <3 x i32> %arg0, i32 1
+  %arg0.2 = extractelement <3 x i32> %arg0, i32 2
+  store volatile i32 %arg0.0, i32 addrspace(3)* undef
+  store volatile i32 %arg0.1, i32 addrspace(3)* undef
+  store volatile i32 %arg0.2, i32 addrspace(3)* undef
+  store volatile i32 %arg1, i32 addrspace(3)* undef
+  ret void
+}
+
 ; Check there is no crash.
 ; GCN-LABEL: {{^}}void_func_v16i8:
 define void @void_func_v16i8(<16 x i8> %arg0) #0 {

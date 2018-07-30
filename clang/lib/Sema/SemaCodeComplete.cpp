@@ -1303,34 +1303,8 @@ namespace {
     void FoundDecl(NamedDecl *ND, NamedDecl *Hiding, DeclContext *Ctx,
                    bool InBaseClass) override {
       bool Accessible = true;
-      if (Ctx) {
-        DeclContext *AccessingCtx = Ctx;
-        // If ND comes from a base class, set the naming class back to the
-        // derived class if the search starts from the derived class (i.e.
-        // InBaseClass is true).
-        //
-        // Example:
-        //   class B { protected: int X; }
-        //   class D : public B { void f(); }
-        //   void D::f() { this->^; }
-        // The completion after "this->" will have `InBaseClass` set to true and
-        // `Ctx` set to "B", when looking up in `B`. We need to set the actual
-        // accessing context (i.e. naming class) to "D" so that access can be
-        // calculated correctly.
-        if (InBaseClass && isa<CXXRecordDecl>(Ctx)) {
-          CXXRecordDecl *RC = nullptr;
-          // Get the enclosing record.
-          for (DeclContext *DC = CurContext; !DC->isFileContext();
-               DC = DC->getParent()) {
-            if ((RC = dyn_cast<CXXRecordDecl>(DC)))
-              break;
-          }
-          if (RC)
-            AccessingCtx = RC;
-        }
-        Accessible = Results.getSema().IsSimplyAccessible(ND, AccessingCtx);
-      }
-
+      if (Ctx)
+        Accessible = Results.getSema().IsSimplyAccessible(ND, Ctx);
       ResultBuilder::Result Result(ND, Results.getBasePriority(ND), nullptr,
                                    false, Accessible, FixIts);
       Results.AddResult(Result, CurContext, Hiding, InBaseClass);

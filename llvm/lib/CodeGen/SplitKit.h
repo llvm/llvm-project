@@ -233,7 +233,7 @@ public:
 /// - Create a SplitEditor from a SplitAnalysis.
 /// - Start a new live interval with openIntv.
 /// - Mark the places where the new interval is entered using enterIntv*
-/// - Mark the ranges where the new interval is used with useIntv* 
+/// - Mark the ranges where the new interval is used with useIntv*
 /// - Mark the places where the interval is exited with exitIntv*.
 /// - Finish the current interval with closeIntv and repeat from 2.
 /// - Rewrite instructions with finish().

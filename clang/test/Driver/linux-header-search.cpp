@@ -493,3 +493,25 @@
 // CHECK-DEBIAN-SPARC64: "-internal-externc-isystem" "[[SYSROOT]]/usr/include/sparc64-linux-gnu"
 // CHECK-DEBIAN-SPARC64: "-internal-externc-isystem" "[[SYSROOT]]/include"
 // CHECK-DEBIAN-SPARC64: "-internal-externc-isystem" "[[SYSROOT]]/usr/include"
+
+// Check header search on OpenEmbedded ARM.
+// RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1 \
+// RUN:     -target arm-oe-linux-gnueabi \
+// RUN:     --sysroot=%S/Inputs/openembedded_arm_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-OE-ARM %s
+
+// CHECK-OE-ARM: "{{[^"]*}}clang{{[^"]*}}" "-cc1"
+// CHECK-OE-ARM: "-isysroot" "[[SYSROOT:[^"]+]]"
+// CHECK-OE-ARM: "-internal-isystem" "[[SYSROOT]]/usr/lib/arm-oe-linux-gnueabi/6.3.0/../../../include/c++/6.3.0"
+// CHECK-OE-ARM: "-internal-isystem" "[[SYSROOT]]/usr/lib/arm-oe-linux-gnueabi/6.3.0/../../../include/c++/6.3.0/backward"
+
+// Check header search on OpenEmbedded AArch64.
+// RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1 \
+// RUN:     -target aarch64-oe-linux \
+// RUN:     --sysroot=%S/Inputs/openembedded_aarch64_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-OE-AARCH64 %s
+
+// CHECK-OE-AARCH64: "{{[^"]*}}clang{{[^"]*}}" "-cc1"
+// CHECK-OE-AARCH64: "-isysroot" "[[SYSROOT:[^"]+]]"
+// CHECK-OE-AARCH64: "-internal-isystem" "[[SYSROOT]]/usr/lib64/aarch64-oe-linux/6.3.0/../../../include/c++/6.3.0"
+// CHECK-OE-AARCH64: "-internal-isystem" "[[SYSROOT]]/usr/lib64/aarch64-oe-linux/6.3.0/../../../include/c++/6.3.0/backward"

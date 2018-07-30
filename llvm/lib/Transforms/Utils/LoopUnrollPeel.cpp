@@ -344,7 +344,7 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
 /// Update the branch weights of the latch of a peeled-off loop
 /// iteration.
 /// This sets the branch weights for the latch of the recently peeled off loop
-/// iteration correctly. 
+/// iteration correctly.
 /// Our goal is to make sure that:
 /// a) The total weight of all the copies of the loop body is preserved.
 /// b) The total weight of the loop exit is preserved.
@@ -544,7 +544,7 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
   //
   // Each following iteration will split the current bottom anchor in two,
   // and put the new copy of the loop body between these two blocks. That is,
-  // after peeling another iteration from the example above, we'll split 
+  // after peeling another iteration from the example above, we'll split
   // InsertBot, and get:
   //
   // InsertTop:

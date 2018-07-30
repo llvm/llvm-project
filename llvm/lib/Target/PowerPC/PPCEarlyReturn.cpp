@@ -73,7 +73,7 @@ protected:
 
         if ((*PI)->empty())
           continue;
-        
+
         for (MachineBasicBlock::iterator J = (*PI)->getLastNonDebugInstr();;) {
           if (J == (*PI)->end())
             break;

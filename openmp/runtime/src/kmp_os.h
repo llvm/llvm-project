@@ -313,9 +313,12 @@ extern "C" {
 #endif
 
 // Define KMP_VERSION_SYMBOL and KMP_EXPAND_NAME
-#ifdef KMP_USE_VERSION_SYMBOLS
+#ifndef KMP_STR
 #define KMP_STR(x) _KMP_STR(x)
 #define _KMP_STR(x) #x
+#endif
+
+#ifdef KMP_USE_VERSION_SYMBOLS
 // If using versioned symbols, KMP_EXPAND_NAME prepends
 // __kmp_api_ to the real API name
 #define KMP_EXPAND_NAME(api_name) _KMP_EXPAND_NAME(api_name)

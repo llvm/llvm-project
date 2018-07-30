@@ -35,7 +35,7 @@ class BlockCounter {
 public:
   BlockCounter() : Data(nullptr) {}
 
-  unsigned getNumVisited(const StackFrameContext *CallSite, 
+  unsigned getNumVisited(const StackFrameContext *CallSite,
                          unsigned BlockID) const;
 
   class Factory {
@@ -45,7 +45,7 @@ public:
     ~Factory();
 
     BlockCounter GetEmptyCounter();
-    BlockCounter IncrementCount(BlockCounter BC, 
+    BlockCounter IncrementCount(BlockCounter BC,
                                   const StackFrameContext *CallSite,
                                   unsigned BlockID);
   };

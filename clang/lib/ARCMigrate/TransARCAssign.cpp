@@ -65,7 +65,7 @@ public:
         }
       }
     }
-    
+
     return true;
   }
 };

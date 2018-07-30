@@ -285,7 +285,7 @@ private:
   SpecificBumpPtrAllocator<AUFoldingSetNode> AUFoldingSetNodeAllocator;
 
   // Maps from a pass to it's associated entry in UniqueAnalysisUsages.  Does
-  // not own the storage associated with either key or value.. 
+  // not own the storage associated with either key or value..
   DenseMap<Pass *, AnalysisUsage*> AnUsageMap;
 
   /// Collection of PassInfo objects found via analysis IDs and in this top

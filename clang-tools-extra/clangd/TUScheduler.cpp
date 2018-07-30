@@ -331,8 +331,6 @@ void ASTWorker::update(
 
     tooling::CompileCommand OldCommand = std::move(FileInputs.CompileCommand);
     FileInputs = Inputs;
-    // Remove the old AST if it's still in cache.
-    IdleASTs.take(this);
 
     log("Updating file {0} with command [{1}] {2}", FileName,
         Inputs.CompileCommand.Directory,
@@ -342,6 +340,8 @@ void ASTWorker::update(
         buildCompilerInvocation(Inputs);
     if (!Invocation) {
       elog("Could not build CompilerInvocation for file {0}", FileName);
+      // Remove the old AST if it's still in cache.
+      IdleASTs.take(this);
       // Make sure anyone waiting for the preamble gets notified it could not
       // be built.
       PreambleWasBuilt.notify();
@@ -367,11 +367,11 @@ void ASTWorker::update(
     PreambleWasBuilt.notify();
 
     if (CanReuseAST) {
-      // Take a shortcut and don't build the AST, neither the inputs nor the
+      // Take a shortcut and don't build the AST if neither the inputs nor the
       // preamble have changed.
       // Note that we do not report the diagnostics, since they should not have
       // changed either. All the clients should handle the lack of OnUpdated()
-      // call anyway, to handle empty result from buildAST.
+      // call anyway to handle empty result from buildAST.
       // FIXME(ibiryukov): the AST could actually change if non-preamble
       // includes changed, but we choose to ignore it.
       // FIXME(ibiryukov): should we refresh the cache in IdleASTs for the
@@ -380,6 +380,9 @@ void ASTWorker::update(
           FileName);
       return;
     }
+    // Remove the old AST if it's still in cache.
+    IdleASTs.take(this);
+
     // Build the AST for diagnostics.
     llvm::Optional<ParsedAST> AST =
         buildAST(FileName, std::move(Invocation), Inputs, NewPreamble, PCHs);

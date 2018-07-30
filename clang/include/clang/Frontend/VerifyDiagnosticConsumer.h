@@ -252,7 +252,7 @@ private:
 
 public:
   /// Create a new verifying diagnostic client, which will issue errors to
-  /// the currently-attached diagnostic client when a diagnostic does not match 
+  /// the currently-attached diagnostic client when a diagnostic does not match
   /// what is expected (as indicated in the source file).
   VerifyDiagnosticConsumer(DiagnosticsEngine &Diags);
   ~VerifyDiagnosticConsumer() override;

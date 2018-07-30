@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements parsing for GCC and Microsoft inline assembly. 
+// This file implements parsing for GCC and Microsoft inline assembly.
 //
 //===----------------------------------------------------------------------===//
 

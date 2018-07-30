@@ -329,7 +329,7 @@ bool SystemZTTIImpl::hasDivRemOp(Type *DataType, bool IsSigned) {
 }
 
 int SystemZTTIImpl::getArithmeticInstrCost(
-    unsigned Opcode, Type *Ty,  
+    unsigned Opcode, Type *Ty,
     TTI::OperandValueKind Op1Info, TTI::OperandValueKind Op2Info,
     TTI::OperandValueProperties Opd1PropInfo,
     TTI::OperandValueProperties Opd2PropInfo,
@@ -469,7 +469,7 @@ int SystemZTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index,
   assert (Tp->isVectorTy());
   assert (ST->hasVector() && "getShuffleCost() called.");
   unsigned NumVectors = getNumberOfParts(Tp);
-  
+
   // TODO: Since fp32 is expanded, the shuffle cost should always be 0.
 
   // FP128 values are always in scalar registers, so there is no work
@@ -647,7 +647,7 @@ int SystemZTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
         return Cost;
       }
     }
-  
+
     if (Opcode == Instruction::SIToFP || Opcode == Instruction::UIToFP ||
         Opcode == Instruction::FPToSI || Opcode == Instruction::FPToUI) {
       // TODO: Fix base implementation which could simplify things a bit here
@@ -704,7 +704,7 @@ int SystemZTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
 
     if (Opcode == Instruction::SIToFP || Opcode == Instruction::UIToFP)
       return (SrcScalarBits >= 32 ? 1 : 2 /*i8/i16 extend*/);
-    
+
     if ((Opcode == Instruction::ZExt || Opcode == Instruction::SExt) &&
         Src->isIntegerTy(1)) {
       // This should be extension of a compare i1 result, which is done with

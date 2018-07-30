@@ -84,7 +84,7 @@ __slwpcb (void)
   (__builtin_ia32_lwpins32((unsigned int) (DATA2), (unsigned int) (DATA1), \
                            (unsigned int) (FLAGS)))
 
-/// Decrements the LWP programmed value sample event counter. If the result is 
+/// Decrements the LWP programmed value sample event counter. If the result is
 ///        negative, inserts an event record into the LWP event ring buffer in memory
 ///        and advances the ring buffer pointer.
 ///
@@ -125,7 +125,7 @@ __slwpcb (void)
   (__builtin_ia32_lwpins64((unsigned long long) (DATA2), (unsigned int) (DATA1), \
                            (unsigned int) (FLAGS)))
 
-/// Decrements the LWP programmed value sample event counter. If the result is 
+/// Decrements the LWP programmed value sample event counter. If the result is
 ///        negative, inserts an event record into the LWP event ring buffer in memory
 ///        and advances the ring buffer pointer.
 ///

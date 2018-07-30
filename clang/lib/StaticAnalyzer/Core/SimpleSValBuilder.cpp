@@ -440,7 +440,7 @@ static bool shouldRearrange(ProgramStateRef State, BinaryOperator::Opcode Op,
                             SymbolRef Sym, llvm::APSInt Int, QualType Ty) {
   return Sym->getType() == Ty &&
     (!BinaryOperator::isComparisonOp(Op) ||
-     (isWithinConstantOverflowBounds(Sym, State) && 
+     (isWithinConstantOverflowBounds(Sym, State) &&
       isWithinConstantOverflowBounds(Int)));
 }
 

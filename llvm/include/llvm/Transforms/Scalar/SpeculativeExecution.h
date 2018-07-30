@@ -82,7 +82,7 @@ private:
   bool considerHoistingFromTo(BasicBlock &FromBlock, BasicBlock &ToBlock);
 
   // If true, this pass is a nop unless the target architecture has branch
-  // divergence.  
+  // divergence.
   const bool OnlyIfDivergentTarget = false;
 
   TargetTransformInfo *TTI = nullptr;

@@ -126,7 +126,7 @@ IntrusiveRefCntPtr<ExternalSemaSource> clang::createChainedIncludesSource(
     bool firstInclude = (i == 0);
     std::unique_ptr<CompilerInvocation> CInvok;
     CInvok.reset(new CompilerInvocation(CI.getInvocation()));
-    
+
     CInvok->getPreprocessorOpts().ChainedIncludes.clear();
     CInvok->getPreprocessorOpts().ImplicitPCHInclude.clear();
     CInvok->getPreprocessorOpts().ImplicitPTHInclude.clear();
@@ -134,7 +134,7 @@ IntrusiveRefCntPtr<ExternalSemaSource> clang::createChainedIncludesSource(
     CInvok->getPreprocessorOpts().Includes.clear();
     CInvok->getPreprocessorOpts().MacroIncludes.clear();
     CInvok->getPreprocessorOpts().Macros.clear();
-    
+
     CInvok->getFrontendOpts().Inputs.clear();
     FrontendInputFile InputFile(includes[i], IK);
     CInvok->getFrontendOpts().Inputs.push_back(InputFile);
@@ -193,7 +193,7 @@ IntrusiveRefCntPtr<ExternalSemaSource> clang::createChainedIncludesSource(
       Clang->setModuleManager(Reader);
       Clang->getASTContext().setExternalSource(Reader);
     }
-    
+
     if (!Clang->InitializeSourceManager(InputFile))
       return nullptr;
 

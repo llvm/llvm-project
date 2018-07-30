@@ -72,3 +72,19 @@ decp    z31.d, p15
 // CHECK-ENCODING: [0xff,0x81,0xed,0x25]
 // CHECK-ERROR: instruction requires: sve
 // CHECK-UNKNOWN: ff 81 ed 25 <unknown>
+
+
+// --------------------------------------------------------------------------//
+// Test compatibility with MOVPRFX instruction.
+
+movprfx z31, z6
+// CHECK-INST: movprfx	z31, z6
+// CHECK-ENCODING: [0xdf,0xbc,0x20,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: df bc 20 04 <unknown>
+
+decp    z31.d, p15
+// CHECK-INST: decp	z31.d, p15
+// CHECK-ENCODING: [0xff,0x81,0xed,0x25]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: ff 81 ed 25 <unknown>

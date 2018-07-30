@@ -21,6 +21,7 @@
 #include "Encoding.h"
 #include "TokenAnnotator.h"
 #include "WhitespaceManager.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Regex.h"
 #include <utility>
 
@@ -135,6 +136,21 @@ public:
   virtual unsigned getContentStartColumn(unsigned LineIndex,
                                          bool Break) const = 0;
 
+  /// Returns additional content indent required for the second line after the
+  /// content at line \p LineIndex is broken.
+  ///
+  // (Next lines do not start with `///` since otherwise -Wdocumentation picks
+  // up the example annotations and generates warnings for them)
+  // For example, Javadoc @param annotations require and indent of 4 spaces and
+  // in this example getContentIndex(1) returns 4.
+  // /**
+  //  * @param loooooooooooooong line
+  //  *     continuation
+  //  */
+  virtual unsigned getContentIndent(unsigned LineIndex) const {
+    return 0;
+  }
+
   /// Returns a range (offset, length) at which to break the line at
   /// \p LineIndex, if previously broken at \p TailOffset. If possible, do not
   /// violate \p ColumnLimit, assuming the text starting at \p TailOffset in
@@ -146,6 +162,7 @@ public:
 
   /// Emits the previously retrieved \p Split via \p Whitespaces.
   virtual void insertBreak(unsigned LineIndex, unsigned TailOffset, Split Split,
+                           unsigned ContentIndent,
                            WhitespaceManager &Whitespaces) const = 0;
 
   /// Returns the number of columns needed to format
@@ -210,7 +227,7 @@ public:
                                       Split SplitAfterLastLine,
                                       WhitespaceManager &Whitespaces) const {
     insertBreak(getLineCount() - 1, TailOffset, SplitAfterLastLine,
-                Whitespaces);
+                /*ContentIndent=*/0, Whitespaces);
   }
 
   /// Updates the next token of \p State to the next token after this
@@ -245,6 +262,7 @@ public:
                  unsigned ContentStartColumn,
                  llvm::Regex &CommentPragmasRegex) const override;
   void insertBreak(unsigned LineIndex, unsigned TailOffset, Split Split,
+                   unsigned ContentIndent,
                    WhitespaceManager &Whitespaces) const override;
   void compressWhitespace(unsigned LineIndex, unsigned TailOffset, Split Split,
                           WhitespaceManager &Whitespaces) const override {}
@@ -354,7 +372,9 @@ public:
   unsigned getRemainingLength(unsigned LineIndex, unsigned Offset,
                               unsigned StartColumn) const override;
   unsigned getContentStartColumn(unsigned LineIndex, bool Break) const override;
+  unsigned getContentIndent(unsigned LineIndex) const override;
   void insertBreak(unsigned LineIndex, unsigned TailOffset, Split Split,
+                   unsigned ContentIndent,
                    WhitespaceManager &Whitespaces) const override;
   Split getReflowSplit(unsigned LineIndex,
                        llvm::Regex &CommentPragmasRegex) const override;
@@ -367,6 +387,10 @@ public:
 
   bool mayReflow(unsigned LineIndex,
                  llvm::Regex &CommentPragmasRegex) const override;
+
+  // Contains Javadoc annotations that require additional indent when continued
+  // on multiple lines.
+  static const llvm::StringSet<> ContentIndentingJavadocAnnotations;
 
 private:
   // Rearranges the whitespace between Lines[LineIndex-1] and Lines[LineIndex].
@@ -423,6 +447,7 @@ public:
                           unsigned StartColumn) const override;
   unsigned getContentStartColumn(unsigned LineIndex, bool Break) const override;
   void insertBreak(unsigned LineIndex, unsigned TailOffset, Split Split,
+                   unsigned ContentIndent,
                    WhitespaceManager &Whitespaces) const override;
   Split getReflowSplit(unsigned LineIndex,
                        llvm::Regex &CommentPragmasRegex) const override;

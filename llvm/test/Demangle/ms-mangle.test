@@ -265,18 +265,18 @@
 ?s6@PR13182@@3PBQBDB
 ; CHECK: char const *const *PR13182::s6
 
-; FIXME: We don't properly support static locals in functions yet.
+; FIXME: We don't properly support extern "C" functions yet.
 ; ?local@?1??extern_c_func@@9@4HA
 ; FIXME: int `extern_c_func'::`2'::local
 
 ; ?local@?1??extern_c_func@@9@4HA
 ; FIXME: int `extern_c_func'::`2'::local
 
-; ?v@?1??f@@YAHXZ@4U<unnamed-type-v>@?1??1@YAHXZ@A
-; FIXME: struct `int __cdecl f(void)'::`2'::<unnamed-type-v> `int __cdecl f(void)'::`2'::v
+?v@?1??f@@YAHXZ@4U<unnamed-type-v>@?1??1@YAHXZ@A
+; CHECK: struct `int __cdecl f(void)'::`2'::<unnamed-type-v> `int __cdecl f(void)'::`2'::v
 
-; ?v@?1???$f@H@@YAHXZ@4U<unnamed-type-v>@?1???$f@H@@YAHXZ@A
-; FIXME: struct `int __cdecl f<int>(void)'::`2'::<unnamed-type-v> `int __cdecl f<int>(void)'::`2'::v
+?v@?1???$f@H@@YAHXZ@4U<unnamed-type-v>@?1???$f@H@@YAHXZ@A
+; CHECK: struct `int __cdecl f<int>(void)'::`2'::<unnamed-type-v> `int __cdecl f<int>(void)'::`2'::v
 
 ??2OverloadedNewDelete@@SAPAXI@Z
 ; CHECK: static void * __cdecl OverloadedNewDelete::operator new(unsigned int)
@@ -335,8 +335,8 @@
 ; ?overloaded_fn@@$$J0YAXXZ
 ; FIXME-EXTERNC: extern \"C\" void __cdecl overloaded_fn(void)
 
-; ?f@UnnamedType@@YAXQAPAU<unnamed-type-T1>@S@1@@Z
-; FIXME: void __cdecl UnnamedType::f(struct UnnamedType::S::<unnamed-type-T1> ** const)
+?f@UnnamedType@@YAXQAPAU<unnamed-type-T1>@S@1@@Z
+; CHECK: void __cdecl UnnamedType::f(struct UnnamedType::S::<unnamed-type-T1> **const)
 
 ?f@UnnamedType@@YAXUT2@S@1@@Z
 ; CHECK: void __cdecl UnnamedType::f(struct UnnamedType::S::T2)

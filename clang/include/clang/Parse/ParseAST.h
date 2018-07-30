@@ -42,7 +42,7 @@ namespace clang {
                 CodeCompleteConsumer *CompletionConsumer = nullptr,
                 bool SkipFunctionBodies = false);
 
-  /// Parse the main file known to the preprocessor, producing an 
+  /// Parse the main file known to the preprocessor, producing an
   /// abstract syntax tree.
   void ParseAST(Sema &S, bool PrintStats = false,
                 bool SkipFunctionBodies = false);

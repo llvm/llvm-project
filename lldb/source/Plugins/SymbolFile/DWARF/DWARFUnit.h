@@ -33,8 +33,6 @@ enum DWARFProducer {
 };
 
 class DWARFUnit {
-  friend class DWARFCompileUnit;
-
   using die_iterator_range =
       llvm::iterator_range<DWARFDebugInfoEntry::collection::iterator>;
 

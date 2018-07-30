@@ -1,4 +1,4 @@
-; RUN: llc -enable-machine-outliner -mtriple=x86_64-apple-darwin < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -enable-machine-outliner -mtriple=x86_64-apple-darwin < %s | FileCheck %s
 
 @x = common local_unnamed_addr global i32 0, align 4
 

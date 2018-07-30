@@ -235,7 +235,7 @@ public:
   }
 
 
-  void printInfoComment(const Value &V, formatted_raw_ostream &OS) override {  
+  void printInfoComment(const Value &V, formatted_raw_ostream &OS) override {
     if (!MustExec.count(&V))
       return;
 
@@ -245,7 +245,7 @@ public:
       OS << " ; (mustexec in " << NumLoops << " loops: ";
     else
       OS << " ; (mustexec in: ";
-    
+
     bool first = true;
     for (const Loop *L : Loops) {
       if (!first)
@@ -264,6 +264,6 @@ bool MustExecutePrinter::runOnFunction(Function &F) {
 
   MustExecuteAnnotatedWriter Writer(F, DT, LI);
   F.print(dbgs(), &Writer);
-  
+
   return false;
 }

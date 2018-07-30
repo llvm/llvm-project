@@ -3096,7 +3096,7 @@ static SDValue promoteToConstantPool(const GlobalValue *GV, SelectionDAG &DAG,
   // need to be duplicated) or duplicating the constant wouldn't increase code
   // size (implying the constant is no larger than 4 bytes).
   const Function &F = DAG.getMachineFunction().getFunction();
-  
+
   // We rely on this decision to inline being idemopotent and unrelated to the
   // use-site. We know that if we inline a variable at one use site, we'll
   // inline it elsewhere too (and reuse the constant pool entry). Fast-isel
@@ -5162,7 +5162,7 @@ static SDValue ExpandBITCAST(SDNode *N, SelectionDAG &DAG,
       return SDValue();
     // SoftFP: read half-precision arguments:
     //
-    // t2: i32,ch = ... 
+    // t2: i32,ch = ...
     //        t7: i16 = truncate t2 <~~~~ Op
     //      t8: f16 = bitcast t7    <~~~~ N
     //
@@ -5173,7 +5173,7 @@ static SDValue ExpandBITCAST(SDNode *N, SelectionDAG &DAG,
     return SDValue();
   }
 
-  // Half-precision return values 
+  // Half-precision return values
   if (SrcVT == MVT::f16 && DstVT == MVT::i16) {
     if (!HasFullFP16)
       return SDValue();
@@ -13461,13 +13461,13 @@ bool ARMTargetLowering::getPostIndexedAddressParts(SDNode *N, SDNode *Op,
     auto *RHS = dyn_cast<ConstantSDNode>(Op->getOperand(1));
     if (!RHS || RHS->getZExtValue() != 4)
       return false;
-    
+
     Offset = Op->getOperand(1);
     Base = Op->getOperand(0);
     AM = ISD::POST_INC;
     return true;
   }
-  
+
   bool isInc;
   bool isLegal = false;
   if (Subtarget->isThumb2())

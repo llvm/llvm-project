@@ -201,13 +201,13 @@ void SSAUpdater::RewriteUse(Use &U) {
 
 void SSAUpdater::RewriteUseAfterInsertions(Use &U) {
   Instruction *User = cast<Instruction>(U.getUser());
-  
+
   Value *V;
   if (PHINode *UserPN = dyn_cast<PHINode>(User))
     V = GetValueAtEndOfBlock(UserPN->getIncomingBlock(U));
   else
     V = GetValueAtEndOfBlock(User->getParent());
-  
+
   U.set(V);
 }
 
@@ -235,7 +235,7 @@ public:
     PHI_iterator(PHINode *P, bool) // end iterator
       : PHI(P), idx(PHI->getNumIncomingValues()) {}
 
-    PHI_iterator &operator++() { ++idx; return *this; } 
+    PHI_iterator &operator++() { ++idx; return *this; }
     bool operator==(const PHI_iterator& x) const { return idx == x.idx; }
     bool operator!=(const PHI_iterator& x) const { return !operator==(x); }
 
@@ -333,7 +333,7 @@ LoadAndStorePromoter::
 LoadAndStorePromoter(ArrayRef<const Instruction *> Insts,
                      SSAUpdater &S, StringRef BaseName) : SSA(S) {
   if (Insts.empty()) return;
-  
+
   const Value *SomeVal;
   if (const LoadInst *LI = dyn_cast<LoadInst>(Insts[0]))
     SomeVal = LI;
@@ -354,7 +354,7 @@ run(const SmallVectorImpl<Instruction *> &Insts) const {
 
   for (Instruction *User : Insts)
     UsesByBlock[User->getParent()].push_back(User);
-  
+
   // Okay, now we can iterate over all the blocks in the function with uses,
   // processing them.  Keep track of which loads are loading a live-in value.
   // Walk the uses in the use-list order to be determinstic.
@@ -364,10 +364,10 @@ run(const SmallVectorImpl<Instruction *> &Insts) const {
   for (Instruction *User : Insts) {
     BasicBlock *BB = User->getParent();
     TinyPtrVector<Instruction *> &BlockUses = UsesByBlock[BB];
-    
+
     // If this block has already been processed, ignore this repeat use.
     if (BlockUses.empty()) continue;
-    
+
     // Okay, this is the first use in the block.  If this block just has a
     // single user in it, we can rewrite it trivially.
     if (BlockUses.size() == 1) {
@@ -375,13 +375,13 @@ run(const SmallVectorImpl<Instruction *> &Insts) const {
       if (StoreInst *SI = dyn_cast<StoreInst>(User)) {
         updateDebugInfo(SI);
         SSA.AddAvailableValue(BB, SI->getOperand(0));
-      } else 
+      } else
         // Otherwise it is a load, queue it to rewrite as a live-in load.
         LiveInLoads.push_back(cast<LoadInst>(User));
       BlockUses.clear();
       continue;
     }
-    
+
     // Otherwise, check to see if this block is all loads.
     bool HasStore = false;
     for (Instruction *I : BlockUses) {
@@ -390,7 +390,7 @@ run(const SmallVectorImpl<Instruction *> &Insts) const {
         break;
       }
     }
-    
+
     // If so, we can queue them all as live in loads.  We don't have an
     // efficient way to tell which on is first in the block and don't want to
     // scan large blocks, so just add all loads as live ins.
@@ -400,7 +400,7 @@ run(const SmallVectorImpl<Instruction *> &Insts) const {
       BlockUses.clear();
       continue;
     }
-    
+
     // Otherwise, we have mixed loads and stores (or just a bunch of stores).
     // Since SSAUpdater is purely for cross-block values, we need to determine
     // the order of these instructions in the block.  If the first use in the
@@ -411,7 +411,7 @@ run(const SmallVectorImpl<Instruction *> &Insts) const {
       if (LoadInst *L = dyn_cast<LoadInst>(&I)) {
         // If this is a load from an unrelated pointer, ignore it.
         if (!isInstInList(L, Insts)) continue;
-        
+
         // If we haven't seen a store yet, this is a live in use, otherwise
         // use the stored value.
         if (StoredValue) {
@@ -433,13 +433,13 @@ run(const SmallVectorImpl<Instruction *> &Insts) const {
         StoredValue = SI->getOperand(0);
       }
     }
-    
+
     // The last stored value that happened is the live-out for the block.
     assert(StoredValue && "Already checked that there is a store in block");
     SSA.AddAvailableValue(BB, StoredValue);
     BlockUses.clear();
   }
-  
+
   // Okay, now we rewrite all loads that use live-in values in the loop,
   // inserting PHI nodes as necessary.
   for (LoadInst *ALoad : LiveInLoads) {
@@ -451,10 +451,10 @@ run(const SmallVectorImpl<Instruction *> &Insts) const {
     ALoad->replaceAllUsesWith(NewVal);
     ReplacedLoads[ALoad] = NewVal;
   }
-  
+
   // Allow the client to do stuff before we start nuking things.
   doExtraRewritesBeforeFinalDeletion();
-  
+
   // Now that everything is rewritten, delete the old instructions from the
   // function.  They should all be dead now.
   for (Instruction *User : Insts) {
@@ -465,7 +465,7 @@ run(const SmallVectorImpl<Instruction *> &Insts) const {
     if (!User->use_empty()) {
       Value *NewVal = ReplacedLoads[User];
       assert(NewVal && "not a replaced load?");
-      
+
       // Propagate down to the ultimate replacee.  The intermediately loads
       // could theoretically already have been deleted, so we don't want to
       // dereference the Value*'s.
@@ -474,11 +474,11 @@ run(const SmallVectorImpl<Instruction *> &Insts) const {
         NewVal = RLI->second;
         RLI = ReplacedLoads.find(NewVal);
       }
-      
+
       replaceLoadWithValue(cast<LoadInst>(User), NewVal);
       User->replaceAllUsesWith(NewVal);
     }
-    
+
     instructionDeleted(User);
     User->eraseFromParent();
   }

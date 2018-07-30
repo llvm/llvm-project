@@ -971,20 +971,25 @@ llvm::DIType *CGDebugInfo::CreateType(const BlockPointerType *Ty,
   auto *DescTy = DBuilder.createPointerType(EltTy, Size);
 
   FieldOffset = 0;
-  FType = CGM.getContext().getPointerType(CGM.getContext().VoidTy);
-  EltTys.push_back(CreateMemberType(Unit, FType, "__isa", &FieldOffset));
-  FType = CGM.getContext().IntTy;
-  EltTys.push_back(CreateMemberType(Unit, FType, "__flags", &FieldOffset));
-  EltTys.push_back(CreateMemberType(Unit, FType, "__reserved", &FieldOffset));
-  FType = CGM.getContext().getPointerType(Ty->getPointeeType());
-  EltTys.push_back(CreateMemberType(Unit, FType, "__FuncPtr", &FieldOffset));
-
-  FType = CGM.getContext().getPointerType(CGM.getContext().VoidTy);
-  FieldSize = CGM.getContext().getTypeSize(Ty);
-  FieldAlign = CGM.getContext().getTypeAlign(Ty);
-  EltTys.push_back(DBuilder.createMemberType(
-      Unit, "__descriptor", nullptr, LineNo, FieldSize, FieldAlign, FieldOffset,
-      llvm::DINode::FlagZero, DescTy));
+  if (CGM.getLangOpts().OpenCL) {
+    FType = CGM.getContext().IntTy;
+    EltTys.push_back(CreateMemberType(Unit, FType, "__size", &FieldOffset));
+    EltTys.push_back(CreateMemberType(Unit, FType, "__align", &FieldOffset));
+  } else {
+    FType = CGM.getContext().getPointerType(CGM.getContext().VoidTy);
+    EltTys.push_back(CreateMemberType(Unit, FType, "__isa", &FieldOffset));
+    FType = CGM.getContext().IntTy;
+    EltTys.push_back(CreateMemberType(Unit, FType, "__flags", &FieldOffset));
+    EltTys.push_back(CreateMemberType(Unit, FType, "__reserved", &FieldOffset));
+    FType = CGM.getContext().getPointerType(Ty->getPointeeType());
+    EltTys.push_back(CreateMemberType(Unit, FType, "__FuncPtr", &FieldOffset));
+    FType = CGM.getContext().getPointerType(CGM.getContext().VoidTy);
+    FieldSize = CGM.getContext().getTypeSize(Ty);
+    FieldAlign = CGM.getContext().getTypeAlign(Ty);
+    EltTys.push_back(DBuilder.createMemberType(
+        Unit, "__descriptor", nullptr, LineNo, FieldSize, FieldAlign, FieldOffset,
+        llvm::DINode::FlagZero, DescTy));
+  }
 
   FieldOffset += FieldSize;
   Elements = DBuilder.getOrCreateArray(EltTys);
@@ -3847,26 +3852,35 @@ void CGDebugInfo::EmitDeclareOfBlockLiteralArgVariable(const CGBlockInfo &block,
       CGM.getDataLayout().getStructLayout(block.StructureType);
 
   SmallVector<llvm::Metadata *, 16> fields;
-  fields.push_back(createFieldType("__isa", C.VoidPtrTy, loc, AS_public,
-                                   blockLayout->getElementOffsetInBits(0),
-                                   tunit, tunit));
-  fields.push_back(createFieldType("__flags", C.IntTy, loc, AS_public,
-                                   blockLayout->getElementOffsetInBits(1),
-                                   tunit, tunit));
-  fields.push_back(createFieldType("__reserved", C.IntTy, loc, AS_public,
-                                   blockLayout->getElementOffsetInBits(2),
-                                   tunit, tunit));
-  auto *FnTy = block.getBlockExpr()->getFunctionType();
-  auto FnPtrType = CGM.getContext().getPointerType(FnTy->desugar());
-  fields.push_back(createFieldType("__FuncPtr", FnPtrType, loc, AS_public,
-                                   blockLayout->getElementOffsetInBits(3),
-                                   tunit, tunit));
-  fields.push_back(createFieldType(
-      "__descriptor",
-      C.getPointerType(block.NeedsCopyDispose
-                           ? C.getBlockDescriptorExtendedType()
-                           : C.getBlockDescriptorType()),
-      loc, AS_public, blockLayout->getElementOffsetInBits(4), tunit, tunit));
+  if (CGM.getLangOpts().OpenCL) {
+    fields.push_back(createFieldType("__size", C.IntTy, loc, AS_public,
+                                     blockLayout->getElementOffsetInBits(0),
+                                     tunit, tunit));
+    fields.push_back(createFieldType("__align", C.IntTy, loc, AS_public,
+                                     blockLayout->getElementOffsetInBits(1),
+                                     tunit, tunit));
+  } else {
+    fields.push_back(createFieldType("__isa", C.VoidPtrTy, loc, AS_public,
+                                     blockLayout->getElementOffsetInBits(0),
+                                     tunit, tunit));
+    fields.push_back(createFieldType("__flags", C.IntTy, loc, AS_public,
+                                     blockLayout->getElementOffsetInBits(1),
+                                     tunit, tunit));
+    fields.push_back(createFieldType("__reserved", C.IntTy, loc, AS_public,
+                                     blockLayout->getElementOffsetInBits(2),
+                                     tunit, tunit));
+    auto *FnTy = block.getBlockExpr()->getFunctionType();
+    auto FnPtrType = CGM.getContext().getPointerType(FnTy->desugar());
+    fields.push_back(createFieldType("__FuncPtr", FnPtrType, loc, AS_public,
+                                     blockLayout->getElementOffsetInBits(3),
+                                     tunit, tunit));
+    fields.push_back(createFieldType(
+        "__descriptor",
+        C.getPointerType(block.NeedsCopyDispose
+                             ? C.getBlockDescriptorExtendedType()
+                             : C.getBlockDescriptorType()),
+        loc, AS_public, blockLayout->getElementOffsetInBits(4), tunit, tunit));
+  }
 
   // We want to sort the captures by offset, not because DWARF
   // requires this, but because we're paranoid about debuggers.

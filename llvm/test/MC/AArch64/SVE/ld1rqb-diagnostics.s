@@ -79,3 +79,19 @@ ld1rqb z0.b, p0/z, [x0, w1, uxtw]
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: register must be x0..x30 without shift
 // CHECK-NEXT: ld1rqb z0.b, p0/z, [x0, w1, uxtw]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+
+// --------------------------------------------------------------------------//
+// Negative tests for instructions that are incompatible with movprfx
+
+movprfx z21.b, p5/z, z28.b
+ld1rqb  {  z21.b  }, p5/z, [x10, #112]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
+// CHECK-NEXT: ld1rqb  {  z21.b  }, p5/z, [x10, #112]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+movprfx z21, z28
+ld1rqb  {  z21.b  }, p5/z, [x10, #112]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
+// CHECK-NEXT: ld1rqb  {  z21.b  }, p5/z, [x10, #112]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:

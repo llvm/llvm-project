@@ -891,7 +891,7 @@ static bool eligibleForCompareElimination(MachineBasicBlock &MBB,
     auto BII = BB.getFirstInstrTerminator();
     // We optimize BBs ending with a conditional branch.
     // We check only for BCC here, not BCCLR, because BCCLR
-    // will be formed only later in the pipeline. 
+    // will be formed only later in the pipeline.
     if (BB.succ_size() == 2 &&
         BII != BB.instr_end() &&
         (*BII).getOpcode() == PPC::BCC &&

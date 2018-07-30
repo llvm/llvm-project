@@ -129,7 +129,7 @@ SystemZPostRASchedStrategy::
 SystemZPostRASchedStrategy(const MachineSchedContext *C)
   : MLI(C->MLI),
     TII(static_cast<const SystemZInstrInfo *>
-        (C->MF->getSubtarget().getInstrInfo())), 
+        (C->MF->getSubtarget().getInstrInfo())),
     MBB(nullptr), HazardRec(nullptr) {
   const TargetSubtargetInfo *ST = &C->MF->getSubtarget();
   SchedModel.init(ST);

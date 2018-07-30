@@ -214,7 +214,7 @@ public:
     bool ignored;
     return isBuiltinExtensionDiag(DiagID, ignored);
   }
-  
+
   /// Determine whether the given built-in diagnostic ID is for an
   /// extension of some sort, and whether it is enabled by default.
   ///
@@ -223,14 +223,14 @@ public:
   /// treated as a warning/error by default.
   ///
   static bool isBuiltinExtensionDiag(unsigned DiagID, bool &EnabledByDefault);
-  
+
 
   /// Return the lowest-level warning option that enables the specified
   /// diagnostic.
   ///
   /// If there is no -Wfoo flag that controls the diagnostic, this returns null.
   static StringRef getWarningOptionForDiag(unsigned DiagID);
-  
+
   /// Return the category number that a specified \p DiagID belongs to,
   /// or 0 if no category.
   static unsigned getCategoryNumberForDiag(unsigned DiagID);
@@ -240,7 +240,7 @@ public:
 
   /// Given a category ID, return the name of the category.
   static StringRef getCategoryNameFromID(unsigned CategoryID);
-  
+
   /// Return true if a given diagnostic falls into an ARC diagnostic
   /// category.
   static bool isARCDiagnostic(unsigned DiagID);
@@ -251,26 +251,26 @@ public:
     /// The diagnostic should not be reported, but it should cause
     /// template argument deduction to fail.
     ///
-    /// The vast majority of errors that occur during template argument 
+    /// The vast majority of errors that occur during template argument
     /// deduction fall into this category.
     SFINAE_SubstitutionFailure,
-    
+
     /// The diagnostic should be suppressed entirely.
     ///
     /// Warnings generally fall into this category.
     SFINAE_Suppress,
-    
+
     /// The diagnostic should be reported.
     ///
-    /// The diagnostic should be reported. Various fatal errors (e.g., 
+    /// The diagnostic should be reported. Various fatal errors (e.g.,
     /// template instantiation depth exceeded) fall into this category.
     SFINAE_Report,
-    
+
     /// The diagnostic is an access-control diagnostic, which will be
     /// substitution failures in some contexts and reported in others.
     SFINAE_AccessControl
   };
-  
+
   /// Determines whether the given built-in diagnostic ID is
   /// for an error that is suppressed if it occurs during C++ template
   /// argument deduction.
@@ -306,7 +306,7 @@ public:
 private:
   /// Classify the specified diagnostic ID into a Level, consumable by
   /// the DiagnosticClient.
-  /// 
+  ///
   /// The classification is based on the way the client configured the
   /// DiagnosticsEngine object.
   ///
