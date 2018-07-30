@@ -107,8 +107,6 @@ public:
   /// \p File is already tracked. Also schedules parsing of the AST for it on a
   /// separate thread. When the parsing is complete, DiagConsumer passed in
   /// constructor will receive onDiagnosticsReady callback.
-  /// When \p SkipCache is true, compile commands will always be requested from
-  /// compilation database even if they were cached in previous invocations.
   void addDocument(PathRef File, StringRef Contents,
                    WantDiagnostics WD = WantDiagnostics::Auto);
 
