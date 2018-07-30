@@ -34,6 +34,8 @@ static bool ComputeClangDirectory(FileSpec &file_spec) { return false; }
 #else
 static bool DefaultComputeClangDirectory(FileSpec &file_spec) {
   return HostInfoPosix::ComputePathRelativeToLibrary(
+      file_spec, "/lib/lldb/clang/");
+  return HostInfoPosix::ComputePathRelativeToLibrary(
       file_spec, (llvm::Twine("/lib") + CLANG_LIBDIR_SUFFIX + "/clang/" +
                   CLANG_VERSION_STRING)
                      .str());

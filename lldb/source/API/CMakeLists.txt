@@ -163,8 +163,8 @@ endif()
 # Copy the clang resource directory.
 add_custom_command_target(
     unused_var
-    COMMAND "${CMAKE_COMMAND}" "-E" "copy_directory" "${CLANG_RESOURCE_PATH}" "${lib_dir}/lldb/clang/${LLVM_PACKAGE_VERSION}"
-    OUTPUT "${lib_dir}/lldb/clang/${LLVM_PACKAGE_VERSION}"
+    COMMAND "${CMAKE_COMMAND}" "-E" "copy_directory" "${CLANG_RESOURCE_PATH}" "${lib_dir}/lldb/clang/"
+    OUTPUT "${lib_dir}/lldb/clang/"
     VERBATIM
     ALL
     DEPENDS ${clang_headers_target})
