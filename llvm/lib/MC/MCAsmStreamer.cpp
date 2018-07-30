@@ -337,7 +337,7 @@ void MCAsmStreamer::AddComment(const Twine &T, bool EOL) {
   if (!IsVerboseAsm) return;
 
   T.toVector(CommentToEmit);
- 
+
   if (EOL)
     CommentToEmit.push_back('\n'); // Place comment in a new line.
 }
@@ -655,7 +655,7 @@ void MCAsmStreamer::EmitSyntaxDirective() {
     EmitEOL();
   }
   // FIXME: Currently emit unprefix'ed registers.
-  // The intel_syntax directive has one optional argument 
+  // The intel_syntax directive has one optional argument
   // with may have a value of prefix or noprefix.
 }
 

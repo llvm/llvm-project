@@ -17,6 +17,9 @@ declare void @external_void_func_i16_zeroext(i16 zeroext) #0
 
 declare void @external_void_func_i32(i32) #0
 declare void @external_void_func_i64(i64) #0
+declare void @external_void_func_v2i64(<2 x i64>) #0
+declare void @external_void_func_v3i64(<3 x i64>) #0
+declare void @external_void_func_v4i64(<4 x i64>) #0
 
 declare void @external_void_func_f16(half) #0
 declare void @external_void_func_f32(float) #0
@@ -27,6 +30,7 @@ declare void @external_void_func_v2f16(<2 x half>) #0
 
 declare void @external_void_func_v2i32(<2 x i32>) #0
 declare void @external_void_func_v3i32(<3 x i32>) #0
+declare void @external_void_func_v3i32_i32(<3 x i32>, i32) #0
 declare void @external_void_func_v4i32(<4 x i32>) #0
 declare void @external_void_func_v8i32(<8 x i32>) #0
 declare void @external_void_func_v16i32(<16 x i32>) #0
@@ -255,6 +259,47 @@ define amdgpu_kernel void @test_call_external_void_func_i64_imm() #0 {
   ret void
 }
 
+; GCN-LABEL: {{^}}test_call_external_void_func_v2i64:
+; GCN: buffer_load_dwordx4 v[0:3]
+; GCN: s_waitcnt
+; GCN-NEXT: s_swappc_b64
+define amdgpu_kernel void @test_call_external_void_func_v2i64() #0 {
+  %val = load <2 x i64>, <2 x i64> addrspace(1)* null
+  call void @external_void_func_v2i64(<2 x i64> %val)
+  ret void
+}
+
+; GCN-LABEL: {{^}}test_call_external_void_func_v3i64:
+; GCN: buffer_load_dwordx4 v[0:3]
+; GCN: v_mov_b32_e32 v4, s
+; GCN: v_mov_b32_e32 v5, s
+; GCN: s_waitcnt
+; GCN-NEXT: s_swappc_b64
+define amdgpu_kernel void @test_call_external_void_func_v3i64() #0 {
+  %load = load <2 x i64>, <2 x i64> addrspace(1)* null
+  %val = shufflevector <2 x i64> %load, <2 x i64> <i64 8589934593, i64 undef>, <3 x i32> <i32 0, i32 1, i32 2>
+
+  call void @external_void_func_v3i64(<3 x i64> %val)
+  ret void
+}
+
+; FIXME: Immedites should fold directly into v_mov_b32s
+; GCN-LABEL: {{^}}test_call_external_void_func_v4i64:
+; GCN: buffer_load_dwordx4 v[0:3]
+; GCN: v_mov_b32_e32 v4, s
+; GCN: v_mov_b32_e32 v5, s
+; GCN: v_mov_b32_e32 v6, s
+; GCN: v_mov_b32_e32 v7, s
+
+; GCN: s_waitcnt
+; GCN-NEXT: s_swappc_b64
+define amdgpu_kernel void @test_call_external_void_func_v4i64() #0 {
+  %load = load <2 x i64>, <2 x i64> addrspace(1)* null
+  %val = shufflevector <2 x i64> %load, <2 x i64> <i64 8589934593, i64 17179869187>, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  call void @external_void_func_v4i64(<4 x i64> %val)
+  ret void
+}
+
 ; GCN-LABEL: {{^}}test_call_external_void_func_f16_imm:
 ; VI: v_mov_b32_e32 v0, 0x4400
 ; CI: v_mov_b32_e32 v0, 4.0
@@ -313,19 +358,28 @@ define amdgpu_kernel void @test_call_external_void_func_v2i32() #0 {
   ret void
 }
 
-; FIXME: Passing 4th
 ; GCN-LABEL: {{^}}test_call_external_void_func_v3i32_imm:
 ; HSA-DAG: s_mov_b32 s33, s9
 ; MESA-DAG: s_mov_b32 s33, s3{{$}}
 
-; GCN-DAG: v_mov_b32_e32 v0
-; GCN-DAG: v_mov_b32_e32 v1
-; GCN-DAG: v_mov_b32_e32 v2
-; GCN-DAG: v_mov_b32_e32 v3
+; GCN-DAG: v_mov_b32_e32 v0, 3
+; GCN-DAG: v_mov_b32_e32 v1, 4
+; GCN-DAG: v_mov_b32_e32 v2, 5
+; GCN-NOT: v3
 
 ; GCN: s_swappc_b64
 define amdgpu_kernel void @test_call_external_void_func_v3i32_imm(i32) #0 {
   call void @external_void_func_v3i32(<3 x i32> <i32 3, i32 4, i32 5>)
+  ret void
+}
+
+; GCN-LABEL: {{^}}test_call_external_void_func_v3i32_i32:
+; GCN-DAG: v_mov_b32_e32 v0, 3
+; GCN-DAG: v_mov_b32_e32 v1, 4
+; GCN-DAG: v_mov_b32_e32 v2, 5
+; GCN-DAG: v_mov_b32_e32 v3, 6
+define amdgpu_kernel void @test_call_external_void_func_v3i32_i32(i32) #0 {
+  call void @external_void_func_v3i32_i32(<3 x i32> <i32 3, i32 4, i32 5>, i32 6)
   ret void
 }
 

@@ -3,6 +3,7 @@
 
 declare float @llvm.maxnum.f32(float, float) #0
 declare <2 x float> @llvm.maxnum.v2f32(<2 x float>, <2 x float>) #0
+declare <3 x float> @llvm.maxnum.v3f32(<3 x float>, <3 x float>) #0
 declare <4 x float> @llvm.maxnum.v4f32(<4 x float>, <4 x float>) #0
 declare <8 x float> @llvm.maxnum.v8f32(<8 x float>, <8 x float>) #0
 declare <16 x float> @llvm.maxnum.v16f32(<16 x float>, <16 x float>) #0
@@ -30,6 +31,17 @@ define amdgpu_kernel void @test_fmax_f32(float addrspace(1)* %out, float %a, flo
 define amdgpu_kernel void @test_fmax_v2f32(<2 x float> addrspace(1)* %out, <2 x float> %a, <2 x float> %b) nounwind {
   %val = call <2 x float> @llvm.maxnum.v2f32(<2 x float> %a, <2 x float> %b) #0
   store <2 x float> %val, <2 x float> addrspace(1)* %out, align 8
+  ret void
+}
+
+; FUNC-LABEL: {{^}}test_fmax_v3f32:
+; SI: v_max_f32_e32
+; SI: v_max_f32_e32
+; SI: v_max_f32_e32
+; SI-NOT: v_max_f32
+define amdgpu_kernel void @test_fmax_v3f32(<3 x float> addrspace(1)* %out, <3 x float> %a, <3 x float> %b) nounwind {
+  %val = call <3 x float> @llvm.maxnum.v3f32(<3 x float> %a, <3 x float> %b) #0
+  store <3 x float> %val, <3 x float> addrspace(1)* %out, align 16
   ret void
 }
 
@@ -278,6 +290,16 @@ define amdgpu_kernel void @fmax_literal_var_f32(float addrspace(1)* %out, float 
   %val = call float @llvm.maxnum.f32(float 99.0, float %a) #0
   store float %val, float addrspace(1)* %out, align 4
   ret void
+}
+
+; FUNC-LABEL: {{^}}test_func_fmax_v3f32:
+; SI: v_max_f32_e32
+; SI: v_max_f32_e32
+; SI: v_max_f32_e32
+; SI-NOT: v_max_f32
+define <3 x float> @test_func_fmax_v3f32(<3 x float> %a, <3 x float> %b) nounwind {
+  %val = call <3 x float> @llvm.maxnum.v3f32(<3 x float> %a, <3 x float> %b) #0
+  ret <3 x float> %val
 }
 
 attributes #0 = { nounwind readnone }

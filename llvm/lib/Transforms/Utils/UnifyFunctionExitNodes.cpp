@@ -61,7 +61,7 @@ bool UnifyFunctionExitNodes::runOnFunction(Function &F) {
   } else if (UnreachableBlocks.size() == 1) {
     UnreachableBlock = UnreachableBlocks.front();
   } else {
-    UnreachableBlock = BasicBlock::Create(F.getContext(), 
+    UnreachableBlock = BasicBlock::Create(F.getContext(),
                                           "UnifiedUnreachableBlock", &F);
     new UnreachableInst(F.getContext(), UnreachableBlock);
 

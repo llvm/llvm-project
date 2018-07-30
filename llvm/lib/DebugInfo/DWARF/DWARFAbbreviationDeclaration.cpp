@@ -38,7 +38,7 @@ DWARFAbbreviationDeclaration::DWARFAbbreviationDeclaration() {
 }
 
 bool
-DWARFAbbreviationDeclaration::extract(DataExtractor Data, 
+DWARFAbbreviationDeclaration::extract(DataExtractor Data,
                                       uint32_t* OffsetPtr) {
   clear();
   const uint32_t Offset = *OffsetPtr;

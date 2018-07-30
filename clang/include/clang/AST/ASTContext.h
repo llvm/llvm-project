@@ -226,6 +226,12 @@ class ASTContext : public RefCountedBase<ASTContext> {
   using TypeInfoMap = llvm::DenseMap<const Type *, struct TypeInfo>;
   mutable TypeInfoMap MemoizedTypeInfo;
 
+  /// A cache from types to unadjusted alignment information. Only ARM and
+  /// AArch64 targets need this information, keeping it separate prevents
+  /// imposing overhead on TypeInfo size.
+  using UnadjustedAlignMap = llvm::DenseMap<const Type *, unsigned>;
+  mutable UnadjustedAlignMap MemoizedUnadjustedAlign;
+
   /// A cache mapping from CXXRecordDecls to key functions.
   llvm::DenseMap<const CXXRecordDecl*, LazyDeclPtr> KeyFunctions;
 
@@ -1522,7 +1528,7 @@ public:
   /// The sizeof operator requires this (C99 6.5.3.4p4).
   CanQualType getSizeType() const;
 
-  /// Return the unique signed counterpart of 
+  /// Return the unique signed counterpart of
   /// the integer type corresponding to size_t.
   CanQualType getSignedSizeType() const;
 
@@ -2067,6 +2073,16 @@ public:
   unsigned getTypeAlign(QualType T) const { return getTypeInfo(T).Align; }
   unsigned getTypeAlign(const Type *T) const { return getTypeInfo(T).Align; }
 
+  /// Return the ABI-specified natural alignment of a (complete) type \p T,
+  /// before alignment adjustments, in bits.
+  ///
+  /// This alignment is curently used only by ARM and AArch64 when passing
+  /// arguments of a composite type.
+  unsigned getTypeUnadjustedAlign(QualType T) const {
+    return getTypeUnadjustedAlign(T.getTypePtr());
+  }
+  unsigned getTypeUnadjustedAlign(const Type *T) const;
+
   /// Return the ABI-specified alignment of a type, in bits, or 0 if
   /// the type is incomplete and we cannot determine the alignment (for
   /// example, from alignment attributes).
@@ -2076,6 +2092,12 @@ public:
   /// characters.
   CharUnits getTypeAlignInChars(QualType T) const;
   CharUnits getTypeAlignInChars(const Type *T) const;
+
+  /// getTypeUnadjustedAlignInChars - Return the ABI-specified alignment of a type,
+  /// in characters, before alignment adjustments. This method does not work on
+  /// incomplete types.
+  CharUnits getTypeUnadjustedAlignInChars(QualType T) const;
+  CharUnits getTypeUnadjustedAlignInChars(const Type *T) const;
 
   // getTypeInfoDataSizeInChars - Return the size of a type, in chars. If the
   // type is a record, its data size is returned.

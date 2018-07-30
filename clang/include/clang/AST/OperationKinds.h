@@ -16,7 +16,7 @@
 #define LLVM_CLANG_AST_OPERATIONKINDS_H
 
 namespace clang {
-  
+
 /// CastKind - The kind of operation required for a conversion.
 enum CastKind {
 #define CAST_OPERATION(Name) CK_##Name,

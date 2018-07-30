@@ -550,7 +550,7 @@ static void writeFragment(raw_ostream &OS, const MCAssembler &Asm,
     break;
   }
 
-  case MCFragment::FT_Data: 
+  case MCFragment::FT_Data:
     ++stats::EmittedDataFragments;
     OS << cast<MCDataFragment>(F).getContents();
     break;

@@ -246,7 +246,7 @@ public:
                        BugReport &BR) override;
 };
 
-/// When a region containing undefined value or '0' value is passed 
+/// When a region containing undefined value or '0' value is passed
 /// as an argument in a call, marks the call as interesting.
 ///
 /// As a result, BugReporter will not prune the path through the function even

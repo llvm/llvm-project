@@ -409,7 +409,7 @@ bool GlobalsAAResult::AnalyzeIndirectGlobalMemory(GlobalVariable *GV) {
   if (Constant *C = GV->getInitializer())
     if (!C->isNullValue())
       return false;
-    
+
   // Walk the user list of the global.  If we find anything other than a direct
   // load or store, bail out.
   for (User *U : GV->users()) {
@@ -464,7 +464,7 @@ bool GlobalsAAResult::AnalyzeIndirectGlobalMemory(GlobalVariable *GV) {
   return true;
 }
 
-void GlobalsAAResult::CollectSCCMembership(CallGraph &CG) {  
+void GlobalsAAResult::CollectSCCMembership(CallGraph &CG) {
   // We do a bottom-up SCC traversal of the call graph.  In other words, we
   // visit all callees before callers (leaf-first).
   unsigned SCCID = 0;
@@ -633,7 +633,7 @@ static bool isNonEscapingGlobalNoAliasWithLoad(const GlobalValue *GV,
   Inputs.push_back(V);
   do {
     const Value *Input = Inputs.pop_back_val();
-    
+
     if (isa<GlobalValue>(Input) || isa<Argument>(Input) || isa<CallInst>(Input) ||
         isa<InvokeInst>(Input))
       // Arguments to functions or returns from functions are inherently
@@ -654,7 +654,7 @@ static bool isNonEscapingGlobalNoAliasWithLoad(const GlobalValue *GV,
     if (auto *LI = dyn_cast<LoadInst>(Input)) {
       Inputs.push_back(GetUnderlyingObject(LI->getPointerOperand(), DL));
       continue;
-    }  
+    }
     if (auto *SI = dyn_cast<SelectInst>(Input)) {
       const Value *LHS = GetUnderlyingObject(SI->getTrueValue(), DL);
       const Value *RHS = GetUnderlyingObject(SI->getFalseValue(), DL);
@@ -672,7 +672,7 @@ static bool isNonEscapingGlobalNoAliasWithLoad(const GlobalValue *GV,
       }
       continue;
     }
-    
+
     return false;
   } while (!Inputs.empty());
 
@@ -754,7 +754,7 @@ bool GlobalsAAResult::isNonEscapingGlobalNoAlias(const GlobalValue *GV,
       // non-addr-taken globals.
       continue;
     }
-    
+
     // Recurse through a limited number of selects, loads and PHIs. This is an
     // arbitrary depth of 4, lower numbers could be used to fix compile time
     // issues if needed, but this is generally expected to be only be important

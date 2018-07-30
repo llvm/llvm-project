@@ -872,9 +872,11 @@ namespace llvm {
                                                MCContext &Ctx) const override;
 
     unsigned getNumRegistersForCallingConv(LLVMContext &Context,
+                                           CallingConv:: ID CC,
                                            EVT VT) const override;
 
     MVT getRegisterTypeForCallingConv(LLVMContext &Context,
+                                      CallingConv:: ID CC,
                                       EVT VT) const override;
 
   private:
@@ -1141,7 +1143,7 @@ namespace llvm {
                                          ISD::ArgFlagsTy &ArgFlags,
                                          CCState &State);
 
-  bool 
+  bool
   CC_PPC32_SVR4_Custom_SkipLastArgRegsPPCF128(unsigned &ValNo, MVT &ValVT,
                                                  MVT &LocVT,
                                                  CCValAssign::LocInfo &LocInfo,

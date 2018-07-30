@@ -27,7 +27,7 @@ enum OverloadedOperatorKind : int {
   NUM_OVERLOADED_OPERATORS
 };
 
-/// Retrieve the spelling of the given overloaded operator, without 
+/// Retrieve the spelling of the given overloaded operator, without
 /// the preceding "operator" keyword.
 const char *getOperatorSpelling(OverloadedOperatorKind Operator);
 

@@ -144,9 +144,9 @@ class CompilerInstance : public ModuleLoader {
   bool DeleteBuiltModules = true;
 
   /// The location of the module-import keyword for the last module
-  /// import. 
+  /// import.
   SourceLocation LastModuleImportLoc;
-  
+
   /// The result of the last module import.
   ///
   ModuleLoadResult LastModuleImportResult;
@@ -246,7 +246,7 @@ public:
 
   /// Indicates whether we should (re)build the global module index.
   bool shouldBuildGlobalModuleIndex() const;
-  
+
   /// Set the flag indicating whether we should (re)build the global
   /// module index.
   void setBuildGlobalModuleIndex(bool Build) {
@@ -350,7 +350,7 @@ public:
   void setDiagnostics(DiagnosticsEngine *Value);
 
   DiagnosticConsumer &getDiagnosticClient() const {
-    assert(Diagnostics && Diagnostics->getClient() && 
+    assert(Diagnostics && Diagnostics->getClient() &&
            "Compiler instance has no diagnostic client!");
     return *Diagnostics->getClient();
   }
@@ -409,7 +409,7 @@ public:
     assert(FileMgr && "Compiler instance has no file manager!");
     return *FileMgr;
   }
-  
+
   void resetAndLeakFileManager() {
     BuryPointer(FileMgr.get());
     FileMgr.resetWithoutRelease();
@@ -429,7 +429,7 @@ public:
     assert(SourceMgr && "Compiler instance has no source manager!");
     return *SourceMgr;
   }
-  
+
   void resetAndLeakSourceManager() {
     BuryPointer(SourceMgr.get());
     SourceMgr.resetWithoutRelease();
@@ -469,7 +469,7 @@ public:
     assert(Context && "Compiler instance has no AST context!");
     return *Context;
   }
-  
+
   void resetAndLeakASTContext() {
     BuryPointer(Context.get());
     Context.resetWithoutRelease();
@@ -481,7 +481,7 @@ public:
   /// Replace the current Sema; the compiler instance takes ownership
   /// of S.
   void setSema(Sema *S);
-  
+
   /// }
   /// @name ASTConsumer
   /// {
@@ -506,7 +506,7 @@ public:
   /// {
   bool hasSema() const { return (bool)TheSema; }
 
-  Sema &getSema() const { 
+  Sema &getSema() const {
     assert(TheSema && "Compiler instance has no Sema object!");
     return *TheSema;
   }
@@ -613,7 +613,7 @@ public:
   /// attached to (and, then, owned by) the DiagnosticsEngine inside this AST
   /// unit.
   ///
-  /// \param ShouldOwnClient If Client is non-NULL, specifies whether 
+  /// \param ShouldOwnClient If Client is non-NULL, specifies whether
   /// the diagnostic object should take ownership of the client.
   void createDiagnostics(DiagnosticConsumer *Client = nullptr,
                          bool ShouldOwnClient = true);
@@ -693,7 +693,7 @@ public:
   /// Create the Sema object to be used for parsing.
   void createSema(TranslationUnitKind TUKind,
                   CodeCompleteConsumer *CompletionConsumer);
-  
+
   /// Create the frontend timer and replace any existing one with it.
   void createFrontendTimer();
 

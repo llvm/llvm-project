@@ -61,7 +61,7 @@ namespace clang {
 ///
 /// The actual scope is described by getScopeRep().
 class CXXScopeSpec {
-  SourceRange Range;  
+  SourceRange Range;
   NestedNameSpecifierLocBuilder Builder;
 
 public:
@@ -73,8 +73,8 @@ public:
   SourceLocation getEndLoc() const { return Range.getEnd(); }
 
   /// Retrieve the representation of the nested-name-specifier.
-  NestedNameSpecifier *getScopeRep() const { 
-    return Builder.getRepresentation(); 
+  NestedNameSpecifier *getScopeRep() const {
+    return Builder.getRepresentation();
   }
 
   /// Extend the current nested-name-specifier by another
@@ -91,7 +91,7 @@ public:
   void Extend(ASTContext &Context, SourceLocation TemplateKWLoc, TypeLoc TL,
               SourceLocation ColonColonLoc);
 
-  /// Extend the current nested-name-specifier by another 
+  /// Extend the current nested-name-specifier by another
   /// nested-name-specifier component of the form 'identifier::'.
   ///
   /// \param Context The AST context in which this nested-name-specifier
@@ -105,7 +105,7 @@ public:
   void Extend(ASTContext &Context, IdentifierInfo *Identifier,
               SourceLocation IdentifierLoc, SourceLocation ColonColonLoc);
 
-  /// Extend the current nested-name-specifier by another 
+  /// Extend the current nested-name-specifier by another
   /// nested-name-specifier component of the form 'namespace::'.
   ///
   /// \param Context The AST context in which this nested-name-specifier
@@ -119,7 +119,7 @@ public:
   void Extend(ASTContext &Context, NamespaceDecl *Namespace,
               SourceLocation NamespaceLoc, SourceLocation ColonColonLoc);
 
-  /// Extend the current nested-name-specifier by another 
+  /// Extend the current nested-name-specifier by another
   /// nested-name-specifier component of the form 'namespace-alias::'.
   ///
   /// \param Context The AST context in which this nested-name-specifier
@@ -127,7 +127,7 @@ public:
   ///
   /// \param Alias The namespace alias.
   ///
-  /// \param AliasLoc The location of the namespace alias 
+  /// \param AliasLoc The location of the namespace alias
   /// name.
   ///
   /// \param ColonColonLoc The location of the trailing '::'.
@@ -137,7 +137,7 @@ public:
   /// Turn this (empty) nested-name-specifier into the global
   /// nested-name-specifier '::'.
   void MakeGlobal(ASTContext &Context, SourceLocation ColonColonLoc);
-  
+
   /// Turns this (empty) nested-name-specifier into '__super'
   /// nested-name-specifier.
   ///
@@ -160,13 +160,13 @@ public:
   /// FIXME: This routine should be used very, very rarely, in cases where we
   /// need to synthesize a nested-name-specifier. Most code should instead use
   /// \c Adopt() with a proper \c NestedNameSpecifierLoc.
-  void MakeTrivial(ASTContext &Context, NestedNameSpecifier *Qualifier, 
+  void MakeTrivial(ASTContext &Context, NestedNameSpecifier *Qualifier,
                    SourceRange R);
-  
-  /// Adopt an existing nested-name-specifier (with source-range 
+
+  /// Adopt an existing nested-name-specifier (with source-range
   /// information).
   void Adopt(NestedNameSpecifierLoc Other);
-  
+
   /// Retrieve a nested-name-specifier with location information, copied
   /// into the given AST context.
   ///
@@ -196,14 +196,14 @@ public:
   bool isValid() const { return isNotEmpty() && getScopeRep() != nullptr; }
 
   /// Indicate that this nested-name-specifier is invalid.
-  void SetInvalid(SourceRange R) { 
+  void SetInvalid(SourceRange R) {
     assert(R.isValid() && "Must have a valid source range");
     if (Range.getBegin().isInvalid())
       Range.setBegin(R.getBegin());
     Range.setEnd(R.getEnd());
     Builder.Clear();
   }
-  
+
   /// Deprecated.  Some call sites intend isNotEmpty() while others intend
   /// isValid().
   bool isSet() const { return getScopeRep() != nullptr; }
@@ -215,8 +215,8 @@ public:
 
   /// Retrieve the data associated with the source-location information.
   char *location_data() const { return Builder.getBuffer().first; }
-  
-  /// Retrieve the size of the data associated with source-location 
+
+  /// Retrieve the size of the data associated with source-location
   /// information.
   unsigned location_size() const { return Builder.getBuffer().second; }
 };
@@ -254,7 +254,7 @@ public:
   static const TSW TSW_short = clang::TSW_short;
   static const TSW TSW_long = clang::TSW_long;
   static const TSW TSW_longlong = clang::TSW_longlong;
-  
+
   enum TSC {
     TSC_unspecified,
     TSC_imaginary,
@@ -709,7 +709,7 @@ public:
 
   bool isModulePrivateSpecified() const { return ModulePrivateLoc.isValid(); }
   SourceLocation getModulePrivateSpecLoc() const { return ModulePrivateLoc; }
-  
+
   bool isConstexprSpecified() const { return Constexpr_specified; }
   SourceLocation getConstexprSpecLoc() const { return ConstexprLoc; }
 
@@ -916,7 +916,7 @@ enum class UnqualifiedIdKind {
   IK_DeductionGuideName
 };
 
-/// Represents a C++ unqualified-id that has been parsed. 
+/// Represents a C++ unqualified-id that has been parsed.
 class UnqualifiedId {
 private:
   UnqualifiedId(const UnqualifiedId &Other) = delete;
@@ -931,8 +931,8 @@ public:
     OverloadedOperatorKind Operator;
 
     /// The source locations of the individual tokens that name
-    /// the operator, e.g., the "new", "[", and "]" tokens in 
-    /// operator new []. 
+    /// the operator, e.g., the "new", "[", and "]" tokens in
+    /// operator new [].
     ///
     /// Different operators have different numbers of tokens in their name,
     /// up to three. Any remaining source locations in this array will be
@@ -946,44 +946,44 @@ public:
     /// When Kind == IK_Identifier, the parsed identifier, or when
     /// Kind == IK_UserLiteralId, the identifier suffix.
     IdentifierInfo *Identifier;
-    
+
     /// When Kind == IK_OperatorFunctionId, the overloaded operator
     /// that we parsed.
     struct OFI OperatorFunctionId;
-    
-    /// When Kind == IK_ConversionFunctionId, the type that the 
+
+    /// When Kind == IK_ConversionFunctionId, the type that the
     /// conversion function names.
     UnionParsedType ConversionFunctionId;
 
     /// When Kind == IK_ConstructorName, the class-name of the type
     /// whose constructor is being referenced.
     UnionParsedType ConstructorName;
-    
+
     /// When Kind == IK_DestructorName, the type referred to by the
     /// class-name.
     UnionParsedType DestructorName;
 
     /// When Kind == IK_DeductionGuideName, the parsed template-name.
     UnionParsedTemplateTy TemplateName;
-    
+
     /// When Kind == IK_TemplateId or IK_ConstructorTemplateId,
     /// the template-id annotation that contains the template name and
     /// template arguments.
     TemplateIdAnnotation *TemplateId;
   };
-  
+
   /// The location of the first token that describes this unqualified-id,
   /// which will be the location of the identifier, "operator" keyword,
   /// tilde (for a destructor), or the template name of a template-id.
   SourceLocation StartLocation;
-  
+
   /// The location of the last token that describes this unqualified-id.
   SourceLocation EndLocation;
 
   UnqualifiedId()
       : Kind(UnqualifiedIdKind::IK_Identifier), Identifier(nullptr) {}
 
-  /// Clear out this unqualified-id, setting it to default (invalid) 
+  /// Clear out this unqualified-id, setting it to default (invalid)
   /// state.
   void clear() {
     Kind = UnqualifiedIdKind::IK_Identifier;
@@ -991,17 +991,17 @@ public:
     StartLocation = SourceLocation();
     EndLocation = SourceLocation();
   }
-  
+
   /// Determine whether this unqualified-id refers to a valid name.
   bool isValid() const { return StartLocation.isValid(); }
 
   /// Determine whether this unqualified-id refers to an invalid name.
   bool isInvalid() const { return !isValid(); }
-  
+
   /// Determine what kind of name we have.
   UnqualifiedIdKind getKind() const { return Kind; }
-  void setKind(UnqualifiedIdKind kind) { Kind = kind; } 
-  
+  void setKind(UnqualifiedIdKind kind) { Kind = kind; }
+
   /// Specify that this unqualified-id was parsed as an identifier.
   ///
   /// \param Id the parsed identifier.
@@ -1011,8 +1011,8 @@ public:
     Identifier = const_cast<IdentifierInfo *>(Id);
     StartLocation = EndLocation = IdLoc;
   }
-  
-  /// Specify that this unqualified-id was parsed as an 
+
+  /// Specify that this unqualified-id was parsed as an
   /// operator-function-id.
   ///
   /// \param OperatorLoc the location of the 'operator' keyword.
@@ -1021,11 +1021,11 @@ public:
   ///
   /// \param SymbolLocations the locations of the individual operator symbols
   /// in the operator.
-  void setOperatorFunctionId(SourceLocation OperatorLoc, 
+  void setOperatorFunctionId(SourceLocation OperatorLoc,
                              OverloadedOperatorKind Op,
                              SourceLocation SymbolLocations[3]);
-  
-  /// Specify that this unqualified-id was parsed as a 
+
+  /// Specify that this unqualified-id was parsed as a
   /// conversion-function-id.
   ///
   /// \param OperatorLoc the location of the 'operator' keyword.
@@ -1033,7 +1033,7 @@ public:
   /// \param Ty the type to which this conversion function is converting.
   ///
   /// \param EndLoc the location of the last token that makes up the type name.
-  void setConversionFunctionId(SourceLocation OperatorLoc, 
+  void setConversionFunctionId(SourceLocation OperatorLoc,
                                ParsedType Ty,
                                SourceLocation EndLoc) {
     Kind = UnqualifiedIdKind::IK_ConversionFunctionId;
@@ -1057,7 +1057,7 @@ public:
     StartLocation = OpLoc;
     EndLocation = IdLoc;
   }
-  
+
   /// Specify that this unqualified-id was parsed as a constructor name.
   ///
   /// \param ClassType the class type referred to by the constructor name.
@@ -1065,7 +1065,7 @@ public:
   /// \param ClassNameLoc the location of the class name.
   ///
   /// \param EndLoc the location of the last token that makes up the type name.
-  void setConstructorName(ParsedType ClassType, 
+  void setConstructorName(ParsedType ClassType,
                           SourceLocation ClassNameLoc,
                           SourceLocation EndLoc) {
     Kind = UnqualifiedIdKind::IK_ConstructorName;
@@ -1096,7 +1096,7 @@ public:
     EndLocation = EndLoc;
     DestructorName = ClassType;
   }
-  
+
   /// Specify that this unqualified-id was parsed as a template-id.
   ///
   /// \param TemplateId the template-id annotation that describes the parsed
@@ -1115,10 +1115,10 @@ public:
     TemplateName = Template;
     StartLocation = EndLocation = TemplateLoc;
   }
-  
+
   /// Return the source range that covers this unqualified-id.
-  SourceRange getSourceRange() const LLVM_READONLY { 
-    return SourceRange(StartLocation, EndLocation); 
+  SourceRange getSourceRange() const LLVM_READONLY {
+    return SourceRange(StartLocation, EndLocation);
   }
   SourceLocation getLocStart() const LLVM_READONLY { return StartLocation; }
   SourceLocation getLocEnd() const LLVM_READONLY { return EndLocation; }
@@ -1326,7 +1326,7 @@ struct DeclaratorChunk {
       /// Pointer to the expression in the noexcept-specifier of this
       /// function, if it has one.
       Expr *NoexceptExpr;
-  
+
       /// Pointer to the cached tokens for an exception-specification
       /// that has not yet been parsed.
       CachedTokens *ExceptionSpecTokens;
@@ -1426,7 +1426,7 @@ struct DeclaratorChunk {
       return SourceLocation::getFromRawEncoding(MutableLoc);
     }
 
-    /// Determine whether this function declaration contains a 
+    /// Determine whether this function declaration contains a
     /// ref-qualifier.
     bool hasRefQualifier() const { return getRefQualifierLoc().isValid(); }
 
@@ -1746,7 +1746,7 @@ enum class DeclaratorContext {
 /// Instances of this class should be a transient object that lives on the
 /// stack, not objects that are allocated in large quantities on the heap.
 class Declarator {
-  
+
 private:
   const DeclSpec &DS;
   CXXScopeSpec SS;
@@ -1771,7 +1771,7 @@ private:
   /// GroupingParens - Set by Parser::ParseParenDeclarator().
   unsigned GroupingParens : 1;
 
-  /// FunctionDefinition - Is this Declarator for a function or member 
+  /// FunctionDefinition - Is this Declarator for a function or member
   /// definition and, if so, what kind?
   ///
   /// Actually a FunctionDefinitionKind.
@@ -1785,7 +1785,7 @@ private:
 
   /// Indicates whether this is an Objective-C instance variable.
   unsigned ObjCIvar : 1;
-    
+
   /// Indicates whether this is an Objective-C 'weak' property.
   unsigned ObjCWeakProperty : 1;
 
@@ -1817,7 +1817,7 @@ private:
   /// If provided, the source location of the ellipsis used to describe
   /// this declarator as a parameter pack.
   SourceLocation EllipsisLoc;
-  
+
   friend struct DeclaratorChunk;
 
 public:
@@ -1858,7 +1858,7 @@ public:
   const DecompositionDeclarator &getDecompositionDeclarator() const {
     return BindingGroup;
   }
-  
+
   DeclaratorContext getContext() const { return Context; }
 
   bool isPrototypeContext() const {
@@ -2107,10 +2107,10 @@ public:
     return BindingGroup.isSet();
   }
 
-  IdentifierInfo *getIdentifier() const { 
+  IdentifierInfo *getIdentifier() const {
     if (Name.getKind() == UnqualifiedIdKind::IK_Identifier)
       return Name.Identifier;
-    
+
     return nullptr;
   }
   SourceLocation getIdentifierLoc() const { return Name.StartLocation; }
@@ -2261,9 +2261,9 @@ public:
     return const_cast<Declarator*>(this)->getFunctionTypeInfo();
   }
 
-  /// Determine whether the declaration that will be produced from 
+  /// Determine whether the declaration that will be produced from
   /// this declaration will be a function.
-  /// 
+  ///
   /// A declaration can declare a function even if the declarator itself
   /// isn't a function declarator, if the type specifier refers to a function
   /// type. This routine checks for both cases.
@@ -2318,8 +2318,8 @@ public:
     case DeclaratorContext::MemberContext:
 
     // FIXME: sizeof(...) permits an expression.
-    case DeclaratorContext::TypeNameContext: 
-    
+    case DeclaratorContext::TypeNameContext:
+
     case DeclaratorContext::FunctionalCastContext:
     case DeclaratorContext::AliasDeclContext:
     case DeclaratorContext::AliasTemplateContext:
@@ -2349,7 +2349,7 @@ public:
 
     llvm_unreachable("unknown context kind!");
   }
-  
+
   /// Return true if a function declarator at this position would be a
   /// function declaration.
   bool isFunctionDeclaratorAFunctionDeclaration() const {
@@ -2418,7 +2418,7 @@ public:
 
   void setObjCIvar(bool Val = true) { ObjCIvar = Val; }
   bool isObjCIvar() const { return ObjCIvar; }
-    
+
   void setObjCWeakProperty(bool Val = true) { ObjCWeakProperty = Val; }
   bool isObjCWeakProperty() const { return ObjCWeakProperty; }
 
@@ -2438,16 +2438,16 @@ public:
   SourceLocation getEllipsisLoc() const { return EllipsisLoc; }
   void setEllipsisLoc(SourceLocation EL) { EllipsisLoc = EL; }
 
-  void setFunctionDefinitionKind(FunctionDefinitionKind Val) { 
-    FunctionDefinition = Val; 
+  void setFunctionDefinitionKind(FunctionDefinitionKind Val) {
+    FunctionDefinition = Val;
   }
-  
+
   bool isFunctionDefinition() const {
     return getFunctionDefinitionKind() != FDK_Declaration;
   }
-  
-  FunctionDefinitionKind getFunctionDefinitionKind() const { 
-    return (FunctionDefinitionKind)FunctionDefinition; 
+
+  FunctionDefinitionKind getFunctionDefinitionKind() const {
+    return (FunctionDefinitionKind)FunctionDefinition;
   }
 
   /// Returns true if this declares a real member and not a friend.
@@ -2511,7 +2511,7 @@ public:
   SourceLocation getFirstLocation() const { return FirstLocation; }
   SourceLocation getLastLocation() const { return LastLocation; }
   Specifier getLastSpecifier() const { return LastSpecifier; }
-  
+
 private:
   unsigned Specifiers;
   Specifier LastSpecifier;
@@ -2565,7 +2565,7 @@ struct LambdaIntroducer {
                   IdentifierInfo* Id,
                   SourceLocation EllipsisLoc,
                   LambdaCaptureInitKind InitKind,
-                  ExprResult Init, 
+                  ExprResult Init,
                   ParsedType InitCaptureType,
                   SourceRange ExplicitRange) {
     Captures.push_back(LambdaCapture(Kind, Loc, Id, EllipsisLoc, InitKind, Init,

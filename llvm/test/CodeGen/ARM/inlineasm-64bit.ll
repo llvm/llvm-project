@@ -104,3 +104,11 @@ define i64 @tied_64bit_lookback_test(i64 %in) nounwind {
   %res = extractvalue {i64, i32, i64} %vars, 2
   ret i64 %res
 }
+
+; Check access to low and high part with a specific register pair constraint
+define i64 @low_high_specific_reg_pair(i64 %in) nounwind {
+; CHECK-LABEL: low_high_specific_reg_pair
+; CHECK: mov r3, r2
+  %res = call i64 asm "mov ${0:R}, ${1:Q}", "=&{r2},0"(i64 %in)
+  ret i64 %res
+}

@@ -86,3 +86,25 @@ uqsub     z0.d, z0.d, #65536
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [0, 255] or a multiple of 256 in range [256, 65280]
 // CHECK-NEXT: uqsub     z0.d, z0.d, #65536
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+
+// --------------------------------------------------------------------------//
+// Negative tests for instructions that are incompatible with movprfx
+
+movprfx z31.d, p0/z, z6.d
+uqsub     z31.d, z31.d, #65280
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a predicated movprfx, suggest using unpredicated movprfx
+// CHECK-NEXT: uqsub     z31.d, z31.d, #65280
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+movprfx z0.d, p0/z, z7.d
+uqsub     z0.d, z0.d, z0.d
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
+// CHECK-NEXT: uqsub     z0.d, z0.d, z0.d
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+movprfx z0, z7
+uqsub     z0.d, z0.d, z0.d
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
+// CHECK-NEXT: uqsub     z0.d, z0.d, z0.d
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:

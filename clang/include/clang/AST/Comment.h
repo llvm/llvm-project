@@ -98,7 +98,7 @@ protected:
     unsigned RenderKind : 2;
     unsigned CommandID : CommandInfo::NumCommandIDBits;
   };
-  enum { NumInlineCommandCommentBits = NumInlineContentCommentBits + 2 + 
+  enum { NumInlineCommandCommentBits = NumInlineContentCommentBits + 2 +
                                        CommandInfo::NumCommandIDBits };
 
   class HTMLTagCommentBitfields {
@@ -146,7 +146,7 @@ protected:
     /// Contains values from CommandMarkerKind enum.
     unsigned CommandMarker : 1;
   };
-  enum { NumBlockCommandCommentBits = NumCommentBits + 
+  enum { NumBlockCommandCommentBits = NumCommentBits +
                                       CommandInfo::NumCommandIDBits + 1 };
 
   class ParamCommandCommentBitfields {
@@ -987,7 +987,7 @@ struct DeclInfo {
   /// Declaration the comment is actually attached to (in the source).
   /// Should not be NULL.
   const Decl *CommentDecl;
-  
+
   /// CurrentDecl is the declaration with which the FullComment is associated.
   ///
   /// It can be different from \c CommentDecl.  It happens when we decide
@@ -997,7 +997,7 @@ struct DeclInfo {
   ///
   /// The information in the DeclInfo corresponds to CurrentDecl.
   const Decl *CurrentDecl;
-  
+
   /// Parameters that can be referenced by \\param if \c CommentDecl is something
   /// that we consider a "function".
   ArrayRef<const ParmVarDecl *> ParamVars;
@@ -1119,21 +1119,21 @@ public:
   }
 
   child_iterator child_end() const {
-    return reinterpret_cast<child_iterator>(Blocks.end()); 
+    return reinterpret_cast<child_iterator>(Blocks.end());
   }
 
   const Decl *getDecl() const LLVM_READONLY {
     return ThisDeclInfo->CommentDecl;
   }
-  
+
   const DeclInfo *getDeclInfo() const LLVM_READONLY {
     if (!ThisDeclInfo->IsFilled)
       ThisDeclInfo->fill();
     return ThisDeclInfo;
   }
-  
+
   ArrayRef<BlockContentComment *> getBlocks() const { return Blocks; }
-  
+
 };
 } // end namespace comments
 } // end namespace clang

@@ -15,7 +15,7 @@ namespace llvm {
 /// AsmCond - Class to support conditional assembly
 ///
 /// The conditional assembly feature (.if, .else, .elseif and .endif) is
-/// implemented with AsmCond that tells us what we are in the middle of 
+/// implemented with AsmCond that tells us what we are in the middle of
 /// processing.  Ignore can be either true or false.  When true we are ignoring
 /// the block of code in the middle of a conditional.
 

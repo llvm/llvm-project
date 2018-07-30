@@ -1777,6 +1777,7 @@ namespace {
           const BitTracker::RegisterCell &RC);
     bool simplifyExtractLow(MachineInstr *MI, BitTracker::RegisterRef RD,
           const BitTracker::RegisterCell &RC, const RegisterSet &AVs);
+    bool simplifyRCmp0(MachineInstr *MI, BitTracker::RegisterRef RD);
 
     // Cache of created instructions to avoid creating duplicates.
     // XXX Currently only used by genBitSplit.
@@ -2567,6 +2568,127 @@ bool BitSimplification::simplifyExtractLow(MachineInstr *MI,
   return Changed;
 }
 
+bool BitSimplification::simplifyRCmp0(MachineInstr *MI,
+      BitTracker::RegisterRef RD) {
+  unsigned Opc = MI->getOpcode();
+  if (Opc != Hexagon::A4_rcmpeqi && Opc != Hexagon::A4_rcmpneqi)
+    return false;
+  MachineOperand &CmpOp = MI->getOperand(2);
+  if (!CmpOp.isImm() || CmpOp.getImm() != 0)
+    return false;
+
+  const TargetRegisterClass *FRC = HBS::getFinalVRegClass(RD, MRI);
+  if (FRC != &Hexagon::IntRegsRegClass && FRC != &Hexagon::DoubleRegsRegClass)
+    return false;
+  assert(RD.Sub == 0);
+
+  MachineBasicBlock &B = *MI->getParent();
+  const DebugLoc &DL = MI->getDebugLoc();
+  auto At = MI->isPHI() ? B.getFirstNonPHI()
+                        : MachineBasicBlock::iterator(MI);
+  bool KnownZ = true;
+  bool KnownNZ = false;
+
+  BitTracker::RegisterRef SR = MI->getOperand(1);
+  if (!BT.has(SR.Reg))
+    return false;
+  const BitTracker::RegisterCell &SC = BT.lookup(SR.Reg);
+  unsigned F, W;
+  if (!HBS::getSubregMask(SR, F, W, MRI))
+    return false;
+
+  for (uint16_t I = F; I != F+W; ++I) {
+    const BitTracker::BitValue &V = SC[I];
+    if (!V.is(0))
+      KnownZ = false;
+    if (V.is(1))
+      KnownNZ = true;
+  }
+
+  auto ReplaceWithConst = [&] (int C) {
+    unsigned NewR = MRI.createVirtualRegister(FRC);
+    BuildMI(B, At, DL, HII.get(Hexagon::A2_tfrsi), NewR)
+      .addImm(C);
+    HBS::replaceReg(RD.Reg, NewR, MRI);
+    BitTracker::RegisterCell NewRC(W);
+    for (uint16_t I = 0; I != W; ++I) {
+      NewRC[I] = BitTracker::BitValue(C & 1);
+      C = unsigned(C) >> 1;
+    }
+    BT.put(BitTracker::RegisterRef(NewR), NewRC);
+    return true;
+  };
+
+  auto IsNonZero = [] (const MachineOperand &Op) {
+    if (Op.isGlobal() || Op.isBlockAddress())
+      return true;
+    if (Op.isImm())
+      return Op.getImm() != 0;
+    if (Op.isCImm())
+      return !Op.getCImm()->isZero();
+    if (Op.isFPImm())
+      return !Op.getFPImm()->isZero();
+    return false;
+  };
+
+  auto IsZero = [] (const MachineOperand &Op) {
+    if (Op.isGlobal() || Op.isBlockAddress())
+      return false;
+    if (Op.isImm())
+      return Op.getImm() == 0;
+    if (Op.isCImm())
+      return Op.getCImm()->isZero();
+    if (Op.isFPImm())
+      return Op.getFPImm()->isZero();
+    return false;
+  };
+
+  // If the source register is known to be 0 or non-0, the comparison can
+  // be folded to a load of a constant.
+  if (KnownZ || KnownNZ) {
+    assert(KnownZ != KnownNZ && "Register cannot be both 0 and non-0");
+    return ReplaceWithConst(KnownZ == (Opc == Hexagon::A4_rcmpeqi));
+  }
+
+  // Special case: if the compare comes from a C2_muxii, then we know the
+  // two possible constants that can be the source value.
+  MachineInstr *InpDef = MRI.getVRegDef(SR.Reg);
+  if (!InpDef)
+    return false;
+  if (SR.Sub == 0 && InpDef->getOpcode() == Hexagon::C2_muxii) {
+    MachineOperand &Src1 = InpDef->getOperand(2);
+    MachineOperand &Src2 = InpDef->getOperand(3);
+    // Check if both are non-zero.
+    bool KnownNZ1 = IsNonZero(Src1), KnownNZ2 = IsNonZero(Src2);
+    if (KnownNZ1 && KnownNZ2)
+      return ReplaceWithConst(Opc == Hexagon::A4_rcmpneqi);
+    // Check if both are zero.
+    bool KnownZ1 = IsZero(Src1), KnownZ2 = IsZero(Src2);
+    if (KnownZ1 && KnownZ2)
+      return ReplaceWithConst(Opc == Hexagon::A4_rcmpeqi);
+
+    // If for both operands we know that they are either 0 or non-0,
+    // replace the comparison with a C2_muxii, using the same predicate
+    // register, but with operands substituted with 0/1 accordingly.
+    if ((KnownZ1 || KnownNZ1) && (KnownZ2 || KnownNZ2)) {
+      unsigned NewR = MRI.createVirtualRegister(FRC);
+      BuildMI(B, At, DL, HII.get(Hexagon::C2_muxii), NewR)
+        .addReg(InpDef->getOperand(1).getReg())
+        .addImm(KnownZ1 == (Opc == Hexagon::A4_rcmpeqi))
+        .addImm(KnownZ2 == (Opc == Hexagon::A4_rcmpeqi));
+      HBS::replaceReg(RD.Reg, NewR, MRI);
+      // Create a new cell with only the least significant bit unknown.
+      BitTracker::RegisterCell NewRC(W);
+      NewRC[0] = BitTracker::BitValue::self();
+      NewRC.fill(1, W, BitTracker::BitValue::Zero);
+      BT.put(BitTracker::RegisterRef(NewR), NewRC);
+      return true;
+    }
+  }
+
+  return false;
+}
+
 bool BitSimplification::processBlock(MachineBasicBlock &B,
       const RegisterSet &AVs) {
   if (!BT.reached(&B))
@@ -2615,6 +2737,7 @@ bool BitSimplification::processBlock(MachineBasicBlock &B,
       T = T || genExtractHalf(MI, RD, RC);
       T = T || genCombineHalf(MI, RD, RC);
       T = T || genExtractLow(MI, RD, RC);
+      T = T || simplifyRCmp0(MI, RD);
       Changed |= T;
       continue;
     }

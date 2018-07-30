@@ -568,7 +568,7 @@ public:
     ReversePostOrderTraversal<Function*> RPOT(&F);
     for (auto *N : RPOT)
       NumSunk += sinkBB(N);
-    
+
     return NumSunk > 0;
   }
 

@@ -721,7 +721,7 @@ struct ReductionData {
 static Optional<ReductionData> getReductionData(Instruction *I) {
   Value *L, *R;
   if (m_BinOp(m_Value(L), m_Value(R)).match(I))
-    return ReductionData(RK_Arithmetic, I->getOpcode(), L, R); 
+    return ReductionData(RK_Arithmetic, I->getOpcode(), L, R);
   if (auto *SI = dyn_cast<SelectInst>(I)) {
     if (m_SMin(m_Value(L), m_Value(R)).match(SI) ||
         m_SMax(m_Value(L), m_Value(R)).match(SI) ||
@@ -730,8 +730,8 @@ static Optional<ReductionData> getReductionData(Instruction *I) {
         m_UnordFMin(m_Value(L), m_Value(R)).match(SI) ||
         m_UnordFMax(m_Value(L), m_Value(R)).match(SI)) {
       auto *CI = cast<CmpInst>(SI->getCondition());
-      return ReductionData(RK_MinMax, CI->getOpcode(), L, R); 
-    }   
+      return ReductionData(RK_MinMax, CI->getOpcode(), L, R);
+    }
     if (m_UMin(m_Value(L), m_Value(R)).match(SI) ||
         m_UMax(m_Value(L), m_Value(R)).match(SI)) {
       auto *CI = cast<CmpInst>(SI->getCondition());
@@ -851,11 +851,11 @@ static ReductionKind matchPairwiseReduction(const ExtractElementInst *ReduxRoot,
 
   // We look for a sequence of shuffle,shuffle,add triples like the following
   // that builds a pairwise reduction tree.
-  //  
+  //
   //  (X0, X1, X2, X3)
   //   (X0 + X1, X2 + X3, undef, undef)
   //    ((X0 + X1) + (X2 + X3), undef, undef, undef)
-  //  
+  //
   // %rdx.shuf.0.0 = shufflevector <4 x float> %rdx, <4 x float> undef,
   //       <4 x i32> <i32 0, i32 2 , i32 undef, i32 undef>
   // %rdx.shuf.0.1 = shufflevector <4 x float> %rdx, <4 x float> undef,
@@ -916,7 +916,7 @@ matchVectorSplittingReduction(const ExtractElementInst *ReduxRoot,
 
   // We look for a sequence of shuffles and adds like the following matching one
   // fadd, shuffle vector pair at a time.
-  //  
+  //
   // %rdx.shuf = shufflevector <4 x float> %rdx, <4 x float> undef,
   //                           <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
   // %bin.rdx = fadd <4 x float> %rdx, %rdx.shuf
@@ -927,7 +927,7 @@ matchVectorSplittingReduction(const ExtractElementInst *ReduxRoot,
 
   unsigned MaskStart = 1;
   Instruction *RdxOp = RdxStart;
-  SmallVector<int, 32> ShuffleMask(NumVecElems, 0); 
+  SmallVector<int, 32> ShuffleMask(NumVecElems, 0);
   unsigned NumVecElemsRemain = NumVecElems;
   while (NumVecElemsRemain - 1) {
     // Check for the right reduction operation.
@@ -1093,7 +1093,7 @@ int TargetTransformInfo::getInstructionThroughput(const Instruction *I) const {
   case Instruction::InsertElement: {
     const InsertElementInst * IE = cast<InsertElementInst>(I);
     ConstantInt *CI = dyn_cast<ConstantInt>(IE->getOperand(2));
-    unsigned Idx = -1; 
+    unsigned Idx = -1;
     if (CI)
       Idx = CI->getZExtValue();
     return getVectorInstrCost(I->getOpcode(),
@@ -1104,7 +1104,7 @@ int TargetTransformInfo::getInstructionThroughput(const Instruction *I) const {
     // TODO: Identify and add costs for insert/extract subvector, etc.
     if (Shuffle->changesLength())
       return -1;
-    
+
     if (Shuffle->isIdentity())
       return 0;
 

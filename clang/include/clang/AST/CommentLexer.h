@@ -76,7 +76,7 @@ class Token {
   /// unused (command spelling can be found with CommandTraits).  Otherwise,
   /// contains the length of the string that starts at TextPtr.
   unsigned IntVal;
-  
+
 public:
   SourceLocation getLocation() const LLVM_READONLY { return Loc; }
   void setLocation(SourceLocation SL) { Loc = SL; }
@@ -228,7 +228,7 @@ private:
   llvm::BumpPtrAllocator &Allocator;
 
   DiagnosticsEngine &Diags;
-  
+
   const CommandTraits &Traits;
 
   const char *const BufferStart;

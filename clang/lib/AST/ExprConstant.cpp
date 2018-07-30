@@ -572,7 +572,7 @@ namespace {
         // FIXME: Force the precision of the source value down so we don't
         // print digits which are usually useless (we don't really care here if
         // we truncate a digit by accident in edge cases).  Ideally,
-        // APFloat::toString would automatically print the shortest 
+        // APFloat::toString would automatically print the shortest
         // representation which rounds to the correct value, but it's a bit
         // tricky to implement.
         unsigned precision =
@@ -826,7 +826,7 @@ namespace {
   private:
     OptionalDiagnostic Diag(SourceLocation Loc, diag::kind DiagId,
                             unsigned ExtraNotes, bool IsCCEDiag) {
-    
+
       if (EvalStatus.Diag) {
         // If we have a prior diagnostic, it will be noting that the expression
         // isn't a constant expression. This diagnostic is more important,
@@ -880,7 +880,7 @@ namespace {
           unsigned ExtraNotes = 0) {
       return Diag(Loc, DiagId, ExtraNotes, false);
     }
-    
+
     OptionalDiagnostic FFDiag(const Expr *E, diag::kind DiagId
                               = diag::note_invalid_subexpr_in_const_expr,
                             unsigned ExtraNotes = 0) {
@@ -4286,13 +4286,13 @@ static bool CheckConstexprFunction(EvalInfo &Info, SourceLocation CallLoc,
 
   if (Info.getLangOpts().CPlusPlus11) {
     const FunctionDecl *DiagDecl = Definition ? Definition : Declaration;
-    
+
     // If this function is not constexpr because it is an inherited
     // non-constexpr constructor, diagnose that directly.
     auto *CD = dyn_cast<CXXConstructorDecl>(DiagDecl);
     if (CD && CD->isInheritingConstructor()) {
       auto *Inherited = CD->getInheritedConstructor().getConstructor();
-      if (!Inherited->isConstexpr()) 
+      if (!Inherited->isConstexpr())
         DiagDecl = CD = Inherited;
     }
 
@@ -4853,7 +4853,7 @@ public:
           return false;
         This = &ThisVal;
         Args = Args.slice(1);
-      } else if (MD && MD->isLambdaStaticInvoker()) {   
+      } else if (MD && MD->isLambdaStaticInvoker()) {
         // Map the static invoker for the lambda back to the call operator.
         // Conveniently, we don't have to slice out the 'this' argument (as is
         // being done for the non-static case), since a static member function
@@ -4888,7 +4888,7 @@ public:
           FD = LambdaCallOp;
       }
 
-      
+
     } else
       return Error(E);
 
@@ -5732,7 +5732,7 @@ public:
       // Update 'Result' to refer to the data member/field of the closure object
       // that represents the '*this' capture.
       if (!HandleLValueMember(Info, E, Result,
-                             Info.CurrentCall->LambdaThisCaptureField)) 
+                             Info.CurrentCall->LambdaThisCaptureField))
         return false;
       // If we captured '*this' by reference, replace the field with its referent.
       if (Info.CurrentCall->LambdaThisCaptureField->getType()
@@ -6583,7 +6583,7 @@ bool RecordExprEvaluator::VisitLambdaExpr(const LambdaExpr *E) {
   if (ClosureClass->isInvalidDecl()) return false;
 
   if (Info.checkingPotentialConstantExpression()) return true;
-  
+
   const size_t NumFields =
       std::distance(ClosureClass->field_begin(), ClosureClass->field_end());
 
@@ -6602,7 +6602,7 @@ bool RecordExprEvaluator::VisitLambdaExpr(const LambdaExpr *E) {
     assert(CaptureInitIt != E->capture_init_end());
     // Get the initializer for this field
     Expr *const CurFieldInit = *CaptureInitIt++;
-    
+
     // If there is no initializer, either this is a VLA or an error has
     // occurred.
     if (!CurFieldInit)
@@ -6802,18 +6802,18 @@ VectorExprEvaluator::VisitInitListExpr(const InitListExpr *E) {
 
   // The number of initializers can be less than the number of
   // vector elements. For OpenCL, this can be due to nested vector
-  // initialization. For GCC compatibility, missing trailing elements 
+  // initialization. For GCC compatibility, missing trailing elements
   // should be initialized with zeroes.
   unsigned CountInits = 0, CountElts = 0;
   while (CountElts < NumElements) {
     // Handle nested vector initialization.
-    if (CountInits < NumInits 
+    if (CountInits < NumInits
         && E->getInit(CountInits)->getType()->isVectorType()) {
       APValue v;
       if (!EvaluateVector(E->getInit(CountInits), v, Info))
         return Error(E);
       unsigned vlen = v.getVectorLength();
-      for (unsigned j = 0; j < vlen; j++) 
+      for (unsigned j = 0; j < vlen; j++)
         Elements.push_back(v.getVectorElt(j));
       CountElts += vlen;
     } else if (EltTy->isIntegerType()) {
@@ -7108,7 +7108,7 @@ public:
   }
 
   bool Success(const llvm::APInt &I, const Expr *E, APValue &Result) {
-    assert(E->getType()->isIntegralOrEnumerationType() && 
+    assert(E->getType()->isIntegralOrEnumerationType() &&
            "Invalid evaluation result.");
     assert(I.getBitWidth() == Info.Ctx.getIntWidth(E->getType()) &&
            "Invalid evaluation result.");
@@ -7198,7 +7198,7 @@ public:
     }
     return Success(Info.ArrayInitIndex, E);
   }
-    
+
   // Note, GNU defines __null as an integer, not a pointer.
   bool VisitGNUNullExpr(const GNUNullExpr *E) {
     return ZeroInitialization(E);
@@ -8585,12 +8585,12 @@ bool DataRecursiveIntBinOpEvaluator::
     Result = RHSResult.Val;
     return true;
   }
-  
+
   if (E->isLogicalOp()) {
     bool lhsResult, rhsResult;
     bool LHSIsOK = HandleConversionToBool(LHSResult.Val, lhsResult);
     bool RHSIsOK = HandleConversionToBool(RHSResult.Val, rhsResult);
-    
+
     if (LHSIsOK) {
       if (RHSIsOK) {
         if (E->getOpcode() == BO_LOr)
@@ -8606,26 +8606,26 @@ bool DataRecursiveIntBinOpEvaluator::
           return Success(rhsResult, E, Result);
       }
     }
-    
+
     return false;
   }
-  
+
   assert(E->getLHS()->getType()->isIntegralOrEnumerationType() &&
          E->getRHS()->getType()->isIntegralOrEnumerationType());
-  
+
   if (LHSResult.Failed || RHSResult.Failed)
     return false;
-  
+
   const APValue &LHSVal = LHSResult.Val;
   const APValue &RHSVal = RHSResult.Val;
-  
+
   // Handle cases like (unsigned long)&a + 4.
   if (E->isAdditiveOp() && LHSVal.isLValue() && RHSVal.isInt()) {
     Result = LHSVal;
     addOrSubLValueAsInteger(Result, RHSVal.getInt(), E->getOpcode() == BO_Sub);
     return true;
   }
-  
+
   // Handle cases like 4 + (unsigned long)&a
   if (E->getOpcode() == BO_Add &&
       RHSVal.isLValue() && LHSVal.isInt()) {
@@ -8633,7 +8633,7 @@ bool DataRecursiveIntBinOpEvaluator::
     addOrSubLValueAsInteger(Result, LHSVal.getInt(), /*IsSub*/false);
     return true;
   }
-  
+
   if (E->getOpcode() == BO_Sub && LHSVal.isLValue() && RHSVal.isLValue()) {
     // Handle (intptr_t)&&A - (intptr_t)&&B.
     if (!LHSVal.getLValueOffset().isZero() ||
@@ -8672,7 +8672,7 @@ bool DataRecursiveIntBinOpEvaluator::
 
 void DataRecursiveIntBinOpEvaluator::process(EvalResult &Result) {
   Job &job = Queue.back();
-  
+
   switch (job.Kind) {
     case Job::AnyExprKind: {
       if (const BinaryOperator *Bop = dyn_cast<BinaryOperator>(job.E)) {
@@ -8682,12 +8682,12 @@ void DataRecursiveIntBinOpEvaluator::process(EvalResult &Result) {
           return;
         }
       }
-      
+
       EvaluateExpr(job.E, Result);
       Queue.pop_back();
       return;
     }
-      
+
     case Job::BinOpKind: {
       const BinaryOperator *Bop = cast<BinaryOperator>(job.E);
       bool SuppressRHSDiags = false;
@@ -8702,7 +8702,7 @@ void DataRecursiveIntBinOpEvaluator::process(EvalResult &Result) {
       enqueue(Bop->getRHS());
       return;
     }
-      
+
     case Job::BinOpVisitedLHSKind: {
       const BinaryOperator *Bop = cast<BinaryOperator>(job.E);
       EvalResult RHS;
@@ -8712,7 +8712,7 @@ void DataRecursiveIntBinOpEvaluator::process(EvalResult &Result) {
       return;
     }
   }
-  
+
   llvm_unreachable("Invalid Job::Kind!");
 }
 
@@ -9299,7 +9299,7 @@ bool IntExprEvaluator::VisitOffsetOfExpr(const OffsetOfExpr *OOE) {
       const RecordType *BaseRT = CurrentType->getAs<RecordType>();
       if (!BaseRT)
         return Error(OOE);
-      
+
       // Add the offset to the base.
       Result += RL.getBaseClassOffset(cast<CXXRecordDecl>(BaseRT->getDecl()));
       break;
@@ -10531,7 +10531,7 @@ static bool FastEvaluateAsRValue(const Expr *Exp, Expr::EvalResult &Result,
     IsConst = false;
     return true;
   }
-  
+
   // FIXME: Evaluating values of large array and record types can cause
   // performance problems. Only do so in C++11 for now.
   if (Exp->isRValue() && (Exp->getType()->isArrayType() ||
@@ -10553,7 +10553,7 @@ bool Expr::EvaluateAsRValue(EvalResult &Result, const ASTContext &Ctx) const {
   bool IsConst;
   if (FastEvaluateAsRValue(this, Result, Ctx, IsConst))
     return IsConst;
-  
+
   EvalInfo Info(Ctx, Result, EvalInfo::EM_IgnoreSideEffects);
   return ::EvaluateAsRValue(Info, this, Result.Val);
 }

@@ -44,7 +44,7 @@ static void mangleFunctionBlock(MangleContext &Context,
   if (discriminator == 0)
     Out << "__" << Outer << "_block_invoke";
   else
-    Out << "__" << Outer << "_block_invoke_" << discriminator+1; 
+    Out << "__" << Outer << "_block_invoke_" << discriminator+1;
 }
 
 void MangleContext::anchor() { }

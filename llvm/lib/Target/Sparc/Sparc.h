@@ -73,7 +73,7 @@ namespace llvm {
       FCC_LE  = 13+16,  // Less or Equal
       FCC_ULE = 14+16,  // Unordered or Less or Equal
       FCC_O   = 15+16,  // Ordered
-        
+
       CPCC_A   =  8+32,  // Always
       CPCC_N   =  0+32,  // Never
       CPCC_3   =  7+32,

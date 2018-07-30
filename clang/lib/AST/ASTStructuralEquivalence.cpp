@@ -505,7 +505,7 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
 
     if (Proto1->getTypeQuals() != Proto2->getTypeQuals())
       return false;
-    
+
     // Check exceptions, this information is lost in canonical type.
     const auto *OrigProto1 =
         cast<FunctionProtoType>(OrigT1.getDesugaredType(Context.FromCtx));
@@ -513,7 +513,7 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
         cast<FunctionProtoType>(OrigT2.getDesugaredType(Context.ToCtx));
     auto Spec1 = OrigProto1->getExceptionSpecType();
     auto Spec2 = OrigProto2->getExceptionSpecType();
-    
+
     if (Spec1 != Spec2)
       return false;
     if (Spec1 == EST_Dynamic) {

@@ -146,7 +146,7 @@ public:
 
   Optional<bool> hasRedZone() const { return HasRedZone; }
   void setHasRedZone(bool s) { HasRedZone = s; }
-  
+
   int getVarArgsStackIndex() const { return VarArgsStackIndex; }
   void setVarArgsStackIndex(int Index) { VarArgsStackIndex = Index; }
 

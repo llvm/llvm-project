@@ -50,7 +50,7 @@ bool PPCDispatchGroupSBHazardRecognizer::isLoadAfterStore(SUnit *SU) {
         return true;
   }
 
-  return false; 
+  return false;
 }
 
 bool PPCDispatchGroupSBHazardRecognizer::isBCTRAfterSet(SUnit *SU) {
@@ -76,7 +76,7 @@ bool PPCDispatchGroupSBHazardRecognizer::isBCTRAfterSet(SUnit *SU) {
         return true;
   }
 
-  return false; 
+  return false;
 }
 
 // FIXME: Remove this when we don't need this:

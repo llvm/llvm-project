@@ -25,7 +25,7 @@ namespace arcmt {
 class CapturedDiagList {
   typedef std::list<StoredDiagnostic> ListTy;
   ListTy List;
-  
+
 public:
   void push_back(const StoredDiagnostic &diag) { List.push_back(diag); }
 

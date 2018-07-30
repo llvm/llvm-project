@@ -609,7 +609,7 @@ struct AddressingMode {
 
   // True if use of index register is supported.
   bool IndexReg;
-  
+
   AddressingMode(bool LongDispl, bool IdxReg) :
     LongDisplacement(LongDispl), IndexReg(IdxReg) {}
 };
@@ -5545,7 +5545,7 @@ SDValue SystemZTargetLowering::combineSHIFTROT(
     // The AND mask is constant
     if (AndMask) {
       auto AmtVal = AndMask->getZExtValue();
-      
+
       // Bottom 6 bits are set
       if ((AmtVal & 0x3f) == 0x3f) {
         SDValue AndOp = N1->getOperand(0);

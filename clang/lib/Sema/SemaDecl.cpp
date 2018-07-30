@@ -3182,7 +3182,7 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD,
   if (OldTypeInfo.getNoCallerSavedRegs() !=
       NewTypeInfo.getNoCallerSavedRegs()) {
     if (NewTypeInfo.getNoCallerSavedRegs()) {
-      AnyX86NoCallerSavedRegistersAttr *Attr = 
+      AnyX86NoCallerSavedRegistersAttr *Attr =
         New->getAttr<AnyX86NoCallerSavedRegistersAttr>();
       Diag(New->getLocation(), diag::err_function_attribute_mismatch) << Attr;
       Diag(OldLocation, diag::note_previous_declaration);
@@ -10720,7 +10720,7 @@ QualType Sema::deduceVarTypeFromInitializer(VarDecl *VDecl,
     InitializedEntity Entity = InitializedEntity::InitializeVariable(VDecl);
     InitializationKind Kind = InitializationKind::CreateForInit(
         VDecl->getLocation(), DirectInit, Init);
-    // FIXME: Initialization should not be taking a mutable list of inits. 
+    // FIXME: Initialization should not be taking a mutable list of inits.
     SmallVector<Expr*, 8> InitsCopy(DeduceInits.begin(), DeduceInits.end());
     return DeduceTemplateSpecializationFromInitializer(TSI, Entity, Kind,
                                                        InitsCopy);
@@ -13409,7 +13409,7 @@ void Sema::AddKnownFunctionAttributes(FunctionDecl *FD) {
         break;
       }
     }
-  
+
     if (Context.BuiltinInfo.isReturnsTwice(BuiltinID) &&
         !FD->hasAttr<ReturnsTwiceAttr>())
       FD->addAttr(ReturnsTwiceAttr::CreateImplicit(Context,

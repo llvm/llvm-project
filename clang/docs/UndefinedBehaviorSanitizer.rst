@@ -89,6 +89,12 @@ Available checks are:
   -  ``-fsanitize=function``: Indirect call of a function through a
      function pointer of the wrong type (Darwin/Linux, C++ and x86/x86_64
      only).
+  -  ``-fsanitize=implicit-integer-truncation``: Implicit conversion from
+     integer of larger bit width to smaller bit width, if that results in data
+     loss. That is, if the demoted value, after casting back to the original
+     width, is not equal to the original value before the downcast.
+     Issues caught by this sanitizer are not undefined behavior,
+     but are often unintentional.
   -  ``-fsanitize=integer-divide-by-zero``: Integer division by zero.
   -  ``-fsanitize=nonnull-attribute``: Passing null pointer as a function
      parameter which is declared to never be null.
@@ -121,15 +127,21 @@ Available checks are:
      unsigned overflow in C++. You can use ``-fsanitize=shift-base`` or
      ``-fsanitize=shift-exponent`` to check only left-hand side or
      right-hand side of shift operation, respectively.
-  -  ``-fsanitize=signed-integer-overflow``: Signed integer overflow,
-     including all the checks added by ``-ftrapv``, and checking for
-     overflow in signed division (``INT_MIN / -1``).
+  -  ``-fsanitize=signed-integer-overflow``: Signed integer overflow, where the
+     result of a signed integer computation cannot be represented in its type.
+     This includes all the checks covered by ``-ftrapv``, as well as checks for
+     signed division overflow (``INT_MIN/-1``), but not checks for
+     lossy implicit conversions performed after the computation
+     (see ``-fsanitize=implicit-conversion``). Both of these two issues are
+     handled by ``-fsanitize=implicit-conversion`` group of checks.
   -  ``-fsanitize=unreachable``: If control flow reaches an unreachable
      program point.
-  -  ``-fsanitize=unsigned-integer-overflow``: Unsigned integer
-     overflows. Note that unlike signed integer overflow, unsigned integer
-     is not undefined behavior. However, while it has well-defined semantics,
-     it is often unintentional, so UBSan offers to catch it.
+  -  ``-fsanitize=unsigned-integer-overflow``: Unsigned integer overflow, where
+     the result of an unsigned integer computation cannot be represented in its
+     type. Unlike signed integer overflow, this is not undefined behavior, but
+     it is often unintentional. This sanitizer does not check for lossy implicit
+     conversions performed after such a computation
+     (see ``-fsanitize=implicit-conversion``).
   -  ``-fsanitize=vla-bound``: A variable-length array whose bound
      does not evaluate to a positive value.
   -  ``-fsanitize=vptr``: Use of an object whose vptr indicates that it is of
@@ -140,11 +152,17 @@ Available checks are:
 
 You can also use the following check groups:
   -  ``-fsanitize=undefined``: All of the checks listed above other than
-     ``unsigned-integer-overflow`` and the ``nullability-*`` checks.
+     ``unsigned-integer-overflow``, ``implicit-conversion`` and the
+     ``nullability-*`` group of checks.
   -  ``-fsanitize=undefined-trap``: Deprecated alias of
      ``-fsanitize=undefined``.
   -  ``-fsanitize=integer``: Checks for undefined or suspicious integer
      behavior (e.g. unsigned integer overflow).
+     Enables ``signed-integer-overflow``, ``unsigned-integer-overflow``,
+     ``shift``, ``integer-divide-by-zero``, and ``implicit-integer-truncation``.
+  -  ``-fsanitize=implicit-conversion``: Checks for suspicious behaviours of
+     implicit conversions.
+     Currently, only ``-fsanitize=implicit-integer-truncation`` is implemented.
   -  ``-fsanitize=nullability``: Enables ``nullability-arg``,
      ``nullability-assign``, and ``nullability-return``. While violating
      nullability does not have undefined behavior, it is often unintentional,

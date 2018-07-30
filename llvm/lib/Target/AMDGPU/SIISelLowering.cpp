@@ -694,6 +694,52 @@ bool SITargetLowering::isShuffleMaskLegal(ArrayRef<int>, EVT) const {
   return false;
 }
 
+MVT SITargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
+                                                    CallingConv::ID CC,
+                                                    EVT VT) const {
+  if (CC != CallingConv::AMDGPU_KERNEL &&
+      VT.isVector() && VT.getVectorNumElements() == 3) {
+    EVT ScalarVT = VT.getScalarType();
+    if (ScalarVT.getSizeInBits() == 32)
+      return ScalarVT.getSimpleVT();
+  }
+
+  return TargetLowering::getRegisterTypeForCallingConv(Context, CC, VT);
+}
+
+unsigned SITargetLowering::getNumRegistersForCallingConv(LLVMContext &Context,
+                                                         CallingConv::ID CC,
+                                                         EVT VT) const {
+  if (CC != CallingConv::AMDGPU_KERNEL &&
+      VT.isVector() && VT.getVectorNumElements() == 3) {
+    EVT ScalarVT = VT.getScalarType();
+    if (ScalarVT.getSizeInBits() == 32)
+      return 3;
+  }
+
+  return TargetLowering::getNumRegistersForCallingConv(Context, CC, VT);
+}
+
+unsigned SITargetLowering::getVectorTypeBreakdownForCallingConv(
+  LLVMContext &Context, CallingConv::ID CC,
+  EVT VT, EVT &IntermediateVT,
+  unsigned &NumIntermediates, MVT &RegisterVT) const {
+
+  if (CC != CallingConv::AMDGPU_KERNEL && VT.getVectorNumElements() == 3) {
+    EVT ScalarVT = VT.getScalarType();
+    if (ScalarVT.getSizeInBits() == 32 ||
+        ScalarVT.getSizeInBits() == 64) {
+      RegisterVT = ScalarVT.getSimpleVT();
+      IntermediateVT = RegisterVT;
+      NumIntermediates = 3;
+      return NumIntermediates;
+    }
+  }
+
+  return TargetLowering::getVectorTypeBreakdownForCallingConv(
+    Context, CC, VT, IntermediateVT, NumIntermediates, RegisterVT);
+}
+
 bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
                                           const CallInst &CI,
                                           MachineFunction &MF,

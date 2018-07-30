@@ -175,7 +175,7 @@ void PPCInstPrinter::printInst(const MCInst *MI, raw_ostream &O,
 
 
 void PPCInstPrinter::printPredicateOperand(const MCInst *MI, unsigned OpNo,
-                                           raw_ostream &O, 
+                                           raw_ostream &O,
                                            const char *Modifier) {
   unsigned Code = MI->getOperand(OpNo).getImm();
 

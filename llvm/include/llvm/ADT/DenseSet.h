@@ -17,7 +17,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/Support/type_traits.h"
-#include <algorithm> 
+#include <algorithm>
 #include <cstddef>
 #include <initializer_list>
 #include <iterator>

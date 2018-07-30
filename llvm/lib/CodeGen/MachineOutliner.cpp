@@ -945,7 +945,7 @@ unsigned MachineOutliner::findCandidates(
         // AA (where each "A" is an instruction).
         //
         // We might have some portion of the module that looks like this:
-        // AAAAAA (6 A's) 
+        // AAAAAA (6 A's)
         //
         // In this case, there are 5 different copies of "AA" in this range, but
         // at most 3 can be outlined. If only outlining 3 of these is going to

@@ -963,7 +963,7 @@ TEST(AddressSanitizer, ThreadNamesTest) {
 #if ASAN_NEEDS_SEGV
 TEST(AddressSanitizer, ShadowGapTest) {
 #if SANITIZER_WORDSIZE == 32
-  char *addr = (char*)0x22000000;
+  char *addr = (char*)0x23000000;
 #else
 # if defined(__powerpc64__)
   char *addr = (char*)0x024000800000;

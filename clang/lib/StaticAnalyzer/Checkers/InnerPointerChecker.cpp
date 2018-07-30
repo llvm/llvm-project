@@ -91,37 +91,53 @@ public:
         ReserveFn("reserve"), ResizeFn("resize"),
         ShrinkToFitFn("shrink_to_fit"), SwapFn("swap") {}
 
-  /// Check whether the function called on the container object is a
-  /// member function that potentially invalidates pointers referring
-  /// to the objects's internal buffer.
-  bool mayInvalidateBuffer(const CallEvent &Call) const;
+  /// Check if the object of this member function call is a `basic_string`.
+  bool isCalledOnStringObject(const CXXInstanceCall *ICall) const;
 
-  /// Record the connection between the symbol returned by c_str() and the
-  /// corresponding string object region in the ProgramState. Mark the symbol
-  /// released if the string object is destroyed.
+  /// Check whether the called member function potentially invalidates
+  /// pointers referring to the container object's inner buffer.
+  bool isInvalidatingMemberFunction(const CallEvent &Call) const;
+
+  /// Mark pointer symbols associated with the given memory region released
+  /// in the program state.
+  void markPtrSymbolsReleased(const CallEvent &Call, ProgramStateRef State,
+                              const MemRegion *ObjRegion,
+                              CheckerContext &C) const;
+
+  /// Standard library functions that take a non-const `basic_string` argument by
+  /// reference may invalidate its inner pointers. Check for these cases and
+  /// mark the pointers released.
+  void checkFunctionArguments(const CallEvent &Call, ProgramStateRef State,
+                              CheckerContext &C) const;
+
+  /// Record the connection between raw pointers referring to a container
+  /// object's inner buffer and the object's memory region in the program state.
+  /// Mark potentially invalidated pointers released.
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const;
 
-  /// Clean up the ProgramState map.
+  /// Clean up the program state map.
   void checkDeadSymbols(SymbolReaper &SymReaper, CheckerContext &C) const;
 };
 
 } // end anonymous namespace
 
-// [string.require]
-//
-// "References, pointers, and iterators referring to the elements of a
-// basic_string sequence may be invalidated by the following uses of that
-// basic_string object:
-//
-// -- TODO: As an argument to any standard library function taking a reference
-// to non-const basic_string as an argument. For example, as an argument to
-// non-member functions swap(), operator>>(), and getline(), or as an argument
-// to basic_string::swap().
-//
-// -- Calling non-const member functions, except operator[], at, front, back,
-// begin, rbegin, end, and rend."
-//
-bool InnerPointerChecker::mayInvalidateBuffer(const CallEvent &Call) const {
+bool InnerPointerChecker::isCalledOnStringObject(
+        const CXXInstanceCall *ICall) const {
+  const auto *ObjRegion =
+    dyn_cast_or_null<TypedValueRegion>(ICall->getCXXThisVal().getAsRegion());
+  if (!ObjRegion)
+    return false;
+
+  QualType ObjTy = ObjRegion->getValueType();
+  if (ObjTy.isNull() ||
+      ObjTy->getAsCXXRecordDecl()->getName() != "basic_string")
+    return false;
+
+  return true;
+}
+
+bool InnerPointerChecker::isInvalidatingMemberFunction(
+        const CallEvent &Call) const {
   if (const auto *MemOpCall = dyn_cast<CXXMemberOperatorCall>(&Call)) {
     OverloadedOperatorKind Opc = MemOpCall->getOriginExpr()->getOperator();
     if (Opc == OO_Equal || Opc == OO_PlusEqual)
@@ -137,53 +153,104 @@ bool InnerPointerChecker::mayInvalidateBuffer(const CallEvent &Call) const {
           Call.isCalled(SwapFn));
 }
 
+void InnerPointerChecker::markPtrSymbolsReleased(const CallEvent &Call,
+                                                 ProgramStateRef State,
+                                                 const MemRegion *MR,
+                                                 CheckerContext &C) const {
+  if (const PtrSet *PS = State->get<RawPtrMap>(MR)) {
+    const Expr *Origin = Call.getOriginExpr();
+    for (const auto Symbol : *PS) {
+      // NOTE: `Origin` may be null, and will be stored so in the symbol's
+      // `RefState` in MallocChecker's `RegionState` program state map.
+      State = allocation_state::markReleased(State, Symbol, Origin);
+    }
+    State = State->remove<RawPtrMap>(MR);
+    C.addTransition(State);
+    return;
+  }
+}
+
+void InnerPointerChecker::checkFunctionArguments(const CallEvent &Call,
+                                                 ProgramStateRef State,
+                                                 CheckerContext &C) const {
+  if (const auto *FC = dyn_cast<AnyFunctionCall>(&Call)) {
+    const FunctionDecl *FD = FC->getDecl();
+    if (!FD || !FD->isInStdNamespace())
+      return;
+
+    for (unsigned I = 0, E = FD->getNumParams(); I != E; ++I) {
+      QualType ParamTy = FD->getParamDecl(I)->getType();
+      if (!ParamTy->isReferenceType() ||
+          ParamTy->getPointeeType().isConstQualified())
+        continue;
+
+      // In case of member operator calls, `this` is counted as an
+      // argument but not as a parameter.
+      bool isaMemberOpCall = isa<CXXMemberOperatorCall>(FC);
+      unsigned ArgI = isaMemberOpCall ? I+1 : I;
+
+      SVal Arg = FC->getArgSVal(ArgI);
+      const auto *ArgRegion =
+          dyn_cast_or_null<TypedValueRegion>(Arg.getAsRegion());
+      if (!ArgRegion)
+        continue;
+
+      markPtrSymbolsReleased(Call, State, ArgRegion, C);
+    }
+  }
+}
+
+// [string.require]
+//
+// "References, pointers, and iterators referring to the elements of a
+// basic_string sequence may be invalidated by the following uses of that
+// basic_string object:
+//
+// -- As an argument to any standard library function taking a reference
+// to non-const basic_string as an argument. For example, as an argument to
+// non-member functions swap(), operator>>(), and getline(), or as an argument
+// to basic_string::swap().
+//
+// -- Calling non-const member functions, except operator[], at, front, back,
+// begin, rbegin, end, and rend."
+
 void InnerPointerChecker::checkPostCall(const CallEvent &Call,
                                         CheckerContext &C) const {
-  const auto *ICall = dyn_cast<CXXInstanceCall>(&Call);
-  if (!ICall)
-    return;
-
-  SVal Obj = ICall->getCXXThisVal();
-  const auto *ObjRegion = dyn_cast_or_null<TypedValueRegion>(Obj.getAsRegion());
-  if (!ObjRegion)
-    return;
-
-  auto *TypeDecl = ObjRegion->getValueType()->getAsCXXRecordDecl();
-  if (TypeDecl->getName() != "basic_string")
-    return;
-
   ProgramStateRef State = C.getState();
 
-  if (Call.isCalled(CStrFn) || Call.isCalled(DataFn)) {
-    SVal RawPtr = Call.getReturnValue();
-    if (SymbolRef Sym = RawPtr.getAsSymbol(/*IncludeBaseRegions=*/true)) {
-      // Start tracking this raw pointer by adding it to the set of symbols
-      // associated with this container object in the program state map.
-      PtrSet::Factory &F = State->getStateManager().get_context<PtrSet>();
-      const PtrSet *SetPtr = State->get<RawPtrMap>(ObjRegion);
-      PtrSet Set = SetPtr ? *SetPtr : F.getEmptySet();
-      assert(C.wasInlined || !Set.contains(Sym));
-      Set = F.add(Set, Sym);
-      State = State->set<RawPtrMap>(ObjRegion, Set);
-      C.addTransition(State);
+  if (const auto *ICall = dyn_cast<CXXInstanceCall>(&Call)) {
+    if (isCalledOnStringObject(ICall)) {
+      const auto *ObjRegion = dyn_cast_or_null<TypedValueRegion>(
+              ICall->getCXXThisVal().getAsRegion());
+
+      if (Call.isCalled(CStrFn) || Call.isCalled(DataFn)) {
+        SVal RawPtr = Call.getReturnValue();
+        if (SymbolRef Sym = RawPtr.getAsSymbol(/*IncludeBaseRegions=*/true)) {
+          // Start tracking this raw pointer by adding it to the set of symbols
+          // associated with this container object in the program state map.
+
+          PtrSet::Factory &F = State->getStateManager().get_context<PtrSet>();
+          const PtrSet *SetPtr = State->get<RawPtrMap>(ObjRegion);
+          PtrSet Set = SetPtr ? *SetPtr : F.getEmptySet();
+          assert(C.wasInlined || !Set.contains(Sym));
+          Set = F.add(Set, Sym);
+
+          State = State->set<RawPtrMap>(ObjRegion, Set);
+          C.addTransition(State);
+        }
+        return;
+      }
+
+      // Check [string.require] / second point.
+      if (isInvalidatingMemberFunction(Call)) {
+        markPtrSymbolsReleased(Call, State, ObjRegion, C);
+        return;
+      }
     }
-    return;
   }
 
-  if (mayInvalidateBuffer(Call)) {
-    if (const PtrSet *PS = State->get<RawPtrMap>(ObjRegion)) {
-      // Mark all pointer symbols associated with the deleted object released.
-      const Expr *Origin = Call.getOriginExpr();
-      for (const auto Symbol : *PS) {
-        // NOTE: `Origin` may be null, and will be stored so in the symbol's
-        // `RefState` in MallocChecker's `RegionState` program state map.
-        State = allocation_state::markReleased(State, Symbol, Origin);
-      }
-      State = State->remove<RawPtrMap>(ObjRegion);
-      C.addTransition(State);
-      return;
-    }
-  }
+  // Check [string.require] / first point.
+  checkFunctionArguments(Call, State, C);
 }
 
 void InnerPointerChecker::checkDeadSymbols(SymbolReaper &SymReaper,
@@ -216,7 +283,6 @@ InnerPointerChecker::InnerPointerBRVisitor::VisitNode(const ExplodedNode *N,
                                                       const ExplodedNode *PrevN,
                                                       BugReporterContext &BRC,
                                                       BugReport &BR) {
-
   if (!isSymbolTracked(N->getState(), PtrToBuf) ||
       isSymbolTracked(PrevN->getState(), PtrToBuf))
     return nullptr;

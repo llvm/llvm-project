@@ -81,12 +81,12 @@ struct ReturnAdjustment {
       return memcmp(this, &RHS, sizeof(RHS)) < 0;
     }
   } Virtual;
-  
+
   ReturnAdjustment() : NonVirtual(0) {}
-  
+
   bool isEmpty() const { return !NonVirtual && Virtual.isEmpty(); }
 
-  friend bool operator==(const ReturnAdjustment &LHS, 
+  friend bool operator==(const ReturnAdjustment &LHS,
                          const ReturnAdjustment &RHS) {
     return LHS.NonVirtual == RHS.NonVirtual && LHS.Virtual.Equals(RHS.Virtual);
   }
@@ -103,7 +103,7 @@ struct ReturnAdjustment {
     return LHS.NonVirtual == RHS.NonVirtual && LHS.Virtual.Less(RHS.Virtual);
   }
 };
-  
+
 /// A \c this pointer adjustment.
 struct ThisAdjustment {
   /// The non-virtual adjustment from the derived object to its
@@ -149,12 +149,12 @@ struct ThisAdjustment {
       return memcmp(this, &RHS, sizeof(RHS)) < 0;
     }
   } Virtual;
-  
+
   ThisAdjustment() : NonVirtual(0) { }
 
   bool isEmpty() const { return !NonVirtual && Virtual.isEmpty(); }
 
-  friend bool operator==(const ThisAdjustment &LHS, 
+  friend bool operator==(const ThisAdjustment &LHS,
                          const ThisAdjustment &RHS) {
     return LHS.NonVirtual == RHS.NonVirtual && LHS.Virtual.Equals(RHS.Virtual);
   }
@@ -162,12 +162,12 @@ struct ThisAdjustment {
   friend bool operator!=(const ThisAdjustment &LHS, const ThisAdjustment &RHS) {
     return !(LHS == RHS);
   }
-  
+
   friend bool operator<(const ThisAdjustment &LHS,
                         const ThisAdjustment &RHS) {
     if (LHS.NonVirtual < RHS.NonVirtual)
       return true;
-    
+
     return LHS.NonVirtual == RHS.NonVirtual && LHS.Virtual.Less(RHS.Virtual);
   }
 };
@@ -179,7 +179,7 @@ class CXXMethodDecl;
 struct ThunkInfo {
   /// The \c this pointer adjustment.
   ThisAdjustment This;
-    
+
   /// The return adjustment.
   ReturnAdjustment Return;
 
@@ -204,7 +204,7 @@ struct ThunkInfo {
   bool isEmpty() const {
     return This.isEmpty() && Return.isEmpty() && Method == nullptr;
   }
-};  
+};
 
 } // end namespace clang
 

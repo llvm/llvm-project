@@ -109,7 +109,7 @@ struct PrintingPolicy {
   /// Suppress printing parts of scope specifiers that don't need
   /// to be written, e.g., for inline or anonymous namespaces.
   bool SuppressUnwrittenScope : 1;
-  
+
   /// Suppress printing of variable initializers.
   ///
   /// This flag is used when printing the loop variable in a for-range
@@ -140,15 +140,15 @@ struct PrintingPolicy {
   /// char a[9] = "A string";
   /// \endcode
   bool ConstantArraySizeAsWritten : 1;
-  
+
   /// When printing an anonymous tag name, also print the location of that
   /// entity (e.g., "enum <anonymous at t.h:10:5>"). Otherwise, just prints
   /// "(anonymous)" for the name.
   bool AnonymousTagLocations : 1;
-  
+
   /// When true, suppress printing of the __strong lifetime qualifier in ARC.
   unsigned SuppressStrongLifetime : 1;
-  
+
   /// When true, suppress printing of lifetime qualifier in ARC.
   unsigned SuppressLifetimeQualifiers : 1;
 
@@ -179,7 +179,7 @@ struct PrintingPolicy {
   /// declarations inside namespaces etc.  Effectively, this should print
   /// only the requested declaration.
   unsigned TerseOutput : 1;
-  
+
   /// When true, do certain refinement needed for producing proper declaration
   /// tag; such as, do not print attributes attached to the declaration.
   ///

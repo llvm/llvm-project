@@ -1,7 +1,3 @@
-UNSUPPORTED: system-windows
-Windows does not like renaming files that have open handles to them. We
-need to use TempFile::keep to move them in a portable way.
-
 RUN: dsymutil -accelerator=Dwarf -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64 -o %t.dwarf.dSYM
 RUN: dsymutil -accelerator=Apple -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64 -o %t.apple.dSYM
 

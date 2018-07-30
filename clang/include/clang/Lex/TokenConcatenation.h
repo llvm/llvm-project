@@ -58,8 +58,8 @@ namespace clang {
   public:
     TokenConcatenation(Preprocessor &PP);
 
-    bool AvoidConcat(const Token &PrevPrevTok, 
-                     const Token &PrevTok, 
+    bool AvoidConcat(const Token &PrevPrevTok,
+                     const Token &PrevTok,
                      const Token &Tok) const;
 
   private:

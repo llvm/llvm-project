@@ -2007,7 +2007,7 @@ NewGVN::performSymbolicEvaluation(Value *V,
     case Instruction::Load:
       E = performSymbolicLoadEvaluation(I);
       break;
-    case Instruction::BitCast: 
+    case Instruction::BitCast:
       E = createExpression(I);
       break;
     case Instruction::ICmp:

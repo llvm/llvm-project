@@ -319,9 +319,9 @@ _mm512_set1_epi32(int __s)
 }
 
 static __inline __m512i __DEFAULT_FN_ATTRS512
-_mm512_maskz_set1_epi32(__mmask16 __M, int __A) 
+_mm512_maskz_set1_epi32(__mmask16 __M, int __A)
 {
-  return (__m512i)__builtin_ia32_selectd_512(__M, 
+  return (__m512i)__builtin_ia32_selectd_512(__M,
                                              (__v16si)_mm512_set1_epi32(__A),
                                              (__v16si)_mm512_setzero_si512());
 }

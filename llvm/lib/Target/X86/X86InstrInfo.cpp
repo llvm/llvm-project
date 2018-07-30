@@ -7725,7 +7725,7 @@ X86InstrInfo::insertOutlinedCall(Module &M, MachineBasicBlock &MBB,
   if (C.CallConstructionID == MachineOutlinerTailCall) {
     // Yes, just insert a JMP.
     It = MBB.insert(It,
-                  BuildMI(MF, DebugLoc(), get(X86::JMP_1))
+                  BuildMI(MF, DebugLoc(), get(X86::TAILJMPd64))
                       .addGlobalAddress(M.getNamedValue(MF.getName())));
   } else {
     // No, insert a call.

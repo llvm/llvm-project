@@ -77,3 +77,37 @@ clasta   z0.d, p7, z0.d, z31.b
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid element width
 // CHECK-NEXT: clasta   z0.d, p7, z0.d, z31.b
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+
+// --------------------------------------------------------------------------//
+// Negative tests for instructions that are incompatible with movprfx
+
+movprfx z31.d, p7/z, z6.d
+clasta   x0, p7, x0, z31.d
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
+// CHECK-NEXT: clasta   x0, p7, x0, z31.d
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+movprfx z31, z6
+clasta   x0, p7, x0, z31.d
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
+// CHECK-NEXT: clasta   x0, p7, x0, z31.d
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+movprfx z31.d, p7/z, z6.d
+clasta   d0, p7, d0, z31.d
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
+// CHECK-NEXT: clasta   d0, p7, d0, z31.d
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+movprfx z31, z6
+clasta   d0, p7, d0, z31.d
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
+// CHECK-NEXT: clasta   d0, p7, d0, z31.d
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+movprfx z0.d, p7/z, z7.d
+clasta   z0.d, p7, z0.d, z31.d
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a predicated movprfx, suggest using unpredicated movprfx
+// CHECK-NEXT: clasta   z0.d, p7, z0.d, z31.d
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:

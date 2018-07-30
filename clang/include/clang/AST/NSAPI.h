@@ -113,7 +113,7 @@ public:
     NSMutableDict_setValueForKey
   };
   static const unsigned NumNSDictionaryMethods = 13;
-  
+
   /// The Objective-C NSDictionary selectors.
   Selector getNSDictionarySelector(NSDictionaryMethodKind MK) const;
 

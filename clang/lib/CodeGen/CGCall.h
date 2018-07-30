@@ -356,7 +356,7 @@ public:
   class FunctionArgList : public SmallVector<const VarDecl*, 16> {
   };
 
-  /// ReturnValueSlot - Contains the address where the return value of a 
+  /// ReturnValueSlot - Contains the address where the return value of a
   /// function can be stored, and whether the address is volatile or not.
   class ReturnValueSlot {
     llvm::PointerIntPair<llvm::Value *, 2, unsigned int> Value;
@@ -381,7 +381,7 @@ public:
     Address getValue() const { return Address(Value.getPointer(), Alignment); }
     bool isUnused() const { return Value.getInt() & IS_UNUSED; }
   };
-  
+
 }  // end namespace CodeGen
 }  // end namespace clang
 

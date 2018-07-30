@@ -377,7 +377,7 @@ private:
     if (auto *NamedTemplate = dyn_cast_or_null<NamedDecl>(Inst.Entity)) {
       llvm::raw_string_ostream OS(Entry.Name);
       NamedTemplate->getNameForDiagnostic(OS, TheSema.getLangOpts(), true);
-      const PresumedLoc DefLoc = 
+      const PresumedLoc DefLoc =
         TheSema.getSourceManager().getPresumedLoc(Inst.Entity->getLocation());
       if(!DefLoc.isInvalid())
         Entry.DefinitionLocation = std::string(DefLoc.getFilename()) + ":" +
@@ -709,13 +709,13 @@ void PrintPreprocessedAction::ExecuteAction() {
   // the input format has inconsistent line endings.
   //
   // This should be a relatively fast operation since most files won't have
-  // all of their source code on a single line. However, that is still a 
+  // all of their source code on a single line. However, that is still a
   // concern, so if we scan for too long, we'll just assume the file should
   // be opened in binary mode.
   bool BinaryMode = true;
   bool InvalidFile = false;
   const SourceManager& SM = CI.getSourceManager();
-  const llvm::MemoryBuffer *Buffer = SM.getBuffer(SM.getMainFileID(), 
+  const llvm::MemoryBuffer *Buffer = SM.getBuffer(SM.getMainFileID(),
                                                      &InvalidFile);
   if (!InvalidFile) {
     const char *cur = Buffer->getBufferStart();
@@ -723,7 +723,7 @@ void PrintPreprocessedAction::ExecuteAction() {
     const char *next = (cur != end) ? cur + 1 : end;
 
     // Limit ourselves to only scanning 256 characters into the source
-    // file.  This is mostly a sanity check in case the file has no 
+    // file.  This is mostly a sanity check in case the file has no
     // newlines whatsoever.
     if (end - cur > 256) end = cur + 256;
 
@@ -774,7 +774,7 @@ void PrintPreambleAction::ExecuteAction() {
   case InputKind::CUDA:
   case InputKind::HIP:
     break;
-      
+
   case InputKind::Unknown:
   case InputKind::Asm:
   case InputKind::LLVM_IR:

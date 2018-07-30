@@ -174,7 +174,7 @@ const PPCFrameLowering::SpillSlot *PPCFrameLowering::getCalleeSavedSpillSlots(
       {PPC::V22, -160},
       {PPC::V21, -176},
       {PPC::V20, -192},
-  
+
       // SPE register save area (overlaps Vector save area).
       {PPC::S31, -8},
       {PPC::S30, -16},
@@ -1229,7 +1229,7 @@ void PPCFrameLowering::emitEpilogue(MachineFunction &MF,
 
   if (MBBI != MBB.end())
     dl = MBBI->getDebugLoc();
-  
+
   const PPCInstrInfo &TII = *Subtarget.getInstrInfo();
   const PPCRegisterInfo *RegInfo = Subtarget.getRegisterInfo();
 
@@ -1315,7 +1315,7 @@ void PPCFrameLowering::emitEpilogue(MachineFunction &MF,
   }
 
   bool IsReturnBlock = (MBBI != MBB.end() && MBBI->isReturn());
-  
+
   if (IsReturnBlock) {
     unsigned RetOpcode = MBBI->getOpcode();
     bool UsesTCRet =  RetOpcode == PPC::TCRETURNri ||

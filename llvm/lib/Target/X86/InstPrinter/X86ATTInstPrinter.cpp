@@ -92,7 +92,7 @@ void X86ATTInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
     // the hex value of the immediate operand when it isn't in the range
     // [-256,255].
     if (CommentStream && !HasCustomInstComment && (Imm > 255 || Imm < -256)) {
-      // Don't print unnecessary hex sign bits. 
+      // Don't print unnecessary hex sign bits.
       if (Imm == (int16_t)(Imm))
         *CommentStream << format("imm = 0x%" PRIX16 "\n", (uint16_t)Imm);
       else if (Imm == (int32_t)(Imm))

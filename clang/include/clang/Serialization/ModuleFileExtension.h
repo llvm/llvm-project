@@ -26,7 +26,7 @@ namespace clang {
 class ASTReader;
 class ASTWriter;
 class Sema;
-  
+
 namespace serialization {
   class ModuleFile;
 } // end namespace serialization
@@ -128,7 +128,7 @@ public:
 /// Abstract base class that reads a module file extension block from
 /// a module file.
 ///
-/// Subclasses 
+/// Subclasses
 class ModuleFileExtensionReader {
   ModuleFileExtension *Extension;
 

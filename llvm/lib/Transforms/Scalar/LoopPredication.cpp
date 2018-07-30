@@ -74,7 +74,7 @@
 //   }
 //
 // One solution for M is M = forall X . (G(X) && B(X)) => G(X + Step)
-// 
+//
 // Informal proof that the transformation above is correct:
 //
 //   By the definition of guards we can rewrite the guard condition to:
@@ -83,7 +83,7 @@
 //   Let's prove that for each iteration of the loop:
 //     G(0) && M => G(I)
 //   And the condition above can be simplified to G(Start) && M.
-// 
+//
 //   Induction base.
 //     G(0) && M => G(0)
 //
@@ -379,7 +379,7 @@ Value *LoopPredication::expandCheck(SCEVExpander &Expander,
                                     ICmpInst::Predicate Pred, const SCEV *LHS,
                                     const SCEV *RHS, Instruction *InsertAt) {
   // TODO: we can check isLoopEntryGuardedByCond before emitting the check
- 
+
   Type *Ty = LHS->getType();
   assert(Ty == RHS->getType() && "expandCheck operands have different types?");
 

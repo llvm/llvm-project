@@ -44,7 +44,7 @@ class TypeLoc;
 /// specifier. Nested name specifiers are made up of a sequence of
 /// specifiers, each of which can be a namespace, type, identifier
 /// (for dependent names), decltype specifier, or the global specifier ('::').
-/// The last two specifiers can only appear at the start of a 
+/// The last two specifiers can only appear at the start of a
 /// nested-namespace-specifier.
 class NestedNameSpecifier : public llvm::FoldingSetNode {
   /// Enumeration describing
@@ -438,7 +438,7 @@ public:
   /// Turn this (empty) nested-name-specifier into the global
   /// nested-name-specifier '::'.
   void MakeGlobal(ASTContext &Context, SourceLocation ColonColonLoc);
-  
+
   /// Turns this (empty) nested-name-specifier into '__super'
   /// nested-name-specifier.
   ///
@@ -452,7 +452,7 @@ public:
   /// name.
   ///
   /// \param ColonColonLoc The location of the trailing '::'.
-  void MakeSuper(ASTContext &Context, CXXRecordDecl *RD, 
+  void MakeSuper(ASTContext &Context, CXXRecordDecl *RD,
                  SourceLocation SuperLoc, SourceLocation ColonColonLoc);
 
   /// Make a new nested-name-specifier from incomplete source-location

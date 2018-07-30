@@ -44,7 +44,7 @@ class raw_ostream;
 } // namespace llvm
 
 namespace clang {
-  
+
 class LangOptions;
 class TargetInfo;
 
@@ -66,7 +66,7 @@ class Module {
 public:
   /// The name of this module.
   std::string Name;
-  
+
   /// The location of the module definition.
   SourceLocation DefinitionLoc;
 
@@ -111,12 +111,12 @@ public:
   /// The module through which entities defined in this module will
   /// eventually be exposed, for use in "private" modules.
   std::string ExportAsModule;
-  
+
 private:
   /// The submodules of this module, indexed by name.
   std::vector<Module *> SubModules;
-  
-  /// A mapping from the submodule name to the index into the 
+
+  /// A mapping from the submodule name to the index into the
   /// \c SubModules vector at which that submodule resides.
   llvm::StringMap<unsigned> SubModuleIndex;
 
@@ -214,13 +214,13 @@ public:
 
   /// Whether this module was loaded from a module file.
   unsigned IsFromModuleFile : 1;
-  
+
   /// Whether this is a framework module.
   unsigned IsFramework : 1;
-  
+
   /// Whether this is an explicit submodule.
   unsigned IsExplicit : 1;
-  
+
   /// Whether this is a "system" module (which assumes that all
   /// headers in it are system headers).
   unsigned IsSystem : 1;
@@ -233,16 +233,16 @@ public:
   /// Whether this is an inferred submodule (module * { ... }).
   unsigned IsInferred : 1;
 
-  /// Whether we should infer submodules for this module based on 
+  /// Whether we should infer submodules for this module based on
   /// the headers.
   ///
   /// Submodules can only be inferred for modules with an umbrella header.
   unsigned InferSubmodules : 1;
-  
+
   /// Whether, when inferring submodules, the inferred submodules
   /// should be explicit.
   unsigned InferExplicitSubmodules : 1;
-  
+
   /// Whether, when inferring submodules, the inferr submodules should
   /// export all modules they import (e.g., the equivalent of "export *").
   unsigned InferExportWildcard : 1;
@@ -280,31 +280,31 @@ public:
   /// The set of modules imported by this module, and on which this
   /// module depends.
   llvm::SmallSetVector<Module *, 2> Imports;
-  
+
   /// Describes an exported module.
   ///
   /// The pointer is the module being re-exported, while the bit will be true
   /// to indicate that this is a wildcard export.
   using ExportDecl = llvm::PointerIntPair<Module *, 1, bool>;
-  
+
   /// The set of export declarations.
   SmallVector<ExportDecl, 2> Exports;
-  
+
   /// Describes an exported module that has not yet been resolved
   /// (perhaps because the module it refers to has not yet been loaded).
   struct UnresolvedExportDecl {
     /// The location of the 'export' keyword in the module map file.
     SourceLocation ExportLoc;
-    
+
     /// The name of the module.
     ModuleId Id;
-    
+
     /// Whether this export declaration ends in a wildcard, indicating
     /// that all of its submodules should be exported (rather than the named
     /// module itself).
     bool Wildcard;
   };
-  
+
   /// The set of export declarations that have yet to be resolved.
   SmallVector<UnresolvedExportDecl, 2> UnresolvedExports;
 
@@ -320,7 +320,7 @@ public:
     LinkLibrary() = default;
     LinkLibrary(const std::string &Library, bool IsFramework)
         : Library(Library), IsFramework(IsFramework) {}
-    
+
     /// The library to link against.
     ///
     /// This will typically be a library or framework name, but can also
@@ -371,9 +371,9 @@ public:
   /// Construct a new module or submodule.
   Module(StringRef Name, SourceLocation DefinitionLoc, Module *Parent,
          bool IsFramework, bool IsExplicit, unsigned VisibilityID);
-  
+
   ~Module();
-  
+
   /// Determine whether this module is available for use within the
   /// current translation unit.
   bool isAvailable() const { return IsAvailable; }
@@ -395,7 +395,7 @@ public:
   ///
   /// \param ShadowingModule If this module is unavailable because it is
   /// shadowed, this parameter will be set to the shadowing module.
-  bool isAvailable(const LangOptions &LangOpts, 
+  bool isAvailable(const LangOptions &LangOpts,
                    const TargetInfo &Target,
                    Requirement &Req,
                    UnresolvedHeaderDirective &MissingHeader,
@@ -403,19 +403,19 @@ public:
 
   /// Determine whether this module is a submodule.
   bool isSubModule() const { return Parent != nullptr; }
-  
+
   /// Determine whether this module is a submodule of the given other
   /// module.
   bool isSubModuleOf(const Module *Other) const;
-  
+
   /// Determine whether this module is a part of a framework,
   /// either because it is a framework module or because it is a submodule
   /// of a framework module.
   bool isPartOfFramework() const {
-    for (const Module *Mod = this; Mod; Mod = Mod->Parent) 
+    for (const Module *Mod = this; Mod; Mod = Mod->Parent)
       if (Mod->IsFramework)
         return true;
-    
+
     return false;
   }
 
@@ -456,7 +456,7 @@ public:
   /// Retrieve the top-level module for this (sub)module, which may
   /// be this module.
   const Module *getTopLevelModule() const;
-  
+
   /// Retrieve the name of the top-level module.
   StringRef getTopLevelModuleName() const {
     return getTopLevelModule()->Name;
@@ -552,7 +552,7 @@ public:
 
   using submodule_iterator = std::vector<Module *>::iterator;
   using submodule_const_iterator = std::vector<Module *>::const_iterator;
-  
+
   submodule_iterator submodule_begin() { return SubModules.begin(); }
   submodule_const_iterator submodule_begin() const {return SubModules.begin();}
   submodule_iterator submodule_end()   { return SubModules.end(); }
@@ -575,9 +575,9 @@ public:
     return "<module-includes>";
   }
 
-  /// Print the module map for this module to the given stream. 
+  /// Print the module map for this module to the given stream.
   void print(raw_ostream &OS, unsigned Indent = 0) const;
-  
+
   /// Dump the contents of this module to the given output stream.
   void dump() const;
 

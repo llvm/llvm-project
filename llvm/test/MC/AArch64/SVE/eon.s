@@ -54,3 +54,19 @@ eon     z0.d, z0.d, #0x6
 // CHECK-ENCODING: [0xa0,0xef,0x43,0x05]
 // CHECK-ERROR: instruction requires: sve
 // CHECK-UNKNOWN: a0 ef 43 05 <unknown>
+
+
+// --------------------------------------------------------------------------//
+// Test compatibility with MOVPRFX instruction.
+
+movprfx z0, z7
+// CHECK-INST: movprfx	z0, z7
+// CHECK-ENCODING: [0xe0,0xbc,0x20,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: e0 bc 20 04 <unknown>
+
+eon     z0.d, z0.d, #0x6
+// CHECK-INST: eor	z0.d, z0.d, #0xfffffffffffffff9
+// CHECK-ENCODING: [0xa0,0xef,0x43,0x05]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: a0 ef 43 05 <unknown>

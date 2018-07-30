@@ -59,8 +59,8 @@ DelayedDiagnostic::makeAvailability(AvailabilityResult AR,
 
 void DelayedDiagnostic::Destroy() {
   switch (Kind) {
-  case Access: 
-    getAccessData().~AccessedEntity(); 
+  case Access:
+    getAccessData().~AccessedEntity();
     break;
 
   case Availability:

@@ -28,19 +28,19 @@
 # CHECK-LABEL: name: main
 
 # CHECK: BL @OUTLINED_FUNCTION_[[F0:[0-9]+]]
-# CHECK-NEXT: early-clobber $sp, $lr = LDRXpost $sp, 16
+# CHECK-NEXT: $lr = ORRXrs $xzr, $x[[REG:[0-9]+]], 0
 # CHECK-NEXT: $x16 = ADDXri $sp, 48, 0
 # CHECK-NEXT: STRHHroW $w16, $x9, $w30, 1, 1
 # CHECK-NEXT: $lr = ORRXri $xzr, 1
 
 # CHECK: BL @OUTLINED_FUNCTION_[[F0]]
-# CHECK-NEXT: early-clobber $sp, $lr = LDRXpost $sp, 16
+# CHECK-NEXT: $lr = ORRXrs $xzr, $x[[REG]], 0
 # CHECK-NEXT: $x16 = ADDXri $sp, 48, 0
 # CHECK-NEXT: STRHHroW $w16, $x9, $w30, 1, 1
 # CHECK-NEXT: $lr = ORRXri $xzr, 1
 
 # CHECK: BL @OUTLINED_FUNCTION_[[F0]]
-# CHECK-NEXT: early-clobber $sp, $lr = LDRXpost $sp, 16
+# CHECK-NEXT: $lr = ORRXrs $xzr, $x[[REG]], 0
 # CHECK-NEXT: $x16 = ADDXri $sp, 48, 0
 # CHECK-NEXT: STRHHroW $w16, $x9, $w30, 1, 1
 # CHECK-NEXT: $lr = ORRXri $xzr, 1

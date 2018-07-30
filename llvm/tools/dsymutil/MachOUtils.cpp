@@ -27,6 +27,27 @@ namespace llvm {
 namespace dsymutil {
 namespace MachOUtils {
 
+llvm::Error ArchAndFile::createTempFile() {
+  llvm::SmallString<128> TmpModel;
+  llvm::sys::path::system_temp_directory(true, TmpModel);
+  llvm::sys::path::append(TmpModel, "dsym.tmp%%%%%.dwarf");
+  Expected<sys::fs::TempFile> T = sys::fs::TempFile::create(TmpModel);
+
+  if (!T)
+    return T.takeError();
+
+  File = llvm::Optional<sys::fs::TempFile>(std::move(*T));
+  return Error::success();
+}
+
+llvm::StringRef ArchAndFile::path() const { return File->TmpName; }
+
+ArchAndFile::~ArchAndFile() {
+  if (File)
+    if (auto E = File->discard())
+      llvm::consumeError(std::move(E));
+}
+
 std::string getArchName(StringRef Arch) {
   if (Arch.startswith("thumb"))
     return (llvm::Twine("arm") + Arch.drop_front(5)).str();
@@ -53,21 +74,16 @@ static bool runLipo(StringRef SDKPath, SmallVectorImpl<StringRef> &Args) {
   return true;
 }
 
-bool generateUniversalBinary(SmallVectorImpl<ArchAndFilename> &ArchFiles,
+bool generateUniversalBinary(SmallVectorImpl<ArchAndFile> &ArchFiles,
                              StringRef OutputFileName,
                              const LinkOptions &Options, StringRef SDKPath) {
-  // No need to merge one file into a universal fat binary. First, try
-  // to move it (rename) to the final location. If that fails because
-  // of cross-device link issues then copy and delete.
+  // No need to merge one file into a universal fat binary.
   if (ArchFiles.size() == 1) {
-    StringRef From(ArchFiles.front().Path);
-    if (sys::fs::rename(From, OutputFileName)) {
-      if (std::error_code EC = sys::fs::copy_file(From, OutputFileName)) {
-        WithColor::error() << "while copying " << From << " to "
-                           << OutputFileName << ": " << EC.message() << "\n";
-        return false;
-      }
-      sys::fs::remove(From);
+    if (auto E = ArchFiles.front().File->keep(OutputFileName)) {
+      WithColor::error() << "while keeping " << ArchFiles.front().path()
+                         << " as " << OutputFileName << ": "
+                         << toString(std::move(E)) << "\n";
+      return false;
     }
     return true;
   }
@@ -77,7 +93,7 @@ bool generateUniversalBinary(SmallVectorImpl<ArchAndFilename> &ArchFiles,
   Args.push_back("-create");
 
   for (auto &Thin : ArchFiles)
-    Args.push_back(Thin.Path);
+    Args.push_back(Thin.path());
 
   // Align segments to match dsymutil-classic alignment
   for (auto &Thin : ArchFiles) {

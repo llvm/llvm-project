@@ -884,7 +884,7 @@ public:
     : Expr(OpaqueValueExprClass, T, VK, OK,
            T->isDependentType() ||
            (SourceExpr && SourceExpr->isTypeDependent()),
-           T->isDependentType() || 
+           T->isDependentType() ||
            (SourceExpr && SourceExpr->isValueDependent()),
            T->isInstantiationDependentType() ||
            (SourceExpr && SourceExpr->isInstantiationDependent()),
@@ -5341,7 +5341,7 @@ public:
 
   SourceLocation getLocStart() const LLVM_READONLY { return SourceLocation(); }
   SourceLocation getLocEnd() const LLVM_READONLY { return SourceLocation(); }
-  
+
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == TypoExprClass;
   }
