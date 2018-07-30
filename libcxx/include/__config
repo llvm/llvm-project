@@ -620,8 +620,6 @@ namespace std {
 
 #define _LIBCPP_ALWAYS_INLINE __forceinline
 
-#define _LIBCPP_HAS_NO_VECTOR_EXTENSION
-
 #elif defined(_LIBCPP_COMPILER_IBM)
 
 #define _ALIGNAS(x) __attribute__((__aligned__(x)))
@@ -653,8 +651,6 @@ namespace std {
 #define _LIBCPP_HAS_NO_ASAN
 
 #define _LIBCPP_ALWAYS_INLINE __attribute__ ((__always_inline__))
-
-#define _LIBCPP_HAS_NO_VECTOR_EXTENSION
 
 #endif // _LIBCPP_COMPILER_[CLANG|GCC|MSVC|IBM]
 

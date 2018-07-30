@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++98, c++03, c++11, c++14
+// UNSUPPORTED: c++98, c++03
 
 // See GCC PR63723.
 // UNSUPPORTED: gcc-4.9
@@ -20,19 +20,18 @@
 #include <cstdint>
 #include <experimental/simd>
 
-namespace ex = std::experimental::parallelism_v2;
+using namespace std::experimental::parallelism_v2;
 
 template <class T, class... Args>
 auto not_supported_native_simd_ctor(Args&&... args)
-    -> decltype(ex::native_simd<T>(std::forward<Args>(args)...),
-                void()) = delete;
+    -> decltype(native_simd<T>(std::forward<Args>(args)...), void()) = delete;
 
 template <class T>
 void not_supported_native_simd_ctor(...) {}
 
 template <class T, class... Args>
 auto supported_native_simd_ctor(Args&&... args)
-    -> decltype(ex::native_simd<T>(std::forward<Args>(args)...), void()) {}
+    -> decltype(native_simd<T>(std::forward<Args>(args)...), void()) {}
 
 template <class T>
 void supported_native_simd_ctor(...) = delete;
@@ -56,31 +55,4 @@ void compile_narrowing_conversion() {
   not_supported_native_simd_ctor<int>(3.);
 }
 
-void compile_convertible() {
-  struct ConvertibleToInt {
-    operator int64_t() const;
-  };
-  supported_native_simd_ctor<int64_t>(ConvertibleToInt());
-
-  struct NotConvertibleToInt {};
-  not_supported_native_simd_ctor<int64_t>(NotConvertibleToInt());
-}
-
-void compile_unsigned() {
-  not_supported_native_simd_ctor<int>(3u);
-  supported_native_simd_ctor<uint16_t>(3u);
-}
-
-template <typename SimdType>
-void test_broadcast() {
-  SimdType a(3);
-  for (size_t i = 0; i < a.size(); i++) {
-    assert(a[i] == 3);
-  }
-}
-
-int main() {
-  test_broadcast<ex::native_simd<int>>();
-  test_broadcast<ex::fixed_size_simd<int, 4>>();
-  test_broadcast<ex::fixed_size_simd<int, 15>>();
-}
+int main() {}
