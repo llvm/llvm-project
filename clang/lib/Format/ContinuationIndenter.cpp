@@ -1809,6 +1809,7 @@ ContinuationIndenter::breakProtrudingToken(const FormatToken &Current,
   if (!DryRun)
     Token->adaptStartOfLine(0, Whitespaces);
 
+  unsigned ContentIndent = 0;
   unsigned Penalty = 0;
   LLVM_DEBUG(llvm::dbgs() << "Breaking protruding token at column "
                           << StartColumn << ".\n");
@@ -1930,11 +1931,28 @@ ContinuationIndenter::breakProtrudingToken(const FormatToken &Current,
         }
       }
       LLVM_DEBUG(llvm::dbgs() << "    Breaking...\n");
-      ContentStartColumn =
-          Token->getContentStartColumn(LineIndex, /*Break=*/true);
+      // Update the ContentIndent only if the current line was not reflown with
+      // the previous line, since in that case the previous line should still
+      // determine the ContentIndent. Also never intent the last line.
+      if (!Reflow)
+        ContentIndent = Token->getContentIndent(LineIndex);
+      LLVM_DEBUG(llvm::dbgs()
+                 << "    ContentIndent: " << ContentIndent << "\n");
+      ContentStartColumn = ContentIndent + Token->getContentStartColumn(
+                                               LineIndex, /*Break=*/true);
+
       unsigned NewRemainingTokenColumns = Token->getRemainingLength(
           LineIndex, TailOffset + Split.first + Split.second,
           ContentStartColumn);
+      if (NewRemainingTokenColumns == 0) {
+        // No content to indent.
+        ContentIndent = 0;
+        ContentStartColumn =
+            Token->getContentStartColumn(LineIndex, /*Break=*/true);
+        NewRemainingTokenColumns = Token->getRemainingLength(
+            LineIndex, TailOffset + Split.first + Split.second,
+            ContentStartColumn);
+      }
 
       // When breaking before a tab character, it may be moved by a few columns,
       // but will still be expanded to the next tab stop, so we don't save any
@@ -1948,7 +1966,8 @@ ContinuationIndenter::breakProtrudingToken(const FormatToken &Current,
       LLVM_DEBUG(llvm::dbgs() << "    Breaking at: " << TailOffset + Split.first
                               << ", " << Split.second << "\n");
       if (!DryRun)
-        Token->insertBreak(LineIndex, TailOffset, Split, Whitespaces);
+        Token->insertBreak(LineIndex, TailOffset, Split, ContentIndent,
+                           Whitespaces);
 
       Penalty += NewBreakPenalty;
       TailOffset += Split.first + Split.second;

@@ -464,14 +464,14 @@ void simpleTemporary() {
   C();
 }
 
-// TODO: Should provide construction context for the constructor,
 // CHECK: void temporaryInCondition()
-// CHECK:          1: C() (CXXConstructExpr, class C)
-// CHECK-NEXT:     2: [B2.1] (ImplicitCastExpr, NoOp, const class C)
-// CHECK-NEXT:     3: [B2.2].operator bool
-// CHECK-NEXT:     4: [B2.2]
-// CHECK-NEXT:     5: [B2.4] (ImplicitCastExpr, UserDefinedConversion, _Bool)
-// CHECK-NEXT:     T: if [B2.5]
+// CHECK:          1: C() (CXXConstructExpr, [B2.2], class C)
+// CHECK-NEXT:     2: [B2.1]
+// CHECK-NEXT:     3: [B2.2] (ImplicitCastExpr, NoOp, const class C)
+// CHECK-NEXT:     4: [B2.3].operator bool
+// CHECK-NEXT:     5: [B2.3]
+// CHECK-NEXT:     6: [B2.5] (ImplicitCastExpr, UserDefinedConversion, _Bool)
+// CHECK-NEXT:     T: if [B2.6]
 void temporaryInCondition() {
   if (C());
 }
@@ -583,14 +583,15 @@ void simpleTemporary() {
 }
 
 // CHECK:  void temporaryInCondition()
-// CHECK:          1: temporary_object_expr_with_dtors::D() (CXXConstructExpr, [B2.2], class temporary_object_expr_with_dtors::D)
+// CHECK:          1: temporary_object_expr_with_dtors::D() (CXXConstructExpr, [B2.2], [B2.3], class temporary_object_expr_with_dtors::D)
 // CHECK-NEXT:     2: [B2.1] (BindTemporary)
-// CHECK-NEXT:     3: [B2.2] (ImplicitCastExpr, NoOp, const class temporary_object_expr_with_dtors::D)
-// CHECK-NEXT:     4: [B2.3].operator bool
-// CHECK-NEXT:     5: [B2.3]
-// CHECK-NEXT:     6: [B2.5] (ImplicitCastExpr, UserDefinedConversion, _Bool)
-// CHECK-NEXT:     7: ~temporary_object_expr_with_dtors::D() (Temporary object destructor)
-// CHECK-NEXT:     T: if [B2.6]
+// CHECK-NEXT:     3: [B2.2]
+// CHECK-NEXT:     4: [B2.3] (ImplicitCastExpr, NoOp, const class temporary_object_expr_with_dtors::D)
+// CHECK-NEXT:     5: [B2.4].operator bool
+// CHECK-NEXT:     6: [B2.4]
+// CHECK-NEXT:     7: [B2.6] (ImplicitCastExpr, UserDefinedConversion, _Bool)
+// CHECK-NEXT:     8: ~temporary_object_expr_with_dtors::D() (Temporary object destructor)
+// CHECK-NEXT:     T: if [B2.7]
 void temporaryInCondition() {
   if (D());
 }
@@ -693,23 +694,25 @@ void referenceWithFunctionalCast() {
 // Test the condition constructor, we don't care about branch constructors here.
 // CHECK: void constructorInTernaryCondition()
 // CXX11:          1: 1
-// CXX11-NEXT:     2: [B7.1] (CXXConstructExpr, [B7.3], class temporary_object_expr_with_dtors::D)
+// CXX11-NEXT:     2: [B7.1] (CXXConstructExpr, [B7.3], [B7.5], class temporary_object_expr_with_dtors::D)
 // CXX11-NEXT:     3: [B7.2] (BindTemporary)
 // CXX11-NEXT:     4: temporary_object_expr_with_dtors::D([B7.3]) (CXXFunctionalCastExpr, ConstructorConversion, class temporary_object_expr_with_dtors::D)
-// CXX11-NEXT:     5: [B7.4] (ImplicitCastExpr, NoOp, const class temporary_object_expr_with_dtors::D)
-// CXX11-NEXT:     6: [B7.5].operator bool
-// CXX11-NEXT:     7: [B7.5]
-// CXX11-NEXT:     8: [B7.7] (ImplicitCastExpr, UserDefinedConversion, _Bool)
-// CXX11-NEXT:     T: [B7.8] ? ... : ...
+// CXX11-NEXT:     5: [B7.4]
+// CXX11-NEXT:     6: [B7.5] (ImplicitCastExpr, NoOp, const class temporary_object_expr_with_dtors::D)
+// CXX11-NEXT:     7: [B7.6].operator bool
+// CXX11-NEXT:     8: [B7.6]
+// CXX11-NEXT:     9: [B7.8] (ImplicitCastExpr, UserDefinedConversion, _Bool)
+// CXX11-NEXT:     T: [B7.9] ? ... : ...
 // CXX17:          1: 1
-// CXX17-NEXT:     2: [B4.1] (CXXConstructExpr, [B4.3], class temporary_object_expr_with_dtors::D)
+// CXX17-NEXT:     2: [B4.1] (CXXConstructExpr, [B4.3], [B4.5], class temporary_object_expr_with_dtors::D)
 // CXX17-NEXT:     3: [B4.2] (BindTemporary)
 // CXX17-NEXT:     4: temporary_object_expr_with_dtors::D([B4.3]) (CXXFunctionalCastExpr, ConstructorConversion, class temporary_object_expr_with_dtors::D)
-// CXX17-NEXT:     5: [B4.4] (ImplicitCastExpr, NoOp, const class temporary_object_expr_with_dtors::D)
-// CXX17-NEXT:     6: [B4.5].operator bool
-// CXX17-NEXT:     7: [B4.5]
-// CXX17-NEXT:     8: [B4.7] (ImplicitCastExpr, UserDefinedConversion, _Bool)
-// CXX17-NEXT:     T: [B4.8] ? ... : ...
+// CXX17-NEXT:     5: [B4.4]
+// CXX17-NEXT:     6: [B4.5] (ImplicitCastExpr, NoOp, const class temporary_object_expr_with_dtors::D)
+// CXX17-NEXT:     7: [B4.6].operator bool
+// CXX17-NEXT:     8: [B4.6]
+// CXX17-NEXT:     9: [B4.8] (ImplicitCastExpr, UserDefinedConversion, _Bool)
+// CXX17-NEXT:     T: [B4.9] ? ... : ...
 void constructorInTernaryCondition() {
   const D &d = D(1) ? D(2) : D(3);
 }

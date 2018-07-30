@@ -6525,13 +6525,13 @@ TreeTransform<Derived>::TransformCaseStmt(CaseStmt *S) {
 
     // Transform the left-hand case value.
     LHS = getDerived().TransformExpr(S->getLHS());
-    LHS = SemaRef.ActOnConstantExpression(LHS);
+    LHS = SemaRef.ActOnCaseExpr(S->getCaseLoc(), LHS);
     if (LHS.isInvalid())
       return StmtError();
 
     // Transform the right-hand case value (for the GNU case-range extension).
     RHS = getDerived().TransformExpr(S->getRHS());
-    RHS = SemaRef.ActOnConstantExpression(RHS);
+    RHS = SemaRef.ActOnCaseExpr(S->getCaseLoc(), RHS);
     if (RHS.isInvalid())
       return StmtError();
   }

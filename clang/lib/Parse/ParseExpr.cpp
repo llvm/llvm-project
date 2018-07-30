@@ -217,6 +217,14 @@ ExprResult Parser::ParseConstantExpression(TypeCastState isTypeCast) {
   return ParseConstantExpressionInExprEvalContext(isTypeCast);
 }
 
+ExprResult Parser::ParseCaseExpression(SourceLocation CaseLoc) {
+  EnterExpressionEvaluationContext ConstantEvaluated(
+      Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated);
+  ExprResult LHS(ParseCastExpression(false, false, NotTypeCast));
+  ExprResult Res(ParseRHSOfBinaryExpression(LHS, prec::Conditional));
+  return Actions.ActOnCaseExpr(CaseLoc, Res);
+}
+
 /// Parse a constraint-expression.
 ///
 /// \verbatim
@@ -609,6 +617,8 @@ class CastExpressionIdValidator : public CorrectionCandidateCallback {
 /// [GNU]   '__FUNCTION__'
 /// [MS]    '__FUNCDNAME__'
 /// [MS]    'L__FUNCTION__'
+/// [MS]    '__FUNCSIG__'
+/// [MS]    'L__FUNCSIG__'
 /// [GNU]   '__PRETTY_FUNCTION__'
 /// [GNU]   '(' compound-statement ')'
 /// [GNU]   '__builtin_va_arg' '(' assignment-expression ',' type-name ')'
@@ -779,6 +789,10 @@ ExprResult Parser::ParseCastExpression(bool isUnaryExpression,
       // We have parsed the cast-expression and no postfix-expr pieces are
       // following.
       return Res;
+    case FoldExpr:
+      // We only parsed a fold-expression. There might be postfix-expr pieces
+      // afterwards; parse them now.
+      break;
     }
 
     break;
@@ -1053,6 +1067,7 @@ ExprResult Parser::ParseCastExpression(bool isUnaryExpression,
   case tok::kw___FUNCDNAME__:   // primary-expression: __FUNCDNAME__ [MS]
   case tok::kw___FUNCSIG__:     // primary-expression: __FUNCSIG__ [MS]
   case tok::kw_L__FUNCTION__:   // primary-expression: L__FUNCTION__ [MS]
+  case tok::kw_L__FUNCSIG__:    // primary-expression: L__FUNCSIG__ [MS]
   case tok::kw___PRETTY_FUNCTION__:  // primary-expression: __P..Y_F..N__ [GNU]
     Res = Actions.ActOnPredefinedExpr(Tok.getLocation(), SavedKind);
     ConsumeToken();
@@ -2512,8 +2527,9 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool stopIfCastExpr,
       Diag(Tok, diag::err_expected_lbrace_in_compound_literal);
       return ExprError();
     }
-  } else if (Tok.is(tok::ellipsis) &&
+  } else if (ExprType >= FoldExpr && Tok.is(tok::ellipsis) &&
              isFoldOperator(NextToken().getKind())) {
+    ExprType = FoldExpr;
     return ParseFoldExpression(ExprResult(), T);
   } else if (isTypeCast) {
     // Parse the expression-list.
@@ -2525,9 +2541,11 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool stopIfCastExpr,
     if (!ParseSimpleExpressionList(ArgExprs, CommaLocs)) {
       // FIXME: If we ever support comma expressions as operands to
       // fold-expressions, we'll need to allow multiple ArgExprs here.
-      if (ArgExprs.size() == 1 && isFoldOperator(Tok.getKind()) &&
-          NextToken().is(tok::ellipsis))
+      if (ExprType >= FoldExpr && ArgExprs.size() == 1 &&
+          isFoldOperator(Tok.getKind()) && NextToken().is(tok::ellipsis)) {
+        ExprType = FoldExpr;
         return ParseFoldExpression(ArgExprs[0], T);
+      }
 
       ExprType = SimpleExpr;
       Result = Actions.ActOnParenListExpr(OpenLoc, Tok.getLocation(),
@@ -2542,10 +2560,13 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool stopIfCastExpr,
       // expressions are parsed correctly.
       Result = Actions.CorrectDelayedTyposInExpr(Result);
     }
-    ExprType = SimpleExpr;
 
-    if (isFoldOperator(Tok.getKind()) && NextToken().is(tok::ellipsis))
+    if (ExprType >= FoldExpr && isFoldOperator(Tok.getKind()) &&
+        NextToken().is(tok::ellipsis)) {
+      ExprType = FoldExpr;
       return ParseFoldExpression(Result, T);
+    }
+    ExprType = SimpleExpr;
 
     // Don't build a paren expression unless we actually match a ')'.
     if (!Result.isInvalid() && Tok.is(tok::r_paren))

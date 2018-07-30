@@ -2064,8 +2064,7 @@ static llvm::Constant *EmitNullConstant(CodeGenModule &CGM,
     if (record->isUnion()) {
       if (Field->getIdentifier())
         break;
-      if (const auto *FieldRD =
-              dyn_cast_or_null<RecordDecl>(Field->getType()->getAsTagDecl()))
+      if (const auto *FieldRD = Field->getType()->getAsRecordDecl())
         if (FieldRD->findFirstNamedDataMember())
           break;
     }

@@ -198,11 +198,12 @@ protected:
 
   class CastExprBitfields {
     friend class CastExpr;
+    friend class ImplicitCastExpr;
 
     unsigned : NumExprBits;
 
     unsigned Kind : 6;
-    unsigned PartOfExplicitCast : 1;
+    unsigned PartOfExplicitCast : 1; // Only set for ImplicitCastExpr.
     unsigned BasePathSize : 32 - 6 - 1 - NumExprBits;
   };
 

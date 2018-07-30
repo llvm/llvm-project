@@ -93,8 +93,8 @@ public:
   }
 
   /// Convert to the specified TypeLoc type, returning a null TypeLoc if
-  /// this TypeLock is not of the desired type. It will consider type
-  /// adjustments from a type that wad written as a T to another type that is
+  /// this TypeLoc is not of the desired type. It will consider type
+  /// adjustments from a type that was written as a T to another type that is
   /// still canonically a T (ignores parens, attributes, elaborated types, etc).
   template <typename T>
   T getAsAdjusted() const;

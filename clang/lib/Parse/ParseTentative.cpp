@@ -1019,6 +1019,7 @@ Parser::isExpressionOrTypeSpecifierSimple(tok::TokenKind Kind) {
   case tok::kw___FUNCDNAME__:
   case tok::kw___FUNCSIG__:
   case tok::kw_L__FUNCTION__:
+  case tok::kw_L__FUNCSIG__:
   case tok::kw___PRETTY_FUNCTION__:
   case tok::kw___uuidof:
 #define TYPE_TRAIT(N,Spelling,K) \

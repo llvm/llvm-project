@@ -679,6 +679,18 @@ void CudaToolChain::addClangTargetOptions(
   }
 }
 
+bool CudaToolChain::supportsDebugInfoOption(const llvm::opt::Arg *A) const {
+  const Option &O = A->getOption();
+  return (O.matches(options::OPT_gN_Group) &&
+          !O.matches(options::OPT_gmodules)) ||
+         O.matches(options::OPT_g_Flag) ||
+         O.matches(options::OPT_ggdbN_Group) || O.matches(options::OPT_ggdb) ||
+         O.matches(options::OPT_gdwarf) || O.matches(options::OPT_gdwarf_2) ||
+         O.matches(options::OPT_gdwarf_3) || O.matches(options::OPT_gdwarf_4) ||
+         O.matches(options::OPT_gdwarf_5) ||
+         O.matches(options::OPT_gcolumn_info);
+}
+
 void CudaToolChain::AddCudaIncludeArgs(const ArgList &DriverArgs,
                                        ArgStringList &CC1Args) const {
   // Check our CUDA version if we're going to include the CUDA headers.

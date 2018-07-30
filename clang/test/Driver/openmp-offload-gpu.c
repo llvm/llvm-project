@@ -182,6 +182,8 @@
 // RUN:   %clang -### -no-canonical-prefixes -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=sm_60 %s -ggdb1 -O2 --cuda-noopt-device-debug 2>&1 \
 // RUN:   | FileCheck -check-prefix=NO_DEBUG -check-prefix=LINE_TABLE %s
 
+// LINE_TABLE-NOT: warning: debug
+// NO_DEBUG-NOT: warning: debug
 // NO_DEBUG: ptxas
 // LINE_TABLE: "-lineinfo"
 // NO_DEBUG-NOT: "-g"
@@ -203,6 +205,7 @@
 // RUN:   %clang -### -no-canonical-prefixes -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=sm_60 %s -ggdb3 -O2 --cuda-noopt-device-debug 2>&1 \
 // RUN:   | FileCheck -check-prefix=HAS_DEBUG %s
 
+// HAS_DEBUG-NOT: warning: debug
 // HAS_DEBUG: "-triple" "nvptx64-nvidia-cuda"
 // HAS_DEBUG-SAME: "-dwarf-version=2"
 // HAS_DEBUG-SAME: "-fopenmp-is-device"

@@ -348,6 +348,60 @@ namespace member_guides {
   };
 }
 
+namespace rdar41903969 {
+template <class T> struct A {};
+template <class T> struct B;
+template <class T> struct C {
+  C(A<T>&);
+  C(B<T>&);
+};
+
+void foo(A<int> &a, B<int> &b) {
+  (void)C{b};
+  (void)C{a};
+}
+
+template<typename T> struct X {
+  X(std::initializer_list<T>) = delete;
+  X(const X&);
+};
+
+template <class T> struct D : X<T> {};
+
+void bar(D<int>& d) {
+  (void)X{d};
+}
+}
+
+namespace rdar41330135 {
+template <int> struct A {};
+template <class T>
+struct S {
+  template <class U>
+  S(T a, U t, A<sizeof(t)>);
+};
+template <class T> struct D {
+  D(T t, A<sizeof(t)>);
+};
+int f() {
+  S s(0, 0, A<sizeof(int)>());
+  D d(0, A<sizeof(int)>());
+}
+
+namespace test_dupls {
+template<unsigned long> struct X {};
+template<typename T> struct A {
+  A(T t, X<sizeof(t)>);
+};
+A a(0, {});
+template<typename U> struct B {
+  B(U u, X<sizeof(u)>);
+};
+B b(0, {});
+}
+
+}
+
 #else
 
 // expected-no-diagnostics

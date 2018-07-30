@@ -291,6 +291,7 @@ const ContainerData *getContainerData(ProgramStateRef State,
                                       const MemRegion *Cont);
 ProgramStateRef setContainerData(ProgramStateRef State, const MemRegion *Cont,
                                  const ContainerData &CData);
+bool hasLiveIterators(ProgramStateRef State, const MemRegion *Cont);
 bool isOutOfRange(ProgramStateRef State, const IteratorPosition &Pos);
 bool isZero(ProgramStateRef State, const NonLoc &Val);
 } // namespace
@@ -536,7 +537,11 @@ void IteratorChecker::checkDeadSymbols(SymbolReaper &SR,
   auto ContMap = State->get<ContainerMap>();
   for (const auto Cont : ContMap) {
     if (!SR.isLiveRegion(Cont.first)) {
-      State = State->remove<ContainerMap>(Cont.first);
+      // We must keep the container data while it has live iterators to be able
+      // to compare them to the begin and the end of the container.
+      if (!hasLiveIterators(State, Cont.first)) {
+        State = State->remove<ContainerMap>(Cont.first);
+      }
     }
   }
 
@@ -1186,6 +1191,22 @@ ProgramStateRef relateIteratorPositions(ProgramStateRef State,
   }
 
   return NewState;
+}
+
+bool hasLiveIterators(ProgramStateRef State, const MemRegion *Cont) {
+  auto RegionMap = State->get<IteratorRegionMap>();
+  for (const auto Reg : RegionMap) {
+    if (Reg.second.getContainer() == Cont)
+      return true;
+  }
+
+  auto SymbolMap = State->get<IteratorSymbolMap>();
+  for (const auto Sym : SymbolMap) {
+    if (Sym.second.getContainer() == Cont)
+      return true;
+  }
+
+  return false;
 }
 
 bool isZero(ProgramStateRef State, const NonLoc &Val) {

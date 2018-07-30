@@ -112,6 +112,9 @@ __constant__ EC_I_EC c_ec_i_ec;
 // CHECK: @_ZZ2dfvE4s_ec = internal addrspace(3) global %struct.EC undef
 // CHECK: @_ZZ2dfvE5s_etc = internal addrspace(3) global %struct.ETC undef
 
+// CHECK: @_ZZ2dfvE11const_array = internal addrspace(4) constant [5 x i32] [i32 1, i32 2, i32 3, i32 4, i32 5]
+// CHECK: @_ZZ2dfvE9const_int = internal addrspace(4) constant i32 123
+
 // We should not emit global initializers for device-side variables.
 // CHECK-NOT: @__cxx_global_var_init
 
@@ -233,6 +236,9 @@ __device__ void df() {
   // CHECK-NOT: call void @_ZN2ECC1Ev(%struct.EC* addrspacecast (%struct.EC addrspace(3)* @_ZZ2dfvE4s_ec to %struct.EC*))
   static __shared__ ETC s_etc;
   // CHECK-NOT: call void @_ZN3ETCC1IJEEEDpT_(%struct.ETC* addrspacecast (%struct.ETC addrspace(3)* @_ZZ2dfvE5s_etc to %struct.ETC*))
+
+  static const int const_array[] = {1, 2, 3, 4, 5};
+  static const int const_int = 123;
 
   // anchor point separating constructors and destructors
   df(); // CHECK: call void @_Z2dfv()
