@@ -8580,7 +8580,7 @@ static SDValue performXorCombine(SDNode *N, SelectionDAG &DAG,
 SDValue
 AArch64TargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
                                      SelectionDAG &DAG,
-                                     std::vector<SDNode *> *Created) const {
+                                     std::vector<SDNode *> &Created) const {
   AttributeList Attr = DAG.getMachineFunction().getFunction().getAttributes();
   if (isIntDivCheap(N->getValueType(0), Attr))
     return SDValue(N,0); // Lower SDIV as SDIV
@@ -8603,11 +8603,9 @@ AArch64TargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
   SDValue Add = DAG.getNode(ISD::ADD, DL, VT, N0, Pow2MinusOne);
   SDValue CSel = DAG.getNode(AArch64ISD::CSEL, DL, VT, Add, N0, CCVal, Cmp);
 
-  if (Created) {
-    Created->push_back(Cmp.getNode());
-    Created->push_back(Add.getNode());
-    Created->push_back(CSel.getNode());
-  }
+  Created.push_back(Cmp.getNode());
+  Created.push_back(Add.getNode());
+  Created.push_back(CSel.getNode());
 
   // Divide by pow2.
   SDValue SRA =
@@ -8618,8 +8616,7 @@ AArch64TargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
   if (Divisor.isNonNegative())
     return SRA;
 
-  if (Created)
-    Created->push_back(SRA.getNode());
+  Created.push_back(SRA.getNode());
   return DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), SRA);
 }
 
