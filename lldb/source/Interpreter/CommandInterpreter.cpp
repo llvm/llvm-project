@@ -482,7 +482,7 @@ void CommandInterpreter::LoadCommandDictionary() {
   std::unique_ptr<CommandObjectRegexCommand> break_regex_cmd_ap(
       new CommandObjectRegexCommand(
           *this, "_regexp-break",
-          "Set a breakpoint using one of several shorthand formats.\n",
+          "Set a breakpoint using one of several shorthand formats.",
           "\n"
           "_regexp-break <filename>:<linenum>\n"
           "              main.c:12             // Break at line 12 of "
@@ -531,7 +531,7 @@ void CommandInterpreter::LoadCommandDictionary() {
   std::unique_ptr<CommandObjectRegexCommand> tbreak_regex_cmd_ap(
       new CommandObjectRegexCommand(
           *this, "_regexp-tbreak",
-          "Set a one-shot breakpoint using one of several shorthand formats.\n",
+          "Set a one-shot breakpoint using one of several shorthand formats.",
           "\n"
           "_regexp-break <filename>:<linenum>\n"
           "              main.c:12             // Break at line 12 of "
