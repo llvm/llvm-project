@@ -2188,7 +2188,8 @@ void Generic_GCC::GCCInstallationDetector::ScanLibDirForGCCTriple(
       // this on Freescale triples, though, since some systems put a *lot* of
       // files in that location, not just GCC installation data.
       {CandidateTriple.str(), "..",
-       TargetTriple.getVendor() == llvm::Triple::Freescale},
+       TargetTriple.getVendor() == llvm::Triple::Freescale ||
+       TargetTriple.getVendor() == llvm::Triple::OpenEmbedded},
 
       // Natively multiarch systems sometimes put the GCC triple-specific
       // directory within their multiarch lib directory, resulting in the
