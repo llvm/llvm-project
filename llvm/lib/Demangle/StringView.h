@@ -22,6 +22,8 @@ class StringView {
   const char *Last;
 
 public:
+  static const size_t npos = ~size_t(0);
+
   template <size_t N>
   StringView(const char (&Str)[N]) : First(Str), Last(Str + N - 1) {}
   StringView(const char *First_, const char *Last_)
@@ -33,6 +35,17 @@ public:
 
   StringView substr(size_t From) const {
     return StringView(begin() + From, size() - From);
+  }
+
+  size_t find(char C, size_t From = 0) const {
+    size_t FindBegin = std::min(From, size());
+    // Avoid calling memchr with nullptr.
+    if (FindBegin < size()) {
+      // Just forward to memchr, which is faster than a hand-rolled loop.
+      if (const void *P = ::memchr(First + FindBegin, C, size() - FindBegin))
+        return static_cast<const char *>(P) - First;
+    }
+    return npos;
   }
 
   StringView substr(size_t From, size_t To) const {
@@ -49,9 +62,20 @@ public:
     return StringView(First + N, Last);
   }
 
+  StringView dropBack(size_t N = 1) const {
+    if (N >= size())
+      N = size();
+    return StringView(First, Last - N);
+  }
+
   char front() const {
     assert(!empty());
     return *begin();
+  }
+
+  char back() const {
+    assert(!empty());
+    return *(end() - 1);
   }
 
   char popFront() {

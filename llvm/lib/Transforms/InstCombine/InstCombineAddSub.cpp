@@ -1614,6 +1614,14 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
   if (match(Op0, m_Not(m_Value(X))) && match(Op1, m_Not(m_Value(Y))))
     return BinaryOperator::CreateSub(Y, X);
 
+  // (X + -1) - Y --> ~Y + X
+  if (match(Op0, m_OneUse(m_Add(m_Value(X), m_AllOnes()))))
+    return BinaryOperator::CreateAdd(Builder.CreateNot(Op1), X);
+
+  // Y - (X + 1) --> ~X + Y
+  if (match(Op1, m_OneUse(m_Add(m_Value(X), m_One()))))
+    return BinaryOperator::CreateAdd(Builder.CreateNot(X), Op0);
+
   if (Constant *C = dyn_cast<Constant>(Op0)) {
     bool IsNegate = match(C, m_ZeroInt());
     Value *X;

@@ -594,7 +594,8 @@ unsigned RegScavenger::scavengeRegisterBackwards(const TargetRegisterClass &RC,
     MachineBasicBlock::iterator ReloadAfter =
       RestoreAfter ? std::next(MBBI) : MBBI;
     MachineBasicBlock::iterator ReloadBefore = std::next(ReloadAfter);
-    LLVM_DEBUG(dbgs() << "Reload before: " << *ReloadBefore << '\n');
+    if (ReloadBefore != MBB.end())
+      LLVM_DEBUG(dbgs() << "Reload before: " << *ReloadBefore << '\n');
     ScavengedInfo &Scavenged = spill(Reg, RC, SPAdj, SpillBefore, ReloadBefore);
     Scavenged.Restore = &*std::prev(SpillBefore);
     LiveUnits.removeReg(Reg);

@@ -2332,6 +2332,36 @@ bool SIInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
          changesVGPRIndexingMode(MI);
 }
 
+bool SIInstrInfo::hasUnwantedEffectsWhenEXECEmpty(const MachineInstr &MI) const {
+  unsigned Opcode = MI.getOpcode();
+
+  if (MI.mayStore() && isSMRD(MI))
+    return true; // scalar store or atomic
+
+  // These instructions cause shader I/O that may cause hardware lockups
+  // when executed with an empty EXEC mask.
+  //
+  // Note: exp with VM = DONE = 0 is automatically skipped by hardware when
+  //       EXEC = 0, but checking for that case here seems not worth it
+  //       given the typical code patterns.
+  if (Opcode == AMDGPU::S_SENDMSG || Opcode == AMDGPU::S_SENDMSGHALT ||
+      Opcode == AMDGPU::EXP || Opcode == AMDGPU::EXP_DONE)
+    return true;
+
+  if (MI.isInlineAsm())
+    return true; // conservative assumption
+
+  // These are like SALU instructions in terms of effects, so it's questionable
+  // whether we should return true for those.
+  //
+  // However, executing them with EXEC = 0 causes them to operate on undefined
+  // data, which we avoid by returning true here.
+  if (Opcode == AMDGPU::V_READFIRSTLANE_B32 || Opcode == AMDGPU::V_READLANE_B32)
+    return true;
+
+  return false;
+}
+
 bool SIInstrInfo::isInlineConstant(const APInt &Imm) const {
   switch (Imm.getBitWidth()) {
   case 32:

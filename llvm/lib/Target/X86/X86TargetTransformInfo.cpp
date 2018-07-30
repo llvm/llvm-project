@@ -2332,15 +2332,9 @@ int X86TTIImpl::getIntImmCost(unsigned Opcode, unsigned Idx, const APInt &Imm,
     // immediates here as the normal path expects bit 31 to be sign extended.
     if (Idx == 1 && Imm.getBitWidth() == 64 && isUInt<32>(Imm.getZExtValue()))
       return TTI::TCC_Free;
-    ImmIdx = 1;
-    break;
+    LLVM_FALLTHROUGH;
   case Instruction::Add:
   case Instruction::Sub:
-    // For add/sub, we can use the opposite instruction for INT32_MIN.
-    if (Idx == 1 && Imm.getBitWidth() == 64 && isInt<32>(-Imm.getSExtValue()))
-      return TTI::TCC_Free;
-    ImmIdx = 1;
-    break;
   case Instruction::Mul:
   case Instruction::UDiv:
   case Instruction::SDiv:

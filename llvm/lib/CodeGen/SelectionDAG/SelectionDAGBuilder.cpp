@@ -7198,11 +7198,10 @@ static SDValue getAddressForMemoryInput(SDValue Chain, const SDLoc &Location,
 /// uses features that we can't model on machineinstrs, we have SDISel do the
 /// allocation.  This produces generally horrible, but correct, code.
 ///
-///   OpInfo describes the operand
-///   RefOpInfo describes the matching operand if any, the operand otherwise
+///   OpInfo describes the operand.
 static void GetRegistersForValue(SelectionDAG &DAG, const TargetLowering &TLI,
-                                 const SDLoc &DL, SDISelAsmOperandInfo &OpInfo,
-                                 SDISelAsmOperandInfo &RefOpInfo) {
+                                 const SDLoc &DL,
+                                 SDISelAsmOperandInfo &OpInfo) {
   LLVMContext &Context = *DAG.getContext();
 
   MachineFunction &MF = DAG.getMachineFunction();
@@ -7212,8 +7211,8 @@ static void GetRegistersForValue(SelectionDAG &DAG, const TargetLowering &TLI,
   // If this is a constraint for a single physreg, or a constraint for a
   // register class, find it.
   std::pair<unsigned, const TargetRegisterClass *> PhysReg =
-      TLI.getRegForInlineAsmConstraint(&TRI, RefOpInfo.ConstraintCode,
-                                       RefOpInfo.ConstraintVT);
+      TLI.getRegForInlineAsmConstraint(&TRI, OpInfo.ConstraintCode,
+                                       OpInfo.ConstraintVT);
 
   unsigned NumRegs = 1;
   if (OpInfo.ConstraintVT != MVT::Other) {
@@ -7254,11 +7253,6 @@ static void GetRegistersForValue(SelectionDAG &DAG, const TargetLowering &TLI,
 
     NumRegs = TLI.getNumRegisters(Context, OpInfo.ConstraintVT);
   }
-
-  // No need to allocate a matching input constraint since the constraint it's
-  // matching to has already been allocated.
-  if (OpInfo.isMatchingInputConstraint())
-    return;
 
   MVT RegVT;
   EVT ValueVT = OpInfo.ConstraintVT;
@@ -7508,27 +7502,19 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
 
     // If this constraint is for a specific register, allocate it before
     // anything else.
-    SDISelAsmOperandInfo &RefOpInfo =
-        OpInfo.isMatchingInputConstraint()
-            ? ConstraintOperands[OpInfo.getMatchedOperand()]
-            : ConstraintOperands[i];
-    if (RefOpInfo.ConstraintType == TargetLowering::C_Register)
-      GetRegistersForValue(DAG, TLI, getCurSDLoc(), OpInfo, RefOpInfo);
+    if (OpInfo.ConstraintType == TargetLowering::C_Register)
+      GetRegistersForValue(DAG, TLI, getCurSDLoc(), OpInfo);
   }
 
   // Third pass - Loop over all of the operands, assigning virtual or physregs
   // to register class operands.
   for (unsigned i = 0, e = ConstraintOperands.size(); i != e; ++i) {
     SDISelAsmOperandInfo &OpInfo = ConstraintOperands[i];
-    SDISelAsmOperandInfo &RefOpInfo =
-        OpInfo.isMatchingInputConstraint()
-            ? ConstraintOperands[OpInfo.getMatchedOperand()]
-            : ConstraintOperands[i];
 
     // C_Register operands have already been allocated, Other/Memory don't need
     // to be.
-    if (RefOpInfo.ConstraintType == TargetLowering::C_RegisterClass)
-      GetRegistersForValue(DAG, TLI, getCurSDLoc(), OpInfo, RefOpInfo);
+    if (OpInfo.ConstraintType == TargetLowering::C_RegisterClass)
+      GetRegistersForValue(DAG, TLI, getCurSDLoc(), OpInfo);
   }
 
   // AsmNodeOperands - The operands for the ISD::INLINEASM node.
