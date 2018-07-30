@@ -56,7 +56,7 @@
 // - it makes linker optimizations less useful (order files, LOHs, ...)
 // - it forces usage of indexed addressing (which isn't necessarily "free")
 // - it can increase register pressure when the uses are disparate enough.
-// 
+//
 // We use heuristics to discover the best global grouping we can (cf cl::opts).
 //
 // ===---------------------------------------------------------------------===//

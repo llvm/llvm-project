@@ -45,6 +45,6 @@ _mm_clzero (void * __line)
   __builtin_ia32_clzero ((void *)__line);
 }
 
-#undef __DEFAULT_FN_ATTRS 
+#undef __DEFAULT_FN_ATTRS
 
 #endif /* __CLZEROINTRIN_H */

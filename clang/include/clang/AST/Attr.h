@@ -86,7 +86,7 @@ public:
   attr::Kind getKind() const {
     return static_cast<attr::Kind>(AttrKind);
   }
-  
+
   unsigned getSpellingListIndex() const { return SpellingListIndex; }
   const char *getSpelling() const;
 

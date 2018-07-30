@@ -30,3 +30,31 @@ lslr    z0.d, p0/m, z0.d, z0.d
 // CHECK-ENCODING: [0x00,0x80,0xd7,0x04]
 // CHECK-ERROR: instruction requires: sve
 // CHECK-UNKNOWN: 00 80 d7 04 <unknown>
+
+
+// --------------------------------------------------------------------------//
+// Test compatibility with MOVPRFX instruction.
+
+movprfx z5.d, p0/z, z7.d
+// CHECK-INST: movprfx	z5.d, p0/z, z7.d
+// CHECK-ENCODING: [0xe5,0x20,0xd0,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: e5 20 d0 04 <unknown>
+
+lslr    z5.d, p0/m, z5.d, z0.d
+// CHECK-INST: lslr	z5.d, p0/m, z5.d, z0.d
+// CHECK-ENCODING: [0x05,0x80,0xd7,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 05 80 d7 04 <unknown>
+
+movprfx z5, z7
+// CHECK-INST: movprfx	z5, z7
+// CHECK-ENCODING: [0xe5,0xbc,0x20,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: e5 bc 20 04 <unknown>
+
+lslr    z5.d, p0/m, z5.d, z0.d
+// CHECK-INST: lslr	z5.d, p0/m, z5.d, z0.d
+// CHECK-ENCODING: [0x05,0x80,0xd7,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 05 80 d7 04 <unknown>

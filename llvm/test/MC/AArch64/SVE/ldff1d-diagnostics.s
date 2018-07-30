@@ -111,3 +111,19 @@ ldff1d z0.d, p0/z, [z0.d, #3]
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 8 in range [0, 248].
 // CHECK-NEXT: ldff1d z0.d, p0/z, [z0.d, #3]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+
+// --------------------------------------------------------------------------//
+// Negative tests for instructions that are incompatible with movprfx
+
+movprfx z0.d, p0/z, z7.d
+ldff1d  { z0.d }, p0/z, [z0.d]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
+// CHECK-NEXT: ldff1d  { z0.d }, p0/z, [z0.d]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+movprfx z0, z7
+ldff1d  { z0.d }, p0/z, [z0.d]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
+// CHECK-NEXT: ldff1d  { z0.d }, p0/z, [z0.d]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:

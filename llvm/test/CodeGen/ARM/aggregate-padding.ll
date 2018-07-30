@@ -99,3 +99,19 @@ define i16 @test_i16_forced_stack([8 x double], double, i32, i32, [3 x i16] %arg
   %sum = add i16 %val0, %val2
   ret i16 %sum
 }
+
+; [2 x <4 x i32>] should be aligned only on a 64-bit boundary and contiguous.
+; None of the two <4 x i32> elements should introduce any padding to 128 bits.
+define i32 @test_4xi32_64bit_aligned_and_contiguous([8 x double], float, [2 x <4 x i32>] %arg) nounwind {
+; CHECK-LABEL: test_4xi32_64bit_aligned_and_contiguous:
+; CHECK-DAG: ldr [[VAL0_0:r[0-9]+]], [sp, #8]
+; CHECK-DAG: ldr [[VAL1_0:r[0-9]+]], [sp, #24]
+; CHECK: add r0, [[VAL0_0]], [[VAL1_0]]
+
+  %val0 = extractvalue [2 x <4 x i32>] %arg, 0
+  %val0_0 = extractelement <4 x i32> %val0, i32 0
+  %val1 = extractvalue [2 x <4 x i32>] %arg, 1
+  %val1_0 = extractelement <4 x i32> %val1, i32 0
+  %sum = add i32 %val0_0, %val1_0
+  ret i32 %sum
+}

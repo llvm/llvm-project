@@ -117,12 +117,12 @@ public:
   }
 };
 
-/// \class RuntimeDefinition 
+/// \class RuntimeDefinition
 /// Defines the runtime definition of the called function.
-/// 
-/// Encapsulates the information we have about which Decl will be used 
+///
+/// Encapsulates the information we have about which Decl will be used
 /// when the call is executed on the given path. When dealing with dynamic
-/// dispatch, the information is based on DynamicTypeInfo and might not be 
+/// dispatch, the information is based on DynamicTypeInfo and might not be
 /// precise.
 class RuntimeDefinition {
   /// The Declaration of the function which could be called at runtime.
@@ -141,13 +141,13 @@ public:
   RuntimeDefinition(const Decl *InD, const MemRegion *InR): D(InD), R(InR) {}
 
   const Decl *getDecl() { return D; }
-    
-  /// Check if the definition we have is precise. 
-  /// If not, it is possible that the call dispatches to another definition at 
+
+  /// Check if the definition we have is precise.
+  /// If not, it is possible that the call dispatches to another definition at
   /// execution time.
   bool mayHaveOtherDefinitions() { return R != nullptr; }
-  
-  /// When other definitions are possible, returns the region whose runtime type 
+
+  /// When other definitions are possible, returns the region whose runtime type
   /// determines the method definition.
   const MemRegion *getDispatchRegion() { return R; }
 };
@@ -628,7 +628,7 @@ protected:
       : AnyFunctionCall(D, St, LCtx) {}
   CXXInstanceCall(const CXXInstanceCall &Other) = default;
 
-  void getExtraInvalidatedValues(ValueList &Values, 
+  void getExtraInvalidatedValues(ValueList &Values,
          RegionAndSymbolInvalidationTraits *ETraits) const override;
 
 public:

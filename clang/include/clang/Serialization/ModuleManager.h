@@ -82,7 +82,7 @@ class ModuleManager {
 
   /// The visitation order.
   SmallVector<ModuleFile *, 4> VisitOrder;
-      
+
   /// The list of module files that both we and the global module index
   /// know about.
   ///
@@ -150,13 +150,13 @@ public:
 
   /// Forward iterator end-point to traverse all loaded modules
   ModuleIterator end() { return Chain.end(); }
-  
+
   /// Const forward iterator to traverse all loaded modules.
   ModuleConstIterator begin() const { return Chain.begin(); }
 
   /// Const forward iterator end-point to traverse all loaded modules
   ModuleConstIterator end() const { return Chain.end(); }
-  
+
   /// Reverse iterator to traverse all loaded modules.
   ModuleReverseIterator rbegin() { return Chain.rbegin(); }
 
@@ -172,14 +172,14 @@ public:
   /// Returns the primary module associated with the manager, that is,
   /// the first module loaded
   ModuleFile &getPrimaryModule() { return *Chain[0]; }
-  
+
   /// Returns the primary module associated with the manager, that is,
   /// the first module loaded.
   ModuleFile &getPrimaryModule() const { return *Chain[0]; }
-  
+
   /// Returns the module associated with the given index
   ModuleFile &operator[](unsigned Index) const { return *Chain[Index]; }
-  
+
   /// Returns the module associated with the given file name.
   ModuleFile *lookupByFileName(StringRef FileName) const;
 
@@ -191,7 +191,7 @@ public:
 
   /// Returns the in-memory (virtual file) buffer with the given name
   std::unique_ptr<llvm::MemoryBuffer> lookupBuffer(StringRef Name);
-  
+
   /// Number of modules loaded
   unsigned size() const { return Chain.size(); }
 

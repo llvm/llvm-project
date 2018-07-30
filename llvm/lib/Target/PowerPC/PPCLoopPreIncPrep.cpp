@@ -360,7 +360,7 @@ bool PPCLoopPreIncPrep::runOnLoop(Loop *L) {
     // generate direct offsets from both the pre-incremented and
     // post-incremented pointer values. Thus, we'll pick the first non-prefetch
     // instruction in each bucket, and adjust the recurrence and other offsets
-    // accordingly. 
+    // accordingly.
     for (int j = 0, je = Buckets[i].Elements.size(); j != je; ++j) {
       if (auto *II = dyn_cast<IntrinsicInst>(Buckets[i].Elements[j].Instr))
         if (II->getIntrinsicID() == Intrinsic::prefetch)

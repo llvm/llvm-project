@@ -64,7 +64,7 @@ public:
 
   /// Returns true if at least one of the register writes performed by
   /// \param Inst implicitly clears the upper portion of all super-registers.
-  /// 
+  ///
   /// Example: on X86-64, a write to EAX implicitly clears the upper half of
   /// RAX. Also (still on x86) an XMM write perfomed by an AVX 128-bit
   /// instruction implicitly clears the upper portion of the correspondent

@@ -62,7 +62,7 @@ class Sema;
     /// Succeeded, but refers to a deleted function.
     OR_Deleted
   };
-  
+
   enum OverloadCandidateDisplayKind {
     /// Requests that all candidates be shown.  Viable candidates will
     /// be printed first.
@@ -107,7 +107,7 @@ class Sema;
     /// Integral conversions (C++ [conv.integral])
     ICK_Integral_Conversion,
 
-    /// Floating point conversions (C++ [conv.double] 
+    /// Floating point conversions (C++ [conv.double]
     ICK_Floating_Conversion,
 
     /// Complex conversions (C99 6.3.1.6)
@@ -252,7 +252,7 @@ class Sema;
     /// Whether the qualification conversion involves a change in the
     /// Objective-C lifetime (for automatic reference counting).
     unsigned QualificationIncludesObjCLifetime : 1;
-    
+
     /// IncompatibleObjC - Whether this is an Objective-C conversion
     /// that we should warn about (if we actually use it).
     unsigned IncompatibleObjC : 1;
@@ -268,21 +268,21 @@ class Sema;
     /// Whether this is an lvalue reference binding (otherwise, it's
     /// an rvalue reference binding).
     unsigned IsLvalueReference : 1;
-    
+
     /// Whether we're binding to a function lvalue.
     unsigned BindsToFunctionLvalue : 1;
-    
+
     /// Whether we're binding to an rvalue.
     unsigned BindsToRvalue : 1;
-    
-    /// Whether this binds an implicit object argument to a 
+
+    /// Whether this binds an implicit object argument to a
     /// non-static member function without a ref-qualifier.
     unsigned BindsImplicitObjectArgumentWithoutRefQualifier : 1;
-    
+
     /// Whether this binds a reference to an object with a different
     /// Objective-C lifetime qualifier.
     unsigned ObjCLifetimeConversionBinding : 1;
-    
+
     /// FromType - The type that this conversion is converting
     /// from. This is an opaque pointer that can be translated into a
     /// QualType.
@@ -303,13 +303,13 @@ class Sema;
 
     void setFromType(QualType T) { FromTypePtr = T.getAsOpaquePtr(); }
 
-    void setToType(unsigned Idx, QualType T) { 
+    void setToType(unsigned Idx, QualType T) {
       assert(Idx < 3 && "To type index is out of range");
-      ToTypePtrs[Idx] = T.getAsOpaquePtr(); 
+      ToTypePtrs[Idx] = T.getAsOpaquePtr();
     }
 
     void setAllToTypes(QualType T) {
-      ToTypePtrs[0] = T.getAsOpaquePtr(); 
+      ToTypePtrs[0] = T.getAsOpaquePtr();
       ToTypePtrs[1] = ToTypePtrs[0];
       ToTypePtrs[2] = ToTypePtrs[0];
     }
@@ -324,11 +324,11 @@ class Sema;
     }
 
     void setAsIdentityConversion();
-    
+
     bool isIdentityConversion() const {
       return Second == ICK_Identity && Third == ICK_Identity;
     }
-    
+
     ImplicitConversionRank getRank() const;
     NarrowingKind
     getNarrowingKind(ASTContext &Context, const Expr *Converted,
@@ -562,7 +562,7 @@ class Sema;
       new (this) ImplicitConversionSequence(Other);
       return *this;
     }
-    
+
     ~ImplicitConversionSequence() {
       destruct();
     }
@@ -571,7 +571,7 @@ class Sema;
       assert(isInitialized() && "querying uninitialized conversion");
       return Kind(ConversionKind);
     }
-    
+
     /// Return a ranking of the implicit conversion sequence
     /// kind, where smaller ranks represent better conversion
     /// sequences.
@@ -581,11 +581,11 @@ class Sema;
     /// per C++ [over.best.ics]p10.
     unsigned getKindRank() const {
       switch (getKind()) {
-      case StandardConversion: 
+      case StandardConversion:
         return 0;
 
       case UserDefinedConversion:
-      case AmbiguousConversion: 
+      case AmbiguousConversion:
         return 1;
 
       case EllipsisConversion:
@@ -781,7 +781,7 @@ class Sema;
 
     union {
       DeductionFailureInfo DeductionFailure;
-      
+
       /// FinalConversion - For a conversion function (where Function is
       /// a CXXConversionDecl), the standard conversion that occurs
       /// after the call to the overload candidate to convert the result

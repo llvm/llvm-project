@@ -509,7 +509,7 @@ class EHScopeStack::iterator {
 public:
   iterator() : Ptr(nullptr) {}
 
-  EHScope *get() const { 
+  EHScope *get() const {
     return reinterpret_cast<EHScope*>(Ptr);
   }
 

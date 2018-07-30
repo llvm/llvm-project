@@ -75,7 +75,7 @@ bool IndexingContext::handleReference(const NamedDecl *D, SourceLocation Loc,
 
   if (isa<NonTypeTemplateParmDecl>(D) || isa<TemplateTypeParmDecl>(D))
     return true;
-    
+
   return handleDeclOccurrence(D, Loc, /*IsRef=*/true, Parent, Roles, Relations,
                               RefE, RefD, DC);
 }

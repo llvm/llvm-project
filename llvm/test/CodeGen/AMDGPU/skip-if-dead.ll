@@ -72,10 +72,18 @@ define amdgpu_ps void @test_kill_depth_var_x2(float %x, float %y) #0 {
 ; CHECK-LABEL: {{^}}test_kill_depth_var_x2_instructions:
 ; CHECK-NEXT: ; %bb.0:
 ; CHECK-NEXT: v_cmpx_le_f32_e32 vcc, 0, v0
+; CHECK-NEXT: s_cbranch_execnz BB6_2
 ; CHECK-NEXT: ; %bb.1:
+; CHECK-NEXT: exp
+; CHECK-NEXT: s_endpgm
+; CHECK-NEXT: BB6_2:
 ; CHECK: v_mov_b32_e64 v7, -1
 ; CHECK: v_cmpx_le_f32_e32 vcc, 0, v7
-; CHECK-NEXT: ; %bb.2:
+; CHECK-NEXT: s_cbranch_execnz BB6_4
+; CHECK-NEXT: ; %bb.3:
+; CHECK-NEXT: exp
+; CHECK-NEXT: s_endpgm
+; CHECK-NEXT: BB6_4:
 ; CHECK-NEXT: s_endpgm
 define amdgpu_ps void @test_kill_depth_var_x2_instructions(float %x) #0 {
   call void @llvm.AMDGPU.kill(float %x)

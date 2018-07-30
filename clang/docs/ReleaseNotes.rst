@@ -46,7 +46,9 @@ sections with improvements to Clang's support for those languages.
 Major New Features
 ------------------
 
--  ...
+- A new Implicit Conversion Sanitizer (``-fsanitize=implicit-conversion``) group
+  was added. Please refer to the :ref:`release-notes-ubsan` section of the
+  release notes for the details.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -280,10 +282,36 @@ Static Analyzer
 
 ...
 
+.. _release-notes-ubsan:
+
 Undefined Behavior Sanitizer (UBSan)
 ------------------------------------
 
-* ...
+* A new Implicit Conversion Sanitizer (``-fsanitize=implicit-conversion``) group
+  was added.
+
+  Currently, only one type of issues is caught - implicit integer truncation
+  (``-fsanitize=implicit-integer-truncation``), also known as integer demotion.
+  While there is a ``-Wconversion`` diagnostic group that catches this kind of
+  issues, it is both noisy, and does not catch **all** the cases.
+
+  .. code-block:: c++
+
+      unsigned char store = 0;
+
+      bool consume(unsigned int val);
+
+      void test(unsigned long val) {
+        if (consume(val)) // the value may have been silently truncated.
+          store = store + 768; // before addition, 'store' was promoted to int.
+        (void)consume((unsigned int)val); // OK, the truncation is explicit.
+      }
+
+  Just like other ``-fsanitize=integer`` checks, these issues are **not**
+  undefined behaviour. But they are not *always* intentional, and are somewhat
+  hard to track down. This group is **not** enabled by ``-fsanitize=undefined``,
+  but the ``-fsanitize=implicit-integer-truncation`` check
+  is enabled by ``-fsanitize=integer``.
 
 Core Analysis Improvements
 ==========================

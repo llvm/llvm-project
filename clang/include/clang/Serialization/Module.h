@@ -173,7 +173,7 @@ public:
 
   /// The generation of which this module file is a part.
   unsigned Generation;
-  
+
   /// The memory buffer that stores the data associated with
   /// this AST file, owned by the PCMCache in the ModuleManager.
   llvm::MemoryBuffer *Buffer;
@@ -358,17 +358,17 @@ public:
   /// the header files.
   void *HeaderFileInfoTable = nullptr;
 
-  // === Submodule information ===  
+  // === Submodule information ===
 
   /// The number of submodules in this module.
   unsigned LocalNumSubmodules = 0;
-  
+
   /// Base submodule ID for submodules local to this module.
   serialization::SubmoduleID BaseSubmoduleID = 0;
-  
+
   /// Remapping table for submodule IDs in this module.
   ContinuousRangeMap<uint32_t, int, 2> SubmoduleRemap;
-  
+
   // === Selectors ===
 
   /// The number of selectors new to this file.
@@ -431,13 +431,13 @@ public:
   const serialization::DeclID *FileSortedDecls = nullptr;
   unsigned NumFileSortedDecls = 0;
 
-  /// Array of category list location information within this 
+  /// Array of category list location information within this
   /// module file, sorted by the definition ID.
   const serialization::ObjCCategoriesInfo *ObjCCategoriesMap = nullptr;
-  
+
   /// The number of redeclaration info entries in ObjCCategoriesMap.
   unsigned LocalNumObjCCategoriesInMap = 0;
-  
+
   /// The Objective-C category lists for categories known to this
   /// module.
   SmallVector<uint64_t, 1> ObjCCategories;

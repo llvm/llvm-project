@@ -340,7 +340,7 @@ void LiveDebugValues::printVarLocInMBB(const MachineFunction &MF,
 /// address the spill location in a target independent way.
 int LiveDebugValues::extractSpillBaseRegAndOffset(const MachineInstr &MI,
                                                   unsigned &Reg) {
-  assert(MI.hasOneMemOperand() && 
+  assert(MI.hasOneMemOperand() &&
          "Spill instruction does not have exactly one memory operand?");
   auto MMOI = MI.memoperands_begin();
   const PseudoSourceValue *PVal = (*MMOI)->getPseudoValue();
@@ -472,7 +472,7 @@ bool LiveDebugValues::isSpillInstruction(const MachineInstr &MI,
   int FI;
   const MachineMemOperand *MMO;
 
-  // TODO: Handle multiple stores folded into one. 
+  // TODO: Handle multiple stores folded into one.
   if (!MI.hasOneMemOperand())
     return false;
 

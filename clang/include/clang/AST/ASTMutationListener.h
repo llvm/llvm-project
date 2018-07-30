@@ -134,13 +134,13 @@ public:
   /// \param M The containing module in which the definition was made visible,
   ///        if any.
   virtual void RedefinedHiddenDefinition(const NamedDecl *D, Module *M) {}
-  
+
   /// An attribute was added to a RecordDecl
   ///
   /// \param Attr The attribute that was added to the Record
   ///
   /// \param Record The RecordDecl that got a new attribute
-  virtual void AddedAttributeToRecord(const Attr *Attr, 
+  virtual void AddedAttributeToRecord(const Attr *Attr,
                                       const RecordDecl *Record) {}
 
   // NOTE: If new methods are added they should also be added to

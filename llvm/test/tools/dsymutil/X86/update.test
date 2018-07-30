@@ -1,7 +1,3 @@
-UNSUPPORTED: system-windows
-Windows does not like renaming files that have open handles to them. We
-need to use TempFile::keep to move them in a portable way.
-
 RUN: rm -rf %t.dir
 RUN: mkdir -p %t.dir
 RUN: cat %p/../Inputs/basic.macho.x86_64 > %t.dir/basic

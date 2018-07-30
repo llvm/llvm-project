@@ -10,7 +10,7 @@
 /// Contains a collection of routines for determining if a given instruction is
 /// guaranteed to execute if a given point in control flow is reached.  The most
 /// common example is an instruction within a loop being provably executed if we
-/// branch to the header of it's containing loop.  
+/// branch to the header of it's containing loop.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -58,7 +58,7 @@ void computeLoopSafetyInfo(LoopSafetyInfo *, Loop *);
 bool isGuaranteedToExecute(const Instruction &Inst, const DominatorTree *DT,
                            const Loop *CurLoop,
                            const LoopSafetyInfo *SafetyInfo);
-  
+
 }
 
 #endif

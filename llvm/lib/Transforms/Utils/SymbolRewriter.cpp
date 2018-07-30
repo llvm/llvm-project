@@ -536,7 +536,7 @@ private:
 char RewriteSymbolsLegacyPass::ID = 0;
 
 RewriteSymbolsLegacyPass::RewriteSymbolsLegacyPass() : ModulePass(ID) {
-  initializeRewriteSymbolsLegacyPassPass(*PassRegistry::getPassRegistry());  
+  initializeRewriteSymbolsLegacyPassPass(*PassRegistry::getPassRegistry());
 }
 
 RewriteSymbolsLegacyPass::RewriteSymbolsLegacyPass(

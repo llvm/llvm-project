@@ -56,20 +56,20 @@ namespace llvm {
   };
 
   template<> struct DenseMapInfo<clang::CanQualType> {
-    static inline clang::CanQualType getEmptyKey() { 
-      return clang::CanQualType(); 
+    static inline clang::CanQualType getEmptyKey() {
+      return clang::CanQualType();
     }
-    
+
     static inline clang::CanQualType getTombstoneKey() {
       using clang::CanQualType;
       return CanQualType::getFromOpaquePtr(reinterpret_cast<clang::Type *>(-1));
     }
-    
+
     static unsigned getHashValue(clang::CanQualType Val) {
       return (unsigned)((uintptr_t)Val.getAsOpaquePtr()) ^
       ((unsigned)((uintptr_t)Val.getAsOpaquePtr() >> 9));
     }
-    
+
     static bool isEqual(clang::CanQualType LHS, clang::CanQualType RHS) {
       return LHS == RHS;
     }

@@ -34,10 +34,10 @@ namespace clang {
 
 class ASTContext;
 class NamedDecl;
-  
+
 /// Represents an element in a path from a derived class to a
-/// base class. 
-/// 
+/// base class.
+///
 /// Each step in the path references the link from a
 /// derived class to one of its direct base classes, along with a
 /// base "number" that identifies which base subobject of the
@@ -47,12 +47,12 @@ struct CXXBasePathElement {
   /// class to a base class, which will be followed by this base
   /// path element.
   const CXXBaseSpecifier *Base;
-  
+
   /// The record decl of the class that the base is a base of.
   const CXXRecordDecl *Class;
-  
+
   /// Identifies which base class subobject (of type
-  /// \c Base->getType()) this base path element refers to. 
+  /// \c Base->getType()) this base path element refers to.
   ///
   /// This value is only valid if \c !Base->isVirtual(), because there
   /// is no base numbering for the zero or one virtual bases of a
@@ -64,7 +64,7 @@ struct CXXBasePathElement {
 /// (which is not represented as part of the path) to a particular
 /// (direct or indirect) base class subobject.
 ///
-/// Individual elements in the path are described by the \c CXXBasePathElement 
+/// Individual elements in the path are described by the \c CXXBasePathElement
 /// structure, which captures both the link from a derived class to one of its
 /// direct bases and identification describing which base class
 /// subobject is being used.
@@ -121,7 +121,7 @@ class CXXBasePaths {
 
   /// The type from which this search originated.
   CXXRecordDecl *Origin = nullptr;
-  
+
   /// Paths - The actual set of paths that can be taken from the
   /// derived class to the same base class.
   std::list<CXXBasePath> Paths;
@@ -160,12 +160,12 @@ class CXXBasePaths {
   /// ambiguous paths while it is looking for a path from a derived
   /// type to a base type.
   bool FindAmbiguities;
-  
+
   /// RecordPaths - Whether Sema::IsDerivedFrom should record paths
   /// while it is determining whether there are paths from a derived
   /// type to a base type.
   bool RecordPaths;
-  
+
   /// DetectVirtual - Whether Sema::IsDerivedFrom should abort the search
   /// if it finds a path that goes across a virtual base. The virtual class
   /// is also recorded.
@@ -181,7 +181,7 @@ public:
   using paths_iterator = std::list<CXXBasePath>::iterator;
   using const_paths_iterator = std::list<CXXBasePath>::const_iterator;
   using decl_iterator = NamedDecl **;
-  
+
   /// BasePaths - Construct a new BasePaths structure to record the
   /// paths for a derived-to-base search.
   explicit CXXBasePaths(bool FindAmbiguities = true, bool RecordPaths = true,
@@ -193,31 +193,31 @@ public:
   paths_iterator end()   { return Paths.end(); }
   const_paths_iterator begin() const { return Paths.begin(); }
   const_paths_iterator end()   const { return Paths.end(); }
-  
+
   CXXBasePath&       front()       { return Paths.front(); }
   const CXXBasePath& front() const { return Paths.front(); }
-  
+
   using decl_range = llvm::iterator_range<decl_iterator>;
 
   decl_range found_decls();
-  
+
   /// Determine whether the path from the most-derived type to the
   /// given base type is ambiguous (i.e., it refers to multiple subobjects of
   /// the same base type).
   bool isAmbiguous(CanQualType BaseType);
-  
+
   /// Whether we are finding multiple paths to detect ambiguities.
   bool isFindingAmbiguities() const { return FindAmbiguities; }
-  
+
   /// Whether we are recording paths.
   bool isRecordingPaths() const { return RecordPaths; }
-  
+
   /// Specify whether we should be recording paths or not.
   void setRecordingPaths(bool RP) { RecordPaths = RP; }
-  
+
   /// Whether we are detecting virtual bases.
   bool isDetectingVirtual() const { return DetectVirtual; }
-  
+
   /// The virtual base discovered on the path (if we are merely
   /// detecting virtuals).
   const RecordType* getDetectedVirtual() const {
@@ -228,11 +228,11 @@ public:
   /// began
   CXXRecordDecl *getOrigin() const { return Origin; }
   void setOrigin(CXXRecordDecl *Rec) { Origin = Rec; }
-  
+
   /// Clear the base-paths results.
   void clear();
-  
-  /// Swap this data structure's contents with another CXXBasePaths 
+
+  /// Swap this data structure's contents with another CXXBasePaths
   /// object.
   void swap(CXXBasePaths &Other);
 };

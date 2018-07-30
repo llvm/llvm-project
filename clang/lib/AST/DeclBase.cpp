@@ -139,7 +139,7 @@ void Decl::setInvalidDecl(bool Invalid) {
   if (!isa<ParmVarDecl>(this)) {
     // Defensive maneuver for ill-formed code: we're likely not to make it to
     // a point where we set the access specifier, so default it to "public"
-    // to avoid triggering asserts elsewhere in the front end. 
+    // to avoid triggering asserts elsewhere in the front end.
     setAccess(AS_public);
   }
 
@@ -211,7 +211,7 @@ bool Decl::isTemplateParameterPack() const {
 bool Decl::isParameterPack() const {
   if (const auto *Parm = dyn_cast<ParmVarDecl>(this))
     return Parm->isParameterPack();
-  
+
   return isTemplateParameterPack();
 }
 
@@ -253,7 +253,7 @@ bool Decl::isTemplated() const {
 
 const DeclContext *Decl::getParentFunctionOrMethod() const {
   for (const DeclContext *DC = getDeclContext();
-       DC && !DC->isTranslationUnit() && !DC->isNamespace(); 
+       DC && !DC->isTranslationUnit() && !DC->isNamespace();
        DC = DC->getParent())
     if (DC->isFunctionOrMethod())
       return DC;
@@ -419,7 +419,7 @@ void Decl::markUsed(ASTContext &C) {
   setIsUsed();
 }
 
-bool Decl::isReferenced() const { 
+bool Decl::isReferenced() const {
   if (Referenced)
     return true;
 
@@ -428,7 +428,7 @@ bool Decl::isReferenced() const {
     if (I->Referenced)
       return true;
 
-  return false; 
+  return false;
 }
 
 bool Decl::isExported() const {
@@ -530,13 +530,13 @@ static AvailabilityResult CheckAvailability(ASTContext &Context,
     HintMessage = " - ";
     HintMessage += A->getMessage();
   }
-  
+
   // Make sure that this declaration has not been marked 'unavailable'.
   if (A->getUnavailable()) {
     if (Message) {
       Message->clear();
       llvm::raw_string_ostream Out(*Message);
-      Out << "not available on " << PrettyPlatformName 
+      Out << "not available on " << PrettyPlatformName
           << HintMessage;
     }
 
@@ -544,13 +544,13 @@ static AvailabilityResult CheckAvailability(ASTContext &Context,
   }
 
   // Make sure that this declaration has already been introduced.
-  if (!A->getIntroduced().empty() && 
+  if (!A->getIntroduced().empty() &&
       EnclosingVersion < A->getIntroduced()) {
     if (Message) {
       Message->clear();
       llvm::raw_string_ostream Out(*Message);
       VersionTuple VTI(A->getIntroduced());
-      Out << "introduced in " << PrettyPlatformName << ' ' 
+      Out << "introduced in " << PrettyPlatformName << ' '
           << VTI << HintMessage;
     }
 
@@ -563,10 +563,10 @@ static AvailabilityResult CheckAvailability(ASTContext &Context,
       Message->clear();
       llvm::raw_string_ostream Out(*Message);
       VersionTuple VTO(A->getObsoleted());
-      Out << "obsoleted in " << PrettyPlatformName << ' ' 
+      Out << "obsoleted in " << PrettyPlatformName << ' '
           << VTO << HintMessage;
     }
-    
+
     return AR_Unavailable;
   }
 
@@ -579,7 +579,7 @@ static AvailabilityResult CheckAvailability(ASTContext &Context,
       Out << "first deprecated in " << PrettyPlatformName << ' '
           << VTD << HintMessage;
     }
-    
+
     return AR_Deprecated;
   }
 
@@ -1012,7 +1012,7 @@ DeclContext *DeclContext::getLookupParent() {
     if (getParent()->getRedeclContext()->isFileContext() &&
         getLexicalParent()->getRedeclContext()->isRecord())
       return getLexicalParent();
-  
+
   return getParent();
 }
 
@@ -1047,11 +1047,11 @@ bool DeclContext::isDependentContext() const {
   if (const auto *Record = dyn_cast<CXXRecordDecl>(this)) {
     if (Record->getDescribedClassTemplate())
       return true;
-    
+
     if (Record->isDependentLambda())
       return true;
   }
-  
+
   if (const auto *Function = dyn_cast<FunctionDecl>(this)) {
     if (Function->getDescribedFunctionTemplate())
       return true;
@@ -1140,12 +1140,12 @@ DeclContext *DeclContext::getPrimaryContext() {
     if (auto *Def = cast<ObjCInterfaceDecl>(this)->getDefinition())
       return Def;
     return this;
-      
+
   case Decl::ObjCProtocol:
     if (auto *Def = cast<ObjCProtocolDecl>(this)->getDefinition())
       return Def;
     return this;
-      
+
   case Decl::ObjCCategory:
     return this;
 
@@ -1180,20 +1180,20 @@ DeclContext *DeclContext::getPrimaryContext() {
   }
 }
 
-void 
+void
 DeclContext::collectAllContexts(SmallVectorImpl<DeclContext *> &Contexts){
   Contexts.clear();
-  
+
   if (DeclKind != Decl::Namespace) {
     Contexts.push_back(this);
     return;
   }
-  
+
   auto *Self = static_cast<NamespaceDecl *>(this);
   for (NamespaceDecl *N = Self->getMostRecentDecl(); N;
        N = N->getPreviousDecl())
     Contexts.push_back(N);
-  
+
   std::reverse(Contexts.begin(), Contexts.end());
 }
 
@@ -1253,7 +1253,7 @@ DeclContext::LoadLexicalDeclsFromExternalStorage() const {
   bool FieldsAlreadyLoaded = false;
   if (const auto *RD = dyn_cast<RecordDecl>(this))
     FieldsAlreadyLoaded = RD->LoadedFieldsFromExternalStorage;
-  
+
   // Splice the newly-read declarations into the beginning of the list
   // of declarations.
   Decl *ExternalFirst, *ExternalLast;
@@ -1638,7 +1638,7 @@ void DeclContext::loadLazyLocalLexicalLookups() {
 void DeclContext::localUncachedLookup(DeclarationName Name,
                                       SmallVectorImpl<NamedDecl *> &Results) {
   Results.clear();
-  
+
   // If there's no external storage, just perform a normal lookup and copy
   // the results.
   if (!hasExternalVisibleStorage() && !hasExternalLexicalStorage() && Name) {
@@ -1661,7 +1661,7 @@ void DeclContext::localUncachedLookup(DeclarationName Name,
     }
   }
 
-  // Slow case: grovel through the declarations in our chain looking for 
+  // Slow case: grovel through the declarations in our chain looking for
   // matches.
   // FIXME: If we have lazy external declarations, this will not find them!
   // FIXME: Should we CollectAllContexts and walk them all here?
@@ -1892,7 +1892,7 @@ DependentDiagnostic *DependentDiagnostic::Create(ASTContext &C,
   PartialDiagnostic::Storage *DiagStorage = nullptr;
   if (PDiag.hasStorage())
     DiagStorage = new (C) PartialDiagnostic::Storage;
-  
+
   auto *DD = new (C) DependentDiagnostic(PDiag, DiagStorage);
 
   // TODO: Maybe we shouldn't reverse the order during insertion.

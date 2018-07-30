@@ -26,17 +26,11 @@ define void @test_x86_wrpkru(i32 %src) {
 }
 
 define i32 @test_x86_rdpkru() {
-; X86-LABEL: test_x86_rdpkru:
-; X86:       ## %bb.0:
-; X86-NEXT:    xorl %ecx, %ecx ## encoding: [0x31,0xc9]
-; X86-NEXT:    rdpkru ## encoding: [0x0f,0x01,0xee]
-; X86-NEXT:    retl ## encoding: [0xc3]
-;
-; X64-LABEL: test_x86_rdpkru:
-; X64:       ## %bb.0:
-; X64-NEXT:    xorl %ecx, %ecx ## encoding: [0x31,0xc9]
-; X64-NEXT:    rdpkru ## encoding: [0x0f,0x01,0xee]
-; X64-NEXT:    retq ## encoding: [0xc3]
+; CHECK-LABEL: test_x86_rdpkru:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    xorl %ecx, %ecx ## encoding: [0x31,0xc9]
+; CHECK-NEXT:    rdpkru ## encoding: [0x0f,0x01,0xee]
+; CHECK-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
   %res = call i32 @llvm.x86.rdpkru()
   ret i32 %res
 }

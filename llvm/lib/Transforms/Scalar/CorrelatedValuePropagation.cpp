@@ -473,7 +473,7 @@ static bool processCallSite(CallSite CS, LazyValueInfo *LVI) {
     // relatively expensive analysis for constants which are obviously either
     // null or non-null to start with.
     if (Type && !CS.paramHasAttr(ArgNo, Attribute::NonNull) &&
-        !isa<Constant>(V) && 
+        !isa<Constant>(V) &&
         LVI->getPredicateAt(ICmpInst::ICMP_EQ, V,
                             ConstantPointerNull::get(Type),
                             CS.getInstruction()) == LazyValueInfo::False)
@@ -670,12 +670,12 @@ static Constant *getConstantAt(Value *V, Instruction *At, LazyValueInfo *LVI) {
   Value *Op0 = C->getOperand(0);
   Constant *Op1 = dyn_cast<Constant>(C->getOperand(1));
   if (!Op1) return nullptr;
-  
+
   LazyValueInfo::Tristate Result =
     LVI->getPredicateAt(C->getPredicate(), Op0, Op1, At);
   if (Result == LazyValueInfo::Unknown)
     return nullptr;
-  
+
   return (Result == LazyValueInfo::True) ?
     ConstantInt::getTrue(C->getContext()) :
     ConstantInt::getFalse(C->getContext());
@@ -747,7 +747,7 @@ static bool runImpl(Function &F, LazyValueInfo *LVI, DominatorTree *DT,
       if (auto *C = getConstantAt(RetVal, RI, LVI)) {
         ++NumReturns;
         RI->replaceUsesOfWith(RetVal, C);
-        BBChanged = true;        
+        BBChanged = true;
       }
     }
     }

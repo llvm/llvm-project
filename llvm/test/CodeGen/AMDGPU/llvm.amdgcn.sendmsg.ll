@@ -136,6 +136,21 @@ body:
   ret void
 }
 
+; GCN-LABEL: {{^}}if_sendmsg:
+; GCN: s_cbranch_execz
+; GCN: s_sendmsg sendmsg(MSG_GS_DONE, GS_OP_NOP)
+define amdgpu_gs void @if_sendmsg(i32 %flag) #0 {
+  %cc = icmp eq i32 %flag, 0
+  br i1 %cc, label %sendmsg, label %end
+
+sendmsg:
+  call void @llvm.amdgcn.s.sendmsg(i32 3, i32 0)
+  br label %end
+
+end:
+  ret void
+}
+
 declare void @llvm.amdgcn.s.sendmsg(i32, i32) #0
 declare void @llvm.amdgcn.s.sendmsghalt(i32, i32) #0
 

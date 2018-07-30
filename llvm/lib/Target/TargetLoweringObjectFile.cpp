@@ -92,10 +92,10 @@ static bool IsNullTerminatedString(const Constant *C) {
   if (const ConstantDataSequential *CDS = dyn_cast<ConstantDataSequential>(C)) {
     unsigned NumElts = CDS->getNumElements();
     assert(NumElts != 0 && "Can't have an empty CDS");
-    
+
     if (CDS->getElementAsInteger(NumElts-1) != 0)
       return false; // Not null terminated.
-    
+
     // Verify that the null doesn't occur anywhere else in the string.
     for (unsigned i = 0; i != NumElts-1; ++i)
       if (CDS->getElementAsInteger(i) == 0)

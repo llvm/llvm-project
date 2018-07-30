@@ -362,19 +362,19 @@ IntegerType *AtomicExpand::getCorrespondingIntegerType(Type *T,
 
 /// Convert an atomic load of a non-integral type to an integer load of the
 /// equivalent bitwidth.  See the function comment on
-/// convertAtomicStoreToIntegerType for background.  
+/// convertAtomicStoreToIntegerType for background.
 LoadInst *AtomicExpand::convertAtomicLoadToIntegerType(LoadInst *LI) {
   auto *M = LI->getModule();
   Type *NewTy = getCorrespondingIntegerType(LI->getType(),
                                             M->getDataLayout());
 
   IRBuilder<> Builder(LI);
-  
+
   Value *Addr = LI->getPointerOperand();
   Type *PT = PointerType::get(NewTy,
                               Addr->getType()->getPointerAddressSpace());
   Value *NewAddr = Builder.CreateBitCast(Addr, PT);
-  
+
   auto *NewLI = Builder.CreateLoad(NewAddr);
   NewLI->setAlignment(LI->getAlignment());
   NewLI->setVolatile(LI->isVolatile());
@@ -452,7 +452,7 @@ StoreInst *AtomicExpand::convertAtomicStoreToIntegerType(StoreInst *SI) {
   Type *NewTy = getCorrespondingIntegerType(SI->getValueOperand()->getType(),
                                             M->getDataLayout());
   Value *NewVal = Builder.CreateBitCast(SI->getValueOperand(), NewTy);
-  
+
   Value *Addr = SI->getPointerOperand();
   Type *PT = PointerType::get(NewTy,
                               Addr->getType()->getPointerAddressSpace());
@@ -920,14 +920,14 @@ Value *AtomicExpand::insertRMWLLSCLoop(
 /// the equivalent bitwidth.  We used to not support pointer cmpxchg in the
 /// IR.  As a migration step, we convert back to what use to be the standard
 /// way to represent a pointer cmpxchg so that we can update backends one by
-/// one. 
+/// one.
 AtomicCmpXchgInst *AtomicExpand::convertCmpXchgToIntegerType(AtomicCmpXchgInst *CI) {
   auto *M = CI->getModule();
   Type *NewTy = getCorrespondingIntegerType(CI->getCompareOperand()->getType(),
                                             M->getDataLayout());
 
   IRBuilder<> Builder(CI);
-  
+
   Value *Addr = CI->getPointerOperand();
   Type *PT = PointerType::get(NewTy,
                               Addr->getType()->getPointerAddressSpace());
@@ -935,8 +935,8 @@ AtomicCmpXchgInst *AtomicExpand::convertCmpXchgToIntegerType(AtomicCmpXchgInst *
 
   Value *NewCmp = Builder.CreatePtrToInt(CI->getCompareOperand(), NewTy);
   Value *NewNewVal = Builder.CreatePtrToInt(CI->getNewValOperand(), NewTy);
-  
-  
+
+
   auto *NewCI = Builder.CreateAtomicCmpXchg(NewAddr, NewCmp, NewNewVal,
                                             CI->getSuccessOrdering(),
                                             CI->getFailureOrdering(),

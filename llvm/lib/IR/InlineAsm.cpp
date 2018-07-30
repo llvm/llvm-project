@@ -57,7 +57,7 @@ void InlineAsm::destroyConstant() {
 FunctionType *InlineAsm::getFunctionType() const {
   return FTy;
 }
-    
+
 /// Parse - Analyze the specified string (e.g. "==&{eax}") and fill in the
 /// fields in this structure.  If the constraint string is not understood,
 /// return true, otherwise return false.
@@ -80,7 +80,7 @@ bool InlineAsm::ConstraintInfo::Parse(StringRef Str,
   isCommutative = false;
   isIndirect = false;
   currentAlternativeIndex = 0;
-  
+
   // Parse prefixes.
   if (*I == '~') {
     Type = isClobber;
@@ -100,7 +100,7 @@ bool InlineAsm::ConstraintInfo::Parse(StringRef Str,
   }
 
   if (I == E) return true;  // Just a prefix, like "==" or "~".
-  
+
   // Parse the modifiers.
   bool DoneWithModifiers = false;
   while (!DoneWithModifiers) {
@@ -124,13 +124,13 @@ bool InlineAsm::ConstraintInfo::Parse(StringRef Str,
     case '*':     // Register preferencing.
       return true;     // Not supported.
     }
-    
+
     if (!DoneWithModifiers) {
       ++I;
       if (I == E) return true;   // Just prefixes and modifiers!
     }
   }
-  
+
   // Parse the various constraints.
   while (I != E) {
     if (*I == '{') {   // Physical register reference.
@@ -150,7 +150,7 @@ bool InlineAsm::ConstraintInfo::Parse(StringRef Str,
       if (N >= ConstraintsSoFar.size() || ConstraintsSoFar[N].Type != isOutput||
           Type != isInput)
         return true;  // Invalid constraint number.
-      
+
       // If Operand N already has a matching input, reject this.  An output
       // can't be constrained to the same value as multiple inputs.
       if (isMultipleAlternative) {
@@ -207,7 +207,7 @@ void InlineAsm::ConstraintInfo::selectAlternative(unsigned index) {
 InlineAsm::ConstraintInfoVector
 InlineAsm::ParseConstraints(StringRef Constraints) {
   ConstraintInfoVector Result;
-  
+
   // Scan the constraints string.
   for (StringRef::iterator I = Constraints.begin(),
          E = Constraints.end(); I != E; ) {
@@ -223,7 +223,7 @@ InlineAsm::ParseConstraints(StringRef Constraints) {
     }
 
     Result.push_back(Info);
-    
+
     // ConstraintEnd may be either the next comma or the end of the string.  In
     // the former case, we skip the comma.
     I = ConstraintEnd;
@@ -235,7 +235,7 @@ InlineAsm::ParseConstraints(StringRef Constraints) {
       } // don't allow "xyz,"
     }
   }
-  
+
   return Result;
 }
 
@@ -243,15 +243,15 @@ InlineAsm::ParseConstraints(StringRef Constraints) {
 /// specified function type, and otherwise validate the constraint string.
 bool InlineAsm::Verify(FunctionType *Ty, StringRef ConstStr) {
   if (Ty->isVarArg()) return false;
-  
+
   ConstraintInfoVector Constraints = ParseConstraints(ConstStr);
-  
+
   // Error parsing constraints.
   if (Constraints.empty() && !ConstStr.empty()) return false;
-  
+
   unsigned NumOutputs = 0, NumInputs = 0, NumClobbers = 0;
   unsigned NumIndirect = 0;
-  
+
   for (unsigned i = 0, e = Constraints.size(); i != e; ++i) {
     switch (Constraints[i].Type) {
     case InlineAsm::isOutput:
@@ -272,7 +272,7 @@ bool InlineAsm::Verify(FunctionType *Ty, StringRef ConstStr) {
       break;
     }
   }
-  
+
   switch (NumOutputs) {
   case 0:
     if (!Ty->getReturnType()->isVoidTy()) return false;
@@ -285,8 +285,8 @@ bool InlineAsm::Verify(FunctionType *Ty, StringRef ConstStr) {
     if (!STy || STy->getNumElements() != NumOutputs)
       return false;
     break;
-  }      
-  
+  }
+
   if (Ty->getNumParams() != NumInputs) return false;
   return true;
 }

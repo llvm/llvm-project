@@ -77,13 +77,13 @@ static bool runImpl(CallGraphSCC &SCC, CallGraph &CG) {
 
   // Next, check to see if any callees might throw or if there are any external
   // functions in this SCC: if so, we cannot prune any functions in this SCC.
-  // Definitions that are weak and not declared non-throwing might be 
+  // Definitions that are weak and not declared non-throwing might be
   // overridden at linktime with something that throws, so assume that.
   // If this SCC includes the unwind instruction, we KNOW it throws, so
   // obviously the SCC might throw.
   //
   bool SCCMightUnwind = false, SCCMightReturn = false;
-  for (CallGraphSCC::iterator I = SCC.begin(), E = SCC.end(); 
+  for (CallGraphSCC::iterator I = SCC.begin(), E = SCC.end();
        (!SCCMightUnwind || !SCCMightReturn) && I != E; ++I) {
     Function *F = (*I)->getFunction();
     if (!F) {

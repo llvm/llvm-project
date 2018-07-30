@@ -617,7 +617,7 @@ static bool addArgumentAttrsFromCallsites(Function &F) {
     if (!isGuaranteedToTransferExecutionToSuccessor(&I))
       break;
   }
-  
+
   return Changed;
 }
 

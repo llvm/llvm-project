@@ -274,7 +274,7 @@ const char *findCCommentEnd(const char *BufferPtr, const char *BufferEnd) {
   }
   llvm_unreachable("buffer end hit before '*/' was seen");
 }
-    
+
 } // end anonymous namespace
 
 void Lexer::formTokenWithChars(Token &Result, const char *TokEnd,

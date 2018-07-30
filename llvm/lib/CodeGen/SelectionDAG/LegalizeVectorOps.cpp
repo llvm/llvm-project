@@ -131,7 +131,7 @@ class VectorLegalizer {
   SDValue ExpandCTLZ(SDValue Op);
   SDValue ExpandCTTZ_ZERO_UNDEF(SDValue Op);
   SDValue ExpandStrictFPOp(SDValue Op);
-  
+
   /// Implements vector promotion.
   ///
   /// This is essentially just bitcasting the operands to a different type and
@@ -315,7 +315,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
     // equivalent.  For instance, if ISD::FSQRT is legal then ISD::STRICT_FSQRT
     // is also legal, but if ISD::FSQRT requires expansion then so does
     // ISD::STRICT_FSQRT.
-    Action = TLI.getStrictFPOperationAction(Node->getOpcode(), 
+    Action = TLI.getStrictFPOperationAction(Node->getOpcode(),
                                             Node->getValueType(0));
     break;
   case ISD::ADD:
@@ -397,12 +397,12 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
     Action = TLI.getOperationAction(Node->getOpcode(), Node->getValueType(0));
     break;
   case ISD::FP_ROUND_INREG:
-    Action = TLI.getOperationAction(Node->getOpcode(), 
+    Action = TLI.getOperationAction(Node->getOpcode(),
                cast<VTSDNode>(Node->getOperand(1))->getVT());
     break;
   case ISD::SINT_TO_FP:
   case ISD::UINT_TO_FP:
-    Action = TLI.getOperationAction(Node->getOpcode(), 
+    Action = TLI.getOperationAction(Node->getOpcode(),
                                     Node->getOperand(0).getValueType());
     break;
   case ISD::MSCATTER:
@@ -736,7 +736,7 @@ SDValue VectorLegalizer::Expand(SDValue Op) {
   case ISD::CTTZ_ZERO_UNDEF:
     return ExpandCTTZ_ZERO_UNDEF(Op);
   case ISD::STRICT_FADD:
-  case ISD::STRICT_FSUB: 
+  case ISD::STRICT_FSUB:
   case ISD::STRICT_FMUL:
   case ISD::STRICT_FDIV:
   case ISD::STRICT_FSQRT:
@@ -1153,24 +1153,24 @@ SDValue VectorLegalizer::ExpandStrictFPOp(SDValue Op) {
   SmallVector<SDValue, 32> OpChains;
   for (unsigned i = 0; i < NumElems; ++i) {
     SmallVector<SDValue, 4> Opers;
-    SDValue Idx = DAG.getConstant(i, dl, 
+    SDValue Idx = DAG.getConstant(i, dl,
                                   TLI.getVectorIdxTy(DAG.getDataLayout()));
 
     // The Chain is the first operand.
     Opers.push_back(Chain);
 
-    // Now process the remaining operands. 
+    // Now process the remaining operands.
     for (unsigned j = 1; j < NumOpers; ++j) {
       SDValue Oper = Op.getOperand(j);
       EVT OperVT = Oper.getValueType();
 
       if (OperVT.isVector())
-        Oper = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, 
+        Oper = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl,
                            EltVT, Oper, Idx);
 
       Opers.push_back(Oper);
     }
- 
+
     SDValue ScalarOp = DAG.getNode(Op->getOpcode(), dl, ValueVTs, Opers);
 
     OpValues.push_back(ScalarOp.getValue(0));

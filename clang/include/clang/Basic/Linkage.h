@@ -19,7 +19,7 @@
 
 namespace clang {
 
-/// Describes the different kinds of linkage 
+/// Describes the different kinds of linkage
 /// (C++ [basic.link], C99 6.2.2) that an entity may have.
 enum Linkage : unsigned char {
   /// No linkage, which means that the entity is unique and
@@ -31,7 +31,7 @@ enum Linkage : unsigned char {
   /// translation units).
   InternalLinkage,
 
-  /// External linkage within a unique namespace. 
+  /// External linkage within a unique namespace.
   ///
   /// From the language perspective, these entities have external
   /// linkage. However, since they reside in an anonymous namespace,

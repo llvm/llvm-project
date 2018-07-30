@@ -30,3 +30,19 @@ splice  z31.d, p7, z31.d, z31.d
 // CHECK-ENCODING: [0xff,0x9f,0xec,0x05]
 // CHECK-ERROR: instruction requires: sve
 // CHECK-UNKNOWN: ff 9f ec 05 <unknown>
+
+
+// --------------------------------------------------------------------------//
+// Test compatibility with MOVPRFX instruction.
+
+movprfx z4, z6
+// CHECK-INST: movprfx	z4, z6
+// CHECK-ENCODING: [0xc4,0xbc,0x20,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: c4 bc 20 04 <unknown>
+
+splice  z4.d, p7, z4.d, z31.d
+// CHECK-INST: splice	z4.d, p7, z4.d, z31.d
+// CHECK-ENCODING: [0xe4,0x9f,0xec,0x05]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: e4 9f ec 05 <unknown>

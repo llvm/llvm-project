@@ -18,3 +18,9 @@ void f() {
   // points to, which doesn't live long enough.
   int *const &s = (int *const &)T{1, 2, 3}; // expected-warning {{temporary bound to local reference 's' will be destroyed at the end of the full-expression}}
 }
+
+// PR38355
+void g() {
+  const int a[] = {a[0]};
+  const int b[] = {a[0]};
+}

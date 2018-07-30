@@ -78,3 +78,31 @@ insr    z31.d, d31
 // CHECK-ENCODING: [0xff,0x3b,0xf4,0x05]
 // CHECK-ERROR: instruction requires: sve
 // CHECK-UNKNOWN: ff 3b f4 05 <unknown>
+
+
+// --------------------------------------------------------------------------//
+// Test compatibility with MOVPRFX instruction.
+
+movprfx z31, z6
+// CHECK-INST: movprfx	z31, z6
+// CHECK-ENCODING: [0xdf,0xbc,0x20,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: df bc 20 04 <unknown>
+
+insr    z31.d, xzr
+// CHECK-INST: insr	z31.d, xzr
+// CHECK-ENCODING: [0xff,0x3b,0xe4,0x05]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: ff 3b e4 05 <unknown>
+
+movprfx z4, z6
+// CHECK-INST: movprfx	z4, z6
+// CHECK-ENCODING: [0xc4,0xbc,0x20,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: c4 bc 20 04 <unknown>
+
+insr    z4.d, d31
+// CHECK-INST: insr	z4.d, d31
+// CHECK-ENCODING: [0xe4,0x3b,0xf4,0x05]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: e4 3b f4 05 <unknown>

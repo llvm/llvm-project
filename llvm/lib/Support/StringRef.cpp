@@ -389,7 +389,7 @@ static unsigned GetAutoSenseRadix(StringRef &Str) {
     Str = Str.substr(2);
     return 16;
   }
-  
+
   if (Str.startswith("0b") || Str.startswith("0B")) {
     Str = Str.substr(2);
     return 2;

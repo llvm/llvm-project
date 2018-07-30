@@ -100,7 +100,7 @@ printableTextForNextCharacter(StringRef SourceLine, size_t *i,
                               unsigned TabStop) {
   assert(i && "i must not be null");
   assert(*i<SourceLine.size() && "must point to a valid index");
-  
+
   if (SourceLine[*i]=='\t') {
     assert(0 < TabStop && TabStop <= DiagnosticOptions::MaxTabStop &&
            "Invalid -ftabstop value");
@@ -118,7 +118,7 @@ printableTextForNextCharacter(StringRef SourceLine, size_t *i,
   unsigned char const *begin, *end;
   begin = reinterpret_cast<unsigned char const *>(&*(SourceLine.begin() + *i));
   end = begin + (SourceLine.size() - *i);
-  
+
   if (llvm::isLegalUTF8Sequence(begin, end)) {
     llvm::UTF32 c;
     llvm::UTF32 *cptr = &c;
@@ -203,7 +203,7 @@ static void byteToColumn(StringRef SourceLine, unsigned TabStop,
     out.resize(1u,0);
     return;
   }
-  
+
   out.resize(SourceLine.size()+1, -1);
 
   int columns = 0;
@@ -255,10 +255,10 @@ namespace {
 struct SourceColumnMap {
   SourceColumnMap(StringRef SourceLine, unsigned TabStop)
   : m_SourceLine(SourceLine) {
-    
+
     ::byteToColumn(SourceLine, TabStop, m_byteToColumn);
     ::columnToByte(SourceLine, TabStop, m_columnToByte);
-    
+
     assert(m_byteToColumn.size()==SourceLine.size()+1);
     assert(0 < m_byteToColumn.size() && 0 < m_columnToByte.size());
     assert(m_byteToColumn.size()
@@ -309,7 +309,7 @@ struct SourceColumnMap {
   StringRef getSourceLine() const {
     return m_SourceLine;
   }
-  
+
 private:
   const std::string m_SourceLine;
   SmallVector<int,200> m_byteToColumn;
@@ -684,7 +684,7 @@ void TextDiagnostic::emitDiagnosticMessage(
 
   if (DiagOpts->ShowColors)
     OS.resetColor();
-  
+
   printDiagnosticLevel(OS, Level, DiagOpts->ShowColors,
                        DiagOpts->CLFallbackMode);
   printDiagnosticMessage(OS,
@@ -891,7 +891,7 @@ void TextDiagnostic::emitIncludeLocation(FullSourceLoc Loc, PresumedLoc PLoc) {
     OS << "In file included from " << PLoc.getFilename() << ':'
        << PLoc.getLine() << ":\n";
   else
-    OS << "In included file:\n"; 
+    OS << "In included file:\n";
 }
 
 void TextDiagnostic::emitImportLocation(FullSourceLoc Loc, PresumedLoc PLoc,
@@ -1269,15 +1269,15 @@ void TextDiagnostic::emitSnippet(StringRef line) {
     return;
 
   size_t i = 0;
-  
+
   std::string to_print;
   bool print_reversed = false;
-  
+
   while (i<line.size()) {
     std::pair<SmallString<16>,bool> res
         = printableTextForNextCharacter(line, &i, DiagOpts->TabStop);
     bool was_printable = res.second;
-    
+
     if (DiagOpts->ShowColors && was_printable == print_reversed) {
       if (print_reversed)
         OS.reverseColor();
@@ -1286,17 +1286,17 @@ void TextDiagnostic::emitSnippet(StringRef line) {
       if (DiagOpts->ShowColors)
         OS.resetColor();
     }
-    
+
     print_reversed = !was_printable;
     to_print += res.first.str();
   }
-  
+
   if (print_reversed && DiagOpts->ShowColors)
     OS.reverseColor();
   OS << to_print;
   if (print_reversed && DiagOpts->ShowColors)
     OS.resetColor();
-  
+
   OS << '\n';
 }
 

@@ -554,6 +554,7 @@ static bool fnegFoldsIntoOp(unsigned Opc) {
   case ISD::FTRUNC:
   case ISD::FRINT:
   case ISD::FNEARBYINT:
+  case ISD::FCANONICALIZE:
   case AMDGPUISD::RCP:
   case AMDGPUISD::RCP_LEGACY:
   case AMDGPUISD::RCP_IFLAG:
@@ -907,6 +908,7 @@ void AMDGPUTargetLowering::analyzeFormalArgumentsCompute(
   LLVMContext &Ctx = Fn.getParent()->getContext();
   const AMDGPUSubtarget &ST = AMDGPUSubtarget::get(MF);
   const unsigned ExplicitOffset = ST.getExplicitKernelArgOffset(Fn);
+  CallingConv::ID CC = Fn.getCallingConv();
 
   unsigned MaxAlign = 1;
   uint64_t ExplicitArgOffset = 0;
@@ -940,16 +942,10 @@ void AMDGPUTargetLowering::analyzeFormalArgumentsCompute(
 
       EVT ArgVT = ValueVTs[Value];
       EVT MemVT = ArgVT;
-      MVT RegisterVT =
-        getRegisterTypeForCallingConv(Ctx, ArgVT);
-      unsigned NumRegs =
-        getNumRegistersForCallingConv(Ctx, ArgVT);
+      MVT RegisterVT = getRegisterTypeForCallingConv(Ctx, CC, ArgVT);
+      unsigned NumRegs = getNumRegistersForCallingConv(Ctx, CC, ArgVT);
 
-      if (!Subtarget->isAmdHsaOS() &&
-          (ArgVT == MVT::i16 || ArgVT == MVT::i8 || ArgVT == MVT::f16)) {
-        // The ABI says the caller will extend these values to 32-bits.
-        MemVT = ArgVT.isInteger() ? MVT::i32 : MVT::f32;
-      } else if (NumRegs == 1) {
+      if (NumRegs == 1) {
         // This argument is not split, so the IR type is the memory type.
         if (ArgVT.isExtended()) {
           // We have an extended type, like i24, so we should just use the
@@ -3600,6 +3596,7 @@ SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
   case ISD::FRINT:
   case ISD::FNEARBYINT: // XXX - Should fround be handled?
   case ISD::FSIN:
+  case ISD::FCANONICALIZE:
   case AMDGPUISD::RCP:
   case AMDGPUISD::RCP_LEGACY:
   case AMDGPUISD::RCP_IFLAG:

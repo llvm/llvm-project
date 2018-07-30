@@ -302,7 +302,7 @@ private:
   /// global variable, etc.) that is lexically inside an objc container
   /// definition.
   unsigned TopLevelDeclInObjCContainer : 1;
-  
+
   /// Whether statistic collection is enabled.
   static bool StatisticsEnabled;
 
@@ -629,7 +629,7 @@ protected:
     assert(isFromASTFile() && "Only works on a deserialized declaration");
     *((unsigned*)this - 2) = ID;
   }
-  
+
 public:
   /// Determine the availability of the given declaration.
   ///
@@ -879,7 +879,7 @@ public:
 
   /// Whether this particular Decl is a canonical one.
   bool isCanonicalDecl() const { return getCanonicalDecl() == this; }
-  
+
 protected:
   /// Returns the next redeclaration or itself if this is the only decl.
   ///
@@ -956,10 +956,10 @@ public:
   /// Retrieve the previous declaration that declares the same entity
   /// as this declaration, or NULL if there is no previous declaration.
   Decl *getPreviousDecl() { return getPreviousDeclImpl(); }
-  
+
   /// Retrieve the most recent declaration that declares the same entity
   /// as this declaration, or NULL if there is no previous declaration.
-  const Decl *getPreviousDecl() const { 
+  const Decl *getPreviousDecl() const {
     return const_cast<Decl *>(this)->getPreviousDeclImpl();
   }
 
@@ -974,7 +974,7 @@ public:
 
   /// Retrieve the most recent declaration that declares the same entity
   /// as this declaration (which may be this declaration).
-  const Decl *getMostRecentDecl() const { 
+  const Decl *getMostRecentDecl() const {
     return const_cast<Decl *>(this)->getMostRecentDeclImpl();
   }
 
@@ -1159,13 +1159,13 @@ protected:
 inline bool declaresSameEntity(const Decl *D1, const Decl *D2) {
   if (!D1 || !D2)
     return false;
-  
+
   if (D1 == D2)
     return true;
-  
+
   return D1->getCanonicalDecl() == D2->getCanonicalDecl();
 }
-  
+
 /// PrettyStackTraceDecl - If a crash occurs, indicate that it happened when
 /// doing something to a specific decl.
 class PrettyStackTraceDecl : public llvm::PrettyStackTraceEntry {
@@ -1517,7 +1517,7 @@ public:
   /// connected to this declaration context.
   ///
   /// For declaration contexts that have multiple semantically connected but
-  /// syntactically distinct contexts, such as C++ namespaces, this routine 
+  /// syntactically distinct contexts, such as C++ namespaces, this routine
   /// retrieves the complete set of such declaration contexts in source order.
   /// For example, given:
   ///
@@ -1921,7 +1921,7 @@ public:
   /// Determine whether the given declaration is stored in the list of
   /// declarations lexically within this context.
   bool isDeclInLexicalTraversal(const Decl *D) const {
-    return D && (D->NextInContextAndBits.getPointer() || D == FirstDecl || 
+    return D && (D->NextInContextAndBits.getPointer() || D == FirstDecl ||
                  D == LastDecl);
   }
 

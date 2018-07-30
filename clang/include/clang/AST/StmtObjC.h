@@ -81,7 +81,7 @@ public:
   ObjCAtCatchStmt(SourceLocation atCatchLoc, SourceLocation rparenloc,
                   VarDecl *catchVarDecl,
                   Stmt *atCatchStmt)
-    : Stmt(ObjCAtCatchStmtClass), ExceptionDecl(catchVarDecl), 
+    : Stmt(ObjCAtCatchStmtClass), ExceptionDecl(catchVarDecl),
     Body(atCatchStmt), AtCatchLoc(atCatchLoc), RParenLoc(rparenloc) { }
 
   explicit ObjCAtCatchStmt(EmptyShell Empty) :
@@ -155,27 +155,27 @@ class ObjCAtTryStmt : public Stmt {
 private:
   // The location of the @ in the \@try.
   SourceLocation AtTryLoc;
-  
+
   // The number of catch blocks in this statement.
   unsigned NumCatchStmts : 16;
-  
+
   // Whether this statement has a \@finally statement.
   bool HasFinally : 1;
-  
+
   /// Retrieve the statements that are stored after this \@try statement.
   ///
   /// The order of the statements in memory follows the order in the source,
   /// with the \@try body first, followed by the \@catch statements (if any)
   /// and, finally, the \@finally (if it exists).
   Stmt **getStmts() { return reinterpret_cast<Stmt **> (this + 1); }
-  const Stmt* const *getStmts() const { 
-    return reinterpret_cast<const Stmt * const*> (this + 1); 
+  const Stmt* const *getStmts() const {
+    return reinterpret_cast<const Stmt * const*> (this + 1);
   }
-  
+
   ObjCAtTryStmt(SourceLocation atTryLoc, Stmt *atTryStmt,
                 Stmt **CatchStmts, unsigned NumCatchStmts,
                 Stmt *atFinallyStmt);
-  
+
   explicit ObjCAtTryStmt(EmptyShell Empty, unsigned NumCatchStmts,
                          bool HasFinally)
     : Stmt(ObjCAtTryStmtClass, Empty), NumCatchStmts(NumCatchStmts),
@@ -188,7 +188,7 @@ public:
                                Stmt *atFinallyStmt);
   static ObjCAtTryStmt *CreateEmpty(const ASTContext &Context,
                                     unsigned NumCatchStmts, bool HasFinally);
-  
+
   /// Retrieve the location of the @ in the \@try.
   SourceLocation getAtTryLoc() const { return AtTryLoc; }
   void setAtTryLoc(SourceLocation Loc) { AtTryLoc = Loc; }
@@ -201,41 +201,41 @@ public:
   /// Retrieve the number of \@catch statements in this try-catch-finally
   /// block.
   unsigned getNumCatchStmts() const { return NumCatchStmts; }
-  
+
   /// Retrieve a \@catch statement.
   const ObjCAtCatchStmt *getCatchStmt(unsigned I) const {
     assert(I < NumCatchStmts && "Out-of-bounds @catch index");
     return cast_or_null<ObjCAtCatchStmt>(getStmts()[I + 1]);
   }
-  
+
   /// Retrieve a \@catch statement.
   ObjCAtCatchStmt *getCatchStmt(unsigned I) {
     assert(I < NumCatchStmts && "Out-of-bounds @catch index");
     return cast_or_null<ObjCAtCatchStmt>(getStmts()[I + 1]);
   }
-  
+
   /// Set a particular catch statement.
   void setCatchStmt(unsigned I, ObjCAtCatchStmt *S) {
     assert(I < NumCatchStmts && "Out-of-bounds @catch index");
     getStmts()[I + 1] = S;
   }
-  
+
   /// Retrieve the \@finally statement, if any.
   const ObjCAtFinallyStmt *getFinallyStmt() const {
     if (!HasFinally)
       return nullptr;
-    
+
     return cast_or_null<ObjCAtFinallyStmt>(getStmts()[1 + NumCatchStmts]);
   }
   ObjCAtFinallyStmt *getFinallyStmt() {
     if (!HasFinally)
       return nullptr;
-    
+
     return cast_or_null<ObjCAtFinallyStmt>(getStmts()[1 + NumCatchStmts]);
   }
-  void setFinallyStmt(Stmt *S) { 
+  void setFinallyStmt(Stmt *S) {
     assert(HasFinally && "@try does not have a @finally slot!");
-    getStmts()[1 + NumCatchStmts] = S; 
+    getStmts()[1 + NumCatchStmts] = S;
   }
 
   SourceLocation getLocStart() const LLVM_READONLY { return AtTryLoc; }

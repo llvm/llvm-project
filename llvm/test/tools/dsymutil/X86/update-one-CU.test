@@ -1,7 +1,3 @@
-UNSUPPORTED: system-windows
-Windows does not like renaming files that have open handles to them. We
-need to use TempFile::keep to move them in a portable way.
-
 RUN: dsymutil -oso-prepend-path=%p/.. %p/../Inputs/objc.macho.x86_64 -o %t.dSYM
 RUN: dsymutil -update %t.dSYM
 RUN: llvm-dwarfdump -apple-types -apple-objc %t.dSYM | FileCheck %s

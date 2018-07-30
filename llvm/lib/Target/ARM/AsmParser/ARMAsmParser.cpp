@@ -969,7 +969,7 @@ public:
 
   // checks whether this operand is a memory operand computed as an offset
   // applied to PC. the offset may have 8 bits of magnitude and is represented
-  // with two bits of shift. textually it may be either [pc, #imm], #imm or 
+  // with two bits of shift. textually it may be either [pc, #imm], #imm or
   // relocable expression...
   bool isThumbMemPC() const {
     int64_t Val = 0;
@@ -2284,7 +2284,7 @@ public:
       }
 
       const MCSymbolRefExpr *SR = dyn_cast<MCSymbolRefExpr>(Imm.Val);
- 
+
       assert(SR && "Unknown value type!");
       Inst.addOperand(MCOperand::createExpr(SR));
       return;
@@ -2326,7 +2326,7 @@ public:
     assert(isImm() && "Not an immediate!");
 
     // If we have an immediate that's not a constant, treat it as a label
-    // reference needing a fixup. 
+    // reference needing a fixup.
     if (!isa<MCConstantExpr>(getImm())) {
       Inst.addOperand(MCOperand::createExpr(getImm()));
       return;
@@ -3419,7 +3419,7 @@ int ARMAsmParser::tryParseShiftRegister(OperandVector &Operands) {
   SMLoc S = Parser.getTok().getLoc();
   const AsmToken &Tok = Parser.getTok();
   if (Tok.isNot(AsmToken::Identifier))
-    return -1; 
+    return -1;
 
   std::string lowerCase = Tok.getString().lower();
   ARM_AM::ShiftOpc ShiftTy = StringSwitch<ARM_AM::ShiftOpc>(lowerCase)
@@ -4311,7 +4311,7 @@ ARMAsmParser::parseProcIFlagsOperand(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   SMLoc S = Parser.getTok().getLoc();
   const AsmToken &Tok = Parser.getTok();
-  if (!Tok.is(AsmToken::Identifier)) 
+  if (!Tok.is(AsmToken::Identifier))
     return MatchOperand_NoMatch;
   StringRef IFlagsStr = Tok.getString();
 
@@ -4353,7 +4353,7 @@ ARMAsmParser::parseMSRMaskOperand(OperandVector &Operands) {
       return MatchOperand_NoMatch;
     }
     unsigned SYSmvalue = Val & 0xFF;
-    Parser.Lex(); 
+    Parser.Lex();
     Operands.push_back(ARMOperand::CreateMSRMask(SYSmvalue, S));
     return MatchOperand_Success;
   }
@@ -4996,7 +4996,7 @@ void ARMAsmParser::cvtThumbBranches(MCInst &Inst,
   // first decide whether or not the branch should be conditional
   // by looking at it's location relative to an IT block
   if(inITBlock()) {
-    // inside an IT block we cannot have any conditional branches. any 
+    // inside an IT block we cannot have any conditional branches. any
     // such instructions needs to be converted to unconditional form
     switch(Inst.getOpcode()) {
       case ARM::tBcc: Inst.setOpcode(ARM::tB); break;
@@ -5008,11 +5008,11 @@ void ARMAsmParser::cvtThumbBranches(MCInst &Inst,
     unsigned Cond = static_cast<ARMOperand &>(*Operands[CondOp]).getCondCode();
     switch(Inst.getOpcode()) {
       case ARM::tB:
-      case ARM::tBcc: 
-        Inst.setOpcode(Cond == ARMCC::AL ? ARM::tB : ARM::tBcc); 
+      case ARM::tBcc:
+        Inst.setOpcode(Cond == ARMCC::AL ? ARM::tB : ARM::tBcc);
         break;
       case ARM::t2B:
-      case ARM::t2Bcc: 
+      case ARM::t2Bcc:
         Inst.setOpcode(Cond == ARMCC::AL ? ARM::t2B : ARM::t2Bcc);
         break;
     }
@@ -8882,7 +8882,7 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
   case ARM::MOVsi: {
     ARM_AM::ShiftOpc SOpc = ARM_AM::getSORegShOp(Inst.getOperand(2).getImm());
     // rrx shifts and asr/lsr of #32 is encoded as 0
-    if (SOpc == ARM_AM::rrx || SOpc == ARM_AM::asr || SOpc == ARM_AM::lsr) 
+    if (SOpc == ARM_AM::rrx || SOpc == ARM_AM::asr || SOpc == ARM_AM::lsr)
       return false;
     if (ARM_AM::getSORegOffset(Inst.getOperand(2).getImm()) == 0) {
       // Shifting by zero is accepted as a vanilla 'MOVr'

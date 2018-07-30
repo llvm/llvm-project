@@ -650,7 +650,7 @@ AggExprEmitter::VisitCompoundLiteralExpr(CompoundLiteralExpr *E) {
     EmitAggLoadOfLValue(E);
     return;
   }
-  
+
   AggValueSlot Slot = EnsureSlot(E->getType());
   CGF.EmitAggExpr(E->getInitializer(), Slot);
 }
@@ -766,7 +766,7 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
                                           AggValueSlot::DoesNotOverlap,
                                           AggValueSlot::IsZeroed);
       }
-      
+
       CGF.EmitAggExpr(E->getSubExpr(), valueDest);
       return;
     }
@@ -801,7 +801,7 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
            "Implicit cast types must be compatible");
     Visit(E->getSubExpr());
     break;
-      
+
   case CK_LValueBitCast:
     llvm_unreachable("should not be emitting lvalue bitcast as rvalue");
 
@@ -1140,7 +1140,7 @@ void AggExprEmitter::VisitBinAssign(const BinaryOperator *E) {
              Dest);
     return;
   }
-  
+
   LValue LHS = CGF.EmitLValue(E->getLHS());
 
   // If we have an atomic type, evaluate into the destination and then
@@ -1155,7 +1155,7 @@ void AggExprEmitter::VisitBinAssign(const BinaryOperator *E) {
 
   // Codegen the RHS so that it stores directly into the LHS.
   AggValueSlot LHSSlot =
-    AggValueSlot::forLValue(LHS, AggValueSlot::IsDestructed, 
+    AggValueSlot::forLValue(LHS, AggValueSlot::IsDestructed,
                             needsGC(E->getLHS()->getType()),
                             AggValueSlot::IsAliased,
                             AggValueSlot::MayOverlap);
@@ -1163,7 +1163,7 @@ void AggExprEmitter::VisitBinAssign(const BinaryOperator *E) {
   if (!LHSSlot.isVolatile() &&
       CGF.hasVolatileMember(E->getLHS()->getType()))
     LHSSlot.setVolatile(true);
-      
+
   CGF.EmitAggExpr(E->getRHS(), LHSSlot);
 
   // Copy into the destination if the assignment isn't ignored.
@@ -1303,13 +1303,13 @@ static bool isSimpleZero(const Expr *E, CodeGenFunction &CGF) {
   // '\0'
   if (const CharacterLiteral *CL = dyn_cast<CharacterLiteral>(E))
     return CL->getValue() == 0;
-  
+
   // Otherwise, hard case: conservatively return false.
   return false;
 }
 
 
-void 
+void
 AggExprEmitter::EmitInitializationToLValue(Expr *E, LValue LV) {
   QualType type = LV.getType();
   // FIXME: Ignore result?
@@ -1326,7 +1326,7 @@ AggExprEmitter::EmitInitializationToLValue(Expr *E, LValue LV) {
     RValue RV = CGF.EmitReferenceBindingToExpr(E);
     return CGF.EmitStoreThroughLValue(RV, LV);
   }
-  
+
   switch (CGF.getEvaluationKind(type)) {
   case TEK_Complex:
     CGF.EmitComplexExprIntoLValue(E, LV, /*isInit*/ true);
@@ -1357,7 +1357,7 @@ void AggExprEmitter::EmitNullInitializationToLValue(LValue lv) {
   // copied into it, we don't have to emit any zeros here.
   if (Dest.isZeroed() && CGF.getTypes().isZeroInitializable(type))
     return;
-  
+
   if (CGF.hasScalarEvaluationKind(type)) {
     // For non-aggregates, we can store the appropriate null constant.
     llvm::Value *null = CGF.CGM.EmitNullConstant(type);
@@ -1501,12 +1501,12 @@ void AggExprEmitter::VisitInitListExpr(InitListExpr *E) {
     if (curInitIndex == NumInitElements && Dest.isZeroed() &&
         CGF.getTypes().isZeroInitializable(E->getType()))
       break;
-    
+
 
     LValue LV = CGF.EmitLValueForFieldInitialization(DestLV, field);
     // We never generate write-barries for initialized fields.
     LV.setNonGC(true);
-    
+
     if (curInitIndex < NumInitElements) {
       // Store the initializer into the field.
       EmitInitializationToLValue(E->getInit(curInitIndex++), LV);
@@ -1535,10 +1535,10 @@ void AggExprEmitter::VisitInitListExpr(InitListExpr *E) {
         pushedCleanup = true;
       }
     }
-    
+
     // If the GEP didn't get used because of a dead zero init or something
     // else, clean it up for -O0 builds and general tidiness.
-    if (!pushedCleanup && LV.isSimple()) 
+    if (!pushedCleanup && LV.isSimple())
       if (llvm::GetElementPtrInst *GEP =
             dyn_cast<llvm::GetElementPtrInst>(LV.getPointer()))
         if (GEP->use_empty())
@@ -1677,7 +1677,7 @@ static CharUnits GetNumNonZeroBytesInInit(const Expr *E, CodeGenFunction &CGF) {
     ILE = dyn_cast<InitListExpr>(ILE->getInit(0));
   if (!ILE || !CGF.getTypes().isZeroInitializable(ILE->getType()))
     return CGF.getContext().getTypeSizeInChars(E->getType());
-  
+
   // InitListExprs for structs have to be handled carefully.  If there are
   // reference members, we need to consider the size of the reference, not the
   // referencee.  InitListExprs for unions and arrays can't have references.
@@ -1685,7 +1685,7 @@ static CharUnits GetNumNonZeroBytesInInit(const Expr *E, CodeGenFunction &CGF) {
     if (!RT->isUnionType()) {
       RecordDecl *SD = E->getType()->getAs<RecordType>()->getDecl();
       CharUnits NumNonZeroBytes = CharUnits::Zero();
-      
+
       unsigned ILEElement = 0;
       if (auto *CXXRD = dyn_cast<CXXRecordDecl>(SD))
         while (ILEElement != CXXRD->getNumBases())
@@ -1701,7 +1701,7 @@ static CharUnits GetNumNonZeroBytesInInit(const Expr *E, CodeGenFunction &CGF) {
           continue;
 
         const Expr *E = ILE->getInit(ILEElement++);
-        
+
         // Reference values are always non-null and have the width of a pointer.
         if (Field->getType()->isReferenceType())
           NumNonZeroBytes += CGF.getContext().toCharUnitsFromBits(
@@ -1709,12 +1709,12 @@ static CharUnits GetNumNonZeroBytesInInit(const Expr *E, CodeGenFunction &CGF) {
         else
           NumNonZeroBytes += GetNumNonZeroBytesInInit(E, CGF);
       }
-      
+
       return NumNonZeroBytes;
     }
   }
-  
-  
+
+
   CharUnits NumNonZeroBytes = CharUnits::Zero();
   for (unsigned i = 0, e = ILE->getNumInits(); i != e; ++i)
     NumNonZeroBytes += GetNumNonZeroBytesInInit(ILE->getInit(i), CGF);
@@ -1750,14 +1750,14 @@ static void CheckAggExprForMemSetUse(AggValueSlot &Slot, const Expr *E,
   CharUnits NumNonZeroBytes = GetNumNonZeroBytesInInit(E, CGF);
   if (NumNonZeroBytes*4 > Size)
     return;
-  
+
   // Okay, it seems like a good idea to use an initial memset, emit the call.
   llvm::Constant *SizeVal = CGF.Builder.getInt64(Size.getQuantity());
 
-  Address Loc = Slot.getAddress();  
+  Address Loc = Slot.getAddress();
   Loc = CGF.Builder.CreateElementBitCast(Loc, CGF.Int8Ty);
   CGF.Builder.CreateMemSet(Loc, CGF.Builder.getInt8(0), SizeVal, false);
-  
+
   // Tell the AggExprEmitter that the slot is known zero.
   Slot.setZeroed();
 }
@@ -1777,7 +1777,7 @@ void CodeGenFunction::EmitAggExpr(const Expr *E, AggValueSlot Slot) {
 
   // Optimize the slot if possible.
   CheckAggExprForMemSetUse(Slot, E, *this);
- 
+
   AggExprEmitter(*this, Slot, Slot.isIgnored()).Visit(const_cast<Expr*>(E));
 }
 
@@ -1826,7 +1826,7 @@ void CodeGenFunction::EmitAggregateCopy(LValue Dest, LValue Src, QualType Ty,
   if (getLangOpts().CPlusPlus) {
     if (const RecordType *RT = Ty->getAs<RecordType>()) {
       CXXRecordDecl *Record = cast<CXXRecordDecl>(RT->getDecl());
-      assert((Record->hasTrivialCopyConstructor() || 
+      assert((Record->hasTrivialCopyConstructor() ||
               Record->hasTrivialCopyAssignment() ||
               Record->hasTrivialMoveConstructor() ||
               Record->hasTrivialMoveAssignment() ||
@@ -1899,7 +1899,7 @@ void CodeGenFunction::EmitAggregateCopy(LValue Dest, LValue Src, QualType Ty,
   } else if (const RecordType *RecordTy = Ty->getAs<RecordType>()) {
     RecordDecl *Record = RecordTy->getDecl();
     if (Record->hasObjectMember()) {
-      CGM.getObjCRuntime().EmitGCMemmoveCollectable(*this, DestPtr, SrcPtr, 
+      CGM.getObjCRuntime().EmitGCMemmoveCollectable(*this, DestPtr, SrcPtr,
                                                     SizeVal);
       return;
     }
@@ -1907,7 +1907,7 @@ void CodeGenFunction::EmitAggregateCopy(LValue Dest, LValue Src, QualType Ty,
     QualType BaseType = getContext().getBaseElementType(Ty);
     if (const RecordType *RecordTy = BaseType->getAs<RecordType>()) {
       if (RecordTy->getDecl()->hasObjectMember()) {
-        CGM.getObjCRuntime().EmitGCMemmoveCollectable(*this, DestPtr, SrcPtr, 
+        CGM.getObjCRuntime().EmitGCMemmoveCollectable(*this, DestPtr, SrcPtr,
                                                       SizeVal);
         return;
       }

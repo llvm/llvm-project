@@ -115,7 +115,7 @@ class GlobalModuleIndex {
   /// The number of identifier lookup hits, where we recognize the
   /// identifier.
   unsigned NumIdentifierLookupHits;
-  
+
   /// Internal constructor. Use \c readIndex() to read an index.
   explicit GlobalModuleIndex(std::unique_ptr<llvm::MemoryBuffer> Buffer,
                              llvm::BitstreamCursor Cursor);
@@ -167,7 +167,7 @@ public:
 
   /// A set of module files in which we found a result.
   typedef llvm::SmallPtrSet<ModuleFile *, 4> HitSet;
-  
+
   /// Look for all of the module files with information about the given
   /// identifier, e.g., a global function, variable, or type with that name.
   ///

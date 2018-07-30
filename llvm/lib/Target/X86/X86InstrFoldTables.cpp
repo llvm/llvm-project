@@ -1576,7 +1576,7 @@ static const X86MemoryFoldTableEntry MemoryFoldTable2[] = {
   { X86::SUBSDrr_Int,              X86::SUBSDrm_Int,              TB_NO_REVERSE },
   { X86::SUBSSrr,                  X86::SUBSSrm,                  0 },
   { X86::SUBSSrr_Int,              X86::SUBSSrm_Int,              TB_NO_REVERSE },
-  // FIXME: TEST*rr -> swapped      operand of TEST      *mr.     
+  // FIXME: TEST*rr -> swapped      operand of TEST      *mr.
   { X86::UNPCKHPDrr,               X86::UNPCKHPDrm,               TB_ALIGN_16 },
   { X86::UNPCKHPSrr,               X86::UNPCKHPSrm,               TB_ALIGN_16 },
   { X86::UNPCKLPDrr,               X86::UNPCKLPDrm,               TB_ALIGN_16 },

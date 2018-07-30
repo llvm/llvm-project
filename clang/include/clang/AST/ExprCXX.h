@@ -721,7 +721,7 @@ public:
   }
 };
 
-/// A member reference to an MSPropertyDecl. 
+/// A member reference to an MSPropertyDecl.
 ///
 /// This expression always has pseudo-object type, and therefore it is
 /// typically not encountered in a fully-typechecked expression except
@@ -1591,7 +1591,7 @@ class LambdaExpr final : public Expr,
 
   /// The number of captures.
   unsigned NumCaptures : 16;
-  
+
   /// The default capture kind, which is a value of type
   /// LambdaCaptureDefault.
   unsigned CaptureDefault : 2;
@@ -1602,10 +1602,10 @@ class LambdaExpr final : public Expr,
 
   /// Whether this lambda had the result type explicitly specified.
   unsigned ExplicitResultType : 1;
-  
+
   /// The location of the closing brace ('}') that completes
   /// the lambda.
-  /// 
+  ///
   /// The location of the brace is also available by looking up the
   /// function call operator in the lambda class. However, it is
   /// stored here to improve the performance of getSourceRange(), and
@@ -1673,7 +1673,7 @@ public:
 
   /// Retrieve this lambda's captures.
   capture_range captures() const;
-  
+
   /// Retrieve an iterator pointing to the first lambda capture.
   capture_iterator capture_begin() const;
 
@@ -1686,7 +1686,7 @@ public:
 
   /// Retrieve this lambda's explicit captures.
   capture_range explicit_captures() const;
-  
+
   /// Retrieve an iterator pointing to the first explicit
   /// lambda capture.
   capture_iterator explicit_capture_begin() const;
@@ -1754,18 +1754,18 @@ public:
   SourceRange getIntroducerRange() const { return IntroducerRange; }
 
   /// Retrieve the class that corresponds to the lambda.
-  /// 
+  ///
   /// This is the "closure type" (C++1y [expr.prim.lambda]), and stores the
   /// captures in its fields and provides the various operations permitted
   /// on a lambda (copying, calling).
   CXXRecordDecl *getLambdaClass() const;
 
   /// Retrieve the function call operator associated with this
-  /// lambda expression. 
+  /// lambda expression.
   CXXMethodDecl *getCallOperator() const;
 
-  /// If this is a generic lambda expression, retrieve the template 
-  /// parameter list associated with it, or else return null. 
+  /// If this is a generic lambda expression, retrieve the template
+  /// parameter list associated with it, or else return null.
   TemplateParameterList *getTemplateParameterList() const;
 
   /// Whether this is a generic lambda.
@@ -1784,7 +1784,7 @@ public:
 
   /// Whether this lambda had its result type explicitly specified.
   bool hasExplicitResultType() const { return ExplicitResultType; }
-    
+
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == LambdaExprClass;
   }
@@ -2129,7 +2129,7 @@ public:
   Expr *getArgument() { return cast<Expr>(Argument); }
   const Expr *getArgument() const { return cast<Expr>(Argument); }
 
-  /// Retrieve the type being destroyed. 
+  /// Retrieve the type being destroyed.
   ///
   /// If the type being destroyed is a dependent type which may or may not
   /// be a pointer, return an invalid type.
@@ -2345,13 +2345,13 @@ class TypeTraitExpr final
       private llvm::TrailingObjects<TypeTraitExpr, TypeSourceInfo *> {
   /// The location of the type trait keyword.
   SourceLocation Loc;
-  
+
   ///  The location of the closing parenthesis.
   SourceLocation RParenLoc;
-  
+
   // Note: The TypeSourceInfos for the arguments are allocated after the
   // TypeTraitExpr.
-  
+
   TypeTraitExpr(QualType T, SourceLocation Loc, TypeTrait Kind,
                 ArrayRef<TypeSourceInfo *> Args,
                 SourceLocation RParenLoc,
@@ -2377,26 +2377,26 @@ public:
 
   static TypeTraitExpr *CreateDeserialized(const ASTContext &C,
                                            unsigned NumArgs);
-  
+
   /// Determine which type trait this expression uses.
   TypeTrait getTrait() const {
     return static_cast<TypeTrait>(TypeTraitExprBits.Kind);
   }
 
-  bool getValue() const { 
-    assert(!isValueDependent()); 
-    return TypeTraitExprBits.Value; 
+  bool getValue() const {
+    assert(!isValueDependent());
+    return TypeTraitExprBits.Value;
   }
-  
+
   /// Determine the number of arguments to this type trait.
   unsigned getNumArgs() const { return TypeTraitExprBits.NumArgs; }
-  
+
   /// Retrieve the Ith argument.
   TypeSourceInfo *getArg(unsigned I) const {
     assert(I < getNumArgs() && "Argument out-of-range");
     return getArgs()[I];
   }
-  
+
   /// Retrieve the argument types.
   ArrayRef<TypeSourceInfo *> getArgs() const {
     return llvm::makeArrayRef(getTrailingObjects<TypeSourceInfo *>(),
@@ -2409,7 +2409,7 @@ public:
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == TypeTraitExprClass;
   }
-  
+
   // Iterators
   child_range children() {
     return child_range(child_iterator(), child_iterator());

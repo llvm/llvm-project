@@ -70,3 +70,13 @@ fmla z0.d, z1.d, z2.d[2]
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: vector lane must be an integer in range [0, 1].
 // CHECK-NEXT: fmla z0.d, z1.d, z2.d[2]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+
+// --------------------------------------------------------------------------//
+// Negative tests for instructions that are incompatible with movprfx
+
+movprfx z0.d, p0/z, z7.d
+fmla z0.d, z1.d, z7.d[1]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a predicated movprfx, suggest using unpredicated movprfx
+// CHECK-NEXT: fmla z0.d, z1.d, z7.d[1]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:

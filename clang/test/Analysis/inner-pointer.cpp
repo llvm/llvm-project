@@ -38,12 +38,28 @@ typedef basic_string<wchar_t> wstring;
 typedef basic_string<char16_t> u16string;
 typedef basic_string<char32_t> u32string;
 
+template <typename T>
+void func_ref(T &a);
+
+template <typename T>
+void func_const_ref(const T &a);
+
+template <typename T>
+void func_value(T a);
+
+string my_string = "default";
+void default_arg(int a = 42, string &b = my_string);
+
 } // end namespace std
 
 void consume(const char *) {}
 void consume(const wchar_t *) {}
 void consume(const char16_t *) {}
 void consume(const char32_t *) {}
+
+//=--------------------------------------=//
+//     `std::string` member functions     //
+//=--------------------------------------=//
 
 void deref_after_scope_char(bool cond) {
   const char *c, *d;
@@ -149,6 +165,19 @@ void multiple_symbols(bool cond) {
   } else {
     consume(d1); // expected-warning {{Use of memory after it is freed}}
   }              // expected-note@-1 {{Use of memory after it is freed}}
+}
+
+void deref_after_scope_ok(bool cond) {
+  const char *c, *d;
+  std::string s;
+  {
+    c = s.c_str();
+    d = s.data();
+  }
+  if (cond)
+    consume(c); // no-warning
+  else
+    consume(d); // no-warning
 }
 
 void deref_after_equals() {
@@ -277,15 +306,58 @@ void deref_after_swap() {
   // expected-note@-1 {{Use of memory after it is freed}}
 }
 
-void deref_after_scope_ok(bool cond) {
-  const char *c, *d;
+//=---------------------------=//
+//     Other STL functions     //
+//=---------------------------=//
+
+void STL_func_ref() {
+  const char *c;
   std::string s;
-  {
-    c = s.c_str();
-    d = s.data();
-  }
-  if (cond)
-    consume(c); // no-warning
-  else
-    consume(d); // no-warning
+  c = s.c_str();    // expected-note {{Dangling inner pointer obtained here}}
+  std::func_ref(s); // expected-note {{Inner pointer invalidated by call to 'func_ref'}}
+  consume(c);       // expected-warning {{Use of memory after it is freed}}
+  // expected-note@-1 {{Use of memory after it is freed}}
+}
+
+void STL_func_const_ref() {
+  const char *c;
+  std::string s;
+  c = s.c_str();
+  std::func_const_ref(s);
+  consume(c); // no-warning
+}
+
+void STL_func_value() {
+  const char *c;
+  std::string s;
+  c = s.c_str();
+  std::func_value(s);
+  consume(c); // no-warning
+}
+
+void func_ptr_known() {
+  const char *c;
+  std::string s;
+  void (*func_ptr)(std::string &) = std::func_ref<std::string>;
+  c = s.c_str(); // expected-note {{Dangling inner pointer obtained here}}
+  func_ptr(s);   // expected-note {{Inner pointer invalidated by call to 'func_ref'}}
+  consume(c);    // expected-warning {{Use of memory after it is freed}}
+  // expected-note@-1 {{Use of memory after it is freed}}
+}
+
+void func_ptr_unknown(void (*func_ptr)(std::string &)) {
+  const char *c;
+  std::string s;
+  c = s.c_str();
+  func_ptr(s);
+  consume(c); // no-warning
+}
+
+void func_default_arg() {
+  const char *c;
+  std::string s;
+  c = s.c_str();     // expected-note {{Dangling inner pointer obtained here}}
+  default_arg(3, s); // expected-note {{Inner pointer invalidated by call to 'default_arg'}}
+  consume(c);        // expected-warning {{Use of memory after it is freed}}
+  // expected-note@-1 {{Use of memory after it is freed}}
 }

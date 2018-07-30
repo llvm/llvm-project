@@ -48,3 +48,31 @@ ucvtf   z0.d, p0/m, z0.d
 // CHECK-ENCODING: [0x00,0xa0,0xd7,0x65]
 // CHECK-ERROR: instruction requires: sve
 // CHECK-UNKNOWN: 00 a0 d7 65 <unknown>
+
+
+// --------------------------------------------------------------------------//
+// Test compatibility with MOVPRFX instruction.
+
+movprfx z5.d, p0/z, z7.d
+// CHECK-INST: movprfx	z5.d, p0/z, z7.d
+// CHECK-ENCODING: [0xe5,0x20,0xd0,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: e5 20 d0 04 <unknown>
+
+ucvtf   z5.d, p0/m, z0.d
+// CHECK-INST: ucvtf	z5.d, p0/m, z0.d
+// CHECK-ENCODING: [0x05,0xa0,0xd7,0x65]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 05 a0 d7 65 <unknown>
+
+movprfx z5, z7
+// CHECK-INST: movprfx	z5, z7
+// CHECK-ENCODING: [0xe5,0xbc,0x20,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: e5 bc 20 04 <unknown>
+
+ucvtf   z5.d, p0/m, z0.d
+// CHECK-INST: ucvtf	z5.d, p0/m, z0.d
+// CHECK-ENCODING: [0x05,0xa0,0xd7,0x65]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 05 a0 d7 65 <unknown>

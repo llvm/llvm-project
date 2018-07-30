@@ -4599,7 +4599,7 @@ bool Sema::DeduceReturnType(FunctionDecl *FD, SourceLocation Loc,
     CXXRecordDecl *Lambda = cast<CXXMethodDecl>(FD)->getParent();
     FunctionDecl *CallOp = Lambda->getLambdaCallOperator();
 
-    // For a generic lambda, instantiate the call operator if needed. 
+    // For a generic lambda, instantiate the call operator if needed.
     if (auto *Args = FD->getTemplateSpecializationArgs()) {
       CallOp = InstantiateFunctionDeclaration(
           CallOp->getDescribedFunctionTemplate(), Args, Loc);

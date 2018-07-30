@@ -319,7 +319,7 @@ tok::PPKeywordKind IdentifierInfo::getPPKeywordID() const {
   CASE( 6, 'i', 'n', ifndef);
   CASE( 6, 'i', 'p', import);
   CASE( 6, 'p', 'a', pragma);
-      
+
   CASE( 7, 'd', 'f', defined);
   CASE( 7, 'i', 'c', include);
   CASE( 7, 'w', 'r', warning);
@@ -328,7 +328,7 @@ tok::PPKeywordKind IdentifierInfo::getPPKeywordID() const {
   CASE(12, 'i', 'c', include_next);
 
   CASE(14, '_', 'p', __public_macro);
-      
+
   CASE(15, '_', 'p', __private_macro);
 
   CASE(16, '_', 'i', __include_macros);
@@ -566,9 +566,9 @@ ObjCMethodFamily Selector::getMethodFamilyImpl(Selector sel) {
 ObjCInstanceTypeFamily Selector::getInstTypeMethodFamily(Selector sel) {
   IdentifierInfo *first = sel.getIdentifierInfoForSlot(0);
   if (!first) return OIT_None;
-  
+
   StringRef name = first->getName();
-  
+
   if (name.empty()) return OIT_None;
   switch (name.front()) {
     case 'a':
@@ -593,22 +593,22 @@ ObjCInstanceTypeFamily Selector::getInstTypeMethodFamily(Selector sel) {
 ObjCStringFormatFamily Selector::getStringFormatFamilyImpl(Selector sel) {
   IdentifierInfo *first = sel.getIdentifierInfoForSlot(0);
   if (!first) return SFF_None;
-  
+
   StringRef name = first->getName();
-  
+
   switch (name.front()) {
     case 'a':
       if (name == "appendFormat") return SFF_NSString;
       break;
-      
+
     case 'i':
       if (name == "initWithFormat") return SFF_NSString;
       break;
-      
+
     case 'l':
       if (name == "localizedStringWithFormat") return SFF_NSString;
       break;
-      
+
     case 's':
       if (name == "stringByAppendingFormat" ||
           name == "stringWithFormat") return SFF_NSString;

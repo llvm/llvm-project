@@ -10,7 +10,7 @@
 // This pass transforms loops by placing phi nodes at the end of the loops for
 // all values that are live across the loop boundary.  For example, it turns
 // the left into the right code:
-// 
+//
 // for (...)                for (...)
 //   if (c)                   if (c)
 //     X1 = ...                 X1 = ...
@@ -21,8 +21,8 @@
 //                          ... = X4 + 4
 //
 // This is still valid LLVM; the extra phi nodes are purely redundant, and will
-// be trivially eliminated by InstCombine.  The major benefit of this 
-// transformation is that it makes many other loop optimizations, such as 
+// be trivially eliminated by InstCombine.  The major benefit of this
+// transformation is that it makes many other loop optimizations, such as
 // LoopUnswitching, simpler.
 //
 //===----------------------------------------------------------------------===//

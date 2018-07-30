@@ -1424,7 +1424,7 @@ Instruction *InstCombiner::foldShuffledBinop(BinaryOperator &Inst) {
       bool ConstOp1 = isa<Constant>(Inst.getOperand(1));
       if (Inst.isIntDivRem() || (Inst.isShift() && ConstOp1))
         NewC = getSafeVectorConstantForBinop(Inst.getOpcode(), NewC, ConstOp1);
-      
+
       // Op(shuffle(V1, Mask), C) -> shuffle(Op(V1, NewC), Mask)
       // Op(C, shuffle(V1, Mask)) -> shuffle(Op(NewC, V1), Mask)
       Value *NewLHS = isa<Constant>(LHS) ? NewC : V1;

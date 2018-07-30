@@ -25,7 +25,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
-#include "llvm/Support/Compiler.h" 
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstdint>
 #include <limits>
@@ -86,7 +86,7 @@ public:
   bool isNull() const {
     return !RemoveRange.isValid();
   }
-  
+
   /// Create a code modification hint that inserts the given
   /// code string at a specific location.
   static FixItHint CreateInsertion(SourceLocation InsertionLoc,
@@ -99,7 +99,7 @@ public:
     Hint.BeforePreviousInsertions = BeforePreviousInsertions;
     return Hint;
   }
-  
+
   /// Create a code modification hint that inserts the given
   /// code from \p FromRange at a specific location.
   static FixItHint CreateInsertionFromRange(SourceLocation InsertionLoc,
@@ -123,7 +123,7 @@ public:
   static FixItHint CreateRemoval(SourceRange RemoveRange) {
     return CreateRemoval(CharSourceRange::getTokenRange(RemoveRange));
   }
-  
+
   /// Create a code modification hint that replaces the given
   /// source range with the given code string.
   static FixItHint CreateReplacement(CharSourceRange RemoveRange,
@@ -133,7 +133,7 @@ public:
     Hint.CodeToInsert = Code;
     return Hint;
   }
-  
+
   static FixItHint CreateReplacement(SourceRange RemoveRange,
                                      StringRef Code) {
     return CreateReplacement(CharSourceRange::getTokenRange(RemoveRange), Code);
@@ -348,7 +348,7 @@ private:
       unsigned Offset;
 
       DiagStatePoint(DiagState *State, unsigned Offset)
-          : State(State), Offset(Offset) {} 
+          : State(State), Offset(Offset) {}
     };
 
     /// Description of the diagnostic states and state transitions for a
@@ -420,7 +420,7 @@ private:
 
   /// Indicates that an unrecoverable error has occurred.
   bool UnrecoverableErrorOccurred;
-  
+
   /// Counts for DiagnosticErrorTrap to check whether an error occurred
   /// during a parsing section, e.g. during parsing a function.
   unsigned TrapNumErrorsOccurred;
@@ -556,7 +556,7 @@ public:
   ///
   /// Zero disables the limit.
   void setErrorLimit(unsigned Limit) { ErrorLimit = Limit; }
-  
+
   /// Specify the maximum number of template instantiation
   /// notes to emit along with a given diagnostic.
   void setTemplateBacktraceLimit(unsigned Limit) {
@@ -626,11 +626,11 @@ public:
     return GetCurDiagState()->SuppressSystemWarnings;
   }
 
-  /// Suppress all diagnostics, to silence the front end when we 
+  /// Suppress all diagnostics, to silence the front end when we
   /// know that we don't want any more diagnostics to be passed along to the
   /// client
-  void setSuppressAllDiagnostics(bool Val = true) { 
-    SuppressAllDiagnostics = Val; 
+  void setSuppressAllDiagnostics(bool Val = true) {
+    SuppressAllDiagnostics = Val;
   }
   bool getSuppressAllDiagnostics() const { return SuppressAllDiagnostics; }
 
@@ -638,12 +638,12 @@ public:
   /// template types.
   void setElideType(bool Val = true) { ElideType = Val; }
   bool getElideType() { return ElideType; }
- 
+
   /// Set tree printing, to outputting the template difference in a
   /// tree format.
   void setPrintTemplateTree(bool Val = false) { PrintTemplateTree = Val; }
   bool getPrintTemplateTree() { return PrintTemplateTree; }
- 
+
   /// Set color printing, so the type diffing will inject color markers
   /// into the output.
   void setShowColors(bool Val = false) { ShowColors = Val; }
@@ -657,7 +657,7 @@ public:
     ShowOverloads = Val;
   }
   OverloadsShown getShowOverloads() const { return ShowOverloads; }
-  
+
   /// Pretend that the last diagnostic issued was ignored, so any
   /// subsequent notes will be suppressed, or restore a prior ignoring
   /// state after ignoring some diagnostics and their notes, possibly in
@@ -751,12 +751,12 @@ public:
     return UncompilableErrorOccurred;
   }
   bool hasFatalErrorOccurred() const { return FatalErrorOccurred; }
-  
+
   /// Determine whether any kind of unrecoverable error has occurred.
   bool hasUnrecoverableErrorOccurred() const {
     return FatalErrorOccurred || UnrecoverableErrorOccurred;
   }
-  
+
   unsigned getNumWarnings() const { return NumWarnings; }
 
   void setNumWarnings(unsigned NumWarnings) {
@@ -799,10 +799,10 @@ public:
     LastDiagLevel = Other.LastDiagLevel;
   }
 
-  /// Reset the state of the diagnostic object to its initial 
+  /// Reset the state of the diagnostic object to its initial
   /// configuration.
   void Reset();
-  
+
   //===--------------------------------------------------------------------===//
   // DiagnosticsEngine classification and reporting interfaces.
   //
@@ -875,7 +875,7 @@ public:
   /// DiagnosticsEngine object itself.
   void SetDelayedDiagnostic(unsigned DiagID, StringRef Arg1 = "",
                             StringRef Arg2 = "");
-  
+
   /// Clear out the current diagnostic.
   void Clear() { CurDiagID = std::numeric_limits<unsigned>::max(); }
 
@@ -894,7 +894,7 @@ private:
   friend class DiagnosticErrorTrap;
   friend class DiagnosticIDs;
   friend class PartialDiagnostic;
-  
+
   /// Report the delayed diagnostic.
   void ReportDelayed();
 
@@ -1042,7 +1042,7 @@ public:
 class DiagnosticBuilder {
   friend class DiagnosticsEngine;
   friend class PartialDiagnostic;
-  
+
   mutable DiagnosticsEngine *DiagObj = nullptr;
   mutable unsigned NumArgs = 0;
 
@@ -1105,7 +1105,7 @@ protected:
 
     return Result;
   }
-  
+
 public:
   /// Copy constructor.  When copied, this "takes" the diagnostic info from the
   /// input and neuters it.
@@ -1430,8 +1430,8 @@ public:
 };
 
 /**
- * Represents a diagnostic in a form that can be retained until its 
- * corresponding source manager is destroyed. 
+ * Represents a diagnostic in a form that can be retained until its
+ * corresponding source manager is destroyed.
  */
 class StoredDiagnostic {
   unsigned ID;
@@ -1444,9 +1444,9 @@ class StoredDiagnostic {
 public:
   StoredDiagnostic() = default;
   StoredDiagnostic(DiagnosticsEngine::Level Level, const Diagnostic &Info);
-  StoredDiagnostic(DiagnosticsEngine::Level Level, unsigned ID, 
+  StoredDiagnostic(DiagnosticsEngine::Level Level, unsigned ID,
                    StringRef Message);
-  StoredDiagnostic(DiagnosticsEngine::Level Level, unsigned ID, 
+  StoredDiagnostic(DiagnosticsEngine::Level Level, unsigned ID,
                    StringRef Message, FullSourceLoc Loc,
                    ArrayRef<CharSourceRange> Ranges,
                    ArrayRef<FixItHint> Fixits);
@@ -1466,7 +1466,7 @@ public:
   range_iterator range_begin() const { return Ranges.begin(); }
   range_iterator range_end() const { return Ranges.end(); }
   unsigned range_size() const { return Ranges.size(); }
-  
+
   ArrayRef<CharSourceRange> getRanges() const {
     return llvm::makeArrayRef(Ranges);
   }
@@ -1476,7 +1476,7 @@ public:
   fixit_iterator fixit_begin() const { return FixIts.begin(); }
   fixit_iterator fixit_end() const { return FixIts.end(); }
   unsigned fixit_size() const { return FixIts.size(); }
-  
+
   ArrayRef<FixItHint> getFixIts() const {
     return llvm::makeArrayRef(FixIts);
   }
@@ -1488,7 +1488,7 @@ class DiagnosticConsumer {
 protected:
   unsigned NumWarnings = 0;       ///< Number of warnings reported
   unsigned NumErrors = 0;         ///< Number of errors reported
-  
+
 public:
   DiagnosticConsumer() = default;
   virtual ~DiagnosticConsumer();
@@ -1506,7 +1506,7 @@ public:
   /// in between BeginSourceFile() and EndSourceFile().
   ///
   /// \param LangOpts The language options for the source file being processed.
-  /// \param PP The preprocessor object being used for the source; this is 
+  /// \param PP The preprocessor object being used for the source; this is
   /// optional, e.g., it may not be present when processing AST source files.
   virtual void BeginSourceFile(const LangOptions &LangOpts,
                                const Preprocessor *PP = nullptr) {}

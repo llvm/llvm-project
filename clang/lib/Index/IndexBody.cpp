@@ -30,7 +30,7 @@ public:
   BodyIndexer(IndexingContext &indexCtx,
               const NamedDecl *Parent, const DeclContext *DC)
     : IndexCtx(indexCtx), Parent(Parent), ParentDC(DC) { }
-  
+
   bool shouldWalkTypesOfTypeLocs() const { return false; }
 
   bool dataTraverseStmtPre(Stmt *S) {
@@ -322,7 +322,7 @@ public:
     }
     return true;
   }
-  
+
   bool VisitObjCDictionaryLiteral(ObjCDictionaryLiteral *E) {
     if (ObjCMethodDecl *MD = E->getDictWithObjectsMethod()) {
       return passObjCLiteralMethodCall(MD, E);

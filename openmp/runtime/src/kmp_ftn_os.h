@@ -616,5 +616,25 @@
 // All GOMP_4.5 symbols
 #define KMP_API_NAME_GOMP_TASKLOOP GOMP_taskloop
 #define KMP_API_NAME_GOMP_TASKLOOP_ULL GOMP_taskloop_ull
+#define KMP_API_NAME_GOMP_DOACROSS_POST GOMP_doacross_post
+#define KMP_API_NAME_GOMP_DOACROSS_WAIT GOMP_doacross_wait
+#define KMP_API_NAME_GOMP_LOOP_DOACROSS_STATIC_START                           \
+  GOMP_loop_doacross_static_start
+#define KMP_API_NAME_GOMP_LOOP_DOACROSS_DYNAMIC_START                          \
+  GOMP_loop_doacross_dynamic_start
+#define KMP_API_NAME_GOMP_LOOP_DOACROSS_GUIDED_START                           \
+  GOMP_loop_doacross_guided_start
+#define KMP_API_NAME_GOMP_LOOP_DOACROSS_RUNTIME_START                          \
+  GOMP_loop_doacross_runtime_start
+#define KMP_API_NAME_GOMP_DOACROSS_ULL_POST GOMP_doacross_ull_post
+#define KMP_API_NAME_GOMP_DOACROSS_ULL_WAIT GOMP_doacross_ull_wait
+#define KMP_API_NAME_GOMP_LOOP_ULL_DOACROSS_STATIC_START                       \
+  GOMP_loop_ull_doacross_static_start
+#define KMP_API_NAME_GOMP_LOOP_ULL_DOACROSS_DYNAMIC_START                      \
+  GOMP_loop_ull_doacross_dynamic_start
+#define KMP_API_NAME_GOMP_LOOP_ULL_DOACROSS_GUIDED_START                       \
+  GOMP_loop_ull_doacross_guided_start
+#define KMP_API_NAME_GOMP_LOOP_ULL_DOACROSS_RUNTIME_START                      \
+  GOMP_loop_ull_doacross_runtime_start
 
 #endif /* KMP_FTN_OS_H */
