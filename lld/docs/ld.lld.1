@@ -3,7 +3,7 @@
 .\"
 .\" This man page documents only lld's ELF linking support, obtained originally
 .\" from FreeBSD.
-.Dd April 28, 2018
+.Dd July 30, 2018
 .Dt LD.LLD 1
 .Os
 .Sh NAME
@@ -40,9 +40,9 @@ for shared libraries if used.
 Set the
 .Dv DT_AUXILIARY
 field to the specified name.
-.It Fl -Bdynamic
+.It Fl -Bdynamic , Fl -dy
 Link against shared libraries.
-.It Fl -Bstatic
+.It Fl -Bstatic , Fl -static , Fl -dn
 Do not link against shared libraries.
 .It Fl -Bsymbolic
 Bind defined symbols locally.
@@ -95,7 +95,9 @@ may be
 .Cm none
 or
 .Cm zlib .
-.It Fl -define-common
+.It Fl -cref
+Output cross reference table.
+.It Fl -define-common , Fl d
 Assign space to common symbols.
 .It Fl -defsym Ns = Ns Ar symbol Ns = Ns Ar expression
 Define a symbol alias.
@@ -109,9 +111,9 @@ or
 Demangle symbol names.
 .It Fl -disable-new-dtags
 Disable new dynamic tags.
-.It Fl -discard-all
+.It Fl -discard-all , Fl x
 Delete all local symbols.
-.It Fl -discard-locals
+.It Fl -discard-locals , Fl X
 Delete temporary local symbols.
 .It Fl -discard-none
 Keep all symbols in the symbol table.
@@ -128,7 +130,7 @@ Request creation of
 section and
 .Dv PT_GNU_EH_FRAME
 segment header.
-.It Fl -emit-relocs
+.It Fl -emit-relocs , Fl q
 Generate relocations in the output.
 .It Fl -enable-new-dtags
 Enable new dynamic tags.
@@ -148,17 +150,17 @@ Exclude static libraries from automatic export.
 Include
 .Ar symbol
 in the dynamic symbol table.
-.It Fl -export-dynamic
+.It Fl -export-dynamic , Fl E
 Put symbols in the dynamic symbol table.
 .It Fl -fatal-warnings
 Treat warnings as errors.
-.It Fl -filter Ns = Ns Ar value
+.It Fl -filter Ns = Ns Ar value , Fl F Ar value
 Set the
 .Dv DT_FILTER
 field to the specified value.
 .It Fl -fini Ns = Ns Ar symbol
 Specify a finalizer function.
-.It Fl -format Ns = Ns Ar input-format
+.It Fl -format Ns = Ns Ar input-format , Fl b Ar input-format
 Specify the format of the inputs following this option.
 .Ar input-format
 may be one of
@@ -198,6 +200,10 @@ Set the base address to
 .Ar value .
 .It Fl -init Ns = Ns Ar symbol
 Specify an initializer function.
+.It Fl -keep-unique Ns = Ns Ar symbol
+Do not fold
+.Ar symbol
+during ICF.
 .It Fl -lto-aa-pipeline Ns = Ns Ar value
 AA pipeline to run during LTO.
 Used in conjunction with
@@ -208,11 +214,11 @@ Passes to run during LTO.
 Optimization level for LTO.
 .It Fl -lto-partitions Ns = Ns Ar value
 Number of LTO codegen partitions.
-.It Fl L Ar dir
+.It Fl L Ar dir , Fl -library-path Ns = Ns Ar dir
 Add a directory to the library search path.
-.It Fl l Ar libName
+.It Fl l Ar libName, Fl -library Ns = Ns Ar libName
 Root name of library to use.
-.It Fl -Map Ns = Ns Ar file
+.It Fl -Map Ns = Ns Ar file , Fl M Ar file
 Print a link map to
 .Ar file .
 .It Fl m Ar value
@@ -258,7 +264,7 @@ The only supported
 is
 .Cm binary ,
 which produces output with no ELF header.
-.It Fl -omagic
+.It Fl -omagic , Fl N
 Set the text and data sections to be readable and writable.
 .It Fl -opt-remarks-filename Ar file
 Write optimization remarks in YAML format to
@@ -302,13 +308,13 @@ and
 .It Fl -pop-state
 Undo the effect of
 .Fl -push-state.
-.It Fl -relocatable
+.It Fl -relocatable , Fl r
 Create relocatable object file.
 .It Fl -reproduce Ns = Ns Ar value
 Dump linker invocation and input files for debugging.
 .It Fl -retain-symbols-file Ns = Ns Ar file
 Retain only the symbols listed in the file.
-.It Fl -rpath Ns = Ns Ar value
+.It Fl -rpath Ns = Ns Ar value , Fl R Ar value
 Add a
 .Dv DT_RUNPATH
 to the output.
@@ -318,14 +324,14 @@ The supported values are
 .Cm windows
 and
 .Cm posix .
-.It Fl -script Ns = Ns Ar file
+.It Fl -script Ns = Ns Ar file , Fl T Ar file
 Read linker script from
 .Ar file .
-.It Fl -section-start Ns = Ar section Ns = Ns Ar address
+.It Fl -section-start Ns = Ns Ar section Ns = Ns Ar address
 Set address of section.
-.It Fl -shared
+.It Fl -shared , Fl -Bsharable
 Build a shared object.
-.It Fl -soname Ns = Ns Ar value
+.It Fl -soname Ns = Ns Ar value , Fl h Ar value
 Set
 .Dv DT_SONAME
 to
@@ -335,9 +341,9 @@ Specifies sections sorting rule when linkerscript is used.
 .It Fl -start-lib
 Start a grouping of objects that should be treated as if they were together
 in an archive.
-.It Fl -strip-all
+.It Fl -strip-all , Fl s
 Strip all symbols.
-.It Fl -strip-debug
+.It Fl -strip-debug , Fl S
 Strip debugging information.
 .It Fl -symbol-ordering-file Ns = Ns Ar file
 Lay out sections in the order specified by
@@ -387,7 +393,7 @@ Number of ThinLTO jobs.
 .It Fl -threads
 Run the linker multi-threaded.
 This option is enabled by default.
-.It Fl -trace-symbol Ns = Ns Ar symbol
+.It Fl -trace-symbol Ns = Ns Ar symbol , Fl y Ar symbol
 Trace references to
 .Ar symbol .
 .It Fl -trace
@@ -398,7 +404,7 @@ Same as
 with
 .Li .text
 as the sectionname.
-.It Fl -undefined Ns = Ns Ar symbol
+.It Fl -undefined Ns = Ns Ar symbol , Fl u Ar symbol
 Force
 .Ar symbol
 to be an undefined symbol during linking.
