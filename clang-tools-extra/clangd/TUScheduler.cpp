@@ -367,11 +367,11 @@ void ASTWorker::update(
     PreambleWasBuilt.notify();
 
     if (CanReuseAST) {
-      // Take a shortcut and don't build the AST, neither the inputs nor the
+      // Take a shortcut and don't build the AST if neither the inputs nor the
       // preamble have changed.
       // Note that we do not report the diagnostics, since they should not have
       // changed either. All the clients should handle the lack of OnUpdated()
-      // call anyway, to handle empty result from buildAST.
+      // call anyway to handle empty result from buildAST.
       // FIXME(ibiryukov): the AST could actually change if non-preamble
       // includes changed, but we choose to ignore it.
       // FIXME(ibiryukov): should we refresh the cache in IdleASTs for the
