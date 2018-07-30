@@ -85,12 +85,12 @@ public:
   PartialDiagnostic PD;
   SourceLocation Loc;
   const Stmt *stmt;
-  
+
   PossiblyUnreachableDiag(const PartialDiagnostic &PD, SourceLocation Loc,
                           const Stmt *stmt)
       : PD(PD), Loc(Loc), stmt(stmt) {}
 };
-    
+
 /// Retains information about a function, method, or block that is
 /// currently being parsed.
 class FunctionScopeInfo {
@@ -101,7 +101,7 @@ protected:
     SK_Lambda,
     SK_CapturedRegion
   };
-  
+
 public:
   /// What kind of scope we are describing.
   ScopeKind Kind : 3;
@@ -206,7 +206,7 @@ public:
   /// current function scope.  These diagnostics are vetted for reachability
   /// prior to being emitted.
   SmallVector<PossiblyUnreachableDiag, 4> PossiblyUnreachableDiags;
-  
+
   /// A list of parameters which have the nonnull attribute and are
   /// modified in the function.
   llvm::SmallPtrSet<const ParmVarDecl *, 8> ModifiedNonNullParams;
@@ -633,9 +633,9 @@ public:
   QualType ReturnType;
 
   void addCapture(VarDecl *Var, bool isBlock, bool isByref, bool isNested,
-                  SourceLocation Loc, SourceLocation EllipsisLoc, 
+                  SourceLocation Loc, SourceLocation EllipsisLoc,
                   QualType CaptureType, Expr *Cpy) {
-    Captures.push_back(Capture(Var, isBlock, isByref, isNested, Loc, 
+    Captures.push_back(Capture(Var, isBlock, isByref, isNested, Loc,
                                EllipsisLoc, CaptureType, Cpy));
     CaptureMap[Var] = Captures.size();
   }
@@ -655,13 +655,13 @@ public:
 
   /// Determine whether the C++ 'this' is captured.
   bool isCXXThisCaptured() const { return CXXThisCaptureIndex != 0; }
-  
+
   /// Retrieve the capture of C++ 'this', if it has been captured.
   Capture &getCXXThisCapture() {
     assert(isCXXThisCaptured() && "this has not been captured");
     return Captures[CXXThisCaptureIndex - 1];
   }
-  
+
   /// Determine whether the given variable has been captured.
   bool isCaptured(VarDecl *Var) const {
     return CaptureMap.count(Var);
@@ -684,7 +684,7 @@ public:
     return Captures[Known->second - 1];
   }
 
-  static bool classof(const FunctionScopeInfo *FSI) { 
+  static bool classof(const FunctionScopeInfo *FSI) {
     return FSI->Kind == SK_Block || FSI->Kind == SK_Lambda
                                  || FSI->Kind == SK_CapturedRegion;
   }
@@ -694,7 +694,7 @@ public:
 class BlockScopeInfo final : public CapturingScopeInfo {
 public:
   BlockDecl *TheDecl;
-  
+
   /// TheScope - This is the scope for the block itself, which contains
   /// arguments etc.
   Scope *TheScope;
@@ -711,8 +711,8 @@ public:
 
   ~BlockScopeInfo() override;
 
-  static bool classof(const FunctionScopeInfo *FSI) { 
-    return FSI->Kind == SK_Block; 
+  static bool classof(const FunctionScopeInfo *FSI) {
+    return FSI->Kind == SK_Block;
   }
 };
 
@@ -796,12 +796,12 @@ public:
   /// Whether the lambda contains an unexpanded parameter pack.
   bool ContainsUnexpandedParameterPack = false;
 
-  /// If this is a generic lambda, use this as the depth of 
+  /// If this is a generic lambda, use this as the depth of
   /// each 'auto' parameter, during initial AST construction.
   unsigned AutoTemplateParameterDepth = 0;
 
   /// Store the list of the auto parameters for a generic lambda.
-  /// If this is a generic lambda, store the list of the auto 
+  /// If this is a generic lambda, store the list of the auto
   /// parameters converted into TemplateTypeParmDecls into a vector
   /// that can be used to construct the generic lambda's template
   /// parameter list, during initial AST construction.
@@ -811,19 +811,19 @@ public:
   /// list has been created (from the AutoTemplateParams) then
   /// store a reference to it (cache it to avoid reconstructing it).
   TemplateParameterList *GLTemplateParameterList = nullptr;
-  
+
   /// Contains all variable-referring-expressions (i.e. DeclRefExprs
   ///  or MemberExprs) that refer to local variables in a generic lambda
   ///  or a lambda in a potentially-evaluated-if-used context.
-  ///  
-  ///  Potentially capturable variables of a nested lambda that might need 
-  ///   to be captured by the lambda are housed here.  
+  ///
+  ///  Potentially capturable variables of a nested lambda that might need
+  ///   to be captured by the lambda are housed here.
   ///  This is specifically useful for generic lambdas or
   ///  lambdas within a potentially evaluated-if-used context.
   ///  If an enclosing variable is named in an expression of a lambda nested
-  ///  within a generic lambda, we don't always know know whether the variable 
+  ///  within a generic lambda, we don't always know know whether the variable
   ///  will truly be odr-used (i.e. need to be captured) by that nested lambda,
-  ///  until its instantiation. But we still need to capture it in the 
+  ///  until its instantiation. But we still need to capture it in the
   ///  enclosing lambda if all intervening lambdas can capture the variable.
   llvm::SmallVector<Expr*, 4> PotentiallyCapturingExprs;
 
@@ -867,10 +867,10 @@ public:
     return !AutoTemplateParams.empty() || GLTemplateParameterList;
   }
 
-  /// Add a variable that might potentially be captured by the 
-  /// lambda and therefore the enclosing lambdas. 
-  /// 
-  /// This is also used by enclosing lambda's to speculatively capture 
+  /// Add a variable that might potentially be captured by the
+  /// lambda and therefore the enclosing lambdas.
+  ///
+  /// This is also used by enclosing lambda's to speculatively capture
   /// variables that nested lambda's - depending on their enclosing
   /// specialization - might need to capture.
   /// Consider:
@@ -879,7 +879,7 @@ public:
   /// void foo() {
   ///   const int x = 10;
   ///   auto L = [=](auto a) { // capture 'x'
-  ///      return [=](auto b) { 
+  ///      return [=](auto b) {
   ///        f(x, a);  // we may or may not need to capture 'x'
   ///      };
   ///   };
@@ -888,46 +888,46 @@ public:
     assert(isa<DeclRefExpr>(VarExpr) || isa<MemberExpr>(VarExpr));
     PotentiallyCapturingExprs.push_back(VarExpr);
   }
-  
+
   void addPotentialThisCapture(SourceLocation Loc) {
     PotentialThisCaptureLocation = Loc;
   }
 
-  bool hasPotentialThisCapture() const { 
-    return PotentialThisCaptureLocation.isValid(); 
+  bool hasPotentialThisCapture() const {
+    return PotentialThisCaptureLocation.isValid();
   }
 
   /// Mark a variable's reference in a lambda as non-odr using.
   ///
-  /// For generic lambdas, if a variable is named in a potentially evaluated 
-  /// expression, where the enclosing full expression is dependent then we 
+  /// For generic lambdas, if a variable is named in a potentially evaluated
+  /// expression, where the enclosing full expression is dependent then we
   /// must capture the variable (given a default capture).
-  /// This is accomplished by recording all references to variables 
-  /// (DeclRefExprs or MemberExprs) within said nested lambda in its array of 
+  /// This is accomplished by recording all references to variables
+  /// (DeclRefExprs or MemberExprs) within said nested lambda in its array of
   /// PotentialCaptures. All such variables have to be captured by that lambda,
   /// except for as described below.
-  /// If that variable is usable as a constant expression and is named in a 
-  /// manner that does not involve its odr-use (e.g. undergoes 
+  /// If that variable is usable as a constant expression and is named in a
+  /// manner that does not involve its odr-use (e.g. undergoes
   /// lvalue-to-rvalue conversion, or discarded) record that it is so. Upon the
   /// act of analyzing the enclosing full expression (ActOnFinishFullExpr)
   /// if we can determine that the full expression is not instantiation-
-  /// dependent, then we can entirely avoid its capture. 
+  /// dependent, then we can entirely avoid its capture.
   ///
   ///   const int n = 0;
   ///   [&] (auto x) {
   ///     (void)+n + x;
   ///   };
-  /// Interestingly, this strategy would involve a capture of n, even though 
-  /// it's obviously not odr-used here, because the full-expression is 
+  /// Interestingly, this strategy would involve a capture of n, even though
+  /// it's obviously not odr-used here, because the full-expression is
   /// instantiation-dependent.  It could be useful to avoid capturing such
   /// variables, even when they are referred to in an instantiation-dependent
   /// expression, if we can unambiguously determine that they shall never be
   /// odr-used.  This would involve removal of the variable-referring-expression
-  /// from the array of PotentialCaptures during the lvalue-to-rvalue 
+  /// from the array of PotentialCaptures during the lvalue-to-rvalue
   /// conversions.  But per the working draft N3797, (post-chicago 2013) we must
-  /// capture such variables. 
+  /// capture such variables.
   /// Before anyone is tempted to implement a strategy for not-capturing 'n',
-  /// consider the insightful warning in: 
+  /// consider the insightful warning in:
   ///    /cfe-commits/Week-of-Mon-20131104/092596.html
   /// "The problem is that the set of captures for a lambda is part of the ABI
   ///  (since lambda layout can be made visible through inline functions and the
@@ -937,32 +937,32 @@ public:
   ///  building such a node. So we need a rule that anyone can implement and get
   ///  exactly the same result".
   void markVariableExprAsNonODRUsed(Expr *CapturingVarExpr) {
-    assert(isa<DeclRefExpr>(CapturingVarExpr) 
+    assert(isa<DeclRefExpr>(CapturingVarExpr)
         || isa<MemberExpr>(CapturingVarExpr));
     NonODRUsedCapturingExprs.insert(CapturingVarExpr);
   }
   bool isVariableExprMarkedAsNonODRUsed(Expr *CapturingVarExpr) const {
-    assert(isa<DeclRefExpr>(CapturingVarExpr) 
+    assert(isa<DeclRefExpr>(CapturingVarExpr)
       || isa<MemberExpr>(CapturingVarExpr));
     return NonODRUsedCapturingExprs.count(CapturingVarExpr);
   }
   void removePotentialCapture(Expr *E) {
     PotentiallyCapturingExprs.erase(
-        std::remove(PotentiallyCapturingExprs.begin(), 
-            PotentiallyCapturingExprs.end(), E), 
+        std::remove(PotentiallyCapturingExprs.begin(),
+            PotentiallyCapturingExprs.end(), E),
         PotentiallyCapturingExprs.end());
   }
   void clearPotentialCaptures() {
     PotentiallyCapturingExprs.clear();
     PotentialThisCaptureLocation = SourceLocation();
   }
-  unsigned getNumPotentialVariableCaptures() const { 
-    return PotentiallyCapturingExprs.size(); 
+  unsigned getNumPotentialVariableCaptures() const {
+    return PotentiallyCapturingExprs.size();
   }
 
-  bool hasPotentialCaptures() const { 
-    return getNumPotentialVariableCaptures() || 
-                                  PotentialThisCaptureLocation.isValid(); 
+  bool hasPotentialCaptures() const {
+    return getNumPotentialVariableCaptures() ||
+                                  PotentialThisCaptureLocation.isValid();
   }
 
   // When passed the index, returns the VarDecl and Expr associated

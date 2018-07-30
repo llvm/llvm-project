@@ -200,7 +200,7 @@ break; \
   return QC.apply(Context, QT);
 }
 
-/// Convert the given type to a string suitable for printing as part of 
+/// Convert the given type to a string suitable for printing as part of
 /// a diagnostic.
 ///
 /// There are four main criteria when determining whether we should have an
@@ -254,7 +254,7 @@ ConvertTypeToDiagnosticString(ASTContext &Context, QualType Ty,
                  // and the desugared comparison string.
     std::string CompareCanS =
         CompareCanTy.getAsString(Context.getPrintingPolicy());
-    
+
     if (CompareCanS == CanS)
       continue;  // No new info from canonical type
 
@@ -327,11 +327,11 @@ void clang::FormatASTNodeDiagnosticArgument(
     void *Cookie,
     ArrayRef<intptr_t> QualTypeVals) {
   ASTContext &Context = *static_cast<ASTContext*>(Cookie);
-  
+
   size_t OldEnd = Output.size();
   llvm::raw_svector_ostream OS(Output);
   bool NeedQuotes = true;
-  
+
   switch (Kind) {
     default: llvm_unreachable("unknown ArgumentKind");
     case DiagnosticsEngine::ak_qualtype_pair: {
@@ -365,7 +365,7 @@ void clang::FormatASTNodeDiagnosticArgument(
     case DiagnosticsEngine::ak_qualtype: {
       assert(Modifier.empty() && Argument.empty() &&
              "Invalid modifier for QualType argument");
-      
+
       QualType Ty(QualType::getFromOpaquePtr(reinterpret_cast<void*>(Val)));
       OS << ConvertTypeToDiagnosticString(Context, Ty, PrevArgs, QualTypeVals);
       NeedQuotes = false;
@@ -2040,7 +2040,7 @@ public:
 /// is successful.
 static bool FormatTemplateTypeDiff(ASTContext &Context, QualType FromType,
                                    QualType ToType, bool PrintTree,
-                                   bool PrintFromType, bool ElideType, 
+                                   bool PrintFromType, bool ElideType,
                                    bool ShowColors, raw_ostream &OS) {
   if (PrintTree)
     PrintFromType = true;

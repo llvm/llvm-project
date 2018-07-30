@@ -37,7 +37,7 @@ namespace clang {
 ///   lookup.  In this case, Origins contains an entry overriding lookup and
 ///   specifying the correct pair of DeclContext/ASTContext.
 ///
-/// - The DeclContext of origin was determined by another ExterenalASTMerger. 
+/// - The DeclContext of origin was determined by another ExterenalASTMerger.
 ///   (This is possible when the source ASTContext for one of the Importers has
 ///   its own ExternalASTMerger).  The origin must be properly forwarded in this
 ///   case.
@@ -57,7 +57,7 @@ public:
   typedef std::map<const DeclContext *, DCOrigin> OriginMap;
   typedef std::vector<std::unique_ptr<ASTImporter>> ImporterVector;
 private:
-  /// One importer exists for each source.  
+  /// One importer exists for each source.
   ImporterVector Importers;
   /// Overrides in case name lookup would return nothing or would return
   /// the wrong thing.
@@ -106,7 +106,7 @@ public:
   /// Remove a set of ASTContexts as possible origins.
   ///
   /// Sometimes an origin goes away (for example, if a source file gets
-  /// superseded by a newer version). 
+  /// superseded by a newer version).
   ///
   /// The caller is responsible for ensuring that this doesn't leave
   /// DeclContexts that can't be completed.
@@ -163,7 +163,7 @@ private:
   template <typename CallbackType>
   void ForEachMatchingDC(const DeclContext *DC, CallbackType Callback);
 
-public: 
+public:
   /// Log something if there is a logging callback installed.
   llvm::raw_ostream &logs() { return *LogStream; }
 

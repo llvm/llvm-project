@@ -133,6 +133,7 @@ struct Configuration {
   bool EhFrameHdr;
   bool EmitRelocs;
   bool EnableNewDtags;
+  bool ExecuteOnly;
   bool ExportDynamic;
   bool FixCortexA53Errata843419;
   bool GcSections;

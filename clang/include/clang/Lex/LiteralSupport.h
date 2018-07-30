@@ -208,7 +208,7 @@ class StringLiteralParser {
   const LangOptions &Features;
   const TargetInfo &Target;
   DiagnosticsEngine *Diags;
-  
+
   unsigned MaxTokenLength;
   unsigned SizeBound;
   unsigned CharByteWidth;
@@ -230,7 +230,7 @@ public:
       ResultPtr(ResultBuf.data()), hadError(false), Pascal(false) {
     init(StringToks);
   }
-    
+
 
   bool hadError;
   bool Pascal;

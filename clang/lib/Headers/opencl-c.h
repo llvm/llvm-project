@@ -11540,7 +11540,7 @@ half16 __ovld __cnfn select(half16 a, half16 b, ushort16 c);
  *
  * vstoren write sizeof (gentypen) bytes given by data to address (p + (offset * n)).
  *
- * The address computed as (p + (offset * n)) must be 
+ * The address computed as (p + (offset * n)) must be
  * 8-bit aligned if gentype is char, uchar;
  * 16-bit aligned if gentype is short, ushort, half;
  * 32-bit aligned if gentype is int, uint, float;
@@ -12888,7 +12888,7 @@ void __ovld write_mem_fence(cl_mem_fence_flags flags);
 cl_mem_fence_flags __ovld get_fence(const void *ptr);
 cl_mem_fence_flags __ovld get_fence(void *ptr);
 
-/** 
+/**
  * Builtin functions to_global, to_local, and to_private need to be declared as Clang builtin functions
  * and checked in Sema since they should be declared as
  *   addr gentype* to_addr (gentype*);
@@ -13773,7 +13773,7 @@ ulong __ovld atomic_fetch_max_explicit(volatile atomic_ulong *object, long opera
 // add/sub: atomic type argument can be uintptr_t/intptr_t, value type argument can be ptrdiff_t.
 // or/xor/and/min/max: atomic type argument can be intptr_t/uintptr_t, value type argument can be intptr_t/uintptr_t.
 
-#if defined(cl_khr_int64_base_atomics) && defined(cl_khr_int64_extended_atomics) 
+#if defined(cl_khr_int64_base_atomics) && defined(cl_khr_int64_extended_atomics)
 uintptr_t __ovld atomic_fetch_add(volatile atomic_uintptr_t *object, ptrdiff_t operand);
 uintptr_t __ovld atomic_fetch_add_explicit(volatile atomic_uintptr_t *object, ptrdiff_t operand, memory_order order);
 uintptr_t __ovld atomic_fetch_add_explicit(volatile atomic_uintptr_t *object, ptrdiff_t operand, memory_order order, memory_scope scope);
@@ -14571,7 +14571,7 @@ int printf(__constant const char* st, ...);
  * only. The filter_mode specified in sampler
  * must be set to CLK_FILTER_NEAREST; otherwise
  * the values returned are undefined.
- 
+
  * The read_image{f|i|ui} calls that take
  * integer coordinates must use a sampler with
  * normalized coordinates set to

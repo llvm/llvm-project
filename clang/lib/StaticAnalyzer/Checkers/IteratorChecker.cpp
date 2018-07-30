@@ -551,6 +551,8 @@ void IteratorChecker::checkDeadSymbols(SymbolReaper &SR,
       State = State->remove<IteratorComparisonMap>(Comp.first);
     }
   }
+
+  C.addTransition(State);
 }
 
 ProgramStateRef IteratorChecker::evalAssume(ProgramStateRef State, SVal Cond,

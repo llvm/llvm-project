@@ -68,7 +68,7 @@ void CFGReverseBlockReachabilityAnalysis::mapReachability(const CFGBlock *Dst) {
       firstRun = false;
 
     // Add the predecessors to the worklist.
-    for (CFGBlock::const_pred_iterator i = block->pred_begin(), 
+    for (CFGBlock::const_pred_iterator i = block->pred_begin(),
          e = block->pred_end(); i != e; ++i) {
       if (*i)
         worklist.push_back(*i);

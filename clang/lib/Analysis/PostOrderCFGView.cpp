@@ -22,11 +22,11 @@ void PostOrderCFGView::anchor() {}
 PostOrderCFGView::PostOrderCFGView(const CFG *cfg) {
   Blocks.reserve(cfg->getNumBlockIDs());
   CFGBlockSet BSet(cfg);
-    
+
   for (po_iterator I = po_iterator::begin(cfg, BSet),
                    E = po_iterator::end(cfg, BSet); I != E; ++I) {
     BlockOrder[*I] = Blocks.size() + 1;
-    Blocks.push_back(*I);      
+    Blocks.push_back(*I);
   }
 }
 
@@ -43,7 +43,7 @@ bool PostOrderCFGView::BlockOrderCompare::operator()(const CFGBlock *b1,
                                                      const CFGBlock *b2) const {
   PostOrderCFGView::BlockOrderTy::const_iterator b1It = POV.BlockOrder.find(b1);
   PostOrderCFGView::BlockOrderTy::const_iterator b2It = POV.BlockOrder.find(b2);
-    
+
   unsigned b1V = (b1It == POV.BlockOrder.end()) ? 0 : b1It->second;
   unsigned b2V = (b2It == POV.BlockOrder.end()) ? 0 : b2It->second;
   return b1V > b2V;

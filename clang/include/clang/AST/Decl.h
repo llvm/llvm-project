@@ -98,7 +98,7 @@ public:
 
   /// Return the TypeLoc wrapper for the type source info.
   TypeLoc getTypeLoc() const; // implemented in TypeLoc.h
-  
+
   /// Override the type stored in this TypeSourceInfo. Use with caution!
   void overrideType(QualType T) { Ty = T; }
 };
@@ -488,7 +488,7 @@ public:
                            SourceLocation IdentL, IdentifierInfo *II,
                            SourceLocation GnuLabelL);
   static LabelDecl *CreateDeserialized(ASTContext &C, unsigned ID);
-  
+
   LabelStmt *getStmt() const { return TheStmt; }
   void setStmt(LabelStmt *T) { TheStmt = T; }
 
@@ -511,8 +511,8 @@ public:
 };
 
 /// Represent a C++ namespace.
-class NamespaceDecl : public NamedDecl, public DeclContext, 
-                      public Redeclarable<NamespaceDecl> 
+class NamespaceDecl : public NamedDecl, public DeclContext,
+                      public Redeclarable<NamespaceDecl>
 {
   /// The starting location of the source range, pointing
   /// to either the namespace or the inline keyword.
@@ -523,7 +523,7 @@ class NamespaceDecl : public NamedDecl, public DeclContext,
 
   /// A pointer to either the anonymous namespace that lives just inside
   /// this namespace or to the first namespace in the chain (the latter case
-  /// only when this is not the first in the chain), along with a 
+  /// only when this is not the first in the chain), along with a
   /// boolean value indicating whether this is an inline namespace.
   llvm::PointerIntPair<NamespaceDecl *, 1, bool> AnonOrFirstNamespaceAndInline;
 
@@ -1931,7 +1931,7 @@ public:
                               bool isConstexprSpecified = false);
 
   static FunctionDecl *CreateDeserialized(ASTContext &C, unsigned ID);
-                       
+
   DeclarationNameInfo getNameInfo() const {
     return DeclarationNameInfo(getDeclName(), getLocation(), DNLoc);
   }
@@ -2598,7 +2598,7 @@ public:
                            InClassInitStyle InitStyle);
 
   static FieldDecl *CreateDeserialized(ASTContext &C, unsigned ID);
-  
+
   /// Returns the index of this field within its record,
   /// as appropriate for passing to ASTRecordLayout::getFieldOffset.
   unsigned getFieldIndex() const;
@@ -2754,7 +2754,7 @@ public:
                                   QualType T, Expr *E,
                                   const llvm::APSInt &V);
   static EnumConstantDecl *CreateDeserialized(ASTContext &C, unsigned ID);
-  
+
   const Expr *getInitExpr() const { return (const Expr*) Init; }
   Expr *getInitExpr() { return (Expr*) Init; }
   const llvm::APSInt &getInitVal() const { return Val; }
@@ -3812,7 +3812,7 @@ public:
 
   /// Finds the first data member which has a name.
   /// nullptr is returned if no named data member exists.
-  const FieldDecl *findFirstNamedDataMember() const;  
+  const FieldDecl *findFirstNamedDataMember() const;
 
 private:
   /// Deserialize just the fields.
@@ -3835,7 +3835,7 @@ public:
                                   SourceLocation RParenLoc);
 
   static FileScopeAsmDecl *CreateDeserialized(ASTContext &C, unsigned ID);
-  
+
   SourceLocation getAsmLoc() const { return getLocation(); }
   SourceLocation getRParenLoc() const { return RParenLoc; }
   void setRParenLoc(SourceLocation L) { RParenLoc = L; }
@@ -3927,9 +3927,9 @@ protected:
         IsConversionFromLambda(false), DoesNotEscape(false) {}
 
 public:
-  static BlockDecl *Create(ASTContext &C, DeclContext *DC, SourceLocation L); 
+  static BlockDecl *Create(ASTContext &C, DeclContext *DC, SourceLocation L);
   static BlockDecl *CreateDeserialized(ASTContext &C, unsigned ID);
-  
+
   SourceLocation getCaretLocation() const { return getLocation(); }
 
   bool isVariadic() const { return IsVariadic; }
@@ -4009,7 +4009,7 @@ public:
    }
 
    Decl *getBlockManglingContextDecl() const {
-     return ManglingContextDecl;    
+     return ManglingContextDecl;
    }
 
   void setBlockMangling(unsigned Number, Decl *Ctx) {
@@ -4145,16 +4145,16 @@ class ImportDecl final : public Decl,
 
   /// The imported module, along with a bit that indicates whether
   /// we have source-location information for each identifier in the module
-  /// name. 
+  /// name.
   ///
   /// When the bit is false, we only have a single source location for the
   /// end of the import declaration.
   llvm::PointerIntPair<Module *, 1, bool> ImportedAndComplete;
-  
+
   /// The next import in the list of imports local to the translation
   /// unit being parsed (not loaded from an AST file).
   ImportDecl *NextLocalImport = nullptr;
-  
+
   ImportDecl(DeclContext *DC, SourceLocation StartLoc, Module *Imported,
              ArrayRef<SourceLocation> IdentifierLocs);
 
@@ -4162,26 +4162,26 @@ class ImportDecl final : public Decl,
              SourceLocation EndLoc);
 
   ImportDecl(EmptyShell Empty) : Decl(Import, Empty) {}
-  
+
 public:
   /// Create a new module import declaration.
-  static ImportDecl *Create(ASTContext &C, DeclContext *DC, 
+  static ImportDecl *Create(ASTContext &C, DeclContext *DC,
                             SourceLocation StartLoc, Module *Imported,
                             ArrayRef<SourceLocation> IdentifierLocs);
-  
+
   /// Create a new module import declaration for an implicitly-generated
   /// import.
-  static ImportDecl *CreateImplicit(ASTContext &C, DeclContext *DC, 
-                                    SourceLocation StartLoc, Module *Imported, 
+  static ImportDecl *CreateImplicit(ASTContext &C, DeclContext *DC,
+                                    SourceLocation StartLoc, Module *Imported,
                                     SourceLocation EndLoc);
-  
+
   /// Create a new, deserialized module import declaration.
-  static ImportDecl *CreateDeserialized(ASTContext &C, unsigned ID, 
+  static ImportDecl *CreateDeserialized(ASTContext &C, unsigned ID,
                                         unsigned NumLocations);
-  
+
   /// Retrieve the module that was imported by the import declaration.
   Module *getImportedModule() const { return ImportedAndComplete.getPointer(); }
-  
+
   /// Retrieves the locations of each of the identifiers that make up
   /// the complete module name in the import declaration.
   ///
@@ -4218,7 +4218,7 @@ public:
   static ExportDecl *Create(ASTContext &C, DeclContext *DC,
                             SourceLocation ExportLoc);
   static ExportDecl *CreateDeserialized(ASTContext &C, unsigned ID);
-  
+
   SourceLocation getExportLoc() const { return getLocation(); }
   SourceLocation getRBraceLoc() const { return RBraceLoc; }
   void setRBraceLoc(SourceLocation L) { RBraceLoc = L; }

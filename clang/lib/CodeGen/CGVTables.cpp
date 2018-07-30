@@ -110,7 +110,7 @@ static RValue PerformReturnAdjustment(CodeGenFunction &CGF,
   return RValue::get(ReturnValue);
 }
 
-/// This function clones a function's DISubprogram node and enters it into 
+/// This function clones a function's DISubprogram node and enters it into
 /// a value map with the intent that the map can be utilized by the cloner
 /// to short-circuit Metadata node mapping.
 /// Furthermore, the function resolves any DILocalVariable nodes referenced

@@ -888,7 +888,7 @@ ParsedTemplateArgument Sema::ActOnTemplateTypeArgument(TypeResult ParsedType) {
 
   // This is a normal type template argument. Note, if the type template
   // argument is an injected-class-name for a template, it has a dual nature
-  // and can be used as either a type or a template. We handle that in 
+  // and can be used as either a type or a template. We handle that in
   // convertTypeTemplateArgumentToTemplate.
   return ParsedTemplateArgument(ParsedTemplateArgument::Type,
                                 ParsedType.get().getAsOpaquePtr(),
@@ -1044,14 +1044,14 @@ NamedDecl *Sema::ActOnNonTypeTemplateParameter(Scope *S, Declarator &D,
   // Check that we have valid decl-specifiers specified.
   auto CheckValidDeclSpecifiers = [this, &D] {
     // C++ [temp.param]
-    // p1 
+    // p1
     //   template-parameter:
     //     ...
     //     parameter-declaration
-    // p2 
+    // p2
     //   ... A storage class shall not be specified in a template-parameter
     //   declaration.
-    // [dcl.typedef]p1: 
+    // [dcl.typedef]p1:
     //   The typedef specifier [...] shall not be used in the decl-specifier-seq
     //   of a parameter-declaration
     const DeclSpec &DS = D.getDeclSpec();
@@ -1061,22 +1061,22 @@ NamedDecl *Sema::ActOnNonTypeTemplateParameter(Scope *S, Declarator &D,
     };
     if (DS.getStorageClassSpec() != DeclSpec::SCS_unspecified)
       EmitDiag(DS.getStorageClassSpecLoc());
-    
+
     if (DS.getThreadStorageClassSpec() != TSCS_unspecified)
       EmitDiag(DS.getThreadStorageClassSpecLoc());
-    
-    // [dcl.inline]p1: 
-    //   The inline specifier can be applied only to the declaration or 
+
+    // [dcl.inline]p1:
+    //   The inline specifier can be applied only to the declaration or
     //   definition of a variable or function.
-    
+
     if (DS.isInlineSpecified())
       EmitDiag(DS.getInlineSpecLoc());
-    
+
     // [dcl.constexpr]p1:
-    //   The constexpr specifier shall be applied only to the definition of a 
-    //   variable or variable template or the declaration of a function or 
+    //   The constexpr specifier shall be applied only to the definition of a
+    //   variable or variable template or the declaration of a function or
     //   function template.
-    
+
     if (DS.isConstexprSpecified())
       EmitDiag(DS.getConstexprSpecLoc());
 
@@ -1094,7 +1094,7 @@ NamedDecl *Sema::ActOnNonTypeTemplateParameter(Scope *S, Declarator &D,
   };
 
   CheckValidDeclSpecifiers();
-  
+
   if (TInfo->getType()->isUndeducedType()) {
     Diag(D.getIdentifierLoc(),
          diag::warn_cxx14_compat_template_nontype_parm_auto_type)

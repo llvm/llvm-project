@@ -21,7 +21,7 @@ namespace clang {
 
 class ASTContext;
 class ObjCMessageExpr;
-  
+
 class ObjCNoReturn {
   /// Cached "raise" selector.
   Selector RaiseSel;
@@ -36,7 +36,7 @@ class ObjCNoReturn {
 
 public:
   ObjCNoReturn(ASTContext &C);
-  
+
   /// Return true if the given message expression is known to never
   /// return.
   bool isImplicitNoReturn(const ObjCMessageExpr *ME);

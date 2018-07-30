@@ -197,7 +197,7 @@ class LValue {
 
   // objective-c's ivar
   bool Ivar:1;
-  
+
   // objective-c's ivar is an array
   bool ObjIsArray:1;
 
@@ -207,7 +207,7 @@ class LValue {
 
   // Lvalue is a global reference of an objective-c object
   bool GlobalObjCRef : 1;
-  
+
   // Lvalue is a thread local reference
   bool ThreadLocalRef : 1;
 
@@ -301,7 +301,7 @@ public:
   bool isVolatile() const {
     return Quals.hasVolatile();
   }
-  
+
   Expr *getBaseIvarExp() const { return BaseIvarExp; }
   void setBaseIvarExp(Expr *V) { BaseIvarExp = V; }
 
@@ -452,7 +452,7 @@ class AggValueSlot {
   /// slot might require calling an appropriate Objective-C GC
   /// barrier.  The exact interaction here is unnecessarily mysterious.
   bool ObjCGCFlag : 1;
-  
+
   /// ZeroedFlag - This is set to true if the memory in the slot is
   /// known to be zero before the assignment into it.  This means that
   /// zero fields don't need to be set.
@@ -472,7 +472,7 @@ class AggValueSlot {
   /// evaluating an expression which constructs such an object.
   bool AliasedFlag : 1;
 
-  /// This is set to true if the tail padding of this slot might overlap 
+  /// This is set to true if the tail padding of this slot might overlap
   /// another object that may have already been initialized (and whose
   /// value must be preserved by this initialization). If so, we may only
   /// store up to the dsize of the type. Otherwise we can widen stores to
@@ -564,7 +564,7 @@ public:
   void setVolatile(bool flag) {
     Quals.setVolatile(flag);
   }
-  
+
   Qualifiers::ObjCLifetime getObjCLifetime() const {
     return Quals.getObjCLifetime();
   }

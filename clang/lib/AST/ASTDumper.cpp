@@ -1968,7 +1968,7 @@ void ASTDumper::dumpStmt(const Stmt *S) {
 }
 
 void ASTDumper::VisitStmt(const Stmt *Node) {
-  {   
+  {
     ColorScope Color(*this, StmtColor);
     OS << Node->getStmtClassName();
   }

@@ -50,7 +50,7 @@ namespace {
       return Delta;
     }
   };
-  
+
   /// DeltaTreeNode - The common part of all nodes.
   ///
   class DeltaTreeNode {
@@ -59,7 +59,7 @@ namespace {
       DeltaTreeNode *LHS, *RHS;
       SourceDelta Split;
     };
-    
+
   private:
     friend class DeltaTreeInteriorNode;
 

@@ -85,8 +85,8 @@ public:
 
   /// Retrieve the underlying type pointer, which refers to a
   /// canonical type, or nullptr.
-  const T *getTypePtrOrNull() const { 
-    return cast_or_null<T>(Stored.getTypePtrOrNull()); 
+  const T *getTypePtrOrNull() const {
+    return cast_or_null<T>(Stored.getTypePtrOrNull());
   }
 
   /// Implicit conversion to a qualified type.
@@ -94,7 +94,7 @@ public:
 
   /// Implicit conversion to bool.
   explicit operator bool() const { return !isNull(); }
-  
+
   bool isNull() const {
     return Stored.isNull();
   }

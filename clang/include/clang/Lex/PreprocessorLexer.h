@@ -169,12 +169,12 @@ public:
   using conditional_iterator =
       SmallVectorImpl<PPConditionalInfo>::const_iterator;
 
-  conditional_iterator conditional_begin() const { 
-    return ConditionalStack.begin(); 
+  conditional_iterator conditional_begin() const {
+    return ConditionalStack.begin();
   }
 
-  conditional_iterator conditional_end() const { 
-    return ConditionalStack.end(); 
+  conditional_iterator conditional_end() const {
+    return ConditionalStack.end();
   }
 
   void setConditionalLevels(ArrayRef<PPConditionalInfo> CL) {

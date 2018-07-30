@@ -573,7 +573,7 @@ BreakableBlockComment::getReflowSplit(unsigned LineIndex,
                                       llvm::Regex &CommentPragmasRegex) const {
   if (!mayReflow(LineIndex, CommentPragmasRegex))
     return Split(StringRef::npos, 0);
-  
+
   // If we're reflowing into a line with content indent, only reflow the next
   // line if its starting whitespace matches the content indent.
   size_t Trimmed = Content[LineIndex].find_first_not_of(Blanks);

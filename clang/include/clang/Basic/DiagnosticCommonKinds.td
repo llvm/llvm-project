@@ -16,7 +16,7 @@ let Component = "Common" in {
 // Basic.
 
 def fatal_too_many_errors
-  : Error<"too many errors emitted, stopping now">, DefaultFatal; 
+  : Error<"too many errors emitted, stopping now">, DefaultFatal;
 
 def note_declared_at : Note<"declared here">;
 def note_previous_definition : Note<"previous definition is here">;
@@ -97,11 +97,11 @@ def remark_module_lock_timeout : Remark<
 def err_module_shadowed : Error<"import of shadowed module '%0'">, DefaultFatal;
 def err_module_build_shadowed_submodule : Error<
   "build a shadowed submodule '%0'">, DefaultFatal;
-def err_module_cycle : Error<"cyclic dependency in module '%0': %1">, 
+def err_module_cycle : Error<"cyclic dependency in module '%0': %1">,
   DefaultFatal;
 def err_module_prebuilt : Error<
   "error in loading module '%0' from prebuilt module path">, DefaultFatal;
-def note_pragma_entered_here : Note<"#pragma entered here">;  
+def note_pragma_entered_here : Note<"#pragma entered here">;
 def note_decl_hiding_tag_type : Note<
   "%1 %0 is hidden by a non-type declaration of %0 here">;
 def err_attribute_not_type_attr : Error<
@@ -115,7 +115,7 @@ let CategoryName = "Nullability Issue" in {
 def warn_nullability_duplicate : Warning<
   "duplicate nullability specifier %0">,
   InGroup<Nullability>;
-  
+
 def warn_conflicting_nullability_attr_overriding_ret_types : Warning<
   "conflicting nullability specifier on return types, %0 "
   "conflicts with existing specifier %1">,
@@ -223,7 +223,7 @@ def err_unable_to_rename_temp : Error<
   "unable to rename temporary '%0' to output file '%1': '%2'">;
 def err_unable_to_make_temp : Error<
   "unable to make temporary file: %0">;
-  
+
 // Modules
 def err_module_format_unhandled : Error<
   "no handler registered for module format '%0'">, DefaultFatal;

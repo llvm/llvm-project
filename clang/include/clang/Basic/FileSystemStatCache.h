@@ -62,7 +62,7 @@ protected:
 
 public:
   virtual ~FileSystemStatCache() = default;
-  
+
   enum LookupResult {
     /// We know the file exists and its cached stat data.
     CacheExists,
@@ -90,10 +90,10 @@ public:
   void setNextStatCache(std::unique_ptr<FileSystemStatCache> Cache) {
     NextStatCache = std::move(Cache);
   }
-  
+
   /// Retrieve the next stat call cache in the chain.
   FileSystemStatCache *getNextStatCache() { return NextStatCache.get(); }
-  
+
   /// Retrieve the next stat call cache in the chain, transferring
   /// ownership of this cache (and, transitively, all of the remaining caches)
   /// to the caller.

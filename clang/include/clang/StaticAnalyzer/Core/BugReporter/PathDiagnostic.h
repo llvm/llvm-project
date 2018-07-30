@@ -71,17 +71,17 @@ public:
     PDFileEntry(llvm::FoldingSetNodeID &NodeID) : NodeID(NodeID) {}
 
     using ConsumerFiles = std::vector<std::pair<StringRef, StringRef>>;
-    
+
     /// A vector of <consumer,file> pairs.
     ConsumerFiles files;
-    
+
     /// A precomputed hash tag used for uniquing PDFileEntry objects.
     const llvm::FoldingSetNodeID NodeID;
 
     /// Used for profiling in the FoldingSet.
     void Profile(llvm::FoldingSetNodeID &ID) { ID = NodeID; }
   };
-  
+
   class FilesMade {
     llvm::BumpPtrAllocator Alloc;
     llvm::FoldingSet<PDFileEntry> Set;
@@ -94,7 +94,7 @@ public:
     void addDiagnostic(const PathDiagnostic &PD,
                        StringRef ConsumerName,
                        StringRef fileName);
-    
+
     PDFileEntry::ConsumerFiles *getFiles(const PathDiagnostic &PD);
   };
 
@@ -127,7 +127,7 @@ public:
 
   virtual PathGenerationScheme getGenerationScheme() const { return Minimal; }
   virtual bool supportsLogicalOpControlFlow() const { return false; }
-  
+
   /// Return true if the PathDiagnosticConsumer supports individual
   /// PathDiagnostics that span multiple files.
   virtual bool supportsCrossFileDiagnostics() const { return false; }
@@ -322,12 +322,12 @@ public:
   void flatten();
 
   const SourceManager& getManager() const { assert(isValid()); return *SM; }
-  
+
   void Profile(llvm::FoldingSetNodeID &ID) const;
 
   void dump() const;
 
-  /// Given an exploded node, retrieve the statement that should be used 
+  /// Given an exploded node, retrieve the statement that should be used
   /// for the diagnostic location.
   static const Stmt *getStmt(const ExplodedNode *N);
 
@@ -354,7 +354,7 @@ public:
     Start.flatten();
     End.flatten();
   }
-  
+
   void Profile(llvm::FoldingSetNodeID &ID) const {
     Start.Profile(ID);
     End.Profile(ID);
@@ -378,7 +378,7 @@ private:
   /// In the containing bug report, this piece is the last piece from
   /// the main source file.
   bool LastInMainSourceFile = false;
-  
+
   /// A constant string that can be used to tag the PathDiagnosticPiece,
   /// typically with the identification of the creator.  The actual pointer
   /// value is meant to be an identifier; the string itself is useful for
@@ -401,14 +401,14 @@ public:
 
   /// Tag this PathDiagnosticPiece with the given C-string.
   void setTag(const char *tag) { Tag = tag; }
-  
+
   /// Return the opaque tag (if any) on the PathDiagnosticPiece.
   const void *getTag() const { return Tag.data(); }
-  
+
   /// Return the string representation of the tag.  This is useful
   /// for debugging.
   StringRef getTagStr() const { return Tag; }
-  
+
   /// getDisplayHint - Return a hint indicating where the diagnostic should
   ///  be displayed by the PathDiagnosticConsumer.
   DisplayHint getDisplayHint() const { return Hint; }
@@ -488,7 +488,7 @@ public:
 
 /// Interface for classes constructing Stack hints.
 ///
-/// If a PathDiagnosticEvent occurs in a different frame than the final 
+/// If a PathDiagnosticEvent occurs in a different frame than the final
 /// diagnostic the hints can be used to summarize the effect of the call.
 class StackHintGenerator {
 public:
@@ -563,12 +563,12 @@ public:
 
   bool hasCallStackHint() { return (bool)CallStackHint; }
 
-  /// Produce the hint for the given node. The node contains 
+  /// Produce the hint for the given node. The node contains
   /// information about the call for which the diagnostic can be generated.
   std::string getCallStackMessage(const ExplodedNode *N) {
     if (CallStackHint)
       return CallStackHint->getMessage(N);
-    return {};  
+    return {};
   }
 
   void dump() const override;
@@ -605,16 +605,16 @@ class PathDiagnosticCallPiece : public PathDiagnosticPiece {
 public:
   PathDiagnosticLocation callEnter;
   PathDiagnosticLocation callEnterWithin;
-  PathDiagnosticLocation callReturn;  
+  PathDiagnosticLocation callReturn;
   PathPieces path;
 
   ~PathDiagnosticCallPiece() override;
 
   const Decl *getCaller() const { return Caller; }
-  
+
   const Decl *getCallee() const { return Callee; }
   void setCallee(const CallEnter &CE, const SourceManager &SM);
-  
+
   bool hasCallStackMessage() { return !CallStackMessage.empty(); }
   void setCallStackMessage(StringRef st) { CallStackMessage = st; }
 
@@ -725,7 +725,7 @@ public:
   ~PathDiagnosticMacroPiece() override;
 
   PathPieces subPieces;
-  
+
   bool containsEvent() const;
 
   void flattenLocations() override {
@@ -779,7 +779,7 @@ class PathDiagnostic : public llvm::FoldingSetNode {
 
   PathPieces pathImpl;
   SmallVector<PathPieces *, 3> pathStack;
-  
+
   /// Important bug uniqueing location.
   /// The location info is useful to differentiate between bugs.
   PathDiagnosticLocation UniqueingLoc;
@@ -796,22 +796,22 @@ public:
                  const Decl *DeclToUnique,
                  std::unique_ptr<FilesToLineNumsMap> ExecutedLines);
   ~PathDiagnostic();
-  
+
   const PathPieces &path;
 
-  /// Return the path currently used by builders for constructing the 
+  /// Return the path currently used by builders for constructing the
   /// PathDiagnostic.
   PathPieces &getActivePath() {
     if (pathStack.empty())
       return pathImpl;
     return *pathStack.back();
   }
-  
+
   /// Return a mutable version of 'path'.
   PathPieces &getMutablePieces() {
     return pathImpl;
   }
-    
+
   /// Return the unrolled size of the path.
   unsigned full_size();
 
@@ -898,7 +898,7 @@ public:
   /// Two diagnostics with the same issue along different paths will generate
   /// different profiles.
   void FullProfile(llvm::FoldingSetNodeID &ID) const;
-};  
+};
 
 } // namespace ento
 

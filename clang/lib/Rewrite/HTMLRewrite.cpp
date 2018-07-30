@@ -49,7 +49,7 @@ void html::HighlightRange(Rewriter &R, SourceLocation B, SourceLocation E,
   const char *BufferStart = SM.getBufferData(FID, &Invalid).data();
   if (Invalid)
     return;
-  
+
   HighlightRange(R.getEditBuffer(FID), BOffset, EOffset,
                  BufferStart, StartTag, EndTag);
 }

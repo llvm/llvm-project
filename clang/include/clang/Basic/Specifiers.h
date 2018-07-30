@@ -28,14 +28,14 @@ namespace clang {
     TSW_long,
     TSW_longlong
   };
-  
+
   /// Specifies the signedness of a type, e.g., signed or unsigned.
   enum TypeSpecifierSign {
     TSS_unspecified,
     TSS_signed,
     TSS_unsigned
   };
-  
+
   enum TypeSpecifiersPipe {
     TSP_unspecified,
     TSP_pipe
@@ -134,7 +134,7 @@ namespace clang {
     /// An Objective-C property is a logical field of an Objective-C
     /// object which is read and written via Objective-C method calls.
     OK_ObjCProperty,
-    
+
     /// An Objective-C array/dictionary subscripting which reads an
     /// object or writes at the subscripted array/dictionary element via
     /// Objective-C method calls.

@@ -23,11 +23,11 @@ namespace clang {
       NUM_BUILTIN_AST_DIAGNOSTICS
     };
   }  // end namespace diag
-  
+
   /// DiagnosticsEngine argument formatting function for diagnostics that
   /// involve AST nodes.
   ///
-  /// This function formats diagnostic arguments for various AST nodes, 
+  /// This function formats diagnostic arguments for various AST nodes,
   /// including types, declaration names, nested name specifiers, and
   /// declaration contexts, into strings that can be printed as part of
   /// diagnostics. It is meant to be used as the argument to

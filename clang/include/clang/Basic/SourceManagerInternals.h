@@ -79,7 +79,7 @@ inline bool operator<(unsigned Offset, const LineEntry &E) {
 
 /// Used to hold and unique data used to represent \#line information.
 class LineTableInfo {
-  /// Map used to assign unique IDs to filenames in \#line directives. 
+  /// Map used to assign unique IDs to filenames in \#line directives.
   ///
   /// This allows us to unique the filenames that
   /// frequently reoccur and reference them with indices.  FilenameIDs holds

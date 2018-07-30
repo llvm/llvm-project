@@ -53,7 +53,7 @@ def ext_multi_line_line_comment : Extension<"multi-line // comment">,
 def ext_line_comment : Extension<
   "// comments are not allowed in this language">,
   InGroup<Comment>;
-def ext_no_newline_eof : Extension<"no newline at end of file">, 
+def ext_no_newline_eof : Extension<"no newline at end of file">,
   InGroup<NewlineEOF>;
 def warn_no_newline_eof : Warning<"no newline at end of file">,
   InGroup<NewlineEOF>, DefaultIgnore;
@@ -294,7 +294,7 @@ def pp_nonportable_path : NonportablePath,
   InGroup<DiagGroup<"nonportable-include-path">>;
 def pp_nonportable_system_path : NonportablePath, DefaultIgnore,
   InGroup<DiagGroup<"nonportable-system-include-path">>;
-  
+
 def pp_pragma_once_in_main_file : Warning<"#pragma once in main file">,
   InGroup<DiagGroup<"pragma-once-outside-header">>;
 def pp_pragma_sysheader_in_main_file : Warning<
@@ -353,7 +353,7 @@ def ext_pp_warning_directive : Extension<"#warning is a language extension">;
 
 def ext_pp_extra_tokens_at_eol : ExtWarn<
   "extra tokens at end of #%0 directive">, InGroup<ExtraTokens>;
-  
+
 def ext_pp_comma_expr : Extension<"comma operator in operand of #if">;
 def ext_pp_bad_vaargs_use : Extension<
   "__VA_ARGS__ can only appear in the expansion of a C99 variadic macro">;
@@ -594,7 +594,7 @@ def err_pp_illegal_floating_literal : Error<
 def err_pp_line_requires_integer : Error<
   "#line directive requires a positive integer argument">;
 def ext_pp_line_zero : Extension<
-  "#line directive with zero argument is a GNU extension">, 
+  "#line directive with zero argument is a GNU extension">,
   InGroup<GNUZeroLineDirective>;
 def err_pp_line_invalid_filename : Error<
   "invalid filename for #line directive">;
@@ -736,7 +736,7 @@ def warn_auto_module_import : Warning<
 def note_implicit_top_level_module_import_here : Note<
   "submodule of top-level module '%0' implicitly imported here">;
 def warn_uncovered_module_header : Warning<
-  "umbrella header for module '%0' does not include header '%1'">, 
+  "umbrella header for module '%0' does not include header '%1'">,
   InGroup<IncompleteUmbrella>;
 def warn_mmap_umbrella_dir_not_found : Warning<
   "umbrella directory '%0' not found">,
@@ -755,7 +755,7 @@ def warn_non_modular_include_in_module : Warning<
   "include of non-modular header inside module '%0': '%1'">,
   InGroup<NonModularIncludeInModule>, DefaultIgnore;
 def warn_module_conflict : Warning<
-  "module '%0' conflicts with already-imported module '%1': %2">, 
+  "module '%0' conflicts with already-imported module '%1': %2">,
   InGroup<ModuleConflict>;
 
 def warn_header_guard : Warning<

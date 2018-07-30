@@ -47,7 +47,7 @@ class PropertiesRewriter {
   MigrationContext &MigrateCtx;
   MigrationPass &Pass;
   ObjCImplementationDecl *CurImplD;
-  
+
   enum PropActionKind {
     PropAction_None,
     PropAction_RetainReplacedWithStrong,
@@ -118,7 +118,7 @@ public:
       AtPropDeclsTy::iterator findAtLoc = AtProps.find(rawAtLoc);
       if (findAtLoc == AtProps.end())
         continue;
-      
+
       PropsTy &props = findAtLoc->second;
       for (PropsTy::iterator I = props.begin(), E = props.end(); I != E; ++I) {
         if (I->PropD == propD) {
@@ -137,7 +137,7 @@ public:
         continue;
       if (hasIvarWithExplicitARCOwnership(props))
         continue;
-      
+
       Transaction Trans(Pass.TA);
       rewriteProperty(props, atLoc);
     }
@@ -170,7 +170,7 @@ private:
 
   void rewriteProperty(PropsTy &props, SourceLocation atLoc) {
     ObjCPropertyDecl::PropertyAttributeKind propAttrs = getPropertyAttrs(props);
-    
+
     if (propAttrs & (ObjCPropertyDecl::OBJC_PR_copy |
                      ObjCPropertyDecl::OBJC_PR_unsafe_unretained |
                      ObjCPropertyDecl::OBJC_PR_strong |
@@ -215,7 +215,7 @@ private:
   void rewriteAssign(PropsTy &props, SourceLocation atLoc) const {
     bool canUseWeak = canApplyWeak(Pass.Ctx, getPropertyType(props),
                                   /*AllowOnUnknownClass=*/Pass.isGCMigration());
-    const char *toWhich = 
+    const char *toWhich =
       (Pass.isGCMigration() && !hasGCWeak(props, atLoc)) ? "strong" :
       (canUseWeak ? "weak" : "unsafe_unretained");
 
@@ -227,7 +227,7 @@ private:
       if (isUserDeclared(I->IvarD)) {
         if (I->IvarD &&
             I->IvarD->getType().getObjCLifetime() != Qualifiers::OCL_Weak) {
-          const char *toWhich = 
+          const char *toWhich =
             (Pass.isGCMigration() && !hasGCWeak(props, atLoc)) ? "__strong " :
               (canUseWeak ? "__weak " : "__unsafe_unretained ");
           Pass.TA.insert(I->IvarD->getLocation(), toWhich);
@@ -327,7 +327,7 @@ private:
       }
     }
 
-    return false;    
+    return false;
   }
 
   // Returns true if all declarations in the @property have GC __weak.

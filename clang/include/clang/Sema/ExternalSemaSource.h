@@ -46,7 +46,7 @@ struct ExternalVTableUse {
   SourceLocation Location;
   bool DefinitionRequired;
 };
-  
+
 /// An abstract interface that should be implemented by
 /// external AST sources that also provide information for semantic
 /// analysis.
@@ -106,7 +106,7 @@ public:
   /// introduce the same declarations repeatedly.
   virtual void ReadTentativeDefinitions(
                                   SmallVectorImpl<VarDecl *> &TentativeDefs) {}
-  
+
   /// Read the set of unused file-scope declarations known to the
   /// external Sema source.
   ///
@@ -116,7 +116,7 @@ public:
   /// introduce the same declarations repeatedly.
   virtual void ReadUnusedFileScopedDecls(
                  SmallVectorImpl<const DeclaratorDecl *> &Decls) {}
-  
+
   /// Read the set of delegating constructors known to the
   /// external Sema source.
   ///
@@ -148,9 +148,9 @@ public:
   /// Read the set of referenced selectors known to the
   /// external Sema source.
   ///
-  /// The external source should append its own referenced selectors to the 
-  /// given vector of selectors. Note that this routine 
-  /// may be invoked multiple times; the external source should take care not 
+  /// The external source should append its own referenced selectors to the
+  /// given vector of selectors. Note that this routine
+  /// may be invoked multiple times; the external source should take care not
   /// to introduce the same selectors repeatedly.
   virtual void ReadReferencedSelectors(
                  SmallVectorImpl<std::pair<Selector, SourceLocation> > &Sels) {}
@@ -159,7 +159,7 @@ public:
   /// external Sema source.
   ///
   /// The external source should append its own weak, undeclared identifiers to
-  /// the given vector. Note that this routine may be invoked multiple times; 
+  /// the given vector. Note that this routine may be invoked multiple times;
   /// the external source should take care not to introduce the same identifiers
   /// repeatedly.
   virtual void ReadWeakUndeclaredIdentifiers(
@@ -180,7 +180,7 @@ public:
   /// external source should take care not to introduce the same instantiations
   /// repeatedly.
   virtual void ReadPendingInstantiations(
-                 SmallVectorImpl<std::pair<ValueDecl *, 
+                 SmallVectorImpl<std::pair<ValueDecl *,
                                            SourceLocation> > &Pending) {}
 
   /// Read the set of late parsed template functions for this source.
@@ -227,7 +227,7 @@ public:
   static bool classof(const ExternalASTSource *Source) {
     return Source->SemaSource;
   }
-}; 
+};
 
 } // end namespace clang
 

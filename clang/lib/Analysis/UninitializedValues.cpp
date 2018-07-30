@@ -62,13 +62,13 @@ class DeclToIndex {
 
 public:
   DeclToIndex() = default;
-  
+
   /// Compute the actual mapping from declarations to bits.
   void computeMap(const DeclContext &dc);
-  
+
   /// Return the number of declarations in the map.
   unsigned size() const { return map.size(); }
-  
+
   /// Returns the bit vector index for a given declaration.
   Optional<unsigned> getValueIndex(const VarDecl *d) const;
 };
@@ -126,8 +126,8 @@ public:
   CFGBlockValues(const CFG &cfg);
 
   unsigned getNumEntries() const { return declToIndex.size(); }
-  
-  void computeSetOfDeclarations(const DeclContext &dc);  
+
+  void computeSetOfDeclarations(const DeclContext &dc);
 
   ValueVector &getValueVector(const CFGBlock *block) {
     return vals[block->getBlockID()];
@@ -136,13 +136,13 @@ public:
   void setAllScratchValues(Value V);
   void mergeIntoScratch(ValueVector const &source, bool isFirst);
   bool updateValueVectorWithScratch(const CFGBlock *block);
-  
+
   bool hasNoDeclarations() const {
     return declToIndex.size() == 0;
   }
 
   void resetScratch();
-  
+
   ValueVector::reference operator[](const VarDecl *vd);
 
   Value getValue(const CFGBlock *block, const CFGBlock *dstBlock,
@@ -151,7 +151,7 @@ public:
     assert(idx.hasValue());
     return getValueVector(block)[idx.getValue()];
   }
-};  
+};
 
 } // namespace
 
@@ -235,7 +235,7 @@ public:
       ++PO_I;
     }
   }
-  
+
   void enqueueSuccessors(const CFGBlock *block);
   const CFGBlock *dequeue();
 };
@@ -614,7 +614,7 @@ public:
         const CFGBlock *Pred = *I;
         if (!Pred)
           continue;
-        
+
         Value AtPredExit = vals.getValue(Pred, B, vd);
         if (AtPredExit == Initialized)
           // This block initializes the variable.
@@ -923,7 +923,7 @@ void clang::runUninitializedVariablesAnalysis(
                               classification, wasAnalyzed, PBH);
     ++stats.NumBlockVisits;
     if (changed || !previouslyVisited[block->getBlockID()])
-      worklist.enqueueSuccessors(block);    
+      worklist.enqueueSuccessors(block);
     previouslyVisited[block->getBlockID()] = true;
   }
 

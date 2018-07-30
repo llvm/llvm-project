@@ -416,7 +416,7 @@ private:
   /// The set of Objective-C class that have categories we
   /// should serialize.
   llvm::SetVector<ObjCInterfaceDecl *> ObjCClassesWithCategories;
-                    
+
   /// The set of declarations that may have redeclaration chains that
   /// need to be serialized.
   llvm::SmallVector<const Decl *, 16> Redeclarations;
@@ -424,7 +424,7 @@ private:
   /// A cache of the first local declaration for "interesting"
   /// redeclaration chains.
   llvm::DenseMap<const Decl *, const Decl *> FirstLocalDeclCache;
-                                      
+
   /// Mapping from SwitchCase statements to IDs.
   llvm::DenseMap<SwitchCase *, unsigned> SwitchCaseIDs;
 
@@ -475,7 +475,7 @@ private:
   void WriteHeaderSearch(const HeaderSearch &HS);
   void WritePreprocessorDetail(PreprocessingRecord &PPRec);
   void WriteSubmodules(Module *WritingModule);
-                                        
+
   void WritePragmaDiagnosticMappings(const DiagnosticsEngine &Diag,
                                      bool isModule);
 

@@ -51,9 +51,9 @@ void ASTMergeAction::ExecuteAction() {
     if (!Unit)
       continue;
 
-    ASTImporter Importer(CI.getASTContext(), 
+    ASTImporter Importer(CI.getASTContext(),
                          CI.getFileManager(),
-                         Unit->getASTContext(), 
+                         Unit->getASTContext(),
                          Unit->getFileManager(),
                          /*MinimalImport=*/false);
 
@@ -64,9 +64,9 @@ void ASTMergeAction::ExecuteAction() {
         if (IdentifierInfo *II = ND->getIdentifier())
           if (II->isStr("__va_list_tag") || II->isStr("__builtin_va_list"))
             continue;
-      
+
       Decl *ToD = Importer.Import(D);
-    
+
       if (ToD) {
         DeclGroupRef DGR(ToD);
         CI.getASTConsumer().HandleTopLevelDecl(DGR);
@@ -88,7 +88,7 @@ ASTMergeAction::ASTMergeAction(std::unique_ptr<FrontendAction> adaptedAction,
   assert(AdaptedAction && "ASTMergeAction needs an action to adapt");
 }
 
-ASTMergeAction::~ASTMergeAction() { 
+ASTMergeAction::~ASTMergeAction() {
 }
 
 bool ASTMergeAction::usesPreprocessorOnly() const {
