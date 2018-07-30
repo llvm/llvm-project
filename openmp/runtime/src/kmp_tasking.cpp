@@ -1025,6 +1025,9 @@ kmp_task_t *__kmp_task_alloc(ident_t *loc_ref, kmp_int32 gtid,
   kmp_taskdata_t *parent_task = thread->th.th_current_task;
   size_t shareds_offset;
 
+  if (!TCR_4(__kmp_init_middle))
+    __kmp_middle_initialize();
+
   KA_TRACE(10, ("__kmp_task_alloc(enter): T#%d loc=%p, flags=(0x%x) "
                 "sizeof_task=%ld sizeof_shared=%ld entry=%p\n",
                 gtid, loc_ref, *((kmp_int32 *)flags), sizeof_kmp_task_t,
