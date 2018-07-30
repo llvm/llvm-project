@@ -1,3 +1,8 @@
+// FIXME: https://code.google.com/p/address-sanitizer/issues/detail?id=316
+// I'm not sure this is actually *that* issue, but this seems oddly similar to the other XFAIL'ed cases.
+// XFAIL: android
+// UNSUPPORTED: ios
+
 // RUN: rm -f %tmp
 // RUN: echo "[implicit-integer-truncation]" >> %tmp
 // RUN: echo "fun:*implicitTruncation*" >> %tmp
