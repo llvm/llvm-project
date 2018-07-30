@@ -11,22 +11,18 @@
 
 // <experimental/simd>
 //
-// [simd.traits]
-// template <class T, size_t N> struct abi_for_size { using type = see below ;
-// }; template <class T, size_t N> using ex::abi_for_size_t = typename
-// ex::abi_for_size<T, N>::type;
+// [simd.class]
+// simd() = default;
 
 #include <cstdint>
 #include <experimental/simd>
 
 namespace ex = std::experimental::parallelism_v2;
 
-static_assert(std::is_same<typename ex::abi_for_size<int, 4>::type,
-                           ex::simd_abi::fixed_size<4>>::value,
-              "");
-
-static_assert(std::is_same<ex::abi_for_size_t<int, 4>,
-                           ex::simd_abi::fixed_size<4>>::value,
-              "");
-
-int main() {}
+int main() {
+  static_assert(ex::native_simd<int32_t>().size() > 0, "");
+  static_assert(ex::fixed_size_simd<int32_t, 4>().size() == 4, "");
+  static_assert(ex::fixed_size_simd<int32_t, 5>().size() == 5, "");
+  static_assert(ex::fixed_size_simd<int32_t, 1>().size() == 1, "");
+  static_assert(ex::fixed_size_simd<char, 32>().size() == 32, "");
+}
