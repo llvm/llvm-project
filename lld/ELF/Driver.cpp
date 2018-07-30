@@ -302,6 +302,14 @@ static void checkOptions(opt::InputArgList &Args) {
     if (Config->Pie)
       error("-r and -pie may not be used together");
   }
+
+  if (Config->ExecuteOnly) {
+    if (Config->EMachine != EM_AARCH64)
+      error("-execute-only is only supported on AArch64 targets");
+
+    if (Config->SingleRoRx && !Script->HasSectionsCommand)
+      error("-execute-only and -no-rosegment cannot be used together");
+  }
 }
 
 static const char *getReproduceOption(opt::InputArgList &Args) {
@@ -747,6 +755,8 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->EnableNewDtags =
       Args.hasFlag(OPT_enable_new_dtags, OPT_disable_new_dtags, true);
   Config->Entry = Args.getLastArgValue(OPT_entry);
+  Config->ExecuteOnly =
+      Args.hasFlag(OPT_execute_only, OPT_no_execute_only, false);
   Config->ExportDynamic =
       Args.hasFlag(OPT_export_dynamic, OPT_no_export_dynamic, false);
   Config->FilterList = args::getStrings(Args, OPT_filter);

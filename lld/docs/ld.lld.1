@@ -30,6 +30,8 @@ These options are available:
 .It Fl -allow-multiple-definition
 Do not error if a symbol is defined multiple times.
 The first definition will be used.
+.It Fl -apply-dynamic-relocs
+Apply link-time values for dynamic relocations.
 .It Fl -as-needed
 Only set
 .Dv DT_NEEDED
@@ -42,10 +44,10 @@ field to the specified name.
 Link against shared libraries.
 .It Fl -Bstatic
 Do not link against shared libraries.
-.It Fl -Bsymbolic-functions
-Bind defined function symbols locally.
 .It Fl -Bsymbolic
 Bind defined symbols locally.
+.It Fl -Bsymbolic-functions
+Bind defined function symbols locally.
 .It Fl -build-id Ns = Ns Ar value
 Generate a build ID note.
 .Ar value
@@ -432,6 +434,10 @@ Make the main stack executable.
 Stack permissions are recorded in the
 .Dv PT_GNU_STACK
 segment.
+.It Cm initfirst
+Sets the
+.Dv DF_1_INITFIRST
+flag to indicate the module should be initialized first.
 .It Cm muldefs
 Do not error if a symbol is defined multiple times.
 The first definition will be used.

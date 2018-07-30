@@ -204,7 +204,7 @@ kmp_adaptive_backoff_params_t __kmp_adaptive_backoff_params = {
     1, 1024}; // TODO: tune it!
 
 #if KMP_DEBUG_ADAPTIVE_LOCKS
-char *__kmp_speculative_statsfile = "-";
+const char *__kmp_speculative_statsfile = "-";
 #endif
 
 #endif // KMP_USE_ADAPTIVE_LOCKS

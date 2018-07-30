@@ -58,8 +58,8 @@ defm allow_multiple_definition: B<"allow-multiple-definition",
     "Do not allow multiple definitions (default)">;
 
 defm apply_dynamic_relocs: B<"apply-dynamic-relocs",
-    "Apply dynamic relocations to place",
-    "Do not apply dynamic relocations to place">;
+    "Apply link-time values for dynamic relocations",
+    "Do not apply link-time values for dynamic relocations (default)">;
 
 defm as_needed: B<"as-needed",
     "Only set DT_NEEDED for shared libraries if used",
@@ -130,6 +130,10 @@ def error_unresolved_symbols: F<"error-unresolved-symbols">,
   HelpText<"Report unresolved symbols as errors">;
 
 defm exclude_libs: Eq<"exclude-libs", "Exclude static libraries from automatic export">;
+
+defm execute_only: B<"execute-only",
+    "Do not mark executable sections readable",
+    "Mark executable sections readable (default)">;
 
 defm export_dynamic: B<"export-dynamic",
     "Put symbols in the dynamic symbol table",

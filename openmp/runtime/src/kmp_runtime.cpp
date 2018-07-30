@@ -1644,12 +1644,8 @@ int __kmp_fork_call(ident_t *loc, int gtid,
       KA_TRACE(20, ("__kmp_fork_call: T#%d(%d:0) invoke microtask = %p\n", gtid,
                     parent_team->t.t_id, parent_team->t.t_pkfn));
 
-      {
-        KMP_TIME_PARTITIONED_BLOCK(OMP_parallel);
-        KMP_SET_THREAD_STATE_BLOCK(IMPLICIT_TASK);
-        if (!parent_team->t.t_invoke(gtid)) {
-          KMP_ASSERT2(0, "cannot invoke microtask for MASTER thread");
-        }
+      if (!parent_team->t.t_invoke(gtid)) {
+        KMP_ASSERT2(0, "cannot invoke microtask for MASTER thread");
       }
       KA_TRACE(20, ("__kmp_fork_call: T#%d(%d:0) done microtask = %p\n", gtid,
                     parent_team->t.t_id, parent_team->t.t_pkfn));
@@ -1839,11 +1835,7 @@ int __kmp_fork_call(ident_t *loc, int gtid,
           //     because initial code in teams should have level=0
           team->t.t_level--;
           // AC: call special invoker for outer "parallel" of teams construct
-          {
-            KMP_TIME_PARTITIONED_BLOCK(OMP_parallel);
-            KMP_SET_THREAD_STATE_BLOCK(IMPLICIT_TASK);
-            invoker(gtid);
-          }
+          invoker(gtid);
         } else {
 #endif /* OMP_40_ENABLED */
           argv = args;
@@ -2256,12 +2248,8 @@ int __kmp_fork_call(ident_t *loc, int gtid,
                   team->t.t_id, team->t.t_pkfn));
   } // END of timer KMP_fork_call block
 
-  {
-    KMP_TIME_PARTITIONED_BLOCK(OMP_parallel);
-    KMP_SET_THREAD_STATE_BLOCK(IMPLICIT_TASK);
-    if (!team->t.t_invoke(gtid)) {
-      KMP_ASSERT2(0, "cannot invoke microtask for MASTER thread");
-    }
+  if (!team->t.t_invoke(gtid)) {
+    KMP_ASSERT2(0, "cannot invoke microtask for MASTER thread");
   }
   KA_TRACE(20, ("__kmp_fork_call: T#%d(%d:0) done microtask = %p\n", gtid,
                 team->t.t_id, team->t.t_pkfn));
@@ -3700,7 +3688,7 @@ int __kmp_register_root(int initial_thread) {
 #if KMP_STATS_ENABLED
   // Initialize stats as soon as possible (right after gtid assignment).
   __kmp_stats_thread_ptr = __kmp_stats_list->push_back(gtid);
-  KMP_START_EXPLICIT_TIMER(OMP_worker_thread_life);
+  __kmp_stats_thread_ptr->startLife();
   KMP_SET_THREAD_STATE(SERIAL_REGION);
   KMP_INIT_PARTITIONED_TIMERS(OMP_serial);
 #endif
@@ -5639,11 +5627,7 @@ void *__kmp_launch_thread(kmp_info_t *this_thr) {
         }
 #endif
 
-        {
-          KMP_TIME_PARTITIONED_BLOCK(OMP_parallel);
-          KMP_SET_THREAD_STATE_BLOCK(IMPLICIT_TASK);
-          rc = (*pteam)->t.t_invoke(gtid);
-        }
+        rc = (*pteam)->t.t_invoke(gtid);
         KMP_ASSERT(rc);
 
         KMP_MB();
