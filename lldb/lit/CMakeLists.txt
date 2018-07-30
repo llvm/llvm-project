@@ -49,11 +49,6 @@ llvm_canonicalize_cmake_booleans(
   LLDB_DISABLE_PYTHON
   LLVM_ENABLE_ZLIB)
 
-# BEGIN - Swift Mods
-option(LLDB_TEST_CLANG "Use in-tree clang when testing lldb" On)
-option(LLDB_TEST_SWIFT "Use in-tree swift when testing lldb" On)
-# END - Swift Mods
-
 # This should be inherited from the `check-lldb` target. We currently don't run
 # it for swift, but we might consider removing this code once we're done.
 set(LIT_ARGS "-sv")
