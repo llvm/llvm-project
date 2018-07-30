@@ -4015,7 +4015,7 @@ void __kmp_taskloop_recur(ident_t *loc, int gtid, kmp_task_t *task,
   // schedule new task with correct return address for OMPT events
   __kmp_omp_taskloop_task(NULL, gtid, new_task, codeptr_ra);
 #else
-  __kmp_omp_task(NULL, gtid, new_task); // schedule new task
+  __kmp_omp_task(gtid, new_task, true); // schedule new task
 #endif
 
   // execute the 1st half of current subrange

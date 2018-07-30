@@ -510,7 +510,7 @@ static void *__kmp_launch_worker(void *thr) {
 #if KMP_STATS_ENABLED
   // set thread local index to point to thread-specific stats
   __kmp_stats_thread_ptr = ((kmp_info_t *)thr)->th.th_stats;
-  KMP_START_EXPLICIT_TIMER(OMP_worker_thread_life);
+  __kmp_stats_thread_ptr->startLife();
   KMP_SET_THREAD_STATE(IDLE);
   KMP_INIT_PARTITIONED_TIMERS(OMP_idle);
 #endif

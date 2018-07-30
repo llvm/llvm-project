@@ -20,6 +20,7 @@
 #include "kmp_itt.h"
 #include "kmp_lock.h"
 #include "kmp_wait_release.h"
+#include "kmp_wrapper_getpid.h"
 
 #include "tsan_annotations.h"
 
@@ -1870,13 +1871,15 @@ static kmp_adaptive_lock_statistics_t destroyedStats;
 static kmp_adaptive_lock_info_t liveLocks;
 
 // A lock so we can safely update the list of locks.
-static kmp_bootstrap_lock_t chain_lock;
+static kmp_bootstrap_lock_t chain_lock =
+    KMP_BOOTSTRAP_LOCK_INITIALIZER(chain_lock);
 
 // Initialize the list of stats.
 void __kmp_init_speculative_stats() {
   kmp_adaptive_lock_info_t *lck = &liveLocks;
 
-  memset((void *)&(lck->stats), 0, sizeof(lck->stats));
+  memset(CCAST(kmp_adaptive_lock_statistics_t *, &(lck->stats)), 0,
+         sizeof(lck->stats));
   lck->stats.next = lck;
   lck->stats.prev = lck;
 
@@ -1914,7 +1917,8 @@ static void __kmp_forget_lock(kmp_adaptive_lock_info_t *lck) {
 }
 
 static void __kmp_zero_speculative_stats(kmp_adaptive_lock_info_t *lck) {
-  memset((void *)&lck->stats, 0, sizeof(lck->stats));
+  memset(CCAST(kmp_adaptive_lock_statistics_t *, &lck->stats), 0,
+         sizeof(lck->stats));
   __kmp_remember_lock(lck);
 }
 
@@ -1931,8 +1935,6 @@ static void __kmp_add_stats(kmp_adaptive_lock_statistics_t *t,
 }
 
 static void __kmp_accumulate_speculative_stats(kmp_adaptive_lock_info_t *lck) {
-  kmp_adaptive_lock_statistics_t *t = &destroyedStats;
-
   __kmp_acquire_bootstrap_lock(&chain_lock);
 
   __kmp_add_stats(&destroyedStats, lck);
@@ -1960,11 +1962,6 @@ static FILE *__kmp_open_stats_file() {
 }
 
 void __kmp_print_speculative_stats() {
-  if (__kmp_user_lock_kind != lk_adaptive)
-    return;
-
-  FILE *statsFile = __kmp_open_stats_file();
-
   kmp_adaptive_lock_statistics_t total = destroyedStats;
   kmp_adaptive_lock_info_t *lck;
 
@@ -1977,6 +1974,10 @@ void __kmp_print_speculative_stats() {
   kmp_uint32 totalSpeculations = t->successfulSpeculations +
                                  t->hardFailedSpeculations +
                                  t->softFailedSpeculations;
+  if (totalSections <= 0)
+    return;
+
+  FILE *statsFile = __kmp_open_stats_file();
 
   fprintf(statsFile, "Speculative lock statistics (all approximate!)\n");
   fprintf(statsFile, " Lock parameters: \n"
