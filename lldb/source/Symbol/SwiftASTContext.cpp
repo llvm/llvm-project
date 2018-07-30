@@ -1379,7 +1379,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
       if (result.second) {
         StreamString ss;
         module_sp->GetDescription(&ss, eDescriptionLevelBrief);
-        if (module_swift_ast->HasFatalErrors())
+        if (module_swift_ast && module_swift_ast->HasFatalErrors())
           ss << ": "
              << module_swift_ast->GetFatalErrors().AsCString("unknown error");
 
