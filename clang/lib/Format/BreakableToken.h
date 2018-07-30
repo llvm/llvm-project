@@ -139,12 +139,14 @@ public:
   /// Returns additional content indent required for the second line after the
   /// content at line \p LineIndex is broken.
   ///
-  /// For example, Javadoc @param annotations require and indent of 4 spaces and
-  /// in this example getContentIndex(1) returns 4.
-  /// /**
-  ///  * @param loooooooooooooong line
-  ///  *     continuation
-  ///  */
+  // (Next lines do not start with `///` since otherwise -Wdocumentation picks
+  // up the example annotations and generates warnings for them)
+  // For example, Javadoc @param annotations require and indent of 4 spaces and
+  // in this example getContentIndex(1) returns 4.
+  // /**
+  //  * @param loooooooooooooong line
+  //  *     continuation
+  //  */
   virtual unsigned getContentIndent(unsigned LineIndex) const {
     return 0;
   }
