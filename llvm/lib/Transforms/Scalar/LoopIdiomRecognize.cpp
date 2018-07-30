@@ -1573,7 +1573,7 @@ void LoopIdiomRecognize::transformLoopToCountable(
       InitXNext =
           Builder.CreateLShr(InitX, ConstantInt::get(InitX->getType(), 1));
     else
-      llvm_unreachable("Unexpected opcode!");      
+      llvm_unreachable("Unexpected opcode!");
   } else
     InitXNext = InitX;
   CTLZ = createCTLZIntrinsic(Builder, InitXNext, DL, ZeroCheck);

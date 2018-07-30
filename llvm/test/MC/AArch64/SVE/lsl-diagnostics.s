@@ -120,3 +120,31 @@ lsl z0.b, p8/m, z0.b, z1.b
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: restricted predicate has range [0, 7].
 // CHECK-NEXT: lsl z0.b, p8/m, z0.b, z1.b
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+
+// --------------------------------------------------------------------------//
+// Negative tests for instructions that are incompatible with movprfx
+
+movprfx z31.d, p0/z, z6.d
+lsl     z31.d, z31.d, #63
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
+// CHECK-NEXT: lsl     z31.d, z31.d, #63
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+movprfx z31, z6
+lsl     z31.d, z31.d, #63
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
+// CHECK-NEXT: lsl     z31.d, z31.d, #63
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+movprfx z0.s, p0/z, z7.s
+lsl     z0.s, z1.s, z2.d
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
+// CHECK-NEXT: lsl     z0.s, z1.s, z2.d
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+movprfx z0, z7
+lsl     z0.s, z1.s, z2.d
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
+// CHECK-NEXT: lsl     z0.s, z1.s, z2.d
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:

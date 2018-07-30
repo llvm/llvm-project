@@ -4,10 +4,10 @@
 //
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
-// 
+//
 //===----------------------------------------------------------------------===//
 //
-// This file defines the interface for the Disassembly library's disassembler 
+// This file defines the interface for the Disassembly library's disassembler
 // context.  The disassembler is responsible for producing strings for
 // individual instructions according to a given architecture and disassembly
 // syntax.

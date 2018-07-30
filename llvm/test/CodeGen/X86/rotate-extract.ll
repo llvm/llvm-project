@@ -24,9 +24,7 @@ define i64 @rolq_extract_shl(i64 %i) nounwind {
 ; X64-LABEL: rolq_extract_shl:
 ; X64:       # %bb.0:
 ; X64-NEXT:    leaq (,%rdi,8), %rax
-; X64-NEXT:    shlq $10, %rdi
-; X64-NEXT:    shrq $57, %rax
-; X64-NEXT:    orq %rdi, %rax
+; X64-NEXT:    rolq $7, %rax
 ; X64-NEXT:    retq
   %lhs_mul = shl i64 %i, 3
   %rhs_mul = shl i64 %i, 10
@@ -39,16 +37,17 @@ define i16 @rolw_extract_shrl(i16 %i) nounwind {
 ; X86-LABEL: rolw_extract_shrl:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    rolw $9, %ax
-; X86-NEXT:    andl $61951, %eax # imm = 0xF1FF
+; X86-NEXT:    shrl $3, %eax
+; X86-NEXT:    rolw $12, %ax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: rolw_extract_shrl:
 ; X64:       # %bb.0:
-; X64-NEXT:    rolw $9, %di
-; X64-NEXT:    andl $61951, %edi # imm = 0xF1FF
-; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    movzwl %di, %eax
+; X64-NEXT:    shrl $3, %eax
+; X64-NEXT:    rolw $12, %ax
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
   %lhs_div = lshr i16 %i, 7
   %rhs_div = lshr i16 %i, 3
@@ -60,22 +59,16 @@ define i16 @rolw_extract_shrl(i16 %i) nounwind {
 define i32 @roll_extract_mul(i32 %i) nounwind {
 ; X86-LABEL: roll_extract_mul:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    leal (%ecx,%ecx,8), %eax
-; X86-NEXT:    shll $7, %ecx
-; X86-NEXT:    leal (%ecx,%ecx,8), %ecx
-; X86-NEXT:    shrl $25, %eax
-; X86-NEXT:    orl %ecx, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    leal (%eax,%eax,8), %eax
+; X86-NEXT:    roll $7, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: roll_extract_mul:
 ; X64:       # %bb.0:
 ; X64-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X64-NEXT:    leal (%rdi,%rdi,8), %eax
-; X64-NEXT:    shll $7, %edi
-; X64-NEXT:    leal (%rdi,%rdi,8), %ecx
-; X64-NEXT:    shrl $25, %eax
-; X64-NEXT:    orl %ecx, %eax
+; X64-NEXT:    roll $7, %eax
 ; X64-NEXT:    retq
   %lhs_mul = mul i32 %i, 9
   %rhs_mul = mul i32 %i, 1152
@@ -89,11 +82,8 @@ define i8 @rolb_extract_udiv(i8 %i) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    imull $171, %eax, %eax
-; X86-NEXT:    movb %ah, %cl
-; X86-NEXT:    shlb $3, %cl
-; X86-NEXT:    andb $-16, %cl
-; X86-NEXT:    shrl $13, %eax
-; X86-NEXT:    orb %cl, %al
+; X86-NEXT:    shrl $9, %eax
+; X86-NEXT:    rolb $4, %al
 ; X86-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-NEXT:    retl
 ;
@@ -101,12 +91,8 @@ define i8 @rolb_extract_udiv(i8 %i) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movzbl %dil, %eax
 ; X64-NEXT:    imull $171, %eax, %eax
-; X64-NEXT:    movl %eax, %ecx
-; X64-NEXT:    shrl $8, %ecx
-; X64-NEXT:    shlb $3, %cl
-; X64-NEXT:    andb $-16, %cl
-; X64-NEXT:    shrl $13, %eax
-; X64-NEXT:    orb %cl, %al
+; X64-NEXT:    shrl $9, %eax
+; X64-NEXT:    rolb $4, %al
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
   %lhs_div = udiv i8 %i, 3
@@ -139,12 +125,8 @@ define i64 @rolq_extract_mul_with_mask(i64 %i) nounwind {
 ; X64-LABEL: rolq_extract_mul_with_mask:
 ; X64:       # %bb.0:
 ; X64-NEXT:    leaq (%rdi,%rdi,8), %rax
-; X64-NEXT:    # kill: def $edi killed $edi killed $rdi def $rdi
-; X64-NEXT:    shll $7, %edi
-; X64-NEXT:    leal (%rdi,%rdi,8), %ecx
-; X64-NEXT:    movzbl %cl, %ecx
-; X64-NEXT:    shrq $57, %rax
-; X64-NEXT:    orq %rcx, %rax
+; X64-NEXT:    rolq $7, %rax
+; X64-NEXT:    movzbl %al, %eax
 ; X64-NEXT:    retq
   %lhs_mul = mul i64 %i, 1152
   %rhs_mul = mul i64 %i, 9

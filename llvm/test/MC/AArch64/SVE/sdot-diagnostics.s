@@ -56,3 +56,19 @@ sdot  z0.d, z1.h, z15.h[2]
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: vector lane must be an integer in range [0, 1].
 // CHECK-NEXT: sdot  z0.d, z1.h, z15.h[2]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+
+// --------------------------------------------------------------------------//
+// Negative tests for instructions that are incompatible with movprfx
+
+movprfx z0.d, p0/z, z7.d
+sdot  z0.d, z1.h, z31.h
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a predicated movprfx, suggest using unpredicated movprfx
+// CHECK-NEXT: sdot  z0.d, z1.h, z31.h
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+movprfx z0.d, p0/z, z7.d
+sdot  z0.d, z1.h, z15.h[1]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a predicated movprfx, suggest using unpredicated movprfx
+// CHECK-NEXT: sdot  z0.d, z1.h, z15.h[1]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:

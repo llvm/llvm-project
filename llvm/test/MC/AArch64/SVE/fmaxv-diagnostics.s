@@ -18,3 +18,18 @@ fmaxv v0, p7, z31.h
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // CHECK-NEXT: fmaxv v0, p7, z31.h
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+// --------------------------------------------------------------------------//
+// Negative tests for instructions that are incompatible with movprfx
+
+movprfx z31.d, p7/z, z6.d
+fmaxv d0, p7, z31.d
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
+// CHECK-NEXT: fmaxv d0, p7, z31.d
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+movprfx z31, z6
+fmaxv d0, p7, z31.d
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
+// CHECK-NEXT: fmaxv d0, p7, z31.d
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:

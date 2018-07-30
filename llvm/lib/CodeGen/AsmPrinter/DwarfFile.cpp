@@ -95,6 +95,6 @@ bool DwarfFile::addScopeVariable(LexicalScope *LS, DbgVariable *Var) {
     }
   } else {
     ScopeVars.Locals.push_back(Var);
-  }    
+  }
   return true;
 }

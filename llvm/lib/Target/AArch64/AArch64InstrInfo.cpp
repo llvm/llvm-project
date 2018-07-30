@@ -4851,81 +4851,119 @@ AArch64InstrInfo::getSerializableMachineMemOperandTargetFlags() const {
   return makeArrayRef(TargetFlags);
 }
 
-  /// Constants defining how certain sequences should be outlined.
-  /// This encompasses how an outlined function should be called, and what kind of
-  /// frame should be emitted for that outlined function.
-  ///
-  /// \p MachineOutlinerDefault implies that the function should be called with
-  /// a save and restore of LR to the stack.
-  ///
-  /// That is,
-  ///
-  /// I1     Save LR                    OUTLINED_FUNCTION:
-  /// I2 --> BL OUTLINED_FUNCTION       I1
-  /// I3     Restore LR                 I2
-  ///                                   I3
-  ///                                   RET
-  ///
-  /// * Call construction overhead: 3 (save + BL + restore)
-  /// * Frame construction overhead: 1 (ret)
-  /// * Requires stack fixups? Yes
-  ///
-  /// \p MachineOutlinerTailCall implies that the function is being created from
-  /// a sequence of instructions ending in a return.
-  ///
-  /// That is,
-  ///
-  /// I1                             OUTLINED_FUNCTION:
-  /// I2 --> B OUTLINED_FUNCTION     I1
-  /// RET                            I2
-  ///                                RET
-  ///
-  /// * Call construction overhead: 1 (B)
-  /// * Frame construction overhead: 0 (Return included in sequence)
-  /// * Requires stack fixups? No
-  ///
-  /// \p MachineOutlinerNoLRSave implies that the function should be called using
-  /// a BL instruction, but doesn't require LR to be saved and restored. This
-  /// happens when LR is known to be dead.
-  ///
-  /// That is,
-  ///
-  /// I1                                OUTLINED_FUNCTION:
-  /// I2 --> BL OUTLINED_FUNCTION       I1
-  /// I3                                I2
-  ///                                   I3
-  ///                                   RET
-  ///
-  /// * Call construction overhead: 1 (BL)
-  /// * Frame construction overhead: 1 (RET)
-  /// * Requires stack fixups? No
-  ///
-  /// \p MachineOutlinerThunk implies that the function is being created from
-  /// a sequence of instructions ending in a call. The outlined function is
-  /// called with a BL instruction, and the outlined function tail-calls the
-  /// original call destination.
-  ///
-  /// That is,
-  ///
-  /// I1                                OUTLINED_FUNCTION:
-  /// I2 --> BL OUTLINED_FUNCTION       I1
-  /// BL f                              I2
-  ///                                   B f
-  /// * Call construction overhead: 1 (BL)
-  /// * Frame construction overhead: 0
-  /// * Requires stack fixups? No
-  ///
+/// Constants defining how certain sequences should be outlined.
+/// This encompasses how an outlined function should be called, and what kind of
+/// frame should be emitted for that outlined function.
+///
+/// \p MachineOutlinerDefault implies that the function should be called with
+/// a save and restore of LR to the stack.
+///
+/// That is,
+///
+/// I1     Save LR                    OUTLINED_FUNCTION:
+/// I2 --> BL OUTLINED_FUNCTION       I1
+/// I3     Restore LR                 I2
+///                                   I3
+///                                   RET
+///
+/// * Call construction overhead: 3 (save + BL + restore)
+/// * Frame construction overhead: 1 (ret)
+/// * Requires stack fixups? Yes
+///
+/// \p MachineOutlinerTailCall implies that the function is being created from
+/// a sequence of instructions ending in a return.
+///
+/// That is,
+///
+/// I1                             OUTLINED_FUNCTION:
+/// I2 --> B OUTLINED_FUNCTION     I1
+/// RET                            I2
+///                                RET
+///
+/// * Call construction overhead: 1 (B)
+/// * Frame construction overhead: 0 (Return included in sequence)
+/// * Requires stack fixups? No
+///
+/// \p MachineOutlinerNoLRSave implies that the function should be called using
+/// a BL instruction, but doesn't require LR to be saved and restored. This
+/// happens when LR is known to be dead.
+///
+/// That is,
+///
+/// I1                                OUTLINED_FUNCTION:
+/// I2 --> BL OUTLINED_FUNCTION       I1
+/// I3                                I2
+///                                   I3
+///                                   RET
+///
+/// * Call construction overhead: 1 (BL)
+/// * Frame construction overhead: 1 (RET)
+/// * Requires stack fixups? No
+///
+/// \p MachineOutlinerThunk implies that the function is being created from
+/// a sequence of instructions ending in a call. The outlined function is
+/// called with a BL instruction, and the outlined function tail-calls the
+/// original call destination.
+///
+/// That is,
+///
+/// I1                                OUTLINED_FUNCTION:
+/// I2 --> BL OUTLINED_FUNCTION       I1
+/// BL f                              I2
+///                                   B f
+/// * Call construction overhead: 1 (BL)
+/// * Frame construction overhead: 0
+/// * Requires stack fixups? No
+///
+/// \p MachineOutlinerRegSave implies that the function should be called with a
+/// save and restore of LR to an available register. This allows us to avoid
+/// stack fixups. Note that this outlining variant is compatible with the
+/// NoLRSave case.
+///
+/// That is,
+///
+/// I1     Save LR                    OUTLINED_FUNCTION:
+/// I2 --> BL OUTLINED_FUNCTION       I1
+/// I3     Restore LR                 I2
+///                                   I3
+///                                   RET
+///
+/// * Call construction overhead: 3 (save + BL + restore)
+/// * Frame construction overhead: 1 (ret)
+/// * Requires stack fixups? No
 enum MachineOutlinerClass {
   MachineOutlinerDefault,  /// Emit a save, restore, call, and return.
   MachineOutlinerTailCall, /// Only emit a branch.
   MachineOutlinerNoLRSave, /// Emit a call and return.
   MachineOutlinerThunk,    /// Emit a call and tail-call.
+  MachineOutlinerRegSave   /// Same as default, but save to a register.
 };
 
 enum MachineOutlinerMBBFlags {
   LRUnavailableSomewhere = 0x2,
   HasCalls = 0x4
 };
+
+unsigned
+AArch64InstrInfo::findRegisterToSaveLRTo(const outliner::Candidate &C) const {
+  MachineFunction *MF = C.getMF();
+  const AArch64RegisterInfo *ARI = static_cast<const AArch64RegisterInfo *>(
+      MF->getSubtarget().getRegisterInfo());
+
+  // Check if there is an available register across the sequence that we can
+  // use.
+  for (unsigned Reg : AArch64::GPR64RegClass) {
+    if (!ARI->isReservedReg(*MF, Reg) &&
+        Reg != AArch64::LR &&  // LR is not reserved, but don't use it.
+        Reg != AArch64::X16 && // X16 is not guaranteed to be preserved.
+        Reg != AArch64::X17 && // Ditto for X17.
+        C.LRU.available(Reg) && C.UsedInSequence.available(Reg))
+      return Reg;
+  }
+
+  // No suitable register. Return 0.
+  return 0u;
+}
 
 outliner::OutlinedFunction
 AArch64InstrInfo::getOutliningCandidateInfo(
@@ -5015,11 +5053,27 @@ AArch64InstrInfo::getOutliningCandidateInfo(
     SetCandidateCallInfo(MachineOutlinerNoLRSave, 4);
   }
 
-  // LR is live, so we need to save it to the stack.
+  // LR is live, so we need to save it. Decide whether it should be saved to
+  // the stack, or if it can be saved to a register.
   else {
-    FrameID = MachineOutlinerDefault;
-    NumBytesToCreateFrame = 4;
-    SetCandidateCallInfo(MachineOutlinerDefault, 12);
+    if (std::all_of(RepeatedSequenceLocs.begin(), RepeatedSequenceLocs.end(),
+                    [this](outliner::Candidate &C) {
+                      return findRegisterToSaveLRTo(C);
+                    })) {
+      // Every candidate has an available callee-saved register for the save.
+      // We can save LR to a register.
+      FrameID = MachineOutlinerRegSave;
+      NumBytesToCreateFrame = 4;
+      SetCandidateCallInfo(MachineOutlinerRegSave, 12);
+    }
+
+    else {
+      // At least one candidate does not have an available callee-saved
+      // register. We must save LR to the stack.
+      FrameID = MachineOutlinerDefault;
+      NumBytesToCreateFrame = 4;
+      SetCandidateCallInfo(MachineOutlinerDefault, 12);
+    }
   }
 
   // Check if the range contains a call. These require a save + restore of the
@@ -5088,7 +5142,7 @@ AArch64InstrInfo::getMachineOutlinerMBBFlags(MachineBasicBlock &MBB) const {
                 MBB.rend(),
                 [&LRU](MachineInstr &MI) { LRU.accumulate(MI); });
 
-  if (!LRU.available(AArch64::LR)) 
+  if (!LRU.available(AArch64::LR))
       Flags |= MachineOutlinerMBBFlags::LRUnavailableSomewhere;
 
   return Flags;
@@ -5114,14 +5168,14 @@ AArch64InstrInfo::getOutliningType(MachineBasicBlock::iterator &MIT,
   // ahead and skip over them.
   if (MI.isKill())
     return outliner::InstrType::Invisible;
-  
+
   // Is this a terminator for a basic block?
   if (MI.isTerminator()) {
 
     // Is this the end of a function?
     if (MI.getParent()->succ_empty())
       return outliner::InstrType::Legal;
-    
+
     // It's not, so don't outline it.
     return outliner::InstrType::Illegal;
   }
@@ -5424,7 +5478,7 @@ void AArch64InstrInfo::buildOutlinedFrame(
   MBB.insert(MBB.end(), ret);
 
   // Did we have to modify the stack by saving the link register?
-  if (OF.FrameConstructionID == MachineOutlinerNoLRSave)
+  if (OF.FrameConstructionID != MachineOutlinerDefault)
     return;
 
   // We modified the stack.
@@ -5457,13 +5511,41 @@ MachineBasicBlock::iterator AArch64InstrInfo::insertOutlinedCall(
   // We want to return the spot where we inserted the call.
   MachineBasicBlock::iterator CallPt;
 
-  // We have a default call. Save the link register.
-  MachineInstr *STRXpre = BuildMI(MF, DebugLoc(), get(AArch64::STRXpre))
-                              .addReg(AArch64::SP, RegState::Define)
-                              .addReg(AArch64::LR)
-                              .addReg(AArch64::SP)
-                              .addImm(-16);
-  It = MBB.insert(It, STRXpre);
+  // Instructions for saving and restoring LR around the call instruction we're
+  // going to insert.
+  MachineInstr *Save;
+  MachineInstr *Restore;
+  // Can we save to a register?
+  if (C.CallConstructionID == MachineOutlinerRegSave) {
+    // FIXME: This logic should be sunk into a target-specific interface so that
+    // we don't have to recompute the register.
+    unsigned Reg = findRegisterToSaveLRTo(C);
+    assert(Reg != 0 && "No callee-saved register available?");
+
+    // Save and restore LR from that register.
+    Save = BuildMI(MF, DebugLoc(), get(AArch64::ORRXrs), Reg)
+               .addReg(AArch64::XZR)
+               .addReg(AArch64::LR)
+               .addImm(0);
+    Restore = BuildMI(MF, DebugLoc(), get(AArch64::ORRXrs), AArch64::LR)
+                .addReg(AArch64::XZR)
+                .addReg(Reg)
+                .addImm(0);
+  } else {
+    // We have the default case. Save and restore from SP.
+    Save = BuildMI(MF, DebugLoc(), get(AArch64::STRXpre))
+               .addReg(AArch64::SP, RegState::Define)
+               .addReg(AArch64::LR)
+               .addReg(AArch64::SP)
+               .addImm(-16);
+    Restore = BuildMI(MF, DebugLoc(), get(AArch64::LDRXpost))
+                  .addReg(AArch64::SP, RegState::Define)
+                  .addReg(AArch64::LR, RegState::Define)
+                  .addReg(AArch64::SP)
+                  .addImm(16);
+  }
+
+  It = MBB.insert(It, Save);
   It++;
 
   // Insert the call.
@@ -5472,14 +5554,7 @@ MachineBasicBlock::iterator AArch64InstrInfo::insertOutlinedCall(
   CallPt = It;
   It++;
 
-  // Restore the link register.
-  MachineInstr *LDRXpost = BuildMI(MF, DebugLoc(), get(AArch64::LDRXpost))
-                               .addReg(AArch64::SP, RegState::Define)
-                               .addReg(AArch64::LR, RegState::Define)
-                               .addReg(AArch64::SP)
-                               .addImm(16);
-  It = MBB.insert(It, LDRXpost);
-
+  It = MBB.insert(It, Restore);
   return CallPt;
 }
 

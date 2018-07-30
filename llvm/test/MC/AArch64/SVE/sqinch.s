@@ -294,3 +294,43 @@ sqinch  x0, #28
 // CHECK-ENCODING: [0x80,0xf3,0x70,0x04]
 // CHECK-ERROR: instruction requires: sve
 // CHECK-UNKNOWN: 80 f3 70 04 <unknown>
+
+
+// --------------------------------------------------------------------------//
+// Test compatibility with MOVPRFX instruction.
+
+movprfx z0, z7
+// CHECK-INST: movprfx	z0, z7
+// CHECK-ENCODING: [0xe0,0xbc,0x20,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: e0 bc 20 04 <unknown>
+
+sqinch  z0.h
+// CHECK-INST: sqinch	z0.h
+// CHECK-ENCODING: [0xe0,0xc3,0x60,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: e0 c3 60 04 <unknown>
+
+movprfx z0, z7
+// CHECK-INST: movprfx	z0, z7
+// CHECK-ENCODING: [0xe0,0xbc,0x20,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: e0 bc 20 04 <unknown>
+
+sqinch  z0.h, pow2, mul #16
+// CHECK-INST: sqinch	z0.h, pow2, mul #16
+// CHECK-ENCODING: [0x00,0xc0,0x6f,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 c0 6f 04 <unknown>
+
+movprfx z0, z7
+// CHECK-INST: movprfx	z0, z7
+// CHECK-ENCODING: [0xe0,0xbc,0x20,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: e0 bc 20 04 <unknown>
+
+sqinch  z0.h, pow2
+// CHECK-INST: sqinch	z0.h, pow2
+// CHECK-ENCODING: [0x00,0xc0,0x60,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 c0 60 04 <unknown>

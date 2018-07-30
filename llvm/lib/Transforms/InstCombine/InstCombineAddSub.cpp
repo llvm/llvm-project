@@ -1872,7 +1872,7 @@ Instruction *InstCombiner::visitFSub(BinaryOperator &I) {
   Constant *C;
   if (match(Op1, m_Constant(C)) && !isa<ConstantExpr>(Op1))
     return BinaryOperator::CreateFAddFMF(Op0, ConstantExpr::getFNeg(C), &I);
-  
+
   // X - (-Y) --> X + Y
   if (match(Op1, m_FNeg(m_Value(Y))))
     return BinaryOperator::CreateFAddFMF(Op0, Y, &I);

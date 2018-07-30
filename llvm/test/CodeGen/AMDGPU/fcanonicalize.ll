@@ -40,7 +40,7 @@ define amdgpu_kernel void @v_test_canonicalize_fabs_var_f32(float addrspace(1)* 
 }
 
 ; GCN-LABEL: {{^}}v_test_canonicalize_fneg_fabs_var_f32:
-; GCN: v_mul_f32_e64 [[REG:v[0-9]+]], 1.0, -|{{v[0-9]+}}|
+; GCN: v_mul_f32_e64 [[REG:v[0-9]+]], -1.0, |{{v[0-9]+}}|
 ; GCN: buffer_store_dword [[REG]]
 define amdgpu_kernel void @v_test_canonicalize_fneg_fabs_var_f32(float addrspace(1)* %out) #1 {
   %val = load float, float addrspace(1)* %out
@@ -52,7 +52,7 @@ define amdgpu_kernel void @v_test_canonicalize_fneg_fabs_var_f32(float addrspace
 }
 
 ; GCN-LABEL: {{^}}v_test_canonicalize_fneg_var_f32:
-; GCN: v_mul_f32_e64 [[REG:v[0-9]+]], 1.0, -{{v[0-9]+}}
+; GCN: v_mul_f32_e32 [[REG:v[0-9]+]], -1.0, {{v[0-9]+}}
 ; GCN: buffer_store_dword [[REG]]
 define amdgpu_kernel void @v_test_canonicalize_fneg_var_f32(float addrspace(1)* %out) #1 {
   %val = load float, float addrspace(1)* %out

@@ -153,7 +153,7 @@ void LLVMInitializeMCJITCompilerOptions(LLVMMCJITCompilerOptions *PassedOptions,
   LLVMMCJITCompilerOptions options;
   memset(&options, 0, sizeof(options)); // Most fields are zero by default.
   options.CodeModel = LLVMCodeModelJITDefault;
-  
+
   memcpy(PassedOptions, &options,
          std::min(sizeof(options), SizeOfPassedOptions));
 }
@@ -171,14 +171,14 @@ LLVMBool LLVMCreateMCJITCompilerForModule(
       "LLVM library mismatch.");
     return 1;
   }
-  
+
   // Defend against the user having an old version of the API by ensuring that
   // any fields they didn't see are cleared. We must defend against fields being
   // set to the bitwise equivalent of zero, and assume that this means "do the
   // default" as if that option hadn't been available.
   LLVMInitializeMCJITCompilerOptions(&options, sizeof(options));
   memcpy(&options, PassedOptions, SizeOfPassedOptions);
-  
+
   TargetOptions targetOptions;
   targetOptions.EnableFastISel = options.EnableFastISel;
   std::unique_ptr<Module> Mod(unwrap(M));
@@ -241,12 +241,12 @@ LLVMGenericValueRef LLVMRunFunction(LLVMExecutionEngineRef EE, LLVMValueRef F,
                                     unsigned NumArgs,
                                     LLVMGenericValueRef *Args) {
   unwrap(EE)->finalizeObject();
-  
+
   std::vector<GenericValue> ArgVec;
   ArgVec.reserve(NumArgs);
   for (unsigned I = 0; I != NumArgs; ++I)
     ArgVec.push_back(*unwrap(Args[I]));
-  
+
   GenericValue *Result = new GenericValue();
   *Result = unwrap(EE)->runFunction(unwrap<Function>(F), ArgVec);
   return wrap(Result);
@@ -297,7 +297,7 @@ void LLVMAddGlobalMapping(LLVMExecutionEngineRef EE, LLVMValueRef Global,
 
 void *LLVMGetPointerToGlobal(LLVMExecutionEngineRef EE, LLVMValueRef Global) {
   unwrap(EE)->finalizeObject();
-  
+
   return unwrap(EE)->getPointerToGlobal(unwrap<GlobalValue>(Global));
 }
 
@@ -395,11 +395,11 @@ LLVMMCJITMemoryManagerRef LLVMCreateSimpleMCJITMemoryManager(
   LLVMMemoryManagerAllocateDataSectionCallback AllocateDataSection,
   LLVMMemoryManagerFinalizeMemoryCallback FinalizeMemory,
   LLVMMemoryManagerDestroyCallback Destroy) {
-  
+
   if (!AllocateCodeSection || !AllocateDataSection || !FinalizeMemory ||
       !Destroy)
     return nullptr;
-  
+
   SimpleBindingMMFunctions functions;
   functions.AllocateCodeSection = AllocateCodeSection;
   functions.AllocateDataSection = AllocateDataSection;

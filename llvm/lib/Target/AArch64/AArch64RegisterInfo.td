@@ -764,18 +764,35 @@ def Z30   : AArch64Reg<30, "z30", [Q30, Z30_HI]>, DwarfRegNum<[126]>;
 def Z31   : AArch64Reg<31, "z31", [Q31, Z31_HI]>, DwarfRegNum<[127]>;
 }
 
+// Enum descibing the element size for destructive
+// operations.
+class ElementSizeEnum<bits<3> val> {
+  bits<3> Value = val;
+}
+
+def ElementSizeNone : ElementSizeEnum<0>;
+def ElementSizeB    : ElementSizeEnum<1>;
+def ElementSizeH    : ElementSizeEnum<2>;
+def ElementSizeS    : ElementSizeEnum<3>;
+def ElementSizeD    : ElementSizeEnum<4>;
+def ElementSizeQ    : ElementSizeEnum<5>;  // Unused
+
 class SVERegOp <string Suffix, AsmOperandClass C,
+                ElementSizeEnum Size,
                 RegisterClass RC> : RegisterOperand<RC> {
+  ElementSizeEnum ElementSize;
+
+  let ElementSize = Size;
   let PrintMethod = !if(!eq(Suffix, ""),
                         "printSVERegOp<>",
                         "printSVERegOp<'" # Suffix # "'>");
   let ParserMatchClass = C;
 }
 
-class PPRRegOp <string Suffix, AsmOperandClass C,
-                RegisterClass RC> : SVERegOp<Suffix, C, RC> {}
-class ZPRRegOp <string Suffix, AsmOperandClass C,
-                RegisterClass RC> : SVERegOp<Suffix, C, RC> {}
+class PPRRegOp <string Suffix, AsmOperandClass C, ElementSizeEnum Size,
+                RegisterClass RC> : SVERegOp<Suffix, C, Size, RC> {}
+class ZPRRegOp <string Suffix, AsmOperandClass C, ElementSizeEnum Size,
+                RegisterClass RC> : SVERegOp<Suffix, C, Size, RC> {}
 
 //******************************************************************************
 
@@ -805,11 +822,11 @@ def PPRAsmOp16  : PPRAsmOperand<"PredicateH",   "PPR", 16>;
 def PPRAsmOp32  : PPRAsmOperand<"PredicateS",   "PPR", 32>;
 def PPRAsmOp64  : PPRAsmOperand<"PredicateD",   "PPR", 64>;
 
-def PPRAny : PPRRegOp<"",  PPRAsmOpAny, PPR>;
-def PPR8   : PPRRegOp<"b", PPRAsmOp8,   PPR>;
-def PPR16  : PPRRegOp<"h", PPRAsmOp16,  PPR>;
-def PPR32  : PPRRegOp<"s", PPRAsmOp32,  PPR>;
-def PPR64  : PPRRegOp<"d", PPRAsmOp64,  PPR>;
+def PPRAny : PPRRegOp<"",  PPRAsmOpAny, ElementSizeNone, PPR>;
+def PPR8   : PPRRegOp<"b", PPRAsmOp8,   ElementSizeB,  PPR>;
+def PPR16  : PPRRegOp<"h", PPRAsmOp16,  ElementSizeH,  PPR>;
+def PPR32  : PPRRegOp<"s", PPRAsmOp32,  ElementSizeS,  PPR>;
+def PPR64  : PPRRegOp<"d", PPRAsmOp64,  ElementSizeD,  PPR>;
 
 def PPRAsmOp3bAny : PPRAsmOperand<"Predicate3bAny", "PPR_3b",  0>;
 def PPRAsmOp3b8   : PPRAsmOperand<"Predicate3bB",   "PPR_3b",  8>;
@@ -817,11 +834,11 @@ def PPRAsmOp3b16  : PPRAsmOperand<"Predicate3bH",   "PPR_3b", 16>;
 def PPRAsmOp3b32  : PPRAsmOperand<"Predicate3bS",   "PPR_3b", 32>;
 def PPRAsmOp3b64  : PPRAsmOperand<"Predicate3bD",   "PPR_3b", 64>;
 
-def PPR3bAny : PPRRegOp<"",  PPRAsmOp3bAny, PPR_3b>;
-def PPR3b8   : PPRRegOp<"b", PPRAsmOp3b8,   PPR_3b>;
-def PPR3b16  : PPRRegOp<"h", PPRAsmOp3b16,  PPR_3b>;
-def PPR3b32  : PPRRegOp<"s", PPRAsmOp3b32,  PPR_3b>;
-def PPR3b64  : PPRRegOp<"d", PPRAsmOp3b64,  PPR_3b>;
+def PPR3bAny : PPRRegOp<"",  PPRAsmOp3bAny, ElementSizeNone, PPR_3b>;
+def PPR3b8   : PPRRegOp<"b", PPRAsmOp3b8,   ElementSizeB, PPR_3b>;
+def PPR3b16  : PPRRegOp<"h", PPRAsmOp3b16,  ElementSizeH, PPR_3b>;
+def PPR3b32  : PPRRegOp<"s", PPRAsmOp3b32,  ElementSizeS, PPR_3b>;
+def PPR3b64  : PPRRegOp<"d", PPRAsmOp3b64,  ElementSizeD, PPR_3b>;
 
 //******************************************************************************
 
@@ -874,28 +891,28 @@ def ZPRAsmOp32  : ZPRAsmOperand<"VectorS",   32>;
 def ZPRAsmOp64  : ZPRAsmOperand<"VectorD",   64>;
 def ZPRAsmOp128 : ZPRAsmOperand<"VectorQ",   128>;
 
-def ZPRAny  : ZPRRegOp<"",  ZPRAsmOpAny, ZPR>;
-def ZPR8    : ZPRRegOp<"b", ZPRAsmOp8,   ZPR>;
-def ZPR16   : ZPRRegOp<"h", ZPRAsmOp16,  ZPR>;
-def ZPR32   : ZPRRegOp<"s", ZPRAsmOp32,  ZPR>;
-def ZPR64   : ZPRRegOp<"d", ZPRAsmOp64,  ZPR>;
-def ZPR128  : ZPRRegOp<"q", ZPRAsmOp128, ZPR>;
+def ZPRAny  : ZPRRegOp<"",  ZPRAsmOpAny, ElementSizeNone, ZPR>;
+def ZPR8    : ZPRRegOp<"b", ZPRAsmOp8,   ElementSizeB, ZPR>;
+def ZPR16   : ZPRRegOp<"h", ZPRAsmOp16,  ElementSizeH, ZPR>;
+def ZPR32   : ZPRRegOp<"s", ZPRAsmOp32,  ElementSizeS, ZPR>;
+def ZPR64   : ZPRRegOp<"d", ZPRAsmOp64,  ElementSizeD, ZPR>;
+def ZPR128  : ZPRRegOp<"q", ZPRAsmOp128, ElementSizeQ, ZPR>;
 
 def ZPRAsmOp3b8   : ZPRAsmOperand<"Vector3bB", 8, "_3b">;
 def ZPRAsmOp3b16  : ZPRAsmOperand<"Vector3bH", 16, "_3b">;
 def ZPRAsmOp3b32  : ZPRAsmOperand<"Vector3bS", 32, "_3b">;
 
-def ZPR3b8  : ZPRRegOp<"b", ZPRAsmOp3b8,  ZPR_3b>;
-def ZPR3b16 : ZPRRegOp<"h", ZPRAsmOp3b16, ZPR_3b>;
-def ZPR3b32 : ZPRRegOp<"s", ZPRAsmOp3b32, ZPR_3b>;
+def ZPR3b8  : ZPRRegOp<"b", ZPRAsmOp3b8,  ElementSizeB, ZPR_3b>;
+def ZPR3b16 : ZPRRegOp<"h", ZPRAsmOp3b16, ElementSizeH, ZPR_3b>;
+def ZPR3b32 : ZPRRegOp<"s", ZPRAsmOp3b32, ElementSizeS, ZPR_3b>;
 
 def ZPRAsmOp4b16  : ZPRAsmOperand<"Vector4bH", 16, "_4b">;
 def ZPRAsmOp4b32  : ZPRAsmOperand<"Vector4bS", 32, "_4b">;
 def ZPRAsmOp4b64  : ZPRAsmOperand<"Vector4bD", 64, "_4b">;
 
-def ZPR4b16 : ZPRRegOp<"h", ZPRAsmOp4b16, ZPR_4b>;
-def ZPR4b32 : ZPRRegOp<"s", ZPRAsmOp4b32, ZPR_4b>;
-def ZPR4b64 : ZPRRegOp<"d", ZPRAsmOp4b64, ZPR_4b>;
+def ZPR4b16 : ZPRRegOp<"h", ZPRAsmOp4b16, ElementSizeH, ZPR_4b>;
+def ZPR4b32 : ZPRRegOp<"s", ZPRAsmOp4b32, ElementSizeS, ZPR_4b>;
+def ZPR4b64 : ZPRRegOp<"d", ZPRAsmOp4b64, ElementSizeD, ZPR_4b>;
 
 class FPRasZPR<int Width> : AsmOperandClass{
   let Name = "FPR" # Width # "asZPR";

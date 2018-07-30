@@ -117,7 +117,7 @@ bool ARMAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   // globals from all functions in PromotedGlobals.
   for (auto *GV : AFI->getGlobalsPromotedToConstantPool())
     PromotedGlobals.insert(GV);
-  
+
   // Calculate this function's optimization goal.
   unsigned OptimizationGoal;
   if (F.hasFnAttribute(Attribute::OptimizeNone))
@@ -367,8 +367,9 @@ bool ARMAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
 
       unsigned NumVals = InlineAsm::getNumOperandRegisters(Flags);
       unsigned RC;
-      InlineAsm::hasRegClassConstraint(Flags, RC);
-      if (RC == ARM::GPRPairRegClassID) {
+      const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
+      if (InlineAsm::hasRegClassConstraint(Flags, RC) &&
+          ARM::GPRPairRegClass.hasSubClassEq(TRI->getRegClass(RC))) {
         if (NumVals != 1)
           return true;
         const MachineOperand &MO = MI->getOperand(OpNum);
@@ -990,7 +991,7 @@ void ARMAsmPrinter::EmitJumpTableTBInst(const MachineInstr *MI,
 
   if (Subtarget->isThumb1Only())
     EmitAlignment(2);
-  
+
   MCSymbol *JTISymbol = GetARMJTIPICJumpTableLabel(JTI);
   OutStreamer->EmitLabel(JTISymbol);
 

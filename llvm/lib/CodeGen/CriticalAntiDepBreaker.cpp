@@ -530,7 +530,7 @@ BreakAntiDependencies(const std::vector<SUnit> &SUnits,
     // Kill instructions can define registers but are really nops, and there
     // might be a real definition earlier that needs to be paired with uses
     // dominated by this kill.
-    
+
     // FIXME: It may be possible to remove the isKill() restriction once PR18663
     // has been properly fixed. There can be value in processing kills as seen
     // in the AggressiveAntiDepBreaker class.

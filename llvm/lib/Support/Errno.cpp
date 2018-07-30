@@ -42,7 +42,7 @@ std::string StrError(int errnum) {
   const int MaxErrStrLen = 2000;
   char buffer[MaxErrStrLen];
   buffer[0] = '\0';
-#endif  
+#endif
 
 #ifdef HAVE_STRERROR_R
   // strerror_r is thread-safe.

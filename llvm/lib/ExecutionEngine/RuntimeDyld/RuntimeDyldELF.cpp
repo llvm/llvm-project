@@ -1430,7 +1430,7 @@ RuntimeDyldELF::processRelocationRef(
     } else {
       processSimpleRelocation(SectionID, Offset, RelType, Value);
     }
-  
+
   } else if (Arch == Triple::ppc64 || Arch == Triple::ppc64le) {
     if (RelType == ELF::R_PPC64_REL24) {
       // Determine ABI variant in use for this object.

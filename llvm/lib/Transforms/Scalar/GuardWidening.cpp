@@ -389,7 +389,7 @@ GuardWideningImpl::WideningScore GuardWideningImpl::computeWideningScore(
   // case.  At the moment, we really only consider the second in our heuristic
   // here.  TODO: evaluate cost model for spurious deopt
   // NOTE: As written, this also lets us hoist right over another guard which
-  // is essentially just another spelling for control flow.  
+  // is essentially just another spelling for control flow.
   if (isWideningCondProfitable(getGuardCondition(DominatedGuard),
                                getGuardCondition(DominatingGuard)))
     return HoistingOutOfLoop ? WS_VeryPositive : WS_Positive;
@@ -403,7 +403,7 @@ GuardWideningImpl::WideningScore GuardWideningImpl::computeWideningScore(
   auto MaybeHoistingOutOfIf = [&]() {
     auto *DominatingBlock = DominatingGuard->getParent();
     auto *DominatedBlock = DominatedGuard->getParent();
-    
+
     // Same Block?
     if (DominatedBlock == DominatingBlock)
       return false;

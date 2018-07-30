@@ -23368,7 +23368,7 @@ static SDValue convertShiftLeftToScale(SDValue Amt, const SDLoc &dl,
     return DAG.getBuildVector(VT, dl, Elts);
   }
 
-  // If the target doesn't support variable shifts, use either FP conversion 
+  // If the target doesn't support variable shifts, use either FP conversion
   // or integer multiplication to avoid shifting each element individually.
   if (VT == MVT::v4i32) {
     Amt = DAG.getNode(ISD::SHL, dl, VT, Amt, DAG.getConstant(23, dl, VT));
@@ -38911,7 +38911,7 @@ static SDValue matchPMADDWD_2(SelectionDAG &DAG, SDValue N0, SDValue N1,
       std::swap(IdxN00, IdxN10);
       std::swap(IdxN01, IdxN11);
     }
-    // N0 indices be the even elemtn. N1 indices must be the next odd element.
+    // N0 indices be the even element. N1 indices must be the next odd element.
     if (IdxN00 != 2 * i || IdxN10 != 2 * i + 1 ||
         IdxN01 != 2 * i || IdxN11 != 2 * i + 1)
       return SDValue();

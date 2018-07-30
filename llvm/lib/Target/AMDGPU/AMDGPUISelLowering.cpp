@@ -554,6 +554,7 @@ static bool fnegFoldsIntoOp(unsigned Opc) {
   case ISD::FTRUNC:
   case ISD::FRINT:
   case ISD::FNEARBYINT:
+  case ISD::FCANONICALIZE:
   case AMDGPUISD::RCP:
   case AMDGPUISD::RCP_LEGACY:
   case AMDGPUISD::RCP_IFLAG:
@@ -3595,6 +3596,7 @@ SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
   case ISD::FRINT:
   case ISD::FNEARBYINT: // XXX - Should fround be handled?
   case ISD::FSIN:
+  case ISD::FCANONICALIZE:
   case AMDGPUISD::RCP:
   case AMDGPUISD::RCP_LEGACY:
   case AMDGPUISD::RCP_IFLAG:

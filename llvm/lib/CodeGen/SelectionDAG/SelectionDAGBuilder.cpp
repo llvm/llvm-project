@@ -4987,7 +4987,7 @@ SDDbgValue *SelectionDAGBuilder::getDbgValue(SDValue N,
                                              unsigned DbgSDNodeOrder) {
   if (auto *FISDN = dyn_cast<FrameIndexSDNode>(N.getNode())) {
     // Construct a FrameIndexDbgValue for FrameIndexSDNodes so we can describe
-    // stack slot locations. 
+    // stack slot locations.
     //
     // Consider "int x = 0; int *px = &x;". There are two kinds of interesting
     // debug values here after optimization:
@@ -7198,10 +7198,11 @@ static SDValue getAddressForMemoryInput(SDValue Chain, const SDLoc &Location,
 /// uses features that we can't model on machineinstrs, we have SDISel do the
 /// allocation.  This produces generally horrible, but correct, code.
 ///
-///   OpInfo describes the operand.
+///   OpInfo describes the operand
+///   RefOpInfo describes the matching operand if any, the operand otherwise
 static void GetRegistersForValue(SelectionDAG &DAG, const TargetLowering &TLI,
-                                 const SDLoc &DL,
-                                 SDISelAsmOperandInfo &OpInfo) {
+                                 const SDLoc &DL, SDISelAsmOperandInfo &OpInfo,
+                                 SDISelAsmOperandInfo &RefOpInfo) {
   LLVMContext &Context = *DAG.getContext();
 
   MachineFunction &MF = DAG.getMachineFunction();
@@ -7211,8 +7212,8 @@ static void GetRegistersForValue(SelectionDAG &DAG, const TargetLowering &TLI,
   // If this is a constraint for a single physreg, or a constraint for a
   // register class, find it.
   std::pair<unsigned, const TargetRegisterClass *> PhysReg =
-      TLI.getRegForInlineAsmConstraint(&TRI, OpInfo.ConstraintCode,
-                                       OpInfo.ConstraintVT);
+      TLI.getRegForInlineAsmConstraint(&TRI, RefOpInfo.ConstraintCode,
+                                       RefOpInfo.ConstraintVT);
 
   unsigned NumRegs = 1;
   if (OpInfo.ConstraintVT != MVT::Other) {
@@ -7253,6 +7254,11 @@ static void GetRegistersForValue(SelectionDAG &DAG, const TargetLowering &TLI,
 
     NumRegs = TLI.getNumRegisters(Context, OpInfo.ConstraintVT);
   }
+
+  // No need to allocate a matching input constraint since the constraint it's
+  // matching to has already been allocated.
+  if (OpInfo.isMatchingInputConstraint())
+    return;
 
   MVT RegVT;
   EVT ValueVT = OpInfo.ConstraintVT;
@@ -7502,19 +7508,27 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
 
     // If this constraint is for a specific register, allocate it before
     // anything else.
-    if (OpInfo.ConstraintType == TargetLowering::C_Register)
-      GetRegistersForValue(DAG, TLI, getCurSDLoc(), OpInfo);
+    SDISelAsmOperandInfo &RefOpInfo =
+        OpInfo.isMatchingInputConstraint()
+            ? ConstraintOperands[OpInfo.getMatchedOperand()]
+            : ConstraintOperands[i];
+    if (RefOpInfo.ConstraintType == TargetLowering::C_Register)
+      GetRegistersForValue(DAG, TLI, getCurSDLoc(), OpInfo, RefOpInfo);
   }
 
   // Third pass - Loop over all of the operands, assigning virtual or physregs
   // to register class operands.
   for (unsigned i = 0, e = ConstraintOperands.size(); i != e; ++i) {
     SDISelAsmOperandInfo &OpInfo = ConstraintOperands[i];
+    SDISelAsmOperandInfo &RefOpInfo =
+        OpInfo.isMatchingInputConstraint()
+            ? ConstraintOperands[OpInfo.getMatchedOperand()]
+            : ConstraintOperands[i];
 
     // C_Register operands have already been allocated, Other/Memory don't need
     // to be.
-    if (OpInfo.ConstraintType == TargetLowering::C_RegisterClass)
-      GetRegistersForValue(DAG, TLI, getCurSDLoc(), OpInfo);
+    if (RefOpInfo.ConstraintType == TargetLowering::C_RegisterClass)
+      GetRegistersForValue(DAG, TLI, getCurSDLoc(), OpInfo, RefOpInfo);
   }
 
   // AsmNodeOperands - The operands for the ISD::INLINEASM node.

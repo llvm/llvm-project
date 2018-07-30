@@ -108,3 +108,43 @@ and     p15.b, p15/z, p15.b, p15.b
 // CHECK-ENCODING: [0xef,0x7d,0x0f,0x25]
 // CHECK-ERROR: instruction requires: sve
 // CHECK-UNKNOWN: ef 7d 0f 25 <unknown>
+
+
+// --------------------------------------------------------------------------//
+// Test compatibility with MOVPRFX instruction.
+
+movprfx z4.d, p7/z, z6.d
+// CHECK-INST: movprfx	z4.d, p7/z, z6.d
+// CHECK-ENCODING: [0xc4,0x3c,0xd0,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: c4 3c d0 04 <unknown>
+
+and     z4.d, p7/m, z4.d, z31.d
+// CHECK-INST: and	z4.d, p7/m, z4.d, z31.d
+// CHECK-ENCODING: [0xe4,0x1f,0xda,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: e4 1f da 04 <unknown>
+
+movprfx z4, z6
+// CHECK-INST: movprfx	z4, z6
+// CHECK-ENCODING: [0xc4,0xbc,0x20,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: c4 bc 20 04 <unknown>
+
+and     z4.d, p7/m, z4.d, z31.d
+// CHECK-INST: and	z4.d, p7/m, z4.d, z31.d
+// CHECK-ENCODING: [0xe4,0x1f,0xda,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: e4 1f da 04 <unknown>
+
+movprfx z0, z7
+// CHECK-INST: movprfx	z0, z7
+// CHECK-ENCODING: [0xe0,0xbc,0x20,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: e0 bc 20 04 <unknown>
+
+and     z0.d, z0.d, #0x6
+// CHECK-INST: and	z0.d, z0.d, #0x6
+// CHECK-ENCODING: [0x20,0xf8,0x83,0x05]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 20 f8 83 05 <unknown>

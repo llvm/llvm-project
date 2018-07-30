@@ -254,7 +254,7 @@ bool ELFAsmParser::ParseSectionName(StringRef &SectionName) {
     if (getLexer().is(AsmToken::Comma) ||
       getLexer().is(AsmToken::EndOfStatement))
       break;
-    
+
     unsigned CurSize;
     if (getLexer().is(AsmToken::String)) {
       CurSize = getTok().getIdentifier().size() + 2;

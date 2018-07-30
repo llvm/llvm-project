@@ -68,7 +68,7 @@ X86FrameLowering::canSimplifyCallFramePseudos(const MachineFunction &MF) const {
 // needsFrameIndexResolution - Do we need to perform FI resolution for
 // this function. Normally, this is required only when the function
 // has any stack objects. However, FI resolution actually has another job,
-// not apparent from the title - it resolves callframesetup/destroy 
+// not apparent from the title - it resolves callframesetup/destroy
 // that were not simplified earlier.
 // So, this is required for x86 functions that have push sequences even
 // when there are no stack objects.
@@ -607,7 +607,7 @@ void X86FrameLowering::emitStackProbeInline(MachineFunction &MF,
   int64_t RCXShadowSlot = 0;
   int64_t RDXShadowSlot = 0;
 
-  // If inlining in the prolog, save RCX and RDX.     
+  // If inlining in the prolog, save RCX and RDX.
   // Future optimization: don't save or restore if not live in.
   if (InProlog) {
     // Compute the offsets. We need to account for things already
@@ -2694,7 +2694,7 @@ bool X86FrameLowering::adjustStackWithPops(MachineBasicBlock &MBB,
     Regs[FoundRegs++] = Regs[0];
 
   for (int i = 0; i < NumPops; ++i)
-    BuildMI(MBB, MBBI, DL, 
+    BuildMI(MBB, MBBI, DL,
             TII.get(STI.is64Bit() ? X86::POP64r : X86::POP32r), Regs[i]);
 
   return true;
@@ -2984,7 +2984,7 @@ struct X86FrameSortingComparator {
     // in general. Something to keep in mind, though.
     if (DensityAScaled == DensityBScaled)
       return A.ObjectAlignment < B.ObjectAlignment;
-    
+
     return DensityAScaled < DensityBScaled;
   }
 };
@@ -3020,7 +3020,7 @@ void X86FrameLowering::orderFrameObjects(
     if (ObjectSize == 0)
       // Variable size. Just use 4.
       SortingObjects[Obj].ObjectSize = 4;
-    else      
+    else
       SortingObjects[Obj].ObjectSize = ObjectSize;
   }
 

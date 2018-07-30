@@ -464,7 +464,7 @@ class Value;
   /// This is equivelent to saying that all instructions within the basic block
   /// are guaranteed to transfer execution to their successor within the basic
   /// block. This has the same assumptions w.r.t. undefined behavior as the
-  /// instruction variant of this function. 
+  /// instruction variant of this function.
   bool isGuaranteedToTransferExecutionToSuccessor(const BasicBlock *BB);
 
   /// Return true if this function can prove that the instruction I

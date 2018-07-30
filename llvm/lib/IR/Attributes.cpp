@@ -1709,6 +1709,15 @@ adjustMinLegalVectorWidth(Function &Caller, const Function &Callee) {
   }
 }
 
+/// If the inlined function has "null-pointer-is-valid=true" attribute,
+/// set this attribute in the caller post inlining.
+static void
+adjustNullPointerValidAttr(Function &Caller, const Function &Callee) {
+  if (Callee.nullPointerIsDefined() && !Caller.nullPointerIsDefined()) {
+    Caller.addFnAttr(Callee.getFnAttribute("null-pointer-is-valid"));
+  }
+}
+
 #define GET_ATTR_COMPAT_FUNC
 #include "AttributesCompatFunc.inc"
 

@@ -142,7 +142,7 @@ void AliasSet::addPointer(AliasSetTracker &AST, PointerRec &Entry,
         Alias = SetMayAlias;
         AST.TotalMayAliasSetSize += size();
       } else {
-        // First entry of must alias must have maximum size!        
+        // First entry of must alias must have maximum size!
         P->updateSizeAndAAInfo(Size, AAInfo);
       }
       assert(Result != NoAlias && "Cannot be part of must set!");
@@ -251,9 +251,9 @@ void AliasSetTracker::clear() {
   for (PointerMapType::iterator I = PointerMap.begin(), E = PointerMap.end();
        I != E; ++I)
     I->second->eraseFromList();
-  
+
   PointerMap.clear();
-  
+
   // The alias sets should all be clear now.
   AliasSets.clear();
 }
@@ -269,7 +269,7 @@ AliasSet *AliasSetTracker::mergeAliasSetsForPointer(const Value *Ptr,
   for (iterator I = begin(), E = end(); I != E;) {
     iterator Cur = I++;
     if (Cur->Forward || !Cur->aliasesPointer(Ptr, Size, AAInfo, AA)) continue;
-    
+
     if (!FoundSet) {      // If this is the first alias set ptr can go into.
       FoundSet = &*Cur;   // Remember it.
     } else {              // Otherwise, we must merge the sets.
@@ -336,13 +336,13 @@ AliasSet &AliasSetTracker::getAliasSetForPointer(Value *Pointer,
     // Return the set!
     return *Entry.getAliasSet(*this)->getForwardedTarget(*this);
   }
-  
+
   if (AliasSet *AS = mergeAliasSetsForPointer(Pointer, Size, AAInfo)) {
     // Add it to the alias set it aliases.
     AS->addPointer(*this, Entry, Size, AAInfo);
     return *AS;
   }
-  
+
   // Otherwise create a new alias set to hold the loaded pointer.
   AliasSets.push_back(new AliasSet());
   AliasSets.back().addPointer(*this, Entry, Size, AAInfo);
@@ -526,10 +526,10 @@ void AliasSetTracker::deleteValue(Value *PtrVal) {
     AS->SetSize--;
     TotalMayAliasSetSize--;
   }
-  
+
   // Stop using the alias set.
   AS->dropRef(*this);
-  
+
   PointerMap.erase(I);
 }
 

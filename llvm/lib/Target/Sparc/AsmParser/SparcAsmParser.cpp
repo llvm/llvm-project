@@ -190,7 +190,7 @@ public:
     Sparc::C8_C9,   Sparc::C10_C11, Sparc::C12_C13, Sparc::C14_C15,
     Sparc::C16_C17, Sparc::C18_C19, Sparc::C20_C21, Sparc::C22_C23,
     Sparc::C24_C25, Sparc::C26_C27, Sparc::C28_C29, Sparc::C30_C31};
-  
+
 namespace {
 
 /// SparcOperand - Instances of this class represent a parsed Sparc machine
@@ -459,7 +459,7 @@ public:
     Op.Reg.Kind = rk_CoprocPairReg;
     return true;
   }
-  
+
   static std::unique_ptr<SparcOperand>
   MorphToMEMrr(unsigned Base, std::unique_ptr<SparcOperand> Op) {
     unsigned offsetReg = Op->getReg();
@@ -1000,7 +1000,7 @@ bool SparcAsmParser::matchRegisterName(const AsmToken &Tok, unsigned &RegNo,
       RegKind = SparcOperand::rk_Special;
       return true;
     }
-    
+
     if (name.equals("wim")) {
       RegNo = Sparc::WIM;
       RegKind = SparcOperand::rk_Special;
@@ -1093,7 +1093,7 @@ bool SparcAsmParser::matchRegisterName(const AsmToken &Tok, unsigned &RegNo,
       RegKind = SparcOperand::rk_CoprocReg;
       return true;
     }
-    
+
     if (name.equals("tpc")) {
       RegNo = Sparc::TPC;
       RegKind = SparcOperand::rk_Special;

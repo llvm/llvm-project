@@ -911,7 +911,7 @@ static void appendTypeSuffix(Value *Op, StringRef &Name,
       NameBuffer += 'l';
 
     Name = NameBuffer;
-  }  
+  }
 }
 
 Value *llvm::emitUnaryFloatFnCall(Value *Op, StringRef Name, IRBuilder<> &B,

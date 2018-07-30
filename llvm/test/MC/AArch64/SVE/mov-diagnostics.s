@@ -412,3 +412,79 @@ mov z24.q, z21.q[4]
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: vector lane must be an integer in range [0, 3].
 // CHECK-NEXT: mov z24.q, z21.q[4]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+
+// --------------------------------------------------------------------------//
+// Negative tests for instructions that are incompatible with movprfx
+
+movprfx z31.b, p0/z, z6.b
+mov     z31.b, wsp
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
+// CHECK-NEXT: mov     z31.b, wsp
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+movprfx z31, z6
+mov     z31.b, wsp
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
+// CHECK-NEXT: mov     z31.b, wsp
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+movprfx z0.d, p0/z, z7.d
+mov     z0.d, #0xe0000000000003ff
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
+// CHECK-NEXT: mov     z0.d, #0xe0000000000003ff
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+movprfx z0, z7
+mov     z0.d, #0xe0000000000003ff
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
+// CHECK-NEXT: mov     z0.d, #0xe0000000000003ff
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+movprfx z4.d, p7/z, z6.d
+mov     z4.d, p7/m, z31.d
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
+// CHECK-NEXT: mov     z4.d, p7/m, z31.d
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+movprfx z31, z6
+mov     z31.d, p15/m, z31.d
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
+// CHECK-NEXT: mov     z31.d, p15/m, z31.d
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+movprfx z0.d, p0/z, z7.d
+mov     z0.d, d0
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
+// CHECK-NEXT: mov     z0.d, d0
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+movprfx z0, z7
+mov     z0.d, d0
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
+// CHECK-NEXT: mov     z0.d, d0
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+movprfx z31.d, p0/z, z6.d
+mov     z31.d, z0.d
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
+// CHECK-NEXT: mov     z31.d, z0.d
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+movprfx z31, z6
+mov     z31.d, z0.d
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
+// CHECK-NEXT: mov     z31.d, z0.d
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+movprfx z31.d, p0/z, z6.d
+mov     z31.d, z31.d[7]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
+// CHECK-NEXT: mov     z31.d, z31.d[7]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+movprfx z31, z6
+mov     z31.d, z31.d[7]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
+// CHECK-NEXT: mov     z31.d, z31.d[7]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:

@@ -834,7 +834,7 @@ void ARMInstPrinter::printMSRMaskOperand(const MCInst *MI, unsigned OpNum,
       return;
     }
 
-    O << SYSm; 
+    O << SYSm;
 
     return;
   }

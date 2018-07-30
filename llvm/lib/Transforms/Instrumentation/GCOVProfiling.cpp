@@ -148,7 +148,7 @@ public:
   }
   StringRef getPassName() const override { return "GCOV Profiler"; }
 
-  bool runOnModule(Module &M) override { 
+  bool runOnModule(Module &M) override {
     auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
     return Profiler.runOnModule(M, TLI);
   }

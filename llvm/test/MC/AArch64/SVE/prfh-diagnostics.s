@@ -153,3 +153,19 @@ prfh #0, p8, [x0]
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: restricted predicate has range [0, 7].
 // CHECK-NEXT: prfh #0, p8, [x0]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+
+// --------------------------------------------------------------------------//
+// Negative tests for instructions that are incompatible with movprfx
+
+movprfx z0.d, p0/z, z7.d
+prfh    pldl1keep, p0, [x0, z0.d, lsl #1]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
+// CHECK-NEXT: prfh    pldl1keep, p0, [x0, z0.d, lsl #1]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+movprfx z0, z7
+prfh    pldl1keep, p0, [x0, z0.d, lsl #1]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
+// CHECK-NEXT: prfh    pldl1keep, p0, [x0, z0.d, lsl #1]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
