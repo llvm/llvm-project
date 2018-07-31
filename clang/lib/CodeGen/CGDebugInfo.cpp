@@ -989,9 +989,9 @@ llvm::DIType *CGDebugInfo::CreateType(const BlockPointerType *Ty,
     EltTys.push_back(DBuilder.createMemberType(
         Unit, "__descriptor", nullptr, LineNo, FieldSize, FieldAlign, FieldOffset,
         llvm::DINode::FlagZero, DescTy));
+    FieldOffset += FieldSize;
   }
 
-  FieldOffset += FieldSize;
   Elements = DBuilder.getOrCreateArray(EltTys);
 
   // The __block_literal_generic structs are marked with a special

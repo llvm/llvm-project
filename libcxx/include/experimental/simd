@@ -662,6 +662,8 @@ public:
 
 _LIBCPP_BEGIN_NAMESPACE_EXPERIMENTAL_SIMD
 
+#if _LIBCPP_STD_VER >= 17
+
 enum class _StorageKind {
   _Scalar,
   _Array,
@@ -1560,6 +1562,8 @@ public:
   friend simd_mask operator==(const simd_mask&, const simd_mask&) noexcept;
   friend simd_mask operator!=(const simd_mask&, const simd_mask&) noexcept;
 };
+
+#endif // _LIBCPP_STD_VER >= 17
 
 _LIBCPP_END_NAMESPACE_EXPERIMENTAL_SIMD
 

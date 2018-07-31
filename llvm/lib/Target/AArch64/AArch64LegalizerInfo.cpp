@@ -293,6 +293,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
             atomicOrderingAtLeastOrStrongerThan(0, AtomicOrdering::Monotonic)));
   }
 
+  getActionDefinitionsBuilder(G_BLOCK_ADDR).legalFor({p0});
+
   // Merge/Unmerge
   for (unsigned Op : {G_MERGE_VALUES, G_UNMERGE_VALUES}) {
     unsigned BigTyIdx = Op == G_MERGE_VALUES ? 0 : 1;

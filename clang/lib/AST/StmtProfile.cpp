@@ -1277,7 +1277,6 @@ static Stmt::StmtClass DecodeOperatorCall(const CXXOperatorCallExpr *S,
   case OO_Arrow:
   case OO_Call:
   case OO_Conditional:
-  case OO_Coawait:
   case NUM_OVERLOADED_OPERATORS:
     llvm_unreachable("Invalid operator call kind");
 
@@ -1449,6 +1448,10 @@ static Stmt::StmtClass DecodeOperatorCall(const CXXOperatorCallExpr *S,
 
   case OO_Subscript:
     return Stmt::ArraySubscriptExprClass;
+
+  case OO_Coawait:
+    UnaryOp = UO_Coawait;
+    return Stmt::UnaryOperatorClass;
   }
 
   llvm_unreachable("Invalid overloaded operator expression");
