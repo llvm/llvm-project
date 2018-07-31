@@ -72,7 +72,6 @@
 #include <string>
 #include <tuple>
 #include <utility>
-#include <vector>
 
 using namespace llvm;
 
@@ -18069,7 +18068,7 @@ SDValue DAGCombiner::BuildSDIV(SDNode *N) {
   if (C->isNullValue())
     return SDValue();
 
-  std::vector<SDNode *> Built;
+  SmallVector<SDNode *, 8> Built;
   SDValue S =
       TLI.BuildSDIV(N, C->getAPIntValue(), DAG, LegalOperations, Built);
 
@@ -18089,7 +18088,7 @@ SDValue DAGCombiner::BuildSDIVPow2(SDNode *N) {
   if (C->isNullValue())
     return SDValue();
 
-  std::vector<SDNode *> Built;
+  SmallVector<SDNode *, 8> Built;
   SDValue S = TLI.BuildSDIVPow2(N, C->getAPIntValue(), DAG, Built);
 
   for (SDNode *N : Built)
@@ -18115,7 +18114,7 @@ SDValue DAGCombiner::BuildUDIV(SDNode *N) {
   if (C->isNullValue())
     return SDValue();
 
-  std::vector<SDNode *> Built;
+  SmallVector<SDNode *, 8> Built;
   SDValue S =
       TLI.BuildUDIV(N, C->getAPIntValue(), DAG, LegalOperations, Built);
 

@@ -102,7 +102,12 @@ defm : SLMWriteResPair<WriteBSWAP32,[SLM_IEC_RSV01], 1>;
 defm : SLMWriteResPair<WriteBSWAP64,[SLM_IEC_RSV01], 1>;
 
 defm : SLMWriteResPair<WriteShift,  [SLM_IEC_RSV0],  1>;
-defm : SLMWriteResPair<WriteShiftDouble,  [SLM_IEC_RSV0],  1>;
+
+defm : X86WriteRes<WriteSHDrri, [SLM_IEC_RSV0],  1, [1], 1>;
+defm : X86WriteRes<WriteSHDrrcl,[SLM_IEC_RSV0],  1, [1], 1>;
+defm : X86WriteRes<WriteSHDmri, [SLM_MEC_RSV, SLM_IEC_RSV0], 4, [2, 1], 2>;
+defm : X86WriteRes<WriteSHDmrcl,[SLM_MEC_RSV, SLM_IEC_RSV0], 4, [2, 1], 2>;
+
 defm : SLMWriteResPair<WriteJump,   [SLM_IEC_RSV1],  1>;
 defm : SLMWriteResPair<WriteCRC32,  [SLM_IEC_RSV1],  3>;
 

@@ -30,24 +30,6 @@
 // CHECK: .eabi_attribute 0, 0
 // CHECK: ^
 
-	.inst 0xdefe
-
-// CHECK: error: unknown directive
-// CHECK: .inst 0xdefe
-// CHECK: ^
-
-	.inst.n 0xdefe
-
-// CHECK: error: unknown directive
-// CHECK: .inst.n 0xdefe
-// CHECK: ^
-
-	.inst.w 0xdefe
-
-// CHECK: error: unknown directive
-// CHECK: .inst.w 0xdefe
-// CHECK: ^
-
 	.object_arch armv7
 
 // CHECK: error: unknown directive

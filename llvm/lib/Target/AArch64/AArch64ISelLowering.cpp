@@ -8580,7 +8580,7 @@ static SDValue performXorCombine(SDNode *N, SelectionDAG &DAG,
 SDValue
 AArch64TargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
                                      SelectionDAG &DAG,
-                                     std::vector<SDNode *> &Created) const {
+                                     SmallVectorImpl<SDNode *> &Created) const {
   AttributeList Attr = DAG.getMachineFunction().getFunction().getAttributes();
   if (isIntDivCheap(N->getValueType(0), Attr))
     return SDValue(N,0); // Lower SDIV as SDIV

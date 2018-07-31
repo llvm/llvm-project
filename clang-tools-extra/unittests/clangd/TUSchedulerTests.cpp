@@ -390,5 +390,39 @@ TEST_F(TUSchedulerTests, NoopOnEmptyChanges) {
   ASSERT_FALSE(DoUpdate(getInputs(Source, OtherSourceContents)));
 }
 
+TEST_F(TUSchedulerTests, NoChangeDiags) {
+  TUScheduler S(
+      /*AsyncThreadsCount=*/getDefaultAsyncThreadsCount(),
+      /*StorePreambleInMemory=*/true, PreambleParsedCallback(),
+      /*UpdateDebounce=*/std::chrono::steady_clock::duration::zero(),
+      ASTRetentionPolicy());
+
+  auto FooCpp = testPath("foo.cpp");
+  auto Contents = "int a; int b;";
+
+  S.update(FooCpp, getInputs(FooCpp, Contents), WantDiagnostics::No,
+           [](std::vector<Diag>) { ADD_FAILURE() << "Should not be called."; });
+  S.runWithAST("touchAST", FooCpp, [](llvm::Expected<InputsAndAST> IA) {
+    // Make sure the AST was actually built.
+    cantFail(std::move(IA));
+  });
+  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(1)));
+
+  // Even though the inputs didn't change and AST can be reused, we need to
+  // report the diagnostics, as they were not reported previously.
+  std::atomic<bool> SeenDiags(false);
+  S.update(FooCpp, getInputs(FooCpp, Contents), WantDiagnostics::Auto,
+           [&](std::vector<Diag>) { SeenDiags = true; });
+  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(1)));
+  ASSERT_TRUE(SeenDiags);
+
+  // Subsequent request does not get any diagnostics callback because the same
+  // diags have previously been reported and the inputs didn't change.
+  S.update(
+      FooCpp, getInputs(FooCpp, Contents), WantDiagnostics::Auto,
+      [&](std::vector<Diag>) { ADD_FAILURE() << "Should not be called."; });
+  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(1)));
+}
+
 } // namespace clangd
 } // namespace clang

@@ -578,7 +578,7 @@ bool FixupLEAPass::processBasicBlock(MachineFunction &MF,
         continue;
 
     if (OptLEA) {
-      if (MF.getSubtarget<X86Subtarget>().isSLM())
+      if (MF.getSubtarget<X86Subtarget>().slowLEA())
         processInstructionForSLM(I, MFI);
 
       else {

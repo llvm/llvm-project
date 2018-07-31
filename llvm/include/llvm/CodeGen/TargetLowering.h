@@ -3490,10 +3490,10 @@ public:
   //
   SDValue BuildSDIV(SDNode *N, const APInt &Divisor, SelectionDAG &DAG,
                     bool IsAfterLegalization,
-                    std::vector<SDNode *> &Created) const;
+                    SmallVectorImpl<SDNode *> &Created) const;
   SDValue BuildUDIV(SDNode *N, const APInt &Divisor, SelectionDAG &DAG,
                     bool IsAfterLegalization,
-                    std::vector<SDNode *> &Created) const;
+                    SmallVectorImpl<SDNode *> &Created) const;
 
   /// Targets may override this function to provide custom SDIV lowering for
   /// power-of-2 denominators.  If the target returns an empty SDValue, LLVM
@@ -3501,7 +3501,7 @@ public:
   /// operations.
   virtual SDValue BuildSDIVPow2(SDNode *N, const APInt &Divisor,
                                 SelectionDAG &DAG,
-                                std::vector<SDNode *> &Created) const;
+                                SmallVectorImpl<SDNode *> &Created) const;
 
   /// Indicate whether this target prefers to combine FDIVs with the same
   /// divisor. If the transform should never be done, return zero. If the

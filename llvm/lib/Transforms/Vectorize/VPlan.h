@@ -26,6 +26,7 @@
 #ifndef LLVM_TRANSFORMS_VECTORIZE_VPLAN_H
 #define LLVM_TRANSFORMS_VECTORIZE_VPLAN_H
 
+#include "VPlanLoopInfo.h"
 #include "VPlanValue.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DepthFirstIterator.h"
@@ -52,7 +53,6 @@ class BasicBlock;
 class DominatorTree;
 class InnerLoopVectorizer;
 class InterleaveGroup;
-class LoopInfo;
 class raw_ostream;
 class Value;
 class VPBasicBlock;
@@ -526,6 +526,13 @@ public:
     // TODO: Only printing VPBB name for now since we only have dot printing
     // support for VPInstructions/Recipes.
     printAsOperand(OS, false);
+  }
+
+  /// Return true if it is legal to hoist instructions into this block.
+  bool isLegalToHoistInto() {
+    // There are currently no constraints that prevent an instruction to be
+    // hoisted into a VPBlockBase.
+    return true;
   }
 };
 
@@ -1104,6 +1111,9 @@ private:
   /// VPlan.
   Value2VPValueTy Value2VPValue;
 
+  /// Holds the VPLoopInfo analysis for this VPlan.
+  VPLoopInfo VPLInfo;
+
 public:
   VPlan(VPBlockBase *Entry = nullptr) : Entry(Entry) {}
 
@@ -1149,6 +1159,10 @@ public:
     assert(Value2VPValue.count(V) && "Value does not exist in VPlan");
     return Value2VPValue[V];
   }
+
+  /// Return the VPLoopInfo analysis for this VPlan.
+  VPLoopInfo &getVPLoopInfo() { return VPLInfo; }
+  const VPLoopInfo &getVPLoopInfo() const { return VPLInfo; }
 
 private:
   /// Add to the given dominator tree the header block and every new basic block
