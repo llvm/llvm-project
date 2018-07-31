@@ -2452,7 +2452,9 @@ void MicrosoftRecordLayoutBuilder::cxxLayout(const CXXRecordDecl *RD) {
   auto RoundingAlignment = Alignment;
   if (!MaxFieldAlignment.isZero())
     RoundingAlignment = std::min(RoundingAlignment, MaxFieldAlignment);
-  NonVirtualSize = Size = Size.alignTo(RoundingAlignment);
+  if (!UseExternalLayout)
+    Size = Size.alignTo(RoundingAlignment);
+  NonVirtualSize = Size;
   RequiredAlignment = std::max(
       RequiredAlignment, Context.toCharUnitsFromBits(RD->getMaxAlignment()));
   layoutVirtualBases(RD);
@@ -2653,21 +2655,16 @@ void MicrosoftRecordLayoutBuilder::layoutField(const FieldDecl *FD) {
   LastFieldIsNonZeroWidthBitfield = false;
   ElementInfo Info = getAdjustedElementInfo(FD);
   Alignment = std::max(Alignment, Info.Alignment);
-  if (IsUnion) {
-    placeFieldAtOffset(CharUnits::Zero());
-    Size = std::max(Size, Info.Size);
-  } else {
-    CharUnits FieldOffset;
-    if (UseExternalLayout) {
-      FieldOffset =
-          Context.toCharUnitsFromBits(External.getExternalFieldOffset(FD));
-      assert(FieldOffset >= Size && "field offset already allocated");
-    } else {
-      FieldOffset = Size.alignTo(Info.Alignment);
-    }
-    placeFieldAtOffset(FieldOffset);
-    Size = FieldOffset + Info.Size;
-  }
+  CharUnits FieldOffset;
+  if (UseExternalLayout)
+    FieldOffset =
+        Context.toCharUnitsFromBits(External.getExternalFieldOffset(FD));
+  else if (IsUnion)
+    FieldOffset = CharUnits::Zero();
+  else
+    FieldOffset = Size.alignTo(Info.Alignment);
+  placeFieldAtOffset(FieldOffset);
+  Size = std::max(Size, FieldOffset + Info.Size);
 }
 
 void MicrosoftRecordLayoutBuilder::layoutBitField(const FieldDecl *FD) {
@@ -2692,18 +2689,17 @@ void MicrosoftRecordLayoutBuilder::layoutBitField(const FieldDecl *FD) {
   }
   LastFieldIsNonZeroWidthBitfield = true;
   CurrentBitfieldSize = Info.Size;
-  if (IsUnion) {
-    placeFieldAtOffset(CharUnits::Zero());
-    Size = std::max(Size, Info.Size);
-    // TODO: Add a Sema warning that MS ignores bitfield alignment in unions.
-  } else if (UseExternalLayout) {
+  if (UseExternalLayout) {
     auto FieldBitOffset = External.getExternalFieldOffset(FD);
     placeFieldAtBitOffset(FieldBitOffset);
     auto NewSize = Context.toCharUnitsFromBits(
         llvm::alignTo(FieldBitOffset + Width, Context.getCharWidth()));
-    assert(NewSize >= Size && "bit field offset already allocated");
-    Size = NewSize;
+    Size = std::max(Size, NewSize);
     Alignment = std::max(Alignment, Info.Alignment);
+  } else if (IsUnion) {
+    placeFieldAtOffset(CharUnits::Zero());
+    Size = std::max(Size, Info.Size);
+    // TODO: Add a Sema warning that MS ignores bitfield alignment in unions.
   } else {
     // Allocate a new block of memory and place the bitfield in it.
     CharUnits FieldOffset = Size.alignTo(Info.Alignment);

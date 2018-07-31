@@ -228,6 +228,9 @@ private:
   Semaphore &Barrier;
   /// Inputs, corresponding to the current state of AST.
   ParseInputs FileInputs;
+  /// Whether the diagnostics for the current FileInputs were reported to the
+  /// users before.
+  bool DiagsWereReported = false;
   /// Size of the last AST
   /// Guards members used by both TUScheduler and the worker thread.
   mutable std::mutex Mutex;
@@ -330,7 +333,9 @@ void ASTWorker::update(
         std::tie(Inputs.CompileCommand, Inputs.Contents);
 
     tooling::CompileCommand OldCommand = std::move(FileInputs.CompileCommand);
+    bool PrevDiagsWereReported = DiagsWereReported;
     FileInputs = Inputs;
+    DiagsWereReported = false;
 
     log("Updating file {0} with command [{1}] {2}", FileName,
         Inputs.CompileCommand.Directory,
@@ -366,34 +371,44 @@ void ASTWorker::update(
     OldPreamble.reset();
     PreambleWasBuilt.notify();
 
-    if (CanReuseAST) {
-      // Take a shortcut and don't build the AST if neither the inputs nor the
-      // preamble have changed.
-      // Note that we do not report the diagnostics, since they should not have
-      // changed either. All the clients should handle the lack of OnUpdated()
-      // call anyway to handle empty result from buildAST.
-      // FIXME(ibiryukov): the AST could actually change if non-preamble
-      // includes changed, but we choose to ignore it.
-      // FIXME(ibiryukov): should we refresh the cache in IdleASTs for the
-      // current file at this point?
-      log("Skipping rebuild of the AST for {0}, inputs are the same.",
-          FileName);
-      return;
+    if (!CanReuseAST) {
+      IdleASTs.take(this); // Remove the old AST if it's still in cache.
+    } else {
+      // Since we don't need to rebuild the AST, we might've already reported
+      // the diagnostics for it.
+      if (PrevDiagsWereReported) {
+        DiagsWereReported = true;
+        // Take a shortcut and don't report the diagnostics, since they should
+        // not changed. All the clients should handle the lack of OnUpdated()
+        // call anyway to handle empty result from buildAST.
+        // FIXME(ibiryukov): the AST could actually change if non-preamble
+        // includes changed, but we choose to ignore it.
+        // FIXME(ibiryukov): should we refresh the cache in IdleASTs for the
+        // current file at this point?
+        log("Skipping rebuild of the AST for {0}, inputs are the same.",
+            FileName);
+        return;
+      }
     }
-    // Remove the old AST if it's still in cache.
-    IdleASTs.take(this);
 
-    // Build the AST for diagnostics.
-    llvm::Optional<ParsedAST> AST =
-        buildAST(FileName, std::move(Invocation), Inputs, NewPreamble, PCHs);
+    // Get the AST for diagnostics.
+    llvm::Optional<std::unique_ptr<ParsedAST>> AST = IdleASTs.take(this);
+    if (!AST) {
+      llvm::Optional<ParsedAST> NewAST =
+          buildAST(FileName, std::move(Invocation), Inputs, NewPreamble, PCHs);
+      AST = NewAST ? llvm::make_unique<ParsedAST>(std::move(*NewAST)) : nullptr;
+    }
+
     // We want to report the diagnostics even if this update was cancelled.
     // It seems more useful than making the clients wait indefinitely if they
     // spam us with updates.
-    if (WantDiags != WantDiagnostics::No && AST)
-      OnUpdated(AST->getDiagnostics());
+    // Note *AST can be still be null if buildAST fails.
+    if (WantDiags != WantDiagnostics::No && *AST) {
+      OnUpdated((*AST)->getDiagnostics());
+      DiagsWereReported = true;
+    }
     // Stash the AST in the cache for further use.
-    IdleASTs.put(this,
-                 AST ? llvm::make_unique<ParsedAST>(std::move(*AST)) : nullptr);
+    IdleASTs.put(this, std::move(*AST));
   };
 
   startTask("Update", Bind(Task, std::move(OnUpdated)), WantDiags);
