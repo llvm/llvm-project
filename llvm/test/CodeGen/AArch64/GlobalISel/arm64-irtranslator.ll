@@ -2147,3 +2147,15 @@ define i32 @test_atomicrmw_umax(i256* %addr) {
   %oldval.trunc = trunc i256 %oldval to i32
   ret i32 %oldval.trunc
 }
+
+@addr = global i8* null
+
+define void @test_blockaddress() {
+; CHECK-LABEL: name: test_blockaddress
+; CHECK: [[BADDR:%[0-9]+]]:_(p0) = G_BLOCK_ADDR blockaddress(@test_blockaddress, %ir-block.block)
+; CHECK: G_STORE [[BADDR]](p0)
+  store i8* blockaddress(@test_blockaddress, %block), i8** @addr
+  indirectbr i8* blockaddress(@test_blockaddress, %block), [label %block]
+block:
+  ret void
+}
