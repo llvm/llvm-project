@@ -86,8 +86,8 @@
 // Check if offloading descriptor is created.
 // CHECK: [[ENTBEGIN:@.+]] = external constant [[ENTTY]]
 // CHECK: [[ENTEND:@.+]] = external constant [[ENTTY]]
-// CHECK: [[DEVBEGIN:@.+]] = external constant i8
-// CHECK: [[DEVEND:@.+]] = external constant i8
+// CHECK: [[DEVBEGIN:@.+]] = extern_weak constant i8
+// CHECK: [[DEVEND:@.+]] = extern_weak constant i8
 // CHECK: [[IMAGES:@.+]] = internal unnamed_addr constant [1 x [[DEVTY]]] [{{.+}} { i8* [[DEVBEGIN]], i8* [[DEVEND]], [[ENTTY]]* [[ENTBEGIN]], [[ENTTY]]* [[ENTEND]] }], comdat($[[REGFN]])
 // CHECK: [[DESC:@.+]] = internal constant [[DSCTY]] { i32 1, [[DEVTY]]* getelementptr inbounds ([1 x [[DEVTY]]], [1 x [[DEVTY]]]* [[IMAGES]], i32 0, i32 0), [[ENTTY]]* [[ENTBEGIN]], [[ENTTY]]* [[ENTEND]] }, comdat($[[REGFN]])
 

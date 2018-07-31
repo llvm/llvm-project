@@ -760,3 +760,9 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR, UDTSym &UDT) {
   P.formatLine("original type = {0}", UDT.Type);
   return Error::success();
 }
+
+Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
+                                            UsingNamespaceSym &UN) {
+  P.format(" `{0}`", UN.Name);
+  return Error::success();
+}

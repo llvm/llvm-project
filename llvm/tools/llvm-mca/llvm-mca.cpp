@@ -96,7 +96,7 @@ static cl::opt<unsigned>
 
 static cl::opt<unsigned>
     RegisterFileSize("register-file-size",
-                     cl::desc("Maximum number of temporary registers which can "
+                     cl::desc("Maximum number of physical registers which can "
                               "be used for register mappings"),
                      cl::cat(ToolOptions), cl::init(0));
 

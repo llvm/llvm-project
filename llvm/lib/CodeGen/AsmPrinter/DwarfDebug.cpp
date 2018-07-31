@@ -2136,7 +2136,7 @@ void DwarfDebug::emitDebugRanges() {
     return;
   }
 
-  if (getDwarfVersion() >= 5 && NoRangesPresent())
+  if (NoRangesPresent())
     return;
 
   // Start the dwarf ranges section.

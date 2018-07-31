@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 %s -triple x86_64-pc-win32 -fms-extensions -emit-llvm -o - | FileCheck %s
 // RUN: %clang_cc1 %s -triple i686-pc-win32 -fms-extensions -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple aarch64-windows -fms-extensions -emit-llvm -o - | FileCheck %s
 
 void abort(void) __attribute__((noreturn));
 void might_crash(void);

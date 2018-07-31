@@ -112,8 +112,8 @@ defm : SBWriteResPair<WriteADC,    [SBPort05,SBPort015], 2, [1,1], 2>;
 defm : SBWriteResPair<WriteIMul,   [SBPort1],   3>;
 defm : SBWriteResPair<WriteIMul64, [SBPort1],   3>;
 
-defm : SBWriteResPair<WriteBSWAP32,[SBPort1], 1>;
-defm : SBWriteResPair<WriteBSWAP64,[SBPort1,SBPort05], 2, [1,1], 2>;
+defm : X86WriteRes<WriteBSWAP32,   [SBPort1], 1, [1], 1>;
+defm : X86WriteRes<WriteBSWAP64,   [SBPort1,SBPort05], 2, [1,1], 2>;
 
 defm : SBWriteResPair<WriteDiv8,   [SBPort0, SBDivider], 25, [1, 10]>;
 defm : SBWriteResPair<WriteDiv16,  [SBPort0, SBDivider], 25, [1, 10]>;

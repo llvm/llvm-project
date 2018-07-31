@@ -335,7 +335,7 @@ void BuildIdSection::writeBuildId(ArrayRef<uint8_t> Buf) {
   switch (Config->BuildId) {
   case BuildIdKind::Fast:
     computeHash(Buf, [](uint8_t *Dest, ArrayRef<uint8_t> Arr) {
-      write64le(Dest, xxHash64(toStringRef(Arr)));
+      write64le(Dest, xxHash64(Arr));
     });
     break;
   case BuildIdKind::Md5:
