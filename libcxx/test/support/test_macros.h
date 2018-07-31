@@ -94,16 +94,6 @@
 #define TEST_GLIBC_PREREQ(major, minor) __GLIBC_PREREQ(major, minor)
 #endif
 
-/* Features that were introduced in C++14 */
-#if TEST_STD_VER >= 14
-#define TEST_HAS_EXTENDED_CONSTEXPR
-#define TEST_HAS_VARIABLE_TEMPLATES
-#endif
-
-/* Features that were introduced after C++14 */
-#if TEST_STD_VER > 14
-#endif
-
 #if TEST_STD_VER >= 11
 #define TEST_ALIGNOF(...) alignof(__VA_ARGS__)
 #define TEST_ALIGNAS(...) alignas(__VA_ARGS__)
@@ -131,6 +121,43 @@
 #define TEST_NOEXCEPT_COND(...)
 #define TEST_THROW_SPEC(...) throw(__VA_ARGS__)
 #endif
+
+// Sniff out to see if the underling C library has C11 features
+// Note that at this time (July 2018), MacOS X and iOS do NOT.
+#if __ISO_C_VISIBLE >= 2011
+#  if defined(__FreeBSD__)
+#    define TEST_HAS_C11_FEATURES
+#  elif defined(__Fuchsia__)
+#    define TEST_HAS_C11_FEATURES
+#  elif defined(__linux__)
+#    if !defined(_LIBCPP_HAS_MUSL_LIBC)
+#      if _LIBCPP_GLIBC_PREREQ(2, 17)
+#        define TEST_HAS_C11_FEATURES
+#      endif
+#    else // defined(_LIBCPP_HAS_MUSL_LIBC)
+#      define TEST_HAS_C11_FEATURES
+#    endif
+#  elif defined(_WIN32)
+#    if defined(_MSC_VER) && !defined(__MINGW32__)
+#      define TEST_HAS_C11_FEATURES // Using Microsoft's C Runtime library
+#    endif
+#  endif
+#endif
+
+/* Features that were introduced in C++14 */
+#if TEST_STD_VER >= 14
+#define TEST_HAS_EXTENDED_CONSTEXPR
+#define TEST_HAS_VARIABLE_TEMPLATES
+#endif
+
+/* Features that were introduced in C++17 */
+#if TEST_STD_VER >= 17
+#endif
+
+/* Features that were introduced after C++17 */
+#if TEST_STD_VER > 17
+#endif
+
 
 #define TEST_ALIGNAS_TYPE(...) TEST_ALIGNAS(TEST_ALIGNOF(__VA_ARGS__))
 

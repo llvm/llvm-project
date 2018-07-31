@@ -1071,8 +1071,7 @@ void MergeInputSection::splitNonStrings(ArrayRef<uint8_t> Data,
   bool IsAlloc = Flags & SHF_ALLOC;
 
   for (size_t I = 0; I != Size; I += EntSize)
-    Pieces.emplace_back(I, xxHash64(toStringRef(Data.slice(I, EntSize))),
-                        !IsAlloc);
+    Pieces.emplace_back(I, xxHash64(Data.slice(I, EntSize)), !IsAlloc);
 }
 
 template <class ELFT>
