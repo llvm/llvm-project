@@ -465,7 +465,13 @@ public:
 
   TemplateArgumentLoc(const TemplateArgument &Argument, Expr *E)
       : Argument(Argument), LocInfo(E) {
-    assert(Argument.getKind() == TemplateArgument::Expression);
+
+    // Permit any kind of template argument that can be represented with an
+    // expression
+    assert(Argument.getKind() == TemplateArgument::NullPtr ||
+           Argument.getKind() == TemplateArgument::Integral ||
+           Argument.getKind() == TemplateArgument::Declaration ||
+           Argument.getKind() == TemplateArgument::Expression);
   }
 
   TemplateArgumentLoc(const TemplateArgument &Argument,

@@ -558,7 +558,7 @@ public:
   SourceLocation getBeginLoc() const { return NameLoc; }
 
   /// getEndLoc - Retrieve the location of the last token.
-  SourceLocation getEndLoc() const;
+  SourceLocation getEndLoc() const { return getLocEnd(); }
 
   /// getSourceRange - The range of the declaration name.
   SourceRange getSourceRange() const LLVM_READONLY {
@@ -570,9 +570,11 @@ public:
   }
 
   SourceLocation getLocEnd() const LLVM_READONLY {
-    SourceLocation EndLoc = getEndLoc();
+    SourceLocation EndLoc = getEndLocPrivate();
     return EndLoc.isValid() ? EndLoc : getLocStart();
   }
+private:
+  SourceLocation getEndLocPrivate() const;
 };
 
 /// Insertion operator for diagnostics.  This allows sending DeclarationName's

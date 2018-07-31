@@ -7060,8 +7060,8 @@ LoopVectorizationPlanner::buildVPlan(VFRange &Range) {
   auto Plan = llvm::make_unique<VPlan>();
 
   // Build hierarchical CFG
-  VPlanHCFGBuilder HCFGBuilder(OrigLoop, LI);
-  HCFGBuilder.buildHierarchicalCFG(*Plan.get());
+  VPlanHCFGBuilder HCFGBuilder(OrigLoop, LI, *Plan);
+  HCFGBuilder.buildHierarchicalCFG();
 
   return Plan;
 }

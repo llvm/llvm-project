@@ -689,7 +689,7 @@ void DeclarationNameInfo::printName(raw_ostream &OS) const {
   llvm_unreachable("Unexpected declaration name kind");
 }
 
-SourceLocation DeclarationNameInfo::getEndLoc() const {
+SourceLocation DeclarationNameInfo::getEndLocPrivate() const {
   switch (Name.getNameKind()) {
   case DeclarationName::Identifier:
   case DeclarationName::CXXDeductionGuideName:

@@ -54,6 +54,36 @@ static Value *createMinMax(InstCombiner::BuilderTy &Builder,
   return Builder.CreateSelect(Builder.CreateICmp(Pred, A, B), A, B);
 }
 
+/// Fold
+///   %A = icmp eq/ne i8 %x, 0
+///   %B = op i8 %x, %z
+///   %C = select i1 %A, i8 %B, i8 %y
+/// To
+///   %C = select i1 %A, i8 %z, i8 %y
+/// OP: binop with an identity constant
+/// TODO: support for non-commutative and FP opcodes
+static Instruction *foldSelectBinOpIdentity(SelectInst &Sel) {
+
+  Value *Cond = Sel.getCondition();
+  Value *X, *Z;
+  Constant *C;
+  CmpInst::Predicate Pred;
+  if (!match(Cond, m_ICmp(Pred, m_Value(X), m_Constant(C))) ||
+      !ICmpInst::isEquality(Pred))
+    return nullptr;
+
+  bool IsEq = Pred == ICmpInst::ICMP_EQ;
+  auto *BO =
+      dyn_cast<BinaryOperator>(IsEq ? Sel.getTrueValue() : Sel.getFalseValue());
+  // TODO: support for undefs
+  if (BO && match(BO, m_c_BinOp(m_Specific(X), m_Value(Z))) &&
+      ConstantExpr::getBinOpIdentity(BO->getOpcode(), X->getType()) == C) {
+    Sel.setOperand(IsEq ? 1 : 2, Z);
+    return &Sel;
+  }
+  return nullptr;
+}
+
 /// This folds:
 ///  select (icmp eq (and X, C1)), TC, FC
 ///    iff C1 is a power 2 and the difference between TC and FC is a power-of-2.
@@ -1959,6 +1989,9 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
 
   // Simplify selects that test the returned flag of cmpxchg instructions.
   if (Instruction *Select = foldSelectCmpXchg(SI))
+    return Select;
+
+  if (Instruction *Select = foldSelectBinOpIdentity(SI))
     return Select;
 
   return nullptr;

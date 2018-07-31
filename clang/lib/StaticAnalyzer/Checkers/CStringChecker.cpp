@@ -552,6 +552,7 @@ void CStringChecker::emitNullArgBug(CheckerContext &C, ProgramStateRef State,
 
     BuiltinBug *BT = static_cast<BuiltinBug *>(BT_Null.get());
     auto Report = llvm::make_unique<BugReport>(*BT, WarningMsg, N);
+    Report->addRange(S->getSourceRange());
     bugreporter::trackNullOrUndefValue(N, S, *Report);
     C.emitReport(std::move(Report));
   }

@@ -6,6 +6,7 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_llvm_unittest(VectorizeTests
+  VPlanDominatorTreeTest.cpp
   VPlanTest.cpp
   VPlanHCFGTest.cpp
   )

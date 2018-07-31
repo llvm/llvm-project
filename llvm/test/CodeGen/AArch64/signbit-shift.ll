@@ -150,8 +150,8 @@ define i32 @sext_ifneg(i32 %x) {
 define i32 @add_sext_ifneg(i32 %x) {
 ; CHECK-LABEL: add_sext_ifneg:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #42
-; CHECK-NEXT:    sub w0, w8, w0, lsr #31
+; CHECK-NEXT:    asr w8, w0, #31
+; CHECK-NEXT:    add w0, w8, #42 // =42
 ; CHECK-NEXT:    ret
   %c = icmp slt i32 %x, 0
   %e = sext i1 %c to i32
@@ -225,7 +225,7 @@ define <4 x i32> @sub_lshr_not_vec_splat(<4 x i32> %x) {
 define i32 @sub_lshr(i32 %x, i32 %y) {
 ; CHECK-LABEL: sub_lshr:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub w0, w1, w0, lsr #31
+; CHECK-NEXT:    add w0, w1, w0, asr #31
 ; CHECK-NEXT:    ret
   %sh = lshr i32 %x, 31
   %r = sub i32 %y, %sh
@@ -235,8 +235,8 @@ define i32 @sub_lshr(i32 %x, i32 %y) {
 define <4 x i32> @sub_lshr_vec(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: sub_lshr_vec:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ushr v0.4s, v0.4s, #31
-; CHECK-NEXT:    sub v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    ssra v1.4s, v0.4s, #31
+; CHECK-NEXT:    mov v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %sh = lshr <4 x i32> %x, <i32 31, i32 31, i32 31, i32 31>
   %r = sub <4 x i32> %y, %sh
@@ -246,8 +246,8 @@ define <4 x i32> @sub_lshr_vec(<4 x i32> %x, <4 x i32> %y) {
 define i32 @sub_const_op_lshr(i32 %x) {
 ; CHECK-LABEL: sub_const_op_lshr:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #43
-; CHECK-NEXT:    sub w0, w8, w0, lsr #31
+; CHECK-NEXT:    asr w8, w0, #31
+; CHECK-NEXT:    add w0, w8, #43 // =43
 ; CHECK-NEXT:    ret
   %sh = lshr i32 %x, 31
   %r = sub i32 43, %sh
@@ -257,9 +257,9 @@ define i32 @sub_const_op_lshr(i32 %x) {
 define <4 x i32> @sub_const_op_lshr_vec(<4 x i32> %x) {
 ; CHECK-LABEL: sub_const_op_lshr_vec:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ushr v0.4s, v0.4s, #31
 ; CHECK-NEXT:    movi v1.4s, #42
-; CHECK-NEXT:    sub v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    ssra v1.4s, v0.4s, #31
+; CHECK-NEXT:    mov v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %sh = lshr <4 x i32> %x, <i32 31, i32 31, i32 31, i32 31>
   %r = sub <4 x i32> <i32 42, i32 42, i32 42, i32 42>, %sh
