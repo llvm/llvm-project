@@ -144,7 +144,8 @@ bool llvm::formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
 
       PHINode *PN = PHINode::Create(I->getType(), PredCache.size(ExitBB),
                                     I->getName() + ".lcssa", &ExitBB->front());
-
+      // Get the debug location from the original instruction.
+      PN->setDebugLoc(I->getDebugLoc());
       // Add inputs from inside the loop for this PHI.
       for (BasicBlock *Pred : PredCache.get(ExitBB)) {
         PN->addIncoming(I, Pred);
