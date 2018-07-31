@@ -4873,12 +4873,11 @@ bool AArch64AsmParser::ParseDirective(AsmToken DirectiveID) {
     parseDirectiveLtorg(Loc);
   else if (IDVal == ".unreq")
     parseDirectiveUnreq(Loc);
-  else if (!IsMachO && !IsCOFF) {
-    if (IDVal == ".inst")
-      parseDirectiveInst(Loc);
-    else
-      return true;
-  } else if (IDVal == MCLOHDirectiveName())
+  else if (IDVal == ".inst")
+    parseDirectiveInst(Loc);
+  else if (!IsMachO && !IsCOFF)
+    return true;
+  else if (IDVal == MCLOHDirectiveName())
     parseDirectiveLOH(IDVal, Loc);
   else
     return true;

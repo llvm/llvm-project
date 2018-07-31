@@ -36808,38 +36808,14 @@ static SDValue isFNEG(SDNode *N) {
   if (!Op1.getValueType().isFloatingPoint())
     return SDValue();
 
-  SDValue Op0 = peekThroughBitcasts(Op.getOperand(0));
+  // Extract constant bits and see if they are all sign bit masks.
+  APInt UndefElts;
+  SmallVector<APInt, 16> EltBits;
+  if (getTargetConstantBitsFromNode(Op1, Op1.getScalarValueSizeInBits(),
+                                    UndefElts, EltBits, false, false))
+    if (llvm::all_of(EltBits, [](APInt &I) { return I.isSignMask(); }))
+      return peekThroughBitcasts(Op.getOperand(0));
 
-  unsigned EltBits = Op1.getScalarValueSizeInBits();
-  auto isSignMask = [&](const ConstantFP *C) {
-    return C->getValueAPF().bitcastToAPInt() == APInt::getSignMask(EltBits);
-  };
-
-  // There is more than one way to represent the same constant on
-  // the different X86 targets. The type of the node may also depend on size.
-  //  - load scalar value and broadcast
-  //  - BUILD_VECTOR node
-  //  - load from a constant pool.
-  // We check all variants here.
-  if (Op1.getOpcode() == X86ISD::VBROADCAST) {
-    if (auto *C = getTargetConstantFromNode(Op1.getOperand(0)))
-      if (isSignMask(cast<ConstantFP>(C)))
-        return Op0;
-
-  } else if (BuildVectorSDNode *BV = dyn_cast<BuildVectorSDNode>(Op1)) {
-    if (ConstantFPSDNode *CN = BV->getConstantFPSplatNode())
-      if (isSignMask(CN->getConstantFPValue()))
-        return Op0;
-
-  } else if (auto *C = getTargetConstantFromNode(Op1)) {
-    if (C->getType()->isVectorTy()) {
-      if (auto *SplatV = C->getSplatValue())
-        if (isSignMask(cast<ConstantFP>(SplatV)))
-          return Op0;
-    } else if (auto *FPConst = dyn_cast<ConstantFP>(C))
-      if (isSignMask(FPConst))
-        return Op0;
-  }
   return SDValue();
 }
 

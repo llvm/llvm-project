@@ -1134,17 +1134,21 @@ the configuration (without a prefix: ``Auto``).
   .. code-block:: c++
 
     true:
-    SomeClass::Constructor()
-        : aaaaaaaa(aaaaaaaa), aaaaaaaa(aaaaaaaa), aaaaaaaa(aaaaaaaaaaaaaaaaaaaaaaaaa) {
-      return 0;
-    }
+    FitsOnOneLine::Constructor()
+        : aaaaaaaaaaaaa(aaaaaaaaaaaaaa), aaaaaaaaaaaaa(aaaaaaaaaaaaaa) {}
+
+    DoesntFit::Constructor()
+        : aaaaaaaaaaaaa(aaaaaaaaaaaaaa),
+          aaaaaaaaaaaaa(aaaaaaaaaaaaaa),
+          aaaaaaaaaaaaa(aaaaaaaaaaaaaa) {}
 
     false:
-    SomeClass::Constructor()
-        : aaaaaaaa(aaaaaaaa), aaaaaaaa(aaaaaaaa),
-          aaaaaaaa(aaaaaaaaaaaaaaaaaaaaaaaaa) {
-      return 0;
-    }
+    FitsOnOneLine::Constructor()
+        : aaaaaaaaaaaaa(aaaaaaaaaaaaaa), aaaaaaaaaaaaa(aaaaaaaaaaaaaa) {}
+
+    DoesntFit::Constructor()
+        : aaaaaaaaaaaaa(aaaaaaaaaaaaaa), aaaaaaaaaaaaa(aaaaaaaaaaaaaa),
+          aaaaaaaaaaaaa(aaaaaaaaaaaaaa) {}
 
 **ConstructorInitializerIndentWidth** (``unsigned``)
   The number of characters to use for indentation of constructor
