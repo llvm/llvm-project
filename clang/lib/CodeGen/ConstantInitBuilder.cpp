@@ -166,7 +166,7 @@ void ConstantAggregateBuilderBase::getGEPIndicesTo(
   if (Parent) {
     Parent->getGEPIndicesTo(indices, Begin);
 
-  // Otherwise, add an index to drill into the first level of pointer. 
+  // Otherwise, add an index to drill into the first level of pointer.
   } else {
     assert(indices.empty());
     indices.push_back(llvm::ConstantInt::get(Builder.CGM.Int32Ty, 0));

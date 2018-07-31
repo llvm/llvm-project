@@ -19,6 +19,7 @@
 #include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/CodeGen/LivePhysRegs.h"
 
 namespace llvm {
 namespace outliner {
@@ -73,6 +74,13 @@ public:
   /// This is optionally used by the target to calculate more fine-grained
   /// cost model information.
   LiveRegUnits LRU;
+
+  /// Contains the accumulated register liveness information for the
+  /// instructions in this \p Candidate.
+  ///
+  /// This is optionally used by the target to determine which registers have
+  /// been used across the sequence.
+  LiveRegUnits UsedInSequence;
 
   /// Return the number of instructions in this Candidate.
   unsigned getLength() const { return Len; }
@@ -137,6 +145,12 @@ public:
     // outlining candidate.
     std::for_each(MBB->rbegin(), (MachineBasicBlock::reverse_iterator)front(),
                   [this](MachineInstr &MI) { LRU.stepBackward(MI); });
+
+    // Walk over the sequence itself and figure out which registers were used
+    // in the sequence.
+    UsedInSequence.init(TRI);
+    std::for_each(front(), std::next(back()),
+                  [this](MachineInstr &MI) { UsedInSequence.accumulate(MI); });
   }
 };
 

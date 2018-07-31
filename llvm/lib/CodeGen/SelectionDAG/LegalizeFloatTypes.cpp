@@ -153,7 +153,7 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_ConstantFP(SDNode *N, unsigned ResNo) {
   // of Endianness. LLVM's APFloat representation is not Endian sensitive,
   // and so always converts into a 128-bit APInt in a non-Endian-sensitive
   // way. However, APInt's are serialized in an Endian-sensitive fashion,
-  // so on big-Endian targets, the two doubles are output in the wrong 
+  // so on big-Endian targets, the two doubles are output in the wrong
   // order. Fix this by manually flipping the order of the high 64 bits
   // and the low 64 bits here.
   if (DAG.getDataLayout().isBigEndian() &&
@@ -815,7 +815,7 @@ bool DAGTypeLegalizer::CanSkipSoftenFloatOperand(SDNode *N, unsigned OpNo) {
 
   switch (N->getOpcode()) {
     case ISD::ConstantFP:  // Leaf node.
-    case ISD::CopyFromReg: // Operand is a register that we know to be left 
+    case ISD::CopyFromReg: // Operand is a register that we know to be left
                            // unchanged by SoftenFloatResult().
     case ISD::Register:    // Leaf node.
       return true;
@@ -838,7 +838,7 @@ SDValue DAGTypeLegalizer::SoftenFloatOp_COPY_TO_REG(SDNode *N) {
   if (N->getNumOperands() == 3)
     return SDValue(DAG.UpdateNodeOperands(N, N->getOperand(0), Op1, Op2), 0);
 
-  return SDValue(DAG.UpdateNodeOperands(N, N->getOperand(0), Op1, Op2, 
+  return SDValue(DAG.UpdateNodeOperands(N, N->getOperand(0), Op1, Op2,
                                         N->getOperand(3)),
                  0);
 }

@@ -40,7 +40,7 @@ class CodeGenVTables {
 
   typedef std::pair<const CXXRecordDecl *, BaseSubobject> BaseSubobjectPairTy;
   typedef llvm::DenseMap<BaseSubobjectPairTy, uint64_t> SubVTTIndiciesMapTy;
-  
+
   /// SubVTTIndicies - Contains indices into the various sub-VTTs.
   SubVTTIndiciesMapTy SubVTTIndicies;
 
@@ -87,21 +87,21 @@ public:
   /// getSubVTTIndex - Return the index of the sub-VTT for the base class of the
   /// given record decl.
   uint64_t getSubVTTIndex(const CXXRecordDecl *RD, BaseSubobject Base);
-  
+
   /// getSecondaryVirtualPointerIndex - Return the index in the VTT where the
   /// virtual pointer for the given subobject is located.
   uint64_t getSecondaryVirtualPointerIndex(const CXXRecordDecl *RD,
                                            BaseSubobject Base);
 
-  /// GenerateConstructionVTable - Generate a construction vtable for the given 
+  /// GenerateConstructionVTable - Generate a construction vtable for the given
   /// base subobject.
   llvm::GlobalVariable *
-  GenerateConstructionVTable(const CXXRecordDecl *RD, const BaseSubobject &Base, 
-                             bool BaseIsVirtual, 
+  GenerateConstructionVTable(const CXXRecordDecl *RD, const BaseSubobject &Base,
+                             bool BaseIsVirtual,
                              llvm::GlobalVariable::LinkageTypes Linkage,
                              VTableAddressPointsMapTy& AddressPoints);
 
-    
+
   /// GetAddrOfVTT - Get the address of the VTT for the given record decl.
   llvm::GlobalVariable *GetAddrOfVTT(const CXXRecordDecl *RD);
 
@@ -112,7 +112,7 @@ public:
 
   /// EmitThunks - Emit the associated thunks for the given global decl.
   void EmitThunks(GlobalDecl GD);
-    
+
   /// GenerateClassData - Generate all the class data required to be
   /// generated upon definition of a KeyFunction.  This includes the
   /// vtable, the RTTI data structure (if RTTI is enabled) and the VTT

@@ -30,7 +30,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
-#include <cstdint> 
+#include <cstdint>
 #include <cstring>
 #include <string>
 
@@ -274,7 +274,7 @@ void clang::expandUCNs(SmallVectorImpl<char> &Buf, StringRef Input) {
 static bool ProcessUCNEscape(const char *ThisTokBegin, const char *&ThisTokBuf,
                              const char *ThisTokEnd,
                              uint32_t &UcnVal, unsigned short &UcnLen,
-                             FullSourceLoc Loc, DiagnosticsEngine *Diags, 
+                             FullSourceLoc Loc, DiagnosticsEngine *Diags,
                              const LangOptions &Features,
                              bool in_char_string_literal = false) {
   const char *UcnBegin = ThisTokBuf;
@@ -1539,7 +1539,7 @@ void StringLiteralParser::init(ArrayRef<Token> StringToks){
     // that ThisTokBuf points to a buffer that is big enough for the whole token
     // and 'spelled' tokens can only shrink.
     bool StringInvalid = false;
-    unsigned ThisTokLen = 
+    unsigned ThisTokLen =
       Lexer::getSpelling(StringToks[i], ThisTokBuf, SM, Features,
                          &StringInvalid);
     if (StringInvalid)

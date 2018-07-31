@@ -535,13 +535,13 @@ protected:
   /// Returns true if we should generate a scalar version of \p IV.
   bool needsScalarInduction(Instruction *IV) const;
 
-  /// If there is a cast involved in the induction variable \p ID, which should 
-  /// be ignored in the vectorized loop body, this function records the 
-  /// VectorLoopValue of the respective Phi also as the VectorLoopValue of the 
-  /// cast. We had already proved that the casted Phi is equal to the uncasted 
-  /// Phi in the vectorized loop (under a runtime guard), and therefore 
-  /// there is no need to vectorize the cast - the same value can be used in the 
-  /// vector loop for both the Phi and the cast. 
+  /// If there is a cast involved in the induction variable \p ID, which should
+  /// be ignored in the vectorized loop body, this function records the
+  /// VectorLoopValue of the respective Phi also as the VectorLoopValue of the
+  /// cast. We had already proved that the casted Phi is equal to the uncasted
+  /// Phi in the vectorized loop (under a runtime guard), and therefore
+  /// there is no need to vectorize the cast - the same value can be used in the
+  /// vector loop for both the Phi and the cast.
   /// If \p VectorLoopValue is a scalarized value, \p Lane is also specified,
   /// Otherwise, \p VectorLoopValue is a widened/vectorized value.
   ///
@@ -5443,7 +5443,7 @@ bool LoopVectorizationCostModel::useEmulatedMaskMemRefHack(Instruction *I){
   // high enough value to practically disable vectorization with such
   // operations, except where previously deployed legality hack allowed
   // using very low cost values. This is to avoid regressions coming simply
-  // from moving "masked load/store" check from legality to cost model. 
+  // from moving "masked load/store" check from legality to cost model.
   // Masked Load/Gather emulation was previously never allowed.
   // Limited number of Masked Store/Scatter emulation was allowed.
   assert(isScalarWithPredication(I) &&
@@ -6412,12 +6412,12 @@ void LoopVectorizationPlanner::collectTriviallyDeadInstructions(
         }))
       DeadInstructions.insert(IndUpdate);
 
-    // We record as "Dead" also the type-casting instructions we had identified 
+    // We record as "Dead" also the type-casting instructions we had identified
     // during induction analysis. We don't need any handling for them in the
-    // vectorized loop because we have proven that, under a proper runtime 
-    // test guarding the vectorized loop, the value of the phi, and the casted 
+    // vectorized loop because we have proven that, under a proper runtime
+    // test guarding the vectorized loop, the value of the phi, and the casted
     // value of the phi, are the same. The last instruction in this casting chain
-    // will get its scalar/vector/widened def from the scalar/vector/widened def 
+    // will get its scalar/vector/widened def from the scalar/vector/widened def
     // of the respective phi node. Any other casts in the induction def-use chain
     // have no other uses outside the phi update chain, and will be ignored.
     InductionDescriptor &IndDes = Induction.second;
@@ -7060,8 +7060,8 @@ LoopVectorizationPlanner::buildVPlan(VFRange &Range) {
   auto Plan = llvm::make_unique<VPlan>();
 
   // Build hierarchical CFG
-  VPlanHCFGBuilder HCFGBuilder(OrigLoop, LI);
-  HCFGBuilder.buildHierarchicalCFG(*Plan.get());
+  VPlanHCFGBuilder HCFGBuilder(OrigLoop, LI, *Plan);
+  HCFGBuilder.buildHierarchicalCFG();
 
   return Plan;
 }

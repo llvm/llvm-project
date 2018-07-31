@@ -152,7 +152,7 @@ MemoryBuffer::getFileOrSTDIN(const Twine &Filename, int64_t FileSize,
 }
 
 ErrorOr<std::unique_ptr<MemoryBuffer>>
-MemoryBuffer::getFileSlice(const Twine &FilePath, uint64_t MapSize, 
+MemoryBuffer::getFileSlice(const Twine &FilePath, uint64_t MapSize,
                            uint64_t Offset, bool IsVolatile) {
   return getFileAux<MemoryBuffer>(FilePath, -1, MapSize, Offset, false,
                                   IsVolatile);

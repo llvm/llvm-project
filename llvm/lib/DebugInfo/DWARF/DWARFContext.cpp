@@ -474,7 +474,7 @@ void DWARFContext::dump(
     while (rangesData.isValidOffset(offset)) {
       if (Error E = rangeList.extract(rangesData, &offset)) {
         WithColor::error() << toString(std::move(E)) << '\n';
-        break;  
+        break;
       }
       rangeList.dump(OS);
     }

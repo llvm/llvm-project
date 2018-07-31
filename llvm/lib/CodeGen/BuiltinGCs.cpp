@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file contains the boilerplate required to define our various built in
-// gc lowering strategies.  
+// gc lowering strategies.
 //
 //===----------------------------------------------------------------------===//
 

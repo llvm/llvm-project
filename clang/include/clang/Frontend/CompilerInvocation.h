@@ -106,7 +106,7 @@ public:
     return *PreprocessorOpts;
   }
 };
-  
+
 /// Helper class for holding the data necessary to invoke the compiler.
 ///
 /// This class is designed to represent an abstract "invocation" of the
@@ -117,7 +117,7 @@ class CompilerInvocation : public CompilerInvocationBase {
   AnalyzerOptionsRef AnalyzerOpts;
 
   MigratorOptions MigratorOpts;
-  
+
   /// Options controlling IRgen and the backend.
   CodeGenOptions CodeGenOpts;
 
@@ -172,11 +172,11 @@ public:
   static void setLangDefaults(LangOptions &Opts, InputKind IK,
                    const llvm::Triple &T, PreprocessorOptions &PPOpts,
                    LangStandard::Kind LangStd = LangStandard::lang_unspecified);
-  
-  /// Retrieve a module hash string that is suitable for uniquely 
+
+  /// Retrieve a module hash string that is suitable for uniquely
   /// identifying the conditions under which the module was built.
   std::string getModuleHash() const;
-  
+
   /// @}
   /// @name Option Subgroups
   /// @{
@@ -185,7 +185,7 @@ public:
 
   MigratorOptions &getMigratorOpts() { return MigratorOpts; }
   const MigratorOptions &getMigratorOpts() const { return MigratorOpts; }
-  
+
   CodeGenOptions &getCodeGenOpts() { return CodeGenOpts; }
   const CodeGenOptions &getCodeGenOpts() const { return CodeGenOpts; }
 

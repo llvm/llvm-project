@@ -644,7 +644,7 @@ private:
                                          SelectionDAG &DAG) const;
 
   SDValue BuildSDIVPow2(SDNode *N, const APInt &Divisor, SelectionDAG &DAG,
-                        std::vector<SDNode *> *Created) const override;
+                        std::vector<SDNode *> &Created) const override;
   SDValue getSqrtEstimate(SDValue Operand, SelectionDAG &DAG, int Enabled,
                           int &ExtraSteps, bool &UseOneConst,
                           bool Reciprocal) const override;

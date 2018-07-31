@@ -45,7 +45,7 @@ inline bool IsVariableAConstantExpression(VarDecl *Var, ASTContext &Context) {
   const VarDecl *DefVD = nullptr;
   return !isa<ParmVarDecl>(Var) &&
     Var->isUsableInConstantExpressions(Context) &&
-    Var->getAnyInitializer(DefVD) && DefVD->checkInitIsICE(); 
+    Var->getAnyInitializer(DefVD) && DefVD->checkInitIsICE();
 }
 
 // Helper function to check whether D's attributes match current CUDA mode.
@@ -60,13 +60,13 @@ inline bool DeclAttrsMatchCUDAMode(const LangOptions &LangOpts, Decl *D) {
   return isDeviceSideDecl == LangOpts.CUDAIsDevice;
 }
 
-// Directly mark a variable odr-used. Given a choice, prefer to use 
-// MarkVariableReferenced since it does additional checks and then 
+// Directly mark a variable odr-used. Given a choice, prefer to use
+// MarkVariableReferenced since it does additional checks and then
 // calls MarkVarDeclODRUsed.
 // If the variable must be captured:
 //  - if FunctionScopeIndexToStopAt is null, capture it in the CurContext
-//  - else capture it in the DeclContext that maps to the 
-//    *FunctionScopeIndexToStopAt on the FunctionScopeInfo stack.  
+//  - else capture it in the DeclContext that maps to the
+//    *FunctionScopeIndexToStopAt on the FunctionScopeInfo stack.
 inline void MarkVarDeclODRUsed(VarDecl *Var,
     SourceLocation Loc, Sema &SemaRef,
     const unsigned *const FunctionScopeIndexToStopAt) {
@@ -81,10 +81,10 @@ inline void MarkVarDeclODRUsed(VarDecl *Var,
       old = Loc;
   }
   QualType CaptureType, DeclRefType;
-  SemaRef.tryCaptureVariable(Var, Loc, Sema::TryCapture_Implicit, 
+  SemaRef.tryCaptureVariable(Var, Loc, Sema::TryCapture_Implicit,
     /*EllipsisLoc*/ SourceLocation(),
-    /*BuildAndDiagnose*/ true, 
-    CaptureType, DeclRefType, 
+    /*BuildAndDiagnose*/ true,
+    CaptureType, DeclRefType,
     FunctionScopeIndexToStopAt);
 
   Var->markUsed(SemaRef.Context);

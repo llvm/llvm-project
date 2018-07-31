@@ -119,10 +119,10 @@ void RTDyldMemoryManager::deregisterEHFramesInProcess(uint8_t *Addr,
 
 void RTDyldMemoryManager::registerEHFramesInProcess(uint8_t *Addr,
                                                     size_t Size) {
-  // On Linux __register_frame takes a single argument: 
+  // On Linux __register_frame takes a single argument:
   // a pointer to the start of the .eh_frame section.
 
-  // How can it find the end? Because crtendS.o is linked 
+  // How can it find the end? Because crtendS.o is linked
   // in and it has an .eh_frame section with four zero chars.
   __register_frame(Addr);
 }
@@ -255,7 +255,7 @@ RTDyldMemoryManager::getSymbolAddressInProcess(const std::string &Name) {
     return (uint64_t)&__morestack;
 #endif
 #endif // __linux__ && __GLIBC__
-  
+
   // See ARM_MATH_IMPORTS definition for explanation
 #if defined(__BIONIC__) && defined(__arm__)
   if (Name.compare(0, 8, "__aeabi_") == 0) {

@@ -196,7 +196,7 @@ bool SimplifyIndvar::makeIVComparisonInvariant(ICmpInst *ICmp,
   SmallDenseMap<const SCEV*, Value*> CheapExpansions;
   CheapExpansions[S] = ICmp->getOperand(IVOperIdx);
   CheapExpansions[X] = ICmp->getOperand(1 - IVOperIdx);
-  
+
   // TODO: Support multiple entry loops?  (We currently bail out of these in
   // the IndVarSimplify pass)
   if (auto *BB = L->getLoopPredecessor()) {

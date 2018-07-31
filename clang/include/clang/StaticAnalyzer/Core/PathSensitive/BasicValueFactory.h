@@ -155,12 +155,12 @@ public:
 
     return getValue(TargetType.convert(From));
   }
-  
+
   const llvm::APSInt &Convert(QualType T, const llvm::APSInt &From) {
     APSIntType TargetType = getAPSIntType(T);
     if (TargetType == APSIntType(From))
       return From;
-    
+
     return getValue(TargetType.convert(From));
   }
 

@@ -655,7 +655,7 @@ static void EmitMemberInitializer(CodeGenFunction &CGF,
       // the constructor.
       QualType::DestructionKind dtorKind = FieldType.isDestructedType();
       if (CGF.needsEHCleanup(dtorKind))
-        CGF.pushEHDestroy(dtorKind, LHS.getAddress(), FieldType); 
+        CGF.pushEHDestroy(dtorKind, LHS.getAddress(), FieldType);
       return;
     }
   }
@@ -890,7 +890,7 @@ namespace {
     SanitizerSet OldSanOpts;
   };
 } // end anonymous namespace
- 
+
 namespace {
   class FieldMemcpyizer {
   public:
@@ -1937,7 +1937,7 @@ void CodeGenFunction::EmitCXXAggrConstructorCall(const CXXConstructorDecl *ctor,
   // The alignment of the base, adjusted by the size of a single element,
   // provides a conservative estimate of the alignment of every element.
   // (This assumes we never start tracking offsetted alignments.)
-  // 
+  //
   // Note that these are complete objects and so we don't need to
   // use the non-virtual size or alignment.
   QualType type = getContext().getTypeDeclType(ctor->getParent());

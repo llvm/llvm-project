@@ -117,7 +117,7 @@ bool ARMAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   // globals from all functions in PromotedGlobals.
   for (auto *GV : AFI->getGlobalsPromotedToConstantPool())
     PromotedGlobals.insert(GV);
-  
+
   // Calculate this function's optimization goal.
   unsigned OptimizationGoal;
   if (F.hasFnAttribute(Attribute::OptimizeNone))
@@ -991,7 +991,7 @@ void ARMAsmPrinter::EmitJumpTableTBInst(const MachineInstr *MI,
 
   if (Subtarget->isThumb1Only())
     EmitAlignment(2);
-  
+
   MCSymbol *JTISymbol = GetARMJTIPICJumpTableLabel(JTI);
   OutStreamer->EmitLabel(JTISymbol);
 

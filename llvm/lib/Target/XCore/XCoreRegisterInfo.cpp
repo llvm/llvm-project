@@ -296,12 +296,12 @@ XCoreRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   // fold constant into offset.
   Offset += MI.getOperand(FIOperandNum + 1).getImm();
   MI.getOperand(FIOperandNum + 1).ChangeToImmediate(0);
-  
+
   assert(Offset%4 == 0 && "Misaligned stack offset");
   LLVM_DEBUG(errs() << "Offset             : " << Offset << "\n"
                     << "<--------->\n");
   Offset/=4;
-  
+
   unsigned Reg = MI.getOperand(0).getReg();
   assert(XCore::GRRegsRegClass.contains(Reg) && "Unexpected register operand");
 

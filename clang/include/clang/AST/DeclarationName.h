@@ -211,14 +211,14 @@ public:
   /// getNameKind - Determine what kind of name this is.
   NameKind getNameKind() const;
 
-  /// Determines whether the name itself is dependent, e.g., because it 
+  /// Determines whether the name itself is dependent, e.g., because it
   /// involves a C++ type that is itself dependent.
   ///
   /// Note that this does not capture all of the notions of "dependent name",
-  /// because an identifier can be a dependent name if it is used as the 
+  /// because an identifier can be a dependent name if it is used as the
   /// callee in a call expression with dependent arguments.
   bool isDependentName() const;
-  
+
   /// getNameAsString - Retrieve the human-readable string for this name.
   std::string getAsString() const;
 
@@ -543,7 +543,7 @@ public:
 
   /// Determine whether this name involves a template parameter.
   bool isInstantiationDependent() const;
-  
+
   /// Determine whether this name contains an unexpanded
   /// parameter pack.
   bool containsUnexpandedParameterPack() const;
@@ -558,7 +558,7 @@ public:
   SourceLocation getBeginLoc() const { return NameLoc; }
 
   /// getEndLoc - Retrieve the location of the last token.
-  SourceLocation getEndLoc() const;
+  SourceLocation getEndLoc() const { return getLocEnd(); }
 
   /// getSourceRange - The range of the declaration name.
   SourceRange getSourceRange() const LLVM_READONLY {
@@ -570,9 +570,11 @@ public:
   }
 
   SourceLocation getLocEnd() const LLVM_READONLY {
-    SourceLocation EndLoc = getEndLoc();
+    SourceLocation EndLoc = getEndLocPrivate();
     return EndLoc.isValid() ? EndLoc : getLocStart();
   }
+private:
+  SourceLocation getEndLocPrivate() const;
 };
 
 /// Insertion operator for diagnostics.  This allows sending DeclarationName's

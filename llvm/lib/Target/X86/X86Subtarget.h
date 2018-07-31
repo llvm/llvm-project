@@ -51,7 +51,7 @@ enum Style {
 } // end namespace PICStyles
 
 class X86Subtarget final : public X86GenSubtargetInfo {
-public:  
+public:
   enum X86ProcFamilyEnum {
     Others,
     IntelAtom,

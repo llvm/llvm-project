@@ -4016,7 +4016,7 @@ public:
   void setDoesNotThrow() {
     addAttribute(AttributeList::FunctionIndex, Attribute::NoUnwind);
   }
-  
+
   /// Return the function called, or null if this is an
   /// indirect function invocation.
   ///

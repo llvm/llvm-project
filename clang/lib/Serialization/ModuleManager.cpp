@@ -340,7 +340,7 @@ void ModuleManager::visit(llvm::function_ref<bool(ModuleFile &M)> Visitor,
     unsigned N = size();
     VisitOrder.clear();
     VisitOrder.reserve(N);
-    
+
     // Record the number of incoming edges for each module. When we
     // encounter a module with no incoming edges, push it into the queue
     // to seed the queue.
@@ -477,21 +477,21 @@ namespace llvm {
     static ChildIteratorType child_end(NodeRef Node) {
       return Node->Imports.end();
     }
-    
+
     static nodes_iterator nodes_begin(const ModuleManager &Manager) {
       return nodes_iterator(Manager.begin());
     }
-    
+
     static nodes_iterator nodes_end(const ModuleManager &Manager) {
       return nodes_iterator(Manager.end());
     }
   };
-  
+
   template<>
   struct DOTGraphTraits<ModuleManager> : public DefaultDOTGraphTraits {
     explicit DOTGraphTraits(bool IsSimple = false)
         : DefaultDOTGraphTraits(IsSimple) {}
-    
+
     static bool renderGraphFromBottomUp() { return true; }
 
     std::string getNodeLabel(ModuleFile *M, const ModuleManager&) {

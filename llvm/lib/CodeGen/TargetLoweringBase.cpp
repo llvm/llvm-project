@@ -632,7 +632,7 @@ void TargetLoweringBase::initActions() {
     setOperationAction(ISD::CTTZ_ZERO_UNDEF, VT, Expand);
 
     setOperationAction(ISD::BITREVERSE, VT, Expand);
-    
+
     // These library functions default to expand.
     setOperationAction(ISD::FROUND, VT, Expand);
     setOperationAction(ISD::FPOWI, VT, Expand);
@@ -924,7 +924,7 @@ TargetLoweringBase::emitPatchPoint(MachineInstr &InitialMI,
   // STATEPOINT Deopt Spill - live-through, read only, indirect
   // STATEPOINT Deopt Alloca - live-through, read only, direct
   // (We're currently conservative and mark the deopt slots read/write in
-  // practice.) 
+  // practice.)
   // STATEPOINT GC Spill - live-through, read/write, indirect
   // STATEPOINT GC Alloca - live-through, read/write, direct
   // The live-in vs live-through is handled already (the live through ones are
@@ -1411,7 +1411,7 @@ bool TargetLoweringBase::allowsMemoryAccess(LLVMContext &Context,
       *Fast = true;
     return true;
   }
-  
+
   // This is a misaligned access.
   return allowsMisalignedMemoryAccesses(VT, AddrSpace, Alignment, Fast);
 }

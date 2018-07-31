@@ -1068,14 +1068,14 @@ void DAGTypeLegalizer::SplitVecRes_StrictFPOp(SDNode *N, SDValue &Lo,
   OpsLo.push_back(Chain);
   OpsHi.push_back(Chain);
 
-  // Now process the remaining operands. 
+  // Now process the remaining operands.
   for (unsigned i = 1; i < NumOps; ++i) {
-    SDValue Op = N->getOperand(i); 
-    SDValue OpLo = Op; 
-    SDValue OpHi = Op;   
+    SDValue Op = N->getOperand(i);
+    SDValue OpLo = Op;
+    SDValue OpHi = Op;
 
     EVT InVT = Op.getValueType();
-    if (InVT.isVector()) { 
+    if (InVT.isVector()) {
       // If the input also splits, handle it directly for a
       // compile time speedup. Otherwise split it by hand.
       if (getTypeAction(InVT) == TargetLowering::TypeSplitVector)
@@ -1092,10 +1092,10 @@ void DAGTypeLegalizer::SplitVecRes_StrictFPOp(SDNode *N, SDValue &Lo,
   EVT HiValueVTs[] = {HiVT, MVT::Other};
   Lo = DAG.getNode(N->getOpcode(), dl, LoValueVTs, OpsLo);
   Hi = DAG.getNode(N->getOpcode(), dl, HiValueVTs, OpsHi);
-  
+
   // Build a factor node to remember that this Op is independent of the
   // other one.
-  Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, 
+  Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other,
                       Lo.getValue(1), Hi.getValue(1));
 
   // Legalize the chain result - switch anything that used the old chain to

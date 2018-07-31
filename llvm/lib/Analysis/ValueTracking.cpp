@@ -71,7 +71,7 @@
 #include <cassert>
 #include <cstdint>
 #include <iterator>
-#include <utility>     
+#include <utility>
 
 using namespace llvm;
 using namespace llvm::PatternMatch;
@@ -3828,7 +3828,7 @@ static bool checkRippleForSignedAdd(const KnownBits &LHSKnown,
 
   // If either of the values is known to be non-negative, adding them can only
   // overflow if the second is also non-negative, so we can assume that.
-  // Two non-negative numbers will only overflow if there is a carry to the 
+  // Two non-negative numbers will only overflow if there is a carry to the
   // sign bit, so we can check if even when the values are as big as possible
   // there is no overflow to the sign bit.
   if (LHSKnown.isNonNegative() || RHSKnown.isNonNegative()) {
@@ -3855,7 +3855,7 @@ static bool checkRippleForSignedAdd(const KnownBits &LHSKnown,
   }
 
   // If we reached here it means that we know nothing about the sign bits.
-  // In this case we can't know if there will be an overflow, since by 
+  // In this case we can't know if there will be an overflow, since by
   // changing the sign bits any two values can be made to overflow.
   return false;
 }
@@ -3905,7 +3905,7 @@ static OverflowResult computeOverflowForSignedAdd(const Value *LHS,
   // operands.
   bool LHSOrRHSKnownNonNegative =
       (LHSKnown.isNonNegative() || RHSKnown.isNonNegative());
-  bool LHSOrRHSKnownNegative = 
+  bool LHSOrRHSKnownNegative =
       (LHSKnown.isNegative() || RHSKnown.isNegative());
   if (LHSOrRHSKnownNonNegative || LHSOrRHSKnownNegative) {
     KnownBits AddKnown = computeKnownBits(Add, DL, /*Depth=*/0, AC, CxtI, DT);
@@ -4454,7 +4454,7 @@ static SelectPatternResult matchMinMax(CmpInst::Predicate Pred,
   SPR = matchMinMaxOfMinMax(Pred, CmpLHS, CmpRHS, TrueVal, FalseVal, Depth);
   if (SPR.Flavor != SelectPatternFlavor::SPF_UNKNOWN)
     return SPR;
-  
+
   if (Pred != CmpInst::ICMP_SGT && Pred != CmpInst::ICMP_SLT)
     return {SPF_UNKNOWN, SPNB_NA, false};
 
@@ -4630,7 +4630,7 @@ static SelectPatternResult matchSelectPattern(CmpInst::Predicate Pred,
     case FCmpInst::FCMP_OLE: return {SPF_FMINNUM, NaNBehavior, Ordered};
     }
   }
-  
+
   if (isKnownNegation(TrueVal, FalseVal)) {
     // Sign-extending LHS does not change its sign, so TrueVal/FalseVal can
     // match against either LHS or sext(LHS).

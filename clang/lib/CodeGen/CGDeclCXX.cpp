@@ -27,9 +27,9 @@ using namespace CodeGen;
 static void EmitDeclInit(CodeGenFunction &CGF, const VarDecl &D,
                          ConstantAddress DeclPtr) {
   assert(D.hasGlobalStorage() && "VarDecl must have global storage!");
-  assert(!D.getType()->isReferenceType() && 
+  assert(!D.getType()->isReferenceType() &&
          "Should not call EmitDeclInit on a reference!");
-  
+
   QualType type = D.getType();
   LValue lv = CGF.MakeAddrLValue(DeclPtr, type);
 
@@ -67,7 +67,7 @@ static void EmitDeclDestroy(CodeGenFunction &CGF, const VarDecl &D,
   CodeGenModule &CGM = CGF.CGM;
 
   // FIXME:  __attribute__((cleanup)) ?
-  
+
   QualType type = D.getType();
   QualType::DestructionKind dtorKind = type.isDestructedType();
 
@@ -219,7 +219,7 @@ llvm::Constant *CodeGenFunction::createAtExitStub(const VarDecl &VD,
   CGF.StartFunction(&VD, CGM.getContext().VoidTy, fn, FI, FunctionArgList());
 
   llvm::CallInst *call = CGF.Builder.CreateCall(dtor, addr);
- 
+
  // Make sure the call and the callee agree on calling convention.
   if (llvm::Function *dtorFn =
         dyn_cast<llvm::Function>(dtor->stripPointerCasts()))
@@ -488,7 +488,7 @@ CodeGenModule::EmitCXXGlobalInitFunc() {
   // Create our global initialization function.
   if (!PrioritizedCXXGlobalInits.empty()) {
     SmallVector<llvm::Function *, 8> LocalCXXGlobalInits;
-    llvm::array_pod_sort(PrioritizedCXXGlobalInits.begin(), 
+    llvm::array_pod_sort(PrioritizedCXXGlobalInits.begin(),
                          PrioritizedCXXGlobalInits.end());
     // Iterate over "chunks" of ctors with same priority and emit each chunk
     // into separate function. Note - everything is sorted first by priority,
@@ -684,8 +684,8 @@ llvm::Function *CodeGenFunction::generateDestroyHelper(
   StartFunction(VD, getContext().VoidTy, fn, FI, args);
 
   emitDestroy(addr, type, destroyer, useEHCleanupForArray);
-  
+
   FinishFunction();
-  
+
   return fn;
 }

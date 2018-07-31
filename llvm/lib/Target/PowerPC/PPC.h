@@ -66,7 +66,7 @@ namespace llvm {
   extern char &PPCVSXFMAMutateID;
 
   namespace PPCII {
-    
+
   /// Target Operand Flag enum.
   enum TOF {
     //===------------------------------------------------------------------===//
@@ -111,7 +111,7 @@ namespace llvm {
     MO_TLS = 8 << 4
   };
   } // end namespace PPCII
-  
+
 } // end namespace llvm;
 
 #endif

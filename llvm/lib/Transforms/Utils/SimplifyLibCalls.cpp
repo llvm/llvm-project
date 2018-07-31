@@ -890,7 +890,7 @@ static Value *foldMallocMemset(CallInst *Memset, IRBuilder<> &B,
     return nullptr;
 
   // Replace the malloc with a calloc. We need the data layout to know what the
-  // actual size of a 'size_t' parameter is. 
+  // actual size of a 'size_t' parameter is.
   B.SetInsertPoint(Malloc->getParent(), ++Malloc->getIterator());
   const DataLayout &DL = Malloc->getModule()->getDataLayout();
   IntegerType *SizeType = DL.getIntPtrType(B.GetInsertBlock()->getContext());
@@ -970,7 +970,7 @@ static Value *optimizeUnaryDoubleFP(CallInst *CI, IRBuilder<> &B,
   Value *V = valueHasFloatPrecision(CI->getArgOperand(0));
   if (V == nullptr)
     return nullptr;
-  
+
   // If call isn't an intrinsic, check that it isn't within a function with the
   // same name as the float version of this call.
   //
@@ -1283,7 +1283,7 @@ Value *LibCallSimplifier::optimizePow(CallInst *Pow, IRBuilder<> &B) {
     // We cannot readily convert a non-double type (like float) to a double.
     // So we first convert ExpoA to something which could be converted to double.
     ExpoA.convert(APFloat::IEEEdouble(), APFloat::rmTowardZero, &Ignored);
-    
+
     Value *FMul = getPow(InnerChain, ExpoA.convertToDouble(), B);
     // For negative exponents simply compute the reciprocal.
     if (ExpoC->isNegative())

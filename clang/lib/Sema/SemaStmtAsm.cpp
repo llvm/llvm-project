@@ -603,7 +603,7 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
                                  Context.getTargetInfo(), Context);
   if (ConstraintLoc.isValid())
     return Diag(ConstraintLoc, diag::error_inoutput_conflict_with_clobber);
-  
+
   return NS;
 }
 

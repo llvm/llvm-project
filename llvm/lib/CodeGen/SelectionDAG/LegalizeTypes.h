@@ -510,7 +510,7 @@ private:
   SDValue SoftenFloatRes_XINT_TO_FP(SDNode *N);
 
   // Return true if we can skip softening the given operand or SDNode because
-  // either it was soften before by SoftenFloatResult and references to the 
+  // either it was soften before by SoftenFloatResult and references to the
   // operand were replaced by ReplaceValueWith or it's value type is legal in HW
   // registers and the operand can be left unchanged.
   bool CanSkipSoftenFloatOperand(SDNode *N, unsigned OpNo);

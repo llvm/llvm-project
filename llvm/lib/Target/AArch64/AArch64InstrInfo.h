@@ -272,6 +272,10 @@ private:
                              ArrayRef<MachineOperand> Cond) const;
   bool substituteCmpToZero(MachineInstr &CmpInstr, unsigned SrcReg,
                            const MachineRegisterInfo *MRI) const;
+
+  /// Returns an unused general-purpose register which can be used for
+  /// constructing an outlined call if one exists. Returns 0 otherwise.
+  unsigned findRegisterToSaveLRTo(const outliner::Candidate &C) const;
 };
 
 /// emitFrameOffset - Emit instructions as needed to set DestReg to SrcReg

@@ -233,7 +233,7 @@ bool MLxExpansion::FindMLxHazard(MachineInstr *MI) {
 
   // On Swift, we mostly care about hazards from multiplication instructions
   // writing the accumulator and the pipelining of loop iterations by out-of-
-  // order execution. 
+  // order execution.
   if (isSwift)
     return isFpMulInstruction(DefMI->getOpcode()) || hasLoopHazard(MI);
 

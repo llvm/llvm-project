@@ -13105,7 +13105,7 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
 SDValue
 PPCTargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
                                   SelectionDAG &DAG,
-                                  std::vector<SDNode *> *Created) const {
+                                  std::vector<SDNode *> &Created) const {
   // fold (sdiv X, pow2)
   EVT VT = N->getValueType(0);
   if (VT == MVT::i64 && !Subtarget.isPPC64())
@@ -13122,13 +13122,11 @@ PPCTargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
   SDValue ShiftAmt = DAG.getConstant(Lg2, DL, VT);
 
   SDValue Op = DAG.getNode(PPCISD::SRA_ADDZE, DL, VT, N0, ShiftAmt);
-  if (Created)
-    Created->push_back(Op.getNode());
+  Created.push_back(Op.getNode());
 
   if (IsNegPow2) {
     Op = DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), Op);
-    if (Created)
-      Created->push_back(Op.getNode());
+    Created.push_back(Op.getNode());
   }
 
   return Op;

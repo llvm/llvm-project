@@ -725,7 +725,7 @@ bool LazyValueInfoImpl::solveBlockValueNonLocal(ValueLatticeElement &BBLV,
   // frequently arranged such that dominating ones come first and we quickly
   // find a path to function entry.  TODO: We should consider explicitly
   // canonicalizing to make this true rather than relying on this happy
-  // accident.  
+  // accident.
   for (pred_iterator PI = pred_begin(BB), E = pred_end(BB); PI != E; ++PI) {
     ValueLatticeElement EdgeResult;
     if (!getEdgeValue(Val, *PI, BB, EdgeResult))

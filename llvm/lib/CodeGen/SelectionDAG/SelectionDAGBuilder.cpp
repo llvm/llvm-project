@@ -4987,7 +4987,7 @@ SDDbgValue *SelectionDAGBuilder::getDbgValue(SDValue N,
                                              unsigned DbgSDNodeOrder) {
   if (auto *FISDN = dyn_cast<FrameIndexSDNode>(N.getNode())) {
     // Construct a FrameIndexDbgValue for FrameIndexSDNodes so we can describe
-    // stack slot locations. 
+    // stack slot locations.
     //
     // Consider "int x = 0; int *px = &x;". There are two kinds of interesting
     // debug values here after optimization:

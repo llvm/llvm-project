@@ -992,7 +992,7 @@ class ObjCObjectTypeLoc : public ConcreteTypeLoc<UnqualTypeLoc,
     return (TypeSourceInfo**)this->getExtraLocalData();
   }
 
-  // SourceLocations are stored after the type argument information, one for 
+  // SourceLocations are stored after the type argument information, one for
   // each Protocol.
   SourceLocation *getProtocolLocArray() const {
     return (SourceLocation*)(getTypeArgLocArray() + getNumTypeArgs());
@@ -1131,11 +1131,11 @@ public:
   void setNameLoc(SourceLocation Loc) {
     getLocalData()->NameLoc = Loc;
   }
-                                                    
+
   SourceRange getLocalSourceRange() const {
     return SourceRange(getNameLoc(), getNameEndLoc());
   }
-  
+
   SourceLocation getNameEndLoc() const {
     return getLocalData()->NameEndLoc;
   }
@@ -1766,10 +1766,10 @@ public:
     return range;
   }
 
-  ///  Returns the type before the address space attribute application 
-  ///  area.   
+  ///  Returns the type before the address space attribute application
+  ///  area.
   ///    int * __attribute__((address_space(11))) *
-  ///    ^   ^          
+  ///    ^   ^
   QualType getInnerType() const {
     return this->getTypePtr()->getPointeeType();
   }

@@ -3809,7 +3809,7 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
           continue;
         // The mapping from OriginalId to GUID may return a GUID
         // that corresponds to a static variable. Filter it out here.
-        // This can happen when 
+        // This can happen when
         // 1) There is a call to a library function which does not have
         // a CallValidId;
         // 2) There is a static variable with the  OriginalGUID identical

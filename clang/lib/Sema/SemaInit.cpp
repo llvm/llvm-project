@@ -191,7 +191,7 @@ static void CheckStringInit(Expr *Str, QualType &DeclT, const ArrayType *AT,
       if (SL->isPascal())
         StrLength--;
     }
-  
+
     // [dcl.init.string]p2
     if (StrLength > CAT->getSize().getZExtValue())
       S.Diag(Str->getLocStart(),
@@ -450,7 +450,7 @@ ExprResult InitListChecker::PerformEmptyInit(Sema &SemaRef,
           IsInStd = true;
       }
 
-      if (IsInStd && llvm::StringSwitch<bool>(R->getName()) 
+      if (IsInStd && llvm::StringSwitch<bool>(R->getName())
               .Cases("basic_string", "deque", "forward_list", true)
               .Cases("list", "map", "multimap", "multiset", true)
               .Cases("priority_queue", "queue", "set", "stack", true)
@@ -1578,7 +1578,7 @@ void InitListChecker::CheckVectorType(const InitializedEntity &Entity,
                         T->getVectorKind() == VectorType::NeonPolyVector)) {
       // The ability to use vector initializer lists is a GNU vector extension
       // and is unrelated to the NEON intrinsics in arm_neon.h. On little
-      // endian machines it works fine, however on big endian machines it 
+      // endian machines it works fine, however on big endian machines it
       // exhibits surprising behaviour:
       //
       //   uint32x2_t x = {42, 64};
@@ -2225,7 +2225,7 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
           SemaRef.Diag(D->getLocStart(),
                        diag::warn_subobject_initializer_overrides)
             << SourceRange(D->getLocStart(), DIE->getLocEnd());
-  
+
           SemaRef.Diag(ExistingInit->getLocStart(),
                        diag::note_previous_initializer)
             << /*FIXME:has side effects=*/0
@@ -3000,7 +3000,7 @@ DeclarationName InitializedEntity::getName() const {
 
   case EK_LambdaCapture:
     return DeclarationName(Capture.VarID);
-      
+
   case EK_Result:
   case EK_StmtExprResult:
   case EK_Exception:
@@ -3653,13 +3653,13 @@ ResolveConstructorOverload(Sema &S, SourceLocation DeclLoc,
                                      CandidateSet, SuppressUserConversions);
     else {
       // C++ [over.match.copy]p1:
-      //   - When initializing a temporary to be bound to the first parameter 
+      //   - When initializing a temporary to be bound to the first parameter
       //     of a constructor [for type T] that takes a reference to possibly
       //     cv-qualified T as its first argument, called with a single
       //     argument in the context of direct-initialization, explicit
       //     conversion functions are also considered.
       // FIXME: What if a constructor template instantiates to such a signature?
-      bool AllowExplicitConv = AllowExplicit && !CopyInitializing && 
+      bool AllowExplicitConv = AllowExplicit && !CopyInitializing &&
                                Args.size() == 1 &&
                                hasCopyOrMoveCtorParam(S.Context, Info);
       S.AddOverloadCandidate(Info.Constructor, Info.FoundDecl, Args,
@@ -4226,7 +4226,7 @@ static OverloadingResult TryRefInitWithConversionFunction(
   (void)DerivedToBase;
   (void)ObjCConversion;
   (void)ObjCLifetimeConversion;
-  
+
   // Build the candidate set directly in the initialization sequence
   // structure, so that it will persist if we fail.
   OverloadCandidateSet &CandidateSet = Sequence.getFailedCandidateSet();
@@ -4646,7 +4646,7 @@ static void TryReferenceInitializationCore(Sema &S,
                               /*FIXME:InOverloadResolution=*/false,
                               /*CStyle=*/Kind.isCStyleOrFunctionalCast(),
                               /*AllowObjCWritebackConversion=*/false);
-  
+
   if (ICS.isBad()) {
     // FIXME: Use the conversion function set stored in ICS to turn
     // this into an overloading ambiguity diagnostic. However, we need
@@ -4787,7 +4787,7 @@ static void TryDefaultInitialization(Sema &S,
   //   To default-initialize an object of type T means:
   //     - if T is an array type, each element is default-initialized;
   QualType DestType = S.Context.getBaseElementType(Entity.getType());
-         
+
   //     - if T is a (possibly cv-qualified) class type (Clause 9), the default
   //       constructor for T is called (and the initialization is ill-formed if
   //       T has no accessible default constructor);
@@ -5043,11 +5043,11 @@ static InvalidICRKind isInvalidICRSource(ASTContext &C, Expr *e,
 
   // If we have a declaration reference, it had better be a local variable.
   } else if (isa<DeclRefExpr>(e)) {
-    // set isWeakAccess to true, to mean that there will be an implicit 
+    // set isWeakAccess to true, to mean that there will be an implicit
     // load which requires a cleanup.
     if (e->getType().getObjCLifetime() == Qualifiers::OCL_Weak)
       isWeakAccess = true;
-    
+
     if (!isAddressOf) return IIK_nonlocal;
 
     VarDecl *var = dyn_cast<VarDecl>(cast<DeclRefExpr>(e)->getDecl());
@@ -5082,7 +5082,7 @@ static void checkIndirectCopyRestoreSource(Sema &S, Expr *src) {
   assert(src->isRValue());
   bool isWeakAccess = false;
   InvalidICRKind iik = isInvalidICRSource(S.Context, src, false, isWeakAccess);
-  // If isWeakAccess to true, there will be an implicit 
+  // If isWeakAccess to true, there will be an implicit
   // load which requires a cleanup.
   if (S.getLangOpts().ObjCAutoRefCount && isWeakAccess)
     S.Cleanup.setExprNeedsCleanups(true);
@@ -5124,7 +5124,7 @@ static bool tryObjCWritebackConversion(Sema &S,
     ArgPointee = ArgArrayType->getElementType();
     ArgType = S.Context.getPointerType(ArgPointee);
   }
-      
+
   // Handle write-back conversion.
   QualType ConvertedArgType;
   if (!S.isObjCWritebackConversion(ArgType, Entity.getType(),
@@ -5151,10 +5151,10 @@ static bool tryObjCWritebackConversion(Sema &S,
       ICS.Standard.First = ICK_Lvalue_To_Rvalue;
       ResultType = Initializer->getType().getNonLValueExprType(S.Context);
     }
-          
+
     Sequence.AddConversionSequenceStep(ICS, ResultType);
   }
-        
+
   Sequence.AddPassByIndirectCopyRestoreStep(Entity.getType(), ShouldCopy);
   return true;
 }
@@ -5567,13 +5567,13 @@ void InitializationSequence::InitializeFrom(Sema &S,
   if (ICS.isStandard() &&
       ICS.Standard.Second == ICK_Writeback_Conversion) {
     // Objective-C ARC writeback conversion.
-    
+
     // We should copy unless we're passing to an argument explicitly
     // marked 'out'.
     bool ShouldCopy = true;
     if (ParmVarDecl *Param = cast_or_null<ParmVarDecl>(Entity.getDecl()))
       ShouldCopy = (Param->getObjCDeclQualifier() != ParmVarDecl::OBJC_TQ_Out);
-    
+
     // If there was an lvalue adjustment, add it as a separate conversion.
     if (ICS.Standard.First == ICK_Array_To_Pointer ||
         ICS.Standard.First == ICK_Lvalue_To_Rvalue) {
@@ -5584,7 +5584,7 @@ void InitializationSequence::InitializeFrom(Sema &S,
       LvalueICS.Standard.First = ICS.Standard.First;
       AddConversionSequenceStep(LvalueICS, ICS.Standard.getToType(0));
     }
-    
+
     AddPassByIndirectCopyRestoreStep(DestType, ShouldCopy);
   } else if (ICS.isBad()) {
     DeclAccessPair dap;
@@ -5635,9 +5635,9 @@ getAssignmentAction(const InitializedEntity &Entity, bool Diagnose = false) {
     if (Entity.getDecl() &&
       isa<ObjCMethodDecl>(Entity.getDecl()->getDeclContext()))
       return Sema::AA_Sending;
-      
+
     return !Diagnose ? Sema::AA_Passing : Sema::AA_Passing_CFAudited;
-      
+
   case InitializedEntity::EK_Result:
   case InitializedEntity::EK_StmtExprResult: // FIXME: Not quite right.
     return Sema::AA_Returning;
@@ -5743,7 +5743,7 @@ static SourceLocation getInitializationLoc(const InitializedEntity &Entity,
 
   case InitializedEntity::EK_LambdaCapture:
     return Entity.getCaptureLoc();
-      
+
   case InitializedEntity::EK_ArrayElement:
   case InitializedEntity::EK_Member:
   case InitializedEntity::EK_Parameter:
@@ -6065,9 +6065,9 @@ PerformConstructorInitialization(Sema &S,
   ExprResult CurInit((Expr *)nullptr);
 
   // C++ [over.match.copy]p1:
-  //   - When initializing a temporary to be bound to the first parameter 
-  //     of a constructor that takes a reference to possibly cv-qualified 
-  //     T as its first argument, called with a single argument in the 
+  //   - When initializing a temporary to be bound to the first parameter
+  //     of a constructor that takes a reference to possibly cv-qualified
+  //     T as its first argument, called with a single argument in the
   //     context of direct-initialization, explicit conversion functions
   //     are also considered.
   bool AllowExplicitConv =
@@ -7130,7 +7130,7 @@ InitializationSequence::Perform(Sema &S,
                                   Args);
     }
     assert(Kind.getKind() == InitializationKind::IK_Copy ||
-           Kind.isExplicitCast() || 
+           Kind.isExplicitCast() ||
            Kind.getKind() == InitializationKind::IK_DirectList);
     return ExprResult(Args[0]);
   }
@@ -7832,7 +7832,7 @@ InitializationSequence::Perform(Sema &S,
         // this has already been done when parsing the variable declaration.
         if (!Init->isConstantInitializer(S.Context, false))
           break;
-        
+
         if (!SourceType->isIntegerType() ||
             32 != S.Context.getIntWidth(SourceType)) {
           S.Diag(Kind.getLocation(), diag::err_sampler_initializer_not_integer)
@@ -7868,7 +7868,7 @@ InitializationSequence::Perform(Sema &S,
       break;
     }
     case SK_OCLZeroEvent: {
-      assert(Step->Type->isEventT() && 
+      assert(Step->Type->isEventT() &&
              "Event initialization on non-event type.");
 
       CurInit = S.ImpCastExprToType(CurInit.get(), Step->Type,
@@ -8365,7 +8365,7 @@ bool InitializationSequence::Diagnose(Sema &S,
           llvm_unreachable("Inconsistent overload resolution?");
           break;
         }
-       
+
         // If this is a defaulted or implicitly-declared function, then
         // it was implicitly deleted. Make it clear that the deletion was
         // implicit.

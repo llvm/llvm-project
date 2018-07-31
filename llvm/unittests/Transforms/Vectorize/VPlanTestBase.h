@@ -50,8 +50,19 @@ protected:
     doAnalysis(*LoopHeader->getParent());
 
     auto Plan = llvm::make_unique<VPlan>();
-    VPlanHCFGBuilder HCFGBuilder(LI->getLoopFor(LoopHeader), LI.get());
-    HCFGBuilder.buildHierarchicalCFG(*Plan.get());
+    VPlanHCFGBuilder HCFGBuilder(LI->getLoopFor(LoopHeader), LI.get(), *Plan);
+    HCFGBuilder.buildHierarchicalCFG();
+    return Plan;
+  }
+
+  /// Build the VPlan plain CFG for the loop starting from \p LoopHeader.
+  VPlanPtr buildPlainCFG(BasicBlock *LoopHeader) {
+    doAnalysis(*LoopHeader->getParent());
+
+    auto Plan = llvm::make_unique<VPlan>();
+    VPlanHCFGBuilder HCFGBuilder(LI->getLoopFor(LoopHeader), LI.get(), *Plan);
+    VPRegionBlock *TopRegion = HCFGBuilder.buildPlainCFG();
+    Plan->setEntry(TopRegion);
     return Plan;
   }
 };

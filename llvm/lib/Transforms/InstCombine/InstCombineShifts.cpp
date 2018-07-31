@@ -570,7 +570,7 @@ Instruction *InstCombiner::FoldShiftByConstant(Value *Op0, Constant *Op1,
                             m_OneUse(m_BinOp(FBO))))) {
       const APInt *C;
       if (!isa<Constant>(TrueVal) && FBO->getOperand(0) == TrueVal &&
-          match(FBO->getOperand(1), m_APInt(C)) && 
+          match(FBO->getOperand(1), m_APInt(C)) &&
           canShiftBinOpWithConstantRHS(I, FBO, *C)) {
         Constant *NewRHS = ConstantExpr::get(I.getOpcode(),
                                        cast<Constant>(FBO->getOperand(1)), Op1);

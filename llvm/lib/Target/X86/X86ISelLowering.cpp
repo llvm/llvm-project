@@ -23368,7 +23368,7 @@ static SDValue convertShiftLeftToScale(SDValue Amt, const SDLoc &dl,
     return DAG.getBuildVector(VT, dl, Elts);
   }
 
-  // If the target doesn't support variable shifts, use either FP conversion 
+  // If the target doesn't support variable shifts, use either FP conversion
   // or integer multiplication to avoid shifting each element individually.
   if (VT == MVT::v4i32) {
     Amt = DAG.getNode(ISD::SHL, dl, VT, Amt, DAG.getConstant(23, dl, VT));

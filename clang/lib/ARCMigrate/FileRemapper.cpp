@@ -67,7 +67,7 @@ bool FileRemapper::initFromFile(StringRef filePath, DiagnosticsEngine &Diag,
       llvm::MemoryBuffer::getFile(infoFile);
   if (!fileBuf)
     return report("Error opening file: " + infoFile, Diag);
-  
+
   SmallVector<StringRef, 64> lines;
   fileBuf.get()->getBuffer().split(lines, "\n");
 
@@ -78,7 +78,7 @@ bool FileRemapper::initFromFile(StringRef filePath, DiagnosticsEngine &Diag,
       return report("Invalid file data: '" + lines[idx+1] + "' not a number",
                     Diag);
     StringRef toFilename = lines[idx+2];
-    
+
     const FileEntry *origFE = FileMgr->getFile(fromFilename);
     if (!origFE) {
       if (ignoreIfFilesChanged)
@@ -152,7 +152,7 @@ bool FileRemapper::flushToFile(StringRef outputPath, DiagnosticsEngine &Diag) {
       llvm::MemoryBuffer *mem = I->second.get<llvm::MemoryBuffer *>();
       newOut.write(mem->getBufferStart(), mem->getBufferSize());
       newOut.close();
-      
+
       const FileEntry *newE = FileMgr->getFile(tempPath);
       remap(origFE, newE);
       infoOut << newE->getName() << '\n';

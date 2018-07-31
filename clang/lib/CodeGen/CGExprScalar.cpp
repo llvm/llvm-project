@@ -299,13 +299,31 @@ public:
                                 Value *Src, QualType SrcType, QualType DstType,
                                 llvm::Type *DstTy, SourceLocation Loc);
 
+  /// Known implicit conversion check kinds.
+  /// Keep in sync with the enum of the same name in ubsan_handlers.h
+  enum ImplicitConversionCheckKind : unsigned char {
+    ICCK_IntegerTruncation = 0,
+  };
+
+  /// Emit a check that an [implicit] truncation of an integer  does not
+  /// discard any bits. It is not UB, so we use the value after truncation.
+  void EmitIntegerTruncationCheck(Value *Src, QualType SrcType, Value *Dst,
+                                  QualType DstType, SourceLocation Loc);
+
   /// Emit a conversion from the specified type to the specified destination
   /// type, both of which are LLVM scalar types.
-  Value *EmitScalarConversion(Value *Src, QualType SrcTy, QualType DstTy,
-                              SourceLocation Loc);
+  struct ScalarConversionOpts {
+    bool TreatBooleanAsSigned;
+    bool EmitImplicitIntegerTruncationChecks;
 
-  Value *EmitScalarConversion(Value *Src, QualType SrcTy, QualType DstTy,
-                              SourceLocation Loc, bool TreatBooleanAsSigned);
+    ScalarConversionOpts()
+        : TreatBooleanAsSigned(false),
+          EmitImplicitIntegerTruncationChecks(false) {}
+  };
+  Value *
+  EmitScalarConversion(Value *Src, QualType SrcTy, QualType DstTy,
+                       SourceLocation Loc,
+                       ScalarConversionOpts Opts = ScalarConversionOpts());
 
   /// Emit a conversion from the specified complex type to the specified
   /// destination type, where the destination type is an LLVM scalar type.
@@ -923,18 +941,59 @@ void ScalarExprEmitter::EmitFloatConversionCheck(
                 SanitizerHandler::FloatCastOverflow, StaticArgs, OrigSrc);
 }
 
+void ScalarExprEmitter::EmitIntegerTruncationCheck(Value *Src, QualType SrcType,
+                                                   Value *Dst, QualType DstType,
+                                                   SourceLocation Loc) {
+  if (!CGF.SanOpts.has(SanitizerKind::ImplicitIntegerTruncation))
+    return;
+
+  llvm::Type *SrcTy = Src->getType();
+  llvm::Type *DstTy = Dst->getType();
+
+  // We only care about int->int conversions here.
+  // We ignore conversions to/from pointer and/or bool.
+  if (!(SrcType->isIntegerType() && DstType->isIntegerType()))
+    return;
+
+  assert(isa<llvm::IntegerType>(SrcTy) && isa<llvm::IntegerType>(DstTy) &&
+         "clang integer type lowered to non-integer llvm type");
+
+  unsigned SrcBits = SrcTy->getScalarSizeInBits();
+  unsigned DstBits = DstTy->getScalarSizeInBits();
+  // This must be truncation. Else we do not care.
+  if (SrcBits <= DstBits)
+    return;
+
+  assert(!DstType->isBooleanType() && "we should not get here with booleans.");
+
+  CodeGenFunction::SanitizerScope SanScope(&CGF);
+
+  llvm::Value *Check = nullptr;
+
+  // 1. Extend the truncated value back to the same width as the Src.
+  bool InputSigned = DstType->isSignedIntegerOrEnumerationType();
+  Check = Builder.CreateIntCast(Dst, SrcTy, InputSigned, "anyext");
+  // 2. Equality-compare with the original source value
+  Check = Builder.CreateICmpEQ(Check, Src, "truncheck");
+  // If the comparison result is 'i1 false', then the truncation was lossy.
+
+  llvm::Constant *StaticArgs[] = {
+      CGF.EmitCheckSourceLocation(Loc), CGF.EmitCheckTypeDescriptor(SrcType),
+      CGF.EmitCheckTypeDescriptor(DstType),
+      llvm::ConstantInt::get(Builder.getInt8Ty(), ICCK_IntegerTruncation)};
+  CGF.EmitCheck(std::make_pair(Check, SanitizerKind::ImplicitIntegerTruncation),
+                SanitizerHandler::ImplicitConversion, StaticArgs, {Src, Dst});
+}
+
 /// Emit a conversion from the specified type to the specified destination type,
 /// both of which are LLVM scalar types.
 Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
                                                QualType DstType,
-                                               SourceLocation Loc) {
-  return EmitScalarConversion(Src, SrcType, DstType, Loc, false);
-}
-
-Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
-                                               QualType DstType,
                                                SourceLocation Loc,
-                                               bool TreatBooleanAsSigned) {
+                                               ScalarConversionOpts Opts) {
+  QualType NoncanonicalSrcType = SrcType;
+  QualType NoncanonicalDstType = DstType;
+
   SrcType = CGF.getContext().getCanonicalType(SrcType);
   DstType = CGF.getContext().getCanonicalType(DstType);
   if (SrcType == DstType) return Src;
@@ -1083,7 +1142,7 @@ Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
 
   if (isa<llvm::IntegerType>(SrcTy)) {
     bool InputSigned = SrcType->isSignedIntegerOrEnumerationType();
-    if (SrcType->isBooleanType() && TreatBooleanAsSigned) {
+    if (SrcType->isBooleanType() && Opts.TreatBooleanAsSigned) {
       InputSigned = true;
     }
     if (isa<llvm::IntegerType>(DstTy))
@@ -1117,6 +1176,10 @@ Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
       Res = Builder.CreateFPTrunc(Res, ResTy, "conv");
     }
   }
+
+  if (Opts.EmitImplicitIntegerTruncationChecks)
+    EmitIntegerTruncationCheck(Src, NoncanonicalSrcType, Res,
+                               NoncanonicalDstType, Loc);
 
   return Res;
 }
@@ -1812,16 +1875,26 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     return Builder.CreateVectorSplat(NumElements, Elt, "splat");
   }
 
-  case CK_IntegralCast:
+  case CK_IntegralCast: {
+    ScalarConversionOpts Opts;
+    if (CGF.SanOpts.has(SanitizerKind::ImplicitIntegerTruncation)) {
+      if (auto *ICE = dyn_cast<ImplicitCastExpr>(CE))
+        Opts.EmitImplicitIntegerTruncationChecks = !ICE->isPartOfExplicitCast();
+    }
+    return EmitScalarConversion(Visit(E), E->getType(), DestTy,
+                                CE->getExprLoc(), Opts);
+  }
   case CK_IntegralToFloating:
   case CK_FloatingToIntegral:
   case CK_FloatingCast:
     return EmitScalarConversion(Visit(E), E->getType(), DestTy,
                                 CE->getExprLoc());
-  case CK_BooleanToSignedIntegral:
+  case CK_BooleanToSignedIntegral: {
+    ScalarConversionOpts Opts;
+    Opts.TreatBooleanAsSigned = true;
     return EmitScalarConversion(Visit(E), E->getType(), DestTy,
-                                CE->getExprLoc(),
-                                /*TreatBooleanAsSigned=*/true);
+                                CE->getExprLoc(), Opts);
+  }
   case CK_IntegralToBoolean:
     return EmitIntToBoolConversion(Visit(E));
   case CK_PointerToBoolean:
@@ -2766,7 +2839,7 @@ static Value *emitPointerArithmetic(CodeGenFunction &CGF,
   //
   if (BinaryOperator::isNullPointerArithmeticExtension(CGF.getContext(),
                                                        op.Opcode,
-                                                       expr->getLHS(), 
+                                                       expr->getLHS(),
                                                        expr->getRHS()))
     return CGF.Builder.CreateIntToPtr(index, pointer->getType());
 

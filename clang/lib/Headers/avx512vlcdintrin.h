@@ -34,7 +34,7 @@
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_broadcastmb_epi64 (__mmask8 __A)
-{ 
+{
   return (__m128i) _mm_set1_epi64x((long long) __A);
 }
 

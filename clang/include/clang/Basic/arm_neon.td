@@ -772,9 +772,9 @@ def RSHRN_HIGH_N   : IOpInst<"vrshrn_high_n", "hmdi",
                              "HsHiHlHUsHUiHUl", OP_NARROW_HI>;
 def QRSHRUN_HIGH_N : SOpInst<"vqrshrun_high_n", "hmdi",
                              "HsHiHl", OP_NARROW_HI>;
-def QSHRN_HIGH_N   : SOpInst<"vqshrn_high_n", "hmdi", 
+def QSHRN_HIGH_N   : SOpInst<"vqshrn_high_n", "hmdi",
                              "HsHiHlHUsHUiHUl", OP_NARROW_HI>;
-def QRSHRN_HIGH_N  : SOpInst<"vqrshrn_high_n", "hmdi", 
+def QRSHRN_HIGH_N  : SOpInst<"vqrshrn_high_n", "hmdi",
                              "HsHiHlHUsHUiHUl", OP_NARROW_HI>;
 }
 
@@ -927,7 +927,7 @@ def VMINV   : SInst<"vminv", "sd", "csifUcUsUiQcQsQiQUcQUsQUiQfQd">;
 def VADDV   : SInst<"vaddv", "sd", "csifUcUsUiQcQsQiQUcQUsQUiQfQdQlQUl">;
 def FMAXNMV : SInst<"vmaxnmv", "sd", "fQfQd">;
 def FMINNMV : SInst<"vminnmv", "sd", "fQfQd">;
- 
+
 ////////////////////////////////////////////////////////////////////////////////
 // Newly added Vector Extract for f64
 def VEXT_A64 : WInst<"vext", "dddi", "dQdPlQPl">;

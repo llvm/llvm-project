@@ -269,6 +269,8 @@ namespace {
 /// pointer dereference outside.
 class NoStoreFuncVisitor final : public BugReporterVisitor {
   const SubRegion *RegionOfInterest;
+  const SourceManager &SM;
+  const PrintingPolicy &PP;
   static constexpr const char *DiagnosticsMsg =
       "Returning without writing to '";
 
@@ -284,7 +286,10 @@ class NoStoreFuncVisitor final : public BugReporterVisitor {
   llvm::SmallPtrSet<const StackFrameContext *, 32> FramesModifyingCalculated;
 
 public:
-  NoStoreFuncVisitor(const SubRegion *R) : RegionOfInterest(R) {}
+  NoStoreFuncVisitor(const SubRegion *R)
+      : RegionOfInterest(R),
+        SM(R->getMemRegionManager()->getContext().getSourceManager()),
+        PP(R->getMemRegionManager()->getContext().getPrintingPolicy()) {}
 
   void Profile(llvm::FoldingSetNodeID &ID) const override {
     static int Tag = 0;
@@ -307,8 +312,6 @@ public:
 
     CallEventRef<> Call =
         BRC.getStateManager().getCallEventManager().getCaller(SCtx, State);
-    const PrintingPolicy &PP = BRC.getASTContext().getPrintingPolicy();
-    const SourceManager &SM = BRC.getSourceManager();
 
     // Region of interest corresponds to an IVar, exiting a method
     // which could have written into that IVar, but did not.
@@ -318,16 +321,14 @@ public:
                                       IvarR->getDecl()) &&
             !isRegionOfInterestModifiedInFrame(N))
           return notModifiedMemberDiagnostics(
-              Ctx, SM, PP, *CallExitLoc, Call,
-              MC->getReceiverSVal().getAsRegion());
+              Ctx, *CallExitLoc, Call, MC->getReceiverSVal().getAsRegion());
 
     if (const auto *CCall = dyn_cast<CXXConstructorCall>(Call)) {
-      const MemRegion *ThisRegion = CCall->getCXXThisVal().getAsRegion();
-      if (RegionOfInterest->isSubRegionOf(ThisRegion)
+      const MemRegion *ThisR = CCall->getCXXThisVal().getAsRegion();
+      if (RegionOfInterest->isSubRegionOf(ThisR)
           && !CCall->getDecl()->isImplicit()
           && !isRegionOfInterestModifiedInFrame(N))
-        return notModifiedMemberDiagnostics(Ctx, SM, PP, *CallExitLoc,
-                                                   CCall, ThisRegion);
+        return notModifiedMemberDiagnostics(Ctx, *CallExitLoc, Call, ThisR);
     }
 
     ArrayRef<ParmVarDecl *> parameters = getCallParameters(Call);
@@ -344,7 +345,7 @@ public:
             return nullptr;
 
           return notModifiedParameterDiagnostics(
-              Ctx, SM, PP, *CallExitLoc, Call, PVD, R, IndirectionLevel);
+              Ctx, *CallExitLoc, Call, PVD, R, IndirectionLevel);
         }
         QualType PT = T->getPointeeType();
         if (PT.isNull() || PT->isVoidType()) break;
@@ -446,8 +447,6 @@ private:
   /// in a given function.
   std::shared_ptr<PathDiagnosticPiece> notModifiedMemberDiagnostics(
       const LocationContext *Ctx,
-      const SourceManager &SM,
-      const PrintingPolicy &PP,
       CallExitBegin &CallExitLoc,
       CallEventRef<> Call,
       const MemRegion *ArgRegion) {
@@ -474,8 +473,6 @@ private:
   /// before we get to the super region of \c RegionOfInterest
   std::shared_ptr<PathDiagnosticPiece>
   notModifiedParameterDiagnostics(const LocationContext *Ctx,
-                         const SourceManager &SM,
-                         const PrintingPolicy &PP,
                          CallExitBegin &CallExitLoc,
                          CallEventRef<> Call,
                          const ParmVarDecl *PVD,
@@ -612,8 +609,7 @@ public:
         const ExplodedNode *N, const MemRegion *R,
         bool EnableNullFPSuppression, BugReport &BR,
         const SVal V) {
-    AnalyzerOptions &Options = N->getState()->getStateManager()
-        .getOwningEngine()->getAnalysisManager().options;
+    AnalyzerOptions &Options = N->getState()->getAnalysisManager().options;
     if (EnableNullFPSuppression && Options.shouldSuppressNullReturnPaths()
           && V.getAs<Loc>())
       BR.addVisitor(llvm::make_unique<MacroNullReturnSuppressionVisitor>(
@@ -740,9 +736,7 @@ public:
         RetVal = State->getSVal(*LValue);
 
     // See if the return value is NULL. If so, suppress the report.
-    SubEngine *Eng = State->getStateManager().getOwningEngine();
-    assert(Eng && "Cannot file a bug report without an owning engine");
-    AnalyzerOptions &Options = Eng->getAnalysisManager().options;
+    AnalyzerOptions &Options = State->getAnalysisManager().options;
 
     bool EnableNullFPSuppression = false;
     if (InEnableNullFPSuppression && Options.shouldSuppressNullReturnPaths())
@@ -1321,9 +1315,7 @@ SuppressInlineDefensiveChecksVisitor::
 SuppressInlineDefensiveChecksVisitor(DefinedSVal Value, const ExplodedNode *N)
     : V(Value) {
   // Check if the visitor is disabled.
-  SubEngine *Eng = N->getState()->getStateManager().getOwningEngine();
-  assert(Eng && "Cannot file a bug report without an owning engine");
-  AnalyzerOptions &Options = Eng->getAnalysisManager().options;
+  AnalyzerOptions &Options = N->getState()->getAnalysisManager().options;
   if (!Options.shouldSuppressInlinedDefensiveChecks())
     IsSatisfied = true;
 
@@ -1603,6 +1595,7 @@ bool bugreporter::trackNullOrUndefValue(const ExplodedNode *N,
         LVNode->getSVal(Inner).getAsRegion();
 
     if (R) {
+
       // Mark both the variable region and its contents as interesting.
       SVal V = LVState->getRawSVal(loc::MemRegionVal(R));
       report.addVisitor(

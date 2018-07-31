@@ -166,7 +166,7 @@ struct CGRecordLowering {
     return Layout.getFieldOffset(FD->getFieldIndex());
   }
   // Layout routines.
-  void setBitFieldInfo(const FieldDecl *FD, CharUnits StartOffset, 
+  void setBitFieldInfo(const FieldDecl *FD, CharUnits StartOffset,
                        llvm::Type *StorageType);
   /// Lowers an ASTRecordLayout to a llvm type.
   void lower(bool NonVirtualBaseType);
@@ -246,7 +246,7 @@ void CGRecordLowering::lower(bool NVBaseType) {
   // 1) Store all members (fields and bases) in a list and sort them by offset.
   // 2) Add a 1-byte capstone member at the Size of the structure.
   // 3) Clip bitfield storages members if their tail padding is or might be
-  //    used by another field or base.  The clipping process uses the capstone 
+  //    used by another field or base.  The clipping process uses the capstone
   //    by treating it as another object that occurs after the record.
   // 4) Determine if the llvm-struct requires packing.  It's important that this
   //    phase occur after clipping, because clipping changes the llvm type.
@@ -436,7 +436,7 @@ CGRecordLowering::accumulateBitFields(RecordDecl::field_iterator Field,
         StartBitOffset = getFieldBitOffset(*Field);
         Tail = StartBitOffset + Field->getBitWidthValue(Context);
         StartFieldAsSingleRun = IsBetterAsSingleFieldRun(Tail - StartBitOffset,
-                                                         StartBitOffset); 
+                                                         StartBitOffset);
       }
       ++Field;
       continue;
@@ -686,7 +686,7 @@ CGBitFieldInfo CGBitFieldInfo::MakeInfo(CodeGenTypes &Types,
                                         uint64_t Offset, uint64_t Size,
                                         uint64_t StorageSize,
                                         CharUnits StorageOffset) {
-  // This function is vestigial from CGRecordLayoutBuilder days but is still 
+  // This function is vestigial from CGRecordLayoutBuilder days but is still
   // used in GCObjCRuntime.cpp.  That usage has a "fixme" attached to it that
   // when addressed will allow for the removal of this function.
   llvm::Type *Ty = Types.ConvertTypeForMem(FD->getType());
@@ -781,14 +781,14 @@ CGRecordLayout *CodeGenTypes::ComputeRecordLayout(const RecordDecl *D,
   if (BaseTy) {
     CharUnits NonVirtualSize  = Layout.getNonVirtualSize();
 
-    uint64_t AlignedNonVirtualTypeSizeInBits = 
+    uint64_t AlignedNonVirtualTypeSizeInBits =
       getContext().toBits(NonVirtualSize);
 
-    assert(AlignedNonVirtualTypeSizeInBits == 
+    assert(AlignedNonVirtualTypeSizeInBits ==
            getDataLayout().getTypeAllocSizeInBits(BaseTy) &&
            "Type size mismatch!");
   }
-                                     
+
   // Verify that the LLVM and AST field offsets agree.
   llvm::StructType *ST = RL->getLLVMType();
   const llvm::StructLayout *SL = getDataLayout().getStructLayout(ST);
@@ -806,7 +806,7 @@ CGRecordLayout *CodeGenTypes::ComputeRecordLayout(const RecordDecl *D,
              "Invalid field offset!");
       continue;
     }
-    
+
     // Ignore unnamed bit-fields.
     if (!FD->getDeclName())
       continue;
@@ -853,7 +853,7 @@ void CGRecordLayout::print(raw_ostream &OS) const {
   OS << "<CGRecordLayout\n";
   OS << "  LLVMType:" << *CompleteObjectType << "\n";
   if (BaseSubobjectType)
-    OS << "  NonVirtualBaseLLVMType:" << *BaseSubobjectType << "\n"; 
+    OS << "  NonVirtualBaseLLVMType:" << *BaseSubobjectType << "\n";
   OS << "  IsZeroInitializable:" << IsZeroInitializable << "\n";
   OS << "  BitFields:[\n";
 

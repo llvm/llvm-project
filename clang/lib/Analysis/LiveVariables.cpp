@@ -39,7 +39,7 @@ public:
     : enqueuedBlocks(cfg.getNumBlockIDs()),
       POV(Ctx.getAnalysis<PostOrderCFGView>()),
       worklist(POV->getComparator()) {}
-  
+
   void enqueueBlock(const CFGBlock *block);
   void enqueuePredecessors(const CFGBlock *block);
 
@@ -73,7 +73,7 @@ const CFGBlock *DataflowWorklist::dequeue() {
 
 namespace {
 class LiveVariablesImpl {
-public:  
+public:
   AnalysisDeclContext &analysisContext;
   llvm::ImmutableSet<const Stmt *>::Factory SSetFact;
   llvm::ImmutableSet<const VarDecl *>::Factory DSetFact;
@@ -83,7 +83,7 @@ public:
   llvm::DenseMap<const Stmt *, LiveVariables::LivenessValues> stmtsToLiveness;
   llvm::DenseMap<const DeclRefExpr *, unsigned> inAssignment;
   const bool killAtAssign;
-  
+
   LiveVariables::LivenessValues
   merge(LiveVariables::LivenessValues valsA,
         LiveVariables::LivenessValues valsB);
@@ -130,7 +130,7 @@ namespace {
   SET mergeSets(SET A, SET B) {
     if (A.isEmpty())
       return B;
-    
+
     for (typename SET::iterator it = B.begin(), ei = B.end(); it != ei; ++it) {
       A = A.add(*it);
     }
@@ -142,17 +142,17 @@ void LiveVariables::Observer::anchor() { }
 
 LiveVariables::LivenessValues
 LiveVariablesImpl::merge(LiveVariables::LivenessValues valsA,
-                         LiveVariables::LivenessValues valsB) {  
-  
+                         LiveVariables::LivenessValues valsB) {
+
   llvm::ImmutableSetRef<const Stmt *>
     SSetRefA(valsA.liveStmts.getRootWithoutRetain(), SSetFact.getTreeFactory()),
     SSetRefB(valsB.liveStmts.getRootWithoutRetain(), SSetFact.getTreeFactory());
-                                                
-  
+
+
   llvm::ImmutableSetRef<const VarDecl *>
     DSetRefA(valsA.liveDecls.getRootWithoutRetain(), DSetFact.getTreeFactory()),
     DSetRefB(valsB.liveDecls.getRootWithoutRetain(), DSetFact.getTreeFactory());
-  
+
   llvm::ImmutableSetRef<const BindingDecl *>
     BSetRefA(valsA.liveBindings.getRootWithoutRetain(), BSetFact.getTreeFactory()),
     BSetRefB(valsB.liveBindings.getRootWithoutRetain(), BSetFact.getTreeFactory());
@@ -160,12 +160,12 @@ LiveVariablesImpl::merge(LiveVariables::LivenessValues valsA,
   SSetRefA = mergeSets(SSetRefA, SSetRefB);
   DSetRefA = mergeSets(DSetRefA, DSetRefB);
   BSetRefA = mergeSets(BSetRefA, BSetRefB);
-  
+
   // asImmutableSet() canonicalizes the tree, allowing us to do an easy
   // comparison afterwards.
   return LiveVariables::LivenessValues(SSetRefA.asImmutableSet(),
                                        DSetRefA.asImmutableSet(),
-                                       BSetRefA.asImmutableSet());  
+                                       BSetRefA.asImmutableSet());
 }
 
 bool LiveVariables::LivenessValues::equals(const LivenessValues &V) const {
@@ -211,7 +211,7 @@ public:
 
   void VisitBinaryOperator(BinaryOperator *BO);
   void VisitBlockExpr(BlockExpr *BE);
-  void VisitDeclRefExpr(DeclRefExpr *DR);  
+  void VisitDeclRefExpr(DeclRefExpr *DR);
   void VisitDeclStmt(DeclStmt *DS);
   void VisitObjCForCollectionStmt(ObjCForCollectionStmt *OS);
   void VisitUnaryExprOrTypeTraitExpr(UnaryExprOrTypeTraitExpr *UE);
@@ -226,7 +226,7 @@ static const VariableArrayType *FindVA(QualType Ty) {
     if (const VariableArrayType *VAT = dyn_cast<VariableArrayType>(VT))
       if (VAT->getSizeExpr())
         return VAT;
-    
+
     ty = VT->getElementType().getTypePtr();
   }
 
@@ -236,7 +236,7 @@ static const VariableArrayType *FindVA(QualType Ty) {
 static const Stmt *LookThroughStmt(const Stmt *S) {
   while (S) {
     if (const Expr *Ex = dyn_cast<Expr>(S))
-      S = Ex->IgnoreParens();    
+      S = Ex->IgnoreParens();
     if (const ExprWithCleanups *EWC = dyn_cast<ExprWithCleanups>(S)) {
       S = EWC->getSubExpr();
       continue;
@@ -259,15 +259,15 @@ static void AddLiveStmt(llvm::ImmutableSet<const Stmt *> &Set,
 void TransferFunctions::Visit(Stmt *S) {
   if (observer)
     observer->observeStmt(S, currentBlock, val);
-  
+
   StmtVisitor<TransferFunctions>::Visit(S);
-  
+
   if (isa<Expr>(S)) {
     val.liveStmts = LV.SSetFact.remove(val.liveStmts, S);
   }
 
   // Mark all children expressions live.
-  
+
   switch (S->getStmtClass()) {
     default:
       break;
@@ -344,7 +344,7 @@ void TransferFunctions::VisitBinaryOperator(BinaryOperator *B) {
   if (B->isAssignmentOp()) {
     if (!LV.killAtAssign)
       return;
-    
+
     // Assigning to a variable?
     Expr *LHS = B->getLHS()->IgnoreParens();
 
@@ -414,7 +414,7 @@ void TransferFunctions::VisitObjCForCollectionStmt(ObjCForCollectionStmt *OS) {
   else if ((DR = dyn_cast<DeclRefExpr>(cast<Expr>(element)->IgnoreParens()))) {
     VD = cast<VarDecl>(DR->getDecl());
   }
-  
+
   if (VD) {
     val.liveDecls = LV.DSetFact.remove(val.liveDecls, VD);
     if (observer && DR)
@@ -444,12 +444,12 @@ void TransferFunctions::VisitUnaryOperator(UnaryOperator *UO) {
   // since a ++/-- acts as both a kill and a "use".
   if (!observer)
     return;
-  
+
   switch (UO->getOpcode()) {
   default:
     return;
   case UO_PostInc:
-  case UO_PostDec:    
+  case UO_PostDec:
   case UO_PreInc:
   case UO_PreDec:
     break;
@@ -470,11 +470,11 @@ LiveVariablesImpl::runOnBlock(const CFGBlock *block,
                               LiveVariables::Observer *obs) {
 
   TransferFunctions TF(*this, val, obs, block);
-  
+
   // Visit the terminator (if any).
   if (const Stmt *term = block->getTerminator())
     TF.Visit(const_cast<Stmt*>(term));
-  
+
   // Apply the transfer function for all Stmts in the block.
   for (CFGBlock::const_reverse_iterator it = block->rbegin(),
        ei = block->rend(); it != ei; ++it) {
@@ -488,7 +488,7 @@ LiveVariablesImpl::runOnBlock(const CFGBlock *block,
 
     if (!elem.getAs<CFGStmt>())
       continue;
-    
+
     const Stmt *S = elem.castAs<CFGStmt>().getStmt();
     TF.Visit(const_cast<Stmt*>(S));
     stmtsToLiveness[S] = val;
@@ -499,10 +499,10 @@ LiveVariablesImpl::runOnBlock(const CFGBlock *block,
 void LiveVariables::runOnAllBlocks(LiveVariables::Observer &obs) {
   const CFG *cfg = getImpl(impl).analysisContext.getCFG();
   for (CFG::const_iterator it = cfg->begin(), ei = cfg->end(); it != ei; ++it)
-    getImpl(impl).runOnBlock(*it, getImpl(impl).blocksEndToLiveness[*it], &obs);    
+    getImpl(impl).runOnBlock(*it, getImpl(impl).blocksEndToLiveness[*it], &obs);
 }
 
-LiveVariables::LiveVariables(void *im) : impl(im) {} 
+LiveVariables::LiveVariables(void *im) : impl(im) {}
 
 LiveVariables::~LiveVariables() {
   delete (LiveVariablesImpl*) impl;
@@ -533,7 +533,7 @@ LiveVariables::computeLiveness(AnalysisDeclContext &AC,
   for (CFG::const_iterator it = cfg->begin(), ei = cfg->end(); it != ei; ++it) {
     const CFGBlock *block = *it;
     worklist.enqueueBlock(block);
-    
+
     // FIXME: Scan for DeclRefExprs using in the LHS of an assignment.
     // We need to do this because we lack context in the reverse analysis
     // to determine if a DeclRefExpr appears in such a context, and thus
@@ -554,35 +554,35 @@ LiveVariables::computeLiveness(AnalysisDeclContext &AC,
         }
       }
   }
-  
+
   while (const CFGBlock *block = worklist.dequeue()) {
     // Determine if the block's end value has changed.  If not, we
     // have nothing left to do for this block.
     LivenessValues &prevVal = LV->blocksEndToLiveness[block];
-    
+
     // Merge the values of all successor blocks.
     LivenessValues val;
     for (CFGBlock::const_succ_iterator it = block->succ_begin(),
                                        ei = block->succ_end(); it != ei; ++it) {
-      if (const CFGBlock *succ = *it) {     
+      if (const CFGBlock *succ = *it) {
         val = LV->merge(val, LV->blocksBeginToLiveness[succ]);
       }
     }
-    
+
     if (!everAnalyzedBlock[block->getBlockID()])
       everAnalyzedBlock[block->getBlockID()] = true;
     else if (prevVal.equals(val))
       continue;
 
     prevVal = val;
-    
+
     // Update the dataflow value for the start of this block.
     LV->blocksBeginToLiveness[block] = LV->runOnBlock(block, val);
-    
+
     // Enqueue the value to the predecessors.
     worklist.enqueuePredecessors(block);
   }
-  
+
   return new LiveVariables(LV);
 }
 
@@ -595,7 +595,7 @@ void LiveVariablesImpl::dumpBlockLiveness(const SourceManager &M) {
   for (llvm::DenseMap<const CFGBlock *, LiveVariables::LivenessValues>::iterator
        it = blocksEndToLiveness.begin(), ei = blocksEndToLiveness.end();
        it != ei; ++it) {
-    vec.push_back(it->first);    
+    vec.push_back(it->first);
   }
   llvm::sort(vec.begin(), vec.end(), [](const CFGBlock *A, const CFGBlock *B) {
     return A->getBlockID() < B->getBlockID();
@@ -607,14 +607,14 @@ void LiveVariablesImpl::dumpBlockLiveness(const SourceManager &M) {
         it = vec.begin(), ei = vec.end(); it != ei; ++it) {
     llvm::errs() << "\n[ B" << (*it)->getBlockID()
                  << " (live variables at block exit) ]\n";
-    
+
     LiveVariables::LivenessValues vals = blocksEndToLiveness[*it];
     declVec.clear();
-    
+
     for (llvm::ImmutableSet<const VarDecl *>::iterator si =
           vals.liveDecls.begin(),
           se = vals.liveDecls.end(); si != se; ++si) {
-      declVec.push_back(*si);      
+      declVec.push_back(*si);
     }
 
     llvm::sort(declVec.begin(), declVec.end(),
@@ -630,7 +630,7 @@ void LiveVariablesImpl::dumpBlockLiveness(const SourceManager &M) {
       llvm::errs() << ">\n";
     }
   }
-  llvm::errs() << "\n";  
+  llvm::errs() << "\n";
 }
 
 const void *LiveVariables::getTag() { static int x; return &x; }

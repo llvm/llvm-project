@@ -248,7 +248,7 @@ protected:
 
 private:
   bool GlobalsEmitted;
-  
+
   // This is specific per MachineFunction.
   const MachineRegisterInfo *MRI;
   // The contents are specific for each

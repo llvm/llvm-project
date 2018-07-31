@@ -80,7 +80,7 @@ public:
     Body = body;
     TraverseStmt(body);
   }
-  
+
   ~AutoreleasePoolRewriter() {
     SmallVector<VarDecl *, 8> VarsToHandle;
 
@@ -174,7 +174,7 @@ public:
               PoolVarInfo &info = PoolVars[VD];
               info.Dcl = DclS;
               collectRefs(VD, S, info.Refs);
-              // Does this statement follow the pattern:  
+              // Does this statement follow the pattern:
               // NSAutoreleasePool * pool = [NSAutoreleasePool  new];
               if (isPoolCreation(VD->getInit())) {
                 Scopes.push_back(PoolScope());
@@ -188,7 +188,7 @@ public:
       } else if (BinaryOperator *bop = dyn_cast<BinaryOperator>(child)) {
         if (DeclRefExpr *dref = dyn_cast<DeclRefExpr>(bop->getLHS())) {
           if (VarDecl *VD = dyn_cast<VarDecl>(dref->getDecl())) {
-            // Does this statement follow the pattern:  
+            // Does this statement follow the pattern:
             // pool = [NSAutoreleasePool  new];
             if (isNSAutoreleasePool(VD->getType()) &&
                 isPoolCreation(bop->getRHS())) {
@@ -311,7 +311,7 @@ private:
             scope.IsFollowedBySimpleReturnStmt = true;
             ++SI; // the return will be included in scope, don't check it.
           }
-      
+
       for (; SI != SE; ++SI) {
         nameUsedOutsideScope = !NameReferenceChecker(Pass.Ctx, scope,
                                                      referenceLoc,
@@ -415,7 +415,7 @@ private:
 
   IdentifierInfo *PoolII;
   Selector DrainSel;
-  
+
   struct PoolVarInfo {
     DeclStmt *Dcl;
     ExprSet Refs;

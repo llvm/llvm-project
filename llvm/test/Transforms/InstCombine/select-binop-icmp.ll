@@ -6,8 +6,7 @@ declare void @use(<2 x i1>)
 define i32 @select_xor_icmp(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @select_xor_icmp(
 ; CHECK-NEXT:    [[A:%.*]] = icmp eq i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[B:%.*]] = xor i32 [[X]], [[Z:%.*]]
-; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i32 [[B]], i32 [[Y:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i32 [[Z:%.*]], i32 [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
   %A = icmp eq i32 %x, 0
@@ -19,8 +18,7 @@ define i32 @select_xor_icmp(i32 %x, i32 %y, i32 %z) {
 define i32 @select_xor_icmp2(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @select_xor_icmp2(
 ; CHECK-NEXT:    [[A:%.*]] = icmp eq i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[B:%.*]] = xor i32 [[X]], [[Z:%.*]]
-; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i32 [[B]], i32 [[Y:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i32 [[Z:%.*]], i32 [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
   %A = icmp ne i32 %x, 0
@@ -32,8 +30,7 @@ define i32 @select_xor_icmp2(i32 %x, i32 %y, i32 %z) {
 define i32 @select_xor_icmp_meta(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @select_xor_icmp_meta(
 ; CHECK-NEXT:    [[A:%.*]] = icmp eq i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[B:%.*]] = xor i32 [[X]], [[Z:%.*]]
-; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i32 [[B]], i32 [[Y:%.*]], !prof !0
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i32 [[Z:%.*]], i32 [[Y:%.*]], !prof !0
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
   %A = icmp eq i32 %x, 0
@@ -45,8 +42,7 @@ define i32 @select_xor_icmp_meta(i32 %x, i32 %y, i32 %z) {
 define i32 @select_mul_icmp(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @select_mul_icmp(
 ; CHECK-NEXT:    [[A:%.*]] = icmp eq i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[B:%.*]] = mul i32 [[X]], [[Z:%.*]]
-; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i32 [[B]], i32 [[Y:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i32 [[Z:%.*]], i32 [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
   %A = icmp eq i32 %x, 1
@@ -58,8 +54,7 @@ define i32 @select_mul_icmp(i32 %x, i32 %y, i32 %z) {
 define i32 @select_add_icmp(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @select_add_icmp(
 ; CHECK-NEXT:    [[A:%.*]] = icmp eq i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[B:%.*]] = add i32 [[X]], [[Z:%.*]]
-; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i32 [[B]], i32 [[Y:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i32 [[Z:%.*]], i32 [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
   %A = icmp eq i32 %x, 0
@@ -71,8 +66,7 @@ define i32 @select_add_icmp(i32 %x, i32 %y, i32 %z) {
 define i32 @select_or_icmp(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @select_or_icmp(
 ; CHECK-NEXT:    [[A:%.*]] = icmp eq i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[B:%.*]] = or i32 [[X]], [[Z:%.*]]
-; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i32 [[B]], i32 [[Y:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i32 [[Z:%.*]], i32 [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
   %A = icmp eq i32 %x, 0
@@ -84,8 +78,7 @@ define i32 @select_or_icmp(i32 %x, i32 %y, i32 %z) {
 define i32 @select_and_icmp(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @select_and_icmp(
 ; CHECK-NEXT:    [[A:%.*]] = icmp eq i32 [[X:%.*]], -1
-; CHECK-NEXT:    [[B:%.*]] = and i32 [[X]], [[Z:%.*]]
-; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i32 [[B]], i32 [[Y:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i32 [[Z:%.*]], i32 [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
   %A = icmp eq i32 %x, -1
@@ -97,8 +90,7 @@ define i32 @select_and_icmp(i32 %x, i32 %y, i32 %z) {
 define <2 x i8> @select_xor_icmp_vec(<2 x i8> %x, <2 x i8> %y, <2 x i8> %z) {
 ; CHECK-LABEL: @select_xor_icmp_vec(
 ; CHECK-NEXT:    [[A:%.*]] = icmp eq <2 x i8> [[X:%.*]], zeroinitializer
-; CHECK-NEXT:    [[B:%.*]] = xor <2 x i8> [[X]], [[Z:%.*]]
-; CHECK-NEXT:    [[C:%.*]] = select <2 x i1> [[A]], <2 x i8> [[B]], <2 x i8> [[Y:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = select <2 x i1> [[A]], <2 x i8> [[Z:%.*]], <2 x i8> [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[C]]
 ;
   %A = icmp eq <2 x i8>  %x, <i8 0, i8 0>
@@ -111,8 +103,7 @@ define <2 x i8> @select_xor_icmp_vec_use(<2 x i8> %x, <2 x i8> %y, <2 x i8> %z) 
 ; CHECK-LABEL: @select_xor_icmp_vec_use(
 ; CHECK-NEXT:    [[A:%.*]] = icmp ne <2 x i8> [[X:%.*]], zeroinitializer
 ; CHECK-NEXT:    call void @use(<2 x i1> [[A]])
-; CHECK-NEXT:    [[B:%.*]] = xor <2 x i8> [[X]], [[Z:%.*]]
-; CHECK-NEXT:    [[C:%.*]] = select <2 x i1> [[A]], <2 x i8> [[Y:%.*]], <2 x i8> [[B]]
+; CHECK-NEXT:    [[C:%.*]] = select <2 x i1> [[A]], <2 x i8> [[Y:%.*]], <2 x i8> [[Z:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[C]]
 ;
   %A = icmp ne <2 x i8>  %x, <i8 0, i8 0>
@@ -125,8 +116,7 @@ define <2 x i8> @select_xor_icmp_vec_use(<2 x i8> %x, <2 x i8> %y, <2 x i8> %z) 
 define i32 @select_xor_inv_icmp(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @select_xor_inv_icmp(
 ; CHECK-NEXT:    [[A:%.*]] = icmp eq i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[B:%.*]] = xor i32 [[Z:%.*]], [[X]]
-; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i32 [[B]], i32 [[Y:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i32 [[Z:%.*]], i32 [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
   %A = icmp eq i32 %x, 0
@@ -138,8 +128,7 @@ define i32 @select_xor_inv_icmp(i32 %x, i32 %y, i32 %z) {
 define i32 @select_xor_inv_icmp2(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @select_xor_inv_icmp2(
 ; CHECK-NEXT:    [[A:%.*]] = icmp eq i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[B:%.*]] = xor i32 [[X]], [[Z:%.*]]
-; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i32 [[B]], i32 [[Y:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i32 [[Z:%.*]], i32 [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
   %A = icmp ne i32 %x, 0
@@ -240,6 +229,7 @@ define <2 x i8> @select_xor_icmp_vec_bad(<2 x i8> %x, <2 x i8> %y, <2 x i8> %z) 
   ret <2 x i8>  %C
 }
 
+; TODO: support for undefs, check for an identity constant does not handle them yet
 define <2 x i8> @select_xor_icmp_vec_bad_2(<2 x i8> %x, <2 x i8> %y, <2 x i8> %z) {
 ; CHECK-LABEL: @select_xor_icmp_vec_bad_2(
 ; CHECK-NEXT:    [[A:%.*]] = icmp eq <2 x i8> [[X:%.*]], <i8 0, i8 undef>

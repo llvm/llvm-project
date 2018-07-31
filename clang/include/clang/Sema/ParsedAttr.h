@@ -179,7 +179,7 @@ private:
   /// The location of the 'unavailable' keyword in an
   /// availability attribute.
   SourceLocation UnavailableLoc;
-  
+
   const Expr *MessageExpr;
 
   /// Arguments, if any, are stored immediately following the object.
@@ -265,7 +265,7 @@ private:
     Args[2] = Parm3;
     AttrKind = getKind(getName(), getScopeName(), syntaxUsed);
   }
-  
+
   /// Constructor for type_tag_for_datatype attribute.
   ParsedAttr(IdentifierInfo *attrName, SourceRange attrRange,
              IdentifierInfo *scopeName, SourceLocation scopeLoc,
@@ -352,7 +352,7 @@ public:
 
   void operator delete(void *) = delete;
 
-  enum Kind {           
+  enum Kind {
     #define PARSED_ATTR(NAME) AT_##NAME,
     #include "clang/Sema/AttrParsedAttrList.inc"
     #undef PARSED_ATTR
@@ -363,11 +363,11 @@ public:
   IdentifierInfo *getName() const { return AttrName; }
   SourceLocation getLoc() const { return AttrRange.getBegin(); }
   SourceRange getRange() const { return AttrRange; }
-  
+
   bool hasScope() const { return ScopeName; }
   IdentifierInfo *getScopeName() const { return ScopeName; }
   SourceLocation getScopeLoc() const { return ScopeLoc; }
-  
+
   bool hasParsedType() const { return HasParsedType; }
 
   /// Is this the Microsoft __declspec(property) attribute?
@@ -473,7 +473,7 @@ public:
     assert(getKind() == AT_Availability && "Not an availability attribute");
     return UnavailableLoc;
   }
-  
+
   const Expr * getMessageExpr() const {
     assert(getKind() == AT_Availability && "Not an availability attribute");
     return MessageExpr;

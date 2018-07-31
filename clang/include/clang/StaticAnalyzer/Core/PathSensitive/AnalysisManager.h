@@ -45,12 +45,12 @@ class AnalysisManager : public BugReporterData {
 
 public:
   AnalyzerOptions &options;
-  
+
   AnalysisManager(ASTContext &ctx,DiagnosticsEngine &diags,
                   const LangOptions &lang,
                   const PathDiagnosticConsumers &Consumers,
                   StoreManagerCreator storemgr,
-                  ConstraintManagerCreator constraintmgr, 
+                  ConstraintManagerCreator constraintmgr,
                   CheckerManager *checkerMgr,
                   AnalyzerOptions &Options,
                   CodeInjector* injector = nullptr);
@@ -60,7 +60,7 @@ public:
   void ClearContexts() {
     AnaCtxMgr.clear();
   }
-  
+
   AnalysisDeclContextManager& getAnalysisDeclContextManager() {
     return AnaCtxMgr;
   }

@@ -3501,7 +3501,7 @@ public:
   /// operations.
   virtual SDValue BuildSDIVPow2(SDNode *N, const APInt &Divisor,
                                 SelectionDAG &DAG,
-                                std::vector<SDNode *> *Created) const;
+                                std::vector<SDNode *> &Created) const;
 
   /// Indicate whether this target prefers to combine FDIVs with the same
   /// divisor. If the transform should never be done, return zero. If the

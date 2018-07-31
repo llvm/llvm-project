@@ -124,7 +124,7 @@ namespace {
 }
 
 char CFGPrinterLegacyPass::ID = 0;
-INITIALIZE_PASS(CFGPrinterLegacyPass, "dot-cfg", "Print CFG of function to 'dot' file", 
+INITIALIZE_PASS(CFGPrinterLegacyPass, "dot-cfg", "Print CFG of function to 'dot' file",
                 false, true)
 
 PreservedAnalyses CFGPrinterPass::run(Function &F,

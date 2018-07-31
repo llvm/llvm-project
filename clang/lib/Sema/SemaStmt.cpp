@@ -216,7 +216,7 @@ void Sema::DiagnoseUnusedExprResult(const Stmt *S) {
   // expression is a call to a function with the warn_unused_result attribute,
   // we warn no matter the location. Because of the order in which the various
   // checks need to happen, we factor out the macro-related test here.
-  bool ShouldSuppress = 
+  bool ShouldSuppress =
       SourceMgr.isMacroBodyExpansion(ExprLoc) ||
       SourceMgr.isInSystemMacro(ExprLoc);
 
@@ -1879,7 +1879,7 @@ Sema::ActOnObjCForCollectionStmt(SourceLocation ForLoc,
       VarDecl *D = dyn_cast<VarDecl>(DS->getSingleDecl());
       if (!D || D->isInvalidDecl())
         return StmtError();
-      
+
       FirstType = D->getType();
       // C99 6.8.5p3: The declaration part of a 'for' statement shall only
       // declare identifiers for objects having storage class 'auto' or
@@ -2373,7 +2373,7 @@ Sema::BuildCXXForRangeStmt(SourceLocation ForLoc, SourceLocation CoawaitLoc,
         // Rather, we need to determine what it was when the array was first
         // created - so we resort to using sizeof(vla)/sizeof(element).
         // For e.g.
-        //  void f(int b) { 
+        //  void f(int b) {
         //    int vla[b];
         //    b = -1;   <-- This should not affect the num of iterations below
         //    for (int &c : vla) { .. }
@@ -2399,7 +2399,7 @@ Sema::BuildCXXForRangeStmt(SourceLocation ForLoc, SourceLocation CoawaitLoc,
             EndVar->getSourceRange());
         if (SizeOfVLAExprR.isInvalid())
           return StmtError();
-        
+
         ExprResult SizeOfEachElementExprR = ActOnUnaryExprOrTypeTraitExpr(
             EndVar->getLocation(), UETT_SizeOf,
             /*isType=*/true,
@@ -2416,7 +2416,7 @@ Sema::BuildCXXForRangeStmt(SourceLocation ForLoc, SourceLocation CoawaitLoc,
                        SizeOfVLAExprR.get(), SizeOfEachElementExprR.get());
         if (BoundExpr.isInvalid())
           return StmtError();
-        
+
       } else {
         // Can't be a DependentSizedArrayType or an IncompleteArrayType since
         // UnqAT is not incomplete and Range is not type-dependent.
@@ -3366,7 +3366,7 @@ bool Sema::DeduceFunctionTypeFromReturnExpr(FunctionDecl *FD,
     //   statement with a non-type-dependent operand.
     assert(AT->isDeduced() && "should have deduced to dependent type");
     return false;
-  } 
+  }
 
   if (RetExpr) {
     //  Otherwise, [...] deduce a value for U using the rules of template

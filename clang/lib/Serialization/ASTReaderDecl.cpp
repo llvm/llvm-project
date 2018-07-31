@@ -569,7 +569,7 @@ void ASTDeclReader::VisitDecl(Decl *D) {
     Reader.addPendingDeclContextInfo(D,
                                      SemaDCIDForTemplateParmDecl,
                                      LexicalDCIDForTemplateParmDecl);
-    D->setDeclContext(Reader.getContext().getTranslationUnitDecl()); 
+    D->setDeclContext(Reader.getContext().getTranslationUnitDecl());
   } else {
     auto *SemaDC = ReadDeclAs<DeclContext>();
     auto *LexicalDC = ReadDeclAs<DeclContext>();
@@ -701,7 +701,7 @@ void ASTDeclReader::VisitTypeAliasDecl(TypeAliasDecl *TD) {
 ASTDeclReader::RedeclarableResult ASTDeclReader::VisitTagDecl(TagDecl *TD) {
   RedeclarableResult Redecl = VisitRedeclarable(TD);
   VisitTypeDecl(TD);
-  
+
   TD->IdentifierNamespace = Record.readInt();
   TD->setTagKind((TagDecl::TagKind)Record.readInt());
   if (!isa<CXXRecordDecl>(TD))
@@ -710,7 +710,7 @@ ASTDeclReader::RedeclarableResult ASTDeclReader::VisitTagDecl(TagDecl *TD) {
   TD->setFreeStanding(Record.readInt());
   TD->setCompleteDefinitionRequired(Record.readInt());
   TD->setBraceRange(ReadSourceRange());
-  
+
   switch (Record.readInt()) {
   case 0:
     break;
@@ -1717,7 +1717,7 @@ void ASTDeclReader::ReadCXXDefinitionData(
       bool IsImplicit = Record.readInt();
       auto Kind = static_cast<LambdaCaptureKind>(Record.readInt());
       switch (Kind) {
-      case LCK_StarThis: 
+      case LCK_StarThis:
       case LCK_This:
       case LCK_VLAType:
         *ToCapture++ = Capture(Loc, IsImplicit, Kind, nullptr,SourceLocation());
@@ -2691,8 +2691,8 @@ static bool isConsumerInterestedIn(ASTContext &Ctx, Decl *D, bool HasBody) {
       return false;
   }
 
-  if (isa<FileScopeAsmDecl>(D) || 
-      isa<ObjCProtocolDecl>(D) || 
+  if (isa<FileScopeAsmDecl>(D) ||
+      isa<ObjCProtocolDecl>(D) ||
       isa<ObjCImplDecl>(D) ||
       isa<ImportDecl>(D) ||
       isa<PragmaCommentDecl>(D) ||
@@ -3274,7 +3274,7 @@ ASTDeclReader::FindExistingResult ASTDeclReader::findExisting(NamedDecl *D) {
       }
     } UpToDate(Name.getAsIdentifierInfo());
 
-    for (IdentifierResolver::iterator I = IdResolver.begin(Name), 
+    for (IdentifierResolver::iterator I = IdResolver.begin(Name),
                                    IEnd = IdResolver.end();
          I != IEnd; ++I) {
       if (NamedDecl *Existing = getDeclForMerging(*I, TypedefNameForLinkage))
@@ -3759,7 +3759,7 @@ Decl *ASTReader::ReadDeclRecord(DeclID ID) {
     Error("attempt to read a C++ ctor initializer record as a declaration");
     return nullptr;
   case DECL_IMPORT:
-    // Note: last entry of the ImportDecl record is the number of stored source 
+    // Note: last entry of the ImportDecl record is the number of stored source
     // locations.
     D = ImportDecl::CreateDeserialized(Context, ID, Record.back());
     break;
@@ -3819,7 +3819,7 @@ Decl *ASTReader::ReadDeclRecord(DeclID ID) {
     if (Class->isThisDeclarationADefinition() ||
         PendingDefinitions.count(Class))
       loadObjCCategories(ID, Class);
-  
+
   // If we have deserialized a declaration that has a definition the
   // AST consumer might need to know about, queue it.
   // We don't pass it to the consumer immediately because we may be in recursive
@@ -3981,17 +3981,17 @@ namespace {
     llvm::DenseMap<DeclarationName, ObjCCategoryDecl *> NameCategoryMap;
     serialization::GlobalDeclID InterfaceID;
     unsigned PreviousGeneration;
-    
+
     void add(ObjCCategoryDecl *Cat) {
       // Only process each category once.
       if (!Deserialized.erase(Cat))
         return;
-      
+
       // Check for duplicate categories.
       if (Cat->getDeclName()) {
         ObjCCategoryDecl *&Existing = NameCategoryMap[Cat->getDeclName()];
-        if (Existing && 
-            Reader.getOwningModuleFile(Existing) 
+        if (Existing &&
+            Reader.getOwningModuleFile(Existing)
                                           != Reader.getOwningModuleFile(Cat)) {
           // FIXME: We should not warn for duplicates in diamond:
           //
@@ -4001,8 +4001,8 @@ namespace {
           //  \  /    //
           //   MB     //
           //
-          // If there are duplicates in ML/MR, there will be warning when 
-          // creating MB *and* when importing MB. We should not warn when 
+          // If there are duplicates in ML/MR, there will be warning when
+          // creating MB *and* when importing MB. We should not warn when
           // importing.
           Reader.Diag(Cat->getLocation(), diag::warn_dup_category_def)
             << Interface->getDeclName() << Cat->getDeclName();
@@ -4012,7 +4012,7 @@ namespace {
           Existing = Cat;
         }
       }
-      
+
       // Add this category to the end of the chain.
       if (Tail)
         ASTDeclReader::setNextObjCCategory(Tail, Cat);
@@ -4020,7 +4020,7 @@ namespace {
         Interface->setCategoryListRaw(Cat);
       Tail = Cat;
     }
-    
+
   public:
     ObjCCategoriesVisitor(ASTReader &Reader,
                           ObjCInterfaceDecl *Interface,
@@ -4033,7 +4033,7 @@ namespace {
       for (auto *Cat : Interface->known_categories()) {
         if (Cat->getDeclName())
           NameCategoryMap[Cat->getDeclName()] = Cat;
-        
+
         // Keep track of the tail of the category list.
         Tail = Cat;
       }
@@ -4044,8 +4044,8 @@ namespace {
       // this module file, we're done.
       if (M.Generation <= PreviousGeneration)
         return true;
-      
-      // Map global ID of the definition down to the local ID used in this 
+
+      // Map global ID of the definition down to the local ID used in this
       // module file. If there is no such mapping, we'll find nothing here
       // (or in any module it imports).
       DeclID LocalID = Reader.mapGlobalIDToModuleFileGlobalID(M, InterfaceID);
@@ -4057,7 +4057,7 @@ namespace {
       const ObjCCategoriesInfo Compare = { LocalID, 0 };
       const ObjCCategoriesInfo *Result
         = std::lower_bound(M.ObjCCategoriesMap,
-                           M.ObjCCategoriesMap + M.LocalNumObjCCategoriesInMap, 
+                           M.ObjCCategoriesMap + M.LocalNumObjCCategoriesInMap,
                            Compare);
       if (Result == M.ObjCCategoriesMap + M.LocalNumObjCCategoriesInMap ||
           Result->DefinitionID != LocalID) {
@@ -4066,7 +4066,7 @@ namespace {
         // so suppress further lookup.
         return Reader.isDeclIDFromModule(InterfaceID, M);
       }
-      
+
       // We found something. Dig out all of the categories.
       unsigned Offset = Result->Offset;
       unsigned N = M.ObjCCategories[Offset];
