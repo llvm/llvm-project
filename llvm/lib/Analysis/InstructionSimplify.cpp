@@ -65,13 +65,6 @@ static Value *SimplifyCastInst(unsigned, Value *, Type *,
 static Value *SimplifyGEPInst(Type *, ArrayRef<Value *>, const SimplifyQuery &,
                               unsigned);
 
-/// Fold
-///   %A = icmp ne/eq i8 %X, %V1
-///   %B = icmp ne/eq i8 %X, %V2
-///   %C = or/and i1 %A, %B
-///   %D = select i1 %C, i8 %X, i8 %V1
-/// To
-///   %X/%V1
 static Value *foldSelectWithBinaryOp(Value *Cond, Value *TrueVal,
                                      Value *FalseVal) {
   BinaryOperator::BinaryOps BinOpCode;
@@ -80,7 +73,7 @@ static Value *foldSelectWithBinaryOp(Value *Cond, Value *TrueVal,
   else
     return nullptr;
 
-  CmpInst::Predicate ExpectedPred;
+  CmpInst::Predicate ExpectedPred, Pred1, Pred2;
   if (BinOpCode == BinaryOperator::Or) {
     ExpectedPred = ICmpInst::ICMP_NE;
   } else if (BinOpCode == BinaryOperator::And) {
@@ -88,15 +81,30 @@ static Value *foldSelectWithBinaryOp(Value *Cond, Value *TrueVal,
   } else
     return nullptr;
 
-  CmpInst::Predicate Pred1, Pred2;
-  if (!match(
-          Cond,
-          m_c_BinOp(m_c_ICmp(Pred1, m_Specific(TrueVal), m_Specific(FalseVal)),
-                    m_c_ICmp(Pred2, m_Specific(TrueVal), m_Value()))) ||
+  // %A = icmp eq %TV, %FV
+  // %B = icmp eq %X, %Y (and one of these is a select operand)
+  // %C = and %A, %B
+  // %D = select %C, %TV, %FV
+  // -->
+  // %FV
+
+  // %A = icmp ne %TV, %FV
+  // %B = icmp ne %X, %Y (and one of these is a select operand)
+  // %C = or %A, %B
+  // %D = select %C, %TV, %FV
+  // -->
+  // %TV
+  Value *X, *Y;
+  if (!match(Cond, m_c_BinOp(m_c_ICmp(Pred1, m_Specific(TrueVal),
+                                      m_Specific(FalseVal)),
+                             m_ICmp(Pred2, m_Value(X), m_Value(Y)))) ||
       Pred1 != Pred2 || Pred1 != ExpectedPred)
     return nullptr;
 
-  return BinOpCode == BinaryOperator::Or ? TrueVal : FalseVal;
+  if (X == TrueVal || X == FalseVal || Y == TrueVal || Y == FalseVal)
+    return BinOpCode == BinaryOperator::Or ? TrueVal : FalseVal;
+
+  return nullptr;
 }
 
 /// For a boolean type or a vector of boolean type, return false or a vector

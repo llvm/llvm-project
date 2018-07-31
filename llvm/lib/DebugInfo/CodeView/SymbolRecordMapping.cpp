@@ -463,3 +463,11 @@ Error SymbolRecordMapping::visitKnownRecord(CVSymbol &CVR, UDTSym &UDT) {
 
   return Error::success();
 }
+
+Error SymbolRecordMapping::visitKnownRecord(CVSymbol &CVR,
+                                            UsingNamespaceSym &UN) {
+
+  error(IO.mapStringZ(UN.Name));
+
+  return Error::success();
+}

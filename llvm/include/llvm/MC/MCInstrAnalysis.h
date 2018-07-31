@@ -87,6 +87,19 @@ public:
                                     const MCInst &Inst,
                                     APInt &Writes) const;
 
+  /// Returns true if \param Inst is a dependency breaking instruction for the
+  /// given subtarget.
+  ///
+  /// The value computed by a dependency breaking instruction is not dependent
+  /// on the inputs. An example of dependency breaking instruction on X86 is
+  /// `XOR %eax, %eax`.
+  /// TODO: In future, we could implement an alternative approach where this
+  /// method returns `true` if the input instruction is not dependent on
+  /// some/all of its input operands. An APInt mask could then be used to
+  /// identify independent operands.
+  virtual bool isDependencyBreaking(const MCSubtargetInfo &STI,
+                                    const MCInst &Inst) const;
+
   /// Given a branch instruction try to get the address the branch
   /// targets. Return true on success, and the address in Target.
   virtual bool

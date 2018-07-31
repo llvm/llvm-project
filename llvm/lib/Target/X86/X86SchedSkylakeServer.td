@@ -110,8 +110,8 @@ defm : SKXWriteResPair<WriteADC,    [SKXPort06],   1>; // Integer ALU + flags op
 defm : SKXWriteResPair<WriteIMul,   [SKXPort1],    3>; // Integer multiplication.
 defm : SKXWriteResPair<WriteIMul64, [SKXPort1],    3>; // Integer 64-bit multiplication.
 
-defm : SKXWriteResPair<WriteBSWAP32,[SKXPort15],   1>; //
-defm : SKXWriteResPair<WriteBSWAP64,[SKXPort06, SKXPort15], 2, [1,1], 2>; //
+defm : X86WriteRes<WriteBSWAP32, [SKXPort15], 1, [1], 1>;
+defm : X86WriteRes<WriteBSWAP64, [SKXPort06, SKXPort15], 2, [1,1], 2>;
 
 defm : SKXWriteResPair<WriteDiv8,   [SKXPort0, SKXDivider], 25, [1,10], 1, 4>;
 defm : SKXWriteResPair<WriteDiv16,  [SKXPort0, SKXDivider], 25, [1,10], 1, 4>;

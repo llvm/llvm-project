@@ -276,6 +276,10 @@ def ReturnUndefChecker : Checker<"UndefReturn">,
 
 let ParentPackage = Cplusplus in {
 
+def InnerPointerChecker : Checker<"InnerPointer">,
+  HelpText<"Check for inner pointers of C++ containers used after re/deallocation">,
+  DescFile<"InnerPointerChecker.cpp">;
+
 def NewDeleteChecker : Checker<"NewDelete">,
   HelpText<"Check for double-free and use-after-free problems. Traces memory managed by new/delete.">,
   DescFile<"MallocChecker.cpp">;
@@ -304,10 +308,6 @@ def DeleteWithNonVirtualDtorChecker : Checker<"DeleteWithNonVirtualDtor">,
   HelpText<"Reports destructions of polymorphic objects with a non-virtual "
            "destructor in their base class">,
   DescFile<"DeleteWithNonVirtualDtorChecker.cpp">;
-
-def InnerPointerChecker : Checker<"InnerPointer">,
-  HelpText<"Check for inner pointers of C++ containers used after re/deallocation">,
-  DescFile<"InnerPointerChecker.cpp">;
 
 def IteratorRangeChecker : Checker<"IteratorRange">,
   HelpText<"Check for iterators used outside their valid ranges">,

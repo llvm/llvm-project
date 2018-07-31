@@ -15,7 +15,7 @@
 
 // SIMD-ONLY-NOT: {{__kmpc|__tgt}}
 
-// DEVICE-DAG: [[C_ADDR:.+]] = weak_odr global i32 0,
+// DEVICE-DAG: [[C_ADDR:.+]] = internal global i32 0,
 // DEVICE-DAG: [[CD_ADDR:@.+]] = global %struct.S zeroinitializer,
 // HOST-DAG: @[[C_ADDR:.+]] = internal global i32 0,
 // HOST-DAG: @[[CD_ADDR:.+]] = global %struct.S zeroinitializer,

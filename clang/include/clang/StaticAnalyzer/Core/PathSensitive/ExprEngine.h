@@ -761,24 +761,24 @@ private:
   /// This allows, among other things, to keep bindings to variable's fields
   /// made within the constructor alive until its declaration actually
   /// goes into scope.
-  static ProgramStateRef addObjectUnderConstruction(
-      ProgramStateRef State,
-      llvm::PointerUnion<const Stmt *, const CXXCtorInitializer *> P,
-      const LocationContext *LC, SVal V);
+  static ProgramStateRef
+  addObjectUnderConstruction(ProgramStateRef State,
+                             const ConstructionContextItem &Item,
+                             const LocationContext *LC, SVal V);
 
   /// Mark the object sa fully constructed, cleaning up the state trait
   /// that tracks objects under construction.
-  static ProgramStateRef finishObjectConstruction(
-      ProgramStateRef State,
-      llvm::PointerUnion<const Stmt *, const CXXCtorInitializer *> P,
-      const LocationContext *LC);
+  static ProgramStateRef
+  finishObjectConstruction(ProgramStateRef State,
+                           const ConstructionContextItem &Item,
+                           const LocationContext *LC);
 
   /// If the given statement corresponds to an object under construction,
   /// being part of its construciton context, retrieve that object's location.
-  static Optional<SVal> getObjectUnderConstruction(
-      ProgramStateRef State,
-      llvm::PointerUnion<const Stmt *, const CXXCtorInitializer *> P,
-      const LocationContext *LC);
+  static Optional<SVal>
+  getObjectUnderConstruction(ProgramStateRef State,
+                             const ConstructionContextItem &Item,
+                             const LocationContext *LC);
 
   /// If the given expression corresponds to a temporary that was used for
   /// passing into an elidable copy/move constructor and that constructor
