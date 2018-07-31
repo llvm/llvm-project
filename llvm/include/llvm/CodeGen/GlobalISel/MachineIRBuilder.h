@@ -942,6 +942,16 @@ public:
   /// \return a MachineInstrBuilder for the newly created instruction.
   MachineInstrBuilder buildAtomicRMWUmin(unsigned OldValRes, unsigned Addr,
                                          unsigned Val, MachineMemOperand &MMO);
+
+  /// Build and insert \p Res = G_BLOCK_ADDR \p BA
+  ///
+  /// G_BLOCK_ADDR computes the address of a basic block.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p Res must be a generic virtual register of a pointer type.
+  ///
+  /// \return The newly created instruction.
+  MachineInstrBuilder buildBlockAddress(unsigned Res, const BlockAddress *BA);
 };
 
 /// A CRTP class that contains methods for building instructions that can

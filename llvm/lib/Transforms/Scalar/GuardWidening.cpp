@@ -43,6 +43,7 @@
 #include <functional>
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DepthFirstIterator.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/PostDominators.h"
@@ -60,6 +61,8 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "guard-widening"
+
+STATISTIC(GuardsEliminated, "Number of eliminated guards");
 
 namespace {
 
@@ -362,6 +365,7 @@ bool GuardWideningImpl::isGuard(const Instruction* I) {
 
 void GuardWideningImpl::eliminateGuard(Instruction *GuardInst) {
   GuardInst->eraseFromParent();
+  ++GuardsEliminated;
 }
 
 GuardWideningImpl::WideningScore GuardWideningImpl::computeWideningScore(

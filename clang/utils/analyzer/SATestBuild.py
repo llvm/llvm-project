@@ -60,9 +60,9 @@ import threading
 import time
 import Queue
 
-#------------------------------------------------------------------------------
+###############################################################################
 # Helper functions.
-#------------------------------------------------------------------------------
+###############################################################################
 
 Local = threading.local()
 Local.stdout = sys.stdout
@@ -91,9 +91,9 @@ def getProjectMapPath():
     ProjectMapPath = os.path.join(os.path.abspath(os.curdir),
                                   ProjectMapFile)
     if not os.path.exists(ProjectMapPath):
-        Local.stdout.write("Error: Cannot find the Project Map file "
-                           + ProjectMapPath
-                           + "\nRunning script for the wrong directory?\n")
+        Local.stdout.write("Error: Cannot find the Project Map file " +
+                           ProjectMapPath +
+                           "\nRunning script for the wrong directory?\n")
         sys.exit(1)
     return ProjectMapPath
 
@@ -108,9 +108,9 @@ def getSBOutputDirName(IsReferenceBuild):
     else:
         return SBOutputDirName
 
-#------------------------------------------------------------------------------
+###############################################################################
 # Configuration setup.
-#------------------------------------------------------------------------------
+###############################################################################
 
 
 # Find Clang for static analysis.
@@ -185,9 +185,9 @@ Checkers = ",".join([
 
 Verbose = 0
 
-#------------------------------------------------------------------------------
+###############################################################################
 # Test harness logic.
-#------------------------------------------------------------------------------
+###############################################################################
 
 
 def runCleanupScript(Dir, PBuildLogFile):

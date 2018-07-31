@@ -13104,8 +13104,8 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
 
 SDValue
 PPCTargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
-                                  SelectionDAG &DAG,
-                                  std::vector<SDNode *> &Created) const {
+                                 SelectionDAG &DAG,
+                                 SmallVectorImpl<SDNode *> &Created) const {
   // fold (sdiv X, pow2)
   EVT VT = N->getValueType(0);
   if (VT == MVT::i64 && !Subtarget.isPPC64())

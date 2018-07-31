@@ -37,6 +37,19 @@ struct ProfileBuffer {
   size_t Size;
 };
 
+// Current version of the profile format.
+constexpr u64 XRayProfilingVersion = 0x20180424;
+
+// Identifier for XRay profiling files 'xrayprof' in hex.
+constexpr u64 XRayMagicBytes = 0x7872617970726f66;
+
+struct XRayProfilingFileHeader {
+  const u64 MagicBytes = XRayMagicBytes;
+  const u64 Version = XRayProfilingVersion;
+  u64 Timestamp = 0; // System time in nanoseconds.
+  u64 PID = 0;       // Process ID.
+};
+
 struct BlockHeader {
   u32 BlockSize;
   u32 BlockNum;
@@ -302,7 +315,22 @@ XRayBuffer nextBuffer(XRayBuffer B) {
   if (ProfileBuffers == nullptr || ProfileBuffers->Size() == 0)
     return {nullptr, 0};
 
-  if (B.Data == nullptr)
+  static pthread_once_t Once = PTHREAD_ONCE_INIT;
+  static typename std::aligned_storage<sizeof(XRayProfilingFileHeader)>::type
+      FileHeaderStorage;
+  pthread_once(&Once,
+               +[] { new (&FileHeaderStorage) XRayProfilingFileHeader{}; });
+
+  if (UNLIKELY(B.Data == nullptr)) {
+    // The first buffer should always contain the file header information.
+    auto &FileHeader =
+        *reinterpret_cast<XRayProfilingFileHeader *>(&FileHeaderStorage);
+    FileHeader.Timestamp = NanoTime();
+    FileHeader.PID = internal_getpid();
+    return {&FileHeaderStorage, sizeof(XRayProfilingFileHeader)};
+  }
+
+  if (UNLIKELY(B.Data == &FileHeaderStorage))
     return {(*ProfileBuffers)[0].Data, (*ProfileBuffers)[0].Size};
 
   BlockHeader Header;

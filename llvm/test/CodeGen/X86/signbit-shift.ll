@@ -156,9 +156,9 @@ define i32 @sext_ifneg(i32 %x) {
 define i32 @add_sext_ifneg(i32 %x) {
 ; CHECK-LABEL: add_sext_ifneg:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    shrl $31, %edi
-; CHECK-NEXT:    movl $42, %eax
-; CHECK-NEXT:    subl %edi, %eax
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    sarl $31, %edi
+; CHECK-NEXT:    leal 42(%rdi), %eax
 ; CHECK-NEXT:    retq
   %c = icmp slt i32 %x, 0
   %e = sext i1 %c to i32
@@ -169,9 +169,9 @@ define i32 @add_sext_ifneg(i32 %x) {
 define i32 @sel_ifneg_fval_bigger(i32 %x) {
 ; CHECK-LABEL: sel_ifneg_fval_bigger:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    shrl $31, %edi
-; CHECK-NEXT:    movl $42, %eax
-; CHECK-NEXT:    subl %edi, %eax
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    sarl $31, %edi
+; CHECK-NEXT:    leal 42(%rdi), %eax
 ; CHECK-NEXT:    retq
   %c = icmp slt i32 %x, 0
   %r = select i1 %c, i32 41, i32 42
@@ -231,9 +231,10 @@ define <4 x i32> @sub_lshr_not_vec_splat(<4 x i32> %x) {
 define i32 @sub_lshr(i32 %x, i32 %y) {
 ; CHECK-LABEL: sub_lshr:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    shrl $31, %edi
-; CHECK-NEXT:    subl %edi, %esi
-; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    sarl $31, %edi
+; CHECK-NEXT:    leal (%rdi,%rsi), %eax
 ; CHECK-NEXT:    retq
   %sh = lshr i32 %x, 31
   %r = sub i32 %y, %sh
@@ -243,9 +244,8 @@ define i32 @sub_lshr(i32 %x, i32 %y) {
 define <4 x i32> @sub_lshr_vec(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: sub_lshr_vec:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    psrld $31, %xmm0
-; CHECK-NEXT:    psubd %xmm0, %xmm1
-; CHECK-NEXT:    movdqa %xmm1, %xmm0
+; CHECK-NEXT:    psrad $31, %xmm0
+; CHECK-NEXT:    paddd %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %sh = lshr <4 x i32> %x, <i32 31, i32 31, i32 31, i32 31>
   %r = sub <4 x i32> %y, %sh
@@ -255,9 +255,9 @@ define <4 x i32> @sub_lshr_vec(<4 x i32> %x, <4 x i32> %y) {
 define i32 @sub_const_op_lshr(i32 %x) {
 ; CHECK-LABEL: sub_const_op_lshr:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    shrl $31, %edi
-; CHECK-NEXT:    xorl $43, %edi
-; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    sarl $31, %edi
+; CHECK-NEXT:    leal 43(%rdi), %eax
 ; CHECK-NEXT:    retq
   %sh = lshr i32 %x, 31
   %r = sub i32 43, %sh
@@ -267,10 +267,8 @@ define i32 @sub_const_op_lshr(i32 %x) {
 define <4 x i32> @sub_const_op_lshr_vec(<4 x i32> %x) {
 ; CHECK-LABEL: sub_const_op_lshr_vec:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    psrld $31, %xmm0
-; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [42,42,42,42]
-; CHECK-NEXT:    psubd %xmm0, %xmm1
-; CHECK-NEXT:    movdqa %xmm1, %xmm0
+; CHECK-NEXT:    psrad $31, %xmm0
+; CHECK-NEXT:    paddd {{.*}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %sh = lshr <4 x i32> %x, <i32 31, i32 31, i32 31, i32 31>
   %r = sub <4 x i32> <i32 42, i32 42, i32 42, i32 42>, %sh

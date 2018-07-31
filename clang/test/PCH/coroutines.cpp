@@ -66,6 +66,14 @@ int f2(T x) {  // checks coawait_expr and coroutine_body_stmt
   co_return x;   // checks coreturn_stmt with expr
 }
 
+struct S {};
+S operator co_await(S) { return S(); }
+
+template <typename T>
+int f3(T x) {
+  co_await x; // checks dependent_coawait with overloaded co_await operator
+}
+
 #else
 
 // expected-no-diagnostics
