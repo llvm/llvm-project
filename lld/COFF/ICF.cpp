@@ -27,6 +27,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/xxhash.h"
 #include <algorithm>
 #include <atomic>
 #include <vector>
@@ -64,13 +65,6 @@ private:
   int Cnt = 0;
   std::atomic<bool> Repeat = {false};
 };
-
-// Returns a hash value for S.
-uint32_t ICF::getHash(SectionChunk *C) {
-  return hash_combine(C->getOutputCharacteristics(), C->SectionName,
-                      C->Relocs.size(), uint32_t(C->Header->SizeOfRawData),
-                      C->Checksum, C->getContents());
-}
 
 // Returns true if section S is subject of ICF.
 //
@@ -265,7 +259,7 @@ void ICF::run(ArrayRef<Chunk *> Vec) {
   // Initially, we use hash values to partition sections.
   for_each(parallel::par, Chunks.begin(), Chunks.end(), [&](SectionChunk *SC) {
     // Set MSB to 1 to avoid collisions with non-hash classs.
-    SC->Class[0] = getHash(SC) | (1 << 31);
+    SC->Class[0] = xxHash64(SC->getContents()) | (1 << 31);
   });
 
   // From now on, sections in Chunks are ordered so that sections in
