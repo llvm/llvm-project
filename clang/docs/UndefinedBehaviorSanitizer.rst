@@ -131,7 +131,7 @@ Available checks are:
      result of a signed integer computation cannot be represented in its type.
      This includes all the checks covered by ``-ftrapv``, as well as checks for
      signed division overflow (``INT_MIN/-1``), but not checks for
-     lossy implicit conversions performed after the computation
+     lossy implicit conversions performed before the computation
      (see ``-fsanitize=implicit-conversion``). Both of these two issues are
      handled by ``-fsanitize=implicit-conversion`` group of checks.
   -  ``-fsanitize=unreachable``: If control flow reaches an unreachable
@@ -140,7 +140,7 @@ Available checks are:
      the result of an unsigned integer computation cannot be represented in its
      type. Unlike signed integer overflow, this is not undefined behavior, but
      it is often unintentional. This sanitizer does not check for lossy implicit
-     conversions performed after such a computation
+     conversions performed before such a computation
      (see ``-fsanitize=implicit-conversion``).
   -  ``-fsanitize=vla-bound``: A variable-length array whose bound
      does not evaluate to a positive value.

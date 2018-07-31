@@ -133,10 +133,10 @@ namespace DummyRPCAPI {
   };
 
   class AllTheTypes
-    : public Function<AllTheTypes,
-                      void(int8_t, uint8_t, int16_t, uint16_t, int32_t,
-                           uint32_t, int64_t, uint64_t, bool, std::string,
-                           std::vector<int>)> {
+      : public Function<AllTheTypes, void(int8_t, uint8_t, int16_t, uint16_t,
+                                          int32_t, uint32_t, int64_t, uint64_t,
+                                          bool, std::string, std::vector<int>,
+                                          std::set<int>, std::map<int, bool>)> {
   public:
     static const char* getName() { return "AllTheTypes"; }
   };
@@ -451,43 +451,50 @@ TEST(DummyRPC, TestSerialization) {
   DummyRPCEndpoint Server(*Channels.second);
 
   std::thread ServerThread([&]() {
-      Server.addHandler<DummyRPCAPI::AllTheTypes>(
-          [&](int8_t S8, uint8_t U8, int16_t S16, uint16_t U16,
-              int32_t S32, uint32_t U32, int64_t S64, uint64_t U64,
-              bool B, std::string S, std::vector<int> V) {
-
-            EXPECT_EQ(S8, -101) << "int8_t serialization broken";
-            EXPECT_EQ(U8, 250) << "uint8_t serialization broken";
-            EXPECT_EQ(S16, -10000) << "int16_t serialization broken";
-            EXPECT_EQ(U16, 10000) << "uint16_t serialization broken";
-            EXPECT_EQ(S32, -1000000000) << "int32_t serialization broken";
-            EXPECT_EQ(U32, 1000000000ULL) << "uint32_t serialization broken";
-            EXPECT_EQ(S64, -10000000000) << "int64_t serialization broken";
-            EXPECT_EQ(U64, 10000000000ULL) << "uint64_t serialization broken";
-            EXPECT_EQ(B, true) << "bool serialization broken";
-            EXPECT_EQ(S, "foo") << "std::string serialization broken";
-            EXPECT_EQ(V, std::vector<int>({42, 7}))
-              << "std::vector serialization broken";
-            return Error::success();
-          });
-
-      {
-        // Poke the server to handle the negotiate call.
-        auto Err = Server.handleOne();
-        EXPECT_FALSE(!!Err) << "Server failed to handle call to negotiate";
-      }
-
-      {
-        // Poke the server to handle the AllTheTypes call.
-        auto Err = Server.handleOne();
-        EXPECT_FALSE(!!Err) << "Server failed to handle call to void(bool)";
-      }
+    Server.addHandler<DummyRPCAPI::AllTheTypes>([&](int8_t S8, uint8_t U8,
+                                                    int16_t S16, uint16_t U16,
+                                                    int32_t S32, uint32_t U32,
+                                                    int64_t S64, uint64_t U64,
+                                                    bool B, std::string S,
+                                                    std::vector<int> V,
+                                                    std::set<int> S2,
+                                                    std::map<int, bool> M) {
+      EXPECT_EQ(S8, -101) << "int8_t serialization broken";
+      EXPECT_EQ(U8, 250) << "uint8_t serialization broken";
+      EXPECT_EQ(S16, -10000) << "int16_t serialization broken";
+      EXPECT_EQ(U16, 10000) << "uint16_t serialization broken";
+      EXPECT_EQ(S32, -1000000000) << "int32_t serialization broken";
+      EXPECT_EQ(U32, 1000000000ULL) << "uint32_t serialization broken";
+      EXPECT_EQ(S64, -10000000000) << "int64_t serialization broken";
+      EXPECT_EQ(U64, 10000000000ULL) << "uint64_t serialization broken";
+      EXPECT_EQ(B, true) << "bool serialization broken";
+      EXPECT_EQ(S, "foo") << "std::string serialization broken";
+      EXPECT_EQ(V, std::vector<int>({42, 7}))
+          << "std::vector serialization broken";
+      EXPECT_EQ(S2, std::set<int>({7, 42})) << "std::set serialization broken";
+      EXPECT_EQ(M, (std::map<int, bool>({{7, false}, {42, true}})))
+          << "std::map serialization broken";
+      return Error::success();
     });
 
+    {
+      // Poke the server to handle the negotiate call.
+      auto Err = Server.handleOne();
+      EXPECT_FALSE(!!Err) << "Server failed to handle call to negotiate";
+    }
+
+    {
+      // Poke the server to handle the AllTheTypes call.
+      auto Err = Server.handleOne();
+      EXPECT_FALSE(!!Err) << "Server failed to handle call to void(bool)";
+    }
+  });
 
   {
     // Make an async call.
-    std::vector<int> v({42, 7});
+    std::vector<int> V({42, 7});
+    std::set<int> S({7, 42});
+    std::map<int, bool> M({{7, false}, {42, true}});
     auto Err = Client.callAsync<DummyRPCAPI::AllTheTypes>(
         [](Error Err) {
           EXPECT_FALSE(!!Err) << "Async AllTheTypes response handler failed";
@@ -497,7 +504,7 @@ TEST(DummyRPC, TestSerialization) {
         static_cast<int16_t>(-10000), static_cast<uint16_t>(10000),
         static_cast<int32_t>(-1000000000), static_cast<uint32_t>(1000000000),
         static_cast<int64_t>(-10000000000), static_cast<uint64_t>(10000000000),
-        true, std::string("foo"), v);
+        true, std::string("foo"), V, S, M);
     EXPECT_FALSE(!!Err) << "Client.callAsync failed for AllTheTypes";
   }
 

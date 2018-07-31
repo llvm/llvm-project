@@ -226,7 +226,10 @@ bool TypeStreamMerger::remapIndexFallback(TypeIndex &Idx,
   if (IsSecondPass && MapPos >= Map.size()) {
     // FIXME: Print a more useful error. We can give the current record and the
     // index that we think its pointing to.
-    LastError = joinErrors(std::move(*LastError), errorCorruptRecord());
+    if (LastError)
+      LastError = joinErrors(std::move(*LastError), errorCorruptRecord());
+    else
+      LastError = errorCorruptRecord();
   }
 
   ++NumBadIndices;
