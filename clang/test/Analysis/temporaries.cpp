@@ -1,7 +1,7 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -analyzer-config cfg-temporary-dtors=false -verify -w -std=c++03 %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -analyzer-config cfg-temporary-dtors=false -verify -w -std=c++11 %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -DTEMPORARY_DTORS -verify -w -analyzer-config cfg-temporary-dtors=true,c++-temp-dtor-inlining=true %s -std=c++11
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -DTEMPORARY_DTORS -w -analyzer-config cfg-temporary-dtors=true,c++-temp-dtor-inlining=true %s -std=c++17
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,cplusplus,debug.ExprInspection -analyzer-config cfg-temporary-dtors=false -verify -w -std=c++03 %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,cplusplus,debug.ExprInspection -analyzer-config cfg-temporary-dtors=false -verify -w -std=c++11 %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,cplusplus,debug.ExprInspection -DTEMPORARY_DTORS -verify -w -analyzer-config cfg-temporary-dtors=true,c++-temp-dtor-inlining=true %s -std=c++11
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,cplusplus,debug.ExprInspection -DTEMPORARY_DTORS -w -analyzer-config cfg-temporary-dtors=true,c++-temp-dtor-inlining=true %s -std=c++17
 
 // Note: The C++17 run-line doesn't -verify yet - it is a no-crash test.
 
@@ -945,3 +945,29 @@ C &&foo2();
 const C &bar1() { return foo1(); } // no-crash
 C &&bar2() { return foo2(); } // no-crash
 } // end namespace pass_references_through
+
+
+namespace ctor_argument {
+// Stripped down unique_ptr<int>
+struct IntPtr {
+  IntPtr(): i(new int) {}
+  IntPtr(IntPtr &&o): i(o.i) { o.i = 0; }
+  ~IntPtr() { delete i; }
+
+  int *i;
+};
+
+struct Foo {
+  Foo(IntPtr);
+  void bar();
+
+  IntPtr i;
+};
+
+void bar() {
+  IntPtr ptr;
+  int *i = ptr.i;
+  Foo f(static_cast<IntPtr &&>(ptr));
+  *i = 99; // no-warning
+}
+} // namespace ctor_argument

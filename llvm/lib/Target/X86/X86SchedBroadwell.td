@@ -119,8 +119,8 @@ defm : BWWriteResPair<WriteIDiv16, [BWPort0, BWDivider], 25, [1, 10]>;
 defm : BWWriteResPair<WriteIDiv32, [BWPort0, BWDivider], 25, [1, 10]>;
 defm : BWWriteResPair<WriteIDiv64, [BWPort0, BWDivider], 25, [1, 10]>;
 
-defm : BWWriteResPair<WriteBSWAP32,[BWPort15], 1>; //
-defm : BWWriteResPair<WriteBSWAP64,[BWPort06, BWPort15], 2, [1, 1], 2>; //
+defm : X86WriteRes<WriteBSWAP32,   [BWPort15], 1, [1], 1>;
+defm : X86WriteRes<WriteBSWAP64,   [BWPort06, BWPort15], 2, [1, 1], 2>;
 
 defm : BWWriteResPair<WriteCRC32, [BWPort1],   3>;
 def : WriteRes<WriteIMulH, []> { let Latency = 3; } // Integer multiplication, high part.
@@ -137,7 +137,6 @@ def  : WriteRes<WriteSETCCStore, [BWPort06,BWPort4,BWPort237]> {
   let NumMicroOps = 3;
 }
 def  : WriteRes<WriteLAHFSAHF, [BWPort06]>;
-def  : WriteRes<WriteBitTest,[BWPort06]>; // Bit Test instrs
 
 // Bit counts.
 defm : BWWriteResPair<WriteBSF, [BWPort1], 3>;
@@ -604,6 +603,14 @@ def BWWriteResGroup6 : SchedWriteRes<[BWPort06]> {
   let ResourceCycles = [1];
 }
 def: InstRW<[BWWriteResGroup6], (instrs CDQ, CQO)>;
+def: InstRW<[BWWriteResGroup6], (instregex "BT(16|32|64)ri8",
+                                           "BT(16|32|64)rr",
+                                           "BTC(16|32|64)ri8",
+                                           "BTC(16|32|64)rr",
+                                           "BTR(16|32|64)ri8",
+                                           "BTR(16|32|64)rr",
+                                           "BTS(16|32|64)ri8",
+                                           "BTS(16|32|64)rr")>;
 
 def BWWriteResGroup7 : SchedWriteRes<[BWPort15]> {
   let Latency = 1;

@@ -81,8 +81,8 @@ defm : AtomWriteResPair<WriteADC,    [AtomPort01], [AtomPort0]>;
 defm : AtomWriteResPair<WriteIMul,   [AtomPort01], [AtomPort01],  7,  7,  [7],  [7]>;
 defm : AtomWriteResPair<WriteIMul64, [AtomPort01], [AtomPort01], 12, 12, [12], [12]>;
 
-defm : AtomWriteResPair<WriteBSWAP32,    [AtomPort0], [AtomPort0]>;
-defm : AtomWriteResPair<WriteBSWAP64,    [AtomPort0], [AtomPort0]>;
+defm : X86WriteRes<WriteBSWAP32,     [AtomPort0], 1, [1], 1>;
+defm : X86WriteRes<WriteBSWAP64,     [AtomPort0], 1, [1], 1>;
 
 defm : AtomWriteResPair<WriteDiv8,   [AtomPort01], [AtomPort01], 50, 68, [50], [68]>;
 defm : AtomWriteResPair<WriteDiv16,  [AtomPort01], [AtomPort01], 50, 50, [50], [50]>;
@@ -108,7 +108,6 @@ def  : WriteRes<WriteLAHFSAHF, [AtomPort01]> {
   let Latency = 2;
   let ResourceCycles = [2];
 }
-def : WriteRes<WriteBitTest,[AtomPort01]>;
 
 defm : X86WriteResUnsupported<WriteIMulH>;
 

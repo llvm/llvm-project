@@ -443,8 +443,6 @@ private:
 
   void collectSchedClasses();
 
-  void checkSchedClasses();
-
   void collectRetireControlUnits();
 
   void collectRegisterFiles();

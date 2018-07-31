@@ -97,10 +97,19 @@ ARM::ARM() {
 }
 
 uint32_t ARM::calcEFlags() const {
+  // The ABIFloatType is used by loaders to detect the floating point calling
+  // convention.
+  uint32_t ABIFloatType = 0;
+  if (Config->ARMVFPArgs == ARMVFPArgKind::Base ||
+      Config->ARMVFPArgs == ARMVFPArgKind::Default)
+    ABIFloatType = EF_ARM_ABI_FLOAT_SOFT;
+  else if (Config->ARMVFPArgs == ARMVFPArgKind::VFP)
+    ABIFloatType = EF_ARM_ABI_FLOAT_HARD;
+
   // We don't currently use any features incompatible with EF_ARM_EABI_VER5,
   // but we don't have any firm guarantees of conformance. Linux AArch64
   // kernels (as of 2016) require an EABI version to be set.
-  return EF_ARM_EABI_VER5;
+  return EF_ARM_EABI_VER5 | ABIFloatType;
 }
 
 RelExpr ARM::getRelExpr(RelType Type, const Symbol &S,

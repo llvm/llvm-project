@@ -132,3 +132,7 @@ uint64_t llvm::xxHash64(StringRef Data) {
 
   return H64;
 }
+
+uint64_t llvm::xxHash64(ArrayRef<uint8_t> Data) {
+  return xxHash64({(const char *)Data.data(), Data.size()});
+}

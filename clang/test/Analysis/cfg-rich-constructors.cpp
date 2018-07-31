@@ -817,6 +817,11 @@ public:
   ~D();
 };
 
+class E {
+public:
+  E(D d);
+};
+
 void useC(C c);
 void useCByReference(const C &c);
 void useD(D d);
@@ -879,6 +884,32 @@ void passArgumentWithDestructor() {
 // CHECK-NEXT:     8: ~argument_constructors::D() (Temporary object destructor)
 void passArgumentWithDestructorByReference() {
   useDByReference(D());
+}
+
+// FIXME: Find construction context for the argument.
+// CHECK: void passArgumentIntoAnotherConstructor()
+// CXX11:          1: argument_constructors::D() (CXXConstructExpr, [B1.2], [B1.4], class argument_constructors::D)
+// CXX11-NEXT:     2: [B1.1] (BindTemporary)
+// CXX11-NEXT:     3: [B1.2] (ImplicitCastExpr, NoOp, const class argument_constructors::D)
+// CXX11-NEXT:     4: [B1.3]
+// CXX11-NEXT:     5: [B1.4] (CXXConstructExpr, class argument_constructors::D)
+// CXX11-NEXT:     6: [B1.5] (BindTemporary)
+// CXX11-ELIDE-NEXT:     7: [B1.6] (CXXConstructExpr, [B1.9], [B1.10], class argument_constructors::E)
+// CXX11-NOELIDE-NEXT:     7: [B1.6] (CXXConstructExpr, [B1.9], class argument_constructors::E)
+// CXX11-NEXT:     8: argument_constructors::E([B1.7]) (CXXFunctionalCastExpr, ConstructorConversion, class argument_constructors::E)
+// CXX11-NEXT:     9: [B1.8]
+// CXX11-NEXT:    10: [B1.9] (CXXConstructExpr, [B1.11], class argument_constructors::E)
+// CXX11-NEXT:    11: argument_constructors::E e = argument_constructors::E(argument_constructors::D());
+// CXX11-NEXT:    12: ~argument_constructors::D() (Temporary object destructor)
+// CXX11-NEXT:    13: ~argument_constructors::D() (Temporary object destructor)
+// CXX17:          1: argument_constructors::D() (CXXConstructExpr, class argument_constructors::D)
+// CXX17-NEXT:     2: [B1.1] (BindTemporary)
+// CXX17-NEXT:     3: [B1.2] (CXXConstructExpr, [B1.5], class argument_constructors::E)
+// CXX17-NEXT:     4: argument_constructors::E([B1.3]) (CXXFunctionalCastExpr, ConstructorConversion, class argument_constructors::E)
+// CXX17-NEXT:     5: argument_constructors::E e = argument_constructors::E(argument_constructors::D());
+// CXX17-NEXT:     6: ~argument_constructors::D() (Temporary object destructor)
+void passArgumentIntoAnotherConstructor() {
+  E e = E(D());
 }
 } // end namespace argument_constructors
 

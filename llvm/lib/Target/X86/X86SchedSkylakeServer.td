@@ -110,8 +110,8 @@ defm : SKXWriteResPair<WriteADC,    [SKXPort06],   1>; // Integer ALU + flags op
 defm : SKXWriteResPair<WriteIMul,   [SKXPort1],    3>; // Integer multiplication.
 defm : SKXWriteResPair<WriteIMul64, [SKXPort1],    3>; // Integer 64-bit multiplication.
 
-defm : SKXWriteResPair<WriteBSWAP32,[SKXPort15],   1>; //
-defm : SKXWriteResPair<WriteBSWAP64,[SKXPort06, SKXPort15], 2, [1,1], 2>; //
+defm : X86WriteRes<WriteBSWAP32, [SKXPort15], 1, [1], 1>;
+defm : X86WriteRes<WriteBSWAP64, [SKXPort06, SKXPort15], 2, [1,1], 2>;
 
 defm : SKXWriteResPair<WriteDiv8,   [SKXPort0, SKXDivider], 25, [1,10], 1, 4>;
 defm : SKXWriteResPair<WriteDiv16,  [SKXPort0, SKXDivider], 25, [1,10], 1, 4>;
@@ -136,7 +136,6 @@ def  : WriteRes<WriteSETCCStore, [SKXPort06,SKXPort4,SKXPort237]> {
   let NumMicroOps = 3;
 }
 def  : WriteRes<WriteLAHFSAHF, [SKXPort06]>;
-def  : WriteRes<WriteBitTest,[SKXPort06]>; //
 
 // Integer shifts and rotates.
 defm : SKXWriteResPair<WriteShift, [SKXPort06],  1>;
@@ -619,6 +618,14 @@ def SKXWriteResGroup7 : SchedWriteRes<[SKXPort06]> {
   let ResourceCycles = [1];
 }
 def: InstRW<[SKXWriteResGroup7], (instrs CDQ, CQO, CLAC, STAC)>;
+def: InstRW<[SKXWriteResGroup7], (instregex "BT(16|32|64)ri8",
+                                            "BT(16|32|64)rr",
+                                            "BTC(16|32|64)ri8",
+                                            "BTC(16|32|64)rr",
+                                            "BTR(16|32|64)ri8",
+                                            "BTR(16|32|64)rr",
+                                            "BTS(16|32|64)ri8",
+                                            "BTS(16|32|64)rr")>;
 
 def SKXWriteResGroup8 : SchedWriteRes<[SKXPort15]> {
   let Latency = 1;

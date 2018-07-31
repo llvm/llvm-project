@@ -70,10 +70,11 @@ define <2 x i32> @and_xor_common_op_commute3(<2 x i32> %pa, <2 x i32> %pb) {
 }
 
 ; It's ok to match a common constant.
+; TODO: The xor should be a 'not' op (-1 constant), but demanded bits shrinks it.
 
 define <4 x i32> @and_xor_common_op_constant(<4 x i32> %A) {
 ; CHECK-LABEL: @and_xor_common_op_constant(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i32> [[A:%.*]], <i32 1, i32 2, i32 3, i32 4>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i32> [[A:%.*]], <i32 7, i32 7, i32 7, i32 7>
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <4 x i32> [[TMP1]], <i32 1, i32 2, i32 3, i32 4>
 ; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 ;

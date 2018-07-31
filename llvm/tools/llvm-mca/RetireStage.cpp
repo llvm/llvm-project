@@ -45,10 +45,12 @@ void RetireStage::cycleStart() {
 void RetireStage::notifyInstructionRetired(const InstRef &IR) {
   LLVM_DEBUG(dbgs() << "[E] Instruction Retired: #" << IR << '\n');
   SmallVector<unsigned, 4> FreedRegs(PRF.getNumRegisterFiles());
-  const InstrDesc &Desc = IR.getInstruction()->getDesc();
+  const Instruction &Inst = *IR.getInstruction();
+  const InstrDesc &Desc = Inst.getDesc();
 
-  for (const std::unique_ptr<WriteState> &WS : IR.getInstruction()->getDefs())
-    PRF.removeRegisterWrite(*WS.get(), FreedRegs, !Desc.isZeroLatency());
+  bool ShouldFreeRegs = !(Desc.isZeroLatency() && Inst.isDependencyBreaking());
+  for (const std::unique_ptr<WriteState> &WS : Inst.getDefs())
+    PRF.removeRegisterWrite(*WS.get(), FreedRegs, ShouldFreeRegs);
   notifyEvent<HWInstructionEvent>(HWInstructionRetiredEvent(IR, FreedRegs));
 }
 

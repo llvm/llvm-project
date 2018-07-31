@@ -213,6 +213,8 @@ enum {
   // Tag_ABI_VFP_args, (=28), uleb128
   BaseAAPCS = 0,
   HardFPAAPCS = 1,
+  ToolChainFPPCS = 2,
+  CompatibleFPAAPCS = 3,
 
   // Tag_FP_HP_extension, (=36), uleb128
   AllowHPFP = 1, // Allow use of Half Precision FP

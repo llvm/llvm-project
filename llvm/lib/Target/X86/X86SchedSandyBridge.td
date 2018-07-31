@@ -112,8 +112,8 @@ defm : SBWriteResPair<WriteADC,    [SBPort05,SBPort015], 2, [1,1], 2>;
 defm : SBWriteResPair<WriteIMul,   [SBPort1],   3>;
 defm : SBWriteResPair<WriteIMul64, [SBPort1],   3>;
 
-defm : SBWriteResPair<WriteBSWAP32,[SBPort1], 1>;
-defm : SBWriteResPair<WriteBSWAP64,[SBPort1,SBPort05], 2, [1,1], 2>;
+defm : X86WriteRes<WriteBSWAP32,   [SBPort1], 1, [1], 1>;
+defm : X86WriteRes<WriteBSWAP64,   [SBPort1,SBPort05], 2, [1,1], 2>;
 
 defm : SBWriteResPair<WriteDiv8,   [SBPort0, SBDivider], 25, [1, 10]>;
 defm : SBWriteResPair<WriteDiv16,  [SBPort0, SBDivider], 25, [1, 10]>;
@@ -145,7 +145,6 @@ def  : WriteRes<WriteSETCCStore, [SBPort05,SBPort4,SBPort23]> {
   let NumMicroOps = 3;
 }
 def  : WriteRes<WriteLAHFSAHF, [SBPort05]>;
-def  : WriteRes<WriteBitTest,[SBPort05]>;
 
 // This is for simple LEAs with one or two input operands.
 // The complex ones can only execute on port 1, and they require two cycles on
@@ -571,6 +570,14 @@ def SBWriteResGroup4 : SchedWriteRes<[SBPort05]> {
   let ResourceCycles = [1];
 }
 def: InstRW<[SBWriteResGroup4], (instrs CDQ, CQO)>;
+def: InstRW<[SBWriteResGroup4], (instregex "BT(16|32|64)ri8",
+                                           "BT(16|32|64)rr",
+                                           "BTC(16|32|64)ri8",
+                                           "BTC(16|32|64)rr",
+                                           "BTR(16|32|64)ri8",
+                                           "BTR(16|32|64)rr",
+                                           "BTS(16|32|64)ri8",
+                                           "BTS(16|32|64)rr")>;
 
 def SBWriteResGroup5 : SchedWriteRes<[SBPort15]> {
   let Latency = 1;

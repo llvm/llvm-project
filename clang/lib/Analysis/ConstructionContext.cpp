@@ -15,6 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/ConstructionContext.h"
+#include "clang/AST/ExprObjC.h"
 
 using namespace clang;
 
@@ -111,7 +112,9 @@ const ConstructionContext *ConstructionContext::createFromLayers(
         assert(ParentLayer->isLast());
 
         // This is a constructor into a function argument. Not implemented yet.
-        if (isa<CallExpr>(ParentLayer->getTriggerStmt()))
+        if (isa<CallExpr>(ParentLayer->getTriggerStmt()) ||
+            isa<CXXConstructExpr>(ParentLayer->getTriggerStmt()) ||
+            isa<ObjCMessageExpr>(ParentLayer->getTriggerStmt()))
           return nullptr;
         // This is C++17 copy-elided construction into return statement.
         if (auto *RS = dyn_cast<ReturnStmt>(ParentLayer->getTriggerStmt())) {
@@ -173,7 +176,9 @@ const ConstructionContext *ConstructionContext::createFromLayers(
       return create<SimpleReturnedValueConstructionContext>(C, RS);
     }
     // This is a constructor into a function argument. Not implemented yet.
-    if (isa<CallExpr>(TopLayer->getTriggerStmt()))
+    if (isa<CallExpr>(TopLayer->getTriggerStmt()) ||
+        isa<CXXConstructExpr>(TopLayer->getTriggerStmt()) ||
+        isa<ObjCMessageExpr>(TopLayer->getTriggerStmt()))
       return nullptr;
     llvm_unreachable("Unexpected construction context with statement!");
   } else if (const CXXCtorInitializer *I = TopLayer->getTriggerInit()) {
