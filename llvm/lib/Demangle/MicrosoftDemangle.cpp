@@ -209,28 +209,19 @@ namespace {
 struct Type;
 struct Name;
 
-struct FunctionParams {
+// Represents a list of parameters (template params or function arguments.
+// It's represented as a linked list.
+struct ParamList {
   bool IsVariadic = false;
 
+  // If this is a type, Current will be valid and AliasName will be null.
   Type *Current = nullptr;
 
-  FunctionParams *Next = nullptr;
-};
+  // If this is an alias (e.g. using X = Y), Current will be null and AliasName
+  // will be valid.
+  Name *AliasName = nullptr;
 
-struct TemplateParams {
-  bool IsTemplateTemplate = false;
-  bool IsAliasTemplate = false;
-
-  // Type can be null if this is a template template parameter.  In that case
-  // only Name will be valid.
-  Type *Type = nullptr;
-
-  // Name can be valid if this is a template template parameter (see above) or
-  // this is a function declaration (e.g. foo<&SomeFunc>).  In the latter case
-  // Name contains the name of the function and Type contains the signature.
-  Name *Name = nullptr;
-
-  TemplateParams *Next = nullptr;
+  ParamList *Next = nullptr;
 };
 
 // The type class. Mangled symbols are first parsed and converted to
@@ -271,7 +262,7 @@ struct Name {
   StringView Operator;
 
   // Template parameters. Null if not a template.
-  TemplateParams *TParams = nullptr;
+  ParamList *TemplateParams = nullptr;
 
   // Nested BackReferences (e.g. "A::B::C") are represented as a linked list.
   Name *Next = nullptr;
@@ -317,7 +308,7 @@ struct FunctionType : public Type {
   CallingConv CallConvention;
   FuncClass FunctionClass;
 
-  FunctionParams Params;
+  ParamList Params;
 };
 
 struct UdtType : public Type {
@@ -475,17 +466,22 @@ static bool startsWithLocalScopePattern(StringView S) {
 static void outputName(OutputStream &OS, const Name *TheName);
 
 // Write a function or template parameter list.
-static void outputParameterList(OutputStream &OS,
-                                const FunctionParams &Params) {
-  if (!Params.Current) {
-    OS << "void";
+static void outputParameterList(OutputStream &OS, const ParamList &Params,
+                                bool EmptyAsVoid) {
+  if (!Params.Current && !Params.AliasName) {
+    if (EmptyAsVoid)
+      OS << "void";
     return;
   }
 
-  const FunctionParams *Head = &Params;
+  const ParamList *Head = &Params;
   while (Head) {
-    Type::outputPre(OS, *Head->Current);
-    Type::outputPost(OS, *Head->Current);
+    if (Head->Current) {
+      Type::outputPre(OS, *Head->Current);
+      Type::outputPost(OS, *Head->Current);
+    } else if (Head->AliasName) {
+      outputName(OS, Head->AliasName);
+    }
 
     Head = Head->Next;
 
@@ -494,39 +490,12 @@ static void outputParameterList(OutputStream &OS,
   }
 }
 
-static void outputParameterList(OutputStream &OS,
-                                const TemplateParams &Params) {
-  if (!Params.Type && !Params.Name) {
-    OS << "<>";
+static void outputTemplateParams(OutputStream &OS, const Name &TheName) {
+  if (!TheName.TemplateParams)
     return;
-  }
 
   OS << "<";
-  const TemplateParams *Head = &Params;
-  while (Head) {
-    // Type can be null if this is a template template parameter,
-    // and Name can be null if this is a simple type.
-
-    if (Head->Type && Head->Name) {
-      // Function pointer.
-      OS << "&";
-      Type::outputPre(OS, *Head->Type);
-      outputName(OS, Head->Name);
-      Type::outputPost(OS, *Head->Type);
-    } else if (Head->Type) {
-      // simple type.
-      Type::outputPre(OS, *Head->Type);
-      Type::outputPost(OS, *Head->Type);
-    } else {
-      // Template alias.
-      outputName(OS, Head->Name);
-    }
-
-    Head = Head->Next;
-
-    if (Head)
-      OS << ", ";
-  }
+  outputParameterList(OS, *TheName.TemplateParams, false);
   OS << ">";
 }
 
@@ -541,16 +510,14 @@ static void outputName(OutputStream &OS, const Name *TheName) {
   for (; TheName->Next; TheName = TheName->Next) {
     Previous = TheName;
     OS << TheName->Str;
-    if (TheName->TParams)
-      outputParameterList(OS, *TheName->TParams);
+    outputTemplateParams(OS, *TheName);
     OS << "::";
   }
 
   // Print out a regular name.
   if (TheName->Operator.empty()) {
     OS << TheName->Str;
-    if (TheName->TParams)
-      outputParameterList(OS, *TheName->TParams);
+    outputTemplateParams(OS, *TheName);
     return;
   }
 
@@ -560,8 +527,7 @@ static void outputName(OutputStream &OS, const Name *TheName) {
 
   if (TheName->Operator == "ctor" || TheName->Operator == "dtor") {
     OS << Previous->Str;
-    if (Previous->TParams)
-      outputParameterList(OS, *Previous->TParams);
+    outputTemplateParams(OS, *Previous);
     return;
   }
 
@@ -789,7 +755,7 @@ void FunctionType::outputPre(OutputStream &OS) {
 
 void FunctionType::outputPost(OutputStream &OS) {
   OS << "(";
-  outputParameterList(OS, Params);
+  outputParameterList(OS, Params, true);
   OS << ")";
   if (Quals & Q_Const)
     OS << " const";
@@ -893,8 +859,8 @@ private:
 
   ArrayType *demangleArrayType(StringView &MangledName);
 
-  TemplateParams *demangleTemplateParameterList(StringView &MangledName);
-  FunctionParams demangleFunctionParameterList(StringView &MangledName);
+  ParamList *demangleTemplateParameterList(StringView &MangledName);
+  ParamList demangleFunctionParameterList(StringView &MangledName);
 
   int demangleNumber(StringView &MangledName);
 
@@ -1103,7 +1069,7 @@ Name *Demangler::demangleClassTemplateName(StringView &MangledName) {
   MangledName.consumeFront("?$");
 
   Name *Node = demangleSimpleName(MangledName, false);
-  Node->TParams = demangleTemplateParameterList(MangledName);
+  Node->TemplateParams = demangleTemplateParameterList(MangledName);
 
   // Render this class template name into a string buffer so that we can
   // memorize it for the purpose of back-referencing.
@@ -1894,14 +1860,13 @@ ArrayType *Demangler::demangleArrayType(StringView &MangledName) {
 }
 
 // Reads a function or a template parameters.
-FunctionParams
-Demangler::demangleFunctionParameterList(StringView &MangledName) {
+ParamList Demangler::demangleFunctionParameterList(StringView &MangledName) {
   // Empty parameter list.
   if (MangledName.consumeFront('X'))
     return {};
 
-  FunctionParams *Head;
-  FunctionParams **Current = &Head;
+  ParamList *Head;
+  ParamList **Current = &Head;
   while (!Error && !MangledName.startsWith('@') &&
          !MangledName.startsWith('Z')) {
 
@@ -1913,7 +1878,7 @@ Demangler::demangleFunctionParameterList(StringView &MangledName) {
       }
       MangledName = MangledName.dropFront();
 
-      *Current = Arena.alloc<FunctionParams>();
+      *Current = Arena.alloc<ParamList>();
       (*Current)->Current = FunctionParamBackRefs[N]->clone(Arena);
       Current = &(*Current)->Next;
       continue;
@@ -1921,7 +1886,7 @@ Demangler::demangleFunctionParameterList(StringView &MangledName) {
 
     size_t OldSize = MangledName.size();
 
-    *Current = Arena.alloc<FunctionParams>();
+    *Current = Arena.alloc<ParamList>();
     (*Current)->Current = demangleType(MangledName, QualifierMangleMode::Drop);
 
     size_t CharsConsumed = OldSize - MangledName.size();
@@ -1953,13 +1918,12 @@ Demangler::demangleFunctionParameterList(StringView &MangledName) {
   return {};
 }
 
-TemplateParams *
-Demangler::demangleTemplateParameterList(StringView &MangledName) {
-  TemplateParams *Head;
-  TemplateParams **Current = &Head;
+ParamList *Demangler::demangleTemplateParameterList(StringView &MangledName) {
+  ParamList *Head;
+  ParamList **Current = &Head;
   while (!Error && !MangledName.startsWith('@')) {
     // Template parameter lists don't participate in back-referencing.
-    *Current = Arena.alloc<TemplateParams>();
+    *Current = Arena.alloc<ParamList>();
 
     // Empty parameter pack.
     if (MangledName.consumeFront("$S") || MangledName.consumeFront("$$V") ||
@@ -1969,16 +1933,11 @@ Demangler::demangleTemplateParameterList(StringView &MangledName) {
       continue;
     }
 
-    if (MangledName.consumeFront("$$Y")) {
-      (*Current)->IsTemplateTemplate = true;
-      (*Current)->IsAliasTemplate = true;
-      (*Current)->Name = demangleFullyQualifiedTypeName(MangledName);
-    } else if (MangledName.consumeFront("$1?")) {
-      (*Current)->Name = demangleFullyQualifiedSymbolName(MangledName);
-      (*Current)->Type = demangleFunctionEncoding(MangledName);
-    } else {
-      (*Current)->Type = demangleType(MangledName, QualifierMangleMode::Drop);
-    }
+    if (MangledName.consumeFront("$$Y"))
+      (*Current)->AliasName = demangleFullyQualifiedTypeName(MangledName);
+    else
+      (*Current)->Current =
+          demangleType(MangledName, QualifierMangleMode::Drop);
 
     Current = &(*Current)->Next;
   }

@@ -13,6 +13,8 @@
 
 #include "ARMTargetMachine.h"
 #include "llvm/MC/ConstantPools.h"
+#include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -47,6 +49,41 @@ void ARMTargetStreamer::finish() { ConstantPools->emitAll(Streamer); }
 // reset() - Reset any state
 void ARMTargetStreamer::reset() {}
 
+void ARMTargetStreamer::emitInst(uint32_t Inst, char Suffix) {
+  unsigned Size;
+  char Buffer[4];
+  const bool LittleEndian = getStreamer().getContext().getAsmInfo()->isLittleEndian();
+
+  switch (Suffix) {
+  case '\0':
+    Size = 4;
+
+    for (unsigned II = 0, IE = Size; II != IE; II++) {
+      const unsigned I = LittleEndian ? (Size - II - 1) : II;
+      Buffer[Size - II - 1] = uint8_t(Inst >> I * CHAR_BIT);
+    }
+
+    break;
+  case 'n':
+  case 'w':
+    Size = (Suffix == 'n' ? 2 : 4);
+
+    // Thumb wide instructions are emitted as a pair of 16-bit words of the
+    // appropriate endianness.
+    for (unsigned II = 0, IE = Size; II != IE; II = II + 2) {
+      const unsigned I0 = LittleEndian ? II + 0 : II + 1;
+      const unsigned I1 = LittleEndian ? II + 1 : II + 0;
+      Buffer[Size - II - 2] = uint8_t(Inst >> I0 * CHAR_BIT);
+      Buffer[Size - II - 1] = uint8_t(Inst >> I1 * CHAR_BIT);
+    }
+
+    break;
+  default:
+    llvm_unreachable("Invalid Suffix");
+  }
+  getStreamer().EmitBytes(StringRef(Buffer, Size));
+}
+
 // The remaining callbacks should be handled separately by each
 // streamer.
 void ARMTargetStreamer::emitFnStart() {}
@@ -76,7 +113,6 @@ void ARMTargetStreamer::emitArchExtension(unsigned ArchExt) {}
 void ARMTargetStreamer::emitObjectArch(ARM::ArchKind Arch) {}
 void ARMTargetStreamer::emitFPU(unsigned FPU) {}
 void ARMTargetStreamer::finishAttributeSection() {}
-void ARMTargetStreamer::emitInst(uint32_t Inst, char Suffix) {}
 void
 ARMTargetStreamer::AnnotateTLSDescriptorSequence(const MCSymbolRefExpr *SRE) {}
 void ARMTargetStreamer::emitThumbSet(MCSymbol *Symbol, const MCExpr *Value) {}

@@ -1,7 +1,7 @@
-; RUN: llc -mtriple=thumbv7m -arm-disable-cgp=false %s -o - | FileCheck %s
-; RUN: llc -mtriple=thumbv8m.main -arm-disable-cgp=false %s -o - | FileCheck %s
-; RUN: llc -mtriple=thumbv7 %s -arm-disable-cgp=false -o - | FileCheck %s
-; RUN: llc -mtriple=armv8 %s -arm-disable-cgp=false -o - | FileCheck %s
+; RUN: llc -mtriple=thumbv7m %s -o - | FileCheck %s
+; RUN: llc -mtriple=thumbv8m.main %s -o - | FileCheck %s
+; RUN: llc -mtriple=thumbv7 %s -o - | FileCheck %s
+; RUN: llc -mtriple=armv8 %s -o - | FileCheck %s
 
 ; Test to check that ARMCodeGenPrepare doesn't optimised away sign extends.
 ; CHECK-LABEL: test_signed_load:

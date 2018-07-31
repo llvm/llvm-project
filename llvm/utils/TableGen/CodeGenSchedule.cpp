@@ -21,6 +21,7 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/raw_ostream.h"
@@ -32,6 +33,16 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "subtarget-emitter"
+
+#ifdef EXPENSIVE_CHECKS
+// FIXME: TableGen is failed iff EXPENSIVE_CHECKS defined
+static constexpr bool OptCheckSchedClasses = true;
+#else
+// FIXME: the default value should be false
+static cl::opt<bool> OptCheckSchedClasses(
+    "check-sched-class-table", cl::init(true), cl::Hidden,
+    cl::desc("Check sched class table on different types of inconsistencies"));
+#endif
 
 #ifndef NDEBUG
 static void dumpIdxVec(ArrayRef<unsigned> V) {
@@ -223,6 +234,7 @@ CodeGenSchedModels::CodeGenSchedModels(RecordKeeper &RK,
   collectOptionalProcessorInfo();
 
   checkCompleteness();
+  checkSchedClasses();
 }
 
 void CodeGenSchedModels::collectRetireControlUnits() {
@@ -696,6 +708,86 @@ void CodeGenSchedModels::collectSchedClasses() {
         }
       }
     });
+  }
+}
+
+void CodeGenSchedModels::checkSchedClasses() {
+  if (!OptCheckSchedClasses)
+    return;
+
+  std::string str;
+  raw_string_ostream OS(str);
+
+  // Check each instruction for each model to see if its overridden too often.
+  // Iff YES it's a candidate for more fine-grained Sched Class.
+  for (const CodeGenInstruction *Inst : Target.getInstructionsByEnumValue()) {
+    StringRef InstName = Inst->TheDef->getName();
+    unsigned SCIdx = getSchedClassIdx(*Inst);
+    if (!SCIdx)
+      continue;
+    CodeGenSchedClass &SC = getSchedClass(SCIdx);
+    if (SC.Writes.empty())
+      continue;
+    const RecVec &RWDefs = SchedClasses[SCIdx].InstRWs;
+    if (RWDefs.empty())
+      continue;
+    // FIXME: what should be threshold here?
+    if (RWDefs.size() > (ProcModels.size() / 2)) {
+      // FIXME: this dump hangs the execution !!!
+      // SC.dump(&Target.getSchedModels());
+      OS << "SchedRW machine model for inst '" << InstName << "' (";
+      for (auto I : SC.Writes)
+        OS << " " << SchedWrites[I].Name;
+      for (auto I : SC.Reads)
+        OS << " " << SchedReads[I].Name;
+      OS << " ) should be updated /improvedbecause it's overriden " << RWDefs.size()
+         << " times out of " << ProcModels.size() << " models:\n\t";
+      for (Record *RWDef : RWDefs)
+        OS << " " << getProcModel(RWDef->getValueAsDef("SchedModel")).ModelName;
+      PrintWarning(OS.str());
+      str.clear();
+    }
+
+    // TODO: here we should check latency/uop in SC vs. RWDef. Maybe we
+    // should do it iff RWDefs.size() == 1 only.
+    // Iff latency/uop are the same then warn about unnecessary redefine.
+    if (RWDefs.size()) {
+      for (Record *RWDef : RWDefs) {
+        IdxVec Writes;
+        IdxVec Reads;
+        findRWs(RWDef->getValueAsListOfDefs("OperandReadWrites"), Writes,
+                Reads);
+
+        if ((Writes.size() == SC.Writes.size()) &&
+            (Reads.size() == SC.Reads.size())) {
+          // TODO: do we need sorting Write & Reads?
+          for (unsigned I = 0, S = SC.Writes.size(); I < S; I++) {
+            auto SCSchedW = SchedWrites[SC.Writes[I]];
+            auto SchedW = SchedWrites[Writes[I]];
+            if (!SCSchedW.TheDef || !SchedW.TheDef)
+              continue;
+            const RecordVal *R = SCSchedW.TheDef->getValue("Latency");
+            // FIXME: We should deal with default Latency here
+            if (!R || !R->getValue())
+              continue;
+            auto SCLat = SCSchedW.TheDef->getValueAsInt("Latency");
+            auto SCuOp = SCSchedW.TheDef->getValueAsInt("NumMicroOps");
+            auto Lat = SchedW.TheDef->getValueAsInt("Latency");
+            auto uOp = SchedW.TheDef->getValueAsInt("NumMicroOps");
+            if ((SCLat == Lat) && (SCuOp == uOp))
+              OS << "Overridden verion of inst '" << InstName
+                 << "' has the same latency & uOp values as the original one "
+                    "for model '"
+                 << getProcModel(RWDef->getValueAsDef("SchedModel")).ModelName
+                 << "'\n";
+          }
+          if (!str.empty()) {
+            PrintWarning(OS.str());
+            str.clear();
+          }
+        }
+      }
+    }
   }
 }
 
