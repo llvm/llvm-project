@@ -73,13 +73,8 @@ class SpinMutex : public StaticSpinMutex {
 
 class BlockingMutex {
  public:
-#if SANITIZER_WINDOWS
-  // Windows does not currently support LinkerInitialized
-  explicit BlockingMutex(LinkerInitialized);
-#else
   explicit constexpr BlockingMutex(LinkerInitialized)
-      : opaque_storage_ {0, }, owner_(0) {}
-#endif
+      : opaque_storage_ {0, }, owner_ {0} {}
   BlockingMutex();
   void Lock();
   void Unlock();
