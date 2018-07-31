@@ -549,3 +549,180 @@ statistics are displayed by using the command option ``-all-stats`` or
 
 In this example, we can conclude that the IPC is mostly limited by data
 dependencies, and not by resource pressure.
+
+Instruction Flow
+^^^^^^^^^^^^^^^^
+This section describes the instruction flow through MCA's default out-of-order
+pipeline, as well as the functional units involved in the process.
+
+The default pipeline implements the following sequence of stages used to
+process instructions.
+
+* Dispatch (Instruction is dispatched to the schedulers).
+* Issue (Instruction is issued to the processor pipelines).
+* Write Back (Instruction is executed, and results are written back).
+* Retire (Instruction is retired; writes are architecturally committed).
+
+The default pipeline only models the out-of-order portion of a processor.
+Therefore, the instruction fetch and decode stages are not modeled. Performance
+bottlenecks in the frontend are not diagnosed.  MCA assumes that instructions
+have all been decoded and placed into a queue.  Also, MCA does not model branch
+prediction.
+
+Instruction Dispatch
+""""""""""""""""""""
+During the dispatch stage, instructions are picked in program order from a
+queue of already decoded instructions, and dispatched in groups to the
+simulated hardware schedulers.
+
+The size of a dispatch group depends on the availability of the simulated
+hardware resources.  The processor dispatch width defaults to the value
+of the ``IssueWidth`` in LLVM's scheduling model.
+
+An instruction can be dispatched if:
+
+* The size of the dispatch group is smaller than processor's dispatch width.
+* There are enough entries in the reorder buffer.
+* There are enough physical registers to do register renaming.
+* The schedulers are not full.
+
+Scheduling models can optionally specify which register files are available on
+the processor. MCA uses that information to initialize register file
+descriptors.  Users can limit the number of physical registers that are
+globally available for register renaming by using the command option
+``-register-file-size``.  A value of zero for this option means *unbounded*.
+By knowing how many registers are available for renaming, MCA can predict
+dispatch stalls caused by the lack of registers.
+
+The number of reorder buffer entries consumed by an instruction depends on the
+number of micro-opcodes specified by the target scheduling model.  MCA's
+reorder buffer's purpose is to track the progress of instructions that are
+"in-flight," and to retire instructions in program order.  The number of
+entries in the reorder buffer defaults to the `MicroOpBufferSize` provided by
+the target scheduling model.
+
+Instructions that are dispatched to the schedulers consume scheduler buffer
+entries.  MCA queries the scheduling model to determine the set of
+buffered resources consumed by an instruction.  Buffered resources are treated
+like scheduler resources.
+
+Instruction Issue
+"""""""""""""""""
+Each processor scheduler implements a buffer of instructions.  An instruction
+has to wait in the scheduler's buffer until input register operands become
+available.  Only at that point, does the instruction becomes eligible for
+execution and may be issued (potentially out-of-order) for execution.
+Instruction latencies are computed by MCA with the help of the scheduling
+model.
+
+MCA's scheduler is designed to simulate multiple processor schedulers.  The
+scheduler is responsible for tracking data dependencies, and dynamically
+selecting which processor resources are consumed by instructions.
+
+The scheduler delegates the management of processor resource units and resource
+groups to a resource manager.  The resource manager is responsible for
+selecting resource units that are consumed by instructions.  For example, if an
+instruction consumes 1cy of a resource group, the resource manager selects one
+of the available units from the group; by default, the resource manager uses a
+round-robin selector to guarantee that resource usage is uniformly distributed
+between all units of a group.
+
+MCA's scheduler implements three instruction queues:
+
+* WaitQueue: a queue of instructions whose operands are not ready.
+* ReadyQueue: a queue of instructions ready to execute.
+* IssuedQueue: a queue of instructions executing.
+
+Depending on the operand availability, instructions that are dispatched to the
+scheduler are either placed into the WaitQueue or into the ReadyQueue.
+
+Every cycle, the scheduler checks if instructions can be moved from the
+WaitQueue to the ReadyQueue, and if instructions from the ReadyQueue can be
+issued.  The algorithm prioritizes older instructions over younger
+instructions.
+
+Write-Back and Retire Stage
+"""""""""""""""""""""""""""
+Issued instructions are moved from the ReadyQueue to the IssuedQueue.  There,
+instructions wait until they reach the write-back stage.  At that point, they
+get removed from the queue and the retire control unit is notified.
+
+When instructions are executed, the retire control unit flags the
+instruction as "ready to retire."
+
+Instructions are retired in program order.  The register file is notified of
+the retirement so that it can free the temporary registers that were allocated
+for the instruction during the register renaming stage.
+
+Load/Store Unit and Memory Consistency Model
+""""""""""""""""""""""""""""""""""""""""""""
+To simulate an out-of-order execution of memory operations, MCA utilizes a
+simulated load/store unit (LSUnit) to simulate the speculative execution of
+loads and stores.
+
+Each load (or store) consumes an entry in the load (or store) queue.  The
+number of slots in the load/store queues is unknown by MCA, since there is no
+mention of it in the scheduling model.  In practice, users can specify flags
+``-lqueue`` and ``-squeue`` to limit the number of entries in the load and
+store queues respectively.  The queues are unbounded by default.
+
+The LSUnit implements a relaxed consistency model for memory loads and stores.
+The rules are:
+
+1. A younger load is allowed to pass an older load only if there are no
+   intervening stores or barriers between the two loads.
+2. A younger load is allowed to pass an older store provided that the load does
+   not alias with the store.
+3. A younger store is not allowed to pass an older store.
+4. A younger store is not allowed to pass an older load.
+
+By default, the LSUnit optimistically assumes that loads do not alias
+(`-noalias=true`) store operations.  Under this assumption, younger loads are
+always allowed to pass older stores.  Essentially, the LSUnit does not attempt
+to run any alias analysis to predict when loads and stores do not alias with
+each other.
+
+Note that, in the case of write-combining memory, rule 3 could be relaxed to
+allow reordering of non-aliasing store operations.  That being said, at the
+moment, there is no way to further relax the memory model (``-noalias`` is the
+only option).  Essentially, there is no option to specify a different memory
+type (e.g., write-back, write-combining, write-through; etc.) and consequently
+to weaken, or strengthen, the memory model.
+
+Other limitations are:
+
+* The LSUnit does not know when store-to-load forwarding may occur.
+* The LSUnit does not know anything about cache hierarchy and memory types.
+* The LSUnit does not know how to identify serializing operations and memory
+  fences.
+
+The LSUnit does not attempt to predict if a load or store hits or misses the L1
+cache.  It only knows if an instruction "MayLoad" and/or "MayStore."  For
+loads, the scheduling model provides an "optimistic" load-to-use latency (which
+usually matches the load-to-use latency for when there is a hit in the L1D).
+
+MCA does not know about serializing operations or memory-barrier like
+instructions.  The LSUnit conservatively assumes that an instruction which has
+both "MayLoad" and unmodeled side effects behaves like a "soft" load-barrier.
+That means, it serializes loads without forcing a flush of the load queue.
+Similarly, instructions that "MayStore" and have unmodeled side effects are
+treated like store barriers.  A full memory barrier is a "MayLoad" and
+"MayStore" instruction with unmodeled side effects.  This is inaccurate, but it
+is the best that we can do at the moment with the current information available
+in LLVM.
+
+A load/store barrier consumes one entry of the load/store queue.  A load/store
+barrier enforces ordering of loads/stores.  A younger load cannot pass a load
+barrier.  Also, a younger store cannot pass a store barrier.  A younger load
+has to wait for the memory/load barrier to execute.  A load/store barrier is
+"executed" when it becomes the oldest entry in the load/store queue(s). That
+also means, by construction, all of the older loads/stores have been executed.
+
+In conclusion, the full set of load/store consistency rules are:
+
+#. A store may not pass a previous store.
+#. A store may not pass a previous load (regardless of ``-noalias``).
+#. A store has to wait until an older store barrier is fully executed.
+#. A load may pass a previous load.
+#. A load may not pass a previous store unless ``-noalias`` is set.
+#. A load has to wait until an older load barrier is fully executed.

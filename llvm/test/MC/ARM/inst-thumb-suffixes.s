@@ -8,6 +8,6 @@
 	.global suffixes_required_in_thumb
 	.type suffixes_required_in_thumb,%function
 suffixes_required_in_thumb:
-	.inst 0x0000
+	.inst 0xff00
 @ CHECK-ERROR: cannot determine Thumb instruction size, use inst.n/inst.w instead
 

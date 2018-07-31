@@ -175,41 +175,73 @@ define <2 x i8> @shl_by_sext_bool_vec(<2 x i1> %x, <2 x i8> %y) {
   ret <2 x i8> %r
 }
 
-define i32 @shl_or_shr(i32 %a, i32 %b) {
+define i64 @shl_or_shr(i32 %a, i32 %b) {
 ; CHECK-LABEL: @shl_or_shr(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[A:%.*]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[B:%.*]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP1]], 32
 ; CHECK-NEXT:    [[TMP4:%.*]] = or i64 [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP4]], 32
-; CHECK-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP5]] to i32
-; CHECK-NEXT:    ret i32 [[TMP6]]
+; CHECK-NEXT:    ret i64 [[TMP5]]
 ;
   %tmp1 = zext i32 %a to i64
   %tmp2 = zext i32 %b to i64
   %tmp3 = shl nuw i64 %tmp1, 32
   %tmp4 = or i64 %tmp2, %tmp3
   %tmp5 = lshr i64 %tmp4, 32
-  %tmp6 = trunc i64 %tmp5 to i32
-  ret i32 %tmp6
+  ret i64 %tmp5
 }
 
-define i32 @shl_or_shr2(i32 %a, i32 %b) {
 ; Since shift count of shl is smaller than the size of %b, OR cannot be eliminated.
+define i64 @shl_or_shr2(i32 %a, i32 %b) {
 ; CHECK-LABEL: @shl_or_shr2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[A:%.*]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[B:%.*]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP1]], 31
 ; CHECK-NEXT:    [[TMP4:%.*]] = or i64 [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP4]], 31
-; CHECK-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP5]] to i32
-; CHECK-NEXT:    ret i32 [[TMP6]]
+; CHECK-NEXT:    ret i64 [[TMP5]]
 ;
   %tmp1 = zext i32 %a to i64
   %tmp2 = zext i32 %b to i64
   %tmp3 = shl nuw i64 %tmp1, 31
   %tmp4 = or i64 %tmp2, %tmp3
   %tmp5 = lshr i64 %tmp4, 31
-  %tmp6 = trunc i64 %tmp5 to i32
-  ret i32 %tmp6
+  ret i64 %tmp5
+}
+
+; Unit test for vector integer
+define <2 x i64> @shl_or_shr1v(<2 x i32> %a, <2 x i32> %b) {
+; CHECK-LABEL: @shl_or_shr1v(
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <2 x i32> [[A:%.*]] to <2 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = zext <2 x i32> [[B:%.*]] to <2 x i64>
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw <2 x i64> [[TMP1]], <i64 32, i64 32>
+; CHECK-NEXT:    [[TMP4:%.*]] = or <2 x i64> [[TMP3]], [[TMP2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = lshr <2 x i64> [[TMP4]], <i64 32, i64 32>
+; CHECK-NEXT:    ret <2 x i64> [[TMP5]]
+;
+  %tmp1 = zext <2 x i32> %a to <2 x i64>
+  %tmp2 = zext <2 x i32> %b to <2 x i64>
+  %tmp3 = shl nuw <2 x i64> %tmp1, <i64 32, i64 32>
+  %tmp4 = or <2 x i64> %tmp3, %tmp2
+  %tmp5 = lshr <2 x i64> %tmp4, <i64 32, i64 32>
+  ret <2 x i64> %tmp5
+}
+
+; Negative unit test for vector integer
+define <2 x i64> @shl_or_shr2v(<2 x i32> %a, <2 x i32> %b) {
+; CHECK-LABEL: @shl_or_shr2v(
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <2 x i32> [[A:%.*]] to <2 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = zext <2 x i32> [[B:%.*]] to <2 x i64>
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw <2 x i64> [[TMP1]], <i64 31, i64 31>
+; CHECK-NEXT:    [[TMP4:%.*]] = or <2 x i64> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = lshr <2 x i64> [[TMP4]], <i64 31, i64 31>
+; CHECK-NEXT:    ret <2 x i64> [[TMP5]]
+;
+  %tmp1 = zext <2 x i32> %a to <2 x i64>
+  %tmp2 = zext <2 x i32> %b to <2 x i64>
+  %tmp3 = shl nuw <2 x i64> %tmp1, <i64 31, i64 31>
+  %tmp4 = or <2 x i64> %tmp2, %tmp3
+  %tmp5 = lshr <2 x i64> %tmp4, <i64 31, i64 31>
+  ret <2 x i64> %tmp5
 }
