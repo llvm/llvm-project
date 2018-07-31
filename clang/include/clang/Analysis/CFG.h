@@ -15,9 +15,10 @@
 #ifndef LLVM_CLANG_ANALYSIS_CFG_H
 #define LLVM_CLANG_ANALYSIS_CFG_H
 
-#include "clang/AST/ExprCXX.h"
 #include "clang/Analysis/Support/BumpVector.h"
 #include "clang/Analysis/ConstructionContext.h"
+#include "clang/AST/ExprCXX.h"
+#include "clang/AST/ExprObjC.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/GraphTraits.h"
@@ -179,15 +180,18 @@ class CFGCXXRecordTypedCall : public CFGStmt {
 public:
   /// Returns true when call expression \p CE needs to be represented
   /// by CFGCXXRecordTypedCall, as opposed to a regular CFGStmt.
-  static bool isCXXRecordTypedCall(CallExpr *CE, const ASTContext &ACtx) {
-    return CE->getCallReturnType(ACtx).getCanonicalType()->getAsCXXRecordDecl();
+  static bool isCXXRecordTypedCall(Expr *E) {
+    assert(isa<CallExpr>(E) || isa<ObjCMessageExpr>(E));
+    // There is no such thing as reference-type expression. If the function
+    // returns a reference, it'll return the respective lvalue or xvalue
+    // instead, and we're only interested in objects.
+    return !E->isGLValue() &&
+           E->getType().getCanonicalType()->getAsCXXRecordDecl();
   }
 
-  explicit CFGCXXRecordTypedCall(CallExpr *CE, const ConstructionContext *C)
-      : CFGStmt(CE, CXXRecordTypedCall) {
-    // FIXME: This is not protected against squeezing a non-record-typed-call
-    // into the constructor. An assertion would require passing an ASTContext
-    // which would mean paying for something we don't use.
+  explicit CFGCXXRecordTypedCall(Expr *E, const ConstructionContext *C)
+      : CFGStmt(E, CXXRecordTypedCall) {
+    assert(isCXXRecordTypedCall(E));
     assert(C && (isa<TemporaryObjectConstructionContext>(C) ||
                  // These are possible in C++17 due to mandatory copy elision.
                  isa<ReturnedValueConstructionContext>(C) ||
@@ -874,10 +878,10 @@ public:
     Elements.push_back(CFGConstructor(CE, CC), C);
   }
 
-  void appendCXXRecordTypedCall(CallExpr *CE,
+  void appendCXXRecordTypedCall(Expr *E,
                                 const ConstructionContext *CC,
                                 BumpVectorContext &C) {
-    Elements.push_back(CFGCXXRecordTypedCall(CE, CC), C);
+    Elements.push_back(CFGCXXRecordTypedCall(E, CC), C);
   }
 
   void appendInitializer(CXXCtorInitializer *initializer,
