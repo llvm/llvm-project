@@ -60,6 +60,13 @@ Debug info
   link.exe.  However, LLD does not support /DEBUG:FASTLINK.
 
 
+Downloading LLD
+===============
+
+The Windows version of LLD is included in the `pre-built binaries of LLVM's
+releases <https://releases.llvm.org/download.html>`_ and in the `LLVM Snapshot
+Builds <https://llvm.org/builds/>`_.
+
 Building LLD
 ============
 

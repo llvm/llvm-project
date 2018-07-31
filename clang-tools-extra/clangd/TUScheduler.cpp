@@ -391,6 +391,10 @@ void ASTWorker::update(
       }
     }
 
+    // We only need to build the AST if diagnostics were requested.
+    if (WantDiags == WantDiagnostics::No)
+      return;
+
     // Get the AST for diagnostics.
     llvm::Optional<std::unique_ptr<ParsedAST>> AST = IdleASTs.take(this);
     if (!AST) {
@@ -398,12 +402,11 @@ void ASTWorker::update(
           buildAST(FileName, std::move(Invocation), Inputs, NewPreamble, PCHs);
       AST = NewAST ? llvm::make_unique<ParsedAST>(std::move(*NewAST)) : nullptr;
     }
-
     // We want to report the diagnostics even if this update was cancelled.
     // It seems more useful than making the clients wait indefinitely if they
     // spam us with updates.
     // Note *AST can be still be null if buildAST fails.
-    if (WantDiags != WantDiagnostics::No && *AST) {
+    if (*AST) {
       OnUpdated((*AST)->getDiagnostics());
       DiagsWereReported = true;
     }
