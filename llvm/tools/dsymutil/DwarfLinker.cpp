@@ -321,6 +321,7 @@ void DwarfLinker::startDebugObject(LinkContext &Context) {
 
 void DwarfLinker::endDebugObject(LinkContext &Context) {
   Context.Clear();
+
   for (auto I = DIEBlocks.begin(), E = DIEBlocks.end(); I != E; ++I)
     (*I)->~DIEBlock();
   for (auto I = DIELocs.begin(), E = DIELocs.end(); I != E; ++I)
@@ -1746,6 +1747,20 @@ void DwarfLinker::patchLineTableForUnit(CompileUnit &Unit,
 }
 
 void DwarfLinker::emitAcceleratorEntriesForUnit(CompileUnit &Unit) {
+  switch (Options.TheAccelTableKind) {
+  case AccelTableKind::Apple:
+    emitAppleAcceleratorEntriesForUnit(Unit);
+    break;
+  case AccelTableKind::Dwarf:
+    emitDwarfAcceleratorEntriesForUnit(Unit);
+    break;
+  case AccelTableKind::Default:
+    llvm_unreachable("The default must be updated to a concrete value.");
+    break;
+  }
+}
+
+void DwarfLinker::emitAppleAcceleratorEntriesForUnit(CompileUnit &Unit) {
   // Add namespaces.
   for (const auto &Namespace : Unit.getNamespaces())
     AppleNamespaces.addName(Namespace.Name,
@@ -1772,6 +1787,18 @@ void DwarfLinker::emitAcceleratorEntriesForUnit(CompileUnit &Unit) {
   /// Add ObjC names.
   for (const auto &ObjC : Unit.getObjC())
     AppleObjc.addName(ObjC.Name, ObjC.Die->getOffset() + Unit.getStartOffset());
+}
+
+void DwarfLinker::emitDwarfAcceleratorEntriesForUnit(CompileUnit &Unit) {
+  for (const auto &Namespace : Unit.getNamespaces())
+    DebugNames.addName(Namespace.Name, Namespace.Die->getOffset(),
+                       Namespace.Die->getTag(), Unit.getUniqueID());
+  for (const auto &Pubname : Unit.getPubnames())
+    DebugNames.addName(Pubname.Name, Pubname.Die->getOffset(),
+                       Pubname.Die->getTag(), Unit.getUniqueID());
+  for (const auto &Pubtype : Unit.getPubtypes())
+    DebugNames.addName(Pubtype.Name, Pubtype.Die->getOffset(),
+                       Pubtype.Die->getTag(), Unit.getUniqueID());
 }
 
 /// Read the frame info stored in the object, and emit the
@@ -2063,9 +2090,9 @@ Error DwarfLinker::loadClangModule(StringRef Filename, StringRef ModulePath,
   // Setup access to the debug info.
   auto DwarfContext = DWARFContext::create(*ErrOrObj);
   RelocationManager RelocMgr(*this);
-  for (const auto &CU : DwarfContext->compile_units()) {
-    maybeUpdateMaxDwarfVersion(CU->getVersion());
 
+  for (const auto &CU : DwarfContext->compile_units()) {
+    updateDwarfVersion(CU->getVersion());
     // Recursively get all modules imported by this one.
     auto CUDie = CU->getUnitDIE(false);
     if (!CUDie)
@@ -2172,6 +2199,26 @@ void DwarfLinker::DIECloner::cloneAllCompileUnits(
   }
 }
 
+void DwarfLinker::updateAccelKind(DWARFContext &Dwarf) {
+  if (Options.TheAccelTableKind != AccelTableKind::Default)
+    return;
+
+  auto &DwarfObj = Dwarf.getDWARFObj();
+
+  if (!AtLeastOneDwarfAccelTable &&
+      (!DwarfObj.getAppleNamesSection().Data.empty() ||
+       !DwarfObj.getAppleTypesSection().Data.empty() ||
+       !DwarfObj.getAppleNamespacesSection().Data.empty() ||
+       !DwarfObj.getAppleObjCSection().Data.empty())) {
+    AtLeastOneAppleAccelTable = true;
+  }
+
+  if (!AtLeastOneDwarfAccelTable &&
+      !DwarfObj.getDebugNamesSection().Data.empty()) {
+    AtLeastOneDwarfAccelTable = true;
+  }
+}
+
 bool DwarfLinker::emitPaperTrailWarnings(const DebugMapObject &DMO,
                                          const DebugMap &Map,
                                          OffsetsStringPool &StringPool) {
@@ -2245,8 +2292,12 @@ bool DwarfLinker::link(const DebugMap &Map) {
   unsigned NumObjects = Map.getNumberOfObjects();
   std::vector<LinkContext> ObjectContexts;
   ObjectContexts.reserve(NumObjects);
-  for (const auto &Obj : Map.objects())
+  for (const auto &Obj : Map.objects()) {
     ObjectContexts.emplace_back(Map, *this, *Obj.get());
+    LinkContext &LC = ObjectContexts.back();
+    if (LC.ObjectFile)
+      updateAccelKind(*LC.DwarfContext);
+  }
 
   // This Dwarf string pool which is only used for uniquing. This one should
   // never be used for offsets as its not thread-safe or predictable.
@@ -2259,6 +2310,19 @@ bool DwarfLinker::link(const DebugMap &Map) {
 
   // ODR Contexts for the link.
   DeclContextTree ODRContexts;
+
+  // If we haven't decided on an accelerator table kind yet, we base ourselves
+  // on the DWARF we have seen so far. At this point we haven't pulled in debug
+  // information from modules yet, so it is technically possible that they
+  // would affect the decision. However, as they're built with the same
+  // compiler and flags, it is safe to assume that they will follow the
+  // decision made here.
+  if (Options.TheAccelTableKind == AccelTableKind::Default) {
+    if (AtLeastOneDwarfAccelTable && !AtLeastOneAppleAccelTable)
+      Options.TheAccelTableKind = AccelTableKind::Dwarf;
+    else
+      Options.TheAccelTableKind = AccelTableKind::Apple;
+  }
 
   for (LinkContext &LinkContext : ObjectContexts) {
     if (Options.Verbose)
@@ -2325,7 +2389,9 @@ bool DwarfLinker::link(const DebugMap &Map) {
     // In a first phase, just read in the debug info and load all clang modules.
     LinkContext.CompileUnits.reserve(
         LinkContext.DwarfContext->getNumCompileUnits());
+
     for (const auto &CU : LinkContext.DwarfContext->compile_units()) {
+      updateDwarfVersion(CU->getVersion());
       auto CUDie = CU->getUnitDIE(false);
       if (Options.Verbose) {
         outs() << "Input compilation unit:";
@@ -2341,13 +2407,11 @@ bool DwarfLinker::link(const DebugMap &Map) {
                                    UniquingStringPool, ODRContexts, UnitID)) {
         LinkContext.CompileUnits.push_back(llvm::make_unique<CompileUnit>(
             *CU, UnitID++, !Options.NoODR && !Options.Update, ""));
-        maybeUpdateMaxDwarfVersion(CU->getVersion());
       }
     }
   }
 
-  // If we haven't seen any CUs, pick an arbitrary valid Dwarf version anyway,
-  // to be able to emit papertrail warnings.
+  // If we haven't seen any CUs, pick an arbitrary valid Dwarf version anyway.
   if (MaxDwarfVersion == 0)
     MaxDwarfVersion = 3;
 
@@ -2444,10 +2508,20 @@ bool DwarfLinker::link(const DebugMap &Map) {
     if (!Options.NoOutput) {
       Streamer->emitAbbrevs(Abbreviations, MaxDwarfVersion);
       Streamer->emitStrings(OffsetsStringPool);
-      Streamer->emitAppleNames(AppleNames);
-      Streamer->emitAppleNamespaces(AppleNamespaces);
-      Streamer->emitAppleTypes(AppleTypes);
-      Streamer->emitAppleObjc(AppleObjc);
+      switch (Options.TheAccelTableKind) {
+      case AccelTableKind::Apple:
+        Streamer->emitAppleNames(AppleNames);
+        Streamer->emitAppleNamespaces(AppleNamespaces);
+        Streamer->emitAppleTypes(AppleTypes);
+        Streamer->emitAppleObjc(AppleObjc);
+        break;
+      case AccelTableKind::Dwarf:
+        Streamer->emitDebugNames(DebugNames);
+        break;
+      case AccelTableKind::Default:
+        llvm_unreachable("Default should have already been resolved.");
+        break;
+      }
     }
   };
 
@@ -2465,7 +2539,7 @@ bool DwarfLinker::link(const DebugMap &Map) {
   }
 
   return Options.NoOutput ? true : Streamer->finish(Map);
-}
+} // namespace dsymutil
 
 bool linkDwarf(raw_fd_ostream &OutFile, BinaryHolder &BinHolder,
                const DebugMap &DM, const LinkOptions &Options) {
