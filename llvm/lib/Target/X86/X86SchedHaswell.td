@@ -124,8 +124,8 @@ defm : HWWriteResPair<WriteADC,    [HWPort06, HWPort0156], 2, [1,1], 2>;
 defm : HWWriteResPair<WriteIMul,   [HWPort1],   3>;
 defm : HWWriteResPair<WriteIMul64, [HWPort1],   3>;
 
-defm : HWWriteResPair<WriteBSWAP32,[HWPort15],   1>;
-defm : HWWriteResPair<WriteBSWAP64,[HWPort06, HWPort15], 2, [1,1], 2>;
+defm : X86WriteRes<WriteBSWAP32,   [HWPort15], 1, [1], 1>;
+defm : X86WriteRes<WriteBSWAP64,   [HWPort06, HWPort15], 2, [1,1], 2>;
 
 def  : WriteRes<WriteIMulH, []> { let Latency = 3; }
 

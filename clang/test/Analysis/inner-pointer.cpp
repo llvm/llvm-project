@@ -1,4 +1,4 @@
-//RUN: %clang_analyze_cc1 -analyzer-checker=alpha.cplusplus.InnerPointer %s -analyzer-output=text -verify
+//RUN: %clang_analyze_cc1 -analyzer-checker=cplusplus.InnerPointer %s -analyzer-output=text -verify
 
 namespace std {
 

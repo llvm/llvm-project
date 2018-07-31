@@ -436,7 +436,7 @@ template <class ELFT> void ICF<ELFT>::run() {
   // Initially, we use hash values to partition sections.
   parallelForEach(Sections, [&](InputSection *S) {
     // Set MSB to 1 to avoid collisions with non-hash IDs.
-    S->Class[0] = xxHash64(toStringRef(S->Data)) | (1U << 31);
+    S->Class[0] = xxHash64(S->Data) | (1U << 31);
   });
 
   // From now on, sections in Sections vector are ordered so that sections

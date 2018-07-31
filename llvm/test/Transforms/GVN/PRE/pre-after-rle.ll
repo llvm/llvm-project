@@ -63,10 +63,12 @@ preheader:
   %cmp = icmp slt i32 1, %h
   br i1 %cmp, label %body, label %exit
 
-; Alias analysis currently can't figure out %width doesn't alias %s, so just
-; check that the redundant load has been removed.
+; CHECK-LABEL: preheader.body_crit_edge:
+; CHECK: load i32, i32* %width, align 8
+
 ; CHECK-LABEL: body:
 ; CHECK-NOT: load i32*, i32** %start, align 8
+; CHECK-NOT: load i32, i32* %width, align 8
 body:
   %j = phi i32 [ 0, %preheader ], [ %j.next, %body ]
   %s = load i32*, i32** %start, align 8

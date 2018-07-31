@@ -119,8 +119,8 @@ defm : BWWriteResPair<WriteIDiv16, [BWPort0, BWDivider], 25, [1, 10]>;
 defm : BWWriteResPair<WriteIDiv32, [BWPort0, BWDivider], 25, [1, 10]>;
 defm : BWWriteResPair<WriteIDiv64, [BWPort0, BWDivider], 25, [1, 10]>;
 
-defm : BWWriteResPair<WriteBSWAP32,[BWPort15], 1>; //
-defm : BWWriteResPair<WriteBSWAP64,[BWPort06, BWPort15], 2, [1, 1], 2>; //
+defm : X86WriteRes<WriteBSWAP32,   [BWPort15], 1, [1], 1>;
+defm : X86WriteRes<WriteBSWAP64,   [BWPort06, BWPort15], 2, [1, 1], 2>;
 
 defm : BWWriteResPair<WriteCRC32, [BWPort1],   3>;
 def : WriteRes<WriteIMulH, []> { let Latency = 3; } // Integer multiplication, high part.
