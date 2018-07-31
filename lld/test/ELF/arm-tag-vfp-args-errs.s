@@ -3,12 +3,12 @@
 // RUN: llvm-mc -filetype=obj -triple=armv7a-none-linux-gnueabi %S/Inputs/arm-vfp-arg-vfp.s -o %tvfp.o
 // RUN: llvm-mc -filetype=obj -triple=armv7a-none-linux-gnueabi %S/Inputs/arm-vfp-arg-toolchain.s -o %ttoolchain.o
 // RUN: llvm-mc -filetype=obj -triple=armv7a-none-linux-gnueabi %s -o %t.o
-// RUN: not ld.lld %t.o %tbase.o %tvfp.o 2>&1 | FileCheck %s
-// RUN: not ld.lld %t.o %tbase.o %ttoolchain.o 2>&1 | FileCheck %s
-// RUN: not ld.lld %t.o %tvfp.o %tbase.o 2>&1 | FileCheck %s
-// RUN: not ld.lld %t.o %tvfp.o %ttoolchain.o 2>&1 | FileCheck %s
-// RUN: not ld.lld %t.o %ttoolchain.o %tbase.o 2>&1 | FileCheck %s
-// RUN: not ld.lld %t.o %ttoolchain.o %tvfp.o 2>&1 | FileCheck %s
+// RUN: not ld.lld %t.o %tbase.o %tvfp.o -o%t 2>&1 | FileCheck %s
+// RUN: not ld.lld %t.o %tbase.o %ttoolchain.o -o%t 2>&1 | FileCheck %s
+// RUN: not ld.lld %t.o %tvfp.o %tbase.o -o%t 2>&1 | FileCheck %s
+// RUN: not ld.lld %t.o %tvfp.o %ttoolchain.o -o%t 2>&1 | FileCheck %s
+// RUN: not ld.lld %t.o %ttoolchain.o %tbase.o -o%t 2>&1 | FileCheck %s
+// RUN: not ld.lld %t.o %ttoolchain.o %tvfp.o -o%t 2>&1 | FileCheck %s
 
 // CHECK: incompatible Tag_ABI_VFP_args
 	.arch armv7-a
