@@ -532,8 +532,6 @@ public:
   //------------------------------------------------------------------
   size_t PutULEB128(uint64_t uval);
 
-  static void UnitTest(Stream *s);
-
 protected:
   //------------------------------------------------------------------
   // Member variables
