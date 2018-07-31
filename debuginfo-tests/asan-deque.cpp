@@ -20,8 +20,8 @@ static void __attribute__((noinline, optnone)) escape(log_t &log) {
 
 int main() {
   log_t log;
-  log.emplace_back(1234);
-  log.emplace_back(56789);
+  log.push_back(1234);
+  log.push_back(56789);
   escape(log);
   // DEBUGGER: break 25
   while (!log.empty()) {
