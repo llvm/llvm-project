@@ -62,16 +62,16 @@ void DWARFUnitVector::addUnitsImpl(
   DWARFDataExtractor Data(Obj, Section, LE, 0);
   // Lazy initialization of Parser, now that we have all section info.
   if (!Parser) {
-    const DWARFUnitIndex *Index = nullptr;
-    if (IsDWO)
-      Index = &getDWARFUnitIndex(Context, SectionKind);
     Parser = [=, &Context, &Obj, &Section, &SOS, &LS](
-                 uint32_t Offset,
+                 uint32_t Offset, DWARFSectionKind SectionKind,
                  const DWARFSection *CurSection) -> std::unique_ptr<DWARFUnit> {
       const DWARFSection &InfoSection = CurSection ? *CurSection : Section;
       DWARFDataExtractor Data(Obj, InfoSection, LE, 0);
       if (!Data.isValidOffset(Offset))
         return nullptr;
+      const DWARFUnitIndex *Index = nullptr;
+      if (IsDWO)
+        Index = &getDWARFUnitIndex(Context, SectionKind);
       DWARFUnitHeader Header;
       if (!Header.extract(Context, Data, &Offset, SectionKind, Index))
         return nullptr;
@@ -89,14 +89,21 @@ void DWARFUnitVector::addUnitsImpl(
   }
   if (Lazy)
     return;
+  // Find a reasonable insertion point within the vector.  We skip over
+  // (a) units from a different section, (b) units from the same section
+  // but with lower offset-within-section.  This keeps units in order
+  // within a section, although not necessarily within the object file,
+  // even if we do lazy parsing.
   auto I = this->begin();
   uint32_t Offset = 0;
   while (Data.isValidOffset(Offset)) {
-    if (I != this->end() && (*I)->getOffset() == Offset) {
+    if (I != this->end() &&
+        (&(*I)->getInfoSection() != &Section || (*I)->getOffset() == Offset)) {
       ++I;
       continue;
     }
-    auto U = Parser(Offset, &Section);
+    auto U = Parser(Offset, SectionKind, &Section);
+    // If parsing failed, we're done with this section.
     if (!U)
       break;
     Offset = U->getNextUnitOffset();
@@ -134,7 +141,7 @@ DWARFUnitVector::getUnitForIndexEntry(const DWARFUnitIndex::Entry &E) {
   if (!Parser)
     return nullptr;
 
-  auto U = Parser(Offset, nullptr);
+  auto U = Parser(Offset, DW_SECT_INFO, nullptr);
   if (!U)
     U = nullptr;
 
