@@ -116,3 +116,19 @@ namespace MemberSpecializationLocation {
 #endif
   int k = A<int>::n;
 }
+
+// https://bugs.llvm.org/show_bug.cgi?id=34728
+namespace PR34728 {
+int test() {
+  // Verify with several TemplateParmDecl kinds, using PCH (incl. modules).
+  int z1 = func1(/*ignored*/2.718);
+  int z2 = func2(/*ignored*/3.142);
+  int tmp3 = 30;
+  Container<int> c = func3(tmp3);
+  int z3 = c.item;
+
+  // Return value is meaningless.  Just "use" all these values to avoid
+  // warning about unused vars / values.
+  return z1 + z2 + z3;
+}
+} // end namespace PR34728

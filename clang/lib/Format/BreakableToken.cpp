@@ -514,7 +514,7 @@ unsigned BreakableBlockComment::getContentStartColumn(unsigned LineIndex,
 const llvm::StringSet<>
     BreakableBlockComment::ContentIndentingJavadocAnnotations = {
         "@param", "@return",     "@returns", "@throws",  "@type", "@template",
-        "@see",   "@deprecated", "@define",  "@exports", "@mods",
+        "@see",   "@deprecated", "@define",  "@exports", "@mods", "@private",
 };
 
 unsigned BreakableBlockComment::getContentIndent(unsigned LineIndex) const {

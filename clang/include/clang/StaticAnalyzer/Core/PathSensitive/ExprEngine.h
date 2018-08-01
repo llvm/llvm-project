@@ -581,6 +581,14 @@ public:
     return svalBuilder.evalBinOp(ST, Op, LHS, RHS, T);
   }
 
+  /// By looking at a certain item that may be potentially part of an object's
+  /// ConstructionContext, retrieve such object's location. A particular
+  /// statement can be transparently passed as \p Item in most cases.
+  static Optional<SVal>
+  getObjectUnderConstruction(ProgramStateRef State,
+                             const ConstructionContextItem &Item,
+                             const LocationContext *LC);
+
 protected:
   /// evalBind - Handle the semantics of binding a value to a specific location.
   ///  This method is used by evalStore, VisitDeclStmt, and others.
@@ -761,24 +769,17 @@ private:
   /// This allows, among other things, to keep bindings to variable's fields
   /// made within the constructor alive until its declaration actually
   /// goes into scope.
-  static ProgramStateRef addObjectUnderConstruction(
-      ProgramStateRef State,
-      llvm::PointerUnion<const Stmt *, const CXXCtorInitializer *> P,
-      const LocationContext *LC, SVal V);
+  static ProgramStateRef
+  addObjectUnderConstruction(ProgramStateRef State,
+                             const ConstructionContextItem &Item,
+                             const LocationContext *LC, SVal V);
 
   /// Mark the object sa fully constructed, cleaning up the state trait
   /// that tracks objects under construction.
-  static ProgramStateRef finishObjectConstruction(
-      ProgramStateRef State,
-      llvm::PointerUnion<const Stmt *, const CXXCtorInitializer *> P,
-      const LocationContext *LC);
-
-  /// If the given statement corresponds to an object under construction,
-  /// being part of its construciton context, retrieve that object's location.
-  static Optional<SVal> getObjectUnderConstruction(
-      ProgramStateRef State,
-      llvm::PointerUnion<const Stmt *, const CXXCtorInitializer *> P,
-      const LocationContext *LC);
+  static ProgramStateRef
+  finishObjectConstruction(ProgramStateRef State,
+                           const ConstructionContextItem &Item,
+                           const LocationContext *LC);
 
   /// If the given expression corresponds to a temporary that was used for
   /// passing into an elidable copy/move constructor and that constructor

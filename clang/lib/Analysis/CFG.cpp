@@ -693,16 +693,14 @@ private:
                 std::is_same<CallLikeExpr, CXXConstructExpr>::value ||
                 std::is_same<CallLikeExpr, ObjCMessageExpr>::value>>
   void findConstructionContextsForArguments(CallLikeExpr *E) {
-    // A stub for the code that'll eventually be used for finding construction
-    // contexts for constructors of C++ object-type arguments passed into
-    // call-like expression E.
-    // FIXME: Once actually implemented, this construction context layer should
-    // include the index of the argument as well.
-    for (auto Arg : E->arguments())
+    for (unsigned i = 0, e = E->getNumArgs(); i != e; ++i) {
+      Expr *Arg = E->getArg(i);
       if (Arg->getType()->getAsCXXRecordDecl() && !Arg->isGLValue())
         findConstructionContexts(
-            ConstructionContextLayer::create(cfg->getBumpVectorContext(), E),
+            ConstructionContextLayer::create(cfg->getBumpVectorContext(),
+                                             ConstructionContextItem(E, i)),
             Arg);
+    }
   }
 
   // Unset the construction context after consuming it. This is done immediately
@@ -1289,8 +1287,8 @@ void CFGBuilder::findConstructionContexts(
   if (!Child)
     return;
 
-  auto withExtraLayer = [this, Layer](Stmt *S) {
-    return ConstructionContextLayer::create(cfg->getBumpVectorContext(), S,
+  auto withExtraLayer = [this, Layer](const ConstructionContextItem &Item) {
+    return ConstructionContextLayer::create(cfg->getBumpVectorContext(), Item,
                                             Layer);
   };
 
@@ -1351,18 +1349,17 @@ void CFGBuilder::findConstructionContexts(
     // it indicates the beginning of a temporary object construction context,
     // so it shouldn't be found in the middle. However, if it is the beginning
     // of an elidable copy or move construction context, we need to include it.
-    if (const auto *CE =
-            dyn_cast_or_null<CXXConstructExpr>(Layer->getTriggerStmt())) {
-      if (CE->isElidable()) {
-        auto *MTE = cast<MaterializeTemporaryExpr>(Child);
-        findConstructionContexts(withExtraLayer(MTE), MTE->GetTemporaryExpr());
-      }
+    if (Layer->getItem().getKind() ==
+        ConstructionContextItem::ElidableConstructorKind) {
+      auto *MTE = cast<MaterializeTemporaryExpr>(Child);
+      findConstructionContexts(withExtraLayer(MTE), MTE->GetTemporaryExpr());
     }
     break;
   }
   case Stmt::ConditionalOperatorClass: {
     auto *CO = cast<ConditionalOperator>(Child);
-    if (!dyn_cast_or_null<MaterializeTemporaryExpr>(Layer->getTriggerStmt())) {
+    if (Layer->getItem().getKind() !=
+        ConstructionContextItem::MaterializationKind) {
       // If the object returned by the conditional operator is not going to be a
       // temporary object that needs to be immediately materialized, then
       // it must be C++17 with its mandatory copy elision. Do not yet promise
@@ -3224,8 +3221,7 @@ CFGBlock *CFGBuilder::VisitForStmt(ForStmt *F) {
           const DeclStmt *DS = F->getConditionVariableDeclStmt();
           assert(DS->isSingleDecl());
           findConstructionContexts(
-              ConstructionContextLayer::create(cfg->getBumpVectorContext(),
-                                               const_cast<DeclStmt *>(DS)),
+              ConstructionContextLayer::create(cfg->getBumpVectorContext(), DS),
               Init);
           appendStmt(Block, DS);
           EntryConditionBlock = addStmt(Init);
@@ -5012,7 +5008,7 @@ static void print_construction_context(raw_ostream &OS,
     OS << ", ";
     const auto *SICC = cast<SimpleConstructorInitializerConstructionContext>(CC);
     print_initializer(OS, Helper, SICC->getCXXCtorInitializer());
-    break;
+    return;
   }
   case ConstructionContext::CXX17ElidedCopyConstructorInitializerKind: {
     OS << ", ";
@@ -5062,6 +5058,17 @@ static void print_construction_context(raw_ostream &OS,
     Stmts.push_back(TOCC->getMaterializedTemporaryExpr());
     Stmts.push_back(TOCC->getConstructorAfterElision());
     break;
+  }
+  case ConstructionContext::ArgumentKind: {
+    const auto *ACC = cast<ArgumentConstructionContext>(CC);
+    if (const Stmt *BTE = ACC->getCXXBindTemporaryExpr()) {
+      OS << ", ";
+      Helper.handledStmt(const_cast<Stmt *>(BTE), OS);
+    }
+    OS << ", ";
+    Helper.handledStmt(const_cast<Expr *>(ACC->getCallLikeExpr()), OS);
+    OS << "+" << ACC->getIndex();
+    return;
   }
   }
   for (auto I: Stmts)
