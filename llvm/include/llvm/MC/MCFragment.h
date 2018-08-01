@@ -149,6 +149,7 @@ public:
     case MCFragment::FT_Relaxable:
     case MCFragment::FT_CompactEncodedInst:
     case MCFragment::FT_Data:
+    case MCFragment::FT_Dwarf:
       return true;
     }
   }
@@ -232,7 +233,7 @@ public:
   static bool classof(const MCFragment *F) {
     MCFragment::FragmentType Kind = F->getKind();
     return Kind == MCFragment::FT_Relaxable || Kind == MCFragment::FT_Data ||
-           Kind == MCFragment::FT_CVDefRange;
+           Kind == MCFragment::FT_CVDefRange || Kind == MCFragment::FT_Dwarf;;
   }
 };
 
@@ -514,7 +515,7 @@ public:
   }
 };
 
-class MCDwarfLineAddrFragment : public MCFragment {
+class MCDwarfLineAddrFragment : public MCEncodedFragmentWithFixups<8, 1> {
   /// LineDelta - the value of the difference between the two line numbers
   /// between two .loc dwarf directives.
   int64_t LineDelta;
@@ -523,15 +524,11 @@ class MCDwarfLineAddrFragment : public MCFragment {
   /// make up the address delta between two .loc dwarf directives.
   const MCExpr *AddrDelta;
 
-  SmallString<8> Contents;
-
 public:
   MCDwarfLineAddrFragment(int64_t LineDelta, const MCExpr &AddrDelta,
                           MCSection *Sec = nullptr)
-      : MCFragment(FT_Dwarf, false, Sec), LineDelta(LineDelta),
-        AddrDelta(&AddrDelta) {
-    Contents.push_back(0);
-  }
+      : MCEncodedFragmentWithFixups<8, 1>(FT_Dwarf, false, Sec),
+        LineDelta(LineDelta), AddrDelta(&AddrDelta) {}
 
   /// \name Accessors
   /// @{
@@ -539,9 +536,6 @@ public:
   int64_t getLineDelta() const { return LineDelta; }
 
   const MCExpr &getAddrDelta() const { return *AddrDelta; }
-
-  SmallString<8> &getContents() { return Contents; }
-  const SmallString<8> &getContents() const { return Contents; }
 
   /// @}
 

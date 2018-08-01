@@ -950,8 +950,19 @@ void MCObjectFileInfo::InitMCObjectFileInfo(const Triple &TheTriple, bool PIC,
 }
 
 MCSection *MCObjectFileInfo::getDwarfTypesSection(uint64_t Hash) const {
-  return Ctx->getELFSection(".debug_types", ELF::SHT_PROGBITS, ELF::SHF_GROUP,
-                            0, utostr(Hash));
+  switch (TT.getObjectFormat()) {
+  case Triple::ELF:
+    return Ctx->getELFSection(".debug_types", ELF::SHT_PROGBITS, ELF::SHF_GROUP,
+                              0, utostr(Hash));
+  case Triple::MachO:
+  case Triple::COFF:
+  case Triple::Wasm:
+  case Triple::UnknownObjectFormat:
+    report_fatal_error("Cannot get DWARF types section for this object file "
+                       "format: not implemented.");
+    break;
+  }
+  llvm_unreachable("Unknown ObjectFormatType");
 }
 
 MCSection *

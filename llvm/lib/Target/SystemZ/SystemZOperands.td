@@ -357,6 +357,7 @@ def imm32zx16 : Immediate<i32, [{
 }], UIMM16, "U16Imm">;
 
 def imm32sx16trunc : Immediate<i32, [{}], SIMM16, "S16Imm">;
+def imm32zx16trunc : Immediate<i32, [{}], UIMM16, "U16Imm">;
 
 // Full 32-bit immediates.  we need both signed and unsigned versions
 // because the assembler is picky.  E.g. AFI requires signed operands

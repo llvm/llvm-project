@@ -35,6 +35,8 @@
 #include "InstrProfiling.h"
 #include "InstrProfilingUtil.h"
 
+COMPILER_RT_WEAK unsigned lprofDirMode = 0755;
+
 COMPILER_RT_VISIBILITY
 void __llvm_profile_recursive_mkdir(char *path) {
   int i;
@@ -47,11 +49,18 @@ void __llvm_profile_recursive_mkdir(char *path) {
 #ifdef _WIN32
     _mkdir(path);
 #else
-    mkdir(path, 0755); /* Some of these will fail, ignore it. */
+    /* Some of these will fail, ignore it. */
+    mkdir(path, __llvm_profile_get_dir_mode());
 #endif
     path[i] = save;
   }
 }
+
+COMPILER_RT_VISIBILITY
+void __llvm_profile_set_dir_mode(unsigned Mode) { lprofDirMode = Mode; }
+
+COMPILER_RT_VISIBILITY
+unsigned __llvm_profile_get_dir_mode(void) { return lprofDirMode; }
 
 #if COMPILER_RT_HAS_ATOMICS != 1
 COMPILER_RT_VISIBILITY

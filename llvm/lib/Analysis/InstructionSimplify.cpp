@@ -1325,6 +1325,23 @@ static Value *SimplifyLShrInst(Value *Op0, Value *Op1, bool isExact,
   if (match(Op0, m_NUWShl(m_Value(X), m_Specific(Op1))))
     return X;
 
+  // ((X << A) | Y) >> A -> X  if effective width of Y is not larger than A.
+  // We can return X as we do in the above case since OR alters no bits in X.
+  // SimplifyDemandedBits in InstCombine can do more general optimization for
+  // bit manipulation. This pattern aims to provide opportunities for other
+  // optimizers by supporting a simple but common case in InstSimplify.
+  Value *Y;
+  const APInt *ShRAmt, *ShLAmt;
+  if (match(Op1, m_APInt(ShRAmt)) &&
+      match(Op0, m_c_Or(m_NUWShl(m_Value(X), m_APInt(ShLAmt)), m_Value(Y))) &&
+      *ShRAmt == *ShLAmt) {
+    const KnownBits YKnown = computeKnownBits(Y, Q.DL, 0, Q.AC, Q.CxtI, Q.DT);
+    const unsigned Width = Op0->getType()->getScalarSizeInBits();
+    const unsigned EffWidthY = Width - YKnown.countMinLeadingZeros();
+    if (EffWidthY <= ShRAmt->getZExtValue())
+      return X;
+  }
+
   return nullptr;
 }
 

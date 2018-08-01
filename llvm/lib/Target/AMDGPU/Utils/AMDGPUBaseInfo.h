@@ -42,6 +42,7 @@ namespace AMDGPU {
 #define GET_MIMGBaseOpcode_DECL
 #define GET_MIMGDim_DECL
 #define GET_MIMGEncoding_DECL
+#define GET_MIMGLZMapping_DECL
 #include "AMDGPUGenSearchableTables.inc"
 
 namespace IsaInfo {
@@ -210,6 +211,14 @@ struct MIMGDimInfo {
 
 LLVM_READONLY
 const MIMGDimInfo *getMIMGDimInfo(unsigned Dim);
+
+struct MIMGLZMappingInfo {
+  MIMGBaseOpcode L;
+  MIMGBaseOpcode LZ;
+};
+
+LLVM_READONLY
+const MIMGLZMappingInfo *getMIMGLZMappingInfo(unsigned L);
 
 LLVM_READONLY
 int getMIMGOpcode(unsigned BaseOpcode, unsigned MIMGEncoding,

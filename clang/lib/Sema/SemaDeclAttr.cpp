@@ -6150,6 +6150,9 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
   case ParsedAttr::AT_Restrict:
     handleRestrictAttr(S, D, AL);
     break;
+  case ParsedAttr::AT_LifetimeBound:
+    handleSimpleAttribute<LifetimeBoundAttr>(S, D, AL);
+    break;
   case ParsedAttr::AT_MayAlias:
     handleSimpleAttribute<MayAliasAttr>(S, D, AL);
     break;

@@ -295,7 +295,7 @@ template <class _Tp>                        void as_const(const _Tp&&) = delete;
 #endif
 
 struct _LIBCPP_TEMPLATE_VIS piecewise_construct_t { };
-#if defined(_LIBCPP_CXX03_LANG) || defined(_LIBCPP_BUILDING_UTILITY)
+#if defined(_LIBCPP_CXX03_LANG) || defined(_LIBCPP_BUILDING_LIBRARY)
 extern const piecewise_construct_t piecewise_construct;// = piecewise_construct_t();
 #else
 /* _LIBCPP_INLINE_VAR */ constexpr piecewise_construct_t piecewise_construct = piecewise_construct_t();

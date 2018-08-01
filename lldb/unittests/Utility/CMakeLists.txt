@@ -14,6 +14,7 @@ add_lldb_unittest(UtilityTests
   NameMatchesTest.cpp
   StatusTest.cpp
   StreamTeeTest.cpp
+  StreamTest.cpp
   StringExtractorTest.cpp
   StructuredDataTest.cpp
   TildeExpressionResolverTest.cpp

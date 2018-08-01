@@ -422,32 +422,34 @@ static StringRef getSectionPrefixForGlobal(SectionKind Kind) {
   return ".data.rel.ro";
 }
 
+static unsigned getEntrySizeForKind(SectionKind Kind) {
+  if (Kind.isMergeable1ByteCString())
+    return 1;
+  else if (Kind.isMergeable2ByteCString())
+    return 2;
+  else if (Kind.isMergeable4ByteCString())
+    return 4;
+  else if (Kind.isMergeableConst4())
+    return 4;
+  else if (Kind.isMergeableConst8())
+    return 8;
+  else if (Kind.isMergeableConst16())
+    return 16;
+  else if (Kind.isMergeableConst32())
+    return 32;
+  else {
+    // We shouldn't have mergeable C strings or mergeable constants that we
+    // didn't handle above.
+    assert(!Kind.isMergeableCString() && "unknown string width");
+    assert(!Kind.isMergeableConst() && "unknown data width");
+    return 0;
+  }
+}
+
 static MCSectionELF *selectELFSectionForGlobal(
     MCContext &Ctx, const GlobalObject *GO, SectionKind Kind, Mangler &Mang,
     const TargetMachine &TM, bool EmitUniqueSection, unsigned Flags,
     unsigned *NextUniqueID, const MCSymbolELF *AssociatedSymbol) {
-  unsigned EntrySize = 0;
-  if (Kind.isMergeableCString()) {
-    if (Kind.isMergeable2ByteCString()) {
-      EntrySize = 2;
-    } else if (Kind.isMergeable4ByteCString()) {
-      EntrySize = 4;
-    } else {
-      EntrySize = 1;
-      assert(Kind.isMergeable1ByteCString() && "unknown string width");
-    }
-  } else if (Kind.isMergeableConst()) {
-    if (Kind.isMergeableConst4()) {
-      EntrySize = 4;
-    } else if (Kind.isMergeableConst8()) {
-      EntrySize = 8;
-    } else if (Kind.isMergeableConst16()) {
-      EntrySize = 16;
-    } else {
-      assert(Kind.isMergeableConst32() && "unknown data width");
-      EntrySize = 32;
-    }
-  }
 
   StringRef Group = "";
   if (const Comdat *C = getELFComdat(GO)) {
@@ -455,7 +457,9 @@ static MCSectionELF *selectELFSectionForGlobal(
     Group = C->getName();
   }
 
-  bool UniqueSectionNames = TM.getUniqueSectionNames();
+  // Get the section entry size based on the kind.
+  unsigned EntrySize = getEntrySizeForKind(Kind);
+
   SmallString<128> Name;
   if (Kind.isMergeableCString()) {
     // We also need alignment here.
@@ -479,16 +483,17 @@ static MCSectionELF *selectELFSectionForGlobal(
       Name += *OptionalPrefix;
   }
 
-  if (EmitUniqueSection && UniqueSectionNames) {
-    Name.push_back('.');
-    TM.getNameWithPrefix(Name, GO, Mang, true);
-  }
   unsigned UniqueID = MCContext::GenericSectionID;
-  if (EmitUniqueSection && !UniqueSectionNames) {
-    UniqueID = *NextUniqueID;
-    (*NextUniqueID)++;
+  if (EmitUniqueSection) {
+    if (TM.getUniqueSectionNames()) {
+      Name.push_back('.');
+      TM.getNameWithPrefix(Name, GO, Mang, true /*MayAlwaysUsePrivate*/);
+    } else {
+      UniqueID = *NextUniqueID;
+      (*NextUniqueID)++;
+    }
   }
-  // Use 0 as the unique ID for execute-only text
+  // Use 0 as the unique ID for execute-only text.
   if (Kind.isExecuteOnly())
     UniqueID = 0;
   return Ctx.getELFSection(Name, getELFSectionType(Name, Kind), Flags,

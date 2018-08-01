@@ -822,6 +822,9 @@ void MCAssembler::layout(MCAsmLayout &Layout) {
       } else if (auto *FragWithFixups = dyn_cast<MCCVDefRangeFragment>(&Frag)) {
         Fixups = FragWithFixups->getFixups();
         Contents = FragWithFixups->getContents();
+      } else if (auto *FragWithFixups = dyn_cast<MCDwarfLineAddrFragment>(&Frag)) {
+        Fixups = FragWithFixups->getFixups();
+        Contents = FragWithFixups->getContents();
       } else
         llvm_unreachable("Unknown fragment with fixups!");
       for (const MCFixup &Fixup : Fixups) {
@@ -951,16 +954,43 @@ bool MCAssembler::relaxDwarfLineAddr(MCAsmLayout &Layout,
   MCContext &Context = Layout.getAssembler().getContext();
   uint64_t OldSize = DF.getContents().size();
   int64_t AddrDelta;
-  bool Abs = DF.getAddrDelta().evaluateKnownAbsolute(AddrDelta, Layout);
-  assert(Abs && "We created a line delta with an invalid expression");
-  (void) Abs;
+  bool Abs;
+  if (getBackend().requiresDiffExpressionRelocations())
+    Abs = DF.getAddrDelta().evaluateAsAbsolute(AddrDelta, Layout);
+  else {
+    Abs = DF.getAddrDelta().evaluateKnownAbsolute(AddrDelta, Layout);
+    assert(Abs && "We created a line delta with an invalid expression");
+  }
   int64_t LineDelta;
   LineDelta = DF.getLineDelta();
-  SmallString<8> &Data = DF.getContents();
+  SmallVectorImpl<char> &Data = DF.getContents();
   Data.clear();
   raw_svector_ostream OSE(Data);
-  MCDwarfLineAddr::Encode(Context, getDWARFLinetableParams(), LineDelta,
-                          AddrDelta, OSE);
+  DF.getFixups().clear();
+
+  if (Abs) {
+    MCDwarfLineAddr::Encode(Context, getDWARFLinetableParams(), LineDelta,
+                            AddrDelta, OSE);
+  } else {
+    uint32_t Offset;
+    uint32_t Size;
+    bool SetDelta = MCDwarfLineAddr::FixedEncode(Context,
+                                                 getDWARFLinetableParams(),
+                                                 LineDelta, AddrDelta,
+                                                 OSE, &Offset, &Size);
+    // Add Fixups for address delta or new address.
+    const MCExpr *FixupExpr;
+    if (SetDelta) {
+      FixupExpr = &DF.getAddrDelta();
+    } else {
+      const MCBinaryExpr *ABE = cast<MCBinaryExpr>(&DF.getAddrDelta());
+      FixupExpr = ABE->getLHS();
+    }
+    DF.getFixups().push_back(
+        MCFixup::create(Offset, FixupExpr,
+                        MCFixup::getKindForSize(Size, false /*isPCRel*/)));
+  }
+
   return OldSize != Data.size();
 }
 

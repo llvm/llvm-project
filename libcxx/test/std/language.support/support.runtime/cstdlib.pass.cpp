@@ -13,6 +13,8 @@
 #include <type_traits>
 #include <cassert>
 
+#include "test_macros.h"
+
 // As of 1/10/2015 clang emits a -Wnonnull warnings even if the warning occurs
 // in an unevaluated context. For this reason we manually suppress the warning.
 #if defined(__clang__)
@@ -71,6 +73,14 @@ int main()
     static_assert((std::is_same<decltype(std::strtoull("", endptr,0)), unsigned long long>::value), "");
     static_assert((std::is_same<decltype(std::rand()), int>::value), "");
     static_assert((std::is_same<decltype(std::srand(0)), void>::value), "");
+
+//  Microsoft does not implement aligned_alloc in their C library
+#ifndef TEST_COMPILER_C1XX
+#if TEST_STD_VER > 14 && defined(TEST_HAS_C11_FEATURES)
+    static_assert((std::is_same<decltype(std::aligned_alloc(0,0)), void*>::value), "");
+#endif
+#endif
+
     static_assert((std::is_same<decltype(std::calloc(0,0)), void*>::value), "");
     static_assert((std::is_same<decltype(std::free(0)), void>::value), "");
     static_assert((std::is_same<decltype(std::malloc(0)), void*>::value), "");

@@ -16,15 +16,17 @@ from inside the tasks, once again everything runs fine.
 int main() {
   #pragma omp task
   {
+    int i;
     #pragma omp parallel for
-    for (int i = 0; i < N; i++)
+    for (i = 0; i < N; i++)
       (void)0;
   }
 
   #pragma omp task
   {
+    int i;
     #pragma omp parallel for
-    for (int i = 0; i < N; ++i)
+    for (i = 0; i < N; ++i)
       (void)0;
   }
 

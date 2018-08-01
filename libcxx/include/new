@@ -103,13 +103,13 @@ void  operator delete[](void* ptr, void*) noexcept;
 #pragma GCC system_header
 #endif
 
-#if !(defined(_LIBCPP_BUILDING_NEW) || _LIBCPP_STD_VER >= 14 || \
+#if !(defined(_LIBCPP_BUILDING_LIBRARY) || _LIBCPP_STD_VER >= 14 || \
     (defined(__cpp_sized_deallocation) && __cpp_sized_deallocation >= 201309))
 # define _LIBCPP_HAS_NO_SIZED_DEALLOCATION
 #endif
 
 #if !defined(_LIBCPP_HAS_NO_ALIGNED_ALLOCATION) && \
-    (!(defined(_LIBCPP_BUILDING_NEW) || _LIBCPP_STD_VER > 14 || \
+    (!(defined(_LIBCPP_BUILDING_LIBRARY) || _LIBCPP_STD_VER > 14 || \
     (defined(__cpp_aligned_new) && __cpp_aligned_new >= 201606)))
 # define _LIBCPP_HAS_NO_ALIGNED_ALLOCATION
 #endif
@@ -167,7 +167,7 @@ public:
 
 #define _LIBCPP_BAD_ARRAY_LENGTH_DEFINED
 
-#endif  // defined(_LIBCPP_BUILDING_NEW) || (_LIBCPP_STD_VER > 11)
+#endif  // defined(_LIBCPP_BUILDING_LIBRARY) || (_LIBCPP_STD_VER > 11)
 
 #if !defined(_LIBCPP_ABI_MICROSOFT) || defined(_LIBCPP_NO_VCRUNTIME)
 #if !defined(_LIBCPP_HAS_NO_ALIGNED_ALLOCATION) || _LIBCPP_STD_VER > 14
