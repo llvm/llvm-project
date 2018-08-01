@@ -109,7 +109,7 @@ protected:
   uint32_t m_concrete_frames_fetched;
   uint32_t m_current_inlined_depth;
   lldb::addr_t m_current_inlined_pc;
-  bool m_show_inlined_frames;
+  const bool m_show_inlined_frames;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(StackFrameList);

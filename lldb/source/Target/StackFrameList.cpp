@@ -81,127 +81,119 @@ uint32_t StackFrameList::GetCurrentInlinedDepth() {
 }
 
 void StackFrameList::ResetCurrentInlinedDepth() {
+  if (!m_show_inlined_frames)
+    return;
+
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
-  if (m_show_inlined_frames) {
-    GetFramesUpTo(0);
-    if (m_frames.empty())
-      return;
-    if (!m_frames[0]->IsInlined()) {
-      m_current_inlined_depth = UINT32_MAX;
-      m_current_inlined_pc = LLDB_INVALID_ADDRESS;
-      Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
-      if (log && log->GetVerbose())
-        log->Printf(
-            "ResetCurrentInlinedDepth: Invalidating current inlined depth.\n");
-    } else {
-      // We only need to do something special about inlined blocks when we are
-      // at the beginning of an inlined function:
-      // FIXME: We probably also have to do something special if the PC is at
-      // the END
-      // of an inlined function, which coincides with the end of either its
-      // containing function or another inlined function.
+  GetFramesUpTo(0);
+  if (m_frames.empty())
+    return;
+  if (!m_frames[0]->IsInlined()) {
+    m_current_inlined_depth = UINT32_MAX;
+    m_current_inlined_pc = LLDB_INVALID_ADDRESS;
+    Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+    if (log && log->GetVerbose())
+      log->Printf(
+          "ResetCurrentInlinedDepth: Invalidating current inlined depth.\n");
+    return;
+  }
 
-      lldb::addr_t curr_pc = m_thread.GetRegisterContext()->GetPC();
-      Block *block_ptr = m_frames[0]->GetFrameBlock();
-      if (block_ptr) {
-        Address pc_as_address;
-        pc_as_address.SetLoadAddress(curr_pc,
-                                     &(m_thread.GetProcess()->GetTarget()));
-        AddressRange containing_range;
-        if (block_ptr->GetRangeContainingAddress(pc_as_address,
-                                                 containing_range)) {
-          if (pc_as_address == containing_range.GetBaseAddress()) {
-            // If we got here because of a breakpoint hit, then set the inlined
-            // depth depending on where the breakpoint was set. If we got here
-            // because of a crash, then set the inlined depth to the deepest
-            // most block. Otherwise, we stopped here naturally as the result
-            // of a step, so set ourselves in the containing frame of the whole
-            // set of nested inlines, so the user can then "virtually" step
-            // into the frames one by one, or next over the whole mess. Note:
-            // We don't have to handle being somewhere in the middle of the
-            // stack here, since ResetCurrentInlinedDepth doesn't get called if
-            // there is a valid inlined depth set.
-            StopInfoSP stop_info_sp = m_thread.GetStopInfo();
-            if (stop_info_sp) {
-              switch (stop_info_sp->GetStopReason()) {
-              case eStopReasonWatchpoint:
-              case eStopReasonException:
-              case eStopReasonExec:
-              case eStopReasonSignal:
-                // In all these cases we want to stop in the deepest most
-                // frame.
-                m_current_inlined_pc = curr_pc;
-                m_current_inlined_depth = 0;
-                break;
-              case eStopReasonBreakpoint: {
-                // FIXME: Figure out what this break point is doing, and set the
-                // inline depth
-                // appropriately.  Be careful to take into account breakpoints
-                // that implement step over prologue, since that should do the
-                // default calculation. For now, if the breakpoints
-                // corresponding to this hit are all internal,
-                // I set the stop location to the top of the inlined stack,
-                // since that will make
-                // things like stepping over prologues work right.  But if
-                // there are any non-internal breakpoints I do to the bottom of
-                // the stack, since that was the old behavior.
-                uint32_t bp_site_id = stop_info_sp->GetValue();
-                BreakpointSiteSP bp_site_sp(
-                    m_thread.GetProcess()->GetBreakpointSiteList().FindByID(
-                        bp_site_id));
-                bool all_internal = true;
-                if (bp_site_sp) {
-                  uint32_t num_owners = bp_site_sp->GetNumberOfOwners();
-                  for (uint32_t i = 0; i < num_owners; i++) {
-                    Breakpoint &bp_ref =
-                        bp_site_sp->GetOwnerAtIndex(i)->GetBreakpoint();
-                    if (!bp_ref.IsInternal()) {
-                      all_internal = false;
-                    }
-                  }
-                }
-                if (!all_internal) {
-                  m_current_inlined_pc = curr_pc;
-                  m_current_inlined_depth = 0;
-                  break;
-                }
-              }
-                LLVM_FALLTHROUGH;
-              default: {
-                // Otherwise, we should set ourselves at the container of the
-                // inlining, so that the user can descend into them. So first
-                // we check whether we have more than one inlined block sharing
-                // this PC:
-                int num_inlined_functions = 0;
+  // We only need to do something special about inlined blocks when we are
+  // at the beginning of an inlined function:
+  // FIXME: We probably also have to do something special if the PC is at
+  // the END of an inlined function, which coincides with the end of either
+  // its containing function or another inlined function.
 
-                for (Block *container_ptr = block_ptr->GetInlinedParent();
-                     container_ptr != nullptr;
-                     container_ptr = container_ptr->GetInlinedParent()) {
-                  if (!container_ptr->GetRangeContainingAddress(
-                          pc_as_address, containing_range))
-                    break;
-                  if (pc_as_address != containing_range.GetBaseAddress())
-                    break;
+  Block *block_ptr = m_frames[0]->GetFrameBlock();
+  if (!block_ptr)
+    return;
 
-                  num_inlined_functions++;
-                }
-                m_current_inlined_pc = curr_pc;
-                m_current_inlined_depth = num_inlined_functions + 1;
-                Log *log(
-                    lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
-                if (log && log->GetVerbose())
-                  log->Printf("ResetCurrentInlinedDepth: setting inlined "
-                              "depth: %d 0x%" PRIx64 ".\n",
-                              m_current_inlined_depth, curr_pc);
+  Address pc_as_address;
+  lldb::addr_t curr_pc = m_thread.GetRegisterContext()->GetPC();
+  pc_as_address.SetLoadAddress(curr_pc, &(m_thread.GetProcess()->GetTarget()));
+  AddressRange containing_range;
+  if (!block_ptr->GetRangeContainingAddress(pc_as_address, containing_range) ||
+      pc_as_address != containing_range.GetBaseAddress())
+    return;
 
-              } break;
-              }
-            }
-          }
+  // If we got here because of a breakpoint hit, then set the inlined depth
+  // depending on where the breakpoint was set. If we got here because of a
+  // crash, then set the inlined depth to the deepest most block.  Otherwise,
+  // we stopped here naturally as the result of a step, so set ourselves in the
+  // containing frame of the whole set of nested inlines, so the user can then
+  // "virtually" step into the frames one by one, or next over the whole mess.
+  // Note: We don't have to handle being somewhere in the middle of the stack
+  // here, since ResetCurrentInlinedDepth doesn't get called if there is a
+  // valid inlined depth set.
+  StopInfoSP stop_info_sp = m_thread.GetStopInfo();
+  if (!stop_info_sp)
+    return;
+  switch (stop_info_sp->GetStopReason()) {
+  case eStopReasonWatchpoint:
+  case eStopReasonException:
+  case eStopReasonExec:
+  case eStopReasonSignal:
+    // In all these cases we want to stop in the deepest frame.
+    m_current_inlined_pc = curr_pc;
+    m_current_inlined_depth = 0;
+    break;
+  case eStopReasonBreakpoint: {
+    // FIXME: Figure out what this break point is doing, and set the inline
+    // depth appropriately.  Be careful to take into account breakpoints that
+    // implement step over prologue, since that should do the default
+    // calculation. For now, if the breakpoints corresponding to this hit are
+    // all internal, I set the stop location to the top of the inlined stack,
+    // since that will make things like stepping over prologues work right.
+    // But if there are any non-internal breakpoints I do to the bottom of the
+    // stack, since that was the old behavior.
+    uint32_t bp_site_id = stop_info_sp->GetValue();
+    BreakpointSiteSP bp_site_sp(
+        m_thread.GetProcess()->GetBreakpointSiteList().FindByID(bp_site_id));
+    bool all_internal = true;
+    if (bp_site_sp) {
+      uint32_t num_owners = bp_site_sp->GetNumberOfOwners();
+      for (uint32_t i = 0; i < num_owners; i++) {
+        Breakpoint &bp_ref = bp_site_sp->GetOwnerAtIndex(i)->GetBreakpoint();
+        if (!bp_ref.IsInternal()) {
+          all_internal = false;
         }
       }
     }
+    if (!all_internal) {
+      m_current_inlined_pc = curr_pc;
+      m_current_inlined_depth = 0;
+      break;
+    }
+  }
+    LLVM_FALLTHROUGH;
+  default: {
+    // Otherwise, we should set ourselves at the container of the inlining, so
+    // that the user can descend into them. So first we check whether we have
+    // more than one inlined block sharing this PC:
+    int num_inlined_functions = 0;
+
+    for (Block *container_ptr = block_ptr->GetInlinedParent();
+         container_ptr != nullptr;
+         container_ptr = container_ptr->GetInlinedParent()) {
+      if (!container_ptr->GetRangeContainingAddress(pc_as_address,
+                                                    containing_range))
+        break;
+      if (pc_as_address != containing_range.GetBaseAddress())
+        break;
+
+      num_inlined_functions++;
+    }
+    m_current_inlined_pc = curr_pc;
+    m_current_inlined_depth = num_inlined_functions + 1;
+    Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+    if (log && log->GetVerbose())
+      log->Printf("ResetCurrentInlinedDepth: setting inlined "
+                  "depth: %d 0x%" PRIx64 ".\n",
+                  m_current_inlined_depth, curr_pc);
+
+    break;
+  }
   }
 }
 
