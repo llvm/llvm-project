@@ -127,9 +127,9 @@ attributes #7 = { noduplicate }
 !24 = !DILocation(line: 62, column: 3, scope: !6)
 
 ; CHECK: define i8* @f(i32 %x) #0 !dbg ![[ORIG:[0-9]+]]
-; CHECK: define internal fastcc void @f.resume(%f.Frame* %FramePtr) #0 !dbg ![[RESUME:[0-9]+]]
-; CHECK: define internal fastcc void @f.destroy(%f.Frame* %FramePtr) #0 !dbg ![[DESTROY:[0-9]+]]
-; CHECK: define internal fastcc void @f.cleanup(%f.Frame* %FramePtr) #0 !dbg ![[CLEANUP:[0-9]+]]
+; CHECK: define internal fastcc void @f.resume(%f.Frame* noalias nonnull %FramePtr) #0 !dbg ![[RESUME:[0-9]+]]
+; CHECK: define internal fastcc void @f.destroy(%f.Frame* noalias nonnull %FramePtr) #0 !dbg ![[DESTROY:[0-9]+]]
+; CHECK: define internal fastcc void @f.cleanup(%f.Frame* noalias nonnull %FramePtr) #0 !dbg ![[CLEANUP:[0-9]+]]
 
 ; CHECK: ![[ORIG]] = distinct !DISubprogram(name: "f", linkageName: "flink"
 ; CHECK: !DILocalVariable(name: "x", arg: 1, scope: ![[ORIG]]

@@ -235,6 +235,9 @@ if not 'hexagon' in config.target_triple:
 if config.target_triple:
     config.available_features.add('default_triple')
 
+if lit.util.isMacOSTriple(config.target_triple):
+   config.available_features.add('darwin')
+
 import subprocess
 
 
@@ -300,7 +303,7 @@ llvm_config.feature_config(
     [('--assertion-mode', {'ON': 'asserts'}),
      ('--has-global-isel', {'ON': 'global-isel'})])
 
-if 'darwin' == sys.platform:
+if lit.util.isMacOSTriple(config.target_triple):
     try:
         sysctl_cmd = subprocess.Popen(['sysctl', 'hw.optional.fma'],
                                       stdout=subprocess.PIPE)
