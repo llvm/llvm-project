@@ -1473,6 +1473,7 @@ void ASTDeclReader::VisitBlockDecl(BlockDecl *BD) {
   BD->setIsVariadic(Record.readInt());
   BD->setBlockMissingReturnType(Record.readInt());
   BD->setIsConversionFromLambda(Record.readInt());
+  BD->setDoesNotEscape(Record.readInt());
 
   bool capturesCXXThis = Record.readInt();
   unsigned numCaptures = Record.readInt();
