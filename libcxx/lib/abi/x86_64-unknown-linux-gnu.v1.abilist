@@ -1192,6 +1192,8 @@
 {'name': '_ZNSt3__15wclogE', 'is_defined': True, 'type': 'OBJECT', 'size': 160}
 {'name': '_ZNSt3__15wcoutE', 'is_defined': True, 'type': 'OBJECT', 'size': 160}
 {'name': '_ZNSt3__16__clocEv', 'is_defined': True, 'type': 'FUNC'}
+{'name': '_ZNSt3__16__itoa8__u64toaEmPc', 'is_defined': True, 'type': 'FUNC'}
+{'name': '_ZNSt3__16__itoa8__u32toaEjPc', 'is_defined': True, 'type': 'FUNC'}
 {'name': '_ZNSt3__16__sortIRNS_6__lessIaaEEPaEEvT0_S5_T_', 'is_defined': True, 'type': 'FUNC'}
 {'name': '_ZNSt3__16__sortIRNS_6__lessIccEEPcEEvT0_S5_T_', 'is_defined': True, 'type': 'FUNC'}
 {'name': '_ZNSt3__16__sortIRNS_6__lessIddEEPdEEvT0_S5_T_', 'is_defined': True, 'type': 'FUNC'}

@@ -33445,33 +33445,32 @@ static SDValue combineCMov(SDNode *N, SelectionDAG &DAG,
     }
   }
 
-  // Handle (CMOV C-1, (ADD (CTTZ X), C), (X != 0)) ->
-  // (ADD (CMOV (CTTZ X), -1, (X != 0)), C) or
-  // (CMOV (ADD (CTTZ X), C), C-1, (X == 0)) ->
-  // (ADD (CMOV C-1, (CTTZ X), (X == 0)), C)
-  if (CC == X86::COND_NE || CC == X86::COND_E) {
-    auto *Cnst = CC == X86::COND_E ? dyn_cast<ConstantSDNode>(TrueOp)
-                                   : dyn_cast<ConstantSDNode>(FalseOp);
-    SDValue Add = CC == X86::COND_E ? FalseOp : TrueOp;
+  // Fold (CMOV C1, (ADD (CTTZ X), C2), (X != 0)) ->
+  //      (ADD (CMOV C1-C2, (CTTZ X), (X != 0)), C2)
+  // Or (CMOV (ADD (CTTZ X), C2), C1, (X == 0)) ->
+  //    (ADD (CMOV (CTTZ X), C1-C2, (X == 0)), C2)
+  if ((CC == X86::COND_NE || CC == X86::COND_E) &&
+      Cond.getOpcode() == X86ISD::CMP && isNullConstant(Cond.getOperand(1))) {
+    SDValue Add = TrueOp;
+    SDValue Const = FalseOp;
+    // Canonicalize the condition code for easier matching and output.
+    if (CC == X86::COND_E) {
+      std::swap(Add, Const);
+      CC = X86::COND_NE;
+    }
 
-    if (Cnst && Add.getOpcode() == ISD::ADD && Add.hasOneUse()) {
-      auto *AddOp1 = dyn_cast<ConstantSDNode>(Add.getOperand(1));
-      SDValue AddOp2 = Add.getOperand(0);
-      if (AddOp1 && (AddOp2.getOpcode() == ISD::CTTZ_ZERO_UNDEF ||
-                     AddOp2.getOpcode() == ISD::CTTZ)) {
-        APInt Diff = Cnst->getAPIntValue() - AddOp1->getAPIntValue();
-        if (CC == X86::COND_E) {
-          Add = DAG.getNode(X86ISD::CMOV, DL, Add.getValueType(), AddOp2,
-                            DAG.getConstant(Diff, DL, Add.getValueType()),
-                            DAG.getConstant(CC, DL, MVT::i8), Cond);
-        } else {
-          Add = DAG.getNode(X86ISD::CMOV, DL, Add.getValueType(),
-                            DAG.getConstant(Diff, DL, Add.getValueType()),
-                            AddOp2, DAG.getConstant(CC, DL, MVT::i8), Cond);
-        }
-        return DAG.getNode(X86ISD::ADD, DL, Add.getValueType(), Add,
-                           SDValue(AddOp1, 0));
-      }
+    // Ok, now make sure that Add is (add (cttz X), C2) and Const is a constant.
+    if (isa<ConstantSDNode>(Const) && Add.getOpcode() == ISD::ADD &&
+        Add.hasOneUse() && isa<ConstantSDNode>(Add.getOperand(1)) &&
+        (Add.getOperand(0).getOpcode() == ISD::CTTZ_ZERO_UNDEF ||
+         Add.getOperand(0).getOpcode() == ISD::CTTZ) &&
+        Add.getOperand(0).getOperand(0) == Cond.getOperand(0)) {
+      EVT VT = N->getValueType(0);
+      // This should constant fold.
+      SDValue Diff = DAG.getNode(ISD::SUB, DL, VT, Const, Add.getOperand(1));
+      SDValue CMov = DAG.getNode(X86ISD::CMOV, DL, VT, Diff, Add.getOperand(0),
+                                 DAG.getConstant(CC, DL, MVT::i8), Cond);
+      return DAG.getNode(ISD::ADD, DL, VT, CMov, Add.getOperand(1));
     }
   }
 
@@ -37929,8 +37928,7 @@ static SDValue combineFMA(SDNode *N, SelectionDAG &DAG,
     // Look through extract_vector_elts. If it comes from an FNEG, create a
     // new extract from the FNEG input.
     if (V.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
-        isa<ConstantSDNode>(V.getOperand(1)) &&
-        cast<ConstantSDNode>(V.getOperand(1))->getZExtValue() == 0) {
+        isNullConstant(V.getOperand(1))) {
       if (SDValue NegVal = isFNEG(V.getOperand(0).getNode())) {
         NegVal = DAG.getBitcast(V.getOperand(0).getValueType(), NegVal);
         V = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SDLoc(V), V.getValueType(),
@@ -39474,8 +39472,7 @@ static SDValue combineInsertSubvector(SDNode *N, SelectionDAG &DAG,
   if ((IdxVal == OpVT.getVectorNumElements() / 2) &&
       Vec.getOpcode() == ISD::INSERT_SUBVECTOR &&
       OpVT.getSizeInBits() == SubVecVT.getSizeInBits() * 2) {
-    auto *Idx2 = dyn_cast<ConstantSDNode>(Vec.getOperand(2));
-    if (Idx2 && Idx2->getZExtValue() == 0) {
+    if (isNullConstant(Vec.getOperand(2))) {
       SDValue SubVec2 = Vec.getOperand(1);
       // If needed, look through bitcasts to get to the load.
       if (auto *FirstLd = dyn_cast<LoadSDNode>(peekThroughBitcasts(SubVec2))) {

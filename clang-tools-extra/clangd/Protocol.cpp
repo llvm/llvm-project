@@ -263,7 +263,7 @@ bool fromJSON(const json::Value &Params, InitializeParams &R) {
   O.map("rootPath", R.rootPath);
   O.map("capabilities", R.capabilities);
   O.map("trace", R.trace);
-  // initializationOptions, capabilities unused
+  O.map("initializationOptions", R.initializationOptions);
   return true;
 }
 

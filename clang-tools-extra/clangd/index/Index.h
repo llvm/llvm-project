@@ -30,6 +30,9 @@ struct SymbolLocation {
     uint32_t Line = 0; // 0-based
     // Using UTF-16 code units.
     uint32_t Column = 0; // 0-based
+    bool operator==(const Position& P) const {
+      return Line == P.Line && Column == P.Column;
+    }
   };
 
   // The URI of the source file where a symbol occurs.
@@ -39,7 +42,11 @@ struct SymbolLocation {
   Position Start;
   Position End;
 
-  operator bool() const { return !FileURI.empty(); }
+  explicit operator bool() const { return !FileURI.empty(); }
+  bool operator==(const SymbolLocation& Loc) const {
+    return std::tie(FileURI, Start, End) ==
+           std::tie(Loc.FileURI, Loc.Start, Loc.End);
+  }
 };
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const SymbolLocation &);
 

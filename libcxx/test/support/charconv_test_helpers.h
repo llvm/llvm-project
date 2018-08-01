@@ -178,7 +178,7 @@ struct roundtrip_test_base
             {
                 assert(x == 0xc);
                 assert(r2.ptr == buf);
-                assert(r.ec == std::errc::invalid_argument);
+                assert(r2.ec == std::errc::invalid_argument);
             }
             else
             {

@@ -142,6 +142,7 @@ def  WriteFCMOV : SchedWrite; // X87 conditional move.
 def  WriteSETCC : SchedWrite; // Set register based on condition code.
 def  WriteSETCCStore : SchedWrite;
 def  WriteLAHFSAHF : SchedWrite; // Load/Store flags in AH.
+def  WriteBitTest  : SchedWrite; // Bit Test - TODO add memory folding support
 
 // Integer shifts and rotates.
 defm WriteShift : X86SchedWritePair;

@@ -447,6 +447,9 @@ class DwarfDebug : public DebugHandlerBase {
   /// Emit the debug str dwo section.
   void emitDebugStrDWO();
 
+  /// Emit DWO addresses.
+  void emitDebugAddr();
+
   /// Flags to let the linker know we have emitted new style pubnames. Only
   /// emit it here if we don't have a skeleton CU for split dwarf.
   void addGnuPubAttributes(DwarfCompileUnit &U, DIE &D) const;

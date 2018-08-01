@@ -17,8 +17,8 @@
 #include "llvm/ADT/StringRef.h"
 
 namespace clang {
-class ParsedAST;
 namespace clangd {
+class ParsedAST;
 class SymbolIndex;
 
 /// Searches for the symbols matching \p Query. The syntax of \p Query can be
