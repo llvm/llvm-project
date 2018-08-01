@@ -1,0 +1,6 @@
+{
+  'version': 0,
+  'roots': [{ 'type': 'file', 'name': 'OUT_DIR/using-overlay.h',
+             'external-contents': 'INPUT_DIR/using-overlay.h'
+           }]
+}

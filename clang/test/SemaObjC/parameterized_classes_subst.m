@@ -426,36 +426,3 @@ void test_ternary_operator(NSArray<NSString *> *stringArray,
 // warning about likely protocol/class name typos.
 // --------------------------------------------------------------------------
 typedef NSArray<NSObject> ArrayOfNSObjectWarning; // expected-warning{{parameterized class 'NSArray' already conforms to the protocols listed; did you forget a '*'?}}
-
-// rdar://25060179
-@interface MyMutableDictionary<KeyType, ObjectType> : NSObject
-- (void)setObject:(ObjectType)obj forKeyedSubscript:(KeyType <NSCopying>)key; // expected-note{{passing argument to parameter 'obj' here}} \
-    // expected-note{{passing argument to parameter 'key' here}}
-@end
-
-void bar(MyMutableDictionary<NSString *, NSString *> *stringsByString,
-                             NSNumber *n1, NSNumber *n2) {
-  // We warn here when the key types do not match.
-  stringsByString[n1] = n2; // expected-warning{{incompatible pointer types sending 'NSNumber *' to parameter of type 'NSString *'}} \
-    // expected-warning{{incompatible pointer types sending 'NSNumber *' to parameter of type 'NSString<NSCopying> *'}}
-}
-
-@interface MyTest<K, V> : NSObject <NSCopying>
-- (V)test:(K)key;
-- (V)test2:(K)key; // expected-note{{previous definition is here}}
-- (void)mapUsingBlock:(id (^)(V))block;
-- (void)mapUsingBlock2:(id (^)(V))block; // expected-note{{previous definition is here}}
-@end
-
-@implementation MyTest
-- (id)test:(id)key {
-  return key;
-}
-- (int)test2:(id)key{ // expected-warning{{conflicting return type in implementation}}
-  return 0;
-}
-- (void)mapUsingBlock:(id (^)(id))block {
-}
-- (void)mapUsingBlock2:(id)block { // expected-warning{{conflicting parameter types in implementation}}
-}
-@end

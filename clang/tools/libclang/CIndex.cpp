@@ -3469,9 +3469,9 @@ clang_parseTranslationUnit_Impl(CXIndex CIdx, const char *source_filename,
       !PrecompilePreamble ? 0 : 2 - CreatePreambleOnFirstParse;
 
   LibclangInvocationReporter InvocationReporter(
-      *CXXIdx, LibclangInvocationReporter::OperationKind::ParseOperation,
-      options, llvm::makeArrayRef(*Args), /*InvocationArgs=*/None,
-      unsaved_files);
+      *CXXIdx, source_filename,
+      LibclangInvocationReporter::OperationKind::ParseOperation, options,
+      llvm::makeArrayRef(*Args), /*InvocationArgs=*/None, unsaved_files);
   std::unique_ptr<ASTUnit> Unit(ASTUnit::LoadFromCommandLine(
       Args->data(), Args->data() + Args->size(),
       CXXIdx->getPCHContainerOperations(), Diags,

@@ -1264,6 +1264,7 @@ static CXIdxEntityKind getEntityKindFromSymbolKind(SymbolKind K, SymbolLanguage 
   case SymbolKind::Macro:
   case SymbolKind::ClassProperty:
   case SymbolKind::Using:
+  case SymbolKind::CommentTag:
     return CXIdxEntity_Unexposed;
 
   case SymbolKind::Enum: return CXIdxEntity_Enum;

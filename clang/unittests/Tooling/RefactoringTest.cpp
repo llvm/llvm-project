@@ -25,6 +25,9 @@
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Rewrite/Core/Rewriter.h"
+#include "clang/Tooling/Refactor/IndexerQuery.h"
+#include "clang/Tooling/Refactor/RefactoringOperation.h"
+#include "clang/Tooling/Refactor/RefactoringOptions.h"
 #include "clang/Tooling/Refactoring.h"
 #include "clang/Tooling/Refactoring/AtomicChange.h"
 #include "clang/Tooling/Tooling.h"
@@ -1090,6 +1093,51 @@ TEST(DeduplicateByFileTest, NonExistingFilePath) {
   EXPECT_TRUE(FileToReplaces.empty());
 }
 
+namespace {
+struct TestRefactoringValueOption final : OldRefactoringOption {
+  int Value;
+  TestRefactoringValueOption(int Value) : Value(Value) {}
+
+  static constexpr const char *Name = "test value option";
+};
+} // end anonymous namespace
+
+TEST(RefactoringOptionSet, AddGet) {
+  RefactoringOptionSet Options;
+  const TestRefactoringValueOption Kind(21);
+  const TestRefactoringValueOption DefaultKind(42);
+
+  EXPECT_EQ(Options.get<TestRefactoringValueOption>(), nullptr);
+  EXPECT_EQ(Options.get(DefaultKind).Value, DefaultKind.Value);
+
+  Options.add(Kind);
+
+  auto *Ptr = Options.get<TestRefactoringValueOption>();
+  ASSERT_TRUE(Ptr);
+  EXPECT_EQ(Ptr->Value, Kind.Value);
+  EXPECT_EQ(Options.get(DefaultKind).Value, Kind.Value);
+}
+
+namespace {
+struct TestRefactoringOption final : OldRefactoringOption {
+  int &Counter;
+  TestRefactoringOption(int &Counter) : Counter(Counter) {}
+  ~TestRefactoringOption() { ++Counter; }
+
+  static constexpr const char *Name = "test option";
+};
+} // end anonymous namespace
+
+TEST(RefactoringOptionSet, OptionDestroyed) {
+  int Counter = 0;
+  {
+    RefactoringOptionSet Options;
+    Options.add(TestRefactoringOption(Counter));
+    Options.add(TestRefactoringOption(Counter));
+  }
+  EXPECT_EQ(Counter, 3);
+}
+
 class AtomicChangeTest : public ::testing::Test {
   protected:
     void SetUp() override {
@@ -1293,6 +1341,128 @@ TEST_F(AtomicChangeTest, InsertAfterWithInvalidLocation) {
       std::move(Err), replacement_error::wrong_file_path,
       Replacement(Context.Sources, DefaultLoc, 0, "a"),
       Replacement(Context.Sources, SourceLocation(), 0, "b")));
+}
+
+namespace {
+
+class RefactoringOperationTest {
+  RefactoringActionType Type;
+  unsigned Line, Column;
+  bool Success = true;
+  std::function<void(const RefactoringResult &Result)> ResultHandler;
+
+public:
+  RefactoringOperationTest(
+      RefactoringActionType Type, unsigned Line, unsigned Column,
+      std::function<void(const RefactoringResult &Result)> ResultHandler)
+      : Type(Type), Line(Line), Column(Column),
+        ResultHandler(std::move(ResultHandler)) {}
+
+  bool runOver(StringRef Code) {
+    return runToolOnCode(new TestAction(this), Code);
+  }
+
+  bool succeeded() const { return Success; }
+
+  void run() {
+    assert(PP && Context && "Invalid state");
+    SourceLocation Loc = Context->getSourceManager().translateLineCol(
+        Context->getSourceManager().getMainFileID(), Line, Column);
+    if (Loc.isInvalid()) {
+      Success = false;
+      return;
+    }
+    RefactoringOperationResult Op =
+        initiateRefactoringOperationAt(Loc, SourceRange(), *Context, Type);
+    if (!Op.Initiated) {
+      Success = false;
+      return;
+    }
+    RefactoringOptionSet Options;
+    llvm::Expected<RefactoringResult> Result =
+        Op.RefactoringOp->perform(*Context, *PP, Options);
+    if (!Result) {
+      (void)!llvm::handleErrors(
+          Result.takeError(),
+          [&](const RefactoringOperationError &Error) { Success = false; });
+      return;
+    }
+    ResultHandler(Result.get());
+  }
+
+protected:
+  clang::Preprocessor *PP;
+  clang::ASTContext *Context;
+
+private:
+  class TestConsumer : public clang::ASTConsumer {
+  public:
+    TestConsumer(RefactoringOperationTest *Test) : Test(Test) {}
+
+    void HandleTranslationUnit(clang::ASTContext &Context) override {
+      Test->run();
+    }
+
+  private:
+    RefactoringOperationTest *Test;
+  };
+
+  class TestAction : public clang::ASTFrontendAction {
+  public:
+    TestAction(RefactoringOperationTest *Test) : Test(Test) {}
+
+    std::unique_ptr<clang::ASTConsumer>
+    CreateASTConsumer(clang::CompilerInstance &Compiler,
+                      llvm::StringRef) override {
+      Test->PP = &Compiler.getPreprocessor();
+      Test->Context = &Compiler.getASTContext();
+      return llvm::make_unique<TestConsumer>(Test);
+    }
+
+  private:
+    RefactoringOperationTest *Test;
+  };
+};
+
+} // end anonymous namespace
+
+TEST(RefactoringContinuation, ContinuationAndQueriesExist) {
+  using namespace clang::tooling::indexer;
+  using namespace clang::tooling::indexer::detail;
+  RefactoringOperationTest Test(
+      RefactoringActionType::ImplementDeclaredMethods, 2, 1,
+      [](const RefactoringResult &Result) {
+        EXPECT_TRUE(Result.Replacements.empty());
+        ASSERT_NE(Result.Continuation, nullptr);
+        RefactoringContinuation &Continuation = *Result.Continuation;
+
+        ASTProducerQuery *ASTQuery = Continuation.getASTUnitIndexerQuery();
+        ASSERT_NE(ASTQuery, nullptr);
+        EXPECT_TRUE(isa<ASTProducerQuery>(ASTQuery));
+        EXPECT_TRUE(isa<ASTUnitForImplementationOfDeclarationQuery>(ASTQuery));
+        EXPECT_FALSE(isa<DeclarationsQuery>(ASTQuery));
+
+        auto AdditionalQueries = Continuation.getAdditionalIndexerQueries();
+        ASSERT_EQ(AdditionalQueries.size(), (size_t)1);
+        EXPECT_FALSE(isa<ASTProducerQuery>(AdditionalQueries[0]));
+        EXPECT_FALSE(isa<ASTUnitForImplementationOfDeclarationQuery>(
+            AdditionalQueries[0]));
+        ASSERT_TRUE(isa<DeclarationsQuery>(AdditionalQueries[0]));
+
+        const DeclPredicateNode &Predicate =
+            cast<DeclarationsQuery>(AdditionalQueries[0])->getPredicateNode();
+        ASSERT_TRUE(isa<DeclPredicateNotPredicate>(Predicate));
+        const DeclPredicateNode &SubPredicate =
+            cast<DeclPredicateNotPredicate>(Predicate).getChild();
+        ASSERT_TRUE(isa<DeclPredicateNodePredicate>(SubPredicate));
+        EXPECT_EQ(cast<DeclPredicateNodePredicate>(SubPredicate).getPredicate(),
+                  DeclEntity().isDefined().Predicate);
+
+        ASTQuery->invalidateTUSpecificState();
+        AdditionalQueries[0]->invalidateTUSpecificState();
+      });
+  Test.runOver("class Foo {\nvoid method();\n};\n");
+  EXPECT_TRUE(Test.succeeded());
 }
 
 class ApplyAtomicChangesTest : public ::testing::Test {

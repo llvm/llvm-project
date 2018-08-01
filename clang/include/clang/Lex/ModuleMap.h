@@ -231,6 +231,9 @@ private:
     /// Whether this is an exhaustive set of configuration macros.
     unsigned IsExhaustive : 1;
 
+    /// \brief Whether this is a module who has its swift_names inferred.
+    unsigned IsSwiftInferImportAsMember : 1;
+
     /// Whether files in this module can only include non-modular headers
     /// and headers from used modules.
     unsigned NoUndeclaredIncludes : 1;

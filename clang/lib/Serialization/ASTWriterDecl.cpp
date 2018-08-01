@@ -801,6 +801,8 @@ void ASTDeclWriter::VisitObjCCategoryDecl(ObjCCategoryDecl *D) {
 void ASTDeclWriter::VisitObjCCompatibleAliasDecl(ObjCCompatibleAliasDecl *D) {
   VisitNamedDecl(D);
   Record.AddDeclRef(D->getClassInterface());
+  Record.AddSourceLocation(D->getClassInterfaceLoc());
+  Record.AddSourceLocation(D->getAtLoc());
   Code = serialization::DECL_OBJC_COMPATIBLE_ALIAS;
 }
 

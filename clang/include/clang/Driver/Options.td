@@ -328,6 +328,13 @@ def objcmt_whitelist_dir_path: Joined<["-"], "objcmt-whitelist-dir-path=">, Flag
 def : Joined<["-"], "objcmt-white-list-dir-path=">, Flags<[CC1Option]>,
     Alias<objcmt_whitelist_dir_path>;
 
+def index_store_path : Separate<["-"], "index-store-path">, Flags<[CC1Option]>,
+  HelpText<"Enable indexing with the specified data store path">;
+def index_ignore_system_symbols : Flag<["-"], "index-ignore-system-symbols">, Flags<[CC1Option]>,
+  HelpText<"Ignore symbols from system headers">;
+def index_record_codegen_name : Flag<["-"], "index-record-codegen-name">, Flags<[CC1Option]>,
+  HelpText<"Record the codegen name for symbols">;
+
 // Make sure all other -ccc- options are rejected.
 def ccc_ : Joined<["-"], "ccc-">, Group<internal_Group>, Flags<[Unsupported]>;
 
@@ -757,6 +764,21 @@ def fno_profile_instr_use : Flag<["-"], "fno-profile-instr-use">,
     HelpText<"Disable using instrumentation data for profile-guided optimization">;
 def fno_profile_use : Flag<["-"], "fno-profile-use">,
     Alias<fno_profile_instr_use>;
+
+def fapinotes : Flag<["-"], "fapinotes">, Group<f_clang_Group>,
+  Flags<[CC1Option]>, HelpText<"Enable external API notes support">;
+def fapinotes_modules : Flag<["-"], "fapinotes-modules">, Group<f_clang_Group>,
+  Flags<[CC1Option]>, HelpText<"Enable module-based external API notes support">;
+def fno_apinotes : Flag<["-"], "fno-apinotes">, Group<f_clang_Group>,
+  Flags<[CC1Option]>, HelpText<"Disable external API notes support">;
+def fno_apinotes_modules : Flag<["-"], "fno-apinotes-modules">, Group<f_clang_Group>,
+  Flags<[CC1Option]>, HelpText<"Disable module-based external API notes support">;
+def fapinotes_cache_path : Joined<["-"], "fapinotes-cache-path=">,
+  Group<i_Group>, Flags<[DriverOption]>, MetaVarName<"<directory>">,
+  HelpText<"Does nothing; API notes are no longer cached separately from modules">;
+def fapinotes_swift_version : Joined<["-"], "fapinotes-swift-version=">,
+  Group<f_clang_Group>, Flags<[CC1Option]>, MetaVarName<"<version>">,
+  HelpText<"Specify the Swift version to use when filtering API notes">;
 
 def faddrsig : Flag<["-"], "faddrsig">, Group<f_Group>, Flags<[CoreOption, CC1Option]>,
   HelpText<"Emit an address-significance table">;
@@ -1825,6 +1847,8 @@ def help : Flag<["-", "--"], "help">, Flags<[CC1Option,CC1AsOption]>,
   HelpText<"Display available options">;
 def index_header_map : Flag<["-"], "index-header-map">, Flags<[CC1Option]>,
   HelpText<"Make the next included directory (-I or -F) an indexer header map">;
+def iapinotes_modules : JoinedOrSeparate<["-"], "iapinotes-modules">, Group<clang_i_Group>, Flags<[CC1Option]>,
+  HelpText<"Add directory to the API notes search path referenced by module name">, MetaVarName<"<directory>">;
 def idirafter : JoinedOrSeparate<["-"], "idirafter">, Group<clang_i_Group>, Flags<[CC1Option]>,
   HelpText<"Add directory to AFTER include search path">;
 def iframework : JoinedOrSeparate<["-"], "iframework">, Group<clang_i_Group>, Flags<[CC1Option]>,

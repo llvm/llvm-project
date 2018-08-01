@@ -11,12 +11,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Sema/SemaInternal.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/CXXInheritance.h"
+#include "clang/AST/CharUnits.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/EvaluatedExprVisitor.h"
 #include "clang/AST/ExprCXX.h"
@@ -27,11 +27,13 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/AST/TypeOrdering.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/Edit/RefactoringFixits.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaInternal.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
@@ -1193,14 +1195,22 @@ Sema::ActOnFinishSwitchStmt(SourceLocation SwitchLoc, Stmt *Switch,
 
       // Produce a nice diagnostic if multiple values aren't handled.
       if (!UnhandledNames.empty()) {
-        DiagnosticBuilder DB = Diag(CondExpr->getExprLoc(),
-                                    TheDefaultStmt ? diag::warn_def_missing_case
-                                                   : diag::warn_missing_case)
-                               << (int)UnhandledNames.size();
+        {
+          DiagnosticBuilder DB =
+              Diag(CondExpr->getExprLoc(), TheDefaultStmt
+                                               ? diag::warn_def_missing_case
+                                               : diag::warn_missing_case)
+              << (int)UnhandledNames.size();
 
-        for (size_t I = 0, E = std::min(UnhandledNames.size(), (size_t)3);
-             I != E; ++I)
-          DB << UnhandledNames[I];
+          for (size_t I = 0, E = std::min(UnhandledNames.size(), (size_t)3);
+               I != E; ++I)
+            DB << UnhandledNames[I];
+        }
+        auto DB =
+            Diag(CondExpr->getExprLoc(), diag::note_fill_in_missing_cases);
+        edit::fillInMissingSwitchEnumCases(
+            Context, SS, ED, CurContext,
+            [&](const FixItHint &Hint) { DB << Hint; });
       }
 
       if (!hasCasesNotInSwitch)

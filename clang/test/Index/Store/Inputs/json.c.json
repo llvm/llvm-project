@@ -1,0 +1,151 @@
+{
+  "files": [
+    "/test1.o",
+    "/Inputs/test1.c",
+    "/Inputs/head.h",
+    "/test2.o",
+    "/Inputs/test2.c",
+    "/test3.o",
+    "/Inputs/test3.cpp"
+  ],
+  "symbols": [
+    {
+      "kind": "function",
+      "lang": "C",
+      "usr": "c:@F@test1_func",
+      "name": "test1_func",
+      "codegen": "_test1_func",
+      "roles": "Decl,Def"
+    },
+    {
+      "kind": "function",
+      "lang": "C",
+      "usr": "c:@F@test2_func",
+      "name": "test2_func",
+      "codegen": "_test2_func",
+      "roles": "Decl,Def"
+    },
+    {
+      "kind": "class",
+      "lang": "C++",
+      "usr": "c:@S@Base",
+      "name": "Base",
+      "roles": "Def,Ref,RelBase,RelCont"
+    },
+    {
+      "kind": "class",
+      "lang": "C++",
+      "usr": "c:@S@Sub",
+      "name": "Sub",
+      "roles": "Def",
+      "rel-roles": "RelBase,RelCont"
+    }
+  ],
+  "records": [
+    {
+      "occurrences": [
+        {
+          "symbol": 0,
+          "line": 3,
+          "col": 6,
+          "roles": "Def"
+        }
+      ]
+    },
+    {
+      "occurrences": [
+        {
+          "symbol": 0,
+          "line": 2,
+          "col": 13,
+          "roles": "Decl"
+        },
+        {
+          "symbol": 1,
+          "line": 3,
+          "col": 13,
+          "roles": "Decl"
+        }
+      ]
+    },
+    {
+      "occurrences": [
+        {
+          "symbol": 1,
+          "line": 3,
+          "col": 6,
+          "roles": "Def"
+        }
+      ]
+    },
+    {
+      "occurrences": [
+        {
+          "symbol": 2,
+          "line": 1,
+          "col": 7,
+          "roles": "Def"
+        },
+        {
+          "symbol": 3,
+          "line": 2,
+          "col": 7,
+          "roles": "Def"
+        },
+        {
+          "symbol": 2,
+          "line": 2,
+          "col": 20,
+          "roles": "Ref,RelBase,RelCont",
+          "relations": [
+            {
+              "symbol": 3,
+              "rel-roles": "RelBase,RelCont"
+            }
+          ]
+
+        }
+      ]
+    }
+  ],
+  "units": [
+    {
+      "triple": "x86_64-apple-macosx10.7.0",
+      "out-file": 0,
+      "sources": [
+        {
+          "file": 1,
+          "records": [0]
+        },
+        {
+          "file": 2,
+          "records": [1]
+        }
+      ]
+    },
+    {
+      "triple": "x86_64-apple-macosx10.7.0",
+      "out-file": 3,
+      "sources": [
+        {
+          "file": 4,
+          "records": [2]
+        },
+        {
+          "file": 2,
+          "records": [1]
+        }
+      ]
+    },
+    {
+      "triple": "x86_64-apple-macosx10.7.0",
+      "out-file": 5,
+      "sources": [
+        {
+          "file": 6,
+          "records": [3]
+        }
+      ]
+    }
+  ]
+}

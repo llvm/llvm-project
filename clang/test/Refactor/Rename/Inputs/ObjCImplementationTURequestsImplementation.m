@@ -1,0 +1,3 @@
+@implementation ExplicitIVarsInInterface
+
+@end

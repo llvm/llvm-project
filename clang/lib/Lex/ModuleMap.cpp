@@ -1669,6 +1669,9 @@ namespace {
     /// The 'exhaustive' attribute.
     AT_exhaustive,
 
+    // \brief The 'swift_infer_import_as_member' attribute.
+    AT_swift_infer_import_as_member,
+
     /// The 'no_undeclared_includes' attribute.
     AT_no_undeclared_includes
   };
@@ -2827,6 +2830,7 @@ bool ModuleMapParser::parseOptionalAttributes(Attributes &Attrs) {
           .Case("extern_c", AT_extern_c)
           .Case("no_undeclared_includes", AT_no_undeclared_includes)
           .Case("system", AT_system)
+          .Case("swift_infer_import_as_member", AT_swift_infer_import_as_member)
           .Default(AT_unknown);
     switch (Attribute) {
     case AT_unknown:
@@ -2840,6 +2844,10 @@ bool ModuleMapParser::parseOptionalAttributes(Attributes &Attrs) {
 
     case AT_extern_c:
       Attrs.IsExternC = true;
+      break;
+
+    case AT_swift_infer_import_as_member:
+      Attrs.IsSwiftInferImportAsMember = true;
       break;
 
     case AT_exhaustive:

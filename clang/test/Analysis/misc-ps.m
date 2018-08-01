@@ -1086,7 +1086,7 @@ void test_enum_cases(enum Cases C) {
 }
 
 void test_enum_cases_positive(enum Cases C) {
-  switch (C) { // expected-warning{{enumeration value 'C4' not handled in switch}}
+  switch (C) { // expected-warning{{enumeration value 'C4' not handled in switch}} expected-note {{add missing switch cases}}
   case C1:
   case C2:
   case C3:

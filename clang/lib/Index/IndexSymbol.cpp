@@ -478,6 +478,7 @@ StringRef index::getSymbolKindString(SymbolKind K) {
   case SymbolKind::ConversionFunction: return "coversion-func";
   case SymbolKind::Parameter: return "param";
   case SymbolKind::Using: return "using";
+  case SymbolKind::CommentTag: return "comment-tag";
   }
   llvm_unreachable("invalid symbol kind");
 }
@@ -491,6 +492,22 @@ StringRef index::getSymbolSubKindString(SymbolSubKind K) {
   case SymbolSubKind::AccessorSetter: return "acc-set";
   case SymbolSubKind::UsingTypename: return "using-typename";
   case SymbolSubKind::UsingValue: return "using-value";
+  case SymbolSubKind::SwiftAccessorWillSet: return "acc-willset";
+  case SymbolSubKind::SwiftAccessorDidSet: return "acc-didset";
+  case SymbolSubKind::SwiftAccessorAddressor: return "acc-addr";
+  case SymbolSubKind::SwiftAccessorMutableAddressor: return "acc-mutaddr";
+  case SymbolSubKind::SwiftAccessorRead: return "acc-read";
+  case SymbolSubKind::SwiftAccessorModify: return "acc-modify";
+  case SymbolSubKind::SwiftExtensionOfStruct: return "ext-struct";
+  case SymbolSubKind::SwiftExtensionOfClass: return "ext-class";
+  case SymbolSubKind::SwiftExtensionOfEnum: return "ext-enum";
+  case SymbolSubKind::SwiftExtensionOfProtocol: return "ext-protocol";
+  case SymbolSubKind::SwiftPrefixOperator: return "prefix-operator";
+  case SymbolSubKind::SwiftPostfixOperator: return "postfix-operator";
+  case SymbolSubKind::SwiftInfixOperator: return "infix-operator";
+  case SymbolSubKind::SwiftSubscript: return "subscript";
+  case SymbolSubKind::SwiftAssociatedType: return "associated-type";
+  case SymbolSubKind::SwiftGenericTypeParam: return "generic-type-param";
   }
   llvm_unreachable("invalid symbol subkind");
 }

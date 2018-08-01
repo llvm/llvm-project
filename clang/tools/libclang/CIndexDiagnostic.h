@@ -14,6 +14,7 @@
 #define LLVM_CLANG_TOOLS_LIBCLANG_CINDEXDIAGNOSTIC_H
 
 #include "clang-c/Index.h"
+#include "clang/Basic/LLVM.h"
 #include <memory>
 #include <vector>
 #include <assert.h>
@@ -158,6 +159,9 @@ struct CXStoredDiagnostic : public CXDiagnosticImpl {
 namespace cxdiag {
 CXDiagnosticSetImpl *lazyCreateDiags(CXTranslationUnit TU,
                                      bool checkIfChanged = false);
+
+CXDiagnosticSetImpl *createStoredDiags(ArrayRef<StoredDiagnostic> Diags,
+                                       const LangOptions &LangOpts);
 } // end namespace cxdiag
 
 } // end namespace clang

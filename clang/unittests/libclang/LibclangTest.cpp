@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang-c/Index.h"
+#include "clang-c/Refactor.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
@@ -589,6 +590,74 @@ TEST_F(LibclangReparseTest, clang_parseTranslationUnit2FullArgv) {
                                                 nullptr, 0, TUFlags, &ClangTU));
   EXPECT_EQ(0U, clang_getNumDiagnostics(ClangTU));
   DisplayDiagnostics();
+}
+
+TEST(libclang, RefactoringAction) {
+  std::string Name =
+      clang_getCString(clang_RefactoringActionType_getName(CXRefactor_Rename));
+  EXPECT_EQ(Name, "Rename");
+}
+
+TEST_F(LibclangParseTest, RefactoringFindRenamedCursor) {
+  std::string Filename = "test.cpp";
+  WriteFile(Filename, "int renamable = 0;\n");
+
+  ClangTU = clang_parseTranslationUnit(Index, Filename.c_str(), nullptr, 0,
+                                       nullptr, 0, TUFlags);
+  CXSourceLocation Loc = clang_getLocation(
+      ClangTU, clang_getFile(ClangTU, Filename.c_str()), 1, 5);
+  CXSourceRange Range = clang_getRange(Loc, Loc);
+  CXCursor Cursor;
+  EXPECT_EQ(CXError_Success,
+            clang_Refactoring_findRenamedCursor(ClangTU, Loc, Range, &Cursor));
+  EXPECT_EQ(Cursor.kind, CXCursor_VarDecl);
+}
+
+TEST_F(LibclangParseTest, RefactoringRenameIndexedUnsavedFiles) {
+  std::string Filename = "test.cpp";
+  std::string PartialSource = "class Test { };\n";
+  WriteFile(Filename, PartialSource);
+  std::string FullSource = PartialSource + "Test t;\n";
+
+  CXIndexedSymbolLocation IndexedLocations[2] = {
+      {{1, 7}, CXCursor_DeclRefExpr}, {{2, 1}, CXCursor_DeclRefExpr}};
+  CXIndexedSymbol Symbols[1] = {
+      {IndexedLocations, 2, CXCursor_DeclRefExpr, /*Name=*/"Test"}};
+
+  CXIndex Idx = clang_createIndex(0, 0);
+
+  auto test = [&](CXUnsavedFile *File = nullptr) -> CXSymbolOccurrencesInFile {
+    CXSymbolOccurrencesResult Result;
+    CXErrorCode Err = clang_Refactoring_findSymbolOccurrencesInIndexedFile(
+        Symbols, 1, Idx, Filename.c_str(), nullptr, 0, File, File ? 1 : 0,
+        /*Options=*/nullptr, &Result);
+    EXPECT_EQ(CXError_Success, Err);
+    unsigned NumFiles = clang_SymbolOccurrences_getNumFiles(Result);
+    EXPECT_EQ(NumFiles, 1u);
+    CXSymbolOccurrencesInFile Occurrences;
+    clang_SymbolOccurrences_getOccurrencesForFile(Result, 0, &Occurrences);
+    return Occurrences;
+  };
+  CXSymbolOccurrencesInFile FileOccurrences = test();
+  EXPECT_EQ(FileOccurrences.NumOccurrences, 1u);
+  EXPECT_EQ(clang_getCString(FileOccurrences.Filename), Filename);
+  EXPECT_EQ(FileOccurrences.Occurrences[0].NumNamePieces, 1u);
+  EXPECT_EQ(FileOccurrences.Occurrences[0].NamePieces[0].Begin.Line, 1u);
+  EXPECT_EQ(FileOccurrences.Occurrences[0].NamePieces[0].Begin.Column, 7u);
+
+  CXUnsavedFile UnsavedFile = {Filename.c_str(), FullSource.c_str(),
+                               FullSource.size()};
+  CXSymbolOccurrencesInFile UnsavedFileOccurrences = test(&UnsavedFile);
+  EXPECT_EQ(UnsavedFileOccurrences.NumOccurrences, 2u);
+  EXPECT_EQ(clang_getCString(UnsavedFileOccurrences.Filename), Filename);
+  EXPECT_EQ(UnsavedFileOccurrences.Occurrences[0].NumNamePieces, 1u);
+  EXPECT_EQ(UnsavedFileOccurrences.Occurrences[0].NamePieces[0].Begin.Line, 1u);
+  EXPECT_EQ(UnsavedFileOccurrences.Occurrences[0].NamePieces[0].Begin.Column,
+            7u);
+  EXPECT_EQ(UnsavedFileOccurrences.Occurrences[1].NumNamePieces, 1u);
+  EXPECT_EQ(UnsavedFileOccurrences.Occurrences[1].NamePieces[0].Begin.Line, 2u);
+  EXPECT_EQ(UnsavedFileOccurrences.Occurrences[1].NamePieces[0].Begin.Column,
+            1u);
 }
 
 class LibclangPrintingPolicyTest : public LibclangParseTest {

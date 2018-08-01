@@ -436,6 +436,10 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // more information.
   ArgStringList CmdArgs;
 
+  Args.ClaimAllArgs(options::OPT_index_store_path);
+  Args.ClaimAllArgs(options::OPT_index_ignore_system_symbols);
+  Args.ClaimAllArgs(options::OPT_index_record_codegen_name);
+
   /// Hack(tm) to ignore linking errors when we are doing ARC migration.
   if (Args.hasArg(options::OPT_ccc_arcmt_check,
                   options::OPT_ccc_arcmt_migrate)) {

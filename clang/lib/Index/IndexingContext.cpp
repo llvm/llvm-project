@@ -93,12 +93,7 @@ bool IndexingContext::importedModule(const ImportDecl *ImportD) {
   if (FID.isInvalid())
     return true;
 
-  bool Invalid = false;
-  const SrcMgr::SLocEntry &SEntry = SM.getSLocEntry(FID, &Invalid);
-  if (Invalid || !SEntry.isFile())
-    return true;
-
-  if (SEntry.getFile().getFileCharacteristic() != SrcMgr::C_User) {
+  if (isSystemFile(FID)) {
     switch (IndexOpts.SystemSymbolFilter) {
     case IndexingOptions::SystemSymbolFilterKind::None:
       return true;
@@ -159,6 +154,56 @@ bool IndexingContext::shouldIgnoreIfImplicit(const Decl *D) {
   if (isa<ImportDecl>(D))
     return false;
   return true;
+}
+
+void IndexingContext::setSysrootPath(StringRef path) {
+  // Ignore sysroot path if it points to root, otherwise every header will be
+  // treated as system one.
+  if (path == "/")
+    path = StringRef();
+  SysrootPath = path;
+}
+
+bool IndexingContext::isSystemFile(FileID FID) {
+  if (LastFileCheck.first == FID)
+    return LastFileCheck.second;
+
+  auto result = [&](bool res) -> bool {
+    LastFileCheck = { FID, res };
+    return res;
+  };
+
+  bool Invalid = false;
+  const SrcMgr::SLocEntry &SEntry =
+    Ctx->getSourceManager().getSLocEntry(FID, &Invalid);
+  if (Invalid || !SEntry.isFile())
+    return result(false);
+
+  const SrcMgr::FileInfo &FI = SEntry.getFile();
+  if (FI.getFileCharacteristic() != SrcMgr::C_User)
+    return result(true);
+
+  auto *CC = FI.getContentCache();
+  if (!CC)
+    return result(false);
+  auto *FE = CC->OrigEntry;
+  if (!FE)
+    return result(false);
+
+  if (SysrootPath.empty())
+    return result(false);
+
+  // Check if directory is in sysroot so that we can consider system headers
+  // even the headers found via a user framework search path, pointing inside
+  // sysroot.
+  auto dirEntry = FE->getDir();
+  auto pair = DirEntries.insert(std::make_pair(dirEntry, false));
+  bool &isSystemDir = pair.first->second;
+  bool wasInserted = pair.second;
+  if (wasInserted) {
+    isSystemDir = StringRef(dirEntry->getName()).startswith(SysrootPath);
+  }
+  return result(isSystemDir);
 }
 
 static const CXXRecordDecl *
@@ -322,7 +367,7 @@ bool IndexingContext::handleDeclOccurrence(const Decl *D, SourceLocation Loc,
                                            const Expr *OrigE,
                                            const Decl *OrigD,
                                            const DeclContext *ContainerDC) {
-  if (D->isImplicit() && !isa<ObjCMethodDecl>(D))
+  if (D->isImplicit() && !(isa<ObjCMethodDecl>(D) || isa<ObjCIvarDecl>(D)))
     return true;
   if (!isa<NamedDecl>(D) || shouldSkipNamelessDecl(cast<NamedDecl>(D)))
     return true;
@@ -332,12 +377,7 @@ bool IndexingContext::handleDeclOccurrence(const Decl *D, SourceLocation Loc,
   if (FID.isInvalid())
     return true;
 
-  bool Invalid = false;
-  const SrcMgr::SLocEntry &SEntry = SM.getSLocEntry(FID, &Invalid);
-  if (Invalid || !SEntry.isFile())
-    return true;
-
-  if (SEntry.getFile().getFileCharacteristic() != SrcMgr::C_User) {
+  if (isSystemFile(FID)) {
     switch (IndexOpts.SystemSymbolFilter) {
     case IndexingOptions::SystemSymbolFilterKind::None:
       return true;

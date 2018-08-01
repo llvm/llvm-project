@@ -124,6 +124,14 @@ void Decl::print(raw_ostream &Out, const PrintingPolicy &Policy,
   Printer.Visit(const_cast<Decl*>(this));
 }
 
+void TemplateParameterList::print(raw_ostream &Out,
+                                  const PrintingPolicy &Policy,
+                                  const ASTContext &Context,
+                                  unsigned Indentation) const {
+  DeclPrinter Printer(Out, Policy, Context, Indentation);
+  Printer.printTemplateParameters(this);
+}
+
 static QualType GetBaseType(QualType T) {
   // FIXME: This should be on the Type class!
   QualType BaseType = T;
@@ -565,13 +573,15 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
   CXXConversionDecl *ConversionDecl = dyn_cast<CXXConversionDecl>(D);
   CXXDeductionGuideDecl *GuideDecl = dyn_cast<CXXDeductionGuideDecl>(D);
   if (!Policy.SuppressSpecifiers) {
-    switch (D->getStorageClass()) {
-    case SC_None: break;
-    case SC_Extern: Out << "extern "; break;
-    case SC_Static: Out << "static "; break;
-    case SC_PrivateExtern: Out << "__private_extern__ "; break;
-    case SC_Auto: case SC_Register:
-      llvm_unreachable("invalid for functions");
+    if (!Policy.SupressStorageClassSpecifiers) {
+      switch (D->getStorageClass()) {
+      case SC_None: break;
+      case SC_Extern: Out << "extern "; break;
+      case SC_Static: Out << "static "; break;
+      case SC_PrivateExtern: Out << "__private_extern__ "; break;
+      case SC_Auto: case SC_Register:
+        llvm_unreachable("invalid for functions");
+      }
     }
 
     if (D->isInlineSpecified())  Out << "inline ";
@@ -1285,6 +1295,9 @@ void DeclPrinter::VisitObjCInterfaceDecl(ObjCInterfaceDecl *OID) {
     return;
   }
   bool eolnOut = false;
+  prettyPrintAttributes(OID);
+  if (OID->hasAttrs()) Out << "\n";
+
   Out << "@interface " << I;
 
   if (auto TypeParams = OID->getTypeParamListAsWritten()) {

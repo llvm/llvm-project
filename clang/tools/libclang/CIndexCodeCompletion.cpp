@@ -751,7 +751,8 @@ clang_codeCompleteAt_Impl(CXTranslationUnit TU, const char *complete_filename,
                     complete_line, complete_column)
           .str();
   LibclangInvocationReporter InvocationReporter(
-      *CXXIdx, LibclangInvocationReporter::OperationKind::CompletionOperation,
+      *CXXIdx, complete_filename,
+      LibclangInvocationReporter::OperationKind::CompletionOperation,
       TU->ParsingOptions, CArgs, CompletionInvocation, unsaved_files);
   AST->CodeComplete(complete_filename, complete_line, complete_column,
                     RemappedFiles, (options & CXCodeComplete_IncludeMacros),
