@@ -512,9 +512,6 @@ public:
   ///
   /// @param[in] uval
   ///     A uint64_t value that was extracted as a SLEB128 value.
-  ///
-  /// @param[in] format
-  ///     The optional printf format that can be overridden.
   //------------------------------------------------------------------
   size_t PutSLEB128(int64_t uval);
 
@@ -526,9 +523,6 @@ public:
   ///
   /// @param[in] uval
   ///     A uint64_t value that was extracted as a ULEB128 value.
-  ///
-  /// @param[in] format
-  ///     The optional printf format that can be overridden.
   //------------------------------------------------------------------
   size_t PutULEB128(uint64_t uval);
 
