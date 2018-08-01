@@ -35,7 +35,7 @@ public:
   /// for compile_commands.json in all parent directories of each file.
   ClangdLSPServer(JSONOutput &Out, const clangd::CodeCompleteOptions &CCOpts,
                   llvm::Optional<Path> CompileCommandsDir,
-                  const ClangdServer::Options &Opts);
+                  bool ShouldUseInMemoryCDB, const ClangdServer::Options &Opts);
 
   /// Run LSP server loop, receiving input for it from \p In. \p In must be
   /// opened in binary mode. Output will be written using Out variable passed to
@@ -100,10 +100,57 @@ private:
   /// Caches FixIts per file and diagnostics
   llvm::StringMap<DiagnosticToReplacementMap> FixItsMap;
 
+  /// Encapsulates the directory-based or the in-memory compilation database
+  /// that's used by the LSP server.
+  class CompilationDB {
+  public:
+    static CompilationDB makeInMemory();
+    static CompilationDB
+    makeDirectoryBased(llvm::Optional<Path> CompileCommandsDir);
+
+    void invalidate(PathRef File);
+
+    /// Sets the compilation command for a particular file.
+    /// Only valid for in-memory CDB, no-op and error log on DirectoryBasedCDB.
+    ///
+    /// \returns True if the File had no compilation command before.
+    bool
+    setCompilationCommandForFile(PathRef File,
+                                 tooling::CompileCommand CompilationCommand);
+
+    /// Adds extra compilation flags to the compilation command for a particular
+    /// file. Only valid for directory-based CDB, no-op and error log on
+    /// InMemoryCDB;
+    void setExtraFlagsForFile(PathRef File,
+                              std::vector<std::string> ExtraFlags);
+
+    /// Set the compile commands directory to \p P.
+    /// Only valid for directory-based CDB, no-op and error log on InMemoryCDB;
+    void setCompileCommandsDir(Path P);
+
+    /// Returns a CDB that should be used to get compile commands for the
+    /// current instance of ClangdLSPServer.
+    GlobalCompilationDatabase &getCDB();
+
+  private:
+    CompilationDB(std::unique_ptr<GlobalCompilationDatabase> CDB,
+                  std::unique_ptr<CachingCompilationDb> CachingCDB,
+                  bool IsDirectoryBased)
+        : CDB(std::move(CDB)), CachingCDB(std::move(CachingCDB)),
+          IsDirectoryBased(IsDirectoryBased) {}
+
+    // if IsDirectoryBased is true, an instance of InMemoryCDB.
+    // If IsDirectoryBased is false, an instance of DirectoryBasedCDB.
+    // unique_ptr<GlobalCompilationDatabase> CDB;
+    std::unique_ptr<GlobalCompilationDatabase> CDB;
+    // Non-null only for directory-based CDB
+    std::unique_ptr<CachingCompilationDb> CachingCDB;
+    bool IsDirectoryBased;
+  };
+
   // Various ClangdServer parameters go here. It's important they're created
   // before ClangdServer.
-  DirectoryBasedGlobalCompilationDatabase NonCachedCDB;
-  CachingCompilationDb CDB;
+  CompilationDB CDB;
 
   RealFileSystemProvider FSProvider;
   /// Options used for code completion
