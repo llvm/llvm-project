@@ -498,6 +498,7 @@ module std [system] {
   module __tree { header "__tree" export * }
   module __tuple { header "__tuple" export * }
   module __undef_macros { header "__undef_macros" export * }
+  module __node_handle { header "__node_handle" export * }
 
   module experimental {
     requires cplusplus11

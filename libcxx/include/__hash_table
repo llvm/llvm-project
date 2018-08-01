@@ -859,6 +859,17 @@ public:
     template <class> friend class __hash_map_node_destructor;
 };
 
+#if _LIBCPP_STD_VER > 14
+template <class _NodeType, class _Alloc>
+struct __generic_container_node_destructor;
+
+template <class _Tp, class _VoidPtr, class _Alloc>
+struct __generic_container_node_destructor<__hash_node<_Tp, _VoidPtr>, _Alloc>
+    : __hash_node_destructor<_Alloc>
+{
+    using __hash_node_destructor<_Alloc>::__hash_node_destructor;
+};
+#endif
 
 #ifndef _LIBCPP_CXX03_LANG
 template <class _Key, class _Hash, class _Equal, class _Alloc>
@@ -1150,6 +1161,30 @@ public:
     pair<iterator, bool> __insert_unique(const __container_value_type& __x) {
         return __emplace_unique_key_args(_NodeTypes::__get_key(__x), __x);
     }
+
+#if _LIBCPP_STD_VER > 14
+    template <class _NodeHandle, class _InsertReturnType>
+    _LIBCPP_INLINE_VISIBILITY
+    _InsertReturnType __node_handle_insert_unique(_NodeHandle&& __nh);
+    template <class _NodeHandle>
+    _LIBCPP_INLINE_VISIBILITY
+    iterator __node_handle_insert_unique(const_iterator __hint,
+                                         _NodeHandle&& __nh);
+
+    template <class _NodeHandle>
+    _LIBCPP_INLINE_VISIBILITY
+    iterator __node_handle_insert_multi(_NodeHandle&& __nh);
+    template <class _NodeHandle>
+    _LIBCPP_INLINE_VISIBILITY
+    iterator __node_handle_insert_multi(const_iterator __hint, _NodeHandle&& __nh);
+
+    template <class _NodeHandle>
+    _LIBCPP_INLINE_VISIBILITY
+    _NodeHandle __node_handle_extract(key_type const& __key);
+    template <class _NodeHandle>
+    _LIBCPP_INLINE_VISIBILITY
+    _NodeHandle __node_handle_extract(const_iterator __it);
+#endif
 
     void clear() _NOEXCEPT;
     void rehash(size_type __n);
@@ -2125,6 +2160,91 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__insert_multi(const_iterator __p,
 }
 
 #endif  // _LIBCPP_CXX03_LANG
+
+#if _LIBCPP_STD_VER > 14
+template <class _Tp, class _Hash, class _Equal, class _Alloc>
+template <class _NodeHandle, class _InsertReturnType>
+_LIBCPP_INLINE_VISIBILITY
+_InsertReturnType
+__hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_handle_insert_unique(
+    _NodeHandle&& __nh)
+{
+    if (__nh.empty())
+        return _InsertReturnType{end(), false, _NodeHandle()};
+    pair<iterator, bool> __result = __node_insert_unique(__nh.__ptr_);
+    if (__result.second)
+        __nh.__release();
+    return _InsertReturnType{__result.first, __result.second, _VSTD::move(__nh)};
+}
+
+template <class _Tp, class _Hash, class _Equal, class _Alloc>
+template <class _NodeHandle>
+_LIBCPP_INLINE_VISIBILITY
+typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::iterator
+__hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_handle_insert_unique(
+    const_iterator, _NodeHandle&& __nh)
+{
+    if (__nh.empty())
+        return end();
+    pair<iterator, bool> __result = __node_insert_unique(__nh.__ptr_);
+    if (__result.second)
+        __nh.__release();
+    return __result.first;
+}
+
+template <class _Tp, class _Hash, class _Equal, class _Alloc>
+template <class _NodeHandle>
+_LIBCPP_INLINE_VISIBILITY
+_NodeHandle
+__hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_handle_extract(
+    key_type const& __key)
+{
+    iterator __i = find(__key);
+    if (__i == end())
+        return _NodeHandle();
+    return __node_handle_extract<_NodeHandle>(__i);
+}
+
+template <class _Tp, class _Hash, class _Equal, class _Alloc>
+template <class _NodeHandle>
+_LIBCPP_INLINE_VISIBILITY
+_NodeHandle
+__hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_handle_extract(
+    const_iterator __p)
+{
+    allocator_type __alloc(__node_alloc());
+    return _NodeHandle(remove(__p).release(), __alloc);
+}
+
+template <class _Tp, class _Hash, class _Equal, class _Alloc>
+template <class _NodeHandle>
+_LIBCPP_INLINE_VISIBILITY
+typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::iterator
+__hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_handle_insert_multi(
+    _NodeHandle&& __nh)
+{
+    if (__nh.empty())
+        return end();
+    iterator __result = __node_insert_multi(__nh.__ptr_);
+    __nh.__release();
+    return __result;
+}
+
+template <class _Tp, class _Hash, class _Equal, class _Alloc>
+template <class _NodeHandle>
+_LIBCPP_INLINE_VISIBILITY
+typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::iterator
+__hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_handle_insert_multi(
+    const_iterator __hint, _NodeHandle&& __nh)
+{
+    if (__nh.empty())
+        return end();
+    iterator __result = __node_insert_multi(__hint, __nh.__ptr_);
+    __nh.__release();
+    return __result;
+}
+
+#endif  // _LIBCPP_STD_VER > 14
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
 void

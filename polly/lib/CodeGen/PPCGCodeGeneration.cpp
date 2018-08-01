@@ -1289,7 +1289,7 @@ void GPUNodeBuilder::createUser(__isl_take isl_ast_node *UserStmt) {
 }
 
 void GPUNodeBuilder::createFor(__isl_take isl_ast_node *Node) {
-  createForSequential(Node, false);
+  createForSequential(isl::manage(Node), false);
 }
 
 void GPUNodeBuilder::createKernelCopy(ppcg_kernel_stmt *KernelStmt) {

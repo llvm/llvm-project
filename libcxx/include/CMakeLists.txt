@@ -11,6 +11,7 @@ set(files
   __libcpp_version
   __locale
   __mutex_base
+  __node_handle
   __nullptr
   __split_buffer
   __sso_allocator
