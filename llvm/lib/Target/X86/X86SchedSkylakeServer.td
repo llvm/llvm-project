@@ -136,6 +136,7 @@ def  : WriteRes<WriteSETCCStore, [SKXPort06,SKXPort4,SKXPort237]> {
   let NumMicroOps = 3;
 }
 def  : WriteRes<WriteLAHFSAHF, [SKXPort06]>;
+def  : WriteRes<WriteBitTest,[SKXPort06]>; //
 
 // Integer shifts and rotates.
 defm : SKXWriteResPair<WriteShift, [SKXPort06],  1>;
@@ -618,14 +619,6 @@ def SKXWriteResGroup7 : SchedWriteRes<[SKXPort06]> {
   let ResourceCycles = [1];
 }
 def: InstRW<[SKXWriteResGroup7], (instrs CDQ, CQO, CLAC, STAC)>;
-def: InstRW<[SKXWriteResGroup7], (instregex "BT(16|32|64)ri8",
-                                            "BT(16|32|64)rr",
-                                            "BTC(16|32|64)ri8",
-                                            "BTC(16|32|64)rr",
-                                            "BTR(16|32|64)ri8",
-                                            "BTR(16|32|64)rr",
-                                            "BTS(16|32|64)ri8",
-                                            "BTS(16|32|64)rr")>;
 
 def SKXWriteResGroup8 : SchedWriteRes<[SKXPort15]> {
   let Latency = 1;

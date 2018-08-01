@@ -217,6 +217,13 @@ cmpq %rsi, %rdi
 cmpq %rsi, (%rax)
 cmpq (%rax), %rdi
 
+cmpsb
+cmpsw
+cmpsl
+cmpsq
+
+cpuid
+
 decb %dil
 decb (%rax)
 decw %di
@@ -274,6 +281,13 @@ imulq $665536, (%rax), %rdi
 imulq $7, %rsi, %rdi
 imulq $7, (%rax), %rdi
 
+inb $7,  %al
+inb %dx, %al
+inw $7,  %ax
+inw %dx, %ax
+inl $7,  %eax
+inl %dx, %eax
+
 incb %dil
 incb (%rax)
 incw %di
@@ -283,7 +297,23 @@ incl (%rax)
 incq %rdi
 incq (%rax)
 
+insb
+insw
+insl
+
+int $7
+
 lahf
+
+lodsb
+lodsw
+lodsl
+lodsq
+
+movsb
+movsw
+movsl
+movsq
 
 movsbw %al, %di
 movzbw %al, %di
@@ -378,6 +408,19 @@ orq $7, (%rax)
 orq %rsi, %rdi
 orq %rsi, (%rax)
 orq (%rax), %rdi
+
+outb %al,  $7
+outb %al,  %dx
+outw %ax,  $7
+outw %ax,  %dx
+outl %eax, $7
+outl %eax, %dx
+
+outsb
+outsw
+outsl
+
+pause
 
 rclb %dil
 rcrb %dil
@@ -595,6 +638,11 @@ sbbq %rsi, %rdi
 sbbq %rsi, (%rax)
 sbbq (%rax), %rdi
 
+scasb
+scasw
+scasl
+scasq
+
 shldw %cl, %si, %di
 shrdw %cl, %si, %di
 shldw %cl, %si, (%rax)
@@ -621,6 +669,14 @@ shldq $7, %rsi, %rdi
 shrdq $7, %rsi, %rdi
 shldq $7, %rsi, (%rax)
 shrdq $7, %rsi, (%rax)
+
+stc
+std
+
+stosb
+stosw
+stosl
+stosq
 
 subb $7, %al
 subb $7, %dil
@@ -655,6 +711,10 @@ subq $7, (%rax)
 subq %rsi, %rdi
 subq %rsi, (%rax)
 subq (%rax), %rdi
+
+ud2
+
+xlatb
 
 xorb $7, %al
 xorb $7, %dil
@@ -890,6 +950,11 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  1      1     0.50                        cmpq	%rsi, %rdi
 # CHECK-NEXT:  1      1     1.00    *                   cmpq	%rsi, (%rax)
 # CHECK-NEXT:  1      1     1.00    *                   cmpq	(%rax), %rdi
+# CHECK-NEXT:  1      3     1.50                  U     cmpsb	%es:(%rdi), (%rsi)
+# CHECK-NEXT:  1      3     1.50                  U     cmpsw	%es:(%rdi), (%rsi)
+# CHECK-NEXT:  1      3     1.50                  U     cmpsl	%es:(%rdi), (%rsi)
+# CHECK-NEXT:  1      3     1.50                  U     cmpsq	%es:(%rdi), (%rsi)
+# CHECK-NEXT:  1      121   60.50                 U     cpuid
 # CHECK-NEXT:  1      1     0.50                        decb	%dil
 # CHECK-NEXT:  1      1     1.00    *      *            decb	(%rax)
 # CHECK-NEXT:  1      1     0.50                        decw	%di
@@ -940,6 +1005,12 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  1      14    7.00    *                   imulq	$665536, (%rax), %rdi
 # CHECK-NEXT:  1      14    7.00                        imulq	$7, %rsi, %rdi
 # CHECK-NEXT:  1      14    7.00    *                   imulq	$7, (%rax), %rdi
+# CHECK-NEXT:  1      92    46.00                 U     inb	$7, %al
+# CHECK-NEXT:  1      94    47.00                 U     inb	%dx, %al
+# CHECK-NEXT:  1      92    46.00                 U     inw	$7, %ax
+# CHECK-NEXT:  1      94    47.00                 U     inw	%dx, %ax
+# CHECK-NEXT:  1      92    46.00                 U     inl	$7, %eax
+# CHECK-NEXT:  1      94    47.00                 U     inl	%dx, %eax
 # CHECK-NEXT:  1      1     0.50                        incb	%dil
 # CHECK-NEXT:  1      1     1.00    *      *            incb	(%rax)
 # CHECK-NEXT:  1      1     0.50                        incw	%di
@@ -948,7 +1019,19 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  1      1     1.00    *      *            incl	(%rax)
 # CHECK-NEXT:  1      1     0.50                        incq	%rdi
 # CHECK-NEXT:  1      1     1.00    *      *            incq	(%rax)
+# CHECK-NEXT:  1      59    29.50                 U     insb	%dx, %es:(%rdi)
+# CHECK-NEXT:  1      59    29.50                 U     insw	%dx, %es:(%rdi)
+# CHECK-NEXT:  1      59    29.50                 U     insl	%dx, %es:(%rdi)
+# CHECK-NEXT:  1      127   63.50   *      *      U     int	$7
 # CHECK-NEXT:  1      2     1.00                        lahf
+# CHECK-NEXT:  1      2     1.00                  U     lodsb	(%rsi), %al
+# CHECK-NEXT:  1      2     1.00                  U     lodsw	(%rsi), %ax
+# CHECK-NEXT:  1      2     1.00                  U     lodsl	(%rsi), %eax
+# CHECK-NEXT:  1      2     1.00                  U     lodsq	(%rsi), %rax
+# CHECK-NEXT:  1      3     1.50                  U     movsb	(%rsi), %es:(%rdi)
+# CHECK-NEXT:  1      3     1.50                  U     movsw	(%rsi), %es:(%rdi)
+# CHECK-NEXT:  1      3     1.50                  U     movsl	(%rsi), %es:(%rdi)
+# CHECK-NEXT:  1      3     1.50                  U     movsq	(%rsi), %es:(%rdi)
 # CHECK-NEXT:  1      2     1.00                        movsbw	%al, %di
 # CHECK-NEXT:  1      2     1.00                        movzbw	%al, %di
 # CHECK-NEXT:  1      3     1.50    *                   movsbw	(%rax), %di
@@ -1032,6 +1115,16 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  1      1     0.50                        orq	%rsi, %rdi
 # CHECK-NEXT:  1      1     1.00    *      *            orq	%rsi, (%rax)
 # CHECK-NEXT:  1      1     1.00    *                   orq	(%rax), %rdi
+# CHECK-NEXT:  1      72    36.00                 U     outb	%al, $7
+# CHECK-NEXT:  1      68    34.00                 U     outb	%al, %dx
+# CHECK-NEXT:  1      72    36.00                 U     outw	%ax, $7
+# CHECK-NEXT:  1      68    34.00                 U     outw	%ax, %dx
+# CHECK-NEXT:  1      72    36.00                 U     outl	%eax, $7
+# CHECK-NEXT:  1      68    34.00                 U     outl	%eax, %dx
+# CHECK-NEXT:  1      74    37.00                 U     outsb	(%rsi), %dx
+# CHECK-NEXT:  1      74    37.00                 U     outsw	(%rsi), %dx
+# CHECK-NEXT:  1      74    37.00                 U     outsl	(%rsi), %dx
+# CHECK-NEXT:  1      17    8.50    *      *      U     pause
 # CHECK-NEXT:  1      1     1.00                        rclb	%dil
 # CHECK-NEXT:  1      1     1.00                        rcrb	%dil
 # CHECK-NEXT:  1      1     1.00           *            rclb	(%rax)
@@ -1231,6 +1324,10 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  1      1     0.50                        sbbq	%rsi, %rdi
 # CHECK-NEXT:  1      1     1.00    *      *            sbbq	%rsi, (%rax)
 # CHECK-NEXT:  1      1     1.00    *                   sbbq	(%rax), %rdi
+# CHECK-NEXT:  1      2     1.00                  U     scasb	%es:(%rdi), %al
+# CHECK-NEXT:  1      2     1.00                  U     scasw	%es:(%rdi), %ax
+# CHECK-NEXT:  1      2     1.00                  U     scasl	%es:(%rdi), %eax
+# CHECK-NEXT:  1      2     1.00                  U     scasq	%es:(%rdi), %rax
 # CHECK-NEXT:  1      6     3.00                        shldw	%cl, %si, %di
 # CHECK-NEXT:  1      6     3.00                        shrdw	%cl, %si, %di
 # CHECK-NEXT:  1      6     3.00    *      *            shldw	%cl, %si, (%rax)
@@ -1255,6 +1352,12 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  1      9     4.50                        shrdq	$7, %rsi, %rdi
 # CHECK-NEXT:  1      9     4.50    *      *            shldq	$7, %rsi, (%rax)
 # CHECK-NEXT:  1      9     4.50    *      *            shrdq	$7, %rsi, (%rax)
+# CHECK-NEXT:  1      1     0.50                  U     stc
+# CHECK-NEXT:  1      21    10.50                 U     std
+# CHECK-NEXT:  1      1     0.50                  U     stosb	%al, %es:(%rdi)
+# CHECK-NEXT:  1      1     0.50                  U     stosw	%ax, %es:(%rdi)
+# CHECK-NEXT:  1      1     0.50                  U     stosl	%eax, %es:(%rdi)
+# CHECK-NEXT:  1      1     0.50                  U     stosq	%rax, %es:(%rdi)
 # CHECK-NEXT:  1      1     0.50                        subb	$7, %al
 # CHECK-NEXT:  1      1     0.50                        subb	$7, %dil
 # CHECK-NEXT:  1      1     1.00    *      *            subb	$7, (%rax)
@@ -1285,6 +1388,8 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  1      1     0.50                        subq	%rsi, %rdi
 # CHECK-NEXT:  1      1     1.00    *      *            subq	%rsi, (%rax)
 # CHECK-NEXT:  1      1     1.00    *                   subq	(%rax), %rdi
+# CHECK-NEXT:  1      100   0.50    *             U     ud2
+# CHECK-NEXT:  1      6     3.00    *                   xlatb
 # CHECK-NEXT:  1      1     0.50                        xorb	$7, %al
 # CHECK-NEXT:  1      1     0.50                        xorb	$7, %dil
 # CHECK-NEXT:  1      1     1.00    *      *            xorb	$7, (%rax)
@@ -1322,7 +1427,7 @@ xorq (%rax), %rdi
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]
-# CHECK-NEXT: 1418.00 1088.00
+# CHECK-NEXT: 2275.50 1945.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    Instructions:
@@ -1517,6 +1622,11 @@ xorq (%rax), %rdi
 # CHECK-NEXT: 0.50   0.50   cmpq	%rsi, %rdi
 # CHECK-NEXT: 1.00    -     cmpq	%rsi, (%rax)
 # CHECK-NEXT: 1.00    -     cmpq	(%rax), %rdi
+# CHECK-NEXT: 1.50   1.50   cmpsb	%es:(%rdi), (%rsi)
+# CHECK-NEXT: 1.50   1.50   cmpsw	%es:(%rdi), (%rsi)
+# CHECK-NEXT: 1.50   1.50   cmpsl	%es:(%rdi), (%rsi)
+# CHECK-NEXT: 1.50   1.50   cmpsq	%es:(%rdi), (%rsi)
+# CHECK-NEXT: 60.50  60.50  cpuid
 # CHECK-NEXT: 0.50   0.50   decb	%dil
 # CHECK-NEXT: 1.00    -     decb	(%rax)
 # CHECK-NEXT: 0.50   0.50   decw	%di
@@ -1567,6 +1677,12 @@ xorq (%rax), %rdi
 # CHECK-NEXT: 7.00   7.00   imulq	$665536, (%rax), %rdi
 # CHECK-NEXT: 7.00   7.00   imulq	$7, %rsi, %rdi
 # CHECK-NEXT: 7.00   7.00   imulq	$7, (%rax), %rdi
+# CHECK-NEXT: 46.00  46.00  inb	$7, %al
+# CHECK-NEXT: 47.00  47.00  inb	%dx, %al
+# CHECK-NEXT: 46.00  46.00  inw	$7, %ax
+# CHECK-NEXT: 47.00  47.00  inw	%dx, %ax
+# CHECK-NEXT: 46.00  46.00  inl	$7, %eax
+# CHECK-NEXT: 47.00  47.00  inl	%dx, %eax
 # CHECK-NEXT: 0.50   0.50   incb	%dil
 # CHECK-NEXT: 1.00    -     incb	(%rax)
 # CHECK-NEXT: 0.50   0.50   incw	%di
@@ -1575,7 +1691,19 @@ xorq (%rax), %rdi
 # CHECK-NEXT: 1.00    -     incl	(%rax)
 # CHECK-NEXT: 0.50   0.50   incq	%rdi
 # CHECK-NEXT: 1.00    -     incq	(%rax)
+# CHECK-NEXT: 29.50  29.50  insb	%dx, %es:(%rdi)
+# CHECK-NEXT: 29.50  29.50  insw	%dx, %es:(%rdi)
+# CHECK-NEXT: 29.50  29.50  insl	%dx, %es:(%rdi)
+# CHECK-NEXT: 63.50  63.50  int	$7
 # CHECK-NEXT: 1.00   1.00   lahf
+# CHECK-NEXT: 1.00   1.00   lodsb	(%rsi), %al
+# CHECK-NEXT: 1.00   1.00   lodsw	(%rsi), %ax
+# CHECK-NEXT: 1.00   1.00   lodsl	(%rsi), %eax
+# CHECK-NEXT: 1.00   1.00   lodsq	(%rsi), %rax
+# CHECK-NEXT: 1.50   1.50   movsb	(%rsi), %es:(%rdi)
+# CHECK-NEXT: 1.50   1.50   movsw	(%rsi), %es:(%rdi)
+# CHECK-NEXT: 1.50   1.50   movsl	(%rsi), %es:(%rdi)
+# CHECK-NEXT: 1.50   1.50   movsq	(%rsi), %es:(%rdi)
 # CHECK-NEXT: 1.00   1.00   movsbw	%al, %di
 # CHECK-NEXT: 1.00   1.00   movzbw	%al, %di
 # CHECK-NEXT: 1.50   1.50   movsbw	(%rax), %di
@@ -1659,6 +1787,16 @@ xorq (%rax), %rdi
 # CHECK-NEXT: 0.50   0.50   orq	%rsi, %rdi
 # CHECK-NEXT: 1.00    -     orq	%rsi, (%rax)
 # CHECK-NEXT: 1.00    -     orq	(%rax), %rdi
+# CHECK-NEXT: 36.00  36.00  outb	%al, $7
+# CHECK-NEXT: 34.00  34.00  outb	%al, %dx
+# CHECK-NEXT: 36.00  36.00  outw	%ax, $7
+# CHECK-NEXT: 34.00  34.00  outw	%ax, %dx
+# CHECK-NEXT: 36.00  36.00  outl	%eax, $7
+# CHECK-NEXT: 34.00  34.00  outl	%eax, %dx
+# CHECK-NEXT: 37.00  37.00  outsb	(%rsi), %dx
+# CHECK-NEXT: 37.00  37.00  outsw	(%rsi), %dx
+# CHECK-NEXT: 37.00  37.00  outsl	(%rsi), %dx
+# CHECK-NEXT: 8.50   8.50   pause
 # CHECK-NEXT: 1.00    -     rclb	%dil
 # CHECK-NEXT: 1.00    -     rcrb	%dil
 # CHECK-NEXT: 1.00    -     rclb	(%rax)
@@ -1858,6 +1996,10 @@ xorq (%rax), %rdi
 # CHECK-NEXT: 0.50   0.50   sbbq	%rsi, %rdi
 # CHECK-NEXT: 1.00    -     sbbq	%rsi, (%rax)
 # CHECK-NEXT: 1.00    -     sbbq	(%rax), %rdi
+# CHECK-NEXT: 1.00   1.00   scasb	%es:(%rdi), %al
+# CHECK-NEXT: 1.00   1.00   scasw	%es:(%rdi), %ax
+# CHECK-NEXT: 1.00   1.00   scasl	%es:(%rdi), %eax
+# CHECK-NEXT: 1.00   1.00   scasq	%es:(%rdi), %rax
 # CHECK-NEXT: 3.00   3.00   shldw	%cl, %si, %di
 # CHECK-NEXT: 3.00   3.00   shrdw	%cl, %si, %di
 # CHECK-NEXT: 3.00   3.00   shldw	%cl, %si, (%rax)
@@ -1882,6 +2024,12 @@ xorq (%rax), %rdi
 # CHECK-NEXT: 4.50   4.50   shrdq	$7, %rsi, %rdi
 # CHECK-NEXT: 4.50   4.50   shldq	$7, %rsi, (%rax)
 # CHECK-NEXT: 4.50   4.50   shrdq	$7, %rsi, (%rax)
+# CHECK-NEXT: 0.50   0.50   stc
+# CHECK-NEXT: 10.50  10.50  std
+# CHECK-NEXT: 0.50   0.50   stosb	%al, %es:(%rdi)
+# CHECK-NEXT: 0.50   0.50   stosw	%ax, %es:(%rdi)
+# CHECK-NEXT: 0.50   0.50   stosl	%eax, %es:(%rdi)
+# CHECK-NEXT: 0.50   0.50   stosq	%rax, %es:(%rdi)
 # CHECK-NEXT: 0.50   0.50   subb	$7, %al
 # CHECK-NEXT: 0.50   0.50   subb	$7, %dil
 # CHECK-NEXT: 1.00    -     subb	$7, (%rax)
@@ -1912,6 +2060,8 @@ xorq (%rax), %rdi
 # CHECK-NEXT: 0.50   0.50   subq	%rsi, %rdi
 # CHECK-NEXT: 1.00    -     subq	%rsi, (%rax)
 # CHECK-NEXT: 1.00    -     subq	(%rax), %rdi
+# CHECK-NEXT: 0.50   0.50   ud2
+# CHECK-NEXT: 3.00   3.00   xlatb
 # CHECK-NEXT: 0.50   0.50   xorb	$7, %al
 # CHECK-NEXT: 0.50   0.50   xorb	$7, %dil
 # CHECK-NEXT: 1.00    -     xorb	$7, (%rax)

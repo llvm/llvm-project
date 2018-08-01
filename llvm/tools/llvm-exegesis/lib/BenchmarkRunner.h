@@ -23,6 +23,8 @@
 #include "RegisterAliasing.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/Support/Error.h"
+#include <cstdlib>
+#include <memory>
 #include <vector>
 
 namespace exegesis {
@@ -40,6 +42,7 @@ struct BenchmarkConfiguration {
   // measurement it should be as short as possible. It is usually used to setup
   // the content of the Registers.
   struct Setup {
+    std::vector<unsigned> LiveIns; // The registers that are live on entry.
     std::vector<unsigned> RegsToDef;
   };
   Setup SnippetSetup;
@@ -66,6 +69,23 @@ public:
   std::vector<unsigned>
   computeRegsToDef(const std::vector<InstructionInstance> &Snippet) const;
 
+  // Scratch space to run instructions that touch memory.
+  struct ScratchSpace {
+    static constexpr const size_t kAlignment = 1024;
+    static constexpr const size_t kSize = 1 << 20; // 1MB.
+    ScratchSpace()
+        : UnalignedPtr(llvm::make_unique<char[]>(kSize + kAlignment)),
+          AlignedPtr(
+              UnalignedPtr.get() + kAlignment -
+              (reinterpret_cast<intptr_t>(UnalignedPtr.get()) % kAlignment)) {}
+    char *ptr() const { return AlignedPtr; }
+    void clear() { std::memset(ptr(), 0, kSize); }
+
+  private:
+    const std::unique_ptr<char[]> UnalignedPtr;
+    char *const AlignedPtr;
+  };
+
 protected:
   const LLVMState &State;
   const RegisterAliasingTrackerCache RATC;
@@ -84,7 +104,7 @@ private:
   generatePrototype(unsigned Opcode) const = 0;
 
   virtual std::vector<BenchmarkMeasure>
-  runMeasurements(const ExecutableFunction &EF,
+  runMeasurements(const ExecutableFunction &EF, ScratchSpace &Scratch,
                   const unsigned NumRepetitions) const = 0;
 
   // Internal helpers.
@@ -101,6 +121,8 @@ private:
                   llvm::ArrayRef<llvm::MCInst> Code) const;
 
   const InstructionBenchmark::ModeE Mode;
+
+  const std::unique_ptr<ScratchSpace> Scratch;
 };
 
 } // namespace exegesis

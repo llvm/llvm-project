@@ -19,8 +19,8 @@ set vsdevcmd=C:\Program Files (x86)\Microsoft Visual Studio\2017\Professional\Co
 
 set revision=%1
 set branch=trunk
-set package_version=7.0.0-r%revision%
-set clang_format_vs_version=7.0.0.%revision%
+set package_version=8.0.0-r%revision%
+set clang_format_vs_version=8.0.0.%revision%
 set build_dir=llvm_package_%revision%
 
 echo Branch: %branch%

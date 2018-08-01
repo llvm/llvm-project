@@ -527,10 +527,6 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
   setTargetDAGCombine(ISD::EXTRACT_VECTOR_ELT);
   setTargetDAGCombine(ISD::FP_ROUND);
   setTargetDAGCombine(ISD::BSWAP);
-  setTargetDAGCombine(ISD::SHL);
-  setTargetDAGCombine(ISD::SRA);
-  setTargetDAGCombine(ISD::SRL);
-  setTargetDAGCombine(ISD::ROTL);
 
   // Handle intrinsics.
   setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::Other, Custom);
@@ -5524,76 +5520,6 @@ SDValue SystemZTargetLowering::combineBSWAP(
   return SDValue();
 }
 
-SDValue SystemZTargetLowering::combineSHIFTROT(
-    SDNode *N, DAGCombinerInfo &DCI) const {
-
-  SelectionDAG &DAG = DCI.DAG;
-
-  // Shift/rotate instructions only use the last 6 bits of the second operand
-  // register. If the second operand is the result of an AND with an immediate
-  // value that has its last 6 bits set, we can safely remove the AND operation.
-  //
-  // If the AND operation doesn't have the last 6 bits set, we can't remove it
-  // entirely, but we can still truncate it to a 16-bit value. This prevents
-  // us from ending up with a NILL with a signed operand, which will cause the
-  // instruction printer to abort.
-  SDValue N1 = N->getOperand(1);
-  if (N1.getOpcode() == ISD::AND) {
-    SDValue AndMaskOp = N1->getOperand(1);
-    auto *AndMask = dyn_cast<ConstantSDNode>(AndMaskOp);
-
-    // The AND mask is constant
-    if (AndMask) {
-      auto AmtVal = AndMask->getZExtValue();
-
-      // Bottom 6 bits are set
-      if ((AmtVal & 0x3f) == 0x3f) {
-        SDValue AndOp = N1->getOperand(0);
-
-        // This is the only use, so remove the node
-        if (N1.hasOneUse()) {
-          // Combine the AND away
-          DCI.CombineTo(N1.getNode(), AndOp);
-
-          // Return N so it isn't rechecked
-          return SDValue(N, 0);
-
-        // The node will be reused, so create a new node for this one use
-        } else {
-          SDValue Replace = DAG.getNode(N->getOpcode(), SDLoc(N),
-                                        N->getValueType(0), N->getOperand(0),
-                                        AndOp);
-          DCI.AddToWorklist(Replace.getNode());
-
-          return Replace;
-        }
-
-      // We can't remove the AND, but we can use NILL here (normally we would
-      // use NILF). Only keep the last 16 bits of the mask. The actual
-      // transformation will be handled by .td definitions.
-      } else if (AmtVal >> 16 != 0) {
-        SDValue AndOp = N1->getOperand(0);
-
-        auto NewMask = DAG.getConstant(AndMask->getZExtValue() & 0x0000ffff,
-                                       SDLoc(AndMaskOp),
-                                       AndMaskOp.getValueType());
-
-        auto NewAnd = DAG.getNode(N1.getOpcode(), SDLoc(N1), N1.getValueType(),
-                                  AndOp, NewMask);
-
-        SDValue Replace = DAG.getNode(N->getOpcode(), SDLoc(N),
-                                      N->getValueType(0), N->getOperand(0),
-                                      NewAnd);
-        DCI.AddToWorklist(Replace.getNode());
-
-        return Replace;
-      }
-    }
-  }
-
-  return SDValue();
-}
-
 static bool combineCCMask(SDValue &CCReg, int &CCValid, int &CCMask) {
   // We have a SELECT_CCMASK or BR_CCMASK comparing the condition code
   // set by the CCReg instruction using the CCValid / CCMask masks,
@@ -5752,10 +5678,6 @@ SDValue SystemZTargetLowering::PerformDAGCombine(SDNode *N,
   case SystemZISD::JOIN_DWORDS: return combineJOIN_DWORDS(N, DCI);
   case ISD::FP_ROUND:           return combineFP_ROUND(N, DCI);
   case ISD::BSWAP:              return combineBSWAP(N, DCI);
-  case ISD::SHL:
-  case ISD::SRA:
-  case ISD::SRL:
-  case ISD::ROTL:               return combineSHIFTROT(N, DCI);
   case SystemZISD::BR_CCMASK:   return combineBR_CCMASK(N, DCI);
   case SystemZISD::SELECT_CCMASK: return combineSELECT_CCMASK(N, DCI);
   case SystemZISD::GET_CCMASK:  return combineGET_CCMASK(N, DCI);

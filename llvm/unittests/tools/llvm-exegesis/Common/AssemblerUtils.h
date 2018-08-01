@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Assembler.h"
+#include "BenchmarkRunner.h"
 #include "Target.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -36,21 +37,19 @@ protected:
     }
   }
 
-  template <class... Bs> inline void Check(llvm::MCInst MCInst, Bs... Bytes) {
-    CheckWithSetup(ExegesisTarget::getDefault(), {}, MCInst, Bytes...);
-  }
-
   template <class... Bs>
-  inline void CheckWithSetup(const ExegesisTarget &ET,
-                             llvm::ArrayRef<unsigned> RegsToDef,
-                             llvm::MCInst MCInst, Bs... Bytes) {
+  inline void Check(const ExegesisTarget &ET,
+                    llvm::ArrayRef<unsigned> RegsToDef, llvm::MCInst MCInst,
+                    Bs... Bytes) {
     ExecutableFunction Function =
         (MCInst.getOpcode() == 0) ? assembleToFunction(ET, RegsToDef, {})
                                   : assembleToFunction(ET, RegsToDef, {MCInst});
     ASSERT_THAT(Function.getFunctionBytes().str(),
                 testing::ElementsAre(Bytes...));
-    if (CanExecute)
-      Function();
+    if (CanExecute) {
+      BenchmarkRunner::ScratchSpace Scratch;
+      Function(Scratch.ptr());
+    }
   }
 
 private:
@@ -73,7 +72,8 @@ private:
                      llvm::ArrayRef<llvm::MCInst> Instructions) {
     llvm::SmallString<256> Buffer;
     llvm::raw_svector_ostream AsmStream(Buffer);
-    assembleToStream(ET, createTargetMachine(), RegsToDef, Instructions,
+    assembleToStream(ET, createTargetMachine(), /*LiveIns=*/{},
+                     RegsToDef, Instructions,
                      AsmStream);
     return ExecutableFunction(createTargetMachine(),
                               getObjectFromBuffer(AsmStream.str()));
