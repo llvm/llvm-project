@@ -1,0 +1,7 @@
+# RUN: rm -rf %t && mkdir %t && cd %t
+# RUN: %target-swiftc -g \
+# RUN:          -module-cache-path %t/cache %S/Inputs/Global.swift \
+# RUN:          -module-name main -o a.out
+# RUN: %lldb a.out -s %s | FileCheck %S/Inputs/Global.swift
+
+target var c

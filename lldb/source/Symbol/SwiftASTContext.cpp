@@ -5870,6 +5870,8 @@ CompilerType SwiftASTContext::MapIntoContext(lldb::StackFrameSP &frame_sp,
   VALID_OR_RETURN(CompilerType());
   if (!type)
     return CompilerType(GetASTContext(), nullptr);
+  if (!frame_sp)
+    return CompilerType(GetASTContext(), GetSwiftType(type));
   swift::CanType swift_can_type(GetCanonicalSwiftType(type));
   const SymbolContext &sc(frame_sp->GetSymbolContext(eSymbolContextFunction));
   if (!sc.function || (swift_can_type && !swift_can_type->hasTypeParameter()))
