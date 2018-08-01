@@ -510,7 +510,7 @@ namespace std {
 #define _LIBCPP_HAS_IS_BASE_OF
 #endif
 
-#if !__EXCEPTIONS
+#if !__EXCEPTIONS && !defined(_LIBCPP_NO_EXCEPTIONS)
 #define _LIBCPP_NO_EXCEPTIONS
 #endif
 
