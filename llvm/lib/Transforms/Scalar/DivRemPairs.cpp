@@ -21,7 +21,6 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/DebugCounter.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BypassSlowDivision.h"
 using namespace llvm;
@@ -30,8 +29,6 @@ using namespace llvm;
 STATISTIC(NumPairs, "Number of div/rem pairs");
 STATISTIC(NumHoisted, "Number of instructions hoisted");
 STATISTIC(NumDecomposed, "Number of instructions decomposed");
-DEBUG_COUNTER(DRPCounter, "div-rem-pairs-transform",
-              "Controls transformations in div-rem-pairs pass");
 
 /// Find matching pairs of integer div/rem ops (they have the same numerator,
 /// denominator, and signedness). If they exist in different basic blocks, bring
@@ -94,9 +91,6 @@ static bool optimizeDivRem(Function &F, const TargetTransformInfo &TTI,
 
     bool DivDominates = DT.dominates(DivInst, RemInst);
     if (!DivDominates && !DT.dominates(RemInst, DivInst))
-      continue;
-
-    if (!DebugCounter::shouldExecute(DRPCounter))
       continue;
 
     if (HasDivRemOp) {

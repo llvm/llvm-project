@@ -460,7 +460,8 @@ ProgramStateRef ExprEngine::elideDestructor(ProgramStateRef State,
                                             const CXXBindTemporaryExpr *BTE,
                                             const LocationContext *LC) {
   ConstructedObjectKey Key({BTE, /*IsElided=*/true}, LC);
-  assert(!State->contains<ObjectsUnderConstruction>(Key));
+  // FIXME: Currently the state might already contain the marker due to
+  // incorrect handling of temporaries bound to default parameters.
   return State->set<ObjectsUnderConstruction>(Key, UnknownVal());
 }
 
