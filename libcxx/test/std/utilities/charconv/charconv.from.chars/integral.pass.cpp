@@ -37,6 +37,7 @@ struct test_basics : roundtrip_test_base<T>
             using xl = std::numeric_limits<T>;
 
             test(1, b);
+            test(-1, b);
             test(xl::lowest(), b);
             test((xl::max)(), b);
             test((xl::max)() / 2, b);
