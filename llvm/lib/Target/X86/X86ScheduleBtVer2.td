@@ -168,8 +168,8 @@ defm : JWriteResIntPair<WriteIMul,   [JALU1, JMul], 3, [1, 1], 2>; // i8/i16/i32
 defm : JWriteResIntPair<WriteIMul64, [JALU1, JMul], 6, [1, 4], 2>; // i64 multiplication
 defm : X86WriteRes<WriteIMulH,       [JALU1], 6, [4], 1>;
 
-defm : JWriteResIntPair<WriteBSWAP32,[JALU01], 1>;
-defm : JWriteResIntPair<WriteBSWAP64,[JALU01], 1>;
+defm : X86WriteRes<WriteBSWAP32, [JALU01], 1, [1], 1>;
+defm : X86WriteRes<WriteBSWAP64, [JALU01], 1, [1], 1>;
 
 defm : JWriteResIntPair<WriteDiv8,   [JALU1, JDiv], 12, [1, 12], 1>;
 defm : JWriteResIntPair<WriteDiv16,  [JALU1, JDiv], 17, [1, 17], 2>;
@@ -209,33 +209,11 @@ defm : X86WriteResPairUnsupported<WriteBZHI>;
 
 defm : JWriteResIntPair<WriteShift, [JALU01], 1>;
 
-defm : JWriteResIntPair<WriteShiftDouble, [JALU01], 1>;
-
-def JWriteSHLDrri : SchedWriteRes<[JALU01]> {
-  let Latency = 3;
-  let ResourceCycles = [6];
-  let NumMicroOps = 6;
-}
-def: InstRW<[JWriteSHLDrri], (instrs SHLD16rri8, SHLD32rri8, SHLD64rri8,
-                                     SHRD16rri8, SHRD32rri8, SHRD64rri8)>;
-
-def JWriteSHLDrrCL : SchedWriteRes<[JALU01]> {
-  let Latency = 4;
-  let ResourceCycles = [8];
-  let NumMicroOps = 7;
-}
-def: InstRW<[JWriteSHLDrrCL], (instrs SHLD16rrCL, SHLD32rrCL, SHLD64rrCL,
-                                      SHRD16rrCL, SHRD32rrCL, SHRD64rrCL)>;
-
-def JWriteSHLDm : SchedWriteRes<[JLAGU, JALU01]> {
-  let Latency = 9;
-  let ResourceCycles = [1, 22];
-  let NumMicroOps = 8;
-}
-def: InstRW<[JWriteSHLDm],(instrs SHLD16mri8, SHLD32mri8, SHLD64mri8,
-                                  SHLD16mrCL, SHLD32mrCL, SHLD64mrCL,
-                                  SHRD16mri8, SHRD32mri8, SHRD64mri8,
-                                  SHRD16mrCL, SHRD32mrCL, SHRD64mrCL)>;
+// SHLD/SHRD.
+defm : X86WriteRes<WriteSHDrri, [JALU01], 3, [6], 6>;
+defm : X86WriteRes<WriteSHDrrcl,[JALU01], 4, [8], 7>;
+defm : X86WriteRes<WriteSHDmri, [JLAGU, JALU01], 9, [1, 22], 8>;
+defm : X86WriteRes<WriteSHDmrcl,[JLAGU, JALU01], 9, [1, 22], 8>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Loads, stores, and moves, not folded with other operations.

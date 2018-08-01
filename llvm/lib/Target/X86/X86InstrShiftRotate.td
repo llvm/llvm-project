@@ -650,9 +650,9 @@ def ROR64m1  : RI<0xD1, MRM1m, (outs), (ins i64mem:$dst),
 // Double shift instructions (generalizations of rotate)
 //===----------------------------------------------------------------------===//
 
-let Constraints = "$src1 = $dst", SchedRW = [WriteShiftDouble] in {
+let Constraints = "$src1 = $dst" in {
 
-let Uses = [CL] in {
+let Uses = [CL], SchedRW = [WriteSHDrrcl] in {
 def SHLD16rrCL : I<0xA5, MRMDestReg, (outs GR16:$dst),
                    (ins GR16:$src1, GR16:$src2),
                    "shld{w}\t{%cl, $src2, $dst|$dst, $src2, cl}",
@@ -683,9 +683,9 @@ def SHRD64rrCL : RI<0xAD, MRMDestReg, (outs GR64:$dst),
                     "shrd{q}\t{%cl, $src2, $dst|$dst, $src2, cl}",
                     [(set GR64:$dst, (X86shrd GR64:$src1, GR64:$src2, CL))]>,
                     TB;
-}
+} // SchedRW
 
-let isCommutable = 1 in {  // These instructions commute to each other.
+let isCommutable = 1, SchedRW = [WriteSHDrri] in {  // These instructions commute to each other.
 def SHLD16rri8 : Ii8<0xA4, MRMDestReg,
                      (outs GR16:$dst),
                      (ins GR16:$src1, GR16:$src2, u8imm:$src3),
@@ -728,11 +728,10 @@ def SHRD64rri8 : RIi8<0xAC, MRMDestReg,
                       [(set GR64:$dst, (X86shrd GR64:$src1, GR64:$src2,
                                        (i8 imm:$src3)))]>,
                  TB;
-}
-} // Constraints = "$src = $dst", SchedRW
+} // SchedRW
+} // Constraints = "$src = $dst"
 
-let SchedRW = [WriteShiftDoubleLd, WriteRMW] in {
-let Uses = [CL] in {
+let Uses = [CL], SchedRW = [WriteSHDmrcl] in {
 def SHLD16mrCL : I<0xA5, MRMDestMem, (outs), (ins i16mem:$dst, GR16:$src2),
                    "shld{w}\t{%cl, $src2, $dst|$dst, $src2, cl}",
                    [(store (X86shld (loadi16 addr:$dst), GR16:$src2, CL),
@@ -759,8 +758,9 @@ def SHRD64mrCL : RI<0xAD, MRMDestMem, (outs), (ins i64mem:$dst, GR64:$src2),
                     "shrd{q}\t{%cl, $src2, $dst|$dst, $src2, cl}",
                     [(store (X86shrd (loadi64 addr:$dst), GR64:$src2, CL),
                       addr:$dst)]>, TB;
-}
+} // SchedRW
 
+let SchedRW = [WriteSHDmri] in {
 def SHLD16mri8 : Ii8<0xA4, MRMDestMem,
                     (outs), (ins i16mem:$dst, GR16:$src2, u8imm:$src3),
                     "shld{w}\t{$src3, $src2, $dst|$dst, $src2, $src3}",

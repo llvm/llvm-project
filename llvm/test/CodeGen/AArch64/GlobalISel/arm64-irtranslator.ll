@@ -138,9 +138,9 @@ false:
 ; CHECK: %0:_(s32) = COPY $w0
 ; CHECK: %[[reg100:[0-9]+]]:_(s32) = G_CONSTANT i32 100
 ; CHECK: %[[reg200:[0-9]+]]:_(s32) = G_CONSTANT i32 200
-; CHECK: %[[reg0:[0-9]+]]:_(s32) = G_CONSTANT i32 0
-; CHECK: %[[reg1:[0-9]+]]:_(s32) = G_CONSTANT i32 1
 ; CHECK: %[[reg2:[0-9]+]]:_(s32) = G_CONSTANT i32 2
+; CHECK: %[[reg1:[0-9]+]]:_(s32) = G_CONSTANT i32 1
+; CHECK: %[[reg0:[0-9]+]]:_(s32) = G_CONSTANT i32 0
 ; CHECK: %[[regicmp100:[0-9]+]]:_(s1) = G_ICMP intpred(eq), %[[reg100]](s32), %0
 ; CHECK: G_BRCOND %[[regicmp100]](s1), %[[BB_CASE100]]
 ; CHECK: G_BR %[[BB_NOTCASE100_CHECKNEXT]]
@@ -413,9 +413,9 @@ define i64* @trivial_bitcast(i8* %a) {
 ; CHECK:     G_BR %[[CAST:bb\.[0-9]+]]
 
 ; CHECK: [[END:bb\.[0-9]+]].{{[a-zA-Z0-9.]+}}:
+; CHECK:     $x0 = COPY [[A]]
 
 ; CHECK: [[CAST]].{{[a-zA-Z0-9.]+}}:
-; CHECK:     {{%[0-9]+}}:_(p0) = COPY [[A]]
 ; CHECK:     G_BR %[[END]]
 define i64* @trivial_bitcast_with_copy(i8* %a) {
   br label %cast

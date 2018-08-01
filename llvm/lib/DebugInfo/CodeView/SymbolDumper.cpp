@@ -611,6 +611,12 @@ Error CVSymbolDumperImpl::visitKnownRecord(CVSymbol &CVR, UDTSym &UDT) {
   return Error::success();
 }
 
+Error CVSymbolDumperImpl::visitKnownRecord(CVSymbol &CVR,
+                                           UsingNamespaceSym &UN) {
+  W.printString("Namespace", UN.Name);
+  return Error::success();
+}
+
 Error CVSymbolDumperImpl::visitUnknownSymbol(CVSymbol &CVR) {
   W.printNumber("Length", CVR.length());
   return Error::success();

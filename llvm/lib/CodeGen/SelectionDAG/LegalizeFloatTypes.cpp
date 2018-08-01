@@ -1898,7 +1898,8 @@ void DAGTypeLegalizer::PromoteFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::FROUND:
     case ISD::FSIN:
     case ISD::FSQRT:
-    case ISD::FTRUNC:     R = PromoteFloatRes_UnaryOp(N); break;
+    case ISD::FTRUNC:
+    case ISD::FCANONICALIZE: R = PromoteFloatRes_UnaryOp(N); break;
 
     // Binary FP Operations
     case ISD::FADD:

@@ -118,8 +118,8 @@ defm WriteIMul64 : X86SchedWritePair; // Integer 64-bit multiplication.
 def  WriteIMulH  : SchedWrite;        // Integer multiplication, high part.
 def  WriteLEA    : SchedWrite;        // LEA instructions can't fold loads.
 
-defm WriteBSWAP32: X86SchedWritePair; // Byte Order (Endiannes) Swap
-defm WriteBSWAP64: X86SchedWritePair; // Byte Order (Endiannes) Swap
+def  WriteBSWAP32 : SchedWrite; // Byte Order (Endianness) 32-bit Swap.
+def  WriteBSWAP64 : SchedWrite; // Byte Order (Endianness) 64-bit Swap.
 
 // Integer division.
 defm WriteDiv8   : X86SchedWritePair;
@@ -146,7 +146,10 @@ def  WriteLAHFSAHF : SchedWrite; // Load/Store flags in AH.
 // Integer shifts and rotates.
 defm WriteShift : X86SchedWritePair;
 // Double shift instructions.
-defm WriteShiftDouble : X86SchedWritePair;
+def  WriteSHDrri  : SchedWrite;
+def  WriteSHDrrcl : SchedWrite;
+def  WriteSHDmri  : SchedWrite;
+def  WriteSHDmrcl : SchedWrite;
 
 // BMI1 BEXTR, BMI2 BZHI
 defm WriteBEXTR : X86SchedWritePair;

@@ -81,8 +81,8 @@ defm : AtomWriteResPair<WriteADC,    [AtomPort01], [AtomPort0]>;
 defm : AtomWriteResPair<WriteIMul,   [AtomPort01], [AtomPort01],  7,  7,  [7],  [7]>;
 defm : AtomWriteResPair<WriteIMul64, [AtomPort01], [AtomPort01], 12, 12, [12], [12]>;
 
-defm : AtomWriteResPair<WriteBSWAP32,    [AtomPort0], [AtomPort0]>;
-defm : AtomWriteResPair<WriteBSWAP64,    [AtomPort0], [AtomPort0]>;
+defm : X86WriteRes<WriteBSWAP32,     [AtomPort0], 1, [1], 1>;
+defm : X86WriteRes<WriteBSWAP64,     [AtomPort0], 1, [1], 1>;
 
 defm : AtomWriteResPair<WriteDiv8,   [AtomPort01], [AtomPort01], 50, 68, [50], [68]>;
 defm : AtomWriteResPair<WriteDiv16,  [AtomPort01], [AtomPort01], 50, 50, [50], [50]>;
@@ -150,11 +150,10 @@ defm : X86WriteResPairUnsupported<WriteBZHI>;
 
 defm : AtomWriteResPair<WriteShift, [AtomPort0], [AtomPort0]>;
 
-////////////////////////////////////////////////////////////////////////////////
-// Double shift instructions.
-////////////////////////////////////////////////////////////////////////////////
-
-defm : AtomWriteResPair<WriteShiftDouble, [AtomPort0], [AtomPort0]>;
+defm : X86WriteRes<WriteSHDrri, [AtomPort01], 2, [2], 1>;
+defm : X86WriteRes<WriteSHDrrcl,[AtomPort01], 2, [2], 1>;
+defm : X86WriteRes<WriteSHDmri, [AtomPort01], 4, [4], 1>;
+defm : X86WriteRes<WriteSHDmrcl,[AtomPort01], 4, [4], 1>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Loads, stores, and moves, not folded with other operations.
@@ -562,9 +561,7 @@ def AtomWrite01_2 : SchedWriteRes<[AtomPort01]> {
 def : InstRW<[AtomWrite01_2], (instrs LEAVE, LEAVE64, POP16r,
                                       PUSH16rmm, PUSH32rmm, PUSH64rmm,
                                       LODSB, LODSL, LODSQ, LODSW,
-                                      SCASB, SCASL, SCASQ, SCASW,
-                                      SHLD32rrCL, SHRD32rrCL,
-                                      SHLD32rri8, SHRD32rri8)>;
+                                      SCASB, SCASL, SCASQ, SCASW)>;
 def : InstRW<[AtomWrite01_2], (instregex "BT(C|R|S)(16|32|64)mi8",
                                          "PUSH(CS|DS|ES|FS|GS|SS)(16|32|64)",
                                          "XADD(8|16|32|64)rr",
@@ -598,8 +595,6 @@ def AtomWrite01_4 : SchedWriteRes<[AtomPort01]> {
 }
 def : InstRW<[AtomWrite01_4], (instrs CBW, CWD, CWDE, CDQ, CDQE, CQO,
                                       JCXZ, JECXZ, JRCXZ,
-                                      SHLD32mrCL, SHRD32mrCL,
-                                      SHLD32mri8, SHRD32mri8,
                                       LD_F80m)>;
 def : InstRW<[AtomWrite01_4], (instregex "PH(ADD|SUB)Drm",
                                          "(MMX_)?PEXTRWrr(_REV)?")>;

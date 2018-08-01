@@ -65,13 +65,6 @@ static Value *SimplifyCastInst(unsigned, Value *, Type *,
 static Value *SimplifyGEPInst(Type *, ArrayRef<Value *>, const SimplifyQuery &,
                               unsigned);
 
-/// Fold
-///   %A = icmp ne/eq i8 %X, %V1
-///   %B = icmp ne/eq i8 %X, %V2
-///   %C = or/and i1 %A, %B
-///   %D = select i1 %C, i8 %X, i8 %V1
-/// To
-///   %X/%V1
 static Value *foldSelectWithBinaryOp(Value *Cond, Value *TrueVal,
                                      Value *FalseVal) {
   BinaryOperator::BinaryOps BinOpCode;
@@ -80,7 +73,7 @@ static Value *foldSelectWithBinaryOp(Value *Cond, Value *TrueVal,
   else
     return nullptr;
 
-  CmpInst::Predicate ExpectedPred;
+  CmpInst::Predicate ExpectedPred, Pred1, Pred2;
   if (BinOpCode == BinaryOperator::Or) {
     ExpectedPred = ICmpInst::ICMP_NE;
   } else if (BinOpCode == BinaryOperator::And) {
@@ -88,15 +81,30 @@ static Value *foldSelectWithBinaryOp(Value *Cond, Value *TrueVal,
   } else
     return nullptr;
 
-  CmpInst::Predicate Pred1, Pred2;
-  if (!match(
-          Cond,
-          m_c_BinOp(m_c_ICmp(Pred1, m_Specific(TrueVal), m_Specific(FalseVal)),
-                    m_c_ICmp(Pred2, m_Specific(TrueVal), m_Value()))) ||
+  // %A = icmp eq %TV, %FV
+  // %B = icmp eq %X, %Y (and one of these is a select operand)
+  // %C = and %A, %B
+  // %D = select %C, %TV, %FV
+  // -->
+  // %FV
+
+  // %A = icmp ne %TV, %FV
+  // %B = icmp ne %X, %Y (and one of these is a select operand)
+  // %C = or %A, %B
+  // %D = select %C, %TV, %FV
+  // -->
+  // %TV
+  Value *X, *Y;
+  if (!match(Cond, m_c_BinOp(m_c_ICmp(Pred1, m_Specific(TrueVal),
+                                      m_Specific(FalseVal)),
+                             m_ICmp(Pred2, m_Value(X), m_Value(Y)))) ||
       Pred1 != Pred2 || Pred1 != ExpectedPred)
     return nullptr;
 
-  return BinOpCode == BinaryOperator::Or ? TrueVal : FalseVal;
+  if (X == TrueVal || X == FalseVal || Y == TrueVal || Y == FalseVal)
+    return BinOpCode == BinaryOperator::Or ? TrueVal : FalseVal;
+
+  return nullptr;
 }
 
 /// For a boolean type or a vector of boolean type, return false or a vector
@@ -1316,6 +1324,23 @@ static Value *SimplifyLShrInst(Value *Op0, Value *Op1, bool isExact,
   Value *X;
   if (match(Op0, m_NUWShl(m_Value(X), m_Specific(Op1))))
     return X;
+
+  // ((X << A) | Y) >> A -> X  if effective width of Y is not larger than A.
+  // We can return X as we do in the above case since OR alters no bits in X.
+  // SimplifyDemandedBits in InstCombine can do more general optimization for
+  // bit manipulation. This pattern aims to provide opportunities for other
+  // optimizers by supporting a simple but common case in InstSimplify.
+  Value *Y;
+  const APInt *ShRAmt, *ShLAmt;
+  if (match(Op1, m_APInt(ShRAmt)) &&
+      match(Op0, m_c_Or(m_NUWShl(m_Value(X), m_APInt(ShLAmt)), m_Value(Y))) &&
+      *ShRAmt == *ShLAmt) {
+    const KnownBits YKnown = computeKnownBits(Y, Q.DL, 0, Q.AC, Q.CxtI, Q.DT);
+    const unsigned Width = Op0->getType()->getScalarSizeInBits();
+    const unsigned EffWidthY = Width - YKnown.countMinLeadingZeros();
+    if (EffWidthY <= ShRAmt->getZExtValue())
+      return X;
+  }
 
   return nullptr;
 }

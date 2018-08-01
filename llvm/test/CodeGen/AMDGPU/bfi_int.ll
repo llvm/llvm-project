@@ -54,8 +54,8 @@ entry:
 
 ; FUNC-LABEL: {{^}}v_bitselect_v2i32_pat1:
 ; GCN: s_waitcnt
-; GCN-NEXT: v_bfi_b32 v1, v3, v1, v5
 ; GCN-NEXT: v_bfi_b32 v0, v2, v0, v4
+; GCN-NEXT: v_bfi_b32 v1, v3, v1, v5
 ; GCN-NEXT: s_setpc_b64
 define <2 x i32> @v_bitselect_v2i32_pat1(<2 x i32> %a, <2 x i32> %b, <2 x i32> %mask) {
   %xor.0 = xor <2 x i32> %a, %mask

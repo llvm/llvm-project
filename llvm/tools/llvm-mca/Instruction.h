@@ -170,8 +170,6 @@ class ReadState {
   bool IsReady;
 
 public:
-  bool isReady() const { return IsReady; }
-
   ReadState(const ReadDescriptor &Desc, unsigned RegID)
       : RD(Desc), RegisterID(RegID), DependentWrites(0),
         CyclesLeft(UNKNOWN_CYCLES), TotalCycles(0), IsReady(true) {}
@@ -181,6 +179,9 @@ public:
   const ReadDescriptor &getDescriptor() const { return RD; }
   unsigned getSchedClass() const { return RD.SchedClassID; }
   unsigned getRegisterID() const { return RegisterID; }
+
+  bool isReady() const { return IsReady; }
+  bool isImplicitRead() const { return RD.isImplicitRead(); }
 
   void cycleEvent();
   void writeStartEvent(unsigned Cycles);
@@ -299,6 +300,8 @@ class Instruction {
   // Retire Unit token ID for this instruction.
   unsigned RCUTokenID;
 
+  bool IsDepBreaking;
+
   using UniqueDef = std::unique_ptr<WriteState>;
   using UniqueUse = std::unique_ptr<ReadState>;
   using VecDefs = std::vector<UniqueDef>;
@@ -314,7 +317,8 @@ class Instruction {
 
 public:
   Instruction(const InstrDesc &D)
-      : Desc(D), Stage(IS_INVALID), CyclesLeft(UNKNOWN_CYCLES) {}
+      : Desc(D), Stage(IS_INVALID), CyclesLeft(UNKNOWN_CYCLES), RCUTokenID(0),
+        IsDepBreaking(false) {}
   Instruction(const Instruction &Other) = delete;
   Instruction &operator=(const Instruction &Other) = delete;
 
@@ -325,6 +329,9 @@ public:
   const InstrDesc &getDesc() const { return Desc; }
   unsigned getRCUTokenID() const { return RCUTokenID; }
   int getCyclesLeft() const { return CyclesLeft; }
+
+  bool isDependencyBreaking() const { return IsDepBreaking; }
+  void setDependencyBreaking() { IsDepBreaking = true; }
 
   unsigned getNumUsers() const {
     unsigned NumUsers = 0;

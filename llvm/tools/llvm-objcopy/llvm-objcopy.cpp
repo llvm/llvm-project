@@ -186,7 +186,8 @@ LLVM_ATTRIBUTE_NORETURN void reportError(StringRef File, Error E) {
 } // end namespace llvm
 
 static bool IsDebugSection(const SectionBase &Sec) {
-  return Sec.Name.startswith(".debug") || Sec.Name.startswith(".zdebug");
+  return Sec.Name.startswith(".debug") || Sec.Name.startswith(".zdebug") ||
+         Sec.Name == ".gdb_index";
 }
 
 static bool IsDWOSection(const SectionBase &Sec) {

@@ -107,17 +107,21 @@ void DispatchStage::dispatch(InstRef IR) {
   // instruction. A dependency-breaking instruction is a zero-latency
   // instruction that doesn't consume hardware resources.
   // An example of dependency-breaking instruction on X86 is a zero-idiom XOR.
-  if (!Desc.isZeroLatency())
-    for (std::unique_ptr<ReadState> &RS : IS.getUses())
+  bool IsDependencyBreaking = IS.isDependencyBreaking();
+  for (std::unique_ptr<ReadState> &RS : IS.getUses())
+    if (RS->isImplicitRead() || !IsDependencyBreaking)
       updateRAWDependencies(*RS, STI);
 
   // By default, a dependency-breaking zero-latency instruction is expected to
   // be optimized at register renaming stage. That means, no physical register
   // is allocated to the instruction.
+  bool ShouldAllocateRegisters =
+      !(Desc.isZeroLatency() && IsDependencyBreaking);
   SmallVector<unsigned, 4> RegisterFiles(PRF.getNumRegisterFiles());
-  for (std::unique_ptr<WriteState> &WS : IS.getDefs())
+  for (std::unique_ptr<WriteState> &WS : IS.getDefs()) {
     PRF.addRegisterWrite(WriteRef(IR.first, WS.get()), RegisterFiles,
-                         !Desc.isZeroLatency());
+                         ShouldAllocateRegisters);
+  }
 
   // Reserve slots in the RCU, and notify the instruction that it has been
   // dispatched to the schedulers for execution.

@@ -688,8 +688,8 @@ define <8 x float> @fun30(<8 x float> %val1, <8 x float> %val2, <8 x double> %va
 ; CHECK-NEXT:    vpkg %v6, %v6, %v7
 ; CHECK-NEXT:    vpkg %v4, %v4, %v5
 ; CHECK-NEXT:    vn %v5, %v16, %v6
-; CHECK-NEXT:    vsel %v24, %v3, %v2, %v5
-; CHECK-NEXT:    vldeb %v17, %v17
+; CHECK-DAG:     vsel %v24, %v3, %v2, %v5
+; CHECK-DAG:     vldeb %v17, %v17
 ; CHECK-NEXT:    vldeb %v18, %v18
 ; CHECK-NEXT:    vfchdb %v17, %v18, %v17
 ; CHECK-NEXT:    vmrhf %v18, %v30, %v30

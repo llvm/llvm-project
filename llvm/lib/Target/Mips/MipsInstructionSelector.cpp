@@ -166,6 +166,33 @@ bool MipsInstructionSelector::select(MachineInstr &I,
     I.eraseFromParent();
     return true;
   }
+  case G_GLOBAL_VALUE: {
+    if (MF.getTarget().isPositionIndependent())
+      return false;
+
+    const llvm::GlobalValue *GVal = I.getOperand(1).getGlobal();
+    unsigned LUiReg = MRI.createVirtualRegister(&Mips::GPR32RegClass);
+    MachineInstr *LUi, *ADDiu;
+
+    LUi = BuildMI(MBB, I, I.getDebugLoc(), TII.get(Mips::LUi))
+              .addDef(LUiReg)
+              .addGlobalAddress(GVal);
+    LUi->getOperand(1).setTargetFlags(MipsII::MO_ABS_HI);
+
+    ADDiu = BuildMI(MBB, I, I.getDebugLoc(), TII.get(Mips::ADDiu))
+                .addDef(I.getOperand(0).getReg())
+                .addUse(LUiReg)
+                .addGlobalAddress(GVal);
+    ADDiu->getOperand(2).setTargetFlags(MipsII::MO_ABS_LO);
+
+    if (!constrainSelectedInstRegOperands(*LUi, TII, TRI, RBI))
+      return false;
+    if (!constrainSelectedInstRegOperands(*ADDiu, TII, TRI, RBI))
+      return false;
+
+    I.eraseFromParent();
+    return true;
+  }
 
   default:
     return false;

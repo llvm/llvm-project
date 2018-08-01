@@ -108,6 +108,7 @@
 ; CHECK-NEXT:           Delete dead loops
 ; CHECK-NEXT:           Unroll loops
 ; CHECK-NEXT:         MergedLoadStoreMotion
+; CHECK-NEXT:         Phi Values Analysis
 ; CHECK-NEXT:         Basic Alias Analysis (stateless AA impl)
 ; CHECK-NEXT:         Function Alias Analysis Results
 ; CHECK-NEXT:         Memory Dependence Analysis
@@ -115,6 +116,7 @@
 ; CHECK-NEXT:         Lazy Block Frequency Analysis
 ; CHECK-NEXT:         Optimization Remark Emitter
 ; CHECK-NEXT:         Global Value Numbering
+; CHECK-NEXT:         Phi Values Analysis
 ; CHECK-NEXT:         Basic Alias Analysis (stateless AA impl)
 ; CHECK-NEXT:         Function Alias Analysis Results
 ; CHECK-NEXT:         Memory Dependence Analysis
@@ -134,6 +136,7 @@
 ; CHECK-NEXT:         Value Propagation
 ; CHECK-NEXT:         Basic Alias Analysis (stateless AA impl)
 ; CHECK-NEXT:         Function Alias Analysis Results
+; CHECK-NEXT:         Phi Values Analysis
 ; CHECK-NEXT:         Memory Dependence Analysis
 ; CHECK-NEXT:         Dead Store Elimination
 ; CHECK-NEXT:         Natural Loop Information

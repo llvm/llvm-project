@@ -180,11 +180,16 @@ defm : ZnWriteResPair<WriteADC,   [ZnALU], 1>;
 defm : ZnWriteResPair<WriteIMul,   [ZnALU1, ZnMultiplier], 4>;
 defm : ZnWriteResPair<WriteIMul64, [ZnALU1, ZnMultiplier], 4, [1,1], 2>;
 
-defm : ZnWriteResPair<WriteBSWAP32,[ZnALU], 1, [4]>;
-defm : ZnWriteResPair<WriteBSWAP64,[ZnALU], 1, [4]>;
+defm : X86WriteRes<WriteBSWAP32, [ZnALU], 1, [4], 1>;
+defm : X86WriteRes<WriteBSWAP64, [ZnALU], 1, [4], 1>;
 
 defm : ZnWriteResPair<WriteShift, [ZnALU], 1>;
-defm : ZnWriteResPair<WriteShiftDouble, [ZnALU], 1>;
+
+defm : X86WriteRes<WriteSHDrri, [ZnALU], 1, [1], 1>;
+defm : X86WriteResUnsupported<WriteSHDrrcl>;
+defm : X86WriteResUnsupported<WriteSHDmri>;
+defm : X86WriteResUnsupported<WriteSHDmrcl>;
+
 defm : ZnWriteResPair<WriteJump,  [ZnALU], 1>;
 defm : ZnWriteResFpuPair<WriteCRC32, [ZnFPU0], 3>;
 
