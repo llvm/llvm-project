@@ -46,7 +46,7 @@ class DWARFDie {
 
 public:
   DWARFDie() = default;
-  DWARFDie(DWARFUnit *Unit, const DWARFDebugInfoEntry * D) : U(Unit), Die(D) {}
+  DWARFDie(DWARFUnit *Unit, const DWARFDebugInfoEntry *D) : U(Unit), Die(D) {}
 
   bool isValid() const { return U && Die; }
   explicit operator bool() const { return isValid(); }
@@ -82,9 +82,7 @@ public:
   }
 
   /// Returns true for a valid DIE that terminates a sibling chain.
-  bool isNULL() const {
-    return getAbbreviationDeclarationPtr() == nullptr;
-  }
+  bool isNULL() const { return getAbbreviationDeclarationPtr() == nullptr; }
 
   /// Returns true if DIE represents a subprogram (not inlined).
   bool isSubprogramDIE() const;
@@ -128,7 +126,6 @@ public:
   /// \param indent the number of characters to indent each line that is output.
   void dump(raw_ostream &OS, unsigned indent = 0,
             DIDumpOptions DumpOpts = DIDumpOptions()) const;
-
 
   /// Convenience zero-argument overload for debugging.
   LLVM_DUMP_METHOD void dump() const;
@@ -282,15 +279,18 @@ public:
   iterator_range<iterator> children() const;
 };
 
-class DWARFDie::attribute_iterator :
-    public iterator_facade_base<attribute_iterator, std::forward_iterator_tag,
-                                const DWARFAttribute> {
+class DWARFDie::attribute_iterator
+    : public iterator_facade_base<attribute_iterator, std::forward_iterator_tag,
+                                  const DWARFAttribute> {
   /// The DWARF DIE we are extracting attributes from.
   DWARFDie Die;
   /// The value vended to clients via the operator*() or operator->().
   DWARFAttribute AttrValue;
   /// The attribute index within the abbreviation declaration in Die.
   uint32_t Index;
+
+  friend bool operator==(const attribute_iterator &LHS,
+                         const attribute_iterator &RHS);
 
   /// Update the attribute index and attempt to read the attribute value. If the
   /// attribute is able to be read, update AttrValue and the Index member
@@ -307,12 +307,21 @@ public:
   attribute_iterator &operator--();
   explicit operator bool() const { return AttrValue.isValid(); }
   const DWARFAttribute &operator*() const { return AttrValue; }
-  bool operator==(const attribute_iterator &X) const { return Index == X.Index; }
 };
+
+inline bool operator==(const DWARFDie::attribute_iterator &LHS,
+                       const DWARFDie::attribute_iterator &RHS) {
+  return LHS.Index == RHS.Index;
+}
+
+inline bool operator!=(const DWARFDie::attribute_iterator &LHS,
+                       const DWARFDie::attribute_iterator &RHS) {
+  return !(LHS == RHS);
+}
 
 inline bool operator==(const DWARFDie &LHS, const DWARFDie &RHS) {
   return LHS.getDebugInfoEntry() == RHS.getDebugInfoEntry() &&
-      LHS.getDwarfUnit() == RHS.getDwarfUnit();
+         LHS.getDwarfUnit() == RHS.getDwarfUnit();
 }
 
 inline bool operator!=(const DWARFDie &LHS, const DWARFDie &RHS) {
@@ -335,8 +344,7 @@ class DWARFDie::iterator
 public:
   iterator() = default;
 
-  explicit iterator(DWARFDie D) : Die(D) {
-  }
+  explicit iterator(DWARFDie D) : Die(D) {}
 
   iterator &operator++() {
     Die = Die.getSibling();
