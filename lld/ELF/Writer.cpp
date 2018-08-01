@@ -521,7 +521,6 @@ static bool shouldKeepInSymtab(SectionBase *Sec, StringRef SymName,
   if (B.isSection())
     return false;
 
-
   if (Config->Discard == DiscardPolicy::None)
     return true;
 
