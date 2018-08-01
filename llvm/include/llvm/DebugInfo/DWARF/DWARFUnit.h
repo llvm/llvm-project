@@ -106,8 +106,8 @@ const DWARFUnitIndex &getDWARFUnitIndex(DWARFContext &Context,
 
 /// Describes one section's Units.
 class DWARFUnitSection final : public SmallVector<std::unique_ptr<DWARFUnit>, 1> {
-  bool Parsed = false;
-  std::function<std::unique_ptr<DWARFUnit>(uint32_t)> Parser;
+  std::function<std::unique_ptr<DWARFUnit>(uint32_t, const DWARFSection *)>
+      Parser;
 
 public:
   using UnitVector = SmallVectorImpl<std::unique_ptr<DWARFUnit>>;
@@ -116,16 +116,18 @@ public:
 
   DWARFUnit *getUnitForOffset(uint32_t Offset) const;
   DWARFUnit *getUnitForIndexEntry(const DWARFUnitIndex::Entry &E);
-  void parse(DWARFContext &C, const DWARFSection &Section,
-             DWARFSectionKind SectionKind);
-  void parseDWO(DWARFContext &C, const DWARFSection &DWOSection,
-                DWARFSectionKind SectionKind, bool Lazy = false);
+  void addUnitsForSection(DWARFContext &C, const DWARFSection &Section,
+                          DWARFSectionKind SectionKind);
+  void addUnitsForDWOSection(DWARFContext &C, const DWARFSection &DWOSection,
+                             DWARFSectionKind SectionKind, bool Lazy = false);
+
 private:
-  void parseImpl(DWARFContext &Context, const DWARFObject &Obj,
-                 const DWARFSection &Section, const DWARFDebugAbbrev *DA,
-                 const DWARFSection *RS, StringRef SS, const DWARFSection &SOS,
-                 const DWARFSection *AOS, const DWARFSection &LS, bool LE,
-                 bool IsDWO, bool Lazy, DWARFSectionKind SectionKind);
+  void addUnitsImpl(DWARFContext &Context, const DWARFObject &Obj,
+                    const DWARFSection &Section, const DWARFDebugAbbrev *DA,
+                    const DWARFSection *RS, StringRef SS,
+                    const DWARFSection &SOS, const DWARFSection *AOS,
+                    const DWARFSection &LS, bool LE, bool IsDWO, bool Lazy,
+                    DWARFSectionKind SectionKind);
 };
 
 /// Represents base address of the CU.

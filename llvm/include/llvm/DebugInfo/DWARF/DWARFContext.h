@@ -58,7 +58,7 @@ enum class ErrorPolicy { Halt, Continue };
 /// information parsing. The actual data is supplied through DWARFObj.
 class DWARFContext : public DIContext {
   DWARFUnitSection CUs;
-  std::deque<DWARFUnitSection> TUs;
+  DWARFUnitSection TUs;
   std::unique_ptr<DWARFUnitIndex> CUIndex;
   std::unique_ptr<DWARFGdbIndex> GdbIndex;
   std::unique_ptr<DWARFUnitIndex> TUIndex;
@@ -76,7 +76,7 @@ class DWARFContext : public DIContext {
   std::unique_ptr<AppleAcceleratorTable> AppleObjC;
 
   DWARFUnitSection DWOCUs;
-  std::deque<DWARFUnitSection> DWOTUs;
+  DWARFUnitSection DWOTUs;
   std::unique_ptr<DWARFDebugAbbrev> AbbrevDWO;
   std::unique_ptr<DWARFDebugLocDWO> LocDWO;
 
@@ -141,7 +141,6 @@ public:
 
   using cu_iterator_range = DWARFUnitSection::iterator_range;
   using tu_iterator_range = DWARFUnitSection::iterator_range;
-  using tu_section_iterator_range = iterator_range<decltype(TUs)::iterator>;
 
   /// Get compile units in this context.
   cu_iterator_range compile_units() {
@@ -150,9 +149,9 @@ public:
   }
 
   /// Get type units in this context.
-  tu_section_iterator_range type_unit_sections() {
+  tu_iterator_range type_units() {
     parseTypeUnits();
-    return tu_section_iterator_range(TUs.begin(), TUs.end());
+    return tu_iterator_range(TUs.begin(), TUs.end());
   }
 
   /// Get compile units in the DWO context.
@@ -162,9 +161,9 @@ public:
   }
 
   /// Get type units in the DWO context.
-  tu_section_iterator_range dwo_type_unit_sections() {
+  tu_iterator_range dwo_type_units() {
     parseDWOTypeUnits();
-    return tu_section_iterator_range(DWOTUs.begin(), DWOTUs.end());
+    return tu_iterator_range(DWOTUs.begin(), DWOTUs.end());
   }
 
   /// Get the number of compile units in this context.
