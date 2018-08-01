@@ -78,7 +78,7 @@ PlatformSP PlatformWindows::CreateInstance(bool force,
       create = true;
       break;
 
-    case llvm::Triple::UnknownArch:
+    case llvm::Triple::UnknownVendor:
       create = !arch->TripleVendorWasSpecified();
       break;
 
