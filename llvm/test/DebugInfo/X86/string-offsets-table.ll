@@ -81,6 +81,8 @@
 ; SPLIT:      .debug_str contents:
 ; SPLIT-NEXT: 0x00000000:{{.*}}
 ; SPLIT-NEXT: 0x[[STRING2SPLIT:[0-9a-f]*]]{{.*}}
+; SPLIT-NEXT: 0x[[STRING3SPLIT:[0-9a-f]*]]{{.*}}
+; SPLIT-NEXT: 0x[[STRING4SPLIT:[0-9a-f]*]]{{.*}}
 ;
 ; Extract the string offsets referenced in the .dwo file by the split unit.
 ; SPLIT:      .debug_str.dwo contents:
@@ -91,9 +93,11 @@
 ; Check the string offsets sections in both the main and the .dwo files and
 ; verify that the extracted string offsets are referenced correctly.
 ; SPLIT:      .debug_str_offsets contents:
-; SPLIT-NEXT: 0x00000000: Contribution size = 12, Format = DWARF32, Version = 5
+; SPLIT-NEXT: 0x00000000: Contribution size = 20, Format = DWARF32, Version = 5
 ; SPLIT-NEXT: 0x00000008: 00000000{{.*}}
 ; SPLIT-NEXT: 0x0000000c: [[STRING2SPLIT]]
+; SPLIT-NEXT: 0x00000010: [[STRING3SPLIT]]
+; SPLIT-NEXT: 0x00000014: [[STRING4SPLIT]]
 ; SPLIT:      .debug_str_offsets.dwo contents:
 ; SPLIT-NEXT: 0x00000000: Contribution size = 36, Format = DWARF32, Version = 5
 ; SPLIT-NEXT: 0x00000008: 00000000{{.*}}
