@@ -235,6 +235,10 @@ module std [system] {
     export *
   }
   // No submodule for cassert. It fundamentally needs repeated, textual inclusion.
+  module charconv {
+    header "charconv"
+    export *
+  }
   module chrono {
     header "chrono"
     export *
