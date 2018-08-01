@@ -83,6 +83,8 @@ protected:
 
   void GetFramesUpTo(uint32_t end_idx);
 
+  void GetOnlyConcreteFramesUpTo(uint32_t end_idx, Unwind *unwinder);
+
   bool GetAllFramesFetched() { return m_concrete_frames_fetched == UINT32_MAX; }
 
   void SetAllFramesFetched() { m_concrete_frames_fetched = UINT32_MAX; }
