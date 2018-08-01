@@ -104,3 +104,15 @@ define i32 @f10(i32 %a, i32 %sh) {
   %reuse = add i32 %and, %shift
   ret i32 %reuse
 }
+
+; Test that AND is not removed for i128 (which calls __ashlti3)
+define i128 @f11(i128 %a, i32 %sh) {
+; CHECK-LABEL: f11:
+; CHECK: risbg %r4, %r4, 57, 191, 0
+; CHECK: brasl %r14, __ashlti3@PLT
+  %and = and i32 %sh, 127
+  %ext = zext i32 %and to i128
+  %shift = shl i128 %a, %ext
+  ret i128 %shift
+}
+

@@ -82,6 +82,7 @@ private:
   /// may be very expensive.  This method is normally called when the
   /// compilation database is changed.
   void reparseOpenedFiles();
+  void applyConfiguration(const ClangdConfigurationParamsChange &Settings);
 
   JSONOutput &Out;
   /// Used to indicate that the 'shutdown' request was received from the

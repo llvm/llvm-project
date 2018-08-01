@@ -36,6 +36,9 @@ MipsLegalizerInfo::MipsLegalizerInfo(const MipsSubtarget &ST) {
   getActionDefinitionsBuilder(G_FRAME_INDEX)
       .legalFor({p0});
 
+  getActionDefinitionsBuilder(G_GLOBAL_VALUE)
+      .legalFor({p0});
+
   computeTables();
   verify(*ST.getInstrInfo());
 }

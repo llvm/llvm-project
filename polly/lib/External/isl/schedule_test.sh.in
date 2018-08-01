@@ -14,8 +14,14 @@ for i in $srcdir/test_inputs/schedule/*.sc; do
 	dir=`dirname $i`
 	ref=$dir/$base.st
 	options=`$GREP 'OPTIONS:' $i | $SED 's/.*://'`
-	(./isl_schedule$EXEEXT $options < $i > $test &&
-	./isl_schedule_cmp$EXEEXT $ref $test && rm $test) || failed=1
+	for o in --schedule-whole-component --no-schedule-whole-component; do
+		./isl_schedule$EXEEXT $o $options < $i > $test &&
+		    ./isl_schedule_cmp$EXEEXT $ref $test && rm $test
+		if [ $? -ne 0 ]; then
+			echo $o $options
+			failed=1
+		fi
+	done
 done
 
 test $failed -eq 0 || exit

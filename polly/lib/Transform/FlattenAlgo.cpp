@@ -75,13 +75,16 @@ isl::union_pw_aff subtract(isl::union_pw_aff UPwAff, isl::val Val) {
     return UPwAff;
 
   auto Result = isl::union_pw_aff::empty(UPwAff.get_space());
-  UPwAff.foreach_pw_aff([=, &Result](isl::pw_aff PwAff) -> isl::stat {
-    auto ValAff =
-        isl::pw_aff(isl::set::universe(PwAff.get_space().domain()), Val);
-    auto Subtracted = PwAff.sub(ValAff);
-    Result = Result.union_add(isl::union_pw_aff(Subtracted));
-    return isl::stat::ok;
-  });
+  isl::stat Stat =
+      UPwAff.foreach_pw_aff([=, &Result](isl::pw_aff PwAff) -> isl::stat {
+        auto ValAff =
+            isl::pw_aff(isl::set::universe(PwAff.get_space().domain()), Val);
+        auto Subtracted = PwAff.sub(ValAff);
+        Result = Result.union_add(isl::union_pw_aff(Subtracted));
+        return isl::stat::ok();
+      });
+  if (Stat.is_error())
+    return {};
   return Result;
 }
 
@@ -91,13 +94,16 @@ isl::union_pw_aff multiply(isl::union_pw_aff UPwAff, isl::val Val) {
     return UPwAff;
 
   auto Result = isl::union_pw_aff::empty(UPwAff.get_space());
-  UPwAff.foreach_pw_aff([=, &Result](isl::pw_aff PwAff) -> isl::stat {
-    auto ValAff =
-        isl::pw_aff(isl::set::universe(PwAff.get_space().domain()), Val);
-    auto Multiplied = PwAff.mul(ValAff);
-    Result = Result.union_add(Multiplied);
-    return isl::stat::ok;
-  });
+  isl::stat Stat =
+      UPwAff.foreach_pw_aff([=, &Result](isl::pw_aff PwAff) -> isl::stat {
+        auto ValAff =
+            isl::pw_aff(isl::set::universe(PwAff.get_space().domain()), Val);
+        auto Multiplied = PwAff.mul(ValAff);
+        Result = Result.union_add(Multiplied);
+        return isl::stat::ok();
+      });
+  if (Stat.is_error())
+    return {};
   return Result;
 }
 

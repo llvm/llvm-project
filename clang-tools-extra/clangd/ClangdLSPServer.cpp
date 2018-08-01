@@ -72,6 +72,9 @@ SymbolKindBitset defaultSymbolKinds() {
 } // namespace
 
 void ClangdLSPServer::onInitialize(InitializeParams &Params) {
+  if (Params.initializationOptions)
+    applyConfiguration(*Params.initializationOptions);
+
   if (Params.rootUri && *Params.rootUri)
     Server.setRootPath(Params.rootUri->file());
   else if (Params.rootPath && !Params.rootPath->empty())
@@ -398,11 +401,8 @@ void ClangdLSPServer::onHover(TextDocumentPositionParams &Params) {
                    });
 }
 
-// FIXME: This function needs to be properly tested.
-void ClangdLSPServer::onChangeConfiguration(
-    DidChangeConfigurationParams &Params) {
-  ClangdConfigurationParamsChange &Settings = Params.settings;
-
+void ClangdLSPServer::applyConfiguration(
+    const ClangdConfigurationParamsChange &Settings) {
   // Compilation database change.
   if (Settings.compilationDatabasePath.hasValue()) {
     NonCachedCDB.setCompileCommandsDir(
@@ -411,6 +411,12 @@ void ClangdLSPServer::onChangeConfiguration(
 
     reparseOpenedFiles();
   }
+}
+
+// FIXME: This function needs to be properly tested.
+void ClangdLSPServer::onChangeConfiguration(
+    DidChangeConfigurationParams &Params) {
+  applyConfiguration(Params.settings);
 }
 
 ClangdLSPServer::ClangdLSPServer(JSONOutput &Out,

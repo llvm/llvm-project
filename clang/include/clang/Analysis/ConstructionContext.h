@@ -57,6 +57,7 @@ public:
       case ArgumentKind:            return "construct into argument";
       case InitializerKind:         return "construct into member variable";
     };
+    llvm_unreachable("Unknown ItemKind");
   }
 
 private:
