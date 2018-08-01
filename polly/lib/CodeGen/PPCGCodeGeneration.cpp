@@ -262,7 +262,8 @@ static MustKillsInfo computeMustKillsInfo(const Scop &S) {
 
     isl::schedule KillSchedule = isl::schedule::from_domain(KillStmtDomain);
     if (Info.KillsSchedule)
-      Info.KillsSchedule = Info.KillsSchedule.set(KillSchedule);
+      Info.KillsSchedule = isl::manage(
+          isl_schedule_set(Info.KillsSchedule.release(), KillSchedule.copy()));
     else
       Info.KillsSchedule = KillSchedule;
   }

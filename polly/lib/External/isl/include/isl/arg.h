@@ -192,7 +192,7 @@ struct isl_args {
 	.offset = offsetof(st, f),					\
 	.help_msg = h,							\
 	.flags = fl,							\
-	.u = { .ul = { .default_value = d } }				\
+	.u = { .i = { .default_value = d } }				\
 },
 #define ISL_ARG_INT(st,f,s,l,a,d,h)					\
 	ISL_ARG_INT_F(st,f,s,l,a,d,h,0)
