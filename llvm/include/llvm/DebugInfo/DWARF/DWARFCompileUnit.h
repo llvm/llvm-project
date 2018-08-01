@@ -22,9 +22,9 @@ public:
                    const DWARFDebugAbbrev *DA, const DWARFSection *RS,
                    StringRef SS, const DWARFSection &SOS,
                    const DWARFSection *AOS, const DWARFSection &LS, bool LE,
-                   bool IsDWO, const DWARFUnitSection &UnitSection)
+                   bool IsDWO, const DWARFUnitVector &UnitVector)
       : DWARFUnit(Context, Section, Header, DA, RS, SS, SOS, AOS, LS, LE, IsDWO,
-                  UnitSection) {}
+                  UnitVector) {}
 
   /// VTable anchor.
   ~DWARFCompileUnit() override;

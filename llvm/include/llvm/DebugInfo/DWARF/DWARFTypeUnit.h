@@ -30,9 +30,9 @@ public:
                 const DWARFDebugAbbrev *DA, const DWARFSection *RS,
                 StringRef SS, const DWARFSection &SOS, const DWARFSection *AOS,
                 const DWARFSection &LS, bool LE, bool IsDWO,
-                const DWARFUnitSection &UnitSection)
+                const DWARFUnitVector &UnitVector)
       : DWARFUnit(Context, Section, Header, DA, RS, SS, SOS, AOS, LS, LE, IsDWO,
-                  UnitSection) {}
+                  UnitVector) {}
 
   uint64_t getTypeHash() const { return getHeader().getTypeHash(); }
   uint32_t getTypeOffset() const { return getHeader().getTypeOffset(); }

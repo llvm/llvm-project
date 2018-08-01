@@ -57,8 +57,8 @@ enum class ErrorPolicy { Halt, Continue };
 /// This data structure is the top level entity that deals with dwarf debug
 /// information parsing. The actual data is supplied through DWARFObj.
 class DWARFContext : public DIContext {
-  DWARFUnitSection CUs;
-  DWARFUnitSection TUs;
+  DWARFUnitVector CUs;
+  DWARFUnitVector TUs;
   std::unique_ptr<DWARFUnitIndex> CUIndex;
   std::unique_ptr<DWARFGdbIndex> GdbIndex;
   std::unique_ptr<DWARFUnitIndex> TUIndex;
@@ -75,8 +75,8 @@ class DWARFContext : public DIContext {
   std::unique_ptr<AppleAcceleratorTable> AppleNamespaces;
   std::unique_ptr<AppleAcceleratorTable> AppleObjC;
 
-  DWARFUnitSection DWOCUs;
-  DWARFUnitSection DWOTUs;
+  DWARFUnitVector DWOCUs;
+  DWARFUnitVector DWOTUs;
   std::unique_ptr<DWARFDebugAbbrev> AbbrevDWO;
   std::unique_ptr<DWARFDebugLocDWO> LocDWO;
 
@@ -139,8 +139,8 @@ public:
 
   bool verify(raw_ostream &OS, DIDumpOptions DumpOpts = {}) override;
 
-  using cu_iterator_range = DWARFUnitSection::iterator_range;
-  using tu_iterator_range = DWARFUnitSection::iterator_range;
+  using cu_iterator_range = DWARFUnitVector::iterator_range;
+  using tu_iterator_range = DWARFUnitVector::iterator_range;
 
   /// Get compile units in this context.
   cu_iterator_range compile_units() {
