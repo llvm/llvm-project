@@ -106,12 +106,6 @@ TEST_F(StreamTest, PutCharNull) {
 }
 
 TEST_F(StreamTest, PutCStringAsRawHex8) {
-  s.PutCStringAsRawHex8("");
-  // FIXME: Check that printing 00 on an empty string is the intended behavior.
-  // It seems kind of unexpected  that we print the trailing 0 byte for empty
-  // strings, but not for non-empty strings.
-  EXPECT_EQ("00", TakeValue());
-
   s.PutCStringAsRawHex8("foobar");
   EXPECT_EQ("666f6f626172", TakeValue());
 
