@@ -452,11 +452,11 @@ inline bool operator!=(const std::reverse_iterator<DWARFDie::iterator> &LHS,
 }
 
 inline std::reverse_iterator<DWARFDie::iterator> DWARFDie::rbegin() const {
-  return make_reverse_iterator(end());
+  return llvm::make_reverse_iterator(end());
 }
 
 inline std::reverse_iterator<DWARFDie::iterator> DWARFDie::rend() const {
-  return make_reverse_iterator(begin());
+  return llvm::make_reverse_iterator(begin());
 }
 
 } // end namespace llvm
