@@ -29,6 +29,7 @@ class TsanSwiftAccessRaceTestCase(lldbtest.TestBase):
     @decorators.swiftTest
     @decorators.skipIfLinux
     @decorators.skipUnlessSwiftThreadSanitizer
+    @decorators.expectedFailureAll(bugnumber='rdar://42797039')
     def test_tsan_swift(self):
         self.build()
         self.do_test()
