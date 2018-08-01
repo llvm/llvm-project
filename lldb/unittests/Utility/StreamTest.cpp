@@ -106,6 +106,9 @@ TEST_F(StreamTest, PutCharNull) {
 }
 
 TEST_F(StreamTest, PutCStringAsRawHex8) {
+  s.PutCStringAsRawHex8("");
+  EXPECT_EQ("", TakeValue());
+
   s.PutCStringAsRawHex8("foobar");
   EXPECT_EQ("666f6f626172", TakeValue());
 

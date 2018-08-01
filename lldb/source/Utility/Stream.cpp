@@ -518,10 +518,10 @@ size_t Stream::PutCStringAsRawHex8(const char *s) {
   size_t bytes_written = 0;
   bool binary_is_set = m_flags.Test(eBinary);
   m_flags.Clear(eBinary);
-  do {
+  while(*s) {
     bytes_written += _PutHex8(*s, false);
     ++s;
-  } while (*s);
+  }
   if (binary_is_set)
     m_flags.Set(eBinary);
   return bytes_written;
