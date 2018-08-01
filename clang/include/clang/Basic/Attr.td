@@ -141,6 +141,13 @@ def HasFunctionProto : SubsetSubject<DeclBase,
                                        isa<BlockDecl>(S)}],
                                      "non-K&R-style functions">;
 
+// A subject that matches the implicit object parameter of a non-static member
+// function. Accepted as a function type attribute on the type of such a
+// member function.
+// FIXME: This does not actually ever match currently.
+def ImplicitObjectParameter : SubsetSubject<Function, [{false}],
+                                            "implicit object parameters">;
+
 // A single argument to an attribute
 class Argument<string name, bit optional, bit fake = 0> {
   string Name = name;
@@ -1209,6 +1216,13 @@ def LayoutVersion : InheritableAttr, TargetSpecificAttr<TargetMicrosoftCXXABI> {
   let Args = [UnsignedArgument<"Version">];
   let Subjects = SubjectList<[CXXRecord]>;
   let Documentation = [LayoutVersionDocs];
+}
+
+def LifetimeBound : InheritableAttr {
+  let Spellings = [Clang<"lifetimebound", 0>];
+  let Subjects = SubjectList<[ParmVar, ImplicitObjectParameter], ErrorDiag>;
+  let Documentation = [LifetimeBoundDocs];
+  let LangOpts = [CPlusPlus];
 }
 
 def TrivialABI : InheritableAttr {

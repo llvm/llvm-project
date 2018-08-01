@@ -2005,7 +2005,7 @@ namespace placeholders
 
 template <int _Np> struct __ph {};
 
-#if defined(_LIBCPP_CXX03_LANG) || defined(_LIBCPP_BUILDING_BIND)
+#if defined(_LIBCPP_CXX03_LANG) || defined(_LIBCPP_BUILDING_LIBRARY)
 _LIBCPP_FUNC_VIS extern const __ph<1>   _1;
 _LIBCPP_FUNC_VIS extern const __ph<2>   _2;
 _LIBCPP_FUNC_VIS extern const __ph<3>   _3;
@@ -2027,7 +2027,7 @@ _LIBCPP_FUNC_VIS extern const __ph<10> _10;
 /* _LIBCPP_INLINE_VAR */ constexpr __ph<8>   _8{};
 /* _LIBCPP_INLINE_VAR */ constexpr __ph<9>   _9{};
 /* _LIBCPP_INLINE_VAR */ constexpr __ph<10> _10{};
-#endif // defined(_LIBCPP_CXX03_LANG) || defined(_LIBCPP_BUILDING_BIND)
+#endif // defined(_LIBCPP_CXX03_LANG) || defined(_LIBCPP_BUILDING_LIBRARY)
 
 }  // placeholders
 

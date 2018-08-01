@@ -5010,7 +5010,8 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                        Op.getOperand(1), Op.getOperand(2), Op.getOperand(3));
   case Intrinsic::amdgcn_fdot2:
     return DAG.getNode(AMDGPUISD::FDOT2, DL, VT,
-                       Op.getOperand(1), Op.getOperand(2), Op.getOperand(3));
+                       Op.getOperand(1), Op.getOperand(2), Op.getOperand(3),
+                       Op.getOperand(4));
   case Intrinsic::amdgcn_fmul_legacy:
     return DAG.getNode(AMDGPUISD::FMUL_LEGACY, DL, VT,
                        Op.getOperand(1), Op.getOperand(2));
@@ -7613,8 +7614,10 @@ SDValue SITargetLowering::performFMACombine(SDNode *N,
       return SDValue();
 
     if ((Vec1 == Vec3 && Vec2 == Vec4) ||
-        (Vec1 == Vec4 && Vec2 == Vec3))
-      return DAG.getNode(AMDGPUISD::FDOT2, SL, MVT::f32, Vec1, Vec2, FMAAcc);
+        (Vec1 == Vec4 && Vec2 == Vec3)) {
+      return DAG.getNode(AMDGPUISD::FDOT2, SL, MVT::f32, Vec1, Vec2, FMAAcc,
+                         DAG.getTargetConstant(0, SL, MVT::i1));
+    }
   }
   return SDValue();
 }

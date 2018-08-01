@@ -1443,9 +1443,27 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
     return;
   }
 
+  if (T->getAttrKind() == AttributedType::attr_lifetimebound) {
+    OS << " [[clang::lifetimebound]]";
+    return;
+  }
+
   OS << " __attribute__((";
   switch (T->getAttrKind()) {
-  default: llvm_unreachable("This attribute should have been handled already");
+  case AttributedType::attr_lifetimebound:
+  case AttributedType::attr_nonnull:
+  case AttributedType::attr_nullable:
+  case AttributedType::attr_null_unspecified:
+  case AttributedType::attr_objc_gc:
+  case AttributedType::attr_objc_inert_unsafe_unretained:
+  case AttributedType::attr_objc_kindof:
+  case AttributedType::attr_objc_ownership:
+  case AttributedType::attr_ptr32:
+  case AttributedType::attr_ptr64:
+  case AttributedType::attr_sptr:
+  case AttributedType::attr_uptr:
+    llvm_unreachable("This attribute should have been handled already");
+
   case AttributedType::attr_address_space:
     OS << "address_space(";
     // FIXME: printing the raw LangAS value is wrong. This should probably

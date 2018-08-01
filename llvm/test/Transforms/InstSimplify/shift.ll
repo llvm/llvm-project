@@ -178,11 +178,7 @@ define <2 x i8> @shl_by_sext_bool_vec(<2 x i1> %x, <2 x i8> %y) {
 define i64 @shl_or_shr(i32 %a, i32 %b) {
 ; CHECK-LABEL: @shl_or_shr(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[A:%.*]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[B:%.*]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP1]], 32
-; CHECK-NEXT:    [[TMP4:%.*]] = or i64 [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP4]], 32
-; CHECK-NEXT:    ret i64 [[TMP5]]
+; CHECK-NEXT:    ret i64 [[TMP1]]
 ;
   %tmp1 = zext i32 %a to i64
   %tmp2 = zext i32 %b to i64
@@ -214,11 +210,7 @@ define i64 @shl_or_shr2(i32 %a, i32 %b) {
 define <2 x i64> @shl_or_shr1v(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-LABEL: @shl_or_shr1v(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext <2 x i32> [[A:%.*]] to <2 x i64>
-; CHECK-NEXT:    [[TMP2:%.*]] = zext <2 x i32> [[B:%.*]] to <2 x i64>
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw <2 x i64> [[TMP1]], <i64 32, i64 32>
-; CHECK-NEXT:    [[TMP4:%.*]] = or <2 x i64> [[TMP3]], [[TMP2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = lshr <2 x i64> [[TMP4]], <i64 32, i64 32>
-; CHECK-NEXT:    ret <2 x i64> [[TMP5]]
+; CHECK-NEXT:    ret <2 x i64> [[TMP1]]
 ;
   %tmp1 = zext <2 x i32> %a to <2 x i64>
   %tmp2 = zext <2 x i32> %b to <2 x i64>

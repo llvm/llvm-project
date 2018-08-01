@@ -1136,23 +1136,21 @@ Value *LibCallSimplifier::replacePowWithSqrt(CallInst *Pow, IRBuilder<> &B) {
 
   // If errno is never set, then use the intrinsic for sqrt().
   if (Pow->hasFnAttr(Attribute::ReadNone)) {
-
     Function *SqrtFn = Intrinsic::getDeclaration(Pow->getModule(),
                                                  Intrinsic::sqrt, Ty);
     Sqrt = B.CreateCall(SqrtFn, Base);
   }
   // Otherwise, use the libcall for sqrt().
-  else if (hasUnaryFloatFn(TLI, Ty,
-                             LibFunc_sqrt, LibFunc_sqrtf, LibFunc_sqrtl)) {
+  else if (hasUnaryFloatFn(TLI, Ty, LibFunc_sqrt, LibFunc_sqrtf, LibFunc_sqrtl))
     // TODO: We also should check that the target can in fact lower the sqrt()
     // libcall. We currently have no way to ask this question, so we ask if
     // the target has a sqrt() libcall, which is not exactly the same.
     Sqrt = emitUnaryFloatFnCall(Base, TLI->getName(LibFunc_sqrt), B,
                                 Pow->getCalledFunction()->getAttributes());
-  } else
+  else
     return nullptr;
 
-  // If this is pow(x, -0.5), then get the reciprocal.
+  // If the exponent is negative, then get the reciprocal.
   if (ExpoF->isNegative())
     Sqrt = B.CreateFDiv(ConstantFP::get(Ty, 1.0), Sqrt, "reciprocal");
 
@@ -1173,7 +1171,7 @@ Value *LibCallSimplifier::optimizePow(CallInst *Pow, IRBuilder<> &B) {
       Name == TLI->getName(LibFunc_pow) && hasFloatVersion(Name))
     Shrunk = optimizeUnaryDoubleFP(Pow, B, true);
 
-  // Propagate math semantics flags from the call to any created instructions.
+  // Propagate the math semantics from the call to any created instructions.
   IRBuilder<>::FastMathFlagGuard Guard(B);
   B.setFastMathFlags(Pow->getFastMathFlags());
 
@@ -1189,13 +1187,12 @@ Value *LibCallSimplifier::optimizePow(CallInst *Pow, IRBuilder<> &B) {
     return B.CreateCall(Exp2, Expo, "exp2");
   }
 
-  // There's no exp10 intrinsic yet, but, maybe, some day there shall be one.
-  if (ConstantFP *BaseC = dyn_cast<ConstantFP>(Base)) {
-    // pow(10.0, x) -> exp10(x)
+  // pow(10.0, x) -> exp10(x)
+  if (ConstantFP *BaseC = dyn_cast<ConstantFP>(Base))
+    // There's no exp10 intrinsic yet, but, maybe, some day there shall be one.
     if (BaseC->isExactlyValue(10.0) &&
         hasUnaryFloatFn(TLI, Ty, LibFunc_exp10, LibFunc_exp10f, LibFunc_exp10l))
       return emitUnaryFloatFnCall(Expo, TLI->getName(LibFunc_exp10), B, Attrs);
-  }
 
   // pow(exp(x), y) -> exp(x * y)
   // pow(exp2(x), y) -> exp2(x * y)
@@ -1247,8 +1244,8 @@ Value *LibCallSimplifier::optimizePow(CallInst *Pow, IRBuilder<> &B) {
   if (ExpoC->isExactlyValue(0.5) &&
       hasUnaryFloatFn(TLI, Ty, LibFunc_sqrt, LibFunc_sqrtf, LibFunc_sqrtl)) {
     // Expand pow(x, 0.5) to (x == -infinity ? +infinity : fabs(sqrt(x))).
-    // This is faster than calling pow, and still handles negative zero
-    // and negative infinity correctly.
+    // This is faster than calling pow(), and still handles -0.0 and
+    // negative infinity correctly.
     // TODO: In finite-only mode, this could be just fabs(sqrt(x)).
     Value *PosInf = ConstantFP::getInfinity(Ty);
     Value *NegInf = ConstantFP::getInfinity(Ty, true);
@@ -1257,12 +1254,11 @@ Value *LibCallSimplifier::optimizePow(CallInst *Pow, IRBuilder<> &B) {
     // an intrinsic, to match errno semantics.
     Value *Sqrt = emitUnaryFloatFnCall(Base, TLI->getName(LibFunc_sqrt),
                                        B, Attrs);
-    Function *FabsFn = Intrinsic::getDeclaration(Module, Intrinsic::fabs, Ty);
-    Value *FAbs = B.CreateCall(FabsFn, Sqrt, "abs");
-
+    Function *FAbsFn = Intrinsic::getDeclaration(Module, Intrinsic::fabs, Ty);
+    Value *FAbs = B.CreateCall(FAbsFn, Sqrt, "abs");
     Value *FCmp = B.CreateFCmpOEQ(Base, NegInf, "isinf");
-    Value *Sel = B.CreateSelect(FCmp, PosInf, FAbs);
-    return Sel;
+    Sqrt = B.CreateSelect(FCmp, PosInf, FAbs);
+    return Sqrt;
   }
 
   // pow(x, n) -> x * x * x * ....
@@ -1281,11 +1277,11 @@ Value *LibCallSimplifier::optimizePow(CallInst *Pow, IRBuilder<> &B) {
     InnerChain[2] = B.CreateFMul(Base, Base, "square");
 
     // We cannot readily convert a non-double type (like float) to a double.
-    // So we first convert ExpoA to something which could be converted to double.
+    // So we first convert it to something which could be converted to double.
     ExpoA.convert(APFloat::IEEEdouble(), APFloat::rmTowardZero, &Ignored);
-
     Value *FMul = getPow(InnerChain, ExpoA.convertToDouble(), B);
-    // For negative exponents simply compute the reciprocal.
+
+    // If the exponent is negative, then get the reciprocal.
     if (ExpoC->isNegative())
       FMul = B.CreateFDiv(ConstantFP::get(Ty, 1.0), FMul, "reciprocal");
     return FMul;
