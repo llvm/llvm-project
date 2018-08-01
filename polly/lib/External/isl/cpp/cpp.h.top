@@ -1,0 +1,10 @@
+/// These are automatically generated C++ bindings for isl.
+///
+/// isl is a library for computing with integer sets and maps described by
+/// Presburger formulas. On top of this, isl provides various tools for
+/// polyhedral compilation, ranging from dependence analysis over scheduling
+/// to AST generation.
+
+#ifndef ISL_CPP
+#define ISL_CPP
+
