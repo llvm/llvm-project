@@ -275,6 +275,10 @@ public:
 
   iterator begin() const;
   iterator end() const;
+
+  std::reverse_iterator<iterator> rbegin() const;
+  std::reverse_iterator<iterator> rend() const;
+
   iterator_range<iterator> children() const;
 };
 
@@ -323,6 +327,11 @@ class DWARFDie::iterator
     : public iterator_facade_base<iterator, std::bidirectional_iterator_tag,
                                   const DWARFDie> {
   DWARFDie Die;
+
+  friend std::reverse_iterator<llvm::DWARFDie::iterator>;
+  friend bool operator==(const DWARFDie::iterator &LHS,
+                         const DWARFDie::iterator &RHS);
+
 public:
   iterator() = default;
 
@@ -339,10 +348,18 @@ public:
     return *this;
   }
 
-  explicit operator bool() const { return Die.isValid(); }
   const DWARFDie &operator*() const { return Die; }
-  bool operator==(const iterator &X) const { return Die == X.Die; }
 };
+
+inline bool operator==(const DWARFDie::iterator &LHS,
+                       const DWARFDie::iterator &RHS) {
+  return LHS.Die == RHS.Die;
+}
+
+inline bool operator!=(const DWARFDie::iterator &LHS,
+                       const DWARFDie::iterator &RHS) {
+  return !(LHS == RHS);
+}
 
 // These inline functions must follow the DWARFDie::iterator definition above
 // as they use functions from that class.
@@ -356,6 +373,82 @@ inline DWARFDie::iterator DWARFDie::end() const {
 
 inline iterator_range<DWARFDie::iterator> DWARFDie::children() const {
   return make_range(begin(), end());
+}
+
+} // end namespace llvm
+
+namespace std {
+
+template <>
+class reverse_iterator<llvm::DWARFDie::iterator>
+    : public llvm::iterator_facade_base<
+          reverse_iterator<llvm::DWARFDie::iterator>,
+          bidirectional_iterator_tag, const llvm::DWARFDie> {
+
+private:
+  llvm::DWARFDie Die;
+  bool AtEnd;
+
+public:
+  reverse_iterator(llvm::DWARFDie::iterator It)
+      : Die(It.Die), AtEnd(!It.Die.getPreviousSibling()) {
+    if (!AtEnd)
+      Die = Die.getPreviousSibling();
+  }
+
+  reverse_iterator<llvm::DWARFDie::iterator> &operator++() {
+    assert(!AtEnd && "Incrementing rend");
+    llvm::DWARFDie D = Die.getPreviousSibling();
+    if (D)
+      Die = D;
+    else
+      AtEnd = true;
+    return *this;
+  }
+
+  reverse_iterator<llvm::DWARFDie::iterator> &operator--() {
+    if (AtEnd) {
+      AtEnd = false;
+      return *this;
+    }
+    Die = Die.getSibling();
+    assert(!Die.isNULL() && "Decrementing rbegin");
+    return *this;
+  }
+
+  const llvm::DWARFDie &operator*() const {
+    assert(Die.isValid());
+    return Die;
+  }
+
+  // FIXME: We should be able to specify the equals operator as a friend, but
+  //        that causes the compiler to think the operator overload is ambiguous
+  //        with the friend declaration and the actual definition as candidates.
+  bool equals(const reverse_iterator<llvm::DWARFDie::iterator> &RHS) const {
+    return Die == RHS.Die && AtEnd == RHS.AtEnd;
+  }
+};
+
+} // namespace std
+
+namespace llvm {
+
+inline bool operator==(const std::reverse_iterator<DWARFDie::iterator> &LHS,
+                       const std::reverse_iterator<DWARFDie::iterator> &RHS) {
+  return LHS.equals(RHS);
+}
+
+inline bool operator!=(const std::reverse_iterator<DWARFDie::iterator> &LHS,
+                       const std::reverse_iterator<DWARFDie::iterator> &RHS) {
+  return !(LHS == RHS);
+}
+
+inline std::reverse_iterator<DWARFDie::iterator> DWARFDie::rbegin() const {
+  return make_reverse_iterator(end());
+}
+
+inline std::reverse_iterator<DWARFDie::iterator> DWARFDie::rend() const {
+  return make_reverse_iterator(begin());
 }
 
 } // end namespace llvm
