@@ -51,6 +51,7 @@ if(LLDB_BUILD_FRAMEWORK)
     message(FATAL_ERROR "LLDB.framework can only be generated when targeting Apple platforms")
   endif()
 
+  add_custom_target(lldb-framework)
   # These are used to fill out LLDB-Info.plist. These are relevant when building
   # the framework, and must be defined before building liblldb.
   set(PRODUCT_NAME "LLDB")
@@ -60,6 +61,7 @@ if(LLDB_BUILD_FRAMEWORK)
 
   set(LLDB_FRAMEWORK_DIR
     ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${LLDB_FRAMEWORK_INSTALL_DIR})
+  include(LLDBFramework)
 endif()
 
 add_subdirectory(docs)
@@ -162,10 +164,6 @@ if(LLDB_INCLUDE_TESTS)
   add_subdirectory(utils/lldb-dotest)
 endif()
 
-if (LLDB_BUILD_FRAMEWORK)
-  add_custom_target(lldb-framework)
-  include(LLDBFramework)
-endif()
 
 if (NOT LLDB_DISABLE_PYTHON)
     # Add a Post-Build Event to copy over Python files and create the symlink

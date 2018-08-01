@@ -31,14 +31,9 @@ if (NOT IOS)
   )
 endif()
 
-set_target_properties(liblldb PROPERTIES
-  OUTPUT_NAME LLDB
-  FRAMEWORK On
-  FRAMEWORK_VERSION ${LLDB_FRAMEWORK_VERSION}
-  MACOSX_FRAMEWORK_INFO_PLIST ${LLDB_SOURCE_DIR}/resources/LLDB-Info.plist
-  LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${LLDB_FRAMEWORK_INSTALL_DIR}
-  PUBLIC_HEADER "${framework_headers}")
-
 add_dependencies(lldb-framework
   lldb-framework-headers
   lldb-suite)
+
+add_custom_target(install-lldb-framework)
+add_custom_target(install-lldb-framework-stripped)
