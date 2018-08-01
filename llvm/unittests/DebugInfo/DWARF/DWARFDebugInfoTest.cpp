@@ -1078,26 +1078,57 @@ TEST(DWARFDebugInfo, TestRelations) {
   EXPECT_EQ(C1.getParent(), C);
   EXPECT_EQ(C2.getParent(), C);
 
-  // Make sure bidirectional iterator works as expected.
-  auto Begin = A.begin();
-  auto End = A.end();
-  auto It = A.begin();
+  // Make sure iterators work as expected.
+  EXPECT_THAT(std::vector<DWARFDie>(A.begin(), A.end()),
+              testing::ElementsAre(B, C, D));
+  EXPECT_THAT(std::vector<DWARFDie>(A.rbegin(), A.rend()),
+              testing::ElementsAre(D, C, B));
 
-  EXPECT_EQ(It, Begin);
-  EXPECT_EQ(*It, B);
-  ++It;
-  EXPECT_EQ(*It, C);
-  ++It;
-  EXPECT_EQ(*It, D);
-  ++It;
-  EXPECT_EQ(It, End);
-  --It;
-  EXPECT_EQ(*It, D);
-  --It;
-  EXPECT_EQ(*It, C);
-  --It;
-  EXPECT_EQ(*It, B);
-  EXPECT_EQ(It, Begin);
+  // Make sure iterator is bidirectional.
+  {
+    auto Begin = A.begin();
+    auto End = A.end();
+    auto It = A.begin();
+
+    EXPECT_EQ(It, Begin);
+    EXPECT_EQ(*It, B);
+    ++It;
+    EXPECT_EQ(*It, C);
+    ++It;
+    EXPECT_EQ(*It, D);
+    ++It;
+    EXPECT_EQ(It, End);
+    --It;
+    EXPECT_EQ(*It, D);
+    --It;
+    EXPECT_EQ(*It, C);
+    --It;
+    EXPECT_EQ(*It, B);
+    EXPECT_EQ(It, Begin);
+  }
+
+  // Make sure reverse iterator is bidirectional.
+  {
+    auto Begin = A.rbegin();
+    auto End = A.rend();
+    auto It = A.rbegin();
+
+    EXPECT_EQ(It, Begin);
+    EXPECT_EQ(*It, D);
+    ++It;
+    EXPECT_EQ(*It, C);
+    ++It;
+    EXPECT_EQ(*It, B);
+    ++It;
+    EXPECT_EQ(It, End);
+    --It;
+    EXPECT_EQ(*It, B);
+    --It;
+    EXPECT_EQ(*It, C);
+    --It;
+    EXPECT_EQ(*It, D);
+    EXPECT_EQ(It, Begin);
+  }
 }
 
 TEST(DWARFDebugInfo, TestDWARFDie) {
