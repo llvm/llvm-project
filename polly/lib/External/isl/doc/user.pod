@@ -9765,6 +9765,7 @@ This option can significantly increase the speed of the scheduling calculation
 and may also prevent fusing of unrelated dimensions. A value of -1 means that
 this option does not introduce bounds on the variable or parameter
 coefficients.
+This option has no effect on the Feautrier style scheduler.
 
 =item * schedule_max_constant_term
 
