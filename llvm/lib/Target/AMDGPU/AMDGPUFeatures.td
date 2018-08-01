@@ -19,6 +19,15 @@ def FeatureFMA : SubtargetFeature<"fmaf",
   "Enable single precision FMA (not as fast as mul+add, but fused)"
 >;
 
+// Some instructions do not support denormals despite this flag. Using
+// fp32 denormals also causes instructions to run at the double
+// precision rate for the device.
+def FeatureFP32Denormals : SubtargetFeature<"fp32-denormals",
+  "FP32Denormals",
+  "true",
+  "Enable single precision denormal handling"
+>;
+
 class SubtargetFeatureLocalMemorySize <int Value> : SubtargetFeature<
   "localmemorysize"#Value,
   "LocalMemorySize",
