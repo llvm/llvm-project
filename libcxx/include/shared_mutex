@@ -129,7 +129,7 @@ _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
 
-#if _LIBCPP_STD_VER > 11 || defined(_LIBCPP_BUILDING_SHARED_MUTEX)
+#if _LIBCPP_STD_VER > 11 || defined(_LIBCPP_BUILDING_LIBRARY)
 
 #include <__mutex_base>
 
