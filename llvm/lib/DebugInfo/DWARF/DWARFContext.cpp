@@ -17,6 +17,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFAcceleratorTable.h"
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugAddr.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugArangeSet.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugAranges.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugFrame.h"
@@ -249,6 +250,36 @@ static void dumpStringOffsetsSection(
   }
 }
 
+// Dump the .debug_addr section.
+static void dumpAddrSection(raw_ostream &OS, DWARFDataExtractor &AddrData,
+                            DIDumpOptions DumpOpts, uint16_t Version,
+                            uint8_t AddrSize) {
+  // TODO: Make this more general: add callback types to Error.h, create
+  // implementation and make all DWARF classes use them.
+  static auto WarnCallback = [](Error Warn) {
+    handleAllErrors(std::move(Warn), [](ErrorInfoBase &Info) {
+      WithColor::warning() << Info.message() << '\n';
+    });
+  };
+  uint32_t Offset = 0;
+  while (AddrData.isValidOffset(Offset)) {
+    DWARFDebugAddrTable AddrTable;
+    uint32_t TableOffset = Offset;
+    if (Error Err = AddrTable.extract(AddrData, &Offset, Version,
+                                      AddrSize, WarnCallback)) {
+      WithColor::error() << toString(std::move(Err)) << '\n';
+      // Keep going after an error, if we can, assuming that the length field
+      // could be read. If it couldn't, stop reading the section.
+      if (!AddrTable.hasValidLength())
+        break;
+      uint64_t Length = AddrTable.getLength();
+      Offset = TableOffset + Length;
+    } else {
+      AddrTable.dump(OS, DumpOpts);
+    }
+  }
+}
+
 // Dump the .debug_rnglists or .debug_rnglists.dwo section (DWARF v5).
 static void dumpRnglistsSection(raw_ostream &OS,
                                 DWARFDataExtractor &rnglistData,
@@ -455,18 +486,16 @@ void DWARFContext::dump(
     }
   }
 
+  if (shouldDump(Explicit, ".debug_addr", DIDT_ID_DebugAddr,
+                 DObj->getAddrSection().Data)) {
+    DWARFDataExtractor AddrData(*DObj, DObj->getAddrSection(),
+                                   isLittleEndian(), 0);
+    dumpAddrSection(OS, AddrData, DumpOpts, getMaxVersion(), getCUAddrSize());
+  }
+
   if (shouldDump(Explicit, ".debug_ranges", DIDT_ID_DebugRanges,
                  DObj->getRangeSection().Data)) {
-    // In fact, different compile units may have different address byte
-    // sizes, but for simplicity we just use the address byte size of the
-    // last compile unit (there is no easy and fast way to associate address
-    // range list and the compile unit it describes).
-    // FIXME: savedAddressByteSize seems sketchy.
-    uint8_t savedAddressByteSize = 0;
-    for (const auto &CU : compile_units()) {
-      savedAddressByteSize = CU->getAddressByteSize();
-      break;
-    }
+    uint8_t savedAddressByteSize = getCUAddrSize();
     DWARFDataExtractor rangesData(*DObj, DObj->getRangeSection(),
                                   isLittleEndian(), savedAddressByteSize);
     uint32_t offset = 0;
@@ -1583,4 +1612,18 @@ Error DWARFContext::loadRegisterInfo(const object::ObjectFile &Obj) {
     return make_error<StringError>(TargetLookupError, inconvertibleErrorCode());
   RegInfo.reset(TheTarget->createMCRegInfo(TT.str()));
   return Error::success();
+}
+
+uint8_t DWARFContext::getCUAddrSize() {
+  // In theory, different compile units may have different address byte
+  // sizes, but for simplicity we just use the address byte size of the
+  // last compile unit. In practice the address size field is repeated across
+  // various DWARF headers (at least in version 5) to make it easier to dump
+  // them independently, not to enable varying the address size.
+  uint8_t Addr = 0;
+  for (const auto &CU : compile_units()) {
+    Addr = CU->getAddressByteSize();
+    break;
+  }
+  return Addr;
 }

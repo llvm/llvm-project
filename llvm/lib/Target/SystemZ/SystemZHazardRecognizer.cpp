@@ -101,7 +101,7 @@ SystemZHazardRecognizer::fitsIntoCurrentGroup(SUnit *SU) const {
     return (CurrGroupSize == 0);
 
   // An instruction with 4 register operands will not fit in last slot.
-  assert ((CurrGroupSize < 2 || !CurrGroupHas4RegOps) ||
+  assert ((CurrGroupSize < 2 || !CurrGroupHas4RegOps) &&
           "Current decoder group is already full!");
   if (CurrGroupSize == 2 && has4RegOps(SU->getInstr()))
     return false;

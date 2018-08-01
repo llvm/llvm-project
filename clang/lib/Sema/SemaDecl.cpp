@@ -6008,6 +6008,31 @@ static void checkAttributesAfterMerging(Sema &S, NamedDecl &ND) {
             << Attr;
         ND.dropAttr<NotTailCalledAttr>();
       }
+
+  // Check the attributes on the function type, if any.
+  if (const auto *FD = dyn_cast<FunctionDecl>(&ND)) {
+    // Don't declare this variable in the second operand of the for-statement;
+    // GCC miscompiles that by ending its lifetime before evaluating the
+    // third operand. See gcc.gnu.org/PR86769.
+    AttributedTypeLoc ATL;
+    for (TypeLoc TL = FD->getTypeSourceInfo()->getTypeLoc();
+         (ATL = TL.getAsAdjusted<AttributedTypeLoc>());
+         TL = ATL.getModifiedLoc()) {
+      // The [[lifetimebound]] attribute can be applied to the implicit object
+      // parameter of a non-static member function (other than a ctor or dtor)
+      // by applying it to the function type.
+      if (ATL.getAttrKind() == AttributedType::attr_lifetimebound) {
+        const auto *MD = dyn_cast<CXXMethodDecl>(FD);
+        if (!MD || MD->isStatic()) {
+          S.Diag(ATL.getAttrNameLoc(), diag::err_lifetimebound_no_object_param)
+              << !MD << ATL.getLocalSourceRange();
+        } else if (isa<CXXConstructorDecl>(MD) || isa<CXXDestructorDecl>(MD)) {
+          S.Diag(ATL.getAttrNameLoc(), diag::err_lifetimebound_ctor_dtor)
+              << isa<CXXDestructorDecl>(MD) << ATL.getLocalSourceRange();
+        }
+      }
+    }
+  }
 }
 
 static void checkDLLAttributeRedeclaration(Sema &S, NamedDecl *OldDecl,
@@ -8049,6 +8074,29 @@ enum OpenCLParamType {
   RecordKernelParam
 };
 
+static bool isOpenCLSizeDependentType(ASTContext &C, QualType Ty) {
+  // Size dependent types are just typedefs to normal integer types
+  // (e.g. unsigned long), so we cannot distinguish them from other typedefs to
+  // integers other than by their names.
+  StringRef SizeTypeNames[] = {"size_t", "intptr_t", "uintptr_t", "ptrdiff_t"};
+
+  // Remove typedefs one by one until we reach a typedef
+  // for a size dependent type.
+  QualType DesugaredTy = Ty;
+  do {
+    ArrayRef<StringRef> Names(SizeTypeNames);
+    auto Match =
+        std::find(Names.begin(), Names.end(), DesugaredTy.getAsString());
+    if (Names.end() != Match)
+      return true;
+
+    Ty = DesugaredTy;
+    DesugaredTy = Ty.getSingleStepDesugaredType(C);
+  } while (DesugaredTy != Ty);
+
+  return false;
+}
+
 static OpenCLParamType getOpenCLKernelParameterType(Sema &S, QualType PT) {
   if (PT->isPointerType()) {
     QualType PointeeType = PT->getPointeeType();
@@ -8061,8 +8109,13 @@ static OpenCLParamType getOpenCLKernelParameterType(Sema &S, QualType PT) {
     return PtrKernelParam;
   }
 
-  // TODO: Forbid the other integer types (size_t, ptrdiff_t...) when they can
-  // be used as builtin types.
+  // OpenCL v1.2 s6.9.k:
+  // Arguments to kernel functions in a program cannot be declared with the
+  // built-in scalar types bool, half, size_t, ptrdiff_t, intptr_t, and
+  // uintptr_t or a struct and/or union that contain fields declared to be one
+  // of these built-in scalar types.
+  if (isOpenCLSizeDependentType(S.getASTContext(), PT))
+    return InvalidKernelParam;
 
   if (PT->isImageType())
     return PtrKernelParam;
@@ -8078,6 +8131,15 @@ static OpenCLParamType getOpenCLKernelParameterType(Sema &S, QualType PT) {
 
   if (PT->isRecordType())
     return RecordKernelParam;
+
+  // Look into an array argument to check if it has a forbidden type.
+  if (PT->isArrayType()) {
+    const Type *UnderlyingTy = PT->getPointeeOrArrayElementType();
+    // Call ourself to check an underlying type of an array. Since the
+    // getPointeeOrArrayElementType returns an innermost type which is not an
+    // array, this recusive call only happens once.
+    return getOpenCLKernelParameterType(S, QualType(UnderlyingTy, 0));
+  }
 
   return ValidKernelParam;
 }
@@ -8124,8 +8186,20 @@ static void checkIsValidOpenCLKernelParameter(
     // of event_t type.
     // Do not diagnose half type since it is diagnosed as invalid argument
     // type for any function elsewhere.
-    if (!PT->isHalfType())
+    if (!PT->isHalfType()) {
       S.Diag(Param->getLocation(), diag::err_bad_kernel_param_type) << PT;
+
+      // Explain what typedefs are involved.
+      const TypedefType *Typedef = nullptr;
+      while ((Typedef = PT->getAs<TypedefType>())) {
+        SourceLocation Loc = Typedef->getDecl()->getLocation();
+        // SourceLocation may be invalid for a built-in type.
+        if (Loc.isValid())
+          S.Diag(Loc, diag::note_entity_declared_at) << PT;
+        PT = Typedef->desugar();
+      }
+    }
+
     D.setInvalidType();
     return;
 
@@ -8146,9 +8220,14 @@ static void checkIsValidOpenCLKernelParameter(
   SmallVector<const FieldDecl *, 4> HistoryStack;
   HistoryStack.push_back(nullptr);
 
-  const RecordDecl *PD = PT->castAs<RecordType>()->getDecl();
-  VisitStack.push_back(PD);
+  // At this point we already handled everything except of a RecordType or
+  // an ArrayType of a RecordType.
+  assert((PT->isArrayType() || PT->isRecordType()) && "Unexpected type.");
+  const RecordType *RecTy =
+      PT->getPointeeOrArrayElementType()->getAs<RecordType>();
+  const RecordDecl *OrigRecDecl = RecTy->getDecl();
 
+  VisitStack.push_back(RecTy->getDecl());
   assert(VisitStack.back() && "First decl null?");
 
   do {
@@ -8167,7 +8246,15 @@ static void checkIsValidOpenCLKernelParameter(
     const RecordDecl *RD;
     if (const FieldDecl *Field = dyn_cast<FieldDecl>(Next)) {
       HistoryStack.push_back(Field);
-      RD = Field->getType()->castAs<RecordType>()->getDecl();
+
+      QualType FieldTy = Field->getType();
+      // Other field types (known to be valid or invalid) are handled while we
+      // walk around RecordDecl::fields().
+      assert((FieldTy->isArrayType() || FieldTy->isRecordType()) &&
+             "Unexpected type.");
+      const Type *FieldRecTy = FieldTy->getPointeeOrArrayElementType();
+
+      RD = FieldRecTy->castAs<RecordType>()->getDecl();
     } else {
       RD = cast<RecordDecl>(Next);
     }
@@ -8204,8 +8291,8 @@ static void checkIsValidOpenCLKernelParameter(
         S.Diag(Param->getLocation(), diag::err_bad_kernel_param_type) << PT;
       }
 
-      S.Diag(PD->getLocation(), diag::note_within_field_of_type)
-        << PD->getDeclName();
+      S.Diag(OrigRecDecl->getLocation(), diag::note_within_field_of_type)
+          << OrigRecDecl->getDeclName();
 
       // We have an error, now let's go back up through history and show where
       // the offending field came from

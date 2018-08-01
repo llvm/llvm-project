@@ -8,7 +8,7 @@ declare void @leak(i32 %v1, i32 %v2)
 
 declare void @sink(i32)
 
-define i32 @test_trivial_entry_load(i32* %ptr) nounwind {
+define i32 @test_trivial_entry_load(i32* %ptr) {
 ; X64-LABEL: test_trivial_entry_load:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq %rsp, %rcx
@@ -29,12 +29,18 @@ entry:
   ret i32 %v
 }
 
-define void @test_basic_conditions(i32 %a, i32 %b, i32 %c, i32* %ptr1, i32* %ptr2, i32** %ptr3) nounwind {
+define void @test_basic_conditions(i32 %a, i32 %b, i32 %c, i32* %ptr1, i32* %ptr2, i32** %ptr3) {
 ; X64-LABEL: test_basic_conditions:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    pushq %r15
+; X64-NEXT:    .cfi_def_cfa_offset 16
 ; X64-NEXT:    pushq %r14
+; X64-NEXT:    .cfi_def_cfa_offset 24
 ; X64-NEXT:    pushq %rbx
+; X64-NEXT:    .cfi_def_cfa_offset 32
+; X64-NEXT:    .cfi_offset %rbx, -32
+; X64-NEXT:    .cfi_offset %r14, -24
+; X64-NEXT:    .cfi_offset %r15, -16
 ; X64-NEXT:    movq %rsp, %rax
 ; X64-NEXT:    movq $-1, %rbx
 ; X64-NEXT:    sarq $63, %rax
@@ -50,10 +56,14 @@ define void @test_basic_conditions(i32 %a, i32 %b, i32 %c, i32* %ptr1, i32* %ptr
 ; X64-NEXT:    shlq $47, %rax
 ; X64-NEXT:    orq %rax, %rsp
 ; X64-NEXT:    popq %rbx
+; X64-NEXT:    .cfi_def_cfa_offset 24
 ; X64-NEXT:    popq %r14
+; X64-NEXT:    .cfi_def_cfa_offset 16
 ; X64-NEXT:    popq %r15
+; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq
 ; X64-NEXT:  .LBB1_4: # %then2
+; X64-NEXT:    .cfi_def_cfa_offset 32
 ; X64-NEXT:    movq %r8, %r15
 ; X64-NEXT:    cmovneq %rbx, %rax
 ; X64-NEXT:    testl %edx, %edx
@@ -90,19 +100,21 @@ define void @test_basic_conditions(i32 %a, i32 %b, i32 %c, i32* %ptr1, i32* %ptr
 ;
 ; X64-LFENCE-LABEL: test_basic_conditions:
 ; X64-LFENCE:       # %bb.0: # %entry
+; X64-LFENCE-NEXT:    pushq %r14
+; X64-LFENCE-NEXT:    .cfi_def_cfa_offset 16
+; X64-LFENCE-NEXT:    pushq %rbx
+; X64-LFENCE-NEXT:    .cfi_def_cfa_offset 24
+; X64-LFENCE-NEXT:    pushq %rax
+; X64-LFENCE-NEXT:    .cfi_def_cfa_offset 32
+; X64-LFENCE-NEXT:    .cfi_offset %rbx, -24
+; X64-LFENCE-NEXT:    .cfi_offset %r14, -16
 ; X64-LFENCE-NEXT:    testl %edi, %edi
 ; X64-LFENCE-NEXT:    jne .LBB1_6
 ; X64-LFENCE-NEXT:  # %bb.1: # %then1
 ; X64-LFENCE-NEXT:    lfence
 ; X64-LFENCE-NEXT:    testl %esi, %esi
-; X64-LFENCE-NEXT:    je .LBB1_2
-; X64-LFENCE-NEXT:  .LBB1_6: # %exit
-; X64-LFENCE-NEXT:    lfence
-; X64-LFENCE-NEXT:    retq
-; X64-LFENCE-NEXT:  .LBB1_2: # %then2
-; X64-LFENCE-NEXT:    pushq %r14
-; X64-LFENCE-NEXT:    pushq %rbx
-; X64-LFENCE-NEXT:    pushq %rax
+; X64-LFENCE-NEXT:    jne .LBB1_6
+; X64-LFENCE-NEXT:  # %bb.2: # %then2
 ; X64-LFENCE-NEXT:    movq %r8, %rbx
 ; X64-LFENCE-NEXT:    lfence
 ; X64-LFENCE-NEXT:    testl %edx, %edx
@@ -126,10 +138,14 @@ define void @test_basic_conditions(i32 %a, i32 %b, i32 %c, i32* %ptr1, i32* %ptr
 ; X64-LFENCE-NEXT:  .LBB1_5: # %merge
 ; X64-LFENCE-NEXT:    movslq (%r14), %rax
 ; X64-LFENCE-NEXT:    movl $0, (%rbx,%rax,4)
-; X64-LFENCE-NEXT:    addq $8, %rsp
-; X64-LFENCE-NEXT:    popq %rbx
-; X64-LFENCE-NEXT:    popq %r14
+; X64-LFENCE-NEXT:  .LBB1_6: # %exit
 ; X64-LFENCE-NEXT:    lfence
+; X64-LFENCE-NEXT:    addq $8, %rsp
+; X64-LFENCE-NEXT:    .cfi_def_cfa_offset 24
+; X64-LFENCE-NEXT:    popq %rbx
+; X64-LFENCE-NEXT:    .cfi_def_cfa_offset 16
+; X64-LFENCE-NEXT:    popq %r14
+; X64-LFENCE-NEXT:    .cfi_def_cfa_offset 8
 ; X64-LFENCE-NEXT:    retq
 entry:
   %a.cmp = icmp eq i32 %a, 0
@@ -465,12 +481,18 @@ declare i8* @__cxa_allocate_exception(i64) local_unnamed_addr
 
 declare void @__cxa_throw(i8*, i8*, i8*) local_unnamed_addr
 
-define void @test_basic_eh(i32 %a, i32* %ptr1, i32* %ptr2) nounwind personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @test_basic_eh(i32 %a, i32* %ptr1, i32* %ptr2) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
 ; X64-LABEL: test_basic_eh:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    pushq %rbp
+; X64-NEXT:    .cfi_def_cfa_offset 16
 ; X64-NEXT:    pushq %r14
+; X64-NEXT:    .cfi_def_cfa_offset 24
 ; X64-NEXT:    pushq %rbx
+; X64-NEXT:    .cfi_def_cfa_offset 32
+; X64-NEXT:    .cfi_offset %rbx, -32
+; X64-NEXT:    .cfi_offset %r14, -24
+; X64-NEXT:    .cfi_offset %rbp, -16
 ; X64-NEXT:    movq %rsp, %rax
 ; X64-NEXT:    movq $-1, %rcx
 ; X64-NEXT:    sarq $63, %rax
@@ -507,10 +529,14 @@ define void @test_basic_eh(i32 %a, i32* %ptr1, i32* %ptr2) nounwind personality 
 ; X64-NEXT:    shlq $47, %rax
 ; X64-NEXT:    orq %rax, %rsp
 ; X64-NEXT:    popq %rbx
+; X64-NEXT:    .cfi_def_cfa_offset 24
 ; X64-NEXT:    popq %r14
+; X64-NEXT:    .cfi_def_cfa_offset 16
 ; X64-NEXT:    popq %rbp
+; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq
 ; X64-NEXT:  .LBB4_4: # %lpad
+; X64-NEXT:    .cfi_def_cfa_offset 32
 ; X64-NEXT:  .Ltmp2:
 ; X64-NEXT:    movq %rsp, %rcx
 ; X64-NEXT:    sarq $63, %rcx
@@ -529,8 +555,14 @@ define void @test_basic_eh(i32 %a, i32* %ptr1, i32* %ptr2) nounwind personality 
 ; X64-LFENCE-LABEL: test_basic_eh:
 ; X64-LFENCE:       # %bb.0: # %entry
 ; X64-LFENCE-NEXT:    pushq %rbp
+; X64-LFENCE-NEXT:    .cfi_def_cfa_offset 16
 ; X64-LFENCE-NEXT:    pushq %r14
+; X64-LFENCE-NEXT:    .cfi_def_cfa_offset 24
 ; X64-LFENCE-NEXT:    pushq %rbx
+; X64-LFENCE-NEXT:    .cfi_def_cfa_offset 32
+; X64-LFENCE-NEXT:    .cfi_offset %rbx, -32
+; X64-LFENCE-NEXT:    .cfi_offset %r14, -24
+; X64-LFENCE-NEXT:    .cfi_offset %rbp, -16
 ; X64-LFENCE-NEXT:    cmpl $41, %edi
 ; X64-LFENCE-NEXT:    jg .LBB4_2
 ; X64-LFENCE-NEXT:  # %bb.1: # %thrower
@@ -551,10 +583,14 @@ define void @test_basic_eh(i32 %a, i32* %ptr1, i32* %ptr2) nounwind personality 
 ; X64-LFENCE-NEXT:  .LBB4_2: # %exit
 ; X64-LFENCE-NEXT:    lfence
 ; X64-LFENCE-NEXT:    popq %rbx
+; X64-LFENCE-NEXT:    .cfi_def_cfa_offset 24
 ; X64-LFENCE-NEXT:    popq %r14
+; X64-LFENCE-NEXT:    .cfi_def_cfa_offset 16
 ; X64-LFENCE-NEXT:    popq %rbp
+; X64-LFENCE-NEXT:    .cfi_def_cfa_offset 8
 ; X64-LFENCE-NEXT:    retq
 ; X64-LFENCE-NEXT:  .LBB4_3: # %lpad
+; X64-LFENCE-NEXT:    .cfi_def_cfa_offset 32
 ; X64-LFENCE-NEXT:  .Ltmp2:
 ; X64-LFENCE-NEXT:    movl (%rax), %eax
 ; X64-LFENCE-NEXT:    addl (%rbx), %eax

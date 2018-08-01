@@ -622,6 +622,9 @@ shrdq $7, %rsi, %rdi
 shldq $7, %rsi, (%rax)
 shrdq $7, %rsi, (%rax)
 
+stc
+std
+
 subb $7, %al
 subb $7, %dil
 subb $7, (%rax)
@@ -1255,6 +1258,8 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  1      3     1.00                        shrdq	$7, %rsi, %rdi
 # CHECK-NEXT:  4      9     1.00    *      *            shldq	$7, %rsi, (%rax)
 # CHECK-NEXT:  4      9     1.00    *      *            shrdq	$7, %rsi, (%rax)
+# CHECK-NEXT:  1      1     0.25                  U     stc
+# CHECK-NEXT:  6      6     1.50                  U     std
 # CHECK-NEXT:  1      1     0.25                        subb	$7, %al
 # CHECK-NEXT:  1      1     0.25                        subb	$7, %dil
 # CHECK-NEXT:  3      7     1.00    *      *            subb	$7, (%rax)
@@ -1330,7 +1335,7 @@ xorq (%rax), %rdi
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]
-# CHECK-NEXT: 60.00   -     444.50 248.50 218.00 218.00 167.00 197.00 430.00 69.00
+# CHECK-NEXT: 60.00   -     446.00 250.00 218.00 218.00 167.00 198.50 432.50 69.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    Instructions:
@@ -1890,6 +1895,8 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -      -      -     shrdq	$7, %rsi, %rdi
 # CHECK-NEXT:  -      -     0.25   1.25   0.83   0.83    -     0.25   0.25   0.33   shldq	$7, %rsi, (%rax)
 # CHECK-NEXT:  -      -     0.25   1.25   0.83   0.83    -     0.25   0.25   0.33   shrdq	$7, %rsi, (%rax)
+# CHECK-NEXT:  -      -     0.25   0.25    -      -      -     0.25   0.25    -     stc
+# CHECK-NEXT:  -      -     1.25   1.25    -      -      -     1.25   2.25    -     std
 # CHECK-NEXT:  -      -     0.25   0.25    -      -      -     0.25   0.25    -     subb	$7, %al
 # CHECK-NEXT:  -      -     0.25   0.25    -      -      -     0.25   0.25    -     subb	$7, %dil
 # CHECK-NEXT:  -      -     0.25   0.25   0.83   0.83   1.00   0.25   0.25   0.33   subb	$7, (%rax)

@@ -364,7 +364,9 @@ DwarfDebug::DwarfDebug(AsmPrinter *A, Module *M)
   else
     UseSectionsAsReferences = DwarfSectionsAsReferences == Enable;
 
-  GenerateTypeUnits = GenerateDwarfTypeUnits;
+  // Don't generate type units for unsupported object file formats.
+  GenerateTypeUnits =
+      A->TM.getTargetTriple().isOSBinFormatELF() && GenerateDwarfTypeUnits;
 
   TheAccelTableKind = computeAccelTableKind(
       DwarfVersion, GenerateTypeUnits, DebuggerTuning, A->TM.getTargetTriple());
@@ -886,8 +888,7 @@ void DwarfDebug::endModule() {
     emitDebugInfoDWO();
     emitDebugAbbrevDWO();
     emitDebugLineDWO();
-    // Emit DWO addresses.
-    AddrPool.emit(*Asm, Asm->getObjFileLowering().getDwarfAddrSection());
+    emitDebugAddr();
   }
 
   // Emit info into the dwarf accelerator table sections.
@@ -2136,7 +2137,7 @@ void DwarfDebug::emitDebugRanges() {
     return;
   }
 
-  if (getDwarfVersion() >= 5 && NoRangesPresent())
+  if (NoRangesPresent())
     return;
 
   // Start the dwarf ranges section.
@@ -2295,6 +2296,12 @@ void DwarfDebug::emitDebugStrDWO() {
   MCSection *OffSec = Asm->getObjFileLowering().getDwarfStrOffDWOSection();
   InfoHolder.emitStrings(Asm->getObjFileLowering().getDwarfStrDWOSection(),
                          OffSec, /* UseRelativeOffsets = */ false);
+}
+
+// Emit DWO addresses.
+void DwarfDebug::emitDebugAddr() {
+  assert(useSplitDwarf() && "No split dwarf?");
+  AddrPool.emit(*Asm, Asm->getObjFileLowering().getDwarfAddrSection());
 }
 
 MCDwarfDwoLineTable *DwarfDebug::getDwoLineTable(const DwarfCompileUnit &CU) {

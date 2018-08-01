@@ -221,25 +221,42 @@ std::pair<ProgramStateRef, SVal> ExprEngine::prepareForObjectConstruction(
       // and construct directly into the final object. This call
       // also sets the CallOpts flags for us.
       SVal V;
+      // If the elided copy/move constructor is not supported, there's still
+      // benefit in trying to model the non-elided constructor.
+      // Stash our state before trying to elide, as it'll get overwritten.
+      ProgramStateRef PreElideState = State;
+      EvalCallOptions PreElideCallOpts = CallOpts;
+
       std::tie(State, V) = prepareForObjectConstruction(
           CE, State, LCtx, TCC->getConstructionContextAfterElision(), CallOpts);
 
-      // Remember that we've elided the constructor.
-      State = addObjectUnderConstruction(State, CE, LCtx, V);
+      // FIXME: This definition of "copy elision has not failed" is unreliable.
+      // It doesn't indicate that the constructor will actually be inlined
+      // later; it is still up to evalCall() to decide.
+      if (!CallOpts.IsCtorOrDtorWithImproperlyModeledTargetRegion) {
+        // Remember that we've elided the constructor.
+        State = addObjectUnderConstruction(State, CE, LCtx, V);
 
-      // Remember that we've elided the destructor.
-      if (BTE)
-        State = elideDestructor(State, BTE, LCtx);
+        // Remember that we've elided the destructor.
+        if (BTE)
+          State = elideDestructor(State, BTE, LCtx);
 
-      // Instead of materialization, shamelessly return
-      // the final object destination.
-      if (MTE)
-        State = addObjectUnderConstruction(State, MTE, LCtx, V);
+        // Instead of materialization, shamelessly return
+        // the final object destination.
+        if (MTE)
+          State = addObjectUnderConstruction(State, MTE, LCtx, V);
 
-      return std::make_pair(State, V);
+        return std::make_pair(State, V);
+      } else {
+        // Copy elision failed. Revert the changes and proceed as if we have
+        // a simple temporary.
+        State = PreElideState;
+        CallOpts = PreElideCallOpts;
+      }
+      LLVM_FALLTHROUGH;
     }
     case ConstructionContext::SimpleTemporaryObjectKind: {
-      const auto *TCC = cast<SimpleTemporaryObjectConstructionContext>(CC);
+      const auto *TCC = cast<TemporaryObjectConstructionContext>(CC);
       const CXXBindTemporaryExpr *BTE = TCC->getCXXBindTemporaryExpr();
       const MaterializeTemporaryExpr *MTE = TCC->getMaterializedTemporaryExpr();
       SVal V = UnknownVal();
@@ -273,6 +290,10 @@ std::pair<ProgramStateRef, SVal> ExprEngine::prepareForObjectConstruction(
 
       CallOpts.IsTemporaryCtorOrDtor = true;
       return std::make_pair(State, V);
+    }
+    case ConstructionContext::ArgumentKind: {
+      // Function argument constructors. Not implemented yet.
+      break;
     }
     }
   }

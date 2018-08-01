@@ -361,3 +361,38 @@ namespace rdar15468709c {
 namespace MemberSpecializationLocation {
   template<typename T> struct A { static int n; };
 }
+
+// https://bugs.llvm.org/show_bug.cgi?id=34728
+namespace PR34728 {
+
+// case 1: defaulted `NonTypeTemplateParmDecl`, non-defaulted 2nd tpl param
+template <int foo = 10, class T>
+int func1(T const &);
+
+template <int foo, class T>
+int func1(T const &) {
+  return foo;
+}
+
+// case 2: defaulted `TemplateTypeParmDecl`, non-defaulted 2nd tpl param
+template <class A = int, class B>
+A func2(B const &);
+
+template <class A, class B>
+A func2(B const &) {
+  return A(20.0f);
+}
+
+// case 3: defaulted `TemplateTemplateParmDecl`, non-defaulted 2nd tpl param
+template <class T>
+struct Container { T const &item; };
+
+template <template <class> class C = Container, class D>
+C<D> func3(D const &);
+
+template <template <class> class C, class D>
+C<D> func3(D const &d) {
+  return Container<D>{d};
+}
+
+} // end namespace PR34728

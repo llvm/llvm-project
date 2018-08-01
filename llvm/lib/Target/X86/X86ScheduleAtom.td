@@ -108,6 +108,7 @@ def  : WriteRes<WriteLAHFSAHF, [AtomPort01]> {
   let Latency = 2;
   let ResourceCycles = [2];
 }
+def : WriteRes<WriteBitTest,[AtomPort01]>;
 
 defm : X86WriteResUnsupported<WriteIMulH>;
 

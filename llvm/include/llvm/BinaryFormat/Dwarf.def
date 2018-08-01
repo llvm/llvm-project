@@ -856,6 +856,7 @@ HANDLE_DW_UT(0x06, split_type)
 // TODO: Add Mach-O and COFF names.
 // Official DWARF sections.
 HANDLE_DWARF_SECTION(DebugAbbrev, ".debug_abbrev", "debug-abbrev")
+HANDLE_DWARF_SECTION(DebugAddr, ".debug_addr", "debug-addr")
 HANDLE_DWARF_SECTION(DebugAranges, ".debug_aranges", "debug-aranges")
 HANDLE_DWARF_SECTION(DebugInfo, ".debug_info", "debug-info")
 HANDLE_DWARF_SECTION(DebugTypes, ".debug_types", "debug-types")

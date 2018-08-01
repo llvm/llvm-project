@@ -322,6 +322,16 @@ struct ClientCapabilities {
 
 bool fromJSON(const llvm::json::Value &, ClientCapabilities &);
 
+/// Clangd extension to set clangd-specific "initializationOptions" in the
+/// "initialize" request and for the "workspace/didChangeConfiguration"
+/// notification since the data received is described as 'any' type in LSP.
+struct ClangdConfigurationParamsChange {
+  llvm::Optional<std::string> compilationDatabasePath;
+};
+bool fromJSON(const llvm::json::Value &, ClangdConfigurationParamsChange &);
+
+struct ClangdInitializationOptions : public ClangdConfigurationParamsChange {};
+
 struct InitializeParams {
   /// The process Id of the parent process that started
   /// the server. Is null if the process has not been started by another
@@ -348,6 +358,10 @@ struct InitializeParams {
 
   /// The initial trace setting. If omitted trace is disabled ('off').
   llvm::Optional<TraceLevel> trace;
+
+  // We use this predefined struct because it is easier to use
+  // than the protocol specified type of 'any'.
+  llvm::Optional<ClangdInitializationOptions> initializationOptions;
 };
 bool fromJSON(const llvm::json::Value &, InitializeParams &);
 
@@ -418,13 +432,6 @@ struct DidChangeWatchedFilesParams {
   std::vector<FileEvent> changes;
 };
 bool fromJSON(const llvm::json::Value &, DidChangeWatchedFilesParams &);
-
-/// Clangd extension to manage a workspace/didChangeConfiguration notification
-/// since the data received is described as 'any' type in LSP.
-struct ClangdConfigurationParamsChange {
-  llvm::Optional<std::string> compilationDatabasePath;
-};
-bool fromJSON(const llvm::json::Value &, ClangdConfigurationParamsChange &);
 
 struct DidChangeConfigurationParams {
   // We use this predefined struct because it is easier to use

@@ -262,7 +262,8 @@ static MustKillsInfo computeMustKillsInfo(const Scop &S) {
 
     isl::schedule KillSchedule = isl::schedule::from_domain(KillStmtDomain);
     if (Info.KillsSchedule)
-      Info.KillsSchedule = Info.KillsSchedule.set(KillSchedule);
+      Info.KillsSchedule = isl::manage(
+          isl_schedule_set(Info.KillsSchedule.release(), KillSchedule.copy()));
     else
       Info.KillsSchedule = KillSchedule;
   }
@@ -1289,7 +1290,7 @@ void GPUNodeBuilder::createUser(__isl_take isl_ast_node *UserStmt) {
 }
 
 void GPUNodeBuilder::createFor(__isl_take isl_ast_node *Node) {
-  createForSequential(Node, false);
+  createForSequential(isl::manage(Node), false);
 }
 
 void GPUNodeBuilder::createKernelCopy(ppcg_kernel_stmt *KernelStmt) {

@@ -154,6 +154,8 @@ enum DIDumpType : unsigned {
 struct DIDumpOptions {
   unsigned DumpType = DIDT_All;
   unsigned RecurseDepth = -1U;
+  uint16_t Version = 0; // DWARF version to assume when extracting.
+  uint8_t AddrSize = 4; // Address byte size to assume when extracting.
   bool ShowAddresses = true;
   bool ShowChildren = false;
   bool ShowParents = false;

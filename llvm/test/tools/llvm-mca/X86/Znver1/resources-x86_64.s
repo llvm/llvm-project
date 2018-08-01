@@ -622,6 +622,9 @@ shrdq $7, %rsi, %rdi
 shldq $7, %rsi, (%rax)
 shrdq $7, %rsi, (%rax)
 
+stc
+std
+
 subb $7, %al
 subb $7, %dil
 subb $7, (%rax)
@@ -1255,6 +1258,8 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  1      1     0.25                        shrdq	$7, %rsi, %rdi
 # CHECK-NEXT:  2      5     0.50    *      *            shldq	$7, %rsi, (%rax)
 # CHECK-NEXT:  2      5     0.50    *      *            shrdq	$7, %rsi, (%rax)
+# CHECK-NEXT:  1      1     0.25                  U     stc
+# CHECK-NEXT:  1      1     0.25                  U     std
 # CHECK-NEXT:  1      1     0.25                        subb	$7, %al
 # CHECK-NEXT:  1      1     0.25                        subb	$7, %dil
 # CHECK-NEXT:  2      5     0.50    *      *            subb	$7, (%rax)
@@ -1332,7 +1337,7 @@ xorq (%rax), %rdi
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]
-# CHECK-NEXT: 147.50 147.50 131.00 165.00 147.00 131.00 392.00  -      -      -      -     34.00
+# CHECK-NEXT: 147.50 147.50 131.50 165.50 147.50 131.50 392.00  -      -      -      -     34.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   Instructions:
@@ -1892,6 +1897,8 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     shrdq	$7, %rsi, %rdi
 # CHECK-NEXT: 0.50   0.50   0.25   0.25   0.25   0.25    -      -      -      -      -      -     shldq	$7, %rsi, (%rax)
 # CHECK-NEXT: 0.50   0.50   0.25   0.25   0.25   0.25    -      -      -      -      -      -     shrdq	$7, %rsi, (%rax)
+# CHECK-NEXT:  -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     stc
+# CHECK-NEXT:  -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     std
 # CHECK-NEXT:  -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     subb	$7, %al
 # CHECK-NEXT:  -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     subb	$7, %dil
 # CHECK-NEXT: 0.50   0.50   0.25   0.25   0.25   0.25    -      -      -      -      -      -     subb	$7, (%rax)

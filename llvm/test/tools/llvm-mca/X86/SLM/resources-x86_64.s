@@ -622,6 +622,9 @@ shrdq $7, %rsi, %rdi
 shldq $7, %rsi, (%rax)
 shrdq $7, %rsi, (%rax)
 
+stc
+std
+
 subb $7, %al
 subb $7, %dil
 subb $7, (%rax)
@@ -1255,6 +1258,8 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  1      1     1.00                        shrdq	$7, %rsi, %rdi
 # CHECK-NEXT:  2      4     2.00    *      *            shldq	$7, %rsi, (%rax)
 # CHECK-NEXT:  2      4     2.00    *      *            shrdq	$7, %rsi, (%rax)
+# CHECK-NEXT:  1      1     0.50                  U     stc
+# CHECK-NEXT:  1      1     0.50                  U     std
 # CHECK-NEXT:  1      1     0.50                        subb	$7, %al
 # CHECK-NEXT:  1      1     0.50                        subb	$7, %dil
 # CHECK-NEXT:  2      5     2.00    *      *            subb	$7, (%rax)
@@ -1328,7 +1333,7 @@ xorq (%rax), %rdi
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]
-# CHECK-NEXT: 400.00  -      -      -      -     544.00 386.00 502.00
+# CHECK-NEXT: 400.00  -      -      -      -     545.00 387.00 502.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    Instructions:
@@ -1888,6 +1893,8 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -     shrdq	$7, %rsi, %rdi
 # CHECK-NEXT:  -      -      -      -      -     1.00    -     2.00   shldq	$7, %rsi, (%rax)
 # CHECK-NEXT:  -      -      -      -      -     1.00    -     2.00   shrdq	$7, %rsi, (%rax)
+# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     stc
+# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     std
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     subb	$7, %al
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     subb	$7, %dil
 # CHECK-NEXT:  -      -      -      -      -     1.00   1.00   2.00   subb	$7, (%rax)

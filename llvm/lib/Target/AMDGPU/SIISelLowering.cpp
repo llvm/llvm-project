@@ -4555,6 +4555,9 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   const AMDGPU::MIMGBaseOpcodeInfo *BaseOpcode =
       AMDGPU::getMIMGBaseOpcodeInfo(Intr->BaseOpcode);
   const AMDGPU::MIMGDimInfo *DimInfo = AMDGPU::getMIMGDimInfo(Intr->Dim);
+  const AMDGPU::MIMGLZMappingInfo *LZMappingInfo =
+      AMDGPU::getMIMGLZMappingInfo(Intr->BaseOpcode);
+  unsigned IntrOpcode = Intr->BaseOpcode;
 
   SmallVector<EVT, 2> ResultTypes(Op->value_begin(), Op->value_end());
   bool IsD16 = false;
@@ -4640,6 +4643,18 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   SmallVector<SDValue, 4> VAddrs;
   for (unsigned i = 0; i < NumVAddrs; ++i)
     VAddrs.push_back(Op.getOperand(AddrIdx + i));
+
+  // Optimize _L to _LZ when _L is zero
+  if (LZMappingInfo) {
+    if (auto ConstantLod =
+         dyn_cast<ConstantFPSDNode>(VAddrs[NumVAddrs-1].getNode())) {
+      if (ConstantLod->isZero() || ConstantLod->isNegative()) {
+        IntrOpcode = LZMappingInfo->LZ;  // set new opcode to _lz variant of _l
+        VAddrs.pop_back();               // remove 'lod'
+      }
+    }
+  }
+
   SDValue VAddr = getBuildDwordsVector(DAG, DL, VAddrs);
 
   SDValue True = DAG.getTargetConstant(1, DL, MVT::i1);
@@ -4699,10 +4714,10 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   int Opcode = -1;
 
   if (Subtarget->getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS)
-    Opcode = AMDGPU::getMIMGOpcode(Intr->BaseOpcode, AMDGPU::MIMGEncGfx8,
+    Opcode = AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncGfx8,
                                    NumVDataDwords, NumVAddrDwords);
   if (Opcode == -1)
-    Opcode = AMDGPU::getMIMGOpcode(Intr->BaseOpcode, AMDGPU::MIMGEncGfx6,
+    Opcode = AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncGfx6,
                                    NumVDataDwords, NumVAddrDwords);
   assert(Opcode != -1);
 
@@ -5010,7 +5025,8 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                        Op.getOperand(1), Op.getOperand(2), Op.getOperand(3));
   case Intrinsic::amdgcn_fdot2:
     return DAG.getNode(AMDGPUISD::FDOT2, DL, VT,
-                       Op.getOperand(1), Op.getOperand(2), Op.getOperand(3));
+                       Op.getOperand(1), Op.getOperand(2), Op.getOperand(3),
+                       Op.getOperand(4));
   case Intrinsic::amdgcn_fmul_legacy:
     return DAG.getNode(AMDGPUISD::FMUL_LEGACY, DL, VT,
                        Op.getOperand(1), Op.getOperand(2));
@@ -7613,8 +7629,10 @@ SDValue SITargetLowering::performFMACombine(SDNode *N,
       return SDValue();
 
     if ((Vec1 == Vec3 && Vec2 == Vec4) ||
-        (Vec1 == Vec4 && Vec2 == Vec3))
-      return DAG.getNode(AMDGPUISD::FDOT2, SL, MVT::f32, Vec1, Vec2, FMAAcc);
+        (Vec1 == Vec4 && Vec2 == Vec3)) {
+      return DAG.getNode(AMDGPUISD::FDOT2, SL, MVT::f32, Vec1, Vec2, FMAAcc,
+                         DAG.getTargetConstant(0, SL, MVT::i1));
+    }
   }
   return SDValue();
 }

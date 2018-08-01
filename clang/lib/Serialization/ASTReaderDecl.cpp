@@ -3439,22 +3439,16 @@ static void inheritDefaultTemplateArguments(ASTContext &Context,
   assert(FromTP->size() == ToTP->size() && "merged mismatched templates?");
 
   for (unsigned I = 0, N = FromTP->size(); I != N; ++I) {
-    NamedDecl *FromParam = FromTP->getParam(N - I - 1);
-    if (FromParam->isParameterPack())
-      continue;
-    NamedDecl *ToParam = ToTP->getParam(N - I - 1);
+    NamedDecl *FromParam = FromTP->getParam(I);
+    NamedDecl *ToParam = ToTP->getParam(I);
 
-    if (auto *FTTP = dyn_cast<TemplateTypeParmDecl>(FromParam)) {
-      if (!inheritDefaultTemplateArgument(Context, FTTP, ToParam))
-        break;
-    } else if (auto *FNTTP = dyn_cast<NonTypeTemplateParmDecl>(FromParam)) {
-      if (!inheritDefaultTemplateArgument(Context, FNTTP, ToParam))
-        break;
-    } else {
-      if (!inheritDefaultTemplateArgument(
-              Context, cast<TemplateTemplateParmDecl>(FromParam), ToParam))
-        break;
-    }
+    if (auto *FTTP = dyn_cast<TemplateTypeParmDecl>(FromParam))
+      inheritDefaultTemplateArgument(Context, FTTP, ToParam);
+    else if (auto *FNTTP = dyn_cast<NonTypeTemplateParmDecl>(FromParam))
+      inheritDefaultTemplateArgument(Context, FNTTP, ToParam);
+    else
+      inheritDefaultTemplateArgument(
+              Context, cast<TemplateTemplateParmDecl>(FromParam), ToParam);
   }
 }
 

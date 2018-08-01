@@ -5233,6 +5233,8 @@ static ParsedAttr::Kind getAttrListKind(AttributedType::Kind kind) {
     return ParsedAttr::AT_ObjCKindOf;
   case AttributedType::attr_ns_returns_retained:
     return ParsedAttr::AT_NSReturnsRetained;
+  case AttributedType::attr_lifetimebound:
+    return ParsedAttr::AT_LifetimeBound;
   }
   llvm_unreachable("unexpected attribute kind!");
 }
@@ -7194,6 +7196,18 @@ static void deduceOpenCLImplicitAddrSpace(TypeProcessingState &State,
   T = State.getSema().Context.getAddrSpaceQualType(T, ImpAddr);
 }
 
+static void HandleLifetimeBoundAttr(QualType &CurType,
+                                    const ParsedAttr &Attr,
+                                    Sema &S, Declarator &D) {
+  if (D.isDeclarationOfFunction()) {
+    CurType = S.Context.getAttributedType(AttributedType::attr_lifetimebound,
+                                          CurType, CurType);
+  } else {
+    Attr.diagnoseAppertainsTo(S, nullptr);
+  }
+}
+
+
 static void processTypeAttrs(TypeProcessingState &state, QualType &type,
                              TypeAttrLocation TAL,
                              ParsedAttributesView &attrs) {
@@ -7297,6 +7311,13 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
     case ParsedAttr::AT_OpenCLAccess:
       HandleOpenCLAccessAttr(type, attr, state.getSema());
       attr.setUsedAsTypeAttr();
+      break;
+    case ParsedAttr::AT_LifetimeBound:
+      if (TAL == TAL_DeclChunk) {
+        HandleLifetimeBoundAttr(type, attr, state.getSema(),
+                                state.getDeclarator());
+        attr.setUsedAsTypeAttr();
+      }
       break;
 
     MS_TYPE_ATTRS_CASELIST:
