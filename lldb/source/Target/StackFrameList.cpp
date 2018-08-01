@@ -436,11 +436,7 @@ uint32_t StackFrameList::GetNumFrames(bool can_create) {
   if (can_create)
     GetFramesUpTo(UINT32_MAX);
 
-  uint32_t inlined_depth = GetCurrentInlinedDepth();
-  if (inlined_depth == UINT32_MAX)
-    return m_frames.size();
-  else
-    return m_frames.size() - inlined_depth;
+  return GetVisibleStackFrameIndex(m_frames.size());
 }
 
 void StackFrameList::Dump(Stream *s) {
@@ -620,7 +616,6 @@ uint32_t StackFrameList::SetSelectedFrame(lldb_private::StackFrame *frame) {
   return m_selected_frame_idx;
 }
 
-// Mark a stack frame as the current frame using the frame index
 bool StackFrameList::SetSelectedFrameByIndex(uint32_t idx) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   StackFrameSP frame_sp(GetFrameAtIndex(idx));
@@ -650,19 +645,6 @@ void StackFrameList::Clear() {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   m_frames.clear();
   m_concrete_frames_fetched = 0;
-}
-
-void StackFrameList::InvalidateFrames(uint32_t start_idx) {
-  std::lock_guard<std::recursive_mutex> guard(m_mutex);
-  if (m_show_inlined_frames) {
-    Clear();
-  } else {
-    const size_t num_frames = m_frames.size();
-    while (start_idx < num_frames) {
-      m_frames[start_idx].reset();
-      ++start_idx;
-    }
-  }
 }
 
 void StackFrameList::Merge(std::unique_ptr<StackFrameList> &curr_ap,
