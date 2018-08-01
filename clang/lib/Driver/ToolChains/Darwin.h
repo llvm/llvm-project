@@ -130,9 +130,6 @@ protected:
   Tool *buildLinker() const override;
   Tool *getTool(Action::ActionClass AC) const override;
 
-  /// \return Directory to find the runtime library in.
-  SmallString<128> runtimeLibDir(bool IsEmbedded=false) const;
-
 private:
   mutable std::unique_ptr<tools::darwin::Lipo> Lipo;
   mutable std::unique_ptr<tools::darwin::Dsymutil> Dsymutil;
@@ -254,6 +251,7 @@ public:
   GetExceptionModel(const llvm::opt::ArgList &Args) const override {
     return llvm::ExceptionHandling::None;
   }
+
   /// }
 };
 
@@ -422,11 +420,6 @@ protected:
   StringRef getPlatformFamily() const;
   StringRef getOSLibraryNameSuffix() const;
 
-  /// \return Relative path to the filename for the library
-  /// containing the sanitizer {@code SanitizerName}.
-  std::string getFileNameForSanitizerLib(StringRef SanitizerName,
-                                         bool Shared = true) const;
-
 public:
   static StringRef getSDKName(StringRef isysroot);
 
@@ -480,12 +473,6 @@ public:
   SanitizerMask getSupportedSanitizers() const override;
 
   void printVerboseInfo(raw_ostream &OS) const override;
-
-private:
-  /// \return Whether the runtime corresponding to the given
-  /// sanitizer exists in the toolchain.
-  bool sanitizerRuntimeExists(StringRef SanitizerName,
-                              bool Shared = true) const;
 };
 
 /// DarwinClang - The Darwin toolchain used by Clang.

@@ -141,7 +141,7 @@ define fp128 @test_quad_dump() {
   ret fp128 0xL00000000000000004000000000000000
 }
 
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: %0:_(p0) = G_EXTRACT_VECTOR_ELT %1:_(<2 x p0>), %2:_(s32) (in function: vector_of_pointers_extractelement)
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: %2:_(p0) = G_EXTRACT_VECTOR_ELT %0:_(<2 x p0>), %3:_(s32) (in function: vector_of_pointers_extractelement)
 ; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for vector_of_pointers_extractelement
 ; FALLBACK-WITH-REPORT-OUT-LABEL: vector_of_pointers_extractelement:
 @var = global <2 x i16*> zeroinitializer
@@ -158,7 +158,7 @@ end:
   br label %block
 }
 
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: G_STORE %0:_(<2 x p0>), %5:_(p0) :: (store 16 into `<2 x i16*>* undef`) (in function: vector_of_pointers_insertelement)
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: G_STORE %2:_(<2 x p0>), %1:_(p0) :: (store 16 into `<2 x i16*>* undef`) (in function: vector_of_pointers_insertelement)
 ; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for vector_of_pointers_insertelement
 ; FALLBACK-WITH-REPORT-OUT-LABEL: vector_of_pointers_insertelement:
 define void @vector_of_pointers_insertelement() {

@@ -112,6 +112,13 @@ public:
   ConstructionContextItem(const ObjCMessageExpr *ME, unsigned Index)
       : Data(ME), Kind(ArgumentKind), Index(Index) {}
 
+  // A polymorphic version of the previous calls with dynamic type check.
+  ConstructionContextItem(const Expr *E, unsigned Index)
+      : Data(E), Kind(ArgumentKind), Index(Index) {
+    assert(isa<CallExpr>(E) || isa<CXXConstructExpr>(E) ||
+           isa<ObjCMessageExpr>(E));
+  }
+
   ConstructionContextItem(const CXXCtorInitializer *Init)
       : Data(Init), Kind(InitializerKind), Index(0) {}
 

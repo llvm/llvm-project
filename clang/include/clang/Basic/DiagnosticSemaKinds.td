@@ -7854,6 +7854,13 @@ def warn_null_ret : Warning<
   "null returned from %select{function|method}0 that requires a non-null return value">,
   InGroup<NonNull>;
 
+def err_lifetimebound_no_object_param : Error<
+  "'lifetimebound' attribute cannot be applied; %select{static |non-}0member "
+  "function has no implicit object parameter">;
+def err_lifetimebound_ctor_dtor : Error<
+  "'lifetimebound' attribute cannot be applied to a "
+  "%select{constructor|destructor}0">;
+
 // CHECK: returning address/reference of stack memory
 def warn_ret_stack_addr_ref : Warning<
   "%select{address of|reference to}0 stack memory associated with "
@@ -7868,7 +7875,8 @@ def warn_ret_addr_label : Warning<
 def err_ret_local_block : Error<
   "returning block that lives on the local stack">;
 def note_local_var_initializer : Note<
-  "%select{via initialization of|binding reference}0 variable %1 here">;
+  "%select{via initialization of|binding reference}0 variable "
+  "%select{%2 |}1here">;
 def note_init_with_default_member_initalizer : Note<
   "initializing field %0 with default member initializer">;
 
@@ -7900,13 +7908,14 @@ def note_lifetime_extending_member_declared_here : Note<
   "member with %select{reference|'std::initializer_list'}0 subobject}1 "
   "declared here">;
 def warn_dangling_variable : Warning<
-  "%select{temporary %select{whose address is used as value of|bound to}3 "
-  "%select{%select{|reference }3member of local variable|"
-  "local %select{variable|reference}3}1|"
+  "%select{temporary %select{whose address is used as value of|"
+  "%select{|implicitly }2bound to}4 "
+  "%select{%select{|reference }4member of local variable|"
+  "local %select{variable|reference}4}1|"
   "array backing "
   "%select{initializer list subobject of local variable|"
   "local initializer list}1}0 "
-  "%2 will be destroyed at the end of the full-expression">,
+  "%select{%3 |}2will be destroyed at the end of the full-expression">,
   InGroup<Dangling>;
 def warn_new_dangling_reference : Warning<
   "temporary bound to reference member of allocated object "

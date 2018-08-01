@@ -40,6 +40,8 @@ public:
     typedef implementation-defined                   const_iterator;
     typedef std::reverse_iterator<iterator>          reverse_iterator;
     typedef std::reverse_iterator<const_iterator>    const_reverse_iterator;
+    typedef unspecified                              node_type;               // C++17
+    typedef INSERT_RETURN_TYPE<iterator, node_type>  insert_return_type;      // C++17
 
     // construct/copy/destroy:
     set()
@@ -114,6 +116,11 @@ public:
     template <class InputIterator>
         void insert(InputIterator first, InputIterator last);
     void insert(initializer_list<value_type> il);
+
+    node_type extract(const_iterator position);                                       // C++17
+    node_type extract(const key_type& x);                                             // C++17
+    insert_return_type insert(node_type&& nh);                                        // C++17
+    iterator insert(const_iterator hint, node_type&& nh);                             // C++17
 
     iterator  erase(const_iterator position);
     iterator  erase(iterator position);  // C++14
@@ -222,6 +229,7 @@ public:
     typedef implementation-defined                   const_iterator;
     typedef std::reverse_iterator<iterator>          reverse_iterator;
     typedef std::reverse_iterator<const_iterator>    const_reverse_iterator;
+    typedef unspecified                              node_type;               // C++17
 
     // construct/copy/destroy:
     multiset()
@@ -296,6 +304,11 @@ public:
     template <class InputIterator>
         void insert(InputIterator first, InputIterator last);
     void insert(initializer_list<value_type> il);
+
+    node_type extract(const_iterator position);                                       // C++17
+    node_type extract(const key_type& x);                                             // C++17
+    iterator insert(node_type&& nh);                                                  // C++17
+    iterator insert(const_iterator hint, node_type&& nh);                             // C++17
 
     iterator  erase(const_iterator position);
     iterator  erase(iterator position);  // C++14
@@ -387,6 +400,7 @@ swap(multiset<Key, Compare, Allocator>& x, multiset<Key, Compare, Allocator>& y)
 
 #include <__config>
 #include <__tree>
+#include <__node_handle>
 #include <functional>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -428,6 +442,11 @@ public:
     typedef typename __base::const_iterator        const_iterator;
     typedef _VSTD::reverse_iterator<iterator>       reverse_iterator;
     typedef _VSTD::reverse_iterator<const_iterator> const_reverse_iterator;
+
+#if _LIBCPP_STD_VER > 14
+    typedef __set_node_handle<typename __base::__node, allocator_type> node_type;
+    typedef __insert_return_type<iterator, node_type> insert_return_type;
+#endif
 
     _LIBCPP_INLINE_VISIBILITY
     set()
@@ -634,6 +653,35 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     void clear() _NOEXCEPT {__tree_.clear();}
 
+#if _LIBCPP_STD_VER > 14
+    _LIBCPP_INLINE_VISIBILITY
+    insert_return_type insert(node_type&& __nh)
+    {
+        _LIBCPP_ASSERT(__nh.empty() || __nh.get_allocator() == get_allocator(),
+            "node_type with incompatible allocator passed to set::insert()");
+        return __tree_.template __node_handle_insert_unique<
+            node_type, insert_return_type>(_VSTD::move(__nh));
+    }
+    _LIBCPP_INLINE_VISIBILITY
+    iterator insert(const_iterator __hint, node_type&& __nh)
+    {
+        _LIBCPP_ASSERT(__nh.empty() || __nh.get_allocator() == get_allocator(),
+            "node_type with incompatible allocator passed to set::insert()");
+        return __tree_.template __node_handle_insert_unique<node_type>(
+            __hint, _VSTD::move(__nh));
+    }
+    _LIBCPP_INLINE_VISIBILITY
+    node_type extract(key_type const& __key)
+    {
+        return __tree_.template __node_handle_extract<node_type>(__key);
+    }
+    _LIBCPP_INLINE_VISIBILITY
+    node_type extract(const_iterator __it)
+    {
+        return __tree_.template __node_handle_extract<node_type>(__it);
+    }
+#endif
+
     _LIBCPP_INLINE_VISIBILITY
     void swap(set& __s) _NOEXCEPT_(__is_nothrow_swappable<__base>::value)
         {__tree_.swap(__s.__tree_);}
@@ -838,6 +886,10 @@ public:
     typedef _VSTD::reverse_iterator<iterator>       reverse_iterator;
     typedef _VSTD::reverse_iterator<const_iterator> const_reverse_iterator;
 
+#if _LIBCPP_STD_VER > 14
+    typedef __set_node_handle<typename __base::__node, allocator_type> node_type;
+#endif
+
     // construct/copy/destroy:
     _LIBCPP_INLINE_VISIBILITY
     multiset()
@@ -1041,6 +1093,35 @@ public:
         {return __tree_.erase(__f, __l);}
     _LIBCPP_INLINE_VISIBILITY
     void clear() _NOEXCEPT {__tree_.clear();}
+
+#if _LIBCPP_STD_VER > 14
+    _LIBCPP_INLINE_VISIBILITY
+    iterator insert(node_type&& __nh)
+    {
+        _LIBCPP_ASSERT(__nh.empty() || __nh.get_allocator() == get_allocator(),
+            "node_type with incompatible allocator passed to multiset::insert()");
+        return __tree_.template __node_handle_insert_multi<node_type>(
+            _VSTD::move(__nh));
+    }
+    _LIBCPP_INLINE_VISIBILITY
+    iterator insert(const_iterator __hint, node_type&& __nh)
+    {
+        _LIBCPP_ASSERT(__nh.empty() || __nh.get_allocator() == get_allocator(),
+            "node_type with incompatible allocator passed to multiset::insert()");
+        return __tree_.template __node_handle_insert_multi<node_type>(
+            __hint, _VSTD::move(__nh));
+    }
+    _LIBCPP_INLINE_VISIBILITY
+    node_type extract(key_type const& __key)
+    {
+        return __tree_.template __node_handle_extract<node_type>(__key);
+    }
+    _LIBCPP_INLINE_VISIBILITY
+    node_type extract(const_iterator __it)
+    {
+        return __tree_.template __node_handle_extract<node_type>(__it);
+    }
+#endif
 
     _LIBCPP_INLINE_VISIBILITY
     void swap(multiset& __s)

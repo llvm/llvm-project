@@ -66,68 +66,62 @@
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: CUSTOM (0x0)
-; CHECK-NEXT:    Size: 0
-; CHECK-NEXT:    Offset: 504
-; CHECK-NEXT:    Name: .debug_ranges
-; CHECK-NEXT:  }
-; CHECK-NEXT:  Section {
-; CHECK-NEXT:    Type: CUSTOM (0x0)
 ; CHECK-NEXT:    Size: 1
-; CHECK-NEXT:    Offset: 524
+; CHECK-NEXT:    Offset: 504
 ; CHECK-NEXT:    Name: .debug_macinfo
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: CUSTOM (0x0)
 ; CHECK-NEXT:    Size: 42
-; CHECK-NEXT:    Offset: 546
+; CHECK-NEXT:    Offset: 526
 ; CHECK-NEXT:    Name: .debug_pubnames
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: CUSTOM (0x0)
 ; CHECK-NEXT:    Size: 26
-; CHECK-NEXT:    Offset: 610
+; CHECK-NEXT:    Offset: 590
 ; CHECK-NEXT:    Name: .debug_pubtypes
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: CUSTOM (0x0)
 ; CHECK-NEXT:    Size: 57
-; CHECK-NEXT:    Offset: 658
+; CHECK-NEXT:    Offset: 638
 ; CHECK-NEXT:    Name: .debug_line
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: CUSTOM (0x0)
 ; CHECK-NEXT:    Size: 88
-; CHECK-NEXT:    Offset: 733
+; CHECK-NEXT:    Offset: 713
 ; CHECK-NEXT:    Name: linking
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: CUSTOM (0x0)
 ; CHECK-NEXT:    Size: 9
-; CHECK-NEXT:    Offset: 835
+; CHECK-NEXT:    Offset: 815
 ; CHECK-NEXT:    Name: reloc.DATA
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: CUSTOM (0x0)
 ; CHECK-NEXT:    Size: 58
-; CHECK-NEXT:    Offset: 861
+; CHECK-NEXT:    Offset: 841
 ; CHECK-NEXT:    Name: reloc..debug_info
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: CUSTOM (0x0)
 ; CHECK-NEXT:    Size: 6
-; CHECK-NEXT:    Offset: 943
+; CHECK-NEXT:    Offset: 923
 ; CHECK-NEXT:    Name: reloc..debug_pubnames
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: CUSTOM (0x0)
 ; CHECK-NEXT:    Size: 6
-; CHECK-NEXT:    Offset: 977
+; CHECK-NEXT:    Offset: 957
 ; CHECK-NEXT:    Name: reloc..debug_pubtypes
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: CUSTOM (0x0)
 ; CHECK-NEXT:    Size: 6
-; CHECK-NEXT:    Offset: 1011
+; CHECK-NEXT:    Offset: 991
 ; CHECK-NEXT:    Name: reloc..debug_line
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:]
@@ -151,13 +145,13 @@
 ; CHECK-NEXT:    0x5B R_WEBASSEMBLY_FUNCTION_OFFSET_I32 f2 0
 ; CHECK-NEXT:    0x63 R_WEBASSEMBLY_SECTION_OFFSET_I32 .debug_str 118
 ; CHECK-NEXT:  }
-; CHECK-NEXT:  Section (12) .debug_pubnames {
+; CHECK-NEXT:  Section (11) .debug_pubnames {
 ; CHECK-NEXT:    0x6 R_WEBASSEMBLY_SECTION_OFFSET_I32 .debug_info 0
 ; CHECK-NEXT:  }
-; CHECK-NEXT:  Section (13) .debug_pubtypes {
+; CHECK-NEXT:  Section (12) .debug_pubtypes {
 ; CHECK-NEXT:    0x6 R_WEBASSEMBLY_SECTION_OFFSET_I32 .debug_info 0
 ; CHECK-NEXT:  }
-; CHECK-NEXT:  Section (14) .debug_line {
+; CHECK-NEXT:  Section (13) .debug_line {
 ; CHECK-NEXT:    0x2B R_WEBASSEMBLY_FUNCTION_OFFSET_I32 f2 0
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:]

@@ -307,3 +307,154 @@ sw.bb.2:                                          ; preds = %entry
 sw.epilog:                                        ; preds = %sw.bb.2, %sw.bb.1, %entry
   ret void
 }
+
+define  i32 @test5(i32 %x, i32 %y)  #0 {
+; CHECK-LABEL: test5:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addl %esi, %esi
+; CHECK-NEXT:    subl %esi, %edi
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    retq
+entry:
+  %mul = mul nsw i32 %y, -2
+  %add = add nsw i32 %mul, %x
+  ret i32 %add
+}
+
+define  i32 @test6(i32 %x, i32 %y)  #0 {
+; CHECK-LABEL: test6:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
+; CHECK-NEXT:    leal (%rsi,%rsi,2), %eax
+; CHECK-NEXT:    subl %eax, %edi
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    retq
+entry:
+  %mul = mul nsw i32 %y, -3
+  %add = add nsw i32 %mul, %x
+  ret i32 %add
+}
+
+define  i32 @test7(i32 %x, i32 %y)  #0 {
+; CHECK-LABEL: test7:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    shll $2, %esi
+; CHECK-NEXT:    subl %esi, %edi
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    retq
+entry:
+  %mul = mul nsw i32 %y, -4
+  %add = add nsw i32 %mul, %x
+  ret i32 %add
+}
+
+define  i32 @test8(i32 %x, i32 %y)  #0 {
+; CHECK-LABEL: test8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
+; CHECK-NEXT:    leal (,%rsi,4), %eax
+; CHECK-NEXT:    subl %edi, %eax
+; CHECK-NEXT:    retq
+entry:
+  %mul = shl nsw i32 %y, 2
+  %sub = sub nsw i32 %mul, %x
+  ret i32 %sub
+}
+
+
+define  i32 @test9(i32 %x, i32 %y) #0 {
+; CHECK-LABEL: test9:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addl %esi, %esi
+; CHECK-NEXT:    subl %esi, %edi
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    retq
+entry:
+  %mul = mul nsw i32 -2, %y
+  %add = add nsw i32 %x, %mul
+  ret i32 %add
+}
+
+define  i32 @test10(i32 %x, i32 %y) #0 {
+; CHECK-LABEL: test10:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
+; CHECK-NEXT:    leal (%rsi,%rsi,2), %eax
+; CHECK-NEXT:    subl %eax, %edi
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    retq
+entry:
+  %mul = mul nsw i32 -3, %y
+  %add = add nsw i32 %x, %mul
+  ret i32 %add
+}
+
+define  i32 @test11(i32 %x, i32 %y) #0 {
+; CHECK-LABEL: test11:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    shll $2, %esi
+; CHECK-NEXT:    subl %esi, %edi
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    retq
+entry:
+  %mul = mul nsw i32 -4, %y
+  %add = add nsw i32 %x, %mul
+  ret i32 %add
+}
+
+define  i32 @test12(i32 %x, i32 %y) #0 {
+; CHECK-LABEL: test12:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
+; CHECK-NEXT:    leal (,%rsi,4), %eax
+; CHECK-NEXT:    subl %edi, %eax
+; CHECK-NEXT:    retq
+entry:
+  %mul = mul nsw i32 4, %y
+  %sub = sub nsw i32 %mul, %x
+  ret i32 %sub
+}
+
+define  i64 @test13(i64 %x, i64 %y) #0 {
+; CHECK-LABEL: test13:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    shlq $2, %rsi
+; CHECK-NEXT:    subq %rsi, %rdi
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    retq
+entry:
+  %mul = mul nsw i64 -4, %y
+  %add = add nsw i64 %x, %mul
+  ret i64 %add
+}
+
+define  i32 @test14(i32 %x, i32 %y) #0 {
+; CHECK-LABEL: test14:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
+; CHECK-NEXT:    leal (,%rsi,4), %eax
+; CHECK-NEXT:    subl %edi, %eax
+; CHECK-NEXT:    retq
+entry:
+  %mul = mul nsw i32 4, %y
+  %sub = sub nsw i32 %mul, %x
+  ret i32 %sub
+}
+
+define  zeroext i16 @test15(i16 zeroext %x, i16 zeroext %y) #0 {
+; CHECK-LABEL: test15:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    shll $3, %esi
+; CHECK-NEXT:    subl %esi, %edi
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    retq
+entry:
+  %conv = zext i16 %x to i32
+  %conv1 = zext i16 %y to i32
+  %mul = mul nsw i32 -8, %conv1
+  %add = add nsw i32 %conv, %mul
+  %conv2 = trunc i32 %add to i16
+  ret i16 %conv2
+}
+
+attributes #0 = { norecurse nounwind optsize readnone uwtable}

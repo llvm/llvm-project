@@ -358,24 +358,24 @@
 // RUN: %clang -target x86_64-apple-darwin10 -fsanitize=memory -fno-sanitize=memory %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-MSAN-NOMSAN-DARWIN
 // CHECK-MSAN-NOMSAN-DARWIN-NOT: unsupported option
 
-// RUN: %clang -target x86_64-apple-darwin10 -fsanitize=memory -fsanitize=thread,memory -resource-dir %S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-MSAN-TSAN-MSAN-DARWIN
+// RUN: %clang -target x86_64-apple-darwin10 -fsanitize=memory -fsanitize=thread,memory %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-MSAN-TSAN-MSAN-DARWIN
 // CHECK-MSAN-TSAN-MSAN-DARWIN: unsupported option '-fsanitize=memory' for target 'x86_64-apple-darwin10'
 // CHECK-MSAN-TSAN-MSAN-DARWIN-NOT: unsupported option
 
-// RUN: %clang -target x86_64-apple-darwin10 -fsanitize=thread,memory -fsanitize=memory -resource-dir %S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TSAN-MSAN-MSAN-DARWIN
+// RUN: %clang -target x86_64-apple-darwin10 -fsanitize=thread,memory -fsanitize=memory %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TSAN-MSAN-MSAN-DARWIN
 // CHECK-TSAN-MSAN-MSAN-DARWIN: unsupported option '-fsanitize=memory' for target 'x86_64-apple-darwin10'
 // CHECK-TSAN-MSAN-MSAN-DARWIN-NOT: unsupported option
 
-// RUN: %clang -target x86_64-apple-darwin -fsanitize=thread -resource-dir %S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TSAN-X86-64-DARWIN
+// RUN: %clang -target x86_64-apple-darwin -fsanitize=thread %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TSAN-X86-64-DARWIN
 // CHECK-TSAN-X86-64-DARWIN-NOT: unsupported option
 
-// RUN: %clang -target x86_64-apple-iossimulator -fsanitize=thread -resource-dir %S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TSAN-X86-64-IOSSIMULATOR
+// RUN: %clang -target x86_64-apple-iossimulator -fsanitize=thread %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TSAN-X86-64-IOSSIMULATOR
 // CHECK-TSAN-X86-64-IOSSIMULATOR-NOT: unsupported option
 
-// RUN: %clang -target x86_64-apple-tvossimulator -fsanitize=thread -resource-dir %S/Inputs/resource_dir  %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TSAN-X86-64-TVOSSIMULATOR
+// RUN: %clang -target x86_64-apple-tvossimulator -fsanitize=thread %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TSAN-X86-64-TVOSSIMULATOR
 // CHECK-TSAN-X86-64-TVOSSIMULATOR-NOT: unsupported option
 
-// RUN: %clang -target i386-apple-darwin -fsanitize=thread -resource-dir %S/Inputs/resource_dir  %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TSAN-I386-DARWIN
+// RUN: %clang -target i386-apple-darwin -fsanitize=thread %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TSAN-I386-DARWIN
 // CHECK-TSAN-I386-DARWIN: unsupported option '-fsanitize=thread' for target 'i386-apple-darwin'
 
 // RUN: %clang -target arm-apple-ios -fsanitize=thread %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TSAN-ARM-IOS
@@ -448,25 +448,25 @@
 // RUN: %clang -target i386-pc-openbsd -fsanitize=efficiency-working-set %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-ESAN-OPENBSD
 // CHECK-ESAN-OPENBSD: error: unsupported option '-fsanitize=efficiency-{{.*}}' for target 'i386-pc-openbsd'
 
-// RUN: %clang -target x86_64-apple-darwin -fsanitize=leak -resource-dir %S/Inputs/resource_dir  %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-LSAN-X86-64-DARWIN
+// RUN: %clang -target x86_64-apple-darwin -fsanitize=leak %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-LSAN-X86-64-DARWIN
 // CHECK-LSAN-X86-64-DARWIN-NOT: unsupported option
 
-// RUN: %clang -target x86_64-apple-iossimulator -fsanitize=leak -resource-dir %S/Inputs/resource_dir  %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-LSAN-X86-64-IOSSIMULATOR
+// RUN: %clang -target x86_64-apple-iossimulator -fsanitize=leak %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-LSAN-X86-64-IOSSIMULATOR
 // CHECK-LSAN-X86-64-IOSSIMULATOR-NOT: unsupported option
 
-// RUN: %clang -target x86_64-apple-tvossimulator -fsanitize=leak -resource-dir %S/Inputs/resource_dir  %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-LSAN-X86-64-TVOSSIMULATOR
+// RUN: %clang -target x86_64-apple-tvossimulator -fsanitize=leak %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-LSAN-X86-64-TVOSSIMULATOR
 // CHECK-LSAN-X86-64-TVOSSIMULATOR-NOT: unsupported option
 
-// RUN: %clang -target i386-apple-darwin -fsanitize=leak -resource-dir %S/Inputs/resource_dir  %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-LSAN-I386-DARWIN
+// RUN: %clang -target i386-apple-darwin -fsanitize=leak %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-LSAN-I386-DARWIN
 // CHECK-LSAN-I386-DARWIN-NOT: unsupported option
 
-// RUN: %clang -target arm-apple-ios -fsanitize=leak -resource-dir %S/Inputs/resource_dir  %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-LSAN-ARM-IOS
+// RUN: %clang -target arm-apple-ios -fsanitize=leak %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-LSAN-ARM-IOS
 // CHECK-LSAN-ARM-IOS-NOT: unsupported option
 
-// RUN: %clang -target i386-apple-iossimulator -fsanitize=leak -resource-dir %S/Inputs/resource_dir  %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-LSAN-I386-IOSSIMULATOR
+// RUN: %clang -target i386-apple-iossimulator -fsanitize=leak %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-LSAN-I386-IOSSIMULATOR
 // CHECK-LSAN-I386-IOSSIMULATOR-NOT: unsupported option
 
-// RUN: %clang -target i386-apple-tvossimulator -fsanitize=leak -resource-dir %S/Inputs/resource_dir  %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-LSAN-I386-TVOSSIMULATOR
+// RUN: %clang -target i386-apple-tvossimulator -fsanitize=leak %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-LSAN-I386-TVOSSIMULATOR
 // CHECK-LSAN-I386-TVOSSIMULATOR-NOT: unsupported option
 
 // RUN: %clang -target i686-linux-gnu -fsanitize=efficiency-cache-frag %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-ESAN-X86

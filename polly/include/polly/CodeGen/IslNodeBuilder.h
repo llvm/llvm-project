@@ -248,8 +248,7 @@ protected:
   //    of loop iterations.
   //
   // 3. With the existing code, upper bounds have been easier to implement.
-  __isl_give isl_ast_expr *getUpperBound(__isl_keep isl_ast_node *For,
-                                         CmpInst::Predicate &Predicate);
+  isl::ast_expr getUpperBound(isl::ast_node For, CmpInst::Predicate &Predicate);
 
   /// Return non-negative number of iterations in case of the following form
   /// of a loop and -1 otherwise.
@@ -260,7 +259,7 @@ protected:
   ///
   /// NumIter is a non-negative integer value. Condition can have
   /// isl_ast_op_lt type.
-  int getNumberOfIterations(__isl_keep isl_ast_node *For);
+  int getNumberOfIterations(isl::ast_node For);
 
   /// Compute the values and loops referenced in this subtree.
   ///
@@ -349,7 +348,7 @@ protected:
   bool preloadInvariantEquivClass(InvariantEquivClassTy &IAClass);
 
   void createForVector(__isl_take isl_ast_node *For, int VectorWidth);
-  void createForSequential(__isl_take isl_ast_node *For, bool MarkParallel);
+  void createForSequential(isl::ast_node For, bool MarkParallel);
 
   /// Create LLVM-IR that executes a for node thread parallel.
   ///

@@ -3511,7 +3511,7 @@ public:
     explicit __shared_count(long __refs = 0) _NOEXCEPT
         : __shared_owners_(__refs) {}
 
-#if defined(_LIBCPP_BUILDING_MEMORY) && \
+#if defined(_LIBCPP_BUILDING_LIBRARY) && \
     defined(_LIBCPP_DEPRECATED_ABI_LEGACY_LIBRARY_DEFINITIONS_FOR_INLINE_FUNCTIONS)
     void __add_shared() _NOEXCEPT;
     bool __release_shared() _NOEXCEPT;
@@ -3549,7 +3549,7 @@ protected:
     virtual ~__shared_weak_count();
 
 public:
-#if defined(_LIBCPP_BUILDING_MEMORY) && \
+#if defined(_LIBCPP_BUILDING_LIBRARY) && \
     defined(_LIBCPP_DEPRECATED_ABI_LEGACY_LIBRARY_DEFINITIONS_FOR_INLINE_FUNCTIONS)
     void __add_shared() _NOEXCEPT;
     void __add_weak() _NOEXCEPT;
@@ -5549,7 +5549,7 @@ struct _LIBCPP_TYPE_VIS pointer_safety
 #endif
 
 #if !defined(_LIBCPP_ABI_POINTER_SAFETY_ENUM_TYPE) && \
-    defined(_LIBCPP_BUILDING_MEMORY)
+    defined(_LIBCPP_BUILDING_LIBRARY)
 _LIBCPP_FUNC_VIS pointer_safety get_pointer_safety() _NOEXCEPT;
 #else
 // This function is only offered in C++03 under ABI v1.

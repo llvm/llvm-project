@@ -501,6 +501,8 @@ static bool isOutputFormatBinary(opt::InputArgList &Args) {
     StringRef S = Arg->getValue();
     if (S == "binary")
       return true;
+    if (S.startswith("elf"))
+      return false;
     error("unknown --oformat value: " + S);
   }
   return false;
