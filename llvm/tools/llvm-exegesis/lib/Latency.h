@@ -36,7 +36,7 @@ private:
       const Instruction &Instr) const;
 
   std::vector<BenchmarkMeasure>
-  runMeasurements(const ExecutableFunction &EF,
+  runMeasurements(const ExecutableFunction &EF, ScratchSpace &Scratch,
                   const unsigned NumRepetitions) const override;
 
   virtual const char *getCounterName() const;
