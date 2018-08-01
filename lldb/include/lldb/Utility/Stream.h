@@ -129,14 +129,10 @@ public:
       __attribute__((__format__(__printf__, 2, 3)));
 
   //------------------------------------------------------------------
-  /// Format a C string from a printf style format and variable arguments and
-  /// encode and append the resulting C string as hex bytes.
+  /// Append an uint8_t value in the hexadecimal format to the stream.
   ///
-  /// @param[in] format
-  ///     A printf style format string.
-  ///
-  /// @param[in] ...
-  ///     Any additional arguments needed for the printf format string.
+  /// @param[in] uvalue
+  ///     The value to append.
   ///
   /// @return
   ///     The number of bytes that were appended to the stream.
