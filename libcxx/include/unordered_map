@@ -44,6 +44,9 @@ public:
     typedef /unspecified/ local_iterator;
     typedef /unspecified/ const_local_iterator;
 
+    typedef unspecified                             node_type;            // C++17
+    typedef INSERT_RETURN_TYPE<iterator, node_type> insert_return_type;   // C++17
+
     unordered_map()
         noexcept(
             is_nothrow_default_constructible<hasher>::value &&
@@ -121,6 +124,11 @@ public:
     template <class InputIterator>
         void insert(InputIterator first, InputIterator last);
     void insert(initializer_list<value_type>);
+
+    node_type extract(const_iterator position);                                       // C++17
+    node_type extract(const key_type& x);                                             // C++17
+    insert_return_type insert(node_type&& nh);                                        // C++17
+    iterator           insert(const_iterator hint, node_type&& nh);                   // C++17
 
     template <class... Args>
         pair<iterator, bool> try_emplace(const key_type& k, Args&&... args);          // C++17
@@ -226,6 +234,8 @@ public:
     typedef /unspecified/ local_iterator;
     typedef /unspecified/ const_local_iterator;
 
+    typedef unspecified node_type;    // C++17
+
     unordered_multimap()
         noexcept(
             is_nothrow_default_constructible<hasher>::value &&
@@ -304,6 +314,11 @@ public:
         void insert(InputIterator first, InputIterator last);
     void insert(initializer_list<value_type>);
 
+    node_type extract(const_iterator position);                // C++17
+    node_type extract(const key_type& x);                      // C++17
+    iterator insert(node_type&& nh);                           // C++17
+    iterator insert(const_iterator hint, node_type&& nh);      // C++17
+
     iterator erase(const_iterator position);
     iterator erase(iterator position);  // C++14
     size_type erase(const key_type& k);
@@ -367,6 +382,7 @@ template <class Key, class T, class Hash, class Pred, class Alloc>
 
 #include <__config>
 #include <__hash_table>
+#include <__node_handle>
 #include <functional>
 #include <stdexcept>
 #include <tuple>
@@ -843,6 +859,11 @@ public:
     typedef __hash_map_iterator<typename __table::local_iterator> local_iterator;
     typedef __hash_map_const_iterator<typename __table::const_local_iterator> const_local_iterator;
 
+#if _LIBCPP_STD_VER > 14
+    typedef __map_node_handle<__node, allocator_type> node_type;
+    typedef __insert_return_type<iterator, node_type> insert_return_type;
+#endif
+
     _LIBCPP_INLINE_VISIBILITY
     unordered_map()
         _NOEXCEPT_(is_nothrow_default_constructible<__table>::value)
@@ -1136,7 +1157,37 @@ public:
     iterator erase(const_iterator __first, const_iterator __last)
         {return __table_.erase(__first.__i_, __last.__i_);}
     _LIBCPP_INLINE_VISIBILITY
-    void clear() _NOEXCEPT {__table_.clear();}
+        void clear() _NOEXCEPT {__table_.clear();}
+
+#if _LIBCPP_STD_VER > 14
+    _LIBCPP_INLINE_VISIBILITY
+    insert_return_type insert(node_type&& __nh)
+    {
+        _LIBCPP_ASSERT(__nh.empty() || __nh.get_allocator() == get_allocator(),
+            "node_type with incompatible allocator passed to unordered_map::insert()");
+        return __table_.template __node_handle_insert_unique<
+            node_type, insert_return_type>(_VSTD::move(__nh));
+    }
+    _LIBCPP_INLINE_VISIBILITY
+    iterator insert(const_iterator __hint, node_type&& __nh)
+    {
+        _LIBCPP_ASSERT(__nh.empty() || __nh.get_allocator() == get_allocator(),
+            "node_type with incompatible allocator passed to unordered_map::insert()");
+        return __table_.template __node_handle_insert_unique<node_type>(
+            __hint.__i_, _VSTD::move(__nh));
+    }
+    _LIBCPP_INLINE_VISIBILITY
+    node_type extract(key_type const& __key)
+    {
+        return __table_.template __node_handle_extract<node_type>(__key);
+    }
+    _LIBCPP_INLINE_VISIBILITY
+    node_type extract(const_iterator __it)
+    {
+        return __table_.template __node_handle_extract<node_type>(
+            __it.__i_);
+    }
+#endif
 
     _LIBCPP_INLINE_VISIBILITY
     void swap(unordered_map& __u)
@@ -1590,6 +1641,10 @@ public:
     typedef __hash_map_iterator<typename __table::local_iterator> local_iterator;
     typedef __hash_map_const_iterator<typename __table::const_local_iterator> const_local_iterator;
 
+#if _LIBCPP_STD_VER > 14
+    typedef __map_node_handle<__node, allocator_type> node_type;
+#endif
+
     _LIBCPP_INLINE_VISIBILITY
     unordered_multimap()
         _NOEXCEPT_(is_nothrow_default_constructible<__table>::value)
@@ -1762,6 +1817,36 @@ public:
         {return __table_.erase(__first.__i_, __last.__i_);}
     _LIBCPP_INLINE_VISIBILITY
     void clear() _NOEXCEPT {__table_.clear();}
+
+#if _LIBCPP_STD_VER > 14
+    _LIBCPP_INLINE_VISIBILITY
+    iterator insert(node_type&& __nh)
+    {
+        _LIBCPP_ASSERT(__nh.empty() || __nh.get_allocator() == get_allocator(),
+            "node_type with incompatible allocator passed to unordered_multimap::insert()");
+        return __table_.template __node_handle_insert_multi<node_type>(
+            _VSTD::move(__nh));
+    }
+    _LIBCPP_INLINE_VISIBILITY
+    iterator insert(const_iterator __hint, node_type&& __nh)
+    {
+        _LIBCPP_ASSERT(__nh.empty() || __nh.get_allocator() == get_allocator(),
+            "node_type with incompatible allocator passed to unordered_multimap::insert()");
+        return __table_.template __node_handle_insert_multi<node_type>(
+            __hint.__i_, _VSTD::move(__nh));
+    }
+    _LIBCPP_INLINE_VISIBILITY
+    node_type extract(key_type const& __key)
+    {
+        return __table_.template __node_handle_extract<node_type>(__key);
+    }
+    _LIBCPP_INLINE_VISIBILITY
+    node_type extract(const_iterator __it)
+    {
+        return __table_.template __node_handle_extract<node_type>(
+            __it.__i_);
+    }
+#endif
 
     _LIBCPP_INLINE_VISIBILITY
     void swap(unordered_multimap& __u)
