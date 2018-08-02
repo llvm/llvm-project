@@ -27,7 +27,7 @@ void F(int I, int J);
 /// Bonus comment on definition
 void F(int I, int J) {}
 
-// RUN: clang-doc --format=yaml --doxygen --extra-arg=-fmodules-ts -p %t %t/test.cpp -output=%t/docs
+// RUN: clang-doc --format=yaml --doxygen --public --extra-arg=-fmodules-ts -p %t %t/test.cpp -output=%t/docs
 
 
 // RUN: cat %t/docs/./GlobalNamespace.yaml | FileCheck %s --check-prefix CHECK-0

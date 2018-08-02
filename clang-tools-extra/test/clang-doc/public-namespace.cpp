@@ -25,7 +25,7 @@ E func(int i) { return X; }
 }  // namespace B
 }  // namespace A
 
-// RUN: clang-doc --format=yaml --doxygen --extra-arg=-fmodules-ts -p %t %t/test.cpp -output=%t/docs
+// RUN: clang-doc --format=yaml --doxygen --public --extra-arg=-fmodules-ts -p %t %t/test.cpp -output=%t/docs
 
 
 // RUN: cat %t/docs/./A.yaml | FileCheck %s --check-prefix CHECK-0
