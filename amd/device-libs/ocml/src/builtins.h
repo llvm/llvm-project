@@ -48,8 +48,8 @@
 #define BUILTIN_CEIL_F16 __llvm_ceil_f16
 #define BUILTIN_CEIL_2F16 __llvm_ceil_2f16
 
-#define BUILTIN_CLASS_F32 __llvm_amdgcn_class_f32
-#define BUILTIN_CLASS_F64 __llvm_amdgcn_class_f64
+#define BUILTIN_CLASS_F32 __builtin_amdgcn_classf
+#define BUILTIN_CLASS_F64 __builtin_amdgcn_class
 #define BUILTIN_CLASS_F16 __llvm_amdgcn_class_f16
 
 #define BUILTIN_COPYSIGN_F32 __llvm_copysign_f32
@@ -66,14 +66,14 @@
 
 #define BUILTIN_FRACTION_F32(X) ({ \
     float _fract_x = X; \
-    float _fract_r = __llvm_amdgcn_fract_f32(_fract_x); \
-    _fract_r = __llvm_amdgcn_class_f32(_fract_x, CLASS_PINF|CLASS_NINF) ? 0.0f : _fract_r; \
+    float _fract_r = __builtin_amdgcn_fractf(_fract_x); \
+    _fract_r = __builtin_amdgcn_classf(_fract_x, CLASS_PINF|CLASS_NINF) ? 0.0f : _fract_r; \
     _fract_r; \
 })
 #define BUILTIN_FRACTION_F64(X) ({ \
     double _fract_x = X; \
-    double _fract_r = __llvm_amdgcn_fract_f64(_fract_x); \
-    _fract_r = __llvm_amdgcn_class_f64(_fract_x, CLASS_PINF|CLASS_NINF) ? 0.0 : _fract_r; \
+    double _fract_r = __builtin_amdgcn_fract(_fract_x); \
+    _fract_r = __builtin_amdgcn_class(_fract_x, CLASS_PINF|CLASS_NINF) ? 0.0 : _fract_r; \
     _fract_r; \
 })
 #define BUILTIN_FRACTION_F16(X) ({ \
@@ -101,14 +101,14 @@
 #define BUILTIN_MIN_S32(A,B) ((A) < (B) ? (A) : (B))
 #define BUILTIN_MIN_U32(A,B) ((A) < (B) ? (A) : (B))
 
-#define BUILTIN_CANONICALIZE_F32(X) __llvm_canonicalize_f32(X)
-#define BUILTIN_CANONICALIZE_F64(X) __llvm_canonicalize_f64(X)
+#define BUILTIN_CANONICALIZE_F32(X) __builtin_canonicalizef(X)
+#define BUILTIN_CANONICALIZE_F64(X) __builtin_canonicalize(X)
 #define BUILTIN_CANONICALIZE_F16(X) __llvm_canonicalize_f16(X)
 #define BUILTIN_CANONICALIZE_2F16(X) __llvm_canonicalize_2f16(X)
 
 #define BUILTIN_MULHI_U32(A,B) (((ulong)(A) * (ulong)(B)) >> 32)
 
-#define BUILTIN_COS_F32 __llvm_amdgcn_cos_f32
+#define BUILTIN_COS_F32 __builtin_amdgcn_cosf
 
 #define BUILTIN_EXP2_F32 __llvm_exp2_f32
 #define BUILTIN_EXP2_F16 __llvm_exp2_f16
@@ -116,15 +116,15 @@
 #define BUILTIN_LOG2_F32 __llvm_log2_f32
 #define BUILTIN_LOG2_F16 __llvm_log2_f16
 
-#define BUILTIN_RCP_F32 __llvm_amdgcn_rcp_f32
-#define BUILTIN_RCP_F64 __llvm_amdgcn_rcp_f64
+#define BUILTIN_RCP_F32 __builtin_amdgcn_rcpf
+#define BUILTIN_RCP_F64 __builtin_amdgcn_rcp
 #define BUILTIN_RCP_F16 __llvm_amdgcn_rcp_f16
 
-#define BUILTIN_RSQRT_F32 __llvm_amdgcn_rsq_f32
-#define BUILTIN_RSQRT_F64 __llvm_amdgcn_rsq_f64
+#define BUILTIN_RSQRT_F32 __builtin_amdgcn_rsqf
+#define BUILTIN_RSQRT_F64 __builtin_amdgcn_rsq
 #define BUILTIN_RSQRT_F16 __llvm_amdgcn_rsq_f16
 
-#define BUILTIN_SIN_F32 __llvm_amdgcn_sin_f32
+#define BUILTIN_SIN_F32 __builtin_amdgcn_sinf
 
 #define BUILTIN_RINT_F32 __llvm_rint_f32
 #define BUILTIN_RINT_F64 __llvm_rint_f64
@@ -180,16 +180,16 @@
 #define BUILTIN_FMA_F16 __llvm_fma_f16
 #define BUILTIN_FMA_2F16 __llvm_fma_2f16
 
-#define BUILTIN_FLDEXP_F32 __llvm_amdgcn_ldexp_f32
-#define BUILTIN_FLDEXP_F64 __llvm_amdgcn_ldexp_f64
+#define BUILTIN_FLDEXP_F32 __builtin_amdgcn_ldexpf
+#define BUILTIN_FLDEXP_F64 __builtin_amdgcn_ldexp
 #define BUILTIN_FLDEXP_F16 __llvm_amdgcn_ldexp_f16
 
-#define BUILTIN_FREXP_EXP_F32 __llvm_amdgcn_frexp_exp_i32_f32
-#define BUILTIN_FREXP_EXP_F64 __llvm_amdgcn_frexp_exp_i32_f64
+#define BUILTIN_FREXP_EXP_F32 __builtin_amdgcn_frexp_expf
+#define BUILTIN_FREXP_EXP_F64 __builtin_amdgcn_frexp_exp
 #define BUILTIN_FREXP_EXP_F16 __llvm_amdgcn_frexp_exp_i16_f16
 
-#define BUILTIN_FREXP_MANT_F32 __llvm_amdgcn_frexp_mant_f32
-#define BUILTIN_FREXP_MANT_F64 __llvm_amdgcn_frexp_mant_f64
+#define BUILTIN_FREXP_MANT_F32 __builtin_amdgcn_frexp_mantf
+#define BUILTIN_FREXP_MANT_F64 __builtin_amdgcn_frexp_mant
 #define BUILTIN_FREXP_MANT_F16 __llvm_amdgcn_frexp_mant_f16
 
 #define BUILTIN_CMAX_F32 __llvm_maxnum_f32
@@ -202,7 +202,7 @@
 #define BUILTIN_CMIN_F16 __llvm_minnum_f16
 #define BUILTIN_CMIN_2F16 __llvm_minnum_2f16
 
-#define BUILTIN_TRIG_PREOP_F64 __llvm_amdgcn_trig_preop_f64
+#define BUILTIN_TRIG_PREOP_F64 __builtin_amdgcn_trig_preop
 
 #define BUILTIN_MAD_F32 __llvm_fmuladd_f32
 #define BUILTIN_MAD_F64 __llvm_fmuladd_f64

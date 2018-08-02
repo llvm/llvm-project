@@ -139,13 +139,14 @@ native_log10(float f)
 
 ATTR float
 native_recip(float x) {
-    return __llvm_amdgcn_rcp_f32(x);
+    // FIXME: Should use IR fdiv with arcp set.
+    return __builtin_amdgcn_rcpf(x);
 }
 
 ATTR float
 native_rsqrt(float x)
 {
-    return __llvm_amdgcn_rsq_f32(x);
+    return __builtin_amdgcn_rsqf(x);
 }
 
 ATTR float

@@ -18,8 +18,8 @@ __half_tr(float x, int regn)
                   mad(r, 0.01844239256901656082986661f, -0.51396505478854532132342f),
                   1.15588821434688393452299f);
 
-    float t = mad(x*r, a * __llvm_amdgcn_rcp_f32(b), x);
-    float tr = -__llvm_amdgcn_rcp_f32(t);
+    float t = mad(x*r, a * __builtin_amdgcn_rcpf(b), x);
+    float tr = -__builtin_amdgcn_rcpf(t);
 
     return regn & 1 ? tr : t;
 }

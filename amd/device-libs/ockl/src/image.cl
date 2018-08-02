@@ -26,7 +26,7 @@
 #define ADJUST_X(C,I,S) do { \
     float _w = (float)WORD(I,10); \
     float _p = FIELD(S,15,1) ? 1.0f : _w; \
-    float _x = __llvm_floor_f32(C * _p) * __llvm_amdgcn_rcp_f32(_p); \
+    float _x = __llvm_floor_f32(C * _p) * __builtin_amdgcn_rcpf(_p); \
     C = FIELD(S,84,1) ? C : _x; \
 } while (0)
 
@@ -36,8 +36,8 @@
     bool _f = FIELD(S,15,1); \
     float _p = _f ? 1.0f : _w; \
     float _q = _f ? 1.0f : _h; \
-    float _x = __llvm_floor_f32(C.x * _p) * __llvm_amdgcn_rcp_f32(_p); \
-    float _y = __llvm_floor_f32(C.y * _q) * __llvm_amdgcn_rcp_f32(_q); \
+    float _x = __llvm_floor_f32(C.x * _p) * __builtin_amdgcn_rcpf(_p); \
+    float _y = __llvm_floor_f32(C.y * _q) * __builtin_amdgcn_rcpf(_q); \
     bool _m = FIELD(S,84,1); \
     C.x = _m ? C.x : _x; \
     C.y = _m ? C.y : _y; \
@@ -51,9 +51,9 @@
     float _p = _f ? 1.0f : _w; \
     float _q = _f ? 1.0f : _h; \
     float _r = _f ? 1.0f : _d; \
-    float _x = __llvm_floor_f32(C.x * _p) * __llvm_amdgcn_rcp_f32(_p); \
-    float _y = __llvm_floor_f32(C.y * _q) * __llvm_amdgcn_rcp_f32(_q); \
-    float _z = __llvm_floor_f32(C.z * _r) * __llvm_amdgcn_rcp_f32(_r); \
+    float _x = __llvm_floor_f32(C.x * _p) * __builtin_amdgcn_rcpf(_p); \
+    float _y = __llvm_floor_f32(C.y * _q) * __builtin_amdgcn_rcpf(_q); \
+    float _z = __llvm_floor_f32(C.z * _r) * __builtin_amdgcn_rcpf(_r); \
     bool _m = FIELD(S,84,1); \
     C.x = _m ? C.x : _x; \
     C.y = _m ? C.y : _y; \
@@ -67,10 +67,10 @@
     float _vx = C.x; \
     float _vy = C.y; \
     float _vz = C.z; \
-    float _rl = __llvm_amdgcn_rcp_f32(__llvm_amdgcn_cubema(_vx, _vy, _vz)); \
-    C.x = __llvm_fmuladd_f32(__llvm_amdgcn_cubesc(_vx, _vy, _vz), _rl, 0.5f); \
-    C.y = __llvm_fmuladd_f32(__llvm_amdgcn_cubetc(_vx, _vy, _vz), _rl, 0.5f); \
-    C.z = __llvm_amdgcn_cubeid(_vx, _vy, _vz); \
+    float _rl = __builtin_amdgcn_rcpf(__builtin_amdgcn_cubema(_vx, _vy, _vz)); \
+    C.x = __llvm_fmuladd_f32(__builtin_amdgcn_cubesc(_vx, _vy, _vz), _rl, 0.5f); \
+    C.y = __llvm_fmuladd_f32(__builtin_amdgcn_cubetc(_vx, _vy, _vz), _rl, 0.5f); \
+    C.z = __builtin_amdgcn_cubeid(_vx, _vy, _vz); \
 } while (0)
 
 RATTR float4

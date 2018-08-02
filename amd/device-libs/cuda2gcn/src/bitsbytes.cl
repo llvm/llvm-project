@@ -11,10 +11,10 @@
 #define ATTR __attribute__((always_inline, const))
 
 //-------- T __nv_brev
-ATTR int __nv_brev(int x) { return __llvm_bitreverse_i32(x); }
+ATTR int __nv_brev(int x) { return __builtin_bitreverse32(x); }
 
 //-------- T __nv_brevll
-ATTR long __nv_brevll(long x) { return __llvm_bitreverse_i64(x); }
+ATTR long __nv_brevll(long x) { return __builitn_bitreverse64(x); }
 
 //-------- T __nv_clz
 ATTR int __nv_clz(int x)

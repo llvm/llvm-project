@@ -153,7 +153,7 @@ OCKL_MANGLE_T(hsa_signal,store)(hsa_signal_t sig, long value, __ockl_memory_orde
             __global atomic_uint *lp = (__global atomic_uint *)&q->legacy_doorbell_lock;
             uint e = 0;
             while (!AC(lp, &e, (uint)1, memory_order_acquire, memory_order_relaxed, memory_scope_all_svm_devices)) {
-                __llvm_amdgcn_s_sleep(1);
+                __builtin_amdgcn_s_sleep(1);
                 e = 0;
             }
 

@@ -47,7 +47,7 @@ OCKL_MANGLE_U32(bytealign)(uint a, uint b, uint c)
 CATTR uint
 OCKL_MANGLE_U32(lerp)(uint a, uint b, uint c)
 {
-    return __llvm_amdgcn_lerp(a, b, c);
+    return __builtin_amdgcn_lerp(a, b, c);
 }
 
 CATTR float
@@ -59,7 +59,7 @@ OCKL_MANGLE_F32(max3)(float a, float b, float c)
 CATTR float
 OCKL_MANGLE_F32(median3)(float a, float b, float c)
 {
-    return __llvm_amdgcn_fmed3_f32(a, b, c);
+    return __builtin_amdgcn_fmed3f(a, b, c);
 }
 
 CATTR float
