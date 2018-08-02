@@ -54,7 +54,7 @@ OCKL_MANGLE_T(hsa_queue,store_write_index)(__global hsa_queue_t *queue, ulong va
     __global amd_queue_t *q = (__global amd_queue_t *)queue;
     AS((__global atomic_ulong *)&q->write_dispatch_id, value, mem_order, memory_scope_all_svm_devices);
 }
- 
+
 //
 // HSA signal ops
 //
@@ -66,10 +66,10 @@ update_mbox(const __global amd_signal_t *sig)
     if (mb) {
         uint id = sig->event_id;
         AS(mb, id, memory_order_release, memory_scope_all_svm_devices);
-        __builtin_amdgcn_s_sendmsg(1 | (0 << 4), __llvm_amdgcn_readfirstlane(id) & 0xff);
+        __builtin_amdgcn_s_sendmsg(1 | (0 << 4), __builtin_amdgcn_readfirstlane(id) & 0xff);
     }
 }
- 
+
 ATTR long
 OCKL_MANGLE_T(hsa_signal,load)(const hsa_signal_t sig, __ockl_memory_order mem_order)
 {

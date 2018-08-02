@@ -30,7 +30,7 @@
 
 #define FUNC1N(name) \
   FUNC1(__hc_##name##_native##_half, __llvm_##name##_f16, half, half) \
-  FUNC1(__hc_##name##_native, __llvm_##name##_f32, float, float)
+  FUNC1(__hc_##name##_native, __builtin_##name##f, float, float)
 
 #define FUNC1B(name) \
   FUNC1(__hc_##name##_half, __ocml_##name##_f16, half, uint) \

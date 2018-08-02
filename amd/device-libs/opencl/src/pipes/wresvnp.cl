@@ -10,8 +10,8 @@
 size_t
 __amd_wresvn(volatile __global atomic_size_t *pidx, size_t lim, size_t n)
 {
-    uint alc = (size_t)(__llvm_ctpop_i32(__builtin_amdgcn_read_exec_lo()) +
-                        __llvm_ctpop_i32(__builtin_amdgcn_read_exec_hi()));
+    uint alc = (size_t)(__builtin_popcount(__builtin_amdgcn_read_exec_lo()) +
+                        __builtin_popcount(__builtin_amdgcn_read_exec_hi()));
     uint l = __llvm_amdgcn_mbcnt_hi(-1, __llvm_amdgcn_mbcnt_lo(-1, 0u));
     size_t rid;
 
@@ -32,13 +32,13 @@ __amd_wresvn(volatile __global atomic_size_t *pidx, size_t lim, size_t n)
         // Step 1
         ulong smask = __builtin_amdgcn_read_exec() & ((0x1UL << l) - 0x1UL);
         int slid = 63 - (int)clz(smask);
-        uint t = __llvm_amdgcn_ds_bpermute(slid << 2, n);
+        uint t = __builtin_amdgcn_ds_bpermute(slid << 2, n);
         uint sum = n + (slid < 0 ? 0 : t);
         smask ^= (0x1UL << slid) & nomsb;
 
         // Step 2
         slid = 63 - (int)clz(smask);
-        t = __llvm_amdgcn_ds_bpermute(slid << 2, sum);
+        t = __builtin_amdgcn_ds_bpermute(slid << 2, sum);
         sum += slid < 0 ? 0 : t;
 
         smask ^= (0x1UL << slid) & nomsb;
@@ -47,7 +47,7 @@ __amd_wresvn(volatile __global atomic_size_t *pidx, size_t lim, size_t n)
 
         // Step 3
         slid = 63 - (int)clz(smask);
-        t = __llvm_amdgcn_ds_bpermute(slid << 2, sum);
+        t = __builtin_amdgcn_ds_bpermute(slid << 2, sum);
         sum += slid < 0 ? 0 : t;
 
         smask ^= (0x1UL << slid) & nomsb;
@@ -60,7 +60,7 @@ __amd_wresvn(volatile __global atomic_size_t *pidx, size_t lim, size_t n)
 
         // Step 4
         slid = 63 - (int)clz(smask);
-        t = __llvm_amdgcn_ds_bpermute(slid << 2, sum);
+        t = __builtin_amdgcn_ds_bpermute(slid << 2, sum);
         sum += slid < 0 ? 0 : t;
 
         smask ^= (0x1UL << slid) & nomsb;
@@ -81,7 +81,7 @@ __amd_wresvn(volatile __global atomic_size_t *pidx, size_t lim, size_t n)
 
         // Step 5
         slid = 63 - (int)clz(smask);
-        t = __llvm_amdgcn_ds_bpermute(slid << 2, sum);
+        t = __builtin_amdgcn_ds_bpermute(slid << 2, sum);
         sum += slid < 0 ? 0 : t;
 
         smask ^= (0x1UL << slid) & nomsb;
@@ -118,7 +118,7 @@ __amd_wresvn(volatile __global atomic_size_t *pidx, size_t lim, size_t n)
 
         // Step 6
         slid = 63 - (int)clz(smask);
-        t = __llvm_amdgcn_ds_bpermute(slid << 2, sum);
+        t = __builtin_amdgcn_ds_bpermute(slid << 2, sum);
         sum += slid < 0 ? 0 : t;
         __builtin_amdgcn_wave_barrier();
 
@@ -130,8 +130,8 @@ __amd_wresvn(volatile __global atomic_size_t *pidx, size_t lim, size_t n)
 
         // Broadcast
         uint k = 63u - (uint)clz(__builtin_amdgcn_read_exec());
-        idx = ((size_t)__llvm_amdgcn_readlane((uint)(idx >> 32), k) << 32) |
-              (size_t)__llvm_amdgcn_readlane((uint)idx, k);
+        idx = ((size_t)__builtin_amdgcn_readlane((uint)(idx >> 32), k) << 32) |
+              (size_t)__builtin_amdgcn_readlane((uint)idx, k);
         __builtin_amdgcn_wave_barrier();
 
         rid = idx + (size_t)(sum - (uint)n);

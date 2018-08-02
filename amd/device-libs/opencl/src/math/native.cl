@@ -100,41 +100,41 @@ native_tan(float x)
 ATTR float
 native_cos(float x)
 {
-    return __llvm_cos_f32(x);
+    return __builtin_cosf(x);
 }
 
 ATTR float
 native_exp2(float x)
 {
-    return __llvm_exp2_f32(x);
+    return __builtin_exp2f(x);
 }
 
 ATTR float
 native_exp(float f) {
-    return __llvm_exp2_f32(M_LOG2E_F * f);
+    return __builtin_exp2f(M_LOG2E_F * f);
 }
 
 ATTR float
 native_exp10(float f)
 {
-    return __llvm_exp2_f32(M_LOG2_10_F * f);
+    return __builtin_exp2f(M_LOG2_10_F * f);
 }
 
 ATTR float
 native_log2(float x) {
-    return __llvm_log2_f32(x);
+    return __builtin_log2f(x);
 }
 
 ATTR float
 native_log(float f)
 {
-    return __llvm_log2_f32(f) * M_RLOG2_E_F;
+    return __builtin_log2f(f) * M_RLOG2_E_F;
 }
 
 ATTR float
 native_log10(float f)
 {
-    return __llvm_log2_f32(f) * M_RLOG2_10_F;
+    return __builtin_log2f(f) * M_RLOG2_10_F;
 }
 
 ATTR float
@@ -151,11 +151,11 @@ native_rsqrt(float x)
 
 ATTR float
 native_sin(float x) {
-    return __llvm_sin_f32(x);
+    return __builtin_sinf(x);
 }
 
 ATTR float
 native_sqrt(float x) {
-    return __llvm_sqrt_f32(x);
+    return __builtin_sqrtf(x);
 }
 

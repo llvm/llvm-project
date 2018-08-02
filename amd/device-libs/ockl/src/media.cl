@@ -53,7 +53,7 @@ OCKL_MANGLE_U32(lerp)(uint a, uint b, uint c)
 CATTR float
 OCKL_MANGLE_F32(max3)(float a, float b, float c)
 {
-    return __llvm_maxnum_f32(__llvm_maxnum_f32(a, b), c);
+    return __builtin_fmaxf(__builtin_fmaxf(a, b), c);
 }
 
 CATTR float
@@ -65,7 +65,7 @@ OCKL_MANGLE_F32(median3)(float a, float b, float c)
 CATTR float
 OCKL_MANGLE_F32(min3)(float a, float b, float c)
 {
-    return __llvm_minnum_f32(__llvm_minnum_f32(a, b), c);
+    return __builtin_fminf(__builtin_fminf(a, b), c);
 }
 
 CATTR half

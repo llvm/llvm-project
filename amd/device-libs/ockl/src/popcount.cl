@@ -11,12 +11,12 @@
 __attribute__((always_inline, const)) uint
 OCKL_MANGLE_U32(popcount)(uint i)
 {
-    return (uint)__llvm_ctpop_i32((int)i);
+    return (uint)__builtin_popcount(i);
 }
 
 __attribute__((always_inline, const)) ulong
 OCKL_MANGLE_U64(popcount)(ulong i)
 {
-    return (ulong)__llvm_ctpop_i64((long)i);
+    return (ulong)__builtin_popcountl(i);
 }
 
