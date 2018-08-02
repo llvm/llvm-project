@@ -158,6 +158,8 @@
 		268900D313353E6F00698AC0 /* ClangExternalASTSourceCallbacks.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26E69030129C6BEF00DDECD9 /* ClangExternalASTSourceCallbacks.cpp */; };
 		4966DCC4148978A10028481B /* ClangExternalASTSourceCommon.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4966DCC3148978A10028481B /* ClangExternalASTSourceCommon.cpp */; };
 		2689005F13353E0E00698AC0 /* ClangFunctionCaller.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C98D3DA118FB96F00E575D0 /* ClangFunctionCaller.cpp */; };
+		58A080AC2112AABB00D5580F /* ClangHighlighter.cpp in CopyFiles */ = {isa = PBXBuildFile; fileRef = 58A080AB2112AABB00D5580F /* ClangHighlighter.cpp */; };
+		58A080AE2112AAC500D5580F /* ClangHighlighter.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 58A080AD2112AAC500D5580F /* ClangHighlighter.h */; };
 		4CD44D5820C603CB0003557C /* ClangHost.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CD44D5620C603A80003557C /* ClangHost.cpp */; };
 		4959511F1A1BC4BC00F6F8FC /* ClangModulesDeclVendor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4959511E1A1BC4BC00F6F8FC /* ClangModulesDeclVendor.cpp */; };
 		2689006313353E0E00698AC0 /* ClangPersistentVariables.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49D4FE871210B61C00CDB854 /* ClangPersistentVariables.cpp */; };
@@ -336,6 +338,8 @@
 		AE44FB301BB07EB20033EB62 /* GoUserExpression.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AE44FB2C1BB07DD80033EB62 /* GoUserExpression.cpp */; };
 		6D95DC011B9DC057000E318A /* HashedNameToDIE.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D95DBFE1B9DC057000E318A /* HashedNameToDIE.cpp */; };
 		2666ADC81B3CB675001FAFD3 /* HexagonDYLDRendezvous.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2666ADC31B3CB675001FAFD3 /* HexagonDYLDRendezvous.cpp */; };
+		58A080B42112AB3800D5580F /* Highlighter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 58A080A92112AA9400D5580F /* Highlighter.cpp */; };
+		58A080B32112AB2900D5580F /* HighlighterTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 58A080B12112AB2200D5580F /* HighlighterTest.cpp */; };
 		AF1729D6182C907200E0AB97 /* HistoryThread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF1729D4182C907200E0AB97 /* HistoryThread.cpp */; };
 		AF1729D7182C907200E0AB97 /* HistoryUnwind.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF1729D5182C907200E0AB97 /* HistoryUnwind.cpp */; };
 		2689007113353E1A00698AC0 /* Host.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69A01E1C1236C5D400C660B5 /* Host.cpp */; };
@@ -1279,6 +1283,8 @@
 			dstPath = "$(DEVELOPER_INSTALL_DIR)/usr/share/man/man1";
 			dstSubfolderSpec = 0;
 			files = (
+				58A080AE2112AAC500D5580F /* ClangHighlighter.h in CopyFiles */,
+				58A080AC2112AABB00D5580F /* ClangHighlighter.cpp in CopyFiles */,
 				AF90106515AB7D3600FF120D /* lldb.1 in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 1;
@@ -1518,6 +1524,8 @@
 		26BC7D5510F1B77400F91463 /* ClangForward.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ClangForward.h; path = include/lldb/Core/ClangForward.h; sourceTree = "<group>"; };
 		4C98D3DA118FB96F00E575D0 /* ClangFunctionCaller.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ClangFunctionCaller.cpp; path = ExpressionParser/Clang/ClangFunctionCaller.cpp; sourceTree = "<group>"; };
 		4C98D3E0118FB98F00E575D0 /* ClangFunctionCaller.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ClangFunctionCaller.h; path = ExpressionParser/Clang/ClangFunctionCaller.h; sourceTree = "<group>"; };
+		58A080AB2112AABB00D5580F /* ClangHighlighter.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ClangHighlighter.cpp; path = Language/ClangCommon/ClangHighlighter.cpp; sourceTree = "<group>"; };
+		58A080AD2112AAC500D5580F /* ClangHighlighter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ClangHighlighter.h; path = Language/ClangCommon/ClangHighlighter.h; sourceTree = "<group>"; };
 		4CD44D5620C603A80003557C /* ClangHost.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = ClangHost.cpp; path = ExpressionParser/Clang/ClangHost.cpp; sourceTree = "<group>"; };
 		4CD44D5720C603A90003557C /* ClangHost.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = ClangHost.h; path = ExpressionParser/Clang/ClangHost.h; sourceTree = "<group>"; };
 		4959511E1A1BC4BC00F6F8FC /* ClangModulesDeclVendor.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ClangModulesDeclVendor.cpp; path = ExpressionParser/Clang/ClangModulesDeclVendor.cpp; sourceTree = "<group>"; };
@@ -1882,6 +1890,8 @@
 		26A0DA4D140F721D006DA411 /* HashedNameToDIE.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = HashedNameToDIE.h; sourceTree = "<group>"; };
 		2666ADC31B3CB675001FAFD3 /* HexagonDYLDRendezvous.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = HexagonDYLDRendezvous.cpp; sourceTree = "<group>"; };
 		2666ADC41B3CB675001FAFD3 /* HexagonDYLDRendezvous.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HexagonDYLDRendezvous.h; sourceTree = "<group>"; };
+		58A080A92112AA9400D5580F /* Highlighter.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Highlighter.cpp; path = source/Core/Highlighter.cpp; sourceTree = "<group>"; };
+		58A080B12112AB2200D5580F /* HighlighterTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = HighlighterTest.cpp; path = unittests/Language/Highlighting/HighlighterTest.cpp; sourceTree = SOURCE_ROOT; };
 		AF1729D4182C907200E0AB97 /* HistoryThread.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = HistoryThread.cpp; path = Utility/HistoryThread.cpp; sourceTree = "<group>"; };
 		AF061F89182C980000B6A19C /* HistoryThread.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = HistoryThread.h; path = Utility/HistoryThread.h; sourceTree = "<group>"; };
 		AF1729D5182C907200E0AB97 /* HistoryUnwind.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = HistoryUnwind.cpp; path = Utility/HistoryUnwind.cpp; sourceTree = "<group>"; };
@@ -3659,6 +3669,7 @@
 		23CB14E51D66CBEB00EDDDE1 /* Core */ = {
 			isa = PBXGroup;
 			children = (
+				58A080B12112AB2200D5580F /* HighlighterTest.cpp */,
 				4F29D3CD21010F84003B549A /* MangledTest.cpp */,
 				9A3D43E31F3237D500EB767C /* ListenerTest.cpp */,
 				9A3D43E21F3237D500EB767C /* StateTest.cpp */,
@@ -4960,6 +4971,7 @@
 		26BC7C1010F1B34800F91463 /* Core */ = {
 			isa = PBXGroup;
 			children = (
+				58A080A92112AA9400D5580F /* Highlighter.cpp */,
 				26BC7D5010F1B77400F91463 /* Address.h */,
 				26BC7E6910F1B85900F91463 /* Address.cpp */,
 				26BC7D5110F1B77400F91463 /* AddressRange.h */,
@@ -6405,6 +6417,8 @@
 		94B638541B8FABEA004FE1E4 /* Language */ = {
 			isa = PBXGroup;
 			children = (
+				58A080AD2112AAC500D5580F /* ClangHighlighter.h */,
+				58A080AB2112AABB00D5580F /* ClangHighlighter.cpp */,
 				6D0F61501C80AB1400A4ECEE /* Java */,
 				94B6385A1B8FB109004FE1E4 /* CPlusPlus */,
 				AE44FB431BB4BAC20033EB62 /* Go */,
@@ -7424,6 +7438,7 @@
 				8C3BD9A01EF5D1FF0016C343 /* JSONTest.cpp in Sources */,
 				23CB15361D66DA9300EDDDE1 /* FileSpecTest.cpp in Sources */,
 				23E2E5251D90373D006F38BB /* ArchSpecTest.cpp in Sources */,
+				58A080B32112AB2900D5580F /* HighlighterTest.cpp in Sources */,
 				9A2057081F3B819100F6C293 /* MemoryRegionInfoTest.cpp in Sources */,
 				9A20572D1F3B8E6600F6C293 /* TestCompletion.cpp in Sources */,
 				4C719399207D23E300FDF430 /* TestOptionArgParser.cpp in Sources */,
@@ -7956,6 +7971,7 @@
 				26BF51F31B3C754400016294 /* ABISysV_hexagon.cpp in Sources */,
 				232CB619191E00CD00EF39FC /* NativeProcessProtocol.cpp in Sources */,
 				8CF02AEF19DD16B100B14BE0 /* InstrumentationRuntimeStopInfo.cpp in Sources */,
+				58A080B42112AB3800D5580F /* Highlighter.cpp in Sources */,
 				268900FC13353E6F00698AC0 /* ThreadPlanBase.cpp in Sources */,
 				268900FD13353E6F00698AC0 /* ThreadPlanCallFunction.cpp in Sources */,
 				23D4007D1C2101F2000C3885 /* DWARFDebugMacro.cpp in Sources */,

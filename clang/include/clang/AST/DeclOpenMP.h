@@ -100,6 +100,8 @@ public:
 ///
 /// Here 'omp_out += omp_in' is a combiner and 'omp_priv = 0' is an initializer.
 class OMPDeclareReductionDecl final : public ValueDecl, public DeclContext {
+  // This class stores some data in DeclContext::OMPDeclareReductionDeclBits
+  // to save some space. Use the provided accessors to access it.
 public:
   enum InitKind {
     CallInit,   // Initialized by function call.
@@ -113,8 +115,6 @@ private:
   Expr *Combiner;
   /// Initializer for declare reduction construct.
   Expr *Initializer;
-  /// Kind of initializer - function call or omp_priv<init_expr> initializtion.
-  InitKind InitializerKind = CallInit;
 
   /// Reference to the previous declare reduction construct in the same
   /// scope with the same name. Required for proper templates instantiation if
@@ -125,10 +125,7 @@ private:
 
   OMPDeclareReductionDecl(Kind DK, DeclContext *DC, SourceLocation L,
                           DeclarationName Name, QualType Ty,
-                          OMPDeclareReductionDecl *PrevDeclInScope)
-      : ValueDecl(DK, DC, L, Name, Ty), DeclContext(DK), Combiner(nullptr),
-        Initializer(nullptr), InitializerKind(CallInit),
-        PrevDeclInScope(PrevDeclInScope) {}
+                          OMPDeclareReductionDecl *PrevDeclInScope);
 
   void setPrevDeclInScope(OMPDeclareReductionDecl *Prev) {
     PrevDeclInScope = Prev;
@@ -154,11 +151,13 @@ public:
   Expr *getInitializer() { return Initializer; }
   const Expr *getInitializer() const { return Initializer; }
   /// Get initializer kind.
-  InitKind getInitializerKind() const { return InitializerKind; }
+  InitKind getInitializerKind() const {
+    return static_cast<InitKind>(OMPDeclareReductionDeclBits.InitializerKind);
+  }
   /// Set initializer expression for the declare reduction construct.
   void setInitializer(Expr *E, InitKind IK) {
     Initializer = E;
-    InitializerKind = IK;
+    OMPDeclareReductionDeclBits.InitializerKind = IK;
   }
 
   /// Get reference to previous declare reduction construct in the same

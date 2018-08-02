@@ -10,10 +10,10 @@ int initializer1(int &p, int x) {
 }
 
 int param_not_initialized_by_func() {
-  int p;                        // expected-note {{'p' declared without an initial value}}
-  int out = initializer1(p, 0); // expected-note{{Calling 'initializer1'}}
+  int outP;                        // expected-note {{'outP' declared without an initial value}}
+  int out = initializer1(outP, 0); // expected-note{{Calling 'initializer1'}}
                                 // expected-note@-1{{Returning from 'initializer1'}}
-  return p;                     // expected-note{{Undefined or garbage value returned to caller}}
+  return outP;                     // expected-note{{Undefined or garbage value returned to caller}}
                                 // expected-warning@-1{{Undefined or garbage value returned to caller}}
 }
 
@@ -174,4 +174,162 @@ void rdar40335545() {
     int useLocal = local; //expected-warning{{}}
                           //expected-note@-1{{}}
     (void)useLocal;
+}
+
+////////
+
+struct HasRef {
+  int &a;
+  HasRef(int &a) : a(a) {}
+};
+
+
+void maybeInitialize(const HasRef &&pA) {
+  if (coin()) // expected-note{{Assuming the condition is false}}
+              // expected-note@-1{{Taking false branch}}
+    pA.a = 120;
+} // expected-note{{Returning without writing to 'pA.a'}}
+
+int useMaybeInitializerWritingIntoField() {
+  int z; // expected-note{{'z' declared without an initial value}}
+  maybeInitialize(HasRef(z)); // expected-note{{Calling constructor for 'HasRef'}}
+                              // expected-note@-1{{Returning from constructor for 'HasRef'}}
+                              // expected-note@-2{{Calling 'maybeInitialize'}}
+                              // expected-note@-3{{Returning from 'maybeInitialize'}}
+  return z; // expected-warning{{Undefined or garbage value returned to caller}}
+            // expected-note@-1{{Undefined or garbage value returned to caller}}
+}
+
+////////
+
+struct HasRefToItself {
+  HasRefToItself &Ref; // no infinite loop
+  int &z;
+  HasRefToItself(int &z) : Ref(*this), z(z) {}
+};
+
+void maybeInitialize(const HasRefToItself &&pA) {
+  if (coin()) // expected-note{{Assuming the condition is false}}
+              // expected-note@-1{{Taking false branch}}
+    pA.z = 120;
+} // expected-note{{Returning without writing to 'pA.Ref.z'}}
+
+int useMaybeInitializerWritingIntoFieldWithRefToItself() {
+  int z; // expected-note{{'z' declared without an initial value}}
+  maybeInitialize(HasRefToItself(z)); // expected-note{{Calling constructor for 'HasRefToItself'}}
+                              // expected-note@-1{{Returning from constructor for 'HasRefToItself'}}
+                              // expected-note@-2{{Calling 'maybeInitialize'}}
+                              // expected-note@-3{{Returning from 'maybeInitialize'}}
+  return z; // expected-warning{{Undefined or garbage value returned to caller}}
+            // expected-note@-1{{Undefined or garbage value returned to caller}}
+}
+
+////
+
+void maybeInitialize(const HasRef *pA) {
+  if (coin()) // expected-note{{Assuming the condition is false}}
+              // expected-note@-1{{Taking false branch}}
+    pA->a = 120;
+} // expected-note{{Returning without writing to 'pA->a'}}
+
+int useMaybeInitializerStructByPointer() {
+  int z; // expected-note{{'z' declared without an initial value}}
+  HasRef wrapper(z); // expected-note{{Calling constructor for 'HasRef'}}
+                     // expected-note@-1{{Returning from constructor for 'HasRef'}}
+  maybeInitialize(&wrapper); // expected-note{{Calling 'maybeInitialize'}}
+                             // expected-note@-1{{Returning from 'maybeInitialize'}}
+  return z; // expected-warning{{Undefined or garbage value returned to caller}}
+            // expected-note@-1{{Undefined or garbage value returned to caller}}
+}
+
+////////
+
+struct HasParentWithRef : public HasRef {
+  HasParentWithRef(int &a) : HasRef(a) {} // expected-note{{Calling constructor for 'HasRef'}}
+                                          // expected-note@-1{{Returning from constructor for 'HasRef'}}
+};
+
+void maybeInitializeWithParent(const HasParentWithRef &pA) {
+  if (coin()) // expected-note{{Assuming the condition is false}}
+              // expected-note@-1{{Taking false branch}}
+    pA.a = 120;
+} // expected-note{{Returning without writing to 'pA.a'}}
+
+int useMaybeInitializerWritingIntoParentField() {
+  int z; // expected-note{{'z' declared without an initial value}}
+  maybeInitializeWithParent(HasParentWithRef(z)); // expected-note{{Calling constructor for 'HasParentWithRef'}}
+                              // expected-note@-1{{Returning from constructor for 'HasParentWithRef'}}
+                              // expected-note@-2{{Calling 'maybeInitializeWithParent'}}
+                              // expected-note@-3{{Returning from 'maybeInitializeWithParent'}}
+  return z; // expected-warning{{Undefined or garbage value returned to caller}}
+            // expected-note@-1{{Undefined or garbage value returned to caller}}
+}
+
+////////
+
+struct HasIndirectRef {
+  HasRef &Ref;
+  HasIndirectRef(HasRef &Ref) : Ref(Ref) {}
+};
+
+void maybeInitializeIndirectly(const HasIndirectRef &pA) {
+  if (coin()) // expected-note{{Assuming the condition is false}}
+              // expected-note@-1{{Taking false branch}}
+    pA.Ref.a = 120;
+} // expected-note{{Returning without writing to 'pA.Ref.a'}}
+
+int useMaybeInitializeIndirectly() {
+  int z; // expected-note{{'z' declared without an initial value}}
+  HasRef r(z); // expected-note{{Calling constructor for 'HasRef'}}
+               // expected-note@-1{{Returning from constructor for 'HasRef'}}
+  maybeInitializeIndirectly(HasIndirectRef(r)); // expected-note{{Calling 'maybeInitializeIndirectly'}}
+                                                // expected-note@-1{{Returning from 'maybeInitializeIndirectly'}}
+  return z; // expected-warning{{Undefined or garbage value returned to caller}}
+            // expected-note@-1{{Undefined or garbage value returned to caller}}
+}
+
+////////
+
+struct HasIndirectRefByValue {
+  HasRef Ref;
+  HasIndirectRefByValue(HasRef Ref) : Ref(Ref) {}
+};
+
+void maybeInitializeIndirectly(const HasIndirectRefByValue &pA) {
+  if (coin()) // expected-note{{Assuming the condition is false}}
+              // expected-note@-1{{Taking false branch}}
+    pA.Ref.a = 120;
+} // expected-note{{Returning without writing to 'pA.Ref.a'}}
+
+int useMaybeInitializeIndirectlyIndirectRefByValue() {
+  int z; // expected-note{{'z' declared without an initial value}}
+  HasRef r(z); // expected-note{{Calling constructor for 'HasRef'}}
+               // expected-note@-1{{Returning from constructor for 'HasRef'}}
+  maybeInitializeIndirectly(HasIndirectRefByValue(r)); // expected-note{{Calling 'maybeInitializeIndirectly'}}
+                                                // expected-note@-1{{Returning from 'maybeInitializeIndirectly'}}
+  return z; // expected-warning{{Undefined or garbage value returned to caller}}
+            // expected-note@-1{{Undefined or garbage value returned to caller}}
+}
+
+////////
+
+struct HasIndirectPointerRef {
+  HasRef *Ref;
+  HasIndirectPointerRef(HasRef *Ref) : Ref(Ref) {}
+};
+
+void maybeInitializeIndirectly(const HasIndirectPointerRef &pA) {
+  if (coin()) // expected-note{{Assuming the condition is false}}
+              // expected-note@-1{{Taking false branch}}
+    pA.Ref->a = 120;
+} // expected-note{{Returning without writing to 'pA.Ref->a'}}
+
+int useMaybeInitializeIndirectlyWithPointer() {
+  int z; // expected-note{{'z' declared without an initial value}}
+  HasRef r(z); // expected-note{{Calling constructor for 'HasRef'}}
+               // expected-note@-1{{Returning from constructor for 'HasRef'}}
+  maybeInitializeIndirectly(HasIndirectPointerRef(&r)); // expected-note{{Calling 'maybeInitializeIndirectly'}}
+                                                // expected-note@-1{{Returning from 'maybeInitializeIndirectly'}}
+  return z; // expected-warning{{Undefined or garbage value returned to caller}}
+            // expected-note@-1{{Undefined or garbage value returned to caller}}
 }

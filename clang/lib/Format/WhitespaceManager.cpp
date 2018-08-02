@@ -255,8 +255,14 @@ AlignTokenSequence(unsigned Start, unsigned End, unsigned Column, F &&Matches,
             Changes[ScopeStack.back()].indentAndNestingLevel())
       ScopeStack.pop_back();
 
+    // Compare current token to previous non-comment token to ensure whether
+    // it is in a deeper scope or not.
+    unsigned PreviousNonComment = i - 1;
+    while (PreviousNonComment > Start &&
+           Changes[PreviousNonComment].Tok->is(tok::comment))
+      PreviousNonComment--;
     if (i != Start && Changes[i].indentAndNestingLevel() >
-                          Changes[i - 1].indentAndNestingLevel())
+                          Changes[PreviousNonComment].indentAndNestingLevel())
       ScopeStack.push_back(i);
 
     bool InsideNestedScope = ScopeStack.size() != 0;
