@@ -16,6 +16,7 @@
 
 #include "ClangSACheckers.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/Analysis/CFGStmtMap.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
@@ -37,6 +38,7 @@ class AnalysisOrderChecker
                      check::PostStmt<OffsetOfExpr>,
                      check::PreCall,
                      check::PostCall,
+                     check::EndFunction,
                      check::NewAllocator,
                      check::Bind,
                      check::RegionChanges,
@@ -118,6 +120,23 @@ public:
       if (const NamedDecl *ND = dyn_cast_or_null<NamedDecl>(Call.getDecl()))
         llvm::errs() << " (" << ND->getQualifiedNameAsString() << ')';
       llvm::errs() << '\n';
+    }
+  }
+
+  void checkEndFunction(const ReturnStmt *S, CheckerContext &C) const {
+    if (isCallbackEnabled(C, "EndFunction")) {
+      llvm::errs() << "EndFunction\nReturnStmt: " << (S ? "yes" : "no") << "\n";
+      if (!S)
+        return;
+
+      llvm::errs() << "CFGElement: ";
+      CFGStmtMap *Map = C.getCurrentAnalysisDeclContext()->getCFGStmtMap();
+      CFGElement LastElement = Map->getBlock(S)->back();
+
+      if (LastElement.getAs<CFGStmt>())
+        llvm::errs() << "CFGStmt\n";
+      else if (LastElement.getAs<CFGAutomaticObjDtor>())
+        llvm::errs() << "CFGAutomaticObjDtor\n";
     }
   }
 
