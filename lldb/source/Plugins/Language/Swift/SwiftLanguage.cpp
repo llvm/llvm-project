@@ -752,6 +752,8 @@ static void LoadSwiftFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
 
   AddStringSummary(swift_category_sp, "${var.native}",
                    ConstString("CoreGraphics.CGFloat"), summary_flags);
+  AddStringSummary(swift_category_sp, "${var.native}",
+                   ConstString("Foundation.CGFloat"), summary_flags);
 #endif // LLDB_DISABLE_PYTHON
 }
 
