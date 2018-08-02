@@ -13,6 +13,7 @@ def B : JoinedOrSeparate<["-"], "B">,
 defm input_target : Eq<"input-target">,
                     HelpText<"Format of the input file">,
                     Values<"binary">;
+def I : JoinedOrSeparate<[ "-" ], "I">, Alias<input_target>;
 defm output_target : Eq<"output-target">,
                      HelpText<"Format of the output file">,
                      Values<"binary">;
@@ -27,9 +28,13 @@ defm add_gnu_debuglink : Eq<"add-gnu-debuglink">,
 defm remove_section : Eq<"remove-section">,
                       MetaVarName<"section">,
                       HelpText<"Remove <section>">;
-defm rename_section : Eq<"rename-section">,
-                      MetaVarName<"old=new">,
-                      HelpText<"Renames a section from old to new">;
+defm rename_section
+    : Eq<"rename-section">,
+      MetaVarName<"old=new[,flag1,...]">,
+      HelpText<
+          "Renames a section from old to new, optionally with specified flags. "
+          "Flags supported for GNU compatibility: alloc, load, noload, "
+          "readonly, debug, code, data, rom, share, contents, merge, strings.">;
 defm redefine_symbol : Eq<"redefine-sym">,
                        MetaVarName<"old=new">,
                        HelpText<"Change the name of a symbol old to new">;

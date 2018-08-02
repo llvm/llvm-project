@@ -1102,3 +1102,12 @@ bool ObjCLanguage::IsNilReference(ValueObject &valobj) {
   bool isZero = valobj.GetValueAsUnsigned(0, &canReadValue) == 0;
   return canReadValue && isZero;
 }
+
+bool ObjCLanguage::IsSourceFile(llvm::StringRef file_path) const {
+  const auto suffixes = {".h", ".m", ".M"};
+  for (auto suffix : suffixes) {
+    if (file_path.endswith_lower(suffix))
+      return true;
+  }
+  return false;
+}

@@ -4351,7 +4351,7 @@ void Sema::CheckObjCMethodOverrides(ObjCMethodDecl *ObjCMethod,
 
     // Propagate down the 'related result type' bit from overridden methods.
     if (RTC != Sema::RTC_Incompatible && overridden->hasRelatedResultType())
-      ObjCMethod->SetRelatedResultType();
+      ObjCMethod->setRelatedResultType();
 
     // Then merge the declarations.
     mergeObjCMethodDecls(ObjCMethod, overridden);
@@ -4746,7 +4746,7 @@ Decl *Sema::ActOnMethodDeclaration(
 
     if (InferRelatedResultType &&
         !ObjCMethod->getReturnType()->isObjCIndependentClassType())
-      ObjCMethod->SetRelatedResultType();
+      ObjCMethod->setRelatedResultType();
   }
 
   if (MethodDefinition &&

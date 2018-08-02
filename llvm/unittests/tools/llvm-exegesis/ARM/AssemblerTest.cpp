@@ -30,11 +30,13 @@ protected:
 };
 
 TEST_F(ARMMachineFunctionGeneratorTest, DISABLED_JitFunction) {
-  Check(llvm::MCInst(), 0x1e, 0xff, 0x2f, 0xe1);
+  Check(ExegesisTarget::getDefault(), {}, llvm::MCInst(), 0x1e, 0xff, 0x2f,
+        0xe1);
 }
 
 TEST_F(ARMMachineFunctionGeneratorTest, DISABLED_JitFunctionADDrr) {
-  Check(MCInstBuilder(llvm::ARM::ADDrr)
+  Check(ExegesisTarget::getDefault(), {llvm::ARM::R0},
+        MCInstBuilder(llvm::ARM::ADDrr)
             .addReg(llvm::ARM::R0)
             .addReg(llvm::ARM::R0)
             .addReg(llvm::ARM::R0)

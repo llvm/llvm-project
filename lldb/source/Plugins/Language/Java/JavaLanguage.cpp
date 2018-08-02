@@ -99,3 +99,7 @@ lldb::TypeCategoryImplSP JavaLanguage::GetFormatters() {
   });
   return g_category;
 }
+
+bool JavaLanguage::IsSourceFile(llvm::StringRef file_path) const {
+  return file_path.endswith(".java");
+}

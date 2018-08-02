@@ -26,12 +26,20 @@
 
 using namespace llvm;
 
+cl::opt<bool> DumpBackReferences("backrefs", cl::Optional,
+                                 cl::desc("dump backreferences"), cl::Hidden,
+                                 cl::init(false));
 cl::list<std::string> Symbols(cl::Positional, cl::desc("<input symbols>"),
                               cl::ZeroOrMore);
 
 static void demangle(const std::string &S) {
   int Status;
-  char *ResultBuf = microsoftDemangle(S.c_str(), nullptr, nullptr, &Status);
+  MSDemangleFlags Flags = MSDF_None;
+  if (DumpBackReferences)
+    Flags = MSDemangleFlags(Flags | MSDF_DumpBackrefs);
+
+  char *ResultBuf =
+      microsoftDemangle(S.c_str(), nullptr, nullptr, &Status, Flags);
   if (Status == llvm::demangle_success) {
     outs() << ResultBuf << "\n";
     outs().flush();

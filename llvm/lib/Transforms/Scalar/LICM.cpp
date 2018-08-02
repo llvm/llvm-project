@@ -412,7 +412,14 @@ bool llvm::sinkRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
       //
       bool FreeInLoop = false;
       if (isNotUsedOrFreeInLoop(I, CurLoop, SafetyInfo, TTI, FreeInLoop) &&
-          canSinkOrHoistInst(I, AA, DT, CurLoop, CurAST, SafetyInfo, ORE)) {
+          canSinkOrHoistInst(I, AA, DT, CurLoop, CurAST, true, ORE) &&
+          // FIXME: Remove the special casing here.  Why do we need the
+          // execution check at all?  We're sinking from a dominating location
+          // to a dominated location.
+          (isa<LoadInst>(I) || isa<CallInst>(I) ||
+           // TODO: Plumb the context instruction through to make sinking
+           // more powerful. 
+           isSafeToExecuteUnconditionally(I, DT, CurLoop, SafetyInfo, ORE))) {
         if (sink(I, LI, DT, CurLoop, SafetyInfo, ORE, FreeInLoop)) {
           if (!FreeInLoop) {
             ++II;
@@ -482,7 +489,7 @@ bool llvm::hoistRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
       // if it is safe to hoist the instruction.
       //
       if (CurLoop->hasLoopInvariantOperands(&I) &&
-          canSinkOrHoistInst(I, AA, DT, CurLoop, CurAST, SafetyInfo, ORE) &&
+          canSinkOrHoistInst(I, AA, DT, CurLoop, CurAST, true, ORE) &&
           (IsMustExecute ||
            isSafeToExecuteUnconditionally(
                I, DT, CurLoop, SafetyInfo, ORE,
@@ -575,13 +582,29 @@ static bool isLoadInvariantInLoop(LoadInst *LI, DominatorTree *DT,
   return false;
 }
 
+namespace {
+/// Return true if-and-only-if we know how to (mechanically) both hoist and
+/// sink a given instruction out of a loop.  Does not address legality
+/// concerns such as aliasing or speculation safety.  
+bool isHoistableAndSinkableInst(Instruction &I) {
+  // Only these instructions are hoistable/sinkable.
+  return (isa<LoadInst>(I) || isa<CallInst>(I) ||
+          isa<BinaryOperator>(I) || isa<CastInst>(I) ||
+          isa<SelectInst>(I) || isa<GetElementPtrInst>(I) ||
+          isa<CmpInst>(I) || isa<InsertElementInst>(I) ||
+          isa<ExtractElementInst>(I) || isa<ShuffleVectorInst>(I) ||
+          isa<ExtractValueInst>(I) || isa<InsertValueInst>(I));
+}
+}
+
 bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
                               Loop *CurLoop, AliasSetTracker *CurAST,
-                              LoopSafetyInfo *SafetyInfo,
+                              bool TargetExecutesOncePerLoop,
                               OptimizationRemarkEmitter *ORE) {
-  // SafetyInfo is nullptr if we are checking for sinking from preheader to
-  // loop body.
-  const bool SinkingToLoopBody = !SafetyInfo;
+  // If we don't understand the instruction, bail early.
+  if (!isHoistableAndSinkableInst(I))
+    return false;
+  
   // Loads have extra constraints we have to verify before we can hoist them.
   if (LoadInst *LI = dyn_cast<LoadInst>(&I)) {
     if (!LI->isUnordered())
@@ -594,8 +617,8 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
     if (LI->getMetadata(LLVMContext::MD_invariant_load))
       return true;
 
-    if (LI->isAtomic() && SinkingToLoopBody)
-      return false; // Don't sink unordered atomic loads to loop body.
+    if (LI->isAtomic() && !TargetExecutesOncePerLoop)
+      return false; // Don't risk duplicating unordered loads
 
     // This checks for an invariant.start dominating the load.
     if (isLoadInvariantInLoop(LI, DT, CurLoop))
@@ -666,23 +689,9 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
     return false;
   }
 
-  // Only these instructions are hoistable/sinkable.
-  if (!isa<BinaryOperator>(I) && !isa<CastInst>(I) && !isa<SelectInst>(I) &&
-      !isa<GetElementPtrInst>(I) && !isa<CmpInst>(I) &&
-      !isa<InsertElementInst>(I) && !isa<ExtractElementInst>(I) &&
-      !isa<ShuffleVectorInst>(I) && !isa<ExtractValueInst>(I) &&
-      !isa<InsertValueInst>(I))
-    return false;
-
-  // If we are checking for sinking from preheader to loop body it will be
-  // always safe as there is no speculative execution.
-  if (SinkingToLoopBody)
-    return true;
-
-  // TODO: Plumb the context instruction through to make hoisting and sinking
-  // more powerful. Hoisting of loads already works due to the special casing
-  // above.
-  return isSafeToExecuteUnconditionally(I, DT, CurLoop, SafetyInfo, nullptr);
+  // We've established mechanical ability and aliasing, it's up to the caller
+  // to check fault safety
+  return true;
 }
 
 /// Returns true if a PHINode is a trivially replaceable with an

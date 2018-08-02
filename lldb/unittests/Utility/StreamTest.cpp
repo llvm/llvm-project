@@ -106,6 +106,9 @@ TEST_F(StreamTest, PutCharNull) {
 }
 
 TEST_F(StreamTest, PutCStringAsRawHex8) {
+  s.PutCStringAsRawHex8("");
+  EXPECT_EQ("", TakeValue());
+
   s.PutCStringAsRawHex8("foobar");
   EXPECT_EQ("666f6f626172", TakeValue());
 
@@ -185,6 +188,32 @@ TEST_F(StreamTest, PutHex64ByteOrderBig) {
   EXPECT_EQ("ffffffffffffffff", TakeValue());
   s.PutHex64(0U, lldb::eByteOrderBig);
   EXPECT_EQ("0000000000000000", TakeValue());
+}
+
+TEST_F(StreamTest, PutMaxHex64ByteOrderBig) {
+  std::size_t bytes;
+  bytes = s.PutMaxHex64(0x12U, 1, lldb::eByteOrderBig);
+  EXPECT_EQ(2U, bytes);
+  bytes = s.PutMaxHex64(0x1234U, 2, lldb::eByteOrderBig);
+  EXPECT_EQ(4U, bytes);
+  bytes = s.PutMaxHex64(0x12345678U, 4, lldb::eByteOrderBig);
+  EXPECT_EQ(8U, bytes);
+  bytes = s.PutMaxHex64(0x1234567890ABCDEFU, 8, lldb::eByteOrderBig);
+  EXPECT_EQ(16U, bytes);
+  EXPECT_EQ("121234123456781234567890abcdef", TakeValue());
+}
+
+TEST_F(StreamTest, PutMaxHex64ByteOrderLittle) {
+  std::size_t bytes;
+  bytes = s.PutMaxHex64(0x12U, 1, lldb::eByteOrderLittle);
+  EXPECT_EQ(2U, bytes);
+  bytes = s.PutMaxHex64(0x1234U, 2, lldb::eByteOrderLittle);
+  EXPECT_EQ(4U, bytes);
+  bytes = s.PutMaxHex64(0x12345678U, 4, lldb::eByteOrderLittle);
+  EXPECT_EQ(8U, bytes);
+  bytes = s.PutMaxHex64(0x1234567890ABCDEFU, 8, lldb::eByteOrderLittle);
+  EXPECT_EQ(16U, bytes);
+  EXPECT_EQ("12341278563412efcdab9078563412", TakeValue());
 }
 
 //------------------------------------------------------------------------------

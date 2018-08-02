@@ -264,8 +264,7 @@ bool DWARFVerifier::handleDebugInfo() {
   bool isUnitDWARF64 = false;
   bool isHeaderChainValid = true;
   bool hasDIE = DebugInfoData.isValidOffset(Offset);
-  DWARFUnitSection<DWARFTypeUnit> TUSection{};
-  DWARFUnitSection<DWARFCompileUnit> CUSection{};
+  DWARFUnitVector UnitVector{};
   while (hasDIE) {
     OffsetStart = Offset;
     if (!verifyUnitHeader(DebugInfoData, &Offset, UnitIdx, UnitType,
@@ -284,7 +283,7 @@ bool DWARFVerifier::handleDebugInfo() {
             DCtx, DObj.getInfoSection(), Header, DCtx.getDebugAbbrev(),
             &DObj.getRangeSection(), DObj.getStringSection(),
             DObj.getStringOffsetSection(), &DObj.getAppleObjCSection(),
-            DObj.getLineSection(), DCtx.isLittleEndian(), false, TUSection));
+            DObj.getLineSection(), DCtx.isLittleEndian(), false, UnitVector));
         break;
       }
       case dwarf::DW_UT_skeleton:
@@ -298,7 +297,7 @@ bool DWARFVerifier::handleDebugInfo() {
             DCtx, DObj.getInfoSection(), Header, DCtx.getDebugAbbrev(),
             &DObj.getRangeSection(), DObj.getStringSection(),
             DObj.getStringOffsetSection(), &DObj.getAppleObjCSection(),
-            DObj.getLineSection(), DCtx.isLittleEndian(), false, CUSection));
+            DObj.getLineSection(), DCtx.isLittleEndian(), false, UnitVector));
         break;
       }
       default: { llvm_unreachable("Invalid UnitType."); }
@@ -1315,11 +1314,12 @@ unsigned DWARFVerifier::verifyDebugNames(const DWARFSection &AccelSection,
   if (NumErrors > 0)
     return NumErrors;
 
-  for (const std::unique_ptr<DWARFCompileUnit> &CU : DCtx.compile_units()) {
+  for (const std::unique_ptr<DWARFUnit> &U : DCtx.compile_units()) {
     if (const DWARFDebugNames::NameIndex *NI =
-            AccelTable.getCUNameIndex(CU->getOffset())) {
+            AccelTable.getCUNameIndex(U->getOffset())) {
+      auto *CU = cast<DWARFCompileUnit>(U.get());
       for (const DWARFDebugInfoEntry &Die : CU->dies())
-        NumErrors += verifyNameIndexCompleteness(DWARFDie(CU.get(), &Die), *NI);
+        NumErrors += verifyNameIndexCompleteness(DWARFDie(CU, &Die), *NI);
     }
   }
   return NumErrors;

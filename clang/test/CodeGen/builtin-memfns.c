@@ -1,8 +1,5 @@
 // RUN: %clang_cc1 -triple i386-pc-linux-gnu -emit-llvm < %s| FileCheck %s
 
-typedef __WCHAR_TYPE__ wchar_t;
-typedef __SIZE_TYPE__ size_t;
-
 // CHECK: @test1
 // CHECK: call void @llvm.memset.p0i8.i32
 // CHECK: call void @llvm.memset.p0i8.i32
@@ -86,17 +83,3 @@ void test9() {
   // CHECK: call void @llvm.memcpy{{.*}} align 16 {{.*}} align 16 {{.*}} 16, i1 false)
   __builtin_memcpy(x, y, sizeof(y));
 }
-
-wchar_t dest;
-wchar_t src;
-
-// CHECK-LABEL: @test10
-// FIXME: Consider lowering these to llvm.memcpy / llvm.memmove.
-void test10() {
-  // CHECK: call i32* @wmemcpy(i32* @dest, i32* @src, i32 4)
-  __builtin_wmemcpy(&dest, &src, 4);
-
-  // CHECK: call i32* @wmemmove(i32* @dest, i32* @src, i32 4)
-  __builtin_wmemmove(&dest, &src, 4);
-}
-

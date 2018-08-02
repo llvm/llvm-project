@@ -26,6 +26,7 @@ Instruction::Instruction(const llvm::MCInstrDesc &MCInstrDesc,
     Operand Operand;
     Operand.Index = OpIndex;
     Operand.IsDef = (OpIndex < MCInstrDesc.getNumDefs());
+    Operand.IsMem = OpInfo.OperandType == llvm::MCOI::OPERAND_MEMORY;
     Operand.IsExplicit = true;
     // TODO(gchatelet): Handle isLookupPtrRegClass.
     if (OpInfo.RegClass >= 0)
@@ -83,6 +84,11 @@ Instruction::Instruction(const llvm::MCInstrDesc &MCInstrDesc,
   }
 }
 
+bool Instruction::hasMemoryOperands() const {
+  return std::any_of(Operands.begin(), Operands.end(),
+                     [](const Operand &Op) { return Op.IsMem; });
+}
+
 InstructionInstance::InstructionInstance(const Instruction &Instr)
     : Instr(Instr), VariableValues(Instr.Variables.size()) {}
 
@@ -90,6 +96,11 @@ InstructionInstance::InstructionInstance(InstructionInstance &&) = default;
 
 InstructionInstance &InstructionInstance::
 operator=(InstructionInstance &&) = default;
+
+InstructionInstance::InstructionInstance(const InstructionInstance &) = default;
+
+InstructionInstance &InstructionInstance::
+operator=(const InstructionInstance &) = default;
 
 unsigned InstructionInstance::getOpcode() const {
   return Instr.Description->getOpcode();
@@ -117,7 +128,8 @@ InstructionInstance::getValueFor(const Operand &Op) const {
 
 // forward declaration.
 static void randomize(const Instruction &Instr, const Variable &Var,
-                      llvm::MCOperand &AssignedValue);
+                      llvm::MCOperand &AssignedValue,
+                      const llvm::BitVector &ForbiddenRegs);
 
 bool InstructionInstance::hasImmediateVariables() const {
   return llvm::any_of(Instr.Variables, [this](const Variable &Var) {
@@ -129,11 +141,12 @@ bool InstructionInstance::hasImmediateVariables() const {
   });
 }
 
-void InstructionInstance::randomizeUnsetVariables() {
+void InstructionInstance::randomizeUnsetVariables(
+    const llvm::BitVector &ForbiddenRegs) {
   for (const Variable &Var : Instr.Variables) {
     llvm::MCOperand &AssignedValue = getValueFor(Var);
     if (!AssignedValue.isValid())
-      randomize(Instr, Var, AssignedValue);
+      randomize(Instr, Var, AssignedValue, ForbiddenRegs);
   }
 }
 
@@ -222,7 +235,8 @@ static auto randomElement(const C &Container) -> decltype(Container[0]) {
 }
 
 static void randomize(const Instruction &Instr, const Variable &Var,
-                      llvm::MCOperand &AssignedValue) {
+                      llvm::MCOperand &AssignedValue,
+                      const llvm::BitVector &ForbiddenRegs) {
   assert(!Var.TiedOperands.empty());
   const Operand &Op = Instr.Operands[Var.TiedOperands.front()];
   assert(Op.Info != nullptr);
@@ -234,8 +248,11 @@ static void randomize(const Instruction &Instr, const Variable &Var,
     break;
   case llvm::MCOI::OperandType::OPERAND_REGISTER: {
     assert(Op.Tracker);
-    const auto &Registers = Op.Tracker->sourceBits();
-    AssignedValue = llvm::MCOperand::createReg(randomBit(Registers));
+    auto AllowedRegs = Op.Tracker->sourceBits();
+    assert(AllowedRegs.size() == ForbiddenRegs.size());
+    for (auto I : ForbiddenRegs.set_bits())
+      AllowedRegs.reset(I);
+    AssignedValue = llvm::MCOperand::createReg(randomBit(AllowedRegs));
     break;
   }
   default:

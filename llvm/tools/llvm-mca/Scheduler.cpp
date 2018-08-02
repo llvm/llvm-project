@@ -333,8 +333,10 @@ InstRef Scheduler::select() {
     int CurrentRank = I->first - I->second->getNumUsers();
     if (CurrentRank < Rank) {
       const InstrDesc &D = I->second->getDesc();
-      if (Resources->canBeIssued(D))
+      if (Resources->canBeIssued(D)) {
+        Rank = CurrentRank;
         It = I;
+      }
     }
   }
 

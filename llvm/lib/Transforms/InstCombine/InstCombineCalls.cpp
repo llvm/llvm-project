@@ -1137,10 +1137,6 @@ static Value *simplifyMinnumMaxnum(const IntrinsicInst &II) {
   Value *Arg0 = II.getArgOperand(0);
   Value *Arg1 = II.getArgOperand(1);
 
-  // fmin(x, x) -> x
-  if (Arg0 == Arg1)
-    return Arg0;
-
   const auto *C1 = dyn_cast<ConstantFP>(Arg1);
 
   // fmin(x, nan) -> x

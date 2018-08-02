@@ -98,9 +98,11 @@ private:
   bool isHWTrueValue(SDValue Op) const;
   bool isHWFalseValue(SDValue Op) const;
 
- bool FoldOperand(SDNode *ParentNode, unsigned SrcIdx, SDValue &Src,
-                  SDValue &Neg, SDValue &Abs, SDValue &Sel, SDValue &Imm,
-                  SelectionDAG &DAG) const;
+  bool FoldOperand(SDNode *ParentNode, unsigned SrcIdx, SDValue &Src,
+                   SDValue &Neg, SDValue &Abs, SDValue &Sel, SDValue &Imm,
+                   SelectionDAG &DAG) const;
+  SDValue constBufferLoad(LoadSDNode *LoadNode, int Block,
+                          SelectionDAG &DAG) const;
 
   SDNode *PostISelFolding(MachineSDNode *N, SelectionDAG &DAG) const override;
 };

@@ -367,7 +367,7 @@ array(_Tp, _Args...)
 
 template <class _Tp, size_t _Size>
 inline _LIBCPP_INLINE_VISIBILITY
-bool
+_LIBCPP_CONSTEXPR_AFTER_CXX17 bool
 operator==(const array<_Tp, _Size>& __x, const array<_Tp, _Size>& __y)
 {
     return _VSTD::equal(__x.begin(), __x.end(), __y.begin());
@@ -375,7 +375,7 @@ operator==(const array<_Tp, _Size>& __x, const array<_Tp, _Size>& __y)
 
 template <class _Tp, size_t _Size>
 inline _LIBCPP_INLINE_VISIBILITY
-bool
+_LIBCPP_CONSTEXPR_AFTER_CXX17 bool
 operator!=(const array<_Tp, _Size>& __x, const array<_Tp, _Size>& __y)
 {
     return !(__x == __y);
@@ -383,7 +383,7 @@ operator!=(const array<_Tp, _Size>& __x, const array<_Tp, _Size>& __y)
 
 template <class _Tp, size_t _Size>
 inline _LIBCPP_INLINE_VISIBILITY
-bool
+_LIBCPP_CONSTEXPR_AFTER_CXX17 bool
 operator<(const array<_Tp, _Size>& __x, const array<_Tp, _Size>& __y)
 {
     return _VSTD::lexicographical_compare(__x.begin(), __x.end(),
@@ -392,7 +392,7 @@ operator<(const array<_Tp, _Size>& __x, const array<_Tp, _Size>& __y)
 
 template <class _Tp, size_t _Size>
 inline _LIBCPP_INLINE_VISIBILITY
-bool
+_LIBCPP_CONSTEXPR_AFTER_CXX17 bool
 operator>(const array<_Tp, _Size>& __x, const array<_Tp, _Size>& __y)
 {
     return __y < __x;
@@ -400,7 +400,7 @@ operator>(const array<_Tp, _Size>& __x, const array<_Tp, _Size>& __y)
 
 template <class _Tp, size_t _Size>
 inline _LIBCPP_INLINE_VISIBILITY
-bool
+_LIBCPP_CONSTEXPR_AFTER_CXX17 bool
 operator<=(const array<_Tp, _Size>& __x, const array<_Tp, _Size>& __y)
 {
     return !(__y < __x);
@@ -408,7 +408,7 @@ operator<=(const array<_Tp, _Size>& __x, const array<_Tp, _Size>& __y)
 
 template <class _Tp, size_t _Size>
 inline _LIBCPP_INLINE_VISIBILITY
-bool
+_LIBCPP_CONSTEXPR_AFTER_CXX17 bool
 operator>=(const array<_Tp, _Size>& __x, const array<_Tp, _Size>& __y)
 {
     return !(__x < __y);

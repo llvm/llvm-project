@@ -75,6 +75,10 @@ namespace std
     template <class T> struct remove_pointer;
     template <class T> struct add_pointer;
 
+    template<class T> struct type_identity;                     // C++20
+    template<class T>
+      using type_identity_t = typename type_identity<T>::type;  // C++20
+
     // Integral properties:
     template <class T> struct is_signed;
     template <class T> struct is_unsigned;
@@ -1224,6 +1228,12 @@ template <class _Tp> struct _LIBCPP_TEMPLATE_VIS add_pointer
 
 #if _LIBCPP_STD_VER > 11
 template <class _Tp> using add_pointer_t = typename add_pointer<_Tp>::type;
+#endif
+
+// type_identity
+#if _LIBCPP_STD_VER > 17
+template<class _Tp> struct type_identity { typedef _Tp type; };
+template<class _Tp> using type_identity_t = typename type_identity<_Tp>::type;
 #endif
 
 // is_signed

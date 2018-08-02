@@ -58,6 +58,7 @@ struct Variable {
 struct Operand {
   unsigned Index = 0;
   bool IsDef = false;
+  bool IsMem = false;
   bool IsExplicit = false;
   const RegisterAliasingTracker *Tracker = nullptr; // Set for Register Op.
   const llvm::MCOperandInfo *Info = nullptr;        // Set for Explicit Op.
@@ -72,6 +73,8 @@ struct Instruction {
   Instruction(const llvm::MCInstrDesc &MCInstrDesc,
               const RegisterAliasingTrackerCache &ATC);
 
+  bool hasMemoryOperands() const;
+
   const llvm::MCInstrDesc *Description; // Never nullptr.
   llvm::SmallVector<Operand, 8> Operands;
   llvm::SmallVector<Variable, 4> Variables;
@@ -83,11 +86,8 @@ struct Instruction {
 struct InstructionInstance {
   InstructionInstance(const Instruction &Instr);
 
-  // No copy.
-  InstructionInstance(const InstructionInstance &) = delete;
-  InstructionInstance &operator=(const InstructionInstance &) = delete;
-
-  // Moving is OK.
+  InstructionInstance(const InstructionInstance &);
+  InstructionInstance &operator=(const InstructionInstance &);
   InstructionInstance(InstructionInstance &&);
   InstructionInstance &operator=(InstructionInstance &&);
 
@@ -99,7 +99,8 @@ struct InstructionInstance {
   bool hasImmediateVariables() const;
 
   // Assigns a Random Value to all Variables that are still Invalid.
-  void randomizeUnsetVariables();
+  // Do not use any of the registers in `ForbiddenRegs`.
+  void randomizeUnsetVariables(const llvm::BitVector &ForbiddenRegs);
 
   // Returns the instance as an llvm::MCInst. The InstructionInstance must be
   // fully allocated (no invalid variables).
@@ -125,6 +126,9 @@ struct SnippetPrototype {
   SnippetPrototype &operator=(SnippetPrototype &&);
 
   std::string Explanation;
+  // If the prototype uses the provided scratch memory, the register in which
+  // the pointer to this memory is passed in to the function.
+  unsigned ScratchSpaceReg = 0;
   std::vector<InstructionInstance> Snippet;
 };
 

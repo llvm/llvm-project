@@ -36,6 +36,9 @@ void DwarfFile::emitUnits(bool UseOffsets) {
 }
 
 void DwarfFile::emitUnit(DwarfUnit *TheU, bool UseOffsets) {
+  if (TheU->getCUNode()->isDebugDirectivesOnly())
+    return;
+
   DIE &Die = TheU->getUnitDie();
   MCSection *USection = TheU->getSection();
   Asm->OutStreamer->SwitchSection(USection);
@@ -53,6 +56,9 @@ void DwarfFile::computeSizeAndOffsets() {
   // Iterate over each compile unit and set the size and offsets for each
   // DIE within each compile unit. All offsets are CU relative.
   for (const auto &TheU : CUs) {
+    if (TheU->getCUNode()->isDebugDirectivesOnly())
+      continue;
+
     TheU->setDebugSectionOffset(SecOffset);
     SecOffset += computeSizeAndOffsetsForUnit(TheU.get());
   }

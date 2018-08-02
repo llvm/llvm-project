@@ -28,6 +28,15 @@
 using namespace lldb;
 using namespace lldb_private;
 
+bool OCamlLanguage::IsSourceFile(llvm::StringRef file_path) const {
+  const auto suffixes = {".ml", ".mli"};
+  for (auto suffix : suffixes) {
+    if (file_path.endswith_lower(suffix))
+      return true;
+  }
+  return false;
+}
+
 void OCamlLanguage::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(), "OCaml Language",
                                 CreateInstance);

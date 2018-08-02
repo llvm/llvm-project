@@ -9,7 +9,10 @@
 
 #include "llvm-objcopy.h"
 #include "Object.h"
+#include "llvm/ADT/BitmaskEnum.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -115,6 +118,12 @@ public:
   StripOptTable() : OptTable(StripInfoTable, true) {}
 };
 
+struct SectionRename {
+  StringRef OriginalName;
+  StringRef NewName;
+  Optional<uint64_t> NewFlags;
+};
+
 struct CopyConfig {
   StringRef OutputFilename;
   StringRef InputFilename;
@@ -133,7 +142,7 @@ struct CopyConfig {
   std::vector<StringRef> SymbolsToWeaken;
   std::vector<StringRef> SymbolsToRemove;
   std::vector<StringRef> SymbolsToKeep;
-  StringMap<StringRef> SectionsToRename;
+  StringMap<SectionRename> SectionsToRename;
   StringMap<StringRef> SymbolsToRename;
   bool StripAll = false;
   bool StripAllGNU = false;
@@ -151,6 +160,23 @@ struct CopyConfig {
 };
 
 using SectionPred = std::function<bool(const SectionBase &Sec)>;
+
+enum SectionFlag {
+  SecNone = 0,
+  SecAlloc = 1 << 0,
+  SecLoad = 1 << 1,
+  SecNoload = 1 << 2,
+  SecReadonly = 1 << 3,
+  SecDebug = 1 << 4,
+  SecCode = 1 << 5,
+  SecData = 1 << 6,
+  SecRom = 1 << 7,
+  SecMerge = 1 << 8,
+  SecStrings = 1 << 9,
+  SecContents = 1 << 10,
+  SecShare = 1 << 11,
+  LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ SecShare)
+};
 
 } // namespace
 
@@ -184,6 +210,65 @@ LLVM_ATTRIBUTE_NORETURN void reportError(StringRef File, Error E) {
 
 } // end namespace objcopy
 } // end namespace llvm
+
+static SectionFlag ParseSectionRenameFlag(StringRef SectionName) {
+  return llvm::StringSwitch<SectionFlag>(SectionName)
+      .Case("alloc", SectionFlag::SecAlloc)
+      .Case("load", SectionFlag::SecLoad)
+      .Case("noload", SectionFlag::SecNoload)
+      .Case("readonly", SectionFlag::SecReadonly)
+      .Case("debug", SectionFlag::SecDebug)
+      .Case("code", SectionFlag::SecCode)
+      .Case("data", SectionFlag::SecData)
+      .Case("rom", SectionFlag::SecRom)
+      .Case("merge", SectionFlag::SecMerge)
+      .Case("strings", SectionFlag::SecStrings)
+      .Case("contents", SectionFlag::SecContents)
+      .Case("share", SectionFlag::SecShare)
+      .Default(SectionFlag::SecNone);
+}
+
+static SectionRename ParseRenameSectionValue(StringRef FlagValue) {
+  if (!FlagValue.contains('='))
+    error("Bad format for --rename-section: missing '='");
+
+  // Initial split: ".foo" = ".bar,f1,f2,..."
+  auto Old2New = FlagValue.split('=');
+  SectionRename SR;
+  SR.OriginalName = Old2New.first;
+
+  // Flags split: ".bar" "f1" "f2" ...
+  SmallVector<StringRef, 6> NameAndFlags;
+  Old2New.second.split(NameAndFlags, ',');
+  SR.NewName = NameAndFlags[0];
+
+  if (NameAndFlags.size() > 1) {
+    SectionFlag Flags = SectionFlag::SecNone;
+    for (size_t I = 1, Size = NameAndFlags.size(); I < Size; ++I) {
+      SectionFlag Flag = ParseSectionRenameFlag(NameAndFlags[I]);
+      if (Flag == SectionFlag::SecNone)
+        error("Unrecognized section flag '" + NameAndFlags[I] +
+              "'. Flags supported for GNU compatibility: alloc, load, noload, "
+              "readonly, debug, code, data, rom, share, contents, merge, "
+              "strings.");
+      Flags |= Flag;
+    }
+
+    SR.NewFlags = 0;
+    if (Flags & SectionFlag::SecAlloc)
+      *SR.NewFlags |= ELF::SHF_ALLOC;
+    if (!(Flags & SectionFlag::SecReadonly))
+      *SR.NewFlags |= ELF::SHF_WRITE;
+    if (Flags & SectionFlag::SecCode)
+      *SR.NewFlags |= ELF::SHF_EXECINSTR;
+    if (Flags & SectionFlag::SecMerge)
+      *SR.NewFlags |= ELF::SHF_MERGE;
+    if (Flags & SectionFlag::SecStrings)
+      *SR.NewFlags |= ELF::SHF_STRINGS;
+  }
+
+  return SR;
+}
 
 static bool IsDebugSection(const SectionBase &Sec) {
   return Sec.Name.startswith(".debug") || Sec.Name.startswith(".zdebug") ||
@@ -437,8 +522,20 @@ static void HandleArgs(const CopyConfig &Config, Object &Obj,
   if (!Config.SectionsToRename.empty()) {
     for (auto &Sec : Obj.sections()) {
       const auto Iter = Config.SectionsToRename.find(Sec.Name);
-      if (Iter != Config.SectionsToRename.end())
-        Sec.Name = Iter->second;
+      if (Iter != Config.SectionsToRename.end()) {
+        const SectionRename &SR = Iter->second;
+        Sec.Name = SR.NewName;
+        if (SR.NewFlags.hasValue()) {
+          // Preserve some flags which should not be dropped when setting flags.
+          // Also, preserve anything OS/processor dependant.
+          const uint64_t PreserveMask = ELF::SHF_COMPRESSED | ELF::SHF_EXCLUDE |
+                                        ELF::SHF_GROUP | ELF::SHF_LINK_ORDER |
+                                        ELF::SHF_MASKOS | ELF::SHF_MASKPROC |
+                                        ELF::SHF_TLS | ELF::SHF_INFO_LINK;
+          Sec.Flags = (Sec.Flags & PreserveMask) |
+                      (SR.NewFlags.getValue() & ~PreserveMask);
+        }
+      }
     }
   }
 
@@ -600,11 +697,9 @@ static CopyConfig ParseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
   }
 
   for (auto Arg : InputArgs.filtered(OBJCOPY_rename_section)) {
-    if (!StringRef(Arg->getValue()).contains('='))
-      error("Bad format for --rename-section");
-    auto Old2New = StringRef(Arg->getValue()).split('=');
-    if (!Config.SectionsToRename.insert(Old2New).second)
-      error("Already have a section rename for " + Old2New.first);
+    SectionRename SR = ParseRenameSectionValue(StringRef(Arg->getValue()));
+    if (!Config.SectionsToRename.try_emplace(SR.OriginalName, SR).second)
+      error("Multiple renames of section " + SR.OriginalName);
   }
 
   for (auto Arg : InputArgs.filtered(OBJCOPY_remove_section))

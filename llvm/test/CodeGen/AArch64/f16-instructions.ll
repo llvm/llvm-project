@@ -456,6 +456,36 @@ define i1 @test_fcmp_ord(half %a, half %b) #0 {
   ret i1 %r
 }
 
+; CHECK-COMMON-LABEL: test_fccmp:
+; CHECK-CVT:      fcvt  s0, h0
+; CHECK-CVT-NEXT: fmov  s1, #8.00000000
+; CHECK-CVT-NEXT: fmov  s2, #5.00000000
+; CHECK-CVT-NEXT: fcmp  s0, s1
+; CHECK-CVT-NEXT: cset  w8, gt
+; CHECK-CVT-NEXT: fcmp  s0, s2
+; CHECK-CVT-NEXT: cset  w9, mi
+; CHECK-CVT-NEXT: tst   w8, w9
+; CHECK-CVT-NEXT: fcsel s0, s0, s2, ne
+; CHECK-CVT-NEXT: fcvt  h0, s0
+; CHECK-CVT-NEXT: str   h0, [x0]
+; CHECK-CVT-NEXT: ret
+; CHECK-FP16:      fmov  h1, #5.00000000
+; CHECK-FP16-NEXT: fcmp  h0, h1
+; CHECK-FP16-NEXT: fmov  h2, #8.00000000
+; CHECK-FP16-NEXT: fccmp h0, h2, #4, mi
+; CHECK-FP16-NEXT: fcsel h0, h0, h1, gt
+; CHECK-FP16-NEXT: str   h0, [x0]
+; CHECK-FP16-NEXT: ret
+
+define void @test_fccmp(half %in, half* %out) {
+  %cmp1 = fcmp ogt half %in, 0xH4800
+  %cmp2 = fcmp olt half %in, 0xH4500
+  %cond = and i1 %cmp1, %cmp2
+  %result = select i1 %cond, half %in, half 0xH4500
+  store half %result, half* %out
+  ret void
+}
+
 ; CHECK-CVT-LABEL: test_br_cc:
 ; CHECK-CVT-NEXT: fcvt s1, h1
 ; CHECK-CVT-NEXT: fcvt s0, h0

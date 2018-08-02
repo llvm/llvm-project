@@ -149,7 +149,23 @@ void CreateAndRunJITFun(const std::string &IR, CodeGenOpt::Level OLvl) {
   EE->runStaticConstructorsDestructors(false);
 
   typedef void (*func)(int*, int*, int*, int);
-  func f = reinterpret_cast<func>(EE->getPointerToFunction(EntryFunc)); 
+#if defined(__GNUC__) && !defined(__clang) &&                                  \
+    ((__GNUC__ == 4) && (__GNUC_MINOR__ < 9))
+// Silence
+//
+//   warning: ISO C++ forbids casting between pointer-to-function and
+//   pointer-to-object [-Wpedantic]
+//
+// Since C++11 this casting is conditionally supported and GCC versions
+// starting from 4.9.0 don't warn about the cast.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
+#endif
+  func f = reinterpret_cast<func>(EE->getPointerToFunction(EntryFunc));
+#if defined(__GNUC__) && !defined(__clang) &&                                  \
+    ((__GNUC__ == 4) && (__GNUC_MINOR__ < 9))
+#pragma GCC diagnostic pop
+#endif
 
   // Define some dummy arrays to use an input for now
   int a[] = {1};

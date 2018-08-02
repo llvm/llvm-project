@@ -4460,6 +4460,7 @@ INTERCEPTOR(int, random_r, void *buf, u32 *result) {
 // its metadata. See
 // https://github.com/google/sanitizers/issues/321.
 #if SANITIZER_INTERCEPT_PTHREAD_ATTR_GET ||              \
+    SANITIZER_INTERCEPT_PTHREAD_ATTR_GET_SCHED ||        \
     SANITIZER_INTERCEPT_PTHREAD_ATTR_GETINHERITSSCHED || \
     SANITIZER_INTERCEPT_PTHREAD_MUTEXATTR_GET ||         \
     SANITIZER_INTERCEPT_PTHREAD_RWLOCKATTR_GET ||        \

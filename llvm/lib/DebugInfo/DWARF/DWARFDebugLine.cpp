@@ -1047,17 +1047,16 @@ bool DWARFDebugLine::LineTable::getFileLineInfoForAddress(
 // line-table section.
 static DWARFDebugLine::SectionParser::LineToUnitMap
 buildLineToUnitMap(DWARFDebugLine::SectionParser::cu_range CUs,
-                   DWARFDebugLine::SectionParser::tu_range TUSections) {
+                   DWARFDebugLine::SectionParser::tu_range TUs) {
   DWARFDebugLine::SectionParser::LineToUnitMap LineToUnit;
   for (const auto &CU : CUs)
     if (auto CUDIE = CU->getUnitDIE())
       if (auto StmtOffset = toSectionOffset(CUDIE.find(DW_AT_stmt_list)))
         LineToUnit.insert(std::make_pair(*StmtOffset, &*CU));
-  for (const auto &TUS : TUSections)
-    for (const auto &TU : TUS)
-      if (auto TUDIE = TU->getUnitDIE())
-        if (auto StmtOffset = toSectionOffset(TUDIE.find(DW_AT_stmt_list)))
-          LineToUnit.insert(std::make_pair(*StmtOffset, &*TU));
+  for (const auto &TU : TUs)
+    if (auto TUDIE = TU->getUnitDIE())
+      if (auto StmtOffset = toSectionOffset(TUDIE.find(DW_AT_stmt_list)))
+        LineToUnit.insert(std::make_pair(*StmtOffset, &*TU));
   return LineToUnit;
 }
 

@@ -472,6 +472,7 @@ DICompileUnit::getEmissionKind(StringRef Str) {
       .Case("NoDebug", NoDebug)
       .Case("FullDebug", FullDebug)
       .Case("LineTablesOnly", LineTablesOnly)
+      .Case("DebugDirectivesOnly", DebugDirectivesOnly)
       .Default(None);
 }
 
@@ -480,6 +481,7 @@ const char *DICompileUnit::emissionKindString(DebugEmissionKind EK) {
   case NoDebug:        return "NoDebug";
   case FullDebug:      return "FullDebug";
   case LineTablesOnly: return "LineTablesOnly";
+  case DebugDirectivesOnly: return "DebugDirectviesOnly";
   }
   return nullptr;
 }
