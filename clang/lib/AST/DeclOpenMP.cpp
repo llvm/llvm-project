@@ -57,6 +57,14 @@ void OMPThreadPrivateDecl::setVars(ArrayRef<Expr *> VL) {
 // OMPDeclareReductionDecl Implementation.
 //===----------------------------------------------------------------------===//
 
+OMPDeclareReductionDecl::OMPDeclareReductionDecl(
+    Kind DK, DeclContext *DC, SourceLocation L, DeclarationName Name,
+    QualType Ty, OMPDeclareReductionDecl *PrevDeclInScope)
+    : ValueDecl(DK, DC, L, Name, Ty), DeclContext(DK), Combiner(nullptr),
+      PrevDeclInScope(PrevDeclInScope) {
+  setInitializer(nullptr, CallInit);
+}
+
 void OMPDeclareReductionDecl::anchor() {}
 
 OMPDeclareReductionDecl *OMPDeclareReductionDecl::Create(
