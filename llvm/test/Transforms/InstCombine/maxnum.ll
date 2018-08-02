@@ -129,14 +129,6 @@ define float @canonicalize_constant_maxnum_f32(float %x) {
   ret float %y
 }
 
-define float @noop_maxnum_f32(float %x) {
-; CHECK-LABEL: @noop_maxnum_f32(
-; CHECK-NEXT:    ret float [[X:%.*]]
-;
-  %y = call float @llvm.maxnum.f32(float %x, float %x)
-  ret float %y
-}
-
 define float @maxnum_f32_nan_val(float %x) {
 ; CHECK-LABEL: @maxnum_f32_nan_val(
 ; CHECK-NEXT:    ret float [[X:%.*]]

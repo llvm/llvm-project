@@ -139,3 +139,109 @@ define i32 @add_i32_seq_cst(i32* %p, i32 %v) {
   %old = atomicrmw add i32* %p, i32 %v seq_cst
   ret i32 %old
 }
+
+; Ternary RMW instruction: cmpxchg
+; The success and failure ordering arguments specify how this cmpxchg
+; synchronizes with other atomic operations. Both ordering parameters must be at
+; least monotonic, the ordering constraint on failure must be no stronger than
+; that on success, and the failure ordering cannot be either release or acq_rel.
+
+; CHECK-LABEL: cmpxchg_i32_monotonic_monotonic:
+; CHECK-NEXT: .param i32, i32, i32{{$}}
+; CHECK: i32.atomic.rmw.cmpxchg $push0=, 0($0), $1, $2{{$}}
+; CHECK-NEXT: return $pop0{{$}}
+define i32 @cmpxchg_i32_monotonic_monotonic(i32* %p, i32 %exp, i32 %new) {
+  %pair = cmpxchg i32* %p, i32 %exp, i32 %new monotonic monotonic
+  %old = extractvalue { i32, i1 } %pair, 0
+  ret i32 %old
+}
+
+; CHECK-LABEL: cmpxchg_i32_acquire_monotonic:
+; CHECK-NEXT: .param i32, i32, i32{{$}}
+; CHECK: i32.atomic.rmw.cmpxchg $push0=, 0($0), $1, $2{{$}}
+; CHECK-NEXT: return $pop0{{$}}
+define i32 @cmpxchg_i32_acquire_monotonic(i32* %p, i32 %exp, i32 %new) {
+  %pair = cmpxchg i32* %p, i32 %exp, i32 %new acquire monotonic
+  %old = extractvalue { i32, i1 } %pair, 0
+  ret i32 %old
+}
+
+; CHECK-LABEL: cmpxchg_i32_release_monotonic:
+; CHECK-NEXT: .param i32, i32, i32{{$}}
+; CHECK: i32.atomic.rmw.cmpxchg $push0=, 0($0), $1, $2{{$}}
+; CHECK-NEXT: return $pop0{{$}}
+define i32 @cmpxchg_i32_release_monotonic(i32* %p, i32 %exp, i32 %new) {
+  %pair = cmpxchg i32* %p, i32 %exp, i32 %new release monotonic
+  %old = extractvalue { i32, i1 } %pair, 0
+  ret i32 %old
+}
+
+; CHECK-LABEL: cmpxchg_i32_acq_rel_monotonic:
+; CHECK-NEXT: .param i32, i32, i32{{$}}
+; CHECK: i32.atomic.rmw.cmpxchg $push0=, 0($0), $1, $2{{$}}
+; CHECK-NEXT: return $pop0{{$}}
+define i32 @cmpxchg_i32_acq_rel_monotonic(i32* %p, i32 %exp, i32 %new) {
+  %pair = cmpxchg i32* %p, i32 %exp, i32 %new acq_rel monotonic
+  %old = extractvalue { i32, i1 } %pair, 0
+  ret i32 %old
+}
+
+; CHECK-LABEL: cmpxchg_i32_seq_cst_monotonic:
+; CHECK-NEXT: .param i32, i32, i32{{$}}
+; CHECK: i32.atomic.rmw.cmpxchg $push0=, 0($0), $1, $2{{$}}
+; CHECK-NEXT: return $pop0{{$}}
+define i32 @cmpxchg_i32_seq_cst_monotonic(i32* %p, i32 %exp, i32 %new) {
+  %pair = cmpxchg i32* %p, i32 %exp, i32 %new seq_cst monotonic
+  %old = extractvalue { i32, i1 } %pair, 0
+  ret i32 %old
+}
+
+; CHECK-LABEL: cmpxchg_i32_acquire_acquire:
+; CHECK-NEXT: .param i32, i32, i32{{$}}
+; CHECK: i32.atomic.rmw.cmpxchg $push0=, 0($0), $1, $2{{$}}
+; CHECK-NEXT: return $pop0{{$}}
+define i32 @cmpxchg_i32_acquire_acquire(i32* %p, i32 %exp, i32 %new) {
+  %pair = cmpxchg i32* %p, i32 %exp, i32 %new acquire acquire
+  %old = extractvalue { i32, i1 } %pair, 0
+  ret i32 %old
+}
+
+; CHECK-LABEL: cmpxchg_i32_release_acquire:
+; CHECK-NEXT: .param i32, i32, i32{{$}}
+; CHECK: i32.atomic.rmw.cmpxchg $push0=, 0($0), $1, $2{{$}}
+; CHECK-NEXT: return $pop0{{$}}
+define i32 @cmpxchg_i32_release_acquire(i32* %p, i32 %exp, i32 %new) {
+  %pair = cmpxchg i32* %p, i32 %exp, i32 %new release acquire
+  %old = extractvalue { i32, i1 } %pair, 0
+  ret i32 %old
+}
+
+; CHECK-LABEL: cmpxchg_i32_acq_rel_acquire:
+; CHECK-NEXT: .param i32, i32, i32{{$}}
+; CHECK: i32.atomic.rmw.cmpxchg $push0=, 0($0), $1, $2{{$}}
+; CHECK-NEXT: return $pop0{{$}}
+define i32 @cmpxchg_i32_acq_rel_acquire(i32* %p, i32 %exp, i32 %new) {
+  %pair = cmpxchg i32* %p, i32 %exp, i32 %new acq_rel acquire
+  %old = extractvalue { i32, i1 } %pair, 0
+  ret i32 %old
+}
+
+; CHECK-LABEL: cmpxchg_i32_seq_cst_acquire:
+; CHECK-NEXT: .param i32, i32, i32{{$}}
+; CHECK: i32.atomic.rmw.cmpxchg $push0=, 0($0), $1, $2{{$}}
+; CHECK-NEXT: return $pop0{{$}}
+define i32 @cmpxchg_i32_seq_cst_acquire(i32* %p, i32 %exp, i32 %new) {
+  %pair = cmpxchg i32* %p, i32 %exp, i32 %new seq_cst acquire
+  %old = extractvalue { i32, i1 } %pair, 0
+  ret i32 %old
+}
+
+; CHECK-LABEL: cmpxchg_i32_seq_cst_seq_cst:
+; CHECK-NEXT: .param i32, i32, i32{{$}}
+; CHECK: i32.atomic.rmw.cmpxchg $push0=, 0($0), $1, $2{{$}}
+; CHECK-NEXT: return $pop0{{$}}
+define i32 @cmpxchg_i32_seq_cst_seq_cst(i32* %p, i32 %exp, i32 %new) {
+  %pair = cmpxchg i32* %p, i32 %exp, i32 %new seq_cst seq_cst
+  %old = extractvalue { i32, i1 } %pair, 0
+  ret i32 %old
+}

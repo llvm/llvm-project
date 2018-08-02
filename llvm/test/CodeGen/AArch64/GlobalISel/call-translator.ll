@@ -97,18 +97,10 @@ define void @test_struct_formal({double, i64, i8} %in, {double, i64, i8}* %addr)
 ; CHECK: [[CST2:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
 ; CHECK: [[GEP2:%[0-9]+]]:_(p0) = G_GEP [[ADDR]], [[CST2]](s64)
 ; CHECK: [[LD3:%[0-9]+]]:_(s32) = G_LOAD [[GEP2]](p0) :: (load 4 from %ir.addr + 16, align 8)
-; CHECK: [[IMPDEF:%[0-9]+]]:_(s192) = G_IMPLICIT_DEF
-; CHECK: [[INS1:%[0-9]+]]:_(s192) = G_INSERT [[IMPDEF]], [[LD1]](s64), 0
-; CHECK: [[INS2:%[0-9]+]]:_(s192) = G_INSERT [[INS1]], [[LD2]](s64), 64
-; CHECK: [[VAL:%[0-9]+]]:_(s192) = G_INSERT [[INS2]], [[LD3]](s32), 128
 
-; CHECK: [[DBL:%[0-9]+]]:_(s64) = G_EXTRACT [[VAL]](s192), 0
-; CHECK: [[I64:%[0-9]+]]:_(s64) = G_EXTRACT [[VAL]](s192), 64
-; CHECK: [[I32:%[0-9]+]]:_(s32) = G_EXTRACT [[VAL]](s192), 128
-
-; CHECK: $d0 = COPY [[DBL]](s64)
-; CHECK: $x0 = COPY [[I64]](s64)
-; CHECK: $w1 = COPY [[I32]](s32)
+; CHECK: $d0 = COPY [[LD1]](s64)
+; CHECK: $x0 = COPY [[LD2]](s64)
+; CHECK: $w1 = COPY [[LD3]](s32)
 ; CHECK: RET_ReallyLR implicit $d0, implicit $x0, implicit $w1
 define {double, i64, i32} @test_struct_return({double, i64, i32}* %addr) {
   %val = load {double, i64, i32}, {double, i64, i32}* %addr

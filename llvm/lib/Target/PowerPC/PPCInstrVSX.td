@@ -3494,6 +3494,17 @@ def DblToFlt {
   dag B1 = (f32 (fpround (f64 (extractelt v2f64:$B, 1))));
 }
 
+def ExtDbl {
+  dag A0S = (i32 (PPCmfvsr (f64 (PPCfctiwz (f64 (extractelt v2f64:$A, 0))))));
+  dag A1S = (i32 (PPCmfvsr (f64 (PPCfctiwz (f64 (extractelt v2f64:$A, 1))))));
+  dag B0S = (i32 (PPCmfvsr (f64 (PPCfctiwz (f64 (extractelt v2f64:$B, 0))))));
+  dag B1S = (i32 (PPCmfvsr (f64 (PPCfctiwz (f64 (extractelt v2f64:$B, 1))))));
+  dag A0U = (i32 (PPCmfvsr (f64 (PPCfctiwuz (f64 (extractelt v2f64:$A, 0))))));
+  dag A1U = (i32 (PPCmfvsr (f64 (PPCfctiwuz (f64 (extractelt v2f64:$A, 1))))));
+  dag B0U = (i32 (PPCmfvsr (f64 (PPCfctiwuz (f64 (extractelt v2f64:$B, 0))))));
+  dag B1U = (i32 (PPCmfvsr (f64 (PPCfctiwuz (f64 (extractelt v2f64:$B, 1))))));
+}
+
 def ByteToWord {
   dag LE_A0 = (i32 (sext_inreg (i32 (vector_extract v16i8:$A, 0)), i8));
   dag LE_A1 = (i32 (sext_inreg (i32 (vector_extract v16i8:$A, 4)), i8));
@@ -3571,9 +3582,15 @@ def FltToULong {
 }
 def DblToInt {
   dag A = (i32 (PPCmfvsr (f64 (PPCfctiwz f64:$A))));
+  dag B = (i32 (PPCmfvsr (f64 (PPCfctiwz f64:$B))));
+  dag C = (i32 (PPCmfvsr (f64 (PPCfctiwz f64:$C))));
+  dag D = (i32 (PPCmfvsr (f64 (PPCfctiwz f64:$D))));
 }
 def DblToUInt {
   dag A = (i32 (PPCmfvsr (f64 (PPCfctiwuz f64:$A))));
+  dag B = (i32 (PPCmfvsr (f64 (PPCfctiwuz f64:$B))));
+  dag C = (i32 (PPCmfvsr (f64 (PPCfctiwuz f64:$C))));
+  dag D = (i32 (PPCmfvsr (f64 (PPCfctiwuz f64:$D))));
 }
 def DblToLong {
   dag A = (i64 (PPCmfvsr (f64 (PPCfctidz f64:$A))));
@@ -3610,6 +3627,47 @@ def MrgFP {
   dag ABlToFlt = (XVCVDPSP (XXPERMDI $A, $B, 3));
   dag BAhToFlt = (XVCVDPSP (XXPERMDI $B, $A, 0));
   dag BAlToFlt = (XVCVDPSP (XXPERMDI $B, $A, 3));
+}
+
+// Word-element merge dags - conversions from f64 to i32 merged into vectors.
+def MrgWords {
+  // For big endian, we merge low and hi doublewords (A, B).
+  dag A0B0 = (v2f64 (XXPERMDI v2f64:$A, v2f64:$B, 0));
+  dag A1B1 = (v2f64 (XXPERMDI v2f64:$A, v2f64:$B, 3));
+  dag CVA1B1S = (v4i32 (XVCVDPSXWS A1B1));
+  dag CVA0B0S = (v4i32 (XVCVDPSXWS A0B0));
+  dag CVA1B1U = (v4i32 (XVCVDPUXWS A1B1));
+  dag CVA0B0U = (v4i32 (XVCVDPUXWS A0B0));
+
+  // For little endian, we merge low and hi doublewords (B, A).
+  dag B1A1 = (v2f64 (XXPERMDI v2f64:$B, v2f64:$A, 0));
+  dag B0A0 = (v2f64 (XXPERMDI v2f64:$B, v2f64:$A, 3));
+  dag CVB1A1S = (v4i32 (XVCVDPSXWS B1A1));
+  dag CVB0A0S = (v4i32 (XVCVDPSXWS B0A0));
+  dag CVB1A1U = (v4i32 (XVCVDPUXWS B1A1));
+  dag CVB0A0U = (v4i32 (XVCVDPUXWS B0A0));
+
+  // For big endian, we merge hi doublewords of (A, C) and (B, D), convert
+  // then merge.
+  dag AC = (v2f64 (XXPERMDI (COPY_TO_REGCLASS f64:$A, VSRC),
+                            (COPY_TO_REGCLASS f64:$C, VSRC), 0));
+  dag BD = (v2f64 (XXPERMDI (COPY_TO_REGCLASS f64:$B, VSRC),
+                            (COPY_TO_REGCLASS f64:$D, VSRC), 0));
+  dag CVACS = (v4i32 (XVCVDPSXWS AC));
+  dag CVBDS = (v4i32 (XVCVDPSXWS BD));
+  dag CVACU = (v4i32 (XVCVDPUXWS AC));
+  dag CVBDU = (v4i32 (XVCVDPUXWS BD));
+
+  // For little endian, we merge hi doublewords of (D, B) and (C, A), convert
+  // then merge.
+  dag DB = (v2f64 (XXPERMDI (COPY_TO_REGCLASS f64:$D, VSRC),
+                            (COPY_TO_REGCLASS f64:$B, VSRC), 0));
+  dag CA = (v2f64 (XXPERMDI (COPY_TO_REGCLASS f64:$C, VSRC),
+                            (COPY_TO_REGCLASS f64:$A, VSRC), 0));
+  dag CVDBS = (v4i32 (XVCVDPSXWS DB));
+  dag CVCAS = (v4i32 (XVCVDPSXWS CA));
+  dag CVDBU = (v4i32 (XVCVDPUXWS DB));
+  dag CVCAU = (v4i32 (XVCVDPUXWS CA));
 }
 
 // Patterns for BUILD_VECTOR nodes.
@@ -3679,6 +3737,20 @@ let AddedComplexity = 400 in {
     def : Pat<(v4f32 (build_vector DblToFlt.A0, DblToFlt.A1,
                                    DblToFlt.B0, DblToFlt.B1)),
               (v4f32 (VMRGEW MrgFP.ABhToFlt, MrgFP.ABlToFlt))>;
+
+    // Convert 4 doubles to a vector of ints.
+    def : Pat<(v4i32 (build_vector DblToInt.A, DblToInt.B,
+                                   DblToInt.C, DblToInt.D)),
+              (v4i32 (VMRGEW MrgWords.CVACS, MrgWords.CVBDS))>;
+    def : Pat<(v4i32 (build_vector DblToUInt.A, DblToUInt.B,
+                                   DblToUInt.C, DblToUInt.D)),
+              (v4i32 (VMRGEW MrgWords.CVACU, MrgWords.CVBDU))>;
+    def : Pat<(v4i32 (build_vector ExtDbl.A0S, ExtDbl.A1S,
+                                   ExtDbl.B0S, ExtDbl.B1S)),
+              (v4i32 (VMRGEW MrgWords.CVA0B0S, MrgWords.CVA1B1S))>;
+    def : Pat<(v4i32 (build_vector ExtDbl.A0U, ExtDbl.A1U,
+                                   ExtDbl.B0U, ExtDbl.B1U)),
+              (v4i32 (VMRGEW MrgWords.CVA0B0U, MrgWords.CVA1B1U))>;
   }
 
   let Predicates = [IsLittleEndian, HasVSX] in {
@@ -3693,6 +3765,20 @@ let AddedComplexity = 400 in {
     def : Pat<(v4f32 (build_vector DblToFlt.A0, DblToFlt.A1,
                                    DblToFlt.B0, DblToFlt.B1)),
               (v4f32 (VMRGEW MrgFP.BAhToFlt, MrgFP.BAlToFlt))>;
+
+    // Convert 4 doubles to a vector of ints.
+    def : Pat<(v4i32 (build_vector DblToInt.A, DblToInt.B,
+                                   DblToInt.C, DblToInt.D)),
+              (v4i32 (VMRGEW MrgWords.CVDBS, MrgWords.CVCAS))>;
+    def : Pat<(v4i32 (build_vector DblToUInt.A, DblToUInt.B,
+                                   DblToUInt.C, DblToUInt.D)),
+              (v4i32 (VMRGEW MrgWords.CVDBU, MrgWords.CVCAU))>;
+    def : Pat<(v4i32 (build_vector ExtDbl.A0S, ExtDbl.A1S,
+                                   ExtDbl.B0S, ExtDbl.B1S)),
+              (v4i32 (VMRGEW MrgWords.CVB1A1S, MrgWords.CVB0A0S))>;
+    def : Pat<(v4i32 (build_vector ExtDbl.A0U, ExtDbl.A1U,
+                                   ExtDbl.B0U, ExtDbl.B1U)),
+              (v4i32 (VMRGEW MrgWords.CVB1A1U, MrgWords.CVB0A0U))>;
   }
 
   let Predicates = [HasDirectMove] in {

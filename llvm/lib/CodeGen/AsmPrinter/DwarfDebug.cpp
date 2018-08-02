@@ -768,6 +768,8 @@ void DwarfDebug::finalizeModuleInfo() {
   // all other generation.
   for (const auto &P : CUMap) {
     auto &TheCU = *P.second;
+    if (TheCU.getCUNode()->isDebugDirectivesOnly())
+      continue;
     // Emit DW_AT_containing_type attribute to connect types with their
     // vtable holding type.
     TheCU.constructContainingTypeDIEs();
@@ -1416,6 +1418,11 @@ void DwarfDebug::endFunctionImpl(const MachineFunction *MF) {
   LexicalScope *FnScope = LScopes.getCurrentFunctionScope();
   assert(!FnScope || SP == FnScope->getScopeNode());
   DwarfCompileUnit &TheCU = *CUMap.lookup(SP->getUnit());
+  if (TheCU.getCUNode()->isDebugDirectivesOnly()) {
+    PrevLabel = nullptr;
+    CurFn = nullptr;
+    return;
+  }
 
   DenseSet<InlinedVariable> ProcessedVars;
   collectVariableInfo(TheCU, SP, ProcessedVars);
@@ -2132,6 +2139,13 @@ void DwarfDebug::emitDebugRanges() {
         });
   };
 
+  if (llvm::all_of(CUMap, [](const decltype(CUMap)::value_type &Pair) {
+        return Pair.second->getCUNode()->isDebugDirectivesOnly();
+      })) {
+    assert(NoRangesPresent() && "No debug ranges expected.");
+    return;
+  }
+
   if (!useRangesSection()) {
     assert(NoRangesPresent() && "No debug ranges expected.");
     return;
@@ -2154,6 +2168,8 @@ void DwarfDebug::emitDebugRanges() {
   // Grab the specific ranges for the compile units in the module.
   for (const auto &I : CUMap) {
     DwarfCompileUnit *TheCU = I.second;
+    if (TheCU->getCUNode()->isDebugDirectivesOnly())
+      continue;
 
     if (auto *Skel = TheCU->getSkeleton())
       TheCU = Skel;
@@ -2206,12 +2222,19 @@ void DwarfDebug::emitDebugMacinfo() {
   if (CUMap.empty())
     return;
 
+  if (llvm::all_of(CUMap, [](const decltype(CUMap)::value_type &Pair) {
+        return Pair.second->getCUNode()->isDebugDirectivesOnly();
+      }))
+    return;
+
   // Start the dwarf macinfo section.
   Asm->OutStreamer->SwitchSection(
       Asm->getObjFileLowering().getDwarfMacinfoSection());
 
   for (const auto &P : CUMap) {
     auto &TheCU = *P.second;
+    if (TheCU.getCUNode()->isDebugDirectivesOnly())
+      continue;
     auto *SkCU = TheCU.getSkeleton();
     DwarfCompileUnit &U = SkCU ? *SkCU : TheCU;
     auto *CUNode = cast<DICompileUnit>(P.first);

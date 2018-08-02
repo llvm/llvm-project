@@ -169,6 +169,8 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
     case AArch64::fixup_aarch64_ldr_pcrel_imm19:
       if (SymLoc == AArch64MCExpr::VK_GOTTPREL)
         return R_CLS(TLSIE_LD_GOTTPREL_PREL19);
+      if (SymLoc == AArch64MCExpr::VK_GOT)
+        return R_CLS(GOT_LD_PREL19);
       return R_CLS(LD_PREL_LO19);
     case AArch64::fixup_aarch64_pcrel_branch14:
       return R_CLS(TSTBR14);

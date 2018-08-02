@@ -11761,6 +11761,14 @@ SDValue PPCTargetLowering::DAGCombineExtBoolTrunc(SDNode *N,
       ShiftCst);
 }
 
+// Is this an extending load from an f32 to an f64?
+static bool isFPExtLoad(SDValue Op) {
+  if (LoadSDNode *LD = dyn_cast<LoadSDNode>(Op.getNode()))
+    return LD->getExtensionType() == ISD::EXTLOAD &&
+      Op.getValueType() == MVT::f64;
+  return false;
+}
+
 /// Reduces the number of fp-to-int conversion when building a vector.
 ///
 /// If this vector is built out of floating to integer conversions,
@@ -11795,10 +11803,17 @@ combineElementTruncationToVectorTruncation(SDNode *N,
     SmallVector<SDValue, 4> Ops;
     EVT TargetVT = N->getValueType(0);
     for (int i = 0, e = N->getNumOperands(); i < e; ++i) {
-      if (N->getOperand(i).getOpcode() != PPCISD::MFVSR)
+      SDValue NextOp = N->getOperand(i);
+      if (NextOp.getOpcode() != PPCISD::MFVSR)
         return SDValue();
-      unsigned NextConversion = N->getOperand(i).getOperand(0).getOpcode();
+      unsigned NextConversion = NextOp.getOperand(0).getOpcode();
       if (NextConversion != FirstConversion)
+        return SDValue();
+      // If we are converting to 32-bit integers, we need to add an FP_ROUND.
+      // This is not valid if the input was originally double precision. It is
+      // also not profitable to do unless this is an extending load in which
+      // case doing this combine will allow us to combine consecutive loads.
+      if (Is32Bit && !isFPExtLoad(NextOp.getOperand(0).getOperand(0)))
         return SDValue();
       if (N->getOperand(i) != FirstInput)
         IsSplat = false;
@@ -11813,8 +11828,9 @@ combineElementTruncationToVectorTruncation(SDNode *N,
     // Now that we know we have the right type of node, get its operands
     for (int i = 0, e = N->getNumOperands(); i < e; ++i) {
       SDValue In = N->getOperand(i).getOperand(0);
-      // For 32-bit values, we need to add an FP_ROUND node.
       if (Is32Bit) {
+        // For 32-bit values, we need to add an FP_ROUND node (if we made it
+        // here, we know that all inputs are extending loads so this is safe).
         if (In.isUndef())
           Ops.push_back(DAG.getUNDEF(SrcVT));
         else {

@@ -60,8 +60,11 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}test_implicit:
-; 36 prepended implicit bytes + 4(out pointer) + 4*4 = 56
-; EG: VTX_READ_32 {{T[0-9]+\.[XYZW]}}, {{T[0-9]+\.[XYZW]}}, 56
+; 36 prepended implicit bytes + 4(out pointer) + 4*4 = 56 == KC0[3].Z
+; EG: MEM_RAT_CACHELESS STORE_RAW [[VAL:T[0-9]+.[XYZW]]], [[PTR:T[0-9]+.[XYZW]]]
+; EG-NOT: VTX_READ
+; EG-DAG: MOV {{\*?}} [[VAL]], KC0[3].Z
+; EG-DAG: LSHR {{\*? *}}[[PTR]], KC0[2].Y, literal
 define amdgpu_kernel void @test_implicit(i32 addrspace(1)* %out) #1 {
   %implicitarg.ptr = call noalias i8 addrspace(7)* @llvm.r600.implicitarg.ptr()
   %header.ptr = bitcast i8 addrspace(7)* %implicitarg.ptr to i32 addrspace(7)*
@@ -73,7 +76,7 @@ define amdgpu_kernel void @test_implicit(i32 addrspace(1)* %out) #1 {
 
 ; FUNC-LABEL: {{^}}test_implicit_dyn:
 ; 36 prepended implicit bytes + 8(out pointer + in) = 44
-; EG: VTX_READ_32 {{T[0-9]+\.[XYZW]}}, {{T[0-9]+\.[XYZW]}}, 44
+; EG: VTX_READ_32 {{T[0-9]+\.[XYZW]}}, {{T[0-9]+\.[XYZW]}}, 44, #3
 define amdgpu_kernel void @test_implicit_dyn(i32 addrspace(1)* %out, i32 %in) #1 {
   %implicitarg.ptr = call noalias i8 addrspace(7)* @llvm.r600.implicitarg.ptr()
   %header.ptr = bitcast i8 addrspace(7)* %implicitarg.ptr to i32 addrspace(7)*

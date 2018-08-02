@@ -7623,7 +7623,7 @@ static bool isAddSubOrSubAdd(const BuildVectorSDNode *BV,
   // adding/subtracting two integer/float elements.
   // Even-numbered elements in the input build vector are obtained from
   // subtracting/adding two integer/float elements.
-  unsigned Opc[2] {0, 0};
+  unsigned Opc[2] = {0, 0};
   for (unsigned i = 0, e = NumElts; i != e; ++i) {
     SDValue Op = BV->getOperand(i);
 
@@ -9095,6 +9095,28 @@ static SmallVector<int, 64> createTargetShuffleMask(ArrayRef<int> Mask,
     TargetMask[i] = (Zeroable[i] ? SM_SentinelZero : M);
   }
   return TargetMask;
+}
+
+// Attempt to create a shuffle mask from a VSELECT condition mask.
+static bool createShuffleMaskFromVSELECT(SmallVectorImpl<int> &Mask,
+                                         SDValue Cond) {
+  if (!ISD::isBuildVectorOfConstantSDNodes(Cond.getNode()))
+    return false;
+
+  unsigned Size = Cond.getValueType().getVectorNumElements();
+  Mask.resize(Size, SM_SentinelUndef);
+
+  for (int i = 0; i != (int)Size; ++i) {
+    SDValue CondElt = Cond.getOperand(i);
+    Mask[i] = i;
+    // Arbitrarily choose from the 2nd operand if the select condition element
+    // is undef.
+    // TODO: Can we do better by matching patterns such as even/odd?
+    if (CondElt.isUndef() || isNullConstant(CondElt))
+      Mask[i] += Size;
+  }
+
+  return true;
 }
 
 // Check if the shuffle mask is suitable for the AVX vpunpcklwd or vpunpckhwd
@@ -15135,26 +15157,15 @@ static SDValue lowerVSELECTtoVectorShuffle(SDValue Op,
   SDValue Cond = Op.getOperand(0);
   SDValue LHS = Op.getOperand(1);
   SDValue RHS = Op.getOperand(2);
-  SDLoc dl(Op);
   MVT VT = Op.getSimpleValueType();
-
-  if (!ISD::isBuildVectorOfConstantSDNodes(Cond.getNode()))
-    return SDValue();
-  auto *CondBV = cast<BuildVectorSDNode>(Cond);
 
   // Only non-legal VSELECTs reach this lowering, convert those into generic
   // shuffles and re-use the shuffle lowering path for blends.
   SmallVector<int, 32> Mask;
-  for (int i = 0, Size = VT.getVectorNumElements(); i < Size; ++i) {
-    SDValue CondElt = CondBV->getOperand(i);
-    int M = i;
-    // We can't map undef to undef here. They have different meanings. Treat
-    // as the same as zero.
-    if (CondElt.isUndef() || isNullConstant(CondElt))
-      M += Size;
-    Mask.push_back(M);
-  }
-  return DAG.getVectorShuffle(VT, dl, LHS, RHS, Mask);
+  if (createShuffleMaskFromVSELECT(Mask, Cond))
+    return DAG.getVectorShuffle(VT, SDLoc(Op), LHS, RHS, Mask);
+
+  return SDValue();
 }
 
 SDValue X86TargetLowering::LowerVSELECT(SDValue Op, SelectionDAG &DAG) const {
@@ -15793,7 +15804,7 @@ X86TargetLowering::LowerExternalSymbol(SDValue Op, SelectionDAG &DAG) const {
   Result = DAG.getNode(getGlobalWrapperKind(), DL, PtrVT, Result);
 
   // With PIC, the address is actually $g + Offset.
-  if (isPositionIndependent() && !Subtarget.is64Bit()) {
+  if (OpFlag) {
     Result =
         DAG.getNode(ISD::ADD, DL, PtrVT,
                     DAG.getNode(X86ISD::GlobalBaseReg, SDLoc(), PtrVT), Result);
@@ -31807,65 +31818,6 @@ static SDValue combineBitcast(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-// Match a binop + shuffle pyramid that represents a horizontal reduction over
-// the elements of a vector.
-// Returns the vector that is being reduced on, or SDValue() if a reduction
-// was not matched.
-static SDValue matchBinOpReduction(SDNode *Extract, unsigned &BinOp,
-                                   ArrayRef<ISD::NodeType> CandidateBinOps) {
-  // The pattern must end in an extract from index 0.
-  if ((Extract->getOpcode() != ISD::EXTRACT_VECTOR_ELT) ||
-      !isNullConstant(Extract->getOperand(1)))
-    return SDValue();
-
-  SDValue Op = Extract->getOperand(0);
-  unsigned Stages = Log2_32(Op.getValueType().getVectorNumElements());
-
-  // Match against one of the candidate binary ops.
-  if (llvm::none_of(CandidateBinOps, [Op](ISD::NodeType BinOp) {
-        return Op.getOpcode() == unsigned(BinOp);
-      }))
-    return SDValue();
-
-  // At each stage, we're looking for something that looks like:
-  // %s = shufflevector <8 x i32> %op, <8 x i32> undef,
-  //                    <8 x i32> <i32 2, i32 3, i32 undef, i32 undef,
-  //                               i32 undef, i32 undef, i32 undef, i32 undef>
-  // %a = binop <8 x i32> %op, %s
-  // Where the mask changes according to the stage. E.g. for a 3-stage pyramid,
-  // we expect something like:
-  // <4,5,6,7,u,u,u,u>
-  // <2,3,u,u,u,u,u,u>
-  // <1,u,u,u,u,u,u,u>
-  unsigned CandidateBinOp = Op.getOpcode();
-  for (unsigned i = 0; i < Stages; ++i) {
-    if (Op.getOpcode() != CandidateBinOp)
-      return SDValue();
-
-    ShuffleVectorSDNode *Shuffle =
-        dyn_cast<ShuffleVectorSDNode>(Op.getOperand(0).getNode());
-    if (Shuffle) {
-      Op = Op.getOperand(1);
-    } else {
-      Shuffle = dyn_cast<ShuffleVectorSDNode>(Op.getOperand(1).getNode());
-      Op = Op.getOperand(0);
-    }
-
-    // The first operand of the shuffle should be the same as the other operand
-    // of the binop.
-    if (!Shuffle || Shuffle->getOperand(0) != Op)
-      return SDValue();
-
-    // Verify the shuffle has the expected (at this stage of the pyramid) mask.
-    for (int Index = 0, MaskEnd = 1 << i; Index < MaskEnd; ++Index)
-      if (Shuffle->getMaskElt(Index) != MaskEnd + Index)
-        return SDValue();
-  }
-
-  BinOp = CandidateBinOp;
-  return Op;
-}
-
 // Given a select, detect the following pattern:
 // 1:    %2 = zext <N x i8> %0 to <N x i32>
 // 2:    %3 = zext <N x i8> %1 to <N x i32>
@@ -31980,8 +31932,8 @@ static SDValue combineHorizontalMinMaxResult(SDNode *Extract, SelectionDAG &DAG,
     return SDValue();
 
   // Check for SMAX/SMIN/UMAX/UMIN horizontal reduction patterns.
-  unsigned BinOp;
-  SDValue Src = matchBinOpReduction(
+  ISD::NodeType BinOp;
+  SDValue Src = DAG.matchBinOpReduction(
       Extract, BinOp, {ISD::SMAX, ISD::SMIN, ISD::UMAX, ISD::UMIN});
   if (!Src)
     return SDValue();
@@ -32060,8 +32012,8 @@ static SDValue combineHorizontalPredicateResult(SDNode *Extract,
     return SDValue();
 
   // Check for OR(any_of) and AND(all_of) horizontal reduction patterns.
-  unsigned BinOp = 0;
-  SDValue Match = matchBinOpReduction(Extract, BinOp, {ISD::OR, ISD::AND});
+  ISD::NodeType BinOp;
+  SDValue Match = DAG.matchBinOpReduction(Extract, BinOp, {ISD::OR, ISD::AND});
   if (!Match)
     return SDValue();
 
@@ -32143,8 +32095,8 @@ static SDValue combineBasicSADPattern(SDNode *Extract, SelectionDAG &DAG,
     return SDValue();
 
   // Match shuffle + add pyramid.
-  unsigned BinOp = 0;
-  SDValue Root = matchBinOpReduction(Extract, BinOp, {ISD::ADD});
+  ISD::NodeType BinOp;
+  SDValue Root = DAG.matchBinOpReduction(Extract, BinOp, {ISD::ADD});
 
   // The operand is expected to be zero extended from i8
   // (verified in detectZextAbsDiff).
@@ -32619,18 +32571,9 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
   // Convert vselects with constant condition into shuffles.
   if (ISD::isBuildVectorOfConstantSDNodes(Cond.getNode()) &&
       DCI.isBeforeLegalizeOps()) {
-    SmallVector<int, 64> Mask(VT.getVectorNumElements(), -1);
-    for (int i = 0, Size = Mask.size(); i != Size; ++i) {
-      SDValue CondElt = Cond->getOperand(i);
-      Mask[i] = i;
-      // Arbitrarily choose from the 2nd operand if the select condition element
-      // is undef.
-      // TODO: Can we do better by matching patterns such as even/odd?
-      if (CondElt.isUndef() || isNullConstant(CondElt))
-        Mask[i] += Size;
-    }
-
-    return DAG.getVectorShuffle(VT, DL, LHS, RHS, Mask);
+    SmallVector<int, 64> Mask;
+    if (createShuffleMaskFromVSELECT(Mask, Cond))
+      return DAG.getVectorShuffle(VT, DL, LHS, RHS, Mask);
   }
 
   // If we have SSE[12] support, try to form min/max nodes. SSE min/max
@@ -33454,10 +33397,13 @@ static SDValue combineCMov(SDNode *N, SelectionDAG &DAG,
     SDValue Add = TrueOp;
     SDValue Const = FalseOp;
     // Canonicalize the condition code for easier matching and output.
-    if (CC == X86::COND_E) {
+    if (CC == X86::COND_E)
       std::swap(Add, Const);
-      CC = X86::COND_NE;
-    }
+
+    // We might have replaced the constant in the cmov with the LHS of the
+    // compare. If so change it to the RHS of the compare.
+    if (Const == Cond.getOperand(0))
+      Const = Cond.getOperand(1);
 
     // Ok, now make sure that Add is (add (cttz X), C2) and Const is a constant.
     if (isa<ConstantSDNode>(Const) && Add.getOpcode() == ISD::ADD &&
@@ -33469,7 +33415,8 @@ static SDValue combineCMov(SDNode *N, SelectionDAG &DAG,
       // This should constant fold.
       SDValue Diff = DAG.getNode(ISD::SUB, DL, VT, Const, Add.getOperand(1));
       SDValue CMov = DAG.getNode(X86ISD::CMOV, DL, VT, Diff, Add.getOperand(0),
-                                 DAG.getConstant(CC, DL, MVT::i8), Cond);
+                                 DAG.getConstant(X86::COND_NE, DL, MVT::i8),
+                                 Cond);
       return DAG.getNode(ISD::ADD, DL, VT, CMov, Add.getOperand(1));
     }
   }

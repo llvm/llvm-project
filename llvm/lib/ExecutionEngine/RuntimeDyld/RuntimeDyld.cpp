@@ -249,13 +249,15 @@ RuntimeDyldImpl::loadObjectImpl(const object::ObjectFile &Obj) {
       return NameOrErr.takeError();
 
     // Compute JIT symbol flags.
-    JITSymbolFlags JITSymFlags = getJITSymbolFlags(*I);
+    auto JITSymFlags = getJITSymbolFlags(*I);
+    if (!JITSymFlags)
+      return JITSymFlags.takeError();
 
     // If this is a weak definition, check to see if there's a strong one.
     // If there is, skip this symbol (we won't be providing it: the strong
     // definition will). If there's no strong definition, make this definition
     // strong.
-    if (JITSymFlags.isWeak() || JITSymFlags.isCommon()) {
+    if (JITSymFlags->isWeak() || JITSymFlags->isCommon()) {
       // First check whether there's already a definition in this instance.
       // FIXME: Override existing weak definitions with strong ones.
       if (GlobalSymbolTable.count(Name))
@@ -265,12 +267,12 @@ RuntimeDyldImpl::loadObjectImpl(const object::ObjectFile &Obj) {
       // flags lookup earlier.
       auto FlagsI = SymbolFlags.find(Name);
       if (FlagsI == SymbolFlags.end() ||
-          (JITSymFlags.isWeak() && !FlagsI->second.isStrong()) ||
-          (JITSymFlags.isCommon() && FlagsI->second.isCommon())) {
-        if (JITSymFlags.isWeak())
-          JITSymFlags &= ~JITSymbolFlags::Weak;
-        if (JITSymFlags.isCommon()) {
-          JITSymFlags &= ~JITSymbolFlags::Common;
+          (JITSymFlags->isWeak() && !FlagsI->second.isStrong()) ||
+          (JITSymFlags->isCommon() && FlagsI->second.isCommon())) {
+        if (JITSymFlags->isWeak())
+          *JITSymFlags &= ~JITSymbolFlags::Weak;
+        if (JITSymFlags->isCommon()) {
+          *JITSymFlags &= ~JITSymbolFlags::Common;
           uint32_t Align = I->getAlignment();
           uint64_t Size = I->getCommonSize();
           if (!CommonAlign)
@@ -296,7 +298,7 @@ RuntimeDyldImpl::loadObjectImpl(const object::ObjectFile &Obj) {
                         << " SID: " << SectionID
                         << " Offset: " << format("%p", (uintptr_t)Addr)
                         << " flags: " << Flags << "\n");
-      GlobalSymbolTable[Name] = SymbolTableEntry(SectionID, Addr, JITSymFlags);
+      GlobalSymbolTable[Name] = SymbolTableEntry(SectionID, Addr, *JITSymFlags);
     } else if (SymType == object::SymbolRef::ST_Function ||
                SymType == object::SymbolRef::ST_Data ||
                SymType == object::SymbolRef::ST_Unknown ||
@@ -329,7 +331,7 @@ RuntimeDyldImpl::loadObjectImpl(const object::ObjectFile &Obj) {
                         << " Offset: " << format("%p", (uintptr_t)SectOffset)
                         << " flags: " << Flags << "\n");
       GlobalSymbolTable[Name] =
-          SymbolTableEntry(SectionID, SectOffset, JITSymFlags);
+          SymbolTableEntry(SectionID, SectOffset, *JITSymFlags);
     }
   }
 
@@ -642,7 +644,8 @@ void RuntimeDyldImpl::writeBytesUnaligned(uint64_t Value, uint8_t *Dst,
   }
 }
 
-JITSymbolFlags RuntimeDyldImpl::getJITSymbolFlags(const BasicSymbolRef &SR) {
+Expected<JITSymbolFlags>
+RuntimeDyldImpl::getJITSymbolFlags(const SymbolRef &SR) {
   return JITSymbolFlags::fromObjectSymbol(SR);
 }
 
@@ -683,11 +686,15 @@ Error RuntimeDyldImpl::emitCommonSymbols(const ObjectFile &Obj,
       Addr += AlignOffset;
       Offset += AlignOffset;
     }
-    JITSymbolFlags JITSymFlags = getJITSymbolFlags(Sym);
+    auto JITSymFlags = getJITSymbolFlags(Sym);
+
+    if (!JITSymFlags)
+      return JITSymFlags.takeError();
+
     LLVM_DEBUG(dbgs() << "Allocating common symbol " << Name << " address "
                       << format("%p", Addr) << "\n");
     GlobalSymbolTable[Name] =
-      SymbolTableEntry(SectionID, Offset, JITSymFlags);
+        SymbolTableEntry(SectionID, Offset, std::move(*JITSymFlags));
     Offset += Size;
     Addr += Size;
   }

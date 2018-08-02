@@ -903,7 +903,7 @@ SDValue R600TargetLowering::LowerImplicitParameter(SelectionDAG &DAG, EVT VT,
                                                    unsigned DwordOffset) const {
   unsigned ByteOffset = DwordOffset * 4;
   PointerType * PtrType = PointerType::get(VT.getTypeForEVT(*DAG.getContext()),
-                                      AMDGPUASI.CONSTANT_BUFFER_0);
+                                      AMDGPUASI.PARAM_I_ADDRESS);
 
   // We shouldn't be using an offset wider than 16-bits for implicit parameters.
   assert(isInt<16>(ByteOffset));
@@ -1457,33 +1457,17 @@ SDValue R600TargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
       return scalarizeVectorLoad(LoadNode, DAG);
   }
 
+  // This is still used for explicit load from addrspace(8)
   int ConstantBlock = ConstantAddressBlock(LoadNode->getAddressSpace());
   if (ConstantBlock > -1 &&
       ((LoadNode->getExtensionType() == ISD::NON_EXTLOAD) ||
        (LoadNode->getExtensionType() == ISD::ZEXTLOAD))) {
     SDValue Result;
-    if (isa<ConstantExpr>(LoadNode->getMemOperand()->getValue()) ||
-        isa<Constant>(LoadNode->getMemOperand()->getValue()) ||
+    if (isa<Constant>(LoadNode->getMemOperand()->getValue()) ||
         isa<ConstantSDNode>(Ptr)) {
-      SDValue Slots[4];
-      for (unsigned i = 0; i < 4; i++) {
-        // We want Const position encoded with the following formula :
-        // (((512 + (kc_bank << 12) + const_index) << 2) + chan)
-        // const_index is Ptr computed by llvm using an alignment of 16.
-        // Thus we add (((512 + (kc_bank << 12)) + chan ) * 4 here and
-        // then div by 4 at the ISel step
-        SDValue NewPtr = DAG.getNode(ISD::ADD, DL, Ptr.getValueType(), Ptr,
-            DAG.getConstant(4 * i + ConstantBlock * 16, DL, MVT::i32));
-        Slots[i] = DAG.getNode(AMDGPUISD::CONST_ADDRESS, DL, MVT::i32, NewPtr);
-      }
-      EVT NewVT = MVT::v4i32;
-      unsigned NumElements = 4;
-      if (VT.isVector()) {
-        NewVT = VT;
-        NumElements = VT.getVectorNumElements();
-      }
-      Result = DAG.getBuildVector(NewVT, DL, makeArrayRef(Slots, NumElements));
+      return constBufferLoad(LoadNode, LoadNode->getAddressSpace(), DAG);
     } else {
+      //TODO: Does this even work?
       // non-constant ptr can't be folded, keeps it as a v4f32 load
       Result = DAG.getNode(AMDGPUISD::CONST_ADDRESS, DL, MVT::v4i32,
           DAG.getNode(ISD::SRL, DL, MVT::i32, Ptr,
@@ -1622,7 +1606,7 @@ SDValue R600TargetLowering::LowerFormalArguments(
     }
 
     PointerType *PtrTy = PointerType::get(VT.getTypeForEVT(*DAG.getContext()),
-                                          AMDGPUASI.CONSTANT_BUFFER_0);
+                                          AMDGPUASI.PARAM_I_ADDRESS);
 
     // i64 isn't a legal type, so the register type used ends up as i32, which
     // isn't expected here. It attempts to create this sextload, but it ends up
@@ -1646,17 +1630,17 @@ SDValue R600TargetLowering::LowerFormalArguments(
 
     unsigned ValBase = ArgLocs[In.getOrigArgIndex()].getLocMemOffset();
     unsigned PartOffset = VA.getLocMemOffset();
+    unsigned Alignment = MinAlign(VT.getStoreSize(), PartOffset);
 
     MachinePointerInfo PtrInfo(UndefValue::get(PtrTy), PartOffset - ValBase);
     SDValue Arg = DAG.getLoad(
         ISD::UNINDEXED, Ext, VT, DL, Chain,
         DAG.getConstant(PartOffset, DL, MVT::i32), DAG.getUNDEF(MVT::i32),
         PtrInfo,
-        MemVT, /* Alignment = */ 4, MachineMemOperand::MONonTemporal |
+        MemVT, Alignment, MachineMemOperand::MONonTemporal |
                                         MachineMemOperand::MODereferenceable |
                                         MachineMemOperand::MOInvariant);
 
-    // 4 is the preferred alignment for the CONSTANT memory space.
     InVals.push_back(Arg);
   }
   return Chain;
@@ -1802,6 +1786,52 @@ SDValue R600TargetLowering::OptimizeSwizzle(SDValue BuildVector, SDValue Swz[4],
   }
 
   return BuildVector;
+}
+
+SDValue R600TargetLowering::constBufferLoad(LoadSDNode *LoadNode, int Block,
+                                            SelectionDAG &DAG) const {
+  SDLoc DL(LoadNode);
+  EVT VT = LoadNode->getValueType(0);
+  SDValue Chain = LoadNode->getChain();
+  SDValue Ptr = LoadNode->getBasePtr();
+  assert (isa<ConstantSDNode>(Ptr));
+
+  //TODO: Support smaller loads
+  if (LoadNode->getMemoryVT().getScalarType() != MVT::i32 || !ISD::isNON_EXTLoad(LoadNode))
+    return SDValue();
+
+  if (LoadNode->getAlignment() < 4)
+    return SDValue();
+
+  int ConstantBlock = ConstantAddressBlock(Block);
+
+  SDValue Slots[4];
+  for (unsigned i = 0; i < 4; i++) {
+    // We want Const position encoded with the following formula :
+    // (((512 + (kc_bank << 12) + const_index) << 2) + chan)
+    // const_index is Ptr computed by llvm using an alignment of 16.
+    // Thus we add (((512 + (kc_bank << 12)) + chan ) * 4 here and
+    // then div by 4 at the ISel step
+    SDValue NewPtr = DAG.getNode(ISD::ADD, DL, Ptr.getValueType(), Ptr,
+        DAG.getConstant(4 * i + ConstantBlock * 16, DL, MVT::i32));
+    Slots[i] = DAG.getNode(AMDGPUISD::CONST_ADDRESS, DL, MVT::i32, NewPtr);
+  }
+  EVT NewVT = MVT::v4i32;
+  unsigned NumElements = 4;
+  if (VT.isVector()) {
+    NewVT = VT;
+    NumElements = VT.getVectorNumElements();
+  }
+  SDValue Result = DAG.getBuildVector(NewVT, DL, makeArrayRef(Slots, NumElements));
+  if (!VT.isVector()) {
+    Result = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32, Result,
+                         DAG.getConstant(0, DL, MVT::i32));
+  }
+  SDValue MergedValues[2] = {
+    Result,
+    Chain
+  };
+  return DAG.getMergeValues(MergedValues, DL);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2022,6 +2052,16 @@ SDValue R600TargetLowering::PerformDAGCombine(SDNode *N,
     NewArgs[1] = OptimizeSwizzle(N->getOperand(1), &NewArgs[2], DAG, DL);
     return DAG.getNode(AMDGPUISD::TEXTURE_FETCH, DL, N->getVTList(), NewArgs);
   }
+
+  case ISD::LOAD: {
+    LoadSDNode *LoadNode = cast<LoadSDNode>(N);
+    SDValue Ptr = LoadNode->getBasePtr();
+    if (LoadNode->getAddressSpace() == AMDGPUAS::PARAM_I_ADDRESS &&
+         isa<ConstantSDNode>(Ptr))
+      return constBufferLoad(LoadNode, AMDGPUAS::CONSTANT_BUFFER_0, DAG);
+    break;
+  }
+
   default: break;
   }
 

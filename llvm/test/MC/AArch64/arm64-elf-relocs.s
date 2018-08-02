@@ -269,3 +269,10 @@ trickQuestion:
 // certainly be accepted when assembling.
    add x3, x5, :lo12:imm
 // CHECK: add x3, x5, :lo12:imm
+
+   ldr x24, #:got:sym
+   ldr d22, :got:sym
+// CHECK: ldr x24, :got:sym
+// CHECK: ldr d22, :got:sym
+// CHECK-OBJ-LP64: R_AARCH64_GOT_LD_PREL19 sym
+// CHECK-OBJ-LP64: R_AARCH64_GOT_LD_PREL19 sym

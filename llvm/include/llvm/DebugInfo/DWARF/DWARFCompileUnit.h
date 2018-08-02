@@ -22,16 +22,16 @@ public:
                    const DWARFDebugAbbrev *DA, const DWARFSection *RS,
                    StringRef SS, const DWARFSection &SOS,
                    const DWARFSection *AOS, const DWARFSection &LS, bool LE,
-                   bool IsDWO, const DWARFUnitSectionBase &UnitSection)
+                   bool IsDWO, const DWARFUnitVector &UnitVector)
       : DWARFUnit(Context, Section, Header, DA, RS, SS, SOS, AOS, LS, LE, IsDWO,
-                  UnitSection) {}
+                  UnitVector) {}
 
-  // VTable anchor.
+  /// VTable anchor.
   ~DWARFCompileUnit() override;
-
-  void dump(raw_ostream &OS, DIDumpOptions DumpOpts);
-
-  static const DWARFSectionKind Section = DW_SECT_INFO;
+  /// Dump this compile unit to \p OS.
+  void dump(raw_ostream &OS, DIDumpOptions DumpOpts) override;
+  /// Enable LLVM-style RTTI.
+  static bool classof(const DWARFUnit *U) { return !U->isTypeUnit(); }
 };
 
 } // end namespace llvm

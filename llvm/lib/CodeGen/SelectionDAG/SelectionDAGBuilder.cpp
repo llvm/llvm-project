@@ -5693,43 +5693,51 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
     SDValue Y = getValue(I.getArgOperand(1));
     SDValue Z = getValue(I.getArgOperand(2));
     EVT VT = X.getValueType();
+    SDValue BitWidthC = DAG.getConstant(VT.getScalarSizeInBits(), sdl, VT);
+    SDValue Zero = DAG.getConstant(0, sdl, VT);
+    SDValue ShAmt = DAG.getNode(ISD::UREM, sdl, VT, Z, BitWidthC);
 
-    // When X == Y, this is rotate. Create the node directly if legal.
-    // TODO: This should also be done if the operation is custom, but we have
-    // to make sure targets are handling the modulo shift amount as expected.
-    // TODO: If the rotate direction (left or right) corresponding to the shift
-    // is not available, adjust the shift value and invert the direction.
-    auto RotateOpcode = IsFSHL ? ISD::ROTL : ISD::ROTR;
-    if (X == Y && TLI.isOperationLegal(RotateOpcode, VT)) {
-      setValue(&I, DAG.getNode(RotateOpcode, sdl, VT, X, Z));
+    // When X == Y, this is rotate. If the data type has a power-of-2 size, we
+    // avoid the select that is necessary in the general case to filter out
+    // the 0-shift possibility that leads to UB.
+    if (X == Y && isPowerOf2_32(VT.getScalarSizeInBits())) {
+      // TODO: This should also be done if the operation is custom, but we have
+      // to make sure targets are handling the modulo shift amount as expected.
+      // TODO: If the rotate direction (left or right) corresponding to the
+      // shift is not available, adjust the shift value and invert the
+      // direction.
+      auto RotateOpcode = IsFSHL ? ISD::ROTL : ISD::ROTR;
+      if (TLI.isOperationLegal(RotateOpcode, VT)) {
+        setValue(&I, DAG.getNode(RotateOpcode, sdl, VT, X, Z));
+        return nullptr;
+      }
+      // fshl (rotl): (X << (Z % BW)) | (X >> ((0 - Z) % BW))
+      // fshr (rotr): (X << ((0 - Z) % BW)) | (X >> (Z % BW))
+      SDValue NegZ = DAG.getNode(ISD::SUB, sdl, VT, Zero, Z);
+      SDValue NShAmt = DAG.getNode(ISD::UREM, sdl, VT, NegZ, BitWidthC);
+      SDValue ShX = DAG.getNode(ISD::SHL, sdl, VT, X, IsFSHL ? ShAmt : NShAmt);
+      SDValue ShY = DAG.getNode(ISD::SRL, sdl, VT, X, IsFSHL ? NShAmt : ShAmt);
+      setValue(&I, DAG.getNode(ISD::OR, sdl, VT, ShX, ShY));
       return nullptr;
     }
 
-    // Get the shift amount and inverse shift amount, modulo the bit-width.
-    SDValue BitWidthC = DAG.getConstant(VT.getScalarSizeInBits(), sdl, VT);
-    SDValue ShAmt = DAG.getNode(ISD::UREM, sdl, VT, Z, BitWidthC);
-    SDValue NegZ = DAG.getNode(ISD::SUB, sdl, VT, BitWidthC, Z);
-    SDValue InvShAmt = DAG.getNode(ISD::UREM, sdl, VT, NegZ, BitWidthC);
-
-    // fshl: (X << (Z % BW)) | (Y >> ((BW - Z) % BW))
-    // fshr: (X << ((BW - Z) % BW)) | (Y >> (Z % BW))
+    // fshl: (X << (Z % BW)) | (Y >> (BW - (Z % BW)))
+    // fshr: (X << (BW - (Z % BW))) | (Y >> (Z % BW))
+    SDValue InvShAmt = DAG.getNode(ISD::SUB, sdl, VT, BitWidthC, ShAmt);
     SDValue ShX = DAG.getNode(ISD::SHL, sdl, VT, X, IsFSHL ? ShAmt : InvShAmt);
     SDValue ShY = DAG.getNode(ISD::SRL, sdl, VT, Y, IsFSHL ? InvShAmt : ShAmt);
-    SDValue Res = DAG.getNode(ISD::OR, sdl, VT, ShX, ShY);
+    SDValue Or = DAG.getNode(ISD::OR, sdl, VT, ShX, ShY);
 
-    // If (Z % BW == 0), then (BW - Z) % BW is also zero, so the result would
-    // be X | Y. If X == Y (rotate), that's fine. If not, we have to select.
-    if (X != Y) {
-      SDValue Zero = DAG.getConstant(0, sdl, VT);
-      EVT CCVT = MVT::i1;
-      if (VT.isVector())
-        CCVT = EVT::getVectorVT(*Context, CCVT, VT.getVectorNumElements());
-      // For fshl, 0 shift returns the 1st arg (X).
-      // For fshr, 0 shift returns the 2nd arg (Y).
-      SDValue IsZeroShift = DAG.getSetCC(sdl, CCVT, ShAmt, Zero, ISD::SETEQ);
-      Res = DAG.getSelect(sdl, VT, IsZeroShift, IsFSHL ? X : Y, Res);
-    }
-    setValue(&I, Res);
+    // If (Z % BW == 0), then the opposite direction shift is shift-by-bitwidth,
+    // and that is undefined. We must compare and select to avoid UB.
+    EVT CCVT = MVT::i1;
+    if (VT.isVector())
+      CCVT = EVT::getVectorVT(*Context, CCVT, VT.getVectorNumElements());
+
+    // For fshl, 0-shift returns the 1st arg (X).
+    // For fshr, 0-shift returns the 2nd arg (Y).
+    SDValue IsZeroShift = DAG.getSetCC(sdl, CCVT, ShAmt, Zero, ISD::SETEQ);
+    setValue(&I, DAG.getSelect(sdl, VT, IsZeroShift, IsFSHL ? X : Y, Or));
     return nullptr;
   }
   case Intrinsic::stacksave: {

@@ -45,6 +45,7 @@ class TargetLoweringObjectFile : public MCObjectFileInfo {
 protected:
   bool SupportIndirectSymViaGOTPCRel = false;
   bool SupportGOTPCRelWithOffset = true;
+  bool SupportDebugThreadLocalLocation = true;
 
   /// This section contains the static constructor pointer list.
   MCSection *StaticCtorSection = nullptr;
@@ -168,6 +169,11 @@ public:
   /// binary expression with an offset?
   bool supportGOTPCRelWithOffset() const {
     return SupportGOTPCRelWithOffset;
+  }
+
+  /// Target supports TLS offset relocation in debug section?
+  bool supportDebugThreadLocalLocation() const {
+    return SupportDebugThreadLocalLocation;
   }
 
   /// Get the target specific PC relative GOT entry relocation
