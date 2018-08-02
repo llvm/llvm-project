@@ -9380,9 +9380,11 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
       // qualified with an address space.
       char *End;
       unsigned AddrSpace = strtoul(Str, &End, 10);
-      if (End != Str && AddrSpace != 0) {
-        Type = Context.getAddrSpaceQualType(Type,
-                                            getLangASFromTargetAS(AddrSpace));
+      if (End != Str) {
+        // Note AddrSpace == 0 is not the same as an unspecified address space.
+        Type = Context.getAddrSpaceQualType(
+          Type,
+          Context.getLangASForBuiltinAddressSpace(AddrSpace));
         Str = End;
       }
       if (c == '*')
@@ -10316,6 +10318,16 @@ QualType ASTContext::getCorrespondingSaturatedType(QualType Ty) const {
     case BuiltinType::ULongFract:
       return SatUnsignedLongFractTy;
   }
+}
+
+LangAS ASTContext::getLangASForBuiltinAddressSpace(unsigned AS) const {
+  if (LangOpts.OpenCL)
+    return getTargetInfo().getOpenCLBuiltinAddressSpace(AS);
+
+  if (LangOpts.CUDA)
+    return getTargetInfo().getCUDABuiltinAddressSpace(AS);
+
+  return getLangASFromTargetAS(AS);
 }
 
 // Explicitly instantiate this in case a Redeclarable<T> is used from a TU that

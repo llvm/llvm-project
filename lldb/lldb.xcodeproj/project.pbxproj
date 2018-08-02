@@ -65,6 +65,7 @@
 /* End PBXAggregateTarget section */
 
 /* Begin PBXBuildFile section */
+		228B1B672113340200E61C70 /* ClangHighlighter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 58A080AB2112AABB00D5580F /* ClangHighlighter.cpp */; };
 		268900E813353E6F00698AC0 /* ABI.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 497E7B9D1188F6690065CCA1 /* ABI.cpp */; };
 		26DB3E161379E7AD0080DC73 /* ABIMacOSX_arm.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26DB3E071379E7AD0080DC73 /* ABIMacOSX_arm.cpp */; };
 		26DB3E191379E7AD0080DC73 /* ABIMacOSX_arm64.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26DB3E0B1379E7AD0080DC73 /* ABIMacOSX_arm64.cpp */; };
@@ -1283,8 +1284,6 @@
 			dstPath = "$(DEVELOPER_INSTALL_DIR)/usr/share/man/man1";
 			dstSubfolderSpec = 0;
 			files = (
-				58A080AE2112AAC500D5580F /* ClangHighlighter.h in CopyFiles */,
-				58A080AC2112AABB00D5580F /* ClangHighlighter.cpp in CopyFiles */,
 				AF90106515AB7D3600FF120D /* lldb.1 in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 1;
@@ -7958,6 +7957,7 @@
 				268900F313353E6F00698AC0 /* StackFrame.cpp in Sources */,
 				268900F413353E6F00698AC0 /* StackFrameList.cpp in Sources */,
 				268900F513353E6F00698AC0 /* StackID.cpp in Sources */,
+				228B1B672113340200E61C70 /* ClangHighlighter.cpp in Sources */,
 				268900F613353E6F00698AC0 /* StopInfo.cpp in Sources */,
 				256CBDB41ADD0EFD00BC6CDC /* RegisterContextPOSIXCore_arm.cpp in Sources */,
 				267F684F1CC02E270086832B /* RegisterContextPOSIXCore_s390x.cpp in Sources */,

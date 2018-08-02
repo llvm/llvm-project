@@ -3703,6 +3703,16 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
       // we need to do a bit cast.
       llvm::Type *PTy = FTy->getParamType(i);
       if (PTy != ArgValue->getType()) {
+        // XXX - vector of pointers?
+        if (auto *PtrTy = dyn_cast<llvm::PointerType>(PTy)) {
+          if (PtrTy->getAddressSpace() !=
+              ArgValue->getType()->getPointerAddressSpace()) {
+            ArgValue = Builder.CreateAddrSpaceCast(
+              ArgValue,
+              ArgValue->getType()->getPointerTo(PtrTy->getAddressSpace()));
+          }
+        }
+
         assert(PTy->canLosslesslyBitCastTo(FTy->getParamType(i)) &&
                "Must be able to losslessly bit cast to param");
         ArgValue = Builder.CreateBitCast(ArgValue, PTy);
@@ -3719,6 +3729,14 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
       RetTy = ConvertType(BuiltinRetType);
 
     if (RetTy != V->getType()) {
+      // XXX - vector of pointers?
+      if (auto *PtrTy = dyn_cast<llvm::PointerType>(RetTy)) {
+        if (PtrTy->getAddressSpace() != V->getType()->getPointerAddressSpace()) {
+          V = Builder.CreateAddrSpaceCast(
+            V, V->getType()->getPointerTo(PtrTy->getAddressSpace()));
+        }
+      }
+
       assert(V->getType()->canLosslesslyBitCastTo(RetTy) &&
              "Must be able to losslessly bit cast result type");
       V = Builder.CreateBitCast(V, RetTy);
@@ -11039,50 +11057,6 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     CI->setConvergent();
     return CI;
   }
-  case AMDGPU::BI__builtin_amdgcn_ds_faddf:
-  case AMDGPU::BI__builtin_amdgcn_ds_fminf:
-  case AMDGPU::BI__builtin_amdgcn_ds_fmaxf: {
-    llvm::SmallVector<llvm::Value *, 5> Args;
-    for (unsigned I = 0; I != 5; ++I)
-      Args.push_back(EmitScalarExpr(E->getArg(I)));
-    const llvm::Type *PtrTy = Args[0]->getType();
-    // check pointer parameter
-    if (!PtrTy->isPointerTy() ||
-        E->getArg(0)
-                ->getType()
-                ->getPointeeType()
-                .getQualifiers()
-                .getAddressSpace() != LangAS::opencl_local ||
-        !PtrTy->getPointerElementType()->isFloatTy()) {
-       CGM.Error(E->getArg(0)->getLocStart(),
-                "parameter should have type \"local float*\"");
-      return nullptr;
-    }
-    // check float parameter
-    if (!Args[1]->getType()->isFloatTy()) {
-      CGM.Error(E->getArg(1)->getLocStart(),
-                "parameter should have type \"float\"");
-      return nullptr;
-    }
-
-    Intrinsic::ID ID;
-    switch (BuiltinID) {
-    case AMDGPU::BI__builtin_amdgcn_ds_faddf:
-      ID = Intrinsic::amdgcn_ds_fadd;
-      break;
-    case AMDGPU::BI__builtin_amdgcn_ds_fminf:
-      ID = Intrinsic::amdgcn_ds_fmin;
-      break;
-    case AMDGPU::BI__builtin_amdgcn_ds_fmaxf:
-      ID = Intrinsic::amdgcn_ds_fmax;
-      break;
-    default:
-      llvm_unreachable("Unknown BuiltinID");
-    }
-    Value *F = CGM.getIntrinsic(ID);
-    return Builder.CreateCall(F, Args);
-  }
-
   // amdgcn workitem
   case AMDGPU::BI__builtin_amdgcn_workitem_id_x:
     return emitRangedBuiltin(*this, Intrinsic::amdgcn_workitem_id_x, 0, 1024);

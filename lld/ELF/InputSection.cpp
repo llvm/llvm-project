@@ -259,9 +259,6 @@ std::string InputSectionBase::getLocation(uint64_t Offset) {
 //
 //  Returns an empty string if there's no way to get line info.
 std::string InputSectionBase::getSrcMsg(const Symbol &Sym, uint64_t Offset) {
-  // Synthetic sections don't have input files.
-  if (!File)
-    return "";
   return File->getSrcMsg(Sym, *this, Offset);
 }
 
@@ -275,9 +272,6 @@ std::string InputSectionBase::getSrcMsg(const Symbol &Sym, uint64_t Offset) {
 //
 //   path/to/foo.o:(function bar) in archive path/to/bar.a
 std::string InputSectionBase::getObjMsg(uint64_t Off) {
-  // Synthetic sections don't have input files.
-  if (!File)
-    return ("<internal>:(" + Name + "+0x" + utohexstr(Off) + ")").str();
   std::string Filename = File->getName();
 
   std::string Archive;
@@ -524,11 +518,6 @@ static uint64_t getRelocTargetVA(const InputFile *File, RelType Type, int64_t A,
   case R_GOT_PC:
   case R_RELAX_TLS_GD_TO_IE:
     return Sym.getGotVA() + A - P;
-  case R_HINT:
-  case R_NONE:
-  case R_TLSDESC_CALL:
-  case R_TLSLD_HINT:
-    llvm_unreachable("cannot relocate hint relocs");
   case R_MIPS_GOTREL:
     return Sym.getVA(A) - InX::MipsGot->getGp(File);
   case R_MIPS_GOT_GP:
@@ -674,8 +663,9 @@ static uint64_t getRelocTargetVA(const InputFile *File, RelType Type, int64_t A,
     return InX::Got->getTlsIndexOff() + A;
   case R_TLSLD_PC:
     return InX::Got->getTlsIndexVA() + A - P;
+  default:
+    llvm_unreachable("invalid expression");
   }
-  llvm_unreachable("Invalid expression");
 }
 
 // This function applies relocations to sections without SHF_ALLOC bit.
@@ -898,13 +888,8 @@ void InputSectionBase::adjustSplitStackFunctionPrologues(uint8_t *Buf,
     if (Rel.Sym->isLocal())
       continue;
 
-    Defined *D = dyn_cast<Defined>(Rel.Sym);
-    // A reference to an undefined symbol was an error, and should not
-    // have gotten to this point.
-    if (!D)
-      continue;
-
     // Ignore calls into the split-stack api.
+    Defined *D = cast<Defined>(Rel.Sym);
     if (D->getName().startswith("__morestack")) {
       if (D->getName().equals("__morestack"))
         MorestackCalls.push_back(&Rel);

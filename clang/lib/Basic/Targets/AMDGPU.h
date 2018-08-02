@@ -378,6 +378,27 @@ public:
     }
   }
 
+  LangAS getOpenCLBuiltinAddressSpace(unsigned AS) const override {
+    switch (AS) {
+    case 0:
+      return LangAS::opencl_generic;
+    case 1:
+      return LangAS::opencl_global;
+    case 3:
+      return LangAS::opencl_local;
+    case 4:
+      return LangAS::opencl_constant;
+    case 5:
+      return LangAS::opencl_private;
+    default:
+      return getLangASFromTargetAS(AS);
+    }
+  }
+
+  LangAS getCUDABuiltinAddressSpace(unsigned AS) const override {
+    return LangAS::Default;
+  }
+
   llvm::Optional<LangAS> getConstantAddressSpace() const override {
     return getLangASFromTargetAS(Constant);
   }
