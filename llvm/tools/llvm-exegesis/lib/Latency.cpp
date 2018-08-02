@@ -108,6 +108,7 @@ const char *LatencyBenchmarkRunner::getCounterName() const {
 
 std::vector<BenchmarkMeasure>
 LatencyBenchmarkRunner::runMeasurements(const ExecutableFunction &Function,
+                                        ScratchSpace &Scratch,
                                         const unsigned NumRepetitions) const {
   // Cycle measurements include some overhead from the kernel. Repeat the
   // measure several times and take the minimum value.
@@ -121,8 +122,9 @@ LatencyBenchmarkRunner::runMeasurements(const ExecutableFunction &Function,
     llvm::report_fatal_error("invalid perf event");
   for (size_t I = 0; I < NumMeasurements; ++I) {
     pfm::Counter Counter(CyclesPerfEvent);
+    Scratch.clear();
     Counter.start();
-    Function();
+    Function(Scratch.ptr());
     Counter.stop();
     const int64_t Value = Counter.read();
     if (Value < MinLatency)

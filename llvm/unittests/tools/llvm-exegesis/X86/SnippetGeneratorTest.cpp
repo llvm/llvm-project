@@ -18,6 +18,9 @@
 #include <unordered_set>
 
 namespace exegesis {
+
+void InitializeX86ExegesisTarget();
+
 namespace {
 
 using testing::AnyOf;
@@ -41,6 +44,7 @@ protected:
     LLVMInitializeX86TargetMC();
     LLVMInitializeX86Target();
     LLVMInitializeX86AsmPrinter();
+    InitializeX86ExegesisTarget();
   }
 
   const LLVMState State;
@@ -215,6 +219,30 @@ TEST_F(UopsSnippetGeneratorTest, NoTiedVariables) {
   EXPECT_THAT(II.VariableValues[3], IsInvalid());
 }
 
+TEST_F(UopsSnippetGeneratorTest, MemoryUse) {
+  // Mov32rm reads from memory.
+  const unsigned Opcode = llvm::X86::MOV32rm;
+  const SnippetPrototype Proto = checkAndGetConfigurations(Opcode);
+  EXPECT_THAT(Proto.Explanation, HasSubstr("no tied variables"));
+  ASSERT_THAT(Proto.Snippet,
+              SizeIs(UopsBenchmarkRunner::kMinNumDifferentAddresses));
+  const InstructionInstance &II = Proto.Snippet[0];
+  EXPECT_THAT(II.getOpcode(), Opcode);
+  ASSERT_THAT(II.VariableValues, SizeIs(6));
+  EXPECT_EQ(II.VariableValues[2].getImm(), 1);
+  EXPECT_EQ(II.VariableValues[3].getReg(), 0u);
+  EXPECT_EQ(II.VariableValues[4].getImm(), 0);
+  EXPECT_EQ(II.VariableValues[5].getReg(), 0u);
+}
+
+TEST_F(UopsSnippetGeneratorTest, MemoryUse_Movsb) {
+  // MOVSB writes to scratch memory register.
+  const unsigned Opcode = llvm::X86::MOVSB;
+  auto Error = Runner.generatePrototype(Opcode).takeError();
+  EXPECT_TRUE((bool)Error);
+  llvm::consumeError(std::move(Error));
+}
+
 class FakeBenchmarkRunner : public BenchmarkRunner {
 public:
   FakeBenchmarkRunner(const LLVMState &State)
@@ -232,7 +260,7 @@ private:
   }
 
   std::vector<BenchmarkMeasure>
-  runMeasurements(const ExecutableFunction &EF,
+  runMeasurements(const ExecutableFunction &EF, ScratchSpace &Scratch,
                   const unsigned NumRepetitions) const override {
     return {};
   }

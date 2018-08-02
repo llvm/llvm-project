@@ -272,6 +272,8 @@ public:
 
   bool SetUseColor(bool use_color);
 
+  bool GetHighlightSource() const;
+
   lldb::StopShowColumn GetStopShowColumn() const;
 
   const FormatEntity::Entry *GetStopShowColumnAnsiPrefix() const;

@@ -962,6 +962,7 @@ MCSection *MCObjectFileInfo::getDwarfTypesSection(uint64_t Hash) const {
                        "format: not implemented.");
     break;
   }
+  llvm_unreachable("Unknown ObjectFormatType");
 }
 
 MCSection *

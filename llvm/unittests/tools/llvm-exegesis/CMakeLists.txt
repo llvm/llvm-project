@@ -12,6 +12,7 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_unittest(LLVMExegesisTests
   BenchmarkResultTest.cpp
+  BenchmarkRunnerTest.cpp
   ClusteringTest.cpp
   PerfHelperTest.cpp
   )

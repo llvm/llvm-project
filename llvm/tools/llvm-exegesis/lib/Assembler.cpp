@@ -66,12 +66,16 @@ static bool addPass(llvm::PassManagerBase &PM, llvm::StringRef PassName,
   return false;
 }
 
-// Creates a void MachineFunction with no argument.
+// Creates a void(int8*) MachineFunction.
 static llvm::MachineFunction &
-createVoidVoidMachineFunction(llvm::StringRef FunctionID, llvm::Module *Module,
-                              llvm::MachineModuleInfo *MMI) {
+createVoidVoidPtrMachineFunction(llvm::StringRef FunctionID,
+                                 llvm::Module *Module,
+                                 llvm::MachineModuleInfo *MMI) {
   llvm::Type *const ReturnType = llvm::Type::getInt32Ty(Module->getContext());
-  llvm::FunctionType *FunctionType = llvm::FunctionType::get(ReturnType, false);
+  llvm::Type *const MemParamType = llvm::PointerType::get(
+      llvm::Type::getInt8Ty(Module->getContext()), 0 /*default address space*/);
+  llvm::FunctionType *FunctionType =
+      llvm::FunctionType::get(ReturnType, {MemParamType}, false);
   llvm::Function *const F = llvm::Function::Create(
       FunctionType, llvm::GlobalValue::InternalLinkage, FunctionID, Module);
   // Making sure we can create a MachineFunction out of this Function even if it
@@ -81,9 +85,12 @@ createVoidVoidMachineFunction(llvm::StringRef FunctionID, llvm::Module *Module,
 }
 
 static void fillMachineFunction(llvm::MachineFunction &MF,
+                                llvm::ArrayRef<unsigned> LiveIns,
                                 llvm::ArrayRef<llvm::MCInst> Instructions) {
   llvm::MachineBasicBlock *MBB = MF.CreateMachineBasicBlock();
   MF.push_back(MBB);
+  for (const unsigned Reg : LiveIns)
+    MBB->addLiveIn(Reg);
   const llvm::MCInstrInfo *MCII = MF.getTarget().getMCInstrInfo();
   llvm::DebugLoc DL;
   for (const llvm::MCInst &Inst : Instructions) {
@@ -134,13 +141,14 @@ llvm::BitVector getFunctionReservedRegs(const llvm::TargetMachine &TM) {
   std::unique_ptr<llvm::MachineModuleInfo> MMI =
       llvm::make_unique<llvm::MachineModuleInfo>(&TM);
   llvm::MachineFunction &MF =
-      createVoidVoidMachineFunction(FunctionID, Module.get(), MMI.get());
+      createVoidVoidPtrMachineFunction(FunctionID, Module.get(), MMI.get());
   // Saving reserved registers for client.
   return MF.getSubtarget().getRegisterInfo()->getReservedRegs(MF);
 }
 
 void assembleToStream(const ExegesisTarget &ET,
                       std::unique_ptr<llvm::LLVMTargetMachine> TM,
+                      llvm::ArrayRef<unsigned> LiveIns,
                       llvm::ArrayRef<unsigned> RegsToDef,
                       llvm::ArrayRef<llvm::MCInst> Instructions,
                       llvm::raw_pwrite_stream &AsmStream) {
@@ -151,13 +159,17 @@ void assembleToStream(const ExegesisTarget &ET,
   std::unique_ptr<llvm::MachineModuleInfo> MMI =
       llvm::make_unique<llvm::MachineModuleInfo>(TM.get());
   llvm::MachineFunction &MF =
-      createVoidVoidMachineFunction(FunctionID, Module.get(), MMI.get());
+      createVoidVoidPtrMachineFunction(FunctionID, Module.get(), MMI.get());
 
   // We need to instruct the passes that we're done with SSA and virtual
   // registers.
   auto &Properties = MF.getProperties();
   Properties.set(llvm::MachineFunctionProperties::Property::NoVRegs);
   Properties.reset(llvm::MachineFunctionProperties::Property::IsSSA);
+
+  for (const unsigned Reg : LiveIns)
+    MF.getRegInfo().addLiveIn(Reg);
+
   bool IsSnippetSetupComplete = false;
   std::vector<llvm::MCInst> SnippetWithSetup =
       generateSnippetSetupCode(RegsToDef, ET, *TM, IsSnippetSetupComplete);
@@ -176,7 +188,7 @@ void assembleToStream(const ExegesisTarget &ET,
   MF.getRegInfo().freezeReservedRegs(MF);
 
   // Fill the MachineFunction from the instructions.
-  fillMachineFunction(MF, Instructions);
+  fillMachineFunction(MF, LiveIns, Instructions);
 
   // We create the pass manager, run the passes to populate AsmBuffer.
   llvm::MCContext &MCContext = MMI->getContext();

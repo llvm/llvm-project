@@ -13,6 +13,7 @@
 #include "BenchmarkRunner.h"
 #include "MCInstrDescView.h"
 #include "PerfHelper.h"
+#include "Target.h"
 
 // FIXME: Load constants into registers (e.g. with fld1) to not break
 // instructions like x87.
@@ -84,19 +85,11 @@ static bool hasUnknownOperand(const llvm::MCOperandInfo &OpInfo) {
   return OpInfo.OperandType == llvm::MCOI::OPERAND_UNKNOWN;
 }
 
-// FIXME: Handle memory, see PR36905.
-static bool hasMemoryOperand(const llvm::MCOperandInfo &OpInfo) {
-  return OpInfo.OperandType == llvm::MCOI::OPERAND_MEMORY;
-}
-
 llvm::Error
 UopsBenchmarkRunner::isInfeasible(const llvm::MCInstrDesc &MCInstrDesc) const {
   if (llvm::any_of(MCInstrDesc.operands(), hasUnknownOperand))
     return llvm::make_error<BenchmarkFailure>(
         "Infeasible : has unknown operands");
-  if (llvm::any_of(MCInstrDesc.operands(), hasMemoryOperand))
-    return llvm::make_error<BenchmarkFailure>(
-        "Infeasible : has memory operands");
   return llvm::Error::success();
 }
 
@@ -131,18 +124,70 @@ static void remove(llvm::BitVector &a, const llvm::BitVector &b) {
 
 UopsBenchmarkRunner::~UopsBenchmarkRunner() = default;
 
+void UopsBenchmarkRunner::instantiateMemoryOperands(
+    const unsigned ScratchSpaceReg,
+    std::vector<InstructionInstance> &Snippet) const {
+  if (ScratchSpaceReg == 0)
+    return;  // no memory operands.
+  const auto &ET = State.getExegesisTarget();
+  const unsigned MemStep = ET.getMaxMemoryAccessSize();
+  const size_t OriginalSnippetSize = Snippet.size();
+  size_t I = 0;
+  for (InstructionInstance &II : Snippet) {
+    ET.fillMemoryOperands(II, ScratchSpaceReg, I * MemStep);
+    ++I;
+  }
+
+  while (Snippet.size() < kMinNumDifferentAddresses) {
+    InstructionInstance II = Snippet[I % OriginalSnippetSize];
+    ET.fillMemoryOperands(II, ScratchSpaceReg, I * MemStep);
+    ++I;
+    Snippet.push_back(std::move(II));
+  }
+  assert(I * MemStep < ScratchSpace::kSize && "not enough scratch space");
+}
+
 llvm::Expected<SnippetPrototype>
 UopsBenchmarkRunner::generatePrototype(unsigned Opcode) const {
   const auto &InstrDesc = State.getInstrInfo().get(Opcode);
   if (auto E = isInfeasible(InstrDesc))
     return std::move(E);
   const Instruction Instr(InstrDesc, RATC);
+  const auto &ET = State.getExegesisTarget();
+  SnippetPrototype Prototype;
+
+  const llvm::BitVector *ScratchSpaceAliasedRegs = nullptr;
+  if (Instr.hasMemoryOperands()) {
+    Prototype.ScratchSpaceReg =
+        ET.getScratchMemoryRegister(State.getTargetMachine().getTargetTriple());
+    if (Prototype.ScratchSpaceReg == 0)
+      return llvm::make_error<BenchmarkFailure>(
+          "Infeasible : target does not support memory instructions");
+    ScratchSpaceAliasedRegs =
+        &RATC.getRegister(Prototype.ScratchSpaceReg).aliasedBits();
+    // If the instruction implicitly writes to ScratchSpaceReg , abort.
+    // FIXME: We could make a copy of the scratch register.
+    for (const auto &Op : Instr.Operands) {
+      if (Op.IsDef && Op.ImplicitReg &&
+          ScratchSpaceAliasedRegs->test(*Op.ImplicitReg))
+        return llvm::make_error<BenchmarkFailure>(
+            "Infeasible : memory instruction uses scratch memory register");
+    }
+  }
+
   const AliasingConfigurations SelfAliasing(Instr, Instr);
+  InstructionInstance II(Instr);
   if (SelfAliasing.empty()) {
-    return generateUnconstrainedPrototype(Instr, "instruction is parallel");
+    Prototype.Explanation = "instruction is parallel, repeating a random one.";
+    Prototype.Snippet.push_back(std::move(II));
+    instantiateMemoryOperands(Prototype.ScratchSpaceReg, Prototype.Snippet);
+    return std::move(Prototype);
   }
   if (SelfAliasing.hasImplicitAliasing()) {
-    return generateUnconstrainedPrototype(Instr, "instruction is serial");
+    Prototype.Explanation = "instruction is serial, repeating a random one.";
+    Prototype.Snippet.push_back(std::move(II));
+    instantiateMemoryOperands(Prototype.ScratchSpaceReg, Prototype.Snippet);
+    return std::move(Prototype);
   }
   const auto TiedVariables = getTiedVariables(Instr);
   if (!TiedVariables.empty()) {
@@ -155,23 +200,27 @@ UopsBenchmarkRunner::generatePrototype(unsigned Opcode) const {
     assert(!Var->TiedOperands.empty());
     const Operand &Op = Instr.Operands[Var->TiedOperands.front()];
     assert(Op.Tracker);
-    SnippetPrototype Prototype;
     Prototype.Explanation =
         "instruction has tied variables using static renaming.";
     for (const llvm::MCPhysReg Reg : Op.Tracker->sourceBits().set_bits()) {
-      Prototype.Snippet.emplace_back(Instr);
-      Prototype.Snippet.back().getValueFor(*Var) =
-          llvm::MCOperand::createReg(Reg);
+      if (ScratchSpaceAliasedRegs && ScratchSpaceAliasedRegs->test(Reg))
+        continue; // Do not use the scratch memory address register.
+      InstructionInstance TmpII = II;
+      TmpII.getValueFor(*Var) = llvm::MCOperand::createReg(Reg);
+      Prototype.Snippet.push_back(std::move(TmpII));
     }
+    instantiateMemoryOperands(Prototype.ScratchSpaceReg, Prototype.Snippet);
     return std::move(Prototype);
   }
-  InstructionInstance II(Instr);
   // No tied variables, we pick random values for defs.
   llvm::BitVector Defs(State.getRegInfo().getNumRegs());
   for (const auto &Op : Instr.Operands) {
-    if (Op.Tracker && Op.IsExplicit && Op.IsDef) {
+    if (Op.Tracker && Op.IsExplicit && Op.IsDef && !Op.IsMem) {
       auto PossibleRegisters = Op.Tracker->sourceBits();
       remove(PossibleRegisters, RATC.reservedRegisters());
+      // Do not use the scratch memory address register.
+      if (ScratchSpaceAliasedRegs)
+        remove(PossibleRegisters, *ScratchSpaceAliasedRegs);
       assert(PossibleRegisters.any() && "No register left to choose from");
       const auto RandomReg = randomBit(PossibleRegisters);
       Defs.set(RandomReg);
@@ -181,24 +230,28 @@ UopsBenchmarkRunner::generatePrototype(unsigned Opcode) const {
   // And pick random use values that are not reserved and don't alias with defs.
   const auto DefAliases = getAliasedBits(State.getRegInfo(), Defs);
   for (const auto &Op : Instr.Operands) {
-    if (Op.Tracker && Op.IsExplicit && !Op.IsDef) {
+    if (Op.Tracker && Op.IsExplicit && !Op.IsDef && !Op.IsMem) {
       auto PossibleRegisters = Op.Tracker->sourceBits();
       remove(PossibleRegisters, RATC.reservedRegisters());
+      // Do not use the scratch memory address register.
+      if (ScratchSpaceAliasedRegs)
+        remove(PossibleRegisters, *ScratchSpaceAliasedRegs);
       remove(PossibleRegisters, DefAliases);
       assert(PossibleRegisters.any() && "No register left to choose from");
       const auto RandomReg = randomBit(PossibleRegisters);
       II.getValueFor(Op) = llvm::MCOperand::createReg(RandomReg);
     }
   }
-  SnippetPrototype Prototype;
   Prototype.Explanation =
       "instruction has no tied variables picking Uses different from defs";
   Prototype.Snippet.push_back(std::move(II));
+  instantiateMemoryOperands(Prototype.ScratchSpaceReg, Prototype.Snippet);
   return std::move(Prototype);
 }
 
 std::vector<BenchmarkMeasure>
 UopsBenchmarkRunner::runMeasurements(const ExecutableFunction &Function,
+                                     ScratchSpace &Scratch,
                                      const unsigned NumRepetitions) const {
   const auto &SchedModel = State.getSubtargetInfo().getSchedModel();
 
@@ -220,8 +273,9 @@ UopsBenchmarkRunner::runMeasurements(const ExecutableFunction &Function,
         llvm::report_fatal_error(
             llvm::Twine("invalid perf event ").concat(PfmCounters));
       pfm::Counter Counter(UopPerfEvent);
+      Scratch.clear();
       Counter.start();
-      Function();
+      Function(Scratch.ptr());
       Counter.stop();
       CounterValue += Counter.read();
     }
@@ -231,5 +285,7 @@ UopsBenchmarkRunner::runMeasurements(const ExecutableFunction &Function,
   }
   return Result;
 }
+
+constexpr const size_t UopsBenchmarkRunner::kMinNumDifferentAddresses;
 
 } // namespace exegesis

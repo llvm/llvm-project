@@ -350,7 +350,7 @@ DWARFDie::findRecursively(ArrayRef<dwarf::Attribute> Attrs) const {
 DWARFDie
 DWARFDie::getAttributeValueAsReferencedDie(dwarf::Attribute Attr) const {
   if (auto SpecRef = toReference(find(Attr))) {
-    if (auto SpecUnit = U->getUnitSection().getUnitForOffset(*SpecRef))
+    if (auto SpecUnit = U->getUnitVector().getUnitForOffset(*SpecRef))
       return SpecUnit->getDIEForOffset(*SpecRef);
   }
   return DWARFDie();

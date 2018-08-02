@@ -27,8 +27,10 @@ enum : int {
 
 char *itaniumDemangle(const char *mangled_name, char *buf, size_t *n,
                       int *status);
+
+enum MSDemangleFlags { MSDF_None = 0, MSDF_DumpBackrefs = 1 << 0 };
 char *microsoftDemangle(const char *mangled_name, char *buf, size_t *n,
-                        int *status);
+                        int *status, MSDemangleFlags Flags = MSDF_None);
 
 /// "Partial" demangler. This supports demangling a string into an AST
 /// (typically an intermediate stage in itaniumDemangle) and querying certain

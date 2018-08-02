@@ -32,7 +32,7 @@ class GlobalValue;
 
 namespace object {
 
-class BasicSymbolRef;
+class SymbolRef;
 
 } // end namespace object
 
@@ -52,8 +52,9 @@ public:
     Common = 1U << 2,
     Absolute = 1U << 3,
     Exported = 1U << 4,
-    Lazy = 1U << 5,
-    Materializing = 1U << 6
+    Callable = 1U << 5,
+    Lazy = 1U << 6,
+    Materializing = 1U << 7
   };
 
   static JITSymbolFlags stripTransientFlags(JITSymbolFlags Orig) {
@@ -109,6 +110,9 @@ public:
     return (Flags & Exported) == Exported;
   }
 
+  /// Returns true if the given symbol is known to be callable.
+  bool isCallable() const { return (Flags & Callable) == Callable; }
+
   /// Implicitly convert to the underlying flags type.
   operator UnderlyingType&() { return Flags; }
 
@@ -127,7 +131,8 @@ public:
 
   /// Construct a JITSymbolFlags value based on the flags of the given libobject
   /// symbol.
-  static JITSymbolFlags fromObjectSymbol(const object::BasicSymbolRef &Symbol);
+  static Expected<JITSymbolFlags>
+  fromObjectSymbol(const object::SymbolRef &Symbol);
 
 private:
   UnderlyingType Flags = None;
@@ -147,8 +152,8 @@ public:
 
   operator JITSymbolFlags::TargetFlagsType&() { return Flags; }
 
-  static ARMJITSymbolFlags fromObjectSymbol(
-                                           const object::BasicSymbolRef &Symbol);
+  static ARMJITSymbolFlags fromObjectSymbol(const object::SymbolRef &Symbol);
+
 private:
   JITSymbolFlags::TargetFlagsType Flags = 0;
 };

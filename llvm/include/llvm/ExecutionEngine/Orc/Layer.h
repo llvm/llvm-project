@@ -106,15 +106,14 @@ private:
 /// instance) by calling 'emit' on the given ObjectLayer.
 class BasicObjectLayerMaterializationUnit : public MaterializationUnit {
 public:
-
-
-  /// The MemoryBuffer should represent a valid object file.
-  /// If there is any chance that the file is invalid it should be validated
-  /// prior to constructing a BasicObjectLayerMaterializationUnit.
-  BasicObjectLayerMaterializationUnit(ObjectLayer &L, VModuleKey K,
-                                      std::unique_ptr<MemoryBuffer> O);
+  static Expected<std::unique_ptr<BasicObjectLayerMaterializationUnit>>
+  Create(ObjectLayer &L, VModuleKey K, std::unique_ptr<MemoryBuffer> O);
 
 private:
+  BasicObjectLayerMaterializationUnit(SymbolFlagsMap SymbolFlags,
+                                      ObjectLayer &L, VModuleKey K,
+                                      std::unique_ptr<MemoryBuffer> O);
+
   void materialize(MaterializationResponsibility R) override;
   void discard(const VSO &V, SymbolStringPtr Name) override;
 

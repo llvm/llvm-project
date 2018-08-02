@@ -16,13 +16,8 @@
 ; HSA-VI: s_and_b32 s{{[0-9]+}}, [[VAL]], 0xff
 
 
-; EG: LSHR   T0.X, KC0[2].Y, literal.x,
-; EG-NEXT: MOV * T1.X, KC0[2].Z,
-; EG-NEXT: 2(2.802597e-45), 0(0.000000e+00)
-
-; CM: LSHR * T0.X, KC0[2].Y, literal.x,
-; CM-NEXT: 2(2.802597e-45), 0(0.000000e+00)
-; CM-NEXT:	  MOV * T1.X, KC0[2].Z,
+; EGCM: VTX_READ_8{{.*}} #3
+; EGCM: KC0[2].Y
 define amdgpu_kernel void @i8_arg(i32 addrspace(1)* nocapture %out, i8 %in) nounwind {
   %ext = zext i8 %in to i32
   store i32 %ext, i32 addrspace(1)* %out, align 4
@@ -92,14 +87,8 @@ define amdgpu_kernel void @i8_sext_arg(i32 addrspace(1)* nocapture %out, i8 sign
 ; HSA-VI: s_and_b32 s{{[0-9]+}}, [[VAL]], 0xffff{{$}}
 ; HSA-VI: flat_store_dword
 
-
-; EG: LSHR   T0.X, KC0[2].Y, literal.x,
-; EG-NEXT: MOV * T1.X, KC0[2].Z,
-; EG-NEXT: 2(2.802597e-45), 0(0.000000e+00)
-
-; CM: LSHR * T0.X, KC0[2].Y, literal.x,
-; CM-NEXT: 2(2.802597e-45), 0(0.000000e+00)
-; CM-NEXT: MOV * T1.X, KC0[2].Z,
+; EGCM: VTX_READ_16
+; EGCM: KC0[2].Y
 define amdgpu_kernel void @i16_arg(i32 addrspace(1)* nocapture %out, i16 %in) nounwind {
   %ext = zext i16 %in to i32
   store i32 %ext, i32 addrspace(1)* %out, align 4

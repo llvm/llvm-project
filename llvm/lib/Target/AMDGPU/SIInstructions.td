@@ -164,29 +164,26 @@ def S_SUB_U64_CO_PSEUDO : SPseudoInstSI <
 
 } // End usesCustomInserter = 1, Defs = [SCC]
 
-let usesCustomInserter = 1, SALU = 1 in {
-def GET_GROUPSTATICSIZE : PseudoInstSI <(outs SReg_32:$sdst), (ins),
+let usesCustomInserter = 1 in {
+def GET_GROUPSTATICSIZE : SPseudoInstSI <(outs SReg_32:$sdst), (ins),
   [(set SReg_32:$sdst, (int_amdgcn_groupstaticsize))]>;
 } // End let usesCustomInserter = 1, SALU = 1
 
-def S_MOV_B64_term : PseudoInstSI<(outs SReg_64:$dst),
+def S_MOV_B64_term : SPseudoInstSI<(outs SReg_64:$dst),
    (ins SSrc_b64:$src0)> {
-  let SALU = 1;
   let isAsCheapAsAMove = 1;
   let isTerminator = 1;
 }
 
-def S_XOR_B64_term : PseudoInstSI<(outs SReg_64:$dst),
+def S_XOR_B64_term : SPseudoInstSI<(outs SReg_64:$dst),
    (ins SSrc_b64:$src0, SSrc_b64:$src1)> {
-  let SALU = 1;
   let isAsCheapAsAMove = 1;
   let isTerminator = 1;
   let Defs = [SCC];
 }
 
-def S_ANDN2_B64_term : PseudoInstSI<(outs SReg_64:$dst),
+def S_ANDN2_B64_term : SPseudoInstSI<(outs SReg_64:$dst),
    (ins SSrc_b64:$src0, SSrc_b64:$src1)> {
-  let SALU = 1;
   let isAsCheapAsAMove = 1;
   let isTerminator = 1;
 }
