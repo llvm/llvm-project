@@ -641,6 +641,20 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
   case AMDGPUISD::ATOMIC_CMP_SWAP:
     SelectATOMIC_CMP_SWAP(N);
     return;
+  case AMDGPUISD::CVT_PKRTZ_F16_F32:
+  case AMDGPUISD::CVT_PKNORM_I16_F32:
+  case AMDGPUISD::CVT_PKNORM_U16_F32:
+  case AMDGPUISD::CVT_PK_U16_U32:
+  case AMDGPUISD::CVT_PK_I16_I32: {
+    // Hack around using a legal type if f16 is illegal.
+    if (N->getValueType(0) == MVT::i32) {
+      MVT NewVT = Opc == AMDGPUISD::CVT_PKRTZ_F16_F32 ? MVT::v2f16 : MVT::v2i16;
+      N = CurDAG->MorphNodeTo(N, N->getOpcode(), CurDAG->getVTList(NewVT),
+                              { N->getOperand(0), N->getOperand(1) });
+      SelectCode(N);
+      return;
+    }
+  }
   }
 
   SelectCode(N);

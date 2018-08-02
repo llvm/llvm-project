@@ -64,6 +64,9 @@
 ??Hfoo@@QEAAHH@Z
 ; CHECK: int __cdecl foo::operator+(int)
 
+??$?HH@S@@QEAAAEANH@Z
+; CHECK: double & __cdecl S::operator+<int>(int)
+
 ?static_method@foo@@SAPAV1@XZ
 ; CHECK: static class foo * __cdecl foo::static_method(void)
 

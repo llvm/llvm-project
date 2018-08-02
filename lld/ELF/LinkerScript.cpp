@@ -116,7 +116,8 @@ void LinkerScript::expandMemoryRegions(uint64_t Size) {
   if (Ctx->MemRegion)
     expandMemoryRegion(Ctx->MemRegion, Size, Ctx->MemRegion->Name,
                        Ctx->OutSec->Name);
-  if (Ctx->LMARegion)
+  // Only expand the LMARegion if it is different from MemRegion.
+  if (Ctx->LMARegion && Ctx->MemRegion != Ctx->LMARegion)
     expandMemoryRegion(Ctx->LMARegion, Size, Ctx->LMARegion->Name,
                        Ctx->OutSec->Name);
 }

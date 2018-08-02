@@ -249,9 +249,14 @@ private:
           consumeError(SymbolName.takeError());
           continue;
         }
+        // FIXME: Raise an error for bad symbols.
         auto Flags = JITSymbolFlags::fromObjectSymbol(Symbol);
+        if (!Flags) {
+          consumeError(Flags.takeError());
+          continue;
+        }
         SymbolTable.insert(
-          std::make_pair(*SymbolName, JITEvaluatedSymbol(0, Flags)));
+            std::make_pair(*SymbolName, JITEvaluatedSymbol(0, *Flags)));
       }
     }
 

@@ -34,8 +34,8 @@ class AArch64CallLowering: public CallLowering {
 public:
   AArch64CallLowering(const AArch64TargetLowering &TLI);
 
-  bool lowerReturn(MachineIRBuilder &MIRBuiler, const Value *Val,
-                   unsigned VReg) const override;
+  bool lowerReturn(MachineIRBuilder &MIRBuilder, const Value *Val,
+                   ArrayRef<unsigned> VRegs) const override;
 
   bool lowerFormalArguments(MachineIRBuilder &MIRBuilder, const Function &F,
                             ArrayRef<unsigned> VRegs) const override;

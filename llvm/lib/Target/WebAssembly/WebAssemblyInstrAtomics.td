@@ -655,3 +655,246 @@ defm : BinRMWTruncExtPattern<
   ATOMIC_RMW8_U_XCHG_I32, ATOMIC_RMW16_U_XCHG_I32,
   ATOMIC_RMW8_U_XCHG_I64, ATOMIC_RMW16_U_XCHG_I64, ATOMIC_RMW32_U_XCHG_I64>;
 } // Predicates = [HasAtomics]
+
+//===----------------------------------------------------------------------===//
+// Atomic ternary read-modify-writes
+//===----------------------------------------------------------------------===//
+
+// TODO LLVM IR's cmpxchg instruction returns a pair of {loaded value,
+// success flag}. When we use a success flag or both values, we can't make use
+// of truncate/extend versions of instructions for now, which is suboptimal. Add
+// selection rules for those cases too.
+
+let Defs = [ARGUMENTS] in {
+
+multiclass WebAssemblyTerRMW<WebAssemblyRegClass rc, string Name, int Opcode> {
+  defm "" : I<(outs rc:$dst),
+              (ins P2Align:$p2align, offset32_op:$off, I32:$addr, rc:$exp,
+                   rc:$new),
+              (outs), (ins P2Align:$p2align, offset32_op:$off), [],
+              !strconcat(Name, "\t$dst, ${off}(${addr})${p2align}, $exp, $new"),
+              !strconcat(Name, "\t${off}, ${p2align}"), Opcode>;
+}
+
+defm ATOMIC_RMW_CMPXCHG_I32 :
+  WebAssemblyTerRMW<I32, "i32.atomic.rmw.cmpxchg", 0xfe48>;
+defm ATOMIC_RMW_CMPXCHG_I64 :
+  WebAssemblyTerRMW<I64, "i64.atomic.rmw.cmpxchg", 0xfe49>;
+defm ATOMIC_RMW8_U_CMPXCHG_I32 :
+  WebAssemblyTerRMW<I32, "i32.atomic.rmw8_u.cmpxchg", 0xfe4a>;
+defm ATOMIC_RMW16_U_CMPXCHG_I32 :
+  WebAssemblyTerRMW<I32, "i32.atomic.rmw16_u.cmpxchg", 0xfe4b>;
+defm ATOMIC_RMW8_U_CMPXCHG_I64 :
+  WebAssemblyTerRMW<I64, "i64.atomic.rmw8_u.cmpxchg", 0xfe4c>;
+defm ATOMIC_RMW16_U_CMPXCHG_I64 :
+  WebAssemblyTerRMW<I64, "i64.atomic.rmw16_u.cmpxchg", 0xfe4d>;
+defm ATOMIC_RMW32_U_CMPXCHG_I64 :
+  WebAssemblyTerRMW<I64, "i64.atomic.rmw32_u.cmpxchg", 0xfe4e>;
+}
+
+// Select ternary RMWs with no constant offset.
+class TerRMWPatNoOffset<ValueType ty, PatFrag kind, NI inst> :
+  Pat<(ty (kind I32:$addr, ty:$exp, ty:$new)),
+      (inst 0, 0, I32:$addr, ty:$exp, ty:$new)>;
+
+// Select ternary RMWs with a constant offset.
+
+// Pattern with address + immediate offset
+class TerRMWPatImmOff<ValueType ty, PatFrag kind, PatFrag operand, NI inst> :
+  Pat<(ty (kind (operand I32:$addr, imm:$off), ty:$exp, ty:$new)),
+      (inst 0, imm:$off, I32:$addr, ty:$exp, ty:$new)>;
+
+class TerRMWPatGlobalAddr<ValueType ty, PatFrag kind, NI inst> :
+  Pat<(ty (kind (regPlusGA I32:$addr, (WebAssemblywrapper tglobaladdr:$off)),
+                ty:$exp, ty:$new)),
+      (inst 0, tglobaladdr:$off, I32:$addr, ty:$exp, ty:$new)>;
+
+class TerRMWPatExternalSym<ValueType ty, PatFrag kind, NI inst> :
+  Pat<(ty (kind (add I32:$addr, (WebAssemblywrapper texternalsym:$off)),
+                ty:$exp, ty:$new)),
+      (inst 0, texternalsym:$off, I32:$addr, ty:$exp, ty:$new)>;
+
+// Select ternary RMWs with just a constant offset.
+class TerRMWPatOffsetOnly<ValueType ty, PatFrag kind, NI inst> :
+  Pat<(ty (kind imm:$off, ty:$exp, ty:$new)),
+      (inst 0, imm:$off, (CONST_I32 0), ty:$exp, ty:$new)>;
+
+class TerRMWPatGlobalAddrOffOnly<ValueType ty, PatFrag kind, NI inst> :
+  Pat<(ty (kind (WebAssemblywrapper tglobaladdr:$off), ty:$exp, ty:$new)),
+      (inst 0, tglobaladdr:$off, (CONST_I32 0), ty:$exp, ty:$new)>;
+
+class TerRMWPatExternSymOffOnly<ValueType ty, PatFrag kind, NI inst> :
+  Pat<(ty (kind (WebAssemblywrapper texternalsym:$off), ty:$exp, ty:$new)),
+      (inst 0, texternalsym:$off, (CONST_I32 0), ty:$exp, ty:$new)>;
+
+// Patterns for various addressing modes.
+multiclass TerRMWPattern<PatFrag rmw_32, PatFrag rmw_64, NI inst_32,
+                         NI inst_64> {
+  def : TerRMWPatNoOffset<i32, rmw_32, inst_32>;
+  def : TerRMWPatNoOffset<i64, rmw_64, inst_64>;
+
+  def : TerRMWPatImmOff<i32, rmw_32, regPlusImm, inst_32>;
+  def : TerRMWPatImmOff<i64, rmw_64, regPlusImm, inst_64>;
+  def : TerRMWPatImmOff<i32, rmw_32, or_is_add, inst_32>;
+  def : TerRMWPatImmOff<i64, rmw_64, or_is_add, inst_64>;
+
+  def : TerRMWPatGlobalAddr<i32, rmw_32, inst_32>;
+  def : TerRMWPatGlobalAddr<i64, rmw_64, inst_64>;
+
+  def : TerRMWPatExternalSym<i32, rmw_32, inst_32>;
+  def : TerRMWPatExternalSym<i64, rmw_64, inst_64>;
+
+  def : TerRMWPatOffsetOnly<i32, rmw_32, inst_32>;
+  def : TerRMWPatOffsetOnly<i64, rmw_64, inst_64>;
+
+  def : TerRMWPatGlobalAddrOffOnly<i32, rmw_32, inst_32>;
+  def : TerRMWPatGlobalAddrOffOnly<i64, rmw_64, inst_64>;
+
+  def : TerRMWPatExternSymOffOnly<i32, rmw_32, inst_32>;
+  def : TerRMWPatExternSymOffOnly<i64, rmw_64, inst_64>;
+}
+
+let Predicates = [HasAtomics] in {
+defm : TerRMWPattern<atomic_cmp_swap_32, atomic_cmp_swap_64,
+                     ATOMIC_RMW_CMPXCHG_I32, ATOMIC_RMW_CMPXCHG_I64>;
+} // Predicates = [HasAtomics]
+
+// Truncating & zero-extending ternary RMW patterns.
+// DAG legalization & optimization before instruction selection may introduce
+// additional nodes such as anyext or assertzext depending on operand types.
+class zext_ter_rmw_8_32<PatFrag kind> :
+  PatFrag<(ops node:$addr, node:$exp, node:$new),
+          (and (i32 (kind node:$addr, node:$exp, node:$new)), 255)>;
+class zext_ter_rmw_16_32<PatFrag kind> :
+  PatFrag<(ops node:$addr, node:$exp, node:$new),
+          (and (i32 (kind node:$addr, node:$exp, node:$new)), 65535)>;
+class zext_ter_rmw_8_64<PatFrag kind> :
+  PatFrag<(ops node:$addr, node:$exp, node:$new),
+          (zext (i32 (assertzext (i32 (kind node:$addr,
+                                            (i32 (trunc (i64 node:$exp))),
+                                            (i32 (trunc (i64 node:$new))))))))>;
+class zext_ter_rmw_16_64<PatFrag kind> : zext_ter_rmw_8_64<kind>;
+class zext_ter_rmw_32_64<PatFrag kind> :
+  PatFrag<(ops node:$addr, node:$exp, node:$new),
+          (zext (i32 (kind node:$addr,
+                           (i32 (trunc (i64 node:$exp))),
+                           (i32 (trunc (i64 node:$new))))))>;
+
+// Truncating & sign-extending ternary RMW patterns.
+// We match subword RMWs (for 32-bit) and anyext RMWs (for 64-bit) and select a
+// zext RMW; the next instruction will be sext_inreg which is selected by
+// itself.
+class sext_ter_rmw_8_32<PatFrag kind> :
+  PatFrag<(ops node:$addr, node:$exp, node:$new),
+          (kind node:$addr, node:$exp, node:$new)>;
+class sext_ter_rmw_16_32<PatFrag kind> : sext_ter_rmw_8_32<kind>;
+class sext_ter_rmw_8_64<PatFrag kind> :
+  PatFrag<(ops node:$addr, node:$exp, node:$new),
+          (anyext (i32 (assertzext (i32
+            (kind node:$addr,
+                  (i32 (trunc (i64 node:$exp))),
+                  (i32 (trunc (i64 node:$new))))))))>;
+class sext_ter_rmw_16_64<PatFrag kind> : sext_ter_rmw_8_64<kind>;
+// 32->64 sext RMW gets selected as i32.atomic.rmw.***, i64.extend_s/i32
+
+// Patterns for various addressing modes for truncating-extending ternary RMWs.
+multiclass TerRMWTruncExtPattern<
+  PatFrag rmw_8, PatFrag rmw_16, PatFrag rmw_32, PatFrag rmw_64,
+  NI inst8_32, NI inst16_32, NI inst8_64, NI inst16_64, NI inst32_64> {
+  // Truncating-extending ternary RMWs with no constant offset
+  def : TerRMWPatNoOffset<i32, zext_ter_rmw_8_32<rmw_8>, inst8_32>;
+  def : TerRMWPatNoOffset<i32, zext_ter_rmw_16_32<rmw_16>, inst16_32>;
+  def : TerRMWPatNoOffset<i64, zext_ter_rmw_8_64<rmw_8>, inst8_64>;
+  def : TerRMWPatNoOffset<i64, zext_ter_rmw_16_64<rmw_16>, inst16_64>;
+  def : TerRMWPatNoOffset<i64, zext_ter_rmw_32_64<rmw_32>, inst32_64>;
+
+  def : TerRMWPatNoOffset<i32, sext_ter_rmw_8_32<rmw_8>, inst8_32>;
+  def : TerRMWPatNoOffset<i32, sext_ter_rmw_16_32<rmw_16>, inst16_32>;
+  def : TerRMWPatNoOffset<i64, sext_ter_rmw_8_64<rmw_8>, inst8_64>;
+  def : TerRMWPatNoOffset<i64, sext_ter_rmw_16_64<rmw_16>, inst16_64>;
+
+  // Truncating-extending ternary RMWs with a constant offset
+  def : TerRMWPatImmOff<i32, zext_ter_rmw_8_32<rmw_8>, regPlusImm, inst8_32>;
+  def : TerRMWPatImmOff<i32, zext_ter_rmw_16_32<rmw_16>, regPlusImm, inst16_32>;
+  def : TerRMWPatImmOff<i64, zext_ter_rmw_8_64<rmw_8>, regPlusImm, inst8_64>;
+  def : TerRMWPatImmOff<i64, zext_ter_rmw_16_64<rmw_16>, regPlusImm, inst16_64>;
+  def : TerRMWPatImmOff<i64, zext_ter_rmw_32_64<rmw_32>, regPlusImm, inst32_64>;
+  def : TerRMWPatImmOff<i32, zext_ter_rmw_8_32<rmw_8>, or_is_add, inst8_32>;
+  def : TerRMWPatImmOff<i32, zext_ter_rmw_16_32<rmw_16>, or_is_add, inst16_32>;
+  def : TerRMWPatImmOff<i64, zext_ter_rmw_8_64<rmw_8>, or_is_add, inst8_64>;
+  def : TerRMWPatImmOff<i64, zext_ter_rmw_16_64<rmw_16>, or_is_add, inst16_64>;
+  def : TerRMWPatImmOff<i64, zext_ter_rmw_32_64<rmw_32>, or_is_add, inst32_64>;
+
+  def : TerRMWPatImmOff<i32, sext_ter_rmw_8_32<rmw_8>, regPlusImm, inst8_32>;
+  def : TerRMWPatImmOff<i32, sext_ter_rmw_16_32<rmw_16>, regPlusImm, inst16_32>;
+  def : TerRMWPatImmOff<i64, sext_ter_rmw_8_64<rmw_8>, regPlusImm, inst8_64>;
+  def : TerRMWPatImmOff<i64, sext_ter_rmw_16_64<rmw_16>, regPlusImm, inst16_64>;
+  def : TerRMWPatImmOff<i32, sext_ter_rmw_8_32<rmw_8>, or_is_add, inst8_32>;
+  def : TerRMWPatImmOff<i32, sext_ter_rmw_16_32<rmw_16>, or_is_add, inst16_32>;
+  def : TerRMWPatImmOff<i64, sext_ter_rmw_8_64<rmw_8>, or_is_add, inst8_64>;
+  def : TerRMWPatImmOff<i64, sext_ter_rmw_16_64<rmw_16>, or_is_add, inst16_64>;
+
+  def : TerRMWPatGlobalAddr<i32, zext_ter_rmw_8_32<rmw_8>, inst8_32>;
+  def : TerRMWPatGlobalAddr<i32, zext_ter_rmw_16_32<rmw_16>, inst16_32>;
+  def : TerRMWPatGlobalAddr<i64, zext_ter_rmw_8_64<rmw_8>, inst8_64>;
+  def : TerRMWPatGlobalAddr<i64, zext_ter_rmw_16_64<rmw_16>, inst16_64>;
+  def : TerRMWPatGlobalAddr<i64, zext_ter_rmw_32_64<rmw_32>, inst32_64>;
+
+  def : TerRMWPatGlobalAddr<i32, sext_ter_rmw_8_32<rmw_8>, inst8_32>;
+  def : TerRMWPatGlobalAddr<i32, sext_ter_rmw_16_32<rmw_16>, inst16_32>;
+  def : TerRMWPatGlobalAddr<i64, sext_ter_rmw_8_64<rmw_8>, inst8_64>;
+  def : TerRMWPatGlobalAddr<i64, sext_ter_rmw_16_64<rmw_16>, inst16_64>;
+
+  def : TerRMWPatExternalSym<i32, zext_ter_rmw_8_32<rmw_8>, inst8_32>;
+  def : TerRMWPatExternalSym<i32, zext_ter_rmw_16_32<rmw_16>, inst16_32>;
+  def : TerRMWPatExternalSym<i64, zext_ter_rmw_8_64<rmw_8>, inst8_64>;
+  def : TerRMWPatExternalSym<i64, zext_ter_rmw_16_64<rmw_16>, inst16_64>;
+  def : TerRMWPatExternalSym<i64, zext_ter_rmw_32_64<rmw_32>, inst32_64>;
+
+  def : TerRMWPatExternalSym<i32, sext_ter_rmw_8_32<rmw_8>, inst8_32>;
+  def : TerRMWPatExternalSym<i32, sext_ter_rmw_16_32<rmw_16>, inst16_32>;
+  def : TerRMWPatExternalSym<i64, sext_ter_rmw_8_64<rmw_8>, inst8_64>;
+  def : TerRMWPatExternalSym<i64, sext_ter_rmw_16_64<rmw_16>, inst16_64>;
+
+  // Truncating-extending ternary RMWs with just a constant offset
+  def : TerRMWPatOffsetOnly<i32, zext_ter_rmw_8_32<rmw_8>, inst8_32>;
+  def : TerRMWPatOffsetOnly<i32, zext_ter_rmw_16_32<rmw_16>, inst16_32>;
+  def : TerRMWPatOffsetOnly<i64, zext_ter_rmw_8_64<rmw_8>, inst8_64>;
+  def : TerRMWPatOffsetOnly<i64, zext_ter_rmw_16_64<rmw_16>, inst16_64>;
+  def : TerRMWPatOffsetOnly<i64, zext_ter_rmw_32_64<rmw_32>, inst32_64>;
+
+  def : TerRMWPatOffsetOnly<i32, sext_ter_rmw_8_32<rmw_8>, inst8_32>;
+  def : TerRMWPatOffsetOnly<i32, sext_ter_rmw_16_32<rmw_16>, inst16_32>;
+  def : TerRMWPatOffsetOnly<i64, sext_ter_rmw_8_64<rmw_8>, inst8_64>;
+  def : TerRMWPatOffsetOnly<i64, sext_ter_rmw_16_64<rmw_16>, inst16_64>;
+
+  def : TerRMWPatGlobalAddrOffOnly<i32, zext_ter_rmw_8_32<rmw_8>, inst8_32>;
+  def : TerRMWPatGlobalAddrOffOnly<i32, zext_ter_rmw_16_32<rmw_16>, inst16_32>;
+  def : TerRMWPatGlobalAddrOffOnly<i64, zext_ter_rmw_8_64<rmw_8>, inst8_64>;
+  def : TerRMWPatGlobalAddrOffOnly<i64, zext_ter_rmw_16_64<rmw_16>, inst16_64>;
+  def : TerRMWPatGlobalAddrOffOnly<i64, zext_ter_rmw_32_64<rmw_32>, inst32_64>;
+
+  def : TerRMWPatGlobalAddrOffOnly<i32, sext_ter_rmw_8_32<rmw_8>, inst8_32>;
+  def : TerRMWPatGlobalAddrOffOnly<i32, sext_ter_rmw_16_32<rmw_16>, inst16_32>;
+  def : TerRMWPatGlobalAddrOffOnly<i64, sext_ter_rmw_8_64<rmw_8>, inst8_64>;
+  def : TerRMWPatGlobalAddrOffOnly<i64, sext_ter_rmw_16_64<rmw_16>, inst16_64>;
+
+  def : TerRMWPatExternSymOffOnly<i32, zext_ter_rmw_8_32<rmw_8>, inst8_32>;
+  def : TerRMWPatExternSymOffOnly<i32, zext_ter_rmw_16_32<rmw_16>, inst16_32>;
+  def : TerRMWPatExternSymOffOnly<i64, zext_ter_rmw_8_64<rmw_8>, inst8_64>;
+  def : TerRMWPatExternSymOffOnly<i64, zext_ter_rmw_16_64<rmw_16>, inst16_64>;
+  def : TerRMWPatExternSymOffOnly<i64, zext_ter_rmw_32_64<rmw_32>, inst32_64>;
+
+  def : TerRMWPatExternSymOffOnly<i32, sext_ter_rmw_8_32<rmw_8>, inst8_32>;
+  def : TerRMWPatExternSymOffOnly<i32, sext_ter_rmw_16_32<rmw_16>, inst16_32>;
+  def : TerRMWPatExternSymOffOnly<i64, sext_ter_rmw_8_64<rmw_8>, inst8_64>;
+  def : TerRMWPatExternSymOffOnly<i64, sext_ter_rmw_16_64<rmw_16>, inst16_64>;
+}
+
+let Predicates = [HasAtomics] in {
+defm : TerRMWTruncExtPattern<
+  atomic_cmp_swap_8, atomic_cmp_swap_16, atomic_cmp_swap_32, atomic_cmp_swap_64,
+  ATOMIC_RMW8_U_CMPXCHG_I32, ATOMIC_RMW16_U_CMPXCHG_I32,
+  ATOMIC_RMW8_U_CMPXCHG_I64, ATOMIC_RMW16_U_CMPXCHG_I64,
+  ATOMIC_RMW32_U_CMPXCHG_I64>;
+} // Predicates = [HasAtomics]

@@ -497,16 +497,18 @@ Optional<unsigned> getLoopEstimatedTripCount(Loop *L);
 /// getAnalysisUsage.
 void getLoopAnalysisUsage(AnalysisUsage &AU);
 
-/// Returns true if the hoister and sinker can handle this instruction.
-/// If SafetyInfo is null, we are checking for sinking instructions from
-/// preheader to loop body (no speculation).
-/// If SafetyInfo is not null, we are checking for hoisting/sinking
-/// instructions from loop body to preheader/exit. Check if the instruction
-/// can execute speculatively.
+/// Returns true if is legal to hoist or sink this instruction disregarding the
+/// possible introduction of faults.  Reasoning about potential faulting
+/// instructions is the responsibility of the caller since it is challenging to
+/// do efficiently from within this routine.
+/// \p TargetExecutesOncePerLoop is true only when it is guaranteed that the
+/// target executes at most once per execution of the loop body.  This is used
+/// to assess the legality of duplicating atomic loads.  Generally, this is
+/// true when moving out of loop and not true when moving into loops.  
 /// If \p ORE is set use it to emit optimization remarks.
 bool canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
                         Loop *CurLoop, AliasSetTracker *CurAST,
-                        LoopSafetyInfo *SafetyInfo,
+                        bool TargetExecutesOncePerLoop,
                         OptimizationRemarkEmitter *ORE = nullptr);
 
 /// Generates an ordered vector reduction using extracts to reduce the value.

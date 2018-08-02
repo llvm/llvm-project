@@ -18,8 +18,8 @@ declare <4 x i32> @llvm.fshr.v4i32(<4 x i32>, <4 x i32>, <4 x i32>)
 define i32 @fshl_i32(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: fshl_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    orr w9, wzr, #0x20
-; CHECK-NEXT:    sub w9, w9, w2
+; CHECK-NEXT:    and w9, w2, #0x1f
+; CHECK-NEXT:    neg w9, w9
 ; CHECK-NEXT:    lsl w8, w0, w2
 ; CHECK-NEXT:    lsr w9, w1, w9
 ; CHECK-NEXT:    orr w8, w8, w9
@@ -35,26 +35,22 @@ declare i37 @llvm.fshl.i37(i37, i37, i37)
 define i37 @fshl_i37(i37 %x, i37 %y, i37 %z) {
 ; CHECK-LABEL: fshl_i37:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x11, #31883
-; CHECK-NEXT:    mov w10, #37
-; CHECK-NEXT:    movk x11, #3542, lsl #16
-; CHECK-NEXT:    movk x11, #51366, lsl #32
-; CHECK-NEXT:    sub x12, x10, x2
-; CHECK-NEXT:    and x8, x2, #0x1fffffffff
-; CHECK-NEXT:    movk x11, #56679, lsl #48
-; CHECK-NEXT:    and x12, x12, #0x1fffffffff
-; CHECK-NEXT:    umulh x13, x8, x11
-; CHECK-NEXT:    umulh x11, x12, x11
-; CHECK-NEXT:    lsr x13, x13, #5
-; CHECK-NEXT:    lsr x11, x11, #5
-; CHECK-NEXT:    and x9, x1, #0x1fffffffff
-; CHECK-NEXT:    msub x8, x13, x10, x8
-; CHECK-NEXT:    msub x10, x11, x10, x12
-; CHECK-NEXT:    lsl x13, x0, x8
-; CHECK-NEXT:    lsr x9, x9, x10
-; CHECK-NEXT:    orr x9, x13, x9
-; CHECK-NEXT:    cmp x8, #0 // =0
-; CHECK-NEXT:    csel x0, x0, x9, eq
+; CHECK-NEXT:    mov x10, #31883
+; CHECK-NEXT:    movk x10, #3542, lsl #16
+; CHECK-NEXT:    movk x10, #51366, lsl #32
+; CHECK-NEXT:    and x9, x2, #0x1fffffffff
+; CHECK-NEXT:    movk x10, #56679, lsl #48
+; CHECK-NEXT:    umulh x10, x9, x10
+; CHECK-NEXT:    mov w11, #37
+; CHECK-NEXT:    lsr x10, x10, #5
+; CHECK-NEXT:    msub x9, x10, x11, x9
+; CHECK-NEXT:    and x8, x1, #0x1fffffffff
+; CHECK-NEXT:    sub x11, x11, x9
+; CHECK-NEXT:    lsl x10, x0, x9
+; CHECK-NEXT:    lsr x8, x8, x11
+; CHECK-NEXT:    orr x8, x10, x8
+; CHECK-NEXT:    cmp x9, #0 // =0
+; CHECK-NEXT:    csel x0, x0, x8, eq
 ; CHECK-NEXT:    ret
   %f = call i37 @llvm.fshl.i37(i37 %x, i37 %y, i37 %z)
   ret i37 %f
@@ -150,8 +146,8 @@ define i8 @fshl_i8_const_fold() {
 define i32 @fshr_i32(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: fshr_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    orr w9, wzr, #0x20
-; CHECK-NEXT:    sub w9, w9, w2
+; CHECK-NEXT:    and w9, w2, #0x1f
+; CHECK-NEXT:    neg w9, w9
 ; CHECK-NEXT:    lsr w8, w1, w2
 ; CHECK-NEXT:    lsl w9, w0, w9
 ; CHECK-NEXT:    orr w8, w9, w8
@@ -167,21 +163,17 @@ declare i37 @llvm.fshr.i37(i37, i37, i37)
 define i37 @fshr_i37(i37 %x, i37 %y, i37 %z) {
 ; CHECK-LABEL: fshr_i37:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x11, #31883
-; CHECK-NEXT:    mov w10, #37
-; CHECK-NEXT:    movk x11, #3542, lsl #16
-; CHECK-NEXT:    movk x11, #51366, lsl #32
-; CHECK-NEXT:    sub x12, x10, x2
+; CHECK-NEXT:    mov x10, #31883
+; CHECK-NEXT:    movk x10, #3542, lsl #16
+; CHECK-NEXT:    movk x10, #51366, lsl #32
 ; CHECK-NEXT:    and x9, x2, #0x1fffffffff
-; CHECK-NEXT:    movk x11, #56679, lsl #48
-; CHECK-NEXT:    and x12, x12, #0x1fffffffff
-; CHECK-NEXT:    umulh x13, x9, x11
-; CHECK-NEXT:    umulh x11, x12, x11
-; CHECK-NEXT:    lsr x13, x13, #5
-; CHECK-NEXT:    lsr x11, x11, #5
+; CHECK-NEXT:    movk x10, #56679, lsl #48
+; CHECK-NEXT:    umulh x10, x9, x10
+; CHECK-NEXT:    mov w11, #37
+; CHECK-NEXT:    lsr x10, x10, #5
+; CHECK-NEXT:    msub x9, x10, x11, x9
 ; CHECK-NEXT:    and x8, x1, #0x1fffffffff
-; CHECK-NEXT:    msub x9, x13, x10, x9
-; CHECK-NEXT:    msub x10, x11, x10, x12
+; CHECK-NEXT:    sub x10, x11, x9
 ; CHECK-NEXT:    lsr x8, x8, x9
 ; CHECK-NEXT:    lsl x10, x0, x10
 ; CHECK-NEXT:    orr x8, x10, x8

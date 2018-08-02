@@ -68,28 +68,45 @@ ObjectLayer::ObjectLayer(ExecutionSession &ES) : ES(ES) {}
 ObjectLayer::~ObjectLayer() {}
 
 Error ObjectLayer::add(VSO &V, VModuleKey K, std::unique_ptr<MemoryBuffer> O) {
-  return V.define(llvm::make_unique<BasicObjectLayerMaterializationUnit>(
-      *this, std::move(K), std::move(O)));
+  auto ObjMU = BasicObjectLayerMaterializationUnit::Create(*this, std::move(K),
+                                                           std::move(O));
+  if (!ObjMU)
+    return ObjMU.takeError();
+  return V.define(std::move(*ObjMU));
 }
 
-BasicObjectLayerMaterializationUnit::BasicObjectLayerMaterializationUnit(
-    ObjectLayer &L, VModuleKey K, std::unique_ptr<MemoryBuffer> O)
-    : MaterializationUnit(SymbolFlagsMap()), L(L), K(std::move(K)),
-      O(std::move(O)) {
-
+Expected<std::unique_ptr<BasicObjectLayerMaterializationUnit>>
+BasicObjectLayerMaterializationUnit::Create(ObjectLayer &L, VModuleKey K,
+                                            std::unique_ptr<MemoryBuffer> O) {
   auto &ES = L.getExecutionSession();
-  auto Obj = cantFail(
-      object::ObjectFile::createObjectFile(this->O->getMemBufferRef()));
+  auto Obj = object::ObjectFile::createObjectFile(O->getMemBufferRef());
 
-  for (auto &Sym : Obj->symbols()) {
+  if (!Obj)
+    return Obj.takeError();
+
+  SymbolFlagsMap SymbolFlags;
+  for (auto &Sym : (*Obj)->symbols()) {
     if (!(Sym.getFlags() & object::BasicSymbolRef::SF_Undefined) &&
          (Sym.getFlags() & object::BasicSymbolRef::SF_Exported)) {
       auto InternedName =
           ES.getSymbolStringPool().intern(cantFail(Sym.getName()));
-      SymbolFlags[InternedName] = JITSymbolFlags::fromObjectSymbol(Sym);
+      auto SymFlags = JITSymbolFlags::fromObjectSymbol(Sym);
+      if (!SymFlags)
+        return SymFlags.takeError();
+      SymbolFlags[InternedName] = std::move(*SymFlags);
     }
   }
+
+  return std::unique_ptr<BasicObjectLayerMaterializationUnit>(
+      new BasicObjectLayerMaterializationUnit(std::move(SymbolFlags), L, K,
+                                              std::move(O)));
 }
+
+BasicObjectLayerMaterializationUnit::BasicObjectLayerMaterializationUnit(
+    SymbolFlagsMap SymbolFlags, ObjectLayer &L, VModuleKey K,
+    std::unique_ptr<MemoryBuffer> O)
+    : MaterializationUnit(std::move(SymbolFlags)), L(L), K(std::move(K)),
+      O(std::move(O)) {}
 
 void BasicObjectLayerMaterializationUnit::materialize(
     MaterializationResponsibility R) {

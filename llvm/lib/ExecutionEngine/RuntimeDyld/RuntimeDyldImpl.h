@@ -370,7 +370,7 @@ protected:
   void writeBytesUnaligned(uint64_t Value, uint8_t *Dst, unsigned Size) const;
 
   /// Generate JITSymbolFlags from a libObject symbol.
-  virtual JITSymbolFlags getJITSymbolFlags(const BasicSymbolRef &Sym);
+  virtual Expected<JITSymbolFlags> getJITSymbolFlags(const SymbolRef &Sym);
 
   /// Modify the given target address based on the given symbol flags.
   /// This can be used by subclasses to tweak addresses based on symbol flags,
