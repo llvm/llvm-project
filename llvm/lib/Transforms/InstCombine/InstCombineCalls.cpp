@@ -1143,17 +1143,6 @@ static Value *simplifyMinnumMaxnum(const IntrinsicInst &II) {
   if (C1 && C1->isNaN())
     return Arg0;
 
-  // This is the value because if undef were NaN, we would return the other
-  // value and cannot return a NaN unless both operands are.
-  //
-  // fmin(undef, x) -> x
-  if (isa<UndefValue>(Arg0))
-    return Arg1;
-
-  // fmin(x, undef) -> x
-  if (isa<UndefValue>(Arg1))
-    return Arg0;
-
   Value *X = nullptr;
   Value *Y = nullptr;
   if (II.getIntrinsicID() == Intrinsic::minnum) {

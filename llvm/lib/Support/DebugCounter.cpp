@@ -82,6 +82,7 @@ void DebugCounter::push_back(const std::string &Val) {
              << " is not a registered counter\n";
       return;
     }
+    enableAllCounters();
     Counters[CounterID].Skip = CounterVal;
     Counters[CounterID].IsSet = true;
   } else if (CounterPair.first.endswith("-count")) {
@@ -92,6 +93,7 @@ void DebugCounter::push_back(const std::string &Val) {
              << " is not a registered counter\n";
       return;
     }
+    enableAllCounters();
     Counters[CounterID].StopAfter = CounterVal;
     Counters[CounterID].IsSet = true;
   } else {

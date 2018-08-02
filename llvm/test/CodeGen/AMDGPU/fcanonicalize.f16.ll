@@ -6,6 +6,8 @@ declare half @llvm.fabs.f16(half) #0
 declare half @llvm.canonicalize.f16(half) #0
 declare <2 x half> @llvm.fabs.v2f16(<2 x half>) #0
 declare <2 x half> @llvm.canonicalize.v2f16(<2 x half>) #0
+declare <3 x half> @llvm.canonicalize.v3f16(<3 x half>) #0
+declare <4 x half> @llvm.canonicalize.v4f16(<4 x half>) #0
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 
 
@@ -474,6 +476,43 @@ define amdgpu_kernel void @test_fold_canonicalize_snan3_value_v2f16(<2 x half> a
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> <half 0xHFC01, half 0xHFC01>)
   store <2 x half> %canonicalized, <2 x half> addrspace(1)* %out
   ret void
+}
+
+; FIXME: Extra 4th component handled
+; GCN-LABEL: {{^}}v_test_canonicalize_var_v3f16:
+; GFX9: s_waitcnt
+; GFX9-NEXT: v_pk_max_f16 v1, v1, v1
+; GFX9-NEXT: v_pk_max_f16 v0, v0, v0
+; GFX9-NEXT: s_setpc_b64
+
+; VI-DAG: v_max_f16_sdwa [[CANON_ELT3:v[0-9]+]], v1, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-DAG: v_max_f16_e32 [[CANON_ELT2:v[0-9]+]], v1, v1
+; VI-DAG: v_max_f16_sdwa [[CANON_ELT1:v[0-9]+]], v0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-DAG: v_max_f16_e32 [[CANON_ELT0:v[0-9]+]], v0, v0
+; VI-DAG: v_or_b32_e32 v0, [[CANON_ELT0]], [[CANON_ELT1]]
+; VI-DAG: v_or_b32_e32 v1, [[CANON_ELT2]], [[CANON_ELT3]]
+; VI: s_setpc_b64
+define <3 x half> @v_test_canonicalize_var_v3f16(<3 x half> %val) #1 {
+  %canonicalized = call <3 x half> @llvm.canonicalize.v3f16(<3 x half> %val)
+  ret <3 x half> %canonicalized
+}
+
+; GCN-LABEL: {{^}}v_test_canonicalize_var_v4f16:
+; GFX9: s_waitcnt
+; GFX9-NEXT: v_pk_max_f16 v0, v0, v0
+; GFX9-NEXT: v_pk_max_f16 v1, v1, v1
+; GFX9-NEXT: s_setpc_b64
+
+; VI-DAG: v_max_f16_sdwa [[CANON_ELT3:v[0-9]+]], v1, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-DAG: v_max_f16_e32 [[CANON_ELT2:v[0-9]+]], v1, v1
+; VI-DAG: v_max_f16_sdwa [[CANON_ELT1:v[0-9]+]], v0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-DAG: v_max_f16_e32 [[CANON_ELT0:v[0-9]+]], v0, v0
+; VI-DAG: v_or_b32_e32 v0, [[CANON_ELT0]], [[CANON_ELT1]]
+; VI-DAG: v_or_b32_e32 v1, [[CANON_ELT2]], [[CANON_ELT3]]
+; VI: s_setpc_b64
+define <4 x half> @v_test_canonicalize_var_v4f16(<4 x half> %val) #1 {
+  %canonicalized = call <4 x half> @llvm.canonicalize.v4f16(<4 x half> %val)
+  ret <4 x half> %canonicalized
 }
 
 attributes #0 = { nounwind readnone }

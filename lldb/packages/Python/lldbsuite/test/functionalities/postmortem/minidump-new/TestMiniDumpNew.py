@@ -189,6 +189,161 @@ class MiniDumpNewTestCase(TestBase):
         stop_description = thread.GetStopDescription(256)
         self.assertEqual(stop_description, "")
 
+    def check_register_unsigned(self, set, name, expected):
+        reg_value = set.GetChildMemberWithName(name)
+        self.assertTrue(reg_value.IsValid(),
+                        'Verify we have a register named "%s"' % (name))
+        self.assertEqual(reg_value.GetValueAsUnsigned(), expected,
+                         'Verify "%s" == %i' % (name, expected))
+
+    def check_register_string_value(self, set, name, expected, format):
+        reg_value = set.GetChildMemberWithName(name)
+        self.assertTrue(reg_value.IsValid(),
+                        'Verify we have a register named "%s"' % (name))
+        if format is not None:
+            reg_value.SetFormat(format)
+        self.assertEqual(reg_value.GetValue(), expected,
+                         'Verify "%s" has string value "%s"' % (name,
+                                                                expected))
+
+    def test_arm64_registers(self):
+        """Test ARM64 registers from a breakpad created minidump."""
+        # target create -c arm64-macos.dmp
+        self.dbg.CreateTarget(None)
+        self.target = self.dbg.GetSelectedTarget()
+        self.process = self.target.LoadCore("arm64-macos.dmp")
+        self.check_state()
+        self.assertEqual(self.process.GetNumThreads(), 1)
+        thread = self.process.GetThreadAtIndex(0)
+        self.assertEqual(thread.GetStopReason(), lldb.eStopReasonNone)
+        stop_description = thread.GetStopDescription(256)
+        self.assertEqual(stop_description, "")
+        registers = thread.GetFrameAtIndex(0).GetRegisters()
+        # Verify the GPR registers are all correct
+        # Verify x0 - x31 register values
+        gpr = registers.GetValueAtIndex(0)
+        for i in range(32):
+            v = i+1 | i+2 << 32 | i+3 << 48
+            w = i+1
+            self.check_register_unsigned(gpr, 'x%i' % (i), v)
+            self.check_register_unsigned(gpr, 'w%i' % (i), w)
+        # Verify arg1 - arg8 register values
+        for i in range(1, 9):
+            v = i | i+1 << 32 | i+2 << 48
+            self.check_register_unsigned(gpr, 'arg%i' % (i), v)
+        i = 29
+        v = i+1 | i+2 << 32 | i+3 << 48
+        self.check_register_unsigned(gpr, 'fp', v)
+        i = 30
+        v = i+1 | i+2 << 32 | i+3 << 48
+        self.check_register_unsigned(gpr, 'lr', v)
+        i = 31
+        v = i+1 | i+2 << 32 | i+3 << 48
+        self.check_register_unsigned(gpr, 'sp', v)
+        self.check_register_unsigned(gpr, 'pc', 0x1000)
+        self.check_register_unsigned(gpr, 'cpsr', 0x11223344)
+        self.check_register_unsigned(gpr, 'psr', 0x11223344)
+
+        # Verify the FPR registers are all correct
+        fpr = registers.GetValueAtIndex(1)
+        for i in range(32):
+            v = "0x"
+            d = "0x"
+            s = "0x"
+            h = "0x"
+            for j in range(i+15, i-1, -1):
+                v += "%2.2x" % (j)
+            for j in range(i+7, i-1, -1):
+                d += "%2.2x" % (j)
+            for j in range(i+3, i-1, -1):
+                s += "%2.2x" % (j)
+            for j in range(i+1, i-1, -1):
+                h += "%2.2x" % (j)
+            self.check_register_string_value(fpr, "v%i" % (i), v,
+                                             lldb.eFormatHex)
+            self.check_register_string_value(fpr, "d%i" % (i), d,
+                                             lldb.eFormatHex)
+            self.check_register_string_value(fpr, "s%i" % (i), s,
+                                             lldb.eFormatHex)
+            self.check_register_string_value(fpr, "h%i" % (i), h,
+                                             lldb.eFormatHex)
+        self.check_register_unsigned(gpr, 'fpsr', 0x55667788)
+        self.check_register_unsigned(gpr, 'fpcr', 0x99aabbcc)
+
+    def verify_arm_registers(self, apple=False):
+        """
+            Verify values of all ARM registers from a breakpad created
+            minidump.
+        """
+        self.dbg.CreateTarget(None)
+        self.target = self.dbg.GetSelectedTarget()
+        if apple:
+            self.process = self.target.LoadCore("arm-macos.dmp")
+        else:
+            self.process = self.target.LoadCore("arm-linux.dmp")
+        self.check_state()
+        self.assertEqual(self.process.GetNumThreads(), 1)
+        thread = self.process.GetThreadAtIndex(0)
+        self.assertEqual(thread.GetStopReason(), lldb.eStopReasonNone)
+        stop_description = thread.GetStopDescription(256)
+        self.assertEqual(stop_description, "")
+        registers = thread.GetFrameAtIndex(0).GetRegisters()
+        # Verify the GPR registers are all correct
+        # Verify x0 - x31 register values
+        gpr = registers.GetValueAtIndex(0)
+        for i in range(1, 16):
+            self.check_register_unsigned(gpr, 'r%i' % (i), i+1)
+        # Verify arg1 - arg4 register values
+        for i in range(1, 5):
+            self.check_register_unsigned(gpr, 'arg%i' % (i), i)
+        if apple:
+            self.check_register_unsigned(gpr, 'fp', 0x08)
+        else:
+            self.check_register_unsigned(gpr, 'fp', 0x0c)
+        self.check_register_unsigned(gpr, 'lr', 0x0f)
+        self.check_register_unsigned(gpr, 'sp', 0x0e)
+        self.check_register_unsigned(gpr, 'pc', 0x10)
+        self.check_register_unsigned(gpr, 'cpsr', 0x11223344)
+
+        # Verify the FPR registers are all correct
+        fpr = registers.GetValueAtIndex(1)
+        # Check d0 - d31
+        self.check_register_unsigned(gpr, 'fpscr', 0x55667788aabbccdd)
+        for i in range(32):
+            value = (i+1) | (i+1) << 8 | (i+1) << 32 | (i+1) << 48
+            self.check_register_unsigned(fpr, "d%i" % (i), value)
+        # Check s0 - s31
+        for i in range(32):
+            i_val = (i >> 1) + 1
+            if i & 1:
+                value = "%#8.8x" % (i_val | i_val << 16)
+            else:
+                value = "%#8.8x" % (i_val | i_val << 8)
+            self.check_register_string_value(fpr, "s%i" % (i), value,
+                                             lldb.eFormatHex)
+        # Check q0 - q15
+        for i in range(15):
+            a = i * 2 + 1
+            b = a + 1
+            value = ("0x00%2.2x00%2.2x0000%2.2x%2.2x"
+                     "00%2.2x00%2.2x0000%2.2x%2.2x") % (b, b, b, b, a, a, a, a)
+            self.check_register_string_value(fpr, "q%i" % (i), value,
+                                             lldb.eFormatHex)
+
+    def test_linux_arm_registers(self):
+        """Test Linux ARM registers from a breakpad created minidump.
+
+           The frame pointer is R11 for linux.
+        """
+        self.verify_arm_registers(apple=False)
+
+    def test_apple_arm_registers(self):
+        """Test Apple ARM registers from a breakpad created minidump.
+
+           The frame pointer is R7 for linux.
+        """
+        self.verify_arm_registers(apple=True)
+
     def do_test_deeper_stack(self, binary, core, pid):
         target = self.dbg.CreateTarget(binary)
         process = target.LoadCore(core)
