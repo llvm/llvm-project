@@ -31,6 +31,9 @@ namespace doc {
 using SymbolID = std::array<uint8_t, 20>;
 
 struct Info;
+struct FunctionInfo;
+struct EnumInfo;
+
 enum class InfoType {
   IT_default,
   IT_namespace,
@@ -153,6 +156,9 @@ struct Location {
 struct Info {
   Info() = default;
   Info(InfoType IT) : IT(IT) {}
+  Info(InfoType IT, SymbolID USR) : USR(USR), IT(IT) {}
+  Info(InfoType IT, SymbolID USR, StringRef Name)
+      : USR(USR), IT(IT), Name(Name) {}
   Info(const Info &Other) = delete;
   Info(Info &&Other) = default;
 
@@ -166,18 +172,36 @@ struct Info {
 
   void mergeBase(Info &&I);
   bool mergeable(const Info &Other);
+
+  // Returns a reference to the parent scope (that is, the immediate parent
+  // namespace or class in which this decl resides).
+  llvm::Expected<Reference> getEnclosingScope();
 };
 
 // Info for namespaces.
 struct NamespaceInfo : public Info {
   NamespaceInfo() : Info(InfoType::IT_namespace) {}
+  NamespaceInfo(SymbolID USR) : Info(InfoType::IT_namespace, USR) {}
+  NamespaceInfo(SymbolID USR, StringRef Name)
+      : Info(InfoType::IT_namespace, USR, Name) {}
 
   void merge(NamespaceInfo &&I);
+
+  // Namespaces and Records are references because they will be properly
+  // documented in their own info, while the entirety of Functions and Enums are
+  // included here because they should not have separate documentation from
+  // their scope.
+  std::vector<Reference> ChildNamespaces;
+  std::vector<Reference> ChildRecords;
+  std::vector<FunctionInfo> ChildFunctions;
+  std::vector<EnumInfo> ChildEnums;
 };
 
 // Info for symbols.
 struct SymbolInfo : public Info {
   SymbolInfo(InfoType IT) : Info(IT) {}
+  SymbolInfo(InfoType IT, SymbolID USR) : Info(IT, USR) {}
+  SymbolInfo(InfoType IT, SymbolID USR, StringRef Name) : Info(IT, USR, Name) {}
 
   void merge(SymbolInfo &&I);
 
@@ -189,6 +213,7 @@ struct SymbolInfo : public Info {
 // Info for functions.
 struct FunctionInfo : public SymbolInfo {
   FunctionInfo() : SymbolInfo(InfoType::IT_function) {}
+  FunctionInfo(SymbolID USR) : SymbolInfo(InfoType::IT_function, USR) {}
 
   void merge(FunctionInfo &&I);
 
@@ -205,6 +230,9 @@ struct FunctionInfo : public SymbolInfo {
 // Info for types.
 struct RecordInfo : public SymbolInfo {
   RecordInfo() : SymbolInfo(InfoType::IT_record) {}
+  RecordInfo(SymbolID USR) : SymbolInfo(InfoType::IT_record, USR) {}
+  RecordInfo(SymbolID USR, StringRef Name)
+      : SymbolInfo(InfoType::IT_record, USR, Name) {}
 
   void merge(RecordInfo &&I);
 
@@ -218,12 +246,21 @@ struct RecordInfo : public SymbolInfo {
                                            // parents).
   llvm::SmallVector<Reference, 4>
       VirtualParents; // List of virtual base/parent records.
+
+  // Records are references because they will be properly
+  // documented in their own info, while the entirety of Functions and Enums are
+  // included here because they should not have separate documentation from
+  // their scope.
+  std::vector<Reference> ChildRecords;
+  std::vector<FunctionInfo> ChildFunctions;
+  std::vector<EnumInfo> ChildEnums;
 };
 
 // TODO: Expand to allow for documenting templating.
 // Info for types.
 struct EnumInfo : public SymbolInfo {
   EnumInfo() : SymbolInfo(InfoType::IT_enum) {}
+  EnumInfo(SymbolID USR) : SymbolInfo(InfoType::IT_enum, USR) {}
 
   void merge(EnumInfo &&I);
 
