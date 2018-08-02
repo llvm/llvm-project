@@ -161,6 +161,7 @@ class MallocChecker : public Checker<check::DeadSymbols,
                                      check::PointerEscape,
                                      check::ConstPointerEscape,
                                      check::PreStmt<ReturnStmt>,
+                                     check::EndFunction,
                                      check::PreCall,
                                      check::PostStmt<CallExpr>,
                                      check::PostStmt<CXXNewExpr>,
@@ -217,6 +218,7 @@ public:
   void checkPostStmt(const BlockExpr *BE, CheckerContext &C) const;
   void checkDeadSymbols(SymbolReaper &SymReaper, CheckerContext &C) const;
   void checkPreStmt(const ReturnStmt *S, CheckerContext &C) const;
+  void checkEndFunction(const ReturnStmt *S, CheckerContext &C) const;
   ProgramStateRef evalAssume(ProgramStateRef state, SVal Cond,
                             bool Assumption) const;
   void checkLocation(SVal l, bool isLoad, const Stmt *S,
@@ -353,7 +355,7 @@ private:
   static ProgramStateRef CallocMem(CheckerContext &C, const CallExpr *CE,
                                    ProgramStateRef State);
 
-  ///Check if the memory associated with this symbol was released.
+  /// Check if the memory associated with this symbol was released.
   bool isReleased(SymbolRef Sym, CheckerContext &C) const;
 
   bool checkUseAfterFree(SymbolRef Sym, CheckerContext &C, const Stmt *S) const;
@@ -377,12 +379,15 @@ private:
                                    ProgramStateRef State,
                                    SymbolRef &EscapingSymbol) const;
 
-  // Implementation of the checkPointerEscape callabcks.
+  // Implementation of the checkPointerEscape callbacks.
   ProgramStateRef checkPointerEscapeAux(ProgramStateRef State,
                                   const InvalidatedSymbols &Escaped,
                                   const CallEvent *Call,
                                   PointerEscapeKind Kind,
                                   bool(*CheckRefState)(const RefState*)) const;
+
+  // Implementation of the checkPreStmt and checkEndFunction callbacks.
+  void checkEscapeOnReturn(const ReturnStmt *S, CheckerContext &C) const;
 
   ///@{
   /// Tells if a given family/call/symbol is tracked by the current checker.
@@ -2451,7 +2456,24 @@ void MallocChecker::checkPreCall(const CallEvent &Call,
   }
 }
 
-void MallocChecker::checkPreStmt(const ReturnStmt *S, CheckerContext &C) const {
+void MallocChecker::checkPreStmt(const ReturnStmt *S,
+                                 CheckerContext &C) const {
+  checkEscapeOnReturn(S, C);
+}
+
+// In the CFG, automatic destructors come after the return statement.
+// This callback checks for returning memory that is freed by automatic
+// destructors, as those cannot be reached in checkPreStmt().
+void MallocChecker::checkEndFunction(const ReturnStmt *S,
+                                     CheckerContext &C) const {
+  checkEscapeOnReturn(S, C);
+}
+
+void MallocChecker::checkEscapeOnReturn(const ReturnStmt *S,
+                                        CheckerContext &C) const {
+  if (!S)
+    return;
+
   const Expr *E = S->getRetValue();
   if (!E)
     return;
