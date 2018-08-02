@@ -1,4 +1,10 @@
 // RUN: %libomp-compile-and-run
+// UNSUPPORTED: gcc
+// This test is incompatible with gcc because of the explicit call to
+// __kmpc_doacross_fini().  gcc relies on an implicit call to this function
+// when the last iteration is executed inside the GOMP_loop_*_next() functions.
+// Hence, in gcc, having the explicit call leads to __kmpc_doacross_fini()
+// being called twice.
 #include <stdio.h>
 
 #define N   1000

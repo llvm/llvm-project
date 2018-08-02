@@ -6511,6 +6511,19 @@ uint16_t X86InstrInfo::getExecutionDomainCustom(const MachineInstr &MI) const {
 
     // All domains are valid.
     return 0xe;
+  case X86::MOVHLPSrr:
+    // We can swap domains when both inputs are the same register.
+    // FIXME: This doesn't catch all the cases we would like. If the input
+    // register isn't KILLed by the instruction, the two address instruction
+    // pass puts a COPY on one input. The other input uses the original
+    // register. This prevents the same physical register from being used by
+    // both inputs.
+    if (MI.getOperand(1).getReg() == MI.getOperand(2).getReg() &&
+        MI.getOperand(0).getSubReg() == 0 &&
+        MI.getOperand(1).getSubReg() == 0 &&
+        MI.getOperand(2).getSubReg() == 0)
+      return 0x6;
+    return 0;
   }
   return 0;
 }
@@ -6617,6 +6630,20 @@ bool X86InstrInfo::setExecutionDomainCustom(MachineInstr &MI,
     MI.setDesc(get(table[Domain - 1]));
     return true;
   }
+  case X86::UNPCKHPDrr:
+  case X86::MOVHLPSrr:
+    // We just need to commute the instruction which will switch the domains.
+    if (Domain != dom && Domain != 3 &&
+        MI.getOperand(1).getReg() == MI.getOperand(2).getReg() &&
+        MI.getOperand(0).getSubReg() == 0 &&
+        MI.getOperand(1).getSubReg() == 0 &&
+        MI.getOperand(2).getSubReg() == 0) {
+      commuteInstruction(MI, false);
+      return true;
+    }
+    // We must always return true for MOVHLPSrr.
+    if (Opcode == X86::MOVHLPSrr)
+      return true;
   }
   return false;
 }

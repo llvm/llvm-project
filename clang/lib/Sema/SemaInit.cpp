@@ -6371,8 +6371,12 @@ static bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD) {
   const TypeSourceInfo *TSI = FD->getTypeSourceInfo();
   if (!TSI)
     return false;
+  // Don't declare this variable in the second operand of the for-statement;
+  // GCC miscompiles that by ending its lifetime before evaluating the
+  // third operand. See gcc.gnu.org/PR86769.
+  AttributedTypeLoc ATL;
   for (TypeLoc TL = TSI->getTypeLoc();
-       auto ATL = TL.getAsAdjusted<AttributedTypeLoc>();
+       (ATL = TL.getAsAdjusted<AttributedTypeLoc>());
        TL = ATL.getModifiedLoc()) {
     if (ATL.getAttrKind() == AttributedType::attr_lifetimebound)
       return true;

@@ -4767,9 +4767,10 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
     // If the arguments are the same, this is a no-op.
     if (Op0 == Op1) return Op0;
 
-    // If one argument is NaN, return the other argument.
-    if (match(Op0, m_NaN())) return Op1;
-    if (match(Op1, m_NaN())) return Op0;
+    // If one argument is NaN or undef, return the other argument.
+    if (match(Op0, m_CombineOr(m_NaN(), m_Undef()))) return Op1;
+    if (match(Op1, m_CombineOr(m_NaN(), m_Undef()))) return Op0;
+
     break;
   default:
     break;

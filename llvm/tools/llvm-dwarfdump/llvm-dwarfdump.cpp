@@ -282,7 +282,8 @@ using HandlerFn = std::function<bool(ObjectFile &, DWARFContext &DICtx, Twine,
 
 /// Print only DIEs that have a certain name.
 static void filterByName(const StringSet<> &Names,
-                         DWARFContext::cu_iterator_range CUs, raw_ostream &OS) {
+                         DWARFContext::unit_iterator_range CUs,
+                         raw_ostream &OS) {
   for (const auto &CU : CUs)
     for (const auto &Entry : CU->dies()) {
       DWARFDie Die = {CU.get(), &Entry};
@@ -306,7 +307,6 @@ static void filterByName(const StringSet<> &Names,
           Die.dump(OS, 0, getDumpOpts());
       }
     }
-
 }
 
 static void getDies(DWARFContext &DICtx, const AppleAcceleratorTable &Accel,

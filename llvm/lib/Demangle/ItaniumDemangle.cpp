@@ -4924,6 +4924,8 @@ Node *Db::parse() {
     bool RequireNumber = consumeIf('_');
     if (parseNumber().empty() && RequireNumber)
       return nullptr;
+    if (look() == '.')
+      First = Last;
     if (numLeft() != 0)
       return nullptr;
     return make<SpecialName>("invocation function for block in ", Encoding);

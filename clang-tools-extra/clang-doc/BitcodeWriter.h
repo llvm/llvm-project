@@ -68,11 +68,10 @@ enum BlockId {
 
 // New Ids need to be added to the enum here, and to the relevant IdNameMap and
 // initialization list in the implementation file.
-#define INFORECORDS(X) X##_USR, X##_NAME
-
 enum RecordId {
   VERSION = 1,
-  INFORECORDS(FUNCTION),
+  FUNCTION_USR,
+  FUNCTION_NAME,
   FUNCTION_DEFLOCATION,
   FUNCTION_LOCATION,
   FUNCTION_ACCESS,
@@ -91,13 +90,16 @@ enum RecordId {
   FIELD_TYPE_NAME,
   MEMBER_TYPE_NAME,
   MEMBER_TYPE_ACCESS,
-  INFORECORDS(NAMESPACE),
-  INFORECORDS(ENUM),
+  NAMESPACE_USR,
+  NAMESPACE_NAME,
+  ENUM_USR,
+  ENUM_NAME,
   ENUM_DEFLOCATION,
   ENUM_LOCATION,
   ENUM_MEMBER,
   ENUM_SCOPED,
-  INFORECORDS(RECORD),
+  RECORD_USR,
+  RECORD_NAME,
   RECORD_DEFLOCATION,
   RECORD_LOCATION,
   RECORD_TAG_TYPE,
@@ -112,10 +114,16 @@ enum RecordId {
 static constexpr unsigned BlockIdCount = BI_LAST - BI_FIRST;
 static constexpr unsigned RecordIdCount = RI_LAST - RI_FIRST;
 
-#undef INFORECORDS
-
 // Identifiers for differentiating between subblocks
-enum class FieldId { F_default, F_namespace, F_parent, F_vparent, F_type };
+enum class FieldId {
+  F_default,
+  F_namespace,
+  F_parent,
+  F_vparent,
+  F_type,
+  F_child_namespace,
+  F_child_record
+};
 
 class ClangDocBitcodeWriter {
 public:
