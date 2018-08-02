@@ -297,8 +297,6 @@ extern __attribute__((const)) __constant void *__llvm_amdgcn_queue_ptr(void) __a
 extern __attribute__((const)) __constant void *__llvm_amdgcn_kernarg_segment_ptr(void) __asm("llvm.amdgcn.kernarg.segment.ptr");
 extern __attribute__((const)) __constant void *__llvm_amdgcn_implicitarg_ptr(void) __asm("llvm.amdgcn.implicitarg.ptr");
 
-extern __attribute__((const)) uint __llvm_amdgcn_groupstaticsize(void) __asm("llvm.amdgcn.groutstaticsize");
-
 extern void __llvm_amdgcn_s_sleep(uint) __asm("llvm.amdgcn.s.sleep");
 extern ulong __llvm_amdgcn_s_memtime(void) __asm("llvm.amdgcn.s.memtime");
 extern ulong __llvm_amdgcn_s_memrealtime(void) __asm("llvm.amdgcn.s.memrealtime");
