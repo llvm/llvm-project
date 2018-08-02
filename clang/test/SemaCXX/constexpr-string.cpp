@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 %s -triple x86_64-linux-gnu -std=c++1z -fsyntax-only -verify -pedantic
-// RUN: %clang_cc1 %s -triple x86_64-linux-gnu -std=c++1z -fsyntax-only -verify -pedantic -fno-signed-char
-// RUN: %clang_cc1 %s -triple x86_64-linux-gnu -std=c++1z -fsyntax-only -verify -pedantic -fno-wchar -Dwchar_t=__WCHAR_TYPE__
+// RUN: %clang_cc1 %s -std=c++1z -fsyntax-only -verify -pedantic
+// RUN: %clang_cc1 %s -std=c++1z -fsyntax-only -verify -pedantic -fno-signed-char
+// RUN: %clang_cc1 %s -std=c++1z -fsyntax-only -verify -pedantic -fno-wchar -Dwchar_t=__WCHAR_TYPE__
 
 # 6 "/usr/include/string.h" 1 3 4
 extern "C" {
@@ -14,13 +14,10 @@ extern "C" {
 
   extern char *strchr(const char *s, int c);
   extern void *memchr(const void *s, int c, size_t n);
-
-  extern void *memcpy(void *d, const void *s, size_t n);
-  extern void *memmove(void *d, const void *s, size_t n);
 }
-# 22 "SemaCXX/constexpr-string.cpp" 2
+# 19 "SemaCXX/constexpr-string.cpp" 2
 
-# 24 "/usr/include/wchar.h" 1 3 4
+# 21 "/usr/include/wchar.h" 1 3 4
 extern "C" {
   extern size_t wcslen(const wchar_t *p);
 
@@ -30,12 +27,9 @@ extern "C" {
 
   extern wchar_t *wcschr(const wchar_t *s, wchar_t c);
   extern wchar_t *wmemchr(const wchar_t *s, wchar_t c, size_t n);
-
-  extern wchar_t *wmemcpy(wchar_t *d, const wchar_t *s, size_t n);
-  extern wchar_t *wmemmove(wchar_t *d, const wchar_t *s, size_t n);
 }
 
-# 39 "SemaCXX/constexpr-string.cpp" 2
+# 33 "SemaCXX/constexpr-string.cpp" 2
 namespace Strlen {
   constexpr int n = __builtin_strlen("hello"); // ok
   static_assert(n == 5);
@@ -240,134 +234,4 @@ namespace WcschrEtc {
 
   constexpr bool a = !wcschr(L"hello", L'h'); // expected-error {{constant expression}} expected-note {{non-constexpr function 'wcschr' cannot be used in a constant expression}}
   constexpr bool b = !wmemchr(L"hello", L'h', 3); // expected-error {{constant expression}} expected-note {{non-constexpr function 'wmemchr' cannot be used in a constant expression}}
-}
-
-namespace MemcpyEtc {
-  template<typename T>
-  constexpr T result(T (&arr)[4]) {
-    return arr[0] * 1000 + arr[1] * 100 + arr[2] * 10 + arr[3];
-  }
-
-  constexpr int test_memcpy(int a, int b, int n) {
-    int arr[4] = {1, 2, 3, 4};
-    __builtin_memcpy(arr + a, arr + b, n);
-    // expected-note@-1 2{{overlapping memory regions}}
-    // expected-note@-2 {{size to copy (1) is not a multiple of size of element type 'int'}}
-    // expected-note@-3 {{source is not a contiguous array of at least 2 elements of type 'int'}}
-    // expected-note@-4 {{destination is not a contiguous array of at least 3 elements of type 'int'}}
-    return result(arr);
-  }
-  constexpr int test_memmove(int a, int b, int n) {
-    int arr[4] = {1, 2, 3, 4};
-    __builtin_memmove(arr + a, arr + b, n);
-    // expected-note@-1 {{size to copy (1) is not a multiple of size of element type 'int'}}
-    // expected-note@-2 {{source is not a contiguous array of at least 2 elements of type 'int'}}
-    // expected-note@-3 {{destination is not a contiguous array of at least 3 elements of type 'int'}}
-    return result(arr);
-  }
-  constexpr int test_wmemcpy(int a, int b, int n) {
-    wchar_t arr[4] = {1, 2, 3, 4};
-    __builtin_wmemcpy(arr + a, arr + b, n);
-    // expected-note@-1 2{{overlapping memory regions}}
-    // expected-note-re@-2 {{source is not a contiguous array of at least 2 elements of type '{{wchar_t|int}}'}}
-    // expected-note-re@-3 {{destination is not a contiguous array of at least 3 elements of type '{{wchar_t|int}}'}}
-    return result(arr);
-  }
-  constexpr int test_wmemmove(int a, int b, int n) {
-    wchar_t arr[4] = {1, 2, 3, 4};
-    __builtin_wmemmove(arr + a, arr + b, n);
-    // expected-note-re@-1 {{source is not a contiguous array of at least 2 elements of type '{{wchar_t|int}}'}}
-    // expected-note-re@-2 {{destination is not a contiguous array of at least 3 elements of type '{{wchar_t|int}}'}}
-    return result(arr);
-  }
-
-  static_assert(test_memcpy(1, 2, 4) == 1334);
-  static_assert(test_memcpy(2, 1, 4) == 1224);
-  static_assert(test_memcpy(0, 1, 8) == 2334); // expected-error {{constant}} expected-note {{in call}}
-  static_assert(test_memcpy(1, 0, 8) == 1124); // expected-error {{constant}} expected-note {{in call}}
-  static_assert(test_memcpy(1, 2, 1) == 1334); // expected-error {{constant}} expected-note {{in call}}
-  static_assert(test_memcpy(0, 3, 4) == 4234);
-  static_assert(test_memcpy(0, 3, 8) == 4234); // expected-error {{constant}} expected-note {{in call}}
-  static_assert(test_memcpy(2, 0, 12) == 4234); // expected-error {{constant}} expected-note {{in call}}
-
-  static_assert(test_memmove(1, 2, 4) == 1334);
-  static_assert(test_memmove(2, 1, 4) == 1224);
-  static_assert(test_memmove(0, 1, 8) == 2334);
-  static_assert(test_memmove(1, 0, 8) == 1124);
-  static_assert(test_memmove(1, 2, 1) == 1334); // expected-error {{constant}} expected-note {{in call}}
-  static_assert(test_memmove(0, 3, 4) == 4234);
-  static_assert(test_memmove(0, 3, 8) == 4234); // expected-error {{constant}} expected-note {{in call}}
-  static_assert(test_memmove(2, 0, 12) == 4234); // expected-error {{constant}} expected-note {{in call}}
-
-  static_assert(test_wmemcpy(1, 2, 1) == 1334);
-  static_assert(test_wmemcpy(2, 1, 1) == 1224);
-  static_assert(test_wmemcpy(0, 1, 2) == 2334); // expected-error {{constant}} expected-note {{in call}}
-  static_assert(test_wmemcpy(1, 0, 2) == 1124); // expected-error {{constant}} expected-note {{in call}}
-  static_assert(test_wmemcpy(1, 2, 1) == 1334);
-  static_assert(test_wmemcpy(0, 3, 1) == 4234);
-  static_assert(test_wmemcpy(0, 3, 2) == 4234); // expected-error {{constant}} expected-note {{in call}}
-  static_assert(test_wmemcpy(2, 0, 3) == 4234); // expected-error {{constant}} expected-note {{in call}}
-
-  static_assert(test_wmemmove(1, 2, 1) == 1334);
-  static_assert(test_wmemmove(2, 1, 1) == 1224);
-  static_assert(test_wmemmove(0, 1, 2) == 2334);
-  static_assert(test_wmemmove(1, 0, 2) == 1124);
-  static_assert(test_wmemmove(1, 2, 1) == 1334);
-  static_assert(test_wmemmove(0, 3, 1) == 4234);
-  static_assert(test_wmemmove(0, 3, 2) == 4234); // expected-error {{constant}} expected-note {{in call}}
-  static_assert(test_wmemmove(2, 0, 3) == 4234); // expected-error {{constant}} expected-note {{in call}}
-
-  // Copying is permitted for any trivially-copyable type.
-  struct Trivial { char k; short s; constexpr bool ok() { return k == 3 && s == 4; } };
-  constexpr bool test_trivial() {
-    Trivial arr[3] = {{1, 2}, {3, 4}, {5, 6}};
-    __builtin_memcpy(arr, arr+1, sizeof(Trivial));
-    __builtin_memmove(arr+1, arr, 2 * sizeof(Trivial));
-    return arr[0].ok() && arr[1].ok() && arr[2].ok();
-  }
-  static_assert(test_trivial());
-
-  // But not for a non-trivially-copyable type.
-  struct NonTrivial {
-    constexpr NonTrivial() : n(0) {}
-    constexpr NonTrivial(const NonTrivial &) : n(1) {}
-    int n;
-  };
-  constexpr bool test_nontrivial_memcpy() { // expected-error {{never produces a constant}}
-    NonTrivial arr[3] = {};
-    __builtin_memcpy(arr, arr + 1, sizeof(NonTrivial)); // expected-note 2{{non-trivially-copyable}}
-    return true;
-  }
-  static_assert(test_nontrivial_memcpy()); // expected-error {{constant}} expected-note {{in call}}
-  constexpr bool test_nontrivial_memmove() { // expected-error {{never produces a constant}}
-    NonTrivial arr[3] = {};
-    __builtin_memcpy(arr, arr + 1, sizeof(NonTrivial)); // expected-note 2{{non-trivially-copyable}}
-    return true;
-  }
-  static_assert(test_nontrivial_memmove()); // expected-error {{constant}} expected-note {{in call}}
-
-  // Type puns via constant evaluated memcpy are not supported yet.
-  constexpr float type_pun(const unsigned &n) {
-    float f = 0.0f;
-    __builtin_memcpy(&f, &n, 4); // expected-note {{cannot constant evaluate 'memcpy' from object of type 'const unsigned int' to object of type 'float'}}
-    return f;
-  }
-  static_assert(type_pun(0x3f800000) == 1.0f); // expected-error {{constant}} expected-note {{in call}}
-
-  // Make sure we're not confused by derived-to-base conversions.
-  struct Base { int a; };
-  struct Derived : Base { int b; };
-  constexpr int test_derived_to_base(int n) {
-    Derived arr[2] = {1, 2, 3, 4};
-    Base *p = &arr[0];
-    Base *q = &arr[1];
-    __builtin_memcpy(p, q, sizeof(Base) * n); // expected-note {{source is not a contiguous array of at least 2 elements of type 'MemcpyEtc::Base'}}
-    return arr[0].a * 1000 + arr[0].b * 100 + arr[1].a * 10 + arr[1].b;
-  }
-  static_assert(test_derived_to_base(0) == 1234);
-  static_assert(test_derived_to_base(1) == 3234);
-  // FIXME: We could consider making this work by stripping elements off both
-  // designators until we have a long enough matching size, if both designators
-  // point to the start of their respective final elements.
-  static_assert(test_derived_to_base(2) == 3434); // expected-error {{constant}} expected-note {{in call}}
 }
