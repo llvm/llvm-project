@@ -1,0 +1,74 @@
+# RUN: yaml2obj %s > %t
+
+# Single flags on a section with all flags:
+# RUN: llvm-objcopy --rename-section=.foo=.bar,alloc %t %t.alloc
+# RUN: llvm-readobj -sections %t.alloc | FileCheck %s --check-prefixes=CHECK,ALLOC,WRITE
+# RUN: llvm-objcopy --rename-section=.foo=.bar,load %t %t.load
+# RUN: llvm-readobj -sections %t.load | FileCheck %s --check-prefixes=CHECK,WRITE
+# RUN: llvm-objcopy --rename-section=.foo=.bar,noload %t %t.noload
+# RUN: llvm-readobj -sections %t.noload | FileCheck %s --check-prefixes=CHECK,WRITE
+# RUN: llvm-objcopy --rename-section=.foo=.bar,readonly %t %t.readonly
+# RUN: llvm-readobj -sections %t.readonly | FileCheck %s --check-prefixes=CHECK
+# RUN: llvm-objcopy --rename-section=.foo=.bar,debug %t %t.debug
+# RUN: llvm-readobj -sections %t.debug | FileCheck %s --check-prefixes=CHECK,WRITE
+# RUN: llvm-objcopy --rename-section=.foo=.bar,code %t %t.code
+# RUN: llvm-readobj -sections %t.code | FileCheck %s --check-prefixes=CHECK,EXEC,WRITE
+# RUN: llvm-objcopy --rename-section=.foo=.bar,data %t %t.data
+# RUN: llvm-readobj -sections %t.data | FileCheck %s --check-prefixes=CHECK,WRITE
+# RUN: llvm-objcopy --rename-section=.foo=.bar,rom %t %t.rom
+# RUN: llvm-readobj -sections %t.rom | FileCheck %s --check-prefixes=CHECK,WRITE
+# RUN: llvm-objcopy --rename-section=.foo=.bar,contents %t %t.contents
+# RUN: llvm-readobj -sections %t.contents | FileCheck %s --check-prefixes=CHECK,WRITE
+# RUN: llvm-objcopy --rename-section=.foo=.bar,merge %t %t.merge
+# RUN: llvm-readobj -sections %t.merge | FileCheck %s --check-prefixes=CHECK,MERGE,WRITE
+# RUN: llvm-objcopy --rename-section=.foo=.bar,strings %t %t.strings
+# RUN: llvm-readobj -sections %t.strings | FileCheck %s --check-prefixes=CHECK,STRINGS,WRITE
+# RUN: llvm-objcopy --rename-section=.foo=.bar,share %t %t.share
+# RUN: llvm-readobj -sections %t.share | FileCheck %s --check-prefixes=CHECK,WRITE
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .infolink
+    Type:            SHT_NOBITS
+  - Name:            .group
+    Type:            SHT_GROUP
+    Link:            .symtab
+    Flags:           [ ]
+    Info:            dummy
+    Members:
+      - SectionOrType: GRP_COMDAT
+      - SectionOrType: .foo
+  - Name:            .foo
+    Type:            SHT_PROGBITS
+    Link:            .infolink
+    Flags:           [ SHF_ALLOC, SHF_COMPRESSED, SHF_EXCLUDE, SHF_EXECINSTR,
+                       SHF_GROUP, SHF_INFO_LINK, SHF_LINK_ORDER, SHF_MERGE,
+                       SHF_OS_NONCONFORMING, SHF_STRINGS, SHF_TLS, SHF_WRITE ]
+    Content:        "a4a4a4a4"
+Symbols:
+  Local:
+  - Name:            dummy
+    Section:         .group
+
+# CHECK:        Name: .bar
+# CHECK-NEXT:   Type: SHT_PROGBITS
+# CHECK-NEXT:   Flags [
+# ALLOC-NEXT:     SHF_ALLOC (0x2)
+# CHECK-NEXT:     SHF_COMPRESSED (0x800)
+# CHECK-NEXT:     SHF_EXCLUDE (0x80000000)
+# EXEC-NEXT:      SHF_EXECINSTR (0x4)
+# CHECK-NEXT:     SHF_GROUP (0x200)
+# CHECK-NEXT:     SHF_INFO_LINK (0x40)
+# CHECK-NEXT:     SHF_LINK_ORDER (0x80)
+# MERGE-NEXT:     SHF_MERGE (0x10)
+# STRINGS-NEXT:   SHF_STRINGS (0x20)
+# CHECK-NEXT:     SHF_TLS (0x400)
+# WRITE-NEXT:     SHF_WRITE (0x1)
+# CHECK-NEXT:   ]
+
+# BAD-FLAG: unrecognized section flag 'xyzzy'

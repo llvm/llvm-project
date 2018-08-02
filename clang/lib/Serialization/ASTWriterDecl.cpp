@@ -529,26 +529,25 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
 
   // FunctionDecl's body is handled last at ASTWriterDecl::Visit,
   // after everything else is written.
-
-  Record.push_back((int)D->SClass); // FIXME: stable encoding
-  Record.push_back(D->IsInline);
-  Record.push_back(D->IsInlineSpecified);
-  Record.push_back(D->IsExplicitSpecified);
-  Record.push_back(D->IsVirtualAsWritten);
-  Record.push_back(D->IsPure);
-  Record.push_back(D->HasInheritedPrototype);
-  Record.push_back(D->HasWrittenPrototype);
-  Record.push_back(D->IsDeleted);
-  Record.push_back(D->IsTrivial);
-  Record.push_back(D->IsTrivialForCall);
-  Record.push_back(D->IsDefaulted);
-  Record.push_back(D->IsExplicitlyDefaulted);
-  Record.push_back(D->HasImplicitReturnZero);
-  Record.push_back(D->IsConstexpr);
-  Record.push_back(D->UsesSEHTry);
-  Record.push_back(D->HasSkippedBody);
-  Record.push_back(D->IsMultiVersion);
-  Record.push_back(D->IsLateTemplateParsed);
+  Record.push_back(static_cast<int>(D->getStorageClass())); // FIXME: stable encoding
+  Record.push_back(D->isInlineSpecified());
+  Record.push_back(D->isInlined());
+  Record.push_back(D->isExplicitSpecified());
+  Record.push_back(D->isVirtualAsWritten());
+  Record.push_back(D->isPure());
+  Record.push_back(D->hasInheritedPrototype());
+  Record.push_back(D->hasWrittenPrototype());
+  Record.push_back(D->isDeletedBit());
+  Record.push_back(D->isTrivial());
+  Record.push_back(D->isTrivialForCall());
+  Record.push_back(D->isDefaulted());
+  Record.push_back(D->isExplicitlyDefaulted());
+  Record.push_back(D->hasImplicitReturnZero());
+  Record.push_back(D->isConstexpr());
+  Record.push_back(D->usesSEHTry());
+  Record.push_back(D->hasSkippedBody());
+  Record.push_back(D->isMultiVersion());
+  Record.push_back(D->isLateTemplateParsed());
   Record.push_back(D->getLinkageInternal());
   Record.AddSourceLocation(D->getLocEnd());
 
@@ -628,7 +627,7 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
 
 void ASTDeclWriter::VisitCXXDeductionGuideDecl(CXXDeductionGuideDecl *D) {
   VisitFunctionDecl(D);
-  Record.push_back(D->IsCopyDeductionCandidate);
+  Record.push_back(D->isCopyDeductionCandidate());
   Code = serialization::DECL_CXX_DEDUCTION_GUIDE;
 }
 
@@ -648,12 +647,12 @@ void ASTDeclWriter::VisitObjCMethodDecl(ObjCMethodDecl *D) {
   Record.push_back(D->isVariadic());
   Record.push_back(D->isPropertyAccessor());
   Record.push_back(D->isDefined());
-  Record.push_back(D->IsOverriding);
-  Record.push_back(D->HasSkippedBody);
+  Record.push_back(D->isOverriding());
+  Record.push_back(D->hasSkippedBody());
 
-  Record.push_back(D->IsRedeclaration);
-  Record.push_back(D->HasRedeclaration);
-  if (D->HasRedeclaration) {
+  Record.push_back(D->isRedeclaration());
+  Record.push_back(D->hasRedeclaration());
+  if (D->hasRedeclaration()) {
     assert(Context.getObjCMethodRedeclaration(D));
     Record.AddDeclRef(Context.getObjCMethodRedeclaration(D));
   }
@@ -670,7 +669,7 @@ void ASTDeclWriter::VisitObjCMethodDecl(ObjCMethodDecl *D) {
   for (const auto *P : D->parameters())
     Record.AddDeclRef(P);
 
-  Record.push_back(D->SelLocsKind);
+  Record.push_back(D->getSelLocsKind());
   unsigned NumStoredSelLocs = D->getNumStoredSelLocs();
   SourceLocation *SelLocs = D->getStoredSelLocs();
   Record.push_back(NumStoredSelLocs);
@@ -1098,6 +1097,7 @@ void ASTDeclWriter::VisitBlockDecl(BlockDecl *D) {
   Record.push_back(D->isVariadic());
   Record.push_back(D->blockMissingReturnType());
   Record.push_back(D->isConversionFromLambda());
+  Record.push_back(D->doesNotEscape());
   Record.push_back(D->capturesCXXThis());
   Record.push_back(D->getNumCaptures());
   for (const auto &capture : D->captures()) {
@@ -1275,7 +1275,7 @@ void ASTDeclWriter::VisitCXXRecordDecl(CXXRecordDecl *D) {
 
   // Store (what we currently believe to be) the key function to avoid
   // deserializing every method so we can compute it.
-  if (D->IsCompleteDefinition)
+  if (D->isCompleteDefinition())
     Record.AddDeclRef(Context.getCurrentKeyFunction(D));
 
   Code = serialization::DECL_CXX_RECORD;

@@ -30,7 +30,7 @@ BenchmarkRunner::BenchmarkRunner(const LLVMState &State,
                                  InstructionBenchmark::ModeE Mode)
     : State(State), RATC(State.getRegInfo(),
                          getFunctionReservedRegs(State.getTargetMachine())),
-      Mode(Mode) {}
+      Mode(Mode), Scratch(llvm::make_unique<ScratchSpace>()) {}
 
 BenchmarkRunner::~BenchmarkRunner() = default;
 
@@ -119,7 +119,7 @@ BenchmarkRunner::runOne(const BenchmarkConfiguration &Configuration,
                << *ObjectFilePath << "\n";
   const ExecutableFunction EF(State.createTargetMachine(),
                               getObjectFromFile(*ObjectFilePath));
-  InstrBenchmark.Measurements = runMeasurements(EF, NumRepetitions);
+  InstrBenchmark.Measurements = runMeasurements(EF, *Scratch, NumRepetitions);
 
   return InstrBenchmark;
 }
@@ -132,9 +132,14 @@ BenchmarkRunner::generateConfigurations(unsigned Opcode) const {
     BenchmarkConfiguration Configuration;
     Configuration.Info = Prototype.Explanation;
     for (InstructionInstance &II : Prototype.Snippet) {
-      II.randomizeUnsetVariables();
+      II.randomizeUnsetVariables(
+          Prototype.ScratchSpaceReg
+              ? RATC.getRegister(Prototype.ScratchSpaceReg).aliasedBits()
+              : RATC.emptyRegisters());
       Configuration.Snippet.push_back(II.build());
     }
+    if (Prototype.ScratchSpaceReg)
+      Configuration.SnippetSetup.LiveIns.push_back(Prototype.ScratchSpaceReg);
     Configuration.SnippetSetup.RegsToDef = computeRegsToDef(Prototype.Snippet);
     return std::vector<BenchmarkConfiguration>{Configuration};
   } else
@@ -144,6 +149,7 @@ BenchmarkRunner::generateConfigurations(unsigned Opcode) const {
 std::vector<unsigned> BenchmarkRunner::computeRegsToDef(
     const std::vector<InstructionInstance> &Snippet) const {
   // Collect all register uses and create an assignment for each of them.
+  // Ignore memory operands which are handled separately.
   // Loop invariant: DefinedRegs[i] is true iif it has been set at least once
   // before the current instruction.
   llvm::BitVector DefinedRegs = RATC.emptyRegisters();
@@ -152,11 +158,12 @@ std::vector<unsigned> BenchmarkRunner::computeRegsToDef(
     // Returns the register that this Operand sets or uses, or 0 if this is not
     // a register.
     const auto GetOpReg = [&II](const Operand &Op) -> unsigned {
-      if (Op.ImplicitReg) {
+      if (Op.IsMem)
+        return 0;
+      if (Op.ImplicitReg)
         return *Op.ImplicitReg;
-      } else if (Op.IsExplicit && II.getValueFor(Op).isReg()) {
+      if (Op.IsExplicit && II.getValueFor(Op).isReg())
         return II.getValueFor(Op).getReg();
-      }
       return 0;
     };
     // Collect used registers that have never been def'ed.
@@ -173,9 +180,8 @@ std::vector<unsigned> BenchmarkRunner::computeRegsToDef(
     for (const Operand &Op : II.Instr.Operands) {
       if (Op.IsDef) {
         const unsigned Reg = GetOpReg(Op);
-        if (Reg > 0) {
+        if (Reg > 0)
           DefinedRegs.set(Reg);
-        }
       }
     }
   }
@@ -192,7 +198,7 @@ BenchmarkRunner::writeObjectFile(const BenchmarkConfiguration::Setup &Setup,
     return std::move(E);
   llvm::raw_fd_ostream OFS(ResultFD, true /*ShouldClose*/);
   assembleToStream(State.getExegesisTarget(), State.createTargetMachine(),
-                   Setup.RegsToDef, Code, OFS);
+                   Setup.LiveIns, Setup.RegsToDef, Code, OFS);
   return ResultPath.str();
 }
 

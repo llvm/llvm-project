@@ -1162,7 +1162,8 @@ public:
     NoDebug = 0,
     FullDebug,
     LineTablesOnly,
-    LastEmissionKind = LineTablesOnly
+    DebugDirectivesOnly,
+    LastEmissionKind = DebugDirectivesOnly
   };
 
   static Optional<DebugEmissionKind> getEmissionKind(StringRef Str);
@@ -1267,6 +1268,9 @@ public:
   unsigned getRuntimeVersion() const { return RuntimeVersion; }
   DebugEmissionKind getEmissionKind() const {
     return (DebugEmissionKind)EmissionKind;
+  }
+  bool isDebugDirectivesOnly() const {
+    return EmissionKind == DebugDirectivesOnly;
   }
   bool getDebugInfoForProfiling() const { return DebugInfoForProfiling; }
   bool getGnuPubnames() const { return GnuPubnames; }

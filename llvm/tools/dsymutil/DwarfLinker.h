@@ -183,7 +183,7 @@ private:
   /// keep. Store that information in \p CU's DIEInfo.
   ///
   /// The return value indicates whether the DIE is incomplete.
-  bool lookForDIEsToKeep(RelocationManager &RelocMgr, RangesTy &Ranges,
+  void lookForDIEsToKeep(RelocationManager &RelocMgr, RangesTy &Ranges,
                          const UnitListTy &Units, const DWARFDie &DIE,
                          const DebugMapObject &DMO, CompileUnit &CU,
                          unsigned Flags);

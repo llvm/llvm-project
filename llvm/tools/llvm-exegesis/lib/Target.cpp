@@ -30,9 +30,8 @@ void ExegesisTarget::registerTarget(ExegesisTarget *Target) {
     FirstTarget = Target;
     return;
   }
-  assert(Target->Next == nullptr && "target has already been registered");
   if (Target->Next != nullptr)
-    return;
+    return; // Already registered.
   Target->Next = FirstTarget;
   FirstTarget = Target;
 }

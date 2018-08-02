@@ -92,6 +92,7 @@ public:
         Listed = true;
       }
     }
+    (void)Listed;
     assert(Listed && "basic block is not found among incoming blocks");
     return false;
   }

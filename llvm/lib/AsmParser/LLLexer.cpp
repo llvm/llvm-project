@@ -905,7 +905,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   }
 
   if (Keyword == "NoDebug" || Keyword == "FullDebug" ||
-      Keyword == "LineTablesOnly") {
+      Keyword == "LineTablesOnly" || Keyword == "DebugDirectivesOnly") {
     StrVal.assign(Keyword.begin(), Keyword.end());
     return lltok::EmissionKind;
   }

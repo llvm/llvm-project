@@ -463,14 +463,15 @@ define float @fabs_select_positive_constants_vector_extract(i32 %c) {
   ret float %fabs
 }
 
+declare float @llvm.minnum.f32(float, float)
+declare float @llvm.maxnum.f32(float, float)
 declare double @llvm.minnum.f64(double, double)
 declare double @llvm.maxnum.f64(double, double)
 declare <2 x double> @llvm.minnum.v2f64(<2 x double>, <2 x double>)
 declare <2 x double> @llvm.maxnum.v2f64(<2 x double>, <2 x double>)
 
 ; From the LangRef for minnum/maxnum:
-; "follows the IEEE-754 semantics for maxNum, which also match for libm’s fmax.
-; If either operand is a NaN, returns the other non-NaN operand."
+; "If either operand is a NaN, returns the other non-NaN operand."
 
 define double @maxnum_nan_op0(double %x) {
 ; CHECK-LABEL: @maxnum_nan_op0(
@@ -534,5 +535,21 @@ define <2 x double> @minnum_nan_op1_vec(<2 x double> %x) {
 ;
   %r = call <2 x double> @llvm.minnum.v2f64(<2 x double> %x, <2 x double> <double 0x7ff800dead00dead, double 0x7ff800dead00dead>)
   ret <2 x double> %r
+}
+
+define float @minnum_same_args(float %x) {
+; CHECK-LABEL: @minnum_same_args(
+; CHECK-NEXT:    ret float [[X:%.*]]
+;
+  %y = call float @llvm.minnum.f32(float %x, float %x)
+  ret float %y
+}
+
+define float @maxnum_same_args(float %x) {
+; CHECK-LABEL: @maxnum_same_args(
+; CHECK-NEXT:    ret float [[X:%.*]]
+;
+  %y = call float @llvm.maxnum.f32(float %x, float %x)
+  ret float %y
 }
 

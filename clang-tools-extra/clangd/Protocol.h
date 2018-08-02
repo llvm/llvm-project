@@ -322,11 +322,25 @@ struct ClientCapabilities {
 
 bool fromJSON(const llvm::json::Value &, ClientCapabilities &);
 
+/// Clangd extension that's used in the 'compilationDatabaseChanges' in
+/// workspace/didChangeConfiguration to record updates to the in-memory
+/// compilation database.
+struct ClangdCompileCommand {
+  std::string workingDirectory;
+  std::vector<std::string> compilationCommand;
+};
+bool fromJSON(const llvm::json::Value &, ClangdCompileCommand &);
+
 /// Clangd extension to set clangd-specific "initializationOptions" in the
 /// "initialize" request and for the "workspace/didChangeConfiguration"
 /// notification since the data received is described as 'any' type in LSP.
 struct ClangdConfigurationParamsChange {
   llvm::Optional<std::string> compilationDatabasePath;
+
+  // The changes that happened to the compilation database.
+  // The key of the map is a file name.
+  llvm::Optional<std::map<std::string, ClangdCompileCommand>>
+      compilationDatabaseChanges;
 };
 bool fromJSON(const llvm::json::Value &, ClangdConfigurationParamsChange &);
 

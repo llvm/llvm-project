@@ -129,7 +129,7 @@ template <class ELFT> void ObjFile<ELFT>::initializeDwarf() {
   DWARFDataExtractor LineData(Obj, Obj.getLineSection(), Config->IsLE,
                               Config->Wordsize);
 
-  for (std::unique_ptr<DWARFCompileUnit> &CU : Dwarf->compile_units()) {
+  for (std::unique_ptr<DWARFUnit> &CU : Dwarf->compile_units()) {
     auto Report = [](Error Err) {
       handleAllErrors(std::move(Err),
                       [](ErrorInfoBase &Info) { warn(Info.message()); });

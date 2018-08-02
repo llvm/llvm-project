@@ -1002,3 +1002,16 @@ CPlusPlusLanguage::GetHardcodedSynthetics() {
 
   return g_formatters;
 }
+
+bool CPlusPlusLanguage::IsSourceFile(llvm::StringRef file_path) const {
+  const auto suffixes = {".cpp", ".cxx", ".c++", ".cc",  ".c",
+                         ".h",   ".hh",  ".hpp", ".hxx", ".h++"};
+  for (auto suffix : suffixes) {
+    if (file_path.endswith_lower(suffix))
+      return true;
+  }
+
+  // Check if we're in a STL path (where the files usually have no extension
+  // that we could check for.
+  return file_path.contains("/usr/include/c++/");
+}

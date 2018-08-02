@@ -145,7 +145,6 @@ def debug_symtab : F<"debug:symtab">;
 def export_all_symbols : F<"export-all-symbols">;
 def kill_at : F<"kill-at">;
 def lldmingw : F<"lldmingw">;
-def msvclto : F<"msvclto">;
 def output_def : Joined<["/", "-"], "output-def:">;
 def pdb_source_path : P<"pdbsourcepath",
                         "Base path used to make relative source file path absolute in PDB">;

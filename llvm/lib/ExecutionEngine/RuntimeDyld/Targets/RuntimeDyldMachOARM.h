@@ -34,9 +34,11 @@ public:
 
   unsigned getStubAlignment() override { return 4; }
 
-  JITSymbolFlags getJITSymbolFlags(const BasicSymbolRef &SR) override {
+  Expected<JITSymbolFlags> getJITSymbolFlags(const SymbolRef &SR) override {
     auto Flags = RuntimeDyldImpl::getJITSymbolFlags(SR);
-    Flags.getTargetFlags() = ARMJITSymbolFlags::fromObjectSymbol(SR);
+    if (!Flags)
+      return Flags.takeError();
+    Flags->getTargetFlags() = ARMJITSymbolFlags::fromObjectSymbol(SR);
     return Flags;
   }
 

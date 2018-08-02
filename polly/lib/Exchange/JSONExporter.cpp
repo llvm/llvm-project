@@ -723,9 +723,10 @@ static bool importScop(Scop &S, const Dependences &D, const DataLayout &DL,
   Expected<json::Value> ParseResult =
       json::parse(result.get().get()->getBuffer());
 
-  if (!ParseResult) {
-    ParseResult.takeError();
+  if (Error E = ParseResult.takeError()) {
     errs() << "JSCoP file could not be parsed\n";
+    errs() << E << "\n";
+    consumeError(std::move(E));
     return false;
   }
   json::Object &jscop = *ParseResult.get().getAsObject();

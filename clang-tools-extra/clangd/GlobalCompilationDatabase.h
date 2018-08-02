@@ -113,6 +113,29 @@ private:
       Cached; /* GUARDED_BY(Mut) */
 };
 
+/// Gets compile args from an in-memory mapping based on a filepath. Typically
+/// used by clients who provide the compile commands themselves.
+class InMemoryCompilationDb : public GlobalCompilationDatabase {
+public:
+  /// Gets compile command for \p File from the stored mapping.
+  llvm::Optional<tooling::CompileCommand>
+  getCompileCommand(PathRef File) const override;
+
+  /// Sets the compilation command for a particular file.
+  ///
+  /// \returns True if the File had no compilation command before.
+  bool setCompilationCommandForFile(PathRef File,
+                                    tooling::CompileCommand CompilationCommand);
+
+  /// Removes the compilation command for \p File if it's present in the
+  /// mapping.
+  void invalidate(PathRef File);
+
+private:
+  mutable std::mutex Mutex;
+  llvm::StringMap<tooling::CompileCommand> Commands; /* GUARDED_BY(Mut) */
+};
+
 } // namespace clangd
 } // namespace clang
 
