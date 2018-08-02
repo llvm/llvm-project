@@ -121,9 +121,24 @@ bool DumpResultToFile(const Twine &DirName, const Twine &FileName,
   return false;
 }
 
+// A function to extract the appropriate path name for a given info's
+// documentation. The path returned is a composite of the parent namespaces as
+// directories plus the decl name as the filename.
+//
+// Example: Given the below, the <ext> path for class C will be <
+// root>/A/B/C.<ext>
+//
+// namespace A {
+// namesapce B {
+//
+// class C {};
+//
+// }
+// }
 llvm::Expected<llvm::SmallString<128>>
-getPath(StringRef Root, StringRef Ext, StringRef Name,
-        llvm::SmallVectorImpl<doc::Reference> &Namespaces) {
+getInfoOutputFile(StringRef Root,
+                  llvm::SmallVectorImpl<doc::Reference> &Namespaces,
+                  StringRef Name, StringRef Ext) {
   std::error_code OK;
   llvm::SmallString<128> Path;
   llvm::sys::path::native(Root, Path);
@@ -134,6 +149,8 @@ getPath(StringRef Root, StringRef Ext, StringRef Name,
     return llvm::make_error<llvm::StringError>("Unable to create directory.\n",
                                                llvm::inconvertibleErrorCode());
 
+  if (Name.empty())
+    Name = "GlobalNamespace";
   llvm::sys::path::append(Path, Name + Ext);
   return Path;
 }
@@ -144,6 +161,30 @@ std::string getFormatString(OutputFormatTy Ty) {
     return "yaml";
   }
   llvm_unreachable("Unknown OutputFormatTy");
+}
+
+// Iterate through tool results and build string map of info vectors from the
+// encoded bitstreams.
+bool bitcodeResultsToInfos(
+    tooling::ToolResults &Results,
+    llvm::StringMap<std::vector<std::unique_ptr<doc::Info>>> &Output) {
+  bool Err = false;
+  Results.forEachResult([&](StringRef Key, StringRef Value) {
+    llvm::BitstreamCursor Stream(Value);
+    doc::ClangDocBitcodeReader Reader(Stream);
+    auto Infos = Reader.readBitcode();
+    if (!Infos) {
+      llvm::errs() << toString(Infos.takeError()) << "\n";
+      Err = true;
+      return;
+    }
+    for (auto &I : Infos.get()) {
+      auto R =
+          Output.try_emplace(Key, std::vector<std::unique_ptr<doc::Info>>());
+      R.first->second.emplace_back(std::move(I));
+    }
+  });
+  return Err;
 }
 
 int main(int argc, const char **argv) {
@@ -196,30 +237,21 @@ int main(int argc, const char **argv) {
   }
 
   // Collect values into output by key.
-  llvm::outs() << "Collecting infos...\n";
-  llvm::StringMap<std::vector<std::unique_ptr<doc::Info>>> MapOutput;
-
   // In ToolResults, the Key is the hashed USR and the value is the
   // bitcode-encoded representation of the Info object.
-  Exec->get()->getToolResults()->forEachResult([&](StringRef Key,
-                                                   StringRef Value) {
-    llvm::BitstreamCursor Stream(Value);
-    doc::ClangDocBitcodeReader Reader(Stream);
-    auto Infos = Reader.readBitcode();
-    for (auto &I : Infos) {
-      auto R =
-          MapOutput.try_emplace(Key, std::vector<std::unique_ptr<doc::Info>>());
-      R.first->second.emplace_back(std::move(I));
-    }
-  });
+  llvm::outs() << "Collecting infos...\n";
+  llvm::StringMap<std::vector<std::unique_ptr<doc::Info>>> USRToInfos;
+  if (bitcodeResultsToInfos(*Exec->get()->getToolResults(), USRToInfos))
+    return 1;
 
-  // Reducing and generation phases
-  llvm::outs() << "Reducing " << MapOutput.size() << " infos...\n";
-  llvm::StringMap<std::unique_ptr<doc::Info>> ReduceOutput;
-  for (auto &Group : MapOutput) {
+  // First reducing phase (reduce all decls into one info per decl).
+  llvm::outs() << "Reducing " << USRToInfos.size() << " infos...\n";
+  for (auto &Group : USRToInfos) {
     auto Reduced = doc::mergeInfos(Group.getValue());
-    if (!Reduced)
+    if (!Reduced) {
       llvm::errs() << llvm::toString(Reduced.takeError());
+      continue;
+    }
 
     if (DumpIntermediateResult) {
       SmallString<4096> Buffer;
@@ -230,10 +262,10 @@ int main(int argc, const char **argv) {
         llvm::errs() << "Error dumping to bitcode.\n";
       continue;
     }
-
-    // Create the relevant ostream and emit the documentation for this decl.
     doc::Info *I = Reduced.get().get();
-    auto InfoPath = getPath(OutDirectory, "." + Format, I->Name, I->Namespace);
+
+    auto InfoPath =
+        getInfoOutputFile(OutDirectory, I->Namespace, I->Name, "." + Format);
     if (!InfoPath) {
       llvm::errs() << toString(InfoPath.takeError()) << "\n";
       continue;
@@ -241,7 +273,7 @@ int main(int argc, const char **argv) {
     std::error_code FileErr;
     llvm::raw_fd_ostream InfoOS(InfoPath.get(), FileErr, llvm::sys::fs::F_None);
     if (FileErr != OK) {
-      llvm::errs() << "Error opening index file: " << FileErr.message() << "\n";
+      llvm::errs() << "Error opening info file: " << FileErr.message() << "\n";
       continue;
     }
 

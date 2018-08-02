@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fmodules -verify %s
+// RUN: %clang_cc1 -fmodules -verify %s -emit-llvm-only
 // expected-no-diagnostics
 
 #pragma clang module build A

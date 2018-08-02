@@ -64,6 +64,7 @@
     <None Include="source.extension.vsixmanifest">
       <SubType>Designer</SubType>
     </None>
+    <None Include="Key.snk" />
     <Content Include="Platformx64\Toolset.props">
       <IncludeInVSIX>true</IncludeInVSIX>
       <InstallRoot>VCTargets</InstallRoot>
@@ -90,11 +91,7 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(VSToolsPath)\VSSDK\Microsoft.VsSDK.targets" Condition="'$(VSToolsPath)' != ''" />
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-       Other similar extension points exist, see Microsoft.Common.targets.
-  <Target Name="BeforeBuild">
-  </Target>
-  <Target Name="AfterBuild">
-  </Target>
-  -->
+  <PropertyGroup>
+    <PreBuildEvent>if not exist $(ProjectDir)Key.snk ("$(TargetFrameworkSDKToolsDirectory)\x64\sn.exe" -k $(ProjectDir)Key.snk)</PreBuildEvent>
+  </PropertyGroup>
 </Project>

@@ -65,6 +65,7 @@
 /* End PBXAggregateTarget section */
 
 /* Begin PBXBuildFile section */
+		228B1B672113340200E61C70 /* ClangHighlighter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 58A080AB2112AABB00D5580F /* ClangHighlighter.cpp */; };
 		268900E813353E6F00698AC0 /* ABI.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 497E7B9D1188F6690065CCA1 /* ABI.cpp */; };
 		26DB3E161379E7AD0080DC73 /* ABIMacOSX_arm.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26DB3E071379E7AD0080DC73 /* ABIMacOSX_arm.cpp */; };
 		26DB3E191379E7AD0080DC73 /* ABIMacOSX_arm64.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26DB3E0B1379E7AD0080DC73 /* ABIMacOSX_arm64.cpp */; };
@@ -664,6 +665,10 @@
 		26474CBE18D0CB2D0073DEBA /* RegisterContextMach_i386.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26474CB818D0CB2D0073DEBA /* RegisterContextMach_i386.cpp */; };
 		26474CC018D0CB2D0073DEBA /* RegisterContextMach_x86_64.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26474CBA18D0CB2D0073DEBA /* RegisterContextMach_x86_64.cpp */; };
 		26474CC918D0CB5B0073DEBA /* RegisterContextMemory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26474CC218D0CB5B0073DEBA /* RegisterContextMemory.cpp */; };
+		2619C4852107A9A2009CDE81 /* RegisterContextMinidump_ARM.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2619C4812107A9A1009CDE81 /* RegisterContextMinidump_ARM.cpp */; };
+		2619C4872107A9A2009CDE81 /* RegisterContextMinidump_ARM.h in Headers */ = {isa = PBXBuildFile; fileRef = 2619C4832107A9A2009CDE81 /* RegisterContextMinidump_ARM.h */; };
+		2619C4842107A9A2009CDE81 /* RegisterContextMinidump_ARM64.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2619C4802107A9A1009CDE81 /* RegisterContextMinidump_ARM64.cpp */; };
+		2619C4862107A9A2009CDE81 /* RegisterContextMinidump_ARM64.h in Headers */ = {isa = PBXBuildFile; fileRef = 2619C4822107A9A2009CDE81 /* RegisterContextMinidump_ARM64.h */; };
 		947CF7761DC7B20D00EF980B /* RegisterContextMinidump_x86_32.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 947CF7741DC7B20D00EF980B /* RegisterContextMinidump_x86_32.cpp */; };
 		AFD65C811D9B5B2E00D93120 /* RegisterContextMinidump_x86_64.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFD65C7F1D9B5B2E00D93120 /* RegisterContextMinidump_x86_64.cpp */; };
 		AFD65C821D9B5B2E00D93120 /* RegisterContextMinidump_x86_64.h in Headers */ = {isa = PBXBuildFile; fileRef = AFD65C801D9B5B2E00D93120 /* RegisterContextMinidump_x86_64.h */; };
@@ -1283,8 +1288,6 @@
 			dstPath = "$(DEVELOPER_INSTALL_DIR)/usr/share/man/man1";
 			dstSubfolderSpec = 0;
 			files = (
-				58A080AE2112AAC500D5580F /* ClangHighlighter.h in CopyFiles */,
-				58A080AC2112AABB00D5580F /* ClangHighlighter.cpp in CopyFiles */,
 				AF90106515AB7D3600FF120D /* lldb.1 in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 1;
@@ -2543,6 +2546,10 @@
 		26474CC218D0CB5B0073DEBA /* RegisterContextMemory.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = RegisterContextMemory.cpp; path = Utility/RegisterContextMemory.cpp; sourceTree = "<group>"; };
 		262D24E513FB8710002D1960 /* RegisterContextMemory.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RegisterContextMemory.h; path = Utility/RegisterContextMemory.h; sourceTree = "<group>"; };
 		26474CC318D0CB5B0073DEBA /* RegisterContextMemory.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RegisterContextMemory.h; path = Utility/RegisterContextMemory.h; sourceTree = "<group>"; };
+		2619C4812107A9A1009CDE81 /* RegisterContextMinidump_ARM.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RegisterContextMinidump_ARM.cpp; sourceTree = "<group>"; };
+		2619C4832107A9A2009CDE81 /* RegisterContextMinidump_ARM.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RegisterContextMinidump_ARM.h; sourceTree = "<group>"; };
+		2619C4802107A9A1009CDE81 /* RegisterContextMinidump_ARM64.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RegisterContextMinidump_ARM64.cpp; sourceTree = "<group>"; };
+		2619C4822107A9A2009CDE81 /* RegisterContextMinidump_ARM64.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RegisterContextMinidump_ARM64.h; sourceTree = "<group>"; };
 		947CF7741DC7B20D00EF980B /* RegisterContextMinidump_x86_32.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RegisterContextMinidump_x86_32.cpp; sourceTree = "<group>"; };
 		947CF7721DC7B20300EF980B /* RegisterContextMinidump_x86_32.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RegisterContextMinidump_x86_32.h; sourceTree = "<group>"; };
 		AFD65C7F1D9B5B2E00D93120 /* RegisterContextMinidump_x86_64.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RegisterContextMinidump_x86_64.cpp; sourceTree = "<group>"; };
@@ -3788,6 +3795,10 @@
 		23E2E5351D9048E7006F38BB /* minidump */ = {
 			isa = PBXGroup;
 			children = (
+				2619C4812107A9A1009CDE81 /* RegisterContextMinidump_ARM.cpp */,
+				2619C4832107A9A2009CDE81 /* RegisterContextMinidump_ARM.h */,
+				2619C4802107A9A1009CDE81 /* RegisterContextMinidump_ARM64.cpp */,
+				2619C4822107A9A2009CDE81 /* RegisterContextMinidump_ARM64.h */,
 				AFD65C7F1D9B5B2E00D93120 /* RegisterContextMinidump_x86_64.cpp */,
 				AFD65C801D9B5B2E00D93120 /* RegisterContextMinidump_x86_64.h */,
 				23E2E5361D9048FB006F38BB /* CMakeLists.txt */,
@@ -6940,8 +6951,10 @@
 				AF6CA6681FBBAF37005A0DC3 /* ArchSpec.h in Headers */,
 				AF235EB41FBE7858009C5541 /* RegisterInfoPOSIX_ppc64le.h in Headers */,
 				AF2E02A41FA2CEAF00A86C34 /* ArchitectureArm.h in Headers */,
+				2619C4872107A9A2009CDE81 /* RegisterContextMinidump_ARM.h in Headers */,
 				267F685A1CC02EBE0086832B /* RegisterInfos_s390x.h in Headers */,
 				267F68541CC02E920086832B /* RegisterContextLinux_s390x.h in Headers */,
+				2619C4862107A9A2009CDE81 /* RegisterContextMinidump_ARM64.h in Headers */,
 				AF235EB11FBE77B6009C5541 /* RegisterContextPOSIX_ppc64le.h in Headers */,
 				267F68501CC02E270086832B /* RegisterContextPOSIXCore_s390x.h in Headers */,
 				4984BA181B979C08008658D4 /* ExpressionVariable.h in Headers */,
@@ -7644,6 +7657,7 @@
 				2689002113353DDE00698AC0 /* CommandObjectQuit.cpp in Sources */,
 				2689002213353DDE00698AC0 /* CommandObjectRegister.cpp in Sources */,
 				26BC17AF18C7F4CB00D2196D /* RegisterContextPOSIXCore_x86_64.cpp in Sources */,
+				2619C4842107A9A2009CDE81 /* RegisterContextMinidump_ARM64.cpp in Sources */,
 				2689002313353DDE00698AC0 /* CommandObjectScript.cpp in Sources */,
 				2689002413353DDE00698AC0 /* CommandObjectSettings.cpp in Sources */,
 				2689002513353DDE00698AC0 /* CommandObjectSource.cpp in Sources */,
@@ -7724,6 +7738,7 @@
 				2689005113353E0400698AC0 /* StringList.cpp in Sources */,
 				2689005213353E0400698AC0 /* Timer.cpp in Sources */,
 				2689005413353E0400698AC0 /* UserSettingsController.cpp in Sources */,
+				2619C4852107A9A2009CDE81 /* RegisterContextMinidump_ARM.cpp in Sources */,
 				23059A0719532B96007B8189 /* LinuxSignals.cpp in Sources */,
 				8CCB017E19BA28A80009FD44 /* ThreadCollection.cpp in Sources */,
 				9A77AD541E64E2760025CE04 /* RegisterInfoPOSIX_arm.cpp in Sources */,
@@ -7958,6 +7973,7 @@
 				268900F313353E6F00698AC0 /* StackFrame.cpp in Sources */,
 				268900F413353E6F00698AC0 /* StackFrameList.cpp in Sources */,
 				268900F513353E6F00698AC0 /* StackID.cpp in Sources */,
+				228B1B672113340200E61C70 /* ClangHighlighter.cpp in Sources */,
 				268900F613353E6F00698AC0 /* StopInfo.cpp in Sources */,
 				256CBDB41ADD0EFD00BC6CDC /* RegisterContextPOSIXCore_arm.cpp in Sources */,
 				267F684F1CC02E270086832B /* RegisterContextPOSIXCore_s390x.cpp in Sources */,

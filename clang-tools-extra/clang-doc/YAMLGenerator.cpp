@@ -20,6 +20,8 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(MemberTypeInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(Reference)
 LLVM_YAML_IS_SEQUENCE_VECTOR(Location)
 LLVM_YAML_IS_SEQUENCE_VECTOR(CommentInfo)
+LLVM_YAML_IS_SEQUENCE_VECTOR(FunctionInfo)
+LLVM_YAML_IS_SEQUENCE_VECTOR(EnumInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(std::unique_ptr<CommentInfo>)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::SmallString<16>)
 
@@ -175,7 +177,14 @@ template <> struct MappingTraits<MemberTypeInfo> {
 };
 
 template <> struct MappingTraits<NamespaceInfo> {
-  static void mapping(IO &IO, NamespaceInfo &I) { InfoMapping(IO, I); }
+  static void mapping(IO &IO, NamespaceInfo &I) {
+    InfoMapping(IO, I);
+    IO.mapOptional("ChildNamespaces", I.ChildNamespaces,
+                   std::vector<Reference>());
+    IO.mapOptional("ChildRecords", I.ChildRecords, std::vector<Reference>());
+    IO.mapOptional("ChildFunctions", I.ChildFunctions);
+    IO.mapOptional("ChildEnums", I.ChildEnums);
+  }
 };
 
 template <> struct MappingTraits<RecordInfo> {
@@ -186,6 +195,9 @@ template <> struct MappingTraits<RecordInfo> {
     IO.mapOptional("Parents", I.Parents, llvm::SmallVector<Reference, 4>());
     IO.mapOptional("VirtualParents", I.VirtualParents,
                    llvm::SmallVector<Reference, 4>());
+    IO.mapOptional("ChildRecords", I.ChildRecords, std::vector<Reference>());
+    IO.mapOptional("ChildFunctions", I.ChildFunctions);
+    IO.mapOptional("ChildEnums", I.ChildEnums);
   }
 };
 

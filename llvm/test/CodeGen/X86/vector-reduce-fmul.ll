@@ -956,7 +956,7 @@ define double @test_v2f64(double %a0, <2 x double> %a1) {
 ; SSE-LABEL: test_v2f64:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    mulsd %xmm1, %xmm0
-; SSE-NEXT:    movhlps {{.*#+}} xmm1 = xmm1[1,1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1,1]
 ; SSE-NEXT:    mulsd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
@@ -981,10 +981,10 @@ define double @test_v4f64(double %a0, <4 x double> %a1) {
 ; SSE-LABEL: test_v4f64:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    mulsd %xmm1, %xmm0
-; SSE-NEXT:    movhlps {{.*#+}} xmm1 = xmm1[1,1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1,1]
 ; SSE-NEXT:    mulsd %xmm1, %xmm0
 ; SSE-NEXT:    mulsd %xmm2, %xmm0
-; SSE-NEXT:    movhlps {{.*#+}} xmm2 = xmm2[1,1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1,1]
 ; SSE-NEXT:    mulsd %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
@@ -1019,16 +1019,16 @@ define double @test_v8f64(double %a0, <8 x double> %a1) {
 ; SSE-LABEL: test_v8f64:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    mulsd %xmm1, %xmm0
-; SSE-NEXT:    movhlps {{.*#+}} xmm1 = xmm1[1,1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1,1]
 ; SSE-NEXT:    mulsd %xmm1, %xmm0
 ; SSE-NEXT:    mulsd %xmm2, %xmm0
-; SSE-NEXT:    movhlps {{.*#+}} xmm2 = xmm2[1,1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1,1]
 ; SSE-NEXT:    mulsd %xmm2, %xmm0
 ; SSE-NEXT:    mulsd %xmm3, %xmm0
-; SSE-NEXT:    movhlps {{.*#+}} xmm3 = xmm3[1,1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm3 = xmm3[1,1]
 ; SSE-NEXT:    mulsd %xmm3, %xmm0
 ; SSE-NEXT:    mulsd %xmm4, %xmm0
-; SSE-NEXT:    movhlps {{.*#+}} xmm4 = xmm4[1,1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm4 = xmm4[1,1]
 ; SSE-NEXT:    mulsd %xmm4, %xmm0
 ; SSE-NEXT:    retq
 ;
@@ -1079,28 +1079,28 @@ define double @test_v16f64(double %a0, <16 x double> %a1) {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm8
 ; SSE-NEXT:    mulsd %xmm1, %xmm0
-; SSE-NEXT:    movhlps {{.*#+}} xmm1 = xmm1[1,1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1,1]
 ; SSE-NEXT:    mulsd %xmm1, %xmm0
 ; SSE-NEXT:    mulsd %xmm2, %xmm0
-; SSE-NEXT:    movhlps {{.*#+}} xmm2 = xmm2[1,1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1,1]
 ; SSE-NEXT:    mulsd %xmm2, %xmm0
 ; SSE-NEXT:    mulsd %xmm3, %xmm0
-; SSE-NEXT:    movhlps {{.*#+}} xmm3 = xmm3[1,1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm3 = xmm3[1,1]
 ; SSE-NEXT:    mulsd %xmm3, %xmm0
 ; SSE-NEXT:    mulsd %xmm4, %xmm0
-; SSE-NEXT:    movhlps {{.*#+}} xmm4 = xmm4[1,1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm4 = xmm4[1,1]
 ; SSE-NEXT:    mulsd %xmm4, %xmm0
 ; SSE-NEXT:    mulsd %xmm5, %xmm0
-; SSE-NEXT:    movhlps {{.*#+}} xmm5 = xmm5[1,1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm5 = xmm5[1,1]
 ; SSE-NEXT:    mulsd %xmm5, %xmm0
 ; SSE-NEXT:    mulsd %xmm6, %xmm0
-; SSE-NEXT:    movhlps {{.*#+}} xmm6 = xmm6[1,1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm6 = xmm6[1,1]
 ; SSE-NEXT:    mulsd %xmm6, %xmm0
 ; SSE-NEXT:    mulsd %xmm7, %xmm0
-; SSE-NEXT:    movhlps {{.*#+}} xmm7 = xmm7[1,1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm7 = xmm7[1,1]
 ; SSE-NEXT:    mulsd %xmm7, %xmm0
 ; SSE-NEXT:    mulsd %xmm8, %xmm0
-; SSE-NEXT:    movhlps {{.*#+}} xmm8 = xmm8[1,1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm8 = xmm8[1,1]
 ; SSE-NEXT:    mulsd %xmm8, %xmm0
 ; SSE-NEXT:    retq
 ;
@@ -1210,7 +1210,7 @@ define double @test_v4f64_one(<4 x double> %a0) {
 ; SSE-NEXT:    movhlps {{.*#+}} xmm2 = xmm0[1],xmm2[1]
 ; SSE-NEXT:    mulsd %xmm0, %xmm2
 ; SSE-NEXT:    mulsd %xmm1, %xmm2
-; SSE-NEXT:    movhlps {{.*#+}} xmm1 = xmm1[1,1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1,1]
 ; SSE-NEXT:    mulsd %xmm1, %xmm2
 ; SSE-NEXT:    movapd %xmm2, %xmm0
 ; SSE-NEXT:    retq
@@ -1247,13 +1247,13 @@ define double @test_v8f64_one(<8 x double> %a0) {
 ; SSE-NEXT:    movhlps {{.*#+}} xmm4 = xmm0[1],xmm4[1]
 ; SSE-NEXT:    mulsd %xmm0, %xmm4
 ; SSE-NEXT:    mulsd %xmm1, %xmm4
-; SSE-NEXT:    movhlps {{.*#+}} xmm1 = xmm1[1,1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1,1]
 ; SSE-NEXT:    mulsd %xmm1, %xmm4
 ; SSE-NEXT:    mulsd %xmm2, %xmm4
-; SSE-NEXT:    movhlps {{.*#+}} xmm2 = xmm2[1,1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1,1]
 ; SSE-NEXT:    mulsd %xmm2, %xmm4
 ; SSE-NEXT:    mulsd %xmm3, %xmm4
-; SSE-NEXT:    movhlps {{.*#+}} xmm3 = xmm3[1,1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm3 = xmm3[1,1]
 ; SSE-NEXT:    mulsd %xmm3, %xmm4
 ; SSE-NEXT:    movapd %xmm4, %xmm0
 ; SSE-NEXT:    retq
@@ -1301,29 +1301,29 @@ define double @test_v8f64_one(<8 x double> %a0) {
 define double @test_v16f64_one(<16 x double> %a0) {
 ; SSE-LABEL: test_v16f64_one:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movaps %xmm0, %xmm8
-; SSE-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
+; SSE-NEXT:    movapd %xmm0, %xmm8
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1,1]
 ; SSE-NEXT:    mulsd %xmm8, %xmm0
 ; SSE-NEXT:    mulsd %xmm1, %xmm0
-; SSE-NEXT:    movhlps {{.*#+}} xmm1 = xmm1[1,1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1,1]
 ; SSE-NEXT:    mulsd %xmm1, %xmm0
 ; SSE-NEXT:    mulsd %xmm2, %xmm0
-; SSE-NEXT:    movhlps {{.*#+}} xmm2 = xmm2[1,1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1,1]
 ; SSE-NEXT:    mulsd %xmm2, %xmm0
 ; SSE-NEXT:    mulsd %xmm3, %xmm0
-; SSE-NEXT:    movhlps {{.*#+}} xmm3 = xmm3[1,1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm3 = xmm3[1,1]
 ; SSE-NEXT:    mulsd %xmm3, %xmm0
 ; SSE-NEXT:    mulsd %xmm4, %xmm0
-; SSE-NEXT:    movhlps {{.*#+}} xmm4 = xmm4[1,1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm4 = xmm4[1,1]
 ; SSE-NEXT:    mulsd %xmm4, %xmm0
 ; SSE-NEXT:    mulsd %xmm5, %xmm0
-; SSE-NEXT:    movhlps {{.*#+}} xmm5 = xmm5[1,1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm5 = xmm5[1,1]
 ; SSE-NEXT:    mulsd %xmm5, %xmm0
 ; SSE-NEXT:    mulsd %xmm6, %xmm0
-; SSE-NEXT:    movhlps {{.*#+}} xmm6 = xmm6[1,1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm6 = xmm6[1,1]
 ; SSE-NEXT:    mulsd %xmm6, %xmm0
 ; SSE-NEXT:    mulsd %xmm7, %xmm0
-; SSE-NEXT:    movhlps {{.*#+}} xmm7 = xmm7[1,1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm7 = xmm7[1,1]
 ; SSE-NEXT:    mulsd %xmm7, %xmm0
 ; SSE-NEXT:    retq
 ;
@@ -1403,7 +1403,7 @@ define double @test_v16f64_one(<16 x double> %a0) {
 define double @test_v2f64_undef(<2 x double> %a0) {
 ; SSE-LABEL: test_v2f64_undef:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1,1]
 ; SSE-NEXT:    mulsd {{.*}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
@@ -1425,10 +1425,10 @@ define double @test_v2f64_undef(<2 x double> %a0) {
 define double @test_v4f64_undef(<4 x double> %a0) {
 ; SSE-LABEL: test_v4f64_undef:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1,1]
 ; SSE-NEXT:    mulsd {{.*}}(%rip), %xmm0
 ; SSE-NEXT:    mulsd %xmm1, %xmm0
-; SSE-NEXT:    movhlps {{.*#+}} xmm1 = xmm1[1,1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1,1]
 ; SSE-NEXT:    mulsd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
@@ -1460,16 +1460,16 @@ define double @test_v4f64_undef(<4 x double> %a0) {
 define double @test_v8f64_undef(<8 x double> %a0) {
 ; SSE-LABEL: test_v8f64_undef:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1,1]
 ; SSE-NEXT:    mulsd {{.*}}(%rip), %xmm0
 ; SSE-NEXT:    mulsd %xmm1, %xmm0
-; SSE-NEXT:    movhlps {{.*#+}} xmm1 = xmm1[1,1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1,1]
 ; SSE-NEXT:    mulsd %xmm1, %xmm0
 ; SSE-NEXT:    mulsd %xmm2, %xmm0
-; SSE-NEXT:    movhlps {{.*#+}} xmm2 = xmm2[1,1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1,1]
 ; SSE-NEXT:    mulsd %xmm2, %xmm0
 ; SSE-NEXT:    mulsd %xmm3, %xmm0
-; SSE-NEXT:    movhlps {{.*#+}} xmm3 = xmm3[1,1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm3 = xmm3[1,1]
 ; SSE-NEXT:    mulsd %xmm3, %xmm0
 ; SSE-NEXT:    retq
 ;
@@ -1516,28 +1516,28 @@ define double @test_v8f64_undef(<8 x double> %a0) {
 define double @test_v16f64_undef(<16 x double> %a0) {
 ; SSE-LABEL: test_v16f64_undef:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1,1]
 ; SSE-NEXT:    mulsd {{.*}}(%rip), %xmm0
 ; SSE-NEXT:    mulsd %xmm1, %xmm0
-; SSE-NEXT:    movhlps {{.*#+}} xmm1 = xmm1[1,1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1,1]
 ; SSE-NEXT:    mulsd %xmm1, %xmm0
 ; SSE-NEXT:    mulsd %xmm2, %xmm0
-; SSE-NEXT:    movhlps {{.*#+}} xmm2 = xmm2[1,1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1,1]
 ; SSE-NEXT:    mulsd %xmm2, %xmm0
 ; SSE-NEXT:    mulsd %xmm3, %xmm0
-; SSE-NEXT:    movhlps {{.*#+}} xmm3 = xmm3[1,1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm3 = xmm3[1,1]
 ; SSE-NEXT:    mulsd %xmm3, %xmm0
 ; SSE-NEXT:    mulsd %xmm4, %xmm0
-; SSE-NEXT:    movhlps {{.*#+}} xmm4 = xmm4[1,1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm4 = xmm4[1,1]
 ; SSE-NEXT:    mulsd %xmm4, %xmm0
 ; SSE-NEXT:    mulsd %xmm5, %xmm0
-; SSE-NEXT:    movhlps {{.*#+}} xmm5 = xmm5[1,1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm5 = xmm5[1,1]
 ; SSE-NEXT:    mulsd %xmm5, %xmm0
 ; SSE-NEXT:    mulsd %xmm6, %xmm0
-; SSE-NEXT:    movhlps {{.*#+}} xmm6 = xmm6[1,1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm6 = xmm6[1,1]
 ; SSE-NEXT:    mulsd %xmm6, %xmm0
 ; SSE-NEXT:    mulsd %xmm7, %xmm0
-; SSE-NEXT:    movhlps {{.*#+}} xmm7 = xmm7[1,1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm7 = xmm7[1,1]
 ; SSE-NEXT:    mulsd %xmm7, %xmm0
 ; SSE-NEXT:    retq
 ;

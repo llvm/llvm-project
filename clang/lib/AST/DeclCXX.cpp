@@ -1327,6 +1327,15 @@ bool CXXRecordDecl::isGenericLambda() const {
   return getLambdaData().IsGenericLambda;
 }
 
+#ifndef NDEBUG
+static bool allLookupResultsAreTheSame(const DeclContext::lookup_result &R) {
+  for (auto *D : R)
+    if (!declaresSameEntity(D, R.front()))
+      return false;
+  return true;
+}
+#endif
+
 CXXMethodDecl* CXXRecordDecl::getLambdaCallOperator() const {
   if (!isLambda()) return nullptr;
   DeclarationName Name =
@@ -1334,7 +1343,8 @@ CXXMethodDecl* CXXRecordDecl::getLambdaCallOperator() const {
   DeclContext::lookup_result Calls = lookup(Name);
 
   assert(!Calls.empty() && "Missing lambda call operator!");
-  assert(Calls.size() == 1 && "More than one lambda call operator!");
+  assert(allLookupResultsAreTheSame(Calls) &&
+         "More than one lambda call operator!");
 
   NamedDecl *CallOp = Calls.front();
   if (const auto *CallOpTmpl = dyn_cast<FunctionTemplateDecl>(CallOp))
@@ -1349,7 +1359,8 @@ CXXMethodDecl* CXXRecordDecl::getLambdaStaticInvoker() const {
     &getASTContext().Idents.get(getLambdaStaticInvokerName());
   DeclContext::lookup_result Invoker = lookup(Name);
   if (Invoker.empty()) return nullptr;
-  assert(Invoker.size() == 1 && "More than one static invoker operator!");
+  assert(allLookupResultsAreTheSame(Invoker) &&
+         "More than one static invoker operator!");
   NamedDecl *InvokerFun = Invoker.front();
   if (const auto *InvokerTemplate = dyn_cast<FunctionTemplateDecl>(InvokerFun))
     return cast<CXXMethodDecl>(InvokerTemplate->getTemplatedDecl());

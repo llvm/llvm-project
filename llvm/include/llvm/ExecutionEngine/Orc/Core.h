@@ -344,6 +344,17 @@ reexports(VSO &SourceV, SymbolAliasMap Aliases) {
 Expected<SymbolAliasMap>
 buildSimpleReexportsAliasMap(VSO &SourceV, const SymbolNameSet &Symbols);
 
+class ReexportsFallbackDefinitionGenerator {
+public:
+  using SymbolPredicate = std::function<bool(SymbolStringPtr)>;
+  ReexportsFallbackDefinitionGenerator(VSO &BackingVSO, SymbolPredicate Allow);
+  SymbolNameSet operator()(VSO &V, const SymbolNameSet &Names);
+
+private:
+  VSO &BackingVSO;
+  SymbolPredicate Allow;
+};
+
 /// Base utilities for ExecutionSession.
 class ExecutionSessionBase {
   // FIXME: Remove this when we remove the old ORC layers.
