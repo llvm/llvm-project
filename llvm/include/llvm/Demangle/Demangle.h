@@ -7,6 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_DEMANGLE_DEMANGLE_H
+#define LLVM_DEMANGLE_DEMANGLE_H
+
 #include <cstddef>
 
 namespace llvm {
@@ -84,3 +87,5 @@ private:
   void *Context;
 };
 } // namespace llvm
+
+#endif
