@@ -324,7 +324,8 @@ int includeFixerMain(int argc, const char **argv) {
            const IncludeFixerContext::HeaderInfo &RHS) {
           return LHS.QualifiedName == RHS.QualifiedName;
         });
-    auto InsertStyle = format::getStyle("file", Context.getFilePath(), Style);
+    auto InsertStyle = format::getStyle(format::DefaultFormatStyle,
+                                        Context.getFilePath(), Style);
     if (!InsertStyle) {
       llvm::errs() << llvm::toString(InsertStyle.takeError()) << "\n";
       return 1;
@@ -402,7 +403,8 @@ int includeFixerMain(int argc, const char **argv) {
   std::vector<tooling::Replacements> FixerReplacements;
   for (const auto &Context : Contexts) {
     StringRef FilePath = Context.getFilePath();
-    auto InsertStyle = format::getStyle("file", FilePath, Style);
+    auto InsertStyle =
+        format::getStyle(format::DefaultFormatStyle, FilePath, Style);
     if (!InsertStyle) {
       llvm::errs() << llvm::toString(InsertStyle.takeError()) << "\n";
       return 1;
