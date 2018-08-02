@@ -266,13 +266,15 @@ define i1 @orderedLessZeroMinNum(float, float) {
   ret i1 %uge
 }
 
-; FIXME: This is wrong.
 ; PR37776: https://bugs.llvm.org/show_bug.cgi?id=37776
 ; exp() may return nan, leaving %1 as the unknown result, so we can't simplify.
 
 define i1 @orderedLessZeroMaxNum(float, float) {
 ; CHECK-LABEL: @orderedLessZeroMaxNum(
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[A:%.*]] = call float @llvm.exp.f32(float [[TMP0:%.*]])
+; CHECK-NEXT:    [[B:%.*]] = call float @llvm.maxnum.f32(float [[A]], float [[TMP1:%.*]])
+; CHECK-NEXT:    [[UGE:%.*]] = fcmp uge float [[B]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[UGE]]
 ;
   %a = call float @llvm.exp.f32(float %0)
   %b = call float @llvm.maxnum.f32(float %a, float %1)

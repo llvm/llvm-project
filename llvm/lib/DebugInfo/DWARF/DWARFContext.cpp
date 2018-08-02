@@ -99,13 +99,10 @@ using ContributionCollection =
 // Collect all the contributions to the string offsets table from all units,
 // sort them by their starting offsets and remove duplicates.
 static ContributionCollection
-collectContributionData(DWARFContext::cu_iterator_range CUs,
-                        DWARFContext::tu_iterator_range TUs) {
+collectContributionData(DWARFContext::unit_iterator_range Units) {
   ContributionCollection Contributions;
-  for (const auto &CU : CUs)
-    Contributions.push_back(CU->getStringOffsetsTableContribution());
-  for (const auto &TU : TUs)
-    Contributions.push_back(TU->getStringOffsetsTableContribution());
+  for (const auto &U : Units)
+    Contributions.push_back(U->getStringOffsetsTableContribution());
   // Sort the contributions so that any invalid ones are placed at
   // the start of the contributions vector. This way they are reported
   // first.
@@ -134,9 +131,8 @@ collectContributionData(DWARFContext::cu_iterator_range CUs,
 static void dumpDWARFv5StringOffsetsSection(
     raw_ostream &OS, StringRef SectionName, const DWARFObject &Obj,
     const DWARFSection &StringOffsetsSection, StringRef StringSection,
-    DWARFContext::cu_iterator_range CUs, DWARFContext::tu_iterator_range TUs,
-    bool LittleEndian) {
-  auto Contributions = collectContributionData(CUs, TUs);
+    DWARFContext::unit_iterator_range Units, bool LittleEndian) {
+  auto Contributions = collectContributionData(Units);
   DWARFDataExtractor StrOffsetExt(Obj, StringOffsetsSection, LittleEndian, 0);
   DataExtractor StrData(StringSection, LittleEndian, 0);
   uint64_t SectionSize = StringOffsetsSection.Data.size();
@@ -217,15 +213,14 @@ static void dumpStringOffsetsSection(raw_ostream &OS, StringRef SectionName,
                                      const DWARFObject &Obj,
                                      const DWARFSection &StringOffsetsSection,
                                      StringRef StringSection,
-                                     DWARFContext::cu_iterator_range CUs,
-                                     DWARFContext::tu_iterator_range TUs,
+                                     DWARFContext::unit_iterator_range Units,
                                      bool LittleEndian, unsigned MaxVersion) {
   // If we have at least one (compile or type) unit with DWARF v5 or greater,
   // we assume that the section is formatted like a DWARF v5 string offsets
   // section.
   if (MaxVersion >= 5)
     dumpDWARFv5StringOffsetsSection(OS, SectionName, Obj, StringOffsetsSection,
-                                    StringSection, CUs, TUs, LittleEndian);
+                                    StringSection, Units, LittleEndian);
   else {
     DataExtractor strOffsetExt(StringOffsetsSection.Data, LittleEndian, 0);
     uint32_t offset = 0;
@@ -340,14 +335,14 @@ void DWARFContext::dump(
     getDebugAbbrevDWO()->dump(OS);
 
   auto dumpDebugInfo = [&](bool IsExplicit, const char *Name,
-                           DWARFSection Section, cu_iterator_range CUs) {
+                           DWARFSection Section, unit_iterator_range Units) {
     if (shouldDump(IsExplicit, Name, DIDT_ID_DebugInfo, Section.Data)) {
       if (DumpOffset)
         getDIEForOffset(DumpOffset.getValue())
             .dump(OS, 0, DumpOpts.noImplicitRecursion());
       else
-        for (const auto &CU : CUs)
-          CU->dump(OS, DumpOpts);
+        for (const auto &U : Units)
+          U->dump(OS, DumpOpts);
     }
   };
   dumpDebugInfo(Explicit, ".debug_info", DObj->getInfoSection(),
@@ -355,15 +350,15 @@ void DWARFContext::dump(
   dumpDebugInfo(ExplicitDWO, ".debug_info.dwo", DObj->getInfoDWOSection(),
                 dwo_info_section_units());
 
-  auto dumpDebugType = [&](const char *Name, tu_iterator_range TUs) {
+  auto dumpDebugType = [&](const char *Name, unit_iterator_range Units) {
     OS << '\n' << Name << " contents:\n";
     DumpOffset = DumpOffsets[DIDT_ID_DebugTypes];
-    for (const auto &TU : TUs)
+    for (const auto &U : Units)
       if (DumpOffset)
-        TU->getDIEForOffset(*DumpOffset)
+        U->getDIEForOffset(*DumpOffset)
             .dump(OS, 0, DumpOpts.noImplicitRecursion());
       else
-        TU->dump(OS, DumpOpts);
+        U->dump(OS, DumpOpts);
   };
   if ((DumpType & DIDT_DebugTypes)) {
     if (Explicit || getNumTypeUnits())
@@ -546,14 +541,14 @@ void DWARFContext::dump(
                  DObj->getStringOffsetSection().Data))
     dumpStringOffsetsSection(OS, "debug_str_offsets", *DObj,
                              DObj->getStringOffsetSection(),
-                             DObj->getStringSection(), compile_units(),
-                             type_units(), isLittleEndian(), getMaxVersion());
+                             DObj->getStringSection(), normal_units(),
+                             isLittleEndian(), getMaxVersion());
   if (shouldDump(ExplicitDWO, ".debug_str_offsets.dwo", DIDT_ID_DebugStrOffsets,
                  DObj->getStringOffsetDWOSection().Data))
-    dumpStringOffsetsSection(
-        OS, "debug_str_offsets.dwo", *DObj, DObj->getStringOffsetDWOSection(),
-        DObj->getStringDWOSection(), dwo_compile_units(), dwo_type_units(),
-        isLittleEndian(), getMaxVersion());
+    dumpStringOffsetsSection(OS, "debug_str_offsets.dwo", *DObj,
+                             DObj->getStringOffsetDWOSection(),
+                             DObj->getStringDWOSection(), dwo_units(),
+                             isLittleEndian(), getMaxVersion());
 
   if (shouldDump(Explicit, ".gnu_index", DIDT_ID_GdbIndex,
                  DObj->getGdbIndexSection())) {

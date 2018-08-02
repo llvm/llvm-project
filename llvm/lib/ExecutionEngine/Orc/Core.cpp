@@ -886,6 +886,30 @@ buildSimpleReexportsAliasMap(VSO &SourceV, const SymbolNameSet &Symbols) {
   return Result;
 }
 
+ReexportsFallbackDefinitionGenerator::ReexportsFallbackDefinitionGenerator(
+    VSO &BackingVSO, SymbolPredicate Allow)
+    : BackingVSO(BackingVSO), Allow(std::move(Allow)) {}
+
+SymbolNameSet ReexportsFallbackDefinitionGenerator::
+operator()(VSO &V, const SymbolNameSet &Names) {
+  orc::SymbolNameSet Added;
+  orc::SymbolAliasMap AliasMap;
+
+  auto Flags = BackingVSO.lookupFlags(Names);
+
+  for (auto &KV : Flags) {
+    if (!Allow(KV.first))
+      continue;
+    AliasMap[KV.first] = SymbolAliasMapEntry(KV.first, KV.second);
+    Added.insert(KV.first);
+  }
+
+  if (!Added.empty())
+    cantFail(V.define(reexports(BackingVSO, AliasMap)));
+
+  return Added;
+}
+
 Error VSO::defineMaterializing(const SymbolFlagsMap &SymbolFlags) {
   return ES.runSessionLocked([&]() -> Error {
     std::vector<SymbolMap::iterator> AddedSyms;

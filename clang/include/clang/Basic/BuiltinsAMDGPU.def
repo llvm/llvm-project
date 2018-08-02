@@ -24,6 +24,7 @@
 BUILTIN(__builtin_amdgcn_dispatch_ptr, "v*4", "nc")
 BUILTIN(__builtin_amdgcn_kernarg_segment_ptr, "v*4", "nc")
 BUILTIN(__builtin_amdgcn_implicitarg_ptr, "v*4", "nc")
+BUILTIN(__builtin_amdgcn_queue_ptr, "v*4", "nc")
 
 BUILTIN(__builtin_amdgcn_workgroup_id_x, "Ui", "nc")
 BUILTIN(__builtin_amdgcn_workgroup_id_y, "Ui", "nc")
