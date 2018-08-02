@@ -65,7 +65,7 @@ Non-comprehensive list of changes in this release
   results for code that is relying on the undefined behavior of overflowing 
   casts. The optimization can be disabled by specifying a function attribute:
   "strict-float-cast-overflow"="false". This attribute may be created by the
-  clang option :option:`-fno-strict-float-cast-overflow`.
+  clang option ``-fno-strict-float-cast-overflow``.
   Code sanitizers can be used to detect affected patterns. The option for
   detecting this problem alone is "-fsanitize=float-cast-overflow":
 
