@@ -100,8 +100,6 @@ bool decodeRecord(Record R, FieldId &Field, llvm::StringRef Blob) {
   case FieldId::F_parent:
   case FieldId::F_vparent:
   case FieldId::F_type:
-  case FieldId::F_child_namespace:
-  case FieldId::F_child_record:
   case FieldId::F_default:
     Field = F;
     return true;
@@ -374,12 +372,6 @@ template <> void addReference(NamespaceInfo *I, Reference &&R, FieldId F) {
   case FieldId::F_namespace:
     I->Namespace.emplace_back(std::move(R));
     break;
-  case FieldId::F_child_namespace:
-    I->ChildNamespaces.emplace_back(std::move(R));
-    break;
-  case FieldId::F_child_record:
-    I->ChildRecords.emplace_back(std::move(R));
-    break;
   default:
     llvm::errs() << "Invalid field type for info.\n";
     exit(1);
@@ -411,35 +403,10 @@ template <> void addReference(RecordInfo *I, Reference &&R, FieldId F) {
   case FieldId::F_vparent:
     I->VirtualParents.emplace_back(std::move(R));
     break;
-  case FieldId::F_child_record:
-    I->ChildRecords.emplace_back(std::move(R));
-    break;
   default:
     llvm::errs() << "Invalid field type for info.\n";
     exit(1);
   }
-}
-
-template <typename T, typename ChildInfoType>
-void addChild(T I, ChildInfoType &&R) {
-  llvm::errs() << "Invalid child type for info.\n";
-  exit(1);
-}
-
-template <> void addChild(NamespaceInfo *I, FunctionInfo &&R) {
-  I->ChildFunctions.emplace_back(std::move(R));
-}
-
-template <> void addChild(NamespaceInfo *I, EnumInfo &&R) {
-  I->ChildEnums.emplace_back(std::move(R));
-}
-
-template <> void addChild(RecordInfo *I, FunctionInfo &&R) {
-  I->ChildFunctions.emplace_back(std::move(R));
-}
-
-template <> void addChild(RecordInfo *I, EnumInfo &&R) {
-  I->ChildEnums.emplace_back(std::move(R));
 }
 
 // Read records from bitcode into a given info.
@@ -488,8 +455,7 @@ template <typename T> bool ClangDocBitcodeReader::readBlock(unsigned ID, T I) {
 template <typename T>
 bool ClangDocBitcodeReader::readSubBlock(unsigned ID, T I) {
   switch (ID) {
-  // Blocks can only have Comment, Reference, TypeInfo, FunctionInfo, or
-  // EnumInfo subblocks
+  // Blocks can only have Comment, Reference, or TypeInfo subblocks
   case BI_COMMENT_BLOCK_ID:
     if (readBlock(ID, getCommentInfo(I)))
       return true;
@@ -522,22 +488,6 @@ bool ClangDocBitcodeReader::readSubBlock(unsigned ID, T I) {
     Reference R;
     if (readBlock(ID, &R)) {
       addReference(I, std::move(R), CurrentReferenceField);
-      return true;
-    }
-    return false;
-  }
-  case BI_FUNCTION_BLOCK_ID: {
-    FunctionInfo F;
-    if (readBlock(ID, &F)) {
-      addChild(I, std::move(F));
-      return true;
-    }
-    return false;
-  }
-  case BI_ENUM_BLOCK_ID: {
-    EnumInfo E;
-    if (readBlock(ID, &E)) {
-      addChild(I, std::move(E));
       return true;
     }
     return false;
@@ -623,21 +573,16 @@ std::unique_ptr<Info> ClangDocBitcodeReader::readBlockToInfo(unsigned ID) {
 }
 
 // Entry point
-llvm::Expected<std::vector<std::unique_ptr<Info>>>
-ClangDocBitcodeReader::readBitcode() {
+std::vector<std::unique_ptr<Info>> ClangDocBitcodeReader::readBitcode() {
   std::vector<std::unique_ptr<Info>> Infos;
   if (!validateStream())
-    return llvm::make_error<llvm::StringError>("Invalid bitcode stream.\n",
-                                               llvm::inconvertibleErrorCode());
-  ;
+    return Infos;
 
   // Read the top level blocks.
   while (!Stream.AtEndOfStream()) {
     unsigned Code = Stream.ReadCode();
     if (Code != llvm::bitc::ENTER_SUBBLOCK)
-      return llvm::make_error<llvm::StringError>(
-          "Missing subblock in bitcode.\n", llvm::inconvertibleErrorCode());
-    ;
+      return Infos;
 
     unsigned ID = Stream.ReadSubBlockID();
     switch (ID) {
@@ -647,30 +592,24 @@ ClangDocBitcodeReader::readBitcode() {
     case BI_MEMBER_TYPE_BLOCK_ID:
     case BI_COMMENT_BLOCK_ID:
     case BI_REFERENCE_BLOCK_ID:
-      return llvm::make_error<llvm::StringError>(
-          "Invalid top level block in bitcode.\n",
-          llvm::inconvertibleErrorCode());
-      ;
+      llvm::errs() << "Invalid top level block.\n";
+      return Infos;
     case BI_NAMESPACE_BLOCK_ID:
     case BI_RECORD_BLOCK_ID:
     case BI_ENUM_BLOCK_ID:
     case BI_FUNCTION_BLOCK_ID:
-      if (std::unique_ptr<Info> I = readBlockToInfo(ID))
+      if (std::unique_ptr<Info> I = readBlockToInfo(ID)) {
         Infos.emplace_back(std::move(I));
+      }
       return Infos;
     case BI_VERSION_BLOCK_ID:
       if (readBlock(ID, VersionNumber))
         continue;
-      return llvm::make_error<llvm::StringError>(
-          "Invalid bitcode version in bitcode.\n",
-          llvm::inconvertibleErrorCode());
-      ;
+      return Infos;
     case llvm::bitc::BLOCKINFO_BLOCK_ID:
       if (readBlockInfoBlock())
         continue;
-      return llvm::make_error<llvm::StringError>(
-          "Invalid BlockInfo in bitcode.\n", llvm::inconvertibleErrorCode());
-      ;
+      return Infos;
     default:
       if (!Stream.SkipBlock())
         continue;

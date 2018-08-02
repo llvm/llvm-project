@@ -13,7 +13,6 @@
 #include "clang/AST/Comment.h"
 #include "clang/Index/USRGeneration.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/Error.h"
 
 using clang::comments::FullComment;
 
@@ -34,15 +33,14 @@ template <typename T> bool MapASTVisitor::mapDecl(const T *D) {
   if (index::generateUSRForDecl(D, USR))
     return true;
 
-  auto I = serialize::emitInfo(
+  std::string info = serialize::emitInfo(
       D, getComment(D, D->getASTContext()), getLine(D, D->getASTContext()),
       getFile(D, D->getASTContext()), CDCtx.PublicOnly);
 
-  // A null in place of I indicates that the serializer is skipping this decl
-  // for some reason (e.g. we're only reporting public decls).
-  if (I)
-    CDCtx.ECtx->reportResult(llvm::toHex(llvm::toStringRef(I->USR)),
-                       serialize::serialize(I));
+  if (info != "")
+    CDCtx.ECtx->reportResult(
+        llvm::toHex(llvm::toStringRef(serialize::hashUSR(USR))), info);
+
   return true;
 }
 
