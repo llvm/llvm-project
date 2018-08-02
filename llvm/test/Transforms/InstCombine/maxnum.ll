@@ -153,22 +153,6 @@ define float @fold_maxnum_f32_undef_undef(float %x) {
   ret float %val
 }
 
-define float @fold_maxnum_f32_val_undef(float %x) {
-; CHECK-LABEL: @fold_maxnum_f32_val_undef(
-; CHECK-NEXT:    ret float [[X:%.*]]
-;
-  %val = call float @llvm.maxnum.f32(float %x, float undef)
-  ret float %val
-}
-
-define float @fold_maxnum_f32_undef_val(float %x) {
-; CHECK-LABEL: @fold_maxnum_f32_undef_val(
-; CHECK-NEXT:    ret float [[X:%.*]]
-;
-  %val = call float @llvm.maxnum.f32(float undef, float %x)
-  ret float %val
-}
-
 define float @maxnum_x_maxnum_x_y(float %x, float %y) {
 ; CHECK-LABEL: @maxnum_x_maxnum_x_y(
 ; CHECK-NEXT:    [[A:%.*]] = call float @llvm.maxnum.f32(float [[X:%.*]], float [[Y:%.*]])

@@ -78,7 +78,7 @@ define void @sqrtsd(<2 x double> %a) nounwind uwtable ssp {
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    sqrtsd %xmm0, %xmm1
 ; CHECK-NEXT:    cvtsd2ss %xmm1, %xmm2
-; CHECK-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
+; CHECK-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1,1]
 ; CHECK-NEXT:    xorps %xmm1, %xmm1
 ; CHECK-NEXT:    cvtsd2ss %xmm0, %xmm1
 ; CHECK-NEXT:    movaps %xmm2, %xmm0

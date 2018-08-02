@@ -589,6 +589,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FMUL, MVT::v4f16, Custom);
     setOperationAction(ISD::FMINNUM, MVT::v4f16, Custom);
     setOperationAction(ISD::FMAXNUM, MVT::v4f16, Custom);
+    setOperationAction(ISD::FCANONICALIZE, MVT::v4f16, Custom);
 
     setOperationAction(ISD::SELECT, MVT::v4i16, Custom);
     setOperationAction(ISD::SELECT, MVT::v4f16, Custom);
@@ -3575,6 +3576,7 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return lowerDEBUGTRAP(Op, DAG);
   case ISD::FABS:
   case ISD::FNEG:
+  case ISD::FCANONICALIZE:
     return splitUnaryVectorOp(Op, DAG);
   case ISD::SHL:
   case ISD::SRA:
