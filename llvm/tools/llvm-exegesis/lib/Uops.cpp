@@ -126,23 +126,23 @@ UopsBenchmarkRunner::~UopsBenchmarkRunner() = default;
 
 void UopsBenchmarkRunner::instantiateMemoryOperands(
     const unsigned ScratchSpaceReg,
-    std::vector<InstructionInstance> &Snippet) const {
+    std::vector<InstructionBuilder> &Snippet) const {
   if (ScratchSpaceReg == 0)
-    return;  // no memory operands.
+    return; // no memory operands.
   const auto &ET = State.getExegesisTarget();
   const unsigned MemStep = ET.getMaxMemoryAccessSize();
   const size_t OriginalSnippetSize = Snippet.size();
   size_t I = 0;
-  for (InstructionInstance &II : Snippet) {
-    ET.fillMemoryOperands(II, ScratchSpaceReg, I * MemStep);
+  for (InstructionBuilder &IB : Snippet) {
+    ET.fillMemoryOperands(IB, ScratchSpaceReg, I * MemStep);
     ++I;
   }
 
   while (Snippet.size() < kMinNumDifferentAddresses) {
-    InstructionInstance II = Snippet[I % OriginalSnippetSize];
-    ET.fillMemoryOperands(II, ScratchSpaceReg, I * MemStep);
+    InstructionBuilder IB = Snippet[I % OriginalSnippetSize];
+    ET.fillMemoryOperands(IB, ScratchSpaceReg, I * MemStep);
     ++I;
-    Snippet.push_back(std::move(II));
+    Snippet.push_back(std::move(IB));
   }
   assert(I * MemStep < ScratchSpace::kSize && "not enough scratch space");
 }
@@ -176,16 +176,16 @@ UopsBenchmarkRunner::generatePrototype(unsigned Opcode) const {
   }
 
   const AliasingConfigurations SelfAliasing(Instr, Instr);
-  InstructionInstance II(Instr);
+  InstructionBuilder IB(Instr);
   if (SelfAliasing.empty()) {
     Prototype.Explanation = "instruction is parallel, repeating a random one.";
-    Prototype.Snippet.push_back(std::move(II));
+    Prototype.Snippet.push_back(std::move(IB));
     instantiateMemoryOperands(Prototype.ScratchSpaceReg, Prototype.Snippet);
     return std::move(Prototype);
   }
   if (SelfAliasing.hasImplicitAliasing()) {
     Prototype.Explanation = "instruction is serial, repeating a random one.";
-    Prototype.Snippet.push_back(std::move(II));
+    Prototype.Snippet.push_back(std::move(IB));
     instantiateMemoryOperands(Prototype.ScratchSpaceReg, Prototype.Snippet);
     return std::move(Prototype);
   }
@@ -205,9 +205,9 @@ UopsBenchmarkRunner::generatePrototype(unsigned Opcode) const {
     for (const llvm::MCPhysReg Reg : Op.Tracker->sourceBits().set_bits()) {
       if (ScratchSpaceAliasedRegs && ScratchSpaceAliasedRegs->test(Reg))
         continue; // Do not use the scratch memory address register.
-      InstructionInstance TmpII = II;
-      TmpII.getValueFor(*Var) = llvm::MCOperand::createReg(Reg);
-      Prototype.Snippet.push_back(std::move(TmpII));
+      InstructionBuilder TmpIB = IB;
+      TmpIB.getValueFor(*Var) = llvm::MCOperand::createReg(Reg);
+      Prototype.Snippet.push_back(std::move(TmpIB));
     }
     instantiateMemoryOperands(Prototype.ScratchSpaceReg, Prototype.Snippet);
     return std::move(Prototype);
@@ -224,7 +224,7 @@ UopsBenchmarkRunner::generatePrototype(unsigned Opcode) const {
       assert(PossibleRegisters.any() && "No register left to choose from");
       const auto RandomReg = randomBit(PossibleRegisters);
       Defs.set(RandomReg);
-      II.getValueFor(Op) = llvm::MCOperand::createReg(RandomReg);
+      IB.getValueFor(Op) = llvm::MCOperand::createReg(RandomReg);
     }
   }
   // And pick random use values that are not reserved and don't alias with defs.
@@ -239,12 +239,12 @@ UopsBenchmarkRunner::generatePrototype(unsigned Opcode) const {
       remove(PossibleRegisters, DefAliases);
       assert(PossibleRegisters.any() && "No register left to choose from");
       const auto RandomReg = randomBit(PossibleRegisters);
-      II.getValueFor(Op) = llvm::MCOperand::createReg(RandomReg);
+      IB.getValueFor(Op) = llvm::MCOperand::createReg(RandomReg);
     }
   }
   Prototype.Explanation =
       "instruction has no tied variables picking Uses different from defs";
-  Prototype.Snippet.push_back(std::move(II));
+  Prototype.Snippet.push_back(std::move(IB));
   instantiateMemoryOperands(Prototype.ScratchSpaceReg, Prototype.Snippet);
   return std::move(Prototype);
 }

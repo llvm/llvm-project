@@ -34,5 +34,5 @@ HAVE_DFT: INFO: 1/{{.*}} inputs have the Data Flow Trace
 # Collect DFT, then use it.
 RUN: rm -rf %t/C  && mkdir %t/C &&  cp %t/IN/* %t/C
 RUN: rm -rf %t/C_DFT && %libfuzzer_src/scripts/collect_data_flow.py %t-DFT %t/C %t/C_DFT > /dev/null 2>&1
-RUN: not %t-Fuzz -focus_function=f0 -data_flow_trace=%t/C_DFT -seed=1 -runs=1000000 -use_value_profile=3 %t/C 2> %t/log
+RUN: not %t-Fuzz -focus_function=f0 -data_flow_trace=%t/C_DFT -seed=1 -runs=1000000 -use_value_profile=1 %t/C 2> %t/log
 RUN: grep BINGO %t/log

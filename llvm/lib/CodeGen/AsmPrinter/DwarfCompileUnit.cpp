@@ -186,6 +186,10 @@ DIE *DwarfCompileUnit::getOrCreateGlobalVariableDIE(
     if (!Global && (!Expr || !Expr->isConstant()))
       continue;
 
+    if (Global && Global->isThreadLocal() &&
+        !Asm->getObjFileLowering().supportDebugThreadLocalLocation())
+      continue;
+
     if (!Loc) {
       addToAccelTable = true;
       Loc = new (DIEValueAllocator) DIELoc;

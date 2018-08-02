@@ -795,7 +795,8 @@ void ClangMoveTool::removeDeclsInOldFiles() {
     // Ignore replacements for new.h/cc.
     if (SI == FilePathToFileID.end()) continue;
     llvm::StringRef Code = SM.getBufferData(SI->second);
-    auto Style = format::getStyle("file", FilePath, Context->FallbackStyle);
+    auto Style = format::getStyle(format::DefaultFormatStyle, FilePath,
+                                  Context->FallbackStyle);
     if (!Style) {
       llvm::errs() << llvm::toString(Style.takeError()) << "\n";
       continue;

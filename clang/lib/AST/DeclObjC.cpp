@@ -787,13 +787,6 @@ ObjCMethodDecl::ObjCMethodDecl(SourceLocation beginLoc, SourceLocation endLoc,
     : NamedDecl(ObjCMethod, contextDecl, beginLoc, SelInfo),
       DeclContext(ObjCMethod), MethodDeclType(T), ReturnTInfo(ReturnTInfo),
       DeclEndLoc(endLoc) {
-  // See the comment in ObjCMethodFamilyBitfields about
-  // ObjCMethodFamilyBitWidth for why we check this.
-  static_assert(
-      static_cast<unsigned>(ObjCMethodDeclBits.ObjCMethodFamilyBitWidth) ==
-          static_cast<unsigned>(ObjCMethodFamilyBitWidth),
-      "ObjCMethodDeclBitfields::ObjCMethodFamilyBitWidth and "
-      "ObjCMethodFamilyBitWidth do not match!");
 
   // Initialized the bits stored in DeclContext.
   ObjCMethodDeclBits.Family =

@@ -1,5 +1,6 @@
 ; RUN: llc -filetype=obj -o %t.o %s
 ; RUN: llc -filetype=obj %S/Inputs/hidden.ll -o %t2.o
+; RUN: rm -f %t2.a
 ; RUN: llvm-ar rcs %t2.a %t2.o
 ; RUN: wasm-ld %t.o %t2.a -o %t.wasm
 ; RUN: obj2yaml %t.wasm | FileCheck %s

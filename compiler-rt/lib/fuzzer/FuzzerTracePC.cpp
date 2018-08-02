@@ -401,20 +401,15 @@ ATTRIBUTE_TARGET_POPCNT ALWAYS_INLINE
 ATTRIBUTE_NO_SANITIZE_ALL
 void TracePC::HandleCmp(uintptr_t PC, T Arg1, T Arg2) {
   uint64_t ArgXor = Arg1 ^ Arg2;
-  uint64_t ArgDistance = __builtin_popcountll(ArgXor) + 1; // [1,65]
-  uintptr_t Idx = ((PC & 4095) + 1) * ArgDistance;
   if (sizeof(T) == 4)
       TORC4.Insert(ArgXor, Arg1, Arg2);
   else if (sizeof(T) == 8)
       TORC8.Insert(ArgXor, Arg1, Arg2);
-  // TODO: remove these flags and instead use all metrics at once.
-  if (UseValueProfileMask & 1)
-    ValueProfileMap.AddValue(Idx);
-  if (UseValueProfileMask & 2)
-    ValueProfileMap.AddValue(
-        PC * 64 + (Arg1 == Arg2 ? 0 : __builtin_clzll(Arg1 - Arg2) + 1));
-  if (UseValueProfileMask & 4)  // alternative way to use the hamming distance
-    ValueProfileMap.AddValue(PC * 64 + ArgDistance);
+  uint64_t HammingDistance = __builtin_popcountll(ArgXor); // [0,64]
+  uint64_t AbsoluteDistance =
+      (Arg1 == Arg2 ? 0 : __builtin_clzll(Arg1 - Arg2) + 1);
+  ValueProfileMap.AddValue(PC * 128 + HammingDistance);
+  ValueProfileMap.AddValue(PC * 128 + 64 + AbsoluteDistance);
 }
 
 static size_t InternalStrnlen(const char *S, size_t MaxLen) {

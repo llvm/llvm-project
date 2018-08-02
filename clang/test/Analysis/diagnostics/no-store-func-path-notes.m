@@ -52,7 +52,6 @@ int initFromBlock() {
 extern void expectNonNull(NSString * _Nonnull a);
 
 @interface A : NSObject
-- (void) func;
 - (void) initAMaybe;
 @end
 
@@ -66,12 +65,41 @@ extern void expectNonNull(NSString * _Nonnull a);
     a = @"string";
 } // expected-note{{Returning without writing to 'self->a'}}
 
-- (void) func {
+- (void) passNullToNonnull {
   a = nil; // expected-note{{nil object reference stored to 'a'}}
   [self initAMaybe]; // expected-note{{Calling 'initAMaybe'}}
                      // expected-note@-1{{Returning from 'initAMaybe'}}
   expectNonNull(a); // expected-warning{{nil passed to a callee that requires a non-null 1st parameter}}
                     // expected-note@-1{{nil passed to a callee that requires a non-null 1st parameter}}
+}
+
+- (void) initAMaybeWithExplicitSelf {
+  if (coin()) // expected-note{{Assuming the condition is false}}
+              // expected-note@-1{{Taking false branch}}
+    self->a = @"string";
+} // expected-note{{Returning without writing to 'self->a'}}
+
+- (void) passNullToNonnullWithExplicitSelf {
+  self->a = nil; // expected-note{{nil object reference stored to 'a'}}
+  [self initAMaybeWithExplicitSelf]; // expected-note{{Calling 'initAMaybeWithExplicitSelf'}}
+                     // expected-note@-1{{Returning from 'initAMaybeWithExplicitSelf'}}
+  expectNonNull(a); // expected-warning{{nil passed to a callee that requires a non-null 1st parameter}}
+                    // expected-note@-1{{nil passed to a callee that requires a non-null 1st parameter}}
+}
+
+- (void) initPassedAMaybe:(A *) param {
+  if (coin()) // expected-note{{Assuming the condition is false}}
+              // expected-note@-1{{Taking false branch}}
+    param->a = @"string";
+} // expected-note{{Returning without writing to 'param->a'}}
+
+- (void) useInitPassedAMaybe:(A *) paramA {
+  paramA->a = nil; // expected-note{{nil object reference stored to 'a'}}
+  [self initPassedAMaybe:paramA]; // expected-note{{Calling 'initPassedAMaybe:'}}
+                                  // expected-note@-1{{Returning from 'initPassedAMaybe:'}}
+  expectNonNull(paramA->a); // expected-warning{{nil passed to a callee that requires a non-null 1st parameter}}
+                            // expected-note@-1{{nil passed to a callee that requires a non-null 1st parameter}}
+
 }
 
 @end

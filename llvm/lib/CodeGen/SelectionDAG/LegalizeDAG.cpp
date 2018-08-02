@@ -1489,24 +1489,20 @@ SDValue SelectionDAGLegalize::ExpandFCOPYSIGN(SDNode *Node) const {
 
   // Get the signbit at the right position for MagAsInt.
   int ShiftAmount = SignAsInt.SignBit - MagAsInt.SignBit;
-  if (SignBit.getValueSizeInBits() > ClearedSign.getValueSizeInBits()) {
-    if (ShiftAmount > 0) {
-      SDValue ShiftCnst = DAG.getConstant(ShiftAmount, DL, IntVT);
-      SignBit = DAG.getNode(ISD::SRL, DL, IntVT, SignBit, ShiftCnst);
-    } else if (ShiftAmount < 0) {
-      SDValue ShiftCnst = DAG.getConstant(-ShiftAmount, DL, IntVT);
-      SignBit = DAG.getNode(ISD::SHL, DL, IntVT, SignBit, ShiftCnst);
-    }
-    SignBit = DAG.getNode(ISD::TRUNCATE, DL, MagVT, SignBit);
-  } else if (SignBit.getValueSizeInBits() < ClearedSign.getValueSizeInBits()) {
+  EVT ShiftVT = IntVT;
+  if (SignBit.getValueSizeInBits() < ClearedSign.getValueSizeInBits()) {
     SignBit = DAG.getNode(ISD::ZERO_EXTEND, DL, MagVT, SignBit);
-    if (ShiftAmount > 0) {
-      SDValue ShiftCnst = DAG.getConstant(ShiftAmount, DL, MagVT);
-      SignBit = DAG.getNode(ISD::SRL, DL, MagVT, SignBit, ShiftCnst);
-    } else if (ShiftAmount < 0) {
-      SDValue ShiftCnst = DAG.getConstant(-ShiftAmount, DL, MagVT);
-      SignBit = DAG.getNode(ISD::SHL, DL, MagVT, SignBit, ShiftCnst);
-    }
+    ShiftVT = MagVT;
+  }
+  if (ShiftAmount > 0) {
+    SDValue ShiftCnst = DAG.getConstant(ShiftAmount, DL, ShiftVT);
+    SignBit = DAG.getNode(ISD::SRL, DL, ShiftVT, SignBit, ShiftCnst);
+  } else if (ShiftAmount < 0) {
+    SDValue ShiftCnst = DAG.getConstant(-ShiftAmount, DL, ShiftVT);
+    SignBit = DAG.getNode(ISD::SHL, DL, ShiftVT, SignBit, ShiftCnst);
+  }
+  if (SignBit.getValueSizeInBits() > ClearedSign.getValueSizeInBits()) {
+    SignBit = DAG.getNode(ISD::TRUNCATE, DL, MagVT, SignBit);
   }
 
   // Store the part with the modified sign and convert back to float.

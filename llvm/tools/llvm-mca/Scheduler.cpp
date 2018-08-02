@@ -42,30 +42,38 @@ void ResourceState::dump() const {
 }
 #endif
 
-void ResourceManager::initialize(const llvm::MCSchedModel &SM) {
-  computeProcResourceMasks(SM, ProcResID2Mask);
-  for (unsigned I = 0, E = SM.getNumProcResourceKinds(); I < E; ++I)
-    addResource(*SM.getProcResource(I), I, ProcResID2Mask[I]);
+unsigned getResourceStateIndex(uint64_t Mask) {
+  return std::numeric_limits<uint64_t>::digits - llvm::countLeadingZeros(Mask);
 }
 
-// Adds a new resource state in Resources, as well as a new descriptor in
-// ResourceDescriptor. Map 'Resources' allows to quickly obtain ResourceState
-// objects from resource mask identifiers.
-void ResourceManager::addResource(const MCProcResourceDesc &Desc,
-                                  unsigned Index, uint64_t Mask) {
-  assert(Resources.find(Mask) == Resources.end() && "Resource already added!");
-  Resources[Mask] = llvm::make_unique<ResourceState>(Desc, Index, Mask);
+unsigned ResourceManager::resolveResourceMask(uint64_t Mask) const {
+  return Resources[getResourceStateIndex(Mask)]->getProcResourceID();
+}
+
+unsigned ResourceManager::getNumUnits(uint64_t ResourceID) const {
+  return Resources[getResourceStateIndex(ResourceID)]->getNumUnits();
+}
+
+void ResourceManager::initialize(const llvm::MCSchedModel &SM) {
+  computeProcResourceMasks(SM, ProcResID2Mask);
+  Resources.resize(SM.getNumProcResourceKinds());
+
+  for (unsigned I = 0, E = SM.getNumProcResourceKinds(); I < E; ++I) {
+    unsigned Mask = ProcResID2Mask[I];
+    Resources[getResourceStateIndex(Mask)] =
+        llvm::make_unique<ResourceState>(*SM.getProcResource(I), I, Mask);
+  }
 }
 
 // Returns the actual resource consumed by this Use.
 // First, is the primary resource ID.
 // Second, is the specific sub-resource ID.
 std::pair<uint64_t, uint64_t> ResourceManager::selectPipe(uint64_t ResourceID) {
-  ResourceState &RS = *Resources[ResourceID];
+  ResourceState &RS = *Resources[getResourceStateIndex(ResourceID)];
   uint64_t SubResourceID = RS.selectNextInSequence();
   if (RS.isAResourceGroup())
     return selectPipe(SubResourceID);
-  return std::pair<uint64_t, uint64_t>(ResourceID, SubResourceID);
+  return std::make_pair(ResourceID, SubResourceID);
 }
 
 void ResourceState::removeFromNextInSequence(uint64_t ID) {
@@ -82,9 +90,9 @@ void ResourceState::removeFromNextInSequence(uint64_t ID) {
   }
 }
 
-void ResourceManager::use(ResourceRef RR) {
+void ResourceManager::use(const ResourceRef &RR) {
   // Mark the sub-resource referenced by RR as used.
-  ResourceState &RS = *Resources[RR.first];
+  ResourceState &RS = *Resources[getResourceStateIndex(RR.first)];
   RS.markSubResourceAsUsed(RR.second);
   // If there are still available units in RR.first,
   // then we are done.
@@ -92,8 +100,8 @@ void ResourceManager::use(ResourceRef RR) {
     return;
 
   // Notify to other resources that RR.first is no longer available.
-  for (const std::pair<uint64_t, UniqueResourceState> &Res : Resources) {
-    ResourceState &Current = *Res.second.get();
+  for (UniqueResourceState &Res : Resources) {
+    ResourceState &Current = *Res;
     if (!Current.isAResourceGroup() || Current.getResourceMask() == RR.first)
       continue;
 
@@ -104,15 +112,15 @@ void ResourceManager::use(ResourceRef RR) {
   }
 }
 
-void ResourceManager::release(ResourceRef RR) {
-  ResourceState &RS = *Resources[RR.first];
+void ResourceManager::release(const ResourceRef &RR) {
+  ResourceState &RS = *Resources[getResourceStateIndex(RR.first)];
   bool WasFullyUsed = !RS.isReady();
   RS.releaseSubResource(RR.second);
   if (!WasFullyUsed)
     return;
 
-  for (const std::pair<uint64_t, UniqueResourceState> &Res : Resources) {
-    ResourceState &Current = *Res.second.get();
+  for (UniqueResourceState &Res : Resources) {
+    ResourceState &Current = *Res;
     if (!Current.isAResourceGroup() || Current.getResourceMask() == RR.first)
       continue;
 
@@ -125,7 +133,8 @@ ResourceStateEvent
 ResourceManager::canBeDispatched(ArrayRef<uint64_t> Buffers) const {
   ResourceStateEvent Result = ResourceStateEvent::RS_BUFFER_AVAILABLE;
   for (uint64_t Buffer : Buffers) {
-    Result = isBufferAvailable(Buffer);
+    ResourceState &RS = *Resources[getResourceStateIndex(Buffer)];
+    Result = RS.isBufferAvailable();
     if (Result != ResourceStateEvent::RS_BUFFER_AVAILABLE)
       break;
   }
@@ -133,19 +142,21 @@ ResourceManager::canBeDispatched(ArrayRef<uint64_t> Buffers) const {
 }
 
 void ResourceManager::reserveBuffers(ArrayRef<uint64_t> Buffers) {
-  for (const uint64_t R : Buffers) {
-    reserveBuffer(R);
-    ResourceState &Resource = *Resources[R];
-    if (Resource.isADispatchHazard()) {
-      assert(!Resource.isReserved());
-      Resource.setReserved();
+  for (const uint64_t Buffer : Buffers) {
+    ResourceState &RS = *Resources[getResourceStateIndex(Buffer)];
+    assert(RS.isBufferAvailable() == ResourceStateEvent::RS_BUFFER_AVAILABLE);
+    RS.reserveBuffer();
+
+    if (RS.isADispatchHazard()) {
+      assert(!RS.isReserved());
+      RS.setReserved();
     }
   }
 }
 
 void ResourceManager::releaseBuffers(ArrayRef<uint64_t> Buffers) {
   for (const uint64_t R : Buffers)
-    releaseBuffer(R);
+    Resources[getResourceStateIndex(R)]->releaseBuffer();
 }
 
 bool ResourceManager::canBeIssued(const InstrDesc &Desc) const {
@@ -153,7 +164,8 @@ bool ResourceManager::canBeIssued(const InstrDesc &Desc) const {
                      [&](const std::pair<uint64_t, const ResourceUsage> &E) {
                        unsigned NumUnits =
                            E.second.isReserved() ? 0U : E.second.NumUnits;
-                       return isReady(E.first, NumUnits);
+                       unsigned Index = getResourceStateIndex(E.first);
+                       return Resources[Index]->isReady(NumUnits);
                      });
 }
 
@@ -163,14 +175,15 @@ bool ResourceManager::mustIssueImmediately(const InstrDesc &Desc) {
   if (!canBeIssued(Desc))
     return false;
   bool AllInOrderResources = all_of(Desc.Buffers, [&](uint64_t BufferMask) {
-    const ResourceState &Resource = *Resources[BufferMask];
+    unsigned Index = getResourceStateIndex(BufferMask);
+    const ResourceState &Resource = *Resources[Index];
     return Resource.isInOrder() || Resource.isADispatchHazard();
   });
   if (!AllInOrderResources)
     return false;
 
   return any_of(Desc.Buffers, [&](uint64_t BufferMask) {
-    return Resources[BufferMask]->isADispatchHazard();
+    return Resources[getResourceStateIndex(BufferMask)]->isADispatchHazard();
   });
 }
 
@@ -190,7 +203,7 @@ void ResourceManager::issueInstruction(
       use(Pipe);
       BusyResources[Pipe] += CS.size();
       // Replace the resource mask with a valid processor resource index.
-      const ResourceState &RS = *Resources[Pipe.first];
+      const ResourceState &RS = *Resources[getResourceStateIndex(Pipe.first)];
       Pipe.first = RS.getProcResourceID();
       Pipes.emplace_back(
           std::pair<ResourceRef, double>(Pipe, static_cast<double>(CS.size())));
@@ -222,6 +235,17 @@ void ResourceManager::cycleEvent(SmallVectorImpl<ResourceRef> &ResourcesFreed) {
 
   for (const ResourceRef &RF : ResourcesFreed)
     BusyResources.erase(RF);
+}
+
+void ResourceManager::reserveResource(uint64_t ResourceID) {
+  ResourceState &Resource = *Resources[getResourceStateIndex(ResourceID)];
+  assert(!Resource.isReserved());
+  Resource.setReserved();
+}
+
+void ResourceManager::releaseResource(uint64_t ResourceID) {
+  ResourceState &Resource = *Resources[getResourceStateIndex(ResourceID)];
+  Resource.clearReserved();
 }
 
 #ifndef NDEBUG
@@ -384,7 +408,8 @@ bool Scheduler::reserveResources(InstRef &IR) {
   // If necessary, reserve queue entries in the load-store unit (LSU).
   const bool Reserved = LSU->reserve(IR);
   if (!IR.getInstruction()->isReady() || (Reserved && !LSU->isReady(IR))) {
-    LLVM_DEBUG(dbgs() << "[SCHEDULER] Adding #" << IR << " to the Wait Queue\n");
+    LLVM_DEBUG(dbgs() << "[SCHEDULER] Adding #" << IR
+                      << " to the Wait Queue\n");
     WaitQueue[IR.getSourceIndex()] = IR.getInstruction();
     return false;
   }
