@@ -18,14 +18,17 @@ accuracy before using.
 
 To generate all current tests:
 - Generate mapper tests:
-    gen_tests.py -flag='--dump-mapper' -flag='--doxygen' -prefix mapper
+    python gen_tests.py -flag='--dump-mapper' -flag='--doxygen' -flag='--extra-arg=-fmodules-ts' -prefix mapper
 
 - Generate reducer tests:
-    gen_tests.py -flag='--dump-intermediate' -flag='--doxygen' -prefix bc
-    
+    python gen_tests.py -flag='--dump-intermediate' -flag='--doxygen' -flag='--extra-arg=-fmodules-ts' -prefix bc
+
 - Generate yaml tests:
-    gen_tests.py -flag='--format=yaml' -flag='--doxygen' -prefix yaml
-    
+    python gen_tests.py -flag='--format=yaml' -flag='--doxygen' -flag='--extra-arg=-fmodules-ts' -prefix yaml
+
+- Generate public decl tests:
+    python gen_tests.py -flag='--format=yaml' -flag='--doxygen' -flag='--public' -flag='--extra-arg=-fmodules-ts' -prefix public
+
 This script was written on/for Linux, and has not been tested on any other
 platform and so it may not work.
 
@@ -34,6 +37,7 @@ platform and so it may not work.
 import argparse
 import glob
 import os
+import re
 import shutil
 import subprocess
 
@@ -48,6 +52,10 @@ CHECK = '// CHECK-{0}: '
 
 CHECK_NEXT = '// CHECK-{0}-NEXT: '
 
+BITCODE_USR = '<USR abbrevid=4 op0=20 op1={{[0-9]+}} op2={{[0-9]+}} op3={{[0-9]+}} op4={{[0-9]+}} op5={{[0-9]+}} op6={{[0-9]+}} op7={{[0-9]+}} op8={{[0-9]+}} op9={{[0-9]+}} op10={{[0-9]+}} op11={{[0-9]+}} op12={{[0-9]+}} op13={{[0-9]+}} op14={{[0-9]+}} op15={{[0-9]+}} op16={{[0-9]+}} op17={{[0-9]+}} op18={{[0-9]+}} op19={{[0-9]+}} op20={{[0-9]+}}/>'
+BITCODE_USR_REGEX = r'<USR abbrevid=4 op0=20 op1=[0-9]+ op2=[0-9]+ op3=[0-9]+ op4=[0-9]+ op5=[0-9]+ op6=[0-9]+ op7=[0-9]+ op8=[0-9]+ op9=[0-9]+ op10=[0-9]+ op11=[0-9]+ op12=[0-9]+ op13=[0-9]+ op14=[0-9]+ op15=[0-9]+ op16=[0-9]+ op17=[0-9]+ op18=[0-9]+ op19=[0-9]+ op20=[0-9]+/>'
+YAML_USR = "USR:             '{{[0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z]}}'"
+YAML_USR_REGEX = r"USR:             '[0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z]'"
 
 def clear_test_prefix_files(prefix, tests_path):
     if os.path.isdir(tests_path):
@@ -108,6 +116,8 @@ def get_output(root, out_file, case_out_path, flags, checkname, bcanalyzer):
 
     # Format output.
     output = output.replace('blob data = \'test\'', 'blob data = \'{{.*}}\'')
+    output = re.sub(YAML_USR_REGEX, YAML_USR, output)
+    output = re.sub(BITCODE_USR_REGEX, BITCODE_USR, output)
     output = CHECK.format(checkname) + output.rstrip()
     output = run_cmd + output.replace('\n',
                                       '\n' + CHECK_NEXT.format(checkname))

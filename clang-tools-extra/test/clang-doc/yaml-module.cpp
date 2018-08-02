@@ -14,7 +14,7 @@ static int staticModuleFunction(int x); // ModuleInternalLinkage
 
 export double exportedModuleFunction(double y, int z); // ExternalLinkage
 
-// RUN: clang-doc --format=yaml --doxygen --public --extra-arg=-fmodules-ts -p %t %t/test.cpp -output=%t/docs
+// RUN: clang-doc --format=yaml --doxygen --extra-arg=-fmodules-ts -p %t %t/test.cpp -output=%t/docs
 
 
 // RUN: cat %t/docs/./GlobalNamespace.yaml | FileCheck %s --check-prefix CHECK-0
@@ -25,6 +25,18 @@ export double exportedModuleFunction(double y, int z); // ExternalLinkage
 // CHECK-0-NEXT:     Name:            'moduleFunction'
 // CHECK-0-NEXT:     Location:        
 // CHECK-0-NEXT:       - LineNumber:      11
+// CHECK-0-NEXT:         Filename:        'test'
+// CHECK-0-NEXT:     Params:          
+// CHECK-0-NEXT:       - Type:            
+// CHECK-0-NEXT:           Name:            'int'
+// CHECK-0-NEXT:         Name:            'x'
+// CHECK-0-NEXT:     ReturnType:      
+// CHECK-0-NEXT:       Type:            
+// CHECK-0-NEXT:         Name:            'int'
+// CHECK-0-NEXT:   - USR:             '{{[0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z]}}'
+// CHECK-0-NEXT:     Name:            'staticModuleFunction'
+// CHECK-0-NEXT:     Location:        
+// CHECK-0-NEXT:       - LineNumber:      13
 // CHECK-0-NEXT:         Filename:        'test'
 // CHECK-0-NEXT:     Params:          
 // CHECK-0-NEXT:       - Type:            

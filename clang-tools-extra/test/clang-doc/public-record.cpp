@@ -39,7 +39,7 @@ class X {
   class Y {};
 };
 
-// RUN: clang-doc --format=yaml --doxygen --extra-arg=-fmodules-ts -p %t %t/test.cpp -output=%t/docs
+// RUN: clang-doc --format=yaml --doxygen --public --extra-arg=-fmodules-ts -p %t %t/test.cpp -output=%t/docs
 
 
 // RUN: cat %t/docs/./C.yaml | FileCheck %s --check-prefix CHECK-0
@@ -206,31 +206,3 @@ class X {
 // CHECK-6-NEXT:       - 'A'
 // CHECK-6-NEXT:       - 'B'
 // CHECK-6-NEXT: ...
-
-// RUN: cat %t/docs/H/I.yaml | FileCheck %s --check-prefix CHECK-7
-// CHECK-7: ---
-// CHECK-7-NEXT: USR:             '{{[0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z]}}'
-// CHECK-7-NEXT: Name:            'I'
-// CHECK-7-NEXT: Namespace:       
-// CHECK-7-NEXT:   - Type:            Function
-// CHECK-7-NEXT:     Name:            'H'
-// CHECK-7-NEXT:     USR:             '{{[0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z]}}'
-// CHECK-7-NEXT: DefLocation:     
-// CHECK-7-NEXT:   LineNumber:      12
-// CHECK-7-NEXT:   Filename:        'test'
-// CHECK-7-NEXT: TagType:         Class
-// CHECK-7-NEXT: ...
-
-// RUN: cat %t/docs/X/Y.yaml | FileCheck %s --check-prefix CHECK-8
-// CHECK-8: ---
-// CHECK-8-NEXT: USR:             '{{[0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z]}}'
-// CHECK-8-NEXT: Name:            'Y'
-// CHECK-8-NEXT: Namespace:       
-// CHECK-8-NEXT:   - Type:            Record
-// CHECK-8-NEXT:     Name:            'X'
-// CHECK-8-NEXT:     USR:             '{{[0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z]}}'
-// CHECK-8-NEXT: DefLocation:     
-// CHECK-8-NEXT:   LineNumber:      39
-// CHECK-8-NEXT:   Filename:        'test'
-// CHECK-8-NEXT: TagType:         Class
-// CHECK-8-NEXT: ...

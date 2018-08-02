@@ -19,6 +19,7 @@
 #include "BitcodeWriter.h"
 #include "Representation.h"
 #include "clang/AST/AST.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Bitcode/BitstreamReader.h"
 
@@ -31,7 +32,7 @@ public:
   ClangDocBitcodeReader(llvm::BitstreamCursor &Stream) : Stream(Stream) {}
 
   // Main entry point, calls readBlock to read each block in the given stream.
-  std::vector<std::unique_ptr<Info>> readBitcode();
+  llvm::Expected<std::vector<std::unique_ptr<Info>>> readBitcode();
 
 private:
   enum class Cursor { BadBlock = 1, Record, BlockEnd, BlockBegin };
