@@ -65,6 +65,13 @@ void ObjCProtocolList::set(ObjCProtocolDecl* const* InList, unsigned Elts,
 // ObjCInterfaceDecl
 //===----------------------------------------------------------------------===//
 
+ObjCContainerDecl::ObjCContainerDecl(Kind DK, DeclContext *DC,
+                                     IdentifierInfo *Id, SourceLocation nameLoc,
+                                     SourceLocation atStartLoc)
+    : NamedDecl(DK, DC, nameLoc, Id), DeclContext(DK) {
+  setAtStartLoc(atStartLoc);
+}
+
 void ObjCContainerDecl::anchor() {}
 
 /// getIvarDecl - This method looks up an ivar in this ContextDecl.
@@ -769,6 +776,44 @@ ObjCMethodDecl *ObjCInterfaceDecl::lookupPrivateMethod(
 // ObjCMethodDecl
 //===----------------------------------------------------------------------===//
 
+ObjCMethodDecl::ObjCMethodDecl(SourceLocation beginLoc, SourceLocation endLoc,
+                               Selector SelInfo, QualType T,
+                               TypeSourceInfo *ReturnTInfo,
+                               DeclContext *contextDecl, bool isInstance,
+                               bool isVariadic, bool isPropertyAccessor,
+                               bool isImplicitlyDeclared, bool isDefined,
+                               ImplementationControl impControl,
+                               bool HasRelatedResultType)
+    : NamedDecl(ObjCMethod, contextDecl, beginLoc, SelInfo),
+      DeclContext(ObjCMethod), MethodDeclType(T), ReturnTInfo(ReturnTInfo),
+      DeclEndLoc(endLoc) {
+  // See the comment in ObjCMethodFamilyBitfields about
+  // ObjCMethodFamilyBitWidth for why we check this.
+  static_assert(
+      static_cast<unsigned>(ObjCMethodDeclBits.ObjCMethodFamilyBitWidth) ==
+          static_cast<unsigned>(ObjCMethodFamilyBitWidth),
+      "ObjCMethodDeclBitfields::ObjCMethodFamilyBitWidth and "
+      "ObjCMethodFamilyBitWidth do not match!");
+
+  // Initialized the bits stored in DeclContext.
+  ObjCMethodDeclBits.Family =
+      static_cast<ObjCMethodFamily>(InvalidObjCMethodFamily);
+  setInstanceMethod(isInstance);
+  setVariadic(isVariadic);
+  setPropertyAccessor(isPropertyAccessor);
+  setDefined(isDefined);
+  setIsRedeclaration(false);
+  setHasRedeclaration(false);
+  setDeclImplementation(impControl);
+  setObjCDeclQualifier(OBJC_TQ_None);
+  setRelatedResultType(HasRelatedResultType);
+  setSelLocsKind(SelLoc_StandardNoSpace);
+  setOverriding(false);
+  setHasSkippedBody(false);
+
+  setImplicit(isImplicitlyDeclared);
+}
+
 ObjCMethodDecl *ObjCMethodDecl::Create(
     ASTContext &C, SourceLocation beginLoc, SourceLocation endLoc,
     Selector SelInfo, QualType T, TypeSourceInfo *ReturnTInfo,
@@ -810,8 +855,8 @@ Stmt *ObjCMethodDecl::getBody() const {
 void ObjCMethodDecl::setAsRedeclaration(const ObjCMethodDecl *PrevMethod) {
   assert(PrevMethod);
   getASTContext().setObjCMethodRedeclaration(PrevMethod, this);
-  IsRedeclaration = true;
-  PrevMethod->HasRedeclaration = true;
+  setIsRedeclaration(true);
+  PrevMethod->setHasRedeclaration(true);
 }
 
 void ObjCMethodDecl::setParamsAndSelLocs(ASTContext &C,
@@ -846,9 +891,9 @@ void ObjCMethodDecl::setMethodParams(ASTContext &C,
   if (isImplicit())
     return setParamsAndSelLocs(C, Params, llvm::None);
 
-  SelLocsKind = hasStandardSelectorLocs(getSelector(), SelLocs, Params,
-                                        DeclEndLoc);
-  if (SelLocsKind != SelLoc_NonStandard)
+  setSelLocsKind(hasStandardSelectorLocs(getSelector(), SelLocs, Params,
+                                        DeclEndLoc));
+  if (getSelLocsKind() != SelLoc_NonStandard)
     return setParamsAndSelLocs(C, Params, llvm::None);
 
   setParamsAndSelLocs(C, Params, SelLocs);
@@ -860,7 +905,7 @@ void ObjCMethodDecl::setMethodParams(ASTContext &C,
 ObjCMethodDecl *ObjCMethodDecl::getNextRedeclarationImpl() {
   ASTContext &Ctx = getASTContext();
   ObjCMethodDecl *Redecl = nullptr;
-  if (HasRedeclaration)
+  if (hasRedeclaration())
     Redecl = const_cast<ObjCMethodDecl*>(Ctx.getObjCMethodRedeclaration(this));
   if (Redecl)
     return Redecl;
@@ -938,7 +983,7 @@ SourceLocation ObjCMethodDecl::getLocEnd() const {
 }
 
 ObjCMethodFamily ObjCMethodDecl::getMethodFamily() const {
-  auto family = static_cast<ObjCMethodFamily>(Family);
+  auto family = static_cast<ObjCMethodFamily>(ObjCMethodDeclBits.Family);
   if (family != static_cast<unsigned>(InvalidObjCMethodFamily))
     return family;
 
@@ -954,7 +999,7 @@ ObjCMethodFamily ObjCMethodDecl::getMethodFamily() const {
     case ObjCMethodFamilyAttr::OMF_mutableCopy: family = OMF_mutableCopy; break;
     case ObjCMethodFamilyAttr::OMF_new: family = OMF_new; break;
     }
-    Family = static_cast<unsigned>(family);
+    ObjCMethodDeclBits.Family = family;
     return family;
   }
 
@@ -1025,7 +1070,7 @@ ObjCMethodFamily ObjCMethodDecl::getMethodFamily() const {
   }
 
   // Cache the result.
-  Family = static_cast<unsigned>(family);
+  ObjCMethodDeclBits.Family = family;
   return family;
 }
 

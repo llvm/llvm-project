@@ -471,8 +471,6 @@ BUILTIN(__builtin_wcslen, "zwC*", "nF")
 BUILTIN(__builtin_wcsncmp, "iwC*wC*z", "nF")
 BUILTIN(__builtin_wmemchr, "w*wC*wz", "nF")
 BUILTIN(__builtin_wmemcmp, "iwC*wC*z", "nF")
-BUILTIN(__builtin_wmemcpy, "w*w*wC*z", "nF")
-BUILTIN(__builtin_wmemmove, "w*w*wC*z", "nF")
 BUILTIN(__builtin_return_address, "v*IUi", "n")
 BUILTIN(__builtin_extract_return_addr, "v*v*", "n")
 BUILTIN(__builtin_frame_address, "v*IUi", "n")
@@ -910,8 +908,6 @@ LIBBUILTIN(wcslen,  "zwC*",     "f", "wchar.h", ALL_LANGUAGES)
 LIBBUILTIN(wcsncmp, "iwC*wC*z", "f", "wchar.h", ALL_LANGUAGES)
 LIBBUILTIN(wmemchr, "w*wC*wz",  "f", "wchar.h", ALL_LANGUAGES)
 LIBBUILTIN(wmemcmp, "iwC*wC*z", "f", "wchar.h", ALL_LANGUAGES)
-LIBBUILTIN(wmemcpy, "w*w*wC*z", "f", "wchar.h", ALL_LANGUAGES)
-LIBBUILTIN(wmemmove,"w*w*wC*z", "f", "wchar.h", ALL_LANGUAGES)
 
 // C99
 // In some systems setjmp is a macro that expands to _setjmp. We undefine

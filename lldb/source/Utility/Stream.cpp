@@ -427,11 +427,11 @@ size_t Stream::PutMaxHex64(uint64_t uvalue, size_t byte_size,
   case 1:
     return PutHex8((uint8_t)uvalue);
   case 2:
-    return PutHex16((uint16_t)uvalue);
+    return PutHex16((uint16_t)uvalue, byte_order);
   case 4:
-    return PutHex32((uint32_t)uvalue);
+    return PutHex32((uint32_t)uvalue, byte_order);
   case 8:
-    return PutHex64(uvalue);
+    return PutHex64(uvalue, byte_order);
   }
   return 0;
 }
@@ -518,10 +518,10 @@ size_t Stream::PutCStringAsRawHex8(const char *s) {
   size_t bytes_written = 0;
   bool binary_is_set = m_flags.Test(eBinary);
   m_flags.Clear(eBinary);
-  do {
+  while(*s) {
     bytes_written += _PutHex8(*s, false);
     ++s;
-  } while (*s);
+  }
   if (binary_is_set)
     m_flags.Set(eBinary);
   return bytes_written;

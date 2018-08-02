@@ -275,6 +275,9 @@ void DwarfCompileUnit::addRange(RangeSpan Range) {
 }
 
 void DwarfCompileUnit::initStmtList() {
+  if (CUNode->isDebugDirectivesOnly())
+    return;
+
   // Define start line table label for each Compile Unit.
   MCSymbol *LineTableStartSym;
   const TargetLoweringObjectFile &TLOF = Asm->getObjFileLowering();
@@ -882,7 +885,7 @@ bool DwarfCompileUnit::hasDwarfPubSections() const {
     return true;
 
   return DD->tuneForGDB() && DD->usePubSections() &&
-         !includeMinimalInlineScopes();
+         !includeMinimalInlineScopes() && !CUNode->isDebugDirectivesOnly();
 }
 
 /// addGlobalName - Add a new global name to the compile unit.

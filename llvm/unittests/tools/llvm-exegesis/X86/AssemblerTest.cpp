@@ -11,6 +11,9 @@
 #include "X86InstrInfo.h"
 
 namespace exegesis {
+
+void InitializeX86ExegesisTarget();
+
 namespace {
 
 using llvm::MCInstBuilder;
@@ -31,25 +34,39 @@ protected:
     LLVMInitializeX86TargetMC();
     LLVMInitializeX86Target();
     LLVMInitializeX86AsmPrinter();
+    InitializeX86ExegesisTarget();
   }
 };
 
 TEST_F(X86MachineFunctionGeneratorTest, DISABLED_JitFunction) {
-  Check(llvm::MCInst(), 0xc3);
+  Check(ExegesisTarget::getDefault(), {}, llvm::MCInst(), 0xc3);
 }
 
-TEST_F(X86MachineFunctionGeneratorTest, DISABLED_JitFunctionXOR32rr) {
-  Check(MCInstBuilder(XOR32rr).addReg(EAX).addReg(EAX).addReg(EAX), 0x31, 0xc0,
+TEST_F(X86MachineFunctionGeneratorTest, DISABLED_JitFunctionXOR32rr_Default) {
+  Check(ExegesisTarget::getDefault(), {EAX},
+        MCInstBuilder(XOR32rr).addReg(EAX).addReg(EAX).addReg(EAX), 0x31, 0xc0,
         0xc3);
 }
 
+TEST_F(X86MachineFunctionGeneratorTest, DISABLED_JitFunctionXOR32rr_X86) {
+  const auto *ET = ExegesisTarget::lookup(llvm::Triple("x86_64-unknown-linux"));
+  ASSERT_NE(ET, nullptr);
+  Check(*ET, {EAX}, MCInstBuilder(XOR32rr).addReg(EAX).addReg(EAX).addReg(EAX),
+        // mov eax, 1
+        0xb8, 0x01, 0x00, 0x00, 0x00,
+        // xor eax, eax
+        0x31, 0xc0, 0xc3);
+}
+
 TEST_F(X86MachineFunctionGeneratorTest, DISABLED_JitFunctionMOV64ri) {
-  Check(MCInstBuilder(MOV64ri32).addReg(RAX).addImm(42), 0x48, 0xc7, 0xc0, 0x2a,
+  Check(ExegesisTarget::getDefault(), {},
+        MCInstBuilder(MOV64ri32).addReg(RAX).addImm(42), 0x48, 0xc7, 0xc0, 0x2a,
         0x00, 0x00, 0x00, 0xc3);
 }
 
 TEST_F(X86MachineFunctionGeneratorTest, DISABLED_JitFunctionMOV32ri) {
-  Check(MCInstBuilder(MOV32ri).addReg(EAX).addImm(42), 0xb8, 0x2a, 0x00, 0x00,
+  Check(ExegesisTarget::getDefault(), {},
+        MCInstBuilder(MOV32ri).addReg(EAX).addImm(42), 0xb8, 0x2a, 0x00, 0x00,
         0x00, 0xc3);
 }
 

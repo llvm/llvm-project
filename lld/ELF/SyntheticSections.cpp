@@ -2371,7 +2371,7 @@ static std::vector<InputSection *> getDebugInfoSections() {
 
 static std::vector<GdbIndexSection::CuEntry> readCuList(DWARFContext &Dwarf) {
   std::vector<GdbIndexSection::CuEntry> Ret;
-  for (std::unique_ptr<DWARFCompileUnit> &Cu : Dwarf.compile_units())
+  for (std::unique_ptr<DWARFUnit> &Cu : Dwarf.compile_units())
     Ret.push_back({Cu->getOffset(), Cu->getLength() + 4});
   return Ret;
 }
@@ -2381,7 +2381,7 @@ readAddressAreas(DWARFContext &Dwarf, InputSection *Sec) {
   std::vector<GdbIndexSection::AddressEntry> Ret;
 
   uint32_t CuIdx = 0;
-  for (std::unique_ptr<DWARFCompileUnit> &Cu : Dwarf.compile_units()) {
+  for (std::unique_ptr<DWARFUnit> &Cu : Dwarf.compile_units()) {
     DWARFAddressRangesVector Ranges;
     Cu->collectAddressRanges(Ranges);
 

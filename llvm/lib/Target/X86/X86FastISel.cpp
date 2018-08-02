@@ -738,6 +738,10 @@ bool X86FastISel::handleConstantAddresses(const Value *V, X86AddressMode &AM) {
     if (GV->isThreadLocal())
       return false;
 
+    // Can't handle !absolute_symbol references yet.
+    if (GV->isAbsoluteSymbolRef())
+      return false;
+
     // RIP-relative addresses can't have additional register operands, so if
     // we've already folded stuff into the addressing mode, just force the
     // global value into its own register, which we can use as the basereg.

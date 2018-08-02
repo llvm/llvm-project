@@ -92,7 +92,7 @@ define i32 @rotl_i32(i32 %x, i32 %z) nounwind {
 define <4 x i32> @rotl_v4i32(<4 x i32> %x, <4 x i32> %z) nounwind {
 ; X32-SSE2-LABEL: rotl_v4i32:
 ; X32-SSE2:       # %bb.0:
-; X32-SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [32,32,32,32]
+; X32-SSE2-NEXT:    pxor %xmm3, %xmm3
 ; X32-SSE2-NEXT:    psubd %xmm1, %xmm3
 ; X32-SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [31,31,31,31]
 ; X32-SSE2-NEXT:    pand %xmm4, %xmm3
@@ -132,7 +132,7 @@ define <4 x i32> @rotl_v4i32(<4 x i32> %x, <4 x i32> %z) nounwind {
 ; X64-AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [31,31,31,31]
 ; X64-AVX2-NEXT:    vpand %xmm2, %xmm1, %xmm3
 ; X64-AVX2-NEXT:    vpsllvd %xmm3, %xmm0, %xmm3
-; X64-AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm4 = [32,32,32,32]
+; X64-AVX2-NEXT:    vpxor %xmm4, %xmm4, %xmm4
 ; X64-AVX2-NEXT:    vpsubd %xmm1, %xmm4, %xmm1
 ; X64-AVX2-NEXT:    vpand %xmm2, %xmm1, %xmm1
 ; X64-AVX2-NEXT:    vpsrlvd %xmm1, %xmm0, %xmm0
@@ -226,27 +226,28 @@ define i64 @rotr_i64(i64 %x, i64 %z) nounwind {
 ; X32-SSE2-NEXT:    pushl %esi
 ; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-SSE2-NEXT:    movl %eax, %ecx
+; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X32-SSE2-NEXT:    movl %ebx, %ecx
 ; X32-SSE2-NEXT:    andl $63, %ecx
 ; X32-SSE2-NEXT:    movl %edx, %edi
 ; X32-SSE2-NEXT:    shrl %cl, %edi
-; X32-SSE2-NEXT:    movl %esi, %ebx
-; X32-SSE2-NEXT:    shrdl %cl, %edx, %ebx
-; X32-SSE2-NEXT:    xorl %ebp, %ebp
+; X32-SSE2-NEXT:    movl %esi, %ebp
+; X32-SSE2-NEXT:    shrdl %cl, %edx, %ebp
+; X32-SSE2-NEXT:    xorl %eax, %eax
 ; X32-SSE2-NEXT:    testb $32, %cl
-; X32-SSE2-NEXT:    cmovnel %edi, %ebx
-; X32-SSE2-NEXT:    cmovnel %ebp, %edi
-; X32-SSE2-NEXT:    movl $64, %ecx
-; X32-SSE2-NEXT:    subl %eax, %ecx
-; X32-SSE2-NEXT:    andl $63, %ecx
+; X32-SSE2-NEXT:    cmovnel %edi, %ebp
+; X32-SSE2-NEXT:    cmovnel %eax, %edi
+; X32-SSE2-NEXT:    negl %ebx
+; X32-SSE2-NEXT:    andl $63, %ebx
 ; X32-SSE2-NEXT:    movl %esi, %eax
+; X32-SSE2-NEXT:    movl %ebx, %ecx
 ; X32-SSE2-NEXT:    shll %cl, %eax
 ; X32-SSE2-NEXT:    shldl %cl, %esi, %edx
-; X32-SSE2-NEXT:    testb $32, %cl
+; X32-SSE2-NEXT:    testb $32, %bl
 ; X32-SSE2-NEXT:    cmovnel %eax, %edx
-; X32-SSE2-NEXT:    cmovnel %ebp, %eax
-; X32-SSE2-NEXT:    orl %ebx, %eax
+; X32-SSE2-NEXT:    movl $0, %ecx
+; X32-SSE2-NEXT:    cmovnel %ecx, %eax
+; X32-SSE2-NEXT:    orl %ebp, %eax
 ; X32-SSE2-NEXT:    orl %edi, %edx
 ; X32-SSE2-NEXT:    popl %esi
 ; X32-SSE2-NEXT:    popl %edi
@@ -270,7 +271,7 @@ define <4 x i32> @rotr_v4i32(<4 x i32> %x, <4 x i32> %z) nounwind {
 ; X32-SSE2-LABEL: rotr_v4i32:
 ; X32-SSE2:       # %bb.0:
 ; X32-SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [31,31,31,31]
-; X32-SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [32,32,32,32]
+; X32-SSE2-NEXT:    pxor %xmm3, %xmm3
 ; X32-SSE2-NEXT:    psubd %xmm1, %xmm3
 ; X32-SSE2-NEXT:    movdqa %xmm1, %xmm4
 ; X32-SSE2-NEXT:    pand %xmm2, %xmm4
@@ -310,7 +311,7 @@ define <4 x i32> @rotr_v4i32(<4 x i32> %x, <4 x i32> %z) nounwind {
 ; X64-AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [31,31,31,31]
 ; X64-AVX2-NEXT:    vpand %xmm2, %xmm1, %xmm3
 ; X64-AVX2-NEXT:    vpsrlvd %xmm3, %xmm0, %xmm3
-; X64-AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm4 = [32,32,32,32]
+; X64-AVX2-NEXT:    vpxor %xmm4, %xmm4, %xmm4
 ; X64-AVX2-NEXT:    vpsubd %xmm1, %xmm4, %xmm1
 ; X64-AVX2-NEXT:    vpand %xmm2, %xmm1, %xmm1
 ; X64-AVX2-NEXT:    vpsllvd %xmm1, %xmm0, %xmm0
@@ -383,5 +384,34 @@ define <4 x i32> @rotr_v4i32_shift_by_bitwidth(<4 x i32> %x) nounwind {
 ; ANY-NEXT:    ret{{[l|q]}}
   %f = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %x, <4 x i32> %x, <4 x i32> <i32 32, i32 32, i32 32, i32 32>)
   ret <4 x i32> %f
+}
+
+; Non power-of-2 types can't use the negated shift amount to avoid a select.
+
+declare i7 @llvm.fshl.i7(i7, i7, i7)
+declare i7 @llvm.fshr.i7(i7, i7, i7)
+
+; extract(concat(0b1110000, 0b1110000) << 9) = 0b1000011
+; Try an oversized shift to test modulo functionality.
+
+define i7 @fshl_i7() {
+; ANY-LABEL: fshl_i7:
+; ANY:       # %bb.0:
+; ANY-NEXT:    movb $67, %al
+; ANY-NEXT:    ret{{[l|q]}}
+  %f = call i7 @llvm.fshl.i7(i7 112, i7 112, i7 9)
+  ret i7 %f
+}
+
+; extract(concat(0b1110001, 0b1110001) >> 16) = 0b0111100
+; Try an oversized shift to test modulo functionality.
+
+define i7 @fshr_i7() {
+; ANY-LABEL: fshr_i7:
+; ANY:       # %bb.0:
+; ANY-NEXT:    movb $60, %al
+; ANY-NEXT:    ret{{[l|q]}}
+  %f = call i7 @llvm.fshr.i7(i7 113, i7 113, i7 16)
+  ret i7 %f
 }
 

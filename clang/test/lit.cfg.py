@@ -71,7 +71,7 @@ llvm_config.add_tool_substitutions(tools, tool_dirs)
 
 config.substitutions.append(
     ('%hmaptool', "'%s' %s" % (config.python_executable,
-                             os.path.join(config.llvm_tools_dir, 'hmaptool'))))
+                             os.path.join(config.clang_tools_dir, 'hmaptool'))))
 
 # Plugins (loadable modules)
 # TODO: This should be supplied by Makefile or autoconf.

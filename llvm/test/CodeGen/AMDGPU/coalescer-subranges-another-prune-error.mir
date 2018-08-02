@@ -262,7 +262,7 @@ body:             |
     %113:vgpr_32 = V_MUL_F32_e32 0, killed %112, implicit $exec
     %114:vgpr_32 = V_MAD_F32 0, killed %113, 0, 0, 0, 0, 0, 0, implicit $exec
     %115:vgpr_32 = V_MAX_F32_e32 0, killed %114, implicit $exec
-    %116:vgpr_32 = V_CVT_PKRTZ_F16_F32_e64 0, killed %115, 0, 1065353216, 0, implicit $exec
+    %116:vgpr_32 = V_CVT_PKRTZ_F16_F32_e64 0, killed %115, 0, 1065353216, 0, 0, implicit $exec
     EXP 0, undef %117:vgpr_32, killed %116, undef %118:vgpr_32, undef %119:vgpr_32, -1, -1, 15, implicit $exec
     S_ENDPGM
 ...
