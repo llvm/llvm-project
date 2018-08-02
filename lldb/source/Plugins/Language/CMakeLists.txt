@@ -1,3 +1,4 @@
+add_subdirectory(ClangCommon)
 add_subdirectory(CPlusPlus)
 add_subdirectory(Go)
 add_subdirectory(Java)
