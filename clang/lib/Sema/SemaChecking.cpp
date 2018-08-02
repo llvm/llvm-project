@@ -4347,7 +4347,7 @@ ExprResult Sema::SemaAtomicOpsOverloaded(ExprResult TheCallResult,
         << Ptr->getType() << Ptr->getSourceRange();
       return ExprError();
     }
-    if (AtomTy.isConstQualified() ||
+    if ((Form != Load && Form != LoadCopy && AtomTy.isConstQualified()) ||
         AtomTy.getAddressSpace() == LangAS::opencl_constant) {
       Diag(DRE->getLocStart(), diag::err_atomic_op_needs_non_const_atomic)
           << (AtomTy.isConstQualified() ? 0 : 1) << Ptr->getType()
