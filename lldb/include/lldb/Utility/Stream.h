@@ -91,7 +91,13 @@ public:
   /// @return
   ///     The number of bytes that were appended to the stream.
   //------------------------------------------------------------------
-  virtual size_t Write(const void *src, size_t src_len) = 0;
+  size_t Write(const void *src, size_t src_len) {
+    size_t appended_byte_count = WriteImpl(src, src_len);
+    m_bytes_written += appended_byte_count;
+    return appended_byte_count;
+  }
+
+  size_t GetWrittenBytes() const { return m_bytes_written; }
 
   //------------------------------------------------------------------
   // Member functions
@@ -531,8 +537,25 @@ protected:
   lldb::ByteOrder
       m_byte_order;   ///< Byte order to use when encoding scalar types.
   int m_indent_level; ///< Indention level.
+  std::size_t m_bytes_written = 0; ///< Number of bytes written so far.
 
   size_t _PutHex8(uint8_t uvalue, bool add_prefix);
+
+  //------------------------------------------------------------------
+  /// Output character bytes to the stream.
+  ///
+  /// Appends \a src_len characters from the buffer \a src to the stream.
+  ///
+  /// @param[in] src
+  ///     A buffer containing at least \a src_len bytes of data.
+  ///
+  /// @param[in] src_len
+  ///     A number of bytes to append to the stream.
+  ///
+  /// @return
+  ///     The number of bytes that were appended to the stream.
+  //------------------------------------------------------------------
+  virtual size_t WriteImpl(const void *src, size_t src_len) = 0;
 };
 
 } // namespace lldb_private
