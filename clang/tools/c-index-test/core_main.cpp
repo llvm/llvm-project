@@ -248,11 +248,11 @@ static void dumpModuleFileInputs(serialization::ModuleFile &Mod,
   });
 }
 
-static bool printSourceSymbols(ArrayRef<const char *> Args,
-                               bool dumpModuleImports,
-                               bool indexLocals) {
+static bool printSourceSymbols(const char *Executable,
+                               ArrayRef<const char *> Args,
+                               bool dumpModuleImports, bool indexLocals) {
   SmallVector<const char *, 4> ArgsWithProgName;
-  ArgsWithProgName.push_back("clang");
+  ArgsWithProgName.push_back(Executable);
   ArgsWithProgName.append(Args.begin(), Args.end());
   IntrusiveRefCntPtr<DiagnosticsEngine>
     Diags(CompilerInstance::createDiagnostics(new DiagnosticOptions));
@@ -859,6 +859,8 @@ bool deconstructPathAndRange(StringRef input,
 int indextest_core_main(int argc, const char **argv) {
   sys::PrintStackTraceOnErrorSignal(argv[0]);
   PrettyStackTraceProgram X(argc, argv);
+  void *MainAddr = (void*) (intptr_t) indextest_core_main;
+  std::string Executable = llvm::sys::fs::getMainExecutable(argv[0], MainAddr);
 
   assert(argv[1] == StringRef("core"));
   ++argv;
@@ -888,7 +890,9 @@ int indextest_core_main(int argc, const char **argv) {
       errs() << "error: missing compiler args; pass '-- <compiler arguments>'\n";
       return 1;
     }
-    return printSourceSymbols(CompArgs, options::DumpModuleImports, options::IncludeLocals);
+    return printSourceSymbols(Executable.c_str(), CompArgs,
+                              options::DumpModuleImports,
+                              options::IncludeLocals);
   }
 
   if (options::Action == ActionType::PrintRecord) {
