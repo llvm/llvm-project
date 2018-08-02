@@ -323,14 +323,16 @@ bool IRTranslator::translateRet(const User &U, MachineIRBuilder &MIRBuilder) {
   const Value *Ret = RI.getReturnValue();
   if (Ret && DL->getTypeStoreSize(Ret->getType()) == 0)
     Ret = nullptr;
+
+  ArrayRef<unsigned> VRegs;
+  if (Ret)
+    VRegs = getOrCreateVRegs(*Ret);
+
   // The target may mess up with the insertion point, but
   // this is not important as a return is the last instruction
   // of the block anyway.
 
-  // FIXME: this interface should simplify when CallLowering gets adapted to
-  // multiple VRegs per Value.
-  unsigned VReg = Ret ? packRegs(*Ret, MIRBuilder) : 0;
-  return CLI->lowerReturn(MIRBuilder, Ret, VReg);
+  return CLI->lowerReturn(MIRBuilder, Ret, VRegs);
 }
 
 bool IRTranslator::translateBr(const User &U, MachineIRBuilder &MIRBuilder) {

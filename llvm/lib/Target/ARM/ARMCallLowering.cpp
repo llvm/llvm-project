@@ -237,7 +237,7 @@ void ARMCallLowering::splitToValueTypes(
 /// Lower the return value for the already existing \p Ret. This assumes that
 /// \p MIRBuilder's insertion point is correct.
 bool ARMCallLowering::lowerReturnVal(MachineIRBuilder &MIRBuilder,
-                                     const Value *Val, unsigned VReg,
+                                     const Value *Val, ArrayRef<unsigned> VRegs,
                                      MachineInstrBuilder &Ret) const {
   if (!Val)
     // Nothing to do here.
@@ -251,16 +251,24 @@ bool ARMCallLowering::lowerReturnVal(MachineIRBuilder &MIRBuilder,
   if (!isSupportedType(DL, TLI, Val->getType()))
     return false;
 
-  SmallVector<ArgInfo, 4> SplitVTs;
-  SmallVector<unsigned, 4> Regs;
-  ArgInfo RetInfo(VReg, Val->getType());
-  setArgFlags(RetInfo, AttributeList::ReturnIndex, DL, F);
-  splitToValueTypes(RetInfo, SplitVTs, MF, [&](unsigned Reg, uint64_t Offset) {
-    Regs.push_back(Reg);
-  });
+  SmallVector<EVT, 4> SplitEVTs;
+  ComputeValueVTs(TLI, DL, Val->getType(), SplitEVTs);
+  assert(VRegs.size() == SplitEVTs.size() &&
+         "For each split Type there should be exactly one VReg.");
 
-  if (Regs.size() > 1)
-    MIRBuilder.buildUnmerge(Regs, VReg);
+  SmallVector<ArgInfo, 4> SplitVTs;
+  LLVMContext &Ctx = Val->getType()->getContext();
+  for (unsigned i = 0; i < SplitEVTs.size(); ++i) {
+    ArgInfo CurArgInfo(VRegs[i], SplitEVTs[i].getTypeForEVT(Ctx));
+    setArgFlags(CurArgInfo, AttributeList::ReturnIndex, DL, F);
+
+    SmallVector<unsigned, 4> Regs;
+    splitToValueTypes(
+        CurArgInfo, SplitVTs, MF,
+        [&](unsigned Reg, uint64_t Offset) { Regs.push_back(Reg); });
+    if (Regs.size() > 1)
+      MIRBuilder.buildUnmerge(Regs, VRegs[i]);
+  }
 
   CCAssignFn *AssignFn =
       TLI.CCAssignFnForReturn(F.getCallingConv(), F.isVarArg());
@@ -270,14 +278,15 @@ bool ARMCallLowering::lowerReturnVal(MachineIRBuilder &MIRBuilder,
 }
 
 bool ARMCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
-                                  const Value *Val, unsigned VReg) const {
-  assert(!Val == !VReg && "Return value without a vreg");
+                                  const Value *Val,
+                                  ArrayRef<unsigned> VRegs) const {
+  assert(!Val == VRegs.empty() && "Return value without a vreg");
 
   auto const &ST = MIRBuilder.getMF().getSubtarget<ARMSubtarget>();
   unsigned Opcode = ST.getReturnOpcode();
   auto Ret = MIRBuilder.buildInstrNoInsert(Opcode).add(predOps(ARMCC::AL));
 
-  if (!lowerReturnVal(MIRBuilder, Val, VReg, Ret))
+  if (!lowerReturnVal(MIRBuilder, Val, VRegs, Ret))
     return false;
 
   MIRBuilder.insertInstr(Ret);

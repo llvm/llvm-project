@@ -19,20 +19,15 @@ declare i32 @llvm.eh.typeid.for(i8*)
 
 ; CHECK:   [[BAD]].{{[a-z]+}} (landing-pad):
 ; CHECK:     EH_LABEL
-; CHECK:     [[PTR:%[0-9]+]]:_(p0) = COPY $x0
+; CHECK:     [[PTR_RET:%[0-9]+]]:_(p0) = COPY $x0
 ; CHECK:     [[SEL_PTR:%[0-9]+]]:_(p0) = COPY $x1
-; CHECK:     [[SEL:%[0-9]+]]:_(s32) = G_PTRTOINT [[SEL_PTR]]
-; CHECK:     [[UNDEF:%[0-9]+]]:_(s128) = G_IMPLICIT_DEF
-; CHECK:     [[VAL_WITH_PTR:%[0-9]+]]:_(s128) = G_INSERT [[UNDEF]], [[PTR]](p0), 0
-; CHECK:     [[PTR_SEL:%[0-9]+]]:_(s128) = G_INSERT [[VAL_WITH_PTR]], [[SEL]](s32), 64
-; CHECK:     [[PTR_RET:%[0-9]+]]:_(s64) = G_EXTRACT [[PTR_SEL]](s128), 0
-; CHECK:     [[SEL_RET:%[0-9]+]]:_(s32) = G_EXTRACT [[PTR_SEL]](s128), 64
+; CHECK:     [[SEL_RET:%[0-9]+]]:_(s32) = G_PTRTOINT [[SEL_PTR]]
 ; CHECK:     $x0 = COPY [[PTR_RET]]
 ; CHECK:     $w1 = COPY [[SEL_RET]]
 
 ; CHECK:   [[GOOD]].{{[a-z]+}}:
 ; CHECK:     [[SEL:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-; CHECK:     {{%[0-9]+}}:_(s128) = G_INSERT {{%[0-9]+}}, [[SEL]](s32), 64
+; CHECK:     $w1 = COPY [[SEL]]
 
 define { i8*, i32 } @bar() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
   %res32 = invoke i32 @foo(i32 42) to label %continue unwind label %broken
