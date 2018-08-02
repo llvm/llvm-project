@@ -2488,6 +2488,8 @@ public:
 
   unsigned getTargetAddressSpace(LangAS AS) const;
 
+  LangAS getLangASForBuiltinAddressSpace(unsigned AS) const;
+
   /// Get target-dependent integer value for null pointer which is used for
   /// constant folding.
   uint64_t getTargetNullPointerValue(QualType QT) const;

@@ -940,8 +940,7 @@ std::vector<const typename ELFT::Verdef *> SharedFile<ELFT>::parseVerdefs() {
     auto *CurVerdef = reinterpret_cast<const Elf_Verdef *>(Verdef);
     Verdef += CurVerdef->vd_next;
     unsigned VerdefIndex = CurVerdef->vd_ndx;
-    if (Verdefs.size() <= VerdefIndex)
-      Verdefs.resize(VerdefIndex + 1);
+    Verdefs.resize(VerdefIndex + 1);
     Verdefs[VerdefIndex] = CurVerdef;
   }
 

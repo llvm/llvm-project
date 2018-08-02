@@ -21,9 +21,9 @@
 // SI+ only builtins.
 //===----------------------------------------------------------------------===//
 
-BUILTIN(__builtin_amdgcn_dispatch_ptr, "Uc*4", "nc")
-BUILTIN(__builtin_amdgcn_kernarg_segment_ptr, "Uc*4", "nc")
-BUILTIN(__builtin_amdgcn_implicitarg_ptr, "Uc*4", "nc")
+BUILTIN(__builtin_amdgcn_dispatch_ptr, "v*4", "nc")
+BUILTIN(__builtin_amdgcn_kernarg_segment_ptr, "v*4", "nc")
+BUILTIN(__builtin_amdgcn_implicitarg_ptr, "v*4", "nc")
 
 BUILTIN(__builtin_amdgcn_workgroup_id_x, "Ui", "nc")
 BUILTIN(__builtin_amdgcn_workgroup_id_y, "Ui", "nc")
@@ -45,6 +45,8 @@ BUILTIN(__builtin_amdgcn_s_barrier, "v", "n")
 BUILTIN(__builtin_amdgcn_wave_barrier, "v", "n")
 BUILTIN(__builtin_amdgcn_s_dcache_inv, "v", "n")
 BUILTIN(__builtin_amdgcn_buffer_wbinvl1, "v", "n")
+
+// FIXME: Need to disallow constant address space.
 BUILTIN(__builtin_amdgcn_div_scale, "dddbb*", "n")
 BUILTIN(__builtin_amdgcn_div_scalef, "fffbb*", "n")
 BUILTIN(__builtin_amdgcn_div_fmas, "ddddb", "nc")
@@ -93,9 +95,9 @@ BUILTIN(__builtin_amdgcn_ds_bpermute, "iii", "nc")
 BUILTIN(__builtin_amdgcn_readfirstlane, "ii", "nc")
 BUILTIN(__builtin_amdgcn_readlane, "iii", "nc")
 BUILTIN(__builtin_amdgcn_fmed3f, "ffff", "nc")
-BUILTIN(__builtin_amdgcn_ds_faddf, "ff*fIiIiIb", "n")
-BUILTIN(__builtin_amdgcn_ds_fminf, "ff*fIiIiIb", "n")
-BUILTIN(__builtin_amdgcn_ds_fmaxf, "ff*fIiIiIb", "n")
+BUILTIN(__builtin_amdgcn_ds_faddf, "ff*3fIiIiIb", "n")
+BUILTIN(__builtin_amdgcn_ds_fminf, "ff*3fIiIiIb", "n")
+BUILTIN(__builtin_amdgcn_ds_fmaxf, "ff*3fIiIiIb", "n")
 
 //===----------------------------------------------------------------------===//
 // VI+ only builtins.
