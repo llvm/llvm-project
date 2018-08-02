@@ -48,7 +48,7 @@ public:
   }
 
   // Fills memory operands with references to the address at [Reg] + Offset.
-  virtual void fillMemoryOperands(InstructionInstance &II, unsigned Reg,
+  virtual void fillMemoryOperands(InstructionBuilder &IB, unsigned Reg,
                                   unsigned Offset) const {
     llvm_unreachable(
         "fillMemoryOperands() requires getScratchMemoryRegister() > 0");

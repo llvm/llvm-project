@@ -120,32 +120,32 @@ class ExegesisX86Target : public ExegesisTarget {
 
   unsigned getMaxMemoryAccessSize() const override { return 64; }
 
-  void fillMemoryOperands(InstructionInstance &II, unsigned Reg,
+  void fillMemoryOperands(InstructionBuilder &IB, unsigned Reg,
                           unsigned Offset) const override {
     // FIXME: For instructions that read AND write to memory, we use the same
     // value for input and output.
-    for (size_t I = 0, E = II.Instr.Operands.size(); I < E; ++I) {
-      const Operand *Op = &II.Instr.Operands[I];
+    for (size_t I = 0, E = IB.Instr.Operands.size(); I < E; ++I) {
+      const Operand *Op = &IB.Instr.Operands[I];
       if (Op->IsExplicit && Op->IsMem) {
         // Case 1: 5-op memory.
         assert((I + 5 <= E) && "x86 memory references are always 5 ops");
-        II.getValueFor(*Op) = llvm::MCOperand::createReg(Reg); // BaseReg
-        Op = &II.Instr.Operands[++I];
+        IB.getValueFor(*Op) = llvm::MCOperand::createReg(Reg); // BaseReg
+        Op = &IB.Instr.Operands[++I];
         assert(Op->IsMem);
         assert(Op->IsExplicit);
-        II.getValueFor(*Op) = llvm::MCOperand::createImm(1); // ScaleAmt
-        Op = &II.Instr.Operands[++I];
+        IB.getValueFor(*Op) = llvm::MCOperand::createImm(1); // ScaleAmt
+        Op = &IB.Instr.Operands[++I];
         assert(Op->IsMem);
         assert(Op->IsExplicit);
-        II.getValueFor(*Op) = llvm::MCOperand::createReg(0); // IndexReg
-        Op = &II.Instr.Operands[++I];
+        IB.getValueFor(*Op) = llvm::MCOperand::createReg(0); // IndexReg
+        Op = &IB.Instr.Operands[++I];
         assert(Op->IsMem);
         assert(Op->IsExplicit);
-        II.getValueFor(*Op) = llvm::MCOperand::createImm(Offset); // Disp
-        Op = &II.Instr.Operands[++I];
+        IB.getValueFor(*Op) = llvm::MCOperand::createImm(Offset); // Disp
+        Op = &IB.Instr.Operands[++I];
         assert(Op->IsMem);
         assert(Op->IsExplicit);
-        II.getValueFor(*Op) = llvm::MCOperand::createReg(0); // Segment
+        IB.getValueFor(*Op) = llvm::MCOperand::createReg(0); // Segment
         // Case2: segment:index addressing. We assume that ES is 0.
       }
     }

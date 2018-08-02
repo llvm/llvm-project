@@ -50,8 +50,8 @@ public:
 
   MipsCallLowering(const MipsTargetLowering &TLI);
 
-  bool lowerReturn(MachineIRBuilder &MIRBuiler, const Value *Val,
-                   unsigned VReg) const override;
+  bool lowerReturn(MachineIRBuilder &MIRBuilder, const Value *Val,
+                   ArrayRef<unsigned> VRegs) const override;
 
   bool lowerFormalArguments(MachineIRBuilder &MIRBuilder, const Function &F,
                             ArrayRef<unsigned> VRegs) const override;

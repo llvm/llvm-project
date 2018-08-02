@@ -17,7 +17,7 @@ set -e
 release=""
 rc=""
 rebranch="no"
-projects="llvm cfe test-suite compiler-rt libcxx libcxxabi clang-tools-extra polly lldb lld openmp libunwind"
+projects="llvm cfe test-suite compiler-rt libcxx libcxxabi clang-tools-extra polly lldb lld openmp libunwind debuginfo-tests"
 dryrun=""
 revision="HEAD"
 

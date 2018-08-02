@@ -178,7 +178,6 @@ typedef struct CXVersion {
  * A negative value indicates that the cursor is not a function declaration.
  */
 enum CXCursor_ExceptionSpecificationKind {
-
   /**
    * The cursor has no exception specification.
    */
