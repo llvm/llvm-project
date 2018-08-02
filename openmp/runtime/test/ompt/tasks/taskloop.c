@@ -1,6 +1,12 @@
 // RUN: %libomp-compile-and-run | FileCheck %s
 // RUN: %libomp-compile-and-run | FileCheck --check-prefix=TASKS %s
 // REQUIRES: ompt
+
+// These compilers don't support the taskloop construct
+// UNSUPPORTED: gcc-4, gcc-5, icc-16
+// GCC 6 has support for taskloops, but at least 6.3.0 is crashing on this test
+// UNSUPPORTED: gcc-6
+
 #include "callback.h"
 #include <omp.h>
 
