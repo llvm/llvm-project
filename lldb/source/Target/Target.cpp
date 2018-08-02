@@ -1586,8 +1586,7 @@ void Target::ModulesDidLoad(ModuleList &module_list) {
     // There is no point in notifying the per-module SwiftASTContexts,
     // but do notify the global scratch context.
     auto swift_ast_ctx =
-        llvm::dyn_cast_or_null<SwiftASTContext>(GetScratchTypeSystemForLanguage(
-            &error, eLanguageTypeSwift, create_on_demand));
+        GetScratchSwiftASTContext(error, nullptr, create_on_demand);
     if (swift_ast_ctx)
       swift_ast_ctx->ModulesDidLoad(module_list);
     module_list.ClearModuleDependentCaches();
@@ -2141,10 +2140,8 @@ TypeSystem *Target::GetScratchTypeSystemForLanguage(
     }
   }
 
-  if (m_cant_make_scratch_type_system.find(language) !=
-      m_cant_make_scratch_type_system.end()) {
+  if (m_cant_make_scratch_type_system.count(language))
     return nullptr;
-  }
 
   TypeSystem *type_system = m_scratch_type_system_map.GetTypeSystemForLanguage(
       language, this, create_on_demand, compiler_options);
@@ -2153,27 +2150,22 @@ TypeSystem *Target::GetScratchTypeSystemForLanguage(
             llvm::dyn_cast_or_null<SwiftASTContext>(type_system)) {
       if (swift_ast_ctx->CheckProcessChanged() ||
           swift_ast_ctx->HasFatalErrors()) {
-        if (StreamSP errs = GetDebugger().GetAsyncErrorStream()) {
-          if (swift_ast_ctx->HasFatalErrors()) {
-            auto *module_name = GetExecutableModule()
-                                    ->GetPlatformFileSpec()
-                                    .GetFilename()
-                                    .AsCString();
-            if (m_use_scratch_typesystem_per_module)
-              errs->Printf("\nnote: Swift compiler options for %s "
-                           "conflict with options found in other modules;\n"
-                           "      Switching to a new expression evaluator for "
-                           "%s, old $R variables are lost.\n",
-                           module_name, module_name);
-            else {
-              errs->Printf("Shared Swift state for %s has developed fatal "
-                           "errors and is being discarded.\n",
-                           module_name);
-              errs->PutCString("REPL definitions and persistent names/types "
-                               "will be lost.\n\n");
-            }
-            errs->Flush();
-          }
+        if (m_use_scratch_typesystem_per_module)
+          DisplayFallbackSwiftContextErrors(swift_ast_ctx);
+        else if (StreamSP errs = GetDebugger().GetAsyncErrorStream()) {
+          errs->Printf(
+              "warning: Swift error in scratch context: %s.\n",
+              swift_ast_ctx->GetFatalErrors().AsCString("unknown error"));
+          auto *module_name = GetExecutableModule()
+                                  ->GetPlatformFileSpec()
+                                  .GetFilename()
+                                  .AsCString();
+          errs->Printf("Shared Swift state for %s has developed fatal "
+                       "errors and is being discarded.\n",
+                       module_name);
+          errs->PutCString("REPL definitions and persistent names/types "
+                           "will be lost.\n\n");
+          errs->Flush();
         }
 
         m_scratch_type_system_map.RemoveTypeSystemsForLanguage(language);
@@ -2254,13 +2246,17 @@ Target::GetSwiftPersistentExpressionState(ExecutionContextScope &exe_scope) {
 }
 
 UserExpression *Target::GetUserExpressionForLanguage(
+    ExecutionContext &exe_ctx,
     llvm::StringRef expr, llvm::StringRef prefix, lldb::LanguageType language,
     Expression::ResultType desired_type,
     const EvaluateExpressionOptions &options, Status &error) {
   Status type_system_error;
 
+  ExecutionContextScope *exe_scope = exe_ctx.GetBestExecutionContextScope();
   TypeSystem *type_system =
-      GetScratchTypeSystemForLanguage(&type_system_error, language);
+      (language == eLanguageTypeSwift && exe_scope)
+          ? GetScratchSwiftASTContext(type_system_error, *exe_scope, true)
+          : GetScratchTypeSystemForLanguage(&type_system_error, language);
   UserExpression *user_expr = nullptr;
 
   if (!type_system) {
@@ -2359,36 +2355,49 @@ ClangASTImporterSP Target::GetClangASTImporter() {
   return ClangASTImporterSP();
 }
 
+SwiftASTContext *Target::GetScratchSwiftASTContext(
+    Status &error, ExecutionContextScope &exe_scope, bool create_on_demand) {
+  Module *lldb_module = nullptr;
+  if (m_use_scratch_typesystem_per_module)
+    if (lldb::StackFrameSP stack_frame = exe_scope.CalculateStackFrame()) {
+      auto sc = stack_frame->GetSymbolContext(lldb::eSymbolContextEverything);
+      lldb_module = sc.module_sp.get();
+    }
+
+  return GetScratchSwiftASTContext(error, lldb_module, create_on_demand);
+}
+
 #ifdef __clang_analyzer__
 // See GetScratchTypeSystemForLanguage() in Target.h
-SwiftASTContext *
-Target::GetScratchSwiftASTContextImpl(Status &error,
-                                      ExecutionContextScope &exe_scope,
-                                      bool create_on_demand)
+SwiftASTContext *Target::GetScratchSwiftASTContextImpl(Status &error,
+                                                       Module *lldb_module,
+                                                       bool create_on_demand)
 #else
-SwiftASTContext *
-Target::GetScratchSwiftASTContext(Status &error,
-                                  ExecutionContextScope &exe_scope,
-                                  bool create_on_demand)
+SwiftASTContext *Target::GetScratchSwiftASTContext(Status &error,
+                                                   Module *lldb_module,
+                                                   bool create_on_demand)
 #endif
 {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TARGET));
-  while (m_use_scratch_typesystem_per_module && create_on_demand) {
-    lldb::StackFrameSP stack_frame = exe_scope.CalculateStackFrame();
-    if (!stack_frame)
-      break;
-
-    auto sc = stack_frame->GetSymbolContext(lldb::eSymbolContextEverything);
-    auto *lldb_module = sc.module_sp.get();
-    if (!lldb_module)
-      break;
+  while (lldb_module && m_use_scratch_typesystem_per_module) {
     ModuleLanguage idx = {lldb_module, lldb::eLanguageTypeSwift};
     auto cached = m_scratch_typesystem_for_module.find(idx);
     if (cached != m_scratch_typesystem_for_module.end()) {
+      auto *cached_ast_ctx = cast<SwiftASTContext>(cached->second.get());
+      if (cached_ast_ctx->HasFatalErrors() &&
+          !m_cant_make_scratch_type_system.count(lldb::eLanguageTypeSwift)) {
+        DisplayFallbackSwiftContextErrors(cached_ast_ctx);
+        // Try again.
+        m_scratch_typesystem_for_module.erase(cached);
+        break;
+      }
       if (log)
         log->Printf("returned cached module-wide scratch context\n");
-      return cast<SwiftASTContext>(cached->second.get());
+      return cached_ast_ctx;
     }
+
+    if (!create_on_demand)
+      break;
 
     auto typesystem_sp = SwiftASTContext::CreateInstance(
         lldb::eLanguageTypeSwift, *lldb_module, this);
@@ -2404,6 +2413,25 @@ Target::GetScratchSwiftASTContext(Status &error,
   return llvm::dyn_cast_or_null<SwiftASTContext>(
       GetScratchTypeSystemForLanguage(&error, eLanguageTypeSwift,
                                       create_on_demand));
+}
+
+void Target::DisplayFallbackSwiftContextErrors(SwiftASTContext *swift_ast_ctx) {
+  assert(m_use_scratch_typesystem_per_module);
+  StreamSP errs = GetDebugger().GetAsyncErrorStream();
+  if (!errs || m_did_display_scratch_fallback_warning ||
+      !swift_ast_ctx->HasFatalErrors())
+    return;
+
+  m_did_display_scratch_fallback_warning = true;
+  errs->Printf(
+      "warning: Swift error in fallback scratch context: %s\n\nnote: This "
+      "error message is displayed only once. If the error displayed above is "
+      "due to conflicting search paths to Clang modules in different images of "
+      "the debugged executable, this can slow down debugging of Swift code "
+      "significantly, since a fresh Swift context has to be created every time "
+      "a conflict is encountered.\n\n",
+      swift_ast_ctx->GetFatalErrors().AsCString("unknown error"));
+  errs->Flush();
 }
 
 void Target::SettingsInitialize() { Process::SettingsInitialize(); }

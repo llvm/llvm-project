@@ -1066,10 +1066,14 @@ static swift::ASTContext *SetupASTContext(
   }
 
   // Lazily get the clang importer if we can to make sure it exists in case we
-  // need it
+  // need it.
   if (!swift_ast_context->GetClangImporter()) {
+    std::string swift_error = "Fatal Swift ";
+    swift_error +=
+        swift_ast_context->GetFatalErrors().AsCString("error: unknown error.");
+    diagnostic_manager.PutString(eDiagnosticSeverityError, swift_error);
     diagnostic_manager.PutString(
-        eDiagnosticSeverityError,
+        eDiagnosticSeverityRemark,
         "Swift expressions require OS X 10.10 / iOS 8 SDKs or later.\n");
     return nullptr;
   }

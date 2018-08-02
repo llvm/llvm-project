@@ -324,9 +324,10 @@ SwiftHashedContainerBufferHandler::CreateBufferHandlerForNativeStorageOwner(
       native_storage_ptr =
           process_sp->ReadPointerFromMemory(native_storage_ptr, error);
       // (AnyObject,AnyObject)?
+      ExecutionContext exe_ctx(process_sp);
+      ExecutionContextScope *exe_scope = exe_ctx.GetBestExecutionContextScope();
       SwiftASTContext *swift_ast_ctx = llvm::dyn_cast_or_null<SwiftASTContext>(
-          process_sp->GetTarget().GetScratchTypeSystemForLanguage(
-              &error, eLanguageTypeSwift));
+          process_sp->GetTarget().GetScratchSwiftASTContext(error, *exe_scope));
       if (swift_ast_ctx) {
         CompilerType element_type(swift_ast_ctx->GetTypeFromMangledTypename(
             SwiftLanguageRuntime::GetCurrentMangledName(
