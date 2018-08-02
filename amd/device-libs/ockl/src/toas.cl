@@ -6,7 +6,7 @@
 __attribute__((always_inline, const)) bool
 OCKL_MANGLE_T(is_local,addr)(const void *a)
 {
-    __constant amd_queue_t *q = (__constant amd_queue_t *)__llvm_amdgcn_queue_ptr();
+    __constant amd_queue_t *q = (__constant amd_queue_t *)__builtin_amdgcn_queue_ptr();
     uint u = (uint)((ulong)a >> 32);
     return u == q->group_segment_aperture_base_hi;
 }
@@ -14,7 +14,7 @@ OCKL_MANGLE_T(is_local,addr)(const void *a)
 __attribute__((always_inline, const)) bool
 OCKL_MANGLE_T(is_private,addr)(const void *a)
 {
-    __constant amd_queue_t *q = (__constant amd_queue_t *)__llvm_amdgcn_queue_ptr();
+    __constant amd_queue_t *q = (__constant amd_queue_t *)__builtin_amdgcn_queue_ptr();
     uint u = (uint)((ulong)a >> 32);
     return u == q->private_segment_aperture_base_hi;
 }

@@ -17,7 +17,7 @@
 __global char *
 __printf_alloc(uint bytes)
 {
-    __global char *ptr = (__global char *)(((__constant size_t *)__llvm_amdgcn_implicitarg_ptr())[3]);
+    __global char *ptr = (__global char *)(((__constant size_t *)__builtin_amdgcn_implicitarg_ptr())[3]);
 
     uint size = ((__global uint *)ptr)[1];
     uint offset = atomic_load_explicit((__global atomic_uint *)ptr, memory_order_relaxed, memory_scope_device);

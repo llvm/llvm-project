@@ -8,7 +8,7 @@
 ATTR uint
 amp_get_global_id(int dim)
 {
-  __constant hsa_kernel_dispatch_packet_t *p = __llvm_amdgcn_dispatch_ptr();
+  __constant hsa_kernel_dispatch_packet_t *p = __builtin_amdgcn_dispatch_ptr();
   uint l, g, s;
 
   switch(dim) {
@@ -40,7 +40,7 @@ amp_get_global_id(int dim)
 ATTR uint
 amp_get_global_size(int dim)
 {
-    __constant hsa_kernel_dispatch_packet_t *p = __llvm_amdgcn_dispatch_ptr();
+    __constant hsa_kernel_dispatch_packet_t *p = __builtin_amdgcn_dispatch_ptr();
 
     switch(dim) {
     case 0:
@@ -72,7 +72,7 @@ amp_get_local_id(int dim)
 ATTR uint
 amp_get_num_groups(int dim)
 {
-    __constant hsa_kernel_dispatch_packet_t *p = __llvm_amdgcn_dispatch_ptr();
+    __constant hsa_kernel_dispatch_packet_t *p = __builtin_amdgcn_dispatch_ptr();
 
     uint n, d;
     switch(dim) {

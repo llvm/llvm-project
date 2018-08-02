@@ -76,19 +76,19 @@ typedef struct _AmdEvent {
 static inline __global void *
 get_printf_ptr(void)
 {
-    return (__global void *)(((__constant size_t *)__llvm_amdgcn_implicitarg_ptr())[3]);
+    return (__global void *)(((__constant size_t *)__builtin_amdgcn_implicitarg_ptr())[3]);
 }
 
 static inline __global AmdVQueueHeader *
 get_vqueue(void)
 {
-    return (__global AmdVQueueHeader *)(((__constant size_t *)__llvm_amdgcn_implicitarg_ptr())[4]);
+    return (__global AmdVQueueHeader *)(((__constant size_t *)__builtin_amdgcn_implicitarg_ptr())[4]);
 }
 
 static inline __global AmdAqlWrap *
 get_aql_wrap(void)
 {
-    return (__global AmdAqlWrap *)(((__constant size_t *)__llvm_amdgcn_implicitarg_ptr())[5]);
+    return (__global AmdAqlWrap *)(((__constant size_t *)__builtin_amdgcn_implicitarg_ptr())[5]);
 }
 
 // reserve a slot in a bitmask controlled resource

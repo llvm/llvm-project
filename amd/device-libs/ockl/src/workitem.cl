@@ -16,11 +16,11 @@ __ockl_get_global_offset(uint dim)
     // TODO find out if implicit arg pointer is aligned properly
     switch(dim) {
     case 0:
-        return *(__constant size_t *)__llvm_amdgcn_implicitarg_ptr();
+        return *(__constant size_t *)__builtin_amdgcn_implicitarg_ptr();
     case 1:
-        return ((__constant size_t *)__llvm_amdgcn_implicitarg_ptr())[1];
+        return ((__constant size_t *)__builtin_amdgcn_implicitarg_ptr())[1];
     case 2:
-        return ((__constant size_t *)__llvm_amdgcn_implicitarg_ptr())[2];
+        return ((__constant size_t *)__builtin_amdgcn_implicitarg_ptr())[2];
     default:
         return 0;
     }
@@ -29,7 +29,7 @@ __ockl_get_global_offset(uint dim)
 ATTR size_t
 __ockl_get_global_id(uint dim)
 {
-    __constant hsa_kernel_dispatch_packet_t *p = __llvm_amdgcn_dispatch_ptr();
+    __constant hsa_kernel_dispatch_packet_t *p = __builtin_amdgcn_dispatch_ptr();
     uint l, g, s;
 
     switch(dim) {
@@ -91,7 +91,7 @@ __ockl_get_group_id(uint dim)
 ATTR size_t
 __ockl_get_global_size(uint dim)
 {
-    __constant hsa_kernel_dispatch_packet_t *p = __llvm_amdgcn_dispatch_ptr();
+    __constant hsa_kernel_dispatch_packet_t *p = __builtin_amdgcn_dispatch_ptr();
 
     switch(dim) {
     case 0:
@@ -109,7 +109,7 @@ ATTR size_t
 __ockl_get_local_size(uint dim)
 {
     // TODO save some effort if -cl-uniform-work-group-size is used
-    __constant hsa_kernel_dispatch_packet_t *p = __llvm_amdgcn_dispatch_ptr();
+    __constant hsa_kernel_dispatch_packet_t *p = __builtin_amdgcn_dispatch_ptr();
     uint group_id, grid_size, group_size;
 
     switch(dim) {
@@ -141,7 +141,7 @@ __ockl_get_local_size(uint dim)
 ATTR size_t
 __ockl_get_num_groups(uint dim)
 {
-    __constant hsa_kernel_dispatch_packet_t *p = __llvm_amdgcn_dispatch_ptr();
+    __constant hsa_kernel_dispatch_packet_t *p = __builtin_amdgcn_dispatch_ptr();
 
     uint n, d;
     switch(dim) {
@@ -171,7 +171,7 @@ __ockl_get_num_groups(uint dim)
 
 ATTR uint
 __ockl_get_work_dim(void) {
-    __constant hsa_kernel_dispatch_packet_t *p = __llvm_amdgcn_dispatch_ptr();
+    __constant hsa_kernel_dispatch_packet_t *p = __builtin_amdgcn_dispatch_ptr();
     // XXX revist this if setup field ever changes
     return p->setup;
 }
@@ -179,7 +179,7 @@ __ockl_get_work_dim(void) {
 ATTR size_t
 __ockl_get_enqueued_local_size(uint dim)
 {
-    __constant hsa_kernel_dispatch_packet_t *p = __llvm_amdgcn_dispatch_ptr();
+    __constant hsa_kernel_dispatch_packet_t *p = __builtin_amdgcn_dispatch_ptr();
 
     switch(dim) {
     case 0:
@@ -196,7 +196,7 @@ __ockl_get_enqueued_local_size(uint dim)
 ATTR size_t
 __ockl_get_global_linear_id(void)
 {
-    __constant hsa_kernel_dispatch_packet_t *p = __llvm_amdgcn_dispatch_ptr();
+    __constant hsa_kernel_dispatch_packet_t *p = __builtin_amdgcn_dispatch_ptr();
 
     // XXX revisit this if setup field ever changes
     switch (p->setup) {
@@ -246,7 +246,7 @@ __ockl_get_global_linear_id(void)
 ATTR size_t
 __ockl_get_local_linear_id(void)
 {
-    __constant hsa_kernel_dispatch_packet_t *p = __llvm_amdgcn_dispatch_ptr();
+    __constant hsa_kernel_dispatch_packet_t *p = __builtin_amdgcn_dispatch_ptr();
     return (__builtin_amdgcn_workitem_id_z()*p->workgroup_size_y +
             __builtin_amdgcn_workitem_id_y()) * p->workgroup_size_x + __builtin_amdgcn_workitem_id_x();
 }
