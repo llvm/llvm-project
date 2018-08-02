@@ -292,7 +292,7 @@ uptr ThreadDescriptorSize() {
       val = FIRST_32_SECOND_64(1168, 1776);
     else if (minor == 11 || (minor == 12 && patch == 1))
       val = FIRST_32_SECOND_64(1168, 2288);
-    else if (minor <= 13)
+    else if (minor <= 14)
       val = FIRST_32_SECOND_64(1168, 2304);
     else
       val = FIRST_32_SECOND_64(1216, 2304);
