@@ -2394,6 +2394,7 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::FSIN:
   case ISD::FSQRT:
   case ISD::FTRUNC:
+  case ISD::FCANONICALIZE:
     Res = WidenVecRes_Unary(N);
     break;
   case ISD::FMA:

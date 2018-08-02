@@ -63,46 +63,44 @@ OPTIONS:
 )";
 
 const char ArHelp[] = R"(
-OVERVIEW: LLVM Archiver (llvm-ar)
+OVERVIEW: LLVM Archiver
 
-  This program archives bitcode files into single libraries
-
-USAGE: llvm-ar [options] [relpos] [count] <archive-file> [members]...
+USAGE: llvm-ar [options] [-]<operation>[modifiers] [relpos] <archive> [files]
+       llvm-ar -M [<mri-script]
 
 OPTIONS:
-  -M                                -
-  -format                           - Archive format to create
-    =default                        -   default
-    =gnu                            -   gnu
-    =darwin                         -   darwin
-    =bsd                            -   bsd
-  -plugin=<string>                  - plugin (ignored for compatibility
-  -help                             - Display available options
-  -version                          - Display the version of this program
+  --format              - Archive format to create
+    =default            -   default
+    =gnu                -   gnu
+    =darwin             -   darwin
+    =bsd                -   bsd
+  --plugin=<string>     - Ignored for compatibility
+  --help                - Display available options
+  --version             - Display the version of this program
 
 OPERATIONS:
-  d[NsS]       - delete file(s) from the archive
-  m[abiSs]     - move file(s) in the archive
-  p[kN]        - print file(s) found in the archive
-  q[ufsS]      - quick append file(s) to the archive
-  r[abfiuRsS]  - replace or insert file(s) into the archive
-  t            - display contents of archive
-  x[No]        - extract file(s) from the archive
+  d - delete [files] from the archive
+  m - move [files] in the archive
+  p - print [files] found in the archive
+  q - quick append [files] to the archive
+  r - replace or insert [files] into the archive
+  s - act as ranlib
+  t - display contents of archive
+  x - extract [files] from the archive
 
-MODIFIERS (operation specific):
-  [a] - put file(s) after [relpos]
-  [b] - put file(s) before [relpos] (same as [i])
+MODIFIERS:
+  [a] - put [files] after [relpos]
+  [b] - put [files] before [relpos] (same as [i])
+  [c] - do not warn if archive had to be created
   [D] - use zero for timestamps and uids/gids (default)
-  [i] - put file(s) before [relpos] (same as [b])
+  [i] - put [files] before [relpos] (same as [b])
+  [l] - ignored for compatibility
   [o] - preserve original dates
   [s] - create an archive index (cf. ranlib)
   [S] - do not build a symbol table
   [T] - create a thin archive
-  [u] - update only files newer than archive contents
+  [u] - update only [files] newer than archive contents
   [U] - use actual timestamps and uids/gids
-
-MODIFIERS (generic):
-  [c] - do not warn if the library had to be created
   [v] - be verbose about actions taken
 )";
 

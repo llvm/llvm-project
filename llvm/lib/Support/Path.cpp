@@ -190,48 +190,55 @@ createUniqueEntity(const Twine &Model, int &ResultFD,
   ResultPath.push_back(0);
   ResultPath.pop_back();
 
-retry_random_path:
-  // Replace '%' with random chars.
-  for (unsigned i = 0, e = ModelStorage.size(); i != e; ++i) {
-    if (ModelStorage[i] == '%')
-      ResultPath[i] = "0123456789abcdef"[sys::Process::GetRandomNumber() & 15];
-  }
-
-  // Try to open + create the file.
-  switch (Type) {
-  case FS_File: {
-    if (std::error_code EC =
-            sys::fs::openFileForReadWrite(Twine(ResultPath.begin()), ResultFD,
-                                          sys::fs::CD_CreateNew, Flags, Mode)) {
-      if (EC == errc::file_exists)
-        goto retry_random_path;
-      return EC;
+  // Limit the number of attempts we make, so that we don't infinite loop when
+  // we run out of filenames that fit the model.
+  std::error_code EC;
+  for (int Retries = 128; Retries > 0; --Retries) {
+    // Replace '%' with random chars.
+    for (unsigned i = 0, e = ModelStorage.size(); i != e; ++i) {
+      if (ModelStorage[i] == '%')
+        ResultPath[i] =
+            "0123456789abcdef"[sys::Process::GetRandomNumber() & 15];
     }
 
-    return std::error_code();
-  }
+    // Try to open + create the file.
+    switch (Type) {
+    case FS_File: {
+      EC = sys::fs::openFileForReadWrite(Twine(ResultPath.begin()), ResultFD,
+                                         sys::fs::CD_CreateNew, Flags, Mode);
+      if (EC) {
+        // errc::permission_denied happens on Windows when we try to open a file
+        // that has been marked for deletion.
+        if (EC == errc::file_exists || EC == errc::permission_denied)
+          continue;
+        return EC;
+      }
 
-  case FS_Name: {
-    std::error_code EC =
-        sys::fs::access(ResultPath.begin(), sys::fs::AccessMode::Exist);
-    if (EC == errc::no_such_file_or_directory)
       return std::error_code();
-    if (EC)
-      return EC;
-    goto retry_random_path;
-  }
-
-  case FS_Dir: {
-    if (std::error_code EC =
-            sys::fs::create_directory(ResultPath.begin(), false)) {
-      if (EC == errc::file_exists)
-        goto retry_random_path;
-      return EC;
     }
-    return std::error_code();
+
+    case FS_Name: {
+      EC = sys::fs::access(ResultPath.begin(), sys::fs::AccessMode::Exist);
+      if (EC == errc::no_such_file_or_directory)
+        return std::error_code();
+      if (EC)
+        return EC;
+      continue;
+    }
+
+    case FS_Dir: {
+      EC = sys::fs::create_directory(ResultPath.begin(), false);
+      if (EC) {
+        if (EC == errc::file_exists)
+          continue;
+        return EC;
+      }
+      return std::error_code();
+    }
+    }
+    llvm_unreachable("Invalid Type");
   }
-  }
-  llvm_unreachable("Invalid Type");
+  return EC;
 }
 
 namespace llvm {

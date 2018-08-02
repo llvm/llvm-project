@@ -19,13 +19,13 @@ declare void @specified(i32, i32)
 ; CHECK: callWithArgs:
 ; CHECK: i32.const	$push1=, 0
 ; CHECK-NEXT: i32.const	$push0=, 1
-; CHECK-NEXT: call    	.Lbitcast@FUNCTION, $pop1, $pop0
-; CHECK: call    	.Lbitcast.1@FUNCTION, $pop{{[0-9]+$}}
+; CHECK-NEXT: call    	.Lunderspecified_bitcast@FUNCTION, $pop1, $pop0
+; CHECK: call    	.Lspecified_bitcast@FUNCTION, $pop{{[0-9]+$}}
 
-; CHECK: .Lbitcast:
+; CHECK: .Lunderspecified_bitcast:
 ; CHECK-NEXT: .param  	i32, i32{{$}}
 ; CHECK: call    	underspecified@FUNCTION, $pop{{[0-9]+$}}
 
-; CHECK: .Lbitcast.1:
+; CHECK: .Lspecified_bitcast:
 ; CHECK-NEXT: .param  	i32{{$}}
 ; CHECK: call    	specified@FUNCTION, $pop{{[0-9]+}}, $pop{{[0-9]+$}}

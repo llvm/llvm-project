@@ -1178,7 +1178,7 @@ Value *LibCallSimplifier::optimizePow(CallInst *Pow, IRBuilder<> &B) {
   // Evaluate special cases related to the base.
 
   // pow(1.0, x) -> 1.0
-  if (match(Base, m_SpecificFP(1.0)))
+  if (match(Base, m_FPOne()))
     return Base;
 
   // pow(2.0, x) -> exp2(x)
