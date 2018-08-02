@@ -838,6 +838,11 @@ static void switchMorestackCallsToMorestackNonSplit(
   // __morestack inside that function should be switched to
   // __morestack_non_split.
   Symbol *MoreStackNonSplit = Symtab->find("__morestack_non_split");
+  if (!MoreStackNonSplit) {
+    error("Mixing split-stack objects requires a definition of "
+          "__morestack_non_split");
+    return;
+  }
 
   // Sort both collections to compare addresses efficiently.
   llvm::sort(MorestackCalls.begin(), MorestackCalls.end(),
@@ -862,8 +867,8 @@ static void switchMorestackCallsToMorestackNonSplit(
   }
 }
 
-static bool enclosingPrologueAdjusted(uint64_t Offset,
-                                      const DenseSet<Defined *> &Prologues) {
+static bool enclosingPrologueAttempted(uint64_t Offset,
+                                       const DenseSet<Defined *> &Prologues) {
   for (Defined *F : Prologues)
     if (F->Value <= Offset && Offset < F->Value + F->Size)
       return true;
@@ -879,7 +884,7 @@ void InputSectionBase::adjustSplitStackFunctionPrologues(uint8_t *Buf,
                                                          uint8_t *End) {
   if (!getFile<ELFT>()->SplitStack)
     return;
-  DenseSet<Defined *> AdjustedPrologues;
+  DenseSet<Defined *> Prologues;
   std::vector<Relocation *> MorestackCalls;
 
   for (Relocation &Rel : Relocations) {
@@ -902,21 +907,26 @@ void InputSectionBase::adjustSplitStackFunctionPrologues(uint8_t *Buf,
     if (D->Type != STT_FUNC)
       continue;
 
-    if (enclosingPrologueAdjusted(Rel.Offset, AdjustedPrologues))
+    // If the callee's-file was compiled with split stack, nothing to do.
+    auto *IS = cast_or_null<InputSection>(D->Section);
+    if (!IS || IS->getFile<ELFT>()->SplitStack)
+      continue;
+
+    if (enclosingPrologueAttempted(Rel.Offset, Prologues))
       continue;
 
     if (Defined *F = getEnclosingFunction<ELFT>(Rel.Offset)) {
-      if (Target->adjustPrologueForCrossSplitStack(Buf + F->Value, End)) {
-        AdjustedPrologues.insert(F);
+      Prologues.insert(F);
+      if (Target->adjustPrologueForCrossSplitStack(Buf + getOffset(F->Value),
+                                                   End))
         continue;
-      }
+      if (!getFile<ELFT>()->SomeNoSplitStack)
+        error(lld::toString(this) + ": " + F->getName() +
+              " (with -fsplit-stack) calls " + D->getName() +
+              " (without -fsplit-stack), but couldn't adjust its prologue");
     }
-    if (!getFile<ELFT>()->SomeNoSplitStack)
-      error("function call at " + getErrorLocation(Buf + Rel.Offset) +
-            "crosses a split-stack boundary, but unable " +
-            "to adjust the enclosing function's prologue");
   }
-  switchMorestackCallsToMorestackNonSplit(AdjustedPrologues, MorestackCalls);
+  switchMorestackCallsToMorestackNonSplit(Prologues, MorestackCalls);
 }
 
 template <class ELFT> void InputSection::writeTo(uint8_t *Buf) {
