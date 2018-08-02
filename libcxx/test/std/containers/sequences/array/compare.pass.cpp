@@ -9,6 +9,7 @@
 
 // <array>
 
+//  These are all constexpr in C++20
 // bool operator==(array<T, N> const&, array<T, N> const&);
 // bool operator!=(array<T, N> const&, array<T, N> const&);
 // bool operator<(array<T, N> const&, array<T, N> const&);
@@ -40,6 +41,41 @@ void test_compare(const Array& LHS, const Array& RHS) {
   assert((LHS >= RHS) == (LHSV >= RHSV));
 }
 
+#if TEST_STD_VER > 17
+template <class Array>
+constexpr bool constexpr_compare(const Array &lhs, const Array &rhs, bool isEqual, bool isLess)
+{
+  if (isEqual)
+  {
+    if (!(lhs == rhs)) return false;
+    if ( (lhs != rhs)) return false;
+    if ( (lhs  < rhs)) return false;
+    if (!(lhs <= rhs)) return false;
+    if ( (lhs  > rhs)) return false;
+    if (!(lhs >= rhs)) return false;
+  }
+  else if (isLess)
+  {
+    if ( (lhs == rhs)) return false;
+    if (!(lhs != rhs)) return false;
+    if (!(lhs  < rhs)) return false;
+    if (!(lhs <= rhs)) return false;
+    if ( (lhs  > rhs)) return false;
+    if ( (lhs >= rhs)) return false;
+  }
+  else // greater
+  {
+    if ( (lhs == rhs)) return false;
+    if (!(lhs != rhs)) return false;
+    if ( (lhs  < rhs)) return false;
+    if ( (lhs <= rhs)) return false;
+    if (!(lhs  > rhs)) return false;
+    if (!(lhs >= rhs)) return false;
+  }
+  return true;  
+}
+#endif
+
 int main()
 {
   {
@@ -60,4 +96,14 @@ int main()
     C c2 = {};
     test_compare(c1, c2);
   }
+
+#if TEST_STD_VER > 17
+  {
+  constexpr std::array<int, 3> a1 = {1, 2, 3};
+  constexpr std::array<int, 3> a2 = {2, 3, 4};
+  static_assert(constexpr_compare(a1, a1, true, false), "");
+  static_assert(constexpr_compare(a1, a2, false, true), "");
+  static_assert(constexpr_compare(a2, a1, false, false), "");
+  }
+#endif
 }

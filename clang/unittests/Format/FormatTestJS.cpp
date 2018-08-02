@@ -191,17 +191,19 @@ TEST_F(FormatTestJS, JSDocComments) {
 
   // Break a single line long jsdoc comment pragma.
   EXPECT_EQ("/**\n"
-            " * @returns\n"
-            " *     {string}\n"
-            " *     jsdoc line 12\n"
+            " * @returns {string} jsdoc line 12\n"
             " */",
             format("/** @returns {string} jsdoc line 12 */",
                    getGoogleJSStyleWithColumns(20)));
+  EXPECT_EQ("/**\n"
+            " * @returns {string}\n"
+            " *     jsdoc line 12\n"
+            " */",
+            format("/** @returns {string} jsdoc line 12 */",
+                   getGoogleJSStyleWithColumns(25)));
 
   EXPECT_EQ("/**\n"
-            " * @returns\n"
-            " *     {string}\n"
-            " *     jsdoc line 12\n"
+            " * @returns {string} jsdoc line 12\n"
             " */",
             format("/** @returns {string} jsdoc line 12  */",
                    getGoogleJSStyleWithColumns(20)));
@@ -209,13 +211,12 @@ TEST_F(FormatTestJS, JSDocComments) {
   // FIXME: this overcounts the */ as a continuation of the 12 when breaking.
   // Related to the FIXME in BreakableBlockComment::getRangeLength.
   EXPECT_EQ("/**\n"
-            " * @returns\n"
-            " *     {string}\n"
-            " *     jsdoc line\n"
+            " * @returns {string}\n"
+            " *     jsdoc line line\n"
             " *     12\n"
             " */",
-            format("/** @returns {string} jsdoc line 12*/",
-                   getGoogleJSStyleWithColumns(20)));
+            format("/** @returns {string} jsdoc line line 12*/",
+                   getGoogleJSStyleWithColumns(25)));
 
   // Fix a multiline jsdoc comment ending in a comment pragma.
   EXPECT_EQ("/**\n"
@@ -2038,27 +2039,32 @@ TEST_F(FormatTestJS, WrapAfterParen) {
 
 TEST_F(FormatTestJS, JSDocAnnotations) {
   verifyFormat("/**\n"
-               " * @exports\n"
-               " *     {this.is.a.long.path.to.a.Type}\n"
+               " * @exports {this.is.a.long.path.to.a.Type}\n"
                " */",
                "/**\n"
                " * @exports {this.is.a.long.path.to.a.Type}\n"
                " */",
                getGoogleJSStyleWithColumns(20));
   verifyFormat("/**\n"
-               " * @mods\n"
-               " *     {this.is.a.long.path.to.a.Type}\n"
+               " * @mods {this.is.a.long.path.to.a.Type}\n"
                " */",
                "/**\n"
                " * @mods {this.is.a.long.path.to.a.Type}\n"
                " */",
                getGoogleJSStyleWithColumns(20));
   verifyFormat("/**\n"
-               " * @param\n"
-               " *     {this.is.a.long.path.to.a.Type}\n"
+               " * @mods {this.is.a.long.path.to.a.Type}\n"
                " */",
                "/**\n"
-               " * @param {this.is.a.long.path.to.a.Type}\n"
+               " * @mods {this.is.a.long.path.to.a.Type}\n"
+               " */",
+               getGoogleJSStyleWithColumns(20));
+  verifyFormat("/**\n"
+               " * @param {canWrap\n"
+               " *     onSpace}\n"
+               " */",
+               "/**\n"
+               " * @param {canWrap onSpace}\n"
                " */",
                getGoogleJSStyleWithColumns(20));
   verifyFormat("/**\n"
@@ -2083,8 +2089,7 @@ TEST_F(FormatTestJS, JSDocAnnotations) {
             "  /**\n"
             "   * long long long\n"
             "   * long\n"
-            "   * @param\n"
-            "   *     {this.is.a.long.path.to.a.Type}\n"
+            "   * @param {this.is.a.long.path.to.a.Type}\n"
             "   *     a\n"
             "   * long long long\n"
             "   * long long\n"

@@ -274,7 +274,7 @@ typedef std::pair<unsigned, unsigned> BufferUsageEntry;
 class ResourceManager {
   // The resource manager owns all the ResourceState.
   using UniqueResourceState = std::unique_ptr<ResourceState>;
-  llvm::SmallDenseMap<uint64_t, UniqueResourceState> Resources;
+  std::vector<UniqueResourceState> Resources;
 
   // Keeps track of which resources are busy, and how many cycles are left
   // before those become usable again.
@@ -283,46 +283,16 @@ class ResourceManager {
   // A table to map processor resource IDs to processor resource masks.
   llvm::SmallVector<uint64_t, 8> ProcResID2Mask;
 
-  // Adds a new resource state in Resources, as well as a new descriptor in
-  // ResourceDescriptor.
-  void addResource(const llvm::MCProcResourceDesc &Desc, unsigned Index,
-                   uint64_t Mask);
-
   // Populate resource descriptors.
   void initialize(const llvm::MCSchedModel &SM);
 
   // Returns the actual resource unit that will be used.
   ResourceRef selectPipe(uint64_t ResourceID);
 
-  void use(ResourceRef RR);
-  void release(ResourceRef RR);
+  void use(const ResourceRef &RR);
+  void release(const ResourceRef &RR);
 
-  unsigned getNumUnits(uint64_t ResourceID) const {
-    assert(Resources.find(ResourceID) != Resources.end());
-    return Resources.find(ResourceID)->getSecond()->getNumUnits();
-  }
-
-  // Reserve a specific Resource kind.
-  void reserveBuffer(uint64_t ResourceID) {
-    assert(isBufferAvailable(ResourceID) ==
-           ResourceStateEvent::RS_BUFFER_AVAILABLE);
-    ResourceState &Resource = *Resources[ResourceID];
-    Resource.reserveBuffer();
-  }
-
-  void releaseBuffer(uint64_t ResourceID) {
-    Resources[ResourceID]->releaseBuffer();
-  }
-
-  ResourceStateEvent isBufferAvailable(uint64_t ResourceID) const {
-    const ResourceState &Resource = *Resources.find(ResourceID)->second;
-    return Resource.isBufferAvailable();
-  }
-
-  bool isReady(uint64_t ResourceID, unsigned NumUnits) const {
-    const ResourceState &Resource = *Resources.find(ResourceID)->second;
-    return Resource.isReady(NumUnits);
-  }
+  unsigned getNumUnits(uint64_t ResourceID) const;
 
 public:
   ResourceManager(const llvm::MCSchedModel &SM)
@@ -335,9 +305,7 @@ public:
   ResourceStateEvent canBeDispatched(llvm::ArrayRef<uint64_t> Buffers) const;
 
   // Return the processor resource identifier associated to this Mask.
-  unsigned resolveResourceMask(uint64_t Mask) const {
-    return Resources.find(Mask)->second->getProcResourceID();
-  }
+  unsigned resolveResourceMask(uint64_t Mask) const;
 
   // Consume a slot in every buffered resource from array 'Buffers'. Resource
   // units that are dispatch hazards (i.e. BufferSize=0) are marked as reserved.
@@ -346,16 +314,12 @@ public:
   // Release buffer entries previously allocated by method reserveBuffers.
   void releaseBuffers(llvm::ArrayRef<uint64_t> Buffers);
 
-  void reserveResource(uint64_t ResourceID) {
-    ResourceState &Resource = *Resources[ResourceID];
-    assert(!Resource.isReserved());
-    Resource.setReserved();
-  }
+  // Reserve a processor resource. A reserved resource is not available for
+  // instruction issue until it is released. 
+  void reserveResource(uint64_t ResourceID);
 
-  void releaseResource(uint64_t ResourceID) {
-    ResourceState &Resource = *Resources[ResourceID];
-    Resource.clearReserved();
-  }
+  // Release a previously reserved processor resource.
+  void releaseResource(uint64_t ResourceID);
 
   // Returns true if all resources are in-order, and there is at least one
   // resource which is a dispatch hazard (BufferSize = 0).
@@ -371,8 +335,8 @@ public:
 
 #ifndef NDEBUG
   void dump() const {
-    for (const std::pair<uint64_t, UniqueResourceState> &Resource : Resources)
-      Resource.second->dump();
+    for (const UniqueResourceState &Resource : Resources)
+      Resource->dump();
   }
 #endif
 }; // namespace mca

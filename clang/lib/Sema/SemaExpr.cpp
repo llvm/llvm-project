@@ -5153,10 +5153,13 @@ static FunctionDecl *rewriteBuiltinFunctionDecl(Sema *Sema, ASTContext &Context,
       continue;
     }
 
+    QualType PointeeType = ParamType->getPointeeType();
+    if (PointeeType.getQualifiers().hasAddressSpace())
+      continue;
+
     NeedsNewDecl = true;
     LangAS AS = ArgType->getPointeeType().getAddressSpace();
 
-    QualType PointeeType = ParamType->getPointeeType();
     PointeeType = Context.getAddrSpaceQualType(PointeeType, AS);
     OverloadParams.push_back(Context.getPointerType(PointeeType));
   }

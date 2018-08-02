@@ -67,7 +67,7 @@ public:
 
   // Given a snippet, computes which registers the setup code needs to define.
   std::vector<unsigned>
-  computeRegsToDef(const std::vector<InstructionInstance> &Snippet) const;
+  computeRegsToDef(const std::vector<InstructionBuilder> &Snippet) const;
 
   // Scratch space to run instructions that touch memory.
   struct ScratchSpace {

@@ -181,7 +181,7 @@ llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
 
   // Don't enter the unroll code if there is nothing to do.
   if (TripCount == 0 && Count < 2) {
-    LLVM_DEBUG(dbgs() << "Won't unroll; almost nothing to do\n");
+    LLVM_DEBUG(dbgs() << "Won't unroll-and-jam; almost nothing to do\n");
     return LoopUnrollResult::Unmodified;
   }
 
@@ -619,16 +619,28 @@ static bool checkDependencies(SmallVector<Value *, 4> &Earlier,
       if (auto D = DI.depends(Src, Dst, true)) {
         assert(D->isOrdered() && "Expected an output, flow or anti dep.");
 
-        if (D->isConfused())
+        if (D->isConfused()) {
+          LLVM_DEBUG(dbgs() << "  Confused dependency between:\n"
+                            << "  " << *Src << "\n"
+                            << "  " << *Dst << "\n");
           return false;
+        }
         if (!InnerLoop) {
-          if (D->getDirection(LoopDepth) & Dependence::DVEntry::GT)
+          if (D->getDirection(LoopDepth) & Dependence::DVEntry::GT) {
+            LLVM_DEBUG(dbgs() << "  > dependency between:\n"
+                              << "  " << *Src << "\n"
+                              << "  " << *Dst << "\n");
             return false;
+          }
         } else {
           assert(LoopDepth + 1 <= D->getLevels());
           if (D->getDirection(LoopDepth) & Dependence::DVEntry::GT &&
-              D->getDirection(LoopDepth + 1) & Dependence::DVEntry::LT)
+              D->getDirection(LoopDepth + 1) & Dependence::DVEntry::LT) {
+            LLVM_DEBUG(dbgs() << "  < > dependency between:\n"
+                              << "  " << *Src << "\n"
+                              << "  " << *Dst << "\n");
             return false;
+          }
         }
       }
     }
@@ -716,38 +728,58 @@ bool llvm::isSafeToUnrollAndJam(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
   if (SubLoopLatch != SubLoopExit)
     return false;
 
-  if (Header->hasAddressTaken() || SubLoopHeader->hasAddressTaken())
+  if (Header->hasAddressTaken() || SubLoopHeader->hasAddressTaken()) {
+    LLVM_DEBUG(dbgs() << "Won't unroll-and-jam; Address taken\n");
     return false;
+  }
 
   // Split blocks into Fore/SubLoop/Aft based on dominators
   BasicBlockSet SubLoopBlocks;
   BasicBlockSet ForeBlocks;
   BasicBlockSet AftBlocks;
   if (!partitionOuterLoopBlocks(L, SubLoop, ForeBlocks, SubLoopBlocks,
-                                AftBlocks, &DT))
+                                AftBlocks, &DT)) {
+    LLVM_DEBUG(dbgs() << "Won't unroll-and-jam; Incompatible loop layout\n");
     return false;
+  }
 
   // Aft blocks may need to move instructions to fore blocks, which becomes more
   // difficult if there are multiple (potentially conditionally executed)
   // blocks. For now we just exclude loops with multiple aft blocks.
-  if (AftBlocks.size() != 1)
+  if (AftBlocks.size() != 1) {
+    LLVM_DEBUG(dbgs() << "Won't unroll-and-jam; Can't currently handle "
+                         "multiple blocks after the loop\n");
     return false;
+  }
 
-  // Check inner loop IV is consistent between all iterations
-  const SCEV *SubLoopBECountSC = SE.getExitCount(SubLoop, SubLoopLatch);
-  if (isa<SCEVCouldNotCompute>(SubLoopBECountSC) ||
-      !SubLoopBECountSC->getType()->isIntegerTy())
+  // Check inner loop backedge count is consistent on all iterations of the
+  // outer loop
+  auto CheckInnerLoopIterationCountInvariant = [](Loop *SubLoop, Loop *OuterL,
+                                                  ScalarEvolution &SE) {
+    BasicBlock *SubLoopLatch = SubLoop->getLoopLatch();
+    const SCEV *SubLoopBECountSC = SE.getExitCount(SubLoop, SubLoopLatch);
+    if (isa<SCEVCouldNotCompute>(SubLoopBECountSC) ||
+        !SubLoopBECountSC->getType()->isIntegerTy())
+      return false;
+    ScalarEvolution::LoopDisposition LD =
+        SE.getLoopDisposition(SubLoopBECountSC, OuterL);
+    if (LD != ScalarEvolution::LoopInvariant)
+      return false;
+    return true;
+  };
+  if (!CheckInnerLoopIterationCountInvariant(SubLoop, L, SE)) {
+    LLVM_DEBUG(dbgs() << "Won't unroll-and-jam; Inner loop iteration count is "
+                         "not consistent on each iteration\n");
     return false;
-  ScalarEvolution::LoopDisposition LD =
-      SE.getLoopDisposition(SubLoopBECountSC, L);
-  if (LD != ScalarEvolution::LoopInvariant)
-    return false;
+  }
 
   // Check the loop safety info for exceptions.
   LoopSafetyInfo LSI;
   computeLoopSafetyInfo(&LSI, L);
-  if (LSI.MayThrow)
+  if (LSI.MayThrow) {
+    LLVM_DEBUG(dbgs() << "Won't unroll-and-jam; Something may throw\n");
     return false;
+  }
 
   // We've ruled out the easy stuff and now need to check that there are no
   // interdependencies which may prevent us from moving the:
@@ -772,14 +804,19 @@ bool llvm::isSafeToUnrollAndJam(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
             }
             // Keep going
             return true;
-          }))
+          })) {
+    LLVM_DEBUG(dbgs() << "Won't unroll-and-jam; can't move required "
+                         "instructions after subloop to before it\n");
     return false;
+  }
 
   // Check for memory dependencies which prohibit the unrolling we are doing.
   // Because of the way we are unrolling Fore/Sub/Aft blocks, we need to check
   // there are no dependencies between Fore-Sub, Fore-Aft, Sub-Aft and Sub-Sub.
-  if (!checkDependencies(L, ForeBlocks, SubLoopBlocks, AftBlocks, DI))
+  if (!checkDependencies(L, ForeBlocks, SubLoopBlocks, AftBlocks, DI)) {
+    LLVM_DEBUG(dbgs() << "Won't unroll-and-jam; failed dependency check\n");
     return false;
+  }
 
   return true;
 }

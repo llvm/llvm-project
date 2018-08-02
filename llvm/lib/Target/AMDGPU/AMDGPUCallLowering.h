@@ -35,8 +35,8 @@ class AMDGPUCallLowering: public CallLowering {
  public:
   AMDGPUCallLowering(const AMDGPUTargetLowering &TLI);
 
-  bool lowerReturn(MachineIRBuilder &MIRBuiler, const Value *Val,
-                   unsigned VReg) const override;
+  bool lowerReturn(MachineIRBuilder &MIRBuilder, const Value *Val,
+                   ArrayRef<unsigned> VRegs) const override;
   bool lowerFormalArguments(MachineIRBuilder &MIRBuilder, const Function &F,
                             ArrayRef<unsigned> VRegs) const override;
   static CCAssignFn *CCAssignFnForCall(CallingConv::ID CC, bool IsVarArg);
