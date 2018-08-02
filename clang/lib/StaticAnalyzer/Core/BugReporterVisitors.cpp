@@ -395,7 +395,7 @@ private:
   const Optional<RegionVector>
   findRegionOfInterestInRecord(const RecordDecl *RD, ProgramStateRef State,
                                const MemRegion *R,
-                               RegionVector Vec = {},
+                               const RegionVector &Vec = {},
                                int depth = 0) {
 
     if (depth == DEREFERENCE_LIMIT) // Limit the recursion depth.
@@ -548,14 +548,10 @@ private:
 
   /// \return Diagnostics piece for region not modified in the current function.
   std::shared_ptr<PathDiagnosticPiece>
-  notModifiedDiagnostics(const LocationContext *Ctx,
-                         CallExitBegin &CallExitLoc,
-                         CallEventRef<> Call,
-                         RegionVector FieldChain,
-                         const MemRegion *MatchedRegion,
-                         StringRef FirstElement,
-                         bool FirstIsReferenceType,
-                         unsigned IndirectionLevel) {
+  notModifiedDiagnostics(const LocationContext *Ctx, CallExitBegin &CallExitLoc,
+                         CallEventRef<> Call, const RegionVector &FieldChain,
+                         const MemRegion *MatchedRegion, StringRef FirstElement,
+                         bool FirstIsReferenceType, unsigned IndirectionLevel) {
 
     PathDiagnosticLocation L;
     if (const ReturnStmt *RS = CallExitLoc.getReturnStmt()) {
@@ -579,7 +575,8 @@ private:
   /// Pretty-print region \p MatchedRegion to \p os.
   void prettyPrintRegionName(StringRef FirstElement, bool FirstIsReferenceType,
                              const MemRegion *MatchedRegion,
-                             RegionVector FieldChain, int IndirectionLevel,
+                             const RegionVector &FieldChain,
+                             int IndirectionLevel,
                              llvm::raw_svector_ostream &os) {
 
     if (FirstIsReferenceType)
