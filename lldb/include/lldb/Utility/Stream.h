@@ -121,14 +121,10 @@ public:
       __attribute__((__format__(__printf__, 2, 3)));
 
   //------------------------------------------------------------------
-  /// Format a C string from a printf style format and variable arguments and
-  /// encode and append the resulting C string as hex bytes.
+  /// Append an uint8_t value in the hexadecimal format to the stream.
   ///
-  /// @param[in] format
-  ///     A printf style format string.
-  ///
-  /// @param[in] ...
-  ///     Any additional arguments needed for the printf format string.
+  /// @param[in] uvalue
+  ///     The value to append.
   ///
   /// @return
   ///     The number of bytes that were appended to the stream.
@@ -504,9 +500,6 @@ public:
   ///
   /// @param[in] uval
   ///     A uint64_t value that was extracted as a SLEB128 value.
-  ///
-  /// @param[in] format
-  ///     The optional printf format that can be overridden.
   //------------------------------------------------------------------
   size_t PutSLEB128(int64_t uval);
 
@@ -518,9 +511,6 @@ public:
   ///
   /// @param[in] uval
   ///     A uint64_t value that was extracted as a ULEB128 value.
-  ///
-  /// @param[in] format
-  ///     The optional printf format that can be overridden.
   //------------------------------------------------------------------
   size_t PutULEB128(uint64_t uval);
 

@@ -500,7 +500,7 @@ static bool isOutputFormatBinary(opt::InputArgList &Args) {
   StringRef S = Args.getLastArgValue(OPT_oformat, "elf");
   if (S == "binary")
     return true;
-  if (S != "elf")
+  if (!S.startswith("elf"))
     error("unknown --oformat value: " + S);
   return false;
 }

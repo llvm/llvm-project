@@ -307,14 +307,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
                 decl.SetColumn(form_value.Unsigned());
                 break;
               case DW_AT_name:
-
                 type_name_cstr = form_value.AsCString();
-                // Work around a bug in llvm-gcc where they give a name to a
-                // reference type which doesn't include the "&"...
-                if (tag == DW_TAG_reference_type) {
-                  if (strchr(type_name_cstr, '&') == NULL)
-                    type_name_cstr = NULL;
-                }
                 if (type_name_cstr)
                   type_name_const_str.SetCString(type_name_cstr);
                 break;
@@ -558,16 +551,9 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
             if (attributes.ExtractFormValueAtIndex(i, form_value)) {
               switch (attr) {
               case DW_AT_decl_file:
-                if (die.GetCU()->DW_AT_decl_file_attributes_are_invalid()) {
-                  // llvm-gcc outputs invalid DW_AT_decl_file attributes that
-                  // always point to the compile unit file, so we clear this
-                  // invalid value so that we can still unique types
-                  // efficiently.
-                  decl.SetFile(FileSpec("<invalid>", false));
-                } else
-                  decl.SetFile(
-                      sc.comp_unit->GetSupportFiles().GetFileSpecAtIndex(
-                          form_value.Unsigned()));
+                decl.SetFile(
+                   sc.comp_unit->GetSupportFiles().GetFileSpecAtIndex(
+                      form_value.Unsigned()));
                 break;
 
               case DW_AT_decl_line:
@@ -2976,15 +2962,6 @@ bool DWARFASTParserClang::ParseChildMembers(
         if (class_language == eLanguageTypeObjC ||
             class_language == eLanguageTypeObjC_plus_plus)
           accessibility = eAccessNone;
-
-        if (member_idx == 0 && !is_artificial && name &&
-            (strstr(name, "_vptr$") == name)) {
-          // Not all compilers will mark the vtable pointer member as
-          // artificial (llvm-gcc). We can't have the virtual members in our
-          // classes otherwise it throws off all child offsets since we end up
-          // having and extra pointer sized member in our class layouts.
-          is_artificial = true;
-        }
 
         // Handle static members
         if (is_external && member_byte_offset == UINT32_MAX) {
