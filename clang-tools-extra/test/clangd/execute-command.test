@@ -6,7 +6,7 @@
 # CHECK-NEXT:  "params": {
 # CHECK-NEXT:    "diagnostics": [
 # CHECK-NEXT:      {
-# CHECK-NEXT:        "message": "using the result of an assignment as a condition without parentheses",
+# CHECK-NEXT:        "message": "Using the result of an assignment as a condition without parentheses",
 # CHECK-NEXT:        "range": {
 # CHECK-NEXT:          "end": {
 # CHECK-NEXT:            "character": 37,

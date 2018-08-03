@@ -78,6 +78,7 @@ static CXCursorKind GetCursorKind(const Attr *A) {
     case attr::ObjCDesignatedInitializer: return CXCursor_ObjCDesignatedInitializer;
     case attr::ObjCRuntimeVisible: return CXCursor_ObjCRuntimeVisible;
     case attr::ObjCBoxable: return CXCursor_ObjCBoxable;
+    case attr::FlagEnum: return CXCursor_FlagEnum;
   }
 
   return CXCursor_UnexposedAttr;

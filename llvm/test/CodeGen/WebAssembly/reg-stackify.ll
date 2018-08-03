@@ -450,7 +450,7 @@ bb10:                                             ; preds = %bb9, %bb
 
 ; CHECK-LABEL: stackpointer_dependency:
 ; CHECK:      call {{.+}}, stackpointer_callee@FUNCTION,
-; CHECK-NEXT: set_global __stack_pointer,
+; CHECK-NEXT: set_global __stack_pointer@GLOBAL,
 declare i32 @stackpointer_callee(i8* readnone, i8* readnone)
 declare i8* @llvm.frameaddress(i32)
 define i32 @stackpointer_dependency(i8* readnone) {

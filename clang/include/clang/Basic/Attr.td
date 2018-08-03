@@ -145,8 +145,9 @@ def HasFunctionProto : SubsetSubject<DeclBase,
 // function. Accepted as a function type attribute on the type of such a
 // member function.
 // FIXME: This does not actually ever match currently.
-def ImplicitObjectParameter : SubsetSubject<Function, [{false}],
-                                            "implicit object parameters">;
+def ImplicitObjectParameter
+    : SubsetSubject<Function, [{static_cast<void>(S), false}],
+                    "implicit object parameters">;
 
 // A single argument to an attribute
 class Argument<string name, bit optional, bit fake = 0> {

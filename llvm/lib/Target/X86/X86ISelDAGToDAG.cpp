@@ -2803,6 +2803,16 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     ReplaceNode(Node, getGlobalBaseReg());
     return;
 
+  case ISD::BITCAST:
+    // Just drop all 128/256/512-bit bitcasts.
+    if (NVT.is512BitVector() || NVT.is256BitVector() || NVT.is128BitVector() ||
+        NVT == MVT::f128) {
+      ReplaceUses(SDValue(Node, 0), Node->getOperand(0));
+      CurDAG->RemoveDeadNode(Node);
+      return;
+    }
+    break;
+
   case X86ISD::SELECT:
   case X86ISD::SHRUNKBLEND: {
     // SHRUNKBLEND selects like a regular VSELECT. Same with X86ISD::SELECT.

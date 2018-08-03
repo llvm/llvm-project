@@ -116,6 +116,19 @@ static std::future<MBErrPair> createFutureForFile(std::string Path) {
   });
 }
 
+// Symbol names are mangled by prepending "_" on x86.
+static StringRef mangle(StringRef Sym) {
+  assert(Config->Machine != IMAGE_FILE_MACHINE_UNKNOWN);
+  if (Config->Machine == I386)
+    return Saver.save("_" + Sym);
+  return Sym;
+}
+
+static bool findUnderscoreMangle(StringRef Sym) {
+  StringRef Entry = Symtab->findMangle(mangle(Sym));
+  return !Entry.empty() && !isa<Undefined>(Symtab->find(Entry));
+}
+
 MemoryBufferRef LinkerDriver::takeBuffer(std::unique_ptr<MemoryBuffer> MB) {
   MemoryBufferRef MBRef = *MB;
   make<std::unique_ptr<MemoryBuffer>>(std::move(MB)); // take ownership
@@ -407,33 +420,12 @@ Symbol *LinkerDriver::addUndefined(StringRef Name) {
   return B;
 }
 
-// Symbol names are mangled by appending "_" prefix on x86.
-StringRef LinkerDriver::mangle(StringRef Sym) {
-  assert(Config->Machine != IMAGE_FILE_MACHINE_UNKNOWN);
-  if (Config->Machine == I386)
-    return Saver.save("_" + Sym);
-  return Sym;
-}
-
 // Windows specific -- find default entry point name.
 //
 // There are four different entry point functions for Windows executables,
 // each of which corresponds to a user-defined "main" function. This function
 // infers an entry point from a user-defined "main" function.
 StringRef LinkerDriver::findDefaultEntry() {
-  // As a special case, if /nodefaultlib is given, we directly look for an
-  // entry point. This is because, if no default library is linked, users
-  // need to define an entry point instead of a "main".
-  if (Config->NoDefaultLibAll) {
-    for (StringRef S : {"mainCRTStartup", "wmainCRTStartup",
-                        "WinMainCRTStartup", "wWinMainCRTStartup"}) {
-      StringRef Entry = Symtab->findMangle(S);
-      if (!Entry.empty() && !isa<Undefined>(Symtab->find(Entry)))
-        return mangle(S);
-    }
-    return "";
-  }
-
   // User-defined main functions and their corresponding entry points.
   static const char *Entries[][2] = {
       {"main", "mainCRTStartup"},
@@ -442,8 +434,10 @@ StringRef LinkerDriver::findDefaultEntry() {
       {"wWinMain", "wWinMainCRTStartup"},
   };
   for (auto E : Entries) {
-    StringRef Entry = Symtab->findMangle(mangle(E[0]));
-    if (!Entry.empty() && !isa<Undefined>(Symtab->find(Entry)))
+    // As a special case, if /nodefaultlib is given, we directly look for an
+    // entry point. This is because, if no default library is linked, users
+    // need to define an entry point instead of a "main".
+    if (findUnderscoreMangle(E[Config->NoDefaultLibAll]))
       return mangle(E[1]);
   }
   return "";
@@ -452,9 +446,9 @@ StringRef LinkerDriver::findDefaultEntry() {
 WindowsSubsystem LinkerDriver::inferSubsystem() {
   if (Config->DLL)
     return IMAGE_SUBSYSTEM_WINDOWS_GUI;
-  if (Symtab->findUnderscore("main") || Symtab->findUnderscore("wmain"))
+  if (findUnderscoreMangle("main") || findUnderscoreMangle("wmain"))
     return IMAGE_SUBSYSTEM_WINDOWS_CUI;
-  if (Symtab->findUnderscore("WinMain") || Symtab->findUnderscore("wWinMain"))
+  if (findUnderscoreMangle("WinMain") || findUnderscoreMangle("wWinMain"))
     return IMAGE_SUBSYSTEM_WINDOWS_GUI;
   return IMAGE_SUBSYSTEM_UNKNOWN;
 }

@@ -172,7 +172,7 @@ TEST(DiagnosticsTest, ToLSP) {
   };
 
   // Diagnostics should turn into these:
-  clangd::Diagnostic MainLSP = MatchingLSP(D, R"(something terrible happened
+  clangd::Diagnostic MainLSP = MatchingLSP(D, R"(Something terrible happened
 
 main.cpp:6:7: remark: declared somewhere in the main file
 
@@ -180,7 +180,7 @@ main.cpp:6:7: remark: declared somewhere in the main file
 note: declared somewhere in the header file)");
 
   clangd::Diagnostic NoteInMainLSP =
-      MatchingLSP(NoteInMain, R"(declared somewhere in the main file
+      MatchingLSP(NoteInMain, R"(Declared somewhere in the main file
 
 main.cpp:2:3: error: something terrible happened)");
 

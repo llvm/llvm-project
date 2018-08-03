@@ -24,12 +24,12 @@ declare void @ext_byval_func_empty(%EmptyStruct* byval)
 define void @byval_arg(%SmallStruct* %ptr) {
  ; CHECK: .param i32
  ; Subtract 16 from SP (SP is 16-byte aligned)
- ; CHECK-NEXT: get_global $push[[L2:.+]]=, __stack_pointer
+ ; CHECK-NEXT: get_global $push[[L2:.+]]=, __stack_pointer@GLOBAL
  ; CHECK-NEXT: i32.const $push[[L3:.+]]=, 16
  ; CHECK-NEXT: i32.sub $push[[L11:.+]]=, $pop[[L2]], $pop[[L3]]
  ; Ensure SP is stored back before the call
  ; CHECK-NEXT: tee_local $push[[L10:.+]]=, $[[SP:.+]]=, $pop[[L11]]{{$}}
- ; CHECK-NEXT: set_global __stack_pointer, $pop[[L10]]{{$}}
+ ; CHECK-NEXT: set_global __stack_pointer@GLOBAL, $pop[[L10]]{{$}}
  ; Copy the SmallStruct argument to the stack (SP+12, original SP-4)
  ; CHECK-NEXT: i32.load $push[[L0:.+]]=, 0($0)
  ; CHECK-NEXT: i32.store 12($[[SP]]), $pop[[L0]]
@@ -41,7 +41,7 @@ define void @byval_arg(%SmallStruct* %ptr) {
  ; Restore the stack
  ; CHECK-NEXT: i32.const $push[[L6:.+]]=, 16
  ; CHECK-NEXT: i32.add $push[[L8:.+]]=, $[[SP]], $pop[[L6]]
- ; CHECK-NEXT: set_global __stack_pointer, $pop[[L8]]
+ ; CHECK-NEXT: set_global __stack_pointer@GLOBAL, $pop[[L8]]
  ; CHECK-NEXT: return
  ret void
 }
@@ -53,7 +53,7 @@ define void @byval_arg_align8(%SmallStruct* %ptr) {
  ; CHECK: i32.const $push[[L1:.+]]=, 16
  ; CHECK-NEXT: i32.sub $push[[L11:.+]]=, {{.+}}, $pop[[L1]]
  ; CHECK-NEXT: tee_local $push[[L10:.+]]=, $[[SP:.+]]=, $pop[[L11]]{{$}}
- ; CHECK-NEXT: set_global __stack_pointer, $pop[[L10]]{{$}}
+ ; CHECK-NEXT: set_global __stack_pointer@GLOBAL, $pop[[L10]]{{$}}
  ; Copy the SmallStruct argument to the stack (SP+8, original SP-8)
  ; CHECK-NEXT: i32.load $push[[L0:.+]]=, 0($0){{$}}
  ; CHECK-NEXT: i32.store 8($[[SP]]), $pop[[L0]]{{$}}
@@ -72,7 +72,7 @@ define void @byval_arg_double(%AlignedStruct* %ptr) {
  ; CHECK: i32.const $push[[L1:.+]]=, 16
  ; CHECK-NEXT: i32.sub $push[[L14:.+]]=, {{.+}}, $pop[[L1]]
  ; CHECK-NEXT: tee_local $push[[L13:.+]]=, $[[SP:.+]]=, $pop[[L14]]
- ; CHECK-NEXT: set_global __stack_pointer, $pop[[L13]]
+ ; CHECK-NEXT: set_global __stack_pointer@GLOBAL, $pop[[L13]]
  ; Copy the AlignedStruct argument to the stack (SP+0, original SP-16)
  ; Just check the last load/store pair of the memcpy
  ; CHECK: i64.load $push[[L4:.+]]=, 0($0)
@@ -110,11 +110,11 @@ define void @byval_empty_callee(%EmptyStruct* byval %ptr) {
 
 ; Call memcpy for "big" byvals.
 ; CHECK-LABEL: big_byval:
-; CHECK:      get_global $push[[L2:.+]]=, __stack_pointer{{$}}
+; CHECK:      get_global $push[[L2:.+]]=, __stack_pointer@GLOBAL{{$}}
 ; CHECK-NEXT: i32.const $push[[L3:.+]]=, 131072
 ; CHECK-NEXT: i32.sub $push[[L11:.+]]=, $pop[[L2]], $pop[[L3]]
 ; CHECK-NEXT: tee_local $push[[L10:.+]]=, $[[SP:.+]]=, $pop[[L11]]{{$}}
-; CHECK-NEXT: set_global __stack_pointer, $pop[[L10]]{{$}}
+; CHECK-NEXT: set_global __stack_pointer@GLOBAL, $pop[[L10]]{{$}}
 ; CHECK-NEXT: i32.const $push[[L0:.+]]=, 131072
 ; CHECK-NEXT: i32.call       $push[[L11:.+]]=, memcpy@FUNCTION, $[[SP]], ${{.+}}, $pop{{.+}}
 ; CHECK-NEXT: tee_local      $push[[L9:.+]]=, $[[SP:.+]]=, $pop[[L11]]{{$}}

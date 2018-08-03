@@ -86,6 +86,8 @@ static unsigned getDefaultParsingOptions() {
     options |= CXTranslationUnit_LimitSkipFunctionBodiesToPreamble;
   if (getenv("CINDEXTEST_INCLUDE_ATTRIBUTED_TYPES"))
     options |= CXTranslationUnit_IncludeAttributedTypes;
+  if (getenv("CINDEXTEST_VISIT_IMPLICIT_ATTRIBUTES"))
+    options |= CXTranslationUnit_VisitImplicitAttributes;
 
   return options;
 }
@@ -1101,6 +1103,34 @@ static void PrintCursor(CXCursor Cursor, const char *CommentSchemaFile) {
       }
     }
 
+    if (Cursor.kind == CXCursor_ObjCPropertyDecl) {
+      CXString Name = clang_Cursor_getObjCPropertyGetterName(Cursor);
+      CXString Spelling = clang_getCursorSpelling(Cursor);
+      const char *CName = clang_getCString(Name);
+      const char *CSpelling = clang_getCString(Spelling);
+      if (CName && strcmp(CName, CSpelling)) {
+        printf(" (getter=%s)", CName);
+      }
+      clang_disposeString(Spelling);
+      clang_disposeString(Name);
+    }
+
+    if (Cursor.kind == CXCursor_ObjCPropertyDecl) {
+      CXString Name = clang_Cursor_getObjCPropertySetterName(Cursor);
+      CXString Spelling = clang_getCursorSpelling(Cursor);
+      const char *CName = clang_getCString(Name);
+      const char *CSpelling = clang_getCString(Spelling);
+      char *DefaultSetter = malloc(strlen(CSpelling) + 5);
+      sprintf(DefaultSetter, "set%s:", CSpelling);
+      DefaultSetter[3] &= ~(1 << 5); /* Make uppercase */
+      if (CName && strcmp(CName, DefaultSetter)) {
+        printf(" (setter=%s)", CName);
+      }
+      free(DefaultSetter);
+      clang_disposeString(Spelling);
+      clang_disposeString(Name);
+    }
+
     {
       unsigned QT = clang_Cursor_getObjCDeclQualifiers(Cursor);
       if (QT != CXObjCDeclQualifier_None) {
@@ -1780,6 +1810,23 @@ static enum CXChildVisitResult PrintTypeDeclaration(CXCursor cursor, CXCursor p,
   }
 
   return CXChildVisit_Recurse;
+}
+
+/******************************************************************************/
+/* Declaration attributes testing                                             */
+/******************************************************************************/
+
+static enum CXChildVisitResult PrintDeclAttributes(CXCursor cursor, CXCursor p,
+                                                   CXClientData d) {
+  if (clang_isDeclaration(cursor.kind)) {
+    printf("\n");
+    PrintCursor(cursor, NULL);
+    return CXChildVisit_Recurse;
+  } else if (clang_isAttribute(cursor.kind)) {
+    printf(" ");
+    PrintCursor(cursor, NULL);
+  }
+  return CXChildVisit_Continue;
 }
 
 /******************************************************************************/
@@ -4793,6 +4840,9 @@ int cindextest_main(int argc, const char **argv) {
   else if (argc > 2 && strcmp(argv[1], "-test-print-type-declaration") == 0)
     return perform_test_load_source(argc - 2, argv + 2, "all",
                                     PrintTypeDeclaration, 0);
+  else if (argc > 2 && strcmp(argv[1], "-test-print-decl-attributes") == 0)
+    return perform_test_load_source(argc - 2, argv + 2, "all",
+                                    PrintDeclAttributes, 0);
   else if (argc > 2 && strcmp(argv[1], "-test-print-bitwidth") == 0)
     return perform_test_load_source(argc - 2, argv + 2, "all",
                                     PrintBitWidth, 0);

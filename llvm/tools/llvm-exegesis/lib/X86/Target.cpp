@@ -25,8 +25,8 @@ namespace {
 template <typename Impl> class X86BenchmarkRunner : public Impl {
   using Impl::Impl;
 
-  llvm::Expected<SnippetPrototype>
-  generatePrototype(unsigned Opcode) const override {
+  llvm::Expected<CodeTemplate>
+  generateCodeTemplate(unsigned Opcode) const override {
     // Test whether we can generate a snippet for this instruction.
     const auto &InstrInfo = this->State.getInstrInfo();
     const auto OpcodeName = InstrInfo.getName(Opcode);
@@ -54,7 +54,7 @@ template <typename Impl> class X86BenchmarkRunner : public Impl {
       //   - `ST(0) = ST(0) + ST(i)` (TwoArgFP)
       // They are intrinsically serial and do not modify the state of the stack.
       // We generate the same code for latency and uops.
-      return this->generateSelfAliasingPrototype(Instr);
+      return this->generateSelfAliasingCodeTemplate(Instr);
     }
     case llvm::X86II::CompareFP:
       return Impl::handleCompareFP(Instr);
@@ -67,7 +67,7 @@ template <typename Impl> class X86BenchmarkRunner : public Impl {
     }
 
     // Fallback to generic implementation.
-    return Impl::Base::generatePrototype(Opcode);
+    return Impl::Base::generateCodeTemplate(Opcode);
   }
 };
 
@@ -75,12 +75,10 @@ class X86LatencyImpl : public LatencyBenchmarkRunner {
 protected:
   using Base = LatencyBenchmarkRunner;
   using Base::Base;
-  llvm::Expected<SnippetPrototype>
-  handleCompareFP(const Instruction &Instr) const {
+  llvm::Expected<CodeTemplate> handleCompareFP(const Instruction &Instr) const {
     return llvm::make_error<BenchmarkFailure>("Unsupported x87 CompareFP");
   }
-  llvm::Expected<SnippetPrototype>
-  handleCondMovFP(const Instruction &Instr) const {
+  llvm::Expected<CodeTemplate> handleCondMovFP(const Instruction &Instr) const {
     return llvm::make_error<BenchmarkFailure>("Unsupported x87 CondMovFP");
   }
 };
@@ -91,14 +89,12 @@ protected:
   using Base::Base;
   // We can compute uops for any FP instruction that does not grow or shrink the
   // stack (either do not touch the stack or push as much as they pop).
-  llvm::Expected<SnippetPrototype>
-  handleCompareFP(const Instruction &Instr) const {
-    return generateUnconstrainedPrototype(
+  llvm::Expected<CodeTemplate> handleCompareFP(const Instruction &Instr) const {
+    return generateUnconstrainedCodeTemplate(
         Instr, "instruction does not grow/shrink the FP stack");
   }
-  llvm::Expected<SnippetPrototype>
-  handleCondMovFP(const Instruction &Instr) const {
-    return generateUnconstrainedPrototype(
+  llvm::Expected<CodeTemplate> handleCondMovFP(const Instruction &Instr) const {
+    return generateUnconstrainedCodeTemplate(
         Instr, "instruction does not grow/shrink the FP stack");
   }
 };

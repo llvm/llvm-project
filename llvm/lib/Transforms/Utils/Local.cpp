@@ -2264,8 +2264,16 @@ bool llvm::removeUnreachableBlocks(Function &F, LazyValueInfo *LVI,
 
   if (DTU) {
     DTU->applyUpdates(Updates, /*ForceRemoveDuplicates*/ true);
-    for (auto *BB : ToDeleteBBs)
+    bool Deleted = false;
+    for (auto *BB : ToDeleteBBs) {
+      if (DTU->isBBPendingDeletion(BB))
+        --NumRemoved;
+      else
+        Deleted = true;
       DTU->deleteBB(BB);
+    }
+    if (!Deleted)
+      return false;
   }
   return true;
 }

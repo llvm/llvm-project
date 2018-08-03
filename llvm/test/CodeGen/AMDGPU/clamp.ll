@@ -53,9 +53,30 @@ define amdgpu_kernel void @v_clamp_negabs_f32(float addrspace(1)* %out, float ad
 
 ; GCN-LABEL: {{^}}v_clamp_negzero_f32:
 ; GCN-DAG: {{buffer|flat|global}}_load_dword [[A:v[0-9]+]]
+; GCN-DAG: v_add_f32_e32 [[ADD:v[0-9]+]], 0.5, [[A]]
 ; GCN-DAG: v_bfrev_b32_e32 [[SIGNBIT:v[0-9]+]], 1
-; GCN: v_med3_f32 v{{[0-9]+}}, [[A]], [[SIGNBIT]], 1.0
+; GCN: v_med3_f32 v{{[0-9]+}}, [[ADD]], [[SIGNBIT]], 1.0
 define amdgpu_kernel void @v_clamp_negzero_f32(float addrspace(1)* %out, float addrspace(1)* %aptr) #0 {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
+  %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
+  %a = load float, float addrspace(1)* %gep0
+  %add = fadd nnan float %a, 0.5
+  %max = call float @llvm.maxnum.f32(float %add, float -0.0)
+  %med = call float @llvm.minnum.f32(float %max, float 1.0)
+
+  store float %med, float addrspace(1)* %out.gep
+  ret void
+}
+
+; FIXME: Weird inconsistency in how -0.0 is treated. Accepted if clamp
+; matched through med3, not if directly. Is this correct?
+
+; GCN-LABEL: {{^}}v_clamp_negzero_maybe_snan_f32:
+; GCN: {{buffer|flat|global}}_load_dword [[A:v[0-9]+]]
+; GCN: v_max_f32_e32 [[MAX:v[0-9]+]], 0x80000000, [[A]]
+; GCN: v_min_f32_e32 [[MIN:v[0-9]+]], 1.0, [[MAX]]
+define amdgpu_kernel void @v_clamp_negzero_maybe_snan_f32(float addrspace(1)* %out, float addrspace(1)* %aptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
   %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
@@ -352,13 +373,15 @@ define amdgpu_kernel void @v_clamp_constant_snan_f32(float addrspace(1)* %out) #
 
 ; GCN-LABEL: {{^}}v_clamp_f32_no_dx10_clamp:
 ; GCN: {{buffer|flat|global}}_load_dword [[A:v[0-9]+]]
-; GCN: v_med3_f32 v{{[0-9]+}}, [[A]], 0, 1.0
+; GCN: v_add_f32_e32 [[ADD:v[0-9]+]], 0.5, [[A]]
+; GCN: v_med3_f32 v{{[0-9]+}}, [[ADD]], 0, 1.0
 define amdgpu_kernel void @v_clamp_f32_no_dx10_clamp(float addrspace(1)* %out, float addrspace(1)* %aptr) #2 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
   %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
   %a = load float, float addrspace(1)* %gep0
-  %max = call float @llvm.maxnum.f32(float %a, float 0.0)
+  %a.nnan = fadd nnan float %a, 0.5
+  %max = call float @llvm.maxnum.f32(float %a.nnan, float 0.0)
   %med = call float @llvm.minnum.f32(float %max, float 1.0)
 
   store float %med, float addrspace(1)* %out.gep
@@ -367,13 +390,14 @@ define amdgpu_kernel void @v_clamp_f32_no_dx10_clamp(float addrspace(1)* %out, f
 
 ; GCN-LABEL: {{^}}v_clamp_f32_snan_dx10clamp:
 ; GCN: {{buffer|flat|global}}_load_dword [[A:v[0-9]+]]
-; GCN: v_max_f32_e64 v{{[0-9]+}}, [[A]], [[A]] clamp{{$}}
+; GCN: v_add_f32_e64 [[ADD:v[0-9]+]], [[A]], 0.5 clamp{{$}}
 define amdgpu_kernel void @v_clamp_f32_snan_dx10clamp(float addrspace(1)* %out, float addrspace(1)* %aptr) #3 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
   %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
   %a = load float, float addrspace(1)* %gep0
-  %max = call float @llvm.maxnum.f32(float %a, float 0.0)
+  %add = fadd float %a, 0.5
+  %max = call float @llvm.maxnum.f32(float %add, float 0.0)
   %med = call float @llvm.minnum.f32(float %max, float 1.0)
 
   store float %med, float addrspace(1)* %out.gep

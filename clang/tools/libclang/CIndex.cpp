@@ -1802,7 +1802,9 @@ bool CursorVisitor::VisitCXXRecordDecl(CXXRecordDecl *D) {
 
 bool CursorVisitor::VisitAttributes(Decl *D) {
   for (const auto *I : D->attrs())
-    if (!I->isImplicit() && Visit(MakeCXCursor(I, D, TU)))
+    if ((TU->ParsingOptions & CXTranslationUnit_VisitImplicitAttributes ||
+         !I->isImplicit()) &&
+        Visit(MakeCXCursor(I, D, TU)))
         return true;
 
   return false;
@@ -5311,6 +5313,8 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
     return cxstring::createRef("attribute(objc_runtime_visible)");
   case CXCursor_ObjCBoxable:
     return cxstring::createRef("attribute(objc_boxable)");
+  case CXCursor_FlagEnum:
+    return cxstring::createRef("attribute(flag_enum)");
   case CXCursor_PreprocessingDirective:
     return cxstring::createRef("preprocessing directive");
   case CXCursor_MacroDefinition:
@@ -7909,6 +7913,30 @@ unsigned clang_Cursor_getObjCPropertyAttributes(CXCursor C, unsigned reserved) {
 #undef SET_CXOBJCPROP_ATTR
 
   return Result;
+}
+
+CXString clang_Cursor_getObjCPropertyGetterName(CXCursor C) {
+  if (C.kind != CXCursor_ObjCPropertyDecl)
+    return cxstring::createNull();
+
+  const ObjCPropertyDecl *PD = dyn_cast<ObjCPropertyDecl>(getCursorDecl(C));
+  Selector sel = PD->getGetterName();
+  if (sel.isNull())
+    return cxstring::createNull();
+
+  return cxstring::createDup(sel.getAsString());
+}
+
+CXString clang_Cursor_getObjCPropertySetterName(CXCursor C) {
+  if (C.kind != CXCursor_ObjCPropertyDecl)
+    return cxstring::createNull();
+
+  const ObjCPropertyDecl *PD = dyn_cast<ObjCPropertyDecl>(getCursorDecl(C));
+  Selector sel = PD->getSetterName();
+  if (sel.isNull())
+    return cxstring::createNull();
+
+  return cxstring::createDup(sel.getAsString());
 }
 
 unsigned clang_Cursor_getObjCDeclQualifiers(CXCursor C) {

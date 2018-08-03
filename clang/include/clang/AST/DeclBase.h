@@ -1250,16 +1250,29 @@ public:
 /// that directly derive from DeclContext are mentioned, not their subclasses):
 ///
 ///   TranslationUnitDecl
+///   ExternCContext
 ///   NamespaceDecl
-///   FunctionDecl
 ///   TagDecl
+///   OMPDeclareReductionDecl
+///   FunctionDecl
 ///   ObjCMethodDecl
 ///   ObjCContainerDecl
 ///   LinkageSpecDecl
 ///   ExportDecl
 ///   BlockDecl
-///   OMPDeclareReductionDecl
+///   CapturedDecl
 class DeclContext {
+  /// For makeDeclVisibleInContextImpl
+  friend class ASTDeclReader;
+  /// For reconcileExternalVisibleStorage, CreateStoredDeclsMap,
+  /// hasNeedToReconcileExternalVisibleStorage
+  friend class ExternalASTSource;
+  /// For CreateStoredDeclsMap
+  friend class DependentDiagnostic;
+  /// For hasNeedToReconcileExternalVisibleStorage,
+  /// hasLazyLocalLexicalLookups, hasLazyExternalLexicalLookups
+  friend class ASTWriter;
+
   // We use uint64_t in the bit-fields below since some bit-fields
   // cross the unsigned boundary and this breaks the packing.
 
@@ -1715,10 +1728,6 @@ protected:
     static_assert(sizeof(BlockDeclBitfields) <= 8,
                   "BlockDeclBitfields is larger than 8 bytes!");
   };
-
-  friend class ASTDeclReader;
-  friend class ASTWriter;
-  friend class ExternalASTSource;
 
   /// FirstDecl - The first declaration stored within this declaration
   /// context.
@@ -2397,8 +2406,6 @@ private:
   void setHasLazyExternalLexicalLookups(bool HasLELL = true) const {
     DeclContextBits.HasLazyExternalLexicalLookups = HasLELL;
   }
-
-  friend class DependentDiagnostic;
 
   void reconcileExternalVisibleStorage() const;
   bool LoadLexicalDeclsFromExternalStorage() const;

@@ -1076,7 +1076,7 @@ RValue CodeGenFunction::EmitBlockCallExpr(const CallExpr *E,
     E->getCallee()->getType()->getAs<BlockPointerType>();
 
   llvm::Value *BlockPtr = EmitScalarExpr(E->getCallee());
-  llvm::Value *FuncPtr;
+  llvm::Value *FuncPtr = nullptr;
 
   if (!CGM.getLangOpts().OpenCL) {
     // Get a pointer to the generic block literal.
