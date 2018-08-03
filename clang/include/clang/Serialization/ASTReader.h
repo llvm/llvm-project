@@ -539,6 +539,11 @@ private:
   /// declaration that has an exception specification.
   llvm::SmallMapVector<Decl *, FunctionDecl *, 4> PendingExceptionSpecUpdates;
 
+  /// Deduced return type updates that have been loaded but not yet propagated
+  /// across the relevant redeclaration chain. The map key is the canonical
+  /// declaration and the value is the deduced return type.
+  llvm::SmallMapVector<FunctionDecl *, QualType, 4> PendingDeducedTypeUpdates;
+
   /// Declarations that have been imported and have typedef names for
   /// linkage purposes.
   llvm::DenseMap<std::pair<DeclContext *, IdentifierInfo *>, NamedDecl *>
@@ -1055,6 +1060,12 @@ private:
   /// need to be emitted, such as inline function definitions or
   /// Objective-C protocols.
   std::deque<InterestingDecl> PotentiallyInterestingDecls;
+
+  /// The list of deduced function types that we have not yet read, because
+  /// they might contain a deduced return type that refers to a local type
+  /// declared within the function.
+  SmallVector<std::pair<FunctionDecl *, serialization::TypeID>, 16>
+      PendingFunctionTypes;
 
   /// The list of redeclaration chains that still need to be
   /// reconstructed, and the local offset to the corresponding list

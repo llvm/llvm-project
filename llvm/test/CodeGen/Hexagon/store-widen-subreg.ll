@@ -36,10 +36,10 @@
 %s.27 = type { i16, i16, i32, i32, i32 }
 
 ; Function Attrs: nounwind
-define hidden void @f0() local_unnamed_addr #0 {
+define void @f0(i64* %a0, i1 %a1) #0 {
 b0:
-  %v0 = load i64, i64* undef, align 8
-  br i1 undef, label %b1, label %b2
+  %v0 = load i64, i64* %a0, align 8
+  br i1 %a1, label %b1, label %b2
 
 b1:                                               ; preds = %b0
   %v1 = trunc i64 %v0 to i32
@@ -50,10 +50,10 @@ b1:                                               ; preds = %b0
   store i8 1, i8* %v4, align 1
   %v5 = getelementptr inbounds %s.0, %s.0* %v2, i32 0, i32 6
   store i8 1, i8* %v5, align 1
-  unreachable
+  ret void
 
 b2:                                               ; preds = %b0
-  unreachable
+  ret void
 }
 
 attributes #0 = { nounwind }

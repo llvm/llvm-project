@@ -31,6 +31,7 @@ class EventAPITestCase(TestBase):
     @expectedFailureAll(
         oslist=["linux"],
         bugnumber="llvm.org/pr23730 Flaky, fails ~1/10 cases")
+    @skipIfWindows # This test will hang on windows llvm.org/pr21753
     def test_listen_for_and_print_event(self):
         """Exercise SBEvent API."""
         self.build()

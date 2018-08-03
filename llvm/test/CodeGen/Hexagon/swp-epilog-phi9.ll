@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -march=hexagon -hexagon-initial-cfg-cleanup=0 < %s | FileCheck %s
 
 ; Test that we generate the correct Phi name in the last couple of epilog
 ; blocks, when there are 3 epilog blocks. The Phi was scheduled in stage

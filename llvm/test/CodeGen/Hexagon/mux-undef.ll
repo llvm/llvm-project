@@ -1,18 +1,18 @@
 ; RUN: llc -march=hexagon -verify-machineinstrs < %s | FileCheck %s
 ;
 ; Make sure this test compiles successfully.
-; CHECK: jumpr r31
+; CHECK: call foo
 
 target triple = "hexagon--elf"
 
 ; Function Attrs: nounwind
-define i32 @fred() #0 {
+define i32 @fred(i1 %a0) #0 {
 b0:
   call void @foo() #0
   br label %b1
 
 b1:                                               ; preds = %b0
-  br i1 undef, label %b2, label %b3
+  br i1 %a0, label %b2, label %b3
 
 b2:                                               ; preds = %b1
   br label %b3

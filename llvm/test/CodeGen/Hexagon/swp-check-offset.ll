@@ -15,13 +15,13 @@
 ; CHECK-V65: }{{[ \t]*}}:mem_noshuf
 
 ; Function Attrs: nounwind
-define void @f0() #0 {
+define i32 @f0(i8** %a0) #0 {
 b0:
-  br i1 undef, label %b1, label %b4
+  br label %b1
 
 b1:                                               ; preds = %b1, %b0
   %v0 = phi i32 [ %v7, %b1 ], [ 0, %b0 ]
-  %v1 = getelementptr inbounds i8*, i8** undef, i32 %v0
+  %v1 = getelementptr inbounds i8*, i8** %a0, i32 %v0
   %v2 = load i8*, i8** %v1, align 4
   %v3 = bitcast i8* %v2 to i32*
   store i32 0, i32* %v3, align 4
@@ -34,13 +34,7 @@ b1:                                               ; preds = %b1, %b0
   br i1 %v8, label %b2, label %b1
 
 b2:                                               ; preds = %b1
-  br i1 undef, label %b3, label %b4
-
-b3:                                               ; preds = %b2
-  unreachable
-
-b4:                                               ; preds = %b2, %b0
-  unreachable
+  ret i32 %v7
 }
 
 attributes #0 = { nounwind }

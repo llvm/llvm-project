@@ -5277,6 +5277,40 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
     return cxstring::createRef("attribute(dllexport)");
   case CXCursor_DLLImport:
     return cxstring::createRef("attribute(dllimport)");
+  case CXCursor_NSReturnsRetained:
+    return cxstring::createRef("attribute(ns_returns_retained)");
+  case CXCursor_NSReturnsNotRetained:
+    return cxstring::createRef("attribute(ns_returns_not_retained)");
+  case CXCursor_NSReturnsAutoreleased:
+    return cxstring::createRef("attribute(ns_returns_autoreleased)");
+  case CXCursor_NSConsumesSelf:
+    return cxstring::createRef("attribute(ns_consumes_self)");
+  case CXCursor_NSConsumed:
+    return cxstring::createRef("attribute(ns_consumed)");
+  case CXCursor_ObjCException:
+    return cxstring::createRef("attribute(objc_exception)");
+  case CXCursor_ObjCNSObject:
+    return cxstring::createRef("attribute(NSObject)");
+  case CXCursor_ObjCIndependentClass:
+    return cxstring::createRef("attribute(objc_independent_class)");
+  case CXCursor_ObjCPreciseLifetime:
+    return cxstring::createRef("attribute(objc_precise_lifetime)");
+  case CXCursor_ObjCReturnsInnerPointer:
+    return cxstring::createRef("attribute(objc_returns_inner_pointer)");
+  case CXCursor_ObjCRequiresSuper:
+    return cxstring::createRef("attribute(objc_requires_super)");
+  case CXCursor_ObjCRootClass:
+    return cxstring::createRef("attribute(objc_root_class)");
+  case CXCursor_ObjCSubclassingRestricted:
+    return cxstring::createRef("attribute(objc_subclassing_restricted)");
+  case CXCursor_ObjCExplicitProtocolImpl:
+    return cxstring::createRef("attribute(objc_protocol_requires_explicit_implementation)");
+  case CXCursor_ObjCDesignatedInitializer:
+    return cxstring::createRef("attribute(objc_designated_initializer)");
+  case CXCursor_ObjCRuntimeVisible:
+    return cxstring::createRef("attribute(objc_runtime_visible)");
+  case CXCursor_ObjCBoxable:
+    return cxstring::createRef("attribute(objc_boxable)");
   case CXCursor_PreprocessingDirective:
     return cxstring::createRef("preprocessing directive");
   case CXCursor_MacroDefinition:

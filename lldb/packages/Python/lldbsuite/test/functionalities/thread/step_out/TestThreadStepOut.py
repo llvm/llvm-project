@@ -25,6 +25,7 @@ class ThreadStepOutTestCase(TestBase):
     @expectedFailureAll(
         oslist=["freebsd"],
         bugnumber="llvm.org/pr18066 inferior does not exit")
+    @skipIfWindows # This test will hang on windows llvm.org/pr21753
     @expectedFailureAll(oslist=["windows"])
     def test_step_single_thread(self):
         """Test thread step out on one thread via command interpreter. """
@@ -39,6 +40,7 @@ class ThreadStepOutTestCase(TestBase):
     @expectedFailureAll(
         oslist=["freebsd"],
         bugnumber="llvm.org/pr19347 2nd thread stops at breakpoint")
+    @skipIfWindows # This test will hang on windows llvm.org/pr21753
     @expectedFailureAll(oslist=["windows"])
     @expectedFailureAll(oslist=["watchos"], archs=['armv7k'], bugnumber="rdar://problem/34674488") # stop reason is trace when it should be step-out
     def test_step_all_threads(self):
@@ -54,6 +56,7 @@ class ThreadStepOutTestCase(TestBase):
     @expectedFailureAll(
         oslist=["freebsd"],
         bugnumber="llvm.org/pr19347 2nd thread stops at breakpoint")
+    @skipIfWindows # This test will hang on windows llvm.org/pr21753
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24681")
     def test_python(self):
         """Test thread step out on one thread via Python API (dwarf)."""

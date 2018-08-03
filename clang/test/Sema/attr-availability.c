@@ -64,8 +64,8 @@ enum {
 void f4(int) __attribute__((availability(ios,deprecated=3.0)));
 void f4(int) __attribute__((availability(ios,introduced=4.0))); // expected-warning {{feature cannot be deprecated in iOS version 3.0 before it was introduced in version 4.0; attribute ignored}}
 
-void f5(int) __attribute__((availability(ios,deprecated=3.0),
-                            availability(ios,introduced=4.0)));  // expected-warning {{feature cannot be deprecated in iOS version 3.0 before it was introduced in version 4.0; attribute ignored}}
+void f5(int) __attribute__((availability(ios,deprecated=3.0),   // expected-warning {{feature cannot be deprecated in iOS version 3.0 before it was introduced in version 4.0; attribute ignored}}
+                            availability(ios,introduced=4.0)));
 
 void f6(int) __attribute__((availability(ios,deprecated=3.0))); // expected-note {{previous attribute is here}}
 void f6(int) __attribute__((availability(ios,deprecated=4.0))); // expected-warning {{availability does not match previous declaration}}

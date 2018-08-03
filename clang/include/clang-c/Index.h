@@ -1331,7 +1331,12 @@ enum CXTranslationUnit_Flags {
    *
    * The function bodies of the main file are not skipped.
    */
-  CXTranslationUnit_LimitSkipFunctionBodiesToPreamble = 0x800
+  CXTranslationUnit_LimitSkipFunctionBodiesToPreamble = 0x800,
+
+  /**
+   * Used to indicate that attributed types should be included in CXType.
+   */
+  CXTranslationUnit_IncludeAttributedTypes = 0x1000
 };
 
 /**
@@ -2558,7 +2563,24 @@ enum CXCursorKind {
   CXCursor_VisibilityAttr                = 417,
   CXCursor_DLLExport                     = 418,
   CXCursor_DLLImport                     = 419,
-  CXCursor_LastAttr                      = CXCursor_DLLImport,
+  CXCursor_NSReturnsRetained             = 420,
+  CXCursor_NSReturnsNotRetained          = 421,
+  CXCursor_NSReturnsAutoreleased         = 422,
+  CXCursor_NSConsumesSelf                = 423,
+  CXCursor_NSConsumed                    = 424,
+  CXCursor_ObjCException                 = 425,
+  CXCursor_ObjCNSObject                  = 426,
+  CXCursor_ObjCIndependentClass          = 427,
+  CXCursor_ObjCPreciseLifetime           = 428,
+  CXCursor_ObjCReturnsInnerPointer       = 429,
+  CXCursor_ObjCRequiresSuper             = 430,
+  CXCursor_ObjCRootClass                 = 431,
+  CXCursor_ObjCSubclassingRestricted     = 432,
+  CXCursor_ObjCExplicitProtocolImpl      = 433,
+  CXCursor_ObjCDesignatedInitializer     = 434,
+  CXCursor_ObjCRuntimeVisible            = 435,
+  CXCursor_ObjCBoxable                   = 436,
+  CXCursor_LastAttr                      = CXCursor_ObjCBoxable,
 
   /* Preprocessing */
   CXCursor_PreprocessingDirective        = 500,
@@ -3265,7 +3287,11 @@ enum CXTypeKind {
   CXType_OCLSampler = 157,
   CXType_OCLEvent = 158,
   CXType_OCLQueue = 159,
-  CXType_OCLReserveID = 160
+  CXType_OCLReserveID = 160,
+
+  CXType_ObjCObject = 161,
+  CXType_ObjCTypeParam = 162,
+  CXType_Attributed = 163
 };
 
 /**
@@ -3627,6 +3653,43 @@ CINDEX_LINKAGE int clang_getNumArgTypes(CXType T);
 CINDEX_LINKAGE CXType clang_getArgType(CXType T, unsigned i);
 
 /**
+ * Retrieves the base type of the ObjCObjectType.
+ *
+ * If the type is not an ObjC object, an invalid type is returned.
+ */
+CINDEX_LINKAGE CXType clang_Type_getObjCObjectBaseType(CXType T);
+
+/**
+ * Retrieve the number of protocol references associated with an ObjC object/id.
+ *
+ * If the type is not an ObjC object, 0 is returned.
+ */
+CINDEX_LINKAGE unsigned clang_Type_getNumObjCProtocolRefs(CXType T);
+
+/**
+ * Retrieve the decl for a protocol reference for an ObjC object/id.
+ *
+ * If the type is not an ObjC object or there are not enough protocol
+ * references, an invalid cursor is returned.
+ */
+CINDEX_LINKAGE CXCursor clang_Type_getObjCProtocolDecl(CXType T, unsigned i);
+
+/**
+ * Retreive the number of type arguments associated with an ObjC object.
+ *
+ * If the type is not an ObjC object, 0 is returned.
+ */
+CINDEX_LINKAGE unsigned clang_Type_getNumObjCTypeArgs(CXType T);
+
+/**
+ * Retrieve a type argument associated with an ObjC object.
+ *
+ * If the type is not an ObjC or the index is not valid,
+ * an invalid type is returned.
+ */
+CINDEX_LINKAGE CXType clang_Type_getObjCTypeArg(CXType T, unsigned i);
+
+/**
  * Return 1 if the CXType is a variadic function type, and 0 otherwise.
  */
 CINDEX_LINKAGE unsigned clang_isFunctionTypeVariadic(CXType T);
@@ -3698,6 +3761,33 @@ CINDEX_LINKAGE CXType clang_Type_getNamedType(CXType T);
  * \returns non-zero if transparent and zero otherwise.
  */
 CINDEX_LINKAGE unsigned clang_Type_isTransparentTagTypedef(CXType T);
+
+enum CXTypeNullabilityKind {
+  /**
+   * Values of this type can never be null.
+   */
+  CXTypeNullability_NonNull = 0,
+  /**
+   * Values of this type can be null.
+   */
+  CXTypeNullability_Nullable = 1,
+  /**
+   * Whether values of this type can be null is (explicitly)
+   * unspecified. This captures a (fairly rare) case where we
+   * can't conclude anything about the nullability of the type even
+   * though it has been considered.
+   */
+  CXTypeNullability_Unspecified = 2,
+  /**
+   * Nullability is not applicable to this type.
+   */
+  CXTypeNullability_Invalid = 3
+};
+
+/**
+ * Retrieve the nullability kind of a pointer type.
+ */
+CINDEX_LINKAGE enum CXTypeNullabilityKind clang_Type_getNullability(CXType T);
 
 /**
  * List the possible error codes for \c clang_Type_getSizeOf,
@@ -3776,6 +3866,13 @@ CINDEX_LINKAGE long long clang_Type_getSizeOf(CXType T);
  *   CXTypeLayoutError_InvalidFieldName is returned.
  */
 CINDEX_LINKAGE long long clang_Type_getOffsetOf(CXType T, const char *S);
+
+/**
+ * Return the type that was modified by this attributed type.
+ *
+ * If the type is not an attributed type, an invalid type is returned.
+ */
+CINDEX_LINKAGE CXType clang_Type_getModifiedType(CXType T);
 
 /**
  * Return the offset of the field represented by the Cursor.

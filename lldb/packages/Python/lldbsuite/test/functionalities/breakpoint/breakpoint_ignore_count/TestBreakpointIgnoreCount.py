@@ -18,12 +18,14 @@ class BreakpointIgnoreCountTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
+    @skipIfWindows # This test will hang on windows llvm.org/pr21753
     def test_with_run_command(self):
         """Exercise breakpoint ignore count with 'breakpoint set -i <count>'."""
         self.build()
         self.breakpoint_ignore_count()
 
     @add_test_categories(['pyapi'])
+    @skipIfWindows # This test will hang on windows llvm.org/pr21753
     def test_with_python_api(self):
         """Use Python APIs to set breakpoint ignore count."""
         self.build()

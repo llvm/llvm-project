@@ -36,14 +36,14 @@ __attribute__((objc_root_class))
 
 - (nonnull NSFoo **)invalidMethod1; // expected-error{{nullability keyword 'nonnull' cannot be applied to multi-level pointer type 'NSFoo **'}}
 // expected-note@-1{{use nullability type specifier '_Nonnull' to affect the innermost pointer type of 'NSFoo **'}}
-- (nonnull NSFoo * _Nullable)conflictingMethod1; // expected-error{{nullability specifier '_Nullable' conflicts with existing specifier '_Nonnull'}}
-- (nonnull NSFoo * _Nonnull)redundantMethod1; // expected-warning{{duplicate nullability specifier '_Nonnull'}}
+- (nonnull NSFoo * _Nullable)conflictingMethod1; // expected-error{{nullability specifier 'nonnull' conflicts with existing specifier '_Nullable'}}
+- (nonnull NSFoo * _Nonnull)redundantMethod1; // expected-warning{{duplicate nullability specifier 'nonnull'}}
 
 @property(nonnull,retain) NSFoo *property1;
 @property(nullable,assign) NSFoo ** invalidProperty1; // expected-error{{nullability keyword 'nullable' cannot be applied to multi-level pointer type 'NSFoo **'}}
 // expected-note@-1{{use nullability type specifier '_Nullable' to affect the innermost pointer type of 'NSFoo **'}}
-@property(null_unspecified,retain) NSFoo * _Nullable conflictingProperty1; // expected-error{{nullability specifier '_Nullable' conflicts with existing specifier '_Null_unspecified'}}
-@property(retain,nonnull) NSFoo * _Nonnull redundantProperty1; // expected-warning{{duplicate nullability specifier '_Nonnull'}}
+@property(null_unspecified,retain) NSFoo * _Nullable conflictingProperty1; // expected-error{{nullability specifier 'null_unspecified' conflicts with existing specifier '_Nullable'}}
+@property(retain,nonnull) NSFoo * _Nonnull redundantProperty1; // expected-warning{{duplicate nullability specifier 'nonnull'}}
 
 @property(null_unspecified,retain,nullable) NSFoo *conflictingProperty3; // expected-error{{nullability specifier 'nullable' conflicts with existing specifier 'null_unspecified'}}
 @property(nullable,retain,nullable) NSFoo *redundantProperty3; // expected-warning{{duplicate nullability specifier 'nullable'}}
@@ -53,8 +53,8 @@ __attribute__((objc_root_class))
 @property(nonnull,retain) NSFoo *property2;
 @property(nullable,assign) NSFoo ** invalidProperty2; // expected-error{{nullability keyword 'nullable' cannot be applied to multi-level pointer type 'NSFoo **'}}
 // expected-note@-1{{use nullability type specifier '_Nullable' to affect the innermost pointer type of 'NSFoo **'}}
-@property(null_unspecified,retain) NSFoo * _Nullable conflictingProperty2; // expected-error{{nullability specifier '_Nullable' conflicts with existing specifier '_Null_unspecified'}}
-@property(retain,nonnull) NSFoo * _Nonnull redundantProperty2; // expected-warning{{duplicate nullability specifier '_Nonnull'}}
+@property(null_unspecified,retain) NSFoo * _Nullable conflictingProperty2; // expected-error{{nullability specifier 'null_unspecified' conflicts with existing specifier '_Nullable'}}
+@property(retain,nonnull) NSFoo * _Nonnull redundantProperty2; // expected-warning{{duplicate nullability specifier 'nonnull'}}
 @end
 
 void test_accepts_nonnull_null_pointer_literal(NSFoo *foo, _Nonnull NSBar *bar) {
@@ -157,7 +157,7 @@ __attribute__((objc_root_class))
 - (nullable instancetype)returnMe;
 + (nullable instancetype)returnInstanceOfMe;
 
-- (nonnull instancetype _Nullable)initWithBlah2:(nonnull id)blah; // expected-error {{nullability specifier '_Nullable' conflicts with existing specifier '_Nonnull'}}
+- (nonnull instancetype _Nullable)initWithBlah2:(nonnull id)blah; // expected-error {{nullability specifier 'nonnull' conflicts with existing specifier '_Nullable'}}
 - (instancetype _Nullable)returnMe2;
 + (_Nonnull instancetype)returnInstanceOfMe2;
 @end

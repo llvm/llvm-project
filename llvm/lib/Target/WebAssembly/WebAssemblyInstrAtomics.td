@@ -897,4 +897,130 @@ defm : TerRMWTruncExtPattern<
   ATOMIC_RMW8_U_CMPXCHG_I32, ATOMIC_RMW16_U_CMPXCHG_I32,
   ATOMIC_RMW8_U_CMPXCHG_I64, ATOMIC_RMW16_U_CMPXCHG_I64,
   ATOMIC_RMW32_U_CMPXCHG_I64>;
+}
+
+//===----------------------------------------------------------------------===//
+// Atomic wait / notify
+//===----------------------------------------------------------------------===//
+
+let Defs = [ARGUMENTS] in {
+let hasSideEffects = 1 in {
+defm ATOMIC_NOTIFY :
+  I<(outs I64:$dst),
+    (ins P2Align:$p2align, offset32_op:$off, I32:$addr, I64:$count),
+    (outs), (ins P2Align:$p2align, offset32_op:$off), [],
+    "atomic.notify \t$dst, ${off}(${addr})${p2align}, $count",
+    "atomic.notify \t${off}, ${p2align}", 0xfe00>;
+let mayLoad = 1 in {
+defm ATOMIC_WAIT_I32 :
+  I<(outs I32:$dst),
+    (ins P2Align:$p2align, offset32_op:$off, I32:$addr, I32:$exp, I64:$timeout),
+    (outs), (ins P2Align:$p2align, offset32_op:$off), [],
+    "i32.atomic.wait \t$dst, ${off}(${addr})${p2align}, $exp, $timeout",
+    "i32.atomic.wait \t${off}, ${p2align}", 0xfe01>;
+defm ATOMIC_WAIT_I64 :
+  I<(outs I32:$dst),
+    (ins P2Align:$p2align, offset32_op:$off, I32:$addr, I64:$exp, I64:$timeout),
+    (outs), (ins P2Align:$p2align, offset32_op:$off), [],
+    "i64.atomic.wait \t$dst, ${off}(${addr})${p2align}, $exp, $timeout",
+    "i64.atomic.wait \t${off}, ${p2align}", 0xfe02>;
+} // mayLoad = 1
+} // hasSideEffects = 1
+} // Defs = [ARGUMENTS]
+
+let Predicates = [HasAtomics] in {
+// Select notifys with no constant offset.
+class NotifyPatNoOffset<Intrinsic kind> :
+  Pat<(i64 (kind I32:$addr, I64:$count)),
+      (ATOMIC_NOTIFY 0, 0, I32:$addr, I64:$count)>;
+def : NotifyPatNoOffset<int_wasm_atomic_notify>;
+
+// Select notifys with a constant offset.
+
+// Pattern with address + immediate offset
+class NotifyPatImmOff<Intrinsic kind, PatFrag operand> :
+  Pat<(i64 (kind (operand I32:$addr, imm:$off), I64:$count)),
+      (ATOMIC_NOTIFY 0, imm:$off, I32:$addr, I64:$count)>;
+def : NotifyPatImmOff<int_wasm_atomic_notify, regPlusImm>;
+def : NotifyPatImmOff<int_wasm_atomic_notify, or_is_add>;
+
+class NotifyPatGlobalAddr<Intrinsic kind> :
+  Pat<(i64 (kind (regPlusGA I32:$addr, (WebAssemblywrapper tglobaladdr:$off)),
+                 I64:$count)),
+      (ATOMIC_NOTIFY 0, tglobaladdr:$off, I32:$addr, I64:$count)>;
+def : NotifyPatGlobalAddr<int_wasm_atomic_notify>;
+
+class NotifyPatExternalSym<Intrinsic kind> :
+  Pat<(i64 (kind (add I32:$addr, (WebAssemblywrapper texternalsym:$off)),
+                 I64:$count)),
+      (ATOMIC_NOTIFY 0, texternalsym:$off, I32:$addr, I64:$count)>;
+def : NotifyPatExternalSym<int_wasm_atomic_notify>;
+
+// Select notifys with just a constant offset.
+class NotifyPatOffsetOnly<Intrinsic kind> :
+  Pat<(i64 (kind imm:$off, I64:$count)),
+      (ATOMIC_NOTIFY 0, imm:$off, (CONST_I32 0), I64:$count)>;
+def : NotifyPatOffsetOnly<int_wasm_atomic_notify>;
+
+class NotifyPatGlobalAddrOffOnly<Intrinsic kind> :
+  Pat<(i64 (kind (WebAssemblywrapper tglobaladdr:$off), I64:$count)),
+      (ATOMIC_NOTIFY 0, tglobaladdr:$off, (CONST_I32 0), I64:$count)>;
+def : NotifyPatGlobalAddrOffOnly<int_wasm_atomic_notify>;
+
+class NotifyPatExternSymOffOnly<Intrinsic kind> :
+  Pat<(i64 (kind (WebAssemblywrapper texternalsym:$off), I64:$count)),
+      (ATOMIC_NOTIFY 0, texternalsym:$off, (CONST_I32 0), I64:$count)>;
+def : NotifyPatExternSymOffOnly<int_wasm_atomic_notify>;
+
+// Select waits with no constant offset.
+class WaitPatNoOffset<ValueType ty, Intrinsic kind, NI inst> :
+  Pat<(i32 (kind I32:$addr, ty:$exp, I64:$timeout)),
+      (inst 0, 0, I32:$addr, ty:$exp, I64:$timeout)>;
+def : WaitPatNoOffset<i32, int_wasm_atomic_wait_i32, ATOMIC_WAIT_I32>;
+def : WaitPatNoOffset<i64, int_wasm_atomic_wait_i64, ATOMIC_WAIT_I64>;
+
+// Select waits with a constant offset.
+
+// Pattern with address + immediate offset
+class WaitPatImmOff<ValueType ty, Intrinsic kind, PatFrag operand, NI inst> :
+  Pat<(i32 (kind (operand I32:$addr, imm:$off), ty:$exp, I64:$timeout)),
+      (inst 0, imm:$off, I32:$addr, ty:$exp, I64:$timeout)>;
+def : WaitPatImmOff<i32, int_wasm_atomic_wait_i32, regPlusImm, ATOMIC_WAIT_I32>;
+def : WaitPatImmOff<i32, int_wasm_atomic_wait_i32, or_is_add, ATOMIC_WAIT_I32>;
+def : WaitPatImmOff<i64, int_wasm_atomic_wait_i64, regPlusImm, ATOMIC_WAIT_I64>;
+def : WaitPatImmOff<i64, int_wasm_atomic_wait_i64, or_is_add, ATOMIC_WAIT_I64>;
+
+class WaitPatGlobalAddr<ValueType ty, Intrinsic kind, NI inst> :
+  Pat<(i32 (kind (regPlusGA I32:$addr, (WebAssemblywrapper tglobaladdr:$off)),
+                 ty:$exp, I64:$timeout)),
+      (inst 0, tglobaladdr:$off, I32:$addr, ty:$exp, I64:$timeout)>;
+def : WaitPatGlobalAddr<i32, int_wasm_atomic_wait_i32, ATOMIC_WAIT_I32>;
+def : WaitPatGlobalAddr<i64, int_wasm_atomic_wait_i64, ATOMIC_WAIT_I64>;
+
+class WaitPatExternalSym<ValueType ty, Intrinsic kind, NI inst> :
+  Pat<(i32 (kind (add I32:$addr, (WebAssemblywrapper texternalsym:$off)),
+                 ty:$exp, I64:$timeout)),
+      (inst 0, texternalsym:$off, I32:$addr, ty:$exp, I64:$timeout)>;
+def : WaitPatExternalSym<i32, int_wasm_atomic_wait_i32, ATOMIC_WAIT_I32>;
+def : WaitPatExternalSym<i64, int_wasm_atomic_wait_i64, ATOMIC_WAIT_I64>;
+
+// Select wait_i32, ATOMIC_WAIT_I32s with just a constant offset.
+class WaitPatOffsetOnly<ValueType ty, Intrinsic kind, NI inst> :
+  Pat<(i32 (kind imm:$off, ty:$exp, I64:$timeout)),
+      (inst 0, imm:$off, (CONST_I32 0), ty:$exp, I64:$timeout)>;
+def : WaitPatOffsetOnly<i32, int_wasm_atomic_wait_i32, ATOMIC_WAIT_I32>;
+def : WaitPatOffsetOnly<i64, int_wasm_atomic_wait_i64, ATOMIC_WAIT_I64>;
+
+class WaitPatGlobalAddrOffOnly<ValueType ty, Intrinsic kind, NI inst> :
+  Pat<(i32 (kind (WebAssemblywrapper tglobaladdr:$off), ty:$exp, I64:$timeout)),
+      (inst 0, tglobaladdr:$off, (CONST_I32 0), ty:$exp, I64:$timeout)>;
+def : WaitPatGlobalAddrOffOnly<i32, int_wasm_atomic_wait_i32, ATOMIC_WAIT_I32>;
+def : WaitPatGlobalAddrOffOnly<i64, int_wasm_atomic_wait_i64, ATOMIC_WAIT_I64>;
+
+class WaitPatExternSymOffOnly<ValueType ty, Intrinsic kind, NI inst> :
+  Pat<(i32 (kind (WebAssemblywrapper texternalsym:$off), ty:$exp,
+                 I64:$timeout)),
+      (inst 0, texternalsym:$off, (CONST_I32 0), ty:$exp, I64:$timeout)>;
+def : WaitPatExternSymOffOnly<i32, int_wasm_atomic_wait_i32, ATOMIC_WAIT_I32>;
+def : WaitPatExternSymOffOnly<i64, int_wasm_atomic_wait_i64, ATOMIC_WAIT_I64>;
 } // Predicates = [HasAtomics]

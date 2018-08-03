@@ -209,17 +209,13 @@ define void @add_16i(i16* %p) {
 ;   treat 16 bit arithmetic as expensive on X86/X86_64.
 ; X64-LABEL: add_16i:
 ; X64:       # %bb.0:
-; X64-NEXT:    movw (%rdi), %ax
-; X64-NEXT:    addl $2, %eax
-; X64-NEXT:    movw %ax, (%rdi)
+; X64-NEXT:    addw $2, (%rdi)
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: add_16i:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movw (%eax), %cx
-; X32-NEXT:    addl $2, %ecx
-; X32-NEXT:    movw %cx, (%eax)
+; X32-NEXT:    addw $2, (%eax)
 ; X32-NEXT:    retl
   %1 = load atomic i16, i16* %p acquire, align 2
   %2 = add i16 %1, 2
@@ -232,17 +228,14 @@ define void @add_16r(i16* %p, i16 %v) {
 ;   treat 16 bit arithmetic as expensive on X86/X86_64.
 ; X64-LABEL: add_16r:
 ; X64:       # %bb.0:
-; X64-NEXT:    movw (%rdi), %ax
-; X64-NEXT:    addl %esi, %eax
-; X64-NEXT:    movw %ax, (%rdi)
+; X64-NEXT:    addw %si, (%rdi)
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: add_16r:
 ; X32:       # %bb.0:
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movw (%eax), %cx
-; X32-NEXT:    addw {{[0-9]+}}(%esp), %cx
-; X32-NEXT:    movw %cx, (%eax)
+; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    addw %ax, (%ecx)
 ; X32-NEXT:    retl
   %1 = load atomic i16, i16* %p acquire, align 2
   %2 = add i16 %1, %v
@@ -506,17 +499,13 @@ define void @and_16i(i16* %p) {
 ;   treat 16 bit arithmetic as expensive on X86/X86_64.
 ; X64-LABEL: and_16i:
 ; X64:       # %bb.0:
-; X64-NEXT:    movw (%rdi), %ax
-; X64-NEXT:    andl $2, %eax
-; X64-NEXT:    movw %ax, (%rdi)
+; X64-NEXT:    andw $2, (%rdi)
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: and_16i:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movw (%eax), %cx
-; X32-NEXT:    andl $2, %ecx
-; X32-NEXT:    movw %cx, (%eax)
+; X32-NEXT:    andw $2, (%eax)
 ; X32-NEXT:    retl
   %1 = load atomic i16, i16* %p acquire, align 2
   %2 = and i16 %1, 2
@@ -529,17 +518,14 @@ define void @and_16r(i16* %p, i16 %v) {
 ;   treat 16 bit arithmetic as expensive on X86/X86_64.
 ; X64-LABEL: and_16r:
 ; X64:       # %bb.0:
-; X64-NEXT:    movw (%rdi), %ax
-; X64-NEXT:    andl %esi, %eax
-; X64-NEXT:    movw %ax, (%rdi)
+; X64-NEXT:    andw %si, (%rdi)
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: and_16r:
 ; X32:       # %bb.0:
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movw (%eax), %cx
-; X32-NEXT:    andw {{[0-9]+}}(%esp), %cx
-; X32-NEXT:    movw %cx, (%eax)
+; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    andw %ax, (%ecx)
 ; X32-NEXT:    retl
   %1 = load atomic i16, i16* %p acquire, align 2
   %2 = and i16 %1, %v
@@ -751,17 +737,13 @@ define void @or_8r(i8* %p, i8 %v) {
 define void @or_16i(i16* %p) {
 ; X64-LABEL: or_16i:
 ; X64:       # %bb.0:
-; X64-NEXT:    movw (%rdi), %ax
-; X64-NEXT:    orl $2, %eax
-; X64-NEXT:    movw %ax, (%rdi)
+; X64-NEXT:    orw $2, (%rdi)
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: or_16i:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movw (%eax), %cx
-; X32-NEXT:    orl $2, %ecx
-; X32-NEXT:    movw %cx, (%eax)
+; X32-NEXT:    orw $2, (%eax)
 ; X32-NEXT:    retl
   %1 = load atomic i16, i16* %p acquire, align 2
   %2 = or i16 %1, 2
@@ -772,17 +754,14 @@ define void @or_16i(i16* %p) {
 define void @or_16r(i16* %p, i16 %v) {
 ; X64-LABEL: or_16r:
 ; X64:       # %bb.0:
-; X64-NEXT:    movw (%rdi), %ax
-; X64-NEXT:    orl %esi, %eax
-; X64-NEXT:    movw %ax, (%rdi)
+; X64-NEXT:    orw %si, (%rdi)
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: or_16r:
 ; X32:       # %bb.0:
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movw (%eax), %cx
-; X32-NEXT:    orw {{[0-9]+}}(%esp), %cx
-; X32-NEXT:    movw %cx, (%eax)
+; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    orw %ax, (%ecx)
 ; X32-NEXT:    retl
   %1 = load atomic i16, i16* %p acquire, align 2
   %2 = or i16 %1, %v
@@ -994,17 +973,13 @@ define void @xor_8r(i8* %p, i8 %v) {
 define void @xor_16i(i16* %p) {
 ; X64-LABEL: xor_16i:
 ; X64:       # %bb.0:
-; X64-NEXT:    movw (%rdi), %ax
-; X64-NEXT:    xorl $2, %eax
-; X64-NEXT:    movw %ax, (%rdi)
+; X64-NEXT:    xorw $2, (%rdi)
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: xor_16i:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movw (%eax), %cx
-; X32-NEXT:    xorl $2, %ecx
-; X32-NEXT:    movw %cx, (%eax)
+; X32-NEXT:    xorw $2, (%eax)
 ; X32-NEXT:    retl
   %1 = load atomic i16, i16* %p acquire, align 2
   %2 = xor i16 %1, 2
@@ -1015,17 +990,14 @@ define void @xor_16i(i16* %p) {
 define void @xor_16r(i16* %p, i16 %v) {
 ; X64-LABEL: xor_16r:
 ; X64:       # %bb.0:
-; X64-NEXT:    movw (%rdi), %ax
-; X64-NEXT:    xorl %esi, %eax
-; X64-NEXT:    movw %ax, (%rdi)
+; X64-NEXT:    xorw %si, (%rdi)
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: xor_16r:
 ; X32:       # %bb.0:
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movw (%eax), %cx
-; X32-NEXT:    xorw {{[0-9]+}}(%esp), %cx
-; X32-NEXT:    movw %cx, (%eax)
+; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    xorw %ax, (%ecx)
 ; X32-NEXT:    retl
   %1 = load atomic i16, i16* %p acquire, align 2
   %2 = xor i16 %1, %v
@@ -1226,24 +1198,18 @@ define void @inc_16(i16* %p) {
 ;   treat 16 bit arithmetic as expensive on X86/X86_64.
 ; FAST_INC-LABEL: inc_16:
 ; FAST_INC:       # %bb.0:
-; FAST_INC-NEXT:    movw (%rdi), %ax
-; FAST_INC-NEXT:    incl %eax
-; FAST_INC-NEXT:    movw %ax, (%rdi)
+; FAST_INC-NEXT:    incw (%rdi)
 ; FAST_INC-NEXT:    retq
 ;
 ; X32-LABEL: inc_16:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movw (%eax), %cx
-; X32-NEXT:    incl %ecx
-; X32-NEXT:    movw %cx, (%eax)
+; X32-NEXT:    incw (%eax)
 ; X32-NEXT:    retl
 ;
 ; SLOW_INC-LABEL: inc_16:
 ; SLOW_INC:       # %bb.0:
-; SLOW_INC-NEXT:    movw (%rdi), %ax
-; SLOW_INC-NEXT:    addl $1, %eax
-; SLOW_INC-NEXT:    movw %ax, (%rdi)
+; SLOW_INC-NEXT:    addw $1, (%rdi)
 ; SLOW_INC-NEXT:    retq
   %1 = load atomic i16, i16* %p acquire, align 2
   %2 = add i16 %1, 1
@@ -1379,24 +1345,18 @@ define void @dec_16(i16* %p) {
 ;   treat 16 bit arithmetic as expensive on X86/X86_64.
 ; FAST_INC-LABEL: dec_16:
 ; FAST_INC:       # %bb.0:
-; FAST_INC-NEXT:    movw (%rdi), %ax
-; FAST_INC-NEXT:    decl %eax
-; FAST_INC-NEXT:    movw %ax, (%rdi)
+; FAST_INC-NEXT:    decw (%rdi)
 ; FAST_INC-NEXT:    retq
 ;
 ; X32-LABEL: dec_16:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movw (%eax), %cx
-; X32-NEXT:    decl %ecx
-; X32-NEXT:    movw %cx, (%eax)
+; X32-NEXT:    decw (%eax)
 ; X32-NEXT:    retl
 ;
 ; SLOW_INC-LABEL: dec_16:
 ; SLOW_INC:       # %bb.0:
-; SLOW_INC-NEXT:    movw (%rdi), %ax
-; SLOW_INC-NEXT:    addl $-1, %eax
-; SLOW_INC-NEXT:    movw %ax, (%rdi)
+; SLOW_INC-NEXT:    addw $-1, (%rdi)
 ; SLOW_INC-NEXT:    retq
   %1 = load atomic i16, i16* %p acquire, align 2
   %2 = sub i16 %1, 1
@@ -1503,6 +1463,256 @@ define void @dec_32_seq_cst(i32* %p) {
   ret void
 }
 
+; ----- NOT -----
+
+define void @not_8(i8* %p) {
+; X64-LABEL: not_8:
+; X64:       # %bb.0:
+; X64-NEXT:    notb (%rdi)
+; X64-NEXT:    retq
+;
+; X32-LABEL: not_8:
+; X32:       # %bb.0:
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    notb (%eax)
+; X32-NEXT:    retl
+  %1 = load atomic i8, i8* %p seq_cst, align 1
+  %2 = xor i8 %1, -1
+  store atomic i8 %2, i8* %p release, align 1
+  ret void
+}
+
+define void @not_16(i16* %p) {
+;   Currently the transformation is not done on 16 bit accesses, as the backend
+;   treat 16 bit arithmetic as expensive on X86/X86_64.
+; X64-LABEL: not_16:
+; X64:       # %bb.0:
+; X64-NEXT:    notw (%rdi)
+; X64-NEXT:    retq
+;
+; X32-LABEL: not_16:
+; X32:       # %bb.0:
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    notw (%eax)
+; X32-NEXT:    retl
+  %1 = load atomic i16, i16* %p acquire, align 2
+  %2 = xor i16 %1, -1
+  store atomic i16 %2, i16* %p release, align 2
+  ret void
+}
+
+define void @not_32(i32* %p) {
+; X64-LABEL: not_32:
+; X64:       # %bb.0:
+; X64-NEXT:    notl (%rdi)
+; X64-NEXT:    retq
+;
+; X32-LABEL: not_32:
+; X32:       # %bb.0:
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    notl (%eax)
+; X32-NEXT:    retl
+  %1 = load atomic i32, i32* %p acquire, align 4
+  %2 = xor i32 %1, -1
+  store atomic i32 %2, i32* %p monotonic, align 4
+  ret void
+}
+
+define void @not_64(i64* %p) {
+; X64-LABEL: not_64:
+; X64:       # %bb.0:
+; X64-NEXT:    notq (%rdi)
+; X64-NEXT:    retq
+;
+; X32-LABEL: not_64:
+; X32:       # %bb.0:
+; X32-NEXT:    pushl %ebx
+; X32-NEXT:    .cfi_def_cfa_offset 8
+; X32-NEXT:    pushl %esi
+; X32-NEXT:    .cfi_def_cfa_offset 12
+; X32-NEXT:    .cfi_offset %esi, -12
+; X32-NEXT:    .cfi_offset %ebx, -8
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X32-NEXT:    xorl %eax, %eax
+; X32-NEXT:    xorl %edx, %edx
+; X32-NEXT:    xorl %ecx, %ecx
+; X32-NEXT:    xorl %ebx, %ebx
+; X32-NEXT:    lock cmpxchg8b (%esi)
+; X32-NEXT:    movl %eax, %ebx
+; X32-NEXT:    movl %edx, %ecx
+; X32-NEXT:    notl %ecx
+; X32-NEXT:    notl %ebx
+; X32-NEXT:    movl (%esi), %eax
+; X32-NEXT:    movl 4(%esi), %edx
+; X32-NEXT:    .p2align 4, 0x90
+; X32-NEXT:  .LBB61_1: # %atomicrmw.start
+; X32-NEXT:    # =>This Inner Loop Header: Depth=1
+; X32-NEXT:    lock cmpxchg8b (%esi)
+; X32-NEXT:    jne .LBB61_1
+; X32-NEXT:  # %bb.2: # %atomicrmw.end
+; X32-NEXT:    popl %esi
+; X32-NEXT:    .cfi_def_cfa_offset 8
+; X32-NEXT:    popl %ebx
+; X32-NEXT:    .cfi_def_cfa_offset 4
+; X32-NEXT:    retl
+;   We do not check X86-32 as it cannot do 'notq'.
+  %1 = load atomic i64, i64* %p acquire, align 8
+  %2 = xor i64 %1, -1
+  store atomic i64 %2, i64* %p release, align 8
+  ret void
+}
+
+define void @not_32_seq_cst(i32* %p) {
+; X64-LABEL: not_32_seq_cst:
+; X64:       # %bb.0:
+; X64-NEXT:    movl (%rdi), %eax
+; X64-NEXT:    notl %eax
+; X64-NEXT:    xchgl %eax, (%rdi)
+; X64-NEXT:    retq
+;
+; X32-LABEL: not_32_seq_cst:
+; X32:       # %bb.0:
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl (%eax), %ecx
+; X32-NEXT:    notl %ecx
+; X32-NEXT:    xchgl %ecx, (%eax)
+; X32-NEXT:    retl
+  %1 = load atomic i32, i32* %p monotonic, align 4
+  %2 = xor i32 %1, -1
+  store atomic i32 %2, i32* %p seq_cst, align 4
+  ret void
+}
+
+; ----- NEG -----
+
+define void @neg_8(i8* %p) {
+; X64-LABEL: neg_8:
+; X64:       # %bb.0:
+; X64-NEXT:    negb (%rdi)
+; X64-NEXT:    retq
+;
+; X32-LABEL: neg_8:
+; X32:       # %bb.0:
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    negb (%eax)
+; X32-NEXT:    retl
+  %1 = load atomic i8, i8* %p seq_cst, align 1
+  %2 = sub i8 0, %1
+  store atomic i8 %2, i8* %p release, align 1
+  ret void
+}
+
+define void @neg_16(i16* %p) {
+;   Currently the transformation is neg done on 16 bit accesses, as the backend
+;   treat 16 bit arithmetic as expensive on X86/X86_64.
+; X64-LABEL: neg_16:
+; X64:       # %bb.0:
+; X64-NEXT:    movw (%rdi), %ax
+; X64-NEXT:    negl %eax
+; X64-NEXT:    movw %ax, (%rdi)
+; X64-NEXT:    retq
+;
+; X32-LABEL: neg_16:
+; X32:       # %bb.0:
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movw (%eax), %cx
+; X32-NEXT:    negl %ecx
+; X32-NEXT:    movw %cx, (%eax)
+; X32-NEXT:    retl
+  %1 = load atomic i16, i16* %p acquire, align 2
+  %2 = sub i16 0, %1
+  store atomic i16 %2, i16* %p release, align 2
+  ret void
+}
+
+define void @neg_32(i32* %p) {
+; X64-LABEL: neg_32:
+; X64:       # %bb.0:
+; X64-NEXT:    negl (%rdi)
+; X64-NEXT:    retq
+;
+; X32-LABEL: neg_32:
+; X32:       # %bb.0:
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    negl (%eax)
+; X32-NEXT:    retl
+  %1 = load atomic i32, i32* %p acquire, align 4
+  %2 = sub i32 0, %1
+  store atomic i32 %2, i32* %p monotonic, align 4
+  ret void
+}
+
+define void @neg_64(i64* %p) {
+; X64-LABEL: neg_64:
+; X64:       # %bb.0:
+; X64-NEXT:    negq (%rdi)
+; X64-NEXT:    retq
+;
+; X32-LABEL: neg_64:
+; X32:       # %bb.0:
+; X32-NEXT:    pushl %ebx
+; X32-NEXT:    .cfi_def_cfa_offset 8
+; X32-NEXT:    pushl %edi
+; X32-NEXT:    .cfi_def_cfa_offset 12
+; X32-NEXT:    pushl %esi
+; X32-NEXT:    .cfi_def_cfa_offset 16
+; X32-NEXT:    .cfi_offset %esi, -16
+; X32-NEXT:    .cfi_offset %edi, -12
+; X32-NEXT:    .cfi_offset %ebx, -8
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X32-NEXT:    xorl %esi, %esi
+; X32-NEXT:    xorl %eax, %eax
+; X32-NEXT:    xorl %edx, %edx
+; X32-NEXT:    xorl %ecx, %ecx
+; X32-NEXT:    xorl %ebx, %ebx
+; X32-NEXT:    lock cmpxchg8b (%edi)
+; X32-NEXT:    movl %eax, %ebx
+; X32-NEXT:    negl %ebx
+; X32-NEXT:    sbbl %edx, %esi
+; X32-NEXT:    movl (%edi), %eax
+; X32-NEXT:    movl 4(%edi), %edx
+; X32-NEXT:    .p2align 4, 0x90
+; X32-NEXT:  .LBB66_1: # %atomicrmw.start
+; X32-NEXT:    # =>This Inner Loop Header: Depth=1
+; X32-NEXT:    movl %esi, %ecx
+; X32-NEXT:    lock cmpxchg8b (%edi)
+; X32-NEXT:    jne .LBB66_1
+; X32-NEXT:  # %bb.2: # %atomicrmw.end
+; X32-NEXT:    popl %esi
+; X32-NEXT:    .cfi_def_cfa_offset 12
+; X32-NEXT:    popl %edi
+; X32-NEXT:    .cfi_def_cfa_offset 8
+; X32-NEXT:    popl %ebx
+; X32-NEXT:    .cfi_def_cfa_offset 4
+; X32-NEXT:    retl
+;   We do neg check X86-32 as it canneg do 'negq'.
+  %1 = load atomic i64, i64* %p acquire, align 8
+  %2 = sub i64 0, %1
+  store atomic i64 %2, i64* %p release, align 8
+  ret void
+}
+
+define void @neg_32_seq_cst(i32* %p) {
+; X64-LABEL: neg_32_seq_cst:
+; X64:       # %bb.0:
+; X64-NEXT:    movl (%rdi), %eax
+; X64-NEXT:    negl %eax
+; X64-NEXT:    xchgl %eax, (%rdi)
+; X64-NEXT:    retq
+;
+; X32-LABEL: neg_32_seq_cst:
+; X32:       # %bb.0:
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl (%eax), %ecx
+; X32-NEXT:    negl %ecx
+; X32-NEXT:    xchgl %ecx, (%eax)
+; X32-NEXT:    retl
+  %1 = load atomic i32, i32* %p monotonic, align 4
+  %2 = sub i32 0, %1
+  store atomic i32 %2, i32* %p seq_cst, align 4
+  ret void
+}
+
 ; ----- FADD -----
 
 define void @fadd_32r(float* %loc, float %val) {
@@ -1574,10 +1784,10 @@ define void @fadd_64r(double* %loc, double %val) {
 ; X32-NEXT:    movl (%esi), %eax
 ; X32-NEXT:    movl 4(%esi), %edx
 ; X32-NEXT:    .p2align 4, 0x90
-; X32-NEXT:  .LBB59_1: # %atomicrmw.start
+; X32-NEXT:  .LBB69_1: # %atomicrmw.start
 ; X32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X32-NEXT:    lock cmpxchg8b (%esi)
-; X32-NEXT:    jne .LBB59_1
+; X32-NEXT:    jne .LBB69_1
 ; X32-NEXT:  # %bb.2: # %atomicrmw.end
 ; X32-NEXT:    leal -8(%ebp), %esp
 ; X32-NEXT:    popl %esi
@@ -1664,10 +1874,10 @@ define void @fadd_64g() {
 ; X32-NEXT:    movl glob64+4, %edx
 ; X32-NEXT:    movl glob64, %eax
 ; X32-NEXT:    .p2align 4, 0x90
-; X32-NEXT:  .LBB61_1: # %atomicrmw.start
+; X32-NEXT:  .LBB71_1: # %atomicrmw.start
 ; X32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X32-NEXT:    lock cmpxchg8b glob64
-; X32-NEXT:    jne .LBB61_1
+; X32-NEXT:    jne .LBB71_1
 ; X32-NEXT:  # %bb.2: # %atomicrmw.end
 ; X32-NEXT:    leal -4(%ebp), %esp
 ; X32-NEXT:    popl %ebx
@@ -1751,10 +1961,10 @@ define void @fadd_64imm() {
 ; X32-NEXT:    movl -559038737, %eax
 ; X32-NEXT:    movl -559038733, %edx
 ; X32-NEXT:    .p2align 4, 0x90
-; X32-NEXT:  .LBB63_1: # %atomicrmw.start
+; X32-NEXT:  .LBB73_1: # %atomicrmw.start
 ; X32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X32-NEXT:    lock cmpxchg8b -559038737
-; X32-NEXT:    jne .LBB63_1
+; X32-NEXT:    jne .LBB73_1
 ; X32-NEXT:  # %bb.2: # %atomicrmw.end
 ; X32-NEXT:    leal -4(%ebp), %esp
 ; X32-NEXT:    popl %ebx
@@ -1838,10 +2048,10 @@ define void @fadd_64stack() {
 ; X32-NEXT:    movl (%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    .p2align 4, 0x90
-; X32-NEXT:  .LBB65_1: # %atomicrmw.start
+; X32-NEXT:  .LBB75_1: # %atomicrmw.start
 ; X32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X32-NEXT:    lock cmpxchg8b (%esp)
-; X32-NEXT:    jne .LBB65_1
+; X32-NEXT:    jne .LBB75_1
 ; X32-NEXT:  # %bb.2: # %atomicrmw.end
 ; X32-NEXT:    leal -4(%ebp), %esp
 ; X32-NEXT:    popl %ebx
@@ -1898,10 +2108,10 @@ define void @fadd_array(i64* %arg, double %arg1, i64 %arg2) {
 ; X32-NEXT:    movl (%edi,%esi,8), %eax
 ; X32-NEXT:    movl 4(%edi,%esi,8), %edx
 ; X32-NEXT:    .p2align 4, 0x90
-; X32-NEXT:  .LBB66_1: # %atomicrmw.start
+; X32-NEXT:  .LBB76_1: # %atomicrmw.start
 ; X32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X32-NEXT:    lock cmpxchg8b (%edi,%esi,8)
-; X32-NEXT:    jne .LBB66_1
+; X32-NEXT:    jne .LBB76_1
 ; X32-NEXT:  # %bb.2: # %atomicrmw.end
 ; X32-NEXT:    leal -12(%ebp), %esp
 ; X32-NEXT:    popl %esi
