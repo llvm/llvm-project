@@ -38,6 +38,7 @@
 
 namespace fuzzer {
 static const size_t kMaxUnitSizeToPrint = 256;
+static const size_t kUpdateMutationWeightRuns = 10000;
 
 thread_local bool Fuzzer::IsMyThread;
 
@@ -554,6 +555,9 @@ static bool LooseMemeq(const uint8_t *A, const uint8_t *B, size_t Size) {
 
 void Fuzzer::ExecuteCallback(const uint8_t *Data, size_t Size) {
   TPC.RecordInitialStack();
+  if (Options.UseWeightedMutations &&
+      TotalNumberOfRuns % kUpdateMutationWeightRuns == 0)
+    MD.UpdateDistribution();
   TotalNumberOfRuns++;
   assert(InFuzzingThread());
   if (SMR.IsClient())
