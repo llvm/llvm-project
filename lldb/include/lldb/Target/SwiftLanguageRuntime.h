@@ -420,8 +420,6 @@ protected:
 
   std::shared_ptr<swift::remote::MemoryReader> GetMemoryReader();
 
-  SwiftASTContext *GetScratchSwiftASTContext();
-
   std::unordered_set<std::string> m_library_negative_cache; // We have to load
                                                             // swift dependent
                                                             // libraries by

@@ -1106,6 +1106,7 @@ public:
   // Returns a new-ed object which the caller owns.
 
   UserExpression *GetUserExpressionForLanguage(
+      ExecutionContext &exe_ctx,
       llvm::StringRef expr, llvm::StringRef prefix, lldb::LanguageType language,
       Expression::ResultType desired_type,
       const EvaluateExpressionOptions &options, Status &error);
@@ -1151,28 +1152,34 @@ public:
 
   lldb::ClangASTImporterSP GetClangASTImporter();
 
+  /// Convenience wrapper that extracts the scope's module first.
+  SwiftASTContext *GetScratchSwiftASTContext(Status &error,
+                                             ExecutionContextScope &exe_scope,
+                                             bool create_on_demand = true);
+
 #ifdef __clang_analyzer__
   // See GetScratchTypeSystemForLanguage()
-  SwiftASTContext *
-  GetScratchSwiftASTContext(Status &error, ExecutionContextScope &exe_scope,
-                            bool create_on_demand = true,
-                            const char *extra_options = nullptr)
-      __attribute__((always_inline)) {
+  SwiftASTContext *GetScratchSwiftASTContext(
+      Status &error, Module *lldb_module, bool create_on_demand = true,
+      const char *extra_options = nullptr) __attribute__((always_inline)) {
     SwiftASTContext *ret = GetScratchSwiftASTContextImpl(
-        error, exe_scope, create_on_demand, extra_options);
+        error, lldb_module, create_on_demand, extra_options);
 
     return ret ? ret : nullptr;
   }
 
-  SwiftASTContext *
-  GetScratchSwiftASTContextImpl(Status &error, ExecutionContextScope &exe_scope,
-                                bool create_on_demand = true);
+  SwiftASTContext *GetScratchSwiftASTContextImpl(Status &error,
+                                                 Module *lldb_module,
+                                                 bool create_on_demand = true);
 #else
-  SwiftASTContext *GetScratchSwiftASTContext(Status &error,
-                                             ExecutionContextScope &exe_scope,
+  SwiftASTContext *GetScratchSwiftASTContext(Status &error, Module *lldb_module,
                                              bool create_on_demand = true);
 #endif
 
+private:
+  void DisplayFallbackSwiftContextErrors(SwiftASTContext *swift_ast_ctx);
+public:
+  
   //----------------------------------------------------------------------
   // Install any files through the platform that need be to installed
   // prior to launching or attaching.
@@ -1432,6 +1439,7 @@ protected:
   unsigned m_next_persistent_variable_index = 0;
 
   bool m_use_scratch_typesystem_per_module = false;
+  bool m_did_display_scratch_fallback_warning = false;
   typedef std::pair<lldb_private::Module *, char> ModuleLanguage;
   llvm::DenseMap<ModuleLanguage, lldb::TypeSystemSP>
       m_scratch_typesystem_for_module;

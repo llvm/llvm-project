@@ -615,6 +615,7 @@ public:
   virtual bool HasSyntheticValue();
 
   SwiftASTContext *GetSwiftASTContext();
+  SwiftASTContext *GetScratchSwiftASTContext();
 
   virtual bool IsSynthetic() { return false; }
 

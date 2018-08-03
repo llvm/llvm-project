@@ -1741,18 +1741,22 @@ SwiftASTContext *ValueObject::GetSwiftASTContext() {
   if (GetObjectRuntimeLanguage() != lldb::eLanguageTypeSwift)
     return nullptr;
   lldb::ModuleSP module_sp(GetModule());
-  if (module_sp)
-    return llvm::dyn_cast_or_null<SwiftASTContext>(
-        module_sp->GetTypeSystemForLanguage(lldb::eLanguageTypeSwift));
-
-  lldb::TargetSP target_sp(GetTargetSP());
-  if (target_sp) {
-    Status error;
-    ExecutionContext ctx = GetExecutionContextRef().Lock(false);
-    auto *exe_scope = ctx.GetBestExecutionContextScope();
-    return target_sp->GetScratchSwiftASTContext(error, *exe_scope);
+  if (module_sp) {
+    auto ts = module_sp->GetTypeSystemForLanguage(lldb::eLanguageTypeSwift);
+    return llvm::dyn_cast_or_null<SwiftASTContext>(ts);
   }
-  return nullptr;
+  return GetScratchSwiftASTContext();
+}
+
+SwiftASTContext *ValueObject::GetScratchSwiftASTContext() {
+  lldb::TargetSP target_sp(GetTargetSP());
+  if (!target_sp)
+    return nullptr;
+
+  Status error;
+  ExecutionContext ctx = GetExecutionContextRef().Lock(false);
+  auto *exe_scope = ctx.GetBestExecutionContextScope();
+  return target_sp->GetScratchSwiftASTContext(error, *exe_scope);
 }
 
 void ValueObject::AddSyntheticChild(const ConstString &key,
