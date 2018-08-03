@@ -502,16 +502,31 @@ std::vector<EhFrameSection::FdeData> EhFrameSection::getFdeData() const {
   uint8_t *Buf = getParent()->Loc + OutSecOff;
   std::vector<FdeData> Ret;
 
+  uint64_t VA = InX::EhFrameHdr->getVA();
   for (CieRecord *Rec : CieRecords) {
     uint8_t Enc = getFdeEncoding(Rec->Cie);
     for (EhSectionPiece *Fde : Rec->Fdes) {
       uint64_t Pc = getFdePc(Buf, Fde->OutputOff, Enc);
-      if (Pc > UINT32_MAX)
-        fatal(toString(Fde->Sec) + ": PC address is too large: " + Twine(Pc));
-      uint32_t FdeVA = getParent()->Addr + Fde->OutputOff;
-      Ret.push_back({(uint32_t)Pc, FdeVA});
+      uint64_t FdeVA = getParent()->Addr + Fde->OutputOff;
+      if (!isInt<32>(Pc - VA))
+        fatal(toString(Fde->Sec) + ": PC offset is too large: 0x" +
+              Twine::utohexstr(Pc - VA));
+      Ret.push_back({uint32_t(Pc - VA), uint32_t(FdeVA - VA)});
     }
   }
+
+  // Sort the FDE list by their PC and uniqueify. Usually there is only
+  // one FDE for a PC (i.e. function), but if ICF merges two functions
+  // into one, there can be more than one FDEs pointing to the address.
+  auto Less = [](const FdeData &A, const FdeData &B) {
+    return A.PcRel < B.PcRel;
+  };
+  std::stable_sort(Ret.begin(), Ret.end(), Less);
+  auto Eq = [](const FdeData &A, const FdeData &B) {
+    return A.PcRel == B.PcRel;
+  };
+  Ret.erase(std::unique(Ret.begin(), Ret.end(), Eq), Ret.end());
+
   return Ret;
 }
 
@@ -2532,14 +2547,6 @@ void EhFrameHeader::writeTo(uint8_t *Buf) {
 
   std::vector<FdeData> Fdes = InX::EhFrame->getFdeData();
 
-  // Sort the FDE list by their PC and uniqueify. Usually there is only
-  // one FDE for a PC (i.e. function), but if ICF merges two functions
-  // into one, there can be more than one FDEs pointing to the address.
-  auto Less = [](const FdeData &A, const FdeData &B) { return A.Pc < B.Pc; };
-  std::stable_sort(Fdes.begin(), Fdes.end(), Less);
-  auto Eq = [](const FdeData &A, const FdeData &B) { return A.Pc == B.Pc; };
-  Fdes.erase(std::unique(Fdes.begin(), Fdes.end(), Eq), Fdes.end());
-
   Buf[0] = 1;
   Buf[1] = DW_EH_PE_pcrel | DW_EH_PE_sdata4;
   Buf[2] = DW_EH_PE_udata4;
@@ -2548,10 +2555,9 @@ void EhFrameHeader::writeTo(uint8_t *Buf) {
   write32(Buf + 8, Fdes.size());
   Buf += 12;
 
-  uint64_t VA = this->getVA();
   for (FdeData &Fde : Fdes) {
-    write32(Buf, Fde.Pc - VA);
-    write32(Buf + 4, Fde.FdeVA - VA);
+    write32(Buf, Fde.PcRel);
+    write32(Buf + 4, Fde.FdeVARel);
     Buf += 8;
   }
 }
