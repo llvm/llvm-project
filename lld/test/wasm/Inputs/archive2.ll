@@ -7,8 +7,3 @@ entry:
   %call = tail call i32 @foo() #2
   ret i32 %call
 }
-
-define void @archive2_symbol() local_unnamed_addr #0 {
-entry:
-  ret void
-}

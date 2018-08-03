@@ -414,24 +414,7 @@ StringRef LinkerDriver::mangle(StringRef Sym) {
 }
 
 // Windows specific -- find default entry point name.
-//
-// There are four different entry point functions for Windows executables,
-// each of which corresponds to a user-defined "main" function. This function
-// infers an entry point from a user-defined "main" function.
 StringRef LinkerDriver::findDefaultEntry() {
-  // As a special case, if /nodefaultlib is given, we directly look for an
-  // entry point. This is because, if no default library is linked, users
-  // need to define an entry point instead of a "main".
-  if (Config->NoDefaultLibAll) {
-    for (StringRef S : {"mainCRTStartup", "wmainCRTStartup",
-                        "WinMainCRTStartup", "wWinMainCRTStartup"}) {
-      StringRef Entry = Symtab->findMangle(S);
-      if (!Entry.empty() && !isa<Undefined>(Symtab->find(Entry)))
-        return mangle(S);
-    }
-    return "";
-  }
-
   // User-defined main functions and their corresponding entry points.
   static const char *Entries[][2] = {
       {"main", "mainCRTStartup"},
@@ -984,9 +967,6 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
       Config->PDBAltPath = Arg->getValue();
     if (Args.hasArg(OPT_natvis))
       Config->NatvisFiles = Args.getAllArgValues(OPT_natvis);
-
-    if (auto *Arg = Args.getLastArg(OPT_pdb_source_path))
-      Config->PDBSourcePath = Arg->getValue();
   }
 
   // Handle /noentry

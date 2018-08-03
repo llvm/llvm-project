@@ -63,7 +63,7 @@ public:
   Kind kind() const { return FileKind; }
 
   // An archive file name if this file is created from an archive.
-  StringRef ArchiveName;
+  StringRef ParentName;
 
   ArrayRef<Symbol *> getSymbols() const { return Symbols; }
 

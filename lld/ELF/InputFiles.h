@@ -215,9 +215,6 @@ public:
   // but had one or more functions with the no_split_stack attribute.
   bool SomeNoSplitStack = false;
 
-  // Pointer to this input file's .llvm_addrsig section, if it has one.
-  const Elf_Shdr *AddrsigSec = nullptr;
-
 private:
   void
   initializeSections(llvm::DenseSet<llvm::CachedHashStringRef> &ComdatGroups);

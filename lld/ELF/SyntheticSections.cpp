@@ -1849,7 +1849,8 @@ void SymbolTableBaseSection::finalizeContents() {
 // symbol. That is convenient for purpose of identifying where are local symbols
 // coming from.
 void SymbolTableBaseSection::postThunkContents() {
-  assert(this->Type == SHT_SYMTAB);
+  if (this->Type == SHT_DYNSYM)
+    return;
 
   // Move all local symbols before global symbols.
   auto E = std::stable_partition(

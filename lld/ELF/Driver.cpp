@@ -51,7 +51,6 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compression.h"
-#include "llvm/Support/LEB128.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TarWriter.h"
 #include "llvm/Support/TargetSelect.h"
@@ -295,9 +294,7 @@ static void checkOptions(opt::InputArgList &Args) {
       error("-r and -shared may not be used together");
     if (Config->GcSections)
       error("-r and --gc-sections may not be used together");
-    if (Config->GdbIndex)
-      error("-r and --gdb-index may not be used together");
-    if (Config->ICF != ICFLevel::None)
+    if (Config->ICF)
       error("-r and --icf may not be used together");
     if (Config->Pie)
       error("-r and -pie may not be used together");
@@ -518,15 +515,6 @@ static StringRef getDynamicLinker(opt::InputArgList &Args) {
   if (!Arg || Arg->getOption().getID() == OPT_no_dynamic_linker)
     return "";
   return Arg->getValue();
-}
-
-static ICFLevel getICF(opt::InputArgList &Args) {
-  auto *Arg = Args.getLastArg(OPT_icf_none, OPT_icf_safe, OPT_icf_all);
-  if (!Arg || Arg->getOption().getID() == OPT_icf_none)
-    return ICFLevel::None;
-  if (Arg->getOption().getID() == OPT_icf_safe)
-    return ICFLevel::Safe;
-  return ICFLevel::All;
 }
 
 static StripPolicy getStrip(opt::InputArgList &Args) {
@@ -755,7 +743,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->GcSections = Args.hasFlag(OPT_gc_sections, OPT_no_gc_sections, false);
   Config->GnuUnique = Args.hasFlag(OPT_gnu_unique, OPT_no_gnu_unique, true);
   Config->GdbIndex = Args.hasFlag(OPT_gdb_index, OPT_no_gdb_index, false);
-  Config->ICF = getICF(Args);
+  Config->ICF = Args.hasFlag(OPT_icf_all, OPT_icf_none, false);
   Config->IgnoreDataAddressEquality =
       Args.hasArg(OPT_ignore_data_address_equality);
   Config->IgnoreFunctionAddressEquality =
@@ -1235,59 +1223,15 @@ template <class ELFT> static void demoteSymbols() {
   }
 }
 
-static bool keepUnique(Symbol *S) {
-  if (auto *D = dyn_cast_or_null<Defined>(S)) {
-    if (D->Section) {
-      D->Section->KeepUnique = true;
-      return true;
-    }
-  }
-  return false;
-}
-
 // Record sections that define symbols mentioned in --keep-unique <symbol>
-// and symbols referred to by address-significance tables. These sections are
-// ineligible for ICF.
-template <class ELFT>
+// these sections are inelligible for ICF.
 static void findKeepUniqueSections(opt::InputArgList &Args) {
   for (auto *Arg : Args.filtered(OPT_keep_unique)) {
     StringRef Name = Arg->getValue();
-    if (!keepUnique(Symtab->find(Name)))
+    if (auto *Sym = dyn_cast_or_null<Defined>(Symtab->find(Name)))
+      Sym->Section->KeepUnique = true;
+    else
       warn("could not find symbol " + Name + " to keep unique");
-  }
-
-  if (Config->ICF == ICFLevel::Safe) {
-    // Symbols in the dynsym could be address-significant in other executables
-    // or DSOs, so we conservatively mark them as address-significant.
-    for (Symbol *S : Symtab->getSymbols())
-      if (S->includeInDynsym())
-        keepUnique(S);
-
-    // Visit the address-significance table in each object file and mark each
-    // referenced symbol as address-significant.
-    for (InputFile *F : ObjectFiles) {
-      auto *Obj = cast<ObjFile<ELFT>>(F);
-      ArrayRef<Symbol *> Syms = Obj->getSymbols();
-      if (Obj->AddrsigSec) {
-        ArrayRef<uint8_t> Contents =
-            check(Obj->getObj().getSectionContents(Obj->AddrsigSec));
-        const uint8_t *Cur = Contents.begin();
-        while (Cur != Contents.end()) {
-          unsigned Size;
-          const char *Err;
-          uint64_t SymIndex = decodeULEB128(Cur, &Size, Contents.end(), &Err);
-          if (Err)
-            fatal(toString(F) + ": could not decode addrsig section: " + Err);
-          keepUnique(Syms[SymIndex]);
-          Cur += Size;
-        }
-      } else {
-        // If an object file does not have an address-significance table,
-        // conservatively mark all of its symbols as address-significant.
-        for (Symbol *S : Syms)
-          keepUnique(S);
-      }
-    }
   }
 }
 
@@ -1463,8 +1407,8 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   markLive<ELFT>();
   demoteSymbols<ELFT>();
   mergeSections();
-  if (Config->ICF != ICFLevel::None) {
-    findKeepUniqueSections<ELFT>(Args);
+  if (Config->ICF) {
+    findKeepUniqueSections(Args);
     doIcf<ELFT>();
   }
 

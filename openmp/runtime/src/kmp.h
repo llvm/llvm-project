@@ -2558,9 +2558,6 @@ typedef struct KMP_ALIGN_CACHE kmp_base_info {
 #if KMP_STATS_ENABLED
   kmp_stats_list *th_stats;
 #endif
-#if KMP_OS_UNIX
-  std::atomic<bool> th_blocking;
-#endif
 } kmp_base_info_t;
 
 typedef union KMP_ALIGN_CACHE kmp_info {

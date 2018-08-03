@@ -932,15 +932,7 @@ void PDBLinker::addObjFile(ObjFile *File) {
   // subsections.
   auto NewChecksums = make_unique<DebugChecksumsSubsection>(PDBStrTab);
   for (FileChecksumEntry &FC : Checksums) {
-    SmallString<128> FileName = ExitOnErr(CVStrTab.getString(FC.FileNameOffset));
-    if (!sys::path::is_absolute(FileName) &&
-        !Config->PDBSourcePath.empty()) {
-      SmallString<128> AbsoluteFileName = Config->PDBSourcePath;
-      sys::path::append(AbsoluteFileName, FileName);
-      sys::path::native(AbsoluteFileName);
-      sys::path::remove_dots(AbsoluteFileName, /*remove_dot_dots=*/true);
-      FileName = std::move(AbsoluteFileName);
-    }
+    StringRef FileName = ExitOnErr(CVStrTab.getString(FC.FileNameOffset));
     ExitOnErr(Builder.getDbiBuilder().addModuleSourceFile(*File->ModuleDBI,
                                                           FileName));
     NewChecksums->addChecksum(FileName, FC.Kind, FC.Checksum);

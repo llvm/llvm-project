@@ -212,6 +212,17 @@ void SymbolTable::applySymbolWrap() {
   }
 }
 
+// Apply changes caused by relocations to wrapped symbols
+// This is needed for direct calls to __wrap_sym
+void SymbolTable::applySymbolWrapReloc() {
+  for (WrappedSymbol &W : WrappedSymbols) {
+    memcpy(W.Wrap, W.Sym, sizeof(SymbolUnion));
+
+    // Keep this so that this copy of the symbol remains dropped
+    W.Wrap->IsUsedInRegularObj = false;
+  }
+}
+
 static uint8_t getMinVisibility(uint8_t VA, uint8_t VB) {
   if (VA == STV_DEFAULT)
     return VB;

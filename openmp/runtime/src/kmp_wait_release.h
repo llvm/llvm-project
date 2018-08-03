@@ -154,10 +154,10 @@ static inline void __ompt_implicit_task_end(kmp_info_t *this_thr,
 /* Spin wait loop that first does pause, then yield, then sleep. A thread that
    calls __kmp_wait_*  must make certain that another thread calls __kmp_release
    to wake it back up to prevent deadlocks!  */
-template <class C, int final_spin>
+template <class C>
 static inline void
-__kmp_wait_template(kmp_info_t *this_thr,
-                    C *flag USE_ITT_BUILD_ARG(void *itt_sync_obj)) {
+__kmp_wait_template(kmp_info_t *this_thr, C *flag,
+                    int final_spin USE_ITT_BUILD_ARG(void *itt_sync_obj)) {
   // NOTE: We may not belong to a team at this point.
   volatile void *spin = flag->get();
   kmp_uint32 spins;
@@ -176,10 +176,6 @@ __kmp_wait_template(kmp_info_t *this_thr,
     return;
   }
   th_gtid = this_thr->th.th_info.ds.ds_gtid;
-#if KMP_OS_UNIX
-  if (final_spin)
-    KMP_ATOMIC_ST_REL(&this_thr->th.th_blocking, true);
-#endif
   KA_TRACE(20,
            ("__kmp_wait_sleep: T#%d waiting for flag(%p)\n", th_gtid, flag));
 #if KMP_STATS_ENABLED
@@ -413,15 +409,7 @@ final_spin=FALSE)
 #endif
 
     KF_TRACE(50, ("__kmp_wait_sleep: T#%d suspend time reached\n", th_gtid));
-#if KMP_OS_UNIX
-    if (final_spin)
-      KMP_ATOMIC_ST_REL(&this_thr->th.th_blocking, false);
-#endif
     flag->suspend(th_gtid);
-#if KMP_OS_UNIX
-    if (final_spin)
-      KMP_ATOMIC_ST_REL(&this_thr->th.th_blocking, true);
-#endif
 
     if (TCR_4(__kmp_global.g.g_done)) {
       if (__kmp_global.g.g_abort)
@@ -462,10 +450,6 @@ final_spin=FALSE)
   }
 #endif
 
-#if KMP_OS_UNIX
-  if (final_spin)
-    KMP_ATOMIC_ST_REL(&this_thr->th.th_blocking, false);
-#endif
   KMP_FSYNC_SPIN_ACQUIRED(CCAST(void *, spin));
 }
 
@@ -748,12 +732,8 @@ public:
   }
   void wait(kmp_info_t *this_thr,
             int final_spin USE_ITT_BUILD_ARG(void *itt_sync_obj)) {
-    if (final_spin)
-      __kmp_wait_template<kmp_flag_32, TRUE>(
-          this_thr, this USE_ITT_BUILD_ARG(itt_sync_obj));
-    else
-      __kmp_wait_template<kmp_flag_32, FALSE>(
-          this_thr, this USE_ITT_BUILD_ARG(itt_sync_obj));
+    __kmp_wait_template(this_thr, this,
+                        final_spin USE_ITT_BUILD_ARG(itt_sync_obj));
   }
   void release() { __kmp_release_template(this); }
   flag_type get_ptr_type() { return flag32; }
@@ -777,12 +757,8 @@ public:
   }
   void wait(kmp_info_t *this_thr,
             int final_spin USE_ITT_BUILD_ARG(void *itt_sync_obj)) {
-    if (final_spin)
-      __kmp_wait_template<kmp_flag_64, TRUE>(
-          this_thr, this USE_ITT_BUILD_ARG(itt_sync_obj));
-    else
-      __kmp_wait_template<kmp_flag_64, FALSE>(
-          this_thr, this USE_ITT_BUILD_ARG(itt_sync_obj));
+    __kmp_wait_template(this_thr, this,
+                        final_spin USE_ITT_BUILD_ARG(itt_sync_obj));
   }
   void release() { __kmp_release_template(this); }
   flag_type get_ptr_type() { return flag64; }
@@ -869,12 +845,8 @@ public:
   bool is_sleeping() { return is_sleeping_val(*get()); }
   bool is_any_sleeping() { return is_sleeping_val(*get()); }
   void wait(kmp_info_t *this_thr, int final_spin) {
-    if (final_spin)
-      __kmp_wait_template<kmp_flag_oncore, TRUE>(
-          this_thr, this USE_ITT_BUILD_ARG(itt_sync_obj));
-    else
-      __kmp_wait_template<kmp_flag_oncore, FALSE>(
-          this_thr, this USE_ITT_BUILD_ARG(itt_sync_obj));
+    __kmp_wait_template<kmp_flag_oncore>(
+        this_thr, this, final_spin USE_ITT_BUILD_ARG(itt_sync_obj));
   }
   void release() { __kmp_release_template(this); }
   void suspend(int th_gtid) { __kmp_suspend_oncore(th_gtid, this); }

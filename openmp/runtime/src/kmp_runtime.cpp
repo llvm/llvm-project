@@ -4334,9 +4334,6 @@ kmp_info_t *__kmp_allocate_thread(kmp_root_t *root, kmp_team_t *team,
 
   new_thr->th.th_spin_here = FALSE;
   new_thr->th.th_next_waiting = 0;
-#if KMP_OS_UNIX
-  new_thr->th.th_blocking = false;
-#endif
 
 #if OMP_40_ENABLED && KMP_AFFINITY_SUPPORTED
   new_thr->th.th_current_place = KMP_PLACE_UNDEFINED;
@@ -5963,18 +5960,6 @@ static void __kmp_internal_end(void) {
     }
 
     __kmp_reap_task_teams();
-
-#if KMP_OS_UNIX
-    // Threads that are not reaped should not access any resources since they
-    // are going to be deallocated soon, so the shutdown sequence should wait
-    // until all threads either exit the final spin-waiting loop or begin
-    // sleeping after the given blocktime.
-    for (i = 0; i < __kmp_threads_capacity; i++) {
-      kmp_info_t *thr = __kmp_threads[i];
-      while (thr && KMP_ATOMIC_LD_ACQ(&thr->th.th_blocking))
-        KMP_CPU_PAUSE();
-    }
-#endif
 
     for (i = 0; i < __kmp_threads_capacity; ++i) {
       // TBD: Add some checking...
