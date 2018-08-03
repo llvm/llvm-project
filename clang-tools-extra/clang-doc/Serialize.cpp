@@ -329,7 +329,7 @@ std::unique_ptr<Info> emitInfo(const NamespaceDecl *D, const FullComment *FC,
     return nullptr;
   auto I = llvm::make_unique<NamespaceInfo>();
   populateInfo(*I, D, FC);
-  return I;
+  return std::unique_ptr<Info>{std::move(I)};
 }
 
 std::unique_ptr<Info> emitInfo(const RecordDecl *D, const FullComment *FC,
@@ -343,7 +343,7 @@ std::unique_ptr<Info> emitInfo(const RecordDecl *D, const FullComment *FC,
   parseFields(*I, D, PublicOnly);
   if (const auto *C = dyn_cast<CXXRecordDecl>(D))
     parseBases(*I, C);
-  return I;
+  return std::unique_ptr<Info>{std::move(I)};
 }
 
 std::unique_ptr<Info> emitInfo(const FunctionDecl *D, const FullComment *FC,
@@ -362,7 +362,7 @@ std::unique_ptr<Info> emitInfo(const FunctionDecl *D, const FullComment *FC,
   else
     I->USR = SymbolID();
   I->ChildFunctions.push_back(std::move(Func));
-  return I;
+  return std::unique_ptr<Info>{std::move(I)};
 }
 
 std::unique_ptr<Info> emitInfo(const CXXMethodDecl *D, const FullComment *FC,
@@ -383,7 +383,7 @@ std::unique_ptr<Info> emitInfo(const CXXMethodDecl *D, const FullComment *FC,
   auto I = llvm::make_unique<RecordInfo>();
   I->USR = ParentUSR;
   I->ChildFunctions.push_back(std::move(Func));
-  return I;
+  return std::unique_ptr<Info>{std::move(I)};
 }
 
 std::unique_ptr<Info> emitInfo(const EnumDecl *D, const FullComment *FC,
@@ -400,18 +400,16 @@ std::unique_ptr<Info> emitInfo(const EnumDecl *D, const FullComment *FC,
   if (!Enum.Namespace.empty()) {
     switch (Enum.Namespace[0].RefType) {
     case InfoType::IT_namespace: {
-      std::unique_ptr<Info> IPtr = llvm::make_unique<NamespaceInfo>();
-      NamespaceInfo *I = static_cast<NamespaceInfo *>(IPtr.get());
+      auto I = llvm::make_unique<NamespaceInfo>();
       I->USR = Enum.Namespace[0].USR;
       I->ChildEnums.push_back(std::move(Enum));
-      return IPtr;
+      return std::unique_ptr<Info>{std::move(I)};
     }
     case InfoType::IT_record: {
-      std::unique_ptr<Info> IPtr = llvm::make_unique<RecordInfo>();
-      RecordInfo *I = static_cast<RecordInfo *>(IPtr.get());
+      auto I = llvm::make_unique<RecordInfo>();
       I->USR = Enum.Namespace[0].USR;
       I->ChildEnums.push_back(std::move(Enum));
-      return IPtr;
+      return std::unique_ptr<Info>{std::move(I)};
     }
     default:
       break;
@@ -422,7 +420,7 @@ std::unique_ptr<Info> emitInfo(const EnumDecl *D, const FullComment *FC,
   auto I = llvm::make_unique<NamespaceInfo>();
   I->USR = SymbolID();
   I->ChildEnums.push_back(std::move(Enum));
-  return I;
+  return std::unique_ptr<Info>{std::move(I)};
 }
 
 } // namespace serialize
