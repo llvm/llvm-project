@@ -100,7 +100,7 @@ atomic_work_item_fence(cl_mem_fence_flags flags, memory_order order, memory_scop
 
             if ((scope == memory_scope_device) | (scope == memory_scope_all_svm_devices)) {
                 if (order != memory_order_release) {
-                    __llvm_amdcgn_buffer_wbinvl1_vol();
+                    __builtin_amdcgn_buffer_wbinvl1_vol();
                     __llvm_amdgcn_s_dcache_inv_vol();
                 }
             }
@@ -113,7 +113,7 @@ atomic_work_item_fence(cl_mem_fence_flags flags, memory_order order, memory_scop
 
             if ((scope == memory_scope_device) | (scope == memory_scope_all_svm_devices)) {
                 if (order != memory_order_release) {
-                    __llvm_amdcgn_buffer_wbinvl1_vol();
+                    __builtin_amdcgn_buffer_wbinvl1_vol();
                     __llvm_amdgcn_s_dcache_inv_vol();
                 }
             }
