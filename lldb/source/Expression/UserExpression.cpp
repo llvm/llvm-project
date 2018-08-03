@@ -218,7 +218,7 @@ lldb::ExpressionResults UserExpression::Evaluate(
   }
 
   lldb::UserExpressionSP user_expression_sp(
-      target->GetUserExpressionForLanguage(expr, full_prefix, language,
+      target->GetUserExpressionForLanguage(exe_ctx, expr, full_prefix, language,
                                            desired_type, options, error));
   if (error.Fail()) {
     if (log)
@@ -262,7 +262,8 @@ lldb::ExpressionResults UserExpression::Evaluate(
     if (fixed_expression && !fixed_expression->empty() &&
         options.GetAutoApplyFixIts()) {
       lldb::UserExpressionSP fixed_expression_sp(
-          target->GetUserExpressionForLanguage(fixed_expression->c_str(),
+          target->GetUserExpressionForLanguage(exe_ctx,
+                                               fixed_expression->c_str(),
                                                full_prefix, language,
                                                desired_type, options, error));
       DiagnosticManager fixed_diagnostic_manager;

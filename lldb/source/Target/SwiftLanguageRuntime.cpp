@@ -1180,13 +1180,6 @@ SwiftLanguageRuntime::GetMemoryReader() {
   return m_memory_reader_sp;
 }
 
-SwiftASTContext *SwiftLanguageRuntime::GetScratchSwiftASTContext() {
-  Status error;
-  return llvm::dyn_cast_or_null<SwiftASTContext>(
-      m_process->GetTarget().GetScratchTypeSystemForLanguage(
-          &error, eLanguageTypeSwift));
-}
-
 SwiftLanguageRuntime::MetadataPromise::MetadataPromise(
     SwiftASTContext &swift_ast_ctx, SwiftLanguageRuntime &runtime,
     lldb::addr_t location)
@@ -1287,8 +1280,12 @@ static inline swift::Type GetSwiftType(const CompilerType &type) {
 SwiftLanguageRuntime::MetadataPromiseSP
 SwiftLanguageRuntime::GetMetadataPromise(lldb::addr_t addr,
                                          SwiftASTContext *swift_ast_ctx) {
-  if (!swift_ast_ctx)
-    swift_ast_ctx = GetScratchSwiftASTContext();
+  if (!swift_ast_ctx) {
+    Status error;
+    swift_ast_ctx = llvm::dyn_cast_or_null<SwiftASTContext>(
+        m_process->GetTarget().GetScratchTypeSystemForLanguage(
+            &error, eLanguageTypeSwift));
+  }
 
   if (!swift_ast_ctx || swift_ast_ctx->HasFatalErrors())
     return nullptr;
@@ -1460,7 +1457,9 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Class(
 
   // Dynamic type resolution in RemoteAST might pull in other Swift modules, so
   // use the scratch context where such operations are legal and safe.
-  SwiftASTContext *swift_ast_ctx = GetScratchSwiftASTContext();
+  Status error;
+  SwiftASTContext *swift_ast_ctx = in_value.GetScratchSwiftASTContext();
+
   if (!swift_ast_ctx || swift_ast_ctx->HasFatalErrors())
     return false;
 
@@ -1487,6 +1486,19 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Class(
                   instance_type.getFailure().render().c_str());
     }
 
+    if (swift_ast_ctx->HasFatalErrors()) {
+      // Retry exactly once using the per-module fallback scratch context.
+      auto &target = m_process->GetTarget();
+      if (!target.UseScratchTypesystemPerModule()) {
+        if (log)
+          log->Printf("Dynamic type resolution detected fatal errors in "
+                      "shared Swift state. Falling back to per-module "
+                      "scratch context.\n");
+        target.SetUseScratchTypesystemPerModule(true);
+        return GetDynamicTypeAndAddress_Class(in_value, use_dynamic,
+                                              class_type_or_name, address);
+      }
+    }
     return false;
   }
 
@@ -2131,7 +2143,7 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_GenericTypeParam(
 
   // Dynamic type resolution in RemoteAST might pull in other Swift modules, so
   // use the scratch context where such operations are legal and safe.
-  SwiftASTContext *swift_ast_ctx = GetScratchSwiftASTContext();
+  SwiftASTContext *swift_ast_ctx = in_value.GetScratchSwiftASTContext();
   if (!swift_ast_ctx || swift_ast_ctx->HasFatalErrors())
     return false;
 
@@ -3703,7 +3715,7 @@ SwiftLanguageRuntime::GetBridgedSyntheticChildProvider(ValueObject &valobj) {
   ProjectionSyntheticChildren::TypeProjectionUP type_projection(
       new ProjectionSyntheticChildren::TypeProjectionUP::element_type());
 
-  if (SwiftASTContext *swift_ast_ctx = GetScratchSwiftASTContext()) {
+  if (SwiftASTContext *swift_ast_ctx = valobj.GetScratchSwiftASTContext()) {
     Status error;
     CompilerType swift_type =
         swift_ast_ctx->GetTypeFromMangledTypename(type_name, error);

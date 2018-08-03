@@ -511,9 +511,10 @@ bool lldb_private::formatters::swift::NSContiguousString_SummaryProvider(
 
   DataExtractor data(buffer_sp, process_sp->GetByteOrder(), ptr_size);
 
+  ExecutionContext exe_ctx(process_sp);
+  ExecutionContextScope *exe_scope = exe_ctx.GetBestExecutionContextScope();
   SwiftASTContext *lldb_swift_ast = llvm::dyn_cast_or_null<SwiftASTContext>(
-      process_sp->GetTarget().GetScratchTypeSystemForLanguage(
-          &error, eLanguageTypeSwift));
+      process_sp->GetTarget().GetScratchSwiftASTContext(error, *exe_scope));
   if (!lldb_swift_ast)
     return false;
   CompilerType string_guts_type = lldb_swift_ast->GetTypeFromMangledTypename(
