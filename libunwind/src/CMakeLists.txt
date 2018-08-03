@@ -103,8 +103,6 @@ set_target_properties(unwind_objects
                         COMPILE_FLAGS "${LIBUNWIND_COMPILE_FLAGS}"
                         POSITION_INDEPENDENT_CODE ON)
 
-set(LIBUNWIND_TARGETS)
-
 # Build the shared library.
 if (LIBUNWIND_ENABLE_SHARED)
   add_library(unwind_shared SHARED $<TARGET_OBJECTS:unwind_objects>)
@@ -118,7 +116,10 @@ if (LIBUNWIND_ENABLE_SHARED)
                           OUTPUT_NAME   "unwind"
                           VERSION       "1.0"
                           SOVERSION     "1")
-  list(APPEND LIBUNWIND_TARGETS "unwind_shared")
+  list(APPEND LIBUNWIND_BUILD_TARGETS "unwind_shared")
+  if (LIBUNWIND_INSTALL_SHARED_LIBRARY)
+    list(APPEND LIBUNWIND_INSTALL_TARGETS "unwind_shared")
+  endif()
 endif()
 
 # Build the static library.
@@ -129,14 +130,17 @@ if (LIBUNWIND_ENABLE_STATIC)
                         PROPERTIES
                           LINK_FLAGS    "${LIBUNWIND_LINK_FLAGS}"
                           OUTPUT_NAME   "unwind")
-  list(APPEND LIBUNWIND_TARGETS "unwind_static")
+  list(APPEND LIBUNWIND_BUILD_TARGETS "unwind_static")
+  if (LIBUNWIND_INSTALL_STATIC_LIBRARY)
+    list(APPEND LIBUNWIND_INSTALL_TARGETS "unwind_static")
+  endif()
 endif()
 
 # Add a meta-target for both libraries.
-add_custom_target(unwind DEPENDS ${LIBUNWIND_TARGETS})
+add_custom_target(unwind DEPENDS ${LIBUNWIND_BUILD_TARGETS})
 
 if (LIBUNWIND_INSTALL_LIBRARY)
-  install(TARGETS ${LIBUNWIND_TARGETS}
+  install(TARGETS ${LIBUNWIND_INSTALL_TARGETS}
     LIBRARY DESTINATION ${LIBUNWIND_INSTALL_PREFIX}lib${LIBUNWIND_LIBDIR_SUFFIX} COMPONENT unwind
     ARCHIVE DESTINATION ${LIBUNWIND_INSTALL_PREFIX}lib${LIBUNWIND_LIBDIR_SUFFIX} COMPONENT unwind)
 endif()

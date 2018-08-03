@@ -32,9 +32,9 @@ configure_lit_site_cfg(
 set(LLD_TEST_DEPS lld)
 if (NOT LLD_BUILT_STANDALONE)
   list(APPEND LLD_TEST_DEPS
-    FileCheck count not llvm-ar llvm-as llvm-dis llvm-dwarfdump llvm-nm
-    llc llvm-config llvm-objdump llvm-readelf llvm-readobj yaml2obj obj2yaml
-    llvm-mc llvm-lib llvm-pdbutil opt llvm-bcanalyzer
+    FileCheck count llc llvm-ar llvm-as llvm-bcanalyzer llvm-config llvm-dis
+    llvm-dwarfdump llvm-lib llvm-mc llvm-nm llvm-objcopy llvm-objdump
+    llvm-pdbutil llvm-readelf llvm-readobj not obj2yaml opt yaml2obj
     )
 endif()
 

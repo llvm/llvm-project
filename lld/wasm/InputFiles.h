@@ -150,6 +150,10 @@ public:
   std::unique_ptr<llvm::lto::InputFile> Obj;
 };
 
+// Will report a fatal() error if the input buffer is not a valid bitcode
+// or was object file.
+InputFile *createObjectFile(MemoryBufferRef MB);
+
 // Opens a given file.
 llvm::Optional<MemoryBufferRef> readFile(StringRef Path);
 

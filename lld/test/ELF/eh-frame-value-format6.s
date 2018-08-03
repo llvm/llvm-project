@@ -22,7 +22,7 @@
   .byte 0x01 # LEB128
   .byte 0x01 # LEB128
 
-  .byte 0x08 # DW_EH_PE_signed
+  .byte 0x00 # DW_EH_PE_absptr
   .byte 0xFF
   .byte 0xFF
   .byte 0xFF

@@ -41,25 +41,21 @@ EXTERN int32_t __kmpc_cancel_barrier(kmp_Indent *loc_ref, int32_t tid) {
 }
 
 EXTERN void __kmpc_barrier(kmp_Indent *loc_ref, int32_t tid) {
-  if (isSPMDMode()) {
-    __kmpc_barrier_simple_spmd(loc_ref, tid);
-  } else if (isRuntimeUninitialized()) {
-    __kmpc_barrier_simple_generic(loc_ref, tid);
+  if (isRuntimeUninitialized()) {
+    if (isSPMDMode())
+      __kmpc_barrier_simple_spmd(loc_ref, tid);
+    else
+      __kmpc_barrier_simple_generic(loc_ref, tid);
   } else {
     tid = GetLogicalThreadIdInBlock();
     omptarget_nvptx_TaskDescr *currTaskDescr =
         omptarget_nvptx_threadPrivateContext->GetTopLevelTaskDescr(tid);
-    if (!currTaskDescr->InL2OrHigherParallelRegion()) {
-      int numberOfActiveOMPThreads =
-          GetNumberOfOmpThreads(tid, isSPMDMode(), isRuntimeUninitialized());
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700
-      // On Volta and newer architectures we require that all lanes in
-      // a warp (at least, all present for the kernel launch) participate in the
-      // barrier.  This is enforced when launching the parallel region.  An
-      // exception is when there are < WARPSIZE workers.  In this case only 1
-      // worker is started, so we don't need a barrier.
-      if (numberOfActiveOMPThreads > 1) {
-#endif
+    int numberOfActiveOMPThreads = GetNumberOfOmpThreads(
+        tid, isSPMDMode(), /*isRuntimeUninitialized=*/false);
+    if (numberOfActiveOMPThreads > 1) {
+      if (isSPMDMode()) {
+        __kmpc_barrier_simple_spmd(loc_ref, tid);
+      } else {
         // The #threads parameter must be rounded up to the WARPSIZE.
         int threads =
             WARPSIZE * ((numberOfActiveOMPThreads + WARPSIZE - 1) / WARPSIZE);
@@ -69,10 +65,8 @@ EXTERN void __kmpc_barrier(kmp_Indent *loc_ref, int32_t tid) {
               numberOfActiveOMPThreads, threads);
         // Barrier #1 is for synchronization among active threads.
         named_sync(L1_BARRIER, threads);
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700
-      } // numberOfActiveOMPThreads > 1
-#endif
-    }
+      }
+    } // numberOfActiveOMPThreads > 1
     PRINT0(LD_SYNC, "completed kmpc_barrier\n");
   }
 }

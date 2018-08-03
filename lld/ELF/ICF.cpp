@@ -172,10 +172,9 @@ static bool isEligible(InputSection *S) {
       !S->Name.startswith(".data.rel.ro."))
     return false;
 
-  // Don't merge read only data sections unless
-  // --ignore-data-address-equality or --icf=safe was passed.
-  if (!(S->Flags & SHF_EXECINSTR) &&
-      !(Config->IgnoreDataAddressEquality || Config->ICF == ICFLevel::Safe))
+  // SHF_LINK_ORDER sections are ICF'd as a unit with their dependent sections,
+  // so we don't consider them for ICF individually.
+  if (S->Flags & SHF_LINK_ORDER)
     return false;
 
   // Don't merge synthetic sections as their Data member is not valid and empty.

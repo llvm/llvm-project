@@ -79,8 +79,8 @@ public:
   size_t NumFdes = 0;
 
   struct FdeData {
-    uint32_t Pc;
-    uint32_t FdeVA;
+    uint32_t PcRel;
+    uint32_t FdeVARel;
   };
 
   std::vector<FdeData> getFdeData() const;

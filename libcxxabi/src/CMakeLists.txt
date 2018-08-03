@@ -61,12 +61,19 @@ if (LIBCXXABI_USE_LLVM_UNWINDER)
   # Prefer using the in-tree version of libunwind, either shared or static. If
   # none are found fall back to using -lunwind.
   # FIXME: Is it correct to prefer the static version of libunwind?
-  if (NOT LIBCXXABI_ENABLE_STATIC_UNWINDER AND (TARGET unwind_shared OR HAVE_LIBUNWIND))
-    list(APPEND LIBCXXABI_LIBRARIES unwind_shared)
-  elseif (LIBCXXABI_ENABLE_STATIC_UNWINDER AND (TARGET unwind_static OR HAVE_LIBUNWIND))
-    list(APPEND LIBCXXABI_LIBRARIES unwind_static)
+  if (NOT LIBCXXABI_STATICALLY_LINK_UNWINDER_IN_SHARED_LIBRARY AND (TARGET unwind_shared OR HAVE_LIBUNWIND))
+    list(APPEND LIBCXXABI_SHARED_LIBRARIES unwind_shared)
+  elseif (LIBCXXABI_STATICALLY_LINK_UNWINDER_IN_SHARED_LIBRARY AND (TARGET unwind_static OR HAVE_LIBUNWIND))
+    list(APPEND LIBCXXABI_SHARED_LIBRARIES unwind_static)
   else()
-    list(APPEND LIBCXXABI_LIBRARIES unwind)
+    list(APPEND LIBCXXABI_SHARED_LIBRARIES unwind)
+  endif()
+  if (NOT LIBCXXABI_STATICALLY_LINK_UNWINDER_IN_STATIC_LIBRARY AND (TARGET unwind_shared OR HAVE_LIBUNWIND))
+    list(APPEND LIBCXXABI_STATIC_LIBRARIES unwind_shared)
+  elseif (LIBCXXABI_STATICALLY_LINK_UNWINDER_IN_STATIC_LIBRARY AND (TARGET unwind_static OR HAVE_LIBUNWIND))
+      # We handle this by directly merging libunwind objects into libc++abi.
+  else()
+    list(APPEND LIBCXXABI_STATIC_LIBRARIES unwind)
   endif()
 else()
   add_library_flags_if(LIBCXXABI_HAS_GCC_S_LIB gcc_s)
@@ -122,15 +129,13 @@ set_target_properties(cxxabi_objects
                         POSITION_INDEPENDENT_CODE
                           ON)
 
-set(LIBCXXABI_TARGETS)
-
 # Build the shared library.
 if (LIBCXXABI_ENABLE_SHARED)
   add_library(cxxabi_shared SHARED $<TARGET_OBJECTS:cxxabi_objects>)
   if(COMMAND llvm_setup_rpath)
     llvm_setup_rpath(cxxabi_shared)
   endif()
-  target_link_libraries(cxxabi_shared ${LIBCXXABI_LIBRARIES})
+  target_link_libraries(cxxabi_shared ${LIBCXXABI_LIBRARIES} ${LIBCXXABI_SHARED_LIBRARIES})
   set_target_properties(cxxabi_shared
                         PROPERTIES
                           CXX_EXTENSIONS
@@ -149,19 +154,22 @@ if (LIBCXXABI_ENABLE_SHARED)
                             "1"
                           VERSION
                             "1.0")
-  list(APPEND LIBCXXABI_TARGETS "cxxabi_shared")
+  list(APPEND LIBCXXABI_BUILD_TARGETS "cxxabi_shared")
+  if (LIBCXXABI_INSTALL_SHARED_LIBRARY)
+    list(APPEND LIBCXXABI_INSTALL_TARGETS "cxxabi_shared")
+  endif()
 endif()
 
 # Build the static library.
 if (LIBCXXABI_ENABLE_STATIC)
   set(cxxabi_static_sources $<TARGET_OBJECTS:cxxabi_objects>)
-  if (LIBCXXABI_USE_LLVM_UNWINDER AND LIBCXXABI_ENABLE_STATIC_UNWINDER)
+  if (LIBCXXABI_USE_LLVM_UNWINDER AND LIBCXXABI_STATICALLY_LINK_UNWINDER_IN_STATIC_LIBRARY)
     if (TARGET unwind_static OR HAVE_LIBUNWIND)
       list(APPEND cxxabi_static_sources $<TARGET_OBJECTS:unwind_objects>)
     endif()
   endif()
   add_library(cxxabi_static STATIC ${cxxabi_static_sources})
-  target_link_libraries(cxxabi_static ${LIBCXXABI_LIBRARIES})
+  target_link_libraries(cxxabi_static ${LIBCXXABI_LIBRARIES} ${LIBCXXABI_STATIC_LIBRARIES})
   set_target_properties(cxxabi_static
                         PROPERTIES
                           CXX_EXTENSIONS
@@ -176,14 +184,17 @@ if (LIBCXXABI_ENABLE_STATIC)
                             "c++abi"
                           POSITION_INDEPENDENT_CODE
                             ON)
-  list(APPEND LIBCXXABI_TARGETS "cxxabi_static")
+  list(APPEND LIBCXXABI_BUILD_TARGETS "cxxabi_static")
+  if (LIBCXXABI_INSTALL_STATIC_LIBRARY)
+    list(APPEND LIBCXXABI_INSTALL_TARGETS "cxxabi_static")
+  endif()
 endif()
 
 # Add a meta-target for both libraries.
-add_custom_target(cxxabi DEPENDS ${LIBCXXABI_TARGETS})
+add_custom_target(cxxabi DEPENDS ${LIBCXXABI_BUILD_TARGETS})
 
 if (LIBCXXABI_INSTALL_LIBRARY)
-  install(TARGETS ${LIBCXXABI_TARGETS}
+  install(TARGETS ${LIBCXXABI_INSTALL_TARGETS}
     LIBRARY DESTINATION ${LIBCXXABI_INSTALL_PREFIX}lib${LIBCXXABI_LIBDIR_SUFFIX} COMPONENT cxxabi
     ARCHIVE DESTINATION ${LIBCXXABI_INSTALL_PREFIX}lib${LIBCXXABI_LIBDIR_SUFFIX} COMPONENT cxxabi
     )

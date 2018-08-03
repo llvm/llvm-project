@@ -68,13 +68,17 @@ private:
   void createFiles(opt::InputArgList &Args);
   void addFile(StringRef Path);
   void addLibrary(StringRef Name);
+
+  // True if we are in --whole-archive and --no-whole-archive.
+  bool InWholeArchive = false;
+
   std::vector<InputFile *> Files;
 };
 } // anonymous namespace
 
 bool lld::wasm::link(ArrayRef<const char *> Args, bool CanExitEarly,
                      raw_ostream &Error) {
-  errorHandler().LogName = Args[0];
+  errorHandler().LogName = sys::path::filename(Args[0]);
   errorHandler().ErrorOS = &Error;
   errorHandler().ColorDiagnostics = Error.has_colors();
   errorHandler().ErrorLimitExceededMsg =
@@ -180,6 +184,37 @@ static void readImportFile(StringRef Filename) {
       Config->AllowUndefinedSymbols.insert(Sym);
 }
 
+// Returns slices of MB by parsing MB as an archive file.
+// Each slice consists of a member file in the archive.
+std::vector<MemoryBufferRef> static getArchiveMembers(
+    MemoryBufferRef MB) {
+  std::unique_ptr<Archive> File =
+      CHECK(Archive::create(MB),
+            MB.getBufferIdentifier() + ": failed to parse archive");
+
+  std::vector<MemoryBufferRef> V;
+  Error Err = Error::success();
+  for (const ErrorOr<Archive::Child> &COrErr : File->children(Err)) {
+    Archive::Child C =
+        CHECK(COrErr, MB.getBufferIdentifier() +
+                          ": could not get the child of the archive");
+    MemoryBufferRef MBRef =
+        CHECK(C.getMemoryBufferRef(),
+              MB.getBufferIdentifier() +
+                  ": could not get the buffer for a child of the archive");
+    V.push_back(MBRef);
+  }
+  if (Err)
+    fatal(MB.getBufferIdentifier() + ": Archive::children failed: " +
+          toString(std::move(Err)));
+
+  // Take ownership of memory buffers created for members of thin archives.
+  for (std::unique_ptr<MemoryBuffer> &MB : File->takeThinBuffers())
+    make<std::unique_ptr<MemoryBuffer>>(std::move(MB));
+
+  return V;
+}
+
 void LinkerDriver::addFile(StringRef Path) {
   Optional<MemoryBufferRef> Buffer = readFile(Path);
   if (!Buffer.hasValue())
@@ -188,6 +223,13 @@ void LinkerDriver::addFile(StringRef Path) {
 
   switch (identify_magic(MBRef.getBuffer())) {
   case file_magic::archive: {
+    // Handle -whole-archive.
+    if (InWholeArchive) {
+      for (MemoryBufferRef &M : getArchiveMembers(MBRef))
+        Files.push_back(createObjectFile(M));
+      return;
+    }
+
     SmallString<128> ImportFile = Path;
     path::replace_extension(ImportFile, ".imports");
     if (fs::exists(ImportFile))
@@ -197,10 +239,11 @@ void LinkerDriver::addFile(StringRef Path) {
     return;
   }
   case file_magic::bitcode:
-    Files.push_back(make<BitcodeFile>(MBRef));
+  case file_magic::wasm_object:
+    Files.push_back(createObjectFile(MBRef));
     break;
   default:
-    Files.push_back(make<ObjFile>(MBRef));
+    error("unknown file type: " + MBRef.getBufferIdentifier());
   }
 }
 
@@ -224,6 +267,12 @@ void LinkerDriver::createFiles(opt::InputArgList &Args) {
       break;
     case OPT_INPUT:
       addFile(Arg->getValue());
+      break;
+    case OPT_whole_archive:
+      InWholeArchive = true;
+      break;
+    case OPT_no_whole_archive:
+      InWholeArchive = false;
       break;
     }
   }

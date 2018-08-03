@@ -129,15 +129,6 @@ class kmp_stats_list;
 #include "ompt-internal.h"
 #endif
 
-/*Select data placement in NUMA memory */
-#define NO_FIRST_TOUCH 0
-#define FIRST_TOUCH 1 /* Exploit SGI's first touch page placement algo */
-
-/* If not specified on compile command line, assume no first touch */
-#ifndef BUILD_MEMORY
-#define BUILD_MEMORY NO_FIRST_TOUCH
-#endif
-
 // 0 - no fast memory allocation, alignment: 8-byte on x86, 16-byte on x64.
 // 3 - fast allocation using sync, non-sync free lists of any size, non-self
 // free lists of limited size.

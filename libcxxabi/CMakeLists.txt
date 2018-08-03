@@ -84,6 +84,20 @@ set(LIBCXXABI_LIBCXX_LIBRARY_PATH "" CACHE PATH "The path to libc++ library.")
 option(LIBCXXABI_ENABLE_SHARED "Build libc++abi as a shared library." ON)
 option(LIBCXXABI_ENABLE_STATIC "Build libc++abi as a static library." ON)
 
+cmake_dependent_option(LIBCXXABI_INSTALL_STATIC_LIBRARY
+  "Install the static libc++abi library." ON
+  "LIBCXXABI_ENABLE_STATIC;LIBCXXABI_INSTALL_LIBRARY" OFF)
+cmake_dependent_option(LIBCXXABI_INSTALL_SHARED_LIBRARY
+  "Install the shared libc++abi library." ON
+  "LIBCXXABI_ENABLE_SHARED;LIBCXXABI_INSTALL_LIBRARY" OFF)
+
+cmake_dependent_option(LIBCXXABI_STATICALLY_LINK_UNWINDER_IN_STATIC_LIBRARY
+  "Statically link the LLVM unwinder to static library" ON
+  "LIBCXXABI_ENABLE_STATIC_UNWINDER;LIBCXXABI_ENABLE_STATIC" OFF)
+cmake_dependent_option(LIBCXXABI_STATICALLY_LINK_UNWINDER_IN_SHARED_LIBRARY
+  "Statically link the LLVM unwinder to shared library" ON
+  "LIBCXXABI_ENABLE_STATIC_UNWINDER;LIBCXXABI_ENABLE_SHARED" OFF)
+
 option(LIBCXXABI_BAREMETAL "Build libc++abi for baremetal targets." OFF)
 # The default terminate handler attempts to demangle uncaught exceptions, which
 # causes extra I/O and demangling code to be pulled in.
@@ -165,7 +179,7 @@ if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
 elseif(LLVM_LIBRARY_OUTPUT_INTDIR)
   set(LIBCXXABI_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR})
 else()
-  set(LIBCXXABI_LIBRARY_DIR ${CMAKE_BINARY_DIR}/lib${LIBCXX_LIBDIR_SUFFIX})
+  set(LIBCXXABI_LIBRARY_DIR ${CMAKE_BINARY_DIR}/lib${LIBCXXABI_LIBDIR_SUFFIX})
 endif()
 
 set(LIBCXXABI_INSTALL_PREFIX ${DEFAULT_INSTALL_PREFIX} CACHE STRING
