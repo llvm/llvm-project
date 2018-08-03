@@ -42,6 +42,7 @@
 #include "llvm/Object/COFFImportFile.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/MachO.h"
+#include "llvm/Object/MachOUniversal.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/Wasm.h"
 #include "llvm/Support/Casting.h"
@@ -2363,6 +2364,8 @@ static void DumpInput(StringRef file) {
     DumpArchive(a);
   else if (ObjectFile *o = dyn_cast<ObjectFile>(&Binary))
     DumpObject(o);
+  else if (MachOUniversalBinary *UB = dyn_cast<MachOUniversalBinary>(&Binary))
+    ParseInputMachO(UB);
   else
     report_error(file, object_error::invalid_file_type);
 }

@@ -156,6 +156,9 @@ bool WebAssemblySetP2AlignOperands::runOnMachineFunction(MachineFunction &MF) {
       case WebAssembly::ATOMIC_RMW_XOR_I64:
       case WebAssembly::ATOMIC_RMW_XCHG_I64:
       case WebAssembly::ATOMIC_RMW_CMPXCHG_I64:
+      case WebAssembly::ATOMIC_NOTIFY:
+      case WebAssembly::ATOMIC_WAIT_I32:
+      case WebAssembly::ATOMIC_WAIT_I64:
         RewriteP2Align(MI, WebAssembly::LoadP2AlignOperandNo);
         break;
       case WebAssembly::STORE_I32:

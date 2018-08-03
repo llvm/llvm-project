@@ -61,8 +61,8 @@ __generic int func_return_generic(void);    //expected-error {{return value cann
 
 void func_multiple_addr(void) {
   typedef __private int private_int_t;
-  __local __private int var1;   // expected-error {{multiple address spaces specified for type}}
-  __local __private int *var2;  // expected-error {{multiple address spaces specified for type}}
+  __private __local int var1;   // expected-error {{multiple address spaces specified for type}}
+  __private __local int *var2;  // expected-error {{multiple address spaces specified for type}}
   __local private_int_t var3;   // expected-error {{multiple address spaces specified for type}}
   __local private_int_t *var4;  // expected-error {{multiple address spaces specified for type}}
   __private private_int_t var5; // expected-warning {{multiple identical address spaces specified for type}}

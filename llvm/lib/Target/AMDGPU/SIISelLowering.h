@@ -81,7 +81,7 @@ private:
   SDValue LowerBRCOND(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue adjustLoadValueType(unsigned Opcode, MemSDNode *M,
-                              SelectionDAG &DAG,
+                              SelectionDAG &DAG, ArrayRef<SDValue> Ops,
                               bool IsIntrinsic = false) const;
 
   SDValue handleD16VData(SDValue VData, SelectionDAG &DAG) const;

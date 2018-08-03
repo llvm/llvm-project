@@ -1,11 +1,8 @@
 // RUN: %clang_cc1 -ast-print %s -o - | FileCheck %s
 // RUN: %clang_cc1 -DMS_EXT -fsyntax-only -fms-extensions %s -triple x86_64-pc-win32 -ast-print | FileCheck %s --check-prefix=MS-EXT
 
-// FIXME: A bug in ParsedAttributes causes the order of the attributes to be
-// reversed. The checks are consequently in the reverse order below.
-
-// CHECK: #pragma clang loop interleave_count(8){{$}}
-// CHECK-NEXT: #pragma clang loop vectorize_width(4)
+// CHECK: #pragma clang loop vectorize_width(4)
+// CHECK-NEXT: #pragma clang loop interleave_count(8){{$}}
 
 void test(int *List, int Length) {
   int i = 0;
@@ -17,9 +14,9 @@ void test(int *List, int Length) {
     i++;
   }
 
-// CHECK: #pragma clang loop interleave(disable)
+// CHECK: #pragma clang loop distribute(disable)
 // CHECK-NEXT: #pragma clang loop vectorize(enable)
-// CHECK-NEXT: #pragma clang loop distribute(disable)
+// CHECK-NEXT: #pragma clang loop interleave(disable)
 
 #pragma clang loop distribute(disable)
 #pragma clang loop vectorize(enable)
@@ -30,9 +27,9 @@ void test(int *List, int Length) {
     i++;
   }
 
-// CHECK: #pragma clang loop interleave(enable)
+// CHECK: #pragma clang loop distribute(enable)
 // CHECK-NEXT: #pragma clang loop vectorize(disable)
-// CHECK-NEXT: #pragma clang loop distribute(enable)
+// CHECK-NEXT: #pragma clang loop interleave(enable)
 
 #pragma clang loop distribute(enable)
 #pragma clang loop vectorize(disable)
@@ -52,8 +49,8 @@ void test_nontype_template_param(int *List, int Length) {
   }
 }
 
-// CHECK: #pragma clang loop interleave_count(I)
 // CHECK: #pragma clang loop vectorize_width(V)
+// CHECK: #pragma clang loop interleave_count(I)
 
 void test_templates(int *List, int Length) {
   test_nontype_template_param<2, 4>(List, Length);

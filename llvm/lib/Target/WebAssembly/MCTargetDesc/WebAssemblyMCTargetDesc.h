@@ -81,6 +81,16 @@ enum {
   // whether the value represents a control-flow label.
   VariableOpImmediateIsLabel = (1 << 1)
 };
+
+/// Target Operand Flag enum.
+enum TOF {
+  MO_NO_FLAG = 0,
+
+  // Flags to indicate the type of the symbol being referenced
+  MO_SYMBOL_FUNCTION = 0x1,
+  MO_SYMBOL_GLOBAL   = 0x2,
+  MO_SYMBOL_MASK     = 0x3,
+};
 } // end namespace WebAssemblyII
 
 } // end namespace llvm
@@ -253,6 +263,10 @@ inline unsigned GetDefaultP2Align(unsigned Opcode) {
   case WebAssembly::ATOMIC_RMW_CMPXCHG_I32_S:
   case WebAssembly::ATOMIC_RMW32_U_CMPXCHG_I64:
   case WebAssembly::ATOMIC_RMW32_U_CMPXCHG_I64_S:
+  case WebAssembly::ATOMIC_NOTIFY:
+  case WebAssembly::ATOMIC_NOTIFY_S:
+  case WebAssembly::ATOMIC_WAIT_I32:
+  case WebAssembly::ATOMIC_WAIT_I32_S:
     return 2;
   case WebAssembly::LOAD_I64:
   case WebAssembly::LOAD_I64_S:
@@ -280,6 +294,8 @@ inline unsigned GetDefaultP2Align(unsigned Opcode) {
   case WebAssembly::ATOMIC_RMW_XCHG_I64_S:
   case WebAssembly::ATOMIC_RMW_CMPXCHG_I64:
   case WebAssembly::ATOMIC_RMW_CMPXCHG_I64_S:
+  case WebAssembly::ATOMIC_WAIT_I64:
+  case WebAssembly::ATOMIC_WAIT_I64_S:
     return 3;
   default:
     llvm_unreachable("Only loads and stores have p2align values");

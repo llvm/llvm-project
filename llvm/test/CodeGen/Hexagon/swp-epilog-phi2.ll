@@ -14,9 +14,9 @@
 %s.11 = type { i32, i32, i8* }
 
 ; Function Attrs: nounwind
-define void @f0(%s.0* %a0) #0 {
+define void @f0(%s.0* %a0, i8* %a1, i16* %a2, i16** %a3, i16** %a4) #0 {
 b0:
-  %v0 = load i8, i8* undef, align 1, !tbaa !0
+  %v0 = load i8, i8* %a1, align 1, !tbaa !0
   %v1 = icmp eq i8 %v0, 1
   br i1 %v1, label %b1, label %b2
 
@@ -26,7 +26,7 @@ b0:
 ; CHECK: }{{[ \t]*}}:endloop0
 
 b1:                                               ; preds = %b1, %b0
-  %v2 = phi i16* [ %v17, %b1 ], [ undef, %b0 ]
+  %v2 = phi i16* [ %v17, %b1 ], [ %a2, %b0 ]
   %v3 = phi i32 [ %v18, %b1 ], [ 0, %b0 ]
   %v4 = getelementptr inbounds %s.0, %s.0* %a0, i32 0, i32 25, i32 10, i32 %v3
   %v5 = load i8, i8* %v4, align 1, !tbaa !0
@@ -35,16 +35,16 @@ b1:                                               ; preds = %b1, %b0
   %v8 = getelementptr inbounds %s.0, %s.0* %a0, i32 0, i32 25, i32 10, i32 %v7
   %v9 = load i8, i8* %v8, align 1, !tbaa !0
   %v10 = or i16 0, %v6
-  %v11 = load i8, i8* undef, align 1, !tbaa !0
+  %v11 = load i8, i8* %a1, align 1, !tbaa !0
   %v12 = zext i8 %v11 to i16
   %v13 = shl nuw i16 %v12, 8
   %v14 = or i16 %v10, %v13
   %v15 = or i16 %v14, 0
   %v16 = getelementptr inbounds i16, i16* %v2, i32 1
-  store i16* %v16, i16** null, align 4, !tbaa !3
+  store i16* %v16, i16** %a3, align 4, !tbaa !3
   store i16 %v15, i16* %v2, align 2, !tbaa !5
   %v17 = getelementptr inbounds i16, i16* %v2, i32 2
-  store i16* %v17, i16** null, align 4, !tbaa !3
+  store i16* %v17, i16** %a4, align 4, !tbaa !3
   store i16 0, i16* %v16, align 2, !tbaa !5
   %v18 = add nsw i32 %v3, 8
   %v19 = icmp slt i32 %v18, undef

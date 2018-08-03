@@ -661,7 +661,7 @@ void Sema::AddPragmaAttributes(Scope *S, Decl *D) {
     Entry.IsUsed = true;
     PragmaAttributeCurrentTargetDecl = D;
     ParsedAttributesView Attrs;
-    Attrs.addAtStart(Attribute);
+    Attrs.addAtEnd(Attribute);
     ProcessDeclAttributeList(S, D, Attrs);
     PragmaAttributeCurrentTargetDecl = nullptr;
   }

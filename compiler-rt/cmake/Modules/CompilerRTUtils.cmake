@@ -210,47 +210,51 @@ macro(load_llvm_config)
     find_program(LLVM_CONFIG_PATH "llvm-config"
                  DOC "Path to llvm-config binary")
     if (NOT LLVM_CONFIG_PATH)
-      message(FATAL_ERROR "llvm-config not found: specify LLVM_CONFIG_PATH")
+      message(WARNING "UNSUPPORTED COMPILER-RT CONFIGURATION DETECTED: "
+                      "llvm-config not found.\n"
+                      "Reconfigure with -DLLVM_CONFIG_PATH=path/to/llvm-config.")
     endif()
   endif()
-  execute_process(
-    COMMAND ${LLVM_CONFIG_PATH} "--obj-root" "--bindir" "--libdir" "--src-root"
-    RESULT_VARIABLE HAD_ERROR
-    OUTPUT_VARIABLE CONFIG_OUTPUT)
-  if (HAD_ERROR)
-    message(FATAL_ERROR "llvm-config failed with status ${HAD_ERROR}")
+  if (LLVM_CONFIG_PATH)
+    execute_process(
+      COMMAND ${LLVM_CONFIG_PATH} "--obj-root" "--bindir" "--libdir" "--src-root"
+      RESULT_VARIABLE HAD_ERROR
+      OUTPUT_VARIABLE CONFIG_OUTPUT)
+    if (HAD_ERROR)
+      message(FATAL_ERROR "llvm-config failed with status ${HAD_ERROR}")
+    endif()
+    string(REGEX REPLACE "[ \t]*[\r\n]+[ \t]*" ";" CONFIG_OUTPUT ${CONFIG_OUTPUT})
+    list(GET CONFIG_OUTPUT 0 BINARY_DIR)
+    list(GET CONFIG_OUTPUT 1 TOOLS_BINARY_DIR)
+    list(GET CONFIG_OUTPUT 2 LIBRARY_DIR)
+    list(GET CONFIG_OUTPUT 3 MAIN_SRC_DIR)
+
+    set(LLVM_BINARY_DIR ${BINARY_DIR} CACHE PATH "Path to LLVM build tree")
+    set(LLVM_TOOLS_BINARY_DIR ${TOOLS_BINARY_DIR} CACHE PATH "Path to llvm/bin")
+    set(LLVM_LIBRARY_DIR ${LIBRARY_DIR} CACHE PATH "Path to llvm/lib")
+    set(LLVM_MAIN_SRC_DIR ${MAIN_SRC_DIR} CACHE PATH "Path to LLVM source tree")
+
+    # Make use of LLVM CMake modules.
+    # --cmakedir is supported since llvm r291218 (4.0 release)
+    execute_process(
+      COMMAND ${LLVM_CONFIG_PATH} --cmakedir
+      RESULT_VARIABLE HAD_ERROR
+      OUTPUT_VARIABLE CONFIG_OUTPUT)
+    if(NOT HAD_ERROR)
+      string(STRIP "${CONFIG_OUTPUT}" LLVM_CMAKE_PATH_FROM_LLVM_CONFIG)
+      file(TO_CMAKE_PATH ${LLVM_CMAKE_PATH_FROM_LLVM_CONFIG} LLVM_CMAKE_PATH)
+    else()
+      file(TO_CMAKE_PATH ${LLVM_BINARY_DIR} LLVM_BINARY_DIR_CMAKE_STYLE)
+      set(LLVM_CMAKE_PATH "${LLVM_BINARY_DIR_CMAKE_STYLE}/lib${LLVM_LIBDIR_SUFFIX}/cmake/llvm")
+    endif()
+
+    list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_PATH}")
+    # Get some LLVM variables from LLVMConfig.
+    include("${LLVM_CMAKE_PATH}/LLVMConfig.cmake")
+
+    set(LLVM_LIBRARY_OUTPUT_INTDIR
+      ${LLVM_BINARY_DIR}/${CMAKE_CFG_INTDIR}/lib${LLVM_LIBDIR_SUFFIX})
   endif()
-  string(REGEX REPLACE "[ \t]*[\r\n]+[ \t]*" ";" CONFIG_OUTPUT ${CONFIG_OUTPUT})
-  list(GET CONFIG_OUTPUT 0 BINARY_DIR)
-  list(GET CONFIG_OUTPUT 1 TOOLS_BINARY_DIR)
-  list(GET CONFIG_OUTPUT 2 LIBRARY_DIR)
-  list(GET CONFIG_OUTPUT 3 MAIN_SRC_DIR)
-
-  set(LLVM_BINARY_DIR ${BINARY_DIR} CACHE PATH "Path to LLVM build tree")
-  set(LLVM_TOOLS_BINARY_DIR ${TOOLS_BINARY_DIR} CACHE PATH "Path to llvm/bin")
-  set(LLVM_LIBRARY_DIR ${LIBRARY_DIR} CACHE PATH "Path to llvm/lib")
-  set(LLVM_MAIN_SRC_DIR ${MAIN_SRC_DIR} CACHE PATH "Path to LLVM source tree")
-
-  # Make use of LLVM CMake modules.
-  # --cmakedir is supported since llvm r291218 (4.0 release)
-  execute_process(
-    COMMAND ${LLVM_CONFIG_PATH} --cmakedir
-    RESULT_VARIABLE HAD_ERROR
-    OUTPUT_VARIABLE CONFIG_OUTPUT)
-  if(NOT HAD_ERROR)
-    string(STRIP "${CONFIG_OUTPUT}" LLVM_CMAKE_PATH_FROM_LLVM_CONFIG)
-    file(TO_CMAKE_PATH ${LLVM_CMAKE_PATH_FROM_LLVM_CONFIG} LLVM_CMAKE_PATH)
-  else()
-    file(TO_CMAKE_PATH ${LLVM_BINARY_DIR} LLVM_BINARY_DIR_CMAKE_STYLE)
-    set(LLVM_CMAKE_PATH "${LLVM_BINARY_DIR_CMAKE_STYLE}/lib${LLVM_LIBDIR_SUFFIX}/cmake/llvm")
-  endif()
-
-  list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_PATH}")
-  # Get some LLVM variables from LLVMConfig.
-  include("${LLVM_CMAKE_PATH}/LLVMConfig.cmake")
-
-  set(LLVM_LIBRARY_OUTPUT_INTDIR
-    ${LLVM_BINARY_DIR}/${CMAKE_CFG_INTDIR}/lib${LLVM_LIBDIR_SUFFIX})
 endmacro()
 
 macro(construct_compiler_rt_default_triple)

@@ -8132,51 +8132,6 @@ let Predicates = [UseAVX2] in {
 }
 
 //===----------------------------------------------------------------------===//
-// Extra selection patterns for f128, f128mem
-
-// movaps is shorter than movdqa. movaps is in SSE and movdqa is in SSE2.
-def : Pat<(alignedstore (f128 VR128:$src), addr:$dst),
-          (MOVAPSmr addr:$dst, (COPY_TO_REGCLASS (f128 VR128:$src), VR128))>;
-def : Pat<(store (f128 VR128:$src), addr:$dst),
-          (MOVUPSmr addr:$dst, (COPY_TO_REGCLASS (f128 VR128:$src), VR128))>;
-
-def : Pat<(alignedloadf128 addr:$src),
-          (COPY_TO_REGCLASS (MOVAPSrm addr:$src), VR128)>;
-def : Pat<(loadf128 addr:$src),
-          (COPY_TO_REGCLASS (MOVUPSrm addr:$src), VR128)>;
-
-// andps is shorter than andpd or pand. andps is SSE and andpd/pand are in SSE2
-def : Pat<(f128 (X86fand VR128:$src1, (memopf128 addr:$src2))),
-          (COPY_TO_REGCLASS
-           (ANDPSrm (COPY_TO_REGCLASS VR128:$src1, VR128), f128mem:$src2),
-           VR128)>;
-
-def : Pat<(f128 (X86fand VR128:$src1, VR128:$src2)),
-          (COPY_TO_REGCLASS
-           (ANDPSrr (COPY_TO_REGCLASS VR128:$src1, VR128),
-                    (COPY_TO_REGCLASS VR128:$src2, VR128)), VR128)>;
-
-def : Pat<(f128 (X86for VR128:$src1, (memopf128 addr:$src2))),
-          (COPY_TO_REGCLASS
-           (ORPSrm (COPY_TO_REGCLASS VR128:$src1, VR128), f128mem:$src2),
-           VR128)>;
-
-def : Pat<(f128 (X86for VR128:$src1, VR128:$src2)),
-          (COPY_TO_REGCLASS
-           (ORPSrr (COPY_TO_REGCLASS VR128:$src1, VR128),
-                   (COPY_TO_REGCLASS VR128:$src2, VR128)), VR128)>;
-
-def : Pat<(f128 (X86fxor VR128:$src1, (memopf128 addr:$src2))),
-          (COPY_TO_REGCLASS
-           (XORPSrm (COPY_TO_REGCLASS VR128:$src1, VR128), f128mem:$src2),
-           VR128)>;
-
-def : Pat<(f128 (X86fxor VR128:$src1, VR128:$src2)),
-          (COPY_TO_REGCLASS
-           (XORPSrr (COPY_TO_REGCLASS VR128:$src1, VR128),
-                    (COPY_TO_REGCLASS VR128:$src2, VR128)), VR128)>;
-
-//===----------------------------------------------------------------------===//
 // GFNI instructions
 //===----------------------------------------------------------------------===//
 

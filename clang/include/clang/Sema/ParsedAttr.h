@@ -728,10 +728,6 @@ public:
   ParsedAttr &operator[](SizeType pos) { return *AttrList[pos]; }
   const ParsedAttr &operator[](SizeType pos) const { return *AttrList[pos]; }
 
-  void addAtStart(ParsedAttr *newAttr) {
-    assert(newAttr);
-    AttrList.insert(AttrList.begin(), newAttr);
-  }
   void addAtEnd(ParsedAttr *newAttr) {
     assert(newAttr);
     AttrList.push_back(newAttr);
@@ -785,6 +781,23 @@ public:
   iterator end() { return iterator(AttrList.end()); }
   const_iterator end() const { return const_iterator(AttrList.end()); }
 
+  ParsedAttr &front() {
+    assert(!empty());
+    return *AttrList.front();
+  }
+  const ParsedAttr &front() const {
+    assert(!empty());
+    return *AttrList.front();
+  }
+  ParsedAttr &back() {
+    assert(!empty());
+    return *AttrList.back();
+  }
+  const ParsedAttr &back() const {
+    assert(!empty());
+    return *AttrList.back();
+  }
+
   bool hasAttribute(ParsedAttr::Kind K) const {
     return llvm::any_of(
         AttrList, [K](const ParsedAttr *AL) { return AL->getKind() == K; });
@@ -826,7 +839,7 @@ public:
                      SourceLocation ellipsisLoc = SourceLocation()) {
     ParsedAttr *attr = pool.create(attrName, attrRange, scopeName, scopeLoc,
                                    args, numArgs, syntax, ellipsisLoc);
-    addAtStart(attr);
+    addAtEnd(attr);
     return attr;
   }
 
@@ -842,7 +855,7 @@ public:
     ParsedAttr *attr = pool.create(
         attrName, attrRange, scopeName, scopeLoc, Param, introduced, deprecated,
         obsoleted, unavailable, MessageExpr, syntax, strict, ReplacementExpr);
-    addAtStart(attr);
+    addAtEnd(attr);
     return attr;
   }
 
@@ -853,7 +866,7 @@ public:
                      IdentifierLoc *Param3, ParsedAttr::Syntax syntax) {
     ParsedAttr *attr = pool.create(attrName, attrRange, scopeName, scopeLoc,
                                    Param1, Param2, Param3, syntax);
-    addAtStart(attr);
+    addAtEnd(attr);
     return attr;
   }
 
@@ -867,7 +880,7 @@ public:
     ParsedAttr *attr = pool.createTypeTagForDatatype(
         attrName, attrRange, scopeName, scopeLoc, argumentKind, matchingCType,
         layoutCompatible, mustBeNull, syntax);
-    addAtStart(attr);
+    addAtEnd(attr);
     return attr;
   }
 
@@ -878,7 +891,7 @@ public:
                              ParsedAttr::Syntax syntaxUsed) {
     ParsedAttr *attr = pool.createTypeAttribute(attrName, attrRange, scopeName,
                                                 scopeLoc, typeArg, syntaxUsed);
-    addAtStart(attr);
+    addAtEnd(attr);
     return attr;
   }
 
@@ -891,7 +904,7 @@ public:
     ParsedAttr *attr =
         pool.createPropertyAttribute(attrName, attrRange, scopeName, scopeLoc,
                                      getterId, setterId, syntaxUsed);
-    addAtStart(attr);
+    addAtEnd(attr);
     return attr;
   }
 

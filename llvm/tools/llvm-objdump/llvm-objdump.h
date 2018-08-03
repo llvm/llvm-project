@@ -22,6 +22,7 @@ namespace object {
   class COFFObjectFile;
   class COFFImportFile;
   class MachOObjectFile;
+  class MachOUniversalBinary;
   class ObjectFile;
   class Archive;
   class RelocationRef;
@@ -71,6 +72,7 @@ extern cl::opt<DIDumpType> DwarfDumpType;
 void error(std::error_code ec);
 bool RelocAddressLess(object::RelocationRef a, object::RelocationRef b);
 void ParseInputMachO(StringRef Filename);
+void ParseInputMachO(object::MachOUniversalBinary *UB);
 void printCOFFUnwindInfo(const object::COFFObjectFile* o);
 void printMachOUnwindInfo(const object::MachOObjectFile* o);
 void printMachOExportsTrie(const object::MachOObjectFile* o);

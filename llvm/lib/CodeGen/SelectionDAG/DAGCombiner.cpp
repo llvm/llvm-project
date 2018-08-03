@@ -18060,21 +18060,14 @@ SDValue DAGCombiner::BuildSDIV(SDNode *N) {
   if (DAG.getMachineFunction().getFunction().optForMinSize())
     return SDValue();
 
-  ConstantSDNode *C = isConstOrConstSplat(N->getOperand(1));
-  if (!C)
-    return SDValue();
-
-  // Avoid division by zero.
-  if (C->isNullValue())
-    return SDValue();
-
   SmallVector<SDNode *, 8> Built;
-  SDValue S =
-      TLI.BuildSDIV(N, C->getAPIntValue(), DAG, LegalOperations, Built);
+  if (SDValue S = TLI.BuildSDIV(N, DAG, LegalOperations, Built)) {
+    for (SDNode *N : Built)
+      AddToWorklist(N);
+    return S;
+  }
 
-  for (SDNode *N : Built)
-    AddToWorklist(N);
-  return S;
+  return SDValue();
 }
 
 /// Given an ISD::SDIV node expressing a divide by constant power of 2, return a

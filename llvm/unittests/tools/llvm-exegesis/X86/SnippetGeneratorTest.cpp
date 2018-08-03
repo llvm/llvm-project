@@ -57,22 +57,21 @@ class SnippetGeneratorTest : public X86SnippetGeneratorTest {
 protected:
   SnippetGeneratorTest() : Runner(State) {}
 
-  SnippetPrototype checkAndGetConfigurations(unsigned Opcode) {
+  CodeTemplate checkAndGetCodeTemplate(unsigned Opcode) {
     randomGenerator().seed(0); // Initialize seed.
-    auto ProtoOrError = Runner.generatePrototype(Opcode);
-    EXPECT_FALSE(ProtoOrError.takeError()); // Valid configuration.
-    return std::move(ProtoOrError.get());
+    auto CodeTemplateOrError = Runner.generateCodeTemplate(Opcode);
+    EXPECT_FALSE(CodeTemplateOrError.takeError()); // Valid configuration.
+    return std::move(CodeTemplateOrError.get());
   }
 
   BenchmarkRunner Runner;
 };
 
-using LatencySnippetGeneratorTest =
-    SnippetGeneratorTest<LatencyBenchmarkRunner>;
+using LatencyBenchmarkRunnerTest = SnippetGeneratorTest<LatencyBenchmarkRunner>;
 
-using UopsSnippetGeneratorTest = SnippetGeneratorTest<UopsBenchmarkRunner>;
+using UopsBenchmarkRunnerTest = SnippetGeneratorTest<UopsBenchmarkRunner>;
 
-TEST_F(LatencySnippetGeneratorTest, ImplicitSelfDependency) {
+TEST_F(LatencyBenchmarkRunnerTest, ImplicitSelfDependency) {
   // ADC16i16 self alias because of implicit use and def.
 
   // explicit use 0       : imm
@@ -85,16 +84,16 @@ TEST_F(LatencySnippetGeneratorTest, ImplicitSelfDependency) {
   EXPECT_THAT(MCInstrInfo.get(Opcode).getImplicitDefs()[1], llvm::X86::EFLAGS);
   EXPECT_THAT(MCInstrInfo.get(Opcode).getImplicitUses()[0], llvm::X86::AX);
   EXPECT_THAT(MCInstrInfo.get(Opcode).getImplicitUses()[1], llvm::X86::EFLAGS);
-  const SnippetPrototype Proto = checkAndGetConfigurations(Opcode);
-  EXPECT_THAT(Proto.Explanation, HasSubstr("implicit"));
-  ASSERT_THAT(Proto.Snippet, SizeIs(1));
-  const InstructionBuilder &IB = Proto.Snippet[0];
+  const CodeTemplate CT = checkAndGetCodeTemplate(Opcode);
+  EXPECT_THAT(CT.Info, HasSubstr("implicit"));
+  ASSERT_THAT(CT.Instructions, SizeIs(1));
+  const InstructionBuilder &IB = CT.Instructions[0];
   EXPECT_THAT(IB.getOpcode(), Opcode);
   ASSERT_THAT(IB.VariableValues, SizeIs(1)); // Imm.
   EXPECT_THAT(IB.VariableValues[0], IsInvalid()) << "Immediate is not set";
 }
 
-TEST_F(LatencySnippetGeneratorTest, ExplicitSelfDependency) {
+TEST_F(LatencyBenchmarkRunnerTest, ExplicitSelfDependency) {
   // ADD16ri self alias because Op0 and Op1 are tied together.
 
   // explicit def 0       : reg RegClass=GR16
@@ -103,78 +102,78 @@ TEST_F(LatencySnippetGeneratorTest, ExplicitSelfDependency) {
   // implicit def         : EFLAGS
   const unsigned Opcode = llvm::X86::ADD16ri;
   EXPECT_THAT(MCInstrInfo.get(Opcode).getImplicitDefs()[0], llvm::X86::EFLAGS);
-  const SnippetPrototype Proto = checkAndGetConfigurations(Opcode);
-  EXPECT_THAT(Proto.Explanation, HasSubstr("explicit"));
-  ASSERT_THAT(Proto.Snippet, SizeIs(1));
-  const InstructionBuilder &IB = Proto.Snippet[0];
+  const CodeTemplate CT = checkAndGetCodeTemplate(Opcode);
+  EXPECT_THAT(CT.Info, HasSubstr("explicit"));
+  ASSERT_THAT(CT.Instructions, SizeIs(1));
+  const InstructionBuilder &IB = CT.Instructions[0];
   EXPECT_THAT(IB.getOpcode(), Opcode);
   ASSERT_THAT(IB.VariableValues, SizeIs(2));
   EXPECT_THAT(IB.VariableValues[0], IsReg()) << "Operand 0 and 1";
   EXPECT_THAT(IB.VariableValues[1], IsInvalid()) << "Operand 2 is not set";
 }
 
-TEST_F(LatencySnippetGeneratorTest, DependencyThroughOtherOpcode) {
+TEST_F(LatencyBenchmarkRunnerTest, DependencyThroughOtherOpcode) {
   // CMP64rr
   // explicit use 0       : reg RegClass=GR64
   // explicit use 1       : reg RegClass=GR64
   // implicit def         : EFLAGS
 
   const unsigned Opcode = llvm::X86::CMP64rr;
-  const SnippetPrototype Proto = checkAndGetConfigurations(Opcode);
-  EXPECT_THAT(Proto.Explanation, HasSubstr("cycle through"));
-  ASSERT_THAT(Proto.Snippet, SizeIs(2));
-  const InstructionBuilder &IB = Proto.Snippet[0];
+  const CodeTemplate CT = checkAndGetCodeTemplate(Opcode);
+  EXPECT_THAT(CT.Info, HasSubstr("cycle through"));
+  ASSERT_THAT(CT.Instructions, SizeIs(2));
+  const InstructionBuilder &IB = CT.Instructions[0];
   EXPECT_THAT(IB.getOpcode(), Opcode);
   ASSERT_THAT(IB.VariableValues, SizeIs(2));
   EXPECT_THAT(IB.VariableValues, AnyOf(ElementsAre(IsReg(), IsInvalid()),
                                        ElementsAre(IsInvalid(), IsReg())));
-  EXPECT_THAT(Proto.Snippet[1].getOpcode(), Not(Opcode));
+  EXPECT_THAT(CT.Instructions[1].getOpcode(), Not(Opcode));
   // TODO: check that the two instructions alias each other.
 }
 
-TEST_F(LatencySnippetGeneratorTest, LAHF) {
+TEST_F(LatencyBenchmarkRunnerTest, LAHF) {
   const unsigned Opcode = llvm::X86::LAHF;
-  const SnippetPrototype Proto = checkAndGetConfigurations(Opcode);
-  EXPECT_THAT(Proto.Explanation, HasSubstr("cycle through"));
-  ASSERT_THAT(Proto.Snippet, SizeIs(2));
-  const InstructionBuilder &IB = Proto.Snippet[0];
+  const CodeTemplate CT = checkAndGetCodeTemplate(Opcode);
+  EXPECT_THAT(CT.Info, HasSubstr("cycle through"));
+  ASSERT_THAT(CT.Instructions, SizeIs(2));
+  const InstructionBuilder &IB = CT.Instructions[0];
   EXPECT_THAT(IB.getOpcode(), Opcode);
   ASSERT_THAT(IB.VariableValues, SizeIs(0));
 }
 
-TEST_F(UopsSnippetGeneratorTest, ParallelInstruction) {
+TEST_F(UopsBenchmarkRunnerTest, ParallelInstruction) {
   // BNDCL32rr is parallel no matter what.
 
   // explicit use 0       : reg RegClass=BNDR
   // explicit use 1       : reg RegClass=GR32
 
   const unsigned Opcode = llvm::X86::BNDCL32rr;
-  const SnippetPrototype Proto = checkAndGetConfigurations(Opcode);
-  EXPECT_THAT(Proto.Explanation, HasSubstr("parallel"));
-  ASSERT_THAT(Proto.Snippet, SizeIs(1));
-  const InstructionBuilder &IB = Proto.Snippet[0];
+  const CodeTemplate CT = checkAndGetCodeTemplate(Opcode);
+  EXPECT_THAT(CT.Info, HasSubstr("parallel"));
+  ASSERT_THAT(CT.Instructions, SizeIs(1));
+  const InstructionBuilder &IB = CT.Instructions[0];
   EXPECT_THAT(IB.getOpcode(), Opcode);
   ASSERT_THAT(IB.VariableValues, SizeIs(2));
   EXPECT_THAT(IB.VariableValues[0], IsInvalid());
   EXPECT_THAT(IB.VariableValues[1], IsInvalid());
 }
 
-TEST_F(UopsSnippetGeneratorTest, SerialInstruction) {
+TEST_F(UopsBenchmarkRunnerTest, SerialInstruction) {
   // CDQ is serial no matter what.
 
   // implicit def         : EAX
   // implicit def         : EDX
   // implicit use         : EAX
   const unsigned Opcode = llvm::X86::CDQ;
-  const SnippetPrototype Proto = checkAndGetConfigurations(Opcode);
-  EXPECT_THAT(Proto.Explanation, HasSubstr("serial"));
-  ASSERT_THAT(Proto.Snippet, SizeIs(1));
-  const InstructionBuilder &IB = Proto.Snippet[0];
+  const CodeTemplate CT = checkAndGetCodeTemplate(Opcode);
+  EXPECT_THAT(CT.Info, HasSubstr("serial"));
+  ASSERT_THAT(CT.Instructions, SizeIs(1));
+  const InstructionBuilder &IB = CT.Instructions[0];
   EXPECT_THAT(IB.getOpcode(), Opcode);
   ASSERT_THAT(IB.VariableValues, SizeIs(0));
 }
 
-TEST_F(UopsSnippetGeneratorTest, StaticRenaming) {
+TEST_F(UopsBenchmarkRunnerTest, StaticRenaming) {
   // CMOVA32rr has tied variables, we enumarate the possible values to execute
   // as many in parallel as possible.
 
@@ -183,12 +182,12 @@ TEST_F(UopsSnippetGeneratorTest, StaticRenaming) {
   // explicit use 2       : reg RegClass=GR32
   // implicit use         : EFLAGS
   const unsigned Opcode = llvm::X86::CMOVA32rr;
-  const SnippetPrototype Proto = checkAndGetConfigurations(Opcode);
-  EXPECT_THAT(Proto.Explanation, HasSubstr("static renaming"));
+  const CodeTemplate CT = checkAndGetCodeTemplate(Opcode);
+  EXPECT_THAT(CT.Info, HasSubstr("static renaming"));
   constexpr const unsigned kInstructionCount = 15;
-  ASSERT_THAT(Proto.Snippet, SizeIs(kInstructionCount));
+  ASSERT_THAT(CT.Instructions, SizeIs(kInstructionCount));
   std::unordered_set<unsigned> AllDefRegisters;
-  for (const auto &IB : Proto.Snippet) {
+  for (const auto &IB : CT.Instructions) {
     ASSERT_THAT(IB.VariableValues, SizeIs(2));
     AllDefRegisters.insert(IB.VariableValues[0].getReg());
   }
@@ -196,7 +195,7 @@ TEST_F(UopsSnippetGeneratorTest, StaticRenaming) {
       << "Each instruction writes to a different register";
 }
 
-TEST_F(UopsSnippetGeneratorTest, NoTiedVariables) {
+TEST_F(UopsBenchmarkRunnerTest, NoTiedVariables) {
   // CMOV_GR32 has no tied variables, we make sure def and use are different
   // from each other.
 
@@ -206,10 +205,10 @@ TEST_F(UopsSnippetGeneratorTest, NoTiedVariables) {
   // explicit use 3       : imm
   // implicit use         : EFLAGS
   const unsigned Opcode = llvm::X86::CMOV_GR32;
-  const SnippetPrototype Proto = checkAndGetConfigurations(Opcode);
-  EXPECT_THAT(Proto.Explanation, HasSubstr("no tied variables"));
-  ASSERT_THAT(Proto.Snippet, SizeIs(1));
-  const InstructionBuilder &IB = Proto.Snippet[0];
+  const CodeTemplate CT = checkAndGetCodeTemplate(Opcode);
+  EXPECT_THAT(CT.Info, HasSubstr("no tied variables"));
+  ASSERT_THAT(CT.Instructions, SizeIs(1));
+  const InstructionBuilder &IB = CT.Instructions[0];
   EXPECT_THAT(IB.getOpcode(), Opcode);
   ASSERT_THAT(IB.VariableValues, SizeIs(4));
   EXPECT_THAT(IB.VariableValues[0].getReg(), Not(IB.VariableValues[1].getReg()))
@@ -219,14 +218,14 @@ TEST_F(UopsSnippetGeneratorTest, NoTiedVariables) {
   EXPECT_THAT(IB.VariableValues[3], IsInvalid());
 }
 
-TEST_F(UopsSnippetGeneratorTest, MemoryUse) {
+TEST_F(UopsBenchmarkRunnerTest, MemoryUse) {
   // Mov32rm reads from memory.
   const unsigned Opcode = llvm::X86::MOV32rm;
-  const SnippetPrototype Proto = checkAndGetConfigurations(Opcode);
-  EXPECT_THAT(Proto.Explanation, HasSubstr("no tied variables"));
-  ASSERT_THAT(Proto.Snippet,
+  const CodeTemplate CT = checkAndGetCodeTemplate(Opcode);
+  EXPECT_THAT(CT.Info, HasSubstr("no tied variables"));
+  ASSERT_THAT(CT.Instructions,
               SizeIs(UopsBenchmarkRunner::kMinNumDifferentAddresses));
-  const InstructionBuilder &IB = Proto.Snippet[0];
+  const InstructionBuilder &IB = CT.Instructions[0];
   EXPECT_THAT(IB.getOpcode(), Opcode);
   ASSERT_THAT(IB.VariableValues, SizeIs(6));
   EXPECT_EQ(IB.VariableValues[2].getImm(), 1);
@@ -235,10 +234,10 @@ TEST_F(UopsSnippetGeneratorTest, MemoryUse) {
   EXPECT_EQ(IB.VariableValues[5].getReg(), 0u);
 }
 
-TEST_F(UopsSnippetGeneratorTest, MemoryUse_Movsb) {
+TEST_F(UopsBenchmarkRunnerTest, MemoryUse_Movsb) {
   // MOVSB writes to scratch memory register.
   const unsigned Opcode = llvm::X86::MOVSB;
-  auto Error = Runner.generatePrototype(Opcode).takeError();
+  auto Error = Runner.generateCodeTemplate(Opcode).takeError();
   EXPECT_TRUE((bool)Error);
   llvm::consumeError(std::move(Error));
 }
@@ -253,8 +252,8 @@ public:
   }
 
 private:
-  llvm::Expected<SnippetPrototype>
-  generatePrototype(unsigned Opcode) const override {
+  llvm::Expected<CodeTemplate>
+  generateCodeTemplate(unsigned Opcode) const override {
     return llvm::make_error<llvm::StringError>("not implemented",
                                                llvm::inconvertibleErrorCode());
   }

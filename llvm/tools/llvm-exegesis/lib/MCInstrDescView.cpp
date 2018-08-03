@@ -159,9 +159,9 @@ llvm::MCInst InstructionBuilder::build() const {
   return Result;
 }
 
-SnippetPrototype::SnippetPrototype(SnippetPrototype &&) = default;
+CodeTemplate::CodeTemplate(CodeTemplate &&) = default;
 
-SnippetPrototype &SnippetPrototype::operator=(SnippetPrototype &&) = default;
+CodeTemplate &CodeTemplate::operator=(CodeTemplate &&) = default;
 
 bool RegisterOperandAssignment::
 operator==(const RegisterOperandAssignment &Other) const {

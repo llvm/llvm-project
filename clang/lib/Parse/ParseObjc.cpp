@@ -384,12 +384,12 @@ static void addContextSensitiveTypeNullability(Parser &P,
 
   if (D.getNumTypeObjects() > 0) {
     // Add the attribute to the declarator chunk nearest the declarator.
-    D.getTypeObject(0).getAttrs().addAtStart(
+    D.getTypeObject(0).getAttrs().addAtEnd(
         getNullabilityAttr(D.getAttributePool()));
   } else if (!addedToDeclSpec) {
     // Otherwise, just put it on the declaration specifiers (if one
     // isn't there already).
-    D.getMutableDeclSpec().getAttributes().addAtStart(
+    D.getMutableDeclSpec().getAttributes().addAtEnd(
         getNullabilityAttr(D.getMutableDeclSpec().getAttributes().getPool()));
     addedToDeclSpec = true;
   }
@@ -1198,7 +1198,7 @@ static void takeDeclAttributes(ParsedAttributesView &attrs,
   for (auto &AL : llvm::reverse(from)) {
     if (!AL.isUsedAsTypeAttr()) {
       from.remove(&AL);
-      attrs.addAtStart(&AL);
+      attrs.addAtEnd(&AL);
     }
   }
 }
