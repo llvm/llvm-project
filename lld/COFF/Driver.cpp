@@ -426,18 +426,6 @@ Symbol *LinkerDriver::addUndefined(StringRef Name) {
 // each of which corresponds to a user-defined "main" function. This function
 // infers an entry point from a user-defined "main" function.
 StringRef LinkerDriver::findDefaultEntry() {
-  // As a special case, if /nodefaultlib is given, we directly look for an
-  // entry point. This is because, if no default library is linked, users
-  // need to define an entry point instead of a "main".
-  if (Config->NoDefaultLibAll) {
-    for (StringRef S : {"mainCRTStartup", "wmainCRTStartup",
-                        "WinMainCRTStartup", "wWinMainCRTStartup"}) {
-      if (findUnderscoreMangle(S))
-        return mangle(S);
-    }
-    return "";
-  }
-
   // User-defined main functions and their corresponding entry points.
   static const char *Entries[][2] = {
       {"main", "mainCRTStartup"},
@@ -446,7 +434,10 @@ StringRef LinkerDriver::findDefaultEntry() {
       {"wWinMain", "wWinMainCRTStartup"},
   };
   for (auto E : Entries) {
-    if (findUnderscoreMangle(E[0]))
+    // As a special case, if /nodefaultlib is given, we directly look for an
+    // entry point. This is because, if no default library is linked, users
+    // need to define an entry point instead of a "main".
+    if (findUnderscoreMangle(E[Config->NoDefaultLibAll]))
       return mangle(E[1]);
   }
   return "";
