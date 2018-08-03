@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -emit-llvm -o %t %s
 // RUN: not grep "@pipe()" %t
 // RUN: grep '_thisIsNotAPipe' %t | count 3
-// RUN: not grep 'g0' %t
+// RUN: not grep '@g0' %t
 // RUN: grep '_renamed' %t | count 2
 // RUN: %clang_cc1 -DUSE_DEF -emit-llvm -o %t %s
 // RUN: not grep "@pipe()" %t

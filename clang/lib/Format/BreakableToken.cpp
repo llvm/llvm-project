@@ -90,19 +90,21 @@ static BreakableToken::Split getCommentSplit(StringRef Text,
 
   StringRef::size_type SpaceOffset = Text.find_last_of(Blanks, MaxSplitBytes);
 
-  // Do not split before a number followed by a dot: this would be interpreted
-  // as a numbered list, which would prevent re-flowing in subsequent passes.
   static auto *const kNumberedListRegexp = new llvm::Regex("^[1-9][0-9]?\\.");
-  if (SpaceOffset != StringRef::npos &&
-      kNumberedListRegexp->match(Text.substr(SpaceOffset).ltrim(Blanks)))
-    SpaceOffset = Text.find_last_of(Blanks, SpaceOffset);
-  // In JavaScript, some @tags can be followed by {, and machinery that parses
-  // these comments will fail to understand the comment if followed by a line
-  // break. So avoid ever breaking before a {.
-  if (Style.Language == FormatStyle::LK_JavaScript &&
-      SpaceOffset != StringRef::npos && SpaceOffset + 1 < Text.size() &&
-      Text[SpaceOffset + 1] == '{')
-    SpaceOffset = Text.find_last_of(Blanks, SpaceOffset);
+  while (SpaceOffset != StringRef::npos) {
+    // Do not split before a number followed by a dot: this would be interpreted
+    // as a numbered list, which would prevent re-flowing in subsequent passes.
+    if (kNumberedListRegexp->match(Text.substr(SpaceOffset).ltrim(Blanks)))
+      SpaceOffset = Text.find_last_of(Blanks, SpaceOffset);
+    // In JavaScript, some @tags can be followed by {, and machinery that parses
+    // these comments will fail to understand the comment if followed by a line
+    // break. So avoid ever breaking before a {.
+    else if (Style.Language == FormatStyle::LK_JavaScript &&
+             SpaceOffset + 1 < Text.size() && Text[SpaceOffset + 1] == '{')
+      SpaceOffset = Text.find_last_of(Blanks, SpaceOffset);
+    else
+      break;
+  }
 
   if (SpaceOffset == StringRef::npos ||
       // Don't break at leading whitespace.

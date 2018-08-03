@@ -3788,26 +3788,43 @@ SDValue DAGTypeLegalizer::WidenVecOp_STORE(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::WidenVecOp_MSTORE(SDNode *N, unsigned OpNo) {
-  assert(OpNo == 3 && "Can widen only data operand of mstore");
+  assert((OpNo == 2 || OpNo == 3) &&
+         "Can widen only data or mask operand of mstore");
   MaskedStoreSDNode *MST = cast<MaskedStoreSDNode>(N);
   SDValue Mask = MST->getMask();
   EVT MaskVT = Mask.getValueType();
   SDValue StVal = MST->getValue();
-  // Widen the value
-  SDValue WideVal = GetWidenedVector(StVal);
   SDLoc dl(N);
 
-  // The mask should be widened as well.
-  EVT WideVT = WideVal.getValueType();
-  EVT WideMaskVT = EVT::getVectorVT(*DAG.getContext(),
-                                    MaskVT.getVectorElementType(),
-                                    WideVT.getVectorNumElements());
-  Mask = ModifyToType(Mask, WideMaskVT, true);
+  if (OpNo == 3) {
+    // Widen the value
+    StVal = GetWidenedVector(StVal);
+
+    // The mask should be widened as well.
+    EVT WideVT = StVal.getValueType();
+    EVT WideMaskVT = EVT::getVectorVT(*DAG.getContext(),
+                                      MaskVT.getVectorElementType(),
+                                      WideVT.getVectorNumElements());
+    Mask = ModifyToType(Mask, WideMaskVT, true);
+  } else {
+    EVT WideMaskVT = TLI.getTypeToTransformTo(*DAG.getContext(), MaskVT);
+    Mask = ModifyToType(Mask, WideMaskVT, true);
+
+    EVT ValueVT = StVal.getValueType();
+    if (getTypeAction(ValueVT) == TargetLowering::TypeWidenVector)
+      StVal = GetWidenedVector(StVal);
+    else {
+      EVT WideVT = EVT::getVectorVT(*DAG.getContext(),
+                                    ValueVT.getVectorElementType(),
+                                    WideMaskVT.getVectorNumElements());
+      StVal = ModifyToType(StVal, WideVT);
+    }
+  }
 
   assert(Mask.getValueType().getVectorNumElements() ==
-         WideVal.getValueType().getVectorNumElements() &&
+         StVal.getValueType().getVectorNumElements() &&
          "Mask and data vectors should have the same number of elements");
-  return DAG.getMaskedStore(MST->getChain(), dl, WideVal, MST->getBasePtr(),
+  return DAG.getMaskedStore(MST->getChain(), dl, StVal, MST->getBasePtr(),
                             Mask, MST->getMemoryVT(), MST->getMemOperand(),
                             false, MST->isCompressingStore());
 }

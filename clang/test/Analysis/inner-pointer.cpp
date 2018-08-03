@@ -382,3 +382,13 @@ const char *escape_via_return_local() {
                     // expected-note@-1 {{Inner pointer invalidated by call to destructor}}
 } // expected-warning {{Use of memory after it is freed}}
 // expected-note@-1 {{Use of memory after it is freed}}
+
+
+char *c();
+class A {};
+
+void no_CXXRecordDecl() {
+  A a, *b;
+  *(void **)&b = c() + 1;
+  *b = a; // no-crash
+}

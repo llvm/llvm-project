@@ -1310,6 +1310,65 @@ define void @trunc_mask(<4 x float> %x, <4 x float>* %ptr, <4 x float> %y, <4 x 
   ret void
 }
 
+; This needs to be widened to v4i32.
+; This used to assert in type legalization. PR38436
+; FIXME: The codegen for AVX512 should use KSHIFT to zero the upper bits of the mask.
+define void @widen_masked_store(<3 x i32> %v, <3 x i32>* %p, <3 x i1> %mask) {
+; AVX1-LABEL: widen_masked_store:
+; AVX1:       ## %bb.0:
+; AVX1-NEXT:    vmovd %edx, %xmm1
+; AVX1-NEXT:    vmovd %esi, %xmm2
+; AVX1-NEXT:    vpunpckldq {{.*#+}} xmm1 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; AVX1-NEXT:    vmovd %ecx, %xmm2
+; AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; AVX1-NEXT:    vpslld $31, %xmm1, %xmm1
+; AVX1-NEXT:    vpsrad $31, %xmm1, %xmm1
+; AVX1-NEXT:    vmaskmovps %xmm0, %xmm1, (%rdi)
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: widen_masked_store:
+; AVX2:       ## %bb.0:
+; AVX2-NEXT:    vmovd %edx, %xmm1
+; AVX2-NEXT:    vmovd %esi, %xmm2
+; AVX2-NEXT:    vpunpckldq {{.*#+}} xmm1 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; AVX2-NEXT:    vmovd %ecx, %xmm2
+; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; AVX2-NEXT:    vpslld $31, %xmm1, %xmm1
+; AVX2-NEXT:    vpsrad $31, %xmm1, %xmm1
+; AVX2-NEXT:    vpmaskmovd %xmm0, %xmm1, (%rdi)
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: widen_masked_store:
+; AVX512F:       ## %bb.0:
+; AVX512F-NEXT:    ## kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512F-NEXT:    vpslld $31, %xmm1, %xmm1
+; AVX512F-NEXT:    vptestmd %zmm1, %zmm1, %k1
+; AVX512F-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512F-NEXT:    vpblendd {{.*#+}} xmm1 = xmm1[0,1,2],xmm2[3]
+; AVX512F-NEXT:    vptestmd %zmm1, %zmm1, %k0
+; AVX512F-NEXT:    kshiftlw $12, %k0, %k0
+; AVX512F-NEXT:    kshiftrw $12, %k0, %k1
+; AVX512F-NEXT:    vmovdqu32 %zmm0, (%rdi) {%k1}
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
+;
+; SKX-LABEL: widen_masked_store:
+; SKX:       ## %bb.0:
+; SKX-NEXT:    vpslld $31, %xmm1, %xmm1
+; SKX-NEXT:    vptestmd %xmm1, %xmm1, %k1
+; SKX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; SKX-NEXT:    vmovdqa32 %xmm1, %xmm1 {%k1} {z}
+; SKX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; SKX-NEXT:    vpblendd {{.*#+}} xmm1 = xmm1[0,1,2],xmm2[3]
+; SKX-NEXT:    vptestmd %xmm1, %xmm1, %k1
+; SKX-NEXT:    vmovdqa32 %xmm0, (%rdi) {%k1}
+; SKX-NEXT:    retq
+  call void @llvm.masked.store.v3i32(<3 x i32> %v, <3 x i32>* %p, i32 16, <3 x i1> %mask)
+  ret void
+}
+declare void @llvm.masked.store.v3i32(<3 x i32>, <3 x i32>*, i32, <3 x i1>)
+
 declare <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>*, i32, <4 x i1>, <4 x i32>)
 declare <2 x i32> @llvm.masked.load.v2i32.p0v2i32(<2 x i32>*, i32, <2 x i1>, <2 x i32>)
 declare <4 x i64> @llvm.masked.load.v4i64.p0v4i64(<4 x i64>*, i32, <4 x i1>, <4 x i64>)

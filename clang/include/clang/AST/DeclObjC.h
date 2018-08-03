@@ -137,6 +137,9 @@ public:
 /// the above methods are setMenu:, menu, replaceSubview:with:, and defaultMenu.
 ///
 class ObjCMethodDecl : public NamedDecl, public DeclContext {
+  // This class stores some data in DeclContext::ObjCMethodDeclBits
+  // to save some space. Use the provided accessors to access it.
+
 public:
   enum ImplementationControl { None, Required, Optional };
 
@@ -953,6 +956,9 @@ public:
 /// ObjCProtocolDecl, and ObjCImplDecl.
 ///
 class ObjCContainerDecl : public NamedDecl, public DeclContext {
+  // This class stores some data in DeclContext::ObjCContainerDeclBits
+  // to save some space. Use the provided accessors to access it.
+
   // These two locations in the range mark the end of the method container.
   // The first points to the '@' token, and the second to the 'end' token.
   SourceRange AtEnd;

@@ -21,43 +21,12 @@ The main goal of this tool is not just to predict the performance of the code
 when run on the target, but also help with diagnosing potential performance
 issues.
 
-Given an assembly code sequence, llvm-mca estimates the Instructions Per Cycle
-(IPC), as well as hardware resource pressure. The analysis and reporting style
-were inspired by the IACA tool from Intel.
+Given an assembly code sequence, :program:`llvm-mca` estimates the Instructions
+Per Cycle (IPC), as well as hardware resource pressure. The analysis and
+reporting style were inspired by the IACA tool from Intel.
 
-:program:`llvm-mca` allows the usage of special code comments to mark regions of
-the assembly code to be analyzed.  A comment starting with substring
-``LLVM-MCA-BEGIN`` marks the beginning of a code region. A comment starting with
-substring ``LLVM-MCA-END`` marks the end of a code region.  For example:
-
-.. code-block:: none
-
-  # LLVM-MCA-BEGIN My Code Region
-    ...
-  # LLVM-MCA-END
-
-Multiple regions can be specified provided that they do not overlap.  A code
-region can have an optional description. If no user-defined region is specified,
-then :program:`llvm-mca` assumes a default region which contains every
-instruction in the input file.  Every region is analyzed in isolation, and the
-final performance report is the union of all the reports generated for every
-code region.
-
-Inline assembly directives may be used from source code to annotate the 
-assembly text:
-
-.. code-block:: c++
-
-  int foo(int a, int b) {
-    __asm volatile("# LLVM-MCA-BEGIN foo");
-    a += 42;
-    __asm volatile("# LLVM-MCA-END");
-    a *= b;
-    return a;
-  }
-
-So for example, you can compile code with clang, output assembly, and pipe it
-directly into llvm-mca for analysis:
+For example, you can compile code with clang, output assembly, and pipe it
+directly into :program:`llvm-mca` for analysis:
 
 .. code-block:: bash
 
@@ -206,6 +175,40 @@ EXIT STATUS
 
 :program:`llvm-mca` returns 0 on success. Otherwise, an error message is printed
 to standard error, and the tool returns 1.
+
+USING MARKERS TO ANALYZE SPECIFIC CODE BLOCKS
+---------------------------------------------
+:program:`llvm-mca` allows for the optional usage of special code comments to
+mark regions of the assembly code to be analyzed.  A comment starting with
+substring ``LLVM-MCA-BEGIN`` marks the beginning of a code region. A comment
+starting with substring ``LLVM-MCA-END`` marks the end of a code region.  For
+example:
+
+.. code-block:: none
+
+  # LLVM-MCA-BEGIN My Code Region
+    ...
+  # LLVM-MCA-END
+
+Multiple regions can be specified provided that they do not overlap.  A code
+region can have an optional description. If no user-defined region is specified,
+then :program:`llvm-mca` assumes a default region which contains every
+instruction in the input file.  Every region is analyzed in isolation, and the
+final performance report is the union of all the reports generated for every
+code region.
+
+Inline assembly directives may be used from source code to annotate the
+assembly text:
+
+.. code-block:: c++
+
+  int foo(int a, int b) {
+    __asm volatile("# LLVM-MCA-BEGIN foo");
+    a += 42;
+    __asm volatile("# LLVM-MCA-END");
+    a *= b;
+    return a;
+  }
 
 HOW LLVM-MCA WORKS
 ------------------

@@ -10,6 +10,7 @@
 #include "UnnecessaryValueParamCheck.h"
 
 #include "../utils/DeclRefExprUtils.h"
+#include "../utils/ExprMutationAnalyzer.h"
 #include "../utils/FixItHintUtils.h"
 #include "../utils/Matchers.h"
 #include "../utils/TypeTraits.h"
@@ -29,14 +30,6 @@ std::string paramNameOrIndex(StringRef Name, size_t Index) {
   return (Name.empty() ? llvm::Twine('#') + llvm::Twine(Index + 1)
                        : llvm::Twine('\'') + Name + llvm::Twine('\''))
       .str();
-}
-
-template <typename S>
-bool isSubset(const S &SubsetCandidate, const S &SupersetCandidate) {
-  for (const auto &E : SubsetCandidate)
-    if (SupersetCandidate.count(E) == 0)
-      return false;
-  return true;
 }
 
 bool isReferencedOutsideOfCallExpr(const FunctionDecl &Function,
@@ -98,42 +91,54 @@ void UnnecessaryValueParamCheck::registerMatchers(MatchFinder *Finder) {
 void UnnecessaryValueParamCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Param = Result.Nodes.getNodeAs<ParmVarDecl>("param");
   const auto *Function = Result.Nodes.getNodeAs<FunctionDecl>("functionDecl");
-  const size_t Index = std::find(Function->parameters().begin(),
-                                 Function->parameters().end(), Param) -
-                       Function->parameters().begin();
-  bool IsConstQualified =
-      Param->getType().getCanonicalType().isConstQualified();
 
-  auto AllDeclRefExprs = utils::decl_ref_expr::allDeclRefExprs(
-      *Param, *Function, *Result.Context);
-  auto ConstDeclRefExprs = utils::decl_ref_expr::constReferenceDeclRefExprs(
-      *Param, *Function, *Result.Context);
-
-  // Do not trigger on non-const value parameters when they are not only used as
-  // const.
-  if (!isSubset(AllDeclRefExprs, ConstDeclRefExprs))
+  // Do not trigger on non-const value parameters when they are mutated either
+  // within the function body or within init expression(s) when the function is
+  // a ctor.
+  if (utils::ExprMutationAnalyzer(Function->getBody(), Result.Context)
+          .isMutated(Param))
     return;
+  // CXXCtorInitializer might also mutate Param but they're not part of function
+  // body, so check them separately here.
+  if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(Function)) {
+    for (const auto *Init : Ctor->inits()) {
+      if (utils::ExprMutationAnalyzer(Init->getInit(), Result.Context)
+              .isMutated(Param))
+        return;
+    }
+  }
+
+  const bool IsConstQualified =
+      Param->getType().getCanonicalType().isConstQualified();
 
   // If the parameter is non-const, check if it has a move constructor and is
   // only referenced once to copy-construct another object or whether it has a
   // move assignment operator and is only referenced once when copy-assigned.
   // In this case wrap DeclRefExpr with std::move() to avoid the unnecessary
   // copy.
-  if (!IsConstQualified && AllDeclRefExprs.size() == 1) {
-    auto CanonicalType = Param->getType().getCanonicalType();
-    const auto &DeclRefExpr  = **AllDeclRefExprs.begin();
+  if (!IsConstQualified) {
+    auto AllDeclRefExprs = utils::decl_ref_expr::allDeclRefExprs(
+        *Param, *Function, *Result.Context);
+    if (AllDeclRefExprs.size() == 1) {
+      auto CanonicalType = Param->getType().getCanonicalType();
+      const auto &DeclRefExpr = **AllDeclRefExprs.begin();
 
-    if (!hasLoopStmtAncestor(DeclRefExpr, *Function, *Result.Context) &&
-        ((utils::type_traits::hasNonTrivialMoveConstructor(CanonicalType) &&
-          utils::decl_ref_expr::isCopyConstructorArgument(
-              DeclRefExpr, *Function, *Result.Context)) ||
-         (utils::type_traits::hasNonTrivialMoveAssignment(CanonicalType) &&
-          utils::decl_ref_expr::isCopyAssignmentArgument(
-              DeclRefExpr, *Function, *Result.Context)))) {
-      handleMoveFix(*Param, DeclRefExpr, *Result.Context);
-      return;
+      if (!hasLoopStmtAncestor(DeclRefExpr, *Function, *Result.Context) &&
+          ((utils::type_traits::hasNonTrivialMoveConstructor(CanonicalType) &&
+            utils::decl_ref_expr::isCopyConstructorArgument(
+                DeclRefExpr, *Function, *Result.Context)) ||
+           (utils::type_traits::hasNonTrivialMoveAssignment(CanonicalType) &&
+            utils::decl_ref_expr::isCopyAssignmentArgument(
+                DeclRefExpr, *Function, *Result.Context)))) {
+        handleMoveFix(*Param, DeclRefExpr, *Result.Context);
+        return;
+      }
     }
   }
+
+  const size_t Index = std::find(Function->parameters().begin(),
+                                 Function->parameters().end(), Param) -
+                       Function->parameters().begin();
 
   auto Diag =
       diag(Param->getLocation(),

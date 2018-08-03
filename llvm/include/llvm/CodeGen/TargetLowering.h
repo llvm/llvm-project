@@ -2868,6 +2868,13 @@ public:
       SDValue Op, const APInt &DemandedElts, APInt &KnownUndef,
       APInt &KnownZero, TargetLoweringOpt &TLO, unsigned Depth = 0) const;
 
+  /// If \p SNaN is false, \returns true if \p Op is known to never be any
+  /// NaN. If \p sNaN is true, returns if \p Op is known to never be a signaling
+  /// NaN.
+  virtual bool isKnownNeverNaNForTargetNode(SDValue Op,
+                                            const SelectionDAG &DAG,
+                                            bool SNaN = false,
+                                            unsigned Depth = 0) const;
   struct DAGCombinerInfo {
     void *DC;  // The DAG Combiner object.
     CombineLevel Level;
