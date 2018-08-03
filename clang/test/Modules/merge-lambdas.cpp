@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fmodules -verify %s
+// RUN: %clang_cc1 -fmodules -verify %s -emit-llvm-only
 // expected-no-diagnostics
 
 #pragma clang module build A
@@ -46,3 +46,6 @@ using U = decltype(y2);
 
 using V = decltype(x3);
 using V = decltype(y3);
+
+#pragma clang module import A
+void (*p)() = f<int>();

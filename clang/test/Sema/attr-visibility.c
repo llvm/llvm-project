@@ -15,8 +15,8 @@ struct test5;
 struct __attribute__((visibility("hidden"))) test5; // expected-note {{previous attribute is here}}
 struct __attribute__((visibility("default"))) test5; // expected-error {{visibility does not match previous declaration}}
 
-void test6() __attribute__((visibility("hidden"), // expected-note {{previous attribute is here}}
-                            visibility("default"))); // expected-error {{visibility does not match previous declaration}}
+void test6() __attribute__((visibility("default"), // expected-error {{visibility does not match previous declaration}}
+                            visibility("hidden"))); // expected-note {{previous attribute is here}}
 
 extern int test7 __attribute__((visibility("default"))); // expected-note {{previous attribute is here}}
 extern int test7 __attribute__((visibility("hidden"))); // expected-error {{visibility does not match previous declaration}}

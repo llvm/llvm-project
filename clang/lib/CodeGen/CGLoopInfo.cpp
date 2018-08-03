@@ -344,6 +344,17 @@ void LoopInfoStack::InsertHelper(Instruction *I) const {
     return;
   }
 
-  if (L.getAttributes().IsParallel && I->mayReadOrWriteMemory())
-    I->setMetadata("llvm.mem.parallel_loop_access", L.getLoopID());
+  if (I->mayReadOrWriteMemory()) {
+    SmallVector<Metadata *, 2> ParallelLoopIDs;
+    for (const LoopInfo &AL : Active)
+      if (AL.getAttributes().IsParallel)
+        ParallelLoopIDs.push_back(AL.getLoopID());
+
+    MDNode *ParallelMD = nullptr;
+    if (ParallelLoopIDs.size() == 1)
+      ParallelMD = cast<MDNode>(ParallelLoopIDs[0]);
+    else if (ParallelLoopIDs.size() >= 2)
+      ParallelMD = MDNode::get(I->getContext(), ParallelLoopIDs);
+    I->setMetadata("llvm.mem.parallel_loop_access", ParallelMD);
+  }
 }

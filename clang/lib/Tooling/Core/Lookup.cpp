@@ -14,6 +14,7 @@
 #include "clang/Tooling/Core/Lookup.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclarationName.h"
 using namespace clang;
 using namespace clang::tooling;
 
@@ -114,6 +115,37 @@ static bool isFullyQualified(const NestedNameSpecifier *NNS) {
   return false;
 }
 
+// Returns true if spelling symbol \p QName as \p Spelling in \p UseContext is
+// ambiguous. For example, if QName is "::y::bar" and the spelling is "y::bar"
+// in `UseContext` "a" that contains a nested namespace "a::y", then "y::bar"
+// can be resolved to ::a::y::bar, which can cause compile error.
+// FIXME: consider using namespaces.
+static bool isAmbiguousNameInScope(StringRef Spelling, StringRef QName,
+                                   const DeclContext &UseContext) {
+  assert(QName.startswith("::"));
+  if (Spelling.startswith("::"))
+    return false;
+
+  // Lookup the first component of Spelling in all enclosing namespaces and
+  // check if there is any existing symbols with the same name but in different
+  // scope.
+  StringRef Head = Spelling.split("::").first;
+
+  llvm::SmallVector<const NamespaceDecl *, 4> UseNamespaces =
+      getAllNamedNamespaces(&UseContext);
+  auto &AST = UseContext.getParentASTContext();
+  StringRef TrimmedQName = QName.substr(2);
+  for (const auto *NS : UseNamespaces) {
+    auto LookupRes = NS->lookup(DeclarationName(&AST.Idents.get(Head)));
+    if (!LookupRes.empty()) {
+      for (const NamedDecl *Res : LookupRes)
+        if (!TrimmedQName.startswith(Res->getQualifiedNameAsString()))
+          return true;
+    }
+  }
+  return false;
+}
+
 std::string tooling::replaceNestedName(const NestedNameSpecifier *Use,
                                        const DeclContext *UseContext,
                                        const NamedDecl *FromDecl,
@@ -146,6 +178,14 @@ std::string tooling::replaceNestedName(const NestedNameSpecifier *Use,
   // figure out how good a namespace match we have with our destination type.
   // We work backwards (from most specific possible namespace to least
   // specific).
-  return getBestNamespaceSubstr(UseContext, ReplacementString,
-                                isFullyQualified(Use));
+  StringRef Suggested = getBestNamespaceSubstr(UseContext, ReplacementString,
+                                               isFullyQualified(Use));
+  // Use the fully qualified name if the suggested name is ambiguous.
+  // FIXME: consider re-shortening the name until the name is not ambiguous. We
+  // are not doing this because ambiguity is pretty bad and we should not try to
+  // be clever in handling such cases. Making this noticeable to users seems to
+  // be a better option.
+  return isAmbiguousNameInScope(Suggested, ReplacementString, *UseContext)
+             ? ReplacementString
+             : Suggested;
 }

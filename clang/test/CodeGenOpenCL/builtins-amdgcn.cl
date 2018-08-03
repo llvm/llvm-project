@@ -462,6 +462,13 @@ void test_dispatch_ptr(__constant unsigned char ** out)
   *out = __builtin_amdgcn_dispatch_ptr();
 }
 
+// CHECK-LABEL: @test_queue_ptr
+// CHECK: call i8 addrspace(4)* @llvm.amdgcn.queue.ptr()
+void test_queue_ptr(__constant unsigned char ** out)
+{
+  *out = __builtin_amdgcn_queue_ptr();
+}
+
 // CHECK-LABEL: @test_kernarg_segment_ptr
 // CHECK: call i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
 void test_kernarg_segment_ptr(__constant unsigned char ** out)
