@@ -9,7 +9,7 @@
 #define OCML_H
 
 // This C header declares the functions provided by the OCML library
-// Aspects of this library's behavior can be controlled via the 
+// Aspects of this library's behavior can be controlled via the
 // oclc library.  See the oclc header for further information
 
 // Define here the return values from fpclassify
@@ -129,6 +129,7 @@ DECL_CONST_OCML_UNARY_F32(fabs)
 DECL_CONST_OCML_BINARY_F32(fdim)
 DECL_CONST_OCML_UNARY_F32(floor)
 DECL_CONST_OCML_TERNARY_F32(fma)
+DECL_CONST_OCML_TERNARY_F32(fmuladd)
 DECL_CONST_OCML_BINARY_F32(fmax)
 DECL_CONST_OCML_BINARY_F32(fmin)
 DECL_CONST_OCML_BINARY_F32(fmod)
@@ -258,6 +259,7 @@ DECL_CONST_OCML_UNARY_F64(fabs)
 DECL_CONST_OCML_BINARY_F64(fdim)
 DECL_CONST_OCML_UNARY_F64(floor)
 DECL_CONST_OCML_TERNARY_F64(fma)
+DECL_CONST_OCML_TERNARY_F64(fmuladd)
 DECL_CONST_OCML_BINARY_F64(fmax)
 DECL_CONST_OCML_BINARY_F64(fmin)
 DECL_CONST_OCML_BINARY_F64(fmod)
@@ -526,6 +528,7 @@ DECL_CONST_OCML_TERNARY_2F16(fma_rte)
 DECL_CONST_OCML_TERNARY_2F16(fma_rtp)
 DECL_CONST_OCML_TERNARY_2F16(fma_rtn)
 DECL_CONST_OCML_TERNARY_2F16(fma_rtz)
+DECL_CONST_OCML_TERNARY_2F16(fmuladd)
 DECL_CONST_OCML_BINARY_2F16(fmax)
 DECL_CONST_OCML_BINARY_2F16(fmin)
 DECL_CONST_OCML_BINARY_2F16(fmod)

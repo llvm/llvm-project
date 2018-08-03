@@ -204,10 +204,10 @@
 
 #define BUILTIN_TRIG_PREOP_F64 __builtin_amdgcn_trig_preop
 
-#define BUILTIN_MAD_F32 __llvm_fmuladd_f32
-#define BUILTIN_MAD_F64 __llvm_fmuladd_f64
-#define BUILTIN_MAD_F16 __llvm_fmuladd_f16
-#define BUILTIN_MAD_2F16 __llvm_fmuladd_2f16
+#define BUILTIN_MAD_F32 __ocml_fmuladd_f32
+#define BUILTIN_MAD_F64 __ocml_fmuladd_f64
+#define BUILTIN_MAD_F16 __ocml_fmuladd_f16
+#define BUILTIN_MAD_2F16 __ocml_fmuladd_2f16
 
 // HW has ISA for max3, median3, and min3, median3 can be used to clamp
 #define BUILTIN_CLAMP_S32(X,L,H) ({ \

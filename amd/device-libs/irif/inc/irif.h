@@ -45,11 +45,6 @@ extern __attribute__((const)) half __llvm_rint_f16(half) __asm("llvm.rint.f16");
 extern __attribute__((const)) half2 __llvm_rint_2f16(half2) __asm("llvm.rint.v2f16");
 
 
-extern __attribute__((const)) half __llvm_fmuladd_f16(half, half, half) __asm("llvm.fmuladd.f16");
-extern __attribute__((const)) half2 __llvm_fmuladd_2f16(half2, half2, half2) __asm("llvm.fmuladd.v2f16");
-extern __attribute__((const)) float __llvm_fmuladd_f32(float, float, float) __asm("llvm.fmuladd.f32");
-extern __attribute__((const)) double __llvm_fmuladd_f64(double, double, double) __asm("llvm.fmuladd.f64");
-
 extern __attribute__((const)) half __llvm_canonicalize_f16(half) __asm("llvm.canonicalize.f16");
 extern __attribute__((const)) half2 __llvm_canonicalize_2f16(half2) __asm("llvm.canonicalize.v2f16");
 

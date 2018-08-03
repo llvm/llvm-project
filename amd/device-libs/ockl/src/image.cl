@@ -60,16 +60,23 @@
     C.z = _m ? C.z : _z; \
 } while (0)
 
+GATTR
+static float fmuladd_f32(float a, float b, float c)
+{
+    #pragma OPENCL FP_CONTRACT ON
+    return a * b + c;
+}
+
 #define LS_ARRAY_FACE(I,F) (6 * (((I) << 8) >> 8) + (F))
-#define SAMPLE_ARRAY_FACE(I, F) __llvm_fmuladd_f32(__builtin_rintf(I), 8.0f, F)
+#define SAMPLE_ARRAY_FACE(I, F) fmuladd_f32(__builtin_rintf(I), 8.0f, F)
 
 #define CUBE_PREP(C) do { \
     float _vx = C.x; \
     float _vy = C.y; \
     float _vz = C.z; \
     float _rl = __builtin_amdgcn_rcpf(__builtin_amdgcn_cubema(_vx, _vy, _vz)); \
-    C.x = __llvm_fmuladd_f32(__builtin_amdgcn_cubesc(_vx, _vy, _vz), _rl, 0.5f); \
-    C.y = __llvm_fmuladd_f32(__builtin_amdgcn_cubetc(_vx, _vy, _vz), _rl, 0.5f); \
+    C.x = fmuladd_f32(__builtin_amdgcn_cubesc(_vx, _vy, _vz), _rl, 0.5f); \
+    C.y = fmuladd_f32(__builtin_amdgcn_cubetc(_vx, _vy, _vz), _rl, 0.5f); \
     C.z = __builtin_amdgcn_cubeid(_vx, _vy, _vz); \
 } while (0)
 
