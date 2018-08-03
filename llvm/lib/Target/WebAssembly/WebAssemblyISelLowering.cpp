@@ -438,6 +438,46 @@ EVT WebAssemblyTargetLowering::getSetCCResultType(const DataLayout &DL,
   return TargetLowering::getSetCCResultType(DL, C, VT);
 }
 
+bool WebAssemblyTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
+                                                   const CallInst &I,
+                                                   MachineFunction &MF,
+                                                   unsigned Intrinsic) const {
+  switch (Intrinsic) {
+  case Intrinsic::wasm_atomic_notify:
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.align = 4;
+    // atomic.notify instruction does not really load the memory specified with
+    // this argument, but MachineMemOperand should either be load or store, so
+    // we set this to a load.
+    // FIXME Volatile isn't really correct, but currently all LLVM atomic
+    // instructions are treated as volatiles in the backend, so we should be
+    // consistent. The same applies for wasm_atomic_wait intrinsics too.
+    Info.flags = MachineMemOperand::MOVolatile | MachineMemOperand::MOLoad;
+    return true;
+  case Intrinsic::wasm_atomic_wait_i32:
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.align = 4;
+    Info.flags = MachineMemOperand::MOVolatile | MachineMemOperand::MOLoad;
+    return true;
+  case Intrinsic::wasm_atomic_wait_i64:
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::i64;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.align = 8;
+    Info.flags = MachineMemOperand::MOVolatile | MachineMemOperand::MOLoad;
+    return true;
+  default:
+    return false;
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // WebAssembly Lowering private implementation.
 //===----------------------------------------------------------------------===//

@@ -53,8 +53,8 @@ Out:		; preds = %Loop
 	ret i32 %A
 ; CHECK-LABEL: @test2b(
 ; CHECK: Out:
-; CHECK-NOT: sdiv
-; CHECK: ret i32 %A.lcssa
+; CHECK-NEXT: sdiv
+; CHECK-NEXT: ret i32 %A
 }
 
 define double @test2c(double* %P) {

@@ -1,13 +1,7 @@
-; RUN: llc -march=hexagon -hexagon-expand-condsets=0 < %s | FileCheck %s
+; RUN: llc -march=hexagon -hexagon-expand-condsets=0 -hexagon-initial-cfg-cleanup=0 < %s | FileCheck %s
 ;
 ; Expand-condsets eliminates the "mux" instruction, which is what this
 ; testcase is checking.
-
-%struct._Dnk_filet.1 = type { i16, i8, i32, i8*, i8*, i8*, i8*, i8*, i8*, i32*, [2 x i32], i8*, i8*, i8*, %struct._Mbstatet.0, i8*, [8 x i8], i8 }
-%struct._Mbstatet.0 = type { i32, i16, i16 }
-
-@_Stdout = external global %struct._Dnk_filet.1
-@.str = external unnamed_addr constant [23 x i8], align 8
 
 ; Test that we don't generate a new value compare if the operands are
 ; the same register.
@@ -15,49 +9,55 @@
 ; CHECK-NOT: cmp.eq([[REG0:(r[0-9]+)]].new,[[REG0]])
 ; CHECK: cmp.eq([[REG1:(r[0-9]+)]],[[REG1]])
 
+%s.0 = type { i16, i8, i32, i8*, i8*, i8*, i8*, i8*, i8*, i32*, [2 x i32], i8*, i8*, i8*, %s.1, i8*, [8 x i8], i8 }
+%s.1 = type { i32, i16, i16 }
+
+@g0 = external global %s.0
+@g1 = external unnamed_addr constant [23 x i8], align 8
+
 ; Function Attrs: nounwind
-declare void @fprintf(%struct._Dnk_filet.1* nocapture, i8* nocapture readonly, ...) #1
+declare void @f0(%s.0* nocapture, i8* nocapture readonly, ...) #0
 
-define void @main() #0 {
-entry:
-  %0 = load i32*, i32** undef, align 4
-  %1 = load i32, i32* undef, align 4
-  br i1 undef, label %if.end, label %_ZNSt6vectorIbSaIbEE3endEv.exit
+define void @f1() #1 {
+b0:
+  %v0 = load i32*, i32** undef, align 4
+  %v1 = load i32, i32* undef, align 4
+  br i1 undef, label %b4, label %b1
 
-_ZNSt6vectorIbSaIbEE3endEv.exit:
-  %2 = icmp slt i32 %1, 0
-  %sub5.i.i.i = lshr i32 %1, 5
-  %add619.i.i.i = add i32 %sub5.i.i.i, -134217728
-  %sub5.i.pn.i.i = select i1 %2, i32 %add619.i.i.i, i32 %sub5.i.i.i
-  %storemerge2.i.i = getelementptr inbounds i32, i32* %0, i32 %sub5.i.pn.i.i
-  %cmp.i.i = icmp ult i32* %storemerge2.i.i, %0
-  %.mux = select i1 %cmp.i.i, i32 0, i32 1
-  br i1 undef, label %_ZNSt6vectorIbSaIbEE3endEv.exit57, label %if.end
+b1:                                               ; preds = %b0
+  %v2 = icmp slt i32 %v1, 0
+  %v3 = lshr i32 %v1, 5
+  %v4 = add i32 %v3, -134217728
+  %v5 = select i1 %v2, i32 %v4, i32 %v3
+  %v6 = getelementptr inbounds i32, i32* %v0, i32 %v5
+  %v7 = icmp ult i32* %v6, %v0
+  %v8 = select i1 %v7, i32 0, i32 1
+  br i1 undef, label %b2, label %b4
 
-_ZNSt6vectorIbSaIbEE3endEv.exit57:
-  %3 = icmp slt i32 %1, 0
-  %sub5.i.i.i44 = lshr i32 %1, 5
-  %add619.i.i.i45 = add i32 %sub5.i.i.i44, -134217728
-  %sub5.i.pn.i.i46 = select i1 %3, i32 %add619.i.i.i45, i32 %sub5.i.i.i44
-  %storemerge2.i.i47 = getelementptr inbounds i32, i32* %0, i32 %sub5.i.pn.i.i46
-  %cmp.i38 = icmp ult i32* %storemerge2.i.i47, %0
-  %.reg2mem.sroa.0.sroa.0.0.load14.i.reload = select i1 %cmp.i38, i32 0, i32 1
-  %cmp = icmp eq i32 %.mux, %.reg2mem.sroa.0.sroa.0.0.load14.i.reload
-  br i1 %cmp, label %if.end, label %if.then
+b2:                                               ; preds = %b1
+  %v9 = icmp slt i32 %v1, 0
+  %v10 = lshr i32 %v1, 5
+  %v11 = add i32 %v10, -134217728
+  %v12 = select i1 %v9, i32 %v11, i32 %v10
+  %v13 = getelementptr inbounds i32, i32* %v0, i32 %v12
+  %v14 = icmp ult i32* %v13, %v0
+  %v15 = select i1 %v14, i32 0, i32 1
+  %v16 = icmp eq i32 %v8, %v15
+  br i1 %v16, label %b4, label %b3
 
-if.then:
-  call void (%struct._Dnk_filet.1*, i8*, ...) @fprintf(%struct._Dnk_filet.1* @_Stdout, i8* getelementptr inbounds ([23 x i8], [23 x i8]* @.str, i32 0, i32 0), i32 %.mux, i32 %.reg2mem.sroa.0.sroa.0.0.load14.i.reload) #1
+b3:                                               ; preds = %b2
+  call void (%s.0*, i8*, ...) @f0(%s.0* @g0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* @g1, i32 0, i32 0), i32 %v8, i32 %v15) #0
   unreachable
 
-if.end:
-  br i1 undef, label %_ZNSt6vectorIbSaIbEED2Ev.exit, label %if.then.i.i.i
+b4:                                               ; preds = %b2, %b1, %b0
+  br i1 undef, label %b6, label %b5
 
-if.then.i.i.i:
+b5:                                               ; preds = %b4
   unreachable
 
-_ZNSt6vectorIbSaIbEED2Ev.exit:
+b6:                                               ; preds = %b4
   ret void
 }
 
-attributes #0 = { "target-cpu"="hexagonv5" }
-attributes #1 = { nounwind "target-cpu"="hexagonv5" }
+attributes #0 = { nounwind "target-cpu"="hexagonv5" }
+attributes #1 = { "target-cpu"="hexagonv5" }

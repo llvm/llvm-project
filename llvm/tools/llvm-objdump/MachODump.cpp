@@ -1937,11 +1937,7 @@ static void printArchiveHeaders(StringRef Filename, Archive *A, bool verbose,
     report_error(StringRef(), Filename, std::move(Err), ArchitectureName);
 }
 
-// ParseInputMachO() parses the named Mach-O file in Filename and handles the
-// -arch flags selecting just those slices as specified by them and also parses
-// archive files.  Then for each individual Mach-O file ProcessMachO() is
-// called to process the file based on the command line options.
-void llvm::ParseInputMachO(StringRef Filename) {
+static bool ValidateArchFlags() {
   // Check for -arch all and verifiy the -arch flags are valid.
   for (unsigned i = 0; i < ArchFlags.size(); ++i) {
     if (ArchFlags[i] == "all") {
@@ -1950,10 +1946,20 @@ void llvm::ParseInputMachO(StringRef Filename) {
       if (!MachOObjectFile::isValidArch(ArchFlags[i])) {
         errs() << "llvm-objdump: Unknown architecture named '" + ArchFlags[i] +
                       "'for the -arch option\n";
-        return;
+        return false;
       }
     }
   }
+  return true;
+}
+
+// ParseInputMachO() parses the named Mach-O file in Filename and handles the
+// -arch flags selecting just those slices as specified by them and also parses
+// archive files.  Then for each individual Mach-O file ProcessMachO() is
+// called to process the file based on the command line options.
+void llvm::ParseInputMachO(StringRef Filename) {
+  if (!ValidateArchFlags())
+    return;
 
   // Attempt to open the binary.
   Expected<OwningBinary<Binary>> BinaryOrErr = createBinary(Filename);
@@ -1989,191 +1995,199 @@ void llvm::ParseInputMachO(StringRef Filename) {
       report_error(Filename, std::move(Err));
     return;
   }
-  if (UniversalHeaders) {
-    if (MachOUniversalBinary *UB = dyn_cast<MachOUniversalBinary>(&Bin))
-      printMachOUniversalHeaders(UB, !NonVerbose);
-  }
   if (MachOUniversalBinary *UB = dyn_cast<MachOUniversalBinary>(&Bin)) {
-    // If we have a list of architecture flags specified dump only those.
-    if (!ArchAll && ArchFlags.size() != 0) {
-      // Look for a slice in the universal binary that matches each ArchFlag.
-      bool ArchFound;
-      for (unsigned i = 0; i < ArchFlags.size(); ++i) {
-        ArchFound = false;
-        for (MachOUniversalBinary::object_iterator I = UB->begin_objects(),
-                                                   E = UB->end_objects();
-             I != E; ++I) {
-          if (ArchFlags[i] == I->getArchFlagName()) {
-            ArchFound = true;
-            Expected<std::unique_ptr<ObjectFile>> ObjOrErr =
-                I->getAsObjectFile();
-            std::string ArchitectureName = "";
-            if (ArchFlags.size() > 1)
-              ArchitectureName = I->getArchFlagName();
-            if (ObjOrErr) {
-              ObjectFile &O = *ObjOrErr.get();
-              if (MachOObjectFile *MachOOF = dyn_cast<MachOObjectFile>(&O))
-                ProcessMachO(Filename, MachOOF, "", ArchitectureName);
-            } else if (auto E = isNotObjectErrorInvalidFileType(
-                       ObjOrErr.takeError())) {
-              report_error(Filename, StringRef(), std::move(E),
-                           ArchitectureName);
-              continue;
-            } else if (Expected<std::unique_ptr<Archive>> AOrErr =
-                           I->getAsArchive()) {
-              std::unique_ptr<Archive> &A = *AOrErr;
-              outs() << "Archive : " << Filename;
-              if (!ArchitectureName.empty())
-                outs() << " (architecture " << ArchitectureName << ")";
-              outs() << "\n";
-              if (ArchiveHeaders)
-                printArchiveHeaders(Filename, A.get(), !NonVerbose,
-                                    ArchiveMemberOffsets, ArchitectureName);
-              Error Err = Error::success();
-              for (auto &C : A->children(Err)) {
-                Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
-                if (!ChildOrErr) {
-                  if (auto E = isNotObjectErrorInvalidFileType(ChildOrErr.takeError()))
-                    report_error(Filename, C, std::move(E), ArchitectureName);
-                  continue;
-                }
-                if (MachOObjectFile *O =
-                        dyn_cast<MachOObjectFile>(&*ChildOrErr.get()))
-                  ProcessMachO(Filename, O, O->getFileName(), ArchitectureName);
-              }
-              if (Err)
-                report_error(Filename, std::move(Err));
-            } else {
-              consumeError(AOrErr.takeError());
-              error("Mach-O universal file: " + Filename + " for " +
-                    "architecture " + StringRef(I->getArchFlagName()) +
-                    " is not a Mach-O file or an archive file");
-            }
-          }
-        }
-        if (!ArchFound) {
-          errs() << "llvm-objdump: file: " + Filename + " does not contain "
-                 << "architecture: " + ArchFlags[i] + "\n";
-          return;
-        }
-      }
-      return;
-    }
-    // No architecture flags were specified so if this contains a slice that
-    // matches the host architecture dump only that.
-    if (!ArchAll) {
-      for (MachOUniversalBinary::object_iterator I = UB->begin_objects(),
-                                                 E = UB->end_objects();
-           I != E; ++I) {
-        if (MachOObjectFile::getHostArch().getArchName() ==
-            I->getArchFlagName()) {
-          Expected<std::unique_ptr<ObjectFile>> ObjOrErr = I->getAsObjectFile();
-          std::string ArchiveName;
-          ArchiveName.clear();
-          if (ObjOrErr) {
-            ObjectFile &O = *ObjOrErr.get();
-            if (MachOObjectFile *MachOOF = dyn_cast<MachOObjectFile>(&O))
-              ProcessMachO(Filename, MachOOF);
-          } else if (auto E = isNotObjectErrorInvalidFileType(
-                     ObjOrErr.takeError())) {
-            report_error(Filename, std::move(E));
-            continue;
-          } else if (Expected<std::unique_ptr<Archive>> AOrErr =
-                         I->getAsArchive()) {
-            std::unique_ptr<Archive> &A = *AOrErr;
-            outs() << "Archive : " << Filename << "\n";
-            if (ArchiveHeaders)
-              printArchiveHeaders(Filename, A.get(), !NonVerbose,
-                                  ArchiveMemberOffsets);
-            Error Err = Error::success();
-            for (auto &C : A->children(Err)) {
-              Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
-              if (!ChildOrErr) {
-                if (auto E = isNotObjectErrorInvalidFileType(ChildOrErr.takeError()))
-                  report_error(Filename, C, std::move(E));
-                continue;
-              }
-              if (MachOObjectFile *O =
-                      dyn_cast<MachOObjectFile>(&*ChildOrErr.get()))
-                ProcessMachO(Filename, O, O->getFileName());
-            }
-            if (Err)
-              report_error(Filename, std::move(Err));
-          } else {
-            consumeError(AOrErr.takeError());
-            error("Mach-O universal file: " + Filename + " for architecture " +
-                  StringRef(I->getArchFlagName()) +
-                  " is not a Mach-O file or an archive file");
-          }
-          return;
-        }
-      }
-    }
-    // Either all architectures have been specified or none have been specified
-    // and this does not contain the host architecture so dump all the slices.
-    bool moreThanOneArch = UB->getNumberOfObjects() > 1;
-    for (MachOUniversalBinary::object_iterator I = UB->begin_objects(),
-                                               E = UB->end_objects();
-         I != E; ++I) {
-      Expected<std::unique_ptr<ObjectFile>> ObjOrErr = I->getAsObjectFile();
-      std::string ArchitectureName = "";
-      if (moreThanOneArch)
-        ArchitectureName = I->getArchFlagName();
-      if (ObjOrErr) {
-        ObjectFile &Obj = *ObjOrErr.get();
-        if (MachOObjectFile *MachOOF = dyn_cast<MachOObjectFile>(&Obj))
-          ProcessMachO(Filename, MachOOF, "", ArchitectureName);
-      } else if (auto E = isNotObjectErrorInvalidFileType(
-                 ObjOrErr.takeError())) {
-        report_error(StringRef(), Filename, std::move(E), ArchitectureName);
-        continue;
-      } else if (Expected<std::unique_ptr<Archive>> AOrErr =
-                   I->getAsArchive()) {
-        std::unique_ptr<Archive> &A = *AOrErr;
-        outs() << "Archive : " << Filename;
-        if (!ArchitectureName.empty())
-          outs() << " (architecture " << ArchitectureName << ")";
-        outs() << "\n";
-        if (ArchiveHeaders)
-          printArchiveHeaders(Filename, A.get(), !NonVerbose,
-                              ArchiveMemberOffsets, ArchitectureName);
-        Error Err = Error::success();
-        for (auto &C : A->children(Err)) {
-          Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
-          if (!ChildOrErr) {
-            if (auto E = isNotObjectErrorInvalidFileType(ChildOrErr.takeError()))
-              report_error(Filename, C, std::move(E), ArchitectureName);
-            continue;
-          }
-          if (MachOObjectFile *O =
-                  dyn_cast<MachOObjectFile>(&*ChildOrErr.get())) {
-            if (MachOObjectFile *MachOOF = dyn_cast<MachOObjectFile>(O))
-              ProcessMachO(Filename, MachOOF, MachOOF->getFileName(),
-                           ArchitectureName);
-          }
-        }
-        if (Err)
-          report_error(Filename, std::move(Err));
-      } else {
-        consumeError(AOrErr.takeError());
-        error("Mach-O universal file: " + Filename + " for architecture " +
-              StringRef(I->getArchFlagName()) +
-              " is not a Mach-O file or an archive file");
-      }
-    }
+    ParseInputMachO(UB);
     return;
   }
   if (ObjectFile *O = dyn_cast<ObjectFile>(&Bin)) {
     if (!checkMachOAndArchFlags(O, Filename))
       return;
-    if (MachOObjectFile *MachOOF = dyn_cast<MachOObjectFile>(&*O)) {
+    if (MachOObjectFile *MachOOF = dyn_cast<MachOObjectFile>(&*O))
       ProcessMachO(Filename, MachOOF);
-    } else
+    else
       errs() << "llvm-objdump: '" << Filename << "': "
              << "Object is not a Mach-O file type.\n";
     return;
   }
   llvm_unreachable("Input object can't be invalid at this point");
+}
+
+void llvm::ParseInputMachO(MachOUniversalBinary *UB) {
+  if (!ValidateArchFlags())
+    return;
+
+  auto Filename = UB->getFileName();
+
+  if (UniversalHeaders)
+    printMachOUniversalHeaders(UB, !NonVerbose);
+
+  // If we have a list of architecture flags specified dump only those.
+  if (!ArchAll && ArchFlags.size() != 0) {
+    // Look for a slice in the universal binary that matches each ArchFlag.
+    bool ArchFound;
+    for (unsigned i = 0; i < ArchFlags.size(); ++i) {
+      ArchFound = false;
+      for (MachOUniversalBinary::object_iterator I = UB->begin_objects(),
+                                                  E = UB->end_objects();
+            I != E; ++I) {
+        if (ArchFlags[i] == I->getArchFlagName()) {
+          ArchFound = true;
+          Expected<std::unique_ptr<ObjectFile>> ObjOrErr =
+              I->getAsObjectFile();
+          std::string ArchitectureName = "";
+          if (ArchFlags.size() > 1)
+            ArchitectureName = I->getArchFlagName();
+          if (ObjOrErr) {
+            ObjectFile &O = *ObjOrErr.get();
+            if (MachOObjectFile *MachOOF = dyn_cast<MachOObjectFile>(&O))
+              ProcessMachO(Filename, MachOOF, "", ArchitectureName);
+          } else if (auto E = isNotObjectErrorInvalidFileType(
+                      ObjOrErr.takeError())) {
+            report_error(Filename, StringRef(), std::move(E),
+                          ArchitectureName);
+            continue;
+          } else if (Expected<std::unique_ptr<Archive>> AOrErr =
+                          I->getAsArchive()) {
+            std::unique_ptr<Archive> &A = *AOrErr;
+            outs() << "Archive : " << Filename;
+            if (!ArchitectureName.empty())
+              outs() << " (architecture " << ArchitectureName << ")";
+            outs() << "\n";
+            if (ArchiveHeaders)
+              printArchiveHeaders(Filename, A.get(), !NonVerbose,
+                                  ArchiveMemberOffsets, ArchitectureName);
+            Error Err = Error::success();
+            for (auto &C : A->children(Err)) {
+              Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
+              if (!ChildOrErr) {
+                if (auto E = isNotObjectErrorInvalidFileType(ChildOrErr.takeError()))
+                  report_error(Filename, C, std::move(E), ArchitectureName);
+                continue;
+              }
+              if (MachOObjectFile *O =
+                      dyn_cast<MachOObjectFile>(&*ChildOrErr.get()))
+                ProcessMachO(Filename, O, O->getFileName(), ArchitectureName);
+            }
+            if (Err)
+              report_error(Filename, std::move(Err));
+          } else {
+            consumeError(AOrErr.takeError());
+            error("Mach-O universal file: " + Filename + " for " +
+                  "architecture " + StringRef(I->getArchFlagName()) +
+                  " is not a Mach-O file or an archive file");
+          }
+        }
+      }
+      if (!ArchFound) {
+        errs() << "llvm-objdump: file: " + Filename + " does not contain "
+                << "architecture: " + ArchFlags[i] + "\n";
+        return;
+      }
+    }
+    return;
+  }
+  // No architecture flags were specified so if this contains a slice that
+  // matches the host architecture dump only that.
+  if (!ArchAll) {
+    for (MachOUniversalBinary::object_iterator I = UB->begin_objects(),
+                                                E = UB->end_objects();
+          I != E; ++I) {
+      if (MachOObjectFile::getHostArch().getArchName() ==
+          I->getArchFlagName()) {
+        Expected<std::unique_ptr<ObjectFile>> ObjOrErr = I->getAsObjectFile();
+        std::string ArchiveName;
+        ArchiveName.clear();
+        if (ObjOrErr) {
+          ObjectFile &O = *ObjOrErr.get();
+          if (MachOObjectFile *MachOOF = dyn_cast<MachOObjectFile>(&O))
+            ProcessMachO(Filename, MachOOF);
+        } else if (auto E = isNotObjectErrorInvalidFileType(
+                    ObjOrErr.takeError())) {
+          report_error(Filename, std::move(E));
+          continue;
+        } else if (Expected<std::unique_ptr<Archive>> AOrErr =
+                        I->getAsArchive()) {
+          std::unique_ptr<Archive> &A = *AOrErr;
+          outs() << "Archive : " << Filename << "\n";
+          if (ArchiveHeaders)
+            printArchiveHeaders(Filename, A.get(), !NonVerbose,
+                                ArchiveMemberOffsets);
+          Error Err = Error::success();
+          for (auto &C : A->children(Err)) {
+            Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
+            if (!ChildOrErr) {
+              if (auto E = isNotObjectErrorInvalidFileType(ChildOrErr.takeError()))
+                report_error(Filename, C, std::move(E));
+              continue;
+            }
+            if (MachOObjectFile *O =
+                    dyn_cast<MachOObjectFile>(&*ChildOrErr.get()))
+              ProcessMachO(Filename, O, O->getFileName());
+          }
+          if (Err)
+            report_error(Filename, std::move(Err));
+        } else {
+          consumeError(AOrErr.takeError());
+          error("Mach-O universal file: " + Filename + " for architecture " +
+                StringRef(I->getArchFlagName()) +
+                " is not a Mach-O file or an archive file");
+        }
+        return;
+      }
+    }
+  }
+  // Either all architectures have been specified or none have been specified
+  // and this does not contain the host architecture so dump all the slices.
+  bool moreThanOneArch = UB->getNumberOfObjects() > 1;
+  for (MachOUniversalBinary::object_iterator I = UB->begin_objects(),
+                                              E = UB->end_objects();
+        I != E; ++I) {
+    Expected<std::unique_ptr<ObjectFile>> ObjOrErr = I->getAsObjectFile();
+    std::string ArchitectureName = "";
+    if (moreThanOneArch)
+      ArchitectureName = I->getArchFlagName();
+    if (ObjOrErr) {
+      ObjectFile &Obj = *ObjOrErr.get();
+      if (MachOObjectFile *MachOOF = dyn_cast<MachOObjectFile>(&Obj))
+        ProcessMachO(Filename, MachOOF, "", ArchitectureName);
+    } else if (auto E = isNotObjectErrorInvalidFileType(
+                ObjOrErr.takeError())) {
+      report_error(StringRef(), Filename, std::move(E), ArchitectureName);
+      continue;
+    } else if (Expected<std::unique_ptr<Archive>> AOrErr =
+                  I->getAsArchive()) {
+      std::unique_ptr<Archive> &A = *AOrErr;
+      outs() << "Archive : " << Filename;
+      if (!ArchitectureName.empty())
+        outs() << " (architecture " << ArchitectureName << ")";
+      outs() << "\n";
+      if (ArchiveHeaders)
+        printArchiveHeaders(Filename, A.get(), !NonVerbose,
+                            ArchiveMemberOffsets, ArchitectureName);
+      Error Err = Error::success();
+      for (auto &C : A->children(Err)) {
+        Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
+        if (!ChildOrErr) {
+          if (auto E = isNotObjectErrorInvalidFileType(ChildOrErr.takeError()))
+            report_error(Filename, C, std::move(E), ArchitectureName);
+          continue;
+        }
+        if (MachOObjectFile *O =
+                dyn_cast<MachOObjectFile>(&*ChildOrErr.get())) {
+          if (MachOObjectFile *MachOOF = dyn_cast<MachOObjectFile>(O))
+            ProcessMachO(Filename, MachOOF, MachOOF->getFileName(),
+                          ArchitectureName);
+        }
+      }
+      if (Err)
+        report_error(Filename, std::move(Err));
+    } else {
+      consumeError(AOrErr.takeError());
+      error("Mach-O universal file: " + Filename + " for architecture " +
+            StringRef(I->getArchFlagName()) +
+            " is not a Mach-O file or an archive file");
+    }
+  }
 }
 
 // The block of info used by the Symbolizer call backs.

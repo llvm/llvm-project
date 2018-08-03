@@ -260,8 +260,9 @@ main_body:
 }
 
 ; Check that WWM is turned on correctly across basic block boundaries.
+; if..then..endif version
 ;
-;CHECK-LABEL: {{^}}test_wwm6:
+;CHECK-LABEL: {{^}}test_wwm6_then:
 ;CHECK: s_or_saveexec_b64 [[ORIG:s\[[0-9]+:[0-9]+\]]], -1
 ;SI-CHECK: buffer_load_dword
 ;VI-CHECK: flat_load_dword
@@ -272,7 +273,7 @@ main_body:
 ;VI-CHECK: flat_load_dword
 ;CHECK: v_add_f32_e32
 ;CHECK: s_mov_b64 exec, [[ORIG2]]
-define amdgpu_ps float @test_wwm6() {
+define amdgpu_ps float @test_wwm6_then() {
 main_body:
   %src0 = load volatile float, float addrspace(1)* undef
   ; use mbcnt to make sure the branch is divergent
@@ -290,6 +291,40 @@ if:
 endif:
   %out.1 = phi float [ %out.0, %if ], [ 0.0, %main_body ]
   ret float %out.1
+}
+
+; Check that WWM is turned on correctly across basic block boundaries.
+; loop version
+;
+;CHECK-LABEL: {{^}}test_wwm6_loop:
+;CHECK: s_or_saveexec_b64 [[ORIG:s\[[0-9]+:[0-9]+\]]], -1
+;SI-CHECK: buffer_load_dword
+;VI-CHECK: flat_load_dword
+;CHECK: s_mov_b64 exec, [[ORIG]]
+;CHECK: %loop
+;CHECK: s_or_saveexec_b64 [[ORIG2:s\[[0-9]+:[0-9]+\]]], -1
+;SI-CHECK: buffer_load_dword
+;VI-CHECK: flat_load_dword
+;CHECK: s_mov_b64 exec, [[ORIG2]]
+define amdgpu_ps float @test_wwm6_loop() {
+main_body:
+  %src0 = load volatile float, float addrspace(1)* undef
+  ; use mbcnt to make sure the branch is divergent
+  %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+  %hi = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %lo)
+  br label %loop
+
+loop:
+  %counter = phi i32 [ %lo, %main_body ], [ %counter.1, %loop ]
+  %src1 = load volatile float, float addrspace(1)* undef
+  %out = fadd float %src0, %src1
+  %out.0 = call float @llvm.amdgcn.wwm.f32(float %out)
+  %counter.1 = sub i32 %counter, 1
+  %cc = icmp ne i32 %counter.1, 0
+  br i1 %cc, label %loop, label %endloop
+
+endloop:
+  ret float %out.0
 }
 
 ; Check that @llvm.amdgcn.set.inactive disables WWM.

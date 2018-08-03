@@ -721,10 +721,8 @@ void CXXNameMangler::mangleFunctionEncodingBareType(const FunctionDecl *FD) {
   if (FD->hasAttr<EnableIfAttr>()) {
     FunctionTypeDepthState Saved = FunctionTypeDepth.push();
     Out << "Ua9enable_ifI";
-    // FIXME: specific_attr_iterator iterates in reverse order. Fix that and use
-    // it here.
-    for (AttrVec::const_reverse_iterator I = FD->getAttrs().rbegin(),
-                                         E = FD->getAttrs().rend();
+    for (AttrVec::const_iterator I = FD->getAttrs().begin(),
+                                 E = FD->getAttrs().end();
          I != E; ++I) {
       EnableIfAttr *EIA = dyn_cast<EnableIfAttr>(*I);
       if (!EIA)

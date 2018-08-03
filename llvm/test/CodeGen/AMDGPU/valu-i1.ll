@@ -201,8 +201,7 @@ exit:
 
 ; Initialize inner condition to false
 ; SI: BB{{[0-9]+_[0-9]+}}: ; %bb10.preheader
-; SI: s_mov_b64 [[ZERO:s\[[0-9]+:[0-9]+\]]], 0{{$}}
-; SI: s_mov_b64 [[COND_STATE:s\[[0-9]+:[0-9]+\]]], [[ZERO]]
+; SI: s_mov_b64 [[COND_STATE:s\[[0-9]+:[0-9]+\]]], 0{{$}}
 
 ; Clear exec bits for workitems that load -1s
 ; SI: [[LABEL_LOOP:BB[0-9]+_[0-9]+]]:

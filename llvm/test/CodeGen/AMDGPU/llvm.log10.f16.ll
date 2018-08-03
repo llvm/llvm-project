@@ -9,7 +9,6 @@ declare <2 x half> @llvm.log10.v2f16(<2 x half> %a)
 ; SI:     buffer_load_ushort v[[A_F16_0:[0-9]+]]
 ; VI:     flat_load_ushort v[[A_F16_0:[0-9]+]]
 ; GFX9:   global_load_ushort v[[A_F16_0:[0-9]+]]
-; SI:     v_mov_b32_e32 v[[A_F32_1:[0-9]+]]
 ; SI:     v_cvt_f32_f16_e32 v[[A_F32_0:[0-9]+]], v[[A_F16_0]]
 ; SI:     v_log_f32_e32 v[[R_F32_0:[0-9]+]], v[[A_F32_0]]
 ; SI:     v_mul_f32_e32 v[[R_F32_1:[0-9]+]], 0x3e9a209a, v[[R_F32_0]]

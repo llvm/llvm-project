@@ -253,6 +253,10 @@ inline unsigned GetDefaultP2Align(unsigned Opcode) {
   case WebAssembly::ATOMIC_RMW_CMPXCHG_I32_S:
   case WebAssembly::ATOMIC_RMW32_U_CMPXCHG_I64:
   case WebAssembly::ATOMIC_RMW32_U_CMPXCHG_I64_S:
+  case WebAssembly::ATOMIC_NOTIFY:
+  case WebAssembly::ATOMIC_NOTIFY_S:
+  case WebAssembly::ATOMIC_WAIT_I32:
+  case WebAssembly::ATOMIC_WAIT_I32_S:
     return 2;
   case WebAssembly::LOAD_I64:
   case WebAssembly::LOAD_I64_S:
@@ -280,6 +284,8 @@ inline unsigned GetDefaultP2Align(unsigned Opcode) {
   case WebAssembly::ATOMIC_RMW_XCHG_I64_S:
   case WebAssembly::ATOMIC_RMW_CMPXCHG_I64:
   case WebAssembly::ATOMIC_RMW_CMPXCHG_I64_S:
+  case WebAssembly::ATOMIC_WAIT_I64:
+  case WebAssembly::ATOMIC_WAIT_I64_S:
     return 3;
   default:
     llvm_unreachable("Only loads and stores have p2align values");

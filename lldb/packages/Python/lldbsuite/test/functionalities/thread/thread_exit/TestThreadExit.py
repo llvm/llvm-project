@@ -8,6 +8,7 @@ from __future__ import print_function
 import os
 import time
 import lldb
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 import lldbsuite.test.lldbutil as lldbutil
 
@@ -25,6 +26,9 @@ class ThreadExitTestCase(TestBase):
         self.break_3 = line_number('main.cpp', '// Set third breakpoint here')
         self.break_4 = line_number('main.cpp', '// Set fourth breakpoint here')
 
+    # The test is actually flakey on Windows, failing every dozen or so runs, but even with the flakey
+    # decorator it still fails
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr38373")
     def test(self):
         """Test thread exit handling."""
         self.build(dictionary=self.getBuildFlags())
