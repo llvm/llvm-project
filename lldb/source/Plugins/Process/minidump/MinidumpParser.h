@@ -98,7 +98,6 @@ private:
 private:
   lldb::DataBufferSP m_data_sp;
   llvm::DenseMap<uint32_t, MinidumpLocationDescriptor> m_directory_map;
-  ArchSpec m_arch;
 };
 
 } // end namespace minidump

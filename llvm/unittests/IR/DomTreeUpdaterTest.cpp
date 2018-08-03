@@ -699,3 +699,29 @@ TEST(DomTreeUpdater, LazyUpdateStepTest) {
   DTU.flush();
   ASSERT_TRUE(DT.verify());
 }
+
+TEST(DomTreeUpdater, NoTreeTest) {
+  StringRef FuncName = "f";
+  StringRef ModuleString = R"(
+                           define i32 @f() {
+                           bb0:
+                              ret i32 0
+                           }
+                           )";
+  // Make the module.
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+  Function *F = M->getFunction(FuncName);
+
+  // Make the DTU.
+  DomTreeUpdater DTU(nullptr, nullptr, DomTreeUpdater::UpdateStrategy::Lazy);
+  ASSERT_FALSE(DTU.hasDomTree());
+  ASSERT_FALSE(DTU.hasPostDomTree());
+  Function::iterator FI = F->begin();
+  BasicBlock *BB0 = &*FI++;
+  // Test whether PendingDeletedBB is flushed after the recalculation.
+  DTU.deleteBB(BB0);
+  ASSERT_TRUE(DTU.hasPendingDeletedBB());
+  DTU.recalculate(*F);
+  ASSERT_FALSE(DTU.hasPendingDeletedBB());
+}

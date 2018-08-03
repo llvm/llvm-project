@@ -3488,8 +3488,7 @@ public:
   //===--------------------------------------------------------------------===//
   // Div utility functions
   //
-  SDValue BuildSDIV(SDNode *N, const APInt &Divisor, SelectionDAG &DAG,
-                    bool IsAfterLegalization,
+  SDValue BuildSDIV(SDNode *N, SelectionDAG &DAG, bool IsAfterLegalization,
                     SmallVectorImpl<SDNode *> &Created) const;
   SDValue BuildUDIV(SDNode *N, const APInt &Divisor, SelectionDAG &DAG,
                     bool IsAfterLegalization,

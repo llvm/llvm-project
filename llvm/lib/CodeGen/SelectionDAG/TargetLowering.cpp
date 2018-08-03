@@ -3463,8 +3463,8 @@ SDValue TargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
 /// return a DAG expression to select that will generate the same value by
 /// multiplying by a magic number.
 /// Ref: "Hacker's Delight" or "The PowerPC Compiler Writer's Guide".
-SDValue TargetLowering::BuildSDIV(SDNode *N, const APInt &Divisor,
-                                  SelectionDAG &DAG, bool IsAfterLegalization,
+SDValue TargetLowering::BuildSDIV(SDNode *N, SelectionDAG &DAG,
+                                  bool IsAfterLegalization,
                                   SmallVectorImpl<SDNode *> &Created) const {
   EVT VT = N->getValueType(0);
   SDLoc dl(N);
@@ -3473,6 +3473,12 @@ SDValue TargetLowering::BuildSDIV(SDNode *N, const APInt &Divisor,
   // FIXME: We should be more aggressive here.
   if (!isTypeLegal(VT))
     return SDValue();
+
+  // TODO: Add non-uniform constant support.
+  ConstantSDNode *C = isConstOrConstSplat(N->getOperand(1));
+  if (!C || C->isNullValue())
+    return SDValue();
+  const APInt &Divisor = C->getAPIntValue();
 
   // If the sdiv has an 'exact' bit we can use a simpler lowering.
   if (N->getFlags().hasExact())

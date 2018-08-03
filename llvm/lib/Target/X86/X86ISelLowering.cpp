@@ -613,7 +613,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   // Long double always uses X87, except f128 in MMX.
   if (UseX87) {
     if (Subtarget.is64Bit() && Subtarget.hasMMX()) {
-      addRegisterClass(MVT::f128, &X86::VR128RegClass);
+      addRegisterClass(MVT::f128, Subtarget.hasVLX() ? &X86::VR128XRegClass
+                                                     : &X86::VR128RegClass);
       ValueTypeActions.setTypeAction(MVT::f128, TypeSoftenFloat);
       setOperationAction(ISD::FABS , MVT::f128, Custom);
       setOperationAction(ISD::FNEG , MVT::f128, Custom);
@@ -36981,7 +36982,7 @@ static SDValue lowerX86FPLogicOp(SDNode *N, SelectionDAG &DAG,
                                  const X86Subtarget &Subtarget) {
   MVT VT = N->getSimpleValueType(0);
   // If we have integer vector types available, use the integer opcodes.
-  if (VT.isVector() && Subtarget.hasSSE2()) {
+  if ((VT.isVector() || VT == MVT::f128) && Subtarget.hasSSE2()) {
     SDLoc dl(N);
 
     MVT IntVT = MVT::getVectorVT(MVT::i64, VT.getSizeInBits() / 64);

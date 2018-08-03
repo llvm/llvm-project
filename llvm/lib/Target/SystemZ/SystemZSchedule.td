@@ -12,11 +12,13 @@
 // These resources are used to express decoder grouping rules.  The number of
 // decoder slots needed by an instructions is normally one, but there are
 // exceptions.
-def NormalGr   : SchedWrite;
-def Cracked    : SchedWrite;
-def GroupAlone : SchedWrite;
-def BeginGroup : SchedWrite;
-def EndGroup   : SchedWrite;
+def NormalGr    : SchedWrite;
+def Cracked     : SchedWrite;
+def GroupAlone  : SchedWrite;
+def GroupAlone2 : SchedWrite;
+def GroupAlone3 : SchedWrite;
+def BeginGroup  : SchedWrite;
+def EndGroup    : SchedWrite;
 
 // A SchedWrite added to other SchedWrites to make LSU latency parameterizable.
 def LSULatency : SchedWrite;

@@ -547,7 +547,7 @@ define <16 x i32> @maskz_shuffle_v16i32_02_03_04_05_06_07_08_09_10_11_12_13_14_1
 define <16 x float> @test_vshuff32x4_512(<16 x float> %x, <16 x float> %x1) nounwind {
 ; ALL-LABEL: test_vshuff32x4_512:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vshuff32x4 {{.*#+}} zmm0 = zmm0[0,1,2,3,4,5,6,7],zmm1[4,5,6,7,0,1,2,3]
+; ALL-NEXT:    vshuff64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[2,3,0,1]
 ; ALL-NEXT:    retq
   %res = shufflevector <16 x float> %x, <16 x float> %x1, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 20, i32 21, i32 22, i32 23, i32 16, i32 17, i32 18, i32 19>
   ret <16 x float> %res
@@ -556,7 +556,7 @@ define <16 x float> @test_vshuff32x4_512(<16 x float> %x, <16 x float> %x1) noun
 define <16 x i32> @test_vshufi32x4_512(<16 x i32> %x, <16 x i32> %x1) nounwind {
 ; ALL-LABEL: test_vshufi32x4_512:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vshufi32x4 {{.*#+}} zmm0 = zmm0[0,1,2,3,4,5,6,7],zmm1[4,5,6,7,0,1,2,3]
+; ALL-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[2,3,0,1]
 ; ALL-NEXT:    retq
   %res = shufflevector <16 x i32> %x, <16 x i32> %x1, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 20, i32 21, i32 22, i32 23, i32 16, i32 17, i32 18, i32 19>
   ret <16 x i32> %res

@@ -3274,11 +3274,15 @@ static std::string GenerateCustomAppertainsTo(const Record &Subject,
     return "";
   }
 
+  const StringRef CheckCodeValue = Subject.getValueAsString("CheckCode");
+
   OS << "static bool " << FnName << "(const Decl *D) {\n";
-  OS << "  if (const auto *S = dyn_cast<";
-  OS << GetSubjectWithSuffix(Base);
-  OS << ">(D))\n";
-  OS << "    return " << Subject.getValueAsString("CheckCode") << ";\n";
+  if (CheckCodeValue != "false") {
+    OS << "  if (const auto *S = dyn_cast<";
+    OS << GetSubjectWithSuffix(Base);
+    OS << ">(D))\n";
+    OS << "    return " << Subject.getValueAsString("CheckCode") << ";\n";
+  }
   OS << "  return false;\n";
   OS << "}\n\n";
 
