@@ -32,13 +32,13 @@ MATH_MANGLE(asinpi)(float x)
     float x2 = ax * ax;
     float r = ax >= 0.5f ? tx : x2;
 
-    float u = r * MATH_MAD(r, MATH_MAD(r, MATH_MAD(r, MATH_MAD(r, 
-                  MATH_MAD(r, 
+    float u = r * MATH_MAD(r, MATH_MAD(r, MATH_MAD(r, MATH_MAD(r,
+                  MATH_MAD(r,
                       -0x1.3f1c6cp-8f, 0x1.2ac560p-6f), 0x1.80aab4p-8f), 0x1.e53378p-7f),
                       0x1.86680ap-6f), 0x1.b29c5ap-5f);
 
     float s = MATH_FAST_SQRT(r);
-    float ret = MATH_MAD(-2.0, MATH_MAD(s, u, piinv*s), 0.5f);
+    float ret = MATH_MAD(-2.0f, MATH_MAD(s, u, piinv*s), 0.5f);
     float xux = MATH_MAD(piinv, ax, ax*u);
     ret = ax >= 0.5f ? ret : xux;
 

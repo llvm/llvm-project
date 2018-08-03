@@ -18,9 +18,9 @@ MATH_MANGLE(erfcx)(float x)
                   -0x1.60e46ep-4f), 0x1.54d3e4p-3f),
                   -0x1.340edap-2f), 0x1.00049ap-1f),
                   -0x1.81286p-1f), 0x1.ffffcap-1f),
-                  -0x1.20dd7p+0f), 0x1.0p+0);
+                  -0x1.20dd7p+0f), 0x1.0p+0f);
     } else if (ax < 32.0f) {
-        double t = MATH_DIV(ax - 4.0f, ax + 4.0f);
+        float t = MATH_DIV(ax - 4.0f, ax + 4.0f);
         ret = MATH_MAD(t, MATH_MAD(t, MATH_MAD(t, MATH_MAD(t,
               MATH_MAD(t, MATH_MAD(t, MATH_MAD(t, MATH_MAD(t,
               MATH_MAD(t,
@@ -33,7 +33,7 @@ MATH_MANGLE(erfcx)(float x)
         ret = MATH_DIV(ret, MATH_MAD(ax, 2.0f, 1.0f));
     } else {
         const float one_over_sqrtpi = 0x1.20dd76p-1f;
-        double z = MATH_RCP(x * x);
+        float z = MATH_RCP(x * x);
         ret =  MATH_DIV(one_over_sqrtpi, x) * MATH_MAD(z, MATH_MAD(z, 0.375f, -0.5f), 1.0f);
     }
 
