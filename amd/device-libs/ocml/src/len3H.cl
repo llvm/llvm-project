@@ -14,12 +14,7 @@ MATH_MANGLE(len3)(half x, half y, half z)
     float fy = (float)y;
     float fz = (float)z;
 
-    float d2;
-    if (HAVE_FAST_FMA32()) {
-        d2 = BUILTIN_FMA_F32(fx, fx, BUILTIN_FMA_F32(fy, fy, fz*fz));
-    } else {
-        d2 = BUILTIN_MAD_F32(fx, fx, BUILTIN_MAD_F32(fy, fy, fz*fz));
-    }
+    float d2 = MATH_MAD(fx, fx, MATH_MAD(fy, fy, fz*fz));
 
     half ret = (half)BUILTIN_SQRT_F32(d2);
 
