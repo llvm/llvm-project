@@ -4,7 +4,7 @@
 ; STATS: 1 pipeliner        - Number of loops software pipelined
 
 ; Function Attrs: nounwind
-define void @f0(i32 %a0) #0 {
+define i64 @f0(i32 %a0, i32* %a1) #0 {
 b0:
   %v0 = icmp slt i32 %a0, 123469
   br i1 %v0, label %b1, label %b4
@@ -21,7 +21,7 @@ b2:                                               ; preds = %b2, %b1
   %v6 = phi i64 [ undef, %b1 ], [ %v11, %b2 ]
   %v7 = tail call i64 @llvm.hexagon.M2.vdmacs.s0(i64 %v5, i64 %v6, i64 %v6)
   %v8 = tail call i64 @llvm.hexagon.S2.packhl(i32 undef, i32 %v4)
-  %v9 = load i32, i32* undef, align 4, !tbaa !0
+  %v9 = load i32, i32* %a1, align 4, !tbaa !0
   %v10 = tail call i64 @llvm.hexagon.M2.vdmacs.s0(i64 %v2, i64 %v6, i64 %v8)
   %v11 = tail call i64 @llvm.hexagon.S2.packhl(i32 %v9, i32 undef)
   %v12 = tail call i64 @llvm.hexagon.M2.vdmacs.s0(i64 %v1, i64 %v6, i64 %v11)
@@ -36,7 +36,8 @@ b3:                                               ; preds = %b2
 b4:                                               ; preds = %b3, %b0
   %v16 = phi i64 [ %v10, %b3 ], [ undef, %b0 ]
   %v17 = phi i64 [ %v7, %b3 ], [ undef, %b0 ]
-  unreachable
+  %v18 = add i64 %v16, %v17
+  ret i64 %v18
 }
 
 ; Function Attrs: nounwind readnone

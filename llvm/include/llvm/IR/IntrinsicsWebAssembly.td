@@ -64,4 +64,27 @@ def int_wasm_landingpad_index: Intrinsic<[], [llvm_i32_ty], [IntrNoMem]>;
 
 // Returns LSDA address of the current function.
 def int_wasm_lsda : Intrinsic<[llvm_ptr_ty], [], [IntrNoMem]>;
+
+//===----------------------------------------------------------------------===//
+// Atomic intrinsics
+//===----------------------------------------------------------------------===//
+
+// wait / notify
+def int_wasm_atomic_wait_i32 :
+  Intrinsic<[llvm_i32_ty],
+            [LLVMPointerType<llvm_i32_ty>, llvm_i32_ty, llvm_i64_ty],
+            [IntrInaccessibleMemOrArgMemOnly, ReadOnly<0>, NoCapture<0>,
+             IntrHasSideEffects],
+             "", [SDNPMemOperand]>;
+def int_wasm_atomic_wait_i64 :
+  Intrinsic<[llvm_i32_ty],
+            [LLVMPointerType<llvm_i64_ty>, llvm_i64_ty, llvm_i64_ty],
+            [IntrInaccessibleMemOrArgMemOnly, ReadOnly<0>, NoCapture<0>,
+             IntrHasSideEffects],
+             "", [SDNPMemOperand]>;
+def int_wasm_atomic_notify:
+  Intrinsic<[llvm_i64_ty], [LLVMPointerType<llvm_i32_ty>, llvm_i64_ty],
+            [IntrInaccessibleMemOnly, NoCapture<0>, IntrHasSideEffects], "",
+            [SDNPMemOperand]>;
+
 }

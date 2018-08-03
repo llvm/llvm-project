@@ -26,6 +26,7 @@
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/DomTreeUpdater.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
@@ -1425,12 +1426,13 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT = nullptr,
   // Remove the old branch.
   Preheader->getTerminator()->eraseFromParent();
 
+  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
   if (DT) {
     // Update the dominator tree by informing it about the new edge from the
     // preheader to the exit.
-    DT->insertEdge(Preheader, ExitBlock);
+    DTU.insertEdge(Preheader, ExitBlock);
     // Inform the dominator tree about the removed edge.
-    DT->deleteEdge(Preheader, L->getHeader());
+    DTU.deleteEdge(Preheader, L->getHeader());
   }
 
   // Given LCSSA form is satisfied, we should not have users of instructions

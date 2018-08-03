@@ -37,18 +37,17 @@ public:
 };
 
 // A collection of instructions that are to be assembled, executed and measured.
-struct BenchmarkConfiguration {
-  // This code is run before the Snippet is iterated. Since it is part of the
-  // measurement it should be as short as possible. It is usually used to setup
-  // the content of the Registers.
-  struct Setup {
-    std::vector<unsigned> LiveIns; // The registers that are live on entry.
-    std::vector<unsigned> RegsToDef;
-  };
-  Setup SnippetSetup;
-
+struct BenchmarkCode {
   // The sequence of instructions that are to be repeated.
-  std::vector<llvm::MCInst> Snippet;
+  std::vector<llvm::MCInst> Instructions;
+
+  // Before the code is executed some instructions are added to setup the
+  // registers initial values.
+  std::vector<unsigned> RegsToDef;
+
+  // We also need to provide the registers that are live on entry for the
+  // assembler to generate proper prologue/epilogue.
+  std::vector<unsigned> LiveIns;
 
   // Informations about how this configuration was built.
   std::string Info;
@@ -90,34 +89,34 @@ protected:
   const LLVMState &State;
   const RegisterAliasingTrackerCache RATC;
 
-  // Generates a single instruction prototype that has a self-dependency.
-  llvm::Expected<SnippetPrototype>
-  generateSelfAliasingPrototype(const Instruction &Instr) const;
-  // Generates a single instruction prototype without assignment constraints.
-  llvm::Expected<SnippetPrototype>
-  generateUnconstrainedPrototype(const Instruction &Instr,
-                                 llvm::StringRef Msg) const;
+  // Generates a single code template that has a self-dependency.
+  llvm::Expected<CodeTemplate>
+  generateSelfAliasingCodeTemplate(const Instruction &Instr) const;
+  // Generates a single code template without assignment constraints.
+  llvm::Expected<CodeTemplate>
+  generateUnconstrainedCodeTemplate(const Instruction &Instr,
+                                    llvm::StringRef Msg) const;
 
 private:
   // API to be implemented by subclasses.
-  virtual llvm::Expected<SnippetPrototype>
-  generatePrototype(unsigned Opcode) const = 0;
+  virtual llvm::Expected<CodeTemplate>
+  generateCodeTemplate(unsigned Opcode) const = 0;
 
   virtual std::vector<BenchmarkMeasure>
   runMeasurements(const ExecutableFunction &EF, ScratchSpace &Scratch,
                   const unsigned NumRepetitions) const = 0;
 
   // Internal helpers.
-  InstructionBenchmark runOne(const BenchmarkConfiguration &Configuration,
-                              unsigned Opcode, unsigned NumRepetitions) const;
+  InstructionBenchmark runConfiguration(const BenchmarkCode &Configuration,
+                                        unsigned Opcode,
+                                        unsigned NumRepetitions) const;
 
-  // Calls generatePrototype and expands the SnippetPrototype into one or more
-  // BenchmarkConfiguration.
-  llvm::Expected<std::vector<BenchmarkConfiguration>>
+  // Calls generateCodeTemplate and expands it into one or more BenchmarkCode.
+  llvm::Expected<std::vector<BenchmarkCode>>
   generateConfigurations(unsigned Opcode) const;
 
   llvm::Expected<std::string>
-  writeObjectFile(const BenchmarkConfiguration::Setup &Setup,
+  writeObjectFile(const BenchmarkCode &Configuration,
                   llvm::ArrayRef<llvm::MCInst> Code) const;
 
   const InstructionBenchmark::ModeE Mode;

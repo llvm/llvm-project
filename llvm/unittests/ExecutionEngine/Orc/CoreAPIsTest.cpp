@@ -273,6 +273,28 @@ TEST_F(CoreAPIsStandardTest, TestThatReExportsDontUnnecessarilyMaterialize) {
   EXPECT_FALSE(BarMaterialized) << "Bar should not have been materialized";
 }
 
+TEST_F(CoreAPIsStandardTest, TestReexportsFallbackGenerator) {
+  // Test that a re-exports fallback generator can dynamically generate
+  // reexports.
+
+  auto &V2 = ES.createVSO("V2");
+  cantFail(V2.define(absoluteSymbols({{Foo, FooSym}, {Bar, BarSym}})));
+
+  auto Filter = [this](SymbolStringPtr Name) { return Name != Bar; };
+
+  V.setFallbackDefinitionGenerator(
+      ReexportsFallbackDefinitionGenerator(V2, Filter));
+
+  auto Flags = V.lookupFlags({Foo, Bar, Baz});
+  EXPECT_EQ(Flags.size(), 1U) << "Unexpected number of results";
+  EXPECT_EQ(Flags[Foo], FooSym.getFlags()) << "Unexpected flags for Foo";
+
+  auto Result = cantFail(lookup({&V}, Foo));
+
+  EXPECT_EQ(Result.getAddress(), FooSym.getAddress())
+      << "Incorrect reexported symbol address";
+}
+
 TEST_F(CoreAPIsStandardTest, TestTrivialCircularDependency) {
   Optional<MaterializationResponsibility> FooR;
   auto FooMU = llvm::make_unique<SimpleMaterializationUnit>(

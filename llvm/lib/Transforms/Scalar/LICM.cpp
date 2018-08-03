@@ -412,14 +412,7 @@ bool llvm::sinkRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
       //
       bool FreeInLoop = false;
       if (isNotUsedOrFreeInLoop(I, CurLoop, SafetyInfo, TTI, FreeInLoop) &&
-          canSinkOrHoistInst(I, AA, DT, CurLoop, CurAST, true, ORE) &&
-          // FIXME: Remove the special casing here.  Why do we need the
-          // execution check at all?  We're sinking from a dominating location
-          // to a dominated location.
-          (isa<LoadInst>(I) || isa<CallInst>(I) ||
-           // TODO: Plumb the context instruction through to make sinking
-           // more powerful. 
-           isSafeToExecuteUnconditionally(I, DT, CurLoop, SafetyInfo, ORE))) {
+          canSinkOrHoistInst(I, AA, DT, CurLoop, CurAST, true, ORE)) {
         if (sink(I, LI, DT, CurLoop, SafetyInfo, ORE, FreeInLoop)) {
           if (!FreeInLoop) {
             ++II;

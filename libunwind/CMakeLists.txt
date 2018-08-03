@@ -66,9 +66,10 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
       set(LLVM_CMAKE_PATH "${LLVM_BINARY_DIR_CMAKE_STYLE}/lib${LLVM_LIBDIR_SUFFIX}/cmake/llvm")
     endif()
   else()
-    message(FATAL_ERROR "llvm-config not found and LLVM_MAIN_SRC_DIR not defined. "
-                        "Reconfigure with -DLLVM_CONFIG=path/to/llvm-config "
-                        "or -DLLVM_PATH=path/to/llvm-source-root.")
+    message(WARNING "UNSUPPORTED LIBUNWIND CONFIGURATION DETECTED: "
+                    "llvm-config not found and LLVM_MAIN_SRC_DIR not defined. "
+                    "Reconfigure with -DLLVM_CONFIG=path/to/llvm-config "
+                    "or -DLLVM_PATH=path/to/llvm-source-root.")
   endif()
 
   if (EXISTS ${LLVM_CMAKE_PATH})
@@ -76,7 +77,7 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     include("${LLVM_CMAKE_PATH}/AddLLVM.cmake")
     include("${LLVM_CMAKE_PATH}/HandleLLVMOptions.cmake")
   else()
-    message(FATAL_ERROR "Not found: ${LLVM_CMAKE_PATH}")
+    message(WARNING "Not found: ${LLVM_CMAKE_PATH}")
   endif()
 
   set(PACKAGE_NAME libunwind)
@@ -366,4 +367,6 @@ if (LIBUNWIND_INCLUDE_DOCS)
   add_subdirectory(docs)
 endif()
 
-add_subdirectory(test)
+if (EXISTS ${LLVM_CMAKE_PATH})
+  add_subdirectory(test)
+endif()

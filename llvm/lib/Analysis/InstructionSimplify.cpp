@@ -1863,6 +1863,40 @@ static Value *SimplifyAndInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
                                       MaxRecurse))
       return V;
 
+  // Assuming the effective width of Y is not larger than A, i.e. all bits
+  // from X and Y are disjoint in (X << A) | Y,
+  // if the mask of this AND op covers all bits of X or Y, while it covers
+  // no bits from the other, we can bypass this AND op. E.g.,
+  // ((X << A) | Y) & Mask -> Y,
+  //     if Mask = ((1 << effective_width_of(Y)) - 1)
+  // ((X << A) | Y) & Mask -> X << A,
+  //     if Mask = ((1 << effective_width_of(X)) - 1) << A
+  // SimplifyDemandedBits in InstCombine can optimize the general case.
+  // This pattern aims to help other passes for a common case.
+  Value *Y, *XShifted;
+  if (match(Op1, m_APInt(Mask)) &&
+      match(Op0, m_c_Or(m_CombineAnd(m_NUWShl(m_Value(X), m_APInt(ShAmt)),
+                                     m_Value(XShifted)),
+                        m_Value(Y)))) {
+    const unsigned ShftCnt = ShAmt->getZExtValue();
+    const KnownBits YKnown = computeKnownBits(Y, Q.DL, 0, Q.AC, Q.CxtI, Q.DT);
+    const unsigned Width = Op0->getType()->getScalarSizeInBits();
+    const unsigned EffWidthY = Width - YKnown.countMinLeadingZeros();
+    if (EffWidthY <= ShftCnt) {
+      const KnownBits XKnown = computeKnownBits(X, Q.DL, 0, Q.AC, Q.CxtI,
+                                                Q.DT);
+      const unsigned EffWidthX = Width - XKnown.countMinLeadingZeros();
+      const APInt EffBitsY = APInt::getLowBitsSet(Width, EffWidthY);
+      const APInt EffBitsX = APInt::getLowBitsSet(Width, EffWidthX) << ShftCnt;
+      // If the mask is extracting all bits from X or Y as is, we can skip
+      // this AND op.
+      if (EffBitsY.isSubsetOf(*Mask) && !EffBitsX.intersects(*Mask))
+        return Y;
+      if (EffBitsX.isSubsetOf(*Mask) && !EffBitsY.intersects(*Mask))
+        return XShifted;
+    }
+  }
+
   return nullptr;
 }
 
