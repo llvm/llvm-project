@@ -109,6 +109,12 @@ Non-comprehensive list of changes in this release
   it's now a better choice even on the heap (although when TinyPtrVector works,
   it's even smaller).
 
+* Preliminary/experimental support for DWARF v5 debugging information,
+  including the new .debug_names accelerator table. DWARF emitted at ``-O0``
+  should be fully DWARF v5 compliant. Type units and split DWARF are known
+  not to be compliant, and higher optimization levels will still emit some
+  information in v4 format.
+
 * Note..
 
 .. NOTE
