@@ -896,8 +896,14 @@ multiclass RELEASE_BINOP_MI<SDNode op> {
         "#BINOP "#NAME#"8mr PSEUDO!",
         [(atomic_store_8 addr:$dst, (op
             (atomic_load_8 addr:$dst), GR8:$src))]>;
-    // NAME#16 is not generated as 16-bit arithmetic instructions are considered
-    // costly and avoided as far as possible by this backend anyway
+    def NAME#16mi : I<0, Pseudo, (outs), (ins i16mem:$dst, i16imm:$src),
+        "#BINOP "#NAME#"16mi PSEUDO!",
+        [(atomic_store_16 addr:$dst, (op
+            (atomic_load_16 addr:$dst), (i16 imm:$src)))]>;
+    def NAME#16mr : I<0, Pseudo, (outs), (ins i16mem:$dst, GR16:$src),
+        "#BINOP "#NAME#"16mr PSEUDO!",
+        [(atomic_store_16 addr:$dst, (op
+            (atomic_load_16 addr:$dst), GR16:$src))]>;
     def NAME#32mi : I<0, Pseudo, (outs), (ins i32mem:$dst, i32imm:$src),
         "#BINOP "#NAME#"32mi PSEUDO!",
         [(atomic_store_32 addr:$dst, (op
@@ -974,23 +980,20 @@ let Defs = [EFLAGS], Predicates = [UseIncDec], SchedRW = [WriteMicrocoded] in {
       (add (atomic_load_32 addr:$dst), (i32 -1)),
       (add (atomic_load_64 addr:$dst), (i64 -1))>;
 }
-/*
-TODO: These don't work because the type inference of TableGen fails.
-TODO: find a way to fix it.
+
 let Defs = [EFLAGS] in {
   defm RELEASE_NEG : RELEASE_UNOP<
-      (ineg (atomic_load_8  addr:$dst)),
-      (ineg (atomic_load_16 addr:$dst)),
-      (ineg (atomic_load_32 addr:$dst)),
-      (ineg (atomic_load_64 addr:$dst))>;
+      (ineg (i8 (atomic_load_8  addr:$dst))),
+      (ineg (i16 (atomic_load_16 addr:$dst))),
+      (ineg (i32 (atomic_load_32 addr:$dst))),
+      (ineg (i64 (atomic_load_64 addr:$dst)))>;
 }
 // NOT doesn't set flags.
 defm RELEASE_NOT : RELEASE_UNOP<
-    (not (atomic_load_8  addr:$dst)),
-    (not (atomic_load_16 addr:$dst)),
-    (not (atomic_load_32 addr:$dst)),
-    (not (atomic_load_64 addr:$dst))>;
-*/
+    (not (i8 (atomic_load_8  addr:$dst))),
+    (not (i16 (atomic_load_16 addr:$dst))),
+    (not (i32 (atomic_load_32 addr:$dst))),
+    (not (i64 (atomic_load_64 addr:$dst)))>;
 
 let SchedRW = [WriteMicrocoded] in {
 def RELEASE_MOV8mi : I<0, Pseudo, (outs), (ins i8mem:$dst, i8imm:$src),

@@ -46,3 +46,6 @@ using U = decltype(y2);
 
 using V = decltype(x3);
 using V = decltype(y3);
+
+#pragma clang module import A
+void (*p)() = f<int>();

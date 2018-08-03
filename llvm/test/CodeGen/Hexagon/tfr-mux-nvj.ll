@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O2 -hexagon-expand-condsets=0 < %s | FileCheck %s
+; RUN: llc -march=hexagon -O2 -hexagon-expand-condsets=0 -hexagon-initial-cfg-cleanup=0 < %s | FileCheck %s
 
 ; CHECK: mux
 ; CHECK: cmp{{.*\.new}}

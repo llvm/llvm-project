@@ -1,0 +1,20 @@
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -std=c++11 -emit-llvm -o - %s | FileCheck %s
+
+// Verify that the inner access is tagged with a parallel_loop_access
+// for the outer loop.
+void vectorize_outer_test(int *List, int Length) {
+#pragma clang loop vectorize(assume_safety) interleave(disable) unroll(disable)
+  for (int i = 0; i < Length; i += 2) {
+#pragma clang loop unroll(full)
+    for (int j = 0; j < 2; j += 1)
+      List[i + j] = (i + j) * 2;
+  }
+}
+
+// CHECK: %[[MUL:.+]] = mul
+// CHECK: store i32 %[[MUL]], i32* %{{.+}}, !llvm.mem.parallel_loop_access ![[OUTER_LOOPID:[0-9]+]]
+// CHECK: br label %{{.+}}, !llvm.loop ![[INNER_LOOPID:[0-9]+]]
+// CHECK: br label %{{.+}}, !llvm.loop ![[OUTER_LOOPID]]
+
+// CHECK: ![[OUTER_LOOPID]] = distinct !{![[OUTER_LOOPID]],
+// CHECK: ![[INNER_LOOPID]] = distinct !{![[INNER_LOOPID]],

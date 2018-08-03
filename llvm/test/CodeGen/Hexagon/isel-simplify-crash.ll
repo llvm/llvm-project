@@ -22,7 +22,7 @@ b5:                                               ; preds = %b1
   ret void
 
 b11:                                              ; preds = %b1
-  unreachable
+  ret void
 }
 
 attributes #0 = { norecurse nounwind "target-cpu"="hexagonv60" "target-features"="+hvx-length64b,+hvxv60" }

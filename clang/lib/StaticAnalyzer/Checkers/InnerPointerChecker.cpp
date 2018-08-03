@@ -129,8 +129,11 @@ bool InnerPointerChecker::isCalledOnStringObject(
     return false;
 
   QualType ObjTy = ObjRegion->getValueType();
-  if (ObjTy.isNull() ||
-      ObjTy->getAsCXXRecordDecl()->getName() != "basic_string")
+  if (ObjTy.isNull())
+    return false;
+
+  CXXRecordDecl *Decl = ObjTy->getAsCXXRecordDecl();
+  if (!Decl || Decl->getName() != "basic_string")
     return false;
 
   return true;

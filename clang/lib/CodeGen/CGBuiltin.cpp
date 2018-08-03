@@ -12055,6 +12055,26 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     Value *Callee = CGM.getIntrinsic(Intrinsic::wasm_rethrow);
     return Builder.CreateCall(Callee);
   }
+  case WebAssembly::BI__builtin_wasm_atomic_wait_i32: {
+    Value *Addr = EmitScalarExpr(E->getArg(0));
+    Value *Expected = EmitScalarExpr(E->getArg(1));
+    Value *Timeout = EmitScalarExpr(E->getArg(2));
+    Value *Callee = CGM.getIntrinsic(Intrinsic::wasm_atomic_wait_i32);
+    return Builder.CreateCall(Callee, {Addr, Expected, Timeout});
+  }
+  case WebAssembly::BI__builtin_wasm_atomic_wait_i64: {
+    Value *Addr = EmitScalarExpr(E->getArg(0));
+    Value *Expected = EmitScalarExpr(E->getArg(1));
+    Value *Timeout = EmitScalarExpr(E->getArg(2));
+    Value *Callee = CGM.getIntrinsic(Intrinsic::wasm_atomic_wait_i64);
+    return Builder.CreateCall(Callee, {Addr, Expected, Timeout});
+  }
+  case WebAssembly::BI__builtin_wasm_atomic_notify: {
+    Value *Addr = EmitScalarExpr(E->getArg(0));
+    Value *Count = EmitScalarExpr(E->getArg(1));
+    Value *Callee = CGM.getIntrinsic(Intrinsic::wasm_atomic_notify);
+    return Builder.CreateCall(Callee, {Addr, Count});
+  }
 
   default:
     return nullptr;

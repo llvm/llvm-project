@@ -61,6 +61,23 @@ static CXCursorKind GetCursorKind(const Attr *A) {
     case attr::Visibility: return CXCursor_VisibilityAttr;
     case attr::DLLExport: return CXCursor_DLLExport;
     case attr::DLLImport: return CXCursor_DLLImport;
+    case attr::NSReturnsRetained: return CXCursor_NSReturnsRetained;
+    case attr::NSReturnsNotRetained: return CXCursor_NSReturnsNotRetained;
+    case attr::NSReturnsAutoreleased: return CXCursor_NSReturnsAutoreleased;
+    case attr::NSConsumesSelf: return CXCursor_NSConsumesSelf;
+    case attr::NSConsumed: return CXCursor_NSConsumed;
+    case attr::ObjCException: return CXCursor_ObjCException;
+    case attr::ObjCNSObject: return CXCursor_ObjCNSObject;
+    case attr::ObjCIndependentClass: return CXCursor_ObjCIndependentClass;
+    case attr::ObjCPreciseLifetime: return CXCursor_ObjCPreciseLifetime;
+    case attr::ObjCReturnsInnerPointer: return CXCursor_ObjCReturnsInnerPointer;
+    case attr::ObjCRequiresSuper: return CXCursor_ObjCRequiresSuper;
+    case attr::ObjCRootClass: return CXCursor_ObjCRootClass;
+    case attr::ObjCSubclassingRestricted: return CXCursor_ObjCSubclassingRestricted;
+    case attr::ObjCExplicitProtocolImpl: return CXCursor_ObjCExplicitProtocolImpl;
+    case attr::ObjCDesignatedInitializer: return CXCursor_ObjCDesignatedInitializer;
+    case attr::ObjCRuntimeVisible: return CXCursor_ObjCRuntimeVisible;
+    case attr::ObjCBoxable: return CXCursor_ObjCBoxable;
   }
 
   return CXCursor_UnexposedAttr;

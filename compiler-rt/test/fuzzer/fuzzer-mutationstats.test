@@ -1,5 +1,10 @@
 RUN: %cpp_compiler %S/SimpleTest.cpp -o %t-MutationStatsTest
-RUN: not %run %t-MutationStatsTest -print_mutation_stats=1 2>&1 | FileCheck %s
+RUN: not %run %t-MutationStatsTest -print_mutation_stats=1 2>&1 | FileCheck %s --check-prefix=STAT
 
 # Ensures there are some non-zero values in the usefulness percentages printed.
-CHECK: stat::mutation_usefulness:   {{[0-9]+\.[0-9]+}}
+STAT: stat::mutation_usefulness:   {{[0-9]+\.[0-9]+}}
+
+# Weighted mutations only trigger after first 10,000 runs, hence flag.
+RUN: not %run %t-MutationStatsTest -use_weighted_mutations=1 -seed=1 -runs=100000 2>&1 | FileCheck %s --check-prefix=WEIGHTED
+
+WEIGHTED: BINGO

@@ -6,22 +6,21 @@
 target triple = "hexagon"
 
 ; Function Attrs: nounwind
-define void @fred() #0 {
-entry:
-  br label %for.cond
+define i32 @f0(i32* %a0, i32 %a1) #0 {
+b0:
+  br label %b1
 
-for.cond:                                         ; preds = %entry
-  %0 = load i32, i32* undef, align 4
-  %mul = mul nsw i32 2, %0
-  %cmp = icmp slt i32 undef, %mul
-  br i1 %cmp, label %for.body, label %for.end13
+b1:                                               ; preds = %b0
+  %v0 = load i32, i32* %a0, align 4
+  %v1 = mul nsw i32 2, %v0
+  %v2 = icmp slt i32 %a1, %v1
+  br i1 %v2, label %b2, label %b3
 
-for.body:                                         ; preds = %for.cond
-  unreachable
+b2:                                               ; preds = %b1
+  ret i32 0
 
-for.end13:                                        ; preds = %for.cond
-  ret void
+b3:                                               ; preds = %b1
+  ret i32 %v1
 }
 
 attributes #0 = { nounwind "target-cpu"="hexagonv60" "target-features"="+hvx,+hvx-length64b" }
-

@@ -461,7 +461,18 @@ bool GlobalMerge::doMerge(const SmallVectorImpl<GlobalVariable *> &Globals,
     unsigned CurIdx = 0;
     for (j = i; j != -1; j = GlobalSet.find_next(j)) {
       Type *Ty = Globals[j]->getValueType();
+
+      // Make sure we use the same alignment AsmPrinter would use. There
+      // currently isn't any helper to compute that, so we compute it
+      // explicitly here.
+      //
+      // getPreferredAlignment will sometimes return an alignment higher
+      // than the explicitly specified alignment; we must ignore that
+      // if the section is explicitly specified, to avoid inserting extra
+      // padding into that section.
       unsigned Align = DL.getPreferredAlignment(Globals[j]);
+      if (Globals[j]->hasSection() && Globals[j]->getAlignment())
+        Align = Globals[j]->getAlignment();
       unsigned Padding = alignTo(MergedSize, Align) - MergedSize;
       MergedSize += Padding;
       MergedSize += DL.getTypeAllocSize(Ty);
@@ -516,6 +527,7 @@ bool GlobalMerge::doMerge(const SmallVectorImpl<GlobalVariable *> &Globals,
         GlobalVariable::NotThreadLocal, AddrSpace);
 
     MergedGV->setAlignment(MaxAlign);
+    MergedGV->setSection(Globals[i]->getSection());
 
     const StructLayout *MergedLayout = DL.getStructLayout(MergedTy);
     for (ssize_t k = i, idx = 0; k != j; k = GlobalSet.find_next(k), ++idx) {
@@ -599,16 +611,15 @@ bool GlobalMerge::doInitialization(Module &M) {
   IsMachO = Triple(M.getTargetTriple()).isOSBinFormatMachO();
 
   auto &DL = M.getDataLayout();
-  DenseMap<unsigned, SmallVector<GlobalVariable *, 16>> Globals, ConstGlobals,
-                                                        BSSGlobals;
+  DenseMap<std::pair<unsigned, StringRef>, SmallVector<GlobalVariable *, 16>>
+      Globals, ConstGlobals, BSSGlobals;
   bool Changed = false;
   setMustKeepGlobalVariables(M);
 
   // Grab all non-const globals.
   for (auto &GV : M.globals()) {
     // Merge is safe for "normal" internal or external globals only
-    if (GV.isDeclaration() || GV.isThreadLocal() ||
-        GV.hasSection() || GV.hasImplicitSection())
+    if (GV.isDeclaration() || GV.isThreadLocal() || GV.hasImplicitSection())
       continue;
 
     // It's not safe to merge globals that may be preempted
@@ -623,6 +634,7 @@ bool GlobalMerge::doInitialization(Module &M) {
     assert(PT && "Global variable is not a pointer!");
 
     unsigned AddressSpace = PT->getAddressSpace();
+    StringRef Section = GV.getSection();
 
     // Ignore all 'special' globals.
     if (GV.getName().startswith("llvm.") ||
@@ -637,26 +649,26 @@ bool GlobalMerge::doInitialization(Module &M) {
     if (DL.getTypeAllocSize(Ty) < MaxOffset) {
       if (TM &&
           TargetLoweringObjectFile::getKindForGlobal(&GV, *TM).isBSSLocal())
-        BSSGlobals[AddressSpace].push_back(&GV);
+        BSSGlobals[{AddressSpace, Section}].push_back(&GV);
       else if (GV.isConstant())
-        ConstGlobals[AddressSpace].push_back(&GV);
+        ConstGlobals[{AddressSpace, Section}].push_back(&GV);
       else
-        Globals[AddressSpace].push_back(&GV);
+        Globals[{AddressSpace, Section}].push_back(&GV);
     }
   }
 
   for (auto &P : Globals)
     if (P.second.size() > 1)
-      Changed |= doMerge(P.second, M, false, P.first);
+      Changed |= doMerge(P.second, M, false, P.first.first);
 
   for (auto &P : BSSGlobals)
     if (P.second.size() > 1)
-      Changed |= doMerge(P.second, M, false, P.first);
+      Changed |= doMerge(P.second, M, false, P.first.first);
 
   if (EnableGlobalMergeOnConst)
     for (auto &P : ConstGlobals)
       if (P.second.size() > 1)
-        Changed |= doMerge(P.second, M, true, P.first);
+        Changed |= doMerge(P.second, M, true, P.first.first);
 
   return Changed;
 }

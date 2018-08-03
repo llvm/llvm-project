@@ -10,7 +10,7 @@ declare <16 x i32> @llvm.hexagon.V6.lo(<32 x i32>) #0
 declare <32 x i32> @llvm.hexagon.V6.vshuffvdd(<16 x i32>, <16 x i32>, i32) #0
 declare <16 x i32> @llvm.hexagon.V6.lvsplatw(i32) #0
 
-define void @crash() #1 {
+define void @crash(<16 x i32>* %a0) #1 {
 b0:
   %v1 = tail call <16 x i32> @llvm.hexagon.V6.lvsplatw(i32 0) #0
   %v2 = bitcast <16 x i32> %v1 to <32 x i16>
@@ -20,8 +20,8 @@ b0:
   %v6 = tail call <16 x i32> @llvm.hexagon.V6.lo(<32 x i32> %v5) #0
   %v7 = tail call <32 x i32> @llvm.hexagon.V6.vshuffvdd(<16 x i32> undef, <16 x i32> %v6, i32 -2) #0
   %v8 = tail call <16 x i32> @llvm.hexagon.V6.lo(<32 x i32> %v7)
-  store <16 x i32> %v8, <16 x i32>* undef, align 2
-  unreachable
+  store <16 x i32> %v8, <16 x i32>* %a0, align 2
+  ret void
 }
 
 attributes #0 = { nounwind readnone }

@@ -1,5 +1,6 @@
 ; RUN: llc -march=hexagon -enable-pipeliner -pipeliner-max-stages=2 \
-; RUN:     -pipeliner-ignore-recmii -disable-hexagon-nv-schedule -stats -o /dev/null\
+; RUN:     -pipeliner-ignore-recmii -disable-hexagon-nv-schedule \
+; RUN:     -hexagon-initial-cfg-cleanup=0 -stats -o /dev/null \
 ; RUN:     -enable-aa-sched-mi < %s 2>&1 | FileCheck %s --check-prefix=STATS
 ; REQUIRES: asserts
 ;

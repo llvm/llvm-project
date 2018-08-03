@@ -2381,9 +2381,9 @@ TEST(APIntTest, SolveQuadraticEquationWrap) {
     };
 
     auto EquationToString = [&] (const char *X_str) {
-      return Twine(A) + Twine(X_str) + Twine("^2 + ") + Twine(B) +
-             Twine(X_str) + Twine(" + ") + Twine(C) + Twine(", bitwidth: ") +
-             Twine(Width);
+      return (Twine(A) + Twine(X_str) + Twine("^2 + ") + Twine(B) +
+              Twine(X_str) + Twine(" + ") + Twine(C) + Twine(", bitwidth: ") +
+              Twine(Width)).str();
     };
 
     auto IsSolution = [&] (const char *X_str, int X) {
