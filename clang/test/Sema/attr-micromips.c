@@ -6,9 +6,9 @@ __attribute__((micromips(1))) void foo2();    // expected-error {{'micromips' at
 __attribute((nomicromips)) int a; // expected-error {{attribute only applies to functions}}
 __attribute((micromips)) int b;   // expected-error {{attribute only applies to functions}}
 
-__attribute__((micromips,mips16)) void foo5();  // expected-error {{'micromips' and 'mips16' attributes are not compatible}} \
+__attribute__((micromips,mips16)) void foo5();  // expected-error {{'mips16' and 'micromips' attributes are not compatible}} \
                                                 // expected-note {{conflicting attribute is here}}
-__attribute__((mips16,micromips)) void foo6();  // expected-error {{'mips16' and 'micromips' attributes are not compatible}} \
+__attribute__((mips16,micromips)) void foo6();  // expected-error {{'micromips' and 'mips16' attributes are not compatible}} \
                                                 // expected-note {{conflicting attribute is here}}
 
 __attribute((micromips)) void foo7();

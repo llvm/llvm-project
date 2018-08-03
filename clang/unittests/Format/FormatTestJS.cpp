@@ -2067,6 +2067,14 @@ TEST_F(FormatTestJS, JSDocAnnotations) {
                " * @param {canWrap onSpace}\n"
                " */",
                getGoogleJSStyleWithColumns(20));
+  // make sure clang-format doesn't break before *any* '{'
+  verifyFormat("/**\n"
+               " * @lala {lala {lalala\n"
+               " */\n",
+               "/**\n"
+               " * @lala {lala {lalala\n"
+               " */\n",
+               getGoogleJSStyleWithColumns(20));
   verifyFormat("/**\n"
                " * @see http://very/very/long/url/is/long\n"
                " */",

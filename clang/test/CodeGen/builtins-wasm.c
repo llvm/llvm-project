@@ -50,3 +50,21 @@ void f7(void) {
 // WEBASSEMBLY32: call void @llvm.wasm.rethrow()
 // WEBASSEMBLY64: call void @llvm.wasm.rethrow()
 }
+
+int f8(int *addr, int expected, long long timeout) {
+  return __builtin_wasm_atomic_wait_i32(addr, expected, timeout);
+// WEBASSEMBLY32: call i32 @llvm.wasm.atomic.wait.i32(i32* %{{.*}}, i32 %{{.*}}, i64 %{{.*}})
+// WEBASSEMBLY64: call i32 @llvm.wasm.atomic.wait.i32(i32* %{{.*}}, i32 %{{.*}}, i64 %{{.*}})
+}
+
+int f9(long long *addr, long long expected, long long timeout) {
+  return __builtin_wasm_atomic_wait_i64(addr, expected, timeout);
+// WEBASSEMBLY32: call i32 @llvm.wasm.atomic.wait.i64(i64* %{{.*}}, i64 %{{.*}}, i64 %{{.*}})
+// WEBASSEMBLY64: call i32 @llvm.wasm.atomic.wait.i64(i64* %{{.*}}, i64 %{{.*}}, i64 %{{.*}})
+}
+
+unsigned long long f10(int *addr, long long count) {
+  return __builtin_wasm_atomic_notify(addr, count);
+// WEBASSEMBLY32: call i64 @llvm.wasm.atomic.notify(i32* %{{.*}}, i64 %{{.*}})
+// WEBASSEMBLY64: call i64 @llvm.wasm.atomic.notify(i32* %{{.*}}, i64 %{{.*}})
+}

@@ -246,7 +246,7 @@ namespace {
 
       getMutableDeclSpec().getAttributes().clearListOnly();
       for (ParsedAttr *AL : savedAttrs)
-        getMutableDeclSpec().getAttributes().addAtStart(AL);
+        getMutableDeclSpec().getAttributes().addAtEnd(AL);
     }
   };
 } // end anonymous namespace
@@ -255,7 +255,7 @@ static void moveAttrFromListToList(ParsedAttr &attr,
                                    ParsedAttributesView &fromList,
                                    ParsedAttributesView &toList) {
   fromList.remove(&attr);
-  toList.addAtStart(&attr);
+  toList.addAtEnd(&attr);
 }
 
 /// The location of a type attribute.
@@ -4118,7 +4118,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
               SourceRange(pointerLoc), nullptr, SourceLocation(), nullptr, 0,
               syntax);
 
-      attrs.addAtStart(nullabilityAttr);
+      attrs.addAtEnd(nullabilityAttr);
 
       if (inferNullabilityCS) {
         state.getDeclarator().getMutableDeclSpec().getObjCQualifiers()
@@ -5083,7 +5083,7 @@ static void transferARCOwnershipToDeclaratorChunk(TypeProcessingState &state,
       &S.Context.Idents.get("objc_ownership"), SourceLocation(),
       /*scope*/ nullptr, SourceLocation(),
       /*args*/ &Args, 1, ParsedAttr::AS_GNU);
-  chunk.getAttrs().addAtStart(attr);
+  chunk.getAttrs().addAtEnd(attr);
   // TODO: mark whether we did this inference?
 }
 
