@@ -19,7 +19,6 @@
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LazyValueInfo.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
@@ -28,6 +27,7 @@
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/DomTreeUpdater.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
@@ -44,6 +44,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include <cassert>
 #include <utility>
 
@@ -308,6 +309,7 @@ static bool processCmp(CmpInst *C, LazyValueInfo *LVI) {
 /// a case fires on every incoming edge then the entire switch can be removed
 /// and replaced with a branch to the case destination.
 static bool processSwitch(SwitchInst *SI, LazyValueInfo *LVI, DominatorTree *DT) {
+  DomTreeUpdater DTU(*DT, DomTreeUpdater::UpdateStrategy::Lazy);
   Value *Cond = SI->getCondition();
   BasicBlock *BB = SI->getParent();
 
@@ -372,7 +374,7 @@ static bool processSwitch(SwitchInst *SI, LazyValueInfo *LVI, DominatorTree *DT)
       ++NumDeadCases;
       Changed = true;
       if (--SuccessorsCount[Succ] == 0)
-        DT->deleteEdge(BB, Succ);
+        DTU.deleteEdge(BB, Succ);
       continue;
     }
     if (State == LazyValueInfo::True) {
@@ -389,15 +391,11 @@ static bool processSwitch(SwitchInst *SI, LazyValueInfo *LVI, DominatorTree *DT)
     ++CI;
   }
 
-  if (Changed) {
+  if (Changed)
     // If the switch has been simplified to the point where it can be replaced
     // by a branch then do so now.
-    DeferredDominance DDT(*DT);
     ConstantFoldTerminator(BB, /*DeleteDeadConditions = */ false,
-                           /*TLI = */ nullptr, &DDT);
-    DDT.flush();
-  }
-
+                           /*TLI = */ nullptr, &DTU);
   return Changed;
 }
 

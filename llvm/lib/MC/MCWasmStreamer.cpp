@@ -119,7 +119,6 @@ bool MCWasmStreamer::EmitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
     break;
 
   case MCSA_ELF_TypeObject:
-    Symbol->setType(wasm::WASM_SYMBOL_TYPE_DATA);
     break;
 
   default:

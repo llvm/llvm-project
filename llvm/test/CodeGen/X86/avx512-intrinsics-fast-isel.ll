@@ -158,7 +158,7 @@ entry:
 define <16 x float> @test_mm512_shuffle_f32x4(<16 x float> %__A, <16 x float> %__B) {
 ; CHECK-LABEL: test_mm512_shuffle_f32x4:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vshuff32x4 {{.*#+}} zmm0 = zmm0[0,1,2,3,4,5,6,7],zmm1[0,1,2,3,0,1,2,3]
+; CHECK-NEXT:    vshuff64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[0,1,0,1]
 ; CHECK-NEXT:    ret{{[l|q]}}
 entry:
   %shuffle = shufflevector <16 x float> %__A, <16 x float> %__B, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 16, i32 17, i32 18, i32 19>

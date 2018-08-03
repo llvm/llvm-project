@@ -138,7 +138,7 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
                  Info.OperandType == WebAssembly::OPERAND_TYPEINDEX) {
         FixupKind = MCFixupKind(WebAssembly::fixup_code_uleb128_i32);
       } else if (Info.OperandType == WebAssembly::OPERAND_GLOBAL) {
-        FixupKind = MCFixupKind(WebAssembly::fixup_code_global_index);
+        FixupKind = MCFixupKind(WebAssembly::fixup_code_uleb128_i32);
       } else {
         llvm_unreachable("unexpected symbolic operand kind");
       }

@@ -32,7 +32,7 @@
  * compatible, thus CINDEX_VERSION_MAJOR is expected to remain stable.
  */
 #define CINDEX_VERSION_MAJOR 0
-#define CINDEX_VERSION_MINOR 49
+#define CINDEX_VERSION_MINOR 50
 
 #define CINDEX_VERSION_ENCODE(major, minor) ( \
       ((major) * 10000)                       \
@@ -1336,7 +1336,12 @@ enum CXTranslationUnit_Flags {
   /**
    * Used to indicate that attributed types should be included in CXType.
    */
-  CXTranslationUnit_IncludeAttributedTypes = 0x1000
+  CXTranslationUnit_IncludeAttributedTypes = 0x1000,
+
+  /**
+   * Used to indicate that implicit attributes should be visited.
+   */
+  CXTranslationUnit_VisitImplicitAttributes = 0x2000
 };
 
 /**
@@ -2580,7 +2585,8 @@ enum CXCursorKind {
   CXCursor_ObjCDesignatedInitializer     = 434,
   CXCursor_ObjCRuntimeVisible            = 435,
   CXCursor_ObjCBoxable                   = 436,
-  CXCursor_LastAttr                      = CXCursor_ObjCBoxable,
+  CXCursor_FlagEnum                      = 437,
+  CXCursor_LastAttr                      = CXCursor_FlagEnum,
 
   /* Preprocessing */
   CXCursor_PreprocessingDirective        = 500,
@@ -4442,6 +4448,18 @@ typedef enum {
  */
 CINDEX_LINKAGE unsigned clang_Cursor_getObjCPropertyAttributes(CXCursor C,
                                                              unsigned reserved);
+
+/**
+ * Given a cursor that represents a property declaration, return the
+ * name of the method that implements the getter.
+ */
+CINDEX_LINKAGE CXString clang_Cursor_getObjCPropertyGetterName(CXCursor C);
+
+/**
+ * Given a cursor that represents a property declaration, return the
+ * name of the method that implements the setter, if any.
+ */
+CINDEX_LINKAGE CXString clang_Cursor_getObjCPropertySetterName(CXCursor C);
 
 /**
  * 'Qualifiers' written next to the return and parameter types in

@@ -6745,13 +6745,6 @@ SDValue SITargetLowering::performRcpCombine(SDNode *N,
   return AMDGPUTargetLowering::performRcpCombine(N, DCI);
 }
 
-static bool isKnownNeverSNan(SelectionDAG &DAG, SDValue Op) {
-  if (!DAG.getTargetLoweringInfo().hasFloatingPointExceptions())
-    return true;
-
-  return DAG.isKnownNeverNaN(Op);
-}
-
 static bool isCanonicalized(SelectionDAG &DAG, SDValue Op,
                             const GCNSubtarget *ST, unsigned MaxDepth=5) {
   // If source is a result of another standard FP operation it is already in
@@ -6846,7 +6839,7 @@ SDValue SITargetLowering::performFCanonicalizeCombine(
 
     bool IsIEEEMode = Subtarget->enableIEEEBit(DAG.getMachineFunction());
 
-    if ((IsIEEEMode || isKnownNeverSNan(DAG, N0)) &&
+    if ((IsIEEEMode || DAG.isKnownNeverSNaN(N0)) &&
         isCanonicalized(DAG, N0, ST))
       return N0;
 
@@ -6991,7 +6984,7 @@ SDValue SITargetLowering::performFPMed3ImmCombine(SelectionDAG &DAG,
     // then give the other result, which is different from med3 with a NaN
     // input.
     SDValue Var = Op0.getOperand(0);
-    if (!isKnownNeverSNan(DAG, Var))
+    if (!DAG.isKnownNeverSNaN(Var))
       return SDValue();
 
     return DAG.getNode(AMDGPUISD::FMED3, SL, K0->getValueType(0),

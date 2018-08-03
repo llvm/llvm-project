@@ -145,7 +145,71 @@ const MinidumpSystemInfo *MinidumpParser::GetSystemInfo() {
   return MinidumpSystemInfo::Parse(data);
 }
 
-ArchSpec MinidumpParser::GetArchitecture() { return m_arch; }
+ArchSpec MinidumpParser::GetArchitecture() {
+  ArchSpec arch_spec;
+  const MinidumpSystemInfo *system_info = GetSystemInfo();
+
+  if (!system_info)
+    return arch_spec;
+
+  // TODO what to do about big endiand flavors of arm ?
+  // TODO set the arm subarch stuff if the minidump has info about it
+
+  llvm::Triple triple;
+  triple.setVendor(llvm::Triple::VendorType::UnknownVendor);
+
+  const MinidumpCPUArchitecture arch =
+      static_cast<const MinidumpCPUArchitecture>(
+          static_cast<const uint32_t>(system_info->processor_arch));
+
+  switch (arch) {
+  case MinidumpCPUArchitecture::X86:
+    triple.setArch(llvm::Triple::ArchType::x86);
+    break;
+  case MinidumpCPUArchitecture::AMD64:
+    triple.setArch(llvm::Triple::ArchType::x86_64);
+    break;
+  case MinidumpCPUArchitecture::ARM:
+    triple.setArch(llvm::Triple::ArchType::arm);
+    break;
+  case MinidumpCPUArchitecture::ARM64:
+    triple.setArch(llvm::Triple::ArchType::aarch64);
+    break;
+  default:
+    triple.setArch(llvm::Triple::ArchType::UnknownArch);
+    break;
+  }
+
+  const MinidumpOSPlatform os = static_cast<const MinidumpOSPlatform>(
+      static_cast<const uint32_t>(system_info->platform_id));
+
+  // TODO add all of the OSes that Minidump/breakpad distinguishes?
+  switch (os) {
+  case MinidumpOSPlatform::Win32S:
+  case MinidumpOSPlatform::Win32Windows:
+  case MinidumpOSPlatform::Win32NT:
+  case MinidumpOSPlatform::Win32CE:
+    triple.setOS(llvm::Triple::OSType::Win32);
+    break;
+  case MinidumpOSPlatform::Linux:
+    triple.setOS(llvm::Triple::OSType::Linux);
+    break;
+  case MinidumpOSPlatform::MacOSX:
+    triple.setOS(llvm::Triple::OSType::MacOSX);
+    break;
+  case MinidumpOSPlatform::Android:
+    triple.setOS(llvm::Triple::OSType::Linux);
+    triple.setEnvironment(llvm::Triple::EnvironmentType::Android);
+    break;
+  default:
+    triple.setOS(llvm::Triple::OSType::UnknownOS);
+    break;
+  }
+
+  arch_spec.SetTriple(triple);
+
+  return arch_spec;
+}
 
 const MinidumpMiscInfo *MinidumpParser::GetMiscInfo() {
   llvm::ArrayRef<uint8_t> data = GetStream(MinidumpStreamType::MiscInfo);
@@ -487,80 +551,6 @@ Status MinidumpParser::Initialize() {
     error.SetErrorString("invalid minidump: truncated stream");
     return error;
   }
-
-  // Set the architecture in m_arch
-  const MinidumpSystemInfo *system_info = GetSystemInfo();
-
-  if (!system_info) {
-    error.SetErrorString("invalid minidump: missing system info");
-    return error;
-  }
-
-  // TODO what to do about big endiand flavors of arm ?
-  // TODO set the arm subarch stuff if the minidump has info about it
-
-  llvm::Triple triple;
-  triple.setVendor(llvm::Triple::VendorType::UnknownVendor);
-
-  const MinidumpCPUArchitecture arch =
-      static_cast<const MinidumpCPUArchitecture>(
-          static_cast<const uint32_t>(system_info->processor_arch));
-
-  switch (arch) {
-  case MinidumpCPUArchitecture::X86:
-    triple.setArch(llvm::Triple::ArchType::x86);
-    break;
-  case MinidumpCPUArchitecture::AMD64:
-    triple.setArch(llvm::Triple::ArchType::x86_64);
-    break;
-  case MinidumpCPUArchitecture::ARM:
-    triple.setArch(llvm::Triple::ArchType::arm);
-    break;
-  case MinidumpCPUArchitecture::ARM64:
-    triple.setArch(llvm::Triple::ArchType::aarch64);
-    break;
-  default:
-    triple.setArch(llvm::Triple::ArchType::UnknownArch);
-    break;
-  }
-
-  const MinidumpOSPlatform os = static_cast<const MinidumpOSPlatform>(
-      static_cast<const uint32_t>(system_info->platform_id));
-
-  // TODO add all of the OSes that Minidump/breakpad distinguishes?
-  switch (os) {
-  case MinidumpOSPlatform::Win32S:
-  case MinidumpOSPlatform::Win32Windows:
-  case MinidumpOSPlatform::Win32NT:
-  case MinidumpOSPlatform::Win32CE:
-    triple.setOS(llvm::Triple::OSType::Win32);
-    break;
-  case MinidumpOSPlatform::Linux:
-    triple.setOS(llvm::Triple::OSType::Linux);
-    break;
-  case MinidumpOSPlatform::MacOSX:
-    triple.setOS(llvm::Triple::OSType::MacOSX);
-    triple.setVendor(llvm::Triple::Apple);
-    break;
-  case MinidumpOSPlatform::IOS:
-    triple.setOS(llvm::Triple::OSType::IOS);
-    triple.setVendor(llvm::Triple::Apple);
-    break;
-  case MinidumpOSPlatform::Android:
-    triple.setOS(llvm::Triple::OSType::Linux);
-    triple.setEnvironment(llvm::Triple::EnvironmentType::Android);
-    break;
-  default: {
-    triple.setOS(llvm::Triple::OSType::UnknownOS);
-    std::string csd_version;
-    if (auto s = GetMinidumpString(system_info->csd_version_rva))
-      csd_version = *s;
-    if (csd_version.find("Linux") != std::string::npos)
-      triple.setOS(llvm::Triple::OSType::Linux);
-    break;
-  }
-  }
-  m_arch.SetTriple(triple);
 
   return error;
 }

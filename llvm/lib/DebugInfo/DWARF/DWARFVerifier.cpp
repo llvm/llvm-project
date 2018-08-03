@@ -1211,8 +1211,9 @@ unsigned DWARFVerifier::verifyNameIndexCompleteness(
   // make sure we catch any missing items, we instead blacklist all TAGs that we
   // know shouldn't be indexed.
   switch (Die.getTag()) {
-  // Compile unit has a name but it shouldn't be indexed.
+  // Compile units and modules have names but shouldn't be indexed.
   case DW_TAG_compile_unit:
+  case DW_TAG_module:
     return 0;
 
   // Function and template parameters are not globally visible, so we shouldn't

@@ -107,7 +107,7 @@ static void writeSPToMemory(unsigned SrcReg, MachineFunction &MF,
   const char *ES = "__stack_pointer";
   auto *SPSymbol = MF.createExternalSymbolName(ES);
   BuildMI(MBB, InsertStore, DL, TII->get(WebAssembly::SET_GLOBAL_I32))
-      .addExternalSymbol(SPSymbol)
+      .addExternalSymbol(SPSymbol, WebAssemblyII::MO_SYMBOL_GLOBAL)
       .addReg(SrcReg);
 }
 
@@ -153,7 +153,7 @@ void WebAssemblyFrameLowering::emitPrologue(MachineFunction &MF,
   const char *ES = "__stack_pointer";
   auto *SPSymbol = MF.createExternalSymbolName(ES);
   BuildMI(MBB, InsertPt, DL, TII->get(WebAssembly::GET_GLOBAL_I32), SPReg)
-      .addExternalSymbol(SPSymbol);
+      .addExternalSymbol(SPSymbol, WebAssemblyII::MO_SYMBOL_GLOBAL);
 
   bool HasBP = hasBP(MF);
   if (HasBP) {

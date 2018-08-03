@@ -23,6 +23,7 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
+#include "llvm/IR/DomTreeUpdater.h"
 #include "llvm/IR/ValueHandle.h"
 #include <memory>
 #include <utility>
@@ -34,7 +35,7 @@ class BinaryOperator;
 class BranchInst;
 class CmpInst;
 class Constant;
-class DeferredDominance;
+class DomTreeUpdater;
 class Function;
 class Instruction;
 class IntrinsicInst;
@@ -78,7 +79,7 @@ class JumpThreadingPass : public PassInfoMixin<JumpThreadingPass> {
   TargetLibraryInfo *TLI;
   LazyValueInfo *LVI;
   AliasAnalysis *AA;
-  DeferredDominance *DDT;
+  DomTreeUpdater *DTU;
   std::unique_ptr<BlockFrequencyInfo> BFI;
   std::unique_ptr<BranchProbabilityInfo> BPI;
   bool HasProfileData = false;
@@ -109,8 +110,8 @@ public:
 
   // Glue for old PM.
   bool runImpl(Function &F, TargetLibraryInfo *TLI_, LazyValueInfo *LVI_,
-               AliasAnalysis *AA_, DeferredDominance *DDT_,
-               bool HasProfileData_, std::unique_ptr<BlockFrequencyInfo> BFI_,
+               AliasAnalysis *AA_, DomTreeUpdater *DTU_, bool HasProfileData_,
+               std::unique_ptr<BlockFrequencyInfo> BFI_,
                std::unique_ptr<BranchProbabilityInfo> BPI_);
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);

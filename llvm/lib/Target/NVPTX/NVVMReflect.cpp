@@ -50,7 +50,9 @@ namespace {
 class NVVMReflect : public FunctionPass {
 public:
   static char ID;
-  NVVMReflect() : FunctionPass(ID) {
+  unsigned int SmVersion;
+  NVVMReflect() : NVVMReflect(0) {}
+  explicit NVVMReflect(unsigned int Sm) : FunctionPass(ID), SmVersion(Sm) {
     initializeNVVMReflectPass(*PassRegistry::getPassRegistry());
   }
 
@@ -58,7 +60,9 @@ public:
 };
 }
 
-FunctionPass *llvm::createNVVMReflectPass() { return new NVVMReflect(); }
+FunctionPass *llvm::createNVVMReflectPass(unsigned int SmVersion) {
+  return new NVVMReflect(SmVersion);
+}
 
 static cl::opt<bool>
 NVVMReflectEnabled("nvvm-reflect-enable", cl::init(true), cl::Hidden,
@@ -163,6 +167,8 @@ bool NVVMReflect::runOnFunction(Function &F) {
       if (auto *Flag = mdconst::extract_or_null<ConstantInt>(
               F.getParent()->getModuleFlag("nvvm-reflect-ftz")))
         ReflectVal = Flag->getSExtValue();
+    } else if (ReflectArg == "__CUDA_ARCH") {
+      ReflectVal = SmVersion * 10;
     }
     Call->replaceAllUsesWith(ConstantInt::get(Call->getType(), ReflectVal));
     ToRemove.push_back(Call);

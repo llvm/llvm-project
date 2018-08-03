@@ -246,6 +246,11 @@ public:
                                            const SelectionDAG &DAG,
                                            unsigned Depth = 0) const override;
 
+  bool isKnownNeverNaNForTargetNode(SDValue Op,
+                                    const SelectionDAG &DAG,
+                                    bool SNaN = false,
+                                    unsigned Depth = 0) const override;
+
   /// Helper function that adds Reg to the LiveIn list of the DAG's
   /// MachineFunction.
   ///

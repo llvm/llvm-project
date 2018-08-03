@@ -108,9 +108,11 @@ MCSymbol *WebAssemblyMCInstLower::GetExternalSymbolSymbol(
 
 MCOperand WebAssemblyMCInstLower::LowerSymbolOperand(MCSymbol *Sym,
                                                      int64_t Offset,
-                                                     bool IsFunc) const {
+                                                     bool IsFunc,
+                                                     bool IsGlob) const {
   MCSymbolRefExpr::VariantKind VK =
-      IsFunc ? MCSymbolRefExpr::VK_WebAssembly_FUNCTION
+      IsFunc ? MCSymbolRefExpr::VK_WebAssembly_FUNCTION :
+      IsGlob ? MCSymbolRefExpr::VK_WebAssembly_GLOBAL
              : MCSymbolRefExpr::VK_None;
 
   const MCExpr *Expr = MCSymbolRefExpr::create(Sym, VK, Ctx);
@@ -118,6 +120,8 @@ MCOperand WebAssemblyMCInstLower::LowerSymbolOperand(MCSymbol *Sym,
   if (Offset != 0) {
     if (IsFunc)
       report_fatal_error("Function addresses with offsets not supported");
+    if (IsGlob)
+      report_fatal_error("Global indexes with offsets not supported");
     Expr =
         MCBinaryExpr::createAdd(Expr, MCConstantExpr::create(Offset, Ctx), Ctx);
   }
@@ -212,18 +216,20 @@ void WebAssemblyMCInstLower::Lower(const MachineInstr *MI,
       break;
     }
     case MachineOperand::MO_GlobalAddress:
-      assert(MO.getTargetFlags() == 0 &&
+      assert(MO.getTargetFlags() == WebAssemblyII::MO_NO_FLAG &&
              "WebAssembly does not use target flags on GlobalAddresses");
       MCOp = LowerSymbolOperand(GetGlobalAddressSymbol(MO), MO.getOffset(),
-                                MO.getGlobal()->getValueType()->isFunctionTy());
+                                MO.getGlobal()->getValueType()->isFunctionTy(),
+                                false);
       break;
     case MachineOperand::MO_ExternalSymbol:
       // The target flag indicates whether this is a symbol for a
       // variable or a function.
-      assert((MO.getTargetFlags() & -2) == 0 &&
-             "WebAssembly uses only one target flag bit on ExternalSymbols");
+      assert((MO.getTargetFlags() & ~WebAssemblyII::MO_SYMBOL_MASK) == 0 &&
+             "WebAssembly uses only symbol flags on ExternalSymbols");
       MCOp = LowerSymbolOperand(GetExternalSymbolSymbol(MO), /*Offset=*/0,
-                                MO.getTargetFlags() & 1);
+          (MO.getTargetFlags() & WebAssemblyII::MO_SYMBOL_FUNCTION) != 0,
+          (MO.getTargetFlags() & WebAssemblyII::MO_SYMBOL_GLOBAL) != 0);
       break;
     }
 
