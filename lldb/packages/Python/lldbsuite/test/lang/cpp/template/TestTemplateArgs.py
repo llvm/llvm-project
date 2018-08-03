@@ -116,6 +116,7 @@ class TemplateArgsTestCase(TestBase):
     # parameters.
     @expectedFailureAll(bugnumber="llvm.org/pr28354", compiler="gcc")
     @expectedFailureAll(oslist=["windows"])
+    @expectedFailureAll
     def test_enum_args(self):
         frame = self.prepareProcess()
 
