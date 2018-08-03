@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s bugprone-use-after-move %t -- -- -std=c++11 -fno-delayed-template-parsing
+// RUN: %check_clang_tidy %s bugprone-use-after-move %t -- -- -std=c++17 -fno-delayed-template-parsing
 
 typedef decltype(nullptr) nullptr_t;
 
@@ -1132,13 +1132,30 @@ void forRangeSequences() {
   }
 }
 
-// If a variable is declared in an if statement, the declaration of the variable
-// (which is treated like a reinitialization by the check) is sequenced before
-// the evaluation of the condition (which constitutes a use).
-void ifStmtSequencesDeclAndCondition() {
+// If a variable is declared in an if, while or switch statement, the init
+// statement (for if and switch) is sequenced before the variable declaration,
+// which in turn is sequenced before the evaluation of the condition.
+void ifWhileAndSwitchSequenceInitDeclAndCondition() {
   for (int i = 0; i < 10; ++i) {
-    if (A a = A()) {
-      std::move(a);
+    A a1;
+    if (A a2 = std::move(a1)) {
+      std::move(a2);
+    }
+  }
+  for (int i = 0; i < 10; ++i) {
+    A a1;
+    if (A a2 = std::move(a1); A a3 = std::move(a2)) {
+      std::move(a3);
+    }
+  }
+  while (A a = A()) {
+    std::move(a);
+  }
+  for (int i = 0; i < 10; ++i) {
+    A a1;
+    switch (A a2 = a1; A a3 = std::move(a2)) {
+      case true:
+        std::move(a3);
     }
   }
 }
