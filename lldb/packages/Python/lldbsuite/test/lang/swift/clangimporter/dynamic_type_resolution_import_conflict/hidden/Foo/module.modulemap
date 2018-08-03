@@ -1,0 +1,3 @@
+module Bar {
+  header "Outer.h"
+}

@@ -924,10 +924,10 @@ public:
     Status type_system_error;
     TypeSystem *type_system;
     
-    if (lang == lldb::eLanguageTypeSwift) {
-      Status error;
-      type_system = target_sp->GetScratchSwiftASTContext(error, *frame_sp);
-    } else
+    if (lang == lldb::eLanguageTypeSwift)
+      type_system =
+          target_sp->GetScratchSwiftASTContext(type_system_error, *frame_sp);
+    else
       type_system = target_sp->GetScratchTypeSystemForLanguage(
         &type_system_error, m_type.GetMinimumLanguage());
 
