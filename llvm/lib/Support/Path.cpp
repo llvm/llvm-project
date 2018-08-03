@@ -190,8 +190,10 @@ createUniqueEntity(const Twine &Model, int &ResultFD,
   ResultPath.push_back(0);
   ResultPath.pop_back();
 
-  // Limit the number of attempts we make, so that we don't infinite loop when
-  // we run out of filenames that fit the model.
+  // Limit the number of attempts we make, so that we don't infinite loop. E.g.
+  // "permission denied" could be for a specific file (so we retry with a
+  // different name) or for the whole directory (retry would always fail).
+  // Checking which is racy, so we try a number of times, then give up.
   std::error_code EC;
   for (int Retries = 128; Retries > 0; --Retries) {
     // Replace '%' with random chars.

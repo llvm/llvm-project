@@ -30,9 +30,10 @@
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/DomTreeUpdater.h"
 #include "llvm/IR/Dominators.h"
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
@@ -614,8 +615,8 @@ void AggressiveDeadCodeElimination::updateDeadRegions() {
       }
     }
 
-    DT.applyUpdates(DeletedEdges);
-    PDT.applyUpdates(DeletedEdges);
+    DomTreeUpdater(DT, PDT, DomTreeUpdater::UpdateStrategy::Eager)
+        .applyUpdates(DeletedEdges);
 
     NumBranchesRemoved += 1;
   }

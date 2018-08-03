@@ -6,36 +6,38 @@
 ; CHECK-NOT: memw([[REG0]]+#0) =
 ; CHECK: }
 
-define void @main() #0 {
-cond.end.6:
-  store i32 -1, i32* undef, align 8, !tbaa !0
-  br label %polly.stmt.for.body.i
 
-if.then:
+define void @f0(i32* %a0) #0 {
+b0:
+  store i32 -1, i32* %a0, align 8, !tbaa !0
+  br label %b4
+
+b1:                                               ; preds = %b3
   unreachable
 
-if.end:
+b2:                                               ; preds = %b3
   ret void
 
-polly.stmt.for.body.i24:
-  %0 = extractelement <2 x i32> %add.ip_vec, i32 1
-  br i1 undef, label %if.end, label %if.then
+b3:                                               ; preds = %b4
+  %v0 = extractelement <2 x i32> %v6, i32 1
+  br i1 undef, label %b2, label %b1
 
-polly.stmt.for.body.i:
-  %add.ip_vec30 = phi <2 x i32> [ %add.ip_vec, %polly.stmt.for.body.i ], [ zeroinitializer, %cond.end.6 ]
-  %scevgep.phi = phi i32* [ %scevgep.inc, %polly.stmt.for.body.i ], [ undef, %cond.end.6 ]
-  %polly.indvar = phi i32 [ %polly.indvar_next, %polly.stmt.for.body.i ], [ 0, %cond.end.6 ]
-  %vector_ptr = bitcast i32* %scevgep.phi to <2 x i32>*
-  %_p_vec_full = load <2 x i32>, <2 x i32>* %vector_ptr, align 8
-  %add.ip_vec = add <2 x i32> %_p_vec_full, %add.ip_vec30
-  %polly.indvar_next = add nsw i32 %polly.indvar, 2
-  %polly.loop_cond = icmp slt i32 %polly.indvar, 4
-  %scevgep.inc = getelementptr i32, i32* %scevgep.phi, i32 2
-  br i1 %polly.loop_cond, label %polly.stmt.for.body.i, label %polly.stmt.for.body.i24
+b4:                                               ; preds = %b4, %b0
+  %v1 = phi <2 x i32> [ %v6, %b4 ], [ zeroinitializer, %b0 ]
+  %v2 = phi i32* [ %v9, %b4 ], [ %a0, %b0 ]
+  %v3 = phi i32 [ %v7, %b4 ], [ 0, %b0 ]
+  %v4 = bitcast i32* %v2 to <2 x i32>*
+  %v5 = load <2 x i32>, <2 x i32>* %v4, align 8
+  %v6 = add <2 x i32> %v5, %v1
+  %v7 = add nsw i32 %v3, 2
+  %v8 = icmp slt i32 %v3, 4
+  %v9 = getelementptr i32, i32* %v2, i32 2
+  br i1 %v8, label %b4, label %b3
 }
 
 attributes #0 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf"="true" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
-!0 = !{!"int", !1}
-!1 = !{!"omnipotent char", !2}
-!2 = !{!"Simple C/C++ TBAA"}
+!0 = !{!1, !1, i64 0}
+!1 = !{!"int", !2}
+!2 = !{!"omnipotent char", !3}
+!3 = !{!"Simple C/C++ TBAA"}

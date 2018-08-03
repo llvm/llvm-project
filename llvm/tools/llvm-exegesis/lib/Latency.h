@@ -26,14 +26,14 @@ public:
       : BenchmarkRunner(State, InstructionBenchmark::Latency) {}
   ~LatencyBenchmarkRunner() override;
 
-  llvm::Expected<SnippetPrototype>
-  generatePrototype(unsigned Opcode) const override;
+  llvm::Expected<CodeTemplate>
+  generateCodeTemplate(unsigned Opcode) const override;
 
 private:
   llvm::Error isInfeasible(const llvm::MCInstrDesc &MCInstrDesc) const;
 
-  llvm::Expected<SnippetPrototype> generateTwoInstructionPrototype(
-      const Instruction &Instr) const;
+  llvm::Expected<CodeTemplate>
+  generateTwoInstructionPrototype(const Instruction &Instr) const;
 
   std::vector<BenchmarkMeasure>
   runMeasurements(const ExecutableFunction &EF, ScratchSpace &Scratch,

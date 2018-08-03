@@ -27,6 +27,7 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/IR/DomTreeUpdater.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
@@ -41,6 +42,7 @@ using namespace llvm;
 static bool simplifyLoopCFG(Loop &L, DominatorTree &DT, LoopInfo &LI,
                             ScalarEvolution &SE) {
   bool Changed = false;
+  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
   // Copy blocks into a temporary array to avoid iterator invalidation issues
   // as we remove them.
   SmallVector<WeakTrackingVH, 16> Blocks(L.blocks());
@@ -57,7 +59,7 @@ static bool simplifyLoopCFG(Loop &L, DominatorTree &DT, LoopInfo &LI,
       continue;
 
     // Merge Succ into Pred and delete it.
-    MergeBlockIntoPredecessor(Succ, &DT, &LI);
+    MergeBlockIntoPredecessor(Succ, &DTU, &LI);
 
     SE.forgetLoop(&L);
     Changed = true;

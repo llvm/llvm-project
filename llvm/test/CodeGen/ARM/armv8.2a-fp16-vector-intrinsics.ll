@@ -911,34 +911,48 @@ entry:
   ret <8 x half> %sub.i
 }
 
+define dso_local <4 x half> @test_vfma_f16(<4 x half> %a, <4 x half> %b, <4 x half> %c) {
+; CHECK-LABEL: test_vfma_f16:
+; CHECK:         vfma.f16 d0, d1, d2
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = tail call <4 x half> @llvm.fma.v4f16(<4 x half> %b, <4 x half> %c, <4 x half> %a)
+  ret <4 x half> %0
+}
+
+define dso_local <8 x half> @test_vfmaq_f16(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
+; CHECK-LABEL: test_vfmaq_f16:
+; CHECK:         vfma.f16 q0, q1, q2
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = tail call <8 x half> @llvm.fma.v8f16(<8 x half> %b, <8 x half> %c, <8 x half> %a)
+  ret <8 x half> %0
+}
+
+define dso_local <4 x half> @test_vfms_f16(<4 x half> %a, <4 x half> %b, <4 x half> %c) {
+; CHECK-LABEL: test_vfms_f16:
+; CHECK:         vneg.f16 [[D16:d[0-9]+]], d1
+; CHECK-NEXT:    vfma.f16 d0, [[D16]], d2
+; CHECK-NEXT:    bx lr
+entry:
+  %sub.i = fsub <4 x half> <half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000>, %b
+  %0 = tail call <4 x half> @llvm.fma.v4f16(<4 x half> %sub.i, <4 x half> %c, <4 x half> %a)
+  ret <4 x half> %0
+}
+
+define dso_local <8 x half> @test_vfmsq_f16(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
+; CHECK-LABEL: test_vfmsq_f16:
+; CHECK:         vneg.f16 [[Q8:q[0-9]+]], q1
+; CHECK-NEXT:    vfma.f16 q0, [[Q8]], q2
+; CHECK-NEXT:    bx lr
+entry:
+  %sub.i = fsub <8 x half> <half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000>, %b
+  %0 = tail call <8 x half> @llvm.fma.v8f16(<8 x half> %sub.i, <8 x half> %c, <8 x half> %a)
+  ret <8 x half> %0
+}
+
 ; FIXME (PR38404)
 ;
-;define dso_local <4 x half> @test_vfma_f16(<4 x half> %a, <4 x half> %b, <4 x half> %c) {
-;entry:
-;  %0 = tail call <4 x half> @llvm.fma.v4f16(<4 x half> %b, <4 x half> %c, <4 x half> %a)
-;  ret <4 x half> %0
-;}
-
-;define dso_local <8 x half> @test_vfmaq_f16(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
-;entry:
-;  %0 = tail call <8 x half> @llvm.fma.v8f16(<8 x half> %b, <8 x half> %c, <8 x half> %a)
-;  ret <8 x half> %0
-;}
-
-;define dso_local <4 x half> @test_vfms_f16(<4 x half> %a, <4 x half> %b, <4 x half> %c) {
-;entry:
-;  %sub.i = fsub <4 x half> <half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000>, %b
-;  %0 = tail call <4 x half> @llvm.fma.v4f16(<4 x half> %sub.i, <4 x half> %c, <4 x half> %a)
-;  ret <4 x half> %0
-;}
-
-;define dso_local <8 x half> @test_vfmsq_f16(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
-;entry:
-;  %sub.i = fsub <8 x half> <half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000>, %b
-;  %0 = tail call <8 x half> @llvm.fma.v8f16(<8 x half> %sub.i, <8 x half> %c, <8 x half> %a)
-;  ret <8 x half> %0
-;}
-
 ;define dso_local <4 x half> @test_vmul_lane_f16(<4 x half> %a, <4 x half> %b) {
 ;entry:
 ;  %shuffle = shufflevector <4 x half> %b, <4 x half> undef, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
@@ -1001,43 +1015,55 @@ entry:
   ret <8 x half> %3
 }
 
+define dso_local %struct.float16x4x2_t @test_vzip_f16(<4 x half> %a, <4 x half> %b) {
+; CHECK-LABEL: test_vzip_f16:
+; CHECK:         vzip.16 d0, d1
+; CHECK-NEXT:    bx lr
+entry:
+  %vzip.i = shufflevector <4 x half> %a, <4 x half> %b, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
+  %vzip1.i = shufflevector <4 x half> %a, <4 x half> %b, <4 x i32> <i32 2, i32 6, i32 3, i32 7>
+  %.fca.0.0.insert = insertvalue %struct.float16x4x2_t undef, <4 x half> %vzip.i, 0, 0
+  %.fca.0.1.insert = insertvalue %struct.float16x4x2_t %.fca.0.0.insert, <4 x half> %vzip1.i, 0, 1
+  ret %struct.float16x4x2_t %.fca.0.1.insert
+}
+
+define dso_local %struct.float16x8x2_t @test_vzipq_f16(<8 x half> %a, <8 x half> %b) {
+; CHECK-LABEL: test_vzipq_f16:
+; CHECK:         vzip.16 q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %vzip.i = shufflevector <8 x half> %a, <8 x half> %b, <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11>
+  %vzip1.i = shufflevector <8 x half> %a, <8 x half> %b, <8 x i32> <i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
+  %.fca.0.0.insert = insertvalue %struct.float16x8x2_t undef, <8 x half> %vzip.i, 0, 0
+  %.fca.0.1.insert = insertvalue %struct.float16x8x2_t %.fca.0.0.insert, <8 x half> %vzip1.i, 0, 1
+  ret %struct.float16x8x2_t %.fca.0.1.insert
+}
+
+define dso_local %struct.float16x4x2_t @test_vuzp_f16(<4 x half> %a, <4 x half> %b) {
+; CHECK-LABEL: test_vuzp_f16:
+; CHECK:         vuzp.16 d0, d1
+; CHECK-NEXT:    bx lr
+entry:
+  %vuzp.i = shufflevector <4 x half> %a, <4 x half> %b, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  %vuzp1.i = shufflevector <4 x half> %a, <4 x half> %b, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+  %.fca.0.0.insert = insertvalue %struct.float16x4x2_t undef, <4 x half> %vuzp.i, 0, 0
+  %.fca.0.1.insert = insertvalue %struct.float16x4x2_t %.fca.0.0.insert, <4 x half> %vuzp1.i, 0, 1
+  ret %struct.float16x4x2_t %.fca.0.1.insert
+}
+
+define dso_local %struct.float16x8x2_t @test_vuzpq_f16(<8 x half> %a, <8 x half> %b) {
+; CHECK-LABEL: test_vuzpq_f16:
+; CHECK:         vuzp.16 q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %vuzp.i = shufflevector <8 x half> %a, <8 x half> %b, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+  %vuzp1.i = shufflevector <8 x half> %a, <8 x half> %b, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+  %.fca.0.0.insert = insertvalue %struct.float16x8x2_t undef, <8 x half> %vuzp.i, 0, 0
+  %.fca.0.1.insert = insertvalue %struct.float16x8x2_t %.fca.0.0.insert, <8 x half> %vuzp1.i, 0, 1
+  ret %struct.float16x8x2_t %.fca.0.1.insert
+}
+
 ; FIXME (PR38404)
-;
-;define dso_local %struct.float16x4x2_t @test_vzip_f16(<4 x half> %a, <4 x half> %b) {
-;entry:
-;  %vzip.i = shufflevector <4 x half> %a, <4 x half> %b, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
-;  %vzip1.i = shufflevector <4 x half> %a, <4 x half> %b, <4 x i32> <i32 2, i32 6, i32 3, i32 7>
-;  %.fca.0.0.insert = insertvalue %struct.float16x4x2_t undef, <4 x half> %vzip.i, 0, 0
-;  %.fca.0.1.insert = insertvalue %struct.float16x4x2_t %.fca.0.0.insert, <4 x half> %vzip1.i, 0, 1
-;  ret %struct.float16x4x2_t %.fca.0.1.insert
-;}
-;
-;define dso_local %struct.float16x8x2_t @test_vzipq_f16(<8 x half> %a, <8 x half> %b) {
-;entry:
-;  %vzip.i = shufflevector <8 x half> %a, <8 x half> %b, <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11>
-;  %vzip1.i = shufflevector <8 x half> %a, <8 x half> %b, <8 x i32> <i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
-;  %.fca.0.0.insert = insertvalue %struct.float16x8x2_t undef, <8 x half> %vzip.i, 0, 0
-;  %.fca.0.1.insert = insertvalue %struct.float16x8x2_t %.fca.0.0.insert, <8 x half> %vzip1.i, 0, 1
-;  ret %struct.float16x8x2_t %.fca.0.1.insert
-;}
-;
-;define dso_local %struct.float16x4x2_t @test_vuzp_f16(<4 x half> %a, <4 x half> %b) {
-;entry:
-;  %vuzp.i = shufflevector <4 x half> %a, <4 x half> %b, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-;  %vuzp1.i = shufflevector <4 x half> %a, <4 x half> %b, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
-;  %.fca.0.0.insert = insertvalue %struct.float16x4x2_t undef, <4 x half> %vuzp.i, 0, 0
-;  %.fca.0.1.insert = insertvalue %struct.float16x4x2_t %.fca.0.0.insert, <4 x half> %vuzp1.i, 0, 1
-;  ret %struct.float16x4x2_t %.fca.0.1.insert
-;}
-;
-;define dso_local %struct.float16x8x2_t @test_vuzpq_f16(<8 x half> %a, <8 x half> %b) {
-;entry:
-;  %vuzp.i = shufflevector <8 x half> %a, <8 x half> %b, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
-;  %vuzp1.i = shufflevector <8 x half> %a, <8 x half> %b, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
-;  %.fca.0.0.insert = insertvalue %struct.float16x8x2_t undef, <8 x half> %vuzp.i, 0, 0
-;  %.fca.0.1.insert = insertvalue %struct.float16x8x2_t %.fca.0.0.insert, <8 x half> %vuzp1.i, 0, 1
-;  ret %struct.float16x8x2_t %.fca.0.1.insert
-;}
 ;
 ;define dso_local %struct.float16x4x2_t @test_vtrn_f16(<4 x half> %a, <4 x half> %b) {
 ;entry:

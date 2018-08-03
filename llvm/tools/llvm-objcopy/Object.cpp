@@ -725,8 +725,7 @@ void ELFBuilder<ELFT>::initSymbolTable(SymbolTableSection *SymTab) {
       Elf_Word Index = ShndxData[&Sym - Symbols.begin()];
       DefSection = Obj.sections().getSection(
           Index,
-          "Symbol '" + Name + "' has invalid section index " +
-              Twine(Index));
+          "Symbol '" + Name + "' has invalid section index " + Twine(Index));
     } else if (Sym.st_shndx >= SHN_LORESERVE) {
       if (!isValidReservedSectionIndex(Sym.st_shndx, Obj.Machine)) {
         error(

@@ -881,6 +881,14 @@ void X86DAGToDAGISel::PostprocessISelDAG() {
         In.getMachineOpcode() <= TargetOpcode::GENERIC_OP_END)
       continue;
 
+    // Make sure the instruction has a VEX, XOP, or EVEX prefix. This covers
+    // the SHA instructions which use a legacy encoding.
+    uint64_t TSFlags = getInstrInfo()->get(In.getMachineOpcode()).TSFlags;
+    if ((TSFlags & X86II::EncodingMask) != X86II::VEX &&
+        (TSFlags & X86II::EncodingMask) != X86II::EVEX &&
+        (TSFlags & X86II::EncodingMask) != X86II::XOP)
+      continue;
+
     // Producing instruction is another vector instruction. We can drop the
     // move.
     CurDAG->UpdateNodeOperands(N, N->getOperand(0), In, N->getOperand(2));
@@ -2794,6 +2802,16 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
   case X86ISD::GlobalBaseReg:
     ReplaceNode(Node, getGlobalBaseReg());
     return;
+
+  case ISD::BITCAST:
+    // Just drop all 128/256/512-bit bitcasts.
+    if (NVT.is512BitVector() || NVT.is256BitVector() || NVT.is128BitVector() ||
+        NVT == MVT::f128) {
+      ReplaceUses(SDValue(Node, 0), Node->getOperand(0));
+      CurDAG->RemoveDeadNode(Node);
+      return;
+    }
+    break;
 
   case X86ISD::SELECT:
   case X86ISD::SHRUNKBLEND: {

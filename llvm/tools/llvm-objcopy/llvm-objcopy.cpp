@@ -601,7 +601,8 @@ static Error deepWriteArchive(StringRef ArcName,
   return Error::success();
 }
 
-static void ExecuteElfObjcopyOnArchive(const CopyConfig &Config, const Archive &Ar) {
+static void ExecuteElfObjcopyOnArchive(const CopyConfig &Config,
+                                       const Archive &Ar) {
   std::vector<NewArchiveMember> NewArchiveMembers;
   Error Err = Error::success();
   for (const Archive::Child &Child : Ar.children(Err)) {

@@ -27,7 +27,7 @@ b3:                                               ; preds = %b1, %b0
   %v8 = getelementptr i16, i16* %v7, i32 88
   %v9 = bitcast i16* %v8 to <8 x i16>*
   store <8 x i16> zeroinitializer, <8 x i16>* %v9, align 8
-  unreachable
+  ret void
 }
 
 attributes #0 = { norecurse nounwind }

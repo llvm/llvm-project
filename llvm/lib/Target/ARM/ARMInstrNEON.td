@@ -4734,6 +4734,12 @@ def  VFMShq   : N3VQMulOp<0, 0, 0b11, 0b1100, 1, IIC_VFMACQ, "vfms", "f16",
                 Requires<[HasNEON,HasFullFP16,UseFusedMAC]>;
 
 // Match @llvm.fma.* intrinsics
+def : Pat<(v4f16 (fma DPR:$Vn, DPR:$Vm, DPR:$src1)),
+          (VFMAhd DPR:$src1, DPR:$Vn, DPR:$Vm)>,
+          Requires<[HasNEON,HasFullFP16]>;
+def : Pat<(v8f16 (fma QPR:$Vn, QPR:$Vm, QPR:$src1)),
+          (VFMAhq QPR:$src1, QPR:$Vn, QPR:$Vm)>,
+          Requires<[HasNEON,HasFullFP16]>;
 def : Pat<(v2f32 (fma DPR:$Vn, DPR:$Vm, DPR:$src1)),
           (VFMAfd DPR:$src1, DPR:$Vn, DPR:$Vm)>,
           Requires<[HasVFP4]>;
