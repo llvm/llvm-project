@@ -1,6 +1,8 @@
 #include <clc/clc.h>
 
-#if __clang_major__ >= 7
+#if __clang_major__ >= 8
+#define CONST_AS __constant
+#elif __clang_major__ >= 7
 #define CONST_AS __attribute__((address_space(4)))
 #else
 #define CONST_AS __attribute__((address_space(2)))
