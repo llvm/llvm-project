@@ -857,7 +857,7 @@ public:
     __tree_iterator operator--(int)
         {__tree_iterator __t(*this); --(*this); return __t;}
 
-    friend _LIBCPP_INLINE_VISIBILITY 
+    friend _LIBCPP_INLINE_VISIBILITY
         bool operator==(const __tree_iterator& __x, const __tree_iterator& __y)
         {return __x.__ptr_ == __y.__ptr_;}
     friend _LIBCPP_INLINE_VISIBILITY
@@ -1488,7 +1488,7 @@ private:
     void __copy_assign_alloc(const __tree& __t, true_type)
         {
         if (__node_alloc() != __t.__node_alloc())
-        	clear();
+            clear();
         __node_alloc() = __t.__node_alloc();
         }
     _LIBCPP_INLINE_VISIBILITY
@@ -1830,7 +1830,7 @@ __tree<_Tp, _Compare, _Allocator>::operator=(__tree&& __t)
         __node_traits::propagate_on_container_move_assignment::value &&
         is_nothrow_move_assignable<value_compare>::value &&
         is_nothrow_move_assignable<__node_allocator>::value)
-        
+
 {
     __move_assign(__t, integral_constant<bool,
                   __node_traits::propagate_on_container_move_assignment::value>());

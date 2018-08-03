@@ -238,9 +238,9 @@ __bitset<_N_words, _Size>::__init(unsigned long long __v, false_type) _NOEXCEPT
     size_t __sz = _Size;
     for (size_t __i = 0; __i < sizeof(__t)/sizeof(__t[0]); ++__i, __v >>= __bits_per_word, __sz -= __bits_per_word )
         if ( __sz < __bits_per_word)
-        	__t[__i] = static_cast<__storage_type>(__v) & ( 1ULL << __sz ) - 1;
+            __t[__i] = static_cast<__storage_type>(__v) & ( 1ULL << __sz ) - 1;
         else
-        	__t[__i] = static_cast<__storage_type>(__v);
+            __t[__i] = static_cast<__storage_type>(__v);
 
     _VSTD::copy(__t, __t + sizeof(__t)/sizeof(__t[0]), __first_);
     _VSTD::fill(__first_ + sizeof(__t)/sizeof(__t[0]), __first_ + sizeof(__first_)/sizeof(__first_[0]),
@@ -254,7 +254,7 @@ __bitset<_N_words, _Size>::__init(unsigned long long __v, true_type) _NOEXCEPT
 {
     __first_[0] = __v;
     if (_Size < __bits_per_word)
-    	__first_[0] &= ( 1ULL << _Size ) - 1;
+        __first_[0] &= ( 1ULL << _Size ) - 1;
 
     _VSTD::fill(__first_ + 1, __first_ + sizeof(__first_)/sizeof(__first_[0]), __storage_type(0));
 }
@@ -269,9 +269,9 @@ __bitset<_N_words, _Size>::__bitset(unsigned long long __v) _NOEXCEPT
 #if __SIZEOF_SIZE_T__ == 8
     : __first_{__v}
 #elif __SIZEOF_SIZE_T__ == 4
-    : __first_{static_cast<__storage_type>(__v), 
-    			_Size >= 2 * __bits_per_word ? static_cast<__storage_type>(__v >> __bits_per_word)
-    			: static_cast<__storage_type>((__v >> __bits_per_word) & (__storage_type(1) << (_Size - __bits_per_word)) - 1)}
+    : __first_{static_cast<__storage_type>(__v),
+                _Size >= 2 * __bits_per_word ? static_cast<__storage_type>(__v >> __bits_per_word)
+                : static_cast<__storage_type>((__v >> __bits_per_word) & (__storage_type(1) << (_Size - __bits_per_word)) - 1)}
 #else
 #error This constructor has not been ported to this platform
 #endif
