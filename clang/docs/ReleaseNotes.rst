@@ -50,6 +50,12 @@ Major New Features
   was added. Please refer to the :ref:`release-notes-ubsan` section of the
   release notes for the details.
 
+- Preliminary/experimental support for DWARF v5 debugging information. If you
+  compile with ``-gdwarf-5 -O0`` you should get fully conforming DWARF v5
+  information, including the new .debug_names accelerator table. Type units
+  and split DWARF are known not to conform, and higher optimization levels
+  will likely get a mix of v4 and v5 formats.
+  
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
