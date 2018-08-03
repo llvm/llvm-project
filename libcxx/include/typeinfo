@@ -232,7 +232,7 @@ void __throw_bad_cast()
 #ifndef _LIBCPP_NO_EXCEPTIONS
     throw bad_cast();
 #else
-	_VSTD::abort();
+    _VSTD::abort();
 #endif
 }
 _LIBCPP_END_NAMESPACE_STD

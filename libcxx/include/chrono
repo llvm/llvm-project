@@ -323,7 +323,7 @@ struct clock_time_conversion;
 
 template<class DestClock, class SourceClock, class Duration>
   auto clock_cast(const time_point<SourceClock, Duration>& t);
-  
+
 // 25.8.2, class last_spec    // C++20
 struct last_spec;
 
@@ -528,7 +528,7 @@ constexpr year_month_weekday_last
   operator-(const year_month_weekday_last& ymwdl, const months& dm) noexcept;
 constexpr year_month_weekday_last
   operator-(const year_month_weekday_last& ymwdl, const years& dy) noexcept;
-  
+
 // 25.8.18, civil calendar conventional syntax operators    // C++20
 constexpr year_month
   operator/(const year& y, const month& m) noexcept;
@@ -609,7 +609,7 @@ constexpr year_month_weekday_last
 constexpr year_month_weekday_last
   operator/(const month_weekday_last& mwdl, const year& y) noexcept;
 constexpr year_month_weekday_last
-  operator/(const month_weekday_last& mwdl, int y) noexcept;  
+  operator/(const month_weekday_last& mwdl, int y) noexcept;
 
 // 25.9, class template time_of_day    // C++20
 template<class Duration> class time_of_day;
@@ -640,7 +640,7 @@ class ambiguous_local_time;
 // 25.10.4, information classes    // C++20
 struct sys_info;
 struct local_info;
-    
+
 // 25.10.5, class time_zone    // C++20
 enum class choose {earliest, latest};
 class time_zone;
@@ -650,7 +650,7 @@ bool operator<(const time_zone& x, const time_zone& y) noexcept;
 bool operator>(const time_zone& x, const time_zone& y) noexcept;
 bool operator<=(const time_zone& x, const time_zone& y) noexcept;
 bool operator>=(const time_zone& x, const time_zone& y) noexcept;
-  
+
 // 25.10.6, class template zoned_traits    // C++20
 template<class T> struct zoned_traits;
 
@@ -724,7 +724,7 @@ template<class charT, class traits, class Alloc, class Streamable>
 template<class charT, class traits, class Alloc, class Streamable>
   basic_string<charT, traits, Alloc>
     format(const locale& loc, const basic_string<charT, traits, Alloc>& fmt,
-           const Streamable& s);             
+           const Streamable& s);
 
 // 25.12, parsing    // C++20
 template<class charT, class traits, class Alloc, class Parsable>
@@ -746,7 +746,7 @@ unspecified
     parse(const basic_string<charT, traits, Alloc>& format, Parsable& tp,
           basic_string<charT, traits, Alloc>& abbrev, minutes& offset);
 
-inline constexpr last_spec								last{};       // C++20
+inline constexpr last_spec                              last{};       // C++20
 inline constexpr chrono::weekday                        Sunday{0};    // C++20
 inline constexpr chrono::weekday                        Monday{1};    // C++20
 inline constexpr chrono::weekday                        Tuesday{2};   // C++20
@@ -1015,7 +1015,7 @@ class _LIBCPP_TEMPLATE_VIS duration
         typedef ratio<__mul<__n1, __d2, !value>::value,
                       __mul<__n2, __d1, !value>::value> type;
     };
-    
+
 public:
     typedef _Rep rep;
     typedef typename _Period::type period;
@@ -1576,7 +1576,7 @@ typedef system_clock high_resolution_clock;
 #if _LIBCPP_STD_VER > 11
 // Suffixes for duration literals [time.duration.literals]
 inline namespace literals
-{ 
+{
   inline namespace chrono_literals
   {
 
@@ -1633,7 +1633,7 @@ inline namespace literals
     {
         return chrono::duration<long double, micro> (__us);
     }
-    
+
 
     constexpr chrono::nanoseconds operator""ns(unsigned long long __ns)
     {
