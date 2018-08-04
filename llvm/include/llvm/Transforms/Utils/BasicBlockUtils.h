@@ -229,7 +229,8 @@ void SplitLandingPadPredecessors(BasicBlock *OrigBB,
 /// value defined by a PHI, propagate the right value into the return. It
 /// returns the new return instruction in the predecessor.
 ReturnInst *FoldReturnIntoUncondBranch(ReturnInst *RI, BasicBlock *BB,
-                                       BasicBlock *Pred);
+                                       BasicBlock *Pred,
+                                       DomTreeUpdater *DTU = nullptr);
 
 /// Split the containing block at the specified instruction - everything before
 /// SplitBefore stays in the old basic block, and the rest of the instructions

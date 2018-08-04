@@ -116,7 +116,7 @@ class AggressiveDeadCodeElimination {
 
   // ADCE does not use DominatorTree per se, but it updates it to preserve the
   // analysis.
-  DominatorTree &DT;
+  DominatorTree *DT;
   PostDominatorTree &PDT;
 
   /// Mapping of blocks to associated information, an element in BlockInfoVec.
@@ -191,7 +191,7 @@ class AggressiveDeadCodeElimination {
   void makeUnconditional(BasicBlock *BB, BasicBlock *Target);
 
 public:
-  AggressiveDeadCodeElimination(Function &F, DominatorTree &DT,
+  AggressiveDeadCodeElimination(Function &F, DominatorTree *DT,
                                 PostDominatorTree &PDT)
       : F(F), DT(DT), PDT(PDT) {}
 
@@ -615,7 +615,7 @@ void AggressiveDeadCodeElimination::updateDeadRegions() {
       }
     }
 
-    DomTreeUpdater(DT, PDT, DomTreeUpdater::UpdateStrategy::Eager)
+    DomTreeUpdater(DT, &PDT, DomTreeUpdater::UpdateStrategy::Eager)
         .applyUpdates(DeletedEdges);
 
     NumBranchesRemoved += 1;
@@ -672,7 +672,9 @@ void AggressiveDeadCodeElimination::makeUnconditional(BasicBlock *BB,
 //
 //===----------------------------------------------------------------------===//
 PreservedAnalyses ADCEPass::run(Function &F, FunctionAnalysisManager &FAM) {
-  auto &DT = FAM.getResult<DominatorTreeAnalysis>(F);
+  // ADCE does not need DominatorTree, but require DominatorTree here
+  // to update analysis if it is already available.
+  auto *DT = FAM.getCachedResult<DominatorTreeAnalysis>(F);
   auto &PDT = FAM.getResult<PostDominatorTreeAnalysis>(F);
   if (!AggressiveDeadCodeElimination(F, DT, PDT).performDeadCodeElimination())
     return PreservedAnalyses::all();
@@ -698,15 +700,16 @@ struct ADCELegacyPass : public FunctionPass {
     if (skipFunction(F))
       return false;
 
-    auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+    // ADCE does not need DominatorTree, but require DominatorTree here
+    // to update analysis if it is already available.
+    auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>();
+    auto *DT = DTWP ? &DTWP->getDomTree() : nullptr;
     auto &PDT = getAnalysis<PostDominatorTreeWrapperPass>().getPostDomTree();
     return AggressiveDeadCodeElimination(F, DT, PDT)
         .performDeadCodeElimination();
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    // We require DominatorTree here only to update and thus preserve it.
-    AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<PostDominatorTreeWrapperPass>();
     if (!RemoveControlFlowFlag)
       AU.setPreservesCFG();
@@ -724,7 +727,6 @@ char ADCELegacyPass::ID = 0;
 
 INITIALIZE_PASS_BEGIN(ADCELegacyPass, "adce",
                       "Aggressive Dead Code Elimination", false, false)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(PostDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(ADCELegacyPass, "adce", "Aggressive Dead Code Elimination",
                     false, false)

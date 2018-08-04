@@ -1,0 +1,17 @@
+# REQUIRES: x86
+
+# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
+
+# RUN: rm -f %t.exe
+# RUN: mkdir -p %t.dir
+# RUN: cd %t.dir
+# RUN: touch %t.exe
+# RUN: chmod 100 %t.exe
+# RUN: not ld.lld %t.o -o %t.exe 2>&1 | FileCheck %s
+# RUN: chmod 755 %t.exe
+
+# CHECK: error: failed to write to the output file {{.*}}.exe :permission denied
+
+.globl _start
+_start:
+  nop

@@ -133,10 +133,7 @@ bool InnerPointerChecker::isCalledOnStringObject(
     return false;
 
   CXXRecordDecl *Decl = ObjTy->getAsCXXRecordDecl();
-  if (!Decl || Decl->getName() != "basic_string")
-    return false;
-
-  return true;
+  return Decl && Decl->getName() == "basic_string";
 }
 
 bool InnerPointerChecker::isInvalidatingMemberFunction(

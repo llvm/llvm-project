@@ -290,13 +290,13 @@ void __throw_bad_array_length()
 #ifndef _LIBCPP_NO_EXCEPTIONS
     throw bad_array_length();
 #else
-	_VSTD::abort();
+    _VSTD::abort();
 #endif
 }
 #endif
 
 template <class _Tp>
-_LIBCPP_NODISCARD_AFTER_CXX17 inline 
+_LIBCPP_NODISCARD_AFTER_CXX17 inline
 _LIBCPP_CONSTEXPR _Tp* __launder(_Tp* __p) _NOEXCEPT
 {
     static_assert (!(is_function<_Tp>::value), "can't launder functions" );
