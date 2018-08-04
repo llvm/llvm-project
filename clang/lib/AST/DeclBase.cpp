@@ -1017,7 +1017,7 @@ DeclContext::~DeclContext() = default;
 /// a friend function the parent lookup context is the lexical context, which
 /// is the class in which the friend is declared.
 DeclContext *DeclContext::getLookupParent() {
-  // FIXME: Find a better way to identify friends
+  // FIXME: Find a better way to identify friends.
   if (isa<FunctionDecl>(this))
     if (getParent()->getRedeclContext()->isFileContext() &&
         getLexicalParent()->getRedeclContext()->isRecord())

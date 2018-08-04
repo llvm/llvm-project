@@ -15,6 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "handle_llvm.h"
+#include "input_arrays.h"
 
 #include "llvm/ADT/Triple.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -48,6 +49,9 @@
 
 using namespace llvm;
 
+// Define a type for the functions that are compiled and executed
+typedef void (*LLVMFunc)(int*, int*, int*, int);
+
 // Helper function to parse command line args and find the optimization level
 static void getOptLevel(const std::vector<const char *> &ExtraArgs,
                               CodeGenOpt::Level &OLvl) {
@@ -68,7 +72,7 @@ static void getOptLevel(const std::vector<const char *> &ExtraArgs,
   }
 }
 
-void ErrorAndExit(std::string message) {
+static void ErrorAndExit(std::string message) {
   errs()<< "ERROR: " << message << "\n";
   std::exit(1);
 }
@@ -88,7 +92,7 @@ static void AddOptimizationPasses(legacy::PassManagerBase &MPM,
 }
 
 // Mimics the opt tool to run an optimization pass over the provided IR
-std::string OptLLVM(const std::string &IR, CodeGenOpt::Level OLvl) {
+static std::string OptLLVM(const std::string &IR, CodeGenOpt::Level OLvl) {
   // Create a module that will run the optimization passes
   SMDiagnostic Err;
   LLVMContext Context;
@@ -117,11 +121,19 @@ std::string OptLLVM(const std::string &IR, CodeGenOpt::Level OLvl) {
   return OS.str();
 }
 
-void CreateAndRunJITFun(const std::string &IR, CodeGenOpt::Level OLvl) {
+// Takes a function and runs it on a set of inputs
+// First determines whether f is the optimized or unoptimized function
+static void RunFuncOnInputs(LLVMFunc f, int Arr[kNumArrays][kArraySize]) {
+  for (int i = 0; i < kNumArrays / 3; i++)
+    f(Arr[i], Arr[i + (kNumArrays / 3)], Arr[i + (2 * kNumArrays / 3)],
+      kArraySize);
+}
+
+// Takes a string of IR and compiles it using LLVM's JIT Engine
+static void CreateAndRunJITFunc(const std::string &IR, CodeGenOpt::Level OLvl) {
   SMDiagnostic Err;
   LLVMContext Context;
-  std::unique_ptr<Module> M = parseIR(MemoryBufferRef(IR, "IR"), Err,
-                                          Context);
+  std::unique_ptr<Module> M = parseIR(MemoryBufferRef(IR, "IR"), Err, Context);
   if (!M)
     ErrorAndExit("Could not parse IR");
 
@@ -148,7 +160,6 @@ void CreateAndRunJITFun(const std::string &IR, CodeGenOpt::Level OLvl) {
   EE->finalizeObject();
   EE->runStaticConstructorsDestructors(false);
 
-  typedef void (*func)(int*, int*, int*, int);
 #if defined(__GNUC__) && !defined(__clang) &&                                  \
     ((__GNUC__ == 4) && (__GNUC_MINOR__ < 9))
 // Silence
@@ -161,17 +172,14 @@ void CreateAndRunJITFun(const std::string &IR, CodeGenOpt::Level OLvl) {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
 #endif
-  func f = reinterpret_cast<func>(EE->getPointerToFunction(EntryFunc));
+  LLVMFunc f = reinterpret_cast<LLVMFunc>(EE->getPointerToFunction(EntryFunc));
 #if defined(__GNUC__) && !defined(__clang) &&                                  \
     ((__GNUC__ == 4) && (__GNUC_MINOR__ < 9))
 #pragma GCC diagnostic pop
 #endif
 
-  // Define some dummy arrays to use an input for now
-  int a[] = {1};
-  int b[] = {1};
-  int c[] = {1};
-  f(a, b, c, 1);
+  // Figure out if we are running the optimized func or the unoptimized func
+  RunFuncOnInputs(f, (OLvl == CodeGenOpt::None) ? UnoptArrays : OptArrays);
 
   EE->runStaticConstructorsDestructors(true);
 }
@@ -180,6 +188,10 @@ void CreateAndRunJITFun(const std::string &IR, CodeGenOpt::Level OLvl) {
 // Mimics the lli tool to JIT the LLVM IR code and execute it
 void clang_fuzzer::HandleLLVM(const std::string &IR,
                               const std::vector<const char *> &ExtraArgs) {
+  // Populate OptArrays and UnoptArrays with the arrays from InputArrays
+  memcpy(OptArrays, InputArrays, kTotalSize);
+  memcpy(UnoptArrays, InputArrays, kTotalSize);
+
   // Parse ExtraArgs to set the optimization level
   CodeGenOpt::Level OLvl;
   getOptLevel(ExtraArgs, OLvl);
@@ -187,8 +199,11 @@ void clang_fuzzer::HandleLLVM(const std::string &IR,
   // First we optimize the IR by running a loop vectorizer pass
   std::string OptIR = OptLLVM(IR, OLvl);
 
-  CreateAndRunJITFun(OptIR, OLvl);
-  CreateAndRunJITFun(IR, CodeGenOpt::None);
-  
+  CreateAndRunJITFunc(OptIR, OLvl);
+  CreateAndRunJITFunc(IR, CodeGenOpt::None);
+
+  if (memcmp(OptArrays, UnoptArrays, kTotalSize))
+    ErrorAndExit("!!!BUG!!!");
+
   return;
 }

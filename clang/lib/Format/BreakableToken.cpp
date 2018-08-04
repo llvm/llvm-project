@@ -102,6 +102,8 @@ static BreakableToken::Split getCommentSplit(StringRef Text,
     else if (Style.Language == FormatStyle::LK_JavaScript &&
              SpaceOffset + 1 < Text.size() && Text[SpaceOffset + 1] == '{')
       SpaceOffset = Text.find_last_of(Blanks, SpaceOffset);
+    else
+      break;
   }
 
   if (SpaceOffset == StringRef::npos ||
