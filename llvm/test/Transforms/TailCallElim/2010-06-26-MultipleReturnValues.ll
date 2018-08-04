@@ -1,4 +1,4 @@
-; RUN: opt < %s -tailcallelim -S | FileCheck %s
+; RUN: opt < %s -tailcallelim -verify-dom-info -S | FileCheck %s
 ; PR7328
 ; PR7506
 define i32 @foo(i32 %x) {
