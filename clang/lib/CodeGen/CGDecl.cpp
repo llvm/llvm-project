@@ -1093,59 +1093,6 @@ void CodeGenFunction::EmitLifetimeEnd(llvm::Value *Size, llvm::Value *Addr) {
   C->setDoesNotThrow();
 }
 
-void CodeGenFunction::EmitAndRegisterVariableArrayDimensions(
-    CGDebugInfo *DI, const VarDecl &D, bool EmitDebugInfo) {
-  // For each dimension stores its QualType and corresponding
-  // size-expression Value.
-  SmallVector<CodeGenFunction::VlaSizePair, 4> Dimensions;
-
-  // Break down the array into individual dimensions.
-  QualType Type1D = D.getType();
-  while (getContext().getAsVariableArrayType(Type1D)) {
-    auto VlaSize = getVLAElements1D(Type1D);
-    if (auto *C = dyn_cast<llvm::ConstantInt>(VlaSize.NumElts))
-      Dimensions.emplace_back(C, Type1D.getUnqualifiedType());
-    else {
-      auto SizeExprAddr = CreateDefaultAlignTempAlloca(
-          VlaSize.NumElts->getType(), "__vla_expr");
-      Builder.CreateStore(VlaSize.NumElts, SizeExprAddr);
-      Dimensions.emplace_back(SizeExprAddr.getPointer(),
-                              Type1D.getUnqualifiedType());
-    }
-    Type1D = VlaSize.Type;
-  }
-
-  if (!EmitDebugInfo)
-    return;
-
-  // Register each dimension's size-expression with a DILocalVariable,
-  // so that it can be used by CGDebugInfo when instantiating a DISubrange
-  // to describe this array.
-  for (auto &VlaSize : Dimensions) {
-    llvm::Metadata *MD;
-    if (auto *C = dyn_cast<llvm::ConstantInt>(VlaSize.NumElts))
-      MD = llvm::ConstantAsMetadata::get(C);
-    else {
-      // Create an artificial VarDecl to generate debug info for.
-      IdentifierInfo &NameIdent = getContext().Idents.getOwn(
-          cast<llvm::AllocaInst>(VlaSize.NumElts)->getName());
-      auto VlaExprTy = VlaSize.NumElts->getType()->getPointerElementType();
-      auto QT = getContext().getIntTypeForBitwidth(
-          VlaExprTy->getScalarSizeInBits(), false);
-      auto *ArtificialDecl = VarDecl::Create(
-          getContext(), const_cast<DeclContext *>(D.getDeclContext()),
-          D.getLocation(), D.getLocation(), &NameIdent, QT,
-          getContext().CreateTypeSourceInfo(QT), SC_Auto);
-      ArtificialDecl->setImplicit();
-
-      MD = DI->EmitDeclareOfAutoVariable(ArtificialDecl, VlaSize.NumElts,
-                                         Builder);
-    }
-    assert(MD && "No Size expression debug node created");
-    DI->registerVLASizeExpression(VlaSize.Type, MD);
-  }
-}
-
 /// EmitAutoVarAlloca - Emit the alloca and debug information for a
 /// local variable.  Does not emit initialization or destruction.
 CodeGenFunction::AutoVarEmission
@@ -1165,10 +1112,6 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
   // If the type is variably-modified, emit all the VLA sizes for it.
   if (Ty->isVariablyModifiedType())
     EmitVariablyModifiedType(Ty);
-
-  auto *DI = getDebugInfo();
-  bool EmitDebugInfo = DI && CGM.getCodeGenOpts().getDebugInfo() >=
-                                 codegenoptions::LimitedDebugInfo;
 
   Address address = Address::invalid();
   Address AllocaAddr = Address::invalid();
@@ -1316,17 +1259,14 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
       pushStackRestore(NormalCleanup, Stack);
     }
 
-    auto VlaSize = getVLASize(Ty);
-    llvm::Type *llvmTy = ConvertTypeForMem(VlaSize.Type);
+    llvm::Value *elementCount;
+    QualType elementType;
+    std::tie(elementCount, elementType) = getVLASize(Ty);
+
+    llvm::Type *llvmTy = ConvertTypeForMem(elementType);
 
     // Allocate memory for the array.
-    address = CreateTempAlloca(llvmTy, alignment, "vla", VlaSize.NumElts,
-                               &AllocaAddr);
-
-    // If we have debug info enabled, properly describe the VLA dimensions for
-    // this type by registering the vla size expression for each of the
-    // dimensions.
-    EmitAndRegisterVariableArrayDimensions(DI, D, EmitDebugInfo);
+    address = CreateTempAlloca(llvmTy, alignment, "vla", elementCount);
   }
 
   setAddrOfLocalVar(&D, address);
@@ -1334,10 +1274,14 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
   emission.AllocaAddr = AllocaAddr;
 
   // Emit debug info for local var declaration.
-  if (EmitDebugInfo && HaveInsertPoint()) {
-    DI->setLocation(D.getLocation());
-    (void)DI->EmitDeclareOfAutoVariable(&D, address.getPointer(), Builder);
-  }
+  if (HaveInsertPoint())
+    if (CGDebugInfo *DI = getDebugInfo()) {
+      if (CGM.getCodeGenOpts().getDebugInfo() >=
+          codegenoptions::LimitedDebugInfo) {
+        DI->setLocation(D.getLocation());
+        DI->EmitDeclareOfAutoVariable(&D, address.getPointer(), Builder);
+      }
+    }
 
   if (D.hasAttr<AnnotateAttr>())
     EmitVarAnnotations(&D, address.getPointer());
