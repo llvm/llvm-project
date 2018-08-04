@@ -2104,7 +2104,6 @@ void llvm::ParseInputMachO(MachOUniversalBinary *UB) {
         } else if (auto E = isNotObjectErrorInvalidFileType(
                     ObjOrErr.takeError())) {
           report_error(Filename, std::move(E));
-          continue;
         } else if (Expected<std::unique_ptr<Archive>> AOrErr =
                         I->getAsArchive()) {
           std::unique_ptr<Archive> &A = *AOrErr;
@@ -2153,7 +2152,6 @@ void llvm::ParseInputMachO(MachOUniversalBinary *UB) {
     } else if (auto E = isNotObjectErrorInvalidFileType(
                 ObjOrErr.takeError())) {
       report_error(StringRef(), Filename, std::move(E), ArchitectureName);
-      continue;
     } else if (Expected<std::unique_ptr<Archive>> AOrErr =
                   I->getAsArchive()) {
       std::unique_ptr<Archive> &A = *AOrErr;

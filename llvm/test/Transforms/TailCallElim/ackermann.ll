@@ -1,6 +1,6 @@
 ; REQUIRES: asserts
 ; This function contains two tail calls, which should be eliminated
-; RUN: opt < %s -tailcallelim -stats -disable-output 2>&1 | grep "2 tailcallelim"
+; RUN: opt < %s -tailcallelim -verify-dom-info -stats -disable-output 2>&1 | grep "2 tailcallelim"
 
 define i32 @Ack(i32 %M.1, i32 %N.1) {
 entry:

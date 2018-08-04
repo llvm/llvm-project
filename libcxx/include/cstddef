@@ -66,10 +66,10 @@ enum class byte : unsigned char {};
 
 constexpr byte  operator| (byte  __lhs, byte __rhs) noexcept
 {
-	return static_cast<byte>(
-	  static_cast<unsigned char>(
-	     static_cast<unsigned int>(__lhs) | static_cast<unsigned int>(__rhs)
-	));
+    return static_cast<byte>(
+      static_cast<unsigned char>(
+         static_cast<unsigned int>(__lhs) | static_cast<unsigned int>(__rhs)
+    ));
 }
 
 constexpr byte& operator|=(byte& __lhs, byte __rhs) noexcept
@@ -77,10 +77,10 @@ constexpr byte& operator|=(byte& __lhs, byte __rhs) noexcept
 
 constexpr byte  operator& (byte  __lhs, byte __rhs) noexcept
 {
-	return static_cast<byte>(
-	  static_cast<unsigned char>(
-	     static_cast<unsigned int>(__lhs) & static_cast<unsigned int>(__rhs)
-	));
+    return static_cast<byte>(
+      static_cast<unsigned char>(
+         static_cast<unsigned int>(__lhs) & static_cast<unsigned int>(__rhs)
+    ));
 }
 
 constexpr byte& operator&=(byte& __lhs, byte __rhs) noexcept
@@ -88,13 +88,13 @@ constexpr byte& operator&=(byte& __lhs, byte __rhs) noexcept
 
 constexpr byte  operator^ (byte  __lhs, byte __rhs) noexcept
 {
-	return static_cast<byte>(
-	  static_cast<unsigned char>(
-	     static_cast<unsigned int>(__lhs) ^ static_cast<unsigned int>(__rhs)
-	));
+    return static_cast<byte>(
+      static_cast<unsigned char>(
+         static_cast<unsigned int>(__lhs) ^ static_cast<unsigned int>(__rhs)
+    ));
 }
 
-constexpr byte& operator^=(byte& __lhs, byte __rhs) noexcept 
+constexpr byte& operator^=(byte& __lhs, byte __rhs) noexcept
 { return __lhs = __lhs ^ __rhs; }
 
 constexpr byte  operator~ (byte __b) noexcept
