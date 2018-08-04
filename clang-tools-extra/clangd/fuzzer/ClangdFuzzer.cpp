@@ -30,7 +30,8 @@ extern "C" int LLVMFuzzerTestOneInput(uint8_t *data, size_t size) {
   clang::clangd::ClangdServer::Options Opts;
 
   // Initialize and run ClangdLSPServer.
-  clang::clangd::ClangdLSPServer LSPServer(Out, CCOpts, llvm::None, Opts);
+  clang::clangd::ClangdLSPServer LSPServer(Out, CCOpts, llvm::None, false,
+                                           Opts);
   // fmemopen isn't portable, but I think we only run the fuzzer on Linux.
   LSPServer.run(fmemopen(data, size, "r"));
   return 0;
