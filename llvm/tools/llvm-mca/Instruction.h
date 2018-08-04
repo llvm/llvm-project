@@ -384,8 +384,11 @@ public:
   Instruction *getInstruction() { return second; }
   const Instruction *getInstruction() const { return second; }
 
-  /// Returns true if  this InstRef has been populated.
+  /// Returns true if this references a valid instruction.
   bool isValid() const { return second != nullptr; }
+
+  /// Invalidate this reference.
+  void invalidate() { second = nullptr; }
 
 #ifndef NDEBUG
   void print(llvm::raw_ostream &OS) const { OS << getSourceIndex(); }

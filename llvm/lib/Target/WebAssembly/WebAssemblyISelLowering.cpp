@@ -871,7 +871,7 @@ SDValue WebAssemblyTargetLowering::LowerExternalSymbol(
   // functions.
   return DAG.getNode(WebAssemblyISD::Wrapper, DL, VT,
                      DAG.getTargetExternalSymbol(ES->getSymbol(), VT,
-                                                 /*TargetFlags=*/0x1));
+                                                 WebAssemblyII::MO_SYMBOL_FUNCTION));
 }
 
 SDValue WebAssemblyTargetLowering::LowerJumpTable(SDValue Op,

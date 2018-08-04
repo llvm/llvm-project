@@ -34710,6 +34710,73 @@ static SDValue combineAndLoadToBZHI(SDNode *Node, SelectionDAG &DAG,
   return SDValue();
 }
 
+// Look for (and (ctpop X), 1) which is the IR form of __builtin_parity.
+// Turn it into series of XORs and a setnp.
+static SDValue combineParity(SDNode *N, SelectionDAG &DAG,
+                             const X86Subtarget &Subtarget) {
+  EVT VT = N->getValueType(0);
+
+  // We only support 64-bit and 32-bit. 64-bit requires special handling
+  // unless the 64-bit popcnt instruction is legal.
+  if (VT != MVT::i32 && VT != MVT::i64)
+    return SDValue();
+
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  if (TLI.isTypeLegal(VT) && TLI.isOperationLegal(ISD::CTPOP, VT))
+    return SDValue();
+
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+
+  // LHS needs to be a single use CTPOP.
+  if (N0.getOpcode() != ISD::CTPOP || !N0.hasOneUse())
+    return SDValue();
+
+  // RHS needs to be 1.
+  if (!isOneConstant(N1))
+    return SDValue();
+
+  SDLoc DL(N);
+  SDValue X = N0.getOperand(0);
+
+  // If this is 64-bit, its always best to xor the two 32-bit pieces together
+  // even if we have popcnt.
+  if (VT == MVT::i64) {
+    SDValue Hi = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32,
+                             DAG.getNode(ISD::SRL, DL, VT, X,
+                                         DAG.getConstant(32, DL, MVT::i8)));
+    SDValue Lo = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, X);
+    X = DAG.getNode(ISD::XOR, DL, MVT::i32, Lo, Hi);
+    // Generate a 32-bit parity idiom. This will bring us back here if we need
+    // to expand it too.
+    SDValue Parity = DAG.getNode(ISD::AND, DL, MVT::i32,
+                                 DAG.getNode(ISD::CTPOP, DL, MVT::i32, X),
+                                 DAG.getConstant(1, DL, MVT::i32));
+    return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, Parity);
+  }
+  assert(VT == MVT::i32 && "Unexpected VT!");
+
+  // Xor the high and low 16-bits together using a 32-bit operation.
+  SDValue Hi16 = DAG.getNode(ISD::SRL, DL, VT, X,
+                             DAG.getConstant(16, DL, MVT::i8));
+  X = DAG.getNode(ISD::XOR, DL, VT, X, Hi16);
+
+  // Finally xor the low 2 bytes together and use a 8-bit flag setting xor.
+  // This should allow an h-reg to be used to save a shift.
+  // FIXME: We only get an h-reg in 32-bit mode.
+  SDValue Hi = DAG.getNode(ISD::TRUNCATE, DL, MVT::i8,
+                           DAG.getNode(ISD::SRL, DL, VT, X,
+                                       DAG.getConstant(8, DL, MVT::i8)));
+  SDValue Lo = DAG.getNode(ISD::TRUNCATE, DL, MVT::i8, X);
+  SDVTList VTs = DAG.getVTList(MVT::i8, MVT::i32);
+  SDValue Flags = DAG.getNode(X86ISD::XOR, DL, VTs, Lo, Hi).getValue(1);
+
+  // Copy the inverse of the parity flag into a register with setcc.
+  SDValue Setnp = getSETCC(X86::COND_NP, Flags, DL, DAG);
+  // Zero extend to original type.
+  return DAG.getNode(ISD::ZERO_EXTEND, DL, N->getValueType(0), Setnp);
+}
+
 static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
                           TargetLowering::DAGCombinerInfo &DCI,
                           const X86Subtarget &Subtarget) {
@@ -34736,6 +34803,10 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
                          DAG.getNode(ISD::AND, dl, MVT::i32, LHS, RHS));
     }
   }
+
+  // This must be done before legalization has expanded the ctpop.
+  if (SDValue V = combineParity(N, DAG, Subtarget))
+    return V;
 
   if (DCI.isBeforeLegalizeOps())
     return SDValue();

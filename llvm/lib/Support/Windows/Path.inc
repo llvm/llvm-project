@@ -450,7 +450,7 @@ static std::error_code rename_handle(HANDLE FromHandle, const Twine &To) {
       if (std::error_code EC2 = realPathFromHandle(FromHandle, WideFrom))
         return EC2;
       if (::MoveFileExW(WideFrom.begin(), WideTo.begin(),
-                        MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED))
+                        MOVEFILE_REPLACE_EXISTING))
         return std::error_code();
       return mapWindowsError(GetLastError());
     }

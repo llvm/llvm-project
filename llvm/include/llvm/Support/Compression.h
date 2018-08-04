@@ -23,17 +23,15 @@ class StringRef;
 
 namespace zlib {
 
-enum CompressionLevel {
-  NoCompression,
-  DefaultCompression,
-  BestSpeedCompression,
-  BestSizeCompression
-};
+static constexpr int NoCompression = 0;
+static constexpr int BestSpeedCompression = 1;
+static constexpr int DefaultCompression = 6;
+static constexpr int BestSizeCompression = 9;
 
 bool isAvailable();
 
 Error compress(StringRef InputBuffer, SmallVectorImpl<char> &CompressedBuffer,
-               CompressionLevel Level = DefaultCompression);
+               int Level = DefaultCompression);
 
 Error uncompress(StringRef InputBuffer, char *UncompressedBuffer,
                  size_t &UncompressedSize);
@@ -49,4 +47,3 @@ uint32_t crc32(StringRef Buffer);
 } // End of namespace llvm
 
 #endif
-

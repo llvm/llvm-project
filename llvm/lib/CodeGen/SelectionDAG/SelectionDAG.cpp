@@ -3622,21 +3622,102 @@ bool SelectionDAG::isBaseWithConstantOffset(SDValue Op) const {
   return true;
 }
 
-bool SelectionDAG::isKnownNeverNaN(SDValue Op) const {
+bool SelectionDAG::isKnownNeverNaN(SDValue Op, bool SNaN, unsigned Depth) const {
   // If we're told that NaNs won't happen, assume they won't.
-  if (getTarget().Options.NoNaNsFPMath)
+  if (getTarget().Options.NoNaNsFPMath || Op->getFlags().hasNoNaNs())
     return true;
 
-  if (Op->getFlags().hasNoNaNs())
-    return true;
+  if (Depth == 6)
+    return false; // Limit search depth.
 
+  // TODO: Handle vectors.
   // If the value is a constant, we can obviously see if it is a NaN or not.
-  if (const ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(Op))
-    return !C->getValueAPF().isNaN();
+  if (const ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(Op)) {
+    return !C->getValueAPF().isNaN() ||
+           (SNaN && !C->getValueAPF().isSignaling());
+  }
 
-  // TODO: Recognize more cases here.
+  unsigned Opcode = Op.getOpcode();
+  switch (Opcode) {
+  case ISD::FADD:
+  case ISD::FSUB:
+  case ISD::FMUL: {
+    if (SNaN)
+      return true;
+    return isKnownNeverNaN(Op.getOperand(0), SNaN, Depth + 1) &&
+           isKnownNeverNaN(Op.getOperand(1), SNaN, Depth + 1);
+  }
+  case ISD::FCANONICALIZE:
+  case ISD::FEXP:
+  case ISD::FEXP2:
+  case ISD::FTRUNC:
+  case ISD::FFLOOR:
+  case ISD::FCEIL:
+  case ISD::FROUND:
+  case ISD::FRINT:
+  case ISD::FNEARBYINT: {
+    if (SNaN)
+      return true;
+    return isKnownNeverNaN(Op.getOperand(0), SNaN, Depth + 1);
+  }
+  case ISD::FABS:
+  case ISD::FNEG:
+  case ISD::FCOPYSIGN: {
+    return isKnownNeverNaN(Op.getOperand(0), SNaN, Depth + 1);
+  }
+  case ISD::SELECT:
+    return isKnownNeverNaN(Op.getOperand(1), SNaN, Depth + 1) &&
+           isKnownNeverNaN(Op.getOperand(2), SNaN, Depth + 1);
+  case ISD::FDIV:
+  case ISD::FREM:
+  case ISD::FSIN:
+  case ISD::FCOS: {
+    if (SNaN)
+      return true;
+    // TODO: Need isKnownNeverInfinity
+    return false;
+  }
+  case ISD::FP_EXTEND:
+  case ISD::FP_ROUND: {
+    if (SNaN)
+      return true;
+    return isKnownNeverNaN(Op.getOperand(0), SNaN, Depth + 1);
+  }
+  case ISD::SINT_TO_FP:
+  case ISD::UINT_TO_FP:
+    return true;
+  case ISD::FMA:
+  case ISD::FMAD: {
+    if (SNaN)
+      return true;
+    return isKnownNeverNaN(Op.getOperand(0), SNaN, Depth + 1) &&
+           isKnownNeverNaN(Op.getOperand(1), SNaN, Depth + 1) &&
+           isKnownNeverNaN(Op.getOperand(2), SNaN, Depth + 1);
+  }
+  case ISD::FSQRT: // Need is known positive
+  case ISD::FLOG:
+  case ISD::FLOG2:
+  case ISD::FLOG10:
+  case ISD::FPOWI:
+  case ISD::FPOW: {
+    if (SNaN)
+      return true;
+    // TODO: Refine on operand
+    return false;
+  }
 
-  return false;
+  // TODO: Handle FMINNUM/FMAXNUM/FMINNAN/FMAXNAN when there is an agreement on
+  // what they should do.
+  default:
+    if (Opcode >= ISD::BUILTIN_OP_END ||
+        Opcode == ISD::INTRINSIC_WO_CHAIN ||
+        Opcode == ISD::INTRINSIC_W_CHAIN ||
+        Opcode == ISD::INTRINSIC_VOID) {
+      return TLI->isKnownNeverNaNForTargetNode(Op, *this, SNaN, Depth);
+    }
+
+    return false;
+  }
 }
 
 bool SelectionDAG::isKnownNeverZeroFloat(SDValue Op) const {

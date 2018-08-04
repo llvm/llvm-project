@@ -887,48 +887,38 @@ defm LXADD : ATOMIC_LOAD_BINOP<0xc0, 0xc1, "xadd", "atomic_load_add">, TB, LOCK;
  * extremely late to prevent them from being accidentally reordered in the backend
  * (see below the RELEASE_MOV* / ACQUIRE_MOV* pseudo-instructions)
  */
-multiclass RELEASE_BINOP_MI<SDNode op> {
-    def NAME#8mi : I<0, Pseudo, (outs), (ins i8mem:$dst, i8imm:$src),
-        "#BINOP "#NAME#"8mi PSEUDO!",
-        [(atomic_store_8 addr:$dst, (op
-            (atomic_load_8 addr:$dst), (i8 imm:$src)))]>;
-    def NAME#8mr : I<0, Pseudo, (outs), (ins i8mem:$dst, GR8:$src),
-        "#BINOP "#NAME#"8mr PSEUDO!",
-        [(atomic_store_8 addr:$dst, (op
-            (atomic_load_8 addr:$dst), GR8:$src))]>;
-    def NAME#16mi : I<0, Pseudo, (outs), (ins i16mem:$dst, i16imm:$src),
-        "#BINOP "#NAME#"16mi PSEUDO!",
-        [(atomic_store_16 addr:$dst, (op
-            (atomic_load_16 addr:$dst), (i16 imm:$src)))]>;
-    def NAME#16mr : I<0, Pseudo, (outs), (ins i16mem:$dst, GR16:$src),
-        "#BINOP "#NAME#"16mr PSEUDO!",
-        [(atomic_store_16 addr:$dst, (op
-            (atomic_load_16 addr:$dst), GR16:$src))]>;
-    def NAME#32mi : I<0, Pseudo, (outs), (ins i32mem:$dst, i32imm:$src),
-        "#BINOP "#NAME#"32mi PSEUDO!",
-        [(atomic_store_32 addr:$dst, (op
-            (atomic_load_32 addr:$dst), (i32 imm:$src)))]>;
-    def NAME#32mr : I<0, Pseudo, (outs), (ins i32mem:$dst, GR32:$src),
-        "#BINOP "#NAME#"32mr PSEUDO!",
-        [(atomic_store_32 addr:$dst, (op
-            (atomic_load_32 addr:$dst), GR32:$src))]>;
-    def NAME#64mi32 : I<0, Pseudo, (outs), (ins i64mem:$dst, i64i32imm:$src),
-        "#BINOP "#NAME#"64mi32 PSEUDO!",
-        [(atomic_store_64 addr:$dst, (op
-            (atomic_load_64 addr:$dst), (i64immSExt32:$src)))]>;
-    def NAME#64mr : I<0, Pseudo, (outs), (ins i64mem:$dst, GR64:$src),
-        "#BINOP "#NAME#"64mr PSEUDO!",
-        [(atomic_store_64 addr:$dst, (op
-            (atomic_load_64 addr:$dst), GR64:$src))]>;
+multiclass RELEASE_BINOP_MI<string Name, SDNode op> {
+  def : Pat<(atomic_store_8 addr:$dst,
+             (op (atomic_load_8 addr:$dst), (i8 imm:$src))),
+            (!cast<Instruction>(Name#"8mi") addr:$dst, imm:$src)>;
+  def : Pat<(atomic_store_16 addr:$dst,
+             (op (atomic_load_16 addr:$dst), (i16 imm:$src))),
+            (!cast<Instruction>(Name#"16mi") addr:$dst, imm:$src)>;
+  def : Pat<(atomic_store_32 addr:$dst,
+             (op (atomic_load_32 addr:$dst), (i32 imm:$src))),
+            (!cast<Instruction>(Name#"32mi") addr:$dst, imm:$src)>;
+  def : Pat<(atomic_store_64 addr:$dst,
+             (op (atomic_load_64 addr:$dst), (i64immSExt32:$src))),
+            (!cast<Instruction>(Name#"64mi32") addr:$dst, (i64immSExt32:$src))>;
+
+  def : Pat<(atomic_store_8 addr:$dst,
+             (op (atomic_load_8 addr:$dst), (i8 GR8:$src))),
+            (!cast<Instruction>(Name#"8mr") addr:$dst, GR8:$src)>;
+  def : Pat<(atomic_store_16 addr:$dst,
+             (op (atomic_load_16 addr:$dst), (i16 GR16:$src))),
+            (!cast<Instruction>(Name#"16mr") addr:$dst, GR16:$src)>;
+  def : Pat<(atomic_store_32 addr:$dst,
+             (op (atomic_load_32 addr:$dst), (i32 GR32:$src))),
+            (!cast<Instruction>(Name#"32mr") addr:$dst, GR32:$src)>;
+  def : Pat<(atomic_store_64 addr:$dst,
+             (op (atomic_load_64 addr:$dst), (i64 GR64:$src))),
+            (!cast<Instruction>(Name#"64mr") addr:$dst, GR64:$src)>;
 }
-let Defs = [EFLAGS], SchedRW = [WriteMicrocoded] in {
-  defm RELEASE_ADD : RELEASE_BINOP_MI<add>;
-  defm RELEASE_AND : RELEASE_BINOP_MI<and>;
-  defm RELEASE_OR  : RELEASE_BINOP_MI<or>;
-  defm RELEASE_XOR : RELEASE_BINOP_MI<xor>;
-  // Note: we don't deal with sub, because substractions of constants are
-  //       optimized into additions before this code can run.
-}
+defm : RELEASE_BINOP_MI<"ADD", add>;
+defm : RELEASE_BINOP_MI<"AND", and>;
+defm : RELEASE_BINOP_MI<"OR",  or>;
+defm : RELEASE_BINOP_MI<"XOR", xor>;
+defm : RELEASE_BINOP_MI<"SUB", sub>;
 
 // Same as above, but for floating-point.
 // FIXME: imm version.
@@ -953,88 +943,64 @@ defm RELEASE_FADD : RELEASE_FP_BINOP_MI<fadd>;
 // FIXME: Add fsub, fmul, fdiv, ...
 }
 
-multiclass RELEASE_UNOP<dag dag8, dag dag16, dag dag32, dag dag64> {
-    def NAME#8m : I<0, Pseudo, (outs), (ins i8mem:$dst),
-        "#UNOP "#NAME#"8m PSEUDO!",
-        [(atomic_store_8 addr:$dst, dag8)]>;
-    def NAME#16m : I<0, Pseudo, (outs), (ins i16mem:$dst),
-        "#UNOP "#NAME#"16m PSEUDO!",
-        [(atomic_store_16 addr:$dst, dag16)]>;
-    def NAME#32m : I<0, Pseudo, (outs), (ins i32mem:$dst),
-        "#UNOP "#NAME#"32m PSEUDO!",
-        [(atomic_store_32 addr:$dst, dag32)]>;
-    def NAME#64m : I<0, Pseudo, (outs), (ins i64mem:$dst),
-        "#UNOP "#NAME#"64m PSEUDO!",
-        [(atomic_store_64 addr:$dst, dag64)]>;
+multiclass RELEASE_UNOP<string Name, dag dag8, dag dag16, dag dag32,
+                        dag dag64> {
+  def : Pat<(atomic_store_8 addr:$dst, dag8),
+            (!cast<Instruction>(Name#8m) addr:$dst)>;
+  def : Pat<(atomic_store_16 addr:$dst, dag16),
+            (!cast<Instruction>(Name#16m) addr:$dst)>;
+  def : Pat<(atomic_store_32 addr:$dst, dag32),
+            (!cast<Instruction>(Name#32m) addr:$dst)>;
+  def : Pat<(atomic_store_64 addr:$dst, dag64),
+            (!cast<Instruction>(Name#64m) addr:$dst)>;
 }
 
-let Defs = [EFLAGS], Predicates = [UseIncDec], SchedRW = [WriteMicrocoded] in {
-  defm RELEASE_INC : RELEASE_UNOP<
+let Predicates = [UseIncDec] in {
+  defm : RELEASE_UNOP<"INC",
       (add (atomic_load_8  addr:$dst), (i8 1)),
       (add (atomic_load_16 addr:$dst), (i16 1)),
       (add (atomic_load_32 addr:$dst), (i32 1)),
       (add (atomic_load_64 addr:$dst), (i64 1))>;
-  defm RELEASE_DEC : RELEASE_UNOP<
+  defm : RELEASE_UNOP<"DEC",
       (add (atomic_load_8  addr:$dst), (i8 -1)),
       (add (atomic_load_16 addr:$dst), (i16 -1)),
       (add (atomic_load_32 addr:$dst), (i32 -1)),
       (add (atomic_load_64 addr:$dst), (i64 -1))>;
 }
 
-let Defs = [EFLAGS] in {
-  defm RELEASE_NEG : RELEASE_UNOP<
-      (ineg (i8 (atomic_load_8  addr:$dst))),
-      (ineg (i16 (atomic_load_16 addr:$dst))),
-      (ineg (i32 (atomic_load_32 addr:$dst))),
-      (ineg (i64 (atomic_load_64 addr:$dst)))>;
-}
-// NOT doesn't set flags.
-defm RELEASE_NOT : RELEASE_UNOP<
+defm : RELEASE_UNOP<"NEG",
+    (ineg (i8 (atomic_load_8  addr:$dst))),
+    (ineg (i16 (atomic_load_16 addr:$dst))),
+    (ineg (i32 (atomic_load_32 addr:$dst))),
+    (ineg (i64 (atomic_load_64 addr:$dst)))>;
+defm : RELEASE_UNOP<"NOT",
     (not (i8 (atomic_load_8  addr:$dst))),
     (not (i16 (atomic_load_16 addr:$dst))),
     (not (i32 (atomic_load_32 addr:$dst))),
     (not (i64 (atomic_load_64 addr:$dst)))>;
 
-let SchedRW = [WriteMicrocoded] in {
-def RELEASE_MOV8mi : I<0, Pseudo, (outs), (ins i8mem:$dst, i8imm:$src),
-            "#RELEASE_MOV8mi PSEUDO!",
-            [(atomic_store_8 addr:$dst, (i8 imm:$src))]>;
-def RELEASE_MOV16mi : I<0, Pseudo, (outs), (ins i16mem:$dst, i16imm:$src),
-            "#RELEASE_MOV16mi PSEUDO!",
-            [(atomic_store_16 addr:$dst, (i16 imm:$src))]>;
-def RELEASE_MOV32mi : I<0, Pseudo, (outs), (ins i32mem:$dst, i32imm:$src),
-            "#RELEASE_MOV32mi PSEUDO!",
-            [(atomic_store_32 addr:$dst, (i32 imm:$src))]>;
-def RELEASE_MOV64mi32 : I<0, Pseudo, (outs), (ins i64mem:$dst, i64i32imm:$src),
-            "#RELEASE_MOV64mi32 PSEUDO!",
-            [(atomic_store_64 addr:$dst, i64immSExt32:$src)]>;
+def : Pat<(atomic_store_8 addr:$dst, (i8 imm:$src)),
+          (MOV8mi addr:$dst, imm:$src)>;
+def : Pat<(atomic_store_16 addr:$dst, (i16 imm:$src)),
+          (MOV16mi addr:$dst, imm:$src)>;
+def : Pat<(atomic_store_32 addr:$dst, (i32 imm:$src)),
+          (MOV32mi addr:$dst, imm:$src)>;
+def : Pat<(atomic_store_64 addr:$dst, (i64immSExt32:$src)),
+          (MOV64mi32 addr:$dst, i64immSExt32:$src)>;
 
-def RELEASE_MOV8mr  : I<0, Pseudo, (outs), (ins i8mem :$dst, GR8 :$src),
-                        "#RELEASE_MOV8mr PSEUDO!",
-                        [(atomic_store_8  addr:$dst, GR8 :$src)]>;
-def RELEASE_MOV16mr : I<0, Pseudo, (outs), (ins i16mem:$dst, GR16:$src),
-                        "#RELEASE_MOV16mr PSEUDO!",
-                        [(atomic_store_16 addr:$dst, GR16:$src)]>;
-def RELEASE_MOV32mr : I<0, Pseudo, (outs), (ins i32mem:$dst, GR32:$src),
-                        "#RELEASE_MOV32mr PSEUDO!",
-                        [(atomic_store_32 addr:$dst, GR32:$src)]>;
-def RELEASE_MOV64mr : I<0, Pseudo, (outs), (ins i64mem:$dst, GR64:$src),
-                        "#RELEASE_MOV64mr PSEUDO!",
-                        [(atomic_store_64 addr:$dst, GR64:$src)]>;
+def : Pat<(atomic_store_8 addr:$dst, GR8:$src),
+          (MOV8mr addr:$dst, GR8:$src)>;
+def : Pat<(atomic_store_16 addr:$dst, GR16:$src),
+          (MOV16mr addr:$dst, GR16:$src)>;
+def : Pat<(atomic_store_32 addr:$dst, GR32:$src),
+          (MOV32mr addr:$dst, GR32:$src)>;
+def : Pat<(atomic_store_64 addr:$dst, GR64:$src),
+          (MOV64mr addr:$dst, GR64:$src)>;
 
-def ACQUIRE_MOV8rm  : I<0, Pseudo, (outs GR8 :$dst), (ins i8mem :$src),
-                      "#ACQUIRE_MOV8rm PSEUDO!",
-                      [(set GR8:$dst,  (atomic_load_8  addr:$src))]>;
-def ACQUIRE_MOV16rm : I<0, Pseudo, (outs GR16:$dst), (ins i16mem:$src),
-                      "#ACQUIRE_MOV16rm PSEUDO!",
-                      [(set GR16:$dst, (atomic_load_16 addr:$src))]>;
-def ACQUIRE_MOV32rm : I<0, Pseudo, (outs GR32:$dst), (ins i32mem:$src),
-                      "#ACQUIRE_MOV32rm PSEUDO!",
-                      [(set GR32:$dst, (atomic_load_32 addr:$src))]>;
-def ACQUIRE_MOV64rm : I<0, Pseudo, (outs GR64:$dst), (ins i64mem:$src),
-                      "#ACQUIRE_MOV64rm PSEUDO!",
-                      [(set GR64:$dst, (atomic_load_64 addr:$src))]>;
-} // SchedRW
+def : Pat<(i8  (atomic_load_8 addr:$src)),  (MOV8rm addr:$src)>;
+def : Pat<(i16 (atomic_load_16 addr:$src)), (MOV16rm addr:$src)>;
+def : Pat<(i32 (atomic_load_32 addr:$src)), (MOV32rm addr:$src)>;
+def : Pat<(i64 (atomic_load_64 addr:$src)), (MOV64rm addr:$src)>;
 
 //===----------------------------------------------------------------------===//
 // DAG Pattern Matching Rules

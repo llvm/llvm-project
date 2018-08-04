@@ -195,7 +195,7 @@ void NVPTXTargetMachine::adjustPassManager(PassManagerBuilder &Builder) {
   Builder.addExtension(
     PassManagerBuilder::EP_EarlyAsPossible,
     [&](const PassManagerBuilder &, legacy::PassManagerBase &PM) {
-      PM.add(createNVVMReflectPass());
+      PM.add(createNVVMReflectPass(Subtarget.getSmVersion()));
       PM.add(createNVVMIntrRangePass(Subtarget.getSmVersion()));
     });
 }
@@ -258,7 +258,8 @@ void NVPTXPassConfig::addIRPasses() {
   // it here does nothing.  But since we need it for correctness when lowering
   // to NVPTX, run it here too, in case whoever built our pass pipeline didn't
   // call addEarlyAsPossiblePasses.
-  addPass(createNVVMReflectPass());
+  const NVPTXSubtarget &ST = *getTM<NVPTXTargetMachine>().getSubtargetImpl();
+  addPass(createNVVMReflectPass(ST.getSmVersion()));
 
   if (getOptLevel() != CodeGenOpt::None)
     addPass(createNVPTXImageOptimizerPass());

@@ -1484,8 +1484,15 @@ public:
   ///     X|Cst == X+Cst iff X&Cst = 0.
   bool isBaseWithConstantOffset(SDValue Op) const;
 
-  /// Test whether the given SDValue is known to never be NaN.
-  bool isKnownNeverNaN(SDValue Op) const;
+  /// Test whether the given SDValue is known to never be NaN. If \p SNaN is
+  /// true, returns if \p Op is known to never be a signaling NaN (it may still
+  /// be a qNaN).
+  bool isKnownNeverNaN(SDValue Op, bool SNaN = false, unsigned Depth = 0) const;
+
+  /// \returns true if \p Op is known to never be a signaling NaN.
+  bool isKnownNeverSNaN(SDValue Op, unsigned Depth = 0) const {
+    return isKnownNeverNaN(Op, true, Depth);
+  }
 
   /// Test whether the given floating point SDValue is known to never be
   /// positive or negative zero.

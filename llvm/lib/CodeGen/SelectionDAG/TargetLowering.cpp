@@ -1711,6 +1711,19 @@ bool TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
   return false;
 }
 
+bool TargetLowering::isKnownNeverNaNForTargetNode(SDValue Op,
+                                                  const SelectionDAG &DAG,
+                                                  bool SNaN,
+                                                  unsigned Depth) const {
+  assert((Op.getOpcode() >= ISD::BUILTIN_OP_END ||
+          Op.getOpcode() == ISD::INTRINSIC_WO_CHAIN ||
+          Op.getOpcode() == ISD::INTRINSIC_W_CHAIN ||
+          Op.getOpcode() == ISD::INTRINSIC_VOID) &&
+         "Should use isKnownNeverNaN if you don't know whether Op"
+         " is a target node!");
+  return false;
+}
+
 // FIXME: Ideally, this would use ISD::isConstantSplatVector(), but that must
 // work with truncating build vectors and vectors with elements of less than
 // 8 bits.
@@ -3463,8 +3476,8 @@ SDValue TargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
 /// return a DAG expression to select that will generate the same value by
 /// multiplying by a magic number.
 /// Ref: "Hacker's Delight" or "The PowerPC Compiler Writer's Guide".
-SDValue TargetLowering::BuildSDIV(SDNode *N, const APInt &Divisor,
-                                  SelectionDAG &DAG, bool IsAfterLegalization,
+SDValue TargetLowering::BuildSDIV(SDNode *N, SelectionDAG &DAG,
+                                  bool IsAfterLegalization,
                                   SmallVectorImpl<SDNode *> &Created) const {
   EVT VT = N->getValueType(0);
   SDLoc dl(N);
@@ -3473,6 +3486,12 @@ SDValue TargetLowering::BuildSDIV(SDNode *N, const APInt &Divisor,
   // FIXME: We should be more aggressive here.
   if (!isTypeLegal(VT))
     return SDValue();
+
+  // TODO: Add non-uniform constant support.
+  ConstantSDNode *C = isConstOrConstSplat(N->getOperand(1));
+  if (!C || C->isNullValue())
+    return SDValue();
+  const APInt &Divisor = C->getAPIntValue();
 
   // If the sdiv has an 'exact' bit we can use a simpler lowering.
   if (N->getFlags().hasExact())

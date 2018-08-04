@@ -66,6 +66,34 @@ STATISTIC(GuardsEliminated, "Number of eliminated guards");
 
 namespace {
 
+// Get the condition of \p GuardInst.
+static Value *getGuardCondition(Instruction *GuardInst) {
+  IntrinsicInst *GI = cast<IntrinsicInst>(GuardInst);
+  assert(GI->getIntrinsicID() == Intrinsic::experimental_guard &&
+         "Bad guard intrinsic?");
+  return GI->getArgOperand(0);
+}
+
+// Set the condition for \p GuardInst to \p NewCond.
+static void setGuardCondition(Instruction *GuardInst, Value *NewCond) {
+  IntrinsicInst *GI = cast<IntrinsicInst>(GuardInst);
+  assert(GI->getIntrinsicID() == Intrinsic::experimental_guard &&
+         "Bad guard intrinsic?");
+  GI->setArgOperand(0, NewCond);
+}
+
+// Whether or not the particular instruction \p I is a guard.
+static bool isGuard(const Instruction *I) {
+  using namespace llvm::PatternMatch;
+  return match(I, m_Intrinsic<Intrinsic::experimental_guard>());
+}
+
+// Eliminates the guard instruction properly.
+static void eliminateGuard(Instruction *GuardInst) {
+  GuardInst->eraseFromParent();
+  ++GuardsEliminated;
+}
+
 class GuardWideningImpl {
   DominatorTree &DT;
   PostDominatorTree *PDT;
@@ -92,18 +120,6 @@ class GuardWideningImpl {
       Instruction *Guard, const df_iterator<DomTreeNode *> &DFSI,
       const DenseMap<BasicBlock *, SmallVector<Instruction *, 8>> &
           GuardsPerBlock);
-
-  // Get the condition from \p GuardInst.
-  Value *getGuardCondition(Instruction *GuardInst);
-
-  // Set the condition for \p GuardInst.
-  void setGuardCondition(Instruction *GuardInst, Value *NewCond);
-
-  // Whether or not the particular instruction is a guard.
-  bool isGuard(const Instruction *I);
-
-  // Eliminates the guard instruction properly.
-  void eliminateGuard(Instruction *GuardInst);
 
   /// Used to keep track of which widening potential is more effective.
   enum WideningScore {
@@ -341,31 +357,6 @@ bool GuardWideningImpl::eliminateGuardViaWidening(
   EliminatedGuards.push_back(GuardInst);
   WidenedGuards.insert(BestSoFar);
   return true;
-}
-
-Value *GuardWideningImpl::getGuardCondition(Instruction *GuardInst) {
-  IntrinsicInst *GI = cast<IntrinsicInst>(GuardInst);
-  assert(GI->getIntrinsicID() == Intrinsic::experimental_guard &&
-         "Bad guard intrinsic?");
-  return GI->getArgOperand(0);
-}
-
-void GuardWideningImpl::setGuardCondition(Instruction *GuardInst,
-                                          Value *NewCond) {
-  IntrinsicInst *GI = cast<IntrinsicInst>(GuardInst);
-  assert(GI->getIntrinsicID() == Intrinsic::experimental_guard &&
-         "Bad guard intrinsic?");
-  GI->setArgOperand(0, NewCond);
-}
-
-bool GuardWideningImpl::isGuard(const Instruction* I) {
-  using namespace llvm::PatternMatch;
-  return match(I, m_Intrinsic<Intrinsic::experimental_guard>());
-}
-
-void GuardWideningImpl::eliminateGuard(Instruction *GuardInst) {
-  GuardInst->eraseFromParent();
-  ++GuardsEliminated;
 }
 
 GuardWideningImpl::WideningScore GuardWideningImpl::computeWideningScore(
