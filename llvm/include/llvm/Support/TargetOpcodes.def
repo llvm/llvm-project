@@ -464,6 +464,21 @@ HANDLE_TARGET_OPCODE(G_EXTRACT_VECTOR_ELT)
 /// Generic shufflevector.
 HANDLE_TARGET_OPCODE(G_SHUFFLE_VECTOR)
 
+/// Generic count trailing zeroes.
+HANDLE_TARGET_OPCODE(G_CTTZ)
+
+/// Same as above, undefined for zero inputs.
+HANDLE_TARGET_OPCODE(G_CTTZ_ZERO_UNDEF)
+
+/// Generic count leading zeroes.
+HANDLE_TARGET_OPCODE(G_CTLZ)
+
+/// Same as above, undefined for zero inputs.
+HANDLE_TARGET_OPCODE(G_CTLZ_ZERO_UNDEF)
+
+/// Generic count bits.
+HANDLE_TARGET_OPCODE(G_CTPOP)
+
 /// Generic byte swap.
 HANDLE_TARGET_OPCODE(G_BSWAP)
 
