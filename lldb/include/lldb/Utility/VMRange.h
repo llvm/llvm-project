@@ -87,24 +87,6 @@ public:
   void Dump(Stream *s, lldb::addr_t base_addr = 0,
             uint32_t addr_width = 8) const;
 
-  class ValueInRangeUnaryPredicate {
-  public:
-    ValueInRangeUnaryPredicate(lldb::addr_t value) : _value(value) {}
-    bool operator()(const VMRange &range) const {
-      return range.Contains(_value);
-    }
-    lldb::addr_t _value;
-  };
-
-  class RangeInRangeUnaryPredicate {
-  public:
-    RangeInRangeUnaryPredicate(VMRange range) : _range(range) {}
-    bool operator()(const VMRange &range) const {
-      return range.Contains(_range);
-    }
-    const VMRange &_range;
-  };
-
   static bool ContainsValue(const VMRange::collection &coll,
                             lldb::addr_t value);
 

@@ -24,7 +24,7 @@ namespace {
 
 #if LLVM_ENABLE_ZLIB == 1 && HAVE_LIBZ
 
-void TestZlibCompression(StringRef Input, zlib::CompressionLevel Level) {
+void TestZlibCompression(StringRef Input, int Level) {
   SmallString<32> Compressed;
   SmallString<32> Uncompressed;
 

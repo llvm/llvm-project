@@ -81,6 +81,16 @@ enum {
   // whether the value represents a control-flow label.
   VariableOpImmediateIsLabel = (1 << 1)
 };
+
+/// Target Operand Flag enum.
+enum TOF {
+  MO_NO_FLAG = 0,
+
+  // Flags to indicate the type of the symbol being referenced
+  MO_SYMBOL_FUNCTION = 0x1,
+  MO_SYMBOL_GLOBAL   = 0x2,
+  MO_SYMBOL_MASK     = 0x3,
+};
 } // end namespace WebAssemblyII
 
 } // end namespace llvm

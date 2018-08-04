@@ -1,4 +1,4 @@
-; RUN: opt < %s -tailcallelim -S | FileCheck %s
+; RUN: opt < %s -tailcallelim -verify-dom-info -S | FileCheck %s
 
 ; Don't turn this into an infinite loop, this is probably the implementation
 ; of fabs and we expect the codegen to lower fabs.

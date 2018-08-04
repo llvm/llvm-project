@@ -1,6 +1,5 @@
 add_llvm_library(LLVMXRay
   InstrumentationMap.cpp
-	Profile.cpp
   Trace.cpp
 
   ADDITIONAL_HEADER_DIRS

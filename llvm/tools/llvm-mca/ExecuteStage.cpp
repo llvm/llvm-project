@@ -37,7 +37,7 @@ void ExecuteStage::reclaimSchedulerResources() {
 // Update the scheduler's instruction queues.
 void ExecuteStage::updateSchedulerQueues() {
   SmallVector<InstRef, 4> InstructionIDs;
-  HWS.updateIssuedQueue(InstructionIDs);
+  HWS.updateIssuedSet(InstructionIDs);
   for (const InstRef &IR : InstructionIDs)
     notifyInstructionExecuted(IR);
   InstructionIDs.clear();
@@ -65,9 +65,9 @@ void ExecuteStage::issueReadyInstructions() {
     // Instructions that have been issued during this cycle might have unblocked
     // other dependent instructions. Dependent instructions may be issued during
     // this same cycle if operands have ReadAdvance entries.  Promote those
-    // instructions to the ReadyQueue and tell to the caller that we need
+    // instructions to the ReadySet and tell to the caller that we need
     // another round of 'issue()'.
-    HWS.promoteToReadyQueue(InstructionIDs);
+    HWS.promoteToReadySet(InstructionIDs);
     for (const InstRef &I : InstructionIDs)
       notifyInstructionReady(I);
     InstructionIDs.clear();

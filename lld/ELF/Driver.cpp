@@ -647,33 +647,28 @@ static void readCallGraph(MemoryBufferRef MB) {
     for (Symbol *Sym : File->getSymbols())
       SymbolNameToSymbol[Sym->getName()] = Sym;
 
+  auto FindSection = [&](StringRef SymName) -> InputSectionBase * {
+    const Symbol *Sym = SymbolNameToSymbol.lookup(SymName);
+    if (Sym)
+      warnUnorderableSymbol(Sym);
+    else if (Config->WarnSymbolOrdering)
+      warn(MB.getBufferIdentifier() + ": no such symbol: " + SymName);
+
+    if (const Defined *DR = dyn_cast_or_null<Defined>(Sym))
+      return dyn_cast_or_null<InputSectionBase>(DR->Section);
+    return nullptr;
+  };
+
   for (StringRef L : args::getLines(MB)) {
     SmallVector<StringRef, 3> Fields;
     L.split(Fields, ' ');
     uint64_t Count;
     if (Fields.size() != 3 || !to_integer(Fields[2], Count))
       fatal(MB.getBufferIdentifier() + ": parse error");
-    const Symbol *FromSym = SymbolNameToSymbol.lookup(Fields[0]);
-    const Symbol *ToSym = SymbolNameToSymbol.lookup(Fields[1]);
-    if (Config->WarnSymbolOrdering) {
-      if (!FromSym)
-        warn(MB.getBufferIdentifier() + ": no such symbol: " + Fields[0]);
-      if (!ToSym)
-        warn(MB.getBufferIdentifier() + ": no such symbol: " + Fields[1]);
-    }
-    if (!FromSym || !ToSym || Count == 0)
-      continue;
-    warnUnorderableSymbol(FromSym);
-    warnUnorderableSymbol(ToSym);
-    const Defined *FromSymD = dyn_cast<Defined>(FromSym);
-    const Defined *ToSymD = dyn_cast<Defined>(ToSym);
-    if (!FromSymD || !ToSymD)
-      continue;
-    const auto *FromSB = dyn_cast_or_null<InputSectionBase>(FromSymD->Section);
-    const auto *ToSB = dyn_cast_or_null<InputSectionBase>(ToSymD->Section);
-    if (!FromSB || !ToSB)
-      continue;
-    Config->CallGraphProfile[std::make_pair(FromSB, ToSB)] += Count;
+
+    if (const InputSectionBase *FromSB = FindSection(Fields[0]))
+      if (const InputSectionBase *ToSB = FindSection(Fields[1]))
+        Config->CallGraphProfile[std::make_pair(FromSB, ToSB)] += Count;
   }
 }
 

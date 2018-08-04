@@ -844,4 +844,23 @@ TEST(Local, RemoveUnreachableBlocks) {
   runWithDomTree(*M, "br_self_loop", runLazy);
   runWithDomTree(*M, "br_constant", runLazy);
   runWithDomTree(*M, "br_loop", runLazy);
+
+  M = parseIR(C,
+              R"(
+      define void @f() {
+      entry:
+        ret void
+      bb0:
+        ret void
+      }
+        )");
+
+  auto checkRUBlocksRetVal = [&](Function &F, DominatorTree *DT) {
+    DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
+    EXPECT_TRUE(removeUnreachableBlocks(F, nullptr, &DTU));
+    EXPECT_FALSE(removeUnreachableBlocks(F, nullptr, &DTU));
+    EXPECT_TRUE(DTU.getDomTree().verify());
+  };
+
+  runWithDomTree(*M, "f", checkRUBlocksRetVal);
 }

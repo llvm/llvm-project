@@ -250,9 +250,9 @@ void ResourceManager::releaseResource(uint64_t ResourceID) {
 
 #ifndef NDEBUG
 void Scheduler::dump() const {
-  dbgs() << "[SCHEDULER]: WaitQueue size is: " << WaitQueue.size() << '\n';
-  dbgs() << "[SCHEDULER]: ReadyQueue size is: " << ReadyQueue.size() << '\n';
-  dbgs() << "[SCHEDULER]: IssuedQueue size is: " << IssuedQueue.size() << '\n';
+  dbgs() << "[SCHEDULER]: WaitSet size is: " << WaitSet.size() << '\n';
+  dbgs() << "[SCHEDULER]: ReadySet size is: " << ReadySet.size() << '\n';
+  dbgs() << "[SCHEDULER]: IssuedSet size is: " << IssuedSet.size() << '\n';
   Resources->dump();
 }
 #endif
@@ -296,7 +296,7 @@ void Scheduler::issueInstructionImpl(
   IS->execute();
 
   if (IS->isExecuting())
-    IssuedQueue[IR.getSourceIndex()] = IS;
+    IssuedSet.emplace_back(IR);
 }
 
 // Release the buffered resources and issue the instruction.
@@ -308,92 +308,109 @@ void Scheduler::issueInstruction(
   issueInstructionImpl(IR, UsedResources);
 }
 
-void Scheduler::promoteToReadyQueue(SmallVectorImpl<InstRef> &Ready) {
+void Scheduler::promoteToReadySet(SmallVectorImpl<InstRef> &Ready) {
   // Scan the set of waiting instructions and promote them to the
   // ready queue if operands are all ready.
-  for (auto I = WaitQueue.begin(), E = WaitQueue.end(); I != E;) {
-    const unsigned IID = I->first;
-    Instruction *IS = I->second;
+  unsigned RemovedElements = 0;
+  for (auto I = WaitSet.begin(), E = WaitSet.end(); I != E; ) {
+    InstRef &IR = *I;
+    if (!IR.isValid())
+      break;
 
     // Check if this instruction is now ready. In case, force
     // a transition in state using method 'update()'.
-    if (!IS->isReady())
-      IS->update();
+    Instruction &IS = *IR.getInstruction();
+    if (!IS.isReady())
+      IS.update();
 
-    const InstrDesc &Desc = IS->getDesc();
+    const InstrDesc &Desc = IS.getDesc();
     bool IsMemOp = Desc.MayLoad || Desc.MayStore;
-    if (!IS->isReady() || (IsMemOp && !LSU->isReady({IID, IS}))) {
+    if (!IS.isReady() || (IsMemOp && !LSU->isReady(IR))) {
       ++I;
       continue;
     }
 
-    Ready.emplace_back(IID, IS);
-    ReadyQueue[IID] = IS;
-    auto ToRemove = I;
-    ++I;
-    WaitQueue.erase(ToRemove);
+    Ready.emplace_back(IR);
+    ReadySet.emplace_back(IR);
+
+    IR.invalidate();
+    ++RemovedElements;
+    std::iter_swap(I, E - RemovedElements);
   }
+
+  WaitSet.resize(WaitSet.size() - RemovedElements);
 }
 
 InstRef Scheduler::select() {
-  // Find the oldest ready-to-issue instruction in the ReadyQueue.
-  auto It = std::find_if(ReadyQueue.begin(), ReadyQueue.end(),
-                         [&](const QueueEntryTy &Entry) {
-                           const InstrDesc &D = Entry.second->getDesc();
-                           return Resources->canBeIssued(D);
-                         });
+  unsigned QueueIndex = ReadySet.size();
+  int Rank = std::numeric_limits<int>::max();
 
-  if (It == ReadyQueue.end())
-    return {0, nullptr};
+  for (unsigned I = 0, E = ReadySet.size(); I != E; ++I) {
+    const InstRef &IR = ReadySet[I];
+    const unsigned IID = IR.getSourceIndex();
+    const Instruction &IS = *IR.getInstruction();
 
-  // We want to prioritize older instructions over younger instructions to
-  // minimize the pressure on the reorder buffer.  We also want to
-  // rank higher the instructions with more users to better expose ILP.
+    // Compute a rank value based on the age of an instruction (i.e. its source
+    // index) and its number of users. The lower the rank value, the better.
+    int CurrentRank = IID - IS.getNumUsers();
 
-  // Compute a rank value based on the age of an instruction (i.e. its source
-  // index) and its number of users. The lower the rank value, the better.
-  int Rank = It->first - It->second->getNumUsers();
-  for (auto I = It, E = ReadyQueue.end(); I != E; ++I) {
-    int CurrentRank = I->first - I->second->getNumUsers();
-    if (CurrentRank < Rank) {
-      const InstrDesc &D = I->second->getDesc();
+    // We want to prioritize older instructions over younger instructions to
+    // minimize the pressure on the reorder buffer.  We also want to
+    // rank higher the instructions with more users to better expose ILP.
+    if (CurrentRank == Rank)
+      if (IID > ReadySet[QueueIndex].getSourceIndex())
+        continue;
+
+    if (CurrentRank <= Rank) {
+      const InstrDesc &D = IS.getDesc();
       if (Resources->canBeIssued(D)) {
         Rank = CurrentRank;
-        It = I;
+        QueueIndex = I;
       }
     }
   }
 
+  if (QueueIndex == ReadySet.size())
+    return InstRef();
+
   // We found an instruction to issue.
-  InstRef IR(It->first, It->second);
-  ReadyQueue.erase(It);
+  
+  InstRef IR = ReadySet[QueueIndex];
+  std::swap(ReadySet[QueueIndex], ReadySet[ReadySet.size() - 1]);
+  ReadySet.pop_back();
   return IR;
 }
 
 void Scheduler::updatePendingQueue(SmallVectorImpl<InstRef> &Ready) {
   // Notify to instructions in the pending queue that a new cycle just
   // started.
-  for (QueueEntryTy Entry : WaitQueue)
-    Entry.second->cycleEvent();
-  promoteToReadyQueue(Ready);
+  for (InstRef &Entry : WaitSet)
+    Entry.getInstruction()->cycleEvent();
+  promoteToReadySet(Ready);
 }
 
-void Scheduler::updateIssuedQueue(SmallVectorImpl<InstRef> &Executed) {
-  for (auto I = IssuedQueue.begin(), E = IssuedQueue.end(); I != E;) {
-    const QueueEntryTy Entry = *I;
-    Instruction *IS = Entry.second;
-    IS->cycleEvent();
-    if (IS->isExecuted()) {
-      Executed.push_back({Entry.first, Entry.second});
-      auto ToRemove = I;
-      ++I;
-      IssuedQueue.erase(ToRemove);
-    } else {
-      LLVM_DEBUG(dbgs() << "[SCHEDULER]: Instruction #" << Entry.first
+void Scheduler::updateIssuedSet(SmallVectorImpl<InstRef> &Executed) {
+  unsigned RemovedElements = 0;
+  for (auto I = IssuedSet.begin(), E = IssuedSet.end(); I != E; ) {
+    InstRef &IR = *I;
+    if (!IR.isValid())
+      break;
+    Instruction &IS = *IR.getInstruction();
+    IS.cycleEvent();
+    if (!IS.isExecuted()) {
+      LLVM_DEBUG(dbgs() << "[SCHEDULER]: Instruction #" << IR
                         << " is still executing.\n");
       ++I;
+      continue;
     }
+
+    Executed.emplace_back(IR);
+    ++RemovedElements;
+    IR.invalidate();
+    std::iter_swap(I, E - RemovedElements);
   }
+
+  IssuedSet.resize(IssuedSet.size() - RemovedElements);
 }
 
 void Scheduler::onInstructionExecuted(const InstRef &IR) {
@@ -408,9 +425,8 @@ bool Scheduler::reserveResources(InstRef &IR) {
   // If necessary, reserve queue entries in the load-store unit (LSU).
   const bool Reserved = LSU->reserve(IR);
   if (!IR.getInstruction()->isReady() || (Reserved && !LSU->isReady(IR))) {
-    LLVM_DEBUG(dbgs() << "[SCHEDULER] Adding #" << IR
-                      << " to the Wait Queue\n");
-    WaitQueue[IR.getSourceIndex()] = IR.getInstruction();
+    LLVM_DEBUG(dbgs() << "[SCHEDULER] Adding #" << IR << " to the WaitSet\n");
+    WaitSet.push_back(IR);
     return false;
   }
   return true;
@@ -419,9 +435,8 @@ bool Scheduler::reserveResources(InstRef &IR) {
 bool Scheduler::issueImmediately(InstRef &IR) {
   const InstrDesc &Desc = IR.getInstruction()->getDesc();
   if (!Desc.isZeroLatency() && !Resources->mustIssueImmediately(Desc)) {
-    LLVM_DEBUG(dbgs() << "[SCHEDULER] Adding #" << IR
-                      << " to the Ready Queue\n");
-    ReadyQueue[IR.getSourceIndex()] = IR.getInstruction();
+    LLVM_DEBUG(dbgs() << "[SCHEDULER] Adding #" << IR << " to the ReadySet\n");
+    ReadySet.push_back(IR);
     return false;
   }
   return true;

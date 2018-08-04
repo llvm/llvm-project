@@ -458,7 +458,10 @@ define amdgpu_kernel void @test_fold_canonicalize_maxnum_value_f64(double addrsp
 }
 
 ; GCN-LABEL: test_no_fold_canonicalize_fmul_value_f32_no_ieee:
-; GCN-EXCEPT: v_mul_f32_e32 v{{[0-9]+}}, 1.0, v{{[0-9]+}}
+; GCN: v_mul_f32_e32 [[V:v[0-9]+]], 0x41700000, v{{[0-9]+}}
+; GCN-NOT: v_mul
+; GCN-NOT: v_max
+; GCN-NEXT: ; return
 define amdgpu_ps float @test_no_fold_canonicalize_fmul_value_f32_no_ieee(float %arg) {
 entry:
   %v = fmul float %arg, 15.0

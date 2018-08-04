@@ -646,7 +646,8 @@ void llvm::SplitLandingPadPredecessors(BasicBlock *OrigBB,
 }
 
 ReturnInst *llvm::FoldReturnIntoUncondBranch(ReturnInst *RI, BasicBlock *BB,
-                                             BasicBlock *Pred) {
+                                             BasicBlock *Pred,
+                                             DomTreeUpdater *DTU) {
   Instruction *UncondBranch = Pred->getTerminator();
   // Clone the return and add it to the end of the predecessor.
   Instruction *NewRet = RI->clone();
@@ -680,6 +681,10 @@ ReturnInst *llvm::FoldReturnIntoUncondBranch(ReturnInst *RI, BasicBlock *BB,
   // longer branch to them.
   BB->removePredecessor(Pred);
   UncondBranch->eraseFromParent();
+
+  if (DTU)
+    DTU->deleteEdge(Pred, BB);
+
   return cast<ReturnInst>(NewRet);
 }
 
