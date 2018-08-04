@@ -4078,6 +4078,14 @@ public:
     mu_.Unlock();
   }
 
+  void unlockExclusive() EXCLUSIVE_UNLOCK_FUNCTION(mu_) {
+    mu_.Unlock();
+  }
+
+  void unlockShared() SHARED_UNLOCK_FUNCTION(mu_) {
+    mu_.ReaderUnlock();
+  }
+
   // Check failure to lock.
   void lockBad() EXCLUSIVE_LOCK_FUNCTION(mu_) {    // expected-note {{mutex acquired here}}
     mu2_.Lock();
