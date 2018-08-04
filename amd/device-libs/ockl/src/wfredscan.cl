@@ -353,8 +353,7 @@ GENMAX(ulong)
 IATTR static bool
 fullwave(void)
 {
-    return __llvm_ctpop_i32(__builtin_amdgcn_read_exec_lo()) +
-           __llvm_ctpop_i32(__builtin_amdgcn_read_exec_hi()) == 64;
+    return __builtin_popcountl(__builtin_amdgcn_read_exec()) == 64;
 }
 
 #define GENRED(T,OP,ID) \

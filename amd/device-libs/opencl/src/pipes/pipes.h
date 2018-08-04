@@ -9,7 +9,7 @@
 
 #pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
 #pragma OPENCL EXTENSION cl_khr_int64_extended_atomics : enable
- 
+
 extern size_t __amd_wresvn(volatile __global atomic_size_t *pidx, size_t lim, size_t n);
 
 #define DO_PIPE_SIZE(F) \
@@ -51,8 +51,7 @@ reserve(volatile __global atomic_size_t *pi, size_t lim, size_t n)
 static inline size_t
 wave_reserve_1(volatile __global atomic_size_t *pi, size_t lim)
 {
-    size_t n = (size_t)(__llvm_ctpop_i32(__builtin_amdgcn_read_exec_lo()) +
-                        __llvm_ctpop_i32(__builtin_amdgcn_read_exec_hi()));
+    ulong n = __builtin_popcountl(__builtin_amdgcn_read_exec());
     uint l = __llvm_amdgcn_mbcnt_hi(__builtin_amdgcn_read_exec_hi(),
                __llvm_amdgcn_mbcnt_lo(__builtin_amdgcn_read_exec_lo(), 0u));
     size_t i = 0;
