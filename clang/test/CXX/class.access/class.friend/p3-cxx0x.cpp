@@ -52,14 +52,25 @@ struct {
   // Ill-formed
   int friend; // expected-error {{'friend' must appear first in a non-function declaration}}
   unsigned friend int; // expected-error {{'friend' must appear first in a non-function declaration}}
-  const volatile friend int; // expected-error {{'friend' must appear first in a non-function declaration}}
+  const volatile friend int; // expected-error {{'friend' must appear first in a non-function declaration}} \
+                             // expected-error {{'const' is invalid in friend declarations}} \
+                             // expected-error {{'volatile' is invalid in friend declarations}}
   int
           friend; // expected-error {{'friend' must appear first in a non-function declaration}}
+  friend const int; // expected-error {{'const' is invalid in friend declarations}}
+  friend volatile int; // expected-error {{'volatile' is invalid in friend declarations}}
+  template <typename T> friend const class X; // expected-error {{'const' is invalid in friend declarations}}
+  // C++ doesn't have restrict and _Atomic, but they're both the same sort
+  // of qualifier.
+  typedef int *PtrToInt;
+  friend __restrict PtrToInt; // expected-error {{'restrict' is invalid in friend declarations}} \
+                              // expected-error {{restrict requires a pointer or reference}}
+  friend _Atomic int; // expected-error {{'_Atomic' is invalid in friend declarations}}
 
   // OK
   int friend foo(void);
+  const int friend foo2(void);
   friend int;
-  friend const volatile int;
       friend
 
   float;

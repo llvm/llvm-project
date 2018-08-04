@@ -23,6 +23,7 @@ int main()
 {
     {
         int i = 0;
+        static_assert((std::is_same<int *, decltype(std::pointer_traits<int*>::pointer_to(i))>::value), "");
         int* a = std::pointer_traits<int*>::pointer_to(i);
         assert(a == &i);
     }

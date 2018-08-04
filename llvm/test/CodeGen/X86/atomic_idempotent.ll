@@ -28,14 +28,14 @@ define i16 @or16(i16* %p) {
 ; X64-LABEL: or16:
 ; X64:       # %bb.0:
 ; X64-NEXT:    mfence
-; X64-NEXT:    movw (%rdi), %ax
+; X64-NEXT:    movzwl (%rdi), %eax
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: or16:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    mfence
-; X32-NEXT:    movw (%eax), %ax
+; X32-NEXT:    movzwl (%eax), %eax
 ; X32-NEXT:    retl
   %1 = atomicrmw or i16* %p, i16 0 acquire
   ret i16 %1

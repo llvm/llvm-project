@@ -12,6 +12,7 @@
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/VASPrintf.h"
 #include "llvm/ADT/SmallString.h" // for SmallString
+#include "llvm/Support/LEB128.h"
 
 #include <string>
 
@@ -49,47 +50,20 @@ void Stream::Offset(uint32_t uval, const char *format) { Printf(format, uval); }
 // Put an SLEB128 "uval" out to the stream using the printf format in "format".
 //------------------------------------------------------------------
 size_t Stream::PutSLEB128(int64_t sval) {
-  size_t bytes_written = 0;
-  if (m_flags.Test(eBinary)) {
-    bool more = true;
-    while (more) {
-      uint8_t byte = sval & 0x7fu;
-      sval >>= 7;
-      /* sign bit of byte is 2nd high order bit (0x40) */
-      if ((sval == 0 && !(byte & 0x40)) || (sval == -1 && (byte & 0x40)))
-        more = false;
-      else
-        // more bytes to come
-        byte |= 0x80u;
-      bytes_written += Write(&byte, 1);
-    }
-  } else {
-    bytes_written = Printf("0x%" PRIi64, sval);
-  }
-
-  return bytes_written;
+  if (m_flags.Test(eBinary))
+    return llvm::encodeSLEB128(sval, m_forwarder);
+  else
+    return Printf("0x%" PRIi64, sval);
 }
 
 //------------------------------------------------------------------
 // Put an ULEB128 "uval" out to the stream using the printf format in "format".
 //------------------------------------------------------------------
 size_t Stream::PutULEB128(uint64_t uval) {
-  size_t bytes_written = 0;
-  if (m_flags.Test(eBinary)) {
-    do {
-
-      uint8_t byte = uval & 0x7fu;
-      uval >>= 7;
-      if (uval != 0) {
-        // more bytes to come
-        byte |= 0x80u;
-      }
-      bytes_written += Write(&byte, 1);
-    } while (uval != 0);
-  } else {
-    bytes_written = Printf("0x%" PRIx64, uval);
-  }
-  return bytes_written;
+  if (m_flags.Test(eBinary))
+    return llvm::encodeULEB128(uval, m_forwarder);
+  else
+    return Printf("0x%" PRIx64, uval);
 }
 
 //------------------------------------------------------------------

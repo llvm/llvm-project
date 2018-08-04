@@ -139,11 +139,26 @@ const Stmt *ExprSequence::getSequenceSuccessor(const Stmt *S) const {
       if (S == ForRange->getLoopVarStmt())
         return ForRange->getBody();
     } else if (const auto *TheIfStmt = dyn_cast<IfStmt>(Parent)) {
-      // If statement: If a variable is declared inside the condition, the
-      // expression used to initialize the variable is sequenced before the
-      // evaluation of the condition.
+      // If statement:
+      // - Sequence init statement before variable declaration.
+      // - Sequence variable declaration (along with the expression used to
+      //   initialize it) before the evaluation of the condition.
+      if (S == TheIfStmt->getInit())
+        return TheIfStmt->getConditionVariableDeclStmt();
       if (S == TheIfStmt->getConditionVariableDeclStmt())
         return TheIfStmt->getCond();
+    } else if (const auto *TheSwitchStmt = dyn_cast<SwitchStmt>(Parent)) {
+      // Ditto for switch statements.
+      if (S == TheSwitchStmt->getInit())
+        return TheSwitchStmt->getConditionVariableDeclStmt();
+      if (S == TheSwitchStmt->getConditionVariableDeclStmt())
+        return TheSwitchStmt->getCond();
+    } else if (const auto *TheWhileStmt = dyn_cast<WhileStmt>(Parent)) {
+      // While statement: Sequence variable declaration (along with the
+      // expression used to initialize it) before the evaluation of the
+      // condition.
+      if (S == TheWhileStmt->getConditionVariableDeclStmt())
+        return TheWhileStmt->getCond();
     }
   }
 

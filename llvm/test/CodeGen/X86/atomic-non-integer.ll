@@ -62,7 +62,7 @@ define half @load_half(half* %fptr) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    movw (%rdi), %ax
+; CHECK-NEXT:    movzwl (%rdi), %eax
 ; CHECK-NEXT:    movzwl %ax, %edi
 ; CHECK-NEXT:    callq __gnu_h2f_ieee
 ; CHECK-NEXT:    popq %rax

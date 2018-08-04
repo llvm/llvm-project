@@ -39,6 +39,7 @@ int main()
 {
     {
         int i = 0;
+        static_assert((std::is_same<A<int>, decltype(std::pointer_traits<A<int> >::pointer_to(i))>::value), "");
         A<int> a = std::pointer_traits<A<int> >::pointer_to(i);
         assert(a.t_ == &i);
     }
