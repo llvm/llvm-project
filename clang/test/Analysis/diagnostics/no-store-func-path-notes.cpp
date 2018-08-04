@@ -333,3 +333,27 @@ int useMaybeInitializeIndirectlyWithPointer() {
   return z; // expected-warning{{Undefined or garbage value returned to caller}}
             // expected-note@-1{{Undefined or garbage value returned to caller}}
 }
+
+////////
+
+struct HasFieldA {
+  int x;
+};
+
+struct HasFieldB {
+  int x;
+};
+
+void maybeInitializeHasField(HasFieldA *b) {
+  if (coin()) // expected-note{{Assuming the condition is false}}
+              // expected-note@-1{{Taking false branch}}
+    ((HasFieldB*)b)->x = 120;
+}
+
+int forceElementRegionApperence() {
+  HasFieldA a;
+  maybeInitializeHasField(&a); // expected-note{{Calling 'maybeInitializeHasField'}}
+                               // expected-note@-1{{Returning from 'maybeInitializeHasField'}}
+  return ((HasFieldB*)&a)->x; // expected-warning{{Undefined or garbage value returned to caller}}
+                              // expected-note@-1{{Undefined or garbage value returned to caller}}
+}

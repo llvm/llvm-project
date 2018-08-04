@@ -60,7 +60,6 @@ void SymbolTable::addCombinedLTOObject() {
 }
 
 void SymbolTable::reportRemainingUndefines() {
-  SetVector<Symbol *> Undefs;
   for (Symbol *Sym : SymVector) {
     if (!Sym->isUndefined() || Sym->isWeak())
       continue;
@@ -68,20 +67,8 @@ void SymbolTable::reportRemainingUndefines() {
       continue;
     if (!Sym->IsUsedInRegularObj)
       continue;
-    Undefs.insert(Sym);
+    error(toString(Sym->getFile()) + ": undefined symbol: " + toString(*Sym));
   }
-
-  if (Undefs.empty())
-    return;
-
-  for (ObjFile *File : ObjectFiles)
-    for (Symbol *Sym : File->getSymbols())
-      if (Undefs.count(Sym))
-        error(toString(File) + ": undefined symbol: " + toString(*Sym));
-
-  for (Symbol *Sym : Undefs)
-    if (!Sym->getFile())
-      error("undefined symbol: " + toString(*Sym));
 }
 
 Symbol *SymbolTable::find(StringRef Name) {

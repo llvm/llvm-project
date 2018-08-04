@@ -2244,22 +2244,6 @@ S2 s2;
 #endif
 
 #if defined(FIRST)
-struct T3 {};
-struct S3 {
-  friend const T3;
-};
-#elif defined(SECOND)
-struct T3 {};
-struct S3 {
-  friend T3;
-};
-#else
-S3 s3;
-// expected-error@second.h:* {{'Friend::S3' has different definitions in different modules; first difference is definition in module 'SecondModule' found friend 'Friend::T3'}}
-// expected-note@first.h:* {{but in 'FirstModule' found friend 'const Friend::T3'}}
-#endif
-
-#if defined(FIRST)
 struct T4 {};
 struct S4 {
   friend T4;
@@ -2292,14 +2276,12 @@ S5 s5;
   friend class FriendA;  \
   friend struct FriendB; \
   friend FriendC;        \
-  friend const FriendD;  \
   friend void Function();
 
 #if defined(FIRST) || defined(SECOND)
 class FriendA {};
 class FriendB {};
 class FriendC {};
-class FriendD {};
 #endif
 
 #if defined(FIRST) || defined(SECOND)
