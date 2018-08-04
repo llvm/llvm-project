@@ -5549,7 +5549,7 @@ void CGOpenMPRuntime::emitReduction(CodeGenFunction &CGF, SourceLocation Loc,
       llvm::Value *Size = CGF.Builder.CreateIntCast(
           CGF.getVLASize(
                  CGF.getContext().getAsVariableArrayType((*IPriv)->getType()))
-              .NumElts,
+              .first,
           CGF.SizeTy, /*isSigned=*/false);
       CGF.Builder.CreateStore(CGF.Builder.CreateIntToPtr(Size, CGF.VoidPtrTy),
                               Elem);
