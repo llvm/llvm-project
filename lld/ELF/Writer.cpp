@@ -513,8 +513,7 @@ template <class ELFT> void Writer<ELFT>::run() {
     return;
 
   if (auto E = Buffer->commit())
-    error("failed to write to the output file " + Config->OutputFile + " :" +
-          toString(std::move(E)));
+    error("failed to write to the output file: " + toString(std::move(E)));
 }
 
 static bool shouldKeepInSymtab(SectionBase *Sec, StringRef SymName,
