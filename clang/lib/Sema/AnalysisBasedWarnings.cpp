@@ -2068,11 +2068,11 @@ AnalysisBasedWarnings::IssueWarnings(sema::AnalysisBasedWarnings::Policy P,
   }
 
   // Install the logical handler for -Wtautological-overlap-compare
-  std::unique_ptr<LogicalErrorHandler> LEH;
+  llvm::Optional<LogicalErrorHandler> LEH;
   if (!Diags.isIgnored(diag::warn_tautological_overlap_comparison,
                        D->getLocStart())) {
-    LEH.reset(new LogicalErrorHandler(S));
-    AC.getCFGBuildOptions().Observer = LEH.get();
+    LEH.emplace(S);
+    AC.getCFGBuildOptions().Observer = &*LEH;
   }
 
   // Emit delayed diagnostics.
