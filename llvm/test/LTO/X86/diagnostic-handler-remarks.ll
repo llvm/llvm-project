@@ -53,9 +53,10 @@
 ; YAML-NEXT:   - Callee:          foo
 ; YAML-NEXT:   - String:          ' inlined into '
 ; YAML-NEXT:   - Caller:          main
-; YAML-NEXT:   - String:          ' with cost='
+; YAML-NEXT:   - String:          ' with '
+; YAML-NEXT:   - String:          '(cost='
 ; YAML-NEXT:   - Cost:            '-15000'
-; YAML-NEXT:   - String:          ' (threshold='
+; YAML-NEXT:   - String:          ', threshold='
 ; YAML-NEXT:   - Threshold:       '337'
 ; YAML-NEXT:   - String:          ')'
 ; YAML-NEXT: ...
