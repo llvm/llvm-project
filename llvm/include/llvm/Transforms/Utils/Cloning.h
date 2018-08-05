@@ -22,6 +22,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/InlineCost.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
@@ -232,13 +233,16 @@ public:
 /// and all varargs at the callsite will be passed to any calls to
 /// ForwardVarArgsTo. The caller of InlineFunction has to make sure any varargs
 /// are only used by ForwardVarArgsTo.
-bool InlineFunction(CallInst *C, InlineFunctionInfo &IFI,
-                    AAResults *CalleeAAR = nullptr, bool InsertLifetime = true);
-bool InlineFunction(InvokeInst *II, InlineFunctionInfo &IFI,
-                    AAResults *CalleeAAR = nullptr, bool InsertLifetime = true);
-bool InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
-                    AAResults *CalleeAAR = nullptr, bool InsertLifetime = true,
-                    Function *ForwardVarArgsTo = nullptr);
+InlineResult InlineFunction(CallInst *C, InlineFunctionInfo &IFI,
+                            AAResults *CalleeAAR = nullptr,
+                            bool InsertLifetime = true);
+InlineResult InlineFunction(InvokeInst *II, InlineFunctionInfo &IFI,
+                            AAResults *CalleeAAR = nullptr,
+                            bool InsertLifetime = true);
+InlineResult InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
+                            AAResults *CalleeAAR = nullptr,
+                            bool InsertLifetime = true,
+                            Function *ForwardVarArgsTo = nullptr);
 
 /// Clones a loop \p OrigLoop.  Returns the loop and the blocks in \p
 /// Blocks.
