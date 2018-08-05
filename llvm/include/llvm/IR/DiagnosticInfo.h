@@ -414,6 +414,7 @@ public:
     Argument(StringRef Key, const Value *V);
     Argument(StringRef Key, const Type *T);
     Argument(StringRef Key, StringRef S);
+    Argument(StringRef Key, const char *S) : Argument(Key, StringRef(S)) {};
     Argument(StringRef Key, int N);
     Argument(StringRef Key, float N);
     Argument(StringRef Key, long N);

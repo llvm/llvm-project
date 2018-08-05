@@ -25,9 +25,10 @@
 ; YAML1-NEXT:   - Callee:          foo
 ; YAML1-NEXT:   - String:          ' inlined into '
 ; YAML1-NEXT:   - Caller:          main
-; YAML1-NEXT:   - String:          ' with cost='
+; YAML1-NEXT:   - String:          ' with '
+; YAML1-NEXT:   - String:          '(cost='
 ; YAML1-NEXT:   - Cost:            '-30'
-; YAML1-NEXT:   - String:          ' (threshold='
+; YAML1-NEXT:   - String:          ', threshold='
 ; YAML1-NEXT:   - Threshold:       '337'
 ; YAML1-NEXT:   - String:          ')'
 ; YAML1-NEXT: ...
@@ -43,9 +44,10 @@
 ; YAML2-NEXT:   - Callee:          bar
 ; YAML2-NEXT:   - String:          ' inlined into '
 ; YAML2-NEXT:   - Caller:          foo
-; YAML2-NEXT:   - String:          ' with cost='
+; YAML2-NEXT:   - String:          ' with '
+; YAML2-NEXT:   - String:          '(cost='
 ; YAML2-NEXT:   - Cost:            '-30'
-; YAML2-NEXT:   - String:          ' (threshold='
+; YAML2-NEXT:   - String:          ', threshold='
 ; YAML2-NEXT:   - Threshold:       '337'
 ; YAML2-NEXT:   - String:          ')'
 ; YAML2-NEXT: ...
