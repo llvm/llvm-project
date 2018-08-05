@@ -2006,8 +2006,6 @@ template <class ELFT> void Writer<ELFT>::assignFileOffsetsBinary() {
 }
 
 static std::string rangeToString(uint64_t Addr, uint64_t Len) {
-  if (Len == 0)
-    return "<empty range at 0x" + utohexstr(Addr) + ">";
   return "[0x" + utohexstr(Addr) + ", 0x" + utohexstr(Addr + Len - 1) + "]";
 }
 
@@ -2050,7 +2048,7 @@ template <class ELFT> void Writer<ELFT>::assignFileOffsets() {
       continue;
     if ((Sec->Offset > FileSize) || (Sec->Offset + Sec->Size > FileSize))
       error("unable to place section " + Sec->Name + " at file offset " +
-            rangeToString(Sec->Offset, Sec->Offset + Sec->Size) +
+            rangeToString(Sec->Offset, Sec->Size) +
             "; check your linker script for overflows");
   }
 }
@@ -2150,7 +2148,7 @@ template <class ELFT> void Writer<ELFT>::checkSections() {
   // file so we skip any non-allocated sections in that case.
   std::vector<SectionOffset> FileOffs;
   for (OutputSection *Sec : OutputSections)
-    if (0 < Sec->Size && Sec->Type != SHT_NOBITS &&
+    if (Sec->Size > 0 && Sec->Type != SHT_NOBITS &&
         (!Config->OFormatBinary || (Sec->Flags & SHF_ALLOC)))
       FileOffs.push_back({Sec, Sec->Offset});
   checkOverlap("file", FileOffs, false);
@@ -2168,7 +2166,7 @@ template <class ELFT> void Writer<ELFT>::checkSections() {
   // ranges in the file.
   std::vector<SectionOffset> VMAs;
   for (OutputSection *Sec : OutputSections)
-    if (0 < Sec->Size && (Sec->Flags & SHF_ALLOC) && !(Sec->Flags & SHF_TLS))
+    if (Sec->Size > 0 && (Sec->Flags & SHF_ALLOC) && !(Sec->Flags & SHF_TLS))
       VMAs.push_back({Sec, Sec->Addr});
   checkOverlap("virtual address", VMAs, true);
 
@@ -2177,7 +2175,7 @@ template <class ELFT> void Writer<ELFT>::checkSections() {
   // script with AT().
   std::vector<SectionOffset> LMAs;
   for (OutputSection *Sec : OutputSections)
-    if (0 < Sec->Size && (Sec->Flags & SHF_ALLOC) && !(Sec->Flags & SHF_TLS))
+    if (Sec->Size > 0 && (Sec->Flags & SHF_ALLOC) && !(Sec->Flags & SHF_TLS))
       LMAs.push_back({Sec, Sec->getLMA()});
   checkOverlap("load address", LMAs, false);
 }
