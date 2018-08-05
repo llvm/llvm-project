@@ -205,8 +205,6 @@ define void @add_8r(i8* %p, i8 %v) {
 }
 
 define void @add_16i(i16* %p) {
-;   Currently the transformation is not done on 16 bit accesses, as the backend
-;   treat 16 bit arithmetic as expensive on X86/X86_64.
 ; X64-LABEL: add_16i:
 ; X64:       # %bb.0:
 ; X64-NEXT:    addw $2, (%rdi)
@@ -224,8 +222,6 @@ define void @add_16i(i16* %p) {
 }
 
 define void @add_16r(i16* %p, i16 %v) {
-;   Currently the transformation is not done on 16 bit accesses, as the backend
-;   treat 16 bit arithmetic as expensive on X86/X86_64.
 ; X64-LABEL: add_16r:
 ; X64:       # %bb.0:
 ; X64-NEXT:    addw %si, (%rdi)
@@ -478,8 +474,6 @@ define void @sub_8r(i8* %p, i8 %v) {
 }
 
 define void @sub_16r(i16* %p, i16 %v) {
-;   Currently the transformation is not done on 16 bit accesses, as the backend
-;   treat 16 bit arithmetic as expensive on X86/X86_64.
 ; X64-LABEL: sub_16r:
 ; X64:       # %bb.0:
 ; X64-NEXT:    subw %si, (%rdi)
@@ -666,8 +660,6 @@ define void @and_8r(i8* %p, i8 %v) {
 }
 
 define void @and_16i(i16* %p) {
-;   Currently the transformation is not done on 16 bit accesses, as the backend
-;   treat 16 bit arithmetic as expensive on X86/X86_64.
 ; X64-LABEL: and_16i:
 ; X64:       # %bb.0:
 ; X64-NEXT:    andw $2, (%rdi)
@@ -685,8 +677,6 @@ define void @and_16i(i16* %p) {
 }
 
 define void @and_16r(i16* %p, i16 %v) {
-;   Currently the transformation is not done on 16 bit accesses, as the backend
-;   treat 16 bit arithmetic as expensive on X86/X86_64.
 ; X64-LABEL: and_16r:
 ; X64:       # %bb.0:
 ; X64-NEXT:    andw %si, (%rdi)
@@ -1365,8 +1355,6 @@ define void @inc_8(i8* %p) {
 }
 
 define void @inc_16(i16* %p) {
-;   Currently the transformation is not done on 16 bit accesses, as the backend
-;   treat 16 bit arithmetic as expensive on X86/X86_64.
 ; FAST_INC-LABEL: inc_16:
 ; FAST_INC:       # %bb.0:
 ; FAST_INC-NEXT:    incw (%rdi)
@@ -1512,8 +1500,6 @@ define void @dec_8(i8* %p) {
 }
 
 define void @dec_16(i16* %p) {
-;   Currently the transformation is not done on 16 bit accesses, as the backend
-;   treat 16 bit arithmetic as expensive on X86/X86_64.
 ; FAST_INC-LABEL: dec_16:
 ; FAST_INC:       # %bb.0:
 ; FAST_INC-NEXT:    decw (%rdi)
@@ -1654,8 +1640,6 @@ define void @not_8(i8* %p) {
 }
 
 define void @not_16(i16* %p) {
-;   Currently the transformation is not done on 16 bit accesses, as the backend
-;   treat 16 bit arithmetic as expensive on X86/X86_64.
 ; X64-LABEL: not_16:
 ; X64:       # %bb.0:
 ; X64-NEXT:    notw (%rdi)
@@ -1774,8 +1758,6 @@ define void @neg_8(i8* %p) {
 }
 
 define void @neg_16(i16* %p) {
-;   Currently the transformation is neg done on 16 bit accesses, as the backend
-;   treat 16 bit arithmetic as expensive on X86/X86_64.
 ; X64-LABEL: neg_16:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movzwl (%rdi), %eax
