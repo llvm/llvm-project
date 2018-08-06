@@ -33,3 +33,20 @@ TEST(ConstStringTest, MangledCounterpart) {
   EXPECT_TRUE(foo.GetMangledCounterpart(counterpart));
   EXPECT_EQ("bar", counterpart.GetStringRef());
 }
+
+TEST(ConstStringTest, NullAndEmptyStates) {
+  ConstString foo("foo");
+  EXPECT_FALSE(!foo);
+  EXPECT_FALSE(foo.IsEmpty());
+  EXPECT_FALSE(foo.IsNull());
+
+  ConstString empty("");
+  EXPECT_TRUE(!empty);
+  EXPECT_TRUE(empty.IsEmpty());
+  EXPECT_FALSE(empty.IsNull());
+
+  ConstString null;
+  EXPECT_TRUE(!null);
+  EXPECT_TRUE(null.IsEmpty());
+  EXPECT_TRUE(null.IsNull());
+}
