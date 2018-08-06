@@ -235,7 +235,7 @@ void Mangled::Clear() {
 int Mangled::Compare(const Mangled &a, const Mangled &b) {
   return ConstString::Compare(
       a.GetName(lldb::eLanguageTypeUnknown, ePreferMangled),
-      a.GetName(lldb::eLanguageTypeUnknown, ePreferMangled));
+      b.GetName(lldb::eLanguageTypeUnknown, ePreferMangled));
 }
 
 //----------------------------------------------------------------------
