@@ -111,38 +111,34 @@ public:
   }
 
   const char *
-  GetConstCStringAndSetMangledCounterPart(const char *demangled_cstr,
+  GetConstCStringAndSetMangledCounterPart(llvm::StringRef demangled,
                                           const char *mangled_ccstr) {
-    if (demangled_cstr != nullptr) {
-      const char *demangled_ccstr = nullptr;
+    const char *demangled_ccstr = nullptr;
 
-      {
-        llvm::StringRef string_ref(demangled_cstr);
-        const uint8_t h = hash(string_ref);
-        llvm::sys::SmartScopedWriter<false> wlock(m_string_pools[h].m_mutex);
+    {
+      const uint8_t h = hash(demangled);
+      llvm::sys::SmartScopedWriter<false> wlock(m_string_pools[h].m_mutex);
 
-        // Make string pool entry with the mangled counterpart already set
-        StringPoolEntryType &entry =
-            *m_string_pools[h]
-                 .m_string_map.insert(std::make_pair(string_ref, mangled_ccstr))
-                 .first;
+      // Make string pool entry with the mangled counterpart already set
+      StringPoolEntryType &entry =
+          *m_string_pools[h]
+               .m_string_map.insert(std::make_pair(demangled, mangled_ccstr))
+               .first;
 
-        // Extract the const version of the demangled_cstr
-        demangled_ccstr = entry.getKeyData();
-      }
-
-      {
-        // Now assign the demangled const string as the counterpart of the
-        // mangled const string...
-        const uint8_t h = hash(llvm::StringRef(mangled_ccstr));
-        llvm::sys::SmartScopedWriter<false> wlock(m_string_pools[h].m_mutex);
-        GetStringMapEntryFromKeyData(mangled_ccstr).setValue(demangled_ccstr);
-      }
-
-      // Return the constant demangled C string
-      return demangled_ccstr;
+      // Extract the const version of the demangled_cstr
+      demangled_ccstr = entry.getKeyData();
     }
-    return nullptr;
+
+    {
+      // Now assign the demangled const string as the counterpart of the
+      // mangled const string...
+      const uint8_t h = hash(llvm::StringRef(mangled_ccstr));
+      llvm::sys::SmartScopedWriter<false> wlock(m_string_pools[h].m_mutex);
+      GetStringMapEntryFromKeyData(mangled_ccstr).setValue(demangled_ccstr);
+    }
+
+    // Return the constant demangled C string
+    return demangled_ccstr;
   }
 
   const char *GetConstTrimmedCStringWithLength(const char *cstr,
@@ -306,7 +302,7 @@ void ConstString::SetString(const llvm::StringRef &s) {
   m_string = StringPool().GetConstCStringWithLength(s.data(), s.size());
 }
 
-void ConstString::SetCStringWithMangledCounterpart(const char *demangled,
+void ConstString::SetStringWithMangledCounterpart(llvm::StringRef demangled,
                                                    const ConstString &mangled) {
   m_string = StringPool().GetConstCStringAndSetMangledCounterPart(
       demangled, mangled.m_string);

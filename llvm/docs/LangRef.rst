@@ -5833,7 +5833,7 @@ one module path entry per linked module with summary.
 
 Example:
 
-.. code-block:: llvm
+.. code-block:: text
 
     ^0 = module: (path: "/path/to/file.o", hash: (2468601609, 1329373163, 1565878005, 638838075, 3148790418))
 
@@ -5851,7 +5851,7 @@ referenced by a summarized module.
 
 Example:
 
-.. code-block:: llvm
+.. code-block:: text
 
     ^4 = gv: (name: "f"[, summaries: (Summary)[, (Summary)]*]?) ; guid = 14740650423002898831
 
@@ -5871,7 +5871,7 @@ Function Summary
 
 If the global value is a function, the ``Summary`` entry will look like:
 
-.. code-block:: llvm
+.. code-block:: text
 
     function: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 2[, FuncFlags]?[, Calls]?[, TypeIdInfo]?[, Refs]?
 
@@ -5892,7 +5892,7 @@ Global Variable Summary
 
 If the global value is a variable, the ``Summary`` entry will look like:
 
-.. code-block:: llvm
+.. code-block:: text
 
     variable: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 0)[, Refs]?
 
@@ -5906,7 +5906,7 @@ Alias Summary
 
 If the global value is an alias, the ``Summary`` entry will look like:
 
-.. code-block:: llvm
+.. code-block:: text
 
     alias: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 0), aliasee: ^2)
 
@@ -5921,7 +5921,7 @@ Function Flags
 
 The optional ``FuncFlags`` field looks like:
 
-.. code-block:: llvm
+.. code-block:: text
 
     funcFlags: (readNone: 0, readOnly: 0, noRecurse: 0, returnDoesNotAlias: 0)
 
@@ -5935,13 +5935,13 @@ Calls
 
 The optional ``Calls`` field looks like:
 
-.. code-block:: llvm
+.. code-block:: text
 
     calls: ((Callee)[, (Callee)]*)
 
 where each ``Callee`` looks like:
 
-.. code-block:: llvm
+.. code-block:: text
 
     callee: ^1[, hotness: None]?[, relbf: 0]?
 
@@ -5958,7 +5958,7 @@ Refs
 
 The optional ``Refs`` field looks like:
 
-.. code-block:: llvm
+.. code-block:: text
 
     refs: ((Ref)[, (Ref)]*)
 
@@ -5974,7 +5974,7 @@ The optional ``TypeIdInfo`` field, used for
 `Control Flow Integrity <http://clang.llvm.org/docs/ControlFlowIntegrity.html>`_,
 looks like:
 
-.. code-block:: llvm
+.. code-block:: text
 
     typeIdInfo: [(TypeTests)]?[, (TypeTestAssumeVCalls)]?[, (TypeCheckedLoadVCalls)]?[, (TypeTestAssumeConstVCalls)]?[, (TypeCheckedLoadConstVCalls)]?
 
@@ -5983,7 +5983,7 @@ These optional fields have the following forms:
 TypeTests
 """""""""
 
-.. code-block:: llvm
+.. code-block:: text
 
     typeTests: (TypeIdRef[, TypeIdRef]*)
 
@@ -5993,13 +5993,13 @@ by summary id or ``GUID``.
 TypeTestAssumeVCalls
 """"""""""""""""""""
 
-.. code-block:: llvm
+.. code-block:: text
 
     typeTestAssumeVCalls: (VFuncId[, VFuncId]*)
 
 Where each VFuncId has the format:
 
-.. code-block:: llvm
+.. code-block:: text
 
     vFuncId: (TypeIdRef, offset: 16)
 
@@ -6009,7 +6009,7 @@ by summary id or ``GUID`` preceeded by a ``guid:`` tag.
 TypeCheckedLoadVCalls
 """""""""""""""""""""
 
-.. code-block:: llvm
+.. code-block:: text
 
     typeCheckedLoadVCalls: (VFuncId[, VFuncId]*)
 
@@ -6018,13 +6018,13 @@ Where each VFuncId has the format described for ``TypeTestAssumeVCalls``.
 TypeTestAssumeConstVCalls
 """""""""""""""""""""""""
 
-.. code-block:: llvm
+.. code-block:: text
 
     typeTestAssumeConstVCalls: (ConstVCall[, ConstVCall]*)
 
 Where each ConstVCall has the format:
 
-.. code-block:: llvm
+.. code-block:: text
 
     VFuncId, args: (Arg[, Arg]*)
 
@@ -6034,7 +6034,7 @@ and each Arg is an integer argument number.
 TypeCheckedLoadConstVCalls
 """"""""""""""""""""""""""
 
-.. code-block:: llvm
+.. code-block:: text
 
     typeCheckedLoadConstVCalls: (ConstVCall[, ConstVCall]*)
 
@@ -6053,7 +6053,7 @@ so these are only present in a combined summary index.
 
 Example:
 
-.. code-block:: llvm
+.. code-block:: text
 
     ^4 = typeid: (name: "_ZTS1A", summary: (typeTestRes: (kind: allOnes, sizeM1BitWidth: 7[, alignLog2: 0]?[, sizeM1: 0]?[, bitMask: 0]?[, inlineBits: 0]?)[, WpdResolutions]?)) ; guid = 7004155349499253778
 
@@ -6063,14 +6063,14 @@ the ``size-1`` bit width. It is followed by optional flags, which default to 0,
 and an optional WpdResolutions (whole program devirtualization resolution)
 field that looks like:
 
-.. code-block:: llvm
+.. code-block:: text
 
     wpdResolutions: ((offset: 0, WpdRes)[, (offset: 1, WpdRes)]*
 
 where each entry is a mapping from the given byte offset to the whole-program
 devirtualization resolution WpdRes, that has one of the following formats:
 
-.. code-block:: llvm
+.. code-block:: text
 
     wpdRes: (kind: branchFunnel)
     wpdRes: (kind: singleImpl, singleImplName: "_ZN1A1nEi")
@@ -6079,13 +6079,13 @@ devirtualization resolution WpdRes, that has one of the following formats:
 Additionally, each wpdRes has an optional ``resByArg`` field, which
 describes the resolutions for calls with all constant integer arguments:
 
-.. code-block:: llvm
+.. code-block:: text
 
     resByArg: (ResByArg[, ResByArg]*)
 
 where ResByArg is:
 
-.. code-block:: llvm
+.. code-block:: text
 
     args: (Arg[, Arg]*), byArg: (kind: UniformRetVal[, info: 0][, byte: 0][, bit: 0])
 
