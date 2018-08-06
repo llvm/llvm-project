@@ -295,13 +295,12 @@ public:
 
   void Initialize(ASTContext &Context) override {
     Ctx = &Context;
-    checkerMgr =
-        createCheckerManager(*Opts, PP.getLangOpts(), Plugins,
-                             CheckerRegistrationFns, PP.getDiagnostics());
+    checkerMgr = createCheckerManager(
+        *Ctx, *Opts, Plugins, CheckerRegistrationFns, PP.getDiagnostics());
 
     Mgr = llvm::make_unique<AnalysisManager>(
-        *Ctx, PP.getDiagnostics(), PP.getLangOpts(), PathConsumers,
-        CreateStoreMgr, CreateConstraintMgr, checkerMgr.get(), *Opts, Injector);
+        *Ctx, PP.getDiagnostics(), PathConsumers, CreateStoreMgr,
+        CreateConstraintMgr, checkerMgr.get(), *Opts, Injector);
   }
 
   /// Store the top level decls in the set to be processed later on.
