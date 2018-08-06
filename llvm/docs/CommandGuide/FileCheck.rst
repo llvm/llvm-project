@@ -270,9 +270,9 @@ you can use the "``CHECK-EMPTY:``" directive.
 
 .. code-block:: llvm
 
-   foo
+   declare void @foo()
 
-   bar
+   declare void @bar()
    ; CHECK: foo
    ; CHECK-EMPTY:
    ; CHECK-NEXT: bar
