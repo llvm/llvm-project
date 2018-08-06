@@ -19,9 +19,10 @@
 ; YAML-NEXT:   - Callee:          tinkywinky
 ; YAML-NEXT:   - String:          ' inlined into '
 ; YAML-NEXT:   - Caller:          main
-; YAML-NEXT:   - String:          ' with cost='
+; YAML-NEXT:   - String:          ' with '
+; YAML-NEXT:   - String:          '(cost='
 ; YAML-NEXT:   - Cost:            '0'
-; YAML-NEXT:   - String:          ' (threshold='
+; YAML-NEXT:   - String:          ', threshold='
 ; YAML-NEXT:   - Threshold:       '337'
 ; YAML-NEXT:   - String:          ')'
 ; YAML-NEXT: ...
@@ -29,7 +30,7 @@
 ; Next try with pass remarks to stderr
 ; RUN: %clang -target x86_64-scei-ps4 -O2 -x ir %t.o -fthinlto-index=%t.thinlto.bc -mllvm -pass-remarks=inline -fdiagnostics-show-hotness -o %t2.o -c 2>&1 | FileCheck %s
 
-; CHECK: tinkywinky inlined into main with cost=0 (threshold=337) (hotness: 300)
+; CHECK: tinkywinky inlined into main with (cost=0, threshold=337) (hotness: 300)
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-scei-ps4"
