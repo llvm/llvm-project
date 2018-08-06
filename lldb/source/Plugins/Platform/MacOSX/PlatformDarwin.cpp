@@ -16,8 +16,6 @@
 #include <algorithm>
 #include <mutex>
 
-// Other libraries and framework includes
-#include "clang/Basic/VersionTuple.h"
 // Project includes
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Breakpoint/BreakpointSite.h"
@@ -42,6 +40,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Threading.h"
+#include "llvm/Support/VersionTuple.h"
 
 #if defined(__APPLE__)
 #include <TargetConditionals.h> // for TARGET_OS_TV, TARGET_OS_WATCH
@@ -73,10 +72,9 @@ FileSpecList PlatformDarwin::LocateExecutableScriptingResources(
     // NB some extensions might be meaningful and should not be stripped -
     // "this.binary.file"
     // should not lose ".file" but GetFileNameStrippingExtension() will do
-    // precisely that.
-    // Ideally, we should have a per-platform list of extensions (".exe",
-    // ".app", ".dSYM", ".framework")
-    // which should be stripped while leaving "this.binary.file" as-is.
+    // precisely that. Ideally, we should have a per-platform list of
+    // extensions (".exe", ".app", ".dSYM", ".framework") which should be
+    // stripped while leaving "this.binary.file" as-is.
     ScriptInterpreter *script_interpreter =
         target->GetDebugger().GetCommandInterpreter().GetScriptInterpreter();
 
@@ -101,14 +99,11 @@ FileSpecList PlatformDarwin::LocateExecutableScriptingResources(
                 // FIXME: for Python, we cannot allow certain characters in
                 // module
                 // filenames we import. Theoretically, different scripting
-                // languages may
-                // have different sets of forbidden tokens in filenames, and
-                // that should
-                // be dealt with by each ScriptInterpreter. For now, we just
-                // replace dots
-                // with underscores, but if we ever support anything other than
-                // Python
-                // we will need to rework this
+                // languages may have different sets of forbidden tokens in
+                // filenames, and that should be dealt with by each
+                // ScriptInterpreter. For now, we just replace dots with
+                // underscores, but if we ever support anything other than
+                // Python we will need to rework this
                 std::replace(module_basename.begin(), module_basename.end(),
                              '.', '_');
                 std::replace(module_basename.begin(), module_basename.end(),
@@ -125,9 +120,9 @@ FileSpecList PlatformDarwin::LocateExecutableScriptingResources(
                 StreamString path_string;
                 StreamString original_path_string;
                 // for OSX we are going to be in
-                // .dSYM/Contents/Resources/DWARF/<basename>
-                // let us go to .dSYM/Contents/Resources/Python/<basename>.py
-                // and see if the file exists
+                // .dSYM/Contents/Resources/DWARF/<basename> let us go to
+                // .dSYM/Contents/Resources/Python/<basename>.py and see if the
+                // file exists
                 path_string.Printf("%s/../Python/%s.py",
                                    symfile_spec.GetDirectory().GetCString(),
                                    module_basename.c_str());
@@ -140,9 +135,8 @@ FileSpecList PlatformDarwin::LocateExecutableScriptingResources(
                                            true);
 
                 // if we did some replacements of reserved characters, and a
-                // file with the untampered name
-                // exists, then warn the user that the file as-is shall not be
-                // loaded
+                // file with the untampered name exists, then warn the user
+                // that the file as-is shall not be loaded
                 if (feedback_stream) {
                   if (module_basename != original_module_basename &&
                       orig_script_fspec.Exists()) {
@@ -178,8 +172,8 @@ FileSpecList PlatformDarwin::LocateExecutableScriptingResources(
                   break;
                 }
 
-                // If we didn't find the python file, then keep
-                // stripping the extensions and try again
+                // If we didn't find the python file, then keep stripping the
+                // extensions and try again
                 ConstString filename_no_extension(
                     module_spec.GetFileNameStrippingExtension());
                 if (module_spec.GetFilename() == filename_no_extension)
@@ -270,8 +264,8 @@ lldb_private::Status PlatformDarwin::GetSharedModuleWithLocalCache(
       FileSpec module_cache_spec(cache_path, false);
 
       // if rsync is supported, always bring in the file - rsync will be very
-      // efficient
-      // when files are the same on the local and remote end of the connection
+      // efficient when files are the same on the local and remote end of the
+      // connection
       if (this->GetSupportsRSync()) {
         err = BringInRemoteFile(this, module_spec, module_cache_spec);
         if (err.Fail())
@@ -370,8 +364,8 @@ Status PlatformDarwin::GetSharedModule(
   module_sp.reset();
 
   if (IsRemote()) {
-    // If we have a remote platform always, let it try and locate
-    // the shared module first.
+    // If we have a remote platform always, let it try and locate the shared
+    // module first.
     if (m_remote_platform_sp) {
       error = m_remote_platform_sp->GetSharedModule(
           module_spec, process, module_sp, module_search_paths_ptr,
@@ -453,8 +447,8 @@ PlatformDarwin::GetSoftwareBreakpointTrapOpcode(Target &target,
   switch (machine) {
   case llvm::Triple::aarch64: {
     // TODO: fix this with actual darwin breakpoint opcode for arm64.
-    // right now debugging uses the Z packets with GDB remote so this
-    // is not needed, but the size needs to be correct...
+    // right now debugging uses the Z packets with GDB remote so this is not
+    // needed, but the size needs to be correct...
     static const uint8_t g_arm64_breakpoint_opcode[] = {0xFE, 0xDE, 0xFF, 0xE7};
     trap_opcode = g_arm64_breakpoint_opcode;
     trap_opcode_size = sizeof(g_arm64_breakpoint_opcode);
@@ -472,7 +466,7 @@ PlatformDarwin::GetSoftwareBreakpointTrapOpcode(Target &target,
       lldb::BreakpointLocationSP bp_loc_sp(bp_site->GetOwnerAtIndex(0));
       if (bp_loc_sp)
         bp_is_thumb = bp_loc_sp->GetAddress().GetAddressClass() ==
-                      eAddressClassCodeAlternateISA;
+                      AddressClass::eCodeAlternateISA;
     }
     if (bp_is_thumb) {
       trap_opcode = g_thumb_breakpooint_opcode;
@@ -548,8 +542,8 @@ bool PlatformDarwin::x86GetSupportedArchitectureAtIndex(uint32_t idx,
           HostInfo::GetArchitecture(HostInfo::eArchKind64));
       if (platform_arch.IsExactMatch(platform_arch64)) {
         // This macosx platform supports both 32 and 64 bit. Since we already
-        // returned the 64 bit arch for idx == 0, return the 32 bit arch
-        // for idx == 1
+        // returned the 64 bit arch for idx == 0, return the 32 bit arch for
+        // idx == 1
         arch = HostInfo::GetArchitecture(HostInfo::eArchKind32);
         return arch.IsValid();
       }
@@ -558,9 +552,9 @@ bool PlatformDarwin::x86GetSupportedArchitectureAtIndex(uint32_t idx,
   return false;
 }
 
-// The architecture selection rules for arm processors
-// These cpu subtypes have distinct names (e.g. armv7f) but armv7 binaries run
-// fine on an armv7f processor.
+// The architecture selection rules for arm processors These cpu subtypes have
+// distinct names (e.g. armv7f) but armv7 binaries run fine on an armv7f
+// processor.
 
 bool PlatformDarwin::ARMGetSupportedArchitectureAtIndex(uint32_t idx,
                                                         ArchSpec &arch) {
@@ -1138,14 +1132,15 @@ const char *PlatformDarwin::GetDeveloperDirectory() {
   if (m_developer_directory.empty()) {
     bool developer_dir_path_valid = false;
     char developer_dir_path[PATH_MAX];
-    FileSpec temp_file_spec;
 
     // Get the lldb framework's file path, and if it exists, truncate some
     // components to only the developer directory path.
-    if (HostInfo::GetLLDBPath(ePathTypeLLDBShlibDir, temp_file_spec)) {
+    FileSpec temp_file_spec = HostInfo::GetShlibDir();
+    if (temp_file_spec) {
       if (temp_file_spec.GetPath(developer_dir_path,
                                  sizeof(developer_dir_path))) {
-        // e.g. /Applications/Xcode.app/Contents/SharedFrameworks/LLDB.framework
+        // e.g.
+        // /Applications/Xcode.app/Contents/SharedFrameworks/LLDB.framework
         char *shared_frameworks =
             strstr(developer_dir_path, "/SharedFrameworks/LLDB.framework");
         if (shared_frameworks) {
@@ -1153,7 +1148,8 @@ const char *PlatformDarwin::GetDeveloperDirectory() {
           strncat (developer_dir_path, "/Developer", sizeof (developer_dir_path) - 1); // add /Developer on
           developer_dir_path_valid = true;
         } else {
-          // e.g. /Applications/Xcode.app/Contents/Developer/Toolchains/iOS11.2.xctoolchain/System/Library/PrivateFrameworks/LLDB.framework
+          // e.g.
+          // /Applications/Xcode.app/Contents/Developer/Toolchains/iOS11.2.xctoolchain/System/Library/PrivateFrameworks/LLDB.framework
           char *developer_toolchains =
             strstr(developer_dir_path, "/Contents/Developer/Toolchains/");
           if (developer_toolchains) {
@@ -1171,7 +1167,7 @@ const char *PlatformDarwin::GetDeveloperDirectory() {
       if (xcode_select_prefix_dir)
         xcode_dir_path.append(xcode_select_prefix_dir);
       xcode_dir_path.append("/usr/share/xcode-select/xcode_dir_path");
-      temp_file_spec.SetFile(xcode_dir_path, false);
+      temp_file_spec.SetFile(xcode_dir_path, false, FileSpec::Style::native);
       auto dir_buffer =
           DataBufferLLVM::CreateFromPath(temp_file_spec.GetPath());
       if (dir_buffer && dir_buffer->GetByteSize() > 0) {
@@ -1196,7 +1192,7 @@ const char *PlatformDarwin::GetDeveloperDirectory() {
             Host::RunShellCommand("/usr/bin/xcode-select --print-path",
                                   NULL, // current working directory
                                   &exit_status, &signo, &command_output,
-                                  2,      // short timeout
+                                  std::chrono::seconds(2), // short timeout
                                   false); // don't run in a shell
         if (error.Success() && exit_status == 0 && !command_output.empty()) {
           const char *cmd_output_ptr = command_output.c_str();
@@ -1219,7 +1215,8 @@ const char *PlatformDarwin::GetDeveloperDirectory() {
     }
 
     if (developer_dir_path_valid) {
-      temp_file_spec.SetFile(developer_dir_path, false);
+      temp_file_spec.SetFile(developer_dir_path, false,
+                             FileSpec::Style::native);
       if (temp_file_spec.Exists()) {
         m_developer_directory.assign(developer_dir_path);
         return m_developer_directory.c_str();
@@ -1230,8 +1227,8 @@ const char *PlatformDarwin::GetDeveloperDirectory() {
     m_developer_directory.assign(1, '\0');
   }
 
-  // We should have put a single NULL character into m_developer_directory
-  // or it should have a valid path if the code gets here
+  // We should have put a single NULL character into m_developer_directory or
+  // it should have a valid path if the code gets here
   assert(m_developer_directory.empty() == false);
   if (m_developer_directory[0])
     return m_developer_directory.c_str();
@@ -1279,17 +1276,11 @@ PlatformDarwin::GetResumeCountForLaunchInfo(ProcessLaunchInfo &launch_info) {
     shell_name++;
 
   if (strcmp(shell_name, "sh") == 0) {
-    // /bin/sh re-exec's itself as /bin/bash requiring another resume.
-    // But it only does this if the COMMAND_MODE environment variable
-    // is set to "legacy".
-    const char **envp =
-        launch_info.GetEnvironmentEntries().GetConstArgumentVector();
-    if (envp != NULL) {
-      for (int i = 0; envp[i] != NULL; i++) {
-        if (strcmp(envp[i], "COMMAND_MODE=legacy") == 0)
-          return 2;
-      }
-    }
+    // /bin/sh re-exec's itself as /bin/bash requiring another resume. But it
+    // only does this if the COMMAND_MODE environment variable is set to
+    // "legacy".
+    if (launch_info.GetEnvironment().lookup("COMMAND_MODE") == "legacy")
+      return 2;
     return 1;
   } else if (strcmp(shell_name, "csh") == 0 ||
              strcmp(shell_name, "tcsh") == 0 ||
@@ -1310,7 +1301,7 @@ static const char *const sdk_strings[] = {
 
 static FileSpec CheckPathForXcode(const FileSpec &fspec) {
   if (fspec.Exists()) {
-    const char substr[] = ".app/Contents/";
+    const char substr[] = ".app/Contents";
 
     std::string path_to_shlib = fspec.GetPath();
     size_t pos = path_to_shlib.rfind(substr);
@@ -1339,9 +1330,8 @@ static FileSpec GetXcodeContentsPath() {
 
     // First get the program file spec. If lldb.so or LLDB.framework is running
     // in a program and that program is Xcode, the path returned with be the
-    // path
-    // to Xcode.app/Contents/MacOS/Xcode, so this will be the correct Xcode to
-    // use.
+    // path to Xcode.app/Contents/MacOS/Xcode, so this will be the correct
+    // Xcode to use.
     fspec = HostInfo::GetProgramFileSpec();
 
     if (fspec) {
@@ -1375,7 +1365,7 @@ static FileSpec GetXcodeContentsPath() {
             &signo,  // Put the signal that caused the process to exit in here
             &output, // Get the output from the command and place it in this
                      // string
-            3);      // Timeout in seconds to wait for shell program to finish
+            std::chrono::seconds(3));
         if (status == 0 && !output.empty()) {
           size_t first_non_newline = output.find_last_not_of("\r\n");
           if (first_non_newline != std::string::npos) {
@@ -1392,18 +1382,14 @@ static FileSpec GetXcodeContentsPath() {
   return g_xcode_filespec;
 }
 
-bool PlatformDarwin::SDKSupportsModules(SDKType sdk_type, uint32_t major,
-                                        uint32_t minor, uint32_t micro) {
+bool PlatformDarwin::SDKSupportsModules(SDKType sdk_type,
+                                        llvm::VersionTuple version) {
   switch (sdk_type) {
   case SDKType::MacOSX:
-    if (major > 10 || (major == 10 && minor >= 10))
-      return true;
-    break;
+    return version >= llvm::VersionTuple(10, 10);
   case SDKType::iPhoneOS:
   case SDKType::iPhoneSimulator:
-    if (major >= 8)
-      return true;
-    break;
+    return version >= llvm::VersionTuple(8);
   }
 
   return false;
@@ -1425,32 +1411,10 @@ bool PlatformDarwin::SDKSupportsModules(SDKType desired_type,
       return false;
     }
 
-    const size_t major_dot_offset = version_part.find('.');
-    if (major_dot_offset == llvm::StringRef::npos)
+    llvm::VersionTuple version;
+    if (version.tryParse(version_part))
       return false;
-
-    const llvm::StringRef major_version =
-        version_part.slice(0, major_dot_offset);
-    const llvm::StringRef minor_part =
-        version_part.drop_front(major_dot_offset + 1);
-
-    const size_t minor_dot_offset = minor_part.find('.');
-    if (minor_dot_offset == llvm::StringRef::npos)
-      return false;
-
-    const llvm::StringRef minor_version = minor_part.slice(0, minor_dot_offset);
-
-    unsigned int major = 0;
-    unsigned int minor = 0;
-    unsigned int micro = 0;
-
-    if (major_version.getAsInteger(10, major))
-      return false;
-
-    if (minor_version.getAsInteger(10, minor))
-      return false;
-
-    return SDKSupportsModules(desired_type, major, minor, micro);
+    return SDKSupportsModules(desired_type, version);
   }
 
   return false;
@@ -1522,18 +1486,17 @@ FileSpec PlatformDarwin::GetSDKDirectoryForModules(SDKType sdk_type) {
   sdks_spec.AppendPathComponent("SDKs");
 
   if (sdk_type == SDKType::MacOSX) {
-    uint32_t major = 0;
-    uint32_t minor = 0;
-    uint32_t micro = 0;
+    llvm::VersionTuple version = HostInfo::GetOSVersion();
 
-    if (HostInfo::GetOSVersion(major, minor, micro)) {
-      if (SDKSupportsModules(SDKType::MacOSX, major, minor, micro)) {
+    if (!version.empty()) {
+      if (SDKSupportsModules(SDKType::MacOSX, version)) {
         // We slightly prefer the exact SDK for this machine.  See if it is
         // there.
 
         FileSpec native_sdk_spec = sdks_spec;
         StreamString native_sdk_name;
-        native_sdk_name.Printf("MacOSX%u.%u.sdk", major, minor);
+        native_sdk_name.Printf("MacOSX%u.%u.sdk", version.getMajor(),
+                               version.getMinor().getValueOr(0));
         native_sdk_spec.AppendPathComponent(native_sdk_name.GetString());
 
         if (native_sdk_spec.Exists()) {
@@ -1546,14 +1509,14 @@ FileSpec PlatformDarwin::GetSDKDirectoryForModules(SDKType sdk_type) {
   return FindSDKInXcodeForModules(sdk_type, sdks_spec);
 }
 
-std::tuple<uint32_t, uint32_t, uint32_t, llvm::StringRef>
+std::tuple<llvm::VersionTuple, llvm::StringRef>
 PlatformDarwin::ParseVersionBuildDir(llvm::StringRef dir) {
-  uint32_t major, minor, update;
   llvm::StringRef build;
   llvm::StringRef version_str;
   llvm::StringRef build_str;
   std::tie(version_str, build_str) = dir.split(' ');
-  if (Args::StringToVersion(version_str, major, minor, update) ||
+  llvm::VersionTuple version;
+  if (!version.tryParse(version_str) ||
       build_str.empty()) {
     if (build_str.consume_front("(")) {
       size_t pos = build_str.find(')');
@@ -1561,7 +1524,7 @@ PlatformDarwin::ParseVersionBuildDir(llvm::StringRef dir) {
     }
   }
 
-  return std::make_tuple(major, minor, update, build);
+  return std::make_tuple(version, build);
 }
 
 void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
@@ -1573,7 +1536,6 @@ void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
   options.insert(options.end(), apple_arguments.begin(), apple_arguments.end());
 
   StreamString minimum_version_option;
-  uint32_t versions[3] = {0, 0, 0};
   bool use_current_os_version = false;
   switch (sdk_type) {
   case SDKType::iPhoneOS:
@@ -1597,9 +1559,9 @@ void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
     break;
   }
 
-  bool versions_valid = false;
+  llvm::VersionTuple version;
   if (use_current_os_version)
-    versions_valid = GetOSVersion(versions[0], versions[1], versions[2]);
+    version = GetOSVersion();
   else if (target) {
     // Our OS doesn't match our executable so we need to get the min OS version
     // from the object file
@@ -1607,35 +1569,23 @@ void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
     if (exe_module_sp) {
       ObjectFile *object_file = exe_module_sp->GetObjectFile();
       if (object_file)
-        versions_valid = object_file->GetMinimumOSVersion(versions, 3) > 0;
+        version = object_file->GetMinimumOSVersion();
     }
   }
   // Only add the version-min options if we got a version from somewhere
-  if (versions_valid && versions[0] != UINT32_MAX) {
-    // Make any invalid versions be zero if needed
-    if (versions[1] == UINT32_MAX)
-      versions[1] = 0;
-    if (versions[2] == UINT32_MAX)
-      versions[2] = 0;
-
+  if (!version.empty()) {
     switch (sdk_type) {
     case SDKType::iPhoneOS:
       minimum_version_option.PutCString("-mios-version-min=");
-      minimum_version_option.PutCString(
-          clang::VersionTuple(versions[0], versions[1], versions[2])
-              .getAsString());
+      minimum_version_option.PutCString(version.getAsString());
       break;
     case SDKType::iPhoneSimulator:
       minimum_version_option.PutCString("-mios-simulator-version-min=");
-      minimum_version_option.PutCString(
-          clang::VersionTuple(versions[0], versions[1], versions[2])
-              .getAsString());
+      minimum_version_option.PutCString(version.getAsString());
       break;
     case SDKType::MacOSX:
       minimum_version_option.PutCString("-mmacosx-version-min=");
-      minimum_version_option.PutCString(
-          clang::VersionTuple(versions[0], versions[1], versions[2])
-              .getAsString());
+      minimum_version_option.PutCString(version.getAsString());
     }
     options.push_back(minimum_version_option.GetString());
   }
@@ -1662,49 +1612,35 @@ ConstString PlatformDarwin::GetFullNameForDylib(ConstString basename) {
   return ConstString(stream.GetString());
 }
 
-bool PlatformDarwin::GetOSVersion(uint32_t &major, uint32_t &minor,
-                                  uint32_t &update, Process *process) {
+llvm::VersionTuple PlatformDarwin::GetOSVersion(Process *process) {
   if (process && strstr(GetPluginName().GetCString(), "-simulator")) {
     lldb_private::ProcessInstanceInfo proc_info;
     if (Host::GetProcessInfo(process->GetID(), proc_info)) {
-      Args &env = proc_info.GetEnvironmentEntries();
-      const size_t n = env.GetArgumentCount();
-      const llvm::StringRef k_runtime_version("SIMULATOR_RUNTIME_VERSION=");
-      const llvm::StringRef k_dyld_root_path("DYLD_ROOT_PATH=");
-      std::string dyld_root_path;
+      const Environment &env = proc_info.GetEnvironment();
 
-      for (size_t i = 0; i < n; ++i) {
-        const char *env_cstr = env.GetArgumentAtIndex(i);
-        if (env_cstr) {
-          llvm::StringRef env_str(env_cstr);
-          if (env_str.consume_front(k_runtime_version)) {
-            if (Args::StringToVersion(env_str, major, minor, update))
-              return true;
-          } else if (env_str.consume_front(k_dyld_root_path)) {
-            dyld_root_path = env_str;
-          }
-        }
-      }
+      llvm::VersionTuple result;
+      if (!result.tryParse(env.lookup("SIMULATOR_RUNTIME_VERSION")))
+        return result;
 
+      std::string dyld_root_path = env.lookup("DYLD_ROOT_PATH");
       if (!dyld_root_path.empty()) {
         dyld_root_path += "/System/Library/CoreServices/SystemVersion.plist";
         ApplePropertyList system_version_plist(dyld_root_path.c_str());
         std::string product_version;
         if (system_version_plist.GetValueAsString("ProductVersion",
                                                   product_version)) {
-          return Args::StringToVersion(product_version, major, minor, update);
+          if (!result.tryParse(product_version))
+            return result;
         }
       }
     }
     // For simulator platforms, do NOT call back through
-    // Platform::GetOSVersion()
-    // as it might call Process::GetHostOSVersion() which we don't want as it
-    // will be
-    // incorrect
-    return false;
+    // Platform::GetOSVersion() as it might call Process::GetHostOSVersion()
+    // which we don't want as it will be incorrect
+    return llvm::VersionTuple();
   }
 
-  return Platform::GetOSVersion(major, minor, update, process);
+  return Platform::GetOSVersion(process);
 }
 
 lldb_private::FileSpec PlatformDarwin::LocateExecutable(const char *basename) {
@@ -1713,9 +1649,9 @@ lldb_private::FileSpec PlatformDarwin::LocateExecutable(const char *basename) {
   // any executable directories that should be searched.
   static std::vector<FileSpec> g_executable_dirs;
 
-  // Find the global list of directories that we will search for
-  // executables once so we don't keep doing the work over and over.
-  static std::once_flag g_once_flag;
+  // Find the global list of directories that we will search for executables
+  // once so we don't keep doing the work over and over.
+  static llvm::once_flag g_once_flag;
   llvm::call_once(g_once_flag, []() {
 
     // When locating executables, trust the DEVELOPER_DIR first if it is set
@@ -1802,22 +1738,19 @@ PlatformDarwin::GetUnitTestModule(lldb_private::ModuleList &modules) {
 
 lldb_private::Status
 PlatformDarwin::LaunchProcess(lldb_private::ProcessLaunchInfo &launch_info) {
-  // Starting in Fall 2016 OSes, NSLog messages only get mirrored to stderr
-  // if the OS_ACTIVITY_DT_MODE environment variable is set.  (It doesn't
-  // require any specific value; rather, it just needs to exist).
-  // We will set it here as long as the IDE_DISABLED_OS_ACTIVITY_DT_MODE flag
-  // is not set.  Xcode makes use of IDE_DISABLED_OS_ACTIVITY_DT_MODE to tell
+  // Starting in Fall 2016 OSes, NSLog messages only get mirrored to stderr if
+  // the OS_ACTIVITY_DT_MODE environment variable is set.  (It doesn't require
+  // any specific value; rather, it just needs to exist). We will set it here
+  // as long as the IDE_DISABLED_OS_ACTIVITY_DT_MODE flag is not set.  Xcode
+  // makes use of IDE_DISABLED_OS_ACTIVITY_DT_MODE to tell
   // LLDB *not* to muck with the OS_ACTIVITY_DT_MODE flag when they
   // specifically want it unset.
   const char *disable_env_var = "IDE_DISABLED_OS_ACTIVITY_DT_MODE";
-  auto &env_vars = launch_info.GetEnvironmentEntries();
-  if (!env_vars.ContainsEnvironmentVariable(llvm::StringRef(disable_env_var))) {
-    // We want to make sure that OS_ACTIVITY_DT_MODE is set so that
-    // we get os_log and NSLog messages mirrored to the target process
-    // stderr.
-    if (!env_vars.ContainsEnvironmentVariable(
-            llvm::StringRef("OS_ACTIVITY_DT_MODE")))
-      env_vars.AppendArgument(llvm::StringRef("OS_ACTIVITY_DT_MODE=enable"));
+  auto &env_vars = launch_info.GetEnvironment();
+  if (!env_vars.count(disable_env_var)) {
+    // We want to make sure that OS_ACTIVITY_DT_MODE is set so that we get
+    // os_log and NSLog messages mirrored to the target process stderr.
+    env_vars.try_emplace("OS_ACTIVITY_DT_MODE", "enable");
   }
 
   // Let our parent class do the real launching.
@@ -1831,15 +1764,16 @@ PlatformDarwin::FindBundleBinaryInExecSearchPaths (const ModuleSpec &module_spec
                                                    ModuleSP *old_module_sp_ptr, bool *did_create_ptr)
 {
   const FileSpec &platform_file = module_spec.GetFileSpec();
-  // See if the file is present in any of the module_search_paths_ptr directories.
+  // See if the file is present in any of the module_search_paths_ptr
+  // directories.
   if (!module_sp && module_search_paths_ptr && platform_file) {
-    // create a vector of all the file / directory names in platform_file
-    // e.g. this might be
+    // create a vector of all the file / directory names in platform_file e.g.
+    // this might be
     // /System/Library/PrivateFrameworks/UIFoundation.framework/UIFoundation
     //
-    // We'll need to look in the module_search_paths_ptr directories for
-    // both "UIFoundation" and "UIFoundation.framework" -- most likely the
-    // latter will be the one we find there.
+    // We'll need to look in the module_search_paths_ptr directories for both
+    // "UIFoundation" and "UIFoundation.framework" -- most likely the latter
+    // will be the one we find there.
 
     FileSpec platform_pull_apart(platform_file);
     std::vector<std::string> path_parts;
@@ -1856,25 +1790,24 @@ PlatformDarwin::FindBundleBinaryInExecSearchPaths (const ModuleSpec &module_spec
       Log *log_verbose = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
       if (log_verbose)
           log_verbose->Printf ("PlatformRemoteDarwinDevice::GetSharedModule searching for binary in search-path %s", module_search_paths_ptr->GetFileSpecAtIndex(i).GetPath().c_str());
-      // Create a new FileSpec with this module_search_paths_ptr
-      // plus just the filename ("UIFoundation"), then the parent
-      // dir plus filename ("UIFoundation.framework/UIFoundation")
-      // etc - up to four names (to handle "Foo.framework/Contents/MacOS/Foo")
+      // Create a new FileSpec with this module_search_paths_ptr plus just the
+      // filename ("UIFoundation"), then the parent dir plus filename
+      // ("UIFoundation.framework/UIFoundation") etc - up to four names (to
+      // handle "Foo.framework/Contents/MacOS/Foo")
 
       for (size_t j = 0; j < 4 && j < path_parts_size - 1; ++j) {
         FileSpec path_to_try(module_search_paths_ptr->GetFileSpecAtIndex(i));
 
         // Add the components backwards.  For
-        // .../PrivateFrameworks/UIFoundation.framework/UIFoundation
-        // path_parts is
+        // .../PrivateFrameworks/UIFoundation.framework/UIFoundation path_parts
+        // is
         //   [0] UIFoundation
         //   [1] UIFoundation.framework
         //   [2] PrivateFrameworks
         //
         // and if 'j' is 2, we want to append path_parts[1] and then
-        // path_parts[0], aka
-        // 'UIFoundation.framework/UIFoundation', to the module_search_paths_ptr
-        // path.
+        // path_parts[0], aka 'UIFoundation.framework/UIFoundation', to the
+        // module_search_paths_ptr path.
 
         for (int k = j; k >= 0; --k) {
           path_to_try.AppendPathComponent(path_parts[k]);

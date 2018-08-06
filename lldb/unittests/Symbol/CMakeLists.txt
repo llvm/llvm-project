@@ -7,6 +7,7 @@ add_lldb_unittest(SymbolTests
     lldbHost
     lldbSymbol
     lldbUtilityHelpers
+    lldbPluginObjectFileELF
   )
 
 add_dependencies(SymbolTests yaml2obj)

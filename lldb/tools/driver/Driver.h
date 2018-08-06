@@ -37,7 +37,10 @@ public:
 
   virtual ~Driver();
 
-  void MainLoop();
+  /// Runs the main loop.
+  ///
+  /// @return The exit code that the process should return.
+  int MainLoop();
 
   lldb::SBError ParseArgs(int argc, const char *argv[], FILE *out_fh,
                           bool &do_exit);

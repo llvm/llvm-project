@@ -80,8 +80,8 @@ class MiDataTestCase(lldbmi_testcase.MiTestCaseBase):
         # To match the escaped characters in the ouptut, we must use four backslashes per matches backslash
         # See https://docs.python.org/2/howto/regex.html#the-backslash-plague
 
-        # The MIPS disassembler never prints stub name 
-        if self.isMIPS():
+        # The MIPS and PPC64le disassemblers never print stub name
+        if self.isMIPS() or self.isPPC64le():
             self.expect(["{address=\"0x[0-9a-f]+\",func-name=\"hello_world\(\)\",offset=\"[0-9]+\",size=\"[0-9]+\",inst=\".+?; \\\\\"Hello, World!\\\\\\\\n\\\\\"\"}",
                      "{address=\"0x[0-9a-f]+\",func-name=\"hello_world\(\)\",offset=\"[0-9]+\",size=\"[0-9]+\",inst=\".+?\"}"])
         else:
@@ -330,62 +330,6 @@ class MiDataTestCase(lldbmi_testcase.MiTestCaseBase):
         self.runCmd("-data-list-register-values x 0")
         self.expect(
             "\^done,register-values=\[{number=\"0\",value=\"0x[0-9a-f]+\"}\]")
-
-    @skipIfRemote   # We do not currently support remote debugging via the MI.
-    @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
-    @skipIfDarwin   # pexpect is known to be unreliable on Darwin
-    @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
-    def test_lldbmi_data_info_line(self):
-        """Test that 'lldb-mi --interpreter' works for -data-info-line."""
-
-        self.spawnLldbMi(args=None)
-
-        # Load executable
-        self.runCmd("-file-exec-and-symbols %s" % self.myexe)
-        self.expect("\^done")
-
-        # Run to main
-        self.runCmd("-break-insert -f main")
-        self.expect("\^done,bkpt={number=\"1\"")
-        self.runCmd("-exec-run")
-        self.expect("\^running")
-        self.expect("\*stopped,reason=\"breakpoint-hit\"")
-
-        # Get the address of main and its line
-        self.runCmd("-data-evaluate-expression main")
-        self.expect(
-            "\^done,value=\"0x[0-9a-f]+ \(a.out`main at main.cpp:[0-9]+\)\"")
-        addr = int(self.child.after.split("\"")[1].split(" ")[0], 16)
-        line = line_number('main.cpp', '// FUNC_main')
-
-        # Test that -data-info-line works for address
-        self.runCmd("-data-info-line *%#x" % addr)
-        self.expect(
-            "\^done,start=\"0x0*%x\",end=\"0x[0-9a-f]+\",file=\".+?main.cpp\",line=\"%d\"" %
-            (addr, line))
-
-        # Test that -data-info-line works for file:line
-        self.runCmd("-data-info-line main.cpp:%d" % line)
-        self.expect(
-            "\^done,start=\"0x0*%x\",end=\"0x[0-9a-f]+\",file=\".+?main.cpp\",line=\"%d\"" %
-            (addr, line))
-
-        # Test that -data-info-line fails when invalid address is specified
-        self.runCmd("-data-info-line *0x0")
-        self.expect(
-            "\^error,msg=\"Command 'data-info-line'\. Error: The LineEntry is absent or has an unknown format\.\"")
-
-        # Test that -data-info-line fails when file is unknown
-        self.runCmd("-data-info-line unknown_file:1")
-        self.expect(
-            "\^error,msg=\"Command 'data-info-line'\. Error: The LineEntry is absent or has an unknown format\.\"")
-
-        # Test that -data-info-line fails when line has invalid format
-        self.runCmd("-data-info-line main.cpp:bad_line")
-        self.expect(
-            "\^error,msg=\"error: invalid line number string 'bad_line'")
-        self.runCmd("-data-info-line main.cpp:0")
-        self.expect("\^error,msg=\"error: zero is an invalid line number")
 
     @skipIfRemote   # We do not currently support remote debugging via the MI.
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows

@@ -304,11 +304,9 @@ bool Listener::FindNextEventInternal(
 
     if (remove) {
       m_events.erase(pos);
-      // Unlock the event queue here.  We've removed this event and are about to
-      // return
-      // it so it should be okay to get the next event off the queue here - and
-      // it might
-      // be useful to do that in the "DoOnRemoval".
+      // Unlock the event queue here.  We've removed this event and are about
+      // to return it so it should be okay to get the next event off the queue
+      // here - and it might be useful to do that in the "DoOnRemoval".
       lock.unlock();
       event_sp->DoOnRemoval();
     }
@@ -434,8 +432,8 @@ Listener::StartListeningForEventSpec(BroadcasterManagerSP manager_sp,
   if (!manager_sp)
     return 0;
 
-  // The BroadcasterManager mutex must be locked before m_broadcasters_mutex
-  // to avoid violating the lock hierarchy (manager before broadcasters).
+  // The BroadcasterManager mutex must be locked before m_broadcasters_mutex to
+  // avoid violating the lock hierarchy (manager before broadcasters).
   std::lock_guard<std::recursive_mutex> manager_guard(
       manager_sp->m_manager_mutex);
   std::lock_guard<std::recursive_mutex> guard(m_broadcasters_mutex);

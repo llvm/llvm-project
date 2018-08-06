@@ -1466,8 +1466,8 @@ bool ABIMacOSX_arm::GetArgumentValues(Thread &thread, ValueList &values) const {
   addr_t sp = 0;
 
   for (uint32_t value_idx = 0; value_idx < num_values; ++value_idx) {
-    // We currently only support extracting values with Clang QualTypes.
-    // Do we care about others?
+    // We currently only support extracting values with Clang QualTypes. Do we
+    // care about others?
     Value *value = values.GetValueAtIndex(value_idx);
 
     if (!value)
@@ -1589,10 +1589,8 @@ ValueObjectSP ABIMacOSX_arm::GetReturnValueObjectImpl(
     case 128:
       if (IsArmv7kProcess()) {
         // "A composite type not larger than 16 bytes is returned in r0-r3. The
-        // format is
-        // as if the result had been stored in memory at a word-aligned address
-        // and then
-        // loaded into r0-r3 with an ldm instruction"
+        // format is as if the result had been stored in memory at a word-
+        // aligned address and then loaded into r0-r3 with an ldm instruction"
         {
           const RegisterInfo *r1_reg_info =
               reg_ctx->GetRegisterInfoByName("r1", 0);
@@ -1756,10 +1754,8 @@ Status ABIMacOSX_arm::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
       }
     } else if (num_bytes <= 16 && IsArmv7kProcess()) {
       // "A composite type not larger than 16 bytes is returned in r0-r3. The
-      // format is
-      // as if the result had been stored in memory at a word-aligned address
-      // and then
-      // loaded into r0-r3 with an ldm instruction"
+      // format is as if the result had been stored in memory at a word-aligned
+      // address and then loaded into r0-r3 with an ldm instruction"
 
       const RegisterInfo *r0_info = reg_ctx->GetRegisterInfoByName("r0", 0);
       const RegisterInfo *r1_info = reg_ctx->GetRegisterInfoByName("r1", 0);

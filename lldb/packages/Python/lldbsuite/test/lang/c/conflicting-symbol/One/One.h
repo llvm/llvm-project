@@ -1,4 +1,4 @@
 #ifndef ONE_H
 #define ONE_H
-void one();
+LLDB_TEST_API void one();
 #endif

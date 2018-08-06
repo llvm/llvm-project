@@ -15,6 +15,7 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Interpreter/CommandObject.h"
+#include "lldb/Utility/CompletionRequest.h"
 
 namespace lldb_private {
 
@@ -56,10 +57,7 @@ public:
 
   bool WantsRawCommandString() override { return false; }
 
-  int HandleCompletion(Args &input, int &cursor_index,
-                       int &cursor_char_position, int match_start_point,
-                       int max_return_elements, bool &word_complete,
-                       StringList &matches) override;
+  int HandleCompletion(CompletionRequest &request) override;
 
   const char *GetRepeatCommand(Args &current_command_args,
                                uint32_t index) override;
@@ -87,8 +85,8 @@ public:
 
   ~CommandObjectProxy() override;
 
-  // Subclasses must provide a command object that will be transparently
-  // used for this object.
+  // Subclasses must provide a command object that will be transparently used
+  // for this object.
   virtual CommandObject *GetProxyCommandObject() = 0;
 
   llvm::StringRef GetHelpLong() override;
@@ -121,17 +119,11 @@ public:
 
   Options *GetOptions() override;
 
-  int HandleCompletion(Args &input, int &cursor_index,
-                       int &cursor_char_position, int match_start_point,
-                       int max_return_elements, bool &word_complete,
-                       StringList &matches) override;
+  int HandleCompletion(CompletionRequest &request) override;
 
-  int HandleArgumentCompletion(Args &input, int &cursor_index,
-                               int &cursor_char_position,
-                               OptionElementVector &opt_element_vector,
-                               int match_start_point, int max_return_elements,
-                               bool &word_complete,
-                               StringList &matches) override;
+  int HandleArgumentCompletion(
+      CompletionRequest &request,
+      OptionElementVector &opt_element_vector) override;
 
   const char *GetRepeatCommand(Args &current_command_args,
                                uint32_t index) override;

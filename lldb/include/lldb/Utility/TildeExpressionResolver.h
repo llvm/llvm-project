@@ -22,7 +22,7 @@ class TildeExpressionResolver {
 public:
   virtual ~TildeExpressionResolver();
 
-  /// \brief Resolve a Tilde Expression contained according to bash rules.
+  /// Resolve a Tilde Expression contained according to bash rules.
   ///
   /// \param Expr Contains the tilde expression to resolve.  A valid tilde
   ///             expression must begin with a tilde and contain only non
@@ -35,7 +35,7 @@ public:
   virtual bool ResolveExact(llvm::StringRef Expr,
                             llvm::SmallVectorImpl<char> &Output) = 0;
 
-  /// \brief Auto-complete a tilde expression with all matching values.
+  /// Auto-complete a tilde expression with all matching values.
   ///
   /// \param Expr Contains the tilde expression prefix to resolve.  See
   ///             ResolveExact() for validity rules.
@@ -48,8 +48,8 @@ public:
   virtual bool ResolvePartial(llvm::StringRef Expr,
                               llvm::StringSet<> &Output) = 0;
 
-  /// \brief Resolve an entire path that begins with a tilde expression,
-  /// replacing the username portion with the matched result.
+  /// Resolve an entire path that begins with a tilde expression, replacing
+  /// the username portion with the matched result.
   bool ResolveFullPath(llvm::StringRef Expr,
                        llvm::SmallVectorImpl<char> &Output);
 };

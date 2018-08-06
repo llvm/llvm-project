@@ -31,12 +31,10 @@ using namespace lldb_private;
 
 PlatformRemoteDarwinDevice::SDKDirectoryInfo::SDKDirectoryInfo(
     const lldb_private::FileSpec &sdk_dir)
-    : directory(sdk_dir), build(), version_major(0), version_minor(0),
-      version_update(0), user_cached(false) {
+    : directory(sdk_dir), build(), user_cached(false) {
   llvm::StringRef dirname_str = sdk_dir.GetFilename().GetStringRef();
   llvm::StringRef build_str;
-  std::tie(version_major, version_minor, version_update, build_str) =
-      ParseVersionBuildDir(dirname_str);
+  std::tie(version, build_str) = ParseVersionBuildDir(dirname_str);
   build.SetString(build_str);
 }
 
@@ -97,9 +95,9 @@ Status PlatformRemoteDarwinDevice::ResolveExecutable(
         return error;
       exe_module_sp.reset();
     }
-    // No valid architecture was specified or the exact ARM slice wasn't
-    // found so ask the platform for the architectures that we should be
-    // using (in the correct order) and see if we can find a match that way
+    // No valid architecture was specified or the exact ARM slice wasn't found
+    // so ask the platform for the architectures that we should be using (in
+    // the correct order) and see if we can find a match that way
     StreamString arch_names;
     for (uint32_t idx = 0; GetSupportedArchitectureAtIndex(
              idx, resolved_module_spec.GetArchitecture());
@@ -183,8 +181,8 @@ bool PlatformRemoteDarwinDevice::UpdateSDKDirectoryInfosIfNeeded() {
                                    &builtin_sdk_directory_infos);
 
       // Only add SDK directories that have symbols in them, some SDKs only
-      // contain
-      // developer disk images and no symbols, so they aren't useful to us.
+      // contain developer disk images and no symbols, so they aren't useful to
+      // us.
       FileSpec sdk_symbols_symlink_fspec;
       for (const auto &sdk_directory_info : builtin_sdk_directory_infos) {
         sdk_symbols_symlink_fspec = sdk_directory_info.directory;
@@ -244,8 +242,8 @@ PlatformRemoteDarwinDevice::GetSDKDirectoryForCurrentOSVersion() {
   if (UpdateSDKDirectoryInfosIfNeeded()) {
     const uint32_t num_sdk_infos = m_sdk_directory_infos.size();
 
-    // Check to see if the user specified a build string. If they did, then
-    // be sure to match it.
+    // Check to see if the user specified a build string. If they did, then be
+    // sure to match it.
     std::vector<bool> check_sdk_info(num_sdk_infos, true);
     ConstString build(m_sdk_build);
     if (build) {
@@ -253,26 +251,25 @@ PlatformRemoteDarwinDevice::GetSDKDirectoryForCurrentOSVersion() {
         check_sdk_info[i] = m_sdk_directory_infos[i].build == build;
     }
 
-    // If we are connected we can find the version of the OS the platform
-    // us running on and select the right SDK
-    uint32_t major, minor, update;
-    if (GetOSVersion(major, minor, update)) {
+    // If we are connected we can find the version of the OS the platform us
+    // running on and select the right SDK
+    llvm::VersionTuple version = GetOSVersion();
+    if (!version.empty()) {
       if (UpdateSDKDirectoryInfosIfNeeded()) {
         // First try for an exact match of major, minor and update
         for (i = 0; i < num_sdk_infos; ++i) {
           if (check_sdk_info[i]) {
-            if (m_sdk_directory_infos[i].version_major == major &&
-                m_sdk_directory_infos[i].version_minor == minor &&
-                m_sdk_directory_infos[i].version_update == update) {
+            if (m_sdk_directory_infos[i].version == version)
               return &m_sdk_directory_infos[i];
-            }
           }
         }
         // First try for an exact match of major and minor
         for (i = 0; i < num_sdk_infos; ++i) {
           if (check_sdk_info[i]) {
-            if (m_sdk_directory_infos[i].version_major == major &&
-                m_sdk_directory_infos[i].version_minor == minor) {
+            if (m_sdk_directory_infos[i].version.getMajor() ==
+                    version.getMajor() &&
+                m_sdk_directory_infos[i].version.getMinor() ==
+                    version.getMinor()) {
               return &m_sdk_directory_infos[i];
             }
           }
@@ -280,7 +277,8 @@ PlatformRemoteDarwinDevice::GetSDKDirectoryForCurrentOSVersion() {
         // Lastly try to match of major version only..
         for (i = 0; i < num_sdk_infos; ++i) {
           if (check_sdk_info[i]) {
-            if (m_sdk_directory_infos[i].version_major == major) {
+            if (m_sdk_directory_infos[i].version.getMajor() ==
+                version.getMajor()) {
               return &m_sdk_directory_infos[i];
             }
           }
@@ -300,25 +298,13 @@ const PlatformRemoteDarwinDevice::SDKDirectoryInfo *
 PlatformRemoteDarwinDevice::GetSDKDirectoryForLatestOSVersion() {
   const PlatformRemoteDarwinDevice::SDKDirectoryInfo *result = NULL;
   if (UpdateSDKDirectoryInfosIfNeeded()) {
-    const uint32_t num_sdk_infos = m_sdk_directory_infos.size();
-    // First try for an exact match of major, minor and update
-    for (uint32_t i = 0; i < num_sdk_infos; ++i) {
-      const SDKDirectoryInfo &sdk_dir_info = m_sdk_directory_infos[i];
-      if (sdk_dir_info.version_major != UINT32_MAX) {
-        if (result == NULL ||
-            sdk_dir_info.version_major > result->version_major) {
-          result = &sdk_dir_info;
-        } else if (sdk_dir_info.version_major == result->version_major) {
-          if (sdk_dir_info.version_minor > result->version_minor) {
-            result = &sdk_dir_info;
-          } else if (sdk_dir_info.version_minor == result->version_minor) {
-            if (sdk_dir_info.version_update > result->version_update) {
-              result = &sdk_dir_info;
-            }
-          }
-        }
-      }
-    }
+    auto max = std::max_element(
+        m_sdk_directory_infos.begin(), m_sdk_directory_infos.end(),
+        [](const SDKDirectoryInfo &a, const SDKDirectoryInfo &b) {
+          return a.version < b.version;
+        });
+    if (max != m_sdk_directory_infos.end())
+      result = &*max;
   }
   return result;
 }
@@ -366,8 +352,8 @@ const char *PlatformRemoteDarwinDevice::GetDeviceSupportDirectoryForOSVersion() 
     }
   }
   // We should have put a single NULL character into
-  // m_device_support_directory_for_os_version
-  // or it should have a valid path if the code gets here
+  // m_device_support_directory_for_os_version or it should have a valid path
+  // if the code gets here
   assert(m_device_support_directory_for_os_version.empty() == false);
   if (m_device_support_directory_for_os_version[0])
     return m_device_support_directory_for_os_version.c_str();
@@ -409,7 +395,7 @@ bool PlatformRemoteDarwinDevice::GetFileInSDK(const char *platform_file_path,
 
       const char *paths_to_try[] = {"Symbols", "", "Symbols.Internal", nullptr};
       for (size_t i = 0; paths_to_try[i] != nullptr; i++) {
-        local_file.SetFile(sdkroot_path, false);
+        local_file.SetFile(sdkroot_path, false, FileSpec::Style::native);
         if (paths_to_try[i][0] != '\0')
           local_file.AppendPathComponent(paths_to_try[i]);
         local_file.AppendPathComponent(platform_file_path);
@@ -442,7 +428,7 @@ Status PlatformRemoteDarwinDevice::GetSymbolFile(const FileSpec &platform_file,
       ::snprintf(resolved_path, sizeof(resolved_path), "%s/%s", os_version_dir,
                  platform_file_path);
 
-      local_file.SetFile(resolved_path, true);
+      local_file.SetFile(resolved_path, true, FileSpec::Style::native);
       if (local_file.Exists()) {
         if (log) {
           log->Printf("Found a copy of %s in the DeviceSupport dir %s",
@@ -454,7 +440,7 @@ Status PlatformRemoteDarwinDevice::GetSymbolFile(const FileSpec &platform_file,
       ::snprintf(resolved_path, sizeof(resolved_path), "%s/Symbols.Internal/%s",
                  os_version_dir, platform_file_path);
 
-      local_file.SetFile(resolved_path, true);
+      local_file.SetFile(resolved_path, true, FileSpec::Style::native);
       if (local_file.Exists()) {
         if (log) {
           log->Printf(
@@ -466,7 +452,7 @@ Status PlatformRemoteDarwinDevice::GetSymbolFile(const FileSpec &platform_file,
       ::snprintf(resolved_path, sizeof(resolved_path), "%s/Symbols/%s",
                  os_version_dir, platform_file_path);
 
-      local_file.SetFile(resolved_path, true);
+      local_file.SetFile(resolved_path, true, FileSpec::Style::native);
       if (local_file.Exists()) {
         if (log) {
           log->Printf("Found a copy of %s in the DeviceSupport dir %s/Symbols",
@@ -492,10 +478,9 @@ Status PlatformRemoteDarwinDevice::GetSharedModule(
     const ModuleSpec &module_spec, Process *process, ModuleSP &module_sp,
     const FileSpecList *module_search_paths_ptr, ModuleSP *old_module_sp_ptr,
     bool *did_create_ptr) {
-  // For iOS, the SDK files are all cached locally on the host
-  // system. So first we ask for the file in the cached SDK,
-  // then we attempt to get a shared module for the right architecture
-  // with the right UUID.
+  // For iOS, the SDK files are all cached locally on the host system. So first
+  // we ask for the file in the cached SDK, then we attempt to get a shared
+  // module for the right architecture with the right UUID.
   const FileSpec &platform_file = module_spec.GetFileSpec();
   Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
 
@@ -510,8 +495,7 @@ Status PlatformRemoteDarwinDevice::GetSharedModule(
     const uint32_t num_sdk_infos = m_sdk_directory_infos.size();
 
     // If we are connected we migth be able to correctly deduce the SDK
-    // directory
-    // using the OS build.
+    // directory using the OS build.
     const uint32_t connected_sdk_idx = GetConnectedSDKIndex();
     if (connected_sdk_idx < num_sdk_infos) {
       LLDB_LOGV(log, "Searching for {0} in sdk path {1}", platform_file,
@@ -528,8 +512,8 @@ Status PlatformRemoteDarwinDevice::GetSharedModule(
       }
     }
 
-    // Try the last SDK index if it is set as most files from an SDK
-    // will tend to be valid in that same SDK.
+    // Try the last SDK index if it is set as most files from an SDK will tend
+    // to be valid in that same SDK.
     if (m_last_module_sdk_idx < num_sdk_infos) {
       LLDB_LOGV(log, "Searching for {0} in sdk path {1}", platform_file,
                 m_sdk_directory_infos[m_last_module_sdk_idx].directory);
@@ -544,9 +528,9 @@ Status PlatformRemoteDarwinDevice::GetSharedModule(
       }
     }
 
-    // First try for an exact match of major, minor and update:
-    // If a particalar SDK version was specified via --version or --build, look
-    // for a match on disk.
+    // First try for an exact match of major, minor and update: If a particalar
+    // SDK version was specified via --version or --build, look for a match on
+    // disk.
     const SDKDirectoryInfo *current_sdk_info =
         GetSDKDirectoryForCurrentOSVersion();
     const uint32_t current_sdk_idx =
@@ -570,8 +554,7 @@ Status PlatformRemoteDarwinDevice::GetSharedModule(
     // Second try all SDKs that were found.
     for (uint32_t sdk_idx = 0; sdk_idx < num_sdk_infos; ++sdk_idx) {
       if (m_last_module_sdk_idx == sdk_idx) {
-        // Skip the last module SDK index if we already searched
-        // it above
+        // Skip the last module SDK index if we already searched it above
         continue;
       }
       LLDB_LOGV(log, "Searching for {0} in sdk path {1}", platform_file,
@@ -582,8 +565,8 @@ Status PlatformRemoteDarwinDevice::GetSharedModule(
 
         error = ResolveExecutable(platform_module_spec, module_sp, NULL);
         if (module_sp) {
-          // Remember the index of the last SDK that we found a file
-          // in in case the wrong SDK was selected.
+          // Remember the index of the last SDK that we found a file in in case
+          // the wrong SDK was selected.
           m_last_module_sdk_idx = sdk_idx;
           error.Clear();
           return error;

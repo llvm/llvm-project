@@ -46,7 +46,7 @@ class ProcessAttachTestCase(TestBase):
         newdir = self.getBuildArtifact("newdir")
         try:
             os.mkdir(newdir)
-        except OSError, e:
+        except OSError as e:
             if e.errno != os.errno.EEXIST:
                 raise
         testdir = self.getBuildDir()

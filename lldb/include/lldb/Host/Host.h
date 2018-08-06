@@ -12,8 +12,9 @@
 
 #include "lldb/Host/File.h"
 #include "lldb/Host/HostThread.h"
+#include "lldb/Utility/Environment.h"
 #include "lldb/Utility/FileSpec.h"
-#include "lldb/Utility/StringList.h"
+#include "lldb/Utility/Timeout.h"
 #include "lldb/lldb-private-forward.h"
 #include "lldb/lldb-private.h"
 #include <cerrno>
@@ -56,10 +57,9 @@ inline bool operator!=(WaitStatus a, WaitStatus b) { return !(a == b); }
 
 //----------------------------------------------------------------------
 /// @class Host Host.h "lldb/Host/Host.h"
-/// @brief A class that provides host computer information.
+/// A class that provides host computer information.
 ///
-/// Host is a class that answers information about the host operating
-/// system.
+/// Host is a class that answers information about the host operating system.
 //----------------------------------------------------------------------
 class Host {
 public:
@@ -72,18 +72,17 @@ public:
   //------------------------------------------------------------------
   /// Start monitoring a child process.
   ///
-  /// Allows easy monitoring of child processes. \a callback will be
-  /// called when the child process exits or if it gets a signal. The
-  /// callback will only be called with signals if \a monitor_signals
-  /// is \b true. \a callback will usually be called from another
-  /// thread so the callback function must be thread safe.
+  /// Allows easy monitoring of child processes. \a callback will be called
+  /// when the child process exits or if it gets a signal. The callback will
+  /// only be called with signals if \a monitor_signals is \b true. \a
+  /// callback will usually be called from another thread so the callback
+  /// function must be thread safe.
   ///
-  /// When the callback gets called, the return value indicates if
-  /// monitoring should stop. If \b true is returned from \a callback
-  /// the information will be removed. If \b false is returned then
-  /// monitoring will continue. If the child process exits, the
-  /// monitoring will automatically stop after the callback returned
-  /// regardless of the callback return value.
+  /// When the callback gets called, the return value indicates if monitoring
+  /// should stop. If \b true is returned from \a callback the information
+  /// will be removed. If \b false is returned then monitoring will continue.
+  /// If the child process exits, the monitoring will automatically stop after
+  /// the callback returned regardless of the callback return value.
   ///
   /// @param[in] callback
   ///     A function callback to call when a child receives a signal
@@ -126,9 +125,8 @@ public:
   static void Kill(lldb::pid_t pid, int signo);
 
   //------------------------------------------------------------------
-  /// Get the thread token (the one returned by ThreadCreate when the thread was
-  /// created) for the
-  /// calling thread in the current process.
+  /// Get the thread token (the one returned by ThreadCreate when the thread
+  /// was created) for the calling thread in the current process.
   ///
   /// @return
   ///     The thread token for the calling thread in the current process.
@@ -138,11 +136,11 @@ public:
   static const char *GetSignalAsCString(int signo);
 
   //------------------------------------------------------------------
-  /// Given an address in the current process (the process that
-  /// is running the LLDB code), return the name of the module that
-  /// it comes from. This can be useful when you need to know the
-  /// path to the shared library that your code is running in for
-  /// loading resources that are relative to your binary.
+  /// Given an address in the current process (the process that is running the
+  /// LLDB code), return the name of the module that it comes from. This can
+  /// be useful when you need to know the path to the shared library that your
+  /// code is running in for loading resources that are relative to your
+  /// binary.
   ///
   /// @param[in] host_addr
   ///     The pointer to some code in the current process.
@@ -155,10 +153,9 @@ public:
   static FileSpec GetModuleFileSpecForHostAddress(const void *host_addr);
 
   //------------------------------------------------------------------
-  /// If you have an executable that is in a bundle and want to get
-  /// back to the bundle directory from the path itself, this
-  /// function will change a path to a file within a bundle to the
-  /// bundle directory itself.
+  /// If you have an executable that is in a bundle and want to get back to
+  /// the bundle directory from the path itself, this function will change a
+  /// path to a file within a bundle to the bundle directory itself.
   ///
   /// @param[in] file
   ///     A file spec that might point to a file in a bundle.
@@ -176,10 +173,9 @@ public:
                                  FileSpec &bundle_directory);
 
   //------------------------------------------------------------------
-  /// When executable files may live within a directory, where the
-  /// directory represents an executable bundle (like the MacOSX
-  /// app bundles), then locate the executable within the containing
-  /// bundle.
+  /// When executable files may live within a directory, where the directory
+  /// represents an executable bundle (like the MacOSX app bundles), then
+  /// locate the executable within the containing bundle.
   ///
   /// @param[in,out] file
   ///     A file spec that currently points to the bundle that will
@@ -203,11 +199,14 @@ public:
 
   static const lldb::UnixSignalsSP &GetUnixSignals();
 
+  /// Launch the process specified in launch_info. The monitoring callback in
+  /// launch_info must be set, and it will be called when the process
+  /// terminates.
   static Status LaunchProcess(ProcessLaunchInfo &launch_info);
 
   //------------------------------------------------------------------
-  /// Perform expansion of the command-line for this launch info
-  /// This can potentially involve wildcard expansion
+  /// Perform expansion of the command-line for this launch info This can
+  /// potentially involve wildcard expansion
   //  environment variable replacement, and whatever other
   //  argument magic the platform defines as part of its typical
   //  user experience
@@ -224,8 +223,7 @@ public:
                        // process to exit
       std::string
           *command_output, // Pass NULL if you don't want the command output
-      uint32_t timeout_sec,
-      bool run_in_default_shell = true);
+      const Timeout<std::micro> &timeout, bool run_in_default_shell = true);
 
   static Status RunShellCommand(
       const Args &args,
@@ -236,13 +234,12 @@ public:
                        // process to exit
       std::string
           *command_output, // Pass NULL if you don't want the command output
-      uint32_t timeout_sec,
-      bool run_in_default_shell = true);
+      const Timeout<std::micro> &timeout, bool run_in_default_shell = true);
 
   static bool OpenFileInExternalEditor(const FileSpec &file_spec,
                                        uint32_t line_no);
 
-  static size_t GetEnvironment(StringList &env);
+  static Environment GetEnvironment();
 
   static std::unique_ptr<Connection>
   CreateDefaultConnection(llvm::StringRef url);
@@ -252,8 +249,8 @@ public:
 
 namespace llvm {
 template <> struct format_provider<lldb_private::WaitStatus> {
-  /// Options = "" gives a human readable description of the status
-  /// Options = "g" gives a gdb-remote protocol status (e.g., X09)
+  /// Options = "" gives a human readable description of the status Options =
+  /// "g" gives a gdb-remote protocol status (e.g., X09)
   static void format(const lldb_private::WaitStatus &WS, raw_ostream &OS,
                      llvm::StringRef Options);
 };

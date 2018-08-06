@@ -1,6 +1,6 @@
 # REQUIRES: zlib
 # RUN: yaml2obj %s > %t
-# RUN: lldb-test module-sections --contents %t | FileCheck %s
+# RUN: lldb-test object-file --contents %t | FileCheck %s
 --- !ELF
 FileHeader:
   Class:           ELFCLASS32
@@ -18,12 +18,14 @@ Sections:
     Content:         deadbeefbaadf00d
 
 # CHECK: Name: .hello_elf
+# CHECK-NEXT: Type: regular
 # CHECK-NEXT: VM size: 0
 # CHECK-NEXT: File size: 28
 # CHECK-NEXT: Data:
 # CHECK-NEXT: 20304050 60708090
 
 # CHECK: Name: .bogus
+# CHECK-NEXT: Type: regular
 # CHECK-NEXT: VM size: 0
 # CHECK-NEXT: File size: 8
 # CHECK-NEXT: Data:

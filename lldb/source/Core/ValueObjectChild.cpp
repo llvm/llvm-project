@@ -172,8 +172,8 @@ bool ValueObjectChild::UpdateValue() {
           } else if (addr == 0) {
             m_error.SetErrorString("parent is NULL");
           } else {
-            // Set this object's scalar value to the address of its
-            // value by adding its byte offset to the parent address
+            // Set this object's scalar value to the address of its value by
+            // adding its byte offset to the parent address
             m_value.GetScalar() += GetByteOffset();
           }
         } break;

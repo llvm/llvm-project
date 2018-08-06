@@ -98,7 +98,8 @@ lldb::TypeSP DWARFASTParserOCaml::ParseTypeFromDWARF(const SymbolContext &sc,
   dw_tag_t sc_parent_tag = sc_parent_die.Tag();
 
   SymbolContextScope *symbol_context_scope = nullptr;
-  if (sc_parent_tag == DW_TAG_compile_unit) {
+  if (sc_parent_tag == DW_TAG_compile_unit ||
+      sc_parent_tag == DW_TAG_partial_unit) {
     symbol_context_scope = sc.comp_unit;
   } else if (sc.function != nullptr && sc_parent_die) {
     symbol_context_scope =

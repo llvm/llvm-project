@@ -7,6 +7,7 @@ import os
 import time
 import lldb
 from lldbsuite.test.lldbtest import *
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 
 
@@ -14,9 +15,9 @@ class ForwardDeclarationTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    def test_and_run_command(self):
+    def do_test(self, dictionary=None):
         """Display *bar_ptr when stopped on a function with forward declaration of struct bar."""
-        self.build()
+        self.build(dictionary=dictionary)
         exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
@@ -53,3 +54,15 @@ class ForwardDeclarationTestCase(TestBase):
                 '(bar)',
                 '(int) a = 1',
                 '(int) b = 2'])
+
+    def test(self):
+        self.do_test()
+
+    @no_debug_info_test
+    @skipIfDarwin
+    @skipIf(compiler=no_match("clang"))
+    @skipIf(compiler_version=["<", "7.0"])
+    def test_debug_names(self):
+        """Test that we are able to find complete types when using DWARF v5
+        accelerator tables"""
+        self.do_test(dict(CFLAGS_EXTRAS="-mllvm -accel-tables=Dwarf"))

@@ -33,9 +33,9 @@
 #include "lldb/Host/common/NativeProcessProtocol.h"
 #include "lldb/Host/common/NativeRegisterContext.h"
 #include "lldb/Host/common/NativeThreadProtocol.h"
-#include "lldb/Interpreter/Args.h"
 #include "lldb/Target/FileAction.h"
 #include "lldb/Target/MemoryRegionInfo.h"
+#include "lldb/Utility/Args.h"
 #include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/JSON.h"
@@ -49,7 +49,7 @@
 // Project includes
 #include "ProcessGDBRemote.h"
 #include "ProcessGDBRemoteLog.h"
-#include "Utility/StringExtractorGDBRemote.h"
+#include "lldb/Utility/StringExtractorGDBRemote.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -236,16 +236,15 @@ Status GDBRemoteCommunicationServerLLGS::LaunchProcess() {
     m_debugged_process_up = std::move(*process_or);
   }
 
-  // Handle mirroring of inferior stdout/stderr over the gdb-remote protocol
-  // as needed.
-  // llgs local-process debugging may specify PTY paths, which will make these
-  // file actions non-null
-  // process launch -i/e/o will also make these file actions non-null
-  // nullptr means that the traffic is expected to flow over gdb-remote protocol
+  // Handle mirroring of inferior stdout/stderr over the gdb-remote protocol as
+  // needed. llgs local-process debugging may specify PTY paths, which will
+  // make these file actions non-null process launch -i/e/o will also make
+  // these file actions non-null nullptr means that the traffic is expected to
+  // flow over gdb-remote protocol
   if (should_forward_stdio) {
     // nullptr means it's not redirected to file or pty (in case of LLGS local)
-    // at least one of stdio will be transferred pty<->gdb-remote
-    // we need to give the pty master handle to this object to read and/or write
+    // at least one of stdio will be transferred pty<->gdb-remote we need to
+    // give the pty master handle to this object to read and/or write
     LLDB_LOG(log,
              "pid = {0}: setting up stdout/stderr redirection via $O "
              "gdb-remote commands",
@@ -291,7 +290,7 @@ Status GDBRemoteCommunicationServerLLGS::AttachToProcess(lldb::pid_t pid) {
   // else.
   if (m_debugged_process_up &&
       m_debugged_process_up->GetID() != LLDB_INVALID_PROCESS_ID)
-    return Status("cannot attach to a process %" PRIu64
+    return Status("cannot attach to process %" PRIu64
                   " when another process with pid %" PRIu64
                   " is being debugged.",
                   pid, m_debugged_process_up->GetID());
@@ -410,8 +409,8 @@ static JSONObject::SP GetRegistersAsJSON(NativeThreadProtocol &thread) {
   JSONObject::SP register_object_sp = std::make_shared<JSONObject>();
 
 #ifdef LLDB_JTHREADSINFO_FULL_REGISTER_SET
-  // Expedite all registers in the first register set (i.e. should be GPRs) that
-  // are not contained in other registers.
+  // Expedite all registers in the first register set (i.e. should be GPRs)
+  // that are not contained in other registers.
   const RegisterSet *reg_set_p = reg_ctx_sp->GetRegisterSet(0);
   if (!reg_set_p)
     return nullptr;
@@ -420,8 +419,7 @@ static JSONObject::SP GetRegistersAsJSON(NativeThreadProtocol &thread) {
     uint32_t reg_num = *reg_num_p;
 #else
   // Expedite only a couple of registers until we figure out why sending
-  // registers is
-  // expensive.
+  // registers is expensive.
   static const uint32_t k_expedited_registers[] = {
       LLDB_REGNUM_GENERIC_PC, LLDB_REGNUM_GENERIC_SP, LLDB_REGNUM_GENERIC_FP,
       LLDB_REGNUM_GENERIC_RA, LLDB_INVALID_REGNUM};
@@ -595,8 +593,7 @@ GDBRemoteCommunicationServerLLGS::SendStopReplyPacketForThread(
     return SendErrorResponse(52);
 
   // FIXME implement register handling for exec'd inferiors.
-  // if (tid_stop_info.reason == eStopReasonExec)
-  // {
+  // if (tid_stop_info.reason == eStopReasonExec) {
   //     const bool force = true;
   //     InitializeRegisters(force);
   // }
@@ -633,14 +630,14 @@ GDBRemoteCommunicationServerLLGS::SendStopReplyPacketForThread(
     response.PutChar(';');
   }
 
-  // If a 'QListThreadsInStopReply' was sent to enable this feature, we
-  // will send all thread IDs back in the "threads" key whose value is
-  // a list of hex thread IDs separated by commas:
+  // If a 'QListThreadsInStopReply' was sent to enable this feature, we will
+  // send all thread IDs back in the "threads" key whose value is a list of hex
+  // thread IDs separated by commas:
   //  "threads:10a,10b,10c;"
-  // This will save the debugger from having to send a pair of qfThreadInfo
-  // and qsThreadInfo packets, but it also might take a lot of room in the
-  // stop reply packet, so it must be enabled only on systems where there
-  // are no limits on packet lengths.
+  // This will save the debugger from having to send a pair of qfThreadInfo and
+  // qsThreadInfo packets, but it also might take a lot of room in the stop
+  // reply packet, so it must be enabled only on systems where there are no
+  // limits on packet lengths.
   if (m_list_threads_in_stop_reply) {
     response.PutCString("threads:");
 
@@ -655,12 +652,11 @@ GDBRemoteCommunicationServerLLGS::SendStopReplyPacketForThread(
     }
     response.PutChar(';');
 
-    // Include JSON info that describes the stop reason for any threads
-    // that actually have stop reasons. We use the new "jstopinfo" key
-    // whose values is hex ascii JSON that contains the thread IDs
-    // thread stop info only for threads that have stop reasons. Only send
-    // this if we have more than one thread otherwise this packet has all
-    // the info it needs.
+    // Include JSON info that describes the stop reason for any threads that
+    // actually have stop reasons. We use the new "jstopinfo" key whose values
+    // is hex ascii JSON that contains the thread IDs thread stop info only for
+    // threads that have stop reasons. Only send this if we have more than one
+    // thread otherwise this packet has all the info it needs.
     if (thread_index > 0) {
       const bool threads_with_valid_stop_info_only = true;
       JSONArray::SP threads_info_sp = GetJSONThreadsInfo(
@@ -806,8 +802,8 @@ void GDBRemoteCommunicationServerLLGS::HandleInferiorState_Exited(
                   __FUNCTION__, process->GetID());
   }
 
-  // Close the pipe to the inferior terminal i/o if we launched it
-  // and set one up.
+  // Close the pipe to the inferior terminal i/o if we launched it and set one
+  // up.
   MaybeCloseInferiorTerminalConnection();
 
   // We are ready to exit the debug monitor.
@@ -823,8 +819,7 @@ void GDBRemoteCommunicationServerLLGS::HandleInferiorState_Stopped(
   if (log)
     log->Printf("GDBRemoteCommunicationServerLLGS::%s called", __FUNCTION__);
 
-  // Send the stop reason unless this is the stop after the
-  // launch or attach.
+  // Send the stop reason unless this is the stop after the launch or attach.
   switch (m_inferior_prev_state) {
   case eStateLaunching:
   case eStateAttaching:
@@ -859,13 +854,11 @@ void GDBRemoteCommunicationServerLLGS::ProcessStateChanged(
     break;
 
   case StateType::eStateStopped:
-    // Make sure we get all of the pending stdout/stderr from the inferior
-    // and send it to the lldb host before we send the state change
-    // notification
+    // Make sure we get all of the pending stdout/stderr from the inferior and
+    // send it to the lldb host before we send the state change notification
     SendProcessOutput();
     // Then stop the forwarding, so that any late output (see llvm.org/pr25652)
-    // does not
-    // interfere with our protocol.
+    // does not interfere with our protocol.
     StopSTDIOForwarding();
     HandleInferiorState_Stopped(process);
     break;
@@ -1287,8 +1280,8 @@ GDBRemoteCommunicationServerLLGS::Handle_qC(StringExtractorGDBRemote &packet) {
       (m_debugged_process_up->GetID() == LLDB_INVALID_PROCESS_ID))
     return SendErrorResponse(68);
 
-  // Make sure we set the current thread so g and p packets return
-  // the data the gdb will expect.
+  // Make sure we set the current thread so g and p packets return the data the
+  // gdb will expect.
   lldb::tid_t tid = m_debugged_process_up->GetCurrentThreadID();
   SetCurrentThreadID(tid);
 
@@ -1397,10 +1390,9 @@ GDBRemoteCommunicationServerLLGS::Handle_C(StringExtractorGDBRemote &packet) {
   Status error;
 
   // We have two branches: what to do if a continue thread is specified (in
-  // which case we target
-  // sending the signal to that thread), or when we don't have a continue thread
-  // set (in which
-  // case we send a signal to the process).
+  // which case we target sending the signal to that thread), or when we don't
+  // have a continue thread set (in which case we send a signal to the
+  // process).
 
   // TODO discuss with Greg Clayton, make sure this makes sense.
 
@@ -1639,8 +1631,8 @@ GDBRemoteCommunicationServerLLGS::SendStopReasonForState(
   case eStateStopped:
   case eStateCrashed: {
     lldb::tid_t tid = m_debugged_process_up->GetCurrentThreadID();
-    // Make sure we set the current thread so g and p packets return
-    // the data the gdb will expect.
+    // Make sure we set the current thread so g and p packets return the data
+    // the gdb will expect.
     SetCurrentThreadID(tid);
     return SendStopReplyPacketForThread(tid);
   }
@@ -2043,9 +2035,8 @@ GDBRemoteCommunicationServerLLGS::Handle_P(StringExtractorGDBRemote &packet) {
     return SendErrorResponse(0x47);
   }
 
-  // The dwarf expression are evaluate on host site
-  // which may cause register size to change
-  // Hence the reg_size may not be same as reg_info->bytes_size
+  // The dwarf expression are evaluate on host site which may cause register
+  // size to change Hence the reg_size may not be same as reg_info->bytes_size
   if ((reg_size != reg_info->byte_size) &&
       !(reg_info->dynamic_size_dwarf_expr_bytes)) {
     return SendIllFormedResponse(packet, "P packet register size is incorrect");
@@ -2376,10 +2367,9 @@ GDBRemoteCommunicationServerLLGS::Handle_qMemoryRegionInfoSupported(
   Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PROCESS));
 
   // Currently only the NativeProcessProtocol knows if it can handle a
-  // qMemoryRegionInfoSupported
-  // request, but we're not guaranteed to be attached to a process.  For now
-  // we'll assume the
-  // client only asks this when a process is being debugged.
+  // qMemoryRegionInfoSupported request, but we're not guaranteed to be
+  // attached to a process.  For now we'll assume the client only asks this
+  // when a process is being debugged.
 
   // Ensure we have a process running; otherwise, we can't figure this out
   // since we won't have a NativeProcessProtocol.
@@ -2670,8 +2660,7 @@ GDBRemoteCommunicationServerLLGS::Handle_s(StringExtractorGDBRemote &packet) {
   }
 
   // We first try to use a continue thread id.  If any one or any all set, use
-  // the current thread.
-  // Bail out if we don't have a thread id.
+  // the current thread. Bail out if we don't have a thread id.
   lldb::tid_t tid = GetContinueThreadID();
   if (tid == 0 || tid == LLDB_INVALID_THREAD_ID)
     tid = GetCurrentThreadID();
@@ -2935,7 +2924,7 @@ GDBRemoteCommunicationServerLLGS::Handle_vAttach(
       log->Printf("GDBRemoteCommunicationServerLLGS::%s failed to attach to "
                   "pid %" PRIu64 ": %s\n",
                   __FUNCTION__, pid, error.AsCString());
-    return SendErrorResponse(0x01);
+    return SendErrorResponse(error);
   }
 
   // Notify we attached by sending a stop packet.
@@ -3093,8 +3082,8 @@ GDBRemoteCommunicationServerLLGS::Handle_QPassSignals(
   std::vector<int> signals;
   packet.SetFilePos(strlen("QPassSignals:"));
 
-  // Read sequence of hex signal numbers divided by a semicolon and
-  // optionally spaces.
+  // Read sequence of hex signal numbers divided by a semicolon and optionally
+  // spaces.
   while (packet.GetBytesLeft() > 0) {
     int signal = packet.GetS32(-1, 16);
     if (signal < 0)
@@ -3154,8 +3143,7 @@ NativeThreadProtocol *GDBRemoteCommunicationServerLLGS::GetThreadFromSuffix(
     return nullptr;
 
   // If the client hasn't asked for thread suffix support, there will not be a
-  // thread suffix.
-  // Use the current thread in that case.
+  // thread suffix. Use the current thread in that case.
   if (!m_thread_suffix_supported) {
     const lldb::tid_t current_tid = GetCurrentThreadID();
     if (current_tid == LLDB_INVALID_THREAD_ID)
@@ -3201,9 +3189,9 @@ NativeThreadProtocol *GDBRemoteCommunicationServerLLGS::GetThreadFromSuffix(
 
 lldb::tid_t GDBRemoteCommunicationServerLLGS::GetCurrentThreadID() const {
   if (m_current_tid == 0 || m_current_tid == LLDB_INVALID_THREAD_ID) {
-    // Use whatever the debug process says is the current thread id
-    // since the protocol either didn't specify or specified we want
-    // any/all threads marked as the current thread.
+    // Use whatever the debug process says is the current thread id since the
+    // protocol either didn't specify or specified we want any/all threads
+    // marked as the current thread.
     if (!m_debugged_process_up)
       return LLDB_INVALID_THREAD_ID;
     return m_debugged_process_up->GetCurrentThreadID();

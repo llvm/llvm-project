@@ -1,0 +1,7 @@
+REQUIRES: windows, lld
+RUN: clang-cl /c /Zi %S/Inputs/FunctionNestedBlockTest.cpp /o %t.obj
+RUN: lld-link /debug:full /nodefaultlib /entry:main %t.obj /out:%t.exe
+RUN: lldb-test symbols -find=function -file FunctionNestedBlockTest.cpp -line 4 %t.exe | FileCheck %s
+
+CHECK: Found 1 functions:
+CHECK: name = "{{.*}}", mangled = "{{_?}}main"

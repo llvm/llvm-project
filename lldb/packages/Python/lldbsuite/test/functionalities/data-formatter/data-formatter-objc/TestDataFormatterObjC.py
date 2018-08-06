@@ -226,7 +226,7 @@ class ObjCDataFormatterTestCase(TestBase):
 
     def nscontainers_data_formatter_commands(self):
         self.expect(
-            'frame variable newArray newDictionary newMutableDictionary cfarray_ref mutable_array_ref',
+            'frame variable newArray nsDictionary newDictionary nscfDictionary cfDictionaryRef newMutableDictionary cfarray_ref mutable_array_ref',
             substrs=[
                 '(NSArray *) newArray = ',
                 '@"50 elements"',
@@ -234,6 +234,10 @@ class ObjCDataFormatterTestCase(TestBase):
                 ' 12 key/value pairs',
                 '(NSDictionary *) newMutableDictionary = ',
                 ' 21 key/value pairs',
+                '(NSDictionary *) nsDictionary = ',
+                ' 2 key/value pairs',
+                '(CFDictionaryRef) cfDictionaryRef = ',
+                ' 3 key/value pairs',
                 '(CFArrayRef) cfarray_ref = ',
                 '@"3 elements"',
                 '(CFMutableArrayRef) mutable_array_ref = ',

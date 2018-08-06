@@ -20,10 +20,9 @@
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolContext.h"
 
-// There is one UnwindTable object per ObjectFile.
-// It contains a list of Unwind objects -- one per function, populated lazily --
-// for the ObjectFile.
-// Each Unwind object has multiple UnwindPlans for different scenarios.
+// There is one UnwindTable object per ObjectFile. It contains a list of Unwind
+// objects -- one per function, populated lazily -- for the ObjectFile. Each
+// Unwind object has multiple UnwindPlans for different scenarios.
 
 using namespace lldb;
 using namespace lldb_private;
@@ -33,8 +32,7 @@ UnwindTable::UnwindTable(ObjectFile &objfile)
       m_eh_frame_up(), m_compact_unwind_up(), m_arm_unwind_up() {}
 
 // We can't do some of this initialization when the ObjectFile is running its
-// ctor; delay doing it
-// until needed for something.
+// ctor; delay doing it until needed for something.
 
 void UnwindTable::Initialize() {
   if (m_initialized)
@@ -134,10 +132,9 @@ UnwindTable::GetFuncUnwindersContainingAddress(const Address &addr,
 }
 
 // Ignore any existing FuncUnwinders for this function, create a new one and
-// don't add it to the
-// UnwindTable.  This is intended for use by target modules show-unwind where we
-// want to create
-// new UnwindPlans, not re-use existing ones.
+// don't add it to the UnwindTable.  This is intended for use by target modules
+// show-unwind where we want to create new UnwindPlans, not re-use existing
+// ones.
 FuncUnwindersSP
 UnwindTable::GetUncachedFuncUnwindersContainingAddress(const Address &addr,
                                                        SymbolContext &sc) {

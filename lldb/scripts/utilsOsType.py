@@ -44,6 +44,7 @@ else:
                   "FreeBSD",
                   "Linux",
                   "NetBSD",
+                  "OpenBSD",
                   "Windows",
                   "kFreeBSD"]
 
@@ -91,6 +92,8 @@ def determine_os_type():
         eOSType = EnumOsType.Linux
     elif strOS.startswith("netbsd"):
         eOSType = EnumOsType.NetBSD
+    elif strOS.startswith("openbsd"):
+        eOSType = EnumOsType.OpenBSD
     elif strOS == "win32":
         eOSType = EnumOsType.Windows
     elif strOS.startswith("gnukfreebsd"):

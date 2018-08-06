@@ -51,6 +51,8 @@ from ..support import seven
 
 def is_exe(fpath):
     """Returns true if fpath is an executable."""
+    if fpath == None:
+      return False
     return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
 
 
@@ -83,6 +85,10 @@ class _WritelnDecorator(object):
         if arg:
             self.write(arg)
         self.write('\n')  # text-mode streams translate to \r\n if needed
+
+#
+# Global variables:
+#
 
 
 def usage(parser):
@@ -270,12 +276,6 @@ def parseOptionsAndInitTestdirs():
 
     if args.h:
         do_help = True
-
-    if args.lldb_platform_name and args.apple_sdk == "macosx":
-        # We likely know better here.
-        sdk = getSDKForPlatform(args.lldb_platform_name)
-        if sdk != None:
-            args.apple_sdk = sdk
 
     if args.compiler:
         configuration.compiler = os.path.realpath(args.compiler)
@@ -696,16 +696,7 @@ def setupSysPath():
     # This is the root of the lldb git/svn checkout
     # When this changes over to a package instead of a standalone script, this
     # will be `lldbsuite.lldb_root`
-    lldbRootDirectory = os.path.abspath(os.path.join(scriptPath, os.pardir))
-    # if we are in packages/Python/lldbsuite, we are too deep and not really at our root
-    # so go up a few more times
-    if os.path.basename(lldbRootDirectory) == 'lldbsuite':
-        lldbRootDirectory = os.path.abspath(
-            os.path.join(
-                lldbRootDirectory,
-                os.pardir,
-                os.pardir,
-                os.pardir))
+    lldbRootDirectory = lldbsuite.lldb_root
 
     # Some of the tests can invoke the 'lldb' command directly.
     # We'll try to locate the appropriate executable right here.
@@ -1077,33 +1068,6 @@ def isMultiprocessTestRunner():
     return not (
         configuration.is_inferior_test_runner or configuration.no_multiprocess_test_runner)
 
-def getSDKForPlatform(platform):
-    sdks = {
-        'ios-simulator': 'iphonesimulator',
-        'tvos-simulator': 'appletvsimulator',
-        'watchos-simulator': 'watchsimulator',
-        'remote-ios': 'iphoneos',
-        'remote-tvos': 'appletvos',
-        'remote-watchos': 'watchos'
-    }
-    if platform in sdks:
-        return sdks[platform]
-    else:
-        return None
-
-def getInfixForPlatform(platform):
-    infixes = {
-        'ios-simulator': '-apple-ios',
-        'tvos-simulator': '-apple-tvos',
-        'watchos-simulator': '-apple-watchos',
-        'remote-ios': '-apple-ios',
-        'remote-tvos': '-apple-tvos',
-        'remote-watchos': '-apple-watchos'
-    }
-    if platform in infixes:
-        return infixes[platform]
-    else:
-        return None
 
 def getVersionForSDK(sdk):
     sdk = str.lower(sdk)
@@ -1124,10 +1088,9 @@ def getPathForSDK(sdk):
 
 
 def setDefaultTripleForPlatform():
-    infix = getInfixForPlatform(configuration.lldb_platform_name)
-    sdk = getSDKForPlatform(configuration.lldb_platform_name)
-    if infix != None and sdk != None and len(configuration.arch) > 0:
-        triple_str = configuration.arch + infix + getVersionForSDK(sdk)
+    if configuration.lldb_platform_name == 'ios-simulator':
+        triple_str = 'x86_64-apple-ios%s' % (
+            getVersionForSDK('iphonesimulator'))
         os.environ['TRIPLE'] = triple_str
         return {'TRIPLE': triple_str}
     return {}
@@ -1193,6 +1156,22 @@ def checkLibstdcxxSupport():
     print("libstdcxx tests will not be run because: " + reason)
     configuration.skipCategories.append("libstdcxx")
 
+def checkDebugInfoSupport():
+    import lldb
+
+    platform = lldb.DBG.GetSelectedPlatform().GetTriple().split('-')[2]
+    compiler = configuration.compiler
+    skipped = []
+    for cat in test_categories.debug_info_categories:
+        if cat in configuration.categoriesList:
+            continue # Category explicitly requested, let it run.
+        if test_categories.is_supported_on_platform(cat, platform, compiler):
+            continue
+        configuration.skipCategories.append(cat)
+        skipped.append(cat)
+    if skipped:
+        print("Skipping following debug info categories:", skipped)
+
 def run_suite():
     # On MacOS X, check to make sure that domain for com.apple.DebugSymbols defaults
     # does not exist before proceeding to running the test suite.
@@ -1243,7 +1222,6 @@ def run_suite():
               (configuration.lldb_platform_name))
         lldb.remote_platform = lldb.SBPlatform(
             configuration.lldb_platform_name)
-        lldb.remote_platform_name = configuration.lldb_platform_name
         if not lldb.remote_platform.IsValid():
             print(
                 "error: unable to create the LLDB platform named '%s'." %
@@ -1282,11 +1260,11 @@ def run_suite():
             configuration.lldb_platform_working_dir, 448)  # 448 = 0o700
         if error.Fail():
             raise Exception("making remote directory '%s': %s" % (
-                remote_test_dir, error))
+                configuration.lldb_platform_working_dir, error))
 
         if not lldb.remote_platform.SetWorkingDirectory(
                 configuration.lldb_platform_working_dir):
-            raise Exception("failed to set working directory '%s'" % remote_test_dir)
+            raise Exception("failed to set working directory '%s'" % configuration.lldb_platform_working_dir)
         lldb.DBG.SetSelectedPlatform(lldb.remote_platform)
     else:
         lldb.remote_platform = None
@@ -1303,8 +1281,9 @@ def run_suite():
 
     checkLibcxxSupport()
     checkLibstdcxxSupport()
+    checkDebugInfoSupport()
 
-    # Don't do debugserver tests on everything except OS X.
+    # Don't do debugserver tests on anything except OS X.
     configuration.dont_do_debugserver_test = "linux" in target_platform or "freebsd" in target_platform or "windows" in target_platform
 
     # Don't do lldb-server (llgs) tests on anything except Linux.

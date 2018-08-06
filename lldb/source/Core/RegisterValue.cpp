@@ -9,9 +9,8 @@
 
 #include "lldb/Core/RegisterValue.h"
 
-#include "lldb/Core/DumpDataExtractor.h"
 #include "lldb/Core/Scalar.h"
-#include "lldb/Interpreter/Args.h"
+#include "lldb/Utility/Args.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
@@ -33,67 +32,6 @@
 
 using namespace lldb;
 using namespace lldb_private;
-
-bool RegisterValue::Dump(Stream *s, const RegisterInfo *reg_info,
-                         bool prefix_with_name, bool prefix_with_alt_name,
-                         Format format,
-                         uint32_t reg_name_right_align_at) const {
-  DataExtractor data;
-  if (GetData(data)) {
-    bool name_printed = false;
-    // For simplicity, alignment of the register name printing applies only
-    // in the most common case where:
-    //
-    //     prefix_with_name^prefix_with_alt_name is true
-    //
-    StreamString format_string;
-    if (reg_name_right_align_at && (prefix_with_name ^ prefix_with_alt_name))
-      format_string.Printf("%%%us", reg_name_right_align_at);
-    else
-      format_string.Printf("%%s");
-    std::string fmt = format_string.GetString();
-    if (prefix_with_name) {
-      if (reg_info->name) {
-        s->Printf(fmt.c_str(), reg_info->name);
-        name_printed = true;
-      } else if (reg_info->alt_name) {
-        s->Printf(fmt.c_str(), reg_info->alt_name);
-        prefix_with_alt_name = false;
-        name_printed = true;
-      }
-    }
-    if (prefix_with_alt_name) {
-      if (name_printed)
-        s->PutChar('/');
-      if (reg_info->alt_name) {
-        s->Printf(fmt.c_str(), reg_info->alt_name);
-        name_printed = true;
-      } else if (!name_printed) {
-        // No alternate name but we were asked to display a name, so show the
-        // main name
-        s->Printf(fmt.c_str(), reg_info->name);
-        name_printed = true;
-      }
-    }
-    if (name_printed)
-      s->PutCString(" = ");
-
-    if (format == eFormatDefault)
-      format = reg_info->format;
-
-    DumpDataExtractor(data, s,
-                      0,                    // Offset in "data"
-                      format,               // Format to use when dumping
-                      reg_info->byte_size,  // item_byte_size
-                      1,                    // item_count
-                      UINT32_MAX,           // num_per_line
-                      LLDB_INVALID_ADDRESS, // base_addr
-                      0,                    // item_bit_size
-                      0);                   // item_bit_offset
-    return true;
-  }
-  return false;
-}
 
 bool RegisterValue::GetData(DataExtractor &data) const {
   return data.SetData(GetBytes(), GetByteSize(), GetByteOrder()) > 0;
@@ -375,9 +313,9 @@ static bool ParseVectorEncoding(const RegisterInfo *reg_info,
   std::vector<uint8_t> bytes;
   unsigned byte = 0;
 
-  // Using radix auto-sensing by passing 0 as the radix.
-  // Keep on processing the vector elements as long as the parsing succeeds and
-  // the vector size is < byte_size.
+  // Using radix auto-sensing by passing 0 as the radix. Keep on processing the
+  // vector elements as long as the parsing succeeds and the vector size is <
+  // byte_size.
   while (!car.getAsInteger(0, byte) && bytes.size() < byte_size) {
     bytes.push_back(byte);
     std::tie(car, cdr) = cdr.split(Sep);
@@ -812,10 +750,9 @@ bool RegisterValue::SetUInt(uint64_t uint, uint32_t byte_size) {
 
 void RegisterValue::SetBytes(const void *bytes, size_t length,
                              lldb::ByteOrder byte_order) {
-  // If this assertion fires off we need to increase the size of
-  // buffer.bytes, or make it something that is allocated on
-  // the heap. Since the data buffer is in a union, we can't make it
-  // a collection class like SmallVector...
+  // If this assertion fires off we need to increase the size of buffer.bytes,
+  // or make it something that is allocated on the heap. Since the data buffer
+  // is in a union, we can't make it a collection class like SmallVector...
   if (bytes && length > 0) {
     assert(length <= sizeof(buffer.bytes) &&
            "Storing too many bytes in a RegisterValue.");

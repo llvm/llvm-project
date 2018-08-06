@@ -10,7 +10,6 @@
 #include "DWARFASTParserGo.h"
 
 #include "DWARFASTParserGo.h"
-#include "DWARFCompileUnit.h"
 #include "DWARFDIE.h"
 #include "DWARFDIECollection.h"
 #include "DWARFDebugInfo.h"
@@ -158,7 +157,8 @@ TypeSP DWARFASTParserGo::ParseTypeFromDWARF(
           Type *type = dwarf->ResolveTypeUID(encoding_uid);
           if (type) {
             if (go_kind == 0 && type->GetName() == type_name_const_str) {
-              // Go emits extra typedefs as a forward declaration. Ignore these.
+              // Go emits extra typedefs as a forward declaration. Ignore
+              // these.
               dwarf->m_die_to_type[die.GetDIE()] = type;
               return type->shared_from_this();
             }
@@ -213,10 +213,10 @@ TypeSP DWARFASTParserGo::ParseTypeFromDWARF(
 
         // TODO(ribrdb): Do we need this?
 
-        // UniqueDWARFASTType is large, so don't create a local variables on the
-        // stack, put it on the heap. This function is often called recursively
-        // and clang isn't good and sharing the stack space for variables in
-        // different blocks.
+        // UniqueDWARFASTType is large, so don't create a local variables on
+        // the stack, put it on the heap. This function is often called
+        // recursively and clang isn't good and sharing the stack space for
+        // variables in different blocks.
         std::unique_ptr<UniqueDWARFASTType> unique_ast_entry_ap(
             new UniqueDWARFASTType());
 
@@ -225,11 +225,10 @@ TypeSP DWARFASTParserGo::ParseTypeFromDWARF(
             dwarf->GetUniqueDWARFASTTypeMap().Find(
                 type_name_const_str, die, decl,
                 byte_size_valid ? byte_size : -1, *unique_ast_entry_ap)) {
-          // We have already parsed this type or from another
-          // compile unit. GCC loves to use the "one definition
-          // rule" which can result in multiple definitions
-          // of the same class over and over in each compile
-          // unit.
+          // We have already parsed this type or from another compile unit. GCC
+          // loves to use the "one definition rule" which can result in
+          // multiple definitions of the same class over and over in each
+          // compile unit.
           type_sp = unique_ast_entry_ap->m_type_sp;
           if (type_sp) {
             dwarf->m_die_to_type[die.GetDIE()] = type_sp.get();
@@ -255,9 +254,9 @@ TypeSP DWARFASTParserGo::ParseTypeFromDWARF(
                                Type::eEncodingIsUID, &decl, compiler_type,
                                Type::eResolveStateForward));
 
-        // Add our type to the unique type map so we don't
-        // end up creating many copies of the same type over
-        // and over in the ASTContext for our module
+        // Add our type to the unique type map so we don't end up creating many
+        // copies of the same type over and over in the ASTContext for our
+        // module
         unique_ast_entry_ap->m_type_sp = type_sp;
         unique_ast_entry_ap->m_die = die;
         unique_ast_entry_ap->m_declaration = decl;
@@ -266,19 +265,19 @@ TypeSP DWARFASTParserGo::ParseTypeFromDWARF(
                                                  *unique_ast_entry_ap);
 
         if (!is_forward_declaration) {
-          // Always start the definition for a class type so that
-          // if the class has child classes or types that require
-          // the class to be created for use as their decl contexts
-          // the class will be ready to accept these child definitions.
+          // Always start the definition for a class type so that if the class
+          // has child classes or types that require the class to be created
+          // for use as their decl contexts the class will be ready to accept
+          // these child definitions.
           if (die.HasChildren() == false) {
             // No children for this struct/union/class, lets finish it
             m_ast.CompleteStructType(compiler_type);
           } else if (compiler_type_was_created) {
-            // Leave this as a forward declaration until we need
-            // to know the details of the type. lldb_private::Type
-            // will automatically call the SymbolFile virtual function
-            // "SymbolFileDWARF::CompleteType(Type *)"
-            // When the definition needs to be defined.
+            // Leave this as a forward declaration until we need to know the
+            // details of the type. lldb_private::Type will automatically call
+            // the SymbolFile virtual function
+            // "SymbolFileDWARF::CompleteType(Type *)" When the definition
+            // needs to be defined.
             dwarf->m_forward_decl_die_to_clang_type[die.GetDIE()] =
                 compiler_type.GetOpaqueQualType();
             dwarf->m_forward_decl_clang_type_to_die[compiler_type
@@ -432,7 +431,8 @@ TypeSP DWARFASTParserGo::ParseTypeFromDWARF(
         dw_tag_t sc_parent_tag = sc_parent_die.Tag();
 
         SymbolContextScope *symbol_context_scope = NULL;
-        if (sc_parent_tag == DW_TAG_compile_unit) {
+        if (sc_parent_tag == DW_TAG_compile_unit ||
+            sc_parent_tag == DW_TAG_partial_unit) {
           symbol_context_scope = sc.comp_unit;
         } else if (sc.function != NULL && sc_parent_die) {
           symbol_context_scope =
@@ -655,8 +655,7 @@ size_t DWARFASTParserGo::ParseChildMembers(const SymbolContext &sc,
               if (form_value.BlockData()) {
                 Value initialValue(0);
                 Value memberOffset(0);
-                const DWARFDataExtractor &debug_info_data =
-                    die.GetDWARF()->get_debug_info_data();
+                const DWARFDataExtractor &debug_info_data = die.GetData();
                 uint32_t block_length = form_value.Unsigned();
                 uint32_t block_offset =
                     form_value.BlockData() - debug_info_data.GetDataStart();
@@ -670,8 +669,8 @@ size_t DWARFASTParserGo::ParseChildMembers(const SymbolContext &sc,
                 }
               } else {
                 // With DWARF 3 and later, if the value is an integer constant,
-                // this form value is the offset in bytes from the beginning
-                // of the containing entity.
+                // this form value is the offset in bytes from the beginning of
+                // the containing entity.
                 member_byte_offset = form_value.Unsigned();
               }
               break;

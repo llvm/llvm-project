@@ -265,10 +265,10 @@ public:
     lldb::SBValue
     CreateValueFromAddress(const char* name, lldb::addr_t address, lldb::SBType type);
     
-	lldb::SBValue
-	CreateValueFromData (const char* name,
-	                     lldb::SBData data,
-	                     lldb::SBType type);
+  lldb::SBValue
+  CreateValueFromData (const char* name,
+                       lldb::SBData data,
+                       lldb::SBType type);
 
     lldb::SBType
     GetType();
@@ -391,8 +391,8 @@ public:
     bool
     GetExpressionPath (lldb::SBStream &description);
 
-	%feature("docstring", "
-	//------------------------------------------------------------------
+  %feature("docstring", "
+  //------------------------------------------------------------------
     /// Get an SBData wrapping what this SBValue points to.
     ///
     /// This method will dereference the current SBValue, if its
@@ -413,13 +413,13 @@ public:
     ///     An SBData with the contents of the copied items, on success.
     ///     An empty SBData otherwise.
     //------------------------------------------------------------------
-	") GetPointeeData;
-	lldb::SBData
-	GetPointeeData (uint32_t item_idx = 0,
-					uint32_t item_count = 1);
+  ") GetPointeeData;
+  lldb::SBData
+  GetPointeeData (uint32_t item_idx = 0,
+          uint32_t item_count = 1);
 
     %feature("docstring", "
-	//------------------------------------------------------------------
+  //------------------------------------------------------------------
     /// Get an SBData wrapping the contents of this SBValue.
     ///
     /// This method will read the contents of this object in memory
@@ -429,18 +429,18 @@ public:
     ///     An SBData with the contents of this SBValue, on success.
     ///     An empty SBData otherwise.
     //------------------------------------------------------------------
-	") GetData;
+  ") GetData;
     lldb::SBData
     GetData ();
              
     bool
     SetData (lldb::SBData &data, lldb::SBError& error);
 
-	lldb::addr_t
-	GetLoadAddress();
+  lldb::addr_t
+  GetLoadAddress();
 
-	lldb::SBAddress
-	GetAddress();
+  lldb::SBAddress
+  GetAddress();
     
     lldb::SBValue
     Persist ();
@@ -455,6 +455,40 @@ public:
             '''Helper function for the "SBValue.dynamic" property.'''
             return self.GetDynamicValue (eDynamicCanRunTarget)
         
+        class children_access(object):
+            '''A helper object that will lazily hand out thread for a process when supplied an index.'''
+            
+            def __init__(self, sbvalue):
+                self.sbvalue = sbvalue
+                
+            def __len__(self):
+                if self.sbvalue:
+                    return int(self.sbvalue.GetNumChildren())
+                return 0
+
+            def __getitem__(self, key):
+                if type(key) is int and key < len(self):
+                    return self.sbvalue.GetChildAtIndex(key)
+                return None
+        
+        def get_child_access_object(self):
+            '''An accessor function that returns a children_access() object which allows lazy member variable access from a lldb.SBValue object.'''
+            return self.children_access (self)
+        
+        def get_value_child_list(self):
+            '''An accessor function that returns a list() that contains all children in a lldb.SBValue object.'''
+            children = []
+            accessor = self.get_child_access_object()
+            for idx in range(len(accessor)):
+                children.append(accessor[idx])
+            return children
+        
+        __swig_getmethods__["children"] = get_value_child_list
+        if _newclass: children = property(get_value_child_list, None, doc='''A read only property that returns a list() of lldb.SBValue objects for the children of the value.''')
+        
+        __swig_getmethods__["child"] = get_child_access_object
+        if _newclass: child = property(get_child_access_object, None, doc='''A read only property that returns an object that can access children of a variable by index (child_value = value.children[12]).''')
+
         __swig_getmethods__["name"] = GetName
         if _newclass: name = property(GetName, None, doc='''A read only property that returns the name of this value as a string.''')
 

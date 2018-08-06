@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "lldb/Host/Config.h"
 #include "lldb/Host/linux/HostInfoLinux.h"
 #include "lldb/Utility/Log.h"
 
@@ -25,12 +26,8 @@ using namespace lldb_private;
 
 namespace {
 struct HostInfoLinuxFields {
-  HostInfoLinuxFields() : m_os_major(0), m_os_minor(0), m_os_update(0) {}
-
   std::string m_distribution_id;
-  uint32_t m_os_major;
-  uint32_t m_os_minor;
-  uint32_t m_os_update;
+  llvm::VersionTuple m_os_version;
 };
 
 HostInfoLinuxFields *g_fields = nullptr;
@@ -42,35 +39,21 @@ void HostInfoLinux::Initialize() {
   g_fields = new HostInfoLinuxFields();
 }
 
-bool HostInfoLinux::GetOSVersion(uint32_t &major, uint32_t &minor,
-                                 uint32_t &update) {
-  static bool success = false;
-  static std::once_flag g_once_flag;
+llvm::VersionTuple HostInfoLinux::GetOSVersion() {
+  static llvm::once_flag g_once_flag;
   llvm::call_once(g_once_flag, []() {
-
     struct utsname un;
-    if (uname(&un) == 0) {
-      int status = sscanf(un.release, "%u.%u.%u", &g_fields->m_os_major,
-                          &g_fields->m_os_minor, &g_fields->m_os_update);
-      if (status == 3)
-        success = true;
-      else {
-        // Some kernels omit the update version, so try looking for just "X.Y"
-        // and
-        // set update to 0.
-        g_fields->m_os_update = 0;
-        status = sscanf(un.release, "%u.%u", &g_fields->m_os_major,
-                        &g_fields->m_os_minor);
-        if (status == 2)
-          success = true;
-      }
-    }
+    if (uname(&un) != 0)
+      return;
+
+    llvm::StringRef release = un.release;
+    // The kernel release string can include a lot of stuff (e.g.
+    // 4.9.0-6-amd64). We're only interested in the numbered prefix.
+    release = release.substr(0, release.find_first_not_of("0123456789."));
+    g_fields->m_os_version.tryParse(release);
   });
 
-  major = g_fields->m_os_major;
-  minor = g_fields->m_os_minor;
-  update = g_fields->m_os_update;
-  return success;
+  return g_fields->m_os_version;
 }
 
 bool HostInfoLinux::GetOSBuildString(std::string &s) {
@@ -99,17 +82,16 @@ bool HostInfoLinux::GetOSKernelDescription(std::string &s) {
 }
 
 llvm::StringRef HostInfoLinux::GetDistributionId() {
-  // Try to run 'lbs_release -i', and use that response
-  // for the distribution id.
-  static std::once_flag g_once_flag;
+  // Try to run 'lbs_release -i', and use that response for the distribution
+  // id.
+  static llvm::once_flag g_once_flag;
   llvm::call_once(g_once_flag, []() {
 
     Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST));
     if (log)
       log->Printf("attempting to determine Linux distribution...");
 
-    // check if the lsb_release command exists at one of the
-    // following paths
+    // check if the lsb_release command exists at one of the following paths
     const char *const exe_paths[] = {"/bin/lsb_release",
                                      "/usr/bin/lsb_release"};
 
@@ -188,7 +170,7 @@ FileSpec HostInfoLinux::GetProgramFileSpec() {
     ssize_t len = readlink("/proc/self/exe", exe_path, sizeof(exe_path) - 1);
     if (len > 0) {
       exe_path[len] = 0;
-      g_program_filespec.SetFile(exe_path, false);
+      g_program_filespec.SetFile(exe_path, false, FileSpec::Style::native);
     }
   }
 
@@ -204,15 +186,15 @@ bool HostInfoLinux::ComputeSupportExeDirectory(FileSpec &file_spec) {
 }
 
 bool HostInfoLinux::ComputeSystemPluginsDirectory(FileSpec &file_spec) {
-  FileSpec temp_file("/usr/lib/lldb/plugins", true);
+  FileSpec temp_file("/usr/lib" LLDB_LIBDIR_SUFFIX "/lldb/plugins", true);
   file_spec.GetDirectory().SetCString(temp_file.GetPath().c_str());
   return true;
 }
 
 bool HostInfoLinux::ComputeUserPluginsDirectory(FileSpec &file_spec) {
   // XDG Base Directory Specification
-  // http://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html
-  // If XDG_DATA_HOME exists, use that, otherwise use ~/.local/share/lldb.
+  // http://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html If
+  // XDG_DATA_HOME exists, use that, otherwise use ~/.local/share/lldb.
   const char *xdg_data_home = getenv("XDG_DATA_HOME");
   if (xdg_data_home && xdg_data_home[0]) {
     std::string user_plugin_dir(xdg_data_home);

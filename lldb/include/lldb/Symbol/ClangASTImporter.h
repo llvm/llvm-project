@@ -250,13 +250,12 @@ private:
     // recorded and placed into the decls_to_deport set.
     //
     // A call to "ExecuteDeportWorkQueues" completes all the Decls that
-    // are in decls_to_deport, adding any Decls it sees along the way that
-    // it hasn't already deported.  It proceeds until decls_to_deport is
-    // empty.
+    // are in decls_to_deport, adding any Decls it sees along the way that it
+    // hasn't already deported.  It proceeds until decls_to_deport is empty.
     //
-    // These calls must be paired.  Leaving a minion in deport mode or
-    // trying to start deport minion with a new pair of queues will result
-    // in an assertion failure.
+    // These calls must be paired.  Leaving a minion in deport mode or trying
+    // to start deport minion with a new pair of queues will result in an
+    // assertion failure.
 
     void
     InitDeportWorkQueues(std::set<clang::NamedDecl *> *decls_to_deport,

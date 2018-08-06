@@ -54,9 +54,9 @@ public:
   lldb::SBSymbolContext GetSymbolContext(uint32_t resolve_scope);
 
   // The following functions grab individual objects for a given address and
-  // are less efficient if you want more than one symbol related objects.
-  // Use one of the following when you want multiple debug symbol related
-  // objects for an address:
+  // are less efficient if you want more than one symbol related objects. Use
+  // one of the following when you want multiple debug symbol related objects
+  // for an address:
   //    lldb::SBSymbolContext SBAddress::GetSymbolContext (uint32_t
   //    resolve_scope);
   //    lldb::SBSymbolContext SBTarget::ResolveSymbolContextForAddress (const
@@ -80,8 +80,6 @@ public:
 
   lldb::SBLineEntry GetLineEntry();
 
-  lldb::AddressClass GetAddressClass();
-
 protected:
   friend class SBBlock;
   friend class SBBreakpointLocation;
@@ -103,7 +101,7 @@ protected:
 
   const lldb_private::Address *operator->() const;
 
-  friend bool operator==(const SBAddress &lhs, const SBAddress &rhs);
+  friend bool LLDB_API operator==(const SBAddress &lhs, const SBAddress &rhs);
 
   lldb_private::Address *get();
 
@@ -119,7 +117,7 @@ private:
   std::unique_ptr<lldb_private::Address> m_opaque_ap;
 };
 
-bool operator==(const SBAddress &lhs, const SBAddress &rhs);
+bool LLDB_API operator==(const SBAddress &lhs, const SBAddress &rhs);
 
 } // namespace lldb
 

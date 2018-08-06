@@ -46,17 +46,17 @@ public:
   bool RemoveListener(const lldb::SBListener &listener,
                       uint32_t event_mask = UINT32_MAX);
 
-  // This comparison is checking if the internal opaque pointer value
-  // is equal to that in "rhs".
+  // This comparison is checking if the internal opaque pointer value is equal
+  // to that in "rhs".
   bool operator==(const lldb::SBBroadcaster &rhs) const;
 
-  // This comparison is checking if the internal opaque pointer value
-  // is not equal to that in "rhs".
+  // This comparison is checking if the internal opaque pointer value is not
+  // equal to that in "rhs".
   bool operator!=(const lldb::SBBroadcaster &rhs) const;
 
-  // This comparison is checking if the internal opaque pointer value
-  // is less than that in "rhs" so SBBroadcaster objects can be contained
-  // in ordered containers.
+  // This comparison is checking if the internal opaque pointer value is less
+  // than that in "rhs" so SBBroadcaster objects can be contained in ordered
+  // containers.
   bool operator<(const lldb::SBBroadcaster &rhs) const;
 
 protected:

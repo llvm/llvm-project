@@ -91,7 +91,7 @@ bool lldb_private::operator==(const Declaration &lhs, const Declaration &rhs) {
       return lhs.GetFile() == rhs.GetFile();
 #else
   if (lhs.GetLine() == rhs.GetLine())
-    return FileSpec::Equal(lhs.GetFile(), rhs.GetFile(), true, true);
+    return FileSpec::Equal(lhs.GetFile(), rhs.GetFile(), true);
 #endif
   return false;
 }

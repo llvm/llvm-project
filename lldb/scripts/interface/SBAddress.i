@@ -89,12 +89,8 @@ public:
     SBAddress::GetOffset ();
 
     void
-    SetAddress (lldb::SBSection section, 
+    SetAddress (lldb::SBSection section,
                 lldb::addr_t offset);
-             
-
-    lldb::AddressClass
-    GetAddressClass ();
 
     %feature("docstring", "
     //------------------------------------------------------------------

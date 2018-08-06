@@ -109,17 +109,17 @@ static std::string PrintValue(llvm::Value *V, bool truncate = false) {
 
 //----------------------------------------------------------------------
 /// @class Instrumenter IRDynamicChecks.cpp
-/// @brief Finds and instruments individual LLVM IR instructions
+/// Finds and instruments individual LLVM IR instructions
 ///
-/// When instrumenting LLVM IR, it is frequently desirable to first search
-/// for instructions, and then later modify them.  This way iterators
-/// remain intact, and multiple passes can look at the same code base without
+/// When instrumenting LLVM IR, it is frequently desirable to first search for
+/// instructions, and then later modify them.  This way iterators remain
+/// intact, and multiple passes can look at the same code base without
 /// treading on each other's toes.
 ///
 /// The Instrumenter class implements this functionality.  A client first
-/// calls Inspect on a function, which populates a list of instructions to
-/// be instrumented.  Then, later, when all passes' Inspect functions have
-/// been called, the client calls Instrument, which adds the desired
+/// calls Inspect on a function, which populates a list of instructions to be
+/// instrumented.  Then, later, when all passes' Inspect functions have been
+/// called, the client calls Instrument, which adds the desired
 /// instrumentation.
 ///
 /// A subclass of Instrumenter must override InstrumentInstruction, which
@@ -200,8 +200,8 @@ protected:
   }
 
   //------------------------------------------------------------------
-  /// Determine whether a single instruction is interesting to
-  /// instrument, and, if so, call RegisterInstruction
+  /// Determine whether a single instruction is interesting to instrument,
+  /// and, if so, call RegisterInstruction
   ///
   /// @param[in] i
   ///     The instruction to be inspected.
@@ -250,8 +250,8 @@ protected:
   }
 
   //------------------------------------------------------------------
-  /// Build a function pointer for a function with signature
-  /// void (*)(uint8_t*) with a given address
+  /// Build a function pointer for a function with signature void
+  /// (*)(uint8_t*) with a given address
   ///
   /// @param[in] start_address
   ///     The address of the function.
@@ -275,8 +275,8 @@ protected:
   }
 
   //------------------------------------------------------------------
-  /// Build a function pointer for a function with signature
-  /// void (*)(uint8_t*, uint8_t*) with a given address
+  /// Build a function pointer for a function with signature void
+  /// (*)(uint8_t*, uint8_t*) with a given address
   ///
   /// @param[in] start_address
   ///     The address of the function.

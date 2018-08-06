@@ -8,16 +8,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "DIERef.h"
-#include "DWARFCompileUnit.h"
+#include "DWARFUnit.h"
 #include "DWARFDebugInfo.h"
 #include "DWARFFormValue.h"
 #include "SymbolFileDWARF.h"
 #include "SymbolFileDWARFDebugMap.h"
-
-DIERef::DIERef()
-    : cu_offset(DW_INVALID_OFFSET), die_offset(DW_INVALID_OFFSET) {}
-
-DIERef::DIERef(dw_offset_t c, dw_offset_t d) : cu_offset(c), die_offset(d) {}
 
 DIERef::DIERef(lldb::user_id_t uid, SymbolFileDWARF *dwarf)
     : cu_offset(DW_INVALID_OFFSET), die_offset(uid & 0xffffffff) {
@@ -28,7 +23,7 @@ DIERef::DIERef(lldb::user_id_t uid, SymbolFileDWARF *dwarf)
     if (actual_dwarf) {
       DWARFDebugInfo *debug_info = actual_dwarf->DebugInfo();
       if (debug_info) {
-        DWARFCompileUnit *dwarf_cu =
+        DWARFUnit *dwarf_cu =
             debug_info->GetCompileUnitContainingDIEOffset(die_offset);
         if (dwarf_cu) {
           cu_offset = dwarf_cu->GetOffset();
@@ -45,7 +40,7 @@ DIERef::DIERef(lldb::user_id_t uid, SymbolFileDWARF *dwarf)
 DIERef::DIERef(const DWARFFormValue &form_value)
     : cu_offset(DW_INVALID_OFFSET), die_offset(DW_INVALID_OFFSET) {
   if (form_value.IsValid()) {
-    const DWARFCompileUnit *dwarf_cu = form_value.GetCompileUnit();
+    const DWARFUnit *dwarf_cu = form_value.GetCompileUnit();
     if (dwarf_cu) {
       if (dwarf_cu->GetBaseObjOffset() != DW_INVALID_OFFSET)
         cu_offset = dwarf_cu->GetBaseObjOffset();

@@ -1,0 +1,3 @@
+# UNSUPPORTED: windows
+# RUN: python %S/expect_exit_code.py 30  %lldb -b -s %s
+q 30

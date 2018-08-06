@@ -62,7 +62,7 @@ ThreadMemory::CreateRegisterContextForFrame(StackFrame *frame) {
     reg_ctx_sp = GetRegisterContext();
   } else {
     Unwind *unwinder = GetUnwinder();
-    if (unwinder)
+    if (unwinder != nullptr)
       reg_ctx_sp = unwinder->CreateRegisterContextForFrame(frame);
   }
   return reg_ctx_sp;

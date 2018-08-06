@@ -607,6 +607,11 @@ const char *MachProcess::GetDeploymentInfo(const struct load_command& lc,
     }
   }
 #if defined (LC_BUILD_VERSION)
+#ifndef PLATFORM_IOSSIMULATOR
+#define PLATFORM_IOSSIMULATOR 7
+#define PLATFORM_TVOSSIMULATOR 8
+#define PLATFORM_WATCHOSSIMULATOR 9
+#endif
   if (cmd == LC_BUILD_VERSION) {
     struct build_version_command build_vers;
     if (ReadMemory(load_command_address, sizeof(struct build_version_command),
@@ -621,10 +626,13 @@ const char *MachProcess::GetDeploymentInfo(const struct load_command& lc,
     case PLATFORM_MACOS:
       return "macosx";
     case PLATFORM_IOS:
+    case PLATFORM_IOSSIMULATOR:
       return "ios";
     case PLATFORM_TVOS:
+    case PLATFORM_TVOSSIMULATOR:
       return "tvos";
     case PLATFORM_WATCHOS:
+    case PLATFORM_WATCHOSSIMULATOR:
       return "watchos";
     case PLATFORM_BRIDGEOS:
       return "bridgeos";
@@ -747,50 +755,15 @@ bool MachProcess::GetMachOInformationFromMemory(
         inf.min_version_os_version += std::to_string(patch_version);
       }
     }
-#if defined (LC_BUILD_VERSION)
-    if (lc.cmd == LC_BUILD_VERSION)
-    {
-        struct build_version_command build_vers;
-        if (ReadMemory(load_cmds_p, sizeof(struct build_version_command),
-                       &build_vers) != sizeof(struct build_version_command)) {
-          return false;
-        }
-        switch (build_vers.platform)
-        {
-            case PLATFORM_MACOS:
-                inf.min_version_os_name = "macosx";
-                break;
-            case PLATFORM_IOS:
-                inf.min_version_os_name = "iphoneos";
-                break;
-            case PLATFORM_TVOS:
-                inf.min_version_os_name = "tvos";
-                break;
-            case PLATFORM_WATCHOS:
-                inf.min_version_os_name = "watchos";
-                break;
-            case PLATFORM_BRIDGEOS:
-                inf.min_version_os_name = "bridgeos";
-                break;
-        }
-        uint32_t xxxx = build_vers.sdk >> 16;;
-        uint32_t yy = (build_vers.sdk >> 8) & 0xffu;
-        uint32_t zz = build_vers.sdk & 0xffu;
-        inf.min_version_os_version = "";
-        inf.min_version_os_version += std::to_string(xxxx);
-        inf.min_version_os_version += ".";
-        inf.min_version_os_version += std::to_string(yy);
-        if (zz != 0) {
-            inf.min_version_os_version += ".";
-            inf.min_version_os_version += std::to_string(zz);
-        }
-    }
-#endif
+
     load_cmds_p += lc.cmdsize;
   }
   return true;
 }
 
+// Given completely filled in array of binary_image_information structures,
+// create a JSONGenerator object
+// with all the details we want to send to lldb.
 JSONGenerator::ObjectSP MachProcess::FormatDynamicLibrariesIntoJSON(
     const std::vector<struct binary_image_information> &image_infos) {
 
@@ -1521,7 +1494,7 @@ bool MachProcess::Detach() {
   // Resume our task
   m_task.Resume();
 
-  // NULL our task out as we have already retored all exception ports
+  // NULL our task out as we have already restored all exception ports
   m_task.Clear();
 
   // Clear out any notion of the process we once were
@@ -1832,7 +1805,7 @@ bool MachProcess::DisableBreakpoint(nub_addr_t addr, bool remove) {
           break_op_size) {
         bool verify = false;
         if (bp->IsEnabled()) {
-          // Make sure we have the a breakpoint opcode exists at this address
+          // Make sure a breakpoint opcode exists at this address
           if (memcmp(curr_break_op, break_op, break_op_size) == 0) {
             break_op_found = true;
             // We found a valid breakpoint opcode at this address, now restore

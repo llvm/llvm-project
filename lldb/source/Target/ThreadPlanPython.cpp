@@ -59,8 +59,7 @@ bool ThreadPlanPython::ValidatePlan(Stream *error) {
 
 void ThreadPlanPython::DidPush() {
   // We set up the script side in DidPush, so that it can push other plans in
-  // the constructor,
-  // and doesn't have to care about the details of DidPush.
+  // the constructor, and doesn't have to care about the details of DidPush.
 
   if (!m_class_name.empty()) {
     ScriptInterpreter *script_interp = m_thread.GetProcess()

@@ -21,7 +21,7 @@
 
 //----------------------------------------------------------------------
 /// @class JSONGenerator JSONGenerator.h
-/// @brief A class which can construct structured data for the sole purpose
+/// A class which can construct structured data for the sole purpose
 /// of printing it in JSON format.
 ///
 /// A stripped down version of lldb's StructuredData objects which are much

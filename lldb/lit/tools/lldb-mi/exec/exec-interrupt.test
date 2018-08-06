@@ -1,0 +1,20 @@
+# XFAIL: windows
+# -> llvm.org/pr24452
+#
+# RUN: %cc -o %t %p/inputs/main.c -g
+# RUN: %lldbmi %t < %s | FileCheck %s
+
+# Test lldb-mi -exec-interrupt command.
+
+# Check that we have a valid target created via '%lldbmi %t'.
+# CHECK: ^done
+
+-break-insert main
+# CHECK: ^done,bkpt={number="1"
+
+-exec-run
+# CHECK: ^running
+# CHECK: *stopped,reason="breakpoint-hit"
+
+-exec-interrupt
+# CHECK: ^error,msg="Process is not running."

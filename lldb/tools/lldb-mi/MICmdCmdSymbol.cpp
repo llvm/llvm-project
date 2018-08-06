@@ -10,18 +10,36 @@
 // Overview:    CMICmdCmdSymbolListLines     implementation.
 
 // Third Party Headers:
-#include "lldb/API/SBCommandInterpreter.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Regex.h"
+#include "llvm/ADT/Twine.h"
+#include "lldb/API/SBAddress.h"
+#include "lldb/API/SBLineEntry.h"
+#include "lldb/API/SBFileSpec.h"
+#include "lldb/API/SBCompileUnit.h"
+#include "lldb/API/SBSymbolContext.h"
+#include "lldb/API/SBSymbolContextList.h"
 
 // In-house headers:
 #include "MICmdArgValFile.h"
 #include "MICmdCmdSymbol.h"
 #include "MICmnLLDBDebugSessionInfo.h"
 #include "MICmnMIResultRecord.h"
-#include "MICmnMIValueList.h"
 #include "MICmnMIValueTuple.h"
+#include "MICmnMIValueResult.h"
+
+namespace {
+const CMICmnMIValueTuple
+CreateMITuplePCLine(const uint32_t addr, const uint32_t line_number) {
+  const CMICmnMIValueConst miValueConstAddr("0x" + llvm::Twine::utohexstr(addr).str());
+  const CMICmnMIValueConst miValueConstLine(llvm::Twine(line_number).str());
+  const CMICmnMIValueResult miValueResultAddr("pc", miValueConstAddr);
+  const CMICmnMIValueResult miValueResultLine("line", miValueConstLine);
+  CMICmnMIValueTuple miValueTuple(miValueResultAddr);
+  miValueTuple.Add(miValueResultLine);
+  return miValueTuple;
+}
+} // namespace
+
+using namespace lldb; // For operator==(const SBAddress &, const SBAddress &).
 
 //++
 //------------------------------------------------------------------------------------
@@ -32,7 +50,7 @@
 // Throws:  None.
 //--
 CMICmdCmdSymbolListLines::CMICmdCmdSymbolListLines()
-    : m_constStrArgNameFile("file") {
+    : m_resultList(false), m_constStrArgNameFile("file") {
   // Command factory matches this name with that received from the stdin stream
   m_strMiCmd = "symbol-list-lines";
 
@@ -84,93 +102,51 @@ bool CMICmdCmdSymbolListLines::ParseArgs() {
 bool CMICmdCmdSymbolListLines::Execute() {
   CMICMDBASE_GETOPTION(pArgFile, File, m_constStrArgNameFile);
 
-  const CMIUtilString &strFilePath(pArgFile->GetValue());
-  const CMIUtilString strCmd(CMIUtilString::Format(
-      "source info --file \"%s\"", strFilePath.AddSlashes().c_str()));
-
-  CMICmnLLDBDebugSessionInfo &rSessionInfo(
-      CMICmnLLDBDebugSessionInfo::Instance());
-  const lldb::ReturnStatus rtn =
-      rSessionInfo.GetDebugger().GetCommandInterpreter().HandleCommand(
-          strCmd.c_str(), m_lldbResult);
-  MIunused(rtn);
-
-  return MIstatus::success;
-}
-
-//++
-//------------------------------------------------------------------------------------
-// Details: Helper function for parsing the header returned from lldb for the
-// command:
-//              target modules dump line-table <file>
-//          where the header is of the format:
-//              Line table for /path/to/file in `/path/to/module
-// Args:    input - (R) Input string to parse.
-//          file  - (W) String representing the file.
-// Return:  bool - True = input was parsed successfully, false = input could not
-// be parsed.
-// Throws:  None.
-//--
-static bool ParseLLDBLineAddressHeader(const char *input, CMIUtilString &file) {
-  // Match LineEntry using regex.
-  static llvm::Regex g_lineentry_header_regex(llvm::StringRef(
-      "^ *Lines found for file (.+) in compilation unit (.+) in `(.+)$"));
-  //                                       ^1=file                  ^2=cu
-  //                                       ^3=module
-
-  llvm::SmallVector<llvm::StringRef, 4> match;
-
-  const bool ok = g_lineentry_header_regex.match(input, &match);
-  if (ok)
-    file = match[1];
-  return ok;
-}
-
-//++
-//------------------------------------------------------------------------------------
-// Details: Helper function for parsing a line entry returned from lldb for the
-// command:
-//              target modules dump line-table <file>
-//          where the line entry is of the format:
-//              0x0000000100000e70: /path/to/file:3002[:4]
-//              addr                file          line column(opt)
-// Args:    input - (R) Input string to parse.
-//          addr  - (W) String representing the pc address.
-//          file  - (W) String representing the file.
-//          line  - (W) String representing the line.
-// Return:  bool - True = input was parsed successfully, false = input could not
-// be parsed.
-// Throws:  None.
-//--
-static bool ParseLLDBLineAddressEntry(const char *input, CMIUtilString &addr,
-                                      CMIUtilString &file,
-                                      CMIUtilString &line) {
-  // Note: Ambiguities arise because the column is optional, and
-  // because : can appear in filenames or as a byte in a multibyte
-  // UTF8 character.  We keep those cases to a minimum by using regex
-  // to work on the string from both the left and right, so that what
-  // is remains is assumed to be the filename.
-
-  // Match LineEntry using regex.
-  static llvm::Regex g_lineentry_nocol_regex(llvm::StringRef(
-      "^ *\\[(0x[0-9a-fA-F]+)-(0x[0-9a-fA-F]+)\\): (.+):([0-9]+)$"));
-  static llvm::Regex g_lineentry_col_regex(llvm::StringRef(
-      "^ *\\[(0x[0-9a-fA-F]+)-(0x[0-9a-fA-F]+)\\): (.+):([0-9]+):[0-9]+$"));
-  //                     ^1=start         ^2=end               ^3=f ^4=line
-  //                     ^5=:col(opt)
-
-  llvm::SmallVector<llvm::StringRef, 6> match;
-
-  // First try matching the LineEntry with the column,
-  // then try without the column.
-  const bool ok = g_lineentry_col_regex.match(input, &match) ||
-                  g_lineentry_nocol_regex.match(input, &match);
-  if (ok) {
-    addr = match[1];
-    file = match[3];
-    line = match[4];
+  const auto &rSessionInfo(CMICmnLLDBDebugSessionInfo::Instance());
+  if (rSessionInfo.GetTarget() == rSessionInfo.GetDebugger().GetDummyTarget()) {
+    SetError(CMIUtilString::Format(MIRSRC(IDS_CMD_ERR_INVALID_TARGET_CURRENT),
+                                   m_cmdData.strMiCmd.c_str()));
+    return MIstatus::failure;
   }
-  return ok;
+
+  const lldb::SBFileSpec source_file_spec(pArgFile->GetValue().c_str(), true);
+  const char *source_file_name = source_file_spec.GetFilename();
+  const char *source_file_directory = source_file_spec.GetDirectory();
+  const bool has_path = source_file_directory;
+
+  lldb::SBSymbolContextList sc_cu_list =
+      CMICmnLLDBDebugSessionInfo::Instance().GetTarget().FindCompileUnits(
+          source_file_spec);
+
+  bool found_something = false;
+  for (uint32_t i = 0, e = sc_cu_list.GetSize(); i < e; ++i) {
+    const lldb::SBCompileUnit cu =
+        sc_cu_list.GetContextAtIndex(i).GetCompileUnit();
+    for (uint32_t j = 0, e = cu.GetNumLineEntries(); j < e; ++j) {
+      const lldb::SBLineEntry line = cu.GetLineEntryAtIndex(j);
+      const lldb::SBFileSpec line_spec = line.GetFileSpec();
+      if (line_spec.GetFilename() == source_file_name) {
+        if (has_path && (line_spec.GetDirectory() != source_file_directory))
+          continue;
+        // We don't need a line with start address equals to end one,
+        // so just skip it.
+        const lldb::SBAddress line_start_address = line.GetStartAddress();
+        const lldb::SBAddress line_end_address = line.GetEndAddress();
+        if (line_start_address == line_end_address)
+          continue;
+        // We have a matching line.
+        found_something = true;
+        m_resultList.Add(CreateMITuplePCLine(
+            line_start_address.GetFileAddress(),
+            line.GetLine()));
+      }
+    }
+  }
+  if (!found_something) {
+    SetError(MIRSRC(IDS_UTIL_FILE_ERR_INVALID_PATHNAME));
+    return MIstatus::failure;
+  }
+  return MIstatus::success;
 }
 
 //++
@@ -185,71 +161,11 @@ static bool ParseLLDBLineAddressEntry(const char *input, CMIUtilString &addr,
 // Throws:  None.
 //--
 bool CMICmdCmdSymbolListLines::Acknowledge() {
-  if (m_lldbResult.GetErrorSize() > 0) {
-    const char *pLldbErr = m_lldbResult.GetError();
-    const CMIUtilString strMsg(CMIUtilString(pLldbErr).StripCRAll());
-    const CMICmnMIValueConst miValueConst(strMsg);
-    const CMICmnMIValueResult miValueResult("message", miValueConst);
-    const CMICmnMIResultRecord miRecordResult(
-        m_cmdData.strMiCmdToken, CMICmnMIResultRecord::eResultClass_Error,
-        miValueResult);
-    m_miResultRecord = miRecordResult;
-  } else {
-    CMIUtilString::VecString_t vecLines;
-    const CMIUtilString strLldbMsg(m_lldbResult.GetOutput());
-    const MIuint nLines(strLldbMsg.SplitLines(vecLines));
-
-    // Parse the file from the header.
-    const CMIUtilString &rWantFile(vecLines[0]);
-    CMIUtilString strWantFile;
-    if (!ParseLLDBLineAddressHeader(rWantFile.c_str(), strWantFile)) {
-      // Unexpected error - parsing failed.
-      // MI print "%s^error,msg=\"Command '-symbol-list-lines'. Error: Line
-      // address header is absent or has an unknown format.\""
-      const CMICmnMIValueConst miValueConst(CMIUtilString::Format(
-          MIRSRC(IDS_CMD_ERR_SOME_ERROR), m_cmdData.strMiCmd.c_str(),
-          "Line address header is absent or has an unknown format."));
-      const CMICmnMIValueResult miValueResult("msg", miValueConst);
-      const CMICmnMIResultRecord miRecordResult(
-          m_cmdData.strMiCmdToken, CMICmnMIResultRecord::eResultClass_Error,
-          miValueResult);
-      m_miResultRecord = miRecordResult;
-
-      return MIstatus::success;
-    }
-
-    // Parse the line address entries.
-    CMICmnMIValueList miValueList(true);
-    for (MIuint i = 1; i < nLines; ++i) {
-      // String looks like:
-      // 0x0000000100000e70: /path/to/file:3[:4]
-      const CMIUtilString &rLine(vecLines[i]);
-      CMIUtilString strAddr;
-      CMIUtilString strFile;
-      CMIUtilString strLine;
-
-      if (!ParseLLDBLineAddressEntry(rLine.c_str(), strAddr, strFile, strLine))
-        continue;
-
-      const CMICmnMIValueConst miValueConst(strAddr);
-      const CMICmnMIValueResult miValueResult("pc", miValueConst);
-      CMICmnMIValueTuple miValueTuple(miValueResult);
-
-      const CMICmnMIValueConst miValueConst2(strLine);
-      const CMICmnMIValueResult miValueResult2("line", miValueConst2);
-      miValueTuple.Add(miValueResult2);
-
-      miValueList.Add(miValueTuple);
-    }
-
-    // MI print "%s^done,lines=[{pc=\"%d\",line=\"%d\"}...]"
-    const CMICmnMIValueResult miValueResult("lines", miValueList);
-    const CMICmnMIResultRecord miRecordResult(
-        m_cmdData.strMiCmdToken, CMICmnMIResultRecord::eResultClass_Done,
-        miValueResult);
-    m_miResultRecord = miRecordResult;
-  }
-
+  // MI print "%s^done,lines=[{pc=\"%d\",line=\"%d\"}...]"
+  const CMICmnMIValueResult miValueResult("lines", m_resultList);
+  m_miResultRecord = CMICmnMIResultRecord(
+      m_cmdData.strMiCmdToken, CMICmnMIResultRecord::eResultClass_Done,
+      miValueResult);
   return MIstatus::success;
 }
 

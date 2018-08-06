@@ -39,8 +39,10 @@
               The easiest way to run the LLDB test suite is to use the <tt>check-lldb</tt> build
               target. By default, the <tt>check-lldb</tt> target builds the test programs with
               the same compiler that was used to build LLDB. To build the tests with a different
-              compiler, you can set the <strong>LLDB_TEST_COMPILER</strong> CMake variable. It is possible to
-              customize the architecture of the test binaries and compiler used by appending -A
+              compiler, you can set the <strong>LLDB_TEST_C_COMPILER</strong> or the <strong>LLDB_TEST_CXX_COMPILER</strong> CMake variables.
+              These variables are ignored unless the respective <strong>LLDB_TEST_USE_CUSTOM_C_COMPILER</strong> and
+              <strong>LLDB_TEST_USE_CUSTOM_CXX_COMPILER</strong> are set to ON.
+              It is possible to customize the architecture of the test binaries and compiler used by appending -A
               and -C options respectively to the CMake variable <strong>LLDB_TEST_USER_ARGS</strong>. For
               example, to test LLDB against 32-bit binaries
               built with a custom version of clang, do:

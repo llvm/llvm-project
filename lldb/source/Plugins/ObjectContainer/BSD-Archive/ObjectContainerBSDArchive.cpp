@@ -89,9 +89,9 @@ ObjectContainerBSDArchive::Object::Extract(const DataExtractor &data,
 
   str.assign((const char *)data.GetData(&offset, 16), 16);
   if (str.find("#1/") == 0) {
-    // If the name is longer than 16 bytes, or contains an embedded space
-    // then it will use this format where the length of the name is
-    // here and the name characters are after this header.
+    // If the name is longer than 16 bytes, or contains an embedded space then
+    // it will use this format where the length of the name is here and the
+    // name characters are after this header.
     ar_name_len = strtoul(str.c_str() + 3, &err, 10);
   } else {
     // Strip off any trailing spaces.
@@ -203,8 +203,8 @@ ObjectContainerBSDArchive::Archive::FindCachedArchive(
   shared_ptr archive_sp;
   Archive::Map &archive_map = Archive::GetArchiveCache();
   Archive::Map::iterator pos = archive_map.find(file);
-  // Don't cache a value for "archive_map.end()" below since we might
-  // delete an archive entry...
+  // Don't cache a value for "archive_map.end()" below since we might delete an
+  // archive entry...
   while (pos != archive_map.end() && pos->first == file) {
     bool match = true;
     if (arch.IsValid() &&
@@ -217,14 +217,13 @@ ObjectContainerBSDArchive::Archive::FindCachedArchive(
       if (pos->second->GetModificationTime() == time) {
         return pos->second;
       } else {
-        // We have a file at the same path with the same architecture
-        // whose modification time doesn't match. It doesn't make sense
-        // for us to continue to use this BSD archive since we cache only
-        // the object info which consists of file time info and also the
-        // file offset and file size of any contained objects. Since
-        // this information is now out of date, we won't get the correct
-        // information if we go and extract the file data, so we should
-        // remove the old and outdated entry.
+        // We have a file at the same path with the same architecture whose
+        // modification time doesn't match. It doesn't make sense for us to
+        // continue to use this BSD archive since we cache only the object info
+        // which consists of file time info and also the file offset and file
+        // size of any contained objects. Since this information is now out of
+        // date, we won't get the correct information if we go and extract the
+        // file data, so we should remove the old and outdated entry.
         archive_map.erase(pos);
         pos = archive_map.find(file);
         continue; // Continue to next iteration so we don't increment pos
@@ -295,9 +294,9 @@ ObjectContainer *ObjectContainerBSDArchive::CreateInstance(
     return nullptr;
 
   if (data_sp) {
-    // We have data, which means this is the first 512 bytes of the file
-    // Check to see if the magic bytes match and if they do, read the entire
-    // table of contents for the archive and cache it
+    // We have data, which means this is the first 512 bytes of the file Check
+    // to see if the magic bytes match and if they do, read the entire table of
+    // contents for the archive and cache it
     DataExtractor data;
     data.SetData(data_sp, data_offset, length);
     if (file && data_sp && ObjectContainerBSDArchive::MagicBytesMatch(data)) {
@@ -389,8 +388,8 @@ bool ObjectContainerBSDArchive::ParseHeader() {
             m_file, module_sp->GetArchitecture(),
             module_sp->GetModificationTime(), m_offset, m_data);
       }
-      // Clear the m_data that contains the entire archive
-      // data and let our m_archive_sp hold onto the data.
+      // Clear the m_data that contains the entire archive data and let our
+      // m_archive_sp hold onto the data.
       m_data.Clear();
     }
   }
@@ -453,9 +452,9 @@ size_t ObjectContainerBSDArchive::GetModuleSpecifications(
     lldb::offset_t data_offset, lldb::offset_t file_offset,
     lldb::offset_t file_size, lldb_private::ModuleSpecList &specs) {
 
-  // We have data, which means this is the first 512 bytes of the file
-  // Check to see if the magic bytes match and if they do, read the entire
-  // table of contents for the archive and cache it
+  // We have data, which means this is the first 512 bytes of the file Check to
+  // see if the magic bytes match and if they do, read the entire table of
+  // contents for the archive and cache it
   DataExtractor data;
   data.SetData(data_sp, data_offset, data_sp->GetByteSize());
   if (!file || !data_sp || !ObjectContainerBSDArchive::MagicBytesMatch(data))
@@ -505,8 +504,8 @@ size_t ObjectContainerBSDArchive::GetModuleSpecifications(
   const size_t end_count = specs.GetSize();
   size_t num_specs_added = end_count - initial_count;
   if (set_archive_arch && num_specs_added > 0) {
-    // The archive was created but we didn't have an architecture
-    // so we need to set it
+    // The archive was created but we didn't have an architecture so we need to
+    // set it
     for (size_t i = initial_count; i < end_count; ++i) {
       ModuleSpec module_spec;
       if (specs.GetModuleSpecAtIndex(i, module_spec)) {

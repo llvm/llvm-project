@@ -88,9 +88,9 @@ TypeImpl &SBType::ref() {
 }
 
 const TypeImpl &SBType::ref() const {
-  // "const SBAddress &addr" should already have checked "addr.IsValid()"
-  // prior to calling this function. In case you didn't we will assert
-  // and die to let you know.
+  // "const SBAddress &addr" should already have checked "addr.IsValid()" prior
+  // to calling this function. In case you didn't we will assert and die to let
+  // you know.
   assert(m_opaque_sp.get());
   return *m_opaque_sp;
 }

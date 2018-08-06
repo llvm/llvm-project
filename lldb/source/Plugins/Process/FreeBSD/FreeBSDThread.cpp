@@ -57,7 +57,7 @@ using namespace lldb_private;
 
 FreeBSDThread::FreeBSDThread(Process &process, lldb::tid_t tid)
     : Thread(process, tid), m_frame_ap(), m_breakpoint(),
-      m_thread_name_valid(false), m_thread_name(), m_posix_thread(NULL) {
+      m_thread_name_valid(false), m_thread_name(), m_posix_thread(nullptr) {
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_THREAD));
   LLDB_LOGV(log, "tid = {0}", tid);
 
@@ -69,15 +69,15 @@ FreeBSDThread::FreeBSDThread(Process &process, lldb::tid_t tid)
   for (uint32_t wp_idx = 0; wp_idx < wp_size; wp_idx++) {
     lldb::WatchpointSP wp = wp_list.GetByIndex(wp_idx);
     if (wp.get() && wp->IsEnabled()) {
-      // This watchpoint as been enabled; obviously this "new" thread
-      // has been created since that watchpoint was enabled.  Since
-      // the POSIXBreakpointProtocol has yet to be initialized, its
-      // m_watchpoints_initialized member will be FALSE.  Attempting to
-      // read the debug status register to determine if a watchpoint
-      // has been hit would result in the zeroing of that register.
-      // Since the active debug registers would have been cloned when
-      // this thread was created, simply force the m_watchpoints_initized
-      // member to TRUE and avoid resetting dr6 and dr7.
+      // This watchpoint as been enabled; obviously this "new" thread has been
+      // created since that watchpoint was enabled.  Since the
+      // POSIXBreakpointProtocol has yet to be initialized, its
+      // m_watchpoints_initialized member will be FALSE.  Attempting to read
+      // the debug status register to determine if a watchpoint has been hit
+      // would result in the zeroing of that register. Since the active debug
+      // registers would have been cloned when this thread was created, simply
+      // force the m_watchpoints_initized member to TRUE and avoid resetting
+      // dr6 and dr7.
       GetPOSIXBreakpointProtocol()->ForceWatchpointsInitialized();
     }
   }
@@ -98,16 +98,15 @@ void FreeBSDThread::RefreshStateAfterStop() {
   // context by the time this function gets called. The KDPRegisterContext
   // class has been made smart enough to detect when it needs to invalidate
   // which registers are valid by putting hooks in the register read and
-  // register supply functions where they check the process stop ID and do
-  // the right thing.
-  // if (StateIsStoppedState(GetState())
+  // register supply functions where they check the process stop ID and do the
+  // right thing. if (StateIsStoppedState(GetState())
   {
     const bool force = false;
     GetRegisterContext()->InvalidateIfNeeded(force);
   }
 }
 
-const char *FreeBSDThread::GetInfo() { return NULL; }
+const char *FreeBSDThread::GetInfo() { return nullptr; }
 
 void FreeBSDThread::SetName(const char *name) {
   m_thread_name_valid = (name && name[0]);
@@ -158,15 +157,15 @@ const char *FreeBSDThread::GetName() {
   }
 
   if (m_thread_name.empty())
-    return NULL;
+    return nullptr;
   return m_thread_name.c_str();
 }
 
 lldb::RegisterContextSP FreeBSDThread::GetRegisterContext() {
   if (!m_reg_context_sp) {
-    m_posix_thread = NULL;
+    m_posix_thread = nullptr;
 
-    RegisterInfoInterface *reg_interface = NULL;
+    RegisterInfoInterface *reg_interface = nullptr;
     const ArchSpec &target_arch = GetProcess()->GetTarget().GetArchitecture();
 
     assert(target_arch.GetTriple().getOS() == llvm::Triple::FreeBSD);
@@ -282,7 +281,7 @@ bool FreeBSDThread::CalculateStopInfo() {
 }
 
 Unwind *FreeBSDThread::GetUnwinder() {
-  if (m_unwinder_ap.get() == NULL)
+  if (!m_unwinder_ap)
     m_unwinder_ap.reset(new UnwindLLDB(*this));
 
   return m_unwinder_ap.get();
@@ -469,22 +468,19 @@ void FreeBSDThread::BreakNotify(const ProcessMessage &message) {
       GetProcess()->GetBreakpointSiteList().FindByAddress(pc));
 
   // If the breakpoint is for this thread, then we'll report the hit, but if it
-  // is for another thread,
-  // we create a stop reason with should_stop=false.  If there is no breakpoint
-  // location, then report
-  // an invalid stop reason. We don't need to worry about stepping over the
-  // breakpoint here, that will
-  // be taken care of when the thread resumes and notices that there's a
+  // is for another thread, we create a stop reason with should_stop=false.  If
+  // there is no breakpoint location, then report an invalid stop reason. We
+  // don't need to worry about stepping over the breakpoint here, that will be
+  // taken care of when the thread resumes and notices that there's a
   // breakpoint under the pc.
   if (bp_site) {
     lldb::break_id_t bp_id = bp_site->GetID();
     // If we have an operating system plug-in, we might have set a thread
-    // specific breakpoint using the
-    // operating system thread ID, so we can't make any assumptions about the
-    // thread ID so we must always
-    // report the breakpoint regardless of the thread.
+    // specific breakpoint using the operating system thread ID, so we can't
+    // make any assumptions about the thread ID so we must always report the
+    // breakpoint regardless of the thread.
     if (bp_site->ValidForThisThread(this) ||
-        GetProcess()->GetOperatingSystem() != NULL)
+        GetProcess()->GetOperatingSystem() != nullptr)
       SetStopInfo(StopInfo::CreateStopReasonWithBreakpointSiteID(*this, bp_id));
     else {
       const bool should_stop = false;
@@ -541,15 +537,14 @@ void FreeBSDThread::TraceNotify(const ProcessMessage &message) {
   lldb::BreakpointSiteSP bp_site(
       GetProcess()->GetBreakpointSiteList().FindByAddress(pc));
 
-  // If the current pc is a breakpoint site then set the StopInfo to Breakpoint.
-  // Otherwise, set the StopInfo to Watchpoint or Trace.
-  // If we have an operating system plug-in, we might have set a thread specific
-  // breakpoint using the
-  // operating system thread ID, so we can't make any assumptions about the
-  // thread ID so we must always
-  // report the breakpoint regardless of the thread.
+  // If the current pc is a breakpoint site then set the StopInfo to
+  // Breakpoint. Otherwise, set the StopInfo to Watchpoint or Trace. If we have
+  // an operating system plug-in, we might have set a thread specific
+  // breakpoint using the operating system thread ID, so we can't make any
+  // assumptions about the thread ID so we must always report the breakpoint
+  // regardless of the thread.
   if (bp_site && (bp_site->ValidForThisThread(this) ||
-                  GetProcess()->GetOperatingSystem() != NULL))
+                  GetProcess()->GetOperatingSystem() != nullptr))
     SetStopInfo(StopInfo::CreateStopReasonWithBreakpointSiteID(
         *this, bp_site->GetID()));
   else {

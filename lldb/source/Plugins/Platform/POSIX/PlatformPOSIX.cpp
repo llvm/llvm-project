@@ -102,17 +102,14 @@ lldb_private::Status PlatformPOSIX::RunShellCommand(
                      // process to exit
     std::string
         *command_output, // Pass NULL if you don't want the command output
-    uint32_t
-        timeout_sec) // Timeout in seconds to wait for shell program to finish
-{
+    const Timeout<std::micro> &timeout) {
   if (IsHost())
     return Host::RunShellCommand(command, working_dir, status_ptr, signo_ptr,
-                                 command_output, timeout_sec);
+                                 command_output, timeout);
   else {
     if (m_remote_platform_sp)
-      return m_remote_platform_sp->RunShellCommand(command, working_dir,
-                                                   status_ptr, signo_ptr,
-                                                   command_output, timeout_sec);
+      return m_remote_platform_sp->RunShellCommand(
+          command, working_dir, status_ptr, signo_ptr, command_output, timeout);
     else
       return Status("unable to run a remote command without a platform");
   }
@@ -129,11 +126,12 @@ PlatformPOSIX::ResolveExecutable(const ModuleSpec &module_spec,
   ModuleSpec resolved_module_spec(module_spec);
 
   if (IsHost()) {
-    // If we have "ls" as the exe_file, resolve the executable location based on
-    // the current path variables
+    // If we have "ls" as the exe_file, resolve the executable location based
+    // on the current path variables
     if (!resolved_module_spec.GetFileSpec().Exists()) {
       resolved_module_spec.GetFileSpec().GetPath(exe_path, sizeof(exe_path));
-      resolved_module_spec.GetFileSpec().SetFile(exe_path, true);
+      resolved_module_spec.GetFileSpec().SetFile(exe_path, true,
+                                                 FileSpec::Style::native);
     }
 
     if (!resolved_module_spec.GetFileSpec().Exists())
@@ -215,9 +213,9 @@ PlatformPOSIX::ResolveExecutable(const ModuleSpec &module_spec,
             resolved_module_spec.GetArchitecture().GetArchitectureName());
       }
     } else {
-      // No valid architecture was specified, ask the platform for
-      // the architectures that we should be using (in the correct order)
-      // and see if we can find a match that way
+      // No valid architecture was specified, ask the platform for the
+      // architectures that we should be using (in the correct order) and see
+      // if we can find a match that way
       StreamString arch_names;
       for (uint32_t idx = 0; GetSupportedArchitectureAtIndex(
                idx, resolved_module_spec.GetArchitecture());
@@ -372,7 +370,8 @@ static uint32_t chown_file(Platform *platform, const char *path,
     command.Printf(":%d", gid);
   command.Printf("%s", path);
   int status;
-  platform->RunShellCommand(command.GetData(), NULL, &status, NULL, NULL, 10);
+  platform->RunShellCommand(command.GetData(), NULL, &status, NULL, NULL,
+                            std::chrono::seconds(10));
   return status;
 }
 
@@ -396,7 +395,8 @@ PlatformPOSIX::PutFile(const lldb_private::FileSpec &source,
     StreamString command;
     command.Printf("cp %s %s", src_path.c_str(), dst_path.c_str());
     int status;
-    RunShellCommand(command.GetData(), NULL, &status, NULL, NULL, 10);
+    RunShellCommand(command.GetData(), NULL, &status, NULL, NULL,
+                    std::chrono::seconds(10));
     if (status != 0)
       return Status("unable to perform copy");
     if (uid == UINT32_MAX && gid == UINT32_MAX)
@@ -426,7 +426,8 @@ PlatformPOSIX::PutFile(const lldb_private::FileSpec &source,
       if (log)
         log->Printf("[PutFile] Running command: %s\n", command.GetData());
       int retcode;
-      Host::RunShellCommand(command.GetData(), NULL, &retcode, NULL, NULL, 60);
+      Host::RunShellCommand(command.GetData(), NULL, &retcode, NULL, NULL,
+                            std::chrono::minutes(1));
       if (retcode == 0) {
         // Don't chown a local file for a remote system
         //                if (chown_file(this,dst_path.c_str(),uid,gid) != 0)
@@ -500,7 +501,8 @@ lldb_private::Status PlatformPOSIX::GetFile(
     StreamString cp_command;
     cp_command.Printf("cp %s %s", src_path.c_str(), dst_path.c_str());
     int status;
-    RunShellCommand(cp_command.GetData(), NULL, &status, NULL, NULL, 10);
+    RunShellCommand(cp_command.GetData(), NULL, &status, NULL, NULL,
+                    std::chrono::seconds(10));
     if (status != 0)
       return Status("unable to perform copy");
     return Status();
@@ -521,11 +523,12 @@ lldb_private::Status PlatformPOSIX::GetFile(
       if (log)
         log->Printf("[GetFile] Running command: %s\n", command.GetData());
       int retcode;
-      Host::RunShellCommand(command.GetData(), NULL, &retcode, NULL, NULL, 60);
+      Host::RunShellCommand(command.GetData(), NULL, &retcode, NULL, NULL,
+                            std::chrono::minutes(1));
       if (retcode == 0)
         return Status();
-      // If we are here, rsync has failed - let's try the slow way before giving
-      // up
+      // If we are here, rsync has failed - let's try the slow way before
+      // giving up
     }
     // open src and dst
     // read/write, read/write, read/write, ...
@@ -650,9 +653,10 @@ bool PlatformPOSIX::SetRemoteWorkingDirectory(const FileSpec &working_dir) {
 }
 
 bool PlatformPOSIX::GetRemoteOSVersion() {
-  if (m_remote_platform_sp)
-    return m_remote_platform_sp->GetOSVersion(
-        m_major_os_version, m_minor_os_version, m_update_os_version);
+  if (m_remote_platform_sp) {
+    m_os_version = m_remote_platform_sp->GetOSVersion();
+    return !m_os_version.empty();
+  }
   return false;
 }
 
@@ -663,13 +667,13 @@ bool PlatformPOSIX::GetRemoteOSBuildString(std::string &s) {
   return false;
 }
 
-size_t PlatformPOSIX::GetEnvironment(StringList &env) {
+Environment PlatformPOSIX::GetEnvironment() {
   if (IsRemote()) {
     if (m_remote_platform_sp)
-      return m_remote_platform_sp->GetEnvironment(env);
-    return 0;
+      return m_remote_platform_sp->GetEnvironment();
+    return Environment();
   }
-  return Host::GetEnvironment(env);
+  return Host::GetEnvironment();
 }
 
 bool PlatformPOSIX::GetRemoteOSKernelDescription(std::string &s) {
@@ -866,12 +870,12 @@ PlatformPOSIX::DebugProcess(ProcessLaunchInfo &launch_info, Debugger &debugger,
 
   if (IsHost()) {
     // We are going to hand this process off to debugserver which will be in
-    // charge of setting the exit status.
-    // We still need to reap it from lldb but if we let the monitor thread also
-    // set the exit status, we set up a
-    // race between debugserver & us for who will find out about the debugged
-    // process's death.
-    launch_info.GetFlags().Set(eLaunchFlagDontSetExitStatus);
+    // charge of setting the exit status.  However, we still need to reap it
+    // from lldb. So, make sure we use a exit callback which does not set exit
+    // status.
+    const bool monitor_signals = false;
+    launch_info.SetMonitorProcessCallback(
+        &ProcessLaunchInfo::NoOpMonitorCallback, monitor_signals);
     process_sp = Platform::DebugProcess(launch_info, debugger, target, error);
   } else {
     if (m_remote_platform_sp)
@@ -928,14 +932,14 @@ Status PlatformPOSIX::EvaluateLibdlExpression(
   return Status();
 }
 
-UtilityFunction *
-PlatformPOSIX::MakeLoadImageUtilityFunction(ExecutionContext &exe_ctx, 
-                                            Status &error)
-{
-  // Remember to prepend this with the prefix from GetLibdlFunctionDeclarations.
-  // The returned values are all in __lldb_dlopen_result for consistency.
-  // The wrapper returns a void * but doesn't use it because
-  // UtilityFunctions don't work with void returns at present.
+std::unique_ptr<UtilityFunction>
+PlatformPOSIX::MakeLoadImageUtilityFunction(ExecutionContext &exe_ctx,
+                                            Status &error) {
+  // Remember to prepend this with the prefix from
+  // GetLibdlFunctionDeclarations. The returned values are all in
+  // __lldb_dlopen_result for consistency. The wrapper returns a void * but
+  // doesn't use it because UtilityFunctions don't work with void returns at
+  // present.
   static const char *dlopen_wrapper_code = R"(
   struct __lldb_dlopen_result {
     void *image_ptr;
@@ -1007,7 +1011,6 @@ PlatformPOSIX::MakeLoadImageUtilityFunction(ExecutionContext &exe_ctx,
   Value value;
   ValueList arguments;
   FunctionCaller *do_dlopen_function = nullptr;
-  UtilityFunction *dlopen_utility_func = nullptr;
 
   // Fetch the clang types we will need:
   ClangASTContext *ast = process->GetTarget().GetScratchClangASTContext();
@@ -1043,9 +1046,7 @@ PlatformPOSIX::MakeLoadImageUtilityFunction(ExecutionContext &exe_ctx,
   }
   
   // We made a good utility function, so cache it in the process:
-  dlopen_utility_func = dlopen_utility_func_up.get();
-  process->SetLoadImageUtilityFunction(std::move(dlopen_utility_func_up));
-  return dlopen_utility_func;
+  return dlopen_utility_func_up;
 }
 
 uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
@@ -1071,26 +1072,16 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
   thread_sp->CalculateExecutionContext(exe_ctx);
 
   Status utility_error;
-  
   UtilityFunction *dlopen_utility_func;
   ValueList arguments;
   FunctionCaller *do_dlopen_function = nullptr;
 
-  // Multiple threads could be calling into DoLoadImage concurrently,
-  // only one should be allowed to create the UtilityFunction.
-  {
-    static std::mutex do_dlopen_mutex;
-    std::lock_guard<std::mutex> lock(do_dlopen_mutex);
-
-    // The UtilityFunction is held in the Process.  Platforms don't track the
-    // lifespan of the Targets that use them, we can't put this in the Platform.
-    dlopen_utility_func
-        = process->GetLoadImageUtilityFunction(this);
-    if (!dlopen_utility_func) {
-      // Make the UtilityFunction:
-      dlopen_utility_func = MakeLoadImageUtilityFunction(exe_ctx, error);
-    }
-  }
+  // The UtilityFunction is held in the Process.  Platforms don't track the
+  // lifespan of the Targets that use them, we can't put this in the Platform.
+  dlopen_utility_func = process->GetLoadImageUtilityFunction(
+      this, [&]() -> std::unique_ptr<UtilityFunction> {
+        return MakeLoadImageUtilityFunction(exe_ctx, error);
+      });
   // If we couldn't make it, the error will be in error, so we can exit here.
   if (!dlopen_utility_func)
     return LLDB_INVALID_IMAGE_TOKEN;
@@ -1102,8 +1093,8 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
   }
   arguments = do_dlopen_function->GetArgumentValues();
   
-  // Now insert the path we are searching for and the result structure into
-  // the target.
+  // Now insert the path we are searching for and the result structure into the
+  // target.
   uint32_t permissions = ePermissionsReadable|ePermissionsWritable;
   size_t path_len = path.size() + 1;
   lldb::addr_t path_addr = process->AllocateMemory(path_len, 
@@ -1127,8 +1118,8 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
     return LLDB_INVALID_IMAGE_TOKEN;
   }
   
-  // Make space for our return structure.  It is two pointers big: the token and
-  // the error string.
+  // Make space for our return structure.  It is two pointers big: the token
+  // and the error string.
   const uint32_t addr_size = process->GetAddressByteSize();
   lldb::addr_t return_addr = process->CallocateMemory(2*addr_size,
                                                       permissions,
@@ -1290,7 +1281,8 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
       std::string name_string;
       process->ReadCStringFromMemory(buffer_addr, name_string, utility_error);
       if (utility_error.Success())
-        loaded_image->SetFile(name_string, false);
+        loaded_image->SetFile(name_string, false, 
+                              llvm::sys::path::Style::posix);
     }
     return process->AddImageToken(token);
   }

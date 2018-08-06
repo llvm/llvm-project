@@ -28,15 +28,15 @@ namespace lldb_private {
 
 //----------------------------------------------------------------------
 /// @class Mangled Mangled.h "lldb/Core/Mangled.h"
-/// @brief A class that handles mangled names.
+/// A class that handles mangled names.
 ///
-/// Designed to handle mangled names. The demangled version of any names
-/// will be computed when the demangled name is accessed through the
-/// Demangled() acccessor. This class can also tokenize the demangled
-/// version of the name for powerful searches. Functions and symbols
-/// could make instances of this class for their mangled names. Uniqued
-/// string pools are used for the mangled, demangled, and token string
-/// values to allow for faster comparisons and for efficient memory use.
+/// Designed to handle mangled names. The demangled version of any names will
+/// be computed when the demangled name is accessed through the Demangled()
+/// acccessor. This class can also tokenize the demangled version of the name
+/// for powerful searches. Functions and symbols could make instances of this
+/// class for their mangled names. Uniqued string pools are used for the
+/// mangled, demangled, and token string values to allow for faster
+/// comparisons and for efficient memory use.
 //----------------------------------------------------------------------
 class Mangled {
 public:
@@ -91,16 +91,16 @@ public:
   //----------------------------------------------------------------------
   /// Destructor
   ///
-  /// Releases its ref counts on the mangled and demangled strings that
-  /// live in the global string pool.
+  /// Releases its ref counts on the mangled and demangled strings that live
+  /// in the global string pool.
   //----------------------------------------------------------------------
   ~Mangled();
 
   //----------------------------------------------------------------------
   /// Convert to pointer operator.
   ///
-  /// This allows code to check a Mangled object to see if it contains
-  /// a valid mangled name using code such as:
+  /// This allows code to check a Mangled object to see if it contains a valid
+  /// mangled name using code such as:
   ///
   /// @code
   /// Mangled mangled(...);
@@ -117,8 +117,8 @@ public:
   //----------------------------------------------------------------------
   /// Logical NOT operator.
   ///
-  /// This allows code to check a Mangled object to see if it contains
-  /// an empty mangled name using code such as:
+  /// This allows code to check a Mangled object to see if it contains an
+  /// empty mangled name using code such as:
   ///
   /// @code
   /// Mangled mangled(...);
@@ -158,8 +158,8 @@ public:
   //----------------------------------------------------------------------
   /// Dump a description of this object to a Stream \a s.
   ///
-  /// Dump a Mangled object to stream \a s. We don't force our
-  /// demangled name to be computed currently (we don't use the accessor).
+  /// Dump a Mangled object to stream \a s. We don't force our demangled name
+  /// to be computed currently (we don't use the accessor).
   ///
   /// @param[in] s
   ///     The stream to which to dump the object description.
@@ -245,9 +245,9 @@ public:
   //----------------------------------------------------------------------
   /// Get the memory cost of this object.
   ///
-  /// Return the size in bytes that this object takes in memory. This
-  /// returns the size in bytes of this object, not any shared string
-  /// values it may refer to.
+  /// Return the size in bytes that this object takes in memory. This returns
+  /// the size in bytes of this object, not any shared string values it may
+  /// refer to.
   ///
   /// @return
   ///     The number of bytes that this object occupies in memory.
@@ -259,8 +259,8 @@ public:
   //----------------------------------------------------------------------
   /// Set the string value in this object.
   ///
-  /// If \a is_mangled is \b true, then the mangled named is set to \a
-  /// name, else the demangled name is set to \a name.
+  /// If \a is_mangled is \b true, then the mangled named is set to \a name,
+  /// else the demangled name is set to \a name.
   ///
   /// @param[in] name
   ///     The already const version of the name for this object.
@@ -285,14 +285,14 @@ public:
   //----------------------------------------------------------------------
   /// Try to guess the language from the mangling.
   ///
-  /// For a mangled name to have a language it must have both a mangled
-  /// and a demangled name and it can be guessed from the mangling what
-  /// the language is.  Note: this will return C++ for any language that
-  /// uses Itanium ABI mangling.
+  /// For a mangled name to have a language it must have both a mangled and a
+  /// demangled name and it can be guessed from the mangling what the language
+  /// is.  Note: this will return C++ for any language that uses Itanium ABI
+  /// mangling.
   ///
-  /// Standard C function names will return eLanguageTypeUnknown because
-  /// they aren't mangled and it isn't clear what language the name
-  /// represents (there will be no mangled name).
+  /// Standard C function names will return eLanguageTypeUnknown because they
+  /// aren't mangled and it isn't clear what language the name represents
+  /// (there will be no mangled name).
   ///
   /// @return
   ///     The language for the mangled/demangled name, eLanguageTypeUnknown

@@ -1,0 +1,272 @@
+L1 = malloc 32 2
+free L1
+L2 = malloc 3 4
+L3 = malloc 3 128
+free L3
+free L2
+L4 = malloc 2 16
+free L4
+L5 = malloc 4097 4
+free L5
+L6 = malloc 2 2
+L7 = malloc 3 2
+L8 = malloc 32 16
+free L6
+free L8
+free L7
+L9 = malloc 8192 2
+L10 = malloc 33 4
+free L9
+L11 = malloc 2047 2
+L12 = malloc 5 16
+L13 = malloc 4 16
+L14 = malloc 2048 2
+free L10
+L15 = malloc 4 128
+free L13
+L16 = malloc 1 2
+L17 = malloc 4095 128
+free L12
+free L15
+L18 = malloc 0 128
+L19 = malloc 2 128
+L20 = malloc 4096 2
+L21 = malloc 2 2
+L22 = malloc 8192 128
+L23 = malloc 4 2
+L24 = malloc 4097 4
+free L19
+free L20
+L25 = malloc 3 128
+free L23
+free L21
+free L22
+free L25
+free L16
+L26 = malloc 1 128
+L27 = malloc 4096 4
+free L14
+L28 = malloc 31 2
+free L24
+L29 = malloc 2048 128
+free L28
+free L11
+L30 = malloc 4 2
+L31 = malloc 32 16
+L32 = malloc 1 4
+free L30
+L33 = malloc 3 2
+L34 = malloc 4096 4
+free L17
+free L18
+free L32
+L35 = malloc 4097 4
+L36 = malloc 8193 2
+L37 = malloc 3 2
+free L34
+L38 = malloc 8193 16
+L39 = malloc 4096 4
+L40 = malloc 8192 16
+L41 = malloc 32 4
+free L26
+free L38
+free L37
+L42 = malloc 0 2
+free L31
+free L40
+free L36
+free L35
+L43 = malloc 2047 2
+free L41
+L44 = malloc 4 4
+free L43
+free L33
+free L42
+L45 = malloc 4097 16
+free L27
+L46 = malloc 32 128
+L47 = malloc 8191 16
+L48 = malloc 1 16
+L49 = malloc 32 128
+L50 = malloc 3 2
+L51 = malloc 4096 128
+free L51
+L52 = malloc 2048 4
+free L29
+L53 = malloc 4097 128
+free L44
+L54 = malloc 1 16
+L55 = malloc 4095 16
+L56 = malloc 2047 2
+L57 = malloc 0 2
+L58 = malloc 2048 2
+free L48
+L59 = malloc 1 4
+L60 = malloc 32 16
+free L50
+L61 = malloc 1 4
+L62 = malloc 4096 2
+free L60
+L63 = malloc 1 16
+L64 = malloc 32 128
+free L55
+L65 = malloc 8192 16
+free L57
+L66 = malloc 1 128
+free L65
+free L61
+free L45
+free L64
+free L39
+L67 = malloc 2048 2
+free L47
+L68 = malloc 2049 4
+free L63
+free L68
+free L54
+free L59
+free L52
+L69 = malloc 2 2
+L70 = malloc 8192 16
+L71 = malloc 2049 16
+L72 = malloc 3 16
+L73 = malloc 4097 16
+L74 = malloc 4096 2
+L75 = malloc 4097 4
+free L67
+free L71
+free L72
+free L75
+free L74
+L76 = malloc 3 4
+free L70
+free L69
+L77 = malloc 4 4
+free L49
+L78 = malloc 4096 16
+L79 = malloc 33 2
+free L76
+L80 = malloc 2 16
+free L58
+free L80
+free L56
+L81 = malloc 1 128
+free L73
+L82 = malloc 1 16
+free L53
+free L81
+free L77
+L83 = malloc 2 2
+L84 = malloc 3 16
+free L62
+L85 = malloc 2049 2
+free L83
+L86 = malloc 3 4
+L87 = malloc 4096 128
+free L86
+L88 = malloc 3 2
+free L82
+free L66
+free L84
+L89 = malloc 8192 4
+free L88
+L90 = malloc 3 4
+L91 = malloc 1 4
+L92 = malloc 4097 4
+L93 = malloc 5 16
+L94 = malloc 2 128
+L95 = malloc 4096 2
+L96 = malloc 32 16
+L97 = malloc 8192 16
+L98 = malloc 32 128
+free L90
+free L79
+L99 = malloc 8193 4
+free L46
+L100 = malloc 31 4
+L101 = malloc 8192 128
+free L99
+L102 = malloc 2049 16
+L103 = malloc 4 2
+L104 = malloc 32 2
+free L101
+free L98
+L105 = malloc 1 16
+free L92
+L106 = malloc 2 2
+L107 = malloc 31 16
+L108 = malloc 2 4
+free L94
+L109 = malloc 4097 4
+L110 = malloc 31 4
+free L103
+L111 = malloc 31 4
+free L111
+L112 = malloc 2049 2
+L113 = malloc 32 128
+free L106
+L114 = malloc 8191 2
+free L105
+free L97
+free L109
+L115 = malloc 2 16
+free L78
+free L93
+free L114
+free L115
+free L96
+free L85
+L116 = malloc 2 16
+free L89
+free L87
+L117 = malloc 33 2
+L118 = malloc 1 4
+L119 = malloc 4096 128
+free L107
+L120 = malloc 8192 4
+L121 = malloc 1 128
+L122 = malloc 3 4
+L123 = malloc 2047 4
+L124 = malloc 2 2
+free L121
+free L102
+L125 = malloc 2 4
+L126 = malloc 1 16
+L127 = malloc 2048 2
+L128 = malloc 2048 16
+L129 = malloc 32 128
+free L124
+L130 = malloc 2048 16
+L131 = malloc 32 16
+L132 = malloc 32 128
+free L100
+free L117
+free L126
+L133 = malloc 8192 4
+L134 = malloc 8192 2
+L135 = malloc 2 16
+free L119
+L136 = malloc 31 16
+free L118
+free L125
+free L132
+free L122
+free L134
+free L136
+free L130
+free L110
+free L123
+free L104
+free L116
+free L133
+free L91
+free L113
+free L128
+free L129
+free L95
+free L131
+free L127
+free L112
+free L108
+free L135
+free L120

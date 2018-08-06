@@ -24,8 +24,7 @@
 #include "llvm/Support/Errno.h"
 
 // System includes - They have to be included after framework includes because
-// they define some
-// macros which collide with variable names in other modules
+// they define some macros which collide with variable names in other modules
 // clang-format off
 #include <sys/types.h>
 #include <sys/ptrace.h>
@@ -93,17 +92,19 @@ NativeProcessNetBSD::Factory::Launch(ProcessLaunchInfo &launch_info,
   }
   LLDB_LOG(log, "inferior started, now in stopped state");
 
-  ArchSpec arch;
-  if ((status = ResolveProcessArchitecture(pid, arch)).Fail())
-    return status.ToError();
+  ProcessInstanceInfo Info;
+  if (!Host::GetProcessInfo(pid, Info)) {
+    return llvm::make_error<StringError>("Cannot get process architecture",
+                                         llvm::inconvertibleErrorCode());
+  }
 
   // Set the architecture to the exe architecture.
   LLDB_LOG(log, "pid = {0:x}, detected architecture {1}", pid,
-           arch.GetArchitectureName());
+           Info.GetArchitecture().GetArchitectureName());
 
   std::unique_ptr<NativeProcessNetBSD> process_up(new NativeProcessNetBSD(
       pid, launch_info.GetPTY().ReleaseMasterFileDescriptor(), native_delegate,
-      arch, mainloop));
+      Info.GetArchitecture(), mainloop));
 
   status = process_up->ReinitializeThreads();
   if (status.Fail())
@@ -111,7 +112,7 @@ NativeProcessNetBSD::Factory::Launch(ProcessLaunchInfo &launch_info,
 
   for (const auto &thread : process_up->m_threads)
     static_cast<NativeThreadNetBSD &>(*thread).SetStoppedBySignal(SIGSTOP);
-  process_up->SetState(StateType::eStateStopped);
+  process_up->SetState(StateType::eStateStopped, false);
 
   return std::move(process_up);
 }
@@ -124,15 +125,16 @@ NativeProcessNetBSD::Factory::Attach(
   LLDB_LOG(log, "pid = {0:x}", pid);
 
   // Retrieve the architecture for the running process.
-  ArchSpec arch;
-  Status status = ResolveProcessArchitecture(pid, arch);
-  if (!status.Success())
-    return status.ToError();
+  ProcessInstanceInfo Info;
+  if (!Host::GetProcessInfo(pid, Info)) {
+    return llvm::make_error<StringError>("Cannot get process architecture",
+                                         llvm::inconvertibleErrorCode());
+  }
 
-  std::unique_ptr<NativeProcessNetBSD> process_up(
-      new NativeProcessNetBSD(pid, -1, native_delegate, arch, mainloop));
+  std::unique_ptr<NativeProcessNetBSD> process_up(new NativeProcessNetBSD(
+      pid, -1, native_delegate, Info.GetArchitecture(), mainloop));
 
-  status = process_up->Attach();
+  Status status = process_up->Attach();
   if (!status.Success())
     return status.ToError();
 
@@ -349,8 +351,8 @@ NativeProcessNetBSD::FixupBreakpointPCAsNeeded(NativeThreadNetBSD &thread) {
     return error;
   } else
     LLDB_LOG(log, "breakpoint size: {0}", breakpoint_size);
-  // First try probing for a breakpoint at a software breakpoint location: PC
-  // - breakpoint size.
+  // First try probing for a breakpoint at a software breakpoint location: PC -
+  // breakpoint size.
   const lldb::addr_t initial_pc_addr =
       context.GetPCfromBreakpointLocation();
   lldb::addr_t breakpoint_addr = initial_pc_addr;
@@ -559,8 +561,8 @@ Status NativeProcessNetBSD::GetMemoryRegionInfo(lldb::addr_t load_addr,
            "descending memory map entries detected, unexpected");
     prev_base_address = proc_entry_info.GetRange().GetRangeBase();
     UNUSED_IF_ASSERT_DISABLED(prev_base_address);
-    // If the target address comes before this entry, indicate distance to
-    // next region.
+    // If the target address comes before this entry, indicate distance to next
+    // region.
     if (load_addr < proc_entry_info.GetRange().GetRangeBase()) {
       range_info.GetRange().SetRangeBase(load_addr);
       range_info.GetRange().SetByteSize(
@@ -579,9 +581,8 @@ Status NativeProcessNetBSD::GetMemoryRegionInfo(lldb::addr_t load_addr,
     // parsed.
   }
   // If we made it here, we didn't find an entry that contained the given
-  // address. Return the
-  // load_addr as start and the amount of bytes betwwen load address and the
-  // end of the memory as size.
+  // address. Return the load_addr as start and the amount of bytes betwwen
+  // load address and the end of the memory as size.
   range_info.GetRange().SetRangeBase(load_addr);
   range_info.GetRange().SetRangeEnd(LLDB_INVALID_ADDRESS);
   range_info.SetReadable(MemoryRegionInfo::OptionalBool::eNo);
@@ -641,8 +642,8 @@ Status NativeProcessNetBSD::PopulateMemoryRegionCache() {
   free(vm);
 
   if (m_mem_region_cache.empty()) {
-    // No entries after attempting to read them.  This shouldn't happen.
-    // Assume we don't support map entries.
+    // No entries after attempting to read them.  This shouldn't happen. Assume
+    // we don't support map entries.
     LLDB_LOG(log, "failed to find any vmmap entries, assuming no support "
                   "for memory region metadata retrieval");
     m_supports_mem_region = LazyBool::eLazyBoolNo;
@@ -778,8 +779,8 @@ Status NativeProcessNetBSD::Attach() {
     return status;
 
   int wstatus;
-  // Need to use WALLSIG otherwise we receive an error with errno=ECHLD
-  // At this point we should have a thread stopped if waitpid succeeds.
+  // Need to use WALLSIG otherwise we receive an error with errno=ECHLD At this
+  // point we should have a thread stopped if waitpid succeeds.
   if ((wstatus = waitpid(m_pid, NULL, WALLSIG)) < 0)
     return Status(errno, eErrorTypePOSIX);
 
@@ -871,13 +872,13 @@ NativeProcessNetBSD::GetAuxvData() const {
    */
   size_t auxv_size = 100 * sizeof(AuxInfo);
 
-  ErrorOr<std::unique_ptr<MemoryBuffer>> buf =
-      llvm::MemoryBuffer::getNewMemBuffer(auxv_size);
+  ErrorOr<std::unique_ptr<WritableMemoryBuffer>> buf =
+      llvm::WritableMemoryBuffer::getNewMemBuffer(auxv_size);
 
   struct ptrace_io_desc io;
   io.piod_op = PIOD_READ_AUXV;
   io.piod_offs = 0;
-  io.piod_addr = const_cast<void *>(static_cast<const void *>(buf.get()->getBufferStart()));
+  io.piod_addr = static_cast<void *>(buf.get()->getBufferStart());
   io.piod_len = auxv_size;
 
   Status error = NativeProcessNetBSD::PtraceWrapper(PT_IO, GetID(), &io);
@@ -888,7 +889,7 @@ NativeProcessNetBSD::GetAuxvData() const {
   if (io.piod_len < 1)
     return std::error_code(ECANCELED, std::generic_category());
 
-  return buf;
+  return std::move(buf);
 }
 
 Status NativeProcessNetBSD::ReinitializeThreads() {

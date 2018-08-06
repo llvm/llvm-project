@@ -85,7 +85,7 @@ SymbolFileDWARFDwp::SymbolFileDWARFDwp(lldb::ModuleSP module_sp,
 {}
 
 std::unique_ptr<SymbolFileDWARFDwo>
-SymbolFileDWARFDwp::GetSymbolFileForDwoId(DWARFCompileUnit *dwarf_cu,
+SymbolFileDWARFDwp::GetSymbolFileForDwoId(DWARFUnit *dwarf_cu,
                                           uint64_t dwo_id) {
   return std::unique_ptr<SymbolFileDWARFDwo>(
       new SymbolFileDWARFDwoDwp(this, m_obj_file, dwarf_cu, dwo_id));

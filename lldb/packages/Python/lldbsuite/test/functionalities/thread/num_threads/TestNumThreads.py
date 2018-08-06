@@ -8,6 +8,7 @@ from __future__ import print_function
 import os
 import time
 import lldb
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 import lldbsuite.test.lldbutil as lldbutil
 
@@ -15,15 +16,15 @@ import lldbsuite.test.lldbutil as lldbutil
 class NumberOfThreadsTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
+    NO_DEBUG_INFO_TESTCASE = True
 
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
         # Find the line numbers for our break points.
         self.thread3_notify_all_line = line_number('main.cpp', '// Set thread3 break point on notify_all at this line.')
-        self.thread3_before_lock_line = line_number('main.cpp', '// Set thread3 break point on lock at this line.')
+        self.thread3_before_lock_line = line_number('main.cpp', '// thread3-before-lock')
 
-    @decorators.skipIfDarwin
     def test_number_of_threads(self):
         """Test number of threads."""
         self.build()
@@ -61,8 +62,9 @@ class NumberOfThreadsTestCase(TestBase):
         self.assertTrue(
             num_threads >= 13,
             'Number of expected threads and actual threads do not match.')
-        
-    @decorators.skipIfDarwin
+
+    @skipIfDarwin # rdar://33462362
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr37658")
     def test_unique_stacks(self):
         """Test backtrace unique with multiple threads executing the same stack."""
         self.build()

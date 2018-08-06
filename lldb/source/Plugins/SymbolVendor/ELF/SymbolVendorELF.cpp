@@ -57,9 +57,9 @@ const char *SymbolVendorELF::GetPluginDescriptionStatic() {
 //----------------------------------------------------------------------
 // CreateInstance
 //
-// Platforms can register a callback to use when creating symbol
-// vendors to allow for complex debug information file setups, and to
-// also allow for finding separate debug information files.
+// Platforms can register a callback to use when creating symbol vendors to
+// allow for complex debug information file setups, and to also allow for
+// finding separate debug information files.
 //----------------------------------------------------------------------
 SymbolVendor *
 SymbolVendorELF::CreateInstance(const lldb::ModuleSP &module_sp,
@@ -112,11 +112,9 @@ SymbolVendorELF::CreateInstance(const lldb::ModuleSP &module_sp,
           module_sp, &dsym_fspec, 0, dsym_fspec.GetByteSize(),
           dsym_file_data_sp, dsym_file_data_offset);
       if (dsym_objfile_sp) {
-        // This objfile is for debugging purposes. Sadly, ObjectFileELF won't be
-        // able
-        // to figure this out consistently as the symbol file may not have
-        // stripped the
-        // code sections, etc.
+        // This objfile is for debugging purposes. Sadly, ObjectFileELF won't
+        // be able to figure this out consistently as the symbol file may not
+        // have stripped the code sections, etc.
         dsym_objfile_sp->SetType(ObjectFile::eTypeDebugInfo);
 
         SymbolVendorELF *symbol_vendor = new SymbolVendorELF(module_sp);
@@ -134,7 +132,7 @@ SymbolVendorELF::CreateInstance(const lldb::ModuleSP &module_sp,
               eSectionTypeDWARFDebugMacInfo,  eSectionTypeDWARFDebugPubNames,
               eSectionTypeDWARFDebugPubTypes, eSectionTypeDWARFDebugRanges,
               eSectionTypeDWARFDebugStr,      eSectionTypeDWARFDebugStrOffsets,
-              eSectionTypeELFSymbolTable,
+              eSectionTypeELFSymbolTable,     eSectionTypeDWARFGNUDebugAltLink,
           };
           for (size_t idx = 0; idx < sizeof(g_sections) / sizeof(g_sections[0]);
                ++idx) {

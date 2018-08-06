@@ -23,7 +23,7 @@ public:
   ConstString GetPluginName() override;
   uint32_t GetPluginVersion() override;
 
-  void OverrideStopInfo(Thread &thread) override;
+  void OverrideStopInfo(Thread &thread) const override;
 
 private:
   static std::unique_ptr<Architecture> Create(const ArchSpec &arch);

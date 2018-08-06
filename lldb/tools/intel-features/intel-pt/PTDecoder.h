@@ -33,7 +33,7 @@ namespace ptdecoder {
 
 //----------------------------------------------------------------------
 /// @class PTInstruction
-/// @brief Represents an assembly instruction containing raw
+/// Represents an assembly instruction containing raw
 ///     instruction bytes, instruction address along with information
 ///     regarding execution flow context and Intel(R) Processor Trace
 ///     context.
@@ -85,7 +85,7 @@ private:
 
 //---------------------------------------------------------------------------
 /// @class PTInstructionList
-/// @brief Represents a list of assembly instructions. Each instruction is of
+/// Represents a list of assembly instructions. Each instruction is of
 ///     type PTInstruction.
 //---------------------------------------------------------------------------
 class PTInstructionList {
@@ -114,7 +114,7 @@ private:
 
 //----------------------------------------------------------------------
 /// @class PTTraceOptions
-/// @brief Provides configuration options like trace type, trace buffer size,
+/// Provides configuration options like trace type, trace buffer size,
 ///     meta data buffer size along with other Intel(R) Processor Trace
 ///     specific options.
 //----------------------------------------------------------------------
@@ -134,9 +134,9 @@ public:
 
   //------------------------------------------------------------------
   /// Get Intel(R) Processor Trace specific configuration options (apart from
-  /// trace buffer size, meta data buffer size and TraceType) formatted as json
-  /// text i.e. {"Name":Value,"Name":Value} pairs, where "Value" is a 64-bit
-  /// unsigned integer in hex format. For "Name", please refer to
+  /// trace buffer size, meta data buffer size and TraceType) formatted as
+  /// json text i.e. {"Name":Value,"Name":Value} pairs, where "Value" is a
+  /// 64-bit unsigned integer in hex format. For "Name", please refer to
   /// SBProcess::StartTrace API description for setting SBTraceOptions.
   ///
   /// @return
@@ -154,7 +154,7 @@ private:
 
 //----------------------------------------------------------------------
 /// @class PTDecoder
-/// @brief This class makes use of Intel(R) Processor Trace hardware feature
+/// This class makes use of Intel(R) Processor Trace hardware feature
 ///     (implememted inside LLDB) to gather trace data for an inferior (being
 ///     debugged with LLDB) to provide meaningful information out of it.
 ///

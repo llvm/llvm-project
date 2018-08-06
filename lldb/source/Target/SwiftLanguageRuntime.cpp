@@ -4158,7 +4158,7 @@ private:
   }
 
 protected:
-  bool DoExecute(const char *command, CommandReturnObject &result) {
+  bool DoExecute(llvm::StringRef command, CommandReturnObject &result) {
     StackFrameSP frame_sp(m_exe_ctx.GetFrameSP());
     EvaluateExpressionOptions options;
     options.SetLanguage(lldb::eLanguageTypeSwift);

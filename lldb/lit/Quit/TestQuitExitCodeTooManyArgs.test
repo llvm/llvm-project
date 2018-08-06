@@ -1,0 +1,4 @@
+# UNSUPPORTED: windows
+# RUN: %lldb -b -s %s 2>&1 | FileCheck %s
+q 1 2
+// CHECK: Too many arguments for 'quit'

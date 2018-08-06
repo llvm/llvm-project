@@ -33,8 +33,8 @@
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class Breakpoint Breakpoint.h "lldb/Breakpoint/Breakpoint.h"
-/// @brief Class that manages logical breakpoint setting.
+/// @class Breakpoint Breakpoint.h "lldb/Breakpoint/Breakpoint.h" Class that
+/// manages logical breakpoint setting.
 //----------------------------------------------------------------------
 
 //----------------------------------------------------------------------
@@ -42,33 +42,28 @@ namespace lldb_private {
 /// A breakpoint has four main parts, a filter, a resolver, the list of
 /// breakpoint
 /// locations that have been determined for the filter/resolver pair, and
-/// finally
-/// a set of options for the breakpoint.
+/// finally a set of options for the breakpoint.
 ///
 /// \b Filter:
-/// This is an object derived from SearchFilter.  It manages the search
-/// for breakpoint location matches through the symbols in the module list of
-/// the target
-/// that owns it.  It also filters out locations based on whatever logic it
-/// wants.
+/// This is an object derived from SearchFilter.  It manages the search for
+/// breakpoint location matches through the symbols in the module list of the
+/// target that owns it.  It also filters out locations based on whatever
+/// logic it wants.
 ///
 /// \b Resolver:
-/// This is an object derived from BreakpointResolver.  It provides a
-/// callback to the filter that will find breakpoint locations.  How it does
-/// this is
+/// This is an object derived from BreakpointResolver.  It provides a callback
+/// to the filter that will find breakpoint locations.  How it does this is
 /// determined by what kind of resolver it is.
 ///
 /// The Breakpoint class also provides constructors for the common breakpoint
-/// cases
-/// which make the appropriate filter and resolver for you.
+/// cases which make the appropriate filter and resolver for you.
 ///
 /// \b Location List:
-/// This stores the breakpoint locations that have been determined
-/// to date.  For a given breakpoint, there will be only one location with a
-/// given
-/// address.  Adding a location at an already taken address will just return the
-/// location
-/// already at that address.  Locations can be looked up by ID, or by address.
+/// This stores the breakpoint locations that have been determined to date.
+/// For a given breakpoint, there will be only one location with a given
+/// address.  Adding a location at an already taken address will just return
+/// the location already at that address.  Locations can be looked up by ID,
+/// or by address.
 ///
 /// \b Options:
 /// This includes:
@@ -77,25 +72,17 @@ namespace lldb_private {
 ///    \b Callback
 ///    \b Condition
 /// Note, these options can be set on the breakpoint, and they can also be set
-/// on the
-/// individual locations.  The options set on the breakpoint take precedence
-/// over the
-/// options set on the individual location.
-/// So for instance disabling the breakpoint will cause NONE of the locations to
-/// get hit.
-/// But if the breakpoint is enabled, then the location's enabled state will be
-/// checked
-/// to determine whether to insert that breakpoint location.
+/// on the individual locations.  The options set on the breakpoint take
+/// precedence over the options set on the individual location. So for
+/// instance disabling the breakpoint will cause NONE of the locations to get
+/// hit. But if the breakpoint is enabled, then the location's enabled state
+/// will be checked to determine whether to insert that breakpoint location.
 /// Similarly, if the breakpoint condition says "stop", we won't check the
-/// location's condition.
-/// But if the breakpoint condition says "continue", then we will check the
-/// location for whether
-/// to actually stop or not.
-/// One subtle point worth observing here is that you don't actually stop at a
-/// Breakpoint, you
-/// always stop at one of its locations.  So the "should stop" tests are done by
-/// the location,
-/// not by the breakpoint.
+/// location's condition. But if the breakpoint condition says "continue",
+/// then we will check the location for whether to actually stop or not. One
+/// subtle point worth observing here is that you don't actually stop at a
+/// Breakpoint, you always stop at one of its locations.  So the "should stop"
+/// tests are done by the location, not by the breakpoint.
 //----------------------------------------------------------------------
 class Breakpoint : public std::enable_shared_from_this<Breakpoint>,
                    public Stoppoint {
@@ -103,8 +90,8 @@ public:
   static const ConstString &GetEventIdentifier();
 
   //------------------------------------------------------------------
-  /// An enum specifying the match style for breakpoint settings.  At
-  /// present only used for function name style breakpoints.
+  /// An enum specifying the match style for breakpoint settings.  At present
+  /// only used for function name style breakpoints.
   //------------------------------------------------------------------
   typedef enum { Exact, Regexp, Glob } MatchType;
 
@@ -191,9 +178,9 @@ public:
   //------------------------------------------------------------------
   /// Destructor.
   ///
-  /// The destructor is not virtual since there should be no reason to subclass
-  /// breakpoints.  The varieties of breakpoints are specified instead by
-  /// providing different resolvers & filters.
+  /// The destructor is not virtual since there should be no reason to
+  /// subclass breakpoints.  The varieties of breakpoints are specified
+  /// instead by providing different resolvers & filters.
   //------------------------------------------------------------------
   ~Breakpoint() override;
 
@@ -202,8 +189,7 @@ public:
   //------------------------------------------------------------------
 
   //------------------------------------------------------------------
-  /// Tell whether this breakpoint is an "internal" breakpoint.
-  /// @return
+  /// Tell whether this breakpoint is an "internal" breakpoint. @return
   ///     Returns \b true if this is an internal breakpoint, \b false otherwise.
   //------------------------------------------------------------------
   bool IsInternal() const;
@@ -214,13 +200,13 @@ public:
   void Dump(Stream *s) override;
 
   //------------------------------------------------------------------
-  // The next set of methods provide ways to tell the breakpoint to update
-  // it's location list - usually done when modules appear or disappear.
+  // The next set of methods provide ways to tell the breakpoint to update it's
+  // location list - usually done when modules appear or disappear.
   //------------------------------------------------------------------
 
   //------------------------------------------------------------------
-  /// Tell this breakpoint to clear all its breakpoint sites.  Done
-  /// when the process holding the breakpoint sites is destroyed.
+  /// Tell this breakpoint to clear all its breakpoint sites.  Done when the
+  /// process holding the breakpoint sites is destroyed.
   //------------------------------------------------------------------
   void ClearAllBreakpointSites();
 
@@ -231,8 +217,8 @@ public:
   void ResolveBreakpoint();
 
   //------------------------------------------------------------------
-  /// Tell this breakpoint to scan a given module list and resolve any
-  /// new locations that match the breakpoint's specifications.
+  /// Tell this breakpoint to scan a given module list and resolve any new
+  /// locations that match the breakpoint's specifications.
   ///
   /// @param[in] module_list
   ///    The list of modules to look in for new locations.
@@ -245,8 +231,8 @@ public:
                                   bool send_event = true);
 
   //------------------------------------------------------------------
-  /// Tell this breakpoint to scan a given module list and resolve any
-  /// new locations that match the breakpoint's specifications.
+  /// Tell this breakpoint to scan a given module list and resolve any new
+  /// locations that match the breakpoint's specifications.
   ///
   /// @param[in] changed_modules
   ///    The list of modules to look in for new locations.
@@ -274,9 +260,9 @@ public:
                       bool delete_locations = false);
 
   //------------------------------------------------------------------
-  /// Tells the breakpoint the old module \a old_module_sp has been
-  /// replaced by new_module_sp (usually because the underlying file has been
-  /// rebuilt, and the old version is gone.)
+  /// Tells the breakpoint the old module \a old_module_sp has been replaced
+  /// by new_module_sp (usually because the underlying file has been rebuilt,
+  /// and the old version is gone.)
   ///
   /// @param[in] old_module_sp
   ///    The old module that is going away.
@@ -287,13 +273,13 @@ public:
                       lldb::ModuleSP new_module_sp);
 
   //------------------------------------------------------------------
-  // The next set of methods provide access to the breakpoint locations
-  // for this breakpoint.
+  // The next set of methods provide access to the breakpoint locations for
+  // this breakpoint.
   //------------------------------------------------------------------
 
   //------------------------------------------------------------------
-  /// Add a location to the breakpoint's location list.  This is only meant
-  /// to be called by the breakpoint's resolver.  FIXME: how do I ensure that?
+  /// Add a location to the breakpoint's location list.  This is only meant to
+  /// be called by the breakpoint's resolver.  FIXME: how do I ensure that?
   ///
   /// @param[in] addr
   ///    The Address specifying the new location.
@@ -359,12 +345,12 @@ public:
   /// Removes all invalid breakpoint locations.
   ///
   /// Removes all breakpoint locations with architectures that aren't
-  /// compatible with \a arch. Also remove any breakpoint locations
-  /// with whose locations have address where the section has been
-  /// deleted (module and object files no longer exist).
+  /// compatible with \a arch. Also remove any breakpoint locations with whose
+  /// locations have address where the section has been deleted (module and
+  /// object files no longer exist).
   ///
-  /// This is typically used after the process calls exec, or anytime
-  /// the architecture of the target changes.
+  /// This is typically used after the process calls exec, or anytime the
+  /// architecture of the target changes.
   ///
   /// @param[in] arch
   ///     If valid, check the module in each breakpoint to make sure
@@ -403,8 +389,7 @@ public:
   uint32_t GetIgnoreCount() const;
 
   //------------------------------------------------------------------
-  /// Return the current hit count for all locations.
-  /// @return
+  /// Return the current hit count for all locations. @return
   ///     The current hit count for all locations.
   //------------------------------------------------------------------
   uint32_t GetHitCount() const;
@@ -422,7 +407,8 @@ public:
   bool IsOneShot() const;
 
   //------------------------------------------------------------------
-  /// If \a auto_continue is \b true, breakpoint will auto-continue when on hit.
+  /// If \a auto_continue is \b true, breakpoint will auto-continue when on
+  /// hit.
   //------------------------------------------------------------------
   void SetAutoContinue(bool auto_continue);
 
@@ -508,8 +494,8 @@ public:
   //------------------------------------------------------------------
 
   //------------------------------------------------------------------
-  /// Return the number of breakpoint locations that have resolved to
-  /// actual breakpoint sites.
+  /// Return the number of breakpoint locations that have resolved to actual
+  /// breakpoint sites.
   ///
   /// @return
   ///     The number locations resolved breakpoint sites.
@@ -541,10 +527,9 @@ public:
 
   //------------------------------------------------------------------
   /// Set the "kind" description for a breakpoint.  If the breakpoint is hit
-  /// the stop info will show this "kind" description instead of the breakpoint
-  /// number.  Mostly useful for internal breakpoints, where the breakpoint
-  /// number
-  /// doesn't have meaning to the user.
+  /// the stop info will show this "kind" description instead of the
+  /// breakpoint number.  Mostly useful for internal breakpoints, where the
+  /// breakpoint number doesn't have meaning to the user.
   ///
   /// @param[in] kind
   ///     New "kind" description.
@@ -574,10 +559,9 @@ public:
 
   //------------------------------------------------------------------
   /// Find breakpoint locations which match the (filename, line_number)
-  /// description.
-  /// The breakpoint location collection is to be filled with the matching
-  /// locations.
-  /// It should be initialized with 0 size by the API client.
+  /// description. The breakpoint location collection is to be filled with the
+  /// matching locations. It should be initialized with 0 size by the API
+  /// client.
   ///
   /// @return
   ///     True if there is a match
@@ -661,13 +645,12 @@ public:
   /// Set a pre-condition filter that overrides all user provided
   /// filters/callbacks etc.
   ///
-  /// Used to define fancy breakpoints that can do dynamic hit detection without
-  /// taking up the condition slot -
-  /// which really belongs to the user anyway...
+  /// Used to define fancy breakpoints that can do dynamic hit detection
+  /// without taking up the condition slot - which really belongs to the user
+  /// anyway...
   ///
-  /// The Precondition should not continue the target, it should return true if
-  /// the condition says to stop and
-  /// false otherwise.
+  /// The Precondition should not continue the target, it should return true
+  /// if the condition says to stop and false otherwise.
   ///
   //------------------------------------------------------------------
   void SetPrecondition(BreakpointPreconditionSP precondition_sp) {
@@ -706,10 +689,9 @@ protected:
   //------------------------------------------------------------------
   /// Constructors and Destructors
   /// Only the Target can make a breakpoint, and it owns the breakpoint
-  /// lifespans.
-  /// The constructor takes a filter and a resolver.  Up in Target there are
-  /// convenience
-  /// variants that make breakpoints for some common cases.
+  /// lifespans. The constructor takes a filter and a resolver.  Up in Target
+  /// there are convenience variants that make breakpoints for some common
+  /// cases.
   ///
   /// @param[in] target
   ///    The target in which the breakpoint will be set.
@@ -744,10 +726,10 @@ protected:
   void DecrementIgnoreCount();
 
   // BreakpointLocation::IgnoreCountShouldStop &
-  // Breakpoint::IgnoreCountShouldStop can only be called once per stop,
-  // and BreakpointLocation::IgnoreCountShouldStop should be tested first, and
-  // if it returns false we should
-  // continue, otherwise we should test Breakpoint::IgnoreCountShouldStop.
+  // Breakpoint::IgnoreCountShouldStop can only be called once per stop, and
+  // BreakpointLocation::IgnoreCountShouldStop should be tested first, and if
+  // it returns false we should continue, otherwise we should test
+  // Breakpoint::IgnoreCountShouldStop.
 
   bool IgnoreCountShouldStop();
 
@@ -760,8 +742,7 @@ protected:
 
 private:
   // This one should only be used by Target to copy breakpoints from target to
-  // target - primarily from the dummy
-  // target to prime new targets.
+  // target - primarily from the dummy target to prime new targets.
   Breakpoint(Target &new_target, Breakpoint &bp_to_copy_from);
 
   //------------------------------------------------------------------
@@ -782,9 +763,9 @@ private:
   BreakpointPreconditionSP m_precondition_sp; // The precondition is a
                                               // breakpoint-level hit filter
                                               // that can be used
-  // to skip certain breakpoint hits.  For instance, exception breakpoints
-  // use this to limit the stop to certain exception classes, while leaving
-  // the condition & callback free for user specification.
+  // to skip certain breakpoint hits.  For instance, exception breakpoints use
+  // this to limit the stop to certain exception classes, while leaving the
+  // condition & callback free for user specification.
   std::unique_ptr<BreakpointOptions>
       m_options_up; // Settable breakpoint options
   BreakpointLocationList

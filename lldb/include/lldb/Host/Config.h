@@ -16,6 +16,10 @@
 // absence of a configuration step.
 #define LLDB_CONFIG_TERMIOS_SUPPORTED 1
 
+#define LLDB_EDITLINE_USE_WCHAR 1
+
+#define LLDB_HAVE_EL_RFUNC_T 1
+
 #define HAVE_SYS_EVENT_H 1
 
 #define HAVE_PPOLL 0

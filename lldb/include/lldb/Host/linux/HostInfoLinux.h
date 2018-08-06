@@ -12,8 +12,8 @@
 
 #include "lldb/Host/posix/HostInfoPosix.h"
 #include "lldb/Utility/FileSpec.h"
-
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/VersionTuple.h"
 
 #include <string>
 
@@ -30,7 +30,7 @@ private:
 public:
   static void Initialize();
 
-  static bool GetOSVersion(uint32_t &major, uint32_t &minor, uint32_t &update);
+  static llvm::VersionTuple GetOSVersion();
   static bool GetOSBuildString(std::string &s);
   static bool GetOSKernelDescription(std::string &s);
   static llvm::StringRef GetDistributionId();

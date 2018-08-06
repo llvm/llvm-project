@@ -43,6 +43,8 @@ private:
   ValueObjectSP m_ptr_obj;
   ValueObjectSP m_obj_obj;
   ValueObjectSP m_del_obj;
+
+  ValueObjectSP GetTuple();
 };
 
 } // end of anonymous namespace
@@ -53,17 +55,36 @@ LibStdcppUniquePtrSyntheticFrontEnd::LibStdcppUniquePtrSyntheticFrontEnd(
   Update();
 }
 
-bool LibStdcppUniquePtrSyntheticFrontEnd::Update() {
+ValueObjectSP LibStdcppUniquePtrSyntheticFrontEnd::GetTuple() {
   ValueObjectSP valobj_backend_sp = m_backend.GetSP();
+
   if (!valobj_backend_sp)
-    return false;
+    return nullptr;
 
   ValueObjectSP valobj_sp = valobj_backend_sp->GetNonSyntheticValue();
   if (!valobj_sp)
-    return false;
+    return nullptr;
 
-  ValueObjectSP tuple_sp =
+  ValueObjectSP obj_child_sp =
       valobj_sp->GetChildMemberWithName(ConstString("_M_t"), true);
+  if (!obj_child_sp)
+      return nullptr;
+
+  ValueObjectSP obj_subchild_sp =
+      obj_child_sp->GetChildMemberWithName(ConstString("_M_t"), true);
+
+  // if there is a _M_t subchild, the tuple is found in the obj_subchild_sp
+  // (for libstdc++ 6.0.23).
+  if (obj_subchild_sp) {
+    return obj_subchild_sp;
+  }
+
+  return obj_child_sp;
+}
+
+bool LibStdcppUniquePtrSyntheticFrontEnd::Update() {
+  ValueObjectSP tuple_sp = GetTuple();
+
   if (!tuple_sp)
     return false;
 

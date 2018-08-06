@@ -372,10 +372,10 @@ Status NativeRegisterContextLinux_s390x::ReadAllRegisterValues(
   DoReadRegisterSet(NT_S390_SYSTEM_CALL, dst, 4);
   dst += 4;
 
-  // To enable inferior function calls while the process is stopped in
-  // an interrupted system call, we need to clear the system call flag.
-  // It will be restored to its original value by WriteAllRegisterValues.
-  // Again we ignore error if the regset is unsupported.
+  // To enable inferior function calls while the process is stopped in an
+  // interrupted system call, we need to clear the system call flag. It will be
+  // restored to its original value by WriteAllRegisterValues. Again we ignore
+  // error if the regset is unsupported.
   uint32_t system_call = 0;
   DoWriteRegisterSet(NT_S390_SYSTEM_CALL, &system_call, 4);
 

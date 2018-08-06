@@ -13,6 +13,7 @@
 
 #include "lldb/Core/RegisterValue.h"
 #include "lldb/Core/Scalar.h"
+#include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/DataBufferHeap.h"
@@ -20,7 +21,6 @@
 #include "lldb/Utility/Endian.h"
 #include "llvm/Support/Compiler.h"
 
-#include "Plugins/Process/elf-core/ProcessElfCore.h"
 #include "RegisterContextPOSIX_arm.h"
 
 using namespace lldb;
@@ -107,11 +107,6 @@ RegisterContextPOSIX_arm::RegisterContextPOSIX_arm(
   }
 
   ::memset(&m_fpr, 0, sizeof m_fpr);
-
-  // elf-core yet to support ReadFPR()
-  lldb::ProcessSP base = CalculateProcess();
-  if (base.get()->GetPluginName() == ProcessElfCore::GetPluginNameStatic())
-    return;
 }
 
 RegisterContextPOSIX_arm::~RegisterContextPOSIX_arm() {}
@@ -142,8 +137,8 @@ size_t RegisterContextPOSIX_arm::GetGPRSize() {
 
 const lldb_private::RegisterInfo *RegisterContextPOSIX_arm::GetRegisterInfo() {
   // Commonly, this method is overridden and g_register_infos is copied and
-  // specialized.
-  // So, use GetRegisterInfo() rather than g_register_infos in this scope.
+  // specialized. So, use GetRegisterInfo() rather than g_register_infos in
+  // this scope.
   return m_register_info_ap->GetRegisterInfo();
 }
 
@@ -199,8 +194,8 @@ bool RegisterContextPOSIX_arm::IsRegisterSetAvailable(size_t set_index) {
   return set_index < k_num_register_sets;
 }
 
-// Used when parsing DWARF and EH frame information and any other
-// object file sections that contain register numbers in them.
+// Used when parsing DWARF and EH frame information and any other object file
+// sections that contain register numbers in them.
 uint32_t RegisterContextPOSIX_arm::ConvertRegisterKindToRegisterNumber(
     lldb::RegisterKind kind, uint32_t num) {
   const uint32_t num_regs = GetRegisterCount();

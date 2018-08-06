@@ -43,9 +43,8 @@ public:
   lldb::ThreadSP GetSelectedThread();
 
   // Manage the thread to use for running expressions.  This is usually the
-  // Selected thread,
-  // but sometimes (e.g. when evaluating breakpoint conditions & stop hooks) it
-  // isn't.
+  // Selected thread, but sometimes (e.g. when evaluating breakpoint conditions
+  // & stop hooks) it isn't.
   class ExpressionExecutionThreadPusher {
   public:
     ExpressionExecutionThreadPusher(ThreadList &thread_list, lldb::tid_t tid)
@@ -83,9 +82,9 @@ public:
 
   void Destroy();
 
-  // Note that "idx" is not the same as the "thread_index". It is a zero
-  // based index to accessing the current threads, whereas "thread_index"
-  // is a unique index assigned
+  // Note that "idx" is not the same as the "thread_index". It is a zero based
+  // index to accessing the current threads, whereas "thread_index" is a unique
+  // index assigned
   lldb::ThreadSP GetThreadAtIndex(uint32_t idx, bool can_update = true);
 
   lldb::ThreadSP FindThreadByID(lldb::tid_t tid, bool can_update = true);

@@ -151,6 +151,18 @@ llvm::StringRef XMLNode::GetAttributeValue(const char *name,
     return llvm::StringRef();
 }
 
+bool XMLNode::GetAttributeValueAsUnsigned(const char *name, uint64_t &value,
+                                          uint64_t fail_value, int base) const {
+#if defined(LIBXML2_DEFINED)
+  llvm::StringRef str_value = GetAttributeValue(name, "");
+#else
+  llvm::StringRef str_value;
+#endif
+  bool success = false;
+  value = StringConvert::ToUInt64(str_value.data(), fail_value, base, &success);
+  return success;
+}
+
 void XMLNode::ForEachChildNode(NodeCallback const &callback) const {
 #if defined(LIBXML2_DEFINED)
   if (IsValid())
@@ -240,8 +252,8 @@ void XMLNode::ForEachSiblingElementWithName(
       if (node->type != XML_ELEMENT_NODE)
         continue;
 
-      // If name is nullptr, we take all nodes of type "t", else
-      // just the ones whose name matches
+      // If name is nullptr, we take all nodes of type "t", else just the ones
+      // whose name matches
       if (name) {
         if (strcmp((const char *)node->name, name) != 0)
           continue; // Name mismatch, ignore this one

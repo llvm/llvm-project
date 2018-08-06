@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <cstdarg>
+#include <cstdlib>
 #include "ns.h"
 
 namespace {
@@ -23,7 +24,7 @@ namespace {
     variadic_sum (int arg_count...)
     {
         int sum = 0;
-        va_list args;
+        std::va_list args;
         va_start(args, arg_count);
 
         for (int i = 0; i < arg_count; i++)

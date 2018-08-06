@@ -22,6 +22,7 @@
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
+#include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 
@@ -253,11 +254,10 @@ are no syntax errors may indicate that a function was declared but never called.
     std::unique_ptr<WatchpointOptions::CommandData> data_ap(
         new WatchpointOptions::CommandData());
 
-    // It's necessary to set both user_source and script_source to the oneliner.
-    // The former is used to generate callback description (as in watchpoint
-    // command list)
-    // while the latter is used for Python to interpret during the actual
-    // callback.
+    // It's necessary to set both user_source and script_source to the
+    // oneliner. The former is used to generate callback description (as in
+    // watchpoint command list) while the latter is used for Python to
+    // interpret during the actual callback.
     data_ap->user_source.AppendString(oneliner);
     data_ap->script_source.assign(oneliner);
     data_ap->stop_on_error = m_options.m_stop_on_error;
@@ -286,8 +286,8 @@ are no syntax errors may indicate that a function was declared but never called.
         CommandReturnObject result;
         Debugger &debugger = target->GetDebugger();
         // Rig up the results secondary output stream to the debugger's, so the
-        // output will come out synchronously
-        // if the debugger is set up that way.
+        // output will come out synchronously if the debugger is set up that
+        // way.
 
         StreamSP output_stream(debugger.GetAsyncOutputStream());
         StreamSP error_stream(debugger.GetAsyncErrorStream());
@@ -331,7 +331,7 @@ are no syntax errors may indicate that a function was declared but never called.
         break;
 
       case 's':
-        m_script_language = (lldb::ScriptLanguage)Args::StringToOptionEnum(
+        m_script_language = (lldb::ScriptLanguage)OptionArgParser::ToOptionEnum(
             option_arg, GetDefinitions()[option_idx].enum_values,
             eScriptLanguageNone, error);
 
@@ -341,7 +341,8 @@ are no syntax errors may indicate that a function was declared but never called.
 
       case 'e': {
         bool success = false;
-        m_stop_on_error = Args::StringToBoolean(option_arg, false, &success);
+        m_stop_on_error =
+            OptionArgParser::ToBoolean(option_arg, false, &success);
         if (!success)
           error.SetErrorStringWithFormat(
               "invalid value for stop-on-error: \"%s\"",
@@ -439,20 +440,19 @@ protected:
         if (wp_options == nullptr)
           continue;
 
-        // If we are using script language, get the script interpreter
-        // in order to set or collect command callback.  Otherwise, call
-        // the methods associated with this object.
+        // If we are using script language, get the script interpreter in order
+        // to set or collect command callback.  Otherwise, call the methods
+        // associated with this object.
         if (m_options.m_use_script_language) {
           // Special handling for one-liner specified inline.
           if (m_options.m_use_one_liner) {
             m_interpreter.GetScriptInterpreter()->SetWatchpointCommandCallback(
                 wp_options, m_options.m_one_liner.c_str());
           }
-          // Special handling for using a Python function by name
-          // instead of extending the watchpoint callback data structures, we
-          // just automatize
-          // what the user would do manually: make their watchpoint command be a
-          // function call
+          // Special handling for using a Python function by name instead of
+          // extending the watchpoint callback data structures, we just
+          // automatize what the user would do manually: make their watchpoint
+          // command be a function call
           else if (!m_options.m_function_name.empty()) {
             std::string oneliner(m_options.m_function_name);
             oneliner += "(frame, wp, internal_dict)";
@@ -669,7 +669,7 @@ CommandObjectWatchpointCommand::CommandObjectWatchpointCommand(
     : CommandObjectMultiword(
           interpreter, "command",
           "Commands for adding, removing and examining LLDB commands "
-          "executed when the watchpoint is hit (watchpoint 'commmands').",
+          "executed when the watchpoint is hit (watchpoint 'commands').",
           "command <sub-command> [<sub-command-options>] <watchpoint-id>") {
   CommandObjectSP add_command_object(
       new CommandObjectWatchpointCommandAdd(interpreter));

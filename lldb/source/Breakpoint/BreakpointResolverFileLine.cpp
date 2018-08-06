@@ -111,20 +111,40 @@ BreakpointResolverFileLine::SerializeToStructuredData() {
 
 // Filter the symbol context list to remove contexts where the line number was
 // moved into a new function. We do this conservatively, so if e.g. we cannot
-// resolve the function in the context (which can happen in case of
-// line-table-only debug info), we leave the context as is. The trickiest part
-// here is handling inlined functions -- in this case we need to make sure we
-// look at the declaration line of the inlined function, NOT the function it was
+// resolve the function in the context (which can happen in case of line-table-
+// only debug info), we leave the context as is. The trickiest part here is
+// handling inlined functions -- in this case we need to make sure we look at
+// the declaration line of the inlined function, NOT the function it was
 // inlined into.
-void BreakpointResolverFileLine::FilterContexts(SymbolContextList &sc_list) {
+void BreakpointResolverFileLine::FilterContexts(SymbolContextList &sc_list,
+                                                bool is_relative) {
   if (m_exact_match)
     return; // Nothing to do. Contexts are precise.
+
+  llvm::StringRef relative_path;
+  if (is_relative)
+    relative_path = m_file_spec.GetDirectory().GetStringRef();
 
   Log * log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS);
   for(uint32_t i = 0; i < sc_list.GetSize(); ++i) {
     SymbolContext sc;
     sc_list.GetContextAtIndex(i, sc);
-    if (! sc.block)
+    if (is_relative) {
+      // If the path was relative, make sure any matches match as long as the
+      // relative parts of the path match the path from support files
+      auto sc_dir = sc.line_entry.file.GetDirectory().GetStringRef();
+      if (!sc_dir.endswith(relative_path)) {
+        // We had a relative path specified and the relative directory doesn't
+        // match so remove this one
+        LLDB_LOG(log, "removing not matching relative path {0} since it "
+                "doesn't end with {1}", sc_dir, relative_path);
+        sc_list.RemoveContextAtIndex(i);
+        --i;
+        continue;
+      }
+    }
+
+    if (!sc.block)
       continue;
 
     FileSpec file;
@@ -180,20 +200,25 @@ BreakpointResolverFileLine::SearchCallback(SearchFilter &filter,
   assert(m_breakpoint != NULL);
 
   // There is a tricky bit here.  You can have two compilation units that
-  // #include the same file, and in one of them the function at m_line_number is
-  // used (and so code and a line entry for it is generated) but in the other it
-  // isn't.  If we considered the CU's independently, then in the second
-  // inclusion, we'd move the breakpoint to the next function that actually
-  // generated code in the header file.  That would end up being confusing.  So
-  // instead, we do the CU iterations by hand here, then scan through the
-  // complete list of matches, and figure out the closest line number match, and
-  // only set breakpoints on that match.
+  // #include the same file, and in one of them the function at m_line_number
+  // is used (and so code and a line entry for it is generated) but in the
+  // other it isn't.  If we considered the CU's independently, then in the
+  // second inclusion, we'd move the breakpoint to the next function that
+  // actually generated code in the header file.  That would end up being
+  // confusing.  So instead, we do the CU iterations by hand here, then scan
+  // through the complete list of matches, and figure out the closest line
+  // number match, and only set breakpoints on that match.
 
-  // Note also that if file_spec only had a file name and not a directory, there
-  // may be many different file spec's in the resultant list.  The closest line
-  // match for one will not be right for some totally different file.  So we go
-  // through the match list and pull out the sets that have the same file spec
-  // in their line_entry and treat each set separately.
+  // Note also that if file_spec only had a file name and not a directory,
+  // there may be many different file spec's in the resultant list.  The
+  // closest line match for one will not be right for some totally different
+  // file.  So we go through the match list and pull out the sets that have the
+  // same file spec in their line_entry and treat each set separately.
+
+  FileSpec search_file_spec = m_file_spec;
+  const bool is_relative = m_file_spec.IsRelative();
+  if (is_relative)
+    search_file_spec.GetDirectory().Clear();
 
   const size_t num_comp_units = context.module_sp->GetNumCompileUnits();
   const bool force_check_inlines =
@@ -202,13 +227,13 @@ BreakpointResolverFileLine::SearchCallback(SearchFilter &filter,
     CompUnitSP cu_sp(context.module_sp->GetCompileUnitAtIndex(i));
     if (cu_sp) {
       if (filter.CompUnitPasses(*cu_sp))
-        cu_sp->ResolveSymbolContext(
-            m_file_spec, m_line_number, m_inlines | force_check_inlines,
-            m_exact_match, eSymbolContextEverything, sc_list);
+        cu_sp->ResolveSymbolContext(search_file_spec, m_line_number, m_inlines | force_check_inlines,
+                                    m_exact_match, eSymbolContextEverything,
+                                    sc_list);
     }
   }
 
-  FilterContexts(sc_list);
+  FilterContexts(sc_list, is_relative);
 
   StreamString s;
   s.Printf("for %s:%d ", m_file_spec.GetFilename().AsCString("<Unknown>"),

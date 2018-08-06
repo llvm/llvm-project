@@ -104,8 +104,8 @@ Status NativeBreakpointList::DecRef(lldb::addr_t addr) {
     return error;
   }
 
-  // Breakpoint has no more references.  Disable it if it's not
-  // already disabled.
+  // Breakpoint has no more references.  Disable it if it's not already
+  // disabled.
   if (log)
     log->Printf("NativeBreakpointList::%s addr = 0x%" PRIx64
                 " -- removing due to no remaining references",

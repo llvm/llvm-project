@@ -24,6 +24,7 @@
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandObject.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
+#include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/OptionGroupFormat.h"
 #include "lldb/Interpreter/OptionValueBoolean.h"
 #include "lldb/Interpreter/OptionValueLanguage.h"
@@ -329,7 +330,7 @@ private:
 
       switch (short_option) {
       case 'C':
-        m_cascade = Args::StringToBoolean(option_arg, true, &success);
+        m_cascade = OptionArgParser::ToBoolean(option_arg, true, &success);
         if (!success)
           error.SetErrorStringWithFormat("invalid value for cascade: %s",
                                          option_arg.str().c_str());
@@ -571,7 +572,7 @@ private:
 
       switch (short_option) {
       case 'C':
-        m_cascade = Args::StringToBoolean(option_value, true, &success);
+        m_cascade = OptionArgParser::ToBoolean(option_value, true, &success);
         if (!success)
           error.SetErrorStringWithFormat("invalid value for cascade: %s",
                                          option_value.str().c_str());
@@ -1252,7 +1253,7 @@ Status CommandObjectTypeSummaryAdd::CommandOptions::SetOptionValue(
 
   switch (short_option) {
   case 'C':
-    m_flags.SetCascades(Args::StringToBoolean(option_arg, true, &success));
+    m_flags.SetCascades(OptionArgParser::ToBoolean(option_arg, true, &success));
     if (!success)
       error.SetErrorStringWithFormat("invalid value for cascade: %s",
                                      option_arg.str().c_str());
@@ -1420,8 +1421,8 @@ bool CommandObjectTypeSummaryAdd::Execute_ScriptSummary(
     return result.Succeeded();
   }
 
-  // if I am here, script_format must point to something good, so I can add that
-  // as a script summary to all interested parties
+  // if I am here, script_format must point to something good, so I can add
+  // that as a script summary to all interested parties
 
   Status error;
 
@@ -2520,7 +2521,7 @@ private:
 
       switch (short_option) {
       case 'C':
-        m_cascade = Args::StringToBoolean(option_arg, true, &success);
+        m_cascade = OptionArgParser::ToBoolean(option_arg, true, &success);
         if (!success)
           error.SetErrorStringWithFormat("invalid value for cascade: %s",
                                          option_arg.str().c_str());
@@ -2756,9 +2757,8 @@ static OptionDefinition g_type_lookup_options[] = {
 class CommandObjectTypeLookup : public CommandObjectRaw {
 protected:
   // this function is allowed to do a more aggressive job at guessing languages
-  // than the expression parser
-  // is comfortable with - so leave the original call alone and add one that is
-  // specific to type lookup
+  // than the expression parser is comfortable with - so leave the original
+  // call alone and add one that is specific to type lookup
   lldb::LanguageType GuessLanguage(StackFrame *frame) {
     lldb::LanguageType lang_type = lldb::eLanguageTypeUnknown;
 
@@ -2863,9 +2863,9 @@ public:
     return m_cmd_help_long;
   }
 
-  bool DoExecute(const char *raw_command_line,
+  bool DoExecute(llvm::StringRef raw_command_line,
                  CommandReturnObject &result) override {
-    if (!raw_command_line || !raw_command_line[0]) {
+    if (raw_command_line.empty()) {
       result.SetError(
           "type lookup cannot be invoked without a type name as argument");
       return false;
@@ -2874,42 +2874,13 @@ public:
     auto exe_ctx = GetCommandInterpreter().GetExecutionContext();
     m_option_group.NotifyOptionParsingStarting(&exe_ctx);
 
-    const char *name_of_type = nullptr;
+    OptionsWithRaw args(raw_command_line);
+    const char *name_of_type = args.GetRawPart().c_str();
 
-    if (raw_command_line[0] == '-') {
-      // We have some options and these options MUST end with --.
-      const char *end_options = nullptr;
-      const char *s = raw_command_line;
-      while (s && s[0]) {
-        end_options = ::strstr(s, "--");
-        if (end_options) {
-          end_options += 2; // Get past the "--"
-          if (::isspace(end_options[0])) {
-            name_of_type = end_options;
-            while (::isspace(*name_of_type))
-              ++name_of_type;
-            break;
-          }
-        }
-        s = end_options;
-      }
-
-      if (end_options) {
-        Args args(
-            llvm::StringRef(raw_command_line, end_options - raw_command_line));
-        if (!ParseOptions(args, result))
-          return false;
-
-        Status error(m_option_group.NotifyOptionParsingFinished(&exe_ctx));
-        if (error.Fail()) {
-          result.AppendError(error.AsCString());
-          result.SetStatus(eReturnStatusFailed);
-          return false;
-        }
-      }
-    }
-    if (nullptr == name_of_type)
-      name_of_type = raw_command_line;
+    if (args.HasArgs())
+      if (!ParseOptionsAndNotify(args.GetArgs(), result, m_option_group,
+                                 exe_ctx))
+        return false;
 
     // TargetSP
     // target_sp(GetCommandInterpreter().GetDebugger().GetSelectedTarget());
@@ -2935,9 +2906,8 @@ public:
     }
 
     // This is not the most efficient way to do this, but we support very few
-    // languages
-    // so the cost of the sort is going to be dwarfed by the actual lookup
-    // anyway
+    // languages so the cost of the sort is going to be dwarfed by the actual
+    // lookup anyway
     if (StackFrame *frame = m_exe_ctx.GetFramePtr()) {
       guessed_language = GuessLanguage(frame);
       if (guessed_language != eLanguageTypeUnknown) {
@@ -3026,7 +2996,8 @@ public:
   ~CommandObjectFormatterInfo() override = default;
 
 protected:
-  bool DoExecute(const char *command, CommandReturnObject &result) override {
+  bool DoExecute(llvm::StringRef command,
+                 CommandReturnObject &result) override {
     TargetSP target_sp = m_interpreter.GetDebugger().GetSelectedTarget();
     Thread *thread = GetDefaultThread();
     if (!thread) {
@@ -3049,16 +3020,16 @@ protected:
           m_discovery_function(*result_valobj_sp);
       if (formatter_sp) {
         std::string description(formatter_sp->GetDescription());
-        result.AppendMessageWithFormat(
-            "%s applied to (%s) %s is: %s\n", m_formatter_name.c_str(),
-            result_valobj_sp->GetDisplayTypeName().AsCString("<unknown>"),
-            command, description.c_str());
+        result.GetOutputStream()
+            << m_formatter_name << " applied to ("
+            << result_valobj_sp->GetDisplayTypeName().AsCString("<unknown>")
+            << ") " << command << " is: " << description << "\n";
         result.SetStatus(lldb::eReturnStatusSuccessFinishResult);
       } else {
-        result.AppendMessageWithFormat(
-            "no %s applies to (%s) %s\n", m_formatter_name.c_str(),
-            result_valobj_sp->GetDisplayTypeName().AsCString("<unknown>"),
-            command);
+        result.GetOutputStream()
+            << "no " << m_formatter_name << " applies to ("
+            << result_valobj_sp->GetDisplayTypeName().AsCString("<unknown>")
+            << ") " << command << "\n";
         result.SetStatus(lldb::eReturnStatusSuccessFinishNoResult);
       }
       return true;

@@ -562,6 +562,9 @@ eSectionTypeARMextab = _lldb.eSectionTypeARMextab
 eSectionTypeCompactUnwind = _lldb.eSectionTypeCompactUnwind
 eSectionTypeGoSymtab = _lldb.eSectionTypeGoSymtab
 eSectionTypeAbsoluteAddress = _lldb.eSectionTypeAbsoluteAddress
+eSectionTypeDWARFGNUDebugAltLink = _lldb.eSectionTypeDWARFGNUDebugAltLink
+eSectionTypeDWARFDebugTypes = _lldb.eSectionTypeDWARFDebugTypes
+eSectionTypeDWARFDebugNames = _lldb.eSectionTypeDWARFDebugNames
 eSectionTypeOther = _lldb.eSectionTypeOther
 eEmulateInstructionOptionNone = _lldb.eEmulateInstructionOptionNone
 eEmulateInstructionOptionAutoAdvancePC = _lldb.eEmulateInstructionOptionAutoAdvancePC
@@ -660,19 +663,13 @@ eTypeOptionShowOneLiner = _lldb.eTypeOptionShowOneLiner
 eTypeOptionHideNames = _lldb.eTypeOptionHideNames
 eTypeOptionNonCacheable = _lldb.eTypeOptionNonCacheable
 eTypeOptionHideEmptyAggregates = _lldb.eTypeOptionHideEmptyAggregates
+eTypeOptionFrontEndWantsDereference = _lldb.eTypeOptionFrontEndWantsDereference
 eFrameCompareInvalid = _lldb.eFrameCompareInvalid
 eFrameCompareUnknown = _lldb.eFrameCompareUnknown
 eFrameCompareEqual = _lldb.eFrameCompareEqual
 eFrameCompareSameParent = _lldb.eFrameCompareSameParent
 eFrameCompareYounger = _lldb.eFrameCompareYounger
 eFrameCompareOlder = _lldb.eFrameCompareOlder
-eAddressClassInvalid = _lldb.eAddressClassInvalid
-eAddressClassUnknown = _lldb.eAddressClassUnknown
-eAddressClassCode = _lldb.eAddressClassCode
-eAddressClassCodeAlternateISA = _lldb.eAddressClassCodeAlternateISA
-eAddressClassData = _lldb.eAddressClassData
-eAddressClassDebug = _lldb.eAddressClassDebug
-eAddressClassRuntime = _lldb.eAddressClassRuntime
 eFilePermissionsUserRead = _lldb.eFilePermissionsUserRead
 eFilePermissionsUserWrite = _lldb.eFilePermissionsUserWrite
 eFilePermissionsUserExecute = _lldb.eFilePermissionsUserExecute
@@ -913,10 +910,6 @@ class SBAddress(_object):
     def SetAddress(self, *args):
         """SetAddress(self, SBSection section, addr_t offset)"""
         return _lldb.SBAddress_SetAddress(self, *args)
-
-    def GetAddressClass(self):
-        """GetAddressClass(self) -> AddressClass"""
-        return _lldb.SBAddress_GetAddressClass(self)
 
     def GetSymbolContext(self, *args):
         """
@@ -2431,6 +2424,18 @@ class SBCommandInterpreter(_object):
         """SetPromptOnQuit(self, bool b)"""
         return _lldb.SBCommandInterpreter_SetPromptOnQuit(self, *args)
 
+    def AllowExitCodeOnQuit(self, *args):
+        """AllowExitCodeOnQuit(self, bool b)"""
+        return _lldb.SBCommandInterpreter_AllowExitCodeOnQuit(self, *args)
+
+    def HasCustomQuitExitCode(self):
+        """HasCustomQuitExitCode(self) -> bool"""
+        return _lldb.SBCommandInterpreter_HasCustomQuitExitCode(self)
+
+    def GetQuitStatus(self):
+        """GetQuitStatus(self) -> int"""
+        return _lldb.SBCommandInterpreter_GetQuitStatus(self)
+
     def ResolveCommand(self, *args):
         """ResolveCommand(self, str command_line, SBCommandReturnObject result)"""
         return _lldb.SBCommandInterpreter_ResolveCommand(self, *args)
@@ -3690,6 +3695,12 @@ class SBDebugger(_object):
 
     if _newclass:StateAsCString = staticmethod(StateAsCString)
     __swig_getmethods__["StateAsCString"] = lambda x: StateAsCString
+    def GetBuildConfiguration():
+        """GetBuildConfiguration() -> SBStructuredData"""
+        return _lldb.SBDebugger_GetBuildConfiguration()
+
+    if _newclass:GetBuildConfiguration = staticmethod(GetBuildConfiguration)
+    __swig_getmethods__["GetBuildConfiguration"] = lambda x: GetBuildConfiguration
     def StateIsRunningState(*args):
         """StateIsRunningState(StateType state) -> bool"""
         return _lldb.SBDebugger_StateIsRunningState(*args)
@@ -3885,6 +3896,10 @@ def SBDebugger_GetVersionString():
 def SBDebugger_StateAsCString(*args):
   """SBDebugger_StateAsCString(StateType state) -> str"""
   return _lldb.SBDebugger_StateAsCString(*args)
+
+def SBDebugger_GetBuildConfiguration():
+  """SBDebugger_GetBuildConfiguration() -> SBStructuredData"""
+  return _lldb.SBDebugger_GetBuildConfiguration()
 
 def SBDebugger_StateIsRunningState(*args):
   """SBDebugger_StateIsRunningState(StateType state) -> bool"""
@@ -5491,10 +5506,6 @@ class SBInstruction(_object):
         """GetAddress(self) -> SBAddress"""
         return _lldb.SBInstruction_GetAddress(self)
 
-    def GetAddressClass(self):
-        """GetAddressClass(self) -> AddressClass"""
-        return _lldb.SBInstruction_GetAddressClass(self)
-
     def GetMnemonic(self, *args):
         """GetMnemonic(self, SBTarget target) -> str"""
         return _lldb.SBInstruction_GetMnemonic(self, *args)
@@ -6424,6 +6435,23 @@ class SBModule(_object):
     def GetCompileUnitAtIndex(self, *args):
         """GetCompileUnitAtIndex(self, uint32_t arg0) -> SBCompileUnit"""
         return _lldb.SBModule_GetCompileUnitAtIndex(self, *args)
+
+    def FindCompileUnits(self, *args):
+        """
+        FindCompileUnits(self, SBFileSpec sb_file_spec) -> SBSymbolContextList
+
+        Find compile units related to *this module and passed source
+        file.
+        
+        @param[in] sb_file_spec
+            A lldb::SBFileSpec object that contains source file
+            specification.
+        
+        @return
+            A lldb::SBSymbolContextList that gets filled in with all of
+            the symbol contexts for all the matches.
+        """
+        return _lldb.SBModule_FindCompileUnits(self, *args)
 
     def GetNumSymbols(self):
         """GetNumSymbols(self) -> size_t"""
@@ -8665,7 +8693,7 @@ class SBSymbolContext(_object):
     """
     A context object that provides access to core debugger entities.
 
-    Manay debugger functions require a context when doing lookups. This class
+    Many debugger functions require a context when doing lookups. This class
     provides a common structure that can be used as the result of a query that
     can contain a single result.
 
@@ -9147,7 +9175,7 @@ class SBTarget(_object):
             An optional listener that will receive all process events.
             If listener is valid then listener will listen to all
             process events. If not valid, then this target's debugger
-            (SBTarget::GetDebugger()) will listen to all process events. 
+            (SBTarget::GetDebugger()) will listen to all process events.
         
         @param[in] argv
             The argument array.
@@ -9177,7 +9205,7 @@ class SBTarget(_object):
             The working directory to have the child process run in
         
         @param[in] launch_flags
-            Some launch options specified by logical OR'ing 
+            Some launch options specified by logical OR'ing
             lldb::LaunchFlags enumeration values together.
         
         @param[in] stop_at_entry
@@ -9208,11 +9236,16 @@ class SBTarget(_object):
     def LoadCore(self, *args):
         """
         LoadCore(self, str core_file) -> SBProcess
+        LoadCore(self, str core_file, SBError error) -> SBProcess
 
         Load a core file
         
         @param[in] core_file
             File path of the core dump.
+        
+        @param[out] error
+            An error explaining what went wrong if the operation fails.
+            (Optional)
         
         @return
              A process object for the newly created core file.
@@ -9337,6 +9370,23 @@ class SBTarget(_object):
         """FindModule(self, SBFileSpec file_spec) -> SBModule"""
         return _lldb.SBTarget_FindModule(self, *args)
 
+    def FindCompileUnits(self, *args):
+        """
+        FindCompileUnits(self, SBFileSpec sb_file_spec) -> SBSymbolContextList
+
+        Find compile units related to *this target and passed source
+        file.
+        
+        @param[in] sb_file_spec
+            A lldb::SBFileSpec object that contains source file
+            specification.
+        
+        @return
+            A lldb::SBSymbolContextList that gets filled in with all of
+            the symbol contexts for all the matches.
+        """
+        return _lldb.SBTarget_FindCompileUnits(self, *args)
+
     def GetByteOrder(self):
         """GetByteOrder(self) -> ByteOrder"""
         return _lldb.SBTarget_GetByteOrder(self)
@@ -9403,11 +9453,11 @@ class SBTarget(_object):
             A logical OR of one or more FunctionNameType enum bits that
             indicate what kind of names should be used when doing the
             lookup. Bits include fully qualified names, base names,
-            C++ methods, or ObjC selectors. 
+            C++ methods, or ObjC selectors.
             See FunctionNameType for more details.
         
         @return
-            A lldb::SBSymbolContextList that gets filled in with all of 
+            A lldb::SBSymbolContextList that gets filled in with all of
             the symbol contexts for all the matches.
         """
         return _lldb.SBTarget_FindFunctions(self, *args)
@@ -9499,16 +9549,16 @@ class SBTarget(_object):
         """
         ReadMemory(self, SBAddress addr, void buf, SBError error) -> size_t
 
-        Read target memory. If a target process is running then memory  
+        Read target memory. If a target process is running then memory
         is read from here. Otherwise the memory is read from the object
         files. For a target whose bytes are sized as a multiple of host
         bytes, the data read back will preserve the target's byte order.
         
         @param[in] addr
-            A target address to read from. 
+            A target address to read from.
         
         @param[out] buf
-            The buffer to read memory into. 
+            The buffer to read memory into.
         
         @param[in] size
             The maximum number of host bytes to read in the buffer passed
@@ -9638,7 +9688,7 @@ class SBTarget(_object):
         BreakpointsCreateFromFile(self, SBFileSpec source_file, SBStringList matching_names, 
             SBBreakpointList new_bps) -> SBError
 
-        Read breakpoints from source_file and return the newly created 
+        Read breakpoints from source_file and return the newly created
         breakpoints in bkpt_list.
         
         @param[in] source_file
@@ -10186,6 +10236,7 @@ class SBThread(_object):
         """
         StepOver(self, RunMode stop_other_threads = eOnlyDuringStepping)
         StepOver(self)
+        Do a source level single step over in the currently selected thread.
         """
         return _lldb.SBThread_StepOver(self, *args)
 
@@ -10196,27 +10247,36 @@ class SBThread(_object):
         StepInto(self, str target_name, RunMode stop_other_threads = eOnlyDuringStepping)
         StepInto(self, str target_name)
 
-            Step  the current thread from the current source line to the line given by end_line, stopping if
+            Step the current thread from the current source line to the line given by end_line, stopping if
             the thread steps into the function given by target_name.  If target_name is None, then stepping will stop
             in any of the places we would normally stop.
             
 
-            Step  the current thread from the current source line to the line given by end_line, stopping if
+            Step the current thread from the current source line to the line given by end_line, stopping if
             the thread steps into the function given by target_name.  If target_name is None, then stepping will stop
             in any of the places we would normally stop.
         """
         return _lldb.SBThread_StepInto(self, *args)
 
-    def StepOut(self):
-        """StepOut(self)"""
-        return _lldb.SBThread_StepOut(self)
+    def StepOut(self, *args):
+        """
+        StepOut(self)
+        Step out of the currently selected thread.
+        """
+        return _lldb.SBThread_StepOut(self, *args)
 
     def StepOutOfFrame(self, *args):
-        """StepOutOfFrame(self, SBFrame frame)"""
+        """
+        StepOutOfFrame(self, SBFrame frame)
+        Step out of the specified frame.
+        """
         return _lldb.SBThread_StepOutOfFrame(self, *args)
 
     def StepInstruction(self, *args):
-        """StepInstruction(self, bool step_over)"""
+        """
+        StepInstruction(self, bool step_over)
+        Do an instruction level single step in the currently selected thread.
+        """
         return _lldb.SBThread_StepInstruction(self, *args)
 
     def StepOverUntil(self, *args):
@@ -10235,7 +10295,10 @@ class SBThread(_object):
         return _lldb.SBThread_JumpToLine(self, *args)
 
     def RunToAddress(self, *args):
-        """RunToAddress(self, addr_t addr)"""
+        """
+        RunToAddress(self, addr_t addr)
+        RunToAddress(self, addr_t addr, SBError error)
+        """
         return _lldb.SBThread_RunToAddress(self, *args)
 
     def ReturnFromFrame(self, *args):
@@ -10254,9 +10317,10 @@ class SBThread(_object):
         """
         return _lldb.SBThread_UnwindInnermostExpression(self)
 
-    def Suspend(self):
+    def Suspend(self, *args):
         """
         Suspend(self) -> bool
+        Suspend(self, SBError error) -> bool
 
         LLDB currently supports process centric debugging which means when any
         thread in a process stops, all other threads are stopped. The Suspend()
@@ -10278,11 +10342,14 @@ class SBThread(_object):
         anyone has the need for them to be reference counted, please let us
         know.
         """
-        return _lldb.SBThread_Suspend(self)
+        return _lldb.SBThread_Suspend(self, *args)
 
-    def Resume(self):
-        """Resume(self) -> bool"""
-        return _lldb.SBThread_Resume(self)
+    def Resume(self, *args):
+        """
+        Resume(self) -> bool
+        Resume(self, SBError error) -> bool
+        """
+        return _lldb.SBThread_Resume(self, *args)
 
     def IsSuspended(self):
         """IsSuspended(self) -> bool"""
@@ -12743,25 +12810,25 @@ class SBValue(_object):
         GetPointeeData(self, uint32_t item_idx = 0) -> SBData
         GetPointeeData(self) -> SBData
 
-           Get an SBData wrapping what this SBValue points to.
-           
-           This method will dereference the current SBValue, if its
-           data type is a T* or T[], and extract item_count elements
-           of type T from it, copying their contents in an SBData. 
-           
-           @param[in] item_idx
-               The index of the first item to retrieve. For an array
-               this is equivalent to array[item_idx], for a pointer
-               to *(pointer + item_idx). In either case, the measurement
-               unit for item_idx is the sizeof(T) rather than the byte
-           
-           @param[in] item_count
-               How many items should be copied into the output. By default
-               only one item is copied, but more can be asked for.
-           
-           @return
-               An SBData with the contents of the copied items, on success.
-               An empty SBData otherwise.
+          Get an SBData wrapping what this SBValue points to.
+          
+          This method will dereference the current SBValue, if its
+          data type is a T* or T[], and extract item_count elements
+          of type T from it, copying their contents in an SBData. 
+          
+          @param[in] item_idx
+              The index of the first item to retrieve. For an array
+              this is equivalent to array[item_idx], for a pointer
+              to *(pointer + item_idx). In either case, the measurement
+              unit for item_idx is the sizeof(T) rather than the byte
+          
+          @param[in] item_count
+              How many items should be copied into the output. By default
+              only one item is copied, but more can be asked for.
+          
+          @return
+              An SBData with the contents of the copied items, on success.
+              An empty SBData otherwise.
         """
         return _lldb.SBValue_GetPointeeData(self, item_idx, item_count)
 
@@ -12769,14 +12836,14 @@ class SBValue(_object):
         """
         GetData(self) -> SBData
 
-           Get an SBData wrapping the contents of this SBValue.
-           
-           This method will read the contents of this object in memory
-           and copy them into an SBData for future use. 
-           
-           @return
-               An SBData with the contents of this SBValue, on success.
-               An empty SBData otherwise.
+          Get an SBData wrapping the contents of this SBValue.
+          
+          This method will read the contents of this object in memory
+          and copy them into an SBData for future use. 
+          
+          @return
+              An SBData with the contents of this SBValue, on success.
+              An empty SBData otherwise.
         """
         return _lldb.SBValue_GetData(self)
 
@@ -12808,6 +12875,40 @@ class SBValue(_object):
     def __get_dynamic__ (self):
         '''Helper function for the "SBValue.dynamic" property.'''
         return self.GetDynamicValue (eDynamicCanRunTarget)
+
+    class children_access(object):
+        '''A helper object that will lazily hand out thread for a process when supplied an index.'''
+        
+        def __init__(self, sbvalue):
+            self.sbvalue = sbvalue
+            
+        def __len__(self):
+            if self.sbvalue:
+                return int(self.sbvalue.GetNumChildren())
+            return 0
+
+        def __getitem__(self, key):
+            if type(key) is int and key < len(self):
+                return self.sbvalue.GetChildAtIndex(key)
+            return None
+
+    def get_child_access_object(self):
+        '''An accessor function that returns a children_access() object which allows lazy member variable access from a lldb.SBValue object.'''
+        return self.children_access (self)
+
+    def get_value_child_list(self):
+        '''An accessor function that returns a list() that contains all children in a lldb.SBValue object.'''
+        children = []
+        accessor = self.get_child_access_object()
+        for idx in range(len(accessor)):
+            children.append(accessor[idx])
+        return children
+
+    __swig_getmethods__["children"] = get_value_child_list
+    if _newclass: children = property(get_value_child_list, None, doc='''A read only property that returns a list() of lldb.SBValue objects for the children of the value.''')
+
+    __swig_getmethods__["child"] = get_child_access_object
+    if _newclass: child = property(get_child_access_object, None, doc='''A read only property that returns an object that can access children of a variable by index (child_value = value.children[12]).''')
 
     __swig_getmethods__["name"] = GetName
     if _newclass: name = property(GetName, None, doc='''A read only property that returns the name of this value as a string.''')
@@ -13350,29 +13451,18 @@ class SBUnixSignals(_object):
 SBUnixSignals_swigregister = _lldb.SBUnixSignals_swigregister
 SBUnixSignals_swigregister(SBUnixSignals)
 
-def command(*args, **kwargs):
+def command(command_name=None, doc=None):
     import lldb
-    import inspect
     """A decorator function that registers an LLDB command line
         command that is bound to the function it is attached to."""
-    class obj(object):
-        """The object that tracks adding the command to LLDB one time and handles
-            calling the function on subsequent calls."""
-        def __init__(self, function, command_name, doc = None):
-            if doc:
-                function.__doc__ = doc
-            command = "command script add -f %s.%s %s" % (function.__module__, function.__name__, command_name)
-            lldb.debugger.HandleCommand(command)
-            self.function = function
-        def __call__(self, debugger, command, exe_ctx, result, dict):
-            if len(inspect.getargspec(self.function).args) == 5:
-                self.function(debugger, command, exe_ctx, result, dict)
-            else:
-                self.function(debugger, command, result, dict)
     def callable(function):
-        """Creates a callable object that gets used."""
-        f = obj(function, *args, **kwargs)
-        return f.__call__
+        """Registers an lldb command for the decorated function."""
+        command = "command script add -f %s.%s %s" % (function.__module__, function.__name__, command_name or function.__name__)
+        lldb.debugger.HandleCommand(command)
+        if doc:
+            function.__doc__ = doc
+        return function
+
     return callable
 
 class declaration(object):

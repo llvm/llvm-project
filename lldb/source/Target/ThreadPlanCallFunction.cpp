@@ -15,6 +15,7 @@
 #include "lldb/Breakpoint/Breakpoint.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Address.h"
+#include "lldb/Core/DumpRegisterValue.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/ABI.h"
@@ -57,8 +58,7 @@ bool ThreadPlanCallFunction::ConstructorSetup(
 
   m_function_sp = thread.GetRegisterContext()->GetSP() - abi->GetRedZoneSize();
   // If we can't read memory at the point of the process where we are planning
-  // to put our function, we're
-  // not going to get any further...
+  // to put our function, we're not going to get any further...
   Status error;
   process_sp->ReadUnsignedIntegerFromMemory(m_function_sp, 4, 0, error);
   if (!error.Success()) {
@@ -190,7 +190,8 @@ void ThreadPlanCallFunction::ReportRegisterState(const char *message) {
          reg_idx < num_registers; ++reg_idx) {
       const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoAtIndex(reg_idx);
       if (reg_ctx->ReadRegister(reg_info, reg_value)) {
-        reg_value.Dump(&strm, reg_info, true, false, eFormatDefault);
+        DumpRegisterValue(reg_value, &strm, reg_info, true, false,
+                          eFormatDefault);
         strm.EOL();
       }
     }
@@ -281,9 +282,8 @@ bool ThreadPlanCallFunction::DoPlanExplainsStop(Event *event_ptr) {
                                                   LIBLLDB_LOG_PROCESS));
   m_real_stop_info_sp = GetPrivateStopInfo();
 
-  // If our subplan knows why we stopped, even if it's done (which would forward
-  // the question to us)
-  // we answer yes.
+  // If our subplan knows why we stopped, even if it's done (which would
+  // forward the question to us) we answer yes.
   if (m_subplan_sp && m_subplan_sp->PlanExplainsStop(event_ptr)) {
     SetPlanComplete();
     return true;
@@ -305,8 +305,8 @@ bool ThreadPlanCallFunction::DoPlanExplainsStop(Event *event_ptr) {
     return true;
 
   // One more quirk here.  If this event was from Halt interrupting the target,
-  // then we should not consider
-  // ourselves complete.  Return true to acknowledge the stop.
+  // then we should not consider ourselves complete.  Return true to
+  // acknowledge the stop.
   if (Process::ProcessEventData::GetInterruptedFromEvent(event_ptr)) {
     if (log)
       log->Printf("ThreadPlanCallFunction::PlanExplainsStop: The event is an "
@@ -315,8 +315,8 @@ bool ThreadPlanCallFunction::DoPlanExplainsStop(Event *event_ptr) {
   }
   // We control breakpoints separately from other "stop reasons."  So first,
   // check the case where we stopped for an internal breakpoint, in that case,
-  // continue on.
-  // If it is not an internal breakpoint, consult m_ignore_breakpoints.
+  // continue on. If it is not an internal breakpoint, consult
+  // m_ignore_breakpoints.
 
   if (stop_reason == eStopReasonBreakpoint) {
     ProcessSP process_sp(m_thread.CalculateProcess());
@@ -367,15 +367,13 @@ bool ThreadPlanCallFunction::DoPlanExplainsStop(Event *event_ptr) {
     // should be propagated up the stack.
     return false;
   } else {
-    // If the subplan is running, any crashes are attributable to us.
-    // If we want to discard the plan, then we say we explain the stop
-    // but if we are going to be discarded, let whoever is above us
-    // explain the stop.
-    // But don't discard the plan if the stop would restart itself (for instance
-    // if it is a
-    // signal that is set not to stop.  Check that here first.  We just say we
-    // explain the stop
-    // but aren't done and everything will continue on from there.
+    // If the subplan is running, any crashes are attributable to us. If we
+    // want to discard the plan, then we say we explain the stop but if we are
+    // going to be discarded, let whoever is above us explain the stop. But
+    // don't discard the plan if the stop would restart itself (for instance if
+    // it is a signal that is set not to stop.  Check that here first.  We just
+    // say we explain the stop but aren't done and everything will continue on
+    // from there.
 
     if (m_real_stop_info_sp &&
         m_real_stop_info_sp->ShouldStopSynchronous(event_ptr)) {
@@ -409,9 +407,8 @@ void ThreadPlanCallFunction::DidPush() {
   //#define SINGLE_STEP_EXPRESSIONS
 
   // Now set the thread state to "no reason" so we don't run with whatever
-  // signal was outstanding...
-  // Wait till the plan is pushed so we aren't changing the stop info till we're
-  // about to run.
+  // signal was outstanding... Wait till the plan is pushed so we aren't
+  // changing the stop info till we're about to run.
 
   GetThread().SetStopInfoToNothing();
 
@@ -515,10 +512,9 @@ bool ThreadPlanCallFunction::BreakpointsExplainStop() {
 
       SetPlanComplete(false);
 
-      // If the user has set the ObjC language breakpoint, it would normally get
-      // priority over our internal
-      // catcher breakpoint, but in this case we can't let that happen, so force
-      // the ShouldStop here.
+      // If the user has set the ObjC language breakpoint, it would normally
+      // get priority over our internal catcher breakpoint, but in this case we
+      // can't let that happen, so force the ShouldStop here.
       stop_info_sp->OverrideShouldStop(true);
       return true;
     }

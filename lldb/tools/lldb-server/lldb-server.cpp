@@ -7,12 +7,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Initialization/SystemInitializerCommon.h"
+#include "SystemInitializerLLGS.h"
 #include "lldb/Initialization/SystemLifetimeManager.h"
 #include "lldb/lldb-private.h"
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ManagedStatic.h"
+#include "llvm/Support/PrettyStackTrace.h"
+#include "llvm/Support/Signals.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -35,8 +38,8 @@ int main_gdbserver(int argc, char *argv[]);
 int main_platform(int argc, char *argv[]);
 
 static void initialize() {
-  g_debugger_lifetime->Initialize(
-      llvm::make_unique<lldb_private::SystemInitializerCommon>(), nullptr);
+  g_debugger_lifetime->Initialize(llvm::make_unique<SystemInitializerLLGS>(),
+                                  nullptr);
 }
 
 static void terminate() { g_debugger_lifetime->Terminate(); }
@@ -45,6 +48,10 @@ static void terminate() { g_debugger_lifetime->Terminate(); }
 // main
 //----------------------------------------------------------------------
 int main(int argc, char *argv[]) {
+  llvm::StringRef ToolName = argv[0];
+  llvm::sys::PrintStackTraceOnErrorSignal(ToolName);
+  llvm::PrettyStackTraceProgram X(argc, argv);
+
   int option_error = 0;
   const char *progname = argv[0];
   if (argc < 2) {

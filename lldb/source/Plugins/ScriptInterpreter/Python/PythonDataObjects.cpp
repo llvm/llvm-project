@@ -1,5 +1,4 @@
-//===-- PythonDataObjects.cpp ------------------------------------*- C++
-//-*-===//
+//===-- PythonDataObjects.cpp -----------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -123,21 +122,20 @@ PythonObject::ResolveNameWithDictionary(llvm::StringRef name,
 }
 
 PythonObject PythonObject::ResolveName(llvm::StringRef name) const {
-  // Resolve the name in the context of the specified object.  If,
-  // for example, `this` refers to a PyModule, then this will look for
-  // `name` in this module.  If `this` refers to a PyType, then it will
-  // resolve `name` as an attribute of that type.  If `this` refers to
-  // an instance of an object, then it will resolve `name` as the value
-  // of the specified field.
+  // Resolve the name in the context of the specified object.  If, for example,
+  // `this` refers to a PyModule, then this will look for `name` in this
+  // module.  If `this` refers to a PyType, then it will resolve `name` as an
+  // attribute of that type.  If `this` refers to an instance of an object,
+  // then it will resolve `name` as the value of the specified field.
   //
   // This function handles dotted names so that, for example, if `m_py_obj`
-  // refers to the `sys` module, and `name` == "path.append", then it
-  // will find the function `sys.path.append`.
+  // refers to the `sys` module, and `name` == "path.append", then it will find
+  // the function `sys.path.append`.
 
   size_t dot_pos = name.find_first_of('.');
   if (dot_pos == llvm::StringRef::npos) {
-    // No dots in the name, we should be able to find the value immediately
-    // as an attribute of `m_py_obj`.
+    // No dots in the name, we should be able to find the value immediately as
+    // an attribute of `m_py_obj`.
     return GetAttributeValue(name);
   }
 
@@ -230,8 +228,8 @@ bool PythonBytes::Check(PyObject *py_obj) {
 }
 
 void PythonBytes::Reset(PyRefType type, PyObject *py_obj) {
-  // Grab the desired reference type so that if we end up rejecting
-  // `py_obj` it still gets decremented if necessary.
+  // Grab the desired reference type so that if we end up rejecting `py_obj` it
+  // still gets decremented if necessary.
   PythonObject result(type, py_obj);
 
   if (!PythonBytes::Check(py_obj)) {
@@ -240,8 +238,7 @@ void PythonBytes::Reset(PyRefType type, PyObject *py_obj) {
   }
 
   // Calling PythonObject::Reset(const PythonObject&) will lead to stack
-  // overflow since it calls
-  // back into the virtual implementation.
+  // overflow since it calls back into the virtual implementation.
   PythonObject::Reset(PyRefType::Borrowed, result.get());
 }
 
@@ -303,8 +300,8 @@ bool PythonByteArray::Check(PyObject *py_obj) {
 }
 
 void PythonByteArray::Reset(PyRefType type, PyObject *py_obj) {
-  // Grab the desired reference type so that if we end up rejecting
-  // `py_obj` it still gets decremented if necessary.
+  // Grab the desired reference type so that if we end up rejecting `py_obj` it
+  // still gets decremented if necessary.
   PythonObject result(type, py_obj);
 
   if (!PythonByteArray::Check(py_obj)) {
@@ -313,8 +310,7 @@ void PythonByteArray::Reset(PyRefType type, PyObject *py_obj) {
   }
 
   // Calling PythonObject::Reset(const PythonObject&) will lead to stack
-  // overflow since it calls
-  // back into the virtual implementation.
+  // overflow since it calls back into the virtual implementation.
   PythonObject::Reset(PyRefType::Borrowed, result.get());
 }
 
@@ -378,8 +374,8 @@ bool PythonString::Check(PyObject *py_obj) {
 }
 
 void PythonString::Reset(PyRefType type, PyObject *py_obj) {
-  // Grab the desired reference type so that if we end up rejecting
-  // `py_obj` it still gets decremented if necessary.
+  // Grab the desired reference type so that if we end up rejecting `py_obj` it
+  // still gets decremented if necessary.
   PythonObject result(type, py_obj);
 
   if (!PythonString::Check(py_obj)) {
@@ -394,8 +390,7 @@ void PythonString::Reset(PyRefType type, PyObject *py_obj) {
     result.Reset(PyRefType::Owned, PyUnicode_AsUTF8String(result.get()));
 #endif
   // Calling PythonObject::Reset(const PythonObject&) will lead to stack
-  // overflow since it calls
-  // back into the virtual implementation.
+  // overflow since it calls back into the virtual implementation.
   PythonObject::Reset(PyRefType::Borrowed, result.get());
 }
 
@@ -466,8 +461,8 @@ bool PythonInteger::Check(PyObject *py_obj) {
     return false;
 
 #if PY_MAJOR_VERSION >= 3
-  // Python 3 does not have PyInt_Check.  There is only one type of
-  // integral value, long.
+  // Python 3 does not have PyInt_Check.  There is only one type of integral
+  // value, long.
   return PyLong_Check(py_obj);
 #else
   return PyLong_Check(py_obj) || PyInt_Check(py_obj);
@@ -475,8 +470,8 @@ bool PythonInteger::Check(PyObject *py_obj) {
 }
 
 void PythonInteger::Reset(PyRefType type, PyObject *py_obj) {
-  // Grab the desired reference type so that if we end up rejecting
-  // `py_obj` it still gets decremented if necessary.
+  // Grab the desired reference type so that if we end up rejecting `py_obj` it
+  // still gets decremented if necessary.
   PythonObject result(type, py_obj);
 
   if (!PythonInteger::Check(py_obj)) {
@@ -485,13 +480,13 @@ void PythonInteger::Reset(PyRefType type, PyObject *py_obj) {
   }
 
 #if PY_MAJOR_VERSION < 3
-  // Always store this as a PyLong, which makes interoperability between
-  // Python 2.x and Python 3.x easier.  This is only necessary in 2.x,
-  // since 3.x doesn't even have a PyInt.
+  // Always store this as a PyLong, which makes interoperability between Python
+  // 2.x and Python 3.x easier.  This is only necessary in 2.x, since 3.x
+  // doesn't even have a PyInt.
   if (PyInt_Check(py_obj)) {
     // Since we converted the original object to a different type, the new
-    // object is an owned object regardless of the ownership semantics requested
-    // by the user.
+    // object is an owned object regardless of the ownership semantics
+    // requested by the user.
     result.Reset(PyRefType::Owned, PyLong_FromLongLong(PyInt_AsLong(py_obj)));
   }
 #endif
@@ -500,8 +495,7 @@ void PythonInteger::Reset(PyRefType type, PyObject *py_obj) {
          "Couldn't get a PyLong from this PyObject");
 
   // Calling PythonObject::Reset(const PythonObject&) will lead to stack
-  // overflow since it calls
-  // back into the virtual implementation.
+  // overflow since it calls back into the virtual implementation.
   PythonObject::Reset(PyRefType::Borrowed, result.get());
 }
 
@@ -513,10 +507,9 @@ int64_t PythonInteger::GetInteger() const {
     int overflow = 0;
     int64_t result = PyLong_AsLongLongAndOverflow(m_py_obj, &overflow);
     if (overflow != 0) {
-      // We got an integer that overflows, like 18446744072853913392L
-      // we can't use PyLong_AsLongLong() as it will return
-      // 0xffffffffffffffff. If we use the unsigned long long
-      // it will work as expected.
+      // We got an integer that overflows, like 18446744072853913392L we can't
+      // use PyLong_AsLongLong() as it will return 0xffffffffffffffff. If we
+      // use the unsigned long long it will work as expected.
       const uint64_t uval = PyLong_AsUnsignedLongLong(m_py_obj);
       result = static_cast<int64_t>(uval);
     }
@@ -563,8 +556,8 @@ bool PythonList::Check(PyObject *py_obj) {
 }
 
 void PythonList::Reset(PyRefType type, PyObject *py_obj) {
-  // Grab the desired reference type so that if we end up rejecting
-  // `py_obj` it still gets decremented if necessary.
+  // Grab the desired reference type so that if we end up rejecting `py_obj` it
+  // still gets decremented if necessary.
   PythonObject result(type, py_obj);
 
   if (!PythonList::Check(py_obj)) {
@@ -573,8 +566,7 @@ void PythonList::Reset(PyRefType type, PyObject *py_obj) {
   }
 
   // Calling PythonObject::Reset(const PythonObject&) will lead to stack
-  // overflow since it calls
-  // back into the virtual implementation.
+  // overflow since it calls back into the virtual implementation.
   PythonObject::Reset(PyRefType::Borrowed, result.get());
 }
 
@@ -668,8 +660,8 @@ bool PythonTuple::Check(PyObject *py_obj) {
 }
 
 void PythonTuple::Reset(PyRefType type, PyObject *py_obj) {
-  // Grab the desired reference type so that if we end up rejecting
-  // `py_obj` it still gets decremented if necessary.
+  // Grab the desired reference type so that if we end up rejecting `py_obj` it
+  // still gets decremented if necessary.
   PythonObject result(type, py_obj);
 
   if (!PythonTuple::Check(py_obj)) {
@@ -678,8 +670,7 @@ void PythonTuple::Reset(PyRefType type, PyObject *py_obj) {
   }
 
   // Calling PythonObject::Reset(const PythonObject&) will lead to stack
-  // overflow since it calls
-  // back into the virtual implementation.
+  // overflow since it calls back into the virtual implementation.
   PythonObject::Reset(PyRefType::Borrowed, result.get());
 }
 
@@ -741,8 +732,8 @@ bool PythonDictionary::Check(PyObject *py_obj) {
 }
 
 void PythonDictionary::Reset(PyRefType type, PyObject *py_obj) {
-  // Grab the desired reference type so that if we end up rejecting
-  // `py_obj` it still gets decremented if necessary.
+  // Grab the desired reference type so that if we end up rejecting `py_obj` it
+  // still gets decremented if necessary.
   PythonObject result(type, py_obj);
 
   if (!PythonDictionary::Check(py_obj)) {
@@ -751,8 +742,7 @@ void PythonDictionary::Reset(PyRefType type, PyObject *py_obj) {
   }
 
   // Calling PythonObject::Reset(const PythonObject&) will lead to stack
-  // overflow since it calls
-  // back into the virtual implementation.
+  // overflow since it calls back into the virtual implementation.
   PythonObject::Reset(PyRefType::Borrowed, result.get());
 }
 
@@ -833,8 +823,8 @@ bool PythonModule::Check(PyObject *py_obj) {
 }
 
 void PythonModule::Reset(PyRefType type, PyObject *py_obj) {
-  // Grab the desired reference type so that if we end up rejecting
-  // `py_obj` it still gets decremented if necessary.
+  // Grab the desired reference type so that if we end up rejecting `py_obj` it
+  // still gets decremented if necessary.
   PythonObject result(type, py_obj);
 
   if (!PythonModule::Check(py_obj)) {
@@ -843,8 +833,7 @@ void PythonModule::Reset(PyRefType type, PyObject *py_obj) {
   }
 
   // Calling PythonObject::Reset(const PythonObject&) will lead to stack
-  // overflow since it calls
-  // back into the virtual implementation.
+  // overflow since it calls back into the virtual implementation.
   PythonObject::Reset(PyRefType::Borrowed, result.get());
 }
 
@@ -871,8 +860,8 @@ bool PythonCallable::Check(PyObject *py_obj) {
 }
 
 void PythonCallable::Reset(PyRefType type, PyObject *py_obj) {
-  // Grab the desired reference type so that if we end up rejecting
-  // `py_obj` it still gets decremented if necessary.
+  // Grab the desired reference type so that if we end up rejecting `py_obj` it
+  // still gets decremented if necessary.
   PythonObject result(type, py_obj);
 
   if (!PythonCallable::Check(py_obj)) {
@@ -881,8 +870,7 @@ void PythonCallable::Reset(PyRefType type, PyObject *py_obj) {
   }
 
   // Calling PythonObject::Reset(const PythonObject&) will lead to stack
-  // overflow since it calls
-  // back into the virtual implementation.
+  // overflow since it calls back into the virtual implementation.
   PythonObject::Reset(PyRefType::Borrowed, result.get());
 }
 
@@ -963,9 +951,9 @@ bool PythonFile::Check(PyObject *py_obj) {
 #else
   // In Python 3, there is no `PyFile_Check`, and in fact PyFile is not even a
   // first-class object type anymore.  `PyFile_FromFd` is just a thin wrapper
-  // over `io.open()`, which returns some object derived from `io.IOBase`.
-  // As a result, the only way to detect a file in Python 3 is to check whether
-  // it inherits from `io.IOBase`.  Since it is possible for non-files to also
+  // over `io.open()`, which returns some object derived from `io.IOBase`. As a
+  // result, the only way to detect a file in Python 3 is to check whether it
+  // inherits from `io.IOBase`.  Since it is possible for non-files to also
   // inherit from `io.IOBase`, we additionally verify that it has the `fileno`
   // attribute, which should guarantee that it is backed by the file system.
   PythonObject io_module(PyRefType::Owned, PyImport_ImportModule("io"));
@@ -985,8 +973,8 @@ bool PythonFile::Check(PyObject *py_obj) {
 }
 
 void PythonFile::Reset(PyRefType type, PyObject *py_obj) {
-  // Grab the desired reference type so that if we end up rejecting
-  // `py_obj` it still gets decremented if necessary.
+  // Grab the desired reference type so that if we end up rejecting `py_obj` it
+  // still gets decremented if necessary.
   PythonObject result(type, py_obj);
 
   if (!PythonFile::Check(py_obj)) {

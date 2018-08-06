@@ -43,10 +43,10 @@ class Scalar;
 namespace process_darwin {
 
 /// @class NativeProcessDarwin
-/// @brief Manages communication with the inferior (debugee) process.
+/// Manages communication with the inferior (debugee) process.
 ///
-/// Upon construction, this class prepares and launches an inferior
-/// process for debugging.
+/// Upon construction, this class prepares and launches an inferior process
+/// for debugging.
 ///
 /// Changes in the inferior process state are broadcasted.
 class NativeProcessDarwin : public NativeProcessProtocol {
@@ -205,10 +205,10 @@ private:
   // -----------------------------------------------------------------
   /// Finalize the launch.
   ///
-  /// This method associates the NativeProcessDarwin instance with
-  /// the host process that was just launched.  It peforms actions
-  /// like attaching a listener to the inferior exception port,
-  /// ptracing the process, and the like.
+  /// This method associates the NativeProcessDarwin instance with the host
+  /// process that was just launched.  It peforms actions like attaching a
+  /// listener to the inferior exception port, ptracing the process, and the
+  /// like.
   ///
   /// @param[in] launch_flavor
   ///     The launch flavor that was used to launch the process.
@@ -263,8 +263,8 @@ private:
 
   task_t TaskPortForProcessID(Status &error, bool force = false) const;
 
-  /// Attaches to an existing process.  Forms the
-  /// implementation of Process::DoAttach.
+  /// Attaches to an existing process.  Forms the implementation of
+  /// Process::DoAttach.
   void AttachToInferior(MainLoop &mainloop, lldb::pid_t pid, Status &error);
 
   ::pid_t Attach(lldb::pid_t pid, Status &error);
@@ -323,8 +323,8 @@ private:
   Status GetSignalInfo(lldb::tid_t tid, void *siginfo);
 
   /// Writes the raw event message code (vis-a-vis PTRACE_GETEVENTMSG)
-  /// corresponding to the given thread ID to the memory pointed to
-  /// by @p message.
+  /// corresponding to the given thread ID to the memory pointed to by @p
+  /// message.
   Status GetEventMessage(lldb::tid_t tid, unsigned long *message);
 
   void NotifyThreadDeath(lldb::tid_t tid);

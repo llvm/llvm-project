@@ -85,8 +85,7 @@ static StructuredData::ObjectSP ParseJSONObject(JSONParser &json_parser) {
 
 static StructuredData::ObjectSP ParseJSONArray(JSONParser &json_parser) {
   // The "JSONParser::Token::ObjectStart" token should have already been
-  // consumed
-  // by the time this function is called
+  // consumed by the time this function is called
   auto array_up = llvm::make_unique<StructuredData::Array>();
 
   std::string value;
@@ -162,8 +161,8 @@ StructuredData::Object::GetObjectForDotSeparatedPath(llvm::StringRef path) {
     std::string key = match.first.str();
     ObjectSP value = this->GetAsDictionary()->GetValueForKey(key);
     if (value.get()) {
-      // Do we have additional words to descend?  If not, return the
-      // value we're at right now.
+      // Do we have additional words to descend?  If not, return the value
+      // we're at right now.
       if (match.second.empty()) {
         return value;
       } else {

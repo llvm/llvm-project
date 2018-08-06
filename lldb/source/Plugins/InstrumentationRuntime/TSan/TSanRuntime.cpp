@@ -288,9 +288,8 @@ GetRenumberedThreadIds(ProcessSP process_sp, ValueObjectSP data,
         } else {
           // This isn't a live thread anymore.  Ask process to assign a new
           // Index ID (or return an old one if we've already seen this
-          // thread_os_id).
-          // It will also make sure that no new threads are assigned this Index
-          // ID.
+          // thread_os_id). It will also make sure that no new threads are
+          // assigned this Index ID.
           lldb_user_id = process_sp->AssignIndexIDToThread(thread_os_id);
         }
 
@@ -593,7 +592,7 @@ static void GetSymbolDeclarationFromAddress(ProcessSP process_sp, addr_t addr,
     return;
 
   VariableList var_list;
-  module->FindGlobalVariables(sym_name, nullptr, true, 1U, var_list);
+  module->FindGlobalVariables(sym_name, nullptr, 1U, var_list);
   if (var_list.GetSize() < 1)
     return;
 

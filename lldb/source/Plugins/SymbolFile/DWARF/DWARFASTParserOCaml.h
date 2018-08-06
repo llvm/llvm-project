@@ -4,7 +4,6 @@
 #define SymbolFileDWARF_DWARFASTParserOCaml_h_
 
 #include "DWARFASTParser.h"
-#include "DWARFCompileUnit.h"
 #include "DWARFDIE.h"
 #include "DWARFDebugInfo.h"
 #include "DWARFDefines.h"

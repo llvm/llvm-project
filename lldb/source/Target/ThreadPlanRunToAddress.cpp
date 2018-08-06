@@ -133,8 +133,7 @@ void ThreadPlanRunToAddress::GetDescription(Stream *s,
 }
 
 bool ThreadPlanRunToAddress::ValidatePlan(Stream *error) {
-  // If we couldn't set the breakpoint for some reason, then this won't
-  // work.
+  // If we couldn't set the breakpoint for some reason, then this won't work.
   bool all_bps_good = true;
   size_t num_break_ids = m_break_ids.size();
 

@@ -143,7 +143,7 @@ public:
     GuessLanguage() const;
 
     bool IsSwiftThunk() const;
-         
+
    %feature("docstring", "
     /// Return true if this frame represents an inlined function.
     ///

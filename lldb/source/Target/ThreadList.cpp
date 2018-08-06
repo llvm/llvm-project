@@ -40,8 +40,8 @@ ThreadList::ThreadList(const ThreadList &rhs)
 
 const ThreadList &ThreadList::operator=(const ThreadList &rhs) {
   if (this != &rhs) {
-    // Lock both mutexes to make sure neither side changes anyone on us
-    // while the assignment occurs
+    // Lock both mutexes to make sure neither side changes anyone on us while
+    // the assignment occurs
     std::lock_guard<std::recursive_mutex> guard(GetMutex());
     std::lock_guard<std::recursive_mutex> rhs_guard(rhs.GetMutex());
 
@@ -54,9 +54,8 @@ const ThreadList &ThreadList::operator=(const ThreadList &rhs) {
 }
 
 ThreadList::~ThreadList() {
-  // Clear the thread list. Clear will take the mutex lock
-  // which will ensure that if anyone is using the list
-  // they won't get it removed while using it.
+  // Clear the thread list. Clear will take the mutex lock which will ensure
+  // that if anyone is using the list they won't get it removed while using it.
   Clear();
 }
 
@@ -231,13 +230,13 @@ bool ThreadList::ShouldStop(Event *event_ptr) {
 
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
 
-  // The ShouldStop method of the threads can do a whole lot of work,
-  // figuring out whether the thread plan conditions are met.  So we don't want
-  // to keep the ThreadList locked the whole time we are doing this.
+  // The ShouldStop method of the threads can do a whole lot of work, figuring
+  // out whether the thread plan conditions are met.  So we don't want to keep
+  // the ThreadList locked the whole time we are doing this.
   // FIXME: It is possible that running code could cause new threads
-  // to be created.  If that happens, we will miss asking them whether
-  // they should stop.  This is not a big deal since we haven't had
-  // a chance to hang any interesting operations on those threads yet.
+  // to be created.  If that happens, we will miss asking them whether they
+  // should stop.  This is not a big deal since we haven't had a chance to hang
+  // any interesting operations on those threads yet.
 
   collection threads_copy;
   {
@@ -247,25 +246,21 @@ bool ThreadList::ShouldStop(Event *event_ptr) {
     m_process->UpdateThreadListIfNeeded();
     for (lldb::ThreadSP thread_sp : m_threads) {
       // This is an optimization...  If we didn't let a thread run in between
-      // the previous stop and this
-      // one, we shouldn't have to consult it for ShouldStop.  So just leave it
-      // off the list we are going to
-      // inspect.
-      // On Linux, if a thread-specific conditional breakpoint was hit, it won't
-      // necessarily be the thread
-      // that hit the breakpoint itself that evaluates the conditional
-      // expression, so the thread that hit
-      // the breakpoint could still be asked to stop, even though it hasn't been
-      // allowed to run since the
-      // previous stop.
+      // the previous stop and this one, we shouldn't have to consult it for
+      // ShouldStop.  So just leave it off the list we are going to inspect. On
+      // Linux, if a thread-specific conditional breakpoint was hit, it won't
+      // necessarily be the thread that hit the breakpoint itself that
+      // evaluates the conditional expression, so the thread that hit the
+      // breakpoint could still be asked to stop, even though it hasn't been
+      // allowed to run since the previous stop.
       if (thread_sp->GetTemporaryResumeState() != eStateSuspended ||
           thread_sp->IsStillAtLastBreakpointHit())
         threads_copy.push_back(thread_sp);
     }
 
     // It is possible the threads we were allowing to run all exited and then
-    // maybe the user interrupted
-    // or something, then fall back on looking at all threads:
+    // maybe the user interrupted or something, then fall back on looking at
+    // all threads:
 
     if (threads_copy.size() == 0)
       threads_copy = m_threads;
@@ -296,12 +291,11 @@ bool ThreadList::ShouldStop(Event *event_ptr) {
   }
 
   // Now we run through all the threads and get their stop info's.  We want to
-  // make sure to do this first before
-  // we start running the ShouldStop, because one thread's ShouldStop could
-  // destroy information (like deleting a
-  // thread specific breakpoint another thread had stopped at) which could lead
-  // us to compute the StopInfo incorrectly.
-  // We don't need to use it here, we just want to make sure it gets computed.
+  // make sure to do this first before we start running the ShouldStop, because
+  // one thread's ShouldStop could destroy information (like deleting a thread
+  // specific breakpoint another thread had stopped at) which could lead us to
+  // compute the StopInfo incorrectly. We don't need to use it here, we just
+  // want to make sure it gets computed.
 
   for (pos = threads_copy.begin(); pos != end; ++pos) {
     ThreadSP thread_sp(*pos);
@@ -312,27 +306,24 @@ bool ThreadList::ShouldStop(Event *event_ptr) {
     ThreadSP thread_sp(*pos);
 
     // We should never get a stop for which no thread had a stop reason, but
-    // sometimes we do see this -
-    // for instance when we first connect to a remote stub.  In that case we
-    // should stop, since we can't figure out
-    // the right thing to do and stopping gives the user control over what to do
-    // in this instance.
+    // sometimes we do see this - for instance when we first connect to a
+    // remote stub.  In that case we should stop, since we can't figure out the
+    // right thing to do and stopping gives the user control over what to do in
+    // this instance.
     //
     // Note, this causes a problem when you have a thread specific breakpoint,
-    // and a bunch of threads hit the breakpoint,
-    // but not the thread which we are waiting for.  All the threads that are
-    // not "supposed" to hit the breakpoint
-    // are marked as having no stop reason, which is right, they should not show
-    // a stop reason.  But that triggers this
-    // code and causes us to stop seemingly for no reason.
+    // and a bunch of threads hit the breakpoint, but not the thread which we
+    // are waiting for.  All the threads that are not "supposed" to hit the
+    // breakpoint are marked as having no stop reason, which is right, they
+    // should not show a stop reason.  But that triggers this code and causes
+    // us to stop seemingly for no reason.
     //
     // Since the only way we ever saw this error was on first attach, I'm only
-    // going to trigger set did_anybody_stop_for_a_reason
-    // to true unless this is the first stop.
+    // going to trigger set did_anybody_stop_for_a_reason to true unless this
+    // is the first stop.
     //
     // If this becomes a problem, we'll have to have another StopReason like
-    // "StopInfoHidden" which will look invalid
-    // everywhere but at this check.
+    // "StopInfoHidden" which will look invalid everywhere but at this check.
 
     if (thread_sp->GetProcess()->GetStopID() > 1)
       did_anybody_stop_for_a_reason = true;
@@ -379,8 +370,8 @@ Vote ThreadList::ShouldReportStop(Event *event_ptr) {
     log->Printf("ThreadList::%s %" PRIu64 " threads", __FUNCTION__,
                 (uint64_t)m_threads.size());
 
-  // Run through the threads and ask whether we should report this event.
-  // For stopping, a YES vote wins over everything.  A NO vote wins over NO
+  // Run through the threads and ask whether we should report this event. For
+  // stopping, a YES vote wins over everything.  A NO vote wins over NO
   // opinion.
   for (pos = m_threads.begin(); pos != end; ++pos) {
     ThreadSP thread_sp(*pos);
@@ -427,8 +418,8 @@ Vote ThreadList::ShouldReportRun(Event *event_ptr) {
   m_process->UpdateThreadListIfNeeded();
   collection::iterator pos, end = m_threads.end();
 
-  // Run through the threads and ask whether we should report this event.
-  // The rule is NO vote wins over everything, a YES vote wins over no opinion.
+  // Run through the threads and ask whether we should report this event. The
+  // rule is NO vote wins over everything, a YES vote wins over no opinion.
 
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
 
@@ -485,8 +476,8 @@ void ThreadList::RefreshStateAfterStop() {
 }
 
 void ThreadList::DiscardThreadPlans() {
-  // You don't need to update the thread list here, because only threads
-  // that you currently know about have any thread plans.
+  // You don't need to update the thread list here, because only threads that
+  // you currently know about have any thread plans.
   std::lock_guard<std::recursive_mutex> guard(GetMutex());
 
   collection::iterator pos, end = m_threads.end();
@@ -495,9 +486,9 @@ void ThreadList::DiscardThreadPlans() {
 }
 
 bool ThreadList::WillResume() {
-  // Run through the threads and perform their momentary actions.
-  // But we only do this for threads that are running, user suspended
-  // threads stay where they are.
+  // Run through the threads and perform their momentary actions. But we only
+  // do this for threads that are running, user suspended threads stay where
+  // they are.
 
   std::lock_guard<std::recursive_mutex> guard(GetMutex());
   m_process->UpdateThreadListIfNeeded();
@@ -505,14 +496,11 @@ bool ThreadList::WillResume() {
   collection::iterator pos, end = m_threads.end();
 
   // See if any thread wants to run stopping others.  If it does, then we won't
-  // setup the other threads for resume, since they aren't going to get a chance
-  // to run.  This is necessary because the SetupForResume might add
-  // "StopOthers"
-  // plans which would then get to be part of the who-gets-to-run negotiation,
-  // but
-  // they're coming in after the fact, and the threads that are already set up
-  // should
-  // take priority.
+  // setup the other threads for resume, since they aren't going to get a
+  // chance to run.  This is necessary because the SetupForResume might add
+  // "StopOthers" plans which would then get to be part of the who-gets-to-run
+  // negotiation, but they're coming in after the fact, and the threads that
+  // are already set up should take priority.
 
   bool wants_solo_run = false;
 
@@ -544,11 +532,9 @@ bool ThreadList::WillResume() {
   }
 
   // Give all the threads that are likely to run a last chance to set up their
-  // state before we
-  // negotiate who is actually going to get a chance to run...
+  // state before we negotiate who is actually going to get a chance to run...
   // Don't set to resume suspended threads, and if any thread wanted to stop
-  // others, only
-  // call setup on the threads that request StopOthers...
+  // others, only call setup on the threads that request StopOthers...
 
   for (pos = m_threads.begin(); pos != end; ++pos) {
     if ((*pos)->GetResumeState() != eStateSuspended &&
@@ -650,13 +636,12 @@ void ThreadList::DidStop() {
   std::lock_guard<std::recursive_mutex> guard(GetMutex());
   collection::iterator pos, end = m_threads.end();
   for (pos = m_threads.begin(); pos != end; ++pos) {
-    // Notify threads that the process just stopped.
-    // Note, this currently assumes that all threads in the list
-    // stop when the process stops.  In the future we will want to support
-    // a debugging model where some threads continue to run while others
-    // are stopped.  We either need to handle that somehow here or
-    // create a special thread list containing only threads which will
-    // stop in the code that calls this method (currently
+    // Notify threads that the process just stopped. Note, this currently
+    // assumes that all threads in the list stop when the process stops.  In
+    // the future we will want to support a debugging model where some threads
+    // continue to run while others are stopped.  We either need to handle that
+    // somehow here or create a special thread list containing only threads
+    // which will stop in the code that calls this method (currently
     // Process::SetPrivateState).
     ThreadSP thread_sp(*pos);
     if (StateIsRunningState(thread_sp->GetState()))
@@ -717,8 +702,8 @@ void ThreadList::NotifySelectedThreadChanged(lldb::tid_t tid) {
 
 void ThreadList::Update(ThreadList &rhs) {
   if (this != &rhs) {
-    // Lock both mutexes to make sure neither side changes anyone on us
-    // while the assignment occurs
+    // Lock both mutexes to make sure neither side changes anyone on us while
+    // the assignment occurs
     std::lock_guard<std::recursive_mutex> guard(GetMutex());
 
     m_process = rhs.m_process;
@@ -726,13 +711,12 @@ void ThreadList::Update(ThreadList &rhs) {
     m_threads.swap(rhs.m_threads);
     m_selected_tid = rhs.m_selected_tid;
 
-    // Now we look for threads that we are done with and
-    // make sure to clear them up as much as possible so
-    // anyone with a shared pointer will still have a reference,
-    // but the thread won't be of much use. Using std::weak_ptr
-    // for all backward references (such as a thread to a process)
-    // will eventually solve this issue for us, but for now, we
-    // need to work around the issue
+    // Now we look for threads that we are done with and make sure to clear
+    // them up as much as possible so anyone with a shared pointer will still
+    // have a reference, but the thread won't be of much use. Using
+    // std::weak_ptr for all backward references (such as a thread to a
+    // process) will eventually solve this issue for us, but for now, we need
+    // to work around the issue
     collection::iterator rhs_pos, rhs_end = rhs.m_threads.end();
     for (rhs_pos = rhs.m_threads.begin(); rhs_pos != rhs_end; ++rhs_pos) {
       const lldb::tid_t tid = (*rhs_pos)->GetID();

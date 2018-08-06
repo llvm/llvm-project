@@ -60,8 +60,7 @@ void Block::Dump(Stream *s, addr_t base_addr, int32_t depth,
   if (depth < 0) {
     Block *parent = GetParent();
     if (parent) {
-      // We have a depth that is less than zero, print our parent blocks
-      // first
+      // We have a depth that is less than zero, print our parent blocks first
       parent->Dump(s, base_addr, depth + 1, show_context);
     }
   }

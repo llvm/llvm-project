@@ -36,24 +36,9 @@ class TestExclusivitySuppression(TestBase):
         """Test that exclusively owned values can still be accessed"""
 
         self.build()
+        (target, process, thread, bp1) = lldbutil.run_to_source_breakpoint(self,
+                'Breakpoint 1', self.main_source_spec)
 
-        target = self.create_target()
-
-        # Set the breakpoints
-        bp1 = target.BreakpointCreateBySourceRegex('Breakpoint 1',
-                                                   self.main_source_spec)
-        self.assertTrue(bp1.GetNumLocations() > 0, VALID_BREAKPOINT)
-
-        # Launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(None, None, os.getcwd())
-
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        # Frame #0 should be at our breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint(process, bp1)
-
-        self.assertTrue(len(threads) == 1)
-        thread = threads[0]
         frame = thread.frames[0]
         self.assertTrue(frame, "Frame 0 is valid.")
 
@@ -71,27 +56,13 @@ class TestExclusivitySuppression(TestBase):
     def test_exclusivity_suppression_for_concurrent_expressions(self):
         """Test that exclusivity suppression works with concurrent expressions"""
         self.build()
+        (target, process, thread, bp1) = lldbutil.run_to_source_breakpoint(self,
+                'Breakpoint 1', self.main_source_spec)
 
-        target = self.create_target()
-
-        bp1 = target.BreakpointCreateBySourceRegex('Breakpoint 1',
-                                                   self.main_source_spec)
-        self.assertTrue(bp1.GetNumLocations() > 0, VALID_BREAKPOINT)
-
+        # We hit Breakpoint 1, then evaluate 'get()' to hit breakpoint 2.
         bp2 = target.BreakpointCreateBySourceRegex('Breakpoint 2',
                                                    self.main_source_spec)
         self.assertTrue(bp2.GetNumLocations() > 0, VALID_BREAKPOINT)
-
-        # Launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(None, None, os.getcwd())
-
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        # Break at Breakpoint 1, then evaluate 'get()' to hit breakpoint 2.
-        threads = lldbutil.get_threads_stopped_at_breakpoint(process, bp1)
-
-        self.assertTrue(len(threads) == 1)
-        thread = threads[0]
 
         opts = lldb.SBExpressionOptions()
         opts.SetIgnoreBreakpoints(False)
@@ -125,15 +96,6 @@ class TestExclusivitySuppression(TestBase):
             expression, expected_result, answer)
         self.assertTrue(answer == expected_result, report_str)
 
-    def create_target(self):
-        exe_name = "main"
-        exe = self.getBuildArtifact(exe_name)
-
-        # Create the target
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        return target
 
 if __name__ == '__main__':
     import atexit

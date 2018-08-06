@@ -382,8 +382,8 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetChildAtIndex(
         return lldb::ValueObjectSP();
       }
     } else {
-      // because of the way our debug info is made, we need to read item 0 first
-      // so that we can cache information used to generate other elements
+      // because of the way our debug info is made, we need to read item 0
+      // first so that we can cache information used to generate other elements
       if (m_skip_size == UINT32_MAX)
         GetChildAtIndex(0);
       if (m_skip_size == UINT32_MAX) {

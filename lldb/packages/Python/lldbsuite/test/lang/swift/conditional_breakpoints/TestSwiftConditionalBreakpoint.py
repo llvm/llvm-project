@@ -34,7 +34,8 @@ class TestSwiftConditionalBreakpoint(TestBase):
 
     def break_commands(self):
         """Tests that we can set a conditional breakpoint in Swift code"""
-        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
+        exe_name = self.getBuildArtifact("a.out")
+        self.runCmd("file %s"%(exe_name), CURRENT_EXECUTABLE_SET)
         bkno = lldbutil.run_break_set_by_source_regexp(
             self, "Set breakpoint here")
         self.runCmd('breakpoint modify ' + str(bkno) + ' -c x==y')

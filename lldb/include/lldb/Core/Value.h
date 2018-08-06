@@ -48,8 +48,8 @@ namespace lldb_private {
 
 class Value {
 public:
-  // Values Less than zero are an error, greater than or equal to zero
-  // returns what the Scalar result is.
+  // Values Less than zero are an error, greater than or equal to zero returns
+  // what the Scalar result is.
   enum ValueType {
     // m_value contains...
     // ============================
@@ -107,8 +107,7 @@ public:
               byte_order != lldb::eByteOrderInvalid);
     }
     // Casts a vector, if valid, to an unsigned int of matching or largest
-    // supported size.
-    // Truncates to the beginning of the vector if required.
+    // supported size. Truncates to the beginning of the vector if required.
     // Returns a default constructed Scalar if the Vector data is internally
     // inconsistent.
     llvm::APInt rhs = llvm::APInt(BITWIDTH_INT128, NUM_OF_WORDS_INT128,

@@ -18,6 +18,7 @@ add_lldb_library(lldbCore
   Debugger.cpp
   Disassembler.cpp
   DumpDataExtractor.cpp
+  DumpRegisterValue.cpp
   DynamicLoader.cpp
   EmulateInstruction.cpp
   Event.cpp
@@ -72,7 +73,6 @@ add_lldb_library(lldbCore
     lldbPluginProcessUtility
     lldbPluginCPlusPlusLanguage
     lldbPluginObjCLanguage
-    lldbPluginObjectFileJIT
     ${LLDB_CURSES_LIBS}
 
   LINK_COMPONENTS

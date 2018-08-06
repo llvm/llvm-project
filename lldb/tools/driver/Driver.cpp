@@ -41,9 +41,10 @@
 #include "lldb/API/SBStringList.h"
 #include "lldb/API/SBTarget.h"
 #include "lldb/API/SBThread.h"
-#if defined(_WIN32)
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ConvertUTF.h"
-#endif
+#include "llvm/Support/PrettyStackTrace.h"
+#include "llvm/Support/Signals.h"
 #include <thread>
 
 #if !defined(__APPLE__)
@@ -71,7 +72,7 @@ typedef struct {
   uint32_t usage_mask; // Used to mark options that can be used together.  If (1
                        // << n & usage_mask) != 0
                        // then this option belongs to option set n.
-  bool required;
+  bool required;       // This option is required (in the current usage level)
   const char *long_option; // Full name for this option.
   int short_option;        // Single character for this option.
   int option_has_arg; // no_argument, required_argument or optional_argument
@@ -85,7 +86,6 @@ typedef struct {
 
 #define LLDB_3_TO_5 LLDB_OPT_SET_3 | LLDB_OPT_SET_4 | LLDB_OPT_SET_5
 #define LLDB_4_TO_5 LLDB_OPT_SET_4 | LLDB_OPT_SET_5
-#define LLDB_3_AND_7 LLDB_OPT_SET_3 | LLDB_OPT_SET_7
 
 static OptionDefinition g_options[] = {
     {LLDB_OPT_SET_1, true, "help", 'h', no_argument, 0, eArgTypeNone,
@@ -871,7 +871,6 @@ SBError Driver::ParseArgs(int argc, const char *argv[], FILE *out_fh,
   } else {
     // Skip any options we consumed with getopt_long_only
     argc -= optind;
-    // argv += optind; // Commented out to keep static analyzer happy
 
     if (argc > 0)
       ::fprintf(out_fh,
@@ -968,7 +967,7 @@ std::string EscapeString(std::string arg) {
   return '"' + arg + '"';
 }
 
-void Driver::MainLoop() {
+int Driver::MainLoop() {
   if (::tcgetattr(STDIN_FILENO, &g_old_stdin_termios) == 0) {
     g_old_stdin_termios_is_valid = true;
     atexit(reset_stdin_termios);
@@ -1006,6 +1005,10 @@ void Driver::MainLoop() {
     result.PutError(m_debugger.GetErrorFileHandle());
     result.PutOutput(m_debugger.GetOutputFileHandle());
   }
+
+  // We allow the user to specify an exit code when calling quit which we will
+  // return when exiting.
+  m_debugger.GetCommandInterpreter().AllowExitCodeOnQuit(true);
 
   // Now we handle options we got from the command line
   SBStream commands_stream;
@@ -1165,7 +1168,9 @@ void Driver::MainLoop() {
   reset_stdin_termios();
   fclose(stdin);
 
+  int exit_code = sb_interpreter.GetQuitStatus();
   SBDebugger::Destroy(m_debugger);
+  return exit_code;
 }
 
 void Driver::ResizeWindow(unsigned short col) {
@@ -1231,6 +1236,10 @@ main(int argc, char const *argv[])
   const char **argv = argvPointers.data();
 #endif
 
+  llvm::StringRef ToolName = argv[0];
+  llvm::sys::PrintStackTraceOnErrorSignal(ToolName);
+  llvm::PrettyStackTraceProgram X(argc, argv);
+
   SBDebugger::Initialize();
 
   SBHostOS::ThreadCreated("<lldb.driver.main-thread>");
@@ -1243,6 +1252,7 @@ main(int argc, char const *argv[])
   signal(SIGCONT, sigcont_handler);
 #endif
 
+  int exit_code = 0;
   // Create a scope for driver so that the driver object will destroy itself
   // before SBDebugger::Terminate() is called.
   {
@@ -1251,14 +1261,15 @@ main(int argc, char const *argv[])
     bool exiting = false;
     SBError error(driver.ParseArgs(argc, argv, stdout, exiting));
     if (error.Fail()) {
+      exit_code = 1;
       const char *error_cstr = error.GetCString();
       if (error_cstr)
         ::fprintf(stderr, "error: %s\n", error_cstr);
     } else if (!exiting) {
-      driver.MainLoop();
+      exit_code = driver.MainLoop();
     }
   }
 
   SBDebugger::Terminate();
-  return 0;
+  return exit_code;
 }

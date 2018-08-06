@@ -21,14 +21,15 @@ using namespace lldb;
 using namespace lldb_private;
 
 namespace {
-void CreateEnvironmentBuffer(const Args &env, std::vector<char> &buffer) {
-  if (env.GetArgumentCount() == 0)
+void CreateEnvironmentBuffer(const Environment &env,
+                             std::vector<char> &buffer) {
+  if (env.size() == 0)
     return;
 
   // Environment buffer is a null terminated list of null terminated strings
-  for (auto &entry : env.entries()) {
+  for (const auto &KV : env) {
     std::wstring warg;
-    if (llvm::ConvertUTF8toWide(entry.ref, warg)) {
+    if (llvm::ConvertUTF8toWide(Environment::compose(KV), warg)) {
       buffer.insert(buffer.end(), (char *)warg.c_str(),
                     (char *)(warg.c_str() + warg.size() + 1));
     }
@@ -75,9 +76,8 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
   if (launch_info.GetFlags().Test(eLaunchFlagDebug))
     flags |= DEBUG_ONLY_THIS_PROCESS;
 
-  auto &env = const_cast<Args &>(launch_info.GetEnvironmentEntries());
   LPVOID env_block = nullptr;
-  ::CreateEnvironmentBuffer(env, environment);
+  ::CreateEnvironmentBuffer(launch_info.GetEnvironment(), environment);
   if (!environment.empty())
     env_block = environment.data();
 
@@ -96,6 +96,12 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
       wexecutable.c_str(), &wcommandLine[0], NULL, NULL, TRUE, flags, env_block,
       wworkingDirectory.size() == 0 ? NULL : wworkingDirectory.c_str(),
       &startupinfo, &pi);
+
+  if (!result) {
+    // Call GetLastError before we make any other system calls.
+    error.SetError(::GetLastError(), eErrorTypeWin32);
+  }
+
   if (result) {
     // Do not call CloseHandle on pi.hProcess, since we want to pass that back
     // through the HostProcess.
@@ -110,7 +116,8 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
     ::CloseHandle(stderr_handle);
 
   if (!result)
-    error.SetError(::GetLastError(), eErrorTypeWin32);
+    return HostProcess();
+
   return HostProcess(pi.hProcess);
 }
 

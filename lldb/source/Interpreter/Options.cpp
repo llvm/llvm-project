@@ -115,13 +115,12 @@ bool Options::VerifyOptions(CommandReturnObject &result) {
   int num_levels = GetRequiredOptions().size();
   if (num_levels) {
     for (int i = 0; i < num_levels && !options_are_valid; ++i) {
-      // This is the correct set of options if:  1). m_seen_options contains all
-      // of m_required_options[i]
-      // (i.e. all the required options at this level are a subset of
-      // m_seen_options); AND
-      // 2). { m_seen_options - m_required_options[i] is a subset of
-      // m_options_options[i] (i.e. all the rest of
-      // m_seen_options are in the set of optional options at this level.
+      // This is the correct set of options if:  1). m_seen_options contains
+      // all of m_required_options[i] (i.e. all the required options at this
+      // level are a subset of m_seen_options); AND 2). { m_seen_options -
+      // m_required_options[i] is a subset of m_options_options[i] (i.e. all
+      // the rest of m_seen_options are in the set of optional options at this
+      // level.
 
       // Check to see if all of m_required_options[i] are a subset of
       // m_seen_options
@@ -152,8 +151,7 @@ bool Options::VerifyOptions(CommandReturnObject &result) {
 }
 
 // This is called in the Options constructor, though we could call it lazily if
-// that ends up being
-// a performance problem.
+// that ends up being a performance problem.
 
 void Options::BuildValidOptionSets() {
   // Check to see if we already did this.
@@ -265,13 +263,11 @@ Option *Options::GetLongOptions() {
 }
 
 // This function takes INDENT, which tells how many spaces to output at the
-// front of each line; SPACES, which is
-// a string containing 80 spaces; and TEXT, which is the text that is to be
-// output.   It outputs the text, on
+// front of each line; SPACES, which is a string containing 80 spaces; and
+// TEXT, which is the text that is to be output.   It outputs the text, on
 // multiple lines if necessary, to RESULT, with INDENT spaces at the front of
-// each line.  It breaks lines on spaces,
-// tabs or newlines, shortening the line if necessary to not break in the middle
-// of a word.  It assumes that each
+// each line.  It breaks lines on spaces, tabs or newlines, shortening the line
+// if necessary to not break in the middle of a word.  It assumes that each
 // output line should contain a maximum of OUTPUT_MAX_COLUMNS characters.
 
 void Options::OutputFormattedUsageText(Stream &strm,
@@ -421,8 +417,8 @@ void Options::GenerateOptionUsage(Stream &strm, CommandObject *cmd,
 
   strm.IndentMore(2);
 
-  // First, show each usage level set of options, e.g. <cmd>
-  // [options-for-level-0]
+  // First, show each usage level set of options, e.g. <cmd> [options-for-
+  // level-0]
   //                                                   <cmd>
   //                                                   [options-for-level-1]
   //                                                   etc.
@@ -449,9 +445,9 @@ void Options::GenerateOptionUsage(Stream &strm, CommandObject *cmd,
       if (cmd)
         cmd->GetFormattedCommandArguments(args_str, opt_set_mask);
 
-      // First go through and print all options that take no arguments as
-      // a single string. If a command has "-a" "-b" and "-c", this will show
-      // up as [-abc]
+      // First go through and print all options that take no arguments as a
+      // single string. If a command has "-a" "-b" and "-c", this will show up
+      // as [-abc]
 
       std::set<int> options;
       std::set<int>::const_iterator options_pos, options_end;
@@ -554,24 +550,23 @@ void Options::GenerateOptionUsage(Stream &strm, CommandObject *cmd,
     //   help text
 
     // This variable is used to keep track of which options' info we've printed
-    // out, because some options can be in
-    // more than one usage level, but we only want to print the long form of its
-    // information once.
+    // out, because some options can be in more than one usage level, but we
+    // only want to print the long form of its information once.
 
     std::multimap<int, uint32_t> options_seen;
     strm.IndentMore(5);
 
     // Put the unique command options in a vector & sort it, so we can output
-    // them alphabetically (by short_option)
-    // when writing out detailed help for each option.
+    // them alphabetically (by short_option) when writing out detailed help for
+    // each option.
 
     i = 0;
     for (auto &def : opt_defs)
       options_seen.insert(std::make_pair(def.short_option, i++));
 
-    // Go through the unique'd and alphabetically sorted vector of options, find
-    // the table entry for each option
-    // and write out the detailed help information for that option.
+    // Go through the unique'd and alphabetically sorted vector of options,
+    // find the table entry for each option and write out the detailed help
+    // information for that option.
 
     bool first_option_printed = false;
 
@@ -627,14 +622,10 @@ void Options::GenerateOptionUsage(Stream &strm, CommandObject *cmd,
 }
 
 // This function is called when we have been given a potentially incomplete set
-// of
-// options, such as when an alias has been defined (more options might be added
-// at
-// at the time the alias is invoked).  We need to verify that the options in the
-// set
-// m_seen_options are all part of a set that may be used together, but
-// m_seen_options
-// may be missing some of the "required" options.
+// of options, such as when an alias has been defined (more options might be
+// added at at the time the alias is invoked).  We need to verify that the
+// options in the set m_seen_options are all part of a set that may be used
+// together, but m_seen_options may be missing some of the "required" options.
 
 bool Options::VerifyPartialOptions(CommandReturnObject &result) {
   bool options_are_valid = false;
@@ -643,10 +634,8 @@ bool Options::VerifyPartialOptions(CommandReturnObject &result) {
   if (num_levels) {
     for (int i = 0; i < num_levels && !options_are_valid; ++i) {
       // In this case we are treating all options as optional rather than
-      // required.
-      // Therefore a set of options is correct if m_seen_options is a subset of
-      // the
-      // union of m_required_options and m_optional_options.
+      // required. Therefore a set of options is correct if m_seen_options is a
+      // subset of the union of m_required_options and m_optional_options.
       OptionSet union_set;
       OptionsSetUnion(GetRequiredOptions()[i], GetOptionalOptions()[i],
                       union_set);
@@ -658,28 +647,26 @@ bool Options::VerifyPartialOptions(CommandReturnObject &result) {
   return options_are_valid;
 }
 
-bool Options::HandleOptionCompletion(
-    Args &input, OptionElementVector &opt_element_vector, int cursor_index,
-    int char_pos, int match_start_point, int max_return_elements,
-    CommandInterpreter &interpreter, bool &word_complete,
-    lldb_private::StringList &matches) {
-  word_complete = true;
+bool Options::HandleOptionCompletion(CompletionRequest &request,
+                                     OptionElementVector &opt_element_vector,
+                                     CommandInterpreter &interpreter) {
+  request.SetWordComplete(true);
 
   // For now we just scan the completions to see if the cursor position is in
   // an option or its argument.  Otherwise we'll call HandleArgumentCompletion.
-  // In the future we can use completion to validate options as well if we want.
+  // In the future we can use completion to validate options as well if we
+  // want.
 
   auto opt_defs = GetDefinitions();
 
-  std::string cur_opt_std_str(input.GetArgumentAtIndex(cursor_index));
-  cur_opt_std_str.erase(char_pos);
+  std::string cur_opt_std_str = request.GetCursorArgumentPrefix().str();
   const char *cur_opt_str = cur_opt_std_str.c_str();
 
   for (size_t i = 0; i < opt_element_vector.size(); i++) {
     int opt_pos = opt_element_vector[i].opt_pos;
     int opt_arg_pos = opt_element_vector[i].opt_arg_pos;
     int opt_defs_index = opt_element_vector[i].opt_defs_index;
-    if (opt_pos == cursor_index) {
+    if (opt_pos == request.GetCursorIndex()) {
       // We're completing the option itself.
 
       if (opt_defs_index == OptionArgElement::eBareDash) {
@@ -693,7 +680,7 @@ bool Options::HandleOptionCompletion(
           if (!def.short_option)
             continue;
           opt_str[1] = def.short_option;
-          matches.AppendString(opt_str);
+          request.GetMatches().AppendString(opt_str);
         }
 
         return true;
@@ -705,25 +692,23 @@ bool Options::HandleOptionCompletion(
 
           full_name.erase(full_name.begin() + 2, full_name.end());
           full_name.append(def.long_option);
-          matches.AppendString(full_name.c_str());
+          request.GetMatches().AppendString(full_name.c_str());
         }
         return true;
       } else if (opt_defs_index != OptionArgElement::eUnrecognizedArg) {
-        // We recognized it, if it an incomplete long option, complete it anyway
-        // (getopt_long_only is
-        // happy with shortest unique string, but it's still a nice thing to
-        // do.)  Otherwise return
-        // The string so the upper level code will know this is a full match and
-        // add the " ".
+        // We recognized it, if it an incomplete long option, complete it
+        // anyway (getopt_long_only is happy with shortest unique string, but
+        // it's still a nice thing to do.)  Otherwise return The string so the
+        // upper level code will know this is a full match and add the " ".
         if (cur_opt_str && strlen(cur_opt_str) > 2 && cur_opt_str[0] == '-' &&
             cur_opt_str[1] == '-' &&
             strcmp(opt_defs[opt_defs_index].long_option, cur_opt_str) != 0) {
           std::string full_name("--");
           full_name.append(opt_defs[opt_defs_index].long_option);
-          matches.AppendString(full_name.c_str());
+          request.GetMatches().AppendString(full_name.c_str());
           return true;
         } else {
-          matches.AppendString(input.GetArgumentAtIndex(cursor_index));
+          request.GetMatches().AppendString(request.GetCursorArgument());
           return true;
         }
       } else {
@@ -731,9 +716,8 @@ bool Options::HandleOptionCompletion(
         // Check to see if they are writing a long option & complete it.
         // I think we will only get in here if the long option table has two
         // elements
-        // that are not unique up to this point.  getopt_long_only does shortest
-        // unique match
-        // for long options already.
+        // that are not unique up to this point.  getopt_long_only does
+        // shortest unique match for long options already.
 
         if (cur_opt_str && strlen(cur_opt_str) > 2 && cur_opt_str[0] == '-' &&
             cur_opt_str[1] == '-') {
@@ -747,29 +731,30 @@ bool Options::HandleOptionCompletion(
               // The options definitions table has duplicates because of the
               // way the grouping information is stored, so only add once.
               bool duplicate = false;
-              for (size_t k = 0; k < matches.GetSize(); k++) {
-                if (matches.GetStringAtIndex(k) == full_name) {
+              for (size_t k = 0; k < request.GetMatches().GetSize(); k++) {
+                if (request.GetMatches().GetStringAtIndex(k) == full_name) {
                   duplicate = true;
                   break;
                 }
               }
               if (!duplicate)
-                matches.AppendString(full_name.c_str());
+                request.GetMatches().AppendString(full_name.c_str());
             }
           }
         }
         return true;
       }
 
-    } else if (opt_arg_pos == cursor_index) {
-      // Okay the cursor is on the completion of an argument.
-      // See if it has a completion, otherwise return no matches.
+    } else if (opt_arg_pos == request.GetCursorIndex()) {
+      // Okay the cursor is on the completion of an argument. See if it has a
+      // completion, otherwise return no matches.
 
+      CompletionRequest subrequest = request;
+      subrequest.SetCursorCharPosition(subrequest.GetCursorArgument().size());
       if (opt_defs_index != -1) {
-        HandleOptionArgumentCompletion(
-            input, cursor_index, strlen(input.GetArgumentAtIndex(cursor_index)),
-            opt_element_vector, i, match_start_point, max_return_elements,
-            interpreter, word_complete, matches);
+        HandleOptionArgumentCompletion(subrequest, opt_element_vector, i,
+                                       interpreter);
+        request.SetWordComplete(subrequest.GetWordComplete());
         return true;
       } else {
         // No completion callback means no completions...
@@ -785,11 +770,8 @@ bool Options::HandleOptionCompletion(
 }
 
 bool Options::HandleOptionArgumentCompletion(
-    Args &input, int cursor_index, int char_pos,
-    OptionElementVector &opt_element_vector, int opt_element_index,
-    int match_start_point, int max_return_elements,
-    CommandInterpreter &interpreter, bool &word_complete,
-    lldb_private::StringList &matches) {
+    CompletionRequest &request, OptionElementVector &opt_element_vector,
+    int opt_element_index, CommandInterpreter &interpreter) {
   auto opt_defs = GetDefinitions();
   std::unique_ptr<SearchFilter> filter_ap;
 
@@ -801,22 +783,23 @@ bool Options::HandleOptionArgumentCompletion(
   OptionEnumValueElement *enum_values = opt_defs[opt_defs_index].enum_values;
   if (enum_values != nullptr) {
     bool return_value = false;
-    std::string match_string(input.GetArgumentAtIndex(opt_arg_pos),
-                             input.GetArgumentAtIndex(opt_arg_pos) + char_pos);
+    std::string match_string(
+        request.GetParsedLine().GetArgumentAtIndex(opt_arg_pos),
+        request.GetParsedLine().GetArgumentAtIndex(opt_arg_pos) +
+            request.GetCursorCharPosition());
     for (int i = 0; enum_values[i].string_value != nullptr; i++) {
       if (strstr(enum_values[i].string_value, match_string.c_str()) ==
           enum_values[i].string_value) {
-        matches.AppendString(enum_values[i].string_value);
+        request.GetMatches().AppendString(enum_values[i].string_value);
         return_value = true;
       }
     }
     return return_value;
   }
 
-  // If this is a source file or symbol type completion, and  there is a
-  // -shlib option somewhere in the supplied arguments, then make a search
-  // filter
-  // for that shared library.
+  // If this is a source file or symbol type completion, and  there is a -shlib
+  // option somewhere in the supplied arguments, then make a search filter for
+  // that shared library.
   // FIXME: Do we want to also have an "OptionType" so we don't have to match
   // string names?
 
@@ -852,7 +835,8 @@ bool Options::HandleOptionArgumentCompletion(
       // restrict it to that shared library.
       if (cur_opt_name && strcmp(cur_opt_name, "shlib") == 0 &&
           cur_arg_pos != -1) {
-        const char *module_name = input.GetArgumentAtIndex(cur_arg_pos);
+        const char *module_name =
+            request.GetParsedLine().GetArgumentAtIndex(cur_arg_pos);
         if (module_name) {
           FileSpec module_spec(module_name, false);
           lldb::TargetSP target_sp =
@@ -867,9 +851,7 @@ bool Options::HandleOptionArgumentCompletion(
   }
 
   return CommandCompletions::InvokeCommonCompletionCallbacks(
-      interpreter, completion_mask, input.GetArgumentAtIndex(opt_arg_pos),
-      match_start_point, max_return_elements, filter_ap.get(), word_complete,
-      matches);
+      interpreter, completion_mask, request, filter_ap.get());
 }
 
 void OptionGroupOptions::Append(OptionGroup *group) {
@@ -908,8 +890,8 @@ void OptionGroupOptions::Finalize() {
 Status OptionGroupOptions::SetOptionValue(uint32_t option_idx,
                                           llvm::StringRef option_value,
                                           ExecutionContext *execution_context) {
-  // After calling OptionGroupOptions::Append(...), you must finalize the groups
-  // by calling OptionGroupOptions::Finlize()
+  // After calling OptionGroupOptions::Append(...), you must finalize the
+  // groups by calling OptionGroupOptions::Finlize()
   assert(m_did_finalize);
   Status error;
   if (option_idx < m_option_infos.size()) {
@@ -950,4 +932,526 @@ OptionGroupOptions::OptionParsingFinished(ExecutionContext *execution_context) {
     }
   }
   return error;
+}
+
+// OptionParser permutes the arguments while processing them, so we create a
+// temporary array holding to avoid modification of the input arguments. The
+// options themselves are never modified, but the API expects a char * anyway,
+// hence the const_cast.
+static std::vector<char *> GetArgvForParsing(const Args &args) {
+  std::vector<char *> result;
+  // OptionParser always skips the first argument as it is based on getopt().
+  result.push_back(const_cast<char *>("<FAKE-ARG0>"));
+  for (const Args::ArgEntry &entry : args)
+    result.push_back(const_cast<char *>(entry.c_str()));
+  return result;
+}
+
+// Given a permuted argument, find it's position in the original Args vector.
+static Args::const_iterator FindOriginalIter(const char *arg,
+                                             const Args &original) {
+  return llvm::find_if(
+      original, [arg](const Args::ArgEntry &D) { return D.c_str() == arg; });
+}
+
+// Given a permuted argument, find it's index in the original Args vector.
+static size_t FindOriginalIndex(const char *arg, const Args &original) {
+  return std::distance(original.begin(), FindOriginalIter(arg, original));
+}
+
+// Construct a new Args object, consisting of the entries from the original
+// arguments, but in the permuted order.
+static Args ReconstituteArgsAfterParsing(llvm::ArrayRef<char *> parsed,
+                                         const Args &original) {
+  Args result;
+  for (const char *arg : parsed) {
+    auto pos = FindOriginalIter(arg, original);
+    assert(pos != original.end());
+    result.AppendArgument(pos->ref, pos->quote);
+  }
+  return result;
+}
+
+static size_t FindArgumentIndexForOption(const Args &args,
+                                         const Option &long_option) {
+  std::string short_opt = llvm::formatv("-{0}", char(long_option.val)).str();
+  std::string long_opt =
+      llvm::formatv("--{0}", long_option.definition->long_option);
+  for (const auto &entry : llvm::enumerate(args)) {
+    if (entry.value().ref.startswith(short_opt) ||
+        entry.value().ref.startswith(long_opt))
+      return entry.index();
+  }
+
+  return size_t(-1);
+}
+
+llvm::Expected<Args> Options::ParseAlias(const Args &args,
+                                         OptionArgVector *option_arg_vector,
+                                         std::string &input_line) {
+  StreamString sstr;
+  int i;
+  Option *long_options = GetLongOptions();
+
+  if (long_options == nullptr) {
+    return llvm::make_error<llvm::StringError>("Invalid long options",
+                                               llvm::inconvertibleErrorCode());
+  }
+
+  for (i = 0; long_options[i].definition != nullptr; ++i) {
+    if (long_options[i].flag == nullptr) {
+      sstr << (char)long_options[i].val;
+      switch (long_options[i].definition->option_has_arg) {
+      default:
+      case OptionParser::eNoArgument:
+        break;
+      case OptionParser::eRequiredArgument:
+        sstr << ":";
+        break;
+      case OptionParser::eOptionalArgument:
+        sstr << "::";
+        break;
+      }
+    }
+  }
+
+  Args args_copy = args;
+  std::vector<char *> argv = GetArgvForParsing(args);
+
+  std::unique_lock<std::mutex> lock;
+  OptionParser::Prepare(lock);
+  int val;
+  while (1) {
+    int long_options_index = -1;
+    val = OptionParser::Parse(argv.size(), &*argv.begin(), sstr.GetString(),
+                              long_options, &long_options_index);
+
+    if (val == -1)
+      break;
+
+    if (val == '?') {
+      return llvm::make_error<llvm::StringError>(
+          "Unknown or ambiguous option", llvm::inconvertibleErrorCode());
+    }
+
+    if (val == 0)
+      continue;
+
+    OptionSeen(val);
+
+    // Look up the long option index
+    if (long_options_index == -1) {
+      for (int j = 0; long_options[j].definition || long_options[j].flag ||
+                      long_options[j].val;
+           ++j) {
+        if (long_options[j].val == val) {
+          long_options_index = j;
+          break;
+        }
+      }
+    }
+
+    // See if the option takes an argument, and see if one was supplied.
+    if (long_options_index == -1) {
+      return llvm::make_error<llvm::StringError>(
+          llvm::formatv("Invalid option with value '{0}'.", char(val)).str(),
+          llvm::inconvertibleErrorCode());
+    }
+
+    StreamString option_str;
+    option_str.Printf("-%c", val);
+    const OptionDefinition *def = long_options[long_options_index].definition;
+    int has_arg =
+        (def == nullptr) ? OptionParser::eNoArgument : def->option_has_arg;
+
+    const char *option_arg = nullptr;
+    switch (has_arg) {
+    case OptionParser::eRequiredArgument:
+      if (OptionParser::GetOptionArgument() == nullptr) {
+        return llvm::make_error<llvm::StringError>(
+            llvm::formatv("Option '{0}' is missing argument specifier.",
+                          option_str.GetString())
+                .str(),
+            llvm::inconvertibleErrorCode());
+      }
+      LLVM_FALLTHROUGH;
+    case OptionParser::eOptionalArgument:
+      option_arg = OptionParser::GetOptionArgument();
+      LLVM_FALLTHROUGH;
+    case OptionParser::eNoArgument:
+      break;
+    default:
+      return llvm::make_error<llvm::StringError>(
+          llvm::formatv("error with options table; invalid value in has_arg "
+                        "field for option '{0}'.",
+                        char(val))
+              .str(),
+          llvm::inconvertibleErrorCode());
+    }
+    if (!option_arg)
+      option_arg = "<no-argument>";
+    option_arg_vector->emplace_back(option_str.GetString(), has_arg,
+                                    option_arg);
+
+    // Find option in the argument list; also see if it was supposed to take an
+    // argument and if one was supplied.  Remove option (and argument, if
+    // given) from the argument list.  Also remove them from the
+    // raw_input_string, if one was passed in.
+    size_t idx =
+        FindArgumentIndexForOption(args_copy, long_options[long_options_index]);
+    if (idx == size_t(-1))
+      continue;
+
+    if (!input_line.empty()) {
+      auto tmp_arg = args_copy[idx].ref;
+      size_t pos = input_line.find(tmp_arg);
+      if (pos != std::string::npos)
+        input_line.erase(pos, tmp_arg.size());
+    }
+    args_copy.DeleteArgumentAtIndex(idx);
+    if ((long_options[long_options_index].definition->option_has_arg !=
+         OptionParser::eNoArgument) &&
+        (OptionParser::GetOptionArgument() != nullptr) &&
+        (idx < args_copy.GetArgumentCount()) &&
+        (args_copy[idx].ref == OptionParser::GetOptionArgument())) {
+      if (input_line.size() > 0) {
+        auto tmp_arg = args_copy[idx].ref;
+        size_t pos = input_line.find(tmp_arg);
+        if (pos != std::string::npos)
+          input_line.erase(pos, tmp_arg.size());
+      }
+      args_copy.DeleteArgumentAtIndex(idx);
+    }
+  }
+
+  return std::move(args_copy);
+}
+
+OptionElementVector Options::ParseForCompletion(const Args &args,
+                                                uint32_t cursor_index) {
+  OptionElementVector option_element_vector;
+  StreamString sstr;
+  Option *long_options = GetLongOptions();
+  option_element_vector.clear();
+
+  if (long_options == nullptr)
+    return option_element_vector;
+
+  // Leading : tells getopt to return a : for a missing option argument AND to
+  // suppress error messages.
+
+  sstr << ":";
+  for (int i = 0; long_options[i].definition != nullptr; ++i) {
+    if (long_options[i].flag == nullptr) {
+      sstr << (char)long_options[i].val;
+      switch (long_options[i].definition->option_has_arg) {
+      default:
+      case OptionParser::eNoArgument:
+        break;
+      case OptionParser::eRequiredArgument:
+        sstr << ":";
+        break;
+      case OptionParser::eOptionalArgument:
+        sstr << "::";
+        break;
+      }
+    }
+  }
+
+  std::unique_lock<std::mutex> lock;
+  OptionParser::Prepare(lock);
+  OptionParser::EnableError(false);
+
+  int val;
+  auto opt_defs = GetDefinitions();
+
+  std::vector<char *> dummy_vec = GetArgvForParsing(args);
+
+  // I stick an element on the end of the input, because if the last element
+  // is option that requires an argument, getopt_long_only will freak out.
+  dummy_vec.push_back(const_cast<char *>("<FAKE-VALUE>"));
+
+  bool failed_once = false;
+  uint32_t dash_dash_pos = -1;
+
+  while (1) {
+    bool missing_argument = false;
+    int long_options_index = -1;
+
+    val = OptionParser::Parse(dummy_vec.size(), &dummy_vec[0], sstr.GetString(),
+                              long_options, &long_options_index);
+
+    if (val == -1) {
+      // When we're completing a "--" which is the last option on line,
+      if (failed_once)
+        break;
+
+      failed_once = true;
+
+      // If this is a bare  "--" we mark it as such so we can complete it
+      // successfully later.  Handling the "--" is a little tricky, since that
+      // may mean end of options or arguments, or the user might want to
+      // complete options by long name.  I make this work by checking whether
+      // the cursor is in the "--" argument, and if so I assume we're
+      // completing the long option, otherwise I let it pass to
+      // OptionParser::Parse which will terminate the option parsing.  Note, in
+      // either case we continue parsing the line so we can figure out what
+      // other options were passed.  This will be useful when we come to
+      // restricting completions based on what other options we've seen on the
+      // line.
+
+      if (static_cast<size_t>(OptionParser::GetOptionIndex()) <
+              dummy_vec.size() &&
+          (strcmp(dummy_vec[OptionParser::GetOptionIndex() - 1], "--") == 0)) {
+        dash_dash_pos = FindOriginalIndex(
+            dummy_vec[OptionParser::GetOptionIndex() - 1], args);
+        if (dash_dash_pos == cursor_index) {
+          option_element_vector.push_back(
+              OptionArgElement(OptionArgElement::eBareDoubleDash, dash_dash_pos,
+                               OptionArgElement::eBareDoubleDash));
+          continue;
+        } else
+          break;
+      } else
+        break;
+    } else if (val == '?') {
+      option_element_vector.push_back(OptionArgElement(
+          OptionArgElement::eUnrecognizedArg,
+          FindOriginalIndex(dummy_vec[OptionParser::GetOptionIndex() - 1],
+                            args),
+          OptionArgElement::eUnrecognizedArg));
+      continue;
+    } else if (val == 0) {
+      continue;
+    } else if (val == ':') {
+      // This is a missing argument.
+      val = OptionParser::GetOptionErrorCause();
+      missing_argument = true;
+    }
+
+    OptionSeen(val);
+
+    // Look up the long option index
+    if (long_options_index == -1) {
+      for (int j = 0; long_options[j].definition || long_options[j].flag ||
+                      long_options[j].val;
+           ++j) {
+        if (long_options[j].val == val) {
+          long_options_index = j;
+          break;
+        }
+      }
+    }
+
+    // See if the option takes an argument, and see if one was supplied.
+    if (long_options_index >= 0) {
+      int opt_defs_index = -1;
+      for (size_t i = 0; i < opt_defs.size(); i++) {
+        if (opt_defs[i].short_option != val)
+          continue;
+        opt_defs_index = i;
+        break;
+      }
+
+      const OptionDefinition *def = long_options[long_options_index].definition;
+      int has_arg =
+          (def == nullptr) ? OptionParser::eNoArgument : def->option_has_arg;
+      switch (has_arg) {
+      case OptionParser::eNoArgument:
+        option_element_vector.push_back(OptionArgElement(
+            opt_defs_index,
+            FindOriginalIndex(dummy_vec[OptionParser::GetOptionIndex() - 1],
+                              args),
+            0));
+        break;
+      case OptionParser::eRequiredArgument:
+        if (OptionParser::GetOptionArgument() != nullptr) {
+          int arg_index;
+          if (missing_argument)
+            arg_index = -1;
+          else
+            arg_index = OptionParser::GetOptionIndex() - 2;
+
+          option_element_vector.push_back(OptionArgElement(
+              opt_defs_index,
+              FindOriginalIndex(dummy_vec[OptionParser::GetOptionIndex() - 2],
+                                args),
+              arg_index));
+        } else {
+          option_element_vector.push_back(OptionArgElement(
+              opt_defs_index,
+              FindOriginalIndex(dummy_vec[OptionParser::GetOptionIndex() - 1],
+                                args),
+              -1));
+        }
+        break;
+      case OptionParser::eOptionalArgument:
+        if (OptionParser::GetOptionArgument() != nullptr) {
+          option_element_vector.push_back(OptionArgElement(
+              opt_defs_index,
+              FindOriginalIndex(dummy_vec[OptionParser::GetOptionIndex() - 2],
+                                args),
+              FindOriginalIndex(dummy_vec[OptionParser::GetOptionIndex() - 1],
+                                args)));
+        } else {
+          option_element_vector.push_back(OptionArgElement(
+              opt_defs_index,
+              FindOriginalIndex(dummy_vec[OptionParser::GetOptionIndex() - 2],
+                                args),
+              FindOriginalIndex(dummy_vec[OptionParser::GetOptionIndex() - 1],
+                                args)));
+        }
+        break;
+      default:
+        // The options table is messed up.  Here we'll just continue
+        option_element_vector.push_back(OptionArgElement(
+            OptionArgElement::eUnrecognizedArg,
+            FindOriginalIndex(dummy_vec[OptionParser::GetOptionIndex() - 1],
+                              args),
+            OptionArgElement::eUnrecognizedArg));
+        break;
+      }
+    } else {
+      option_element_vector.push_back(OptionArgElement(
+          OptionArgElement::eUnrecognizedArg,
+          FindOriginalIndex(dummy_vec[OptionParser::GetOptionIndex() - 1],
+                            args),
+          OptionArgElement::eUnrecognizedArg));
+    }
+  }
+
+  // Finally we have to handle the case where the cursor index points at a
+  // single "-".  We want to mark that in the option_element_vector, but only
+  // if it is not after the "--".  But it turns out that OptionParser::Parse
+  // just ignores an isolated "-".  So we have to look it up by hand here.  We
+  // only care if it is AT the cursor position. Note, a single quoted dash is
+  // not the same as a single dash...
+
+  const Args::ArgEntry &cursor = args[cursor_index];
+  if ((static_cast<int32_t>(dash_dash_pos) == -1 ||
+       cursor_index < dash_dash_pos) &&
+      !cursor.IsQuoted() && cursor.ref == "-") {
+    option_element_vector.push_back(
+        OptionArgElement(OptionArgElement::eBareDash, cursor_index,
+                         OptionArgElement::eBareDash));
+  }
+  return option_element_vector;
+}
+
+llvm::Expected<Args> Options::Parse(const Args &args,
+                                    ExecutionContext *execution_context,
+                                    lldb::PlatformSP platform_sp,
+                                    bool require_validation) {
+  StreamString sstr;
+  Status error;
+  Option *long_options = GetLongOptions();
+  if (long_options == nullptr) {
+    return llvm::make_error<llvm::StringError>("Invalid long options.",
+                                               llvm::inconvertibleErrorCode());
+  }
+
+  for (int i = 0; long_options[i].definition != nullptr; ++i) {
+    if (long_options[i].flag == nullptr) {
+      if (isprint8(long_options[i].val)) {
+        sstr << (char)long_options[i].val;
+        switch (long_options[i].definition->option_has_arg) {
+        default:
+        case OptionParser::eNoArgument:
+          break;
+        case OptionParser::eRequiredArgument:
+          sstr << ':';
+          break;
+        case OptionParser::eOptionalArgument:
+          sstr << "::";
+          break;
+        }
+      }
+    }
+  }
+  std::vector<char *> argv = GetArgvForParsing(args);
+  std::unique_lock<std::mutex> lock;
+  OptionParser::Prepare(lock);
+  int val;
+  while (1) {
+    int long_options_index = -1;
+    val = OptionParser::Parse(argv.size(), &*argv.begin(), sstr.GetString(),
+                              long_options, &long_options_index);
+    if (val == -1)
+      break;
+
+    // Did we get an error?
+    if (val == '?') {
+      error.SetErrorStringWithFormat("unknown or ambiguous option");
+      break;
+    }
+    // The option auto-set itself
+    if (val == 0)
+      continue;
+
+    OptionSeen(val);
+
+    // Lookup the long option index
+    if (long_options_index == -1) {
+      for (int i = 0; long_options[i].definition || long_options[i].flag ||
+                      long_options[i].val;
+           ++i) {
+        if (long_options[i].val == val) {
+          long_options_index = i;
+          break;
+        }
+      }
+    }
+    // Call the callback with the option
+    if (long_options_index >= 0 &&
+        long_options[long_options_index].definition) {
+      const OptionDefinition *def = long_options[long_options_index].definition;
+
+      if (!platform_sp) {
+        // User did not pass in an explicit platform.  Try to grab from the
+        // execution context.
+        TargetSP target_sp =
+            execution_context ? execution_context->GetTargetSP() : TargetSP();
+        platform_sp = target_sp ? target_sp->GetPlatform() : PlatformSP();
+      }
+      OptionValidator *validator = def->validator;
+
+      if (!platform_sp && require_validation) {
+        // Caller requires validation but we cannot validate as we don't have
+        // the mandatory platform against which to validate.
+        return llvm::make_error<llvm::StringError>(
+            "cannot validate options: no platform available",
+            llvm::inconvertibleErrorCode());
+      }
+
+      bool validation_failed = false;
+      if (platform_sp) {
+        // Ensure we have an execution context, empty or not.
+        ExecutionContext dummy_context;
+        ExecutionContext *exe_ctx_p =
+            execution_context ? execution_context : &dummy_context;
+        if (validator && !validator->IsValid(*platform_sp, *exe_ctx_p)) {
+          validation_failed = true;
+          error.SetErrorStringWithFormat("Option \"%s\" invalid.  %s",
+                                         def->long_option,
+                                         def->validator->LongConditionString());
+        }
+      }
+
+      // As long as validation didn't fail, we set the option value.
+      if (!validation_failed)
+        error =
+            SetOptionValue(long_options_index,
+                           (def->option_has_arg == OptionParser::eNoArgument)
+                               ? nullptr
+                               : OptionParser::GetOptionArgument(),
+                           execution_context);
+    } else {
+      error.SetErrorStringWithFormat("invalid option with value '%i'", val);
+    }
+    if (error.Fail())
+      return error.ToError();
+  }
+
+  argv.erase(argv.begin(), argv.begin() + OptionParser::GetOptionIndex());
+  return ReconstituteArgsAfterParsing(argv, args);
 }

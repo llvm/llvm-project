@@ -52,11 +52,11 @@ namespace lldb_private {
 //----------------------------------------------------------------------
 /// @class RegularExpression RegularExpression.h
 /// "lldb/Utility/RegularExpression.h"
-/// @brief A C++ wrapper class for regex.
+/// A C++ wrapper class for regex.
 ///
-/// This regular expression class wraps the posix regex functions
-/// \c regcomp(), \c regerror(), \c regexec(), and \c regfree() from
-/// the header file in \c /usr/include/regex\.h.
+/// This regular expression class wraps the posix regex functions \c
+/// regcomp(), \c regerror(), \c regexec(), and \c regfree() from the header
+/// file in \c /usr/include/regex\.h.
 //----------------------------------------------------------------------
 class RegularExpression {
 public:
@@ -98,8 +98,8 @@ public:
   //------------------------------------------------------------------
   /// Default constructor.
   ///
-  /// The default constructor that initializes the object state such
-  /// that it contains no compiled regular expression.
+  /// The default constructor that initializes the object state such that it
+  /// contains no compiled regular expression.
   //------------------------------------------------------------------
   RegularExpression();
 
@@ -108,8 +108,8 @@ public:
   //------------------------------------------------------------------
   /// Destructor.
   ///
-  /// Any previously compiled regular expression contained in this
-  /// object will be freed.
+  /// Any previously compiled regular expression contained in this object will
+  /// be freed.
   //------------------------------------------------------------------
   ~RegularExpression();
 
@@ -120,12 +120,11 @@ public:
   //------------------------------------------------------------------
   /// Compile a regular expression.
   ///
-  /// Compile a regular expression using the supplied regular
-  /// expression text. The compiled regular expression lives
-  /// in this object so that it can be readily used for regular
-  /// expression matches. Execute() can be called after the regular
-  /// expression is compiled. Any previously compiled regular
-  /// expression contained in this object will be freed.
+  /// Compile a regular expression using the supplied regular expression text.
+  /// The compiled regular expression lives in this object so that it can be
+  /// readily used for regular expression matches. Execute() can be called
+  /// after the regular expression is compiled. Any previously compiled
+  /// regular expression contained in this object will be freed.
   ///
   /// @param[in] re
   ///     A NULL terminated C string that represents the regular
@@ -141,11 +140,11 @@ public:
   //------------------------------------------------------------------
   /// Executes a regular expression.
   ///
-  /// Execute a regular expression match using the compiled regular
-  /// expression that is already in this object against the match
-  /// string \a s. If any parens are used for regular expression
-  /// matches \a match_count should indicate the number of regmatch_t
-  /// values that are present in \a match_ptr.
+  /// Execute a regular expression match using the compiled regular expression
+  /// that is already in this object against the match string \a s. If any
+  /// parens are used for regular expression matches \a match_count should
+  /// indicate the number of regmatch_t values that are present in \a
+  /// match_ptr.
   ///
   /// @param[in] string
   ///     The string to match against the compile regular expression.
@@ -167,8 +166,8 @@ public:
   //------------------------------------------------------------------
   /// Free the compiled regular expression.
   ///
-  /// If this object contains a valid compiled regular expression,
-  /// this function will free any resources it was consuming.
+  /// If this object contains a valid compiled regular expression, this
+  /// function will free any resources it was consuming.
   //------------------------------------------------------------------
   void Free();
 

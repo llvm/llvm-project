@@ -14,7 +14,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include <vector>
 
-class DWARFCompileUnit;
+class DWARFUnit;
 class DWARFFormValue;
 
 class DWARFAttribute {
@@ -50,9 +50,9 @@ public:
   DWARFAttributes();
   ~DWARFAttributes();
 
-  void Append(const DWARFCompileUnit *cu, dw_offset_t attr_die_offset,
+  void Append(const DWARFUnit *cu, dw_offset_t attr_die_offset,
               dw_attr_t attr, dw_form_t form);
-  const DWARFCompileUnit *CompileUnitAtIndex(uint32_t i) const {
+  const DWARFUnit *CompileUnitAtIndex(uint32_t i) const {
     return m_infos[i].cu;
   }
   dw_offset_t DIEOffsetAtIndex(uint32_t i) const {
@@ -73,7 +73,7 @@ public:
 
 protected:
   struct AttributeValue {
-    const DWARFCompileUnit *cu; // Keep the compile unit with each attribute in
+    const DWARFUnit *cu;        // Keep the compile unit with each attribute in
                                 // case we have DW_FORM_ref_addr values
     dw_offset_t die_offset;
     DWARFAttribute attr;

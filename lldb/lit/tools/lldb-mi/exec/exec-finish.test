@@ -1,0 +1,33 @@
+# XFAIL: windows
+# -> llvm.org/pr24452
+#
+# RUN: %cc -o %t %p/inputs/main.c -g
+# RUN: %lldbmi %t < %s | FileCheck %s
+
+# Test lldb-mi -exec-finish command.
+
+# Check that we have a valid target created via '%lldbmi %t'.
+# CHECK: ^done
+
+-break-insert main
+# CHECK: ^done,bkpt={number="1"
+
+-break-insert dummyFunction
+# CHECK: ^done,bkpt={number="2"
+
+-exec-run
+# CHECK: ^running
+# CHECK: *stopped,reason="breakpoint-hit"
+
+-exec-finish --thread 0
+# Check that exec-finish can process the case of invalid thread ID.
+# CHECK: ^error,msg="Command 'exec-finish'. Thread ID invalid"
+
+-exec-finish --thread 1
+# CHECK: ^running
+# CHECK: *stopped,reason="breakpoint-hit"
+
+-exec-finish
+# Check exec-finish in a selected thread.
+# CHECK: ^running
+# CHECK: *stopped,reason="end-stepping-range"

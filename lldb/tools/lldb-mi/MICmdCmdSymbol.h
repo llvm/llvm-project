@@ -24,10 +24,10 @@
 #pragma once
 
 // Third party headers:
-#include "lldb/API/SBCommandReturnObject.h"
 
 // In-house headers:
 #include "MICmdBase.h"
+#include "MICmnMIValueList.h"
 
 //++
 //============================================================================
@@ -55,6 +55,6 @@ public:
 
   // Attributes:
 private:
-  lldb::SBCommandReturnObject m_lldbResult;
+  CMICmnMIValueList m_resultList;
   const CMIUtilString m_constStrArgNameFile;
 };

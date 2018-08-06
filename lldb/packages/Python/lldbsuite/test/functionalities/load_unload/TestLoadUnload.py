@@ -19,6 +19,8 @@ class LoadUnloadTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
+    NO_DEBUG_INFO_TESTCASE = True
+   
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -215,8 +217,6 @@ class LoadUnloadTestCase(TestBase):
     @expectedFailureAll(
         bugnumber="llvm.org/pr25805",
         hostoslist=["windows"],
-        compiler="gcc",
-        archs=["i386"],
         triple='.*-android')
     @skipIfFreeBSD  # llvm.org/pr14424 - missing FreeBSD Makefiles/testcase support
     @skipIfWindows  # Windows doesn't have dlopen and friends, dynamic libraries work differently
@@ -364,7 +364,6 @@ class LoadUnloadTestCase(TestBase):
     @expectedFailureAll(oslist=["linux"])
     @skipIfFreeBSD  # llvm.org/pr14424 - missing FreeBSD Makefiles/testcase support
     @skipIfWindows  # Windows doesn't have dlopen and friends, dynamic libraries work differently
-    @unittest2.expectedFailure("llvm.org/pr25806")
     def test_static_init_during_load(self):
         """Test that we can set breakpoints correctly in static initializers"""
         self.copy_shlibs_to_remote()
@@ -389,19 +388,19 @@ class LoadUnloadTestCase(TestBase):
         self.runCmd("continue")
         self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
                     substrs=['stopped',
-                             'a_init',
-                             'stop reason = breakpoint %d' % a_init_bp_num])
+                             'b_init',
+                             'stop reason = breakpoint %d' % b_init_bp_num])
         self.expect("thread backtrace",
-                    substrs=['a_init',
+                    substrs=['b_init',
                              'dlopen',
                              'main'])
 
         self.runCmd("continue")
         self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
                     substrs=['stopped',
-                             'b_init',
-                             'stop reason = breakpoint %d' % b_init_bp_num])
+                             'a_init',
+                             'stop reason = breakpoint %d' % a_init_bp_num])
         self.expect("thread backtrace",
-                    substrs=['b_init',
+                    substrs=['a_init',
                              'dlopen',
                              'main'])

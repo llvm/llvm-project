@@ -71,9 +71,9 @@ public:
 
   bool IsEnabled() const;
 
-  // This doesn't really enable/disable the watchpoint.  
-  // It is currently just for use in the Process plugin's
-  // {Enable,Disable}Watchpoint, which should be used instead.
+  // This doesn't really enable/disable the watchpoint.   It is currently just
+  // for use in the Process plugin's {Enable,Disable}Watchpoint, which should
+  // be used instead.
   
   void SetEnabled(bool enabled, bool notify = true);
 
@@ -197,10 +197,8 @@ private:
   uint32_t m_disabled_count; // Keep track of the count that the watchpoint is
                              // disabled while in ephemeral mode.
   // At the end of the ephemeral mode when the watchpoint is to be enabled
-  // again,
-  // we check the count, if it is more than 1, it means the user-supplied
-  // actions
-  // actually want the watchpoint to be disabled!
+  // again, we check the count, if it is more than 1, it means the user-
+  // supplied actions actually want the watchpoint to be disabled!
   uint32_t m_watch_read : 1, // 1 if we stop when the watched data is read from
       m_watch_write : 1,     // 1 if we stop when the watched data is written to
       m_watch_was_read : 1, // Set to 1 when watchpoint is hit for a read access

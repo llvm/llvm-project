@@ -161,12 +161,14 @@ class TestSwiftTypes(TestBase):
                 'Double',
                 'float64',
                 'value = 2.5'])
-        self.expect(
-            "frame variable --raw float80",
-            substrs=[
-                'Float80',
-                'float80',
-                'value = 1.0625'])
+        float80_unsupported_platforms = ["ios"]
+        if self.getPlatform() not in float80_unsupported_platforms:
+            self.expect(
+                "frame variable --raw float80",
+                substrs=[
+                    'Float80',
+                    'float80',
+                    'value = 1.0625'])
         self.expect(
             "frame variable --raw float",
             substrs=[

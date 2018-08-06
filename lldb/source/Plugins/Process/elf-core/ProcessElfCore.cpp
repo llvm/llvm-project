@@ -56,9 +56,9 @@ lldb::ProcessSP ProcessElfCore::CreateInstance(lldb::TargetSP target_sp,
                                                const FileSpec *crash_file) {
   lldb::ProcessSP process_sp;
   if (crash_file) {
-    // Read enough data for a ELF32 header or ELF64 header
-    // Note: Here we care about e_type field only, so it is safe
-    // to ignore possible presence of the header extension.
+    // Read enough data for a ELF32 header or ELF64 header Note: Here we care
+    // about e_type field only, so it is safe to ignore possible presence of
+    // the header extension.
     const size_t header_size = sizeof(llvm::ELF::Elf64_Ehdr);
 
     auto data_sp = DataBufferLLVM::CreateSliceFromPath(crash_file->GetPath(),
@@ -107,10 +107,10 @@ ProcessElfCore::ProcessElfCore(lldb::TargetSP target_sp,
 //----------------------------------------------------------------------
 ProcessElfCore::~ProcessElfCore() {
   Clear();
-  // We need to call finalize on the process before destroying ourselves
-  // to make sure all of the broadcaster cleanup goes as planned. If we
-  // destruct this class, then Process::~Process() might have problems
-  // trying to fully destroy the broadcaster.
+  // We need to call finalize on the process before destroying ourselves to
+  // make sure all of the broadcaster cleanup goes as planned. If we destruct
+  // this class, then Process::~Process() might have problems trying to fully
+  // destroy the broadcaster.
   Finalize();
 }
 
@@ -206,8 +206,8 @@ Status ProcessElfCore::DoLoadCore() {
     m_core_range_infos.Sort();
   }
 
-  // Even if the architecture is set in the target, we need to override
-  // it to match the core file which is always single arch.
+  // Even if the architecture is set in the target, we need to override it to
+  // match the core file which is always single arch.
   ArchSpec arch(m_core_module_sp->GetArchitecture());
 
   ArchSpec target_arch = GetTarget().GetArchitecture();
@@ -241,8 +241,7 @@ Status ProcessElfCore::DoLoadCore() {
   }
 
   // Core files are useless without the main executable. See if we can locate
-  // the main
-  // executable using data we found in the core file notes.
+  // the main executable using data we found in the core file notes.
   lldb::ModuleSP exe_module_sp = GetTarget().GetExecutableModule();
   if (!exe_module_sp) {
     // The first entry in the NT_FILE might be our executable
@@ -250,7 +249,8 @@ Status ProcessElfCore::DoLoadCore() {
       ModuleSpec exe_module_spec;
       exe_module_spec.GetArchitecture() = arch;
       exe_module_spec.GetFileSpec().SetFile(
-          m_nt_file_entries[0].path.GetCString(), false);
+          m_nt_file_entries[0].path.GetCString(), false,
+          FileSpec::Style::native);
       if (exe_module_spec.GetFileSpec()) {
         exe_module_sp = GetTarget().GetSharedModule(exe_module_spec);
         if (exe_module_sp)
@@ -297,8 +297,8 @@ bool ProcessElfCore::IsAlive() { return true; }
 //------------------------------------------------------------------
 size_t ProcessElfCore::ReadMemory(lldb::addr_t addr, void *buf, size_t size,
                                   Status &error) {
-  // Don't allow the caching that lldb_private::Process::ReadMemory does
-  // since in core files we have it all cached our our core file anyway.
+  // Don't allow the caching that lldb_private::Process::ReadMemory does since
+  // in core files we have it all cached our our core file anyway.
   return DoReadMemory(addr, buf, size, error);
 }
 
@@ -368,17 +368,18 @@ size_t ProcessElfCore::DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
   lldb::addr_t bytes_left =
       0; // Number of bytes available in the core file from the given address
 
-  // Don't proceed if core file doesn't contain the actual data for this address range.
+  // Don't proceed if core file doesn't contain the actual data for this
+  // address range.
   if (file_start == file_end)
     return 0;
 
-  // Figure out how many on-disk bytes remain in this segment
-  // starting at the given offset
+  // Figure out how many on-disk bytes remain in this segment starting at the
+  // given offset
   if (file_end > file_start + offset)
     bytes_left = file_end - (file_start + offset);
 
-  // Figure out how many bytes we need to zero-fill if we are
-  // reading more bytes than available in the on-disk segment
+  // Figure out how many bytes we need to zero-fill if we are reading more
+  // bytes than available in the on-disk segment
   if (bytes_to_read > bytes_left) {
     zero_fill_size = bytes_to_read - bytes_left;
     bytes_to_read = bytes_left;
@@ -551,8 +552,8 @@ llvm::Error ProcessElfCore::parseFreeBSDNotes(llvm::ArrayRef<CoreNote> notes) {
 llvm::Error ProcessElfCore::parseNetBSDNotes(llvm::ArrayRef<CoreNote> notes) {
   ThreadData thread_data;
   for (const auto &note : notes) {
-    // NetBSD per-thread information is stored in notes named
-    // "NetBSD-CORE@nnn" so match on the initial part of the string.
+    // NetBSD per-thread information is stored in notes named "NetBSD-CORE@nnn"
+    // so match on the initial part of the string.
     if (!llvm::StringRef(note.info.n_name).startswith("NetBSD-CORE"))
       continue;
 
@@ -585,8 +586,8 @@ llvm::Error ProcessElfCore::parseNetBSDNotes(llvm::ArrayRef<CoreNote> notes) {
 llvm::Error ProcessElfCore::parseOpenBSDNotes(llvm::ArrayRef<CoreNote> notes) {
   ThreadData thread_data;
   for (const auto &note : notes) {
-    // OpenBSD per-thread information is stored in notes named
-    // "OpenBSD@nnn" so match on the initial part of the string.
+    // OpenBSD per-thread information is stored in notes named "OpenBSD@nnn" so
+    // match on the initial part of the string.
     if (!llvm::StringRef(note.info.n_name).startswith("OpenBSD"))
       continue;
 
@@ -749,9 +750,9 @@ ArchSpec ProcessElfCore::GetArchitecture() {
   ArchSpec target_arch = GetTarget().GetArchitecture();
   arch.MergeFrom(target_arch);
 
-  // On MIPS there is no way to differentiate betwenn 32bit and 64bit core files
-  // and this information can't be merged in from the target arch so we fail
-  // back to unconditionally returning the target arch in this config.
+  // On MIPS there is no way to differentiate betwenn 32bit and 64bit core
+  // files and this information can't be merged in from the target arch so we
+  // fail back to unconditionally returning the target arch in this config.
   if (target_arch.IsMIPS()) {
     return target_arch;
   }

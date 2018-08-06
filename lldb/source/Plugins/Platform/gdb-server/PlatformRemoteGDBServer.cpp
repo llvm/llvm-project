@@ -118,9 +118,9 @@ Status PlatformRemoteGDBServer::ResolveExecutable(
         return error;
       exe_module_sp.reset();
     }
-    // No valid architecture was specified or the exact arch wasn't
-    // found so ask the platform for the architectures that we should be
-    // using (in the correct order) and see if we can find a match that way
+    // No valid architecture was specified or the exact arch wasn't found so
+    // ask the platform for the architectures that we should be using (in the
+    // correct order) and see if we can find a match that way
     StreamString arch_names;
     for (uint32_t idx = 0; GetSupportedArchitectureAtIndex(
              idx, resolved_module_spec.GetArchitecture());
@@ -236,14 +236,8 @@ size_t PlatformRemoteGDBServer::GetSoftwareBreakpointTrapOpcode(
 }
 
 bool PlatformRemoteGDBServer::GetRemoteOSVersion() {
-  uint32_t major, minor, update;
-  if (m_gdb_client.GetOSVersion(major, minor, update)) {
-    m_major_os_version = major;
-    m_minor_os_version = minor;
-    m_update_os_version = update;
-    return true;
-  }
-  return false;
+  m_os_version = m_gdb_client.GetOSVersion();
+  return !m_os_version.empty();
 }
 
 bool PlatformRemoteGDBServer::GetRemoteOSBuildString(std::string &s) {
@@ -277,8 +271,7 @@ bool PlatformRemoteGDBServer::SetRemoteWorkingDirectory(
     const FileSpec &working_dir) {
   if (IsConnected()) {
     // Clear the working directory it case it doesn't get set correctly. This
-    // will
-    // for use to re-read it
+    // will for use to re-read it
     Log *log = GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PLATFORM);
     if (log)
       log->Printf("PlatformRemoteGDBServer::SetRemoteWorkingDirectory('%s')",
@@ -423,16 +416,7 @@ Status PlatformRemoteGDBServer::LaunchProcess(ProcessLaunchInfo &launch_info) {
   }
 
   // Send the environment and the program + arguments after we connect
-  const char **envp =
-      launch_info.GetEnvironmentEntries().GetConstArgumentVector();
-
-  if (envp) {
-    const char *env_entry;
-    for (int i = 0; (env_entry = envp[i]); ++i) {
-      if (m_gdb_client.SendEnvironmentPacket(env_entry) != 0)
-        break;
-    }
-  }
+  m_gdb_client.SendEnvironment(launch_info.GetEnvironment());
 
   ArchSpec arch_spec = launch_info.GetArchitecture();
   const char *arch_triple = arch_spec.GetTriple().str().c_str();
@@ -549,9 +533,8 @@ bool PlatformRemoteGDBServer::LaunchGDBServer(lldb::pid_t &pid,
   bool launch_result = false;
   if (remote_triple.getVendor() == llvm::Triple::Apple &&
       remote_triple.getOS() == llvm::Triple::IOS) {
-    // When remote debugging to iOS, we use a USB mux that always talks
-    // to localhost, so we will need the remote debugserver to accept
-    // connections
+    // When remote debugging to iOS, we use a USB mux that always talks to
+    // localhost, so we will need the remote debugserver to accept connections
     // only from localhost, no matter what our current hostname is
     launch_result =
         m_gdb_client.LaunchGDBServer("127.0.0.1", pid, port, socket_name);
@@ -731,11 +714,9 @@ Status PlatformRemoteGDBServer::RunShellCommand(
                      // process to exit
     std::string
         *command_output, // Pass NULL if you don't want the command output
-    uint32_t
-        timeout_sec) // Timeout in seconds to wait for shell program to finish
-{
+    const Timeout<std::micro> &timeout) {
   return m_gdb_client.RunShellCommand(command, working_dir, status_ptr,
-                                      signo_ptr, command_output, timeout_sec);
+                                      signo_ptr, command_output, timeout);
 }
 
 void PlatformRemoteGDBServer::CalculateTrapHandlerSymbolNames() {
@@ -749,8 +730,8 @@ const UnixSignalsSP &PlatformRemoteGDBServer::GetRemoteUnixSignals() {
   if (m_remote_signals_sp)
     return m_remote_signals_sp;
 
-  // If packet not implemented or JSON failed to parse,
-  // we'll guess the signal set based on the remote architecture.
+  // If packet not implemented or JSON failed to parse, we'll guess the signal
+  // set based on the remote architecture.
   m_remote_signals_sp = UnixSignals::Create(GetRemoteSystemArchitecture());
 
   StringExtractorGDBRemote response;

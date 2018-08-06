@@ -22,6 +22,7 @@
 #include "lldb/Interpreter/CommandCompletions.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
+#include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/Options.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
@@ -91,8 +92,8 @@ class CommandObjectSourceInfo : public CommandObjectParsed {
         break;
 
       case 'a': {
-        address = Args::StringToAddress(execution_context, option_arg,
-                                        LLDB_INVALID_ADDRESS, &error);
+        address = OptionArgParser::ToAddress(execution_context, option_arg,
+                                             LLDB_INVALID_ADDRESS, &error);
       } break;
       case 's':
         modules.push_back(std::string(option_arg));
@@ -147,16 +148,13 @@ public:
   Options *GetOptions() override { return &m_options; }
 
 protected:
-  // Dump the line entries in each symbol context.
-  // Return the number of entries found.
-  // If module_list is set, only dump lines contained in one of the modules.
-  // If file_spec is set, only dump lines in the file.
-  // If the start_line option was specified, don't print lines less than
-  // start_line.
+  // Dump the line entries in each symbol context. Return the number of entries
+  // found. If module_list is set, only dump lines contained in one of the
+  // modules. If file_spec is set, only dump lines in the file. If the
+  // start_line option was specified, don't print lines less than start_line.
   // If the end_line option was specified, don't print lines greater than
-  // end_line.
-  // If the num_lines option was specified, dont print more than num_lines
-  // entries.
+  // end_line. If the num_lines option was specified, dont print more than
+  // num_lines entries.
   uint32_t DumpLinesInSymbolContexts(Stream &strm,
                                      const SymbolContextList &sc_list,
                                      const ModuleList &module_list,
@@ -221,14 +219,11 @@ protected:
   }
 
   // Dump the requested line entries for the file in the compilation unit.
-  // Return the number of entries found.
-  // If module_list is set, only dump lines contained in one of the modules.
-  // If the start_line option was specified, don't print lines less than
-  // start_line.
-  // If the end_line option was specified, don't print lines greater than
-  // end_line.
-  // If the num_lines option was specified, dont print more than num_lines
-  // entries.
+  // Return the number of entries found. If module_list is set, only dump lines
+  // contained in one of the modules. If the start_line option was specified,
+  // don't print lines less than start_line. If the end_line option was
+  // specified, don't print lines greater than end_line. If the num_lines
+  // option was specified, dont print more than num_lines entries.
   uint32_t DumpFileLinesInCompUnit(Stream &strm, Module *module,
                                    CompileUnit *cu, const FileSpec &file_spec) {
     uint32_t start_line = m_options.start_line;
@@ -258,8 +253,8 @@ protected:
         while (true) {
           LineEntry line_entry;
 
-          // Find the lowest index of a line entry with a line equal to
-          // or higher than 'line'.
+          // Find the lowest index of a line entry with a line equal to or
+          // higher than 'line'.
           uint32_t start_idx = 0;
           start_idx = cu->FindLineEntry(start_idx, line, &cu_file_spec,
                                         /*exact=*/false, &line_entry);
@@ -270,7 +265,8 @@ protected:
           if (end_line > 0 && line_entry.line > end_line)
             break;
 
-          // Loop through to find any other entries for this line, dumping each.
+          // Loop through to find any other entries for this line, dumping
+          // each.
           line = line_entry.line;
           do {
             num_matches++;
@@ -304,22 +300,18 @@ protected:
     return num_matches;
   }
 
-  // Dump the requested line entries for the file in the module.
-  // Return the number of entries found.
-  // If module_list is set, only dump lines contained in one of the modules.
-  // If the start_line option was specified, don't print lines less than
-  // start_line.
-  // If the end_line option was specified, don't print lines greater than
-  // end_line.
-  // If the num_lines option was specified, dont print more than num_lines
-  // entries.
+  // Dump the requested line entries for the file in the module. Return the
+  // number of entries found. If module_list is set, only dump lines contained
+  // in one of the modules. If the start_line option was specified, don't print
+  // lines less than start_line. If the end_line option was specified, don't
+  // print lines greater than end_line. If the num_lines option was specified,
+  // dont print more than num_lines entries.
   uint32_t DumpFileLinesInModule(Stream &strm, Module *module,
                                  const FileSpec &file_spec) {
     uint32_t num_matches = 0;
     if (module) {
       // Look through all the compilation units (CUs) in this module for ones
-      // that
-      // contain lines of code from this source file.
+      // that contain lines of code from this source file.
       for (size_t i = 0; i < module->GetNumCompileUnits(); i++) {
         // Look for a matching source file in this CU.
         CompUnitSP cu_sp(module->GetCompileUnitAtIndex(i));
@@ -333,10 +325,8 @@ protected:
   }
 
   // Given an address and a list of modules, append the symbol contexts of all
-  // line entries
-  // containing the address found in the modules and return the count of
-  // matches.  If none
-  // is found, return an error in 'error_strm'.
+  // line entries containing the address found in the modules and return the
+  // count of matches.  If none is found, return an error in 'error_strm'.
   size_t GetSymbolContextsForAddress(const ModuleList &module_list,
                                      lldb::addr_t addr,
                                      SymbolContextList &sc_list,
@@ -346,8 +336,8 @@ protected:
     assert(module_list.GetSize() > 0);
     Target *target = m_exe_ctx.GetTargetPtr();
     if (target->GetSectionLoadList().IsEmpty()) {
-      // The target isn't loaded yet, we need to lookup the file address in
-      // all modules.  Note: the module list option does not apply to addresses.
+      // The target isn't loaded yet, we need to lookup the file address in all
+      // modules.  Note: the module list option does not apply to addresses.
       const size_t num_modules = module_list.GetSize();
       for (size_t i = 0; i < num_modules; ++i) {
         ModuleSP module_sp(module_list.GetModuleAtIndex(i));
@@ -369,8 +359,8 @@ protected:
                           " not found in any modules.\n",
                           addr);
     } else {
-      // The target has some things loaded, resolve this address to a
-      // compile unit + file + line and display
+      // The target has some things loaded, resolve this address to a compile
+      // unit + file + line and display
       if (target->GetSectionLoadList().ResolveLoadAddress(addr, so_addr)) {
         ModuleSP module_sp(so_addr.GetModule());
         // Check to make sure this module is in our list.
@@ -408,8 +398,8 @@ protected:
     return num_matches;
   }
 
-  // Dump the line entries found in functions matching the name specified in the
-  // option.
+  // Dump the line entries found in functions matching the name specified in
+  // the option.
   bool DumpLinesInFunctions(CommandReturnObject &result) {
     SymbolContextList sc_list_funcs;
     ConstString name(m_options.symbol_name.c_str());
@@ -709,8 +699,8 @@ class CommandObjectSourceList : public CommandObjectParsed {
         break;
 
       case 'a': {
-        address = Args::StringToAddress(execution_context, option_arg,
-                                        LLDB_INVALID_ADDRESS, &error);
+        address = OptionArgParser::ToAddress(execution_context, option_arg,
+                                             LLDB_INVALID_ADDRESS, &error);
       } break;
       case 's':
         modules.push_back(std::string(option_arg));
@@ -773,9 +763,9 @@ public:
 
   const char *GetRepeatCommand(Args &current_command_args,
                                uint32_t index) override {
-    // This is kind of gross, but the command hasn't been parsed yet so we can't
-    // look at the option values for this invocation...  I have to scan the
-    // arguments directly.
+    // This is kind of gross, but the command hasn't been parsed yet so we
+    // can't look at the option values for this invocation...  I have to scan
+    // the arguments directly.
     auto iter =
         llvm::find_if(current_command_args, [](const Args::ArgEntry &e) {
           return e.ref == "-r" || e.ref == "--reverse";
@@ -863,11 +853,9 @@ protected:
       }
 
       // This is a little hacky, but the first line table entry for a function
-      // points to the "{" that
-      // starts the function block.  It would be nice to actually get the
-      // function
-      // declaration in there too.  So back up a bit, but not further than what
-      // you're going to display.
+      // points to the "{" that starts the function block.  It would be nice to
+      // actually get the function declaration in there too.  So back up a bit,
+      // but not further than what you're going to display.
       uint32_t extra_lines;
       if (m_options.num_lines >= 10)
         extra_lines = 5;
@@ -880,8 +868,7 @@ protected:
         line_no = start_line - extra_lines;
 
       // For fun, if the function is shorter than the number of lines we're
-      // supposed to display,
-      // only display the function...
+      // supposed to display, only display the function...
       if (end_line != 0) {
         if (m_options.num_lines > end_line - line_no)
           m_options.num_lines = end_line - line_no + extra_lines;
@@ -912,14 +899,13 @@ protected:
     return 0;
   }
 
-  // From Jim: The FindMatchingFunctions / FindMatchingFunctionSymbols functions
-  // "take a possibly empty vector of strings which are names of modules, and
-  // run the two search functions on the subset of the full module list that
-  // matches the strings in the input vector". If we wanted to put these
-  // somewhere,
-  // there should probably be a module-filter-list that can be passed to the
-  // various ModuleList::Find* calls, which would either be a vector of string
-  // names or a ModuleSpecList.
+  // From Jim: The FindMatchingFunctions / FindMatchingFunctionSymbols
+  // functions "take a possibly empty vector of strings which are names of
+  // modules, and run the two search functions on the subset of the full module
+  // list that matches the strings in the input vector". If we wanted to put
+  // these somewhere, there should probably be a module-filter-list that can be
+  // passed to the various ModuleList::Find* calls, which would either be a
+  // vector of string names or a ModuleSpecList.
   size_t FindMatchingFunctions(Target *target, const ConstString &name,
                                SymbolContextList &sc_list) {
     // Displaying the source for a symbol:
@@ -996,8 +982,7 @@ protected:
       size_t num_matches = FindMatchingFunctions(target, name, sc_list);
       if (!num_matches) {
         // If we didn't find any functions with that name, try searching for
-        // symbols
-        // that line up exactly with function addresses.
+        // symbols that line up exactly with function addresses.
         SymbolContextList sc_list_symbols;
         size_t num_symbol_matches =
             FindMatchingFunctionSymbols(target, name, sc_list_symbols);
@@ -1064,8 +1049,8 @@ protected:
       SymbolContextList sc_list;
 
       if (target->GetSectionLoadList().IsEmpty()) {
-        // The target isn't loaded yet, we need to lookup the file address
-        // in all modules
+        // The target isn't loaded yet, we need to lookup the file address in
+        // all modules
         const ModuleList &module_list = target->GetImages();
         const size_t num_modules = module_list.GetSize();
         for (size_t i = 0; i < num_modules; ++i) {
@@ -1090,8 +1075,8 @@ protected:
           return false;
         }
       } else {
-        // The target has some things loaded, resolve this address to a
-        // compile unit + file + line and display
+        // The target has some things loaded, resolve this address to a compile
+        // unit + file + line and display
         if (target->GetSectionLoadList().ResolveLoadAddress(m_options.address,
                                                             so_addr)) {
           ModuleSP module_sp(so_addr.GetModule());
@@ -1168,11 +1153,10 @@ protected:
         }
       }
     } else if (m_options.file_name.empty()) {
-      // Last valid source manager context, or the current frame if no
-      // valid last context in source manager.
-      // One little trick here, if you type the exact same list command twice in
-      // a row, it is
-      // more likely because you typed it once, then typed it again
+      // Last valid source manager context, or the current frame if no valid
+      // last context in source manager. One little trick here, if you type the
+      // exact same list command twice in a row, it is more likely because you
+      // typed it once, then typed it again
       if (m_options.start_line == 0) {
         if (target->GetSourceManager().DisplayMoreWithLineNumbers(
                 &result.GetOutputStream(), m_options.num_lines,

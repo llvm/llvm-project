@@ -48,6 +48,11 @@ public:
                                             StringExtractorGDBRemote &response,
                                             bool send_async);
 
+  PacketResult SendPacketAndReceiveResponseWithOutputSupport(
+      llvm::StringRef payload, StringExtractorGDBRemote &response,
+      bool send_async,
+      llvm::function_ref<void(llvm::StringRef)> output_callback);
+
   bool SendvContPacket(llvm::StringRef payload,
                        StringExtractorGDBRemote &response);
 

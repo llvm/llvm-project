@@ -380,8 +380,8 @@ bool ABISysV_s390x::GetArgumentValues(Thread &thread, ValueList &values) const {
     if (!value)
       return false;
 
-    // We currently only support extracting values with Clang QualTypes.
-    // Do we care about others?
+    // We currently only support extracting values with Clang QualTypes. Do we
+    // care about others?
     CompilerType compiler_type = value->GetCompilerType();
     if (!compiler_type)
       return false;
@@ -483,8 +483,8 @@ Status ABISysV_s390x::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
 
   if (!set_it_simple) {
     // Okay we've got a structure or something that doesn't fit in a simple
-    // register.
-    // We should figure out where it really goes, but we don't support this yet.
+    // register. We should figure out where it really goes, but we don't
+    // support this yet.
     error.SetErrorString("We only support setting simple integer and float "
                          "return types at present.");
   }
@@ -618,9 +618,8 @@ ValueObjectSP ABISysV_s390x::GetReturnValueObjectImpl(
     // FIXME: This is just taking a guess, r2 may very well no longer hold the
     // return storage location.
     // If we are going to do this right, when we make a new frame we should
-    // check to see if it uses a memory
-    // return, and if we are at the first instruction and if so stash away the
-    // return location.  Then we would
+    // check to see if it uses a memory return, and if we are at the first
+    // instruction and if so stash away the return location.  Then we would
     // only return the memory return value if we know it is valid.
 
     unsigned r2_id =
@@ -654,8 +653,8 @@ bool ABISysV_s390x::CreateFunctionEntryUnwindPlan(UnwindPlan &unwind_plan) {
 }
 
 bool ABISysV_s390x::CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) {
-  // There's really no default way to unwind on s390x.
-  // Trust the .eh_frame CFI, which should always be good.
+  // There's really no default way to unwind on s390x. Trust the .eh_frame CFI,
+  // which should always be good.
   return false;
 }
 
@@ -663,8 +662,8 @@ bool ABISysV_s390x::GetFallbackRegisterLocation(
     const RegisterInfo *reg_info,
     UnwindPlan::Row::RegisterLocation &unwind_regloc) {
   // If a volatile register is being requested, we don't want to forward the
-  // next frame's register contents
-  // up the stack -- the register is not retrievable at this frame.
+  // next frame's register contents up the stack -- the register is not
+  // retrievable at this frame.
   if (RegisterIsVolatile(reg_info)) {
     unwind_regloc.SetUndefined();
     return true;

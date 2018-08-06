@@ -30,8 +30,8 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 
-// Define these constants from OpenBSD mman.h for use when targeting
-// remote openbsd systems even when host has different values.
+// Define these constants from OpenBSD mman.h for use when targeting remote
+// openbsd systems even when host has different values.
 #define MAP_PRIVATE 0x0002
 #define MAP_ANON 0x1000
 
@@ -58,9 +58,8 @@ PlatformSP PlatformOpenBSD::CreateInstance(bool force, const ArchSpec *arch) {
       break;
 
 #if defined(__OpenBSD__)
-    // Only accept "unknown" for the OS if the host is BSD and
-    // it "unknown" wasn't specified (it was just returned because it
-    // was NOT specified)
+    // Only accept "unknown" for the OS if the host is BSD and it "unknown"
+    // wasn't specified (it was just returned because it was NOT specified)
     case llvm::Triple::OSType::UnknownOS:
       create = !arch->TripleOSWasSpecified();
       break;
@@ -167,13 +166,10 @@ bool PlatformOpenBSD::GetSupportedArchitectureAtIndex(uint32_t idx,
       return false;
     }
     // Leave the vendor as "llvm::Triple:UnknownVendor" and don't specify the
-    // vendor by
-    // calling triple.SetVendorName("unknown") so that it is a "unspecified
-    // unknown".
-    // This means when someone calls triple.GetVendorName() it will return an
-    // empty string
-    // which indicates that the vendor can be set when two architectures are
-    // merged
+    // vendor by calling triple.SetVendorName("unknown") so that it is a
+    // "unspecified unknown". This means when someone calls
+    // triple.GetVendorName() it will return an empty string which indicates
+    // that the vendor can be set when two architectures are merged
 
     // Now set the triple into "arch" and return true
     arch.SetTriple(triple);

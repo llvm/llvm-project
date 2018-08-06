@@ -60,10 +60,8 @@ public:
   virtual Status Accept(Socket *&socket) = 0;
 
   // Initialize a Tcp Socket object in listening mode.  listen and accept are
-  // implemented
-  // separately because the caller may wish to manipulate or query the socket
-  // after it is
-  // initialized, but before entering a blocking accept.
+  // implemented separately because the caller may wish to manipulate or query
+  // the socket after it is initialized, but before entering a blocking accept.
   static Status TcpListen(llvm::StringRef host_and_port,
                           bool child_processes_inherit, Socket *&socket,
                           Predicate<uint16_t> *predicate, int backlog = 5);

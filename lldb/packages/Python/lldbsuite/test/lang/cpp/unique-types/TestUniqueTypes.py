@@ -28,10 +28,6 @@ class UniqueTypesTestCase(TestBase):
 
         compiler = self.getCompiler()
         compiler_basename = os.path.basename(compiler)
-        if "clang" in compiler_basename and int(
-                self.getCompilerVersion().split('.')[0]) < 3:
-            self.skipTest(
-                "rdar://problem/9173060 lldb hangs while running unique-types for clang version < 3")
 
         exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)

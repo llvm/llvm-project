@@ -12,7 +12,7 @@
 
 #include "lldb/lldb-types.h"
 
-#if defined(_MSC_VER)
+#if defined(_WIN32)
 #if defined(EXPORT_LIBLLDB)
 #define LLDB_API __declspec(dllexport)
 #elif defined(IMPORT_LIBLLDB)
@@ -20,7 +20,7 @@
 #else
 #define LLDB_API
 #endif
-#else // defined (_MSC_VER)
+#else // defined (_WIN32)
 #define LLDB_API
 #endif
 

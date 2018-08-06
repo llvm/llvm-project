@@ -123,9 +123,6 @@ class TestResilience(TestBase):
 
     def do_test(self):
         """Test that LLDB can debug across resilient boundaries"""
-        def cleanup():
-            execute_command("make cleanup")
-        self.addTearDownHook(cleanup)
 
         for exe_flavor in ["a", "b"]:
             for mod_flavor in ["a", "b"]:

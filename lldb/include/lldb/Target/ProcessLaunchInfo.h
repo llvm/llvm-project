@@ -107,13 +107,18 @@ public:
     return m_monitor_callback;
   }
 
+  /// A Monitor callback which does not take any action on process events. Use
+  /// this if you don't need to take any particular action when the process
+  /// terminates, but you still need to reap it.
+  static bool NoOpMonitorCallback(lldb::pid_t pid, bool exited, int signal,
+                                  int status);
+
   bool GetMonitorSignals() const { return m_monitor_signals; }
 
   // If the LaunchInfo has a monitor callback, then arrange to monitor the
-  // process.
-  // Return true if the LaunchInfo has taken care of monitoring the process, and
-  // false if the
-  // caller might want to monitor the process themselves.
+  // process. Return true if the LaunchInfo has taken care of monitoring the
+  // process, and false if the caller might want to monitor the process
+  // themselves.
 
   bool MonitorProcess() const;
 

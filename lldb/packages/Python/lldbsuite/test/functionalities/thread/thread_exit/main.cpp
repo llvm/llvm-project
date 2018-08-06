@@ -64,7 +64,8 @@ int main ()
     thread_1.join();
 
     // Synchronize with the remaining thread
-    pseudo_barrier_wait(g_barrier3);                  // Set third breakpoint here
+    int dummy = 47;                   // Set third breakpoint here
+    pseudo_barrier_wait(g_barrier3);
 
     // Wait for the second thread to finish
     thread_2.join();

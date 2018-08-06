@@ -40,6 +40,7 @@
 #include "lldb/Target/SwiftLanguageRuntime.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Logging.h" // for GetLogIfAn...
 #include "lldb/Utility/RegularExpression.h"
@@ -48,13 +49,12 @@
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
 
-#if defined(LLVM_ON_WIN32)
+#if defined(_WIN32)
 #include "lldb/Host/windows/PosixApi.h" // for PATH_MAX
 #endif
 
 #include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 #include "Plugins/Language/ObjC/ObjCLanguage.h"
-#include "Plugins/ObjectFile/JIT/ObjectFileJIT.h"
 
 #include "swift/Basic/LangOptions.h"
 #include "swift/Frontend/Frontend.h"
@@ -84,21 +84,17 @@ class VariableList;
 using namespace lldb;
 using namespace lldb_private;
 
-// Shared pointers to modules track module lifetimes in
-// targets and in the global module, but this collection
-// will track all module objects that are still alive
+// Shared pointers to modules track module lifetimes in targets and in the
+// global module, but this collection will track all module objects that are
+// still alive
 typedef std::vector<Module *> ModuleCollection;
 
 static ModuleCollection &GetModuleCollection() {
   // This module collection needs to live past any module, so we could either
-  // make it a
-  // shared pointer in each module or just leak is.  Since it is only an empty
-  // vector by
-  // the time all the modules have gone away, we just leak it for now.  If we
-  // decide this
-  // is a big problem we can introduce a Finalize method that will tear
-  // everything down in
-  // a predictable order.
+  // make it a shared pointer in each module or just leak is.  Since it is only
+  // an empty vector by the time all the modules have gone away, we just leak
+  // it for now.  If we decide this is a big problem we can introduce a
+  // Finalize method that will tear everything down in a predictable order.
 
   static ModuleCollection *g_module_collection = nullptr;
   if (g_module_collection == nullptr)
@@ -109,9 +105,9 @@ static ModuleCollection &GetModuleCollection() {
 
 std::recursive_mutex &Module::GetAllocationModuleCollectionMutex() {
   // NOTE: The mutex below must be leaked since the global module list in
-  // the ModuleList class will get torn at some point, and we can't know
-  // if it will tear itself down before the "g_module_collection_mutex" below
-  // will. So we leak a Mutex object below to safeguard against that
+  // the ModuleList class will get torn at some point, and we can't know if it
+  // will tear itself down before the "g_module_collection_mutex" below will.
+  // So we leak a Mutex object below to safeguard against that
 
   static std::recursive_mutex *g_module_collection_mutex = nullptr;
   if (g_module_collection_mutex == nullptr)
@@ -156,8 +152,8 @@ Module::Module(const ModuleSpec &module_spec)
                     : module_spec.GetObjectName().AsCString(""),
                 module_spec.GetObjectName().IsEmpty() ? "" : ")");
 
-  // First extract all module specifications from the file using the local
-  // file path. If there are no specifications, then don't fill anything in
+  // First extract all module specifications from the file using the local file
+  // path. If there are no specifications, then don't fill anything in
   ModuleSpecList modules_specs;
   if (ObjectFile::GetModuleSpecifications(module_spec.GetFileSpec(), 0, 0,
                                           modules_specs) == 0)
@@ -165,9 +161,8 @@ Module::Module(const ModuleSpec &module_spec)
 
   // Now make sure that one of the module specifications matches what we just
   // extract. We might have a module specification that specifies a file
-  // "/usr/lib/dyld"
-  // with UUID XXX, but we might have a local version of "/usr/lib/dyld" that
-  // has
+  // "/usr/lib/dyld" with UUID XXX, but we might have a local version of
+  // "/usr/lib/dyld" that has
   // UUID YYY and we don't want those to match. If they don't match, just don't
   // fill any ivars in so we don't accidentally grab the wrong file later since
   // they don't match...
@@ -182,8 +177,8 @@ Module::Module(const ModuleSpec &module_spec)
     m_mod_time =
         FileSystem::GetModificationTime(matching_module_spec.GetFileSpec());
 
-  // Copy the architecture from the actual spec if we got one back, else use the
-  // one that was specified
+  // Copy the architecture from the actual spec if we got one back, else use
+  // the one that was specified
   if (matching_module_spec.GetArchitecture().IsValid())
     m_arch = matching_module_spec.GetArchitecture();
   else if (module_spec.GetArchitecture().IsValid())
@@ -215,9 +210,9 @@ Module::Module(const ModuleSpec &module_spec)
   else
     m_object_name = module_spec.GetObjectName();
 
-  // Always trust the object offset (file offset) and object modification
-  // time (for mod time in a BSD static archive) of from the matching
-  // module specification
+  // Always trust the object offset (file offset) and object modification time
+  // (for mod time in a BSD static archive) of from the matching module
+  // specification
   m_object_offset = matching_module_spec.GetObjectOffset();
   m_object_mod_time = matching_module_spec.GetObjectModificationTime();
 }
@@ -258,8 +253,8 @@ Module::Module()
 }
 
 Module::~Module() {
-  // Lock our module down while we tear everything down to make sure
-  // we don't get any access to the module while it is being destroyed
+  // Lock our module down while we tear everything down to make sure we don't
+  // get any access to the module while it is being destroyed
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   // Scope for locker below...
   {
@@ -313,9 +308,8 @@ ObjectFile *Module::GetMemoryObjectFile(const lldb::ProcessSP &process_sp,
           m_object_name.SetString(s.GetString());
 
           // Once we get the object file, update our module with the object
-          // file's
-          // architecture since it might differ in vendor/os if some parts were
-          // unknown.
+          // file's architecture since it might differ in vendor/os if some
+          // parts were unknown.
           m_objfile_sp->GetArchitecture(m_arch);
         } else {
           error.SetErrorString("unable to find suitable object file plug-in");
@@ -332,18 +326,28 @@ ObjectFile *Module::GetMemoryObjectFile(const lldb::ProcessSP &process_sp,
 }
 
 const lldb_private::UUID &Module::GetUUID() {
-  if (!m_did_parse_uuid.load()) {
+  if (!m_did_set_uuid.load()) {
     std::lock_guard<std::recursive_mutex> guard(m_mutex);
-    if (!m_did_parse_uuid.load()) {
+    if (!m_did_set_uuid.load()) {
       ObjectFile *obj_file = GetObjectFile();
 
       if (obj_file != nullptr) {
         obj_file->GetUUID(&m_uuid);
-        m_did_parse_uuid = true;
+        m_did_set_uuid = true;
       }
     }
   }
   return m_uuid;
+}
+
+void Module::SetUUID(const lldb_private::UUID &uuid) {
+  std::lock_guard<std::recursive_mutex> guard(m_mutex);
+  if (!m_did_set_uuid) {
+    m_uuid = uuid;
+    m_did_set_uuid = true;
+  } else {
+    lldbassert(0 && "Attempting to overwrite the existing module UUID");
+  }
 }
 
 #ifdef __clang_analyzer__
@@ -452,8 +456,8 @@ uint32_t Module::ResolveSymbolContextForAddress(
 
   // Make sure the section matches this module before we try and match anything
   if (section_sp && section_sp->GetModule().get() == this) {
-    // If the section offset based address resolved itself, then this
-    // is the right module.
+    // If the section offset based address resolved itself, then this is the
+    // right module.
     sc.module_sp = shared_from_this();
     resolved_flags |= eSymbolContextModule;
 
@@ -461,8 +465,8 @@ uint32_t Module::ResolveSymbolContextForAddress(
     if (!sym_vendor)
       return resolved_flags;
 
-    // Resolve the compile unit, function, block, line table or line
-    // entry if requested.
+    // Resolve the compile unit, function, block, line table or line entry if
+    // requested.
     if (resolve_scope & eSymbolContextCompUnit ||
         resolve_scope & eSymbolContextFunction ||
         resolve_scope & eSymbolContextBlock ||
@@ -472,8 +476,8 @@ uint32_t Module::ResolveSymbolContextForAddress(
           sym_vendor->ResolveSymbolContext(so_addr, resolve_scope, sc);
     }
 
-    // Resolve the symbol if requested, but don't re-look it up if we've already
-    // found it.
+    // Resolve the symbol if requested, but don't re-look it up if we've
+    // already found it.
     if (resolve_scope & eSymbolContextSymbol &&
         !(resolved_flags & eSymbolContextSymbol)) {
       Symtab *symtab = sym_vendor->GetSymtab();
@@ -502,12 +506,11 @@ uint32_t Module::ResolveSymbolContextForAddress(
 
         if (sc.symbol) {
           if (sc.symbol->IsSynthetic()) {
-            // We have a synthetic symbol so lets check if the object file
-            // from the symbol file in the symbol vendor is different than
-            // the object file for the module, and if so search its symbol
-            // table to see if we can come up with a better symbol. For example
-            // dSYM files on MacOSX have an unstripped symbol table inside of
-            // them.
+            // We have a synthetic symbol so lets check if the object file from
+            // the symbol file in the symbol vendor is different than the
+            // object file for the module, and if so search its symbol table to
+            // see if we can come up with a better symbol. For example dSYM
+            // files on MacOSX have an unstripped symbol table inside of them.
             ObjectFile *symtab_objfile = symtab->GetObjectFile();
             if (symtab_objfile && symtab_objfile->IsStripped()) {
               SymbolFile *symfile = sym_vendor->GetSymbolFile();
@@ -533,10 +536,8 @@ uint32_t Module::ResolveSymbolContextForAddress(
     }
 
     // For function symbols, so_addr may be off by one.  This is a convention
-    // consistent
-    // with FDE row indices in eh_frame sections, but requires extra logic here
-    // to permit
-    // symbol lookup for disassembly and unwind.
+    // consistent with FDE row indices in eh_frame sections, but requires extra
+    // logic here to permit symbol lookup for disassembly and unwind.
     if (resolve_scope & eSymbolContextSymbol &&
         !(resolved_flags & eSymbolContextSymbol) && resolve_tail_call_address &&
         so_addr.IsSectionOffset()) {
@@ -553,10 +554,9 @@ uint32_t Module::ResolveSymbolContextForAddress(
           if (addr_range.GetBaseAddress().GetSection() ==
               so_addr.GetSection()) {
             // If the requested address is one past the address range of a
-            // function (i.e. a tail call),
-            // or the decremented address is the start of a function (i.e. some
-            // forms of trampoline),
-            // indicate that the symbol has been resolved.
+            // function (i.e. a tail call), or the decremented address is the
+            // start of a function (i.e. some forms of trampoline), indicate
+            // that the symbol has been resolved.
             if (so_addr.GetOffset() ==
                     addr_range.GetBaseAddress().GetOffset() ||
                 so_addr.GetOffset() ==
@@ -610,21 +610,21 @@ uint32_t Module::ResolveSymbolContextsForFileSpec(const FileSpec &file_spec,
 
 size_t Module::FindGlobalVariables(const ConstString &name,
                                    const CompilerDeclContext *parent_decl_ctx,
-                                   bool append, size_t max_matches,
-                                   VariableList &variables) {
-  SymbolVendor *symbols = GetSymbolVendor();
-  if (symbols)
-    return symbols->FindGlobalVariables(name, parent_decl_ctx, append,
-                                        max_matches, variables);
-  return 0;
-}
-
-size_t Module::FindGlobalVariables(const RegularExpression &regex, bool append,
                                    size_t max_matches,
                                    VariableList &variables) {
   SymbolVendor *symbols = GetSymbolVendor();
   if (symbols)
-    return symbols->FindGlobalVariables(regex, append, max_matches, variables);
+    return symbols->FindGlobalVariables(name, parent_decl_ctx, max_matches,
+                                        variables);
+  return 0;
+}
+
+size_t Module::FindGlobalVariables(const RegularExpression &regex,
+                                   size_t max_matches,
+                                   VariableList &variables) {
+  SymbolVendor *symbols = GetSymbolVendor();
+  if (symbols)
+    return symbols->FindGlobalVariables(regex, max_matches, variables);
   return 0;
 }
 
@@ -702,8 +702,7 @@ Module::LookupInfo::LookupInfo(const ConstString &name, uint32_t name_type_mask,
     if (name_type_mask & eFunctionNameTypeMethod ||
         name_type_mask & eFunctionNameTypeBase) {
       // If they've asked for a CPP method or function name and it can't be
-      // that, we don't
-      // even need to search for CPP methods or names.
+      // that, we don't even need to search for CPP methods or names.
       CPlusPlusLanguage::MethodName cpp_method(name);
       SwiftLanguageRuntime::MethodName swift_method(name, true);
       if (swift_method.IsValid())
@@ -713,17 +712,15 @@ Module::LookupInfo::LookupInfo(const ConstString &name, uint32_t name_type_mask,
       if (!basename.empty()) {
         if (!cpp_method.GetQualifiers().empty()) {
           // There is a "const" or other qualifier following the end of the
-          // function parens,
-          // this can't be a eFunctionNameTypeBase
+          // function parens, this can't be a eFunctionNameTypeBase
           m_name_type_mask &= ~(eFunctionNameTypeBase);
           if (m_name_type_mask == eFunctionNameTypeNone)
             return;
         }
       } else {
         // If the CPP method parser didn't manage to chop this up, try to fill
-        // in the base name if we can.
-        // If a::b::c is passed in, we need to just look up "c", and then we'll
-        // filter the result later.
+        // in the base name if we can. If a::b::c is passed in, we need to just
+        // look up "c", and then we'll filter the result later.
         CPlusPlusLanguage::ExtractContextAndIdentifier(name_cstr, context,
                                                        basename);
       }
@@ -752,19 +749,15 @@ Module::LookupInfo::LookupInfo(const ConstString &name, uint32_t name_type_mask,
   }
 
   if (!basename.empty()) {
-    // The name supplied was a partial C++ path like "a::count". In this case we
-    // want to do a
-    // lookup on the basename "count" and then make sure any matching results
-    // contain "a::count"
-    // so that it would match "b::a::count" and "a::count". This is why we set
-    // "match_name_after_lookup"
-    // to true
+    // The name supplied was a partial C++ path like "a::count". In this case
+    // we want to do a lookup on the basename "count" and then make sure any
+    // matching results contain "a::count" so that it would match "b::a::count"
+    // and "a::count". This is why we set "match_name_after_lookup" to true
     m_lookup_name.SetString(basename);
     m_match_name_after_lookup = true;
   } else {
     // The name is already correct, just use the exact name as supplied, and we
-    // won't need
-    // to check if any matches contain "name"
+    // won't need to check if any matches contain "name"
     m_lookup_name = name;
     m_match_name_after_lookup = false;
   }
@@ -798,8 +791,8 @@ void Module::LookupInfo::Prune(SymbolContextList &sc_list,
     while (i < sc_list.GetSize()) {
       if (!sc_list.GetContextAtIndex(i, sc))
         break;
-      // Make sure the mangled and demangled names don't match before we try
-      // to pull anything out
+      // Make sure the mangled and demangled names don't match before we try to
+      // pull anything out
       ConstString mangled_name(sc.GetFunctionName(Mangled::ePreferMangled));
       ConstString full_name(sc.GetFunctionName());
       if (mangled_name != m_name && full_name != m_name)
@@ -895,7 +888,8 @@ size_t Module::FindFunctions(const RegularExpression &regex,
   if (symbols) {
     symbols->FindFunctions(regex, include_inlines, append, sc_list);
 
-    // Now check our symbol table for symbols that are code symbols if requested
+    // Now check our symbol table for symbols that are code symbols if
+    // requested
     if (include_symbols) {
       Symtab *symtab = symbols->GetSymtab();
       if (symtab) {
@@ -910,7 +904,8 @@ size_t Module::FindFunctions(const RegularExpression &regex,
           size_t num_functions_added_to_sc_list =
               end_functions_added_index - start_size;
           if (num_functions_added_to_sc_list == 0) {
-            // No functions were added, just symbols, so we can just append them
+            // No functions were added, just symbols, so we can just append
+            // them
             for (size_t i = 0; i < num_matches; ++i) {
               sc.symbol = symtab->SymbolAtIndex(symbol_indexes[i]);
               SymbolType sym_type = sc.symbol->GetType();
@@ -1050,8 +1045,7 @@ size_t Module::FindTypes(
     // basename
     if (type_class != eTypeClassAny && !type_basename.empty()) {
       // The "type_name_cstr" will have been modified if we have a valid type
-      // class
-      // prefix (like "struct", "class", "union", "typedef" etc).
+      // class prefix (like "struct", "class", "union", "typedef" etc).
       FindTypes_Impl(sc, ConstString(type_basename), nullptr, append,
                      UINT_MAX, searched_symbol_files, typesmap);
       typesmap.RemoveMismatchedTypes(type_scope, type_basename, type_class,
@@ -1093,8 +1087,8 @@ SymbolVendor *Module::GetSymbolVendor(bool can_create,
 
 void Module::SetFileSpecAndObjectName(const FileSpec &file,
                                       const ConstString &object_name) {
-  // Container objects whose paths do not specify a file directly can call
-  // this function to correct the file and object names.
+  // Container objects whose paths do not specify a file directly can call this
+  // function to correct the file and object names.
   m_file = file;
   m_mod_time = FileSystem::GetModificationTime(file);
   m_object_name = object_name;
@@ -1294,12 +1288,10 @@ ObjectFile *Module::GetObjectFile() {
             file_size - m_object_offset, data_sp, data_offset);
         if (m_objfile_sp) {
           // Once we get the object file, update our module with the object
-          // file's
-          // architecture since it might differ in vendor/os if some parts were
-          // unknown.  But since the matching arch might already be more
-          // specific
-          // than the generic COFF architecture, only merge in those values that
-          // overwrite unspecified unknown values.
+          // file's architecture since it might differ in vendor/os if some
+          // parts were unknown.  But since the matching arch might already be
+          // more specific than the generic COFF architecture, only merge in
+          // those values that overwrite unspecified unknown values.
           ArchSpec new_arch;
           m_objfile_sp->GetArchitecture(new_arch);
           m_arch.MergeFrom(new_arch);
@@ -1314,7 +1306,7 @@ ObjectFile *Module::GetObjectFile() {
 }
 
 SectionList *Module::GetSectionList() {
-  // Populate m_unified_sections_ap with sections from objfile.
+  // Populate m_sections_ap with sections from objfile.
   if (!m_sections_ap) {
     ObjectFile *obj_file = GetObjectFile();
     if (obj_file != nullptr)
@@ -1333,7 +1325,6 @@ void Module::SectionFileAddressesChanged() {
 }
 
 SectionList *Module::GetUnifiedSectionList() {
-  // Populate m_unified_sections_ap with sections from objfile.
   if (!m_sections_ap)
     m_sections_ap = llvm::make_unique<SectionList>();
   return m_sections_ap.get();
@@ -1464,9 +1455,8 @@ void Module::SetSymbolFileFileSpec(const FileSpec &file) {
     if (section_list && symbol_file) {
       ObjectFile *obj_file = symbol_file->GetObjectFile();
       // Make sure we have an object file and that the symbol vendor's objfile
-      // isn't
-      // the same as the module's objfile before we remove any sections for
-      // it...
+      // isn't the same as the module's objfile before we remove any sections
+      // for it...
       if (obj_file) {
         // Check to make sure we aren't trying to specify the file we already
         // have
@@ -1481,8 +1471,7 @@ void Module::SetSymbolFileFileSpec(const FileSpec &file) {
         obj_file->ClearSymtab();
 
         // The symbol file might be a directory bundle ("/tmp/a.out.dSYM")
-        // instead
-        // of a full path to the symbol file within the bundle
+        // instead of a full path to the symbol file within the bundle
         // ("/tmp/a.out.dSYM/Contents/Resources/DWARF/a.out"). So we need to
         // check this
 
@@ -1509,8 +1498,7 @@ void Module::SetSymbolFileFileSpec(const FileSpec &file) {
       }
     }
     // Keep all old symbol files around in case there are any lingering type
-    // references in
-    // any SBValue objects that might have been handed out.
+    // references in any SBValue objects that might have been handed out.
     m_old_symfiles.push_back(std::move(m_symfile_ap));
   }
   m_symfile_spec = file;
@@ -1684,37 +1672,10 @@ bool Module::RemapSourceFile(llvm::StringRef path,
   return m_source_mappings.RemapPath(path, new_path);
 }
 
-uint32_t Module::GetVersion(uint32_t *versions, uint32_t num_versions) {
-  ObjectFile *obj_file = GetObjectFile();
-  if (obj_file)
-    return obj_file->GetVersion(versions, num_versions);
-
-  if (versions != nullptr && num_versions != 0) {
-    for (uint32_t i = 0; i < num_versions; ++i)
-      versions[i] = LLDB_INVALID_MODULE_VERSION;
-  }
-  return 0;
-}
-
-ModuleSP
-Module::CreateJITModule(const lldb::ObjectFileJITDelegateSP &delegate_sp) {
-  if (delegate_sp) {
-    // Must create a module and place it into a shared pointer before
-    // we can create an object file since it has a std::weak_ptr back
-    // to the module, so we need to control the creation carefully in
-    // this static function
-    ModuleSP module_sp(new Module());
-    module_sp->m_objfile_sp =
-        std::make_shared<ObjectFileJIT>(module_sp, delegate_sp);
-    if (module_sp->m_objfile_sp) {
-      // Once we get the object file, update our module with the object file's
-      // architecture since it might differ in vendor/os if some parts were
-      // unknown.
-      module_sp->m_objfile_sp->GetArchitecture(module_sp->m_arch);
-    }
-    return module_sp;
-  }
-  return ModuleSP();
+llvm::VersionTuple Module::GetVersion() {
+  if (ObjectFile *obj_file = GetObjectFile())
+    return obj_file->GetVersion();
+  return llvm::VersionTuple();
 }
 
 void Module::ClearModuleDependentCaches() {
@@ -1731,8 +1692,4 @@ bool Module::GetIsDynamicLinkEditor() {
     return obj_file->GetIsDynamicLinkEditor();
 
   return false;
-}
-
-Status Module::LoadInMemory(Target &target, bool set_pc) {
-  return m_objfile_sp->LoadInMemory(target, set_pc);
 }

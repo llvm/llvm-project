@@ -842,8 +842,8 @@ static void CountLocals(
     for (size_t vi = 0, ve = variables.GetSize(); vi != ve; ++vi) {
       lldb::VariableSP variable_sp(variables.GetVariableAtIndex(vi));
 
-      const ConstString &name(variable_sp->GetName());
-      const char *name_cstring = variable_sp->GetName().GetCString();
+      const ConstString &name(variable_sp->GetUnqualifiedName());
+      const char *name_cstring = variable_sp->GetUnqualifiedName().GetCString();
 
       if (name.IsEmpty())
         continue;

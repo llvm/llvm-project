@@ -21,10 +21,9 @@ namespace lldb_private {
 
 //----------------------------------------------------------------------
 /// @class BreakpointResolverAddress BreakpointResolverAddress.h
-/// "lldb/Breakpoint/BreakpointResolverAddress.h"
-/// @brief This class sets breakpoints on a given Address.  This breakpoint only
-/// takes
-/// once, and then it won't attempt to reset itself.
+/// "lldb/Breakpoint/BreakpointResolverAddress.h" This class sets breakpoints
+/// on a given Address.  This breakpoint only takes once, and then it won't
+/// attempt to reset itself.
 //----------------------------------------------------------------------
 
 class BreakpointResolverAddress : public BreakpointResolver {
@@ -74,8 +73,7 @@ protected:
   FileSpec m_module_filespec;   // If this filespec is Valid, and m_addr is an
                                 // offset, then it will be converted
   // to a Section+Offset address in this module, whenever that module gets
-  // around to
-  // being loaded.
+  // around to being loaded.
 private:
   DISALLOW_COPY_AND_ASSIGN(BreakpointResolverAddress);
 };

@@ -182,6 +182,8 @@ public:
 
   lldb::SectionType GetType() const { return m_type; }
 
+  const char *GetTypeAsCString() const;
+
   lldb::SectionSP GetParent() const { return m_parent_wp.lock(); }
 
   bool IsThreadSpecific() const { return m_thread_specific; }
@@ -270,10 +272,9 @@ protected:
   SectionList m_children; // Child sections
   bool m_fake : 1, // If true, then this section only can contain the address if
                    // one of its
-      // children contains an address. This allows for gaps between the children
-      // that are contained in the address range for this section, but do not
-      // produce
-      // hits unless the children contain the address.
+      // children contains an address. This allows for gaps between the
+      // children that are contained in the address range for this section, but
+      // do not produce hits unless the children contain the address.
       m_encrypted : 1,         // Set to true if the contents are encrypted
       m_thread_specific : 1,   // This section is thread specific
       m_readable : 1,          // If this section has read permissions

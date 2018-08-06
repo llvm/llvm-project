@@ -316,8 +316,8 @@ int el_get(EditLine *el, int code, ...) {
 }
 
 int el_source(EditLine *el, const char *file) {
-  // init edit line by reading the contents of 'file'
-  // nothing to do here on windows...
+  // init edit line by reading the contents of 'file' nothing to do here on
+  // windows...
   return 0;
 }
 
@@ -342,8 +342,8 @@ void history_end(History *) {
 }
 
 int history(History *, HistEvent *, int op, ...) {
-  // perform operation 'op' on the history list with
-  // optional arguments as needed by the operation.
+  // perform operation 'op' on the history list with optional arguments as
+  // needed by the operation.
   return 0;
 }
 

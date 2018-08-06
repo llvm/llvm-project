@@ -74,9 +74,8 @@ char StringExtractor::GetChar(char fail_value) {
 }
 
 //----------------------------------------------------------------------
-// If a pair of valid hex digits exist at the head of the
-// StringExtractor they are decoded into an unsigned byte and returned
-// by this function
+// If a pair of valid hex digits exist at the head of the StringExtractor they
+// are decoded into an unsigned byte and returned by this function
 //
 // If there is not a pair of valid hex digits at the head of the
 // StringExtractor, it is left unchanged and -1 is returned
@@ -96,12 +95,12 @@ int StringExtractor::DecodeHexU8() {
 }
 
 //----------------------------------------------------------------------
-// Extract an unsigned character from two hex ASCII chars in the packet
-// string, or return fail_value on failure
+// Extract an unsigned character from two hex ASCII chars in the packet string,
+// or return fail_value on failure
 //----------------------------------------------------------------------
 uint8_t StringExtractor::GetHexU8(uint8_t fail_value, bool set_eof_on_fail) {
-  // On success, fail_value will be overwritten with the next
-  // character in the stream
+  // On success, fail_value will be overwritten with the next character in the
+  // stream
   GetHexU8Ex(fail_value, set_eof_on_fail);
   return fail_value;
 }
@@ -307,8 +306,8 @@ size_t StringExtractor::GetHexBytes(llvm::MutableArrayRef<uint8_t> dest,
 }
 
 //----------------------------------------------------------------------
-// Decodes all valid hex encoded bytes at the head of the
-// StringExtractor, limited by dst_len.
+// Decodes all valid hex encoded bytes at the head of the StringExtractor,
+// limited by dst_len.
 //
 // Returns the number of bytes successfully decoded
 //----------------------------------------------------------------------
@@ -390,9 +389,9 @@ size_t StringExtractor::GetHexByteStringTerminatedBy(std::string &str,
 
 bool StringExtractor::GetNameColonValue(llvm::StringRef &name,
                                         llvm::StringRef &value) {
-  // Read something in the form of NNNN:VVVV; where NNNN is any character
-  // that is not a colon, followed by a ':' character, then a value (one or
-  // more ';' chars), followed by a ';'
+  // Read something in the form of NNNN:VVVV; where NNNN is any character that
+  // is not a colon, followed by a ':' character, then a value (one or more ';'
+  // chars), followed by a ';'
   if (m_index >= m_packet.size())
     return fail();
 
