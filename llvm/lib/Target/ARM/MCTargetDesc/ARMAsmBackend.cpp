@@ -373,6 +373,7 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
   // interfere with checking valid expressions.
   if (const MCSymbolRefExpr *A = Target.getSymA()) {
     if (A->hasSubsectionsViaSymbols() && Asm.isThumbFunc(&A->getSymbol()) &&
+        A->getSymbol().isExternal() &&
         (Kind == FK_Data_4 || Kind == ARM::fixup_arm_movw_lo16 ||
          Kind == ARM::fixup_arm_movt_hi16 || Kind == ARM::fixup_t2_movw_lo16 ||
          Kind == ARM::fixup_t2_movt_hi16))
