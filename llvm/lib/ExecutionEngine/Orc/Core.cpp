@@ -30,17 +30,17 @@ RegisterDependenciesFunction NoDependenciesToRegister =
 void MaterializationUnit::anchor() {}
 
 raw_ostream &operator<<(raw_ostream &OS, const JITSymbolFlags &Flags) {
+  if (Flags.isCallable())
+    OS << "[Callable]";
+  else
+    OS << "[Data]";
   if (Flags.isWeak())
-    OS << 'W';
+    OS << "[Weak]";
   else if (Flags.isCommon())
-    OS << 'C';
-  else
-    OS << 'S';
+    OS << "[Common]";
 
-  if (Flags.isExported())
-    OS << 'E';
-  else
-    OS << 'H';
+  if (!Flags.isExported())
+    OS << "[Hidden]";
 
   return OS;
 }

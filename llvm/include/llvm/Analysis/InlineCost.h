@@ -74,8 +74,15 @@ class InlineCost {
   /// The adjusted threshold against which this cost was computed.
   const int Threshold;
 
+  /// Must be set for Always and Never instances.
+  const char *Reason = nullptr;
+
   // Trivial constructor, interesting logic in the factory functions below.
-  InlineCost(int Cost, int Threshold) : Cost(Cost), Threshold(Threshold) {}
+  InlineCost(int Cost, int Threshold, const char *Reason = nullptr)
+      : Cost(Cost), Threshold(Threshold), Reason(Reason) {
+    assert((isVariable() || Reason) &&
+           "Reason must be provided for Never or Always");
+  }
 
 public:
   static InlineCost get(int Cost, int Threshold) {
@@ -83,11 +90,11 @@ public:
     assert(Cost < NeverInlineCost && "Cost crosses sentinel value");
     return InlineCost(Cost, Threshold);
   }
-  static InlineCost getAlways() {
-    return InlineCost(AlwaysInlineCost, 0);
+  static InlineCost getAlways(const char *Reason) {
+    return InlineCost(AlwaysInlineCost, 0, Reason);
   }
-  static InlineCost getNever() {
-    return InlineCost(NeverInlineCost, 0);
+  static InlineCost getNever(const char *Reason) {
+    return InlineCost(NeverInlineCost, 0, Reason);
   }
 
   /// Test whether the inline cost is low enough for inlining.
@@ -112,10 +119,28 @@ public:
     return Threshold;
   }
 
+  /// Get the reason of Always or Never.
+  const char *getReason() const {
+    assert((Reason || isVariable()) &&
+           "InlineCost reason must be set for Always or Never");
+    return Reason;
+  }
+
   /// Get the cost delta from the threshold for inlining.
   /// Only valid if the cost is of the variable kind. Returns a negative
   /// value if the cost is too high to inline.
   int getCostDelta() const { return Threshold - getCost(); }
+};
+
+/// InlineResult is basically true or false. For false results the message
+/// describes a reason why it is decided not to inline.
+struct InlineResult {
+  const char *message = nullptr;
+  InlineResult(bool result, const char *message = nullptr)
+      : message(result ? nullptr : (message ? message : "cost > threshold")) {}
+  InlineResult(const char *message = nullptr) : message(message) {}
+  operator bool() const { return !message; }
+  operator const char *() const { return message; }
 };
 
 /// Thresholds to tune inline cost analysis. The inline cost analysis decides
