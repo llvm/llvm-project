@@ -42,8 +42,7 @@ MATH_MANGLE(atan2)(double y, double x)
               BUILTIN_CLASS_F64(y, CLASS_NINF|CLASS_PINF) ?
               t : a;
 
-        a = BUILTIN_CLASS_F64(x, CLASS_SNAN|CLASS_QNAN) |
-              BUILTIN_CLASS_F64(y, CLASS_SNAN|CLASS_QNAN) ?
+        a = BUILTIN_ISNAN_F64(x) | BUILTIN_ISNAN_F64(y) ?
               AS_DOUBLE(QNANBITPATT_DP64) : a;
     }
 

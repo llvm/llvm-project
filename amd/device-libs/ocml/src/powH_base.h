@@ -56,11 +56,11 @@ MATH_MANGLE(pow)(half x, half y)
     bool ax_gt_1 = ax > 1.0h;
     bool ax_lt_pinf = BUILTIN_CLASS_F16(x, CLASS_PNOR|CLASS_PSUB);
     bool ax_eq_pinf = BUILTIN_CLASS_F16(x, CLASS_PINF);
-    bool ax_eq_nan = BUILTIN_CLASS_F16(x, CLASS_QNAN|CLASS_SNAN);
+    bool ax_eq_nan = BUILTIN_ISNAN_F16(x);
     bool x_pos = BUILTIN_CLASS_F16(x, CLASS_PZER|CLASS_PSUB|CLASS_PNOR|CLASS_PINF);
     bool ay_eq_0 = ay == 0.0h;
     bool ay_eq_pinf = BUILTIN_CLASS_F16(ay, CLASS_PINF);
-    bool ay_eq_nan = BUILTIN_CLASS_F16(ay, CLASS_QNAN|CLASS_SNAN);
+    bool ay_eq_nan = BUILTIN_ISNAN_F16(ay);
     bool y_eq_ninf = BUILTIN_CLASS_F16(y, CLASS_NINF);
     bool y_eq_pinf = BUILTIN_CLASS_F16(y, CLASS_PINF);
     bool ay_lt_inf = BUILTIN_CLASS_F16(y, CLASS_PNOR|CLASS_PSUB);
@@ -95,7 +95,7 @@ MATH_MANGLE(pow)(half x, half y)
     bool x_eq_pinf = BUILTIN_CLASS_F16(x, CLASS_PINF);
     bool ax_lt_pinf = BUILTIN_CLASS_F16(x, CLASS_PNOR|CLASS_PSUB);
     bool ax_eq_pinf = BUILTIN_CLASS_F16(x, CLASS_PINF);
-    bool ax_eq_nan = BUILTIN_CLASS_F16(x, CLASS_QNAN|CLASS_SNAN);
+    bool ax_eq_nan = BUILTIN_ISNAN_F16(x);
     bool x_pos = BUILTIN_CLASS_F16(x, CLASS_PZER|CLASS_PSUB|CLASS_PNOR|CLASS_PINF);
     bool y_pos = ny >= 0;
 
@@ -125,7 +125,7 @@ MATH_MANGLE(pow)(half x, half y)
     bool x_eq_pinf = BUILTIN_CLASS_F16(x, CLASS_PINF);
     bool ax_lt_pinf = BUILTIN_CLASS_F16(x, CLASS_PNOR|CLASS_PSUB);
     bool ax_eq_pinf = BUILTIN_CLASS_F16(x, CLASS_PINF);
-    bool ax_eq_nan = BUILTIN_CLASS_F16(x, CLASS_QNAN|CLASS_SNAN);
+    bool ax_eq_nan = BUILTIN_ISNAN_F16(x);
     bool x_pos = BUILTIN_CLASS_F16(x, CLASS_PZER|CLASS_PSUB|CLASS_PNOR|CLASS_PINF);
     bool y_pos = ny >= 0;
 
@@ -156,13 +156,13 @@ MATH_MANGLE(pow)(half x, half y)
     bool ax_gt_1 = ax > 1.0h;
     bool ax_lt_pinf = BUILTIN_CLASS_F16(x, CLASS_PNOR|CLASS_PSUB);
     bool ax_eq_pinf = BUILTIN_CLASS_F16(x, CLASS_PINF);
-    bool ax_eq_nan = BUILTIN_CLASS_F16(x, CLASS_QNAN|CLASS_SNAN);
+    bool ax_eq_nan = BUILTIN_ISNAN_F16(x);
     bool x_pos = BUILTIN_CLASS_F16(x, CLASS_PZER|CLASS_PSUB|CLASS_PNOR|CLASS_PINF);
     bool x_eq_ninf = BUILTIN_CLASS_F16(x, CLASS_NINF);
     bool x_eq_pinf = BUILTIN_CLASS_F16(x, CLASS_PINF);
     bool ay_eq_0 = ay == 0.0h;
     bool ay_eq_pinf = BUILTIN_CLASS_F16(ay, CLASS_PINF);
-    bool ay_eq_nan = BUILTIN_CLASS_F16(ay, CLASS_QNAN|CLASS_SNAN);
+    bool ay_eq_nan = BUILTIN_ISNAN_F16(ay);
     bool y_eq_ninf = BUILTIN_CLASS_F16(y, CLASS_NINF);
     bool y_eq_pinf = BUILTIN_CLASS_F16(y, CLASS_PINF);
     bool ay_lt_inf = BUILTIN_CLASS_F16(y, CLASS_PNOR|CLASS_PSUB);

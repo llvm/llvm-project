@@ -22,8 +22,8 @@ MATH_MANGLE(nextafter)(double x, double y)
     long r = SIGNBIT_DP64 - t;
     r = t < 0 ? r : t;
     if (!FINITE_ONLY_OPT()) {
-        r = BUILTIN_CLASS_F64(x, CLASS_QNAN|CLASS_SNAN) ? ix : r;
-        r = BUILTIN_CLASS_F64(y, CLASS_QNAN|CLASS_SNAN) ? iy : r;
+        r = BUILTIN_ISNAN_F64(x) ? ix : r;
+        r = BUILTIN_ISNAN_F64(y) ? iy : r;
     }
     r = (ax|ay) == 0L | ix == iy ? iy : r;
     return AS_DOUBLE(r);

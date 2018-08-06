@@ -48,8 +48,7 @@ MATH_MANGLE(atan2)(float y, float x)
             t : a;
 
         // x or y is NaN
-        a = BUILTIN_CLASS_F32(x, CLASS_SNAN|CLASS_QNAN) |
-            BUILTIN_CLASS_F32(y, CLASS_SNAN|CLASS_QNAN) ?
+        a = BUILTIN_ISNAN_F32(x) | BUILTIN_ISNAN_F32(y) ?
             AS_FLOAT(QNANBITPATT_SP32) : a;
     }
 

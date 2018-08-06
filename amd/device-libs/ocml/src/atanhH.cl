@@ -20,7 +20,7 @@ MATH_MANGLE(atanh)(half hx)
 
     if (!FINITE_ONLY_OPT()) {
         ret = x == 1.0f ? AS_HALF((short)PINFBITPATT_HP16) : ret;
-        ret = (x > 1.0f) | BUILTIN_CLASS_F32(x, CLASS_SNAN|CLASS_QNAN) ? AS_HALF((short)QNANBITPATT_HP16) : ret;
+        ret = (x > 1.0f) | BUILTIN_ISNAN_F32(x) ? AS_HALF((short)QNANBITPATT_HP16) : ret;
     }
 
     return BUILTIN_COPYSIGN_F16(ret, hx);

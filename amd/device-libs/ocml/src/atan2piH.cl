@@ -40,8 +40,7 @@ MATH_MANGLE(atan2pi)(half y, half x)
             at : a;
 
         // x or y is NaN
-        a = BUILTIN_CLASS_F16(x, CLASS_SNAN|CLASS_QNAN) |
-            BUILTIN_CLASS_F16(y, CLASS_SNAN|CLASS_QNAN) ?
+        a = BUILTIN_ISNAN_F16(x) | BUILTIN_ISNAN_F16(y) ?
             AS_HALF((short)QNANBITPATT_HP16) : a;
     }
 

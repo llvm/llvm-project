@@ -16,7 +16,7 @@ MATH_MANGLE(fract)(float x, __private float *ip)
     if (__oclc_ISA_version() < 800) {
         f = BUILTIN_MIN_F32(x - i, 0x1.fffffep-1f);
         if (!FINITE_ONLY_OPT()) {
-            f = BUILTIN_CLASS_F32(x, CLASS_QNAN|CLASS_SNAN) ? x : f;
+            f = BUILTIN_ISNAN_F32(x) ? x : f;
             f = BUILTIN_CLASS_F32(x, CLASS_PINF|CLASS_NINF) ? 0.0f : f;
         }
     } else {

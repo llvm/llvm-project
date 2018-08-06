@@ -45,10 +45,10 @@ MATH_MANGLE(rlen4)(double x, double y, double z, double w)
     if (!FINITE_ONLY_OPT()) {
         ret = a == 0.0 ? AS_DOUBLE(PINFBITPATT_DP64) : ret;
 
-        ret = (BUILTIN_CLASS_F64(x, CLASS_QNAN|CLASS_SNAN) |
-               BUILTIN_CLASS_F64(y, CLASS_QNAN|CLASS_SNAN) |
-               BUILTIN_CLASS_F64(z, CLASS_QNAN|CLASS_SNAN) |
-               BUILTIN_CLASS_F64(w, CLASS_QNAN|CLASS_SNAN)) ? AS_DOUBLE(QNANBITPATT_DP64) : ret;
+        ret = (BUILTIN_ISNAN_F64(x) |
+               BUILTIN_ISNAN_F64(y) |
+               BUILTIN_ISNAN_F64(z) |
+               BUILTIN_ISNAN_F64(w)) ? AS_DOUBLE(QNANBITPATT_DP64) : ret;
 
         ret = (BUILTIN_CLASS_F64(x, CLASS_PINF|CLASS_NINF) |
                BUILTIN_CLASS_F64(y, CLASS_PINF|CLASS_NINF) |

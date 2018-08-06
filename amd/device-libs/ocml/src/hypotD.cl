@@ -20,8 +20,8 @@ MATH_MANGLE(hypot)(double x, double y)
     ret = t == 0.0 ? 0.0 : ret;
 
     if (!FINITE_ONLY_OPT()) {
-        ret = BUILTIN_CLASS_F64(x, CLASS_QNAN|CLASS_SNAN) |
-              BUILTIN_CLASS_F64(y, CLASS_QNAN|CLASS_SNAN) ?  AS_DOUBLE(QNANBITPATT_DP64) : ret;
+        ret = BUILTIN_ISNAN_F64(x) |
+              BUILTIN_ISNAN_F64(y) ?  AS_DOUBLE(QNANBITPATT_DP64) : ret;
 
         ret = BUILTIN_CLASS_F64(x, CLASS_NINF|CLASS_PINF) |
               BUILTIN_CLASS_F64(y, CLASS_NINF|CLASS_PINF) ?  AS_DOUBLE(PINFBITPATT_DP64) : ret;

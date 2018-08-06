@@ -59,7 +59,7 @@ MATH_MANGLE(remainder)(half x, half y)
             iq -= clt;
             qacc = (qacc << bits) | iq;
 #endif
-            ax = BUILTIN_FLDEXP_F32(ax, bits); 
+            ax = BUILTIN_FLDEXP_F32(ax, bits);
             nb -= bits;
         }
 
@@ -128,7 +128,7 @@ MATH_MANGLE(remainder)(half x, half y)
         q7 = y == 0.0h ? 0 : q7;
 #endif
 
-        bool c = BUILTIN_CLASS_F16(y, CLASS_QNAN|CLASS_SNAN) |
+        bool c = BUILTIN_ISNAN_F16(y) |
                  BUILTIN_CLASS_F16(x, CLASS_NINF|CLASS_PINF|CLASS_SNAN|CLASS_QNAN);
         ret = c ? AS_HALF((short)QNANBITPATT_HP16) : ret;
 #if defined(COMPILING_REMQUO)
